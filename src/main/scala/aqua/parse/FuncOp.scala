@@ -1,8 +1,8 @@
-package aqua
+package aqua.parse
 
-import cats.parse.{Parser ⇒ P, Parser0 ⇒ P0}
-import Token._
+import aqua.parse.Token._
 import cats.data.NonEmptyList
+import cats.parse.{Parser ⇒ P}
 
 sealed trait FuncOp
 

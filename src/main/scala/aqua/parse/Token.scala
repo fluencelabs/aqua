@@ -1,4 +1,5 @@
-package aqua
+package aqua.parse
+
 import cats.data.NonEmptyList
 import cats.parse.{Parser ⇒ P, Parser0 ⇒ P0}
 
@@ -17,12 +18,12 @@ object Token {
   val `func`: P[Unit] = P.string("func")
   val `:`: P[Unit] = P.char(':')
   val ` : `: P[Unit] = P.char(':').surroundedBy(` `.?)
-  val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).map{case (c, s) ⇒ c.toString ++ s.getOrElse("")}
-  val `Name`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).?).map{case (c, s) ⇒ c.toString ++ s.getOrElse("")}
-  val `\n`: P0[Unit]= P.char('\n') | P.end
+  val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
+  val `Name`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
+  val `\n`: P0[Unit] = P.char('\n') | P.end
   val ` \n`: P0[Unit] = ` `.?.void <* `\n`
   val `,`: P[Unit] = P.char(',') <* ` `.?
-  val `(`: P[Unit] = ` `.?.with1 *>P.char('(') <* ` `.?
+  val `(`: P[Unit] = ` `.?.with1 *> P.char('(') <* ` `.?
   val `)`: P[Unit] = ` `.?.with1 *> P.char(')') <* ` `.?
   val `->`: P[Unit] = ` `.?.with1 *> P.string("->") <* ` `.?
 
@@ -33,9 +34,9 @@ object Token {
     P.repSep0(p, `,` <* ` \n`.?)
 
   def indented[T](p: P[T]): P[NonEmptyList[T]] =
-    ` `.flatMap (
+    ` `.flatMap(
       indent ⇒ p.map(NonEmptyList.one) ~ (P.string(indent) *> p).rep0
-    ).map{
+    ).map {
       case (nel, l) ⇒ nel ++ l
     }
 }

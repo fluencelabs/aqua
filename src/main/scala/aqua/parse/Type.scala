@@ -1,9 +1,7 @@
-package aqua
+package aqua.parse
 
-import Token._
-
-import cats.data.{NonEmptyList, NonEmptyMap}
-import cats.parse.{Parser ⇒ P, Parser0 ⇒ P0}
+import aqua.parse.Token._
+import cats.parse.{Parser ⇒ P}
 
 sealed trait Type
 sealed trait DataType extends Type

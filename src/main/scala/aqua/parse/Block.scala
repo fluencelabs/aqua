@@ -1,10 +1,10 @@
-package aqua
+package aqua.parse
 
-import aqua.DataType.`datatypedef`
-import aqua.Type.{`arrowdef`, `typedef`}
-import aqua.Token._
+import aqua.parse.DataType.`datatypedef`
+import aqua.parse.Token._
+import aqua.parse.Type.{`arrowdef`, `typedef`}
 import cats.data.{NonEmptyList, NonEmptyMap}
-import cats.parse.{Parser ⇒ P, Parser0 ⇒ P0}
+import cats.parse.{Parser ⇒ P}
 
 
 sealed trait Block
