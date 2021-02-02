@@ -1,0 +1,93 @@
+data User:
+  peer_id: PeerId
+  relay_id: PeerId
+  name: string
+
+data Return:
+  ret_code: i32
+  err_msg: string
+
+alias Auth = bool
+
+service UserList:
+  get_user: PeerId -> Return + users: []User
+  get_users: -> Return + users: []User
+  join: User -> Return
+  leave: PeerId -> Return
+  is_exists: PeerId -> Return + is_exists: bool
+  is_authenticated: -> Return + is_authenticated: Auth
+
+data Entry:
+  id: u64
+  body: string
+
+service Chat:
+  add: string, Auth -> Unit
+  user_added: User -> Unit
+  user_removed: PeerId -> Unit
+
+service History:
+  add: string, Auth -> Return + entry_id: u64
+  get_all: Auth -> Return + entries: []Entry
+  get_last: u64, Auth -> Return + entries: []Entry
+  set_tetraplet: PeerId, ServiceId, string, string -> Return
+
+
+data ChatApp:
+  userList: PeerId
+  userListSrv: UserList
+
+  history: PeerId
+  historySrv: History
+
+  peerSrv: Chat
+
+func updateOnlineStatuses(app: ChatApp, set_online: PeerId -> Unit):
+  on app.userList:
+    allUsers <- app.userListSrv.get_users()
+  for u <- allUsers par:
+    via u.relay_id on u.peer_id:
+      !op.identity()
+      set_online(u.peer_id)
+
+func notifySelfAdded(app: ChatApp, self_user: User):
+  on app.userList:
+    allUsers <- app.userListSrv.get_users()
+  for u <- allUsers par:
+    via u.relay_id on u.peer_id:
+      app.peerSrv.user_added(self_user)
+
+func getUserList(app: ChatApp, list: []User -> Unit):
+  on app.userList:
+    allUsers <- app.userListSrv.get_users()
+    list(allUsers)
+
+func join(app: ChatApp, self_user: User, joined: Return -> Unit):
+   on app.userList:
+    ret <- app.userListSrv.join(self_user)
+    joined(ret)
+
+func leave(app: ChatApp):
+  on app.userList:
+    app.userListSrv.leave(%init_peer_id%)
+    allUsers <- app.userListSrv.get_users()
+  for u <- allUsers par:
+    via u.relay_id on u.peer_id:
+        app.peerSrv.user_removed(%init_peer_id%)
+
+func getHistory(app: ChatApp, on_history: []Entry -> Unit):
+  on app.userList:
+    token <- app.userListSrv.is_authenticated()
+  on app.history:
+    entries <- app.historySrv.get_all(token.is_authenticated)
+    on_history(entries.entries)
+
+func addEntry(app: ChatApp, entry: String):
+  on app.userList:
+    token <- app.userListSrv.is_authenticated()
+    allUsers <- app.get_users()
+  on app.history:
+    app.historySrv.add(entry, token.is_authenticated)
+  for u <- allUsers par:
+    via u.relay_id on u.peer_id:
+      app.peerSrv.add(entry, token.is_authenticated)
