@@ -5,20 +5,69 @@ import cats.syntax.show._
 
 abstract sealed class Keyword(val value: String)
 
-object Keyword{
+object Keyword {
+
   case object Null extends Keyword("null")
+
   case object Next extends Keyword("next")
+
   case object Fold extends Keyword("fold")
+
   case object Match extends Keyword("match")
+
+  case object Mismatch extends Keyword("mismatch")
+
   case object Call extends Keyword("call")
+
   case object Seq extends Keyword("seq")
+
   case object Par extends Keyword("par")
+
   case object Xor extends Keyword("xor")
+
 }
 
-case class Triplet(peerId: String, serviceId: String, functionName: String)
+abstract sealed class DataView
 
-  abstract sealed class Air(val keyword: Keyword)
+object DataView {
+
+  case class StringScalar(value: String) extends DataView
+
+  case object InitPeerId extends DataView
+
+  case object LastError extends DataView
+
+  case class Variable(name: String) extends DataView
+
+  case class Stream(name: String) extends DataView
+
+  case class VarLens(name: String, lens: String) extends DataView
+
+  implicit val show: Show[DataView] = Show.show {
+    case StringScalar(v) ⇒ "\""+v+"\""
+    case InitPeerId ⇒ "%init_peer_id%"
+    case LastError ⇒ "%last_error%"
+    case Variable(name) ⇒ name
+    case Stream(name) ⇒ name
+    case VarLens(name, lens) ⇒ s"$name.$lens"
+  }
+}
+
+abstract sealed class Triplet
+
+object Triplet {
+
+  case class FromData(peerAndService: DataView, functionName: String) extends Triplet
+
+  case class Full(peerId: DataView, serviceId: DataView, functionName: String) extends Triplet
+
+  implicit val show: Show[Triplet] = Show.show {
+    case FromData(ps, fn) ⇒ s"${ps.show} "+"\""+fn+"\""
+    case Full(p, s, fn) ⇒ s"${p.show} (${s.show} "+"\""+fn+"\""
+  }
+}
+
+abstract sealed class Air(val keyword: Keyword)
 
 object Air {
 
@@ -26,9 +75,11 @@ object Air {
 
   case class Next(label: String) extends Air(Keyword.Next)
 
-  case class Fold(iterable: String, label: String, instruction: Air) extends Air(Keyword.Fold)
+  case class Fold(iterable: DataView, label: String, instruction: Air) extends Air(Keyword.Fold)
 
-  case class Match(left: String, right: String, instruction: Air) extends Air(Keyword.Match)
+  case class Match(left: DataView, right: DataView, instruction: Air) extends Air(Keyword.Match)
+
+  case class Mismatch(left: DataView, right: DataView, instruction: Air) extends Air(Keyword.Mismatch)
 
   case class Par(left: Air, right: Air) extends Air(Keyword.Par)
 
@@ -36,7 +87,7 @@ object Air {
 
   case class Xor(left: Air, right: Air) extends Air(Keyword.Xor)
 
-  case class Call(triplet: Triplet, args: List[String], result: Option[String]) extends Air(Keyword.Call)
+  case class Call(triplet: Triplet, args: List[DataView], result: Option[String]) extends Air(Keyword.Call)
 
 
   private def show(depth: Int, air: Air): String = {
@@ -47,12 +98,13 @@ object Air {
       (air match {
         case Air.Null ⇒ ""
         case Air.Next(label) ⇒ s" $label"
-        case Air.Fold(iter, label, inst) ⇒ s" $iter $label\n${showNext(inst)}$space"
-        case Air.Match(left, right, inst) ⇒ s" $left $right\n${showNext(inst)}$space"
+        case Air.Fold(iter, label, inst) ⇒ s" ${iter.show} $label\n${showNext(inst)}$space"
+        case Air.Match(left, right, inst) ⇒ s" ${left.show} ${right.show}\n${showNext(inst)}$space"
+        case Air.Mismatch(left, right, inst) ⇒ s" ${left.show} ${right.show}\n${showNext(inst)}$space"
         case Air.Par(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
         case Air.Seq(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
         case Air.Xor(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
-        case Air.Call(Triplet(p, s, f), args, res) ⇒ s" $p ($s $f) [${args.mkString(", ")}]${res.fold("")(" " + _)}"
+        case Air.Call(triplet, args, res) ⇒ s" ${triplet.show} [${args.map(_.show).mkString(", ")}]${res.fold("")(" " + _)}"
       }) + ")\n"
   }
 

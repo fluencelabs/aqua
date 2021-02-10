@@ -13,9 +13,9 @@ object Main extends IOApp.Simple {
   override def run: IO[Unit] =
     IO {
 
-      val air: Air = Air.Fold("iter!", "label", Air.Par(Air.Next("label"), Air.Null))
+      val air: Air = Air.Fold(DataView.VarLens("iter", "$.all!"), "label", Air.Par(Air.Next("label"), Air.Null))
 
-      //println(air.show)
+      println(air.show)
 
 
       type Call[F[_]] = Kleisli[F, List[String], Option[String]]
