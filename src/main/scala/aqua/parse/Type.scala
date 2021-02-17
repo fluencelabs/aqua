@@ -14,7 +14,7 @@ object DataType {
   val `customtypedef`: P[CustomType] = `Name`.map(CustomType)
   val `basictypedef`: P[BasicType] =
     P.oneOf(
-      ("i32" :: "i64" :: Nil).map(n ⇒ P.string(n).as(BasicType(n)))
+      ("s32" :: "s64" :: "i32" :: "i64" :: "f32" :: "f64" :: "bool" :: Nil).map(n ⇒ P.string(n).as(BasicType(n)))
     )
   lazy val `arraytypedef`: P[ArrayType] = (P.string("[]") *> `datatypedef`).map(ArrayType)
 

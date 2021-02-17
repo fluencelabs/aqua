@@ -1,0 +1,111 @@
+-- predef
+
+service Peer:
+  timestamp: -> i64
+  connect: []byte, []multiaddr -> bool
+
+-- kad
+
+<<<<<<<<<<<<< ALIAS >>>>>>>>>>>>>
+
+alias Key = []byte
+
+type Contact:
+  peer_id: []byte
+  multiaddrs: []multiaddr
+
+type Node:
+  key: Key
+  contact: Contact
+
+type KadConfig:
+  bucketSize: i32
+  siblingsSize: i32
+  pingExpiresIn: i32
+
+service Bucket:
+  index: -> i32
+  size: -> i32
+  isFull: -> bool
+  nodes: Key-> []Node
+
+<<<<<<<<<<<<< RETURN OPTION >>>>>>>>>>>>>
+  find: Key -> ?Node
+
+  update: Node, pingExpiresIn, currentTime -> ?Node to ping
+
+service Siblings:
+  size: -> i32
+  isFull: -> bool
+  nodes: Key -> []Node
+  find: Key -> ?Node
+  add: Node -> bool
+
+<<<<<<<<<<<<< LOCAL FUNCTION PATTERN WITH RETURN >>>>>>>>>>>>>
+func ping(node: Node): {Peer} bool
+  Peer.is_connected(node) || Peer.connect(node)
+
+<<<<<<<<<<<<< BYTE OPS, XOR, ZEROS >>>>>>>>>>>>>
+func bucket(key: Key): {}Bucket
+  index = zero_prefix $ this_peer_id & key
+  idx_bucket(index)
+
+<<<<<<<<<<<<< MAKE SRV ID FROM PARTS >>>>>>>>>>>>>
+func idx_bucket(index: i32): {}Bucket
+  bucket_id = "bucket-"+index
+  Bucket(bucket_id)
+
+func update_bucket(node: Node, pingExpiresIn: i32): {Peer} bool
+  time <- Peer.timestamp
+  bucket = bucket(node.key)
+
+  last_node <- bucket.update(node, pingExpiresIn, time)
+  if last_node:
+    p <- ping(last_node, pingExpiresIn, time)
+    if p:
+      update(ping)
+    else:
+      update(node)
+
+  else true
+
+func update_siblings(node: Node): {Siblings} bool
+  Siblings.add(node)
+
+ability RoutingTable(key_length):
+  func find(key: Key): ?Node
+    Siblings.find(key) || bucket(key).find(key)
+
+  func lookup(key: Key, num: i32): []Node
+    o = order(\n -> zero_prefix $ n.key & key)
+<<<<<<<<<<<<< DIVERGING INDEXES ARE IMPOSSIBLE??? >>>>>>>>>>>>>
+    idxs = diverging_indexes(key)
+    $nodes: Node[]
+<<<<<<<<<<<<< PUSH ITEMS INTO A STREAM >>>>>>>>>>>>>
+    for i <- idxs:
+      $nodes ++ bucket(i).nodes(key)
+      if $nodes.size > num: break
+
+<<<<<<<<<<<<< SUBTRACTION WITH MAPPING, THEN ADD WITH ORDER >>>>>>>>>>>>>
+    for n <- Siblings.nodes(key): // Take (siblings \ nodes)?
+      if not $nodes(_.key).contains(n.key):
+        $nodes + n // maybe push ordered?
+<<<<<<<<<<<<< ORDER A STREAM, TAKE SOME SUBSTREAM >>>>>>>>>>>>>
+    $nodes.order(key).take(num)
+
+<<<<<<<<<<<<< HOW TO MAKE A LAZY LOOKUP STREAM???? >>>>>>>>>>>>>
+  func lookupAway(key: Key, num: i32): ????
+
+  func update(node: Node): {Peer}bool
+    par:
+        update_bucket || update_siblings
+
+<<<<<<<<<<<<< MANY OPERATIONS WITH COLLECTIONS >>>>>>>>>>>>>
+  func updateList(nodes: []Node): {}[]Node
+    -- rearrange: take slices of nodes received by ???
+    -- update portion: take a portion, update them, then update next portion
+    -- update par portions: take all portions, update par
+    -- divide nodes into groups by buckets (indices), make into slices (rearrange), then update par portions
+
+
+  func lookupIterative(key: Key, num: i32, alpha: i32, pingExpiresIn): []Node

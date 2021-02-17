@@ -29,6 +29,8 @@ What we want:
 - Check if variable has a certain feature (map to bool)
 - Convert a tuple to smth (check for inclusion)
   
+zip
+
 union: union(A, B)
 intersection: inter(A, B)
 
