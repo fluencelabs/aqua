@@ -21,16 +21,19 @@ object Main extends IOApp.Simple {
       type Call[F[_]] = Kleisli[F, List[String], Option[String]]
 
 
-      val typeStr = """data Smth:
+      val typeStr = """-- This is some data
+                      |-- With a comment on first lines
+                      |data Smth:
                       |  a: B
                       |  c: []D
                       |  oloolo: Akaka""".stripMargin
 
       val serviceStr = """service MySrv:
                        func: A -> i32
+                       -- We can have comments inside
                        pure: -> []Cdef"""
 
-      val funcStr = """func do_smth( a: X, b: -> Z ):
+      val funcStr = """func do_smth( a: X, b: -> Z ): -- And comments after the line
                       |  line1
                       |  line2""".stripMargin
 

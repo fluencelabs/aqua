@@ -1,10 +1,8 @@
 
-import aqua.Main
-import org.junit.Test
-import org.junit.Assert._
+import org.scalatest.flatspec.AnyFlatSpec
 
-class Test1 {
-  @Test def t1(): Unit = {
-    //assertEquals("I was compiled by dotty :)", Main.msg)
+class Test1 extends AnyFlatSpec {
+  "test" should "run" in {
+
   }
 }

@@ -20,18 +20,19 @@ object Token {
   val ` : `: P[Unit] = P.char(':').surroundedBy(` `.?)
   val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
   val `Name`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
-  val `\n`: P0[Unit] = P.char('\n') | P.end
-  val ` \n`: P0[Unit] = ` `.?.void <* `\n`
+  val `\n`: P[Unit] = P.char('\n')
+  val `--`: P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
+  val ` \n`: P[Unit] = ((`--` *> P.charsWhile(_ != '\n')).?.void *> ` `.?.void).with1 *> `\n`
   val `,`: P[Unit] = P.char(',') <* ` `.?
   val `(`: P[Unit] = ` `.?.with1 *> P.char('(') <* ` `.?
   val `)`: P[Unit] = ` `.?.with1 *> P.char(')') <* ` `.?
   val `->`: P[Unit] = ` `.?.with1 *> P.string("->") <* ` `.?
 
   def comma[T](p: P[T]): P[NonEmptyList[T]] =
-    P.repSep(p, `,` <* ` \n`.?)
+    P.repSep(p, `,` <* ` \n`.rep0)
 
   def comma0[T](p: P[T]): P0[List[T]] =
-    P.repSep0(p, `,` <* ` \n`.?)
+    P.repSep0(p, `,` <* ` \n`.rep0)
 
   def indented[T](p: P[T]): P[NonEmptyList[T]] =
     ` `.flatMap(
