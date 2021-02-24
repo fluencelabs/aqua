@@ -10,7 +10,7 @@ import cats.parse.{Parser ⇒ P}
 sealed trait Block
 case class DefType(name: String, fields: NonEmptyMap[String, DataType]) extends Block
 case class DefService(name: String, funcs: NonEmptyMap[String, ArrowType]) extends Block
-case class DefFunc(name: String, args: Map[String, Type], body: NonEmptyList[FuncOp]) extends Block
+case class DefFunc(name: String, args: Map[String, Type], body: NonEmptyList[FuncOp], ret: Option[DataType]) extends Block
 
 object DefType {
   val `dname`: P[String] = `data` *> ` ` *> Name <* ` `.? <* `:` <* ` \n`
@@ -27,13 +27,12 @@ object DefFunc {
   val `funcdef`: P[(String, ArrowType)] =
     (`name` <* ` : `) ~ `arrowdef`
 
-
   val `funcname`: P[String] = ` `.?.with1 *> `func` *> ` ` *> name <* ` `.?
   val `funcargs`: P[Map[String, Type]] =
     `(` *> comma0((`name` <* ` : `) ~ `typedef`).map(_.toMap) <* `)`
   val `deffunc`: P[DefFunc] =
-    (`funcname` ~ (`funcargs` <* ` : ` <* ` \n`) ~  FuncOp.body).map {
-      case ((n, a), b) ⇒ DefFunc(n, a, b)
+    (`funcname` ~ (`funcargs` ~ (`->` *> `datatypedef`).? <*  ` : ` <* ` \n`) ~  FuncOp.body).map {
+      case ((n, (a, r)), b) ⇒ DefFunc(n, a, b, r)
     }
 
 }

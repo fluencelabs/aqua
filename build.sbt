@@ -1,7 +1,7 @@
-val dottyVersion = "2.13.4"
-//val dottyVersion = "3.0.0-M3"
+val dottyVersion = "2.13.5"
+//val dottyVersion = "3.0.0-RC1"
 
-val catsV = "2.3.1"
+val catsV = "2.4.2"
 
 lazy val root = project
   .in(file("."))
@@ -14,8 +14,8 @@ lazy val root = project
     mainClass in (Compile, run) := Some("aqua.Main"),
 
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % "3.0.0-M5",
-      "org.typelevel" %% "cats-parse" % "0.3.0",
+      "org.typelevel" %% "cats-effect" % "3.0.0-RC2",
+      "org.typelevel" %% "cats-parse" % "0.3.1",
       "org.typelevel" %% "cats-free" % catsV
     ),
 
