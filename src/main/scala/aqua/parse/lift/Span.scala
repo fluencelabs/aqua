@@ -1,5 +1,6 @@
 package aqua.parse.lift
 
+import cats.{Comonad, Functor}
 import cats.parse.{Parser ⇒ P}
 
 import scala.language.implicitConversions
@@ -7,6 +8,14 @@ import scala.language.implicitConversions
 case class Span[T](startIndex: Int, endIndex: Int, value: T)
 
 object Span {
+
+  implicit object spanComonad extends Comonad[Span] {
+    override def extract[A](x: Span[A]): A = x.value
+
+    override def coflatMap[A, B](fa: Span[A])(f: Span[A] ⇒ B): Span[B] = fa.copy(value = f(fa))
+
+    override def map[A, B](fa: Span[A])(f: A ⇒ B): Span[B] = fa.copy(value = f(fa.value))
+  }
 
   implicit object spanLiftParser extends LiftParser[Span] {
 

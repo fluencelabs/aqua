@@ -10,7 +10,7 @@ import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.parse.{Parser ⇒ P}
 
 sealed trait Block[F[_]]
-case class DefType[F[_]](name: F[String], fields: NonEmptyMap[String, DataType]) extends Block[F]
+case class DefType[F[_]](name: F[String], fields: NonEmptyMap[String, F[DataType]]) extends Block[F]
 case class DefService[F[_]](name: F[String], funcs: NonEmptyMap[String, ArrowType]) extends Block[F]
 
 case class FuncHead[F[_]](name: F[String], args: Map[String, Type], ret: Option[DataType])
@@ -20,7 +20,7 @@ case class DefFunc[F[_]](head: FuncHead[F], body: NonEmptyList[F[FuncOp[F]]]) ex
 object DefType {
   def `dname`[F[_]: LiftParser]: P[F[String]] = `data` *> ` ` *> Name.lift <* ` `.? <* `:` <* ` \n*`
 
-  val `dataname`: P[(String, DataType)] = (`name` <* ` : `) ~ `datatypedef`
+  def `dataname`[F[_]: LiftParser]: P[(String, F[DataType])] = (`name` <* ` : `) ~ `datatypedef`.lift
 
   def `deftype`[F[_]: LiftParser]: P[DefType[F]] =
     (`dname` ~ indented(`dataname`)).map {
