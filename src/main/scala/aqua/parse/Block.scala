@@ -1,13 +1,13 @@
 package aqua.parse
 
-import aqua.parse.DataType.`datatypedef`
+import aqua.parse.DataType.{`customtypedef`, `datatypedef`}
 import aqua.parse.lexer.Token._
 import aqua.parse.Type.{`arrowdef`, `typedef`}
 import aqua.parse.lift.LiftParser
 import aqua.parse.lift.LiftParser._
 import cats.Functor
 import cats.data.{NonEmptyList, NonEmptyMap}
-import cats.parse.{Parser ⇒ P}
+import cats.parse.{Parser => P}
 
 sealed trait Block[F[_]]
 case class DefType[F[_]](name: F[String], fields: NonEmptyMap[String, F[DataType]]) extends Block[F]
@@ -16,6 +16,7 @@ case class DefService[F[_]](name: F[String], funcs: NonEmptyMap[String, ArrowTyp
 case class FuncHead[F[_]](name: F[String], args: Map[String, Type], ret: Option[DataType])
 
 case class DefFunc[F[_]](head: FuncHead[F], body: NonEmptyList[F[FuncOp[F]]]) extends Block[F]
+case class DefAlias[F[_]](alias: CustomType, target: Type) extends Block[F]
 
 object DefType {
   def `dname`[F[_]: LiftParser]: P[F[String]] = `data` *> ` ` *> Name.lift <* ` `.? <* `:` <* ` \n*`
@@ -61,8 +62,18 @@ object DefService {
     }
 }
 
+object DefAlias {
+
+  def `defalias`[F[_]: LiftParser]: P[DefAlias[F]] =
+    ((`alias` *> ` ` *> `customtypedef` <* ` : `) ~ `typedef`).map {
+      case (ct, t) => DefAlias(ct, t)
+    }
+}
+
 object Block {
 
   def block[F[_]: LiftParser: Functor]: P[Block[F]] =
-    ` \n*`.rep0.with1 *> P.oneOf(DefType.`deftype` :: DefService.`defservice` :: DefFunc.`deffunc` :: Nil)
+    ` \n*`.rep0.with1 *> P.oneOf(
+      DefType.`deftype` :: DefService.`defservice` :: DefFunc.`deffunc` :: DefAlias.`defalias` :: Nil
+    )
 }

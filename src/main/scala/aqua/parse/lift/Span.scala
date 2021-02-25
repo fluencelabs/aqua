@@ -1,7 +1,8 @@
 package aqua.parse.lift
 
-import cats.{Comonad, Functor}
+import cats.Comonad
 import cats.parse.{Parser ⇒ P}
+import cats.free.Free
 
 import scala.language.implicitConversions
 

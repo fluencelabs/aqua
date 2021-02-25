@@ -14,6 +14,7 @@ object Token {
 
   val ` ` : P[String] = P.charsWhile(fSpaces)
   val `data`: P[Unit] = P.string("data")
+  val `alias`: P[Unit] = P.string("alias")
   val `service`: P[Unit] = P.string("service")
   val `func`: P[Unit] = P.string("func")
   val `on`: P[Unit] = P.string("on")
