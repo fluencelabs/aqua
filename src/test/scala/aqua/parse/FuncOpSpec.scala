@@ -6,43 +6,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class FuncOpSpec extends AnyFlatSpec with Matchers with EitherValues{
-  /**
-   * line variants:
-func(...)
-x <- func(...)
-Ability.func(...)
-x <- Ability.func(...)
-
-par line
-xor line
-
-on peer:
-  indented lines*
-
-Ability "const"
-Ability service.id
-Ability:
-  // we're on a local node
-  call smth
-  res.id
-
-func {Need, x}(y: i32, z: {x}i64 -> Y, p: -> {x}) -> {x}Bool:
-
-Ability keyword, parser
-Literal, true/false
-AbilityResolve: literal, lens, or arrow that resolves to a string id
-
-try:
- ...
-catch( errn)?:
- ...
-
-
-if a == != b:
-
-else:
-
-   */
 
   "func calls" should "parse func()" in {
     FuncOp.`funcop`.parseAll("func()") should be(Right(FuncCall("func", Nil)))
@@ -81,11 +44,11 @@ else:
   "on" should "parse on x: y" in {
     val fCall = AbilityFuncCall("Ab", FuncCall("func", Nil))
     val extr = Extract("x", fCall)
-    val call = FuncCall("call", VarLambda("smth", None) :: Nil)
+    val call = FuncCall("call", Literal("true", BasicType.bool) :: Nil)
 
     val script = """on peer.id:
                    | x <- Ab.func()
-                   | call(smth)""".stripMargin
+                   | call(true)""".stripMargin
 
     FuncOp.`funcop`.parseAll(script).right.value should be(On(VarLambda("peer", Some("id")), NonEmptyList.of(extr, call)))
   }
@@ -100,4 +63,27 @@ else:
 
     FuncOp.`funcop`.parseAll(script) should be('right)
   }
+
+  /*
+  TODO: xor1
+try:
+ ...
+catch( errn)?:
+ ...
+(next)
+   */
+  /*
+  TODO: xor2
+if a == != b:
+ ...
+else:
+ ...
+(next)
+   */
+  /*
+  TODO: ability from lens
+   */
+  /*
+  TODO: fold, fold par, streams, ...
+   */
 }

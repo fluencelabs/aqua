@@ -9,14 +9,18 @@ case class ArrayType(data: DataType) extends DataType
 case class CustomType(name: String) extends DataType
 case class BasicType(name: String) extends DataType
 object BasicType {
-  val floatS = "f32" :: "f64" :: Nil
-  val numberS = "s32" :: "s64" :: "i32" :: "i64" :: floatS
-  val boolS = "bool" :: Nil
-  val allS = numberS ++ boolS
+  private val floatS = "f32" :: "f64" :: Nil
+  private val signedS = "s32" :: "s64" :: floatS
+  private val numberS = "i32" :: "i64" :: signedS
+  private val boolS = "bool" :: Nil
+  private val stringS = "string" :: Nil
+  private val allS = numberS ++ boolS ++ stringS
 
   val float = floatS.map(BasicType(_))
+  val signed = signedS.map(BasicType(_))
   val number = numberS.map(BasicType(_))
   val bool = boolS.map(BasicType(_))
+  val string = stringS.map(BasicType(_))
 
   val `basictypedef`: P[BasicType] =
     P.oneOf(

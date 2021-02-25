@@ -3,11 +3,7 @@ package aqua.parse
 import aqua.parse.Token._
 import cats.data.NonEmptyList
 import cats.parse.{Parser ⇒ P}
-
-// TODO could be const
-sealed trait Value
-case class VarLambda(name: String, lambda: Option[String]) extends Value
-case class Literal(value: String, ts: List[BasicType]) extends Value
+import Value.`value`
 
 sealed trait FuncOp
 sealed trait InstrOp extends FuncOp
@@ -29,17 +25,9 @@ case class AbilityId(ability: String, id: Value) extends AbilityResolve
 
 object FuncOp {
 
-  val notLambdaSymbols = Set(' ', ',', '\n', ')', ':')
-
-  val varLambda: P[VarLambda] = (`name` ~ (`.` *> P.charsWhile(c ⇒ !notLambdaSymbols(c))).?).map{
-    case (n, l) ⇒ VarLambda(n, l)
-  }
-
-  // TODO parse literals
-  val value: P[Value] = varLambda
 
   val funcCall: P[FuncCall] =
-    (`name` ~ P.repSep0(value, `,`).between(`(`, `)`)).map{
+    (`name` ~ P.repSep0(`value`, `,`).between(`(`, `)`)).map{
       case (fnName, args) ⇒ FuncCall(fnName, args)
     }
 
@@ -54,14 +42,14 @@ object FuncOp {
     case (v, f) ⇒ Extract(v, f)
   }
 
-  val abilityResolve: P[AbilityResolve] = ((`Name` <* ` `) ~ value).map{
+  val abilityResolve: P[AbilityResolve] = ((`Name` <* ` `) ~ `value`).map{
     case (n, v) ⇒ AbilityId(n, v)
   }
 
   // TODO can't be in Par, can be in On
   val execOp: P[ExecOp] = P.oneOf( callOp.backtrack :: abilityResolve.backtrack :: extract :: Nil)
 
-  val startOn: P[Value] = `on` *> ` ` *> value <* ` `.? <* `:` <* ` \n*`
+  val startOn: P[Value] = `on` *> ` ` *> `value` <* ` `.? <* `:` <* ` \n*`
 
   val execOn: P[On] =
     (startOn ~ indented(execOp)).map{
