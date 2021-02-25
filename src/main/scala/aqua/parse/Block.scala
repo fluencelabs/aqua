@@ -1,25 +1,28 @@
 package aqua.parse
 
 import aqua.parse.DataType.`datatypedef`
-import aqua.parse.Token._
+import aqua.parse.lexer.Token._
 import aqua.parse.Type.{`arrowdef`, `typedef`}
+import aqua.parse.lift.LiftParser
+import aqua.parse.lift.LiftParser._
+import cats.Functor
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.parse.{Parser ⇒ P}
 
-sealed trait Block
-case class DefType(name: String, fields: NonEmptyMap[String, DataType]) extends Block
-case class DefService(name: String, funcs: NonEmptyMap[String, ArrowType]) extends Block
+sealed trait Block[F[_]]
+case class DefType[F[_]](name: F[String], fields: NonEmptyMap[String, DataType]) extends Block[F]
+case class DefService[F[_]](name: F[String], funcs: NonEmptyMap[String, ArrowType]) extends Block[F]
 
-case class FuncHead(name: String, args: Map[String, Type], ret: Option[DataType])
+case class FuncHead[F[_]](name: F[String], args: Map[String, Type], ret: Option[DataType])
 
-case class DefFunc(head: FuncHead, body: NonEmptyList[FuncOp]) extends Block
+case class DefFunc[F[_]](head: FuncHead[F], body: NonEmptyList[F[FuncOp[F]]]) extends Block[F]
 
 object DefType {
-  val `dname`: P[String] = `data` *> ` ` *> Name <* ` `.? <* `:` <* ` \n*`
+  def `dname`[F[_]: LiftParser]: P[F[String]] = `data` *> ` ` *> Name.lift <* ` `.? <* `:` <* ` \n*`
 
   val `dataname`: P[(String, DataType)] = (`name` <* ` : `) ~ `datatypedef`
 
-  val `deftype`: P[DefType] =
+  def `deftype`[F[_]: LiftParser]: P[DefType[F]] =
     (`dname` ~ indented(`dataname`)).map {
       case (n, t) ⇒ DefType(n, t.toNem)
     }
@@ -30,17 +33,17 @@ object DefFunc {
   val `funcdef`: P[(String, ArrowType)] =
     (`name` <* ` : `) ~ `arrowdef`
 
-  val `funcname`: P[String] = ` `.?.with1 *> `func` *> ` ` *> name <* ` `.?
+  def `funcname`[F[_]: LiftParser]: P[F[String]] = ` `.?.with1 *> `func` *> ` ` *> name.lift <* ` `.?
 
   val `funcargs`: P[Map[String, Type]] =
     `(` *> comma0((`name` <* ` : `) ~ `typedef`).map(_.toMap) <* `)`
 
-  val `funchead`: P[FuncHead] =
+  def `funchead`[F[_]: LiftParser]: P[FuncHead[F]] =
     (`funcname` ~ (`funcargs` ~ (`->` *> `datatypedef`).?)).map {
       case (n, (a, r)) ⇒ FuncHead(n, a, r)
     }
 
-  val `deffunc`: P[DefFunc] =
+  def `deffunc`[F[_]: LiftParser: Functor]: P[DefFunc[F]] =
     ((`funchead` <* ` : ` <* ` \n*`) ~ FuncOp.body).map {
       case (h, b) ⇒ DefFunc(h, b)
     }
@@ -50,9 +53,9 @@ object DefFunc {
 object DefService {
   import DefFunc.`funcdef`
 
-  val `servicename`: P[String] = `service` *> ` ` *> Name <* ` `.? <* `:` <* ` \n*`
+  def `servicename`[F[_]: LiftParser]: P[F[String]] = `service` *> ` ` *> Name.lift <* ` `.? <* `:` <* ` \n*`
 
-  val `defservice`: P[DefService] =
+  def `defservice`[F[_]: LiftParser]: P[DefService[F]] =
     (`servicename` ~ indented(`funcdef`).map(_.toNem)).map {
       case (n, f) ⇒ DefService(n, f)
     }
@@ -60,6 +63,6 @@ object DefService {
 
 object Block {
 
-  val block: P[Block] =
+  def block[F[_]: LiftParser: Functor]: P[Block[F]] =
     ` \n*`.rep0.with1 *> P.oneOf(DefType.`deftype` :: DefService.`defservice` :: DefFunc.`deffunc` :: Nil)
 }

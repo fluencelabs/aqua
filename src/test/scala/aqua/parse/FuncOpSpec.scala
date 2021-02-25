@@ -1,51 +1,59 @@
 package aqua.parse
 
+import aqua.parse.lexer.{Literal, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import aqua.parse.lift.LiftParser.Implicits.idLiftParser
+import cats.Id
 
 class FuncOpSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "func calls" should "parse func()" in {
     FuncOp.`funcop`.parseAll("func()") should be(Right(FuncCall("func", Nil)))
-    FuncOp.`funcop`.parseAll("func(arg)") should be(Right(FuncCall("func", VarLambda("arg", None) :: Nil)))
+    FuncOp.`funcop`.parseAll("func(arg)") should be(Right(FuncCall[Id]("func", VarLambda("arg", None) :: Nil)))
     FuncOp.`funcop`.parseAll("func(arg.doSomeThing)") should be(
-      Right(FuncCall("func", VarLambda("arg", Some("doSomeThing")) :: Nil))
+      Right(FuncCall[Id]("func", VarLambda("arg", Some("doSomeThing")) :: Nil))
     )
     FuncOp.`funcop`.parseAll("func(arg.doSomeThing, arg2)") should be(
-      Right(FuncCall("func", VarLambda("arg", Some("doSomeThing")) :: VarLambda("arg2", None) :: Nil))
+      Right(FuncCall[Id]("func", VarLambda("arg", Some("doSomeThing")) :: VarLambda("arg2", None) :: Nil))
     )
   }
 
   "ability calls" should "parse Ab.func()" in {
-    FuncOp.`funcop`.parseAll("Ab.func()") should be(Right(AbilityFuncCall("Ab", FuncCall("func", Nil))))
+    FuncOp.`funcop`.parseAll("Ab.func()") should be(Right(AbilityFuncCall[Id]("Ab", FuncCall[Id]("func", Nil))))
     FuncOp.`funcop`.parseAll("Ab.func(arg)") should be(
-      Right(AbilityFuncCall("Ab", FuncCall("func", VarLambda("arg", None) :: Nil)))
+      Right(AbilityFuncCall[Id]("Ab", FuncCall[Id]("func", VarLambda("arg", None) :: Nil)))
     )
     FuncOp.`funcop`.parseAll("Ab.func(arg.doSomeThing)") should be(
-      Right(AbilityFuncCall("Ab", FuncCall("func", VarLambda("arg", Some("doSomeThing")) :: Nil)))
+      Right(AbilityFuncCall[Id]("Ab", FuncCall[Id]("func", VarLambda("arg", Some("doSomeThing")) :: Nil)))
     )
     FuncOp.`funcop`.parseAll("Ab.func(arg.doSomeThing, arg2)") should be(
       Right(
-        AbilityFuncCall("Ab", FuncCall("func", VarLambda("arg", Some("doSomeThing")) :: VarLambda("arg2", None) :: Nil))
+        AbilityFuncCall[Id](
+          "Ab",
+          FuncCall[Id]("func", VarLambda("arg", Some("doSomeThing")) :: VarLambda("arg2", None) :: Nil)
+        )
       )
     )
   }
 
   "extracting" should "parse x <- func()" in {
-    FuncOp.`funcop`.parseAll("someThing <- func()") should be(Right(Extract("someThing", FuncCall("func", Nil))))
+    FuncOp.`funcop`.parseAll("someThing <- func()") should be(
+      Right(Extract[Id]("someThing", FuncCall[Id]("func", Nil)))
+    )
   }
 
   "extracting" should "parse x <- Ab.func()" in {
-    val fCall = AbilityFuncCall("Ab", FuncCall("func", Nil))
-    FuncOp.`funcop`.parseAll("x <- Ab.func()") should be(Right(Extract("x", fCall)))
+    val fCall = AbilityFuncCall[Id]("Ab", FuncCall[Id]("func", Nil))
+    FuncOp.`funcop`.parseAll("x <- Ab.func()") should be(Right(Extract[Id]("x", fCall)))
   }
 
   // TODO test with literals
   "ability resolve" should "parse id getter" in {
-    FuncOp.`funcop`.parseAll("Ab x") should be(Right(AbilityId("Ab", VarLambda("x", None))))
-    FuncOp.`funcop`.parseAll("Ab x.id") should be(Right(AbilityId("Ab", VarLambda("x", Some("id")))))
+    FuncOp.`funcop`.parseAll("Ab x") should be(Right(AbilityId[Id]("Ab", VarLambda("x", None))))
+    FuncOp.`funcop`.parseAll("Ab x.id") should be(Right(AbilityId[Id]("Ab", VarLambda("x", Some("id")))))
   }
 
   "on" should "parse startOn" in {
@@ -54,10 +62,10 @@ class FuncOpSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "on" should "parse on x: y" in {
-    val fCall = AbilityFuncCall("Ab", FuncCall("func", Nil))
-    val extr = Extract("x", fCall)
-    val resl = AbilityId("Peer", Literal("\"some id\"", BasicType.string))
-    val call = FuncCall("call", Literal("true", BasicType.bool) :: Nil)
+    val fCall = AbilityFuncCall[Id]("Ab", FuncCall[Id]("func", Nil))
+    val extr = Extract[Id]("x", fCall)
+    val resl = AbilityId[Id]("Peer", Literal("\"some id\"", BasicType.string))
+    val call = FuncCall[Id]("call", Literal("true", BasicType.bool) :: Nil)
 
     val script = """on peer.id:
                    | x <- Ab.func()
@@ -65,12 +73,12 @@ class FuncOpSpec extends AnyFlatSpec with Matchers with EitherValues {
                    | call(true)""".stripMargin
 
     FuncOp.`funcop`.parseAll(script).right.value should be(
-      On(VarLambda("peer", Some("id")), NonEmptyList.of(extr, resl, call))
+      On[Id](VarLambda("peer", Some("id")), NonEmptyList.of(extr, resl, call))
     )
   }
 
   "par" should "parse" in {
-    FuncOp.`funcop`.parseAll("par func()") should be(Right(Par(FuncCall("func", Nil))))
+    FuncOp.`funcop`.parseAll("par func()") should be(Right(Par[Id](FuncCall[Id]("func", Nil))))
 
     val script = """par on peer.id:
                    |

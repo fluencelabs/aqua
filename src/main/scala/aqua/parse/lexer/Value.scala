@@ -1,8 +1,8 @@
-package aqua.parse
+package aqua.parse.lexer
 
-import aqua.parse.Token._
-import cats.parse.{Parser ⇒ P}
-import cats.parse.Numbers
+import aqua.parse.BasicType
+import aqua.parse.lexer.Token._
+import cats.parse.{Numbers, Parser ⇒ P}
 
 sealed trait Value
 case class VarLambda(name: String, lambda: Option[String]) extends Value

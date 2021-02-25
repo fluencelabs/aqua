@@ -1,13 +1,16 @@
 package aqua.parse
 
+import aqua.parse.lexer.{Literal, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import aqua.parse.lift.LiftParser.Implicits.idLiftParser
+import cats.Id
 
 class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  private val getTimeHead = FuncHead(
+  private val getTimeHead = FuncHead[Id](
     "getTime",
     Map("peer" -> CustomType("PeerId"), "ret" -> ArrowType(BasicType("i32") :: Nil, BasicType("()"))),
     Some(BasicType("string"))
@@ -47,17 +50,17 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
         | ret(t)""".stripMargin
 
     DefFunc.`deffunc`.parseAll(func).right.value should be(
-      DefFunc(
+      DefFunc[Id](
         getTimeHead,
         NonEmptyList.of(
-          On(
+          On[Id](
             VarLambda("peer", None),
             NonEmptyList.of(
-              AbilityId("Peer", Literal("\"peer\"", BasicType.string)),
-              Extract("t", AbilityFuncCall("Peer", FuncCall("timestamp", Nil)))
+              AbilityId[Id]("Peer", Literal("\"peer\"", BasicType.string)),
+              Extract[Id]("t", AbilityFuncCall[Id]("Peer", FuncCall[Id]("timestamp", Nil)))
             )
           ),
-          FuncCall("ret", VarLambda("t", None) :: Nil)
+          FuncCall[Id]("ret", VarLambda("t", None) :: Nil)
         )
       )
     )
