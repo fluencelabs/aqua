@@ -17,9 +17,7 @@ object Main extends IOApp.Simple {
 
       println(air.show)
 
-
       type Call[F[_]] = Kleisli[F, List[String], Option[String]]
-
 
       val typeStr = """-- This is some data
                       |-- With a comment on first lines
@@ -34,8 +32,8 @@ object Main extends IOApp.Simple {
                        pure: -> []Cdef"""
 
       val funcStr = """func do_smth( a: X, b: -> Z ): -- And comments after the line
-                      |  line1
-                      |  line2""".stripMargin
+                      |  b()
+                      |  x(a)""".stripMargin
 
       def tryParse(str: String) =
         Aqua.`parser`.parseAll(str) match {
@@ -56,4 +54,3 @@ object Main extends IOApp.Simple {
     }
 
 }
-

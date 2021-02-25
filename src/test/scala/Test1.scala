@@ -1,11 +1,11 @@
-
 import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class Test1 extends AnyFlatSpec {
+class Test1 extends AnyFlatSpec with Matchers {
   "test" should "run" in {
 
     import cats.parse.{Parser0 ⇒ P0, Parser => P, Numbers}
-/*
+    /*
 
 def getTime(peer: PeerId, reply: i64 -> string) -> string =
   on peer:
@@ -57,6 +57,6 @@ xor line
 on peer:
   indented lines*
 
- */
+     */
   }
 }

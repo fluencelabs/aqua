@@ -15,12 +15,12 @@ case class FuncHead(name: String, args: Map[String, Type], ret: Option[DataType]
 case class DefFunc(head: FuncHead, body: NonEmptyList[FuncOp]) extends Block
 
 object DefType {
-  val `dname`: P[String] = `data` *> ` ` *> Name <* ` `.? <* `:` <* ` \n`
+  val `dname`: P[String] = `data` *> ` ` *> Name <* ` `.? <* `:` <* ` \n*`
 
   val `dataname`: P[(String, DataType)] = (`name` <* ` : `) ~ `datatypedef`
 
   val `deftype`: P[DefType] =
-    (`dname` ~ indented(`dataname` <* ` \n`.?)).map {
+    (`dname` ~ indented(`dataname`)).map {
       case (n, t) ⇒ DefType(n, t.toNem)
     }
 }
@@ -50,14 +50,16 @@ object DefFunc {
 object DefService {
   import DefFunc.`funcdef`
 
-  val `servicename`: P[String] = `service` *> ` ` *> Name <* ` `.? <* `:` <* ` \n`
+  val `servicename`: P[String] = `service` *> ` ` *> Name <* ` `.? <* `:` <* ` \n*`
 
   val `defservice`: P[DefService] =
-    (`servicename` ~ indented(`funcdef` <* ` \n`.?).map(_.toNem)).map {
+    (`servicename` ~ indented(`funcdef`).map(_.toNem)).map {
       case (n, f) ⇒ DefService(n, f)
     }
 }
 
 object Block {
-  val block: P[Block] = P.oneOf(DefType.`deftype` :: DefService.`defservice` :: DefFunc.`deffunc` :: Nil)
+
+  val block: P[Block] =
+    ` \n*`.rep0.with1 *> P.oneOf(DefType.`deftype` :: DefService.`defservice` :: DefFunc.`deffunc` :: Nil)
 }
