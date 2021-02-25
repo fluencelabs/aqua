@@ -3,10 +3,11 @@ package aqua.parse
 import aqua.parse.Token._
 import cats.data.NonEmptyList
 import cats.parse.{Parser ⇒ P}
-import DataType.`customtypedef`
 
 // TODO could be const
-case class VarLambda(name: String, lambda: Option[String])
+sealed trait Value
+case class VarLambda(name: String, lambda: Option[String]) extends Value
+case class Literal(value: String, ts: List[BasicType]) extends Value
 
 sealed trait FuncOp
 sealed trait InstrOp extends FuncOp
@@ -14,13 +15,17 @@ sealed trait InstrOp extends FuncOp
 sealed trait ExecOp extends InstrOp
 sealed trait CallOp extends ExecOp
 
-case class FuncCall(name: String, args: List[VarLambda]) extends CallOp
-case class AbilityFuncCall(ability: CustomType, call: FuncCall) extends CallOp
+case class FuncCall(name: String, args: List[Value]) extends CallOp
+case class AbilityFuncCall(ability: String, call: FuncCall) extends CallOp
 case class Extract(v: String, from: CallOp) extends ExecOp
 
-case class On(peer: VarLambda, ops: NonEmptyList[ExecOp]) extends InstrOp
+case class On(peer: Value, ops: NonEmptyList[ExecOp]) extends InstrOp
 
 case class Par(op: InstrOp) extends FuncOp
+
+// TODO: can't be in Par, can be in On
+sealed trait AbilityResolve extends ExecOp
+case class AbilityId(ability: String, id: Value) extends AbilityResolve
 
 object FuncOp {
 
@@ -30,13 +35,16 @@ object FuncOp {
     case (n, l) ⇒ VarLambda(n, l)
   }
 
+  // TODO parse literals
+  val value: P[Value] = varLambda
+
   val funcCall: P[FuncCall] =
-    (`name` ~ P.repSep0(varLambda, `,`).between(`(`, `)`)).map{
+    (`name` ~ P.repSep0(value, `,`).between(`(`, `)`)).map{
       case (fnName, args) ⇒ FuncCall(fnName, args)
     }
 
   val abilityFuncCall: P[AbilityFuncCall] =
-    ((`customtypedef` <* `.`) ~ funcCall).map{
+    ((`Name` <* `.`) ~ funcCall).map{
       case (abName, fc) ⇒ AbilityFuncCall(abName, fc)
     }
 
@@ -46,9 +54,14 @@ object FuncOp {
     case (v, f) ⇒ Extract(v, f)
   }
 
-  val execOp: P[ExecOp] = P.oneOf( callOp.backtrack :: extract :: Nil)
+  val abilityResolve: P[AbilityResolve] = ((`Name` <* ` `) ~ value).map{
+    case (n, v) ⇒ AbilityId(n, v)
+  }
 
-  val startOn: P[VarLambda] = `on` *> ` ` *> varLambda <* ` `.? <* `:` <* ` \n*`
+  // TODO can't be in Par, can be in On
+  val execOp: P[ExecOp] = P.oneOf( callOp.backtrack :: abilityResolve.backtrack :: extract :: Nil)
+
+  val startOn: P[Value] = `on` *> ` ` *> value <* ` `.? <* `:` <* ` \n*`
 
   val execOn: P[On] =
     (startOn ~ indented(execOp)).map{
