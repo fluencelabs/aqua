@@ -11,11 +11,11 @@ case class Literal(value: String, ts: List[BasicType]) extends Value
 object Value {
   val notLambdaSymbols = Set(' ', ',', '\n', ')', ':')
 
-  val varLambda: P[VarLambda] = (`name` ~ (`.` *> P.charsWhile(c ⇒ !notLambdaSymbols(c))).?).map{
+  val varLambda: P[VarLambda] = (`name` ~ (`.` *> P.charsWhile(c ⇒ !notLambdaSymbols(c))).?).map {
     case (n, l) ⇒ VarLambda(n, l)
   }
 
-  val bool: P[Literal] = P.oneOf( ("true" :: "false" :: Nil).map(t ⇒  P.string(t).as(Literal(t, BasicType.bool)) ))
+  val bool: P[Literal] = P.oneOf(("true" :: "false" :: Nil).map(t ⇒ P.string(t).as(Literal(t, BasicType.bool))))
 
   val num: P[Literal] = (P.char('-').?.with1 ~ Numbers.nonNegativeIntString).map {
     case (Some(_), n) ⇒ Literal(s"-$n", BasicType.signed)
@@ -23,12 +23,13 @@ object Value {
   }
 
   val float: P[Literal] =
-    (P.char('-').?.with1 ~ (Numbers.nonNegativeIntString <* P.char('.')) ~ Numbers.nonNegativeIntString)
-      .string
+    (P.char('-').?.with1 ~ (Numbers.nonNegativeIntString <* P.char('.')) ~ Numbers.nonNegativeIntString).string
       .map(Literal(_, BasicType.float))
 
+  // TODO make more sophisticated escaping/unescaping
   val string: P[Literal] =
-    (P.char('"') *> P.repUntil0(P.anyChar, !P.charWhere(_ != '\\') *> P.char('"'))).string.map(Literal(_, BasicType.string))
+    (`"` *> P.charsWhile0(_ != '"') <* `"`).string
+      .map(Literal(_, BasicType.string))
 
   val literal: P[Literal] = P.oneOf(bool :: float.backtrack :: num :: string :: Nil)
 

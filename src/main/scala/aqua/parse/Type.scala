@@ -8,6 +8,7 @@ sealed trait DataType extends Type
 case class ArrayType(data: DataType) extends DataType
 case class CustomType(name: String) extends DataType
 case class BasicType(name: String) extends DataType
+
 object BasicType {
   private val floatS = "f32" :: "f64" :: Nil
   private val signedS = "s32" :: "s64" :: floatS
@@ -24,7 +25,7 @@ object BasicType {
 
   val `basictypedef`: P[BasicType] =
     P.oneOf(
-      (BasicType.allS).map(n ⇒ P.string(n).as(BasicType(n)))
+      ("()" :: BasicType.allS).map(n ⇒ P.string(n).as(BasicType(n)))
     )
 }
 case class ArrowType(args: List[DataType], res: DataType) extends Type
@@ -34,15 +35,17 @@ object DataType {
 
   lazy val `arraytypedef`: P[ArrayType] = (P.string("[]") *> `datatypedef`).map(ArrayType)
 
-  val `datatypedef`: P[DataType] = P.oneOf( P.defer(`arraytypedef`) :: BasicType.`basictypedef` :: `customtypedef` :: Nil)
+  val `datatypedef`: P[DataType] =
+    P.oneOf(P.defer(`arraytypedef`) :: BasicType.`basictypedef` :: `customtypedef` :: Nil)
 }
 
 object Type {
 
   val `arrowdef`: P[ArrowType] =
-    (comma0(DataType.`datatypedef`).with1 ~ (`->` *> DataType.`datatypedef`))
-      .map{case (args, res) ⇒ ArrowType(args, res)}
+    (comma0(DataType.`datatypedef`).with1 ~ (`->` *> DataType.`datatypedef`)).map {
+      case (args, res) ⇒ ArrowType(args, res)
+    }
 
-  val `typedef`: P[Type] = P.oneOf(DataType.`datatypedef` :: `arrowdef` :: Nil)
+  val `typedef`: P[Type] = P.oneOf(`arrowdef`.backtrack :: DataType.`datatypedef` :: Nil)
 
 }
