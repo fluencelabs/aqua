@@ -10,14 +10,13 @@ sealed trait Error {
 
 case class SyntaxError(offset: Int, expectations: NonEmptyList[Expectation]) extends Error {
 
-  // TODO print expectations
   override def showForConsole(script: String): String =
     Span(offset, offset + 1)
       .focus(script, 3)
-      .map(_.toConsoleStr(Console.RED))
+      .map(_.toConsoleStr(s"Syntax error, expected: ${expectations.toList.mkString(", ")}", Console.RED))
       .getOrElse(
         "(offset is beyond the script)"
-      ) ++ s"\n${Console.RED}Syntax error${Console.RESET}, expected: ${expectations.toList.mkString(", ")}\n"
+      ) + "\n"
 }
 
 case class NamesError(span: Span, hint: String) extends Error {
@@ -25,6 +24,6 @@ case class NamesError(span: Span, hint: String) extends Error {
   override def showForConsole(script: String): String =
     span
       .focus(script, 3)
-      .map(_.toConsoleStr(Console.YELLOW))
-      .getOrElse("(offset is beyond the script)") ++ s"\n${Console.YELLOW}${hint}${Console.RESET}\n"
+      .map(_.toConsoleStr(hint, Console.YELLOW))
+      .getOrElse("(offset is beyond the script)") + "\n"
 }

@@ -17,7 +17,7 @@ case class DefService[F[_]](name: F[String], funcs: NonEmptyMap[String, ArrowTyp
 case class FuncHead[F[_]](name: F[String], args: Map[String, (F[String], F[Type])], ret: Option[F[DataType]])
 
 case class DefFunc[F[_]](head: FuncHead[F], body: NonEmptyList[F[FuncOp[F]]]) extends Block[F]
-case class DefAlias[F[_]](alias: CustomType, target: Type) extends Block[F]
+case class DefAlias[F[_]](alias: F[CustomType], target: F[Type]) extends Block[F]
 
 object DefType {
   def `dname`[F[_]: LiftParser]: P[F[String]] = `data` *> ` ` *> Name.lift <* ` `.? <* `:` <* ` \n*`
@@ -68,7 +68,7 @@ object DefService {
 object DefAlias {
 
   def `defalias`[F[_]: LiftParser]: P[DefAlias[F]] =
-    ((`alias` *> ` ` *> `customtypedef` <* ` : `) ~ `typedef`).map {
+    ((`alias` *> ` ` *> `customtypedef`.lift <* ` : `) ~ `typedef`.lift).map {
       case (ct, t) => DefAlias(ct, t)
     }
 }

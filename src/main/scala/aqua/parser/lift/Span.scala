@@ -15,12 +15,12 @@ case class Span(startIndex: Int, endIndex: Int) {
           .getLine(line)
           .map(l =>
             Span.Focus(
-              (Math.max(0, line - ctx) until line).map(map.getLine).toList.flatten, {
+              (Math.max(0, line - ctx) until line).map(i => map.getLine(i).map(i -> _)).toList.flatten, {
                 val (l1, l2) = l.splitAt(column)
                 val (lc, l3) = l2.splitAt(endIndex - startIndex)
-                (l1, lc, l3)
+                (line, l1, lc, l3)
               },
-              ((line + 1) to (line + ctx)).map(map.getLine).toList.flatten
+              ((line + 1) to (line + ctx)).map(i => map.getLine(i).map(i -> _)).toList.flatten
             )
           )
     }
@@ -29,24 +29,41 @@ case class Span(startIndex: Int, endIndex: Int) {
 
 object Span {
 
-  case class Focus(pre: List[String], line: (String, String, String), post: List[String]) {
+  case class Focus(pre: List[(Int, String)], line: (Int, String, String, String), post: List[(Int, String)]) {
 
-    def toConsoleStr(onLeft: String, onRight: String = Console.RESET): String =
-      pre.mkString("\n") +
+    private lazy val lastN = post.lastOption.map(_._1).getOrElse(line._1) + 1
+    private lazy val lastNSize = lastN.toString.length
+
+    private def formatLine(l: (Int, String), onLeft: String, onRight: String) =
+      formatLN(l._1, onLeft, onRight) + l._2
+
+    private def formatLN(ln: Int, onLeft: String, onRight: String) = {
+      val s = (ln + 1).toString
+      onLeft + s + (" " * (lastNSize - s.length)) + onRight + " "
+    }
+
+    def toConsoleStr(msg: String, onLeft: String, onRight: String = Console.RESET): String =
+      pre.map(formatLine(_, onLeft, onRight)).mkString("\n") +
         "\n" +
-        line._1 +
-        onLeft +
+        formatLN(line._1, onLeft, onRight) +
         line._2 +
-        onRight +
-        line._3 +
-        "\n" +
-        (" " * line._1.length) +
         onLeft +
-        ("^" * line._2.length) +
-        ("=" * line._3.length) +
+        line._3 +
+        onRight +
+        line._4 +
+        "\n" +
+        (" " * (line._2.length + lastNSize + 1)) +
+        onLeft +
+        ("^" * line._3.length) +
+        ("=" * line._4.length) +
         onRight +
         "\n" +
-        post.mkString("\n")
+        (" " * (line._2.length + lastNSize + 1)) +
+        onLeft +
+        msg +
+        onRight +
+        "\n" +
+        post.map(formatLine(_, onLeft, onRight)).mkString("\n")
   }
 
   type F[T] = (Span, T)

@@ -1,7 +1,7 @@
 package aqua
 
-import aqua.parser.{DefFunc, FuncOp}
-import aqua.parser.lexer.VarLambda
+import aqua.parser.{BasicType, DefFunc, FuncOp}
+import aqua.parser.lexer.{Literal, Value, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
 import org.scalatest.EitherValues
@@ -15,24 +15,32 @@ class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
   private val funcOpsP = (v: String) => FuncOp.body[Id].parseAll(v).right.value
   private val namesP = (v: String) => namesId(funcOpsP(v))
 
-  private implicit def setToMapS(set: Set[String]): Map[String, Id[String]] = set.map(s => s -> s).toMap
-  private implicit def setToMapV(set: Set[String]): Map[String, Id[VarLambda]] = set.map(s => s -> VarLambda(s)).toMap
+  private implicit def setToAccS(set: Set[String]): Names.Acc[Id, String] =
+    set.map(Names.Acc.str[Id]).foldLeft(Names.Acc.empty[Id, String])(_ add _)
+
+  private implicit def setToAccVar(set: Set[String]): Names.Acc[Id, VarLambda] =
+    set.map(s => Names.Acc.one[Id, VarLambda](s, VarLambda(s))).foldLeft(Names.Acc.empty[Id, VarLambda])(_ add _)
+
+  private implicit def setToAccVal(set: Set[String]): Names.Acc[Id, Value] =
+    set
+      .map(s => Names.Acc.one[Id, Value](s, Literal(s, BasicType.string)))
+      .foldLeft(Names.Acc.empty[Id, Value])(_ add _)
 
   "names" should "extract from funcops" in {
-    namesP(" func()") should be(Names[Id](expectArrows = Set("func")))
-    namesP(" fn(32)") should be(Names[Id](expectArrows = Set("fn")))
-    namesP(" fn(s)") should be(Names[Id](expectArrows = Set("fn"), importData = Set("s")))
-    namesP(" x <- fn(s)") should be(Names[Id](expectArrows = Set("fn"), importData = Set("s"), exportData = Set("x")))
+    namesP(" func()") should be(Names[Id](expectedArrows = Set("func")))
+    namesP(" fn(32)") should be(Names[Id](expectedArrows = Set("fn")))
+    namesP(" fn(s)") should be(Names[Id](expectedArrows = Set("fn"), importData = Set("s")))
+    namesP(" x <- fn(s)") should be(Names[Id](expectedArrows = Set("fn"), importData = Set("s"), exportData = Set("x")))
     namesP(" x <- fn(s)\n y <- fn(z)") should be(
-      Names[Id](expectArrows = Set("fn"), importData = Set("s", "z"), exportData = Set("x", "y"))
+      Names[Id](expectedArrows = Set("fn"), importData = Set("s", "z"), exportData = Set("x", "y"))
     )
     namesP(" x <- fn(s)\n y <- fn(x)") should be(
-      Names[Id](expectArrows = Set("fn"), importData = Set("s"), exportData = Set("x", "y"))
+      Names[Id](expectedArrows = Set("fn"), importData = Set("s"), exportData = Set("x", "y"))
     )
     namesP(""" Peer 42
              | x <- Peer.id()
              | y <- Op.identity()""".stripMargin) should be(
-      Names[Id](exportData = Set("x", "y"), resolvedAbilities = Set("Peer"), expectedAbilities = Set("Op"))
+      Names[Id](exportData = Set("x", "y"), resolvedAbilities = Set("Peer"), unresolvedAbilities = Set("Op"))
     )
     namesP(""" on p:
              |   x <- Peer.id()
@@ -41,8 +49,8 @@ class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
       Names[Id](
         importData = Set("p"),
         exportData = Set("x"),
-        expectedAbilities = Set("Peer"),
-        expectArrows = Set("arr")
+        unresolvedAbilities = Set("Peer"),
+        expectedArrows = Set("arr")
       )
     )
     namesP(""" on p:
@@ -52,8 +60,8 @@ class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
       Names[Id](
         importData = Set("p", "k", "z"),
         exportData = Set("x"),
-        expectedAbilities = Set("Peer"),
-        expectArrows = Set("arr")
+        unresolvedAbilities = Set("Peer"),
+        expectedArrows = Set("arr")
       )
     )
   }
@@ -87,8 +95,8 @@ class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
 
     Names.funcNames(funcAst) should be(
       Names[Id](
-        expectArrows = Set("finish"),
-        expectedAbilities = Set("Other"),
+        expectedArrows = Set("finish"),
+        unresolvedAbilities = Set("Other"),
         importData = Set("v")
       )
     )

@@ -7,6 +7,7 @@ import cats.Show
 import aqua.ir._
 import cats.data.{Kleisli, NonEmptyList, Validated, ValidatedNel}
 import cats.parse.LocationMap
+import cats.syntax.validated._
 
 object Main extends IOApp.Simple {
 
@@ -39,11 +40,13 @@ object Main extends IOApp.Simple {
                        |  b()
                        |  b(a, z)""".stripMargin
 
+      val aliasStr = """alias Akaka : i32"""
+
       def tryParse(str: String) =
         Aqua.parse(str) match {
-          case Right(v) ⇒ println(v)
-          case Left(err) ⇒
-            println(err.showForConsole(str))
+          case Validated.Valid(v) ⇒ println(v)
+          case Validated.Invalid(errs) ⇒
+            errs.map(_.showForConsole(str)).map(println)
         }
 
       assert(Aqua.`parser` ne null)
@@ -52,7 +55,8 @@ object Main extends IOApp.Simple {
       tryParse(serviceStr)
       tryParse(funcStr)
       tryParse(funcStr2)
-      tryParse((funcStr :: serviceStr :: typeStr :: Nil).reverse.mkString("\n \n"))
+      tryParse(aliasStr)
+      tryParse((funcStr :: serviceStr :: typeStr :: aliasStr :: Nil).reverse.mkString("\n \n"))
 
     }
 
