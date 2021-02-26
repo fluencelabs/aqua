@@ -35,13 +35,15 @@ object Main extends IOApp.Simple {
                       |  b()
                       |  x(a)""".stripMargin
 
+      val funcStr2 = """func do_smth( a: X, b: -> Z ): -- And comments after the line
+                       |  b()
+                       |  b(a, z)""".stripMargin
+
       def tryParse(str: String) =
-        Aqua.`parser`.parseAll(str) match {
+        Aqua.parse(str) match {
           case Right(v) ⇒ println(v)
           case Left(err) ⇒
-            System.err.println(err.expected)
-            System.err.println(str.substring(err.failedAtOffset))
-            System.err.println(Console.BLUE + "===========" + Console.RESET)
+            println(err.showForConsole(str))
         }
 
       assert(Aqua.`parser` ne null)
@@ -49,6 +51,7 @@ object Main extends IOApp.Simple {
       tryParse(typeStr)
       tryParse(serviceStr)
       tryParse(funcStr)
+      tryParse(funcStr2)
       tryParse((funcStr :: serviceStr :: typeStr :: Nil).reverse.mkString("\n \n"))
 
     }

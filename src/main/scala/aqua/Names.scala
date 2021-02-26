@@ -2,7 +2,7 @@ package aqua
 
 import aqua.parser.lexer.{Value, VarLambda}
 import aqua.parser._
-import cats.Comonad
+import cats.{Comonad, MonoidK}
 import cats.data.NonEmptyList
 import cats.syntax.comonad._
 import cats.syntax.functor._
@@ -29,18 +29,20 @@ object Names {
   case object ParMode extends CustomMode
   case object XorMode extends CustomMode
 
+  private def combineSeq[G[_]: Comonad](a: Names[G], b: Names[G]): Names[G] =
+    a.copy(
+      exportData = a.exportData ++ b.exportData,
+      importData = a.importData ++ b.importData.view.filterKeys(k => !a.exportData.contains(k)).toMap,
+      resolvedAbilities = if (b.peerId == a.peerId) a.resolvedAbilities ++ b.resolvedAbilities else a.resolvedAbilities,
+      expectedAbilities =
+        a.expectedAbilities ++ b.expectedAbilities.view.filterKeys(k => !a.resolvedAbilities.contains(k)).toMap,
+      expectArrows = a.expectArrows ++ b.expectArrows
+    )
+
   def funcOps[G[_]: Comonad](ops: NonEmptyList[G[FuncOp[G]]]): Names[G] =
     ops.map(funcOp[G]).foldLeft[Names[G]](Names[G]()) {
       case (acc, n) if n.mode.isEmpty =>
-        acc.copy(
-          exportData = acc.exportData ++ n.exportData,
-          importData = acc.importData ++ n.importData.view.filterKeys(k => !acc.exportData.contains(k)).toMap,
-          resolvedAbilities =
-            if (n.peerId == acc.peerId) acc.resolvedAbilities ++ n.resolvedAbilities else acc.resolvedAbilities,
-          expectedAbilities =
-            acc.expectedAbilities ++ n.expectedAbilities.view.filterKeys(k => !acc.resolvedAbilities.contains(k)).toMap,
-          expectArrows = acc.expectArrows ++ n.expectArrows
-        )
+        combineSeq(acc, n)
       case (acc, n) if n.mode.exists(_.extract == ParMode) =>
         acc.copy(
           exportData = acc.exportData ++ n.exportData,
@@ -115,4 +117,32 @@ object Names {
 
   def funcNames[G[_]: Comonad](func: DefFunc[G]): Names[G] =
     funcHeadNames(func.head, funcOps(func.body))
+
+  def blockNames[G[_]: Comonad](block: Block[G]): Names[G] =
+    block match {
+      case func: DefFunc[G] =>
+        funcNames(func)
+      case _ =>
+        // Until we care about types, there's no imports/exports
+        Names[G]()
+    }
+
+  def foldVerify[G[_]: Comonad](input: List[Names[G]]): Either[G[String], Names[G]] =
+    input.foldLeft[Either[G[String], Names[G]]](Right[G[String], Names[G]](Names[G]())) {
+      case (accE, ns) =>
+        accE.map(acc => combineSeq[G](acc, ns)).flatMap { acc =>
+          val maybeErr: Option[G[String]] = {
+            List(
+              acc.importData.headOption.map(_._2.as("Unknown variable")),
+              acc.expectArrows.headOption.map(_._2.as("Unknown arrow")),
+              acc.expectedAbilities.headOption.map(_._2.as("Unresolved ability"))
+            ).collectFirst {
+              case Some(v) => v
+            }
+          }
+
+          maybeErr.toLeft(acc)
+
+        }
+    }
 }
