@@ -18,12 +18,12 @@ class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
   private implicit def setToAccS(set: Set[String]): Names.Acc[Id, String] =
     set.map(Names.Acc.str[Id]).foldLeft(Names.Acc.empty[Id, String])(_ add _)
 
-  private implicit def setToAccVar(set: Set[String]): Names.Acc[Id, VarLambda] =
+  private def setToAccVar(set: Set[String]): Names.Acc[Id, VarLambda] =
     set.map(s => Names.Acc.one[Id, VarLambda](s, VarLambda(s))).foldLeft(Names.Acc.empty[Id, VarLambda])(_ add _)
 
   private implicit def setToAccVal(set: Set[String]): Names.Acc[Id, Value] =
     set
-      .map(s => Names.Acc.one[Id, Value](s, Literal(s, BasicType.string)))
+      .map(s => Names.Acc.one[Id, Value](s, VarLambda(s)))
       .foldLeft(Names.Acc.empty[Id, Value])(_ add _)
 
   "names" should "extract from funcops" in {
@@ -31,16 +31,16 @@ class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
     namesP(" fn(32)") should be(Names[Id](expectedArrows = Set("fn")))
     namesP(" fn(s)") should be(Names[Id](expectedArrows = Set("fn"), importData = Set("s")))
     namesP(" x <- fn(s)") should be(Names[Id](expectedArrows = Set("fn"), importData = Set("s"), exportData = Set("x")))
-    namesP(" x <- fn(s)\n y <- fn(z)") should be(
-      Names[Id](expectedArrows = Set("fn"), importData = Set("s", "z"), exportData = Set("x", "y"))
+    namesP(" x <- fn(s)\n y <- fn2(z)") should be(
+      Names[Id](expectedArrows = Set("fn", "fn2"), importData = Set("s", "z"), exportData = Set("x", "y"))
     )
-    namesP(" x <- fn(s)\n y <- fn(x)") should be(
-      Names[Id](expectedArrows = Set("fn"), importData = Set("s"), exportData = Set("x", "y"))
+    namesP(" x <- fn(s)\n y <- gn(x)") should be(
+      Names[Id](expectedArrows = Set("fn", "gn"), importData = Set("s"), exportData = Set("x", "y"))
     )
     namesP(""" Peer 42
-             | x <- Peer.id()
+             | x <- Cop.id()
              | y <- Op.identity()""".stripMargin) should be(
-      Names[Id](exportData = Set("x", "y"), resolvedAbilities = Set("Peer"), unresolvedAbilities = Set("Op"))
+      Names[Id](exportData = Set("x", "y"), resolvedAbilities = Set("Peer"), unresolvedAbilities = Set("Op", "Cop"))
     )
     namesP(""" on p:
              |   x <- Peer.id()

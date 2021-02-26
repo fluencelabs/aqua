@@ -28,7 +28,10 @@ object BasicType {
       ("()" :: BasicType.allS).map(n ⇒ P.string(n).as(BasicType(n)))
     )
 }
-case class ArrowType(args: List[DataType], res: DataType) extends Type
+sealed trait ArrowDef
+case class ArrowType(args: List[DataType], res: DataType) extends Type with ArrowDef
+
+case class AquaArrowType(args: List[Type], res: Option[DataType]) extends ArrowDef
 
 object DataType {
   val `customtypedef`: P[CustomType] = `Name`.map(CustomType)

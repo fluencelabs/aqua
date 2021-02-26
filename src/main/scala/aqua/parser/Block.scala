@@ -9,12 +9,17 @@ import cats.Comonad
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.parse.{Parser => P}
 import cats.syntax.comonad._
+import cats.syntax.functor._
 
 sealed trait Block[F[_]]
 case class DefType[F[_]](name: F[String], fields: NonEmptyMap[String, (F[String], F[DataType])]) extends Block[F]
 case class DefService[F[_]](name: F[String], funcs: NonEmptyMap[String, ArrowType]) extends Block[F]
 
-case class FuncHead[F[_]](name: F[String], args: Map[String, (F[String], F[Type])], ret: Option[F[DataType]])
+case class FuncHead[F[_]](name: F[String], args: List[(String, F[String], F[Type])], ret: Option[F[DataType]]) {
+
+  def toArrowDef(implicit F: Comonad[F]): F[AquaArrowType] =
+    name.as(AquaArrowType(args.map(_._3.extract), ret.map(_.extract)))
+}
 
 case class DefFunc[F[_]](head: FuncHead[F], body: NonEmptyList[F[FuncOp[F]]]) extends Block[F]
 case class DefAlias[F[_]](alias: F[CustomType], target: F[Type]) extends Block[F]
@@ -37,8 +42,8 @@ object DefFunc {
 
   def `funcname`[F[_]: LiftParser]: P[F[String]] = ` `.?.with1 *> `func` *> ` ` *> name.lift <* ` `.?
 
-  def `funcargs`[F[_]: LiftParser: Comonad]: P[Map[String, (F[String], F[Type])]] =
-    `(` *> comma0((`name`.lift <* ` : `) ~ `typedef`.lift).map(_.map(kv => kv._1.extract -> kv).toMap) <* `)`
+  def `funcargs`[F[_]: LiftParser: Comonad]: P[List[(String, F[String], F[Type])]] =
+    `(` *> comma0((`name`.lift <* ` : `) ~ `typedef`.lift).map(_.map(kv => (kv._1.extract, kv._1, kv._2))) <* `)`
 
   def `funchead`[F[_]: LiftParser: Comonad]: P[FuncHead[F]] =
     (`funcname` ~ (`funcargs` ~ (`->` *> `datatypedef`.lift).?)).map {

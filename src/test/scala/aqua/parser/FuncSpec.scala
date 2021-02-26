@@ -12,31 +12,31 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   private val getTimeHead = FuncHead[Id](
     "getTime",
-    Map(
-      "peer" -> ("peer", CustomType("PeerId")),
-      "ret" -> ("ret", ArrowType(BasicType("i32") :: Nil, BasicType("()")))
+    List(
+      ("peer", "peer", CustomType("PeerId")),
+      ("ret", "ret", ArrowType(BasicType("i32") :: Nil, BasicType("()")))
     ),
     Some(BasicType("string"))
   )
 
   "func header" should "parse" in {
-    DefFunc.`funchead`.parseAll("func some()").right.value should be(FuncHead("some", Map.empty, None))
+    DefFunc.`funchead`.parseAll("func some()").right.value should be(FuncHead("some", Nil, None))
     DefFunc.`funchead`.parseAll("func some(peer: i32)").right.value should be(
-      FuncHead[Id]("some", Map("peer" -> ("peer", BasicType("i32"))), None)
+      FuncHead[Id]("some", List(("peer", "peer", BasicType("i32"))), None)
     )
 
     DefFunc.`funchead`.parseAll("func some(peer: PeerId)").right.value should be(
-      FuncHead[Id]("some", Map("peer" -> ("peer", CustomType("PeerId"))), None)
+      FuncHead[Id]("some", List(("peer", "peer", CustomType("PeerId"))), None)
     )
     DefFunc.`funchead`.parseAll("func some(peer: PeerId, other: i32)").right.value should be(
-      FuncHead[Id]("some", Map("peer" -> ("peer", CustomType("PeerId")), "other" -> ("other", BasicType("i32"))), None)
+      FuncHead[Id]("some", List(("peer", "peer", CustomType("PeerId")), ("other", "other", BasicType("i32"))), None)
     )
     DefFunc.`funchead`.parseAll("func some(peer: PeerId, other: i32 -> i32)").right.value should be(
       FuncHead[Id](
         "some",
-        Map(
-          "peer" -> ("peer", CustomType("PeerId")),
-          "other" -> ("other", ArrowType(BasicType("i32") :: Nil, BasicType("i32")))
+        List(
+          ("peer", "peer", CustomType("PeerId")),
+          ("other", "other", ArrowType(BasicType("i32") :: Nil, BasicType("i32")))
         ),
         None
       )

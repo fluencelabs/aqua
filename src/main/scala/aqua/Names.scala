@@ -6,9 +6,7 @@ import cats.data.Validated.Valid
 import cats.{Comonad, Functor}
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.syntax.comonad._
-import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.syntax.validated._
 
 // Fully resolved Scope must have no expected abilities (all resolved)
 case class Names[F[_]](
@@ -26,10 +24,11 @@ case class Names[F[_]](
   definedAbilities: Names.Acc[F, DefService[F]] = Names.Acc.empty[F, DefService[F]],
   // Types can be defined and expected
   expectedTypes: Names.Acc[F, CustomType] = Names.Acc.empty[F, CustomType],
-  definedTypes: Names.Acc[F, Option[DefType[F]]] = Names.Acc.empty[F, Option[DefType[F]]],
+  definedTypes: Names.Acc[F, Either[Type, DefType[F]]] = Names.Acc.empty[F, Either[Type, DefType[F]]],
   // We don't know the types yet
   expectedArrows: Names.Acc[F, String] = Names.Acc.empty[F, String],
-  definedArrows: Names.Acc[F, String] = Names.Acc.empty[F, String],
+  definedFuncs: Names.Acc[F, DefFunc[F]] = Names.Acc.empty[F, DefFunc[F]],
+  localArrows: Names.Acc[F, ArrowType] = Names.Acc.empty[F, ArrowType],
   // Set when know
   mode: Option[F[Names.CustomMode]] = None
 )
@@ -56,6 +55,8 @@ object Names {
     def erase: Acc[F, T] = Acc.empty
 
     def addOne(n: String, v: F[T]) = add(Acc.one(n, v))
+
+    def takeKeys(keys: Set[String]) = copy(data = data.view.filterKeys(keys).toMap)
   }
 
   object Acc {
@@ -77,8 +78,8 @@ object Names {
       resolvedAbilities =
         if (b.peerId == a.peerId) a.resolvedAbilities add b.resolvedAbilities else a.resolvedAbilities,
       unresolvedAbilities = a.unresolvedAbilities.add(b.unresolvedAbilities, a.resolvedAbilities.keys),
-      expectedArrows = a.expectedArrows.add(b.expectedArrows, a.definedArrows.keys),
-      definedArrows = a.definedArrows add b.definedArrows,
+      expectedArrows = a.expectedArrows.add(b.expectedArrows, a.definedFuncs.keys),
+      definedFuncs = a.definedFuncs add b.definedFuncs,
       expectedTypes = a.expectedTypes.add(b.expectedTypes, a.definedTypes.keys),
       definedTypes = a.definedTypes add b.definedTypes,
       expectedAbilities = a.expectedAbilities.add(b.expectedAbilities, a.definedAbilities.keys),
@@ -170,15 +171,13 @@ object Names {
         exportData = body.exportData.erase,
         // Until we have a notion for exporting abilities, they're cleaned
         resolvedAbilities = body.resolvedAbilities.erase,
-        // Create arrow from this func
-        definedArrows = Acc.str(head.name),
         // Expected arrows are not reduced by this func's name, hence recursive functions are forbidden
-        expectedTypes = head.args.map(_._2._2).map(typeAcc(_)).foldLeft(body.expectedTypes)(_ add _),
+        expectedTypes = head.args.map(_._3).map(typeAcc(_)).foldLeft(body.expectedTypes)(_ add _),
         // Even if peer is defined, it's defined inside
         peerId = None
       )
     ) {
-      case (names, (k, (_, ft))) =>
+      case (names, (k, _, ft)) =>
         ft.extract match {
           case cd: CustomType =>
             names.copy(
@@ -190,8 +189,11 @@ object Names {
               importData = names.importData sub k,
               expectedTypes = names.expectedTypes add typeAcc[G](ft.as(cd.data))
             )
-          case _: ArrowType =>
-            names.copy(expectedArrows = names.expectedArrows sub k)
+          case at: ArrowType =>
+            names.copy(
+              expectedArrows = names.expectedArrows sub k,
+              localArrows = names.localArrows.addOne(k, ft.as(at))
+            )
         }
     }
 
@@ -201,10 +203,13 @@ object Names {
   def blockNames[G[_]: Comonad](block: Block[G]): Names[G] =
     block match {
       case func: DefFunc[G] =>
-        funcNames(func)
+        funcNames(func).copy(
+          localArrows = Acc.empty,
+          definedFuncs = Acc.one(func.head.name.extract, func.head.name.as(func))
+        )
       case deft: DefType[G] =>
         Names[G](
-          definedTypes = Acc.one(deft.name.extract, deft.name.as(Some(deft))),
+          definedTypes = Acc.one(deft.name.extract, deft.name.as(Right(deft))),
           expectedTypes = deft.fields.toNel.map {
             case (_, (_, tv)) =>
               typeAcc(tv.widen[Type])
@@ -212,8 +217,7 @@ object Names {
         )
       case alias: DefAlias[G] =>
         Names[G](
-          definedTypes =
-            Acc.one[G, Option[DefType[G]]](alias.alias.extract.name, alias.target.as(Option.empty[DefType[G]])),
+          definedTypes = Acc.one[G, Either[Type, DefType[G]]](alias.alias.extract.name, alias.target.map(t => Left(t))),
           expectedTypes = typeAcc(alias.target)
         )
       case _ =>
@@ -224,19 +228,41 @@ object Names {
   def foldVerify[G[_]: Comonad](input: List[Names[G]]): ValidatedNel[G[String], Names[G]] =
     input.foldLeft[ValidatedNel[G[String], Names[G]]](Valid(Names[G]())) {
       case (accE, ns) =>
-        accE.map(acc => combineSeq[G](acc, ns)).andThen { acc =>
-          Validated.fromEither[NonEmptyList[G[String]], Names[G]](
-            NonEmptyList
-              .fromList(
-                acc.importData.toErrors((v, _) => s"Unknown variable `${v}`") :::
-                  acc.expectedArrows.toErrors((a, _) => s"Unknown arrow `${a}`") :::
-                  acc.unresolvedAbilities.toErrors((a, _) => s"Unresolved ability `${a}`") :::
-                  acc.expectedAbilities.toErrors((a, _) => s"Undefined ability `${a}`") :::
-                  acc.expectedTypes.toErrors((t, _) => s"Undefined type `$t`")
-              )
-              .toLeft(acc)
+        accE
+          .andThen(acc =>
+            Validated.fromEither[NonEmptyList[G[String]], Names[G]](
+              NonEmptyList
+                .fromList(
+                  ns.definedAbilities
+                    .takeKeys(acc.definedAbilities.keys)
+                    .toErrors((v, _) => s"Duplicate ability definition `$v`") :::
+                    ns.definedTypes
+                      .takeKeys(acc.definedTypes.keys)
+                      .toErrors((v, _) => s"Duplicate type definition `$v`") :::
+                    ns.definedFuncs
+                      .takeKeys(acc.definedFuncs.keys)
+                      .toErrors((v, _) => s"Duplicate func definition `$v`")
+                )
+                .toLeft(acc)
+            )
           )
+          .map(acc =>
+            // TODO reject duplicate definitions
+            combineSeq[G](acc, ns)
+          )
+          .andThen { acc =>
+            Validated.fromEither[NonEmptyList[G[String]], Names[G]](
+              NonEmptyList
+                .fromList(
+                  acc.importData.toErrors((v, _) => s"Unknown variable `${v}`") :::
+                    acc.expectedArrows.toErrors((a, _) => s"Unknown arrow `${a}`") :::
+                    acc.unresolvedAbilities.toErrors((a, _) => s"Unresolved ability `${a}`") :::
+                    acc.expectedAbilities.toErrors((a, _) => s"Undefined ability `${a}`") :::
+                    acc.expectedTypes.toErrors((t, _) => s"Undefined type `$t`")
+                )
+                .toLeft(acc)
+            )
 
-        }
+          }
     }
 }

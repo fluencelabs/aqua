@@ -1,0 +1,22 @@
+-- This is some data
+-- With a comment on first lines
+data Smth:
+  a: B
+  c: []D
+  oloolo: Akaka
+
+service MySrv:
+  func: A -> i32
+  -- We can have comments inside
+  pure: -> []Cdef
+
+func do_smth( a: X, b: -> Z ): -- And comments after the line
+  b()
+  x(a)
+
+func do_smth2( a: X, b: -> Z ): -- And comments after the line
+  b()
+  b(a, z)
+
+alias Akaka : i32
+alias Akaka : bool
