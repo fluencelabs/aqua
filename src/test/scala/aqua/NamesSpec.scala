@@ -1,14 +1,14 @@
-package aqua.parser
+package aqua
 
-import scala.language.implicitConversions
+import aqua.parser.{DefFunc, FuncOp}
 import aqua.parser.lexer.VarLambda
-import aqua.parser.lift.Names
+import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
-import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+
+import scala.language.implicitConversions
 
 class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
   private val namesId = Names.funcOps[Id](_)
@@ -54,6 +54,42 @@ class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
         exportData = Set("x"),
         expectedAbilities = Set("Peer"),
         expectArrows = Set("arr")
+      )
+    )
+  }
+
+  "names" should "see noo free names in correct function" in {
+    val func =
+      """func getTime(peer: PeerId, ret: i32 -> ()) -> string:
+        | on peer:
+        |   Peer "peer"
+        |   t <- Peer.timestamp()
+        | ret(t)""".stripMargin
+
+    val funcAst = DefFunc.`deffunc`[Id].parseAll(func).right.value
+
+    Names.funcNames(funcAst) should be(
+      Names[Id]()
+    )
+  }
+
+  "names" should "get free abilities, vars in functions" in {
+    val func =
+      """func getTime(peer: PeerId, ret: i32 -> ()) -> string:
+        | on peer:
+        |   Peer "peer"
+        |   t <- Peer.timestamp()
+        |   Other.call()
+        |   finish()
+        | ret(t, v)""".stripMargin
+
+    val funcAst = DefFunc.`deffunc`[Id].parseAll(func).right.value
+
+    Names.funcNames(funcAst) should be(
+      Names[Id](
+        expectArrows = Set("finish"),
+        expectedAbilities = Set("Other"),
+        importData = Set("v")
       )
     )
   }

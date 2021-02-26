@@ -1,7 +1,7 @@
-package aqua.parser.lift
+package aqua
 
-import aqua.parser.{AbilityFuncCall, AbilityId, DataType, ExecOp, Extract, FuncCall, FuncOp, On, Par}
 import aqua.parser.lexer.{Value, VarLambda}
+import aqua.parser._
 import cats.Comonad
 import cats.data.NonEmptyList
 import cats.syntax.comonad._
@@ -90,4 +90,29 @@ object Names {
       case Par(op) =>
         funcOp(op.widen[FuncOp[G]]).copy(mode = Some(op.as(ParMode)))
     }
+
+  def funcHeadNames[G[_]: Comonad](head: FuncHead[G], body: Names[G]): Names[G] =
+    head.args.foldLeft(
+      body.copy(
+        // We clear the mode, as functions are always defined in a sequence
+        mode = None,
+        // Function may have result type, but it's not names
+        exportData = Map.empty,
+        // Until we have a notion for exporting abilities, they're cleaned
+        resolvedAbilities = Map.empty,
+        // Even if peer is defined, it's defined inside
+        peerId = None
+      )
+    ) {
+      case (names, (k, (_, ft))) =>
+        ft.extract match {
+          case _: DataType =>
+            names.copy(importData = names.importData - k)
+          case _: ArrowType =>
+            names.copy(expectArrows = names.expectArrows - k)
+        }
+    }
+
+  def funcNames[G[_]: Comonad](func: DefFunc[G]): Names[G] =
+    funcHeadNames(func.head, funcOps(func.body))
 }
