@@ -1,4 +1,4 @@
-package aqua.parse.lift
+package aqua.parser.lift
 
 import cats.Id
 import cats.parse.Parser

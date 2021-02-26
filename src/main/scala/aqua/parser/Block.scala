@@ -1,10 +1,10 @@
-package aqua.parse
+package aqua.parser
 
-import aqua.parse.DataType.{`customtypedef`, `datatypedef`}
-import aqua.parse.lexer.Token._
-import aqua.parse.Type.{`arrowdef`, `typedef`}
-import aqua.parse.lift.LiftParser
-import aqua.parse.lift.LiftParser._
+import aqua.parser.DataType.{`customtypedef`, `datatypedef`}
+import aqua.parser.lexer.Token._
+import aqua.parser.Type.{`arrowdef`, `typedef`}
+import aqua.parser.lift.LiftParser
+import aqua.parser.lift.LiftParser._
 import cats.Functor
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.parse.{Parser => P}
@@ -56,6 +56,7 @@ object DefService {
 
   def `servicename`[F[_]: LiftParser]: P[F[String]] = `service` *> ` ` *> Name.lift <* ` `.? <* `:` <* ` \n*`
 
+  // TODO switch to funchead?
   def `defservice`[F[_]: LiftParser]: P[DefService[F]] =
     (`servicename` ~ indented(`funcdef`).map(_.toNem)).map {
       case (n, f) ⇒ DefService(n, f)
@@ -74,6 +75,10 @@ object Block {
 
   def block[F[_]: LiftParser: Functor]: P[Block[F]] =
     ` \n*`.rep0.with1 *> P.oneOf(
-      DefType.`deftype` :: DefService.`defservice` :: DefFunc.`deffunc` :: DefAlias.`defalias` :: Nil
+      DefType.`deftype` ::
+        DefService.`defservice` ::
+        DefFunc.`deffunc` ::
+        DefAlias.`defalias` ::
+        Nil
     )
 }

@@ -1,12 +1,12 @@
-package aqua.parse
+package aqua.parser
 
-import aqua.parse.lexer.Token._
-import aqua.parse.lexer.Value
+import aqua.parser.lexer.Token._
+import aqua.parser.lexer.Value
 import cats.data.NonEmptyList
 import cats.parse.{Parser ⇒ P}
-import aqua.parse.lexer.Value.`value`
-import aqua.parse.lift.LiftParser
-import aqua.parse.lift.LiftParser._
+import aqua.parser.lexer.Value.`value`
+import aqua.parser.lift.LiftParser
+import aqua.parser.lift.LiftParser._
 import cats.Functor
 import cats.syntax.functor._
 

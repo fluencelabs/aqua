@@ -1,6 +1,6 @@
-package aqua.parse.lexer
+package aqua.parser.lexer
 
-import aqua.parse.lexer.Token._
+import aqua.parser.lexer.Token._
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

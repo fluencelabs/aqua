@@ -1,9 +1,13 @@
-## sbt project compiled with Dotty
+## Aquamarine HLL
 
-### Usage
+The high level language that compiles to AIR and some wrappers in the host language (e.g. TypeScript).
 
-This is a normal sbt project, you can compile code with `sbt compile` and run it
-with `sbt run`, `sbt console` will start a Dotty REPL.
+### TODO
 
-For more information on the sbt-dotty plugin, see the
-[dotty-example-project](https://github.com/lampepfl/dotty-example-project/blob/master/README.md).
+- Lambda
+- Build data types: extend
+- Platform-specific Predef with Return ability
+- Implementation for abilities
+- Abilities passing
+- Print syntax errors better way
+- For the offset, find a token

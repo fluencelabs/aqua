@@ -6,7 +6,7 @@ records[type]
 arrays[type]
 ```
 
-From lambda, we want to have a non-destructive transitions.
+From lambda, we want to have non-destructive transitions.
 
 Assume we have variables a...z in scope.
 

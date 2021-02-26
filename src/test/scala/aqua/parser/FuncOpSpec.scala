@@ -1,11 +1,11 @@
-package aqua.parse
+package aqua.parser
 
-import aqua.parse.lexer.{Literal, VarLambda}
+import aqua.parser.lexer.{Literal, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import aqua.parse.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
 
 class FuncOpSpec extends AnyFlatSpec with Matchers with EitherValues {

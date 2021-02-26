@@ -1,7 +1,7 @@
-package aqua.parse.lexer
+package aqua.parser.lexer
 
-import aqua.parse.BasicType
-import aqua.parse.lexer.Token._
+import aqua.parser.BasicType
+import aqua.parser.lexer.Token._
 import cats.parse.{Numbers, Parser ⇒ P}
 
 sealed trait Value

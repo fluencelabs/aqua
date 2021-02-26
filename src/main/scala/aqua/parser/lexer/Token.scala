@@ -1,4 +1,4 @@
-package aqua.parse.lexer
+package aqua.parser.lexer
 
 import cats.data.NonEmptyList
 import cats.parse.{Accumulator0, Parser ⇒ P, Parser0 ⇒ P0}

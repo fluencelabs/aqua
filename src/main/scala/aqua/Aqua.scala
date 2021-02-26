@@ -1,9 +1,9 @@
 package aqua
 
-import aqua.parse.{ArrowType, Block, DataType, Type}
+import aqua.parser.{ArrowType, Block, DataType, Type}
 import cats.data.NonEmptyMap
 import cats.parse.{Parser ⇒ P, Parser0 ⇒ P0}
-import aqua.parse.lift.Span
+import aqua.parser.lift.Span
 
 case class Aqua(
   inputs: Map[String, DataType],
@@ -13,7 +13,7 @@ case class Aqua(
 )
 
 object Aqua {
-  import aqua.parse.lexer.Token._
+  import aqua.parser.lexer.Token._
 
   val `parser`: P0[List[Block[Span]]] = P.repSep0(Block.`block`[Span], ` \n*`)
 }

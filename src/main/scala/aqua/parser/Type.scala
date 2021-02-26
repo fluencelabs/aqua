@@ -1,6 +1,6 @@
-package aqua.parse
+package aqua.parser
 
-import aqua.parse.lexer.Token._
+import aqua.parser.lexer.Token._
 import cats.parse.{Parser ⇒ P}
 
 sealed trait Type
