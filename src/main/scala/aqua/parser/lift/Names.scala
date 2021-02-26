@@ -56,27 +56,30 @@ object Names {
         )
     }
 
+  private def valuesToNames[G[_]: Comonad](args: List[G[Value]]): Map[String, G[Value]] =
+    args
+      .collect(arg =>
+        arg.extract match {
+          case VarLambda(name, _) => name -> arg
+        }
+      )
+      .toMap
+
   def funcOp[G[_]: Comonad](op: G[FuncOp[G]]): Names[G] =
     op.extract match {
       case FuncCall(fname, fargs) =>
         Names[G](
           expectArrows = Map(fname.extract -> fname),
-          importData = fargs
-            .collect(arg =>
-              arg.extract match {
-                case VarLambda(name, _) => name -> arg
-              }
-            )
-            .toMap
+          importData = valuesToNames(fargs)
         )
       case AbilityFuncCall(ab, fc) =>
         val funcNames = funcOp(fc.widen[FuncOp[G]])
-        funcNames.copy(expectedAbilities = Map(ab.extract -> ab))
+        funcNames.copy(expectedAbilities = Map(ab.extract -> ab), expectArrows = Map.empty)
       case Extract(n, fn) =>
         val funcNames = funcOp(fn.widen[FuncOp[G]])
         funcNames.copy(exportData = Map(n.extract -> n))
-      case AbilityId(ab, _) =>
-        Names[G](resolvedAbilities = Map(ab.extract -> ab))
+      case AbilityId(ab, id) =>
+        Names[G](resolvedAbilities = Map(ab.extract -> ab), importData = valuesToNames(id :: Nil))
       case On(p, ops) =>
         val ns = funcOps(ops.map(_.widen[FuncOp[G]])).copy(peerId = Some(p))
         p.extract match {

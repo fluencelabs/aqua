@@ -88,6 +88,33 @@ class FuncOpSpec extends AnyFlatSpec with Matchers with EitherValues {
     FuncOp.`funcop`.parseAll(script) should be('right)
   }
 
+  "body" should "parse several instructions in different orders" in {
+    FuncOp.body[Id].parseAll(""" x <- func()""").right.value should be(
+      NonEmptyList.of(Extract[Id]("x", FuncCall[Id]("func", Nil)))
+    )
+    FuncOp.body[Id].parseAll(""" x <- func()
+                               | Peer 3""".stripMargin).right.value should be(
+      NonEmptyList.of(
+        Extract[Id]("x", FuncCall[Id]("func", Nil)),
+        AbilityId[Id]("Peer", Literal("3", BasicType.number))
+      )
+    )
+    FuncOp.body[Id].parseAll(""" x <- func()
+                               | on x:
+                               |   Peer 3""".stripMargin).right.value should be(
+      NonEmptyList.of(
+        Extract[Id]("x", FuncCall[Id]("func", Nil)),
+        On[Id](VarLambda("x"), NonEmptyList.of(AbilityId[Id]("Peer", Literal("3", BasicType.number))))
+      )
+    )
+    FuncOp.body[Id].parseAll(""" on x:
+                               |   Peer 3""".stripMargin).right.value should be(
+      NonEmptyList.of(
+        On[Id](VarLambda("x"), NonEmptyList.of(AbilityId[Id]("Peer", Literal("3", BasicType.number))))
+      )
+    )
+  }
+
   /*
   TODO: xor1
 try:

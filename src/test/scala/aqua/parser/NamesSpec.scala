@@ -29,5 +29,32 @@ class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
     namesP(" x <- fn(s)\n y <- fn(x)") should be(
       Names[Id](expectArrows = Set("fn"), importData = Set("s"), exportData = Set("x", "y"))
     )
+    namesP(""" Peer 42
+             | x <- Peer.id()
+             | y <- Op.identity()""".stripMargin) should be(
+      Names[Id](exportData = Set("x", "y"), resolvedAbilities = Set("Peer"), expectedAbilities = Set("Op"))
+    )
+    namesP(""" on p:
+             |   x <- Peer.id()
+             |   Op "op"
+             | arr()""".stripMargin) should be(
+      Names[Id](
+        importData = Set("p"),
+        exportData = Set("x"),
+        expectedAbilities = Set("Peer"),
+        expectArrows = Set("arr")
+      )
+    )
+    namesP(""" on p:
+             |   x <- Peer.id(23, p, k)
+             |   Op z
+             | arr()""".stripMargin) should be(
+      Names[Id](
+        importData = Set("p", "k", "z"),
+        exportData = Set("x"),
+        expectedAbilities = Set("Peer"),
+        expectArrows = Set("arr")
+      )
+    )
   }
 }
