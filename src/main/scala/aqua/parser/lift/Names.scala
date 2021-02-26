@@ -7,49 +7,48 @@ import cats.data.NonEmptyList
 import cats.syntax.comonad._
 import cats.syntax.functor._
 
-// TODO: add comonad to show where import/export is declared
 // Fully resolved Scope must have no expected abilities (all resolved)
-case class Names(
+case class Names[F[_]](
   // None means "inherit"
-  peerId: Option[Value] = None,
+  peerId: Option[F[Value]] = None,
   // Take vars, set vars
   // Data type is not yet known
-  importData: Set[String] = Set.empty,
-  exportData: Set[String] = Set.empty,
+  importData: Map[String, F[Value]] = Map.empty[String, F[Value]],
+  exportData: Map[String, F[String]] = Map.empty[String, F[String]],
   // Abilities can be imported or set
-  expectedAbilities: Set[String] = Set.empty,
-  resolvedAbilities: Set[String] = Set.empty,
+  expectedAbilities: Map[String, F[String]] = Map.empty[String, F[String]],
+  resolvedAbilities: Map[String, F[String]] = Map.empty[String, F[String]],
   // We don't know the types yet
-  expectArrows: Set[String] = Set.empty,
+  expectArrows: Map[String, F[String]] = Map.empty[String, F[String]],
   // Set when know
-  mode: Names.Mode.Value = Names.Mode.Seq
+  mode: Option[F[Names.CustomMode]] = None
 )
 
 object Names {
+  sealed trait CustomMode
+  case object ParMode extends CustomMode
+  case object XorMode extends CustomMode
 
-  object Mode extends Enumeration {
-    val Seq, Par, Xor = Value;
-  }
-
-  def funcOps[G[_]: Comonad](ops: NonEmptyList[G[FuncOp[G]]]): Names =
-    ops.toList.map(_.extract).map(funcOp[G]).foldLeft(Names()) {
-      case (acc, n) if n.mode == Mode.Seq =>
+  def funcOps[G[_]: Comonad](ops: NonEmptyList[G[FuncOp[G]]]): Names[G] =
+    ops.map(funcOp[G]).foldLeft[Names[G]](Names[G]()) {
+      case (acc, n) if n.mode.isEmpty =>
         acc.copy(
           exportData = acc.exportData ++ n.exportData,
-          importData = acc.importData ++ (n.importData -- acc.exportData),
+          importData = acc.importData ++ n.importData.view.filterKeys(k => !acc.exportData.contains(k)).toMap,
           resolvedAbilities =
             if (n.peerId == acc.peerId) acc.resolvedAbilities ++ n.resolvedAbilities else acc.resolvedAbilities,
-          expectedAbilities = acc.expectedAbilities ++ (n.expectedAbilities -- acc.resolvedAbilities),
+          expectedAbilities =
+            acc.expectedAbilities ++ n.expectedAbilities.view.filterKeys(k => !acc.resolvedAbilities.contains(k)).toMap,
           expectArrows = acc.expectArrows ++ n.expectArrows
         )
-      case (acc, n) if n.mode == Mode.Par =>
+      case (acc, n) if n.mode.exists(_.extract == ParMode) =>
         acc.copy(
           exportData = acc.exportData ++ n.exportData,
           importData = acc.importData ++ n.importData,
           expectedAbilities = acc.expectedAbilities ++ n.expectedAbilities,
           expectArrows = acc.expectArrows ++ n.expectArrows
         )
-      case (acc, n) if n.mode == Mode.Xor =>
+      case (acc, n) if n.mode.exists(_.extract == XorMode) =>
         acc.copy(
           importData = acc.importData ++ n.importData,
           expectedAbilities = acc.expectedAbilities ++ n.expectedAbilities,
@@ -57,33 +56,35 @@ object Names {
         )
     }
 
-  def funcOp[G[_]: Comonad](op: FuncOp[G]): Names =
-    op match {
+  def funcOp[G[_]: Comonad](op: G[FuncOp[G]]): Names[G] =
+    op.extract match {
       case FuncCall(fname, fargs) =>
-        Names(
-          expectArrows = Set(fname.extract),
+        Names[G](
+          expectArrows = Map(fname.extract -> fname),
           importData = fargs
-            .collect(_.extract match {
-              case VarLambda(name, _) => name
-            })
-            .toSet
+            .collect(arg =>
+              arg.extract match {
+                case VarLambda(name, _) => name -> arg
+              }
+            )
+            .toMap
         )
       case AbilityFuncCall(ab, fc) =>
-        val funcNames = funcOp(fc.extract)
-        funcNames.copy(expectedAbilities = Set(ab.extract))
+        val funcNames = funcOp(fc.widen[FuncOp[G]])
+        funcNames.copy(expectedAbilities = Map(ab.extract -> ab))
       case Extract(n, fn) =>
-        val funcNames = funcOp(fn.extract)
-        funcNames.copy(exportData = Set(n.extract))
+        val funcNames = funcOp(fn.widen[FuncOp[G]])
+        funcNames.copy(exportData = Map(n.extract -> n))
       case AbilityId(ab, _) =>
-        Names(resolvedAbilities = Set(ab.extract))
+        Names[G](resolvedAbilities = Map(ab.extract -> ab))
       case On(p, ops) =>
-        val ns = funcOps(ops.map(_.widen[FuncOp[G]])).copy(peerId = Some(p.extract))
+        val ns = funcOps(ops.map(_.widen[FuncOp[G]])).copy(peerId = Some(p))
         p.extract match {
           case VarLambda(name, _) =>
-            ns.copy(importData = ns.importData + name)
+            ns.copy(importData = ns.importData + (name -> p))
           case _ => ns
         }
       case Par(op) =>
-        funcOp(op.extract).copy(mode = Mode.Par)
+        funcOp(op.widen[FuncOp[G]]).copy(mode = Some(op.as(ParMode)))
     }
 }

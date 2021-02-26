@@ -5,7 +5,7 @@ import aqua.parser.lexer.Token._
 import cats.parse.{Numbers, Parser ⇒ P}
 
 sealed trait Value
-case class VarLambda(name: String, lambda: Option[String]) extends Value
+case class VarLambda(name: String, lambda: Option[String] = None) extends Value
 case class Literal(value: String, ts: List[BasicType]) extends Value
 
 object Value {
