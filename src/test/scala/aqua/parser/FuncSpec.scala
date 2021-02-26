@@ -41,6 +41,21 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
     )
   }
 
+  "function" should "parse single line fn" in {
+    val func =
+      """func getTime(peer: PeerId, ret: i32 -> ()) -> string:
+        | ret(43)""".stripMargin
+
+    DefFunc.`deffunc`.parseAll(func).right.value should be(
+      DefFunc[Id](
+        getTimeHead,
+        NonEmptyList.of(
+          FuncCall[Id]("ret", Literal("43", BasicType.number) :: Nil)
+        )
+      )
+    )
+  }
+
   "function" should "parse getTime as a whole" in {
     val func =
       """func getTime(peer: PeerId, ret: i32 -> ()) -> string:

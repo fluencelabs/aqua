@@ -2,27 +2,27 @@ package aqua.parser.lift
 
 import cats.Comonad
 import cats.parse.{Parser ⇒ P}
-import cats.free.Free
 
 import scala.language.implicitConversions
 
-case class Span[T](startIndex: Int, endIndex: Int, value: T)
+case class Span(startIndex: Int, endIndex: Int)
 
 object Span {
+  type F[T] = (Span, T)
 
-  implicit object spanComonad extends Comonad[Span] {
-    override def extract[A](x: Span[A]): A = x.value
+  implicit object spanComonad extends Comonad[F] {
+    override def extract[A](x: F[A]): A = x._2
 
-    override def coflatMap[A, B](fa: Span[A])(f: Span[A] ⇒ B): Span[B] = fa.copy(value = f(fa))
+    override def coflatMap[A, B](fa: F[A])(f: F[A] ⇒ B): F[B] = fa.copy(_2 = f(fa))
 
-    override def map[A, B](fa: Span[A])(f: A ⇒ B): Span[B] = fa.copy(value = f(fa.value))
+    override def map[A, B](fa: F[A])(f: A ⇒ B): F[B] = fa.copy(_2 = f(fa._2))
   }
 
-  implicit object spanLiftParser extends LiftParser[Span] {
+  implicit object spanLiftParser extends LiftParser[F] {
 
-    override def lift[T](p: P[T]): P[Span[T]] =
+    override def lift[T](p: P[T]): P[F[T]] =
       (P.index.with1 ~ p ~ P.index).map {
-        case ((s, v), e) ⇒ Span(s, e, v)
+        case ((s, v), e) ⇒ (Span(s, e), v)
       }
   }
 

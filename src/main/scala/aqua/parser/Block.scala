@@ -44,6 +44,7 @@ object DefFunc {
       case (n, (a, r)) ⇒ FuncHead(n, a, r)
     }
 
+  // TODO: if funchead has return type, for the last op, add extract, add Return.reply(extracted)
   def `deffunc`[F[_]: LiftParser: Functor]: P[DefFunc[F]] =
     ((`funchead` <* ` : ` <* ` \n*`) ~ FuncOp.body).map {
       case (h, b) ⇒ DefFunc(h, b)

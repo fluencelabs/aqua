@@ -1,6 +1,7 @@
 package aqua.parser.lexer
 
 import aqua.parser.lexer.Token._
+import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -42,6 +43,11 @@ class TokenSpec extends AnyFlatSpec with Matchers with EitherValues {
                       |              -- line 3
                       |              -- line 4
                       |""".stripMargin).right.value should be(())
+  }
+
+  "indented" should "parse 1 or more lines" in {
+    indented(`.`).parseAll(" .\n .").right.value should be(NonEmptyList.of((), ()))
+    indented(`.`).parseAll(" .").right.value should be(NonEmptyList.of(()))
   }
 
 }

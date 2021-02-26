@@ -15,5 +15,5 @@ case class Aqua(
 object Aqua {
   import aqua.parser.lexer.Token._
 
-  val `parser`: P0[List[Block[Span]]] = P.repSep0(Block.`block`[Span], ` \n*`)
+  val `parser`: P0[List[Block[Span.F]]] = P.repSep0(Block.`block`[Span.F], ` \n*`)
 }

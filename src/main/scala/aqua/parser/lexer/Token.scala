@@ -43,7 +43,7 @@ object Token {
     P.repSep0(p, `,` <* ` \n*`.rep0)
 
   def indented[T](p: P[T]): P[NonEmptyList[T]] =
-    ` `.flatMap(indent ⇒ (p.map(NonEmptyList.one) <* ` \n*`) ~ (P.string(indent) *> p).repSep0(` \n*`)).map {
-      case (nel, l) ⇒ nel ++ l
+    ` `.flatMap(indent ⇒ p.map(NonEmptyList.one) ~ (` \n*` *> (P.string(indent) *> p).repSep0(` \n*`)).?).map {
+      case (nel, l) ⇒ nel ++ l.getOrElse(Nil)
     }
 }
