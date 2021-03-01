@@ -1,6 +1,6 @@
 package aqua.parser
 
-import aqua.parser.lexer.{Literal, VarLambda}
+import aqua.parser.lexer.{BasicType, Literal, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec

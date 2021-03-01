@@ -1,7 +1,14 @@
 package aqua.parser.lexer
 
+import cats.Functor
 import cats.data.NonEmptyList
-import cats.parse.{Accumulator0, Parser ⇒ P, Parser0 ⇒ P0}
+import cats.parse.{Accumulator0, Parser => P, Parser0 => P0}
+
+trait Token[F[_]] {
+  def as[T](v: T)(implicit F: Functor[F]): F[T]
+
+  def unit(implicit F: Functor[F]): F[Unit] = as(())
+}
 
 object Token {
   private val fSpaces = Set(' ', '\t')
@@ -31,6 +38,7 @@ object Token {
   val `,` : P[Unit] = P.char(',') <* ` `.?
   val `.` : P[Unit] = P.char('.')
   val `"` : P[Unit] = P.char('"')
+  val `*` : P[Unit] = P.char('*')
   val `(` : P[Unit] = ` `.?.with1 *> P.char('(') <* ` `.?
   val `)` : P[Unit] = ` `.?.with1 *> P.char(')') <* ` `.?
   val `->` : P[Unit] = ` `.?.with1 *> P.string("->") <* ` `.?

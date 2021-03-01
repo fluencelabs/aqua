@@ -1,22 +1,17 @@
 package aqua.model
 
-import aqua.parser.DataType
 import aqua.parser.lexer.Value
+import cats.Functor
+import cats.syntax.functor._
 
-trait Instr
+case class Scope[F[_]](mode: Option[F[Mode]] = None, peerId: Option[Value[F]] = None) {
+  def par(f: F[Unit])(implicit F: Functor[F]): Scope[F] = copy(mode = Some(f.as(ParMode)))
 
-// Fully resolved Scope must have no expected abilities (all resolved)
-case class Scope(
-  // None means "inherit"
-  peerId: Option[Value],
-  // Take vars, set vars
-  importData: Map[String, DataType],
-  exportData: Map[String, DataType],
-  // Abilities can be imported or set
-  expectedAbilities: Set[String],
-  resolvedAbilities: Set[String],
-  // We don't know the types yet
-  expectArrows: Set[String],
-  // resolved subtrees, or unresolved shit
-  body: List[Either[Scope, Instr]]
-)
+  def xor(f: F[Unit])(implicit F: Functor[F]): Scope[F] = copy(mode = Some(f.as(XorMode)))
+
+  def on(v: Value[F]): Scope[F] = copy(peerId = Some(v))
+
+  def unsetMode: Scope[F] = copy(mode = None)
+
+  def unsetPeer: Scope[F] = copy(peerId = None)
+}

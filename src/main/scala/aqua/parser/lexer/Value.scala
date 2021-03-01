@@ -1,38 +1,56 @@
 package aqua.parser.lexer
 
-import aqua.parser.BasicType
 import aqua.parser.lexer.Token._
-import cats.parse.{Numbers, Parser ⇒ P}
+import aqua.parser.lift.LiftParser
+import aqua.parser.lift.LiftParser._
+import cats.{Comonad, Functor}
+import cats.parse.{Numbers, Parser => P}
+import cats.syntax.functor._
+import cats.syntax.comonad._
 
-sealed trait Value
-case class VarLambda(name: String, lambda: Option[String] = None) extends Value
-case class Literal(value: String, ts: List[BasicType]) extends Value
+sealed trait Value[F[_]] extends Token[F]
+
+case class VarLambda[F[_]](name: F[String], lambda: List[LambdaOp[F]] = Nil) extends Value[F] {
+  override def as[T](v: T)(implicit F: Functor[F]): F[T] = name.as(v)
+}
+
+case class Literal[F[_]](value: F[String], ts: List[BasicType.Value]) extends Value[F] {
+  override def as[T](v: T)(implicit F: Functor[F]): F[T] = value.as(v)
+}
 
 object Value {
   val notLambdaSymbols = Set(' ', ',', '\n', ')', ':')
 
-  val varLambda: P[VarLambda] = (`name` ~ (`.` *> P.charsWhile(c ⇒ !notLambdaSymbols(c))).?).map {
-    case (n, l) ⇒ VarLambda(n, l)
-  }
+  def varLambda[F[_]: LiftParser]: P[VarLambda[F]] =
+    (`name`.lift ~ LambdaOp.ops[F].?).map {
+      case (n, l) ⇒ VarLambda(n, l.fold[List[LambdaOp[F]]](Nil)(_.toList))
+    }
 
-  val bool: P[Literal] = P.oneOf(("true" :: "false" :: Nil).map(t ⇒ P.string(t).as(Literal(t, BasicType.bool))))
+  def bool[F[_]: LiftParser: Functor]: P[Literal[F]] =
+    P.oneOf(
+      ("true" :: "false" :: Nil)
+        .map(t ⇒ P.string(t).lift.map(fu => Literal(fu.as(t), BasicType.bool)))
+    )
 
-  val num: P[Literal] = (P.char('-').?.with1 ~ Numbers.nonNegativeIntString).map {
-    case (Some(_), n) ⇒ Literal(s"-$n", BasicType.signed)
-    case (None, n) ⇒ Literal(n, BasicType.number)
-  }
+  def num[F[_]: LiftParser: Comonad]: P[Literal[F]] =
+    (P.char('-').?.with1 ~ Numbers.nonNegativeIntString).lift.map(fu =>
+      fu.extract match {
+        case (Some(_), n) ⇒ Literal(fu.as(s"-$n"), BasicType.signed)
+        case (None, n) ⇒ Literal(fu.as(n), BasicType.number)
+      }
+    )
 
-  val float: P[Literal] =
-    (P.char('-').?.with1 ~ (Numbers.nonNegativeIntString <* P.char('.')) ~ Numbers.nonNegativeIntString).string
+  def float[F[_]: LiftParser]: P[Literal[F]] =
+    (P.char('-').?.with1 ~ (Numbers.nonNegativeIntString <* P.char('.')) ~ Numbers.nonNegativeIntString).string.lift
       .map(Literal(_, BasicType.float))
 
   // TODO make more sophisticated escaping/unescaping
-  val string: P[Literal] =
-    (`"` *> P.charsWhile0(_ != '"') <* `"`).string
+  def string[F[_]: LiftParser]: P[Literal[F]] =
+    (`"` *> P.charsWhile0(_ != '"') <* `"`).string.lift
       .map(Literal(_, BasicType.string))
 
-  val literal: P[Literal] = P.oneOf(bool :: float.backtrack :: num :: string :: Nil)
+  def literal[F[_]: LiftParser: Comonad]: P[Literal[F]] = P.oneOf(bool :: float.backtrack :: num :: string :: Nil)
 
-  val `value`: P[Value] = P.oneOf(literal.backtrack :: varLambda :: Nil)
+  def `value`[F[_]: LiftParser: Comonad]: P[Value[F]] = P.oneOf(literal.backtrack :: varLambda :: Nil)
 
 }

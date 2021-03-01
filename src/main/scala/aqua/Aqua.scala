@@ -1,10 +1,10 @@
 package aqua
 
-import aqua.parser.{ArrowType, Block, DataType, Type}
+import aqua.model.Names
+import aqua.parser.Block
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.parse.{Parser => P, Parser0 => P0}
 import aqua.parser.lift.Span
-import cats.syntax.validated._
 
 object Aqua {
   import aqua.parser.lexer.Token._

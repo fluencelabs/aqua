@@ -1,9 +1,7 @@
 package aqua
 
 import cats.effect.{IO, IOApp}
-import cats.syntax.show._
-import aqua.ir._
-import cats.data.{Kleisli, Validated}
+import cats.data.Validated
 
 import scala.io.Source
 

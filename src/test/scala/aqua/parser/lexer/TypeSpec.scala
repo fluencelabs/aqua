@@ -1,4 +1,4 @@
-package aqua.parser
+package aqua.parser.lexer
 
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec

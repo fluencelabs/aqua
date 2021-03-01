@@ -1,84 +1,99 @@
 package aqua.parser
 
 import aqua.parser.lexer.Token._
-import aqua.parser.lexer.Value
+import aqua.parser.lexer.{Ability, Token, Value, Var}
 import cats.data.NonEmptyList
-import cats.parse.{Parser ⇒ P}
+import cats.parse.{Parser => P}
 import aqua.parser.lexer.Value.`value`
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
-import cats.Functor
+import cats.{Comonad, Functor}
 import cats.syntax.functor._
 
-sealed trait FuncOp[F[_]]
+sealed trait FuncOp[F[_]] extends Token[F]
 sealed trait InstrOp[F[_]] extends FuncOp[F]
 
 sealed trait ExecOp[F[_]] extends InstrOp[F]
 sealed trait CallOp[F[_]] extends ExecOp[F]
 
-case class FuncCall[F[_]](name: F[String], args: List[F[Value]]) extends CallOp[F]
-case class AbilityFuncCall[F[_]](ability: F[String], call: F[FuncCall[F]]) extends CallOp[F]
-case class Extract[F[_]](v: F[String], from: F[CallOp[F]]) extends ExecOp[F]
+case class FuncCall[F[_]](name: F[String], args: List[Value[F]]) extends CallOp[F] {
+  override def as[T](v: T)(implicit F: Functor[F]): F[T] = name.as(v)
+}
 
-case class On[F[_]](peer: F[Value], ops: NonEmptyList[F[ExecOp[F]]]) extends InstrOp[F]
+case class AbilityFuncCall[F[_]](ability: Ability[F], call: FuncCall[F]) extends CallOp[F] {
+  override def as[T](v: T)(implicit F: Functor[F]): F[T] = ability.as(v)
+}
 
-case class Par[F[_]](op: F[InstrOp[F]]) extends FuncOp[F]
+case class Extract[F[_]](vr: Var[F], from: CallOp[F]) extends ExecOp[F] {
+  override def as[T](v: T)(implicit F: Functor[F]): F[T] = vr.as(v)
+}
+
+case class On[F[_]](peer: Value[F], ops: NonEmptyList[ExecOp[F]]) extends InstrOp[F] {
+  override def as[T](v: T)(implicit F: Functor[F]): F[T] = peer.as(v)
+}
+
+case class Par[F[_]](f: F[Unit], op: InstrOp[F]) extends FuncOp[F] {
+  override def as[T](v: T)(implicit F: Functor[F]): F[T] = f.as(v)
+}
 
 // TODO: can't be in Par, can be in On
-sealed trait AbilityResolve[F[_]] extends ExecOp[F]
-case class AbilityId[F[_]](ability: F[String], id: F[Value]) extends AbilityResolve[F]
+sealed trait AbilityResolve[F[_]] extends ExecOp[F] {
+  def ability: Ability[F]
+  override def as[T](v: T)(implicit F: Functor[F]): F[T] = ability.as(v)
+}
+case class AbilityId[F[_]](ability: Ability[F], id: Value[F]) extends AbilityResolve[F]
 
 object FuncOp {
 
-  def funcCall[F[_]: LiftParser]: P[F[FuncCall[F]]] =
-    (`name`.lift ~ P.repSep0(`value`.lift, `,`).between(`(`, `)`)).map {
+  def funcCall[F[_]: LiftParser: Comonad]: P[FuncCall[F]] =
+    (`name`.lift ~ P.repSep0(`value`, `,`).between(`(`, `)`)).map {
       case (fnName, args) ⇒ FuncCall(fnName, args)
-    }.lift
+    }
 
-  def abilityFuncCall[F[_]: LiftParser]: P[F[AbilityFuncCall[F]]] =
-    ((`Name`.lift <* `.`) ~ funcCall).map {
+  def abilityFuncCall[F[_]: LiftParser: Comonad]: P[AbilityFuncCall[F]] =
+    ((Ability.ab[F] <* `.`) ~ funcCall).map {
       case (abName, fc) ⇒ AbilityFuncCall(abName, fc)
-    }.lift
+    }
 
-  def callOp[F[_]: LiftParser: Functor]: P[F[CallOp[F]]] =
-    P.oneOf(funcCall[F].map(_.widen[CallOp[F]]) :: abilityFuncCall[F].map(_.widen[CallOp[F]]) :: Nil)
+  def callOp[F[_]: LiftParser: Comonad]: P[CallOp[F]] =
+    P.oneOf(funcCall[F] :: abilityFuncCall[F] :: Nil)
 
-  def extract[F[_]: LiftParser: Functor]: P[F[Extract[F]]] =
-    ((`name`.lift <* `<-`) ~ callOp[F]).map {
+  def extract[F[_]: LiftParser: Comonad]: P[Extract[F]] =
+    ((Var.v <* `<-`) ~ callOp[F]).map {
       case (v, f) ⇒ Extract(v, f)
-    }.lift
+    }
 
-  def abilityResolve[F[_]: LiftParser: Functor]: P[F[AbilityResolve[F]]] =
-    ((`Name`.lift <* ` `) ~ `value`.lift).map {
+  def abilityResolve[F[_]: LiftParser: Comonad]: P[AbilityResolve[F]] =
+    ((Ability.ab <* ` `) ~ `value`).map {
       case (n, v) ⇒ AbilityId(n, v)
-    }.widen[AbilityResolve[F]].lift
+    }.widen[AbilityResolve[F]]
 
   // TODO can't be in Par, can be in On
-  def execOp[F[_]: LiftParser: Functor]: P[F[ExecOp[F]]] =
+  def execOp[F[_]: LiftParser: Comonad]: P[ExecOp[F]] =
     P.oneOf(
-      callOp.map(_.widen[ExecOp[F]]).backtrack
-        :: abilityResolve.map(_.widen[ExecOp[F]]).backtrack
-        :: extract.map(_.widen[ExecOp[F]]) :: Nil
+      callOp.backtrack
+        :: abilityResolve.backtrack
+        :: extract :: Nil
     )
 
-  def startOn[F[_]: LiftParser]: P[F[Value]] = `on` *> ` ` *> `value`.lift <* ` `.? <* `:` <* ` \n*`
+  def startOn[F[_]: LiftParser: Comonad]: P[Value[F]] = `on` *> ` ` *> `value` <* ` `.? <* `:` <* ` \n*`
 
-  def execOn[F[_]: LiftParser: Functor]: P[F[On[F]]] =
+  def execOn[F[_]: LiftParser: Comonad]: P[On[F]] =
     (startOn ~ indented(execOp[F])).map {
       case (v, i) ⇒ On(v, i)
-    }.lift
+    }
 
-  def instrOp[F[_]: LiftParser: Functor]: P[F[InstrOp[F]]] =
+  def instrOp[F[_]: LiftParser: Comonad]: P[InstrOp[F]] =
     P.oneOf(
-      execOn.map(_.widen[InstrOp[F]]).backtrack
-        :: execOp.map(_.widen[InstrOp[F]]) :: Nil
+      execOn.backtrack
+        :: execOp :: Nil
     )
 
-  def parOp[F[_]: LiftParser: Functor]: P[F[Par[F]]] =
-    (`par` *> ` ` *> instrOp[F].map(Par(_))).lift
+  def parOp[F[_]: LiftParser: Comonad]: P[Par[F]] =
+    ((`par`.lift <* ` `) ~ instrOp[F]).map(pi => Par(pi._1, pi._2))
 
-  def `funcop`[F[_]: LiftParser: Functor]: P[F[FuncOp[F]]] =
-    P.oneOf(parOp.map(_.widen[FuncOp[F]]).backtrack :: instrOp.map(_.widen[FuncOp[F]]) :: Nil)
+  def `funcop`[F[_]: LiftParser: Comonad]: P[FuncOp[F]] =
+    P.oneOf(parOp.backtrack :: instrOp :: Nil)
 
-  def body[F[_]: LiftParser: Functor]: P[NonEmptyList[F[FuncOp[F]]]] = indented(`funcop`)
+  def body[F[_]: LiftParser: Comonad]: P[NonEmptyList[FuncOp[F]]] = indented(`funcop`)
 }
