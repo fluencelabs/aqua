@@ -3,8 +3,10 @@ package aqua.model
 import aqua.parser._
 import aqua.parser.lexer._
 import cats.Comonad
-import cats.data.Validated.Valid
+import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
+
+import scala.collection.immutable.Queue
 
 // Fully resolved Scope must have no expected abilities (all resolved)
 case class Names[F[_]](
@@ -41,35 +43,25 @@ object Names {
       arrows = InOutAcc.Arrows.block(block)
     )
 
-  def foldVerify[F[_]: Comonad](input: List[Names[F]]): ValidatedNel[F[String], Names[F]] =
-    input.foldLeft[ValidatedNel[F[String], Names[F]]](Valid(Names[F]())) {
-      case (accE, ns) =>
-        accE
-          .andThen(acc =>
-            Validated.fromEither[NonEmptyList[F[String]], Names[F]](
-              NonEmptyList
-                .fromList(
-                  acc.abilities.validateDuplicates((v, _) => s"Duplicate ability definition `$v`", ns.abilities) :::
-                    acc.types.validateDuplicates((v, _) => s"Duplicate type definition `$v`", ns.types) :::
-                    acc.arrows.validateDuplicates((v, _) => s"Duplicate func definition `$v`", ns.arrows)
-                )
-                .toLeft(acc)
-            )
+  def foldVerify[F[_]: Comonad](input: List[Names[F]]): ValidatedNel[F[String], Names[F]] = {
+    val (errs, names) = input.foldLeft[(Queue[F[String]], Names[F])]((Queue.empty, Names[F]())) {
+      case ((errs, acc), ns) =>
+        val combined = combine(acc, ns)
+        errs
+          .appendedAll(
+            acc.abilities.validateDuplicates((v, _) => s"Duplicate ability definition `$v`", ns.abilities) :::
+              acc.types.validateDuplicates((v, _) => s"Duplicate type definition `$v`", ns.types) :::
+              acc.arrows.validateDuplicates((v, _) => s"Duplicate func definition `$v`", ns.arrows)
           )
-          .map(combine(_, ns))
-          .andThen { acc =>
-            Validated.fromEither[NonEmptyList[F[String]], Names[F]](
-              NonEmptyList
-                .fromList(
-                  acc.data.validateUnresolved((v, _) => s"Unknown variable `${v}`") :::
-                    acc.arrows.validateUnresolved((a, _) => s"Unknown arrow `${a}`") :::
-                    acc.abilitiesResolve.validateUnresolved((a, _) => s"Unresolved ability `${a}`") :::
-                    acc.abilities.validateUnresolved((a, _) => s"Undefined ability `${a}`") :::
-                    acc.types.validateUnresolved((t, _) => s"Undefined type `$t`")
-                )
-                .toLeft(acc)
-            )
-
-          }
+          .appendedAll(
+            combined.data.validateUnresolved((v, _) => s"Unknown variable `${v}`") :::
+              combined.arrows.validateUnresolved((a, _) => s"Unknown arrow `${a}`") :::
+              combined.abilitiesResolve.validateUnresolved((a, _) => s"Unresolved ability `${a}`") :::
+              combined.abilities.validateUnresolved((a, _) => s"Undefined ability `${a}`") :::
+              combined.types.validateUnresolved((t, _) => s"Undefined type `$t`")
+          ) -> combined
     }
+    NonEmptyList.fromList(errs.toList).fold[ValidatedNel[F[String], Names[F]]](Valid(names))(Invalid(_))
+  }
+
 }

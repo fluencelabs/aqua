@@ -11,9 +11,12 @@ object Main extends IOApp.Simple {
     IO {
       def tryParse(str: String) =
         Aqua.parse(str) match {
-          case Validated.Valid(v) ⇒ println(v)
+          case Validated.Valid(v) ⇒
+            println(v)
+            println(Console.GREEN + "Aqua script processed successfully" + Console.GREEN)
           case Validated.Invalid(errs) ⇒
             errs.map(_.showForConsole(str)).map(println)
+            println(Console.RED + s"Aqua script errored, total ${errs.length} problems found" + Console.RESET)
         }
 
       val experimental = Source.fromResource("experimental.aqua").mkString
