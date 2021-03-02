@@ -25,7 +25,7 @@ class DataAccSpec extends AnyFlatSpec with Matchers with EitherValues {
       .right
       .value
 
-  "data acc" should "collect vars" in {
+  "data acc" should "collect no vars in a single function" in {
     val bs = parseBlocks("""
                            |func some():
                            |   x <- arr()
@@ -34,6 +34,24 @@ class DataAccSpec extends AnyFlatSpec with Matchers with EitherValues {
 
     bs.length should be(1)
     val ctx = bs.head.context
+    ctx.tail.head should be(Scope[Id]())
+    val acc = ctx.head.acc
+    acc.in.keys should be('empty)
+    acc.out.keys should be('empty)
+  }
+  "data acc" should "collect no vars in two functions" in {
+    val bs = parseBlocks("""
+                           |func some():
+                           |   x <- arr()
+                           |
+                           |
+                           |func other(x: i32):
+                           |   y <- arr2(x)
+                           |   
+                           |""".stripMargin)
+
+    bs.length should be(2)
+    val ctx = bs.last.context
     ctx.tail.head should be(Scope[Id]())
     val acc = ctx.head.acc
     acc.in.keys should be('empty)
