@@ -19,4 +19,5 @@ func do_smth2( a: X, b: -> Z ): -- And comments after the line
   b(a, z)
 
 alias Akaka : i32
+
 alias Akaka : bool

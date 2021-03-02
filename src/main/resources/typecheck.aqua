@@ -1,0 +1,18 @@
+data Inside:
+    foo: i32
+    bar: bool
+
+data Wrapping:
+    inside: Inside
+    value: string
+
+data Enclosing:
+    wrap: Wrapping
+    arr: []Wrapping
+    flag: bool
+
+func call(enc: Enclosing, oni32: i32 -> (), onString: string -> (), onBool: bool -> ()) -> ():
+    onBool(enc.flag)
+    onBool(enc.wrap)
+
+

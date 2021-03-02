@@ -9,7 +9,7 @@ import aqua.parser.lift.Span
 object Aqua {
   import aqua.parser.lexer.Token._
 
-  val `parser`: P0[List[Block[Span.F]]] = P.repSep0(Block.`block`[Span.F], ` \n*`)
+  val `parser`: P0[List[Block[Span.F]]] = P.repSep0(Block.`block`[Span.F], ` \n*`) <* ` \n*`
 
   def parse(input: String): ValidatedNel[Error, List[Block[Span.F]]] =
     Validated

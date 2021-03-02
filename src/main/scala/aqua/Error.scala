@@ -27,3 +27,12 @@ case class NamesError(span: Span, hint: String) extends Error {
       .map(_.toConsoleStr(hint, Console.YELLOW))
       .getOrElse("(offset is beyond the script)") + "\n"
 }
+
+case class GetTypeError(span: Span, hint: String) extends Error {
+
+  override def showForConsole(script: String): String =
+    span
+      .focus(script, 3)
+      .map(_.toConsoleStr(hint, Console.CYAN))
+      .getOrElse("(offset is beyond the script)") + "\n"
+}
