@@ -1,12 +1,12 @@
 package aqua.model
 
-import aqua.parser.lexer.{ArrayType, ArrowType, BasicType, CustomType, Token, Type, Value, VarLambda}
-import cats.{Comonad, Functor}
+import aqua.parser.lexer.{ArrayType, ArrowType, BasicType, CustomType, Type, Value, VarLambda}
+import cats.Comonad
 import cats.data.NonEmptyList
 import cats.syntax.comonad._
 import cats.syntax.functor._
 
-case class Acc[F[_], T <: Token[F]](data: Map[String, NonEmptyList[T]]) {
+case class Acc[F[_], T](data: Map[String, NonEmptyList[T]]) {
 
   def add(other: Acc[F, T], subtract: Set[String] = Set.empty): Acc[F, T] =
     copy(data = (other.data -- subtract).foldLeft(data) {
@@ -18,22 +18,17 @@ case class Acc[F[_], T <: Token[F]](data: Map[String, NonEmptyList[T]]) {
 
   def sub(n: String): Acc[F, T] = copy(data = data - n)
 
-  def erase: Acc[F, T] = Acc.empty
+  def erase: Acc[F, T] = Acc.empty[F, T]
 
   def addOne(n: String, v: T): Acc[F, T] = add(Acc.one(n, v))
 
   def takeKeys(keys: Set[String]): Acc[F, T] = copy(data = data.view.filterKeys(keys).toMap)
-
-  def toErrors(toMsg: (String, T) => String)(implicit F: Functor[F]): List[F[String]] =
-    data.flatMap {
-      case (k, vs) => vs.toList.map(v => v.as(toMsg(k, v)))
-    }.toList
 }
 
 object Acc {
-  def empty[F[_], T <: Token[F]]: Acc[F, T] = Acc(Map.empty[String, NonEmptyList[T]])
+  def empty[F[_], T]: Acc[F, T] = Acc(Map.empty[String, NonEmptyList[T]])
 
-  def one[F[_], T <: Token[F]](n: String, v: T): Acc[F, T] = Acc(Map(n -> NonEmptyList.one(v)))
+  def one[F[_], T](n: String, v: T): Acc[F, T] = Acc(Map(n -> NonEmptyList.one(v)))
 
   def fromValues[F[_]: Comonad](args: List[Value[F]]): Acc[F, Value[F]] =
     args.collect {

@@ -2,6 +2,7 @@ package aqua.model
 
 import aqua.parser._
 import aqua.parser.lexer._
+import aqua.model.marker.{ArrowMarker, TypeMarker}
 import cats.Comonad
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
@@ -9,10 +10,11 @@ import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import scala.collection.immutable.Queue
 
 // Fully resolved Scope must have no expected abilities (all resolved)
-case class Names[F[_]](
+/*case class Names[F[_]](
   // Take vars, set vars
   // Data type is not yet known
-  data: InOutAcc.Data[F] = InOutAcc.empty[F, Value[F], Var[F]],
+  // TODO VarMarker
+  data: DataAcc.Pass[F] = InOutAcc.empty[F, Value[F], Var[F]],
   // Abilities can be imported or set
   abilitiesResolve: InOutAcc.AbilitiesResolve[F] = InOutAcc.empty[F, Ability[F], AbilityResolve[F]],
   // Abilities can be defined and expected
@@ -65,3 +67,4 @@ object Names {
   }
 
 }
+ */

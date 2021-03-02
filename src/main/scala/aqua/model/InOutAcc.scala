@@ -4,149 +4,76 @@ import aqua.parser.{
   AbilityFuncCall,
   AbilityId,
   AbilityResolve,
-  ArrowMarker,
   Block,
   DefAlias,
   DefFunc,
   DefService,
   DefType,
+  Expression,
   Extract,
-  FuncArrow,
   FuncCall,
   FuncOp,
-  LocalArrow,
   On,
-  Par,
-  TypeAlias,
-  TypeDef,
-  TypeMarker
+  Par
 }
 import aqua.parser.lexer.{Ability, ArrowName, ArrowType, CustomType, DataType, Token, Value, Var}
+import aqua.model.marker.{ArrowMarker, FuncArrow, LocalArrow, Marker, TypeAlias, TypeDef, TypeMarker}
 import cats.{Comonad, Functor}
 import cats.data.NonEmptyList
 import cats.syntax.comonad._
 import cats.syntax.functor._
 
-case class InOutAcc[F[_], In <: Token[F], Out <: Token[F]](
+case class InOutAcc[F[_], In <: Token[F], Out <: Marker[F, _]](
   in: Acc[F, In],
-  out: Acc[F, Out],
-  scope: Scope[F]
+  out: Acc[F, Out]
 ) {
-  def par(f: F[Unit])(implicit F: Comonad[F]): InOutAcc[F, In, Out] = copy(scope = scope.par(f))
-  def xor(f: F[Unit])(implicit F: Comonad[F]): InOutAcc[F, In, Out] = copy(scope = scope.xor(f))
-  def on(v: Value[F]): InOutAcc[F, In, Out] = copy(scope = scope.on(v))
-  def unsetMode: InOutAcc[F, In, Out] = copy(scope = scope.unsetMode)
+  type Self = InOutAcc[F, In, Out]
 
-  def unsetPeer: InOutAcc[F, In, Out] = copy(scope = scope.unsetPeer)
-  def unsetScope: InOutAcc[F, In, Out] = unsetMode.unsetPeer
-
-  def combine(other: InOutAcc[F, In, Out])(implicit F: Comonad[F]): InOutAcc[F, In, Out] =
-    scope.mode.map(_.extract) match {
+  def combine(other: Self, mode: Option[Mode])(implicit F: Comonad[F]): Self =
+    mode match {
       case None => combineSeq(other)
       case Some(XorMode) => combineXor(other)
       case Some(ParMode) => combinePar(other)
     }
 
-  def combineSeq(other: InOutAcc[F, In, Out]): InOutAcc[F, In, Out] =
+  def combineSeq(other: Self): Self =
     copy(in = in.add(other.in, out.keys), out = out add other.out)
 
-  def combinePar(other: InOutAcc[F, In, Out]): InOutAcc[F, In, Out] =
+  def combinePar(other: Self): Self =
     copy(in = in add other.in, out = out add other.out)
 
-  def combineXor(other: InOutAcc[F, In, Out]): InOutAcc[F, In, Out] =
+  def combineXor(other: Self): Self =
     copy(in = in add other.in)
 
-  def addIn(addition: Acc[F, In]): InOutAcc[F, In, Out] =
+  def addIn(addition: Acc[F, In]): Self =
     copy(in = in add addition)
 
-  def subIn(rem: String): InOutAcc[F, In, Out] =
+  def subIn(rem: String): Self =
     copy(in = in sub rem)
 
-  def addOut(addition: Acc[F, Out]): InOutAcc[F, In, Out] =
+  def addOut(addition: Acc[F, Out]): Self =
     copy(out = out add addition)
 
-  def collectOut(pf: PartialFunction[Out, Out]): InOutAcc[F, In, Out] =
+  def collectOut(pf: PartialFunction[Out, Out]): Self =
     copy(out = out.copy(data = out.data.map {
       case (k, v) => k -> v.toList.collect(pf)
     }.collect {
       case (k, h :: tail) => k -> NonEmptyList[Out](h, tail)
     }))
 
-  def subOut(rem: String): InOutAcc[F, In, Out] =
+  def subOut(rem: String): Self =
     copy(out = out sub rem)
 
-  def eraseOut: InOutAcc[F, In, Out] = copy(out = out.erase)
-  def eraseIn: InOutAcc[F, In, Out] = copy(in = in.erase)
-
-  def validateDuplicates(toMsg: (String, Out) => String, next: InOutAcc[F, In, Out])(implicit
-    F: Functor[F]
-  ): List[F[String]] =
-    next.out.takeKeys(out.keys).toErrors(toMsg)
-
-  def validateUnresolved(toMsg: (String, In) => String)(implicit F: Functor[F]): List[F[String]] =
-    in.toErrors(toMsg)
+  def eraseOut: Self = copy(out = out.erase)
+  def eraseIn: Self = copy(in = in.erase)
 }
 
 object InOutAcc {
 
-  def empty[F[_], In <: Token[F], Out <: Token[F]]: InOutAcc[F, In, Out] =
-    InOutAcc(Acc.empty[F, In], Acc.empty[F, Out], Scope())
+  def empty[F[_], In <: Token[F], Out <: Marker[F, _]]: InOutAcc[F, In, Out] =
+    InOutAcc(Acc.empty[F, In], Acc.empty[F, Out])
 
-  trait Visitor[IOA[_[_]]] {
-    def funcOp[F[_]: Comonad](op: FuncOp[F]): IOA[F]
-
-    def func[F[_]: Comonad](func: DefFunc[F]): IOA[F]
-
-    def block[F[_]: Comonad](block: Block[F]): IOA[F]
-  }
-
-  type Data[F[_]] = InOutAcc[F, Value[F], Var[F]]
-
-  object Data extends Visitor[Data] {
-
-    def funcOp[F[_]: Comonad](op: FuncOp[F]): Data[F] =
-      op match {
-        case FuncCall(_, fargs) =>
-          (empty: Data[F]) addIn Acc.fromValues(fargs)
-        case AbilityFuncCall(_, fc) =>
-          funcOp(fc)
-        case Extract(n, fc) =>
-          funcOp(fc) addOut Acc.one(n.name.extract, n)
-        case AbilityId(_, id) =>
-          (empty: Data[F]) addIn Acc.fromValues(id :: Nil)
-
-        case On(p, ops) =>
-          ops
-            .widen[FuncOp[F]]
-            .map(funcOp[F](_).on(p))
-            .foldLeft(
-              (empty: Data[F]).on(p) addIn Acc.fromValues(p :: Nil)
-            )(_ combine _)
-        case Par(f, op) =>
-          funcOp(op).par(f)
-        case _ =>
-          empty: Data[F]
-      }
-
-    override def func[F[_]: Comonad](func: DefFunc[F]): Data[F] =
-      func.head.args.foldLeft(
-        func.body.map(funcOp[F]).reduceLeft(_ combine _).unsetScope
-      ) {
-        case (acc, (k, _, _: DataType[F])) =>
-          acc.subIn(k)
-        case (acc, _) => acc
-
-      }
-
-    override def block[F[_]: Comonad](block: Block[F]): Data[F] =
-      block match {
-        case fn: DefFunc[F] =>
-          func(fn)
-        case _ =>
-          empty: Data[F]
-      }
-  }
-
+  /*
   type Abilities[F[_]] = InOutAcc[F, Ability[F], DefService[F]]
 
   object Abilities extends Visitor[Abilities] {
@@ -291,5 +218,5 @@ object InOutAcc {
         case _ =>
           empty: Arrows[F]
       }
-  }
+  }*/
 }

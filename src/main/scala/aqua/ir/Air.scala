@@ -44,7 +44,7 @@ object DataView {
   case class VarLens(name: String, lens: String) extends DataView
 
   implicit val show: Show[DataView] = Show.show {
-    case StringScalar(v) ⇒ "\""+v+"\""
+    case StringScalar(v) ⇒ v
     case InitPeerId ⇒ "%init_peer_id%"
     case LastError ⇒ "%last_error%"
     case Variable(name) ⇒ name
@@ -62,8 +62,8 @@ object Triplet {
   case class Full(peerId: DataView, serviceId: DataView, functionName: String) extends Triplet
 
   implicit val show: Show[Triplet] = Show.show {
-    case FromData(ps, fn) ⇒ s"${ps.show} "+"\""+fn+"\""
-    case Full(p, s, fn) ⇒ s"${p.show} (${s.show} "+"\""+fn+"\""
+    case FromData(ps, fn) ⇒ s"${ps.show} " + "\"" + fn + "\""
+    case Full(p, s, fn) ⇒ s"${p.show} (${s.show} " + "\"" + fn + "\""
   }
 }
 
@@ -89,7 +89,6 @@ object Air {
 
   case class Call(triplet: Triplet, args: List[DataView], result: Option[String]) extends Air(Keyword.Call)
 
-
   private def show(depth: Int, air: Air): String = {
     def showNext(a: Air) = show(depth + 1, a)
 
@@ -104,10 +103,10 @@ object Air {
         case Air.Par(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
         case Air.Seq(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
         case Air.Xor(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
-        case Air.Call(triplet, args, res) ⇒ s" ${triplet.show} [${args.map(_.show).mkString(", ")}]${res.fold("")(" " + _)}"
+        case Air.Call(triplet, args, res) ⇒
+          s" ${triplet.show} [${args.map(_.show).mkString(", ")}]${res.fold("")(" " + _)}"
       }) + ")\n"
   }
-
 
   implicit val s: Show[Air] = Show.show(show(0, _))
 }

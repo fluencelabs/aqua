@@ -11,7 +11,7 @@ service MySrv:
   pure: -> []Cdef
 
 func do_smth( a: X, b: -> Z ): -- And comments after the line
-  b()
+  a <- b()
   x(a)
 
 func do_smth2( a: X, b: -> Z ): -- And comments after the line

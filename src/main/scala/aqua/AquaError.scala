@@ -4,22 +4,22 @@ import aqua.parser.lift.Span
 import cats.data.NonEmptyList
 import cats.parse.Parser.Expectation
 
-sealed trait Error {
+sealed trait AquaError {
   def showForConsole(script: String): String
 }
 
-case class SyntaxError(offset: Int, expectations: NonEmptyList[Expectation]) extends Error {
+case class SyntaxError(offset: Int, expectations: NonEmptyList[Expectation]) extends AquaError {
 
   override def showForConsole(script: String): String =
     Span(offset, offset + 1)
       .focus(script, 3)
       .map(_.toConsoleStr(s"Syntax error, expected: ${expectations.toList.mkString(", ")}", Console.RED))
       .getOrElse(
-        "(offset is beyond the script)"
-      ) + "\n"
+        "(offset is beyond the script, syntax errors) " + Console.RED + expectations.toList.mkString(", ")
+      ) + Console.RESET + "\n"
 }
 
-case class NamesError(span: Span, hint: String) extends Error {
+case class NamesError(span: Span, hint: String) extends AquaError {
 
   override def showForConsole(script: String): String =
     span
@@ -28,7 +28,7 @@ case class NamesError(span: Span, hint: String) extends Error {
       .getOrElse("(offset is beyond the script)") + "\n"
 }
 
-case class GetTypeError(span: Span, hint: String) extends Error {
+case class GetTypeError(span: Span, hint: String) extends AquaError {
 
   override def showForConsole(script: String): String =
     span

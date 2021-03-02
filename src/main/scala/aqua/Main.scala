@@ -19,7 +19,7 @@ object Main extends IOApp.Simple {
             println(Console.RED + s"Aqua script errored, total ${errs.length} problems found" + Console.RESET)
         }
 
-      val experimental = Source.fromResource("typecheck.aqua").mkString
+      val experimental = Source.fromResource("experimental.aqua").mkString
       tryParse(experimental)
     }
 

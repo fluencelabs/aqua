@@ -13,8 +13,11 @@ lazy val root = project
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-effect" % "3.0.0-RC2",
       "org.typelevel" %% "cats-parse"  % "0.3.1",
-      "org.typelevel" %% "cats-free"   % catsV
+      "org.typelevel" %% "cats-free"   % catsV,
+      "com.chuusai"   %% "shapeless"   % "2.3.3"
     ),
     libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.5" % Test,
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.5" % Test
   )
+
+addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full)

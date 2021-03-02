@@ -67,6 +67,11 @@ object Span {
   }
 
   type F[T] = (Span, T)
+  //type F[T] = (Option[Ctx], Span, T)
+
+  //def mapK[K[_]](nat: F ~> K) => F[T] => K[T]
+  //def mapF(fn: F[Unit] => F[Unit]) token.setF(fn(token.unit))
+  //type K[T] = (Names, Span, T)
 
   implicit object spanComonad extends Comonad[F] {
     override def extract[A](x: F[A]): A = x._2

@@ -10,6 +10,7 @@ import cats.syntax.functor._
 sealed trait Type[F[_]] extends Token[F]
 sealed trait DataType[F[_]] extends Type[F]
 
+// TODO add F[Unit]
 case class ArrayType[F[_]](data: DataType[F]) extends DataType[F] {
   override def as[T](v: T)(implicit F: Functor[F]): F[T] = data.as(v)
 }

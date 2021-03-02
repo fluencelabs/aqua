@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.parser.lexer.Token._
-import aqua.parser.lexer.{Ability, Token, Value, Var}
+import aqua.parser.lexer.{Ability, ArrowName, Value, Var}
 import cats.data.NonEmptyList
 import cats.parse.{Parser => P}
 import aqua.parser.lexer.Value.`value`
@@ -9,91 +9,99 @@ import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
 import cats.{Comonad, Functor}
 import cats.syntax.functor._
+import shapeless.HNil
 
-sealed trait FuncOp[F[_]] extends Token[F]
-sealed trait InstrOp[F[_]] extends FuncOp[F]
+sealed trait FuncOp[F[_], L] extends Expression[F, L]
+sealed trait InstrOp[F[_], L] extends FuncOp[F, L]
 
-sealed trait ExecOp[F[_]] extends InstrOp[F]
-sealed trait CallOp[F[_]] extends ExecOp[F]
+sealed trait ExecOp[F[_], L] extends InstrOp[F, L]
+sealed trait CallOp[F[_], L] extends ExecOp[F, L]
 
-case class FuncCall[F[_]](name: F[String], args: List[Value[F]]) extends CallOp[F] {
-  override def as[T](v: T)(implicit F: Functor[F]): F[T] = name.as(v)
-}
+case class FuncCall[F[_], L](arrow: ArrowName[F], args: List[Value[F]], context: L) extends CallOp[F, L]
 
-case class AbilityFuncCall[F[_]](ability: Ability[F], call: FuncCall[F]) extends CallOp[F] {
-  override def as[T](v: T)(implicit F: Functor[F]): F[T] = ability.as(v)
-}
+case class AbilityFuncCall[F[_], L](ability: Ability[F], call: FuncCall[F, L], context: L) extends CallOp[F, L]
 
-case class Extract[F[_]](vr: Var[F], from: CallOp[F]) extends ExecOp[F] {
-  override def as[T](v: T)(implicit F: Functor[F]): F[T] = vr.as(v)
-}
+case class Extract[F[_], L](vr: Var[F], from: CallOp[F, L], context: L) extends ExecOp[F, L]
 
-case class On[F[_]](peer: Value[F], ops: NonEmptyList[ExecOp[F]]) extends InstrOp[F] {
-  override def as[T](v: T)(implicit F: Functor[F]): F[T] = peer.as(v)
-}
+case class On[F[_], L](peer: Value[F], ops: NonEmptyList[ExecOp[F, L]], context: L) extends InstrOp[F, L]
 
-case class Par[F[_]](f: F[Unit], op: InstrOp[F]) extends FuncOp[F] {
-  override def as[T](v: T)(implicit F: Functor[F]): F[T] = f.as(v)
-}
+case class Par[F[_], L](f: F[Unit], op: InstrOp[F, L], context: L) extends FuncOp[F, L]
 
 // TODO: can't be in Par, can be in On
-sealed trait AbilityResolve[F[_]] extends ExecOp[F] {
+sealed trait AbilityResolve[F[_], L] extends ExecOp[F, L] {
   def ability: Ability[F]
-  override def as[T](v: T)(implicit F: Functor[F]): F[T] = ability.as(v)
 }
-case class AbilityId[F[_]](ability: Ability[F], id: Value[F]) extends AbilityResolve[F]
+case class AbilityId[F[_], L](ability: Ability[F], id: Value[F], context: L) extends AbilityResolve[F, L]
 
 object FuncOp {
 
-  def funcCall[F[_]: LiftParser: Comonad]: P[FuncCall[F]] =
-    (`name`.lift ~ P.repSep0(`value`, `,`).between(`(`, `)`)).map {
-      case (fnName, args) ⇒ FuncCall(fnName, args)
+  def funcCall[F[_]: LiftParser: Comonad]: P[FuncCall[F, HNil]] =
+    (ArrowName.an[F] ~ P.repSep0(`value`, `,`).between(`(`, `)`)).map {
+      case (fnName, args) ⇒ FuncCall(fnName, args, HNil)
     }
 
-  def abilityFuncCall[F[_]: LiftParser: Comonad]: P[AbilityFuncCall[F]] =
+  def abilityFuncCall[F[_]: LiftParser: Comonad]: P[AbilityFuncCall[F, HNil]] =
     ((Ability.ab[F] <* `.`) ~ funcCall).map {
-      case (abName, fc) ⇒ AbilityFuncCall(abName, fc)
+      case (abName, fc) ⇒ AbilityFuncCall(abName, fc, HNil)
     }
 
-  def callOp[F[_]: LiftParser: Comonad]: P[CallOp[F]] =
+  def callOp[F[_]: LiftParser: Comonad]: P[CallOp[F, HNil]] =
     P.oneOf(funcCall[F] :: abilityFuncCall[F] :: Nil)
 
-  def extract[F[_]: LiftParser: Comonad]: P[Extract[F]] =
+  def extract[F[_]: LiftParser: Comonad]: P[Extract[F, HNil]] =
     ((Var.v <* `<-`) ~ callOp[F]).map {
-      case (v, f) ⇒ Extract(v, f)
+      case (v, f) ⇒ Extract(v, f, HNil)
     }
 
-  def abilityResolve[F[_]: LiftParser: Comonad]: P[AbilityResolve[F]] =
+  def abilityResolve[F[_]: LiftParser: Comonad]: P[AbilityResolve[F, HNil]] =
     ((Ability.ab <* ` `) ~ `value`).map {
-      case (n, v) ⇒ AbilityId(n, v)
-    }.widen[AbilityResolve[F]]
+      case (n, v) ⇒ AbilityId[F, HNil](n, v, HNil)
+    }.widen[AbilityResolve[F, HNil]]
 
   // TODO can't be in Par, can be in On
-  def execOp[F[_]: LiftParser: Comonad]: P[ExecOp[F]] =
+  def execOp[F[_]: LiftParser: Comonad]: P[ExecOp[F, HNil]] =
     P.oneOf(
       callOp.backtrack
         :: abilityResolve.backtrack
         :: extract :: Nil
     )
 
-  def startOn[F[_]: LiftParser: Comonad]: P[Value[F]] = `on` *> ` ` *> `value` <* ` `.? <* `:` <* ` \n*`
+  def startOn[F[_]: LiftParser: Comonad]: P[Value[F]] = `on` *> ` ` *> `value` <* ` `.? <* `:` <* ` \n+`
 
-  def execOn[F[_]: LiftParser: Comonad]: P[On[F]] =
+  def execOn[F[_]: LiftParser: Comonad]: P[On[F, HNil]] =
     (startOn ~ indented(execOp[F])).map {
-      case (v, i) ⇒ On(v, i)
+      case (v, i) ⇒ On(v, i, HNil)
     }
 
-  def instrOp[F[_]: LiftParser: Comonad]: P[InstrOp[F]] =
+  def instrOp[F[_]: LiftParser: Comonad]: P[InstrOp[F, HNil]] =
     P.oneOf(
       execOn.backtrack
         :: execOp :: Nil
     )
 
-  def parOp[F[_]: LiftParser: Comonad]: P[Par[F]] =
-    ((`par`.lift <* ` `) ~ instrOp[F]).map(pi => Par(pi._1, pi._2))
+  def parOp[F[_]: LiftParser: Comonad]: P[Par[F, HNil]] =
+    ((`par`.lift <* ` `) ~ instrOp[F]).map(pi => Par(pi._1, pi._2, HNil))
 
-  def `funcop`[F[_]: LiftParser: Comonad]: P[FuncOp[F]] =
+  def `funcop`[F[_]: LiftParser: Comonad]: P[FuncOp[F, HNil]] =
     P.oneOf(parOp.backtrack :: instrOp :: Nil)
 
-  def body[F[_]: LiftParser: Comonad]: P[NonEmptyList[FuncOp[F]]] = indented(`funcop`)
+  def body[F[_]: LiftParser: Comonad]: P[NonEmptyList[FuncOp[F, HNil]]] = indented(`funcop`)
+
+  implicit def funcOpFunctor[F[_]]: Functor[FuncOp[F, *]] =
+    new Functor[FuncOp[F, *]] {
+
+      override def map[A, B](fa: FuncOp[F, A])(f: A => B): FuncOp[F, B] =
+        fa match {
+          case fc @ FuncCall(_, _, ctx) => fc.copy(context = f(ctx))
+          case afc @ AbilityFuncCall(_, fc, ctx) => afc.copy(call = fc.copy(context = f(fc.context)), context = f(ctx))
+          case e @ Extract(_, afc @ AbilityFuncCall(_, fc, actx), ctx) =>
+            e.copy(from = afc.copy(call = fc.copy(context = f(fc.context)), context = f(actx)), context = f(ctx))
+          case e @ Extract(_, fc @ FuncCall(_, _, fctx), ctx) =>
+            e.copy(from = fc.copy(context = f(fctx)), context = f(ctx))
+          case on @ On(_, ops, ctx) => on.copy(ops = ops.map(map(_)(f).asInstanceOf[ExecOp[F, B]]), context = f(ctx))
+          case p @ Par(_, op, ctx) => p.copy(op = map(op)(f).asInstanceOf[InstrOp[F, B]], context = f(ctx))
+          case aid @ AbilityId(_, _, ctx) => aid.copy(context = f(ctx))
+        }
+    }
+
 }

@@ -11,7 +11,7 @@ data Enclosing:
     arr: []Wrapping
     flag: bool
 
-func call(enc: Enclosing, oni32: i32 -> (), onString: string -> (), onBool: bool -> ()) -> ():
+func call(enc: Enclosing, oni32: i32 -> (), onString: string -> (), onBool: bool -> (), onInside: Inside -> Inside) -> Inside:
     onBool(enc.flag)
     onBool(enc.wrap)
 
