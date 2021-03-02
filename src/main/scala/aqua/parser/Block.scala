@@ -8,7 +8,7 @@ import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
 import cats.Comonad
 import cats.data.{NonEmptyList, NonEmptyMap}
-import cats.parse.{Parser => P}
+import cats.parse.{Parser => P, Parser0 => P0}
 import cats.syntax.comonad._
 import shapeless.HNil
 
@@ -96,4 +96,7 @@ object Block {
         DefAlias.`defalias` ::
         Nil
     )
+
+  def blocks[F[_]: LiftParser: Comonad]: P0[List[Block[F, HNil]]] =
+    P.repSep0(block[F], ` \n+`) <* ` \n+`.?
 }

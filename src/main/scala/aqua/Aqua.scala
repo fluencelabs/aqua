@@ -11,7 +11,7 @@ import shapeless.HNil
 object Aqua {
   import aqua.parser.lexer.Token._
 
-  private val parser: P0[List[Block[Span.F, HNil]]] = P.repSep0(Block.`block`[Span.F], ` \n+`) <* ` \n+`
+  private val parser: P0[List[Block[Span.F, HNil]]] = Block.blocks[Span.F]
 
   val passer = Passer.hnil[Span.F].andThen(new ScopePasser(_)).andThen(new DataAcc.Pass(_))
 
