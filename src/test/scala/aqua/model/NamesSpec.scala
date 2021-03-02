@@ -11,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
 import scala.language.implicitConversions
 
 class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
-  private val namesId = Names.funcOps[Id](_)
+  /* private val namesId = Names.funcOps[Id](_)
   private val funcOpsP = (v: String) => FuncOp.body[Id].parseAll(v).right.value
   private val namesP = (v: String) => namesId(funcOpsP(v))
 
@@ -100,5 +100,5 @@ class NamesSpec extends AnyFlatSpec with Matchers with EitherValues {
         importData = Set("v")
       )
     )
-  }
+  }*/
 }

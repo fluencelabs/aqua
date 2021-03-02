@@ -14,7 +14,7 @@ class LambdaOpSpec extends AnyFlatSpec with Matchers with EitherValues {
 
     opsP(".field") should be(NonEmptyList.of(IntoField("field")))
     opsP(".field.sub") should be(NonEmptyList.of(IntoField("field"), IntoField("sub")))
-    opsP(".field*.sub") should be(NonEmptyList.of(IntoField("field"), IntoArray, IntoField("sub")))
+    opsP(".field*.sub") should be(NonEmptyList.of(IntoField[Id]("field"), IntoArray[Id](()), IntoField[Id]("sub")))
   }
 
 }

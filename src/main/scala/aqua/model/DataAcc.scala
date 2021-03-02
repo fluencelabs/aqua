@@ -1,7 +1,7 @@
 package aqua.model
 
 import aqua.AquaError
-import aqua.model.marker.{DataMarker, VarMarker}
+import aqua.model.marker.{DataMarker, ExtractedVarMarker, FuncArgMarker}
 import aqua.parser.{AbilityFuncCall, AbilityId, Block, DefFunc, Extract, FuncCall, FuncOp, On, Par}
 import aqua.parser.lexer.{DataType, Value, Var}
 import cats.Comonad
@@ -10,7 +10,9 @@ import shapeless._
 import shapeless.ops.hlist.Selector
 import cats.syntax.comonad._
 
-case class DataAcc[F[_]](acc: InOutAcc[F, Value[F], DataMarker[F, HNil]])
+case class DataAcc[F[_]](acc: InOutAcc[F, Value[F], DataMarker[F, HNil]]) {
+  def eraseOut: DataAcc[F] = copy(acc.eraseOut)
+}
 
 object DataAcc {
   type Acc[F[_]] = InOutAcc[F, Value[F], DataMarker[F, HNil]]
@@ -34,11 +36,14 @@ object DataAcc {
       op match {
         case FuncCall(_, args, _) =>
           combinedWith(_ addIn Acc.fromValues(args)) :: in
-        case AbilityFuncCall(_, fc, _) =>
-          funcOpCtx(fc, prev)
-        case Extract(n, fc, _) =>
+        case AbilityFuncCall(_, _, args, _) =>
+          combinedWith(_ addIn Acc.fromValues(args)) :: in
+        case ex @ Extract(n, fc, _) =>
           val f = funcOpCtx(fc, prev)
-          f.head.copy(f.head.acc.combine(empty[F].acc addOut Acc.one(n.name.extract, VarMarker(n)), mode)) :: f.tail
+          f.head
+            .copy(
+              f.head.acc.combine(empty[F].acc addOut Acc.one(n.name.extract, ExtractedVarMarker(n, ex)), mode)
+            ) :: f.tail
         case AbilityId(_, id, _) =>
           combinedWith(_ addIn Acc.fromValues(id :: Nil)) :: in
         case On(p, _, _) =>
@@ -51,12 +56,12 @@ object DataAcc {
     override def blockCtx(block: Block[F, I]): Ctx =
       (block match {
         case DefFunc(head, _, _) =>
-          head.args.foldLeft(empty[F]) {
-            case (acc, (k, v, _: DataType[F])) =>
-              // TODO we know data type there, should we care?
-              acc.copy(acc.acc.addOut(Acc.one(k, VarMarker(Var(v)))))
-            case (acc, _) => acc
-          }
+          head.args
+            .foldLeft(empty[F]) {
+              case (acc, (k, v, dt: DataType[F])) =>
+                acc.copy(acc.acc.addOut(Acc.one(k, FuncArgMarker(Var(v), dt))))
+              case (acc, _) => acc
+            }
 
         case _ =>
           empty[F]
@@ -75,7 +80,8 @@ object DataAcc {
     override def emptyCtx: Out = empty[F] :: extend.emptyCtx
 
     override def combineBlockCtx(prev: Out, block: Out): Out =
-      DataAcc(prev.head.acc.eraseOut combineSeq block.head.acc) :: extend.combineBlockCtx(prev.tail, block.tail)
+      DataAcc(prev.head.acc.eraseOut combineSeq block.head.acc) :: extend
+        .combineBlockCtx(prev.tail, block.tail)
 
     override def unresolved(ctx: Out): List[F[String]] =
       ctx.head.acc.in.data.flatMap {

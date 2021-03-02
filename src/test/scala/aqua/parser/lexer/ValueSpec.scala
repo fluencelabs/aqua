@@ -3,13 +3,16 @@ package aqua.parser.lexer
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 
 class ValueSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "var getter" should "parse" in {
-    Value.`value`.parseAll("varname").right.value should be(VarLambda("varname", None))
-    Value.`value`.parseAll("varname.field").right.value should be(VarLambda("varname", Some("field")))
-    Value.`value`.parseAll("varname.field.sub").right.value should be(VarLambda("varname", Some("field.sub")))
+    Value.`value`.parseAll("varname").right.value should be(VarLambda("varname", Nil))
+    Value.`value`.parseAll("varname.field").right.value should be(VarLambda("varname", IntoField("field") :: Nil))
+    Value.`value`.parseAll("varname.field.sub").right.value should be(
+      VarLambda("varname", IntoField("field") :: IntoField("sub") :: Nil)
+    )
   }
 
   "literals" should "parse" in {

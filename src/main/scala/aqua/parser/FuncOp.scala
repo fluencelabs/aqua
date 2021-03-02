@@ -9,6 +9,7 @@ import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
 import cats.{Comonad, Functor}
 import cats.syntax.functor._
+import cats.syntax.comonad._
 import shapeless.HNil
 
 sealed trait FuncOp[F[_], L] extends Expression[F, L]
@@ -19,7 +20,8 @@ sealed trait CallOp[F[_], L] extends ExecOp[F, L]
 
 case class FuncCall[F[_], L](arrow: ArrowName[F], args: List[Value[F]], context: L) extends CallOp[F, L]
 
-case class AbilityFuncCall[F[_], L](ability: Ability[F], call: FuncCall[F, L], context: L) extends CallOp[F, L]
+case class AbilityFuncCall[F[_], L](ability: Ability[F], arrow: ArrowName[F], args: List[Value[F]], context: L)
+    extends CallOp[F, L]
 
 case class Extract[F[_], L](vr: Var[F], from: CallOp[F, L], context: L) extends ExecOp[F, L]
 
@@ -42,7 +44,8 @@ object FuncOp {
 
   def abilityFuncCall[F[_]: LiftParser: Comonad]: P[AbilityFuncCall[F, HNil]] =
     ((Ability.ab[F] <* `.`) ~ funcCall).map {
-      case (abName, fc) ⇒ AbilityFuncCall(abName, fc, HNil)
+      case (abName, fc) ⇒
+        AbilityFuncCall(abName, fc.arrow.copy(fc.arrow.name.map(abName.name.extract ++ "." ++ _)), fc.args, HNil)
     }
 
   def callOp[F[_]: LiftParser: Comonad]: P[CallOp[F, HNil]] =
@@ -93,9 +96,9 @@ object FuncOp {
       override def map[A, B](fa: FuncOp[F, A])(f: A => B): FuncOp[F, B] =
         fa match {
           case fc @ FuncCall(_, _, ctx) => fc.copy(context = f(ctx))
-          case afc @ AbilityFuncCall(_, fc, ctx) => afc.copy(call = fc.copy(context = f(fc.context)), context = f(ctx))
-          case e @ Extract(_, afc @ AbilityFuncCall(_, fc, actx), ctx) =>
-            e.copy(from = afc.copy(call = fc.copy(context = f(fc.context)), context = f(actx)), context = f(ctx))
+          case afc @ AbilityFuncCall(_, _, _, ctx) => afc.copy(context = f(ctx))
+          case e @ Extract(_, afc @ AbilityFuncCall(_, _, _, actx), ctx) =>
+            e.copy(from = afc.copy(context = f(actx)), context = f(ctx))
           case e @ Extract(_, fc @ FuncCall(_, _, fctx), ctx) =>
             e.copy(from = fc.copy(context = f(fctx)), context = f(ctx))
           case on @ On(_, ops, ctx) => on.copy(ops = ops.map(map(_)(f).asInstanceOf[ExecOp[F, B]]), context = f(ctx))
