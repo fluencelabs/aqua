@@ -1,6 +1,6 @@
 package aqua
 
-import aqua.context.{Abilities, AbilitiesResolve, ArgsAndVars, Types}
+import aqua.context.{Abilities, AbilitiesResolve, ArgsAndVars, Arrows, Types}
 import aqua.context.scope.ScopeWalker
 import aqua.context.walker.Walker
 import aqua.parser.Block
@@ -21,6 +21,7 @@ object Aqua {
       .andThen(new Types.ExpDef(_))
       .andThen(new Abilities.ExpDef(_))
       .andThen(new AbilitiesResolve.ExpDef(_))
+      .andThen(new Arrows.ExpDef(_))
 
   def parse(input: String): ValidatedNel[AquaError, List[Block[Span.F, walker.Out]]] =
     Validated
