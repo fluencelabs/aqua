@@ -9,6 +9,7 @@ import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import cats.data.Validated.Invalid
 import shapeless._
 
 class ArgsAndVarsSpec extends AnyFlatSpec with Matchers with EitherValues {
@@ -27,7 +28,16 @@ class ArgsAndVarsSpec extends AnyFlatSpec with Matchers with EitherValues {
       .right
       .value
 
-  "data acc" should "collect no vars in a single function" in {
+  def parseBlocksV(str: String) =
+    Validated
+      .fromEither(Block.blocks[Id].parseAll(str))
+      .leftMap(_.toString)
+      .leftMap(NonEmptyList.one)
+      .andThen(
+        walker.walkValidate
+      )
+
+  "Arguments and vars walker" should "collect no vars in a single function" in {
     val bs = parseBlocks("""
                            |func some():
                            |   x <- arr()
@@ -41,7 +51,8 @@ class ArgsAndVarsSpec extends AnyFlatSpec with Matchers with EitherValues {
     acc.expectAcc.keys should be('empty)
     acc.defineAcc.keys should be('empty)
   }
-  "data acc" should "collect no vars in two functions" in {
+
+  "Arguments and vars walker" should "collect no vars in two functions" in {
     val bs = parseBlocks("""
                            |func some():
                            |   x <- arr()
@@ -58,6 +69,19 @@ class ArgsAndVarsSpec extends AnyFlatSpec with Matchers with EitherValues {
     val acc = ctx.head.expDef
     acc.expectAcc.keys should be('empty)
     acc.defineAcc.keys should be('empty)
+  }
+
+  "Arguments and vars walker" should "catch undefined var in a function" in {
+    val res = parseBlocksV("""
+                             |func some():
+                             |   x <- f(z, y)
+                             |   
+                             |alias T: i32
+                             |""".stripMargin)
+
+    res.isValid should be(false)
+    val Invalid(errs) = res
+    errs should have length (2)
   }
 
 }

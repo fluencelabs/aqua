@@ -8,7 +8,7 @@ import shapeless._
 class ScopeWalker[F[_]: Functor, I <: HList, O <: HList](extend: Walker[F, I, O]) extends Walker[F, I, Scope[F] :: O] {
   type Ctx = Scope[F] :: O
 
-  override def exitFuncOpGroup(group: FuncExpr[F, I], last: Ctx): Ctx =
+  override def exitFuncExprGroup(group: FuncExpr[F, I], last: Ctx): Ctx =
     (group match {
       case _: Par[F, I] =>
         last.head.unsetMode
@@ -16,7 +16,7 @@ class ScopeWalker[F[_]: Functor, I <: HList, O <: HList](extend: Walker[F, I, O]
         last.head.unsetPeer
       case _ =>
         last.head
-    }) :: extend.exitFuncOpGroup(group, last.tail)
+    }) :: extend.exitFuncExprGroup(group, last.tail)
 
   override def funcOpCtx(op: FuncExpr[F, I], prev: Ctx): Ctx =
     (op match {
@@ -27,7 +27,7 @@ class ScopeWalker[F[_]: Functor, I <: HList, O <: HList](extend: Walker[F, I, O]
 
   override def blockCtx(block: Block[F, I]): Ctx = Scope[F]() :: extend.blockCtx(block)
 
-  override def duplicates(prev: Out, next: Out): List[F[String]] =
+  override def duplicates(prev: Out, next: Out): List[Walker.DupError[F]] =
     extend.duplicates(prev.tail, next.tail)
 
   override def emptyCtx: Out = Scope[F]() :: extend.emptyCtx
@@ -35,5 +35,5 @@ class ScopeWalker[F[_]: Functor, I <: HList, O <: HList](extend: Walker[F, I, O]
   override def combineBlockCtx(prev: Out, block: Out): Out =
     Scope[F]() :: extend.combineBlockCtx(prev.tail, block.tail)
 
-  override def unresolved(ctx: Out): List[F[String]] = Nil
+  override def unresolved(ctx: Out): (List[Walker.UnresolvedError[F]], Out) = Nil -> ctx
 }

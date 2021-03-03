@@ -2,16 +2,18 @@ package aqua.context
 
 import aqua.context.marker.{DataMarker, ExtractedVarMarker, FuncArgMarker}
 import aqua.context.scope.Scope
+import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.context.walker.{Acc, ExpectAndDefine, Walker}
 import aqua.parser.{AbilityFuncCall, AbilityId, Block, DefFunc, Extract, FuncCall, FuncExpr, On, Par}
 import aqua.parser.lexer.{DataType, Value, Var}
-import cats.Comonad
+import cats.{Comonad, Functor}
 import shapeless._
 import shapeless.ops.hlist.Selector
 import cats.syntax.comonad._
 
 case class ArgsAndVars[F[_]](expDef: ExpectAndDefine[F, Value[F], DataMarker[F, HNil]]) {
   def clearDefinitions: ArgsAndVars[F] = copy(expDef.clearDefinitions)
+  def clearExpectations: ArgsAndVars[F] = copy(expDef.clearExpectations)
 }
 
 object ArgsAndVars {
@@ -19,12 +21,20 @@ object ArgsAndVars {
   def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, Value[F], DataMarker[F, HNil]]
   def empty[F[_]]: ArgsAndVars[F] = ArgsAndVars[F](emptyAcc[F])
 
+  case class DuplicateDef[F[_]](name: String, marker: DataMarker[F, HNil]) extends Walker.DupError[F] {
+    override def toStringF(implicit F: Functor[F]): F[String] = marker.toError(s"Duplicate definition: ${name}")
+  }
+
+  case class UnresolvedVar[F[_]](name: String, usage: Value[F]) extends Walker.UnresolvedError[F] {
+    override def toStringF(implicit F: Functor[F]): F[String] = usage.as(s"Unresolved variable $name")
+  }
+
   class ExpDef[F[_]: Comonad, I <: HList, O <: HList](extend: Walker[F, I, O])(implicit getScope: Selector[O, Scope[F]])
       extends Walker[F, I, ArgsAndVars[F] :: O] {
     type Ctx = ArgsAndVars[F] :: O
 
-    override def exitFuncOpGroup(group: FuncExpr[F, I], last: Ctx): Ctx =
-      last.head :: extend.exitFuncOpGroup(group, last.tail)
+    override def exitFuncExprGroup(group: FuncExpr[F, I], last: Ctx): Ctx =
+      last.head :: extend.exitFuncExprGroup(group, last.tail)
 
     override def funcOpCtx(op: FuncExpr[F, I], prev: Ctx): Ctx = {
       lazy val in = extend.funcOpCtx(op, prev.tail)
@@ -68,24 +78,31 @@ object ArgsAndVars {
 
       }) :: extend.blockCtx(block)
 
-    override def duplicates(prev: Out, next: Out): List[F[String]] =
+    override def duplicates(prev: Out, next: Out): List[DupError[F]] =
       next.head.expDef.defineAcc
         .takeKeys(prev.head.expDef.defineAcc.keys)
         .data
         .flatMap {
-          case (k, vs) => vs.toList.map(_.toError(s"Duplicated variable definition `$k`"))
+          case (k, vs) => vs.toList.map(v => DuplicateDef(k, v))
         }
         .toList ::: extend.duplicates(prev.tail, next.tail)
 
     override def emptyCtx: Out = empty[F] :: extend.emptyCtx
 
     override def combineBlockCtx(prev: Out, block: Out): Out =
-      ArgsAndVars(prev.head.expDef.clearDefinitions combineSeq block.head.expDef) :: extend
+      ArgsAndVars(prev.head.expDef combineSeq block.head.expDef).clearDefinitions :: extend
         .combineBlockCtx(prev.tail, block.tail)
 
-    override def unresolved(ctx: Out): List[F[String]] =
-      ctx.head.expDef.expectAcc.data.flatMap {
-        case (k, vs) => vs.toList.map(v => v.as(s"Unresolved variable `$k`"))
-      }.toList ::: extend.unresolved(ctx.tail)
+    override def unresolved(ctx: Out): (List[UnresolvedError[F]], Out) = {
+      val (extErrs, extCtx) = extend.unresolved(ctx.tail)
+
+      (
+        ctx.head.expDef.expectAcc.data.flatMap {
+          case (k, vs) => vs.toList.map(v => UnresolvedVar(k, v))
+        }.toList ::: extErrs,
+        ctx.head.clearExpectations :: extCtx
+      )
+
+    }
   }
 }

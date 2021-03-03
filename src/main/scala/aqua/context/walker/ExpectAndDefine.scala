@@ -48,6 +48,7 @@ case class ExpectAndDefine[F[_], In <: Token[F], Out <: Marker[F, _]](
     copy(defineAcc = defineAcc sub rem)
 
   def clearDefinitions: Self = copy(defineAcc = defineAcc.erase)
+  def clearExpectations: Self = copy(expectAcc = expectAcc.erase)
 }
 
 object ExpectAndDefine {

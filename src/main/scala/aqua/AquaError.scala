@@ -19,13 +19,13 @@ case class SyntaxError(offset: Int, expectations: NonEmptyList[Expectation]) ext
       ) + Console.RESET + "\n"
 }
 
-case class NamesError(span: Span, hint: String) extends AquaError {
+case class WalkerError(span: Span, hint: String) extends AquaError {
 
   override def showForConsole(script: String): String =
     span
       .focus(script, 3)
-      .map(_.toConsoleStr(hint, Console.YELLOW))
-      .getOrElse("(offset is beyond the script)") + "\n"
+      .map(_.toConsoleStr(hint, Console.CYAN))
+      .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
 }
 
 case class GetTypeError(span: Span, hint: String) extends AquaError {
@@ -33,6 +33,6 @@ case class GetTypeError(span: Span, hint: String) extends AquaError {
   override def showForConsole(script: String): String =
     span
       .focus(script, 3)
-      .map(_.toConsoleStr(hint, Console.CYAN))
-      .getOrElse("(offset is beyond the script)") + "\n"
+      .map(_.toConsoleStr(hint, Console.MAGENTA))
+      .getOrElse("(Get type error, but offset is beyond the script)") + "\n"
 }

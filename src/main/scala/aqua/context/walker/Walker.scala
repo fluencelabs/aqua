@@ -1,6 +1,8 @@
 package aqua.context.walker
 
+import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.parser._
+import cats.Functor
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, ValidatedNel}
 import cats.syntax.functor._
@@ -11,7 +13,7 @@ import scala.collection.immutable.Queue
 trait Walker[F[_], I <: HList, O <: HList] {
   type Out = O
 
-  def exitFuncOpGroup(group: FuncExpr[F, I], last: O): O
+  def exitFuncExprGroup(group: FuncExpr[F, I], last: O): O
 
   def funcOpCtx(op: FuncExpr[F, I], prev: O): O
 
@@ -22,12 +24,12 @@ trait Walker[F[_], I <: HList, O <: HList] {
     op match {
       case p @ Par(_, inner, _) =>
         val inOp = mapFuncOp(inner, ctx)
-        p.copy(op = inOp.asInstanceOf[InstrExpr[F, O]], context = exitFuncOpGroup(p, inOp.context))
+        p.copy(op = inOp.asInstanceOf[InstrExpr[F, O]], context = exitFuncExprGroup(p, inOp.context))
       case o @ On(_, ops, _) =>
         val (inOps, inCtx) = mapFuncOps(ops, ctx)
         o.copy(
           ops = inOps.asInstanceOf[NonEmptyList[ExecExpr[F, O]]],
-          context = exitFuncOpGroup(o, exitFuncOpGroup(o, inCtx))
+          context = exitFuncExprGroup(o, exitFuncExprGroup(o, inCtx))
         )
       case _ =>
         op.as(ctx)
@@ -47,59 +49,68 @@ trait Walker[F[_], I <: HList, O <: HList] {
 
   def combineBlockCtx(prev: Out, block: Out): Out
 
-  def mapBlock(block: Block[F, I], prevCtx: Out): (List[F[String]], Block[F, Out]) = {
+  def mapBlock(block: Block[F, I], prevCtx: Out): (List[Walker.Error[F]], Block[F, Out]) = {
     val ctx = blockCtx(block)
     val dupErr = duplicates(prevCtx, ctx)
-    val bCtx = combineBlockCtx(prevCtx, ctx)
-    val combinedBlock = block match {
+    val (unresolvedErrs, combinedBlock) = block match {
       case df @ DefFunc(_, body, _) =>
-        val (newBody, bodyCtx) = mapFuncOps(body, bCtx)
-        df.copy(body = newBody, context = bodyCtx)
+        val (newBody, bodyCtx) = mapFuncOps(body, ctx)
+        val (errs, bCtx) = unresolved(combineBlockCtx(prevCtx, bodyCtx))
+        errs -> df.copy(body = newBody, context = bCtx)
       case ds: DefService[F, I] =>
-        ds.copy(context = bCtx)
+        val (unresErrs, bCtx) = unresolved(combineBlockCtx(prevCtx, ctx))
+        unresErrs -> ds.copy(context = bCtx)
       case al: DefAlias[F, I] =>
-        al.copy(context = bCtx)
+        val (unresErrs, bCtx) = unresolved(combineBlockCtx(prevCtx, ctx))
+        unresErrs -> al.copy(context = bCtx)
       case dt: DefType[F, I] =>
-        dt.copy(context = bCtx)
+        val (unresErrs, bCtx) = unresolved(combineBlockCtx(prevCtx, ctx))
+        unresErrs -> dt.copy(context = bCtx)
     }
 
-    (dupErr ::: unresolved(combinedBlock.context)) -> combinedBlock
+    (dupErr ::: unresolvedErrs) -> combinedBlock
   }
 
   def andThen[O2 <: HList](f: Walker[F, I, O] => Walker[F, I, O2]): Walker[F, I, O2] = f(this)
 
-  def duplicates(prev: Out, next: Out): List[F[String]]
-  def unresolved(ctx: Out): List[F[String]]
+  def duplicates(prev: Out, next: Out): List[DupError[F]]
+  def unresolved(ctx: Out): (List[UnresolvedError[F]], Out)
 
-  def walkValidate(blocks: List[Block[F, I]]): ValidatedNel[F[String], List[Block[F, Out]]] = {
+  def walkValidate(blocks: List[Block[F, I]]): ValidatedNel[Walker.Error[F], List[Block[F, Out]]] = {
     val (errs, _, nblocks) =
-      blocks.foldLeft[(Queue[F[String]], Out, Queue[Block[F, Out]])]((Queue.empty, emptyCtx, Queue.empty)) {
+      blocks.foldLeft[(Queue[Walker.Error[F]], Out, Queue[Block[F, Out]])]((Queue.empty, emptyCtx, Queue.empty)) {
         case ((errs, prevCtx, blockAcc), next) =>
           val (addErrs, mappedBlock) = mapBlock(next, prevCtx)
           (errs.appendedAll(addErrs), mappedBlock.context, blockAcc.appended(mappedBlock))
       }
     NonEmptyList
       .fromList(errs.toList)
-      .fold[ValidatedNel[F[String], List[Block[F, Out]]]](Valid(nblocks.toList))(Invalid(_))
+      .fold[ValidatedNel[Walker.Error[F], List[Block[F, Out]]]](Valid(nblocks.toList))(Invalid(_))
   }
 }
 
 object Walker {
 
+  trait Error[F[_]] {
+    def toStringF(implicit F: Functor[F]): F[String]
+  }
+  trait DupError[F[_]] extends Error[F]
+  trait UnresolvedError[F[_]] extends Error[F]
+
   def hnil[F[_]]: Walker[F, HNil, HNil] =
     new Walker[F, HNil, HNil] {
-      override def exitFuncOpGroup(group: FuncExpr[F, HNil], last: HNil): HNil = HNil
+      override def exitFuncExprGroup(group: FuncExpr[F, HNil], last: HNil): HNil = HNil
 
       override def funcOpCtx(op: FuncExpr[F, HNil], prev: HNil): HNil = HNil
 
       override def blockCtx(block: Block[F, HNil]): HNil = HNil
 
-      override def duplicates(prev: Out, next: Out): List[F[String]] = Nil
+      override def duplicates(prev: Out, next: Out): List[DupError[F]] = Nil
 
       override def emptyCtx: Out = HNil
 
       override def combineBlockCtx(prev: Out, block: Out): Out = HNil
 
-      override def unresolved(ctx: Out): List[F[String]] = Nil
+      override def unresolved(ctx: Out): (List[UnresolvedError[F]], Out) = Nil -> ctx
     }
 }
