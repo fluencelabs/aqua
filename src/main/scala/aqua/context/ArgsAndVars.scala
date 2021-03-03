@@ -42,7 +42,7 @@ object ArgsAndVars {
       lazy val in = extend.funcOpCtx(op, prev.tail)
       val data = prev.head
       lazy val mode = getScope(in).mode.map(_.extract)
-      def combinedWith(other: Acc[F] => ExpectAndDefine[F, Value[F], DataMarker[F]]): ArgsAndVars[F] =
+      def combinedWith(other: Acc[F] => Acc[F]): ArgsAndVars[F] =
         ArgsAndVars[F](data.expDef.combine(other(emptyAcc[F]), mode))
 
       op match {

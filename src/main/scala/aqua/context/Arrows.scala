@@ -19,7 +19,7 @@ case class Arrows[F[_]](expDef: ExpectAndDefine[F, ArrowName[F], ArrowMarker[F]]
   def clearExpectations: Arrows[F] = copy(expDef.clearExpectations)
 
   def expect(a: ArrowName[F])(implicit F: Comonad[F]): Arrows[F] =
-    copy(expDef.expect(Acc.one(a.name.extract, a)))
+    copy(expDef.combineSeq(Arrows.emptyAcc.expect(Acc.one(a.name.extract, a))))
 
   def defined(name: String, marker: ArrowMarker[F]): Arrows[F] =
     copy(expDef.defined(Acc.one(name, marker)))

@@ -36,22 +36,22 @@ class ArrowsSpec extends AnyFlatSpec with Matchers with EitherValues {
         walker.walkValidate
       )
 
-  "Arrows walker" should "collect no ability resolutions from a function" in {
+  "Arrows walker" should "collect no local arrows from a function" in {
     val bs = parseBlocks("""
-                           |func some():
-                           |   Peer "peer"
-                           |   Peer.timestamp()
+                           |func some(b: -> A):
+                           |   b()
                            |
                            |""".stripMargin)
 
     bs.length should be(1)
     val ctx = bs.head.context
     val acc = ctx.head.expDef
+
     acc.expectAcc.keys should be('empty)
     acc.defineAcc.keys should be('empty)
   }
 
-  "Arrows walker" should "collect ability expectations from two functions" in {
+  "Arrows walker" should "collect arrows from two functions" in {
     val res = parseBlocksV("""
                              |func some():
                              |   x <- First.arr()
@@ -66,7 +66,7 @@ class ArrowsSpec extends AnyFlatSpec with Matchers with EitherValues {
 
     res.isValid should be(false)
     val Invalid(errs) = res
-    errs should have length (2)
+    errs should have length (3)
   }
 
   "Arrows walker" should "resolve abilities in a function" in {
