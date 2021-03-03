@@ -58,41 +58,6 @@ object ExpectAndDefine {
 
   /*
 
-  type AbilitiesResolve[F[_]] = InOutAcc[F, Ability[F], AbilityResolve[F]]
-
-  object AbilitiesResolve extends Visitor[AbilitiesResolve] {
-
-    override def funcOp[F[_]: Comonad](op: FuncOp[F]): AbilitiesResolve[F] =
-      op match {
-        case ar: AbilityResolve[F] =>
-          (empty: AbilitiesResolve[F]) addOut Acc.one(ar.ability.name.extract, ar)
-        case AbilityFuncCall(ab, _) =>
-          (empty: AbilitiesResolve[F]) addIn Acc.one(ab.name.extract, ab)
-        case Extract(_, op) =>
-          funcOp[F](op)
-        case Par(p, op) =>
-          funcOp(op).par(p)
-        case On(p, ops) =>
-          ops
-            .widen[FuncOp[F]]
-            .map(funcOp[F](_).on(p))
-            .reduceLeft(_ combine _)
-            .eraseOut
-        case _ =>
-          empty: AbilitiesResolve[F]
-      }
-
-    // Until we have a notion for exporting abilities, they're cleaned
-    override def func[F[_]: Comonad](func: DefFunc[F]): AbilitiesResolve[F] =
-      func.body.map(funcOp[F]).reduceLeft(_ combine _).unsetScope.eraseOut
-
-    override def block[F[_]: Comonad](block: Block[F]): AbilitiesResolve[F] =
-      block match {
-        case fn: DefFunc[F] =>
-          func(fn)
-        case _ => empty: AbilitiesResolve[F]
-      }
-  }
 
   type Arrows[F[_]] = InOutAcc[F, ArrowName[F], ArrowMarker[F]]
 
