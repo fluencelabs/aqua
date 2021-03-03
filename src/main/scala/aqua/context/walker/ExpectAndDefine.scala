@@ -6,7 +6,7 @@ import aqua.parser.lexer.Token
 import cats.Comonad
 import cats.data.NonEmptyList
 
-case class ExpectAndDefine[F[_], In <: Token[F], Out <: Marker[F, _]](
+case class ExpectAndDefine[F[_], In <: Token[F], Out <: Marker[F]](
   expectAcc: Acc[F, In],
   defineAcc: Acc[F, Out]
 ) {
@@ -53,7 +53,7 @@ case class ExpectAndDefine[F[_], In <: Token[F], Out <: Marker[F, _]](
 
 object ExpectAndDefine {
 
-  def empty[F[_], In <: Token[F], Out <: Marker[F, _]]: ExpectAndDefine[F, In, Out] =
+  def empty[F[_], In <: Token[F], Out <: Marker[F]]: ExpectAndDefine[F, In, Out] =
     ExpectAndDefine(Acc.empty[F, In], Acc.empty[F, Out])
 
   /*
@@ -92,40 +92,7 @@ object ExpectAndDefine {
       }
   }
 
-  type Types[F[_]] = InOutAcc[F, CustomType[F], TypeMarker[F]]
 
-  object Types extends Visitor[Types] {
-
-    override def funcOp[F[_]: Comonad](op: FuncOp[F]): Types[F] =
-      op match {
-        case _ => empty: Types[F]
-      }
-
-    override def func[F[_]: Comonad](func: DefFunc[F]): Types[F] =
-      func.head.args.foldLeft(
-        func.body.map(funcOp[F]).reduceLeft[Types[F]](_ combine _).unsetScope
-      ) {
-        case (acc, (_, _, ft)) =>
-          acc.addIn(Acc.fromType(ft))
-      }
-
-    override def block[F[_]: Comonad](block: Block[F]): Types[F] =
-      block match {
-        case fn: DefFunc[F] =>
-          func(fn)
-        case deft: DefType[F] =>
-          deft.fields.toNel.map {
-            case (_, (_, tv)) =>
-              Acc.fromType[F](tv)
-          }.foldLeft((empty: Types[F]).addOut(Acc.one(deft.name.name.extract, TypeDef(deft))))(_ addIn _)
-        case defs: DefService[F] =>
-          defs.funcs.toNel.map(_._2).map(Acc.fromType(_)).foldLeft(empty: Types[F])(_ addIn _)
-        case a: DefAlias[F] =>
-          (empty: Types[F])
-            .addOut(Acc.one(a.alias.name.extract, TypeAlias(a.target)))
-            .addIn(Acc.fromType(a.target))
-      }
-  }
 
   type AbilitiesResolve[F[_]] = InOutAcc[F, Ability[F], AbilityResolve[F]]
 

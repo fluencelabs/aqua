@@ -1,6 +1,6 @@
 package aqua
 
-import aqua.context.ArgsAndVars
+import aqua.context.{ArgsAndVars, Types}
 import aqua.context.scope.ScopeWalker
 import aqua.context.walker.Walker
 import aqua.parser.Block
@@ -15,7 +15,8 @@ object Aqua {
 
   private val parser: P0[List[Block[Span.F, HNil]]] = Block.blocks[Span.F]
 
-  val walker = Walker.hnil[Span.F].andThen(new ScopeWalker(_)).andThen(new ArgsAndVars.ExpDef(_))
+  val walker =
+    Walker.hnil[Span.F].andThen(new ScopeWalker(_)).andThen(new ArgsAndVars.ExpDef(_)).andThen(new Types.ExpDef(_))
 
   def parse(input: String): ValidatedNel[AquaError, List[Block[Span.F, walker.Out]]] =
     Validated

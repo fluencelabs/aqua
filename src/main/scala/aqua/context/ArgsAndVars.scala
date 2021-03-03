@@ -11,18 +11,20 @@ import shapeless._
 import shapeless.ops.hlist.Selector
 import cats.syntax.comonad._
 
-case class ArgsAndVars[F[_]](expDef: ExpectAndDefine[F, Value[F], DataMarker[F, HNil]]) {
+case class ArgsAndVars[F[_]](expDef: ExpectAndDefine[F, Value[F], DataMarker[F]]) {
   def clearDefinitions: ArgsAndVars[F] = copy(expDef.clearDefinitions)
   def clearExpectations: ArgsAndVars[F] = copy(expDef.clearExpectations)
 }
 
 object ArgsAndVars {
-  type Acc[F[_]] = ExpectAndDefine[F, Value[F], DataMarker[F, HNil]]
-  def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, Value[F], DataMarker[F, HNil]]
+  type Acc[F[_]] = ExpectAndDefine[F, Value[F], DataMarker[F]]
+  def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, Value[F], DataMarker[F]]
   def empty[F[_]]: ArgsAndVars[F] = ArgsAndVars[F](emptyAcc[F])
 
-  case class DuplicateDef[F[_]](name: String, marker: DataMarker[F, HNil]) extends Walker.DupError[F] {
-    override def toStringF(implicit F: Functor[F]): F[String] = marker.toError(s"Duplicate definition: ${name}")
+  case class DuplicateDef[F[_]](name: String, marker: DataMarker[F]) extends Walker.DupError[F] {
+
+    override def toStringF(implicit F: Functor[F]): F[String] =
+      marker.toError(s"Duplicate variable or arg definition: ${name}")
   }
 
   case class UnresolvedVar[F[_]](name: String, usage: Value[F]) extends Walker.UnresolvedError[F] {
@@ -40,7 +42,7 @@ object ArgsAndVars {
       lazy val in = extend.funcOpCtx(op, prev.tail)
       val data = prev.head
       lazy val mode = getScope(in).mode.map(_.extract)
-      def combinedWith(other: Acc[F] => ExpectAndDefine[F, Value[F], DataMarker[F, HNil]]): ArgsAndVars[F] =
+      def combinedWith(other: Acc[F] => ExpectAndDefine[F, Value[F], DataMarker[F]]): ArgsAndVars[F] =
         ArgsAndVars[F](data.expDef.combine(other(emptyAcc[F]), mode))
 
       op match {
@@ -79,13 +81,8 @@ object ArgsAndVars {
       }) :: extend.blockCtx(block)
 
     override def duplicates(prev: Out, next: Out): List[DupError[F]] =
-      next.head.expDef.defineAcc
-        .takeKeys(prev.head.expDef.defineAcc.keys)
-        .data
-        .flatMap {
-          case (k, vs) => vs.toList.map(v => DuplicateDef(k, v))
-        }
-        .toList ::: extend.duplicates(prev.tail, next.tail)
+      Walker.collectDups(prev.head.expDef, next.head.expDef, DuplicateDef[F]) ::: extend
+        .duplicates(prev.tail, next.tail)
 
     override def emptyCtx: Out = empty[F] :: extend.emptyCtx
 
@@ -95,14 +92,8 @@ object ArgsAndVars {
 
     override def unresolved(ctx: Out): (List[UnresolvedError[F]], Out) = {
       val (extErrs, extCtx) = extend.unresolved(ctx.tail)
-
-      (
-        ctx.head.expDef.expectAcc.data.flatMap {
-          case (k, vs) => vs.toList.map(v => UnresolvedVar(k, v))
-        }.toList ::: extErrs,
-        ctx.head.clearExpectations :: extCtx
-      )
-
+      val (curErrs, curExpDef) = Walker.collectUnresolved(ctx.head.expDef, UnresolvedVar[F])
+      (curErrs ::: extErrs, ArgsAndVars(curExpDef) :: extCtx)
     }
   }
 }

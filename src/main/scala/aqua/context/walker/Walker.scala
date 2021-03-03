@@ -1,7 +1,9 @@
 package aqua.context.walker
 
+import aqua.context.marker.Marker
 import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.parser._
+import aqua.parser.lexer.Token
 import cats.Functor
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, ValidatedNel}
@@ -96,6 +98,27 @@ object Walker {
   }
   trait DupError[F[_]] extends Error[F]
   trait UnresolvedError[F[_]] extends Error[F]
+
+  def collectDups[F[_], A <: Token[F], B <: Marker[F]](
+    prev: ExpectAndDefine[F, A, B],
+    next: ExpectAndDefine[F, A, B],
+    toErr: (String, B) => DupError[F]
+  ): List[DupError[F]] =
+    next.defineAcc
+      .takeKeys(prev.defineAcc.keys)
+      .data
+      .flatMap {
+        case (k, vs) => vs.toList.map(toErr(k, _))
+      }
+      .toList
+
+  def collectUnresolved[F[_], A <: Token[F], B <: Marker[F]](
+    expDef: ExpectAndDefine[F, A, B],
+    toErr: (String, A) => UnresolvedError[F]
+  ): (List[UnresolvedError[F]], ExpectAndDefine[F, A, B]) =
+    expDef.expectAcc.data.flatMap {
+      case (k, vs) => vs.toList.map(toErr(k, _))
+    }.toList -> expDef.clearExpectations
 
   def hnil[F[_]]: Walker[F, HNil, HNil] =
     new Walker[F, HNil, HNil] {

@@ -11,10 +11,7 @@ import scala.collection.immutable.Queue
 
 // Fully resolved Scope must have no expected abilities (all resolved)
 /*case class Names[F[_]](
-  // Take vars, set vars
-  // Data type is not yet known
-  // TODO VarMarker
-  data: DataAcc.Pass[F] = InOutAcc.empty[F, Value[F], Var[F]],
+
   // Abilities can be imported or set
   abilitiesResolve: InOutAcc.AbilitiesResolve[F] = InOutAcc.empty[F, Ability[F], AbilityResolve[F]],
   // Abilities can be defined and expected
