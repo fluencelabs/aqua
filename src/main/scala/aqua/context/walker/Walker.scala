@@ -1,33 +1,32 @@
-package aqua.model
+package aqua.context.walker
 
-import aqua.parser.{Block, DefAlias, DefFunc, DefService, DefType, ExecOp, FuncOp, InstrOp, On, Par}
-import cats.Functor
+import aqua.parser._
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, ValidatedNel}
-import shapeless._
 import cats.syntax.functor._
+import shapeless._
 
 import scala.collection.immutable.Queue
 
-trait Passer[F[_], I <: HList, O <: HList] {
+trait Walker[F[_], I <: HList, O <: HList] {
   type Out = O
 
-  def exitFuncOpGroup(group: FuncOp[F, I], last: O): O
+  def exitFuncOpGroup(group: FuncExpr[F, I], last: O): O
 
-  def funcOpCtx(op: FuncOp[F, I], prev: O): O
+  def funcOpCtx(op: FuncExpr[F, I], prev: O): O
 
   def blockCtx(block: Block[F, I]): O
 
-  def mapFuncOp(op: FuncOp[F, I], prev: O): FuncOp[F, O] = {
+  def mapFuncOp(op: FuncExpr[F, I], prev: O): FuncExpr[F, O] = {
     val ctx = funcOpCtx(op, prev)
     op match {
       case p @ Par(_, inner, _) =>
         val inOp = mapFuncOp(inner, ctx)
-        p.copy(op = inOp.asInstanceOf[InstrOp[F, O]], context = exitFuncOpGroup(p, inOp.context))
+        p.copy(op = inOp.asInstanceOf[InstrExpr[F, O]], context = exitFuncOpGroup(p, inOp.context))
       case o @ On(_, ops, _) =>
         val (inOps, inCtx) = mapFuncOps(ops, ctx)
         o.copy(
-          ops = inOps.asInstanceOf[NonEmptyList[ExecOp[F, O]]],
+          ops = inOps.asInstanceOf[NonEmptyList[ExecExpr[F, O]]],
           context = exitFuncOpGroup(o, exitFuncOpGroup(o, inCtx))
         )
       case _ =>
@@ -35,8 +34,8 @@ trait Passer[F[_], I <: HList, O <: HList] {
     }
   }
 
-  def mapFuncOps(ops: NonEmptyList[FuncOp[F, I]], context: O): (NonEmptyList[FuncOp[F, O]], O) = {
-    val (queue, lastCtx) = ops.foldLeft[(Queue[FuncOp[F, O]], O)](Queue.empty -> context) {
+  def mapFuncOps(ops: NonEmptyList[FuncExpr[F, I]], context: O): (NonEmptyList[FuncExpr[F, O]], O) = {
+    val (queue, lastCtx) = ops.foldLeft[(Queue[FuncExpr[F, O]], O)](Queue.empty -> context) {
       case ((acc, o), op) =>
         val mapped = mapFuncOp(op, o)
         acc.appended(mapped) -> mapped.context
@@ -67,12 +66,12 @@ trait Passer[F[_], I <: HList, O <: HList] {
     (dupErr ::: unresolved(combinedBlock.context)) -> combinedBlock
   }
 
-  def andThen[O2 <: HList](f: Passer[F, I, O] => Passer[F, I, O2]): Passer[F, I, O2] = f(this)
+  def andThen[O2 <: HList](f: Walker[F, I, O] => Walker[F, I, O2]): Walker[F, I, O2] = f(this)
 
   def duplicates(prev: Out, next: Out): List[F[String]]
   def unresolved(ctx: Out): List[F[String]]
 
-  def pass(blocks: List[Block[F, I]]): ValidatedNel[F[String], List[Block[F, Out]]] = {
+  def walkValidate(blocks: List[Block[F, I]]): ValidatedNel[F[String], List[Block[F, Out]]] = {
     val (errs, _, nblocks) =
       blocks.foldLeft[(Queue[F[String]], Out, Queue[Block[F, Out]])]((Queue.empty, emptyCtx, Queue.empty)) {
         case ((errs, prevCtx, blockAcc), next) =>
@@ -85,13 +84,13 @@ trait Passer[F[_], I <: HList, O <: HList] {
   }
 }
 
-object Passer {
+object Walker {
 
-  def hnil[F[_]]: Passer[F, HNil, HNil] =
-    new Passer[F, HNil, HNil] {
-      override def exitFuncOpGroup(group: FuncOp[F, HNil], last: HNil): HNil = HNil
+  def hnil[F[_]]: Walker[F, HNil, HNil] =
+    new Walker[F, HNil, HNil] {
+      override def exitFuncOpGroup(group: FuncExpr[F, HNil], last: HNil): HNil = HNil
 
-      override def funcOpCtx(op: FuncOp[F, HNil], prev: HNil): HNil = HNil
+      override def funcOpCtx(op: FuncExpr[F, HNil], prev: HNil): HNil = HNil
 
       override def blockCtx(block: Block[F, HNil]): HNil = HNil
 

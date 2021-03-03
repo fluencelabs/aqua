@@ -1,4 +1,4 @@
-package aqua.model
+package aqua.context.scope
 
 sealed trait Mode
 case object ParMode extends Mode

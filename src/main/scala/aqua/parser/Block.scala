@@ -27,25 +27,25 @@ case class FuncHead[F[_]](name: ArrowName[F], args: List[(String, F[String], Typ
     name.as(AquaArrowType(args.map(_._3), ret))
 }
 
-case class DefFunc[F[_], L](head: FuncHead[F], body: NonEmptyList[FuncOp[F, L]], context: L) extends Block[F, L]
+case class DefFunc[F[_], L](head: FuncHead[F], body: NonEmptyList[FuncExpr[F, L]], context: L) extends Block[F, L]
 
 case class DefAlias[F[_], L](alias: CustomType[F], target: Type[F], context: L) extends Block[F, L]
 
 object DefType {
   def `dname`[F[_]: LiftParser]: P[CustomType[F]] = `data` *> ` ` *> CustomType.ct[F] <* ` `.? <* `:` <* ` \n+`
 
-  def `dataname`[F[_]: LiftParser]: P[(Var[F], DataType[F])] =
+  def `dataname`[F[_]: LiftParser](indent: String): P[(Var[F], DataType[F])] =
     (Var.v[F] <* ` : `) ~ `datatypedef`
 
   def `deftype`[F[_]: LiftParser: Comonad]: P[DefType[F, HNil]] =
-    (`dname` ~ indented(`dataname`)).map {
+    (`dname` ~ indented(`dataname`(_), "")).map {
       case (n, t) ⇒ DefType(n, t.map(kv => kv._1.name.extract -> kv).toNem, HNil)
     }
 }
 
 object DefFunc {
 
-  def `funcdef`[F[_]: LiftParser]: P[(String, ArrowType[F])] =
+  def `funcdef`[F[_]: LiftParser](indent: String): P[(String, ArrowType[F])] =
     (`name` <* ` : `) ~ `arrowdef`
 
   def `funcname`[F[_]: LiftParser]: P[ArrowName[F]] = ` `.?.with1 *> `func` *> ` ` *> ArrowName.an <* ` `.?
@@ -60,7 +60,7 @@ object DefFunc {
 
   // TODO: if funchead has return type, for the last op, add extract, add Return.reply(extracted)
   def `deffunc`[F[_]: LiftParser: Comonad]: P[DefFunc[F, HNil]] =
-    ((`funchead` <* ` : ` <* ` \n+`) ~ FuncOp.body).map {
+    ((`funchead` <* ` : ` <* ` \n+`) ~ FuncExpr.body).map {
       case (h, b) ⇒ DefFunc(h, b, HNil)
     }
 
@@ -73,7 +73,7 @@ object DefService {
 
   // TODO switch to funchead?
   def `defservice`[F[_]: LiftParser]: P[DefService[F, HNil]] =
-    (`servicename` ~ indented(`funcdef`).map(_.toNem)).map {
+    (`servicename` ~ indented(`funcdef`(_), "").map(_.toNem)).map {
       case (n, f) ⇒ DefService(n, f, HNil)
     }
 }

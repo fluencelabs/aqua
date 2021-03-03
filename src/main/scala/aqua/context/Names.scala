@@ -1,8 +1,8 @@
-package aqua.model
+package aqua.context
 
 import aqua.parser._
 import aqua.parser.lexer._
-import aqua.model.marker.{ArrowMarker, TypeMarker}
+import aqua.context.marker.{ArrowMarker, TypeMarker}
 import cats.Comonad
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNel}

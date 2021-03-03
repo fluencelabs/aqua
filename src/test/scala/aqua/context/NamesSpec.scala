@@ -1,8 +1,8 @@
-package aqua.model
+package aqua.context
 
 import aqua.parser.lexer.{Value, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import aqua.parser.{DefFunc, FuncOp}
+import aqua.parser.{DefFunc, FuncExpr}
 import cats.Id
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec

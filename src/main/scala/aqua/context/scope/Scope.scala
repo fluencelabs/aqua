@@ -1,4 +1,4 @@
-package aqua.model
+package aqua.context.scope
 
 import aqua.parser.lexer.Value
 import cats.Functor

@@ -1,6 +1,6 @@
-package aqua.model
+package aqua.context.walker
 
-import aqua.parser.lexer.{ArrayType, ArrowType, BasicType, CustomType, Type, Value, VarLambda}
+import aqua.parser.lexer._
 import cats.Comonad
 import cats.data.NonEmptyList
 import cats.syntax.comonad._

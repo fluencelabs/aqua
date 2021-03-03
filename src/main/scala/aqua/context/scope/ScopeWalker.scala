@@ -1,13 +1,14 @@
-package aqua.model
+package aqua.context.scope
 
-import aqua.parser.{Block, FuncOp, On, Par}
+import aqua.context.walker.Walker
+import aqua.parser.{Block, FuncExpr, On, Par}
 import cats.Functor
 import shapeless._
 
-class ScopePasser[F[_]: Functor, I <: HList, O <: HList](extend: Passer[F, I, O]) extends Passer[F, I, Scope[F] :: O] {
+class ScopeWalker[F[_]: Functor, I <: HList, O <: HList](extend: Walker[F, I, O]) extends Walker[F, I, Scope[F] :: O] {
   type Ctx = Scope[F] :: O
 
-  override def exitFuncOpGroup(group: FuncOp[F, I], last: Ctx): Ctx =
+  override def exitFuncOpGroup(group: FuncExpr[F, I], last: Ctx): Ctx =
     (group match {
       case _: Par[F, I] =>
         last.head.unsetMode
@@ -17,7 +18,7 @@ class ScopePasser[F[_]: Functor, I <: HList, O <: HList](extend: Passer[F, I, O]
         last.head
     }) :: extend.exitFuncOpGroup(group, last.tail)
 
-  override def funcOpCtx(op: FuncOp[F, I], prev: Ctx): Ctx =
+  override def funcOpCtx(op: FuncExpr[F, I], prev: Ctx): Ctx =
     (op match {
       case p: Par[F, I] => prev.head.par(p.f)
       case o: On[F, I] => prev.head.on(o.peer)

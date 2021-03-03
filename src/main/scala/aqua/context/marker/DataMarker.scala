@@ -1,4 +1,4 @@
-package aqua.model.marker
+package aqua.context.marker
 
 import aqua.parser.Extract
 import aqua.parser.lexer.{DataType, Var}

@@ -1,33 +1,16 @@
-package aqua.model
+package aqua.context.walker
 
-import aqua.parser.{
-  AbilityFuncCall,
-  AbilityId,
-  AbilityResolve,
-  Block,
-  DefAlias,
-  DefFunc,
-  DefService,
-  DefType,
-  Expression,
-  Extract,
-  FuncCall,
-  FuncOp,
-  On,
-  Par
-}
-import aqua.parser.lexer.{Ability, ArrowName, ArrowType, CustomType, DataType, Token, Value, Var}
-import aqua.model.marker.{ArrowMarker, FuncArrow, LocalArrow, Marker, TypeAlias, TypeDef, TypeMarker}
-import cats.{Comonad, Functor}
+import aqua.context.marker.Marker
+import aqua.context.scope.{Mode, ParMode, XorMode}
+import aqua.parser.lexer.Token
+import cats.Comonad
 import cats.data.NonEmptyList
-import cats.syntax.comonad._
-import cats.syntax.functor._
 
-case class InOutAcc[F[_], In <: Token[F], Out <: Marker[F, _]](
-  in: Acc[F, In],
-  out: Acc[F, Out]
+case class ExpectAndDefine[F[_], In <: Token[F], Out <: Marker[F, _]](
+  expectAcc: Acc[F, In],
+  defineAcc: Acc[F, Out]
 ) {
-  type Self = InOutAcc[F, In, Out]
+  type Self = ExpectAndDefine[F, In, Out]
 
   def combine(other: Self, mode: Option[Mode])(implicit F: Comonad[F]): Self =
     mode match {
@@ -37,41 +20,40 @@ case class InOutAcc[F[_], In <: Token[F], Out <: Marker[F, _]](
     }
 
   def combineSeq(other: Self): Self =
-    copy(in = in.add(other.in, out.keys), out = out add other.out)
+    copy(expectAcc = expectAcc.add(other.expectAcc, defineAcc.keys), defineAcc = defineAcc add other.defineAcc)
 
   def combinePar(other: Self): Self =
-    copy(in = in add other.in, out = out add other.out)
+    copy(expectAcc = expectAcc add other.expectAcc, defineAcc = defineAcc add other.defineAcc)
 
   def combineXor(other: Self): Self =
-    copy(in = in add other.in)
+    copy(expectAcc = expectAcc add other.expectAcc)
 
-  def addIn(addition: Acc[F, In]): Self =
-    copy(in = in add addition)
+  def expect(addition: Acc[F, In]): Self =
+    copy(expectAcc = expectAcc add addition)
 
-  def subIn(rem: String): Self =
-    copy(in = in sub rem)
+  def resolved(rem: String): Self =
+    copy(expectAcc = expectAcc sub rem)
 
-  def addOut(addition: Acc[F, Out]): Self =
-    copy(out = out add addition)
+  def defined(addition: Acc[F, Out]): Self =
+    copy(defineAcc = defineAcc add addition)
 
-  def collectOut(pf: PartialFunction[Out, Out]): Self =
-    copy(out = out.copy(data = out.data.map {
+  def collectDefinitions(pf: PartialFunction[Out, Out]): Self =
+    copy(defineAcc = defineAcc.copy(data = defineAcc.data.map {
       case (k, v) => k -> v.toList.collect(pf)
     }.collect {
       case (k, h :: tail) => k -> NonEmptyList[Out](h, tail)
     }))
 
-  def subOut(rem: String): Self =
-    copy(out = out sub rem)
+  def undefine(rem: String): Self =
+    copy(defineAcc = defineAcc sub rem)
 
-  def eraseOut: Self = copy(out = out.erase)
-  def eraseIn: Self = copy(in = in.erase)
+  def clearDefinitions: Self = copy(defineAcc = defineAcc.erase)
 }
 
-object InOutAcc {
+object ExpectAndDefine {
 
-  def empty[F[_], In <: Token[F], Out <: Marker[F, _]]: InOutAcc[F, In, Out] =
-    InOutAcc(Acc.empty[F, In], Acc.empty[F, Out])
+  def empty[F[_], In <: Token[F], Out <: Marker[F, _]]: ExpectAndDefine[F, In, Out] =
+    ExpectAndDefine(Acc.empty[F, In], Acc.empty[F, Out])
 
   /*
   type Abilities[F[_]] = InOutAcc[F, Ability[F], DefService[F]]

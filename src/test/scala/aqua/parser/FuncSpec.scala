@@ -91,11 +91,36 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
             VarLambda[Id]("peer", Nil),
             NonEmptyList.of(
               AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", BasicType.string), HNil),
-              Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "Peer.timestamp", Nil, HNil), HNil)
+              Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", Nil, HNil), HNil)
             ),
             HNil
           ),
           FuncCall[Id, HNil]("ret", VarLambda[Id]("t", Nil) :: Nil, HNil)
+        ),
+        HNil
+      )
+    )
+  }
+
+  "function" should "parse getTime with no return" in {
+    val func =
+      """func getTime(peer: PeerId, ret: i32 -> ()) -> string:
+        | on peer:
+        |   Peer "peer"
+        |   t <- Peer.timestamp()""".stripMargin
+
+    DefFunc.`deffunc`.parseAll(func).right.value should be(
+      DefFunc[Id, HNil](
+        getTimeHead,
+        NonEmptyList.of(
+          On[Id, HNil](
+            VarLambda[Id]("peer", Nil),
+            NonEmptyList.of(
+              AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", BasicType.string), HNil),
+              Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", Nil, HNil), HNil)
+            ),
+            HNil
+          )
         ),
         HNil
       )

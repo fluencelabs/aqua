@@ -1,4 +1,4 @@
-package aqua.model.marker
+package aqua.context.marker
 
 import aqua.parser.DefFunc
 import aqua.parser.lexer.ArrowType

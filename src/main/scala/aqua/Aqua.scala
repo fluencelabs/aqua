@@ -1,6 +1,8 @@
 package aqua
 
-import aqua.model.{DataAcc, Passer, ScopePasser}
+import aqua.context.ArgsAndVars
+import aqua.context.scope.ScopeWalker
+import aqua.context.walker.Walker
 import aqua.parser.Block
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.parse.{Parser => P, Parser0 => P0}
@@ -13,9 +15,9 @@ object Aqua {
 
   private val parser: P0[List[Block[Span.F, HNil]]] = Block.blocks[Span.F]
 
-  val passer = Passer.hnil[Span.F].andThen(new ScopePasser(_)).andThen(new DataAcc.Pass(_))
+  val walker = Walker.hnil[Span.F].andThen(new ScopeWalker(_)).andThen(new ArgsAndVars.ExpDef(_))
 
-  def parse(input: String): ValidatedNel[AquaError, List[Block[Span.F, passer.Out]]] =
+  def parse(input: String): ValidatedNel[AquaError, List[Block[Span.F, walker.Out]]] =
     Validated
       .fromEither(
         parser
@@ -24,6 +26,6 @@ object Aqua {
           .map(pe => NonEmptyList.one[AquaError](SyntaxError(pe.failedAtOffset, pe.expected)))
       )
       .andThen { blocks =>
-        passer.pass(blocks).leftMap(_.map(sv => NamesError(sv._1, sv._2)))
+        walker.walkValidate(blocks).leftMap(_.map(sv => NamesError(sv._1, sv._2)))
       }
 }

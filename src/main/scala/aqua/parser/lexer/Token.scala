@@ -50,8 +50,8 @@ object Token {
   def comma0[T](p: P[T]): P0[List[T]] =
     P.repSep0(p, `,` <* ` \n+`.rep0)
 
-  def indented[T](p: P[T]): P[NonEmptyList[T]] =
-    ` `.flatMap(indent ⇒ p.map(NonEmptyList.one) ~ (` \n+` *> (P.string(indent) *> p).repSep0(` \n+`)).?).map {
-      case (nel, l) ⇒ nel ++ l.getOrElse(Nil)
-    }
+  def indented[T](p: String => P[T], baseIndent: String): P[NonEmptyList[T]] =
+    (if (baseIndent.nonEmpty) P.string(baseIndent) ~ ` ` else ` `).string.flatMap(indent ⇒
+      p(indent).repSep((` \n+` *> P.string(indent)).backtrack)
+    )
 }
