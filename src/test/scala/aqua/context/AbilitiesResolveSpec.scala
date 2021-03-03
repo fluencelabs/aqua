@@ -1,5 +1,6 @@
 package aqua.context
 
+import aqua.context.scope.{Scope, ScopeWalker}
 import aqua.context.walker.Walker
 import aqua.parser.Block
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
@@ -13,9 +14,9 @@ import shapeless._
 
 class AbilitiesResolveSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  val walker = Walker.hnil[Id].andThen(new AbilitiesResolve.ExpDef(_))
+  val walker = Walker.hnil[Id].andThen(new ScopeWalker(_)).andThen(new AbilitiesResolve.ExpDef(_))
 
-  def parseBlocks(str: String): List[Block[Id, AbilitiesResolve[Id] :: HNil]] =
+  def parseBlocks(str: String): List[Block[Id, AbilitiesResolve[Id] :: Scope[Id] :: HNil]] =
     Validated
       .fromEither(Block.blocks[Id].parseAll(str))
       .leftMap(_.toString)
@@ -39,7 +40,8 @@ class AbilitiesResolveSpec extends AnyFlatSpec with Matchers with EitherValues {
   "Abilities resolve walker" should "collect no ability resolutions from a function" in {
     val bs = parseBlocks("""
                            |func some():
-                           |   x <- arr()
+                           |   Peer "peer"
+                           |   Peer.timestamp()
                            |
                            |""".stripMargin)
 
@@ -51,27 +53,28 @@ class AbilitiesResolveSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "Abilities resolve walker" should "collect ability expectations from two functions" in {
-    val bs = parseBlocks("""
-                           |func some():
-                           |   x <- arr()
-                           |
-                           |
-                           |func other(x: i32):
-                           |   y <- arr2(x)
-                           |   
-                           |""".stripMargin)
+    val res = parseBlocksV("""
+                             |func some():
+                             |   x <- First.arr()
+                             |
+                             |
+                             |func other(x: i32):
+                             |   Peer "smth"
+                             |   y <- Second.arr2(x)
+                             |   Peer.timestamp()
+                             |   
+                             |""".stripMargin)
 
-    bs.length should be(2)
-    val ctx = bs.last.context
-    val acc = ctx.head.expDef
-    acc.expectAcc.keys should be('empty)
-    acc.defineAcc.keys should be('empty)
+    res.isValid should be(false)
+    val Invalid(errs) = res
+    errs should have length (2)
   }
 
   "Abilities resolve walker" should "resolve abilities in a function" in {
     val res = parseBlocksV("""
                              |func some():
-                             |   x <- f(z, y)
+                             |   y <- Smth.foo()
+                             |   x <- Ab.f(z, y)
                              |   
                              |alias T: i32
                              |""".stripMargin)

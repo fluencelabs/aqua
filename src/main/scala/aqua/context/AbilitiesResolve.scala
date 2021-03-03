@@ -1,6 +1,7 @@
 package aqua.context
 
 import aqua.context.marker.{AbilityResolveMarker, ResolvedMarker}
+import aqua.context.scope.Scope
 import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.context.walker.{Acc, ExpectAndDefine, Walker}
 import aqua.parser.lexer.Ability
@@ -8,6 +9,7 @@ import aqua.parser._
 import cats.syntax.comonad._
 import cats.{Comonad, Functor}
 import shapeless._
+import shapeless.ops.hlist.Selector
 
 case class AbilitiesResolve[F[_]](expDef: ExpectAndDefine[F, Ability[F], AbilityResolveMarker[F]]) {
 
@@ -33,7 +35,7 @@ object AbilitiesResolve {
     override def toStringF(implicit F: Functor[F]): F[String] = usage.as(s"Unresolved ability $name")
   }
 
-  class ExpDef[F[_]: Comonad, I <: HList, O <: HList](extend: Walker[F, I, O])
+  class ExpDef[F[_]: Comonad, I <: HList, O <: HList](extend: Walker[F, I, O])(implicit getScope: Selector[O, Scope[F]])
       extends Walker[F, I, AbilitiesResolve[F] :: O] {
     type Ctx = AbilitiesResolve[F] :: O
 
@@ -42,17 +44,25 @@ object AbilitiesResolve {
         case _ => last.head.clearDefinitions
       }) :: extend.exitFuncExprGroup(group, last.tail)
 
-    override def funcOpCtx(op: FuncExpr[F, I], prev: Ctx): Ctx =
+    override def funcOpCtx(op: FuncExpr[F, I], prev: Ctx): Ctx = {
+      lazy val in = extend.funcOpCtx(op, prev.tail)
+      val data = prev.head
+      lazy val mode = getScope(in).mode.map(_.extract)
+
+      def combinedWith(other: AbilitiesResolve[F] => AbilitiesResolve[F]): AbilitiesResolve[F] =
+        AbilitiesResolve[F](data.expDef.combine(other(empty[F]).expDef, mode))
+
       (op match {
         case ac: AbilityFuncCall[F, I] =>
-          prev.head.expect(ac.ability)
+          combinedWith(_.expect(ac.ability))
         case Extract(_, ac: AbilityFuncCall[F, I], _) =>
-          prev.head.expect(ac.ability)
+          combinedWith(_.expect(ac.ability))
         case ar: AbilityResolve[F, I] =>
-          prev.head.resolve(ar)
+          combinedWith(_.resolve(ar))
         case _ =>
           prev.head
-      }) :: extend.funcOpCtx(op, prev.tail)
+      }) :: in
+    }
 
     override def blockCtx(block: Block[F, I]): Ctx =
       empty[F] :: extend.blockCtx(block)
