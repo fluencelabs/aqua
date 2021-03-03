@@ -19,6 +19,7 @@ sealed trait ExecExpr[F[_], L] extends InstrExpr[F, L]
 
 sealed trait CallExpr[F[_], L] extends ExecExpr[F, L] {
   def arrow: ArrowName[F]
+  def args: List[Value[F]]
 }
 
 case class FuncCall[F[_], L](arrow: ArrowName[F], args: List[Value[F]], context: L) extends CallExpr[F, L]
