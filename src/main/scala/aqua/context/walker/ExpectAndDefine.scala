@@ -57,42 +57,6 @@ object ExpectAndDefine {
     ExpectAndDefine(Acc.empty[F, In], Acc.empty[F, Out])
 
   /*
-  type Abilities[F[_]] = InOutAcc[F, Ability[F], DefService[F]]
-
-  object Abilities extends Visitor[Abilities] {
-
-    def funcOp[F[_]: Comonad](op: FuncOp[F]): Abilities[F] =
-      op match {
-        case ar: AbilityResolve[F] =>
-          (empty: Abilities[F]) addIn Acc.one(ar.ability.name.extract, ar.ability)
-        case Par(p, op) =>
-          funcOp(op).par(p)
-        case On(p, ops) =>
-          ops
-            .widen[FuncOp[F]]
-            .map(funcOp[F](_).on(p))
-            .reduceLeft(_ combine _)
-        case _ =>
-          empty: Abilities[F]
-      }
-
-    // No notion for abilities in funcdef yet
-    override def func[F[_]: Comonad](func: DefFunc[F]): Abilities[F] =
-      func.body.map(funcOp[F]).reduceLeft(_ combine _).unsetScope.eraseOut
-
-    override def block[F[_]: Comonad](block: Block[F]): Abilities[F] =
-      block match {
-        case fn: DefFunc[F] =>
-          func(fn)
-        case defService: DefService[F] =>
-          (empty: Abilities[F])
-            .addOut(Acc.one(defService.name.name.extract, defService))
-        case _ =>
-          empty: Abilities[F]
-      }
-  }
-
-
 
   type AbilitiesResolve[F[_]] = InOutAcc[F, Ability[F], AbilityResolve[F]]
 
