@@ -11,13 +11,11 @@ import cats.{Comonad, Functor}
 import shapeless._
 import shapeless.ops.hlist.Selector
 
-case class AbilitiesResolve[F[_]](expDef: ExpectAndDefine[F, Ability[F], AbilityResolveMarker[F]]) {
+case class AbilitiesResolve[F[_]](expDef: ExpectAndDefine[Ability[F], AbilityResolveMarker[F]]) {
 
   def resolve[L](ar: AbilityResolve[F, L])(implicit F: Comonad[F]): AbilitiesResolve[F] =
     copy(
-      expDef.copy(defineAcc =
-        expDef.defineAcc.sub(ar.ability.name.extract).addOne(ar.ability.name.extract, ResolvedMarker(ar))
-      )
+      expDef.copy(defineAcc = expDef.defineAcc.updated(ar.ability.name.extract, ResolvedMarker(ar)))
     )
 
   def clearDefinitions: AbilitiesResolve[F] = copy(expDef.clearDefinitions)
@@ -27,7 +25,7 @@ case class AbilitiesResolve[F[_]](expDef: ExpectAndDefine[F, Ability[F], Ability
 }
 
 object AbilitiesResolve {
-  type Acc[F[_]] = ExpectAndDefine[F, Ability[F], AbilityResolveMarker[F]]
+  type Acc[F[_]] = ExpectAndDefine[Ability[F], AbilityResolveMarker[F]]
   def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, Ability[F], AbilityResolveMarker[F]]
   def empty[F[_]]: AbilitiesResolve[F] = AbilitiesResolve[F](emptyAcc[F])
 

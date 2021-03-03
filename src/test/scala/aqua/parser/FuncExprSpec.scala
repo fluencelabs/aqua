@@ -41,14 +41,15 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "ability calls" should "parse Ab.func()" in {
-    parseExpr("Ab.func()") should be(AbilityFuncCall[Id, HNil]("Ab", "func", Nil, HNil))
+    parseExpr("Ab.func()") should be(AbilityFuncCall[Id, HNil]("Ab", "func", "Ab.func", Nil, HNil))
     parseExpr("Ab.func(arg)") should be(
-      AbilityFuncCall[Id, HNil]("Ab", "func", VarLambda[Id]("arg", Nil) :: Nil, HNil)
+      AbilityFuncCall[Id, HNil]("Ab", "func", "Ab.func", VarLambda[Id]("arg", Nil) :: Nil, HNil)
     )
     parseExpr("Ab.func(arg.doSomeThing)") should be(
       AbilityFuncCall[Id, HNil](
         "Ab",
         "func",
+        "Ab.func",
         VarLambda[Id]("arg", IntoField[Id]("doSomeThing") :: Nil) :: Nil,
         HNil
       )
@@ -57,6 +58,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
       AbilityFuncCall[Id, HNil](
         "Ab",
         "func",
+        "Ab.func",
         VarLambda[Id]("arg", IntoField[Id]("doSomeThing") :: Nil) :: VarLambda[Id]("arg2", Nil) :: Nil,
         HNil
       )
@@ -70,7 +72,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "extracting" should "parse x <- Ab.func()" in {
-    val fCall = AbilityFuncCall[Id, HNil]("Ab", "func", Nil, HNil)
+    val fCall = AbilityFuncCall[Id, HNil]("Ab", "func", "Ab.func", Nil, HNil)
     parseExpr("x <- Ab.func()") should be(Extract[Id, HNil]("x", fCall, HNil))
   }
 
@@ -88,7 +90,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "on" should "parse on x: y" in {
-    val fCall = AbilityFuncCall[Id, HNil]("Ab", "func", Nil, HNil)
+    val fCall = AbilityFuncCall[Id, HNil]("Ab", "func", "Ab.func", Nil, HNil)
     val extr = Extract[Id, HNil]("x", fCall, HNil)
     val resl = AbilityId[Id, HNil]("Peer", Literal[Id]("\"some id\"", BasicType.string), HNil)
     val call = FuncCall[Id, HNil]("call", Literal[Id]("true", BasicType.bool) :: Nil, HNil)

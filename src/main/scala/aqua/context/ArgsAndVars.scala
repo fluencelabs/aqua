@@ -1,6 +1,6 @@
 package aqua.context
 
-import aqua.context.marker.{DataMarker, ExtractedVarMarker, FuncArgMarker}
+import aqua.context.marker.{ArgVarMarker, ExtractedVarMarker, FuncArgMarker}
 import aqua.context.scope.Scope
 import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.context.walker.{Acc, ExpectAndDefine, Walker}
@@ -11,17 +11,17 @@ import shapeless._
 import shapeless.ops.hlist.Selector
 import cats.syntax.comonad._
 
-case class ArgsAndVars[F[_]](expDef: ExpectAndDefine[F, Value[F], DataMarker[F]]) {
+case class ArgsAndVars[F[_]](expDef: ExpectAndDefine[Value[F], ArgVarMarker[F]]) {
   def clearDefinitions: ArgsAndVars[F] = copy(expDef.clearDefinitions)
   def clearExpectations: ArgsAndVars[F] = copy(expDef.clearExpectations)
 }
 
 object ArgsAndVars {
-  type Acc[F[_]] = ExpectAndDefine[F, Value[F], DataMarker[F]]
-  def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, Value[F], DataMarker[F]]
+  type Acc[F[_]] = ExpectAndDefine[Value[F], ArgVarMarker[F]]
+  def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, Value[F], ArgVarMarker[F]]
   def empty[F[_]]: ArgsAndVars[F] = ArgsAndVars[F](emptyAcc[F])
 
-  case class DuplicateDef[F[_]](name: String, marker: DataMarker[F]) extends Walker.DupError[F] {
+  case class DuplicateDef[F[_]](name: String, marker: ArgVarMarker[F]) extends Walker.DupError[F] {
 
     override def toStringF(implicit F: Functor[F]): F[String] =
       marker.toError(s"Duplicate variable or arg definition: ${name}")
@@ -31,8 +31,9 @@ object ArgsAndVars {
     override def toStringF(implicit F: Functor[F]): F[String] = usage.as(s"Unresolved variable $name")
   }
 
-  class ExpDef[F[_]: Comonad, I <: HList, O <: HList](extend: Walker[F, I, O])(implicit getScope: Selector[O, Scope[F]])
-      extends Walker[F, I, ArgsAndVars[F] :: O] {
+  class ExpDef[F[_]: Comonad, I <: HList, O <: HList](extend: Walker[F, I, O])(implicit
+    getScope: Selector[O, Scope[F]]
+  ) extends Walker[F, I, ArgsAndVars[F] :: O] {
     type Ctx = ArgsAndVars[F] :: O
 
     override def exitFuncExprGroup(group: FuncExpr[F, I], last: Ctx): Ctx =
@@ -48,13 +49,13 @@ object ArgsAndVars {
       op match {
         case FuncCall(_, args, _) =>
           combinedWith(_ expect Acc.fromValues(args)) :: in
-        case AbilityFuncCall(_, _, args, _) =>
+        case AbilityFuncCall(_, _, _, args, _) =>
           combinedWith(_ expect Acc.fromValues(args)) :: in
         case ex @ Extract(n, fc, _) =>
           val f = funcOpCtx(fc, prev)
           f.head
             .copy(
-              f.head.expDef.combine(empty[F].expDef defined Acc.one(n.name.extract, ExtractedVarMarker(n, ex)), mode)
+              f.head.expDef.combine(empty[F].expDef.defined(n.name.extract, ExtractedVarMarker(n, ex)), mode)
             ) :: f.tail
         case AbilityId(_, id, _) =>
           combinedWith(_ expect Acc.fromValues(id :: Nil)) :: in
@@ -71,7 +72,7 @@ object ArgsAndVars {
           head.args
             .foldLeft(empty[F]) {
               case (acc, (k, v, dt: DataType[F])) =>
-                acc.copy(acc.expDef.defined(Acc.one(k, FuncArgMarker(Var(v), dt))))
+                acc.copy(acc.expDef.defined(k, FuncArgMarker(Var(v), dt)))
               case (acc, _) => acc
             }
 

@@ -91,7 +91,7 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
             VarLambda[Id]("peer", Nil),
             NonEmptyList.of(
               AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", BasicType.string), HNil),
-              Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", Nil, HNil), HNil)
+              Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", "Peer.timestamp", Nil, HNil), HNil)
             ),
             HNil
           ),
@@ -117,7 +117,7 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
             VarLambda[Id]("peer", Nil),
             NonEmptyList.of(
               AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", BasicType.string), HNil),
-              Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", Nil, HNil), HNil)
+              Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", "Peer.timestamp", Nil, HNil), HNil)
             ),
             HNil
           )

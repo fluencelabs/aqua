@@ -16,16 +16,20 @@ sealed trait FuncExpr[F[_], L] extends Expression[F, L]
 sealed trait InstrExpr[F[_], L] extends FuncExpr[F, L]
 
 sealed trait ExecExpr[F[_], L] extends InstrExpr[F, L]
-sealed trait CallExpr[F[_], L] extends ExecExpr[F, L]
+
+sealed trait CallExpr[F[_], L] extends ExecExpr[F, L] {
+  def arrow: ArrowName[F]
+}
 
 case class FuncCall[F[_], L](arrow: ArrowName[F], args: List[Value[F]], context: L) extends CallExpr[F, L]
 
-case class AbilityFuncCall[F[_], L](ability: Ability[F], funcName: ArrowName[F], args: List[Value[F]], context: L)
-    extends CallExpr[F, L] {
-
-  def abilityArrow(implicit F: Comonad[F]): ArrowName[F] =
-    funcName.copy[F](funcName.name.map(ability.name.extract + "." + _))
-}
+case class AbilityFuncCall[F[_], L](
+  ability: Ability[F],
+  funcName: ArrowName[F],
+  arrow: ArrowName[F],
+  args: List[Value[F]],
+  context: L
+) extends CallExpr[F, L]
 
 case class Extract[F[_], L](vr: Var[F], from: CallExpr[F, L], context: L) extends ExecExpr[F, L]
 
@@ -49,7 +53,13 @@ object FuncExpr {
   def abilityFuncCall[F[_]: LiftParser: Comonad]: P[AbilityFuncCall[F, HNil]] =
     ((Ability.ab[F] <* `.`) ~ funcCall).map {
       case (abName, fc) ⇒
-        AbilityFuncCall(abName, fc.arrow, fc.args, HNil)
+        AbilityFuncCall(
+          abName,
+          fc.arrow,
+          ArrowName(fc.arrow.as(abName.name.extract + "." + fc.arrow.name.extract)),
+          fc.args,
+          HNil
+        )
     }
 
   def callOp[F[_]: LiftParser: Comonad]: P[CallExpr[F, HNil]] =
@@ -100,8 +110,8 @@ object FuncExpr {
       override def map[A, B](fa: FuncExpr[F, A])(f: A => B): FuncExpr[F, B] =
         fa match {
           case fc @ FuncCall(_, _, ctx) => fc.copy(context = f(ctx))
-          case afc @ AbilityFuncCall(_, _, _, ctx) => afc.copy(context = f(ctx))
-          case e @ Extract(_, afc @ AbilityFuncCall(_, _, _, actx), ctx) =>
+          case afc @ AbilityFuncCall(_, _, _, _, ctx) => afc.copy(context = f(ctx))
+          case e @ Extract(_, afc @ AbilityFuncCall(_, _, _, _, actx), ctx) =>
             e.copy(from = afc.copy(context = f(actx)), context = f(ctx))
           case e @ Extract(_, fc @ FuncCall(_, _, fctx), ctx) =>
             e.copy(from = fc.copy(context = f(fctx)), context = f(ctx))

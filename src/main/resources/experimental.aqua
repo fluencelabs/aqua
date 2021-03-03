@@ -13,7 +13,7 @@ service MySrv:
 func do_smth( a: X, b: -> Z ): -- And comments after the line
   a <- b()
   x(a)
-  MySrv.pure()
+  arrCdef <- MySrv.pure()
   PoorAbility a
   y <- PoorAbility.func()
 
@@ -26,6 +26,7 @@ func do_smth2( a: X, b: -> Z ): -- And comments after the line
   par on 43:
     t <- ParOnAbb.call()
   b(a, z)
+  shouldBeA <- MySrv.func()
 
 alias Akaka : i32
 

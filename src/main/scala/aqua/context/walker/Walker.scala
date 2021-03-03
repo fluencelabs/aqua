@@ -100,22 +100,18 @@ object Walker {
   trait UnresolvedError[F[_]] extends Error[F]
 
   def collectDups[F[_], A <: Token[F], B <: Marker[F]](
-    prev: ExpectAndDefine[F, A, B],
-    next: ExpectAndDefine[F, A, B],
+    prev: ExpectAndDefine[A, B],
+    next: ExpectAndDefine[A, B],
     toErr: (String, B) => DupError[F]
   ): List[DupError[F]] =
-    next.defineAcc
-      .takeKeys(prev.defineAcc.keys)
-      .data
-      .flatMap {
-        case (k, vs) => vs.toList.map(toErr(k, _))
-      }
-      .toList
+    next.defineAcc.view.filterKeys(prev.defineAcc.keySet).toList.map {
+      case (k, v) => toErr(k, v)
+    }
 
   def collectUnresolved[F[_], A <: Token[F], B <: Marker[F]](
-    expDef: ExpectAndDefine[F, A, B],
+    expDef: ExpectAndDefine[A, B],
     toErr: (String, A) => UnresolvedError[F]
-  ): (List[UnresolvedError[F]], ExpectAndDefine[F, A, B]) =
+  ): (List[UnresolvedError[F]], ExpectAndDefine[A, B]) =
     expDef.expectAcc.data.flatMap {
       case (k, vs) => vs.toList.map(toErr(k, _))
     }.toList -> expDef.clearExpectations

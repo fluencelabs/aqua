@@ -49,13 +49,13 @@ object BasicType {
       .lift
       .map(BasicType(_))
 }
-sealed trait ArrowDef
+sealed trait ArrowDef[F[_]]
 
-case class ArrowType[F[_]](args: List[DataType[F]], res: DataType[F]) extends Type[F] with ArrowDef {
+case class ArrowType[F[_]](args: List[DataType[F]], res: DataType[F]) extends Type[F] with ArrowDef[F] {
   override def as[T](v: T)(implicit F: Functor[F]): F[T] = (args.headOption getOrElse res).as(v)
 }
 
-case class AquaArrowType[F[_]](args: List[Type[F]], res: Option[DataType[F]]) extends ArrowDef
+case class AquaArrowType[F[_]](args: List[Type[F]], res: Option[DataType[F]]) extends ArrowDef[F]
 
 object DataType {
   def `arraytypedef`[F[_]: LiftParser]: P[ArrayType[F]] = (P.string("[]") *> `datatypedef`[F]).map(ArrayType(_))

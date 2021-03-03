@@ -9,7 +9,7 @@ import cats.{Comonad, Functor}
 import shapeless._
 import cats.syntax.comonad._
 
-case class Abilities[F[_]](expDef: ExpectAndDefine[F, Ability[F], AbilityMarker[F]]) {
+case class Abilities[F[_]](expDef: ExpectAndDefine[Ability[F], AbilityMarker[F]]) {
   def clearDefinitions: Abilities[F] = copy(expDef.clearDefinitions)
 
   def clearExpectations: Abilities[F] = copy(expDef.clearExpectations)
@@ -19,7 +19,7 @@ case class Abilities[F[_]](expDef: ExpectAndDefine[F, Ability[F], AbilityMarker[
 }
 
 object Abilities {
-  type Acc[F[_]] = ExpectAndDefine[F, Ability[F], AbilityMarker[F]]
+  type Acc[F[_]] = ExpectAndDefine[Ability[F], AbilityMarker[F]]
   def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, Ability[F], AbilityMarker[F]]
   def empty[F[_]]: Abilities[F] = Abilities[F](emptyAcc[F])
 
@@ -52,7 +52,7 @@ object Abilities {
     override def blockCtx(block: Block[F, I]): Ctx =
       (block match {
         case defs: DefService[F, I] =>
-          Abilities(emptyAcc[F].defined(Acc.one(defs.name.name.extract, ServiceAbility(defs.name, defs))))
+          Abilities(emptyAcc[F].defined(defs.name.name.extract, ServiceAbility(defs.name, defs)))
         case _ =>
           empty[F]
 

@@ -23,8 +23,8 @@ case class DefService[F[_], L](name: Ability[F], funcs: NonEmptyMap[String, Arro
 // TODO arg is either Var, or ArrowName
 case class FuncHead[F[_]](name: ArrowName[F], args: List[(String, F[String], Type[F])], ret: Option[DataType[F]]) {
 
-  def toArrowDef(implicit F: Comonad[F]): F[AquaArrowType[F]] =
-    name.as(AquaArrowType(args.map(_._3), ret))
+  def arrowDef: AquaArrowType[F] =
+    AquaArrowType(args.map(_._3), ret)
 }
 
 case class DefFunc[F[_], L](head: FuncHead[F], body: NonEmptyList[FuncExpr[F, L]], context: L) extends Block[F, L]

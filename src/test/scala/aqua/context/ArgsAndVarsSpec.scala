@@ -14,7 +14,8 @@ import shapeless._
 
 class ArgsAndVarsSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  val walker = Walker.hnil[Id].andThen(new ScopeWalker(_)).andThen(new ArgsAndVars.ExpDef(_))
+  val walker =
+    Walker.hnil[Id].andThen(new ScopeWalker(_)).andThen(new ArgsAndVars.ExpDef(_))
 
   def parseBlocks(str: String): List[Block[Id, ArgsAndVars[Id] :: Scope[Id] :: HNil]] =
     Validated

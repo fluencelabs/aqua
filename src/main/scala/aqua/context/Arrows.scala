@@ -9,7 +9,7 @@ import cats.{Comonad, Functor}
 import shapeless._
 import cats.syntax.comonad._
 
-case class Arrows[F[_]](expDef: ExpectAndDefine[F, ArrowName[F], ArrowMarker[F]]) {
+case class Arrows[F[_]](expDef: ExpectAndDefine[ArrowName[F], ArrowMarker[F]]) {
 
   def clearLocal: Arrows[F] =
     copy(expDef.collectDefinitions {
@@ -22,11 +22,11 @@ case class Arrows[F[_]](expDef: ExpectAndDefine[F, ArrowName[F], ArrowMarker[F]]
     copy(expDef.combineSeq(Arrows.emptyAcc.expect(Acc.one(a.name.extract, a))))
 
   def defined(name: String, marker: ArrowMarker[F]): Arrows[F] =
-    copy(expDef.defined(Acc.one(name, marker)))
+    copy(expDef.defined(name, marker))
 }
 
 object Arrows {
-  type Acc[F[_]] = ExpectAndDefine[F, ArrowName[F], ArrowMarker[F]]
+  type Acc[F[_]] = ExpectAndDefine[ArrowName[F], ArrowMarker[F]]
   def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, ArrowName[F], ArrowMarker[F]]
   def empty[F[_]]: Arrows[F] = Arrows[F](emptyAcc[F])
 
@@ -51,14 +51,14 @@ object Arrows {
         case FuncCall(a, _, _) =>
           prev.head.expect(a)
         case afc: AbilityFuncCall[F, I] =>
-          prev.head.expect(afc.abilityArrow)
+          prev.head.expect(afc.arrow)
 
         case Extract(_, fc, _) =>
           fc match {
             case FuncCall(a, _, _) =>
               prev.head.expect(a)
             case afc: AbilityFuncCall[F, I] =>
-              prev.head.expect(afc.abilityArrow)
+              prev.head.expect(afc.arrow)
           }
         case _ =>
           prev.head

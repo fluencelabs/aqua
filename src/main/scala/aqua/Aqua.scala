@@ -17,11 +17,11 @@ object Aqua {
     Walker
       .hnil[Span.F]
       .andThen(new ScopeWalker(_))
+      .andThen(new Arrows.ExpDef(_))
       .andThen(new ArgsAndVars.ExpDef(_))
       .andThen(new Types.ExpDef(_))
       .andThen(new Abilities.ExpDef(_))
       .andThen(new AbilitiesResolve.ExpDef(_))
-      .andThen(new Arrows.ExpDef(_))
 
   def parse(input: String): ValidatedNel[AquaError, List[Block[Span.F, walker.Out]]] =
     Validated

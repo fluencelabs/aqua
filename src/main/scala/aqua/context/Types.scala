@@ -9,14 +9,14 @@ import cats.{Comonad, Functor}
 import shapeless._
 import cats.syntax.comonad._
 
-case class Types[F[_]](expDef: ExpectAndDefine[F, CustomType[F], TypeMarker[F]]) {
+case class Types[F[_]](expDef: ExpectAndDefine[CustomType[F], TypeMarker[F]]) {
   def clearDefinitions: Types[F] = copy(expDef.clearDefinitions)
   def clearExpectations: Types[F] = copy(expDef.clearExpectations)
 
 }
 
 object Types {
-  type Acc[F[_]] = ExpectAndDefine[F, CustomType[F], TypeMarker[F]]
+  type Acc[F[_]] = ExpectAndDefine[CustomType[F], TypeMarker[F]]
   def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, CustomType[F], TypeMarker[F]]
   def empty[F[_]]: Types[F] = Types[F](emptyAcc[F])
 
@@ -53,7 +53,7 @@ object Types {
               .map(Acc.fromType[F](_))
               .foldLeft(
                 emptyAcc[F]
-                  .defined(Acc.one[F, TypeMarker[F]](deft.name.name.extract, TypeDef(deft)))
+                  .defined(deft.name.name.extract, TypeDef(deft))
               )(_ expect _)
           )
 
@@ -70,7 +70,7 @@ object Types {
           Types(
             emptyAcc[F]
               .expect(Acc.fromType(a.target))
-              .defined(Acc.one(a.alias.name.extract, TypeAlias(a.alias, a.target)))
+              .defined(a.alias.name.extract, TypeAlias(a.alias, a.target))
           )
 
       }) :: extend.blockCtx(block)
