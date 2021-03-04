@@ -174,6 +174,8 @@ else:
    */
   /*
   TODO: fold, fold par, streams, ...
+
+  for x <- $xs:
    */
 
   /*

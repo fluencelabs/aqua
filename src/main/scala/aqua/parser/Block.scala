@@ -45,9 +45,6 @@ object DefType {
 
 object DefFunc {
 
-  def `funcdef`[F[_]: LiftParser](indent: String): P[(String, ArrowType[F])] =
-    (`name` <* ` : `) ~ `arrowdef`
-
   def `funcname`[F[_]: LiftParser]: P[ArrowName[F]] = ` `.?.with1 *> `func` *> ` ` *> ArrowName.an <* ` `.?
 
   def `funcargs`[F[_]: LiftParser: Comonad]: P[List[(String, F[String], Type[F])]] =
@@ -67,13 +64,16 @@ object DefFunc {
 }
 
 object DefService {
-  import DefFunc.`funcdef`
+
+  // TODO use name's [F] for ArrowName
+  def `funcdef`[F[_]: LiftParser]: P[(String, ArrowType[F])] =
+    (`name` <* ` : `) ~ `arrowdef`
 
   def `servicename`[F[_]: LiftParser]: P[Ability[F]] = `service` *> ` ` *> Ability.ab[F] <* ` `.? <* `:` <* ` \n+`
 
   // TODO switch to funchead?
   def `defservice`[F[_]: LiftParser]: P[DefService[F, HNil]] =
-    (`servicename` ~ indented(`funcdef`(_), "").map(_.toNem)).map {
+    (`servicename` ~ indented(_ => `funcdef`, "").map(_.toNem)).map {
       case (n, f) ⇒ DefService(n, f, HNil)
     }
 }

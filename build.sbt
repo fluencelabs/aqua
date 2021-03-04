@@ -16,7 +16,6 @@ lazy val root = project
       "org.typelevel" %% "cats-free"   % catsV,
       "com.chuusai"   %% "shapeless"   % "2.3.3"
     ),
-    libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.5" % Test,
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.5" % Test
   )
 
