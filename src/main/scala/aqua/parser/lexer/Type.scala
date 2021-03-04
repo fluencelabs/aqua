@@ -60,6 +60,7 @@ case class ArrowType[F[_]](args: List[DataType[F]], res: DataType[F]) extends Ty
 
   override def argTypes: List[Type[F]] = args
 
+  // TODO: unit result is None
   override def resType: Option[DataType[F]] = Some(res)
 }
 

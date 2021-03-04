@@ -12,7 +12,6 @@ import cats.syntax.comonad._
 case class Types[F[_]](expDef: ExpectAndDefine[CustomType[F], TypeMarker[F]]) {
   def clearDefinitions: Types[F] = copy(expDef.clearDefinitions)
   def clearExpectations: Types[F] = copy(expDef.clearExpectations)
-
 }
 
 object Types {

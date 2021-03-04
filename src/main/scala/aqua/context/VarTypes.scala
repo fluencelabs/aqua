@@ -65,7 +65,8 @@ object VarTypes {
   }
 
   class Checker[F[_]: Comonad, I <: HList, O <: HList](extend: Walker[F, I, O])(implicit
-    getArrows: Selector[I, Arrows[F]]
+    getArrows: Selector[I, Arrows[F]],
+    getTypes: Selector[I, Types[F]]
   ) extends Walker[F, I, VarTypes[F] :: O] {
     type Ctx = VarTypes[F] :: O
 
@@ -76,13 +77,16 @@ object VarTypes {
       getArrows(ctx).expDef.defineAcc.get(name).map(_.arrowDef)
 
     // TODO resolve complex types, check that all fields exist
-    def isSubtype(ctx: I, sup: DataType[F], sub: DataType[F]): Boolean = true
+    def isSubtype(ctx: I, sup: DataType[F], sub: DataType[F]): Boolean =
+      new TypeMatcher[F](getTypes(ctx)).isSubtype(sup, sub).isValid
 
     override def funcOpCtx(op: FuncExpr[F, I], prev: Ctx): Ctx =
       (op match {
         case Extract(vr, c, ectx) =>
           getArrowDef(c.arrow.name.extract, ectx)
             .fold(prev.head.error(ArrowUntyped(c.arrow.unit, c.arrow.name.extract))) { arrowDef =>
+              val matcher = new TypeMatcher[F](getTypes(ectx))
+
               val varTypes =
                 arrowDef.resType.fold(prev.head)(prev.head.derive(vr.name.extract, _))
 
@@ -100,8 +104,7 @@ object VarTypes {
                   getArrowDef(name.extract, ectx).fold(
                     acc.error(ArrowUntyped(name.void, name.extract))
                   )(vat =>
-                    // TODO check args numbers
-                    // TODO fold on arg types, check them covariantly
+                    // TODO matcher.isArrowSubtype(t, vat)
                     (t.resType, vat.resType) match {
                       case (None, None) => acc
                       case (Some(tr), Some(vr)) if isSubtype(ectx, tr, vr) => acc
