@@ -1,11 +1,11 @@
 package aqua.context.marker
 
 import aqua.parser.DefType
-import aqua.parser.lexer.{CustomType, Token, Type}
+import aqua.parser.lexer.{CustomTypeToken, Token, TypeToken}
 
 sealed trait TypeMarker[F[_]] extends Marker[F]
 
-case class TypeAlias[F[_], L](alias: CustomType[F], forType: Type[F]) extends TypeMarker[F] {
+case class TypeAlias[F[_], L](alias: CustomTypeToken[F], forType: TypeToken[F]) extends TypeMarker[F] {
   override def pointer: Token[F] = alias
 }
 

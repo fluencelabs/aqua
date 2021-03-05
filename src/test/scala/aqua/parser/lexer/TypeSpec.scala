@@ -1,42 +1,62 @@
 package aqua.parser.lexer
 
+import aqua.interim.ScalarType
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
+
 import scala.language.implicitConversions
 
 class TypeSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  implicit def strToBt(str: String): BasicType[Id] = BasicType[Id](BasicType.Value(str))
+  import aqua.interim.ScalarType.i32
+
+  implicit def strToBt(st: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](st)
 
   "Basic type" should "parse" in {
-    BasicType.`basictypedef`.parseAll("i32").right.value should be("i32": BasicType[Id])
-    BasicType.`basictypedef`.parseAll("()").right.value should be("()": BasicType[Id])
+    BasicTypeToken.`basictypedef`.parseAll("i32").right.value should be(i32: BasicTypeToken[Id])
+    BasicTypeToken.`basictypedef`.parseAll("()") should be('left)
   }
 
   "Arrow type" should "parse" in {
 
-    Type.`arrowdef`.parseAll("-> B") should be(Right(ArrowType(Nil, CustomType[Id]("B"))))
-    Type.`arrowdef`.parseAll("A -> B") should be(Right(ArrowType(CustomType[Id]("A") :: Nil, CustomType[Id]("B"))))
-    Type.`arrowdef`.parseAll("i32 -> Boo") should be(
-      Right(ArrowType(("i32": BasicType[Id]) :: Nil, CustomType[Id]("Boo")))
+    TypeToken.`arrowdef`.parseAll("-> B").right.value should be(
+      ArrowTypeToken[Id]((), Nil, Some(CustomTypeToken[Id]("B")))
     )
-    Type.`typedef`.parseAll("i32 -> ()") should be(Right(ArrowType(("i32": BasicType[Id]) :: Nil, "()")))
-    Type.`arrowdef`.parseAll("A, i32 -> B") should be(
-      Right(ArrowType(CustomType[Id]("A") :: ("i32": BasicType[Id]) :: Nil, CustomType[Id]("B")))
+    TypeToken.`arrowdef`.parseAll("A -> B").right.value should be(
+      ArrowTypeToken[Id]((), CustomTypeToken[Id]("A") :: Nil, Some(CustomTypeToken[Id]("B")))
     )
-    Type.`arrowdef`.parseAll("[]Absolutely, i32 -> B") should be(
-      Right(ArrowType(ArrayType(CustomType[Id]("Absolutely")) :: ("i32": BasicType[Id]) :: Nil, CustomType[Id]("B")))
+    TypeToken.`arrowdef`.parseAll("i32 -> Boo").right.value should be(
+      ArrowTypeToken[Id]((), (i32: BasicTypeToken[Id]) :: Nil, Some(CustomTypeToken[Id]("Boo")))
+    )
+    TypeToken.`typedef`.parseAll("i32 -> ()").right.value should be(
+      ArrowTypeToken[Id]((), (i32: BasicTypeToken[Id]) :: Nil, None)
+    )
+    TypeToken.`arrowdef`.parseAll("A, i32 -> B").right.value should be(
+      ArrowTypeToken[Id](
+        (),
+        CustomTypeToken[Id]("A") :: (i32: BasicTypeToken[Id]) :: Nil,
+        Some(CustomTypeToken[Id]("B"))
+      )
+    )
+    TypeToken.`arrowdef`.parseAll("[]Absolutely, i32 -> B").right.value should be(
+      ArrowTypeToken[Id](
+        (),
+        ArrayTypeToken(CustomTypeToken[Id]("Absolutely")) :: (i32: BasicTypeToken[Id]) :: Nil,
+        Some(CustomTypeToken[Id]("B"))
+      )
     )
 
   }
 
   "Array type" should "parse" in {
-    Type.`typedef`.parseAll("[]Something") should be(Right(ArrayType(CustomType[Id]("Something"))))
-    Type.`typedef`.parseAll("[]i32") should be(Right(ArrayType("i32": BasicType[Id])))
-    Type.`typedef`.parseAll("[][]i32") should be(Right(ArrayType[Id](ArrayType[Id]("i32": BasicType[Id]))))
+    TypeToken.`typedef`.parseAll("[]Something") should be(Right(ArrayTypeToken(CustomTypeToken[Id]("Something"))))
+    TypeToken.`typedef`.parseAll("[]i32") should be(Right(ArrayTypeToken(i32: BasicTypeToken[Id])))
+    TypeToken.`typedef`.parseAll("[][]i32") should be(
+      Right(ArrayTypeToken[Id](ArrayTypeToken[Id](i32: BasicTypeToken[Id])))
+    )
   }
 
 }

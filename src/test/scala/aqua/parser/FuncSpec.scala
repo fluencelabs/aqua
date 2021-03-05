@@ -1,6 +1,7 @@
 package aqua.parser
 
-import aqua.parser.lexer.{Ability, ArrowName, ArrowType, BasicType, CustomType, Literal, Var, VarLambda}
+import aqua.interim.ScalarType
+import aqua.parser.lexer.{Ability, ArrowName, ArrowTypeToken, BasicTypeToken, CustomTypeToken, Literal, Var, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
@@ -13,7 +14,9 @@ import scala.language.implicitConversions
 
 class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  implicit def strToBt(str: String): BasicType[Id] = BasicType[Id](BasicType.Value(str))
+  import ScalarType.{i32, string}
+
+  implicit def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
   implicit def strToArrow(str: String): ArrowName[Id] = ArrowName[Id](str)
   implicit def strToAb(str: String): Ability[Id] = Ability[Id](str)
   implicit def strToVar(str: String): Var[Id] = Var[Id](str)
@@ -21,25 +24,25 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
   private val getTimeHead = FuncHead[Id](
     "getTime",
     List(
-      ("peer", "peer", CustomType[Id]("PeerId")),
-      ("ret", "ret", ArrowType[Id](("i32": BasicType[Id]) :: Nil, "()": BasicType[Id]))
+      ("peer", "peer", CustomTypeToken[Id]("PeerId")),
+      ("ret", "ret", ArrowTypeToken[Id]((), (i32: BasicTypeToken[Id]) :: Nil, None))
     ),
-    Some("string": BasicType[Id])
+    Some(string: BasicTypeToken[Id])
   )
 
   "func header" should "parse" in {
     DefFunc.`funchead`.parseAll("func some()").right.value should be(FuncHead("some", Nil, None))
     DefFunc.`funchead`.parseAll("func some(peer: i32)").right.value should be(
-      FuncHead[Id]("some", List(("peer", "peer", ("i32": BasicType[Id]))), None)
+      FuncHead[Id]("some", List(("peer", "peer", (i32: BasicTypeToken[Id]))), None)
     )
 
     DefFunc.`funchead`.parseAll("func some(peer: PeerId)").right.value should be(
-      FuncHead[Id]("some", List(("peer", "peer", CustomType[Id]("PeerId"))), None)
+      FuncHead[Id]("some", List(("peer", "peer", CustomTypeToken[Id]("PeerId"))), None)
     )
     DefFunc.`funchead`.parseAll("func some(peer: PeerId, other: i32)").right.value should be(
       FuncHead[Id](
         "some",
-        List(("peer", "peer", CustomType[Id]("PeerId")), ("other", "other", ("i32": BasicType[Id]))),
+        List(("peer", "peer", CustomTypeToken[Id]("PeerId")), ("other", "other", (i32: BasicTypeToken[Id]))),
         None
       )
     )
@@ -47,8 +50,8 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
       FuncHead[Id](
         "some",
         List(
-          ("peer", "peer", CustomType[Id]("PeerId")),
-          ("other", "other", ArrowType[Id](("i32": BasicType[Id]) :: Nil, ("i32": BasicType[Id])))
+          ("peer", "peer", CustomTypeToken[Id]("PeerId")),
+          ("other", "other", ArrowTypeToken[Id]((), (i32: BasicTypeToken[Id]) :: Nil, Some(i32: BasicTypeToken[Id])))
         ),
         None
       )
@@ -68,7 +71,7 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
       DefFunc[Id, HNil](
         getTimeHead,
         NonEmptyList.of(
-          FuncCall[Id, HNil]("ret", Literal[Id]("43", BasicType.number) :: Nil, HNil)
+          FuncCall[Id, HNil]("ret", Literal[Id]("43", ScalarType.number) :: Nil, HNil)
         ),
         HNil
       )
@@ -90,7 +93,7 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
           On[Id, HNil](
             VarLambda[Id]("peer", Nil),
             NonEmptyList.of(
-              AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", BasicType.string), HNil),
+              AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", ScalarType.stringSet), HNil),
               Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", "Peer.timestamp", Nil, HNil), HNil)
             ),
             HNil
@@ -116,7 +119,7 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
           On[Id, HNil](
             VarLambda[Id]("peer", Nil),
             NonEmptyList.of(
-              AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", BasicType.string), HNil),
+              AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", ScalarType.stringSet), HNil),
               Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", "Peer.timestamp", Nil, HNil), HNil)
             ),
             HNil

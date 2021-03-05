@@ -1,9 +1,18 @@
 package aqua.parser
 
-import aqua.parser.lexer.DataType.`datatypedef`
+import aqua.parser.lexer.DataTypeToken.`datatypedef`
 import aqua.parser.lexer.Token._
-import aqua.parser.lexer.Type.{`arrowdef`, `typedef`}
-import aqua.parser.lexer.{Ability, AquaArrowType, ArrowName, ArrowType, CustomType, DataType, Type, Var}
+import aqua.parser.lexer.TypeToken.{`arrowdef`, `typedef`}
+import aqua.parser.lexer.{
+  Ability,
+  AquaArrowType,
+  ArrowName,
+  ArrowTypeToken,
+  CustomTypeToken,
+  DataTypeToken,
+  TypeToken,
+  Var
+}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
 import cats.Comonad
@@ -14,14 +23,21 @@ import shapeless.HNil
 
 sealed trait Block[F[_], L] extends Expression[F, L]
 
-case class DefType[F[_], L](name: CustomType[F], fields: NonEmptyMap[String, (Var[F], DataType[F])], context: L)
-    extends Block[F, L]
+case class DefType[F[_], L](
+  name: CustomTypeToken[F],
+  fields: NonEmptyMap[String, (Var[F], DataTypeToken[F])],
+  context: L
+) extends Block[F, L]
 
-case class DefService[F[_], L](name: Ability[F], funcs: NonEmptyMap[String, ArrowType[F]], context: L)
+case class DefService[F[_], L](name: Ability[F], funcs: NonEmptyMap[String, ArrowTypeToken[F]], context: L)
     extends Block[F, L]
 
 // TODO arg is either Var, or ArrowName
-case class FuncHead[F[_]](name: ArrowName[F], args: List[(String, F[String], Type[F])], ret: Option[DataType[F]]) {
+case class FuncHead[F[_]](
+  name: ArrowName[F],
+  args: List[(String, F[String], TypeToken[F])],
+  ret: Option[DataTypeToken[F]]
+) {
 
   def arrowDef: AquaArrowType[F] =
     AquaArrowType(args.map(_._3), ret)
@@ -29,12 +45,14 @@ case class FuncHead[F[_]](name: ArrowName[F], args: List[(String, F[String], Typ
 
 case class DefFunc[F[_], L](head: FuncHead[F], body: NonEmptyList[FuncExpr[F, L]], context: L) extends Block[F, L]
 
-case class DefAlias[F[_], L](alias: CustomType[F], target: Type[F], context: L) extends Block[F, L]
+case class DefAlias[F[_], L](alias: CustomTypeToken[F], target: TypeToken[F], context: L) extends Block[F, L]
 
 object DefType {
-  def `dname`[F[_]: LiftParser]: P[CustomType[F]] = `data` *> ` ` *> CustomType.ct[F] <* ` `.? <* `:` <* ` \n+`
 
-  def `dataname`[F[_]: LiftParser](indent: String): P[(Var[F], DataType[F])] =
+  def `dname`[F[_]: LiftParser]: P[CustomTypeToken[F]] =
+    `data` *> ` ` *> CustomTypeToken.ct[F] <* ` `.? <* `:` <* ` \n+`
+
+  def `dataname`[F[_]: LiftParser](indent: String): P[(Var[F], DataTypeToken[F])] =
     (Var.v[F] <* ` : `) ~ `datatypedef`
 
   def `deftype`[F[_]: LiftParser: Comonad]: P[DefType[F, HNil]] =
@@ -47,7 +65,7 @@ object DefFunc {
 
   def `funcname`[F[_]: LiftParser]: P[ArrowName[F]] = ` `.?.with1 *> `func` *> ` ` *> ArrowName.an <* ` `.?
 
-  def `funcargs`[F[_]: LiftParser: Comonad]: P[List[(String, F[String], Type[F])]] =
+  def `funcargs`[F[_]: LiftParser: Comonad]: P[List[(String, F[String], TypeToken[F])]] =
     `(` *> comma0((`name`.lift <* ` : `) ~ `typedef`).map(_.map(kv => (kv._1.extract, kv._1, kv._2))) <* `)`
 
   def `funchead`[F[_]: LiftParser: Comonad]: P[FuncHead[F]] =
@@ -66,7 +84,7 @@ object DefFunc {
 object DefService {
 
   // TODO use name's [F] for ArrowName
-  def `funcdef`[F[_]: LiftParser]: P[(String, ArrowType[F])] =
+  def `funcdef`[F[_]: LiftParser]: P[(String, ArrowTypeToken[F])] =
     (`name` <* ` : `) ~ `arrowdef`
 
   def `servicename`[F[_]: LiftParser]: P[Ability[F]] = `service` *> ` ` *> Ability.ab[F] <* ` `.? <* `:` <* ` \n+`
@@ -81,7 +99,7 @@ object DefService {
 object DefAlias {
 
   def `defalias`[F[_]: LiftParser]: P[DefAlias[F, HNil]] =
-    ((`alias` *> ` ` *> CustomType.ct[F] <* ` : `) ~ `typedef`).map {
+    ((`alias` *> ` ` *> CustomTypeToken.ct[F] <* ` : `) ~ `typedef`).map {
       case (ct, t) => DefAlias(ct, t, HNil)
     }
 }

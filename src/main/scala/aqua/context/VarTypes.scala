@@ -2,7 +2,8 @@ package aqua.context
 
 import aqua.context.walker.Walker
 import aqua.context.walker.Walker.UnresolvedError
-import aqua.parser.lexer.{ArrowDef, ArrowType, BasicType, DataType, Literal, Type, VarLambda}
+import aqua.interim.ScalarType
+import aqua.parser.lexer.{ArrowDef, ArrowTypeToken, BasicTypeToken, DataTypeToken, Literal, TypeToken, VarLambda}
 import aqua.parser.{Block, Extract, FuncExpr}
 import cats.{Comonad, Functor}
 import shapeless._
@@ -13,27 +14,30 @@ import cats.syntax.comonad._
 import scala.collection.immutable.Queue
 
 case class VarTypes[F[_]](
-  derived: Map[String, DataType[F]] = Map.empty[String, DataType[F]],
+  derived: Map[String, DataTypeToken[F]] = Map.empty[String, DataTypeToken[F]],
   errorsQ: Queue[VarTypes.Err[F]] = Queue.empty
 ) {
   def error(err: VarTypes.Err[F]): VarTypes[F] = copy(errorsQ = errorsQ.appended(err))
 
   def errors: List[VarTypes.Err[F]] = errorsQ.toList
 
-  def derive(varname: String, dt: DataType[F]): VarTypes[F] = copy(derived + (varname -> dt))
+  def derive(varname: String, dt: DataTypeToken[F]): VarTypes[F] = copy(derived + (varname -> dt))
 }
 
 object VarTypes {
   sealed trait Err[F[_]] extends UnresolvedError[F]
 
-  case class TypeMismatch[F[_]](point: F[Unit], expected: Type[F], given: Type[F]) extends Err[F] {
+  case class TypeMismatch[F[_]](point: F[Unit], expected: TypeToken[F], given: TypeToken[F]) extends Err[F] {
 
     override def toStringF(implicit F: Functor[F]): F[String] =
       point.as(s"Type mismatch, expected: `$expected`, given: `$given`")
   }
 
-  case class LiteralTypeMismatch[F[_]: Comonad](point: F[Unit], expected: Type[F], given: List[BasicType.Value])
-      extends Err[F] {
+  case class LiteralTypeMismatch[F[_]: Comonad](
+    point: F[Unit],
+    expected: TypeToken[F],
+    given: Set[ScalarType]
+  ) extends Err[F] {
 
     override def toStringF(implicit F: Functor[F]): F[String] =
       point.as(s"Literal type mismatch, expected: `${expected}`, given: (`${given.mkString("`, `")}`)")
@@ -57,8 +61,11 @@ object VarTypes {
       point.as(s"Wrong number of arguments, expected: `$expected`, given: `$given`")
   }
 
-  case class ArrowResultMismatch[F[_]](point: F[Unit], expected: Option[DataType[F]], given: Option[DataType[F]])
-      extends Err[F] {
+  case class ArrowResultMismatch[F[_]](
+    point: F[Unit],
+    expected: Option[DataTypeToken[F]],
+    given: Option[DataTypeToken[F]]
+  ) extends Err[F] {
 
     override def toStringF(implicit F: Functor[F]): F[String] =
       point.as(s"Arrow result mismatch, expected: `$expected`, given: `$given`")
@@ -77,7 +84,7 @@ object VarTypes {
       getArrows(ctx).expDef.defineAcc.get(name).map(_.arrowDef)
 
     // TODO resolve complex types, check that all fields exist
-    def isSubtype(ctx: I, sup: DataType[F], sub: DataType[F]): Boolean =
+    def isSubtype(ctx: I, sup: DataTypeToken[F], sub: DataTypeToken[F]): Boolean =
       new TypeMatcher[F](getTypes(ctx)).isSubtype(sup, sub).isValid
 
     override def funcOpCtx(op: FuncExpr[F, I], prev: Ctx): Ctx =
@@ -98,9 +105,9 @@ object VarTypes {
               } else varTypes
 
               args.zip(c.args).foldLeft(checkArgsNum) {
-                case (acc, (BasicType(v), Literal(_, ts))) if ts.contains(v.extract) => acc
+                case (acc, (BasicTypeToken(v), Literal(_, ts))) if ts.contains(v.extract) => acc
                 case (acc, (t, v @ Literal(_, _))) => acc.error(LiteralTypeMismatch(v.unit, t, v.ts))
-                case (acc, (t: ArrowType[F], VarLambda(name, Nil))) =>
+                case (acc, (t: ArrowTypeToken[F], VarLambda(name, Nil))) =>
                   getArrowDef(name.extract, ectx).fold(
                     acc.error(ArrowUntyped(name.void, name.extract))
                   )(vat =>

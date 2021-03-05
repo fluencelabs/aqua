@@ -4,7 +4,7 @@ import aqua.context.marker.{AbilityArrow, ArrowMarker, FuncArrow, LocalArrow}
 import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.context.walker.{Acc, ExpectAndDefine, Walker}
 import aqua.parser.{AbilityFuncCall, Block, DefFunc, DefService, Extract, FuncCall, FuncExpr}
-import aqua.parser.lexer.{ArrowName, ArrowType}
+import aqua.parser.lexer.{ArrowName, ArrowTypeToken}
 import cats.{Comonad, Functor}
 import shapeless._
 import cats.syntax.comonad._
@@ -69,7 +69,7 @@ object Arrows {
         case DefFunc(head, _, _) =>
           head.args
             .foldLeft(empty[F]) {
-              case (acc, (k, _, at: ArrowType[F])) =>
+              case (acc, (k, _, at: ArrowTypeToken[F])) =>
                 acc.defined(k, LocalArrow(at))
               case (acc, _) => acc
             }

@@ -35,17 +35,19 @@ object Acc {
       case arg @ VarLambda(name, _) => Acc.one[Value[F]](name.extract, arg)
     }.foldLeft(Acc.empty[Value[F]])(_ add _)
 
-  def fromType[F[_]: Comonad](t: Type[F]): Acc[CustomType[F]] =
+  def fromType[F[_]: Comonad](t: TypeToken[F]): Acc[CustomTypeToken[F]] =
     t match {
-      case ct: CustomType[F] =>
+      case ct: CustomTypeToken[F] =>
         Acc.one(ct.name.extract, ct)
-      case at: ArrayType[F] =>
+      case at: ArrayTypeToken[F] =>
         fromType(at.data)
-      case at: ArrowType[F] =>
-        (at.res :: at.args.widen[Type[F]])
-          .map[Acc[CustomType[F]]](v => fromType[F](v))
-          .foldLeft[Acc[CustomType[F]]](Acc.empty[CustomType[F]])(_ add _)
-      case _: BasicType[F] =>
+      case at: ArrowTypeToken[F] =>
+        at.args
+          .widen[TypeToken[F]]
+          .prependedAll(at.res)
+          .map[Acc[CustomTypeToken[F]]](v => fromType[F](v))
+          .foldLeft[Acc[CustomTypeToken[F]]](Acc.empty[CustomTypeToken[F]])(_ add _)
+      case _: BasicTypeToken[F] =>
         Acc.empty
     }
 }

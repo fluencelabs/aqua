@@ -2,16 +2,16 @@ package aqua.context
 
 import aqua.context.marker.{TypeAlias, TypeDef}
 import aqua.parser.lexer.{
-  ArrayType,
+  ArrayTypeToken,
   ArrowDef,
-  ArrowType,
-  BasicType,
-  CustomType,
-  DataType,
+  ArrowTypeToken,
+  BasicTypeToken,
+  CustomTypeToken,
+  DataTypeToken,
   IntoArray,
   IntoField,
   LambdaOp,
-  Type
+  TypeToken
 }
 import cats.Comonad
 import cats.data.{NonEmptyMap, Validated, ValidatedNel}
@@ -21,13 +21,13 @@ class TypeMatcher[F[_]: Comonad](types: Types[F]) {
   import TypeMatcher._
 
   // TODO check
-  def lambdaDerive(root: DataType[F], ops: List[LambdaOp[F]]): ValidatedNel[Err, Type[F]] =
+  def lambdaDerive(root: DataTypeToken[F], ops: List[LambdaOp[F]]): ValidatedNel[Err, TypeToken[F]] =
     ops match {
       case Nil => Validated.validNel(root)
       case op :: tail =>
         (op, root) match {
-          case (IntoArray(_), ArrayType(data)) => ??? // op must be
-          case (IntoField(_), CustomType(_)) => ??? // get into
+          case (IntoArray(_), ArrayTypeToken(data)) => ??? // op must be
+          case (IntoField(_), CustomTypeToken(_)) => ??? // get into
         }
 
 //        getType(root).andThen {
@@ -46,11 +46,11 @@ class TypeMatcher[F[_]: Comonad](types: Types[F]) {
 //        }
     }
 
-  def getType(t: CustomType[F]): ValidatedNel[Err, GetType[F]] =
+  def getType(t: CustomTypeToken[F]): ValidatedNel[Err, GetType[F]] =
     types.expDef.defineAcc
       .get(t.name.extract)
       .fold[ValidatedNel[Err, GetType[F]]](Validated.invalidNel(s"Undefined type ${t.name.extract}")) {
-        case TypeAlias(_, forType: CustomType[F]) =>
+        case TypeAlias(_, forType: CustomTypeToken[F]) =>
           getType(forType)
         case TypeAlias(_, forType) =>
           Validated.validNel(Right(forType))
@@ -74,16 +74,16 @@ class TypeMatcher[F[_]: Comonad](types: Types[F]) {
         .foldLeft(Validated.validNel[Err, Unit](()))(_ combine _)
       )
 
-  def isSubtype(superType: Type[F], subType: Type[F]): ValidatedNel[Err, Unit] =
+  def isSubtype(superType: TypeToken[F], subType: TypeToken[F]): ValidatedNel[Err, Unit] =
     (superType, subType) match {
-      case (sup: BasicType[F], sub: BasicType[F]) if sub.name.extract == sup.name.extract =>
+      case (sup: BasicTypeToken[F], sub: BasicTypeToken[F]) if sub.value.extract == sup.value.extract =>
         Validated.Valid(())
-      case (sup: BasicType[F], sub: BasicType[F]) =>
+      case (sup: BasicTypeToken[F], sub: BasicTypeToken[F]) =>
         // TODO check numbers
         Validated.invalidNel(s"$sup and $sub does not match")
-      case (sup: CustomType[F], sub: CustomType[F]) if sub.name.extract == sup.name.extract =>
+      case (sup: CustomTypeToken[F], sub: CustomTypeToken[F]) if sub.name.extract == sup.name.extract =>
         Validated.validNel(())
-      case (sup: CustomType[F], sub: CustomType[F]) =>
+      case (sup: CustomTypeToken[F], sub: CustomTypeToken[F]) =>
         getType(sup).product(getType(sub)).andThen {
           case (Left(supFields), Left(subFields)) =>
             // TODO we can collect errors there
@@ -102,7 +102,7 @@ class TypeMatcher[F[_]: Comonad](types: Types[F]) {
             Validated.invalidNel("Mismatch!")
         }
 
-      case (sup: ArrowType[F], sub: ArrowType[F]) =>
+      case (sup: ArrowTypeToken[F], sub: ArrowTypeToken[F]) =>
         isArrowSubtype(sup, sub)
 
       // TODO handle arrays
@@ -112,6 +112,6 @@ class TypeMatcher[F[_]: Comonad](types: Types[F]) {
 
 object TypeMatcher {
   type Err = String
-  type GetType[F[_]] = Either[NonEmptyMap[String, DataType[F]], Type[F]]
+  type GetType[F[_]] = Either[NonEmptyMap[String, DataTypeToken[F]], TypeToken[F]]
 
 }
