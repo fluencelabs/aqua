@@ -59,9 +59,19 @@ object LiteralType {
 case class ArrayType(element: DataType) extends DataType
 case class ProductType(name: String, fields: NonEmptyMap[String, DataType]) extends DataType
 
-case class ArrowType(args: List[DataType], res: Option[DataType]) extends Type
+sealed trait CallableType extends Type {
+  def acceptsValuesOf(valueTypes: List[Type]): Boolean
+}
 
-case class FuncArrowType(args: List[(String, Either[ArrowType, DataType])], res: Option[DataType]) extends Type {
+case class ArrowType(args: List[DataType], res: Option[DataType]) extends CallableType {
+
+  override def acceptsValuesOf(valueTypes: List[Type]): Boolean =
+    (args.length == valueTypes.length) && args.zip(valueTypes).forall(av => av._1.acceptsValueOf(av._2))
+
+}
+
+case class FuncArrowType(args: List[(String, Either[ArrowType, DataType])], res: Option[DataType])
+    extends CallableType {
 
   def toArrowType: Option[ArrowType] = {
     val dataArgs = args.map(_._2).collect {
@@ -69,6 +79,12 @@ case class FuncArrowType(args: List[(String, Either[ArrowType, DataType])], res:
     }
     Option.when(dataArgs.length == args.length)(ArrowType(dataArgs, res))
   }
+
+  override def acceptsValuesOf(valueTypes: List[Type]): Boolean =
+    (args.length == valueTypes.length) && args
+      .map(_._2)
+      .zip(valueTypes)
+      .forall(av => av._1.fold(identity, identity).acceptsValueOf(av._2))
 }
 
 object Type {

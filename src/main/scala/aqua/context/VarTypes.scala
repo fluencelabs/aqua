@@ -2,7 +2,7 @@ package aqua.context
 
 import aqua.context.walker.Walker
 import aqua.context.walker.Walker.UnresolvedError
-import aqua.interim.ScalarType
+import aqua.interim.{ScalarType, Type}
 import aqua.parser.lexer.{ArrowDef, ArrowTypeToken, BasicTypeToken, DataTypeToken, Literal, TypeToken, VarLambda}
 import aqua.parser.{Block, Extract, FuncExpr}
 import cats.{Comonad, Functor}
@@ -14,14 +14,15 @@ import cats.syntax.comonad._
 import scala.collection.immutable.Queue
 
 case class VarTypes[F[_]](
-  derived: Map[String, DataTypeToken[F]] = Map.empty[String, DataTypeToken[F]],
+  vars: Map[String, Type] = Map.empty[String, Type],
   errorsQ: Queue[VarTypes.Err[F]] = Queue.empty
 ) {
   def error(err: VarTypes.Err[F]): VarTypes[F] = copy(errorsQ = errorsQ.appended(err))
 
   def errors: List[VarTypes.Err[F]] = errorsQ.toList
 
-  def derive(varname: String, dt: DataTypeToken[F]): VarTypes[F] = copy(derived + (varname -> dt))
+  def resolve(varname: String, t: Type): VarTypes[F] = copy(vars + (varname -> t))
+  def get(varname: String): Option[Type] = vars.get(varname)
 }
 
 object VarTypes {
@@ -90,8 +91,19 @@ object VarTypes {
             .fold(prev.head.error(ArrowUntyped(c.arrow.unit, c.arrow.name.extract))) { arrowDef =>
               val types = getTypes(ectx)
 
-              val varTypes =
-                arrowDef.resType.fold(prev.head)(prev.head.derive(vr.name.extract, _))
+              val withResultType =
+                arrowDef.resType.flatMap(types.resolveTypeToken).fold(prev.head)(prev.head.resolve(vr.name.extract, _))
+
+              val valueTypes = c.args.map {
+                case Literal(_, ts) => ts // We want to collect errors with pointers!
+                case VarLambda(name, Nil) =>
+                // variable
+                // or argument
+                // or arrow
+                case VarLambda(name, lambda) =>
+                // variable
+                // or argument
+              }
 
               val args = arrowDef.argTypes
 
@@ -132,6 +144,7 @@ object VarTypes {
           prev.head
       }) :: extend.funcOpCtx(op, prev.tail)
 
+    // TODO fetch argument types
     override def blockCtx(block: Block[F, I]): Ctx =
       VarTypes[F]() :: extend.blockCtx(block)
 
