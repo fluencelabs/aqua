@@ -1,5 +1,7 @@
 package aqua
 
+import aqua.context.Types
+import aqua.parser.lift.Span
 import cats.effect.{IO, IOApp}
 import cats.data.Validated
 
@@ -13,13 +15,13 @@ object Main extends IOApp.Simple {
         Aqua.parse(str) match {
           case Validated.Valid(v) ⇒
             println(v)
-            println(Console.GREEN + "Aqua script processed successfully" + Console.GREEN)
+            println(Console.GREEN + "Aqua script processed successfully" + Console.RESET)
           case Validated.Invalid(errs) ⇒
             errs.map(_.showForConsole(str)).map(println)
             println(Console.RED + s"Aqua script errored, total ${errs.length} problems found" + Console.RESET)
         }
 
-      val experimental = Source.fromResource("experimental.aqua").mkString
+      val experimental = Source.fromResource("typecheck.aqua").mkString
       tryParse(experimental)
     }
 

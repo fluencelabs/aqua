@@ -83,57 +83,50 @@ object VarTypes {
     def getArrowDef(name: String, ctx: I): Option[ArrowDef[F]] =
       getArrows(ctx).expDef.defineAcc.get(name).map(_.arrowDef)
 
-    // TODO resolve complex types, check that all fields exist
-    def isSubtype(ctx: I, sup: DataTypeToken[F], sub: DataTypeToken[F]): Boolean =
-      new TypeMatcher[F](getTypes(ctx)).isSubtype(sup, sub).isValid
-
     override def funcOpCtx(op: FuncExpr[F, I], prev: Ctx): Ctx =
       (op match {
         case Extract(vr, c, ectx) =>
           getArrowDef(c.arrow.name.extract, ectx)
             .fold(prev.head.error(ArrowUntyped(c.arrow.unit, c.arrow.name.extract))) { arrowDef =>
-              val matcher = new TypeMatcher[F](getTypes(ectx))
+              val types = getTypes(ectx)
 
               val varTypes =
                 arrowDef.resType.fold(prev.head)(prev.head.derive(vr.name.extract, _))
 
               val args = arrowDef.argTypes
 
-              val checkArgsNum = if (args.length != c.args.length) {
-                varTypes
-                  .error(ArgNumMismatch(c.arrow.name.void, args.length, c.args.length))
-              } else varTypes
-
-              args.zip(c.args).foldLeft(checkArgsNum) {
-                case (acc, (BasicTypeToken(v), Literal(_, ts))) if ts.contains(v.extract) => acc
-                case (acc, (t, v @ Literal(_, _))) => acc.error(LiteralTypeMismatch(v.unit, t, v.ts))
-                case (acc, (t: ArrowTypeToken[F], VarLambda(name, Nil))) =>
-                  getArrowDef(name.extract, ectx).fold(
-                    acc.error(ArrowUntyped(name.void, name.extract))
-                  )(vat =>
-                    // TODO matcher.isArrowSubtype(t, vat)
-                    (t.resType, vat.resType) match {
-                      case (None, None) => acc
-                      case (Some(tr), Some(vr)) if isSubtype(ectx, tr, vr) => acc
-                      case _ => acc.error(ArrowResultMismatch(name.void, t.resType, vat.resType))
-                    }
-                  )
-
-                case (acc, (t, VarLambda(name, lambda))) =>
-                  // TODO find var type
-                  acc.derived
-                    .get(name.extract)
-                    .fold(
-                      // TODO undefined variable
-                      acc
-                    )(_ =>
-                      // TODO traverse lambda, find subtypes
-                      // TODO finally, check if resulting type is a subtype of expected type
-                      acc
-                    )
-              }
-
+//              args.zip(c.args).foldLeft(checkArgsNum) {
+//                case (acc, (BasicTypeToken(v), Literal(_, ts))) if ts.contains(v.extract) => acc
+//                case (acc, (t, v @ Literal(_, _))) => acc.error(LiteralTypeMismatch(v.unit, t, v.ts))
+//                case (acc, (t: ArrowTypeToken[F], VarLambda(name, Nil))) =>
+//                  getArrowDef(name.extract, ectx).fold(
+//                    acc.error(ArrowUntyped(name.void, name.extract))
+//                  )(vat =>
+//                  types.resolveTypeToken(t).map(_.acceptsValueOf(vat.argTypes))
+//                    // TODO matcher.isArrowSubtype(t, vat)
+//                    (t.resType, vat.resType) match {
+//                      case (None, None) => acc
+//                      case (Some(tr), Some(vr)) if isSubtype(ectx, tr, vr) => acc
+//                      case _ => acc.error(ArrowResultMismatch(name.void, t.resType, vat.resType))
+//                    }
+//                  )
+//
+//                case (acc, (t, VarLambda(name, lambda))) =>
+//                  // TODO find var type
+//                  acc.derived
+//                    .get(name.extract)
+//                    .fold(
+//                      // TODO undefined variable
+//                      acc
+//                    )(_ =>
+//                      // TODO traverse lambda, find subtypes
+//                      // TODO finally, check if resulting type is a subtype of expected type
+//                      acc
+//                    )
+//              }
+              ???
             }
+          prev.head
 
         case _ =>
           prev.head

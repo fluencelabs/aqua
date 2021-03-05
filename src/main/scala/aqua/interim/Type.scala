@@ -5,12 +5,20 @@ import cats.data.NonEmptyMap
 import cats.instances.option._
 import cats.syntax.apply._
 
-sealed trait Type
+sealed trait Type {
+
+  def acceptsValueOf(incoming: Type): Boolean = {
+    import Type.typesPartialOrder
+    import cats.syntax.partialOrder._
+    this >= incoming
+  }
+}
 sealed trait DataType extends Type
 
 case class ScalarType private (name: String) extends DataType
 
 object ScalarType {
+  // TODO https://github.com/fluencelabs/interface-types/blob/master/crates/it-types/src/values.rs#L45-L49
   val i32 = ScalarType("i32")
   val i64 = ScalarType("i64")
   val s32 = ScalarType("s32")

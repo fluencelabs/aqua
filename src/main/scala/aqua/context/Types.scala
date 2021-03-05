@@ -3,9 +3,10 @@ package aqua.context
 import aqua.context.marker.{TypeAlias, TypeDef, TypeMarker}
 import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.context.walker.{Acc, ExpectAndDefine, Walker}
-import aqua.interim.Type
+import aqua.interim.{ArrayType, ArrowType, DataType, ProductType, Type}
 import aqua.parser.{Block, DefAlias, DefFunc, DefService, DefType, FuncExpr}
-import aqua.parser.lexer.CustomTypeToken
+import aqua.parser.lexer.{ArrayTypeToken, ArrowTypeToken, BasicTypeToken, CustomTypeToken, TypeToken}
+import cats.data.NonEmptyMap
 import cats.{Comonad, Functor}
 import shapeless._
 import cats.syntax.comonad._
@@ -16,9 +17,33 @@ case class Types[F[_]](
 ) {
   def clearDefinitions: Types[F] = copy(expDef.clearDefinitions)
   def clearExpectations: Types[F] = copy(expDef.clearExpectations)
+
+  def resolveTypeToken(tt: TypeToken[F])(implicit F: Comonad[F]): Option[Type] =
+    Types.resolveTypeToken(strict, tt)
 }
 
 object Types {
+
+  def resolveTypeToken[F[_]: Comonad](strict: Map[String, Type], tt: TypeToken[F]): Option[Type] =
+    tt match {
+      case ArrayTypeToken(dtt) =>
+        resolveTypeToken(strict, dtt).collect {
+          case it: DataType => ArrayType(it)
+        }
+      case CustomTypeToken(n) => strict.get(n.extract)
+      case BasicTypeToken(v) => Some(v.extract)
+      case ArrowTypeToken(_, args, res) =>
+        val strictArgs = args.map(resolveTypeToken(strict, _)).collect {
+          case Some(dt: DataType) => dt
+        }
+        val strictRes = res.flatMap(resolveTypeToken(strict, _)).collect {
+          case dt: DataType => dt
+        }
+        Option.when(strictRes.isDefined == res.isDefined && strictArgs.length == args.length)(
+          ArrowType(strictArgs, strictRes)
+        )
+    }
+
   type Acc[F[_]] = ExpectAndDefine[CustomTypeToken[F], TypeMarker[F]]
   def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, CustomTypeToken[F], TypeMarker[F]]
   def empty[F[_]]: Types[F] = Types[F](emptyAcc[F], Map.empty)
@@ -85,13 +110,27 @@ object Types {
     override def emptyCtx: Out = empty[F] :: extend.emptyCtx
 
     override def combineBlockCtx(prev: Out, block: Out): Out =
-      Types(prev.head.expDef combineSeq block.head.expDef) :: extend
-        .combineBlockCtx(prev.tail, block.tail)
+      Types(
+        prev.head.expDef combineSeq block.head.expDef,
+        block.head.expDef.defineAcc.foldLeft(prev.head.strict) {
+          case (strict, (k, TypeAlias(_, marker))) =>
+            resolveTypeToken(strict, marker).fold(strict)(t => strict + (k -> t))
+          case (strict, (k, TypeDef(dt))) =>
+            val resTypes = dt.fields.map(_._2).map(resolveTypeToken(strict, _)).toSortedMap.collect {
+              case (kk, Some(t: DataType)) => kk -> t
+            }
+            NonEmptyMap
+              .fromMap(resTypes)
+              .filter(_.length == dt.fields.length)
+              .fold(strict)(fields => strict + (k -> ProductType(dt.name.name.extract, fields)))
+
+        }
+      ) :: extend.combineBlockCtx(prev.tail, block.tail)
 
     override def unresolved(ctx: Out): (List[UnresolvedError[F]], Out) = {
       val (extErrs, extCtx) = extend.unresolved(ctx.tail)
       val (curErrs, curExpDef) = Walker.collectUnresolved(ctx.head.expDef, UnresolvedType[F])
-      (curErrs ::: extErrs, Types(curExpDef) :: extCtx)
+      (curErrs ::: extErrs, Types(curExpDef, ctx.head.strict) :: extCtx)
     }
   }
 }

@@ -70,6 +70,8 @@ trait Walker[F[_], I <: HList, O <: HList] {
         unresErrs -> dt.copy(context = bCtx)
     }
 
+    println(Console.BLUE + combinedBlock.context + Console.RESET)
+
     (dupErr ::: unresolvedErrs) -> combinedBlock
   }
 
