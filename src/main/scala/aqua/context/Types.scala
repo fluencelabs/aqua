@@ -3,13 +3,17 @@ package aqua.context
 import aqua.context.marker.{TypeAlias, TypeDef, TypeMarker}
 import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.context.walker.{Acc, ExpectAndDefine, Walker}
+import aqua.interim.Type
 import aqua.parser.{Block, DefAlias, DefFunc, DefService, DefType, FuncExpr}
 import aqua.parser.lexer.CustomTypeToken
 import cats.{Comonad, Functor}
 import shapeless._
 import cats.syntax.comonad._
 
-case class Types[F[_]](expDef: ExpectAndDefine[CustomTypeToken[F], TypeMarker[F]]) {
+case class Types[F[_]](
+  expDef: ExpectAndDefine[CustomTypeToken[F], TypeMarker[F]],
+  strict: Map[String, Type] = Map.empty
+) {
   def clearDefinitions: Types[F] = copy(expDef.clearDefinitions)
   def clearExpectations: Types[F] = copy(expDef.clearExpectations)
 }
@@ -17,7 +21,7 @@ case class Types[F[_]](expDef: ExpectAndDefine[CustomTypeToken[F], TypeMarker[F]
 object Types {
   type Acc[F[_]] = ExpectAndDefine[CustomTypeToken[F], TypeMarker[F]]
   def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, CustomTypeToken[F], TypeMarker[F]]
-  def empty[F[_]]: Types[F] = Types[F](emptyAcc[F])
+  def empty[F[_]]: Types[F] = Types[F](emptyAcc[F], Map.empty)
 
   case class DuplicateType[F[_]](name: String, marker: TypeMarker[F]) extends Walker.DupError[F] {
     override def toStringF(implicit F: Functor[F]): F[String] = marker.toError(s"Duplicate type definition: ${name}")

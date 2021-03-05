@@ -51,7 +51,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     PartialOrder[Type].eqv(one, three) should be(true)
   }
 
-  "arrows" should "be variant on arguments" in {
+  "arrows" should "be contravariant on arguments" in {
     val one: Type = ArrowType(i32 :: Nil, None)
     val two: Type = ArrowType(i64 :: Nil, None)
 
@@ -61,7 +61,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     two < one should be(true)
   }
 
-  "arrows" should "be contravariant on results" in {
+  "arrows" should "be variant on results" in {
     val one: Type = ArrowType(Nil, Some(i64))
     val two: Type = ArrowType(Nil, Some(i32))
 
