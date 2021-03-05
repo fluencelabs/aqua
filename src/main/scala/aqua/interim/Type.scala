@@ -97,13 +97,13 @@ object Type {
         case (ProductType(_, xFields), ProductType(_, yFields)) =>
           cmpProd(xFields, yFields)
         case (ArrowType(argL, resL), ArrowType(argR, resR)) =>
-          val cmpTypes = cmpTypesList(argL, argR)
+          val cmpTypes = cmpTypesList(argR, argL)
           val cmpRes =
             if (resL == resR) 0.0
             else (resL, resR).mapN(cmp).getOrElse(NaN)
 
-          if (cmpTypes >= 0 && cmpRes <= 0) 1.0
-          else if (cmpTypes <= 0 && cmpRes >= 0) -1.0
+          if (cmpTypes >= 0 && cmpRes >= 0) 1.0
+          else if (cmpTypes <= 0 && cmpRes <= 0) -1.0
           else NaN
 
         case (x: FuncArrowType, y: ArrowType) =>
