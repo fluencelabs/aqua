@@ -1,7 +1,7 @@
 package aqua.parser
 
-import aqua.interim.ScalarType
-import aqua.parser.lexer.{Ability, ArrowName, BasicTypeToken, IntoField, Literal, Var, VarLambda}
+import aqua.interim.{LiteralType, ScalarType}
+import aqua.parser.lexer.{Ability, ArrowName, IntoField, Literal, Var, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
@@ -93,8 +93,8 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
   "on" should "parse on x: y" in {
     val fCall = AbilityFuncCall[Id, HNil]("Ab", "func", "Ab.func", Nil, HNil)
     val extr = Extract[Id, HNil]("x", fCall, HNil)
-    val resl = AbilityId[Id, HNil]("Peer", Literal[Id]("\"some id\"", ScalarType.stringSet), HNil)
-    val call = FuncCall[Id, HNil]("call", Literal[Id]("true", ScalarType.boolSet) :: Nil, HNil)
+    val resl = AbilityId[Id, HNil]("Peer", Literal[Id]("\"some id\"", LiteralType.string), HNil)
+    val call = FuncCall[Id, HNil]("call", Literal[Id]("true", LiteralType.bool) :: Nil, HNil)
 
     val script = """on peer.id:
                    | x <- Ab.func()
@@ -127,7 +127,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
                 | Peer 3""".stripMargin) should be(
       NonEmptyList.of(
         Extract[Id, HNil]("x", FuncCall[Id, HNil]("func", Nil, HNil), HNil),
-        AbilityId[Id, HNil]("Peer", Literal[Id]("3", ScalarType.number), HNil)
+        AbilityId[Id, HNil]("Peer", Literal[Id]("3", LiteralType.number), HNil)
       )
     )
     parseBody(""" x <- func()
@@ -137,7 +137,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
         Extract[Id, HNil]("x", FuncCall[Id, HNil]("func", Nil, HNil), HNil),
         On[Id, HNil](
           VarLambda[Id]("x"),
-          NonEmptyList.of(AbilityId[Id, HNil]("Peer", Literal[Id]("3", ScalarType.number), HNil)),
+          NonEmptyList.of(AbilityId[Id, HNil]("Peer", Literal[Id]("3", LiteralType.number), HNil)),
           HNil
         )
       )
@@ -147,7 +147,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
       NonEmptyList.of(
         On[Id, HNil](
           VarLambda[Id]("x"),
-          NonEmptyList.of(AbilityId[Id, HNil]("Peer", Literal[Id]("3", ScalarType.number), HNil)),
+          NonEmptyList.of(AbilityId[Id, HNil]("Peer", Literal[Id]("3", LiteralType.number), HNil)),
           HNil
         )
       )

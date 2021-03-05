@@ -59,7 +59,7 @@ class ArgsAndVarsSpec extends AnyFlatSpec with Matchers with EitherValues {
                            |   x <- arr()
                            |
                            |
-                           |func other(x: i32):
+                           |func other(x: u32):
                            |   y <- arr2(x)
                            |   
                            |""".stripMargin)
@@ -77,7 +77,7 @@ class ArgsAndVarsSpec extends AnyFlatSpec with Matchers with EitherValues {
                              |func some():
                              |   x <- f(z, y)
                              |   
-                             |alias T: i32
+                             |alias T: u32
                              |""".stripMargin)
 
     res.isValid should be(false)

@@ -19,8 +19,8 @@ case class ScalarType private (name: String) extends DataType
 
 object ScalarType {
   // TODO https://github.com/fluencelabs/interface-types/blob/master/crates/it-types/src/values.rs#L45-L49
-  val i32 = ScalarType("i32")
-  val i64 = ScalarType("i64")
+  val u32 = ScalarType("u32")
+  val u64 = ScalarType("u64")
   val s32 = ScalarType("s32")
   val s64 = ScalarType("s64")
   val f32 = ScalarType("f32")
@@ -30,23 +30,30 @@ object ScalarType {
 
   val float = Set(f32, f64)
   val signed = float ++ Set(s32, s64)
-  val number = signed ++ Set(i32, i64)
+  val number = signed ++ Set(u32, u64)
   val all = number ++ Set(bool, string)
-
-  val boolSet = Set(bool)
-  val stringSet = Set(string)
 
   val scalarOrder: PartialOrder[ScalarType] =
     PartialOrder.from {
       case (a, b) if a == b => 0.0
-      case (`i32`, `i64`) => -1.0
+      case (`u32`, `u64`) => -1.0
       case (`s32`, `s64`) => -1.0
       case (`f32`, `f64`) => -1.0
-      case (`i64`, `i32`) => 1.0
+      case (`u64`, `u32`) => 1.0
       case (`s64`, `s32`) => 1.0
       case (`f64`, `f32`) => 1.0
       case _ => Double.NaN
     }
+}
+
+case class LiteralType private (oneOf: Set[ScalarType]) extends Type
+
+object LiteralType {
+  val float = LiteralType(ScalarType.float)
+  val signed = LiteralType(ScalarType.signed)
+  val number = LiteralType(ScalarType.number)
+  val bool = LiteralType(Set(ScalarType.bool))
+  val string = LiteralType(Set(ScalarType.string))
 }
 
 case class ArrayType(element: DataType) extends DataType
@@ -101,6 +108,10 @@ object Type {
     else
       (l, r) match {
         case (x: ScalarType, y: ScalarType) => ScalarType.scalarOrder.partialCompare(x, y)
+        case (LiteralType(xs), y: ScalarType) if xs == Set(y) => 0.0
+        case (LiteralType(xs), y: ScalarType) if xs(y) => -1.0
+        case (x: ScalarType, LiteralType(ys)) if ys == Set(x) => 0.0
+        case (x: ScalarType, LiteralType(ys)) if ys(x) => 1.0
         case (x: ArrayType, y: ArrayType) => cmp(x.element, y.element)
         case (ProductType(_, xFields), ProductType(_, yFields)) =>
           cmpProd(xFields, yFields)

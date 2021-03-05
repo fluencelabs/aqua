@@ -1,6 +1,6 @@
 package aqua.parser.lexer
 
-import aqua.interim.ScalarType
+import aqua.interim.{LiteralType, ScalarType}
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -17,27 +17,27 @@ class ValueSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "literals" should "parse" in {
-    Value.`value`.parseAll("true").right.value should be(Literal("true", ScalarType.boolSet))
-    Value.`value`.parseAll("false").right.value should be(Literal("false", ScalarType.boolSet))
+    Value.`value`.parseAll("true").right.value should be(Literal("true", LiteralType.bool))
+    Value.`value`.parseAll("false").right.value should be(Literal("false", LiteralType.bool))
 
-    Value.`value`.parseAll("1").right.value should be(Literal("1", ScalarType.number))
-    Value.`value`.parseAll("1111").right.value should be(Literal("1111", ScalarType.number))
+    Value.`value`.parseAll("1").right.value should be(Literal("1", LiteralType.number))
+    Value.`value`.parseAll("1111").right.value should be(Literal("1111", LiteralType.number))
 
-    Value.`value`.parseAll("-1543").right.value should be(Literal("-1543", ScalarType.signed))
+    Value.`value`.parseAll("-1543").right.value should be(Literal("-1543", LiteralType.signed))
 
-    Value.`value`.parseAll("1.0").right.value should be(Literal("1.0", ScalarType.float))
-    Value.`value`.parseAll("1.23").right.value should be(Literal("1.23", ScalarType.float))
-    Value.`value`.parseAll("-1.23").right.value should be(Literal("-1.23", ScalarType.float))
+    Value.`value`.parseAll("1.0").right.value should be(Literal("1.0", LiteralType.float))
+    Value.`value`.parseAll("1.23").right.value should be(Literal("1.23", LiteralType.float))
+    Value.`value`.parseAll("-1.23").right.value should be(Literal("-1.23", LiteralType.float))
 
     Value.`value`.parseAll("\"some crazy string\"").right.value should be(
-      Literal("\"some crazy string\"", Set(ScalarType.string))
+      Literal("\"some crazy string\"", LiteralType.string)
     )
     // This does not work :(
 //    Value.`value`.parseAll("\"some crazy string with escaped \\\" quote\"").right.value should be(
 //      Literal("\"some crazy string with escaped \\\" quote\"", BasicType.string)
 //    )
     Value.`value`.parse("\"just string\"     ").right.value should be(
-      ("     ", Literal("\"just string\"", Set(ScalarType.string)))
+      ("     ", Literal("\"just string\"", LiteralType.string))
     )
   }
 

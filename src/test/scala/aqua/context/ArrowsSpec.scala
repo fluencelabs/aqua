@@ -57,7 +57,7 @@ class ArrowsSpec extends AnyFlatSpec with Matchers with EitherValues {
                              |   x <- First.arr()
                              |
                              |
-                             |func other(x: i32):
+                             |func other(x: u32):
                              |   Peer "smth"
                              |   y <- Second.arr2(x)
                              |   Peer.timestamp()
@@ -75,7 +75,7 @@ class ArrowsSpec extends AnyFlatSpec with Matchers with EitherValues {
                              |   y <- Smth.foo()
                              |   x <- Ab.f(z, y)
                              |   
-                             |alias T: i32
+                             |alias T: u32
                              |""".stripMargin)
 
     res.isValid should be(false)

@@ -1,6 +1,6 @@
 package aqua.parser.lexer
 
-import aqua.interim.ScalarType
+import aqua.interim.LiteralType
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
@@ -15,7 +15,7 @@ case class VarLambda[F[_]](name: F[String], lambda: List[LambdaOp[F]] = Nil) ext
   override def as[T](v: T)(implicit F: Functor[F]): F[T] = name.as(v)
 }
 
-case class Literal[F[_]](value: F[String], ts: Set[ScalarType]) extends Value[F] {
+case class Literal[F[_]](value: F[String], ts: LiteralType) extends Value[F] {
   override def as[T](v: T)(implicit F: Functor[F]): F[T] = value.as(v)
 }
 
@@ -30,25 +30,25 @@ object Value {
   def bool[F[_]: LiftParser: Functor]: P[Literal[F]] =
     P.oneOf(
       ("true" :: "false" :: Nil)
-        .map(t ⇒ P.string(t).lift.map(fu => Literal(fu.as(t), Set(ScalarType.bool))))
+        .map(t ⇒ P.string(t).lift.map(fu => Literal(fu.as(t), LiteralType.bool)))
     )
 
   def num[F[_]: LiftParser: Comonad]: P[Literal[F]] =
     (P.char('-').?.with1 ~ Numbers.nonNegativeIntString).lift.map(fu =>
       fu.extract match {
-        case (Some(_), n) ⇒ Literal(fu.as(s"-$n"), ScalarType.signed)
-        case (None, n) ⇒ Literal(fu.as(n), ScalarType.number)
+        case (Some(_), n) ⇒ Literal(fu.as(s"-$n"), LiteralType.signed)
+        case (None, n) ⇒ Literal(fu.as(n), LiteralType.number)
       }
     )
 
   def float[F[_]: LiftParser]: P[Literal[F]] =
     (P.char('-').?.with1 ~ (Numbers.nonNegativeIntString <* P.char('.')) ~ Numbers.nonNegativeIntString).string.lift
-      .map(Literal(_, ScalarType.float))
+      .map(Literal(_, LiteralType.float))
 
   // TODO make more sophisticated escaping/unescaping
   def string[F[_]: LiftParser]: P[Literal[F]] =
     (`"` *> P.charsWhile0(_ != '"') <* `"`).string.lift
-      .map(Literal(_, Set(ScalarType.string)))
+      .map(Literal(_, LiteralType.string))
 
   def literal[F[_]: LiftParser: Comonad]: P[Literal[F]] = P.oneOf(bool :: float.backtrack :: num :: string :: Nil)
 

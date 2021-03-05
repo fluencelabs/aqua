@@ -1,6 +1,6 @@
 package aqua.parser
 
-import aqua.interim.ScalarType
+import aqua.interim.{LiteralType, ScalarType}
 import aqua.parser.lexer.{Ability, ArrowName, ArrowTypeToken, BasicTypeToken, CustomTypeToken, Literal, Var, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
@@ -14,7 +14,7 @@ import scala.language.implicitConversions
 
 class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  import ScalarType.{i32, string}
+  import ScalarType.{string, u32}
 
   implicit def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
   implicit def strToArrow(str: String): ArrowName[Id] = ArrowName[Id](str)
@@ -25,53 +25,53 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
     "getTime",
     List(
       ("peer", "peer", CustomTypeToken[Id]("PeerId")),
-      ("ret", "ret", ArrowTypeToken[Id]((), (i32: BasicTypeToken[Id]) :: Nil, None))
+      ("ret", "ret", ArrowTypeToken[Id]((), (u32: BasicTypeToken[Id]) :: Nil, None))
     ),
     Some(string: BasicTypeToken[Id])
   )
 
   "func header" should "parse" in {
     DefFunc.`funchead`.parseAll("func some()").right.value should be(FuncHead("some", Nil, None))
-    DefFunc.`funchead`.parseAll("func some(peer: i32)").right.value should be(
-      FuncHead[Id]("some", List(("peer", "peer", (i32: BasicTypeToken[Id]))), None)
+    DefFunc.`funchead`.parseAll("func some(peer: u32)").right.value should be(
+      FuncHead[Id]("some", List(("peer", "peer", (u32: BasicTypeToken[Id]))), None)
     )
 
     DefFunc.`funchead`.parseAll("func some(peer: PeerId)").right.value should be(
       FuncHead[Id]("some", List(("peer", "peer", CustomTypeToken[Id]("PeerId"))), None)
     )
-    DefFunc.`funchead`.parseAll("func some(peer: PeerId, other: i32)").right.value should be(
+    DefFunc.`funchead`.parseAll("func some(peer: PeerId, other: u32)").right.value should be(
       FuncHead[Id](
         "some",
-        List(("peer", "peer", CustomTypeToken[Id]("PeerId")), ("other", "other", (i32: BasicTypeToken[Id]))),
+        List(("peer", "peer", CustomTypeToken[Id]("PeerId")), ("other", "other", (u32: BasicTypeToken[Id]))),
         None
       )
     )
-    DefFunc.`funchead`.parseAll("func some(peer: PeerId, other: i32 -> i32)").right.value should be(
+    DefFunc.`funchead`.parseAll("func some(peer: PeerId, other: u32 -> u32)").right.value should be(
       FuncHead[Id](
         "some",
         List(
           ("peer", "peer", CustomTypeToken[Id]("PeerId")),
-          ("other", "other", ArrowTypeToken[Id]((), (i32: BasicTypeToken[Id]) :: Nil, Some(i32: BasicTypeToken[Id])))
+          ("other", "other", ArrowTypeToken[Id]((), (u32: BasicTypeToken[Id]) :: Nil, Some(u32: BasicTypeToken[Id])))
         ),
         None
       )
     )
 
-    DefFunc.`funchead`.parseAll("func getTime(peer: PeerId, ret: i32 -> ()) -> string").right.value should be(
+    DefFunc.`funchead`.parseAll("func getTime(peer: PeerId, ret: u32 -> ()) -> string").right.value should be(
       getTimeHead
     )
   }
 
   "function" should "parse single line fn" in {
     val func =
-      """func getTime(peer: PeerId, ret: i32 -> ()) -> string:
+      """func getTime(peer: PeerId, ret: u32 -> ()) -> string:
         | ret(43)""".stripMargin
 
     DefFunc.`deffunc`.parseAll(func).right.value should be(
       DefFunc[Id, HNil](
         getTimeHead,
         NonEmptyList.of(
-          FuncCall[Id, HNil]("ret", Literal[Id]("43", ScalarType.number) :: Nil, HNil)
+          FuncCall[Id, HNil]("ret", Literal[Id]("43", LiteralType.number) :: Nil, HNil)
         ),
         HNil
       )
@@ -80,7 +80,7 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "function" should "parse getTime as a whole" in {
     val func =
-      """func getTime(peer: PeerId, ret: i32 -> ()) -> string:
+      """func getTime(peer: PeerId, ret: u32 -> ()) -> string:
         | on peer:
         |   Peer "peer"
         |   t <- Peer.timestamp()
@@ -93,7 +93,7 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
           On[Id, HNil](
             VarLambda[Id]("peer", Nil),
             NonEmptyList.of(
-              AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", ScalarType.stringSet), HNil),
+              AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", LiteralType.string), HNil),
               Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", "Peer.timestamp", Nil, HNil), HNil)
             ),
             HNil
@@ -107,7 +107,7 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "function" should "parse getTime with no return" in {
     val func =
-      """func getTime(peer: PeerId, ret: i32 -> ()) -> string:
+      """func getTime(peer: PeerId, ret: u32 -> ()) -> string:
         | on peer:
         |   Peer "peer"
         |   t <- Peer.timestamp()""".stripMargin
@@ -119,7 +119,7 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
           On[Id, HNil](
             VarLambda[Id]("peer", Nil),
             NonEmptyList.of(
-              AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", ScalarType.stringSet), HNil),
+              AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", LiteralType.string), HNil),
               Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", "Peer.timestamp", Nil, HNil), HNil)
             ),
             HNil
