@@ -56,35 +56,30 @@ object LiteralType {
   val string = LiteralType(Set(ScalarType.string))
 }
 
-case class ArrayType(element: DataType) extends DataType
-case class ProductType(name: String, fields: NonEmptyMap[String, DataType]) extends DataType
+case class ArrayType(element: Type) extends DataType
+case class ProductType(name: String, fields: NonEmptyMap[String, Type]) extends DataType
 
 sealed trait CallableType extends Type {
-  def acceptsValuesOf(valueTypes: List[Type]): Boolean
+  def acceptsAsArguments(valueTypes: List[Type]): Boolean
+  def args: List[Type]
+  def res: Option[Type]
 }
 
-case class ArrowType(args: List[DataType], res: Option[DataType]) extends CallableType {
+case class ArrowType(args: List[Type], res: Option[Type]) extends CallableType {
 
-  override def acceptsValuesOf(valueTypes: List[Type]): Boolean =
+  override def acceptsAsArguments(valueTypes: List[Type]): Boolean =
     (args.length == valueTypes.length) && args.zip(valueTypes).forall(av => av._1.acceptsValueOf(av._2))
 
 }
 
-case class FuncArrowType(args: List[(String, Either[ArrowType, DataType])], res: Option[DataType])
-    extends CallableType {
+case class FuncArrowType(funcArgs: List[(String, Type)], res: Option[Type]) extends CallableType {
 
-  def toArrowType: Option[ArrowType] = {
-    val dataArgs = args.map(_._2).collect {
-      case Right(dt) => dt
-    }
-    Option.when(dataArgs.length == args.length)(ArrowType(dataArgs, res))
-  }
+  lazy val toArrowType: ArrowType = ArrowType(funcArgs.map(_._2), res)
 
-  override def acceptsValuesOf(valueTypes: List[Type]): Boolean =
-    (args.length == valueTypes.length) && args
-      .map(_._2)
-      .zip(valueTypes)
-      .forall(av => av._1.fold(identity, identity).acceptsValueOf(av._2))
+  override def acceptsAsArguments(valueTypes: List[Type]): Boolean =
+    toArrowType.acceptsAsArguments(valueTypes)
+
+  override def args: List[Type] = toArrowType.args
 }
 
 object Type {
@@ -103,7 +98,7 @@ object Type {
         case _ => NaN
       }
 
-  private def cmpProd(lf: NonEmptyMap[String, DataType], rf: NonEmptyMap[String, DataType]): Double =
+  private def cmpProd(lf: NonEmptyMap[String, Type], rf: NonEmptyMap[String, Type]): Double =
     if (lf.toSortedMap == rf.toSortedMap) 0.0
     else if (
       lf.keys.forall(rf.contains) && cmpTypesList(
@@ -131,7 +126,11 @@ object Type {
         case (x: ArrayType, y: ArrayType) => cmp(x.element, y.element)
         case (ProductType(_, xFields), ProductType(_, yFields)) =>
           cmpProd(xFields, yFields)
-        case (ArrowType(argL, resL), ArrowType(argR, resR)) =>
+        case (l: CallableType, r: CallableType) =>
+          val argL = l.args
+          val resL = l.res
+          val argR = r.args
+          val resR = r.res
           val cmpTypes = cmpTypesList(argR, argL)
           val cmpRes =
             if (resL == resR) 0.0
@@ -140,12 +139,6 @@ object Type {
           if (cmpTypes >= 0 && cmpRes >= 0) 1.0
           else if (cmpTypes <= 0 && cmpRes <= 0) -1.0
           else NaN
-
-        case (x: FuncArrowType, y: ArrowType) =>
-          x.toArrowType.fold(NaN)(cmp(_, y))
-
-        case (x: ArrowType, y: FuncArrowType) =>
-          y.toArrowType.fold(NaN)(cmp(x, _))
 
         case _ =>
           Double.NaN

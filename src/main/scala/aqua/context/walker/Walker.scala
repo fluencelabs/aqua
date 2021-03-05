@@ -53,6 +53,7 @@ trait Walker[F[_], I <: HList, O <: HList] {
 
   def mapBlock(block: Block[F, I], prevCtx: Out): (List[Walker.Error[F]], Block[F, Out]) = {
     val ctx = blockCtx(block)
+
     val dupErr = duplicates(prevCtx, ctx)
     val (unresolvedErrs, combinedBlock) = block match {
       case df @ DefFunc(_, body, _) =>
@@ -69,8 +70,6 @@ trait Walker[F[_], I <: HList, O <: HList] {
         val (unresErrs, bCtx) = unresolved(combineBlockCtx(prevCtx, ctx))
         unresErrs -> dt.copy(context = bCtx)
     }
-
-    println(Console.BLUE + combinedBlock.context + Console.RESET)
 
     (dupErr ::: unresolvedErrs) -> combinedBlock
   }
@@ -133,5 +132,22 @@ object Walker {
       override def combineBlockCtx(prev: Out, block: Out): Out = HNil
 
       override def unresolved(ctx: Out): (List[UnresolvedError[F]], Out) = Nil -> ctx
+    }
+
+  def noopFrom[F[_], I <: HList, O <: HList](from: Walker[F, I, O]): Walker[F, O, O] =
+    new Walker[F, O, O] {
+      override def exitFuncExprGroup(group: FuncExpr[F, O], last: O): O = last
+
+      override def funcOpCtx(op: FuncExpr[F, O], prev: O): O = prev
+
+      override def blockCtx(block: Block[F, O]): O = block.context
+
+      override def emptyCtx: Out = from.emptyCtx
+
+      override def combineBlockCtx(prev: Out, block: Out): Out = block
+
+      override def duplicates(prev: Out, next: Out): List[DupError[F]] = Nil
+
+      override def unresolved(ctx: Out): (List[UnresolvedError[F]], Out) = (Nil, ctx)
     }
 }

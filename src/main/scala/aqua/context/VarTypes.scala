@@ -1,10 +1,11 @@
 package aqua.context
 
+import aqua.context.marker.FuncArgMarker
 import aqua.context.walker.Walker
 import aqua.context.walker.Walker.UnresolvedError
-import aqua.interim.{ScalarType, Type}
-import aqua.parser.lexer.{ArrowDef, ArrowTypeToken, BasicTypeToken, DataTypeToken, Literal, TypeToken, VarLambda}
-import aqua.parser.{Block, Extract, FuncExpr}
+import aqua.interim.{ArrayType, ArrowType, ProductType, ScalarType, Type}
+import aqua.parser.lexer.{ArrowDef, DataTypeToken, IntoArray, IntoField, LambdaOp, Literal, TypeToken, Value, VarLambda}
+import aqua.parser.{Block, CallExpr, Extract, FuncExpr}
 import cats.{Comonad, Functor}
 import shapeless._
 import shapeless.ops.hlist.Selector
@@ -28,10 +29,36 @@ case class VarTypes[F[_]](
 object VarTypes {
   sealed trait Err[F[_]] extends UnresolvedError[F]
 
-  case class TypeMismatch[F[_]](point: F[Unit], expected: TypeToken[F], given: TypeToken[F]) extends Err[F] {
+  case class TypeMismatch[F[_]](point: F[Unit], expected: Type, given: Type) extends Err[F] {
 
     override def toStringF(implicit F: Functor[F]): F[String] =
       point.as(s"Type mismatch, expected: `$expected`, given: `$given`")
+  }
+
+  case class TypeUndefined[F[_]](point: F[String]) extends Err[F] {
+
+    override def toStringF(implicit F: Functor[F]): F[String] =
+      point.map(v => s"Undefined: $v")
+  }
+
+  case class NotAnArray[F[_]](point: F[Unit], t: Type) extends Err[F] {
+
+    override def toStringF(implicit F: Functor[F]): F[String] =
+      point.as(s"Expected array, but type is $t")
+  }
+
+  case class ExpectedProduct[F[_]](point: F[String], t: Type) extends Err[F] {
+
+    override def toStringF(implicit F: Functor[F]): F[String] =
+      point.map(f => s"Expected product with field `$f`, but type is $t")
+  }
+
+  case class FieldNotFound[F[_]](point: F[String], t: ProductType) extends Err[F] {
+
+    override def toStringF(implicit F: Functor[F]): F[String] =
+      point.map(f =>
+        s"Expected product with field `$f`, but type `${t.name}` has only `${t.fields.keys.toNonEmptyList.toList.mkString("`, `")}`"
+      )
   }
 
   case class LiteralTypeMismatch[F[_]: Comonad](
@@ -74,77 +101,114 @@ object VarTypes {
 
   class Checker[F[_]: Comonad, I <: HList, O <: HList](extend: Walker[F, I, O])(implicit
     getArrows: Selector[I, Arrows[F]],
-    getTypes: Selector[I, Types[F]]
+    getTypes: Selector[O, Types[F]],
+    getArgsAndVars: Selector[I, ArgsAndVars[F]]
   ) extends Walker[F, I, VarTypes[F] :: O] {
     type Ctx = VarTypes[F] :: O
 
     override def exitFuncExprGroup(group: FuncExpr[F, I], last: Ctx): Ctx =
       last.head :: extend.exitFuncExprGroup(group, last.tail)
 
-    def getArrowDef(name: String, ctx: I): Option[ArrowDef[F]] =
-      getArrows(ctx).expDef.defineAcc.get(name).map(_.arrowDef)
+    def getArrowDef(name: String, inCtx: I, ctx: Ctx): Option[ArrowDef[F]] =
+      getArrows(inCtx).expDef.defineAcc.get(name).map(_.arrowDef)
+
+    def getArrowType(name: String, inCtx: I, ctx: Ctx): Option[ArrowType] =
+      getArrowDef(name, inCtx, ctx).flatMap(getTypes(ctx.tail).resolveArrowDef(_))
+
+    def resolveIdent(name: F[String], inCtx: I, prev: Ctx): Either[Err[F], Type] =
+      prev.head.vars
+        .get(name.extract)
+        .orElse(
+          getArgsAndVars(inCtx).expDef.defineAcc
+            .get(name.extract)
+            .collect {
+              case FuncArgMarker(_, dt) =>
+                getTypes(prev.tail).resolveTypeToken(dt)
+            }
+            .flatten
+        )
+        .orElse(
+          getArrowType(name.extract, inCtx, prev)
+        )
+        .toRight(TypeUndefined(name))
+
+    def resolveOp(rootT: Type, ops: List[LambdaOp[F]]): Either[Err[F], Type] =
+      ops.headOption.fold[Either[Err[F], Type]](Right(rootT)) {
+        case IntoArray(f) =>
+          rootT match {
+            case ArrayType(intern) => resolveOp(intern, ops.tail).map[Type](ArrayType)
+            case _ => Left(NotAnArray(f, rootT))
+          }
+        case IntoField(name) =>
+          rootT match {
+            case pt @ ProductType(_, fields) =>
+              fields(name.extract)
+                .toRight(FieldNotFound(name, pt))
+                .flatMap(resolveOp(_, ops.tail))
+            case _ => Left(ExpectedProduct(name, rootT))
+          }
+
+      }
+
+    def resolveValueType(v: Value[F], inCtx: I, prev: Ctx): Either[Err[F], Type] =
+      v match {
+        case Literal(_, ts) => Right(ts) // We want to collect errors with pointers!
+        case VarLambda(name, lambda) =>
+          resolveIdent(name, inCtx, prev).flatMap(resolveOp(_, lambda))
+
+      }
+
+    def funcCall(
+      fc: CallExpr[F, I],
+      arrowDef: ArrowDef[F],
+      prev: Ctx
+    ): VarTypes[F] = {
+      val funcType = getTypes(prev.tail).resolveArrowDef(arrowDef)
+      val (valueErrs, valueTypes) = fc.args
+        .map(v => resolveValueType(v, fc.context, prev).map(_ -> v))
+        .foldLeft[(Queue[Err[F]], Queue[(Type, Value[F])])](Queue.empty -> Queue.empty) {
+          case ((errs, args), Right(t)) => (errs, args.appended(t))
+          case ((errs, args), Left(t)) => (errs.appended(t), args)
+        }
+
+      if (valueErrs.nonEmpty) valueErrs.foldLeft(prev.head)(_.error(_))
+      else {
+        funcType.fold(prev.head) {
+          case ft if ft.args.length != valueTypes.length =>
+            prev.head.error(ArgNumMismatch(fc.arrow.unit, ft.args.length, valueTypes.length))
+          case ft =>
+            ft.args.zip(valueTypes).foldLeft(prev.head) {
+              case (acc, (expectedType, (givenType, _))) if expectedType.acceptsValueOf(givenType) => acc
+              case (acc, (expectedType, (givenType, v))) =>
+                acc.error(TypeMismatch(v.unit, expectedType, givenType))
+
+            }
+        }
+      }
+    }
 
     override def funcOpCtx(op: FuncExpr[F, I], prev: Ctx): Ctx =
       (op match {
-        case Extract(vr, c, ectx) =>
-          getArrowDef(c.arrow.name.extract, ectx)
-            .fold(prev.head.error(ArrowUntyped(c.arrow.unit, c.arrow.name.extract))) { arrowDef =>
-              val types = getTypes(ectx)
+        case Extract(vr, fc, _) =>
+          getArrowDef(fc.arrow.name.extract, fc.context, prev)
+            .fold(prev.head.error(ArrowUntyped(fc.arrow.unit, fc.arrow.name.extract))) { arrowDef =>
+              val withFC = funcCall(fc, arrowDef, prev)
 
-              val withResultType =
-                arrowDef.resType.flatMap(types.resolveTypeToken).fold(prev.head)(prev.head.resolve(vr.name.extract, _))
-
-              val valueTypes = c.args.map {
-                case Literal(_, ts) => ts // We want to collect errors with pointers!
-                case VarLambda(name, Nil) =>
-                // variable
-                // or argument
-                // or arrow
-                case VarLambda(name, lambda) =>
-                // variable
-                // or argument
-              }
-
-              val args = arrowDef.argTypes
-
-//              args.zip(c.args).foldLeft(checkArgsNum) {
-//                case (acc, (BasicTypeToken(v), Literal(_, ts))) if ts.contains(v.extract) => acc
-//                case (acc, (t, v @ Literal(_, _))) => acc.error(LiteralTypeMismatch(v.unit, t, v.ts))
-//                case (acc, (t: ArrowTypeToken[F], VarLambda(name, Nil))) =>
-//                  getArrowDef(name.extract, ectx).fold(
-//                    acc.error(ArrowUntyped(name.void, name.extract))
-//                  )(vat =>
-//                  types.resolveTypeToken(t).map(_.acceptsValueOf(vat.argTypes))
-//                    // TODO matcher.isArrowSubtype(t, vat)
-//                    (t.resType, vat.resType) match {
-//                      case (None, None) => acc
-//                      case (Some(tr), Some(vr)) if isSubtype(ectx, tr, vr) => acc
-//                      case _ => acc.error(ArrowResultMismatch(name.void, t.resType, vat.resType))
-//                    }
-//                  )
-//
-//                case (acc, (t, VarLambda(name, lambda))) =>
-//                  // TODO find var type
-//                  acc.derived
-//                    .get(name.extract)
-//                    .fold(
-//                      // TODO undefined variable
-//                      acc
-//                    )(_ =>
-//                      // TODO traverse lambda, find subtypes
-//                      // TODO finally, check if resulting type is a subtype of expected type
-//                      acc
-//                    )
-//              }
-              ???
+              arrowDef.resType
+                .flatMap(getTypes(prev.tail).resolveTypeToken)
+                .fold(withFC)(withFC.resolve(vr.name.extract, _))
             }
-          prev.head
+
+        case fc: CallExpr[F, I] =>
+          getArrowDef(fc.arrow.name.extract, fc.context, prev)
+            .fold(prev.head.error(ArrowUntyped(fc.arrow.unit, fc.arrow.name.extract))) { arrowDef =>
+              funcCall(fc, arrowDef, prev)
+            }
 
         case _ =>
           prev.head
       }) :: extend.funcOpCtx(op, prev.tail)
 
-    // TODO fetch argument types
     override def blockCtx(block: Block[F, I]): Ctx =
       VarTypes[F]() :: extend.blockCtx(block)
 

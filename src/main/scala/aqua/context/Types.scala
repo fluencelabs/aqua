@@ -5,7 +5,7 @@ import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.context.walker.{Acc, ExpectAndDefine, Walker}
 import aqua.interim.{ArrayType, ArrowType, DataType, ProductType, Type}
 import aqua.parser.{Block, DefAlias, DefFunc, DefService, DefType, FuncExpr}
-import aqua.parser.lexer.{ArrayTypeToken, ArrowTypeToken, BasicTypeToken, CustomTypeToken, TypeToken}
+import aqua.parser.lexer.{ArrayTypeToken, ArrowDef, ArrowTypeToken, BasicTypeToken, CustomTypeToken, TypeToken}
 import cats.data.NonEmptyMap
 import cats.{Comonad, Functor}
 import shapeless._
@@ -20,6 +20,9 @@ case class Types[F[_]](
 
   def resolveTypeToken(tt: TypeToken[F])(implicit F: Comonad[F]): Option[Type] =
     Types.resolveTypeToken(strict, tt)
+
+  def resolveArrowDef(ad: ArrowDef[F])(implicit F: Comonad[F]): Option[ArrowType] =
+    Types.resolveArrowDef(strict, ad)
 }
 
 object Types {
@@ -42,6 +45,17 @@ object Types {
         Option.when(strictRes.isDefined == res.isDefined && strictArgs.length == args.length)(
           ArrowType(strictArgs, strictRes)
         )
+    }
+
+  def resolveArrowDef[F[_]: Comonad](strict: Map[String, Type], ad: ArrowDef[F]): Option[ArrowType] =
+    ad.resType.flatMap(resolveTypeToken(strict, _)) match {
+      case resType if resType.isDefined == ad.resType.isDefined =>
+        ad.argTypes.flatMap(resolveTypeToken(strict, _)) match {
+          case argTypes if argTypes.length == ad.argTypes.length => Some(ArrowType(argTypes, resType))
+          case _ => None
+        }
+
+      case _ => None
     }
 
   type Acc[F[_]] = ExpectAndDefine[CustomTypeToken[F], TypeMarker[F]]

@@ -1,6 +1,6 @@
 package aqua
 
-import aqua.context.{Abilities, AbilitiesResolve, ArgsAndVars, Arrows, Types}
+import aqua.context.{Abilities, AbilitiesResolve, ArgsAndVars, Arrows, Types, VarTypes}
 import aqua.context.scope.ScopeWalker
 import aqua.context.walker.Walker
 import aqua.parser.Block
@@ -13,7 +13,7 @@ import shapeless.HNil
 object Aqua {
   private val parser: P0[List[Block[Span.F, HNil]]] = Block.blocks[Span.F]
 
-  val walker =
+  val step1 =
     Walker
       .hnil[Span.F]
       .andThen(new ScopeWalker(_))
@@ -23,7 +23,10 @@ object Aqua {
       .andThen(new Abilities.ExpDef(_))
       .andThen(new AbilitiesResolve.ExpDef(_))
 
-  def parse(input: String): ValidatedNel[AquaError, List[Block[Span.F, walker.Out]]] =
+  val step2 =
+    new VarTypes.Checker[Span.F, step1.Out, step1.Out](Walker.noopFrom(step1))
+
+  def parse(input: String): ValidatedNel[AquaError, List[Block[Span.F, step2.Out]]] =
     Validated
       .fromEither(
         parser
@@ -32,6 +35,9 @@ object Aqua {
           .map(pe => NonEmptyList.one[AquaError](SyntaxError(pe.failedAtOffset, pe.expected)))
       )
       .andThen { blocks =>
-        walker.walkValidate(blocks).leftMap(_.map(_.toStringF).map(sv => WalkerError(sv._1, sv._2)))
+        step1.walkValidate(blocks).leftMap(_.map(_.toStringF).map(sv => WalkerError(sv._1, sv._2)))
+      }
+      .andThen { blocks =>
+        step2.walkValidate(blocks).leftMap(_.map(_.toStringF).map(sv => WalkerError(sv._1, sv._2)))
       }
 }

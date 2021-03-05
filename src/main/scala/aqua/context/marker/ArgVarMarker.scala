@@ -12,7 +12,3 @@ case class FuncArgMarker[F[_]](v: Var[F], dt: DataTypeToken[F]) extends ArgVarMa
 case class ExtractedVarMarker[F[_], L](v: Var[F], extract: Extract[F, L]) extends ArgVarMarker[F] {
   override def pointer: Token[F] = v
 }
-
-case class TypedVarMarker[F[_], L](v: Var[F], dt: DataTypeToken[F]) extends ArgVarMarker[F] {
-  override def pointer: Token[F] = v
-}
