@@ -24,7 +24,7 @@ object Expr {
           (p[F] ~ indented(
             s => {
               val psI = ps.copy(indent = s)
-              P.oneOf(cs.map(_.ast[F](psI)))
+              P.oneOf(cs.map(_.ast[F](psI).backtrack))
             },
             ps.indent
           )).map {

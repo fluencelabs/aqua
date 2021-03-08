@@ -2,7 +2,7 @@ package aqua.parser
 
 import aqua.parser.lexer.DataTypeToken.`datatypedef`
 import aqua.parser.lexer.Token._
-import aqua.parser.lexer.TypeToken.{`arrowdef`, `typedef`}
+import aqua.parser.lexer.TypeToken.`typedef`
 import aqua.parser.lexer.{
   Ability,
   AquaArrowType,
@@ -85,7 +85,7 @@ object DefService {
 
   // TODO use name's [F] for ArrowName
   def `funcdef`[F[_]: LiftParser]: P[(String, ArrowTypeToken[F])] =
-    (`name` <* ` : `) ~ `arrowdef`
+    (`name` <* ` : `) ~ ArrowTypeToken.`arrowdef`
 
   def `servicename`[F[_]: LiftParser]: P[Ability[F]] = `service` *> ` ` *> Ability.ab[F] <* ` `.? <* `:` <* ` \n+`
 

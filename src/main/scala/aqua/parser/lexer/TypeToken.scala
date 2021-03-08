@@ -52,6 +52,16 @@ case class ArrowTypeToken[F[_]](point: F[Unit], args: List[DataTypeToken[F]], re
   override def resType: Option[DataTypeToken[F]] = res
 }
 
+object ArrowTypeToken {
+
+  def `arrowdef`[F[_]: LiftParser]: P[ArrowTypeToken[F]] =
+    (comma0(DataTypeToken.`datatypedef`).with1 ~ `->`.lift ~
+      (DataTypeToken.`datatypedef`
+        .map(Some(_)) | P.string("()").as(None))).map {
+      case ((args, point), res) ⇒ ArrowTypeToken(point, args, res)
+    }
+}
+
 case class AquaArrowType[F[_]](args: List[TypeToken[F]], res: Option[DataTypeToken[F]]) extends ArrowDef[F] {
   override def argTypes: List[TypeToken[F]] = args
 
@@ -69,13 +79,7 @@ object DataTypeToken {
 
 object TypeToken {
 
-  def `arrowdef`[F[_]: LiftParser]: P[ArrowTypeToken[F]] =
-    (comma0(DataTypeToken.`datatypedef`).with1 ~ `->`.lift ~
-      (DataTypeToken.`datatypedef`
-        .map(Some(_)) | P.string("()").as(None))).map {
-      case ((args, point), res) ⇒ ArrowTypeToken(point, args, res)
-    }
-
-  def `typedef`[F[_]: LiftParser]: P[TypeToken[F]] = P.oneOf(`arrowdef`.backtrack :: DataTypeToken.`datatypedef` :: Nil)
+  def `typedef`[F[_]: LiftParser]: P[TypeToken[F]] =
+    P.oneOf(ArrowTypeToken.`arrowdef`.backtrack :: DataTypeToken.`datatypedef` :: Nil)
 
 }

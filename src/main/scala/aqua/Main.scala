@@ -1,9 +1,10 @@
 package aqua
 
 import aqua.context.Types
+import aqua.parser.ast.Ast
 import aqua.parser.lift.Span
 import cats.effect.{IO, IOApp}
-import cats.data.Validated
+import cats.data.{NonEmptyList, Validated}
 
 import scala.io.Source
 
@@ -21,8 +22,16 @@ object Main extends IOApp.Simple {
             println(Console.RED + s"Aqua script errored, total ${errs.length} problems found" + Console.RESET)
         }
 
-      val experimental = Source.fromResource("typecheck.aqua").mkString
-      tryParse(experimental)
+      val experimental = Source.fromResource("experimental.aqua").mkString
+      //tryParse(experimental)
+
+      println(
+        Ast
+          .parser[Span.F]()
+          .parseAll(experimental)
+          .left
+          .map(pe => NonEmptyList.one(SyntaxError(pe.failedAtOffset, pe.expected).showForConsole(experimental)))
+      )
     }
 
 }
