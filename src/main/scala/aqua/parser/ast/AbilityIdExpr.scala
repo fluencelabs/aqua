@@ -1,12 +1,19 @@
 package aqua.parser.ast
 
+import aqua.interim.abilities.AbilitiesAlgebra
 import aqua.parser.lexer.{Ability, Value}
 import aqua.parser.lift.LiftParser
 import cats.parse.{Parser => P}
 import aqua.parser.lexer.Token._
 import cats.Comonad
+import cats.free.Free
 
-case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F]) extends Expr[F]
+case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F]) extends Expr[F] {
+
+  def program[Alg[_]](implicit A: AbilitiesAlgebra[Alg]): Free[Alg, Unit] =
+    A.setServiceId(ability, id)
+
+}
 
 object AbilityIdExpr extends Expr.Leaf {
 

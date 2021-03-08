@@ -11,6 +11,9 @@ class AbilitiesAlgebra[Alg[_]](implicit A: InjectK[AbilityOp, Alg]) {
   def defineArrow[F[_]](arrow: ArrowName[F], `type`: ArrowType): Free[Alg, Unit] =
     Free.liftInject[Alg](DefineArrow[F](arrow, `type`))
 
+  def purgeArrows[F[_]](): Free[Alg, List[(ArrowName[F], ArrowType)]] =
+    Free.liftInject[Alg](PurgeArrows[F]())
+
   def defineService[F[_]](name: Ability[F], arrows: NonEmptyMap[String, ArrowType]): Free[Alg, Unit] =
     Free.liftInject[Alg](DefineService[F](name, arrows))
 

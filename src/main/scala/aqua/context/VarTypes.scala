@@ -4,7 +4,18 @@ import aqua.context.marker.FuncArgMarker
 import aqua.context.walker.Walker
 import aqua.context.walker.Walker.UnresolvedError
 import aqua.interim.types.{ArrayType, ArrowType, ProductType, ScalarType, Type}
-import aqua.parser.lexer.{ArrowDef, DataTypeToken, IntoArray, IntoField, LambdaOp, Literal, TypeToken, Value, VarLambda}
+import aqua.parser.lexer.{
+  ArrowDef,
+  DataTypeToken,
+  IntoArray,
+  IntoField,
+  LambdaOp,
+  Literal,
+  TypeToken,
+  Value,
+  Var,
+  VarLambda
+}
 import aqua.parser.{Block, CallExpr, Extract, FuncExpr}
 import cats.{Comonad, Functor}
 import shapeless._
@@ -115,12 +126,12 @@ object VarTypes {
     def getArrowType(name: String, inCtx: I, ctx: Ctx): Option[ArrowType] =
       getArrowDef(name, inCtx, ctx).flatMap(getTypes(ctx.tail).resolveArrowDef(_))
 
-    def resolveIdent(name: F[String], inCtx: I, prev: Ctx): Either[Err[F], Type] =
+    def resolveIdent(name: Var[F], inCtx: I, prev: Ctx): Either[Err[F], Type] =
       prev.head.vars
-        .get(name.extract)
+        .get(name.name.extract)
         .orElse(
           getArgsAndVars(inCtx).expDef.defineAcc
-            .get(name.extract)
+            .get(name.name.extract)
             .collect {
               case FuncArgMarker(_, dt) =>
                 getTypes(prev.tail).resolveTypeToken(dt)
@@ -128,9 +139,9 @@ object VarTypes {
             .flatten
         )
         .orElse(
-          getArrowType(name.extract, inCtx, prev)
+          getArrowType(name.name.extract, inCtx, prev)
         )
-        .toRight(TypeUndefined(name))
+        .toRight(TypeUndefined(name.name))
 
     def resolveOp(rootT: Type, ops: List[LambdaOp[F]]): Either[Err[F], Type] =
       ops.headOption.fold[Either[Err[F], Type]](Right(rootT)) {

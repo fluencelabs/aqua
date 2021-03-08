@@ -7,6 +7,7 @@ import cats.data.NonEmptyMap
 trait AbilityOp[T]
 
 case class DefineArrow[F[_]](arrow: ArrowName[F], `type`: ArrowType) extends AbilityOp[Unit]
+case class PurgeArrows[F[_]]() extends AbilityOp[List[(ArrowName[F], ArrowType)]]
 case class DefineService[F[_]](name: Ability[F], arrows: NonEmptyMap[String, ArrowType]) extends AbilityOp[Unit]
 case class GetArrow[F[_]](name: Ability[F], arrow: ArrowName[F]) extends AbilityOp[ArrowType]
 case class SetServiceId[F[_]](name: Ability[F], id: Value[F]) extends AbilityOp[Unit]
