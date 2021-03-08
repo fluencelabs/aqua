@@ -6,7 +6,7 @@ data Smth:
   oloolo: Akaka
 
 service MySrv:
-  func: A -> i32
+  func: A -> u32
   -- We can have comments inside
   pure: -> []Cdef
 
@@ -28,6 +28,6 @@ func do_smth2( a: X, b: -> Z ): -- And comments after the line
   b(a, z)
   shouldBeA <- MySrv.func()
 
-alias Akaka : i32
+alias Akaka : u32
 
 alias Akaka : bool

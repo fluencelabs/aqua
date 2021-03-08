@@ -8,7 +8,7 @@ import aqua.parser.lexer.Token._
 
 case class ArrowTypeExpr[F[_]](name: ArrowName[F], `type`: ArrowTypeToken[F]) extends Expr[F] {}
 
-object ArrowTypeExpr extends Expr.Companion {
+object ArrowTypeExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[Expr[F]] =
     ((ArrowName.an[F] <* ` : `) ~ ArrowTypeToken.`arrowdef`[F]).map {

@@ -8,7 +8,7 @@ import cats.Comonad
 
 case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F]) extends Expr[F]
 
-object AbilityIdExpr extends Expr.Companion {
+object AbilityIdExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[AbilityIdExpr[F]] =
     ((Ability.ab[F] <* ` `) ~ Value.`value`).map {

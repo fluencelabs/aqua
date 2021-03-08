@@ -13,7 +13,7 @@ case class CoalgebraExpr[F[_]](
   args: List[Value[F]]
 ) extends Expr[F]
 
-object CoalgebraExpr extends Expr.Companion {
+object CoalgebraExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[CoalgebraExpr[F]] =
     ((Var.p[F] <* `<-`).backtrack.?.with1 ~

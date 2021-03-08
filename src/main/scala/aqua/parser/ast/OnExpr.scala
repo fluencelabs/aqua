@@ -8,10 +8,7 @@ import cats.Comonad
 
 case class OnExpr[F[_]](peerId: Value[F]) extends Expr[F]
 
-object OnExpr extends Expr.Companion {
-
-  override def wrapsExprs: List[Expr.Companion] =
-    CoalgebraExpr :: AbilityIdExpr :: Nil
+object OnExpr extends Expr.AndIndented(CoalgebraExpr, AbilityIdExpr) {
 
   override def p[F[_]: LiftParser: Comonad]: P[OnExpr[F]] =
     (`on` *> ` ` *> Value.`value`[F] <* ` : \n+`).map { peerId =>

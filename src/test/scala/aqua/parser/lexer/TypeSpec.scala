@@ -22,26 +22,26 @@ class TypeSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "Arrow type" should "parse" in {
 
-    TypeToken.`arrowdef`.parseAll("-> B").right.value should be(
+    ArrowTypeToken.`arrowdef`.parseAll("-> B").right.value should be(
       ArrowTypeToken[Id]((), Nil, Some(CustomTypeToken[Id]("B")))
     )
-    TypeToken.`arrowdef`.parseAll("A -> B").right.value should be(
+    ArrowTypeToken.`arrowdef`.parseAll("A -> B").right.value should be(
       ArrowTypeToken[Id]((), CustomTypeToken[Id]("A") :: Nil, Some(CustomTypeToken[Id]("B")))
     )
-    TypeToken.`arrowdef`.parseAll("u32 -> Boo").right.value should be(
+    ArrowTypeToken.`arrowdef`.parseAll("u32 -> Boo").right.value should be(
       ArrowTypeToken[Id]((), (u32: BasicTypeToken[Id]) :: Nil, Some(CustomTypeToken[Id]("Boo")))
     )
     TypeToken.`typedef`.parseAll("u32 -> ()").right.value should be(
       ArrowTypeToken[Id]((), (u32: BasicTypeToken[Id]) :: Nil, None)
     )
-    TypeToken.`arrowdef`.parseAll("A, u32 -> B").right.value should be(
+    ArrowTypeToken.`arrowdef`.parseAll("A, u32 -> B").right.value should be(
       ArrowTypeToken[Id](
         (),
         CustomTypeToken[Id]("A") :: (u32: BasicTypeToken[Id]) :: Nil,
         Some(CustomTypeToken[Id]("B"))
       )
     )
-    TypeToken.`arrowdef`.parseAll("[]Absolutely, u32 -> B").right.value should be(
+    ArrowTypeToken.`arrowdef`.parseAll("[]Absolutely, u32 -> B").right.value should be(
       ArrowTypeToken[Id](
         (),
         ArrayTypeToken(CustomTypeToken[Id]("Absolutely")) :: (u32: BasicTypeToken[Id]) :: Nil,

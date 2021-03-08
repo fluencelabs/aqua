@@ -27,10 +27,9 @@ object Main extends IOApp.Simple {
 
       println(
         Ast
-          .parser[Span.F]()
-          .parseAll(experimental)
-          .left
-          .map(pe => NonEmptyList.one(SyntaxError(pe.failedAtOffset, pe.expected).showForConsole(experimental)))
+          .fromString[Span.F](experimental)
+          .leftMap(_.map(_.showForConsole(experimental)))
+          .map(_.tree.map(_.toString + "\n").forceAll)
       )
     }
 
