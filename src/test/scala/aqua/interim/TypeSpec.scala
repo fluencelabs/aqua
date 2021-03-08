@@ -1,15 +1,16 @@
 package aqua.interim
 
+import aqua.interim.types.{ArrayType, ArrowType, DataType, LiteralType, ProductType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.syntax.partialOrder._
-import Type.typesPartialOrder
+import aqua.interim.types.Type.typesPartialOrder
 import cats.data.NonEmptyMap
 import cats.kernel.PartialOrder
 
 class TypeSpec extends AnyFlatSpec with Matchers {
 
-  import ScalarType._
+  import aqua.interim.types.ScalarType._
 
   def `[]`(t: DataType): DataType = ArrayType(t)
 

@@ -1,6 +1,6 @@
 package aqua.parser.ast
 
-import aqua.interim.ScalarType
+import aqua.interim.types.ScalarType
 import aqua.parser.lexer.{ArrowName, ArrowTypeToken, BasicTypeToken, CustomTypeToken, DataTypeToken}
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec

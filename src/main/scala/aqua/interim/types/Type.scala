@@ -1,4 +1,4 @@
-package aqua.interim
+package aqua.interim.types
 
 import cats.PartialOrder
 import cats.data.NonEmptyMap

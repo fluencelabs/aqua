@@ -6,7 +6,7 @@ import cats.Comonad
 import cats.parse.Parser
 import aqua.parser.lexer.Token._
 
-case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Expr[F] {}
+case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Expr[F]
 
 object ServiceExpr extends Expr.AndIndented(ArrowTypeExpr) {
 

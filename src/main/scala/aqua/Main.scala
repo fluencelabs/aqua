@@ -1,10 +1,12 @@
 package aqua
 
 import aqua.context.Types
-import aqua.parser.ast.Ast
+import aqua.interim.names.NameOp
+import aqua.parser.ast.{Ast, Expr}
 import aqua.parser.lift.Span
+import cats.Eval
 import cats.effect.{IO, IOApp}
-import cats.data.{NonEmptyList, Validated}
+import cats.data.Validated
 
 import scala.io.Source
 
@@ -25,12 +27,10 @@ object Main extends IOApp.Simple {
       val experimental = Source.fromResource("experimental.aqua").mkString
       //tryParse(experimental)
 
-      println(
-        Ast
-          .fromString[Span.F](experimental)
-          .leftMap(_.map(_.showForConsole(experimental)))
-          .map(_.tree.map(_.toString + "\n").forceAll)
-      )
+      val ast = Ast
+        .fromString[Span.F](experimental)
+        .leftMap(_.map(_.showForConsole(experimental)))
+
     }
 
 }

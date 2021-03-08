@@ -1,6 +1,6 @@
 package aqua.parser.lexer
 
-import aqua.interim.ScalarType
+import aqua.interim.types.ScalarType
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -11,7 +11,7 @@ import scala.language.implicitConversions
 
 class TypeSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  import aqua.interim.ScalarType.u32
+  import ScalarType.u32
 
   implicit def strToBt(st: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](st)
 

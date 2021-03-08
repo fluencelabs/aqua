@@ -1,6 +1,6 @@
 package aqua.parser
 
-import aqua.interim.{LiteralType, ScalarType}
+import aqua.interim.types.LiteralType
 import aqua.parser.lexer.{Ability, ArrowName, IntoField, Literal, Var, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues

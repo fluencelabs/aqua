@@ -3,7 +3,7 @@ package aqua.context
 import aqua.context.marker.FuncArgMarker
 import aqua.context.walker.Walker
 import aqua.context.walker.Walker.UnresolvedError
-import aqua.interim.{ArrayType, ArrowType, ProductType, ScalarType, Type}
+import aqua.interim.types.{ArrayType, ArrowType, ProductType, ScalarType, Type}
 import aqua.parser.lexer.{ArrowDef, DataTypeToken, IntoArray, IntoField, LambdaOp, Literal, TypeToken, Value, VarLambda}
 import aqua.parser.{Block, CallExpr, Extract, FuncExpr}
 import cats.{Comonad, Functor}

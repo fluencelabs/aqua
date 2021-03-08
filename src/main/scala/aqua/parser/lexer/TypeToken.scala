@@ -1,6 +1,6 @@
 package aqua.parser.lexer
 
-import aqua.interim.ScalarType
+import aqua.interim.types.ScalarType
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._

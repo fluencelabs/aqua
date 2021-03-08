@@ -8,7 +8,11 @@ import cats.parse.{Parser => P, Parser0 => P0}
 import aqua.parser.lexer.Token._
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
 
-case class Ast[F[_]](tree: Ast.Tree[F]) {}
+case class Ast[F[_]](tree: Ast.Tree[F]) {
+
+  def cata[T](folder: (Expr[F], List[T]) => Eval[T]): Eval[T] =
+    Cofree.cata[List, Expr[F], T](tree)(folder)
+}
 
 object Ast {
   type Tree[F[_]] = Cofree[List, Expr[F]]
