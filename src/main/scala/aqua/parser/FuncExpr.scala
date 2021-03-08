@@ -67,7 +67,7 @@ object FuncExpr {
     P.oneOf(funcCall[F] :: abilityFuncCall[F] :: Nil)
 
   def extract[F[_]: LiftParser: Comonad]: P[Extract[F, HNil]] =
-    ((Var.v <* `<-`) ~ callOp[F]).map {
+    ((Var.p <* `<-`) ~ callOp[F]).map {
       case (v, f) ⇒ Extract(v, f, HNil)
     }
 

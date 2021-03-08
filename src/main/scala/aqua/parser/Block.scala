@@ -53,7 +53,7 @@ object DefType {
     `data` *> ` ` *> CustomTypeToken.ct[F] <* ` `.? <* `:` <* ` \n+`
 
   def `dataname`[F[_]: LiftParser](indent: String): P[(Var[F], DataTypeToken[F])] =
-    (Var.v[F] <* ` : `) ~ `datatypedef`
+    (Var.p[F] <* ` : `) ~ `datatypedef`
 
   def `deftype`[F[_]: LiftParser: Comonad]: P[DefType[F, HNil]] =
     (`dname` ~ indented(`dataname`(_), "")).map {

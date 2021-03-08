@@ -13,6 +13,6 @@ case class Var[F[_]](name: F[String]) extends Token[F] {
 
 object Var {
 
-  def v[F[_]: LiftParser]: P[Var[F]] =
+  def p[F[_]: LiftParser]: P[Var[F]] =
     `name`.lift.map(Var(_))
 }

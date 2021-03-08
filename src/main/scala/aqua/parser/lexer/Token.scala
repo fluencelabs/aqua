@@ -35,6 +35,7 @@ object Token {
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
   val ` \n` : P[Unit] = (` `.?.void *> (`--` *> P.charsWhile(_ != '\n')).?.void).with1 *> `\n`
   val ` \n+` : P[Unit] = P.repAs[Unit, Unit](` \n`.backtrack, 1)(Accumulator0.unitAccumulator0)
+  val ` : \n+` : P[Unit] = ` `.?.with1 *> `:` *> ` \n+`
   val `,` : P[Unit] = P.char(',') <* ` `.?
   val `.` : P[Unit] = P.char('.')
   val `"` : P[Unit] = P.char('"')
@@ -51,7 +52,6 @@ object Token {
     P.repSep0(p, `,` <* ` \n+`.rep0)
 
   def indented[T](p: String => P[T], baseIndent: String): P[NonEmptyList[T]] =
-    (if (baseIndent.nonEmpty) P.string(baseIndent) ~ ` ` else ` `).string.flatMap(indent ⇒
-      p(indent).repSep((` \n+` *> P.string(indent)).backtrack)
-    )
+    (if (baseIndent.nonEmpty) P.string(baseIndent) ~ ` ` else ` `).string
+      .flatMap(indent ⇒ p(indent).repSep((` \n+` *> P.string(indent)).backtrack))
 }
