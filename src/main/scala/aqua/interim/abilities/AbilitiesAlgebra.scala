@@ -3,7 +3,7 @@ package aqua.interim.abilities
 import aqua.interim.types.ArrowType
 import aqua.parser.lexer.{Ability, ArrowName, Value}
 import cats.InjectK
-import cats.data.NonEmptyMap
+import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.free.Free
 
 class AbilitiesAlgebra[Alg[_]](implicit A: InjectK[AbilityOp, Alg]) {
@@ -11,7 +11,7 @@ class AbilitiesAlgebra[Alg[_]](implicit A: InjectK[AbilityOp, Alg]) {
   def defineArrow[F[_]](arrow: ArrowName[F], `type`: ArrowType): Free[Alg, Unit] =
     Free.liftInject[Alg](DefineArrow[F](arrow, `type`))
 
-  def purgeArrows[F[_]](): Free[Alg, List[(ArrowName[F], ArrowType)]] =
+  def purgeArrows[F[_]](): Free[Alg, NonEmptyList[(ArrowName[F], ArrowType)]] =
     Free.liftInject[Alg](PurgeArrows[F]())
 
   def defineService[F[_]](name: Ability[F], arrows: NonEmptyMap[String, ArrowType]): Free[Alg, Unit] =

@@ -6,3 +6,4 @@ trait PeerIdOp[T]
 
 case class OnPeerId[F[_]](id: Value[F]) extends PeerIdOp[Unit]
 case class ErasePeerId[F[_]]() extends PeerIdOp[Unit]
+case class CurrentPeerId[F[_]]() extends PeerIdOp[Option[Value[F]]]

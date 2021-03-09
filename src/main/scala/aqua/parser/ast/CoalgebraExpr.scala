@@ -11,7 +11,11 @@ case class CoalgebraExpr[F[_]](
   ability: Option[Ability[F]],
   funcName: ArrowName[F],
   args: List[Value[F]]
-) extends Expr[F]
+) extends Expr[F] {
+
+  def program[Alg[_]](): Prog[Alg, Unit] = ???
+
+}
 
 object CoalgebraExpr extends Expr.Leaf {
 

@@ -12,4 +12,7 @@ class PeerIdAlgebra[Alg[_]](implicit I: InjectK[PeerIdOp, Alg]) {
   def erasePeerId(): Free[Alg, Unit] =
     Free.liftInject[Alg](ErasePeerId())
 
+  def currentPeerId[F[_]](): Free[Alg, Option[Value[F]]] =
+    Free.liftInject[Alg](CurrentPeerId[F]())
+
 }

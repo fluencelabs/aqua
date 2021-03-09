@@ -1,12 +1,21 @@
 package aqua.parser.ast
 
+import aqua.interim.types.TypesAlgebra
 import aqua.parser.lexer.{DataTypeToken, Var}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 import aqua.parser.lexer.Token._
 
-case class FieldTypeExpr[F[_]](name: Var[F], `type`: DataTypeToken[F]) extends Expr[F] {}
+case class FieldTypeExpr[F[_]](name: Var[F], `type`: DataTypeToken[F]) extends Expr[F] {
+
+  def program[Alg[_]](implicit T: TypesAlgebra[Alg]): Prog[Alg, Unit] =
+    for {
+      t <- T.resolveType(`type`)
+      _ <- T.defineField(name, t)
+    } yield ()
+
+}
 
 object FieldTypeExpr extends Expr.Leaf {
 
