@@ -7,11 +7,10 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 import aqua.parser.lexer.Token._
-import cats.free.Free
 
 case class ArrowTypeExpr[F[_]](name: ArrowName[F], `type`: ArrowTypeToken[F]) extends Expr[F] {
 
-  def program[Alg[_]](implicit T: TypesAlgebra[Alg], A: AbilitiesAlgebra[Alg]): Free[Alg, Unit] =
+  def program[Alg[_]](implicit T: TypesAlgebra[Alg], A: AbilitiesAlgebra[Alg]): Prog[Alg, Unit] =
     for {
       t <- T.resolveArrowDef(`type`)
       _ <- A.defineArrow(name, t)

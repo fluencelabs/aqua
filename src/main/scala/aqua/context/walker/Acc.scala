@@ -32,7 +32,7 @@ object Acc {
 
   def fromValues[F[_]: Comonad](args: List[Value[F]]): Acc[Value[F]] =
     args.collect {
-      case arg @ VarLambda(name, _) => Acc.one[Value[F]](name.extract, arg)
+      case arg @ VarLambda(name, _) => Acc.one[Value[F]](name.name.extract, arg)
     }.foldLeft(Acc.empty[Value[F]])(_ add _)
 
   def fromType[F[_]: Comonad](t: TypeToken[F]): Acc[CustomTypeToken[F]] =

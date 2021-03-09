@@ -19,9 +19,9 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
     N: NamesAlgebra[Alg],
     T: TypesAlgebra[Alg],
     F: Comonad[F]
-  ): Free[Alg, Unit] =
-    // TODO: must be called after the contents
-    A.purgeArrows[F]()
+  ): Prog[Alg, Unit] =
+    Prog after A
+      .purgeArrows[F]()
       .map(NonEmptyList.fromList)
       .flatMap {
         case Some(list) =>
