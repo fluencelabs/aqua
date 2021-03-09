@@ -39,3 +39,9 @@ class ValuesAlgebra[Alg[_]](implicit N: NamesAlgebra[Alg], T: TypesAlgebra[Alg])
       }
 
 }
+
+object ValuesAlgebra {
+
+  implicit def deriveValuesAlgebra[Alg[_]](implicit N: NamesAlgebra[Alg], T: TypesAlgebra[Alg]): ValuesAlgebra[Alg] =
+    new ValuesAlgebra[Alg]()
+}

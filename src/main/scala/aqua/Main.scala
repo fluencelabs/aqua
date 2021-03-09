@@ -31,6 +31,8 @@ object Main extends IOApp.Simple {
         .fromString[Span.F](experimental)
         .leftMap(_.map(_.showForConsole(experimental)))
 
+      ast.map(Compiler.transpile(_)).map(println(_))
+
     }
 
 }

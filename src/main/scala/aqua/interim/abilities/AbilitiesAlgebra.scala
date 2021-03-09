@@ -33,3 +33,9 @@ class AbilitiesAlgebra[Alg[_]](implicit A: InjectK[AbilityOp, Alg]) {
     Free.liftInject[Alg](EndScope[F]())
 
 }
+
+object AbilitiesAlgebra {
+
+  implicit def abilitiesAlgebra[Alg[_]](implicit A: InjectK[AbilityOp, Alg]): AbilitiesAlgebra[Alg] =
+    new AbilitiesAlgebra[Alg]()
+}

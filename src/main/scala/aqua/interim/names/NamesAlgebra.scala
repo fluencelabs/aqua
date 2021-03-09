@@ -26,3 +26,7 @@ class NamesAlgebra[Alg[_]](implicit V: InjectK[NameOp, Alg]) {
     Free.liftInject[Alg](EndScope())
 
 }
+
+object NamesAlgebra {
+  implicit def namesAlgebra[Alg[_]](implicit V: InjectK[NameOp, Alg]): NamesAlgebra[Alg] = new NamesAlgebra[Alg]()
+}

@@ -16,3 +16,7 @@ class PeerIdAlgebra[Alg[_]](implicit I: InjectK[PeerIdOp, Alg]) {
     Free.liftInject[Alg](CurrentPeerId[F]())
 
 }
+
+object PeerIdAlgebra {
+  implicit def peerIdAlgebra[Alg[_]](implicit I: InjectK[PeerIdOp, Alg]): PeerIdAlgebra[Alg] = new PeerIdAlgebra[Alg]()
+}

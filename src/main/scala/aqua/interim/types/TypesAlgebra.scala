@@ -32,3 +32,7 @@ class TypesAlgebra[Alg[_]](implicit T: InjectK[TypeOp, Alg]) {
     Free.liftInject[Alg](EnsureTypeMatches[F](token, expected, given))
 
 }
+
+object TypesAlgebra {
+  implicit def typesAlgebra[Alg[_]](implicit T: InjectK[TypeOp, Alg]): TypesAlgebra[Alg] = new TypesAlgebra[Alg]()
+}
