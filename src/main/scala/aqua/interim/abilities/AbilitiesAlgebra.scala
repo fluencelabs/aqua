@@ -23,9 +23,6 @@ class AbilitiesAlgebra[Alg[_]](implicit A: InjectK[AbilityOp, Alg]) {
   def setServiceId[F[_]](name: Ability[F], id: Value[F]): Free[Alg, Unit] =
     Free.liftInject[Alg](SetServiceId[F](name, id))
 
-  def unsetServiceId[F[_]](name: Ability[F]): Free[Alg, Unit] =
-    Free.liftInject[Alg](UnsetServiceId[F](name))
-
   def beginScope[F[_]](token: Token[F]): Free[Alg, Unit] =
     Free.liftInject[Alg](BeginScope[F](token))
 
