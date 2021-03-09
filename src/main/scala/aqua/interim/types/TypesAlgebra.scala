@@ -1,6 +1,6 @@
 package aqua.interim.types
 
-import aqua.parser.lexer.{ArrowDef, CustomTypeToken, LambdaOp, Token, TypeToken, Var}
+import aqua.parser.lexer.{ArrowDef, CustomTypeToken, LambdaOp, Name, Token, TypeToken}
 import cats.InjectK
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.free.Free
@@ -13,10 +13,10 @@ class TypesAlgebra[Alg[_]](implicit T: InjectK[TypeOp, Alg]) {
   def resolveArrowDef[F[_]](arrowDef: ArrowDef[F]): Free[Alg, ArrowType] =
     Free.liftInject[Alg](ResolveArrowDef(arrowDef))
 
-  def defineField[F[_]](name: Var[F], `type`: Type): Free[Alg, Unit] =
+  def defineField[F[_]](name: Name[F], `type`: Type): Free[Alg, Unit] =
     Free.liftInject[Alg](DefineField(name, `type`))
 
-  def purgeFields[F[_]](): Free[Alg, NonEmptyList[(Var[F], Type)]] =
+  def purgeFields[F[_]](): Free[Alg, NonEmptyList[(Name[F], Type)]] =
     Free.liftInject[Alg](PurgeFields[F]())
 
   def defineDataType[F[_]](name: CustomTypeToken[F], fields: NonEmptyMap[String, Type]): Free[Alg, Unit] =

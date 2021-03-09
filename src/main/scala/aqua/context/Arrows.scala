@@ -4,12 +4,12 @@ import aqua.context.marker.{AbilityArrow, ArrowMarker, FuncArrow, LocalArrow}
 import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.context.walker.{Acc, ExpectAndDefine, Walker}
 import aqua.parser.{AbilityFuncCall, Block, DefFunc, DefService, Extract, FuncCall, FuncExpr}
-import aqua.parser.lexer.{ArrowName, ArrowTypeToken}
+import aqua.parser.lexer.{ArrowTypeToken, Name}
 import cats.{Comonad, Functor}
 import shapeless._
 import cats.syntax.comonad._
 
-case class Arrows[F[_]](expDef: ExpectAndDefine[ArrowName[F], ArrowMarker[F]]) {
+case class Arrows[F[_]](expDef: ExpectAndDefine[Name[F], ArrowMarker[F]]) {
 
   def clearLocal: Arrows[F] =
     copy(expDef.collectDefinitions {
@@ -18,7 +18,7 @@ case class Arrows[F[_]](expDef: ExpectAndDefine[ArrowName[F], ArrowMarker[F]]) {
     })
   def clearExpectations: Arrows[F] = copy(expDef.clearExpectations)
 
-  def expect(a: ArrowName[F])(implicit F: Comonad[F]): Arrows[F] =
+  def expect(a: Name[F])(implicit F: Comonad[F]): Arrows[F] =
     copy(expDef.combineSeq(Arrows.emptyAcc.expect(Acc.one(a.name.extract, a))))
 
   def defined(name: String, marker: ArrowMarker[F]): Arrows[F] =
@@ -26,8 +26,8 @@ case class Arrows[F[_]](expDef: ExpectAndDefine[ArrowName[F], ArrowMarker[F]]) {
 }
 
 object Arrows {
-  type Acc[F[_]] = ExpectAndDefine[ArrowName[F], ArrowMarker[F]]
-  def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, ArrowName[F], ArrowMarker[F]]
+  type Acc[F[_]] = ExpectAndDefine[Name[F], ArrowMarker[F]]
+  def emptyAcc[F[_]]: Acc[F] = ExpectAndDefine.empty[F, Name[F], ArrowMarker[F]]
   def empty[F[_]]: Arrows[F] = Arrows[F](emptyAcc[F])
 
   case class DuplicateArrow[F[_]](name: String, marker: ArrowMarker[F]) extends Walker.DupError[F] {
@@ -36,7 +36,7 @@ object Arrows {
       marker.toError(s"Duplicate function or arrow definition: ${name}")
   }
 
-  case class UnresolvedArrow[F[_]](name: String, usage: ArrowName[F]) extends Walker.UnresolvedError[F] {
+  case class UnresolvedArrow[F[_]](name: String, usage: Name[F]) extends Walker.UnresolvedError[F] {
     override def toStringF(implicit F: Functor[F]): F[String] = usage.as(s"Unresolved arrow $name")
   }
 

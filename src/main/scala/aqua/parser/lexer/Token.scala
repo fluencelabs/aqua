@@ -30,7 +30,7 @@ object Token {
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
   val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
-  val `Name`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
+  val `Class`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
   val `\n` : P[Unit] = P.char('\n')
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
   val ` \n` : P[Unit] = (` `.?.void *> (`--` *> P.charsWhile(_ != '\n')).?.void).with1 *> `\n`

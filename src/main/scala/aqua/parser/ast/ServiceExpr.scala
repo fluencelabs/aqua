@@ -1,6 +1,6 @@
 package aqua.parser.ast
 
-import aqua.interim.VarsAlgebra
+import aqua.interim.ValuesAlgebra
 import aqua.interim.abilities.AbilitiesAlgebra
 import aqua.interim.names.NamesAlgebra
 import aqua.interim.types.{LiteralType, TypesAlgebra}
@@ -19,7 +19,7 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
     A: AbilitiesAlgebra[Alg],
     N: NamesAlgebra[Alg],
     T: TypesAlgebra[Alg],
-    V: VarsAlgebra[Alg],
+    V: ValuesAlgebra[Alg],
     F: Comonad[F]
   ): Prog[Alg, Unit] =
     Prog after A

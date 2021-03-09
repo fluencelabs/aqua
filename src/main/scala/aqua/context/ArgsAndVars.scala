@@ -5,7 +5,7 @@ import aqua.context.scope.Scope
 import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.context.walker.{Acc, ExpectAndDefine, Walker}
 import aqua.parser.{AbilityFuncCall, AbilityId, Block, DefFunc, Extract, FuncCall, FuncExpr, On, Par}
-import aqua.parser.lexer.{DataTypeToken, Value, Var}
+import aqua.parser.lexer.{DataTypeToken, Name, Value}
 import cats.{Comonad, Functor}
 import shapeless._
 import shapeless.ops.hlist.Selector
@@ -72,7 +72,7 @@ object ArgsAndVars {
           head.args
             .foldLeft(empty[F]) {
               case (acc, (k, v, dt: DataTypeToken[F])) =>
-                acc.copy(acc.expDef.defined(k, FuncArgMarker(Var(v), dt)))
+                acc.copy(acc.expDef.defined(k, FuncArgMarker(Name(v), dt)))
               case (acc, _) => acc
             }
 

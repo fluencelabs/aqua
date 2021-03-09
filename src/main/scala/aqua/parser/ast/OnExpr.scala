@@ -1,6 +1,6 @@
 package aqua.parser.ast
 
-import aqua.interim.VarsAlgebra
+import aqua.interim.ValuesAlgebra
 import aqua.interim.scope.PeerIdAlgebra
 import aqua.parser.lexer.Value
 import aqua.parser.lift.LiftParser
@@ -11,7 +11,7 @@ import cats.syntax.flatMap._
 
 case class OnExpr[F[_]](peerId: Value[F]) extends Expr[F] {
 
-  def program[Alg[_]](implicit P: PeerIdAlgebra[Alg], V: VarsAlgebra[Alg]): Prog[Alg, Unit] =
+  def program[Alg[_]](implicit P: PeerIdAlgebra[Alg], V: ValuesAlgebra[Alg]): Prog[Alg, Unit] =
     Prog.around(
       V.ensureIsString(peerId) >> P.onPeerId(peerId),
       (_: Unit) => P.erasePeerId()

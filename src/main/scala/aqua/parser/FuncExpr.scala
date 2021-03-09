@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.parser.lexer.Token._
-import aqua.parser.lexer.{Ability, ArrowName, Value, Var}
+import aqua.parser.lexer.{Ability, Name, Value}
 import cats.data.NonEmptyList
 import cats.parse.{Parser => P}
 import aqua.parser.lexer.Value.`value`
@@ -18,21 +18,21 @@ sealed trait InstrExpr[F[_], L] extends FuncExpr[F, L]
 sealed trait ExecExpr[F[_], L] extends InstrExpr[F, L]
 
 sealed trait CallExpr[F[_], L] extends ExecExpr[F, L] {
-  def arrow: ArrowName[F]
+  def arrow: Name[F]
   def args: List[Value[F]]
 }
 
-case class FuncCall[F[_], L](arrow: ArrowName[F], args: List[Value[F]], context: L) extends CallExpr[F, L]
+case class FuncCall[F[_], L](arrow: Name[F], args: List[Value[F]], context: L) extends CallExpr[F, L]
 
 case class AbilityFuncCall[F[_], L](
   ability: Ability[F],
-  funcName: ArrowName[F],
-  arrow: ArrowName[F],
+  funcName: Name[F],
+  arrow: Name[F],
   args: List[Value[F]],
   context: L
 ) extends CallExpr[F, L]
 
-case class Extract[F[_], L](vr: Var[F], from: CallExpr[F, L], context: L) extends ExecExpr[F, L]
+case class Extract[F[_], L](vr: Name[F], from: CallExpr[F, L], context: L) extends ExecExpr[F, L]
 
 case class On[F[_], L](peer: Value[F], ops: NonEmptyList[ExecExpr[F, L]], context: L) extends InstrExpr[F, L]
 
@@ -47,7 +47,7 @@ case class AbilityId[F[_], L](ability: Ability[F], id: Value[F], context: L) ext
 object FuncExpr {
 
   def funcCall[F[_]: LiftParser: Comonad]: P[FuncCall[F, HNil]] =
-    (ArrowName.an[F] ~ P.repSep0(`value`, `,`).between(`(`, `)`)).map {
+    (Name.p[F] ~ P.repSep0(`value`, `,`).between(`(`, `)`)).map {
       case (fnName, args) ⇒ FuncCall(fnName, args, HNil)
     }
 
@@ -57,7 +57,7 @@ object FuncExpr {
         AbilityFuncCall(
           abName,
           fc.arrow,
-          ArrowName(fc.arrow.as(abName.name.extract + "." + fc.arrow.name.extract)),
+          Name(fc.arrow.as(abName.name.extract + "." + fc.arrow.name.extract)),
           fc.args,
           HNil
         )
@@ -67,7 +67,7 @@ object FuncExpr {
     P.oneOf(funcCall[F] :: abilityFuncCall[F] :: Nil)
 
   def extract[F[_]: LiftParser: Comonad]: P[Extract[F, HNil]] =
-    ((Var.p <* `<-`) ~ callOp[F]).map {
+    ((Name.p <* `<-`) ~ callOp[F]).map {
       case (v, f) ⇒ Extract(v, f, HNil)
     }
 

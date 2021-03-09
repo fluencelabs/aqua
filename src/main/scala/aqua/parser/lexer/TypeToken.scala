@@ -21,7 +21,7 @@ case class CustomTypeToken[F[_]](name: F[String]) extends DataTypeToken[F] {
 }
 
 object CustomTypeToken {
-  def ct[F[_]: LiftParser]: P[CustomTypeToken[F]] = `Name`.lift.map(CustomTypeToken(_))
+  def ct[F[_]: LiftParser]: P[CustomTypeToken[F]] = `Class`.lift.map(CustomTypeToken(_))
 }
 
 case class BasicTypeToken[F[_]](value: F[ScalarType]) extends DataTypeToken[F] {

@@ -11,9 +11,9 @@ import aqua.parser.lexer.{
   IntoField,
   LambdaOp,
   Literal,
+  Name,
   TypeToken,
   Value,
-  Var,
   VarLambda
 }
 import aqua.parser.{Block, CallExpr, Extract, FuncExpr}
@@ -126,7 +126,7 @@ object VarTypes {
     def getArrowType(name: String, inCtx: I, ctx: Ctx): Option[ArrowType] =
       getArrowDef(name, inCtx, ctx).flatMap(getTypes(ctx.tail).resolveArrowDef(_))
 
-    def resolveIdent(name: Var[F], inCtx: I, prev: Ctx): Either[Err[F], Type] =
+    def resolveIdent(name: Name[F], inCtx: I, prev: Ctx): Either[Err[F], Type] =
       prev.head.vars
         .get(name.name.extract)
         .orElse(

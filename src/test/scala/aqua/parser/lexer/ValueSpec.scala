@@ -9,10 +9,10 @@ import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 class ValueSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "var getter" should "parse" in {
-    Value.`value`.parseAll("varname").right.value should be(VarLambda(Var("varname"), Nil))
-    Value.`value`.parseAll("varname.field").right.value should be(VarLambda(Var("varname"), IntoField("field") :: Nil))
+    Value.`value`.parseAll("varname").right.value should be(VarLambda(Name("varname"), Nil))
+    Value.`value`.parseAll("varname.field").right.value should be(VarLambda(Name("varname"), IntoField("field") :: Nil))
     Value.`value`.parseAll("varname.field.sub").right.value should be(
-      VarLambda(Var("varname"), IntoField("field") :: IntoField("sub") :: Nil)
+      VarLambda(Name("varname"), IntoField("field") :: IntoField("sub") :: Nil)
     )
   }
 

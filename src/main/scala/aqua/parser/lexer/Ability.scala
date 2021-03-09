@@ -14,5 +14,5 @@ case class Ability[F[_]](name: F[String]) extends Token[F] {
 object Ability {
 
   def ab[F[_]: LiftParser]: P[Ability[F]] =
-    `Name`.lift.map(Ability(_))
+    `Class`.lift.map(Ability(_))
 }

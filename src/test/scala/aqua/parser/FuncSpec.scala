@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.interim.types.{LiteralType, ScalarType}
-import aqua.parser.lexer.{Ability, ArrowName, ArrowTypeToken, BasicTypeToken, CustomTypeToken, Literal, Var, VarLambda}
+import aqua.parser.lexer.{Ability, ArrowTypeToken, BasicTypeToken, CustomTypeToken, Literal, Name, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
@@ -17,9 +17,8 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
   import aqua.interim.types.ScalarType.{string, u32}
 
   implicit def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
-  implicit def strToArrow(str: String): ArrowName[Id] = ArrowName[Id](str)
   implicit def strToAb(str: String): Ability[Id] = Ability[Id](str)
-  implicit def strToVar(str: String): Var[Id] = Var[Id](str)
+  implicit def strToVar(str: String): Name[Id] = Name[Id](str)
 
   private val getTimeHead = FuncHead[Id](
     "getTime",

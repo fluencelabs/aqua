@@ -1,6 +1,6 @@
 package aqua.parser.ast
 
-import aqua.interim.VarsAlgebra
+import aqua.interim.ValuesAlgebra
 import aqua.interim.abilities.AbilitiesAlgebra
 import aqua.parser.lexer.{Ability, Value}
 import aqua.parser.lift.LiftParser
@@ -11,7 +11,7 @@ import cats.syntax.flatMap._
 
 case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F]) extends Expr[F] {
 
-  def program[Alg[_]](implicit A: AbilitiesAlgebra[Alg], V: VarsAlgebra[Alg]): Prog[Alg, Unit] =
+  def program[Alg[_]](implicit A: AbilitiesAlgebra[Alg], V: ValuesAlgebra[Alg]): Prog[Alg, Unit] =
     V.ensureIsString(id) >> A.setServiceId(ability, id)
 
 }

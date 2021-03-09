@@ -11,7 +11,7 @@ import cats.syntax.comonad._
 
 sealed trait Value[F[_]] extends Token[F]
 
-case class VarLambda[F[_]](name: Var[F], lambda: List[LambdaOp[F]] = Nil) extends Value[F] {
+case class VarLambda[F[_]](name: Name[F], lambda: List[LambdaOp[F]] = Nil) extends Value[F] {
   override def as[T](v: T)(implicit F: Functor[F]): F[T] = name.as(v)
 }
 
@@ -23,7 +23,7 @@ object Value {
   val notLambdaSymbols = Set(' ', ',', '\n', ')', ':')
 
   def varLambda[F[_]: LiftParser]: P[VarLambda[F]] =
-    (Var.p[F] ~ LambdaOp.ops[F].?).map {
+    (Name.p[F] ~ LambdaOp.ops[F].?).map {
       case (n, l) ⇒ VarLambda(n, l.fold[List[LambdaOp[F]]](Nil)(_.toList))
     }
 

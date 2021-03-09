@@ -3,16 +3,7 @@ package aqua.parser
 import aqua.parser.lexer.DataTypeToken.`datatypedef`
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.TypeToken.`typedef`
-import aqua.parser.lexer.{
-  Ability,
-  AquaArrowType,
-  ArrowName,
-  ArrowTypeToken,
-  CustomTypeToken,
-  DataTypeToken,
-  TypeToken,
-  Var
-}
+import aqua.parser.lexer.{Ability, AquaArrowType, ArrowTypeToken, CustomTypeToken, DataTypeToken, Name, TypeToken}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
 import cats.Comonad
@@ -25,7 +16,7 @@ sealed trait Block[F[_], L] extends Expression[F, L]
 
 case class DefType[F[_], L](
   name: CustomTypeToken[F],
-  fields: NonEmptyMap[String, (Var[F], DataTypeToken[F])],
+  fields: NonEmptyMap[String, (Name[F], DataTypeToken[F])],
   context: L
 ) extends Block[F, L]
 
@@ -34,7 +25,7 @@ case class DefService[F[_], L](name: Ability[F], funcs: NonEmptyMap[String, Arro
 
 // TODO arg is either Var, or ArrowName
 case class FuncHead[F[_]](
-  name: ArrowName[F],
+  name: Name[F],
   args: List[(String, F[String], TypeToken[F])],
   ret: Option[DataTypeToken[F]]
 ) {
@@ -52,8 +43,8 @@ object DefType {
   def `dname`[F[_]: LiftParser]: P[CustomTypeToken[F]] =
     `data` *> ` ` *> CustomTypeToken.ct[F] <* ` `.? <* `:` <* ` \n+`
 
-  def `dataname`[F[_]: LiftParser](indent: String): P[(Var[F], DataTypeToken[F])] =
-    (Var.p[F] <* ` : `) ~ `datatypedef`
+  def `dataname`[F[_]: LiftParser](indent: String): P[(Name[F], DataTypeToken[F])] =
+    (Name.p[F] <* ` : `) ~ `datatypedef`
 
   def `deftype`[F[_]: LiftParser: Comonad]: P[DefType[F, HNil]] =
     (`dname` ~ indented(`dataname`(_), "")).map {
@@ -63,7 +54,7 @@ object DefType {
 
 object DefFunc {
 
-  def `funcname`[F[_]: LiftParser]: P[ArrowName[F]] = ` `.?.with1 *> `func` *> ` ` *> ArrowName.an <* ` `.?
+  def `funcname`[F[_]: LiftParser]: P[Name[F]] = ` `.?.with1 *> `func` *> ` ` *> Name.p <* ` `.?
 
   def `funcargs`[F[_]: LiftParser: Comonad]: P[List[(String, F[String], TypeToken[F])]] =
     `(` *> comma0((`name`.lift <* ` : `) ~ `typedef`).map(_.map(kv => (kv._1.extract, kv._1, kv._2))) <* `)`

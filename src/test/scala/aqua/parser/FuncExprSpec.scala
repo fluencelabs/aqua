@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.interim.types.LiteralType
-import aqua.parser.lexer.{Ability, ArrowName, IntoField, Literal, Var, VarLambda}
+import aqua.parser.lexer.{Ability, IntoField, Literal, Name, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
@@ -14,9 +14,8 @@ import scala.language.implicitConversions
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  implicit def strToArrow(str: String): ArrowName[Id] = ArrowName[Id](str)
   implicit def strToAb(str: String): Ability[Id] = Ability[Id](str)
-  implicit def strToVar(str: String): Var[Id] = Var[Id](str)
+  implicit def strToVar(str: String): Name[Id] = Name[Id](str)
 
   def parseExpr(str: String) =
     FuncExpr.`funcop`[Id]("").parseAll(str).right.value
