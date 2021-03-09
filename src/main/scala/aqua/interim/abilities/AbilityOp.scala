@@ -1,7 +1,7 @@
 package aqua.interim.abilities
 
 import aqua.interim.types.ArrowType
-import aqua.parser.lexer.{Ability, Name, Value}
+import aqua.parser.lexer.{Ability, Name, Token, Value}
 import cats.data.{NonEmptyList, NonEmptyMap}
 
 trait AbilityOp[T]
@@ -12,3 +12,6 @@ case class DefineService[F[_]](name: Ability[F], arrows: NonEmptyMap[String, Arr
 case class GetArrow[F[_]](name: Ability[F], arrow: Name[F]) extends AbilityOp[ArrowType]
 case class SetServiceId[F[_]](name: Ability[F], id: Value[F]) extends AbilityOp[Unit]
 case class UnsetServiceId[F[_]](name: Ability[F]) extends AbilityOp[Unit]
+
+case class BeginScope[F[_]](token: Token[F]) extends AbilityOp[Unit]
+case class EndScope[F[_]]() extends AbilityOp[Unit]
