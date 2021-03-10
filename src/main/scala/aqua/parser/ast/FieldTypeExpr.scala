@@ -9,7 +9,7 @@ import aqua.parser.lexer.Token._
 
 case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F]) extends Expr[F] {
 
-  def program[Alg[_]](implicit T: TypesAlgebra[Alg]): Prog[Alg, Unit] =
+  def program[Alg[_]](implicit T: TypesAlgebra[F, Alg]): Prog[Alg, Unit] =
     for {
       t <- T.resolveType(`type`)
       _ <- T.defineField(name, t)

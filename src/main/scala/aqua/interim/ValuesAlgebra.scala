@@ -6,9 +6,9 @@ import aqua.parser.lexer.{Literal, Token, Value, VarLambda}
 import cats.free.Free
 import cats.syntax.flatMap._
 
-class ValuesAlgebra[Alg[_]](implicit N: NamesAlgebra[Alg], T: TypesAlgebra[Alg]) {
+class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlgebra[F, Alg]) {
 
-  def ensureIsString[F[_]](v: Value[F]): Free[Alg, Unit] =
+  def ensureIsString(v: Value[F]): Free[Alg, Unit] =
     v match {
       case l: Literal[F] =>
         T.ensureTypeMatches(l, LiteralType.string, l.ts)
@@ -20,7 +20,7 @@ class ValuesAlgebra[Alg[_]](implicit N: NamesAlgebra[Alg], T: TypesAlgebra[Alg])
         } yield ()
     }
 
-  def checkArguments[F[_]](arr: ArrowType, args: List[Value[F]]): Free[Alg, Unit] =
+  def checkArguments(arr: ArrowType, args: List[Value[F]]): Free[Alg, Unit] =
     args
       .map[Free[Alg, (Token[F], Type)]] {
         case l: Literal[F] => Free.pure(l -> l.ts)
@@ -42,6 +42,9 @@ class ValuesAlgebra[Alg[_]](implicit N: NamesAlgebra[Alg], T: TypesAlgebra[Alg])
 
 object ValuesAlgebra {
 
-  implicit def deriveValuesAlgebra[Alg[_]](implicit N: NamesAlgebra[Alg], T: TypesAlgebra[Alg]): ValuesAlgebra[Alg] =
-    new ValuesAlgebra[Alg]()
+  implicit def deriveValuesAlgebra[F[_], Alg[_]](implicit
+    N: NamesAlgebra[F, Alg],
+    T: TypesAlgebra[F, Alg]
+  ): ValuesAlgebra[F, Alg] =
+    new ValuesAlgebra[F, Alg]()
 }

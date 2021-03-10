@@ -18,10 +18,10 @@ import scala.collection.immutable.Queue
 case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTypeToken[F]]) extends Expr[F] {
 
   def program[Alg[_]](implicit
-    T: TypesAlgebra[Alg],
-    N: NamesAlgebra[Alg],
-    P: PeerIdAlgebra[Alg],
-    A: AbilitiesAlgebra[Alg],
+    T: TypesAlgebra[F, Alg],
+    N: NamesAlgebra[F, Alg],
+    P: PeerIdAlgebra[F, Alg],
+    A: AbilitiesAlgebra[F, Alg],
     F: Comonad[F]
   ): Prog[Alg, Unit] =
     Prog.around(

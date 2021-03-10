@@ -20,10 +20,10 @@ case class CoalgebraExpr[F[_]](
 ) extends Expr[F] {
 
   def program[Alg[_]](implicit
-    N: NamesAlgebra[Alg],
-    A: AbilitiesAlgebra[Alg],
-    T: TypesAlgebra[Alg],
-    V: ValuesAlgebra[Alg]
+    N: NamesAlgebra[F, Alg],
+    A: AbilitiesAlgebra[F, Alg],
+    T: TypesAlgebra[F, Alg],
+    V: ValuesAlgebra[F, Alg]
   ): Prog[Alg, Unit] =
     ability
       .fold(N.readArrow(funcName))(A.getArrow(_, funcName))

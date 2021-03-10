@@ -10,7 +10,7 @@ import aqua.parser.lexer.Token._
 
 case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F]) extends Expr[F] {
 
-  def program[Alg[_]](implicit T: TypesAlgebra[Alg], A: AbilitiesAlgebra[Alg]): Prog[Alg, Unit] =
+  def program[Alg[_]](implicit T: TypesAlgebra[F, Alg], A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Unit] =
     for {
       t <- T.resolveArrowDef(`type`)
       _ <- A.defineArrow(name, t)

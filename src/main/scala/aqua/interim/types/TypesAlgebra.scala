@@ -5,34 +5,36 @@ import cats.InjectK
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.free.Free
 
-class TypesAlgebra[Alg[_]](implicit T: InjectK[TypeOp, Alg]) {
+class TypesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]) {
 
-  def resolveType[F[_]](token: TypeToken[F]): Free[Alg, Type] =
+  def resolveType(token: TypeToken[F]): Free[Alg, Type] =
     Free.liftInject[Alg](ResolveType(token))
 
-  def resolveArrowDef[F[_]](arrowDef: ArrowDef[F]): Free[Alg, ArrowType] =
+  def resolveArrowDef(arrowDef: ArrowDef[F]): Free[Alg, ArrowType] =
     Free.liftInject[Alg](ResolveArrowDef(arrowDef))
 
-  def defineField[F[_]](name: Name[F], `type`: Type): Free[Alg, Unit] =
-    Free.liftInject[Alg](DefineField(name, `type`))
+  def defineField(name: Name[F], `type`: Type): Free[Alg, Unit] =
+    Free.liftInject[Alg](DefineField[F](name, `type`))
 
-  def purgeFields[F[_]](): Free[Alg, NonEmptyList[(Name[F], Type)]] =
+  def purgeFields(): Free[Alg, NonEmptyList[(Name[F], Type)]] =
     Free.liftInject[Alg](PurgeFields[F]())
 
-  def defineDataType[F[_]](name: CustomTypeToken[F], fields: NonEmptyMap[String, Type]): Free[Alg, Unit] =
+  def defineDataType(name: CustomTypeToken[F], fields: NonEmptyMap[String, Type]): Free[Alg, Unit] =
     Free.liftInject[Alg](DefineDataType(name, fields))
 
-  def defineAlias[F[_]](name: CustomTypeToken[F], target: Type): Free[Alg, Unit] =
+  def defineAlias(name: CustomTypeToken[F], target: Type): Free[Alg, Unit] =
     Free.liftInject[Alg](DefineAlias(name, target))
 
-  def resolveLambda[F[_]](root: Type, ops: List[LambdaOp[F]]): Free[Alg, Type] =
+  def resolveLambda(root: Type, ops: List[LambdaOp[F]]): Free[Alg, Type] =
     Free.liftInject[Alg](ResolveLambda(root, ops))
 
-  def ensureTypeMatches[F[_]](token: Token[F], expected: Type, given: Type): Free[Alg, Unit] =
+  def ensureTypeMatches(token: Token[F], expected: Type, given: Type): Free[Alg, Unit] =
     Free.liftInject[Alg](EnsureTypeMatches[F](token, expected, given))
 
 }
 
 object TypesAlgebra {
-  implicit def typesAlgebra[Alg[_]](implicit T: InjectK[TypeOp, Alg]): TypesAlgebra[Alg] = new TypesAlgebra[Alg]()
+
+  implicit def typesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]): TypesAlgebra[F, Alg] =
+    new TypesAlgebra[F, Alg]()
 }

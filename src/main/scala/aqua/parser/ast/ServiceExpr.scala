@@ -17,16 +17,16 @@ import cats.syntax.flatMap._
 case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Expr[F] {
 
   def program[Alg[_]](implicit
-    A: AbilitiesAlgebra[Alg],
-    N: NamesAlgebra[Alg],
-    T: TypesAlgebra[Alg],
-    V: ValuesAlgebra[Alg],
+    A: AbilitiesAlgebra[F, Alg],
+    N: NamesAlgebra[F, Alg],
+    T: TypesAlgebra[F, Alg],
+    V: ValuesAlgebra[F, Alg],
     F: Comonad[F]
   ): Prog[Alg, Unit] =
     Prog.around(
       A.beginScope(name),
       (_: Unit) =>
-        (A.purgeArrows[F]() <* A.endScope())
+        (A.purgeArrows() <* A.endScope())
           .map(_.map(kv => kv._1.name.extract -> kv._2).toNem)
           .flatMap { arrows =>
             A.defineService(name, arrows) >>

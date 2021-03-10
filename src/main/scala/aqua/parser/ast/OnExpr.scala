@@ -13,13 +13,13 @@ import cats.syntax.flatMap._
 case class OnExpr[F[_]](peerId: Value[F]) extends Expr[F] {
 
   def program[Alg[_]](implicit
-    P: PeerIdAlgebra[Alg],
-    V: ValuesAlgebra[Alg],
-    A: AbilitiesAlgebra[Alg]
+    P: PeerIdAlgebra[F, Alg],
+    V: ValuesAlgebra[F, Alg],
+    A: AbilitiesAlgebra[F, Alg]
   ): Prog[Alg, Unit] =
     Prog.around(
       V.ensureIsString(peerId) >> P.onPeerId(peerId) >> A.beginScope(peerId),
-      (_: Unit) => A.endScope[F]() >> P.erasePeerId()
+      (_: Unit) => A.endScope() >> P.erasePeerId()
     )
 
 }

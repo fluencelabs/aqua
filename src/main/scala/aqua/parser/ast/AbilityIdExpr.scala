@@ -11,7 +11,7 @@ import cats.syntax.flatMap._
 
 case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F]) extends Expr[F] {
 
-  def program[Alg[_]](implicit A: AbilitiesAlgebra[Alg], V: ValuesAlgebra[Alg]): Prog[Alg, Unit] =
+  def program[Alg[_]](implicit A: AbilitiesAlgebra[F, Alg], V: ValuesAlgebra[F, Alg]): Prog[Alg, Unit] =
     V.ensureIsString(id) >> A.setServiceId(ability, id)
 
 }

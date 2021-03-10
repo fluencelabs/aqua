@@ -9,7 +9,7 @@ import aqua.parser.lexer.Token._
 
 case class AliasExpr[F[_]](name: CustomTypeToken[F], target: TypeToken[F]) extends Expr[F] {
 
-  def program[Alg[_]](implicit T: TypesAlgebra[Alg]): Prog[Alg, Unit] =
+  def program[Alg[_]](implicit T: TypesAlgebra[F, Alg]): Prog[Alg, Unit] =
     for {
       t <- T.resolveType(target)
       _ <- T.defineAlias(name, t)

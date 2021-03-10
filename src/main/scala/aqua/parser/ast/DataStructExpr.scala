@@ -12,12 +12,12 @@ import cats.syntax.comonad._
 case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F] {
 
   def program[Alg[_]](implicit
-    N: NamesAlgebra[Alg],
-    T: TypesAlgebra[Alg],
+    N: NamesAlgebra[F, Alg],
+    T: TypesAlgebra[F, Alg],
     F: Comonad[F]
   ): Prog[Alg, Unit] =
     Prog after T
-      .purgeFields[F]()
+      .purgeFields()
       .map(_.map(kv => kv._1.name.extract -> kv._2).toNem)
       .flatMap(T.defineDataType(name, _))
 

@@ -4,19 +4,21 @@ import aqua.parser.lexer.Value
 import cats.InjectK
 import cats.free.Free
 
-class PeerIdAlgebra[Alg[_]](implicit I: InjectK[PeerIdOp, Alg]) {
+class PeerIdAlgebra[F[_], Alg[_]](implicit I: InjectK[PeerIdOp[F, *], Alg]) {
 
-  def onPeerId[F[_]](id: Value[F]): Free[Alg, Unit] =
+  def onPeerId(id: Value[F]): Free[Alg, Unit] =
     Free.liftInject[Alg](OnPeerId[F](id))
 
   def erasePeerId(): Free[Alg, Unit] =
-    Free.liftInject[Alg](ErasePeerId())
+    Free.liftInject[Alg](ErasePeerId[F]())
 
-  def currentPeerId[F[_]](): Free[Alg, Option[Value[F]]] =
+  def currentPeerId(): Free[Alg, Option[Value[F]]] =
     Free.liftInject[Alg](CurrentPeerId[F]())
 
 }
 
 object PeerIdAlgebra {
-  implicit def peerIdAlgebra[Alg[_]](implicit I: InjectK[PeerIdOp, Alg]): PeerIdAlgebra[Alg] = new PeerIdAlgebra[Alg]()
+
+  implicit def peerIdAlgebra[F[_], Alg[_]](implicit I: InjectK[PeerIdOp[F, *], Alg]): PeerIdAlgebra[F, Alg] =
+    new PeerIdAlgebra[F, Alg]()
 }

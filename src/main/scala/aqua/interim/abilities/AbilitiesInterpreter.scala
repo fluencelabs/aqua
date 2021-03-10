@@ -1,23 +1,21 @@
 package aqua.interim.abilities
 
-import aqua.AquaError
 import aqua.interim.types.ArrowType
 import aqua.parser.lexer.{Name, Token}
-import cats.data.{State, Writer}
+import cats.data.State
 import cats.~>
 import shapeless.Lens
 
-class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbState[F]], error: Writer[X, AquaError])
-    extends (AbilityOp ~> State[X, *]) {
+class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbState[F]]) extends (AbilityOp.Aux[F, *] ~> State[X, *]) {
 
   private def getState: State[X, AbState[F]] = State.get.map(lens.get)
   private def setState(st: AbState[F]): State[X, Unit] = State.modify(s => lens.set(s)(st))
   private def modify(f: AbState[F] => AbState[F]): State[X, Unit] = State.modify(s => lens.set(s)(f(lens.get(s))))
 
-  override def apply[A](fa: AbilityOp[A]): State[X, A] =
+  override def apply[A](fa: AbilityOp.Aux[F, A]): State[X, A] =
     (fa match {
-      case BeginScope(token: Token[F]) =>
-        modify(_.beginScope(token))
+      case bs: BeginScope[F] =>
+        modify(_.beginScope(bs.token))
       case EndScope() =>
         modify(_.endScope)
 
@@ -47,8 +45,11 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbState[F]], error: W
 }
 
 case class AbState[F[_]](stack: List[AbScope[F]]) {
-  def beginScope(token: Token[F]): AbState[F] = copy[F](AbScope(token) :: stack)
+  def beginScope(token: Token[F]): AbState[F] = copy[F](AbScope[F](token) :: stack)
   def endScope: AbState[F] = copy[F](stack.tail)
 }
 
-case class AbScope[F[_]](token: Token[F], arrows: Map[String, (Name[F], ArrowType)] = Map.empty)
+case class AbScope[F[_]](
+  token: Token[F],
+  arrows: Map[String, (Name[F], ArrowType)] = Map.empty[String, (Name[F], ArrowType)]
+)
