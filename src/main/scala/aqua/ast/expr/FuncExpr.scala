@@ -1,6 +1,6 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Prog}
+import aqua.ast.{Expr, Gen, Prog}
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.names.NamesAlgebra
 import aqua.ast.algebra.scope.PeerIdAlgebra
@@ -24,7 +24,7 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
     P: PeerIdAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg],
     F: Comonad[F]
-  ): Prog[Alg, Unit] =
+  ): Prog[Alg, Gen] =
     Prog.around(
       A.beginScope(name) >> Applicative[Free[Alg, *]]
         .product(
@@ -50,7 +50,7 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
         .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2)),
       (funcArrow: ArrowType) =>
         // Erase arguments and internal variables
-        A.endScope() >> N.endScope() >> N.define(name, funcArrow)
+        A.endScope() >> N.endScope() >> N.define(name, funcArrow) as Gen("Function defined")
     )
 
 }

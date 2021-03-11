@@ -1,6 +1,6 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Prog}
+import aqua.ast.{Expr, Gen, Prog}
 import aqua.ast.algebra.ValuesAlgebra
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.names.NamesAlgebra
@@ -14,6 +14,7 @@ import cats.parse.Parser
 import cats.syntax.apply._
 import cats.syntax.comonad._
 import cats.syntax.flatMap._
+import cats.syntax.functor._
 
 case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Expr[F] {
 
@@ -23,7 +24,7 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],
     F: Comonad[F]
-  ): Prog[Alg, Unit] =
+  ): Prog[Alg, Gen] =
     Prog.around(
       A.beginScope(name),
       (_: Unit) =>
@@ -31,7 +32,9 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
           .map(_.map(kv => kv._1.name.extract -> kv._2).toNem)
           .flatMap { arrows =>
             A.defineService(name, arrows) >>
-              id.fold(Free.pure[Alg, Unit](()))(idV => V.ensureIsString(idV) >> A.setServiceId(name, idV))
+              id.fold(Free.pure[Alg, Gen](Gen.noop))(idV =>
+                V.ensureIsString(idV) >> A.setServiceId(name, idV) as Gen.noop
+              )
 
           }
     )

@@ -1,6 +1,6 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Prog}
+import aqua.ast.{Expr, Gen, Prog}
 import aqua.ast.algebra.names.NamesAlgebra
 import aqua.ast.algebra.types.TypesAlgebra
 import aqua.parser.lexer.CustomTypeToken
@@ -9,6 +9,7 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 import cats.syntax.comonad._
+import cats.syntax.functor._
 
 case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F] {
 
@@ -16,11 +17,12 @@ case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F] {
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     F: Comonad[F]
-  ): Prog[Alg, Unit] =
+  ): Prog[Alg, Gen] =
     Prog after T
       .purgeFields()
       .map(_.map(kv => kv._1.name.extract -> kv._2).toNem)
       .flatMap(T.defineDataType(name, _))
+      .as(Gen("Data struct created"))
 
 }
 

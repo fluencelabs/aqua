@@ -1,6 +1,6 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Prog}
+import aqua.ast.{Expr, Gen, Prog}
 import aqua.ast.algebra.ValuesAlgebra
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.scope.PeerIdAlgebra
@@ -10,6 +10,7 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.{Parser => P}
 import cats.syntax.flatMap._
+import cats.syntax.functor._
 
 case class OnExpr[F[_]](peerId: Value[F]) extends Expr[F] {
 
@@ -17,10 +18,10 @@ case class OnExpr[F[_]](peerId: Value[F]) extends Expr[F] {
     P: PeerIdAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
-  ): Prog[Alg, Unit] =
+  ): Prog[Alg, Gen] =
     Prog.around(
       V.ensureIsString(peerId) >> P.onPeerId(peerId) >> A.beginScope(peerId),
-      (_: Unit) => A.endScope() >> P.erasePeerId()
+      (_: Unit) => A.endScope() >> P.erasePeerId() as Gen("OnScope finished")
     )
 
 }

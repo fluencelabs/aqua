@@ -13,18 +13,18 @@ object Expr {
   trait Companion {
     def p[F[_]: LiftParser: Comonad]: P[Expr[F]]
 
-    def ast[F[_]: LiftParser: Comonad](ps: ParserState): P[Ast.Tree[F]]
+    def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]]
   }
 
   abstract class Leaf extends Companion {
 
-    override def ast[F[_]: LiftParser: Comonad](ps: ParserState): P[Ast.Tree[F]] =
+    override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
       p[F].map(Cofree[List, Expr[F]](_, Eval.now(Nil)))
   }
 
   abstract class AndThen(headExpr: Companion, oneOfExprs: Companion*) extends Companion {
 
-    override def ast[F[_]: LiftParser: Comonad](ps: ParserState): P[Ast.Tree[F]] =
+    override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
       ((p[F] <* ` `) ~ P.oneOf((headExpr :: oneOfExprs.toList).map(_.ast[F](ps).backtrack))).map {
         case (expr, andThen) => Cofree[List, Expr[F]](expr, Eval.now(andThen :: Nil))
       }
@@ -32,7 +32,7 @@ object Expr {
 
   abstract class AndIndented(headExpr: Companion, oneOfExprs: Companion*) extends Companion {
 
-    override def ast[F[_]: LiftParser: Comonad](ps: ParserState): P[Ast.Tree[F]] =
+    override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
       (p[F] ~ indented(
         s => {
           val psI = ps.copy(indent = s)

@@ -17,7 +17,7 @@ import aqua.ast.algebra.abilities.{AbilitiesAlgebra, AbilityOp}
 import aqua.ast.algebra.names.{NameOp, NamesAlgebra}
 import aqua.ast.algebra.scope.{PeerIdAlgebra, PeerIdOp}
 import aqua.ast.algebra.types.{TypeOp, TypesAlgebra}
-import aqua.ast.{Ast, Expr, Prog}
+import aqua.ast.{Ast, Expr, Gen, Prog}
 import cats.data.EitherK
 import cats.{Comonad, Eval}
 import cats.free.Free
@@ -32,7 +32,7 @@ object Compiler {
     N: NamesAlgebra[F, G],
     P: PeerIdAlgebra[F, G],
     T: TypesAlgebra[F, G]
-  ): Prog[G, Unit] =
+  ): Prog[G, Gen] =
     expr match {
       case expr: AbilityIdExpr[F] => expr.program[G]
       case expr: AliasExpr[F] => expr.program[G]
@@ -44,7 +44,7 @@ object Compiler {
       case expr: OnExpr[F] => expr.program[G]
       case expr: ParExpr[F] => expr.program[G]
       case expr: ServiceExpr[F] => expr.program[G]
-      case _: RootExpr[F] => Free.pure[G, Unit](())
+      case _: RootExpr[F] => Free.pure[G, Gen](Gen("Root expr"))
     }
 
   def folder[F[_]: Comonad, G[_]](implicit
@@ -52,16 +52,20 @@ object Compiler {
     N: NamesAlgebra[F, G],
     P: PeerIdAlgebra[F, G],
     T: TypesAlgebra[F, G]
-  ): (Expr[F], List[Free[G, Unit]]) => Eval[Free[G, Unit]] = {
+  ): (Expr[F], List[Free[G, Gen]]) => Eval[Free[G, Gen]] = {
     case (expr, inners) =>
-      Eval later exprToProg[F, G](expr).apply(inners.foldLeft(Free.pure[G, Unit](()))(_ >> _))
+      Eval later exprToProg[F, G](expr)
+        .apply(
+          // TODO: instead of >>, do >>= and merge Gens
+          inners.foldLeft(Free.pure[G, Gen](Gen("Folder begin")))(_ >> _)
+        )
   }
 
   type Alg0[F[_], A] = EitherK[AbilityOp.Aux[F, *], NameOp.Aux[F, *], A]
   type Alg1[F[_], A] = EitherK[PeerIdOp[F, *], Alg0[F, *], A]
   type Alg[F[_], A] = EitherK[TypeOp[F, *], Alg1[F, *], A]
 
-  def transpile[F[_]: Comonad](ast: Ast[F]): Free[Alg[F, *], Unit] =
+  def transpile[F[_]: Comonad](ast: Ast[F]): Free[Alg[F, *], Gen] =
     ast.cata(folder[F, Alg[F, *]]).value
 
 }

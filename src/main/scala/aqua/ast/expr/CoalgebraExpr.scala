@@ -1,6 +1,6 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Prog}
+import aqua.ast.{Expr, Gen, Prog}
 import aqua.ast.algebra.ValuesAlgebra
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.names.NamesAlgebra
@@ -12,6 +12,7 @@ import cats.Comonad
 import cats.free.Free
 import cats.parse.{Parser => P}
 import cats.syntax.flatMap._
+import cats.syntax.functor._
 
 case class CoalgebraExpr[F[_]](
   variable: Option[Name[F]],
@@ -25,7 +26,7 @@ case class CoalgebraExpr[F[_]](
     A: AbilitiesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Prog[Alg, Unit] =
+  ): Prog[Alg, Gen] =
     ability
       .fold(N.readArrow(funcName))(A.getArrow(_, funcName))
       .flatMap(at =>
@@ -36,7 +37,7 @@ case class CoalgebraExpr[F[_]](
               Free.pure[Alg, Unit](())
             )(resType => N.define(exportVar, resType))
           )
-      )
+      ) as Gen("Coalgebra expression")
 
 }
 

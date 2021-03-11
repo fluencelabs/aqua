@@ -1,6 +1,6 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Prog}
+import aqua.ast.{Expr, Gen, Prog}
 import aqua.ast.algebra.types.TypesAlgebra
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{DataTypeToken, Name}
@@ -10,11 +10,11 @@ import cats.parse.Parser
 
 case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F]) extends Expr[F] {
 
-  def program[Alg[_]](implicit T: TypesAlgebra[F, Alg]): Prog[Alg, Unit] =
+  def program[Alg[_]](implicit T: TypesAlgebra[F, Alg]): Prog[Alg, Gen] =
     for {
       t <- T.resolveType(`type`)
       _ <- T.defineField(name, t)
-    } yield ()
+    } yield Gen.noop
 
 }
 

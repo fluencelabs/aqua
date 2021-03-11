@@ -1,6 +1,6 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Prog}
+import aqua.ast.{Expr, Gen, Prog}
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.types.TypesAlgebra
 import aqua.parser.lexer.Token._
@@ -11,11 +11,11 @@ import cats.parse.Parser
 
 case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F]) extends Expr[F] {
 
-  def program[Alg[_]](implicit T: TypesAlgebra[F, Alg], A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Unit] =
+  def program[Alg[_]](implicit T: TypesAlgebra[F, Alg], A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Gen] =
     for {
       t <- T.resolveArrowDef(`type`)
       _ <- A.defineArrow(name, t)
-    } yield ()
+    } yield Gen.noop
 
 }
 

@@ -21,7 +21,7 @@ object Ast {
   def rootExprs: List[Expr.Companion] =
     ServiceExpr :: AliasExpr :: DataStructExpr :: FuncExpr :: Nil
 
-  def parser[F[_]: LiftParser: Comonad](ps: ParserState): P0[Ast[F]] =
+  def parser[F[_]: LiftParser: Comonad](ps: Indent): P0[Ast[F]] =
     P.repSep0(
         P.oneOf(rootExprs.map(_.ast[F](ps))),
         ` \n+`
@@ -32,7 +32,7 @@ object Ast {
   def fromString[F[_]: LiftParser: Comonad](script: String): ValidatedNel[AquaError, Ast[F]] =
     Validated
       .fromEither(
-        parser[F](ParserState()).parseAll(script)
+        parser[F](Indent()).parseAll(script)
       )
       .leftMap(pe => NonEmptyList.one(SyntaxError(pe.failedAtOffset, pe.expected)))
 }
