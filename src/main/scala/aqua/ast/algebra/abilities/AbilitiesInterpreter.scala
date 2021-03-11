@@ -2,9 +2,10 @@ package aqua.ast.algebra.abilities
 
 import aqua.ast.algebra.types.ArrowType
 import aqua.parser.lexer.{Name, Token}
-import cats.data.State
-import cats.~>
+import cats.data.{NonEmptyList, NonEmptyMap, State}
+import cats.{~>, MonadError}
 import shapeless.Lens
+import cats.syntax.functor._
 
 class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbState[F]]) extends (AbilityOp.Aux[F, *] ~> State[X, *]) {
 
@@ -20,12 +21,10 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbState[F]]) extends 
         modify(_.endScope)
 
       case PurgeArrows() =>
-        for {
-          st <- getState
-          // get arrows
-          // if empty, error
-          // otherwise, clean and return
-        } yield ()
+        getState.map(_.purgeArrows).flatMap {
+          case (Some(arrs), nextState) => setState(nextState).as(arrs)
+          case _ => ??? //setError
+        }
 
       case GetArrow(name, arrow) =>
       // Find the scope with ability
@@ -47,6 +46,13 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbState[F]]) extends 
 case class AbState[F[_]](stack: List[AbScope[F]]) {
   def beginScope(token: Token[F]): AbState[F] = copy[F](AbScope[F](token) :: stack)
   def endScope: AbState[F] = copy[F](stack.tail)
+
+  def purgeArrows: (Option[NonEmptyList[(Name[F], ArrowType)]], AbState[F]) =
+    stack match {
+      case sc :: tail =>
+        NonEmptyList.fromList(sc.arrows.values.toList) -> copy[F](sc.copy(arrows = Map.empty) :: tail)
+      case _ => None -> this
+    }
 }
 
 case class AbScope[F[_]](

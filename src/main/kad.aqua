@@ -24,8 +24,8 @@ type KadConfig:
   pingExpiresIn: i32
 
 service Bucket:
-  index: -> i32
-  size: -> i32
+  index: -> u32
+  size: -> u32
   isFull: -> bool
   nodes: Key-> []Node
 
