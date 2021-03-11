@@ -1,8 +1,8 @@
 package aqua
 
 import aqua.context.Types
-import aqua.interim.names.NameOp
-import aqua.parser.ast.{Ast, Expr}
+import aqua.ast.algebra.names.NameOp
+import aqua.ast.{Ast, Expr}
 import aqua.parser.lift.Span
 import cats.Eval
 import cats.effect.{IO, IOApp}

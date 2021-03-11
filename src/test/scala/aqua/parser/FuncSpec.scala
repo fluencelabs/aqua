@@ -1,6 +1,6 @@
 package aqua.parser
 
-import aqua.interim.types.{LiteralType, ScalarType}
+import aqua.ast.algebra.types.{LiteralType, ScalarType}
 import aqua.parser.lexer.{Ability, ArrowTypeToken, BasicTypeToken, CustomTypeToken, Literal, Name, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
@@ -14,7 +14,7 @@ import scala.language.implicitConversions
 
 class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  import aqua.interim.types.ScalarType.{string, u32}
+  import aqua.ast.algebra.types.ScalarType.{string, u32}
 
   implicit def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
   implicit def strToAb(str: String): Ability[Id] = Ability[Id](str)

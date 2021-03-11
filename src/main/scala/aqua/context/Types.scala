@@ -3,7 +3,7 @@ package aqua.context
 import aqua.context.marker.{TypeAlias, TypeDef, TypeMarker}
 import aqua.context.walker.Walker.{DupError, UnresolvedError}
 import aqua.context.walker.{Acc, ExpectAndDefine, Walker}
-import aqua.interim.types.{ArrayType, ArrowType, DataType, ProductType, Type}
+import aqua.ast.algebra.types.{ArrayType, ArrowType, DataType, ProductType, Type}
 import aqua.parser.{Block, DefAlias, DefFunc, DefService, DefType, FuncExpr}
 import aqua.parser.lexer.{ArrayTypeToken, ArrowDef, ArrowTypeToken, BasicTypeToken, CustomTypeToken, TypeToken}
 import cats.data.NonEmptyMap

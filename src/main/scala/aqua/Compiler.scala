@@ -1,25 +1,23 @@
 package aqua
 
-import aqua.interim.abilities.{AbilitiesAlgebra, AbilityOp}
-import aqua.interim.names.{NameOp, NamesAlgebra}
-import aqua.interim.scope.{PeerIdAlgebra, PeerIdOp}
-import aqua.interim.types.{TypeOp, TypesAlgebra}
-import aqua.parser.ast.{
+import aqua.ast.expr.{
   AbilityIdExpr,
   AliasExpr,
   ArrowTypeExpr,
-  Ast,
   CoalgebraExpr,
   DataStructExpr,
-  Expr,
   FieldTypeExpr,
   FuncExpr,
   OnExpr,
   ParExpr,
-  Prog,
   RootExpr,
   ServiceExpr
 }
+import aqua.ast.algebra.abilities.{AbilitiesAlgebra, AbilityOp}
+import aqua.ast.algebra.names.{NameOp, NamesAlgebra}
+import aqua.ast.algebra.scope.{PeerIdAlgebra, PeerIdOp}
+import aqua.ast.algebra.types.{TypeOp, TypesAlgebra}
+import aqua.ast.{Ast, Expr, Prog}
 import cats.data.EitherK
 import cats.{Comonad, Eval}
 import cats.free.Free
