@@ -11,8 +11,6 @@ case class ReadArrow[F[_]](name: Name[F]) extends NameOp[F, Option[ArrowType]]
 
 case class DefineName[F[_]](name: Name[F], `type`: Type) extends NameOp[F, Unit]
 
-case class EraseName[F[_]](name: Name[F]) extends NameOp[F, Unit]
-
 case class BeginScope[F[_]](token: Token[F]) extends NameOp[F, Unit]
 
 case class EndScope[F[_]]() extends NameOp[F, Unit]

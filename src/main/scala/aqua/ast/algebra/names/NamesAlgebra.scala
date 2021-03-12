@@ -16,9 +16,6 @@ class NamesAlgebra[F[_], Alg[_]](implicit V: InjectK[NameOp[F, *], Alg]) {
   def define(name: Name[F], `type`: Type): Free[Alg, Unit] =
     Free.liftInject[Alg](DefineName(name, `type`))
 
-  def erase(name: Name[F]): Free[Alg, Unit] =
-    Free.liftInject[Alg](EraseName(name))
-
   def beginScope(token: Token[F]): Free[Alg, Unit] =
     Free.liftInject[Alg](BeginScope(token))
 
