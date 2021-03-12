@@ -4,23 +4,21 @@ import aqua.AquaError
 import aqua.ast.algebra.types.ArrowType
 import aqua.parser.lexer.{Name, Token}
 import cats.data.{EitherT, NonEmptyList, NonEmptyMap, State}
-import cats.{~>, MonadError}
+import cats.~>
 import shapeless.Lens
 import cats.syntax.functor._
 
-class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbState[F]])
-    extends (AbilityOp.Aux[F, *] ~> EitherT[State[X, *], AquaError, *]) {
+class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbState[F]]) extends (AbilityOp.Aux[F, *] ~> State[X, *]) {
 
   type S[A] = State[X, A]
-  type G[A] = EitherT[S, AquaError, A]
 
-  private def getState: G[AbState[F]] = EitherT.right(State.get.map(lens.get))
-  private def setState(st: AbState[F]): G[Unit] = EitherT.right(State.modify(s => lens.set(s)(st)))
+  private def getState: S[AbState[F]] = State.get.map(lens.get)
+  private def setState(st: AbState[F]): S[Unit] = State.modify(s => lens.set(s)(st))
 
-  private def modify(f: AbState[F] => AbState[F]): G[Unit] =
-    EitherT.right(State.modify(s => lens.set(s)(f(lens.get(s)))))
+  private def modify(f: AbState[F] => AbState[F]): S[Unit] =
+    State.modify(s => lens.set(s)(f(lens.get(s))))
 
-  override def apply[A](fa: AbilityOp.Aux[F, A]): EitherT[State[X, *], AquaError, A] =
+  override def apply[A](fa: AbilityOp.Aux[F, A]): State[X, A] =
     (fa match {
       case bs: BeginScope[F] =>
         modify(_.beginScope(bs.token))
@@ -30,7 +28,7 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbState[F]])
       case PurgeArrows() =>
         getState.map(_.purgeArrows).flatMap {
           case (Some(arrs), nextState) => setState(nextState).as(arrs)
-          case _ => EitherT.leftT[S, A](???) //setError
+          case _ => ??? //setError
         }
 
       case GetArrow(name, arrow) =>
@@ -38,21 +36,21 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbState[F]])
         // get ability arrows
         // find arrow by name
         // if no matching arrow, error
-        EitherT.left(???)
+        ???
       case SetServiceId(name, id) =>
       // in current scope, set service id by its name
       // check that it's registered, and that it is a service
       case DefineArrow(arrow, t) =>
         // in current scope, save arrow in the cache
         // if an arrow with this name already exists, raise
-        EitherT.left(???)
+        ???
 
       case DefineService(name, arrows) =>
         // in current scope, define a service (or do it globally?)
         // in case service name is already used for another ability, raise
-        EitherT.left(???)
+        ???
 
-    }).asInstanceOf[EitherT[State[X, *], AquaError, A]]
+    }).asInstanceOf[State[X, A]]
 }
 
 case class AbState[F[_]](stack: List[AbScope[F]]) {
