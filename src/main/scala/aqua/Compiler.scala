@@ -61,7 +61,7 @@ object Compiler {
         )
   }
 
-  type Alg0[F[_], A] = EitherK[AbilityOp.Aux[F, *], NameOp.Aux[F, *], A]
+  type Alg0[F[_], A] = EitherK[AbilityOp[F, *], NameOp[F, *], A]
   type Alg1[F[_], A] = EitherK[PeerIdOp[F, *], Alg0[F, *], A]
   type Alg[F[_], A] = EitherK[TypeOp[F, *], Alg1[F, *], A]
 

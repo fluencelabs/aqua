@@ -29,15 +29,19 @@ case class CoalgebraExpr[F[_]](
   ): Prog[Alg, Gen] =
     ability
       .fold(N.readArrow(funcName))(A.getArrow(_, funcName))
-      .flatMap(at =>
-        V.checkArguments(at, args) >> variable
-          .fold(Free.pure[Alg, Unit](()))(exportVar =>
-            at.res.fold(
-              // TODO: error! we're trying to export variable, but function has no export type
-              Free.pure[Alg, Unit](())
-            )(resType => N.define(exportVar, resType))
-          )
-      ) as Gen("Coalgebra expression")
+      .flatMap {
+        case Some(at) =>
+          V.checkArguments(at, args) >> variable
+            .fold(Free.pure[Alg, Unit](()))(exportVar =>
+              at.res.fold(
+                // TODO: error! we're trying to export variable, but function has no export type
+                Free.pure[Alg, Unit](())
+              )(resType => N.define(exportVar, resType))
+            // TODO: if it's a service, get service id, etc
+            ) as Gen("Coalgebra expression")
+        case None =>
+          Free.pure(Gen("Coalgebra expression errored"))
+      }
 
 }
 

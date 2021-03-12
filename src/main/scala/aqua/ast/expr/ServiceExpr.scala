@@ -28,15 +28,16 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
     Prog.around(
       A.beginScope(name),
       (_: Unit) =>
-        (A.purgeArrows() <* A.endScope())
-          .map(_.map(kv => kv._1.name.extract -> kv._2).toNem)
-          .flatMap { arrows =>
-            A.defineService(name, arrows) >>
+        (A.purgeArrows(name) <* A.endScope()).flatMap {
+          case Some(nel) =>
+            A.defineService(name, nel.map(kv => kv._1.name.extract -> kv._2).toNem) >>
               id.fold(Free.pure[Alg, Gen](Gen.noop))(idV =>
                 V.ensureIsString(idV) >> A.setServiceId(name, idV) as Gen.noop
               )
+          case None =>
+            Gen.noop.lift
 
-          }
+        }
     )
 
 }

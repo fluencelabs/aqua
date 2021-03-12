@@ -6,33 +6,33 @@ import cats.InjectK
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.free.Free
 
-class AbilitiesAlgebra[F[_], Alg[_]](implicit A: InjectK[AbilityOp.Aux[F, *], Alg]) {
+class AbilitiesAlgebra[F[_], Alg[_]](implicit A: InjectK[AbilityOp[F, *], Alg]) {
 
-  def defineArrow(arrow: Name[F], `type`: ArrowType): Free[Alg, Unit] =
-    Free.liftInject[Alg](DefineArrow[F](arrow, `type`): AbilityOp.Aux[F, Unit])
+  def defineArrow(arrow: Name[F], `type`: ArrowType): Free[Alg, Boolean] =
+    Free.liftInject[Alg](DefineArrow[F](arrow, `type`))
 
-  def purgeArrows(): Free[Alg, NonEmptyList[(Name[F], ArrowType)]] =
-    Free.liftInject[Alg](PurgeArrows[F](): AbilityOp.Aux[F, NonEmptyList[(Name[F], ArrowType)]])
+  def purgeArrows(token: Token[F]): Free[Alg, Option[NonEmptyList[(Name[F], ArrowType)]]] =
+    Free.liftInject[Alg](PurgeArrows[F](token))
 
-  def defineService(name: Ability[F], arrows: NonEmptyMap[String, ArrowType]): Free[Alg, Unit] =
-    Free.liftInject[Alg](DefineService[F](name, arrows): AbilityOp.Aux[F, Unit])
+  def defineService(name: Ability[F], arrows: NonEmptyMap[String, ArrowType]): Free[Alg, Boolean] =
+    Free.liftInject[Alg](DefineService[F](name, arrows))
 
-  def getArrow(name: Ability[F], arrow: Name[F]): Free[Alg, ArrowType] =
-    Free.liftInject[Alg](GetArrow[F](name, arrow): AbilityOp.Aux[F, ArrowType])
+  def getArrow(name: Ability[F], arrow: Name[F]): Free[Alg, Option[ArrowType]] =
+    Free.liftInject[Alg](GetArrow[F](name, arrow))
 
-  def setServiceId(name: Ability[F], id: Value[F]): Free[Alg, Unit] =
-    Free.liftInject[Alg](SetServiceId[F](name, id): AbilityOp.Aux[F, Unit])
+  def setServiceId(name: Ability[F], id: Value[F]): Free[Alg, Boolean] =
+    Free.liftInject[Alg](SetServiceId[F](name, id))
 
   def beginScope(token: Token[F]): Free[Alg, Unit] =
-    Free.liftInject[Alg](BeginScope[F](token): AbilityOp.Aux[F, Unit])
+    Free.liftInject[Alg](BeginScope[F](token))
 
-  def endScope(): Free[Alg, Unit] =
-    Free.liftInject[Alg](EndScope[F](): AbilityOp.Aux[F, Unit])
+  def endScope(): Free[Alg, Boolean] =
+    Free.liftInject[Alg](EndScope[F]())
 
 }
 
 object AbilitiesAlgebra {
 
-  implicit def abilitiesAlgebra[F[_], Alg[_]](implicit A: InjectK[AbilityOp.Aux[F, *], Alg]): AbilitiesAlgebra[F, Alg] =
+  implicit def abilitiesAlgebra[F[_], Alg[_]](implicit A: InjectK[AbilityOp[F, *], Alg]): AbilitiesAlgebra[F, Alg] =
     new AbilitiesAlgebra[F, Alg]()
 }
