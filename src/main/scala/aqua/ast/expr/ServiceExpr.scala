@@ -27,7 +27,7 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
   ): Prog[Alg, Gen] =
     Prog.around(
       A.beginScope(name),
-      (_: Unit) =>
+      (_: Unit, body: Gen) =>
         (A.purgeArrows(name) <* A.endScope()).flatMap {
           case Some(nel) =>
             A.defineService(name, nel.map(kv => kv._1.name.extract -> kv._2).toNem) >>

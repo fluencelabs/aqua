@@ -14,10 +14,10 @@ case class RunAfter[Alg[_], A](prog: Free[Alg, A]) extends Prog[Alg, A] {
 
 }
 
-case class RunAround[Alg[_], R, A](before: Free[Alg, R], after: R => Free[Alg, A]) extends Prog[Alg, A] {
+case class RunAround[Alg[_], R, A](before: Free[Alg, R], after: (R, A) => Free[Alg, A]) extends Prog[Alg, A] {
 
   override def apply(v1: Free[Alg, A]): Free[Alg, A] =
-    before >>= (a => v1 >> after(a))
+    before >>= (r => v1 >>= (a => after(r, a)))
 }
 
 object Prog {
@@ -28,7 +28,7 @@ object Prog {
   def after[Alg[_], A](prog: Free[Alg, A]): Prog[Alg, A] =
     RunAfter(prog)
 
-  def around[Alg[_], R, A](before: Free[Alg, R], after: R => Free[Alg, A]): Prog[Alg, A] =
+  def around[Alg[_], R, A](before: Free[Alg, R], after: (R, A) => Free[Alg, A]): Prog[Alg, A] =
     RunAround(before, after)
 
 }

@@ -48,9 +48,9 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
           ret.fold(Free.pure[Alg, Option[Type]](None))(T.resolveType(_).map(Some(_)))
         )
         .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2)),
-      (funcArrow: ArrowType) =>
+      (funcArrow: ArrowType, bodyGen: Gen) =>
         // Erase arguments and internal variables
-        A.endScope() >> N.endScope() >> N.define(name, funcArrow) as Gen("Function defined")
+        A.endScope() >> N.endScope() >> N.define(name, funcArrow) as Gen("Function defined, wrap + " + bodyGen)
     )
 
 }
