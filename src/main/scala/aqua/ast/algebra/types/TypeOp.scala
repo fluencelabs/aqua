@@ -13,5 +13,5 @@ case class PurgeFields[F[_]]() extends TypeOp[F, NonEmptyList[(Name[F], Type)]]
 case class DefineDataType[F[_]](name: CustomTypeToken[F], fields: NonEmptyMap[String, Type]) extends TypeOp[F, Unit]
 case class DefineAlias[F[_]](name: CustomTypeToken[F], target: Type) extends TypeOp[F, Unit]
 
-case class ResolveLambda[F[_]](root: Type, ops: List[LambdaOp[F]]) extends TypeOp[F, Type]
-case class EnsureTypeMatches[F[_]](token: Token[F], expected: Type, given: Type) extends TypeOp[F, Unit]
+case class ResolveLambda[F[_]](root: Type, ops: List[LambdaOp[F]]) extends TypeOp[F, Option[Type]]
+case class EnsureTypeMatches[F[_]](token: Token[F], expected: Type, given: Type) extends TypeOp[F, Boolean]

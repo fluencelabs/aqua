@@ -19,10 +19,10 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
   override def apply[A](fa: AbilityOp[F, A]): State[X, A] =
     (fa match {
       case bs: BeginScope[F] =>
-        modify(_.beginScope(bs.token))
+        beginScope(AbilityStackFrame[F](bs.token))
 
       case EndScope() =>
-        modify(_.endScope)
+        endScope
 
       case pa: PurgeArrows[F] =>
         getState.map(_.purgeArrows).flatMap {
@@ -81,8 +81,6 @@ case class AbilitiesState[F[_]](
   stack: List[AbilityStackFrame[F]] = Nil,
   services: Map[String, NonEmptyMap[String, ArrowType]] = Map.empty
 ) {
-  def beginScope(token: Token[F]): AbilitiesState[F] = copy[F](AbilityStackFrame[F](token) :: stack)
-  def endScope: AbilitiesState[F] = copy[F](stack.tail)
 
   def purgeArrows: Option[(NonEmptyList[(Name[F], ArrowType)], AbilitiesState[F])] =
     stack match {

@@ -25,10 +25,10 @@ class TypesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]) {
   def defineAlias(name: CustomTypeToken[F], target: Type): Free[Alg, Unit] =
     Free.liftInject[Alg](DefineAlias(name, target))
 
-  def resolveLambda(root: Type, ops: List[LambdaOp[F]]): Free[Alg, Type] =
+  def resolveLambda(root: Type, ops: List[LambdaOp[F]]): Free[Alg, Option[Type]] =
     Free.liftInject[Alg](ResolveLambda(root, ops))
 
-  def ensureTypeMatches(token: Token[F], expected: Type, given: Type): Free[Alg, Unit] =
+  def ensureTypeMatches(token: Token[F], expected: Type, given: Type): Free[Alg, Boolean] =
     Free.liftInject[Alg](EnsureTypeMatches[F](token, expected, given))
 
 }

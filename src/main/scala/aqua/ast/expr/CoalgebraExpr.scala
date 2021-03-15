@@ -32,10 +32,10 @@ case class CoalgebraExpr[F[_]](
       .flatMap {
         case Some(at) =>
           V.checkArguments(at, args) >> variable
-            .fold(Free.pure[Alg, Unit](()))(exportVar =>
+            .fold(Free.pure[Alg, Boolean](true))(exportVar =>
               at.res.fold(
                 // TODO: error! we're trying to export variable, but function has no export type
-                Free.pure[Alg, Unit](())
+                Free.pure[Alg, Boolean](false)
               )(resType => N.define(exportVar, resType))
             // TODO: if it's a service, get service id, etc
             ) as Gen("Coalgebra expression")

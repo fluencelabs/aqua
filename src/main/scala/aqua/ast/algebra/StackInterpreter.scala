@@ -42,5 +42,11 @@ abstract class StackInterpreter[F[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(
     State.modify(error(_, t, hint))
 
   protected def modify(f: St => St): S[Unit] =
-    State.modify(s => lens.modify(f)(s))
+    State.modify(lens.modify(f))
+
+  protected def endScope: S[Unit] =
+    modify(stackLens.modify(_.tail))
+
+  protected def beginScope(emptyFrame: Fr): S[Unit] =
+    modify(stackLens.modify(emptyFrame :: _))
 }

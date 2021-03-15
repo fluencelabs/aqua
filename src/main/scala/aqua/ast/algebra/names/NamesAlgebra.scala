@@ -7,13 +7,13 @@ import cats.free.Free
 
 class NamesAlgebra[F[_], Alg[_]](implicit V: InjectK[NameOp[F, *], Alg]) {
 
-  def read(name: Name[F]): Free[Alg, Type] =
+  def read(name: Name[F]): Free[Alg, Option[Type]] =
     Free.liftInject[Alg](ReadName(name))
 
   def readArrow(name: Name[F]): Free[Alg, Option[ArrowType]] =
     Free.liftInject[Alg](ReadArrow(name))
 
-  def define(name: Name[F], `type`: Type): Free[Alg, Unit] =
+  def define(name: Name[F], `type`: Type): Free[Alg, Boolean] =
     Free.liftInject[Alg](DefineName(name, `type`))
 
   def beginScope(token: Token[F]): Free[Alg, Unit] =
