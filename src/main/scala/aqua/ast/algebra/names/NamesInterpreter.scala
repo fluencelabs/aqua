@@ -16,9 +16,11 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
     with (NameOp[F, *] ~> State[X, *]) {
 
   def readName(name: String): S[Option[Type]] =
-    getState.map(_.stack.collectFirst {
-      case frame if frame.names.contains(name) => frame.names(name)
-    })
+    getState.map { st =>
+      st.stack.collectFirst {
+        case frame if frame.names.contains(name) => frame.names(name)
+      } orElse st.rootNames.get(name)
+    }
 
   override def apply[A](fa: NameOp[F, A]): State[X, A] =
     (fa match {
@@ -40,9 +42,10 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
         readName(dn.name.value).flatMap {
           case Some(_) => report(dn.name, "This name was already defined in the scope").as(false)
           case None =>
-            mapStackHead(report(dn.name, "Cannot define a variable in the root scope").as(false))(
-              _.focus(_.names).index(dn.name.value).replace(dn.`type`) -> true
-            )
+            mapStackHead(
+              if (dn.isRoot) modify(_.focus(_.rootNames).index(dn.name.value).replace(dn.`type`)).as(true)
+              else report(dn.name, "Cannot define a variable in the root scope").as(false)
+            )(fr => fr.addName(dn.name.value, dn.`type`) -> true)
         }
       case bs: BeginScope[F] =>
         beginScope(NamesFrame(bs.token))
@@ -51,6 +54,8 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
     }).asInstanceOf[State[X, A]]
 }
 
-case class NamesState[F[_]](stack: List[NamesFrame[F]] = Nil)
+case class NamesState[F[_]](stack: List[NamesFrame[F]] = Nil, rootNames: Map[String, Type] = Map.empty)
 
-case class NamesFrame[F[_]](token: Token[F], names: Map[String, Type] = Map.empty)
+case class NamesFrame[F[_]](token: Token[F], names: Map[String, Type] = Map.empty) {
+  def addName(n: String, t: Type): NamesFrame[F] = copy[F](names = names.updated(n, t))
+}

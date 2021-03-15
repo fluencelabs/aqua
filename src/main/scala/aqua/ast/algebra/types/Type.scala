@@ -15,7 +15,9 @@ sealed trait Type {
 }
 sealed trait DataType extends Type
 
-case class ScalarType private (name: String) extends DataType
+case class ScalarType private (name: String) extends DataType {
+  override def toString: String = name
+}
 
 object ScalarType {
   // TODO https://github.com/fluencelabs/interface-types/blob/master/crates/it-types/src/values.rs#L45-L49
@@ -46,18 +48,27 @@ object ScalarType {
     }
 }
 
-case class LiteralType private (oneOf: Set[ScalarType]) extends Type
-
-object LiteralType {
-  val float = LiteralType(ScalarType.float)
-  val signed = LiteralType(ScalarType.signed)
-  val number = LiteralType(ScalarType.number)
-  val bool = LiteralType(Set(ScalarType.bool))
-  val string = LiteralType(Set(ScalarType.string))
+case class LiteralType private (oneOf: Set[ScalarType], name: String) extends Type {
+  override def toString: String = name
 }
 
-case class ArrayType(element: Type) extends DataType
-case class ProductType(name: String, fields: NonEmptyMap[String, Type]) extends DataType
+object LiteralType {
+  val float = LiteralType(ScalarType.float, "float")
+  val signed = LiteralType(ScalarType.signed, "signed")
+  val number = LiteralType(ScalarType.number, "number")
+  val bool = LiteralType(Set(ScalarType.bool), "bool")
+  val string = LiteralType(Set(ScalarType.string), "string")
+}
+
+case class ArrayType(element: Type) extends DataType {
+  override def toString: String = "[]" + element
+}
+
+case class ProductType(name: String, fields: NonEmptyMap[String, Type]) extends DataType {
+
+  override def toString: String =
+    s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+}
 
 sealed trait CallableType extends Type {
   def acceptsAsArguments(valueTypes: List[Type]): Boolean
@@ -70,16 +81,7 @@ case class ArrowType(args: List[Type], res: Option[Type]) extends CallableType {
   override def acceptsAsArguments(valueTypes: List[Type]): Boolean =
     (args.length == valueTypes.length) && args.zip(valueTypes).forall(av => av._1.acceptsValueOf(av._2))
 
-}
-
-case class FuncArrowType(funcArgs: List[(String, Type)], res: Option[Type]) extends CallableType {
-
-  lazy val toArrowType: ArrowType = ArrowType(funcArgs.map(_._2), res)
-
-  override def acceptsAsArguments(valueTypes: List[Type]): Boolean =
-    toArrowType.acceptsAsArguments(valueTypes)
-
-  override def args: List[Type] = toArrowType.args
+  override def toString: String = args.map(_.toString).mkString(", ") + " -> " + res.map(_.toString).getOrElse("()")
 }
 
 object Type {
@@ -119,10 +121,10 @@ object Type {
     else
       (l, r) match {
         case (x: ScalarType, y: ScalarType) => ScalarType.scalarOrder.partialCompare(x, y)
-        case (LiteralType(xs), y: ScalarType) if xs == Set(y) => 0.0
-        case (LiteralType(xs), y: ScalarType) if xs(y) => -1.0
-        case (x: ScalarType, LiteralType(ys)) if ys == Set(x) => 0.0
-        case (x: ScalarType, LiteralType(ys)) if ys(x) => 1.0
+        case (LiteralType(xs, _), y: ScalarType) if xs == Set(y) => 0.0
+        case (LiteralType(xs, _), y: ScalarType) if xs(y) => -1.0
+        case (x: ScalarType, LiteralType(ys, _)) if ys == Set(x) => 0.0
+        case (x: ScalarType, LiteralType(ys, _)) if ys(x) => 1.0
         case (x: ArrayType, y: ArrayType) => cmp(x.element, y.element)
         case (ProductType(_, xFields), ProductType(_, yFields)) =>
           cmpProd(xFields, yFields)

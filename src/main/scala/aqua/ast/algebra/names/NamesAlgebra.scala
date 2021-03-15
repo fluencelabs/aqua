@@ -13,8 +13,8 @@ class NamesAlgebra[F[_], Alg[_]](implicit V: InjectK[NameOp[F, *], Alg]) {
   def readArrow(name: Name[F]): Free[Alg, Option[ArrowType]] =
     Free.liftInject[Alg](ReadArrow(name))
 
-  def define(name: Name[F], `type`: Type): Free[Alg, Boolean] =
-    Free.liftInject[Alg](DefineName(name, `type`))
+  def define(name: Name[F], `type`: Type, isRoot: Boolean = false): Free[Alg, Boolean] =
+    Free.liftInject[Alg](DefineName(name, `type`, isRoot))
 
   def beginScope(token: Token[F]): Free[Alg, Unit] =
     Free.liftInject[Alg](BeginScope(token))

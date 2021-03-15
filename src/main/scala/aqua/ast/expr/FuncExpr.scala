@@ -37,8 +37,10 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
                 // Resolve arg type, remember it
                 f.flatMap(acc =>
                   T.resolveType(argType).flatMap {
-                    case Some(t) => N.define(argName, t).as(acc.enqueue(t))
-                    case None => Free.pure(acc)
+                    case Some(t) =>
+                      N.define(argName, t).as(acc.enqueue(t))
+                    case None =>
+                      Free.pure(acc)
                   }
                 )
             }
@@ -50,7 +52,9 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
         .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2)),
       (funcArrow: ArrowType, bodyGen: Gen) =>
         // Erase arguments and internal variables
-        A.endScope() >> N.endScope() >> N.define(name, funcArrow) as Gen("Function defined, wrap + " + bodyGen)
+        A.endScope() >> N.endScope() >> N.define(name, funcArrow, isRoot = true) as Gen(
+          "Function defined, wrap + " + bodyGen
+        )
     )
 
 }

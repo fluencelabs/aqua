@@ -1,10 +1,5 @@
 package aqua
 
-import aqua.context.Types
-import aqua.ast.algebra.names.NameOp
-import aqua.ast.{Ast, Expr}
-import aqua.parser.lift.Span
-import cats.Eval
 import cats.effect.{IO, IOApp}
 import cats.data.Validated
 
@@ -14,8 +9,8 @@ object Main extends IOApp.Simple {
 
   override def run: IO[Unit] =
     IO {
-      def tryParse(str: String) =
-        Aqua.parse(str) match {
+      def process(str: String) =
+        Aqua.compile(str) match {
           case Validated.Valid(v) ⇒
             println(v)
             println(Console.GREEN + "Aqua script processed successfully" + Console.RESET)
@@ -25,18 +20,7 @@ object Main extends IOApp.Simple {
         }
 
       val script = Source.fromResource("typecheck.aqua").mkString
-      //tryParse(experimental)
-
-      val ast = Ast
-        .fromString[Span.F](script)
-        .andThen(
-          Compiler
-            .compile[Span.F](_)
-            .leftMap(_.map(ts => CompilerError(ts._1.unit._1, ts._2)))
-        )
-        .leftMap(_.map(_.showForConsole(script)).map(println))
-
-      ast.map(println(_))
+      process(script)
 
     }
 

@@ -1,10 +1,8 @@
 package aqua.ast.algebra.types
 
 import aqua.ast.algebra.ReportError
-import aqua.context.VarTypes.{Err, ExpectedProduct, FieldNotFound, NotAnArray}
 import aqua.parser.lexer.{
   ArrayTypeToken,
-  ArrowDef,
   ArrowTypeToken,
   BasicTypeToken,
   CustomTypeToken,
@@ -16,9 +14,8 @@ import aqua.parser.lexer.{
   TypeToken
 }
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{NonEmptyList, NonEmptyMap, State, Validated, ValidatedNel}
-import cats.free.Free
-import cats.{~>, Comonad}
+import cats.data.{NonEmptyList, NonEmptyMap, State, ValidatedNel}
+import cats.~>
 import monocle.Lens
 import cats.syntax.functor._
 import cats.syntax.flatMap._
