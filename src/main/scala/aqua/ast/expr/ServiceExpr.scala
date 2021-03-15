@@ -12,7 +12,6 @@ import cats.Comonad
 import cats.free.Free
 import cats.parse.Parser
 import cats.syntax.apply._
-import cats.syntax.comonad._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 
@@ -22,15 +21,14 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
     A: AbilitiesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg],
-    F: Comonad[F]
+    V: ValuesAlgebra[F, Alg]
   ): Prog[Alg, Gen] =
     Prog.around(
       A.beginScope(name),
       (_: Unit, body: Gen) =>
         (A.purgeArrows(name) <* A.endScope()).flatMap {
           case Some(nel) =>
-            A.defineService(name, nel.map(kv => kv._1.name.extract -> kv._2).toNem) >>
+            A.defineService(name, nel.map(kv => kv._1.value -> kv._2).toNem) >>
               id.fold(Free.pure[Alg, Gen](Gen.noop))(idV =>
                 V.ensureIsString(idV) >> A.setServiceId(name, idV) as Gen.noop
               )

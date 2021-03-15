@@ -1,5 +1,6 @@
 package aqua.ast
 
+import aqua.ast.algebra.types.ArrowType
 import cats.free.Free
 
 case class Gen(log: String) {
@@ -8,4 +9,6 @@ case class Gen(log: String) {
 
 object Gen {
   def noop = new Gen("noop")
+
+  case class Arrow(`type`: ArrowType, gen: Gen)
 }

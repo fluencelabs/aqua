@@ -40,10 +40,10 @@ case class DefAlias[F[_], L](alias: CustomTypeToken[F], target: TypeToken[F], co
 
 object DefType {
 
-  def `dname`[F[_]: LiftParser]: P[CustomTypeToken[F]] =
+  def `dname`[F[_]: LiftParser: Comonad]: P[CustomTypeToken[F]] =
     `data` *> ` ` *> CustomTypeToken.ct[F] <* ` `.? <* `:` <* ` \n+`
 
-  def `dataname`[F[_]: LiftParser](indent: String): P[(Name[F], DataTypeToken[F])] =
+  def `dataname`[F[_]: LiftParser: Comonad](indent: String): P[(Name[F], DataTypeToken[F])] =
     (Name.p[F] <* ` : `) ~ `datatypedef`
 
   def `deftype`[F[_]: LiftParser: Comonad]: P[DefType[F, HNil]] =
@@ -54,7 +54,7 @@ object DefType {
 
 object DefFunc {
 
-  def `funcname`[F[_]: LiftParser]: P[Name[F]] = ` `.?.with1 *> `func` *> ` ` *> Name.p <* ` `.?
+  def `funcname`[F[_]: LiftParser: Comonad]: P[Name[F]] = ` `.?.with1 *> `func` *> ` ` *> Name.p <* ` `.?
 
   def `funcargs`[F[_]: LiftParser: Comonad]: P[List[(String, F[String], TypeToken[F])]] =
     `(` *> comma0((`name`.lift <* ` : `) ~ `typedef`).map(_.map(kv => (kv._1.extract, kv._1, kv._2))) <* `)`
@@ -75,13 +75,14 @@ object DefFunc {
 object DefService {
 
   // TODO use name's [F] for ArrowName
-  def `funcdef`[F[_]: LiftParser]: P[(String, ArrowTypeToken[F])] =
+  def `funcdef`[F[_]: LiftParser: Comonad]: P[(String, ArrowTypeToken[F])] =
     (`name` <* ` : `) ~ ArrowTypeToken.`arrowdef`
 
-  def `servicename`[F[_]: LiftParser]: P[Ability[F]] = `service` *> ` ` *> Ability.ab[F] <* ` `.? <* `:` <* ` \n+`
+  def `servicename`[F[_]: LiftParser: Comonad]: P[Ability[F]] =
+    `service` *> ` ` *> Ability.ab[F] <* ` `.? <* `:` <* ` \n+`
 
   // TODO switch to funchead?
-  def `defservice`[F[_]: LiftParser]: P[DefService[F, HNil]] =
+  def `defservice`[F[_]: LiftParser: Comonad]: P[DefService[F, HNil]] =
     (`servicename` ~ indented(_ => `funcdef`, "").map(_.toNem)).map {
       case (n, f) ⇒ DefService(n, f, HNil)
     }
@@ -89,7 +90,7 @@ object DefService {
 
 object DefAlias {
 
-  def `defalias`[F[_]: LiftParser]: P[DefAlias[F, HNil]] =
+  def `defalias`[F[_]: LiftParser: Comonad]: P[DefAlias[F, HNil]] =
     ((`alias` *> ` ` *> CustomTypeToken.ct[F] <* ` : `) ~ `typedef`).map {
       case (ct, t) => DefAlias(ct, t, HNil)
     }

@@ -44,7 +44,7 @@ class TypeSpec extends AnyFlatSpec with Matchers with EitherValues {
     ArrowTypeToken.`arrowdef`.parseAll("[]Absolutely, u32 -> B").right.value should be(
       ArrowTypeToken[Id](
         (),
-        ArrayTypeToken(CustomTypeToken[Id]("Absolutely")) :: (u32: BasicTypeToken[Id]) :: Nil,
+        ArrayTypeToken[Id]((), CustomTypeToken[Id]("Absolutely")) :: (u32: BasicTypeToken[Id]) :: Nil,
         Some(CustomTypeToken[Id]("B"))
       )
     )
@@ -52,10 +52,12 @@ class TypeSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "Array type" should "parse" in {
-    TypeToken.`typedef`.parseAll("[]Something") should be(Right(ArrayTypeToken(CustomTypeToken[Id]("Something"))))
-    TypeToken.`typedef`.parseAll("[]u32") should be(Right(ArrayTypeToken(u32: BasicTypeToken[Id])))
+    TypeToken.`typedef`.parseAll("[]Something") should be(
+      Right(ArrayTypeToken[Id]((), CustomTypeToken[Id]("Something")))
+    )
+    TypeToken.`typedef`.parseAll("[]u32") should be(Right(ArrayTypeToken[Id]((), u32: BasicTypeToken[Id])))
     TypeToken.`typedef`.parseAll("[][]u32") should be(
-      Right(ArrayTypeToken[Id](ArrayTypeToken[Id](u32: BasicTypeToken[Id])))
+      Right(ArrayTypeToken[Id]((), ArrayTypeToken[Id]((), u32: BasicTypeToken[Id])))
     )
   }
 

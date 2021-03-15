@@ -29,7 +29,7 @@ object Types {
 
   def resolveTypeToken[F[_]: Comonad](strict: Map[String, Type], tt: TypeToken[F]): Option[Type] =
     tt match {
-      case ArrayTypeToken(dtt) =>
+      case ArrayTypeToken(_, dtt) =>
         resolveTypeToken(strict, dtt).collect {
           case it: DataType => ArrayType(it)
         }

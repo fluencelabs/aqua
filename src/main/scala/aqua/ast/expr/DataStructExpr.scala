@@ -8,19 +8,17 @@ import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
-import cats.syntax.comonad._
 import cats.syntax.functor._
 
 case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F] {
 
   def program[Alg[_]](implicit
     N: NamesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    F: Comonad[F]
+    T: TypesAlgebra[F, Alg]
   ): Prog[Alg, Gen] =
     Prog after T
       .purgeFields()
-      .map(_.map(kv => kv._1.name.extract -> kv._2).toNem)
+      .map(_.map(kv => kv._1.value -> kv._2).toNem)
       .flatMap(T.defineDataType(name, _))
       .as(Gen("Data struct created"))
 

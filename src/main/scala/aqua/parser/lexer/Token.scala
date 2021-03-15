@@ -1,13 +1,12 @@
 package aqua.parser.lexer
 
-import cats.Functor
 import cats.data.NonEmptyList
 import cats.parse.{Accumulator0, Parser => P, Parser0 => P0}
 
 trait Token[F[_]] {
-  def as[T](v: T)(implicit F: Functor[F]): F[T]
+  def as[T](v: T): F[T]
 
-  def unit(implicit F: Functor[F]): F[Unit] = as(())
+  def unit: F[Unit] = as(())
 }
 
 object Token {
