@@ -16,7 +16,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   implicit def strToAb(str: String): Ability[Id] = Ability[Id](str)
   implicit def strToVar(str: String): Name[Id] = Name[Id](str)
-
+  /*
   def parseExpr(str: String) =
     FuncExpr.`funcop`[Id]("").parseAll(str).right.value
 
@@ -151,7 +151,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
         )
       )
     )
-  }
+  }*/
 
   /*
   TODO: xor1

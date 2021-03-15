@@ -19,7 +19,7 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
   implicit def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
   implicit def strToAb(str: String): Ability[Id] = Ability[Id](str)
   implicit def strToVar(str: String): Name[Id] = Name[Id](str)
-
+  /*
   private val getTimeHead = FuncHead[Id](
     "getTime",
     List(
@@ -127,5 +127,5 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
         HNil
       )
     )
-  }
+  }*/
 }
