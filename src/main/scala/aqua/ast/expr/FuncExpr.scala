@@ -36,16 +36,17 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
             ) {
               case (f, Arg(argName, argType)) =>
                 // Resolve arg type, remember it
-                for {
-                  acc <- f
-                  t <- T.resolveType(argType)
-                  _ <- N.define(argName, t)
-                } yield acc.enqueue(t)
+                f.flatMap(acc =>
+                  T.resolveType(argType).flatMap {
+                    case Some(t) => N.define(argName, t).as(acc.enqueue(t))
+                    case None => Free.pure(acc)
+                  }
+                )
             }
             .map(_.toList),
           // Resolve return type
           // TODO handle return VALUE!
-          ret.fold(Free.pure[Alg, Option[Type]](None))(T.resolveType(_).map(Some(_)))
+          ret.fold(Free.pure[Alg, Option[Type]](None))(T.resolveType(_))
         )
         .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2)),
       (funcArrow: ArrowType, bodyGen: Gen) =>

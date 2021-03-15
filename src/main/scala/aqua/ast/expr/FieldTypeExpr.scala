@@ -6,15 +6,17 @@ import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{DataTypeToken, Name}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
+import cats.free.Free
 import cats.parse.Parser
+import cats.syntax.functor._
 
 case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F]) extends Expr[F] {
 
   def program[Alg[_]](implicit T: TypesAlgebra[F, Alg]): Prog[Alg, Gen] =
-    for {
-      t <- T.resolveType(`type`)
-      _ <- T.defineField(name, t)
-    } yield Gen.noop
+    T.resolveType(`type`).flatMap {
+      case Some(t) => T.defineField(name, t).as(Gen.noop)
+      case None => Free.pure(Gen.noop)
+    }
 
 }
 

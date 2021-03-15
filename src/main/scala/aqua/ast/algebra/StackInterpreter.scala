@@ -14,6 +14,12 @@ abstract class StackInterpreter[F[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(
   protected def getState: S[St] = State.get.map(lens.get)
   protected def setState(st: St): S[Unit] = State.modify(s => lens.replace(st)(s))
 
+  protected def report(t: Token[F], hint: String): S[Unit] =
+    State.modify(error(_, t, hint))
+
+  protected def modify(f: St => St): S[Unit] =
+    State.modify(lens.modify(f))
+
   protected def mapStackHead[A](ifStackEmpty: S[A])(f: Fr => (Fr, A)): S[A] =
     getState.map(stackLens.get).flatMap {
       case h :: tail =>
@@ -37,12 +43,6 @@ abstract class StackInterpreter[F[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(
       case Nil =>
         ifStackEmpty
     }
-
-  protected def report(t: Token[F], hint: String): S[Unit] =
-    State.modify(error(_, t, hint))
-
-  protected def modify(f: St => St): S[Unit] =
-    State.modify(lens.modify(f))
 
   protected def endScope: S[Unit] =
     modify(stackLens.modify(_.tail))

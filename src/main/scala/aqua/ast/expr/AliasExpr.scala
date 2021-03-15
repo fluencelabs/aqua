@@ -6,15 +6,17 @@ import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{CustomTypeToken, TypeToken}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
+import cats.free.Free
 import cats.parse.Parser
+import cats.syntax.functor._
 
 case class AliasExpr[F[_]](name: CustomTypeToken[F], target: TypeToken[F]) extends Expr[F] {
 
   def program[Alg[_]](implicit T: TypesAlgebra[F, Alg]): Prog[Alg, Gen] =
-    for {
-      t <- T.resolveType(target)
-      _ <- T.defineAlias(name, t)
-    } yield Gen.noop
+    T.resolveType(target).flatMap {
+      case Some(t) => T.defineAlias(name, t).as(Gen.noop)
+      case None => Free.pure(Gen.noop)
+    }
 
 }
 

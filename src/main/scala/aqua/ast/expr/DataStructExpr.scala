@@ -7,6 +7,7 @@ import aqua.parser.lexer.CustomTypeToken
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import cats.Comonad
+import cats.free.Free
 import cats.parse.Parser
 import cats.syntax.functor._
 
@@ -17,10 +18,11 @@ case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F] {
     T: TypesAlgebra[F, Alg]
   ): Prog[Alg, Gen] =
     Prog after T
-      .purgeFields()
-      .map(_.map(kv => kv._1.value -> kv._2).toNem)
-      .flatMap(T.defineDataType(name, _))
-      .as(Gen("Data struct created"))
+      .purgeFields(name)
+      .flatMap {
+        case Some(fields) => T.defineDataType(name, fields).as(Gen("Data struct created"))
+        case None => Free.pure(Gen.noop)
+      }
 
 }
 
