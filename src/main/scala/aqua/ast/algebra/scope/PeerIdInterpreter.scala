@@ -22,4 +22,4 @@ class PeerIdInterpreter[F[_], X](implicit lens: Lens[X, PeerIdState[F]], error: 
     }).asInstanceOf[State[X, A]]
 }
 
-case class PeerIdState[F[_]](stack: List[Value[F]])
+case class PeerIdState[F[_]](stack: List[Value[F]] = Nil)

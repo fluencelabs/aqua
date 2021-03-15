@@ -44,11 +44,6 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
               _.focus(_.names).index(dn.name.value).replace(dn.`type`) -> true
             )
         }
-        mapStackHeadE(report(dn.name, "Cannot define in the root scope"))(fr =>
-          fr.names.get(dn.name.value) match {
-            case Some(_) => Left((dn.name, "Variable with this name was already defined", false))
-          }
-        )
       case bs: BeginScope[F] =>
         beginScope(NamesFrame(bs.token))
       case _: EndScope[F] =>
@@ -56,6 +51,6 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
     }).asInstanceOf[State[X, A]]
 }
 
-case class NamesState[F[_]](stack: List[NamesFrame[F]])
+case class NamesState[F[_]](stack: List[NamesFrame[F]] = Nil)
 
 case class NamesFrame[F[_]](token: Token[F], names: Map[String, Type] = Map.empty)

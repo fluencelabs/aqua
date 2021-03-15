@@ -35,9 +35,9 @@ object Aqua {
           .map(pe => NonEmptyList.one[AquaError](SyntaxError(pe.failedAtOffset, pe.expected)))
       )
       .andThen { blocks =>
-        step1.walkValidate(blocks).leftMap(_.map(_.toStringF).map(sv => WalkerError(sv._1, sv._2)))
+        step1.walkValidate(blocks).leftMap(_.map(_.toStringF).map(sv => CompilerError(sv._1, sv._2)))
       }
       .andThen { blocks =>
-        step2.walkValidate(blocks).leftMap(_.map(_.toStringF).map(sv => WalkerError(sv._1, sv._2)))
+        step2.walkValidate(blocks).leftMap(_.map(_.toStringF).map(sv => CompilerError(sv._1, sv._2)))
       }
 }

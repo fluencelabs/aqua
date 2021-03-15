@@ -97,8 +97,8 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
 }
 
 case class TypesState[F[_]](
-  fields: Map[String, (Name[F], Type)],
-  strict: Map[String, Type]
+  fields: Map[String, (Name[F], Type)] = Map.empty[String, (Name[F], Type)],
+  strict: Map[String, Type] = Map.empty[String, Type]
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
 

@@ -22,8 +22,7 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
     T: TypesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     P: PeerIdAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg],
-    F: Comonad[F]
+    A: AbilitiesAlgebra[F, Alg]
   ): Prog[Alg, Gen] =
     Prog.around(
       A.beginScope(name) >> Applicative[Free[Alg, *]]

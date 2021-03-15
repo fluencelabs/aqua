@@ -24,14 +24,19 @@ object Main extends IOApp.Simple {
             println(Console.RED + s"Aqua script errored, total ${errs.length} problems found" + Console.RESET)
         }
 
-      val experimental = Source.fromResource("experimental.aqua").mkString
+      val script = Source.fromResource("typecheck.aqua").mkString
       //tryParse(experimental)
 
       val ast = Ast
-        .fromString[Span.F](experimental)
-        .leftMap(_.map(_.showForConsole(experimental)))
+        .fromString[Span.F](script)
+        .andThen(
+          Compiler
+            .compile[Span.F](_)
+            .leftMap(_.map(ts => CompilerError(ts._1.unit._1, ts._2)))
+        )
+        .leftMap(_.map(_.showForConsole(script)).map(println))
 
-      ast.map(Compiler.transpile(_)).map(println(_))
+      ast.map(println(_))
 
     }
 
