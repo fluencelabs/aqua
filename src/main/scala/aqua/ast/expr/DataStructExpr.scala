@@ -17,12 +17,12 @@ case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F] {
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg]
   ): Prog[Alg, Gen] =
-    Prog after T
-      .purgeFields(name)
-      .flatMap {
-        case Some(fields) => T.defineDataType(name, fields) as Gen(s"Data struct ${name.value} created")
-        case None => Free.pure(Gen(s"Data struct ${name.value} can't be created"))
+    Prog.after((_: Gen) =>
+      T.purgeFields(name).flatMap {
+        case Some(fields) => T.defineDataType(name, fields) as Gen.noop // TODO it's not air gen, but ts gen
+        case None => Gen.error.lift
       }
+    )
 
 }
 

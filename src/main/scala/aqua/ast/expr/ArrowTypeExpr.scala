@@ -15,8 +15,8 @@ case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F]) extends
 
   def program[Alg[_]](implicit T: TypesAlgebra[F, Alg], A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Gen] =
     T.resolveArrowDef(`type`).flatMap {
-      case Some(t) => A.defineArrow(name, t) as Gen(s"Arrow $name defined")
-      case None => Free.pure(Gen(s"Arrow $name can't be defined"))
+      case Some(t) => A.defineArrow(name, t) as Gen.noop
+      case None => Gen.error.lift
     }
 
 }

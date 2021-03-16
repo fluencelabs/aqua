@@ -7,7 +7,6 @@ import cats.data.State
 import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
-import monocle.macros.syntax.all._
 import cats.syntax.functor._
 import cats.syntax.flatMap._
 
@@ -27,7 +26,8 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
       case rn: ReadName[F] =>
         readName(rn.name.value).flatTap {
           case Some(_) => State.pure(())
-          case None => report(rn.name, "Undefined name")
+          case None =>
+            getState.flatMap(st => report(rn.name, "Undefined name, available: " + st.allNames.mkString(", ")))
         }
       case ra: ReadArrow[F] =>
         readName(ra.name.value).flatMap {
@@ -36,15 +36,22 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
           case Some(t) =>
             report(ra.name, s"Arrow type expected, got: $t").as(Option.empty[ArrowType])
           case None =>
-            report(ra.name, "Undefined name").as(Option.empty[ArrowType])
+            getState.flatMap(st =>
+              report(ra.name, "Undefined name, available: " + st.allNames.mkString(", ")).as(Option.empty[ArrowType])
+            )
+
         }
       case dn: DefineName[F] =>
         readName(dn.name.value).flatMap {
           case Some(_) => report(dn.name, "This name was already defined in the scope").as(false)
           case None =>
             mapStackHead(
-              if (dn.isRoot) modify(_.focus(_.rootNames).index(dn.name.value).replace(dn.`type`)).as(true)
-              else report(dn.name, "Cannot define a variable in the root scope").as(false)
+              if (dn.isRoot)
+                modify(st => st.copy(rootNames = st.rootNames.updated(dn.name.value, dn.`type`)))
+                  .as(true)
+              else
+                report(dn.name, "Cannot define a variable in the root scope")
+                  .as(false)
             )(fr => fr.addName(dn.name.value, dn.`type`) -> true)
         }
       case bs: BeginScope[F] =>
@@ -54,7 +61,9 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
     }).asInstanceOf[State[X, A]]
 }
 
-case class NamesState[F[_]](stack: List[NamesFrame[F]] = Nil, rootNames: Map[String, Type] = Map.empty)
+case class NamesState[F[_]](stack: List[NamesFrame[F]] = Nil, rootNames: Map[String, Type] = Map.empty) {
+  def allNames: LazyList[String] = LazyList.from(stack).flatMap(_.names.keys).appendedAll(rootNames.keys)
+}
 
 case class NamesFrame[F[_]](token: Token[F], names: Map[String, Type] = Map.empty) {
   def addName(n: String, t: Type): NamesFrame[F] = copy[F](names = names.updated(n, t))

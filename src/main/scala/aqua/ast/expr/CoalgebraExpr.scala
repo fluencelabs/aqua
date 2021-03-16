@@ -1,6 +1,6 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Gen, Prog}
+import aqua.ast.{Expr, Gen, Prog, ServiceCallGen}
 import aqua.ast.algebra.ValuesAlgebra
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.names.NamesAlgebra
@@ -38,10 +38,15 @@ case class CoalgebraExpr[F[_]](
                 Free.pure[Alg, Boolean](false)
               )(resType => N.define(exportVar, resType))
             // TODO: if it's a service, get service id, etc
-            ) as Gen(s"(call peer (${ability.map(_.value).getOrElse("func")} ${funcName.value}) [${args
-            .mkString(", ")}]${variable.map(" " + _).getOrElse("")})")
+            ) as (ServiceCallGen(
+            peerId = "peerId",
+            serviceId = "#" + ability.map(_.value).getOrElse("???"),
+            fnName = funcName.value,
+            args = args.map(_.toString),
+            result = variable.map(_.value)
+          ): Gen)
         case None =>
-          Free.pure(Gen("Coalgebra expression errored"))
+          Gen.error.lift[Alg]
       }
 
 }

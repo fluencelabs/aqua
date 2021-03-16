@@ -1,6 +1,6 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Gen, Prog}
+import aqua.ast.{Expr, FuncBodyGen, FuncGen, Gen, Prog}
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.names.NamesAlgebra
 import aqua.ast.algebra.scope.PeerIdAlgebra
@@ -52,9 +52,9 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
         .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2)),
       (funcArrow: ArrowType, bodyGen: Gen) =>
         // Erase arguments and internal variables
-        A.endScope() >> N.endScope() >> N.define(name, funcArrow, isRoot = true) as Gen(
-          s"func ${name.value}:",
-          bodyGen :: Nil
+        A.endScope() >> N.endScope() >> N.define(name, funcArrow, isRoot = true) as FuncGen(
+          name.value,
+          FuncBodyGen(bodyGen)
         )
     )
 

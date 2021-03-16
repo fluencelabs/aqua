@@ -25,8 +25,8 @@ object Prog {
   implicit def leaf[Alg[_], A](prog: Free[Alg, A]): Prog[Alg, A] =
     RunAfter(prog)
 
-  def after[Alg[_], A](prog: Free[Alg, A]): Prog[Alg, A] =
-    RunAfter(prog)
+  def after[Alg[_], A](prog: A => Free[Alg, A]): Prog[Alg, A] =
+    RunAround(Free.pure(()), (_: Unit, a: A) => prog(a))
 
   def around[Alg[_], R, A](before: Free[Alg, R], after: (R, A) => Free[Alg, A]): Prog[Alg, A] =
     RunAround(before, after)

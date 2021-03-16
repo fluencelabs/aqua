@@ -25,7 +25,6 @@ import cats.data.Validated.{Invalid, Valid}
 import cats.data.{EitherK, NonEmptyList, State, ValidatedNel}
 import cats.Eval
 import cats.free.Free
-import cats.syntax.flatMap._
 import cats.syntax.apply._
 import cats.syntax.semigroup._
 import monocle.Lens
