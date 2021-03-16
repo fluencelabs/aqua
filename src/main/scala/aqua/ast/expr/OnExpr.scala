@@ -21,7 +21,7 @@ case class OnExpr[F[_]](peerId: Value[F]) extends Expr[F] {
   ): Prog[Alg, Gen] =
     Prog.around(
       V.ensureIsString(peerId) >> P.onPeerId(peerId) >> A.beginScope(peerId),
-      (_: Unit, ops: Gen) => A.endScope() >> P.erasePeerId() as Gen("OnScope finished for" + ops)
+      (_: Unit, ops: Gen) => A.endScope() >> P.erasePeerId() as ops
     )
 
 }

@@ -53,7 +53,8 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
       (funcArrow: ArrowType, bodyGen: Gen) =>
         // Erase arguments and internal variables
         A.endScope() >> N.endScope() >> N.define(name, funcArrow, isRoot = true) as Gen(
-          "Function defined, wrap + " + bodyGen
+          s"func ${name.value}:",
+          bodyGen :: Nil
         )
     )
 

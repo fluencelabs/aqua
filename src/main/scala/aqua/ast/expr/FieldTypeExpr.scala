@@ -14,8 +14,8 @@ case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F]) extends 
 
   def program[Alg[_]](implicit T: TypesAlgebra[F, Alg]): Prog[Alg, Gen] =
     T.resolveType(`type`).flatMap {
-      case Some(t) => T.defineField(name, t).as(Gen.noop)
-      case None => Free.pure(Gen.noop)
+      case Some(t) => T.defineField(name, t) as Gen(s"Field ${name.value} defined")
+      case None => Free.pure(Gen(s"Field ${name.value} can't be defined"))
     }
 
 }

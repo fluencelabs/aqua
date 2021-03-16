@@ -20,8 +20,8 @@ case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F] {
     Prog after T
       .purgeFields(name)
       .flatMap {
-        case Some(fields) => T.defineDataType(name, fields).as(Gen("Data struct created"))
-        case None => Free.pure(Gen.noop)
+        case Some(fields) => T.defineDataType(name, fields) as Gen(s"Data struct ${name.value} created")
+        case None => Free.pure(Gen(s"Data struct ${name.value} can't be created"))
       }
 
 }

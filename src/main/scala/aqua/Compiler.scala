@@ -23,9 +23,11 @@ import aqua.parser.lexer.Token
 import cats.arrow.FunctionK
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{EitherK, NonEmptyList, State, ValidatedNel}
-import cats.{Comonad, Eval}
+import cats.Eval
 import cats.free.Free
 import cats.syntax.flatMap._
+import cats.syntax.apply._
+import cats.syntax.semigroup._
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -52,7 +54,7 @@ object Compiler {
       case expr: OnExpr[F] => expr.program[G]
       case expr: ParExpr[F] => expr.program[G]
       case expr: ServiceExpr[F] => expr.program[G]
-      case _: RootExpr[F] => Free.pure[G, Gen](Gen("Root expr"))
+      case expr: RootExpr[F] => expr.program[G]
     }
 
   def folder[F[_], G[_]](implicit
@@ -64,8 +66,9 @@ object Compiler {
     case (expr, inners) =>
       Eval later exprToProg[F, G](expr)
         .apply(
-          // TODO: instead of >>, do >>= and merge Gens
-          inners.foldLeft(Free.pure[G, Gen](Gen("Folder begin")))(_ >> _)
+          inners
+            .reduceLeftOption[Free[G, Gen]]((a, b) => (a, b).mapN(_ |+| _))
+            .getOrElse(Free.pure(Gen.noop))
         )
   }
 

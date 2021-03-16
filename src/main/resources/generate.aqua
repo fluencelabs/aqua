@@ -1,0 +1,8 @@
+service Local("local"):
+    gt: u32, u32 -> bool
+    onIn: string -> ()
+
+func tryGen(in1: u32, in2: string) -> bool:
+    on in2:
+        Local.onIn(in2)
+    Local.gt(in1, 25)

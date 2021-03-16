@@ -14,8 +14,8 @@ case class AliasExpr[F[_]](name: CustomTypeToken[F], target: TypeToken[F]) exten
 
   def program[Alg[_]](implicit T: TypesAlgebra[F, Alg]): Prog[Alg, Gen] =
     T.resolveType(target).flatMap {
-      case Some(t) => T.defineAlias(name, t).as(Gen.noop)
-      case None => Free.pure(Gen.noop)
+      case Some(t) => T.defineAlias(name, t) as Gen(s"Alias ${name.value} defined")
+      case None => Free.pure(Gen(s"Alias ${name.value} can't be defined"))
     }
 
 }

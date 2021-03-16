@@ -29,11 +29,11 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
         (A.purgeArrows(name) <* A.endScope()).flatMap {
           case Some(nel) =>
             A.defineService(name, nel.map(kv => kv._1.value -> kv._2).toNem) >>
-              id.fold(Free.pure[Alg, Gen](Gen.noop))(idV =>
-                V.ensureIsString(idV) >> A.setServiceId(name, idV) as Gen.noop
+              id.fold(Free.pure[Alg, Gen](Gen(s"Service ${name.value} created")))(idV =>
+                V.ensureIsString(idV) >> A.setServiceId(name, idV) as Gen(s"Service ${name.value} created with ID")
               )
           case None =>
-            Gen.noop.lift
+            Gen(s"Cannot create service ${name.value}").lift
 
         }
     )

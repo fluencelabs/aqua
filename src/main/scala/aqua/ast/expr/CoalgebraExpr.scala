@@ -38,7 +38,8 @@ case class CoalgebraExpr[F[_]](
                 Free.pure[Alg, Boolean](false)
               )(resType => N.define(exportVar, resType))
             // TODO: if it's a service, get service id, etc
-            ) as Gen("Coalgebra expression")
+            ) as Gen(s"(call peer (${ability.map(_.value).getOrElse("func")} ${funcName.value}) [${args
+            .mkString(", ")}]${variable.map(" " + _).getOrElse("")})")
         case None =>
           Free.pure(Gen("Coalgebra expression errored"))
       }

@@ -31,4 +31,6 @@ object Prog {
   def around[Alg[_], R, A](before: Free[Alg, R], after: (R, A) => Free[Alg, A]): Prog[Alg, A] =
     RunAround(before, after)
 
+  def noop[Alg[_], A]: Prog[Alg, A] =
+    RunAround(Free.pure(()), (_: Unit, a: A) => Free.pure(a))
 }

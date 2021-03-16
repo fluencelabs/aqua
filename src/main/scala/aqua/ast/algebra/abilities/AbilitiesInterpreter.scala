@@ -8,6 +8,7 @@ import cats.~>
 import cats.syntax.functor._
 import monocle.Lens
 import monocle.macros.GenLens
+import monocle.macros.syntax.all._
 
 class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], error: ReportError[F, X])
     extends StackInterpreter[F, X, AbilitiesState[F], AbilityStackFrame[F]](GenLens[AbilitiesState[F]](_.stack))
@@ -35,6 +36,8 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
       case ga: GetArrow[F] =>
         getService(ga.name.value).flatMap {
           case Some(arrows) =>
+            // TODO: must be resolved
+
             arrows(ga.arrow.value)
               .fold(
                 report(
@@ -50,7 +53,7 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
         getService(s.name.value).flatMap {
           case Some(_) =>
             mapStackHead(
-              report(s.name, "Trying to set service ID while out of the scope").as(false)
+              modify(_.focus(_.rootServiceIds).index(s.name.value).replace(s.id)).as(true)
             )(h => h.copy(serviceIds = h.serviceIds.updated(s.name.value, s.id)) -> true)
 
           case None =>
@@ -79,7 +82,8 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
 
 case class AbilitiesState[F[_]](
   stack: List[AbilityStackFrame[F]] = Nil,
-  services: Map[String, NonEmptyMap[String, ArrowType]] = Map.empty
+  services: Map[String, NonEmptyMap[String, ArrowType]] = Map.empty,
+  rootServiceIds: Map[String, Value[F]] = Map.empty[String, Value[F]]
 ) {
 
   def purgeArrows: Option[(NonEmptyList[(Name[F], ArrowType)], AbilitiesState[F])] =
