@@ -20,6 +20,7 @@ object Gen {
         case (x: ScriptGen, y: ScriptGen) => y.copy(funcs = y.funcs.enqueueAll(x.funcs))
         case (x: FuncGen, y: FuncGen) => ScriptGen(Queue(x, y))
         case (x: FuncGen, y: ScriptGen) => y.copy(funcs = y.funcs.enqueue(x))
+        case (x: ScriptGen, y: FuncGen) => x.copy(funcs = x.funcs.enqueue(y))
         case (x: AirGen, y: FuncBodyGen) => y.copy(op = SeqGen(x, y.op))
         case (x: AirGen, y: ParGen) => ParGen(Some(x), y.right)
         case (x: AirGen, y: AirGen) => SeqGen(x, y)
@@ -38,7 +39,7 @@ object Gen {
   def error: Gen = NoopGen
 }
 
-sealed trait AirGen extends Gen {
+trait AirGen extends Gen {
   self =>
   def generate(ctx: AirContext): (AirContext, Air)
 

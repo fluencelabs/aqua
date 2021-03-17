@@ -18,3 +18,10 @@ func generateComplex(value: string) -> bool:
     Local.onIn("Should be on root")
     Local.onBoolean(b)
     <- b
+
+func genArrows(arr: string -> bool):
+    arr("hi there")
+
+--func wrapGenArrows():
+--    on "some peer":
+--        genArrows(generateComplex)

@@ -4,6 +4,7 @@ import DataView.InitPeerId
 
 case class AirContext(
   data: Map[String, DataView] = Map.empty,
+  arrows: Map[String, ArrowGen.Callable] = Map.empty,
   peerId: DataView = InitPeerId,
   vars: Set[String] = Set.empty,
   instrCounter: Int = 0

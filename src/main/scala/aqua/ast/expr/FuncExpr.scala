@@ -6,7 +6,8 @@ import aqua.ast.{Expr, Indent, Prog}
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.names.NamesAlgebra
 import aqua.ast.algebra.scope.PeerIdAlgebra
-import aqua.ast.algebra.types.{ArrowType, Type, TypesAlgebra}
+import aqua.ast.algebra.types.{ArrowType, DataType, Type, TypesAlgebra}
+import aqua.ast.gen.DataView.InitPeerId
 import aqua.ast.gen.{AirContext, AirGen, ArrowGen, DataView, FuncBodyGen, FuncGen, Gen}
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Arg, DataTypeToken, Name, Value, VarLambda}
@@ -43,7 +44,7 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
                 f.flatMap(acc =>
                   T.resolveType(argType).flatMap {
                     case Some(t: ArrowType) =>
-                      N.defineArrow(argName, ArrowGen.arg(t), isRoot = false).as(acc.enqueue(t))
+                      N.defineArrow(argName, ArrowGen.arg(argName.value, t), isRoot = false).as(acc.enqueue(t))
                     case Some(t) =>
                       N.define(argName, t).as(acc.enqueue(t))
                     case None =>
@@ -76,11 +77,26 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
               ArrowGen.func(funcArrow, argNames, retValue.map(ArrowGen.valueToData), FuncBodyGen(bg)),
               isRoot = true
             ) as FuncGen(
-              name.value, // TODO: handle return value
+              name.value,
               Eval.later {
-                // TODO distinguish arrows, create services!
                 bg.generate(
-                    AirContext(data = argNames.map(a => a -> DataView.Variable(a)).toMap, vars = argNames.toSet)
+                    AirContext(
+                      data = argNames
+                        .zip(funcArrow.args)
+                        .collect { //TODO preload these variables
+                          case (an, _: DataType) =>
+                            an -> DataView.Variable(an)
+                        }
+                        .toMap,
+                      arrows = argNames
+                        .zip(funcArrow.args)
+                        .collect {
+                          case (an, _: ArrowType) =>
+                            an -> new ArrowGen.SrvCallableOnPeer(InitPeerId, DataView.StringScalar("callback"), an)
+                        }
+                        .toMap,
+                      vars = argNames.toSet
+                    )
                   )
                   ._2
               },
