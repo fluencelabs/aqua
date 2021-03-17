@@ -1,4 +1,4 @@
-package aqua.ast
+package aqua.ast.gen
 
 import cats.Semigroup
 import cats.free.Free

@@ -6,6 +6,7 @@ import aqua.ast.algebra.names.{NameOp, NamesAlgebra, NamesInterpreter, NamesStat
 import aqua.ast.algebra.scope.{PeerIdAlgebra, PeerIdInterpreter, PeerIdOp, PeerIdState}
 import aqua.ast.algebra.types.{TypeOp, TypesAlgebra, TypesInterpreter, TypesState}
 import aqua.ast.expr._
+import aqua.ast.gen.Gen
 import aqua.parser.lexer.Token
 import cats.Eval
 import cats.arrow.FunctionK

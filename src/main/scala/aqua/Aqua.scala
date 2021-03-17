@@ -1,6 +1,7 @@
 package aqua
 
-import aqua.ast.{Ast, Compiler, Gen}
+import aqua.ast.gen.Gen
+import aqua.ast.{Ast, Compiler}
 import cats.data.ValidatedNel
 import aqua.parser.lift.Span
 

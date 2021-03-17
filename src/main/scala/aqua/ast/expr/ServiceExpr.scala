@@ -1,10 +1,11 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Gen, Prog}
+import aqua.ast.{Expr, Prog}
 import aqua.ast.algebra.ValuesAlgebra
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.names.NamesAlgebra
 import aqua.ast.algebra.types.TypesAlgebra
+import aqua.ast.gen.{ArrowGen, Gen}
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Ability, Value}
 import aqua.parser.lift.LiftParser
@@ -28,7 +29,7 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
       (_: Unit, body: Gen) =>
         (A.purgeArrows(name) <* A.endScope()).flatMap {
           case Some(nel) =>
-            A.defineService(name, nel.map(kv => kv._1.value -> kv._2).toNem) >>
+            A.defineService(name, nel.map(kv => kv._1.value -> ArrowGen.service(name.value, kv._2)).toNem) >>
               id.fold(Free.pure[Alg, Gen](Gen.noop))(idV =>
                 V.ensureIsString(idV) >> A.setServiceId(name, idV) as Gen.noop
               )

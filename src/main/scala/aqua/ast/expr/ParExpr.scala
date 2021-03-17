@@ -1,6 +1,7 @@
 package aqua.ast.expr
 
-import aqua.ast.{AirGen, Expr, Gen, ParGen, Prog}
+import aqua.ast.gen.{AirGen, Gen, ParGen}
+import aqua.ast.{Expr, Prog}
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._

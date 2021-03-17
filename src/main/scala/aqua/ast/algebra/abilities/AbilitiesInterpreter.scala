@@ -2,6 +2,7 @@ package aqua.ast.algebra.abilities
 
 import aqua.ast.algebra.{ReportError, StackInterpreter}
 import aqua.ast.algebra.types.ArrowType
+import aqua.ast.gen.ArrowGen
 import aqua.parser.lexer.{Name, Token, Value}
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.~>
@@ -14,7 +15,7 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
     extends StackInterpreter[F, X, AbilitiesState[F], AbilityStackFrame[F]](GenLens[AbilitiesState[F]](_.stack))
     with (AbilityOp[F, *] ~> State[X, *]) {
 
-  private def getService(name: String): S[Option[NonEmptyMap[String, ArrowType]]] =
+  private def getService(name: String): S[Option[NonEmptyMap[String, ArrowGen]]] =
     getState.map(_.services.get(name))
 
   override def apply[A](fa: AbilityOp[F, A]): State[X, A] =
@@ -36,17 +37,15 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
       case ga: GetArrow[F] =>
         getService(ga.name.value).flatMap {
           case Some(arrows) =>
-            // TODO: must be resolved
-
             arrows(ga.arrow.value)
               .fold(
                 report(
                   ga.arrow,
                   s"Service found, but arrow is undefined, available: ${arrows.value.keys.toNonEmptyList.toList.mkString(", ")}"
-                ).as(Option.empty[ArrowType])
+                ).as(Option.empty[ArrowGen])
               )(a => State.pure(Some(a)))
           case None =>
-            report(ga.name, "Ability with this name is undefined").as(Option.empty[ArrowType])
+            report(ga.name, "Ability with this name is undefined").as(Option.empty[ArrowGen])
         }
 
       case s: SetServiceId[F] =>
@@ -82,7 +81,7 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
 
 case class AbilitiesState[F[_]](
   stack: List[AbilityStackFrame[F]] = Nil,
-  services: Map[String, NonEmptyMap[String, ArrowType]] = Map.empty,
+  services: Map[String, NonEmptyMap[String, ArrowGen]] = Map.empty,
   rootServiceIds: Map[String, Value[F]] = Map.empty[String, Value[F]]
 ) {
 

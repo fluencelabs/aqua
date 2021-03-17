@@ -2,11 +2,12 @@ package aqua.ast.expr
 
 import aqua.ast.Ast.Tree
 import aqua.ast.algebra.ValuesAlgebra
-import aqua.ast.{AirGen, Expr, FuncBodyGen, FuncGen, Gen, Indent, Prog}
+import aqua.ast.{Expr, Indent, Prog}
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.names.NamesAlgebra
 import aqua.ast.algebra.scope.PeerIdAlgebra
 import aqua.ast.algebra.types.{ArrowType, Type, TypesAlgebra}
+import aqua.ast.gen.{AirGen, ArrowGen, FuncBodyGen, FuncGen, Gen}
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Arg, DataTypeToken, Name, Value}
 import aqua.parser.lift.LiftParser
@@ -41,6 +42,8 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
                 // Resolve arg type, remember it
                 f.flatMap(acc =>
                   T.resolveType(argType).flatMap {
+                    case Some(t: ArrowType) =>
+                      N.defineArrow(argName, ArrowGen.arg(t), isRoot = false).as(acc.enqueue(t))
                     case Some(t) =>
                       N.define(argName, t).as(acc.enqueue(t))
                     case None =>
@@ -67,7 +70,7 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
         // Erase arguments and internal variables
           >> A.endScope() >> N.endScope() >> (bodyGen match {
           case bg: AirGen if ret.isDefined == retValue.isDefined =>
-            N.define(name, funcArrow, isRoot = true) as FuncGen(
+            N.defineArrow(name, ArrowGen.func(funcArrow), isRoot = true) as FuncGen(
               name.value, // TODO: handle return value
               FuncBodyGen(bg)
             )
@@ -94,7 +97,7 @@ object FuncExpr extends Expr.AndIndented(OnExpr, AbilityIdExpr, ReturnExpr, Coal
               Parser.pure(
                 Cofree(funcExpr.copy(retValue = Some(re.value)), tree.tail)
               )
-            case l =>
+            case _ =>
               Parser.failWith(
                 "Return type is defined for function, but nothing returned. Use `<- value` as the last expression inside function body."
               )
