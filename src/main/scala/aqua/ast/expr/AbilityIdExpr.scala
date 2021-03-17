@@ -1,6 +1,6 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Gen, NoopGen, Prog}
+import aqua.ast.{Expr, Gen, Prog}
 import aqua.ast.algebra.ValuesAlgebra
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.parser.lexer.Token._

@@ -15,7 +15,6 @@ lazy val root = project
       "org.typelevel"              %% "cats-effect"   % "3.0.0-RC2",
       "org.typelevel"              %% "cats-parse"    % "0.3.1",
       "org.typelevel"              %% "cats-free"     % catsV,
-      "com.chuusai"                %% "shapeless"     % "2.3.3",
       "com.github.julien-truffaut" %% "monocle-core"  % monocleV,
       "com.github.julien-truffaut" %% "monocle-macro" % monocleV
     ),

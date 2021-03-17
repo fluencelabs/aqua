@@ -54,7 +54,7 @@ case class CoalgebraExpr[F[_]](
 object CoalgebraExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[CoalgebraExpr[F]] =
-    ((Name.p[F] <* `<-`).backtrack.?.with1 ~
+    ((Name.p[F] <* ` <- `).backtrack.?.with1 ~
       ((Ability.ab[F] <* `.`).?.with1 ~
         Name.p[F] ~
         comma0(Value.`value`[F]).between(`(`, `)`))).map {
