@@ -29,7 +29,10 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
       (_: Unit, body: Gen) =>
         (A.purgeArrows(name) <* A.endScope()).flatMap {
           case Some(nel) =>
-            A.defineService(name, nel.map(kv => kv._1.value -> ArrowGen.service(name.value, kv._2)).toNem) >>
+            A.defineService(
+              name,
+              nel.map(kv => kv._1.value -> ArrowGen.service(name.value, kv._1.value, kv._2)).toNem
+            ) >>
               id.fold(Free.pure[Alg, Gen](Gen.noop))(idV =>
                 V.ensureIsString(idV) >> A.setServiceId(name, idV) as Gen.noop
               )

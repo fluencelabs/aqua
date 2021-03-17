@@ -3,7 +3,7 @@ package aqua.ast.algebra.abilities
 import aqua.ast.algebra.{ReportError, StackInterpreter}
 import aqua.ast.algebra.types.ArrowType
 import aqua.ast.gen.ArrowGen
-import aqua.parser.lexer.{Name, Token, Value}
+import aqua.parser.lexer.{Ability, Name, Token, Value}
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.~>
 import cats.syntax.functor._
@@ -52,12 +52,30 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
         getService(s.name.value).flatMap {
           case Some(_) =>
             mapStackHead(
-              modify(_.focus(_.rootServiceIds).index(s.name.value).replace(s.id)).as(true)
+              modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(s.name.value, s.id))).as(true)
             )(h => h.copy(serviceIds = h.serviceIds.updated(s.name.value, s.id)) -> true)
 
           case None =>
             report(s.name, "Service with this name is not registered, can't set its ID").as(false)
         }
+
+      case s: GetServiceId[F] =>
+        getState.flatMap(st =>
+          st.stack.flatMap(_.serviceIds.get(s.name)).headOption orElse st.rootServiceIds.get(s.name) match {
+            case None =>
+              st.stack.headOption
+                .map(_.token)
+                .fold(
+                  // TODO this should be an impossible error
+                  State.pure[X, Option[Value[F]]](Option.empty[Value[F]])
+                )(t =>
+                  report(t, s"Service ID unresolved, use `${s.name} id` expression to set it")
+                    .as(Option.empty[Value[F]])
+                )
+
+            case v => State.pure(v)
+          }
+        )
 
       case da: DefineArrow[F] =>
         mapStackHeadE(

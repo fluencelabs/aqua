@@ -7,15 +7,15 @@ import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.names.NamesAlgebra
 import aqua.ast.algebra.scope.PeerIdAlgebra
 import aqua.ast.algebra.types.{ArrowType, Type, TypesAlgebra}
-import aqua.ast.gen.{AirGen, ArrowGen, FuncBodyGen, FuncGen, Gen}
+import aqua.ast.gen.{AirContext, AirGen, ArrowGen, DataView, FuncBodyGen, FuncGen, Gen}
 import aqua.parser.lexer.Token._
-import aqua.parser.lexer.{Arg, DataTypeToken, Name, Value}
+import aqua.parser.lexer.{Arg, DataTypeToken, Name, Value, VarLambda}
 import aqua.parser.lift.LiftParser
 import cats.free.{Cofree, Free}
 import cats.parse.Parser
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.{Applicative, Comonad}
+import cats.{Applicative, Comonad, Eval}
 
 import scala.collection.immutable.Queue
 
@@ -70,8 +70,20 @@ case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTyp
         // Erase arguments and internal variables
           >> A.endScope() >> N.endScope() >> (bodyGen match {
           case bg: AirGen if ret.isDefined == retValue.isDefined =>
-            N.defineArrow(name, ArrowGen.func(funcArrow), isRoot = true) as FuncGen(
+            val argNames = args.map(_.name.value)
+            N.defineArrow(
+              name,
+              ArrowGen.func(funcArrow, argNames, retValue.map(ArrowGen.valueToData), FuncBodyGen(bg)),
+              isRoot = true
+            ) as FuncGen(
               name.value, // TODO: handle return value
+              Eval.later {
+                // TODO distinguish arrows, create services!
+                bg.generate(
+                    AirContext(data = argNames.map(a => a -> DataView.Variable(a)).toMap, vars = argNames.toSet)
+                  )
+                  ._2
+              },
               FuncBodyGen(bg)
             )
           case _ => Gen.noop.lift

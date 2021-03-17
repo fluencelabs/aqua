@@ -1,6 +1,7 @@
 service Local("local"):
     gt: u32, u32 -> bool
     onIn: string -> ()
+    onBoolean: bool -> ()
 
 func tryGen(in1: u32, in2: string) -> bool:
     on in2:
@@ -12,5 +13,8 @@ func generateComplex(value: string) -> bool:
     on "smth":
         Local "other"
         b <- tryGen(23, value)
+        t <- tryGen(24, "should be omitted")
+        Local.onIn("Should be on other")
     Local.onIn("Should be on root")
-    <- true
+    Local.onBoolean(b)
+    <- b

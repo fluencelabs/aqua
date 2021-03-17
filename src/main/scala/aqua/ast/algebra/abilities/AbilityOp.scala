@@ -17,6 +17,8 @@ case class GetArrow[F[_]](name: Ability[F], arrow: Name[F]) extends AbilityOp[F,
 
 case class SetServiceId[F[_]](name: Ability[F], id: Value[F]) extends AbilityOp[F, Boolean]
 
+case class GetServiceId[F[_]](name: String) extends AbilityOp[F, Option[Value[F]]]
+
 case class BeginScope[F[_]](token: Token[F]) extends AbilityOp[F, Unit]
 
 case class EndScope[F[_]]() extends AbilityOp[F, Boolean]
