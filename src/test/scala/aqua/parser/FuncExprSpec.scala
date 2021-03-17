@@ -1,7 +1,8 @@
 package aqua.parser
 
+import aqua.ast.Indent
 import aqua.ast.algebra.types.LiteralType
-import aqua.ast.expr.{CoalgebraExpr, FuncExpr}
+import aqua.ast.expr.{AbilityIdExpr, CoalgebraExpr, FuncExpr}
 import aqua.parser.lexer.{Ability, IntoField, Literal, Name, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
@@ -15,7 +16,7 @@ import scala.language.implicitConversions
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  implicit def strToAb(str: String): Ability[Id] = Ability[Id](str)
+  implicit def toAb(str: String): Ability[Id] = Ability[Id](str)
 
   implicit def toName(str: String): Name[Id] = Name[Id](str)
 
@@ -26,10 +27,13 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
   private def parseExpr(str: String) =
     CoalgebraExpr.p[Id].parseAll(str).value
 
+  private def parseAbId(str: String) =
+    AbilityIdExpr.p[Id].parseAll(str).value
+
   "func calls" should "parse func()" in {
     parseExpr("func()") should be(CoalgebraExpr[Id](None, None, toName("func"), List()))
-    parseExpr("func(arg)") should be(
-      CoalgebraExpr[Id](None, None, Name[Id]("func"), List(VarLambda[Id](toName("arg"))))
+    parseExpr("Ab.func(arg)") should be(
+      CoalgebraExpr[Id](None, Some(toAb("Ab")), Name[Id]("func"), List(VarLambda[Id](toName("arg"))))
     )
 
     parseExpr("func(arg.doSomething)") should be(
@@ -42,52 +46,37 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
       )
     )
 
-    parseExpr("func(arg.doSomething.and.doSomethingElse, arg2.someFunc)") should be(
-      CoalgebraExpr[Id](None, None, Name[Id]("func"),
+    parseExpr("Ab.func(arg.doSomething.and.doSomethingElse, arg2.someFunc)") should be(
+      CoalgebraExpr[Id](None, Some(toAb("Ab")), Name[Id]("func"),
         List(toVar("arg", List("doSomething", "and", "doSomethingElse")),
           toVar("arg2", List("someFunc"))
         )
       )
     )
+
+    parseExpr("x <- func(arg.doSomething)") should be(
+      CoalgebraExpr[Id](Some(toName("x")), None, Name[Id]("func"),
+        List(
+          toVar("arg", List("doSomething"))
+        )
+      )
+    )
   }
-  /*
-    "ability calls" should "parse Ab.func()" in {
-      parseExpr("Ab.func()") should be(AbilityFuncCall[Id, HNil]("Ab", "func", "Ab.func", Nil, HNil))
-      parseExpr("Ab.func(arg)") should be(
-        AbilityFuncCall[Id, HNil]("Ab", "func", "Ab.func", VarLambda[Id]("arg", Nil) :: Nil, HNil)
-      )
-      parseExpr("Ab.func(arg.doSomeThing)") should be(
-        AbilityFuncCall[Id, HNil](
-          "Ab",
-          "func",
-          "Ab.func",
-          VarLambda[Id]("arg", IntoField[Id]("doSomeThing") :: Nil) :: Nil,
-          HNil
-        )
-      )
-      parseExpr("Ab.func(arg.doSomeThing, arg2)") should be(
-        AbilityFuncCall[Id, HNil](
-          "Ab",
-          "func",
-          "Ab.func",
-          VarLambda[Id]("arg", IntoField[Id]("doSomeThing") :: Nil) :: VarLambda[Id]("arg2", Nil) :: Nil,
-          HNil
-        )
-      )
-    }
 
-    "extracting" should "parse x <- func()" in {
-      parseExpr("someThing <- func()") should be(
-        Extract[Id, HNil]("someThing", FuncCall[Id, HNil]("func", Nil, HNil), HNil)
-      )
-    }
-
-    "extracting" should "parse x <- Ab.func()" in {
-      val fCall = AbilityFuncCall[Id, HNil]("Ab", "func", "Ab.func", Nil, HNil)
-      parseExpr("x <- Ab.func()") should be(Extract[Id, HNil]("x", fCall, HNil))
-    }
-
+  "abilities" should "be parsed" in {
     // TODO test with literals
+    parseAbId("Ab a") should be(
+      AbilityIdExpr[Id](toAb("Ab"), toVar("a", List()),
+      )
+    )
+
+    parseAbId("Ab a.id") should be(
+      AbilityIdExpr[Id](toAb("Ab"), toVar("a", List("id")),
+      )
+    )
+  }
+
+    /*
     "ability resolve" should "parse id getter" in {
       parseExpr("Ab x") should be(AbilityId[Id, HNil]("Ab", VarLambda[Id]("x", Nil), HNil))
       parseExpr("Ab x.id") should be(
