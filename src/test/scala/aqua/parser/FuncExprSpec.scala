@@ -10,7 +10,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
-import shapeless.HNil
 
 import scala.language.implicitConversions
 

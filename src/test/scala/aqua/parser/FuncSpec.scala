@@ -32,22 +32,22 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
   def funcExpr(str: String): FuncExpr[Id] = FuncExpr.p[Id].parseAll(str).value
 
   "func header" should "parse" in {
-    funcExpr("func some() -> bool:\n") should be(FuncExpr(toName("some"), List(), Some(bool: BasicTypeToken[Id])))
-    funcExpr("func some():\n") should be(FuncExpr(toName("some"), List(), None))
+    funcExpr("func some() -> bool:\n") should be(FuncExpr(toName("some"), List(), Some(bool: BasicTypeToken[Id]), None))
+    funcExpr("func some():\n") should be(FuncExpr(toName("some"), List(), None, None))
 
     val arrowToken = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), Some(BasicTypeToken[Id](bool)))
     funcExpr("func some(peer: PeerId, other: u32 -> bool):\n") should be(
-      FuncExpr(toName("some"), List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken)), None)
+      FuncExpr(toName("some"), List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken)), None, None)
     )
 
     val arrowToken2 = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32), BasicTypeToken[Id](u64)), Some(BasicTypeToken[Id](bool)))
     funcExpr("func some(peer: PeerId, other: u32, u64 -> bool):\n") should be(
-      FuncExpr(toName("some"), List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken2)), None)
+      FuncExpr(toName("some"), List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken2)), None, None)
     )
 
     val arrowToken3 = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), None)
     funcExpr("func getTime(peer: PeerId, ret: u32 -> ()) -> string:\n") should be(
-      FuncExpr(toName("getTime"), List(toCustomArg("peer", "PeerId"), toArg("ret", arrowToken3)), Some(BasicTypeToken[Id](string)))
+      FuncExpr(toName("getTime"), List(toCustomArg("peer", "PeerId"), toArg("ret", arrowToken3)), Some(BasicTypeToken[Id](string)), None)
     )
 
   }
