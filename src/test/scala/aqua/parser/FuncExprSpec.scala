@@ -115,55 +115,6 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
 
     FuncExpr.ast[Id](Indent()).parseAll(script).isRight should be(true)
   }
-  /*
-
-    "par" should "parse" in {
-      parseExpr("par func()") should be(
-        Par[Id, HNil]((), FuncCall[Id, HNil]("func", Nil, HNil), HNil)
-      )
-
-      val script = """par on peer.id:
-                     |
-                     | x <- Ab.func()
-                     | call(smth)""".stripMargin
-
-      parseExpr(script)
-    }
-
-    "body" should "parse several instructions in different orders" in {
-      parseBody(""" x <- func()""") should be(
-        NonEmptyList.of(Extract[Id, HNil]("x", FuncCall[Id, HNil]("func", Nil, HNil), HNil))
-      )
-      parseBody(""" x <- func()
-                  | Peer 3""".stripMargin) should be(
-        NonEmptyList.of(
-          Extract[Id, HNil]("x", FuncCall[Id, HNil]("func", Nil, HNil), HNil),
-          AbilityId[Id, HNil]("Peer", Literal[Id]("3", LiteralType.number), HNil)
-        )
-      )
-      parseBody(""" x <- func()
-                  | on x:
-                  |   Peer 3""".stripMargin) should be(
-        NonEmptyList.of(
-          Extract[Id, HNil]("x", FuncCall[Id, HNil]("func", Nil, HNil), HNil),
-          On[Id, HNil](
-            VarLambda[Id]("x"),
-            NonEmptyList.of(AbilityId[Id, HNil]("Peer", Literal[Id]("3", LiteralType.number), HNil)),
-            HNil
-          )
-        )
-      )
-      parseBody(""" on x:
-                  |   Peer 3""".stripMargin) should be(
-        NonEmptyList.of(
-          On[Id, HNil](
-            VarLambda[Id]("x"),
-            NonEmptyList.of(AbilityId[Id, HNil]("Peer", Literal[Id]("3", LiteralType.number), HNil)),
-            HNil
-          )
-        )
-      )
-    }*/
 
   /*
   TODO: xor1
@@ -188,12 +139,5 @@ else:
   TODO: fold, fold par, streams, ...
 
   for x <- $xs:
-   */
-
-  /*
-
-  On(VarLambda(peer,Some(id)),NonEmptyList(Extract(x,AbilityFuncCall(Ab,FuncCall(func,List()))), AbilityId(Peer,Literal("some id" call(true),List(BasicType(string)))))) was not equal to
-  On(VarLambda(peer,Some(id)),NonEmptyList(Extract(x,AbilityFuncCall(Ab,FuncCall(func,List()))), AbilityId(Peer,Literal("some id",List(BasicType(string)))), FuncCall(call,List(Literal(true,List(BasicType(bool)))))))
-
    */
 }
