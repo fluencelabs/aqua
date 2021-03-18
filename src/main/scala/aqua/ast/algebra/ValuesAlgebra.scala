@@ -9,18 +9,32 @@ import cats.syntax.apply._
 class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlgebra[F, Alg]) {
 
   def ensureIsString(v: Value[F]): Free[Alg, Boolean] =
+    ensureTypeMatches(v, LiteralType.string)
+
+  def ensureTypeMatches(v: Value[F], expected: Type): Free[Alg, Boolean] =
+    resolveType(v).flatMap {
+      case Some(vt) =>
+        T.ensureTypeMatches(
+          v match {
+            case l: Literal[F] => l
+            case VarLambda(n, lambda) => lambda.lastOption.getOrElse(n)
+          },
+          expected,
+          vt
+        )
+      case None => Free.pure(false)
+    }
+
+  def resolveType(v: Value[F]): Free[Alg, Option[Type]] =
     v match {
       case l: Literal[F] =>
-        T.ensureTypeMatches(l, LiteralType.string, l.ts)
-      case v @ VarLambda(n, lambda) =>
+        Free pure [Alg, Option[Type]] Some(l.ts)
+      case VarLambda(n, lambda) =>
         N.read(n).flatMap {
           case Some(t) =>
-            T.resolveLambda(t, lambda).flatMap {
-              case Some(vt) => T.ensureTypeMatches(v.lambda.lastOption.getOrElse(n), LiteralType.string, vt)
-              case None => Free.pure(false)
-            }
+            T.resolveLambda(t, lambda)
           case None =>
-            Free.pure(false)
+            Free.pure(None)
         }
     }
 

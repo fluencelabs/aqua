@@ -1,34 +1,22 @@
-package aqua
+package aqua.ast
 
 import aqua.ast.algebra.ReportError
-import aqua.ast.expr.{
-  AbilityIdExpr,
-  AliasExpr,
-  ArrowTypeExpr,
-  CoalgebraExpr,
-  DataStructExpr,
-  FieldTypeExpr,
-  FuncExpr,
-  OnExpr,
-  ParExpr,
-  RootExpr,
-  ServiceExpr
-}
 import aqua.ast.algebra.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState, AbilityOp}
 import aqua.ast.algebra.names.{NameOp, NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.ast.algebra.scope.{PeerIdAlgebra, PeerIdInterpreter, PeerIdOp, PeerIdState}
 import aqua.ast.algebra.types.{TypeOp, TypesAlgebra, TypesInterpreter, TypesState}
-import aqua.ast.{Ast, Expr, Gen, Prog}
+import aqua.ast.expr._
+import aqua.ast.gen.Gen
 import aqua.parser.lexer.Token
+import cats.Eval
 import cats.arrow.FunctionK
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{EitherK, NonEmptyList, State, ValidatedNel}
-import cats.Eval
 import cats.free.Free
-import cats.syntax.apply._
-import cats.syntax.semigroup._
 import monocle.Lens
 import monocle.macros.GenLens
+import cats.syntax.apply._
+import cats.syntax.semigroup._
 
 import scala.collection.immutable.Queue
 
@@ -52,6 +40,7 @@ object Compiler {
       case expr: FuncExpr[F] => expr.program[G]
       case expr: OnExpr[F] => expr.program[G]
       case expr: ParExpr[F] => expr.program[G]
+      case expr: ReturnExpr[F] => expr.program[G]
       case expr: ServiceExpr[F] => expr.program[G]
       case expr: RootExpr[F] => expr.program[G]
     }

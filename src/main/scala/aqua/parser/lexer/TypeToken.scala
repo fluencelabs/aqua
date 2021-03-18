@@ -62,7 +62,7 @@ case class ArrowTypeToken[F[_]: Comonad](
 object ArrowTypeToken {
 
   def `arrowdef`[F[_]: LiftParser: Comonad]: P[ArrowTypeToken[F]] =
-    (comma0(DataTypeToken.`datatypedef`).with1 ~ `->`.lift ~
+    (comma0(DataTypeToken.`datatypedef`).with1 ~ ` -> `.lift ~
       (DataTypeToken.`datatypedef`
         .map(Some(_)) | P.string("()").as(None))).map {
       case ((args, point), res) ⇒ ArrowTypeToken(point, args, res)

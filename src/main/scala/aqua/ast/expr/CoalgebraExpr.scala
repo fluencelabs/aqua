@@ -1,10 +1,11 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Gen, Prog, ServiceCallGen}
+import aqua.ast.{Expr, Prog}
 import aqua.ast.algebra.ValuesAlgebra
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.names.NamesAlgebra
 import aqua.ast.algebra.types.TypesAlgebra
+import aqua.ast.gen.{Gen, ServiceCallGen}
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Ability, Name, Value}
 import aqua.parser.lift.LiftParser
@@ -31,20 +32,13 @@ case class CoalgebraExpr[F[_]](
       .fold(N.readArrow(funcName))(A.getArrow(_, funcName))
       .flatMap {
         case Some(at) =>
-          V.checkArguments(at, args) >> variable
+          V.checkArguments(at.`type`, args) >> variable
             .fold(Free.pure[Alg, Boolean](true))(exportVar =>
-              at.res.fold(
+              at.`type`.res.fold(
                 // TODO: error! we're trying to export variable, but function has no export type
                 Free.pure[Alg, Boolean](false)
               )(resType => N.define(exportVar, resType))
-            // TODO: if it's a service, get service id, etc
-            ) as (ServiceCallGen(
-            peerId = "peerId",
-            serviceId = "#" + ability.map(_.value).getOrElse("???"),
-            fnName = funcName.value,
-            args = args.map(_.toString),
-            result = variable.map(_.value)
-          ): Gen)
+            ) >> at.gen[F, Alg](args, variable).widen[Gen]
         case None =>
           Gen.error.lift[Alg]
       }
@@ -54,7 +48,7 @@ case class CoalgebraExpr[F[_]](
 object CoalgebraExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[CoalgebraExpr[F]] =
-    ((Name.p[F] <* `<-`).backtrack.?.with1 ~
+    ((Name.p[F] <* ` <- `).backtrack.?.with1 ~
       ((Ability.ab[F] <* `.`).?.with1 ~
         Name.p[F] ~
         comma0(Value.`value`[F]).between(`(`, `)`))).map {

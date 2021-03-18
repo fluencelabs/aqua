@@ -2,7 +2,8 @@ package aqua.ast.algebra.abilities
 
 import aqua.ast.algebra.{ReportError, StackInterpreter}
 import aqua.ast.algebra.types.ArrowType
-import aqua.parser.lexer.{Name, Token, Value}
+import aqua.ast.gen.ArrowGen
+import aqua.parser.lexer.{Ability, Name, Token, Value}
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.~>
 import cats.syntax.functor._
@@ -14,7 +15,7 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
     extends StackInterpreter[F, X, AbilitiesState[F], AbilityStackFrame[F]](GenLens[AbilitiesState[F]](_.stack))
     with (AbilityOp[F, *] ~> State[X, *]) {
 
-  private def getService(name: String): S[Option[NonEmptyMap[String, ArrowType]]] =
+  private def getService(name: String): S[Option[NonEmptyMap[String, ArrowGen]]] =
     getState.map(_.services.get(name))
 
   override def apply[A](fa: AbilityOp[F, A]): State[X, A] =
@@ -36,29 +37,45 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
       case ga: GetArrow[F] =>
         getService(ga.name.value).flatMap {
           case Some(arrows) =>
-            // TODO: must be resolved
-
             arrows(ga.arrow.value)
               .fold(
                 report(
                   ga.arrow,
                   s"Service found, but arrow is undefined, available: ${arrows.value.keys.toNonEmptyList.toList.mkString(", ")}"
-                ).as(Option.empty[ArrowType])
+                ).as(Option.empty[ArrowGen])
               )(a => State.pure(Some(a)))
           case None =>
-            report(ga.name, "Ability with this name is undefined").as(Option.empty[ArrowType])
+            report(ga.name, "Ability with this name is undefined").as(Option.empty[ArrowGen])
         }
 
       case s: SetServiceId[F] =>
         getService(s.name.value).flatMap {
           case Some(_) =>
             mapStackHead(
-              modify(_.focus(_.rootServiceIds).index(s.name.value).replace(s.id)).as(true)
+              modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(s.name.value, s.id))).as(true)
             )(h => h.copy(serviceIds = h.serviceIds.updated(s.name.value, s.id)) -> true)
 
           case None =>
             report(s.name, "Service with this name is not registered, can't set its ID").as(false)
         }
+
+      case s: GetServiceId[F] =>
+        getState.flatMap(st =>
+          st.stack.flatMap(_.serviceIds.get(s.name)).headOption orElse st.rootServiceIds.get(s.name) match {
+            case None =>
+              st.stack.headOption
+                .map(_.token)
+                .fold(
+                  // TODO this should be an impossible error
+                  State.pure[X, Option[Value[F]]](Option.empty[Value[F]])
+                )(t =>
+                  report(t, s"Service ID unresolved, use `${s.name} id` expression to set it")
+                    .as(Option.empty[Value[F]])
+                )
+
+            case v => State.pure(v)
+          }
+        )
 
       case da: DefineArrow[F] =>
         mapStackHeadE(
@@ -82,7 +99,7 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
 
 case class AbilitiesState[F[_]](
   stack: List[AbilityStackFrame[F]] = Nil,
-  services: Map[String, NonEmptyMap[String, ArrowType]] = Map.empty,
+  services: Map[String, NonEmptyMap[String, ArrowGen]] = Map.empty,
   rootServiceIds: Map[String, Value[F]] = Map.empty[String, Value[F]]
 ) {
 

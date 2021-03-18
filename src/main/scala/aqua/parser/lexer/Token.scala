@@ -41,8 +41,9 @@ object Token {
   val `*` : P[Unit] = P.char('*')
   val `(` : P[Unit] = ` `.?.with1 *> P.char('(') <* ` `.?
   val `)` : P[Unit] = ` `.?.with1 *> P.char(')') <* ` `.?
-  val `->` : P[Unit] = ` `.?.with1 *> P.string("->") <* ` `.?
-  val `<-` : P[Unit] = (` `.?.with1 *> P.string("<-") <* ` `.?).backtrack
+  val ` -> ` : P[Unit] = ` `.?.with1 *> P.string("->") <* ` `.?
+  val ` <- ` : P[Unit] = (` `.?.with1 *> P.string("<-") <* ` `.?).backtrack
+  val `<-` : P[Unit] = P.string("<-").backtrack
 
   def comma[T](p: P[T]): P[NonEmptyList[T]] =
     P.repSep(p, `,` <* ` \n+`.rep0)

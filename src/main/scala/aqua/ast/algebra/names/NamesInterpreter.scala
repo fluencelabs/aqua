@@ -1,7 +1,8 @@
 package aqua.ast.algebra.names
 
-import aqua.ast.algebra.types.{ArrowType, Type}
+import aqua.ast.algebra.types.Type
 import aqua.ast.algebra.{ReportError, StackInterpreter}
+import aqua.ast.gen.ArrowGen
 import aqua.parser.lexer.Token
 import cats.data.State
 import cats.~>
@@ -18,7 +19,13 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
     getState.map { st =>
       st.stack.collectFirst {
         case frame if frame.names.contains(name) => frame.names(name)
-      } orElse st.rootNames.get(name)
+        case frame if frame.arrows.contains(name) => frame.arrows(name).`type`
+      } orElse st.rootArrows.get(name).map(_.`type`)
+    }
+
+  def readArrow(name: String): S[Option[ArrowGen]] =
+    getState.map { st =>
+      st.stack.flatMap(_.arrows.get(name)).headOption orElse st.rootArrows.get(name)
     }
 
   override def apply[A](fa: NameOp[F, A]): State[X, A] =
@@ -30,29 +37,36 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
             getState.flatMap(st => report(rn.name, "Undefined name, available: " + st.allNames.mkString(", ")))
         }
       case ra: ReadArrow[F] =>
-        readName(ra.name.value).flatMap {
-          case Some(t: ArrowType) =>
-            State.pure(Option(t))
-          case Some(t) =>
-            report(ra.name, s"Arrow type expected, got: $t").as(Option.empty[ArrowType])
+        readArrow(ra.name.value).flatMap {
+          case Some(g) => State.pure(Option(g))
           case None =>
             getState.flatMap(st =>
-              report(ra.name, "Undefined name, available: " + st.allNames.mkString(", ")).as(Option.empty[ArrowType])
+              report(ra.name, "Undefined arrow, available: " + st.allNames.mkString(", "))
+                .as(Option.empty[ArrowGen])
             )
-
         }
+
       case dn: DefineName[F] =>
         readName(dn.name.value).flatMap {
           case Some(_) => report(dn.name, "This name was already defined in the scope").as(false)
           case None =>
             mapStackHead(
-              if (dn.isRoot)
-                modify(st => st.copy(rootNames = st.rootNames.updated(dn.name.value, dn.`type`)))
+              report(dn.name, "Cannot define a variable in the root scope")
+                .as(false)
+            )(fr => fr.addName(dn.name.value, dn.`type`) -> true)
+        }
+      case da: DefineArrow[F] =>
+        readName(da.name.value).flatMap {
+          case Some(_) => report(da.name, "This name was already defined in the scope").as(false)
+          case None =>
+            mapStackHead(
+              if (da.isRoot)
+                modify(st => st.copy(rootArrows = st.rootArrows.updated(da.name.value, da.gen)))
                   .as(true)
               else
-                report(dn.name, "Cannot define a variable in the root scope")
+                report(da.name, "Cannot define a variable in the root scope")
                   .as(false)
-            )(fr => fr.addName(dn.name.value, dn.`type`) -> true)
+            )(fr => fr.addArrow(da.name.value, da.gen) -> true)
         }
       case bs: BeginScope[F] =>
         beginScope(NamesFrame(bs.token))
@@ -61,10 +75,20 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
     }).asInstanceOf[State[X, A]]
 }
 
-case class NamesState[F[_]](stack: List[NamesFrame[F]] = Nil, rootNames: Map[String, Type] = Map.empty) {
-  def allNames: LazyList[String] = LazyList.from(stack).flatMap(_.names.keys).appendedAll(rootNames.keys)
+case class NamesState[F[_]](stack: List[NamesFrame[F]] = Nil, rootArrows: Map[String, ArrowGen] = Map.empty) {
+
+  def allNames: LazyList[String] =
+    LazyList.from(stack).flatMap(s => s.names.keys ++ s.arrows.keys).appendedAll(rootArrows.keys)
+
+  def allArrows: LazyList[String] =
+    LazyList.from(stack).flatMap(_.arrows.keys).appendedAll(rootArrows.keys)
 }
 
-case class NamesFrame[F[_]](token: Token[F], names: Map[String, Type] = Map.empty) {
+case class NamesFrame[F[_]](
+  token: Token[F],
+  names: Map[String, Type] = Map.empty,
+  arrows: Map[String, ArrowGen] = Map.empty
+) {
   def addName(n: String, t: Type): NamesFrame[F] = copy[F](names = names.updated(n, t))
+  def addArrow(n: String, g: ArrowGen): NamesFrame[F] = copy[F](arrows = arrows.updated(n, g))
 }
