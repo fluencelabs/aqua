@@ -2,7 +2,7 @@ package aqua.parser
 
 import aqua.ast.Indent
 import aqua.ast.algebra.types.LiteralType
-import aqua.ast.expr.{AbilityIdExpr, CoalgebraExpr, FuncExpr}
+import aqua.ast.expr.{AbilityIdExpr, CoalgebraExpr, FuncExpr, OnExpr}
 import aqua.parser.lexer.{Ability, IntoField, Literal, Name, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
@@ -29,6 +29,9 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   private def parseAbId(str: String) =
     AbilityIdExpr.p[Id].parseAll(str).value
+
+  private def parseOn(str: String) =
+    OnExpr.p[Id].parseAll(str).value
 
   "func calls" should "parse func()" in {
     parseExpr("func()") should be(CoalgebraExpr[Id](None, None, toName("func"), List()))
@@ -64,9 +67,18 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "abilities" should "be parsed" in {
-    // TODO test with literals
     parseAbId("Ab a") should be(
       AbilityIdExpr[Id](toAb("Ab"), toVar("a", List()),
+      )
+    )
+
+    parseAbId("Ab \"a\"") should be(
+      AbilityIdExpr[Id](toAb("Ab"), Literal[Id]("\"a\"", LiteralType.string),
+      )
+    )
+
+    parseAbId("Ab 1") should be(
+      AbilityIdExpr[Id](toAb("Ab"), Literal[Id]("1", LiteralType.number),
       )
     )
 
@@ -76,34 +88,34 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
     )
   }
 
-    /*
-    "ability resolve" should "parse id getter" in {
-      parseExpr("Ab x") should be(AbilityId[Id, HNil]("Ab", VarLambda[Id]("x", Nil), HNil))
-      parseExpr("Ab x.id") should be(
-        AbilityId[Id, HNil]("Ab", VarLambda[Id]("x", IntoField[Id]("id") :: Nil), HNil)
+  "on" should "be parsed" in {
+    parseOn("on peer:\n") should be(
+      OnExpr[Id](toVar("peer", List()),
       )
-    }
+    )
 
-    "on" should "parse startOn" in {
-      FuncExpr.startOn.parseAll("on peer: \n").right.value should be(VarLambda[Id]("peer", Nil))
-      FuncExpr.startOn.parseAll("on peer.id:\n").right.value should be(VarLambda[Id]("peer", IntoField[Id]("id") :: Nil))
-    }
-
-    "on" should "parse on x: y" in {
-      val fCall = AbilityFuncCall[Id, HNil]("Ab", "func", "Ab.func", Nil, HNil)
-      val extr = Extract[Id, HNil]("x", fCall, HNil)
-      val resl = AbilityId[Id, HNil]("Peer", Literal[Id]("\"some id\"", LiteralType.string), HNil)
-      val call = FuncCall[Id, HNil]("call", Literal[Id]("true", LiteralType.bool) :: Nil, HNil)
-
-      val script = """on peer.id:
-                     | x <- Ab.func()
-                     | Peer "some id"
-                     | call(true)""".stripMargin
-
-      parseExpr(script) should be(
-        On[Id, HNil](VarLambda[Id]("peer", IntoField[Id]("id") :: Nil), NonEmptyList.of(extr, resl, call), HNil)
+    parseOn("on peer.id:\n") should be(
+      OnExpr[Id](toVar("peer", List("id")),
       )
-    }
+    )
+
+    parseOn("on peer.id:\n") should be(
+      OnExpr[Id](toVar("peer", List("id")),
+      )
+    )
+  }
+
+  "on" should "parse on x: y" in {
+    val script =
+      """func a():
+        | on peer.id:
+        |  x <- Ab.func()
+        |  Peer "some id"
+        |  call(true)""".stripMargin
+
+    FuncExpr.ast[Id](Indent()).parseAll(script).isRight should be(true)
+  }
+  /*
 
     "par" should "parse" in {
       parseExpr("par func()") should be(
