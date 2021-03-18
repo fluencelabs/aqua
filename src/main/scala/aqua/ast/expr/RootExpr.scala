@@ -1,6 +1,7 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Gen, Prog, ScriptGen}
+import aqua.ast.gen.{Gen, ScriptGen}
+import aqua.ast.{Expr, Prog}
 import cats.syntax.semigroup._
 
 import scala.collection.immutable.Queue

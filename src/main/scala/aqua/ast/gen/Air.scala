@@ -1,4 +1,4 @@
-package aqua.ir
+package aqua.ast.gen
 
 import cats.Show
 import cats.syntax.show._
@@ -41,7 +41,9 @@ object DataView {
 
   case class Stream(name: String) extends DataView
 
-  case class VarLens(name: String, lens: String) extends DataView
+  case class VarLens(name: String, lens: String) extends DataView {
+    def append(sublens: String): VarLens = copy(lens = lens + sublens)
+  }
 
   implicit val show: Show[DataView] = Show.show {
     case StringScalar(v) ⇒ v
@@ -49,7 +51,7 @@ object DataView {
     case LastError ⇒ "%last_error%"
     case Variable(name) ⇒ name
     case Stream(name) ⇒ name
-    case VarLens(name, lens) ⇒ s"$name.$lens"
+    case VarLens(name, lens) ⇒ name + ".$" + lens
   }
 }
 
@@ -63,7 +65,7 @@ object Triplet {
 
   implicit val show: Show[Triplet] = Show.show {
     case FromData(ps, fn) ⇒ s"${ps.show} " + "\"" + fn + "\""
-    case Full(p, s, fn) ⇒ s"${p.show} (${s.show} " + "\"" + fn + "\""
+    case Full(p, s, fn) ⇒ s"${p.show} (${s.show} " + "\"" + fn + "\")"
   }
 }
 

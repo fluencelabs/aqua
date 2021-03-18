@@ -1,9 +1,10 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Gen, Prog}
+import aqua.ast.{Expr, Prog}
 import aqua.ast.algebra.ValuesAlgebra
 import aqua.ast.algebra.abilities.AbilitiesAlgebra
 import aqua.ast.algebra.scope.PeerIdAlgebra
+import aqua.ast.gen.{AirGen, ArrowGen, Gen}
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.Value
 import aqua.parser.lift.LiftParser
@@ -21,7 +22,12 @@ case class OnExpr[F[_]](peerId: Value[F]) extends Expr[F] {
   ): Prog[Alg, Gen] =
     Prog.around(
       V.ensureIsString(peerId) >> P.onPeerId(peerId) >> A.beginScope(peerId),
-      (_: Unit, ops: Gen) => A.endScope() >> P.erasePeerId() as ops
+      (_: Unit, ops: Gen) =>
+        A.endScope() >> P.erasePeerId() as (ops match {
+          case air: AirGen =>
+            air.wrap(c => (c.copy(peerId = ArrowGen.valueToData(peerId)), _.copy(peerId = c.peerId)))
+          case _ => ops
+        })
     )
 
 }

@@ -1,7 +1,8 @@
 package aqua.ast.expr
 
-import aqua.ast.{Expr, Gen, Prog}
+import aqua.ast.{Expr, Prog}
 import aqua.ast.algebra.types.TypesAlgebra
+import aqua.ast.gen.Gen
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{CustomTypeToken, TypeToken}
 import aqua.parser.lift.LiftParser

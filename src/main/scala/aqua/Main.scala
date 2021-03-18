@@ -10,7 +10,7 @@ object Main extends IOApp.Simple {
   override def run: IO[Unit] =
     IO {
       def process(str: String) =
-        Aqua.compile(str) match {
+        Aqua.generate(str) match {
           case Validated.Valid(v) ⇒
             println(v)
             println(Console.GREEN + "Aqua script processed successfully" + Console.RESET)
