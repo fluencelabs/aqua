@@ -106,7 +106,7 @@ object Air {
         case Air.Seq(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
         case Air.Xor(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
         case Air.Call(triplet, args, res) ⇒
-          s" ${triplet.show} [${args.map(_.show).mkString(", ")}]${res.fold("")(" " + _)}"
+          s" ${triplet.show} [${args.map(_.show).mkString(" ")}]${res.fold("")(" " + _)}"
       }) + ")\n"
   }
 
