@@ -94,7 +94,7 @@ object Air {
   private def show(depth: Int, air: Air): String = {
     def showNext(a: Air) = show(depth + 1, a)
 
-    val space = "\t" * depth
+    val space = " " * depth
     s"$space(${air.keyword.value}" +
       (air match {
         case Air.Null ⇒ ""

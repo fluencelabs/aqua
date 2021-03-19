@@ -82,7 +82,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
               case (n, dt: DataType) => n -> Left(dt)
               case (n, at: ArrowType) => n -> Right(at)
             },
-          ret = retValue.map(ValuesAlgebra.valueToData),
+          ret = retValue.map(ValuesAlgebra.valueToData).flatMap(vd => funcArrow.res.map(vd -> _)),
           body = bg
         )
 

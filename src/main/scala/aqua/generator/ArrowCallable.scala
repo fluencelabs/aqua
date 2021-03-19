@@ -25,5 +25,6 @@ class SrvCallable(srvId: DataView, fnName: String) extends ArrowCallable {
 class SrvCallableOnPeer(peerId: DataView, srvId: DataView, fnName: String) extends ArrowCallable {
 
   override def toCallGen(args: List[DataView], result: Option[String]): AirGen =
+    // TODO: hop via relay, if needed!
     ServiceCallGen(srvId, fnName, args, result).wrap(ctx => (ctx.copy(peerId = peerId), _.copy(peerId = ctx.peerId)))
 }

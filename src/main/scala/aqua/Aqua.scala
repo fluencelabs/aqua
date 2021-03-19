@@ -16,9 +16,9 @@ object Aqua {
   def validate(input: String): ValidatedNel[AquaError, Model] =
     parse(input).andThen(ast => Semantics.validate(ast).leftMap(_.map(ts => CompilerError(ts._1.unit._1, ts._2))))
 
-  def generate(input: String): ValidatedNel[AquaError, Queue[String]] =
+  def generate(input: String): ValidatedNel[AquaError, String] =
     validate(input).map {
-      case g: ScriptModel => g.generateAir
-      case _ => Queue.empty
+      case g: ScriptModel => g.generateTypescript
+      case _ => "//No input given"
     }
 }
