@@ -11,13 +11,15 @@ lazy val root = project
     version                     := "0.1.0",
     scalaVersion                := dottyVersion,
     mainClass in (Compile, run) := Some("aqua.AquaGen"),
-    mainClass in assembly := Some("aqua.AquaGen"),
+    mainClass in assembly       := Some("aqua.AquaGen"),
     libraryDependencies ++= Seq(
       "org.typelevel"              %% "cats-effect"   % "3.0.0-RC2",
       "org.typelevel"              %% "cats-parse"    % "0.3.1",
       "org.typelevel"              %% "cats-free"     % catsV,
       "com.github.julien-truffaut" %% "monocle-core"  % monocleV,
-      "com.github.julien-truffaut" %% "monocle-macro" % monocleV
+      "com.github.julien-truffaut" %% "monocle-macro" % monocleV,
+      "co.fs2"                     %% "fs2-core"      % "3.0.0-M7",
+      "co.fs2"                     %% "fs2-io"        % "3.0.0-M7"
     ),
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.5" % Test
   )
