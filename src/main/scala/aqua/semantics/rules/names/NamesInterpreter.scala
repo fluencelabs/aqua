@@ -1,9 +1,8 @@
-package aqua.semantics.algebra.names
+package aqua.semantics.rules.names
 
-import aqua.semantics.algebra.types.Type
-import aqua.semantics.algebra.{ReportError, StackInterpreter}
-import aqua.generator.ArrowGen
+import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.parser.lexer.Token
+import aqua.semantics.{ArrowType, Type}
 import cats.data.State
 import cats.~>
 import monocle.Lens
@@ -19,11 +18,11 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
     getState.map { st =>
       st.stack.collectFirst {
         case frame if frame.names.contains(name) => frame.names(name)
-        case frame if frame.arrows.contains(name) => frame.arrows(name).`type`
-      } orElse st.rootArrows.get(name).map(_.`type`)
+        case frame if frame.arrows.contains(name) => frame.arrows(name)
+      } orElse st.rootArrows.get(name)
     }
 
-  def readArrow(name: String): S[Option[ArrowGen]] =
+  def readArrow(name: String): S[Option[ArrowType]] =
     getState.map { st =>
       st.stack.flatMap(_.arrows.get(name)).headOption orElse st.rootArrows.get(name)
     }
@@ -42,7 +41,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
           case None =>
             getState.flatMap(st =>
               report(ra.name, "Undefined arrow, available: " + st.allNames.mkString(", "))
-                .as(Option.empty[ArrowGen])
+                .as(Option.empty[ArrowType])
             )
         }
 
@@ -75,7 +74,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
     }).asInstanceOf[State[X, A]]
 }
 
-case class NamesState[F[_]](stack: List[NamesFrame[F]] = Nil, rootArrows: Map[String, ArrowGen] = Map.empty) {
+case class NamesState[F[_]](stack: List[NamesFrame[F]] = Nil, rootArrows: Map[String, ArrowType] = Map.empty) {
 
   def allNames: LazyList[String] =
     LazyList.from(stack).flatMap(s => s.names.keys ++ s.arrows.keys).appendedAll(rootArrows.keys)
@@ -87,8 +86,8 @@ case class NamesState[F[_]](stack: List[NamesFrame[F]] = Nil, rootArrows: Map[St
 case class NamesFrame[F[_]](
   token: Token[F],
   names: Map[String, Type] = Map.empty,
-  arrows: Map[String, ArrowGen] = Map.empty
+  arrows: Map[String, ArrowType] = Map.empty
 ) {
   def addName(n: String, t: Type): NamesFrame[F] = copy[F](names = names.updated(n, t))
-  def addArrow(n: String, g: ArrowGen): NamesFrame[F] = copy[F](arrows = arrows.updated(n, g))
+  def addArrow(n: String, g: ArrowType): NamesFrame[F] = copy[F](arrows = arrows.updated(n, g))
 }

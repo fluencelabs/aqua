@@ -1,8 +1,10 @@
-package aqua.semantics.algebra
+package aqua.semantics.rules
 
-import aqua.semantics.algebra.names.NamesAlgebra
-import aqua.semantics.algebra.types.{ArrowType, LiteralType, Type, TypesAlgebra}
-import aqua.parser.lexer.{Literal, Token, Value, VarLambda}
+import aqua.generator.DataView
+import aqua.semantics.rules.names.NamesAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
+import aqua.parser.lexer.{IntoArray, IntoField, LambdaOp, Literal, Token, Value, VarLambda}
+import aqua.semantics.{ArrowType, LiteralType, Type}
 import cats.free.Free
 import cats.syntax.apply._
 
@@ -52,21 +54,36 @@ class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlge
       .zip(arr.args)
       .foldLeft(
         Free.pure[Alg, Boolean](true)
-      ) {
-        case (f, (ft, t)) =>
-          (
-            f,
-            ft.flatMap {
-              case None => Free.pure(false)
-              case Some((tkn, valType)) =>
-                T.ensureTypeMatches(tkn, t, valType)
-            }
-          ).mapN(_ && _)
+      ) { case (f, (ft, t)) =>
+        (
+          f,
+          ft.flatMap {
+            case None => Free.pure(false)
+            case Some((tkn, valType)) =>
+              T.ensureTypeMatches(tkn, t, valType)
+          }
+        ).mapN(_ && _)
       }
 
 }
 
 object ValuesAlgebra {
+
+  private def opsToLens[F[_]](ops: List[LambdaOp[F]]): String =
+    ops match {
+      case Nil => ""
+      case (_: IntoArray[F]) :: tail => "[@" + opsToLens(tail) + "]"
+      case (f: IntoField[F]) :: tail => "." + f.value + opsToLens(tail)
+    }
+
+  def valueToData[F[_]](v: Value[F]): DataView =
+    v match {
+      case l: Literal[F] => DataView.StringScalar(l.value)
+      case VarLambda(name, Nil) => DataView.Variable(name.value)
+      case VarLambda(name, ops) => DataView.VarLens(name.value, opsToLens(ops))
+    }
+
+  private def argsToData[F[_]](args: List[Value[F]]): List[DataView] = args.map(valueToData)
 
   implicit def deriveValuesAlgebra[F[_], Alg[_]](implicit
     N: NamesAlgebra[F, Alg],

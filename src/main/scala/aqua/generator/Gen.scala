@@ -106,14 +106,23 @@ case class ServiceCallGen(
 
 case class FuncBodyGen(op: AirGen) extends Gen
 
-case class FuncGen(name: String, air: Eval[Air], body: FuncBodyGen) extends Gen {
-  def generateAir: Air = air.memoize.value
+case class FuncGen(
+  name: String,
+  air: Map[String, ArrowCallable] => Eval[Air],
+  body: FuncBodyGen,
+  callable: FuncCallable
+) extends Gen {
+  def generateAir(acc: Map[String, ArrowCallable]): Air = air(acc).value
 }
 
 case class ScriptGen(funcs: Queue[FuncGen]) extends Gen {
 
   def generateAir: Queue[String] =
-    funcs.map(_.generateAir.show)
+    funcs
+      .foldLeft((Map.empty[String, ArrowCallable], Queue.empty[String])) { case ((funcsAcc, outputAcc), func) =>
+        funcsAcc.updated(func.name, func.callable) -> outputAcc.enqueue(func.generateAir(funcsAcc).show)
+      }
+      ._2
 }
 
 case class ParGen(left: Option[AirGen], right: AirGen) extends AirGen {

@@ -1,9 +1,9 @@
 package aqua.parser.lexer
 
-import aqua.semantics.algebra.types.ScalarType
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
+import aqua.semantics.ScalarType
 import cats.{Comonad, Functor}
 import cats.parse.{Parser => P}
 import cats.syntax.functor._
@@ -36,9 +36,8 @@ object BasicTypeToken {
 
   def `basictypedef`[F[_]: LiftParser: Comonad]: P[BasicTypeToken[F]] =
     P.oneOf(
-        ScalarType.all.map(n ⇒ P.string(n.name).as(n)).toList
-      )
-      .lift
+      ScalarType.all.map(n ⇒ P.string(n.name).as(n)).toList
+    ).lift
       .map(BasicTypeToken(_))
 }
 
@@ -64,8 +63,8 @@ object ArrowTypeToken {
   def `arrowdef`[F[_]: LiftParser: Comonad]: P[ArrowTypeToken[F]] =
     (comma0(DataTypeToken.`datatypedef`).with1 ~ ` -> `.lift ~
       (DataTypeToken.`datatypedef`
-        .map(Some(_)) | P.string("()").as(None))).map {
-      case ((args, point), res) ⇒ ArrowTypeToken(point, args, res)
+        .map(Some(_)) | P.string("()").as(None))).map { case ((args, point), res) ⇒
+      ArrowTypeToken(point, args, res)
     }
 }
 

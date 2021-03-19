@@ -1,9 +1,9 @@
 package aqua.parser.lexer
 
-import aqua.semantics.algebra.types.LiteralType
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
+import aqua.semantics.LiteralType
 import cats.{Comonad, Functor}
 import cats.parse.{Numbers, Parser => P}
 import cats.syntax.functor._
@@ -25,8 +25,8 @@ object Value {
   val notLambdaSymbols = Set(' ', ',', '\n', ')', ':')
 
   def varLambda[F[_]: LiftParser: Comonad]: P[VarLambda[F]] =
-    (Name.p[F] ~ LambdaOp.ops[F].?).map {
-      case (n, l) ⇒ VarLambda(n, l.fold[List[LambdaOp[F]]](Nil)(_.toList))
+    (Name.p[F] ~ LambdaOp.ops[F].?).map { case (n, l) ⇒
+      VarLambda(n, l.fold[List[LambdaOp[F]]](Nil)(_.toList))
     }
 
   def bool[F[_]: LiftParser: Functor: Comonad]: P[Literal[F]] =

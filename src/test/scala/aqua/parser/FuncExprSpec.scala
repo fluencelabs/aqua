@@ -1,6 +1,5 @@
 package aqua.parser
 
-import aqua.semantics.algebra.types.LiteralType
 import aqua.parser.expr.{AbilityIdExpr, CoalgebraExpr, FuncExpr, OnExpr}
 import aqua.parser.lexer.{Ability, IntoField, Literal, Name, VarLambda}
 import cats.data.NonEmptyList
@@ -8,6 +7,7 @@ import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.semantics.LiteralType
 import cats.Id
 
 import scala.language.implicitConversions

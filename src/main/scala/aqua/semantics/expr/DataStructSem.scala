@@ -3,8 +3,8 @@ package aqua.semantics.expr
 import aqua.generator.Gen
 import aqua.parser.expr.DataStructExpr
 import aqua.semantics.Prog
-import aqua.semantics.algebra.names.NamesAlgebra
-import aqua.semantics.algebra.types.TypesAlgebra
+import aqua.semantics.rules.names.NamesAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
 import cats.syntax.functor._
 
 class DataStructSem[F[_]](val expr: DataStructExpr[F]) extends AnyVal {

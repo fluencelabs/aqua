@@ -1,7 +1,6 @@
 package aqua.semantics
 
 import aqua.parser.expr.ArrowTypeExpr
-import aqua.semantics.algebra.types.ScalarType
 import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, CustomTypeToken, DataTypeToken, Name}
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec

@@ -3,8 +3,8 @@ package aqua.semantics.expr
 import aqua.generator.Gen
 import aqua.parser.expr.ArrowTypeExpr
 import aqua.semantics.Prog
-import aqua.semantics.algebra.abilities.AbilitiesAlgebra
-import aqua.semantics.algebra.types.TypesAlgebra
+import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
 import cats.syntax.functor._
 
 class ArrowTypeSem[F[_]](val expr: ArrowTypeExpr[F]) extends AnyVal {

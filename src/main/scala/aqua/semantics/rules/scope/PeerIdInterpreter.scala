@@ -1,6 +1,6 @@
-package aqua.semantics.algebra.scope
+package aqua.semantics.rules.scope
 
-import aqua.semantics.algebra.{ReportError, StackInterpreter}
+import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.parser.lexer.Value
 import cats.data.State
 import cats.~>

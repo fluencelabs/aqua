@@ -1,4 +1,4 @@
-package aqua.semantics.algebra
+package aqua.semantics.rules
 
 import aqua.parser.lexer.Token
 

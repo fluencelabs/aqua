@@ -3,11 +3,11 @@ package aqua.semantics
 import aqua.generator.Gen
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
-import aqua.semantics.algebra.ReportError
-import aqua.semantics.algebra.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState, AbilityOp}
-import aqua.semantics.algebra.names.{NameOp, NamesAlgebra, NamesInterpreter, NamesState}
-import aqua.semantics.algebra.scope.{PeerIdAlgebra, PeerIdInterpreter, PeerIdOp, PeerIdState}
-import aqua.semantics.algebra.types.{TypeOp, TypesAlgebra, TypesInterpreter, TypesState}
+import aqua.semantics.rules.ReportError
+import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState, AbilityOp}
+import aqua.semantics.rules.names.{NameOp, NamesAlgebra, NamesInterpreter, NamesState}
+import aqua.semantics.rules.scope.{PeerIdAlgebra, PeerIdInterpreter, PeerIdOp, PeerIdState}
+import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, TypesState}
 import cats.Eval
 import cats.arrow.FunctionK
 import cats.data.Validated.{Invalid, Valid}
@@ -27,15 +27,14 @@ object Semantics {
     N: NamesAlgebra[F, G],
     P: PeerIdAlgebra[F, G],
     T: TypesAlgebra[F, G]
-  ): (Expr[F], List[Free[G, Gen]]) => Eval[Free[G, Gen]] = {
-    case (expr, inners) =>
-      Eval later ExprSem
-        .getProg[F, G](expr)
-        .apply(
-          inners
-            .reduceLeftOption[Free[G, Gen]]((a, b) => (a, b).mapN(_ |+| _))
-            .getOrElse(Free.pure(Gen.noop))
-        )
+  ): (Expr[F], List[Free[G, Gen]]) => Eval[Free[G, Gen]] = { case (expr, inners) =>
+    Eval later ExprSem
+      .getProg[F, G](expr)
+      .apply(
+        inners
+          .reduceLeftOption[Free[G, Gen]]((a, b) => (a, b).mapN(_ |+| _))
+          .getOrElse(Free.pure(Gen.noop))
+      )
   }
 
   type Alg0[F[_], A] = EitherK[AbilityOp[F, *], NameOp[F, *], A]
@@ -85,9 +84,8 @@ object Semantics {
   def validate[F[_]](ast: Ast[F]): ValidatedNel[(Token[F], String), Gen] =
     (transpile[F] _ andThen interpret[F])(ast)
       .run(CompilerState[F]())
-      .map {
-        case (state, gen) =>
-          NonEmptyList.fromList(state.errors.toList).fold[ValidatedNel[(Token[F], String), Gen]](Valid(gen))(Invalid(_))
+      .map { case (state, gen) =>
+        NonEmptyList.fromList(state.errors.toList).fold[ValidatedNel[(Token[F], String), Gen]](Valid(gen))(Invalid(_))
       }
       .value
 }

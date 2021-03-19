@@ -1,15 +1,15 @@
 package aqua.semantics.expr
 
-import aqua.generator.{AirGen, ArrowGen, FuncBodyGen, Gen}
+import aqua.generator.{AirGen, FuncBodyGen, Gen}
 import aqua.model.FuncModel
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.Arg
-import aqua.semantics.Prog
-import aqua.semantics.algebra.ValuesAlgebra
-import aqua.semantics.algebra.abilities.AbilitiesAlgebra
-import aqua.semantics.algebra.names.NamesAlgebra
-import aqua.semantics.algebra.scope.PeerIdAlgebra
-import aqua.semantics.algebra.types.{ArrowType, DataType, Type, TypesAlgebra}
+import aqua.semantics.{ArrowType, DataType, Prog, Type}
+import aqua.semantics.rules.ValuesAlgebra
+import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.names.NamesAlgebra
+import aqua.semantics.rules.scope.PeerIdAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
 import cats.Applicative
 import cats.free.Free
 import cats.syntax.flatMap._
@@ -39,7 +39,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
             f.flatMap(acc =>
               T.resolveType(argType).flatMap {
                 case Some(t: ArrowType) =>
-                  N.defineArrow(argName, ArrowGen.arg(argName.value, t), isRoot = false).as(acc.enqueue(t))
+                  N.defineArrow(argName, t, isRoot = false).as(acc.enqueue(t))
                 case Some(t) =>
                   N.define(argName, t).as(acc.enqueue(t))
                 case None =>
@@ -83,13 +83,13 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
               case (n, dt: DataType) => n -> Left(dt)
               case (n, at: ArrowType) => n -> Right(at)
             },
-          ret = retValue.map(ArrowGen.valueToData),
+          ret = retValue.map(ValuesAlgebra.valueToData),
           body = FuncBodyGen(bg)
         )
 
         N.defineArrow(
           name,
-          ArrowGen.func(funcArrow, argNames, retValue.map(ArrowGen.valueToData), FuncBodyGen(bg)),
+          funcArrow,
           isRoot = true
         ) as model.gen
       case _ => Gen.noop.lift

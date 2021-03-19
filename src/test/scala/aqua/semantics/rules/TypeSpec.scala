@@ -1,16 +1,16 @@
-package aqua.semantics.algebra
+package aqua.semantics.rules
 
-import aqua.semantics.algebra.types.{ArrayType, ArrowType, DataType, LiteralType, ProductType, Type}
+import aqua.semantics.{ArrayType, ArrowType, DataType, LiteralType, ProductType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.syntax.partialOrder._
-import aqua.semantics.algebra.types.Type.typesPartialOrder
+import aqua.semantics.Type.typesPartialOrder
 import cats.data.NonEmptyMap
 import cats.kernel.PartialOrder
 
 class TypeSpec extends AnyFlatSpec with Matchers {
 
-  import aqua.semantics.algebra.types.ScalarType._
+  import aqua.semantics.ScalarType._
 
   def `[]`(t: DataType): DataType = ArrayType(t)
 

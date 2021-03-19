@@ -1,10 +1,10 @@
 package aqua.parser.lexer
 
-import aqua.semantics.algebra.types.LiteralType
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.semantics.LiteralType
 import cats.Id
 
 class ValueSpec extends AnyFlatSpec with Matchers with EitherValues {

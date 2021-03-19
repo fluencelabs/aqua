@@ -3,8 +3,8 @@ package aqua.semantics.expr
 import aqua.generator.Gen
 import aqua.parser.expr.AbilityIdExpr
 import aqua.semantics.Prog
-import aqua.semantics.algebra.ValuesAlgebra
-import aqua.semantics.algebra.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.ValuesAlgebra
+import aqua.semantics.rules.abilities.AbilitiesAlgebra
 
 import cats.syntax.flatMap._
 import cats.syntax.functor._

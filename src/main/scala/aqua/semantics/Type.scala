@@ -1,4 +1,4 @@
-package aqua.semantics.algebra.types
+package aqua.semantics
 
 import cats.PartialOrder
 import cats.data.NonEmptyMap
@@ -48,7 +48,7 @@ object ScalarType {
     }
 }
 
-case class LiteralType private (oneOf: Set[ScalarType], name: String) extends Type {
+case class LiteralType private (oneOf: Set[ScalarType], name: String) extends DataType {
   override def toString: String = name
 }
 

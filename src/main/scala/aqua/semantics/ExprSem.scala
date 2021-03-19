@@ -3,10 +3,10 @@ package aqua.semantics
 import aqua.generator.Gen
 import aqua.parser.Expr
 import aqua.parser.expr._
-import aqua.semantics.algebra.abilities.AbilitiesAlgebra
-import aqua.semantics.algebra.names.NamesAlgebra
-import aqua.semantics.algebra.scope.PeerIdAlgebra
-import aqua.semantics.algebra.types.TypesAlgebra
+import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.names.NamesAlgebra
+import aqua.semantics.rules.scope.PeerIdAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
 import aqua.semantics.expr._
 
 object ExprSem {

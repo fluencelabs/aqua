@@ -1,7 +1,6 @@
 package aqua.parser
 
-import aqua.semantics.algebra.types.ScalarType.{bool, u64}
-import aqua.semantics.algebra.types.{LiteralType, ScalarType}
+import aqua.semantics.ScalarType.{bool, u64}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.{
   Ability,
@@ -19,13 +18,14 @@ import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.semantics.ScalarType
 import cats.Id
 
 import scala.language.implicitConversions
 
 class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  import aqua.semantics.algebra.types.ScalarType.{string, u32}
+  import aqua.semantics.ScalarType.{string, u32}
 
   implicit def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
 

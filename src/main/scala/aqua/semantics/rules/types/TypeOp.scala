@@ -1,6 +1,7 @@
-package aqua.semantics.algebra.types
+package aqua.semantics.rules.types
 
 import aqua.parser.lexer.{ArrowDef, ArrowTypeToken, CustomTypeToken, LambdaOp, Name, Token, TypeToken}
+import aqua.semantics.{ArrowType, Type}
 import cats.data.{NonEmptyList, NonEmptyMap}
 
 sealed trait TypeOp[F[_], T]

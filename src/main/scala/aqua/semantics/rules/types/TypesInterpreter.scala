@@ -1,6 +1,6 @@
-package aqua.semantics.algebra.types
+package aqua.semantics.rules.types
 
-import aqua.semantics.algebra.ReportError
+import aqua.semantics.rules.ReportError
 import aqua.parser.lexer.{
   ArrayTypeToken,
   ArrowTypeToken,
@@ -13,6 +13,7 @@ import aqua.parser.lexer.{
   Token,
   TypeToken
 }
+import aqua.semantics.{ArrayType, ArrowType, DataType, ProductType, Type}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, NonEmptyMap, State, ValidatedNel}
 import cats.~>
@@ -49,8 +50,8 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
           case Valid(t) => State.pure[X, Option[ArrowType]](Some(t))
           case Invalid(errs) =>
             errs
-              .foldLeft[S[Option[ArrowType]]](State.pure(None)) {
-                case (n, (tkn, hint)) => report(tkn, hint) >> n
+              .foldLeft[S[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
+                report(tkn, hint) >> n
               }
         }
 
@@ -102,17 +103,17 @@ case class TypesState[F[_]](
   def resolveTypeToken(tt: TypeToken[F]): Option[Type] =
     tt match {
       case ArrayTypeToken(_, dtt) =>
-        resolveTypeToken(dtt).collect {
-          case it: DataType => ArrayType(it)
+        resolveTypeToken(dtt).collect { case it: DataType =>
+          ArrayType(it)
         }
       case ctt: CustomTypeToken[F] => strict.get(ctt.value)
       case btt: BasicTypeToken[F] => Some(btt.value)
       case ArrowTypeToken(_, args, res) =>
-        val strictArgs = args.map(resolveTypeToken).collect {
-          case Some(dt: DataType) => dt
+        val strictArgs = args.map(resolveTypeToken).collect { case Some(dt: DataType) =>
+          dt
         }
-        val strictRes = res.flatMap(resolveTypeToken).collect {
-          case dt: DataType => dt
+        val strictRes = res.flatMap(resolveTypeToken).collect { case dt: DataType =>
+          dt
         }
         Option.when(strictRes.isDefined == res.isDefined && strictArgs.length == args.length)(
           ArrowType(strictArgs, strictRes)

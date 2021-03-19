@@ -3,7 +3,7 @@ package aqua.semantics.expr
 import aqua.generator.Gen
 import aqua.parser.expr.FieldTypeExpr
 import aqua.semantics.Prog
-import aqua.semantics.algebra.types.TypesAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
 import cats.syntax.functor._
 
 class FieldTypeSem[F[_]](val expr: FieldTypeExpr[F]) extends AnyVal {

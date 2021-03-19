@@ -1,10 +1,10 @@
 package aqua.parser.lexer
 
-import aqua.semantics.algebra.types.ScalarType
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.semantics.ScalarType
 import cats.Id
 
 import scala.language.implicitConversions

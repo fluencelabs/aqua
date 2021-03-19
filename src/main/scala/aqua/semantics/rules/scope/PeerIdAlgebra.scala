@@ -1,4 +1,4 @@
-package aqua.semantics.algebra.scope
+package aqua.semantics.rules.scope
 
 import aqua.parser.lexer.Value
 import cats.InjectK
