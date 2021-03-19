@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
-import aqua.generator.{AirContext, AirGen, ArrowGen, DataView, FuncBodyGen, FuncGen, Gen}
-import aqua.generator.DataView.InitPeerId
+import aqua.generator.{AirGen, ArrowGen, FuncBodyGen, Gen}
+import aqua.model.FuncModel
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.Arg
 import aqua.semantics.Prog
@@ -10,7 +10,7 @@ import aqua.semantics.algebra.abilities.AbilitiesAlgebra
 import aqua.semantics.algebra.names.NamesAlgebra
 import aqua.semantics.algebra.scope.PeerIdAlgebra
 import aqua.semantics.algebra.types.{ArrowType, DataType, Type, TypesAlgebra}
-import cats.{Applicative, Eval}
+import cats.Applicative
 import cats.free.Free
 import cats.syntax.flatMap._
 import cats.syntax.functor._
@@ -34,19 +34,18 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
           .foldLeft(
             // Begin scope -- for mangling
             N.beginScope(name).as[Queue[Type]](Queue.empty)
-          ) {
-            case (f, Arg(argName, argType)) =>
-              // Resolve arg type, remember it
-              f.flatMap(acc =>
-                T.resolveType(argType).flatMap {
-                  case Some(t: ArrowType) =>
-                    N.defineArrow(argName, ArrowGen.arg(argName.value, t), isRoot = false).as(acc.enqueue(t))
-                  case Some(t) =>
-                    N.define(argName, t).as(acc.enqueue(t))
-                  case None =>
-                    Free.pure(acc)
-                }
-              )
+          ) { case (f, Arg(argName, argType)) =>
+            // Resolve arg type, remember it
+            f.flatMap(acc =>
+              T.resolveType(argType).flatMap {
+                case Some(t: ArrowType) =>
+                  N.defineArrow(argName, ArrowGen.arg(argName.value, t), isRoot = false).as(acc.enqueue(t))
+                case Some(t) =>
+                  N.define(argName, t).as(acc.enqueue(t))
+                case None =>
+                  Free.pure(acc)
+              }
+            )
           }
           .map(_.toList),
         // Resolve return type
@@ -54,7 +53,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
       )
       .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2))
 
-  def after[Alg](funcArrow: ArrowType, bodyGen: Gen)(implicit
+  def after[Alg[_]](funcArrow: ArrowType, bodyGen: Gen)(implicit
     T: TypesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],
@@ -75,36 +74,24 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
     }) >> A.endScope() >> N.endScope() >> (bodyGen match {
       case bg: AirGen if ret.isDefined == retValue.isDefined =>
         val argNames = args.map(_.name.value)
+
+        val model = FuncModel(
+          name = name.value,
+          args = argNames
+            .zip(funcArrow.args)
+            .map {
+              case (n, dt: DataType) => n -> Left(dt)
+              case (n, at: ArrowType) => n -> Right(at)
+            },
+          ret = retValue.map(ArrowGen.valueToData),
+          body = FuncBodyGen(bg)
+        )
+
         N.defineArrow(
           name,
           ArrowGen.func(funcArrow, argNames, retValue.map(ArrowGen.valueToData), FuncBodyGen(bg)),
           isRoot = true
-        ) as FuncGen(
-          name.value,
-          Eval.later {
-            bg.generate(
-                AirContext(
-                  data = argNames
-                    .zip(funcArrow.args)
-                    .collect { //TODO preload these variables
-                      case (an, _: DataType) =>
-                        an -> DataView.Variable(an)
-                    }
-                    .toMap,
-                  arrows = argNames
-                    .zip(funcArrow.args)
-                    .collect {
-                      case (an, _: ArrowType) =>
-                        an -> new ArrowGen.SrvCallableOnPeer(InitPeerId, DataView.StringScalar("callback"), an)
-                    }
-                    .toMap,
-                  vars = argNames.toSet
-                )
-              )
-              ._2
-          },
-          FuncBodyGen(bg)
-        )
+        ) as model.gen
       case _ => Gen.noop.lift
     })
 
