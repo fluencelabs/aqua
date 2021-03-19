@@ -5,7 +5,7 @@ import cats.data.Validated
 
 import scala.io.Source
 
-object Main extends IOApp.Simple {
+object Test extends IOApp.Simple {
 
   override def run: IO[Unit] =
     IO {
