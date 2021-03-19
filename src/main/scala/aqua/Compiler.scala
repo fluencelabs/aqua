@@ -1,10 +1,9 @@
 package aqua
 
 import aqua.generator.Gen
-import aqua.parser.expr._
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
-import aqua.semantics.Prog
+import aqua.semantics.ExprSem
 import aqua.semantics.algebra.ReportError
 import aqua.semantics.algebra.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState, AbilityOp}
 import aqua.semantics.algebra.names.{NameOp, NamesAlgebra, NamesInterpreter, NamesState}
@@ -24,29 +23,6 @@ import scala.collection.immutable.Queue
 
 object Compiler {
 
-  private def exprToProg[F[_], G[_]](
-    expr: Expr[F]
-  )(implicit
-    A: AbilitiesAlgebra[F, G],
-    N: NamesAlgebra[F, G],
-    P: PeerIdAlgebra[F, G],
-    T: TypesAlgebra[F, G]
-  ): Prog[G, Gen] =
-    expr match {
-      case expr: AbilityIdExpr[F] => expr.program[G]
-      case expr: AliasExpr[F] => expr.program[G]
-      case expr: ArrowTypeExpr[F] => expr.program[G]
-      case expr: CoalgebraExpr[F] => expr.program[G]
-      case expr: DataStructExpr[F] => expr.program[G]
-      case expr: FieldTypeExpr[F] => expr.program[G]
-      case expr: FuncExpr[F] => expr.program[G]
-      case expr: OnExpr[F] => expr.program[G]
-      case expr: ParExpr[F] => expr.program[G]
-      case expr: ReturnExpr[F] => expr.program[G]
-      case expr: ServiceExpr[F] => expr.program[G]
-      case expr: RootExpr[F] => expr.program[G]
-    }
-
   def folder[F[_], G[_]](implicit
     A: AbilitiesAlgebra[F, G],
     N: NamesAlgebra[F, G],
@@ -54,7 +30,8 @@ object Compiler {
     T: TypesAlgebra[F, G]
   ): (Expr[F], List[Free[G, Gen]]) => Eval[Free[G, Gen]] = {
     case (expr, inners) =>
-      Eval later exprToProg[F, G](expr)
+      Eval later ExprSem
+        .getProg[F, G](expr)
         .apply(
           inners
             .reduceLeftOption[Free[G, Gen]]((a, b) => (a, b).mapN(_ |+| _))

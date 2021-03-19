@@ -1,49 +1,13 @@
 package aqua.parser.expr
 
-import aqua.semantics.Prog
-import aqua.semantics.algebra.ValuesAlgebra
-import aqua.semantics.algebra.abilities.AbilitiesAlgebra
-import aqua.semantics.algebra.names.NamesAlgebra
-import aqua.semantics.algebra.types.TypesAlgebra
-import aqua.generator.{ArrowGen, Gen}
 import aqua.parser.Expr
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Ability, Value}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
-import cats.free.Free
 import cats.parse.Parser
-import cats.syntax.apply._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
 
-case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Expr[F] {
-
-  def program[Alg[_]](implicit
-    A: AbilitiesAlgebra[F, Alg],
-    N: NamesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg]
-  ): Prog[Alg, Gen] =
-    Prog.around(
-      A.beginScope(name),
-      (_: Unit, body: Gen) =>
-        (A.purgeArrows(name) <* A.endScope()).flatMap {
-          case Some(nel) =>
-            A.defineService(
-              name,
-              nel.map(kv => kv._1.value -> ArrowGen.service(name.value, kv._1.value, kv._2)).toNem
-            ) >>
-              id.fold(Free.pure[Alg, Gen](Gen.noop))(idV =>
-                V.ensureIsString(idV) >> A.setServiceId(name, idV) as Gen.noop
-              )
-          case None =>
-            Gen.error.lift
-
-        }
-    )
-
-}
+case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Expr[F] {}
 
 object ServiceExpr extends Expr.AndIndented(ArrowTypeExpr) {
 
