@@ -1,9 +1,8 @@
-package aqua
+package aqua.semantics
 
 import aqua.generator.Gen
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
-import aqua.semantics.ExprSem
 import aqua.semantics.algebra.ReportError
 import aqua.semantics.algebra.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState, AbilityOp}
 import aqua.semantics.algebra.names.{NameOp, NamesAlgebra, NamesInterpreter, NamesState}
@@ -21,7 +20,7 @@ import cats.syntax.semigroup._
 
 import scala.collection.immutable.Queue
 
-object Compiler {
+object Semantics {
 
   def folder[F[_], G[_]](implicit
     A: AbilitiesAlgebra[F, G],
@@ -83,7 +82,7 @@ object Compiler {
     free.foldMap[State[CompilerState[F], *]](interpreter)
   }
 
-  def compile[F[_]](ast: Ast[F]): ValidatedNel[(Token[F], String), Gen] =
+  def validate[F[_]](ast: Ast[F]): ValidatedNel[(Token[F], String), Gen] =
     (transpile[F] _ andThen interpret[F])(ast)
       .run(CompilerState[F]())
       .map {
