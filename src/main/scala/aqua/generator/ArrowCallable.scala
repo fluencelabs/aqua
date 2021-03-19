@@ -4,10 +4,10 @@ sealed trait ArrowCallable {
   def toCallGen(args: List[DataView], result: Option[String]): AirGen
 }
 
-class FuncCallable(argNames: List[String], retValue: Option[DataView], bodyGen: FuncBodyGen) extends ArrowCallable {
+class FuncCallable(argNames: List[String], retValue: Option[DataView], bodyGen: AirGen) extends ArrowCallable {
 
   override def toCallGen(args: List[DataView], result: Option[String]): AirGen =
-    bodyGen.op
+    bodyGen
       .wrap(c =>
         (
           c.copy(data = c.data ++ argNames.zip(args)),

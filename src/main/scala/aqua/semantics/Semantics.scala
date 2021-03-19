@@ -1,6 +1,6 @@
 package aqua.semantics
 
-import aqua.generator.Gen
+import aqua.model.Model
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
@@ -27,13 +27,13 @@ object Semantics {
     N: NamesAlgebra[F, G],
     P: PeerIdAlgebra[F, G],
     T: TypesAlgebra[F, G]
-  ): (Expr[F], List[Free[G, Gen]]) => Eval[Free[G, Gen]] = { case (expr, inners) =>
+  ): (Expr[F], List[Free[G, Model]]) => Eval[Free[G, Model]] = { case (expr, inners) =>
     Eval later ExprSem
       .getProg[F, G](expr)
       .apply(
         inners
-          .reduceLeftOption[Free[G, Gen]]((a, b) => (a, b).mapN(_ |+| _))
-          .getOrElse(Free.pure(Gen.noop))
+          .reduceLeftOption[Free[G, Model]]((a, b) => (a, b).mapN(_ |+| _))
+          .getOrElse(Free.pure(Model.empty))
       )
   }
 
@@ -41,7 +41,7 @@ object Semantics {
   type Alg1[F[_], A] = EitherK[PeerIdOp[F, *], Alg0[F, *], A]
   type Alg[F[_], A] = EitherK[TypeOp[F, *], Alg1[F, *], A]
 
-  def transpile[F[_]](ast: Ast[F]): Free[Alg[F, *], Gen] =
+  def transpile[F[_]](ast: Ast[F]): Free[Alg[F, *], Model] =
     ast.cata(folder[F, Alg[F, *]]).value
 
   case class CompilerState[F[_]](
@@ -52,7 +52,7 @@ object Semantics {
     types: TypesState[F] = TypesState[F]()
   )
 
-  def interpret[F[_]](free: Free[Alg[F, *], Gen]): State[CompilerState[F], Gen] = {
+  def interpret[F[_]](free: Free[Alg[F, *], Model]): State[CompilerState[F], Model] = {
     import monocle.macros.syntax.all._
 
     implicit val re: ReportError[F, CompilerState[F]] =
@@ -81,11 +81,11 @@ object Semantics {
     free.foldMap[State[CompilerState[F], *]](interpreter)
   }
 
-  def validate[F[_]](ast: Ast[F]): ValidatedNel[(Token[F], String), Gen] =
+  def validate[F[_]](ast: Ast[F]): ValidatedNel[(Token[F], String), Model] =
     (transpile[F] _ andThen interpret[F])(ast)
       .run(CompilerState[F]())
       .map { case (state, gen) =>
-        NonEmptyList.fromList(state.errors.toList).fold[ValidatedNel[(Token[F], String), Gen]](Valid(gen))(Invalid(_))
+        NonEmptyList.fromList(state.errors.toList).fold[ValidatedNel[(Token[F], String), Model]](Valid(gen))(Invalid(_))
       }
       .value
 }

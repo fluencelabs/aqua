@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
-import aqua.generator.{DataView, Gen}
-import aqua.model.{CoalgebraModel, ServiceModel}
+import aqua.generator.DataView
+import aqua.model.{CoalgebraModel, Model, ServiceModel}
 import aqua.parser.expr.CoalgebraExpr
 import aqua.semantics.{ArrowType, Prog, Type}
 import aqua.semantics.rules.ValuesAlgebra
@@ -77,7 +77,7 @@ class CoalgebraSem[F[_]](val expr: CoalgebraExpr[F]) extends AnyVal {
     A: AbilitiesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Prog[Alg, Gen] =
-    toModel[Alg].map(_.fold(Gen.noop)(_.arrowGen))
+  ): Prog[Alg, Model] =
+    toModel[Alg].map(_.getOrElse(Model.error))
 
 }

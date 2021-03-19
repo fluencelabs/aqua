@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.generator.Gen
+import aqua.model.Model
 import aqua.parser.expr.ServiceExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -19,21 +19,21 @@ class ServiceSem[F[_]](val expr: ServiceExpr[F]) extends AnyVal {
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Prog[Alg, Gen] =
+  ): Prog[Alg, Model] =
     Prog.around(
       A.beginScope(expr.name),
-      (_: Unit, body: Gen) =>
+      (_: Unit, body: Model) =>
         (A.purgeArrows(expr.name) <* A.endScope()).flatMap {
           case Some(nel) =>
             A.defineService(
               expr.name,
               nel.map(kv => kv._1.value -> kv._2).toNem
             ) >>
-              expr.id.fold(Free.pure[Alg, Gen](Gen.noop))(idV =>
-                V.ensureIsString(idV) >> A.setServiceId(expr.name, idV) as Gen.noop
+              expr.id.fold(Free.pure[Alg, Model](Model.empty))(idV =>
+                V.ensureIsString(idV) >> A.setServiceId(expr.name, idV) as Model.empty
               )
           case None =>
-            Gen.error.lift
+            Free.pure(Model.error)
 
         }
     )

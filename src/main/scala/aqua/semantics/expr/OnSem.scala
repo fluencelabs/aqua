@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.generator.{AirGen, Gen}
+import aqua.model.{FuncOp, Model, OnModel}
 import aqua.parser.expr.OnExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -15,14 +15,14 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
     P: PeerIdAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
-  ): Prog[Alg, Gen] =
+  ): Prog[Alg, Model] =
     Prog.around(
       V.ensureIsString(expr.peerId) >> P.onPeerId(expr.peerId) >> A.beginScope(expr.peerId),
-      (_: Unit, ops: Gen) =>
+      (_: Unit, ops: Model) =>
         A.endScope() >> P.erasePeerId() as (ops match {
-          case air: AirGen =>
-            air.wrap(c => (c.copy(peerId = ValuesAlgebra.valueToData(expr.peerId)), _.copy(peerId = c.peerId)))
-          case _ => ops
+          case op: FuncOp =>
+            OnModel(ValuesAlgebra.valueToData(expr.peerId), op)
+          case _ => Model.error
         })
     )
 }

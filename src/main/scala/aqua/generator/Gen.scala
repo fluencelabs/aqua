@@ -1,43 +1,8 @@
 package aqua.generator
 
-import cats.{Eval, Semigroup}
-import cats.free.Free
 import cats.syntax.functor._
-import cats.syntax.show._
 
-import scala.collection.immutable.Queue
-
-sealed trait Gen {
-  def lift[F[_]]: Free[F, Gen] = Free.pure(this)
-}
-
-object Gen {
-
-  implicit object GenSemigroup extends Semigroup[Gen] {
-
-    override def combine(x: Gen, y: Gen): Gen =
-      (x, y) match {
-        case (x: ScriptGen, y: ScriptGen) => y.copy(funcs = y.funcs.enqueueAll(x.funcs))
-        case (x: FuncGen, y: FuncGen) => ScriptGen(Queue(x, y))
-        case (x: FuncGen, y: ScriptGen) => y.copy(funcs = y.funcs.enqueue(x))
-        case (x: ScriptGen, y: FuncGen) => x.copy(funcs = x.funcs.enqueue(y))
-        case (x: AirGen, y: FuncBodyGen) => y.copy(op = SeqGen(x, y.op))
-        case (x: AirGen, y: ParGen) => ParGen(Some(x), y.right)
-        case (x: AirGen, y: AirGen) => SeqGen(x, y)
-
-        case (NoopGen, _) => y
-        case (_, NoopGen) => x
-
-        case (_, y) =>
-          println(Console.RED + s"drop x: ${x} in favor of y: $y" + Console.RESET)
-          y
-      }
-
-  }
-
-  def noop: Gen = NoopGen
-  def error: Gen = NoopGen
-}
+sealed trait Gen
 
 trait AirGen extends Gen {
   self =>
@@ -58,12 +23,9 @@ case object NullGen extends AirGen {
   override def generate(ctx: AirContext): (AirContext, Air) = (ctx, Air.Null)
 }
 
-case object NoopGen extends Gen
-
 case class SeqGen(left: AirGen, right: AirGen) extends AirGen {
 
   override def generate(ctx: AirContext): (AirContext, Air) = {
-    println(Console.BLUE + ctx + Console.RESET)
     val (c, l) = left.generate(ctx)
     right.generate(c).swap.map(_.incr).swap.map(Air.Seq(l, _))
   }
@@ -104,33 +66,11 @@ case class ServiceCallGen(
   }
 }
 
-case class FuncBodyGen(op: AirGen) extends Gen
+case class ParGen(left: AirGen, right: AirGen) extends AirGen {
 
-case class FuncGen(
-  name: String,
-  air: Map[String, ArrowCallable] => Eval[Air],
-  body: FuncBodyGen,
-  callable: FuncCallable
-) extends Gen {
-  def generateAir(acc: Map[String, ArrowCallable]): Air = air(acc).value
-}
-
-case class ScriptGen(funcs: Queue[FuncGen]) extends Gen {
-
-  def generateAir: Queue[String] =
-    funcs
-      .foldLeft((Map.empty[String, ArrowCallable], Queue.empty[String])) { case ((funcsAcc, outputAcc), func) =>
-        funcsAcc.updated(func.name, func.callable) -> outputAcc.enqueue(func.generateAir(funcsAcc).show)
-      }
-      ._2
-}
-
-case class ParGen(left: Option[AirGen], right: AirGen) extends AirGen {
-
-  override def generate(ctx: AirContext): (AirContext, Air) =
-    left.fold(right.generate(ctx)) { l =>
-      val (lc, la) = l.generate(ctx)
-      val (rc, ra) = right.generate(ctx.incr)
-      (lc.mergePar(rc).incr, Air.Par(la, ra))
-    }
+  override def generate(ctx: AirContext): (AirContext, Air) = {
+    val (lc, la) = left.generate(ctx)
+    val (rc, ra) = right.generate(ctx.incr)
+    (lc.mergePar(rc).incr, Air.Par(la, ra))
+  }
 }

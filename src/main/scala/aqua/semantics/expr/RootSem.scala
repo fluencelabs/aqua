@@ -1,14 +1,15 @@
 package aqua.semantics.expr
 
-import aqua.generator.{Gen, ScriptGen}
+import aqua.model.{Model, ScriptModel}
 import aqua.parser.expr.RootExpr
 import aqua.semantics.Prog
-import cats.syntax.semigroup._
-
-import scala.collection.immutable.Queue
+import cats.free.Free
 
 class RootSem[F[_]](val expr: RootExpr[F]) extends AnyVal {
 
-  def program[Alg[_]]: Prog[Alg, Gen] =
-    Prog.after(a => (a |+| ScriptGen(Queue.empty)).lift)
+  def program[Alg[_]]: Prog[Alg, Model] =
+    Prog.after {
+      case sm: ScriptModel => Free.pure[Alg, Model](sm)
+      case _ => Free.pure[Alg, Model](Model.error)
+    }
 }

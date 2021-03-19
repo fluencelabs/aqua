@@ -1,18 +1,19 @@
 package aqua.semantics.expr
 
-import aqua.generator.Gen
+import aqua.model.Model
 import aqua.parser.expr.ArrowTypeExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
+import cats.free.Free
 import cats.syntax.functor._
 
 class ArrowTypeSem[F[_]](val expr: ArrowTypeExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit T: TypesAlgebra[F, Alg], A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Gen] =
+  def program[Alg[_]](implicit T: TypesAlgebra[F, Alg], A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Model] =
     T.resolveArrowDef(expr.`type`).flatMap {
-      case Some(t) => A.defineArrow(expr.name, t) as Gen.noop
-      case None => Gen.error.lift
+      case Some(t) => A.defineArrow(expr.name, t) as Model.empty
+      case None => Free.pure[Alg, Model](Model.error)
     }
 
 }

@@ -1,6 +1,6 @@
 package aqua.semantics
 
-import aqua.generator.Gen
+import aqua.model.Model
 import aqua.parser.Expr
 import aqua.parser.expr._
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -18,7 +18,7 @@ object ExprSem {
     N: NamesAlgebra[F, G],
     P: PeerIdAlgebra[F, G],
     T: TypesAlgebra[F, G]
-  ): Prog[G, Gen] =
+  ): Prog[G, Model] =
     expr match {
       case expr: AbilityIdExpr[F] => new AbilityIdSem(expr).program[G]
       case expr: AliasExpr[F] => new AliasSem(expr).program[G]

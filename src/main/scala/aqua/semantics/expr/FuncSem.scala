@@ -1,7 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.generator.{AirGen, FuncBodyGen, Gen}
-import aqua.model.FuncModel
+import aqua.model.{FuncModel, FuncOp, Model}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.Arg
 import aqua.semantics.{ArrowType, DataType, Prog, Type}
@@ -53,13 +52,13 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
       )
       .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2))
 
-  def after[Alg[_]](funcArrow: ArrowType, bodyGen: Gen)(implicit
+  def after[Alg[_]](funcArrow: ArrowType, bodyGen: Model)(implicit
     T: TypesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],
     P: PeerIdAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
-  ): Free[Alg, Gen] =
+  ): Free[Alg, Model] =
     // Check return value type
     ((funcArrow.res, retValue) match {
       case (Some(t), Some(v)) =>
@@ -72,7 +71,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
 
       // Erase arguments and internal variables
     }) >> A.endScope() >> N.endScope() >> (bodyGen match {
-      case bg: AirGen if ret.isDefined == retValue.isDefined =>
+      case bg: FuncOp if ret.isDefined == retValue.isDefined =>
         val argNames = args.map(_.name.value)
 
         val model = FuncModel(
@@ -84,15 +83,15 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
               case (n, at: ArrowType) => n -> Right(at)
             },
           ret = retValue.map(ValuesAlgebra.valueToData),
-          body = FuncBodyGen(bg)
+          body = bg
         )
 
         N.defineArrow(
           name,
           funcArrow,
           isRoot = true
-        ) as model.gen
-      case _ => Gen.noop.lift
+        ) as model
+      case _ => Free.pure[Alg, Model](Model.error)
     })
 
   def program[Alg[_]](implicit
@@ -101,7 +100,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
     V: ValuesAlgebra[F, Alg],
     P: PeerIdAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
-  ): Prog[Alg, Gen] =
+  ): Prog[Alg, Model] =
     Prog.around(
       before[Alg],
       after[Alg]
