@@ -24,6 +24,7 @@ object Token {
   val `service`: P[Unit] = P.string("service")
   val `func`: P[Unit] = P.string("func")
   val `on`: P[Unit] = P.string("on")
+  val `for`: P[Unit] = P.string("for")
   val `par`: P[Unit] = P.string("par")
   val `xor`: P[Unit] = P.string("xor")
   val `:` : P[Unit] = P.char(':')

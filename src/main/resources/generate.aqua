@@ -22,6 +22,13 @@ func generateComplex(value: string) -> bool:
 func genArrows(arr: string -> bool):
     arr("hi there")
 
+func genFold(vals: []string):
+    Local.onIn("hi there")
+    for v <- vals:
+        par on v:
+            Local.onIn(v)
+    Local.onBoolean(true)
+
 --func wrapGenArrows():
 --    on "some peer":
 --        genArrows(generateComplex)

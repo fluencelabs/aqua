@@ -1,9 +1,10 @@
 package aqua.model
 
-import aqua.generator.{AirContext, AirGen, DataView, ParGen, SeqGen, SrvCallable}
+import aqua.generator.{Air, AirContext, AirGen, DataView, ParGen, SeqGen, SrvCallable}
 import aqua.semantics.Type
 import cats.data.{NonEmptyChain, NonEmptyList}
 import cats.kernel.Semigroup
+import cats.syntax.semigroup._
 
 sealed trait FuncOp extends Model {
   def toAirGen: AirGen
@@ -35,6 +36,51 @@ case class OnModel(peerId: DataView, op: FuncOp) extends FuncOp {
 
   override def toAirGen: AirGen =
     op.toAirGen.wrap(ctx => (ctx.copy(peerId = peerId), _.copy(peerId = ctx.peerId)))
+}
+
+case class NextModel(item: String) extends FuncOp {
+
+  override def toAirGen: AirGen = new AirGen {
+
+    override def generate(ctx: AirContext): (AirContext, Air) =
+      ctx.data(item) match {
+        case DataView.Variable(v) => ctx -> Air.Next(v)
+        case _ => ctx -> Air.Null
+      }
+  }
+}
+
+case class ForModel(item: String, iterable: DataView, op: FuncOp) extends FuncOp {
+
+  private val opWrap = (op match {
+    case ParModel(pars) => ParModel(pars.append(NextModel(item)))
+    case _ => op |+| NextModel(item)
+  }).toAirGen.wrap(ctx =>
+    (if (ctx.vars(item)) {
+       val vn = item + ctx.instrCounter
+       ctx.copy(vars = ctx.vars + vn, data = ctx.data.updated(item, DataView.Variable(vn)))
+     } else
+       ctx.copy(vars = ctx.vars + item, data = ctx.data.updated(item, DataView.Variable(item)))) -> (cu =>
+      cu.copy(data = cu.data - item)
+    )
+  )
+
+  override def toAirGen: AirGen =
+    new AirGen {
+
+      override def generate(ctx: AirContext): (AirContext, Air) = {
+        val varName =
+          if (ctx.vars(item))
+            item + ctx.instrCounter
+          else item
+
+        val iterData = AirGen.resolve(ctx, iterable)
+
+        val (resCtx, resAir) = opWrap.generate(ctx)
+
+        resCtx -> Air.Fold(iterData, varName, resAir)
+      }
+    }
 }
 
 case class CoalgebraModel(
