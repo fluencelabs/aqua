@@ -3,12 +3,11 @@ package aqua
 import cats.data.Validated
 import cats.effect.{ExitCode, IO, IOApp}
 import fs2.io.file.Files
-import fs2.{text, Stream}
-import cats.implicits._
+import fs2.text
 
-import java.io.{File, PrintWriter}
-import scala.io.Source
-import java.nio.file.{Path, Paths}
+import java.io.File
+import java.nio.file.Path
+import cats.syntax.traverse._
 
 final case class ParseArgsException(private val message: String, private val cause: Throwable = None.orNull)
     extends Exception(message, cause)
@@ -51,22 +50,21 @@ object AquaGen extends IOApp {
   def convertAqua(files: List[File], outputDir: Path): IO[List[Unit]] = {
     (for {
       file <- files
-    } yield {
-      Files[IO]
-        .readAll(file.toPath, 4096)
-        .through(text.utf8Decode)
-        .map(text =>
-          Aqua.generate(text) match {
-            case Validated.Valid(v) ⇒
-              v.mkString("\n")
-            case Validated.Invalid(errs) ⇒
-              errs.map(_.showForConsole(text)).toList.mkString("\n")
-          }
-        )
-        .through(text.utf8Encode)
-        .through(Files[IO].writeAll(outputDir.resolve(file.getName + ".result")))
-        .compile
-        .drain
-    }).sequence
+    } yield Files[IO]
+      .readAll(file.toPath, 4096)
+      .through(text.utf8Decode)
+      .map(text =>
+        Aqua.generate(text) match {
+          case Validated.Valid(v) ⇒
+            v
+          case Validated.Invalid(errs) ⇒
+            errs.map(_.showForConsole(text)).map(println)
+            ""
+        }
+      )
+      .through(text.utf8Encode)
+      .through(Files[IO].writeAll(outputDir.resolve(file.getName + ".js")))
+      .compile
+      .drain).sequence
   }
 }

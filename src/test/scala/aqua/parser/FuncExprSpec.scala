@@ -1,14 +1,13 @@
 package aqua.parser
 
-import aqua.ast.Indent
-import aqua.ast.algebra.types.LiteralType
-import aqua.ast.expr.{AbilityIdExpr, CoalgebraExpr, FuncExpr, OnExpr}
+import aqua.parser.expr.{AbilityIdExpr, CoalgebraExpr, FuncExpr, OnExpr}
 import aqua.parser.lexer.{Ability, IntoField, Literal, Name, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.semantics.LiteralType
 import cats.Id
 
 import scala.language.implicitConversions
@@ -43,21 +42,23 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
     )
 
     parseExpr("func(arg.doSomething.and.doSomethingElse)") should be(
-      CoalgebraExpr[Id](None, None, Name[Id]("func"),
-        List(toVar("arg", List("doSomething", "and", "doSomethingElse")))
-      )
+      CoalgebraExpr[Id](None, None, Name[Id]("func"), List(toVar("arg", List("doSomething", "and", "doSomethingElse"))))
     )
 
     parseExpr("Ab.func(arg.doSomething.and.doSomethingElse, arg2.someFunc)") should be(
-      CoalgebraExpr[Id](None, Some(toAb("Ab")), Name[Id]("func"),
-        List(toVar("arg", List("doSomething", "and", "doSomethingElse")),
-          toVar("arg2", List("someFunc"))
-        )
+      CoalgebraExpr[Id](
+        None,
+        Some(toAb("Ab")),
+        Name[Id]("func"),
+        List(toVar("arg", List("doSomething", "and", "doSomethingElse")), toVar("arg2", List("someFunc")))
       )
     )
 
     parseExpr("x <- func(arg.doSomething)") should be(
-      CoalgebraExpr[Id](Some(toName("x")), None, Name[Id]("func"),
+      CoalgebraExpr[Id](
+        Some(toName("x")),
+        None,
+        Name[Id]("func"),
         List(
           toVar("arg", List("doSomething"))
         )
@@ -67,40 +68,33 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "abilities" should "be parsed" in {
     parseAbId("Ab a") should be(
-      AbilityIdExpr[Id](toAb("Ab"), toVar("a", List()),
-      )
+      AbilityIdExpr[Id](toAb("Ab"), toVar("a", List()))
     )
 
     parseAbId("Ab \"a\"") should be(
-      AbilityIdExpr[Id](toAb("Ab"), Literal[Id]("\"a\"", LiteralType.string),
-      )
+      AbilityIdExpr[Id](toAb("Ab"), Literal[Id]("\"a\"", LiteralType.string))
     )
 
     parseAbId("Ab 1") should be(
-      AbilityIdExpr[Id](toAb("Ab"), Literal[Id]("1", LiteralType.number),
-      )
+      AbilityIdExpr[Id](toAb("Ab"), Literal[Id]("1", LiteralType.number))
     )
 
     parseAbId("Ab a.id") should be(
-      AbilityIdExpr[Id](toAb("Ab"), toVar("a", List("id")),
-      )
+      AbilityIdExpr[Id](toAb("Ab"), toVar("a", List("id")))
     )
   }
 
   "on" should "be parsed" in {
     parseOn("on peer:\n") should be(
-      OnExpr[Id](toVar("peer", List()),
-      )
+      OnExpr[Id](toVar("peer", List()))
     )
 
     parseOn("on peer.id:\n") should be(
-      OnExpr[Id](toVar("peer", List("id")),
-      )
+      OnExpr[Id](toVar("peer", List("id")))
     )
 
     parseOn("on peer.id:\n") should be(
-      OnExpr[Id](toVar("peer", List("id")),
-      )
+      OnExpr[Id](toVar("peer", List("id")))
     )
   }
 
