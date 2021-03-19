@@ -13,10 +13,26 @@ trait AirGen extends Gen {
 
       override def generate(ctx: AirContext): (AirContext, Air) = {
         val (setup, clean) = f(ctx)
-        val (internal, res) = self.generate(setup)
-        (clean(internal), res)
+        val (internal, res) = self.generate(setup.incr)
+        (clean(internal).incr, res)
       }
     }
+}
+
+object AirGen {
+
+  def resolve(ctx: AirContext, dataView: DataView): DataView = dataView match {
+    case DataView.Variable(name) => ctx.data(name)
+    case DataView.Stream(name) => ctx.data(name)
+    case DataView.VarLens(name, lens) =>
+      ctx.data(name) match {
+        case DataView.Variable(n) => DataView.VarLens(n, lens)
+        case DataView.Stream(n) => DataView.VarLens(n, lens)
+        case vl: DataView.VarLens => vl.append(lens)
+        case a => a // actually, it's an error
+      }
+    case a => a
+  }
 }
 
 case object NullGen extends AirGen {
@@ -49,18 +65,7 @@ case class ServiceCallGen(
 
     c.incr -> Air.Call(
       Triplet.Full(ctx.peerId, srvId, fnName),
-      args.map {
-        case DataView.Variable(name) => ctx.data(name)
-        case DataView.Stream(name) => ctx.data(name)
-        case DataView.VarLens(name, lens) =>
-          ctx.data(name) match {
-            case DataView.Variable(n) => DataView.VarLens(n, lens)
-            case DataView.Stream(n) => DataView.VarLens(n, lens)
-            case vl: DataView.VarLens => vl.append(lens)
-            case a => a // actually, it's an error
-          }
-        case a => a
-      },
+      args.map(AirGen.resolve(ctx, _)),
       res
     )
   }
