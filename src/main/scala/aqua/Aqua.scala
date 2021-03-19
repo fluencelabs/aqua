@@ -6,8 +6,6 @@ import cats.data.ValidatedNel
 import aqua.parser.lift.Span
 import aqua.semantics.Semantics
 
-import scala.collection.immutable.Queue
-
 object Aqua {
 
   def parse(input: String): ValidatedNel[AquaError, Ast[Span.F]] =
