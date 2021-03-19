@@ -1,7 +1,7 @@
 package aqua
 
-import aqua.ast.gen.{Gen, ScriptGen}
-import aqua.ast.{Ast, Compiler}
+import aqua.generator.{Gen, ScriptGen}
+import aqua.parser.Ast
 import cats.data.ValidatedNel
 import aqua.parser.lift.Span
 

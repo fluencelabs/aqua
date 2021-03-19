@@ -1,9 +1,19 @@
 package aqua.parser
 
-import aqua.ast.algebra.types.ScalarType.{bool, u64}
-import aqua.ast.algebra.types.{LiteralType, ScalarType}
-import aqua.ast.expr.FuncExpr
-import aqua.parser.lexer.{Ability, Arg, ArrowTypeToken, BasicTypeToken, CustomTypeToken, Literal, Name, TypeToken, VarLambda}
+import aqua.semantics.algebra.types.ScalarType.{bool, u64}
+import aqua.semantics.algebra.types.{LiteralType, ScalarType}
+import aqua.parser.expr.FuncExpr
+import aqua.parser.lexer.{
+  Ability,
+  Arg,
+  ArrowTypeToken,
+  BasicTypeToken,
+  CustomTypeToken,
+  Literal,
+  Name,
+  TypeToken,
+  VarLambda
+}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
@@ -15,7 +25,7 @@ import scala.language.implicitConversions
 
 class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  import aqua.ast.algebra.types.ScalarType.{string, u32}
+  import aqua.semantics.algebra.types.ScalarType.{string, u32}
 
   implicit def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
 
@@ -40,14 +50,20 @@ class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
       FuncExpr(toName("some"), List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken)), None, None)
     )
 
-    val arrowToken2 = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32), BasicTypeToken[Id](u64)), Some(BasicTypeToken[Id](bool)))
+    val arrowToken2 =
+      ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32), BasicTypeToken[Id](u64)), Some(BasicTypeToken[Id](bool)))
     funcExpr("func some(peer: PeerId, other: u32, u64 -> bool):\n") should be(
       FuncExpr(toName("some"), List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken2)), None, None)
     )
 
     val arrowToken3 = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), None)
     funcExpr("func getTime(peer: PeerId, ret: u32 -> ()) -> string:\n") should be(
-      FuncExpr(toName("getTime"), List(toCustomArg("peer", "PeerId"), toArg("ret", arrowToken3)), Some(BasicTypeToken[Id](string)), None)
+      FuncExpr(
+        toName("getTime"),
+        List(toCustomArg("peer", "PeerId"), toArg("ret", arrowToken3)),
+        Some(BasicTypeToken[Id](string)),
+        None
+      )
     )
 
   }
