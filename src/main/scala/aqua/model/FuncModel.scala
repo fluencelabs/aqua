@@ -19,7 +19,7 @@ case class FuncModel(
   def callbackService: String = "callbackSrv"
 
   def callable: ArrowCallable =
-    new FuncCallable(args.map(_._1), ret.map(_._1), bodyGen)
+    new FuncCallable(args, ret.map(_._1), bodyGen)
 
   def typeToTs(t: Type): String = t match {
     case ArrayType(t) => typeToTs(t) + "[]"
@@ -43,9 +43,8 @@ case class FuncModel(
 
   def airContext(acc: Map[String, ArrowCallable]): AirContext =
     AirContext(
-      data = args.collect { //TODO preload these variables
-        case (an, Left(_)) =>
-          an -> DataView.Variable(an)
+      data = args.collect { case (an, Left(_)) =>
+        an -> DataView.Variable(an)
       }.toMap,
       arrows = acc ++ args.collect { case (an, Right(_)) =>
         an -> new SrvCallableOnPeer(InitPeerId, DataView.StringScalar(callbackService), an)
@@ -58,6 +57,22 @@ case class FuncModel(
       .generate(airContext(acc))
       ._2
 
+  def viaRelay(op: FuncOp): FuncOp =
+    OnModel(
+      DataView.Variable("relay"),
+      SeqModel(
+        NonEmptyChain(
+          CoalgebraModel(
+            Some(ServiceModel("op", StringScalar("\"op\""))),
+            "identity",
+            Nil,
+            None
+          ),
+          OnModel(InitPeerId, op)
+        )
+      )
+    )
+
   def generateTypescript(acc: Map[String, ArrowCallable]): String = {
     def getDataOp(name: String): FuncOp =
       CoalgebraModel(
@@ -67,15 +82,35 @@ case class FuncModel(
         Some(name)
       )
 
+    val returnCallback = ret.map { case (dv, t) =>
+      val respFuncName = "response"
+      viaRelay(
+        CoalgebraModel(
+          Some(ServiceModel(callbackService, StringScalar("\"" + callbackService + "\""))),
+          respFuncName,
+          (dv, t) :: Nil,
+          None
+        )
+      ) ->
+        s"""h.on('$callbackService', '$respFuncName', (args) => {
+           |  const [res] = args;
+           |  resolve(res);
+           |});
+           |""".stripMargin
+
+    }
+
     val air = SeqModel(
-      NonEmptyChain.fromChainAppend(
-        Chain.fromSeq(
-          args.collect { case (argName, Left(_)) =>
-            getDataOp(name)
-          }
-        ),
-        body
-      )
+      NonEmptyChain
+        .fromChainAppend(
+          Chain.fromSeq(
+            args.collect { case (argName, Left(_)) =>
+              getDataOp(argName)
+            } :+ getDataOp("relay")
+          ),
+          body
+        )
+        .appendChain(Chain.fromSeq(returnCallback.map(_._1).toSeq))
     ).toAirGen.generate(airContext(acc))._2.show
 
     val setCallbacks = args.map {
@@ -98,20 +133,14 @@ case class FuncModel(
        |            `,
        |            )
        |            .configHandler((h) => {
-       |                h.on('getRelayService', 'getRelay', () => {
+       |                h.on('${getDataService}', 'relay', () => {
        |                    return client.relayPeerId;
        |                });
-       |                h.on('getRelayService', 'hasReleay', () => {
+       |                h.on('getRelayService', 'hasReleay', () => {// Not Used
        |                    return client.relayPeerId !== undefined;
        |                });
        |                $setCallbacks
-       |                h.on('nameForServiceWhichResolvesPromise', 'callbackOrAnythingReally', (args) => {
-       |                    // args is an array of all the arguments to function.
-       |                    // Extract the right one from the args. If there is only 1 item, you can always use
-       |                    // the costruct below
-       |                    const [res] = args;
-       |                    resolve(res);
-       |                });
+       |                ${returnCallback.map(_._2).getOrElse("")}
        |                h.on('nameOfServiceWhereToSendXorError', 'errorProbably', (args) => {
        |                    // assuming error is the single argument
        |                    const [err] = args;
