@@ -1,0 +1,33 @@
+name: "release"
+
+on:
+  push:
+    # tags:
+    #   - "v*"
+    branches:
+      - "master"
+
+jobs:
+  release:
+    name: "Release"
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      ### Setup
+      - uses: olafurpg/setup-scala@v10
+      - name: Assembly
+        run: sbt assembly
+
+      ### Update & build
+
+      ### Create release
+      - uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: false
+          files: |
+            target/scala-2.13/aqua-hll.jar
