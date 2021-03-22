@@ -29,9 +29,9 @@ jobs:
         run: |
           sbt 'print version'
           echo "====="
-          sbt 'print version' | tail -n1
+          sbt 'print version' &| tail -n1
           echo "====="
-          VERSION="$(sbt 'print version' | tail -n1)"
+          VERSION="$(sbt 'print version' &| tail -n1)"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - uses: marvinpinto/action-automatic-releases@latest
