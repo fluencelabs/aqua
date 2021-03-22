@@ -5,8 +5,8 @@ on:
     # uncomment to release only on tags starting with 'v'
     # tags:
     #   - "v*"
-    # branches:
-    #   - "main"
+    branches:
+      - "main"
 
 jobs:
   release:
