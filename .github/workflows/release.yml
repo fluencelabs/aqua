@@ -28,7 +28,8 @@ jobs:
       - name: Get project version
         run: |
           set -x
-          OUTPUT = $(sbt 'print version')
+          sbt 'print version'
+          echo "setting variable"
           echo "VERSION=$(sbt 'print version' | tail -n1)" >> $GITHUB_ENV
 
       - uses: marvinpinto/action-automatic-releases@latest
