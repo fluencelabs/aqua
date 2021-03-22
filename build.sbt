@@ -10,8 +10,8 @@ lazy val root = project
     name                        := "aqua-hll",
     version                     := "0.1.0",
     scalaVersion                := dottyVersion,
-    mainClass in (Compile, run) := Some("aqua.AquaGen"),
-    mainClass in assembly       := Some("aqua.AquaGen"),
+    mainClass in (Compile, run) := Some("aqua.Main"),
+    mainClass in assembly       := Some("aqua.Main"),
     assemblyJarName in assembly := "aqua-hll.jar",
     libraryDependencies ++= Seq(
       "org.typelevel"              %% "cats-effect"   % "3.0.0-RC2",

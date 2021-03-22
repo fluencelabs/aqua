@@ -1,31 +1,15 @@
 package aqua
 
-import cats.data.Validated
+import aqua.cli.AquaGen.{convertAqua}
 import cats.effect.{ExitCode, IO, IOApp}
-import fs2.io.file.Files
-import fs2.text
 
 import java.io.File
 import java.nio.file.Path
-import cats.syntax.traverse._
 
 final case class ParseArgsException(private val message: String, private val cause: Throwable = None.orNull)
     extends Exception(message, cause)
 
-object AquaGen extends IOApp {
-
-  override def run(args: List[String]): IO[ExitCode] = {
-    val io = for {
-      args <- IO.fromEither(parseArgs(args))
-      (input, output) = args
-      _ <- convertAqua(input, output)
-    } yield {}
-    io.map(_ => ExitCode.Success)
-      .handleErrorWith(err => {
-        println(err)
-        IO(ExitCode.Error)
-      })
-  }
+object Main extends IOApp {
 
   def parseArgs(args: List[String]): Either[ParseArgsException, (List[File], Path)] = {
     val error = ParseArgsException("There should be two arguments: path/to/input/dir and path/to/output/dir")
@@ -47,24 +31,16 @@ object AquaGen extends IOApp {
     } yield (inputDir.listFiles().toList, outputDir.toPath)
   }
 
-  def convertAqua(files: List[File], outputDir: Path): IO[List[Unit]] = {
-    (for {
-      file <- files
-    } yield Files[IO]
-      .readAll(file.toPath, 4096)
-      .through(text.utf8Decode)
-      .map(text =>
-        Aqua.generate(text) match {
-          case Validated.Valid(v) ⇒
-            v
-          case Validated.Invalid(errs) ⇒
-            errs.map(_.showForConsole(text)).map(println)
-            ""
-        }
-      )
-      .through(text.utf8Encode)
-      .through(Files[IO].writeAll(outputDir.resolve(file.getName + ".js")))
-      .compile
-      .drain).sequence
+  override def run(args: List[String]): IO[ExitCode] = {
+    val io = for {
+      args <- IO.fromEither(parseArgs(args))
+      (input, output) = args
+      _ <- convertAqua(input, output)
+    } yield {}
+    io.map(_ => ExitCode.Success)
+      .handleErrorWith(err => {
+        println(err)
+        IO(ExitCode.Error)
+      })
   }
 }
