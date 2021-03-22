@@ -1,4 +1,4 @@
-name: "release"
+name: "test"
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
       - master
 
 jobs:
-  release:
-    name: "Test"
+  test:
+    name: "sbt test"
     runs-on: "ubuntu-latest"
 
     steps:
