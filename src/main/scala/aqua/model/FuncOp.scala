@@ -50,6 +50,18 @@ case class NextModel(item: String) extends FuncOp {
   }
 }
 
+case class MatchMismatchModel(left: DataView, right: DataView, shouldMatch: Boolean, op: FuncOp) extends FuncOp {
+
+  override def toAirGen: AirGen =
+    (ctx: AirContext) => {
+      val l = AirGen.resolve(ctx, left)
+      val r = AirGen.resolve(ctx, right)
+      val (resCtx, resAir) = op.toAirGen.generate(ctx)
+      resCtx -> (if (shouldMatch) Air.Match(l, r, resAir) else Air.Mismatch(l, r, resAir))
+    }
+
+}
+
 case class ForModel(item: String, iterable: DataView, op: FuncOp) extends FuncOp {
 
   private val opWrap = (op match {

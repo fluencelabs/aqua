@@ -108,6 +108,16 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
 
     FuncExpr.ast[Id](Indent()).parseAll(script).isRight should be(true)
   }
+  "if" should "parse if x == y" in {
+    val script =
+      """func a():
+        | if peer.id == other:
+        |  x <- Ab.func()
+        |  Peer "some id"
+        |  call(true)""".stripMargin
+
+    FuncExpr.ast[Id](Indent()).parseAll(script).isRight should be(true)
+  }
 
   /*
   TODO: xor1
