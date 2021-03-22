@@ -1,7 +1,9 @@
 package aqua
 
-import aqua.cli.AquaGen.{convertAqua}
+import aqua.cli.AquaGen.convertAqua
+import aqua.cli.ErrorInfo
 import cats.effect.{ExitCode, IO, IOApp}
+import fs2.text
 
 import java.io.File
 import java.nio.file.Path
@@ -31,13 +33,32 @@ object Main extends IOApp {
     } yield (inputDir.listFiles().toList, outputDir.toPath)
   }
 
+  def showResults(results: List[Either[ErrorInfo, String]]): IO[Unit] = {
+    IO {
+      results.map {
+        case Left(errorInfo) =>
+          println(Console.RED + s"File '${errorInfo.name}' processed with errors:" + Console.RESET)
+          errorInfo.errors.map(_.showForConsole(errorInfo.script)).map(println)
+        case Right(name) =>
+          println(Console.GREEN + s"File '$name' processed successfully" + Console.RESET)
+      }
+    }
+  }
+
   override def run(args: List[String]): IO[ExitCode] = {
     val io = for {
       args <- IO.fromEither(parseArgs(args))
       (input, output) = args
-      _ <- convertAqua[IO](input, output)
-    } yield ()
-    io.map(_ => ExitCode.Success).handleErrorWith { err =>
+      results <- convertAqua[IO](input, output)
+      _ <- showResults(results)
+    } yield {
+      if (results.exists(_.isLeft))
+        ExitCode.Error
+      else
+        ExitCode.Success
+    }
+    io.handleErrorWith { err =>
+      // this is an unhandled errors
       println(err)
       IO(ExitCode.Error)
     }
