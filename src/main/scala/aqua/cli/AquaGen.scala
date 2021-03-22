@@ -33,26 +33,23 @@ object AquaGen {
         .compile
         .toList
         .map(_.headOption)
-      _ <- {
-        converted match {
-          case Some(str) =>
-            fs2.Stream
-              .eval(IO(str))
-              .through(text.utf8Encode)
-              .through(Files[IO].writeAll(outputDir.resolve(name + ".ts")))
-              .compile
-              .drain
-          case None => IO.unit
-        }
+      _ <- converted match {
+        case Some(str) =>
+          fs2.Stream
+            .eval(IO(str))
+            .through(text.utf8Encode)
+            .through(Files[IO].writeAll(outputDir.resolve(name + ".ts")))
+            .compile
+            .drain
+        case None => IO.unit
       }
-    } yield {}
+    } yield ()
   }
 
-  def convertAqua(files: List[File], outputDir: Path): IO[List[Unit]] = {
+  def convertAqua(files: List[File], outputDir: Path): IO[List[Unit]] =
     (for {
       file <- files
     } yield {
       convertAquaFromFile(file, outputDir)
     }).sequence
-  }
 }

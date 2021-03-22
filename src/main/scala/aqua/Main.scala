@@ -36,11 +36,10 @@ object Main extends IOApp {
       args <- IO.fromEither(parseArgs(args))
       (input, output) = args
       _ <- convertAqua(input, output)
-    } yield {}
-    io.map(_ => ExitCode.Success)
-      .handleErrorWith(err => {
-        println(err)
-        IO(ExitCode.Error)
-      })
+    } yield ()
+    io.map(_ => ExitCode.Success).handleErrorWith { err =>
+      println(err)
+      IO(ExitCode.Error)
+    }
   }
 }
