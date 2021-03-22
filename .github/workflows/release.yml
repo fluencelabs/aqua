@@ -21,8 +21,8 @@ jobs:
       - uses: olafurpg/setup-scala@v10
 
       ### Update & build
-      # - name: Assembly
-      #   run: sbt assembly
+      - name: Assembly
+        run: sbt 'print version' #assembly
 
       ### Create release
       - name: Get project version
