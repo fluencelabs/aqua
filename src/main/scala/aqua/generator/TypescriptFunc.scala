@@ -83,6 +83,7 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
        |                    reject(err);
        |                });
        |            })
+       |            .handleScriptError(reject)
        |            .handleTimeout(() => {
        |                reject('message for timeout');
        |            })
