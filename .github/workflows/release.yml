@@ -30,11 +30,10 @@ jobs:
 
       - uses: marvinpinto/action-automatic-releases@latest
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: false
-          title: "Aqua Compiler"
-          tag_name: "${{ env.VERSION }}-${{ github.run_number }}"
-          release_name: AIR interpreter "${{ env.FINAL_VERSION }}-${{ github.run_number }}""
+          automatic_release_tag: "${{ env.VERSION }}-${{ github.run_number }}"
+          title: "Aqua Compiler "${{ env.FINAL_VERSION }}-${{ github.run_number }}""
           files: |
             target/scala-2.13/aqua-hll.jar
+          draft: true
+          prerelease: false
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
