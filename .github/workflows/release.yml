@@ -2,6 +2,7 @@ name: "release"
 
 on:
   push:
+    # uncomment to release only on tags starting with 'v'
     # tags:
     #   - "v*"
     branches:
@@ -18,14 +19,15 @@ jobs:
 
       ### Setup
       - uses: olafurpg/setup-scala@v10
-      - name: Assembly
-        run: sbt assembly
 
       ### Update & build
+      - name: Assembly
+        run: sbt assembly
 
       ### Create release
       - uses: marvinpinto/action-automatic-releases@latest
         with:
+          title: "Aqua Compiler"
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
           prerelease: false
