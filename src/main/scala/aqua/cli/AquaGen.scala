@@ -2,20 +2,23 @@ package aqua.cli
 
 import aqua.Aqua
 import cats.data.Validated
-import cats.effect.IO
+import cats.effect.Concurrent
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import cats.syntax.traverse._
+import cats.{Applicative, Functor, Monad}
 import fs2.io.file.Files
-import fs2.{text, Pipe}
+import fs2.text
 
 import java.io.File
 import java.nio.file.Path
 
 object AquaGen {
 
-  def convertAquaFromFile(file: File, outputDir: Path): IO[Unit] = {
+  def convertAquaFromFile[F[_]: Files: Concurrent: Functor: Monad](file: File, outputDir: Path): F[Unit] = {
     val name = file.getName
     for {
-      converted <- Files[IO]
+      converted <- Files[F]
         .readAll(file.toPath, 4096)
         .through(text.utf8Decode)
         .map(text =>
@@ -33,20 +36,22 @@ object AquaGen {
         .compile
         .toList
         .map(_.headOption)
-      _ <- converted match {
-        case Some(str) =>
-          fs2.Stream
-            .eval(IO(str))
-            .through(text.utf8Encode)
-            .through(Files[IO].writeAll(outputDir.resolve(name + ".ts")))
-            .compile
-            .drain
-        case None => IO.unit
+      _ <- {
+        converted match {
+          case Some(str) =>
+            fs2.Stream
+              .emit(str)
+              .through(text.utf8Encode)
+              .through(Files[F].writeAll(outputDir.resolve(name + ".ts")))
+              .compile
+              .drain
+          case None => Applicative[F].unit
+        }
       }
     } yield ()
   }
 
-  def convertAqua(files: List[File], outputDir: Path): IO[List[Unit]] =
+  def convertAqua[F[_]: Files: Concurrent: Functor: Monad](files: List[File], outputDir: Path): F[List[Unit]] =
     (for {
       file <- files
     } yield {

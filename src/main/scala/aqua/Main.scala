@@ -35,7 +35,7 @@ object Main extends IOApp {
     val io = for {
       args <- IO.fromEither(parseArgs(args))
       (input, output) = args
-      _ <- convertAqua(input, output)
+      _ <- convertAqua[IO](input, output)
     } yield ()
     io.map(_ => ExitCode.Success).handleErrorWith { err =>
       println(err)
