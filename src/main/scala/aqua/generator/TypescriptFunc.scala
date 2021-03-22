@@ -25,7 +25,7 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
     at.args.map(typeToTs).zipWithIndex.map(_.swap).map(kv => "arg" + kv._1 + ": " + kv._2).mkString(", ")
 
   def argsCallToTs(at: ArrowType): String =
-    at.args.zipWithIndex.map(_._2).map("arg" + _).mkString(", ")
+    at.args.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
 
   def argsTypescript: String =
     func.args.map {
@@ -35,12 +35,13 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
 
   def generateTypescript: String = {
 
-    val returnCallback = func.ret.map { case (dv, t) =>
-      s"""h.on('${func.callbackService}', '${func.respFuncName}', (args) => {
-         |  const [res] = args;
-         |  resolve(res);
-         |});
-         |""".stripMargin
+    val returnCallback = func.ret.map {
+      case (dv, t) =>
+        s"""h.on('${func.callbackService}', '${func.respFuncName}', (args) => {
+           |  const [res] = args;
+           |  resolve(res);
+           |});
+           |""".stripMargin
 
     }
 
@@ -48,7 +49,7 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
       case (argName, Left(t)) =>
         s"""h.on('${func.getDataService}', '$argName', () => {return $argName;});"""
       case (argName, Right(at)) =>
-        s"""h.on('${func.callbackService}', '$argName', (${argsToTs(at)}) => {return $argName(${argsCallToTs(
+        s"""h.on('${func.callbackService}', '$argName', (args) => {return $argName(${argsCallToTs(
           at
         )});});"""
     }.mkString("\n")
@@ -59,7 +60,7 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
 
     s"""
        |export async function ${func.name}(client: FluenceClient${if (func.args.isEmpty) ""
-    else ", "}${argsTypescript}): Promise<$retType> {
+       else ", "}${argsTypescript}): Promise<$retType> {
        |    let request;
        |    const promise = new Promise<$retType>((resolve, reject) => {
        |        request = new RequestFlowBuilder()
