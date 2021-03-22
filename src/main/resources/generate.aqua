@@ -32,3 +32,5 @@ func genFold(vals: []string):
 func wrapGenArrows():
     on "some peer":
         genArrows(generateComplex)
+    if true == false:
+        generateComplex("hello there!")
