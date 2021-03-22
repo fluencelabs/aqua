@@ -27,7 +27,8 @@ jobs:
       ### Create release
       - name: Get project version
         run: |
-          set -x
+          sbt 'print version'
+          echo "====="
           VERSION=$(sbt 'print version' | tail -n1)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
