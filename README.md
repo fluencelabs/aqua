@@ -27,4 +27,5 @@ input directory should contain files with `aqua` scripts
 - Implementation for abilities
 - Abilities passing
 - Print syntax errors better way
-- For the offset, find a token
+- For the offset, find a token (for LSP)
+- Generate interface types from JSON

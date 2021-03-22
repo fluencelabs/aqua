@@ -35,6 +35,16 @@ object FuncExpr extends Expr.AndIndented(OnExpr, AbilityIdExpr, ReturnExpr, Coal
               )
           }
 
+        case _: FuncExpr[F] =>
+          tree.tail.value.lastOption.map(_.head) match {
+            case Some(_: ReturnExpr[F]) =>
+              Parser.failWith(
+                "Trying to return a value from function that has no return type. Please add return type to function declaration, e.g. `func foo() -> RetType:`"
+              )
+            case _ =>
+              Parser.pure(tree)
+          }
+
         case _ => Parser.pure(tree)
       }
     }

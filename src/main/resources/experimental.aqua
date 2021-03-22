@@ -6,7 +6,7 @@ data Smth:
   oloolo: Akaka
 
 service MySrv:
-  func: A -> u32
+  func: A, u32 -> u32
   -- We can have comments inside
   pure: -> []Cdef
 
@@ -31,3 +31,6 @@ func do_smth2( a: X, b: -> Z ): -- And comments after the line
 alias Akaka : u32
 
 alias Akaka : bool
+
+service Json("json"):
+    getString: string, string -> string

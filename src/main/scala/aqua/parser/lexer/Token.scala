@@ -17,6 +17,7 @@ object Token {
   private val anum = az ++ AZ ++ f09
   private val f_ = Set('_')
   private val anum_ = anum ++ f_
+  private val nl = Set('\n', '\r')
 
   val ` ` : P[String] = P.charsWhile(fSpaces)
   val `data`: P[Unit] = P.string("data")
@@ -31,7 +32,7 @@ object Token {
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
   val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
   val `Class`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
-  val `\n` : P[Unit] = P.char('\n')
+  val `\n` : P[Unit] = P.string("\n\r") | P.char('\n') | P.string("\r\n")
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
   val ` \n` : P[Unit] = (` `.?.void *> (`--` *> P.charsWhile(_ != '\n')).?.void).with1 *> `\n`
   val ` \n+` : P[Unit] = P.repAs[Unit, Unit](` \n`.backtrack, 1)(Accumulator0.unitAccumulator0)

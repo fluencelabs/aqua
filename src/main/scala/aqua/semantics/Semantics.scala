@@ -33,7 +33,7 @@ object Semantics {
       .apply(
         inners
           .reduceLeftOption[Free[G, Model]]((a, b) => (a, b).mapN(_ |+| _))
-          .getOrElse(Free.pure(Model.empty))
+          .getOrElse(Free.pure(Model.empty("AST is empty")))
       )
   }
 

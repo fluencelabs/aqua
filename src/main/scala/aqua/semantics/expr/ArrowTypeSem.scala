@@ -12,8 +12,8 @@ class ArrowTypeSem[F[_]](val expr: ArrowTypeExpr[F]) extends AnyVal {
 
   def program[Alg[_]](implicit T: TypesAlgebra[F, Alg], A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Model] =
     T.resolveArrowDef(expr.`type`).flatMap {
-      case Some(t) => A.defineArrow(expr.name, t) as Model.empty
-      case None => Free.pure[Alg, Model](Model.error)
+      case Some(t) => A.defineArrow(expr.name, t) as Model.empty("Arrow type generates no model")
+      case None => Free.pure[Alg, Model](Model.error("Arrow type unresolved"))
     }
 
 }
