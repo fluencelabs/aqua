@@ -19,7 +19,7 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
         case Some(lt) =>
           V.resolveType(expr.right).flatMap {
             case Some(rt) =>
-              T.ensureTypeMatches(expr.eqOp, lt, rt)
+              T.ensureTypeMatches(expr.right, lt, rt)
             case None =>
               Free.pure[Alg, Boolean](false)
           }

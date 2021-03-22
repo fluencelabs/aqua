@@ -14,5 +14,7 @@ data Enclosing:
 func call(enc: Enclosing, oni32: u32 -> (), onString: string -> (), onBool: bool -> (), onInside: Inside -> Inside) -> Inside:
     onBool(enc.flag)
     onBool(enc.wrap)
-
+    if enc.flag == enc.wrap:
+        oni32(22)
+    <- enc.wrap.inside
 
