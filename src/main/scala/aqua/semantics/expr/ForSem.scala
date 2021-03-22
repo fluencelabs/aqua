@@ -29,7 +29,7 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
         N.endScope() as (ops match {
           case op: FuncOp =>
             ForModel(expr.item.value, ValuesAlgebra.valueToData(expr.iterable), op)
-          case _ => Model.error
+          case _ => Model.error("Wrong body of For expr")
         })
     )
 }

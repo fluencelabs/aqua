@@ -91,7 +91,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
           funcArrow,
           isRoot = true
         ) as model
-      case _ => Free.pure[Alg, Model](Model.error)
+      case m => Free.pure[Alg, Model](Model.error("Function body is not a funcOp, it's " + m))
     })
 
   def program[Alg[_]](implicit

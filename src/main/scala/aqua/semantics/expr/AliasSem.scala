@@ -11,7 +11,7 @@ class AliasSem[F[_]](val expr: AliasExpr[F]) extends AnyVal {
 
   def program[Alg[_]](implicit T: TypesAlgebra[F, Alg]): Prog[Alg, Model] =
     T.resolveType(expr.target).flatMap {
-      case Some(t) => T.defineAlias(expr.name, t) as Model.empty
-      case None => Free.pure[Alg, Model](Model.error)
+      case Some(t) => T.defineAlias(expr.name, t) as Model.empty("Alias generates no model")
+      case None => Free.pure[Alg, Model](Model.error("Alias type unresolved"))
     }
 }

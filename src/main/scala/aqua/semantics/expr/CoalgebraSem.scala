@@ -78,6 +78,6 @@ class CoalgebraSem[F[_]](val expr: CoalgebraExpr[F]) extends AnyVal {
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
   ): Prog[Alg, Model] =
-    toModel[Alg].map(_.getOrElse(Model.error))
+    toModel[Alg].map(_.getOrElse(Model.error("Coalgebra can't be converted to Model")))
 
 }

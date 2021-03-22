@@ -7,8 +7,8 @@ import scala.collection.immutable.Queue
 trait Model
 
 object Model {
-  def empty: Model = EmptyModel
-  def error: Model = EmptyModel
+  def empty(log: String): Model = EmptyModel(log)
+  def error(log: String): Model = EmptyModel(log)
 
   implicit object MergeModels extends Semigroup[Model] {
 
@@ -23,11 +23,11 @@ object Model {
       case (l: ScriptModel, _) => l
       case (_, r: FuncModel) => r
       case (l: FuncModel, _) => l
-      case (EmptyModel, EmptyModel) => EmptyModel
-      case (EmptyModel, r) => r
-      case (l, EmptyModel) => l
+      case (l: EmptyModel, r: EmptyModel) => EmptyModel(l.log + " |+| " + r.log)
+      case (_: EmptyModel, r) => r
+      case (l, _: EmptyModel) => l
     }
   }
 }
 
-case object EmptyModel extends Model
+case class EmptyModel(log: String) extends Model

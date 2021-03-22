@@ -22,7 +22,7 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
         A.endScope() >> P.erasePeerId() as (ops match {
           case op: FuncOp =>
             OnModel(ValuesAlgebra.valueToData(expr.peerId), op)
-          case _ => Model.error
+          case m => Model.error("On body is not an op, it's " + m)
         })
     )
 }

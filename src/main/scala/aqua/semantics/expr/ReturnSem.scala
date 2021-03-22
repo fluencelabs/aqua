@@ -9,5 +9,5 @@ import cats.syntax.functor._
 class ReturnSem[F[_]](val expr: ReturnExpr[F]) extends AnyVal {
 
   def program[Alg[_]](implicit V: ValuesAlgebra[F, Alg]): Prog[Alg, Model] =
-    V.resolveType(expr.value) as Model.empty
+    V.resolveType(expr.value) as Model.empty("Return makes no model")
 }

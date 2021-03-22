@@ -29,11 +29,11 @@ class ServiceSem[F[_]](val expr: ServiceExpr[F]) extends AnyVal {
               expr.name,
               nel.map(kv => kv._1.value -> kv._2).toNem
             ) >>
-              expr.id.fold(Free.pure[Alg, Model](Model.empty))(idV =>
-                V.ensureIsString(idV) >> A.setServiceId(expr.name, idV) as Model.empty
+              expr.id.fold(Free.pure[Alg, Model](Model.empty("No service id is OK")))(idV =>
+                V.ensureIsString(idV) >> A.setServiceId(expr.name, idV) as Model.empty("Service with ID defined")
               )
           case None =>
-            Free.pure(Model.error)
+            Free.pure(Model.error("Service has no arrows, fails"))
 
         }
     )

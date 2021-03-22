@@ -16,8 +16,8 @@ class DataStructSem[F[_]](val expr: DataStructExpr[F]) extends AnyVal {
   ): Prog[Alg, Model] =
     Prog.after((_: Model) =>
       T.purgeFields(expr.name).flatMap {
-        case Some(fields) => T.defineDataType(expr.name, fields) as Model.empty // TODO it's not air gen, but ts gen
-        case None => Free.pure[Alg, Model](Model.error)
+        case Some(fields) => T.defineDataType(expr.name, fields) as Model.empty("Data struct makes no model")
+        case None => Free.pure[Alg, Model](Model.error("Data struct types unresolved"))
       }
     )
 
