@@ -27,7 +27,9 @@ jobs:
       ### Create release
       - name: Get project version
         run: |
-          VERSION="$(sbt 'print version' |& tail -n2)"
+          # I don't know why, but in CI sbt appends a new line after its output. 
+          # If this ever breaks, that might be the reason.
+          VERSION="$(sbt 'print version' |& tail -n2 | head -n1)"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - uses: marvinpinto/action-automatic-releases@latest
