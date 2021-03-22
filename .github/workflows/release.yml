@@ -21,12 +21,15 @@ jobs:
       - uses: olafurpg/setup-scala@v10
 
       ### Update & build
-      - name: Assembly
-        run: sbt assembly
+      # - name: Assembly
+      #   run: sbt assembly
 
       ### Create release
       - name: Get project version
-        run: echo "VERSION=$(sbt 'print version' | tail -n1)" >> $GITHUB_ENV
+        run: |
+          set -x
+          OUTPUT = $(sbt 'print version')
+          echo "VERSION=$(sbt 'print version' | tail -n1)" >> $GITHUB_ENV
 
       - uses: marvinpinto/action-automatic-releases@latest
         with:
