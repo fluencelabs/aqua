@@ -35,7 +35,7 @@ object FuncExpr extends Expr.AndIndented(OnExpr, AbilityIdExpr, ReturnExpr, Coal
               )
           }
 
-        case funcExpr: FuncExpr[F] =>
+        case _: FuncExpr[F] =>
           tree.tail.value.lastOption.map(_.head) match {
             case Some(_: ReturnExpr[F]) =>
               Parser.failWith(
