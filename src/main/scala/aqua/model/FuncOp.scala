@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.generator.{Air, AirContext, AirGen, DataView, ParGen, SeqGen, SrvCallable}
+import aqua.generator.{Air, AirContext, AirGen, DataView, ParGen, SeqGen, SrvCallable, XorGen}
 import aqua.semantics.Type
 import cats.data.{NonEmptyChain, NonEmptyList}
 import cats.kernel.Semigroup
@@ -17,6 +17,7 @@ object FuncOp {
     override def combine(x: FuncOp, y: FuncOp): FuncOp = (x, y) match {
       case (l: ParModel, r: ParModel) => ParModel(l.ops ++ r.ops.toList)
       case (l, r: ParModel) => ParModel(l :: r.ops)
+      case (l, r: XorModel) => XorModel(l :: r.ops)
       case (l: SeqModel, r: SeqModel) => SeqModel(l.ops ++ r.ops)
       case (l: SeqModel, r) => SeqModel(l.ops.append(r))
       case (l, r) => SeqModel(NonEmptyChain(l, r))
@@ -30,6 +31,10 @@ case class SeqModel(ops: NonEmptyChain[FuncOp]) extends FuncOp {
 
 case class ParModel(ops: NonEmptyList[FuncOp]) extends FuncOp {
   override def toAirGen: AirGen = ops.map(_.toAirGen).reduceLeft(ParGen)
+}
+
+case class XorModel(ops: NonEmptyList[FuncOp]) extends FuncOp {
+  override def toAirGen: AirGen = ops.map(_.toAirGen).reduceLeft(XorGen)
 }
 
 case class OnModel(peerId: DataView, op: FuncOp) extends FuncOp {

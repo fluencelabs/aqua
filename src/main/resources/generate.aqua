@@ -34,3 +34,5 @@ func wrapGenArrows():
         genArrows(generateComplex)
     if true == false:
         generateComplex("hello there!")
+    else:
+        generateComplex("else do this!")
