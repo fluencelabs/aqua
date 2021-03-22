@@ -5,8 +5,8 @@ on:
     # uncomment to release only on tags starting with 'v'
     # tags:
     #   - "v*"
-    branches:
-      - "main"
+    # branches:
+    #   - "main"
 
 jobs:
   release:
@@ -25,11 +25,16 @@ jobs:
         run: sbt assembly
 
       ### Create release
+      - name: Get project version
+        run: echo "VERSION=$(sbt 'print version' | tail -n1)" >> $GITHUB_ENV
+
       - uses: marvinpinto/action-automatic-releases@latest
         with:
-          title: "Aqua Compiler"
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
           prerelease: false
+          title: "Aqua Compiler"
+          tag_name: "${{ env.VERSION }}-${{ github.run_number }}"
+          release_name: AIR interpreter "${{ env.FINAL_VERSION }}-${{ github.run_number }}""
           files: |
             target/scala-2.13/aqua-hll.jar
