@@ -54,7 +54,8 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
     }.mkString("\n")
 
     s"""
-       |export async function ${func.name}(client: FluenceClient, ${argsTypescript}): Promise<${func.ret
+       |export async function ${func.name}(client: FluenceClient${if (func.args.isEmpty) ""
+    else ", "}${argsTypescript}): Promise<${func.ret
       .map(_._2)
       .fold("void")(typeToTs)}> {
        |    let request;
