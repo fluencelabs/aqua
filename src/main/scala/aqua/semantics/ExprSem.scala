@@ -29,6 +29,7 @@ object ExprSem {
       case expr: FuncExpr[F] => new FuncSem(expr).program[G]
       case expr: OnExpr[F] => new OnSem(expr).program[G]
       case expr: ForExpr[F] => new ForSem(expr).program[G]
+      case expr: IfExpr[F] => new IfSem(expr).program[G]
       case expr: ParExpr[F] => new ParSem(expr).program[G]
       case expr: ReturnExpr[F] => new ReturnSem(expr).program[G]
       case expr: ServiceExpr[F] => new ServiceSem(expr).program[G]
