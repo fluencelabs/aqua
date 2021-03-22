@@ -10,10 +10,10 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
     case ArrayType(t) => typeToTs(t) + "[]"
     case pt: ProductType => s"{${pt.fields.map(typeToTs).toNel.map(kv => kv._1 + ":" + kv._2).toList.mkString(";")}}"
     case st: ScalarType if ScalarType.number(st) => "number"
-    case ScalarType.bool => "bool"
+    case ScalarType.bool => "boolean"
     case ScalarType.string => "string"
     case lt: LiteralType if lt.oneOf.exists(ScalarType.number) => "number"
-    case lt: LiteralType if lt.oneOf(ScalarType.bool) => "bool"
+    case lt: LiteralType if lt.oneOf(ScalarType.bool) => "boolean"
     case lt: LiteralType if lt.oneOf(ScalarType.string) => "string"
     case _: DataType => "any"
     case at: ArrowType =>
