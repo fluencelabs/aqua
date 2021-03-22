@@ -25,11 +25,28 @@ jobs:
         run: sbt assembly
 
       ### Create release
+      - name: Get project version
+        # In CI sbt appends a new line after its output, so we need `tail -n2 | head -n1`
+        run: |
+          VERSION="$(sbt 'print version' |& tail -n2 | head -n1)"
+          echo "SBT_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION-${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: Add version to .jar name
+        run: |
+          JAR="target/scala-2.13/aqua-hll-${{ env.VERSION }}.jar"
+          mv "target/scala-2.13/aqua-hll.jar" $JAR
+          echo "JAR=$JAR" >> $GITHUB_ENV
+
       - uses: marvinpinto/action-automatic-releases@latest
         with:
-          title: "Aqua Compiler"
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: false
+          # changelog will be automatically generated from the history
+          # between tag env.SBT_VERSION (eg 0.1.0 or 0.2.0, etc)
+          # and the current commit
+          automatic_release_tag: "${{ env.SBT_VERSION }}"
+          title: "Aqua Compiler ${{ env.VERSION }}"
           files: |
-            target/scala-2.13/aqua-hll.jar
+            ${{ env.JAR }}
+          draft: true
+          prerelease: false
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
