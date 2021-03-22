@@ -15,7 +15,8 @@ class FuncCallable(argNames: List[(String, Either[DataType, ArrowType])], retVal
       val argsToData = argsFull.collect { case ((n, Left(_)), v) =>
         n -> v
       }
-      val argsToArrows = argsFull.collect { case ((n, Right(r)), DataView.Variable(name)) =>
+      // TODO: what if ability's arrow is passed?
+      val argsToArrows = argsFull.collect { case ((n, Right(_)), DataView.Variable(name)) =>
         n -> c.arrows(name)
       }
 

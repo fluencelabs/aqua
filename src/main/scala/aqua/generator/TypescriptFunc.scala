@@ -1,17 +1,24 @@
 package aqua.generator
 
 import aqua.model.FuncModel
-import aqua.semantics.{ArrayType, ArrowType, DataType, Type}
+import aqua.semantics.{ArrayType, ArrowType, DataType, LiteralType, ProductType, ScalarType, Type}
 import cats.syntax.show._
 
 case class TypescriptFunc(func: FuncModel, tsAir: Air) {
 
   def typeToTs(t: Type): String = t match {
     case ArrayType(t) => typeToTs(t) + "[]"
-    case dt: DataType => "any" // TODO render types
+    case pt: ProductType => s"{${pt.fields.map(typeToTs).toNel.map(kv => kv._1 + ":" + kv._2).toList.mkString(",")}"
+    case st: ScalarType if ScalarType.number(st) => "number"
+    case ScalarType.bool => "bool"
+    case ScalarType.string => "string"
+    case lt: LiteralType if lt.oneOf.exists(ScalarType.number) => "number"
+    case lt: LiteralType if lt.oneOf(ScalarType.bool) => "bool"
+    case lt: LiteralType if lt.oneOf(ScalarType.string) => "string"
+    case _: DataType => "any"
     case at: ArrowType =>
       s"(${argsToTs(at)}) => ${at.res
-        .fold("void")(_ => "any")}"
+        .fold("void")(typeToTs)}"
   }
 
   def argsToTs(at: ArrowType): String =
