@@ -8,7 +8,7 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
 
   def typeToTs(t: Type): String = t match {
     case ArrayType(t) => typeToTs(t) + "[]"
-    case pt: ProductType => s"{${pt.fields.map(typeToTs).toNel.map(kv => kv._1 + ":" + kv._2).toList.mkString(",")}"
+    case pt: ProductType => s"{${pt.fields.map(typeToTs).toNel.map(kv => kv._1 + ":" + kv._2).toList.mkString(";")}}"
     case st: ScalarType if ScalarType.number(st) => "number"
     case ScalarType.bool => "bool"
     case ScalarType.string => "string"
@@ -53,13 +53,15 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
         )});});"""
     }.mkString("\n")
 
+    val retType = func.ret
+      .map(_._2)
+      .fold("void")(typeToTs)
+
     s"""
        |export async function ${func.name}(client: FluenceClient${if (func.args.isEmpty) ""
-    else ", "}${argsTypescript}): Promise<${func.ret
-      .map(_._2)
-      .fold("void")(typeToTs)}> {
+    else ", "}${argsTypescript}): Promise<$retType> {
        |    let request;
-       |    const promise = new Promise<string>((resolve, reject) => {
+       |    const promise = new Promise<$retType>((resolve, reject) => {
        |        request = new RequestFlowBuilder()
        |            .withRawScript(
        |                `
