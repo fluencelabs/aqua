@@ -1,0 +1,22 @@
+name: "release"
+
+on:
+  push:
+    branches-ignore:
+      - master
+
+jobs:
+  release:
+    name: "Test"
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      ### Setup
+      - uses: olafurpg/setup-scala@v10
+
+      ### Update & build
+      - name: Test
+        run: sbt test
