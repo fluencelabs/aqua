@@ -29,6 +29,7 @@ jobs:
         # In CI sbt appends a new line after its output, so we need `tail -n2 | head -n1`
         run: |
           VERSION="$(sbt 'print version' |& tail -n2 | head -n1)"
+          echo "SBT_VERSION=$VERSION" >> $GITHUB_ENV
           echo "VERSION=$VERSION-${{ github.run_number }}" >> $GITHUB_ENV
 
       - name: Add version to .jar name
@@ -39,7 +40,10 @@ jobs:
 
       - uses: marvinpinto/action-automatic-releases@latest
         with:
-          automatic_release_tag: "${{ env.VERSION }}"
+          # changelog will be automatically generated from the history
+          # between tag env.SBT_VERSION (eg 0.1.0 or 0.2.0, etc)
+          # and the current commit
+          automatic_release_tag: "${{ env.SBT_VERSION }}"
           title: "Aqua Compiler ${{ env.VERSION }}"
           files: |
             ${{ env.JAR }}
