@@ -9,7 +9,7 @@ import cats.parse.{Parser => P}
 
 case class OnExpr[F[_]](peerId: Value[F]) extends Expr[F]
 
-object OnExpr extends Expr.AndIndented(CoalgebraExpr, AbilityIdExpr) {
+object OnExpr extends Expr.AndIndented(CoalgebraExpr, AbilityIdExpr, IfExpr, ElseOtherwiseExpr) {
 
   override def p[F[_]: LiftParser: Comonad]: P[OnExpr[F]] =
     (`on` *> ` ` *> Value.`value`[F] <* ` : \n+`).map { peerId =>

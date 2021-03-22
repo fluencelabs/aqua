@@ -79,3 +79,12 @@ case class ParGen(left: AirGen, right: AirGen) extends AirGen {
     (lc.mergePar(rc).incr, Air.Par(la, ra))
   }
 }
+
+case class XorGen(left: AirGen, right: AirGen) extends AirGen {
+
+  override def generate(ctx: AirContext): (AirContext, Air) = {
+    val (lc, la) = left.generate(ctx)
+    val (rc, ra) = right.generate(ctx.incr)
+    (lc.mergePar(rc).incr, Air.Xor(la, ra))
+  }
+}

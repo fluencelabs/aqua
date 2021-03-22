@@ -12,7 +12,17 @@ import cats.Comonad
 case class FuncExpr[F[_]](name: Name[F], args: List[Arg[F]], ret: Option[DataTypeToken[F]], retValue: Option[Value[F]])
     extends Expr[F]
 
-object FuncExpr extends Expr.AndIndented(OnExpr, AbilityIdExpr, ReturnExpr, CoalgebraExpr, ParExpr, ForExpr, IfExpr) {
+object FuncExpr
+    extends Expr.AndIndented(
+      OnExpr,
+      AbilityIdExpr,
+      ReturnExpr,
+      CoalgebraExpr,
+      ParExpr,
+      ForExpr,
+      IfExpr,
+      ElseOtherwiseExpr
+    ) {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[FuncExpr[F]] =
     ((`func` *> ` ` *> Name.p[F]) ~ comma0(Arg.p)
