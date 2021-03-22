@@ -1,8 +1,8 @@
 package aqua.semantics.rules.types
 
-import aqua.parser.lexer.{ArrowDef, ArrowTypeToken, CustomTypeToken, LambdaOp, Name, Token, TypeToken}
+import aqua.parser.lexer.{ArrowTypeToken, CustomTypeToken, LambdaOp, Name, Token, TypeToken}
 import aqua.semantics.{ArrowType, Type}
-import cats.data.{NonEmptyList, NonEmptyMap}
+import cats.data.NonEmptyMap
 
 sealed trait TypeOp[F[_], T]
 
@@ -16,3 +16,4 @@ case class DefineAlias[F[_]](name: CustomTypeToken[F], target: Type) extends Typ
 
 case class ResolveLambda[F[_]](root: Type, ops: List[LambdaOp[F]]) extends TypeOp[F, Option[Type]]
 case class EnsureTypeMatches[F[_]](token: Token[F], expected: Type, given: Type) extends TypeOp[F, Boolean]
+case class CheckArgumentsNum[F[_]](token: Token[F], expected: Int, given: Int) extends TypeOp[F, Boolean]

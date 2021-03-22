@@ -7,6 +7,8 @@ import aqua.parser.lexer.{IntoArray, IntoField, LambdaOp, Literal, Token, Value,
 import aqua.semantics.{ArrowType, LiteralType, Type}
 import cats.free.Free
 import cats.syntax.apply._
+import cats.syntax.traverse._
+import cats.instances.list._
 
 class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlgebra[F, Alg]) {
 
@@ -40,30 +42,36 @@ class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlge
         }
     }
 
-  def checkArguments(arr: ArrowType, args: List[Value[F]]): Free[Alg, Boolean] =
-    args
-      .map[Free[Alg, Option[(Token[F], Type)]]] {
-        case l: Literal[F] => Free.pure(Some(l -> l.ts))
-        case VarLambda(n, ops) =>
-          N.read(n).flatMap {
-            case Some(t) => T.resolveLambda(t, ops).map(_.map(ops.lastOption.getOrElse(n) -> _))
-            case None => Free.pure(None)
+  def checkArguments(token: Token[F], arr: ArrowType, args: List[Value[F]]): Free[Alg, Boolean] = {
+    T.checkArgumentsNumber(token, arr.args.length, args.length).flatMap {
+      case false => Free.pure[Alg, Boolean](false)
+      case true =>
+        args
+          .map[Free[Alg, Option[(Token[F], Type)]]] {
+            case l: Literal[F] => Free.pure(Some(l -> l.ts))
+            case VarLambda(n, ops) =>
+              N.read(n).flatMap {
+                case Some(t) => T.resolveLambda(t, ops).map(_.map(ops.lastOption.getOrElse(n) -> _))
+                case None => Free.pure(None)
+              }
           }
-      }
-      // TODO check that number of arguments matches!
-      .zip(arr.args)
-      .foldLeft(
-        Free.pure[Alg, Boolean](true)
-      ) { case (f, (ft, t)) =>
-        (
-          f,
-          ft.flatMap {
-            case None => Free.pure(false)
-            case Some((tkn, valType)) =>
-              T.ensureTypeMatches(tkn, t, valType)
+          .zip(arr.args)
+          .foldLeft(
+            Free.pure[Alg, Boolean](true)
+          ) {
+            case (f, (ft, t)) =>
+              (
+                f,
+                ft.flatMap {
+                  case None =>
+                    Free.pure(false)
+                  case Some((tkn, valType)) =>
+                    T.ensureTypeMatches(tkn, t, valType)
+                }
+              ).mapN(_ && _)
           }
-        ).mapN(_ && _)
-      }
+    }
+  }
 
 }
 
@@ -85,7 +93,8 @@ object ValuesAlgebra {
 
   private def argsToData[F[_]](args: List[Value[F]]): List[DataView] = args.map(valueToData)
 
-  implicit def deriveValuesAlgebra[F[_], Alg[_]](implicit
+  implicit def deriveValuesAlgebra[F[_], Alg[_]](
+    implicit
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg]
   ): ValuesAlgebra[F, Alg] =
