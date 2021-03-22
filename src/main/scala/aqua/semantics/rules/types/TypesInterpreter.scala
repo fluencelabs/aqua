@@ -50,8 +50,9 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
           case Valid(t) => State.pure[X, Option[ArrowType]](Some(t))
           case Invalid(errs) =>
             errs
-              .foldLeft[S[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
-                report(tkn, hint) >> n
+              .foldLeft[S[Option[ArrowType]]](State.pure(None)) {
+                case (n, (tkn, hint)) =>
+                  report(tkn, hint) >> n
               }
         }
 
@@ -91,6 +92,14 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
       case etm: EnsureTypeMatches[F] =>
         if (etm.expected.acceptsValueOf(etm.`given`)) State.pure(true)
         else report(etm.token, s"Types mismatch, expected: ${etm.expected}, given: ${etm.`given`}").as(false)
+
+      case ca: CheckArgumentsNum[F] =>
+        if (ca.expected == ca.given) State.pure(true)
+        else
+          report(
+            ca.token,
+            s"Number of arguments doesn't match the function type, expected: ${ca.expected}, given: ${ca.`given`}"
+          ).as(false)
     }
 }
 
@@ -103,17 +112,20 @@ case class TypesState[F[_]](
   def resolveTypeToken(tt: TypeToken[F]): Option[Type] =
     tt match {
       case ArrayTypeToken(_, dtt) =>
-        resolveTypeToken(dtt).collect { case it: DataType =>
-          ArrayType(it)
+        resolveTypeToken(dtt).collect {
+          case it: DataType =>
+            ArrayType(it)
         }
       case ctt: CustomTypeToken[F] => strict.get(ctt.value)
       case btt: BasicTypeToken[F] => Some(btt.value)
       case ArrowTypeToken(_, args, res) =>
-        val strictArgs = args.map(resolveTypeToken).collect { case Some(dt: DataType) =>
-          dt
+        val strictArgs = args.map(resolveTypeToken).collect {
+          case Some(dt: DataType) =>
+            dt
         }
-        val strictRes = res.flatMap(resolveTypeToken).collect { case dt: DataType =>
-          dt
+        val strictRes = res.flatMap(resolveTypeToken).collect {
+          case dt: DataType =>
+            dt
         }
         Option.when(strictRes.isDefined == res.isDefined && strictArgs.length == args.length)(
           ArrowType(strictArgs, strictRes)

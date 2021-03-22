@@ -51,7 +51,7 @@ object DataView {
     case LastError ⇒ "%last_error%"
     case Variable(name) ⇒ name
     case Stream(name) ⇒ name
-    case VarLens(name, lens) ⇒ name + ".$" + lens
+    case VarLens(name, lens) ⇒ name + ".$" + lens + "!"
   }
 }
 
