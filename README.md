@@ -28,3 +28,64 @@ input directory should contain files with `aqua` scripts
 - Abilities passing
 - Print syntax errors better way
 - For the offset, find a token
+
+### Wishlist
+
+1)
+if aaa == bbb: -- !=
+
+else:
+
+2)
+try:
+
+catch err:
+
+3)
+$streams
+
+4...)
+while x:
+backpressure...
+
+5)
+use "smth.aqua" as Smth
+
+6)
+ability passing:
+func x {Ab} -> y
+func x {Ab} -> y {Foo}
+func x -> y {Foo}
+
+7)
+on Ability x:
+
+8)
+on browserId via relayId:
+
+9)
+compilation targets
+- ts
+- pure air
+- ???????????????????
+
+10)
+use blueprint "blueprint id" as ServiceName
+
+11)
+kademlia in Aqua
+onKadNeighborhood(kad_key, replicationFactor) do:
+....
+
+12)
+better lambda expressions
+
+13)
+@-expression
+
+alias AuthToken: bool
+
+func foo(token: AuthToken @check[from app.auth])
+
+14) FUTURE
+    generate facade modules from Aqua
