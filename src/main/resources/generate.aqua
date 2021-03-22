@@ -29,6 +29,6 @@ func genFold(vals: []string):
             Local.onIn(v)
     Local.onBoolean(true)
 
---func wrapGenArrows():
---    on "some peer":
---        genArrows(generateComplex)
+func wrapGenArrows():
+    on "some peer":
+        genArrows(generateComplex)

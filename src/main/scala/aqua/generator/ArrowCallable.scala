@@ -15,14 +15,13 @@ class FuncCallable(argNames: List[(String, Either[DataType, ArrowType])], retVal
       val argsToData = argsFull.collect { case ((n, Left(_)), v) =>
         n -> v
       }
-      // TODO: here we need to collect ArrowCallable's
-      val argsToArrows = argsFull.collect { case ((n, Right(_)), v) =>
-        n -> v
+      val argsToArrows = argsFull.collect { case ((n, Right(r)), DataView.Variable(name)) =>
+        n -> c.arrows(name)
       }
 
       (
-        c.copy(data = c.data ++ argsToData),
-        _.copy(data = c.data ++ result.zip(retValue))
+        c.copy(data = c.data ++ argsToData, arrows = c.arrows ++ argsToArrows),
+        _.copy(data = c.data ++ result.zip(retValue), arrows = c.arrows)
       )
     }
 }
