@@ -2,7 +2,7 @@ package aqua
 
 import aqua.cli.AquaGen.convertAqua
 import aqua.cli.{AquaScriptErrors, CliArgsError, CliError, IOError}
-import cats.effect.{ExitCode, IO, IOApp}
+import cats.effect.{ExitCode, IO, IOApp, Resource}
 import fs2.text
 
 import java.io.File
@@ -53,8 +53,34 @@ object Main extends IOApp {
     }
   }
 
+  def readAllInput(): IO[String] = {
+    import java.io.BufferedReader
+    import java.io.InputStreamReader
+    Resource.make(IO(new BufferedReader(new InputStreamReader(System.in))))(b => IO(b.close())).use { reader =>
+      IO {
+        if (reader.ready()) {
+          val lineSep = sys.props("line.separator")
+          var line: String = reader.readLine
+          val buf = new StringBuilder()
+          while (line != null) {
+            buf.append(line + lineSep)
+            line = reader.readLine
+          }
+          buf.toString
+        } else ""
+      }
+    }
+  }
+
   override def run(args: List[String]): IO[ExitCode] = {
     val io = for {
+      inp <- {
+        if (args.isEmpty) {
+          readAllInput().map(inp => println(inp))
+        } else {
+          IO.unit
+        }
+      }
       args <- IO.fromEither(parseArgs(args))
       (input, output) = args
       results <- convertAqua[IO](input, output)
