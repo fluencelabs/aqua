@@ -21,3 +21,20 @@ func bug(app: App, smth: bool, callback: bool -> ()):
 	UserList.leave("")
 	x <- in(app)
 	callback(smth)
+
+func addEntry(entry: string, selfPeerId: string) -> AddServiceResult:
+	app <- AppConfig.getApp()
+	relay <- AppConfig.get_init_relay()
+	on relay:
+		Op.identity()
+	authRes <- auth()
+	on app.history.peer_id:
+		History app.history.service_id
+		res <- History.add(entry, authRes.is_authenticated)
+	allUsers <- getUserList()
+	for user <- allUsers:
+		on user.relay_id:
+			Op.identity()
+		par on user.peer_id:
+			FluentPad.notifyTextUpdate(entry, selfPeerId, authRes.is_authenticated)
+	<- res
