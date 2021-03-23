@@ -1,0 +1,22 @@
+data ServiceInstance:
+	peer_id: string
+	service_id: string
+
+
+data App:
+	history: ServiceInstance
+	user_list: ServiceInstance
+
+service UserList:
+	leave: string -> u32
+
+func in(xap: App) -> u32:
+    UserList xap.user_list.service_id
+    res <- UserList.leave("")
+    <- res
+
+
+func bug(app: App, smth: bool):
+	UserList app.user_list.service_id
+	UserList.leave("")
+	x <- in(app)
