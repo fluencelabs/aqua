@@ -15,7 +15,7 @@ import aqua.parser.lexer.{
 }
 import aqua.semantics.{ArrayType, ArrowType, DataType, ProductType, Type}
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, NonEmptyList, NonEmptyMap, State, ValidatedNel}
+import cats.data.{Chain, NonEmptyChain, NonEmptyList, NonEmptyMap, State, ValidatedNec}
 import cats.~>
 import monocle.Lens
 import cats.syntax.functor._
@@ -120,7 +120,7 @@ case class TypesState[F[_]](
         )
     }
 
-  def resolveArrowDef(ad: ArrowTypeToken[F]): ValidatedNel[(Token[F], String), ArrowType] =
+  def resolveArrowDef(ad: ArrowTypeToken[F]): ValidatedNec[(Token[F], String), ArrowType] =
     ad.resType.flatMap(resolveTypeToken) match {
       case resType if resType.isDefined == ad.resType.isDefined =>
         val (errs, argTypes) = ad.argTypes
@@ -130,11 +130,11 @@ case class TypesState[F[_]](
             case ((errs, argTypes), Left(e)) => (errs.append(e), argTypes)
           }
 
-        NonEmptyList
-          .fromList(errs.toList)
-          .fold[ValidatedNel[(Token[F], String), ArrowType]](Valid(ArrowType(argTypes.toList, resType)))(Invalid(_))
+        NonEmptyChain
+          .fromChain(errs)
+          .fold[ValidatedNec[(Token[F], String), ArrowType]](Valid(ArrowType(argTypes.toList, resType)))(Invalid(_))
 
-      case _ => Invalid(NonEmptyList.of(ad.resType.getOrElse(ad) -> "Cannot resolve the result type"))
+      case _ => Invalid(NonEmptyChain.one(ad.resType.getOrElse(ad) -> "Cannot resolve the result type"))
     }
 
   def resolveOps(rootT: Type, ops: List[LambdaOp[F]]): Either[(Token[F], String), Type] =

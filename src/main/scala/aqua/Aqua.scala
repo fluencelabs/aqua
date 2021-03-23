@@ -2,19 +2,19 @@ package aqua
 
 import aqua.model.{Model, ScriptModel}
 import aqua.parser.Ast
-import cats.data.ValidatedNel
+import cats.data.ValidatedNec
 import aqua.parser.lift.Span
 import aqua.semantics.Semantics
 
 object Aqua {
 
-  def parse(input: String): ValidatedNel[AquaError, Ast[Span.F]] =
+  def parse(input: String): ValidatedNec[AquaError, Ast[Span.F]] =
     Ast.fromString[Span.F](input)
 
-  def validate(input: String): ValidatedNel[AquaError, Model] =
+  def validate(input: String): ValidatedNec[AquaError, Model] =
     parse(input).andThen(ast => Semantics.validate(ast).leftMap(_.map(ts => CompilerError(ts._1.unit._1, ts._2))))
 
-  def generate(input: String): ValidatedNel[AquaError, String] =
+  def generate(input: String): ValidatedNec[AquaError, String] =
     validate(input).map {
       case g: ScriptModel => g.generateTypescript
       case _ => "//No input given"

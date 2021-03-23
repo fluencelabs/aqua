@@ -1,7 +1,7 @@
 package aqua.cli
 
 import aqua.{Aqua, AquaError}
-import cats.data.{NonEmptyList, Validated}
+import cats.data.{NonEmptyChain, Validated}
 import cats.effect.Concurrent
 import cats.syntax.flatMap._
 import cats.syntax.functor._
@@ -13,7 +13,7 @@ import fs2.text
 import java.io.File
 import java.nio.file.Path
 
-case class ErrorInfo(name: String, script: String, errors: NonEmptyList[AquaError])
+case class ErrorInfo(name: String, script: String, errors: NonEmptyChain[AquaError])
 
 object AquaGen {
 

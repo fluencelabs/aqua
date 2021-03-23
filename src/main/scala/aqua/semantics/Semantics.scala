@@ -11,7 +11,7 @@ import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, Types
 import cats.Eval
 import cats.arrow.FunctionK
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, EitherK, NonEmptyList, State, ValidatedNel}
+import cats.data.{Chain, EitherK, NonEmptyChain, State, ValidatedNec}
 import cats.free.Free
 import monocle.Lens
 import monocle.macros.GenLens
@@ -80,11 +80,11 @@ object Semantics {
     free.foldMap[State[CompilerState[F], *]](interpreter)
   }
 
-  def validate[F[_]](ast: Ast[F]): ValidatedNel[(Token[F], String), Model] =
+  def validate[F[_]](ast: Ast[F]): ValidatedNec[(Token[F], String), Model] =
     (transpile[F] _ andThen interpret[F])(ast)
       .run(CompilerState[F]())
       .map { case (state, gen) =>
-        NonEmptyList.fromList(state.errors.toList).fold[ValidatedNel[(Token[F], String), Model]](Valid(gen))(Invalid(_))
+        NonEmptyChain.fromChain(state.errors).fold[ValidatedNec[(Token[F], String), Model]](Valid(gen))(Invalid(_))
       }
       .value
 }
