@@ -7,14 +7,6 @@ on:
 
 jobs:
   test:
-    - name: Cache SBT
-      uses: actions/cache@v2
-      with:
-        path: | 
-          ~/.ivy2/cache
-          ~/.sbt
-        key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
-
     name: "sbt test"
     runs-on: "ubuntu-latest"
 
@@ -24,6 +16,14 @@ jobs:
 
       ### Setup
       - uses: olafurpg/setup-scala@v10
+
+      - name: Cache SBT
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
 
       ### Update & build
       - name: Test
