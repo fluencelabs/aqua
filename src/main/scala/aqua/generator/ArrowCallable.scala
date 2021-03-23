@@ -22,7 +22,7 @@ class FuncCallable(argNames: List[(String, Either[DataType, ArrowType])], retVal
 
       (
         c.copy(data = c.data ++ argsToData, arrows = c.arrows ++ argsToArrows),
-        _.copy(data = c.data ++ result.zip(retValue), arrows = c.arrows)
+        cc => cc.copy(data = c.data ++ result.zip(retValue.map(AirGen.resolve(cc, _))), arrows = c.arrows)
       )
     }
 }

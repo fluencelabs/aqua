@@ -1,0 +1,13 @@
+service Exp("exp"):
+    foo: -> u32
+
+func expInner() -> u32:
+    a <- Exp.foo()
+    b <- Exp.foo()
+    <- a
+
+func expOuter(callback: u32 -> ()):
+    a <- expInner()
+    b <- Exp.foo()
+    c <- expInner()
+    callback(c)

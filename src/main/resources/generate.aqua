@@ -16,7 +16,7 @@ func generateComplex(value: string) -> bool:
         t <- tryGen(24, "should be omitted")
         Local.onIn("Should be on other")
     Local.onIn("Should be on root")
-    Local.onBoolean(b)
+    Local.onBoolean(t)
     <- b
 
 func genArrows(arr: string -> bool):
@@ -29,10 +29,11 @@ func genFold(vals: []string):
             Local.onIn(v)
     Local.onBoolean(true)
 
-func wrapGenArrows():
+func wrapGenArrows() -> bool:
     on "some peer":
         genArrows(generateComplex)
     if true == false:
-        generateComplex("hello there!")
+        x <- generateComplex("hello there!")
     else:
-        generateComplex("else do this!")
+        y <- generateComplex("else do this!")
+    <- x
