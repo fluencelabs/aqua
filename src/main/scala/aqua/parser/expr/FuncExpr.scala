@@ -26,7 +26,7 @@ object FuncExpr
 
   override def p[F[_]: LiftParser: Comonad]: Parser[FuncExpr[F]] =
     ((`func` *> ` ` *> Name.p[F]) ~ comma0(Arg.p)
-      .between(`(`, `)`) ~ (` -> ` *> DataTypeToken.`datatypedef`).? <* ` : \n+`).map { case ((name, args), ret) =>
+      .between(`(`, `)`) ~ (` -> ` *> DataTypeToken.`datatypedef`).?).map { case ((name, args), ret) =>
       FuncExpr(name, args, ret, None)
     }
 
