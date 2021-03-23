@@ -64,7 +64,7 @@ case class ServiceCallGen(
     }
 
     c.incr -> Air.Call(
-      Triplet.Full(ctx.peerId, srvId, fnName),
+      Triplet.Full(AirGen.resolve(ctx, ctx.peerId), AirGen.resolve(ctx, srvId), fnName),
       args.map(AirGen.resolve(ctx, _)),
       res
     )
