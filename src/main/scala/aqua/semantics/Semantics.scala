@@ -11,14 +11,13 @@ import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, Types
 import cats.Eval
 import cats.arrow.FunctionK
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{EitherK, NonEmptyList, State, ValidatedNel}
+import cats.data.{Chain, EitherK, NonEmptyList, State, ValidatedNel}
 import cats.free.Free
 import monocle.Lens
 import monocle.macros.GenLens
 import cats.syntax.apply._
 import cats.syntax.semigroup._
-
-import scala.collection.immutable.Queue
+import cats.syntax.foldable._
 
 object Semantics {
 
@@ -27,12 +26,12 @@ object Semantics {
     N: NamesAlgebra[F, G],
     P: PeerIdAlgebra[F, G],
     T: TypesAlgebra[F, G]
-  ): (Expr[F], List[Free[G, Model]]) => Eval[Free[G, Model]] = { case (expr, inners) =>
+  ): (Expr[F], Chain[Free[G, Model]]) => Eval[Free[G, Model]] = { case (expr, inners) =>
     Eval later ExprSem
       .getProg[F, G](expr)
       .apply(
-        inners
-          .reduceLeftOption[Free[G, Model]]((a, b) => (a, b).mapN(_ |+| _))
+        inners // TODO: first fold right, then fold left
+          .reduceLeftOption((a, b) => (a, b).mapN(_ |+| _))
           .getOrElse(Free.pure(Model.empty("AST is empty")))
       )
   }
@@ -45,7 +44,7 @@ object Semantics {
     ast.cata(folder[F, Alg[F, *]]).value
 
   case class CompilerState[F[_]](
-    errors: Queue[(Token[F], String)] = Queue.empty[(Token[F], String)],
+    errors: Chain[(Token[F], String)] = Chain.empty[(Token[F], String)],
     names: NamesState[F] = NamesState[F](),
     abilities: AbilitiesState[F] = AbilitiesState[F](),
     peerId: PeerIdState[F] = PeerIdState[F](),
@@ -56,7 +55,7 @@ object Semantics {
     import monocle.macros.syntax.all._
 
     implicit val re: ReportError[F, CompilerState[F]] =
-      (st: CompilerState[F], token: Token[F], hint: String) => st.focus(_.errors).modify(_.enqueue(token -> hint))
+      (st: CompilerState[F], token: Token[F], hint: String) => st.focus(_.errors).modify(_.append(token -> hint))
 
     implicit val ns: Lens[CompilerState[F], NamesState[F]] = GenLens[CompilerState[F]](_.names)
 

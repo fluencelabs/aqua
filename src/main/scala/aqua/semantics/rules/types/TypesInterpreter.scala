@@ -15,13 +15,13 @@ import aqua.parser.lexer.{
 }
 import aqua.semantics.{ArrayType, ArrowType, DataType, ProductType, Type}
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{NonEmptyList, NonEmptyMap, State, ValidatedNel}
+import cats.data.{Chain, NonEmptyList, NonEmptyMap, State, ValidatedNel}
 import cats.~>
 import monocle.Lens
 import cats.syntax.functor._
 import cats.syntax.flatMap._
 
-import scala.collection.immutable.{Queue, SortedMap}
+import scala.collection.immutable.SortedMap
 
 class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: ReportError[F, X])
     extends (TypeOp[F, *] ~> State[X, *]) {
@@ -125,9 +125,9 @@ case class TypesState[F[_]](
       case resType if resType.isDefined == ad.resType.isDefined =>
         val (errs, argTypes) = ad.argTypes
           .map(tt => resolveTypeToken(tt).toRight(tt -> s"Type unresolved"))
-          .foldLeft[(Queue[(Token[F], String)], Queue[Type])]((Queue.empty, Queue.empty)) {
-            case ((errs, argTypes), Right(at)) => (errs, argTypes.enqueue(at))
-            case ((errs, argTypes), Left(e)) => (errs.enqueue(e), argTypes)
+          .foldLeft[(Chain[(Token[F], String)], Chain[Type])]((Chain.empty, Chain.empty)) {
+            case ((errs, argTypes), Right(at)) => (errs, argTypes.append(at))
+            case ((errs, argTypes), Left(e)) => (errs.append(e), argTypes)
           }
 
         NonEmptyList

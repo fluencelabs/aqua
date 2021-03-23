@@ -10,11 +10,10 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.scope.PeerIdAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import cats.Applicative
+import cats.data.Chain
 import cats.free.Free
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-
-import scala.collection.immutable.Queue
 
 class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
   import expr._
@@ -32,15 +31,15 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
         args
           .foldLeft(
             // Begin scope -- for mangling
-            N.beginScope(name).as[Queue[Type]](Queue.empty)
+            N.beginScope(name).as[Chain[Type]](Chain.empty)
           ) { case (f, Arg(argName, argType)) =>
             // Resolve arg type, remember it
             f.flatMap(acc =>
               T.resolveType(argType).flatMap {
                 case Some(t: ArrowType) =>
-                  N.defineArrow(argName, t, isRoot = false).as(acc.enqueue(t))
+                  N.defineArrow(argName, t, isRoot = false).as(acc.append(t))
                 case Some(t) =>
-                  N.define(argName, t).as(acc.enqueue(t))
+                  N.define(argName, t).as(acc.append(t))
                 case None =>
                   Free.pure(acc)
               }

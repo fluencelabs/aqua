@@ -1,8 +1,7 @@
 package aqua.model
 
+import cats.data.Chain
 import cats.kernel.Semigroup
-
-import scala.collection.immutable.Queue
 
 trait Model
 
@@ -16,9 +15,9 @@ object Model {
       case (l: FuncOp, r: FuncOp) =>
         FuncOp.MergeOps.combine(l, r)
       case (l: ScriptModel, r: ScriptModel) => ScriptModel(l.funcs ++ r.funcs)
-      case (l: FuncModel, r: FuncModel) => ScriptModel(Queue(l, r))
-      case (l: ScriptModel, r: FuncModel) => ScriptModel(l.funcs.appended(r))
-      case (l: FuncModel, r: ScriptModel) => ScriptModel(r.funcs.prepended(l))
+      case (l: FuncModel, r: FuncModel) => ScriptModel(Chain(l, r))
+      case (l: ScriptModel, r: FuncModel) => ScriptModel(l.funcs.append(r))
+      case (l: FuncModel, r: ScriptModel) => ScriptModel(r.funcs.prepend(l))
       case (_, r: ScriptModel) => r
       case (l: ScriptModel, _) => l
       case (_, r: FuncModel) => r

@@ -3,6 +3,7 @@ package aqua.parser
 import aqua.parser.Ast.Tree
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
+import cats.data.{Chain, NonEmptyChain}
 import cats.free.Cofree
 import cats.parse.{Parser => P}
 import cats.{Comonad, Eval}
@@ -26,7 +27,7 @@ object Expr {
   abstract class Leaf extends Companion {
 
     override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
-      p[F].map(Cofree[List, Expr[F]](_, Eval.now(Nil)))
+      p[F].map(Cofree[Chain, Expr[F]](_, Eval.now(Chain.empty)))
   }
 
   abstract class AndThen(headExpr: Companion, oneOfExprs: Companion*) extends Companion {
@@ -35,7 +36,7 @@ object Expr {
 
     override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
       ((p[F] <* ` `) ~ P.oneOf(contents.map(_.ast[F](ps).backtrack))).map { case (expr, andThen) =>
-        Cofree[List, Expr[F]](expr, Eval.now(andThen :: Nil))
+        Cofree[Chain, Expr[F]](expr, Eval.now(Chain.one(andThen)))
       }
   }
 
@@ -50,8 +51,8 @@ object Expr {
           P.oneOf(contents.map(_.ast[F](psI).backtrack))
         },
         ps.indent
-      )).map { case (expr, internal) =>
-        Cofree[List, Expr[F]](expr, Eval.now(internal.toList))
+      ).map(_.toList).map(Chain.fromSeq)).map { case (expr, internal) =>
+        Cofree[Chain, Expr[F]](expr, Eval.now(internal))
       }
   }
 }
