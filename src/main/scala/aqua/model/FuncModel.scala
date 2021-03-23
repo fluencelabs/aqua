@@ -29,7 +29,7 @@ case class FuncModel(
   def callable: ArrowCallable =
     new FuncCallable(args, ret.map(_._1), bodyGen)
 
-  def airContext(acc: Map[String, ArrowCallable]): AirContext =
+  def airContextWithArgs(acc: Map[String, ArrowCallable]): AirContext =
     AirContext(
       data = args.collect { case (an, Left(_)) =>
         an -> DataView.Variable(an)
@@ -42,7 +42,7 @@ case class FuncModel(
 
   def generateAir(acc: Map[String, ArrowCallable]): Air =
     bodyGen
-      .generate(airContext(acc))
+      .generate(airContextWithArgs(acc))
       ._2
 
   def generateTs(acc: Map[String, ArrowCallable]): TypescriptFunc =
@@ -74,7 +74,9 @@ case class FuncModel(
           body
         )
         .appendChain(Chain.fromSeq(returnCallback.toSeq))
-    ).toAirGen.generate(airContext(acc))._2
+    ).toAirGen
+      .generate(AirContext(arrows = acc))
+      ._2
 
   def getDataOp(name: String): FuncOp =
     CoalgebraModel(
