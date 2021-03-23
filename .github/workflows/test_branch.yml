@@ -3,7 +3,7 @@ name: "test"
 on:
   push:
     branches-ignore:
-      - master
+      - main
 
 jobs:
   test:
@@ -15,8 +15,24 @@ jobs:
         uses: actions/checkout@v2
 
       ### Setup
+      - name: Cache SBT
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
+
+      - name: Cache coursier
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/coursier
+          key: ${{ runner.OS }}-coursier-cache-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            ${{ runner.OS }}-coursier-cache-${{ hashFiles('**/*.sbt') }}-
+            ${{ runner.OS }}-coursier-cache-
+
       - uses: olafurpg/setup-scala@v10
 
       ### Update & build
-      - name: Test
-        run: sbt test
+      - run: sbt test
