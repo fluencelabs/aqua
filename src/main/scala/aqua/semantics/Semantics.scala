@@ -1,6 +1,6 @@
 package aqua.semantics
 
-import aqua.model.Model
+import aqua.model.{FuncOp, Model, RightBiased}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
@@ -17,7 +17,6 @@ import monocle.Lens
 import monocle.macros.GenLens
 import cats.syntax.apply._
 import cats.syntax.semigroup._
-import cats.syntax.foldable._
 
 object Semantics {
 
@@ -30,9 +29,15 @@ object Semantics {
     Eval later ExprSem
       .getProg[F, G](expr)
       .apply(
-        inners // TODO: first fold right, then fold left
-          .reduceLeftOption((a, b) => (a, b).mapN(_ |+| _))
-          .getOrElse(Free.pure(Model.empty("AST is empty")))
+        inners
+          .foldRight(Free.pure[G, List[Model]](Model.empty("AST is empty") :: Nil)) { case (next, acc) =>
+            (next, acc).mapN {
+              case (nxt: FuncOp, (prev: RightBiased) :: tail) =>
+                Model.empty("Next item is consumed with right-biased op") :: (nxt :+: prev) :: tail
+              case (nxt, tail) => nxt :: tail
+            }
+          }
+          .map(_.reduceLeft(_ |+| _))
       )
   }
 

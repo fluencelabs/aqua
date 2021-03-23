@@ -10,14 +10,16 @@ sealed trait FuncOp extends Model {
   def toAirGen: AirGen
 }
 
+trait RightBiased {
+  self: FuncOp =>
+  def :+:(prev: FuncOp): FuncOp
+}
+
 object FuncOp {
 
   implicit object MergeOps extends Semigroup[FuncOp] {
 
     override def combine(x: FuncOp, y: FuncOp): FuncOp = (x, y) match {
-      case (l: ParModel, r: ParModel) => ParModel(l.ops ++ r.ops.toList)
-      case (l, r: ParModel) => ParModel(l :: r.ops)
-      case (l, r: XorModel) => XorModel(l :: r.ops)
       case (l: SeqModel, r: SeqModel) => SeqModel(l.ops ++ r.ops)
       case (l: SeqModel, r) => SeqModel(l.ops.append(r))
       case (l, r) => SeqModel(NonEmptyChain(l, r))
@@ -29,12 +31,16 @@ case class SeqModel(ops: NonEmptyChain[FuncOp]) extends FuncOp {
   override def toAirGen: AirGen = ops.map(_.toAirGen).reduceLeft(SeqGen)
 }
 
-case class ParModel(ops: NonEmptyList[FuncOp]) extends FuncOp {
+case class ParModel(ops: NonEmptyList[FuncOp]) extends FuncOp with RightBiased {
   override def toAirGen: AirGen = ops.map(_.toAirGen).reduceLeft(ParGen)
+
+  override def :+:(prev: FuncOp): FuncOp = copy(ops.prepend(prev))
 }
 
-case class XorModel(ops: NonEmptyList[FuncOp]) extends FuncOp {
+case class XorModel(ops: NonEmptyList[FuncOp]) extends FuncOp with RightBiased {
   override def toAirGen: AirGen = ops.map(_.toAirGen).reduceLeft(XorGen)
+
+  override def :+:(prev: FuncOp): FuncOp = copy(ops.prepend(prev))
 }
 
 case class OnModel(peerId: DataView, op: FuncOp) extends FuncOp {
