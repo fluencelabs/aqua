@@ -1,42 +1,19 @@
 package aqua.cli
 
-import aqua.{Aqua, AquaError}
-import cats.data.{EitherT, NonEmptyChain, Validated}
+import aqua.Aqua
+import cats.data.{EitherT, Validated}
 import cats.effect.Concurrent
-import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.syntax.traverse._
-import cats.{Applicative, Functor, Monad}
+import cats.Applicative
 import fs2.io.file.Files
 import fs2.text
 
 import java.io.File
 import java.nio.file.{Path, Paths}
 
-sealed trait CliError
-
-object CliError {
-
-  def parseError(name: String, error: String): CliError = {
-    ParseError(name, error)
-  }
-
-  def errorInfo(name: String, script: String, errors: NonEmptyChain[AquaError]): CliError = {
-    ErrorInfo(name, script, errors)
-  }
-
-  def ioError(msg: String, t: Throwable): CliError = {
-    IOError(msg, t)
-  }
-}
-
-case class IOError(msg: String, t: Throwable) extends Exception(msg, t) with CliError
-case class ParseError(name: String, error: String) extends CliError
-case class ErrorInfo(name: String, script: String, errors: NonEmptyChain[AquaError]) extends CliError
-
 object AquaGen {
 
-  def checkAndChangeExtension[F[_]: Monad](fileName: String): EitherT[F, CliError, String] = {
+  def checkAndChangeExtension[F[_]: Applicative](fileName: String): EitherT[F, CliError, String] = {
     val arr = fileName.split("\\.").toList
     for {
       _ <- EitherT.cond[F](
