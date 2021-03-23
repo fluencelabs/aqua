@@ -1,7 +1,7 @@
 package aqua
 
 import aqua.cli.AquaGen.convertAqua
-import aqua.cli.ErrorInfo
+import aqua.cli.{AquaScriptErrors, CliArgsError, CliError, IOError}
 import cats.effect.{ExitCode, IO, IOApp}
 import fs2.text
 
@@ -33,12 +33,20 @@ object Main extends IOApp {
     } yield (inputDir.listFiles().toList, outputDir.toPath)
   }
 
-  def showResults(results: List[Either[ErrorInfo, String]]): IO[Unit] = {
+  def showResults(results: List[Either[CliError, String]]): IO[Unit] = {
     IO {
       results.map {
-        case Left(errorInfo) =>
-          println(Console.RED + s"File '${errorInfo.name}' processed with errors:" + Console.RESET)
-          errorInfo.errors.map(_.showForConsole(errorInfo.script)).map(println)
+        case Left(err) =>
+          err match {
+            case AquaScriptErrors(name, script, errors) =>
+              println(Console.RED + s"File '$name' processed with errors:" + Console.RESET)
+              errors.map(_.showForConsole(script)).map(println)
+            case CliArgsError(name, error) =>
+              println(Console.RED + s"File '$name' processed with error: $error" + Console.RESET)
+            case IOError(msg, t) =>
+              println(Console.RED + s"$msg: $t" + Console.RESET)
+          }
+
         case Right(name) =>
           println(Console.GREEN + s"File '$name' processed successfully" + Console.RESET)
       }
