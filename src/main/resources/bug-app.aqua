@@ -16,7 +16,8 @@ func in(xap: App) -> u32:
     <- res
 
 
-func bug(app: App, smth: bool):
+func bug(app: App, smth: bool, callback: bool -> ()):
 	UserList app.user_list.service_id
 	UserList.leave("")
 	x <- in(app)
+	callback(smth)

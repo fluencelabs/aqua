@@ -74,9 +74,11 @@ case class FuncModel(
           body
         )
         .appendChain(Chain.fromSeq(returnCallback.toSeq))
-    ).toAirGen
-      .generate(AirContext(arrows = acc))
-      ._2
+    ).toAirGen.generate {
+      val ctx = airContextWithArgs(acc)
+
+      ctx.copy(data = Map.empty, vars = ctx.arrows.keySet)
+    }._2
 
   def getDataOp(name: String): FuncOp =
     CoalgebraModel(
