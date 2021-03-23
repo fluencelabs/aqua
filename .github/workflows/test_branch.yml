@@ -40,5 +40,4 @@ jobs:
       - uses: olafurpg/setup-scala@v10
 
       ### Update & build
-      - run: sbt update
       - run: sbt test
