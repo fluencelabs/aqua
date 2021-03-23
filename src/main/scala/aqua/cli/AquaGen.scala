@@ -9,7 +9,7 @@ import fs2.io.file.Files
 import fs2.text
 
 import java.io.File
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 
 object AquaGen {
 
@@ -78,11 +78,10 @@ object AquaGen {
   def convertAqua[F[_]: Files: Concurrent](
     files: List[File],
     outputDir: Path
-  ): F[List[Either[CliError, String]]] = {
+  ): F[List[Either[CliError, String]]] =
     fs2.Stream
       .emits(files)
       .evalMap(f => convertAquaFromFile(f, outputDir).value)
       .compile
       .toList
-  }
 }
