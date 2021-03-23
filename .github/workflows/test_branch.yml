@@ -17,7 +17,6 @@ jobs:
       ### Setup
       - name: Cache SBT
         uses: actions/cache@v2
-        id: cachesbt
         with:
           path: |
             ~/.ivy2/cache
@@ -26,16 +25,12 @@ jobs:
 
       - name: Cache coursier
         uses: actions/cache@v1
-        id: cachecoursier
         with:
           path: ~/.cache/coursier
           key: ${{ runner.OS }}-coursier-cache-${{ hashFiles('**/*.sbt') }}
           restore-keys: |
             ${{ runner.OS }}-coursier-cache-${{ hashFiles('**/*.sbt') }}-
             ${{ runner.OS }}-coursier-cache-
-
-      - name: Debug cache hit
-        run: echo "sbt cache hit? ${{ steps.cachesbt.outputs.cache-hit }} coursier? ${{ steps.cachecoursier.outputs.cache-hit }}"
 
       - uses: olafurpg/setup-scala@v10
 
