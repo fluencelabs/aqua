@@ -8,11 +8,11 @@ sealed trait CliError
 object CliError {
 
   def parseError(name: String, error: String): CliError = {
-    ParseError(name, error)
+    CliArgsError(name, error)
   }
 
   def errorInfo(name: String, script: String, errors: NonEmptyChain[AquaError]): CliError = {
-    ErrorInfo(name, script, errors)
+    AquaScriptErrors(name, script, errors)
   }
 
   def ioError(msg: String, t: Throwable): CliError = {
@@ -21,5 +21,5 @@ object CliError {
 }
 
 case class IOError(msg: String, t: Throwable) extends Exception(msg, t) with CliError
-case class ParseError(name: String, error: String) extends CliError
-case class ErrorInfo(name: String, script: String, errors: NonEmptyChain[AquaError]) extends CliError
+case class CliArgsError(name: String, error: String) extends CliError
+case class AquaScriptErrors(name: String, script: String, errors: NonEmptyChain[AquaError]) extends CliError

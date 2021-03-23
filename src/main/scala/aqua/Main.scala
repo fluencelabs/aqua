@@ -1,7 +1,7 @@
 package aqua
 
 import aqua.cli.AquaGen.convertAqua
-import aqua.cli.{CliError, ErrorInfo, IOError, ParseError}
+import aqua.cli.{AquaScriptErrors, CliArgsError, CliError, IOError}
 import cats.effect.{ExitCode, IO, IOApp}
 import fs2.text
 
@@ -38,10 +38,10 @@ object Main extends IOApp {
       results.map {
         case Left(err) =>
           err match {
-            case ErrorInfo(name, script, errors) =>
+            case AquaScriptErrors(name, script, errors) =>
               println(Console.RED + s"File '$name' processed with errors:" + Console.RESET)
               errors.map(_.showForConsole(script)).map(println)
-            case ParseError(name, error) =>
+            case CliArgsError(name, error) =>
               println(Console.RED + s"File '$name' processed with error: $error" + Console.RESET)
             case IOError(msg, t) =>
               println(Console.RED + s"$msg: $t" + Console.RESET)
