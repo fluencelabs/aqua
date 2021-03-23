@@ -45,7 +45,6 @@ object AquaGen {
               .flatMap { text =>
                 Aqua.generate(text) match {
                   case Validated.Valid(v) ⇒
-                    println("success:" + v)
                     Right(v)
                   case Validated.Invalid(errs) ⇒
                     Left(CliError.errorInfo(name, text, errs))
