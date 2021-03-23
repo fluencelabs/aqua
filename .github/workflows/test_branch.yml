@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      ### Setup
+      ### Setup #
       - name: Cache coursier
         uses: actions/cache@v1
         id: cachecoursier
