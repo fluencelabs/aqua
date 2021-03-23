@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      ### Setup #
+      ### Setup
       - name: Cache SBT
         uses: actions/cache@v2
         id: cachesbt
@@ -40,5 +40,5 @@ jobs:
       - uses: olafurpg/setup-scala@v10
 
       ### Update & build
-      - run: csbt update
-      - run: csbt test
+      - run: sbt update
+      - run: sbt test
