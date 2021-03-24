@@ -30,7 +30,7 @@ object ArgsConfig {
 
   private val builder = OParser.builder[Config]
 
-  val argParser = {
+  private val argParser = {
     import builder._
     OParser.sequence(
       programName("ahc"),

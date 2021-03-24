@@ -28,7 +28,7 @@ object Main extends IOApp {
     }
   }
 
-  private def readAllInput(): IO[String] = {
+  private def readAllInput(): IO[Option[String]] = {
     import java.io.BufferedReader
     import java.io.InputStreamReader
     Resource.make(IO(new BufferedReader(new InputStreamReader(System.in))))(b => IO(b.close())).use { reader =>
@@ -41,8 +41,8 @@ object Main extends IOApp {
             buf.append(line + lineSep)
             line = reader.readLine
           }
-          buf.toString
-        } else ""
+          Some(buf.toString)
+        } else Option("")
       }
     }
   }
@@ -51,20 +51,19 @@ object Main extends IOApp {
     ArgsConfig.parseArgs(args) match {
       case Some(config) =>
         val io = for {
-          results <- {
+          results <-
             (config.input, config.output) match {
               case (Some(i), Some(o)) =>
                 convertAquaFilesToDir[IO](i, o)
               case _ =>
-                readAllInput().map(i => {
-                  if (i.isEmpty) {
+                readAllInput().map {
+                  case Some(i) =>
+                    List(convertAqua(i))
+                  case None =>
                     println("input is empty")
                     List()
-                  } else List(convertAqua(i))
-                })
-
+                }
             }
-          }
           _ <- showResults(results)
         } yield {
           if (results.exists(_.isLeft))
