@@ -14,7 +14,7 @@ object ArgsConfig {
     stringRead.map { str =>
       val inputDir = new File(str)
       if (!inputDir.isDirectory && !inputDir.exists())
-        throw new IllegalArgumentException(s"Input path '$str' should be a dir and exists")
+        throw new IllegalArgumentException(s"The input path '$str' must be a directory and exist")
       else
         inputDir.listFiles().toList
     }
@@ -23,7 +23,7 @@ object ArgsConfig {
     stringRead.map { str =>
       val outputDir = new File(str)
       if (!outputDir.isDirectory && !outputDir.exists())
-        throw new IllegalArgumentException(s"Input path '$str' should be a dir and exists")
+        throw new IllegalArgumentException(s"The input path '$str' must be a directory and exist")
       else
         outputDir.toPath
     }
@@ -33,8 +33,8 @@ object ArgsConfig {
   private val argParser = {
     import builder._
     OParser.sequence(
-      programName("ahc"),
-      head("ahc", "0.1"),
+      programName("aqua-c"),
+      head("aqua-c", "0.1"),
       opt[Boolean]('d', "debug")
         .action((x, c) => c.copy(debug = x))
         .text("debug mode (not implemented)"),
