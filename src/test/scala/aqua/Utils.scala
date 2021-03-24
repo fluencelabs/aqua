@@ -1,7 +1,18 @@
 package aqua
 
-import aqua.parser.expr.{AbilityIdExpr, CoalgebraExpr, FuncExpr, OnExpr}
-import aqua.parser.lexer.{Ability, Arg, BasicTypeToken, CustomTypeToken, IntoField, Name, TypeToken, VarLambda}
+import aqua.parser.expr.{AbilityIdExpr, AliasExpr, ArrowTypeExpr, CoalgebraExpr, FuncExpr, OnExpr}
+import aqua.parser.lexer.{
+  Ability,
+  Arg,
+  ArrowTypeToken,
+  BasicTypeToken,
+  CustomTypeToken,
+  DataTypeToken,
+  IntoField,
+  Name,
+  TypeToken,
+  VarLambda
+}
 import cats.Id
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.semantics.ScalarType
@@ -20,6 +31,9 @@ object Utils {
 
   implicit def toCustomType(str: String): CustomTypeToken[Id] = CustomTypeToken[Id](str)
 
+  implicit def toArrowType(args: List[DataTypeToken[Id]], res: Option[DataTypeToken[Id]]): ArrowTypeToken[Id] =
+    ArrowTypeToken[Id]((), args, res)
+
   implicit def toCustomArg(str: String, customType: String): Arg[Id] = Arg[Id](str, toCustomType(customType))
 
   implicit def toArg(str: String, typeToken: TypeToken[Id]): Arg[Id] = Arg[Id](str, typeToken)
@@ -37,6 +51,12 @@ trait Utils extends EitherValues {
 
   def parseOn(str: String): OnExpr[Id] =
     OnExpr.p[Id].parseAll(str).value
+
+  def parseAlias(str: String): AliasExpr[Id] =
+    AliasExpr.p[Id].parseAll(str).value
+
+  def parseArrow(str: String): ArrowTypeExpr[Id] =
+    ArrowTypeExpr.p[Id].parseAll(str).value
 
   def funcExpr(str: String): FuncExpr[Id] = FuncExpr.p[Id].parseAll(str).value
 }
