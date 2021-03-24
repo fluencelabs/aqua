@@ -1,5 +1,6 @@
 package aqua.parser
 
+import aqua.Utils
 import aqua.semantics.ScalarType.{bool, u64}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.{
@@ -23,27 +24,13 @@ import cats.Id
 
 import scala.language.implicitConversions
 
-class FuncSpec extends AnyFlatSpec with Matchers with EitherValues {
-
+class FuncSpec extends AnyFlatSpec with Matchers with Utils {
+  import Utils._
   import aqua.semantics.ScalarType.{string, u32}
 
-  implicit def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
-
-  implicit def strToAb(str: String): Ability[Id] = Ability[Id](str)
-
-  implicit def toName(str: String): Name[Id] = Name[Id](str)
-
-  implicit def toCustomType(str: String): CustomTypeToken[Id] = CustomTypeToken[Id](str)
-
-  implicit def toCustomArg(str: String, customType: String): Arg[Id] = Arg[Id](toName(str), toCustomType(customType))
-
-  implicit def toArg(str: String, typeToken: TypeToken[Id]): Arg[Id] = Arg[Id](toName(str), typeToken)
-
-  def funcExpr(str: String): FuncExpr[Id] = FuncExpr.p[Id].parseAll(str).value
-
   "func header" should "parse" in {
-    funcExpr("func some() -> bool") should be(FuncExpr(toName("some"), List(), Some(bool: BasicTypeToken[Id]), None))
-    funcExpr("func some()") should be(FuncExpr(toName("some"), List(), None, None))
+    funcExpr("func some() -> bool") should be(FuncExpr("some", List(), Some(bool: BasicTypeToken[Id]), None))
+    funcExpr("func some()") should be(FuncExpr("some", List(), None, None))
 
     val arrowToken = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), Some(BasicTypeToken[Id](bool)))
     funcExpr("func some(peer: PeerId, other: u32 -> bool)") should be(
