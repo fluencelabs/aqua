@@ -1,6 +1,6 @@
 package aqua
 
-import aqua.parser.expr.{AbilityIdExpr, AliasExpr, ArrowTypeExpr, CoalgebraExpr, FuncExpr, OnExpr}
+import aqua.parser.expr.{AbilityIdExpr, AliasExpr, ArrowTypeExpr, CoalgebraExpr, DataStructExpr, FuncExpr, OnExpr}
 import aqua.parser.lexer.{
   Ability,
   Arg,
@@ -9,13 +9,14 @@ import aqua.parser.lexer.{
   CustomTypeToken,
   DataTypeToken,
   IntoField,
+  Literal,
   Name,
   TypeToken,
   VarLambda
 }
 import cats.Id
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import aqua.semantics.ScalarType
+import aqua.semantics.{LiteralType, ScalarType}
 import org.scalatest.EitherValues
 
 import scala.language.implicitConversions
@@ -28,6 +29,7 @@ object Utils {
   implicit def toFields(fields: List[String]): List[IntoField[Id]] = fields.map(f => IntoField[Id](f))
 
   implicit def toVar(name: String, fields: List[String]): VarLambda[Id] = VarLambda[Id](toName(name), toFields(fields))
+  implicit def toLiteral(name: String, t: LiteralType): Literal[Id] = Literal[Id](name, t)
 
   implicit def toCustomType(str: String): CustomTypeToken[Id] = CustomTypeToken[Id](str)
 
@@ -54,6 +56,9 @@ trait Utils extends EitherValues {
 
   def parseAlias(str: String): AliasExpr[Id] =
     AliasExpr.p[Id].parseAll(str).value
+
+  def parseDataStruct(str: String): DataStructExpr[Id] =
+    DataStructExpr.p[Id].parseAll(str).value
 
   def parseArrow(str: String): ArrowTypeExpr[Id] =
     ArrowTypeExpr.p[Id].parseAll(str).value
