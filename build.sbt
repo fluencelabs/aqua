@@ -14,6 +14,7 @@ lazy val root = project
     mainClass in assembly       := Some("aqua.Main"),
     assemblyJarName in assembly := "aqua-hll.jar",
     libraryDependencies ++= Seq(
+      "com.github.scopt"           %% "scopt"         % "4.0.1",
       "org.typelevel"              %% "cats-effect"   % "3.0.0-RC2",
       "org.typelevel"              %% "cats-parse"    % "0.3.1",
       "org.typelevel"              %% "cats-free"     % catsV,

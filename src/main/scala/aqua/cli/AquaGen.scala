@@ -26,6 +26,15 @@ object AquaGen {
     }
   }
 
+  def convertAqua[F[_]](text: String): Either[CliError, String] = {
+    Aqua.generate(text) match {
+      case Validated.Valid(v) ⇒
+        Right(v)
+      case Validated.Invalid(errs) ⇒
+        Left(CliError.errorInfo("stdin", text, errs))
+    }
+  }
+
   def convertAquaFromFile[F[_]: Files: Concurrent](
     file: File,
     outputDir: Path
@@ -75,7 +84,7 @@ object AquaGen {
     } yield result
   }
 
-  def convertAqua[F[_]: Files: Concurrent](
+  def convertAquaFilesToDir[F[_]: Files: Concurrent](
     files: List[File],
     outputDir: Path
   ): F[List[Either[CliError, String]]] =
