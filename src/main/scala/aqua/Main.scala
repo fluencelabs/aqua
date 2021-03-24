@@ -54,11 +54,11 @@ object Main extends IOApp {
           results <-
             (config.input, config.output) match {
               case (Some(i), Some(o)) =>
-                convertAquaFilesToDir[IO](i, o)
+                convertAquaFilesToDir[IO](i, o, config.air)
               case _ =>
                 readAllInput().map {
                   case Some(i) =>
-                    List(convertAqua(i))
+                    List(convertAqua("stdin", i, config.air))
                   case None =>
                     println("input is empty")
                     List()

@@ -13,7 +13,7 @@ import java.nio.file.Path
 
 object AquaGen {
 
-  def checkAndChangeExtension[F[_]: Applicative](fileName: String): EitherT[F, CliError, String] = {
+  def checkAndChangeExtension[F[_]: Applicative](fileName: String, air: Boolean): EitherT[F, CliError, String] = {
     val arr = fileName.split("\\.").toList
     for {
       _ <- EitherT.cond[F](
@@ -22,26 +22,27 @@ object AquaGen {
         CliError.parseError(fileName, s"File '$fileName' should have '.aqua' extension")
       )
     } yield {
-      arr.dropRight(1).mkString(".") + ".ts"
+      arr.dropRight(1).mkString(".") + (if (air) ".air" else ".ts")
     }
   }
 
-  def convertAqua[F[_]](text: String): Either[CliError, String] = {
-    Aqua.generate(text) match {
+  def convertAqua[F[_]](name: String, text: String, air: Boolean): Either[CliError, String] = {
+    Aqua.generate(text, air) match {
       case Validated.Valid(v) ⇒
         Right(v)
       case Validated.Invalid(errs) ⇒
-        Left(CliError.errorInfo("stdin", text, errs))
+        Left(CliError.errorInfo(name, text, errs))
     }
   }
 
   def convertAquaFromFile[F[_]: Files: Concurrent](
     file: File,
-    outputDir: Path
+    outputDir: Path,
+    air: Boolean
   ): EitherT[F, CliError, String] = {
     val name = file.getName
     for {
-      newName <- checkAndChangeExtension(name)
+      newName <- checkAndChangeExtension(name, air)
       newPath = outputDir.resolve(newName)
       converted <- EitherT(
         Files[F]
@@ -52,12 +53,7 @@ object AquaGen {
             _.left
               .map(t => CliError.ioError("Error on reading file", t))
               .flatMap { text =>
-                Aqua.generate(text) match {
-                  case Validated.Valid(v) ⇒
-                    Right(v)
-                  case Validated.Invalid(errs) ⇒
-                    Left(CliError.errorInfo(name, text, errs))
-                }
+                convertAqua(name, text, air)
               }
           }
           .compile
@@ -86,11 +82,12 @@ object AquaGen {
 
   def convertAquaFilesToDir[F[_]: Files: Concurrent](
     files: List[File],
-    outputDir: Path
+    outputDir: Path,
+    air: Boolean
   ): F[List[Either[CliError, String]]] =
     fs2.Stream
       .emits(files)
-      .evalMap(f => convertAquaFromFile(f, outputDir).value)
+      .evalMap(f => convertAquaFromFile(f, outputDir, air).value)
       .compile
       .toList
 }

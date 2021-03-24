@@ -6,7 +6,12 @@ import scopt.Read.stringRead
 import java.io.File
 import java.nio.file.Path
 
-case class Config(input: Option[List[File]] = None, output: Option[Path] = None, debug: Boolean = false)
+case class Config(
+  input: Option[List[File]] = None,
+  output: Option[Path] = None,
+  air: Boolean = false,
+  debug: Boolean = false
+)
 
 object ArgsConfig {
 
@@ -34,7 +39,7 @@ object ArgsConfig {
     import builder._
     OParser.sequence(
       programName("aqua-c"),
-      head("aqua-c", "0.1"),
+      head("aqua-c", "0.1", "Compiles Aquamarine language to TypeScript and AIR"),
       opt[Boolean]('d', "debug")
         .action((x, c) => c.copy(debug = x))
         .text("debug mode (not implemented)"),
@@ -44,6 +49,9 @@ object ArgsConfig {
       opt[Path]('o', "output")
         .action((x, c) => c.copy(output = Some(x)))
         .text("path to output directory"),
+      opt[Unit]('a', "air")
+        .action((_, c) => c.copy(air = true))
+        .text("generate an AIR script instead of TypeScript file"),
       help('h', "help").text("prints this usage text"),
       checkConfig(c => {
         if (c.input.isEmpty != c.output.isEmpty) {
