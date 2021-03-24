@@ -1,14 +1,13 @@
 package aqua.semantics.rules
 
-import aqua.generator.DataView
+import aqua.model.{IntoArrayModel, IntoFieldModel, LambdaModel, LiteralModel, ValueModel, VarModel}
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.parser.lexer.{IntoArray, IntoField, LambdaOp, Literal, Token, Value, VarLambda}
 import aqua.semantics.{ArrowType, LiteralType, Type}
+import cats.data.Chain
 import cats.free.Free
 import cats.syntax.apply._
-import cats.syntax.traverse._
-import cats.instances.list._
 
 class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlgebra[F, Alg]) {
 
@@ -58,17 +57,16 @@ class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlge
           .zip(arr.args)
           .foldLeft(
             Free.pure[Alg, Boolean](true)
-          ) {
-            case (f, (ft, t)) =>
-              (
-                f,
-                ft.flatMap {
-                  case None =>
-                    Free.pure(false)
-                  case Some((tkn, valType)) =>
-                    T.ensureTypeMatches(tkn, t, valType)
-                }
-              ).mapN(_ && _)
+          ) { case (f, (ft, t)) =>
+            (
+              f,
+              ft.flatMap {
+                case None =>
+                  Free.pure(false)
+                case Some((tkn, valType)) =>
+                  T.ensureTypeMatches(tkn, t, valType)
+              }
+            ).mapN(_ && _)
           }
     }
   }
@@ -77,24 +75,20 @@ class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlge
 
 object ValuesAlgebra {
 
-  private def opsToLens[F[_]](ops: List[LambdaOp[F]]): String =
+  private def opsToModel[F[_]](ops: List[LambdaOp[F]]): Chain[LambdaModel] =
     ops match {
-      case Nil => ""
-      case (_: IntoArray[F]) :: tail => "[@" + opsToLens(tail) + "]"
-      case (f: IntoField[F]) :: tail => "." + f.value + opsToLens(tail)
+      case Nil => Chain.empty
+      case (_: IntoArray[F]) :: tail => opsToModel(tail).prepend(IntoArrayModel)
+      case (f: IntoField[F]) :: tail => opsToModel(tail).prepend(IntoFieldModel(f.value))
     }
 
-  def valueToData[F[_]](v: Value[F]): DataView =
+  def valueToData[F[_]](v: Value[F]): ValueModel =
     v match {
-      case l: Literal[F] => DataView.StringScalar(l.value)
-      case VarLambda(name, Nil) => DataView.Variable(name.value)
-      case VarLambda(name, ops) => DataView.VarLens(name.value, opsToLens(ops))
+      case l: Literal[F] => LiteralModel(l.value)
+      case VarLambda(name, ops) => VarModel(name.value, opsToModel(ops))
     }
 
-  private def argsToData[F[_]](args: List[Value[F]]): List[DataView] = args.map(valueToData)
-
-  implicit def deriveValuesAlgebra[F[_], Alg[_]](
-    implicit
+  implicit def deriveValuesAlgebra[F[_], Alg[_]](implicit
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg]
   ): ValuesAlgebra[F, Alg] =

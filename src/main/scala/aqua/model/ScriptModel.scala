@@ -1,8 +1,7 @@
 package aqua.model
 
-import aqua.generator.{ArrowCallable, TypescriptFile, TypescriptFunc}
+import aqua.generator.{ArrowCallable, FuncAirGen, TypescriptFile, TypescriptFunc}
 import cats.data.Chain
-
 import cats.syntax.show._
 
 case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
@@ -15,7 +14,8 @@ case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
   def generateAir: Chain[String] =
     funcs
       .foldLeft((Map.empty[String, ArrowCallable], Chain.empty[String])) { case ((funcsAcc, outputAcc), func) =>
-        funcsAcc.updated(func.name, func.callable) -> outputAcc.append(func.generateAir(funcsAcc).show)
+        val fag = FuncAirGen(func)
+        funcsAcc.updated(func.name, fag.callable) -> outputAcc.append(fag.generateAir(funcsAcc).show)
       }
       ._2
 
@@ -24,7 +24,8 @@ case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
       funcs
         .foldLeft((Map.empty[String, ArrowCallable], Chain.empty[TypescriptFunc])) {
           case ((funcsAcc, outputAcc), func) =>
-            funcsAcc.updated(func.name, func.callable) -> outputAcc.append(func.generateTs(funcsAcc))
+            val fag = FuncAirGen(func)
+            funcsAcc.updated(func.name, fag.callable) -> outputAcc.append(fag.generateTs(funcsAcc))
         }
         ._2
         .toList
