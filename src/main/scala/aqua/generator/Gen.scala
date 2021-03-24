@@ -72,8 +72,8 @@ object AirGen {
     case SeqModel(ops) => ops.map(apply).reduceLeft(SeqGen)
     case ParModel(ops) => ops.map(apply).reduceLeft(ParGen)
     case XorModel(ops) => ops.map(apply).reduceLeft(XorGen)
-    case OnModel(peerId, op) =>
-      apply(op).wrap(ctx => (ctx.copy(peerId = valueToData(peerId)), _.copy(peerId = ctx.peerId)))
+    case OnModel(peerId, body) =>
+      apply(body).wrap(ctx => (ctx.copy(peerId = valueToData(peerId)), _.copy(peerId = ctx.peerId)))
     case NextModel(item) =>
       new AirGen {
 
@@ -83,23 +83,20 @@ object AirGen {
             case _ => ctx -> Air.Null
           }
       }
-    case MatchMismatchModel(left, right, shouldMatch, op) =>
+    case MatchMismatchModel(left, right, shouldMatch, body) =>
       new AirGen {
 
         override def generate(ctx: AirContext): (AirContext, Air) = {
           val l = AirGen.resolve(ctx, valueToData(left))
           val r = AirGen.resolve(ctx, valueToData(right))
-          val (resCtx, resAir) = apply(op).generate(ctx)
+          val (resCtx, resAir) = apply(body).generate(ctx)
           resCtx -> (if (shouldMatch) Air.Match(l, r, resAir) else Air.Mismatch(l, r, resAir))
         }
       }
-    case ForModel(item, iterable, op) =>
+    case fm @ ForModel(item, iterable, _) =>
       new AirGen {
 
-        private val opWrap = apply(op match {
-          case ParModel(pars) => ParModel(pars.append(NextModel(item)))
-          case _ => op |+| NextModel(item)
-        }).wrap(ctx =>
+        private val opWrap = apply(fm.body).wrap(ctx =>
           (if (ctx.vars(item)) {
              val vn = item + ctx.instrCounter
              ctx.copy(vars = ctx.vars + vn, data = ctx.data.updated(item, DataView.Variable(vn)))

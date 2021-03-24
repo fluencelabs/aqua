@@ -3,6 +3,7 @@ package aqua.model
 import aqua.semantics.Type
 import cats.data.{NonEmptyChain, NonEmptyList}
 import cats.kernel.Semigroup
+import cats.syntax.semigroup._
 
 sealed trait FuncOp extends Model
 
@@ -39,7 +40,13 @@ case class NextModel(item: String) extends FuncOp
 
 case class MatchMismatchModel(left: ValueModel, right: ValueModel, shouldMatch: Boolean, op: FuncOp) extends FuncOp
 
-case class ForModel(item: String, iterable: ValueModel, op: FuncOp) extends FuncOp {}
+case class ForModel(item: String, iterable: ValueModel, op: FuncOp) extends FuncOp {
+
+  def body: FuncOp = op match {
+    case ParModel(pars) => ParModel(pars.append(NextModel(item)))
+    case _ => op |+| NextModel(item)
+  }
+}
 
 case class CoalgebraModel(
   ability: Option[AbilityModel],
