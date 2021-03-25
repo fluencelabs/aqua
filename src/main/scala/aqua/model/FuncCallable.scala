@@ -158,7 +158,13 @@ case class FuncCallable(
             ).value._1
           ) ++ Chain.fromSeq(returnCallback.toSeq)
       )
-      .resolvePeerId
+      .resolvePeerId(noop)
+
+  def noop(peerId: ValueModel): FuncOp =
+    FuncOp.wrap(
+      OnTag(peerId, Nil),
+      FuncOp.leaf(CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(peerId)))
+    )
 
   def generateTsCall: Call =
     Call(
@@ -178,18 +184,6 @@ case class FuncCallable(
     )
 
   def viaRelay(op: FuncOp): FuncOp =
-    FuncOp.node(
-      OnTag(VarModel(relayVarName)),
-      Chain(
-        FuncOp.leaf(
-          CallServiceTag(
-            LiteralModel("\"op\""),
-            "identity",
-            Call(Nil, None)
-          )
-        ),
-        FuncOp.wrap(OnTag(InitPeerIdModel), op)
-      )
-    )
+    FuncOp.wrap(OnTag(InitPeerIdModel, VarModel(relayVarName) :: Nil), op)
 
 }

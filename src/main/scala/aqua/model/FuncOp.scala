@@ -38,15 +38,17 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
       )
     )
 
-  def resolvePeerId: FuncOp =
+  def resolvePeerId(doVia: ValueModel => FuncOp): FuncOp =
     FuncOp(FuncOp.mapWithPath(tree) {
       case (path, c: CallServiceTag) =>
         Cofree[Chain, OpTag](
-          c.copy(peerId = path.collectFirst { case OnTag(peerId) =>
+          c.copy(peerId = path.collectFirst { case OnTag(peerId, _) =>
             peerId
           }),
           Eval.now(Chain.empty)
         )
+      case (_, OnTag(pid, via)) if via.nonEmpty =>
+        Cofree[Chain, OpTag](OnTag(pid, Nil), Eval.now(Chain.fromSeq(via.map(doVia).map(_.tree))))
       case (_, t) => Cofree[Chain, OpTag](t, Eval.now(Chain.empty))
     })
 

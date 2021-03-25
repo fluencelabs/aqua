@@ -32,8 +32,8 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
             Free.pure[Alg, Model](
               FuncOp.wrap(
                 MatchMismatchTag(
-                  ValuesAlgebra.valueToData(expr.left),
-                  ValuesAlgebra.valueToData(expr.right),
+                  ValuesAlgebra.valueToModel(expr.left),
+                  ValuesAlgebra.valueToModel(expr.right),
                   expr.eqOp.value
                 ),
                 op

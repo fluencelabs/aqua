@@ -28,7 +28,7 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
         // TODO streams should escape the scope
         N.endScope() as (ops match {
           case op: FuncOp =>
-            FuncOp.wrap(ForTag(expr.item.value, ValuesAlgebra.valueToData(expr.iterable)), op)
+            FuncOp.wrap(ForTag(expr.item.value, ValuesAlgebra.valueToModel(expr.iterable)), op)
           case _ => Model.error("Wrong body of For expr")
         })
     )

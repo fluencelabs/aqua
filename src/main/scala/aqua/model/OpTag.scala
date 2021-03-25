@@ -18,7 +18,7 @@ case class Call(args: List[(ValueModel, Type)], exportTo: Option[String]) {
 sealed trait OpTag {
 
   def mapValues(f: ValueModel => ValueModel): OpTag = this match {
-    case OnTag(peerId) => OnTag(f(peerId))
+    case OnTag(peerId, via) => OnTag(f(peerId), via.map(f))
     case MatchMismatchTag(left, right, shouldMatch) => MatchMismatchTag(f(left), f(right), shouldMatch)
     case ForTag(item, iterable) => ForTag(item, f(iterable))
     case CoalgebraTag(ability, funcName, call) =>
@@ -42,7 +42,7 @@ sealed trait OpTag {
 case object SeqTag extends OpTag
 case object ParTag extends OpTag
 case object XorTag extends OpTag
-case class OnTag(peerId: ValueModel) extends OpTag
+case class OnTag(peerId: ValueModel, via: List[ValueModel]) extends OpTag
 case class NextTag(item: String) extends OpTag
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean) extends OpTag
 case class ForTag(item: String, iterable: ValueModel) extends OpTag

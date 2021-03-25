@@ -86,15 +86,15 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "on" should "be parsed" in {
     parseOn("on peer") should be(
-      OnExpr[Id](toVar("peer", List()))
+      OnExpr[Id](toVar("peer", List()), Nil)
     )
 
     parseOn("on peer.id") should be(
-      OnExpr[Id](toVar("peer", List("id")))
+      OnExpr[Id](toVar("peer", List("id")), Nil)
     )
 
     parseOn("on peer.id") should be(
-      OnExpr[Id](toVar("peer", List("id")))
+      OnExpr[Id](toVar("peer", List("id")), Nil)
     )
   }
 

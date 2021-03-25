@@ -28,7 +28,7 @@ class CoalgebraSem[F[_]](val expr: CoalgebraExpr[F]) extends AnyVal {
           freeUnit[Alg]
         )(resType => N.define(exportVar, resType).void)
       ) >> args.foldLeft(Free.pure[Alg, List[(ValueModel, Type)]](Nil)) { case (acc, v) =>
-      (acc, V.resolveType(v)).mapN((a, b) => a ++ b.map(ValuesAlgebra.valueToData(v) -> _))
+      (acc, V.resolveType(v)).mapN((a, b) => a ++ b.map(ValuesAlgebra.valueToModel(v) -> _))
     }
 
   private def toModel[Alg[_]](implicit
@@ -48,7 +48,7 @@ class CoalgebraSem[F[_]](val expr: CoalgebraExpr[F]) extends AnyVal {
             .map(argsResolved =>
               FuncOp.leaf(
                 CallServiceTag(
-                  serviceId = ValuesAlgebra.valueToData(serviceId),
+                  serviceId = ValuesAlgebra.valueToModel(serviceId),
                   funcName = funcName.value,
                   Call(argsResolved, variable.map(_.value))
                 )

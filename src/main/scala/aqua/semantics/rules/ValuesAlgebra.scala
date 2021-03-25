@@ -82,7 +82,7 @@ object ValuesAlgebra {
       case (f: IntoField[F]) :: tail => opsToModel(tail).prepend(IntoFieldModel(f.value))
     }
 
-  def valueToData[F[_]](v: Value[F]): ValueModel =
+  def valueToModel[F[_]](v: Value[F]): ValueModel =
     v match {
       case l: Literal[F] => LiteralModel(l.value)
       case VarLambda(name, ops) => VarModel(name.value, opsToModel(ops))

@@ -5,7 +5,6 @@ import aqua.parser.Expr
 import aqua.parser.expr._
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
-import aqua.semantics.rules.scope.PeerIdAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.semantics.expr._
 
@@ -16,7 +15,6 @@ object ExprSem {
   )(implicit
     A: AbilitiesAlgebra[F, G],
     N: NamesAlgebra[F, G],
-    P: PeerIdAlgebra[F, G],
     T: TypesAlgebra[F, G]
   ): Prog[G, Model] =
     expr match {
