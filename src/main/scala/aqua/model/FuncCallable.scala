@@ -136,26 +136,29 @@ case class FuncCallable(
     )
 
   // TODO rename
-  def generateTsModel: FuncOp = FuncOp.node(
-    SeqTag,
-    Chain
-      .fromSeq(
-        args.collect { case (argName, Left(_)) =>
-          getDataOp(argName)
-        } :+ getDataOp(relayVarName)
+  def generateTsModel: FuncOp =
+    FuncOp
+      .node(
+        SeqTag,
+        Chain
+          .fromSeq(
+            args.collect { case (argName, Left(_)) =>
+              getDataOp(argName)
+            } :+ getDataOp(relayVarName)
+          )
+          .append(
+            apply(
+              generateTsCall,
+              args.collect { case (argName, Right(arrowType)) =>
+                argName -> initPeerCallable(argName, arrowType)
+              }.toMap,
+              args.collect { case (argName, Left(_)) =>
+                argName
+              }.foldLeft(Set(relayVarName))(_ + _)
+            ).value._1
+          ) ++ Chain.fromSeq(returnCallback.toSeq)
       )
-      .append(
-        apply(
-          generateTsCall,
-          args.collect { case (argName, Right(arrowType)) =>
-            argName -> initPeerCallable(argName, arrowType)
-          }.toMap,
-          args.collect { case (argName, Left(_)) =>
-            argName
-          }.foldLeft(Set(relayVarName))(_ + _)
-        ).value._1
-      ) ++ Chain.fromSeq(returnCallback.toSeq)
-  )
+      .resolvePeerId
 
   def generateTsCall: Call =
     Call(

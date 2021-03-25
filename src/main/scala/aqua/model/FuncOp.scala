@@ -14,7 +14,7 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
 
   def definesValueNames: Eval[Set[String]] = cata[Set[String]] {
     case (CoalgebraTag(_, _, Call(_, Some(export))), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
-    case (CallServiceTag(_, _, Call(_, Some(export))), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
+    case (CallServiceTag(_, _, Call(_, Some(export)), _), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
     case (NextTag(export), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }
@@ -38,6 +38,18 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
       )
     )
 
+  def resolvePeerId: FuncOp =
+    FuncOp(FuncOp.mapWithPath(tree) {
+      case (path, c: CallServiceTag) =>
+        Cofree[Chain, OpTag](
+          c.copy(peerId = path.collectFirst { case OnTag(peerId) =>
+            peerId
+          }),
+          Eval.now(Chain.empty)
+        )
+      case (_, t) => Cofree[Chain, OpTag](t, Eval.now(Chain.empty))
+    })
+
 }
 
 object FuncOp {
@@ -46,11 +58,19 @@ object FuncOp {
     f: (A, OpTag) => (A, Cofree[Chain, OpTag])
   ): Eval[(A, Cofree[Chain, OpTag])] = {
     val (headA, head) = f(init, cf.head)
+    // TODO: it should be in standard library, with some other types
     cf.tail
       .map(_.foldLeft[(A, Chain[Cofree[Chain, OpTag]])]((headA, head.tailForced)) { case ((aggrA, aggrTail), child) =>
         traverseA(child, aggrA)(f).value.map(aggrTail.append)
       })
       .map(_.map(ch => head.copy(tail = Eval.now(ch))))
+  }
+
+  def mapWithPath(cf: Cofree[Chain, OpTag], path: List[OpTag] = Nil)(
+    f: (List[OpTag], OpTag) => Cofree[Chain, OpTag]
+  ): Cofree[Chain, OpTag] = {
+    val h = f(path, cf.head)
+    Cofree[Chain, OpTag](h.head, (h.tail, cf.tail).mapN(_ ++ _).map(_.map(mapWithPath(_, h.head :: path)(f))))
   }
 
   implicit object FuncOpSemigroup extends Semigroup[FuncOp] {

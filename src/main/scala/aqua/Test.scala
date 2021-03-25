@@ -19,7 +19,7 @@ object Test extends IOApp.Simple {
             println(Console.RED + s"Aqua script errored, total ${errs.length} problems found" + Console.RESET)
         }
 
-      val script = Source.fromResource("rescope.aqua").mkString
+      val script = Source.fromResource("fluentpad.aqua").mkString
       process(script)
 
     }

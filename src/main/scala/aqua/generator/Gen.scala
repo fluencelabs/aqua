@@ -25,7 +25,6 @@ import cats.data.Chain
 import cats.free.Cofree
 
 sealed trait AirGen {
-  self =>
   def generate: Air
 
 }
@@ -85,34 +84,24 @@ object AirGen {
         case (ForTag(item, iterable), ops) =>
           Eval later new AirGen {
 
-            private val opWrap = opsToSingle(ops)
-//              .wrap(ctx =>
-//              (if (ctx.vars(item)) {
-//                 val vn = item + ctx.instrCounter
-//                 ctx.copy(vars = ctx.vars + vn, data = ctx.data.updated(item, DataView.Variable(vn)))
-//               } else
-//                 ctx.copy(vars = ctx.vars + item, data = ctx.data.updated(item, DataView.Variable(item)))) -> (cu =>
-//                cu.copy(data = cu.data - item)
-//              )
-//            )
-
             override def generate: Air = {
-              val varName =
-//                if (ctx.vars(item))
-//                  item + ctx.instrCounter
-//                else
-                item
 
               val iterData = valueToData(iterable)
 
-              val resAir = opWrap.generate
+              val resAir = opsToSingle(ops).generate
 
-              Air.Fold(iterData, varName, resAir)
+              Air.Fold(iterData, item, resAir)
             }
           }
-        case (CallServiceTag(serviceId, funcName, Call(args, exportTo)), _) =>
+        case (CallServiceTag(serviceId, funcName, Call(args, exportTo), peerId), _) =>
           Eval.later(
-            ServiceCallGen(valueToData(serviceId), funcName, args.map(_._1).map(valueToData), exportTo)
+            ServiceCallGen(
+              peerId.map(valueToData).getOrElse(DataView.InitPeerId),
+              valueToData(serviceId),
+              funcName,
+              args.map(_._1).map(valueToData),
+              exportTo
+            )
           )
         // TODO: coalgebra should be already resolved!
         case (CoalgebraTag(_, funcName, Call(args, exportTo)), _) =>
@@ -141,21 +130,19 @@ case class SeqGen(left: AirGen, right: AirGen) extends AirGen {
 }
 
 case class ServiceCallGen(
+  peerId: DataView,
   srvId: DataView,
   fnName: String,
   args: List[DataView],
   result: Option[String]
 ) extends AirGen {
 
-  override def generate: Air = {
-
-    // TODO get init peer id
+  override def generate: Air =
     Air.Call(
-      Triplet.Full(DataView.InitPeerId, srvId, fnName),
+      Triplet.Full(peerId, srvId, fnName),
       args,
       result
     )
-  }
 }
 
 case class ParGen(left: AirGen, right: AirGen) extends AirGen {

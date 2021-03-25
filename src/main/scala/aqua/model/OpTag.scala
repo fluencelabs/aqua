@@ -27,11 +27,12 @@ sealed trait OpTag {
         funcName,
         call.mapValues(f)
       )
-    case CallServiceTag(serviceId, funcName, call) =>
+    case CallServiceTag(serviceId, funcName, call, pid) =>
       CallServiceTag(
         f(serviceId),
         funcName,
-        call.mapValues(f)
+        call.mapValues(f),
+        pid.map(f)
       )
     case _ => this
   }
@@ -55,5 +56,6 @@ case class CoalgebraTag(
 case class CallServiceTag(
   serviceId: ValueModel,
   funcName: String,
-  call: Call
+  call: Call,
+  peerId: Option[ValueModel] = None
 ) extends OpTag
