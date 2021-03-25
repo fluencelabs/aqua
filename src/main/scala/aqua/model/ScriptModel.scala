@@ -12,12 +12,17 @@ case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
     case _ => this
   }
 
-  def generateAir: Chain[String] =
+  def generateAir: String =
     funcs
       .foldLeft((Map.empty[String, ArrowCallable], Chain.empty[String])) { case ((funcsAcc, outputAcc), func) =>
-        funcsAcc.updated(func.name, func.callable) -> outputAcc.append(func.generateAir(funcsAcc).show)
+        funcsAcc.updated(func.name, func.callable) -> outputAcc.append(
+          // add function name before body
+          s";; function name: ${func.name}\n\n" + func.generateAir(funcsAcc).show
+        )
       }
       ._2
+      .toList
+      .mkString("\n\n\n")
 
   def generateTypescript: String =
     TypescriptFile(
