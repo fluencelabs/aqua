@@ -19,7 +19,7 @@ case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
       }
       ._2
       .toList
-      .mkString("\n")
+      .mkString("\n\n;; --------------------------------------------\n\n")
 
   def generateTypescript: String =
     TypescriptFile(
