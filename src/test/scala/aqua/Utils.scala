@@ -11,8 +11,12 @@ import aqua.parser.expr.{
   ForExpr,
   FuncExpr,
   IfExpr,
-  OnExpr
+  OnExpr,
+  ParExpr,
+  ReturnExpr,
+  ServiceExpr
 }
+import aqua.parser.lexer.Token.`eqs`
 import aqua.parser.lexer.{
   Ability,
   Arg,
@@ -21,6 +25,7 @@ import aqua.parser.lexer.{
   BasicTypeToken,
   CustomTypeToken,
   DataTypeToken,
+  EqOp,
   IntoField,
   Literal,
   Name,
@@ -29,6 +34,8 @@ import aqua.parser.lexer.{
 }
 import cats.Id
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.lift.LiftParser.LiftParserOps
+import aqua.semantics.LiteralType.{bool, number, string}
 import aqua.semantics.{LiteralType, ScalarType}
 import org.scalatest.EitherValues
 
@@ -41,8 +48,14 @@ object Utils {
 
   implicit def toFields(fields: List[String]): List[IntoField[Id]] = fields.map(f => IntoField[Id](f))
 
-  implicit def toVar(name: String, fields: List[String]): VarLambda[Id] = VarLambda[Id](toName(name), toFields(fields))
+  implicit def toVar(name: String): VarLambda[Id] = VarLambda[Id](toName(name), Nil)
+
+  implicit def toVarLambda(name: String, fields: List[String]): VarLambda[Id] =
+    VarLambda[Id](toName(name), toFields(fields))
   implicit def toLiteral(name: String, t: LiteralType): Literal[Id] = Literal[Id](name, t)
+  implicit def toNumber(n: Int): Literal[Id] = Literal[Id](n.toString, number)
+  implicit def toBool(n: Boolean): Literal[Id] = Literal[Id](n.toString, bool)
+  implicit def toStr(n: String): Literal[Id] = Literal[Id]("\"" + n + "\"", string)
 
   implicit def toCustomType(str: String): CustomTypeToken[Id] = CustomTypeToken[Id](str)
   def toArrayType(str: String): ArrayTypeToken[Id] = ArrayTypeToken[Id]((), str)
@@ -67,6 +80,15 @@ trait Utils extends EitherValues {
 
   def parseOn(str: String): OnExpr[Id] =
     OnExpr.p[Id].parseAll(str).value
+
+  def parsePar(str: String): ParExpr[Id] =
+    ParExpr.p[Id].parseAll(str).value
+
+  def parseReturn(str: String): ReturnExpr[Id] =
+    ReturnExpr.p[Id].parseAll(str).value
+
+  def parseService(str: String): ServiceExpr[Id] =
+    ServiceExpr.p[Id].parseAll(str).value
 
   def parseIf(str: String): IfExpr[Id] =
     IfExpr.p[Id].parseAll(str).value

@@ -13,7 +13,7 @@ class AbilitIdExprSpec extends AnyFlatSpec with Matchers with Utils {
 
   "abilities" should "be parsed" in {
     parseAbId("Ab a") should be(
-      AbilityIdExpr[Id](toAb("Ab"), toVar("a", List()))
+      AbilityIdExpr[Id](toAb("Ab"), toVar("a"))
     )
 
     parseAbId("Ab \"a\"") should be(
@@ -25,7 +25,7 @@ class AbilitIdExprSpec extends AnyFlatSpec with Matchers with Utils {
     )
 
     parseAbId("Ab a.id") should be(
-      AbilityIdExpr[Id](toAb("Ab"), toVar("a", List("id")))
+      AbilityIdExpr[Id](toAb("Ab"), toVarLambda("a", List("id")))
     )
   }
 

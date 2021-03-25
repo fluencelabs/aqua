@@ -17,11 +17,16 @@ class CoalgebraExprSpec extends AnyFlatSpec with Matchers with Utils {
     )
 
     parseExpr("func(arg.doSomething)") should be(
-      CoalgebraExpr[Id](None, None, Name[Id]("func"), List(toVar("arg", List("doSomething"))))
+      CoalgebraExpr[Id](None, None, Name[Id]("func"), List(toVarLambda("arg", List("doSomething"))))
     )
 
     parseExpr("func(arg.doSomething.and.doSomethingElse)") should be(
-      CoalgebraExpr[Id](None, None, Name[Id]("func"), List(toVar("arg", List("doSomething", "and", "doSomethingElse"))))
+      CoalgebraExpr[Id](
+        None,
+        None,
+        Name[Id]("func"),
+        List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse")))
+      )
     )
 
     parseExpr("Ab.func(arg.doSomething.and.doSomethingElse, arg2.someFunc)") should be(
@@ -29,7 +34,7 @@ class CoalgebraExprSpec extends AnyFlatSpec with Matchers with Utils {
         None,
         Some(toAb("Ab")),
         Name[Id]("func"),
-        List(toVar("arg", List("doSomething", "and", "doSomethingElse")), toVar("arg2", List("someFunc")))
+        List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse")), toVarLambda("arg2", List("someFunc")))
       )
     )
 
@@ -39,7 +44,7 @@ class CoalgebraExprSpec extends AnyFlatSpec with Matchers with Utils {
         None,
         Name[Id]("func"),
         List(
-          toVar("arg", List("doSomething"))
+          toVarLambda("arg", List("doSomething"))
         )
       )
     )
