@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.{CoalgebraModel, Model, ServiceModel, ValueModel}
+import aqua.model.{CoalgebraTag, FuncOp, Model, ServiceModel, ValueModel}
 import aqua.parser.expr.CoalgebraExpr
 import aqua.semantics.{ArrowType, Prog, Type}
 import aqua.semantics.rules.ValuesAlgebra
@@ -36,35 +36,39 @@ class CoalgebraSem[F[_]](val expr: CoalgebraExpr[F]) extends AnyVal {
     A: AbilitiesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Free[Alg, Option[CoalgebraModel]] =
+  ): Free[Alg, Option[FuncOp]] =
     ability match {
       case Some(ab) =>
         (A.getArrow(ab, funcName), A.getServiceId(ab)).mapN {
           case (Some(at), Some(sid)) =>
             Option(at -> sid) // Here we assume that Ability is a Service that must be resolved
           case _ => None
-        }.flatMap(_.fold(Free.pure[Alg, Option[CoalgebraModel]](None)) { case (arrowType, serviceId) =>
+        }.flatMap(_.fold(Free.pure[Alg, Option[FuncOp]](None)) { case (arrowType, serviceId) =>
           checkArgsRes(arrowType)
             .map(argsResolved =>
-              CoalgebraModel(
-                ability = Some(ServiceModel(ab.value, ValuesAlgebra.valueToData(serviceId))),
-                funcName = funcName.value,
-                args = argsResolved,
-                exportTo = variable.map(_.value)
+              FuncOp.leaf(
+                CoalgebraTag(
+                  ability = Some(ServiceModel(ab.value, ValuesAlgebra.valueToData(serviceId))),
+                  funcName = funcName.value,
+                  args = argsResolved,
+                  exportTo = variable.map(_.value)
+                )
               )
             )
             .map(Option(_))
         })
       case None =>
         N.readArrow(funcName)
-          .flatMap(_.fold(Free.pure[Alg, Option[CoalgebraModel]](None)) { arrowType =>
+          .flatMap(_.fold(Free.pure[Alg, Option[FuncOp]](None)) { arrowType =>
             checkArgsRes(arrowType)
               .map(argsResolved =>
-                CoalgebraModel(
-                  ability = None,
-                  funcName = funcName.value,
-                  args = argsResolved,
-                  exportTo = variable.map(_.value)
+                FuncOp.leaf(
+                  CoalgebraTag(
+                    ability = None,
+                    funcName = funcName.value,
+                    args = argsResolved,
+                    exportTo = variable.map(_.value)
+                  )
                 )
               )
               .map(Option(_))

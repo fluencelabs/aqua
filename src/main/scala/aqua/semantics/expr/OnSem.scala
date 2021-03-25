@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.{FuncOp, Model, OnModel}
+import aqua.model.{FuncOp, Model, OnTag}
 import aqua.parser.expr.OnExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -21,7 +21,7 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
       (_: Unit, ops: Model) =>
         A.endScope() >> P.erasePeerId() as (ops match {
           case op: FuncOp =>
-            OnModel(ValuesAlgebra.valueToData(expr.peerId), op)
+            FuncOp.wrap(OnTag(ValuesAlgebra.valueToData(expr.peerId)), op)
           case m => Model.error("On body is not an op, it's " + m)
         })
     )

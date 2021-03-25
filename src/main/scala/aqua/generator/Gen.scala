@@ -1,26 +1,29 @@
 package aqua.generator
 
 import aqua.model.{
-  CoalgebraModel,
-  ForModel,
+  CoalgebraTag,
+  ForTag,
   FuncOp,
   InitPeerIdModel,
   IntoArrayModel,
   IntoFieldModel,
   LambdaModel,
   LiteralModel,
-  MatchMismatchModel,
-  NextModel,
-  OnModel,
-  ParModel,
-  SeqModel,
+  MatchMismatchTag,
+  NextTag,
+  OnTag,
+  OpTag,
+  ParTag,
+  SeqTag,
   ServiceModel,
   ValueModel,
   VarModel,
-  XorModel
+  XorTag
 }
+import cats.Eval
+import cats.data.Chain
+import cats.free.Cofree
 import cats.syntax.functor._
-import cats.syntax.semigroup._
 
 sealed trait AirGen {
   self =>
@@ -68,70 +71,80 @@ object AirGen {
     case a => a
   }
 
-  def apply(op: FuncOp): AirGen = op match {
-    case SeqModel(ops) => ops.map(apply).reduceLeft(SeqGen)
-    case ParModel(ops) => ops.map(apply).reduceLeft(ParGen)
-    case XorModel(ops) => ops.map(apply).reduceLeft(XorGen)
-    case OnModel(peerId, body) =>
-      apply(body).wrap(ctx => (ctx.copy(peerId = valueToData(peerId)), _.copy(peerId = ctx.peerId)))
-    case NextModel(item) =>
-      new AirGen {
+  def opsToSingle(ops: Chain[AirGen]): AirGen = ops.toList match {
+    case Nil => NullGen
+    case h :: Nil => h
+    case list => list.reduceLeft(SeqGen)
+  }
 
-        override def generate(ctx: AirContext): (AirContext, Air) =
-          ctx.data(item) match {
-            case DataView.Variable(v) => ctx -> Air.Next(v)
-            case _ => ctx -> Air.Null
-          }
-      }
-    case MatchMismatchModel(left, right, shouldMatch, body) =>
-      new AirGen {
+  def apply(op: Cofree[Chain, OpTag]): AirGen =
+    Cofree
+      .cata[Chain, OpTag, AirGen](op) {
 
-        override def generate(ctx: AirContext): (AirContext, Air) = {
-          val l = AirGen.resolve(ctx, valueToData(left))
-          val r = AirGen.resolve(ctx, valueToData(right))
-          val (resCtx, resAir) = apply(body).generate(ctx)
-          resCtx -> (if (shouldMatch) Air.Match(l, r, resAir) else Air.Mismatch(l, r, resAir))
-        }
-      }
-    case fm @ ForModel(item, iterable, _) =>
-      new AirGen {
-
-        private val opWrap = apply(fm.body).wrap(ctx =>
-          (if (ctx.vars(item)) {
-             val vn = item + ctx.instrCounter
-             ctx.copy(vars = ctx.vars + vn, data = ctx.data.updated(item, DataView.Variable(vn)))
-           } else
-             ctx.copy(vars = ctx.vars + item, data = ctx.data.updated(item, DataView.Variable(item)))) -> (cu =>
-            cu.copy(data = cu.data - item)
-          )
-        )
-
-        override def generate(ctx: AirContext): (AirContext, Air) = {
-          val varName =
-            if (ctx.vars(item))
-              item + ctx.instrCounter
-            else item
-
-          val iterData = AirGen.resolve(ctx, valueToData(iterable))
-
-          val (resCtx, resAir) = opWrap.generate(ctx)
-
-          resCtx -> Air.Fold(iterData, varName, resAir)
-        }
-      }
-    case CoalgebraModel(ability, funcName, args, exportTo) =>
-      ability match {
-        case Some(ServiceModel(_, id)) =>
-          new SrvCallable(valueToData(id), funcName).toCallGen(args.map(_._1).map(valueToData), exportTo)
-        case None =>
-          new AirGen {
+        case (SeqTag, ops) => Eval later ops.toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
+        case (ParTag, ops) => Eval later ops.toList.reduceLeftOption(ParGen).getOrElse(NullGen)
+        case (XorTag, ops) => Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
+        case (OnTag(peerId), ops) =>
+          Eval later opsToSingle(ops).wrap(ctx => (ctx.copy(peerId = valueToData(peerId)), _.copy(peerId = ctx.peerId)))
+        case (NextTag(item), ops) =>
+          Eval later new AirGen {
 
             override def generate(ctx: AirContext): (AirContext, Air) =
-              ctx.arrows(funcName).toCallGen(args.map(_._1).map(valueToData), exportTo).generate(ctx)
+              ctx.data(item) match {
+                case DataView.Variable(v) => ctx -> Air.Next(v)
+                case _ => ctx -> Air.Null
+              }
           }
-      }
+        case (MatchMismatchTag(left, right, shouldMatch), ops) =>
+          Eval later new AirGen {
 
-  }
+            override def generate(ctx: AirContext): (AirContext, Air) = {
+              val l = AirGen.resolve(ctx, valueToData(left))
+              val r = AirGen.resolve(ctx, valueToData(right))
+              val (resCtx, resAir) = opsToSingle(ops).generate(ctx)
+              resCtx -> (if (shouldMatch) Air.Match(l, r, resAir) else Air.Mismatch(l, r, resAir))
+            }
+          }
+        case (ForTag(item, iterable), ops) =>
+          Eval later new AirGen {
+
+            private val opWrap = opsToSingle(ops).wrap(ctx =>
+              (if (ctx.vars(item)) {
+                 val vn = item + ctx.instrCounter
+                 ctx.copy(vars = ctx.vars + vn, data = ctx.data.updated(item, DataView.Variable(vn)))
+               } else
+                 ctx.copy(vars = ctx.vars + item, data = ctx.data.updated(item, DataView.Variable(item)))) -> (cu =>
+                cu.copy(data = cu.data - item)
+              )
+            )
+
+            override def generate(ctx: AirContext): (AirContext, Air) = {
+              val varName =
+                if (ctx.vars(item))
+                  item + ctx.instrCounter
+                else item
+
+              val iterData = AirGen.resolve(ctx, valueToData(iterable))
+
+              val (resCtx, resAir) = opWrap.generate(ctx)
+
+              resCtx -> Air.Fold(iterData, varName, resAir)
+            }
+          }
+        case (CoalgebraTag(ability, funcName, args, exportTo), _) =>
+          Eval.later(ability match {
+            case Some(ServiceModel(_, id)) =>
+              new SrvCallable(valueToData(id), funcName).toCallGen(args.map(_._1).map(valueToData), exportTo)
+            case None =>
+              new AirGen {
+
+                override def generate(ctx: AirContext): (AirContext, Air) =
+                  ctx.arrows(funcName).toCallGen(args.map(_._1).map(valueToData), exportTo).generate(ctx)
+              }
+          })
+
+      }
+      .value
 }
 
 case object NullGen extends AirGen {
