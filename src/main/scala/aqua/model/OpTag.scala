@@ -11,6 +11,8 @@ case class Call(args: List[(ValueModel, Type)], exportTo: Option[String]) {
       },
       exportTo
     )
+
+  def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(f))
 }
 
 sealed trait OpTag {

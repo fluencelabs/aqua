@@ -14,7 +14,7 @@ case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
   def generateAir: Chain[String] =
     funcs
       .foldLeft((Map.empty[String, FuncCallable], Chain.empty[String])) { case ((funcsAcc, outputAcc), func) =>
-        val fr = func.toContext(funcsAcc).value
+        val fr = func.captureArrows(funcsAcc).value
         funcsAcc.updated(func.name, fr) -> outputAcc.append(FuncAirGen(func.name, fr).generateAir.show)
       }
       ._2
@@ -24,7 +24,7 @@ case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
       funcs
         .foldLeft((Map.empty[String, FuncCallable], Chain.empty[TypescriptFunc])) {
           case ((funcsAcc, outputAcc), func) =>
-            val fr = func.toContext(funcsAcc).value
+            val fr = func.captureArrows(funcsAcc).value
             val fag = FuncAirGen(func.name, fr)
             funcsAcc.updated(func.name, fr) -> outputAcc.append(fag.generateTs)
         }
@@ -35,7 +35,7 @@ case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
   def generateModel: String =
     funcs
       .foldLeft((Map.empty[String, FuncCallable], Chain.empty[String])) { case ((funcsAcc, outputAcc), func) =>
-        val fr = func.toContext(funcsAcc).value
+        val fr = func.captureArrows(funcsAcc).value
         funcsAcc.updated(func.name, fr) -> outputAcc.append(fr.toString)
       }
       ._2

@@ -12,15 +12,7 @@ case class FuncModel(
   body: FuncOp
 ) extends Model {
 
-  def toContext(arrows: Map[String, FuncCallable]): Eval[FuncCallable] =
-    body
-      .cata[Cofree[Chain, OpTag]] {
-        case (CoalgebraTag(None, funcName, call), _) if arrows.contains(funcName) =>
-          arrows(funcName).apply(call, arrows, Set.empty).map(_._1.tree)
-        case (o, c) =>
-          Eval.now(Cofree(o, Eval.now(c)))
-      }
-      .map(FuncOp(_))
-      .map(FuncCallable(_, args, ret, arrows))
+  def captureArrows(arrows: Map[String, FuncCallable]): Eval[FuncCallable] =
+    Eval.now(FuncCallable(body, args, ret, arrows))
 
 }

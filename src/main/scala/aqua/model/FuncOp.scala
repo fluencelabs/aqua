@@ -19,15 +19,24 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }
 
-  def resolveValues(vals: Map[String, ValueModel]): FuncOp = FuncOp(tree.map[OpTag](_.mapValues {
-    case v: VarModel =>
-      vals.get(v.name) match {
-        case Some(vv: VarModel) => v.deriveFrom(vv)
-        case Some(vv) => vv // TODO check that lambda is empty, otherwise error
-        case None => v // Should not happen
-      }
-    case v => v
-  }))
+  def resolveValues(vals: Map[String, ValueModel]): FuncOp =
+    FuncOp(tree.map[OpTag](_.mapValues(_.resolveWith(vals))))
+
+  def rename(vals: Map[String, String]): FuncOp =
+    FuncOp(
+      tree.map[OpTag](op =>
+        op.mapValues {
+          case v: VarModel if vals.contains(v.name) => v.copy(name = vals(v.name))
+          case v => v
+        } match {
+          case c: CoalgebraTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
+          case c: CallServiceTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
+          case t: ForTag if vals.contains(t.item) => t.copy(item = vals(t.item))
+          case t: NextTag if vals.contains(t.item) => t.copy(item = vals(t.item))
+          case t => t
+        }
+      )
+    )
 
 }
 

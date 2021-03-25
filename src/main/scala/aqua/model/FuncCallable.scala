@@ -12,33 +12,79 @@ case class FuncCallable(
   capturedArrows: Map[String, FuncCallable]
 ) {
 
+  def findNewNames(forbidden: Set[String], introduce: Set[String]): Map[String, String] =
+    (forbidden intersect introduce).foldLeft(Map.empty[String, String]) { case (acc, name) =>
+      acc + (name -> LazyList
+        .from(0)
+        .map(name + _)
+        .dropWhile(n => forbidden(n) || introduce(n) || acc.contains(n))
+        .head)
+    }
+
+  // Apply a callable function, get its fully resolved body & optional value, if any
   def apply(
     call: Call,
     arrows: Map[String, FuncCallable],
     forbiddenNames: Set[String]
   ): Eval[(FuncOp, Option[ValueModel])] = {
-
+    // Collect all arguments: what names are used inside the function, what values are received
     val argsFull = args.zip(call.args)
+    // DataType arguments
     val argsToData = argsFull.collect { case ((n, Left(_)), v) =>
       n -> v._1
     }.toMap
-
+    // Arrow arguments: expected type is Arrow, given by-name
     val argsToArrows = argsFull.collect { case ((n, Right(_)), (VarModel(name, _), _)) =>
       n -> arrows(name)
     }.toMap
 
-    // Okay, now need to substitute calls
-    val treeWithValues = body.resolveValues(argsToData).tree
+    // Going to resolve arrows: collect them all. Names should never collide: it's semantically checked
+    val allArrows = capturedArrows ++ argsToArrows
 
+    // Substitute arguments (referenced by name and optional lambda expressions) with values
+    val treeWithValues = body.resolveValues(argsToData)
+
+    // Function body on its own defines some values; collect their names
+    val treeDefines = treeWithValues.definesValueNames.value
+
+    // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
+    val shouldRename = findNewNames(forbiddenNames, treeDefines)
+    // If there was a collision, rename exports and usages with new names
+    val treeRenamed = if (shouldRename.isEmpty) treeWithValues else treeWithValues.rename(shouldRename)
+
+    // Result could be derived from arguments, or renamed; take care about that
+    val result = ret.map(_._1).map(_.resolveWith(argsToData)).map {
+      case v: VarModel if shouldRename.contains(v.name) => v.copy(shouldRename(v.name))
+      case v => v
+    }
+
+    // Now, substitute the arrows that were received as function arguments
     FuncOp
-      .traverseA(treeWithValues, (forbiddenNames, Map.empty[String, String])) {
-        case ((noNames, rename), CoalgebraTag(None, fn, c)) if argsToArrows.contains(fn) =>
-          (noNames, rename) -> argsToArrows(fn).apply(c, argsToArrows, noNames).value._1.tree
-        case (acc, tag) => acc -> Cofree[Chain, OpTag](tag, Eval.now(Chain.empty))
+      .traverseA(
+        // Use the new op tree (args are replaced with values, names are unique & safe)
+        treeRenamed.tree,
+        // Accumulator: all used names are forbidden, if we set any more names -- forbid them as well
+        (forbiddenNames ++ shouldRename.values ++ treeDefines) ->
+          // Functions may export variables, so collect them
+          Map.empty[String, ValueModel]
+      ) {
+        case ((noNames, resolvedExports), CoalgebraTag(None, fn, c)) if allArrows.contains(fn) =>
+          // Apply arguments to a function – recursion
+          val (appliedOp, value) = allArrows(fn).apply(c, argsToArrows, noNames).value
+
+          // Function defines new names inside its body – need to collect them
+          // TODO: actually it's done and dropped – so keep and pass it instead
+          val newNames = appliedOp.definesValueNames.value
+          // At the very end, will need to resolve what is used as results with the result values
+          (noNames ++ newNames, resolvedExports ++ c.exportTo.zip(value)) -> appliedOp.tree
+        case (acc @ (_, resolvedExports), tag) =>
+          // All the other tags are already resolved and need no substitution
+          acc -> Cofree[Chain, OpTag](tag.mapValues(_.resolveWith(resolvedExports)), Eval.now(Chain.empty))
       }
-      .map(_._2)
-      .map(FuncOp(_))
-      .map(_ -> ret.map(_._1))
+      .map { case ((_, resolvedExports), b) =>
+        // If return value is affected by any of internal functions, resolve it
+        FuncOp(b) -> result.map(_.resolveWith(resolvedExports))
+      }
   }
 
   val getDataService: String = "getDataSrv"
@@ -47,11 +93,13 @@ case class FuncCallable(
   val respFuncName = "response"
   val relayVarName = "relay"
 
+  val callbackId: ValueModel = LiteralModel("\"" + callbackService + "\"")
+
   val returnCallback: Option[FuncOp] = ret.map { case (dv, t) =>
     viaRelay(
       FuncOp.leaf(
         CallServiceTag(
-          LiteralModel("\"" + callbackService + "\""),
+          callbackId,
           respFuncName,
           Call(
             (dv, t) :: Nil,
@@ -68,7 +116,7 @@ case class FuncCallable(
       viaRelay(
         FuncOp.leaf(
           CallServiceTag(
-            LiteralModel("\"" + callbackService + "\""),
+            callbackId,
             name,
             Call(
               arrowType.args.zipWithIndex.map { case (t, i) =>
@@ -102,7 +150,9 @@ case class FuncCallable(
           args.collect { case (argName, Right(arrowType)) =>
             argName -> initPeerCallable(argName, arrowType)
           }.toMap,
-          Set.empty
+          args.collect { case (argName, Left(_)) =>
+            argName
+          }.foldLeft(Set(relayVarName))(_ + _)
         ).value._1
       ) ++ Chain.fromSeq(returnCallback.toSeq)
   )
