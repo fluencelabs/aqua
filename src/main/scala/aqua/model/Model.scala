@@ -13,7 +13,7 @@ object Model {
 
     override def combine(x: Model, y: Model): Model = (x, y) match {
       case (l: FuncOp, r: FuncOp) =>
-        FuncOp.MergeOps.combine(l, r)
+        FuncOp.FuncOpSemigroup.combine(l, r)
       case (l: ScriptModel, r: ScriptModel) => ScriptModel(l.funcs ++ r.funcs)
       case (l: FuncModel, r: FuncModel) => ScriptModel(Chain(l, r))
       case (l: ScriptModel, r: FuncModel) => ScriptModel(l.funcs.append(r))

@@ -1,6 +1,6 @@
 package aqua.semantics
 
-import aqua.model.{FuncOp, Model, RightBiased}
+import aqua.model.Model
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
@@ -29,15 +29,11 @@ object Semantics {
     Eval later ExprSem
       .getProg[F, G](expr)
       .apply(
-        inners
-          .foldRight(Free.pure[G, List[Model]](Model.empty("AST is empty") :: Nil)) { case (next, acc) =>
-            (next, acc).mapN {
-              case (nxt: FuncOp, (prev: RightBiased) :: tail) =>
-                Model.empty("Next item is consumed with right-biased op") :: (nxt :+: prev) :: tail
-              case (nxt, tail) => nxt :: tail
-            }
+        inners.toList
+          .reduceLeftOption[Free[G, Model]] { case (a, b) =>
+            (a, b).mapN(_ |+| _)
           }
-          .map(_.reduceLeft(_ |+| _))
+          .getOrElse(Free.pure[G, Model](Model.empty("AST is empty")))
       )
   }
 

@@ -4,7 +4,7 @@ import aqua.model.FuncModel
 
 case class FuncAirGen(func: FuncModel) {
 
-  def bodyGen: AirGen = AirGen(func.body)
+  def bodyGen: AirGen = AirGen(func.body.tree)
 
   def callable: ArrowCallable =
     new FuncCallable(func.args, func.ret.map(_._1).map(AirGen.valueToData), bodyGen)
@@ -30,7 +30,7 @@ case class FuncAirGen(func: FuncModel) {
 
   def generateTsAir(acc: Map[String, ArrowCallable]): Air =
     AirGen(
-      func.generateTsModel
+      func.generateTsModel.tree
     ).generate {
       val ctx = airContextWithArgs(acc)
 
