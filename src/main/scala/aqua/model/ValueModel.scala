@@ -11,4 +11,6 @@ sealed trait LambdaModel
 case object IntoArrayModel extends LambdaModel
 case class IntoFieldModel(field: String) extends LambdaModel
 
-case class VarModel(name: String, lambda: Chain[LambdaModel] = Chain.empty) extends ValueModel
+case class VarModel(name: String, lambda: Chain[LambdaModel] = Chain.empty) extends ValueModel {
+  def deriveFrom(vm: VarModel): VarModel = vm.copy(lambda = vm.lambda ++ lambda)
+}

@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.{CallServiceTag, CoalgebraTag, FuncOp, Model, ValueModel}
+import aqua.model.{Call, CallServiceTag, CoalgebraTag, FuncOp, Model, ValueModel}
 import aqua.parser.expr.CoalgebraExpr
 import aqua.semantics.{ArrowType, Prog, Type}
 import aqua.semantics.rules.ValuesAlgebra
@@ -50,8 +50,7 @@ class CoalgebraSem[F[_]](val expr: CoalgebraExpr[F]) extends AnyVal {
                 CallServiceTag(
                   serviceId = ValuesAlgebra.valueToData(serviceId),
                   funcName = funcName.value,
-                  args = argsResolved,
-                  exportTo = variable.map(_.value)
+                  Call(argsResolved, variable.map(_.value))
                 )
               )
             )
@@ -66,8 +65,7 @@ class CoalgebraSem[F[_]](val expr: CoalgebraExpr[F]) extends AnyVal {
                   CoalgebraTag(
                     ability = None,
                     funcName = funcName.value,
-                    args = argsResolved,
-                    exportTo = variable.map(_.value)
+                    Call(argsResolved, variable.map(_.value))
                   )
                 )
               )

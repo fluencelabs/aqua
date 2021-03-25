@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.generator.{ArrowCallable, FuncAirGen, TypescriptFile, TypescriptFunc}
+import aqua.generator.{FuncAirGen, TypescriptFile, TypescriptFunc}
 import cats.data.Chain
 import cats.syntax.show._
 
@@ -13,22 +13,33 @@ case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
 
   def generateAir: Chain[String] =
     funcs
-      .foldLeft((Map.empty[String, ArrowCallable], Chain.empty[String])) { case ((funcsAcc, outputAcc), func) =>
-        val fag = FuncAirGen(func)
-        funcsAcc.updated(func.name, fag.callable) -> outputAcc.append(fag.generateAir(funcsAcc).show)
+      .foldLeft((Map.empty[String, FuncCallable], Chain.empty[String])) { case ((funcsAcc, outputAcc), func) =>
+        val fr = func.toContext(funcsAcc).value
+        funcsAcc.updated(func.name, fr) -> outputAcc.append(FuncAirGen(func.name, fr).generateAir.show)
       }
       ._2
 
   def generateTypescript: String =
     TypescriptFile(
       funcs
-        .foldLeft((Map.empty[String, ArrowCallable], Chain.empty[TypescriptFunc])) {
+        .foldLeft((Map.empty[String, FuncCallable], Chain.empty[TypescriptFunc])) {
           case ((funcsAcc, outputAcc), func) =>
-            val fag = FuncAirGen(func)
-            funcsAcc.updated(func.name, fag.callable) -> outputAcc.append(fag.generateTs(funcsAcc))
+            val fr = func.toContext(funcsAcc).value
+            val fag = FuncAirGen(func.name, fr)
+            funcsAcc.updated(func.name, fr) -> outputAcc.append(fag.generateTs)
         }
         ._2
         .toList
     ).show
+
+  def generateModel: String =
+    funcs
+      .foldLeft((Map.empty[String, FuncCallable], Chain.empty[String])) { case ((funcsAcc, outputAcc), func) =>
+        val fr = func.toContext(funcsAcc).value
+        funcsAcc.updated(func.name, fr) -> outputAcc.append(fr.toString)
+      }
+      ._2
+      .toList
+      .mkString("\n\n")
 
 }

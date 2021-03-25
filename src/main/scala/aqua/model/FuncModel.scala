@@ -1,7 +1,9 @@
 package aqua.model
 
 import aqua.semantics.{ArrowType, DataType, Type}
+import cats.Eval
 import cats.data.Chain
+import cats.free.Cofree
 
 case class FuncModel(
   name: String,
@@ -10,61 +12,15 @@ case class FuncModel(
   body: FuncOp
 ) extends Model {
 
-  val getDataService: String = "getDataSrv"
-  val callbackService: String = "callbackSrv"
-
-  val respFuncName = "response"
-  val relayVarName = "relay"
-
-  val returnCallback: Option[FuncOp] = ret.map { case (dv, t) =>
-    viaRelay(
-      FuncOp.leaf(
-        CallServiceTag(
-          LiteralModel("\"" + callbackService + "\""),
-          respFuncName,
-          (dv, t) :: Nil,
-          None
-        )
-      )
-    )
-  }
-
-  // TODO rename
-  def generateTsModel: FuncOp = FuncOp.node(
-    SeqTag,
-    Chain
-      .fromSeq(
-        args.collect { case (argName, Left(_)) =>
-          getDataOp(argName)
-        } :+ getDataOp(relayVarName)
-      )
-      .append(body) ++ Chain.fromSeq(returnCallback.toSeq)
-  )
-
-  def getDataOp(name: String): FuncOp =
-    FuncOp.leaf(
-      CallServiceTag(
-        LiteralModel("\"" + getDataService + "\""),
-        name,
-        Nil,
-        Some(name)
-      )
-    )
-
-  def viaRelay(op: FuncOp): FuncOp =
-    FuncOp.node(
-      OnTag(VarModel(relayVarName)),
-      Chain(
-        FuncOp.leaf(
-          CallServiceTag(
-            LiteralModel("\"op\""),
-            "identity",
-            Nil,
-            None
-          )
-        ),
-        FuncOp.wrap(OnTag(InitPeerIdModel), op)
-      )
-    )
+  def toContext(arrows: Map[String, FuncCallable]): Eval[FuncCallable] =
+    body
+      .cata[Cofree[Chain, OpTag]] {
+        case (CoalgebraTag(None, funcName, call), _) if arrows.contains(funcName) =>
+          arrows(funcName).apply(call, arrows, Set.empty).map(_._1.tree)
+        case (o, c) =>
+          Eval.now(Cofree(o, Eval.now(c)))
+      }
+      .map(FuncOp(_))
+      .map(FuncCallable(_, args, ret, arrows))
 
 }

@@ -2,7 +2,39 @@ package aqua.model
 
 import aqua.semantics.Type
 
-sealed trait OpTag
+case class Call(args: List[(ValueModel, Type)], exportTo: Option[String]) {
+
+  def mapValues(f: ValueModel => ValueModel): Call =
+    Call(
+      args.map { case (v, t) =>
+        (f(v), t)
+      },
+      exportTo
+    )
+}
+
+sealed trait OpTag {
+
+  def mapValues(f: ValueModel => ValueModel): OpTag = this match {
+    case OnTag(peerId) => OnTag(f(peerId))
+    case MatchMismatchTag(left, right, shouldMatch) => MatchMismatchTag(f(left), f(right), shouldMatch)
+    case ForTag(item, iterable) => ForTag(item, f(iterable))
+    case CoalgebraTag(ability, funcName, call) =>
+      CoalgebraTag(
+        ability,
+        funcName,
+        call.mapValues(f)
+      )
+    case CallServiceTag(serviceId, funcName, call) =>
+      CallServiceTag(
+        f(serviceId),
+        funcName,
+        call.mapValues(f)
+      )
+    case _ => this
+  }
+
+}
 
 case object SeqTag extends OpTag
 case object ParTag extends OpTag
@@ -15,13 +47,11 @@ case class ForTag(item: String, iterable: ValueModel) extends OpTag
 case class CoalgebraTag(
   ability: Option[AbilityModel],
   funcName: String,
-  args: List[(ValueModel, Type)],
-  exportTo: Option[String]
+  call: Call
 ) extends OpTag
 
 case class CallServiceTag(
   serviceId: ValueModel,
   funcName: String,
-  args: List[(ValueModel, Type)],
-  exportTo: Option[String]
+  call: Call
 ) extends OpTag

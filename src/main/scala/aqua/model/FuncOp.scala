@@ -5,10 +5,44 @@ import cats.data.Chain
 import cats.free.Cofree
 import cats.kernel.Semigroup
 import cats.syntax.apply._
+import cats.syntax.functor._
 
-case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model
+case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
+
+  def cata[T](folder: (OpTag, Chain[T]) => Eval[T]): Eval[T] =
+    Cofree.cata(tree)(folder)
+
+  def definesValueNames: Eval[Set[String]] = cata[Set[String]] {
+    case (CoalgebraTag(_, _, Call(_, Some(export))), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
+    case (CallServiceTag(_, _, Call(_, Some(export))), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
+    case (NextTag(export), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
+    case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
+  }
+
+  def resolveValues(vals: Map[String, ValueModel]): FuncOp = FuncOp(tree.map[OpTag](_.mapValues {
+    case v: VarModel =>
+      vals.get(v.name) match {
+        case Some(vv: VarModel) => v.deriveFrom(vv)
+        case Some(vv) => vv // TODO check that lambda is empty, otherwise error
+        case None => v // Should not happen
+      }
+    case v => v
+  }))
+
+}
 
 object FuncOp {
+
+  def traverseA[A](cf: Cofree[Chain, OpTag], init: A)(
+    f: (A, OpTag) => (A, Cofree[Chain, OpTag])
+  ): Eval[(A, Cofree[Chain, OpTag])] = {
+    val (headA, head) = f(init, cf.head)
+    cf.tail
+      .map(_.foldLeft[(A, Chain[Cofree[Chain, OpTag]])]((headA, head.tailForced)) { case ((aggrA, aggrTail), child) =>
+        traverseA(child, aggrA)(f).value.map(aggrTail.append)
+      })
+      .map(_.map(ch => head.copy(tail = Eval.now(ch))))
+  }
 
   implicit object FuncOpSemigroup extends Semigroup[FuncOp] {
 
