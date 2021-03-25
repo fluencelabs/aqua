@@ -1,9 +1,22 @@
 package aqua
 
-import aqua.parser.expr.{AbilityIdExpr, AliasExpr, ArrowTypeExpr, CoalgebraExpr, DataStructExpr, FuncExpr, OnExpr}
+import aqua.parser.expr.{
+  AbilityIdExpr,
+  AliasExpr,
+  ArrowTypeExpr,
+  CoalgebraExpr,
+  DataStructExpr,
+  ElseOtherwiseExpr,
+  FieldTypeExpr,
+  ForExpr,
+  FuncExpr,
+  IfExpr,
+  OnExpr
+}
 import aqua.parser.lexer.{
   Ability,
   Arg,
+  ArrayTypeToken,
   ArrowTypeToken,
   BasicTypeToken,
   CustomTypeToken,
@@ -32,6 +45,7 @@ object Utils {
   implicit def toLiteral(name: String, t: LiteralType): Literal[Id] = Literal[Id](name, t)
 
   implicit def toCustomType(str: String): CustomTypeToken[Id] = CustomTypeToken[Id](str)
+  def toArrayType(str: String): ArrayTypeToken[Id] = ArrayTypeToken[Id]((), str)
 
   implicit def toArrowType(args: List[DataTypeToken[Id]], res: Option[DataTypeToken[Id]]): ArrowTypeToken[Id] =
     ArrowTypeToken[Id]((), args, res)
@@ -53,6 +67,18 @@ trait Utils extends EitherValues {
 
   def parseOn(str: String): OnExpr[Id] =
     OnExpr.p[Id].parseAll(str).value
+
+  def parseIf(str: String): IfExpr[Id] =
+    IfExpr.p[Id].parseAll(str).value
+
+  def parseFor(str: String): ForExpr[Id] =
+    ForExpr.p[Id].parseAll(str).value
+
+  def parseElse(str: String): ElseOtherwiseExpr[Id] =
+    ElseOtherwiseExpr.p[Id].parseAll(str).value
+
+  def parseFieldType(str: String): FieldTypeExpr[Id] =
+    FieldTypeExpr.p[Id].parseAll(str).value
 
   def parseAlias(str: String): AliasExpr[Id] =
     AliasExpr.p[Id].parseAll(str).value

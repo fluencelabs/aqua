@@ -11,7 +11,7 @@ case class ForExpr[F[_]](item: Name[F], iterable: Value[F]) extends Expr[F]
 
 object ForExpr extends Expr.AndIndented(Expr.defer(OnExpr), ParExpr, CoalgebraExpr, AbilityIdExpr) {
 
-  override def p[F[_]: LiftParser: Comonad]: P[Expr[F]] =
+  override def p[F[_]: LiftParser: Comonad]: P[ForExpr[F]] =
     ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value.`value`[F]).map { case (item, iterable) =>
       ForExpr(item, iterable)
     }
