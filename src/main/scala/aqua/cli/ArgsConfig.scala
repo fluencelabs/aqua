@@ -51,7 +51,7 @@ object ArgsConfig {
         .text("path to output directory"),
       opt[Unit]('a', "air")
         .action((_, c) => c.copy(air = true))
-        .text("generate an AIR script instead of TypeScript file"),
+        .text("generates only a code on air instead of TypeScript file"),
       help('h', "help").text("prints this usage text"),
       checkConfig(c => {
         if (c.input.isEmpty != c.output.isEmpty) {
