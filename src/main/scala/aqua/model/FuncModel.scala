@@ -14,12 +14,13 @@ case class FuncModel(
   val callbackService: String = "callbackSrv"
 
   val respFuncName = "response"
+  val relayVarName = "relay"
 
   val returnCallback: Option[FuncOp] = ret.map { case (dv, t) =>
     viaRelay(
       FuncOp.leaf(
-        CoalgebraTag(
-          Some(ServiceModel(callbackService, LiteralModel("\"" + callbackService + "\""))),
+        CallServiceTag(
+          LiteralModel("\"" + callbackService + "\""),
           respFuncName,
           (dv, t) :: Nil,
           None
@@ -35,15 +36,15 @@ case class FuncModel(
       .fromSeq(
         args.collect { case (argName, Left(_)) =>
           getDataOp(argName)
-        } :+ getDataOp("relay")
+        } :+ getDataOp(relayVarName)
       )
       .append(body) ++ Chain.fromSeq(returnCallback.toSeq)
   )
 
   def getDataOp(name: String): FuncOp =
     FuncOp.leaf(
-      CoalgebraTag(
-        Some(ServiceModel(getDataService, LiteralModel("\"" + getDataService + "\""))),
+      CallServiceTag(
+        LiteralModel("\"" + getDataService + "\""),
         name,
         Nil,
         Some(name)
@@ -52,11 +53,11 @@ case class FuncModel(
 
   def viaRelay(op: FuncOp): FuncOp =
     FuncOp.node(
-      OnTag(VarModel("relay")),
+      OnTag(VarModel(relayVarName)),
       Chain(
         FuncOp.leaf(
-          CoalgebraTag(
-            Some(ServiceModel("op", LiteralModel("\"op\""))),
+          CallServiceTag(
+            LiteralModel("\"op\""),
             "identity",
             Nil,
             None

@@ -18,3 +18,10 @@ case class CoalgebraTag(
   args: List[(ValueModel, Type)],
   exportTo: Option[String]
 ) extends OpTag
+
+case class CallServiceTag(
+  serviceId: ValueModel,
+  funcName: String,
+  args: List[(ValueModel, Type)],
+  exportTo: Option[String]
+) extends OpTag

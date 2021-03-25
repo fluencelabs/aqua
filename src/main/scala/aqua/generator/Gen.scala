@@ -1,9 +1,9 @@
 package aqua.generator
 
 import aqua.model.{
+  CallServiceTag,
   CoalgebraTag,
   ForTag,
-  FuncOp,
   InitPeerIdModel,
   IntoArrayModel,
   IntoFieldModel,
@@ -15,7 +15,6 @@ import aqua.model.{
   OpTag,
   ParTag,
   SeqTag,
-  ServiceModel,
   ValueModel,
   VarModel,
   XorTag
@@ -131,17 +130,19 @@ object AirGen {
               resCtx -> Air.Fold(iterData, varName, resAir)
             }
           }
-        case (CoalgebraTag(ability, funcName, args, exportTo), _) =>
-          Eval.later(ability match {
-            case Some(ServiceModel(_, id)) =>
-              new SrvCallable(valueToData(id), funcName).toCallGen(args.map(_._1).map(valueToData), exportTo)
-            case None =>
-              new AirGen {
+        case (CallServiceTag(serviceId, funcName, args, exportTo), _) =>
+          Eval.later(
+            new SrvCallable(valueToData(serviceId), funcName).toCallGen(args.map(_._1).map(valueToData), exportTo)
+          )
+        // TODO: coalgebra should be already resolved!
+        case (CoalgebraTag(_, funcName, args, exportTo), _) =>
+          Eval.later(
+            new AirGen {
 
-                override def generate(ctx: AirContext): (AirContext, Air) =
-                  ctx.arrows(funcName).toCallGen(args.map(_._1).map(valueToData), exportTo).generate(ctx)
-              }
-          })
+              override def generate(ctx: AirContext): (AirContext, Air) =
+                ctx.arrows(funcName).toCallGen(args.map(_._1).map(valueToData), exportTo).generate(ctx)
+            }
+          )
 
       }
       .value
