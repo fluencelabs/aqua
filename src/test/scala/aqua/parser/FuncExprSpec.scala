@@ -1,101 +1,50 @@
 package aqua.parser
 
-import aqua.parser.expr.{AbilityIdExpr, CallArrowExpr, FuncExpr, OnExpr}
-import aqua.parser.lexer.{Ability, IntoField, Literal, Name, VarLambda}
-import cats.data.NonEmptyList
-import org.scalatest.EitherValues
+import aqua.Utils
+import aqua.parser.Ast.Tree
+import aqua.parser.expr.FuncExpr
+import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken}
+import aqua.semantics.ScalarType.{bool, u64}
+import cats.{Eval, Id}
+import cats.syntax.traverse._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import aqua.semantics.LiteralType
-import cats.Id
+import aqua.semantics.Semantics.{folder, Alg}
+import cats.data.Chain
+import cats.free.Cofree
 
 import scala.language.implicitConversions
 
-class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
+class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
+  import Utils._
+  import aqua.semantics.ScalarType.{string, u32}
 
-  implicit def toAb(str: String): Ability[Id] = Ability[Id](str)
+  "func header" should "parse" in {
+    funcExpr("func some() -> bool") should be(FuncExpr("some", List(), Some(bool: BasicTypeToken[Id]), None))
+    funcExpr("func some()") should be(FuncExpr("some", List(), None, None))
 
-  implicit def toName(str: String): Name[Id] = Name[Id](str)
-
-  implicit def toFields(fields: List[String]): List[IntoField[Id]] = fields.map(f => IntoField[Id](f))
-
-  implicit def toVar(name: String, fields: List[String]): VarLambda[Id] = VarLambda[Id](toName(name), toFields(fields))
-
-  private def parseExpr(str: String) =
-    CallArrowExpr.p[Id].parseAll(str).value
-
-  private def parseAbId(str: String) =
-    AbilityIdExpr.p[Id].parseAll(str).value
-
-  private def parseOn(str: String) =
-    OnExpr.p[Id].parseAll(str).value
-
-  "func calls" should "parse func()" in {
-    parseExpr("func()") should be(CallArrowExpr[Id](None, None, toName("func"), List()))
-    parseExpr("Ab.func(arg)") should be(
-      CallArrowExpr[Id](None, Some(toAb("Ab")), Name[Id]("func"), List(VarLambda[Id](toName("arg"))))
+    val arrowToken = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), Some(BasicTypeToken[Id](bool)))
+    funcExpr("func some(peer: PeerId, other: u32 -> bool)") should be(
+      FuncExpr(toName("some"), List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken)), None, None)
     )
 
-    parseExpr("func(arg.doSomething)") should be(
-      CallArrowExpr[Id](None, None, Name[Id]("func"), List(toVar("arg", List("doSomething"))))
+    val arrowToken2 =
+      ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32), BasicTypeToken[Id](u64)), Some(BasicTypeToken[Id](bool)))
+    funcExpr("func some(peer: PeerId, other: u32, u64 -> bool)") should be(
+      FuncExpr(toName("some"), List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken2)), None, None)
     )
 
-    parseExpr("func(arg.doSomething.and.doSomethingElse)") should be(
-      CallArrowExpr[Id](None, None, Name[Id]("func"), List(toVar("arg", List("doSomething", "and", "doSomethingElse"))))
-    )
-
-    parseExpr("Ab.func(arg.doSomething.and.doSomethingElse, arg2.someFunc)") should be(
-      CallArrowExpr[Id](
-        None,
-        Some(toAb("Ab")),
-        Name[Id]("func"),
-        List(toVar("arg", List("doSomething", "and", "doSomethingElse")), toVar("arg2", List("someFunc")))
+    val arrowToken3 = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), None)
+    funcExpr("func getTime(peer: PeerId, ret: u32 -> ()) -> string") should be(
+      FuncExpr(
+        toName("getTime"),
+        List(toCustomArg("peer", "PeerId"), toArg("ret", arrowToken3)),
+        Some(BasicTypeToken[Id](string)),
+        None
       )
     )
 
-    parseExpr("x <- func(arg.doSomething)") should be(
-      CallArrowExpr[Id](
-        Some(toName("x")),
-        None,
-        Name[Id]("func"),
-        List(
-          toVar("arg", List("doSomething"))
-        )
-      )
-    )
-  }
-
-  "abilities" should "be parsed" in {
-    parseAbId("Ab a") should be(
-      AbilityIdExpr[Id](toAb("Ab"), toVar("a", List()))
-    )
-
-    parseAbId("Ab \"a\"") should be(
-      AbilityIdExpr[Id](toAb("Ab"), Literal[Id]("\"a\"", LiteralType.string))
-    )
-
-    parseAbId("Ab 1") should be(
-      AbilityIdExpr[Id](toAb("Ab"), Literal[Id]("1", LiteralType.number))
-    )
-
-    parseAbId("Ab a.id") should be(
-      AbilityIdExpr[Id](toAb("Ab"), toVar("a", List("id")))
-    )
-  }
-
-  "on" should "be parsed" in {
-    parseOn("on peer") should be(
-      OnExpr[Id](toVar("peer", List()), Nil)
-    )
-
-    parseOn("on peer.id") should be(
-      OnExpr[Id](toVar("peer", List("id")), Nil)
-    )
-
-    parseOn("on peer.id") should be(
-      OnExpr[Id](toVar("peer", List("id")), Nil)
-    )
   }
 
   "on" should "parse on x: y" in {
@@ -105,6 +54,11 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
         |  x <- Ab.func()
         |  Peer "some id"
         |  call(true)""".stripMargin
+
+    val c: Cofree[Chain, Expr[Id]] = FuncExpr.ast[Id](Indent()).parseAll(script).value
+    val a = Ast(c).cata(folder[Id, Alg[Id, *]]).value
+//    a.run
+    println(a)
 
     FuncExpr.ast[Id](Indent()).parseAll(script).isRight should be(true)
   }
@@ -118,29 +72,57 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
 
     FuncExpr.ast[Id](Indent()).parseAll(script).isRight should be(true)
   }
+  /*
 
-  /*
-  TODO: xor1
-try:
- ...
-catch( errn)?:
- ...
-(next)
-   */
-  /*
-  TODO: xor2
-if a == != b:
- ...
-else:
- ...
-(next)
-   */
-  /*
-  TODO: ability from lens
-   */
-  /*
-  TODO: fold, fold par, streams, ...
+    "function" should "parse getTime as a whole" in {
+      val func =
+        """func getTime(peer: PeerId, ret: u32 -> ()) -> string:
+          | on peer:
+          |   Peer "peer"
+          |   t <- Peer.timestamp()
+          | ret(t)""".stripMargin
 
-  for x <- $xs:
-   */
+      DefFunc.`deffunc`.parseAll(func).right.value should be(
+        DefFunc[Id, HNil](
+          getTimeHead,
+          NonEmptyList.of(
+            On[Id, HNil](
+              VarLambda[Id]("peer", Nil),
+              NonEmptyList.of(
+                AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", LiteralType.string), HNil),
+                Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", "Peer.timestamp", Nil, HNil), HNil)
+              ),
+              HNil
+            ),
+            FuncCall[Id, HNil]("ret", VarLambda[Id]("t", Nil) :: Nil, HNil)
+          ),
+          HNil
+        )
+      )
+    }
+
+    "function" should "parse getTime with no return" in {
+      val func =
+        """func getTime(peer: PeerId, ret: u32 -> ()) -> string:
+          | on peer:
+          |   Peer "peer"
+          |   t <- Peer.timestamp()""".stripMargin
+
+      DefFunc.`deffunc`.parseAll(func).right.value should be(
+        DefFunc[Id, HNil](
+          getTimeHead,
+          NonEmptyList.of(
+            On[Id, HNil](
+              VarLambda[Id]("peer", Nil),
+              NonEmptyList.of(
+                AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", LiteralType.string), HNil),
+                Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", "Peer.timestamp", Nil, HNil), HNil)
+              ),
+              HNil
+            )
+          ),
+          HNil
+        )
+      )
+    }*/
 }

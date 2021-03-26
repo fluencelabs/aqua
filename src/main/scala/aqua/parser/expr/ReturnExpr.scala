@@ -11,6 +11,6 @@ case class ReturnExpr[F[_]](value: Value[F]) extends Expr[F]
 
 object ReturnExpr extends Expr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[Expr[F]] =
+  override def p[F[_]: LiftParser: Comonad]: Parser[ReturnExpr[F]] =
     (`<-` *> ` ` *> Value.`value`[F]).map(ReturnExpr(_))
 }

@@ -12,7 +12,7 @@ case class OnExpr[F[_]](peerId: Value[F], via: List[Value[F]]) extends Expr[F]
 object OnExpr extends Expr.AndIndented(CallArrowExpr, AbilityIdExpr, IfExpr, ElseOtherwiseExpr) {
 
   override def p[F[_]: LiftParser: Comonad]: P[OnExpr[F]] =
-    (`on` *> ` ` *> Value.`value`[F] ~ (` ` *> `via` *> Value.`value`[F]).rep0).map { case (peerId, via) =>
+    (`on` *> ` ` *> Value.`value`[F] ~ (` ` *> `via` *> ` ` *> Value.`value`[F]).rep0).map { case (peerId, via) =>
       OnExpr(peerId, via)
     }
 }

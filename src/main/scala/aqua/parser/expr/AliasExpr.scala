@@ -11,8 +11,8 @@ case class AliasExpr[F[_]](name: CustomTypeToken[F], target: TypeToken[F]) exten
 
 object AliasExpr extends Expr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[Expr[F]] =
-    ((`alias` *> ` ` *> CustomTypeToken.ct[F] <* ` : `) ~ TypeToken.`typedef`[F]).map {
-      case (name, target) => AliasExpr(name, target)
+  override def p[F[_]: LiftParser: Comonad]: Parser[AliasExpr[F]] =
+    ((`alias` *> ` ` *> CustomTypeToken.ct[F] <* ` : `) ~ TypeToken.`typedef`[F]).map { case (name, target) =>
+      AliasExpr(name, target)
     }
 }

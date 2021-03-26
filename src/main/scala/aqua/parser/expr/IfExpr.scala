@@ -12,7 +12,7 @@ case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F]) extends 
 
 object IfExpr extends Expr.AndIndented(Expr.defer(OnExpr), ParExpr, CallArrowExpr, AbilityIdExpr, ForExpr) {
 
-  override def p[F[_]: LiftParser: Comonad]: P[Expr[F]] =
+  override def p[F[_]: LiftParser: Comonad]: P[IfExpr[F]] =
     (`if` *> ` ` *> Value.`value`[F] ~ (` ` *> EqOp.p[F] ~ (` ` *> Value.`value`[F])).?).map {
       case (left, Some((e, right))) =>
         IfExpr(left, e, right)
