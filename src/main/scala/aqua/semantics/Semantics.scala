@@ -27,6 +27,8 @@ object Semantics {
     Eval later ExprSem
       .getProg[F, G](expr)
       .apply(
+        // TODO instead of foldRight, do slidingWindow for 2 elements, merge right associative ones
+        // Then foldLeft just like now
         inners
           .foldRight[Free[G, List[Model]]](Free.pure[G, List[Model]](List.empty[Model])) { case (a, b) =>
             (a, b).mapN {

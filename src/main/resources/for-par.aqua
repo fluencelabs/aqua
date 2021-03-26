@@ -6,10 +6,12 @@ service SomeThing("smth"):
 func tryFor():
     peers <- SomeThing.getList()
 
-    SomeThing.callBool("just to have smth before the for")
+    if false:
+        SomeThing.callBool("just to have smth before the for")
 
-    par for p <- peers par:
-        SomeThing.callU32("call u32 inside")
-        SomeThing.callBool("call bool inside")
+        par for p <- peers par:
+            SomeThing.callU32("call u32 inside")
+            SomeThing.callBool("call bool inside")
 
-    SomeThing.callBool("just to have smth after the for")
+    else:
+        SomeThing.callBool("just to have smth after the for")
