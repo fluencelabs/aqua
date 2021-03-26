@@ -14,9 +14,16 @@ object Aqua {
   def validate(input: String): ValidatedNec[AquaError, Model] =
     parse(input).andThen(ast => Semantics.validate(ast).leftMap(_.map(ts => CompilerError(ts._1.unit._1, ts._2))))
 
-  def generate(input: String): ValidatedNec[AquaError, String] =
+  def generate(input: String, air: Boolean): ValidatedNec[AquaError, String] =
     validate(input).map {
-      case g: ScriptModel => g.generateTypescript
+      case g: ScriptModel =>
+        if (air) g.generateAir else g.generateTypescript
       case _ => "//No input given"
     }
+
+  def generateTS(input: String): ValidatedNec[AquaError, String] =
+    generate(input, air = false)
+
+  def generateAir(input: String): ValidatedNec[AquaError, String] =
+    generate(input, air = true)
 }

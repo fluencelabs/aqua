@@ -12,12 +12,12 @@ service UserList:
 
 func in(xap: App) -> u32:
     UserList xap.user_list.service_id
-    res <- UserList.leave("")
+    res <- UserList.leave("line in in()")
     <- res
 
 
 func bug(app: App, smth: bool, callback: bool -> ()):
 	UserList app.user_list.service_id
-	UserList.leave("")
+	UserList.leave("line in bug()")
 	x <- in(app)
 	callback(smth)

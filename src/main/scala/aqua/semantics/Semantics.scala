@@ -1,12 +1,11 @@
 package aqua.semantics
 
-import aqua.model.{FuncOp, Model, RightBiased}
+import aqua.model.{FuncOp, Model}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState, AbilityOp}
 import aqua.semantics.rules.names.{NameOp, NamesAlgebra, NamesInterpreter, NamesState}
-import aqua.semantics.rules.scope.{PeerIdAlgebra, PeerIdInterpreter, PeerIdOp, PeerIdState}
 import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, TypesState}
 import cats.Eval
 import cats.arrow.FunctionK
@@ -23,27 +22,27 @@ object Semantics {
   def folder[F[_], G[_]](implicit
     A: AbilitiesAlgebra[F, G],
     N: NamesAlgebra[F, G],
-    P: PeerIdAlgebra[F, G],
     T: TypesAlgebra[F, G]
   ): (Expr[F], Chain[Free[G, Model]]) => Eval[Free[G, Model]] = { case (expr, inners) =>
     Eval later ExprSem
       .getProg[F, G](expr)
       .apply(
+        // TODO instead of foldRight, do slidingWindow for 2 elements, merge right associative ones
+        // Then foldLeft just like now
         inners
-          .foldRight(Free.pure[G, List[Model]](Model.empty("AST is empty") :: Nil)) { case (next, acc) =>
-            (next, acc).mapN {
-              case (nxt: FuncOp, (prev: RightBiased) :: tail) =>
-                Model.empty("Next item is consumed with right-biased op") :: (nxt :+: prev) :: tail
-              case (nxt, tail) => nxt :: tail
+          .foldRight[Free[G, List[Model]]](Free.pure[G, List[Model]](List.empty[Model])) { case (a, b) =>
+            (a, b).mapN {
+              case (prev: FuncOp, (next: FuncOp) :: tail) if next.isRightAssoc =>
+                (prev :+: next) :: tail
+              case (prev, acc) => prev :: acc
             }
           }
-          .map(_.reduceLeft(_ |+| _))
+          .map(_.reduceLeftOption(_ |+| _).getOrElse(Model.empty("AST is empty")))
       )
   }
 
   type Alg0[F[_], A] = EitherK[AbilityOp[F, *], NameOp[F, *], A]
-  type Alg1[F[_], A] = EitherK[PeerIdOp[F, *], Alg0[F, *], A]
-  type Alg[F[_], A] = EitherK[TypeOp[F, *], Alg1[F, *], A]
+  type Alg[F[_], A] = EitherK[TypeOp[F, *], Alg0[F, *], A]
 
   def transpile[F[_]](ast: Ast[F]): Free[Alg[F, *], Model] =
     ast.cata(folder[F, Alg[F, *]]).value
@@ -52,7 +51,6 @@ object Semantics {
     errors: Chain[(Token[F], String)] = Chain.empty[(Token[F], String)],
     names: NamesState[F] = NamesState[F](),
     abilities: AbilitiesState[F] = AbilitiesState[F](),
-    peerId: PeerIdState[F] = PeerIdState[F](),
     types: TypesState[F] = TypesState[F]()
   )
 
@@ -70,17 +68,12 @@ object Semantics {
 
     val abilities = new AbilitiesInterpreter[F, CompilerState[F]]()
 
-    implicit val ps: Lens[CompilerState[F], PeerIdState[F]] = GenLens[CompilerState[F]](_.peerId)
-
-    val peerId = new PeerIdInterpreter[F, CompilerState[F]]()
-
     implicit val ts: Lens[CompilerState[F], TypesState[F]] = GenLens[CompilerState[F]](_.types)
 
     val types = new TypesInterpreter[F, CompilerState[F]]()
 
     val interpreter0: FunctionK[Alg0[F, *], State[CompilerState[F], *]] = abilities or names
-    val interpreter1: FunctionK[Alg1[F, *], State[CompilerState[F], *]] = peerId or interpreter0
-    val interpreter: FunctionK[Alg[F, *], State[CompilerState[F], *]] = types or interpreter1
+    val interpreter: FunctionK[Alg[F, *], State[CompilerState[F], *]] = types or interpreter0
 
     free.foldMap[State[CompilerState[F], *]](interpreter)
   }

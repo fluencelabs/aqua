@@ -1,0 +1,17 @@
+service SomeThing("smth"):
+    callU32: string -> u32
+    callBool: string -> bool
+    getList: -> []string
+
+func tryFor():
+    peers <- SomeThing.getList()
+
+    if false:
+        SomeThing.callBool("just to have smth before the for")
+
+        par for p <- peers par:
+            SomeThing.callU32("call u32 inside")
+            SomeThing.callBool("call bool inside")
+
+    else:
+        SomeThing.callBool("just to have smth after the for")

@@ -1,10 +1,10 @@
 package aqua.generator
 
-import aqua.model.FuncModel
+import aqua.model.FuncCallable
 import aqua.semantics.{ArrayType, ArrowType, DataType, LiteralType, ProductType, ScalarType, Type}
 import cats.syntax.show._
 
-case class TypescriptFunc(func: FuncModel, tsAir: Air) {
+case class TypescriptFunc(name: String, func: FuncCallable, tsAir: Air) {
 
   def typeToTs(t: Type): String = t match {
     case ArrayType(t) => typeToTs(t) + "[]"
@@ -35,13 +35,12 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
 
   def generateTypescript: String = {
 
-    val returnCallback = func.ret.map {
-      case (dv, t) =>
-        s"""h.on('${func.callbackService}', '${func.respFuncName}', (args) => {
-           |  const [res] = args;
-           |  resolve(res);
-           |});
-           |""".stripMargin
+    val returnCallback = func.ret.map { case (dv, t) =>
+      s"""h.on('${func.callbackService}', '${func.respFuncName}', (args) => {
+         |  const [res] = args;
+         |  resolve(res);
+         |});
+         |""".stripMargin
 
     }
 
@@ -59,8 +58,8 @@ case class TypescriptFunc(func: FuncModel, tsAir: Air) {
       .fold("void")(typeToTs)
 
     s"""
-       |export async function ${func.name}(client: FluenceClient${if (func.args.isEmpty) ""
-       else ", "}${argsTypescript}): Promise<$retType> {
+       |export async function ${name}(client: FluenceClient${if (func.args.isEmpty) ""
+    else ", "}${argsTypescript}): Promise<$retType> {
        |    let request;
        |    const promise = new Promise<$retType>((resolve, reject) => {
        |        request = new RequestFlowBuilder()

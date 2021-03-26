@@ -9,7 +9,7 @@ import cats.parse.Parser
 
 case class ParExpr[F[_]](point: F[Unit]) extends Expr[F]
 
-object ParExpr extends Expr.AndThen(Expr.defer(OnExpr), CoalgebraExpr) {
+object ParExpr extends Expr.AndThen(Expr.defer(OnExpr), CallArrowExpr, Expr.defer(ForExpr)) {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[ParExpr[F]] =
     `par`.lift.map(ParExpr(_))

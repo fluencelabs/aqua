@@ -3,7 +3,7 @@ package aqua.parser
 import aqua.parser.Ast.Tree
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
-import cats.data.{Chain, NonEmptyChain}
+import cats.data.Chain
 import cats.free.Cofree
 import cats.parse.{Parser => P}
 import cats.{Comonad, Eval}

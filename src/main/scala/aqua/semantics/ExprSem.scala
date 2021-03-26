@@ -5,7 +5,6 @@ import aqua.parser.Expr
 import aqua.parser.expr._
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
-import aqua.semantics.rules.scope.PeerIdAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.semantics.expr._
 
@@ -16,14 +15,13 @@ object ExprSem {
   )(implicit
     A: AbilitiesAlgebra[F, G],
     N: NamesAlgebra[F, G],
-    P: PeerIdAlgebra[F, G],
     T: TypesAlgebra[F, G]
   ): Prog[G, Model] =
     expr match {
       case expr: AbilityIdExpr[F] => new AbilityIdSem(expr).program[G]
       case expr: AliasExpr[F] => new AliasSem(expr).program[G]
       case expr: ArrowTypeExpr[F] => new ArrowTypeSem(expr).program[G]
-      case expr: CoalgebraExpr[F] => new CoalgebraSem(expr).program[G]
+      case expr: CallArrowExpr[F] => new CallArrowSem(expr).program[G]
       case expr: DataStructExpr[F] => new DataStructSem(expr).program[G]
       case expr: FieldTypeExpr[F] => new FieldTypeSem(expr).program[G]
       case expr: FuncExpr[F] => new FuncSem(expr).program[G]

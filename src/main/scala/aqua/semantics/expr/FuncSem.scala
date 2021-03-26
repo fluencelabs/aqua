@@ -7,7 +7,6 @@ import aqua.semantics.{ArrowType, DataType, Prog, Type}
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
-import aqua.semantics.rules.scope.PeerIdAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import cats.Applicative
 import cats.data.Chain
@@ -22,7 +21,6 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
     T: TypesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],
-    P: PeerIdAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
   ): Free[Alg, ArrowType] =
     A.beginScope(name) >> Applicative[Free[Alg, *]]
@@ -55,7 +53,6 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
     T: TypesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],
-    P: PeerIdAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
   ): Free[Alg, Model] =
     // Check return value type
@@ -81,7 +78,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
               case (n, dt: DataType) => n -> Left(dt)
               case (n, at: ArrowType) => n -> Right(at)
             },
-          ret = retValue.map(ValuesAlgebra.valueToData).flatMap(vd => funcArrow.res.map(vd -> _)),
+          ret = retValue.map(ValuesAlgebra.valueToModel).flatMap(vd => funcArrow.res.map(vd -> _)),
           body = bg
         )
 
@@ -97,7 +94,6 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
     T: TypesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],
-    P: PeerIdAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
   ): Prog[Alg, Model] =
     Prog.around(

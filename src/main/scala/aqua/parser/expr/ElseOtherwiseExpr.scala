@@ -9,7 +9,7 @@ import aqua.parser.lexer.Token._
 
 case class ElseOtherwiseExpr[F[_]](point: F[Unit]) extends Expr[F]
 
-object ElseOtherwiseExpr extends Expr.AndIndented(Expr.defer(OnExpr), ParExpr, CoalgebraExpr, AbilityIdExpr, ForExpr) {
+object ElseOtherwiseExpr extends Expr.AndIndented(Expr.defer(OnExpr), ParExpr, CallArrowExpr, AbilityIdExpr, ForExpr) {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[ElseOtherwiseExpr[F]] =
     (`else` | `otherwise`).lift.map(ElseOtherwiseExpr(_))

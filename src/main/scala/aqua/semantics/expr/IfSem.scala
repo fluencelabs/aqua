@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.{FuncOp, MatchMismatchModel, Model}
+import aqua.model.{FuncOp, MatchMismatchTag, Model}
 import aqua.parser.expr.IfExpr
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
@@ -30,10 +30,12 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
         ops match {
           case op: FuncOp if r =>
             Free.pure[Alg, Model](
-              MatchMismatchModel(
-                ValuesAlgebra.valueToData(expr.left),
-                ValuesAlgebra.valueToData(expr.right),
-                expr.eqOp.value,
+              FuncOp.wrap(
+                MatchMismatchTag(
+                  ValuesAlgebra.valueToModel(expr.left),
+                  ValuesAlgebra.valueToModel(expr.right),
+                  expr.eqOp.value
+                ),
                 op
               )
             )
