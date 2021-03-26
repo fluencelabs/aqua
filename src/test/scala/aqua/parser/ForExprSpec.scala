@@ -2,7 +2,6 @@ package aqua.parser
 
 import aqua.Utils
 import aqua.parser.expr.ForExpr
-import aqua.semantics.LiteralType.{bool, number, string}
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -25,6 +24,10 @@ class ForExprSpec extends AnyFlatSpec with Matchers with Utils {
 
     parseFor("for some <- false") should be(
       ForExpr[Id]("some", toBool(false), None)
+    )
+
+    parseFor("for some <- false par") should be(
+      ForExpr[Id]("some", toBool(false), Some(()))
     )
   }
 }
