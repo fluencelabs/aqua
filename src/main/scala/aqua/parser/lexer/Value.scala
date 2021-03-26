@@ -22,7 +22,6 @@ case class Literal[F[_]: Comonad](valueToken: F[String], ts: LiteralType) extend
 }
 
 object Value {
-  val notLambdaSymbols = Set(' ', ',', '\n', ')', ':')
 
   def varLambda[F[_]: LiftParser: Comonad]: P[VarLambda[F]] =
     (Name.p[F] ~ LambdaOp.ops[F].?).map { case (n, l) ⇒

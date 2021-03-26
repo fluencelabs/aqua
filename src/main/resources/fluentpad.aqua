@@ -11,8 +11,8 @@ data GetUsersServiceResult:
 service UserList:
 	get_users:  -> GetUsersServiceResult
 
-func getUserList():
+func getUserList() -> []User:
 	on "userlist_node":
 		UserList "userlist_id"
 		allUsers <- UserList.get_users()
-	<- allUsers
+	<- allUsers.users

@@ -1,90 +1,155 @@
 package aqua.generator
 
-import cats.syntax.functor._
+import aqua.model.{
+  Call,
+  CallArrowTag,
+  CallServiceTag,
+  ForTag,
+  InitPeerIdModel,
+  IntoArrayModel,
+  IntoFieldModel,
+  LambdaModel,
+  LiteralModel,
+  MatchMismatchTag,
+  NextTag,
+  OnTag,
+  OpTag,
+  ParTag,
+  SeqTag,
+  ValueModel,
+  VarModel,
+  XorTag
+}
+import cats.Eval
+import cats.data.Chain
+import cats.free.Cofree
 
-sealed trait Gen
+sealed trait AirGen {
+  def generate: Air
 
-trait AirGen extends Gen {
-  self =>
-  def generate(ctx: AirContext): (AirContext, Air)
-
-  def wrap(f: AirContext => (AirContext, AirContext => AirContext)): AirGen =
-    new AirGen {
-
-      override def generate(ctx: AirContext): (AirContext, Air) = {
-        val (setup, clean) = f(ctx)
-        val (internal, res) = self.generate(setup.incr)
-        (clean(internal).incr, res)
-      }
-    }
 }
 
 object AirGen {
 
-  def resolve(ctx: AirContext, dataView: DataView): DataView = dataView match {
-    case DataView.Variable(name) => ctx.data(name)
-    case DataView.Stream(name) => ctx.data(name)
-    case DataView.VarLens(name, lens) =>
-      ctx.data(name) match {
-        case DataView.Variable(n) => DataView.VarLens(n, lens)
-        case DataView.Stream(n) => DataView.VarLens(n, lens)
-        case vl: DataView.VarLens => vl.append(lens)
-        case a => a // actually, it's an error
-      }
-    case a => a
+  def lambdaToString(ls: List[LambdaModel]): String = ls match {
+    case Nil => ""
+    case IntoArrayModel :: tail =>
+      s"[@${lambdaToString(tail)}]"
+    case IntoFieldModel(field) :: tail =>
+      s".$field${lambdaToString(tail)}"
   }
+
+  def valueToData(vm: ValueModel): DataView = vm match {
+    case LiteralModel(value) => DataView.StringScalar(value)
+    case InitPeerIdModel => DataView.InitPeerId
+    case VarModel(name, lambda) =>
+      if (lambda.isEmpty) DataView.Variable(name)
+      else DataView.VarLens(name, lambdaToString(lambda.toList))
+  }
+
+  def opsToSingle(ops: Chain[AirGen]): AirGen = ops.toList match {
+    case Nil => NullGen
+    case h :: Nil => h
+    case list => list.reduceLeft(SeqGen)
+  }
+
+  def apply(op: Cofree[Chain, OpTag]): AirGen =
+    Cofree
+      .cata[Chain, OpTag, AirGen](op) {
+
+        case (SeqTag, ops) => Eval later ops.toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
+        case (ParTag, ops) => Eval later ops.toList.reduceLeftOption(ParGen).getOrElse(NullGen)
+        case (XorTag, ops) => Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
+        case (NextTag(item), ops) =>
+          Eval later new AirGen {
+
+            override def generate: Air =
+              Air.Next(item)
+          }
+        case (MatchMismatchTag(left, right, shouldMatch), ops) =>
+          Eval later new AirGen {
+
+            override def generate: Air = {
+              val l = valueToData(left)
+              val r = valueToData(right)
+              val resAir = opsToSingle(ops).generate
+              if (shouldMatch) Air.Match(l, r, resAir) else Air.Mismatch(l, r, resAir)
+            }
+          }
+        case (ForTag(item, iterable), ops) =>
+          Eval later new AirGen {
+
+            override def generate: Air = {
+
+              val iterData = valueToData(iterable)
+
+              val resAir = opsToSingle(ops).generate
+
+              Air.Fold(iterData, item, resAir)
+            }
+          }
+        case (CallServiceTag(serviceId, funcName, Call(args, exportTo), peerId), _) =>
+          Eval.later(
+            ServiceCallGen(
+              peerId.map(valueToData).getOrElse(DataView.InitPeerId),
+              valueToData(serviceId),
+              funcName,
+              args.map(_._1).map(valueToData),
+              exportTo
+            )
+          )
+
+        case (CallArrowTag(_, funcName, Call(args, exportTo)), ops) =>
+          // TODO: should be already resolved & removed from tree
+          Eval later opsToSingle(
+            ops
+          )
+
+        case (OnTag(_, _), ops) =>
+          // TODO should be resolved
+          Eval later opsToSingle(
+            ops
+          )
+
+      }
+      .value
 }
 
 case object NullGen extends AirGen {
-  override def generate(ctx: AirContext): (AirContext, Air) = (ctx, Air.Null)
+  override def generate: Air = Air.Null
 }
 
 case class SeqGen(left: AirGen, right: AirGen) extends AirGen {
 
-  override def generate(ctx: AirContext): (AirContext, Air) = {
-    val (c, l) = left.generate(ctx)
-    right.generate(c).swap.map(_.incr).swap.map(Air.Seq(l, _))
-  }
+  override def generate: Air =
+    Air.Seq(left.generate, right.generate)
+
 }
 
 case class ServiceCallGen(
+  peerId: DataView,
   srvId: DataView,
   fnName: String,
   args: List[DataView],
   result: Option[String]
 ) extends AirGen {
 
-  override def generate(ctx: AirContext): (AirContext, Air) = {
-    val (c, res) = result.fold(ctx -> Option.empty[String]) {
-      case r if ctx.vars(r) =>
-        val vn = r + ctx.instrCounter
-        ctx.copy(vars = ctx.vars + vn, data = ctx.data.updated(r, DataView.Variable(vn))) -> Option(vn)
-      case r =>
-        ctx.copy(vars = ctx.vars + r, data = ctx.data.updated(r, DataView.Variable(r))) -> Option(r)
-    }
-
-    c.incr -> Air.Call(
-      Triplet.Full(AirGen.resolve(ctx, ctx.peerId), AirGen.resolve(ctx, srvId), fnName),
-      args.map(AirGen.resolve(ctx, _)),
-      res
+  override def generate: Air =
+    Air.Call(
+      Triplet.Full(peerId, srvId, fnName),
+      args,
+      result
     )
-  }
 }
 
 case class ParGen(left: AirGen, right: AirGen) extends AirGen {
 
-  override def generate(ctx: AirContext): (AirContext, Air) = {
-    val (lc, la) = left.generate(ctx)
-    val (rc, ra) = right.generate(ctx.incr)
-    (lc.mergePar(rc).incr, Air.Par(la, ra))
-  }
+  override def generate: Air =
+    Air.Par(left.generate, right.generate)
 }
 
 case class XorGen(left: AirGen, right: AirGen) extends AirGen {
 
-  override def generate(ctx: AirContext): (AirContext, Air) = {
-    val (lc, la) = left.generate(ctx)
-    val (rc, ra) = right.generate(ctx.incr)
-    (lc.mergePar(rc).incr, Air.Xor(la, ra))
-  }
+  override def generate: Air =
+    Air.Xor(left.generate, right.generate)
 }
