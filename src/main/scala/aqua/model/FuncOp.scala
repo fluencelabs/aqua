@@ -1,5 +1,6 @@
 package aqua.model
 
+import aqua.model.FuncOp.wrap
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -8,6 +9,8 @@ import cats.syntax.apply._
 import cats.syntax.functor._
 
 case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
+  def head: OpTag = tree.head
+  def isRightAssoc: Boolean = head == XorTag || head == ParTag
 
   def cata[T](folder: (OpTag, Chain[T]) => Eval[T]): Eval[T] =
     Cofree.cata(tree)(folder)
@@ -59,6 +62,8 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
       case (_, t) => Cofree[Chain, OpTag](t, Eval.now(Chain.empty))
     })
 
+  def :+:(prev: FuncOp): FuncOp =
+    FuncOp.RightAssocSemi.combine(prev, this)
 }
 
 object FuncOp {
@@ -88,10 +93,20 @@ object FuncOp {
     )
   }
 
+  object RightAssocSemi extends Semigroup[FuncOp] {
+
+    override def combine(x: FuncOp, y: FuncOp): FuncOp = (x.tree.head, y.tree.head) match {
+      case (ParTag, ParTag) => FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
+      case (XorTag, XorTag) => FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
+      case (_, ParTag | XorTag) =>
+        wrap(SeqTag, FuncOp(y.tree.copy(tail = y.tree.tail.map(_.prepend(x.tree)))))
+      case _ => FuncOpSemigroup.combine(x, y)
+    }
+  }
+
   implicit object FuncOpSemigroup extends Semigroup[FuncOp] {
 
     override def combine(x: FuncOp, y: FuncOp): FuncOp = (x.tree.head, y.tree.head) match {
-      case (_, ParTag | XorTag) => FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
       case (SeqTag, SeqTag) => FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
       case (_, SeqTag) => FuncOp(y.tree.copy(tail = y.tree.tail.map(_.prepend(x.tree))))
       case (SeqTag, _) => FuncOp(x.tree.copy(tail = x.tree.tail.map(_.append(y.tree))))

@@ -1,6 +1,6 @@
 package aqua.semantics
 
-import aqua.model.Model
+import aqua.model.{FuncOp, Model}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
@@ -27,11 +27,15 @@ object Semantics {
     Eval later ExprSem
       .getProg[F, G](expr)
       .apply(
-        inners.toList
-          .reduceLeftOption[Free[G, Model]] { case (a, b) =>
-            (a, b).mapN(_ |+| _)
+        inners
+          .foldRight[Free[G, List[Model]]](Free.pure[G, List[Model]](List.empty[Model])) { case (a, b) =>
+            (a, b).mapN {
+              case (prev: FuncOp, (next: FuncOp) :: tail) if next.isRightAssoc =>
+                (prev :+: next) :: tail
+              case (prev, acc) => prev :: acc
+            }
           }
-          .getOrElse(Free.pure[G, Model](Model.empty("AST is empty")))
+          .map(_.reduceLeftOption(_ |+| _).getOrElse(Model.empty("AST is empty")))
       )
   }
 
