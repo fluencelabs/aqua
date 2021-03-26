@@ -2,8 +2,8 @@ package aqua.generator
 
 import aqua.model.{
   Call,
+  CallArrowTag,
   CallServiceTag,
-  CoalgebraTag,
   ForTag,
   InitPeerIdModel,
   IntoArrayModel,
@@ -104,7 +104,7 @@ object AirGen {
             )
           )
         // TODO: coalgebra should be already resolved!
-        case (CoalgebraTag(_, funcName, Call(args, exportTo)), _) =>
+        case (CallArrowTag(_, funcName, Call(args, exportTo)), _) =>
           ???
 //          Eval.later(
 //            new AirGen {

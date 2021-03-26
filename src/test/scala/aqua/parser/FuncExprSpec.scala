@@ -1,6 +1,6 @@
 package aqua.parser
 
-import aqua.parser.expr.{AbilityIdExpr, CoalgebraExpr, FuncExpr, OnExpr}
+import aqua.parser.expr.{AbilityIdExpr, CallArrowExpr, FuncExpr, OnExpr}
 import aqua.parser.lexer.{Ability, IntoField, Literal, Name, VarLambda}
 import cats.data.NonEmptyList
 import org.scalatest.EitherValues
@@ -23,7 +23,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
   implicit def toVar(name: String, fields: List[String]): VarLambda[Id] = VarLambda[Id](toName(name), toFields(fields))
 
   private def parseExpr(str: String) =
-    CoalgebraExpr.p[Id].parseAll(str).value
+    CallArrowExpr.p[Id].parseAll(str).value
 
   private def parseAbId(str: String) =
     AbilityIdExpr.p[Id].parseAll(str).value
@@ -32,21 +32,21 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
     OnExpr.p[Id].parseAll(str).value
 
   "func calls" should "parse func()" in {
-    parseExpr("func()") should be(CoalgebraExpr[Id](None, None, toName("func"), List()))
+    parseExpr("func()") should be(CallArrowExpr[Id](None, None, toName("func"), List()))
     parseExpr("Ab.func(arg)") should be(
-      CoalgebraExpr[Id](None, Some(toAb("Ab")), Name[Id]("func"), List(VarLambda[Id](toName("arg"))))
+      CallArrowExpr[Id](None, Some(toAb("Ab")), Name[Id]("func"), List(VarLambda[Id](toName("arg"))))
     )
 
     parseExpr("func(arg.doSomething)") should be(
-      CoalgebraExpr[Id](None, None, Name[Id]("func"), List(toVar("arg", List("doSomething"))))
+      CallArrowExpr[Id](None, None, Name[Id]("func"), List(toVar("arg", List("doSomething"))))
     )
 
     parseExpr("func(arg.doSomething.and.doSomethingElse)") should be(
-      CoalgebraExpr[Id](None, None, Name[Id]("func"), List(toVar("arg", List("doSomething", "and", "doSomethingElse"))))
+      CallArrowExpr[Id](None, None, Name[Id]("func"), List(toVar("arg", List("doSomething", "and", "doSomethingElse"))))
     )
 
     parseExpr("Ab.func(arg.doSomething.and.doSomethingElse, arg2.someFunc)") should be(
-      CoalgebraExpr[Id](
+      CallArrowExpr[Id](
         None,
         Some(toAb("Ab")),
         Name[Id]("func"),
@@ -55,7 +55,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with EitherValues {
     )
 
     parseExpr("x <- func(arg.doSomething)") should be(
-      CoalgebraExpr[Id](
+      CallArrowExpr[Id](
         Some(toName("x")),
         None,
         Name[Id]("func"),

@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
-import aqua.model.{Call, CallServiceTag, CoalgebraTag, FuncOp, Model, ValueModel}
-import aqua.parser.expr.CoalgebraExpr
+import aqua.model.{Call, CallArrowTag, CallServiceTag, FuncOp, Model, ValueModel}
+import aqua.parser.expr.CallArrowExpr
 import aqua.semantics.{ArrowType, Prog, Type}
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -12,7 +12,7 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.apply._
 
-class CoalgebraSem[F[_]](val expr: CoalgebraExpr[F]) extends AnyVal {
+class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
 
   import expr._
 
@@ -62,7 +62,7 @@ class CoalgebraSem[F[_]](val expr: CoalgebraExpr[F]) extends AnyVal {
             checkArgsRes(arrowType)
               .map(argsResolved =>
                 FuncOp.leaf(
-                  CoalgebraTag(
+                  CallArrowTag(
                     ability = None,
                     funcName = funcName.value,
                     Call(argsResolved, variable.map(_.value))

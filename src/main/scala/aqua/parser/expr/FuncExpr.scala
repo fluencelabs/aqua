@@ -17,7 +17,7 @@ object FuncExpr
       OnExpr,
       AbilityIdExpr,
       ReturnExpr,
-      CoalgebraExpr,
+      CallArrowExpr,
       ParExpr,
       ForExpr,
       IfExpr,

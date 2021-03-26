@@ -10,7 +10,7 @@ import cats.Comonad
 
 case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F]) extends Expr[F]
 
-object IfExpr extends Expr.AndIndented(Expr.defer(OnExpr), ParExpr, CoalgebraExpr, AbilityIdExpr, ForExpr) {
+object IfExpr extends Expr.AndIndented(Expr.defer(OnExpr), ParExpr, CallArrowExpr, AbilityIdExpr, ForExpr) {
 
   override def p[F[_]: LiftParser: Comonad]: P[Expr[F]] =
     (`if` *> ` ` *> Value.`value`[F] ~ (` ` *> EqOp.p[F] ~ (` ` *> Value.`value`[F])).?).map {

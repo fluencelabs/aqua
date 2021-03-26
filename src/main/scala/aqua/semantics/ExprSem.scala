@@ -21,7 +21,7 @@ object ExprSem {
       case expr: AbilityIdExpr[F] => new AbilityIdSem(expr).program[G]
       case expr: AliasExpr[F] => new AliasSem(expr).program[G]
       case expr: ArrowTypeExpr[F] => new ArrowTypeSem(expr).program[G]
-      case expr: CoalgebraExpr[F] => new CoalgebraSem(expr).program[G]
+      case expr: CallArrowExpr[F] => new CallArrowSem(expr).program[G]
       case expr: DataStructExpr[F] => new DataStructSem(expr).program[G]
       case expr: FieldTypeExpr[F] => new FieldTypeSem(expr).program[G]
       case expr: FuncExpr[F] => new FuncSem(expr).program[G]

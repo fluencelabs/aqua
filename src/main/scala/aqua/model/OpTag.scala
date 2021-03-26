@@ -21,8 +21,8 @@ sealed trait OpTag {
     case OnTag(peerId, via) => OnTag(f(peerId), via.map(f))
     case MatchMismatchTag(left, right, shouldMatch) => MatchMismatchTag(f(left), f(right), shouldMatch)
     case ForTag(item, iterable) => ForTag(item, f(iterable))
-    case CoalgebraTag(ability, funcName, call) =>
-      CoalgebraTag(
+    case CallArrowTag(ability, funcName, call) =>
+      CallArrowTag(
         ability,
         funcName,
         call.mapValues(f)
@@ -47,7 +47,7 @@ case class NextTag(item: String) extends OpTag
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean) extends OpTag
 case class ForTag(item: String, iterable: ValueModel) extends OpTag
 
-case class CoalgebraTag(
+case class CallArrowTag(
   ability: Option[AbilityModel],
   funcName: String,
   call: Call
