@@ -12,19 +12,19 @@ class ForExprSpec extends AnyFlatSpec with Matchers with Utils {
 
   "on" should "be parsed" in {
     parseFor("for some <- \"a\"") should be(
-      ForExpr[Id]("some", toStr("a"))
+      ForExpr[Id]("some", toStr("a"), None)
     )
 
     parseFor("for some <- \"a\"") should be(
-      ForExpr[Id]("some", toStr("a"))
+      ForExpr[Id]("some", toStr("a"), None)
     )
 
     parseFor("for some <- 1") should be(
-      ForExpr[Id]("some", toNumber(1))
+      ForExpr[Id]("some", toNumber(1), None)
     )
 
     parseFor("for some <- false") should be(
-      ForExpr[Id]("some", toBool(false))
+      ForExpr[Id]("some", toBool(false), None)
     )
   }
 }

@@ -4,7 +4,7 @@ import aqua.parser.expr.{
   AbilityIdExpr,
   AliasExpr,
   ArrowTypeExpr,
-  CoalgebraExpr,
+  CallArrowExpr,
   DataStructExpr,
   ElseOtherwiseExpr,
   FieldTypeExpr,
@@ -16,7 +16,6 @@ import aqua.parser.expr.{
   ReturnExpr,
   ServiceExpr
 }
-import aqua.parser.lexer.Token.`eqs`
 import aqua.parser.lexer.{
   Ability,
   Arg,
@@ -34,7 +33,6 @@ import aqua.parser.lexer.{
 }
 import cats.Id
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import aqua.parser.lift.LiftParser.LiftParserOps
 import aqua.semantics.LiteralType.{bool, number, string}
 import aqua.semantics.{LiteralType, ScalarType}
 import org.scalatest.EitherValues
@@ -72,8 +70,8 @@ object Utils {
 
 trait Utils extends EitherValues {
 
-  def parseExpr(str: String): CoalgebraExpr[Id] =
-    CoalgebraExpr.p[Id].parseAll(str).value
+  def parseExpr(str: String): CallArrowExpr[Id] =
+    CallArrowExpr.p[Id].parseAll(str).value
 
   def parseAbId(str: String): AbilityIdExpr[Id] =
     AbilityIdExpr.p[Id].parseAll(str).value

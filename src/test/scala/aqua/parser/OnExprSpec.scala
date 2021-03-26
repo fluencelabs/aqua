@@ -12,19 +12,19 @@ class OnExprSpec extends AnyFlatSpec with Matchers with Utils {
 
   "on" should "be parsed" in {
     parseOn("on peer") should be(
-      OnExpr[Id](toVar("peer"))
+      OnExpr[Id](toVar("peer"), Nil)
     )
 
     parseOn("on peer.id") should be(
-      OnExpr[Id](toVarLambda("peer", List("id")))
+      OnExpr[Id](toVarLambda("peer", List("id")), Nil)
     )
 
     parseOn("on \"peer\"") should be(
-      OnExpr[Id](toStr("peer"))
+      OnExpr[Id](toStr("peer"), Nil)
     )
 
     parseOn("on 1") should be(
-      OnExpr[Id](toNumber(1))
+      OnExpr[Id](toNumber(1), Nil)
     )
   }
 }
