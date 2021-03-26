@@ -38,8 +38,8 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
       )
     )
 
-  def resolvePeerId(doVia: ValueModel => FuncOp): FuncOp =
-    FuncOp(FuncOp.mapWithPath(tree) {
+  def resolveTopology(doVia: ValueModel => FuncOp): FuncOp =
+    FuncOp(FuncOp.transformWithPath(tree) {
       case (path, c: CallServiceTag) =>
         Cofree[Chain, OpTag](
           c.copy(peerId = path.collectFirst { case OnTag(peerId, _) =>
@@ -48,7 +48,14 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
           Eval.now(Chain.empty)
         )
       case (_, OnTag(pid, via)) if via.nonEmpty =>
-        Cofree[Chain, OpTag](OnTag(pid, Nil), Eval.now(Chain.fromSeq(via.map(doVia).map(_.tree))))
+        Cofree[Chain, OpTag](
+          OnTag(pid, Nil),
+          Eval.now(
+            Chain.fromSeq(
+              via.map(doVia).map(_.tree)
+            )
+          )
+        )
       case (_, t) => Cofree[Chain, OpTag](t, Eval.now(Chain.empty))
     })
 
@@ -68,11 +75,17 @@ object FuncOp {
       .map(_.map(ch => head.copy(tail = Eval.now(ch))))
   }
 
-  def mapWithPath(cf: Cofree[Chain, OpTag], path: List[OpTag] = Nil)(
+  def transformWithPath(cf: Cofree[Chain, OpTag], path: List[OpTag] = Nil)(
     f: (List[OpTag], OpTag) => Cofree[Chain, OpTag]
   ): Cofree[Chain, OpTag] = {
     val h = f(path, cf.head)
-    Cofree[Chain, OpTag](h.head, (h.tail, cf.tail).mapN(_ ++ _).map(_.map(mapWithPath(_, h.head :: path)(f))))
+    Cofree[Chain, OpTag](
+      h.head,
+      (h.tail, cf.tail)
+        .mapN(_ ++ _)
+        // IF make foldLeft here, will be possible to get info from prev sibling
+        .map(_.map(transformWithPath(_, h.head :: path)(f)))
+    )
   }
 
   implicit object FuncOpSemigroup extends Semigroup[FuncOp] {

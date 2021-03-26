@@ -2,8 +2,6 @@ package aqua.model
 
 import aqua.semantics.{ArrowType, DataType, Type}
 import cats.Eval
-import cats.data.Chain
-import cats.free.Cofree
 
 case class FuncModel(
   name: String,

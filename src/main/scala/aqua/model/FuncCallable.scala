@@ -70,7 +70,8 @@ case class FuncCallable(
       ) {
         case ((noNames, resolvedExports), CallArrowTag(None, fn, c)) if allArrows.contains(fn) =>
           // Apply arguments to a function – recursion
-          val (appliedOp, value) = allArrows(fn).apply(c, argsToArrows, noNames).value
+          val (appliedOp, value) =
+            allArrows(fn).apply(c.mapValues(_.resolveWith(resolvedExports)), argsToArrows, noNames).value
 
           // Function defines new names inside its body – need to collect them
           // TODO: actually it's done and dropped – so keep and pass it instead
@@ -158,7 +159,7 @@ case class FuncCallable(
             ).value._1
           ) ++ Chain.fromSeq(returnCallback.toSeq)
       )
-      .resolvePeerId(noop)
+      .resolveTopology(noop)
 
   def noop(peerId: ValueModel): FuncOp =
     FuncOp.wrap(
