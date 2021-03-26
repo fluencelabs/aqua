@@ -60,7 +60,7 @@ object AirGen {
         case (SeqTag, ops) => Eval later ops.toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
         case (ParTag, ops) => Eval later ops.toList.reduceLeftOption(ParGen).getOrElse(NullGen)
         case (XorTag, ops) => Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
-        case (OnTag(peerId), ops) =>
+        case (OnTag(peerId, _), ops) =>
           // TODO should be resolved
           Eval later opsToSingle(
             ops
