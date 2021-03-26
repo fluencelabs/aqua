@@ -60,11 +60,6 @@ object AirGen {
         case (SeqTag, ops) => Eval later ops.toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
         case (ParTag, ops) => Eval later ops.toList.reduceLeftOption(ParGen).getOrElse(NullGen)
         case (XorTag, ops) => Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
-        case (OnTag(peerId, _), ops) =>
-          // TODO should be resolved
-          Eval later opsToSingle(
-            ops
-          ) //.wrap(ctx => (ctx.copy(peerId = valueToData(peerId)), _.copy(peerId = ctx.peerId)))
         case (NextTag(item), ops) =>
           Eval later new AirGen {
 
@@ -103,16 +98,18 @@ object AirGen {
               exportTo
             )
           )
-        // TODO: coalgebra should be already resolved!
-        case (CallArrowTag(_, funcName, Call(args, exportTo)), _) =>
-          ???
-//          Eval.later(
-//            new AirGen {
-//
-//              override def generate(ctx: AirContext): (AirContext, Air) =
-//                ctx.arrows(funcName).toCallGen(args.map(_._1).map(valueToData), exportTo).generate(ctx)
-//            }
-//          )
+
+        case (CallArrowTag(_, funcName, Call(args, exportTo)), ops) =>
+          // TODO: should be already resolved & removed from tree
+          Eval later opsToSingle(
+            ops
+          )
+
+        case (OnTag(_, _), ops) =>
+          // TODO should be resolved
+          Eval later opsToSingle(
+            ops
+          )
 
       }
       .value
