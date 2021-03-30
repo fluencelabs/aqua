@@ -2,8 +2,8 @@ package aqua.parser
 
 import aqua.Utils
 import aqua.parser.Ast.Tree
-import aqua.parser.expr.FuncExpr
-import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken}
+import aqua.parser.expr.{AbilityIdExpr, CallArrowExpr, FuncExpr, IfExpr}
+import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp}
 import aqua.semantics.ScalarType.{bool, u64}
 import cats.{Eval, Id}
 import cats.syntax.traverse._
@@ -21,18 +21,35 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
   import aqua.semantics.ScalarType.{string, u32}
 
   "func header" should "parse" in {
-    funcExpr("func some() -> bool") should be(FuncExpr("some", List(), Some(bool: BasicTypeToken[Id]), None))
+    funcExpr("func some() -> bool") should be(
+      FuncExpr("some", List(), Some(bool: BasicTypeToken[Id]), None)
+    )
     funcExpr("func some()") should be(FuncExpr("some", List(), None, None))
 
-    val arrowToken = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), Some(BasicTypeToken[Id](bool)))
+    val arrowToken =
+      ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), Some(BasicTypeToken[Id](bool)))
     funcExpr("func some(peer: PeerId, other: u32 -> bool)") should be(
-      FuncExpr(toName("some"), List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken)), None, None)
+      FuncExpr(
+        toName("some"),
+        List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken)),
+        None,
+        None
+      )
     )
 
     val arrowToken2 =
-      ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32), BasicTypeToken[Id](u64)), Some(BasicTypeToken[Id](bool)))
+      ArrowTypeToken[Id](
+        (),
+        List(BasicTypeToken[Id](u32), BasicTypeToken[Id](u64)),
+        Some(BasicTypeToken[Id](bool))
+      )
     funcExpr("func some(peer: PeerId, other: u32, u64 -> bool)") should be(
-      FuncExpr(toName("some"), List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken2)), None, None)
+      FuncExpr(
+        toName("some"),
+        List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken2)),
+        None,
+        None
+      )
     )
 
     val arrowToken3 = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), None)
@@ -44,25 +61,20 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
         None
       )
     )
-
   }
 
-  "on" should "parse on x: y" in {
-    val script =
-      """func a():
-        | on peer.id:
-        |  x <- Ab.func()
-        |  Peer "some id"
-        |  call(true)""".stripMargin
-
-    val c: Cofree[Chain, Expr[Id]] = FuncExpr.ast[Id](Indent()).parseAll(script).value
-    val a = Ast(c).cata(folder[Id, Alg[Id, *]]).value
-//    a.run
-    println(a)
-
-    FuncExpr.ast[Id](Indent()).parseAll(script).isRight should be(true)
+  def headTail(
+    tree: Cofree[Chain, Expr[Id]],
+    headCheck: Expr[Id],
+    lengthCheck: Int
+  ): Chain[Cofree[Chain, Expr[Id]]] = {
+    tree.head should be(headCheck)
+    val tail = tree.tailForced
+    tail.length should be(lengthCheck)
+    tail
   }
-  "if" should "parse if x == y" in {
+
+  "func expr" should "parse on x: y" in {
     val script =
       """func a():
         | if peer.id == other:
@@ -70,7 +82,20 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
         |  Peer "some id"
         |  call(true)""".stripMargin
 
-    FuncExpr.ast[Id](Indent()).parseAll(script).isRight should be(true)
+    val tree = FuncExpr.ast[Id](Indent()).parseAll(script).value
+    val funcBody = headTail(tree, FuncExpr("a", Nil, None, None), 1).toList
+    println("body: " + funcBody)
+
+    val ifBody =
+      headTail(
+        funcBody.head,
+        IfExpr(toVarLambda("peer", List("id")), EqOp[Id](true), toVar("other")),
+        3
+      ).toList
+
+    ifBody.head.head should be(CallArrowExpr(Some(toName("x")), Some(toAb("Ab")), "func", Nil))
+    ifBody(1).head should be(AbilityIdExpr(toAb("Peer"), toStr("some id")))
+    ifBody(2).head should be(CallArrowExpr(None, None, "call", List(toBool(true))))
   }
   /*
 
