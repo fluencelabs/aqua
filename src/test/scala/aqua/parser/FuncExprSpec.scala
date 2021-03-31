@@ -171,8 +171,8 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
     h2 shouldBe CallServiceTag(LiteralModel("\"local\""), "gt", Call(List(), Some("three")), None)
     t2 shouldBe Nil
 
-//    println(f.generateAir)
-//    println(f.generateTypescript)
+    println(f.generateAir)
+    println(f.generateTypescript)
   }
   /*
 
