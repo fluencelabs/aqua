@@ -95,13 +95,13 @@ object FuncOp {
   def transformWithPath(cf: Cofree[Chain, OpTag], path: List[OpTag] = Nil)(
     f: (List[OpTag], OpTag) => Cofree[Chain, OpTag]
   ): Cofree[Chain, OpTag] = {
-    val h = f(path, cf.head)
+    val newCf = f(path, cf.head)
     Cofree[Chain, OpTag](
-      h.head,
-      (h.tail, cf.tail)
+      newCf.head,
+      (newCf.tail, cf.tail)
         .mapN(_ ++ _)
         // IF make foldLeft here, will be possible to get info from prev sibling
-        .map(_.map(transformWithPath(_, h.head :: path)(f)))
+        .map(_.map(transformWithPath(_, newCf.head :: path)(f)))
     )
   }
 

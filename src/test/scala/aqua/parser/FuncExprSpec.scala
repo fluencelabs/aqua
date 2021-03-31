@@ -145,9 +145,9 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
     val (h1, t1) = headTail(t(1))
     h1 shouldBe OnTag(LiteralModel("\"smth\""), Nil)
 
+    // THIS IS A 'VIA' CALL
     val (h10, t10) = headTail(t1.head)
     h10 shouldBe OnTag(LiteralModel("\"else\""), Nil)
-
     val (h100, t100) = headTail(t10.head)
     h100 shouldBe CallServiceTag(
       LiteralModel("\"op\""),
@@ -164,6 +164,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
       Call(Nil, Some("two")),
       Some(LiteralModel("\"smth\""))
     )
+    // AFTER THIS TAG SHOULD BE IDENTITY CALL TO 'smth' TO RETURN CONTEXT
     t11 shouldBe Nil
 
     val (h2, t2) = headTail(t(2))
