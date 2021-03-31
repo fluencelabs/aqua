@@ -4,7 +4,12 @@ import aqua.model.{FuncOp, Model}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
-import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState, AbilityOp}
+import aqua.semantics.rules.abilities.{
+  AbilitiesAlgebra,
+  AbilitiesInterpreter,
+  AbilitiesState,
+  AbilityOp
+}
 import aqua.semantics.rules.names.{NameOp, NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, TypesState}
 import cats.Eval
@@ -30,12 +35,13 @@ object Semantics {
         // TODO instead of foldRight, do slidingWindow for 2 elements, merge right associative ones
         // Then foldLeft just like now
         inners
-          .foldRight[Free[G, List[Model]]](Free.pure[G, List[Model]](List.empty[Model])) { case (a, b) =>
-            (a, b).mapN {
-              case (prev: FuncOp, (next: FuncOp) :: tail) if next.isRightAssoc =>
-                (prev :+: next) :: tail
-              case (prev, acc) => prev :: acc
-            }
+          .foldRight[Free[G, List[Model]]](Free.pure[G, List[Model]](List.empty[Model])) {
+            case (a, b) =>
+              (a, b).mapN {
+                case (prev: FuncOp, (next: FuncOp) :: tail) if next.isRightAssoc =>
+                  (prev :+: next) :: tail
+                case (prev, acc) => prev :: acc
+              }
           }
           .map(_.reduceLeftOption(_ |+| _).getOrElse(Model.empty("AST is empty")))
       )
@@ -58,13 +64,15 @@ object Semantics {
     import monocle.macros.syntax.all._
 
     implicit val re: ReportError[F, CompilerState[F]] =
-      (st: CompilerState[F], token: Token[F], hint: String) => st.focus(_.errors).modify(_.append(token -> hint))
+      (st: CompilerState[F], token: Token[F], hint: String) =>
+        st.focus(_.errors).modify(_.append(token -> hint))
 
     implicit val ns: Lens[CompilerState[F], NamesState[F]] = GenLens[CompilerState[F]](_.names)
 
     val names = new NamesInterpreter[F, CompilerState[F]]()
 
-    implicit val as: Lens[CompilerState[F], AbilitiesState[F]] = GenLens[CompilerState[F]](_.abilities)
+    implicit val as: Lens[CompilerState[F], AbilitiesState[F]] =
+      GenLens[CompilerState[F]](_.abilities)
 
     val abilities = new AbilitiesInterpreter[F, CompilerState[F]]()
 
@@ -78,11 +86,13 @@ object Semantics {
     free.foldMap[State[CompilerState[F], *]](interpreter)
   }
 
-  def validate[F[_]](ast: Ast[F]): ValidatedNec[(Token[F], String), Model] =
+  def generateModel[F[_]](ast: Ast[F]): ValidatedNec[(Token[F], String), Model] =
     (transpile[F] _ andThen interpret[F])(ast)
       .run(CompilerState[F]())
       .map { case (state, gen) =>
-        NonEmptyChain.fromChain(state.errors).fold[ValidatedNec[(Token[F], String), Model]](Valid(gen))(Invalid(_))
+        NonEmptyChain
+          .fromChain(state.errors)
+          .fold[ValidatedNec[(Token[F], String), Model]](Valid(gen))(Invalid(_))
       }
       .value
 }

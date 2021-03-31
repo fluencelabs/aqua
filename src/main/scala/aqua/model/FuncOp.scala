@@ -1,6 +1,5 @@
 package aqua.model
 
-import aqua.model.FuncOp.wrap
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -16,8 +15,10 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
     Cofree.cata(tree)(folder)
 
   def definesValueNames: Eval[Set[String]] = cata[Set[String]] {
-    case (CallArrowTag(_, _, Call(_, Some(export))), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
-    case (CallServiceTag(_, _, Call(_, Some(export)), _), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
+    case (CallArrowTag(_, _, Call(_, Some(export))), acc) =>
+      Eval.later(acc.foldLeft(Set(export))(_ ++ _))
+    case (CallServiceTag(_, _, Call(_, Some(export)), _), acc) =>
+      Eval.later(acc.foldLeft(Set(export))(_ ++ _))
     case (NextTag(export), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }
@@ -41,7 +42,7 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
       )
     )
 
-  def resolveTopology(doVia: ValueModel => FuncOp): FuncOp =
+  def resolveTopology(): FuncOp =
     FuncOp(FuncOp.transformWithPath(tree) {
       case (path, c: CallServiceTag) =>
         Cofree[Chain, OpTag](
@@ -50,16 +51,26 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
           }),
           Eval.now(Chain.empty)
         )
-      case (_, OnTag(pid, via)) if via.nonEmpty =>
+      case (path, OnTag(pid, via)) if via.nonEmpty =>
         Cofree[Chain, OpTag](
           OnTag(pid, Nil),
           Eval.now(
             Chain.fromSeq(
-              via.map(doVia).map(_.tree)
+              via
+                .map(p =>
+                  FuncOp.wrap(
+                    OnTag(p, Nil),
+                    FuncOp.leaf(
+                      CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(p))
+                    )
+                  )
+                )
+                .map(_.tree)
             )
           )
         )
-      case (_, t) => Cofree[Chain, OpTag](t, Eval.now(Chain.empty))
+      case (_, t) =>
+        Cofree[Chain, OpTag](t, Eval.now(Chain.empty))
     })
 
   def :+:(prev: FuncOp): FuncOp =
@@ -74,8 +85,9 @@ object FuncOp {
     val (headA, head) = f(init, cf.head)
     // TODO: it should be in standard library, with some other types
     cf.tail
-      .map(_.foldLeft[(A, Chain[Cofree[Chain, OpTag]])]((headA, head.tailForced)) { case ((aggrA, aggrTail), child) =>
-        traverseA(child, aggrA)(f).value.map(aggrTail.append)
+      .map(_.foldLeft[(A, Chain[Cofree[Chain, OpTag]])]((headA, head.tailForced)) {
+        case ((aggrA, aggrTail), child) =>
+          traverseA(child, aggrA)(f).value.map(aggrTail.append)
       })
       .map(_.map(ch => head.copy(tail = Eval.now(ch))))
   }

@@ -50,7 +50,8 @@ case class FuncCallable(
     // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
     val shouldRename = findNewNames(forbiddenNames, treeDefines)
     // If there was a collision, rename exports and usages with new names
-    val treeRenamed = if (shouldRename.isEmpty) treeWithValues else treeWithValues.rename(shouldRename)
+    val treeRenamed =
+      if (shouldRename.isEmpty) treeWithValues else treeWithValues.rename(shouldRename)
 
     // Result could be derived from arguments, or renamed; take care about that
     val result = ret.map(_._1).map(_.resolveWith(argsToData)).map {
@@ -71,7 +72,9 @@ case class FuncCallable(
         case ((noNames, resolvedExports), CallArrowTag(None, fn, c)) if allArrows.contains(fn) =>
           // Apply arguments to a function – recursion
           val (appliedOp, value) =
-            allArrows(fn).apply(c.mapValues(_.resolveWith(resolvedExports)), argsToArrows, noNames).value
+            allArrows(fn)
+              .apply(c.mapValues(_.resolveWith(resolvedExports)), argsToArrows, noNames)
+              .value
 
           // Function defines new names inside its body – need to collect them
           // TODO: actually it's done and dropped – so keep and pass it instead
@@ -80,7 +83,10 @@ case class FuncCallable(
           (noNames ++ newNames, resolvedExports ++ c.exportTo.zip(value)) -> appliedOp.tree
         case (acc @ (_, resolvedExports), tag) =>
           // All the other tags are already resolved and need no substitution
-          acc -> Cofree[Chain, OpTag](tag.mapValues(_.resolveWith(resolvedExports)), Eval.now(Chain.empty))
+          acc -> Cofree[Chain, OpTag](
+            tag.mapValues(_.resolveWith(resolvedExports)),
+            Eval.now(Chain.empty)
+          )
       }
       .map { case ((_, resolvedExports), b) =>
         // If return value is affected by any of internal functions, resolve it
@@ -159,13 +165,7 @@ case class FuncCallable(
             ).value._1
           ) ++ Chain.fromSeq(returnCallback.toSeq)
       )
-      .resolveTopology(noop)
-
-  def noop(peerId: ValueModel): FuncOp =
-    FuncOp.wrap(
-      OnTag(peerId, Nil),
-      FuncOp.leaf(CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(peerId)))
-    )
+      .resolveTopology()
 
   def generateTsCall: Call =
     Call(
