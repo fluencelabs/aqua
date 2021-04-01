@@ -2,13 +2,15 @@ package aqua.parser
 
 import aqua.model.{
   Call,
+  CallArrowTag,
   CallServiceTag,
   FuncCallable,
   LiteralModel,
   OnTag,
   OpTag,
   ScriptModel,
-  SeqTag
+  SeqTag,
+  XorTag
 }
 import aqua.{SyntaxError, Utils}
 import aqua.parser.Ast.{parser, Tree}
@@ -26,6 +28,7 @@ import aqua.semantics.Semantics.{folder, Alg}
 import cats.data.{Chain, NonEmptyChain, Validated}
 import cats.free.Cofree
 
+import scala.collection.mutable
 import scala.language.implicitConversions
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
@@ -123,7 +126,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
         |    gt: -> bool
         |    
         |func tryGen() -> bool:
-        |    on "deep" via "deeper":
+        |    on "deeper" via "deep":
         |        v <- Local.gt()         
         |    <- v
         |
@@ -138,69 +141,94 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
     val f =
       Semantics.generateModel(tree).toList.head.asInstanceOf[ScriptModel]
 
-    val func = f.funcs.toList.head
-    val funcOp = func.body.resolveTopology()
+    val funcs = f.funcs.toList
+    val funcTryGen = funcs.head
+    val funcOpTryGen = funcTryGen.body.resolveTopology()
 
-    val list = funcOp.tree.foldLeft(List.empty[OpTag]) { case (acc, tag) =>
-      acc :+ tag
+    val qTryGen = funcOpTryGen.tree.foldLeft(mutable.Queue.empty[OpTag]) { case (acc, tag) =>
+      acc.enqueue(tag)
     }
 
-    println(list)
+    val smth = LiteralModel("\"smth\"")
+    val smthOn = OnTag(smth, Nil)
+    val smthCall = CallServiceTag(
+      LiteralModel("\"op\""),
+      "identity",
+      emptyCall,
+      Some(LiteralModel("\"smth\""))
+    )
 
-    println(f.generateAir)
-    println(f.generateTypescript)
+    val elseL = LiteralModel("\"else\"")
+    val elseOn = OnTag(elseL, Nil)
+    val elseCall = CallServiceTag(
+      LiteralModel("\"op\""),
+      "identity",
+      emptyCall,
+      Some(LiteralModel("\"else\""))
+    )
+
+    val deeper = LiteralModel("\"deeper\"")
+    val deeperOn = OnTag(deeper, Nil)
+    val deeperCall = CallServiceTag(
+      LiteralModel("\"op\""),
+      "identity",
+      emptyCall,
+      Some(LiteralModel("\"deeper\""))
+    )
+    val deep = LiteralModel("\"deep\"")
+    val deepOn = OnTag(deep, Nil)
+    val deepCall = CallServiceTag(
+      LiteralModel("\"op\""),
+      "identity",
+      emptyCall,
+      Some(LiteralModel("\"deep\""))
+    )
+    val local = LiteralModel("\"local\"")
+
+    // tag that we will go to 'deeper'
+    qTryGen.dequeue() shouldBe deeperOn
+    // move to 'deep' node
+    qTryGen.dequeue() shouldBe deepOn
+    qTryGen.dequeue() shouldBe deepCall
+    // move to 'deeper' node
+    qTryGen.dequeue() shouldBe deeperOn
+    qTryGen.dequeue() shouldBe deeperCall
+    // a call must be with `on` too, so we need to call 'deeper' after we will go out of the scope
+    qTryGen.dequeue() shouldBe CallServiceTag(local, "gt", Call(Nil, Some("v")), Some(deeper))
+    qTryGen.dequeue() shouldBe deepOn
+    // return to 'deeper' node
+    qTryGen.dequeue() shouldBe deeperOn
+    qTryGen.dequeue() shouldBe deeperCall
+    // return to 'deep' node
+    qTryGen.dequeue() shouldBe deepOn
+    qTryGen.dequeue() shouldBe deepCall
+
+    val funcGenComplex = f.funcs.toList(1)
+    val funcOpGenComplex = funcGenComplex.body.resolveTopology()
+
+    val qGenComplex = funcOpGenComplex.tree.foldLeft(mutable.Queue.empty[OpTag]) {
+      case (acc, tag) =>
+        acc.enqueue(tag)
+    }
+
+    qGenComplex.dequeue() shouldBe SeqTag
+    qGenComplex.dequeue() shouldBe CallServiceTag(local, "gt", Call(List(), Some("one")), None)
+    // tag that we will go to 'smth'
+    qGenComplex.dequeue() shouldBe smthOn
+    // move to 'else' node
+    qGenComplex.dequeue() shouldBe elseOn
+    qGenComplex.dequeue() shouldBe elseCall
+    // move to 'smth' node
+    qGenComplex.dequeue() shouldBe smthOn
+    qGenComplex.dequeue() shouldBe smthCall
+    qGenComplex.dequeue() shouldBe CallArrowTag(None, "tryGen", Call(List(), Some("two")))
+    qGenComplex.dequeue() shouldBe elseOn
+    // return to 'smth' node
+    qGenComplex.dequeue() shouldBe smthOn
+    qGenComplex.dequeue() shouldBe smthCall
+    // return to 'else' node
+    qGenComplex.dequeue() shouldBe elseOn
+    qGenComplex.dequeue() shouldBe elseCall
+    qGenComplex.dequeue() shouldBe CallServiceTag(local, "gt", Call(List(), Some("three")), None)
   }
-  /*
-
-    "function" should "parse getTime as a whole" in {
-      val func =
-        """func getTime(peer: PeerId, ret: u32 -> ()) -> string:
-          | on peer:
-          |   Peer "peer"
-          |   t <- Peer.timestamp()
-          | ret(t)""".stripMargin
-
-      DefFunc.`deffunc`.parseAll(func).right.value should be(
-        DefFunc[Id, HNil](
-          getTimeHead,
-          NonEmptyList.of(
-            On[Id, HNil](
-              VarLambda[Id]("peer", Nil),
-              NonEmptyList.of(
-                AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", LiteralType.string), HNil),
-                Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", "Peer.timestamp", Nil, HNil), HNil)
-              ),
-              HNil
-            ),
-            FuncCall[Id, HNil]("ret", VarLambda[Id]("t", Nil) :: Nil, HNil)
-          ),
-          HNil
-        )
-      )
-    }
-
-    "function" should "parse getTime with no return" in {
-      val func =
-        """func getTime(peer: PeerId, ret: u32 -> ()) -> string:
-          | on peer:
-          |   Peer "peer"
-          |   t <- Peer.timestamp()""".stripMargin
-
-      DefFunc.`deffunc`.parseAll(func).right.value should be(
-        DefFunc[Id, HNil](
-          getTimeHead,
-          NonEmptyList.of(
-            On[Id, HNil](
-              VarLambda[Id]("peer", Nil),
-              NonEmptyList.of(
-                AbilityId[Id, HNil]("Peer", Literal[Id]("\"peer\"", LiteralType.string), HNil),
-                Extract[Id, HNil]("t", AbilityFuncCall[Id, HNil]("Peer", "timestamp", "Peer.timestamp", Nil, HNil), HNil)
-              ),
-              HNil
-            )
-          ),
-          HNil
-        )
-      )
-    }*/
 }

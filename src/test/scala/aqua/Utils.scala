@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.model.Call
 import aqua.parser.expr.{
   AbilityIdExpr,
   AliasExpr,
@@ -44,7 +45,8 @@ object Utils {
 
   implicit def toName(str: String): Name[Id] = Name[Id](str)
 
-  implicit def toFields(fields: List[String]): List[IntoField[Id]] = fields.map(f => IntoField[Id](f))
+  implicit def toFields(fields: List[String]): List[IntoField[Id]] =
+    fields.map(f => IntoField[Id](f))
 
   implicit def toVar(name: String): VarLambda[Id] = VarLambda[Id](toName(name), Nil)
 
@@ -58,10 +60,14 @@ object Utils {
   implicit def toCustomType(str: String): CustomTypeToken[Id] = CustomTypeToken[Id](str)
   def toArrayType(str: String): ArrayTypeToken[Id] = ArrayTypeToken[Id]((), str)
 
-  implicit def toArrowType(args: List[DataTypeToken[Id]], res: Option[DataTypeToken[Id]]): ArrowTypeToken[Id] =
+  implicit def toArrowType(
+    args: List[DataTypeToken[Id]],
+    res: Option[DataTypeToken[Id]]
+  ): ArrowTypeToken[Id] =
     ArrowTypeToken[Id]((), args, res)
 
-  implicit def toCustomArg(str: String, customType: String): Arg[Id] = Arg[Id](str, toCustomType(customType))
+  implicit def toCustomArg(str: String, customType: String): Arg[Id] =
+    Arg[Id](str, toCustomType(customType))
 
   implicit def toArg(str: String, typeToken: TypeToken[Id]): Arg[Id] = Arg[Id](str, typeToken)
 
@@ -69,6 +75,8 @@ object Utils {
 }
 
 trait Utils extends EitherValues {
+
+  val emptyCall = Call(Nil, None)
 
   def parseExpr(str: String): CallArrowExpr[Id] =
     CallArrowExpr.p[Id].parseAll(str).value
