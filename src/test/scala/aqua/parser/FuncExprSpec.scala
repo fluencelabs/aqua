@@ -17,6 +17,7 @@ import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp}
 import aqua.semantics.ScalarType.{bool, u64}
 import cats.{Eval, Id}
 import cats.syntax.traverse._
+import cats.syntax.foldable._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
@@ -120,11 +121,16 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
     val script =
       """service Local("local"):
         |    gt: -> bool
+        |    
+        |func tryGen() -> bool:
+        |    on "deep" via "deeper":
+        |        v <- Local.gt()         
+        |    <- v
         |
         |func generateComplex(value: string) -> bool:
         |    one <- Local.gt() 
         |    on "smth" via "else":
-        |        two <- Local.gt()      
+        |        two <- tryGen()      
         |    three <- Local.gt() 
         |    <- two""".stripMargin
 
@@ -135,41 +141,11 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
     val func = f.funcs.toList.head
     val funcOp = func.body.resolveTopology()
 
-    val (h, t) = headTail(funcOp.tree)
-    h shouldBe SeqTag
+    val list = funcOp.tree.foldLeft(List.empty[OpTag]) { case (acc, tag) =>
+      acc :+ tag
+    }
 
-    val (h0, t0) = headTail(t.head)
-    h0 shouldBe CallServiceTag(LiteralModel("\"local\""), "gt", Call(Nil, Some("one")), None)
-    t0 shouldBe Nil
-
-    val (h1, t1) = headTail(t(1))
-    h1 shouldBe OnTag(LiteralModel("\"smth\""), Nil)
-
-    // THIS IS A 'VIA' CALL
-    val (h10, t10) = headTail(t1.head)
-    h10 shouldBe OnTag(LiteralModel("\"else\""), Nil)
-    val (h100, t100) = headTail(t10.head)
-    h100 shouldBe CallServiceTag(
-      LiteralModel("\"op\""),
-      "identity",
-      Call(Nil, None),
-      Some(LiteralModel("\"else\""))
-    )
-    t100 shouldBe Nil
-
-    val (h11, t11) = headTail(t1(1))
-    h11 shouldBe CallServiceTag(
-      LiteralModel("\"local\""),
-      "gt",
-      Call(Nil, Some("two")),
-      Some(LiteralModel("\"smth\""))
-    )
-    // AFTER THIS TAG SHOULD BE IDENTITY CALL TO 'smth' TO RETURN CONTEXT
-    t11 shouldBe Nil
-
-    val (h2, t2) = headTail(t(2))
-    h2 shouldBe CallServiceTag(LiteralModel("\"local\""), "gt", Call(List(), Some("three")), None)
-    t2 shouldBe Nil
+    println(list)
 
     println(f.generateAir)
     println(f.generateTypescript)

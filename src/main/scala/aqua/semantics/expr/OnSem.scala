@@ -25,32 +25,27 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
       (_: Unit, ops: Model) =>
         A.endScope() as (ops match {
           case op: FuncOp =>
-            if (expr.via.isEmpty) {
-              FuncOp.node(
-                OnTag(ValuesAlgebra.valueToModel(expr.peerId), Nil),
-                Chain(op)
-              )
-            } else {
-              val returnPath = {
+            val path = expr.via :+ expr.peerId
+            val returnPath = path.reverse
+            val returnLeaf = {
+              FuncOp.leaf(
                 OnTag(
-                  ValuesAlgebra.valueToModel(expr.via.last),
-                  expr.via.reverse.map(ValuesAlgebra.valueToModel)
-                )
-              }
-              println("return path: " + returnPath)
-              FuncOp.node(
-                OnTag(
-                  ValuesAlgebra.valueToModel(expr.peerId),
-                  expr.via.map(ValuesAlgebra.valueToModel)
-                ),
-                Chain(
-                  op,
-                  FuncOp.leaf(
-                    returnPath
-                  )
+                  ValuesAlgebra.valueToModel(returnPath.last),
+                  returnPath.map(ValuesAlgebra.valueToModel)
                 )
               )
             }
+
+            FuncOp.node(
+              OnTag(
+                ValuesAlgebra.valueToModel(expr.peerId),
+                path.map(ValuesAlgebra.valueToModel)
+              ),
+              Chain(
+                op,
+                returnLeaf
+              )
+            )
 
           case m => Model.error("On body is not an op, it's " + m)
         })
