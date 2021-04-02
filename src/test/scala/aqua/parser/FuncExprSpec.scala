@@ -14,7 +14,17 @@ import aqua.model.{
 }
 import aqua.{SyntaxError, Utils}
 import aqua.parser.Ast.{parser, Tree}
-import aqua.parser.expr.{AbilityIdExpr, CallArrowExpr, FuncExpr, IfExpr}
+import aqua.parser.expr.{
+  AbilityIdExpr,
+  ArrowTypeExpr,
+  CallArrowExpr,
+  FuncExpr,
+  IfExpr,
+  OnExpr,
+  ReturnExpr,
+  RootExpr,
+  ServiceExpr
+}
 import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp}
 import aqua.semantics.ScalarType.{bool, u64}
 import cats.{Eval, Id}
@@ -130,7 +140,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
         |        v <- Local.gt()         
         |    <- v
         |
-        |func generateComplex(value: string) -> bool:
+        |func genC(val: string) -> bool:
         |    one <- Local.gt() 
         |    on "smth" via "else":
         |        two <- tryGen()      
@@ -138,6 +148,28 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
         |    <- two""".stripMargin
 
     val tree = parser[Id](Indent()).parseAll(script).value
+
+    val qTree = tree.tree.foldLeft(mutable.Queue.empty[Expr[Id]]) { case (acc, tag) =>
+      acc.enqueue(tag)
+    }
+
+    println(qTree)
+    qTree.d() shouldBe RootExpr()
+    // Local service
+    qTree.d() shouldBe ServiceExpr(toAb("Local"), Some(toStr("local")))
+    qTree.d() shouldBe ArrowTypeExpr("gt", toArrowType(Nil, Some(scToBt(bool))))
+    qTree.d() shouldBe FuncExpr("tryGen", Nil, Some(scToBt(bool)), Some("v"))
+    qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")))
+    qTree.d() shouldBe CallArrowExpr(Some("v"), Some(toAb("Local")), "gt", Nil)
+    qTree.d() shouldBe ReturnExpr(toVar("v"))
+    // genC function
+    qTree.d() shouldBe FuncExpr("genC", List(toArgSc("val", string)), Some(boolSc), Some("two"))
+    qTree.d() shouldBe CallArrowExpr(Some("one"), Some(toAb("Local")), "gt", List())
+    qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
+    qTree.d() shouldBe CallArrowExpr(Some("two"), None, "tryGen", List())
+    qTree.d() shouldBe CallArrowExpr(Some("three"), Some(toAb("Local")), "gt", List())
+    qTree.d() shouldBe ReturnExpr(toVar("two"))
+
     val f =
       Semantics.generateModel(tree).toList.head.asInstanceOf[ScriptModel]
 
@@ -186,22 +218,22 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
     val local = LiteralModel("\"local\"")
 
     // tag that we will go to 'deeper'
-    qTryGen.dequeue() shouldBe deeperOn
+    qTryGen.d() shouldBe deeperOn
     // move to 'deep' node
-    qTryGen.dequeue() shouldBe deepOn
-    qTryGen.dequeue() shouldBe deepCall
+    qTryGen.d() shouldBe deepOn
+    qTryGen.d() shouldBe deepCall
     // move to 'deeper' node
-    qTryGen.dequeue() shouldBe deeperOn
-    qTryGen.dequeue() shouldBe deeperCall
+    qTryGen.d() shouldBe deeperOn
+    qTryGen.d() shouldBe deeperCall
     // a call must be with `on` too, so we need to call 'deeper' after we will go out of the scope
-    qTryGen.dequeue() shouldBe CallServiceTag(local, "gt", Call(Nil, Some("v")), Some(deeper))
-    qTryGen.dequeue() shouldBe deepOn
+    qTryGen.d() shouldBe CallServiceTag(local, "gt", Call(Nil, Some("v")), Some(deeper))
+    qTryGen.d() shouldBe deepOn
     // return to 'deeper' node
-    qTryGen.dequeue() shouldBe deeperOn
-    qTryGen.dequeue() shouldBe deeperCall
+    qTryGen.d() shouldBe deeperOn
+    qTryGen.d() shouldBe deeperCall
     // return to 'deep' node
-    qTryGen.dequeue() shouldBe deepOn
-    qTryGen.dequeue() shouldBe deepCall
+    qTryGen.d() shouldBe deepOn
+    qTryGen.d() shouldBe deepCall
 
     val funcGenComplex = f.funcs.toList(1)
     val funcOpGenComplex = funcGenComplex.body.resolveTopology()
@@ -211,24 +243,24 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
         acc.enqueue(tag)
     }
 
-    qGenComplex.dequeue() shouldBe SeqTag
-    qGenComplex.dequeue() shouldBe CallServiceTag(local, "gt", Call(List(), Some("one")), None)
+    qGenComplex.d() shouldBe SeqTag
+    qGenComplex.d() shouldBe CallServiceTag(local, "gt", Call(List(), Some("one")), None)
     // tag that we will go to 'smth'
-    qGenComplex.dequeue() shouldBe smthOn
+    qGenComplex.d() shouldBe smthOn
     // move to 'else' node
-    qGenComplex.dequeue() shouldBe elseOn
-    qGenComplex.dequeue() shouldBe elseCall
+    qGenComplex.d() shouldBe elseOn
+    qGenComplex.d() shouldBe elseCall
     // move to 'smth' node
-    qGenComplex.dequeue() shouldBe smthOn
-    qGenComplex.dequeue() shouldBe smthCall
-    qGenComplex.dequeue() shouldBe CallArrowTag(None, "tryGen", Call(List(), Some("two")))
-    qGenComplex.dequeue() shouldBe elseOn
+    qGenComplex.d() shouldBe smthOn
+    qGenComplex.d() shouldBe smthCall
+    qGenComplex.d() shouldBe CallArrowTag(None, "tryGen", Call(List(), Some("two")))
+    qGenComplex.d() shouldBe elseOn
     // return to 'smth' node
-    qGenComplex.dequeue() shouldBe smthOn
-    qGenComplex.dequeue() shouldBe smthCall
+    qGenComplex.d() shouldBe smthOn
+    qGenComplex.d() shouldBe smthCall
     // return to 'else' node
-    qGenComplex.dequeue() shouldBe elseOn
-    qGenComplex.dequeue() shouldBe elseCall
-    qGenComplex.dequeue() shouldBe CallServiceTag(local, "gt", Call(List(), Some("three")), None)
+    qGenComplex.d() shouldBe elseOn
+    qGenComplex.d() shouldBe elseCall
+    qGenComplex.d() shouldBe CallServiceTag(local, "gt", Call(List(), Some("three")), None)
   }
 }
