@@ -153,7 +153,6 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Utils {
       acc.enqueue(tag)
     }
 
-    println(qTree)
     qTree.d() shouldBe RootExpr()
     // Local service
     qTree.d() shouldBe ServiceExpr(toAb("Local"), Some(toStr("local")))
