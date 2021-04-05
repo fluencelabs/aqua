@@ -61,7 +61,7 @@ class AbilitiesInterpreter[F[_], X](implicit lens: Lens[X, AbilitiesState[F]], e
         getState.flatMap(st =>
           st.stack.flatMap(_.serviceIds.get(s.name.value)).headOption orElse st.rootServiceIds.get(s.name.value) match {
             case None =>
-              report(s.name, s"Service ID unresolved, use `${s.name} id` expression to set it")
+              report(s.name, s"Service ID unresolved, use `${s.name.value} id` expression to set it")
                 .as(Option.empty[Value[F]])
 
             case v => State.pure(v)
