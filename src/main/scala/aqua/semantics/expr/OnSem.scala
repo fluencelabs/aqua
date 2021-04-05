@@ -25,6 +25,8 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
       (_: Unit, ops: Model) =>
         A.endScope() as (ops match {
           case op: FuncOp =>
+            // the way to the node may be lost if there will be chains of `on` without calls
+            // so peerId is added to the path
             val path = expr.via :+ expr.peerId
             val returnPath = path.reverse
             val returnLeaf = {

@@ -51,21 +51,12 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
           }),
           Eval.now(Chain.empty)
         )
-      case (path, OnTag(pid, via)) if via.nonEmpty =>
+      case (_, OnTag(pid, via)) if via.nonEmpty =>
         Cofree[Chain, OpTag](
           OnTag(pid, Nil),
           Eval.now(
             Chain.fromSeq(
-              via
-                .map(p =>
-                  FuncOp.wrap(
-                    OnTag(p, Nil),
-                    FuncOp.leaf(
-                      CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(p))
-                    )
-                  )
-                )
-                .map(_.tree)
+              via.map(FuncOp.noop).map(_.tree)
             )
           )
         )
@@ -78,6 +69,12 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
 }
 
 object FuncOp {
+
+  def noop(peerId: ValueModel): FuncOp =
+    FuncOp.wrap(
+      OnTag(peerId, Nil),
+      FuncOp.leaf(CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(peerId)))
+    )
 
   def traverseA[A](cf: Cofree[Chain, OpTag], init: A)(
     f: (A, OpTag) => (A, Cofree[Chain, OpTag])
