@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.model.Call
 import aqua.parser.expr.{
   AbilityIdExpr,
   AliasExpr,
@@ -37,16 +38,22 @@ import aqua.semantics.LiteralType.{bool, number, string}
 import aqua.semantics.{LiteralType, ScalarType}
 import org.scalatest.EitherValues
 
+import scala.collection.mutable
 import scala.language.implicitConversions
 
 object Utils {
   implicit def toAb(str: String): Ability[Id] = Ability[Id](str)
 
   implicit def toName(str: String): Name[Id] = Name[Id](str)
+  implicit def toNameOp(str: Option[String]): Option[Name[Id]] = str.map(s => toName(s))
 
-  implicit def toFields(fields: List[String]): List[IntoField[Id]] = fields.map(f => IntoField[Id](f))
+  implicit def toFields(fields: List[String]): List[IntoField[Id]] =
+    fields.map(f => IntoField[Id](f))
 
   implicit def toVar(name: String): VarLambda[Id] = VarLambda[Id](toName(name), Nil)
+
+  implicit def toVarOp(name: Option[String]): Option[VarLambda[Id]] =
+    name.map(s => VarLambda[Id](toName(s), Nil))
 
   implicit def toVarLambda(name: String, fields: List[String]): VarLambda[Id] =
     VarLambda[Id](toName(name), toFields(fields))
@@ -58,17 +65,29 @@ object Utils {
   implicit def toCustomType(str: String): CustomTypeToken[Id] = CustomTypeToken[Id](str)
   def toArrayType(str: String): ArrayTypeToken[Id] = ArrayTypeToken[Id]((), str)
 
-  implicit def toArrowType(args: List[DataTypeToken[Id]], res: Option[DataTypeToken[Id]]): ArrowTypeToken[Id] =
+  implicit def toArrowType(
+    args: List[DataTypeToken[Id]],
+    res: Option[DataTypeToken[Id]]
+  ): ArrowTypeToken[Id] =
     ArrowTypeToken[Id]((), args, res)
 
-  implicit def toCustomArg(str: String, customType: String): Arg[Id] = Arg[Id](str, toCustomType(customType))
+  implicit def toCustomArg(str: String, customType: String): Arg[Id] =
+    Arg[Id](str, toCustomType(customType))
 
   implicit def toArg(str: String, typeToken: TypeToken[Id]): Arg[Id] = Arg[Id](str, typeToken)
 
+  implicit def toArgSc(str: String, scalarType: ScalarType): Arg[Id] =
+    Arg[Id](str, scToBt(scalarType))
+
   implicit def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
+
+  val boolSc: BasicTypeToken[Id] = BasicTypeToken[Id](ScalarType.bool)
+  val stringSc: BasicTypeToken[Id] = BasicTypeToken[Id](ScalarType.string)
 }
 
 trait Utils extends EitherValues {
+
+  val emptyCall = Call(Nil, None)
 
   def parseExpr(str: String): CallArrowExpr[Id] =
     CallArrowExpr.p[Id].parseAll(str).value
@@ -110,4 +129,8 @@ trait Utils extends EitherValues {
     ArrowTypeExpr.p[Id].parseAll(str).value
 
   def funcExpr(str: String): FuncExpr[Id] = FuncExpr.p[Id].parseAll(str).value
+
+  implicit class QueueHelper[T](q: mutable.Queue[T]) {
+    def d(): T = q.dequeue()
+  }
 }
