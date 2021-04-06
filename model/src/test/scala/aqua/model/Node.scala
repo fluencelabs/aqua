@@ -39,7 +39,7 @@ object Node {
 
   def on(peer: ValueModel, via: List[ValueModel], body: Node*) =
     Node(
-      OnTag(peer, via),
+      OnTag(peer, Chain.fromSeq(via)),
       body.toList
     )
 

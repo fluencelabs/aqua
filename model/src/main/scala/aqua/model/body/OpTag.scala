@@ -2,6 +2,7 @@ package aqua.model.body
 
 import aqua.model.{AbilityModel, ValueModel}
 import aqua.types.Type
+import cats.data.Chain
 
 case class Call(args: List[(ValueModel, Type)], exportTo: Option[String]) {
 
@@ -44,7 +45,7 @@ sealed trait OpTag {
 case object SeqTag extends OpTag
 case object ParTag extends OpTag
 case object XorTag extends OpTag
-case class OnTag(peerId: ValueModel, via: List[ValueModel]) extends OpTag
+case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends OpTag
 case class NextTag(item: String) extends OpTag
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean) extends OpTag
 case class ForTag(item: String, iterable: ValueModel) extends OpTag

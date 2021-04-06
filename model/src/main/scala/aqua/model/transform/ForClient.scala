@@ -13,7 +13,7 @@ object ForClient {
 
     // Get to init user through a relay
     def viaRelay(op: FuncOp): FuncOp =
-      FuncOp.wrap(OnTag(InitPeerIdModel, VarModel(relayVarName) :: Nil), op)
+      FuncOp.wrap(OnTag(InitPeerIdModel, Chain.one(VarModel(relayVarName))), op)
 
     val returnCallback: Option[FuncOp] = func.func.ret.map { case (dv, t) =>
       viaRelay(

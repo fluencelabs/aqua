@@ -9,10 +9,8 @@ import cats.free.Cofree
 object Topology {
   type Tree = Cofree[Chain, OpTag]
 
-  def through(peers: List[ValueModel]): Chain[Tree] =
-    Chain.fromSeq(
-      peers.map(FuncOp.noop).map(_.tree)
-    )
+  def through(peers: Chain[ValueModel]): Chain[Tree] =
+    peers.map(FuncOp.noop).map(_.tree)
 
   // TODO: after topology is resolved, OnTag should be eliminated
   def resolve(op: Tree): Tree =
@@ -47,21 +45,21 @@ object Topology {
       case (path, SeqTag, children) =>
         // TODO if we have OnTag, and then something else, need to get back
         // AND keep in mind that we will handle all the children with OnTag processor!
-        def modifyChildrenList(list: List[Tree]): List[Tree] = list match {
-          case Nil => Nil
+        def modifyChildrenList(list: List[Tree]): Chain[Tree] = list match {
+          case Nil => Chain.empty
           case op :: Nil =>
             // TODO: it is a last op, and it could be an On tag; in this case, get back?
-            op :: Nil
+            Chain.one(op)
           case (oncf @ Cofree(ont: OnTag, _)) :: op :: tail =>
-            oncf :: through(ont.via.reverse ::: path.collectFirst { case t: OnTag =>
-              t.via
-            }.toList.flatten.reverse).toList ::: modifyChildrenList(op :: tail)
-          case o :: ops => o :: modifyChildrenList(ops)
+            (oncf +: through(ont.via.reverse ++ Chain.fromSeq(path.collectFirst { case t: OnTag =>
+              t.via.toList
+            }.toList.flatten))) ++ modifyChildrenList(op :: tail)
+          case o :: ops => o +: modifyChildrenList(ops)
         }
 
         Cofree[Chain, OpTag](
           SeqTag,
-          children.map(_.toList).map(modifyChildrenList).map(Chain.fromSeq)
+          children.map(_.toList).map(modifyChildrenList)
         )
 
       case (_, t, children) =>

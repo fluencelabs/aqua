@@ -29,7 +29,7 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
             FuncOp.wrap(
               OnTag(
                 ValuesAlgebra.valueToModel(expr.peerId),
-                expr.via.map(ValuesAlgebra.valueToModel)
+                Chain.fromSeq(expr.via).map(ValuesAlgebra.valueToModel)
               ),
               op
             )
