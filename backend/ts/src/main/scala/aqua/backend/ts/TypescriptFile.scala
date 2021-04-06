@@ -1,8 +1,12 @@
 package aqua.backend.ts
 
+import aqua.model.ScriptModel
 import cats.Show
+import cats.data.Chain
 
-case class TypescriptFile(funcs: Seq[TypescriptFunc])
+case class TypescriptFile(script: ScriptModel) {
+  def funcs: Chain[TypescriptFunc] = script.resolveFunctions.map(TypescriptFunc)
+}
 
 object TypescriptFile {
 
@@ -12,5 +16,5 @@ object TypescriptFile {
       |""".stripMargin
 
   implicit val show: Show[TypescriptFile] =
-    Show.show(tf => Header + "\n\n" + tf.funcs.map(_.generateTypescript).mkString("\n\n"))
+    Show.show(tf => Header + "\n\n" + tf.funcs.map(_.generateTypescript).toList.mkString("\n\n"))
 }

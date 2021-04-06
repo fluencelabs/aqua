@@ -1,11 +1,13 @@
 package aqua.backend.ts
 
-import aqua.backend.air.Air
-import aqua.model.FuncCallable
+import aqua.backend.air.FuncAirGen
+import aqua.model.FuncResolved
 import aqua.types._
 import cats.syntax.show._
 
-case class TypescriptFunc(name: String, func: FuncCallable, tsAir: Air) {
+case class TypescriptFunc(func: FuncResolved) {
+
+  private val tsAir = FuncAirGen(func).generateTsAir
 
   def typeToTs(t: Type): String = t match {
     case ArrayType(t) => typeToTs(t) + "[]"
@@ -35,14 +37,14 @@ case class TypescriptFunc(name: String, func: FuncCallable, tsAir: Air) {
     at.args.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
 
   def argsTypescript: String =
-    func.args.map {
+    func.func.args.map {
       case (n, Left(t)) => s"${n}: " + typeToTs(t)
       case (n, Right(at)) => s"${n}: " + typeToTs(at)
     }.mkString(", ")
 
   def generateTypescript: String = {
 
-    val returnCallback = func.ret.map { case (dv, t) =>
+    val returnCallback = func.func.ret.map { case (dv, t) =>
       s"""h.on('${func.callbackService}', '${func.respFuncName}', (args) => {
          |  const [res] = args;
          |  resolve(res);
@@ -51,7 +53,7 @@ case class TypescriptFunc(name: String, func: FuncCallable, tsAir: Air) {
 
     }
 
-    val setCallbacks = func.args.map {
+    val setCallbacks = func.func.args.map {
       case (argName, Left(t)) =>
         s"""h.on('${func.getDataService}', '$argName', () => {return $argName;});"""
       case (argName, Right(at)) =>
@@ -60,12 +62,12 @@ case class TypescriptFunc(name: String, func: FuncCallable, tsAir: Air) {
         )});});"""
     }.mkString("\n")
 
-    val retType = func.ret
+    val retType = func.func.ret
       .map(_._2)
       .fold("void")(typeToTs)
 
     s"""
-       |export async function ${name}(client: FluenceClient${if (func.args.isEmpty) ""
+       |export async function ${func.name}(client: FluenceClient${if (func.func.args.isEmpty) ""
     else ", "}${argsTypescript}): Promise<$retType> {
        |    let request;
        |    const promise = new Promise<$retType>((resolve, reject) => {

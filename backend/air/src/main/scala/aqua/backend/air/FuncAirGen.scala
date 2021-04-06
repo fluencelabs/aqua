@@ -1,10 +1,10 @@
 package aqua.backend.air
 
-import aqua.model.FuncCallable
+import aqua.model.FuncResolved
 
-case class FuncAirGen(name: String, func: FuncCallable) {
+case class FuncAirGen(func: FuncResolved) {
 
-  def bodyGen: AirGen = AirGen(func.body.tree)
+  def bodyGen: AirGen = AirGen(func.func.body.tree)
 
   def generateAir: Air =
     bodyGen.generate

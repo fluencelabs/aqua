@@ -1,7 +1,6 @@
 package aqua.model
 
 import cats.data.Chain
-import cats.syntax.show._
 
 case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
 
@@ -10,15 +9,13 @@ case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
     case _ => this
   }
 
-  def generateModel: String =
+  def resolveFunctions: Chain[FuncResolved] =
     funcs
-      .foldLeft((Map.empty[String, FuncCallable], Chain.empty[String])) {
+      .foldLeft((Map.empty[String, FuncCallable], Chain.empty[FuncResolved])) {
         case ((funcsAcc, outputAcc), func) =>
-          val fr = func.captureArrows(funcsAcc).value
-          funcsAcc.updated(func.name, fr) -> outputAcc.append(fr.toString)
+          val fr = func.captureArrows(funcsAcc)
+          funcsAcc.updated(func.name, fr) -> outputAcc.append(FuncResolved(func.name, fr))
       }
       ._2
-      .toList
-      .mkString("\n\n")
 
 }

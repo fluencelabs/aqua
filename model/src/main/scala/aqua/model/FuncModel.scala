@@ -2,7 +2,6 @@ package aqua.model
 
 import aqua.model.body.FuncOp
 import aqua.types.{ArrowType, DataType, Type}
-import cats.Eval
 
 case class FuncModel(
   name: String,
@@ -11,7 +10,7 @@ case class FuncModel(
   body: FuncOp
 ) extends Model {
 
-  def captureArrows(arrows: Map[String, FuncCallable]): Eval[FuncCallable] =
-    Eval.now(FuncCallable(body, args, ret, arrows))
+  def captureArrows(arrows: Map[String, FuncCallable]): FuncCallable =
+    FuncCallable(body, args, ret, arrows)
 
 }

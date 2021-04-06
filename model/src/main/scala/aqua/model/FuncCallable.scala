@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.model.body.{Call, CallArrowTag, CallServiceTag, FuncOp, OnTag, OpTag, SeqTag, Topology}
+import aqua.model.body.{Call, CallArrowTag, FuncOp, OpTag}
 import aqua.types.{ArrowType, DataType, Type}
 import cats.Eval
 import cats.data.Chain
@@ -94,98 +94,5 @@ case class FuncCallable(
         FuncOp(b) -> result.map(_.resolveWith(resolvedExports))
       }
   }
-
-  val getDataService: String = "getDataSrv"
-  val callbackService: String = "callbackSrv"
-
-  val respFuncName = "response"
-  val relayVarName = "relay"
-
-  val callbackId: ValueModel = LiteralModel("\"" + callbackService + "\"")
-
-  val returnCallback: Option[FuncOp] = ret.map { case (dv, t) =>
-    viaRelay(
-      FuncOp.leaf(
-        CallServiceTag(
-          callbackId,
-          respFuncName,
-          Call(
-            (dv, t) :: Nil,
-            None
-          )
-        )
-      )
-    )
-  }
-
-  // TODO it's an overkill
-  def initPeerCallable(name: String, arrowType: ArrowType): FuncCallable =
-    FuncCallable(
-      viaRelay(
-        FuncOp.leaf(
-          CallServiceTag(
-            callbackId,
-            name,
-            Call(
-              arrowType.args.zipWithIndex.map { case (t, i) =>
-                VarModel(s"arg$i") -> t
-              },
-              arrowType.res.map(_ => "init_call_res")
-            )
-          )
-        )
-      ),
-      arrowType.args.zipWithIndex.map {
-        case (t: DataType, i) => s"arg$i" -> Left(t)
-        case (t: ArrowType, i) => s"arg$i" -> Right(t)
-      },
-      arrowType.res.map(VarModel("init_call_res") -> _),
-      Map.empty
-    )
-
-  // TODO rename
-  def generateTsModel: FuncOp =
-    Topology resolve
-      FuncOp
-        .node(
-          SeqTag,
-          Chain
-            .fromSeq(
-              args.collect { case (argName, Left(_)) =>
-                getDataOp(argName)
-              } :+ getDataOp(relayVarName)
-            )
-            .append(
-              apply(
-                generateTsCall,
-                args.collect { case (argName, Right(arrowType)) =>
-                  argName -> initPeerCallable(argName, arrowType)
-                }.toMap,
-                args.collect { case (argName, Left(_)) =>
-                  argName
-                }.foldLeft(Set(relayVarName))(_ + _)
-              ).value._1
-            ) ++ Chain.fromSeq(returnCallback.toSeq)
-        )
-
-  def generateTsCall: Call =
-    Call(
-      args.map { case (k, e) =>
-        (VarModel(k), e.fold(identity, identity))
-      },
-      None
-    )
-
-  def getDataOp(name: String): FuncOp =
-    FuncOp.leaf(
-      CallServiceTag(
-        LiteralModel("\"" + getDataService + "\""),
-        name,
-        Call(Nil, Some(name))
-      )
-    )
-
-  def viaRelay(op: FuncOp): FuncOp =
-    FuncOp.wrap(OnTag(InitPeerIdModel, VarModel(relayVarName) :: Nil), op)
 
 }
