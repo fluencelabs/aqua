@@ -49,6 +49,7 @@ object Topology {
           SeqTag,
           children.map(c =>
             // TODO if we have OnTag, and then something else, need to get back
+            // AND keep in mind that we will handle all the children with OnTag processor!
             c
           )
         )

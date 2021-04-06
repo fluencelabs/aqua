@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.model.body.{Call, CallServiceTag, OnTag, OpTag, SeqTag}
+import aqua.model.body.{Call, CallServiceTag, FuncOp, OnTag, OpTag, SeqTag}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -28,10 +28,13 @@ object Node {
   val emptyCall = Call(Nil, None)
   val otherPeer = LiteralModel("other-peer")
   val otherRelay = LiteralModel("other-relay")
+  val otherPeer2 = LiteralModel("other-peer-2")
+  val otherRelay2 = LiteralModel("other-relay-2")
 
   def call(i: Int, on: ValueModel = null) = Node(
     CallServiceTag(LiteralModel(s"srv$i"), s"fn$i", Call(Nil, None), Option(on))
   )
+
   def seq(nodes: Node*) = Node(SeqTag, nodes.toList)
 
   def on(peer: ValueModel, via: List[ValueModel], body: Node*) =
@@ -39,4 +42,7 @@ object Node {
       OnTag(peer, via),
       body.toList
     )
+
+  def through(peer: ValueModel): Node =
+    FuncOp.noop(peer).tree
 }
