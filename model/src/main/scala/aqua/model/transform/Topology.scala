@@ -1,14 +1,16 @@
-package aqua.model.body
+package aqua.model.transform
 
+import aqua.model.body.{CallServiceTag, FuncOp, OnTag, OpTag}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 import cats.syntax.apply._
 
 object Topology {
+  type Tree = Cofree[Chain, OpTag]
 
-  def resolve(op: FuncOp): FuncOp =
-    FuncOp(transformWithPath(op.tree) {
+  def resolve(op: Tree): Tree =
+    transformWithPath(op) {
       case (path, c: CallServiceTag) =>
         Cofree[Chain, OpTag](
           c.copy(peerId = path.collectFirst { case OnTag(peerId, _) =>
@@ -27,11 +29,11 @@ object Topology {
         )
       case (_, t) =>
         Cofree[Chain, OpTag](t, Eval.now(Chain.empty))
-    })
+    }
 
-  def transformWithPath(cf: Cofree[Chain, OpTag], path: List[OpTag] = Nil)(
-    f: (List[OpTag], OpTag) => Cofree[Chain, OpTag]
-  ): Cofree[Chain, OpTag] = {
+  def transformWithPath(cf: Tree, path: List[OpTag] = Nil)(
+    f: (List[OpTag], OpTag) => Tree
+  ): Tree = {
     val newCf = f(path, cf.head)
     Cofree[Chain, OpTag](
       newCf.head,

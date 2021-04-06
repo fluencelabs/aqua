@@ -1,11 +1,14 @@
 package aqua.backend.ts
 
 import aqua.model.ScriptModel
-import cats.Show
+import aqua.model.transform.BodyConfig
 import cats.data.Chain
 
 case class TypescriptFile(script: ScriptModel) {
-  def funcs: Chain[TypescriptFunc] = script.resolveFunctions.map(TypescriptFunc)
+  def funcs: Chain[TypescriptFunc] = script.resolveFunctions.map(TypescriptFunc(_))
+
+  def generateTS(conf: BodyConfig = BodyConfig()): String =
+    TypescriptFile.Header + "\n\n" + funcs.map(_.generateTypescript(conf)).toList.mkString("\n\n")
 }
 
 object TypescriptFile {
@@ -15,6 +18,4 @@ object TypescriptFile {
       |import { RequestFlowBuilder } from '@fluencelabs/fluence/dist/api.unstable';
       |""".stripMargin
 
-  implicit val show: Show[TypescriptFile] =
-    Show.show(tf => Header + "\n\n" + tf.funcs.map(_.generateTypescript).toList.mkString("\n\n"))
 }

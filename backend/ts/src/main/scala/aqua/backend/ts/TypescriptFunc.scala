@@ -2,12 +2,87 @@ package aqua.backend.ts
 
 import aqua.backend.air.FuncAirGen
 import aqua.model.FuncResolved
+import aqua.model.transform.BodyConfig
 import aqua.types._
 import cats.syntax.show._
 
 case class TypescriptFunc(func: FuncResolved) {
 
-  private val tsAir = FuncAirGen(func).generateTsAir
+  import TypescriptFunc._
+
+  def argsTypescript: String =
+    func.func.args.map {
+      case (n, Left(t)) => s"${n}: " + typeToTs(t)
+      case (n, Right(at)) => s"${n}: " + typeToTs(at)
+    }.mkString(", ")
+
+  def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
+
+    val tsAir = FuncAirGen(func).generateClientAir(conf)
+
+    val returnCallback = func.func.ret.map { case (dv, t) =>
+      s"""h.on('${conf.callbackService}', '${conf.respFuncName}', (args) => {
+         |  const [res] = args;
+         |  resolve(res);
+         |});
+         |""".stripMargin
+
+    }
+
+    val setCallbacks = func.func.args.map {
+      case (argName, Left(t)) =>
+        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
+      case (argName, Right(at)) =>
+        s"""h.on('${conf.callbackService}', '$argName', (args) => {return $argName(${argsCallToTs(
+          at
+        )});});"""
+    }.mkString("\n")
+
+    val retType = func.func.ret
+      .map(_._2)
+      .fold("void")(typeToTs)
+
+    s"""
+       |export async function ${func.name}(client: FluenceClient${if (func.func.args.isEmpty) ""
+    else ", "}${argsTypescript}): Promise<$retType> {
+       |    let request;
+       |    const promise = new Promise<$retType>((resolve, reject) => {
+       |        request = new RequestFlowBuilder()
+       |            .withRawScript(
+       |                `
+       |${tsAir.show}
+       |            `,
+       |            )
+       |            .configHandler((h) => {
+       |                h.on('${conf.getDataService}', 'relay', () => {
+       |                    return client.relayPeerId;
+       |                });
+       |                h.on('getRelayService', 'hasReleay', () => {// Not Used
+       |                    return client.relayPeerId !== undefined;
+       |                });
+       |                $setCallbacks
+       |                ${returnCallback.getOrElse("")}
+       |                h.on('nameOfServiceWhereToSendXorError', 'errorProbably', (args) => {
+       |                    // assuming error is the single argument
+       |                    const [err] = args;
+       |                    reject(err);
+       |                });
+       |            })
+       |            .handleScriptError(reject)
+       |            .handleTimeout(() => {
+       |                reject('Request timed out');
+       |            })
+       |            .build();
+       |    });
+       |    await client.initiateFlow(request);
+       |    return promise;
+       |}
+      """.stripMargin
+  }
+
+}
+
+object TypescriptFunc {
 
   def typeToTs(t: Type): String = t match {
     case ArrayType(t) => typeToTs(t) + "[]"
@@ -35,73 +110,5 @@ case class TypescriptFunc(func: FuncResolved) {
 
   def argsCallToTs(at: ArrowType): String =
     at.args.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
-
-  def argsTypescript: String =
-    func.func.args.map {
-      case (n, Left(t)) => s"${n}: " + typeToTs(t)
-      case (n, Right(at)) => s"${n}: " + typeToTs(at)
-    }.mkString(", ")
-
-  def generateTypescript: String = {
-
-    val returnCallback = func.func.ret.map { case (dv, t) =>
-      s"""h.on('${func.callbackService}', '${func.respFuncName}', (args) => {
-         |  const [res] = args;
-         |  resolve(res);
-         |});
-         |""".stripMargin
-
-    }
-
-    val setCallbacks = func.func.args.map {
-      case (argName, Left(t)) =>
-        s"""h.on('${func.getDataService}', '$argName', () => {return $argName;});"""
-      case (argName, Right(at)) =>
-        s"""h.on('${func.callbackService}', '$argName', (args) => {return $argName(${argsCallToTs(
-          at
-        )});});"""
-    }.mkString("\n")
-
-    val retType = func.func.ret
-      .map(_._2)
-      .fold("void")(typeToTs)
-
-    s"""
-       |export async function ${func.name}(client: FluenceClient${if (func.func.args.isEmpty) ""
-    else ", "}${argsTypescript}): Promise<$retType> {
-       |    let request;
-       |    const promise = new Promise<$retType>((resolve, reject) => {
-       |        request = new RequestFlowBuilder()
-       |            .withRawScript(
-       |                `
-       |${tsAir.show}
-       |            `,
-       |            )
-       |            .configHandler((h) => {
-       |                h.on('${func.getDataService}', 'relay', () => {
-       |                    return client.relayPeerId;
-       |                });
-       |                h.on('getRelayService', 'hasReleay', () => {// Not Used
-       |                    return client.relayPeerId !== undefined;
-       |                });
-       |                $setCallbacks
-       |                ${returnCallback.getOrElse("")}
-       |                h.on('nameOfServiceWhereToSendXorError', 'errorProbably', (args) => {
-       |                    // assuming error is the single argument
-       |                    const [err] = args;
-       |                    reject(err);
-       |                });
-       |            })
-       |            .handleScriptError(reject)
-       |            .handleTimeout(() => {
-       |                reject('Request timed out');
-       |            })
-       |            .build();
-       |    });
-       |    await client.initiateFlow(request);
-       |    return promise;
-       |}
-      """.stripMargin
-  }
 
 }
