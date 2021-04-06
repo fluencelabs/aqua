@@ -45,13 +45,23 @@ object Topology {
         }
 
       case (path, SeqTag, children) =>
+        // TODO if we have OnTag, and then something else, need to get back
+        // AND keep in mind that we will handle all the children with OnTag processor!
+        def modifyChildrenList(list: List[Tree]): List[Tree] = list match {
+          case Nil => Nil
+          case op :: Nil =>
+            // TODO: it is a last op, and it could be an On tag; in this case, get back?
+            op :: Nil
+          case (oncf @ Cofree(ont: OnTag, _)) :: op :: tail =>
+            oncf :: through(ont.via.reverse ::: path.collectFirst { case t: OnTag =>
+              t.via
+            }.toList.flatten.reverse).toList ::: modifyChildrenList(op :: tail)
+          case o :: ops => o :: modifyChildrenList(ops)
+        }
+
         Cofree[Chain, OpTag](
           SeqTag,
-          children.map(c =>
-            // TODO if we have OnTag, and then something else, need to get back
-            // AND keep in mind that we will handle all the children with OnTag processor!
-            c
-          )
+          children.map(_.toList).map(modifyChildrenList).map(Chain.fromSeq)
         )
 
       case (_, t, children) =>

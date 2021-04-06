@@ -136,10 +136,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    println(Console.BLUE + init)
-    println(Console.YELLOW + proc)
-    println(Console.MAGENTA + expected)
-    println(Console.RESET)
+//    println(Console.BLUE + init)
+//    println(Console.YELLOW + proc)
+//    println(Console.MAGENTA + expected)
+//    println(Console.RESET)
 
     proc should be(expected)
   }
