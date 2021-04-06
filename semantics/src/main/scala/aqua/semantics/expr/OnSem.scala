@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.{body, Model}
+import aqua.model.Model
 import aqua.model.body.{FuncOp, OnTag}
 import aqua.parser.expr.OnExpr
 import aqua.semantics.Prog
@@ -26,28 +26,12 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
       (_: Unit, ops: Model) =>
         A.endScope() as (ops match {
           case op: FuncOp =>
-            // the way to the node may be lost if there will be chains of `on` without calls
-            // so peerId is added to the path
-            val path = expr.via :+ expr.peerId
-            val returnPath = path.reverse
-            val returnLeaf = {
-              FuncOp.leaf(
-                OnTag(
-                  ValuesAlgebra.valueToModel(returnPath.last),
-                  returnPath.map(ValuesAlgebra.valueToModel)
-                )
-              )
-            }
-
-            FuncOp.node(
-              body.OnTag(
+            FuncOp.wrap(
+              OnTag(
                 ValuesAlgebra.valueToModel(expr.peerId),
-                path.map(ValuesAlgebra.valueToModel)
+                expr.via.map(ValuesAlgebra.valueToModel)
               ),
-              Chain(
-                op,
-                returnLeaf
-              )
+              op
             )
 
           case m => Model.error("On body is not an op, it's " + m)

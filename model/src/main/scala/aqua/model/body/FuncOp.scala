@@ -50,10 +50,7 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
 object FuncOp {
 
   def noop(peerId: ValueModel): FuncOp =
-    FuncOp.wrap(
-      OnTag(peerId, Nil),
-      FuncOp.leaf(CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(peerId)))
-    )
+    FuncOp.leaf(CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(peerId)))
 
   def traverseA[A](cf: Cofree[Chain, OpTag], init: A)(
     f: (A, OpTag) => (A, Cofree[Chain, OpTag])

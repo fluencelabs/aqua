@@ -9,24 +9,39 @@ import cats.syntax.apply._
 object Topology {
   type Tree = Cofree[Chain, OpTag]
 
+  // TODO: after topology is resolved, OnTag should be eliminated
   def resolve(op: Tree): Tree =
     transformWithPath(op) {
-      case (path, c: CallServiceTag) =>
+      case (path, c: CallServiceTag) if c.peerId.isEmpty =>
         Cofree[Chain, OpTag](
           c.copy(peerId = path.collectFirst { case OnTag(peerId, _) =>
             peerId
           }),
           Eval.now(Chain.empty)
         )
-      case (_, OnTag(pid, via)) if via.nonEmpty =>
-        Cofree[Chain, OpTag](
-          OnTag(pid, Nil),
-          Eval.now(
-            Chain.fromSeq(
-              via.map(FuncOp.noop).map(_.tree)
+      case (path, tag @ OnTag(pid, via)) =>
+        // Drop seq/par/xor from path
+        val pathOn = path.collect { case ot: OnTag =>
+          ot
+        }
+
+        pathOn match {
+          // If we are on the right node, do nothing
+          case Nil =>
+            Cofree[Chain, OpTag](tag, Eval.now(Chain.empty))
+          case h :: _ if h.peerId == pid =>
+            Cofree[Chain, OpTag](tag, Eval.now(Chain.empty))
+          case h :: _ =>
+            Cofree[Chain, OpTag](
+              tag,
+              Eval.now(
+                Chain.fromSeq(
+                  (h.via.reverse ++ via).map(FuncOp.noop).map(_.tree)
+                )
+              )
             )
-          )
-        )
+        }
+
       case (_, t) =>
         Cofree[Chain, OpTag](t, Eval.now(Chain.empty))
     }
