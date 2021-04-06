@@ -28,7 +28,7 @@ jobs:
       - name: Get project version
         # In CI sbt appends a new line after its output, so we need `tail -n2 | head -n1`
         run: |
-          VERSION="$(sbt 'print version' |& tail -n2 | head -n1)"
+          VERSION="$(sbt 'print backend-air/version' |& tail -n2 | head -n1)"
           echo "SBT_VERSION=$VERSION" >> $GITHUB_ENV
           echo "VERSION=$VERSION-${{ github.run_number }}" >> $GITHUB_ENV
 
