@@ -1,5 +1,6 @@
 package aqua.model
 
+import aqua.model.body.FuncOp
 import cats.data.Chain
 import cats.kernel.Semigroup
 

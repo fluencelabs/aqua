@@ -1,6 +1,19 @@
 package aqua.backend.air
 
 import aqua.model._
+import aqua.model.body.{
+  Call,
+  CallArrowTag,
+  CallServiceTag,
+  ForTag,
+  MatchMismatchTag,
+  NextTag,
+  OnTag,
+  OpTag,
+  ParTag,
+  SeqTag,
+  XorTag
+}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree

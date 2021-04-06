@@ -1,5 +1,6 @@
 package aqua.model
 
+import aqua.model.body.{Call, CallArrowTag, CallServiceTag, FuncOp, OnTag, OpTag, SeqTag, Topology}
 import aqua.types.{ArrowType, DataType, Type}
 import cats.Eval
 import cats.data.Chain
@@ -144,28 +145,28 @@ case class FuncCallable(
 
   // TODO rename
   def generateTsModel: FuncOp =
-    FuncOp
-      .node(
-        SeqTag,
-        Chain
-          .fromSeq(
-            args.collect { case (argName, Left(_)) =>
-              getDataOp(argName)
-            } :+ getDataOp(relayVarName)
-          )
-          .append(
-            apply(
-              generateTsCall,
-              args.collect { case (argName, Right(arrowType)) =>
-                argName -> initPeerCallable(argName, arrowType)
-              }.toMap,
+    Topology resolve
+      FuncOp
+        .node(
+          SeqTag,
+          Chain
+            .fromSeq(
               args.collect { case (argName, Left(_)) =>
-                argName
-              }.foldLeft(Set(relayVarName))(_ + _)
-            ).value._1
-          ) ++ Chain.fromSeq(returnCallback.toSeq)
-      )
-      .resolveTopology()
+                getDataOp(argName)
+              } :+ getDataOp(relayVarName)
+            )
+            .append(
+              apply(
+                generateTsCall,
+                args.collect { case (argName, Right(arrowType)) =>
+                  argName -> initPeerCallable(argName, arrowType)
+                }.toMap,
+                args.collect { case (argName, Left(_)) =>
+                  argName
+                }.foldLeft(Set(relayVarName))(_ + _)
+              ).value._1
+            ) ++ Chain.fromSeq(returnCallback.toSeq)
+        )
 
   def generateTsCall: Call =
     Call(

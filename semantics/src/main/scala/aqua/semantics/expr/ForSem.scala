@@ -1,6 +1,7 @@
 package aqua.semantics.expr
 
-import aqua.model.{ForTag, FuncOp, Model, NextTag, OpTag, ParTag, SeqTag}
+import aqua.model.Model
+import aqua.model.body.{ForTag, FuncOp, NextTag, OpTag, ParTag, SeqTag}
 import aqua.parser.expr.ForExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra

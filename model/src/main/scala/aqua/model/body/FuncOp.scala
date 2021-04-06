@@ -1,5 +1,6 @@
-package aqua.model
+package aqua.model.body
 
+import aqua.model.{LiteralModel, Model, ValueModel, VarModel}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -42,28 +43,6 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
       )
     )
 
-  def resolveTopology(): FuncOp =
-    FuncOp(FuncOp.transformWithPath(tree) {
-      case (path, c: CallServiceTag) =>
-        Cofree[Chain, OpTag](
-          c.copy(peerId = path.collectFirst { case OnTag(peerId, _) =>
-            peerId
-          }),
-          Eval.now(Chain.empty)
-        )
-      case (_, OnTag(pid, via)) if via.nonEmpty =>
-        Cofree[Chain, OpTag](
-          OnTag(pid, Nil),
-          Eval.now(
-            Chain.fromSeq(
-              via.map(FuncOp.noop).map(_.tree)
-            )
-          )
-        )
-      case (_, t) =>
-        Cofree[Chain, OpTag](t, Eval.now(Chain.empty))
-    })
-
   def :+:(prev: FuncOp): FuncOp =
     FuncOp.RightAssocSemi.combine(prev, this)
 }
@@ -89,19 +68,7 @@ object FuncOp {
       .map(_.map(ch => head.copy(tail = Eval.now(ch))))
   }
 
-  def transformWithPath(cf: Cofree[Chain, OpTag], path: List[OpTag] = Nil)(
-    f: (List[OpTag], OpTag) => Cofree[Chain, OpTag]
-  ): Cofree[Chain, OpTag] = {
-    val newCf = f(path, cf.head)
-    Cofree[Chain, OpTag](
-      newCf.head,
-      (newCf.tail, cf.tail)
-        .mapN(_ ++ _)
-        // IF make foldLeft here, will be possible to get info from prev sibling
-        .map(_.map(transformWithPath(_, newCf.head :: path)(f)))
-    )
-  }
-
+  // Semigroup for foldRight processing
   object RightAssocSemi extends Semigroup[FuncOp] {
 
     override def combine(x: FuncOp, y: FuncOp): FuncOp = (x.tree.head, y.tree.head) match {

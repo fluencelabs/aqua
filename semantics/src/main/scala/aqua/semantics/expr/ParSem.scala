@@ -1,6 +1,7 @@
 package aqua.semantics.expr
 
-import aqua.model.{FuncOp, Model, ParTag}
+import aqua.model.Model
+import aqua.model.body.{FuncOp, ParTag}
 import aqua.parser.expr.ParExpr
 import aqua.semantics.Prog
 import cats.free.Free

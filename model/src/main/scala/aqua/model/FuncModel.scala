@@ -1,5 +1,6 @@
 package aqua.model
 
+import aqua.model.body.FuncOp
 import aqua.types.{ArrowType, DataType, Type}
 import cats.Eval
 

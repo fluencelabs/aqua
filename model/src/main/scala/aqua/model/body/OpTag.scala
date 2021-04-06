@@ -1,5 +1,6 @@
-package aqua.model
+package aqua.model.body
 
+import aqua.model.{AbilityModel, ValueModel}
 import aqua.types.Type
 
 case class Call(args: List[(ValueModel, Type)], exportTo: Option[String]) {

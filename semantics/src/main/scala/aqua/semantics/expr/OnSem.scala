@@ -1,6 +1,7 @@
 package aqua.semantics.expr
 
-import aqua.model.{FuncOp, Model, OnTag}
+import aqua.model.{body, Model}
+import aqua.model.body.{FuncOp, OnTag}
 import aqua.parser.expr.OnExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -39,7 +40,7 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
             }
 
             FuncOp.node(
-              OnTag(
+              body.OnTag(
                 ValuesAlgebra.valueToModel(expr.peerId),
                 path.map(ValuesAlgebra.valueToModel)
               ),

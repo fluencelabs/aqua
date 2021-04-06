@@ -1,6 +1,7 @@
 package aqua.semantics
 
-import aqua.model.{FuncOp, Model}
+import aqua.model.Model
+import aqua.model.body.FuncOp
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
