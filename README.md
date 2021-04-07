@@ -1,31 +1,28 @@
-## Aquamarine HLL
+## Aquamarine
 
-The high level language that compiles to AIR and some wrappers in the host language (e.g. TypeScript).
+Aquamarine is a new-gen language for distributed systems.
 
-## Build and use jar file
-To build a file use this command:
+Aquamarine programs are executed on many peers, sequentially 
+or in parallel, forming a single-use coordination network.
 
-```commandline
-sbt assembly
-```
+Aquamarine's runtime is heterogeneous: it includes browsers, servers, devices, all involved in solving a single task.
+Therefore, Aquamarine scripts are compiled into several targets at once, with AIR and Typescript as a default.
 
+## Compiler CLI
 
-jar file will be in `target/scala-2.13/aqua-hll.jar`
+To compile Aquamarine, clone the repo & build it with `sbt assembly`,
+or simply download the latest JAR file from the [releases](https://github.com/fluencelabs/aqua-hll/releases) page.
 
-Run:
+It requires `java` to run Aquamarine compiler from the command line:
 
 ```commandline
 java -jar aqua-hll.jar path/to/input/dir path/to/output/dir
 ```
-input directory should contain files with `aqua` scripts
 
-### TODO
+Input directory should contain files with `aqua` scripts.
 
-- Lambda
-- Build data types: extend
-- Platform-specific Predef with Return ability
-- Implementation for abilities
-- Abilities passing
-- Print syntax errors better way
-- For the offset, find a token (for LSP)
-- Generate interface types from JSON
+## Language overview
+
+
+
+## Repository structure
