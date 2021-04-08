@@ -21,6 +21,7 @@ case class ScalarType private (name: String) extends DataType {
 
 object ScalarType {
   // TODO https://github.com/fluencelabs/interface-types/blob/master/crates/it-types/src/values.rs#L45-L49
+  val u8 = ScalarType("u8")
   val u32 = ScalarType("u32")
   val u64 = ScalarType("u64")
   val s32 = ScalarType("s32")
@@ -32,13 +33,15 @@ object ScalarType {
 
   val float = Set(f32, f64)
   val signed = float ++ Set(s32, s64)
-  val number = signed ++ Set(u32, u64)
+  val number = signed ++ Set(u8, u32, u64)
   val all = number ++ Set(bool, string)
 
   val scalarOrder: PartialOrder[ScalarType] =
     PartialOrder.from {
       case (a, b) if a == b => 0.0
       case (`u32`, `u64`) => -1.0
+      case (`u8`, `u64`) => -1.0
+      case (`u8`, `u32`) => -1.0
       case (`s32`, `s64`) => -1.0
       case (`f32`, `f64`) => -1.0
       case (`u64`, `u32`) => 1.0

@@ -5,7 +5,7 @@ import aqua.parser.Ast.parser
 import aqua.parser.expr._
 import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import aqua.types.ScalarType.{bool, string, u32, u64}
+import aqua.types.ScalarType.{bool, string, u32, u64, u8}
 import cats.Id
 import cats.data.Chain
 import cats.free.Cofree
@@ -26,8 +26,8 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     funcExpr("func some()") should be(FuncExpr("some", List(), None, None))
 
     val arrowToken =
-      ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), Some(BasicTypeToken[Id](bool)))
-    funcExpr("func some(peer: PeerId, other: u32 -> bool)") should be(
+      ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u8)), Some(BasicTypeToken[Id](bool)))
+    funcExpr("func some(peer: PeerId, other: u8 -> bool)") should be(
       FuncExpr(
         toName("some"),
         List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken)),
