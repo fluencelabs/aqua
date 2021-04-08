@@ -35,7 +35,7 @@ jobs:
       - name: Add version to .jar name
         run: |
           JAR="target/scala-2.13/aqua-hll-${{ env.VERSION }}.jar"
-          mv "target/scala-2.13/aqua-hll.jar" $JAR
+          mv "cli/target/scala-2.13/aqua-hll.jar" $JAR
           echo "JAR=$JAR" >> $GITHUB_ENV
 
       - uses: marvinpinto/action-automatic-releases@latest
