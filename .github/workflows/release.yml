@@ -22,7 +22,7 @@ jobs:
 
       ### Update & build
       - name: Assembly
-        run: sbt assembly
+        run: sbt cli/assembly
 
       ### Create release
       - name: Get project version
