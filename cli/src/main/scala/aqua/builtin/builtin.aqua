@@ -1,0 +1,148 @@
+alias Field : []string
+alias Argument : []string
+alias Bytes : []u8
+alias PeerId : string
+
+data Service:
+    id: string
+    blueprint_id: string
+    owner_id: string
+
+data FunctionSignature:
+    arguments: []Argument
+    name: string
+    output_types: []string
+
+data RecordType:
+    fields: []Field
+    id: u64
+    name: string
+
+data Interface:
+    function_signatures: []FunctionSignature
+    record_types: []RecordType
+
+data ServiceInfo:
+    blueprint_id: string
+    service_id: string
+    interface: Interface
+
+data Info:
+    external_addresses: []string
+
+data ModuleConfig:
+    name: string
+
+data Module:
+    name: string
+    hash: string
+    config: ModuleConfig
+
+data AddBlueprint:
+    name: string
+    dependencies: []string
+
+data Blueprint:
+    id: string
+    name: string
+    dependencies: []string
+
+data ScriptInfo:
+    id: string
+    src: string
+    failures: u32
+    interval: string
+    owner: string
+
+data Contact:
+    peer_id: string
+    addresses: []string
+
+service Op("op"):
+	identity: -> ()
+
+service Peer("peer"):
+    -- Checks if there is a direct connection to the peer identified by a given PeerId
+    -- Argument: PeerId – id of the peer to check if there's a connection with
+    -- Returns: bool - true if connected to the peer, false otherwise
+    is_connected: PeerId -> bool
+
+    -- Initiates a connection to the specified peer
+    -- Arguments:
+    -- PeerId – id of the target peer
+    -- [Multiaddr] – an array of target peer's addresses
+    -- Returns: bool - true if connection was successful
+    connect: PeerId, []string -> bool
+    -- Resolves the contact of a peer via Kademlia
+    -- Argument: PeerId – id of the target peer
+    -- Returns: Contact - true if connection was successful
+    get_contact: PeerId -> Contact
+
+    -- Get information about the peer
+    identify: -> Info
+
+    -- Get Unix timestamp in milliseconds
+    timestamp_ms: -> u64
+
+    -- Get Unix timestamp in seconds
+    timestamp_sec: -> u64
+
+service Kademlia("kad"):
+    -- Instructs node to return the locally-known nodes
+    -- in the Kademlia neighborhood for a given key
+    neighborhood: PeerId -> []PeerId
+
+service Srv("srv"):
+    -- Used to create a service on a certain node
+    -- Arguments:
+    -- blueprint_id – ID of the blueprint that has been added to the node specified in the service call by the dist add_blueprint service.
+    -- Returns: service_id – the service ID of the created service.
+    create: string -> string
+
+    -- Returns a list of services running on a peer
+    list: -> []Service
+
+    -- Adds an alias on service, so, service could be called
+    -- not only by service_id but by alias as well.
+    -- Argument:
+    -- alias - settable service name
+    -- service_id – ID of the service whose interface you want to name.
+    add_alias: string, string -> ()
+
+    -- Retrieves the functional interface of a service running
+    -- on the node specified in the service call
+    -- Argument: service_id – ID of the service whose interface you want to retrieve.
+    get_interface: string -> ServiceInfo
+
+service Dist("dist"):
+    -- Used to add modules to the node specified in the service call
+    -- Arguments:
+    -- bytes – a base64 string containing the .wasm module to add.
+    -- config – module info
+    -- Returns: blake3 hash of the module
+    add_module: Bytes, ModuleConfig -> string
+
+    -- Get a list of modules available on the node
+    list_modules: -> []Module
+
+    -- Get the interface of a module
+    get_interface: string -> Interface
+
+    -- Used to add a blueprint to the node specified in the service call
+
+    add_blueprint: AddBlueprint -> string
+
+    -- Used to get the blueprints available on the node specified in the service call.
+    -- A blueprint is an object of the following structure
+    list_blueprints: -> []Blueprint
+
+service Script("script"):
+    -- Adds the given script to a node
+    add: string, string -> string
+
+    -- Removes recurring script from a node. Only a creator of the script can delete it
+    remove: string -> bool
+
+    -- Returns a list of existing scripts on the node.
+    -- Each object in the list is of the following structure
+    list: -> ScriptInfo
