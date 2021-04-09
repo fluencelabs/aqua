@@ -5,17 +5,25 @@ import aqua.backend.ts.TypescriptFile
 import aqua.model.{Model, ScriptModel}
 import aqua.parser.Ast
 import cats.data.ValidatedNec
-import aqua.parser.lift.Span
+import aqua.parser.lift.{FileSpan, LiftParser, Span}
 import aqua.semantics.Semantics
 import cats.syntax.show._
 
 object Aqua {
 
-  def parse(input: String): ValidatedNec[AquaError, Ast[Span.F]] =
+  def parseString(input: String): ValidatedNec[AquaError, Ast[Span.F]] =
     Ast.fromString[Span.F](input).leftMap(_.map(pe => SyntaxError(pe.failedAtOffset, pe.expected)))
 
+  def parseFileString(name: String, input: String): ValidatedNec[AquaError, Ast[FileSpan.F]] = {
+    implicit val fileLift: LiftParser[FileSpan.F] = FileSpan.fileSpanLiftParser(name)
+    Ast
+      .fromString[FileSpan.F](input)
+      .leftMap(_.map(pe => SyntaxError(pe.failedAtOffset, pe.expected)))
+  }
+
+  // Will fail if imports are used
   def generateModel(input: String): ValidatedNec[AquaError, Model] =
-    parse(input).andThen(ast =>
+    parseString(input).andThen(ast =>
       Semantics.generateModel(ast).leftMap(_.map(ts => CompilerError(ts._1.unit._1, ts._2)))
     )
 
@@ -38,9 +46,4 @@ object Aqua {
       case _ => "//No input given"
     }
 
-  def generateTS(input: String): ValidatedNec[AquaError, String] =
-    generate(input, air = false)
-
-  def generateAir(input: String): ValidatedNec[AquaError, String] =
-    generate(input, air = true)
 }

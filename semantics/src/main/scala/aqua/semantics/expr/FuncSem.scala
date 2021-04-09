@@ -73,6 +73,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
         val argNames = args.map(_.name.value)
 
         val model = FuncModel(
+          export = expr.pub.isDefined,
           name = name.value,
           args = argNames
             .zip(funcArrow.args)

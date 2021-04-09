@@ -12,19 +12,20 @@ trait Expr[F[_]]
 
 object Expr {
 
-  def defer(companion: => Companion): Companion = new Companion {
-    override def p[F[_]: LiftParser: Comonad]: P[Expr[F]] = companion.p[F]
-
-    override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Tree[F]] = companion.ast[F](ps)
-  }
-
   trait Companion {
     def p[F[_]: LiftParser: Comonad]: P[Expr[F]]
 
     def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]]
   }
 
-  abstract class And(thenInline: List[Expr.Companion], orIndented: List[Expr.Companion]) extends Companion {
+  def defer(companion: => Companion): Companion = new Companion {
+    override def p[F[_]: LiftParser: Comonad]: P[Expr[F]] = companion.p[F]
+
+    override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Tree[F]] = companion.ast[F](ps)
+  }
+
+  abstract class And(thenInline: List[Expr.Companion], orIndented: List[Expr.Companion])
+      extends Companion {
 
     override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
       (p[F] ~ ((` `.backtrack *> P

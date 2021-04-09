@@ -4,6 +4,7 @@ import aqua.model.body.FuncOp
 import aqua.types.{ArrowType, DataType, Type}
 
 case class FuncModel(
+  export: Boolean,
   name: String,
   args: List[(String, Either[DataType, ArrowType])],
   ret: Option[(ValueModel, Type)],

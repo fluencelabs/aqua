@@ -14,7 +14,9 @@ case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
       .foldLeft((Map.empty[String, FuncCallable], Chain.empty[FuncResolved])) {
         case ((funcsAcc, outputAcc), func) =>
           val fr = func.captureArrows(funcsAcc)
-          funcsAcc.updated(func.name, fr) -> outputAcc.append(FuncResolved(func.name, fr))
+          funcsAcc.updated(func.name, fr) -> (if (func.`export`)
+                                                outputAcc.append(FuncResolved(func.name, fr))
+                                              else outputAcc)
       }
       ._2
 
