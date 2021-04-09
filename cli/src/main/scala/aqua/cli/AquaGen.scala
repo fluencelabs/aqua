@@ -30,12 +30,11 @@ object AquaGen {
   }
 
   def convertAqua[F[_]](name: String, text: String, air: Boolean): Either[CliError, String] =
-    Aqua.generate(text, air) match {
-      case Validated.Valid(v) ⇒
-        Right(v)
-      case Validated.Invalid(errs) ⇒
-        Left(CliError.errorInfo(name, text, errs))
-    }
+    Aqua
+      .generate(text, air)
+      .toEither
+      .left
+      .map(CliError.errorInfo(name, text, _))
 
   def convertAquaFromFile[F[_]: Files: Concurrent](
     file: File,

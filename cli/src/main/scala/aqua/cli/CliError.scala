@@ -3,6 +3,8 @@ package aqua.cli
 import aqua.AquaError
 import cats.data.NonEmptyChain
 
+import java.io.File
+
 sealed trait CliError
 
 object CliError {
@@ -21,5 +23,8 @@ object CliError {
 }
 
 case class IOError(msg: String, t: Throwable) extends Exception(msg, t) with CliError
+case class EmptyFileError(file: File) extends CliError
 case class CliArgsError(name: String, error: String) extends CliError
-case class AquaScriptErrors(name: String, script: String, errors: NonEmptyChain[AquaError]) extends CliError
+
+case class AquaScriptErrors(name: String, script: String, errors: NonEmptyChain[AquaError])
+    extends CliError

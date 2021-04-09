@@ -4,8 +4,10 @@ import aqua.cli.AquaGen.{convertAqua, convertAquaFilesToDir}
 import aqua.cli.{AquaScriptErrors, ArgsConfig, CliArgsError, CliError, IOError}
 import cats.effect.{ExitCode, IO, IOApp, Resource}
 
-final case class ParseArgsException(private val message: String, private val cause: Throwable = None.orNull)
-    extends Exception(message, cause)
+final case class ParseArgsException(
+  private val message: String,
+  private val cause: Throwable = None.orNull
+) extends Exception(message, cause)
 
 object Main extends IOApp {
 
@@ -31,20 +33,22 @@ object Main extends IOApp {
   private def readAllInput(): IO[Option[String]] = {
     import java.io.BufferedReader
     import java.io.InputStreamReader
-    Resource.make(IO(new BufferedReader(new InputStreamReader(System.in))))(b => IO(b.close())).use { reader =>
-      IO {
-        if (reader.ready()) {
-          val lineSep = sys.props("line.separator")
-          var line: String = reader.readLine
-          val buf = new StringBuilder()
-          while (line != null) {
-            buf.append(line + lineSep)
-            line = reader.readLine
-          }
-          Some(buf.toString)
-        } else Option("")
+    Resource
+      .make(IO(new BufferedReader(new InputStreamReader(System.in))))(b => IO(b.close()))
+      .use { reader =>
+        IO {
+          if (reader.ready()) {
+            val lineSep = sys.props("line.separator")
+            var line: String = reader.readLine
+            val buf = new StringBuilder()
+            while (line != null) {
+              buf.append(line + lineSep)
+              line = reader.readLine
+            }
+            Some(buf.toString)
+          } else Option("")
+        }
       }
-    }
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
@@ -54,7 +58,12 @@ object Main extends IOApp {
           results <-
             (config.input, config.output) match {
               case (Some(i), Some(o)) =>
-                convertAquaFilesToDir[IO](i, o, config.air)
+                convertAquaFilesToDir[IO](
+                  // TODO this approach does not support nested directories
+                  i.toFile.listFiles().toList.filter(_.getName.endsWith(".aqua")),
+                  o,
+                  config.air
+                )
               case _ =>
                 readAllInput().map {
                   case Some(i) =>
