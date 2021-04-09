@@ -140,6 +140,12 @@ service Script("script"):
     add: string, string -> string
 
     -- Removes recurring script from a node. Only a creator of the script can delete it
+    -- Removes recurring script from a node. Only a creator of the script can delete it
+    -- Removes recurring script from a node. Only a creator of the script can delete it
+    -- Removes recurring script from a node. Only a creator of the script can delete it
+    -- Removes recurring script from a node. Only a creator of the script can delete it
+    -- Removes recurring script from a node. Only a creator of the script can delete it
+    -- Removes recurring script from a node. Only a creator of the script can delete it
     remove: string -> bool
 
     -- Returns a list of existing scripts on the node.
