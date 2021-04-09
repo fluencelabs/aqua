@@ -13,7 +13,10 @@ import java.nio.file.Path
 
 object AquaGen {
 
-  def checkAndChangeExtension[F[_]: Applicative](fileName: String, air: Boolean): EitherT[F, CliError, String] = {
+  def checkAndChangeExtension[F[_]: Applicative](
+    fileName: String,
+    air: Boolean
+  ): EitherT[F, CliError, String] = {
     val arr = fileName.split("\\.").toList
     for {
       _ <- EitherT.cond[F](
@@ -48,6 +51,7 @@ object AquaGen {
         Files[F]
           .readAll(file.toPath, 4096)
           .through(text.utf8Decode)
+          .fold("")((acc, str) => acc + str)
           .attempt
           .map {
             _.left
