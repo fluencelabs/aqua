@@ -34,7 +34,7 @@ lazy val cli = project
       "co.fs2"           %% "fs2-io"      % fs2V
     )
   )
-  .dependsOn(semantics, `backend-air`, `backend-ts`)
+  .dependsOn(semantics, `backend-air`, `backend-ts`, linker)
 
 lazy val types = project
   .settings(commons)
@@ -53,6 +53,14 @@ lazy val parser = project
     )
   )
   .dependsOn(types)
+
+lazy val linker = project
+  .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+    )
+  )
+  .dependsOn(parser)
 
 lazy val model = project
   .settings(commons: _*)

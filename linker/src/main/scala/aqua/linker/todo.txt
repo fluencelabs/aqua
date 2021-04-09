@@ -1,0 +1,8 @@
+- make file system abstraction that can read a file
+- normalize file names inside folders: (file, import) => (aqua file id)
+- state machine that gets files, normalizes their imports, and does it until no files are left in the input folder,
+and no more unresolved imports
+- order the dependency graph
+- move through dependency graph, compile files into models (??? what about services and such stuff)
+- remove pub modifier from functions, add exports modifier
+- finally, get the list of AquaFiles corresponding to initial ones, with external models substituted, internal resolved
