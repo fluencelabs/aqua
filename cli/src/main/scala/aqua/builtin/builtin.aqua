@@ -129,7 +129,6 @@ service Dist("dist"):
     get_interface: string -> Interface
 
     -- Used to add a blueprint to the node specified in the service call
-
     add_blueprint: AddBlueprint -> string
 
     -- Used to get the blueprints available on the node specified in the service call.

@@ -50,8 +50,9 @@ object AquaGen {
       converted <- EitherT(
         Files[F]
           .readAll(file.toPath, 4096)
+          .fold(List.empty[Byte])((acc, b) => acc :+ b)
+          .flatMap(fs2.Stream.emits)
           .through(text.utf8Decode)
-          .fold("")((acc, str) => acc + str)
           .attempt
           .map {
             _.left
