@@ -29,14 +29,13 @@ object AquaGen {
     }
   }
 
-  def convertAqua[F[_]](name: String, text: String, air: Boolean): Either[CliError, String] = {
+  def convertAqua[F[_]](name: String, text: String, air: Boolean): Either[CliError, String] =
     Aqua.generate(text, air) match {
       case Validated.Valid(v) ⇒
         Right(v)
       case Validated.Invalid(errs) ⇒
         Left(CliError.errorInfo(name, text, errs))
     }
-  }
 
   def convertAquaFromFile[F[_]: Files: Concurrent](
     file: File,
@@ -50,7 +49,7 @@ object AquaGen {
       converted <- EitherT(
         Files[F]
           .readAll(file.toPath, 4096)
-          .fold(List.empty[Byte])((acc, b) => acc :+ b)
+          .fold(Vector.empty[Byte])((acc, b) => acc :+ b)
           .flatMap(fs2.Stream.emits)
           .through(text.utf8Decode)
           .attempt
