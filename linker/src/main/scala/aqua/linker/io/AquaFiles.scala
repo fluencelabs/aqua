@@ -1,6 +1,6 @@
-package aqua.linker
+package aqua.linker.io
 
-import cats.data.{EitherT, NonEmptyChain, Validated, ValidatedNec}
+import cats.data.{NonEmptyChain, Validated, ValidatedNec}
 import cats.syntax.applicative._
 import cats.syntax.apply._
 import cats.{Applicative, Monoid}
@@ -15,19 +15,19 @@ case class AquaFiles(
   importFrom: List[File]
 ) {
 
-  def addFile[F[_]: Files: Concurrent](
+  /*def addFile[F[_]: Files: Concurrent](
     name: String,
     af: AquaFile
   ): EitherT[F, LinkerError, AquaFiles] = ???
-
+   */
 }
 
 object AquaFiles {
 
-  type FetchFiles = ValidatedNec[LinkerError, Map[String, AquaFile]]
+  type FetchFiles = ValidatedNec[Throwable, Map[String, AquaFile]]
 
   private def emptyFetch[F[_]: Applicative]: F[FetchFiles] =
-    Validated.valid[NonEmptyChain[LinkerError], Map[String, AquaFile]](Map.empty).pure[F]
+    Validated.valid[NonEmptyChain[Throwable], Map[String, AquaFile]](Map.empty).pure[F]
 
   implicit def fetchFilesMonoid[F[_]: Applicative]: Monoid[F[FetchFiles]] =
     new Monoid[F[FetchFiles]] {
@@ -36,7 +36,7 @@ object AquaFiles {
       override def combine(x: F[FetchFiles], y: F[FetchFiles]): F[FetchFiles] =
         (x, y).mapN((a, b) => a.andThen(mp => b.map(_ ++ mp)))
     }
-
+  /*
   def readSrc[F[_]](
     files: List[File],
     imports: List[File],
@@ -86,6 +86,6 @@ object AquaFiles {
               })
               .map(mp ++ _)
           )
-      }
+      }*/
 
 }

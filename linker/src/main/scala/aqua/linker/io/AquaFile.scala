@@ -1,9 +1,7 @@
-package aqua.linker
+package aqua.linker.io
 
 import aqua.parser.Ast
-import aqua.parser.head.ImportExpr
 import aqua.parser.lift.FileSpan
-import cats.data.EitherT
 import cats.syntax.apply._
 
 import java.io.File
@@ -25,7 +23,7 @@ case class AquaFile(
 }
 
 object AquaFile {
-
+  /*
   def readSourceText[F[_]: Files: Concurrent](
     file: File
   ): fs2.Stream[F, Either[LinkerError, String]] =
@@ -64,5 +62,5 @@ object AquaFile {
           .toSet,
         ast
       )
-    )
+    )*/
 }

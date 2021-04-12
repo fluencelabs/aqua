@@ -24,7 +24,6 @@ object Token {
   val `import`: P[Unit] = P.string("import")
   val `use`: P[Unit] = P.string("use")
   val `as`: P[Unit] = P.string("as")
-  val `pub`: P[Unit] = P.string("pub")
   val `alias`: P[Unit] = P.string("alias")
   val `service`: P[Unit] = P.string("service")
   val `func`: P[Unit] = P.string("func")
