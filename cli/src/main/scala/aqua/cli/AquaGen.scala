@@ -30,6 +30,7 @@ object AquaGen {
   }
 
   def convertAqua[F[_]](name: String, text: String, air: Boolean): Either[CliError, String] =
+
     Aqua
       .generate(text, air)
       .toEither
@@ -48,6 +49,8 @@ object AquaGen {
       converted <- EitherT(
         Files[F]
           .readAll(file.toPath, 4096)
+          .fold(Vector.empty[Byte])((acc, b) => acc :+ b)
+          .flatMap(fs2.Stream.emits)
           .through(text.utf8Decode)
           .attempt
           .map {

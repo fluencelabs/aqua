@@ -4,7 +4,7 @@ scalaVersion := dottyVersion
 
 //val dottyVersion = "3.0.0-RC1"
 
-val aquaV = "0.1.0"
+val aquaV = "0.1.1"
 
 val catsV = "2.4.2"
 val catsParseV = "0.3.1"
@@ -13,10 +13,7 @@ val scalaTestV = "3.2.5"
 val fs2V = "3.0.0-M7"
 val catsEffectV = "3.0.0-RC2"
 
-name                        := "aqua-hll"
-mainClass in (Compile, run) := Some("aqua.Main")
-mainClass in assembly       := Some("aqua.Main")
-assemblyJarName in assembly := "aqua-hll.jar"
+name := "aqua-hll"
 
 val commons = Seq(
   version                                := aquaV,
@@ -28,6 +25,9 @@ val commons = Seq(
 lazy val cli = project
   .settings(commons: _*)
   .settings(
+    mainClass in (Compile, run) := Some("aqua.Main"),
+    mainClass in assembly       := Some("aqua.Main"),
+    assemblyJarName in assembly := "aqua-hll.jar",
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt"       % "4.0.1",
       "org.typelevel"    %% "cats-effect" % catsEffectV,
