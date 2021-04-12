@@ -32,12 +32,10 @@ object AquaFiles {
       .toList
       .map {
         case f if f.isFile && f.getName.endsWith(".aqua") =>
-          println("coing to parse " + f)
           AquaFile
             .read(f.toPath.toAbsolutePath)
             .map(Chain(_))
             .leftMap(NonEmptyChain.one)
-
         case f if f.isDirectory =>
           readSources(f.toPath)
       }
@@ -45,10 +43,14 @@ object AquaFiles {
         EitherT.rightT(Chain.empty)
       ) { case (accF, nextF) =>
         EitherT((accF.value, nextF.value).mapN {
-          case (Right(acc), Right(v)) => Right(acc ++ v)
-          case (Left(acc), Left(v)) => Left(acc ++ v)
-          case (Left(acc), _) => Left(acc)
-          case (_, Left(v)) => Left(v)
+          case (Right(acc), Right(v)) =>
+            Right(acc ++ v)
+          case (Left(acc), Left(v)) =>
+            Left(acc ++ v)
+          case (Left(acc), _) =>
+            Left(acc)
+          case (_, Left(v)) =>
+            Left(v)
         })
       }
 
