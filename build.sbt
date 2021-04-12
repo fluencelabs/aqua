@@ -11,6 +11,7 @@ val catsParseV = "0.3.1"
 val monocleV = "3.0.0-M3"
 val scalaTestV = "3.2.5"
 val fs2V = "3.0.0-M7"
+val catsEffectV = "3.0.0-RC2"
 
 name                        := "aqua-hll"
 mainClass in (Compile, run) := Some("aqua.Main")
@@ -29,7 +30,7 @@ lazy val cli = project
   .settings(
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt"       % "4.0.1",
-      "org.typelevel"    %% "cats-effect" % "3.0.0-RC2",
+      "org.typelevel"    %% "cats-effect" % catsEffectV,
       "co.fs2"           %% "fs2-core"    % fs2V,
       "co.fs2"           %% "fs2-io"      % fs2V
     )
@@ -58,6 +59,7 @@ lazy val linker = project
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-effect" % catsEffectV
     )
   )
   .dependsOn(parser)

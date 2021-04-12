@@ -7,20 +7,10 @@ import cats.syntax.apply._
 import java.io.File
 
 case class AquaFile(
-  file: File,
-  imports: Set[String],
+  id: FileModuleId,
+  imports: Map[FileModuleId, LinkerError],
   ast: Ast[FileSpan.F]
-) {
-
-  def resolve(name: String, value: AquaFile): AquaFile = if (imports(name))
-    copy(
-      imports = imports - name,
-      ast = ast.copy(tree = ast.tree.copy(tail = (value.ast.tree.tail, ast.tree.tail).mapN(_ ++ _)))
-    )
-  else this
-
-  def isResolved: Boolean = imports.isEmpty
-}
+) {}
 
 object AquaFile {
   /*
