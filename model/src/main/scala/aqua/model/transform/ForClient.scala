@@ -1,7 +1,8 @@
 package aqua.model.transform
 
 import aqua.model.body._
-import aqua.model.{FuncCallable, FuncResolved, InitPeerIdModel, VarModel}
+import aqua.model.{FuncCallable, FuncResolved, InitPeerIdModel, LiteralModel, VarModel}
+import aqua.types.ScalarType.string
 import aqua.types.{ArrowType, DataType}
 import cats.data.Chain
 import cats.free.Cofree
@@ -10,6 +11,26 @@ object ForClient {
 
   def apply(func: FuncResolved, conf: BodyConfig): Cofree[Chain, OpTag] = {
     import conf._
+
+    def wrapXor(op: FuncOp): FuncOp =
+      FuncOp.node(
+        XorTag,
+        Chain(
+          op,
+          viaRelay(
+            FuncOp.leaf(
+              CallServiceTag(
+                errorHandlingCallback,
+                error,
+                Call(
+                  (LiteralModel("%last_error%"), string) :: Nil,
+                  None
+                )
+              )
+            )
+          )
+        )
+      )
 
     // Get to init user through a relay
     def viaRelay(op: FuncOp): FuncOp =
@@ -74,33 +95,36 @@ object ForClient {
         )
       )
 
-    val body =
-      viaRelay(
-        FuncOp
-          .node(
-            SeqTag,
-            Chain
-              .fromSeq(
-                func.func.args.collect { case (argName, Left(_)) =>
-                  getDataOp(argName)
-                } :+ getDataOp(relayVarName)
-              )
-              .append(
-                func.func
-                  .apply(
-                    funcArgsCall,
-                    func.func.args.collect { case (argName, Right(arrowType)) =>
-                      argName -> initPeerCallable(argName, arrowType)
-                    }.toMap,
-                    func.func.args.collect { case (argName, Left(_)) =>
-                      argName
-                    }.foldLeft(Set(relayVarName))(_ + _)
-                  )
-                  .value
-                  ._1
-              ) ++ Chain.fromSeq(returnCallback.toSeq)
-          )
+    val body = {
+      wrapXor(
+        viaRelay(
+          FuncOp
+            .node(
+              SeqTag,
+              Chain
+                .fromSeq(
+                  func.func.args.collect { case (argName, Left(_)) =>
+                    getDataOp(argName)
+                  } :+ getDataOp(relayVarName)
+                )
+                .append(
+                  func.func
+                    .apply(
+                      funcArgsCall,
+                      func.func.args.collect { case (argName, Right(arrowType)) =>
+                        argName -> initPeerCallable(argName, arrowType)
+                      }.toMap,
+                      func.func.args.collect { case (argName, Left(_)) =>
+                        argName
+                      }.foldLeft(Set(relayVarName))(_ + _)
+                    )
+                    .value
+                    ._1
+                ) ++ Chain.fromSeq(returnCallback.toSeq)
+            )
+        )
       ).tree
+    }
 
     Topology.resolve(body)
   }
