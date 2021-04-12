@@ -4,10 +4,12 @@ import aqua.backend.ts.TypescriptFile
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
 import aqua.model.ScriptModel
+import aqua.parser.lexer.Token
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{CompilerState, Semantics}
 import cats.effect.{IO, IOApp}
-import cats.data.Validated
+import cats.data.{Chain, Validated}
+import cats.syntax.monoid._
 
 import java.nio.file.Paths
 
@@ -18,13 +20,19 @@ object Test extends IOApp.Simple {
       .readAndResolve[IO, CompilerState.S[FileSpan.F]](
         Paths.get("./aqua-src"),
         LazyList(Paths.get("./aqua")),
-        ast => _.flatMap(_ => Semantics.astToState(ast))
+        ast =>
+          _.flatMap(m => {
+            println(Console.YELLOW + "running for ast " + Console.RESET);
+            for {
+              y <- Semantics.astToState(ast)
+            } yield m |+| y
+          })
       )
       .value
       .map {
         case Left(fileErrors) =>
           println(Console.RED + "File errors")
-          println(fileErrors.toChain.toList.mkString("\n") + Console.RESET)
+          println(fileErrors.toChain.map(_.showForConsole).toList.mkString("\n") + Console.RESET)
 
         case Right(modules) =>
           Linker[FileModuleId, AquaFileError, CompilerState.S[FileSpan.F]](
@@ -32,21 +40,33 @@ object Test extends IOApp.Simple {
             ids => Unresolvable(ids.map(_.id.file.toString).mkString(" -> "))
           ) match {
             case Validated.Valid(files) ⇒
+              println("Linker linked " + files)
               files.map { case (modId, proc) =>
+                println(Console.CYAN + modId + Console.RESET)
                 proc.run(CompilerState()).value match {
                   case (proc, _) if proc.errors.nonEmpty =>
-                    proc.errors.map(err => println(Console.RED + err + Console.RESET))
+                    showProcErrors(proc.errors)
+
+                    println(Console.RED + "Script errored " + Console.RESET)
                   case (_, model: ScriptModel) =>
-                    println(TypescriptFile(model).generateTS())
+                    // TODO write to target file
+                    println(
+                      modId.targetPath(
+                        Paths.get("./aqua-src"),
+                        Paths.get("./target"),
+                        "ts"
+                      ) + "\n" + TypescriptFile(model).generateTS()
+                    )
+                    println(Console.GREEN + "Aqua script processed successfully" + Console.RESET)
+
                   case (_, model) =>
-                    println(Console.RED + "Unknown model: " + model)
+                    println(Console.RED + "Unknown model: " + model + Console.RESET)
                 }
               }
 
-              println(Console.GREEN + "Aqua script processed successfully" + Console.RESET)
             case Validated.Invalid(errs) ⇒
               errs
-                //.map(_.showForConsole(str))
+                .map(_.showForConsole)
                 .map(println)
               println(
                 Console.RED + s"Aqua script errored, total ${errs.length} problems found" + Console.RESET
@@ -54,5 +74,18 @@ object Test extends IOApp.Simple {
           }
       }
   }
+
+  def showProcErrors(errors: Chain[(Token[FileSpan.F], String)]): Unit =
+    errors
+      .map(err =>
+        // TODO optimize
+        err._1.unit._1.name + err._1.unit._1.locationMap.value
+          .toLineCol(err._1.unit._1.span.startIndex)
+          .map(ii => ":" + (ii._1 + 1) + ":" + (ii._2 + 1))
+          .getOrElse("") + "\n" +
+          CompilerError(err._1.unit._1.span, err._2)
+            .showForConsole(err._1.unit._1.source)
+      )
+      .map(err => println(err))
 
 }

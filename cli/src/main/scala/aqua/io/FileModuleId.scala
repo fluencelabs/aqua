@@ -7,7 +7,13 @@ import cats.syntax.applicative._
 
 import java.nio.file.Path
 
-case class FileModuleId(file: Path)
+case class FileModuleId(file: Path) {
+
+  def targetPath(src: Path, target: Path, ext: String): Path = {
+    val aqua = target.resolve(src.relativize(file))
+    aqua.getParent.resolve(aqua.getFileName.toString.stripSuffix(".aqua") + s".$ext")
+  }
+}
 
 object FileModuleId {
 
@@ -24,7 +30,7 @@ object FileModuleId {
         .flatMap {
           case true =>
             EitherT(
-              Concurrent[F].attempt(FileModuleId(p.toAbsolutePath).pure[F])
+              Concurrent[F].attempt(FileModuleId(p.toAbsolutePath.normalize()).pure[F])
             ).leftMap[AquaFileError](FileSystemError)
           case false =>
             findFirstF(in.tail, notFound)

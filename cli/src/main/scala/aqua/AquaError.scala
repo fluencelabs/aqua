@@ -12,10 +12,16 @@ case class SyntaxError(offset: Int, expectations: NonEmptyList[Expectation]) ext
 
   override def showForConsole(script: String): String =
     Span(offset, offset + 1)
-      .focus(script, 3)
-      .map(_.toConsoleStr(s"Syntax error, expected: ${expectations.toList.mkString(", ")}", Console.RED))
+      .focus(script, 2)
+      .map(
+        _.toConsoleStr(
+          s"Syntax error, expected: ${expectations.toList.mkString(", ")}",
+          Console.RED
+        )
+      )
       .getOrElse(
-        "(offset is beyond the script, syntax errors) " + Console.RED + expectations.toList.mkString(", ")
+        "(offset is beyond the script, syntax errors) " + Console.RED + expectations.toList
+          .mkString(", ")
       ) + Console.RESET + "\n"
 }
 
@@ -23,7 +29,7 @@ case class CompilerError(span: Span, hint: String) extends AquaError {
 
   override def showForConsole(script: String): String =
     span
-      .focus(script, 3)
+      .focus(script, 1)
       .map(_.toConsoleStr(hint, Console.CYAN))
       .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
 }

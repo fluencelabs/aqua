@@ -15,7 +15,7 @@ object Aqua {
     Ast.fromString[Span.F](input).leftMap(_.map(pe => SyntaxError(pe.failedAtOffset, pe.expected)))
 
   def parseFileString(name: String, input: String): ValidatedNec[AquaError, Ast[FileSpan.F]] = {
-    implicit val fileLift: LiftParser[FileSpan.F] = FileSpan.fileSpanLiftParser(name)
+    implicit val fileLift: LiftParser[FileSpan.F] = FileSpan.fileSpanLiftParser(name, input)
     Ast
       .fromString[FileSpan.F](input)
       .leftMap(_.map(pe => SyntaxError(pe.failedAtOffset, pe.expected)))

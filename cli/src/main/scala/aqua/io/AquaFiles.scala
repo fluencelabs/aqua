@@ -8,16 +8,7 @@ import cats.effect.kernel.Concurrent
 import cats.syntax.apply._
 import fs2.io.file.Files
 
-import java.io.File
 import java.nio.file.Path
-
-case class AquaFiles(
-  output: List[String],
-  fetched: Map[String, AquaFile],
-  unresolvedImports: Set[String],
-  source: File,
-  importFrom: List[File]
-) {}
 
 object AquaFiles {
   type Mods[T] = Modules[FileModuleId, AquaFileError, T]

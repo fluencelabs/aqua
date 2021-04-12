@@ -1,14 +1,14 @@
 package aqua.parser.lift
 
-import cats.Comonad
-import cats.parse.{Parser => P}
+import cats.{Comonad, Eval}
+import cats.parse.{LocationMap, Parser => P}
 
 import scala.language.implicitConversions
 
-case class FileSpan(name: String, span: Span) {
+case class FileSpan(name: String, source: String, locationMap: Eval[LocationMap], span: Span) {
 
-  def focus(text: String, ctx: Int): Option[FileSpan.Focus] =
-    span.focus(text, ctx).map(FileSpan.Focus(name, ctx, _))
+  def focus(ctx: Int): Option[FileSpan.Focus] =
+    span.focus(source, ctx).map(FileSpan.Focus(name, ctx, _))
 }
 
 object FileSpan {
@@ -29,11 +29,13 @@ object FileSpan {
     override def map[A, B](fa: F[A])(f: A ⇒ B): F[B] = fa.copy(_2 = f(fa._2))
   }
 
-  def fileSpanLiftParser(name: String): LiftParser[F] = new LiftParser[F] {
+  def fileSpanLiftParser(name: String, source: String): LiftParser[F] = new LiftParser[F] {
+
+    val memoizedLocationMap = Eval.later(LocationMap(source)).memoize
 
     override def lift[T](p: P[T]): P[F[T]] = {
       implicitly[LiftParser[Span.F]].lift(p).map { case (span, value) =>
-        (FileSpan(name, span), value)
+        (FileSpan(name, source, memoizedLocationMap, span), value)
       }
     }
   }

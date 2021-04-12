@@ -5,7 +5,7 @@ import aqua.linker.AquaModule
 import aqua.parser.Ast
 import aqua.parser.head.ImportExpr
 import aqua.parser.lift.FileSpan
-import cats.data.{EitherT, NonEmptyChain, Validated}
+import cats.data.{EitherT, NonEmptyChain}
 import cats.effect.Concurrent
 import fs2.io.file.Files
 import fs2.text
@@ -86,12 +86,12 @@ object AquaFile {
     EitherT(readAst[F](file).compile.last.map(_.getOrElse(Left(EmptyFileError(file))))).map {
       case (source, ast) =>
         AquaFile(
-          FileModuleId(file.toAbsolutePath),
+          FileModuleId(file.toAbsolutePath.normalize()),
           ast.head.tailForced
             .map(_.head)
             .collect { case ImportExpr(filename) =>
               val fn = filename.value.drop(1).dropRight(1)
-              val focus = filename.unit._1.focus(source, 1)
+              val focus = filename.unit._1.focus(1)
               fn -> focus
             }
             .collect { case (a, Some(b)) =>
