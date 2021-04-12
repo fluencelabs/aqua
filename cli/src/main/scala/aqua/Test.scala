@@ -22,7 +22,7 @@ object Test extends IOApp.Simple {
         LazyList(Paths.get("./aqua")),
         ast =>
           _.flatMap(m => {
-            println(Console.YELLOW + "running for ast " + Console.RESET);
+            //println(Console.YELLOW + "running for ast " + Console.RESET);
             for {
               y <- Semantics.astToState(ast)
             } yield m |+| y
@@ -40,9 +40,7 @@ object Test extends IOApp.Simple {
             ids => Unresolvable(ids.map(_.id.file.toString).mkString(" -> "))
           ) match {
             case Validated.Valid(files) ⇒
-              println("Linker linked " + files)
               files.map { case (modId, proc) =>
-                println(Console.CYAN + modId + Console.RESET)
                 proc.run(CompilerState()).value match {
                   case (proc, _) if proc.errors.nonEmpty =>
                     showProcErrors(proc.errors)
@@ -78,14 +76,11 @@ object Test extends IOApp.Simple {
   def showProcErrors(errors: Chain[(Token[FileSpan.F], String)]): Unit =
     errors
       .map(err =>
-        // TODO optimize
-        err._1.unit._1.name + err._1.unit._1.locationMap.value
-          .toLineCol(err._1.unit._1.span.startIndex)
-          .map(ii => ":" + (ii._1 + 1) + ":" + (ii._2 + 1))
-          .getOrElse("") + "\n" +
-          CompilerError(err._1.unit._1.span, err._2)
-            .showForConsole(err._1.unit._1.source)
+        err._1.unit._1
+          .focus(1)
+          .map(_.toConsoleStr(err._2, Console.CYAN))
+          .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
       )
-      .map(err => println(err))
+      .map(println)
 
 }

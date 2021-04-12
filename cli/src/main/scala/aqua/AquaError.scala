@@ -1,7 +1,9 @@
 package aqua
 
 import aqua.parser.lift.Span
+import cats.Eval
 import cats.data.NonEmptyList
+import cats.parse.LocationMap
 import cats.parse.Parser.Expectation
 
 sealed trait AquaError {
@@ -12,7 +14,7 @@ case class SyntaxError(offset: Int, expectations: NonEmptyList[Expectation]) ext
 
   override def showForConsole(script: String): String =
     Span(offset, offset + 1)
-      .focus(script, 2)
+      .focus(Eval.later(LocationMap(script)), 2)
       .map(
         _.toConsoleStr(
           s"Syntax error, expected: ${expectations.toList.mkString(", ")}",
@@ -29,7 +31,7 @@ case class CompilerError(span: Span, hint: String) extends AquaError {
 
   override def showForConsole(script: String): String =
     span
-      .focus(script, 1)
+      .focus(Eval.later(LocationMap(script)), 1)
       .map(_.toConsoleStr(hint, Console.CYAN))
       .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
 }
