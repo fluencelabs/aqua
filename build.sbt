@@ -58,9 +58,6 @@ lazy val parser = project
 lazy val linker = project
   .settings(commons: _*)
   .settings(
-    libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % catsEffectV
-    )
   )
   .dependsOn(parser)
 

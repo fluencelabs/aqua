@@ -1,4 +1,4 @@
-package aqua.linker.io
+package aqua.io
 
 import cats.data.{NonEmptyChain, Validated, ValidatedNec}
 import cats.syntax.applicative._
