@@ -10,9 +10,9 @@ object Linker {
 
   @tailrec
   def iter[I, E, T: Semigroup](
-    mods: List[Module[I, E, T]],
+    mods: List[AquaModule[I, E, T]],
     proc: Map[I, T => T],
-    cycleError: List[Module[I, E, T]] => E
+    cycleError: List[AquaModule[I, E, T]] => E
   ): Either[E, Map[I, T => T]] =
     mods match {
       case Nil => Right(proc)
@@ -38,7 +38,7 @@ object Linker {
 
   def apply[I, E, T: Monoid](
     modules: Modules[I, E, T],
-    cycleError: List[Module[I, E, T]] => E
+    cycleError: List[AquaModule[I, E, T]] => E
   ): ValidatedNec[E, Map[I, T]] =
     if (modules.dependsOn.nonEmpty) Validated.invalid(modules.dependsOn.values.reduce(_ ++ _))
     else

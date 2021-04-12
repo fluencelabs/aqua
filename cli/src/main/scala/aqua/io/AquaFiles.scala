@@ -1,11 +1,15 @@
 package aqua.io
 
-import cats.data.{NonEmptyChain, Validated, ValidatedNec}
-import cats.syntax.applicative._
+import aqua.linker.Modules
+import aqua.parser.Ast
+import aqua.parser.lift.FileSpan
+import cats.data.{Chain, EitherT, NonEmptyChain}
+import cats.effect.kernel.Concurrent
 import cats.syntax.apply._
-import cats.{Applicative, Monoid}
+import fs2.io.file.Files
 
 import java.io.File
+import java.nio.file.Path
 
 case class AquaFiles(
   output: List[String],
@@ -13,79 +17,90 @@ case class AquaFiles(
   unresolvedImports: Set[String],
   source: File,
   importFrom: List[File]
-) {
-
-  /*def addFile[F[_]: Files: Concurrent](
-    name: String,
-    af: AquaFile
-  ): EitherT[F, LinkerError, AquaFiles] = ???
-   */
-}
+) {}
 
 object AquaFiles {
+  type Mods[T] = Modules[FileModuleId, AquaFileError, T]
+  type ETC[F[_], T] = EitherT[F, NonEmptyChain[AquaFileError], T]
 
-  type FetchFiles = ValidatedNec[Throwable, Map[String, AquaFile]]
+  def readSources[F[_]: Files: Concurrent](
+    sourcePath: Path
+  ): ETC[F, Chain[AquaFile]] =
+    // TODO wrap this with F, as it could fail
+    sourcePath.toFile
+      .listFiles()
+      .toList
+      .map {
+        case f if f.isFile && f.getName.endsWith(".aqua") =>
+          println("coing to parse " + f)
+          AquaFile
+            .read(f.toPath.toAbsolutePath)
+            .map(Chain(_))
+            .leftMap(NonEmptyChain.one)
 
-  private def emptyFetch[F[_]: Applicative]: F[FetchFiles] =
-    Validated.valid[NonEmptyChain[Throwable], Map[String, AquaFile]](Map.empty).pure[F]
+        case f if f.isDirectory =>
+          readSources(f.toPath)
+      }
+      .foldLeft[ETC[F, Chain[AquaFile]]](
+        EitherT.rightT(Chain.empty)
+      ) { case (accF, nextF) =>
+        EitherT((accF.value, nextF.value).mapN {
+          case (Right(acc), Right(v)) => Right(acc ++ v)
+          case (Left(acc), Left(v)) => Left(acc ++ v)
+          case (Left(acc), _) => Left(acc)
+          case (_, Left(v)) => Left(v)
+        })
+      }
 
-  implicit def fetchFilesMonoid[F[_]: Applicative]: Monoid[F[FetchFiles]] =
-    new Monoid[F[FetchFiles]] {
-      override def empty: F[FetchFiles] = emptyFetch[F]
+  def sourceModules[F[_]: Concurrent, T](
+    sources: Chain[AquaFile],
+    importFromPaths: LazyList[Path],
+    transpile: Ast[FileSpan.F] => T => T
+  ): ETC[F, Mods[T]] =
+    sources
+      .map(_.module(transpile, importFromPaths))
+      .foldLeft[ETC[F, Mods[T]]](
+        EitherT.rightT(Modules())
+      ) { case (modulesF, modF) =>
+        for {
+          ms <- modulesF
+          m <- modF
+        } yield ms.add(m, export = true)
+      }
 
-      override def combine(x: F[FetchFiles], y: F[FetchFiles]): F[FetchFiles] =
-        (x, y).mapN((a, b) => a.andThen(mp => b.map(_ ++ mp)))
+  def resolveModules[F[_]: Files: Concurrent, T](
+    modules: Modules[FileModuleId, AquaFileError, T],
+    importFromPaths: LazyList[Path],
+    transpile: Ast[FileSpan.F] => T => T
+  ): ETC[F, Mods[T]] =
+    modules.dependsOn.map { case (moduleId, unresolvedErrors) =>
+      AquaFile
+        .read[F](moduleId.file)
+        .leftMap(unresolvedErrors.prepend)
+        .flatMap(_.module(transpile, importFromPaths))
+
+    }.foldLeft[ETC[F, Mods[T]]](
+      EitherT.rightT(modules)
+    ) { case (modulesF, modF) =>
+      for {
+        ms <- modulesF
+        m <- modF
+      } yield ms.add(m)
+    }.flatMap {
+      case ms if ms.isResolved =>
+        EitherT.rightT(ms)
+      case ms => resolveModules(ms, importFromPaths, transpile)
     }
-  /*
-  def readSrc[F[_]](
-    files: List[File],
-    imports: List[File],
-    isImportFile: Boolean
-  ): F[FetchFiles] =
-    files
-      .foldLeft[F[FetchFiles]](emptyFetch[F]) {
-        case (acc, f) if f.isFile && f.getName.endsWith(".aqua") =>
-          for {
-            fa <- acc
-            v <- AquaFile.read(f).value
-          } yield v match {
-            case Left(e) =>
-              fa.leftMap(_.append(e)).pure[F]
-            case Right(af) =>
-              fa.map(_.updated(f.getName, af))
-          }
 
-        case (acc, f) if f.isDirectory =>
-          for {
-            fa <- acc
-            add <- readSrc(f.listFiles().toList, imports, isImportFile = false)
-            unresolvedImports = add.map(mp =>
-              mp.values
-                .flatMap(_.imports.toList)
-                .toSet
-                .filterNot(mp.contains)
-                .foldLeft[F[FetchFiles]](emptyFetch[F]) { case (importAcc, i) =>
-                  imports
-                    .map(_.toPath.resolve(i).toFile)
-                    .find(_.isFile)
-                    .fold[F[FetchFiles]](
-                      importAcc.map(
-                        _.andThen(_ =>
-                          Validated.invalidNec[CliError, Map[String, AquaFile]](
-                            UnresolvedImportError(f, i)
-                          )
-                        )
-                      )
-                    )(z => readSrc(z :: Nil, imports, isImportFile = true))
-                }
-            )
-          } yield fa.andThen(mp =>
-            add
-              .map(_.map { case (k, v) =>
-                (f.getName + "/" + k) -> v
-              })
-              .map(mp ++ _)
-          )
-      }*/
+  def readAndResolve[F[_]: Files: Concurrent, T](
+    sourcePath: Path,
+    importFromPaths: LazyList[Path],
+    transpile: Ast[FileSpan.F] => T => T
+  ): ETC[F, Mods[T]] =
+    for {
+      srcs <- readSources(sourcePath)
+      srcMods <- sourceModules(srcs, importFromPaths, transpile)
+      resMods <- resolveModules(srcMods, importFromPaths, transpile)
+    } yield resMods
 
 }

@@ -4,12 +4,12 @@ import cats.data.NonEmptyChain
 import cats.syntax.option._
 
 case class Modules[I, E, T](
-  loaded: Map[I, Module[I, E, T]] = Map.empty[I, Module[I, E, T]],
+  loaded: Map[I, AquaModule[I, E, T]] = Map.empty[I, AquaModule[I, E, T]],
   dependsOn: Map[I, NonEmptyChain[E]] = Map.empty[I, NonEmptyChain[E]],
   exports: Set[I] = Set.empty[I]
 ) {
 
-  def add(m: Module[I, E, T], export: Boolean = false): Modules[I, E, T] =
+  def add(m: AquaModule[I, E, T], export: Boolean = false): Modules[I, E, T] =
     if (loaded.contains(m.id)) this
     else
       copy(
