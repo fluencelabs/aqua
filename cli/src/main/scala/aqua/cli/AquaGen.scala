@@ -13,7 +13,10 @@ import java.nio.file.Path
 
 object AquaGen {
 
-  def checkAndChangeExtension[F[_]: Applicative](fileName: String, air: Boolean): EitherT[F, CliError, String] = {
+  def checkAndChangeExtension[F[_]: Applicative](
+    fileName: String,
+    air: Boolean
+  ): EitherT[F, CliError, String] = {
     val arr = fileName.split("\\.").toList
     for {
       _ <- EitherT.cond[F](
@@ -26,14 +29,13 @@ object AquaGen {
     }
   }
 
-  def convertAqua[F[_]](name: String, text: String, air: Boolean): Either[CliError, String] = {
+  def convertAqua[F[_]](name: String, text: String, air: Boolean): Either[CliError, String] =
     Aqua.generate(text, air) match {
       case Validated.Valid(v) ⇒
         Right(v)
       case Validated.Invalid(errs) ⇒
         Left(CliError.errorInfo(name, text, errs))
     }
-  }
 
   def convertAquaFromFile[F[_]: Files: Concurrent](
     file: File,
@@ -47,6 +49,8 @@ object AquaGen {
       converted <- EitherT(
         Files[F]
           .readAll(file.toPath, 4096)
+          .fold(Vector.empty[Byte])((acc, b) => acc :+ b)
+          .flatMap(fs2.Stream.emits)
           .through(text.utf8Decode)
           .attempt
           .map {
