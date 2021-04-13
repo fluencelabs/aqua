@@ -54,13 +54,6 @@ object Semantics {
   def transpile[F[_]](ast: Ast[F]): Free[Alg[F, *], Model] =
     ast.cata(folder[F, Alg[F, *]]).value
 
-  case class CompilerState[F[_]](
-    errors: Chain[(Token[F], String)] = Chain.empty[(Token[F], String)],
-    names: NamesState[F] = NamesState[F](),
-    abilities: AbilitiesState[F] = AbilitiesState[F](),
-    types: TypesState[F] = TypesState[F]()
-  )
-
   def interpret[F[_]](free: Free[Alg[F, *], Model]): State[CompilerState[F], Model] = {
     import monocle.macros.syntax.all._
 
@@ -87,8 +80,11 @@ object Semantics {
     free.foldMap[State[CompilerState[F], *]](interpreter)
   }
 
-  def generateModel[F[_]](ast: Ast[F]): ValidatedNec[(Token[F], String), Model] =
+  def astToState[F[_]](ast: Ast[F]): State[CompilerState[F], Model] =
     (transpile[F] _ andThen interpret[F])(ast)
+
+  def generateModel[F[_]](ast: Ast[F]): ValidatedNec[(Token[F], String), Model] =
+    astToState[F](ast)
       .run(CompilerState[F]())
       .map { case (state, gen) =>
         NonEmptyChain

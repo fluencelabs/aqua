@@ -1,35 +1,41 @@
 package aqua.parser.lift
 
-import cats.Comonad
+import cats.{Comonad, Eval}
 import cats.parse.{LocationMap, Parser => P}
 
 import scala.language.implicitConversions
 
 case class Span(startIndex: Int, endIndex: Int) {
 
-  def focus(text: String, ctx: Int): Option[Span.Focus] = {
-    val map = LocationMap(text)
-    map.toLineCol(startIndex).flatMap {
-      case (line, column) =>
-        map
-          .getLine(line)
-          .map(l =>
-            Span.Focus(
-              (Math.max(0, line - ctx) until line).map(i => map.getLine(i).map(i -> _)).toList.flatten, {
-                val (l1, l2) = l.splitAt(column)
-                val (lc, l3) = l2.splitAt(endIndex - startIndex)
-                (line, l1, lc, l3)
-              },
-              ((line + 1) to (line + ctx)).map(i => map.getLine(i).map(i -> _)).toList.flatten
-            )
+  def focus(locationMap: Eval[LocationMap], ctx: Int): Option[Span.Focus] = {
+    val map = locationMap.value
+    map.toLineCol(startIndex).flatMap { case (line, column) =>
+      map
+        .getLine(line)
+        .map(l =>
+          Span.Focus(
+            (Math
+              .max(0, line - ctx) until line).map(i => map.getLine(i).map(i -> _)).toList.flatten, {
+              val (l1, l2) = l.splitAt(column)
+              val (lc, l3) = l2.splitAt(endIndex - startIndex)
+              (line, l1, lc, l3)
+            },
+            ((line + 1) to (line + ctx)).map(i => map.getLine(i).map(i -> _)).toList.flatten,
+            column
           )
+        )
     }
   }
 }
 
 object Span {
 
-  case class Focus(pre: List[(Int, String)], line: (Int, String, String, String), post: List[(Int, String)]) {
+  case class Focus(
+    pre: List[(Int, String)],
+    line: (Int, String, String, String),
+    post: List[(Int, String)],
+    column: Int
+  ) {
 
     private lazy val lastN = post.lastOption.map(_._1).getOrElse(line._1) + 1
     private lazy val lastNSize = lastN.toString.length
@@ -79,8 +85,8 @@ object Span {
   implicit object spanLiftParser extends LiftParser[F] {
 
     override def lift[T](p: P[T]): P[F[T]] =
-      (P.index.with1 ~ p ~ P.index).map {
-        case ((s, v), e) ⇒ (Span(s, e), v)
+      (P.index.with1 ~ p ~ P.index).map { case ((s, v), e) ⇒
+        (Span(s, e), v)
       }
   }
 

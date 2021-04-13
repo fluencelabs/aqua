@@ -1,6 +1,7 @@
 package aqua.parser
 
 import aqua.parser.expr._
+import aqua.parser.head.{HeadExpr, HeaderExpr, ImportExpr}
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
@@ -8,7 +9,7 @@ import cats.free.Cofree
 import cats.parse.{Parser => P, Parser0 => P0}
 import cats.{Comonad, Eval}
 
-case class Ast[F[_]](tree: Ast.Tree[F]) {
+case class Ast[F[_]](head: Ast.Head[F], tree: Ast.Tree[F]) {
 
   def cata[T](folder: (Expr[F], Chain[T]) => Eval[T]): Eval[T] =
     Cofree.cata[Chain, Expr[F], T](tree)(folder)
@@ -16,17 +17,26 @@ case class Ast[F[_]](tree: Ast.Tree[F]) {
 
 object Ast {
   type Tree[F[_]] = Cofree[Chain, Expr[F]]
+  type Head[F[_]] = Cofree[Chain, HeaderExpr[F]]
 
-  def rootExprs: List[Expr.Companion] =
+  def treeExprs: List[Expr.Companion] =
     ServiceExpr :: AliasExpr :: DataStructExpr :: FuncExpr :: Nil
 
+  def headExprs: List[HeaderExpr.Companion] =
+    ImportExpr :: Nil
+
   def parser[F[_]: LiftParser: Comonad](ps: Indent): P0[Ast[F]] =
-    P.repSep0(
-      P.oneOf(rootExprs.map(_.ast[F](ps))),
+    ((P.repSep0(P.oneOf(headExprs.map(_.ast[F])), ` \n+`) <* ` \n+`).? ~ P.repSep0(
+      P.oneOf(treeExprs.map(_.ast[F](ps))),
       ` \n+`
-    ).map(Chain.fromSeq)
-      .surroundedBy(` \n+`.?)
-      .map(ls => Ast(Cofree(RootExpr(), Eval.now(ls))))
+    )).surroundedBy(` \n+`.?)
+      .map {
+        case (Some(head), tree) => Chain.fromSeq(head) -> Chain.fromSeq(tree)
+        case (_, tree) => Chain.empty[Head[F]] -> Chain.fromSeq(tree)
+      }
+      .map { case (hs, ls) =>
+        Ast(Cofree(HeadExpr(), Eval.now(hs)), Cofree(RootExpr(), Eval.now(ls)))
+      }
 
   def fromString[F[_]: LiftParser: Comonad](script: String): ValidatedNec[P.Error, Ast[F]] =
     Validated

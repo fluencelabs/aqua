@@ -21,6 +21,9 @@ object Token {
 
   val ` ` : P[String] = P.charsWhile(fSpaces)
   val `data`: P[Unit] = P.string("data")
+  val `import`: P[Unit] = P.string("import")
+  val `use`: P[Unit] = P.string("use")
+  val `as`: P[Unit] = P.string("as")
   val `alias`: P[Unit] = P.string("alias")
   val `service`: P[Unit] = P.string("service")
   val `func`: P[Unit] = P.string("func")
@@ -37,8 +40,14 @@ object Token {
   val `par`: P[Unit] = P.string("par")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
-  val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
-  val `Class`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒ c.toString ++ s.getOrElse("") }
+
+  val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒
+    c.toString ++ s.getOrElse("")
+  }
+
+  val `Class`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒
+    c.toString ++ s.getOrElse("")
+  }
   val `\n` : P[Unit] = P.string("\n\r") | P.char('\n') | P.string("\r\n")
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
   val ` \n` : P[Unit] = (` `.?.void *> (`--` *> P.charsWhile(_ != '\n')).?.void).with1 *> `\n`

@@ -1,7 +1,7 @@
 package aqua.semantics.rules.abilities
 
 import aqua.semantics.rules.{ReportError, StackInterpreter}
-import aqua.parser.lexer.{Name, Token, Value}
+import aqua.parser.lexer.{Ability, Name, Token, Value}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.~>
@@ -95,9 +95,19 @@ class AbilitiesInterpreter[F[_], X](implicit
 
       case ds: DefineService[F] =>
         getService(ds.name.value).flatMap {
-          case Some(_) => report(ds.name, "Service with this name was already defined").as(false)
+          case Some(_) =>
+            getState.map(_.definitions.get(ds.name.value).exists(_ == ds.name)).flatMap {
+              case true => State.pure(false)
+              case false => report(ds.name, "Service with this name was already defined").as(false)
+
+            }
           case None =>
-            modify(s => s.copy(services = s.services.updated(ds.name.value, ds.arrows))).as(true)
+            modify(s =>
+              s.copy(
+                services = s.services.updated(ds.name.value, ds.arrows),
+                definitions = s.definitions.updated(ds.name.value, ds.name)
+              )
+            ).as(true)
         }
 
     }).asInstanceOf[State[X, A]]
@@ -106,7 +116,8 @@ class AbilitiesInterpreter[F[_], X](implicit
 case class AbilitiesState[F[_]](
   stack: List[AbilityStackFrame[F]] = Nil,
   services: Map[String, NonEmptyMap[String, ArrowType]] = Map.empty,
-  rootServiceIds: Map[String, Value[F]] = Map.empty[String, Value[F]]
+  rootServiceIds: Map[String, Value[F]] = Map.empty[String, Value[F]],
+  definitions: Map[String, Ability[F]] = Map.empty[String, Ability[F]]
 ) {
 
   def purgeArrows: Option[(NonEmptyList[(Name[F], ArrowType)], AbilitiesState[F])] =

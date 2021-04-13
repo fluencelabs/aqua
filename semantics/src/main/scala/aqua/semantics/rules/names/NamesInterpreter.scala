@@ -1,7 +1,7 @@
 package aqua.semantics.rules.names
 
 import aqua.semantics.rules.{ReportError, StackInterpreter}
-import aqua.parser.lexer.Token
+import aqua.parser.lexer.{Name, Token}
 import aqua.types.{ArrowType, Type}
 import cats.data.State
 import cats.~>
@@ -49,7 +49,11 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
 
       case dn: DefineName[F] =>
         readName(dn.name.value).flatMap {
-          case Some(_) => report(dn.name, "This name was already defined in the scope").as(false)
+          case Some(_) =>
+            getState.map(_.definitions.get(dn.name.value).exists(_ == dn.name)).flatMap {
+              case true => State.pure(false)
+              case false => report(dn.name, "This name was already defined in the scope").as(false)
+            }
           case None =>
             mapStackHead(
               report(dn.name, "Cannot define a variable in the root scope")
@@ -58,11 +62,21 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
         }
       case da: DefineArrow[F] =>
         readName(da.name.value).flatMap {
-          case Some(_) => report(da.name, "This name was already defined in the scope").as(false)
+          case Some(_) =>
+            getState.map(_.definitions.get(da.name.value).exists(_ == da.name)).flatMap {
+              case true => State.pure(false)
+              case false => report(da.name, "This arrow was already defined in the scope").as(false)
+            }
+
           case None =>
             mapStackHead(
               if (da.isRoot)
-                modify(st => st.copy(rootArrows = st.rootArrows.updated(da.name.value, da.gen)))
+                modify(st =>
+                  st.copy(
+                    rootArrows = st.rootArrows.updated(da.name.value, da.gen),
+                    definitions = st.definitions.updated(da.name.value, da.name)
+                  )
+                )
                   .as(true)
               else
                 report(da.name, "Cannot define a variable in the root scope")
@@ -78,7 +92,8 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
 
 case class NamesState[F[_]](
   stack: List[NamesFrame[F]] = Nil,
-  rootArrows: Map[String, ArrowType] = Map.empty
+  rootArrows: Map[String, ArrowType] = Map.empty,
+  definitions: Map[String, Name[F]] = Map.empty[String, Name[F]]
 ) {
 
   def allNames: LazyList[String] =

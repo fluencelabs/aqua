@@ -75,22 +75,31 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
           }
 
       case ddt: DefineDataType[F] =>
-        getState.map(_.isDefined(ddt.name.value)).flatMap {
-          case true => report(ddt.name, s"Type `${ddt.name.value}` was already defined").as(false)
-          case false =>
+        getState.map(_.definitions.get(ddt.name.value)).flatMap {
+          case Some(n) if n == ddt.name => State.pure(false)
+          case Some(_) =>
+            report(ddt.name, s"Type `${ddt.name.value}` was already defined").as(false)
+          case None =>
             modify(st =>
-              st.copy(strict =
-                st.strict.updated(ddt.name.value, ProductType(ddt.name.value, ddt.fields))
+              st.copy(
+                strict = st.strict.updated(ddt.name.value, ProductType(ddt.name.value, ddt.fields)),
+                definitions = st.definitions.updated(ddt.name.value, ddt.name)
               )
             )
               .as(true)
         }
 
       case da: DefineAlias[F] =>
-        getState.map(_.isDefined(da.name.value)).flatMap {
-          case true => report(da.name, s"Type `${da.name.value}` was already defined").as(false)
-          case false =>
-            modify(st => st.copy(strict = st.strict.updated(da.name.value, da.target))).as(true)
+        getState.map(_.definitions.get(da.name.value)).flatMap {
+          case Some(n) if n == da.name => State.pure(false)
+          case Some(_) => report(da.name, s"Type `${da.name.value}` was already defined").as(false)
+          case None =>
+            modify(st =>
+              st.copy(
+                strict = st.strict.updated(da.name.value, da.target),
+                definitions = st.definitions.updated(da.name.value, da.name)
+              )
+            ).as(true)
         }
 
       case rl: ResolveLambda[F] =>
@@ -117,7 +126,8 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
 
 case class TypesState[F[_]](
   fields: Map[String, (Name[F], Type)] = Map.empty[String, (Name[F], Type)],
-  strict: Map[String, Type] = Map.empty[String, Type]
+  strict: Map[String, Type] = Map.empty[String, Type],
+  definitions: Map[String, CustomTypeToken[F]] = Map.empty[String, CustomTypeToken[F]]
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
 

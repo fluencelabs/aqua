@@ -3,25 +3,23 @@ package aqua
 import cats.effect.{IO, IOApp}
 import cats.data.Validated
 
-import scala.io.Source
+import java.nio.file.Paths
 
 object Test extends IOApp.Simple {
 
   override def run: IO[Unit] =
-    IO {
-      def process(str: String) =
-        Aqua.generateTS(str) match {
-          case Validated.Valid(v) ⇒
-            println(v)
-            println(Console.GREEN + "Aqua script processed successfully" + Console.RESET)
-          case Validated.Invalid(errs) ⇒
-            errs.map(_.showForConsole(str)).map(println)
-            println(Console.RED + s"Aqua script errored, total ${errs.length} problems found" + Console.RESET)
-        }
-
-      val script = Source.fromResource("for-par.aqua").mkString
-      process(script)
-
-    }
+    AquaCompiler
+      .compileFilesTo[IO](
+        Paths.get("./aqua-src"),
+        LazyList(Paths.get("./aqua")),
+        Paths.get("./target"),
+        AquaCompiler.TypescriptTarget
+      )
+      .map {
+        case Validated.Invalid(errs) =>
+          errs.map(println)
+        case Validated.Valid(res) =>
+          res.map(println)
+      }
 
 }
