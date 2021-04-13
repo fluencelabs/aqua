@@ -62,7 +62,7 @@ case class TypescriptFunc(func: FuncResolved) {
        |                });
        |                $setCallbacks
        |                ${returnCallback.getOrElse("")}
-       |                h.on('nameOfServiceWhereToSendXorError', 'errorProbably', (args) => {
+       |                h.on('${conf.errorHandlingService}', '${conf.error}', (args) => {
        |                    // assuming error is the single argument
        |                    const [err] = args;
        |                    reject(err);
