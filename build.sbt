@@ -23,6 +23,8 @@ val commons = Seq(
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full)
 )
 
+commons
+
 lazy val cli = project
   .settings(commons: _*)
   .settings(
