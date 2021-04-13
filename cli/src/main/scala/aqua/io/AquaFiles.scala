@@ -9,6 +9,7 @@ import cats.syntax.apply._
 import fs2.io.file.Files
 
 import java.nio.file.Path
+import scala.util.Try
 
 object AquaFiles {
   type Mods[T] = Modules[FileModuleId, AquaFileError, T]
@@ -17,33 +18,41 @@ object AquaFiles {
   def readSources[F[_]: Files: Concurrent](
     sourcePath: Path
   ): ETC[F, Chain[AquaFile]] =
-    // TODO wrap this with F, as it could fail
-    sourcePath.toFile
-      .listFiles()
-      .toList
-      .map {
-        case f if f.isFile && f.getName.endsWith(".aqua") =>
-          AquaFile
-            .read(f.toPath.toAbsolutePath)
-            .map(Chain(_))
-            .leftMap(NonEmptyChain.one)
-        case f if f.isDirectory =>
-          readSources(f.toPath)
-      }
-      .foldLeft[ETC[F, Chain[AquaFile]]](
-        EitherT.rightT(Chain.empty)
-      ) { case (accF, nextF) =>
-        EitherT((accF.value, nextF.value).mapN {
-          case (Right(acc), Right(v)) =>
-            Right(acc ++ v)
-          case (Left(acc), Left(v)) =>
-            Left(acc ++ v)
-          case (Left(acc), _) =>
-            Left(acc)
-          case (_, Left(v)) =>
-            Left(v)
-        })
-      }
+    // TODO use effect instead of Try
+    EitherT
+      .fromEither[F](
+        Try(sourcePath.toFile)
+          .filter(_.isDirectory)
+          .flatMap(d => Try(d.listFiles().toList))
+          .toEither
+      )
+      .leftMap[AquaFileError](FileSystemError)
+      .leftMap(NonEmptyChain.one)
+      .flatMap(
+        _.collect {
+          case f if f.isFile && f.getName.endsWith(".aqua") =>
+            AquaFile
+              .read(f.toPath.toAbsolutePath)
+              .map(Chain(_))
+              .leftMap(NonEmptyChain.one)
+          case f if f.isDirectory =>
+            readSources(f.toPath)
+        }
+          .foldLeft[ETC[F, Chain[AquaFile]]](
+            EitherT.rightT(Chain.empty)
+          ) { case (accF, nextF) =>
+            EitherT((accF.value, nextF.value).mapN {
+              case (Right(acc), Right(v)) =>
+                Right(acc ++ v)
+              case (Left(acc), Left(v)) =>
+                Left(acc ++ v)
+              case (Left(acc), _) =>
+                Left(acc)
+              case (_, Left(v)) =>
+                Left(v)
+            })
+          }
+      )
 
   def sourceModules[F[_]: Concurrent, T](
     sources: Chain[AquaFile],

@@ -27,6 +27,7 @@ Input directory should contain files with `aqua` scripts.
 - **[parser](./parser)** - parser, takes source text and produces a source AST
 - **[model](./model)** - middle-end, internal representation of the code, optimizations and transfromations
 - **[semantics](./semantics)** - rules to convert source AST into the model
+- **[linker](./linker)** - checks dependencies between modules, builds and combines an abstract dependencies tree
 - **[backend/air](./backend/air)** – generates AIR code from the middle-end model
 - **[backend/ts](./backend/ts)** - generates AIR code and Typescript wrappers for use with Fluence JS SDK
 - **[cli](./cli)** - CLI interface
