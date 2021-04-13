@@ -2,16 +2,17 @@ val dottyVersion = "2.13.5"
 
 scalaVersion := dottyVersion
 
-//val dottyVersion = "3.0.0-RC1"
+//val dottyVersion = "3.0.0-RC2"
 
 val aquaV = "0.1.1"
 
-val catsV = "2.4.2"
-val catsParseV = "0.3.1"
-val monocleV = "3.0.0-M3"
-val scalaTestV = "3.2.5"
-val fs2V = "3.0.0-M7"
-val catsEffectV = "3.0.0-RC2"
+val catsV = "2.5.0"
+val catsParseV = "0.3.2"
+val monocleV = "3.0.0-M4"
+val scalaTestV = "3.2.7"
+val fs2V = "3.0.0"
+val catsEffectV = "3.0.2"
+val declineV = "2.0.0-RC1"
 
 name := "aqua-hll"
 
@@ -25,14 +26,15 @@ val commons = Seq(
 lazy val cli = project
   .settings(commons: _*)
   .settings(
-    mainClass in (Compile, run) := Some("aqua.Main"),
-    mainClass in assembly       := Some("aqua.Main"),
+    mainClass in (Compile, run) := Some("aqua.AquaCli"),
+    mainClass in assembly       := Some("aqua.AquaCli"),
     assemblyJarName in assembly := "aqua-hll.jar",
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt"       % "4.0.1",
-      "org.typelevel"    %% "cats-effect" % catsEffectV,
-      "co.fs2"           %% "fs2-core"    % fs2V,
-      "co.fs2"           %% "fs2-io"      % fs2V
+      "com.monovore"  %% "decline"        % declineV,
+      "com.monovore"  %% "decline-effect" % declineV,
+      "org.typelevel" %% "cats-effect"    % catsEffectV,
+      "co.fs2"        %% "fs2-core"       % fs2V,
+      "co.fs2"        %% "fs2-io"         % fs2V
     )
   )
   .dependsOn(semantics, `backend-air`, `backend-ts`, linker)
