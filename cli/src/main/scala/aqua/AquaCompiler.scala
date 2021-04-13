@@ -1,20 +1,30 @@
 package aqua
 
+import aqua.backend.air.FuncAirGen
+import aqua.backend.ts.TypescriptFile
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
 import aqua.model.ScriptModel
 import aqua.parser.lexer.Token
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{CompilerState, Semantics}
-import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
+import cats.Applicative
+import cats.data.{Chain, EitherT, NonEmptyChain, Validated, ValidatedNec}
 import cats.effect.kernel.Concurrent
 import fs2.io.file.Files
 import cats.syntax.monoid._
 import cats.syntax.functor._
+import cats.syntax.flatMap._
+import cats.syntax.show._
+import fs2.text
 
 import java.nio.file.Path
 
 object AquaCompiler {
+  sealed trait CompileTarget
+  case object TypescriptTarget extends CompileTarget
+  case object AirTarget extends CompileTarget
+
   case class Prepared(target: String => Path, model: ScriptModel)
 
   def prepareFiles[F[_]: Files: Concurrent](
@@ -83,5 +93,73 @@ object AquaCompiler {
         .map(_.toConsoleStr(err._2, Console.CYAN))
         .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
     )
+
+  def compileFilesTo[F[_]: Files: Concurrent](
+    srcPath: Path,
+    imports: LazyList[Path],
+    targetPath: Path,
+    compileTo: CompileTarget
+  ): F[ValidatedNec[String, Chain[String]]] =
+    prepareFiles(srcPath, imports, targetPath).flatMap[ValidatedNec[String, Chain[String]]] {
+      case Validated.Invalid(e) =>
+        Applicative[F].pure(Validated.invalid(e))
+      case Validated.Valid(preps) =>
+        (compileTo match {
+          case TypescriptTarget =>
+            preps
+              .map(p => writeFile(p.target("ts"), TypescriptFile(p.model).generateTS()))
+
+          // TODO add function name to AirTarget class
+          case AirTarget =>
+            preps
+              .map(p =>
+                writeFile(
+                  p.target("air"),
+                  p.model.resolveFunctions
+                    .map(FuncAirGen)
+                    .map(g =>
+                      // add function name before body
+                      s";; function name: ${g.func.name}\n\n" + g.generateAir.show
+                    )
+                    .toList
+                    .mkString("\n\n\n")
+                )
+              )
+
+        }).foldLeft(
+          EitherT.rightT[F, NonEmptyChain[String]](Chain.empty[String])
+        ) { case (accET, writeET) =>
+          EitherT(for {
+            a <- accET.value
+            w <- writeET.value
+          } yield (a, w) match {
+            case (Left(errs), Left(err)) => Left(errs :+ err)
+            case (Right(res), Right(r)) => Right(res :+ r)
+            case (Left(errs), _) => Left(errs)
+            case (_, Left(err)) => Left(NonEmptyChain.of(err))
+          })
+        }.value
+          .map(Validated.fromEither)
+
+    }
+
+  def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, String] =
+    EitherT.right[String](Files[F].deleteIfExists(file)) >>
+      EitherT[F, String, String](
+        fs2.Stream
+          .emit(
+            content
+          )
+          .through(text.utf8Encode)
+          .through(Files[F].writeAll(file))
+          .attempt
+          .map { e =>
+            e.left
+              .map(t => s"Error on writing file $file" + t)
+          }
+          .compile
+          .drain
+          .map(_ => Right(s"Compiled $file"))
+      )
 
 }

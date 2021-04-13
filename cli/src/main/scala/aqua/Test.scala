@@ -1,6 +1,5 @@
 package aqua
 
-import aqua.backend.ts.TypescriptFile
 import cats.effect.{IO, IOApp}
 import cats.data.Validated
 
@@ -10,16 +9,17 @@ object Test extends IOApp.Simple {
 
   override def run: IO[Unit] =
     AquaCompiler
-      .prepareFiles[IO](
+      .compileFilesTo[IO](
         Paths.get("./aqua-src"),
         LazyList(Paths.get("./aqua")),
-        Paths.get("./target")
+        Paths.get("./target"),
+        AquaCompiler.TypescriptTarget
       )
       .map {
         case Validated.Invalid(errs) =>
           errs.map(println)
-        case Validated.Valid(preps) =>
-          preps.map(p => p.target("ts") + "\n" + TypescriptFile(p.model).generateTS()).map(println)
+        case Validated.Valid(res) =>
+          res.map(println)
       }
 
 }
