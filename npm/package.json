@@ -1,0 +1,25 @@
+{
+  "name": "@fluencelabs/aquamarine",
+  "version": "1.0.0",
+  "description": "Aquamarine compiler",
+  "files": [
+    "aquamarine.jar"
+  ],
+  "bin": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fluencelabs/aqua-hll.git"
+  },
+  "keywords": [
+    "aquamarine"
+  ],
+  "author": "Fluence Labs",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/fluencelabs/aqua-hll/issues"
+  },
+  "homepage": "https://github.com/fluencelabs/aqua-hll#readme"
+}
