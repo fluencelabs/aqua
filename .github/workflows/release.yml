@@ -60,9 +60,9 @@ jobs:
       - uses: marvinpinto/action-automatic-releases@latest
         with:
           # changelog will be automatically generated from the history
-          # between tag env.SBT_VERSION (eg 0.1.0 or 0.2.0, etc)
+          # between tag env.BASE_VERSION (eg 0.1.0 or 0.2.0, etc)
           # and the current commit
-          automatic_release_tag: "${{ env.SBT_VERSION }}"
+          automatic_release_tag: "${{ env.BASE_VERSION }}"
           title: "Aqua Compiler ${{ env.VERSION }}"
           files: |
             ${{ env.JAR }}
