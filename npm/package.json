@@ -1,6 +1,6 @@
 {
   "name": "@fluencelabs/aqua",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Aqua compiler",
   "files": [
     "aqua-cli.jar"

@@ -69,3 +69,19 @@ jobs:
           draft: true
           prerelease: false
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
+
+      ### Publish to NPM registry
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "14"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: cp ${{ env.JAR }} ./npm/aqua-cli.jar
+
+      - run: npm version ${{ env.VERSION }}
+        working-directory: ./npm
+
+      - run: npm publish --access public
+        working-directory: ./npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
