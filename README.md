@@ -1,19 +1,19 @@
-## Aquamarine
+## Aqua
 
-Aquamarine is a new-gen language for distributed systems.
+Aqua is a new-gen language for distributed systems.
 
-Aquamarine programs are executed on many peers, sequentially 
+Aqua programs are executed on many peers, sequentially 
 or in parallel, forming a single-use coordination network.
 
-Aquamarine's runtime is heterogeneous: it includes browsers, servers, devices, all involved in solving a single task.
-Therefore, Aquamarine scripts are compiled into several targets at once, with AIR and Typescript as a default.
+Aqua's runtime is heterogeneous: it includes browsers, servers, devices, all involved in solving a single task.
+Therefore, Aqua scripts are compiled into several targets at once, with AIR and Typescript as a default.
 
 ## Compiler CLI
 
-To build the Aquamarine compiler, clone the repo & run `sbt assembly`,
+To build the Aqua compiler, clone the repo & run `sbt assembly`,
 or simply download the latest JAR file from the [releases](https://github.com/fluencelabs/aqua-hll/releases) page.
 
-It requires `java` to run Aquamarine compiler from the command line:
+It requires `java` to run Aqua compiler from the command line:
 
 ```commandline
 java -jar aqua-hll.jar path/to/input/dir path/to/output/dir
