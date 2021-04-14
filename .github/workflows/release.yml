@@ -57,6 +57,27 @@ jobs:
           stat "$JAR"
           echo "JAR=$JAR" >> $GITHUB_ENV
 
+      ### Publish to NPM registry
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "14"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install jq and prepare package
+        run: |
+          sudo apt-get update && sudo apt-get --yes --force-yes install jq
+          PKG_NAME="$(cat package.json | jq -r .name)"
+          cp ${{ env.JAR }} ./npm/aqua-cli.jar
+
+      - run: npm version ${{ env.VERSION }}
+        working-directory: ./npm
+
+      - run: npm publish --access public
+        working-directory: ./npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      ### create release
       - uses: marvinpinto/action-automatic-releases@latest
         with:
           # changelog will be automatically generated from the history
@@ -66,6 +87,8 @@ jobs:
           title: "Aqua Compiler ${{ env.VERSION }}"
           files: |
             ${{ env.JAR }}
+          body: |
+            [${{ env.VERSION }} @ NPM registry](https://www.npmjs.com/package/${{ env.PKG_NAME }}/v/${{ env.VERSION }})
           draft: true
           prerelease: false
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
