@@ -42,6 +42,7 @@ jobs:
 
       - name: Check .jar exists
         run: |
+          find . -name "*.jar"
           JAR="cli/target/scala-2.13/aqua-${{ env.VERSION }}.jar"
           stat "$JAR"
           echo "JAR=$JAR" >> $GITHUB_ENV
