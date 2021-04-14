@@ -18,7 +18,7 @@ name := "aqua-hll"
 
 val commons = Seq(
   baseAquaVersion := "0.1.1",
-  version                                := baseAquaVersion.value + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
+  version                                := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion                           := dottyVersion,
   libraryDependencies += "org.scalatest" %% "scalatest" % scalaTestV % Test,
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full)
