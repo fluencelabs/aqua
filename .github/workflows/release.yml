@@ -43,8 +43,13 @@ jobs:
           echo $OUTPUT
           echo "==== 1"
           echo "$OUTPUT"
-          echo "==== 2"
-          read -d "\n" VERSION BASE_VERSION <<<$(echo "$OUTPUT" | tail -n2)
+          echo "==== tail -n3"
+          echo "$OUTPUT" | tail -n3
+          echo "==== tail -n3 | head -n2"
+          echo "$OUTPUT" | tail -n3 | head -n2
+          echo "===="
+
+          read -d "\n" VERSION BASE_VERSION <<<$(echo "$OUTPUT" | tail -n3 | head -n2)
           echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         env:
