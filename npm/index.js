@@ -7,7 +7,7 @@ const { exec } = require("child_process");
 const args = [
   "java",
   "-jar",
-  __dirname + "\\aquamarine.jar",
+  __dirname + "\\aqua-cli.jar",
   "-m",
   "node_modules",
   ...process.argv.slice(2),
