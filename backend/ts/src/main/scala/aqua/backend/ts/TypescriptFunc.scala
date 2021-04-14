@@ -42,6 +42,9 @@ case class TypescriptFunc(func: FuncResolved) {
       .map(_._2)
       .fold("void")(typeToTs)
 
+    val returnVal =
+      if (retType == "void") "Promise.race([promise, Promise.resolve()])" else "promise"
+
     s"""
        |export async function ${func.name}(client: FluenceClient${if (func.func.args.isEmpty) ""
     else ", "}${argsTypescript}): Promise<$retType> {
@@ -75,7 +78,7 @@ case class TypescriptFunc(func: FuncResolved) {
        |            .build();
        |    });
        |    await client.initiateFlow(request);
-       |    return promise;
+       |    return ${returnVal};
        |}
       """.stripMargin
   }
