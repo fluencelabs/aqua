@@ -7,8 +7,14 @@ on:
     #   - "v*"
     branches:
       - "main"
+      - "sbt-version-to-jar"
 
   workflow_dispatch:
+
+defaults:
+  run:
+    env:
+      BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:
   release:
@@ -32,23 +38,23 @@ jobs:
         run: |
           VERSION="$(sbt 'print cli/version' |& tail -n2 | head -n1)"
           echo "SBT_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "VERSION=$VERSION-${{ github.run_number }}" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Add version to .jar name
         run: |
-          JAR="aqua-hll-${{ env.VERSION }}.jar"
+          JAR="aqua-${{ env.VERSION }}.jar"
           mv "cli/target/scala-2.13/aqua-hll.jar" $JAR
           echo "JAR=$JAR" >> $GITHUB_ENV
 
-      - uses: marvinpinto/action-automatic-releases@latest
-        with:
-          # changelog will be automatically generated from the history
-          # between tag env.SBT_VERSION (eg 0.1.0 or 0.2.0, etc)
-          # and the current commit
-          automatic_release_tag: "${{ env.SBT_VERSION }}"
-          title: "Aqua Compiler ${{ env.VERSION }}"
-          files: |
-            ${{ env.JAR }}
-          draft: true
-          prerelease: false
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+      # - uses: marvinpinto/action-automatic-releases@latest
+      #   with:
+      #     # changelog will be automatically generated from the history
+      #     # between tag env.SBT_VERSION (eg 0.1.0 or 0.2.0, etc)
+      #     # and the current commit
+      #     automatic_release_tag: "${{ env.SBT_VERSION }}"
+      #     title: "Aqua Compiler ${{ env.VERSION }}"
+      #     files: |
+      #       ${{ env.JAR }}
+      #     draft: true
+      #     prerelease: false
+      #     repo_token: "${{ secrets.GITHUB_TOKEN }}"

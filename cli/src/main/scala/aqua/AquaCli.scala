@@ -52,7 +52,6 @@ object AquaCli extends IOApp {
       "aqua-c",
       "Aquamarine compiler",
       helpFlag = true,
-      // TODO get version from SBT!
       Option(getClass.getPackage.getImplementationVersion).filter(_.nonEmpty)
     )(mainOpts, args)
 }
