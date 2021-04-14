@@ -38,18 +38,20 @@ jobs:
           # VERSION="$(sbt 'print cli/version' |& tail -n2 | head -n1)"
           # BASE_VERSION="$(sbt 'print cli/baseAquaVersion' |& tail -n2 | head -n1)"
 
+          # print versions in reverse order
           OUTPUT=$(sbt 'print cli/baseAquaVersion; print cli/version')
           echo "==== 0"
           echo $OUTPUT
           echo "==== 1"
-          echo "$OUTPUT"
+          echo -n "$OUTPUT"
           echo "==== tail -n3"
-          echo "$OUTPUT" | tail -n3
+          echo -n "$OUTPUT" | tail -n3
           echo "==== tail -n3 | head -n2"
-          echo "$OUTPUT" | tail -n3 | head -n2
+          echo -n "$OUTPUT" | tail -n3 | head -n2
           echo "===="
 
-          read -d "\n" VERSION BASE_VERSION <<<$(echo "$OUTPUT" | tail -n3)
+          # read two lines to two variables
+          read -d "\n" VERSION BASE_VERSION <<<$(echo -n "$OUTPUT" | tail -n3)
           echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         env:
