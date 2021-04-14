@@ -7,7 +7,6 @@ on:
     #   - "v*"
     branches:
       - "main"
-      - "npm"
 
   workflow_dispatch:
 
