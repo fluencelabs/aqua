@@ -3,11 +3,12 @@
 "use strict";
 
 const { exec } = require("child_process");
+const path = require("path");
 
 const args = [
   "java",
   "-jar",
-  __dirname + "\\aqua-cli.jar",
+  path.join(__dirname, "\\aqua-cli.jar"),
   "-m",
   "node_modules",
   ...process.argv.slice(2),
