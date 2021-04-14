@@ -51,7 +51,10 @@ jobs:
           echo "===="
 
           # read two lines to two variables
-          read -rd "\n" VERSION BASE_VERSION <<<$(echo -n "$OUTPUT" | tail -n3) || true
+          read -rd "\n" VERSION BASE_VERSION <<<$(echo "$OUTPUT" | tail -n3 | head -n2) || true
+          echo "BASE_VERSION="$BASE_VERSION
+          echo "VERSION="$VERSION
+
           echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         env:
