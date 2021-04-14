@@ -25,27 +25,44 @@ jobs:
       ### Update & build
       - name: Assembly
         run: sbt cli/assembly
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
 
       ### Create release
       - name: Get project version
-        # In CI sbt appends a new line after its output, so we need `tail -n2 | head -n1`
+        # In CI sbt appends a new line after its output, so we need `tail -n3 | head -n2` to get last two non-empty lines
         run: |
-          VERSION="$(sbt 'print cli/version' |& tail -n2 | head -n1)"
-          echo "SBT_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "VERSION=$VERSION-${{ github.run_number }}" >> $GITHUB_ENV
+          # Slower way of getting two variables from sbt. Try it if something breaks
+          #
+          # VERSION="$(sbt 'print cli/version' |& tail -n2 | head -n1)"
+          # BASE_VERSION="$(sbt 'print cli/baseAquaVersion' |& tail -n2 | head -n1)"
 
-      - name: Add version to .jar name
+          # print two versions as two lines
+          OUTPUT=$(sbt 'print cli/baseAquaVersion; print cli/version')
+          # read two lines to two variables
+          read -rd "\n" BASE_VERSION VERSION <<<$(echo "$OUTPUT" | tail -n3 | head -n2) || true
+
+          # debug output
+          echo "BASE_VERSION="$BASE_VERSION
+          echo "VERSION="$VERSION
+
+          echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+
+      - name: Check .jar exists
         run: |
-          JAR="aqua-hll-${{ env.VERSION }}.jar"
-          mv "cli/target/scala-2.13/aqua-hll.jar" $JAR
+          JAR="cli/target/scala-2.13/aqua-cli-${{ env.VERSION }}.jar"
+          stat "$JAR"
           echo "JAR=$JAR" >> $GITHUB_ENV
 
       - uses: marvinpinto/action-automatic-releases@latest
         with:
           # changelog will be automatically generated from the history
-          # between tag env.SBT_VERSION (eg 0.1.0 or 0.2.0, etc)
+          # between tag env.BASE_VERSION (eg 0.1.0 or 0.2.0, etc)
           # and the current commit
-          automatic_release_tag: "${{ env.SBT_VERSION }}"
+          automatic_release_tag: "${{ env.BASE_VERSION }}"
           title: "Aqua Compiler ${{ env.VERSION }}"
           files: |
             ${{ env.JAR }}
