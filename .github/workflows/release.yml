@@ -38,20 +38,12 @@ jobs:
           # VERSION="$(sbt 'print cli/version' |& tail -n2 | head -n1)"
           # BASE_VERSION="$(sbt 'print cli/baseAquaVersion' |& tail -n2 | head -n1)"
 
-          # print versions in reverse order
           OUTPUT=$(sbt 'print cli/baseAquaVersion; print cli/version')
-          echo "==== 0"
-          echo $OUTPUT
-          echo "==== 1"
-          echo -n "$OUTPUT"
-          echo "==== tail -n3"
-          echo -n "$OUTPUT" | tail -n3
-          echo "==== tail -n3 | head -n2"
-          echo -n "$OUTPUT" | tail -n3 | head -n2
-          echo "===="
 
           # read two lines to two variables
-          read -rd "\n" VERSION BASE_VERSION <<<$(echo "$OUTPUT" | tail -n3 | head -n2) || true
+          read -rd "\n" BASE_VERSION VERSION <<<$(echo "$OUTPUT" | tail -n3 | head -n2) || true
+
+          # debug output
           echo "BASE_VERSION="$BASE_VERSION
           echo "VERSION="$VERSION
 
