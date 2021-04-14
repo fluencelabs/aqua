@@ -30,7 +30,7 @@ lazy val cli = project
   .settings(
     mainClass in (Compile, run) := Some("aqua.AquaCli"),
     mainClass in assembly       := Some("aqua.AquaCli"),
-    assemblyJarName in assembly := "aqua-hll.jar",
+    assemblyJarName in assembly := "aqua-cli-" + version.value + ".jar",
     libraryDependencies ++= Seq(
       "com.monovore"  %% "decline"        % declineV,
       "com.monovore"  %% "decline-effect" % declineV,

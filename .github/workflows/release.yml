@@ -12,9 +12,8 @@ on:
   workflow_dispatch:
 
 defaults:
-  run:
-    env:
-      BUILD_NUMBER: ${{ github.run_number }}
+  env:
+    BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:
   release:
