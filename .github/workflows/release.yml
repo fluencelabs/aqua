@@ -7,6 +7,7 @@ on:
     #   - "v*"
     branches:
       - "main"
+      - "npm"
 
   workflow_dispatch:
 
@@ -57,19 +58,6 @@ jobs:
           stat "$JAR"
           echo "JAR=$JAR" >> $GITHUB_ENV
 
-      - uses: marvinpinto/action-automatic-releases@latest
-        with:
-          # changelog will be automatically generated from the history
-          # between tag env.BASE_VERSION (eg 0.1.0 or 0.2.0, etc)
-          # and the current commit
-          automatic_release_tag: "${{ env.BASE_VERSION }}"
-          title: "Aqua Compiler ${{ env.VERSION }}"
-          files: |
-            ${{ env.JAR }}
-          draft: true
-          prerelease: false
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-
       ### Publish to NPM registry
       - uses: actions/setup-node@v1
         with:
@@ -85,3 +73,19 @@ jobs:
         working-directory: ./npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      ### create release
+      - uses: marvinpinto/action-automatic-releases@latest
+        with:
+          # changelog will be automatically generated from the history
+          # between tag env.BASE_VERSION (eg 0.1.0 or 0.2.0, etc)
+          # and the current commit
+          automatic_release_tag: "${{ env.BASE_VERSION }}"
+          title: "Aqua Compiler ${{ env.VERSION }}"
+          files: |
+            ${{ env.JAR }}
+          body: |
+            [${{ env.VERSION }} @ NPM registry](https://www.npmjs.com/package/@fluencelabs/aqua/v/${{ env.VERSION }})
+          draft: true
+          prerelease: false
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
