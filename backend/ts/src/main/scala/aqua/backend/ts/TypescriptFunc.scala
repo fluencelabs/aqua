@@ -43,7 +43,7 @@ case class TypescriptFunc(func: FuncResolved) {
       .fold("void")(typeToTs)
 
     val returnVal =
-      if (retType == "void") "Promise.race([promise, Promise.resolve()])" else "promise"
+      func.func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
     s"""
        |export async function ${func.name}(client: FluenceClient${if (func.func.args.isEmpty) ""
