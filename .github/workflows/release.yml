@@ -31,10 +31,14 @@ jobs:
 
       ### Create release
       - name: Get project version
-        # In CI sbt appends a new line after its output, so we need `tail -n2 | head -n1`
+        # In CI sbt appends a new line after its output, so we need `tail -n3 | head -n2` to get last two non-empty lines
         run: |
-          VERSION="$(sbt 'print cli/version' |& tail -n2 | head -n1)"
-          BASE_VERSION="$(sbt 'print cli/baseAquaVersion' |& tail -n2 | head -n1)"
+          # Slower way of getting two variables from sbt. Try it if something breaks
+          #
+          # VERSION="$(sbt 'print cli/version' |& tail -n2 | head -n1)"
+          # BASE_VERSION="$(sbt 'print cli/baseAquaVersion' |& tail -n2 | head -n1)"
+
+          read -d "\n" VERSION BASE_VERSION <<<$(sbt 'print cli/baseAquaVersion; print cli/version' | tail -n3 | head -n2)
           echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         env:
