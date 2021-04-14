@@ -7,7 +7,6 @@ on:
     #   - "v*"
     branches:
       - "main"
-      - "sbt-version-to-jar"
 
   workflow_dispatch:
 
@@ -38,8 +37,8 @@ jobs:
           # VERSION="$(sbt 'print cli/version' |& tail -n2 | head -n1)"
           # BASE_VERSION="$(sbt 'print cli/baseAquaVersion' |& tail -n2 | head -n1)"
 
+          # print two versions as two lines
           OUTPUT=$(sbt 'print cli/baseAquaVersion; print cli/version')
-
           # read two lines to two variables
           read -rd "\n" BASE_VERSION VERSION <<<$(echo "$OUTPUT" | tail -n3 | head -n2) || true
 
@@ -58,15 +57,15 @@ jobs:
           stat "$JAR"
           echo "JAR=$JAR" >> $GITHUB_ENV
 
-      # - uses: marvinpinto/action-automatic-releases@latest
-      #   with:
-      #     # changelog will be automatically generated from the history
-      #     # between tag env.SBT_VERSION (eg 0.1.0 or 0.2.0, etc)
-      #     # and the current commit
-      #     automatic_release_tag: "${{ env.SBT_VERSION }}"
-      #     title: "Aqua Compiler ${{ env.VERSION }}"
-      #     files: |
-      #       ${{ env.JAR }}
-      #     draft: true
-      #     prerelease: false
-      #     repo_token: "${{ secrets.GITHUB_TOKEN }}"
+      - uses: marvinpinto/action-automatic-releases@latest
+        with:
+          # changelog will be automatically generated from the history
+          # between tag env.SBT_VERSION (eg 0.1.0 or 0.2.0, etc)
+          # and the current commit
+          automatic_release_tag: "${{ env.SBT_VERSION }}"
+          title: "Aqua Compiler ${{ env.VERSION }}"
+          files: |
+            ${{ env.JAR }}
+          draft: true
+          prerelease: false
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
