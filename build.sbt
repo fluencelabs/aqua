@@ -4,7 +4,7 @@ scalaVersion := dottyVersion
 
 //val dottyVersion = "3.0.0-RC2"
 
-val aquaV = "0.1.1-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT")
+val baseAquaVersion = settingKey[String]("base aqua version")
 
 val catsV = "2.5.0"
 val catsParseV = "0.3.2"
@@ -17,7 +17,8 @@ val declineV = "2.0.0-RC1"
 name := "aqua-hll"
 
 val commons = Seq(
-  version                                := aquaV,
+  baseAquaVersion := "0.1.1",
+  version                                := baseAquaVersion.value + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion                           := dottyVersion,
   libraryDependencies += "org.scalatest" %% "scalatest" % scalaTestV % Test,
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full)
