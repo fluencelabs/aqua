@@ -38,7 +38,13 @@ jobs:
           # VERSION="$(sbt 'print cli/version' |& tail -n2 | head -n1)"
           # BASE_VERSION="$(sbt 'print cli/baseAquaVersion' |& tail -n2 | head -n1)"
 
-          read -d "\n" VERSION BASE_VERSION <<<$(sbt 'print cli/baseAquaVersion; print cli/version' | tail -n3 | head -n2)
+          OUTPUT=$(sbt 'print cli/baseAquaVersion; print cli/version')
+          echo "==== 0"
+          echo $OUTPUT
+          echo "==== 1"
+          echo "$OUTPUT"
+          echo "==== 2"
+          read -d "\n" VERSION BASE_VERSION <<<$(echo "$OUTPUT" | tail -n2)
           echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         env:
