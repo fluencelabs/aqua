@@ -8,7 +8,7 @@ const path = require("path");
 const args = [
   "java",
   "-jar",
-  path.join(__dirname, "\\aqua-cli.jar"),
+  path.join(__dirname, "aqua-cli.jar"),
   "-m",
   "node_modules",
   ...process.argv.slice(2),
