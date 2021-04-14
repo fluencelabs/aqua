@@ -64,7 +64,11 @@ jobs:
           node-version: "14"
           registry-url: "https://registry.npmjs.org"
 
-      - run: cp ${{ env.JAR }} ./npm/aqua-cli.jar
+      - name: Install jq and prepare package
+        run: |
+          sudo apt-get update && sudo apt-get --yes --force-yes install jq
+          PKG_NAME="$(cat package.json | jq -r .name)"
+          cp ${{ env.JAR }} ./npm/aqua-cli.jar
 
       - run: npm version ${{ env.VERSION }}
         working-directory: ./npm
@@ -85,7 +89,7 @@ jobs:
           files: |
             ${{ env.JAR }}
           body: |
-            [${{ env.VERSION }} @ NPM registry](https://www.npmjs.com/package/@fluencelabs/aqua/v/${{ env.VERSION }})
+            [${{ env.VERSION }} @ NPM registry](https://www.npmjs.com/package/${{ env.PKG_NAME }}/v/${{ env.VERSION }})
           draft: true
           prerelease: false
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
