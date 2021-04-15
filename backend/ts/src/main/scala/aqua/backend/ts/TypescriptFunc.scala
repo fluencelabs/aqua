@@ -73,7 +73,7 @@ case class TypescriptFunc(func: FuncResolved) {
        |            })
        |            .handleScriptError(reject)
        |            .handleTimeout(() => {
-       |                reject('Request timed out');
+       |                reject('Request timed out for ${func.name}');
        |            })
        |            .build();
        |    });
