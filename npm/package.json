@@ -1,0 +1,24 @@
+{
+  "name": "@fluencelabs/aqua-cli",
+  "version": "0.0.0",
+  "description": "Aqua compiler",
+  "files": [
+    "aqua-cli.jar"
+  ],
+  "bin": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fluencelabs/aqua.git"
+  },
+  "keywords": [
+    "aqua",
+    "fluence"
+  ],
+  "author": "Fluence Labs",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/fluencelabs/aqua/issues"
+  },
+  "homepage": "https://github.com/fluencelabs/aqua#readme"
+}
