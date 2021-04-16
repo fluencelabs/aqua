@@ -23,6 +23,7 @@ object ForClient {
                 errorHandlingCallback,
                 errorFuncName,
                 Call(
+                  // TODO not a string
                   (LiteralModel("%last_error%"), string) :: Nil,
                   None
                 )

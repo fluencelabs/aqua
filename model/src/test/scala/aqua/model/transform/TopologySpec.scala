@@ -143,7 +143,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 //    println(Console.MAGENTA + expected)
 //    println(Console.RESET)
 
-    proc should be(expected)
+    proc.equalsOrPrintDiff(expected) should be(true)
   }
 
   "topology resolver" should "work well with function 1 (no calls before on)" in {
@@ -216,7 +216,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               call(0, initPeer),
               on(otherPeer, Nil, through(relayV), call(1, otherPeer))
             ),
-            on(initPeer, relayV :: Nil, through(relayV), respCall(bc, ret, initPeer))
+            through(relayV),
+            on(initPeer, relayV :: Nil, respCall(bc, ret, initPeer))
           )
         ),
         on(initPeer, relayV :: Nil, xorErrorCall(bc, initPeer))
