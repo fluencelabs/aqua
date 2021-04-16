@@ -181,14 +181,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         on(initPeer, relayV :: Nil, xorErrorCall(bc, initPeer))
       )
 
-    //println(procFC diffToString expectedFC)
-
-    //    println(Console.BLUE + (func.func.body.tree: Node))
-//    println(Console.YELLOW + procFC)
-//    println(Console.MAGENTA + expectedFC)
-//    println(Console.RESET)
-
-    procFC should be(expectedFC)
+    procFC.equalsOrPrintDiff(expectedFC) should be(true)
 
   }
 

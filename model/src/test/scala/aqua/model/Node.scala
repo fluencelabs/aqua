@@ -67,6 +67,12 @@ case class Node(tag: OpTag, ops: List[Node] = Nil) {
                        ((if (tag == other.tag) Console.GREEN
                          else Console.RED) + "}\n" + Console.RESET))
 
+  def equalsOrPrintDiff(other: Node): Boolean =
+    if (this == other) true
+    else {
+      println(diffToString(other))
+      false
+    }
 }
 
 object Node {
