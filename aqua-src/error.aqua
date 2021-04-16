@@ -1,8 +1,11 @@
-service Local("smth"):
-    getString: -> string
+service Test("test"):
+	getBool: -> bool
+	getList: -> []string
 
-func join() -> string:
-	app <- Local.getString()
-	on "app.user_list.peer_id":
-		res <- Local.getString()
-	<- res
+func f():
+	list <- Test.getList()
+	for user <- list:
+		on "peer" via "relay":
+			isOnline <- Test.getBool()
+		if isOnline:
+			Test.getBool()
