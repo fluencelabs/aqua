@@ -1,8 +1,8 @@
 package aqua.model.transform
 
-import aqua.model.body.FuncOp
-import aqua.model.{FuncCallable, FuncResolved, InitPeerIdModel, LiteralModel, Node}
-import aqua.types.{LiteralType, ScalarType}
+import aqua.model.body.{Call, CallArrowTag, CallServiceTag, FuncOp}
+import aqua.model.{FuncCallable, FuncResolved, InitPeerIdModel, LiteralModel, Node, VarModel}
+import aqua.types.{ArrowType, LiteralType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -225,6 +225,61 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     procFC.equalsOrPrintDiff(expectedFC) should be(true)
 
+  }
+
+  "topology resolver" should "link funcs correctly" in {
+    /*
+    func one() -> u64:
+      variable <- Demo.get42()
+      <- variable
+
+    func two() -> u64:
+      variable <- one()
+      <- variable
+     */
+
+    val f1: FuncCallable =
+      FuncCallable(
+        FuncOp(Node(CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), None))),
+        Nil,
+        Some(VarModel("v") -> ScalarType.string),
+        Map.empty
+      )
+
+    val f2: FuncCallable =
+      FuncCallable(
+        FuncOp(
+          Node(CallArrowTag(None, "callable", Call(Nil, Some("v"))))
+        ),
+        Nil,
+        Some(VarModel("v") -> ScalarType.string),
+        Map("callable" -> f1)
+      )
+
+    val bc = BodyConfig()
+
+    val res = FuncResolved("tmp", f2).forClient(bc): Node
+
+    res.equalsOrPrintDiff(
+      xor(
+        on(
+          initPeer,
+          relayV :: Nil,
+          seq(
+            dataCall(bc, "relay", initPeer),
+            Node(
+              CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), Some(initPeer))
+            ),
+            on(
+              initPeer,
+              relayV :: Nil,
+              respCall(bc, VarModel("v"), initPeer)
+            )
+          )
+        ),
+        on(initPeer, relayV :: Nil, xorErrorCall(bc, initPeer))
+      )
+    ) should be(true)
   }
 
 }

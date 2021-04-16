@@ -96,7 +96,7 @@ object ForClient {
         )
       )
 
-    val body =
+    val funcAround: FuncCallable = FuncCallable(
       wrapXor(
         viaRelay(
           FuncOp
@@ -109,22 +109,34 @@ object ForClient {
                   } :+ getDataOp(relayVarName)
                 )
                 .append(
-                  func.func
-                    .apply(
-                      funcArgsCall,
-                      func.func.args.collect { case (argName, Right(arrowType)) =>
-                        argName -> initPeerCallable(argName, arrowType)
-                      }.toMap,
-                      func.func.args.collect { case (argName, Left(_)) =>
-                        argName
-                      }.foldLeft(Set(relayVarName))(_ + _)
+                  FuncOp.leaf(
+                    CallArrowTag(
+                      None,
+                      func.name,
+                      funcArgsCall
                     )
-                    .value
-                    ._1
+                  )
                 ) ++ Chain.fromSeq(returnCallback.toSeq)
             )
         )
-      ).tree
+      ),
+      (func.name -> Right(func.arrowType)) :: Nil,
+      None,
+      func.func.args.collect { case (argName, Right(arrowType)) =>
+        argName -> initPeerCallable(argName, arrowType)
+      }.toMap
+    )
+
+    val body =
+      funcAround
+        .apply(
+          Call((VarModel("_func") -> func.arrowType) :: Nil, None),
+          Map("_func" -> func.func),
+          Set.empty
+        )
+        .value
+        ._1
+        .tree
 
     Topology.resolve(body)
   }
