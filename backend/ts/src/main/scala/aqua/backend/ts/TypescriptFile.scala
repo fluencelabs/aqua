@@ -14,7 +14,13 @@ case class TypescriptFile(script: ScriptModel) {
 object TypescriptFile {
 
   val Header: String =
-    """import { FluenceClient, PeerIdB58 } from '@fluencelabs/fluence';
+    """/**
+      | *
+      | * This is generated and patched by https://github.com/fluencelabs/aqua/ code. All changes can be erased at compile time.
+      | * If you found bugs - feel free to write an issue here https://github.com/fluencelabs/aqua/issues
+      | *
+      | */
+      |import { FluenceClient, PeerIdB58 } from '@fluencelabs/fluence';
       |import { RequestFlowBuilder } from '@fluencelabs/fluence/dist/api.unstable';
       |""".stripMargin
 
