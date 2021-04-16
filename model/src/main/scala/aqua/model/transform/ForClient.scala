@@ -21,7 +21,7 @@ object ForClient {
             FuncOp.leaf(
               CallServiceTag(
                 errorHandlingCallback,
-                error,
+                errorFuncName,
                 Call(
                   (LiteralModel("%last_error%"), string) :: Nil,
                   None
@@ -95,7 +95,7 @@ object ForClient {
         )
       )
 
-    val body = {
+    val body =
       wrapXor(
         viaRelay(
           FuncOp
@@ -124,7 +124,6 @@ object ForClient {
             )
         )
       ).tree
-    }
 
     Topology.resolve(body)
   }

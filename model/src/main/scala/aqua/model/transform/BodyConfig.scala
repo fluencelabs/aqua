@@ -6,12 +6,12 @@ case class BodyConfig(
   getDataService: String = "getDataSrv",
   callbackService: String = "callbackSrv",
   errorHandlingService: String = "errorHandlingSrv",
-  error: String = "error",
+  errorFuncName: String = "error",
   respFuncName: String = "response",
   relayVarName: String = "relay"
 ) {
 
-  val errorId: ValueModel = LiteralModel("\"" + error + "\"")
+  val errorId: ValueModel = LiteralModel("\"" + errorFuncName + "\"")
   val errorHandlingCallback: ValueModel = LiteralModel("\"" + errorHandlingService + "\"")
   val callbackSrvId: ValueModel = LiteralModel("\"" + callbackService + "\"")
   val dataSrvId: ValueModel = LiteralModel("\"" + getDataService + "\"")
