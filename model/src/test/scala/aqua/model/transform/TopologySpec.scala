@@ -146,7 +146,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc should be(expected)
   }
 
-  "topology resolver" should "work well with function" in {
+  "topology resolver" should "work well with function 1 (no calls before on)" in {
 
     val ret = LiteralModel("\"return this\"")
 
@@ -176,6 +176,47 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             on(otherPeer, Nil, through(relayV), call(1, otherPeer)),
             through(relayV),
             on(initPeer, relayV :: Nil, respCall(bc, ret, initPeer))
+          )
+        ),
+        on(initPeer, relayV :: Nil, xorErrorCall(bc, initPeer))
+      )
+
+    procFC.equalsOrPrintDiff(expectedFC) should be(true)
+
+  }
+
+  "topology resolver" should "work well with function 2 (with a call before on)" in {
+
+    val ret = LiteralModel("\"return this\"")
+
+    val func: FuncResolved = FuncResolved(
+      "ret",
+      FuncCallable(
+        FuncOp(seq(call(0), on(otherPeer, Nil, call(1)))),
+        Nil,
+        Some(ret -> ScalarType.string),
+        Map.empty
+      )
+    )
+
+    val bc = BodyConfig()
+
+    val fc = ForClient(func, bc)
+
+    val procFC: Node = fc
+
+    val expectedFC =
+      xor(
+        on(
+          initPeer,
+          relayV :: Nil,
+          seq(
+            dataCall(bc, "relay", initPeer),
+            seq(
+              call(0, initPeer),
+              on(otherPeer, Nil, through(relayV), call(1, otherPeer))
+            ),
+            on(initPeer, relayV :: Nil, through(relayV), respCall(bc, ret, initPeer))
           )
         ),
         on(initPeer, relayV :: Nil, xorErrorCall(bc, initPeer))
