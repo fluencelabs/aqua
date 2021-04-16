@@ -13,25 +13,27 @@ object ForClient {
     import conf._
 
     def wrapXor(op: FuncOp): FuncOp =
-      FuncOp.node(
-        XorTag,
-        Chain(
-          op,
-          viaRelay(
-            FuncOp.leaf(
-              CallServiceTag(
-                errorHandlingCallback,
-                errorFuncName,
-                Call(
-                  // TODO not a string
-                  (LiteralModel("%last_error%"), string) :: Nil,
-                  None
+      if (wrapWithXor)
+        FuncOp.node(
+          XorTag,
+          Chain(
+            op,
+            viaRelay(
+              FuncOp.leaf(
+                CallServiceTag(
+                  errorHandlingCallback,
+                  errorFuncName,
+                  Call(
+                    // TODO not a string
+                    (LiteralModel("%last_error%"), string) :: Nil,
+                    None
+                  )
                 )
               )
             )
           )
         )
-      )
+      else op
 
     // Get to init user through a relay
     def viaRelay(op: FuncOp): FuncOp =

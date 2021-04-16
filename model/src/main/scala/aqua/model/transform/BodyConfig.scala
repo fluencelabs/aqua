@@ -8,7 +8,8 @@ case class BodyConfig(
   errorHandlingService: String = "errorHandlingSrv",
   errorFuncName: String = "error",
   respFuncName: String = "response",
-  relayVarName: String = "relay"
+  relayVarName: String = "relay",
+  wrapWithXor: Boolean = true
 ) {
 
   val errorId: ValueModel = LiteralModel("\"" + errorFuncName + "\"")

@@ -256,28 +256,25 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         Map("callable" -> f1)
       )
 
-    val bc = BodyConfig()
+    val bc = BodyConfig(wrapWithXor = false)
 
     val res = FuncResolved("tmp", f2).forClient(bc): Node
 
     res.equalsOrPrintDiff(
-      xor(
-        on(
-          initPeer,
-          relayV :: Nil,
-          seq(
-            dataCall(bc, "relay", initPeer),
-            Node(
-              CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), Some(initPeer))
-            ),
-            on(
-              initPeer,
-              relayV :: Nil,
-              respCall(bc, VarModel("v"), initPeer)
-            )
+      on(
+        initPeer,
+        relayV :: Nil,
+        seq(
+          dataCall(bc, "relay", initPeer),
+          Node(
+            CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), Some(initPeer))
+          ),
+          on(
+            initPeer,
+            relayV :: Nil,
+            respCall(bc, VarModel("v"), initPeer)
           )
-        ),
-        on(initPeer, relayV :: Nil, xorErrorCall(bc, initPeer))
+        )
       )
     ) should be(true)
   }
