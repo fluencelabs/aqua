@@ -8,10 +8,14 @@ or in parallel, forming a single-use coordination network.
 Aqua's runtime is heterogeneous: it includes browsers, servers, devices, all involved in solving a single task.
 Therefore, Aqua scripts are compiled into several targets at once, with AIR and Typescript as a default.
 
+## Using Aqua
+
+Please refer to [aqua-playground](https://github.com/fluencelabs/aqua-playground) to learn how to use Aqua.
+
 ## Compiler CLI
 
 To build the Aqua compiler, clone the repo & run `sbt assembly`,
-or simply download the latest JAR file from the [releases](https://github.com/fluencelabs/aqua-hll/releases) page.
+or simply download the latest JAR file from the [releases](https://github.com/fluencelabs/aqua/releases) page.
 
 It requires `java` to run Aqua compiler from the command line:
 

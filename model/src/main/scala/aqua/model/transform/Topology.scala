@@ -10,7 +10,13 @@ object Topology {
   type Tree = Cofree[Chain, OpTag]
 
   def through(peers: Chain[ValueModel]): Chain[Tree] =
-    peers.map(FuncOp.noop).map(_.tree)
+    peers
+      .foldLeft(Chain.empty[ValueModel]) {
+        case (acc, p) if acc.lastOption.contains(p) => acc
+        case (acc, p) => acc :+ p
+      }
+      .map(FuncOp.noop)
+      .map(_.tree)
 
   // TODO: after topology is resolved, OnTag should be eliminated
   def resolve(op: Tree): Tree =
@@ -45,21 +51,38 @@ object Topology {
       case (path, SeqTag, children) =>
         // TODO if we have OnTag, and then something else, need to get back
         // AND keep in mind that we will handle all the children with OnTag processor!
-        def modifyChildrenList(list: List[Tree]): Chain[Tree] = list match {
+
+        val pathViaChain = Chain.fromSeq(path.collectFirst { case t: OnTag =>
+          t.via.toList
+        }.toList.flatten)
+
+        def modifyChildrenList(list: List[Tree], prev: Option[Tree]): Chain[Tree] = list match {
           case Nil => Chain.empty
           case op :: Nil =>
-            // TODO: it is a last op, and it could be an On tag; in this case, get back?
-            Chain.one(op)
+            prev match {
+              // TODO: sequence might be longer
+              case Some(Cofree(SeqTag, seqTail)) =>
+                seqTail.value.lastOption match {
+                  case Some(Cofree(ont: OnTag, _)) =>
+                    through(ont.via.reverse ++ pathViaChain) :+ op
+                  case _ =>
+                    Chain.one(op)
+                }
+              case _ =>
+                Chain.one(op)
+            }
+
           case (oncf @ Cofree(ont: OnTag, _)) :: op :: tail =>
-            (oncf +: through(ont.via.reverse ++ Chain.fromSeq(path.collectFirst { case t: OnTag =>
-              t.via.toList
-            }.toList.flatten))) ++ modifyChildrenList(op :: tail)
-          case o :: ops => o +: modifyChildrenList(ops)
+            (oncf +: through(ont.via.reverse ++ pathViaChain)) ++ modifyChildrenList(
+              op :: tail,
+              Some(oncf)
+            )
+          case o :: ops => o +: modifyChildrenList(ops, Some(o))
         }
 
         Cofree[Chain, OpTag](
           SeqTag,
-          children.map(_.toList).map(modifyChildrenList)
+          children.map(_.toList).map(modifyChildrenList(_, None))
         )
 
       case (_, t, children) =>

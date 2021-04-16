@@ -16,7 +16,7 @@ sealed trait Type {
 sealed trait DataType extends Type
 
 case class ScalarType private (name: String) extends DataType {
-  override def toString: String = name
+  override def toString: String = s"Scalar($name)"
 }
 
 object ScalarType {
@@ -52,7 +52,7 @@ object ScalarType {
 }
 
 case class LiteralType private (oneOf: Set[ScalarType], name: String) extends DataType {
-  override def toString: String = name
+  override def toString: String = s"Literal($name)"
 }
 
 object LiteralType {
