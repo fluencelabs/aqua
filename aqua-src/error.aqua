@@ -1,0 +1,8 @@
+service Local("smth"):
+    getString: -> string
+
+func join() -> string:
+	app <- Local.getString()
+	on "app.user_list.peer_id":
+		res <- Local.getString()
+	<- res
