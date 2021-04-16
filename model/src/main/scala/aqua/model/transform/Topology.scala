@@ -2,7 +2,7 @@ package aqua.model.transform
 
 import aqua.model.ValueModel
 import aqua.model.body.{CallServiceTag, FuncOp, OnTag, OpTag, SeqTag}
-import cats.{Eval, PartialOrder}
+import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 
@@ -59,8 +59,8 @@ object Topology {
         def modifyChildrenList(list: List[Tree], prev: Option[Tree]): Chain[Tree] = list match {
           case Nil => Chain.empty
           case op :: Nil =>
-            // TODO: it is a last op, and it could be an On tag; in this case, get back?
             prev match {
+              // TODO: sequence might be longer
               case Some(Cofree(SeqTag, seqTail)) =>
                 seqTail.value.lastOption match {
                   case Some(Cofree(ont: OnTag, _)) =>
