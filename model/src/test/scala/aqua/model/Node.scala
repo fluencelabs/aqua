@@ -15,17 +15,17 @@ case class Node(tag: OpTag, ops: List[Node] = Nil) {
   override def toString: String =
     tag.toString + (if (ops.isEmpty) "\n" else s"{\n${ops.mkString}\n}\n")
 
-  def equalOrNot[T](left: T, right: T): String = (if (left == right)
-                                                    Console.GREEN + left + Console.RESET
-                                                  else
-                                                    Console.BLUE + left + Console.RED + " != " + Console.YELLOW + right)
+  private def equalOrNot[T](left: T, right: T): String = (if (left == right)
+                                                            Console.GREEN + left + Console.RESET
+                                                          else
+                                                            Console.BLUE + left + Console.RED + " != " + Console.YELLOW + right)
 
-  def diffArg(left: (ValueModel, Type), right: (ValueModel, Type)): String =
+  private def diffArg(left: (ValueModel, Type), right: (ValueModel, Type)): String =
     Console.GREEN + "(" +
       equalOrNot(left._1, right._1) + Console.GREEN + ", " +
       equalOrNot(left._2, right._2) + Console.GREEN + ")"
 
-  def diffCall(left: Call, right: Call): String =
+  private def diffCall(left: Call, right: Call): String =
     if (left == right) Console.GREEN + left + Console.RESET
     else
       Console.GREEN + "Call(" +
@@ -35,7 +35,7 @@ case class Node(tag: OpTag, ops: List[Node] = Nil) {
           .mkString("::") + Console.GREEN + ", " +
         equalOrNot(left.exportTo, right.exportTo) + Console.GREEN + ")"
 
-  def diffServiceCall(left: CallServiceTag, right: CallServiceTag): String =
+  private def diffServiceCall(left: CallServiceTag, right: CallServiceTag): String =
     Console.GREEN + "CallServiceTag(" +
       equalOrNot(left.serviceId, right.serviceId) + Console.GREEN + ", " +
       equalOrNot(left.funcName, right.funcName) + Console.GREEN + ", " +
@@ -43,7 +43,7 @@ case class Node(tag: OpTag, ops: List[Node] = Nil) {
       equalOrNot(left.peerId, right.peerId) +
       Console.GREEN + ")" + Console.RESET
 
-  def diffTags(left: OpTag, right: OpTag): String = (left, right) match {
+  private def diffTags(left: OpTag, right: OpTag): String = (left, right) match {
     case (l: CallServiceTag, r: CallServiceTag) => diffServiceCall(l, r)
     case _ =>
       Console.BLUE + s"    $left ${Console.RED}\n != ${Console.YELLOW}${right}${Console.RED}"
