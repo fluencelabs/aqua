@@ -93,7 +93,7 @@ object AirGen {
             )
           )
 
-        case (CallArrowTag(_, funcName, Call(args, exportTo)), ops) =>
+        case (CallArrowTag(funcName, Call(args, exportTo)), ops) =>
           // TODO: should be already resolved & removed from tree
           Eval later opsToSingle(
             ops

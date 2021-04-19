@@ -1,9 +1,10 @@
 package aqua.semantics.rules.abilities
 
+import aqua.model.ServiceModel
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.parser.lexer.{Name, Value}
 import aqua.types.ArrowType
-import cats.data.{NonEmptyList, NonEmptyMap, State}
+import cats.data.{NonEmptyList, State}
 import cats.~>
 import cats.syntax.functor._
 import monocle.Lens
@@ -16,7 +17,7 @@ class AbilitiesInterpreter[F[_], X](implicit
       GenLens[AbilitiesState[F]](_.stack)
     ) with (AbilityOp[F, *] ~> State[X, *]) {
 
-  private def getService(name: String): S[Option[NonEmptyMap[String, ArrowType]]] =
+  private def getService(name: String): S[Option[ServiceModel]] =
     getState.map(_.services.get(name))
 
   override def apply[A](fa: AbilityOp[F, A]): State[X, A] =
@@ -37,7 +38,7 @@ class AbilitiesInterpreter[F[_], X](implicit
         }
 
       case ga: GetArrow[F] =>
-        getService(ga.name.value).flatMap {
+        getService(ga.name.value).map(_.map(_.arrows)).flatMap {
           case Some(arrows) =>
             arrows(ga.arrow.value)
               .fold(
@@ -104,7 +105,8 @@ class AbilitiesInterpreter[F[_], X](implicit
           case None =>
             modify(s =>
               s.copy(
-                services = s.services.updated(ds.name.value, ds.arrows),
+                services =
+                  s.services.updated(ds.name.value, ServiceModel(ds.name.value, ds.arrows)),
                 definitions = s.definitions.updated(ds.name.value, ds.name)
               )
             ).as(true)

@@ -249,7 +249,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val f2: FuncCallable =
       FuncCallable(
         FuncOp(
-          Node(CallArrowTag(None, "callable", Call(Nil, Some("v"))))
+          Node(CallArrowTag("callable", Call(Nil, Some("v"))))
         ),
         Nil,
         Some(VarModel("v") -> ScalarType.string),

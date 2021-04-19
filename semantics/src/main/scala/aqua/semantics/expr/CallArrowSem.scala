@@ -68,7 +68,6 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
               .map(argsResolved =>
                 FuncOp.leaf(
                   CallArrowTag(
-                    ability = None,
                     funcName = funcName.value,
                     Call(argsResolved, variable.map(_.value))
                   )

@@ -70,7 +70,7 @@ case class FuncCallable(
           // Functions may export variables, so collect them
           Map.empty[String, ValueModel]
       ) {
-        case ((noNames, resolvedExports), CallArrowTag(None, fn, c)) if allArrows.contains(fn) =>
+        case ((noNames, resolvedExports), CallArrowTag(fn, c)) if allArrows.contains(fn) =>
           // Apply arguments to a function – recursion
           val (appliedOp, value) =
             allArrows(fn)

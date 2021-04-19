@@ -1,13 +1,14 @@
 package aqua.semantics.rules.abilities
 
+import aqua.model.ServiceModel
 import aqua.parser.lexer.{Ability, Name, Token, Value}
 import aqua.types.ArrowType
 import cats.Monoid
-import cats.data.{NonEmptyList, NonEmptyMap}
+import cats.data.NonEmptyList
 
 case class AbilitiesState[F[_]](
   stack: List[AbilitiesState.Frame[F]] = Nil,
-  services: Map[String, NonEmptyMap[String, ArrowType]] = Map.empty,
+  services: Map[String, ServiceModel] = Map.empty,
   rootServiceIds: Map[String, Value[F]] = Map.empty[String, Value[F]],
   definitions: Map[String, Ability[F]] = Map.empty[String, Ability[F]]
 ) {

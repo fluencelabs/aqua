@@ -1,6 +1,6 @@
 package aqua.model.body
 
-import aqua.model.{AbilityModel, ValueModel}
+import aqua.model.ValueModel
 import aqua.types.Type
 import cats.data.Chain
 
@@ -24,9 +24,8 @@ sealed trait OpTag {
     case MatchMismatchTag(left, right, shouldMatch) =>
       MatchMismatchTag(f(left), f(right), shouldMatch)
     case ForTag(item, iterable) => ForTag(item, f(iterable))
-    case CallArrowTag(ability, funcName, call) =>
+    case CallArrowTag(funcName, call) =>
       CallArrowTag(
-        ability,
         funcName,
         call.mapValues(f)
       )
@@ -51,7 +50,6 @@ case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Bo
 case class ForTag(item: String, iterable: ValueModel) extends OpTag
 
 case class CallArrowTag(
-  ability: Option[AbilityModel],
   funcName: String,
   call: Call
 ) extends OpTag

@@ -113,7 +113,6 @@ object ForClient {
                 .append(
                   FuncOp.leaf(
                     CallArrowTag(
-                      None,
                       func.name,
                       funcArgsCall
                     )
