@@ -1,14 +1,15 @@
 package aqua.semantics.expr
 
-import aqua.model.body.{Call, CallArrowTag, CallServiceTag, FuncOp}
-import aqua.model.{Model, ValueModel}
+import aqua.model.func.Call
+import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
+import aqua.model.Model
 import aqua.parser.expr.CallArrowExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrowType, Type}
+import aqua.types.ArrowType
 import cats.free.Free
 import cats.syntax.flatMap._
 import cats.syntax.functor._
@@ -25,15 +26,15 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
   )(implicit
     N: NamesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Free[Alg, List[(ValueModel, Type)]] =
+  ): Free[Alg, List[Call.Arg]] =
     V.checkArguments(expr.funcName, at, args) >> variable
       .fold(freeUnit[Alg])(exportVar =>
         at.res.fold(
           // TODO: error! we're trying to export variable, but function has no export type
           freeUnit[Alg]
         )(resType => N.define(exportVar, resType).void)
-      ) >> args.foldLeft(Free.pure[Alg, List[(ValueModel, Type)]](Nil)) { case (acc, v) =>
-      (acc, V.resolveType(v)).mapN((a, b) => a ++ b.map(ValuesAlgebra.valueToModel(v) -> _))
+      ) >> args.foldLeft(Free.pure[Alg, List[Call.Arg]](Nil)) { case (acc, v) =>
+      (acc, V.resolveType(v)).mapN((a, b) => a ++ b.map(Call.Arg(ValuesAlgebra.valueToModel(v), _)))
     }
 
   private def toModel[Alg[_]](implicit
@@ -68,7 +69,6 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
               .map(argsResolved =>
                 FuncOp.leaf(
                   CallArrowTag(
-                    ability = None,
                     funcName = funcName.value,
                     Call(argsResolved, variable.map(_.value))
                   )

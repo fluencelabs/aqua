@@ -1,15 +1,15 @@
 package aqua.backend.air
 
-import aqua.model.FuncResolved
-import aqua.model.transform.BodyConfig
+import aqua.model.func.FuncCallable
+import aqua.model.transform.{BodyConfig, ForClient}
 
-case class FuncAirGen(func: FuncResolved) {
+case class FuncAirGen(func: FuncCallable) {
 
   /**
    * Generates AIR from the function body as it is, with no modifications and optimizations
    */
   def generateAir: Air =
-    AirGen(func.func.body.tree).generate
+    AirGen(func.body.tree).generate
 
   /**
    * Generates AIR from the optimized function body, assuming client is behind a relay
@@ -17,6 +17,6 @@ case class FuncAirGen(func: FuncResolved) {
    */
   def generateClientAir(conf: BodyConfig = BodyConfig()): Air =
     AirGen(
-      func.forClient(conf)
+      ForClient.resolve(func, conf)
     ).generate
 }

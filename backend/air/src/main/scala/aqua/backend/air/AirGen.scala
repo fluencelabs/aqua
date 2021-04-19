@@ -1,8 +1,8 @@
 package aqua.backend.air
 
 import aqua.model._
-import aqua.model.body.{
-  Call,
+import aqua.model.func.Call
+import aqua.model.func.body.{
   CallArrowTag,
   CallServiceTag,
   ForTag,
@@ -35,7 +35,6 @@ object AirGen {
 
   def valueToData(vm: ValueModel): DataView = vm match {
     case LiteralModel(value) => DataView.StringScalar(value)
-    case InitPeerIdModel => DataView.InitPeerId
     case VarModel(name, lambda) =>
       if (lambda.isEmpty) DataView.Variable(name)
       else DataView.VarLens(name, lambdaToString(lambda.toList))
@@ -88,12 +87,12 @@ object AirGen {
               peerId.map(valueToData).getOrElse(DataView.InitPeerId),
               valueToData(serviceId),
               funcName,
-              args.map(_._1).map(valueToData),
+              args.map(_.model).map(valueToData),
               exportTo
             )
           )
 
-        case (CallArrowTag(_, funcName, Call(args, exportTo)), ops) =>
+        case (CallArrowTag(funcName, Call(args, exportTo)), ops) =>
           // TODO: should be already resolved & removed from tree
           Eval later opsToSingle(
             ops

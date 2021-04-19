@@ -1,21 +1,8 @@
-package aqua.model.body
+package aqua.model.func.body
 
-import aqua.model.{AbilityModel, ValueModel}
-import aqua.types.Type
+import aqua.model.ValueModel
+import aqua.model.func.Call
 import cats.data.Chain
-
-case class Call(args: List[(ValueModel, Type)], exportTo: Option[String]) {
-
-  def mapValues(f: ValueModel => ValueModel): Call =
-    Call(
-      args.map { case (v, t) =>
-        (f(v), t)
-      },
-      exportTo
-    )
-
-  def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(f))
-}
 
 sealed trait OpTag {
 
@@ -24,9 +11,8 @@ sealed trait OpTag {
     case MatchMismatchTag(left, right, shouldMatch) =>
       MatchMismatchTag(f(left), f(right), shouldMatch)
     case ForTag(item, iterable) => ForTag(item, f(iterable))
-    case CallArrowTag(ability, funcName, call) =>
+    case CallArrowTag(funcName, call) =>
       CallArrowTag(
-        ability,
         funcName,
         call.mapValues(f)
       )
@@ -51,7 +37,6 @@ case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Bo
 case class ForTag(item: String, iterable: ValueModel) extends OpTag
 
 case class CallArrowTag(
-  ability: Option[AbilityModel],
   funcName: String,
   call: Call
 ) extends OpTag

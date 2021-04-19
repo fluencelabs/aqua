@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.Model
+import aqua.model.{Model, TypeModel}
 import aqua.parser.expr.ArrowTypeExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -10,9 +10,12 @@ import cats.syntax.functor._
 
 class ArrowTypeSem[F[_]](val expr: ArrowTypeExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit T: TypesAlgebra[F, Alg], A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Model] =
+  def program[Alg[_]](implicit
+    T: TypesAlgebra[F, Alg],
+    A: AbilitiesAlgebra[F, Alg]
+  ): Prog[Alg, Model] =
     T.resolveArrowDef(expr.`type`).flatMap {
-      case Some(t) => A.defineArrow(expr.name, t) as Model.empty("Arrow type generates no model")
+      case Some(t) => A.defineArrow(expr.name, t) as (TypeModel(expr.name.value, t): Model)
       case None => Free.pure[Alg, Model](Model.error("Arrow type unresolved"))
     }
 

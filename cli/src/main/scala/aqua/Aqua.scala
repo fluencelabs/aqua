@@ -35,7 +35,7 @@ object Aqua {
           .map(FuncAirGen)
           .map(g =>
             // add function name before body
-            s";; function name: ${g.func.name}\n\n" + g.generateAir.show
+            s";; function name: ${g.func.funcName}\n\n" + g.generateAir.show
           )
           .toList
           .mkString("\n\n\n")

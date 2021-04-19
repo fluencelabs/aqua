@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.Model
-import aqua.model.body.{FuncOp, OnTag}
+import aqua.model.func.body.{FuncOp, OnTag}
 import aqua.parser.expr.OnExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra

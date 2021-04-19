@@ -1,11 +1,12 @@
-service Test("test"):
-	getBool: -> bool
-	getList: -> []string
+service Demo("demo"):
+	get4() -> u64
+	get5(arg: u32)
+	get6(a: string) -> bool
 
-func f():
-	list <- Test.getList()
-	for user <- list:
-		on "peer" via "relay":
-			isOnline <- Test.getBool()
-		if isOnline:
-			Test.getBool()
+func one() -> u64:
+    variable <- Demo.get4()
+    <- variable
+
+func two() -> u64:
+    variable <- one()
+    <- variable

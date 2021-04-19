@@ -1,8 +1,9 @@
 package aqua.model.transform
 
-import aqua.model.body.FuncOp
-import aqua.model.{FuncCallable, FuncResolved, InitPeerIdModel, LiteralModel, Node}
-import aqua.types.{LiteralType, ScalarType}
+import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
+import aqua.model.func.{ArgsDef, Call, FuncCallable}
+import aqua.model.{LiteralModel, Node, VarModel}
+import aqua.types.ScalarType
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -150,19 +151,18 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val ret = LiteralModel("\"return this\"")
 
-    val func: FuncResolved = FuncResolved(
-      "ret",
+    val func: FuncCallable =
       FuncCallable(
+        "ret",
         FuncOp(on(otherPeer, Nil, call(1))),
-        Nil,
-        Some(ret -> ScalarType.string),
+        ArgsDef.empty,
+        Some(Call.Arg(ret, ScalarType.string)),
         Map.empty
       )
-    )
 
     val bc = BodyConfig()
 
-    val fc = ForClient(func, bc)
+    val fc = ForClient.resolve(func, bc)
 
     val procFC: Node = fc
 
@@ -189,19 +189,17 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val ret = LiteralModel("\"return this\"")
 
-    val func: FuncResolved = FuncResolved(
+    val func: FuncCallable = FuncCallable(
       "ret",
-      FuncCallable(
-        FuncOp(seq(call(0), on(otherPeer, Nil, call(1)))),
-        Nil,
-        Some(ret -> ScalarType.string),
-        Map.empty
-      )
+      FuncOp(seq(call(0), on(otherPeer, Nil, call(1)))),
+      ArgsDef.empty,
+      Some(Call.Arg(ret, ScalarType.string)),
+      Map.empty
     )
 
     val bc = BodyConfig()
 
-    val fc = ForClient(func, bc)
+    val fc = ForClient.resolve(func, bc)
 
     val procFC: Node = fc
 
@@ -225,6 +223,60 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     procFC.equalsOrPrintDiff(expectedFC) should be(true)
 
+  }
+
+  "topology resolver" should "link funcs correctly" in {
+    /*
+    func one() -> u64:
+      variable <- Demo.get42()
+      <- variable
+
+    func two() -> u64:
+      variable <- one()
+      <- variable
+     */
+
+    val f1: FuncCallable =
+      FuncCallable(
+        "f1",
+        FuncOp(Node(CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), None))),
+        ArgsDef.empty,
+        Some(Call.Arg(VarModel("v"), ScalarType.string)),
+        Map.empty
+      )
+
+    val f2: FuncCallable =
+      FuncCallable(
+        "f2",
+        FuncOp(
+          Node(CallArrowTag("callable", Call(Nil, Some("v"))))
+        ),
+        ArgsDef.empty,
+        Some(Call.Arg(VarModel("v"), ScalarType.string)),
+        Map("callable" -> f1)
+      )
+
+    val bc = BodyConfig(wrapWithXor = false)
+
+    val res = ForClient.resolve(f2, bc): Node
+
+    res.equalsOrPrintDiff(
+      on(
+        initPeer,
+        relayV :: Nil,
+        seq(
+          dataCall(bc, "relay", initPeer),
+          Node(
+            CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), Some(initPeer))
+          ),
+          on(
+            initPeer,
+            relayV :: Nil,
+            respCall(bc, VarModel("v"), initPeer)
+          )
+        )
+      )
+    ) should be(true)
   }
 
 }

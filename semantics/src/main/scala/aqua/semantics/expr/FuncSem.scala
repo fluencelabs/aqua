@@ -1,7 +1,8 @@
 package aqua.semantics.expr
 
-import aqua.model.body.FuncOp
-import aqua.model.{FuncModel, Model}
+import aqua.model.func.body.FuncOp
+import aqua.model.Model
+import aqua.model.func.{ArgDef, ArgsDef, Call, FuncModel}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.Arg
 import aqua.semantics.Prog
@@ -74,13 +75,17 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
 
         val model = FuncModel(
           name = name.value,
-          args = argNames
-            .zip(funcArrow.args)
-            .map {
-              case (n, dt: DataType) => n -> Left(dt)
-              case (n, at: ArrowType) => n -> Right(at)
-            },
-          ret = retValue.map(ValuesAlgebra.valueToModel).flatMap(vd => funcArrow.res.map(vd -> _)),
+          args = ArgsDef(
+            argNames
+              .zip(funcArrow.args)
+              .map {
+                case (n, dt: DataType) => ArgDef.Data(n, dt)
+                case (n, at: ArrowType) => ArgDef.Arrow(n, at)
+              }
+          ),
+          ret = retValue
+            .map(ValuesAlgebra.valueToModel)
+            .flatMap(vd => funcArrow.res.map(Call.Arg(vd, _))),
           body = bg
         )
 

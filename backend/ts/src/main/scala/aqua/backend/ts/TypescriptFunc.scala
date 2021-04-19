@@ -1,26 +1,24 @@
 package aqua.backend.ts
 
 import aqua.backend.air.FuncAirGen
-import aqua.model.FuncResolved
+import aqua.model.func.{ArgDef, FuncCallable}
 import aqua.model.transform.BodyConfig
 import aqua.types._
 import cats.syntax.show._
+import cats.syntax.functor._
 
-case class TypescriptFunc(func: FuncResolved) {
+case class TypescriptFunc(func: FuncCallable) {
 
   import TypescriptFunc._
 
   def argsTypescript: String =
-    func.func.args.map {
-      case (n, Left(t)) => s"${n}: " + typeToTs(t)
-      case (n, Right(at)) => s"${n}: " + typeToTs(at)
-    }.mkString(", ")
+    func.args.args.map(ad => s"${ad.name}: " + typeToTs(ad.`type`)).mkString(", ")
 
   def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
 
     val tsAir = FuncAirGen(func).generateClientAir(conf)
 
-    val returnCallback = func.func.ret.map { case (dv, t) =>
+    val returnCallback = func.ret.as {
       s"""h.on('${conf.callbackService}', '${conf.respFuncName}', (args) => {
          |  const [res] = args;
          |  resolve(res);
@@ -29,24 +27,24 @@ case class TypescriptFunc(func: FuncResolved) {
 
     }
 
-    val setCallbacks = func.func.args.map {
-      case (argName, Left(t)) =>
+    val setCallbacks = func.args.args.map {
+      case ArgDef.Data(argName, _) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
-      case (argName, Right(at)) =>
+      case ArgDef.Arrow(argName, at) =>
         s"""h.on('${conf.callbackService}', '$argName', (args) => {return $argName(${argsCallToTs(
           at
         )});});"""
     }.mkString("\n")
 
-    val retType = func.func.ret
-      .map(_._2)
+    val retType = func.ret
+      .map(_.`type`)
       .fold("void")(typeToTs)
 
     val returnVal =
-      func.func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
+      func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
     s"""
-       |export async function ${func.name}(client: FluenceClient${if (func.func.args.isEmpty) ""
+       |export async function ${func.funcName}(client: FluenceClient${if (func.args.isEmpty) ""
     else ", "}${argsTypescript}): Promise<$retType> {
        |    let request;
        |    const promise = new Promise<$retType>((resolve, reject) => {
@@ -73,7 +71,7 @@ case class TypescriptFunc(func: FuncResolved) {
        |            })
        |            .handleScriptError(reject)
        |            .handleTimeout(() => {
-       |                reject('Request timed out for ${func.name}');
+       |                reject('Request timed out for ${func.funcName}');
        |            })
        |            .build();
        |    });

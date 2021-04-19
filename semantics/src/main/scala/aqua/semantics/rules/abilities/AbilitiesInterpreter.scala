@@ -1,9 +1,10 @@
 package aqua.semantics.rules.abilities
 
+import aqua.model.ServiceModel
 import aqua.semantics.rules.{ReportError, StackInterpreter}
-import aqua.parser.lexer.{Ability, Name, Token, Value}
+import aqua.parser.lexer.{Name, Value}
 import aqua.types.ArrowType
-import cats.data.{NonEmptyList, NonEmptyMap, State}
+import cats.data.{NonEmptyList, State}
 import cats.~>
 import cats.syntax.functor._
 import monocle.Lens
@@ -12,17 +13,17 @@ import monocle.macros.GenLens
 class AbilitiesInterpreter[F[_], X](implicit
   lens: Lens[X, AbilitiesState[F]],
   error: ReportError[F, X]
-) extends StackInterpreter[F, X, AbilitiesState[F], AbilityStackFrame[F]](
+) extends StackInterpreter[F, X, AbilitiesState[F], AbilitiesState.Frame[F]](
       GenLens[AbilitiesState[F]](_.stack)
     ) with (AbilityOp[F, *] ~> State[X, *]) {
 
-  private def getService(name: String): S[Option[NonEmptyMap[String, ArrowType]]] =
+  private def getService(name: String): S[Option[ServiceModel]] =
     getState.map(_.services.get(name))
 
   override def apply[A](fa: AbilityOp[F, A]): State[X, A] =
     (fa match {
       case bs: BeginScope[F] =>
-        beginScope(AbilityStackFrame[F](bs.token))
+        beginScope(AbilitiesState.Frame[F](bs.token))
 
       case EndScope() =>
         endScope
@@ -37,7 +38,7 @@ class AbilitiesInterpreter[F[_], X](implicit
         }
 
       case ga: GetArrow[F] =>
-        getService(ga.name.value).flatMap {
+        getService(ga.name.value).map(_.map(_.arrows)).flatMap {
           case Some(arrows) =>
             arrows(ga.arrow.value)
               .fold(
@@ -104,7 +105,8 @@ class AbilitiesInterpreter[F[_], X](implicit
           case None =>
             modify(s =>
               s.copy(
-                services = s.services.updated(ds.name.value, ds.arrows),
+                services =
+                  s.services.updated(ds.name.value, ServiceModel(ds.name.value, ds.arrows)),
                 definitions = s.definitions.updated(ds.name.value, ds.name)
               )
             ).as(true)
@@ -112,26 +114,3 @@ class AbilitiesInterpreter[F[_], X](implicit
 
     }).asInstanceOf[State[X, A]]
 }
-
-case class AbilitiesState[F[_]](
-  stack: List[AbilityStackFrame[F]] = Nil,
-  services: Map[String, NonEmptyMap[String, ArrowType]] = Map.empty,
-  rootServiceIds: Map[String, Value[F]] = Map.empty[String, Value[F]],
-  definitions: Map[String, Ability[F]] = Map.empty[String, Ability[F]]
-) {
-
-  def purgeArrows: Option[(NonEmptyList[(Name[F], ArrowType)], AbilitiesState[F])] =
-    stack match {
-      case sc :: tail =>
-        NonEmptyList
-          .fromList(sc.arrows.values.toList)
-          .map(_ -> copy[F](sc.copy(arrows = Map.empty) :: tail))
-      case _ => None
-    }
-}
-
-case class AbilityStackFrame[F[_]](
-  token: Token[F],
-  arrows: Map[String, (Name[F], ArrowType)] = Map.empty[String, (Name[F], ArrowType)],
-  serviceIds: Map[String, Value[F]] = Map.empty[String, Value[F]]
-)

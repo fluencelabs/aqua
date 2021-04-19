@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.Model
+import aqua.model.{Model, ServiceModel}
 import aqua.parser.expr.ServiceExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -25,13 +25,20 @@ class ServiceSem[F[_]](val expr: ServiceExpr[F]) extends AnyVal {
       (_: Unit, body: Model) =>
         (A.purgeArrows(expr.name) <* A.endScope()).flatMap {
           case Some(nel) =>
+            val arrows = nel.map(kv => kv._1.value -> kv._2).toNem
             A.defineService(
               expr.name,
-              nel.map(kv => kv._1.value -> kv._2).toNem
-            ) >>
-              expr.id.fold(Free.pure[Alg, Model](Model.empty("No service id is OK")))(idV =>
-                V.ensureIsString(idV) >> A.setServiceId(expr.name, idV) as Model.empty("Service with ID defined")
-              )
+              arrows
+            ).flatMap {
+              case true =>
+                val srv = ServiceModel(expr.name.value, arrows)
+                expr.id.fold(Free.pure[Alg, Model](srv))(idV =>
+                  V.ensureIsString(idV) >> A.setServiceId(expr.name, idV) as (srv: Model)
+                )
+              case false =>
+                Free.pure(Model.empty("Service not created due to validation errors"))
+            }
+
           case None =>
             Free.pure(Model.error("Service has no arrows, fails"))
 

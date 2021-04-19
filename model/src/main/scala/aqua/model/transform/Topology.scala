@@ -1,7 +1,7 @@
 package aqua.model.transform
 
 import aqua.model.ValueModel
-import aqua.model.body.{CallServiceTag, FuncOp, OnTag, OpTag, SeqTag}
+import aqua.model.func.body.{CallServiceTag, FuncOps, OnTag, OpTag, SeqTag}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -9,13 +9,16 @@ import cats.free.Cofree
 object Topology {
   type Tree = Cofree[Chain, OpTag]
 
-  def through(peers: Chain[ValueModel]): Chain[Tree] =
-    peers
+  // Walks through peer IDs, doing a noop function on each
+  // If same IDs are found in a row, does noop only once
+  // TODO: if there's a chain like a -> b -> c -> ... -> b -> g, remove everything between b and b
+  def through(peerIds: Chain[ValueModel]): Chain[Tree] =
+    peerIds
       .foldLeft(Chain.empty[ValueModel]) {
         case (acc, p) if acc.lastOption.contains(p) => acc
         case (acc, p) => acc :+ p
       }
-      .map(FuncOp.noop)
+      .map(FuncOps.noop)
       .map(_.tree)
 
   // TODO: after topology is resolved, OnTag should be eliminated

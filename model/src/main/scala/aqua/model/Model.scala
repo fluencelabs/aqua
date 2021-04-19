@@ -1,7 +1,6 @@
 package aqua.model
 
-import aqua.model.body.FuncOp
-import cats.data.Chain
+import aqua.model.func.body.FuncOp
 import cats.kernel.Semigroup
 
 trait Model
@@ -15,17 +14,25 @@ object Model {
     override def combine(x: Model, y: Model): Model = (x, y) match {
       case (l: FuncOp, r: FuncOp) =>
         FuncOp.FuncOpSemigroup.combine(l, r)
-      case (l: ScriptModel, r: ScriptModel) => ScriptModel(l.funcs ++ r.funcs)
-      case (l: FuncModel, r: FuncModel) => ScriptModel(Chain(l, r))
-      case (l: ScriptModel, r: FuncModel) => ScriptModel(l.funcs.append(r))
-      case (l: FuncModel, r: ScriptModel) => ScriptModel(r.funcs.prepend(l))
-      case (_, r: ScriptModel) => r
-      case (l: ScriptModel, _) => l
-      case (_, r: FuncModel) => r
-      case (l: FuncModel, _) => l
-      case (l: EmptyModel, r: EmptyModel) => EmptyModel(l.log + " |+| " + r.log)
+      case (l: ScriptModel, r: ScriptModel) =>
+        ScriptModel.SMMonoid.combine(l, r)
+
       case (_: EmptyModel, r) => r
       case (l, _: EmptyModel) => l
+
+      case (l, r: ScriptModel) =>
+        ScriptModel.toScriptPart(l).fold(r)(ScriptModel.SMMonoid.combine(_, r))
+      case (l: ScriptModel, r) =>
+        ScriptModel.toScriptPart(r).fold(l)(ScriptModel.SMMonoid.combine(l, _))
+      case (l, r) =>
+        ScriptModel
+          .toScriptPart(l)
+          .fold(r)(ls =>
+            ScriptModel.toScriptPart(r).fold(l)(rs => ScriptModel.SMMonoid.combine(ls, rs))
+          )
+
+      case (l: EmptyModel, r: EmptyModel) => EmptyModel(l.log + " |+| " + r.log)
+
     }
   }
 }
