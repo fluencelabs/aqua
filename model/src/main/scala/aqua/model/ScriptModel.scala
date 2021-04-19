@@ -10,13 +10,6 @@ case class ScriptModel(
   types: Chain[TypeModel] = Chain.empty
 ) extends Model {
 
-  def enqueue(m: Model): ScriptModel = m match {
-    case f: FuncModel => copy(funcs.append(f))
-    case s: ServiceModel => copy(services = services.append(s))
-    case t: TypeModel => copy(types = types.append(t))
-    case _ => this
-  }
-
   def resolveFunctions: Chain[FuncCallable] =
     funcs
       .foldLeft((Map.empty[String, FuncCallable], Chain.empty[FuncCallable])) {
