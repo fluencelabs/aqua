@@ -31,13 +31,11 @@ case class FuncCallable(
     }
 
   // Apply a callable function, get its fully resolved body & optional value, if any
-  def apply(
+  def resolve(
     call: Call,
     arrows: Map[String, FuncCallable],
     forbiddenNames: Set[String]
   ): Eval[(FuncOp, Option[ValueModel])] = {
-    println(s"apply $funcName $call")
-    println(s"\tforbidden $forbiddenNames")
 
     // Collect all arguments: what names are used inside the function, what values are received
     val argsFull = args.call(call)
@@ -53,7 +51,7 @@ case class FuncCallable(
     val treeWithValues = body.resolveValues(argsToData)
 
     // Function body on its own defines some values; collect their names
-    val treeDefines = treeWithValues.definesValueNames.value
+    val treeDefines = treeWithValues.definesValueNames.value -- call.exportTo
 
     // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
     val shouldRename = findNewNames(forbiddenNames, treeDefines)
@@ -81,7 +79,7 @@ case class FuncCallable(
           // Apply arguments to a function – recursion
           val (appliedOp, value) =
             allArrows(fn)
-              .apply(c.mapValues(_.resolveWith(resolvedExports)), argsToArrows, noNames)
+              .resolve(c.mapValues(_.resolveWith(resolvedExports)), argsToArrows, noNames)
               .value
 
           // Function defines new names inside its body – need to collect them

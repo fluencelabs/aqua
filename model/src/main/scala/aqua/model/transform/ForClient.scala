@@ -2,7 +2,7 @@ package aqua.model.transform
 
 import aqua.model.func.body._
 import aqua.model.func.{ArgDef, ArgsCall, ArgsDef, Call, FuncCallable}
-import aqua.model.{LiteralModel, VarModel}
+import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.ScalarType.string
 import aqua.types.ArrowType
 import cats.data.Chain
@@ -12,85 +12,88 @@ object ForClient {
   // TODO not a string
   private val lastErrorArg = Call.Arg(LiteralModel("%last_error%"), string)
 
-  def apply(func: FuncCallable, conf: BodyConfig): Cofree[Chain, OpTag] = {
-    import conf._
+  def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =
+    FuncOp.leaf(
+      CallServiceTag(
+        srvId,
+        funcName,
+        call
+      )
+    )
 
-    def wrapXor(op: FuncOp): FuncOp =
-      if (wrapWithXor)
-        FuncOp.node(
-          XorTag,
-          Chain(
-            op,
-            viaRelay(
-              FuncOp.leaf(
-                CallServiceTag(
-                  errorHandlingCallback,
-                  errorFuncName,
-                  Call(
-                    lastErrorArg :: Nil,
-                    None
-                  )
-                )
+  // Get to init user through a relay
+  def viaRelay(op: FuncOp)(implicit conf: BodyConfig): FuncOp =
+    FuncOp.wrap(OnTag(LiteralModel.initPeerId, Chain.one(VarModel(conf.relayVarName))), op)
+
+  def wrapXor(op: FuncOp)(implicit conf: BodyConfig): FuncOp =
+    if (conf.wrapWithXor)
+      FuncOp.node(
+        XorTag,
+        Chain(
+          op,
+          viaRelay(
+            callService(
+              conf.errorHandlingCallback,
+              conf.errorFuncName,
+              Call(
+                lastErrorArg :: Nil,
+                None
               )
             )
           )
         )
-      else op
+      )
+    else op
 
-    // Get to init user through a relay
-    def viaRelay(op: FuncOp): FuncOp =
-      FuncOp.wrap(OnTag(LiteralModel.initPeerId, Chain.one(VarModel(relayVarName))), op)
-
-    val returnCallback: Option[FuncOp] = func.ret.map { retArg =>
+  def returnCallback(func: FuncCallable)(implicit conf: BodyConfig): Option[FuncOp] = func.ret.map {
+    retArg =>
       viaRelay(
-        FuncOp.leaf(
-          CallServiceTag(
-            callbackSrvId,
-            respFuncName,
-            Call(
-              retArg :: Nil,
-              None
-            )
+        callService(
+          conf.callbackSrvId,
+          conf.respFuncName,
+          Call(
+            retArg :: Nil,
+            None
           )
         )
       )
-    }
+  }
 
-    // TODO it's an overkill, is it?
-    def initPeerCallable(name: String, arrowType: ArrowType): FuncCallable = {
-      val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
-      FuncCallable(
-        s"init_peer_callable_$name",
-        viaRelay(
-          FuncOp.leaf(
-            CallServiceTag(
-              callbackSrvId,
-              name,
-              call
-            )
-          )
-        ),
-        args,
-        ret,
-        Map.empty
-      )
-    }
+  def initPeerCallable(name: String, arrowType: ArrowType)(implicit
+    conf: BodyConfig
+  ): FuncCallable = {
+    val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
+    FuncCallable(
+      s"init_peer_callable_$name",
+      viaRelay(
+        callService(
+          conf.callbackSrvId,
+          name,
+          call
+        )
+      ),
+      args,
+      ret,
+      Map.empty
+    )
+  }
+
+  // Get data with this name from a local service
+  def getDataOp(name: String)(implicit conf: BodyConfig): FuncOp =
+    callService(
+      conf.dataSrvId,
+      name,
+      Call(Nil, Some(name))
+    )
+
+  def resolve(func: FuncCallable, conf: BodyConfig): Cofree[Chain, OpTag] = {
+    implicit val c: BodyConfig = conf
 
     // Like it is called from TS
     def funcArgsCall: Call =
       Call(
         func.args.toCallArgs,
         None
-      )
-
-    // Get data with this name from a local service
-    def getDataOp(name: String): FuncOp =
-      FuncOp.leaf(
-        CallServiceTag(
-          dataSrvId,
-          name,
-          Call(Nil, Some(name))
-        )
       )
 
     val funcAround: FuncCallable = FuncCallable(
@@ -101,7 +104,7 @@ object ForClient {
             .node(
               SeqTag,
               (
-                func.args.dataArgNames.map(getDataOp) :+ getDataOp(relayVarName)
+                func.args.dataArgNames.map(getDataOp) :+ getDataOp(conf.relayVarName)
               )
                 .append(
                   FuncOp.leaf(
@@ -110,7 +113,7 @@ object ForClient {
                       funcArgsCall
                     )
                   )
-                ) ++ Chain.fromSeq(returnCallback.toSeq)
+                ) ++ Chain.fromSeq(returnCallback(func).toSeq)
             )
         )
       ),
@@ -123,7 +126,7 @@ object ForClient {
 
     val body =
       funcAround
-        .apply(
+        .resolve(
           Call(Call.Arg(VarModel("_func"), func.arrowType) :: Nil, None),
           Map("_func" -> func),
           Set.empty

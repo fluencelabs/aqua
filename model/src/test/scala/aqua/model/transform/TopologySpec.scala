@@ -1,6 +1,5 @@
 package aqua.model.transform
 
-import aqua.model
 import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
 import aqua.model.func.{ArgsDef, Call, FuncCallable}
 import aqua.model.{LiteralModel, Node, VarModel}
@@ -163,7 +162,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val bc = BodyConfig()
 
-    val fc = ForClient(func, bc)
+    val fc = ForClient.resolve(func, bc)
 
     val procFC: Node = fc
 
@@ -200,7 +199,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val bc = BodyConfig()
 
-    val fc = ForClient(func, bc)
+    val fc = ForClient.resolve(func, bc)
 
     val procFC: Node = fc
 
@@ -259,7 +258,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val bc = BodyConfig(wrapWithXor = false)
 
-    val res = ForClient(f2, bc): Node
+    val res = ForClient.resolve(f2, bc): Node
 
     res.equalsOrPrintDiff(
       on(

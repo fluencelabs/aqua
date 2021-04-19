@@ -17,6 +17,6 @@ case class FuncAirGen(func: FuncCallable) {
    */
   def generateClientAir(conf: BodyConfig = BodyConfig()): Air =
     AirGen(
-      ForClient(func, conf)
+      ForClient.resolve(func, conf)
     ).generate
 }
