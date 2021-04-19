@@ -4,8 +4,15 @@ import aqua.model.{ValueModel, VarModel}
 import aqua.types.{ArrowType, DataType}
 import cats.syntax.functor._
 
-case class ArgsCall(args: List[ArgDef], call: List[Call.Arg]) {
-  lazy val zipped: List[(ArgDef, Call.Arg)] = args zip call
+/**
+ * Wraps argument definitions of a function, along with values provided when this function is called
+ * @param args Argument definitions
+ * @param callWith Values provided for arguments
+ */
+case class ArgsCall(args: List[ArgDef], callWith: List[Call.Arg]) {
+  // Both arguments (arg names and types how they seen from the function body)
+  // and values (value models and types how they seen on the call site)
+  lazy val zipped: List[(ArgDef, Call.Arg)] = args zip callWith
 
   lazy val dataArgs: Map[String, ValueModel] =
     zipped.collect { case (ArgDef.Data(name, _), Call.Arg(value, _)) =>

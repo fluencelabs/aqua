@@ -37,6 +37,7 @@ object ScriptModel {
       ScriptModel(x.funcs ++ y.funcs, x.services ++ y.services, x.types ++ y.types)
   }
 
+  // Builds a ScriptModel if given model can be considered as a part of a script
   def toScriptPart(m: Model): Option[ScriptModel] = m match {
     case fm: FuncModel => Some(ScriptModel(funcs = Chain.one(fm)))
     case sm: ServiceModel => Some(ScriptModel(services = Chain.one(sm)))
