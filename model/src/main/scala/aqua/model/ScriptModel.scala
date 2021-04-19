@@ -2,10 +2,11 @@ package aqua.model
 
 import cats.data.Chain
 
-case class ScriptModel(funcs: Chain[FuncModel]) extends Model {
+case class ScriptModel(funcs: Chain[FuncModel], services: Chain[ServiceModel]) extends Model {
 
   def enqueue(m: Model): ScriptModel = m match {
     case f: FuncModel => copy(funcs.append(f))
+    case s: ServiceModel => copy(services = services.append(s))
     case _ => this
   }
 
