@@ -1,5 +1,6 @@
-package aqua.model.body
+package aqua.model.func.body
 
+import aqua.model.func.Call
 import aqua.model.{LiteralModel, Model, ValueModel, VarModel}
 import cats.Eval
 import cats.data.Chain

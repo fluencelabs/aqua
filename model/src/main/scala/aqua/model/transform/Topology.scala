@@ -1,7 +1,7 @@
 package aqua.model.transform
 
 import aqua.model.ValueModel
-import aqua.model.body.{CallServiceTag, FuncOp, OnTag, OpTag, SeqTag}
+import aqua.model.func.body.{CallServiceTag, FuncOp, OnTag, OpTag, SeqTag}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree

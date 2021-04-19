@@ -1,6 +1,6 @@
 package aqua.backend.air
 
-import aqua.model.FuncResolved
+import aqua.model.func.FuncResolved
 import aqua.model.transform.BodyConfig
 
 case class FuncAirGen(func: FuncResolved) {

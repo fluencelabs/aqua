@@ -1,21 +1,8 @@
-package aqua.model.body
+package aqua.model.func.body
 
 import aqua.model.ValueModel
-import aqua.types.Type
+import aqua.model.func.Call
 import cats.data.Chain
-
-case class Call(args: List[(ValueModel, Type)], exportTo: Option[String]) {
-
-  def mapValues(f: ValueModel => ValueModel): Call =
-    Call(
-      args.map { case (v, t) =>
-        (f(v), t)
-      },
-      exportTo
-    )
-
-  def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(f))
-}
 
 sealed trait OpTag {
 

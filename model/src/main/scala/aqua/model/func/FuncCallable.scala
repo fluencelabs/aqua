@@ -1,15 +1,15 @@
-package aqua.model
+package aqua.model.func
 
-import aqua.model.body.{Call, CallArrowTag, FuncOp, OpTag}
-import aqua.types.{ArrowType, DataType, Type}
+import aqua.model.func.body.{CallArrowTag, FuncOp, OpTag}
+import aqua.model.{ValueModel, VarModel}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 
 case class FuncCallable(
   body: FuncOp,
-  args: List[(String, Either[DataType, ArrowType])],
-  ret: Option[(ValueModel, Type)],
+  args: ArgsDef,
+  ret: Option[Call.Arg],
   capturedArrows: Map[String, FuncCallable]
 ) {
 
@@ -29,15 +29,11 @@ case class FuncCallable(
     forbiddenNames: Set[String]
   ): Eval[(FuncOp, Option[ValueModel])] = {
     // Collect all arguments: what names are used inside the function, what values are received
-    val argsFull = args.zip(call.args)
+    val argsFull = args.call(call)
     // DataType arguments
-    val argsToData = argsFull.collect { case ((n, Left(_)), v) =>
-      n -> v._1
-    }.toMap
+    val argsToData = argsFull.dataArgs
     // Arrow arguments: expected type is Arrow, given by-name
-    val argsToArrows = argsFull.collect { case ((n, Right(_)), (VarModel(name, _), _)) =>
-      n -> arrows(name)
-    }.toMap
+    val argsToArrows = argsFull.arrowArgs(arrows)
 
     // Going to resolve arrows: collect them all. Names should never collide: it's semantically checked
     val allArrows = capturedArrows ++ argsToArrows
@@ -55,7 +51,7 @@ case class FuncCallable(
       if (shouldRename.isEmpty) treeWithValues else treeWithValues.rename(shouldRename)
 
     // Result could be derived from arguments, or renamed; take care about that
-    val result = ret.map(_._1).map(_.resolveWith(argsToData)).map {
+    val result = ret.map(_.model).map(_.resolveWith(argsToData)).map {
       case v: VarModel if shouldRename.contains(v.name) => v.copy(shouldRename(v.name))
       case v => v
     }

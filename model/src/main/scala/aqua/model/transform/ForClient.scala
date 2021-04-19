@@ -1,13 +1,16 @@
 package aqua.model.transform
 
-import aqua.model.body._
-import aqua.model.{FuncCallable, FuncResolved, InitPeerIdModel, LiteralModel, VarModel}
+import aqua.model.func.body._
+import aqua.model.func.{ArgDef, ArgsCall, ArgsDef, Call, FuncCallable, FuncResolved}
+import aqua.model.{LiteralModel, VarModel}
 import aqua.types.ScalarType.string
-import aqua.types.{ArrowType, DataType}
+import aqua.types.ArrowType
 import cats.data.Chain
 import cats.free.Cofree
 
 object ForClient {
+  // TODO not a string
+  private val lastErrorArg = Call.Arg(LiteralModel("%last_error%"), string)
 
   def apply(func: FuncResolved, conf: BodyConfig): Cofree[Chain, OpTag] = {
     import conf._
@@ -24,8 +27,7 @@ object ForClient {
                   errorHandlingCallback,
                   errorFuncName,
                   Call(
-                    // TODO not a string
-                    (LiteralModel("%last_error%"), string) :: Nil,
+                    lastErrorArg :: Nil,
                     None
                   )
                 )
@@ -37,16 +39,16 @@ object ForClient {
 
     // Get to init user through a relay
     def viaRelay(op: FuncOp): FuncOp =
-      FuncOp.wrap(OnTag(InitPeerIdModel, Chain.one(VarModel(relayVarName))), op)
+      FuncOp.wrap(OnTag(LiteralModel.initPeerId, Chain.one(VarModel(relayVarName))), op)
 
-    val returnCallback: Option[FuncOp] = func.func.ret.map { case (dv, t) =>
+    val returnCallback: Option[FuncOp] = func.func.ret.map { retArg =>
       viaRelay(
         FuncOp.leaf(
           CallServiceTag(
             callbackSrvId,
             respFuncName,
             Call(
-              (dv, t) :: Nil,
+              retArg :: Nil,
               None
             )
           )
@@ -55,36 +57,28 @@ object ForClient {
     }
 
     // TODO it's an overkill, is it?
-    def initPeerCallable(name: String, arrowType: ArrowType): FuncCallable =
+    def initPeerCallable(name: String, arrowType: ArrowType): FuncCallable = {
+      val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
       FuncCallable(
         viaRelay(
           FuncOp.leaf(
             CallServiceTag(
               callbackSrvId,
               name,
-              Call(
-                arrowType.args.zipWithIndex.map { case (t, i) =>
-                  VarModel(s"arg$i") -> t
-                },
-                arrowType.res.map(_ => "init_call_res")
-              )
+              call
             )
           )
         ),
-        arrowType.args.zipWithIndex.map {
-          case (t: DataType, i) => s"arg$i" -> Left(t)
-          case (t: ArrowType, i) => s"arg$i" -> Right(t)
-        },
-        arrowType.res.map(VarModel("init_call_res") -> _),
+        args,
+        ret,
         Map.empty
       )
+    }
 
     // Like it is called from TS
     def funcArgsCall: Call =
       Call(
-        func.func.args.map { case (k, e) =>
-          (VarModel(k), e.fold(identity, identity))
-        },
+        func.func.args.toCallArgs,
         None
       )
 
@@ -104,12 +98,9 @@ object ForClient {
           FuncOp
             .node(
               SeqTag,
-              Chain
-                .fromSeq(
-                  func.func.args.collect { case (argName, Left(_)) =>
-                    getDataOp(argName)
-                  } :+ getDataOp(relayVarName)
-                )
+              (
+                func.func.args.dataArgNames.map(getDataOp) :+ getDataOp(relayVarName)
+              )
                 .append(
                   FuncOp.leaf(
                     CallArrowTag(
@@ -121,17 +112,17 @@ object ForClient {
             )
         )
       ),
-      (func.name -> Right(func.arrowType)) :: Nil,
+      ArgsDef(ArgDef.Arrow(func.name, func.arrowType) :: Nil),
       None,
-      func.func.args.collect { case (argName, Right(arrowType)) =>
+      func.func.args.arrowArgs.collect { case ArgDef.Arrow(argName, arrowType) =>
         argName -> initPeerCallable(argName, arrowType)
-      }.toMap
+      }.toList.toMap
     )
 
     val body =
       funcAround
         .apply(
-          Call((VarModel("_func") -> func.arrowType) :: Nil, None),
+          Call(Call.Arg(VarModel("_func"), func.arrowType) :: Nil, None),
           Map("_func" -> func.func),
           Set.empty
         )

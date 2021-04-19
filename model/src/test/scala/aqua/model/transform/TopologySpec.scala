@@ -1,8 +1,10 @@
 package aqua.model.transform
 
-import aqua.model.body.{Call, CallArrowTag, CallServiceTag, FuncOp}
-import aqua.model.{FuncCallable, FuncResolved, InitPeerIdModel, LiteralModel, Node, VarModel}
-import aqua.types.{ArrowType, LiteralType, ScalarType}
+import aqua.model
+import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
+import aqua.model.func.{ArgsDef, Call, FuncCallable, FuncResolved}
+import aqua.model.{LiteralModel, Node, VarModel}
+import aqua.types.ScalarType
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -154,8 +156,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       "ret",
       FuncCallable(
         FuncOp(on(otherPeer, Nil, call(1))),
-        Nil,
-        Some(ret -> ScalarType.string),
+        ArgsDef.empty,
+        Some(Call.Arg(ret, ScalarType.string)),
         Map.empty
       )
     )
@@ -191,10 +193,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val func: FuncResolved = FuncResolved(
       "ret",
-      FuncCallable(
+      model.func.FuncCallable(
         FuncOp(seq(call(0), on(otherPeer, Nil, call(1)))),
-        Nil,
-        Some(ret -> ScalarType.string),
+        ArgsDef.empty,
+        Some(Call.Arg(ret, ScalarType.string)),
         Map.empty
       )
     )
@@ -241,8 +243,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val f1: FuncCallable =
       FuncCallable(
         FuncOp(Node(CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), None))),
-        Nil,
-        Some(VarModel("v") -> ScalarType.string),
+        ArgsDef.empty,
+        Some(Call.Arg(VarModel("v"), ScalarType.string)),
         Map.empty
       )
 
@@ -251,8 +253,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         FuncOp(
           Node(CallArrowTag("callable", Call(Nil, Some("v"))))
         ),
-        Nil,
-        Some(VarModel("v") -> ScalarType.string),
+        ArgsDef.empty,
+        Some(Call.Arg(VarModel("v"), ScalarType.string)),
         Map("callable" -> f1)
       )
 

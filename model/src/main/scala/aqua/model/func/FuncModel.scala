@@ -1,12 +1,12 @@
-package aqua.model
+package aqua.model.func
 
-import aqua.model.body.FuncOp
-import aqua.types.{ArrowType, DataType, Type}
+import aqua.model.func.body.FuncOp
+import aqua.model.Model
 
 case class FuncModel(
   name: String,
-  args: List[(String, Either[DataType, ArrowType])],
-  ret: Option[(ValueModel, Type)],
+  args: ArgsDef,
+  ret: Option[Call.Arg],
   body: FuncOp
 ) extends Model {
 

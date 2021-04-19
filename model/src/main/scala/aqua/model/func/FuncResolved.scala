@@ -1,6 +1,6 @@
-package aqua.model
+package aqua.model.func
 
-import aqua.model.body.OpTag
+import aqua.model.func.body.OpTag
 import aqua.model.transform.{BodyConfig, ForClient}
 import aqua.types.ArrowType
 import cats.data.Chain
@@ -13,10 +13,7 @@ case class FuncResolved(name: String, func: FuncCallable) {
 
   def arrowType: ArrowType =
     ArrowType(
-      func.args.map {
-        case (_, Left(t)) => t
-        case (_, Right(t)) => t
-      },
-      func.ret.map(_._2)
+      func.args.types,
+      func.ret.map(_.`type`)
     )
 }

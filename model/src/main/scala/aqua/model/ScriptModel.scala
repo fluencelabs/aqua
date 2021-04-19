@@ -1,12 +1,19 @@
 package aqua.model
 
+import aqua.model.func.{FuncCallable, FuncModel, FuncResolved}
+import cats.Monoid
 import cats.data.Chain
 
-case class ScriptModel(funcs: Chain[FuncModel], services: Chain[ServiceModel]) extends Model {
+case class ScriptModel(
+  funcs: Chain[FuncModel] = Chain.empty,
+  services: Chain[ServiceModel] = Chain.empty,
+  types: Chain[TypeModel] = Chain.empty
+) extends Model {
 
   def enqueue(m: Model): ScriptModel = m match {
     case f: FuncModel => copy(funcs.append(f))
     case s: ServiceModel => copy(services = services.append(s))
+    case t: TypeModel => copy(types = types.append(t))
     case _ => this
   }
 
@@ -19,4 +26,21 @@ case class ScriptModel(funcs: Chain[FuncModel], services: Chain[ServiceModel]) e
       }
       ._2
 
+}
+
+object ScriptModel {
+
+  implicit object SMMonoid extends Monoid[ScriptModel] {
+    override def empty: ScriptModel = ScriptModel()
+
+    override def combine(x: ScriptModel, y: ScriptModel): ScriptModel =
+      ScriptModel(x.funcs ++ y.funcs, x.services ++ y.services, x.types ++ y.types)
+  }
+
+  def toScriptPart(m: Model): Option[ScriptModel] = m match {
+    case fm: FuncModel => Some(ScriptModel(funcs = Chain.one(fm)))
+    case sm: ServiceModel => Some(ScriptModel(services = Chain.one(sm)))
+    case tm: TypeModel => Some(ScriptModel(types = Chain.one(tm)))
+    case _ => None
+  }
 }

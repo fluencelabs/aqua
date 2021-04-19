@@ -1,8 +1,9 @@
 package aqua.model
 
-import aqua.model.body.{Call, CallServiceTag, FuncOp, OnTag, OpTag, SeqTag, XorTag}
+import aqua.model.func.Call
+import aqua.model.func.body.{CallServiceTag, FuncOp, OnTag, OpTag, SeqTag, XorTag}
 import aqua.model.transform.BodyConfig
-import aqua.types.{ScalarType, Type}
+import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -20,10 +21,10 @@ case class Node(tag: OpTag, ops: List[Node] = Nil) {
                                                           else
                                                             Console.BLUE + left + Console.RED + " != " + Console.YELLOW + right)
 
-  private def diffArg(left: (ValueModel, Type), right: (ValueModel, Type)): String =
+  private def diffArg(left: Call.Arg, right: Call.Arg): String =
     Console.GREEN + "(" +
-      equalOrNot(left._1, right._1) + Console.GREEN + ", " +
-      equalOrNot(left._2, right._2) + Console.GREEN + ")"
+      equalOrNot(left.model, right.model) + Console.GREEN + ", " +
+      equalOrNot(left.`type`, right.`type`) + Console.GREEN + ")"
 
   private def diffCall(left: Call, right: Call): String =
     if (left == right) Console.GREEN + left + Console.RESET
@@ -86,7 +87,7 @@ object Node {
 
   val relay = LiteralModel("relay")
   val relayV = VarModel("relay")
-  val initPeer = InitPeerIdModel
+  val initPeer = LiteralModel.initPeerId
   val emptyCall = Call(Nil, None)
   val otherPeer = LiteralModel("other-peer")
   val otherRelay = LiteralModel("other-relay")
@@ -101,7 +102,7 @@ object Node {
     CallServiceTag(
       bc.errorHandlingCallback,
       bc.errorFuncName,
-      Call((LiteralModel("%last_error%"), ScalarType.string) :: Nil, None),
+      Call(Call.Arg(LiteralModel("%last_error%"), ScalarType.string) :: Nil, None),
       Option(on)
     )
   )
@@ -110,7 +111,7 @@ object Node {
     CallServiceTag(
       bc.callbackSrvId,
       bc.respFuncName,
-      Call((value, ScalarType.string) :: Nil, None),
+      Call(Call.Arg(value, ScalarType.string) :: Nil, None),
       Option(on)
     )
   )

@@ -34,6 +34,9 @@ object Value {
         .map(t ⇒ P.string(t).lift.map(fu => Literal(fu.as(t), LiteralType.bool)))
     )
 
+  def initPeerId[F[_]: LiftParser: Comonad]: P[Literal[F]] =
+    `%init_peer_id%`.string.lift.map(Literal(_, LiteralType.string))
+
   def num[F[_]: LiftParser: Comonad]: P[Literal[F]] =
     (P.char('-').?.with1 ~ Numbers.nonNegativeIntString).lift.map(fu =>
       fu.extract match {
@@ -57,6 +60,6 @@ object Value {
     P.oneOf(bool :: float.backtrack :: num :: string :: Nil)
 
   def `value`[F[_]: LiftParser: Comonad]: P[Value[F]] =
-    P.oneOf(literal.backtrack :: varLambda :: Nil)
+    P.oneOf(literal.backtrack :: initPeerId.backtrack :: varLambda :: Nil)
 
 }

@@ -7,7 +7,10 @@ sealed trait ValueModel {
 }
 
 case class LiteralModel(value: String) extends ValueModel
-case object InitPeerIdModel extends ValueModel
+
+object LiteralModel {
+  val initPeerId: LiteralModel = LiteralModel("%init_peer_id%")
+}
 
 sealed trait LambdaModel
 case object IntoArrayModel extends LambdaModel

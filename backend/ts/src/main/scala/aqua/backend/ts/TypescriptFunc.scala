@@ -1,26 +1,24 @@
 package aqua.backend.ts
 
 import aqua.backend.air.FuncAirGen
-import aqua.model.FuncResolved
+import aqua.model.func.{ArgDef, Call, FuncResolved}
 import aqua.model.transform.BodyConfig
 import aqua.types._
 import cats.syntax.show._
+import cats.syntax.functor._
 
 case class TypescriptFunc(func: FuncResolved) {
 
   import TypescriptFunc._
 
   def argsTypescript: String =
-    func.func.args.map {
-      case (n, Left(t)) => s"${n}: " + typeToTs(t)
-      case (n, Right(at)) => s"${n}: " + typeToTs(at)
-    }.mkString(", ")
+    func.func.args.args.map(ad => s"${ad.name}: " + typeToTs(ad.`type`)).mkString(", ")
 
   def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
 
     val tsAir = FuncAirGen(func).generateClientAir(conf)
 
-    val returnCallback = func.func.ret.map { case (dv, t) =>
+    val returnCallback = func.func.ret.as {
       s"""h.on('${conf.callbackService}', '${conf.respFuncName}', (args) => {
          |  const [res] = args;
          |  resolve(res);
@@ -29,17 +27,17 @@ case class TypescriptFunc(func: FuncResolved) {
 
     }
 
-    val setCallbacks = func.func.args.map {
-      case (argName, Left(t)) =>
+    val setCallbacks = func.func.args.args.map {
+      case ArgDef.Data(argName, _) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
-      case (argName, Right(at)) =>
+      case ArgDef.Arrow(argName, at) =>
         s"""h.on('${conf.callbackService}', '$argName', (args) => {return $argName(${argsCallToTs(
           at
         )});});"""
     }.mkString("\n")
 
     val retType = func.func.ret
-      .map(_._2)
+      .map(_.`type`)
       .fold("void")(typeToTs)
 
     val returnVal =
