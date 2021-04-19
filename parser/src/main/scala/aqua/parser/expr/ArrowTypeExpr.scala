@@ -12,7 +12,8 @@ case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F]) extends
 object ArrowTypeExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[ArrowTypeExpr[F]] =
-    ((Name.p[F] <* ` : `) ~ ArrowTypeToken.`arrowdef`[F]).map { case (name, t) =>
-      ArrowTypeExpr(name, t)
+    (Name.p[F] ~ ((` : ` *> ArrowTypeToken.`arrowdef`[F]) | ArrowTypeToken.`arrowWithNames`)).map {
+      case (name, t) =>
+        ArrowTypeExpr(name, t)
     }
 }

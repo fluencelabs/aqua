@@ -1,7 +1,6 @@
 package aqua.semantics.rules.names
 
 import aqua.semantics.rules.{ReportError, StackInterpreter}
-import aqua.parser.lexer.{Name, Token}
 import aqua.types.{ArrowType, Type}
 import cats.data.State
 import cats.~>
@@ -11,8 +10,9 @@ import cats.syntax.functor._
 import cats.syntax.flatMap._
 
 class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: ReportError[F, X])
-    extends StackInterpreter[F, X, NamesState[F], NamesFrame[F]](GenLens[NamesState[F]](_.stack))
-    with (NameOp[F, *] ~> State[X, *]) {
+    extends StackInterpreter[F, X, NamesState[F], NamesState.Frame[F]](
+      GenLens[NamesState[F]](_.stack)
+    ) with (NameOp[F, *] ~> State[X, *]) {
 
   def readName(name: String): S[Option[Type]] =
     getState.map { st =>
@@ -84,30 +84,8 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
             )(fr => fr.addArrow(da.name.value, da.gen) -> true)
         }
       case bs: BeginScope[F] =>
-        beginScope(NamesFrame(bs.token))
+        beginScope(NamesState.Frame(bs.token))
       case _: EndScope[F] =>
         endScope
     }).asInstanceOf[State[X, A]]
-}
-
-case class NamesState[F[_]](
-  stack: List[NamesFrame[F]] = Nil,
-  rootArrows: Map[String, ArrowType] = Map.empty,
-  definitions: Map[String, Name[F]] = Map.empty[String, Name[F]]
-) {
-
-  def allNames: LazyList[String] =
-    LazyList.from(stack).flatMap(s => s.names.keys ++ s.arrows.keys).appendedAll(rootArrows.keys)
-
-  def allArrows: LazyList[String] =
-    LazyList.from(stack).flatMap(_.arrows.keys).appendedAll(rootArrows.keys)
-}
-
-case class NamesFrame[F[_]](
-  token: Token[F],
-  names: Map[String, Type] = Map.empty,
-  arrows: Map[String, ArrowType] = Map.empty
-) {
-  def addName(n: String, t: Type): NamesFrame[F] = copy[F](names = names.updated(n, t))
-  def addArrow(n: String, g: ArrowType): NamesFrame[F] = copy[F](arrows = arrows.updated(n, g))
 }

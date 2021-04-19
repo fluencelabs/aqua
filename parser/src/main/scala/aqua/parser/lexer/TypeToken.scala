@@ -67,6 +67,12 @@ object ArrowTypeToken {
         .map(Some(_)) | P.string("()").as(None))).map { case ((args, point), res) ⇒
       ArrowTypeToken(point, args, res)
     }
+
+  def `arrowWithNames`[F[_]: LiftParser: Comonad]: P[ArrowTypeToken[F]] =
+    ((`(`.lift ~ comma0(Name.p[F] *> ` : ` *> DataTypeToken.`datatypedef`) <* `)`) ~
+      (` -> ` *> DataTypeToken.`datatypedef`).?).map { case ((point, args), res) =>
+      ArrowTypeToken(point, args, res)
+    }
 }
 
 case class AquaArrowType[F[_]](args: List[TypeToken[F]], res: Option[DataTypeToken[F]])

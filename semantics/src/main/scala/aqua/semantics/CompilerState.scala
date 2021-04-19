@@ -28,27 +28,15 @@ object CompilerState {
       _ <- State.set(
         CompilerState[F](
           a.errors ++ b.errors,
-          NamesState(
-            Nil,
-            a.names.rootArrows ++ b.names.rootArrows,
-            a.names.definitions ++ b.names.definitions
-          ),
-          AbilitiesState(
-            Nil,
-            a.abilities.services ++ b.abilities.services,
-            a.abilities.rootServiceIds ++ b.abilities.rootServiceIds,
-            definitions = a.abilities.definitions ++ b.abilities.definitions
-          ),
-          TypesState(
-            strict = a.types.strict ++ b.types.strict,
-            definitions = a.types.definitions ++ b.types.definitions
-          )
+          a.names |+| b.names,
+          a.abilities |+| b.abilities,
+          a.types |+| b.types
         )
       )
       am <- x
       ym <- y
     } yield {
-      println(s"MONOID COMBINE $am $ym")
+      //println(s"MONOID COMBINE $am $ym")
       am |+| ym
     }
   }

@@ -2,7 +2,7 @@ package aqua.model
 
 import aqua.model.body.{Call, CallServiceTag, FuncOp, OnTag, OpTag, SeqTag, XorTag}
 import aqua.model.transform.BodyConfig
-import aqua.types.{LiteralType, ScalarType, Type}
+import aqua.types.{ScalarType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
