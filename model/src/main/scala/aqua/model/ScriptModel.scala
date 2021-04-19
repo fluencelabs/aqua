@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.model.func.{FuncCallable, FuncModel, FuncResolved}
+import aqua.model.func.{FuncCallable, FuncModel}
 import cats.Monoid
 import cats.data.Chain
 
@@ -17,12 +17,12 @@ case class ScriptModel(
     case _ => this
   }
 
-  def resolveFunctions: Chain[FuncResolved] =
+  def resolveFunctions: Chain[FuncCallable] =
     funcs
-      .foldLeft((Map.empty[String, FuncCallable], Chain.empty[FuncResolved])) {
+      .foldLeft((Map.empty[String, FuncCallable], Chain.empty[FuncCallable])) {
         case ((funcsAcc, outputAcc), func) =>
           val fr = func.captureArrows(funcsAcc)
-          funcsAcc.updated(func.name, fr) -> outputAcc.append(FuncResolved(func.name, fr))
+          funcsAcc.updated(func.name, fr) -> outputAcc.append(fr)
       }
       ._2
 

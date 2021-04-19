@@ -11,6 +11,6 @@ case class FuncModel(
 ) extends Model {
 
   def captureArrows(arrows: Map[String, FuncCallable]): FuncCallable =
-    FuncCallable(body, args, ret, arrows)
+    FuncCallable(name, body, args, ret, arrows)
 
 }

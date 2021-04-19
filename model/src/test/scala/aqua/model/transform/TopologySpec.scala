@@ -2,7 +2,7 @@ package aqua.model.transform
 
 import aqua.model
 import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
-import aqua.model.func.{ArgsDef, Call, FuncCallable, FuncResolved}
+import aqua.model.func.{ArgsDef, Call, FuncCallable}
 import aqua.model.{LiteralModel, Node, VarModel}
 import aqua.types.ScalarType
 import org.scalatest.flatspec.AnyFlatSpec
@@ -152,15 +152,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val ret = LiteralModel("\"return this\"")
 
-    val func: FuncResolved = FuncResolved(
-      "ret",
+    val func: FuncCallable =
       FuncCallable(
+        "ret",
         FuncOp(on(otherPeer, Nil, call(1))),
         ArgsDef.empty,
         Some(Call.Arg(ret, ScalarType.string)),
         Map.empty
       )
-    )
 
     val bc = BodyConfig()
 
@@ -191,14 +190,12 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val ret = LiteralModel("\"return this\"")
 
-    val func: FuncResolved = FuncResolved(
+    val func: FuncCallable = FuncCallable(
       "ret",
-      model.func.FuncCallable(
-        FuncOp(seq(call(0), on(otherPeer, Nil, call(1)))),
-        ArgsDef.empty,
-        Some(Call.Arg(ret, ScalarType.string)),
-        Map.empty
-      )
+      FuncOp(seq(call(0), on(otherPeer, Nil, call(1)))),
+      ArgsDef.empty,
+      Some(Call.Arg(ret, ScalarType.string)),
+      Map.empty
     )
 
     val bc = BodyConfig()
@@ -242,6 +239,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val f1: FuncCallable =
       FuncCallable(
+        "f1",
         FuncOp(Node(CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), None))),
         ArgsDef.empty,
         Some(Call.Arg(VarModel("v"), ScalarType.string)),
@@ -250,6 +248,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val f2: FuncCallable =
       FuncCallable(
+        "f2",
         FuncOp(
           Node(CallArrowTag("callable", Call(Nil, Some("v"))))
         ),
@@ -260,7 +259,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val bc = BodyConfig(wrapWithXor = false)
 
-    val res = FuncResolved("tmp", f2).forClient(bc): Node
+    val res = ForClient(f2, bc): Node
 
     res.equalsOrPrintDiff(
       on(

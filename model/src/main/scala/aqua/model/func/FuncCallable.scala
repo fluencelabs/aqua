@@ -2,16 +2,24 @@ package aqua.model.func
 
 import aqua.model.func.body.{CallArrowTag, FuncOp, OpTag}
 import aqua.model.{ValueModel, VarModel}
+import aqua.types.ArrowType
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 
 case class FuncCallable(
+  funcName: String,
   body: FuncOp,
   args: ArgsDef,
   ret: Option[Call.Arg],
   capturedArrows: Map[String, FuncCallable]
 ) {
+
+  def arrowType: ArrowType =
+    ArrowType(
+      args.types,
+      ret.map(_.`type`)
+    )
 
   def findNewNames(forbidden: Set[String], introduce: Set[String]): Map[String, String] =
     (forbidden intersect introduce).foldLeft(Map.empty[String, String]) { case (acc, name) =>
@@ -28,6 +36,9 @@ case class FuncCallable(
     arrows: Map[String, FuncCallable],
     forbiddenNames: Set[String]
   ): Eval[(FuncOp, Option[ValueModel])] = {
+    println(s"apply $funcName $call")
+    println(s"\tforbidden $forbiddenNames")
+
     // Collect all arguments: what names are used inside the function, what values are received
     val argsFull = args.call(call)
     // DataType arguments

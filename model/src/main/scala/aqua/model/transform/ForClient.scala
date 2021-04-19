@@ -1,7 +1,7 @@
 package aqua.model.transform
 
 import aqua.model.func.body._
-import aqua.model.func.{ArgDef, ArgsCall, ArgsDef, Call, FuncCallable, FuncResolved}
+import aqua.model.func.{ArgDef, ArgsCall, ArgsDef, Call, FuncCallable}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.types.ScalarType.string
 import aqua.types.ArrowType
@@ -12,7 +12,7 @@ object ForClient {
   // TODO not a string
   private val lastErrorArg = Call.Arg(LiteralModel("%last_error%"), string)
 
-  def apply(func: FuncResolved, conf: BodyConfig): Cofree[Chain, OpTag] = {
+  def apply(func: FuncCallable, conf: BodyConfig): Cofree[Chain, OpTag] = {
     import conf._
 
     def wrapXor(op: FuncOp): FuncOp =
@@ -41,7 +41,7 @@ object ForClient {
     def viaRelay(op: FuncOp): FuncOp =
       FuncOp.wrap(OnTag(LiteralModel.initPeerId, Chain.one(VarModel(relayVarName))), op)
 
-    val returnCallback: Option[FuncOp] = func.func.ret.map { retArg =>
+    val returnCallback: Option[FuncOp] = func.ret.map { retArg =>
       viaRelay(
         FuncOp.leaf(
           CallServiceTag(
@@ -60,6 +60,7 @@ object ForClient {
     def initPeerCallable(name: String, arrowType: ArrowType): FuncCallable = {
       val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
       FuncCallable(
+        s"init_peer_callable_$name",
         viaRelay(
           FuncOp.leaf(
             CallServiceTag(
@@ -78,7 +79,7 @@ object ForClient {
     // Like it is called from TS
     def funcArgsCall: Call =
       Call(
-        func.func.args.toCallArgs,
+        func.args.toCallArgs,
         None
       )
 
@@ -93,18 +94,19 @@ object ForClient {
       )
 
     val funcAround: FuncCallable = FuncCallable(
+      "funcAround",
       wrapXor(
         viaRelay(
           FuncOp
             .node(
               SeqTag,
               (
-                func.func.args.dataArgNames.map(getDataOp) :+ getDataOp(relayVarName)
+                func.args.dataArgNames.map(getDataOp) :+ getDataOp(relayVarName)
               )
                 .append(
                   FuncOp.leaf(
                     CallArrowTag(
-                      func.name,
+                      func.funcName,
                       funcArgsCall
                     )
                   )
@@ -112,9 +114,9 @@ object ForClient {
             )
         )
       ),
-      ArgsDef(ArgDef.Arrow(func.name, func.arrowType) :: Nil),
+      ArgsDef(ArgDef.Arrow(func.funcName, func.arrowType) :: Nil),
       None,
-      func.func.args.arrowArgs.collect { case ArgDef.Arrow(argName, arrowType) =>
+      func.args.arrowArgs.collect { case ArgDef.Arrow(argName, arrowType) =>
         argName -> initPeerCallable(argName, arrowType)
       }.toList.toMap
     )
@@ -123,7 +125,7 @@ object ForClient {
       funcAround
         .apply(
           Call(Call.Arg(VarModel("_func"), func.arrowType) :: Nil, None),
-          Map("_func" -> func.func),
+          Map("_func" -> func),
           Set.empty
         )
         .value

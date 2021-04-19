@@ -1,24 +1,24 @@
 package aqua.backend.ts
 
 import aqua.backend.air.FuncAirGen
-import aqua.model.func.{ArgDef, Call, FuncResolved}
+import aqua.model.func.{ArgDef, FuncCallable}
 import aqua.model.transform.BodyConfig
 import aqua.types._
 import cats.syntax.show._
 import cats.syntax.functor._
 
-case class TypescriptFunc(func: FuncResolved) {
+case class TypescriptFunc(func: FuncCallable) {
 
   import TypescriptFunc._
 
   def argsTypescript: String =
-    func.func.args.args.map(ad => s"${ad.name}: " + typeToTs(ad.`type`)).mkString(", ")
+    func.args.args.map(ad => s"${ad.name}: " + typeToTs(ad.`type`)).mkString(", ")
 
   def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
 
     val tsAir = FuncAirGen(func).generateClientAir(conf)
 
-    val returnCallback = func.func.ret.as {
+    val returnCallback = func.ret.as {
       s"""h.on('${conf.callbackService}', '${conf.respFuncName}', (args) => {
          |  const [res] = args;
          |  resolve(res);
@@ -27,7 +27,7 @@ case class TypescriptFunc(func: FuncResolved) {
 
     }
 
-    val setCallbacks = func.func.args.args.map {
+    val setCallbacks = func.args.args.map {
       case ArgDef.Data(argName, _) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
       case ArgDef.Arrow(argName, at) =>
@@ -36,15 +36,15 @@ case class TypescriptFunc(func: FuncResolved) {
         )});});"""
     }.mkString("\n")
 
-    val retType = func.func.ret
+    val retType = func.ret
       .map(_.`type`)
       .fold("void")(typeToTs)
 
     val returnVal =
-      func.func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
+      func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
     s"""
-       |export async function ${func.name}(client: FluenceClient${if (func.func.args.isEmpty) ""
+       |export async function ${func.funcName}(client: FluenceClient${if (func.args.isEmpty) ""
     else ", "}${argsTypescript}): Promise<$retType> {
        |    let request;
        |    const promise = new Promise<$retType>((resolve, reject) => {
@@ -71,7 +71,7 @@ case class TypescriptFunc(func: FuncResolved) {
        |            })
        |            .handleScriptError(reject)
        |            .handleTimeout(() => {
-       |                reject('Request timed out for ${func.name}');
+       |                reject('Request timed out for ${func.funcName}');
        |            })
        |            .build();
        |    });
