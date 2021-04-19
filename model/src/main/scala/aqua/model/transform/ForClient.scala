@@ -2,7 +2,7 @@ package aqua.model.transform
 
 import aqua.model.func.body._
 import aqua.model.func.{ArgDef, ArgsCall, ArgsDef, Call, FuncCallable}
-import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.model.{LiteralModel, VarModel}
 import aqua.types.ScalarType.string
 import aqua.types.ArrowType
 import cats.data.Chain
@@ -12,18 +12,9 @@ object ForClient {
   // TODO not a string
   private val lastErrorArg = Call.Arg(LiteralModel("%last_error%"), string)
 
-  def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =
-    FuncOp.leaf(
-      CallServiceTag(
-        srvId,
-        funcName,
-        call
-      )
-    )
-
   // Get to init user through a relay
   def viaRelay(op: FuncOp)(implicit conf: BodyConfig): FuncOp =
-    FuncOp.wrap(OnTag(LiteralModel.initPeerId, Chain.one(VarModel(conf.relayVarName))), op)
+    FuncOps.onVia(LiteralModel.initPeerId, Chain.one(VarModel(conf.relayVarName)), op)
 
   def wrapXor(op: FuncOp)(implicit conf: BodyConfig): FuncOp =
     if (conf.wrapWithXor)
@@ -32,7 +23,7 @@ object ForClient {
         Chain(
           op,
           viaRelay(
-            callService(
+            FuncOps.callService(
               conf.errorHandlingCallback,
               conf.errorFuncName,
               Call(
@@ -48,7 +39,7 @@ object ForClient {
   def returnCallback(func: FuncCallable)(implicit conf: BodyConfig): Option[FuncOp] = func.ret.map {
     retArg =>
       viaRelay(
-        callService(
+        FuncOps.callService(
           conf.callbackSrvId,
           conf.respFuncName,
           Call(
@@ -66,7 +57,7 @@ object ForClient {
     FuncCallable(
       s"init_peer_callable_$name",
       viaRelay(
-        callService(
+        FuncOps.callService(
           conf.callbackSrvId,
           name,
           call
@@ -80,7 +71,7 @@ object ForClient {
 
   // Get data with this name from a local service
   def getDataOp(name: String)(implicit conf: BodyConfig): FuncOp =
-    callService(
+    FuncOps.callService(
       conf.dataSrvId,
       name,
       Call(Nil, Some(name))

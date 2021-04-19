@@ -1,7 +1,7 @@
 package aqua.model.func.body
 
 import aqua.model.func.Call
-import aqua.model.{LiteralModel, Model, ValueModel, VarModel}
+import aqua.model.{Model, ValueModel, VarModel}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -49,17 +49,15 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
 }
 
 object FuncOp {
+  type Tree = Cofree[Chain, OpTag]
 
-  def noop(peerId: ValueModel): FuncOp =
-    FuncOp.leaf(CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(peerId)))
-
-  def traverseA[A](cf: Cofree[Chain, OpTag], init: A)(
-    f: (A, OpTag) => (A, Cofree[Chain, OpTag])
-  ): Eval[(A, Cofree[Chain, OpTag])] = {
+  def traverseA[A](cf: Tree, init: A)(
+    f: (A, OpTag) => (A, Tree)
+  ): Eval[(A, Tree)] = {
     val (headA, head) = f(init, cf.head)
     // TODO: it should be in standard library, with some other types
     cf.tail
-      .map(_.foldLeft[(A, Chain[Cofree[Chain, OpTag]])]((headA, head.tailForced)) {
+      .map(_.foldLeft[(A, Chain[Tree])]((headA, head.tailForced)) {
         case ((aggrA, aggrTail), child) =>
           traverseA(child, aggrA)(f).value.map(aggrTail.append)
       })
