@@ -44,7 +44,6 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
               )
           })
       case rn: ConstantDefined[F] =>
-        println("get defined: " + rn.name.value)
         constantDefined(rn.name.value)
 
       case ra: ReadArrow[F] =>
@@ -62,12 +61,11 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
           case Some(_) =>
             report(dc.name, "This name was already defined in the scope").as(false)
           case None =>
-            modify(st => {
-              println("add constant")
+            modify(st =>
               st.copy(
                 constants = st.constants.updated(dc.name.value, dc.literal)
               )
-            }).as(true)
+            ).as(true)
         }
       case dn: DefineName[F] =>
         readName(dn.name.value).flatMap {

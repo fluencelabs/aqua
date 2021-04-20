@@ -34,7 +34,6 @@ class ConstantSem[F[_]](val expr: ConstantExpr[F]) extends AnyVal {
         case (_, None, _) =>
           Free.pure[Alg, Model](Model.error(s"There is no such variable ${expr.value}"))
         case (_, Some(v), _) =>
-          println("define constant: " + ValuesAlgebra.valueToModel(v))
           N.defineConstant(expr.name, v) as (Model.empty(
             "Constant definition generates no model"
           ))

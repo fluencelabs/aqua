@@ -34,7 +34,6 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
           freeUnit[Alg]
         )(resType => N.define(exportVar, resType).void)
       ) >> args.foldLeft(Free.pure[Alg, List[Call.Arg]](Nil)) { case (acc, v) =>
-      println("resolve v in CallArrow: " + ValuesAlgebra.valueToModel(v))
       (acc, V.resolveType(v)).mapN((a, b) => a ++ b.map(Call.Arg(ValuesAlgebra.valueToModel(v), _)))
     }
 
