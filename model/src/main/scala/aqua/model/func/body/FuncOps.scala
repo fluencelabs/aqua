@@ -3,6 +3,7 @@ package aqua.model.func.body
 import aqua.model.{LiteralModel, ValueModel}
 import aqua.model.func.Call
 import cats.data.Chain
+import cats.free.Cofree
 
 object FuncOps {
 
@@ -18,14 +19,30 @@ object FuncOps {
       )
     )
 
+  def callArrow(funcName: String, call: Call): FuncOp =
+    FuncOp.leaf(
+      CallArrowTag(
+        funcName,
+        call
+      )
+    )
+
   def onVia(on: ValueModel, via: Chain[ValueModel], wrap: FuncOp): FuncOp =
     FuncOp.wrap(
       OnTag(on, via),
       wrap
     )
 
-  def seq(op1: FuncOp, ops: FuncOp*): FuncOp =
-    FuncOp.node(SeqTag, Chain.fromSeq(op1 +: ops))
+  def seq(ops: FuncOp*): FuncOp =
+    FuncOp.node(
+      SeqTag,
+      Chain
+        .fromSeq(ops.flatMap {
+          case FuncOp(Cofree(SeqTag, subOps)) => subOps.value.toList
+          case FuncOp(cof) => cof :: Nil
+        })
+        .map(FuncOp(_))
+    )
 
   def xor(left: FuncOp, right: FuncOp): FuncOp =
     FuncOp.node(XorTag, Chain(left, right))

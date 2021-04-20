@@ -1,0 +1,4 @@
+service Demo("demo"):
+	get4() -> u64
+	get5(arg: u32)
+	get6(a: string) -> bool
