@@ -17,7 +17,7 @@ val declineV = "2.0.0-RC1"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.1.1",
+  baseAquaVersion                        := "0.1.1",
   version                                := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion                           := dottyVersion,
   libraryDependencies += "org.scalatest" %% "scalatest" % scalaTestV % Test,

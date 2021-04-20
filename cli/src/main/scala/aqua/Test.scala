@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.model.transform.BodyConfig
 import cats.effect.{IO, IOApp}
 import cats.data.Validated
 
@@ -13,7 +14,8 @@ object Test extends IOApp.Simple {
         Paths.get("./aqua-src"),
         LazyList(Paths.get("./aqua")),
         Paths.get("./target"),
-        AquaCompiler.TypescriptTarget
+        AquaCompiler.AirTarget,
+        BodyConfig()
       )
       .map {
         case Validated.Invalid(errs) =>
