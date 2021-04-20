@@ -18,6 +18,14 @@ object FuncOps {
       )
     )
 
+  def callArrow(funcName: String, call: Call): FuncOp =
+    FuncOp.leaf(
+      CallArrowTag(
+        funcName,
+        call
+      )
+    )
+
   def onVia(on: ValueModel, via: Chain[ValueModel], wrap: FuncOp): FuncOp =
     FuncOp.wrap(
       OnTag(on, via),

@@ -2,67 +2,31 @@ package aqua.model.transform
 
 import aqua.model.func.body._
 import aqua.model.func.{ArgDef, ArgsCall, ArgsDef, Call, FuncCallable}
-import aqua.model.{LiteralModel, VarModel}
-import aqua.types.ScalarType.string
+import aqua.model.VarModel
 import aqua.types.ArrowType
 import cats.data.Chain
 import cats.free.Cofree
 
 object ForClient {
-  // TODO not a string
-  private val lastErrorArg = Call.Arg(LiteralModel("%last_error%"), string)
+  type Service = (String, Call) => FuncOp
 
-  // Get to init user through a relay
-  def viaRelay(op: FuncOp)(implicit conf: BodyConfig): FuncOp =
-    FuncOps.onVia(LiteralModel.initPeerId, Chain.one(VarModel(conf.relayVarName)), op)
-
-  def wrapXor(op: FuncOp)(implicit conf: BodyConfig): FuncOp =
-    if (conf.wrapWithXor)
-      FuncOp.node(
-        XorTag,
-        Chain(
-          op,
-          viaRelay(
-            FuncOps.callService(
-              conf.errorHandlingCallback,
-              conf.errorFuncName,
-              Call(
-                lastErrorArg :: Nil,
-                None
-              )
-            )
-          )
-        )
+  def returnCallback(func: FuncCallable, callback: Service)(implicit
+    conf: BodyConfig
+  ): Option[FuncOp] = func.ret.map { retArg =>
+    callback(
+      conf.respFuncName,
+      Call(
+        retArg :: Nil,
+        None
       )
-    else op
-
-  def returnCallback(func: FuncCallable)(implicit conf: BodyConfig): Option[FuncOp] = func.ret.map {
-    retArg =>
-      viaRelay(
-        FuncOps.callService(
-          conf.callbackSrvId,
-          conf.respFuncName,
-          Call(
-            retArg :: Nil,
-            None
-          )
-        )
-      )
+    )
   }
 
-  def initPeerCallable(name: String, arrowType: ArrowType)(implicit
-    conf: BodyConfig
-  ): FuncCallable = {
+  def initPeerCallable(name: String, arrowType: ArrowType, callback: Service): FuncCallable = {
     val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
     FuncCallable(
       s"init_peer_callable_$name",
-      viaRelay(
-        FuncOps.callService(
-          conf.callbackSrvId,
-          name,
-          call
-        )
-      ),
+      callback(name, call),
       args,
       ret,
       Map.empty
@@ -80,6 +44,20 @@ object ForClient {
   def resolve(func: FuncCallable, conf: BodyConfig): Cofree[Chain, OpTag] = {
     implicit val c: BodyConfig = conf
 
+    val initCallable: InitPeerCallable = InitViaRelayCallable(
+      Chain.one(VarModel(conf.relayVarName))
+    )
+    val errorsCatcher = ErrorsCatcher(
+      enabled = true,
+      conf.errorHandlingCallback,
+      conf.errorFuncName,
+      initCallable
+    )
+
+    val tr = errorsCatcher.transform andThen initCallable.transform
+
+    val callback = initCallable.service(conf.callbackSrvId)
+
     // Like it is called from TS
     def funcArgsCall: Call =
       Call(
@@ -89,29 +67,17 @@ object ForClient {
 
     val funcAround: FuncCallable = FuncCallable(
       "funcAround",
-      wrapXor(
-        viaRelay(
-          FuncOp
-            .node(
-              SeqTag,
-              (
-                func.args.dataArgNames.map(getDataOp) :+ getDataOp(conf.relayVarName)
-              )
-                .append(
-                  FuncOp.leaf(
-                    CallArrowTag(
-                      func.funcName,
-                      funcArgsCall
-                    )
-                  )
-                ) ++ Chain.fromSeq(returnCallback(func).toSeq)
-            )
+      tr(
+        FuncOps.seq(
+          getDataOp(conf.relayVarName),
+          (func.args.dataArgNames.map(getDataOp) :+ FuncOps
+            .callArrow(func.funcName, funcArgsCall)).toVector ++ returnCallback(func, callback): _*
         )
       ),
       ArgsDef(ArgDef.Arrow(func.funcName, func.arrowType) :: Nil),
       None,
       func.args.arrowArgs.collect { case ArgDef.Arrow(argName, arrowType) =>
-        argName -> initPeerCallable(argName, arrowType)
+        argName -> initPeerCallable(argName, arrowType, callback)
       }.toList.toMap
     )
 
