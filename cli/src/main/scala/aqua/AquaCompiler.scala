@@ -5,6 +5,7 @@ import aqua.backend.ts.TypescriptFile
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
 import aqua.model.ScriptModel
+import aqua.model.transform.BodyConfig
 import aqua.parser.lexer.Token
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{CompilerState, Semantics}
@@ -25,7 +26,12 @@ object AquaCompiler {
   case object TypescriptTarget extends CompileTarget
   case object AirTarget extends CompileTarget
 
-  case class Prepared(target: String => Path, model: ScriptModel)
+  case class Prepared(target: String => Path, model: ScriptModel) {
+
+    def hasOutput(target: CompileTarget): Boolean = target match {
+      case _ => model.funcs.nonEmpty
+    }
+  }
 
   def prepareFiles[F[_]: Files: Concurrent](
     srcPath: Path,
@@ -98,50 +104,50 @@ object AquaCompiler {
     srcPath: Path,
     imports: LazyList[Path],
     targetPath: Path,
-    compileTo: CompileTarget
+    compileTo: CompileTarget,
+    bodyConfig: BodyConfig
   ): F[ValidatedNec[String, Chain[String]]] =
-    prepareFiles(srcPath, imports, targetPath).flatMap[ValidatedNec[String, Chain[String]]] {
-      case Validated.Invalid(e) =>
-        Applicative[F].pure(Validated.invalid(e))
-      case Validated.Valid(preps) =>
-        (compileTo match {
-          case TypescriptTarget =>
-            preps
-              .map(p => writeFile(p.target("ts"), TypescriptFile(p.model).generateTS()))
+    prepareFiles(srcPath, imports, targetPath)
+      .map(_.map(_.filter(_.hasOutput(compileTo))))
+      .flatMap[ValidatedNec[String, Chain[String]]] {
+        case Validated.Invalid(e) =>
+          Applicative[F].pure(Validated.invalid(e))
+        case Validated.Valid(preps) =>
+          (compileTo match {
+            case TypescriptTarget =>
+              preps
+                .map(p => writeFile(p.target("ts"), TypescriptFile(p.model).generateTS(bodyConfig)))
 
-          // TODO add function name to AirTarget class
-          case AirTarget =>
-            preps
-              .map(p =>
-                writeFile(
-                  p.target("air"),
-                  p.model.resolveFunctions
-                    .map(FuncAirGen)
-                    .map(g =>
-                      // add function name before body
-                      s";; function name: ${g.func.funcName}\n\n" + g.generateAir.show
+            // TODO add function name to AirTarget class
+            case AirTarget =>
+              preps
+                .flatMap(p =>
+                  p.model.resolveFunctions.map { fc =>
+                    fc.funcName -> FuncAirGen(fc).generateAir(bodyConfig).show
+                  }.map { case (n, g) =>
+                    writeFile(
+                      p.target(n + ".air"),
+                      g
                     )
-                    .toList
-                    .mkString("\n\n\n")
+                  }
                 )
-              )
 
-        }).foldLeft(
-          EitherT.rightT[F, NonEmptyChain[String]](Chain.empty[String])
-        ) { case (accET, writeET) =>
-          EitherT(for {
-            a <- accET.value
-            w <- writeET.value
-          } yield (a, w) match {
-            case (Left(errs), Left(err)) => Left(errs :+ err)
-            case (Right(res), Right(r)) => Right(res :+ r)
-            case (Left(errs), _) => Left(errs)
-            case (_, Left(err)) => Left(NonEmptyChain.of(err))
-          })
-        }.value
-          .map(Validated.fromEither)
+          }).foldLeft(
+            EitherT.rightT[F, NonEmptyChain[String]](Chain.empty[String])
+          ) { case (accET, writeET) =>
+            EitherT(for {
+              a <- accET.value
+              w <- writeET.value
+            } yield (a, w) match {
+              case (Left(errs), Left(err)) => Left(errs :+ err)
+              case (Right(res), Right(r)) => Right(res :+ r)
+              case (Left(errs), _) => Left(errs)
+              case (_, Left(err)) => Left(NonEmptyChain.of(err))
+            })
+          }.value
+            .map(Validated.fromEither)
 
-    }
+      }
 
   def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, String] =
     EitherT.right[String](Files[F].deleteIfExists(file)) >>

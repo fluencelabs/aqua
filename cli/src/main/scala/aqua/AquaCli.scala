@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.model.transform.BodyConfig
 import cats.data.Validated
 import cats.effect.{ExitCode, IO, IOApp}
 import com.monovore.decline.Opts
@@ -35,7 +36,8 @@ object AquaCli extends IOApp {
           input,
           imports,
           output,
-          if (toAir) AquaCompiler.AirTarget else AquaCompiler.TypescriptTarget
+          if (toAir) AquaCompiler.AirTarget else AquaCompiler.TypescriptTarget,
+          BodyConfig()
         )
         .map {
           case Validated.Invalid(errs) =>
