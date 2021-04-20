@@ -3,7 +3,7 @@ package aqua.backend.air
 import aqua.model._
 import aqua.model.func.Call
 import aqua.model.func.body.{
-  CallArrowTag,
+  CallFunctionTag,
   CallServiceTag,
   ForTag,
   MatchMismatchTag,
@@ -92,7 +92,7 @@ object AirGen {
             )
           )
 
-        case (CallArrowTag(funcName, Call(args, exportTo)), ops) =>
+        case (CallFunctionTag(funcName, Call(args, exportTo)), ops) =>
           // TODO: should be already resolved & removed from tree
           Eval later opsToSingle(
             ops

@@ -1,9 +1,8 @@
-import "demo.aqua"
+service Demo("demo"):
+	get4: u64 -> u64
 
-func one() -> u64:
-    variable <- Demo.get4()
-    <- variable
+const asd = 1
 
-func two() -> u64:
-    variable <- one()
+func three() -> u64:
+    variable <- Demo.get4(asd)
     <- variable

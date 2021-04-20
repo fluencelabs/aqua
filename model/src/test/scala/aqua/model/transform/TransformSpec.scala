@@ -2,7 +2,7 @@ package aqua.model.transform
 
 import aqua.model.{LiteralModel, Node, VarModel}
 import aqua.model.func.{ArgsDef, Call, FuncCallable}
-import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
+import aqua.model.func.body.{CallFunctionTag, CallServiceTag, FuncOp}
 import aqua.types.ScalarType
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -112,7 +112,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       FuncCallable(
         "f2",
         FuncOp(
-          Node(CallArrowTag("callable", Call(Nil, Some("v"))))
+          Node(CallFunctionTag("callable", Call(Nil, Some("v"))))
         ),
         ArgsDef.empty,
         Some(Call.Arg(VarModel("v"), ScalarType.string)),

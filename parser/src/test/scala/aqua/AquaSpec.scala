@@ -6,6 +6,7 @@ import aqua.parser.expr.{
   ArrowTypeExpr,
   AssignmentExpr,
   CallArrowExpr,
+  ConstantExpr,
   DataStructExpr,
   ElseOtherwiseExpr,
   FieldTypeExpr,
@@ -104,6 +105,9 @@ trait AquaSpec extends EitherValues {
 
   def parseAssign(str: String): AssignmentExpr[Id] =
     AssignmentExpr.p[Id].parseAll(str).value
+
+  def parseConstant(str: String): ConstantExpr[Id] =
+    ConstantExpr.p[Id].parseAll(str).value
 
   def parseService(str: String): ServiceExpr[Id] =
     ServiceExpr.p[Id].parseAll(str).value

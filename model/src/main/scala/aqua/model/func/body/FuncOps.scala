@@ -10,6 +10,11 @@ object FuncOps {
   def noop(peerId: ValueModel): FuncOp =
     FuncOp.leaf(CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(peerId)))
 
+  def assign(arg: Call.Arg, name: String): FuncOp =
+    FuncOp.leaf(
+      CallServiceTag(LiteralModel("\"op\""), "identity", Call(List(arg), Some(name)), None)
+    )
+
   def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =
     FuncOp.leaf(
       CallServiceTag(
@@ -21,7 +26,7 @@ object FuncOps {
 
   def callArrow(funcName: String, call: Call): FuncOp =
     FuncOp.leaf(
-      CallArrowTag(
+      CallFunctionTag(
         funcName,
         call
       )

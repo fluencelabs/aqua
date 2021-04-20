@@ -16,10 +16,11 @@ object ExprSem {
     A: AbilitiesAlgebra[F, G],
     N: NamesAlgebra[F, G],
     T: TypesAlgebra[F, G]
-  ): Prog[G, Model] =
+  ): Prog[G, Model] = {
     expr match {
       case expr: AbilityIdExpr[F] => new AbilityIdSem(expr).program[G]
       case expr: AliasExpr[F] => new AliasSem(expr).program[G]
+      case expr: ConstantExpr[F] => new ConstantSem(expr).program[G]
       case expr: ArrowTypeExpr[F] => new ArrowTypeSem(expr).program[G]
       case expr: CallArrowExpr[F] => new CallArrowSem(expr).program[G]
       case expr: DataStructExpr[F] => new DataStructSem(expr).program[G]
@@ -34,5 +35,6 @@ object ExprSem {
       case expr: ServiceExpr[F] => new ServiceSem(expr).program[G]
       case expr: RootExpr[F] => new RootSem(expr).program[G]
     }
+  }
 
 }

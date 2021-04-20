@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.func.Call
-import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
+import aqua.model.func.body.{CallFunctionTag, CallServiceTag, FuncOp}
 import aqua.model.Model
 import aqua.parser.expr.CallArrowExpr
 import aqua.semantics.Prog
@@ -34,6 +34,7 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
           freeUnit[Alg]
         )(resType => N.define(exportVar, resType).void)
       ) >> args.foldLeft(Free.pure[Alg, List[Call.Arg]](Nil)) { case (acc, v) =>
+      println("resolve v in CallArrow: " + ValuesAlgebra.valueToModel(v))
       (acc, V.resolveType(v)).mapN((a, b) => a ++ b.map(Call.Arg(ValuesAlgebra.valueToModel(v), _)))
     }
 
@@ -68,7 +69,7 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
             checkArgsRes(arrowType)
               .map(argsResolved =>
                 FuncOp.leaf(
-                  CallArrowTag(
+                  CallFunctionTag(
                     funcName = funcName.value,
                     Call(argsResolved, variable.map(_.value))
                   )

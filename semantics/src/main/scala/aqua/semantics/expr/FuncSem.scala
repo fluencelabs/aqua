@@ -62,7 +62,11 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
     ((funcArrow.res, retValue) match {
       case (Some(t), Some(v)) =>
         V.resolveType(v).flatMap {
-          case Some(vt) => T.ensureTypeMatches(v, t, vt).void
+          case Some(vt) => {
+            val a = T.ensureTypeMatches(v, t, vt).void
+            println("resolved in FuncSem: " + ValuesAlgebra.valueToModel(v))
+            a
+          }
           case None => Free.pure[Alg, Unit](())
         }
       case _ =>

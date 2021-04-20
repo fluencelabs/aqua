@@ -1,8 +1,9 @@
 package aqua.semantics.rules.names
 
+import aqua.parser.lexer.Literal
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, Type}
-import cats.data.State
+import cats.data.{OptionT, State}
 import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
@@ -22,6 +23,9 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
       } orElse st.rootArrows.get(name)
     }
 
+  def constantDefined(name: String): S[Option[Literal[F]]] =
+    getState.map(_.constants.get(name))
+
   def readArrow(name: String): S[Option[ArrowType]] =
     getState.map { st =>
       st.stack.flatMap(_.arrows.get(name)).headOption orElse st.rootArrows.get(name)
@@ -30,13 +34,19 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
   override def apply[A](fa: NameOp[F, A]): State[X, A] =
     (fa match {
       case rn: ReadName[F] =>
-        readName(rn.name.value).flatTap {
-          case Some(_) => State.pure(())
-          case None =>
-            getState.flatMap(st =>
-              report(rn.name, "Undefined name, available: " + st.allNames.mkString(", "))
-            )
-        }
+        OptionT
+          .liftF(constantDefined(rn.name.value).map(_.map(_.ts)))
+          .getOrElseF(readName(rn.name.value).flatTap {
+            case Some(_) => State.pure(())
+            case None =>
+              getState.flatMap(st =>
+                report(rn.name, "Undefined name, available: " + st.allNames.mkString(", "))
+              )
+          })
+      case rn: ConstantDefined[F] =>
+        println("get defined: " + rn.name.value)
+        constantDefined(rn.name.value)
+
       case ra: ReadArrow[F] =>
         readArrow(ra.name.value).flatMap {
           case Some(g) => State.pure(Option(g))
@@ -47,6 +57,18 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
             )
         }
 
+      case dc: DefineConstant[F] =>
+        readName(dc.name.value).flatMap {
+          case Some(_) =>
+            report(dc.name, "This name was already defined in the scope").as(false)
+          case None =>
+            modify(st => {
+              println("add constant")
+              st.copy(
+                constants = st.constants.updated(dc.name.value, dc.literal)
+              )
+            }).as(true)
+        }
       case dn: DefineName[F] =>
         readName(dn.name.value).flatMap {
           case Some(_) =>
