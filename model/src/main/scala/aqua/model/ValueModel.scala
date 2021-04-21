@@ -20,7 +20,15 @@ case class VarModel(name: String, lambda: Chain[LambdaModel] = Chain.empty) exte
   def deriveFrom(vm: VarModel): VarModel = vm.copy(lambda = vm.lambda ++ lambda)
 
   override def resolveWith(map: Map[String, ValueModel]): ValueModel = map.get(name) match {
-    case Some(vv: VarModel) => deriveFrom(vv)
+    case Some(vv: VarModel) =>
+      map.get(vv.name) match {
+        case Some(n) =>
+          // it couldn't go to a cycle as long as the semantics protects it
+          n.resolveWith(map)
+        case None =>
+          deriveFrom(vv)
+      }
+
     case Some(vv) => vv // TODO check that lambda is empty, otherwise error
     case None => this // Should not happen
   }

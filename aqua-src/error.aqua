@@ -1,9 +1,12 @@
 service Demo("demo"):
-	get4: u64 -> u64
+	get4: u64, u64, string -> u64
 
 const bbb = 1
-const asd = bbb
+const ccc = "privet"
+const ddd = ccc
+const eee = bbb
+const asd = eee
 
 func three() -> u64:
-    variable <- Demo.get4(asd)
+    variable <- Demo.get4(asd, eee, ddd)
     <- variable
