@@ -1,13 +1,13 @@
 package aqua.semantics.rules.names
 
-import aqua.parser.lexer.{Literal, Name, Token}
+import aqua.parser.lexer.{Name, Token, Value}
 import aqua.types.{ArrowType, Type}
 import cats.kernel.Monoid
 
 case class NamesState[F[_]](
   stack: List[NamesState.Frame[F]] = Nil,
   rootArrows: Map[String, ArrowType] = Map.empty,
-  constants: Map[String, Literal[F]] = Map.empty[String, Literal[F]],
+  constants: Map[String, Type] = Map.empty[String, Type],
   definitions: Map[String, Name[F]] = Map.empty[String, Name[F]]
 ) {
 

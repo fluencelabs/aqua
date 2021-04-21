@@ -1,6 +1,6 @@
 package aqua.semantics.rules.names
 
-import aqua.parser.lexer.Literal
+import aqua.parser.lexer.{Literal, Value}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, Type}
 import cats.data.{OptionT, State}
@@ -17,13 +17,13 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
 
   def readName(name: String): S[Option[Type]] =
     getState.map { st =>
-      st.stack.collectFirst {
+      st.constants.get(name) orElse st.stack.collectFirst {
         case frame if frame.names.contains(name) => frame.names(name)
         case frame if frame.arrows.contains(name) => frame.arrows(name)
       } orElse st.rootArrows.get(name)
     }
 
-  def constantDefined(name: String): S[Option[Literal[F]]] =
+  def constantDefined(name: String): S[Option[Type]] =
     getState.map(_.constants.get(name))
 
   def readArrow(name: String): S[Option[ArrowType]] =
@@ -34,15 +34,16 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
   override def apply[A](fa: NameOp[F, A]): State[X, A] =
     (fa match {
       case rn: ReadName[F] =>
-        OptionT
-          .liftF(constantDefined(rn.name.value).map(_.map(_.ts)))
-          .getOrElseF(readName(rn.name.value).flatTap {
+        OptionT(constantDefined(rn.name.value))
+          .orElseF(readName(rn.name.value))
+          .value
+          .flatTap {
             case Some(_) => State.pure(())
             case None =>
               getState.flatMap(st =>
                 report(rn.name, "Undefined name, available: " + st.allNames.mkString(", "))
               )
-          })
+          }
       case rn: ConstantDefined[F] =>
         constantDefined(rn.name.value)
 
@@ -63,7 +64,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
           case None =>
             modify(st =>
               st.copy(
-                constants = st.constants.updated(dc.name.value, dc.literal)
+                constants = st.constants.updated(dc.name.value, dc.`type`)
               )
             ).as(true)
         }

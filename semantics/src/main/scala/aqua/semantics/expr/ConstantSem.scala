@@ -18,13 +18,9 @@ class ConstantSem[F[_]](val expr: ConstantExpr[F]) extends AnyVal {
     T: TypesAlgebra[F, Alg]
   ): Prog[Alg, Model] = {
     for {
-      name <- N.constantDefined(expr.name)
-      tp <- expr.value match {
-        case VarLambda(name, _) => N.constantDefined(name)
-        case l @ Literal(_, _) =>
-          Free.pure[Alg, Option[Literal[F]]](Option(l))
-      }
-      model <- (name, tp, expr.mark) match {
+      defined <- N.constantDefined(expr.name)
+      t <- V.resolveType(expr.value)
+      model <- (defined, t, expr.mark) match {
         case (Some(_), Some(_), true) =>
           Free.pure[Alg, Model](
             Model.empty("Constant with existed name and '?=' generates no model")
@@ -33,8 +29,8 @@ class ConstantSem[F[_]](val expr: ConstantExpr[F]) extends AnyVal {
           Free.pure[Alg, Model](Model.error(s"Name '${expr.name.value}' was already defined"))
         case (_, None, _) =>
           Free.pure[Alg, Model](Model.error(s"There is no such variable ${expr.value}"))
-        case (_, Some(v), _) =>
-          N.defineConstant(expr.name, v) as (Model.empty(
+        case (_, Some(t), _) =>
+          N.defineConstant(expr.name, t) as (Model.empty(
             "Constant definition generates no model"
           ))
       }
