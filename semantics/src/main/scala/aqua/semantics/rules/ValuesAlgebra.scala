@@ -1,12 +1,11 @@
 package aqua.semantics.rules
 
-import aqua.model.{IntoArrayModel, IntoFieldModel, LambdaModel, LiteralModel, ValueModel, VarModel}
+import aqua.model._
+import aqua.parser.lexer._
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.parser.lexer.{IntoArray, IntoField, LambdaOp, Literal, Token, Value, VarLambda}
-import aqua.semantics.rules.ValuesAlgebra.valueToModel
 import aqua.types.{ArrowType, LiteralType, Type}
-import cats.data.{Chain, OptionT}
+import cats.data.Chain
 import cats.free.Free
 import cats.syntax.apply._
 
@@ -34,7 +33,6 @@ class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlge
       case l: Literal[F] =>
         Free pure [Alg, Option[Type]] Some(l.ts)
       case VarLambda(n, lambda) =>
-        println("try to resolve " + n.value)
         N.read(n).flatMap {
           case Some(t) =>
             T.resolveLambda(t, lambda)

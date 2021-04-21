@@ -1,7 +1,8 @@
 service Demo("demo"):
 	get4: u64 -> u64
 
-const asd = 1
+const bbb = 1
+const asd = bbb
 
 func three() -> u64:
     variable <- Demo.get4(asd)

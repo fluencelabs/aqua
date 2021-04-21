@@ -1,8 +1,7 @@
 package aqua.semantics.expr
 
-import aqua.model.{LiteralModel, Model, TypeModel, VarModel}
+import aqua.model.{ConstantModel, Model}
 import aqua.parser.expr.ConstantExpr
-import aqua.parser.lexer.{Literal, Name, VarLambda}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
@@ -30,9 +29,10 @@ class ConstantSem[F[_]](val expr: ConstantExpr[F]) extends AnyVal {
         case (_, None, _) =>
           Free.pure[Alg, Model](Model.error(s"There is no such variable ${expr.value}"))
         case (_, Some(t), _) =>
-          N.defineConstant(expr.name, t) as (Model.empty(
-            "Constant definition generates no model"
-          ))
+          N.defineConstant(expr.name, t) as (ConstantModel(
+            expr.name.value,
+            ValuesAlgebra.valueToModel(expr.value)
+          ): Model)
       }
     } yield model
   }

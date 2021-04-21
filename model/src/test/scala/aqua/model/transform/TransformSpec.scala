@@ -20,6 +20,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         FuncOp(on(otherPeer, Nil, call(1))),
         ArgsDef.empty,
         Some(Call.Arg(ret, ScalarType.string)),
+        Map.empty,
         Map.empty
       )
 
@@ -57,6 +58,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       FuncOp(seq(call(0), on(otherPeer, Nil, call(1)))),
       ArgsDef.empty,
       Some(Call.Arg(ret, ScalarType.string)),
+      Map.empty,
       Map.empty
     )
 
@@ -105,6 +107,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         FuncOp(Node(CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), None))),
         ArgsDef.empty,
         Some(Call.Arg(VarModel("v"), ScalarType.string)),
+        Map.empty,
         Map.empty
       )
 
@@ -116,7 +119,8 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         ),
         ArgsDef.empty,
         Some(Call.Arg(VarModel("v"), ScalarType.string)),
-        Map("callable" -> f1)
+        Map("callable" -> f1),
+        Map.empty
       )
 
     val bc = BodyConfig(wrapWithXor = false)

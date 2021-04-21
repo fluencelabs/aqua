@@ -11,7 +11,9 @@ class RootSem[F[_]](val expr: RootExpr[F]) extends AnyVal {
 
   def program[Alg[_]]: Prog[Alg, Model] =
     Prog.after {
-      case sm: ScriptModel => Free.pure[Alg, Model](sm)
+      case sm: ScriptModel =>
+        println(sm)
+        Free.pure[Alg, Model](sm)
       case m =>
         Free.pure[Alg, Model](
           ScriptModel
