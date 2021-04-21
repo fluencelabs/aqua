@@ -49,6 +49,7 @@ case class TypescriptFunc(func: FuncCallable) {
        |    let request;
        |    const promise = new Promise<$retType>((resolve, reject) => {
        |        request = new RequestFlowBuilder()
+       |            .disableInjections()
        |            .withRawScript(
        |                `
        |${tsAir.show}
