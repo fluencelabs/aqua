@@ -4,6 +4,7 @@ import aqua.model.func.{FuncCallable, FuncModel}
 import cats.Monoid
 import cats.data.Chain
 
+// TODO make one chain to have order
 case class ScriptModel(
   funcs: Chain[FuncModel] = Chain.empty,
   services: Chain[ServiceModel] = Chain.empty,
