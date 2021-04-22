@@ -26,7 +26,7 @@ case class EmptyFileError(path: Path) extends AquaFileError {
 }
 
 case class FileSystemError(err: Throwable) extends Exception(err) with AquaFileError {
-  override def showForConsole: String = s"File system error"
+  override def showForConsole: String = s"File system error: ${err.getMessage}"
 }
 
 case class Unresolvable(msg: String) extends AquaFileError {
