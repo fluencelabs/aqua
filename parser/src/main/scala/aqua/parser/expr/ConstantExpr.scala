@@ -10,7 +10,7 @@ import cats.parse.{Parser => P}
 case class ConstantExpr[F[_]](
   name: Name[F],
   value: Value[F],
-  skipIfAlreadyAssign: Boolean
+  skipIfAlreadyDefined: Boolean
 ) extends Expr[F]
 
 object ConstantExpr extends Expr.Leaf {

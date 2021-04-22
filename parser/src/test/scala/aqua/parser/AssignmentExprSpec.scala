@@ -19,15 +19,15 @@ class AssignmentExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     parseConstant("const a = b") should be(
-      ConstantExpr[Id]("a", toVar("b"), skipIfAlreadyAssign = false)
+      ConstantExpr[Id]("a", toVar("b"), skipIfAlreadyDefined = false)
     )
 
     parseConstant("const a = 1") should be(
-      ConstantExpr[Id]("a", toNumber(1), skipIfAlreadyAssign = false)
+      ConstantExpr[Id]("a", toNumber(1), skipIfAlreadyDefined = false)
     )
 
     parseConstant("const a ?= 1") should be(
-      ConstantExpr[Id]("a", toNumber(1), skipIfAlreadyAssign = true)
+      ConstantExpr[Id]("a", toNumber(1), skipIfAlreadyDefined = true)
     )
   }
 }
