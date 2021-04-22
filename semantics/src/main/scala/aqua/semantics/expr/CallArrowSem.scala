@@ -1,8 +1,8 @@
 package aqua.semantics.expr
 
+import aqua.model.Model
 import aqua.model.func.Call
 import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
-import aqua.model.Model
 import aqua.parser.expr.CallArrowExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -11,9 +11,9 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.ArrowType
 import cats.free.Free
+import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.syntax.apply._
 
 class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
 

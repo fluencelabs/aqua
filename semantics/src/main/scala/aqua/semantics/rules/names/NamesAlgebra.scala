@@ -1,6 +1,6 @@
 package aqua.semantics.rules.names
 
-import aqua.parser.lexer.{Name, Token}
+import aqua.parser.lexer.{Literal, Name, Token, Value}
 import aqua.types.{ArrowType, Type}
 import cats.InjectK
 import cats.free.Free
@@ -10,11 +10,17 @@ class NamesAlgebra[F[_], Alg[_]](implicit V: InjectK[NameOp[F, *], Alg]) {
   def read(name: Name[F]): Free[Alg, Option[Type]] =
     Free.liftInject[Alg](ReadName(name))
 
+  def constantDefined(name: Name[F]): Free[Alg, Option[Type]] =
+    Free.liftInject[Alg](ConstantDefined(name))
+
   def readArrow(name: Name[F]): Free[Alg, Option[ArrowType]] =
     Free.liftInject[Alg](ReadArrow(name))
 
   def define(name: Name[F], `type`: Type): Free[Alg, Boolean] =
     Free.liftInject[Alg](DefineName(name, `type`))
+
+  def defineConstant(name: Name[F], `type`: Type): Free[Alg, Boolean] =
+    Free.liftInject[Alg](DefineConstant(name, `type`))
 
   def defineArrow(name: Name[F], gen: ArrowType, isRoot: Boolean): Free[Alg, Boolean] =
     Free.liftInject[Alg](DefineArrow(name, gen, isRoot))

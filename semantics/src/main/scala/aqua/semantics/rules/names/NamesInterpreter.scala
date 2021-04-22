@@ -2,12 +2,12 @@ package aqua.semantics.rules.names
 
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, Type}
-import cats.data.State
+import cats.data.{OptionT, State}
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
-import cats.syntax.functor._
-import cats.syntax.flatMap._
 
 class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: ReportError[F, X])
     extends StackInterpreter[F, X, NamesState[F], NamesState.Frame[F]](
@@ -16,11 +16,14 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
 
   def readName(name: String): S[Option[Type]] =
     getState.map { st =>
-      st.stack.collectFirst {
+      st.constants.get(name) orElse st.stack.collectFirst {
         case frame if frame.names.contains(name) => frame.names(name)
         case frame if frame.arrows.contains(name) => frame.arrows(name)
       } orElse st.rootArrows.get(name)
     }
+
+  def constantDefined(name: String): S[Option[Type]] =
+    getState.map(_.constants.get(name))
 
   def readArrow(name: String): S[Option[ArrowType]] =
     getState.map { st =>
@@ -30,13 +33,19 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
   override def apply[A](fa: NameOp[F, A]): State[X, A] =
     (fa match {
       case rn: ReadName[F] =>
-        readName(rn.name.value).flatTap {
-          case Some(_) => State.pure(())
-          case None =>
-            getState.flatMap(st =>
-              report(rn.name, "Undefined name, available: " + st.allNames.mkString(", "))
-            )
-        }
+        OptionT(constantDefined(rn.name.value))
+          .orElseF(readName(rn.name.value))
+          .value
+          .flatTap {
+            case Some(_) => State.pure(())
+            case None =>
+              getState.flatMap(st =>
+                report(rn.name, "Undefined name, available: " + st.allNames.mkString(", "))
+              )
+          }
+      case rn: ConstantDefined[F] =>
+        constantDefined(rn.name.value)
+
       case ra: ReadArrow[F] =>
         readArrow(ra.name.value).flatMap {
           case Some(g) => State.pure(Option(g))
@@ -47,6 +56,17 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
             )
         }
 
+      case dc: DefineConstant[F] =>
+        readName(dc.name.value).flatMap {
+          case Some(_) =>
+            report(dc.name, "This name was already defined in the scope").as(false)
+          case None =>
+            modify(st =>
+              st.copy(
+                constants = st.constants.updated(dc.name.value, dc.`type`)
+              )
+            ).as(true)
+        }
       case dn: DefineName[F] =>
         readName(dn.name.value).flatMap {
           case Some(_) =>

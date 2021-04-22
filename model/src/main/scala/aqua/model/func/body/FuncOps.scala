@@ -1,7 +1,7 @@
 package aqua.model.func.body
 
-import aqua.model.{LiteralModel, ValueModel}
 import aqua.model.func.Call
+import aqua.model.{LiteralModel, ValueModel}
 import cats.data.Chain
 import cats.free.Cofree
 

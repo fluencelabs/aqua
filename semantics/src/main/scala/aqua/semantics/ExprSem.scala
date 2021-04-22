@@ -20,6 +20,7 @@ object ExprSem {
     expr match {
       case expr: AbilityIdExpr[F] => new AbilityIdSem(expr).program[G]
       case expr: AliasExpr[F] => new AliasSem(expr).program[G]
+      case expr: ConstantExpr[F] => new ConstantSem(expr).program[G]
       case expr: ArrowTypeExpr[F] => new ArrowTypeSem(expr).program[G]
       case expr: CallArrowExpr[F] => new CallArrowSem(expr).program[G]
       case expr: DataStructExpr[F] => new DataStructSem(expr).program[G]
