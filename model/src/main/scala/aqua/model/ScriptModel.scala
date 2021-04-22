@@ -6,10 +6,7 @@ import cats.data.Chain
 
 // TODO make one chain to have order
 case class ScriptModel(
-  funcs: Chain[FuncModel] = Chain.empty,
-  services: Chain[ServiceModel] = Chain.empty,
-  types: Chain[TypeModel] = Chain.empty,
-  constants: Chain[ConstantModel] = Chain.empty
+  models: Chain[Model] = Chain.empty
 ) extends Model {
 
   case class Acc(
@@ -17,8 +14,12 @@ case class ScriptModel(
     values: Map[String, ValueModel]
   )
 
+  lazy val funcs: Chain[FuncModel] = models.collect { case c: FuncModel => c }
+  lazy val constants: Chain[ConstantModel] = models.collect { case c: ConstantModel => c }
+
   def resolveFunctions: Chain[FuncCallable] = {
-    val constantsToName = constants.map(c => c.name -> c.value).toList.toMap
+    val constantsToName =
+      constants.map(c => c.name -> c.value).toList.toMap
     funcs
       .foldLeft(
         (
@@ -42,19 +43,16 @@ object ScriptModel {
 
     override def combine(x: ScriptModel, y: ScriptModel): ScriptModel =
       ScriptModel(
-        x.funcs ++ y.funcs,
-        x.services ++ y.services,
-        x.types ++ y.types,
-        x.constants ++ y.constants
+        x.models ++ y.models
       )
   }
 
   // Builds a ScriptModel if given model can be considered as a part of a script
   def toScriptPart(m: Model): Option[ScriptModel] = m match {
-    case fm: FuncModel => Some(ScriptModel(funcs = Chain.one(fm)))
-    case sm: ServiceModel => Some(ScriptModel(services = Chain.one(sm)))
-    case tm: TypeModel => Some(ScriptModel(types = Chain.one(tm)))
-    case cm: ConstantModel => Some(ScriptModel(constants = Chain.one(cm)))
+    case fm: FuncModel => Some(ScriptModel(models = Chain.one(fm)))
+    case sm: ServiceModel => Some(ScriptModel(models = Chain.one(sm)))
+    case tm: TypeModel => Some(ScriptModel(models = Chain.one(tm)))
+    case cm: ConstantModel => Some(ScriptModel(models = Chain.one(cm)))
     case _ => None
   }
 }
