@@ -16,8 +16,8 @@ case class ConstantExpr[F[_]](
 object ConstantExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[ConstantExpr[F]] = {
-    (((`const` *> ` ` *> Name
-      .p[F] <* ` `) ~ `?`.? <* `=` <* ` `).with1 ~ Value.`value`).map {
+    ((((`const` *> ` ` *> Name
+      .p[F] <* ` `) ~ `?`.?).with1 <* `=` <* ` `).with1 ~ Value.`value`).map {
       case ((name, mark), value) =>
         ConstantExpr(name, value, mark.nonEmpty)
     }
