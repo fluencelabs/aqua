@@ -10,7 +10,7 @@ case class FuncModel(
   body: FuncOp
 ) extends Model {
 
-  def captureParts(
+  def capture(
     arrows: Map[String, FuncCallable],
     constants: Map[String, ValueModel]
   ): FuncCallable =

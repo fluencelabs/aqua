@@ -2,7 +2,7 @@ package aqua.parser.expr
 
 import aqua.parser.Expr
 import aqua.parser.lexer.Token._
-import aqua.parser.lexer.{Ability, Name, Value}
+import aqua.parser.lexer.{Name, Value}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.{Parser => P}
@@ -15,7 +15,7 @@ case class AssignmentExpr[F[_]](
 object AssignmentExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[AssignmentExpr[F]] =
-    ((Name.p[F] <* ` = `).backtrack.with1 ~ Value.`value`).map { case (variable, value) =>
+    ((Name.p[F] <* ` = `).with1 ~ Value.`value`).map { case (variable, value) =>
       AssignmentExpr(variable, value)
     }
 }

@@ -25,7 +25,8 @@ case class VarModel(name: String, lambda: Chain[LambdaModel] = Chain.empty) exte
         map.get(vv.name) match {
           case Some(n) =>
             n match {
-              /* It protects when similar names are in a body of a function and a call of a function
+              /* This case protects from infinite recursion
+                 when similar names are in a body of a function and a call of a function
                 service Demo("demo"):
                   get4: u64 -> u64
 
@@ -35,6 +36,8 @@ case class VarModel(name: String, lambda: Chain[LambdaModel] = Chain.empty) exte
 
                 func three(v: u64) -> u64:
                     variable <- Demo.get4(v)
+                    -- here we will try to resolve 'variable' to VarModel('variable')
+                    -- that could cause infinite recursion
                     res <- two(variable)
                     <- variable
                */

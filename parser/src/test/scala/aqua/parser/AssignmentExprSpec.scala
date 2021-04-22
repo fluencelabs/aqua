@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.expr.{AssignmentExpr, ConstantExpr, ReturnExpr}
+import aqua.parser.expr.{AssignmentExpr, ConstantExpr}
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -19,15 +19,15 @@ class AssignmentExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     parseConstant("const a = b") should be(
-      ConstantExpr[Id]("a", toVar("b"), mark = false)
+      ConstantExpr[Id]("a", toVar("b"), skipIfAlreadyAssign = false)
     )
 
     parseConstant("const a = 1") should be(
-      ConstantExpr[Id]("a", toNumber(1), mark = false)
+      ConstantExpr[Id]("a", toNumber(1), skipIfAlreadyAssign = false)
     )
 
     parseConstant("const a ?= 1") should be(
-      ConstantExpr[Id]("a", toNumber(1), mark = true)
+      ConstantExpr[Id]("a", toNumber(1), skipIfAlreadyAssign = true)
     )
   }
 }

@@ -1,7 +1,7 @@
 package aqua.model
 
 import aqua.model.func.{FuncCallable, FuncModel}
-import cats.{Monoid, Semigroup}
+import cats.Monoid
 import cats.data.Chain
 
 case class ScriptModel(
@@ -16,21 +16,22 @@ case class ScriptModel(
     values: Map[String, ValueModel]
   )
 
-  def resolveFunctions: Chain[FuncCallable] =
+  def resolveFunctions: Chain[FuncCallable] = {
+    val constantsToName = constants.map(c => c.name -> c.value).toList.toMap
     funcs
       .foldLeft(
         (
-          Acc(arrows = Map.empty, values = constants.map(c => c.name -> c.value).toList.toMap),
-          Chain.empty[FuncCallable]
+          (
+            Map.empty[String, FuncCallable],
+            Chain.empty[FuncCallable]
+          )
         )
       ) { case ((acc, outputAcc), func) =>
-        val fr = func.captureParts(acc.arrows, acc.values)
-        Acc(
-          acc.arrows.updated(func.name, fr),
-          acc.values ++ fr.capturedValues
-        ) -> outputAcc.append(fr)
+        val fr = func.capture(acc, constantsToName)
+        acc -> outputAcc.append(fr)
       }
       ._2
+  }
 }
 
 object ScriptModel {

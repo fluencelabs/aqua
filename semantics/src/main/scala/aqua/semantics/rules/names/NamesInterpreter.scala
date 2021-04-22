@@ -1,14 +1,13 @@
 package aqua.semantics.rules.names
 
-import aqua.parser.lexer.{Literal, Value}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, Type}
 import cats.data.{OptionT, State}
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
-import cats.syntax.functor._
-import cats.syntax.flatMap._
 
 class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: ReportError[F, X])
     extends StackInterpreter[F, X, NamesState[F], NamesState.Frame[F]](

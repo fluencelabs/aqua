@@ -1,15 +1,20 @@
 service Demo("demo"):
 	get4: u64, u64, string -> u64
 
-const bbb = 1
+const bbb = 5
 const bbb ?= 2
 const ccc = "privet"
 const ddd = ccc
 const eee = bbb
 const asd = eee
+-- const ttt = -2
 
 func two(variable: u64) -> u64:
     v <- Demo.get4(variable, eee, ddd)
+    -- if bbb == ttt:
+    --     Demo.get4(variable, eee, ddd)
+    -- else:
+    --     Demo.get4(variable, eee, ddd)
     <- variable
 
 func three() -> u64:
