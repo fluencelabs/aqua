@@ -2,18 +2,7 @@ package aqua.backend.air
 
 import aqua.model._
 import aqua.model.func.Call
-import aqua.model.func.body.{
-  CallFunctionTag,
-  CallServiceTag,
-  ForTag,
-  MatchMismatchTag,
-  NextTag,
-  OnTag,
-  OpTag,
-  ParTag,
-  SeqTag,
-  XorTag
-}
+import aqua.model.func.body._
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -92,7 +81,7 @@ object AirGen {
             )
           )
 
-        case (CallFunctionTag(funcName, Call(args, exportTo)), ops) =>
+        case (CallArrowTag(funcName, Call(args, exportTo)), ops) =>
           // TODO: should be already resolved & removed from tree
           Eval later opsToSingle(
             ops

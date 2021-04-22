@@ -7,6 +7,11 @@ const ddd = ccc
 const eee = bbb
 const asd = eee
 
+func two(variable: u64) -> u64:
+    v <- Demo.get4(variable, eee, ddd)
+    <- variable
+
 func three() -> u64:
     variable <- Demo.get4(asd, eee, ddd)
+    res <- two(variable)
     <- variable

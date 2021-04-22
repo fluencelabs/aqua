@@ -11,8 +11,8 @@ sealed trait OpTag {
     case MatchMismatchTag(left, right, shouldMatch) =>
       MatchMismatchTag(f(left), f(right), shouldMatch)
     case ForTag(item, iterable) => ForTag(item, f(iterable))
-    case CallFunctionTag(funcName, call) =>
-      CallFunctionTag(
+    case CallArrowTag(funcName, call) =>
+      CallArrowTag(
         funcName,
         call.mapValues(f)
       )
@@ -36,7 +36,7 @@ case class NextTag(item: String) extends OpTag
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean) extends OpTag
 case class ForTag(item: String, iterable: ValueModel) extends OpTag
 
-case class CallFunctionTag(
+case class CallArrowTag(
   funcName: String,
   call: Call
 ) extends OpTag

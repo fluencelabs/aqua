@@ -1,10 +1,8 @@
 package aqua.semantics.expr
 
-import aqua.model.func.FuncModel
-import aqua.model.{Model, ScriptModel, ServiceModel, TypeModel}
+import aqua.model.{Model, ScriptModel}
 import aqua.parser.expr.RootExpr
 import aqua.semantics.Prog
-import cats.data.Chain
 import cats.free.Free
 
 class RootSem[F[_]](val expr: RootExpr[F]) extends AnyVal {
@@ -12,7 +10,6 @@ class RootSem[F[_]](val expr: RootExpr[F]) extends AnyVal {
   def program[Alg[_]]: Prog[Alg, Model] =
     Prog.after {
       case sm: ScriptModel =>
-        println(sm)
         Free.pure[Alg, Model](sm)
       case m =>
         Free.pure[Alg, Model](

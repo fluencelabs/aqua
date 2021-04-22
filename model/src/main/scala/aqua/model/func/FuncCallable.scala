@@ -1,6 +1,6 @@
 package aqua.model.func
 
-import aqua.model.func.body.{CallFunctionTag, FuncOp, OpTag}
+import aqua.model.func.body.{CallArrowTag, FuncOp, OpTag}
 import aqua.model.{ValueModel, VarModel}
 import aqua.types.ArrowType
 import cats.Eval
@@ -66,8 +66,6 @@ case class FuncCallable(
       case v => v
     }
 
-    println(capturedValues)
-
     // Now, substitute the arrows that were received as function arguments
     FuncOp
       .traverseA(
@@ -78,7 +76,7 @@ case class FuncCallable(
           // Functions may export variables, so collect them
           capturedValues
       ) {
-        case ((noNames, resolvedExports), CallFunctionTag(fn, c)) if allArrows.contains(fn) =>
+        case ((noNames, resolvedExports), CallArrowTag(fn, c)) if allArrows.contains(fn) =>
           // Apply arguments to a function – recursion
           val (appliedOp, value) =
             allArrows(fn)

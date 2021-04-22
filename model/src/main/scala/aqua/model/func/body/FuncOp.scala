@@ -17,7 +17,7 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
     Cofree.cata(tree)(folder)
 
   def definesValueNames: Eval[Set[String]] = cata[Set[String]] {
-    case (CallFunctionTag(_, Call(_, Some(export))), acc) =>
+    case (CallArrowTag(_, Call(_, Some(export))), acc) =>
       Eval.later(acc.foldLeft(Set(export))(_ ++ _))
     case (CallServiceTag(_, _, Call(_, Some(export)), _), acc) =>
       Eval.later(acc.foldLeft(Set(export))(_ ++ _))
@@ -35,7 +35,7 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
           case v: VarModel if vals.contains(v.name) => v.copy(name = vals(v.name))
           case v => v
         } match {
-          case c: CallFunctionTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
+          case c: CallArrowTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
           case c: CallServiceTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
           case t: ForTag if vals.contains(t.item) => t.copy(item = vals(t.item))
           case t: NextTag if vals.contains(t.item) => t.copy(item = vals(t.item))
