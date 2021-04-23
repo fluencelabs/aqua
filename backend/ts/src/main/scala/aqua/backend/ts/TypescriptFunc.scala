@@ -4,8 +4,8 @@ import aqua.backend.air.FuncAirGen
 import aqua.model.func.{ArgDef, FuncCallable}
 import aqua.model.transform.BodyConfig
 import aqua.types._
-import cats.syntax.show._
 import cats.syntax.functor._
+import cats.syntax.show._
 
 case class TypescriptFunc(func: FuncCallable) {
 
@@ -31,9 +31,11 @@ case class TypescriptFunc(func: FuncCallable) {
       case ArgDef.Data(argName, _) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
       case ArgDef.Arrow(argName, at) =>
-        s"""h.on('${conf.callbackService}', '$argName', (args) => {return $argName(${argsCallToTs(
+        val value = s"$argName(${argsCallToTs(
           at
-        )});});"""
+        )})"
+        val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
+        s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
     }.mkString("\n")
 
     val retType = func.ret
