@@ -54,10 +54,10 @@ case class ResolveFunc(
       ),
       ArgsDef(ArgDef.Arrow(func.funcName, func.arrowType) :: Nil),
       None,
-      func.args.arrowArgs.collect { case ArgDef.Arrow(argName, arrowType) =>
+      func.args.arrowArgs.map { case ArgDef.Arrow(argName, arrowType) =>
         argName -> arrowToCallback(argName, arrowType)
       }.toList.toMap,
-      func.capturedValues
+      Map.empty
     )
 
   def resolve(func: FuncCallable, funcArgName: String = "_func"): Eval[FuncOp] =

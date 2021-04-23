@@ -80,7 +80,7 @@ case class FuncCallable(
           // Apply arguments to a function – recursion
           val (appliedOp, value) =
             allArrows(fn)
-              .resolve(c.mapValues(_.resolveWith(resolvedExports)), argsToArrows, noNames)
+              .resolve(c.mapValues(_.resolveWith(resolvedExports)), allArrows, noNames)
               .value
 
           // Function defines new names inside its body – need to collect them
@@ -90,9 +90,9 @@ case class FuncCallable(
           (noNames ++ newNames, resolvedExports ++ c.exportTo.zip(value)) -> appliedOp.tree
         case (acc @ (_, resolvedExports), tag) =>
           tag match {
-            case CallArrowTag(funcName, call) if !allArrows.contains(funcName) =>
+            case CallArrowTag(fn, _) if !allArrows.contains(fn) =>
               println(
-                Console.RED + s"UNRESOLVED $funcName, skipping, will become (null) in AIR!" + Console.RESET
+                Console.RED + s"UNRESOLVED $fn in $funcName, skipping, will become (null) in AIR!" + Console.RESET
               )
             case _ =>
           }
