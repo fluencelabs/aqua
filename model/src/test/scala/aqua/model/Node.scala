@@ -1,7 +1,7 @@
 package aqua.model
 
 import aqua.model.func.Call
-import aqua.model.func.body.{CallServiceTag, FuncOp, FuncOps, OnTag, OpTag, SeqTag, XorTag}
+import aqua.model.func.body.{CallServiceTag, FuncOps, OnTag, OpTag, SeqTag, XorTag}
 import aqua.model.transform.BodyConfig
 import aqua.types.ScalarType
 import cats.Eval

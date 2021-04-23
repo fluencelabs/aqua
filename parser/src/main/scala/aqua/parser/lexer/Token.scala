@@ -40,9 +40,14 @@ object Token {
   val `catch`: P[Unit] = P.string("catch")
   val `par`: P[Unit] = P.string("par")
   val `:` : P[Unit] = P.char(':')
+  val `$` : P[Unit] = P.char('$')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
 
   val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒
+    c.toString ++ s.getOrElse("")
+  }
+
+  val `$stream`: P[String] = (P.char('$') ~ P.charsWhile(anum_).?).map { case (c, s) ⇒
     c.toString ++ s.getOrElse("")
   }
 

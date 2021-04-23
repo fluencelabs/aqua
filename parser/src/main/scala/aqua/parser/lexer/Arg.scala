@@ -10,7 +10,7 @@ case class Arg[F[_]](name: Name[F], `type`: TypeToken[F])
 object Arg {
 
   def p[F[_]: LiftParser: Comonad]: P[Arg[F]] =
-    ((Name.p[F] <* ` : `) ~ TypeToken.`typedef`[F]).map {
-      case (name, t) => Arg(name, t)
+    ((Name.p[F] <* ` : `) ~ TypeToken.`typedef`[F]).map { case (name, t) =>
+      Arg(name, t)
     }
 }
