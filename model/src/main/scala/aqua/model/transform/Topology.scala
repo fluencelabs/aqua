@@ -74,10 +74,13 @@ object Topology {
               .collect { case OnTag(_, v) =>
                 v.reverse
               }
-              .flatMap(identity)
 
             if (prevPath.isEmpty) op +: modifyChildrenList(tail, Some(op))
-            else through(prevPath ++ pathViaChain).append(op) ++ modifyChildrenList(tail, Some(op))
+            else
+              through(prevPath.flatMap(identity) ++ pathViaChain).append(op) ++ modifyChildrenList(
+                tail,
+                Some(op)
+              )
 
           case o :: ops => o +: modifyChildrenList(ops, Some(o))
         }
