@@ -1,6 +1,0 @@
-import "builtin.aqua"
-
-func foo() -> u64:
-    t <- Peer.timestamp_sec()
-    id()
-    <- t

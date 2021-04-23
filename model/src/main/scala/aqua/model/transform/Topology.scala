@@ -1,13 +1,16 @@
 package aqua.model.transform
 
 import aqua.model.ValueModel
-import aqua.model.func.body.{CallServiceTag, FuncOps, OnTag, OpTag, SeqTag}
+import aqua.model.func.body.{CallServiceTag, FuncOps, OnTag, OpTag, ParTag, SeqTag}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 
 object Topology {
   type Tree = Cofree[Chain, OpTag]
+
+  def rightBoundary(root: Tree): List[OpTag] =
+    root.head :: root.tailForced.lastOption.fold(List.empty[OpTag])(rightBoundary)
 
   // Walks through peer IDs, doing a noop function on each
   // If same IDs are found in a row, does noop only once
@@ -61,25 +64,21 @@ object Topology {
 
         def modifyChildrenList(list: List[Tree], prev: Option[Tree]): Chain[Tree] = list match {
           case Nil => Chain.empty
-          case op :: Nil =>
-            prev match {
-              // TODO: sequence might be longer
-              case Some(Cofree(SeqTag, seqTail)) =>
-                seqTail.value.lastOption match {
-                  case Some(Cofree(ont: OnTag, _)) =>
-                    through(ont.via.reverse ++ pathViaChain) :+ op
-                  case _ =>
-                    Chain.one(op)
-                }
-              case _ =>
-                Chain.one(op)
-            }
+          case op :: tail =>
+            // TODO further improve
+            val prevPath = Chain
+              .fromSeq(prev.toList.flatMap(rightBoundary).takeWhile {
+                case ParTag => false
+                case _ => true
+              })
+              .collect { case OnTag(_, v) =>
+                v.reverse
+              }
+              .flatMap(identity)
 
-          case (oncf @ Cofree(ont: OnTag, _)) :: op :: tail =>
-            (oncf +: through(ont.via.reverse ++ pathViaChain)) ++ modifyChildrenList(
-              op :: tail,
-              Some(oncf)
-            )
+            if (prevPath.isEmpty) op +: modifyChildrenList(tail, Some(op))
+            else through(prevPath ++ pathViaChain).append(op) ++ modifyChildrenList(tail, Some(op))
+
           case o :: ops => o +: modifyChildrenList(ops, Some(o))
         }
 

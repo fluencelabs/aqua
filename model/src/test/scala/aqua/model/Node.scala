@@ -1,7 +1,16 @@
 package aqua.model
 
 import aqua.model.func.Call
-import aqua.model.func.body.{CallServiceTag, FuncOp, FuncOps, OnTag, OpTag, SeqTag, XorTag}
+import aqua.model.func.body.{
+  CallServiceTag,
+  FuncOp,
+  FuncOps,
+  MatchMismatchTag,
+  OnTag,
+  OpTag,
+  SeqTag,
+  XorTag
+}
 import aqua.model.transform.BodyConfig
 import aqua.types.ScalarType
 import cats.Eval
@@ -132,6 +141,12 @@ object Node {
     Node(
       OnTag(peer, Chain.fromSeq(via)),
       body.toList
+    )
+
+  def _match(l: ValueModel, r: ValueModel, body: Node) =
+    Node(
+      MatchMismatchTag(l, r, shouldMatch = true),
+      body :: Nil
     )
 
   def through(peer: ValueModel): Node =
