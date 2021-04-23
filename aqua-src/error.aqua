@@ -1,23 +1,15 @@
 service Demo("demo"):
 	get4: u64, u64, string -> u64
+	bool: -> bool
+	log: string, bool -> ()
 
-const bbb = 5
-const bbb ?= 2
-const ccc = "privet"
-const ddd = ccc
-const eee = bbb
-const asd = eee
--- const ttt = -2
-
-func two(variable: u64) -> u64:
-    v <- Demo.get4(variable, eee, ddd)
-    -- if bbb == ttt:
-    --     Demo.get4(variable, eee, ddd)
-    -- else:
-    --     Demo.get4(variable, eee, ddd)
-    <- variable
-
-func three() -> u64:
-    variable <- Demo.get4(asd, eee, ddd)
-    res <- two(variable)
-    <- variable
+func initAfterJoin(users: []string) -> []string:
+    for user <- users par:
+        on user:
+            isOnline <- Demo.bool()
+        if isOnline:
+            on user via "user relay":
+                Demo.log("me", true)
+        Demo.log(user, isOnline)
+        par Demo.log(user, isOnline)
+    <- users
