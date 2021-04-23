@@ -7,8 +7,9 @@ func initAfterJoin(users: []string) -> []string:
     for user <- users par:
         on user:
             isOnline <- Demo.bool()
-            if isOnline:
-                on user via "user relay":
-                    Demo.log("me", true)
+        if isOnline:
+            on user via "user relay":
+                Demo.log("me", true)
+        Demo.log(user, isOnline)
         par Demo.log(user, isOnline)
     <- users
