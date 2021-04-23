@@ -31,12 +31,11 @@ case class TypescriptFunc(func: FuncCallable) {
       case ArgDef.Data(argName, _) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
       case ArgDef.Arrow(argName, at) =>
-        val returnValue = at.res.fold("{}")(_ =>
-          s"$argName(${argsCallToTs(
-            at
-          )})"
-        )
-        s"""h.on('${conf.callbackService}', '$argName', (args) => {return $returnValue;});"""
+        val value = s"$argName(${argsCallToTs(
+          at
+        )})"
+        val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
+        s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
     }.mkString("\n")
 
     val retType = func.ret
