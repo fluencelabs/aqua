@@ -11,7 +11,12 @@ import cats.syntax.functor._
 
 case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
   def head: OpTag = tree.head
-  def isRightAssoc: Boolean = head == XorTag || head == ParTag
+
+  lazy val isRightAssoc: Boolean = head match {
+    case XorTag | ParTag => true
+    case _: XorParTag => true
+    case _ => false
+  }
 
   def cata[T](folder: (OpTag, Chain[T]) => Eval[T]): Eval[T] =
     Cofree.cata(tree)(folder)
@@ -70,8 +75,11 @@ object FuncOp {
     override def combine(x: FuncOp, y: FuncOp): FuncOp = (x.tree.head, y.tree.head) match {
       case (ParTag, ParTag) => FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
       case (XorTag, XorTag) => FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
+      case (XorTag, ParTag) => FuncOp(Cofree[Chain, OpTag](XorParTag(x, y), Eval.now(Chain.empty)))
       case (_, ParTag | XorTag) =>
         wrap(SeqTag, FuncOp(y.tree.copy(tail = y.tree.tail.map(_.prepend(x.tree)))))
+      case (_, XorParTag(xor, par)) =>
+        combine(combine(x, xor), par)
       case _ => FuncOpSemigroup.combine(x, y)
     }
   }
@@ -79,6 +87,8 @@ object FuncOp {
   implicit object FuncOpSemigroup extends Semigroup[FuncOp] {
 
     override def combine(x: FuncOp, y: FuncOp): FuncOp = (x.tree.head, y.tree.head) match {
+      case (_, XorParTag(xor, par)) => combine(combine(x, xor), par)
+      case (XorParTag(xor, par), _) => combine(combine(xor, par), y)
       case (SeqTag, SeqTag) => FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
       case (_, SeqTag) => FuncOp(y.tree.copy(tail = y.tree.tail.map(_.prepend(x.tree))))
       case (SeqTag, _) => FuncOp(x.tree.copy(tail = x.tree.tail.map(_.append(y.tree))))
