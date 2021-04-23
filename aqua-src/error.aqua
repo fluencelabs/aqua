@@ -1,25 +1,24 @@
-import "demo.aqua"
+service Demo("demo"):
+	get4: u64, u64, string -> u64
 
-func one() -> u64:
-    variable <- Demo.get4()
+const bbb = 5
+const bbb ?= 2
+const ccc = "privet"
+const ddd = ccc
+const eee = bbb
+const asd = eee
+-- const ttt = -2
+
+func two(variable: u64) -> u64:
+    v <- Demo.get4(variable, eee, ddd)
+    -- if bbb == ttt:
+    --     Demo.get4(variable, eee, ddd)
+    -- else:
+    --     Demo.get4(variable, eee, ddd)
     <- variable
 
-func two() -> u64:
-    variable <- one()
+
+func three() -> u64:
+    variable <- Demo.get4(asd, eee, ddd)
+    res <- two(variable)
     <- variable
-
-func str(xs: []u64, z: u64):
-    $stream: bool
-    for x <- xs:
-       $stream <- Demo.get4()
-    $stream <- z
-
-
-file1
-const x = "privet"
-
-func foo(y: string): ....
-
-file2
-func bar():
-   foo(x) -> telo foo -> y ::::: x -> x :::: "privet"

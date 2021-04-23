@@ -12,7 +12,8 @@ case class FuncCallable(
   body: FuncOp,
   args: ArgsDef,
   ret: Option[Call.Arg],
-  capturedArrows: Map[String, FuncCallable]
+  capturedArrows: Map[String, FuncCallable],
+  capturedValues: Map[String, ValueModel]
 ) {
 
   def arrowType: ArrowType =
@@ -73,7 +74,7 @@ case class FuncCallable(
         // Accumulator: all used names are forbidden, if we set any more names -- forbid them as well
         (forbiddenNames ++ shouldRename.values ++ treeDefines) ->
           // Functions may export variables, so collect them
-          Map.empty[String, ValueModel]
+          capturedValues
       ) {
         case ((noNames, resolvedExports), CallArrowTag(fn, c)) if allArrows.contains(fn) =>
           // Apply arguments to a function – recursion

@@ -14,7 +14,7 @@ object Test extends IOApp.Simple {
         Paths.get("./aqua-src"),
         LazyList(Paths.get("./aqua")),
         Paths.get("./target"),
-        AquaCompiler.AirTarget,
+        AquaCompiler.TypescriptTarget,
         BodyConfig()
       )
       .map {

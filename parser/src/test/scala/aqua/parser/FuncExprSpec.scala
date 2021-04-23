@@ -5,7 +5,7 @@ import aqua.parser.Ast.parser
 import aqua.parser.expr._
 import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import aqua.types.ScalarType.{bool, string, u32, u64, u8}
+import aqua.types.ScalarType._
 import cats.Id
 import cats.data.Chain
 import cats.free.Cofree
@@ -89,7 +89,6 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     val tree = FuncExpr.ast[Id](Indent()).parseAll(script).value
     val funcBody = checkHeadGetTail(tree, FuncExpr("a", Nil, None, None), 1).toList
-    println("body: " + funcBody)
 
     val ifBody =
       checkHeadGetTail(

@@ -1,9 +1,6 @@
 package aqua.model.transform
 
-import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
-import aqua.model.func.{ArgsDef, Call, FuncCallable}
-import aqua.model.{LiteralModel, Node, VarModel}
-import aqua.types.ScalarType
+import aqua.model.Node
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 

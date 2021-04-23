@@ -19,7 +19,7 @@ case class TypescriptFunc(func: FuncCallable) {
     val tsAir = FuncAirGen(func).generateClientAir(conf)
 
     val returnCallback = func.ret.as {
-      s"""h.on('${conf.callbackService}', '${conf.respFuncName}', (args) => {
+      s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
          |  const [res] = args;
          |  resolve(res);
          |});
@@ -49,6 +49,7 @@ case class TypescriptFunc(func: FuncCallable) {
        |    let request;
        |    const promise = new Promise<$retType>((resolve, reject) => {
        |        request = new RequestFlowBuilder()
+       |            .disableInjections()
        |            .withRawScript(
        |                `
        |${tsAir.show}
@@ -56,14 +57,14 @@ case class TypescriptFunc(func: FuncCallable) {
        |            )
        |            .configHandler((h) => {
        |                h.on('${conf.getDataService}', 'relay', () => {
-       |                    return client.relayPeerId;
+       |                    return client.relayPeerId!;
        |                });
        |                h.on('getRelayService', 'hasReleay', () => {// Not Used
        |                    return client.relayPeerId !== undefined;
        |                });
        |                $setCallbacks
        |                ${returnCallback.getOrElse("")}
-       |                h.on('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
+       |                h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
        |                    // assuming error is the single argument
        |                    const [err] = args;
        |                    reject(err);

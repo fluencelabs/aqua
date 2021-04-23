@@ -20,6 +20,7 @@ object Token {
   private val nl = Set('\n', '\r')
 
   val ` ` : P[String] = P.charsWhile(fSpaces)
+  val `const`: P[Unit] = P.string("const")
   val `data`: P[Unit] = P.string("data")
   val `import`: P[Unit] = P.string("import")
   val `use`: P[Unit] = P.string("use")
@@ -67,6 +68,9 @@ object Token {
   val `)` : P[Unit] = ` `.?.with1 *> P.char(')') <* ` `.?
   val ` -> ` : P[Unit] = ` `.?.with1 *> P.string("->") <* ` `.?
   val ` <- ` : P[Unit] = (` `.?.with1 *> P.string("<-") <* ` `.?).backtrack
+  val `=` : P[Unit] = P.string("=")
+  val ` = ` : P[Unit] = (` `.?.with1 *> P.string("=") <* ` `.?).backtrack
+  val `?` : P[Unit] = P.string("?")
   val `<-` : P[Unit] = P.string("<-").backtrack
 
   def comma[T](p: P[T]): P[NonEmptyList[T]] =

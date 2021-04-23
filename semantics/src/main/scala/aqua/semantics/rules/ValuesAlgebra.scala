@@ -1,9 +1,9 @@
 package aqua.semantics.rules
 
-import aqua.model.{IntoArrayModel, IntoFieldModel, LambdaModel, LiteralModel, ValueModel, VarModel}
+import aqua.model._
+import aqua.parser.lexer._
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.parser.lexer.{IntoArray, IntoField, LambdaOp, Literal, Token, Value, VarLambda}
 import aqua.types.{ArrowType, LiteralType, Type}
 import cats.data.Chain
 import cats.free.Free
