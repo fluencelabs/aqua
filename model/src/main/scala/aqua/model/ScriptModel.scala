@@ -20,17 +20,16 @@ case class ScriptModel(
   def resolveFunctions: Chain[FuncCallable] = {
     val constantsToName =
       constants.map(c => c.name -> c.value).toList.toMap
+
     funcs
       .foldLeft(
         (
-          (
-            Map.empty[String, FuncCallable],
-            Chain.empty[FuncCallable]
-          )
+          Map.empty[String, FuncCallable],
+          Chain.empty[FuncCallable]
         )
       ) { case ((acc, outputAcc), func) =>
         val fr = func.capture(acc, constantsToName)
-        acc -> outputAcc.append(fr)
+        acc.updated(func.name, fr) -> outputAcc.append(fr)
       }
       ._2
   }
