@@ -35,7 +35,8 @@ jobs:
       - uses: olafurpg/setup-scala@v10
 
       ### Update & build
-      run: |
+      - name: Run
+        run: |
         sbt test
         ls -lah
         git clone git@github.com:fluencelabs/aqua-playground.git
