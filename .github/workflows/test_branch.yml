@@ -37,11 +37,11 @@ jobs:
       ### Update & build
       - name: Run
         run: |
-        sbt test
-        ls -lah
-        git clone git@github.com:fluencelabs/aqua-playground.git
-        sbt cli/run -i aqua-playground/aqua -o aqua-playground/src/compiled
-        cd aqua-playground
-        npm i
-        npm run cli
+          sbt test
+          ls -lah
+          git clone git@github.com:fluencelabs/aqua-playground.git
+          sbt cli/run -i aqua-playground/aqua -o aqua-playground/src/compiled
+          cd aqua-playground
+          npm i
+          npm run cli
 
