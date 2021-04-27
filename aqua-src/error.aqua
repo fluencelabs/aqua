@@ -12,6 +12,7 @@ data User:
 service Test("test"):
     getUserList: -> []User
     doSomething: -> bool
+    check: bool -> ()
 
 func initAfterJoin(me: User) -> []User:
     allUsers <- Test.getUserList()
@@ -26,3 +27,18 @@ func initAfterJoin(me: User) -> []User:
                 Op.identity()
         par Test.doSomething()
     <- allUsers
+
+func handleArr(arr: []bool):
+    for b <- arr:
+        Test.check(b)
+
+
+func checkStreams(ch: []string) -> []bool:
+    stream: *bool
+    stream <- Peer.is_connected("write once")
+    stream <- Peer.is_connected("write twice")
+    for b <- ch:
+        on b:
+            stream <- Peer.is_connected(b)
+    handleArr(stream)
+    <- stream

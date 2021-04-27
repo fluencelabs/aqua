@@ -9,20 +9,19 @@ import cats.syntax.functor._
  * @param args Argument definitions
  * @param callWith Values provided for arguments
  */
-case class ArgsCall(args: List[ArgDef], callWith: List[Call.Arg]) {
+case class ArgsCall(args: List[ArgDef], callWith: List[ValueModel]) {
   // Both arguments (arg names and types how they seen from the function body)
   // and values (value models and types how they seen on the call site)
-  lazy val zipped: List[(ArgDef, Call.Arg)] = args zip callWith
+  lazy val zipped: List[(ArgDef, ValueModel)] = args zip callWith
 
   lazy val dataArgs: Map[String, ValueModel] =
-    zipped.collect { case (ArgDef.Data(name, _), Call.Arg(value, _)) =>
+    zipped.collect { case (ArgDef.Data(name, _), value) =>
       name -> value
     }.toMap
 
   def arrowArgs(arrowsInScope: Map[String, FuncCallable]): Map[String, FuncCallable] =
     zipped.collect {
-      case (ArgDef.Arrow(name, _), Call.Arg(VarModel(value, _), _))
-          if arrowsInScope.contains(value) =>
+      case (ArgDef.Arrow(name, _), VarModel(value, _, _)) if arrowsInScope.contains(value) =>
         name -> arrowsInScope(value)
     }.toMap
 }
@@ -33,7 +32,7 @@ object ArgsCall {
     arrow: ArrowType,
     argPrefix: String = "arg",
     retName: String = "init_call_res"
-  ): (ArgsDef, Call, Option[Call.Arg]) = {
+  ): (ArgsDef, Call, Option[Call.Export]) = {
     val argNamesTypes = arrow.args.zipWithIndex.map(iv => iv.map(i => argPrefix + i).swap)
 
     val argsDef = ArgsDef(argNamesTypes.map {
@@ -43,12 +42,12 @@ object ArgsCall {
 
     val call = Call(
       argNamesTypes.map { case (a, t) =>
-        Call.Arg(VarModel(a), t)
+        VarModel(a, t)
       },
-      arrow.res.as(retName)
+      arrow.res.map(Call.Export(retName, _))
     )
 
-    (argsDef, call, arrow.res.map(t => Call.Arg(VarModel(retName), t)))
+    (argsDef, call, arrow.res.map(t => Call.Export(retName, t)))
   }
 
 }

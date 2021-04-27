@@ -34,7 +34,7 @@ class ConstantSem[F[_]](val expr: ConstantExpr[F]) extends AnyVal {
         case (_, Some(t), _) =>
           N.defineConstant(expr.name, t) as (ConstantModel(
             expr.name.value,
-            ValuesAlgebra.valueToModel(expr.value)
+            ValuesAlgebra.valueToModel(expr.value, t)
           ): Model)
       }
     } yield model

@@ -6,6 +6,7 @@ import aqua.parser.expr.IfExpr
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.semantics.Prog
+import aqua.types.Type
 import cats.free.Free
 import cats.syntax.functor._
 
@@ -21,26 +22,30 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
           V.resolveType(expr.right).flatMap {
             case Some(rt) =>
               T.ensureTypeMatches(expr.right, lt, rt)
+                .map(m => Some(lt -> rt).filter(_ => m))
             case None =>
-              Free.pure[Alg, Boolean](false)
+              Free.pure[Alg, Option[(Type, Type)]](None)
           }
         case None =>
-          V.resolveType(expr.right).as(false)
+          V.resolveType(expr.right).as[Option[(Type, Type)]](None)
       },
-      (r: Boolean, ops: Model) =>
-        ops match {
-          case op: FuncOp if r =>
-            Free.pure[Alg, Model](
-              FuncOp.wrap(
-                MatchMismatchTag(
-                  ValuesAlgebra.valueToModel(expr.left),
-                  ValuesAlgebra.valueToModel(expr.right),
-                  expr.eqOp.value
-                ),
-                op
-              )
-            )
-          case _ => Free.pure[Alg, Model](Model.error("If expression errored"))
+      (r: Option[(Type, Type)], ops: Model) =>
+        r.fold(Free.pure[Alg, Model](Model.error("If expression errored in matching types"))) {
+          case (lt, rt) =>
+            ops match {
+              case op: FuncOp =>
+                Free.pure[Alg, Model](
+                  FuncOp.wrap(
+                    MatchMismatchTag(
+                      ValuesAlgebra.valueToModel(expr.left, lt),
+                      ValuesAlgebra.valueToModel(expr.right, rt),
+                      expr.eqOp.value
+                    ),
+                    op
+                  )
+                )
+              case _ => Free.pure[Alg, Model](Model.error("Wrong body of the if expression"))
+            }
         }
     )
 }

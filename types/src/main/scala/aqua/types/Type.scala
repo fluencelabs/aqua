@@ -73,15 +73,9 @@ case class ProductType(name: String, fields: NonEmptyMap[String, Type]) extends 
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
-sealed trait CallableType extends Type {
-  def acceptsAsArguments(valueTypes: List[Type]): Boolean
-  def args: List[Type]
-  def res: Option[Type]
-}
+case class ArrowType(args: List[Type], res: Option[Type]) extends Type {
 
-case class ArrowType(args: List[Type], res: Option[Type]) extends CallableType {
-
-  override def acceptsAsArguments(valueTypes: List[Type]): Boolean =
+  def acceptsAsArguments(valueTypes: List[Type]): Boolean =
     (args.length == valueTypes.length) && args
       .zip(valueTypes)
       .forall(av => av._1.acceptsValueOf(av._2))
@@ -89,6 +83,8 @@ case class ArrowType(args: List[Type], res: Option[Type]) extends CallableType {
   override def toString: String =
     args.map(_.toString).mkString(", ") + " -> " + res.map(_.toString).getOrElse("()")
 }
+
+case class StreamType(element: Type) extends DataType
 
 object Type {
   import Double.NaN
@@ -132,9 +128,11 @@ object Type {
         case (x: ScalarType, LiteralType(ys, _)) if ys == Set(x) => 0.0
         case (x: ScalarType, LiteralType(ys, _)) if ys(x) => 1.0
         case (x: ArrayType, y: ArrayType) => cmp(x.element, y.element)
+        case (x: ArrayType, y: StreamType) => cmp(x.element, y.element)
+        case (x: StreamType, y: StreamType) => cmp(x.element, y.element)
         case (ProductType(_, xFields), ProductType(_, yFields)) =>
           cmpProd(xFields, yFields)
-        case (l: CallableType, r: CallableType) =>
+        case (l: ArrowType, r: ArrowType) =>
           val argL = l.args
           val resL = l.res
           val argR = r.args

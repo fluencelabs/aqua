@@ -1,16 +1,7 @@
 package aqua.model
 
 import aqua.model.func.Call
-import aqua.model.func.body.{
-  CallServiceTag,
-  FuncOp,
-  FuncOps,
-  MatchMismatchTag,
-  OnTag,
-  OpTag,
-  SeqTag,
-  XorTag
-}
+import aqua.model.func.body._
 import aqua.model.transform.BodyConfig
 import aqua.types.ScalarType
 import cats.Eval
@@ -30,10 +21,9 @@ case class Node(tag: OpTag, ops: List[Node] = Nil) {
                                                           else
                                                             Console.BLUE + left + Console.RED + " != " + Console.YELLOW + right)
 
-  private def diffArg(left: Call.Arg, right: Call.Arg): String =
+  private def diffArg(left: ValueModel, right: ValueModel): String =
     Console.GREEN + "(" +
-      equalOrNot(left.model, right.model) + Console.GREEN + ", " +
-      equalOrNot(left.`type`, right.`type`) + Console.GREEN + ")"
+      equalOrNot(left, right) + Console.GREEN + ")"
 
   private def diffCall(left: Call, right: Call): String =
     if (left == right) Console.GREEN + left + Console.RESET
@@ -95,7 +85,7 @@ object Node {
     Cofree(tree.tag, Eval.later(Chain.fromSeq(tree.ops.map(nodeToCof))))
 
   val relay = LiteralModel("relay")
-  val relayV = VarModel("relay")
+  val relayV = VarModel("relay", ScalarType.string)
   val initPeer = LiteralModel.initPeerId
   val emptyCall = Call(Nil, None)
   val otherPeer = LiteralModel("other-peer")
@@ -111,7 +101,7 @@ object Node {
     CallServiceTag(
       bc.errorHandlingCallback,
       bc.errorFuncName,
-      Call(Call.Arg(LiteralModel("%last_error%"), ScalarType.string) :: Nil, None),
+      Call(LiteralModel("%last_error%") :: Nil, None),
       Option(on)
     )
   )
@@ -120,7 +110,7 @@ object Node {
     CallServiceTag(
       bc.callbackSrvId,
       bc.respFuncName,
-      Call(Call.Arg(value, ScalarType.string) :: Nil, None),
+      Call(value :: Nil, None),
       Option(on)
     )
   )
@@ -129,7 +119,7 @@ object Node {
     CallServiceTag(
       bc.dataSrvId,
       name,
-      Call(Nil, Some(name)),
+      Call(Nil, Some(Call.Export(name, ScalarType.string))),
       Option(on)
     )
   )

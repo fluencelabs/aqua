@@ -99,6 +99,7 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
         }
 
       case etm: EnsureTypeMatches[F] =>
+        // TODO in case of two literals, check for types intersection?
         if (etm.expected.acceptsValueOf(etm.`given`)) State.pure(true)
         else
           report(etm.token, s"Types mismatch, expected: ${etm.expected}, given: ${etm.`given`}")

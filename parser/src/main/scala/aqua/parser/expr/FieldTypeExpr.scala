@@ -12,7 +12,7 @@ case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F]) extends 
 object FieldTypeExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[FieldTypeExpr[F]] =
-    ((Name.p[F] <* ` : `) ~ DataTypeToken.`datatypedef`[F]).map {
-      case (name, t) => FieldTypeExpr(name, t)
+    ((Name.p[F] <* ` : `) ~ DataTypeToken.`datatypedef`[F]).map { case (name, t) =>
+      FieldTypeExpr(name, t)
     }
 }

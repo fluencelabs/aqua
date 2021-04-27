@@ -3,6 +3,7 @@ package aqua.model.transform
 import aqua.model.func.body._
 import aqua.model.func.FuncCallable
 import aqua.model.VarModel
+import aqua.types.ScalarType
 import cats.data.Chain
 import cats.free.Cofree
 
@@ -10,7 +11,7 @@ object Transform {
 
   def forClient(func: FuncCallable, conf: BodyConfig): Cofree[Chain, OpTag] = {
     val initCallable: InitPeerCallable = InitViaRelayCallable(
-      Chain.one(VarModel(conf.relayVarName))
+      Chain.one(VarModel(conf.relayVarName, ScalarType.string))
     )
     val errorsCatcher = ErrorsCatcher(
       enabled = conf.wrapWithXor,
@@ -19,7 +20,12 @@ object Transform {
       initCallable
     )
     val argsProvider: ArgsProvider =
-      ArgsFromService(conf.dataSrvId, conf.relayVarName +: func.args.dataArgNames.toList)
+      ArgsFromService(
+        conf.dataSrvId,
+        conf.relayVarName -> ScalarType.string :: func.args.dataArgs.toList.map(add =>
+          add.name -> add.dataType
+        )
+      )
 
     val transform =
       errorsCatcher.transform _ compose initCallable.transform compose argsProvider.transform

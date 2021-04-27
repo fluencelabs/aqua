@@ -5,6 +5,7 @@ import aqua.model.func.{ArgDef, ArgsCall, ArgsDef, Call, FuncCallable}
 import aqua.model.func.body.{FuncOp, FuncOps}
 import aqua.types.ArrowType
 import cats.Eval
+import cats.syntax.apply._
 
 case class ResolveFunc(
   transform: FuncOp => FuncOp,
@@ -14,11 +15,11 @@ case class ResolveFunc(
   arrowCallbackPrefix: String = "init_peer_callable_"
 ) {
 
-  def returnCallback(func: FuncCallable): Option[FuncOp] = func.ret.map { retArg =>
+  def returnCallback(func: FuncCallable): Option[FuncOp] = func.ret.map { case (retModel, _) =>
     callback(
       respFuncName,
       Call(
-        retArg :: Nil,
+        retModel :: Nil,
         None
       )
     )
@@ -30,7 +31,7 @@ case class ResolveFunc(
       arrowCallbackPrefix + name,
       callback(name, call),
       args,
-      ret,
+      (ret.map(_.model), arrowType.res).mapN(_ -> _),
       Map.empty,
       Map.empty
     )
@@ -63,7 +64,7 @@ case class ResolveFunc(
   def resolve(func: FuncCallable, funcArgName: String = "_func"): Eval[FuncOp] =
     wrap(func)
       .resolve(
-        Call(Call.Arg(VarModel(funcArgName), func.arrowType) :: Nil, None),
+        Call(VarModel(funcArgName, func.arrowType) :: Nil, None),
         Map(funcArgName -> func),
         Set.empty
       )

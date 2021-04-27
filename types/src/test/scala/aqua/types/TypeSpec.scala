@@ -94,4 +94,13 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     accepts(four, one) should be(false)
   }
 
+  "streams" should "be accepted as an array, but not vice versa" in {
+    val stream: Type = StreamType(bool)
+    val array: Type = ArrayType(bool)
+
+    accepts(array, stream) should be(true)
+    accepts(stream, array) should be(false)
+    accepts(stream, stream) should be(true)
+  }
+
 }

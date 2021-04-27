@@ -19,7 +19,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         "ret",
         FuncOp(on(otherPeer, Nil, call(1))),
         ArgsDef.empty,
-        Some(Call.Arg(ret, ScalarType.string)),
+        Some((ret, ScalarType.string)),
         Map.empty,
         Map.empty
       )
@@ -57,7 +57,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       "ret",
       FuncOp(seq(call(0), on(otherPeer, Nil, call(1)))),
       ArgsDef.empty,
-      Some(Call.Arg(ret, ScalarType.string)),
+      Some((ret, ScalarType.string)),
       Map.empty,
       Map.empty
     )
@@ -104,9 +104,18 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val f1: FuncCallable =
       FuncCallable(
         "f1",
-        FuncOp(Node(CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), None))),
+        FuncOp(
+          Node(
+            CallServiceTag(
+              LiteralModel("\"srv1\""),
+              "foo",
+              Call(Nil, Some(Call.Export("v", ScalarType.string))),
+              None
+            )
+          )
+        ),
         ArgsDef.empty,
-        Some(Call.Arg(VarModel("v"), ScalarType.string)),
+        Some((VarModel("v", ScalarType.string), ScalarType.string)),
         Map.empty,
         Map.empty
       )
@@ -115,10 +124,10 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       FuncCallable(
         "f2",
         FuncOp(
-          Node(CallArrowTag("callable", Call(Nil, Some("v"))))
+          Node(CallArrowTag("callable", Call(Nil, Some(Call.Export("v", ScalarType.string)))))
         ),
         ArgsDef.empty,
-        Some(Call.Arg(VarModel("v"), ScalarType.string)),
+        Some((VarModel("v", ScalarType.string), ScalarType.string)),
         Map("callable" -> f1),
         Map.empty
       )
@@ -134,12 +143,17 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         seq(
           dataCall(bc, "relay", initPeer),
           Node(
-            CallServiceTag(LiteralModel("\"srv1\""), "foo", Call(Nil, Some("v")), Some(initPeer))
+            CallServiceTag(
+              LiteralModel("\"srv1\""),
+              "foo",
+              Call(Nil, Some(Call.Export("v", ScalarType.string))),
+              Some(initPeer)
+            )
           ),
           on(
             initPeer,
             relayV :: Nil,
-            respCall(bc, VarModel("v"), initPeer)
+            respCall(bc, VarModel("v", ScalarType.string), initPeer)
           )
         )
       )

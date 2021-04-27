@@ -7,9 +7,10 @@ import cats.free.Free
 
 class NamesAlgebra[F[_], Alg[_]](implicit V: InjectK[NameOp[F, *], Alg]) {
 
-  def read(name: Name[F]): Free[Alg, Option[Type]] =
-    Free.liftInject[Alg](ReadName(name))
+  def read(name: Name[F], mustBeDefined: Boolean = true): Free[Alg, Option[Type]] =
+    Free.liftInject[Alg](ReadName(name, mustBeDefined))
 
+  // TODO can be implemented via read?
   def constantDefined(name: Name[F]): Free[Alg, Option[Type]] =
     Free.liftInject[Alg](ConstantDefined(name))
 

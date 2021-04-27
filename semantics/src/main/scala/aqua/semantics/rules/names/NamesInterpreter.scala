@@ -37,11 +37,11 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
           .orElseF(readName(rn.name.value))
           .value
           .flatTap {
-            case Some(_) => State.pure(())
-            case None =>
+            case None if rn.mustBeDefined =>
               getState.flatMap(st =>
                 report(rn.name, "Undefined name, available: " + st.allNames.mkString(", "))
               )
+            case _ => State.pure(())
           }
       case rn: ConstantDefined[F] =>
         constantDefined(rn.name.value)

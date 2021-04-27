@@ -25,7 +25,8 @@ object FuncExpr
       ParExpr,
       ForExpr,
       IfExpr,
-      ElseOtherwiseExpr
+      ElseOtherwiseExpr,
+      DeclareStreamExpr
     ) {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[FuncExpr[F]] =
