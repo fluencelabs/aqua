@@ -26,7 +26,6 @@ object AirGen {
   def valueToData(vm: ValueModel): DataView = vm match {
     case LiteralModel(value) => DataView.StringScalar(value)
     case VarModel(name, t, lambda) =>
-      if (name == "stream") println(Console.CYAN + t + Console.RESET)
       val n = t match {
         case _: StreamType => "$" + name
         case _ => name
