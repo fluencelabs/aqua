@@ -17,6 +17,18 @@ case class ArrayTypeToken[F[_]: Comonad](override val unit: F[Unit], data: DataT
   override def as[T](v: T): F[T] = unit.as(v)
 }
 
+case class StreamTypeToken[F[_]: Comonad](override val unit: F[Unit], data: DataTypeToken[F])
+    extends DataTypeToken[F] {
+  override def as[T](v: T): F[T] = unit.as(v)
+}
+
+object StreamTypeToken {
+
+  def `streamtypedef`[F[_]: LiftParser: Comonad]: P[StreamTypeToken[F]] =
+    (`*`.lift ~ DataTypeToken.`datatypedef`[F]).map(ud => StreamTypeToken(ud._1, ud._2))
+
+}
+
 case class CustomTypeToken[F[_]: Comonad](name: F[String]) extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
@@ -64,7 +76,7 @@ object ArrowTypeToken {
   def `arrowdef`[F[_]: LiftParser: Comonad]: P[ArrowTypeToken[F]] =
     (comma0(DataTypeToken.`datatypedef`).with1 ~ ` -> `.lift ~
       (DataTypeToken.`datatypedef`
-        .map(Some(_)) | P.string("()").as(None))).map { case ((args, point), res) ⇒
+        .map(Some(_)) | `()`.as(None))).map { case ((args, point), res) ⇒
       ArrowTypeToken(point, args, res)
     }
 
@@ -75,27 +87,23 @@ object ArrowTypeToken {
     }
 }
 
-case class AquaArrowType[F[_]](args: List[TypeToken[F]], res: Option[DataTypeToken[F]])
-    extends ArrowDef[F] {
-  override def argTypes: List[TypeToken[F]] = args
-
-  override def resType: Option[DataTypeToken[F]] = res
-}
-
 object DataTypeToken {
 
   def `arraytypedef`[F[_]: LiftParser: Comonad]: P[ArrayTypeToken[F]] =
-    (P.string("[]").lift ~ `datatypedef`[F]).map(ud => ArrayTypeToken(ud._1, ud._2))
+    (`[]`.lift ~ `datatypedef`[F]).map(ud => ArrayTypeToken(ud._1, ud._2))
 
   def `datatypedef`[F[_]: LiftParser: Comonad]: P[DataTypeToken[F]] =
     P.oneOf(
-      P.defer(`arraytypedef`[F]) :: BasicTypeToken.`basictypedef`[F] :: CustomTypeToken.ct[F] :: Nil
+      P.defer(`arraytypedef`[F]) :: P.defer(StreamTypeToken.`streamtypedef`) :: BasicTypeToken
+        .`basictypedef`[F] :: CustomTypeToken.ct[F] :: Nil
     )
 }
 
 object TypeToken {
 
   def `typedef`[F[_]: LiftParser: Comonad]: P[TypeToken[F]] =
-    P.oneOf(ArrowTypeToken.`arrowdef`.backtrack :: DataTypeToken.`datatypedef` :: Nil)
+    P.oneOf(
+      ArrowTypeToken.`arrowdef`.backtrack :: DataTypeToken.`datatypedef` :: Nil
+    )
 
 }

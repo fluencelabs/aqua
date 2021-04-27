@@ -41,11 +41,9 @@ object Token {
   val `catch`: P[Unit] = P.string("catch")
   val `par`: P[Unit] = P.string("par")
   val `:` : P[Unit] = P.char(':')
-  val `$` : P[Unit] = P.char('$')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
 
   val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).string
-  val `$stream`: P[String] = (P.char('$') ~ P.charsWhile(anum_).?).string
 
   val `Class`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒
     c.toString ++ s.getOrElse("")
@@ -59,8 +57,10 @@ object Token {
   val `.` : P[Unit] = P.char('.')
   val `"` : P[Unit] = P.char('"')
   val `*` : P[Unit] = P.char('*')
+  val `[]` : P[Unit] = P.string("[]")
   val `(` : P[Unit] = ` `.?.with1 *> P.char('(') <* ` `.?
   val `)` : P[Unit] = ` `.?.with1 *> P.char(')') <* ` `.?
+  val `()` : P[Unit] = P.string("()")
   val ` -> ` : P[Unit] = ` `.?.with1 *> P.string("->") <* ` `.?
   val ` <- ` : P[Unit] = (` `.?.with1 *> P.string("<-") <* ` `.?).backtrack
   val `=` : P[Unit] = P.string("=")
