@@ -11,10 +11,10 @@ case class ArgsDef(args: List[ArgDef]) {
 
   def types: List[Type] = args.map(_.`type`)
 
-  def toCallArgs: List[Call.Arg] = args.map(ad => Call.Arg(VarModel(ad.name), ad.`type`))
+  def toCallArgs: List[VarModel] = args.map(ad => VarModel(ad.name, ad.`type`))
 
-  lazy val dataArgNames: Chain[String] = Chain.fromSeq(args.collect { case ArgDef.Data(n, _) =>
-    n
+  lazy val dataArgs: Chain[ArgDef.Data] = Chain.fromSeq(args.collect { case ad: ArgDef.Data =>
+    ad
   })
 
   lazy val arrowArgs: Chain[ArgDef.Arrow] = Chain.fromSeq(args.collect { case ad: ArgDef.Arrow =>

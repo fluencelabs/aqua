@@ -16,6 +16,7 @@ import cats.data.Chain
 import cats.free.Free
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import cats.syntax.apply._
 
 class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
   import expr._
@@ -61,41 +62,43 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
     // Check return value type
     ((funcArrow.res, retValue) match {
       case (Some(t), Some(v)) =>
-        V.resolveType(v).flatMap {
+        V.resolveType(v).flatTap {
           case Some(vt) => T.ensureTypeMatches(v, t, vt).void
           case None => Free.pure[Alg, Unit](())
         }
       case _ =>
-        Free.pure[Alg, Unit](())
+        Free.pure[Alg, Option[Type]](None)
 
       // Erase arguments and internal variables
-    }) >> A.endScope() >> N.endScope() >> (bodyGen match {
-      case bg: FuncOp if ret.isDefined == retValue.isDefined =>
-        val argNames = args.map(_.name.value)
+    }).flatMap(retType =>
+      A.endScope() >> N.endScope() >> (bodyGen match {
+        case bg: FuncOp if ret.isDefined == retValue.isDefined =>
+          val argNames = args.map(_.name.value)
 
-        val model = FuncModel(
-          name = name.value,
-          args = ArgsDef(
-            argNames
-              .zip(funcArrow.args)
-              .map {
-                case (n, dt: DataType) => ArgDef.Data(n, dt)
-                case (n, at: ArrowType) => ArgDef.Arrow(n, at)
-              }
-          ),
-          ret = retValue
-            .map(ValuesAlgebra.valueToModel)
-            .flatMap(vd => funcArrow.res.map(Call.Arg(vd, _))),
-          body = bg
-        )
+          val model = FuncModel(
+            name = name.value,
+            args = ArgsDef(
+              argNames
+                .zip(funcArrow.args)
+                .map {
+                  case (n, dt: DataType) => ArgDef.Data(n, dt)
+                  case (n, at: ArrowType) => ArgDef.Arrow(n, at)
+                }
+            ),
+            ret = (retValue, retType, funcArrow.res).mapN { case (retV, retT, resT) =>
+              ValuesAlgebra.valueToModel(retV, retT) -> resT
+            },
+            body = bg
+          )
 
-        N.defineArrow(
-          name,
-          funcArrow,
-          isRoot = true
-        ) as model
-      case m => Free.pure[Alg, Model](Model.error("Function body is not a funcOp, it's " + m))
-    })
+          N.defineArrow(
+            name,
+            funcArrow,
+            isRoot = true
+          ) as model
+        case m => Free.pure[Alg, Model](Model.error("Function body is not a funcOp, it's " + m))
+      })
+    )
 
   def program[Alg[_]](implicit
     T: TypesAlgebra[F, Alg],

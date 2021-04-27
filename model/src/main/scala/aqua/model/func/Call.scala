@@ -1,24 +1,24 @@
 package aqua.model.func
 
-import aqua.model.ValueModel
+import aqua.model.{ValueModel, VarModel}
 import aqua.types.Type
 
-case class Call(args: List[Call.Arg], exportTo: Option[String]) {
+case class Call(args: List[ValueModel], exportTo: Option[Call.Export]) {
 
   def mapValues(f: ValueModel => ValueModel): Call =
     Call(
-      args.map(_.mapValues(f)),
+      args.map(f),
       exportTo
     )
 
-  def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(f))
+  def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(_.mapName(f)))
 }
 
 object Call {
 
-  case class Arg(model: ValueModel, `type`: Type) {
+  case class Export(name: String, `type`: Type) {
+    def mapName(f: String => String): Export = copy(f(name))
 
-    def mapValues(f: ValueModel => ValueModel): Arg =
-      copy(f(model))
+    def model: ValueModel = VarModel(name, `type`)
   }
 }

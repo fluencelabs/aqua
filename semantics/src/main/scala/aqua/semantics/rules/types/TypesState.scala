@@ -9,10 +9,11 @@ import aqua.parser.lexer.{
   IntoField,
   LambdaOp,
   Name,
+  StreamTypeToken,
   Token,
   TypeToken
 }
-import aqua.types.{ArrayType, ArrowType, DataType, ProductType, Type}
+import aqua.types.{ArrayType, ArrowType, DataType, ProductType, StreamType, Type}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
@@ -29,6 +30,10 @@ case class TypesState[F[_]](
       case ArrayTypeToken(_, dtt) =>
         resolveTypeToken(dtt).collect { case it: DataType =>
           ArrayType(it)
+        }
+      case StreamTypeToken(_, dtt) =>
+        resolveTypeToken(dtt).collect { case it: DataType =>
+          StreamType(it)
         }
       case ctt: CustomTypeToken[F] => strict.get(ctt.value)
       case btt: BasicTypeToken[F] => Some(btt.value)

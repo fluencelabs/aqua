@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.Model
+import aqua.model.{Model, ValueModel}
 import aqua.model.func.Call
 import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
 import aqua.parser.expr.CallArrowExpr
@@ -9,7 +9,7 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.ArrowType
+import aqua.types.{ArrowType, ScalarType, StreamType, Type}
 import cats.free.Free
 import cats.syntax.apply._
 import cats.syntax.flatMap._
@@ -25,16 +25,29 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
     at: ArrowType
   )(implicit
     N: NamesAlgebra[F, Alg],
+    T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Free[Alg, List[Call.Arg]] =
+  ): Free[Alg, (List[ValueModel], Option[Type])] =
     V.checkArguments(expr.funcName, at, args) >> variable
-      .fold(freeUnit[Alg])(exportVar =>
+      .fold(freeUnit[Alg].as(Option.empty[Type]))(exportVar =>
         at.res.fold(
           // TODO: error! we're trying to export variable, but function has no export type
-          freeUnit[Alg]
-        )(resType => N.define(exportVar, resType).void)
-      ) >> args.foldLeft(Free.pure[Alg, List[Call.Arg]](Nil)) { case (acc, v) =>
-      (acc, V.resolveType(v)).mapN((a, b) => a ++ b.map(Call.Arg(ValuesAlgebra.valueToModel(v), _)))
+          freeUnit[Alg].as(Option.empty[Type])
+        )(resType =>
+          N.read(exportVar, mustBeDefined = false).flatMap {
+            case Some(t @ StreamType(st)) =>
+              T.ensureTypeMatches(exportVar, st, resType).as(Option(t))
+            case _ => N.define(exportVar, resType).as(at.res)
+          }
+        )
+      ) >>= { (v: Option[Type]) =>
+      args
+        .foldLeft(Free.pure[Alg, List[ValueModel]](Nil)) { case (acc, v) =>
+          (acc, V.resolveType(v)).mapN((a, b) =>
+            a ++ b.map(bt => ValuesAlgebra.valueToModel(v, bt))
+          )
+        }
+        .map(_ -> v)
     }
 
   private def toModel[Alg[_]](implicit
@@ -50,30 +63,29 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
             Option(at -> sid) // Here we assume that Ability is a Service that must be resolved
           case _ => None
         }.flatMap(_.fold(Free.pure[Alg, Option[FuncOp]](None)) { case (arrowType, serviceId) =>
-          checkArgsRes(arrowType)
-            .map(argsResolved =>
-              FuncOp.leaf(
-                CallServiceTag(
-                  serviceId = ValuesAlgebra.valueToModel(serviceId),
-                  funcName = funcName.value,
-                  Call(argsResolved, variable.map(_.value))
-                )
+          checkArgsRes(arrowType).map { case (argsResolved, t) =>
+            FuncOp.leaf(
+              CallServiceTag(
+                // TODO service id type should not be hardcoded
+                serviceId = ValuesAlgebra.valueToModel(serviceId, ScalarType.string),
+                funcName = funcName.value,
+                Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
               )
             )
+          }
             .map(Option(_))
         })
       case None =>
         N.readArrow(funcName)
           .flatMap(_.fold(Free.pure[Alg, Option[FuncOp]](None)) { arrowType =>
-            checkArgsRes(arrowType)
-              .map(argsResolved =>
-                FuncOp.leaf(
-                  CallArrowTag(
-                    funcName = funcName.value,
-                    Call(argsResolved, variable.map(_.value))
-                  )
+            checkArgsRes(arrowType).map { case (argsResolved, t) =>
+              FuncOp.leaf(
+                CallArrowTag(
+                  funcName = funcName.value,
+                  Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
                 )
               )
+            }
               .map(Option(_))
           })
     }
@@ -84,6 +96,6 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
   ): Prog[Alg, Model] =
-    toModel[Alg].map(_.getOrElse(Model.error("Coalgebra can't be converted to Model")))
+    toModel[Alg].map(_.getOrElse(Model.error("CallArrow can't be converted to Model")))
 
 }

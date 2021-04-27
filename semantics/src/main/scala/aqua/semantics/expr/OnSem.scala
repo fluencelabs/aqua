@@ -6,6 +6,7 @@ import aqua.parser.expr.OnExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.types.ScalarType
 import cats.data.Chain
 import cats.syntax.flatMap._
 import cats.syntax.functor._
@@ -28,8 +29,8 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
           case op: FuncOp =>
             FuncOp.wrap(
               OnTag(
-                ValuesAlgebra.valueToModel(expr.peerId),
-                Chain.fromSeq(expr.via).map(ValuesAlgebra.valueToModel)
+                ValuesAlgebra.valueToModel(expr.peerId, ScalarType.string),
+                Chain.fromSeq(expr.via).map(ValuesAlgebra.valueToModel(_, ScalarType.string))
               ),
               op
             )

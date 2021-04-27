@@ -4,7 +4,7 @@ import aqua.model._
 import aqua.parser.lexer._
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrowType, LiteralType, Type}
+import aqua.types.{ArrowType, LiteralType, StreamType, Type}
 import cats.data.Chain
 import cats.free.Free
 import cats.syntax.apply._
@@ -82,10 +82,10 @@ object ValuesAlgebra {
       case (f: IntoField[F]) :: tail => opsToModel(tail).prepend(IntoFieldModel(f.value))
     }
 
-  def valueToModel[F[_]](v: Value[F]): ValueModel =
+  def valueToModel[F[_]](v: Value[F], t: Type): ValueModel =
     v match {
       case l: Literal[F] => LiteralModel(l.value)
-      case VarLambda(name, ops) => VarModel(name.value, opsToModel(ops))
+      case VarLambda(name, ops) => VarModel(name.value, t, opsToModel(ops))
     }
 
   implicit def deriveValuesAlgebra[F[_], Alg[_]](implicit

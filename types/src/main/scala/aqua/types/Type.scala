@@ -84,7 +84,7 @@ case class ArrowType(args: List[Type], res: Option[Type]) extends Type {
     args.map(_.toString).mkString(", ") + " -> " + res.map(_.toString).getOrElse("()")
 }
 
-case class StreamType(element: Type) extends Type
+case class StreamType(element: Type) extends DataType
 
 object Type {
   import Double.NaN

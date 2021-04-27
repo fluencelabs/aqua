@@ -2,7 +2,7 @@ package aqua.model.func
 
 import aqua.model.func.body.{CallArrowTag, FuncOp, OpTag}
 import aqua.model.{ValueModel, VarModel}
-import aqua.types.ArrowType
+import aqua.types.{ArrowType, DataType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -11,7 +11,7 @@ case class FuncCallable(
   funcName: String,
   body: FuncOp,
   args: ArgsDef,
-  ret: Option[Call.Arg],
+  ret: Option[(ValueModel, Type)],
   capturedArrows: Map[String, FuncCallable],
   capturedValues: Map[String, ValueModel]
 ) {
@@ -19,7 +19,7 @@ case class FuncCallable(
   def arrowType: ArrowType =
     ArrowType(
       args.types,
-      ret.map(_.`type`)
+      ret.map(_._2)
     )
 
   def findNewNames(forbidden: Set[String], introduce: Set[String]): Map[String, String] =
@@ -52,7 +52,7 @@ case class FuncCallable(
     val treeWithValues = body.resolveValues(argsToData)
 
     // Function body on its own defines some values; collect their names
-    val treeDefines = treeWithValues.definesValueNames.value -- call.exportTo
+    val treeDefines = treeWithValues.definesValueNames.value -- call.exportTo.map(_.name)
 
     // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
     val shouldRename = findNewNames(forbiddenNames, treeDefines)
@@ -61,7 +61,7 @@ case class FuncCallable(
       if (shouldRename.isEmpty) treeWithValues else treeWithValues.rename(shouldRename)
 
     // Result could be derived from arguments, or renamed; take care about that
-    val result = ret.map(_.model).map(_.resolveWith(argsToData)).map {
+    val result = ret.map(_._1).map(_.resolveWith(argsToData)).map {
       case v: VarModel if shouldRename.contains(v.name) => v.copy(shouldRename(v.name))
       case v => v
     }
@@ -79,8 +79,8 @@ case class FuncCallable(
         case ((noNames, resolvedExports), CallArrowTag(fn, c)) if allArrows.contains(fn) =>
           // Apply arguments to a function – recursion
           val callResolved = c.mapValues(_.resolveWith(resolvedExports))
-          val possibleArrowNames = callResolved.args.collect {
-            case Call.Arg(VarModel(m, _), _: ArrowType) => m
+          val possibleArrowNames = callResolved.args.collect { case VarModel(m, _: ArrowType, _) =>
+            m
           }.toSet
 
           val (appliedOp, value) =
@@ -92,7 +92,10 @@ case class FuncCallable(
           // TODO: actually it's done and dropped – so keep and pass it instead
           val newNames = appliedOp.definesValueNames.value
           // At the very end, will need to resolve what is used as results with the result values
-          (noNames ++ newNames, resolvedExports ++ c.exportTo.zip(value)) -> appliedOp.tree
+          (
+            noNames ++ newNames,
+            resolvedExports ++ c.exportTo.map(_.name).zip(value)
+          ) -> appliedOp.tree
         case (acc @ (_, resolvedExports), tag) =>
           tag match {
             case CallArrowTag(fn, _) if !allArrows.contains(fn) =>

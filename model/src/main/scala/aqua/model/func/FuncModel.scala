@@ -2,11 +2,12 @@ package aqua.model.func
 
 import aqua.model.func.body.FuncOp
 import aqua.model.{Model, ValueModel}
+import aqua.types.Type
 
 case class FuncModel(
   name: String,
   args: ArgsDef,
-  ret: Option[Call.Arg],
+  ret: Option[(ValueModel, Type)],
   body: FuncOp
 ) extends Model {
 

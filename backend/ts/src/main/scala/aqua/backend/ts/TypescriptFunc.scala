@@ -39,7 +39,7 @@ case class TypescriptFunc(func: FuncCallable) {
     }.mkString("\n")
 
     val retType = func.ret
-      .map(_.`type`)
+      .map(_._2)
       .fold("void")(typeToTs)
 
     val returnVal =
@@ -90,6 +90,7 @@ object TypescriptFunc {
 
   def typeToTs(t: Type): String = t match {
     case ArrayType(t) => typeToTs(t) + "[]"
+    case StreamType(t) => typeToTs(t) + "[]"
     case pt: ProductType =>
       s"{${pt.fields.map(typeToTs).toNel.map(kv => kv._1 + ":" + kv._2).toList.mkString(";")}}"
     case st: ScalarType if ScalarType.number(st) => "number"

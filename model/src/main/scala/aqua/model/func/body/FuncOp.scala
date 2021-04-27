@@ -23,9 +23,9 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
 
   def definesValueNames: Eval[Set[String]] = cata[Set[String]] {
     case (CallArrowTag(_, Call(_, Some(export))), acc) =>
-      Eval.later(acc.foldLeft(Set(export))(_ ++ _))
+      Eval.later(acc.foldLeft(Set(export.name))(_ ++ _))
     case (CallServiceTag(_, _, Call(_, Some(export)), _), acc) =>
-      Eval.later(acc.foldLeft(Set(export))(_ ++ _))
+      Eval.later(acc.foldLeft(Set(export.name))(_ ++ _))
     case (NextTag(export), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }

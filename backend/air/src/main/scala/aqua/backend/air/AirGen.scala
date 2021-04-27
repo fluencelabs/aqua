@@ -3,6 +3,7 @@ package aqua.backend.air
 import aqua.model._
 import aqua.model.func.Call
 import aqua.model.func.body._
+import aqua.types.StreamType
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -24,9 +25,14 @@ object AirGen {
 
   def valueToData(vm: ValueModel): DataView = vm match {
     case LiteralModel(value) => DataView.StringScalar(value)
-    case VarModel(name, lambda) =>
-      if (lambda.isEmpty) DataView.Variable(name)
-      else DataView.VarLens(name, lambdaToString(lambda.toList))
+    case VarModel(name, t, lambda) =>
+      if (name == "stream") println(Console.CYAN + t + Console.RESET)
+      val n = t match {
+        case _: StreamType => "$" + name
+        case _ => name
+      }
+      if (lambda.isEmpty) DataView.Variable(n)
+      else DataView.VarLens(n, lambdaToString(lambda.toList))
   }
 
   def opsToSingle(ops: Chain[AirGen]): AirGen = ops.toList match {
@@ -76,8 +82,11 @@ object AirGen {
               peerId.map(valueToData).getOrElse(DataView.InitPeerId),
               valueToData(serviceId),
               funcName,
-              args.map(_.model).map(valueToData),
-              exportTo
+              args.map(valueToData),
+              exportTo.map {
+                case Call.Export(name, _: StreamType) => "$" + name
+                case Call.Export(name, _) => name
+              }
             )
           )
 

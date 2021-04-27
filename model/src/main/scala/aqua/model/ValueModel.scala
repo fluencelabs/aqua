@@ -1,5 +1,6 @@
 package aqua.model
 
+import aqua.types.Type
 import cats.data.Chain
 
 sealed trait ValueModel {
@@ -16,7 +17,8 @@ sealed trait LambdaModel
 case object IntoArrayModel extends LambdaModel
 case class IntoFieldModel(field: String) extends LambdaModel
 
-case class VarModel(name: String, lambda: Chain[LambdaModel] = Chain.empty) extends ValueModel {
+case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Chain.empty)
+    extends ValueModel {
   def deriveFrom(vm: VarModel): VarModel = vm.copy(lambda = vm.lambda ++ lambda)
 
   override def resolveWith(map: Map[String, ValueModel]): ValueModel = {
@@ -41,7 +43,7 @@ case class VarModel(name: String, lambda: Chain[LambdaModel] = Chain.empty) exte
                     res <- two(variable)
                     <- variable
                */
-              case vm @ VarModel(nn, _) if nn == name => deriveFrom(vm)
+              case vm @ VarModel(nn, _, _) if nn == name => deriveFrom(vm)
               // it couldn't go to a cycle as long as the semantics protects it
               case _ => n.resolveWith(map)
             }

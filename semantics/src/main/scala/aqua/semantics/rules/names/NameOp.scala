@@ -5,7 +5,7 @@ import aqua.types.{ArrowType, Type}
 
 sealed trait NameOp[F[_], T]
 
-case class ReadName[F[_]](name: Name[F]) extends NameOp[F, Option[Type]]
+case class ReadName[F[_]](name: Name[F], mustBeDefined: Boolean) extends NameOp[F, Option[Type]]
 case class ConstantDefined[F[_]](name: Name[F]) extends NameOp[F, Option[Type]]
 
 case class ReadArrow[F[_]](name: Name[F]) extends NameOp[F, Option[ArrowType]]

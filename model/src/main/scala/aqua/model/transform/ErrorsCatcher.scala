@@ -3,7 +3,6 @@ package aqua.model.transform
 import aqua.model.{LiteralModel, ValueModel}
 import aqua.model.func.Call
 import aqua.model.func.body.{FuncOp, FuncOps}
-import aqua.types.ScalarType.string
 
 case class ErrorsCatcher(
   enabled: Boolean,
@@ -28,7 +27,7 @@ case class ErrorsCatcher(
 
 object ErrorsCatcher {
   // TODO not a string
-  val lastErrorArg: Call.Arg = Call.Arg(LiteralModel("%last_error%"), string)
+  val lastErrorArg: ValueModel = LiteralModel("%last_error%")
 
   val lastErrorCall: Call = Call(
     lastErrorArg :: Nil,
