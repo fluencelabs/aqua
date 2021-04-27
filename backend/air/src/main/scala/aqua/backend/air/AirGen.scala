@@ -92,6 +92,14 @@ object AirGen {
           Eval later opsToSingle(
             ops
           )
+        case (XorParTag(opsx, opsy), ops) =>
+          // TODO should be resolved
+          println(
+            Console.RED + "XorParTag reached AirGen, most likely it's an error" + Console.RESET
+          )
+          Eval later opsToSingle(
+            Chain(apply(opsx.tree), apply(opsy.tree))
+          )
 
       }
       .value

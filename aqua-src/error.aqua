@@ -1,24 +1,28 @@
-service Demo("demo"):
-	get4: u64, u64, string -> u64
+service Peer("peer"):
+    is_connected: string -> bool
 
-const bbb = 5
-const bbb ?= 2
-const ccc = "privet"
-const ddd = ccc
-const eee = bbb
-const asd = eee
--- const ttt = -2
+service Op("op"):
+    identity: -> ()
 
-func two(variable: u64) -> u64:
-    v <- Demo.get4(variable, eee, ddd)
-    -- if bbb == ttt:
-    --     Demo.get4(variable, eee, ddd)
-    -- else:
-    --     Demo.get4(variable, eee, ddd)
-    <- variable
+data User:
+    peer_id: string
+    relay_id: string
+    name: string
 
+service Test("test"):
+    getUserList: -> []User
+    doSomething: -> bool
 
-func three() -> u64:
-    variable <- Demo.get4(asd, eee, ddd)
-    res <- two(variable)
-    <- variable
+func initAfterJoin(me: User) -> []User:
+    allUsers <- Test.getUserList()
+    for user <- allUsers par:
+        on user.relay_id:
+            isOnline <- Peer.is_connected(user.peer_id)
+        if isOnline:
+            on user.peer_id via user.relay_id:
+                Test.doSomething()
+        else:
+            on user.peer_id via user.relay_id:
+                Op.identity()
+        par Test.doSomething()
+    <- allUsers

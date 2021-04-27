@@ -144,4 +144,76 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
+  "topology resolver" should "get back to init peer after a long chain" in {
+
+    val init = on(
+      initPeer,
+      relay :: Nil,
+      seq(
+        on(
+          otherPeer,
+          otherRelay :: Nil,
+          call(0),
+          on(
+            otherPeer2,
+            otherRelay :: Nil,
+            call(1),
+            _match(
+              otherPeer,
+              otherRelay,
+              on(
+                otherPeer,
+                otherRelay :: Nil,
+                call(2)
+              )
+            )
+          )
+        ),
+        call(3)
+      )
+    )
+
+    val proc: Node = Topology.resolve(init)
+
+    val expected = on(
+      initPeer,
+      relay :: Nil,
+      seq(
+        on(
+          otherPeer,
+          otherRelay :: Nil,
+          through(relay),
+          through(otherRelay),
+          call(0, otherPeer),
+          on(
+            otherPeer2,
+            otherRelay :: Nil,
+            through(otherRelay),
+            call(1, otherPeer2),
+            _match(
+              otherPeer,
+              otherRelay,
+              on(
+                otherPeer,
+                otherRelay :: Nil,
+                through(otherRelay),
+                call(2, otherPeer)
+              )
+            )
+          )
+        ),
+        through(otherRelay),
+        through(relay),
+        call(3, initPeer)
+      )
+    )
+
+//    println(Console.BLUE + init)
+//    println(Console.YELLOW + proc)
+//    println(Console.MAGENTA + expected)
+//    println(Console.RESET)
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
 }
