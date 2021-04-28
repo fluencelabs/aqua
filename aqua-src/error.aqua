@@ -1,44 +1,6 @@
-service Peer("peer"):
-    is_connected: string -> bool
-
-service Op("op"):
-    identity: -> ()
-
-data User:
-    peer_id: string
-    relay_id: string
-    name: string
-
 service Test("test"):
-    getUserList: -> []User
-    doSomething: -> bool
-    check: bool -> ()
+    test: string -> ()
 
-func initAfterJoin(me: User) -> []User:
-    allUsers <- Test.getUserList()
-    for user <- allUsers par:
-        on user.relay_id:
-            isOnline <- Peer.is_connected(user.peer_id)
-        if isOnline:
-            on user.peer_id via user.relay_id:
-                Test.doSomething()
-        else:
-            on user.peer_id via user.relay_id:
-                Op.identity()
-        par Test.doSomething()
-    <- allUsers
-
-func handleArr(arr: []bool):
-    for b <- arr:
-        Test.check(b)
-
-
-func checkStreams(ch: []string) -> []bool:
-    stream: *bool
-    stream <- Peer.is_connected("write once")
-    stream <- Peer.is_connected("write twice")
-    for b <- ch:
-        on b:
-            stream <- Peer.is_connected(b)
-    handleArr(stream)
-    <- stream
+func test(relay1: string):
+    on relay1
+        Test.test(%init_peer_id%)

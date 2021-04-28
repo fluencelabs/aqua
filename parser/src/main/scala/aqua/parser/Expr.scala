@@ -28,12 +28,12 @@ object Expr {
       extends Companion {
 
     override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
-      (p[F] ~ ((` `.backtrack *> P
-        .oneOf(thenInline.map(_.ast[F](ps).backtrack))
+      (p[F] ~ ((` ` *> P
+        .oneOf(thenInline.map(_.ast[F](ps)))
         .map(Chain.one)) | (` : \n+` *> indented(
         s => {
           val psI = ps.copy(indent = s)
-          P.oneOf(orIndented.map(_.ast[F](psI).backtrack))
+          P.oneOf(orIndented.map(_.ast[F](psI)))
         },
         ps.indent
       )).map(_.toList).map(Chain.fromSeq))).map { case (expr, internal) =>
