@@ -6,6 +6,11 @@ import cats.free.Cofree
 case class ChainZipper[T](prev: Chain[T], current: T, next: Chain[T]) {
 
   def chain: Chain[T] = (prev :+ current) ++ next
+
+  def moveLeft: Option[ChainZipper[T]] =
+    prev.initLast.map { case (init, last) =>
+      ChainZipper(init, last, current +: next)
+    }
 }
 
 object ChainZipper {

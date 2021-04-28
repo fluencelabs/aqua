@@ -1,8 +1,9 @@
 package aqua.model.topology
 
 import aqua.model.ValueModel
-import aqua.model.func.body.OnTag
+import aqua.model.func.body.{OnTag, SeqGroupTag}
 import cats.data.Chain
+import cats.free.Cofree
 
 case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) {
   def down(h: ChainZipper[Topology.Tree]): Location = copy(h :: path)
@@ -24,6 +25,18 @@ case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) {
       .toList
       .flatten
   )
+
+  def lastLeftSeq: Option[(ChainZipper[Topology.Tree], Location)] =
+    path match {
+      case (cz @ ChainZipper(prev, Cofree(_: SeqGroupTag, _), _)) :: tail if prev.nonEmpty =>
+        cz.moveLeft.map(_ -> Location(tail))
+      case _ :: tail => Location(tail).lastLeftSeq
+      case Nil => None
+    }
+
+  path.collectFirst {
+    case ChainZipper(prev, Cofree(_: SeqGroupTag, _), _) if prev.nonEmpty => prev.lastOption
+  }.flatten
 }
 
 object Location {

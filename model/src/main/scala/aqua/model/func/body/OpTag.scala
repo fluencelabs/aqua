@@ -27,15 +27,18 @@ sealed trait OpTag {
   }
 
 }
+sealed trait SeqGroupTag extends OpTag
 
-case object SeqTag extends OpTag
+case object SeqTag extends SeqGroupTag
 case object ParTag extends OpTag
 case object XorTag extends OpTag
 case class XorParTag(xor: FuncOp, par: FuncOp) extends OpTag
-case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends OpTag
+case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag
 case class NextTag(item: String) extends OpTag
-case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean) extends OpTag
-case class ForTag(item: String, iterable: ValueModel) extends OpTag
+
+case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
+    extends SeqGroupTag
+case class ForTag(item: String, iterable: ValueModel) extends SeqGroupTag
 
 case class CallArrowTag(
   funcName: String,

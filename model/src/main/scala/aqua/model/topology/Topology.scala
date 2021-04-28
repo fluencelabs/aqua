@@ -54,7 +54,7 @@ object Topology {
     zipTransform(ChainZipper.one(op)) {
       case (
             ChainZipper(prev, cf, _),
-            loc @ `head`(SeqTag | _: OnTag | _: MatchMismatchTag | _: ForTag) /: _
+            loc @ `head`(_: SeqGroupTag) /: _
           ) =>
         val cfu = cf.copy(mapTag(cf.head, loc))
 
@@ -65,18 +65,28 @@ object Topology {
           case (_, _) => Chain.empty[ValueModel]
         }
 
-        val prevPath =
+        val prevOn =
           Chain
-            .fromSeq(prev.toList.flatMap(rightBoundary).takeWhile {
-              case ParTag => false
-              case _ => true
-            })
-            .collect { case OnTag(_, v) =>
-              v.reverse
+            .fromSeq(
+              prev.lastOption
+                .orElse(loc.lastLeftSeq.map(_._1.current))
+                .toList
+                .flatMap(rightBoundary)
+                .takeWhile {
+                  case ParTag => false
+                  case _ => true
+                }
+            )
+            .collect { case o: OnTag =>
+              o
             }
-            .flatMap(identity)
 
-        if (prevPath.isEmpty && getThere.isEmpty) cfu :: Nil
+        val prevPath = prevOn.map { case OnTag(_, v) =>
+          v.reverse
+        }
+          .flatMap(identity)
+
+        if (prevOn.isEmpty && getThere.isEmpty) cfu :: Nil
         else
           through(prevPath ++ loc.pathViaChain ++ getThere)
             .append(cfu)
