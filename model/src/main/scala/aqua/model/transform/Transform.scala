@@ -3,6 +3,7 @@ package aqua.model.transform
 import aqua.model.func.body._
 import aqua.model.func.FuncCallable
 import aqua.model.VarModel
+import aqua.model.topology.Topology
 import aqua.types.ScalarType
 import cats.data.Chain
 import cats.free.Cofree

@@ -1,4 +1,4 @@
-package aqua.model.transform
+package aqua.model.topology
 
 import aqua.model.Node
 import org.scalatest.flatspec.AnyFlatSpec
@@ -20,14 +20,11 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc: Node = Topology.resolve(init)
 
-    val expected = on(
-      initPeer,
-      relay :: Nil,
+    val expected =
       seq(
         call(1, initPeer),
         call(2, initPeer)
       )
-    )
 
     proc should be(expected)
 
@@ -50,19 +47,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc: Node = Topology.resolve(init)
 
-    val expected = on(
-      initPeer,
-      relay :: Nil,
-      on(
-        otherPeer,
-        Nil,
-        through(relay),
-        seq(
-          call(1, otherPeer),
-          call(2, otherPeer)
-        )
-      )
-    )
+    val expected =
+      seq(through(relay), call(1, otherPeer), call(2, otherPeer))
 
     proc should be(expected)
   }
@@ -84,20 +70,13 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc: Node = Topology.resolve(init)
 
-    val expected = on(
-      initPeer,
-      relay :: Nil,
-      on(
-        otherPeer,
-        otherRelay :: Nil,
+    val expected =
+      seq(
         through(relay),
         through(otherRelay),
-        seq(
-          call(1, otherPeer),
-          call(2, otherPeer)
-        )
+        call(1, otherPeer),
+        call(2, otherPeer)
       )
-    )
 
     proc should be(expected)
   }
@@ -119,22 +98,15 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc: Node = Topology.resolve(init)
 
-    val expected = on(
-      initPeer,
-      relay :: Nil,
+    val expected =
       seq(
-        on(
-          otherPeer,
-          otherRelay :: Nil,
-          through(relay),
-          through(otherRelay),
-          call(1, otherPeer)
-        ),
+        through(relay),
+        through(otherRelay),
+        call(1, otherPeer),
         through(otherRelay),
         through(relay),
         call(2, initPeer)
       )
-    )
 
 //    println(Console.BLUE + init)
 //    println(Console.YELLOW + proc)
@@ -175,38 +147,25 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc: Node = Topology.resolve(init)
 
-    val expected = on(
-      initPeer,
-      relay :: Nil,
+    val expected =
       seq(
-        on(
+        through(relay),
+        through(otherRelay),
+        call(0, otherPeer),
+        through(otherRelay),
+        call(1, otherPeer2),
+        _match(
           otherPeer,
-          otherRelay :: Nil,
-          through(relay),
-          through(otherRelay),
-          call(0, otherPeer),
-          on(
-            otherPeer2,
-            otherRelay :: Nil,
+          otherRelay,
+          seq(
             through(otherRelay),
-            call(1, otherPeer2),
-            _match(
-              otherPeer,
-              otherRelay,
-              on(
-                otherPeer,
-                otherRelay :: Nil,
-                through(otherRelay),
-                call(2, otherPeer)
-              )
-            )
+            call(2, otherPeer)
           )
         ),
         through(otherRelay),
         through(relay),
         call(3, initPeer)
       )
-    )
 
 //    println(Console.BLUE + init)
 //    println(Console.YELLOW + proc)
