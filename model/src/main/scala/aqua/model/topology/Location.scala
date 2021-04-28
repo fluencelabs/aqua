@@ -34,6 +34,14 @@ case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) {
       case Nil => None
     }
 
+  def lastRightSeq: Option[(ChainZipper[Topology.Tree], Location)] =
+    path match {
+      case (cz @ ChainZipper(_, Cofree(_: SeqGroupTag, _), next)) :: tail if next.nonEmpty =>
+        cz.moveRight.map(_ -> Location(tail))
+      case _ :: tail => Location(tail).lastRightSeq
+      case Nil => None
+    }
+
   path.collectFirst {
     case ChainZipper(prev, Cofree(_: SeqGroupTag, _), _) if prev.nonEmpty => prev.lastOption
   }.flatten

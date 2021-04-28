@@ -11,6 +11,11 @@ case class ChainZipper[T](prev: Chain[T], current: T, next: Chain[T]) {
     prev.initLast.map { case (init, last) =>
       ChainZipper(init, last, current +: next)
     }
+
+  def moveRight: Option[ChainZipper[T]] =
+    next.uncons.map { case (head, tail) =>
+      ChainZipper(prev :+ current, head, tail)
+    }
 }
 
 object ChainZipper {

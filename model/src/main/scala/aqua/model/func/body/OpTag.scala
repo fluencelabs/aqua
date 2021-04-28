@@ -27,11 +27,12 @@ sealed trait OpTag {
   }
 
 }
-sealed trait SeqGroupTag extends OpTag
+sealed trait GroupTag extends OpTag
+sealed trait SeqGroupTag extends GroupTag
 
 case object SeqTag extends SeqGroupTag
-case object ParTag extends OpTag
-case object XorTag extends OpTag
+case object ParTag extends GroupTag
+case object XorTag extends GroupTag
 case class XorParTag(xor: FuncOp, par: FuncOp) extends OpTag
 case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag
 case class NextTag(item: String) extends OpTag
