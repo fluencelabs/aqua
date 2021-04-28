@@ -50,11 +50,27 @@ object Topology {
       }
       .value
 
+  private def prevOnTags(cz: ChainZipper[Tree], loc: Location): Chain[OnTag] =
+    Chain
+      .fromSeq(
+        cz.prev.lastOption
+          .orElse(loc.lastLeftSeq.map(_._1.current))
+          .toList
+          .flatMap(rightBoundary)
+          .takeWhile {
+            case ParTag => false
+            case _ => true
+          }
+      )
+      .collect { case o: OnTag =>
+        o
+      }
+
   def resolveOnMoves(op: Tree): Tree =
     zipTransform(ChainZipper.one(op)) {
       case (
-            ChainZipper(prev, cf, _),
-            loc @ `head`(_: SeqGroupTag) /: _
+            cz @ `current`(cf),
+            loc @ `head`(_: SeqGroupTag | ParTag | XorTag) /: _
           ) =>
         val cfu = cf.copy(mapTag(cf.head, loc))
 
@@ -65,21 +81,7 @@ object Topology {
           case (_, _) => Chain.empty[ValueModel]
         }
 
-        val prevOn =
-          Chain
-            .fromSeq(
-              prev.lastOption
-                .orElse(loc.lastLeftSeq.map(_._1.current))
-                .toList
-                .flatMap(rightBoundary)
-                .takeWhile {
-                  case ParTag => false
-                  case _ => true
-                }
-            )
-            .collect { case o: OnTag =>
-              o
-            }
+        val prevOn = prevOnTags(cz, loc)
 
         val prevPath = prevOn.map { case OnTag(_, v) =>
           v.reverse

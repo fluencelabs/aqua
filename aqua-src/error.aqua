@@ -42,3 +42,11 @@ func checkStreams(ch: []string) -> []bool:
             stream <- Peer.is_connected(b)
     handleArr(stream)
     <- stream
+
+func test(user: string, relay_id: string) -> string:
+    on relay_id:
+        Peer.is_connected("on relay_id")
+    on user:
+        Peer.is_connected("on user")
+    par Peer.is_connected("par on init peer")
+    <- ""
