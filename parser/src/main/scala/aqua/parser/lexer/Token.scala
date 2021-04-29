@@ -19,6 +19,7 @@ object Token {
   private val anum_ = anum ++ f_
   private val nl = Set('\n', '\r')
 
+  val ` 0`: P0[String] = P.charsWhile0(fSpaces)
   val ` ` : P[String] = P.charsWhile(fSpaces)
   val `const`: P[Unit] = P.string("const")
   val `data`: P[Unit] = P.string("data")
@@ -58,13 +59,13 @@ object Token {
   val `"` : P[Unit] = P.char('"')
   val `*` : P[Unit] = P.char('*')
   val `[]` : P[Unit] = P.string("[]")
-  val `(` : P[Unit] = ` `.?.with1 *> P.char('(') <* ` `.?
-  val `)` : P[Unit] = ` `.?.with1 *> P.char(')') <* ` `.?
+  val `(` : P[Unit] = P.char('(').surroundedBy(` `.?)
+  val `)` : P[Unit] = P.char(')').surroundedBy(` `.?)
   val `()` : P[Unit] = P.string("()")
-  val ` -> ` : P[Unit] = ` `.?.with1 *> P.string("->") <* ` `.?
-  val ` <- ` : P[Unit] = (` `.?.with1 *> P.string("<-") <* ` `.?).backtrack
+  val ` -> ` : P[Unit] = P.string("->").surroundedBy(` `.?)
+  val ` <- ` : P[Unit] = P.string("<-").surroundedBy(` `.?)
   val `=` : P[Unit] = P.string("=")
-  val ` = ` : P[Unit] = (` `.?.with1 *> P.string("=") <* ` `.?).backtrack
+  val ` = ` : P[Unit] = P.string("=").surroundedBy(` `.?)
   val `?` : P[Unit] = P.string("?")
   val `<-` : P[Unit] = P.string("<-").backtrack
 

@@ -1,8 +1,7 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.expr.{FuncExpr, OnExpr}
-import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.expr.OnExpr
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -30,18 +29,5 @@ class OnExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parseOn("on \"asd\" via \"fre\" via \"fre2\"") should be(
       OnExpr[Id](toStr("asd"), List(toStr("fre"), toStr("fre2")))
     )
-
-//    OnExpr
-//      .ast[Id](Indent())
-//      .parseAll("""on r
-//                  | T.t()""".stripMargin)
-//      .value
-
-    FuncExpr
-      .ast[Id](Indent())
-      .parseAll("""func t():
-                  | on r
-                  |   T.t()""".stripMargin)
-      .value
   }
 }

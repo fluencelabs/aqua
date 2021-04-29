@@ -12,7 +12,8 @@ case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Exp
 object ServiceExpr extends Expr.AndIndented(ArrowTypeExpr) {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[ServiceExpr[F]] =
-    (`service` *> ` ` *> Ability.ab[F] ~ Value.`value`[F].between(`(`, `)`).backtrack.?).map { case (name, id) =>
-      ServiceExpr(name, id)
+    (`service` *> ` ` *> Ability.ab[F] ~ Value.`value`[F].between(`(`, `)`).backtrack.?).map {
+      case (name, id) =>
+        ServiceExpr(name, id)
     }
 }

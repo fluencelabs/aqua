@@ -1,25 +1,5 @@
-service Peer("peer"):
-    is_connected: string -> bool
-
-service Op("op"):
-    identity: -> ()
-
-data User:
-    peer_id: string
-    relay_id: string
-    name: string
-
-service Test("test"):
-    getUserList: -> []User
-    doSomething: -> bool
-
-func betterMessage(me: User) -> []User:
-    allUsers <- Test.getUserList()
-    for user <- allUsers par:
-        on user.relay_id
-            isOnline <- Peer.is_connected(user.peer_id)
-        if isOnline:
-            on user.peer_id via user.relay_id:
+func b(me: U):
+    on me.p via me.r:
+        if a:
+            if b:
                 Test.doSomething()
-        Test.doSomething()
-    <- allUsers

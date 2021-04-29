@@ -24,32 +24,33 @@ object Expr {
     override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Tree[F]] = companion.ast[F](ps)
   }
 
-  abstract class And(thenInline: List[Expr.Companion], orIndented: List[Expr.Companion])
-      extends Companion {
-
-    override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
-      (p[F] ~ ((` ` *> P
-        .oneOf(thenInline.map(_.ast[F](ps)))
-        .map(Chain.one)) | (` : \n+` *> indented(
-        s => {
-          val psI = ps.copy(indent = s)
-          P.oneOf(orIndented.map(_.ast[F](psI)))
-        },
-        ps.indent
-      )).map(_.toList).map(Chain.fromSeq))).map { case (expr, internal) =>
-        Cofree[Chain, Expr[F]](expr, Eval.now(internal))
-      }
-  }
-
   abstract class Leaf extends Companion {
 
     override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
       p[F].map(Cofree[Chain, Expr[F]](_, Eval.now(Chain.empty)))
   }
 
-  abstract class AndThen(headExpr: Companion, oneOfExprs: Companion*)
-      extends And(thenInline = headExpr :: oneOfExprs.toList, orIndented = Nil)
+  abstract class AndThen(headExpr: Companion, oneOfExprs: Companion*) extends Companion {
 
-  abstract class AndIndented(headExpr: Companion, oneOfExprs: Companion*)
-      extends And(thenInline = Nil, orIndented = headExpr :: oneOfExprs.toList)
+    override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
+      (p[F] ~ (` 0` *> P
+        .oneOf((headExpr :: oneOfExprs.toList).map(_.ast[F](ps)))
+        .map(Chain.one))).map { case (expr, internal) =>
+        Cofree[Chain, Expr[F]](expr, Eval.now(internal))
+      }
+  }
+
+  abstract class AndIndented(headExpr: Companion, oneOfExprs: Companion*) extends Companion {
+
+    override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
+      (p[F] ~ (` : \n+` *> indented(
+        s => {
+          val psI = ps.copy(indent = s)
+          P.oneOf((headExpr :: oneOfExprs.toList).map(_.ast[F](psI).backtrack))
+        },
+        ps.indent
+      )).map(_.toList).map(Chain.fromSeq)).map { case (expr, internal) =>
+        Cofree[Chain, Expr[F]](expr, Eval.now(internal))
+      }
+  }
 }
