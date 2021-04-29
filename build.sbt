@@ -1,18 +1,18 @@
 val dottyVersion = "2.13.5"
 
-scalaVersion := dottyVersion
+//val dottyVersion = "3.0.0-RC3"
 
-//val dottyVersion = "3.0.0-RC2"
+scalaVersion := dottyVersion
 
 val baseAquaVersion = settingKey[String]("base aqua version")
 
-val catsV = "2.5.0"
+val catsV = "2.6.0"
 val catsParseV = "0.3.2"
-val monocleV = "3.0.0-M4"
-val scalaTestV = "3.2.7"
-val fs2V = "3.0.0"
-val catsEffectV = "3.0.2"
-val declineV = "2.0.0-RC1"
+val monocleV = "3.0.0-M5"
+val scalaTestV = "3.2.7" // TODO update version for scala 3-RC3
+val fs2V = "3.0.2"
+val catsEffectV = "3.1.0"
+val declineV = "2.0.0-RC1" // Scala3 issue: https://github.com/bkirwi/decline/issues/260
 
 name := "aqua-hll"
 

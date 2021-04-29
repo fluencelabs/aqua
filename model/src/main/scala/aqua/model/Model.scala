@@ -17,6 +17,7 @@ object Model {
       case (l: ScriptModel, r: ScriptModel) =>
         ScriptModel.SMMonoid.combine(l, r)
 
+      case (l: EmptyModel, r: EmptyModel) => EmptyModel(l.log + " |+| " + r.log)
       case (_: EmptyModel, r) => r
       case (l, _: EmptyModel) => l
 
@@ -24,14 +25,13 @@ object Model {
         ScriptModel.toScriptPart(l).fold(r)(ScriptModel.SMMonoid.combine(_, r))
       case (l: ScriptModel, r) =>
         ScriptModel.toScriptPart(r).fold(l)(ScriptModel.SMMonoid.combine(l, _))
+
       case (l, r) =>
         ScriptModel
           .toScriptPart(l)
           .fold(r)(ls =>
             ScriptModel.toScriptPart(r).fold(l)(rs => ScriptModel.SMMonoid.combine(ls, rs))
           )
-
-      case (l: EmptyModel, r: EmptyModel) => EmptyModel(l.log + " |+| " + r.log)
 
     }
   }
