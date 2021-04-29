@@ -32,17 +32,17 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val expectedFC =
       xor(
-        on(
-          initPeer,
-          relayV :: Nil,
-          seq(
-            dataCall(bc, "relay", initPeer),
-            on(otherPeer, Nil, through(relayV), call(1, otherPeer)),
-            through(relayV),
-            on(initPeer, relayV :: Nil, respCall(bc, ret, initPeer))
-          )
+        seq(
+          dataCall(bc, "relay", initPeer),
+          through(relayV),
+          call(1, otherPeer),
+          through(relayV),
+          respCall(bc, ret, initPeer)
         ),
-        on(initPeer, relayV :: Nil, xorErrorCall(bc, initPeer))
+        seq(
+          through(relayV),
+          xorErrorCall(bc, initPeer)
+        )
       )
 
     procFC.equalsOrPrintDiff(expectedFC) should be(true)
@@ -70,20 +70,18 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val expectedFC =
       xor(
-        on(
-          initPeer,
-          relayV :: Nil,
-          seq(
-            dataCall(bc, "relay", initPeer),
-            seq(
-              call(0, initPeer),
-              on(otherPeer, Nil, through(relayV), call(1, otherPeer))
-            ),
-            through(relayV),
-            on(initPeer, relayV :: Nil, respCall(bc, ret, initPeer))
-          )
+        seq(
+          dataCall(bc, "relay", initPeer),
+          call(0, initPeer),
+          through(relayV),
+          call(1, otherPeer),
+          through(relayV),
+          respCall(bc, ret, initPeer)
         ),
-        on(initPeer, relayV :: Nil, xorErrorCall(bc, initPeer))
+        seq(
+          through(relayV),
+          xorErrorCall(bc, initPeer)
+        )
       )
 
     procFC.equalsOrPrintDiff(expectedFC) should be(true)
@@ -137,25 +135,17 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val res = Transform.forClient(f2, bc): Node
 
     res.equalsOrPrintDiff(
-      on(
-        initPeer,
-        relayV :: Nil,
-        seq(
-          dataCall(bc, "relay", initPeer),
-          Node(
-            CallServiceTag(
-              LiteralModel("\"srv1\""),
-              "foo",
-              Call(Nil, Some(Call.Export("v", ScalarType.string))),
-              Some(initPeer)
-            )
-          ),
-          on(
-            initPeer,
-            relayV :: Nil,
-            respCall(bc, VarModel("v", ScalarType.string), initPeer)
+      seq(
+        dataCall(bc, "relay", initPeer),
+        Node(
+          CallServiceTag(
+            LiteralModel("\"srv1\""),
+            "foo",
+            Call(Nil, Some(Call.Export("v", ScalarType.string))),
+            Some(initPeer)
           )
-        )
+        ),
+        respCall(bc, VarModel("v", ScalarType.string), initPeer)
       )
     ) should be(true)
   }

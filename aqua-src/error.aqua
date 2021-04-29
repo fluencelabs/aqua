@@ -13,6 +13,8 @@ service Test("test"):
     getUserList: -> []User
     doSomething: -> bool
     check: bool -> ()
+    log: string -> ()
+    getString: string -> string
 
 func initAfterJoin(me: User) -> []User:
     allUsers <- Test.getUserList()
@@ -42,3 +44,18 @@ func checkStreams(ch: []string) -> []bool:
             stream <- Peer.is_connected(b)
     handleArr(stream)
     <- stream
+
+func test(user: string, relay_id: string) -> string:
+    on relay_id:
+        Peer.is_connected("on relay_id")
+    on user:
+        Peer.is_connected("on user")
+    par Peer.is_connected("par on init peer")
+    <- ""
+
+-- should fail, as using str2 in parallel
+func topologyTest(friend: string, friendRelay: string) -> string:
+    on friend via friendRelay:
+        str2 <- Test.getString("friends string via")
+    par Test.log(str2)
+    <- "finish"

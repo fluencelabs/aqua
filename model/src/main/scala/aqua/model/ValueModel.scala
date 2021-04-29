@@ -1,10 +1,18 @@
 package aqua.model
 
 import aqua.types.Type
+import cats.Eq
 import cats.data.Chain
 
 sealed trait ValueModel {
   def resolveWith(map: Map[String, ValueModel]): ValueModel = this
+}
+
+object ValueModel {
+
+  implicit object ValueModelEq extends Eq[ValueModel] {
+    override def eqv(x: ValueModel, y: ValueModel): Boolean = x == y
+  }
 }
 
 case class LiteralModel(value: String) extends ValueModel
