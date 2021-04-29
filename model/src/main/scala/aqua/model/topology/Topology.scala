@@ -74,8 +74,9 @@ object Topology {
             case ParTag | XorTag => c.nextOnTags
             case _ => Chain.empty[OnTag]
           }
-          val nextPath = nextOn.map { case OnTag(_, v) =>
-            v.reverse
+          val nextPath = (if (nextOn.nonEmpty) getThere.reverse else Chain.empty) ++ nextOn.map {
+            case OnTag(_, v) =>
+              v.reverse
           }
             .flatMap(identity)
 
