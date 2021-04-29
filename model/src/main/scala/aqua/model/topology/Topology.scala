@@ -78,7 +78,10 @@ object Topology {
             case OnTag(_, v) =>
               v.reverse
           }
-            .flatMap(identity)
+            .flatMap(identity) ++ Chain.fromOption(
+            // Dirty fix for join behaviour
+            nextOn.lastOption.filter(_ => parent == ParTag).map(_.peerId)
+          )
 
           if (prevOn.isEmpty && getThere.isEmpty) cfu :: Nil
           else
