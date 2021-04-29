@@ -16,6 +16,9 @@ case class ChainZipper[T](prev: Chain[T], current: T, next: Chain[T]) {
     next.uncons.map { case (head, tail) =>
       ChainZipper(prev :+ current, head, tail)
     }
+
+  def replaceInjecting(cz: ChainZipper[T]): ChainZipper[T] =
+    copy(prev ++ cz.prev, cz.current, cz.next ++ next)
 }
 
 object ChainZipper {
