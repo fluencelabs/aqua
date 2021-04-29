@@ -84,8 +84,8 @@ object Node {
   implicit def nodeToCof(tree: Node): Cof =
     Cofree(tree.tag, Eval.later(Chain.fromSeq(tree.ops.map(nodeToCof))))
 
-  val relay = LiteralModel("relay")
-  val relayV = VarModel("relay", ScalarType.string)
+  val relay = LiteralModel("-relay-")
+  val relayV = VarModel("-relay-", ScalarType.string)
   val initPeer = LiteralModel.initPeerId
   val emptyCall = Call(Nil, None)
   val otherPeer = LiteralModel("other-peer")

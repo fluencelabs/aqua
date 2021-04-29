@@ -33,7 +33,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val expectedFC =
       xor(
         seq(
-          dataCall(bc, "relay", initPeer),
+          dataCall(bc, "-relay-", initPeer),
           through(relayV),
           call(1, otherPeer),
           through(relayV),
@@ -71,7 +71,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val expectedFC =
       xor(
         seq(
-          dataCall(bc, "relay", initPeer),
+          dataCall(bc, "-relay-", initPeer),
           call(0, initPeer),
           through(relayV),
           call(1, otherPeer),
@@ -136,7 +136,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     res.equalsOrPrintDiff(
       seq(
-        dataCall(bc, "relay", initPeer),
+        dataCall(bc, "-relay-", initPeer),
         Node(
           CallServiceTag(
             LiteralModel("\"srv1\""),

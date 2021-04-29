@@ -58,7 +58,7 @@ case class TypescriptFunc(func: FuncCallable) {
        |            `,
        |            )
        |            .configHandler((h) => {
-       |                h.on('${conf.getDataService}', 'relay', () => {
+       |                h.on('${conf.getDataService}', '${conf.relayVarName}', () => {
        |                    return client.relayPeerId!;
        |                });
        |                h.on('getRelayService', 'hasRelay', () => {// Not Used
