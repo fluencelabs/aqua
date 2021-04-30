@@ -12,7 +12,7 @@ object Transform {
 
   def forClient(func: FuncCallable, conf: BodyConfig): Cofree[Chain, OpTag] = {
     val initCallable: InitPeerCallable = InitViaRelayCallable(
-      Chain.one(VarModel(conf.relayVarName, ScalarType.string))
+      Chain.fromOption(conf.relayVarName).map(VarModel(_, ScalarType.string))
     )
     val errorsCatcher = ErrorsCatcher(
       enabled = conf.wrapWithXor,
@@ -23,8 +23,8 @@ object Transform {
     val argsProvider: ArgsProvider =
       ArgsFromService(
         conf.dataSrvId,
-        conf.relayVarName -> ScalarType.string :: func.args.dataArgs.toList.map(add =>
-          add.name -> add.dataType
+        conf.relayVarName.map(_ -> ScalarType.string).toList ::: func.args.dataArgs.toList.map(
+          add => add.name -> add.dataType
         )
       )
 
