@@ -8,7 +8,7 @@ case class BodyConfig(
   errorHandlingService: String = "errorHandlingSrv",
   errorFuncName: String = "error",
   respFuncName: String = "response",
-  relayVarName: String = "-relay-",
+  relayVarName: Option[String] = Some("-relay-"),
   wrapWithXor: Boolean = true
 ) {
 

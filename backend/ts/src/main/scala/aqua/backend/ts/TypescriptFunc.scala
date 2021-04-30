@@ -58,12 +58,11 @@ case class TypescriptFunc(func: FuncCallable) {
        |            `,
        |            )
        |            .configHandler((h) => {
-       |                h.on('${conf.getDataService}', '${conf.relayVarName}', () => {
+       |                ${conf.relayVarName.fold("") { r =>
+      s"""h.on('${conf.getDataService}', '$r', () => {
        |                    return client.relayPeerId!;
-       |                });
-       |                h.on('getRelayService', 'hasRelay', () => {// Not Used
-       |                    return client.relayPeerId !== undefined;
-       |                });
+       |                });""".stripMargin
+    }}
        |                $setCallbacks
        |                ${returnCallback.getOrElse("")}
        |                h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
