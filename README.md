@@ -1,5 +1,7 @@
 ## Aqua
 
+[![release](https://github.com/fluencelabs/aqua/actions/workflows/release.yml/badge.svg)](https://github.com/fluencelabs/aqua/actions/workflows/release.yml)
+
 Aqua is a new-gen language for distributed systems.
 
 Aqua programs are executed on many peers, sequentially 
