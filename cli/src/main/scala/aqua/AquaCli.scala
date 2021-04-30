@@ -29,24 +29,39 @@ object AquaCli extends IOApp {
       .map(_ => true)
       .withDefault(false)
 
+  val noRelay: Opts[Boolean] =
+    Opts
+      .flag("no-relay", "Do not generate a pass through the relay node")
+      .map(_ => true)
+      .withDefault(false)
+
+  val noXorWrapper: Opts[Boolean] =
+    Opts
+      .flag("no-xor", "Do not generate a wrapper that catches and displays errors")
+      .map(_ => true)
+      .withDefault(false)
+
   def mainOpts: Opts[IO[ExitCode]] =
-    (inputOpts, importOpts, outputOpts, compileToAir).mapN { case (input, imports, output, toAir) =>
-      AquaCompiler
-        .compileFilesTo[IO](
-          input,
-          imports,
-          output,
-          if (toAir) AquaCompiler.AirTarget else AquaCompiler.TypescriptTarget,
-          BodyConfig()
-        )
-        .map {
-          case Validated.Invalid(errs) =>
-            errs.map(println)
-            ExitCode.Error
-          case Validated.Valid(res) =>
-            res.map(println)
-            ExitCode.Success
-        }
+    (inputOpts, importOpts, outputOpts, compileToAir, noRelay, noXorWrapper).mapN {
+      case (input, imports, output, toAir, noRelay, noXor) =>
+        AquaCompiler
+          .compileFilesTo[IO](
+            input,
+            imports,
+            output,
+            if (toAir) AquaCompiler.AirTarget else AquaCompiler.TypescriptTarget, {
+              val bc = BodyConfig(wrapWithXor = !noXor)
+              bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
+            }
+          )
+          .map {
+            case Validated.Invalid(errs) =>
+              errs.map(println)
+              ExitCode.Error
+            case Validated.Valid(res) =>
+              res.map(println)
+              ExitCode.Success
+          }
     }
 
   override def run(args: List[String]): IO[ExitCode] =
