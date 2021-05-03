@@ -51,7 +51,7 @@ object Topology {
     Cursor
       .transform(op) {
         case c @ Cursor(
-              cz @ `current`(cf),
+              `current`(cf),
               loc @ `head`(parent: GroupTag) /: _
             ) =>
           val cfu = cf.copy(mapTag(cf.head, loc))
