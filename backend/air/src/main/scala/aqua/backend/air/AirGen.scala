@@ -40,41 +40,33 @@ object AirGen {
     case list => list.reduceLeft(SeqGen)
   }
 
+  def wrapMatchWithXor(ag: AirGen): AirGen = ag match {
+    case mmg: MatchMismatchGen =>
+      XorGen(mmg, NullGen)
+    case g => g
+  }
+
   def apply(op: Cofree[Chain, OpTag]): AirGen =
     Cofree
       .cata[Chain, OpTag, AirGen](op) {
-
-        case (SeqTag, ops) => Eval later ops.toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
-        case (ParTag, ops) => Eval later ops.toList.reduceLeftOption(ParGen).getOrElse(NullGen)
-        case (XorTag, ops) => Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
-        case (NextTag(item), ops) =>
-          Eval later new AirGen {
-
-            override def generate: Air =
-              Air.Next(item)
-          }
+        case (SeqTag, ops) =>
+          Eval later ops.map(wrapMatchWithXor).toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
+        case (ParTag, ops) =>
+          Eval later ops.map(wrapMatchWithXor).toList.reduceLeftOption(ParGen).getOrElse(NullGen)
+        case (XorTag, ops) =>
+          Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
+        case (NextTag(item), _) =>
+          Eval later NextGen(item)
         case (MatchMismatchTag(left, right, shouldMatch), ops) =>
-          Eval later new AirGen {
+          Eval later MatchMismatchGen(
+            valueToData(left),
+            valueToData(right),
+            shouldMatch,
+            opsToSingle(ops)
+          )
 
-            override def generate: Air = {
-              val l = valueToData(left)
-              val r = valueToData(right)
-              val resAir = opsToSingle(ops).generate
-              if (shouldMatch) Air.Match(l, r, resAir) else Air.Mismatch(l, r, resAir)
-            }
-          }
         case (ForTag(item, iterable), ops) =>
-          Eval later new AirGen {
-
-            override def generate: Air = {
-
-              val iterData = valueToData(iterable)
-
-              val resAir = opsToSingle(ops).generate
-
-              Air.Fold(iterData, item, resAir)
-            }
-          }
+          Eval later ForGen(valueToData(iterable), item, opsToSingle(ops.map(wrapMatchWithXor)))
         case (CallServiceTag(serviceId, funcName, Call(args, exportTo), peerId), _) =>
           Eval.later(
             ServiceCallGen(
@@ -89,18 +81,19 @@ object AirGen {
             )
           )
 
-        case (CallArrowTag(funcName, Call(args, exportTo)), ops) =>
+        case (CallArrowTag(funcName, _), _) =>
           // TODO: should be already resolved & removed from tree
-          Eval later opsToSingle(
-            ops
+          println(
+            Console.RED + s"Unresolved arrow in AirGen: $funcName" + Console.RESET
           )
+          Eval later NullGen
 
         case (OnTag(_, _), ops) =>
           // TODO should be resolved
           Eval later opsToSingle(
             ops
           )
-        case (XorParTag(opsx, opsy), ops) =>
+        case (XorParTag(opsx, opsy), _) =>
           // TODO should be resolved
           println(
             Console.RED + "XorParTag reached AirGen, most likely it's an error" + Console.RESET
@@ -122,6 +115,26 @@ case class SeqGen(left: AirGen, right: AirGen) extends AirGen {
   override def generate: Air =
     Air.Seq(left.generate, right.generate)
 
+}
+
+case class MatchMismatchGen(
+  left: DataView,
+  right: DataView,
+  shouldMatch: Boolean,
+  body: AirGen
+) extends AirGen {
+
+  override def generate: Air =
+    if (shouldMatch) Air.Match(left, right, body.generate)
+    else Air.Mismatch(left, right, body.generate)
+}
+
+case class ForGen(iterable: DataView, item: String, body: AirGen) extends AirGen {
+  override def generate: Air = Air.Fold(iterable, item, body.generate)
+}
+
+case class NextGen(item: String) extends AirGen {
+  override def generate: Air = Air.Next(item)
 }
 
 case class ServiceCallGen(

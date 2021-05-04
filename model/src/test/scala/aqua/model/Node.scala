@@ -84,8 +84,8 @@ object Node {
   implicit def nodeToCof(tree: Node): Cof =
     Cofree(tree.tag, Eval.later(Chain.fromSeq(tree.ops.map(nodeToCof))))
 
-  val relay = LiteralModel("relay")
-  val relayV = VarModel("relay", ScalarType.string)
+  val relay = LiteralModel("-relay-")
+  val relayV = VarModel("-relay-", ScalarType.string)
   val initPeer = LiteralModel.initPeerId
   val emptyCall = Call(Nil, None)
   val otherPeer = LiteralModel("other-peer")
@@ -97,11 +97,11 @@ object Node {
     CallServiceTag(LiteralModel(s"srv$i"), s"fn$i", Call(Nil, None), Option(on))
   )
 
-  def xorErrorCall(bc: BodyConfig, on: ValueModel = null) = Node(
+  def errorCall(bc: BodyConfig, i: Int, on: ValueModel = null) = Node(
     CallServiceTag(
       bc.errorHandlingCallback,
       bc.errorFuncName,
-      Call(LiteralModel("%last_error%") :: Nil, None),
+      Call(LiteralModel("%last_error%") :: LiteralModel(i.toString) :: Nil, None),
       Option(on)
     )
   )
