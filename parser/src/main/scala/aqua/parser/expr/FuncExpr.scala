@@ -1,13 +1,13 @@
 package aqua.parser.expr
 
 import aqua.parser.Ast.Tree
-import aqua.parser.{Expr, Indent}
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Arg, DataTypeToken, Name, Value}
 import aqua.parser.lift.LiftParser
+import aqua.parser.{Expr, Indent}
+import cats.Comonad
 import cats.free.Cofree
 import cats.parse.Parser
-import cats.Comonad
 
 case class FuncExpr[F[_]](
   name: Name[F],
@@ -16,18 +16,7 @@ case class FuncExpr[F[_]](
   retValue: Option[Value[F]]
 ) extends Expr[F]
 
-object FuncExpr
-    extends Expr.AndIndented(
-      OnExpr,
-      AbilityIdExpr,
-      ReturnExpr,
-      CallArrowExpr,
-      ParExpr,
-      ForExpr,
-      IfExpr,
-      ElseOtherwiseExpr,
-      DeclareStreamExpr
-    ) {
+object FuncExpr extends Expr.AndIndented {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[FuncExpr[F]] =
     ((`func` *> ` ` *> Name.p[F]) ~ comma0(Arg.p)
@@ -64,4 +53,16 @@ object FuncExpr
         case _ => Parser.pure(tree)
       }
     }
+
+  override def validChildren: List[Expr.Companion] = List(
+    OnExpr,
+    AbilityIdExpr,
+    ReturnExpr,
+    CallArrowExpr,
+    ParExpr,
+    ForExpr,
+    IfExpr,
+    ElseOtherwiseExpr,
+    DeclareStreamExpr
+  )
 }

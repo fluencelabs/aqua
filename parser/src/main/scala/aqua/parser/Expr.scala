@@ -30,23 +30,27 @@ object Expr {
       p[F].map(Cofree[Chain, Expr[F]](_, Eval.now(Chain.empty)))
   }
 
-  abstract class AndThen(headExpr: Companion, oneOfExprs: Companion*) extends Companion {
+  trait And extends Companion {
+    def validChildren: List[Companion]
+  }
+
+  abstract class AndThen extends And {
 
     override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
       (p[F] ~ (` 0` *> P
-        .oneOf((headExpr :: oneOfExprs.toList).map(_.ast[F](ps)))
+        .oneOf(validChildren.map(_.ast[F](ps)))
         .map(Chain.one))).map { case (expr, internal) =>
         Cofree[Chain, Expr[F]](expr, Eval.now(internal))
       }
   }
 
-  abstract class AndIndented(headExpr: Companion, oneOfExprs: Companion*) extends Companion {
+  abstract class AndIndented extends And {
 
     override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
       (p[F] ~ (` : \n+` *> indented(
         s => {
           val psI = ps.copy(indent = s)
-          P.oneOf((headExpr :: oneOfExprs.toList).map(_.ast[F](psI).backtrack))
+          P.oneOf(validChildren.map(_.ast[F](psI).backtrack))
         },
         ps.indent
       )).map(_.toList).map(Chain.fromSeq)).map { case (expr, internal) =>

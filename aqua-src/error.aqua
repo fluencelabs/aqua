@@ -1,5 +1,8 @@
-func b(me: U):
-    on me.p via me.r:
+service Test("123"):
+    doSomething: -> ()
+
+func b(me: string, a: bool, b: bool):
+    on me:
         if a:
             if b:
                 Test.doSomething()
