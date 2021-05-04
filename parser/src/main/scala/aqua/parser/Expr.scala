@@ -37,7 +37,7 @@ object Expr {
   abstract class AndThen extends And {
 
     override def ast[F[_]: LiftParser: Comonad](ps: Indent): P[Ast.Tree[F]] =
-      (p[F] ~ (` 0` *> P
+      (p[F] ~ (`\s*` *> P
         .oneOf(validChildren.map(_.ast[F](ps)))
         .map(Chain.one))).map { case (expr, internal) =>
         Cofree[Chain, Expr[F]](expr, Eval.now(internal))
