@@ -34,15 +34,17 @@ object FuncOps {
     )
 
   def seq(ops: FuncOp*): FuncOp =
-    FuncOp.node(
-      SeqTag,
-      Chain
-        .fromSeq(ops.flatMap {
-          case FuncOp(Cofree(SeqTag, subOps)) => subOps.value.toList
-          case FuncOp(cof) => cof :: Nil
-        })
-        .map(FuncOp(_))
-    )
+    if (ops.length == 1) ops.head
+    else
+      FuncOp.node(
+        SeqTag,
+        Chain
+          .fromSeq(ops.flatMap {
+            case FuncOp(Cofree(SeqTag, subOps)) => subOps.value.toList
+            case FuncOp(cof) => cof :: Nil
+          })
+          .map(FuncOp(_))
+      )
 
   def xor(left: FuncOp, right: FuncOp): FuncOp =
     FuncOp.node(XorTag, Chain(left, right))

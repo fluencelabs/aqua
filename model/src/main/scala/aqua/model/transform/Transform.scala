@@ -29,7 +29,7 @@ object Transform {
       )
 
     val transform =
-      errorsCatcher.transform _ compose initCallable.transform compose argsProvider.transform
+      initCallable.transform _ compose argsProvider.transform
 
     val callback = initCallable.service(conf.callbackSrvId)
 
@@ -39,6 +39,12 @@ object Transform {
       conf.respFuncName
     )
 
-    Topology.resolve(wrapFunc.resolve(func).value.tree)
+    Topology.resolve(
+      errorsCatcher
+        .transform(
+          wrapFunc.resolve(func).value
+        )
+        .tree
+    )
   }
 }
