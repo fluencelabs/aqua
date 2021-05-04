@@ -30,20 +30,33 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val procFC: Node = fc
 
-    val expectedFC =
+    val expectedFC = seq(
       xor(
         seq(
           dataCall(bc, "-relay-", initPeer),
           through(relayV),
-          call(1, otherPeer),
+          xor(
+            call(1, otherPeer),
+            seq(
+              through(relayV),
+              errorCall(bc, 1, initPeer),
+              through(relayV)
+            )
+          ),
           through(relayV),
-          respCall(bc, ret, initPeer)
+          xor(
+            respCall(bc, ret, initPeer),
+            seq(
+              errorCall(bc, 2, initPeer)
+            )
+          )
         ),
         seq(
           through(relayV),
-          xorErrorCall(bc, initPeer)
+          errorCall(bc, 3, initPeer)
         )
       )
+    )
 
     procFC.equalsOrPrintDiff(expectedFC) should be(true)
 
@@ -62,26 +75,20 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       Map.empty
     )
 
-    val bc = BodyConfig()
+    val bc = BodyConfig(wrapWithXor = false)
 
     val fc = Transform.forClient(func, bc)
 
     val procFC: Node = fc
 
     val expectedFC =
-      xor(
-        seq(
-          dataCall(bc, "-relay-", initPeer),
-          call(0, initPeer),
-          through(relayV),
-          call(1, otherPeer),
-          through(relayV),
-          respCall(bc, ret, initPeer)
-        ),
-        seq(
-          through(relayV),
-          xorErrorCall(bc, initPeer)
-        )
+      seq(
+        dataCall(bc, "-relay-", initPeer),
+        call(0, initPeer),
+        through(relayV),
+        call(1, otherPeer),
+        through(relayV),
+        respCall(bc, ret, initPeer)
       )
 
     procFC.equalsOrPrintDiff(expectedFC) should be(true)

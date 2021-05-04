@@ -97,11 +97,11 @@ object Node {
     CallServiceTag(LiteralModel(s"srv$i"), s"fn$i", Call(Nil, None), Option(on))
   )
 
-  def xorErrorCall(bc: BodyConfig, on: ValueModel = null) = Node(
+  def errorCall(bc: BodyConfig, i: Int, on: ValueModel = null) = Node(
     CallServiceTag(
       bc.errorHandlingCallback,
       bc.errorFuncName,
-      Call(LiteralModel("%last_error%") :: Nil, None),
+      Call(LiteralModel("%last_error%") :: LiteralModel(i.toString) :: Nil, None),
       Option(on)
     )
   )

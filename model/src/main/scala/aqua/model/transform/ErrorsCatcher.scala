@@ -2,7 +2,10 @@ package aqua.model.transform
 
 import aqua.model.{LiteralModel, ValueModel}
 import aqua.model.func.Call
-import aqua.model.func.body.{FuncOp, FuncOps}
+import aqua.model.func.body.{FuncOp, FuncOps, OnTag, OpTag}
+import cats.Eval
+import cats.data.Chain
+import cats.free.Cofree
 
 case class ErrorsCatcher(
   enabled: Boolean,
@@ -12,16 +15,33 @@ case class ErrorsCatcher(
 ) {
 
   def transform(op: FuncOp): FuncOp =
-    if (enabled)
-      FuncOps.xor(
-        op,
-        callable.makeCall(
-          serviceId,
-          funcName,
-          ErrorsCatcher.lastErrorCall
-        )
-      )
-    else op
+    if (enabled) {
+      var i = 0
+      op
+        .cata[Cofree[Chain, OpTag]] {
+          case (ot: OnTag, children) =>
+            i = i + 1
+            Eval now
+              FuncOp
+                .wrap(
+                  ot,
+                  FuncOps.xor(
+                    FuncOps.seq(children.map(FuncOp(_)).toList: _*),
+                    callable.makeCall(
+                      serviceId,
+                      funcName,
+                      ErrorsCatcher.lastErrorCall(i)
+                    )
+                  )
+                )
+                .tree
+
+          case (tag, children) =>
+            Eval.now(Cofree(tag, Eval.now(children)))
+        }
+        .map(FuncOp(_))
+        .value
+    } else op
 
 }
 
@@ -29,8 +49,8 @@ object ErrorsCatcher {
   // TODO not a string
   val lastErrorArg: ValueModel = LiteralModel("%last_error%")
 
-  val lastErrorCall: Call = Call(
-    lastErrorArg :: Nil,
+  def lastErrorCall(i: Int): Call = Call(
+    lastErrorArg :: LiteralModel(i.toString) :: Nil,
     None
   )
 }
