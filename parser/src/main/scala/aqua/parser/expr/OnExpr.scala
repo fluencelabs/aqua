@@ -20,7 +20,7 @@ object OnExpr extends Expr.AndIndented {
   override def validChildren: List[Expr.Companion] = List(
     CallArrowExpr,
     AbilityIdExpr,
-    Expr.defer(ParExpr),
+    ParExpr,
     IfExpr,
     ElseOtherwiseExpr,
     Expr.defer(OnExpr)

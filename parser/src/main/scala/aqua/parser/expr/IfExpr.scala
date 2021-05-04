@@ -21,5 +21,5 @@ object IfExpr extends Expr.AndIndented {
     }
 
   override def validChildren: List[Expr.Companion] =
-    List(Expr.defer(OnExpr), ParExpr, CallArrowExpr, AbilityIdExpr, ForExpr, IfExpr)
+    List(Expr.defer(OnExpr), ParExpr, CallArrowExpr, AbilityIdExpr, Expr.defer(ForExpr), IfExpr)
 }
