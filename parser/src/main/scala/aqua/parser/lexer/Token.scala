@@ -19,7 +19,7 @@ object Token {
   private val anum_ = anum ++ f_
   private val nl = Set('\n', '\r')
 
-  val `\s*`: P0[String] = P.charsWhile0(fSpaces)
+  val ` *` : P0[String] = P.charsWhile0(fSpaces)
   val ` ` : P[String] = P.charsWhile(fSpaces)
   val `const`: P[Unit] = P.string("const")
   val `data`: P[Unit] = P.string("data")
