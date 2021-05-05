@@ -1,7 +1,7 @@
 package aqua.parser.lift
 
-import cats.{Comonad, Eval}
 import cats.parse.{LocationMap, Parser => P}
+import cats.{Comonad, Eval}
 
 import scala.language.implicitConversions
 
@@ -48,7 +48,9 @@ object Span {
       onLeft + s + (" " * (lastNSize - s.length)) + onRight + " "
     }
 
-    def toConsoleStr(msg: String, onLeft: String, onRight: String = Console.RESET): String =
+    def toConsoleStr(msg: String, onLeft: String, onRight: String = Console.RESET): String = {
+      val line3Length = line._3.length
+      val line3Mult = if (line3Length == 0) 1 else line3Length
       pre.map(formatLine(_, onLeft, onRight)).mkString("\n") +
         "\n" +
         formatLN(line._1, onLeft, onRight) +
@@ -60,7 +62,7 @@ object Span {
         "\n" +
         (" " * (line._2.length + lastNSize + 1)) +
         onLeft +
-        ("^" * line._3.length) +
+        ("^" * line3Mult) +
         ("=" * line._4.length) +
         onRight +
         "\n" +
@@ -70,6 +72,7 @@ object Span {
         onRight +
         "\n" +
         post.map(formatLine(_, onLeft, onRight)).mkString("\n")
+    }
   }
 
   type F[T] = (Span, T)
