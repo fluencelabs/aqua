@@ -18,6 +18,18 @@ case class FuncExpr[F[_]](
 
 object FuncExpr extends Expr.AndIndented {
 
+  override def validChildren: List[Expr.Companion] = List(
+    OnExpr,
+    AbilityIdExpr,
+    ReturnExpr,
+    CallArrowExpr,
+    ParExpr,
+    ForExpr,
+    IfExpr,
+    ElseOtherwiseExpr,
+    DeclareStreamExpr
+  )
+
   override def p[F[_]: LiftParser: Comonad]: Parser[FuncExpr[F]] =
     ((`func` *> ` ` *> Name.p[F]) ~ comma0(Arg.p)
       .between(`(`, `)`) ~ (` -> ` *> DataTypeToken.`datatypedef`).?).map {
@@ -53,16 +65,4 @@ object FuncExpr extends Expr.AndIndented {
         case _ => Parser.pure(tree)
       }
     }
-
-  override def validChildren: List[Expr.Companion] = List(
-    OnExpr,
-    AbilityIdExpr,
-    ReturnExpr,
-    CallArrowExpr,
-    ParExpr,
-    ForExpr,
-    IfExpr,
-    ElseOtherwiseExpr,
-    DeclareStreamExpr
-  )
 }

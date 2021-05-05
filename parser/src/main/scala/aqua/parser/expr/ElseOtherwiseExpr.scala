@@ -11,9 +11,17 @@ case class ElseOtherwiseExpr[F[_]](point: F[Unit]) extends Expr[F]
 
 object ElseOtherwiseExpr extends Expr.AndIndented {
 
+  override def validChildren: List[Expr.Companion] =
+    List(
+      Expr.defer(OnExpr),
+      ParExpr,
+      CallArrowExpr,
+      AbilityIdExpr,
+      Expr.defer(ForExpr),
+      Expr.defer(IfExpr),
+      Expr.defer(ElseOtherwiseExpr)
+    )
+
   override def p[F[_]: LiftParser: Comonad]: Parser[ElseOtherwiseExpr[F]] =
     (`else` | `otherwise`).lift.map(ElseOtherwiseExpr(_))
-
-  override def validChildren: List[Expr.Companion] =
-    List(Expr.defer(OnExpr), ParExpr, CallArrowExpr, AbilityIdExpr, ForExpr)
 }

@@ -12,14 +12,6 @@ case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F]) extends 
 
 object IfExpr extends Expr.AndIndented {
 
-  override def p[F[_]: LiftParser: Comonad]: P[IfExpr[F]] =
-    (`if` *> ` ` *> Value.`value`[F] ~ (` ` *> EqOp.p[F] ~ (` ` *> Value.`value`[F])).?).map {
-      case (left, Some((e, right))) =>
-        IfExpr(left, e, right)
-      case (left, None) =>
-        IfExpr(left, EqOp(left.as(true)), Literal(left.as("true"), LiteralType.bool))
-    }
-
   override def validChildren: List[Expr.Companion] =
     List(
       Expr.defer(OnExpr),
@@ -30,4 +22,12 @@ object IfExpr extends Expr.AndIndented {
       Expr.defer(IfExpr),
       Expr.defer(ElseOtherwiseExpr)
     )
+
+  override def p[F[_]: LiftParser: Comonad]: P[IfExpr[F]] =
+    (`if` *> ` ` *> Value.`value`[F] ~ (` ` *> EqOp.p[F] ~ (` ` *> Value.`value`[F])).?).map {
+      case (left, Some((e, right))) =>
+        IfExpr(left, e, right)
+      case (left, None) =>
+        IfExpr(left, EqOp(left.as(true)), Literal(left.as("true"), LiteralType.bool))
+    }
 }

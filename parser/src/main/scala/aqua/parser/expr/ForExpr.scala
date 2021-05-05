@@ -12,12 +12,6 @@ case class ForExpr[F[_]](item: Name[F], iterable: Value[F], par: Option[F[Unit]]
 
 object ForExpr extends Expr.AndIndented {
 
-  override def p[F[_]: LiftParser: Comonad]: P[ForExpr[F]] =
-    ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value.`value`[F] ~ (` ` *> `par`.lift).?).map {
-      case ((item, iterable), par) =>
-        ForExpr(item, iterable, par)
-    }
-
   override def validChildren: List[Expr.Companion] = List(
     Expr.defer(OnExpr),
     ParExpr,
@@ -27,4 +21,10 @@ object ForExpr extends Expr.AndIndented {
     Expr.defer(IfExpr),
     Expr.defer(ElseOtherwiseExpr)
   )
+
+  override def p[F[_]: LiftParser: Comonad]: P[ForExpr[F]] =
+    ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value.`value`[F] ~ (` ` *> `par`.lift).?).map {
+      case ((item, iterable), par) =>
+        ForExpr(item, iterable, par)
+    }
 }
