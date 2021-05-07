@@ -1,10 +1,10 @@
 package aqua.parser.expr
 
-import aqua.parser.Ast.Tree
+import aqua.parser.Ast.IndentTree
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Arg, DataTypeToken, Name, Value}
 import aqua.parser.lift.LiftParser
-import aqua.parser.{Expr, Indent}
+import aqua.parser.{Expr, IndentExpr}
 import cats.Comonad
 import cats.free.Cofree
 import cats.parse.Parser
@@ -19,12 +19,12 @@ case class FuncExpr[F[_]](
 object FuncExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Companion] = List(
-    OnExpr,
     AbilityIdExpr,
     ReturnExpr,
+    ForExpr,
+//    Expr.defer(OnExpr),
     CallArrowExpr,
     ParExpr,
-    ForExpr,
     IfExpr,
     ElseOtherwiseExpr,
     DeclareStreamExpr
@@ -37,14 +37,14 @@ object FuncExpr extends Expr.AndIndented {
         FuncExpr(name, args, ret, None)
     }
 
-  override def ast[F[_]: LiftParser: Comonad](ps: Indent): Parser[Tree[F]] =
-    super.ast(ps).flatMap { tree =>
+  override def ast[F[_]: LiftParser: Comonad](): Parser[IndentTree[F]] =
+    super.ast().flatMap { tree =>
       tree.head match {
-        case funcExpr: FuncExpr[F] if funcExpr.ret.isDefined =>
+        case IndentExpr(_, funcExpr: FuncExpr[F]) if funcExpr.ret.isDefined =>
           tree.tail.value.lastOption.map(_.head) match {
-            case Some(re: ReturnExpr[F]) =>
+            case Some(ie @ IndentExpr(_, re: ReturnExpr[F])) =>
               Parser.pure(
-                Cofree(funcExpr.copy(retValue = Some(re.value)), tree.tail)
+                Cofree(ie.copy(e = funcExpr.copy(retValue = Some(re.value))), tree.tail)
               )
             case _ =>
               Parser.failWith(
@@ -52,9 +52,9 @@ object FuncExpr extends Expr.AndIndented {
               )
           }
 
-        case _: FuncExpr[F] =>
+        case IndentExpr(_, _: FuncExpr[F]) =>
           tree.tail.value.lastOption.map(_.head) match {
-            case Some(_: ReturnExpr[F]) =>
+            case Some(IndentExpr(_, _: ReturnExpr[F])) =>
               Parser.failWith(
                 "Trying to return a value from function that has no return type. Please add return type to function declaration, e.g. `func foo() -> RetType:`"
               )

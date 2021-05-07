@@ -16,6 +16,7 @@ case class Ast[F[_]](head: Ast.Head[F], tree: Ast.Tree[F]) {
 }
 
 object Ast {
+  type IndentTree[F[_]] = Cofree[Chain, IndentExpr[F]]
   type Tree[F[_]] = Cofree[Chain, Expr[F]]
   type Head[F[_]] = Cofree[Chain, HeaderExpr[F]]
 
@@ -27,7 +28,7 @@ object Ast {
 
   def parser[F[_]: LiftParser: Comonad](ps: Indent): P0[Ast[F]] =
     ((P.repSep0(P.oneOf(headExprs.map(_.ast[F])), ` \n+`) <* ` \n+`).? ~ P.repSep0(
-      P.oneOf(treeExprs.map(_.ast[F](ps))),
+      P.oneOf(treeExprs.map(_.ast[F]())),
       ` \n+`
     )).surroundedBy(` \n+`.?)
       .map {
@@ -35,7 +36,7 @@ object Ast {
         case (_, tree) => Chain.empty[Head[F]] -> Chain.fromSeq(tree)
       }
       .map { case (hs, ls) =>
-        Ast(Cofree(HeadExpr(), Eval.now(hs)), Cofree(RootExpr(), Eval.now(ls)))
+        Ast(Cofree(HeadExpr(), Eval.now(hs)), Cofree(RootExpr(), Eval.now(ls.map(_.map(_.e)))))
       }
 
   def fromString[F[_]: LiftParser: Comonad](script: String): ValidatedNec[P.Error, Ast[F]] =

@@ -13,7 +13,7 @@ case class ForExpr[F[_]](item: Name[F], iterable: Value[F], par: Option[F[Unit]]
 object ForExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Companion] = List(
-    Expr.defer(OnExpr),
+//    Expr.defer(OnExpr),
     ParExpr,
     Expr.defer(ForExpr),
     CallArrowExpr,

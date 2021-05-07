@@ -87,7 +87,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |  Peer "some id"
         |  call(true)""".stripMargin
 
-    val tree = FuncExpr.ast[Id](Indent()).parseAll(script).value
+    val tree = FuncExpr.ast[Id]().parseAll(script).value.map(_.e)
     val funcBody = checkHeadGetTail(tree, FuncExpr("a", Nil, None, None), 1).toList
 
     val ifBody =

@@ -1,8 +1,2 @@
-service Test("123"):
-    doSomething: -> ()
-
-func b(me: string, a: bool, b: bool):
-    on me:
-        if a:
-            if b:
-                Test.doSomething()
+func b(a: string):
+    <- a
