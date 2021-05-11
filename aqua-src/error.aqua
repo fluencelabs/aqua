@@ -1,14 +1,10 @@
-alias Field : []string
+service Stringer("stringer-id"):
+    returnString: string -> string
 
-alias Argument : []string
-
-alias Bytes : []u8
-
-service Test("123"):
-    doSomething: -> ()
-
-func b(me: string, a: bool, b: bool):
-    on me:
-        if a:
-            if b:
-                Test.doSomething()
+func checkStreams(ch: []string) -> []string:
+    stream: *string
+    stream <- Stringer.returnString("first")
+    stream <- Stringer.returnString("second")
+    for b <- ch:
+        stream <- Stringer.returnString(b)
+    <- stream

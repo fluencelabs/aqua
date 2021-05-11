@@ -19,6 +19,7 @@ object Expr {
   val allChildrenExprs = List(
     ArrowTypeExpr,
     CallArrowExpr,
+    DeclareStreamExpr,
     OnExpr,
     IfExpr,
     ReturnExpr,
@@ -26,8 +27,7 @@ object Expr {
     ElseOtherwiseExpr,
     FieldTypeExpr,
     CallArrowExpr,
-    AbilityIdExpr,
-    DeclareStreamExpr
+    AbilityIdExpr
   )
 
   val rootExprs = List(
