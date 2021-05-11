@@ -1,3 +1,9 @@
+alias Field : []string
+
+alias Argument : []string
+
+alias Bytes : []u8
+
 service Test("123"):
     doSomething: -> ()
 

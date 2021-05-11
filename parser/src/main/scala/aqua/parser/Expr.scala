@@ -61,7 +61,7 @@ object Expr {
   abstract class Leaf extends Companion {
 
     override def ast[F[_]: LiftParser: Comonad](): P[Ast.Tree[F]] =
-      (` ` ~ p[F]).map { case (e) =>
+      (` *`.with1 ~ p[F]).map { case (e) =>
         Cofree[Chain, Expr[F]](
           e._2,
           Eval.now(Chain.empty)
