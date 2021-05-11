@@ -16,8 +16,6 @@ case class OnExpr[F[_]](peerId: Value[F], via: List[Value[F]], parPrefix: Option
 
 object OnExpr extends Expr.AndIndented with RootCompanion {
 
-  override def readLine[F[_]: LiftParser: Comonad]: P[Expr[F]] = p <* ` : `
-
   override def validChildren: List[Expr.Companion] =
     List(
       Expr.defer(OnExpr),

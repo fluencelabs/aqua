@@ -19,13 +19,13 @@ object Expr {
   val allChildrenExprs = List(
     ArrowTypeExpr,
     CallArrowExpr,
+    FieldTypeExpr,
     DeclareStreamExpr,
     OnExpr,
     IfExpr,
     ReturnExpr,
     ForExpr,
     ElseOtherwiseExpr,
-    FieldTypeExpr,
     CallArrowExpr,
     AbilityIdExpr
   )
@@ -47,6 +47,9 @@ object Expr {
   }
 
   def defer(companion: => Companion): Companion = new Companion {
+
+    override def readLine[F[_]: LiftParser: Comonad]: P[Expr[F]] = companion.readLine[F]
+
     override def p[F[_]: LiftParser: Comonad]: P[Expr[F]] = companion.p[F]
 
     override def ast[F[_]: LiftParser: Comonad](): P[Ast.Tree[F]] =
@@ -136,13 +139,10 @@ object Expr {
     override def ast[F[_]: LiftParser: Comonad](): P[Ast.Tree[F]] = {
       (p[F] ~ (` : \n+` *>
         (P.repSep(
-          ` `.lift ~ P.oneOf(allChildrenExprs.map(_.readLine[F].backtrack)),
+          ` `.lift ~ P.oneOf(validChildren.map(_.readLine[F].backtrack)),
           ` \n+`
         ) <* ` \n`.?)))
-        .map(t => {
-          val res = listToTree(t._1, Chain.fromSeq(t._2.toList))
-          res
-        })
+        .map(t => listToTree(t._1, Chain.fromSeq(t._2.toList)))
     }
   }
 }
