@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.Model
-import aqua.model.func.body.{ForTag, FuncOp, NextTag, OpTag, ParTag, SeqTag}
+import aqua.model.func.body._
 import aqua.parser.expr.ForExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -33,13 +33,14 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
       (stOpt: Option[Type], ops: Model) =>
         N.endScope() as ((stOpt, ops) match {
           case (Some(t), op: FuncOp) =>
-            FuncOp.wrap(
+            val f = FuncOp.wrap(
               ForTag(expr.item.value, ValuesAlgebra.valueToModel(expr.iterable, t)),
               FuncOp.node(
                 expr.par.fold[OpTag](SeqTag)(_ => ParTag),
                 Chain(op, FuncOp.leaf(NextTag(expr.item.value)))
               )
             )
+            expr.parPrefix.fold(f)(_ => FuncOp.wrap(ParTag, f))
           case _ => Model.error("Wrong body of For expr")
         })
     )

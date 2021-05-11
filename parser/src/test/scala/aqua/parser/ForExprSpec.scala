@@ -11,23 +11,27 @@ class ForExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "on" should "be parsed" in {
     parseFor("for some <- \"a\"") should be(
-      ForExpr[Id]("some", toStr("a"), None)
+      ForExpr[Id]("some", toStr("a"), None, None)
     )
 
     parseFor("for some <- \"a\"") should be(
-      ForExpr[Id]("some", toStr("a"), None)
+      ForExpr[Id]("some", toStr("a"), None, None)
     )
 
     parseFor("for some <- 1") should be(
-      ForExpr[Id]("some", toNumber(1), None)
+      ForExpr[Id]("some", toNumber(1), None, None)
     )
 
     parseFor("for some <- false") should be(
-      ForExpr[Id]("some", toBool(false), None)
+      ForExpr[Id]("some", toBool(false), None, None)
     )
 
     parseFor("for some <- false par") should be(
-      ForExpr[Id]("some", toBool(false), Some(()))
+      ForExpr[Id]("some", toBool(false), Some(()), None)
+    )
+
+    parseFor("par for some <- false par") should be(
+      ForExpr[Id]("some", toBool(false), Some(()), Some(()))
     )
   }
 }

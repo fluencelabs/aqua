@@ -1,6 +1,7 @@
 package aqua.parser.expr
 
 import aqua.parser.Expr
+import aqua.parser.Expr.RootCompanion
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
@@ -9,12 +10,11 @@ import cats.parse.Parser
 
 case class ElseOtherwiseExpr[F[_]](point: F[Unit]) extends Expr[F]
 
-object ElseOtherwiseExpr extends Expr.AndIndented {
+object ElseOtherwiseExpr extends Expr.AndIndented with RootCompanion {
 
   override def validChildren: List[Expr.Companion] =
     List(
-//      Expr.defer(OnExpr),
-      ParExpr,
+      Expr.defer(OnExpr),
       CallArrowExpr,
       AbilityIdExpr,
       Expr.defer(ForExpr),

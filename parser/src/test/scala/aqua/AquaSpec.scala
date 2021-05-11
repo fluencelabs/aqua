@@ -1,42 +1,11 @@
 package aqua
 
-import aqua.parser.expr.{
-  AbilityIdExpr,
-  AliasExpr,
-  ArrowTypeExpr,
-  AssignmentExpr,
-  CallArrowExpr,
-  ConstantExpr,
-  DataStructExpr,
-  ElseOtherwiseExpr,
-  FieldTypeExpr,
-  ForExpr,
-  FuncExpr,
-  IfExpr,
-  OnExpr,
-  ParExpr,
-  ReturnExpr,
-  ServiceExpr
-}
-import aqua.parser.lexer.{
-  Ability,
-  Arg,
-  ArrayTypeToken,
-  ArrowTypeToken,
-  BasicTypeToken,
-  CustomTypeToken,
-  DataTypeToken,
-  EqOp,
-  IntoField,
-  Literal,
-  Name,
-  TypeToken,
-  VarLambda
-}
-import cats.Id
+import aqua.parser.expr._
+import aqua.parser.lexer._
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.LiteralType.{bool, number, string}
 import aqua.types.{LiteralType, ScalarType}
+import cats.Id
 import org.scalatest.EitherValues
 
 import scala.collection.mutable
@@ -96,9 +65,6 @@ trait AquaSpec extends EitherValues {
 
   def parseOn(str: String): OnExpr[Id] =
     OnExpr.p[Id].parseAll(str).value
-
-  def parsePar(str: String): ParExpr[Id] =
-    ParExpr.p[Id].parseAll(str).value
 
   def parseReturn(str: String): ReturnExpr[Id] =
     ReturnExpr.p[Id].parseAll(str).value

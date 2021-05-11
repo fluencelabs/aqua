@@ -1,6 +1,7 @@
 package aqua.parser.expr
 
 import aqua.parser.Expr
+import aqua.parser.Expr.RootCompanion
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Ability, Value}
 import aqua.parser.lift.LiftParser
@@ -9,7 +10,7 @@ import cats.parse.Parser
 
 case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Expr[F]
 
-object ServiceExpr extends Expr.AndIndented {
+object ServiceExpr extends Expr.AndIndented with RootCompanion {
 
   override def validChildren: List[Expr.Companion] = List(ArrowTypeExpr)
 

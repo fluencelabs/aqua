@@ -87,7 +87,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |  Peer "some id"
         |  call(true)""".stripMargin
 
-    val tree = FuncExpr.ast[Id]().parseAll(script).value.map(_.e)
+    val tree = FuncExpr.ast[Id]().parseAll(script).value
     val funcBody = checkHeadGetTail(tree, FuncExpr("a", Nil, None, None), 1).toList
 
     val ifBody =
@@ -97,9 +97,11 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         3
       ).toList
 
-    ifBody.head.head should be(CallArrowExpr(Some(toName("x")), Some(toAb("Ab")), "func", Nil))
+    ifBody.head.head should be(
+      CallArrowExpr(Some(toName("x")), Some(toAb("Ab")), "func", Nil, None)
+    )
     ifBody(1).head should be(AbilityIdExpr(toAb("Peer"), toStr("some id")))
-    ifBody(2).head should be(CallArrowExpr(None, None, "call", List(toBool(true))))
+    ifBody(2).head should be(CallArrowExpr(None, None, "call", List(toBool(true)), None))
 
   }
 
@@ -131,15 +133,15 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     qTree.d() shouldBe ServiceExpr(toAb("Local"), Some(toStr("local")))
     qTree.d() shouldBe ArrowTypeExpr("gt", toArrowType(Nil, Some(scToBt(bool))))
     qTree.d() shouldBe FuncExpr("tryGen", Nil, Some(scToBt(bool)), Some("v"))
-    qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")))
-    qTree.d() shouldBe CallArrowExpr(Some("v"), Some(toAb("Local")), "gt", Nil)
+    qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")), None)
+    qTree.d() shouldBe CallArrowExpr(Some("v"), Some(toAb("Local")), "gt", Nil, None)
     qTree.d() shouldBe ReturnExpr(toVar("v"))
     // genC function
     qTree.d() shouldBe FuncExpr("genC", List(toArgSc("val", string)), Some(boolSc), Some("two"))
-    qTree.d() shouldBe CallArrowExpr(Some("one"), Some(toAb("Local")), "gt", List())
-    qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
-    qTree.d() shouldBe CallArrowExpr(Some("two"), None, "tryGen", List())
-    qTree.d() shouldBe CallArrowExpr(Some("three"), Some(toAb("Local")), "gt", List())
+    qTree.d() shouldBe CallArrowExpr(Some("one"), Some(toAb("Local")), "gt", List(), None)
+    qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")), None)
+    qTree.d() shouldBe CallArrowExpr(Some("two"), None, "tryGen", List(), None)
+    qTree.d() shouldBe CallArrowExpr(Some("three"), Some(toAb("Local")), "gt", List(), None)
     qTree.d() shouldBe ReturnExpr(toVar("two"))
     /* TODO this is semantics, not parser test
 

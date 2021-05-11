@@ -16,7 +16,6 @@ case class Ast[F[_]](head: Ast.Head[F], tree: Ast.Tree[F]) {
 }
 
 object Ast {
-  type IndentTree[F[_]] = Cofree[Chain, IndentExpr[F]]
   type Tree[F[_]] = Cofree[Chain, Expr[F]]
   type Head[F[_]] = Cofree[Chain, HeaderExpr[F]]
 
@@ -36,7 +35,7 @@ object Ast {
         case (_, tree) => Chain.empty[Head[F]] -> Chain.fromSeq(tree)
       }
       .map { case (hs, ls) =>
-        Ast(Cofree(HeadExpr(), Eval.now(hs)), Cofree(RootExpr(), Eval.now(ls.map(_.map(_.e)))))
+        Ast(Cofree(HeadExpr(), Eval.now(hs)), Cofree(RootExpr(), Eval.now(ls)))
       }
 
   def fromString[F[_]: LiftParser: Comonad](script: String): ValidatedNec[P.Error, Ast[F]] =

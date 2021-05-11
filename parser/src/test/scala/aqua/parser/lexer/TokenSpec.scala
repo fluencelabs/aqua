@@ -65,10 +65,18 @@ class TokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "a" should "b" in {
     val str =
-      """aaa.bbbccc""".stripMargin
+      """gtt asd
+        |aaa asd :
+        |gtt asd""".stripMargin
 
-    val parser = P.repSep(P.oneOf(P.string("aaa") :: P.string("bbb") :: Nil), `.`) ~
-      P.repSep(P.oneOf(P.string("ccc") :: P.string("ddd") :: Nil), `.`) ~ P.end
+    def s(p: P[String], p1: P[String]): P[(String, String)] =
+      (` `.?.with1 *> p <* ` `) ~ p1
+    def s2(p: P[String], p1: P[String]): P[(String, String)] =
+      (` `.?.with1 *> p <* ` `) ~ p1 <* ` : `
+
+    val valid = s2(`name`, `name`) :: s(`name`, `name`) :: Nil
+
+    val parser = P.repSep(P.oneOf(valid.map(_.backtrack)), ` \n+`)
 
     parser.parseAll(str).right.value
   }
