@@ -8,7 +8,9 @@ import aqua.parser.lift.LiftParser._
 import cats.Comonad
 import cats.parse.Parser
 
-case class ElseOtherwiseExpr[F[_]](point: F[Unit]) extends Expr[F]
+case class ElseOtherwiseExpr[F[_]](point: F[Unit]) extends Expr[F] {
+  override def root: Boolean = true
+}
 
 object ElseOtherwiseExpr extends Expr.AndIndented with RootCompanion {
 

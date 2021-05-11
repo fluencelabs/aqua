@@ -9,7 +9,9 @@ import aqua.types.LiteralType
 import cats.Comonad
 import cats.parse.{Parser => P}
 
-case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F]) extends Expr[F]
+case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F]) extends Expr[F] {
+  override def root: Boolean = true
+}
 
 object IfExpr extends Expr.AndIndented with RootCompanion {
 

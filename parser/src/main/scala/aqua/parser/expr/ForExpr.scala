@@ -14,7 +14,9 @@ case class ForExpr[F[_]](
   iterable: Value[F],
   par: Option[F[Unit]],
   parPrefix: Option[F[Unit]]
-) extends Expr[F]
+) extends Expr[F] {
+  override def root: Boolean = true
+}
 
 object ForExpr extends Expr.AndIndented with RootCompanion {
 

@@ -10,7 +10,9 @@ import cats.Comonad
 import cats.parse.{Parser => P}
 
 case class OnExpr[F[_]](peerId: Value[F], via: List[Value[F]], parPrefix: Option[F[Unit]])
-    extends Expr[F]
+    extends Expr[F] {
+  override def root: Boolean = true
+}
 
 object OnExpr extends Expr.AndIndented with RootCompanion {
 

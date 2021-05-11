@@ -6,7 +6,3 @@ func b(me: string, a: bool, b: bool):
         if a:
             if b:
                 Test.doSomething()
-                par Test.doSomething()
-            par for p <- peers par:
-                SomeThing.callU32("call u32 inside")
-                SomeThing.callBool("call bool inside")
