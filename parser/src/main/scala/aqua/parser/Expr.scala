@@ -1,6 +1,5 @@
 package aqua.parser
 
-import aqua.parser.expr._
 import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
@@ -15,27 +14,6 @@ trait Expr[F[_]] {
 }
 
 object Expr {
-
-  val allChildrenExprs = List(
-    ArrowTypeExpr,
-    CallArrowExpr,
-    FieldTypeExpr,
-    DeclareStreamExpr,
-    OnExpr,
-    IfExpr,
-    ReturnExpr,
-    ForExpr,
-    ElseOtherwiseExpr,
-    CallArrowExpr,
-    AbilityIdExpr
-  )
-
-  val rootExprs = List(
-    ForExpr,
-    OnExpr,
-    IfExpr,
-    ElseOtherwiseExpr
-  )
 
   trait Companion {
 
@@ -64,12 +42,12 @@ object Expr {
   abstract class Leaf extends Companion {
 
     override def ast[F[_]: LiftParser: Comonad](): P[Ast.Tree[F]] =
-      (` *`.with1 ~ p[F]).map { case (e) =>
+      (` *`.with1 ~ p[F]).map(e =>
         Cofree[Chain, Expr[F]](
           e._2,
           Eval.now(Chain.empty)
         )
-      }
+      )
   }
 
   trait And extends Companion {
@@ -89,6 +67,7 @@ object Expr {
       head: Expr[F],
       exprs: Chain[(F[String], Expr[F])]
     ): Ast.Tree[F] = {
+      // if we don't have elements in a list, then head is a leaf
       exprs.headOption.fold(leaf(head)) { lHead =>
         val start = lHead._1.extract.length
         val children = exprs.foldLeft(
@@ -136,13 +115,12 @@ object Expr {
 
     }
 
-    override def ast[F[_]: LiftParser: Comonad](): P[Ast.Tree[F]] = {
+    override def ast[F[_]: LiftParser: Comonad](): P[Ast.Tree[F]] =
       (p[F] ~ (` : \n+` *>
         (P.repSep(
           ` `.lift ~ P.oneOf(validChildren.map(_.readLine[F].backtrack)),
           ` \n+`
         ) <* ` \n`.?)))
         .map(t => listToTree(t._1, Chain.fromSeq(t._2.toList)))
-    }
   }
 }
