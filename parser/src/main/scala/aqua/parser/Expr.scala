@@ -65,7 +65,14 @@ object Expr {
       )
     }
 
-    def listToTree[F[_]: Comonad](
+    case class Acc[F[_]](
+      root: Option[Expr[F]] = None,
+      window: Chain[(F[String], Expr[F])] = Chain.empty,
+      currentChildren: Chain[Ast.Tree[F]] = Chain.empty,
+      error: Option[P.Error] = None
+    )
+
+    def listToTree[F[_]: Comonad: LiftParser](
       head: Expr[F],
       exprs: Chain[(F[String], Expr[F])]
     ): Either[P.Error, Ast.Tree[F]] = {
@@ -73,61 +80,69 @@ object Expr {
       exprs.headOption.fold[Either[P.Error, Cofree[Chain, Expr[F]]]](Right(leaf(head))) { lHead =>
         val start = lHead._1.extract.length
         val children = exprs.foldLeft(
-          (
-            Option.empty[Expr[F]],
-            Chain.empty[(F[String], Expr[F])],
-            Chain.empty[Ast.Tree[F]],
-            Option.empty[P.Error]
-          )
-        ) { case ((h, window, currentLevel, error), (i, currentExpr)) =>
-          error match {
+          Acc[F]()
+        ) { case (acc, (i, currentExpr)) =>
+          acc.error match {
             case None =>
-              h match {
+              acc.root match {
                 case None =>
                   currentExpr match {
                     // if next is root companion, start to gather all tokens under this root
                     case e if e.root =>
-                      (Some(e), Chain.empty, currentLevel, error)
+                      acc.copy(root = Some(e))
                     // create leaf if token is on current level
                     case e =>
-                      (None, Chain.empty, currentLevel.append(leaf(e)), error)
+                      acc.copy(currentChildren = acc.currentChildren.append(leaf(e)))
                   }
                 // if we have root companion, gather all tokens that have indent > than current
-                case Some(he) =>
+                case Some(root) =>
                   if (i.extract.length > start) {
-                    (Some(he), window.append((i, currentExpr)), currentLevel, error)
-                  } else {
+                    Acc[F](
+                      Some(root),
+                      acc.window.append((i, currentExpr)),
+                      acc.currentChildren,
+                      acc.error
+                    )
+                  } else if (i.extract.length == start) {
                     // create a tree from gathered tokens and continue
-                    val treeE = listToTree[F](he, window)
+                    val treeE = listToTree[F](root, acc.window)
+
+                    // if window is empty - error
 
                     treeE match {
                       case Right(tree) =>
-                        val withTree = currentLevel.append(tree)
+                        val withTree = acc.currentChildren.append(tree)
                         currentExpr match {
                           // if next is root companion, start to gather all tokens under this root
                           case e if e.root =>
-                            (Some(e), Chain.empty, withTree, error)
+                            acc.copy(root = Some(e), currentChildren = withTree)
                           // create leaf if token is on current level
                           case e =>
-                            (None, Chain.empty, withTree.append(leaf(e)), error)
+                            acc.copy(root = None, currentChildren = withTree.append(leaf(e)))
                         }
                       case Left(e) =>
-                        (None, Chain.empty, currentLevel, Some(e))
+                        // forward an error
+                        acc.copy(error = Some(e))
                     }
+                  } else {
+                    // add an error
+                    Acc[F](None, Chain.empty, acc.currentChildren, None)
                   }
               }
             case e @ Some(_) =>
-              (None, Chain.empty, currentLevel, e)
+              acc.copy(error = e)
           }
 
         }
-        children._1 match {
+        children.root match {
           case Some(headExpr) =>
-            val tree = listToTree[F](headExpr, children._2)
-            tree.map(t => Cofree[Chain, Expr[F]](head, Eval.now(children._3.append(t))))
+            val tree = listToTree[F](headExpr, children.window)
+            tree.map(t =>
+              Cofree[Chain, Expr[F]](head, Eval.now(children.currentChildren.append(t)))
+            )
 
           case None =>
-            Right(Cofree[Chain, Expr[F]](head, Eval.now(children._3)))
+            Right(Cofree[Chain, Expr[F]](head, Eval.now(children.currentChildren)))
         }
 
       }
