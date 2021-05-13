@@ -21,7 +21,7 @@ object Expr {
 
     def readLine[F[_]: LiftParser: Comonad]: P[Expr[F]] = p
 
-    def ast[F[_]: LiftParser: Comonad](): P[Ast.Tree[F]]
+    def ast[F[_]: LiftParser: Comonad](): P[Either[P.Error, Ast.Tree[F]]]
   }
 
   def defer(companion: => Companion): Companion = new Companion {
@@ -30,7 +30,7 @@ object Expr {
 
     override def p[F[_]: LiftParser: Comonad]: P[Expr[F]] = companion.p[F]
 
-    override def ast[F[_]: LiftParser: Comonad](): P[Ast.Tree[F]] =
+    override def ast[F[_]: LiftParser: Comonad](): P[Either[P.Error, Ast.Tree[F]]] =
       companion.ast[F]()
   }
 
@@ -41,11 +41,13 @@ object Expr {
 
   abstract class Leaf extends Companion {
 
-    override def ast[F[_]: LiftParser: Comonad](): P[Ast.Tree[F]] =
+    override def ast[F[_]: LiftParser: Comonad](): P[Either[P.Error, Ast.Tree[F]]] =
       (` *`.with1 ~ p[F]).map(e =>
-        Cofree[Chain, Expr[F]](
-          e._2,
-          Eval.now(Chain.empty)
+        Right(
+          Cofree[Chain, Expr[F]](
+            e._2,
+            Eval.now(Chain.empty)
+          )
         )
       )
   }
@@ -66,56 +68,73 @@ object Expr {
     def listToTree[F[_]: Comonad](
       head: Expr[F],
       exprs: Chain[(F[String], Expr[F])]
-    ): Ast.Tree[F] = {
+    ): Either[P.Error, Ast.Tree[F]] = {
       // if we don't have elements in a list, then head is a leaf
-      exprs.headOption.fold(leaf(head)) { lHead =>
+      exprs.headOption.fold[Either[P.Error, Cofree[Chain, Expr[F]]]](Right(leaf(head))) { lHead =>
         val start = lHead._1.extract.length
         val children = exprs.foldLeft(
-          (Option.empty[Expr[F]], Chain.empty[(F[String], Expr[F])], Chain.empty[Ast.Tree[F]])
-        ) { case ((h, window, currentLevel), (i, currentExpr)) =>
-          h match {
+          (
+            Option.empty[Expr[F]],
+            Chain.empty[(F[String], Expr[F])],
+            Chain.empty[Ast.Tree[F]],
+            Option.empty[P.Error]
+          )
+        ) { case ((h, window, currentLevel, error), (i, currentExpr)) =>
+          error match {
             case None =>
-              currentExpr match {
-                // if next is root companion, start to gather all tokens under this root
-                case e if e.root =>
-                  (Some(e), Chain.empty, currentLevel)
-                // create leaf if token is on current level
-                case e =>
-                  (None, Chain.empty, currentLevel.append(leaf(e)))
-              }
-            // if we have root companion, gather all tokens that have indent > than current
-            case Some(he) =>
-              if (i.extract.length > start) {
-                (Some(he), window.append((i, currentExpr)), currentLevel)
-              } else {
-                // create a tree from gathered tokens and continue
-                val tree = listToTree[F](he, window)
-                val withTree = currentLevel.append(tree)
-                currentExpr match {
-                  // if next is root companion, start to gather all tokens under this root
-                  case e if e.root =>
-                    (Some(e), Chain.empty, withTree)
-                  // create leaf if token is on current level
-                  case e =>
-                    (None, Chain.empty, withTree.append(leaf(e)))
-                }
-              }
+              h match {
+                case None =>
+                  currentExpr match {
+                    // if next is root companion, start to gather all tokens under this root
+                    case e if e.root =>
+                      (Some(e), Chain.empty, currentLevel, error)
+                    // create leaf if token is on current level
+                    case e =>
+                      (None, Chain.empty, currentLevel.append(leaf(e)), error)
+                  }
+                // if we have root companion, gather all tokens that have indent > than current
+                case Some(he) =>
+                  if (i.extract.length > start) {
+                    (Some(he), window.append((i, currentExpr)), currentLevel, error)
+                  } else {
+                    // create a tree from gathered tokens and continue
+                    val treeE = listToTree[F](he, window)
 
+                    treeE match {
+                      case Right(tree) =>
+                        val withTree = currentLevel.append(tree)
+                        currentExpr match {
+                          // if next is root companion, start to gather all tokens under this root
+                          case e if e.root =>
+                            (Some(e), Chain.empty, withTree, error)
+                          // create leaf if token is on current level
+                          case e =>
+                            (None, Chain.empty, withTree.append(leaf(e)), error)
+                        }
+                      case Left(e) =>
+                        (None, Chain.empty, currentLevel, Some(e))
+                    }
+                  }
+              }
+            case e @ Some(_) =>
+              (None, Chain.empty, currentLevel, e)
           }
+
         }
         children._1 match {
           case Some(headExpr) =>
             val tree = listToTree[F](headExpr, children._2)
-            Cofree[Chain, Expr[F]](head, Eval.now(children._3.append(tree)))
+            tree.map(t => Cofree[Chain, Expr[F]](head, Eval.now(children._3.append(t))))
+
           case None =>
-            Cofree[Chain, Expr[F]](head, Eval.now(children._3))
+            Right(Cofree[Chain, Expr[F]](head, Eval.now(children._3)))
         }
 
       }
 
     }
 
-    override def ast[F[_]: LiftParser: Comonad](): P[Ast.Tree[F]] =
+    override def ast[F[_]: LiftParser: Comonad](): P[Either[P.Error, Ast.Tree[F]]] =
       (p[F] ~ (` : \n+` *>
         (P.repSep(
           ` `.lift ~ P.oneOf(validChildren.map(_.readLine[F].backtrack)),
