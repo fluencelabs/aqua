@@ -2,10 +2,13 @@ package aqua
 
 import aqua.model.transform.BodyConfig
 import cats.data.Validated
-import cats.effect.{ExitCode, IO, IOApp}
+import cats.effect.{Concurrent, ExitCode, IO, IOApp}
+import cats.effect.std.Console
 import com.monovore.decline.Opts
 import com.monovore.decline.effect.CommandIOApp
 import cats.syntax.apply._
+import cats.syntax.functor._
+import fs2.io.file.Files
 
 import java.nio.file.Path
 
@@ -41,11 +44,11 @@ object AquaCli extends IOApp {
       .map(_ => true)
       .withDefault(false)
 
-  def mainOpts: Opts[IO[ExitCode]] =
+  def mainOpts[F[_]: Console: Concurrent: Files]: Opts[F[ExitCode]] =
     (inputOpts, importOpts, outputOpts, compileToAir, noRelay, noXorWrapper).mapN {
       case (input, imports, output, toAir, noRelay, noXor) =>
         AquaCompiler
-          .compileFilesTo[IO](
+          .compileFilesTo[F](
             input,
             imports,
             output,
@@ -70,5 +73,14 @@ object AquaCli extends IOApp {
       "Aquamarine compiler",
       helpFlag = true,
       Option(getClass.getPackage.getImplementationVersion).filter(_.nonEmpty)
-    )(mainOpts, args)
+    )(
+      mainOpts[IO],
+      // Weird ugly hack: in case version flag or help flag is present, ignore other options,
+      // be it correct or not
+      args match {
+        case _ if args.contains("-v") || args.contains("--version") => "-v" :: Nil
+        case _ if args.contains("-h") || args.contains("--help") => "-h" :: Nil
+        case _ => args
+      }
+    )
 }
