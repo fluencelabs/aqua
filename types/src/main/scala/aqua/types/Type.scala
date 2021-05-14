@@ -39,19 +39,25 @@ object ScalarType {
 
   val float = Set(f32, f64)
   val signed = float ++ Set(i8, i16, i32, i64)
-  val number = signed ++ Set(u8, i16, u32, u64)
+  val number = signed ++ Set(u8, u16, u32, u64)
   val all = number ++ Set(bool, string)
 
   private def isLessThen(a: ScalarType, b: ScalarType): Boolean = (a, b) match {
-    case (`u32` | `u16` | `u8`, `u64`) => true
-    case (`u16` | `u8`, `u32`) => true
-    case (`u8`, `u16`) => true
-
+    // Signed numbers
     case (`i32` | `i16` | `i8`, `i64`) => true
     case (`i16` | `i8`, `i32`) => true
     case (`i8`, `i16`) => true
 
+    // Unsigned numbers -- can fit into larger signed ones too
+    case (`u32` | `u16` | `u8`, `u64` | `i64`) => true
+    case (`u16` | `u8`, `u32` | `i32`) => true
+    case (`u8`, `u16` | `i16`) => true
+
+    // Floats
     case (`f32`, `f64`) => true
+
+    case (`i8` | `i16` | `u8` | `u16`, `f32` | `f64`) => true
+    case (`i32` | `u32`, `f64`) => true
 
     case _ => false
   }
