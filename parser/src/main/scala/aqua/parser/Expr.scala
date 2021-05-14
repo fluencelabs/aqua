@@ -70,7 +70,7 @@ object Expr {
     }
 
     case class Acc[F[_]](
-      root: Option[Expr[F]] = None,
+      root: Option[(F[String], Expr[F])] = None,
       window: Chain[(F[String], Expr[F])] = Chain.empty,
       currentChildren: Chain[Ast.Tree[F]] = Chain.empty,
       error: Option[ResultError[F]] = None
@@ -94,16 +94,16 @@ object Expr {
                     currentExpr match {
                       // if next is root companion, start to gather all tokens under this root
                       case e if e.root =>
-                        acc.copy(root = Some(e))
+                        acc.copy(root = Some(i, e))
                       // create leaf if token is on current level
                       case e =>
                         acc.copy(currentChildren = acc.currentChildren.append(leaf(e)))
                     }
                   // if we have root companion, gather all tokens that have indent > than current
-                  case Some(root) =>
+                  case r @ Some((_, root)) =>
                     if (i.extract.length > start) {
                       Acc[F](
-                        Some(root),
+                        r,
                         acc.window.append((i, currentExpr)),
                         acc.currentChildren,
                         acc.error
@@ -122,7 +122,7 @@ object Expr {
                             currentExpr match {
                               // if next is root companion, start to gather all tokens under this root
                               case e if e.root =>
-                                acc.copy(root = Some(e), currentChildren = withTree)
+                                acc.copy(root = Some(i, e), currentChildren = withTree)
                               // create leaf if token is on current level
                               case e =>
                                 acc.copy(root = None, currentChildren = withTree.append(leaf(e)))
@@ -134,7 +134,6 @@ object Expr {
                       }
 
                     } else {
-                      // add an error
                       Acc[F](error = Some(IndentError(i, "Wrong indent")))
                     }
                 }
@@ -143,15 +142,23 @@ object Expr {
             }
 
           }
-          children.root match {
-            case Some(headExpr) =>
-              val tree = listToTree[F](headExpr, children.window)
-              tree.map(t =>
-                Cofree[Chain, Expr[F]](head, Eval.now(children.currentChildren.append(t)))
-              )
-
+          children.error match {
             case None =>
-              Right(Cofree[Chain, Expr[F]](head, Eval.now(children.currentChildren)))
+              children.root match {
+                case Some((i, headExpr)) =>
+                  if (children.window.isEmpty) {
+                    Left(IndentError(i, "Statement have no body"))
+                  } else {
+                    val tree = listToTree[F](headExpr, children.window)
+                    tree.map(t =>
+                      Cofree[Chain, Expr[F]](head, Eval.now(children.currentChildren.append(t)))
+                    )
+                  }
+
+                case None =>
+                  Right(Cofree[Chain, Expr[F]](head, Eval.now(children.currentChildren)))
+              }
+            case Some(err) => Left(err)
           }
 
       }

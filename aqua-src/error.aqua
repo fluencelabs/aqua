@@ -1,4 +1,16 @@
-func c(st: []string) -> []string:
-    for b <- st:
-  stream <- S.s()
-    <- st
+data Service:
+    id: string
+    blueprint_id: string
+    owner_id: string
+
+service Stringer("stringer-id"):
+    returnString: string -> string
+
+func checkStreams(ch: []string) -> []string:
+    stream: *string
+    stream <- Stringer.returnString("first")
+    stream <- Stringer.returnString("second")
+    for b <- ch:
+        on b:
+  stream <- Stringer.returnString(b)
+    <- stream

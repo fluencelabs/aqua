@@ -26,7 +26,7 @@ object Ast {
   def headExprs: List[HeaderExpr.Companion] =
     ImportExpr :: Nil
 
-  def parser[F[_]: LiftParser: Comonad](ps: Indent): P0[Either[ResultError[F], Ast[F]]] =
+  def parser[F[_]: LiftParser: Comonad](): P0[Either[NonEmptyChain[ResultError[F]], Ast[F]]] =
     ((P.repSep0(P.oneOf(headExprs.map(_.ast[F])), ` \n+`) <* ` \n+`).? ~ P.repSep0(
       P.oneOf(treeExprs.map(_.ast[F]())),
       ` \n+`
@@ -39,24 +39,23 @@ object Ast {
         val errs = lss.collect { case Left(e) =>
           e
         }
-        errs.headOption match {
-          case Some(err) =>
-            Left(err)
-          case _ =>
+
+        NonEmptyChain
+          .fromChain(errs)
+          .fold[Either[NonEmptyChain[ResultError[F]], Ast[F]]] {
             val valid = lss.collect { case Right(v) =>
               v
             }
             Right(Ast(Cofree(HeadExpr(), Eval.now(hs)), Cofree(RootExpr(), Eval.now(valid))))
-        }
+          }(e => Left(e))
       }
 
   def fromString[F[_]: LiftParser: Comonad](script: String): ValidatedNec[ResultError[F], Ast[F]] =
     Validated
       .fromEither(
-        parser[F](Indent()).parseAll(script) match {
-          case Left(e) => Left(ParserError[F](e))
+        parser[F]().parseAll(script) match {
+          case Left(e) => Left(NonEmptyChain.one(ParserError[F](e)))
           case Right(r) => r
         }
       )
-      .leftMap(NonEmptyChain.one)
 }
