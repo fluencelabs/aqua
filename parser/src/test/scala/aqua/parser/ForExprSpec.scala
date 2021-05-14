@@ -27,7 +27,11 @@ class ForExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     parseFor("for some <- false par") should be(
-      ForExpr[Id]("some", toBool(false), Some(()), None)
+      ForExpr[Id]("some", toBool(false), Some(ForExpr.ParMode -> ForExpr.ParMode))
+    )
+
+    parseFor("for some <- false try") should be(
+      ForExpr[Id]("some", toBool(false), Some(ForExpr.TryMode -> ForExpr.TryMode))
     )
 
     parseFor("par for some <- false par") should be(

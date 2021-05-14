@@ -36,7 +36,10 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
             val f = FuncOp.wrap(
               ForTag(expr.item.value, ValuesAlgebra.valueToModel(expr.iterable, t)),
               FuncOp.node(
-                expr.par.fold[OpTag](SeqTag)(_ => ParTag),
+                expr.mode.map(_._2).fold[OpTag](SeqTag) {
+                  case ForExpr.ParMode => ParTag
+                  case ForExpr.TryMode => XorTag
+                },
                 Chain(op, FuncOp.leaf(NextTag(expr.item.value)))
               )
             )
