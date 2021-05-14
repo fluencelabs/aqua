@@ -16,37 +16,51 @@ sealed trait Type {
 sealed trait DataType extends Type
 
 case class ScalarType private (name: String) extends DataType {
-  override def toString: String = s"Scalar($name)"
+  override def toString: String = s"ScalarType($name)"
 }
 
 object ScalarType {
-  // TODO https://github.com/fluencelabs/interface-types/blob/master/crates/it-types/src/values.rs#L45-L49
+  // https://github.com/fluencelabs/interface-types/blob/master/crates/it-types/src/values.rs
   val u8 = ScalarType("u8")
+  val u16 = ScalarType("u16")
   val u32 = ScalarType("u32")
   val u64 = ScalarType("u64")
-  val s32 = ScalarType("s32")
-  val s64 = ScalarType("s64")
+
+  val i8 = ScalarType("i8")
+  val i16 = ScalarType("i16")
+  val i32 = ScalarType("i32")
+  val i64 = ScalarType("i64")
+
   val f32 = ScalarType("f32")
   val f64 = ScalarType("f64")
+
   val bool = ScalarType("bool")
   val string = ScalarType("string")
 
   val float = Set(f32, f64)
-  val signed = float ++ Set(s32, s64)
-  val number = signed ++ Set(u8, u32, u64)
+  val signed = float ++ Set(i8, i16, i32, i64)
+  val number = signed ++ Set(u8, i16, u32, u64)
   val all = number ++ Set(bool, string)
+
+  private def isLessThen(a: ScalarType, b: ScalarType): Boolean = (a, b) match {
+    case (`u32` | `u16` | `u8`, `u64`) => true
+    case (`u16` | `u8`, `u32`) => true
+    case (`u8`, `u16`) => true
+
+    case (`i32` | `i16` | `i8`, `i64`) => true
+    case (`i16` | `i8`, `i32`) => true
+    case (`i8`, `i16`) => true
+
+    case (`f32`, `f64`) => true
+
+    case _ => false
+  }
 
   val scalarOrder: PartialOrder[ScalarType] =
     PartialOrder.from {
       case (a, b) if a == b => 0.0
-      case (`u32`, `u64`) => -1.0
-      case (`u8`, `u64`) => -1.0
-      case (`u8`, `u32`) => -1.0
-      case (`s32`, `s64`) => -1.0
-      case (`f32`, `f64`) => -1.0
-      case (`u64`, `u32`) => 1.0
-      case (`s64`, `s32`) => 1.0
-      case (`f64`, `f32`) => 1.0
+      case (a, b) if isLessThen(a, b) => -1.0
+      case (a, b) if isLessThen(b, a) => 1.0
       case _ => Double.NaN
     }
 }
