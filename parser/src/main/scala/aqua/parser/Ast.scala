@@ -1,5 +1,6 @@
 package aqua.parser
 
+import aqua.parser.Expr.{ParserError, ResultError}
 import aqua.parser.expr._
 import aqua.parser.head.{HeadExpr, HeaderExpr, ImportExpr}
 import aqua.parser.lexer.Token._
@@ -25,7 +26,7 @@ object Ast {
   def headExprs: List[HeaderExpr.Companion] =
     ImportExpr :: Nil
 
-  def parser[F[_]: LiftParser: Comonad](ps: Indent): P0[Either[P.Error, Ast[F]]] =
+  def parser[F[_]: LiftParser: Comonad](ps: Indent): P0[Either[ResultError[F], Ast[F]]] =
     ((P.repSep0(P.oneOf(headExprs.map(_.ast[F])), ` \n+`) <* ` \n+`).? ~ P.repSep0(
       P.oneOf(treeExprs.map(_.ast[F]())),
       ` \n+`
@@ -49,10 +50,13 @@ object Ast {
         }
       }
 
-  def fromString[F[_]: LiftParser: Comonad](script: String): ValidatedNec[P.Error, Ast[F]] =
+  def fromString[F[_]: LiftParser: Comonad](script: String): ValidatedNec[ResultError[F], Ast[F]] =
     Validated
       .fromEither(
-        parser[F](Indent()).parseAll(script).flatMap(identity)
+        parser[F](Indent()).parseAll(script) match {
+          case Left(e) => Left(ParserError[F](e))
+          case Right(r) => r
+        }
       )
       .leftMap(NonEmptyChain.one)
 }

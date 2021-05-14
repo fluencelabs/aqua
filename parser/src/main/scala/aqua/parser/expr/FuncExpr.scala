@@ -1,6 +1,6 @@
 package aqua.parser.expr
 
-import aqua.parser.Expr.RootCompanion
+import aqua.parser.Expr.{ResultError, RootCompanion}
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Arg, DataTypeToken, Name, Value}
 import aqua.parser.lift.LiftParser
@@ -36,7 +36,7 @@ object FuncExpr extends Expr.AndIndented with RootCompanion {
         FuncExpr(name, args, ret, None)
     }
 
-  override def ast[F[_]: LiftParser: Comonad](): Parser[Either[Parser.Error, Ast.Tree[F]]] =
+  override def ast[F[_]: LiftParser: Comonad](): Parser[Either[ResultError[F], Ast.Tree[F]]] =
     super.ast().flatMap {
       case l @ Left(_) => Parser.pure(l)
       case Right(tree) =>
