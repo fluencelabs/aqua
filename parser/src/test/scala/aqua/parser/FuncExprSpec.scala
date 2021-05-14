@@ -122,7 +122,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |    three <- Local.gt() 
         |    <- two""".stripMargin
 
-    val tree = parser[Id](Indent()).parseAll(script).value.value
+    val tree = parser[Id]().parseAll(script).value.value
 
     val qTree = tree.tree.foldLeft(mutable.Queue.empty[Expr[Id]]) { case (acc, tag) =>
       acc.enqueue(tag)

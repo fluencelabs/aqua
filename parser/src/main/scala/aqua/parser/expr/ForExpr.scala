@@ -13,7 +13,6 @@ import cats.syntax.comonad._
 case class ForExpr[F[_]](
   item: Name[F],
   iterable: Value[F],
-  par: Option[F[Unit]],
   parPrefix: Option[F[Unit]],
   mode: Option[(F[ForExpr.Mode], ForExpr.Mode)]
 ) extends Expr[F] {
@@ -36,15 +35,8 @@ object ForExpr extends Expr.AndIndented with RootCompanion {
 
   override def p[F[_]: LiftParser: Comonad]: P[ForExpr[F]] =
     ((`par`.lift <* ` `).backtrack.?.with1 ~ ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value
-      .`value`[F] ~ (` ` *> `par`.lift).?)).map { case (prefPar, ((item, iterable), par)) =>
-      ForExpr(item, iterable, par, prefPar)
-
-    /*
-      ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value
-      .`value`[F] ~ (` ` *> (`par`.as(ParMode: Mode).lift | `try`.as(TryMode: Mode).lift)).?).map {
-      case ((item, iterable), mode) =>
-        ForExpr(item, iterable, mode.map(m => m -> m.extract))
-    }
-     */
+      .`value`[F] ~ (` ` *> (`par`.as(ParMode: Mode).lift | `try`.as(TryMode: Mode).lift)).?)).map {
+      case (prefPar, ((item, iterable), mode)) =>
+        ForExpr(item, iterable, prefPar, mode.map(m => m -> m.extract))
     }
 }
