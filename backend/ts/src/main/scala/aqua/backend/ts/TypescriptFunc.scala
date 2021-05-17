@@ -48,7 +48,7 @@ case class TypescriptFunc(func: FuncCallable) {
     s"""
        |export async function ${func.funcName}(client: FluenceClient${if (func.args.isEmpty) ""
     else ", "}${argsTypescript}): Promise<$retType> {
-       |    let request;
+       |    let request: RequestFlow;
        |    const promise = new Promise<$retType>((resolve, reject) => {
        |        request = new RequestFlowBuilder()
        |            .disableInjections()
@@ -77,7 +77,7 @@ case class TypescriptFunc(func: FuncCallable) {
        |            })
        |            .build();
        |    });
-       |    await client.initiateFlow(request);
+       |    await client.initiateFlow(request!);
        |    return ${returnVal};
        |}
       """.stripMargin
