@@ -76,6 +76,7 @@ object Expr {
       error: Option[ResultError[F]] = None
     )
 
+    // converts list of expressions to a tree
     def listToTree[F[_]: Comonad: LiftParser](
       head: Expr[F],
       exprs: Chain[(F[String], Expr[F])]
@@ -83,8 +84,11 @@ object Expr {
       // if we don't have elements in a list, then head is a leaf
       exprs.headOption.fold[Either[ResultError[F], Cofree[Chain, Expr[F]]]](Right(leaf(head))) {
         lHead =>
-          val start = lHead._1.extract.length
-          val children = exprs.foldLeft(
+          // size of an indentation
+          val initialIndent = lHead._1.extract.length
+          // recursively creating a tree
+          // moving a window on a list depending on the nesting of the code
+          val acc = exprs.foldLeft(
             Acc[F]()
           ) { case (acc, (i, currentExpr)) =>
             acc.error match {
@@ -92,35 +96,35 @@ object Expr {
                 acc.root match {
                   case None =>
                     currentExpr match {
-                      // if next is root companion, start to gather all tokens under this root
+                      // if next is root companion, start to gather all expressions under this root
                       case e if e.root =>
                         acc.copy(root = Some(i, e))
                       // create leaf if token is on current level
                       case e =>
                         acc.copy(currentChildren = acc.currentChildren.append(leaf(e)))
                     }
-                  // if we have root companion, gather all tokens that have indent > than current
+                  // if we have root companion, gather all expressions that have indent > than current
                   case r @ Some((_, root)) =>
-                    if (i.extract.length > start) {
+                    if (i.extract.length > initialIndent) {
                       Acc[F](
                         r,
                         acc.window.append((i, currentExpr)),
                         acc.currentChildren,
                         acc.error
                       )
-                    } else if (i.extract.length == start) {
+                    } else if (i.extract.length == initialIndent) {
                       // if root have no tokens in it - return an error
                       if (acc.window.isEmpty) {
-                        Acc(error = Some(IndentError(i, "Statement have no body")))
+                        Acc(error = Some(IndentError(i, "Expression have no body")))
                       } else {
-                        // create a tree from gathered tokens and continue
+                        // create a tree from gathered expressions and continue
                         val treeE = listToTree[F](root, acc.window)
 
                         treeE match {
                           case Right(tree) =>
                             val withTree = acc.currentChildren.append(tree)
                             currentExpr match {
-                              // if next is root companion, start to gather all tokens under this root
+                              // if next expression is root companion, start to gather all tokens under this root
                               case e if e.root =>
                                 acc.copy(root = Some(i, e), currentChildren = withTree)
                               // create leaf if token is on current level
@@ -134,30 +138,40 @@ object Expr {
                       }
 
                     } else {
-                      Acc[F](error = Some(IndentError(i, "Wrong indent")))
+                      Acc[F](error =
+                        Some(
+                          IndentError(
+                            i,
+                            "Wrong indentation. It must match the indentation of the previous expressions."
+                          )
+                        )
+                      )
                     }
                 }
               case e @ Some(_) =>
                 acc.copy(error = e)
             }
-
           }
-          children.error match {
+
+          // finalize all `tails` in the accumulator
+          acc.error match {
             case None =>
-              children.root match {
+              acc.root match {
                 case Some((i, headExpr)) =>
-                  if (children.window.isEmpty) {
-                    Left(IndentError(i, "Statement have no body"))
+                  if (acc.window.isEmpty) {
+                    Left(IndentError(i, "Expression have no body"))
                   } else {
-                    val tree = listToTree[F](headExpr, children.window)
+                    // create a tree from the last expressions if the window is not empty
+                    // this may happen if a function ended in a nested expression
+                    val tree = listToTree[F](headExpr, acc.window)
                     tree.map(t =>
-                      Cofree[Chain, Expr[F]](head, Eval.now(children.currentChildren.append(t)))
+                      Cofree[Chain, Expr[F]](head, Eval.now(acc.currentChildren.append(t)))
                     )
                   }
-
                 case None =>
-                  Right(Cofree[Chain, Expr[F]](head, Eval.now(children.currentChildren)))
+                  Right(Cofree[Chain, Expr[F]](head, Eval.now(acc.currentChildren)))
               }
+            // pass through an error
             case Some(err) => Left(err)
           }
 
