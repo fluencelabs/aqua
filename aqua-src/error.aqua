@@ -1,16 +1,20 @@
-data Service:
-    id: string
-    blueprint_id: string
-    owner_id: string
+service Peer("peer"):
+    is_connected: string -> bool
 
-service Stringer("stringer-id"):
-    returnString: string -> string
+service Op("op"):
+    identity: -> ()
 
-func checkStreams(ch: []string) -> []string:
-    stream: *string
-    stream <- Stringer.returnString("first")
-    stream <- Stringer.returnString("second")
-    for b <- ch:
-        on b:
-  stream <- Stringer.returnString(b)
-    <- stream
+data User:
+    peer_id: string
+    relay_id: string
+    name: string
+
+service Test("test"):
+    getUserList: -> []User
+    doSomething: -> bool
+
+func betterMessage(relay: string):
+    on relay:
+        isOnline <- Peer.is_connected(relay)
+    if isOnline:
+        Test.doSomething()

@@ -128,10 +128,18 @@ object Expr {
                             currentExpr match {
                               // if next expression is root companion, start to gather all tokens under this root
                               case e if e.root =>
-                                acc.copy(root = Some(i, e), currentChildren = withTree)
+                                acc.copy(
+                                  root = Some(i, e),
+                                  currentChildren = withTree,
+                                  window = Chain.empty
+                                )
                               // create leaf if token is on current level
                               case e =>
-                                acc.copy(root = None, currentChildren = withTree.append(leaf(e)))
+                                acc.copy(
+                                  root = None,
+                                  currentChildren = withTree.append(leaf(e)),
+                                  window = Chain.empty
+                                )
                             }
                           case Left(e) =>
                             // forward an error
