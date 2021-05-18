@@ -17,10 +17,6 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
     V: ValuesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
   ): Prog[Alg, Model] =
-//    Prog.after[Alg, Model] {
-//      case g: FuncOp => Free.pure[Alg, Model](FuncOp.wrap(ParTag, g))
-//      case g => Free.pure[Alg, Model](g)
-//    }
     Prog.around(
       expr.via.foldLeft(
         V.ensureIsString(expr.peerId)

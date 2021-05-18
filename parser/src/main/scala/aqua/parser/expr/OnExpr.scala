@@ -1,7 +1,6 @@
 package aqua.parser.expr
 
 import aqua.parser.Expr
-import aqua.parser.Expr.RootCompanion
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.Value
 import aqua.parser.lift.LiftParser
@@ -14,7 +13,7 @@ case class OnExpr[F[_]](peerId: Value[F], via: List[Value[F]], parPrefix: Option
   override def root: Boolean = true
 }
 
-object OnExpr extends Expr.AndIndented with RootCompanion {
+object OnExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Companion] =
     List(

@@ -1,7 +1,6 @@
 package aqua.parser.expr
 
 import aqua.parser.Expr
-import aqua.parser.Expr.RootCompanion
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Name, Value}
 import aqua.parser.lift.LiftParser
@@ -19,7 +18,7 @@ case class ForExpr[F[_]](
   override def root: Boolean = true
 }
 
-object ForExpr extends Expr.AndIndented with RootCompanion {
+object ForExpr extends Expr.AndIndented {
   sealed trait Mode
   case object TryMode extends Mode
   case object ParMode extends Mode

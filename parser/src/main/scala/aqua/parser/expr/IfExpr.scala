@@ -1,7 +1,6 @@
 package aqua.parser.expr
 
 import aqua.parser.Expr
-import aqua.parser.Expr.RootCompanion
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{EqOp, Literal, Value}
 import aqua.parser.lift.LiftParser
@@ -13,7 +12,7 @@ case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F]) extends 
   override def root: Boolean = true
 }
 
-object IfExpr extends Expr.AndIndented with RootCompanion {
+object IfExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Companion] =
     List(

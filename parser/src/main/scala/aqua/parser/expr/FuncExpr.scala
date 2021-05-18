@@ -1,6 +1,6 @@
 package aqua.parser.expr
 
-import aqua.parser.Expr.{ResultError, RootCompanion}
+import aqua.parser.Expr.ResultError
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Arg, DataTypeToken, Name, Value}
 import aqua.parser.lift.LiftParser
@@ -16,7 +16,7 @@ case class FuncExpr[F[_]](
   retValue: Option[Value[F]]
 ) extends Expr[F]
 
-object FuncExpr extends Expr.AndIndented with RootCompanion {
+object FuncExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Companion] = List(
     AbilityIdExpr,
