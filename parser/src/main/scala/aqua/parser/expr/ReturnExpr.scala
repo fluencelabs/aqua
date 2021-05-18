@@ -9,7 +9,7 @@ import cats.parse.Parser
 
 case class ReturnExpr[F[_]](value: Value[F]) extends Expr[F]
 
-object ReturnExpr extends Expr.Leaf {
+object ReturnExpr extends Expr.Companion {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[ReturnExpr[F]] =
     (`<-` *> ` ` *> Value.`value`[F]).map(ReturnExpr(_))

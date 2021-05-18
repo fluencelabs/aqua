@@ -24,11 +24,9 @@ object Expr {
     def p[F[_]: LiftParser: Comonad]: P[Expr[F]]
 
     def readLine[F[_]: LiftParser: Comonad]: P[Expr[F]] = p
-
-    def ast[F[_]: LiftParser: Comonad](): P[Either[ResultError[F], Ast.Tree[F]]]
   }
 
-  def defer(companion: => Companion): Companion = new Companion {
+  def defer(companion: => RootCompanion): RootCompanion = new RootCompanion {
 
     override def readLine[F[_]: LiftParser: Comonad]: P[Expr[F]] = companion.readLine[F]
 
@@ -38,25 +36,29 @@ object Expr {
       companion.ast[F]()
   }
 
+  // expression that could have children
+  // that will be parsed by `ast` method to a tree
   trait RootCompanion extends Companion {
+    def ast[F[_]: LiftParser: Comonad](): P[Either[ResultError[F], Ast.Tree[F]]]
 
     override def readLine[F[_]: LiftParser: Comonad]: P[Expr[F]] = p <* ` : `
   }
 
-  abstract class Leaf extends Companion {
+  // root expression that don't have children
+  abstract class RootLeaf extends RootCompanion {
 
     override def ast[F[_]: LiftParser: Comonad](): P[Either[ResultError[F], Ast.Tree[F]]] =
-      (` *`.with1 ~ p[F]).map(e =>
+      (` *`.with1 *> p[F]).map(e =>
         Right(
           Cofree[Chain, Expr[F]](
-            e._2,
+            e,
             Eval.now(Chain.empty)
           )
         )
       )
   }
 
-  trait And extends Companion {
+  trait And extends RootCompanion {
     def validChildren: List[Companion]
   }
 

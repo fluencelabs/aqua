@@ -9,7 +9,7 @@ import cats.parse.Parser
 
 case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F]) extends Expr[F]
 
-object FieldTypeExpr extends Expr.Leaf {
+object FieldTypeExpr extends Expr.Companion {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[FieldTypeExpr[F]] =
     ((Name.p[F] <* ` : `) ~ DataTypeToken.`datatypedef`[F]).map { case (name, t) =>

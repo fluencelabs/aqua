@@ -12,7 +12,7 @@ case class AssignmentExpr[F[_]](
   value: Value[F]
 ) extends Expr[F]
 
-object AssignmentExpr extends Expr.Leaf {
+object AssignmentExpr extends Expr.RootLeaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[AssignmentExpr[F]] =
     ((Name.p[F] <* ` = `).with1 ~ Value.`value`).map { case (variable, value) =>

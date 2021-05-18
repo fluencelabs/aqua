@@ -9,7 +9,7 @@ import cats.parse.Parser
 
 case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F]) extends Expr[F]
 
-object ArrowTypeExpr extends Expr.Leaf {
+object ArrowTypeExpr extends Expr.Companion {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[ArrowTypeExpr[F]] =
     (Name

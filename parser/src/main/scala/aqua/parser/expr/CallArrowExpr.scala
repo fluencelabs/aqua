@@ -16,7 +16,7 @@ case class CallArrowExpr[F[_]](
   parPrefix: Option[F[Unit]]
 ) extends Expr[F]
 
-object CallArrowExpr extends Expr.Leaf {
+object CallArrowExpr extends Expr.Companion {
 
   override def p[F[_]: LiftParser: Comonad]: P[CallArrowExpr[F]] =
     ((`par`.lift <* ` `).backtrack.?.with1 ~ ((Name.p[F] <* ` <- `).backtrack.?.with1 ~

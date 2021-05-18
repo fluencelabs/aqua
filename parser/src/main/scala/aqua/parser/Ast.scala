@@ -20,7 +20,7 @@ object Ast {
   type Tree[F[_]] = Cofree[Chain, Expr[F]]
   type Head[F[_]] = Cofree[Chain, HeaderExpr[F]]
 
-  def treeExprs: List[Expr.Companion] =
+  def treeExprs: List[Expr.RootCompanion] =
     ServiceExpr :: AliasExpr :: DataStructExpr :: ConstantExpr :: FuncExpr :: Nil
 
   def headExprs: List[HeaderExpr.Companion] =

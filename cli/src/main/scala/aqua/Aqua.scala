@@ -14,7 +14,6 @@ object Aqua {
         case IndentError(indent, message) => CustomSyntaxError(indent._1, message)
         case ParserError(pe) => SyntaxError(pe.failedAtOffset, pe.expected)
       })
-//      .leftMap(_.map(pe => SyntaxError(pe.failedAtOffset, pe.expected)))
 
   def parseFileString(name: String, input: String): ValidatedNec[AquaError, Ast[FileSpan.F]] = {
     implicit val fileLift: LiftParser[FileSpan.F] = FileSpan.fileSpanLiftParser(name, input)

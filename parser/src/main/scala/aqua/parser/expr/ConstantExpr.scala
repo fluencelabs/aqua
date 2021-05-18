@@ -1,7 +1,6 @@
 package aqua.parser.expr
 
 import aqua.parser.Expr
-import aqua.parser.Expr.RootCompanion
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Name, Value}
 import aqua.parser.lift.LiftParser
@@ -14,7 +13,7 @@ case class ConstantExpr[F[_]](
   skipIfAlreadyDefined: Boolean
 ) extends Expr[F]
 
-object ConstantExpr extends Expr.Leaf with RootCompanion {
+object ConstantExpr extends Expr.RootLeaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[ConstantExpr[F]] = {
     ((((`const` *> ` ` *> Name
