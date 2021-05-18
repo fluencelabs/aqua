@@ -105,6 +105,27 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   }
 
+  "function with wrong indent" should "parse with error" in {
+    val script =
+      """func tryGen() -> bool:
+        |    on "deeper" via "deep":
+        |        v <- Local.gt()         
+        |  <- v
+        |""".stripMargin
+
+    parser[Id]().parseAll(script).value shouldBe Symbol("left")
+  }
+
+  "function with root expression without children" should "parse with error" in {
+    val script =
+      """func tryGen() -> bool:
+        |    on "deeper" via "deep":       
+        |    <- v
+        |""".stripMargin
+
+    parser[Id]().parseAll(script).value shouldBe Symbol("left")
+  }
+
   "multi function expression" should "parse" in {
     val script =
       """service Local("local"):
