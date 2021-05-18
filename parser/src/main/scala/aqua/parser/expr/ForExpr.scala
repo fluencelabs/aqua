@@ -14,7 +14,7 @@ case class ForExpr[F[_]](
   iterable: Value[F],
   parPrefix: Option[F[Unit]],
   mode: Option[(F[ForExpr.Mode], ForExpr.Mode)]
-) extends Expr[F] {
+) extends Expr[F] with ParPrefix[F] {
   override def root: Boolean = true
 }
 
@@ -33,7 +33,7 @@ object ForExpr extends Expr.AndIndented {
   )
 
   override def p[F[_]: LiftParser: Comonad]: P[ForExpr[F]] =
-    ((`par`.lift <* ` `).backtrack.?.with1 ~ ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value
+    (ParPrefix.p.with1 ~ ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value
       .`value`[F] ~ (` ` *> (`par`.as(ParMode: Mode).lift | `try`.as(TryMode: Mode).lift)).?)).map {
       case (prefPar, ((item, iterable), mode)) =>
         ForExpr(item, iterable, prefPar, mode.map(m => m -> m.extract))

@@ -4,12 +4,11 @@ import aqua.parser.Expr
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.Value
 import aqua.parser.lift.LiftParser
-import aqua.parser.lift.LiftParser._
 import cats.Comonad
 import cats.parse.{Parser => P}
 
 case class OnExpr[F[_]](peerId: Value[F], via: List[Value[F]], parPrefix: Option[F[Unit]])
-    extends Expr[F] {
+    extends Expr[F] with ParPrefix[F] {
   override def root: Boolean = true
 }
 
@@ -26,7 +25,7 @@ object OnExpr extends Expr.AndIndented {
     )
 
   override def p[F[_]: LiftParser: Comonad]: P[OnExpr[F]] = {
-    ((`par`.lift <* ` `).backtrack.?.with1 ~ (`on` *> ` ` *> Value
+    (ParPrefix.p.with1 ~ (`on` *> ` ` *> Value
       .`value`[F] ~ (` ` *> `via` *> ` ` *> Value.`value`[F]).rep0)).map {
       case (parPrefix, (peerId, via)) =>
         OnExpr(peerId, via, parPrefix)

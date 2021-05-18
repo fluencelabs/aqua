@@ -15,6 +15,6 @@ service Test("test"):
 
 func betterMessage(relay: string):
     on relay:
-        isOnline <- Peer.is_connected(relay)
+        par isOnline <- Peer.is_connected(relay)
     if isOnline:
         Test.doSomething()
