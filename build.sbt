@@ -37,7 +37,8 @@ lazy val cli = project
       "com.monovore"  %% "decline-effect" % declineV,
       "org.typelevel" %% "cats-effect"    % catsEffectV,
       "co.fs2"        %% "fs2-core"       % fs2V,
-      "co.fs2"        %% "fs2-io"         % fs2V
+      "co.fs2"        %% "fs2-io"         % fs2V,
+      "org.typelevel" %% "log4cats-slf4j" % "2.1.1"
     )
   )
   .dependsOn(semantics, `backend-air`, `backend-ts`, linker)
