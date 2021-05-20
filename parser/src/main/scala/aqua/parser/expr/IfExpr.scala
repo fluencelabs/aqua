@@ -8,21 +8,18 @@ import aqua.types.LiteralType
 import cats.Comonad
 import cats.parse.{Parser => P}
 
-case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F]) extends Expr[F] {
-  override def root: Boolean = true
-}
+case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F]) extends Expr[F](IfExpr)
 
 object IfExpr extends Expr.AndIndented {
 
-  override def validChildren: List[Expr.Companion] =
-    List(
-      Expr.defer(OnExpr),
-      CallArrowExpr,
-      AbilityIdExpr,
-      Expr.defer(ForExpr),
-      Expr.defer(IfExpr),
-      Expr.defer(ElseOtherwiseExpr)
-    )
+  override def validChildren: List[Expr.Lexem] =
+    Expr.defer(OnExpr) ::
+      CallArrowExpr ::
+      AbilityIdExpr ::
+      Expr.defer(ForExpr) ::
+      Expr.defer(IfExpr) ::
+      Expr.defer(ElseOtherwiseExpr) ::
+      Nil
 
   override def p[F[_]: LiftParser: Comonad]: P[IfExpr[F]] =
     (`if` *> ` ` *> Value.`value`[F] ~ (` ` *> EqOp.p[F] ~ (` ` *> Value.`value`[F])).?).map {

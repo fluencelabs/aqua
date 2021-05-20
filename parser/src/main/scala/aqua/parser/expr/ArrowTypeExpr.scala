@@ -7,9 +7,10 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 
-case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F]) extends Expr[F]
+case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F])
+    extends Expr[F](ArrowTypeExpr)
 
-object ArrowTypeExpr extends Expr.Companion {
+object ArrowTypeExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[ArrowTypeExpr[F]] =
     (Name

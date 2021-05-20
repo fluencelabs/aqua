@@ -7,9 +7,10 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 
-case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F]) extends Expr[F]
+case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F])
+    extends Expr[F](FieldTypeExpr)
 
-object FieldTypeExpr extends Expr.Companion {
+object FieldTypeExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[FieldTypeExpr[F]] =
     ((Name.p[F] <* ` : `) ~ DataTypeToken.`datatypedef`[F]).map { case (name, t) =>

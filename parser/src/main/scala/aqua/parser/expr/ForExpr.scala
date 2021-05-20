@@ -14,23 +14,21 @@ case class ForExpr[F[_]](
   iterable: Value[F],
   parPrefix: Option[F[Unit]],
   mode: Option[(F[ForExpr.Mode], ForExpr.Mode)]
-) extends Expr[F] with ParPrefix[F] {
-  override def root: Boolean = true
-}
+) extends Expr[F](ForExpr) with ParPrefix[F]
 
 object ForExpr extends Expr.AndIndented {
   sealed trait Mode
   case object TryMode extends Mode
   case object ParMode extends Mode
 
-  override def validChildren: List[Expr.Companion] = List(
-    Expr.defer(OnExpr),
-    Expr.defer(ForExpr),
-    CallArrowExpr,
-    AbilityIdExpr,
-    Expr.defer(IfExpr),
-    Expr.defer(ElseOtherwiseExpr)
-  )
+  override def validChildren: List[Expr.Lexem] =
+    Expr.defer(OnExpr) ::
+      Expr.defer(ForExpr) ::
+      CallArrowExpr ::
+      AbilityIdExpr ::
+      Expr.defer(IfExpr) ::
+      Expr.defer(ElseOtherwiseExpr) ::
+      Nil
 
   override def p[F[_]: LiftParser: Comonad]: P[ForExpr[F]] =
     (ParPrefix.p.with1 ~ ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value

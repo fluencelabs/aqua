@@ -1,7 +1,6 @@
 package aqua
 
-import aqua.parser.Ast
-import aqua.parser.Expr.{IndentError, ParserError}
+import aqua.parser.{Ast, BlockIndentError, FuncReturnError, LexerError}
 import aqua.parser.lift.{FileSpan, LiftParser, Span}
 import cats.data.ValidatedNec
 
@@ -11,8 +10,9 @@ object Aqua {
     Ast
       .fromString[Span.F](input)
       .leftMap(_.map {
-        case IndentError(indent, message) => CustomSyntaxError(indent._1, message)
-        case ParserError(pe) => SyntaxError(pe.failedAtOffset, pe.expected)
+        case BlockIndentError(indent, message) => CustomSyntaxError(indent._1, message)
+        case FuncReturnError(point, message) => CustomSyntaxError(point._1, message)
+        case LexerError(pe) => SyntaxError(pe.failedAtOffset, pe.expected)
       })
 
   def parseFileString(name: String, input: String): ValidatedNec[AquaError, Ast[FileSpan.F]] = {
@@ -20,8 +20,9 @@ object Aqua {
     Ast
       .fromString[FileSpan.F](input)
       .leftMap(_.map {
-        case IndentError(indent, message) => CustomSyntaxError(indent._1.span, message)
-        case ParserError(pe) => SyntaxError(pe.failedAtOffset, pe.expected)
+        case BlockIndentError(indent, message) => CustomSyntaxError(indent._1.span, message)
+        case FuncReturnError(point, message) => CustomSyntaxError(point._1.span, message)
+        case LexerError(pe) => SyntaxError(pe.failedAtOffset, pe.expected)
       })
   }
 

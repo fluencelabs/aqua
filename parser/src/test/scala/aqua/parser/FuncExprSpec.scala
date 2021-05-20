@@ -87,7 +87,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |  Peer "some id"
         |  call(true)""".stripMargin
 
-    val tree = FuncExpr.ast[Id]().parseAll(script).value.value
+    val tree = FuncExpr.ast[Id]().parseAll(script).value.toEither.value
     val funcBody = checkHeadGetTail(tree, FuncExpr("a", Nil, None, None), 1).toList
 
     val ifBody =
@@ -113,7 +113,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |  <- v
         |""".stripMargin
 
-    parser[Id]().parseAll(script).value shouldBe Symbol("left")
+    parser[Id]().parseAll(script).value.toEither shouldBe Symbol("left")
   }
 
   "function with root expression without children" should "parse with error" in {
@@ -123,7 +123,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |    <- v
         |""".stripMargin
 
-    parser[Id]().parseAll(script).value shouldBe Symbol("left")
+    parser[Id]().parseAll(script).value.toEither shouldBe Symbol("left")
   }
 
   "multi function expression" should "parse" in {
@@ -143,7 +143,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |    three <- Local.gt() 
         |    <- two""".stripMargin
 
-    val tree = parser[Id]().parseAll(script).value.value
+    val tree = parser[Id]().parseAll(script).value.toEither.value
 
     val qTree = tree.tree.foldLeft(mutable.Queue.empty[Expr[Id]]) { case (acc, tag) =>
       acc.enqueue(tag)

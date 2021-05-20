@@ -10,9 +10,9 @@ import cats.parse.{Parser => P}
 case class AssignmentExpr[F[_]](
   variable: Name[F],
   value: Value[F]
-) extends Expr[F]
+) extends Expr[F](AssignmentExpr)
 
-object AssignmentExpr extends Expr.RootLeaf {
+object AssignmentExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[AssignmentExpr[F]] =
     ((Name.p[F] <* ` = `).with1 ~ Value.`value`).map { case (variable, value) =>

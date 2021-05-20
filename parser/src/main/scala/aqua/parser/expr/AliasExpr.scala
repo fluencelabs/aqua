@@ -7,9 +7,10 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 
-case class AliasExpr[F[_]](name: CustomTypeToken[F], target: TypeToken[F]) extends Expr[F]
+case class AliasExpr[F[_]](name: CustomTypeToken[F], target: TypeToken[F])
+    extends Expr[F](AliasExpr)
 
-object AliasExpr extends Expr.RootLeaf {
+object AliasExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[AliasExpr[F]] =
     ((`alias` *> ` ` *> CustomTypeToken.ct[F] <* ` : `) ~ TypeToken.`typedef`[F]).map {

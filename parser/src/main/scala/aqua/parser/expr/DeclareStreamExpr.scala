@@ -7,9 +7,10 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 
-case class DeclareStreamExpr[F[_]](name: Name[F], `type`: TypeToken[F]) extends Expr[F]
+case class DeclareStreamExpr[F[_]](name: Name[F], `type`: TypeToken[F])
+    extends Expr[F](DeclareStreamExpr)
 
-object DeclareStreamExpr extends Expr.Companion {
+object DeclareStreamExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[DeclareStreamExpr[F]] =
     ((Name.p[F] <* ` : `) ~ TypeToken.`typedef`[F]).map { case (name, t) =>

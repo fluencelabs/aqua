@@ -8,21 +8,18 @@ import cats.Comonad
 import cats.parse.{Parser => P}
 
 case class OnExpr[F[_]](peerId: Value[F], via: List[Value[F]], parPrefix: Option[F[Unit]])
-    extends Expr[F] with ParPrefix[F] {
-  override def root: Boolean = true
-}
+    extends Expr[F](OnExpr) with ParPrefix[F]
 
 object OnExpr extends Expr.AndIndented {
 
-  override def validChildren: List[Expr.Companion] =
-    List(
-      Expr.defer(OnExpr),
-      CallArrowExpr,
-      AbilityIdExpr,
-      Expr.defer(ForExpr),
-      Expr.defer(IfExpr),
-      Expr.defer(ElseOtherwiseExpr)
-    )
+  override def validChildren: List[Expr.Lexem] =
+    Expr.defer(OnExpr) ::
+      CallArrowExpr ::
+      AbilityIdExpr ::
+      Expr.defer(ForExpr) ::
+      Expr.defer(IfExpr) ::
+      Expr.defer(ElseOtherwiseExpr) ::
+      Nil
 
   override def p[F[_]: LiftParser: Comonad]: P[OnExpr[F]] = {
     (ParPrefix.p.with1 ~ (`on` *> ` ` *> Value
