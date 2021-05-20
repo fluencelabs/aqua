@@ -1,8 +1,6 @@
 package aqua.parser.lexer
 
 import aqua.parser.lexer.Token._
-import cats.data.NonEmptyList
-import cats.parse.{Parser => P}
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -44,37 +42,6 @@ class TokenSpec extends AnyFlatSpec with Matchers with EitherValues {
                       |              -- line 3
                       |              -- line 4
                       |""".stripMargin).right.value should be(())
-  }
-
-  "indented" should "parse 1 or more lines" in {
-    indented(_ => `.`, "").parseAll(" .\n .").right.value should be(NonEmptyList.of((), ()))
-    indented(_ => `.`, "").parseAll(" .\n .\n .").right.value should be(NonEmptyList.of((), (), ()))
-    indented(_ => `.`, "").parse(" .\n .\n .\n").right.value should be(
-      ("\n", NonEmptyList.of((), (), ()))
-    )
-    indented(_ => `.`, "").parse(" .\n .\n .\n ").right.value should be(
-      ("\n ", NonEmptyList.of((), (), ()))
-    )
-    indented(_ => `.`, "").parse(" .\n .\n .\n .").right.value should be(
-      ("", NonEmptyList.of((), (), (), ()))
-    )
-    indented(_ => `.`, "").parseAll(" .").right.value should be(NonEmptyList.of(()))
-
-    indented(_ => `.`, " ").parse("  .\n .").right.value should be(("\n .", NonEmptyList.of(())))
-    indented(_ => `.`, " ").parse("  .\n  ").right.value should be(("\n  ", NonEmptyList.of(())))
-  }
-
-  "nested indented" should "not fail on empty lines" in {
-    sealed trait Tree
-    case object Leaf extends Tree
-    case class Node(branches: NonEmptyList[Tree]) extends Tree
-
-    lazy val p: P[NonEmptyList[Tree]] =
-      indented(
-        _ => P.string("newline") *> (` \n+` *> P.defer(p)).?.map(_.fold[Tree](Leaf)(Node)),
-        ""
-      )
-    p.parseAll(" newline").right.value should be(NonEmptyList.of(Leaf))
   }
 
 }

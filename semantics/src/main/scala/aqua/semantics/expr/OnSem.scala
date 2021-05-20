@@ -34,7 +34,6 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
               ),
               op
             )
-
           case m => Model.error("On body is not an op, it's " + m)
         })
     )

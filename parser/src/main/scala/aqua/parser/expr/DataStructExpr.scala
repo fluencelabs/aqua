@@ -7,11 +7,11 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 
-case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F]
+case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F](DataStructExpr)
 
 object DataStructExpr extends Expr.AndIndented {
 
-  override def validChildren: List[Expr.Companion] = List(FieldTypeExpr)
+  override def validChildren: List[Expr.Lexem] = FieldTypeExpr :: Nil
 
   override def p[F[_]: LiftParser: Comonad]: Parser[DataStructExpr[F]] =
     `data` *> ` ` *> CustomTypeToken.ct[F].map(DataStructExpr(_))

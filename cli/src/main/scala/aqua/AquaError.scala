@@ -10,6 +10,23 @@ sealed trait AquaError {
   def showForConsole(script: String): String
 }
 
+case class CustomSyntaxError(span: Span, message: String) extends AquaError {
+
+  override def showForConsole(script: String): String =
+    span
+      .focus(Eval.later(LocationMap(script)), 2)
+      .map(
+        _.toConsoleStr(
+          message,
+          Console.RED
+        )
+      )
+      .getOrElse(
+        "(offset is beyond the script, syntax errors) Error: " + Console.RED + message
+          .mkString(", ")
+      ) + Console.RESET + "\n"
+}
+
 case class SyntaxError(offset: Int, expectations: NonEmptyList[Expectation]) extends AquaError {
 
   override def showForConsole(script: String): String =
