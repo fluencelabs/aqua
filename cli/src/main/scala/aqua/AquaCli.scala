@@ -2,10 +2,10 @@ package aqua
 
 import aqua.model.transform.BodyConfig
 import cats.Functor
-import cats.data.Validated
 import cats.data.Validated.{Invalid, Valid}
-import cats.effect.std.Console
+import cats.data.{Validated, ValidatedNel}
 import cats.effect._
+import cats.effect.std.Console
 import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.syntax.traverse._
@@ -19,6 +19,7 @@ import org.typelevel.log4cats.{Logger, SelfAwareStructuredLogger}
 import wvlet.log.{LogSupport, Logger => WLogger}
 
 import java.nio.file.Path
+import scala.util.Try
 
 object AquaCli extends IOApp with LogSupport {
 
@@ -31,11 +32,30 @@ object AquaCli extends IOApp with LogSupport {
   val logLevelOpt: Opts[LogLevel] =
     Opts.option[LogLevel]("log-level", help = "Set log level.").withDefault(LogLevel.Info)
 
+  def checkPath: Path => ValidatedNel[String, Path] = { p =>
+    Validated
+      .fromEither(Try {
+        val f = p.toFile
+        if (f.exists() && f.isDirectory) {
+          Right(p)
+        } else {
+          Left(s"There is no path ${p.toString} or it is not a directory.")
+        }
+      }.toEither.left.map(t => s"Error occurred on imports reading: ${t.getMessage}").flatten)
+      .toValidatedNel
+  }
+
   val inputOpts: Opts[Path] =
-    Opts.option[Path]("input", "Path to the input directory that contains your .aqua files", "i")
+    Opts
+      .option[Path](
+        "input",
+        "Path to the input directory that contains your .aqua files. Could be only as a directory.",
+        "i"
+      )
+      .mapValidated(checkPath)
 
   val outputOpts: Opts[Path] =
-    Opts.option[Path]("output", "Path to the output directory", "o")
+    Opts.option[Path]("output", "Path to the output directory", "o").mapValidated(checkPath)
 
   val importOpts: Opts[LazyList[Path]] =
     Opts
