@@ -9,7 +9,7 @@ import org.scalatest.matchers.should.Matchers
 class ForExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
 
-  "on" should "be parsed" in {
+  "for expression" should "be parsed" in {
     parseFor("for some <- \"a\"") should be(
       ForExpr[Id]("some", toStr("a"), None)
     )
@@ -33,5 +33,6 @@ class ForExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parseFor("for some <- false try") should be(
       ForExpr[Id]("some", toBool(false), Some(ForExpr.TryMode -> ForExpr.TryMode))
     )
+
   }
 }

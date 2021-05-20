@@ -3,10 +3,10 @@ package aqua.semantics
 import aqua.model.Model
 import aqua.parser.Expr
 import aqua.parser.expr._
+import aqua.semantics.expr._
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.semantics.expr._
 
 object ExprSem {
 

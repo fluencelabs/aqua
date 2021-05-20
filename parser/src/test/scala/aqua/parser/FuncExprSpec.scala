@@ -87,7 +87,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |  Peer "some id"
         |  call(true)""".stripMargin
 
-    val tree = FuncExpr.ast[Id](Indent()).parseAll(script).value
+    val tree = FuncExpr.ast[Id]().parseAll(script).value.toEither.value
     val funcBody = checkHeadGetTail(tree, FuncExpr("a", Nil, None, None), 1).toList
 
     val ifBody =
@@ -97,10 +97,33 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         3
       ).toList
 
-    ifBody.head.head should be(CallArrowExpr(Some(toName("x")), Some(toAb("Ab")), "func", Nil))
+    ifBody.head.head should be(
+      CallArrowExpr(Some(toName("x")), Some(toAb("Ab")), "func", Nil)
+    )
     ifBody(1).head should be(AbilityIdExpr(toAb("Peer"), toStr("some id")))
     ifBody(2).head should be(CallArrowExpr(None, None, "call", List(toBool(true))))
 
+  }
+
+  "function with wrong indent" should "parse with error" in {
+    val script =
+      """func tryGen() -> bool:
+        |    on "deeper" via "deep":
+        |        v <- Local.gt()         
+        |  <- v
+        |""".stripMargin
+
+    parser[Id]().parseAll(script).value.toEither shouldBe Symbol("left")
+  }
+
+  "function with root expression without children" should "parse with error" in {
+    val script =
+      """func tryGen() -> bool:
+        |    on "deeper" via "deep":       
+        |    <- v
+        |""".stripMargin
+
+    parser[Id]().parseAll(script).value.toEither shouldBe Symbol("left")
   }
 
   "multi function expression" should "parse" in {
@@ -120,7 +143,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |    three <- Local.gt() 
         |    <- two""".stripMargin
 
-    val tree = parser[Id](Indent()).parseAll(script).value
+    val tree = parser[Id]().parseAll(script).value.toEither.value
 
     val qTree = tree.tree.foldLeft(mutable.Queue.empty[Expr[Id]]) { case (acc, tag) =>
       acc.enqueue(tag)

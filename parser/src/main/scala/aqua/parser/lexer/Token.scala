@@ -67,15 +67,11 @@ object Token {
   val `=` : P[Unit] = P.string("=")
   val ` = ` : P[Unit] = P.string("=").surroundedBy(` `.?)
   val `?` : P[Unit] = P.string("?")
-  val `<-` : P[Unit] = P.string("<-").backtrack
+  val `<-` : P[Unit] = P.string("<-")
 
   def comma[T](p: P[T]): P[NonEmptyList[T]] =
     P.repSep(p, `,` <* ` \n+`.rep0)
 
   def comma0[T](p: P[T]): P0[List[T]] =
     P.repSep0(p, `,` <* ` \n+`.rep0)
-
-  def indented[T](p: String => P[T], baseIndent: String): P[NonEmptyList[T]] =
-    (if (baseIndent.nonEmpty) P.string(baseIndent) ~ ` ` else ` `).string
-      .flatMap(indent ⇒ p(indent).repSep((` \n+` *> P.string(indent)).backtrack))
 }

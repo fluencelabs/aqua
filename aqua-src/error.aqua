@@ -1,8 +1,23 @@
-service Test("123"):
-    doSomething: -> ()
+service Peer("peer"):
+    is_connected: string -> bool
 
-func b(me: string, a: bool, b: bool):
-    on me:
-        if a:
-            if b:
-                Test.doSomething()
+service Op("op"):
+    identity: -> ()
+
+data User:
+    peer_id: string
+    relay_id: string
+    name: string
+
+service Test("test"):
+    getUserList: -> []User
+    doSomething: -> bool
+
+func betterMessage(relay: string):
+    on relay:
+        Peer.is_connected("something")
+        par isOnline <- Peer.is_connected(relay)
+    par on "quray":
+        Peer.is_connected("qurara")
+    if isOnline:
+        Test.doSomething()

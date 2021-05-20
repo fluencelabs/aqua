@@ -1,11 +1,11 @@
 package aqua.parser.expr
 
-import aqua.parser.Ast.Tree
 import aqua.parser.lexer.Token._
 import aqua.parser.lexer.{Arg, DataTypeToken, Name, Value}
 import aqua.parser.lift.LiftParser
-import aqua.parser.{Expr, Indent}
+import aqua.parser.{Ast, Expr, FuncReturnError, ParserError}
 import cats.Comonad
+import cats.data.{Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.Parser
 
@@ -14,21 +14,21 @@ case class FuncExpr[F[_]](
   args: List[Arg[F]],
   ret: Option[DataTypeToken[F]],
   retValue: Option[Value[F]]
-) extends Expr[F]
+) extends Expr[F](FuncExpr)
 
 object FuncExpr extends Expr.AndIndented {
 
-  override def validChildren: List[Expr.Companion] = List(
-    OnExpr,
-    AbilityIdExpr,
-    ReturnExpr,
-    CallArrowExpr,
-    ParExpr,
-    ForExpr,
-    IfExpr,
-    ElseOtherwiseExpr,
-    DeclareStreamExpr
-  )
+  override def validChildren: List[Expr.Lexem] =
+    AbilityIdExpr ::
+      ReturnExpr ::
+      ForExpr ::
+      Expr.defer(OnExpr) ::
+      CallArrowExpr ::
+      IfExpr ::
+      ElseOtherwiseExpr ::
+      ParExpr ::
+      DeclareStreamExpr ::
+      Nil
 
   override def p[F[_]: LiftParser: Comonad]: Parser[FuncExpr[F]] =
     ((`func` *> ` ` *> Name.p[F]) ~ comma0(Arg.p)
@@ -37,32 +37,45 @@ object FuncExpr extends Expr.AndIndented {
         FuncExpr(name, args, ret, None)
     }
 
-  override def ast[F[_]: LiftParser: Comonad](ps: Indent): Parser[Tree[F]] =
-    super.ast(ps).flatMap { tree =>
-      tree.head match {
-        case funcExpr: FuncExpr[F] if funcExpr.ret.isDefined =>
-          tree.tail.value.lastOption.map(_.head) match {
-            case Some(re: ReturnExpr[F]) =>
-              Parser.pure(
-                Cofree(funcExpr.copy(retValue = Some(re.value)), tree.tail)
-              )
-            case _ =>
-              Parser.failWith(
-                "Return type is defined for function, but nothing returned. Use `<- value` as the last expression inside function body."
-              )
-          }
+  override def ast[F[_]: LiftParser: Comonad](): Parser[ValidatedNec[ParserError[F], Ast.Tree[F]]] =
+    super
+      .ast()
+      .map(
+        _.andThen(tree =>
+          tree.head match {
+            case funcExpr: FuncExpr[F] =>
+              funcExpr.ret match {
+                case Some(ret) =>
+                  tree.tail.value.lastOption.map(_.head) match {
+                    case Some(re: ReturnExpr[F]) =>
+                      Validated
+                        .validNec(Cofree(funcExpr.copy(retValue = Some(re.value)), tree.tail))
 
-        case _: FuncExpr[F] =>
-          tree.tail.value.lastOption.map(_.head) match {
-            case Some(_: ReturnExpr[F]) =>
-              Parser.failWith(
-                "Trying to return a value from function that has no return type. Please add return type to function declaration, e.g. `func foo() -> RetType:`"
-              )
-            case _ =>
-              Parser.pure(tree)
-          }
+                    case _ =>
+                      Validated.invalidNec(
+                        FuncReturnError[F](
+                          ret.unit,
+                          "Return type is defined for function, but nothing returned. Use `<- value` as the last expression inside function body."
+                        )
+                      )
+                  }
 
-        case _ => Parser.pure(tree)
-      }
-    }
+                case None =>
+                  tree.tail.value.lastOption.map(_.head) match {
+                    case Some(re: ReturnExpr[F]) =>
+                      Validated.invalidNec(
+                        FuncReturnError[F](
+                          re.value.unit,
+                          "Trying to return a value from function that has no return type. Please add return type to function declaration, e.g. `func foo() -> RetType:`"
+                        )
+                      )
+                    case _ =>
+                      Validated.validNec(tree)
+                  }
+              }
+
+            case _ => Validated.validNec(tree)
+          }
+        )
+      )
 }

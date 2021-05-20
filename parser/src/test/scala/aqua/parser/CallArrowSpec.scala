@@ -22,7 +22,21 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     parseExpr("func(arg.doSomething)") should be(
-      CallArrowExpr[Id](None, None, Name[Id]("func"), List(toVarLambda("arg", List("doSomething"))))
+      CallArrowExpr[Id](
+        None,
+        None,
+        Name[Id]("func"),
+        List(toVarLambda("arg", List("doSomething")))
+      )
+    )
+
+    parseExpr("func(arg.doSomething.and.doSomethingElse)") should be(
+      CallArrowExpr[Id](
+        None,
+        None,
+        Name[Id]("func"),
+        List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse")))
+      )
     )
 
     parseExpr("func(arg.doSomething.and.doSomethingElse)") should be(
