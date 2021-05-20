@@ -41,7 +41,7 @@ object AquaCli extends IOApp {
               if (f.exists() && f.isDirectory) {
                 Right(p)
               } else {
-                Left(s"There is no path ${p.toString}")
+                Left(s"There is no path ${p.toString} or it is not a directory.")
               }
             }
           })
@@ -93,6 +93,9 @@ object AquaCli extends IOApp {
     .println(help)
     .as(ExitCode.Success)
 
+  def wrapWithOption[A](opt: Opts[A]): Opts[Option[A]] =
+    opt.map(v => Some(v)).withDefault(None)
+
   def main[F[_]: Concurrent: Files: Console]: Opts[F[ExitCode]] = {
     versionOpt
       .as(
@@ -105,26 +108,31 @@ object AquaCli extends IOApp {
       outputOpts,
       compileToAir,
       noRelay,
-      noXorWrapper
-    ).mapN { case (input, imports, output, toAir, noRelay, noXor) =>
-      AquaCompiler
-        .compileFilesTo[F](
-          input,
-          imports,
-          output,
-          if (toAir) AquaCompiler.AirTarget else AquaCompiler.TypescriptTarget, {
-            val bc = BodyConfig(wrapWithXor = !noXor)
-            bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
+      noXorWrapper,
+      wrapWithOption(helpOpt),
+      wrapWithOption(versionOpt)
+    ).mapN { case (input, imports, output, toAir, noRelay, noXor, h, v) =>
+      // if there is `--help` or `--version` flag - show help and version
+      // otherwise continue program execution
+      h.map(_ => helpAndExit) orElse v.map(_ => versionAndExit) getOrElse
+        AquaCompiler
+          .compileFilesTo[F](
+            input,
+            imports,
+            output,
+            if (toAir) AquaCompiler.AirTarget else AquaCompiler.TypescriptTarget, {
+              val bc = BodyConfig(wrapWithXor = !noXor)
+              bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
+            }
+          )
+          .map {
+            case Validated.Invalid(errs) =>
+              errs.map(println)
+              ExitCode.Error
+            case Validated.Valid(res) =>
+              res.map(println)
+              ExitCode.Success
           }
-        )
-        .map {
-          case Validated.Invalid(errs) =>
-            errs.map(println)
-            ExitCode.Error
-          case Validated.Valid(res) =>
-            res.map(println)
-            ExitCode.Success
-        }
     }
   }
 
