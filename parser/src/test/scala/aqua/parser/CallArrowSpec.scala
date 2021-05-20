@@ -11,14 +11,13 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
 
   "func calls" should "parse func()" in {
-    parseExpr("func()") should be(CallArrowExpr[Id](None, None, toName("func"), List(), None))
+    parseExpr("func()") should be(CallArrowExpr[Id](None, None, toName("func"), List()))
     parseExpr("Ab.func(arg)") should be(
       CallArrowExpr[Id](
         None,
         Some(toAb("Ab")),
         Name[Id]("func"),
-        List(VarLambda[Id](toName("arg"))),
-        None
+        List(VarLambda[Id](toName("arg")))
       )
     )
 
@@ -27,8 +26,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
         None,
         None,
         Name[Id]("func"),
-        List(toVarLambda("arg", List("doSomething"))),
-        None
+        List(toVarLambda("arg", List("doSomething")))
       )
     )
 
@@ -37,18 +35,16 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
         None,
         None,
         Name[Id]("func"),
-        List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse"))),
-        None
+        List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse")))
       )
     )
 
-    parseExpr("par func(arg.doSomething.and.doSomethingElse)") should be(
+    parseExpr("func(arg.doSomething.and.doSomethingElse)") should be(
       CallArrowExpr[Id](
         None,
         None,
         Name[Id]("func"),
-        List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse"))),
-        Some(())
+        List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse")))
       )
     )
 
@@ -60,8 +56,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
         List(
           toVarLambda("arg", List("doSomething", "and", "doSomethingElse")),
           toVarLambda("arg2", List("someFunc"))
-        ),
-        None
+        )
       )
     )
 
@@ -72,8 +67,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
         Name[Id]("func"),
         List(
           toVarLambda("arg", List("doSomething"))
-        ),
-        None
+        )
       )
     )
   }

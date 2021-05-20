@@ -15,6 +15,9 @@ service Test("test"):
 
 func betterMessage(relay: string):
     on relay:
+        Peer.is_connected("something")
         par isOnline <- Peer.is_connected(relay)
+    par on "quray":
+        Peer.is_connected("qurara")
     if isOnline:
         Test.doSomething()

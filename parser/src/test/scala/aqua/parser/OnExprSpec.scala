@@ -11,23 +11,23 @@ class OnExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "on" should "be parsed" in {
     parseOn("on peer") should be(
-      OnExpr[Id](toVar("peer"), Nil, None)
+      OnExpr[Id](toVar("peer"), Nil)
     )
 
     parseOn("on peer.id") should be(
-      OnExpr[Id](toVarLambda("peer", List("id")), Nil, None)
+      OnExpr[Id](toVarLambda("peer", List("id")), Nil)
     )
 
     parseOn("on \"peer\"") should be(
-      OnExpr[Id](toStr("peer"), Nil, None)
+      OnExpr[Id](toStr("peer"), Nil)
     )
 
     parseOn("on 1") should be(
-      OnExpr[Id](toNumber(1), Nil, None)
+      OnExpr[Id](toNumber(1), Nil)
     )
 
     parseOn("on \"asd\" via \"fre\" via \"fre2\"") should be(
-      OnExpr[Id](toStr("asd"), List(toStr("fre"), toStr("fre2")), None)
+      OnExpr[Id](toStr("asd"), List(toStr("fre"), toStr("fre2")))
     )
   }
 }

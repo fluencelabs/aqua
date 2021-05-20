@@ -33,7 +33,7 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
       (stOpt: Option[Type], ops: Model) =>
         N.endScope() as ((stOpt, ops) match {
           case (Some(t), op: FuncOp) =>
-            val f = FuncOp.wrap(
+            FuncOp.wrap(
               ForTag(expr.item.value, ValuesAlgebra.valueToModel(expr.iterable, t)),
               FuncOp.node(
                 expr.mode.map(_._2).fold[OpTag](SeqTag) {
@@ -43,7 +43,6 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
                 Chain(op, FuncOp.leaf(NextTag(expr.item.value)))
               )
             )
-            expr.parPrefix.fold(f)(_ => FuncOp.wrap(ParTag, f))
           case _ => Model.error("Wrong body of For expr")
         })
     )

@@ -9,33 +9,30 @@ import org.scalatest.matchers.should.Matchers
 class ForExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
 
-  "on" should "be parsed" in {
+  "for expression" should "be parsed" in {
     parseFor("for some <- \"a\"") should be(
-      ForExpr[Id]("some", toStr("a"), None, None)
+      ForExpr[Id]("some", toStr("a"), None)
     )
 
     parseFor("for some <- \"a\"") should be(
-      ForExpr[Id]("some", toStr("a"), None, None)
+      ForExpr[Id]("some", toStr("a"), None)
     )
 
     parseFor("for some <- 1") should be(
-      ForExpr[Id]("some", toNumber(1), None, None)
+      ForExpr[Id]("some", toNumber(1), None)
     )
 
     parseFor("for some <- false") should be(
-      ForExpr[Id]("some", toBool(false), None, None)
+      ForExpr[Id]("some", toBool(false), None)
     )
 
     parseFor("for some <- false par") should be(
-      ForExpr[Id]("some", toBool(false), None, Some(ForExpr.ParMode -> ForExpr.ParMode))
+      ForExpr[Id]("some", toBool(false), Some(ForExpr.ParMode -> ForExpr.ParMode))
     )
 
     parseFor("for some <- false try") should be(
-      ForExpr[Id]("some", toBool(false), None, Some(ForExpr.TryMode -> ForExpr.TryMode))
+      ForExpr[Id]("some", toBool(false), Some(ForExpr.TryMode -> ForExpr.TryMode))
     )
 
-    parseFor("par for some <- false par") should be(
-      ForExpr[Id]("some", toBool(false), Some(()), Some(ForExpr.ParMode -> ForExpr.ParMode))
-    )
   }
 }

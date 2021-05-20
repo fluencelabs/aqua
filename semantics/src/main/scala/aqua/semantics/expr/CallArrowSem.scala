@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.func.Call
-import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp, ParTag}
+import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
 import aqua.model.{Model, ValueModel}
 import aqua.parser.expr.CallArrowExpr
 import aqua.semantics.Prog
@@ -50,8 +50,6 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
         .map(_ -> v)
     }
 
-  def wrapWithPar(f: FuncOp): FuncOp = expr.parPrefix.fold(f)(_ => FuncOp.wrap(ParTag, f))
-
   private def toModel[Alg[_]](implicit
     N: NamesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg],
@@ -66,16 +64,15 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
           case _ => None
         }.flatMap(_.fold(Free.pure[Alg, Option[FuncOp]](None)) { case (arrowType, serviceId) =>
           checkArgsRes(arrowType).map { case (argsResolved, t) =>
-            wrapWithPar(
-              FuncOp.leaf(
-                CallServiceTag(
-                  // TODO service id type should not be hardcoded
-                  serviceId = ValuesAlgebra.valueToModel(serviceId, ScalarType.string),
-                  funcName = funcName.value,
-                  Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
-                )
+            FuncOp.leaf(
+              CallServiceTag(
+                // TODO service id type should not be hardcoded
+                serviceId = ValuesAlgebra.valueToModel(serviceId, ScalarType.string),
+                funcName = funcName.value,
+                Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
               )
             )
+
           }
             .map(Option(_))
         })
@@ -83,14 +80,13 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
         N.readArrow(funcName)
           .flatMap(_.fold(Free.pure[Alg, Option[FuncOp]](None)) { arrowType =>
             checkArgsRes(arrowType).map { case (argsResolved, t) =>
-              wrapWithPar(
-                FuncOp.leaf(
-                  CallArrowTag(
-                    funcName = funcName.value,
-                    Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
-                  )
+              FuncOp.leaf(
+                CallArrowTag(
+                  funcName = funcName.value,
+                  Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
                 )
               )
+
             }
               .map(Option(_))
           })

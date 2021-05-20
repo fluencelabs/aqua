@@ -12,9 +12,8 @@ import cats.syntax.comonad._
 case class ForExpr[F[_]](
   item: Name[F],
   iterable: Value[F],
-  parPrefix: Option[F[Unit]],
   mode: Option[(F[ForExpr.Mode], ForExpr.Mode)]
-) extends Expr[F](ForExpr) with ParPrefix[F]
+) extends Expr[F](ForExpr)
 
 object ForExpr extends Expr.AndIndented {
   sealed trait Mode
@@ -31,9 +30,9 @@ object ForExpr extends Expr.AndIndented {
       Nil
 
   override def p[F[_]: LiftParser: Comonad]: P[ForExpr[F]] =
-    (ParPrefix.p.with1 ~ ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value
-      .`value`[F] ~ (` ` *> (`par`.as(ParMode: Mode).lift | `try`.as(TryMode: Mode).lift)).?)).map {
-      case (prefPar, ((item, iterable), mode)) =>
-        ForExpr(item, iterable, prefPar, mode.map(m => m -> m.extract))
+    ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value
+      .`value`[F] ~ (` ` *> (`par`.as(ParMode: Mode).lift | `try`.as(TryMode: Mode).lift)).?).map {
+      case ((item, iterable), mode) =>
+        ForExpr(item, iterable, mode.map(m => m -> m.extract))
     }
 }

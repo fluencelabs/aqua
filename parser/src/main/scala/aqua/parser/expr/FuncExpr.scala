@@ -26,6 +26,7 @@ object FuncExpr extends Expr.AndIndented {
       CallArrowExpr ::
       IfExpr ::
       ElseOtherwiseExpr ::
+      ParExpr ::
       DeclareStreamExpr ::
       Nil
 
