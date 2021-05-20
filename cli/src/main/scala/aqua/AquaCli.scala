@@ -5,24 +5,31 @@ import cats.Functor
 import cats.data.Validated
 import cats.data.Validated.{Invalid, Valid}
 import cats.effect.std.Console
-import cats.effect.{Concurrent, ExitCode, IO, IOApp}
+import cats.effect._
 import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.monovore.decline.Opts.help
 import com.monovore.decline.effect.CommandIOApp
+import com.monovore.decline.enumeratum._
 import com.monovore.decline.{Opts, Visibility}
 import fs2.io.file.Files
+import org.typelevel.log4cats.slf4j.Slf4jLogger
+import org.typelevel.log4cats.{Logger, SelfAwareStructuredLogger}
+import wvlet.log.{LogSupport, Logger => WLogger}
 
 import java.nio.file.Path
 
-object AquaCli extends IOApp {
+object AquaCli extends IOApp with LogSupport {
 
   val helpOpt: Opts[Unit] =
     Opts.flag("help", help = "Display this help text.", "h", Visibility.Partial).asHelp.as(())
 
   val versionOpt: Opts[Unit] =
     Opts.flag("version", help = "Show version.", "v", Visibility.Partial)
+
+  val logLevelOpt: Opts[LogLevel] =
+    Opts.option[LogLevel]("log-level", help = "Set log level.").withDefault(LogLevel.Info)
 
   val inputOpts: Opts[Path] =
     Opts.option[Path]("input", "Path to the input directory that contains your .aqua files", "i")
@@ -96,7 +103,7 @@ object AquaCli extends IOApp {
   def wrapWithOption[A](opt: Opts[A]): Opts[Option[A]] =
     opt.map(v => Some(v)).withDefault(None)
 
-  def main[F[_]: Concurrent: Files: Console]: Opts[F[ExitCode]] = {
+  def main[F[_]: Concurrent: Files: Console: Logger]: Opts[F[ExitCode]] = {
     versionOpt
       .as(
         versionAndExit
@@ -110,8 +117,11 @@ object AquaCli extends IOApp {
       noRelay,
       noXorWrapper,
       wrapWithOption(helpOpt),
-      wrapWithOption(versionOpt)
-    ).mapN { case (input, imports, output, toAir, noRelay, noXor, h, v) =>
+      wrapWithOption(versionOpt),
+      logLevelOpt
+    ).mapN { case (input, imports, output, toAir, noRelay, noXor, h, v, logLevel) =>
+      WLogger.setDefaultLogLevel(LogLevel.toLogLevel(logLevel))
+
       // if there is `--help` or `--version` flag - show help and version
       // otherwise continue program execution
       h.map(_ => helpAndExit) orElse v.map(_ => versionAndExit) getOrElse
@@ -137,6 +147,9 @@ object AquaCli extends IOApp {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
+
+    implicit def logger[F[_]: Sync]: SelfAwareStructuredLogger[F] =
+      Slf4jLogger.getLogger[F]
 
     CommandIOApp.run[IO](
       "aqua-c",

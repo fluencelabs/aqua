@@ -10,13 +10,13 @@ import aqua.parser.lexer.Token
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{CompilerState, Semantics}
 import cats.Applicative
-import cats.data.{Chain, EitherT, NonEmptyChain, Validated, ValidatedNec}
+import cats.data._
 import cats.effect.kernel.Concurrent
-import fs2.io.file.Files
-import cats.syntax.monoid._
-import cats.syntax.functor._
 import cats.syntax.flatMap._
+import cats.syntax.functor._
+import cats.syntax.monoid._
 import cats.syntax.show._
+import fs2.io.file.Files
 import fs2.text
 
 import java.nio.file.Path

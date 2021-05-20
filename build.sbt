@@ -17,10 +17,13 @@ val declineV = "2.0.0-RC1" // Scala3 issue: https://github.com/bkirwi/decline/is
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion                        := "0.1.1",
-  version                                := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
-  scalaVersion                           := dottyVersion,
-  libraryDependencies += "org.scalatest" %% "scalatest" % scalaTestV % Test,
+  baseAquaVersion := "0.1.1",
+  version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
+  scalaVersion    := dottyVersion,
+  libraryDependencies ++= Seq(
+    "org.typelevel" %% "log4cats-core" % "2.1.1",
+    "org.scalatest" %% "scalatest"     % scalaTestV % Test
+  ),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full)
 )
 
@@ -33,12 +36,16 @@ lazy val cli = project
     assembly / mainClass       := Some("aqua.AquaCli"),
     assembly / assemblyJarName := "aqua-cli-" + version.value + ".jar",
     libraryDependencies ++= Seq(
-      "com.monovore"  %% "decline"        % declineV,
-      "com.monovore"  %% "decline-effect" % declineV,
-      "org.typelevel" %% "cats-effect"    % catsEffectV,
-      "co.fs2"        %% "fs2-core"       % fs2V,
-      "co.fs2"        %% "fs2-io"         % fs2V,
-      "org.typelevel" %% "log4cats-slf4j" % "2.1.1"
+      "com.monovore"       %% "decline"            % declineV,
+      "com.monovore"       %% "decline-effect"     % declineV,
+      "org.typelevel"      %% "cats-effect"        % catsEffectV,
+      "co.fs2"             %% "fs2-core"           % fs2V,
+      "co.fs2"             %% "fs2-io"             % fs2V,
+      "org.typelevel"      %% "log4cats-slf4j"     % "2.1.1",
+      "org.wvlet.airframe" %% "airframe-log"       % "21.5.4",
+      "com.beachape"       %% "enumeratum"         % "1.6.1",
+      "org.slf4j"           % "slf4j-jdk14"        % "1.7.25",
+      "com.monovore"       %% "decline-enumeratum" % "1.3.0"
     )
   )
   .dependsOn(semantics, `backend-air`, `backend-ts`, linker)
