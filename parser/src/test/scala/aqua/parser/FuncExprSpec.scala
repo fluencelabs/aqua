@@ -138,9 +138,9 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |
         |func genC(val: string) -> bool:
         |    one <- Local.gt() 
-        |    par on "smth" via "else":
+        |    on "smth" via "else":
         |        two <- tryGen()      
-        |    par three <- Local.gt() 
+        |    three <- Local.gt() 
         |    <- two""".stripMargin
 
     val tree = parser[Id]().parseAll(script).value.toEither.value
