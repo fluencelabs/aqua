@@ -12,29 +12,28 @@ import com.monovore.decline.enumeratum._
 import com.monovore.decline.{Opts, Visibility}
 
 import java.nio.file.Path
-import scala.util.Try
 
 object AppOps {
 
   val helpOpt: Opts[Unit] =
-    Opts.flag("help", help = "Display this help text.", "h", Visibility.Partial).asHelp.as(())
+    Opts.flag("help", help = "Display this help text", "h", Visibility.Partial).asHelp.as(())
 
   val versionOpt: Opts[Unit] =
-    Opts.flag("version", help = "Show version.", "v", Visibility.Partial)
+    Opts.flag("version", help = "Show version", "v", Visibility.Partial)
 
   val logLevelOpt: Opts[LogLevel] =
-    Opts.option[LogLevel]("log-level", help = "Set log level.").withDefault(LogLevel.Info)
+    Opts.option[LogLevel]("log-level", help = "Set log level").withDefault(LogLevel.Info)
 
   def checkPath: Path => ValidatedNel[String, Path] = { p =>
     Validated
-      .fromEither(Try {
+      .fromEither(Validated.catchNonFatal {
         val f = p.toFile
         if (f.exists() && f.isDirectory) {
           Right(p)
         } else {
-          Left(s"There is no path ${p.toString} or it is not a directory.")
+          Left(s"There is no path '${p.toString}' or it is not a directory")
         }
-      }.toEither.left.map(t => s"Error occurred on imports reading: ${t.getMessage}").flatten)
+      }.toEither.left.map(t => s"An error occurred on imports reading: ${t.getMessage}").flatten)
       .toValidatedNel
   }
 
@@ -42,7 +41,7 @@ object AppOps {
     Opts
       .option[Path](
         "input",
-        "Path to the input directory that contains your .aqua files. Could be only as a directory.",
+        "Path to the input directory that contains your .aqua files. Could be only as a directory",
         "i"
       )
       .mapValidated(checkPath)
@@ -61,7 +60,7 @@ object AppOps {
               if (f.exists() && f.isDirectory) {
                 Right(p)
               } else {
-                Left(s"There is no path ${p.toString} or it is not a directory.")
+                Left(s"There is no path ${p.toString} or it is not a directory")
               }
             }
           })

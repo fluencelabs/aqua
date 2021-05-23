@@ -1,13 +1,13 @@
 package aqua.parser.expr
 
 import aqua.parser.Ast.Tree
-import aqua.parser.lexer.Token.` \n+`
-import aqua.parser.{Expr, ParserError}
+import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
-import cats.{Comonad, Eval}
+import aqua.parser.{Expr, ParserError}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.{Parser => P}
+import cats.{Comonad, Eval}
 
 case class RootExpr[F[_]]() extends Expr[F](RootExpr)
 

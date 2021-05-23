@@ -12,6 +12,7 @@ val monocleV = "3.0.0-M5"
 val scalaTestV = "3.2.7" // TODO update version for scala 3-RC3
 val fs2V = "3.0.2"
 val catsEffectV = "3.1.0"
+val airframeLogV = "21.5.4"
 val declineV = "2.0.0-RC1" // Scala3 issue: https://github.com/bkirwi/decline/issues/260
 
 name := "aqua-hll"
@@ -42,7 +43,7 @@ lazy val cli = project
       "co.fs2"             %% "fs2-core"           % fs2V,
       "co.fs2"             %% "fs2-io"             % fs2V,
       "org.typelevel"      %% "log4cats-slf4j"     % "2.1.1",
-      "org.wvlet.airframe" %% "airframe-log"       % "21.5.4",
+      "org.wvlet.airframe" %% "airframe-log"       % airframeLogV,
       "com.beachape"       %% "enumeratum"         % "1.6.1",
       "org.slf4j"           % "slf4j-jdk14"        % "1.7.25",
       "com.monovore"       %% "decline-enumeratum" % "1.3.0"
@@ -71,6 +72,9 @@ lazy val parser = project
 lazy val linker = project
   .settings(commons: _*)
   .settings(
+    libraryDependencies ++= Seq(
+      "org.wvlet.airframe" %% "airframe-log" % airframeLogV
+    )
   )
   .dependsOn(parser)
 

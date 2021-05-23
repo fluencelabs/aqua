@@ -21,3 +21,5 @@ func betterMessage(relay: string):
         Peer.is_connected("qurara")
     if isOnline:
         Test.doSomething()
+
+-- fer
