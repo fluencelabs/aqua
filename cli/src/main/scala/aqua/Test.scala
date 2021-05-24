@@ -1,12 +1,17 @@
 package aqua
 
 import aqua.model.transform.BodyConfig
-import cats.effect.{IO, IOApp}
 import cats.data.Validated
+import cats.effect.{IO, IOApp, Sync}
+import org.typelevel.log4cats.SelfAwareStructuredLogger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.nio.file.Paths
 
 object Test extends IOApp.Simple {
+
+  implicit def logger[F[_]: Sync]: SelfAwareStructuredLogger[F] =
+    Slf4jLogger.getLogger[F]
 
   override def run: IO[Unit] =
     AquaCompiler
