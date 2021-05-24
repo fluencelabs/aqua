@@ -4,13 +4,20 @@
 
 const { exec } = require("child_process");
 const path = require("path");
+const fs = require('fs');
+
+let importArgs = []
+
+const nm = path.join(__dirname, "node_modules")
+if (fs.existsSync(nm) && fs.lstatSync(nm).isDirectory()) {
+  importArgs = ["-m", "node_modules"]
+}
 
 const args = [
   "java",
   "-jar",
   path.join(__dirname, "aqua-cli.jar"),
-  "-m",
-  "node_modules",
+    ...importArgs,
   ...process.argv.slice(2),
 ];
 
