@@ -8,7 +8,8 @@ const fs = require('fs');
 
 let importArgs = []
 
-if (fs.existsSync(path.join(__dirname, "node_modules"))) {
+const nm = path.join(__dirname, "node_modules")
+if (fs.existsSync(nm) && fs.lstatSync(nm).isDirectory()) {
   importArgs = ["-m", "node_modules"]
 }
 
