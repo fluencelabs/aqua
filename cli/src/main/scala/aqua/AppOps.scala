@@ -41,7 +41,7 @@ object AppOps {
     Opts
       .option[Path](
         "input",
-        "Path to the input directory that contains your .aqua files. Could be only as a directory",
+        "Path to the input directory that contains your .aqua files. It can only be a directory",
         "i"
       )
       .mapValidated(checkPath)
