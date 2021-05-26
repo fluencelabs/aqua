@@ -1,13 +1,17 @@
 package aqua.semantics.rules.names
 
-import aqua.parser.lexer.{Name, Token, Value}
+import aqua.parser.lexer.{Name, Token}
 import aqua.types.{ArrowType, Type}
 import cats.kernel.Monoid
 
+// TODO: use models if possible
 case class NamesState[F[_]](
   stack: List[NamesState.Frame[F]] = Nil,
+  // resolved functions
   rootArrows: Map[String, ArrowType] = Map.empty,
+  // resolved constants
   constants: Map[String, Type] = Map.empty[String, Type],
+  // TODO: check if it could be a function
   definitions: Map[String, Name[F]] = Map.empty[String, Name[F]]
 ) {
 
@@ -23,6 +27,8 @@ case class NamesState[F[_]](
 }
 
 object NamesState {
+
+  // def apply(usedModels, context)
 
   case class Frame[F[_]](
     token: Token[F],

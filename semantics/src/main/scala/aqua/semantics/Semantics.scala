@@ -16,12 +16,12 @@ import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, Types
 import cats.Eval
 import cats.arrow.FunctionK
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, EitherK, NonEmptyChain, State, ValidatedNec}
+import cats.data._
 import cats.free.Free
-import monocle.Lens
-import monocle.macros.GenLens
 import cats.syntax.apply._
 import cats.syntax.semigroup._
+import monocle.Lens
+import monocle.macros.GenLens
 
 object Semantics {
 
@@ -85,6 +85,9 @@ object Semantics {
 
   def generateModel[F[_]](ast: Ast[F]): ValidatedNec[(Token[F], String), Model] =
     astToState[F](ast)
+      // add constants through cli
+      // тут надо, чтоб можно было передать всё что нужно в стейт
+      // chain of models to CompilerState
       .run(CompilerState[F]())
       .map { case (state, gen) =>
         NonEmptyChain

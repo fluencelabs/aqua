@@ -8,7 +8,9 @@ import cats.data.NonEmptyList
 
 case class AbilitiesState[F[_]](
   stack: List[AbilitiesState.Frame[F]] = Nil,
+  // global
   services: Map[String, ServiceModel] = Map.empty,
+  // global service ids
   rootServiceIds: Map[String, Value[F]] = Map.empty[String, Value[F]],
   definitions: Map[String, Ability[F]] = Map.empty[String, Ability[F]]
 ) {

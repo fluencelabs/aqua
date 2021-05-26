@@ -4,6 +4,17 @@ import aqua.model.func.{FuncCallable, FuncModel}
 import cats.Monoid
 import cats.data.Chain
 
+/*
+
+
+
+val file1 = Model(m: InnerModel, exports: Map[String, ResolvedModel])
+
+import21 = "123"
+
+val file2 = Model(InnerModel(..., file1.exports.get(import21)))
+ */
+
 case class ScriptModel(
   models: Chain[Model] = Chain.empty
 ) extends Model {

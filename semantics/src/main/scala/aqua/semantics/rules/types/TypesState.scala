@@ -1,25 +1,14 @@
 package aqua.semantics.rules.types
 
-import aqua.parser.lexer.{
-  ArrayTypeToken,
-  ArrowTypeToken,
-  BasicTypeToken,
-  CustomTypeToken,
-  IntoArray,
-  IntoField,
-  LambdaOp,
-  Name,
-  StreamTypeToken,
-  Token,
-  TypeToken
-}
-import aqua.types.{ArrayType, ArrowType, DataType, ProductType, StreamType, Type}
+import aqua.parser.lexer._
+import aqua.types._
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
 
 case class TypesState[F[_]](
   fields: Map[String, (Name[F], Type)] = Map.empty[String, (Name[F], Type)],
+  // resolved types: data, alias
   strict: Map[String, Type] = Map.empty[String, Type],
   definitions: Map[String, CustomTypeToken[F]] = Map.empty[String, CustomTypeToken[F]]
 ) {
