@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.Model
-import aqua.model.func.body.{FuncOp, MatchMismatchTag}
+import aqua.model.func.body.{FuncOp, MatchMismatchTag, XorTag}
 import aqua.parser.expr.IfExpr
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
@@ -36,12 +36,15 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
               case op: FuncOp =>
                 Free.pure[Alg, Model](
                   FuncOp.wrap(
-                    MatchMismatchTag(
-                      ValuesAlgebra.valueToModel(expr.left, lt),
-                      ValuesAlgebra.valueToModel(expr.right, rt),
-                      expr.eqOp.value
-                    ),
-                    op
+                    XorTag.LeftBiased,
+                    FuncOp.wrap(
+                      MatchMismatchTag(
+                        ValuesAlgebra.valueToModel(expr.left, lt),
+                        ValuesAlgebra.valueToModel(expr.right, rt),
+                        expr.eqOp.value
+                      ),
+                      op
+                    )
                   )
                 )
               case _ => Free.pure[Alg, Model](Model.error("Wrong body of the if expression"))

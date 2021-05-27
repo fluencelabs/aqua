@@ -25,6 +25,7 @@ object FuncExpr extends Expr.AndIndented {
       Expr.defer(OnExpr) ::
       CallArrowExpr ::
       IfExpr ::
+      TryExpr ::
       ElseOtherwiseExpr ::
       ParExpr ::
       DeclareStreamExpr ::
