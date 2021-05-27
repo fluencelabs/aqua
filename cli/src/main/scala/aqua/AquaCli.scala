@@ -71,7 +71,13 @@ object AquaCli extends IOApp with LogSupport {
       None
     )(
       main[IO],
-      args
+      // Weird ugly hack: in case version flag or help flag is present, ignore other options,
+      // be it correct or not
+      args match {
+        case _ if args.contains("-v") || args.contains("--version") => "-v" :: Nil
+        case _ if args.contains("-h") || args.contains("--help") => "-h" :: Nil
+        case _ => args
+      }
     )
   }
 }
