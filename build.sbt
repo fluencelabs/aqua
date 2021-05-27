@@ -22,7 +22,7 @@ val declineEnumV = "1.3.0"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.1.1",
+  baseAquaVersion := "0.1.2",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
