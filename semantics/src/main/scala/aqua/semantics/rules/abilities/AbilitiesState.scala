@@ -1,7 +1,7 @@
 package aqua.semantics.rules.abilities
 
-import aqua.model.ServiceModel
-import aqua.parser.lexer.{Ability, Name, Token, Value}
+import aqua.model.{ServiceModel, ValueModel}
+import aqua.parser.lexer.{Ability, Name, Token}
 import aqua.types.ArrowType
 import cats.Monoid
 import cats.data.NonEmptyList
@@ -11,7 +11,7 @@ case class AbilitiesState[F[_]](
   // global
   services: Map[String, ServiceModel] = Map.empty,
   // global service ids
-  rootServiceIds: Map[String, Value[F]] = Map.empty[String, Value[F]],
+  rootServiceIds: Map[String, ValueModel] = Map.empty[String, ValueModel],
   definitions: Map[String, Ability[F]] = Map.empty[String, Ability[F]]
 ) {
 
@@ -30,7 +30,7 @@ object AbilitiesState {
   case class Frame[F[_]](
     token: Token[F],
     arrows: Map[String, (Name[F], ArrowType)] = Map.empty[String, (Name[F], ArrowType)],
-    serviceIds: Map[String, Value[F]] = Map.empty[String, Value[F]]
+    serviceIds: Map[String, ValueModel] = Map.empty[String, ValueModel]
   )
 
   implicit def abilitiesStateMonoid[F[_]]: Monoid[AbilitiesState[F]] =

@@ -1,7 +1,7 @@
 package aqua
 
 import aqua.model.transform.BodyConfig
-import cats.data.Validated
+import cats.data.{Chain, Validated}
 import cats.effect.{IO, IOApp, Sync}
 import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
@@ -20,7 +20,8 @@ object Test extends IOApp.Simple {
         LazyList(Paths.get("./aqua")),
         Paths.get("./target"),
         AquaCompiler.TypescriptTarget,
-        BodyConfig()
+        BodyConfig(),
+        Chain.empty
       )
       .map {
         case Validated.Invalid(errs) =>

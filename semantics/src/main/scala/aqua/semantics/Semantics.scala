@@ -15,7 +15,6 @@ import aqua.semantics.rules.names.{NameOp, NamesAlgebra, NamesInterpreter, Names
 import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, TypesState}
 import cats.Eval
 import cats.arrow.FunctionK
-import cats.data.Validated.{Invalid, Valid}
 import cats.data._
 import cats.free.Free
 import cats.syntax.apply._
@@ -82,17 +81,4 @@ object Semantics {
 
   def astToState[F[_]](ast: Ast[F]): State[CompilerState[F], Model] =
     (transpile[F] _ andThen interpret[F])(ast)
-
-  def generateModel[F[_]](ast: Ast[F]): ValidatedNec[(Token[F], String), Model] =
-    astToState[F](ast)
-      // add constants through cli
-      // тут надо, чтоб можно было передать всё что нужно в стейт
-      // chain of models to CompilerState
-      .run(CompilerState[F]())
-      .map { case (state, gen) =>
-        NonEmptyChain
-          .fromChain(state.errors)
-          .fold[ValidatedNec[(Token[F], String), Model]](Valid(gen))(Invalid(_))
-      }
-      .value
 }

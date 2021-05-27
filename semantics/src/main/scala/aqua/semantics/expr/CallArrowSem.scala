@@ -9,7 +9,7 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrowType, ScalarType, StreamType, Type}
+import aqua.types.{ArrowType, StreamType, Type}
 import cats.free.Free
 import cats.syntax.apply._
 import cats.syntax.flatMap._
@@ -67,7 +67,7 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
             FuncOp.leaf(
               CallServiceTag(
                 // TODO service id type should not be hardcoded
-                serviceId = ValuesAlgebra.valueToModel(serviceId, ScalarType.string),
+                serviceId = serviceId,
                 funcName = funcName.value,
                 Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
               )

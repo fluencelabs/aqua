@@ -1,10 +1,11 @@
 package aqua.model
 
-import aqua.types.Type
+import aqua.types.{ScalarType, Type}
 import cats.Eq
 import cats.data.Chain
 
 sealed trait ValueModel {
+  def `type`: Type
   def resolveWith(map: Map[String, ValueModel]): ValueModel = this
 }
 
@@ -15,10 +16,10 @@ object ValueModel {
   }
 }
 
-case class LiteralModel(value: String) extends ValueModel
+case class LiteralModel(value: String, `type`: Type) extends ValueModel
 
 object LiteralModel {
-  val initPeerId: LiteralModel = LiteralModel("%init_peer_id%")
+  val initPeerId: LiteralModel = LiteralModel("%init_peer_id%", ScalarType.string)
 }
 
 sealed trait LambdaModel

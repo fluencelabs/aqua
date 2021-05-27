@@ -1,12 +1,16 @@
 package aqua
 
-import cats.Functor
+import aqua.model.ConstantModel
+import aqua.parser.expr.ConstantExpr
+import aqua.parser.lift.LiftParser
+import aqua.semantics.rules.ValuesAlgebra
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Validated, ValidatedNel}
+import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.effect.ExitCode
 import cats.effect.std.Console
 import cats.syntax.functor._
 import cats.syntax.traverse._
+import cats.{Comonad, Functor}
 import com.monovore.decline.Opts.help
 import com.monovore.decline.enumeratum._
 import com.monovore.decline.{Opts, Visibility}
@@ -82,6 +86,27 @@ object AppOps {
         }.map(_.to(LazyList))
       }
       .withDefault(LazyList.empty)
+
+  def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[ConstantModel]] =
+    Opts
+      .options[String]("constant", "Constant that will be used in an aqua code", "c")
+      .mapValidated { strs =>
+        val parsed = strs.map(s => ConstantExpr.onlyLiteral.parseAll(s))
+        val errors = parsed.collect { case Left(er) =>
+          er
+        }
+
+        NonEmptyList
+          .fromList(errors)
+          .fold(
+            Validated.validNel[String, List[ConstantModel]](parsed.collect { case Right(v) =>
+              ConstantModel(v._1.value, ValuesAlgebra.valueToModel(v._2, v._2.ts))
+            })
+          ) { errors =>
+            Validated.invalid(errors.map(_.toString))
+          }
+      }
+      .withDefault(List.empty)
 
   val compileToAir: Opts[Boolean] =
     Opts

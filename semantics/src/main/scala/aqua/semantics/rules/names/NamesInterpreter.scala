@@ -51,7 +51,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
           case Some(g) => State.pure(Option(g))
           case None =>
             getState.flatMap(st =>
-              report(ra.name, "Undefined arrow, available: " + st.allNames.mkString(", "))
+              report(ra.name, "Undefined arrow, available names: " + st.allNames.mkString(", "))
                 .as(Option.empty[ArrowType])
             )
         }
@@ -70,7 +70,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
       case dn: DefineName[F] =>
         readName(dn.name.value).flatMap {
           case Some(_) =>
-            getState.map(_.definitions.get(dn.name.value).exists(_ == dn.name)).flatMap {
+            getState.map(_.definitions.contains(dn.name.value)).flatMap {
               case true => State.pure(false)
               case false => report(dn.name, "This name was already defined in the scope").as(false)
             }
@@ -83,7 +83,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
       case da: DefineArrow[F] =>
         readName(da.name.value).flatMap {
           case Some(_) =>
-            getState.map(_.definitions.get(da.name.value).exists(_ == da.name)).flatMap {
+            getState.map(_.definitions.contains(da.name.value)).flatMap {
               case true => State.pure(false)
               case false => report(da.name, "This arrow was already defined in the scope").as(false)
             }
@@ -94,7 +94,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
                 modify(st =>
                   st.copy(
                     rootArrows = st.rootArrows.updated(da.name.value, da.gen),
-                    definitions = st.definitions.updated(da.name.value, da.name)
+                    definitions = st.definitions + da.name.value
                   )
                 )
                   .as(true)

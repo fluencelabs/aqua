@@ -4,8 +4,8 @@ import aqua.backend.air.FuncAirGen
 import aqua.backend.ts.TypescriptFile
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
-import aqua.model.ScriptModel
 import aqua.model.transform.BodyConfig
+import aqua.model.{ConstantModel, ScriptModel}
 import aqua.parser.lexer.Token
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{CompilerState, Semantics}
@@ -36,7 +36,8 @@ object AquaCompiler {
   def prepareFiles[F[_]: Files: Concurrent](
     srcPath: Path,
     imports: LazyList[Path],
-    targetPath: Path
+    targetPath: Path,
+    constants: Chain[ConstantModel]
   ): F[ValidatedNec[String, Chain[Prepared]]] =
     AquaFiles
       .readAndResolve[F, CompilerState.S[FileSpan.F]](
@@ -61,22 +62,32 @@ object AquaCompiler {
             ids => Unresolvable(ids.map(_.id.file.toString).mkString(" -> "))
           ) match {
             case Validated.Valid(files) ⇒
-              val (errs, preps) =
-                files.toSeq.foldLeft[(Chain[String], Chain[Prepared])]((Chain.empty, Chain.empty)) {
-                  case ((errs, preps), (modId, proc)) =>
-                    proc.run(CompilerState()).value match {
-                      case (proc, _) if proc.errors.nonEmpty =>
-                        (errs ++ showProcErrors(proc.errors), preps)
+              val (errs, preps, _) =
+                files.toSeq.foldLeft[(Chain[String], Chain[Prepared], Option[ScriptModel])](
+                  (Chain.empty, Chain.empty, None)
+                ) { case ((errs, preps, lastModel), (modId, proc)) =>
+                  proc
+                    // TODO: uncomment after linker updated
+//                    .run(CompilerState.fromModels(lastModel.fold(Chain.empty[Model])(_.models)))
+                    .run(CompilerState.fromModels(constants))
+                    .value match {
+                    case (proc, _) if proc.errors.nonEmpty =>
+                      (errs ++ showProcErrors(proc.errors), preps, lastModel)
 
-                      case (_, model: ScriptModel) =>
-                        (errs, preps :+ Prepared(modId.targetPath(srcPath, targetPath, _), model))
+                    case (_, model: ScriptModel) =>
+                      (
+                        errs,
+                        preps :+ Prepared(modId.targetPath(srcPath, targetPath, _), model),
+                        Some(model)
+                      )
 
-                      case (_, model) =>
-                        (
-                          errs.append(Console.RED + "Unknown model: " + model + Console.RESET),
-                          preps
-                        )
-                    }
+                    case (_, model) =>
+                      (
+                        errs.append(Console.RED + "Unknown model: " + model + Console.RESET),
+                        preps,
+                        lastModel
+                      )
+                  }
                 }
               NonEmptyChain
                 .fromChain(errs)
@@ -105,9 +116,10 @@ object AquaCompiler {
     imports: LazyList[Path],
     targetPath: Path,
     compileTo: CompileTarget,
-    bodyConfig: BodyConfig
+    bodyConfig: BodyConfig,
+    constants: Chain[ConstantModel]
   ): F[ValidatedNec[String, Chain[String]]] =
-    prepareFiles(srcPath, imports, targetPath)
+    prepareFiles(srcPath, imports, targetPath, constants)
       .map(_.map(_.filter(_.hasOutput(compileTo))))
       .flatMap[ValidatedNec[String, Chain[String]]] {
         case Validated.Invalid(e) =>

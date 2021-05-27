@@ -1,6 +1,6 @@
 package aqua.semantics.rules.names
 
-import aqua.parser.lexer.{Name, Token}
+import aqua.parser.lexer.Token
 import aqua.types.{ArrowType, Type}
 import cats.kernel.Monoid
 
@@ -10,9 +10,9 @@ case class NamesState[F[_]](
   // resolved functions
   rootArrows: Map[String, ArrowType] = Map.empty,
   // resolved constants
-  constants: Map[String, Type] = Map.empty[String, Type],
+  constants: Map[String, Type] = Map.empty,
   // TODO: check if it could be a function
-  definitions: Map[String, Name[F]] = Map.empty[String, Name[F]]
+  definitions: Set[String] = Set.empty
 ) {
 
   def allNames: LazyList[String] =

@@ -1,7 +1,9 @@
 package aqua
 
 import aqua.model.transform.BodyConfig
-import cats.data.Validated
+import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import cats.Id
+import cats.data.{Chain, Validated}
 import cats.effect._
 import cats.effect.std.Console
 import cats.syntax.apply._
@@ -31,8 +33,9 @@ object AquaCli extends IOApp with LogSupport {
       noXorWrapper,
       wrapWithOption(helpOpt),
       wrapWithOption(versionOpt),
-      logLevelOpt
-    ).mapN { case (input, imports, output, toAir, noRelay, noXor, h, v, logLevel) =>
+      logLevelOpt,
+      constantOpts[Id]
+    ).mapN { case (input, imports, output, toAir, noRelay, noXor, h, v, logLevel, constants) =>
       WLogger.setDefaultLogLevel(LogLevel.toLogLevel(logLevel))
 
       // if there is `--help` or `--version` flag - show help and version
@@ -46,7 +49,8 @@ object AquaCli extends IOApp with LogSupport {
             if (toAir) AquaCompiler.AirTarget else AquaCompiler.TypescriptTarget, {
               val bc = BodyConfig(wrapWithXor = !noXor)
               bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
-            }
+            },
+            Chain.fromSeq(constants)
           )
           .map {
             case Validated.Invalid(errs) =>

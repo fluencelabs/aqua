@@ -2,13 +2,21 @@ package aqua.model.func.body
 
 import aqua.model.func.Call
 import aqua.model.{LiteralModel, ValueModel}
+import aqua.types.LiteralType
 import cats.data.Chain
 import cats.free.Cofree
 
 object FuncOps {
 
   def noop(peerId: ValueModel): FuncOp =
-    FuncOp.leaf(CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(peerId)))
+    FuncOp.leaf(
+      CallServiceTag(
+        LiteralModel("\"op\"", LiteralType.string),
+        "identity",
+        Call(Nil, None),
+        Some(peerId)
+      )
+    )
 
   def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =
     FuncOp.leaf(

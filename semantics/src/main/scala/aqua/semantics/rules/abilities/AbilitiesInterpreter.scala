@@ -1,12 +1,12 @@
 package aqua.semantics.rules.abilities
 
-import aqua.model.ServiceModel
-import aqua.semantics.rules.{ReportError, StackInterpreter}
-import aqua.parser.lexer.{Name, Value}
-import aqua.types.ArrowType
+import aqua.model.{ServiceModel, ValueModel}
+import aqua.parser.lexer.Name
+import aqua.semantics.rules.{ReportError, StackInterpreter, ValuesAlgebra}
+import aqua.types.{ArrowType, ScalarType}
 import cats.data.{NonEmptyList, State}
-import cats.~>
 import cats.syntax.functor._
+import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -55,10 +55,16 @@ class AbilitiesInterpreter[F[_], X](implicit
       case s: SetServiceId[F] =>
         getService(s.name.value).flatMap {
           case Some(_) =>
+            val vm = ValuesAlgebra.valueToModel(s.id, ScalarType.string)
             mapStackHead(
-              modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(s.name.value, s.id)))
+              modify(st =>
+                st.copy(rootServiceIds =
+                  st.rootServiceIds
+                    .updated(s.name.value, vm)
+                )
+              )
                 .as(true)
-            )(h => h.copy(serviceIds = h.serviceIds.updated(s.name.value, s.id)) -> true)
+            )(h => h.copy(serviceIds = h.serviceIds.updated(s.name.value, vm)) -> true)
 
           case None =>
             report(s.name, "Service with this name is not registered, can't set its ID").as(false)
@@ -74,7 +80,7 @@ class AbilitiesInterpreter[F[_], X](implicit
                 s.name,
                 s"Service ID unresolved, use `${s.name.value} id` expression to set it"
               )
-                .as(Option.empty[Value[F]])
+                .as(Option.empty[ValueModel])
 
             case v => State.pure(v)
           }
@@ -105,8 +111,8 @@ class AbilitiesInterpreter[F[_], X](implicit
           case None =>
             modify(s =>
               s.copy(
-                services =
-                  s.services.updated(ds.name.value, ServiceModel(ds.name.value, ds.arrows)),
+                services = s.services
+                  .updated(ds.name.value, ServiceModel(ds.name.value, ds.arrows, ds.v)),
                 definitions = s.definitions.updated(ds.name.value, ds.name)
               )
             ).as(true)

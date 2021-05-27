@@ -1,6 +1,7 @@
 package aqua.model.transform
 
 import aqua.model.{LiteralModel, ValueModel}
+import aqua.types.LiteralType
 
 case class BodyConfig(
   getDataService: String = "getDataSrv",
@@ -12,9 +13,11 @@ case class BodyConfig(
   wrapWithXor: Boolean = true
 ) {
 
-  val errorId: ValueModel = LiteralModel("\"" + errorFuncName + "\"")
-  val errorHandlingCallback: ValueModel = LiteralModel("\"" + errorHandlingService + "\"")
-  val callbackSrvId: ValueModel = LiteralModel("\"" + callbackService + "\"")
-  val dataSrvId: ValueModel = LiteralModel("\"" + getDataService + "\"")
+  val errorId: ValueModel = LiteralModel("\"" + errorFuncName + "\"", LiteralType.string)
+
+  val errorHandlingCallback: ValueModel =
+    LiteralModel("\"" + errorHandlingService + "\"", LiteralType.string)
+  val callbackSrvId: ValueModel = LiteralModel("\"" + callbackService + "\"", LiteralType.string)
+  val dataSrvId: ValueModel = LiteralModel("\"" + getDataService + "\"", LiteralType.string)
 
 }

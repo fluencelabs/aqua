@@ -1,3 +1,5 @@
+import "demo.aqua"
+
 service Peer("peer"):
     is_connected: string -> bool
 
@@ -9,11 +11,11 @@ data User:
     relay_id: string
     name: string
 
-service Test("test"):
+service Test(a):
     getUserList: -> []User
     doSomething: -> bool
 
-func betterMessage(relay: string):
+func betterMessage(relay: string, g: u64):
     on relay:
         Peer.is_connected("something")
         par isOnline <- Peer.is_connected(relay)
