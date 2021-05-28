@@ -9,6 +9,11 @@ on:
       - "main"
 
   workflow_dispatch:
+    inputs:
+      draft:
+        description: "Whether to create draft or actual release. 'false' by default, put 'true' to make draft release"
+        required: false
+        default: false
 
 jobs:
   release:
@@ -89,6 +94,6 @@ jobs:
             ${{ env.JAR }}
           body: |
             [${{ env.VERSION }} @ NPM registry](https://www.npmjs.com/package/${{ env.PKG_NAME }}/v/${{ env.VERSION }})
-          draft: true
+          draft: ${{ github.event.inputs.draft }}
           prerelease: false
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
