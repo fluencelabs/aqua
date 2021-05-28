@@ -18,18 +18,29 @@ import cats.syntax.monoid._
 import cats.syntax.show._
 import fs2.io.file.Files
 import fs2.text
+import wvlet.log.LogSupport
 
 import java.nio.file.Path
 
-object AquaCompiler {
+object AquaCompiler extends LogSupport {
   sealed trait CompileTarget
   case object TypescriptTarget extends CompileTarget
   case object AirTarget extends CompileTarget
 
-  case class Prepared(target: String => Path, model: ScriptModel) {
+  case class Prepared(moduleId: FileModuleId, src: Path, target: Path, model: ScriptModel) {
+
+    lazy val srcFile = target.toAbsolutePath
+      .normalize()
+      .resolve(
+        src.toAbsolutePath.normalize().relativize(moduleId.file.toAbsolutePath.normalize())
+      )
 
     def hasOutput(target: CompileTarget): Boolean = target match {
       case _ => model.funcs.nonEmpty
+    }
+
+    def targetPath(ext: String): Path = {
+      srcFile.getParent.resolve(srcFile.getFileName.toString.stripSuffix(".aqua") + s".$ext")
     }
   }
 
@@ -69,7 +80,7 @@ object AquaCompiler {
                         (errs ++ showProcErrors(proc.errors), preps)
 
                       case (_, model: ScriptModel) =>
-                        (errs, preps :+ Prepared(modId.targetPath(srcPath, targetPath, _), model))
+                        (errs, preps :+ Prepared(modId, srcPath, targetPath, model))
 
                       case (_, model) =>
                         (
@@ -106,17 +117,24 @@ object AquaCompiler {
     targetPath: Path,
     compileTo: CompileTarget,
     bodyConfig: BodyConfig
-  ): F[ValidatedNec[String, Chain[String]]] =
+  ): F[ValidatedNec[String, Unit]] =
     prepareFiles(srcPath, imports, targetPath)
-      .map(_.map(_.filter(_.hasOutput(compileTo))))
-      .flatMap[ValidatedNec[String, Chain[String]]] {
+      .map(_.map(_.filter { p =>
+        val hasOutput = p.hasOutput(compileTo)
+        if (!hasOutput) info(s"Source ${p.srcFile}: compilation OK (nothing to emit)")
+        else info(s"Source ${p.srcFile}: compilation OK (${p.model.funcs.length} functions)")
+        hasOutput
+      }))
+      .flatMap[ValidatedNec[String, Unit]] {
         case Validated.Invalid(e) =>
           Applicative[F].pure(Validated.invalid(e))
         case Validated.Valid(preps) =>
           (compileTo match {
             case TypescriptTarget =>
               preps
-                .map(p => writeFile(p.target("ts"), TypescriptFile(p.model).generateTS(bodyConfig)))
+                .map(p =>
+                  writeFile(p.targetPath("ts"), TypescriptFile(p.model).generateTS(bodyConfig))
+                )
 
             // TODO add function name to AirTarget class
             case AirTarget =>
@@ -126,21 +144,21 @@ object AquaCompiler {
                     fc.funcName -> FuncAirGen(fc).generateAir(bodyConfig).show
                   }.map { case (n, g) =>
                     writeFile(
-                      p.target(n + ".air"),
+                      p.targetPath(n + ".air"),
                       g
                     )
                   }
                 )
 
           }).foldLeft(
-            EitherT.rightT[F, NonEmptyChain[String]](Chain.empty[String])
+            EitherT.rightT[F, NonEmptyChain[String]](())
           ) { case (accET, writeET) =>
             EitherT(for {
               a <- accET.value
               w <- writeET.value
             } yield (a, w) match {
               case (Left(errs), Left(err)) => Left(errs :+ err)
-              case (Right(res), Right(r)) => Right(res :+ r)
+              case (Right(_), Right(_)) => Right(())
               case (Left(errs), _) => Left(errs)
               case (_, Left(err)) => Left(NonEmptyChain.of(err))
             })
@@ -149,9 +167,9 @@ object AquaCompiler {
 
       }
 
-  def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, String] =
+  def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, Unit] =
     EitherT.right[String](Files[F].deleteIfExists(file)) >>
-      EitherT[F, String, String](
+      EitherT[F, String, Unit](
         fs2.Stream
           .emit(
             content
@@ -165,7 +183,7 @@ object AquaCompiler {
           }
           .compile
           .drain
-          .map(_ => Right(s"Compiled $file"))
+          .map(_ => Right(()))
       )
 
 }
