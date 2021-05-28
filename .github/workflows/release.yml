@@ -29,10 +29,10 @@ jobs:
       - uses: olafurpg/setup-scala@v10
 
       ### Update & build
-      - name: Assembly
-        run: sbt cli/assembly
-        env:
-          BUILD_NUMBER: ${{ github.run_number }}
+      # - name: Assembly
+      #   run: sbt cli/assembly
+      #   env:
+      #     BUILD_NUMBER: ${{ github.run_number }}
 
       ### Create release
       - name: Get project version
@@ -101,7 +101,7 @@ jobs:
           automatic_release_tag: "${{ env.BASE_VERSION }}"
           title: "Aqua Compiler ${{ env.VERSION }}"
           files: |
-            ${{ env.JAR }}
+            
           body: |
             [${{ env.VERSION }} @ NPM registry](https://www.npmjs.com/package/${{ env.PKG_NAME }}/v/${{ env.VERSION }})
           draft: ${{ env.DRAFT }}
