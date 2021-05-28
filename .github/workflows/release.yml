@@ -5,15 +5,16 @@ on:
     # uncomment to release only on tags starting with 'v'
     # tags:
     #   - "v*"
-    branches:
-      - "main"
+    # branches:
+    #   - "main"
 
   workflow_dispatch:
     inputs:
-      draft:
-        description: "Whether to create draft or actual release. 'false' by default, put 'true' to make draft release"
+      release:
+        description: "Drafted or public release?
+        Public is the default, put 'false' to make a draft release"
         required: false
-        default: false
+        default: 'true'
 
 jobs:
   release:
@@ -63,24 +64,33 @@ jobs:
           echo "JAR=$JAR" >> $GITHUB_ENV
 
       ### Publish to NPM registry
-      - uses: actions/setup-node@v1
-        with:
-          node-version: "14"
-          registry-url: "https://registry.npmjs.org"
+      # - uses: actions/setup-node@v1
+      #   with:
+      #     node-version: "14"
+      #     registry-url: "https://registry.npmjs.org"
 
-      - name: Install jq and prepare package
+      # - name: Install jq and prepare package
+      #   run: |
+      #     sudo apt-get update && sudo apt-get --yes --force-yes install jq
+      #     PKG_NAME="$(cat package.json | jq -r .name)"
+      #     cp ${{ env.JAR }} ./npm/aqua-cli.jar
+
+      # - run: npm version ${{ env.VERSION }}
+      #   working-directory: ./npm
+
+      # - run: npm publish --access public
+      #   working-directory: ./npm
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: determine if release should be drafted
         run: |
-          sudo apt-get update && sudo apt-get --yes --force-yes install jq
-          PKG_NAME="$(cat package.json | jq -r .name)"
-          cp ${{ env.JAR }} ./npm/aqua-cli.jar
-
-      - run: npm version ${{ env.VERSION }}
-        working-directory: ./npm
-
-      - run: npm publish --access public
-        working-directory: ./npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          set -x
+          if [ "${{ github.event.inputs.release }}" = "true" ]; then
+            echo "export DRAFT=false" >> $GITHUB_ENV
+          else
+            echo "export DRAFT=true" >> $GITHUB_ENV
+          fi
 
       ### create release
       - uses: marvinpinto/action-automatic-releases@latest
@@ -94,6 +104,6 @@ jobs:
             ${{ env.JAR }}
           body: |
             [${{ env.VERSION }} @ NPM registry](https://www.npmjs.com/package/${{ env.PKG_NAME }}/v/${{ env.VERSION }})
-          draft: true #${{ github.event.inputs.draft }}
+          draft: ${{ env.DRAFT }}
           prerelease: false
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
