@@ -5,16 +5,15 @@ on:
     # uncomment to release only on tags starting with 'v'
     # tags:
     #   - "v*"
-    # branches:
-    #   - "main"
+    branches:
+      - "main"
 
   workflow_dispatch:
     inputs:
       release:
-        description: "Drafted or public release?
-        Public is the default, put 'false' to make a draft release"
+        description: "Draft or public release?\nPut 'draft' to make a draft release"
         required: false
-        default: 'true'
+        default: 'public'
 
 jobs:
   release:
@@ -29,10 +28,10 @@ jobs:
       - uses: olafurpg/setup-scala@v10
 
       ### Update & build
-      # - name: Assembly
-      #   run: sbt cli/assembly
-      #   env:
-      #     BUILD_NUMBER: ${{ github.run_number }}
+      - name: Assembly
+        run: sbt cli/assembly
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
 
       ### Create release
       - name: Get project version
@@ -57,36 +56,36 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
 
-      # - name: Check .jar exists
-      #   run: |
-      #     JAR="cli/target/scala-2.13/aqua-cli-${{ env.VERSION }}.jar"
-      #     stat "$JAR"
-      #     echo "JAR=$JAR" >> $GITHUB_ENV
+      - name: Check .jar exists
+        run: |
+          JAR="cli/target/scala-2.13/aqua-cli-${{ env.VERSION }}.jar"
+          stat "$JAR"
+          echo "JAR=$JAR" >> $GITHUB_ENV
 
       ### Publish to NPM registry
-      # - uses: actions/setup-node@v1
-      #   with:
-      #     node-version: "14"
-      #     registry-url: "https://registry.npmjs.org"
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "14"
+          registry-url: "https://registry.npmjs.org"
 
-      # - name: Install jq and prepare package
-      #   run: |
-      #     sudo apt-get update && sudo apt-get --yes --force-yes install jq
-      #     PKG_NAME="$(cat package.json | jq -r .name)"
-      #     cp ${{ env.JAR }} ./npm/aqua-cli.jar
+      - name: Install jq and prepare package
+        run: |
+          sudo apt-get update && sudo apt-get --yes --force-yes install jq
+          PKG_NAME="$(cat package.json | jq -r .name)"
+          cp ${{ env.JAR }} ./npm/aqua-cli.jar
 
-      # - run: npm version ${{ env.VERSION }}
-      #   working-directory: ./npm
+      - run: npm version ${{ env.VERSION }}
+        working-directory: ./npm
 
-      # - run: npm publish --access public
-      #   working-directory: ./npm
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --access public
+        working-directory: ./npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: determine if release should be drafted
+      - name: Determine if release should be drafted
         run: |
           set -x
-          if [ "${{ github.event.inputs.release }}" = "true" ]; then
+          if [ "${{ github.event.inputs.release }}" = "public" ]; then
             echo "DRAFT=false" >> $GITHUB_ENV
           else
             echo "DRAFT=true" >> $GITHUB_ENV
@@ -101,9 +100,7 @@ jobs:
           automatic_release_tag: "${{ env.BASE_VERSION }}"
           title: "Aqua Compiler ${{ env.VERSION }}"
           files: |
-            
-          body: |
-            [${{ env.VERSION }} @ NPM registry](https://www.npmjs.com/package/${{ env.PKG_NAME }}/v/${{ env.VERSION }})
+            ${{ env.JAR }}
           draft: ${{ env.DRAFT }}
           prerelease: false
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
