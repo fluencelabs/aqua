@@ -87,9 +87,9 @@ jobs:
         run: |
           set -x
           if [ "${{ github.event.inputs.release }}" = "true" ]; then
-            echo "DRAFT='false'" >> $GITHUB_ENV
+            echo "DRAFT=false" >> $GITHUB_ENV
           else
-            echo "DRAFT='true'" >> $GITHUB_ENV
+            echo "DRAFT=true" >> $GITHUB_ENV
           fi
 
       ### create release
