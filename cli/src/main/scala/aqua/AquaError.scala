@@ -10,13 +10,14 @@ sealed trait AquaError {
   def showForConsole(script: String): String
 }
 
-case class CustomSyntaxError(span: Span, message: String) extends AquaError {
+case class CustomSyntaxError(name: String, span: Span, message: String) extends AquaError {
 
   override def showForConsole(script: String): String =
     span
-      .focus(Eval.later(LocationMap(script)), 2)
+      .focus(Eval.later(LocationMap(script)), 3)
       .map(
         _.toConsoleStr(
+          name,
           message,
           Console.RED
         )
@@ -27,13 +28,15 @@ case class CustomSyntaxError(span: Span, message: String) extends AquaError {
       ) + Console.RESET + "\n"
 }
 
-case class SyntaxError(offset: Int, expectations: NonEmptyList[Expectation]) extends AquaError {
+case class SyntaxError(name: String, offset: Int, expectations: NonEmptyList[Expectation])
+    extends AquaError {
 
   override def showForConsole(script: String): String =
     Span(offset, offset + 1)
-      .focus(Eval.later(LocationMap(script)), 2)
-      .map(
-        _.toConsoleStr(
+      .focus(Eval.later(LocationMap(script)), 3)
+      .map(spanFocus =>
+        spanFocus.toConsoleStr(
+          name,
           s"Syntax error, expected: ${expectations.toList.mkString(", ")}",
           Console.RED
         )
@@ -42,13 +45,4 @@ case class SyntaxError(offset: Int, expectations: NonEmptyList[Expectation]) ext
         "(offset is beyond the script, syntax errors) " + Console.RED + expectations.toList
           .mkString(", ")
       ) + Console.RESET + "\n"
-}
-
-case class CompilerError(span: Span, hint: String) extends AquaError {
-
-  override def showForConsole(script: String): String =
-    span
-      .focus(Eval.later(LocationMap(script)), 1)
-      .map(_.toConsoleStr(hint, Console.CYAN))
-      .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
 }

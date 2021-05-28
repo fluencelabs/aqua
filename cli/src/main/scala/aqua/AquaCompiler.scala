@@ -95,7 +95,7 @@ object AquaCompiler {
   ): Chain[String] =
     errors.map(err =>
       err._1.unit._1
-        .focus(1)
+        .focus(2)
         .map(_.toConsoleStr(err._2, Console.CYAN))
         .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
     )

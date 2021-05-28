@@ -1,7 +1,7 @@
 package aqua.parser.lift
 
-import cats.{Comonad, Eval}
 import cats.parse.{LocationMap, Parser => P}
+import cats.{Comonad, Eval}
 
 import scala.language.implicitConversions
 
@@ -16,7 +16,8 @@ object FileSpan {
   case class Focus(name: String, locationMap: Eval[LocationMap], ctx: Int, spanFocus: Span.Focus) {
 
     def toConsoleStr(msg: String, onLeft: String, onRight: String = Console.RESET): String =
-      s"$name:${spanFocus.line._1 + 1}:${spanFocus.column + 1}\n" + spanFocus.toConsoleStr(
+      spanFocus.toConsoleStr(
+        name,
         msg,
         onLeft,
         onRight
