@@ -94,6 +94,6 @@ jobs:
             ${{ env.JAR }}
           body: |
             [${{ env.VERSION }} @ NPM registry](https://www.npmjs.com/package/${{ env.PKG_NAME }}/v/${{ env.VERSION }})
-          draft: ${{ github.event.inputs.draft }}
+          draft: true #${{ github.event.inputs.draft }}
           prerelease: false
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
