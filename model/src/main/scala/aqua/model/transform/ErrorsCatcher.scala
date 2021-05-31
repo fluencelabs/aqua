@@ -1,7 +1,7 @@
 package aqua.model.transform
 
 import aqua.model.func.Call
-import aqua.model.func.body.{FuncOp, FuncOps, OnTag, OpTag}
+import aqua.model.func.body._
 import aqua.model.{LiteralModel, ValueModel}
 import aqua.types.ScalarType
 import cats.Eval

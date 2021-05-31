@@ -74,17 +74,15 @@ object AquaCompiler extends LogSupport {
             ids => Unresolvable(ids.map(_.id.file.toString).mkString(" -> "))
           ) match {
             case Validated.Valid(files) ⇒
-              val (errs, preps, _) =
-                files.toSeq.foldLeft[(Chain[String], Chain[Prepared], Option[ScriptModel])](
-                  (Chain.empty, Chain.empty, None)
-                ) { case ((errs, preps, lastModel), (modId, proc)) =>
+              val (errs, preps) =
+                files.toSeq.foldLeft[(Chain[String], Chain[Prepared])](
+                  (Chain.empty, Chain.empty)
+                ) { case ((errs, preps), (modId, proc)) =>
                   proc
-                    // TODO: uncomment after linker updated
-//                    .run(CompilerState.fromModels(lastModel.fold(Chain.empty[Model])(_.models)))
                     .run(CompilerState.fromModels(constants))
                     .value match {
                     case (proc, _) if proc.errors.nonEmpty =>
-                      (errs ++ showProcErrors(proc.errors), preps, lastModel)
+                      (errs ++ showProcErrors(proc.errors), preps)
 
                     case (_, model: ScriptModel) =>
                       val src = Validated.catchNonFatal {
@@ -104,8 +102,7 @@ object AquaCompiler extends LogSupport {
                     case (_, model) =>
                       (
                         errs.append(Console.RED + "Unknown model: " + model + Console.RESET),
-                        preps,
-                        lastModel
+                        preps
                       )
                   }
                 }
@@ -139,7 +136,7 @@ object AquaCompiler extends LogSupport {
     bodyConfig: BodyConfig,
     constants: Chain[ConstantModel]
   ): F[ValidatedNec[String, Chain[String]]] =
-    prepareFiles(srcPath, imports, targetPath)
+    prepareFiles(srcPath, imports, targetPath, constants)
       .map(_.map(_.filter { p =>
         val hasOutput = p.hasOutput(compileTo)
         if (!hasOutput) info(s"Source ${p.srcFile}: compilation OK (nothing to emit)")
