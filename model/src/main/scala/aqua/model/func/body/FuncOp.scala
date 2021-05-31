@@ -74,7 +74,10 @@ object FuncOp {
 
     override def combine(x: FuncOp, y: FuncOp): FuncOp = (x.tree.head, y.tree.head) match {
       case (ParTag, ParTag) => FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
-      case (XorTag, XorTag) => FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
+      case (XorTag, XorTag) =>
+        FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
+      case (XorTag.LeftBiased, XorTag) =>
+        wrap(SeqTag, FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _))))
       case (XorTag, ParTag) => FuncOp(Cofree[Chain, OpTag](XorParTag(x, y), Eval.now(Chain.empty)))
       case (_, ParTag | XorTag) =>
         wrap(SeqTag, FuncOp(y.tree.copy(tail = y.tree.tail.map(_.prepend(x.tree)))))

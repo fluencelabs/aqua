@@ -26,8 +26,8 @@ object Test extends IOApp.Simple {
       .map {
         case Validated.Invalid(errs) =>
           errs.map(println)
-        case Validated.Valid(res) =>
-          res.map(println)
+        case Validated.Valid(_) =>
+
       }
 
 }

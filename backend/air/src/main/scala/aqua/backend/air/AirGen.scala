@@ -40,21 +40,18 @@ object AirGen {
     case list => list.reduceLeft(SeqGen)
   }
 
-  def wrapMatchWithXor(ag: AirGen): AirGen = ag match {
-    case mmg: MatchMismatchGen =>
-      XorGen(mmg, NullGen)
-    case g => g
-  }
-
   def apply(op: Cofree[Chain, OpTag]): AirGen =
     Cofree
       .cata[Chain, OpTag, AirGen](op) {
         case (SeqTag, ops) =>
-          Eval later ops.map(wrapMatchWithXor).toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
+          Eval later ops.toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
         case (ParTag, ops) =>
-          Eval later ops.map(wrapMatchWithXor).toList.reduceLeftOption(ParGen).getOrElse(NullGen)
+          Eval later ops.toList.reduceLeftOption(ParGen).getOrElse(NullGen)
         case (XorTag, ops) =>
           Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
+        case (XorTag.LeftBiased, ops) =>
+          Eval later XorGen(opsToSingle(ops), NullGen)
+
         case (NextTag(item), _) =>
           Eval later NextGen(item)
         case (MatchMismatchTag(left, right, shouldMatch), ops) =>
@@ -66,7 +63,7 @@ object AirGen {
           )
 
         case (ForTag(item, iterable), ops) =>
-          Eval later ForGen(valueToData(iterable), item, opsToSingle(ops.map(wrapMatchWithXor)))
+          Eval later ForGen(valueToData(iterable), item, opsToSingle(ops))
         case (CallServiceTag(serviceId, funcName, Call(args, exportTo), peerId), _) =>
           Eval.later(
             ServiceCallGen(

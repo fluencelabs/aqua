@@ -50,7 +50,7 @@ jobs:
       - name: Integration test
         run: |
           git clone https://github.com/fluencelabs/aqua-playground.git
-          sbt "cli/run -i aqua-playground/aqua -o aqua-playground/src/compiled"
+          sbt "cli/run -i aqua-playground/aqua/examples -o aqua-playground/src/compiled/examples"
           cd aqua-playground
           npm i
-          npm run exec
+          npm run examples

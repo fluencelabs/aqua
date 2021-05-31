@@ -7,16 +7,7 @@ import cats.syntax.applicative._
 
 import java.nio.file.Path
 
-case class FileModuleId(file: Path) {
-
-  def targetPath(src: Path, target: Path, ext: String): Path = {
-    val aqua =
-      target.toAbsolutePath
-        .normalize()
-        .resolve(src.toAbsolutePath.normalize().relativize(file.toAbsolutePath.normalize()))
-    aqua.getParent.resolve(aqua.getFileName.toString.stripSuffix(".aqua") + s".$ext")
-  }
-}
+case class FileModuleId(file: Path) {}
 
 object FileModuleId {
 

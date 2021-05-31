@@ -20,7 +20,13 @@ case class ErrorsCatcher(
       var i = 0
       op
         .cata[Cofree[Chain, OpTag]] {
-          case (ot: OnTag, children) =>
+          case (tag, children)
+              if children.length == 1 && children.headOption.exists(
+                _.head == XorTag.LeftBiased
+              ) =>
+            Eval.now(Cofree(tag, Eval.now(children)))
+
+          case (ot @ (OnTag(_, _) | MatchMismatchTag(_, _, _)), children) =>
             i = i + 1
             Eval now
               FuncOp
