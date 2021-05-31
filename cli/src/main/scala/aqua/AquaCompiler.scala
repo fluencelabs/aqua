@@ -10,6 +10,7 @@ import aqua.parser.lexer.Token
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{CompilerState, Semantics}
 import cats.Applicative
+import cats.data.Validated.{Invalid, Valid}
 import cats.data._
 import cats.effect.kernel.Concurrent
 import cats.syntax.flatMap._
@@ -27,21 +28,21 @@ object AquaCompiler extends LogSupport {
   case object TypescriptTarget extends CompileTarget
   case object AirTarget extends CompileTarget
 
-  case class Prepared(moduleId: FileModuleId, src: Path, target: Path, model: ScriptModel) {
-
-    lazy val srcFile = target.toAbsolutePath
-      .normalize()
-      .resolve(
-        src.toAbsolutePath.normalize().relativize(moduleId.file.toAbsolutePath.normalize())
-      )
+  case class Prepared(srcFile: Path, srcDir: Path, model: ScriptModel) {
 
     def hasOutput(target: CompileTarget): Boolean = target match {
       case _ => model.funcs.nonEmpty
     }
 
-    def targetPath(ext: String): Path = {
-      srcFile.getParent.resolve(srcFile.getFileName.toString.stripSuffix(".aqua") + s".$ext")
-    }
+    def targetPath(ext: String): Validated[Throwable, Path] =
+      Validated.catchNonFatal {
+        val fileName = srcFile.getFileName
+        if (fileName == null) {
+          throw new Exception(s"Unexpected: there is no file name in $srcFile")
+        } else {
+          srcDir.resolve(fileName.toString.stripSuffix(".aqua") + s".$ext")
+        }
+      }
   }
 
   def prepareFiles[F[_]: Files: Concurrent](
@@ -80,7 +81,19 @@ object AquaCompiler extends LogSupport {
                         (errs ++ showProcErrors(proc.errors), preps)
 
                       case (_, model: ScriptModel) =>
-                        (errs, preps :+ Prepared(modId, srcPath, targetPath, model))
+                        val src = Validated.catchNonFatal {
+                          targetPath.toAbsolutePath
+                            .normalize()
+                            .resolve(
+                              srcPath.toAbsolutePath
+                                .normalize()
+                                .relativize(modId.file.toAbsolutePath.normalize())
+                            )
+                        }
+                        src match {
+                          case Validated.Invalid(t) => (errs :+ t.getMessage, preps)
+                          case Validated.Valid(s) => (errs, preps :+ Prepared(s, srcPath, model))
+                        }
 
                       case (_, model) =>
                         (
@@ -131,23 +144,35 @@ object AquaCompiler extends LogSupport {
         case Validated.Valid(preps) =>
           (compileTo match {
             case TypescriptTarget =>
-              preps
-                .map(p =>
-                  writeFile(p.targetPath("ts"), TypescriptFile(p.model).generateTS(bodyConfig))
-                )
+              preps.map { p =>
+                val tpV = p.targetPath("ts")
+                tpV match {
+                  case Invalid(t) =>
+                    EitherT.pure(t.getMessage)
+                  case Valid(tp) =>
+                    writeFile(tp, TypescriptFile(p.model).generateTS(bodyConfig))
+                }
+
+              }
 
             // TODO add function name to AirTarget class
             case AirTarget =>
               preps
                 .flatMap(p =>
-                  p.model.resolveFunctions.map { fc =>
-                    fc.funcName -> FuncAirGen(fc).generateAir(bodyConfig).show
-                  }.map { case (n, g) =>
-                    writeFile(
-                      p.targetPath(n + ".air"),
-                      g
-                    )
-                  }
+                  p.model.resolveFunctions
+                    .map(fc => FuncAirGen(fc).generateAir(bodyConfig).show)
+                    .map { generated =>
+                      val tpV = p.targetPath("ts")
+                      tpV match {
+                        case Invalid(t) =>
+                          EitherT.pure(t.getMessage)
+                        case Valid(tp) =>
+                          writeFile(
+                            tp,
+                            generated
+                          )
+                      }
+                    }
                 )
 
           }).foldLeft(
