@@ -32,7 +32,10 @@ sealed trait SeqGroupTag extends GroupTag
 
 case object SeqTag extends SeqGroupTag
 case object ParTag extends GroupTag
-case object XorTag extends GroupTag
+
+case object XorTag extends GroupTag {
+  case object LeftBiased extends GroupTag
+}
 case class XorParTag(xor: FuncOp, par: FuncOp) extends OpTag
 case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag
 case class NextTag(item: String) extends OpTag

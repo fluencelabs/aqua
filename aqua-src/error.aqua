@@ -19,5 +19,9 @@ func betterMessage(relay: string):
         par isOnline <- Peer.is_connected(relay)
     par on "quray":
         Peer.is_connected("qurara")
+
     if isOnline:
+      try:
         Test.doSomething()
+    else:
+      Peer.is_connected("else")

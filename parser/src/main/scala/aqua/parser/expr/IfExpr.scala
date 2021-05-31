@@ -16,6 +16,7 @@ object IfExpr extends Expr.AndIndented {
     Expr.defer(OnExpr) ::
       CallArrowExpr ::
       AbilityIdExpr ::
+      Expr.defer(TryExpr) ::
       Expr.defer(ForExpr) ::
       Expr.defer(IfExpr) ::
       Expr.defer(ElseOtherwiseExpr) ::
