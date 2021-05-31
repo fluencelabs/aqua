@@ -34,9 +34,8 @@ case class Unresolvable(msg: String) extends AquaFileError {
 }
 
 // TODO there should be no AquaErrors, as they does not fit
-case class AquaScriptErrors(name: String, script: String, errors: NonEmptyChain[AquaError])
-    extends AquaFileError {
+case class AquaScriptErrors(errors: NonEmptyChain[AquaError]) extends AquaFileError {
 
   override def showForConsole: String =
-    errors.map(_.showForConsole(script)).toChain.toList.mkString("\n")
+    errors.map(_.showForConsole).toChain.toList.mkString("\n")
 }

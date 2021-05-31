@@ -1,10 +1,11 @@
 package aqua.parser.lift
 
-import cats.{Comonad, Eval}
 import cats.parse.{LocationMap, Parser => P}
+import cats.{Comonad, Eval}
 
 import scala.language.implicitConversions
 
+// TODO: rewrite FileSpan and Span under one trait
 case class FileSpan(name: String, source: String, locationMap: Eval[LocationMap], span: Span) {
 
   def focus(ctx: Int): Option[FileSpan.Focus] =
@@ -16,11 +17,12 @@ object FileSpan {
   case class Focus(name: String, locationMap: Eval[LocationMap], ctx: Int, spanFocus: Span.Focus) {
 
     def toConsoleStr(msg: String, onLeft: String, onRight: String = Console.RESET): String =
-      s"$name:${spanFocus.line._1 + 1}:${spanFocus.column + 1}\n" + spanFocus.toConsoleStr(
-        msg,
-        onLeft,
-        onRight
-      )
+      s"$name:${spanFocus.line._1 + 1}:${spanFocus.column + 1}\n" +
+        spanFocus.toConsoleStr(
+          msg,
+          onLeft,
+          onRight
+        )
   }
 
   type F[T] = (FileSpan, T)

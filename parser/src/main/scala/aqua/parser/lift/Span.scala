@@ -12,18 +12,23 @@ case class Span(startIndex: Int, endIndex: Int) {
     map.toLineCol(startIndex).flatMap { case (line, column) =>
       map
         .getLine(line)
-        .map(l =>
+        .map { l =>
+          val pre =
+            (Math.max(0, line - ctx) until line).map(i => map.getLine(i).map(i -> _)).toList.flatten
+          val linePos = {
+            val (l1, l2) = l.splitAt(column)
+            val (lc, l3) = l2.splitAt(endIndex - startIndex)
+            (line, l1, lc, l3)
+          }
+          val post =
+            ((line + 1) to (line + ctx)).map(i => map.getLine(i).map(i -> _)).toList.flatten
           Span.Focus(
-            (Math
-              .max(0, line - ctx) until line).map(i => map.getLine(i).map(i -> _)).toList.flatten, {
-              val (l1, l2) = l.splitAt(column)
-              val (lc, l3) = l2.splitAt(endIndex - startIndex)
-              (line, l1, lc, l3)
-            },
-            ((line + 1) to (line + ctx)).map(i => map.getLine(i).map(i -> _)).toList.flatten,
+            pre,
+            linePos,
+            post,
             column
           )
-        )
+        }
     }
   }
 }
@@ -48,7 +53,11 @@ object Span {
       onLeft + s + (" " * (lastNSize - s.length)) + onRight + " "
     }
 
-    def toConsoleStr(msg: String, onLeft: String, onRight: String = Console.RESET): String = {
+    def toConsoleStr(
+      msg: String,
+      onLeft: String,
+      onRight: String = Console.RESET
+    ): String = {
       val line3Length = line._3.length
       val line3Mult = if (line3Length == 0) 1 else line3Length
       pre.map(formatLine(_, onLeft, onRight)).mkString("\n") +

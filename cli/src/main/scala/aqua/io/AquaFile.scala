@@ -7,10 +7,10 @@ import aqua.parser.head.ImportExpr
 import aqua.parser.lift.FileSpan
 import cats.data.{EitherT, NonEmptyChain}
 import cats.effect.Concurrent
+import cats.syntax.apply._
+import cats.syntax.functor._
 import fs2.io.file.Files
 import fs2.text
-import cats.syntax.functor._
-import cats.syntax.apply._
 
 import java.nio.file.{Path, Paths}
 
@@ -78,7 +78,7 @@ object AquaFile {
           .map(source -> _)
           .toEither
           .left
-          .map(AquaScriptErrors(file.toString, source, _))
+          .map(AquaScriptErrors(_))
       )
     )
 

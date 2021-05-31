@@ -10,6 +10,7 @@ import aqua.parser.lexer.Token
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{CompilerState, Semantics}
 import cats.Applicative
+import cats.data.Validated.{Invalid, Valid}
 import cats.data._
 import cats.effect.kernel.Concurrent
 import cats.syntax.flatMap._
@@ -18,19 +19,30 @@ import cats.syntax.monoid._
 import cats.syntax.show._
 import fs2.io.file.Files
 import fs2.text
+import wvlet.log.LogSupport
 
 import java.nio.file.Path
 
-object AquaCompiler {
+object AquaCompiler extends LogSupport {
   sealed trait CompileTarget
   case object TypescriptTarget extends CompileTarget
   case object AirTarget extends CompileTarget
 
-  case class Prepared(target: String => Path, model: ScriptModel) {
+  case class Prepared(srcFile: Path, srcDir: Path, model: ScriptModel) {
 
     def hasOutput(target: CompileTarget): Boolean = target match {
       case _ => model.funcs.nonEmpty
     }
+
+    def targetPath(ext: String): Validated[Throwable, Path] =
+      Validated.catchNonFatal {
+        val fileName = srcFile.getFileName
+        if (fileName == null) {
+          throw new Exception(s"Unexpected: 'fileName' is null in path $srcFile")
+        } else {
+          srcDir.resolve(fileName.toString.stripSuffix(".aqua") + s".$ext")
+        }
+      }
   }
 
   def prepareFiles[F[_]: Files: Concurrent](
@@ -69,7 +81,19 @@ object AquaCompiler {
                         (errs ++ showProcErrors(proc.errors), preps)
 
                       case (_, model: ScriptModel) =>
-                        (errs, preps :+ Prepared(modId.targetPath(srcPath, targetPath, _), model))
+                        val src = Validated.catchNonFatal {
+                          targetPath.toAbsolutePath
+                            .normalize()
+                            .resolve(
+                              srcPath.toAbsolutePath
+                                .normalize()
+                                .relativize(modId.file.toAbsolutePath.normalize())
+                            )
+                        }
+                        src match {
+                          case Validated.Invalid(t) => (errs :+ t.getMessage, preps)
+                          case Validated.Valid(s) => (errs, preps :+ Prepared(s, srcPath, model))
+                        }
 
                       case (_, model) =>
                         (
@@ -95,7 +119,7 @@ object AquaCompiler {
   ): Chain[String] =
     errors.map(err =>
       err._1.unit._1
-        .focus(1)
+        .focus(2)
         .map(_.toConsoleStr(err._2, Console.CYAN))
         .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
     )
@@ -108,28 +132,47 @@ object AquaCompiler {
     bodyConfig: BodyConfig
   ): F[ValidatedNec[String, Chain[String]]] =
     prepareFiles(srcPath, imports, targetPath)
-      .map(_.map(_.filter(_.hasOutput(compileTo))))
+      .map(_.map(_.filter { p =>
+        val hasOutput = p.hasOutput(compileTo)
+        if (!hasOutput) info(s"Source ${p.srcFile}: compilation OK (nothing to emit)")
+        else info(s"Source ${p.srcFile}: compilation OK (${p.model.funcs.length} functions)")
+        hasOutput
+      }))
       .flatMap[ValidatedNec[String, Chain[String]]] {
         case Validated.Invalid(e) =>
           Applicative[F].pure(Validated.invalid(e))
         case Validated.Valid(preps) =>
           (compileTo match {
             case TypescriptTarget =>
-              preps
-                .map(p => writeFile(p.target("ts"), TypescriptFile(p.model).generateTS(bodyConfig)))
+              preps.map { p =>
+                val tpV = p.targetPath("ts")
+                tpV match {
+                  case Invalid(t) =>
+                    EitherT.pure(t.getMessage)
+                  case Valid(tp) =>
+                    writeFile(tp, TypescriptFile(p.model).generateTS(bodyConfig))
+                }
+
+              }
 
             // TODO add function name to AirTarget class
             case AirTarget =>
               preps
                 .flatMap(p =>
-                  p.model.resolveFunctions.map { fc =>
-                    fc.funcName -> FuncAirGen(fc).generateAir(bodyConfig).show
-                  }.map { case (n, g) =>
-                    writeFile(
-                      p.target(n + ".air"),
-                      g
-                    )
-                  }
+                  p.model.resolveFunctions
+                    .map(fc => FuncAirGen(fc).generateAir(bodyConfig).show)
+                    .map { generated =>
+                      val tpV = p.targetPath("ts")
+                      tpV match {
+                        case Invalid(t) =>
+                          EitherT.pure(t.getMessage)
+                        case Valid(tp) =>
+                          writeFile(
+                            tp,
+                            generated
+                          )
+                      }
+                    }
                 )
 
           }).foldLeft(
@@ -140,7 +183,7 @@ object AquaCompiler {
               w <- writeET.value
             } yield (a, w) match {
               case (Left(errs), Left(err)) => Left(errs :+ err)
-              case (Right(res), Right(r)) => Right(res :+ r)
+              case (Right(res), Right(_)) => Right(res)
               case (Left(errs), _) => Left(errs)
               case (_, Left(err)) => Left(NonEmptyChain.of(err))
             })
@@ -149,9 +192,9 @@ object AquaCompiler {
 
       }
 
-  def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, String] =
+  def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, Unit] =
     EitherT.right[String](Files[F].deleteIfExists(file)) >>
-      EitherT[F, String, String](
+      EitherT[F, String, Unit](
         fs2.Stream
           .emit(
             content
@@ -165,7 +208,7 @@ object AquaCompiler {
           }
           .compile
           .drain
-          .map(_ => Right(s"Compiled $file"))
+          .map(_ => Right(()))
       )
 
 }
