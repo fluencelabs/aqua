@@ -192,7 +192,8 @@ object AquaCompiler extends LogSupport {
 
       }
 
-  def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, Unit] =
+  def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, Unit] = {
+    println("file: " + file)
     EitherT.right[String](Files[F].deleteIfExists(file)) >>
       EitherT[F, String, Unit](
         fs2.Stream
@@ -210,5 +211,6 @@ object AquaCompiler extends LogSupport {
           .drain
           .map(_ => Right(()))
       )
+  }
 
 }
