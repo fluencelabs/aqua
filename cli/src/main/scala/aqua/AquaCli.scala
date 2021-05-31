@@ -3,7 +3,7 @@ package aqua
 import aqua.model.transform.BodyConfig
 import cats.data.Validated
 import cats.effect._
-import cats.effect.std.{Console => CConsole}
+import cats.effect.std.{Console => ConsoleEff}
 import cats.syntax.apply._
 import cats.syntax.functor._
 import com.monovore.decline.Opts
@@ -26,7 +26,7 @@ object CustomLogFormatter extends LogFormatter {
 object AquaCli extends IOApp with LogSupport {
   import AppOps._
 
-  def main[F[_]: Concurrent: Files: CConsole: Logger]: Opts[F[ExitCode]] = {
+  def main[F[_]: Concurrent: Files: ConsoleEff: Logger]: Opts[F[ExitCode]] = {
     versionOpt
       .as(
         versionAndExit
@@ -63,7 +63,8 @@ object AquaCli extends IOApp with LogSupport {
             case Validated.Invalid(errs) =>
               errs.map(println)
               ExitCode.Error
-            case Validated.Valid(()) =>
+            case Validated.Valid(results) =>
+              results.map(println)
               ExitCode.Success
           }
     }

@@ -1,23 +1,20 @@
 package aqua
 
-import aqua.parser.lift.Span
-import cats.Eval
+import aqua.parser.lift.FileSpan
 import cats.data.NonEmptyList
-import cats.parse.LocationMap
 import cats.parse.Parser.Expectation
 
 sealed trait AquaError {
-  def showForConsole(script: String): String
+  def showForConsole: String
 }
 
-case class CustomSyntaxError(name: String, span: Span, message: String) extends AquaError {
+case class CustomSyntaxError(span: FileSpan, message: String) extends AquaError {
 
-  override def showForConsole(script: String): String =
+  override def showForConsole: String =
     span
-      .focus(Eval.later(LocationMap(script)), 3)
+      .focus(3)
       .map(
         _.toConsoleStr(
-          name,
           message,
           Console.RED
         )
@@ -28,15 +25,13 @@ case class CustomSyntaxError(name: String, span: Span, message: String) extends 
       ) + Console.RESET + "\n"
 }
 
-case class SyntaxError(name: String, offset: Int, expectations: NonEmptyList[Expectation])
-    extends AquaError {
+case class SyntaxError(span: FileSpan, expectations: NonEmptyList[Expectation]) extends AquaError {
 
-  override def showForConsole(script: String): String =
-    Span(offset, offset + 1)
-      .focus(Eval.later(LocationMap(script)), 3)
+  override def showForConsole: String =
+    span
+      .focus(3)
       .map(spanFocus =>
         spanFocus.toConsoleStr(
-          name,
           s"Syntax error, expected: ${expectations.toList.mkString(", ")}",
           Console.RED
         )

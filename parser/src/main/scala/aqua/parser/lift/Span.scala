@@ -54,15 +54,13 @@ object Span {
     }
 
     def toConsoleStr(
-      name: String,
       msg: String,
       onLeft: String,
       onRight: String = Console.RESET
     ): String = {
       val line3Length = line._3.length
       val line3Mult = if (line3Length == 0) 1 else line3Length
-      s"$name:${line._1 + 1}:${column + 1}\n" +
-        pre.map(formatLine(_, onLeft, onRight)).mkString("\n") +
+      pre.map(formatLine(_, onLeft, onRight)).mkString("\n") +
         "\n" +
         formatLN(line._1, onLeft, onRight) +
         line._2 +

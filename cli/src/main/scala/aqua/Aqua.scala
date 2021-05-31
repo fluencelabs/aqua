@@ -1,8 +1,10 @@
 package aqua
 
-import aqua.parser.lift.{FileSpan, LiftParser}
+import aqua.parser.lift.{FileSpan, LiftParser, Span}
 import aqua.parser.{Ast, BlockIndentError, FuncReturnError, LexerError}
+import cats.Eval
 import cats.data.ValidatedNec
+import cats.parse.LocationMap
 
 object Aqua {
 
@@ -11,9 +13,17 @@ object Aqua {
     Ast
       .fromString[FileSpan.F](input)
       .leftMap(_.map {
-        case BlockIndentError(indent, message) => CustomSyntaxError(name, indent._1.span, message)
-        case FuncReturnError(point, message) => CustomSyntaxError(name, point._1.span, message)
-        case LexerError(pe) => SyntaxError(name, pe.failedAtOffset, pe.expected)
+        case BlockIndentError(indent, message) => CustomSyntaxError(indent._1, message)
+        case FuncReturnError(point, message) => CustomSyntaxError(point._1, message)
+        case LexerError(pe) =>
+          val fileSpan =
+            FileSpan(
+              name,
+              input,
+              Eval.later(LocationMap(input)),
+              Span(pe.failedAtOffset, pe.failedAtOffset + 1)
+            )
+          SyntaxError(fileSpan, pe.expected)
       })
   }
 

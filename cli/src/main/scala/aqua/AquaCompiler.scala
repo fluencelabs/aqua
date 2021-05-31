@@ -117,7 +117,7 @@ object AquaCompiler extends LogSupport {
     targetPath: Path,
     compileTo: CompileTarget,
     bodyConfig: BodyConfig
-  ): F[ValidatedNec[String, Unit]] =
+  ): F[ValidatedNec[String, Chain[String]]] =
     prepareFiles(srcPath, imports, targetPath)
       .map(_.map(_.filter { p =>
         val hasOutput = p.hasOutput(compileTo)
@@ -125,7 +125,7 @@ object AquaCompiler extends LogSupport {
         else info(s"Source ${p.srcFile}: compilation OK (${p.model.funcs.length} functions)")
         hasOutput
       }))
-      .flatMap[ValidatedNec[String, Unit]] {
+      .flatMap[ValidatedNec[String, Chain[String]]] {
         case Validated.Invalid(e) =>
           Applicative[F].pure(Validated.invalid(e))
         case Validated.Valid(preps) =>
@@ -151,14 +151,14 @@ object AquaCompiler extends LogSupport {
                 )
 
           }).foldLeft(
-            EitherT.rightT[F, NonEmptyChain[String]](())
+            EitherT.rightT[F, NonEmptyChain[String]](Chain.empty[String])
           ) { case (accET, writeET) =>
             EitherT(for {
               a <- accET.value
               w <- writeET.value
             } yield (a, w) match {
               case (Left(errs), Left(err)) => Left(errs :+ err)
-              case (Right(_), Right(_)) => Right(())
+              case (Right(res), Right(_)) => Right(res)
               case (Left(errs), _) => Left(errs)
               case (_, Left(err)) => Left(NonEmptyChain.of(err))
             })
