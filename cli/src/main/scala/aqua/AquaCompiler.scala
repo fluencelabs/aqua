@@ -38,7 +38,7 @@ object AquaCompiler extends LogSupport {
       Validated.catchNonFatal {
         val fileName = srcFile.getFileName
         if (fileName == null) {
-          throw new Exception(s"Unexpected: there is no file name in $srcFile")
+          throw new Exception(s"Unexpected: 'fileName' is null in path $srcFile")
         } else {
           srcDir.resolve(fileName.toString.stripSuffix(".aqua") + s".$ext")
         }
