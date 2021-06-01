@@ -1,5 +1,6 @@
 package aqua.semantics.rules.types
 
+import aqua.model.{IntoArrayModel, IntoFieldModel, IntoIndexModel, LambdaModel}
 import aqua.parser.lexer.{
   ArrayTypeToken,
   ArrowTypeToken,
@@ -7,6 +8,7 @@ import aqua.parser.lexer.{
   CustomTypeToken,
   IntoArray,
   IntoField,
+  IntoIndex,
   LambdaOp,
   Name,
   StreamTypeToken,
@@ -69,22 +71,36 @@ case class TypesState[F[_]](
         Invalid(NonEmptyChain.one(ad.resType.getOrElse(ad) -> "Cannot resolve the result type"))
     }
 
-  def resolveOps(rootT: Type, ops: List[LambdaOp[F]]): Either[(Token[F], String), Type] =
-    ops.headOption.fold[Either[(Token[F], String), Type]](Right(rootT)) {
-      case i @ IntoArray(f) =>
+  def resolveOps(
+    rootT: Type,
+    ops: List[LambdaOp[F]]
+  ): Either[(Token[F], String), List[LambdaModel]] =
+    ops match {
+      case Nil => Right(Nil)
+      case (i @ IntoArray(_)) :: tail =>
         rootT match {
-          case ArrayType(intern) => resolveOps(intern, ops.tail).map[Type](ArrayType)
-          case _ => Left(i -> s"Expected $rootT to be an array")
+          case ArrayType(intern) =>
+            resolveOps(intern, tail).map(IntoArrayModel(ArrayType(intern)) :: _)
+          case StreamType(intern) =>
+            resolveOps(intern, tail).map(IntoArrayModel(ArrayType(intern)) :: _)
+          case _ => Left(i -> s"Expected $rootT to be an array or a stream")
         }
-      case i @ IntoField(name) =>
+      case (i @ IntoField(_)) :: tail =>
         rootT match {
           case pt @ ProductType(_, fields) =>
             fields(i.value)
               .toRight(i -> s"Field `${i.value}` not found in type `${pt.name}``")
-              .flatMap(resolveOps(_, ops.tail))
+              .flatMap(t => resolveOps(t, tail).map(IntoFieldModel(i.value, t) :: _))
           case _ => Left(i -> s"Expected product to resolve a field, got $rootT")
         }
-
+      case (i @ IntoIndex(_)) :: tail =>
+        rootT match {
+          case ArrayType(intern) =>
+            resolveOps(intern, tail).map(IntoIndexModel(i.value, intern) :: _)
+          case StreamType(intern) =>
+            resolveOps(intern, tail).map(IntoIndexModel(i.value, intern) :: _)
+          case _ => Left(i -> s"Expected $rootT to be an array")
+        }
     }
 }
 

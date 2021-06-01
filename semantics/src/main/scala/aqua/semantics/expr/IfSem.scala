@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.Model
+import aqua.model.{Model, ValueModel}
 import aqua.model.func.body.{FuncOp, MatchMismatchTag, XorTag}
 import aqua.parser.expr.IfExpr
 import aqua.semantics.rules.ValuesAlgebra
@@ -17,19 +17,19 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
     T: TypesAlgebra[F, Alg]
   ): Prog[Alg, Model] =
     Prog.around(
-      V.resolveType(expr.left).flatMap {
+      V.valueToModel(expr.left).flatMap {
         case Some(lt) =>
-          V.resolveType(expr.right).flatMap {
+          V.valueToModel(expr.right).flatMap {
             case Some(rt) =>
-              T.ensureTypeMatches(expr.right, lt, rt)
+              T.ensureTypeMatches(expr.right, lt.lastType, rt.lastType)
                 .map(m => Some(lt -> rt).filter(_ => m))
             case None =>
-              Free.pure[Alg, Option[(Type, Type)]](None)
+              Free.pure[Alg, Option[(ValueModel, ValueModel)]](None)
           }
         case None =>
-          V.resolveType(expr.right).as[Option[(Type, Type)]](None)
+          V.resolveType(expr.right).as[Option[(ValueModel, ValueModel)]](None)
       },
-      (r: Option[(Type, Type)], ops: Model) =>
+      (r: Option[(ValueModel, ValueModel)], ops: Model) =>
         r.fold(Free.pure[Alg, Model](Model.error("If expression errored in matching types"))) {
           case (lt, rt) =>
             ops match {
@@ -39,8 +39,8 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
                     XorTag.LeftBiased,
                     FuncOp.wrap(
                       MatchMismatchTag(
-                        ValuesAlgebra.valueToModel(expr.left, lt),
-                        ValuesAlgebra.valueToModel(expr.right, rt),
+                        lt,
+                        rt,
                         expr.eqOp.value
                       ),
                       op

@@ -1,8 +1,8 @@
 package aqua.semantics.expr
 
 import aqua.model.func.body.FuncOp
-import aqua.model.Model
-import aqua.model.func.{ArgDef, ArgsDef, Call, FuncModel}
+import aqua.model.{Model, ValueModel}
+import aqua.model.func.{ArgDef, ArgsDef, FuncModel}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.Arg
 import aqua.semantics.Prog
@@ -16,7 +16,6 @@ import cats.data.Chain
 import cats.free.Free
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.syntax.apply._
 
 class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
   import expr._
@@ -62,15 +61,15 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
     // Check return value type
     ((funcArrow.res, retValue) match {
       case (Some(t), Some(v)) =>
-        V.resolveType(v).flatTap {
-          case Some(vt) => T.ensureTypeMatches(v, t, vt).void
+        V.valueToModel(v).flatTap {
+          case Some(vt) => T.ensureTypeMatches(v, t, vt.lastType).void
           case None => Free.pure[Alg, Unit](())
         }
       case _ =>
-        Free.pure[Alg, Option[Type]](None)
+        Free.pure[Alg, Option[ValueModel]](None)
 
       // Erase arguments and internal variables
-    }).flatMap(retType =>
+    }).flatMap(retModel =>
       A.endScope() >> N.endScope() >> (bodyGen match {
         case bg: FuncOp if ret.isDefined == retValue.isDefined =>
           val argNames = args.map(_.name.value)
@@ -85,9 +84,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
                   case (n, at: ArrowType) => ArgDef.Arrow(n, at)
                 }
             ),
-            ret = (retValue, retType, funcArrow.res).mapN { case (retV, retT, resT) =>
-              ValuesAlgebra.valueToModel(retV, retT) -> resT
-            },
+            ret = retModel zip funcArrow.res,
             body = bg
           )
 

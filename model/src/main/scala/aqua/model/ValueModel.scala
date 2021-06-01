@@ -1,10 +1,14 @@
 package aqua.model
 
-import aqua.types.Type
+import aqua.types.{ScalarType, Type}
 import cats.Eq
 import cats.data.Chain
 
 sealed trait ValueModel {
+  def `type`: Type
+
+  def lastType: Type
+
   def resolveWith(map: Map[String, ValueModel]): ValueModel = this
 }
 
@@ -15,19 +19,28 @@ object ValueModel {
   }
 }
 
-case class LiteralModel(value: String) extends ValueModel
-
-object LiteralModel {
-  val initPeerId: LiteralModel = LiteralModel("%init_peer_id%")
+case class LiteralModel(value: String, `type`: Type) extends ValueModel {
+  override def lastType: Type = `type`
 }
 
-sealed trait LambdaModel
-case object IntoArrayModel extends LambdaModel
-case class IntoFieldModel(field: String) extends LambdaModel
+object LiteralModel {
+  def quote(str: String): LiteralModel = LiteralModel("\"" + str + "\"", ScalarType.string)
+
+  val initPeerId: LiteralModel = LiteralModel("%init_peer_id%", ScalarType.string)
+}
+
+sealed trait LambdaModel {
+  def `type`: Type
+}
+case class IntoArrayModel(`type`: Type) extends LambdaModel
+case class IntoFieldModel(field: String, `type`: Type) extends LambdaModel
+case class IntoIndexModel(idx: Int, `type`: Type) extends LambdaModel
 
 case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Chain.empty)
     extends ValueModel {
   def deriveFrom(vm: VarModel): VarModel = vm.copy(lambda = vm.lambda ++ lambda)
+
+  override val lastType: Type = lambda.lastOption.map(_.`type`).getOrElse(`type`)
 
   override def resolveWith(map: Map[String, ValueModel]): ValueModel = {
     map.get(name) match {

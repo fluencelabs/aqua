@@ -94,8 +94,8 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
 
       case rl: ResolveLambda[F] =>
         getState.map(_.resolveOps(rl.root, rl.ops)).flatMap {
-          case Left((tkn, hint)) => report(tkn, hint).as(None)
-          case Right(t) => State.pure(Some(t))
+          case Left((tkn, hint)) => report(tkn, hint).as(Nil)
+          case Right(ts) => State.pure(ts)
         }
 
       case etm: EnsureTypeMatches[F] =>

@@ -10,6 +10,7 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, ScalarType, StreamType, Type}
+import cats.Traverse
 import cats.free.Free
 import cats.syntax.apply._
 import cats.syntax.flatMap._
@@ -41,13 +42,7 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
           }
         )
       ) >>= { (v: Option[Type]) =>
-      args
-        .foldLeft(Free.pure[Alg, List[ValueModel]](Nil)) { case (acc, v) =>
-          (acc, V.resolveType(v)).mapN((a, b) =>
-            a ++ b.map(bt => ValuesAlgebra.valueToModel(v, bt))
-          )
-        }
-        .map(_ -> v)
+      Traverse[List].traverse(args)(V.valueToModel).map(_.flatten).map(_ -> v)
     }
 
   private def toModel[Alg[_]](implicit
@@ -63,18 +58,21 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
             Option(at -> sid) // Here we assume that Ability is a Service that must be resolved
           case _ => None
         }.flatMap(_.fold(Free.pure[Alg, Option[FuncOp]](None)) { case (arrowType, serviceId) =>
-          checkArgsRes(arrowType).map { case (argsResolved, t) =>
-            FuncOp.leaf(
-              CallServiceTag(
-                // TODO service id type should not be hardcoded
-                serviceId = ValuesAlgebra.valueToModel(serviceId, ScalarType.string),
-                funcName = funcName.value,
-                Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
+          (checkArgsRes(arrowType), V.valueToModel(serviceId)).mapN {
+            case ((argsResolved, t), Some(serviceIdM)) =>
+              Option(
+                FuncOp.leaf(
+                  CallServiceTag(
+                    serviceId = serviceIdM,
+                    funcName = funcName.value,
+                    Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
+                  )
+                )
               )
-            )
+
+            case _ => None
 
           }
-            .map(Option(_))
         })
       case None =>
         N.readArrow(funcName)

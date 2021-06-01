@@ -12,9 +12,9 @@ case class BodyConfig(
   wrapWithXor: Boolean = true
 ) {
 
-  val errorId: ValueModel = LiteralModel("\"" + errorFuncName + "\"")
-  val errorHandlingCallback: ValueModel = LiteralModel("\"" + errorHandlingService + "\"")
-  val callbackSrvId: ValueModel = LiteralModel("\"" + callbackService + "\"")
-  val dataSrvId: ValueModel = LiteralModel("\"" + getDataService + "\"")
+  val errorId: ValueModel = LiteralModel.quote(errorFuncName)
+  val errorHandlingCallback: ValueModel = LiteralModel.quote(errorHandlingService)
+  val callbackSrvId: ValueModel = LiteralModel.quote(callbackService)
+  val dataSrvId: ValueModel = LiteralModel.quote(getDataService)
 
 }

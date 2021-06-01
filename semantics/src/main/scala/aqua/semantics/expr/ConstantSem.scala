@@ -18,9 +18,9 @@ class ConstantSem[F[_]](val expr: ConstantExpr[F]) extends AnyVal {
   ): Prog[Alg, Model] = {
     for {
       defined <- N.constantDefined(expr.name)
-      t <- V.resolveType(expr.value)
-      model <- (defined, t, expr.skipIfAlreadyDefined) match {
-        case (Some(definedType), Some(actualType), true) =>
+      v <- V.valueToModel(expr.value)
+      model <- (defined, v.map(v => v -> v.lastType), expr.skipIfAlreadyDefined) match {
+        case (Some(definedType), Some((vm, actualType)), true) =>
           T.ensureTypeMatches(expr.value, definedType, actualType).map {
             case true =>
               Model.empty(s"Constant with name ${expr.name} was already defined, skipping")
@@ -32,9 +32,9 @@ class ConstantSem[F[_]](val expr: ConstantExpr[F]) extends AnyVal {
         case (_, None, _) =>
           Free.pure[Alg, Model](Model.error(s"There is no such variable ${expr.value}"))
         case (_, Some(t), _) =>
-          N.defineConstant(expr.name, t) as (ConstantModel(
+          N.defineConstant(expr.name, t._2) as (ConstantModel(
             expr.name.value,
-            ValuesAlgebra.valueToModel(expr.value, t)
+            t._1
           ): Model)
       }
     } yield model

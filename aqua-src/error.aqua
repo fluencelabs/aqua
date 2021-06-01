@@ -13,15 +13,19 @@ service Test("test"):
     getUserList: -> []User
     doSomething: -> bool
 
-func betterMessage(relay: string):
+func betterMessage(relay: string, arr: []string) -> string:
     on relay:
         Peer.is_connected("something")
         par isOnline <- Peer.is_connected(relay)
     par on "quray":
         Peer.is_connected("qurara")
 
+    stream: *string
+
     if isOnline:
       try:
         Test.doSomething()
     else:
-      Peer.is_connected("else")
+      Peer.is_connected(stream!)
+
+    <- stream!2

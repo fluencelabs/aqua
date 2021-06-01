@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.Model
+import aqua.model.{Model, ValueModel}
 import aqua.model.func.body._
 import aqua.parser.expr.ForExpr
 import aqua.semantics.Prog
@@ -21,20 +21,24 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
     T: TypesAlgebra[F, Alg]
   ): Prog[Alg, Model] =
     Prog.around(
-      N.beginScope(expr.item) >> V.resolveType(expr.iterable).flatMap[Option[Type]] {
-        case Some(at @ ArrayType(t)) =>
-          N.define(expr.item, t).as(Option(at))
-        case Some(st @ StreamType(t)) =>
-          N.define(expr.item, t).as(Option(st))
-        case Some(dt: Type) =>
-          T.ensureTypeMatches(expr.iterable, ArrayType(dt), dt).as(Option.empty[Type])
-        case _ => Free.pure[Alg, Option[Type]](None)
+      N.beginScope(expr.item) >> V.valueToModel(expr.iterable).flatMap[Option[ValueModel]] {
+        case Some(vm) =>
+          vm.lastType match {
+            case at @ ArrayType(t) =>
+              N.define(expr.item, t).as(Option(vm))
+            case st @ StreamType(t) =>
+              N.define(expr.item, t).as(Option(vm))
+            case dt =>
+              T.ensureTypeMatches(expr.iterable, ArrayType(dt), dt).as(Option.empty[ValueModel])
+          }
+
+        case _ => Free.pure[Alg, Option[ValueModel]](None)
       },
-      (stOpt: Option[Type], ops: Model) =>
+      (stOpt: Option[ValueModel], ops: Model) =>
         N.endScope() as ((stOpt, ops) match {
-          case (Some(t), op: FuncOp) =>
+          case (Some(vm), op: FuncOp) =>
             FuncOp.wrap(
-              ForTag(expr.item.value, ValuesAlgebra.valueToModel(expr.iterable, t)),
+              ForTag(expr.item.value, vm),
               FuncOp.node(
                 expr.mode.map(_._2).fold[OpTag](SeqTag) {
                   case ForExpr.ParMode => ParTag
