@@ -28,7 +28,7 @@ object AquaCompiler extends LogSupport {
   case object TypescriptTarget extends CompileTarget
   case object AirTarget extends CompileTarget
 
-  case class Prepared(srcFile: Path, srcDir: Path, model: ScriptModel) {
+  case class Prepared(modFile: Path, srcPath: Path, targetPath: Path, model: ScriptModel) {
 
     def hasOutput(target: CompileTarget): Boolean = target match {
       case _ => model.funcs.nonEmpty
@@ -36,11 +36,21 @@ object AquaCompiler extends LogSupport {
 
     def targetPath(ext: String): Validated[Throwable, Path] =
       Validated.catchNonFatal {
-        val fileName = srcFile.getFileName
+        val targetAqua =
+          targetPath.toAbsolutePath
+            .normalize()
+            .resolve(
+              srcPath.toAbsolutePath
+                .normalize()
+                .relativize(modFile.toAbsolutePath.normalize())
+            )
+
+        val fileName = targetAqua.getFileName
         if (fileName == null) {
-          throw new Exception(s"Unexpected: 'fileName' is null in path $srcFile")
+          throw new Exception(s"Unexpected: 'fileName' is null in path $targetAqua")
         } else {
-          srcDir.resolve(fileName.toString.stripSuffix(".aqua") + s".$ext")
+          // rename `.aqua` file name to `.ext`
+          targetAqua.getParent.resolve(fileName.toString.stripSuffix(".aqua") + s".$ext")
         }
       }
   }
@@ -81,19 +91,7 @@ object AquaCompiler extends LogSupport {
                         (errs ++ showProcErrors(proc.errors), preps)
 
                       case (_, model: ScriptModel) =>
-                        val src = Validated.catchNonFatal {
-                          targetPath.toAbsolutePath
-                            .normalize()
-                            .resolve(
-                              srcPath.toAbsolutePath
-                                .normalize()
-                                .relativize(modId.file.toAbsolutePath.normalize())
-                            )
-                        }
-                        src match {
-                          case Validated.Invalid(t) => (errs :+ t.getMessage, preps)
-                          case Validated.Valid(s) => (errs, preps :+ Prepared(s, targetPath, model))
-                        }
+                        (errs, preps :+ Prepared(modId.file, srcPath, targetPath, model))
 
                       case (_, model) =>
                         (
@@ -133,9 +131,9 @@ object AquaCompiler extends LogSupport {
   ): F[ValidatedNec[String, Chain[String]]] =
     prepareFiles(srcPath, imports, targetPath)
       .map(_.map(_.filter { p =>
+        println(srcPath)
         val hasOutput = p.hasOutput(compileTo)
-        if (!hasOutput) info(s"Source ${p.srcFile}: compilation OK (nothing to emit)")
-        else info(s"Source ${p.srcFile}: compilation OK (${p.model.funcs.length} functions)")
+        if (!hasOutput) info(s"Source ${p.srcPath}: compilation OK (nothing to emit)")
         hasOutput
       }))
       .flatMap[ValidatedNec[String, Chain[String]]] {
@@ -145,12 +143,19 @@ object AquaCompiler extends LogSupport {
           (compileTo match {
             case TypescriptTarget =>
               preps.map { p =>
-                val tpV = p.targetPath("ts")
-                tpV match {
+                p.targetPath("ts") match {
                   case Invalid(t) =>
                     EitherT.pure(t.getMessage)
                   case Valid(tp) =>
-                    writeFile(tp, TypescriptFile(p.model).generateTS(bodyConfig))
+                    writeFile(tp, TypescriptFile(p.model).generateTS(bodyConfig)).flatTap { _ =>
+                      EitherT.pure(
+                        Validated.catchNonFatal(
+                          info(
+                            s"Result ${tp.toAbsolutePath}: compilation OK (${p.model.funcs.length} functions)"
+                          )
+                        )
+                      )
+                    }
                 }
 
               }
@@ -170,7 +175,15 @@ object AquaCompiler extends LogSupport {
                           writeFile(
                             tp,
                             generated
-                          )
+                          ).flatTap { _ =>
+                            EitherT.pure(
+                              Validated.catchNonFatal(
+                                info(
+                                  s"Result ${tp.toAbsolutePath}: compilation OK (${p.model.funcs.length} functions)"
+                                )
+                              )
+                            )
+                          }
                       }
                     }
                 )
