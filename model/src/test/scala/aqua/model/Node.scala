@@ -102,7 +102,7 @@ object Node {
       bc.errorHandlingCallback,
       bc.errorFuncName,
       Call(
-        LiteralModel("%last_error%", ScalarType.string) :: LiteralModel(
+        LiteralModel("%last_error%", LiteralType.string) :: LiteralModel(
           i.toString,
           LiteralType.number
         ) :: Nil,
