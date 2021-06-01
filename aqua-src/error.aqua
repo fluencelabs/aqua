@@ -20,10 +20,12 @@ func betterMessage(relay: string, arr: []string) -> string:
     par on "quray":
         Peer.is_connected("qurara")
 
+    stream: *string
+
     if isOnline:
       try:
         Test.doSomething()
     else:
-      Peer.is_connected("else")
+      Peer.is_connected(stream!)
 
-    <- arr!2
+    <- stream!2

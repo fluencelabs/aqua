@@ -3,7 +3,7 @@ package aqua.model
 import aqua.model.func.Call
 import aqua.model.func.body._
 import aqua.model.transform.BodyConfig
-import aqua.types.ScalarType
+import aqua.types.{LiteralType, ScalarType}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -84,24 +84,30 @@ object Node {
   implicit def nodeToCof(tree: Node): Cof =
     Cofree(tree.tag, Eval.later(Chain.fromSeq(tree.ops.map(nodeToCof))))
 
-  val relay = LiteralModel("-relay-")
+  val relay = LiteralModel("-relay-", ScalarType.string)
   val relayV = VarModel("-relay-", ScalarType.string)
   val initPeer = LiteralModel.initPeerId
   val emptyCall = Call(Nil, None)
-  val otherPeer = LiteralModel("other-peer")
-  val otherRelay = LiteralModel("other-relay")
-  val otherPeer2 = LiteralModel("other-peer-2")
-  val otherRelay2 = LiteralModel("other-relay-2")
+  val otherPeer = LiteralModel("other-peer", ScalarType.string)
+  val otherRelay = LiteralModel("other-relay", ScalarType.string)
+  val otherPeer2 = LiteralModel("other-peer-2", ScalarType.string)
+  val otherRelay2 = LiteralModel("other-relay-2", ScalarType.string)
 
   def call(i: Int, on: ValueModel = null) = Node(
-    CallServiceTag(LiteralModel(s"srv$i"), s"fn$i", Call(Nil, None), Option(on))
+    CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(Nil, None), Option(on))
   )
 
   def errorCall(bc: BodyConfig, i: Int, on: ValueModel = null) = Node(
     CallServiceTag(
       bc.errorHandlingCallback,
       bc.errorFuncName,
-      Call(LiteralModel("%last_error%") :: LiteralModel(i.toString) :: Nil, None),
+      Call(
+        LiteralModel("%last_error%", ScalarType.string) :: LiteralModel(
+          i.toString,
+          LiteralType.number
+        ) :: Nil,
+        None
+      ),
       Option(on)
     )
   )

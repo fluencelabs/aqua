@@ -12,7 +12,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
   "transform.forClient" should "work well with function 1 (no calls before on)" in {
 
-    val ret = LiteralModel("\"return this\"")
+    val ret = LiteralModel.quote("return this")
 
     val func: FuncCallable =
       FuncCallable(
@@ -64,7 +64,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
   "transform.forClient" should "work well with function 2 (with a call before on)" in {
 
-    val ret = LiteralModel("\"return this\"")
+    val ret = LiteralModel.quote("return this")
 
     val func: FuncCallable = FuncCallable(
       "ret",
@@ -112,7 +112,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         FuncOp(
           Node(
             CallServiceTag(
-              LiteralModel("\"srv1\""),
+              LiteralModel.quote("srv1"),
               "foo",
               Call(Nil, Some(Call.Export("v", ScalarType.string))),
               None
@@ -146,7 +146,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         dataCall(bc, "-relay-", initPeer),
         Node(
           CallServiceTag(
-            LiteralModel("\"srv1\""),
+            LiteralModel.quote("srv1"),
             "foo",
             Call(Nil, Some(Call.Export("v", ScalarType.string))),
             Some(initPeer)

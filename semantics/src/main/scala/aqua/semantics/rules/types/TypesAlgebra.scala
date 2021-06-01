@@ -1,5 +1,6 @@
 package aqua.semantics.rules.types
 
+import aqua.model.LambdaModel
 import aqua.parser.lexer.{ArrowTypeToken, CustomTypeToken, LambdaOp, Name, Token, TypeToken}
 import aqua.types.{ArrowType, Type}
 import cats.InjectK
@@ -29,7 +30,7 @@ class TypesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]) {
   def defineAlias(name: CustomTypeToken[F], target: Type): Free[Alg, Boolean] =
     Free.liftInject[Alg](DefineAlias(name, target))
 
-  def resolveLambda(root: Type, ops: List[LambdaOp[F]]): Free[Alg, Option[Type]] =
+  def resolveLambda(root: Type, ops: List[LambdaOp[F]]): Free[Alg, List[LambdaModel]] =
     Free.liftInject[Alg](ResolveLambda(root, ops))
 
   def ensureTypeMatches(token: Token[F], expected: Type, given: Type): Free[Alg, Boolean] =

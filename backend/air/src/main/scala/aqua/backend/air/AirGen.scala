@@ -17,16 +17,16 @@ object AirGen {
 
   def lambdaToString(ls: List[LambdaModel]): String = ls match {
     case Nil => ""
-    case IntoArrayModel :: tail =>
+    case IntoArrayModel(_) :: tail =>
       s"[@${lambdaToString(tail)}]"
-    case IntoFieldModel(field) :: tail =>
+    case IntoFieldModel(field, _) :: tail =>
       s".$field${lambdaToString(tail)}"
-    case IntoIndexModel(idx) :: tail =>
+    case IntoIndexModel(idx, _) :: tail =>
       s".[$idx]${lambdaToString(tail)}"
   }
 
   def valueToData(vm: ValueModel): DataView = vm match {
-    case LiteralModel(value) => DataView.StringScalar(value)
+    case LiteralModel(value, _) => DataView.StringScalar(value)
     case VarModel(name, t, lambda) =>
       val n = t match {
         case _: StreamType => "$" + name

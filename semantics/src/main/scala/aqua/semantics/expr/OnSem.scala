@@ -6,9 +6,11 @@ import aqua.parser.expr.OnExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
-import aqua.types.ScalarType
+import cats.Traverse
 import cats.data.Chain
+import cats.free.Free
 import cats.syntax.flatMap._
+import cats.syntax.apply._
 import cats.syntax.functor._
 
 class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
@@ -25,16 +27,25 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
       }
         >> A.beginScope(expr.peerId),
       (_: Unit, ops: Model) =>
-        A.endScope() as (ops match {
+        A.endScope() >> (ops match {
           case op: FuncOp =>
-            FuncOp.wrap(
-              OnTag(
-                ValuesAlgebra.valueToModel(expr.peerId, ScalarType.string),
-                Chain.fromSeq(expr.via).map(ValuesAlgebra.valueToModel(_, ScalarType.string))
-              ),
-              op
-            )
-          case m => Model.error("On body is not an op, it's " + m)
+            (
+              V.valueToModel(expr.peerId),
+              Traverse[List].traverse(expr.via)(V.valueToModel).map(_.flatten)
+            ).mapN {
+              case (Some(om), via) =>
+                FuncOp.wrap(
+                  OnTag(
+                    om,
+                    Chain.fromSeq(via)
+                  ),
+                  op
+                )
+              case _ =>
+                Model.error("Impossible error")
+            }
+
+          case m => Free.pure[Alg, Model](Model.error("On body is not an op, it's " + m))
         })
     )
 }

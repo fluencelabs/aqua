@@ -8,7 +8,7 @@ import cats.free.Cofree
 object FuncOps {
 
   def noop(peerId: ValueModel): FuncOp =
-    FuncOp.leaf(CallServiceTag(LiteralModel("\"op\""), "identity", Call(Nil, None), Some(peerId)))
+    FuncOp.leaf(CallServiceTag(LiteralModel.quote("op"), "identity", Call(Nil, None), Some(peerId)))
 
   def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =
     FuncOp.leaf(
