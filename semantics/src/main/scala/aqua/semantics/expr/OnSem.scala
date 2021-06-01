@@ -9,9 +9,8 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import cats.Traverse
 import cats.data.Chain
 import cats.free.Free
-import cats.syntax.flatMap._
 import cats.syntax.apply._
-import cats.syntax.functor._
+import cats.syntax.flatMap._
 
 class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
 
@@ -42,7 +41,7 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
                   op
                 )
               case _ =>
-                Model.error("Impossible error")
+                Model.error("OnSem: Impossible error")
             }
 
           case m => Free.pure[Alg, Model](Model.error("On body is not an op, it's " + m))
