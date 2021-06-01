@@ -160,9 +160,9 @@ object AquaCompiler extends LogSupport {
               preps
                 .flatMap(p =>
                   p.model.resolveFunctions
-                    .map(fc => FuncAirGen(fc).generateAir(bodyConfig).show)
-                    .map { generated =>
-                      val tpV = p.targetPath("ts")
+                    .map(fc => (fc.funcName -> FuncAirGen(fc).generateAir(bodyConfig).show))
+                    .map { case (fnName, generated) =>
+                      val tpV = p.targetPath(fnName + ".air")
                       tpV match {
                         case Invalid(t) =>
                           EitherT.pure(t.getMessage)
