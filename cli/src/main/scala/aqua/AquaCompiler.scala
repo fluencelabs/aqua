@@ -66,7 +66,6 @@ object AquaCompiler extends LogSupport {
         imports,
         ast =>
           _.flatMap(m => {
-            //println(Console.YELLOW + "running for ast " + Console.RESET);
             for {
               y <- Semantics.astToState(ast)
             } yield m |+| y
@@ -131,7 +130,6 @@ object AquaCompiler extends LogSupport {
   ): F[ValidatedNec[String, Chain[String]]] =
     prepareFiles(srcPath, imports, targetPath)
       .map(_.map(_.filter { p =>
-        println(srcPath)
         val hasOutput = p.hasOutput(compileTo)
         if (!hasOutput) info(s"Source ${p.srcPath}: compilation OK (nothing to emit)")
         hasOutput
