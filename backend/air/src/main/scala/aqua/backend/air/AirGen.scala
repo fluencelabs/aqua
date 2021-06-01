@@ -21,6 +21,8 @@ object AirGen {
       s"[@${lambdaToString(tail)}]"
     case IntoFieldModel(field) :: tail =>
       s".$field${lambdaToString(tail)}"
+    case IntoIndexModel(idx) :: tail =>
+      s".[$idx]${lambdaToString(tail)}"
   }
 
   def valueToData(vm: ValueModel): DataView = vm match {

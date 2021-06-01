@@ -7,6 +7,7 @@ import aqua.parser.lexer.{
   CustomTypeToken,
   IntoArray,
   IntoField,
+  IntoIndex,
   LambdaOp,
   Name,
   StreamTypeToken,
@@ -71,18 +72,25 @@ case class TypesState[F[_]](
 
   def resolveOps(rootT: Type, ops: List[LambdaOp[F]]): Either[(Token[F], String), Type] =
     ops.headOption.fold[Either[(Token[F], String), Type]](Right(rootT)) {
-      case i @ IntoArray(f) =>
+      case i @ IntoArray(_) =>
         rootT match {
           case ArrayType(intern) => resolveOps(intern, ops.tail).map[Type](ArrayType)
+          case StreamType(intern) => resolveOps(intern, ops.tail).map[Type](ArrayType)
           case _ => Left(i -> s"Expected $rootT to be an array")
         }
-      case i @ IntoField(name) =>
+      case i @ IntoField(_) =>
         rootT match {
           case pt @ ProductType(_, fields) =>
             fields(i.value)
               .toRight(i -> s"Field `${i.value}` not found in type `${pt.name}``")
               .flatMap(resolveOps(_, ops.tail))
           case _ => Left(i -> s"Expected product to resolve a field, got $rootT")
+        }
+      case i @ IntoIndex(_) =>
+        rootT match {
+          case ArrayType(intern) => resolveOps(intern, ops.tail)
+          case StreamType(intern) => resolveOps(intern, ops.tail)
+          case _ => Left(i -> s"Expected $rootT to be an array")
         }
 
     }

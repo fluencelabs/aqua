@@ -13,7 +13,7 @@ service Test("test"):
     getUserList: -> []User
     doSomething: -> bool
 
-func betterMessage(relay: string):
+func betterMessage(relay: string, arr: []string) -> string:
     on relay:
         Peer.is_connected("something")
         par isOnline <- Peer.is_connected(relay)
@@ -25,3 +25,5 @@ func betterMessage(relay: string):
         Test.doSomething()
     else:
       Peer.is_connected("else")
+
+    <- arr!2

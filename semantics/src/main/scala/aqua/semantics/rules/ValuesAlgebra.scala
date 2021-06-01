@@ -80,6 +80,7 @@ object ValuesAlgebra {
       case Nil => Chain.empty
       case (_: IntoArray[F]) :: tail => opsToModel(tail).prepend(IntoArrayModel)
       case (f: IntoField[F]) :: tail => opsToModel(tail).prepend(IntoFieldModel(f.value))
+      case (i: IntoIndex[F]) :: tail => opsToModel(tail).prepend(IntoIndexModel(i.value))
     }
 
   def valueToModel[F[_]](v: Value[F], t: Type): ValueModel =

@@ -24,6 +24,7 @@ object LiteralModel {
 sealed trait LambdaModel
 case object IntoArrayModel extends LambdaModel
 case class IntoFieldModel(field: String) extends LambdaModel
+case class IntoIndexModel(idx: Int) extends LambdaModel
 
 case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Chain.empty)
     extends ValueModel {
