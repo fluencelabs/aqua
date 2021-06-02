@@ -83,11 +83,15 @@ object LiteralType {
   val string = LiteralType(Set(ScalarType.string), "string")
 }
 
-case class ArrayType(element: Type) extends DataType {
+sealed trait BoxType extends DataType {
+  def element: Type
+}
+
+case class ArrayType(element: Type) extends BoxType {
   override def toString: String = "[]" + element
 }
 
-case class OptionType(element: Type) extends DataType {
+case class OptionType(element: Type) extends BoxType {
   override def toString: String = "?" + element
 }
 
@@ -108,7 +112,7 @@ case class ArrowType(args: List[Type], res: Option[Type]) extends Type {
     args.map(_.toString).mkString(", ") + " -> " + res.map(_.toString).getOrElse("()")
 }
 
-case class StreamType(element: Type) extends DataType
+case class StreamType(element: Type) extends BoxType
 
 object Type {
   import Double.NaN

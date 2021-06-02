@@ -5,7 +5,7 @@ import aqua.parser.expr.DeclareStreamExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, StreamType}
+import aqua.types.{ArrayType, OptionType, StreamType}
 import cats.free.Free
 
 class DeclareStreamSem[F[_]](val expr: DeclareStreamExpr[F]) {
@@ -19,6 +19,8 @@ class DeclareStreamSem[F[_]](val expr: DeclareStreamExpr[F]) {
         .flatMap {
           case Some(t: StreamType) =>
             N.define(expr.name, t)
+          case Some(t: OptionType) =>
+            N.define(expr.name, StreamType(t.element))
           case Some(at @ ArrayType(t)) =>
             T.ensureTypeMatches(expr.`type`, StreamType(t), at)
           case Some(t) =>
