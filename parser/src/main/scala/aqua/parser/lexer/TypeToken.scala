@@ -29,6 +29,18 @@ object StreamTypeToken {
 
 }
 
+case class OptionTypeToken[F[_]: Comonad](override val unit: F[Unit], data: DataTypeToken[F])
+    extends DataTypeToken[F] {
+  override def as[T](v: T): F[T] = unit.as(v)
+}
+
+object OptionTypeToken {
+
+  def `optiontypedef`[F[_]: LiftParser: Comonad]: P[OptionTypeToken[F]] =
+    (`?`.lift ~ DataTypeToken.`datatypedef`[F]).map(ud => OptionTypeToken(ud._1, ud._2))
+
+}
+
 case class CustomTypeToken[F[_]: Comonad](name: F[String]) extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
@@ -94,7 +106,9 @@ object DataTypeToken {
 
   def `datatypedef`[F[_]: LiftParser: Comonad]: P[DataTypeToken[F]] =
     P.oneOf(
-      P.defer(`arraytypedef`[F]) :: P.defer(StreamTypeToken.`streamtypedef`) :: BasicTypeToken
+      P.defer(`arraytypedef`[F]) :: P.defer(StreamTypeToken.`streamtypedef`) :: P.defer(
+        OptionTypeToken.`optiontypedef`
+      ) :: BasicTypeToken
         .`basictypedef`[F] :: CustomTypeToken.ct[F] :: Nil
     )
 }

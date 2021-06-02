@@ -12,6 +12,8 @@ class TypeSpec extends AnyFlatSpec with Matchers {
   import aqua.types.ScalarType._
 
   def `[]`(t: DataType): DataType = ArrayType(t)
+  def `?`(t: DataType): DataType = OptionType(t)
+  def `*`(t: DataType): DataType = StreamType(t)
 
   def accepts(recv: Type, incoming: Type) =
     recv >= incoming
@@ -101,6 +103,15 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     accepts(array, stream) should be(true)
     accepts(stream, array) should be(false)
     accepts(stream, stream) should be(true)
+  }
+
+  "streams" should "be accepted as an option, but not vice versa" in {
+    val stream: Type = StreamType(bool)
+    val opt: Type = OptionType(bool)
+
+    accepts(opt, stream) should be(true)
+    accepts(stream, opt) should be(false)
+    accepts(opt, opt) should be(true)
   }
 
 }

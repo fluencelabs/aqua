@@ -18,16 +18,25 @@ case class TypescriptFunc(func: FuncCallable) {
 
     val tsAir = FuncAirGen(func).generateClientAir(conf)
 
-    val returnCallback = func.ret.as {
-      s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
-         |  const [res] = args;
-         |  resolve(res);
-         |});
-         |""".stripMargin
+    val returnCallback = func.ret.map(_._2).map {
+      case OptionType(_) =>
+        s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
+           |  const [res] = args;
+           |  resolve(res.length === 0 ? null : res[0]);
+           |});
+           |""".stripMargin
+      case _ =>
+        s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
+           |  const [res] = args;
+           |  resolve(res);
+           |});
+           |""".stripMargin
 
     }
 
     val setCallbacks = func.args.args.map {
+      case ArgDef.Data(argName, OptionType(_)) =>
+        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
       case ArgDef.Data(argName, _) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
       case ArgDef.Arrow(argName, at) =>
@@ -88,6 +97,7 @@ case class TypescriptFunc(func: FuncCallable) {
 object TypescriptFunc {
 
   def typeToTs(t: Type): String = t match {
+    case OptionType(t) => typeToTs(t) + " | null"
     case ArrayType(t) => typeToTs(t) + "[]"
     case StreamType(t) => typeToTs(t) + "[]"
     case pt: ProductType =>
