@@ -28,6 +28,8 @@ func betterMessage(relay: string, arr: []string, opt: ?string, str: *string) -> 
 
     stream: *string
 
+    localOpt: ?string
+
     if isOnline:
       try:
         Test.doSomething()
@@ -36,6 +38,6 @@ func betterMessage(relay: string, arr: []string, opt: ?string, str: *string) -> 
 
     x <- include(arr)
     y <- include(opt)
-    z <- include(str)
+    localOpt <- include(str)
 
     <- opt
