@@ -10,6 +10,11 @@ object FuncOps {
   def noop(peerId: ValueModel): FuncOp =
     FuncOp.leaf(CallServiceTag(LiteralModel.quote("op"), "identity", Call(Nil, None), Some(peerId)))
 
+  def identity(what: ValueModel, to: Call.Export): FuncOp =
+    FuncOp.leaf(
+      CallServiceTag(LiteralModel.quote("op"), "identity", Call(what :: Nil, Some(to)), None)
+    )
+
   def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =
     FuncOp.leaf(
       CallServiceTag(
@@ -48,4 +53,13 @@ object FuncOps {
 
   def xor(left: FuncOp, right: FuncOp): FuncOp =
     FuncOp.node(XorTag, Chain(left, right))
+
+  def fold(item: String, iter: ValueModel, op: FuncOp): FuncOp =
+    FuncOp.wrap(
+      ForTag(item, iter),
+      op
+    )
+
+  def next(item: String): FuncOp =
+    FuncOp.leaf(NextTag(item))
 }

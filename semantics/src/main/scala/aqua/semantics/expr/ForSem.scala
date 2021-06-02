@@ -7,7 +7,7 @@ import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, StreamType, Type}
+import aqua.types.{ArrayType, OptionType, StreamType, Type}
 import cats.data.Chain
 import cats.free.Free
 import cats.syntax.flatMap._
@@ -24,9 +24,11 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
       N.beginScope(expr.item) >> V.valueToModel(expr.iterable).flatMap[Option[ValueModel]] {
         case Some(vm) =>
           vm.lastType match {
-            case at @ ArrayType(t) =>
+            case ArrayType(t) =>
               N.define(expr.item, t).as(Option(vm))
-            case st @ StreamType(t) =>
+            case StreamType(t) =>
+              N.define(expr.item, t).as(Option(vm))
+            case OptionType(t) =>
               N.define(expr.item, t).as(Option(vm))
             case dt =>
               T.ensureTypeMatches(expr.iterable, ArrayType(dt), dt).as(Option.empty[ValueModel])

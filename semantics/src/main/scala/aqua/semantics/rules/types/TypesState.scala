@@ -11,11 +11,12 @@ import aqua.parser.lexer.{
   IntoIndex,
   LambdaOp,
   Name,
+  OptionTypeToken,
   StreamTypeToken,
   Token,
   TypeToken
 }
-import aqua.types.{ArrayType, ArrowType, DataType, ProductType, StreamType, Type}
+import aqua.types.{ArrayType, ArrowType, DataType, OptionType, ProductType, StreamType, Type}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
@@ -36,6 +37,10 @@ case class TypesState[F[_]](
       case StreamTypeToken(_, dtt) =>
         resolveTypeToken(dtt).collect { case it: DataType =>
           StreamType(it)
+        }
+      case OptionTypeToken(_, dtt) =>
+        resolveTypeToken(dtt).collect { case it: DataType =>
+          OptionType(it)
         }
       case ctt: CustomTypeToken[F] => strict.get(ctt.value)
       case btt: BasicTypeToken[F] => Some(btt.value)
@@ -99,7 +104,15 @@ case class TypesState[F[_]](
             resolveOps(intern, tail).map(IntoIndexModel(i.value, intern) :: _)
           case StreamType(intern) =>
             resolveOps(intern, tail).map(IntoIndexModel(i.value, intern) :: _)
-          case _ => Left(i -> s"Expected $rootT to be an array")
+          case OptionType(intern) =>
+            i.value match {
+              case 0 =>
+                resolveOps(intern, tail).map(IntoIndexModel(i.value, intern) :: _)
+              case _ =>
+                Left(i -> s"Option might have only one element, use ! to get it")
+            }
+
+          case _ => Left(i -> s"Expected $rootT to be an array or a stream")
         }
     }
 }

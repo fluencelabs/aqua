@@ -87,6 +87,10 @@ case class ArrayType(element: Type) extends DataType {
   override def toString: String = "[]" + element
 }
 
+case class OptionType(element: Type) extends DataType {
+  override def toString: String = "?" + element
+}
+
 case class ProductType(name: String, fields: NonEmptyMap[String, Type]) extends DataType {
 
   override def toString: String =
@@ -149,6 +153,9 @@ object Type {
         case (x: ScalarType, LiteralType(ys, _)) if ys(x) => 1.0
         case (x: ArrayType, y: ArrayType) => cmp(x.element, y.element)
         case (x: ArrayType, y: StreamType) => cmp(x.element, y.element)
+        case (x: ArrayType, y: OptionType) => cmp(x.element, y.element)
+        case (x: OptionType, y: StreamType) => cmp(x.element, y.element)
+        case (x: OptionType, y: ArrayType) => cmp(x.element, y.element)
         case (x: StreamType, y: StreamType) => cmp(x.element, y.element)
         case (ProductType(_, xFields), ProductType(_, yFields)) =>
           cmpProd(xFields, yFields)

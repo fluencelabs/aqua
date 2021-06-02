@@ -3,7 +3,7 @@ package aqua.backend.air
 import aqua.model._
 import aqua.model.func.Call
 import aqua.model.func.body._
-import aqua.types.StreamType
+import aqua.types.{OptionType, StreamType}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -30,6 +30,7 @@ object AirGen {
     case VarModel(name, t, lambda) =>
       val n = t match {
         case _: StreamType => "$" + name
+        case _: OptionType => "$" + name
         case _ => name
       }
       if (lambda.isEmpty) DataView.Variable(n)

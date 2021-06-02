@@ -28,6 +28,8 @@ case class TypescriptFunc(func: FuncCallable) {
     }
 
     val setCallbacks = func.args.args.map {
+      case ArgDef.Data(argName, OptionType(_)) =>
+        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
       case ArgDef.Data(argName, _) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
       case ArgDef.Arrow(argName, at) =>
@@ -88,6 +90,7 @@ case class TypescriptFunc(func: FuncCallable) {
 object TypescriptFunc {
 
   def typeToTs(t: Type): String = t match {
+    case OptionType(t) => typeToTs(t) + " | null"
     case ArrayType(t) => typeToTs(t) + "[]"
     case StreamType(t) => typeToTs(t) + "[]"
     case pt: ProductType =>

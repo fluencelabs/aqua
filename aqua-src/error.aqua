@@ -13,7 +13,13 @@ service Test("test"):
     getUserList: -> []User
     doSomething: -> bool
 
-func betterMessage(relay: string, arr: []string) -> string:
+func include(opt: ?string) -> string:
+    Peer.is_connected(opt!)
+    for i <- opt:
+       Peer.is_connected(i)
+    <- opt!
+
+func betterMessage(relay: string, arr: []string, opt: ?string, str: *string) -> string:
     on relay:
         Peer.is_connected("something")
         par isOnline <- Peer.is_connected(relay)
@@ -28,4 +34,8 @@ func betterMessage(relay: string, arr: []string) -> string:
     else:
       Peer.is_connected(stream!)
 
-    <- stream!2
+    x <- include(arr)
+    y <- include(opt)
+    z <- include(str)
+
+    <- opt!
