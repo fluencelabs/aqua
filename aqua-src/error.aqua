@@ -19,7 +19,7 @@ func include(opt: ?string) -> string:
        Peer.is_connected(i)
     <- opt!
 
-func betterMessage(relay: string, arr: []string, opt: ?string, str: *string) -> string:
+func betterMessage(relay: string, arr: []string, opt: ?string, str: *string) -> ?string:
     on relay:
         Peer.is_connected("something")
         par isOnline <- Peer.is_connected(relay)
@@ -38,4 +38,4 @@ func betterMessage(relay: string, arr: []string, opt: ?string, str: *string) -> 
     y <- include(opt)
     z <- include(str)
 
-    <- opt!
+    <- opt

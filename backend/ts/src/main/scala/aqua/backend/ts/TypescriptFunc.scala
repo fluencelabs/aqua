@@ -18,12 +18,19 @@ case class TypescriptFunc(func: FuncCallable) {
 
     val tsAir = FuncAirGen(func).generateClientAir(conf)
 
-    val returnCallback = func.ret.as {
-      s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
-         |  const [res] = args;
-         |  resolve(res);
-         |});
-         |""".stripMargin
+    val returnCallback = func.ret.map(_._2).map {
+      case OptionType(_) =>
+        s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
+           |  const [res] = args;
+           |  resolve(res.length === 0 ? null : res[0]);
+           |});
+           |""".stripMargin
+      case _ =>
+        s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
+           |  const [res] = args;
+           |  resolve(res);
+           |});
+           |""".stripMargin
 
     }
 
