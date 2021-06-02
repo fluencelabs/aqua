@@ -30,7 +30,7 @@ object AirGen {
     case VarModel(name, t, lambda) =>
       val n = t match {
         case _: StreamType => "$" + name
-        case _: OptionType => "$" + name
+        case _: OptionType => name
         case _ => name
       }
       if (lambda.isEmpty) DataView.Variable(n)
