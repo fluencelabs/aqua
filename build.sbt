@@ -1,32 +1,32 @@
 val dottyVersion = "2.13.5"
 
-//val dottyVersion = "3.0.0-RC3"
+//val dottyVersion = "3.0.0"
 
 scalaVersion := dottyVersion
 
 val baseAquaVersion = settingKey[String]("base aqua version")
 
-val catsV = "2.6.0"
-val catsParseV = "0.3.3"
+val catsV = "2.6.1"
+val catsParseV = "0.3.4"
 val monocleV = "3.0.0-M5"
-val scalaTestV = "3.2.7" // TODO update version for scala 3-RC3
-val fs2V = "3.0.2"
-val catsEffectV = "3.1.0"
+val scalaTestV = "3.2.9"
+val fs2V = "3.0.4"
+val catsEffectV = "3.1.1"
 val airframeLogV = "21.5.4"
 val log4catsV = "2.1.1"
-val enumeratumV = "1.6.1"
-val slf4jV = "1.7.25"
+val enumeratumV = "1.6.1" // Scala3 issue: https://github.com/lloydmeta/enumeratum/issues/300
+val slf4jV = "1.7.30"
 val declineV = "2.0.0-RC1" // Scala3 issue: https://github.com/bkirwi/decline/issues/260
 val declineEnumV = "1.3.0"
 
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.1.3",
+  baseAquaVersion := "0.1.4",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "log4cats-core" % "2.1.1",
+    "org.typelevel" %% "log4cats-core" % log4catsV,
     "org.scalatest" %% "scalatest"     % scalaTestV % Test
   ),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full)
