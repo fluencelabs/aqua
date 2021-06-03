@@ -13,21 +13,21 @@ trait ArgsProvider {
 case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataType)])
     extends ArgsProvider {
 
-  private def getDataElOp(name: String, t: DataType, el: Type): FuncOp = {
+  private def getStreamDataOp(name: String, t: StreamType): FuncOp = {
     val iter = s"$name-iter"
     val item = s"$name-item"
     FuncOps.seq(
       FuncOps.callService(
         dataServiceId,
         name,
-        Call(Nil, Some(Call.Export(iter, t)))
+        Call(Nil, Some(Call.Export(iter, ArrayType(t.element))))
       ),
       FuncOps.fold(
         item,
-        VarModel(iter, ArrayType(el), Chain.empty),
+        VarModel(iter, ArrayType(t.element), Chain.empty),
         FuncOps.seq(
           // TODO: currently this does not work, as identity wraps everything with an array
-          FuncOps.identity(VarModel(item, el), Call.Export(name, t)),
+          FuncOps.identity(VarModel(item, t.element), Call.Export(name, t)),
           FuncOps.next(item)
         )
       )
@@ -36,8 +36,8 @@ case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataT
 
   def getDataOp(name: String, t: DataType): FuncOp =
     t match {
-      case StreamType(el) =>
-        getDataElOp(name, t, el)
+      case st: StreamType =>
+        getStreamDataOp(name, st)
       case _ =>
         FuncOps.callService(
           dataServiceId,

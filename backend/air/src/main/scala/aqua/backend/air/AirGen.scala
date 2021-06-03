@@ -8,6 +8,8 @@ import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 
+import scala.annotation.tailrec
+
 sealed trait AirGen {
   def generate: Air
 
@@ -42,66 +44,71 @@ object AirGen {
     case list => list.reduceLeft(SeqGen)
   }
 
+  private def folder(op: OpTag, ops: Chain[AirGen]): Eval[AirGen] =
+    op match {
+      case mt: MetaTag =>
+        folder(mt.op, ops).map(ag => mt.comment.fold(ag)(CommentGen(_, ag)))
+      case SeqTag =>
+        Eval later ops.toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
+      case ParTag =>
+        Eval later ops.toList.reduceLeftOption(ParGen).getOrElse(NullGen)
+      case XorTag =>
+        Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
+      case XorTag.LeftBiased =>
+        Eval later XorGen(opsToSingle(ops), NullGen)
+
+      case NextTag(item) =>
+        Eval later NextGen(item)
+      case MatchMismatchTag(left, right, shouldMatch) =>
+        Eval later MatchMismatchGen(
+          valueToData(left),
+          valueToData(right),
+          shouldMatch,
+          opsToSingle(ops)
+        )
+
+      case ForTag(item, iterable) =>
+        Eval later ForGen(valueToData(iterable), item, opsToSingle(ops))
+      case CallServiceTag(serviceId, funcName, Call(args, exportTo), peerId) =>
+        Eval.later(
+          ServiceCallGen(
+            peerId.map(valueToData).getOrElse(DataView.InitPeerId),
+            valueToData(serviceId),
+            funcName,
+            args.map(valueToData),
+            exportTo.map {
+              case Call.Export(name, _: StreamType) => "$" + name
+              case Call.Export(name, _) => name
+            }
+          )
+        )
+
+      case CallArrowTag(funcName, _) =>
+        // TODO: should be already resolved & removed from tree
+        println(
+          Console.RED + s"Unresolved arrow in AirGen: $funcName" + Console.RESET
+        )
+        Eval later NullGen
+
+      case OnTag(_, _) =>
+        // TODO should be resolved
+        Eval later opsToSingle(
+          ops
+        )
+      case XorParTag(opsx, opsy) =>
+        // TODO should be resolved
+        println(
+          Console.RED + "XorParTag reached AirGen, most likely it's an error" + Console.RESET
+        )
+        Eval later opsToSingle(
+          Chain(apply(opsx.tree), apply(opsy.tree))
+        )
+
+    }
+
   def apply(op: Cofree[Chain, OpTag]): AirGen =
     Cofree
-      .cata[Chain, OpTag, AirGen](op) {
-        case (SeqTag, ops) =>
-          Eval later ops.toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
-        case (ParTag, ops) =>
-          Eval later ops.toList.reduceLeftOption(ParGen).getOrElse(NullGen)
-        case (XorTag, ops) =>
-          Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
-        case (XorTag.LeftBiased, ops) =>
-          Eval later XorGen(opsToSingle(ops), NullGen)
-
-        case (NextTag(item), _) =>
-          Eval later NextGen(item)
-        case (MatchMismatchTag(left, right, shouldMatch), ops) =>
-          Eval later MatchMismatchGen(
-            valueToData(left),
-            valueToData(right),
-            shouldMatch,
-            opsToSingle(ops)
-          )
-
-        case (ForTag(item, iterable), ops) =>
-          Eval later ForGen(valueToData(iterable), item, opsToSingle(ops))
-        case (CallServiceTag(serviceId, funcName, Call(args, exportTo), peerId), _) =>
-          Eval.later(
-            ServiceCallGen(
-              peerId.map(valueToData).getOrElse(DataView.InitPeerId),
-              valueToData(serviceId),
-              funcName,
-              args.map(valueToData),
-              exportTo.map {
-                case Call.Export(name, _: StreamType) => "$" + name
-                case Call.Export(name, _) => name
-              }
-            )
-          )
-
-        case (CallArrowTag(funcName, _), _) =>
-          // TODO: should be already resolved & removed from tree
-          println(
-            Console.RED + s"Unresolved arrow in AirGen: $funcName" + Console.RESET
-          )
-          Eval later NullGen
-
-        case (OnTag(_, _), ops) =>
-          // TODO should be resolved
-          Eval later opsToSingle(
-            ops
-          )
-        case (XorParTag(opsx, opsy), _) =>
-          // TODO should be resolved
-          println(
-            Console.RED + "XorParTag reached AirGen, most likely it's an error" + Console.RESET
-          )
-          Eval later opsToSingle(
-            Chain(apply(opsx.tree), apply(opsy.tree))
-          )
-
-      }
+      .cata[Chain, OpTag, AirGen](op)(folder)
       .value
 }
 
@@ -114,6 +121,12 @@ case class SeqGen(left: AirGen, right: AirGen) extends AirGen {
   override def generate: Air =
     Air.Seq(left.generate, right.generate)
 
+}
+
+case class CommentGen(comment: String, op: AirGen) extends AirGen {
+
+  override def generate: Air =
+    Air.Comment(comment, op.generate)
 }
 
 case class MatchMismatchGen(

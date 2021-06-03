@@ -62,4 +62,16 @@ object FuncOps {
 
   def next(item: String): FuncOp =
     FuncOp.leaf(NextTag(item))
+
+  def meta(op: FuncOp, skipTopology: Boolean = false, comment: String = null): FuncOp =
+    FuncOp(
+      op.tree.copy(
+        MetaTag(
+          skipTopology = skipTopology,
+          comment = Option(comment),
+          op.head
+        ),
+        op.tree.tail
+      )
+    )
 }

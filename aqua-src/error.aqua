@@ -23,7 +23,7 @@ func betterMessage(relay: string, arr: []string, opt: ?string, str: *string) -> 
     on relay:
         Peer.is_connected("something")
         par isOnline <- Peer.is_connected(relay)
-    par on "quray":
+    par on "quray" via arr:
         Peer.is_connected("qurara")
 
     stream: *string

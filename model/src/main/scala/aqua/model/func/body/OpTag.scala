@@ -44,6 +44,12 @@ case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Bo
     extends SeqGroupTag
 case class ForTag(item: String, iterable: ValueModel) extends SeqGroupTag
 
+case class MetaTag(
+  skipTopology: Boolean,
+  comment: Option[String],
+  op: OpTag
+) extends OpTag
+
 case class CallArrowTag(
   funcName: String,
   call: Call

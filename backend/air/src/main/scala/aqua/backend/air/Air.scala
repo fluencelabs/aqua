@@ -6,6 +6,7 @@ import cats.syntax.show._
 abstract sealed class Keyword(val value: String)
 
 object Keyword {
+  case object NA extends Keyword("")
 
   case object Null extends Keyword("null")
 
@@ -93,24 +94,36 @@ object Air {
   case class Call(triplet: Triplet, args: List[DataView], result: Option[String])
       extends Air(Keyword.Call)
 
+  case class Comment(comment: String, air: Air) extends Air(Keyword.NA)
+
   private def show(depth: Int, air: Air): String = {
     def showNext(a: Air) = show(depth + 1, a)
 
     val space = " " * depth
-    s"$space(${air.keyword.value}" +
-      (air match {
-        case Air.Null ⇒ ""
-        case Air.Next(label) ⇒ s" $label"
-        case Air.Fold(iter, label, inst) ⇒ s" ${iter.show} $label\n${showNext(inst)}$space"
-        case Air.Match(left, right, inst) ⇒ s" ${left.show} ${right.show}\n${showNext(inst)}$space"
-        case Air.Mismatch(left, right, inst) ⇒
-          s" ${left.show} ${right.show}\n${showNext(inst)}$space"
-        case Air.Par(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
-        case Air.Seq(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
-        case Air.Xor(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
-        case Air.Call(triplet, args, res) ⇒
-          s" ${triplet.show} [${args.map(_.show).mkString(" ")}]${res.fold("")(" " + _)}"
-      }) + ")\n"
+
+    air match {
+      case Air.Comment(c, a) =>
+        space + "; " + c.replace("\n", "\n" + space + "; ") + "\n" +
+          show(depth, a)
+      case _ =>
+        s"$space(${air.keyword.value}" +
+          (air match {
+            case Air.Null ⇒ ""
+            case Air.Next(label) ⇒ s" $label"
+            case Air.Fold(iter, label, inst) ⇒ s" ${iter.show} $label\n${showNext(inst)}$space"
+            case Air.Match(left, right, inst) ⇒
+              s" ${left.show} ${right.show}\n${showNext(inst)}$space"
+            case Air.Mismatch(left, right, inst) ⇒
+              s" ${left.show} ${right.show}\n${showNext(inst)}$space"
+            case Air.Par(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
+            case Air.Seq(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
+            case Air.Xor(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
+            case Air.Call(triplet, args, res) ⇒
+              s" ${triplet.show} [${args.map(_.show).mkString(" ")}]${res.fold("")(" " + _)}"
+            case Air.Comment(_, _) => ";; Should not be displayed"
+          }) + ")\n"
+    }
+
   }
 
   implicit val s: Show[Air] = Show.show(show(0, _))
