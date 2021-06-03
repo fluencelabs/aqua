@@ -28,10 +28,18 @@ object AppOps {
     Validated
       .fromEither(Validated.catchNonFatal {
         val f = p.toFile
-        if (f.exists() && f.isDirectory) {
-          Right(p)
+        if (f.exists()) {
+          if (f.isFile) {
+            val filename = f.getName
+            val ext = Option(filename)
+              .filter(_.contains("."))
+              .map(f => f.substring(f.lastIndexOf(".") + 1))
+              .getOrElse("")
+            if (ext != "aqua") Left("File must be with 'aqua' extension")
+            else Right(p)
+          } else Right(p)
         } else {
-          Left(s"There is no path '${p.toString}' or it is not a directory")
+          Left(s"There is no path '${p.toString}'")
         }
       }.toEither.left.map(t => s"An error occurred on imports reading: ${t.getMessage}").flatten)
       .toValidatedNel
@@ -41,7 +49,7 @@ object AppOps {
     Opts
       .option[Path](
         "input",
-        "Path to the input directory that contains your .aqua files. It can only be a directory",
+        "Path to an aqua file or an input directory that contains your .aqua files",
         "i"
       )
       .mapValidated(checkPath)
