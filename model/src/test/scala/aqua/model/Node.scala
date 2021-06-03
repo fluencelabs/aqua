@@ -2,7 +2,7 @@ package aqua.model
 
 import aqua.model.func.Call
 import aqua.model.func.body._
-import aqua.model.transform.BodyConfig
+import aqua.model.transform.{BodyConfig, ErrorsCatcher}
 import aqua.types.{LiteralType, ScalarType}
 import cats.Eval
 import cats.data.Chain
@@ -102,7 +102,7 @@ object Node {
       bc.errorHandlingCallback,
       bc.errorFuncName,
       Call(
-        LiteralModel("%last_error%", LiteralType.string) :: LiteralModel(
+        ErrorsCatcher.lastErrorArg :: LiteralModel(
           i.toString,
           LiteralType.number
         ) :: Nil,

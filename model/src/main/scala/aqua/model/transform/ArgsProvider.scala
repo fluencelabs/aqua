@@ -26,6 +26,7 @@ case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataT
         item,
         VarModel(iter, ArrayType(el), Chain.empty),
         FuncOps.seq(
+          // TODO: currently this does not work, as identity wraps everything with an array
           FuncOps.identity(VarModel(item, el), Call.Export(name, t)),
           FuncOps.next(item)
         )
@@ -37,8 +38,6 @@ case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataT
     t match {
       case StreamType(el) =>
         getDataElOp(name, t, el)
-      case OptionType(el) =>
-        getDataElOp(name, StreamType(el), el)
       case _ =>
         FuncOps.callService(
           dataServiceId,
