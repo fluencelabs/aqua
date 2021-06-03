@@ -36,13 +36,16 @@ object AquaCompiler extends LogSupport {
 
     def targetPath(ext: String): Validated[Throwable, Path] =
       Validated.catchNonFatal {
+        val srcDir = if (srcPath.toFile.isDirectory) srcPath else srcPath.getParent
+        val srcFilePath = srcDir.toAbsolutePath
+          .normalize()
+          .relativize(modFile.toAbsolutePath.normalize())
+
         val targetAqua =
           targetPath.toAbsolutePath
             .normalize()
             .resolve(
-              srcPath.toAbsolutePath
-                .normalize()
-                .relativize(modFile.toAbsolutePath.normalize())
+              srcFilePath
             )
 
         val fileName = targetAqua.getFileName

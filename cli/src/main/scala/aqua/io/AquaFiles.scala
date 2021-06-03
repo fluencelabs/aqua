@@ -21,10 +21,14 @@ object AquaFiles {
     // TODO use effect instead of Try
     EitherT
       .fromEither[F](
-        Try(sourcePath.toFile)
-          .filter(_.isDirectory)
-          .flatMap(d => Try(d.listFiles().toList))
-          .toEither
+        Try {
+          val f = sourcePath.toFile
+          if (f.isDirectory) {
+            f.listFiles().toList
+          } else {
+            List(f)
+          }
+        }.toEither
       )
       .leftMap[AquaFileError](FileSystemError)
       .leftMap(NonEmptyChain.one)

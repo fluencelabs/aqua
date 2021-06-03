@@ -48,16 +48,19 @@ object AquaCli extends IOApp with LogSupport {
 
       // if there is `--help` or `--version` flag - show help and version
       // otherwise continue program execution
-      h.map(_ => helpAndExit) orElse v.map(_ => versionAndExit) getOrElse
+      h.map(_ => helpAndExit) orElse v.map(_ => versionAndExit) getOrElse {
+        val target = if (toAir) AquaCompiler.AirTarget else AquaCompiler.TypescriptTarget
+        val bc = {
+          val bc = BodyConfig(wrapWithXor = !noXor)
+          bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
+        }
         AquaCompiler
           .compileFilesTo[F](
             input,
             imports,
             output,
-            if (toAir) AquaCompiler.AirTarget else AquaCompiler.TypescriptTarget, {
-              val bc = BodyConfig(wrapWithXor = !noXor)
-              bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
-            }
+            target,
+            bc
           )
           .map {
             case Validated.Invalid(errs) =>
@@ -67,6 +70,7 @@ object AquaCli extends IOApp with LogSupport {
               results.map(println)
               ExitCode.Success
           }
+      }
     }
   }
 
