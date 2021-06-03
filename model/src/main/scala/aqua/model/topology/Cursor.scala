@@ -11,6 +11,16 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) {
   def downLoc(tree: Tree): Location =
     loc.down(point.copy(current = tree))
 
+  def mapParent(f: Tree => Tree): Cursor =
+    copy(loc =
+      Location(
+        loc.path match {
+          case parent :: tail => parent.copy(current = f(parent.current)) :: tail
+          case path => path
+        }
+      )
+    )
+
   def prevOnTags: Chain[OnTag] =
     Chain
       .fromSeq(
