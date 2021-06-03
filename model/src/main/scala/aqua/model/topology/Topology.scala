@@ -44,8 +44,7 @@ object Topology {
                     FuncOps.next(itemName)
                   )
               ),
-              skipTopology = true,
-              comment = "Skip Topology!"
+              skipTopology = true
             )
           case _ =>
             FuncOps.noop(v)
