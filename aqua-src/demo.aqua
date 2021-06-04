@@ -1,4 +1,10 @@
-service Demo("demo"):
-	get4() -> u64
-	get5(arg: u32)
-	get6(a: string) -> bool
+service OpH("op"):
+  puk(s: string) -> string
+
+func a(b: string) -> string:
+  c <- OpH.puk(b)
+  <- c
+
+func d(e: string) -> string:
+  f <- a(e)
+  <- f

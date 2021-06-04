@@ -1,11 +1,13 @@
 package aqua.model.transform
 
-import aqua.model.VarModel
+import aqua.model.{ValueModel, VarModel}
 import aqua.model.func.{ArgDef, ArgsCall, ArgsDef, Call, FuncCallable}
 import aqua.model.func.body.{FuncOp, FuncOps}
 import aqua.types.ArrowType
 import cats.Eval
 import cats.syntax.apply._
+import cats.syntax.functor._
+import wvlet.log.Logger
 
 case class ResolveFunc(
   transform: FuncOp => FuncOp,
@@ -15,7 +17,10 @@ case class ResolveFunc(
   arrowCallbackPrefix: String = "init_peer_callable_"
 ) {
 
-  def returnCallback(func: FuncCallable): Option[FuncOp] = func.ret.map { case (retModel, _) =>
+  private val logger = Logger.of[ResolveFunc]
+  import logger._
+
+  def returnCallback(retModel: ValueModel): FuncOp =
     callback(
       respFuncName,
       Call(
@@ -23,7 +28,6 @@ case class ResolveFunc(
         None
       )
     )
-  }
 
   def arrowToCallback(name: String, arrowType: ArrowType): FuncCallable = {
     val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
@@ -47,10 +51,14 @@ case class ResolveFunc(
               func.funcName,
               Call(
                 func.args.toCallArgs,
-                None
+                func.ret.map(rmv => Call.Export("-return-", rmv._1.lastType))
               )
             ) ::
-            returnCallback(func).toList: _*
+            func.ret
+              .map(_._1)
+              .map(rmv => VarModel("-return-", rmv.lastType))
+              .map(returnCallback)
+              .toList: _*
         )
       ),
       ArgsDef(ArgDef.Arrow(func.funcName, func.arrowType) :: Nil),
@@ -61,7 +69,10 @@ case class ResolveFunc(
       Map.empty
     )
 
-  def resolve(func: FuncCallable, funcArgName: String = "_func"): Eval[FuncOp] =
+  def resolve(
+    func: FuncCallable,
+    funcArgName: String = "_func"
+  ): Eval[FuncOp] =
     wrap(func)
       .resolve(
         Call(VarModel(funcArgName, func.arrowType) :: Nil, None),

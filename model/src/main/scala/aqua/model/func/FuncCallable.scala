@@ -2,10 +2,11 @@ package aqua.model.func
 
 import aqua.model.func.body.{CallArrowTag, FuncOp, OpTag}
 import aqua.model.{ValueModel, VarModel}
-import aqua.types.{ArrowType, DataType, Type}
+import aqua.types.{ArrowType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
+import wvlet.log.Logger
 
 case class FuncCallable(
   funcName: String,
@@ -15,6 +16,9 @@ case class FuncCallable(
   capturedArrows: Map[String, FuncCallable],
   capturedValues: Map[String, ValueModel]
 ) {
+
+  private val logger = Logger.of[FuncCallable]
+  import logger._
 
   def arrowType: ArrowType =
     ArrowType(
@@ -37,6 +41,8 @@ case class FuncCallable(
     arrows: Map[String, FuncCallable],
     forbiddenNames: Set[String]
   ): Eval[(FuncOp, Option[ValueModel])] = {
+
+    debug("Call: " + call)
 
     // Collect all arguments: what names are used inside the function, what values are received
     val argsFull = args.call(call)
@@ -99,9 +105,7 @@ case class FuncCallable(
         case (acc @ (_, resolvedExports), tag) =>
           tag match {
             case CallArrowTag(fn, _) if !allArrows.contains(fn) =>
-              println(
-                Console.RED + s"UNRESOLVED $fn in $funcName, skipping, will become (null) in AIR!" + Console.RESET
-              )
+              error(s"UNRESOLVED $fn in $funcName, skipping, will become (null) in AIR!")
             case _ =>
           }
 
