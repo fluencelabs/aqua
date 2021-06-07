@@ -25,6 +25,8 @@ sealed trait OpTag {
       )
     case AssignmentTag(value, assignTo) =>
       AssignmentTag(f(value), assignTo)
+    case AbilityIdTag(value, ability) =>
+      AssignmentTag(f(value), ability)
     case _ => this
   }
 
@@ -42,7 +44,7 @@ case object XorTag extends GroupTag {
   case object LeftBiased extends GroupTag
 }
 case class XorParTag(xor: FuncOp, par: FuncOp) extends OpTag
-case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag with NoAirTag
+case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag
 case class NextTag(item: String) extends OpTag
 
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
@@ -63,6 +65,11 @@ case class CallArrowTag(
 case class AssignmentTag(
   value: ValueModel,
   assignTo: String
+) extends NoAirTag
+
+case class AbilityIdTag(
+  value: ValueModel,
+  service: String
 ) extends NoAirTag
 
 case class CallServiceTag(

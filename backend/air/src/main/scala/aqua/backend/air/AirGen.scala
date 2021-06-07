@@ -92,15 +92,14 @@ object AirGen {
         )
         Eval later NullGen
 
-      case AssignmentTag(_, _) =>
-        // TODO: should be already resolved & removed from tree
-        Eval later NullGen
-
       case OnTag(_, _) =>
         // TODO should be resolved
         Eval later opsToSingle(
           ops
         )
+      case _: NoAirTag =>
+        // TODO: should be already resolved & removed from tree
+        Eval later NullGen
       case XorParTag(opsx, opsy) =>
         // TODO should be resolved
         error(
