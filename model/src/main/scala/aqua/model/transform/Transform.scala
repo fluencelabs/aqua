@@ -10,6 +10,17 @@ import cats.free.Cofree
 
 object Transform {
 
+  def defaultFilter(t: OpTag): Boolean = t match {
+    case _: NoAirTag => false
+    case _ => true
+  }
+
+  def clear(
+    tree: Cofree[Chain, OpTag],
+    filter: OpTag => Boolean = defaultFilter
+  ): Cofree[Chain, OpTag] =
+    tree.copy(tail = tree.tail.map(_.filter(t => filter(t.head)).map(clear(_, filter))))
+
   def forClient(func: FuncCallable, conf: BodyConfig): Cofree[Chain, OpTag] = {
     val initCallable: InitPeerCallable = InitViaRelayCallable(
       Chain.fromOption(conf.relayVarName).map(VarModel(_, ScalarType.string))
@@ -38,13 +49,14 @@ object Transform {
       callback,
       conf.respFuncName
     )
-
-    Topology.resolve(
-      errorsCatcher
-        .transform(
-          wrapFunc.resolve(func).value
-        )
-        .tree
+    clear(
+      Topology.resolve(
+        errorsCatcher
+          .transform(
+            wrapFunc.resolve(func).value
+          )
+          .tree
+      )
     )
   }
 }

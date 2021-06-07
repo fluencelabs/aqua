@@ -29,6 +29,9 @@ sealed trait OpTag {
   }
 
 }
+
+sealed trait NoAirTag extends OpTag
+
 sealed trait GroupTag extends OpTag
 sealed trait SeqGroupTag extends GroupTag
 
@@ -39,7 +42,7 @@ case object XorTag extends GroupTag {
   case object LeftBiased extends GroupTag
 }
 case class XorParTag(xor: FuncOp, par: FuncOp) extends OpTag
-case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag
+case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag with NoAirTag
 case class NextTag(item: String) extends OpTag
 
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
@@ -60,7 +63,7 @@ case class CallArrowTag(
 case class AssignmentTag(
   value: ValueModel,
   assignTo: String
-) extends OpTag
+) extends NoAirTag
 
 case class CallServiceTag(
   serviceId: ValueModel,

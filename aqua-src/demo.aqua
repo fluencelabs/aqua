@@ -3,6 +3,12 @@ service OpH("op"):
 
 func a(b: string) -> string:
   c <- OpH.puk(b)
+  e = "hello"
+  OpH.puk(e)
+  f = "world"
+  OpH.puk(f)
+  x = "!!!"
+  OpH.puk(x)
   <- c
 
 func d(e: string) -> string:

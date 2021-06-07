@@ -7,6 +7,7 @@ import aqua.types.StreamType
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
+import wvlet.log.Logger
 
 sealed trait AirGen {
   def generate: Air
@@ -14,6 +15,9 @@ sealed trait AirGen {
 }
 
 object AirGen {
+
+  private val logger = Logger.of[AirGen.type]
+  import logger._
 
   def lambdaToString(ls: List[LambdaModel]): String = ls match {
     case Nil => ""
@@ -83,8 +87,8 @@ object AirGen {
 
       case CallArrowTag(funcName, _) =>
         // TODO: should be already resolved & removed from tree
-        println(
-          Console.RED + s"Unresolved arrow in AirGen: $funcName" + Console.RESET
+        error(
+          s"Unresolved arrow in AirGen: $funcName"
         )
         Eval later NullGen
 
@@ -99,8 +103,8 @@ object AirGen {
         )
       case XorParTag(opsx, opsy) =>
         // TODO should be resolved
-        println(
-          Console.RED + "XorParTag reached AirGen, most likely it's an error" + Console.RESET
+        error(
+          "XorParTag reached AirGen, most likely it's an error"
         )
         Eval later opsToSingle(
           Chain(apply(opsx.tree), apply(opsy.tree))

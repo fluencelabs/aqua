@@ -29,7 +29,8 @@ val commons = Seq(
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
     "org.typelevel" %% "log4cats-core" % log4catsV,
-    "org.scalatest" %% "scalatest"     % scalaTestV % Test
+    airframeLog,
+    "org.scalatest" %% "scalatest" % scalaTestV % Test
   ),
   addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full)
 )
@@ -43,16 +44,15 @@ lazy val cli = project
     assembly / mainClass       := Some("aqua.AquaCli"),
     assembly / assemblyJarName := "aqua-cli-" + version.value + ".jar",
     libraryDependencies ++= Seq(
-      "com.monovore"  %% "decline"        % declineV,
-      "com.monovore"  %% "decline-effect" % declineV,
-      "org.typelevel" %% "cats-effect"    % catsEffectV,
-      "co.fs2"        %% "fs2-core"       % fs2V,
-      "co.fs2"        %% "fs2-io"         % fs2V,
-      "org.typelevel" %% "log4cats-slf4j" % log4catsV,
-      airframeLog,
-      "com.beachape" %% "enumeratum"         % enumeratumV,
-      "org.slf4j"     % "slf4j-jdk14"        % slf4jV,
-      "com.monovore" %% "decline-enumeratum" % declineEnumV
+      "com.monovore"  %% "decline"            % declineV,
+      "com.monovore"  %% "decline-effect"     % declineV,
+      "org.typelevel" %% "cats-effect"        % catsEffectV,
+      "co.fs2"        %% "fs2-core"           % fs2V,
+      "co.fs2"        %% "fs2-io"             % fs2V,
+      "org.typelevel" %% "log4cats-slf4j"     % log4catsV,
+      "com.beachape"  %% "enumeratum"         % enumeratumV,
+      "org.slf4j"      % "slf4j-jdk14"        % slf4jV,
+      "com.monovore"  %% "decline-enumeratum" % declineEnumV
     )
   )
   .dependsOn(semantics, `backend-air`, `backend-ts`, linker)
@@ -88,7 +88,6 @@ lazy val model = project
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      airframeLog,
       "org.typelevel" %% "cats-free" % catsV
     )
   )
