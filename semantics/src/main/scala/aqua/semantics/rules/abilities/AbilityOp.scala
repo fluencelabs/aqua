@@ -1,5 +1,6 @@
 package aqua.semantics.rules.abilities
 
+import aqua.model.ValueModel
 import aqua.parser.lexer.{Ability, Name, Token, Value}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, NonEmptyMap}
@@ -11,8 +12,11 @@ case class DefineArrow[F[_]](arrow: Name[F], `type`: ArrowType) extends AbilityO
 case class PurgeArrows[F[_]](token: Token[F])
     extends AbilityOp[F, Option[NonEmptyList[(Name[F], ArrowType)]]]
 
-case class DefineService[F[_]](name: Ability[F], arrows: NonEmptyMap[String, ArrowType])
-    extends AbilityOp[F, Boolean]
+case class DefineService[F[_]](
+  name: Ability[F],
+  arrows: NonEmptyMap[String, ArrowType],
+  defaultId: Option[ValueModel]
+) extends AbilityOp[F, Boolean]
 
 case class GetArrow[F[_]](name: Ability[F], arrow: Name[F]) extends AbilityOp[F, Option[ArrowType]]
 

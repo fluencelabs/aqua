@@ -25,19 +25,23 @@ class ServiceSem[F[_]](val expr: ServiceExpr[F]) extends AnyVal {
         (A.purgeArrows(expr.name) <* A.endScope()).flatMap {
           case Some(nel) =>
             val arrows = nel.map(kv => kv._1.value -> kv._2).toNem
-            A.defineService(
-              expr.name,
-              arrows
-            ).flatMap {
-              case true =>
-                expr.id
-                  .fold(Free.pure[Alg, Option[ValueModel]](None))(idV =>
-                    V.ensureIsString(idV) >> A.setServiceId(expr.name, idV) >> V.valueToModel(idV)
-                  )
-                  .map(defaultId => ServiceModel(expr.name.value, arrows, defaultId))
-              case false =>
-                Free.pure(Model.empty("Service not created due to validation errors"))
-            }
+            for {
+              defaultId <- expr.id
+                .map(v => V.valueToModel(v))
+                .getOrElse(Free.pure[Alg, Option[ValueModel]](None))
+              defineResult <- A.defineService(
+                expr.name,
+                arrows,
+                defaultId
+              )
+              _ <- expr.id
+                .fold(Free.pure[Alg, Unit](()))(idV =>
+                  (V.ensureIsString(idV) >> A.setServiceId(expr.name, idV)).map(_ => ())
+                )
+            } yield
+              if (defineResult) {
+                ServiceModel(expr.name.value, arrows, defaultId)
+              } else Model.empty("Service not created due to validation errors")
 
           case None =>
             Free.pure(Model.error("Service has no arrows, fails"))

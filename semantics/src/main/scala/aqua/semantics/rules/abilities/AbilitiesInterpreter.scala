@@ -1,12 +1,12 @@
 package aqua.semantics.rules.abilities
 
 import aqua.model.ServiceModel
-import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.parser.lexer.{Name, Value}
+import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, State}
-import cats.~>
 import cats.syntax.functor._
+import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -105,8 +105,8 @@ class AbilitiesInterpreter[F[_], X](implicit
           case None =>
             modify(s =>
               s.copy(
-                services =
-                  s.services.updated(ds.name.value, ServiceModel(ds.name.value, ds.arrows)),
+                services = s.services
+                  .updated(ds.name.value, ServiceModel(ds.name.value, ds.arrows, ds.defaultId)),
                 definitions = s.definitions.updated(ds.name.value, ds.name)
               )
             ).as(true)
