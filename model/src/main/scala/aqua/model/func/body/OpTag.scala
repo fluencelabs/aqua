@@ -23,6 +23,8 @@ sealed trait OpTag {
         call.mapValues(f),
         pid.map(f)
       )
+    case AssignmentTag(value, assignTo) =>
+      AssignmentTag(f(value), assignTo)
     case _ => this
   }
 
@@ -53,6 +55,11 @@ case class MetaTag(
 case class CallArrowTag(
   funcName: String,
   call: Call
+) extends OpTag
+
+case class AssignmentTag(
+  value: ValueModel,
+  assignTo: String
 ) extends OpTag
 
 case class CallServiceTag(

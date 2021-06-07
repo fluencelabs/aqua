@@ -20,6 +20,7 @@ object FuncExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Lexem] =
     AbilityIdExpr ::
+      AssignmentExpr ::
       ReturnExpr ::
       ForExpr ::
       Expr.defer(OnExpr) ::

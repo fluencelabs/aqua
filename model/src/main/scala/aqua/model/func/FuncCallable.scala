@@ -1,6 +1,6 @@
 package aqua.model.func
 
-import aqua.model.func.body.{CallArrowTag, FuncOp, OpTag}
+import aqua.model.func.body.{AssignmentTag, CallArrowTag, FuncOp, OpTag}
 import aqua.model.{ValueModel, VarModel}
 import aqua.types.{ArrowType, Type}
 import cats.Eval
@@ -82,6 +82,15 @@ case class FuncCallable(
           // Functions may export variables, so collect them
           capturedValues
       ) {
+        case ((noNames, resolvedExports), tag @ AssignmentTag(value, assignTo)) =>
+          (noNames, resolvedExports + (assignTo -> value.resolveWith(resolvedExports))) -> Cofree[
+            Chain,
+            OpTag
+          ](
+            tag.mapValues(_.resolveWith(resolvedExports)),
+            Eval.now(Chain.empty)
+          )
+
         case ((noNames, resolvedExports), CallArrowTag(fn, c)) if allArrows.contains(fn) =>
           // Apply arguments to a function – recursion
           val callResolved = c.mapValues(_.resolveWith(resolvedExports))

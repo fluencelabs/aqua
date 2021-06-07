@@ -3,12 +3,10 @@ package aqua.backend.air
 import aqua.model._
 import aqua.model.func.Call
 import aqua.model.func.body._
-import aqua.types.{OptionType, StreamType}
+import aqua.types.StreamType
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
-
-import scala.annotation.tailrec
 
 sealed trait AirGen {
   def generate: Air
@@ -88,6 +86,10 @@ object AirGen {
         println(
           Console.RED + s"Unresolved arrow in AirGen: $funcName" + Console.RESET
         )
+        Eval later NullGen
+
+      case AssignmentTag(_, _) =>
+        // TODO: should be already resolved & removed from tree
         Eval later NullGen
 
       case OnTag(_, _) =>
