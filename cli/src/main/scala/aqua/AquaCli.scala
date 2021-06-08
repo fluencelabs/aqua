@@ -54,6 +54,7 @@ object AquaCli extends IOApp with LogSupport {
           val bc = BodyConfig(wrapWithXor = !noXor)
           bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
         }
+        info(s"Aqua Compiler ${versionStr}")
         AquaCompiler
           .compileFilesTo[F](
             input,
