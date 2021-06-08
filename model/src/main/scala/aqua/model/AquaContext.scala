@@ -6,6 +6,7 @@ import aqua.types.Type
 import cats.Monoid
 import cats.syntax.apply._
 import cats.syntax.functor._
+import cats.syntax.monoid._
 
 case class AquaContext(
   funcs: Map[String, FuncCallable],
@@ -70,7 +71,7 @@ object AquaContext {
           FuncCallable(
             fnName,
             // TODO: capture ability resolution, get ID from the call context
-            FuncOp.leaf(CallServiceTag(sm.defaultId.getOrElse(serviceId), fnName, call, None)),
+            FuncOp.leaf(CallServiceTag(serviceId, fnName, call, None)),
             args,
             (ret.map(_.model), arrowType.res).mapN(_ -> _),
             Map.empty,
@@ -84,24 +85,38 @@ object AquaContext {
     )
 
   def fromScriptModel(sm: ScriptModel, init: AquaContext = Monoid.empty[AquaContext]): AquaContext =
-    sm.models.foldLeft(init) {
-      case (ctx, c: ConstantModel) =>
-        ctx.copy(values =
-          if (c.allowOverrides && ctx.values.contains(c.name)) ctx.values
-          else ctx.values.updated(c.name, c.value.resolveWith(ctx.values))
-        )
-      case (ctx, func: FuncModel) =>
-        val fr = func.capture(ctx.funcs, ctx.values)
-        ctx.copy(funcs = ctx.funcs.updated(func.name, fr))
-      case (ctx, t: TypeModel) =>
-        ctx.copy(types = ctx.types.updated(t.name, t.`type`))
-      case (ctx, m: ServiceModel) =>
-        ctx.copy(
-          abilities = m.defaultId.fold(ctx.abilities)(id =>
-            ctx.abilities.updated(m.name, fromServiceModel(m, id))
-          ),
-          services = ctx.services.updated(m.name, m)
-        )
-      case (ctx, _) => ctx
-    }
+    sm.models
+      .foldLeft((init, Monoid.empty[AquaContext])) {
+        case ((ctx, export), c: ConstantModel) =>
+          val add =
+            Monoid
+              .empty[AquaContext]
+              .copy(values =
+                if (c.allowOverrides && ctx.values.contains(c.name)) ctx.values
+                else ctx.values.updated(c.name, c.value.resolveWith(ctx.values))
+              )
+          (ctx |+| add, export |+| add)
+        case ((ctx, export), func: FuncModel) =>
+          val fr = func.capture(ctx.funcs, ctx.values)
+          val add =
+            Monoid.empty[AquaContext].copy(funcs = ctx.funcs.updated(func.name, fr))
+          (ctx |+| add, export |+| add)
+        case ((ctx, export), t: TypeModel) =>
+          val add =
+            Monoid.empty[AquaContext].copy(types = ctx.types.updated(t.name, t.`type`))
+          (ctx |+| add, export |+| add)
+        case ((ctx, export), m: ServiceModel) =>
+          val add =
+            Monoid
+              .empty[AquaContext]
+              .copy(
+                abilities = m.defaultId.fold(ctx.abilities)(id =>
+                  ctx.abilities.updated(m.name, fromServiceModel(m, id))
+                ),
+                services = ctx.services.updated(m.name, m)
+              )
+          (ctx |+| add, export |+| add)
+        case (ce, _) => ce
+      }
+      ._2
 }
