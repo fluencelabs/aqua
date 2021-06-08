@@ -1,62 +1,19 @@
 package aqua.model.topology
 
-import aqua.model.{ValueModel, VarModel}
 import aqua.model.func.body._
+import aqua.model.topology.ChainZipper.Matchers._
+import aqua.model.topology.Location.Matchers._
+import aqua.model.{ValueModel, VarModel}
+import aqua.types.{BoxType, ScalarType}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
-import ChainZipper.Matchers._
-import Location.Matchers._
-import aqua.types.{BoxType, ScalarType}
+import wvlet.log.LogSupport
 
 import scala.annotation.tailrec
 
-object Topology {
+object Topology extends LogSupport {
   type Tree = Cofree[Chain, OpTag]
-
-  // Walks through peer IDs, doing a noop function on each
-  // If same IDs are found in a row, does noop only once
-  // if there's a chain like a -> b -> c -> ... -> b -> g, remove everything between b and b
-  def through(peerIds: Chain[ValueModel], reversed: Boolean = false): Chain[Tree] =
-    peerIds
-      .foldLeft(Chain.empty[ValueModel]) {
-        case (acc, p) if acc.lastOption.contains(p) => acc
-        case (acc, p) if acc.contains(p) => acc.takeWhile(_ != p) :+ p
-        case (acc, p) => acc :+ p
-      }
-      .map { v =>
-        v.lastType match {
-          case _: BoxType =>
-            val itemName = "-via-peer-"
-
-            FuncOps.meta(
-              FuncOps.fold(
-                itemName,
-                v,
-                if (reversed)
-                  FuncOps.seq(
-                    FuncOps.next(itemName),
-                    FuncOps.noop(VarModel(itemName, ScalarType.string))
-                  )
-                else
-                  FuncOps.seq(
-                    FuncOps.noop(VarModel(itemName, ScalarType.string)),
-                    FuncOps.next(itemName)
-                  )
-              ),
-              skipTopology = true
-            )
-          case _ =>
-            FuncOps.noop(v)
-        }
-      }
-      .map(_.tree)
-
-  def mapTag(tag: OpTag, loc: Location): OpTag = tag match {
-    case c: CallServiceTag if c.peerId.isEmpty =>
-      c.copy(peerId = loc.lastOn.map(_.peerId))
-    case t => t
-  }
 
   def resolve(op: Tree): Tree =
     Cofree
@@ -75,6 +32,11 @@ object Topology {
       }
       .value
 
+  def resolveOnMoves(op: Tree): Tree =
+    Cursor
+      .transform(op)(transformWalker)
+      .getOrElse(op)
+
   @tailrec
   private def transformWalker(c: Cursor): List[Tree] =
     c match {
@@ -82,12 +44,15 @@ object Topology {
         transformWalker(c.mapParent(p => p.copy(parent.op, p.tail)))
 
       case Cursor(
-            `current`(cf),
+            `current`(currentTree),
             loc @ `head`(parent: GroupTag) /: _
           ) =>
-        val cfu = cf.copy(mapTag(cf.head, loc))
+        debug("build path for: " + currentTree)
+        val (specified, peerId) = specifyWay(currentTree.head, loc)
+        val peerIdC = Chain.fromOption(peerId)
+        val currentSpecifiedTree = currentTree.copy(head = specified)
 
-        val getThere = (cfu.head, loc.pathOn) match {
+        val getThere = (currentSpecifiedTree.head, loc.pathOn) match {
           case (OnTag(pid, _), h :: _) if h.peerId == pid => Chain.empty[ValueModel]
           case (OnTag(_, via), h :: _) =>
             h.via.reverse ++ via
@@ -96,10 +61,15 @@ object Topology {
 
         val prevOn = c.prevOnTags
 
-        val prevPath = prevOn.map { case OnTag(_, v) =>
-          v.reverse
+        debug("prevOn: " + prevOn)
+
+        // full paths from previous `on` tags
+        val prevPath = prevOn.map { case OnTag(c, v) =>
+          v.reverse :+ c
         }
           .flatMap(identity)
+
+        info("prevPath: " + prevPath)
 
         val nextOn = parent match {
           case ParTag | XorTag => c.nextOnTags
@@ -114,18 +84,92 @@ object Topology {
           nextOn.lastOption.filter(_ => parent == ParTag).map(_.peerId)
         )
 
-        if (prevOn.isEmpty && getThere.isEmpty) cfu :: Nil
-        else
-          (through(prevPath ++ loc.pathViaChain ++ getThere)
-            .append(cfu) ++ through(nextPath, reversed = true)).toList
+        if (prevOn.isEmpty && getThere.isEmpty) {
+          debug("only currentSpecifiedTree: " + currentSpecifiedTree)
+          currentSpecifiedTree :: Nil
+        } else {
+          debug("pathViaChain: " + loc.pathViaChain)
+          debug("getThere: " + getThere)
+          val wayBeforeFull = prevPath ++ loc.pathViaChain ++ getThere ++ peerIdC
+          // filter optimized path by previous call peerId and current call peerId
+          // because on optimization they will stay on their's first and last positions
+          val optimizedWayBefore = optimizePath(wayBeforeFull).filter(vm =>
+            !(peerIdC.contains(vm) || prevPath.lastOption.contains(vm))
+          )
+          val wayBefore = through(optimizedWayBefore)
+          val wayAfterFull = peerIdC ++ nextPath
+          // filter optimized path by current call peerId
+          // because on optimization it will stay on their first position
+          val optimizedWayAfter = optimizePath(wayAfterFull).filter(vm => !peerIdC.contains(vm))
+          val wayAfter = through(optimizedWayAfter, reversed = true)
+          debug("wayBeforeFull: " + wayBeforeFull)
+          info("wayBefore: " + wayBefore)
+          debug("current: " + currentSpecifiedTree.head)
+          debug("wayAfterFull: " + wayAfterFull)
+          debug("wayAfter: " + wayAfter)
+          val fullWay = (wayBefore.append(currentSpecifiedTree) ++ wayAfter).toList
+          debug("fullWay: " + fullWay.map(_.forceAll))
+          fullWay
+        }
 
       case Cursor(ChainZipper(_, cf, _), loc) =>
-        cf.copy(mapTag(cf.head, loc)) :: Nil
+        val (specified, _) = specifyWay(cf.head, loc)
+        cf.copy(head = specified) :: Nil
     }
 
-  def resolveOnMoves(op: Tree): Tree =
-    Cursor
-      .transform(op)(transformWalker)
-      .getOrElse(op)
+  // specify peerId for CallServiceTag depends on location, return this peerId
+  def specifyWay(tag: OpTag, loc: Location): (OpTag, Option[ValueModel]) = tag match {
+    case c: CallServiceTag if c.peerId.isEmpty =>
+      val lastOn = loc.lastOn.map(_.peerId)
+      (c.copy(peerId = lastOn), lastOn)
+    case t => (t, None)
+  }
+
+  // If same IDs are found in a row, does noop only once
+  // if there's a chain like a -> b -> c -> ... -> b -> g, remove everything between b and b
+  def optimizePath(peerIds: Chain[ValueModel]): Chain[ValueModel] =
+    peerIds
+      .foldLeft(Chain.empty[ValueModel]) {
+        case (acc, p) if acc.lastOption.contains(p) => acc
+        case (acc, p) if acc.contains(p) => acc.takeWhile(_ != p) :+ p
+        case (acc, p) => acc :+ p
+      }
+
+  // Walks through peer IDs, doing a noop function on each
+  def through(peerIds: Chain[ValueModel], reversed: Boolean = false): Chain[Tree] = {
+    debug("through peerIds: " + peerIds)
+    peerIds.map { v =>
+      v.lastType match {
+        case _: BoxType =>
+          val itemName = "-via-peer-"
+
+          val noop = FuncOps.noop(VarModel(itemName, ScalarType.string))
+          val next = FuncOps.next(itemName)
+          val seq =
+            if (reversed)
+              FuncOps.seq(
+                next,
+                noop
+              )
+            else
+              FuncOps.seq(
+                noop,
+                next
+              )
+
+          FuncOps.meta(
+            FuncOps.fold(
+              itemName,
+              v,
+              seq
+            ),
+            skipTopology = true
+          )
+        case _ =>
+          FuncOps.noop(v)
+      }
+    }
+      .map(_.tree)
+  }
 
 }

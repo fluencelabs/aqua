@@ -3,6 +3,7 @@ package aqua.model.topology
 import aqua.model.Node
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import wvlet.log.{LogLevel, Logger}
 
 class TopologySpec extends AnyFlatSpec with Matchers {
   import Node._
@@ -51,6 +52,26 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       seq(through(relay), call(1, otherPeer), call(2, otherPeer))
 
     proc should be(expected)
+  }
+
+  "topology resolver" should "simplify a route" in {
+    Logger.setDefaultLogLevel(LogLevel.DEBUG)
+    val init = on(
+      initPeer,
+      relay :: Nil,
+      seq(
+        on(
+          initPeer,
+          relay :: Nil,
+          call(1)
+        ),
+        call(3)
+      )
+    )
+
+    val proc: Node = Topology.resolve(init)
+
+    println(proc)
   }
 
   "topology resolver" should "go through relay to any other node, via another relay" in {

@@ -55,7 +55,7 @@ case class Node(tag: OpTag, ops: List[Node] = Nil) {
                                        else
                                          "{\n") + Console.RESET +
       (if (ops.length != other.ops.length)
-         Console.RED + s"number of ops: ${ops.length} != ${other.ops.length}\n" + Console.RESET
+         Console.RED + s"number of ops (current vs other): ${ops.length} != ${other.ops.length}\n" + Console.RESET
        else "") +
       ops
         .zip(other.ops)
@@ -132,6 +132,7 @@ object Node {
 
   def seq(nodes: Node*) = Node(SeqTag, nodes.toList)
   def xor(left: Node, right: Node) = Node(XorTag, left :: right :: Nil)
+  def par(left: Node, right: Node) = Node(ParTag, left :: right :: Nil)
 
   def on(peer: ValueModel, via: List[ValueModel], body: Node*) =
     Node(
