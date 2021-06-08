@@ -3,8 +3,18 @@ service OpH("op"):
 
 func a(b: string) -> string:
   c <- OpH.puk(b)
+  e = "hello"
+  OpH.puk(e)
+
+  f = "world"
+  OpH "planet"
+  OpH.puk(f)
+
+  x = "!!!"
+  OpH.puk(x)
   <- c
 
 func d(e: string) -> string:
   f <- a(e)
+  OpH.puk("in func d(e) now")
   <- f

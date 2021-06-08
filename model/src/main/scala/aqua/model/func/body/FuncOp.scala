@@ -42,6 +42,7 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
         } match {
           case c: CallArrowTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
           case c: CallServiceTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
+          case a: AssignmentTag => a.copy(assignTo = vals.getOrElse(a.assignTo, a.assignTo))
           case t: ForTag if vals.contains(t.item) => t.copy(item = vals(t.item))
           case t: NextTag if vals.contains(t.item) => t.copy(item = vals(t.item))
           case t => t

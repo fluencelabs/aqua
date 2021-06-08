@@ -23,10 +23,17 @@ sealed trait OpTag {
         call.mapValues(f),
         pid.map(f)
       )
+    case AssignmentTag(value, assignTo) =>
+      AssignmentTag(f(value), assignTo)
+    case AbilityIdTag(value, ability) =>
+      AssignmentTag(f(value), ability)
     case _ => this
   }
 
 }
+
+sealed trait NoAirTag extends OpTag
+
 sealed trait GroupTag extends OpTag
 sealed trait SeqGroupTag extends GroupTag
 
@@ -54,6 +61,16 @@ case class CallArrowTag(
   funcName: String,
   call: Call
 ) extends OpTag
+
+case class AssignmentTag(
+  value: ValueModel,
+  assignTo: String
+) extends NoAirTag
+
+case class AbilityIdTag(
+  value: ValueModel,
+  service: String
+) extends NoAirTag
 
 case class CallServiceTag(
   serviceId: ValueModel,
