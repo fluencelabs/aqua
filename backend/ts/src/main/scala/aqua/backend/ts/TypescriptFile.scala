@@ -1,11 +1,13 @@
 package aqua.backend.ts
 
-import aqua.model.ScriptModel
+import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
 import cats.data.Chain
 
-case class TypescriptFile(script: ScriptModel) {
-  def funcs: Chain[TypescriptFunc] = script.resolveFunctions.map(TypescriptFunc(_))
+case class TypescriptFile(context: AquaContext) {
+
+  def funcs: Chain[TypescriptFunc] =
+    Chain.fromSeq(context.funcs.values.toSeq).map(TypescriptFunc(_))
 
   def generateTS(conf: BodyConfig = BodyConfig()): String =
     TypescriptFile.Header + "\n\n" + funcs.map(_.generateTypescript(conf)).toList.mkString("\n\n")

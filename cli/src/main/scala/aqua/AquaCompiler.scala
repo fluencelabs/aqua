@@ -4,18 +4,16 @@ import aqua.backend.air.FuncAirGen
 import aqua.backend.ts.TypescriptFile
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
-import aqua.model.ScriptModel
+import aqua.model.{AquaContext, ScriptModel}
 import aqua.model.transform.BodyConfig
-import aqua.parser.lexer.Token
 import aqua.parser.lift.FileSpan
-import aqua.semantics.{CompilerState, Semantics}
+import aqua.semantics.{RulesViolated, SemanticError, Semantics}
 import cats.Applicative
 import cats.data.Validated.{Invalid, Valid}
 import cats.data._
 import cats.effect.kernel.Concurrent
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.syntax.monoid._
 import cats.syntax.show._
 import fs2.io.file.Files
 import fs2.text
@@ -28,10 +26,10 @@ object AquaCompiler extends LogSupport {
   case object TypescriptTarget extends CompileTarget
   case object AirTarget extends CompileTarget
 
-  case class Prepared(modFile: Path, srcPath: Path, targetPath: Path, model: ScriptModel) {
+  case class Prepared(modFile: Path, srcPath: Path, targetPath: Path, context: AquaContext) {
 
     def hasOutput(target: CompileTarget): Boolean = target match {
-      case _ => model.funcs.nonEmpty
+      case _ => context.funcs.nonEmpty
     }
 
     def targetPath(ext: String): Validated[Throwable, Path] =
@@ -64,15 +62,10 @@ object AquaCompiler extends LogSupport {
     targetPath: Path
   ): F[ValidatedNec[String, Chain[Prepared]]] =
     AquaFiles
-      .readAndResolve[F, CompilerState.S[FileSpan.F]](
+      .readAndResolve[F, ValidatedNec[SemanticError[FileSpan.F], AquaContext]](
         srcPath,
         imports,
-        ast =>
-          _.flatMap(m => {
-            for {
-              y <- Semantics.astToState(ast)
-            } yield m |+| y
-          })
+        ast => _.andThen(ctx => Semantics.process(ast, ctx))
       )
       .value
       .map {
@@ -80,7 +73,7 @@ object AquaCompiler extends LogSupport {
           Validated.invalid(fileErrors.map(_.showForConsole))
 
         case Right(modules) =>
-          Linker[FileModuleId, AquaFileError, CompilerState.S[FileSpan.F]](
+          Linker[FileModuleId, AquaFileError, ValidatedNec[SemanticError[FileSpan.F], AquaContext]](
             modules,
             ids => Unresolvable(ids.map(_.id.file.toString).mkString(" -> "))
           ) match {
@@ -88,19 +81,10 @@ object AquaCompiler extends LogSupport {
               val (errs, preps) =
                 files.toSeq.foldLeft[(Chain[String], Chain[Prepared])]((Chain.empty, Chain.empty)) {
                   case ((errs, preps), (modId, proc)) =>
-                    proc.run(CompilerState()).value match {
-                      case (proc, _) if proc.errors.nonEmpty =>
-                        (errs ++ showProcErrors(proc.errors), preps)
-
-                      case (_, model: ScriptModel) =>
-                        (errs, preps :+ Prepared(modId.file, srcPath, targetPath, model))
-
-                      case (_, model) =>
-                        (
-                          errs.append(Console.RED + "Unknown model: " + model + Console.RESET),
-                          preps
-                        )
-                    }
+                    proc.fold(
+                      es => (errs ++ showProcErrors(es.toChain)) -> preps,
+                      c => (errs, preps :+ Prepared(modId.file, srcPath, targetPath, c))
+                    )
                 }
               NonEmptyChain
                 .fromChain(errs)
@@ -115,14 +99,17 @@ object AquaCompiler extends LogSupport {
       }
 
   def showProcErrors(
-    errors: Chain[(Token[FileSpan.F], String)]
+    errors: Chain[SemanticError[FileSpan.F]]
   ): Chain[String] =
-    errors.map(err =>
-      err._1.unit._1
-        .focus(2)
-        .map(_.toConsoleStr(err._2, Console.CYAN))
-        .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
-    )
+    errors.map {
+      case RulesViolated(token, hint) =>
+        token.unit._1
+          .focus(2)
+          .map(_.toConsoleStr(hint, Console.CYAN))
+          .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
+      case _ =>
+        "Semantic error"
+    }
 
   def compileFilesTo[F[_]: Files: Concurrent](
     srcPath: Path,
@@ -148,11 +135,11 @@ object AquaCompiler extends LogSupport {
                   case Invalid(t) =>
                     EitherT.pure(t.getMessage)
                   case Valid(tp) =>
-                    writeFile(tp, TypescriptFile(p.model).generateTS(bodyConfig)).flatTap { _ =>
+                    writeFile(tp, TypescriptFile(p.context).generateTS(bodyConfig)).flatTap { _ =>
                       EitherT.pure(
                         Validated.catchNonFatal(
                           info(
-                            s"Result ${tp.toAbsolutePath}: compilation OK (${p.model.funcs.length} functions)"
+                            s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
                           )
                         )
                       )
@@ -165,8 +152,9 @@ object AquaCompiler extends LogSupport {
             case AirTarget =>
               preps
                 .flatMap(p =>
-                  p.model.resolveFunctions
-                    .map(fc => (fc.funcName -> FuncAirGen(fc).generateAir(bodyConfig).show))
+                  Chain
+                    .fromSeq(p.context.funcs.values.toSeq)
+                    .map(fc => fc.funcName -> FuncAirGen(fc).generateAir(bodyConfig).show)
                     .map { case (fnName, generated) =>
                       val tpV = p.targetPath(fnName + ".air")
                       tpV match {
@@ -180,7 +168,7 @@ object AquaCompiler extends LogSupport {
                             EitherT.pure(
                               Validated.catchNonFatal(
                                 info(
-                                  s"Result ${tp.toAbsolutePath}: compilation OK (${p.model.funcs.length} functions)"
+                                  s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
                                 )
                               )
                             )
