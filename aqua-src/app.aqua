@@ -1,0 +1,9 @@
+import "chatApp.aqua"
+import "service.aqua"
+import "builtin.aqua"
+import "demo.aqua"
+
+func createUser(nickname: string):
+    on nickname:
+        AppConfig.getApp()
+        AppConfig.getApp()

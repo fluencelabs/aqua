@@ -4,7 +4,7 @@ import aqua.backend.air.FuncAirGen
 import aqua.backend.ts.TypescriptFile
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
-import aqua.model.{AquaContext, ScriptModel}
+import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{RulesViolated, SemanticError, Semantics}
@@ -78,13 +78,17 @@ object AquaCompiler extends LogSupport {
             ids => Unresolvable(ids.map(_.id.file.toString).mkString(" -> "))
           ) match {
             case Validated.Valid(files) ⇒
-              val (errs, preps) =
-                files.toSeq.foldLeft[(Chain[String], Chain[Prepared])]((Chain.empty, Chain.empty)) {
-                  case ((errs, preps), (modId, proc)) =>
-                    proc.fold(
-                      es => (errs ++ showProcErrors(es.toChain)) -> preps,
-                      c => (errs, preps :+ Prepared(modId.file, srcPath, targetPath, c))
-                    )
+              val (errs, _, preps) =
+                files.toSeq.foldLeft[(Chain[String], Set[String], Chain[Prepared])](
+                  (Chain.empty, Set.empty, Chain.empty)
+                ) { case ((errs, errsSet, preps), (modId, proc)) =>
+                  proc.fold(
+                    es => {
+                      val newErrs = showProcErrors(es.toChain).filterNot(errsSet.contains)
+                      (errs ++ newErrs, errsSet ++ newErrs.iterator, preps)
+                    },
+                    c => (errs, errsSet, preps :+ Prepared(modId.file, srcPath, targetPath, c))
+                  )
                 }
               NonEmptyChain
                 .fromChain(errs)
