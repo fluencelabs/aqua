@@ -36,7 +36,7 @@ object AquaFiles {
         _.collect {
           case f if f.isFile && f.getName.endsWith(".aqua") =>
             AquaFile
-              .read(f.toPath.toAbsolutePath)
+              .read(f.toPath.toAbsolutePath.normalize())
               .map(Chain(_))
               .leftMap(NonEmptyChain.one)
           case f if f.isDirectory =>

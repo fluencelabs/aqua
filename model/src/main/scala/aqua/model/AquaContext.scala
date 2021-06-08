@@ -2,11 +2,14 @@ package aqua.model
 
 import aqua.model.func.body.{CallServiceTag, FuncOp}
 import aqua.model.func.{ArgsCall, FuncCallable, FuncModel}
-import aqua.types.Type
+import aqua.types.{ProductType, Type}
 import cats.Monoid
+import cats.data.NonEmptyMap
 import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.syntax.monoid._
+
+import scala.collection.immutable.SortedMap
 
 case class AquaContext(
   funcs: Map[String, FuncCallable],
@@ -44,6 +47,21 @@ case class AquaContext(
         ts ++ v.allServices(k + ".")
       }
       .map(_.swap.map(prefix + _).swap)
+
+  def `type`(name: String): Option[ProductType] =
+    NonEmptyMap
+      .fromMap(
+        SortedMap.from(
+          funcs.view.mapValues(_.arrowType) ++
+            types ++
+            values.view.mapValues(_.lastType) ++
+            services.view.mapValues(_.`type`) ++
+            abilities.flatMap { case (n, c) =>
+              c.`type`(n).map(n -> _)
+            }
+        )
+      )
+      .map(ProductType(name, _))
 }
 
 object AquaContext {
