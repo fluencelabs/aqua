@@ -25,10 +25,10 @@ class AbilitiesAlgebra[F[_], Alg[_]](implicit A: InjectK[AbilityOp[F, *], Alg]) 
   def getArrow(name: Ability[F], arrow: Name[F]): Free[Alg, Option[ArrowType]] =
     Free.liftInject[Alg](GetArrow[F](name, arrow))
 
-  def setServiceId(name: Ability[F], id: Value[F]): Free[Alg, Boolean] =
-    Free.liftInject[Alg](SetServiceId[F](name, id))
+  def setServiceId(name: Ability[F], id: Value[F], vm: ValueModel): Free[Alg, Boolean] =
+    Free.liftInject[Alg](SetServiceId[F](name, id, vm))
 
-  def getServiceId(name: Ability[F]): Free[Alg, Option[Value[F]]] =
+  def getServiceId(name: Ability[F]): Free[Alg, Option[ValueModel]] =
     Free.liftInject[Alg](GetServiceId[F](name))
 
   def beginScope(token: Token[F]): Free[Alg, Unit] =

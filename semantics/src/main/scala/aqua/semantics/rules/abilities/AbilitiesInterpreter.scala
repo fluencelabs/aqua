@@ -1,7 +1,7 @@
 package aqua.semantics.rules.abilities
 
-import aqua.model.ServiceModel
-import aqua.parser.lexer.{Name, Value}
+import aqua.model.{ServiceModel, ValueModel}
+import aqua.parser.lexer.Name
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, State}
@@ -17,6 +17,7 @@ class AbilitiesInterpreter[F[_], X](implicit
       GenLens[AbilitiesState[F]](_.stack)
     ) with (AbilityOp[F, *] ~> State[X, *]) {
 
+  // TODO: resolve abilities as well
   private def getService(name: String): S[Option[ServiceModel]] =
     getState.map(_.services.get(name))
 
@@ -56,9 +57,11 @@ class AbilitiesInterpreter[F[_], X](implicit
         getService(s.name.value).flatMap {
           case Some(_) =>
             mapStackHead(
-              modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(s.name.value, s.id)))
+              modify(st =>
+                st.copy(rootServiceIds = st.rootServiceIds.updated(s.name.value, s.id -> s.vm))
+              )
                 .as(true)
-            )(h => h.copy(serviceIds = h.serviceIds.updated(s.name.value, s.id)) -> true)
+            )(h => h.copy(serviceIds = h.serviceIds.updated(s.name.value, s.id -> s.vm)) -> true)
 
           case None =>
             report(s.name, "Service with this name is not registered, can't set its ID").as(false)
@@ -66,15 +69,19 @@ class AbilitiesInterpreter[F[_], X](implicit
 
       case s: GetServiceId[F] =>
         getState.flatMap(st =>
-          st.stack.flatMap(_.serviceIds.get(s.name.value)).headOption orElse st.rootServiceIds.get(
-            s.name.value
-          ) match {
+          st.stack
+            .flatMap(_.serviceIds.get(s.name.value).map(_._2))
+            .headOption orElse st.rootServiceIds
+            .get(
+              s.name.value
+            )
+            .map(_._2) orElse st.services.get(s.name.value).flatMap(_.defaultId) match {
             case None =>
               report(
                 s.name,
                 s"Service ID unresolved, use `${s.name.value} id` expression to set it"
               )
-                .as(Option.empty[Value[F]])
+                .as(Option.empty[ValueModel])
 
             case v => State.pure(v)
           }

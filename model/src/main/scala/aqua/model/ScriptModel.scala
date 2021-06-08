@@ -1,32 +1,12 @@
 package aqua.model
 
-import aqua.model.func.{FuncCallable, FuncModel}
+import aqua.model.func.FuncModel
 import cats.Monoid
 import cats.data.Chain
 
 case class ScriptModel(
   models: Chain[Model] = Chain.empty
-) extends Model {
-
-  case class Acc(
-    arrows: Map[String, FuncCallable] = Map.empty,
-    values: Map[String, ValueModel] = Map.empty,
-    output: Chain[FuncCallable] = Chain.empty
-  )
-
-  lazy val funcs: Chain[FuncModel] = models.collect { case c: FuncModel => c }
-  lazy val constants: Chain[ConstantModel] = models.collect { case c: ConstantModel => c }
-
-  lazy val resolveFunctions: Chain[FuncCallable] = models
-    .foldLeft(Acc()) {
-      case (a, c: ConstantModel) => a.copy(values = a.values.updated(c.name, c.value))
-      case (a, func: FuncModel) =>
-        val fr = func.capture(a.arrows, a.values)
-        a.copy(output = a.output :+ fr, arrows = a.arrows.updated(func.name, fr))
-      case (a, _) => a
-    }
-    .output
-}
+) extends Model
 
 object ScriptModel {
 

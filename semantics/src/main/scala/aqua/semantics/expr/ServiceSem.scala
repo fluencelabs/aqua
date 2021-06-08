@@ -34,9 +34,11 @@ class ServiceSem[F[_]](val expr: ServiceExpr[F]) extends AnyVal {
                 arrows,
                 defaultId
               )
-              _ <- expr.id
+              _ <- (expr.id zip defaultId)
                 .fold(Free.pure[Alg, Unit](()))(idV =>
-                  (V.ensureIsString(idV) >> A.setServiceId(expr.name, idV)).map(_ => ())
+                  (V.ensureIsString(idV._1) >> A.setServiceId(expr.name, idV._1, idV._2)).map(_ =>
+                    ()
+                  )
                 )
             } yield
               if (defineResult) {

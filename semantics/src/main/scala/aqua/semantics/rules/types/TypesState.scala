@@ -1,6 +1,6 @@
 package aqua.semantics.rules.types
 
-import aqua.model.{IntoArrayModel, IntoFieldModel, IntoIndexModel, LambdaModel}
+import aqua.model.{AquaContext, IntoArrayModel, IntoFieldModel, IntoIndexModel, LambdaModel}
 import aqua.parser.lexer.{
   ArrayTypeToken,
   ArrowTypeToken,
@@ -128,4 +128,6 @@ object TypesState {
         definitions = x.definitions ++ y.definitions
       )
   }
+
+  def init[F[_]](context: AquaContext): TypesState[F] = TypesState(strict = context.allTypes())
 }

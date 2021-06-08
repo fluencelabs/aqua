@@ -1,0 +1,3 @@
+service AppConfig("affinidi/get-config"):
+    getApp: -> string
+    getLocalService: -> LocalService

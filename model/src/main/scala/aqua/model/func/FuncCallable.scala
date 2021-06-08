@@ -1,7 +1,7 @@
 package aqua.model.func
 
 import aqua.model.func.body.{AssignmentTag, CallArrowTag, FuncOp, OpTag}
-import aqua.model.{ValueModel, VarModel}
+import aqua.model.{Model, ValueModel, VarModel}
 import aqua.types.{ArrowType, Type}
 import cats.Eval
 import cats.data.Chain
@@ -15,7 +15,7 @@ case class FuncCallable(
   ret: Option[(ValueModel, Type)],
   capturedArrows: Map[String, FuncCallable],
   capturedValues: Map[String, ValueModel]
-) {
+) extends Model {
 
   private val logger = Logger.of[FuncCallable]
   import logger._

@@ -1,6 +1,6 @@
 package aqua.semantics
 
-import aqua.model.Model
+import aqua.model.{AquaContext, Model, ScriptModel}
 import aqua.model.func.body.FuncOp
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
@@ -16,7 +16,7 @@ import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, Types
 import cats.Eval
 import cats.arrow.FunctionK
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, EitherK, NonEmptyChain, State, ValidatedNec}
+import cats.data.{Chain, EitherK, NonEmptyChain, State, Validated, ValidatedNec}
 import cats.free.Free
 import monocle.Lens
 import monocle.macros.GenLens
@@ -59,7 +59,7 @@ object Semantics {
 
     implicit val re: ReportError[F, CompilerState[F]] =
       (st: CompilerState[F], token: Token[F], hint: String) =>
-        st.focus(_.errors).modify(_.append(token -> hint))
+        st.focus(_.errors).modify(_.append(RulesViolated(token, hint)))
 
     implicit val ns: Lens[CompilerState[F], NamesState[F]] = GenLens[CompilerState[F]](_.names)
 
@@ -83,13 +83,17 @@ object Semantics {
   def astToState[F[_]](ast: Ast[F]): State[CompilerState[F], Model] =
     (transpile[F] _ andThen interpret[F])(ast)
 
-  def generateModel[F[_]](ast: Ast[F]): ValidatedNec[(Token[F], String), Model] =
+  def process[F[_]](ast: Ast[F], init: AquaContext): ValidatedNec[SemanticError[F], AquaContext] =
     astToState[F](ast)
-      .run(CompilerState[F]())
-      .map { case (state, gen) =>
-        NonEmptyChain
-          .fromChain(state.errors)
-          .fold[ValidatedNec[(Token[F], String), Model]](Valid(gen))(Invalid(_))
+      .run(CompilerState.init[F](init))
+      .map {
+        case (state, gen: ScriptModel) =>
+          val ctx = AquaContext.fromScriptModel(gen)
+          NonEmptyChain
+            .fromChain(state.errors)
+            .fold[ValidatedNec[SemanticError[F], AquaContext]](Valid(ctx))(Invalid(_))
+        case (_, _) =>
+          Validated.invalidNec[SemanticError[F], AquaContext](WrongAST(ast))
       }
       .value
 }

@@ -58,12 +58,12 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
             Option(at -> sid) // Here we assume that Ability is a Service that must be resolved
           case _ => None
         }.flatMap(_.fold(Free.pure[Alg, Option[FuncOp]](None)) { case (arrowType, serviceId) =>
-          (checkArgsRes(arrowType), V.valueToModel(serviceId)).mapN {
-            case ((argsResolved, t), Some(serviceIdM)) =>
+          checkArgsRes(arrowType).map {
+            case (argsResolved, t) =>
               Option(
                 FuncOp.leaf(
                   CallServiceTag(
-                    serviceId = serviceIdM,
+                    serviceId = serviceId,
                     funcName = funcName.value,
                     Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
                   )

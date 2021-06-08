@@ -1,7 +1,6 @@
 package aqua.semantics
 
-import aqua.model.{EmptyModel, Model}
-import aqua.parser.lexer.Token
+import aqua.model.{AquaContext, EmptyModel, Model}
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
@@ -10,7 +9,7 @@ import cats.kernel.Monoid
 import cats.syntax.monoid._
 
 case class CompilerState[F[_]](
-  errors: Chain[(Token[F], String)] = Chain.empty[(Token[F], String)],
+  errors: Chain[SemanticError[F]] = Chain.empty[SemanticError[F]],
   names: NamesState[F] = NamesState[F](),
   abilities: AbilitiesState[F] = AbilitiesState[F](),
   types: TypesState[F] = TypesState[F]()
@@ -18,6 +17,12 @@ case class CompilerState[F[_]](
 
 object CompilerState {
   type S[F[_]] = State[CompilerState[F], Model]
+
+  def init[F[_]](ctx: AquaContext): CompilerState[F] = CompilerState(
+    names = NamesState.init[F](ctx),
+    abilities = AbilitiesState.init[F](ctx),
+    types = TypesState.init[F](ctx)
+  )
 
   implicit def compilerStateMonoid[F[_]]: Monoid[S[F]] = new Monoid[S[F]] {
     override def empty: S[F] = State.pure(EmptyModel("compiler state monoid empty"))
