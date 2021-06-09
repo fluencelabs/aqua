@@ -47,7 +47,6 @@ object Topology extends LogSupport {
             `current`(currentTree),
             loc @ `head`(parent: GroupTag) /: _
           ) =>
-        debug("build path for: " + currentTree)
         val (specified, peerId) = specifyWay(currentTree.head, loc)
         val peerIdC = Chain.fromOption(peerId)
         val currentSpecifiedTree = currentTree.copy(head = specified)
@@ -61,15 +60,12 @@ object Topology extends LogSupport {
 
         val prevOn = c.prevOnTags
 
-        debug("prevOn: " + prevOn)
-
         // full paths from previous `on` tags
         val prevPath = prevOn.map { case OnTag(c, v) =>
           v.reverse :+ c
         }
-          .flatMap(identity)
 
-        info("prevPath: " + prevPath)
+        val prevPathFlat = prevPath.flatMap(identity)
 
         val nextOn = parent match {
           case ParTag | XorTag => c.nextOnTags
@@ -85,30 +81,28 @@ object Topology extends LogSupport {
         )
 
         if (prevOn.isEmpty && getThere.isEmpty) {
-          debug("only currentSpecifiedTree: " + currentSpecifiedTree)
           currentSpecifiedTree :: Nil
         } else {
-          debug("pathViaChain: " + loc.pathViaChain)
-          debug("getThere: " + getThere)
-          val wayBeforeFull = prevPath ++ loc.pathViaChain ++ getThere ++ peerIdC
+          val wayBeforeFull = prevPathFlat ++ loc.pathViaChain ++ getThere ++ peerIdC
+
           // filter optimized path by previous call peerId and current call peerId
           // because on optimization they will stay on their's first and last positions
-          val optimizedWayBefore = optimizePath(wayBeforeFull).filter(vm =>
-            !(peerIdC.contains(vm) || prevPath.lastOption.contains(vm))
-          )
+          val optimizedWayBefore = optimizePath(wayBeforeFull).filter { vm =>
+            val containsTarget = peerIdC.contains(vm)
+            val containsPrevTargets = prevPath.find(_.lastOption.contains(vm)).isDefined
+            !(containsTarget || containsPrevTargets)
+          }
           val wayBefore = through(optimizedWayBefore)
+
           val wayAfterFull = peerIdC ++ nextPath
+
           // filter optimized path by current call peerId
           // because on optimization it will stay on their first position
           val optimizedWayAfter = optimizePath(wayAfterFull).filter(vm => !peerIdC.contains(vm))
           val wayAfter = through(optimizedWayAfter, reversed = true)
-          debug("wayBeforeFull: " + wayBeforeFull)
-          info("wayBefore: " + wayBefore)
-          debug("current: " + currentSpecifiedTree.head)
-          debug("wayAfterFull: " + wayAfterFull)
-          debug("wayAfter: " + wayAfter)
+
           val fullWay = (wayBefore.append(currentSpecifiedTree) ++ wayAfter).toList
-          debug("fullWay: " + fullWay.map(_.forceAll))
+          debug(s"fullWay to ${peerId}: ${fullWay.map(_.forceAll)}")
           fullWay
         }
 

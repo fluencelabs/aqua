@@ -3,7 +3,6 @@ package aqua.model.topology
 import aqua.model.Node
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import wvlet.log.{LogLevel, Logger}
 
 class TopologySpec extends AnyFlatSpec with Matchers {
   import Node._
@@ -55,7 +54,6 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   "topology resolver" should "simplify a route" in {
-    Logger.setDefaultLogLevel(LogLevel.DEBUG)
     val init = on(
       initPeer,
       relay :: Nil,
