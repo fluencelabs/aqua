@@ -97,6 +97,12 @@ object AppOps {
       .map(_ => true)
       .withDefault(false)
 
+  val compileToJs: Opts[Boolean] =
+    Opts
+      .flag("js", "Generate .js file instead of typescript")
+      .map(_ => true)
+      .withDefault(false)
+
   val noRelay: Opts[Boolean] =
     Opts
       .flag("no-relay", "Do not generate a pass through the relay node")
