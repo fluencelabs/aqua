@@ -1,5 +1,6 @@
 package aqua.parser.lexer
 
+import cats.Functor
 import cats.data.NonEmptyList
 import cats.parse.{Accumulator0, Parser => P, Parser0 => P0}
 
@@ -51,7 +52,9 @@ object Token {
   }
   val `\n` : P[Unit] = P.string("\n\r") | P.char('\n') | P.string("\r\n")
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
-  val ` \n` : P[Unit] = (` `.?.void *> (`--` *> P.charsWhile(_ != '\n')).?.void).with1 *> `\n`
+
+  val ` \n` : P[Unit] =
+    (` `.?.void *> (`--` *> P.charsWhile(_ != '\n')).?.void).with1 *> `\n`
   val ` \n+` : P[Unit] = P.repAs[Unit, Unit](` \n`.backtrack, 1)(Accumulator0.unitAccumulator0)
   val ` : \n+` : P[Unit] = ` `.?.with1 *> `:` *> ` \n+`
   val `,` : P[Unit] = P.char(',') <* ` `.?
@@ -69,6 +72,12 @@ object Token {
   val ` = ` : P[Unit] = P.string("=").surroundedBy(` `.?)
   val `?` : P[Unit] = P.string("?")
   val `<-` : P[Unit] = P.string("<-")
+
+  case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
+    override def as[T](v: T): F[T] = Functor[F].as(point, v)
+  }
+
+  def lift[F[_]: Functor, A](point: F[A]): Token[F] = LiftToken(point)
 
   def comma[T](p: P[T]): P[NonEmptyList[T]] =
     P.repSep(p, `,` <* ` \n+`.rep0)

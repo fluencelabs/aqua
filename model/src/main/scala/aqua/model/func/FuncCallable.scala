@@ -1,6 +1,6 @@
 package aqua.model.func
 
-import aqua.model.func.body.{AssignmentTag, CallArrowTag, FuncOp, OpTag}
+import aqua.model.func.body.{AssignmentTag, CallArrowTag, CallServiceTag, FuncOp, OpTag}
 import aqua.model.{Model, ValueModel, VarModel}
 import aqua.types.{ArrowType, Type}
 import cats.Eval
@@ -83,10 +83,10 @@ case class FuncCallable(
           capturedValues
       ) {
         case ((noNames, resolvedExports), tag @ AssignmentTag(value, assignTo)) =>
-          (noNames, resolvedExports + (assignTo -> value.resolveWith(resolvedExports))) -> Cofree[
-            Chain,
-            OpTag
-          ](
+          (
+            noNames,
+            resolvedExports + (assignTo -> value.resolveWith(resolvedExports))
+          ) -> Cofree[Chain, OpTag](
             tag.mapValues(_.resolveWith(resolvedExports)),
             Eval.now(Chain.empty)
           )

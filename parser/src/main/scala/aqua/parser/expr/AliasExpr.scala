@@ -8,7 +8,7 @@ import cats.Comonad
 import cats.parse.Parser
 
 case class AliasExpr[F[_]](name: CustomTypeToken[F], target: TypeToken[F])
-    extends Expr[F](AliasExpr)
+    extends Expr[F](AliasExpr, name)
 
 object AliasExpr extends Expr.Leaf {
 

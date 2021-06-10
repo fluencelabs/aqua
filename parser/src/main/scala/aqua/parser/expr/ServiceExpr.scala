@@ -7,7 +7,8 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 
-case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]]) extends Expr[F](ServiceExpr)
+case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]])
+    extends Expr[F](ServiceExpr, name)
 
 object ServiceExpr extends Expr.AndIndented {
 

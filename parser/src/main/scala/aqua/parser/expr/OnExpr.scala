@@ -7,7 +7,7 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.{Parser => P}
 
-case class OnExpr[F[_]](peerId: Value[F], via: List[Value[F]]) extends Expr[F](OnExpr)
+case class OnExpr[F[_]](peerId: Value[F], via: List[Value[F]]) extends Expr[F](OnExpr, peerId)
 
 object OnExpr extends Expr.AndIndented {
 
@@ -21,6 +21,7 @@ object OnExpr extends Expr.AndIndented {
       Expr.defer(ForExpr) ::
       Expr.defer(IfExpr) ::
       Expr.defer(ElseOtherwiseExpr) ::
+      Expr.defer(CatchExpr) ::
       Nil
 
   override def p[F[_]: LiftParser: Comonad]: P[OnExpr[F]] = {

@@ -11,7 +11,7 @@ case class ConstantExpr[F[_]](
   name: Name[F],
   value: Value[F],
   skipIfAlreadyDefined: Boolean
-) extends Expr[F](ConstantExpr)
+) extends Expr[F](ConstantExpr, name)
 
 object ConstantExpr extends Expr.Leaf {
 

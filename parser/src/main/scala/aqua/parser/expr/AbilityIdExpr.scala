@@ -7,7 +7,8 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.{Parser => P}
 
-case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F]) extends Expr[F](AbilityIdExpr)
+case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F])
+    extends Expr[F](AbilityIdExpr, ability)
 
 object AbilityIdExpr extends Expr.Leaf {
 

@@ -7,7 +7,7 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 
-case class ReturnExpr[F[_]](value: Value[F]) extends Expr[F](ReturnExpr)
+case class ReturnExpr[F[_]](value: Value[F]) extends Expr[F](ReturnExpr, value)
 
 object ReturnExpr extends Expr.Leaf {
 

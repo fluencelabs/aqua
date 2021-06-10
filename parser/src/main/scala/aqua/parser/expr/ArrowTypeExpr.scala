@@ -8,7 +8,7 @@ import cats.Comonad
 import cats.parse.Parser
 
 case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F])
-    extends Expr[F](ArrowTypeExpr)
+    extends Expr[F](ArrowTypeExpr, name)
 
 object ArrowTypeExpr extends Expr.Leaf {
 

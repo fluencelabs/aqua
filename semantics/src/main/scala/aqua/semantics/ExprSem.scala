@@ -32,6 +32,7 @@ object ExprSem {
       case expr: ForExpr[F] => new ForSem(expr).program[G]
       case expr: IfExpr[F] => new IfSem(expr).program[G]
       case expr: TryExpr[F] => new TrySem(expr).program[G]
+      case expr: CatchExpr[F] => new CatchSem(expr).program[G]
       case expr: ElseOtherwiseExpr[F] => new ElseOtherwiseSem(expr).program[G]
       case expr: ParExpr[F] => new ParSem(expr).program[G]
       case expr: ReturnExpr[F] => new ReturnSem(expr).program[G]

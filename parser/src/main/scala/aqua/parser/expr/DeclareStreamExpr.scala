@@ -8,7 +8,7 @@ import cats.Comonad
 import cats.parse.Parser
 
 case class DeclareStreamExpr[F[_]](name: Name[F], `type`: TypeToken[F])
-    extends Expr[F](DeclareStreamExpr)
+    extends Expr[F](DeclareStreamExpr, name)
 
 object DeclareStreamExpr extends Expr.Leaf {
 

@@ -5,7 +5,7 @@ import aqua.backend.ts.TypescriptFile
 import aqua.backend.js.JavaScriptFile
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
-import aqua.model.AquaContext
+import aqua.model.{AquaContext, VarModel}
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{RulesViolated, SemanticError, Semantics}
@@ -13,6 +13,7 @@ import cats.Applicative
 import cats.data.Validated.{Invalid, Valid}
 import cats.data._
 import cats.effect.kernel.Concurrent
+import cats.kernel.Monoid
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.show._
@@ -62,7 +63,7 @@ object AquaCompiler extends LogSupport {
     srcPath: Path,
     imports: LazyList[Path],
     targetPath: Path
-  ): F[ValidatedNec[String, Chain[Prepared]]] =
+  )(implicit aqum: Monoid[AquaContext]): F[ValidatedNec[String, Chain[Prepared]]] =
     AquaFiles
       .readAndResolve[F, ValidatedNec[SemanticError[FileSpan.F], AquaContext]](
         srcPath,
@@ -123,7 +124,8 @@ object AquaCompiler extends LogSupport {
     targetPath: Path,
     compileTo: CompileTarget,
     bodyConfig: BodyConfig
-  ): F[ValidatedNec[String, Chain[String]]] =
+  ): F[ValidatedNec[String, Chain[String]]] = {
+    import bodyConfig.aquaContextMonoid
     prepareFiles(srcPath, imports, targetPath)
       .map(_.map(_.filter { p =>
         val hasOutput = p.hasOutput(compileTo)
@@ -218,6 +220,7 @@ object AquaCompiler extends LogSupport {
             .map(Validated.fromEither)
 
       }
+  }
 
   def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, Unit] =
     EitherT.right[String](Files[F].deleteIfExists(file)) >>

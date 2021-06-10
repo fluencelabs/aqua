@@ -8,7 +8,7 @@ import cats.Comonad
 import cats.parse.Parser
 
 case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F])
-    extends Expr[F](FieldTypeExpr)
+    extends Expr[F](FieldTypeExpr, name)
 
 object FieldTypeExpr extends Expr.Leaf {
 

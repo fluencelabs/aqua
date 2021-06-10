@@ -2,6 +2,7 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.{ElseOtherwiseExpr, OnExpr}
+import aqua.parser.lexer.Token
 import aqua.types.LiteralType.{number, string}
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
@@ -12,11 +13,11 @@ class ElseOtherwiseExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "else" should "be parsed" in {
     parseElse("else") should be(
-      ElseOtherwiseExpr[Id](())
+      ElseOtherwiseExpr[Id](Token.lift[Id, Unit](()))
     )
 
     parseElse("otherwise") should be(
-      ElseOtherwiseExpr[Id](())
+      ElseOtherwiseExpr[Id](Token.lift[Id, Unit](()))
     )
   }
 }

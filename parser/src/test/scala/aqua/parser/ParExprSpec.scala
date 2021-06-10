@@ -2,6 +2,7 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.{CallArrowExpr, ParExpr}
+import aqua.parser.lexer.Token
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.{Eval, Id}
@@ -14,7 +15,7 @@ class ParExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   "par" should "be parsed" in {
     ParExpr.readLine[Id].parseAll("par x <- y()").value should be(
       Cofree[Chain, Expr[Id]](
-        ParExpr[Id](()),
+        ParExpr[Id](Token.lift[Id, Unit](())),
         Eval.now(
           Chain(
             Cofree[Chain, Expr[Id]](

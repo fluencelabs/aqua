@@ -1,6 +1,6 @@
 package aqua.parser.lift
 
-import cats.parse.{LocationMap, Parser => P}
+import cats.parse.{LocationMap, Parser0, Parser => P}
 import cats.{Comonad, Eval}
 
 import scala.language.implicitConversions
@@ -99,6 +99,11 @@ object Span {
     override def lift[T](p: P[T]): P[F[T]] =
       (P.index.with1 ~ p ~ P.index).map { case ((s, v), e) ⇒
         (Span(s, e), v)
+      }
+
+    override def lift0[T](p0: Parser0[T]): Parser0[(Span, T)] =
+      (P.index ~ p0).map { case (i, v) ⇒
+        (Span(i, i), v)
       }
   }
 

@@ -66,19 +66,29 @@ case class AquaContext(
 
 object AquaContext {
 
-  implicit object AquaContextMonoid extends Monoid[AquaContext] {
+  trait Implicits {
+    implicit val aquaContextMonoid: Monoid[AquaContext]
+  }
 
-    override def empty: AquaContext =
-      AquaContext(Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+  val blank: AquaContext = AquaContext(Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
 
-    override def combine(x: AquaContext, y: AquaContext): AquaContext =
-      AquaContext(
-        x.funcs ++ y.funcs,
-        x.types ++ y.types,
-        x.values ++ y.values,
-        x.abilities ++ y.abilities,
-        x.services ++ y.services
-      )
+  def implicits(init: AquaContext): Implicits = new Implicits {
+
+    override implicit val aquaContextMonoid: Monoid[AquaContext] =
+      new Monoid[AquaContext] {
+
+        override def empty: AquaContext =
+          init
+
+        override def combine(x: AquaContext, y: AquaContext): AquaContext =
+          AquaContext(
+            x.funcs ++ y.funcs,
+            x.types ++ y.types,
+            x.values ++ y.values,
+            x.abilities ++ y.abilities,
+            x.services ++ y.services
+          )
+      }
   }
 
   def fromServiceModel(sm: ServiceModel, serviceId: ValueModel): AquaContext =
@@ -102,7 +112,9 @@ object AquaContext {
       services = Map.empty
     )
 
-  def fromScriptModel(sm: ScriptModel, init: AquaContext = Monoid.empty[AquaContext]): AquaContext =
+  def fromScriptModel(sm: ScriptModel, init: AquaContext)(implicit
+    aqum: Monoid[AquaContext]
+  ): AquaContext =
     sm.models
       .foldLeft((init, Monoid.empty[AquaContext])) {
         case ((ctx, export), c: ConstantModel) =>

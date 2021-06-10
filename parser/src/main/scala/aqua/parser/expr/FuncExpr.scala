@@ -14,7 +14,7 @@ case class FuncExpr[F[_]](
   args: List[Arg[F]],
   ret: Option[DataTypeToken[F]],
   retValue: Option[Value[F]]
-) extends Expr[F](FuncExpr)
+) extends Expr[F](FuncExpr, name)
 
 object FuncExpr extends Expr.AndIndented {
 
@@ -28,6 +28,7 @@ object FuncExpr extends Expr.AndIndented {
       IfExpr ::
       TryExpr ::
       ElseOtherwiseExpr ::
+      CatchExpr ::
       ParExpr ::
       DeclareStreamExpr ::
       Nil

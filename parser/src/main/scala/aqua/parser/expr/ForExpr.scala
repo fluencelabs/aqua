@@ -13,7 +13,7 @@ case class ForExpr[F[_]](
   item: Name[F],
   iterable: Value[F],
   mode: Option[(F[ForExpr.Mode], ForExpr.Mode)]
-) extends Expr[F](ForExpr)
+) extends Expr[F](ForExpr, item)
 
 object ForExpr extends Expr.AndIndented {
   sealed trait Mode
@@ -29,6 +29,7 @@ object ForExpr extends Expr.AndIndented {
       Expr.defer(TryExpr) ::
       Expr.defer(IfExpr) ::
       Expr.defer(ElseOtherwiseExpr) ::
+      Expr.defer(CatchExpr) ::
       Nil
 
   override def p[F[_]: LiftParser: Comonad]: P[ForExpr[F]] =

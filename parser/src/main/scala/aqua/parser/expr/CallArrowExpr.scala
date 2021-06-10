@@ -12,7 +12,7 @@ case class CallArrowExpr[F[_]](
   ability: Option[Ability[F]],
   funcName: Name[F],
   args: List[Value[F]]
-) extends Expr[F](CallArrowExpr)
+) extends Expr[F](CallArrowExpr, funcName)
 
 object CallArrowExpr extends Expr.Leaf {
 

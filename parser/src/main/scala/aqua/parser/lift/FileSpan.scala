@@ -1,6 +1,6 @@
 package aqua.parser.lift
 
-import cats.parse.{LocationMap, Parser => P}
+import cats.parse.{LocationMap, Parser0, Parser => P}
 import cats.{Comonad, Eval}
 
 import scala.language.implicitConversions
@@ -41,6 +41,12 @@ object FileSpan {
 
     override def lift[T](p: P[T]): P[F[T]] = {
       implicitly[LiftParser[Span.F]].lift(p).map { case (span, value) =>
+        (FileSpan(name, source, memoizedLocationMap, span), value)
+      }
+    }
+
+    override def lift0[T](p0: Parser0[T]): Parser0[(FileSpan, T)] = {
+      implicitly[LiftParser[Span.F]].lift0(p0).map { case (span, value) =>
         (FileSpan(name, source, memoizedLocationMap, span), value)
       }
     }

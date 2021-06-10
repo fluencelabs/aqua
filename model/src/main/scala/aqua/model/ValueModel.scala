@@ -1,8 +1,9 @@
 package aqua.model
 
-import aqua.types.{ScalarType, Type}
+import aqua.types.{ProductType, ScalarType, Type}
 import cats.Eq
-import cats.data.Chain
+import cats.data.{Chain, NonEmptyMap}
+import wvlet.log.LogSupport
 
 sealed trait ValueModel {
   def `type`: Type
@@ -37,7 +38,7 @@ case class IntoFieldModel(field: String, `type`: Type) extends LambdaModel
 case class IntoIndexModel(idx: Int, `type`: Type) extends LambdaModel
 
 case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Chain.empty)
-    extends ValueModel {
+    extends ValueModel with LogSupport {
   def deriveFrom(vm: VarModel): VarModel = vm.copy(lambda = vm.lambda ++ lambda)
 
   override val lastType: Type = lambda.lastOption.map(_.`type`).getOrElse(`type`)
@@ -66,7 +67,17 @@ case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Cha
                */
               case vm @ VarModel(nn, _, _) if nn == name => deriveFrom(vm)
               // it couldn't go to a cycle as long as the semantics protects it
-              case _ => n.resolveWith(map)
+              case _ =>
+                n.resolveWith(map) match {
+                  case nvm: VarModel =>
+                    deriveFrom(nvm)
+                  case valueModel =>
+                    if (lambda.nonEmpty)
+                      error(
+                        s"Var $name derived from scalar $valueModel, but lambda is lost: $lambda"
+                      )
+                    valueModel
+                }
             }
           case _ =>
             deriveFrom(vv)
@@ -76,4 +87,19 @@ case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Cha
       case None => this // Should not happen
     }
   }
+}
+
+object VarModel {
+
+  val lastError: VarModel = VarModel(
+    "%last_error%",
+    ProductType(
+      "LastError",
+      NonEmptyMap.of(
+        "instruction" -> ScalarType.string,
+        "msg" -> ScalarType.string,
+        "peer_id" -> ScalarType.string
+      )
+    )
+  )
 }
