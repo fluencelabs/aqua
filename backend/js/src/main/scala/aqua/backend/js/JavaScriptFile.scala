@@ -26,9 +26,7 @@ object JavaScriptFile {
       .getOrElse("Unknown")}
        | *
        | */
-       |import { FluenceClient, PeerIdB58 } from '@fluencelabs/fluence';
        |import { RequestFlowBuilder } from '@fluencelabs/fluence/dist/api.unstable';
-       |import { RequestFlow } from '@fluencelabs/fluence/dist/internal/RequestFlow';
        |""".stripMargin
 
 }
