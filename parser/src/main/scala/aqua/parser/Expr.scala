@@ -10,8 +10,9 @@ import cats.parse.{Parser => P}
 import cats.syntax.comonad._
 import cats.{Comonad, Eval}
 import Chain.:==
+import aqua.parser.lexer.Token
 
-abstract class Expr[F[_]](val companion: Expr.Companion) {
+abstract class Expr[F[_]](val companion: Expr.Companion, val token: Token[F]) {
 
   lazy val isBlock: Boolean = companion match {
     case _: Expr.Block => true

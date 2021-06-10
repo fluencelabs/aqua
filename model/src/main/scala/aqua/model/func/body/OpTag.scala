@@ -26,7 +26,7 @@ sealed trait OpTag {
     case AssignmentTag(value, assignTo) =>
       AssignmentTag(f(value), assignTo)
     case AbilityIdTag(value, ability) =>
-      AssignmentTag(f(value), ability)
+      AbilityIdTag(f(value), ability)
     case _ => this
   }
 

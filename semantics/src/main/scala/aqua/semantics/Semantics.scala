@@ -18,6 +18,7 @@ import cats.arrow.FunctionK
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, EitherK, NonEmptyChain, State, Validated, ValidatedNec}
 import cats.free.Free
+import cats.kernel.Monoid
 import monocle.Lens
 import monocle.macros.GenLens
 import cats.syntax.apply._
@@ -80,15 +81,17 @@ object Semantics {
     free.foldMap[State[CompilerState[F], *]](interpreter)
   }
 
-  def astToState[F[_]](ast: Ast[F]): State[CompilerState[F], Model] =
+  private def astToState[F[_]](ast: Ast[F]): State[CompilerState[F], Model] =
     (transpile[F] _ andThen interpret[F])(ast)
 
-  def process[F[_]](ast: Ast[F], init: AquaContext): ValidatedNec[SemanticError[F], AquaContext] =
+  def process[F[_]](ast: Ast[F], init: AquaContext)(implicit
+    aqum: Monoid[AquaContext]
+  ): ValidatedNec[SemanticError[F], AquaContext] =
     astToState[F](ast)
       .run(CompilerState.init[F](init))
       .map {
         case (state, gen: ScriptModel) =>
-          val ctx = AquaContext.fromScriptModel(gen)
+          val ctx = AquaContext.fromScriptModel(gen, aqum.empty)
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[F], AquaContext]](Valid(ctx))(Invalid(_))

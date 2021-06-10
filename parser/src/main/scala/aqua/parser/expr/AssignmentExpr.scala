@@ -10,7 +10,7 @@ import cats.parse.{Parser => P}
 case class AssignmentExpr[F[_]](
   variable: Name[F],
   value: Value[F]
-) extends Expr[F](AssignmentExpr)
+) extends Expr[F](AssignmentExpr, variable)
 
 object AssignmentExpr extends Expr.Leaf {
 

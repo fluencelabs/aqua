@@ -3,7 +3,7 @@ package aqua.parser
 import aqua.AquaSpec
 import aqua.parser.Ast.parser
 import aqua.parser.expr._
-import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp}
+import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp, Token}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.ScalarType._
 import cats.Id
@@ -149,7 +149,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       acc.enqueue(tag)
     }
 
-    qTree.d() shouldBe RootExpr()
+    qTree.d() shouldBe RootExpr(Token.lift[Id, Unit](()))
     // Local service
     qTree.d() shouldBe ServiceExpr(toAb("Local"), Some(toStr("local")))
     qTree.d() shouldBe ArrowTypeExpr("gt", toArrowType(Nil, Some(scToBt(bool))))

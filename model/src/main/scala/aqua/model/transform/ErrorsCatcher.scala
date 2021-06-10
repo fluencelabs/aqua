@@ -1,11 +1,11 @@
 package aqua.model.transform
 
-import aqua.model.{LiteralModel, ValueModel}
+import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.model.func.Call
 import aqua.model.func.body.{FuncOp, FuncOps, MatchMismatchTag, OnTag, OpTag, XorTag}
-import aqua.types.{LiteralType, ProductType, ScalarType}
+import aqua.types.LiteralType
 import cats.Eval
-import cats.data.{Chain, NonEmptyMap}
+import cats.data.Chain
 import cats.free.Cofree
 
 case class ErrorsCatcher(
@@ -54,15 +54,7 @@ case class ErrorsCatcher(
 
 object ErrorsCatcher {
 
-  // TODO not a string
-  val lastErrorArg: ValueModel =
-    LiteralModel(
-      "%last_error%",
-      ProductType(
-        "LastError",
-        NonEmptyMap.of("instruction" -> ScalarType.string, "msg" -> ScalarType.string)
-      )
-    )
+  val lastErrorArg: ValueModel = VarModel.lastError
 
   def lastErrorCall(i: Int): Call = Call(
     lastErrorArg :: LiteralModel(i.toString, LiteralType.number) :: Nil,

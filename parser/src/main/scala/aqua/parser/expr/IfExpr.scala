@@ -8,7 +8,8 @@ import aqua.types.LiteralType
 import cats.Comonad
 import cats.parse.{Parser => P}
 
-case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F]) extends Expr[F](IfExpr)
+case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F])
+    extends Expr[F](IfExpr, eqOp)
 
 object IfExpr extends Expr.AndIndented {
 
@@ -21,6 +22,7 @@ object IfExpr extends Expr.AndIndented {
       Expr.defer(ForExpr) ::
       Expr.defer(IfExpr) ::
       Expr.defer(ElseOtherwiseExpr) ::
+      Expr.defer(CatchExpr) ::
       Nil
 
   override def p[F[_]: LiftParser: Comonad]: P[IfExpr[F]] =

@@ -7,7 +7,7 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 
-case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F](DataStructExpr)
+case class DataStructExpr[F[_]](name: CustomTypeToken[F]) extends Expr[F](DataStructExpr, name)
 
 object DataStructExpr extends Expr.AndIndented {
 

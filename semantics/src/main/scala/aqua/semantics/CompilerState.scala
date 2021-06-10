@@ -1,6 +1,6 @@
 package aqua.semantics
 
-import aqua.model.{AquaContext, EmptyModel, Model}
+import aqua.model.{AquaContext, EmptyModel, Model, VarModel}
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
@@ -18,11 +18,15 @@ case class CompilerState[F[_]](
 object CompilerState {
   type S[F[_]] = State[CompilerState[F], Model]
 
-  def init[F[_]](ctx: AquaContext): CompilerState[F] = CompilerState(
-    names = NamesState.init[F](ctx),
-    abilities = AbilitiesState.init[F](ctx),
-    types = TypesState.init[F](ctx)
-  )
+  def init[F[_]](ctx: AquaContext): CompilerState[F] = {
+    // TODO: should go to Monoid[AquaContext].empty, along with overriden constants
+    val withLE = ctx.copy(values = ctx.values + ("%last_error%" -> VarModel.lastError))
+    CompilerState(
+      names = NamesState.init[F](withLE),
+      abilities = AbilitiesState.init[F](withLE),
+      types = TypesState.init[F](withLE)
+    )
+  }
 
   implicit def compilerStateMonoid[F[_]]: Monoid[S[F]] = new Monoid[S[F]] {
     override def empty: S[F] = State.pure(EmptyModel("compiler state monoid empty"))
