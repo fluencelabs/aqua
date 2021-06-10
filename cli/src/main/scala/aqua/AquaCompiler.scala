@@ -2,6 +2,7 @@ package aqua
 
 import aqua.backend.air.FuncAirGen
 import aqua.backend.ts.TypescriptFile
+import aqua.backend.js.JavaScriptFile
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
 import aqua.model.AquaContext
@@ -159,7 +160,7 @@ object AquaCompiler extends LogSupport {
                   case Invalid(t) =>
                     EitherT.pure(t.getMessage)
                   case Valid(tp) =>
-                    writeFile(tp, TypescriptFile(p.context).generateTS(bodyConfig)).flatTap { _ =>
+                    writeFile(tp, JavaScriptFile(p.context).generateJS(bodyConfig)).flatTap { _ =>
                       EitherT.pure(
                         Validated.catchNonFatal(
                           info(

@@ -55,7 +55,7 @@ lazy val cli = project
       "com.monovore"  %% "decline-enumeratum" % declineEnumV
     )
   )
-  .dependsOn(semantics, `backend-air`, `backend-ts`, linker)
+  .dependsOn(semantics, `backend-air`, `backend-ts`, `backend-js`, linker)
 
 lazy val types = project
   .settings(commons)
