@@ -1,4 +1,4 @@
-package aqua.backend.ts
+package aqua.backend.js
 
 import aqua.backend.air.FuncAirGen
 import aqua.model.func.{ArgDef, FuncCallable}
@@ -7,9 +7,9 @@ import aqua.types._
 import cats.syntax.functor._
 import cats.syntax.show._
 
-case class JavaScriptFile(func: FuncCallable) {
+case class JavaScriptFunc(func: FuncCallable) {
 
-  import JavaScriptFile._
+  import JavaScriptFunc._
 
   def argsJavaScript: String =
     func.args.args.map(ad => s"${ad.name}").mkString(", ")
@@ -46,7 +46,7 @@ case class JavaScriptFile(func: FuncCallable) {
     s"""
        |export async function ${func.funcName}(client${if (func.args.isEmpty) ""
     else ", "}${argsJavaScript}) {
-       |    let request: RequestFlow;
+       |    let request;
        |    const promise = new Promise((resolve, reject) => {
        |        request = new RequestFlowBuilder()
        |            .disableInjections()
@@ -83,7 +83,7 @@ case class JavaScriptFile(func: FuncCallable) {
 
 }
 
-object JavaScriptFile {
+object JavaScriptFunc {
 
   def argsToTs(at: ArrowType): String =
     at.args

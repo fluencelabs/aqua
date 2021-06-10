@@ -24,6 +24,7 @@ import java.nio.file.Path
 object AquaCompiler extends LogSupport {
   sealed trait CompileTarget
   case object TypescriptTarget extends CompileTarget
+  case object JavaScriptTarget extends CompileTarget
   case object AirTarget extends CompileTarget
 
   case class Prepared(modFile: Path, srcPath: Path, targetPath: Path, context: AquaContext) {
@@ -136,6 +137,25 @@ object AquaCompiler extends LogSupport {
             case TypescriptTarget =>
               preps.map { p =>
                 p.targetPath("ts") match {
+                  case Invalid(t) =>
+                    EitherT.pure(t.getMessage)
+                  case Valid(tp) =>
+                    writeFile(tp, TypescriptFile(p.context).generateTS(bodyConfig)).flatTap { _ =>
+                      EitherT.pure(
+                        Validated.catchNonFatal(
+                          info(
+                            s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
+                          )
+                        )
+                      )
+                    }
+                }
+
+              }
+
+            case JavaScriptTarget =>
+              preps.map { p =>
+                p.targetPath("js") match {
                   case Invalid(t) =>
                     EitherT.pure(t.getMessage)
                   case Valid(tp) =>

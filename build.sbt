@@ -112,3 +112,8 @@ lazy val `backend-ts` = project
   .in(file("backend/ts"))
   .settings(commons: _*)
   .dependsOn(`backend-air`)
+
+lazy val `backend-js` = project
+  .in(file("backend/js"))
+  .settings(commons: _*)
+  .dependsOn(`backend-air`)

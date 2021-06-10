@@ -37,12 +37,13 @@ object AquaCli extends IOApp with LogSupport {
       importOpts,
       outputOpts,
       compileToAir,
+      compileToJs,
       noRelay,
       noXorWrapper,
       wrapWithOption(helpOpt),
       wrapWithOption(versionOpt),
       logLevelOpt
-    ).mapN { case (input, imports, output, toAir, noRelay, noXor, h, v, logLevel) =>
+    ).mapN { case (input, imports, output, toAir, toJs, noRelay, noXor, h, v, logLevel) =>
       WLogger.setDefaultLogLevel(LogLevel.toLogLevel(logLevel))
       WLogger.setDefaultFormatter(CustomLogFormatter)
 

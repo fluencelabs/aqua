@@ -1,4 +1,4 @@
-package aqua.backend.ts
+package aqua.backend.js
 
 import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
