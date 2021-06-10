@@ -2,6 +2,7 @@ package aqua
 
 import aqua.backend.air.FuncAirGen
 import aqua.backend.ts.TypescriptFile
+import aqua.backend.js.JavaScriptFile
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
 import aqua.model.{AquaContext, VarModel}
@@ -25,6 +26,7 @@ import java.nio.file.Path
 object AquaCompiler extends LogSupport {
   sealed trait CompileTarget
   case object TypescriptTarget extends CompileTarget
+  case object JavaScriptTarget extends CompileTarget
   case object AirTarget extends CompileTarget
 
   case class Prepared(modFile: Path, srcPath: Path, targetPath: Path, context: AquaContext) {
@@ -142,6 +144,25 @@ object AquaCompiler extends LogSupport {
                     EitherT.pure(t.getMessage)
                   case Valid(tp) =>
                     writeFile(tp, TypescriptFile(p.context).generateTS(bodyConfig)).flatTap { _ =>
+                      EitherT.pure(
+                        Validated.catchNonFatal(
+                          info(
+                            s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
+                          )
+                        )
+                      )
+                    }
+                }
+
+              }
+
+            case JavaScriptTarget =>
+              preps.map { p =>
+                p.targetPath("js") match {
+                  case Invalid(t) =>
+                    EitherT.pure(t.getMessage)
+                  case Valid(tp) =>
+                    writeFile(tp, JavaScriptFile(p.context).generateJS(bodyConfig)).flatTap { _ =>
                       EitherT.pure(
                         Validated.catchNonFatal(
                           info(

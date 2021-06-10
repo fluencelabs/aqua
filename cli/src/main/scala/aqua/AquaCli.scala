@@ -37,19 +37,20 @@ object AquaCli extends IOApp with LogSupport {
       importOpts,
       outputOpts,
       compileToAir,
+      compileToJs,
       noRelay,
       noXorWrapper,
       wrapWithOption(helpOpt),
       wrapWithOption(versionOpt),
       logLevelOpt
-    ).mapN { case (input, imports, output, toAir, noRelay, noXor, h, v, logLevel) =>
+    ).mapN { case (input, imports, output, toAir, toJs, noRelay, noXor, h, v, logLevel) =>
       WLogger.setDefaultLogLevel(LogLevel.toLogLevel(logLevel))
       WLogger.setDefaultFormatter(CustomLogFormatter)
 
       // if there is `--help` or `--version` flag - show help and version
       // otherwise continue program execution
       h.map(_ => helpAndExit) orElse v.map(_ => versionAndExit) getOrElse {
-        val target = if (toAir) AquaCompiler.AirTarget else AquaCompiler.TypescriptTarget
+        val target = if (toAir) AquaCompiler.AirTarget else if (toJs) AquaCompiler.JavaScriptTarget else AquaCompiler.TypescriptTarget
         val bc = {
           val bc = BodyConfig(wrapWithXor = !noXor)
           bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
