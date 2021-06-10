@@ -11,6 +11,7 @@ import cats.free.Cofree
 import wvlet.log.LogSupport
 
 import scala.annotation.tailrec
+import scala.util.Try
 
 object Topology extends LogSupport {
   type Tree = Cofree[Chain, OpTag]
@@ -50,20 +51,26 @@ object Topology extends LogSupport {
         val (specified, peerId) = specifyWay(currentTree.head, loc)
         val peerIdC = Chain.fromOption(peerId)
         val currentSpecifiedTree = currentTree.copy(head = specified)
-
+        println(s"currentSpecTree ${System.currentTimeMillis()}: " + currentSpecifiedTree.forceAll)
+        println("aaaaaaaa")
         val getThere = (currentSpecifiedTree.head, loc.pathOn) match {
           case (OnTag(pid, _), h :: _) if h.peerId == pid => Chain.empty[ValueModel]
           case (OnTag(_, via), h :: _) =>
             h.via.reverse ++ via
           case (_, _) => Chain.empty[ValueModel]
         }
+        println("bbbbbbbbbbb")
 
-        val prevOn = c.prevOnTags
-
+        val prevOnE = Try(c.prevOnTags).toEither
+        println(prevOnE)
+        val prevOn = prevOnE.getOrElse(c.prevOnTags)
+        println("fffffffffffffffff")
         // full paths from previous `on` tags
         val prevPath = prevOn.map { case OnTag(c, v) =>
           v.reverse :+ c
         }
+        println("cccccccccccccc")
+        println("prevPath: " + prevPath)
 
         val prevPathFlat = prevPath.flatMap(identity)
 
@@ -83,27 +90,34 @@ object Topology extends LogSupport {
         if (prevOn.isEmpty && getThere.isEmpty) {
           currentSpecifiedTree :: Nil
         } else {
-          val wayBeforeFull = prevPathFlat ++ loc.pathViaChain ++ getThere ++ peerIdC
+          println("loc path: " + loc.pathViaChain)
+          println("get there: " + getThere)
+          val unoptimizedPathTo = prevPathFlat ++ loc.pathViaChain ++ getThere ++ peerIdC
+          println("unoptimized: " + unoptimizedPathTo)
 
           // filter optimized path by previous call peerId and current call peerId
           // because on optimization they will stay on their's first and last positions
-          val optimizedWayBefore = optimizePath(wayBeforeFull).filter { vm =>
-            val containsTarget = peerIdC.contains(vm)
-            val containsPrevTargets = prevPath.find(_.lastOption.contains(vm)).isDefined
-            !(containsTarget || containsPrevTargets)
+          val pathTo = optimizePath(unoptimizedPathTo).filterNot { vm =>
+            val containsTarget = peerId.contains(vm)
+            val containsPrevTargets = prevPath.exists(_.lastOption.contains(vm))
+            containsTarget || containsPrevTargets
           }
-          val wayBefore = through(optimizedWayBefore)
+          println("optimized: " + pathTo)
+          val pathToTree = through(pathTo)
 
-          val wayAfterFull = peerIdC ++ nextPath
+          val unoptimizedPathAfter = peerIdC ++ nextPath
 
           // filter optimized path by current call peerId
           // because on optimization it will stay on their first position
-          val optimizedWayAfter = optimizePath(wayAfterFull).filter(vm => !peerIdC.contains(vm))
-          val wayAfter = through(optimizedWayAfter, reversed = true)
+          val pathAfter = optimizePath(unoptimizedPathAfter).filter(vm => !peerIdC.contains(vm))
+          val pathAfterTree = through(pathAfter, reversed = true)
 
-          val fullWay = (wayBefore.append(currentSpecifiedTree) ++ wayAfter).toList
-          debug(s"fullWay to ${peerId}: ${fullWay.map(_.forceAll)}")
-          fullWay
+          println("after: " + pathAfter)
+
+          val fullPath = (pathToTree.append(currentSpecifiedTree) ++ pathAfterTree).toList
+          println(s"fullPath to ${peerId}: ${fullPath.map(_.forceAll)}")
+          debug(s"fullPath to ${peerId}: ${fullPath.map(_.forceAll)}")
+          fullPath
         }
 
       case Cursor(ChainZipper(_, cf, _), loc) =>
@@ -112,11 +126,13 @@ object Topology extends LogSupport {
     }
 
   // specify peerId for CallServiceTag depends on location, return this peerId
-  def specifyWay(tag: OpTag, loc: Location): (OpTag, Option[ValueModel]) = tag match {
-    case c: CallServiceTag if c.peerId.isEmpty =>
-      val lastOn = loc.lastOn.map(_.peerId)
-      (c.copy(peerId = lastOn), lastOn)
-    case t => (t, None)
+  def specifyWay(tag: OpTag, loc: Location): (OpTag, Option[ValueModel]) = {
+    val lastOn = loc.lastOn.map(_.peerId)
+    tag match {
+      case c: CallServiceTag if c.peerId.isEmpty =>
+        (c.copy(peerId = lastOn), lastOn)
+      case t => (t, None)
+    }
   }
 
   // If same IDs are found in a row, does noop only once

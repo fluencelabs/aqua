@@ -1,6 +1,7 @@
 package aqua.model.topology
 
-import aqua.model.Node
+import aqua.model.{LiteralModel, Node}
+import cats.data.Chain
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -53,6 +54,15 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc should be(expected)
   }
 
+  "path optimization" should "works well" in {
+    val a = LiteralModel.quote("a")
+    val b = LiteralModel.quote("b")
+    val c = LiteralModel.quote("c")
+    val d = LiteralModel.quote("d")
+    val path = Topology.optimizePath(Chain(d, b, a, c, a, b))
+    println(path)
+  }
+
   "topology resolver" should "simplify a route" in {
     val init = on(
       initPeer,
@@ -63,13 +73,22 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           relay :: Nil,
           call(1)
         ),
-        call(3)
+        call(2)
       )
     )
 
     val proc: Node = Topology.resolve(init)
 
     println(proc)
+
+    val expected =
+      seq(
+        call(1, initPeer),
+        through(relay),
+        call(2, initPeer)
+      )
+
+    proc should be(expected)
   }
 
   "topology resolver" should "go through relay to any other node, via another relay" in {
