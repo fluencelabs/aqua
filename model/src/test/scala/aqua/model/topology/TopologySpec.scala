@@ -81,6 +81,61 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc should be(expected)
   }
 
+  "topology resolver" should "simplify a route with init_peer_id" in {
+    val init = on(
+      initPeer,
+      relay :: Nil,
+      seq(
+        on(
+          initPeer,
+          relay :: Nil,
+          call(1)
+        ),
+        call(2)
+      )
+    )
+
+    val proc: Node = Topology.resolve(init)
+
+    println(proc)
+
+    val expected =
+      seq(
+        call(1, initPeer),
+        call(2, initPeer)
+      )
+
+    proc should be(expected)
+  }
+
+  "topology resolver" should "simplify a route with other peers" in {
+    val init = on(
+      otherPeer,
+      otherRelay :: Nil,
+      seq(
+        on(
+          otherPeer,
+          otherRelay :: Nil,
+          call(1)
+        ),
+        call(2)
+      )
+    )
+
+    val proc: Node = Topology.resolve(init)
+
+    println(proc)
+
+    val expected =
+      seq(
+        through(otherRelay),
+        call(1, otherPeer),
+        call(2, otherPeer)
+      )
+
+    proc should be(expected)
+  }
+
   "topology resolver" should "get back to init peer" in {
 
     val init = on(
