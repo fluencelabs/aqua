@@ -49,11 +49,12 @@ case class TypescriptFunc(func: FuncCallable) {
 
     s"""
        |export async function ${func.funcName}(client: FluenceClient${if (func.args.isEmpty) ""
-    else ", "}${argsTypescript}): Promise<$retType> {
+    else ", "}${argsTypescript}, ttlMsGeneratedArgument?: number): Promise<$retType> {
        |    let request: RequestFlow;
        |    const promise = new Promise<$retType>((resolve, reject) => {
        |        request = new RequestFlowBuilder()
        |            .disableInjections()
+       |            .withTTL(ttlMsGeneratedArgument || 5000)
        |            .withRawScript(
        |                `
        |${tsAir.show}
