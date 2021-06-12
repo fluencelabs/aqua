@@ -133,6 +133,8 @@ object Node {
   def seq(nodes: Node*) = Node(SeqTag, nodes.toList)
   def xor(left: Node, right: Node) = Node(XorTag, left :: right :: Nil)
 
+  def par(left: Node, right: Node) = Node(ParTag, left :: right :: Nil)
+
   def on(peer: ValueModel, via: List[ValueModel], body: Node*) =
     Node(
       OnTag(peer, Chain.fromSeq(via)),
