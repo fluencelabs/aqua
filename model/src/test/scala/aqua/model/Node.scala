@@ -97,6 +97,15 @@ object Node {
     CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(Nil, None), Option(on))
   )
 
+  def callLiteral(i: Int, on: ValueModel = null) = Node(
+    CallServiceTag(
+      LiteralModel("\"srv" + i + "\"", LiteralType.string),
+      s"fn$i",
+      Call(Nil, None),
+      Option(on)
+    )
+  )
+
   def errorCall(bc: BodyConfig, i: Int, on: ValueModel = null) = Node(
     CallServiceTag(
       bc.errorHandlingCallback,
