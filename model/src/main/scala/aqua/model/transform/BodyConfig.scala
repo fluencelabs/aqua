@@ -21,7 +21,6 @@ case class BodyConfig(
   val callbackSrvId: ValueModel = LiteralModel.quote(callbackService)
   val dataSrvId: ValueModel = LiteralModel.quote(getDataService)
 
-  // TODO: add constants to BodyConfig, and register there
   implicit val aquaContextMonoid: Monoid[AquaContext] = {
     val constantsMap = constants.map(c => c.name -> c.value).toMap
     AquaContext

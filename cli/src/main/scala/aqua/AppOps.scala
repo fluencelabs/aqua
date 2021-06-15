@@ -97,7 +97,7 @@ object AppOps {
 
   def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[Constant]] =
     Opts
-      .options[String]("constant", "Constant that will be used in an aqua code", "c")
+      .options[String]("const", "Constant that will be used in an aqua code", "c")
       .mapValidated { strs =>
         val parsed = strs.map(s => ConstantExpr.onlyLiteral.parseAll(s))
         println(parsed)
