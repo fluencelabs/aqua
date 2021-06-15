@@ -3,6 +3,8 @@ package aqua.model.transform
 import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
 import cats.kernel.Monoid
 
+case class Constant(name: String, value: ValueModel)
+
 case class BodyConfig(
   getDataService: String = "getDataSrv",
   callbackService: String = "callbackSrv",
@@ -10,7 +12,8 @@ case class BodyConfig(
   errorFuncName: String = "error",
   respFuncName: String = "response",
   relayVarName: Option[String] = Some("-relay-"),
-  wrapWithXor: Boolean = true
+  wrapWithXor: Boolean = true,
+  constants: List[Constant] = Nil
 ) {
 
   val errorId: ValueModel = LiteralModel.quote(errorFuncName)
@@ -19,11 +22,14 @@ case class BodyConfig(
   val dataSrvId: ValueModel = LiteralModel.quote(getDataService)
 
   // TODO: add constants to BodyConfig, and register there
-  implicit val aquaContextMonoid: Monoid[AquaContext] =
+  implicit val aquaContextMonoid: Monoid[AquaContext] = {
+    val constantsMap = constants.map(c => c.name -> c.value).toMap
     AquaContext
       .implicits(
-        AquaContext.blank.copy(values = Map(VarModel.lastError.name -> VarModel.lastError))
+        AquaContext.blank
+          .copy(values = Map(VarModel.lastError.name -> VarModel.lastError) ++ constantsMap)
       )
       .aquaContextMonoid
+  }
 
 }
