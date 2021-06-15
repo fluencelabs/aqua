@@ -14,6 +14,15 @@ case class TypescriptFunc(func: FuncCallable) {
   def argsTypescript: String =
     func.args.args.map(ad => s"${ad.name}: " + typeToTs(ad.`type`)).mkString(", ")
 
+  def generateUniqueArgName(args: List[String], basis: String, attempt: Int): String = {
+    val name = if (attempt == 0) {
+      basis
+    } else {
+      basis + attempt
+    }
+    args.find(_ == name).map(_ => generateUniqueArgName(args, basis, attempt + 1)).getOrElse(name)
+  }
+
   def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
 
     val tsAir = FuncAirGen(func).generateClientAir(conf)
@@ -24,7 +33,6 @@ case class TypescriptFunc(func: FuncCallable) {
          |  resolve(res);
          |});
          |""".stripMargin
-
     }
 
     val setCallbacks = func.args.args.map {
@@ -47,14 +55,18 @@ case class TypescriptFunc(func: FuncCallable) {
     val returnVal =
       func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
+    val clientArgName = generateUniqueArgName(func.args.args.map(_.name), "client", 0)
+    val ttlArgName = generateUniqueArgName(func.args.args.map(_.name), "ttl", 0)
+
     s"""
-       |export async function ${func.funcName}(client: FluenceClient${if (func.args.isEmpty) ""
-    else ", "}${argsTypescript}, ttlMsGeneratedArgument?: number): Promise<$retType> {
+       |export async function ${func.funcName}($clientArgName: FluenceClient${if (func.args.isEmpty)
+      ""
+    else ", "}${argsTypescript}, $ttlArgName?: number): Promise<$retType> {
        |    let request: RequestFlow;
        |    const promise = new Promise<$retType>((resolve, reject) => {
        |        request = new RequestFlowBuilder()
        |            .disableInjections()
-       |            .withTTL(ttlMsGeneratedArgument || 5000)
+       |            .withTTL($ttlArgName || 5000)
        |            .withRawScript(
        |                `
        |${tsAir.show}
@@ -63,7 +75,7 @@ case class TypescriptFunc(func: FuncCallable) {
        |            .configHandler((h) => {
        |                ${conf.relayVarName.fold("") { r =>
       s"""h.on('${conf.getDataService}', '$r', () => {
-       |                    return client.relayPeerId!;
+       |                    return $clientArgName.relayPeerId!;
        |                });""".stripMargin
     }}
        |                $setCallbacks
@@ -80,7 +92,7 @@ case class TypescriptFunc(func: FuncCallable) {
        |            })
        |            .build();
        |    });
-       |    await client.initiateFlow(request!);
+       |    await $clientArgName.initiateFlow(request!);
        |    return ${returnVal};
        |}
       """.stripMargin
