@@ -56,17 +56,19 @@ case class TypescriptFunc(func: FuncCallable) {
       func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
     val clientArgName = generateUniqueArgName(func.args.args.map(_.name), "client", 0)
-    val ttlArgName = generateUniqueArgName(func.args.args.map(_.name), "ttl", 0)
+    val configArgName = generateUniqueArgName(func.args.args.map(_.name), "config", 0)
+
+    val configType = "{ttl?: number}"
 
     s"""
        |export async function ${func.funcName}($clientArgName: FluenceClient${if (func.args.isEmpty)
       ""
-    else ", "}${argsTypescript}, $ttlArgName?: number): Promise<$retType> {
+    else ", "}${argsTypescript}, $configArgName?: $configType): Promise<$retType> {
        |    let request: RequestFlow;
        |    const promise = new Promise<$retType>((resolve, reject) => {
        |        request = new RequestFlowBuilder()
        |            .disableInjections()
-       |            .withTTL($ttlArgName || 5000)
+       |            .withTTL($configArgName?.ttl || 5000)
        |            .withRawScript(
        |                `
        |${tsAir.show}
