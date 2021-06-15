@@ -1,6 +1,8 @@
 package aqua
 
 import aqua.model.transform.BodyConfig
+import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import cats.Id
 import cats.data.Validated
 import cats.effect._
 import cats.effect.std.{Console => ConsoleEff}
@@ -42,37 +44,42 @@ object AquaCli extends IOApp with LogSupport {
       noXorWrapper,
       wrapWithOption(helpOpt),
       wrapWithOption(versionOpt),
-      logLevelOpt
-    ).mapN { case (input, imports, output, toAir, toJs, noRelay, noXor, h, v, logLevel) =>
-      WLogger.setDefaultLogLevel(LogLevel.toLogLevel(logLevel))
-      WLogger.setDefaultFormatter(CustomLogFormatter)
+      logLevelOpt,
+      constantOpts[Id]
+    ).mapN {
+      case (input, imports, output, toAir, toJs, noRelay, noXor, h, v, logLevel, constants) =>
+        WLogger.setDefaultLogLevel(LogLevel.toLogLevel(logLevel))
+        WLogger.setDefaultFormatter(CustomLogFormatter)
 
-      // if there is `--help` or `--version` flag - show help and version
-      // otherwise continue program execution
-      h.map(_ => helpAndExit) orElse v.map(_ => versionAndExit) getOrElse {
-        val target = if (toAir) AquaCompiler.AirTarget else if (toJs) AquaCompiler.JavaScriptTarget else AquaCompiler.TypescriptTarget
-        val bc = {
-          val bc = BodyConfig(wrapWithXor = !noXor)
-          bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
-        }
-        info(s"Aqua Compiler ${versionStr}")
-        AquaCompiler
-          .compileFilesTo[F](
-            input,
-            imports,
-            output,
-            target,
-            bc
-          )
-          .map {
-            case Validated.Invalid(errs) =>
-              errs.map(println)
-              ExitCode.Error
-            case Validated.Valid(results) =>
-              results.map(println)
-              ExitCode.Success
+        // if there is `--help` or `--version` flag - show help and version
+        // otherwise continue program execution
+        h.map(_ => helpAndExit) orElse v.map(_ => versionAndExit) getOrElse {
+          val target =
+            if (toAir) AquaCompiler.AirTarget
+            else if (toJs) AquaCompiler.JavaScriptTarget
+            else AquaCompiler.TypescriptTarget
+          val bc = {
+            val bc = BodyConfig(wrapWithXor = !noXor, constants = constants)
+            bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
           }
-      }
+          info(s"Aqua Compiler ${versionStr}")
+          AquaCompiler
+            .compileFilesTo[F](
+              input,
+              imports,
+              output,
+              target,
+              bc
+            )
+            .map {
+              case Validated.Invalid(errs) =>
+                errs.map(println)
+                ExitCode.Error
+              case Validated.Valid(results) =>
+                results.map(println)
+                ExitCode.Success
+            }
+        }
     }
   }
 
