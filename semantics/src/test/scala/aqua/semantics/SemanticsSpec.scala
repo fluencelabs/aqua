@@ -12,7 +12,8 @@ import org.scalatest.matchers.should.Matchers
 
 class SemanticsSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
-  "semantics" should "create right model" in {
+  // use it to fix https://github.com/fluencelabs/aqua/issues/90
+  ignore should "create right model" in {
     implicit val fileLift: LiftParser[Span.F] = Span.spanLiftParser
 
     val script =
@@ -30,10 +31,9 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with AquaSpec {
     val bc = BodyConfig()
     import bc.aquaContextMonoid
 
-    val a = Semantics.process(ast, ctx).toList.head
-    println(a)
+    val context = Semantics.process(ast, ctx).toList.head
 
-    val body = a.allFuncs()("topologyTest").body.tree.forceAll
+    val body = context.allFuncs()("topologyTest").body.tree.forceAll
 
     val node = Node.cofToNode(body)
 
