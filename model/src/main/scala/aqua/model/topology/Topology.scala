@@ -19,7 +19,7 @@ object Topology extends LogSupport {
   def resolve(op: Tree): Tree =
     Cofree
       .cata[Chain, OpTag, Tree](resolveOnMoves(op)) {
-        case (SeqTag | _: OnTag, children) =>
+        case (SeqTag | _: OnTag | MetaTag(_, _, SeqTag | _: OnTag), children) =>
           Eval.later(
             Cofree(
               SeqTag,
@@ -38,6 +38,9 @@ object Topology extends LogSupport {
       .transform(op)(transformWalker)
       .getOrElse(op)
 
+  def cursorPrevOn(c: Cursor): Chain[OnTag] =
+    c.prevOnTags
+
   @tailrec
   private def transformWalker(c: Cursor): List[Tree] =
     c match {
@@ -54,15 +57,21 @@ object Topology extends LogSupport {
         // We need to get there, finally
         val currentPeerId = Chain.fromOption(loc.lastOn.map(_.peerId))
 
-        val prevOn = c.prevOnTags
         val currentOn = loc.pathOn
-
-        debug("PrevOn = " + prevOn)
-        debug("CurrentOn = " + currentOn)
+        val prevOn = c.prevOnTags
+        val wasHandled = c.pathToRoot.collectFirst {
+          case cc @ Cursor(_, `head`(_: GroupTag) /: _) => cc.loc.pathOn
+        }.exists(cclp =>
+          cclp == currentOn && {
+            val (c1, c2) = skipCommonPrefix(prevOn, cclp)
+            c1.isEmpty
+          }
+        )
 
         // Usually we don't need to go next
         val nextOn = parent match {
-          case ParTag | XorTag => c.nextOnTags
+          case ParTag => c.nextOnTags
+          case XorTag if c.point.prev.nonEmpty => c.nextOnTags
           case _ => Chain.empty[OnTag]
         }
         val nextPeerId =
@@ -72,12 +81,16 @@ object Topology extends LogSupport {
         val prevPeerId =
           Chain.fromOption(prevOn.lastOption.map(_.peerId) orElse loc.firstOn.map(_.peerId))
 
-        val fromPrevToCurrent = findPath(prevOn, currentOn, prevPeerId, currentPeerId)
+        val fromPrevToCurrent =
+          if (wasHandled) Chain.empty[ValueModel]
+          else
+            findPath(prevOn, currentOn, prevPeerId, currentPeerId)
 
         val fromCurrentToNext = findPath(currentOn, nextOn, currentPeerId, nextPeerId)
 
         if (fromPrevToCurrent.nonEmpty) debug("BEFORE = " + fromPrevToCurrent)
         if (fromCurrentToNext.nonEmpty) debug("NEXT = " + fromCurrentToNext)
+
         (through(fromPrevToCurrent)
           .append(cfu) ++ through(fromCurrentToNext, reversed = true)).toList
 
@@ -107,9 +120,15 @@ object Topology extends LogSupport {
     toPeer: Chain[ValueModel]
   ): Chain[ValueModel] = {
     val (from, to) = skipCommonPrefix(fromOn, toOn)
+    val fromFix =
+      if (from.isEmpty && fromPeer != toPeer) Chain.fromOption(fromOn.lastOption) else from
     val toFix = if (to.isEmpty && fromPeer != toPeer) Chain.fromOption(toOn.lastOption) else to
-    val fromTo = from.reverse.flatMap(_.via.reverse) ++ toFix.flatMap(_.via)
-    optimizePath(fromPeer ++ fromTo ++ toPeer, fromPeer, toPeer)
+    val fromTo = fromFix.reverse.flatMap(_.via.reverse) ++ toFix.flatMap(_.via)
+    val optimized = optimizePath(fromPeer ++ fromTo ++ toPeer, fromPeer, toPeer)
+
+    debug("FIND PATH " + fromFix + " -> " + toFix)
+    debug("                     Optimized: " + optimized)
+    optimized
   }
 
   @tailrec

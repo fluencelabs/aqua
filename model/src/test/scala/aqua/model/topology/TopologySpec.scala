@@ -81,6 +81,42 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
+  "topology resolver" should "go through relay to any other node, via another relay, in complex xor/seq" in {
+
+    val init = on(
+      initPeer,
+      relay :: Nil,
+      on(
+        otherPeer,
+        otherRelay :: Nil,
+        xor(
+          seq(
+            call(1),
+            call(2)
+          ),
+          call(3)
+        )
+      )
+    )
+
+    val proc: Node = Topology.resolve(init)
+
+    val expected =
+      seq(
+        through(relay),
+        through(otherRelay),
+        xor(
+          seq(
+            call(1, otherPeer),
+            call(2, otherPeer)
+          ),
+          call(3, otherPeer)
+        )
+      )
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
   "topology resolver" should "simplify a route with init_peer_id" in {
     val init = on(
       initPeer,

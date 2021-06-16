@@ -1,11 +1,11 @@
 package aqua.model.topology
 
-import aqua.model.ValueModel
-import aqua.model.func.body.{OnTag, SeqGroupTag}
+import aqua.model.func.body.{MetaTag, OnTag, SeqGroupTag}
 import cats.data.Chain
 import cats.free.Cofree
+import wvlet.log.LogSupport
 
-case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) {
+case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) extends LogSupport {
   def down(h: ChainZipper[Topology.Tree]): Location = copy(h :: path)
 
   def lastOn: Option[OnTag] = pathOn.lastOption
@@ -13,40 +13,37 @@ case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) {
   def firstOn: Option[OnTag] = pathOn.headOption
 
   lazy val pathOn: Chain[OnTag] = Chain
-    .fromSeq(path.map(_.current.head).collect { case o: OnTag =>
-      o
+    .fromSeq(path.map(_.current.head).collect {
+      case o: OnTag =>
+        o
+      case MetaTag(_, _, o: OnTag) => o
     })
     .reverse
 
-  def pathViaChain: Chain[ValueModel] = Chain.fromSeq(
-    path
-      .map(_.current.head)
-      .collectFirst { case t: OnTag =>
-        t.via.toList
-      }
-      .toList
-      .flatten
-  )
-
   def lastLeftSeq: Option[(ChainZipper[Topology.Tree], Location)] =
     path match {
-      case (cz @ ChainZipper(prev, Cofree(_: SeqGroupTag, _), _)) :: tail if prev.nonEmpty =>
+      case (cz @ ChainZipper(
+            prev,
+            Cofree(_: SeqGroupTag | MetaTag(_, _, _: SeqGroupTag), _),
+            _
+          )) :: tail if prev.nonEmpty =>
         cz.moveLeft.map(_ -> Location(tail))
-      case _ :: tail => Location(tail).lastLeftSeq
+      case _ :: tail =>
+        Location(tail).lastLeftSeq
       case Nil => None
     }
 
   def lastRightSeq: Option[(ChainZipper[Topology.Tree], Location)] =
     path match {
-      case (cz @ ChainZipper(_, Cofree(_: SeqGroupTag, _), next)) :: tail if next.nonEmpty =>
+      case (cz @ ChainZipper(
+            _,
+            Cofree(_: SeqGroupTag | MetaTag(_, _, _: SeqGroupTag), _),
+            next
+          )) :: tail if next.nonEmpty =>
         cz.moveRight.map(_ -> Location(tail))
       case _ :: tail => Location(tail).lastRightSeq
       case Nil => None
     }
-
-  path.collectFirst {
-    case ChainZipper(prev, Cofree(_: SeqGroupTag, _), _) if prev.nonEmpty => prev.lastOption
-  }.flatten
 }
 
 object Location {

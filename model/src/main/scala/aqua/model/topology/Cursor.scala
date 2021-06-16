@@ -1,7 +1,7 @@
 package aqua.model.topology
 
 import Topology.Tree
-import aqua.model.func.body.{OnTag, OpTag, ParTag, SeqTag}
+import aqua.model.func.body.{MetaTag, OnTag, OpTag, ParTag, SeqTag, XorTag}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -11,6 +11,17 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) {
 
   def downLoc(tree: Tree): Location =
     loc.down(point.copy(current = tree))
+
+  def moveUp: Option[Cursor] =
+    loc.path match {
+      case cz :: tail =>
+        Some(Cursor(cz.replaceInjecting(point), Location(tail)))
+      case _ =>
+        None
+    }
+
+  def pathToRoot: LazyList[Cursor] =
+    moveUp.to(LazyList).flatMap(c => c #:: c.pathToRoot)
 
   def mapParent(f: Tree => Tree): Cursor =
     copy(loc =
@@ -32,10 +43,14 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) {
       .flatMap(pt => pt._1.widen[OpTag] ++ Cursor.rightBoundary(pt._2))
       .takeWhile {
         case ParTag => false
+        case MetaTag(_, _, ParTag) => false
         case _ => true
       }
-      .collect { case o: OnTag =>
-        o
+      .collect {
+        case o: OnTag =>
+          o
+        case MetaTag(_, _, o: OnTag) =>
+          o
       }
 
   def nextOnTags: Chain[OnTag] =
@@ -47,20 +62,35 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) {
       .flatMap(pt => pt._1 ++ Cursor.leftBoundary(pt._2))
       .takeWhile {
         case ParTag => false
+        case MetaTag(_, _, ParTag) => false
         case _ => true
       }
-      .collect { case o: OnTag =>
-        o
+      .collect {
+        case o: OnTag =>
+          o
+        case MetaTag(_, _, o: OnTag) =>
+          o
       }
 }
 
 object Cursor {
 
   def rightBoundary(root: Tree): Chain[OpTag] =
-    Chain
-      .fromSeq(
-        root.head #:: LazyList.unfold(root.tail)(_.value.lastOption.map(lo => lo.head -> lo.tail))
-      )
+    Chain.fromSeq(rightBoundaryLazy(root))
+
+  def rightBoundaryLazy(root: Tree): LazyList[OpTag] =
+    root.head #:: (root.head match {
+      case XorTag =>
+        root.tailForced.reverse.toList match {
+          case _ :: v :: _ =>
+            // Go through the main branch of xor
+            rightBoundaryLazy(v)
+          case v :: Nil => rightBoundaryLazy(v)
+          case _ => LazyList.empty
+        }
+      case _ =>
+        root.tailForced.lastOption.to(LazyList).flatMap(rightBoundaryLazy)
+    })
 
   def leftBoundary(root: Tree): Chain[OpTag] =
     Chain

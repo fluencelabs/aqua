@@ -38,7 +38,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
           xor(
             call(1, otherPeer),
             seq(
-              through(relayV),
+              through(relayV), // TODO this one is also handled
               errorCall(bc, 1, initPeer),
               through(relayV)
             )
@@ -52,11 +52,12 @@ class TransformSpec extends AnyFlatSpec with Matchers {
           )
         ),
         seq(
-          through(relayV),
           errorCall(bc, 3, initPeer)
         )
       )
     )
+
+    println(procFC)
 
     procFC.equalsOrPrintDiff(expectedFC) should be(true)
 
