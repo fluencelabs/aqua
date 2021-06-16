@@ -38,9 +38,6 @@ object Topology extends LogSupport {
       .transform(op)(transformWalker)
       .getOrElse(op)
 
-  def cursorPrevOn(c: Cursor): Chain[OnTag] =
-    c.prevOnTags
-
   @tailrec
   private def transformWalker(c: Cursor): List[Tree] =
     c match {
@@ -63,7 +60,7 @@ object Topology extends LogSupport {
           case cc @ Cursor(_, `head`(_: GroupTag) /: _) => cc.loc.pathOn
         }.exists(cclp =>
           cclp == currentOn && {
-            val (c1, c2) = skipCommonPrefix(prevOn, cclp)
+            val (c1, _) = skipCommonPrefix(prevOn, cclp)
             c1.isEmpty
           }
         )

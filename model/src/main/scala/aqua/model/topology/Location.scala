@@ -27,6 +27,7 @@ case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) extends LogSup
             Cofree(_: SeqGroupTag | MetaTag(_, _, _: SeqGroupTag), _),
             _
           )) :: tail if prev.nonEmpty =>
+        info(s"Move left to $tail")
         cz.moveLeft.map(_ -> Location(tail))
       case _ :: tail =>
         Location(tail).lastLeftSeq
