@@ -116,6 +116,14 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parser[Id]().parseAll(script).value.toEither shouldBe Symbol("left")
   }
 
+  "function with multiline definitions" should "parse without error" in {
+    val script =
+      """func tryGen(a: string,
+        |            b: string)""".stripMargin
+
+    FuncExpr.p[Id].parseAll(script) shouldBe Symbol("right")
+  }
+
   "function with root expression without children" should "parse with error" in {
     val script =
       """func tryGen() -> bool:

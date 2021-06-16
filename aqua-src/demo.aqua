@@ -3,7 +3,9 @@ import "builtin.aqua"
 service OpH("op"):
   puk(s: string) -> string
 
-func a(b: string) -> string:
+func a(b: string,
+  c: string,
+  g: string) -> string:
 
   try:
     f = "world"

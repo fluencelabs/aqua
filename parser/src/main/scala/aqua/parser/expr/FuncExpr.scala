@@ -34,10 +34,10 @@ object FuncExpr extends Expr.AndIndented {
       Nil
 
   override def p[F[_]: LiftParser: Comonad]: Parser[FuncExpr[F]] =
-    ((`func` *> ` ` *> Name.p[F]) ~ comma0(Arg.p)
-      .between(`(`, `)`) ~ (` -> ` *> DataTypeToken.`datatypedef`).?).map {
-      case ((name, args), ret) =>
-        FuncExpr(name, args, ret, None)
+    ((`func` *> ` ` *> Name.p[F])
+      ~ (comma0(` *`.with1 *> Arg.p)).between(`(`, `)`)
+      ~ (` -> ` *> DataTypeToken.`datatypedef`).?).map { case ((name, args), ret) =>
+      FuncExpr(name, args, ret, None)
     }
 
   override def ast[F[_]: LiftParser: Comonad](): Parser[ValidatedNec[ParserError[F], Ast.Tree[F]]] =
