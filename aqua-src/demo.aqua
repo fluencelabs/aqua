@@ -2,13 +2,20 @@ import "builtin.aqua"
 
 service OpH("op"):
   puk(s: string) -> string
+  pek(s: string, -- trgtr
+      c: string) -> string
 
-func a(b: string) -> string:
+func a( -- ferkjn
+  b: string, -- fr
+  c: string, -- asdf
+  g: string
+  ) -> string: -- rgtr
 
   try:
     f = "world"
     OpH "planet"
-    OpH.puk("TRY THIS")
+    OpH.pek("TRY THIS", -- gtrg
+            c)
   catch err:
     OpH.puk(err.msg)
   <- f
