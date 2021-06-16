@@ -5,9 +5,11 @@ service OpH("op"):
   pek(s: string, -- trgtr
       c: string) -> string
 
-func a(b: string, -- fr
+func a( -- ferkjn
+  b: string, -- fr
   c: string, -- asdf
-  g: string) -> string: -- rgtr
+  g: string
+  ) -> string: -- rgtr
 
   try:
     f = "world"

@@ -93,7 +93,9 @@ object ArrowTypeToken {
     }
 
   def `arrowWithNames`[F[_]: LiftParser: Comonad]: P[ArrowTypeToken[F]] =
-    ((`(`.lift ~ comma0(`s*`.with1 *> (Name.p[F] *> ` : ` *> DataTypeToken.`datatypedef`)) <* `)`) ~
+    (((`(`.lift <* `/s*`) ~ comma0(
+      (Name.p[F] *> ` : ` *> DataTypeToken.`datatypedef`).surroundedBy(`/s*`)
+    ) <* (`/s*` *> `)`)) ~
       (` -> ` *> DataTypeToken.`datatypedef`).?).map { case ((point, args), res) =>
       ArrowTypeToken(point, args, res)
     }
