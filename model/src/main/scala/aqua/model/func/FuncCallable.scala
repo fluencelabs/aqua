@@ -58,7 +58,7 @@ case class FuncCallable(
     val treeWithValues = body.resolveValues(argsToData)
 
     // Function body on its own defines some values; collect their names
-    val treeDefines = treeWithValues.definesValueNames.value -- call.exportTo.map(_.name)
+    val treeDefines = treeWithValues.definesVarNames.value -- call.exportTo.map(_.name)
 
     // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
     val shouldRename = findNewNames(forbiddenNames, treeDefines)
@@ -105,7 +105,7 @@ case class FuncCallable(
 
           // Function defines new names inside its body – need to collect them
           // TODO: actually it's done and dropped – so keep and pass it instead
-          val newNames = appliedOp.definesValueNames.value
+          val newNames = appliedOp.definesVarNames.value
           // At the very end, will need to resolve what is used as results with the result values
           (
             noNames ++ newNames,

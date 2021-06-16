@@ -70,7 +70,16 @@ object Topology extends LogSupport {
 
         // Usually we don't need to go next
         val nextOn = parent match {
-          case ParTag => c.nextOnTags
+          case ParTag =>
+            val exports = FuncOp(c.point.current).exportsVarNames.value
+            if (exports.isEmpty) Chain.empty[OnTag]
+            else {
+              val isUsed = c.pathToRoot.tail.collect {
+                case Cursor(cz, `head`(gt: GroupTag) /: _) if gt != ParTag =>
+                  cz.next.map(FuncOp(_)).map(_.usesVarNames)
+              }.exists(_.exists(_.value.intersect(exports).nonEmpty))
+              if (isUsed) c.nextOnTags else Chain.empty[OnTag]
+            }
           case XorTag if c.point.prev.nonEmpty => c.nextOnTags
           case _ => Chain.empty[OnTag]
         }
