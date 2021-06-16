@@ -2,6 +2,7 @@ import "builtin.aqua"
 
 service OpH("op"):
   puk(s: string) -> string
+  pek(s: string, c: string) -> string
 
 func a(b: string,
   c: string,
@@ -10,7 +11,8 @@ func a(b: string,
   try:
     f = "world"
     OpH "planet"
-    OpH.puk("TRY THIS")
+    OpH.pek("TRY THIS",
+            c)
   catch err:
     OpH.puk(err.msg)
   <- f
