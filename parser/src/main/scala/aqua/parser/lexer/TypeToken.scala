@@ -6,8 +6,8 @@ import aqua.parser.lift.LiftParser._
 import aqua.types.ScalarType
 import cats.Comonad
 import cats.parse.{Parser => P}
-import cats.syntax.functor._
 import cats.syntax.comonad._
+import cats.syntax.functor._
 
 sealed trait TypeToken[F[_]] extends Token[F]
 sealed trait DataTypeToken[F[_]] extends TypeToken[F]
@@ -93,7 +93,7 @@ object ArrowTypeToken {
     }
 
   def `arrowWithNames`[F[_]: LiftParser: Comonad]: P[ArrowTypeToken[F]] =
-    ((`(`.lift ~ comma0(Name.p[F] *> ` : ` *> DataTypeToken.`datatypedef`) <* `)`) ~
+    ((`(`.lift ~ comma0(` *`.with1 *> (Name.p[F] *> ` : ` *> DataTypeToken.`datatypedef`)) <* `)`) ~
       (` -> ` *> DataTypeToken.`datatypedef`).?).map { case ((point, args), res) =>
       ArrowTypeToken(point, args, res)
     }
