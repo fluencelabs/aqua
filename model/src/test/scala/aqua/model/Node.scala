@@ -3,7 +3,7 @@ package aqua.model
 import aqua.model.func.Call
 import aqua.model.func.body._
 import aqua.model.transform.{BodyConfig, ErrorsCatcher}
-import aqua.types.{LiteralType, ScalarType}
+import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -92,6 +92,8 @@ object Node {
   val otherRelay = LiteralModel("other-relay", ScalarType.string)
   val otherPeer2 = LiteralModel("other-peer-2", ScalarType.string)
   val otherRelay2 = LiteralModel("other-relay-2", ScalarType.string)
+  val varNode = VarModel("node-id", ScalarType.string)
+  val viaList = VarModel("other-relay-2", ArrayType(ScalarType.string))
 
   def call(i: Int, on: ValueModel = null) = Node(
     CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(Nil, None), Option(on))
