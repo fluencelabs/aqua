@@ -72,6 +72,7 @@ object Token {
   val ` = ` : P[Unit] = P.string("=").surroundedBy(` `.?)
   val `?` : P[Unit] = P.string("?")
   val `<-` : P[Unit] = P.string("<-")
+  val `s*` : P0[Any] = ` *` | ` \n+`
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
     override def as[T](v: T): F[T] = Functor[F].as(point, v)

@@ -20,7 +20,7 @@ object CallArrowExpr extends Expr.Leaf {
     ((Name.p[F] <* ` <- `).backtrack.?.with1 ~
       ((Ability.ab[F] <* `.`).?.with1 ~
         Name.p[F] ~
-        comma0(` *`.with1 *> Value.`value`[F]).between(`(`, `)`))).map {
+        comma0(`s*`.with1 *> Value.`value`[F]).between(`(`, `)`))).map {
       case (variable, ((ability, funcName), args)) =>
         CallArrowExpr(variable, ability, funcName, args)
     }
