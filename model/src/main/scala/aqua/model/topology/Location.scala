@@ -8,13 +8,15 @@ import cats.free.Cofree
 case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) {
   def down(h: ChainZipper[Topology.Tree]): Location = copy(h :: path)
 
-  def lastOn: Option[OnTag] = path.map(_.current.head).collectFirst { case o: OnTag =>
-    o
-  }
+  def lastOn: Option[OnTag] = pathOn.lastOption
 
-  def pathOn: List[OnTag] = path.map(_.current.head).collect { case o: OnTag =>
-    o
-  }
+  def firstOn: Option[OnTag] = pathOn.headOption
+
+  lazy val pathOn: Chain[OnTag] = Chain
+    .fromSeq(path.map(_.current.head).collect { case o: OnTag =>
+      o
+    })
+    .reverse
 
   def pathViaChain: Chain[ValueModel] = Chain.fromSeq(
     path

@@ -5,6 +5,7 @@ import aqua.model.func.body.{OnTag, OpTag, ParTag, SeqTag}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
+import cats.syntax.functor._
 
 case class Cursor(point: ChainZipper[Tree], loc: Location) {
 
@@ -23,32 +24,31 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) {
 
   def prevOnTags: Chain[OnTag] =
     Chain
-      .fromSeq(
+      .fromOption(
         point.prev.lastOption
-          .orElse(loc.lastLeftSeq.map(_._1.current))
-          .toList
-          .flatMap(Cursor.rightBoundary)
-          .takeWhile {
-            case ParTag => false
-            case _ => true
-          }
+          .map(t => loc.pathOn -> t)
+          .orElse(loc.lastLeftSeq.map(_.map(_.pathOn).swap.map(_.current)))
       )
+      .flatMap(pt => pt._1.widen[OpTag] ++ Cursor.rightBoundary(pt._2))
+      .takeWhile {
+        case ParTag => false
+        case _ => true
+      }
       .collect { case o: OnTag =>
         o
       }
 
   def nextOnTags: Chain[OnTag] =
     Chain
-      .fromSeq(
+      .fromOption(
         loc.lastRightSeq
-          .map(_._1.current)
-          .toList
-          .flatMap(Cursor.leftBoundary)
-          .takeWhile {
-            case ParTag => false
-            case _ => true
-          }
+          .map(_.map(_.pathOn).swap.map(_.current))
       )
+      .flatMap(pt => pt._1 ++ Cursor.leftBoundary(pt._2))
+      .takeWhile {
+        case ParTag => false
+        case _ => true
+      }
       .collect { case o: OnTag =>
         o
       }
@@ -56,11 +56,17 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) {
 
 object Cursor {
 
-  def rightBoundary(root: Tree): LazyList[OpTag] =
-    root.head #:: LazyList.unfold(root.tail)(_.value.lastOption.map(lo => lo.head -> lo.tail))
+  def rightBoundary(root: Tree): Chain[OpTag] =
+    Chain
+      .fromSeq(
+        root.head #:: LazyList.unfold(root.tail)(_.value.lastOption.map(lo => lo.head -> lo.tail))
+      )
 
-  def leftBoundary(root: Tree): LazyList[OpTag] =
-    root.head #:: LazyList.unfold(root.tail)(_.value.headOption.map(lo => lo.head -> lo.tail))
+  def leftBoundary(root: Tree): Chain[OpTag] =
+    Chain
+      .fromSeq(
+        root.head #:: LazyList.unfold(root.tail)(_.value.headOption.map(lo => lo.head -> lo.tail))
+      )
 
   def transform(root: Tree)(f: Cursor => List[Tree]): Option[Tree] = {
     def step(cursor: Cursor): Option[Tree] =
