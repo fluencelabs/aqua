@@ -17,7 +17,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val func: FuncCallable =
       FuncCallable(
         "ret",
-        FuncOp(on(otherPeer, Nil, call(1))),
+        FuncOp(on(otherPeer, otherRelay :: Nil, call(1))),
         ArgsDef.empty,
         Some((ret, ScalarType.string)),
         Map.empty,
@@ -35,14 +35,17 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         seq(
           dataCall(bc, "-relay-", initPeer),
           through(relayV),
+          through(otherRelay),
           xor(
             call(1, otherPeer),
             seq(
-              through(relayV), // TODO this one is also handled
+              through(otherRelay),
+              through(relayV),
               errorCall(bc, 1, initPeer),
               through(relayV)
             )
           ),
+          through(otherRelay),
           through(relayV),
           xor(
             respCall(bc, ret, initPeer),

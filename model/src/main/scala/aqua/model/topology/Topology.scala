@@ -56,55 +56,77 @@ object Topology extends LogSupport {
 
         debug("Going to handle: " + cf.head)
 
-        val currentOn = loc.pathOn
-        val prevOn = c.prevOnTags
-        val wasHandled = c.pathToRoot.collectFirst {
-          case cc @ Cursor(_, `head`(_: GroupTag) /: _) => cc.loc.pathOn
-        }.exists(cclp =>
-          cclp == currentOn && {
-            val (c1, _) = skipCommonPrefix(prevOn, cclp)
-            c1.isEmpty
-          }
-        )
+        val fromPrevToCurrentPath = fromPrevToCurrent(c, currentPeerId)
+        if (fromPrevToCurrentPath.nonEmpty) debug("BEFORE = " + fromPrevToCurrentPath)
 
-        // Usually we don't need to go next
-        val nextOn = parent match {
-          case ParTag =>
-            val exports = FuncOp(c.point.current).exportsVarNames.value
-            if (exports.isEmpty) Chain.empty[OnTag]
-            else {
-              val isUsed = c.pathToRoot.tail.collect {
-                case Cursor(cz, `head`(gt: GroupTag) /: _) if gt != ParTag =>
-                  cz.next.map(FuncOp(_)).map(_.usesVarNames)
-              }.exists(_.exists(_.value.intersect(exports).nonEmpty))
-              if (isUsed) c.nextOnTags else Chain.empty[OnTag]
-            }
-          case XorTag if c.point.prev.nonEmpty => c.nextOnTags
-          case _ => Chain.empty[OnTag]
-        }
-        val nextPeerId =
-          if (nextOn.nonEmpty) Chain.fromOption(nextOn.lastOption.map(_.peerId)) else currentPeerId
+        val fromCurrentToNextPath = fromCurrentToNext(parent, c, currentPeerId)
+        if (fromCurrentToNextPath.nonEmpty) debug("NEXT = " + fromCurrentToNextPath)
 
-        // Need to get from there
-        val prevPeerId =
-          Chain.fromOption(prevOn.lastOption.map(_.peerId) orElse loc.firstOn.map(_.peerId))
-
-        val fromPrevToCurrent =
-          if (wasHandled) Chain.empty[ValueModel]
-          else
-            findPath(prevOn, currentOn, prevPeerId, currentPeerId)
-
-        val fromCurrentToNext = findPath(currentOn, nextOn, currentPeerId, nextPeerId)
-
-        if (fromPrevToCurrent.nonEmpty) debug("BEFORE = " + fromPrevToCurrent)
-        if (fromCurrentToNext.nonEmpty) debug("NEXT = " + fromCurrentToNext)
-
-        (through(fromPrevToCurrent)
-          .append(cfu) ++ through(fromCurrentToNext, reversed = true)).toList
+        (through(fromPrevToCurrentPath)
+          .append(cfu) ++ through(fromCurrentToNextPath, reversed = true)).toList
 
       case Cursor(ChainZipper(_, cf, _), loc) =>
         cf.copy(setServiceCallPeerId(cf.head, loc)) :: Nil
     }
+
+  def fromPrevToCurrent(c: Cursor, currentPeerId: Chain[ValueModel]): Chain[ValueModel] = {
+    val prevOn = c.prevOnTags
+    val currentOn = c.loc.pathOn
+
+    val wasHandled = c.pathToRoot.collectFirst { case cc @ Cursor(_, `head`(_: GroupTag) /: _) =>
+      cc.loc.pathOn
+    }.exists(cclp =>
+      cclp == currentOn && {
+        val (c1, _) = skipCommonPrefix(prevOn, cclp)
+        c1.isEmpty
+      }
+    )
+
+    // Need to get from there
+    val prevPeerId =
+      Chain.fromOption(prevOn.lastOption.map(_.peerId) orElse c.loc.firstOn.map(_.peerId))
+
+    if (wasHandled) Chain.empty[ValueModel]
+    else
+      findPath(prevOn, currentOn, prevPeerId, currentPeerId)
+  }
+
+  def fromCurrentToNext(
+    parent: OpTag,
+    c: Cursor,
+    currentPeerId: Chain[ValueModel]
+  ): Chain[ValueModel] = {
+    // Usually we don't need to go next
+    val nextOn = parent match {
+      case ParTag =>
+        val exports = FuncOp(c.point.current).exportsVarNames.value
+        if (exports.isEmpty) Chain.empty[OnTag]
+        else {
+          val isUsed = c.pathToRoot.tail.collect {
+            case Cursor(cz, `head`(gt: GroupTag) /: _) if gt != ParTag =>
+              cz.next.map(FuncOp(_)).map(_.usesVarNames)
+          }.exists(_.exists(_.value.intersect(exports).nonEmpty))
+          if (isUsed) c.nextOnTags else Chain.empty[OnTag]
+        }
+      case XorTag if c.point.prev.nonEmpty => c.nextOnTags
+      case _ => Chain.empty[OnTag]
+    }
+    val nextPeerId =
+      if (nextOn.nonEmpty) Chain.fromOption(nextOn.lastOption.map(_.peerId)) else currentPeerId
+
+    val targetOn: Option[OnTag] = c.point.current.head match {
+      case o: OnTag => Option(o)
+      case _ => None
+    }
+    val currentOn = c.loc.pathOn
+    val currentOnInside = targetOn.fold(currentOn)(currentOn :+ _)
+    findPath(
+      currentOnInside,
+      nextOn,
+      currentPeerId,
+      nextPeerId
+    )
+  }
 
   def optimizePath(
     peerIds: Chain[ValueModel],
@@ -134,7 +156,8 @@ object Topology extends LogSupport {
     val fromTo = fromFix.reverse.flatMap(_.via.reverse) ++ toFix.flatMap(_.via)
     val optimized = optimizePath(fromPeer ++ fromTo ++ toPeer, fromPeer, toPeer)
 
-    debug("FIND PATH " + fromFix + " -> " + toFix)
+    debug("FIND PATH " + fromFix)
+    debug("       -> " + toFix)
     debug("                     Optimized: " + optimized)
     optimized
   }
