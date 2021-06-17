@@ -12,6 +12,10 @@ case class Call(args: List[ValueModel], exportTo: Option[Call.Export]) {
     )
 
   def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(_.mapName(f)))
+
+  def argVarNames: Set[String] = args.collect { case VarModel(name, _, _) =>
+    name
+  }.toSet
 }
 
 object Call {

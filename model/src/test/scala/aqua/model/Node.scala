@@ -3,7 +3,7 @@ package aqua.model
 import aqua.model.func.Call
 import aqua.model.func.body._
 import aqua.model.transform.{BodyConfig, ErrorsCatcher}
-import aqua.types.{LiteralType, ScalarType}
+import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -92,9 +92,20 @@ object Node {
   val otherRelay = LiteralModel("other-relay", ScalarType.string)
   val otherPeer2 = LiteralModel("other-peer-2", ScalarType.string)
   val otherRelay2 = LiteralModel("other-relay-2", ScalarType.string)
+  val varNode = VarModel("node-id", ScalarType.string)
+  val viaList = VarModel("other-relay-2", ArrayType(ScalarType.string))
 
   def call(i: Int, on: ValueModel = null) = Node(
     CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(Nil, None), Option(on))
+  )
+
+  def callLiteral(i: Int, on: ValueModel = null) = Node(
+    CallServiceTag(
+      LiteralModel("\"srv" + i + "\"", LiteralType.string),
+      s"fn$i",
+      Call(Nil, None),
+      Option(on)
+    )
   )
 
   def errorCall(bc: BodyConfig, i: Int, on: ValueModel = null) = Node(
@@ -132,6 +143,8 @@ object Node {
 
   def seq(nodes: Node*) = Node(SeqTag, nodes.toList)
   def xor(left: Node, right: Node) = Node(XorTag, left :: right :: Nil)
+
+  def par(left: Node, right: Node) = Node(ParTag, left :: right :: Nil)
 
   def on(peer: ValueModel, via: List[ValueModel], body: Node*) =
     Node(

@@ -52,8 +52,8 @@ case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Bo
 case class ForTag(item: String, iterable: ValueModel) extends SeqGroupTag
 
 case class MetaTag(
-  skipTopology: Boolean,
-  comment: Option[String],
+  skipTopology: Boolean = false,
+  comment: Option[String] = None,
   op: OpTag
 ) extends OpTag
 
