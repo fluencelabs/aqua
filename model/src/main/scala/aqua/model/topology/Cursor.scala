@@ -6,8 +6,9 @@ import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 import cats.syntax.functor._
+import wvlet.log.LogSupport
 
-case class Cursor(point: ChainZipper[Tree], loc: Location) {
+case class Cursor(point: ChainZipper[Tree], loc: Location) extends LogSupport {
 
   def downLoc(tree: Tree): Location =
     loc.down(point.copy(current = tree))
@@ -49,7 +50,7 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) {
       .collect {
         case o: OnTag =>
           o
-        case MetaTag(_, _, o: OnTag) =>
+        case MetaTag(false, _, o: OnTag) =>
           o
       }
 
@@ -68,7 +69,7 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) {
       .collect {
         case o: OnTag =>
           o
-        case MetaTag(_, _, o: OnTag) =>
+        case MetaTag(false, _, o: OnTag) =>
           o
       }
 }

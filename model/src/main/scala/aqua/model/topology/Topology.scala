@@ -19,7 +19,7 @@ object Topology extends LogSupport {
   def resolve(op: Tree): Tree =
     Cofree
       .cata[Chain, OpTag, Tree](resolveOnMoves(op)) {
-        case (SeqTag | _: OnTag | MetaTag(_, _, SeqTag | _: OnTag), children) =>
+        case (SeqTag | _: OnTag | MetaTag(false, _, SeqTag | _: OnTag), children) =>
           Eval.later(
             Cofree(
               SeqTag,
@@ -53,6 +53,8 @@ object Topology extends LogSupport {
 
         // We need to get there, finally
         val currentPeerId = Chain.fromOption(loc.lastOn.map(_.peerId))
+
+        debug("Going to handle: " + cf.head)
 
         val currentOn = loc.pathOn
         val prevOn = c.prevOnTags

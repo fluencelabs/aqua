@@ -16,7 +16,7 @@ case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) extends LogSup
     .fromSeq(path.map(_.current.head).collect {
       case o: OnTag =>
         o
-      case MetaTag(_, _, o: OnTag) => o
+      case MetaTag(false, _, o: OnTag) => o
     })
     .reverse
 
@@ -24,10 +24,9 @@ case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) extends LogSup
     path match {
       case (cz @ ChainZipper(
             prev,
-            Cofree(_: SeqGroupTag | MetaTag(_, _, _: SeqGroupTag), _),
+            Cofree(_: SeqGroupTag | MetaTag(false, _, _: SeqGroupTag), _),
             _
           )) :: tail if prev.nonEmpty =>
-        info(s"Move left to $tail")
         cz.moveLeft.map(_ -> Location(tail))
       case _ :: tail =>
         Location(tail).lastLeftSeq
@@ -38,7 +37,7 @@ case class Location(path: List[ChainZipper[Topology.Tree]] = Nil) extends LogSup
     path match {
       case (cz @ ChainZipper(
             _,
-            Cofree(_: SeqGroupTag | MetaTag(_, _, _: SeqGroupTag), _),
+            Cofree(_: SeqGroupTag | MetaTag(false, _, _: SeqGroupTag), _),
             next
           )) :: tail if next.nonEmpty =>
         cz.moveRight.map(_ -> Location(tail))
