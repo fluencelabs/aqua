@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
 import aqua.model.LambdaModel
-import aqua.parser.lexer.{ArrowTypeToken, CustomTypeToken, LambdaOp, Name, Token, TypeToken}
+import aqua.parser.lexer._
 import aqua.types.{ArrowType, Type}
 import cats.data.NonEmptyMap
 
@@ -22,6 +22,8 @@ case class ResolveLambda[F[_]](root: Type, ops: List[LambdaOp[F]])
 
 case class EnsureTypeMatches[F[_]](token: Token[F], expected: Type, given: Type)
     extends TypeOp[F, Boolean]
+
+case class ExpectNoExport[F[_]](token: Token[F]) extends TypeOp[F, Unit]
 
 case class CheckArgumentsNum[F[_]](token: Token[F], expected: Int, given: Int)
     extends TypeOp[F, Boolean]

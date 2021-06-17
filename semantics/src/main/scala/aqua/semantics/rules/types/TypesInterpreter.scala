@@ -1,15 +1,14 @@
 package aqua.semantics.rules.types
 
-import aqua.semantics.rules.ReportError
 import aqua.parser.lexer.Token
-
+import aqua.semantics.rules.ReportError
 import aqua.types.{ArrowType, ProductType}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyMap, State}
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import cats.~>
 import monocle.Lens
-import cats.syntax.functor._
-import cats.syntax.flatMap._
 
 import scala.collection.immutable.SortedMap
 
@@ -104,6 +103,12 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
         else
           report(etm.token, s"Types mismatch, expected: ${etm.expected}, given: ${etm.`given`}")
             .as(false)
+
+      case ene: ExpectNoExport[F] =>
+        report(
+          ene.token,
+          "Types mismatch. Cannot assign to a variable the result of a call that returns nothing"
+        ).as(())
 
       case ca: CheckArgumentsNum[F] =>
         if (ca.expected == ca.given) State.pure(true)

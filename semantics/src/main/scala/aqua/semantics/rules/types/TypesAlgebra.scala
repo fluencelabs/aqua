@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
 import aqua.model.LambdaModel
-import aqua.parser.lexer.{ArrowTypeToken, CustomTypeToken, LambdaOp, Name, Token, TypeToken}
+import aqua.parser.lexer._
 import aqua.types.{ArrowType, Type}
 import cats.InjectK
 import cats.data.NonEmptyMap
@@ -35,6 +35,9 @@ class TypesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]) {
 
   def ensureTypeMatches(token: Token[F], expected: Type, given: Type): Free[Alg, Boolean] =
     Free.liftInject[Alg](EnsureTypeMatches[F](token, expected, given))
+
+  def expectNoExport(token: Token[F]): Free[Alg, Unit] =
+    Free.liftInject[Alg](ExpectNoExport[F](token))
 
   def checkArgumentsNumber(token: Token[F], expected: Int, given: Int): Free[Alg, Boolean] =
     Free.liftInject[Alg](CheckArgumentsNum(token, expected, given))
