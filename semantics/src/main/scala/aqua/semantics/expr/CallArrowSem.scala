@@ -9,12 +9,13 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrowType, ScalarType, StreamType, Type}
+import aqua.types.{ArrowType, StreamType, Type}
 import cats.Traverse
 import cats.free.Free
 import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import cats.syntax.traverse._
 
 class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
 
@@ -57,38 +58,48 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
           case (Some(at), Some(sid)) =>
             Option(at -> sid) // Here we assume that Ability is a Service that must be resolved
           case _ => None
-        }.flatMap(_.fold(Free.pure[Alg, Option[FuncOp]](None)) { case (arrowType, serviceId) =>
-          checkArgsRes(arrowType).map {
-            case (argsResolved, t) =>
-              Option(
-                FuncOp.leaf(
-                  CallServiceTag(
-                    serviceId = serviceId,
-                    funcName = funcName.value,
-                    Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
-                  )
-                )
-              )
-
-            case _ => None
-
-          }
-        })
+        }.flatMap(_.map { case (arrowType, serviceId) =>
+          callServiceTag(arrowType, Option(serviceId))
+        }.traverse(identity))
       case None =>
         N.readArrow(funcName)
-          .flatMap(_.fold(Free.pure[Alg, Option[FuncOp]](None)) { arrowType =>
-            checkArgsRes(arrowType).map { case (argsResolved, t) =>
-              FuncOp.leaf(
-                CallArrowTag(
-                  funcName = funcName.value,
-                  Call(argsResolved, (variable.map(_.value), t).mapN(Call.Export))
-                )
-              )
-
-            }
-              .map(Option(_))
-          })
+          .flatMap(_.map { arrowType =>
+            callServiceTag(arrowType, None)
+          }.traverse(identity))
     }
+
+  def callServiceTag[Alg[_]](arrowType: ArrowType, serviceId: Option[ValueModel])(implicit
+    N: NamesAlgebra[F, Alg],
+    A: AbilitiesAlgebra[F, Alg],
+    T: TypesAlgebra[F, Alg],
+    V: ValuesAlgebra[F, Alg]
+  ): Free[Alg, FuncOp] = {
+    checkArgsRes(arrowType).flatMap { case (argsResolved, tOp) =>
+      ((variable, tOp) match {
+        case (Some(v), Some(t)) =>
+          Free.pure[Alg, Option[Call.Export]](Option(Call.Export(v.value, t)))
+        case (Some(v), None) =>
+          T.expectNoExport(v).map(_ => None)
+        case _ =>
+          Free.pure[Alg, Option[Call.Export]](None)
+
+      }).map(call =>
+        FuncOp.leaf(serviceId match {
+          case Some(sid) =>
+            CallServiceTag(
+              serviceId = sid,
+              funcName = funcName.value,
+              Call(argsResolved, call)
+            )
+          case None =>
+            CallArrowTag(
+              funcName = funcName.value,
+              Call(argsResolved, call)
+            )
+        })
+      )
+    }
+  }
 
   def program[Alg[_]](implicit
     N: NamesAlgebra[F, Alg],
