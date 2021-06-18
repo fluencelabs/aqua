@@ -24,6 +24,9 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) extends LogSupport {
   def pathToRoot: LazyList[Cursor] =
     moveUp.to(LazyList).flatMap(c => c #:: c.pathToRoot)
 
+  def parentTag: Option[OpTag] =
+    loc.path.headOption.map(_.current.head)
+
   def mapParent(f: Tree => Tree): Cursor =
     copy(loc =
       Location(
@@ -39,6 +42,7 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) extends LogSupport {
       .fromOption(
         point.prev.lastOption
           .map(t => loc.pathOn -> t)
+          .filter(_ => parentTag.exists(_ != ParTag))
           .orElse(loc.lastLeftSeq.map(_.map(_.pathOn).swap.map(_.current)))
       )
       .flatMap(pt => pt._1.widen[OpTag] ++ Cursor.rightBoundary(pt._2))
@@ -57,8 +61,13 @@ case class Cursor(point: ChainZipper[Tree], loc: Location) extends LogSupport {
   def nextOnTags: Chain[OnTag] =
     Chain
       .fromOption(
-        loc.lastRightSeq
-          .map(_.map(_.pathOn).swap.map(_.current))
+        point.next.headOption
+          .map(t => loc.pathOn -> t)
+          .filter(_ => parentTag.exists(_ != ParTag))
+          .orElse(
+            loc.lastRightSeq
+              .map(_.map(_.pathOn).swap.map(_.current))
+          )
       )
       .flatMap(pt => pt._1 ++ Cursor.leftBoundary(pt._2))
       .takeWhile {

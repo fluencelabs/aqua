@@ -105,7 +105,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             through(otherRelay),
             call(1, otherPeer)
           ),
-          seq(call(2, initPeer))
+          call(2, initPeer)
         )
       )
 
