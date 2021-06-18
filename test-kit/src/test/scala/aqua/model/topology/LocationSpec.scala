@@ -1,9 +1,8 @@
-package model.topology
+package aqua.model.topology
 
 import aqua.model.func.body.SeqTag
 import aqua.model.topology.ChainZipper.Matchers.`head`
 import aqua.model.topology.Location.Matchers._
-import aqua.model.topology.{ChainZipper, Location, Topology}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
