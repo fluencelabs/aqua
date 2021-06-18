@@ -1,22 +1,8 @@
-import "builtin.aqua"
+service CustomId("cid"):
+  id(s: string) -> string
+  ids() -> string
 
-service OpH("op"):
-  puk(s: string) -> string
-  pek(s: string, -- trgtr
-      c: string) -> string
-
-func a( -- ferkjn
-  b: string, -- fr
-  c: string, -- asdf
-  g: string
-  ) -> string: -- rgtr
-
-  try:
-    f = "world"
-    OpH "planet"
-    OpH.pek("TRY THIS", -- gtrg
-            c)
-  catch err:
-    OpH.puk(err.msg)
-  <- f
-
+func topologyTest():
+    on "friend":
+        str2 <- CustomId.id("in on")
+    par CustomId.id("in par")
