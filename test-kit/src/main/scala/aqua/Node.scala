@@ -1,8 +1,9 @@
-package aqua.model
+package aqua
 
 import aqua.model.func.Call
 import aqua.model.func.body._
 import aqua.model.transform.{BodyConfig, ErrorsCatcher}
+import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval
 import cats.data.Chain
