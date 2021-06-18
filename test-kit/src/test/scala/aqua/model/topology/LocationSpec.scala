@@ -1,13 +1,13 @@
 package aqua.model.topology
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
-import Location.Matchers._
-import ChainZipper.Matchers._
 import aqua.model.func.body.SeqTag
+import aqua.model.topology.ChainZipper.Matchers.`head`
+import aqua.model.topology.Location.Matchers._
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 class LocationSpec extends AnyFlatSpec with Matchers {
 

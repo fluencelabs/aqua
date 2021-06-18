@@ -1,6 +1,6 @@
 package aqua.model.topology
 
-import aqua.model.Node
+import aqua.Node
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 

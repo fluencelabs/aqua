@@ -93,6 +93,10 @@ lazy val model = project
   )
   .dependsOn(types)
 
+lazy val `test-kit` = project
+  .settings(commons: _*)
+  .dependsOn(model)
+
 lazy val semantics = project
   .settings(commons: _*)
   .settings(
@@ -101,7 +105,7 @@ lazy val semantics = project
       "com.github.julien-truffaut" %% "monocle-macro" % monocleV
     )
   )
-  .dependsOn(model, parser)
+  .dependsOn(model, `test-kit` % Test, parser)
 
 lazy val `backend-air` = project
   .in(file("backend/air"))
