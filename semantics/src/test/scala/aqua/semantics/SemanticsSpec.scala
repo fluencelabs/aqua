@@ -1,16 +1,16 @@
 package aqua.semantics
 
+import aqua.Node
 import aqua.Node._
 import aqua.model.transform._
 import aqua.model.{AquaContext, LiteralModel}
 import aqua.parser.Ast
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.types.LiteralType
-import aqua.{AquaSpec, Node}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class SemanticsSpec extends AnyFlatSpec with Matchers with AquaSpec {
+class SemanticsSpec extends AnyFlatSpec with Matchers {
 
   // use it to fix https://github.com/fluencelabs/aqua/issues/90
   ignore should "create right model" in {
