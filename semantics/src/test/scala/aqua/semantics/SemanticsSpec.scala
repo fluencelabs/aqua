@@ -13,7 +13,7 @@ import org.scalatest.matchers.should.Matchers
 class SemanticsSpec extends AnyFlatSpec with Matchers {
 
   // use it to fix https://github.com/fluencelabs/aqua/issues/90
-  ignore should "create right model" in {
+  "sem" should "create right model" in {
     implicit val fileLift: LiftParser[Span.F] = Span.spanLiftParser
 
     val script =
@@ -45,7 +45,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
         )
       )
 
-//    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrPrintDiff(expected) should be(true)
 
   }
 }
