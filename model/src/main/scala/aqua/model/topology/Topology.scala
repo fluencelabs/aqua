@@ -35,9 +35,12 @@ object Topology extends LogSupport {
 
   def resolveOnMoves(op: Tree): Eval[Res] =
     RawCursor(NonEmptyList.one(ChainZipper.one(op))).cata { rc =>
+      info(s"Hello from $rc")
       OptionT[Eval, ChainZipper[Res]](
         ({
           case SeqTag => SeqRes
+          case _: OnTag => SeqRes
+          case ForTag(item, iter) => FoldRes(item, iter)
           case ParTag => ParRes
           case XorTag => XorRes
           case NextTag(item) => NextRes(item)
@@ -67,11 +70,11 @@ object Topology extends LogSupport {
       .map(NonEmptyChain.fromChain(_).map(_.uncons))
       .map {
         case None =>
-          // TODO should never happen
+          error("Topology emitted nothing")
           Cofree(SeqRes, MakeRes.nilTail)
         case Some((el, `nil`)) => el
         case Some((el, tail)) =>
-          // TODO this is also very strange
+          warn("Topology emitted many nodes, that's unusual")
           Cofree(SeqRes, Eval.now(el +: tail))
       }
 
