@@ -20,56 +20,6 @@ case class Node[+T](label: T, children: List[Node[T]] = Nil) {
   override def toString: String =
     label.toString + (if (children.isEmpty) "\n" else s"{\n${children.mkString}\n}\n")
 
-  private def equalOrNot[TT](left: TT, right: TT): String = (if (left == right)
-                                                               Console.GREEN + left + Console.RESET
-                                                             else
-                                                               Console.BLUE + left + Console.RED + " != " + Console.YELLOW + right)
-
-  private def diffArg(left: ValueModel, right: ValueModel): String =
-    Console.GREEN + "(" +
-      equalOrNot(left, right) + Console.GREEN + ")"
-
-  private def diffCall(left: Call, right: Call): String =
-    if (left == right) Console.GREEN + left + Console.RESET
-    else
-      Console.GREEN + "Call(" +
-        equalOrNot(left.args.length, right.args.length) + "::" + left.args
-          .zip(right.args)
-          .map(ab => diffArg(ab._1, ab._2))
-          .mkString("::") + Console.GREEN + ", " +
-        equalOrNot(left.exportTo, right.exportTo) + Console.GREEN + ")"
-
-  private def diffServiceCall(left: CallServiceTag, right: CallServiceTag): String =
-    Console.GREEN + "CallServiceTag(" +
-      equalOrNot(left.serviceId, right.serviceId) + Console.GREEN + ", " +
-      equalOrNot(left.funcName, right.funcName) + Console.GREEN + ", " +
-      diffCall(left.call, right.call) + Console.GREEN +
-      Console.GREEN + ")" + Console.RESET
-
-  private def diffTags(left: RawTag, right: RawTag): String = (left, right) match {
-    case (l: CallServiceTag, r: CallServiceTag) => diffServiceCall(l, r)
-    case _ =>
-      Console.BLUE + s"    $left ${Console.RED}\n != ${Console.YELLOW}${right}${Console.RED}"
-  }
-
-//  def diffToString(other: Node): String =
-//    (if (tag == other.tag) Console.GREEN + tag
-//     else diffTags(tag, other.tag)) + (if (ops.isEmpty && other.ops.isEmpty) "\n"
-//                                       else
-//                                         "{\n") + Console.RESET +
-//      (if (ops.length != other.ops.length)
-//         Console.RED + s"number of ops: ${ops.length} != ${other.ops.length}\n" + Console.RESET
-//       else "") +
-//      ops
-//        .zip(other.ops)
-//        .map { case (a, b) =>
-//          a.diffToString(b)
-//        }
-//        .mkString + (if (ops.isEmpty && other.ops.isEmpty) ""
-//                     else
-//                       ((if (tag == other.tag) Console.GREEN
-//                         else Console.RED) + "}\n" + Console.RESET))
-
   def equalsOrPrintDiff[TT](other: Node[TT]): Boolean =
     if (this == other) true
     else {
@@ -185,4 +135,64 @@ object Node {
 
   def through(peer: ValueModel): Node[ResolvedOp] =
     cofToNode(MakeRes.noop(peer))
+
+  private def equalOrNot[TT](left: TT, right: TT): String = (if (left == right)
+                                                               Console.GREEN + left + Console.RESET
+                                                             else
+                                                               Console.BLUE + left + Console.RED + " != " + Console.YELLOW + right)
+
+  private def diffArg(left: ValueModel, right: ValueModel): String =
+    Console.GREEN + "(" +
+      equalOrNot(left, right) + Console.GREEN + ")"
+
+  private def diffCall(left: Call, right: Call): String =
+    if (left == right) Console.GREEN + left + Console.RESET
+    else
+      Console.GREEN + "Call(" +
+        equalOrNot(left.args.length, right.args.length) + "::" + left.args
+          .zip(right.args)
+          .map(ab => diffArg(ab._1, ab._2))
+          .mkString("::") + Console.GREEN + ", " +
+        equalOrNot(left.exportTo, right.exportTo) + Console.GREEN + ")"
+
+  private def diffServiceCall(left: CallServiceRes, right: CallServiceRes): String =
+    Console.GREEN + "CallServiceTag(" +
+      equalOrNot(left.serviceId, right.serviceId) + Console.GREEN + ", " +
+      equalOrNot(left.funcName, right.funcName) + Console.GREEN + ", " +
+      diffCall(left.call, right.call) + Console.GREEN +
+      Console.GREEN + ")" + Console.RESET
+
+  private def diffRes(left: ResolvedOp, right: ResolvedOp): String = (left, right) match {
+    case (l: CallServiceRes, r: CallServiceRes) => diffServiceCall(l, r)
+    case _ =>
+      Console.BLUE + s"    $left ${Console.RED}\n != ${Console.YELLOW}${right}${Console.RED}"
+  }
+
+  def diffToString(current: Node.Res, other: Node.Res): String =
+    (if (current.label == other.label) Console.GREEN + current.label
+     else
+       diffRes(current.label, other.label)) + (if (
+                                                 current.children.isEmpty && other.children.isEmpty
+                                               ) "\n"
+                                               else
+                                                 "{\n") + Console.RESET +
+      (if (current.children.length != other.children.length)
+         Console.RED + s"number of ops: ${current.children.length} != ${other.children.length}\n" + Console.RESET
+       else "") +
+      current.children
+        .zip(other.children)
+        .map { case (a, b) =>
+          diffToString(a, b)
+        }
+        .mkString + (if (current.children.isEmpty && other.children.isEmpty) ""
+                     else
+                       ((if (current.label == other.label) Console.GREEN
+                         else Console.RED) + "}\n" + Console.RESET))
+
+  def equalsOrPrintDiff(current: Node.Res, other: Node.Res): Boolean =
+    if (current == other) true
+    else {
+      println(diffToString(current, other))
+      false
+    }
 }
