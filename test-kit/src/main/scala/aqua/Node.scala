@@ -2,14 +2,7 @@ package aqua
 
 import aqua.model.func.Call
 import aqua.model.func.raw._
-import aqua.model.func.resolved.{
-  CallServiceRes,
-  MakeRes,
-  MatchMismatchRes,
-  ResolvedOp,
-  SeqRes,
-  XorRes
-}
+import aqua.model.func.resolved.{CallServiceRes, MakeRes, MatchMismatchRes, ResolvedOp}
 import aqua.model.transform.{BodyConfig, ErrorsCatcher}
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
@@ -20,7 +13,7 @@ import cats.free.Cofree
 import scala.language.implicitConversions
 
 // Helper to simplify building and visualizing Cofree structures
-case class Node[T](label: T, children: List[Node[T]] = Nil) {
+case class Node[+T](label: T, children: List[Node[T]] = Nil) {
 
   def cof[TT >: T]: Cofree[Chain, TT] = Node.nodeToCof(this)
 
@@ -77,7 +70,7 @@ case class Node[T](label: T, children: List[Node[T]] = Nil) {
 //                       ((if (tag == other.tag) Console.GREEN
 //                         else Console.RED) + "}\n" + Console.RESET))
 
-  def equalsOrPrintDiff(other: Node[T]): Boolean =
+  def equalsOrPrintDiff[TT](other: Node[TT]): Boolean =
     if (this == other) true
     else {
       println("Given: " + this)
@@ -91,7 +84,7 @@ object Node {
   type Raw = Node[RawTag]
 
   implicit def cofToNode[T](cof: Cofree[Chain, T]): Node[T] =
-    Node(cof.head, cof.tailForced.toList.map(cofToNode))
+    Node[T](cof.head, cof.tailForced.toList.map(cofToNode[T]))
 
   implicit def nodeToCof[T](tree: Node[T]): Cofree[Chain, T] =
     Cofree(tree.label, Eval.later(Chain.fromSeq(tree.children.map(nodeToCof))))
