@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.func.body.FuncOp
+import aqua.model.func.raw.FuncOp
 import aqua.model.{Model, ValueModel}
 import aqua.model.func.{ArgDef, ArgsDef, FuncModel}
 import aqua.parser.expr.FuncExpr

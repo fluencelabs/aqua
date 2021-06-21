@@ -1,8 +1,8 @@
 package aqua.model.transform
 
-import aqua.model.func.body._
 import aqua.model.func.FuncCallable
 import aqua.model.VarModel
+import aqua.model.func.resolved.{NoAir, ResolvedOp}
 import aqua.model.topology.Topology
 import aqua.types.ScalarType
 import cats.data.Chain
@@ -10,18 +10,18 @@ import cats.free.Cofree
 
 object Transform {
 
-  def defaultFilter(t: OpTag): Boolean = t match {
-    case _: NoAirTag => false
+  def defaultFilter(t: ResolvedOp): Boolean = t match {
+    case _: NoAir => false
     case _ => true
   }
 
   def clear(
-    tree: Cofree[Chain, OpTag],
-    filter: OpTag => Boolean = defaultFilter
-  ): Cofree[Chain, OpTag] =
+    tree: Cofree[Chain, ResolvedOp],
+    filter: ResolvedOp => Boolean = defaultFilter
+  ): Cofree[Chain, ResolvedOp] =
     tree.copy(tail = tree.tail.map(_.filter(t => filter(t.head)).map(clear(_, filter))))
 
-  def forClient(func: FuncCallable, conf: BodyConfig): Cofree[Chain, OpTag] = {
+  def forClient(func: FuncCallable, conf: BodyConfig): Cofree[Chain, ResolvedOp] = {
     val initCallable: InitPeerCallable = InitViaRelayCallable(
       Chain.fromOption(conf.relayVarName).map(VarModel(_, ScalarType.string))
     )

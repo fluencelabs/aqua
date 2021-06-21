@@ -1,7 +1,7 @@
 package aqua
 
 import aqua.model.func.Call
-import aqua.model.func.body._
+import aqua.model.func.raw._
 import aqua.model.transform.{BodyConfig, ErrorsCatcher}
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
@@ -12,7 +12,7 @@ import cats.free.Cofree
 import scala.language.implicitConversions
 
 // Helper to simplify building and visualizing Cofree structures
-case class Node(tag: OpTag, ops: List[Node] = Nil) {
+case class Node(tag: RawTag, ops: List[Node] = Nil) {
 
   override def toString: String =
     tag.toString + (if (ops.isEmpty) "\n" else s"{\n${ops.mkString}\n}\n")
@@ -44,7 +44,7 @@ case class Node(tag: OpTag, ops: List[Node] = Nil) {
       equalOrNot(left.peerId, right.peerId) +
       Console.GREEN + ")" + Console.RESET
 
-  private def diffTags(left: OpTag, right: OpTag): String = (left, right) match {
+  private def diffTags(left: RawTag, right: RawTag): String = (left, right) match {
     case (l: CallServiceTag, r: CallServiceTag) => diffServiceCall(l, r)
     case _ =>
       Console.BLUE + s"    $left ${Console.RED}\n != ${Console.YELLOW}${right}${Console.RED}"
@@ -77,7 +77,7 @@ case class Node(tag: OpTag, ops: List[Node] = Nil) {
 }
 
 object Node {
-  type Cof = Cofree[Chain, OpTag]
+  type Cof = Cofree[Chain, RawTag]
 
   implicit def cofToNode(cof: Cof): Node =
     Node(cof.head, cof.tailForced.toList.map(cofToNode))

@@ -1,7 +1,7 @@
 package aqua.model.transform
 
 import aqua.Node
-import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
+import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp}
 import aqua.model.func.{ArgsDef, Call, FuncCallable}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.types.ScalarType
@@ -119,8 +119,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
             CallServiceTag(
               LiteralModel.quote("srv1"),
               "foo",
-              Call(Nil, Some(Call.Export("v", ScalarType.string))),
-              None
+              Call(Nil, Some(Call.Export("v", ScalarType.string)))
             )
           )
         ),

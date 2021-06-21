@@ -1,4 +1,4 @@
-package aqua.model.func.body
+package aqua.model.func.raw
 
 import aqua.model.func.Call
 import aqua.model.{LiteralModel, ValueModel}
@@ -7,12 +7,12 @@ import cats.free.Cofree
 
 object FuncOps {
 
-  def noop(peerId: ValueModel): FuncOp =
-    FuncOp.leaf(CallServiceTag(LiteralModel.quote("op"), "identity", Call(Nil, None), Some(peerId)))
+  def noop: FuncOp =
+    FuncOp.leaf(CallServiceTag(LiteralModel.quote("op"), "identity", Call(Nil, None)))
 
   def identity(what: ValueModel, to: Call.Export): FuncOp =
     FuncOp.leaf(
-      CallServiceTag(LiteralModel.quote("op"), "identity", Call(what :: Nil, Some(to)), None)
+      CallServiceTag(LiteralModel.quote("op"), "identity", Call(what :: Nil, Some(to)))
     )
 
   def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =
@@ -62,16 +62,4 @@ object FuncOps {
 
   def next(item: String): FuncOp =
     FuncOp.leaf(NextTag(item))
-
-  def meta(op: FuncOp, skipTopology: Boolean = false, comment: String = null): FuncOp =
-    FuncOp(
-      op.tree.copy(
-        MetaTag(
-          skipTopology = skipTopology,
-          comment = Option(comment),
-          op.head
-        ),
-        op.tree.tail
-      )
-    )
 }

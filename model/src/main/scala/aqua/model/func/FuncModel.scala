@@ -1,6 +1,6 @@
 package aqua.model.func
 
-import aqua.model.func.body.FuncOp
+import aqua.model.func.raw.FuncOp
 import aqua.model.{Model, ValueModel}
 import aqua.types.Type
 

@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.{Model, ValueModel}
-import aqua.model.func.body.{FuncOp, MatchMismatchTag, XorTag}
+import aqua.model.func.raw.{FuncOp, MatchMismatchTag, XorTag}
 import aqua.parser.expr.IfExpr
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra

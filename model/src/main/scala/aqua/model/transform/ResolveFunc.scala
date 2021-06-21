@@ -2,7 +2,7 @@ package aqua.model.transform
 
 import aqua.model.{ValueModel, VarModel}
 import aqua.model.func.{ArgDef, ArgsCall, ArgsDef, Call, FuncCallable}
-import aqua.model.func.body.{FuncOp, FuncOps}
+import aqua.model.func.raw.{FuncOp, FuncOps}
 import aqua.types.ArrowType
 import cats.Eval
 import cats.syntax.apply._

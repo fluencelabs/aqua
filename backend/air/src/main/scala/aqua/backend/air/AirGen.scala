@@ -2,22 +2,19 @@ package aqua.backend.air
 
 import aqua.model._
 import aqua.model.func.Call
-import aqua.model.func.body._
+import aqua.model.func.resolved._
 import aqua.types.StreamType
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
-import wvlet.log.Logger
+import wvlet.log.LogSupport
 
 sealed trait AirGen {
   def generate: Air
 
 }
 
-object AirGen {
-
-  private val logger = Logger.of[AirGen.type]
-  import logger._
+object AirGen extends LogSupport {
 
   def lambdaToString(ls: List[LambdaModel]): String = ls match {
     case Nil => ""
@@ -46,22 +43,20 @@ object AirGen {
     case list => list.reduceLeft(SeqGen)
   }
 
-  private def folder(op: OpTag, ops: Chain[AirGen]): Eval[AirGen] =
+  private def folder(op: ResolvedOp, ops: Chain[AirGen]): Eval[AirGen] =
     op match {
-      case mt: MetaTag =>
-        folder(mt.op, ops).map(ag => mt.comment.fold(ag)(CommentGen(_, ag)))
-      case SeqTag =>
+//      case mt: MetaTag =>
+//        folder(mt.op, ops).map(ag => mt.comment.fold(ag)(CommentGen(_, ag)))
+      case SeqRes =>
         Eval later ops.toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
-      case ParTag =>
+      case ParRes =>
         Eval later ops.toList.reduceLeftOption(ParGen).getOrElse(NullGen)
-      case XorTag =>
+      case XorRes =>
         Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
-      case XorTag.LeftBiased =>
-        Eval later XorGen(opsToSingle(ops), NullGen)
 
-      case NextTag(item) =>
+      case NextRes(item) =>
         Eval later NextGen(item)
-      case MatchMismatchTag(left, right, shouldMatch) =>
+      case MatchMismatchRes(left, right, shouldMatch) =>
         Eval later MatchMismatchGen(
           valueToData(left),
           valueToData(right),
@@ -69,12 +64,12 @@ object AirGen {
           opsToSingle(ops)
         )
 
-      case ForTag(item, iterable) =>
+      case FoldRes(item, iterable) =>
         Eval later ForGen(valueToData(iterable), item, opsToSingle(ops))
-      case CallServiceTag(serviceId, funcName, Call(args, exportTo), peerId) =>
+      case CallServiceRes(serviceId, funcName, Call(args, exportTo), peerId) =>
         Eval.later(
           ServiceCallGen(
-            peerId.map(valueToData).getOrElse(DataView.InitPeerId),
+            valueToData(peerId),
             valueToData(serviceId),
             funcName,
             args.map(valueToData),
@@ -85,35 +80,14 @@ object AirGen {
           )
         )
 
-      case CallArrowTag(funcName, _) =>
-        // TODO: should be already resolved & removed from tree
-        error(
-          s"Unresolved arrow in AirGen: $funcName"
-        )
+      case _: NoAir =>
         Eval later NullGen
-
-      case OnTag(_, _) =>
-        // TODO should be resolved
-        Eval later opsToSingle(
-          ops
-        )
-      case _: NoAirTag =>
-        // TODO: should be already resolved & removed from tree
-        Eval later NullGen
-      case XorParTag(opsx, opsy) =>
-        // TODO should be resolved
-        error(
-          "XorParTag reached AirGen, most likely it's an error"
-        )
-        Eval later opsToSingle(
-          Chain(apply(opsx.tree), apply(opsy.tree))
-        )
 
     }
 
-  def apply(op: Cofree[Chain, OpTag]): AirGen =
+  def apply(op: Cofree[Chain, ResolvedOp]): AirGen =
     Cofree
-      .cata[Chain, OpTag, AirGen](op)(folder)
+      .cata[Chain, ResolvedOp, AirGen](op)(folder)
       .value
 }
 

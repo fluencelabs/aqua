@@ -1,12 +1,12 @@
-package aqua.model.func.body
+package aqua.model.func.raw
 
 import aqua.model.ValueModel
 import aqua.model.func.Call
 import cats.data.Chain
 
-sealed trait OpTag {
+sealed trait RawTag {
 
-  def mapValues(f: ValueModel => ValueModel): OpTag = this match {
+  def mapValues(f: ValueModel => ValueModel): RawTag = this match {
     case OnTag(peerId, via) => OnTag(f(peerId), via.map(f))
     case MatchMismatchTag(left, right, shouldMatch) =>
       MatchMismatchTag(f(left), f(right), shouldMatch)
@@ -16,12 +16,11 @@ sealed trait OpTag {
         funcName,
         call.mapValues(f)
       )
-    case CallServiceTag(serviceId, funcName, call, pid) =>
+    case CallServiceTag(serviceId, funcName, call) =>
       CallServiceTag(
         f(serviceId),
         funcName,
-        call.mapValues(f),
-        pid.map(f)
+        call.mapValues(f)
       )
     case AssignmentTag(value, assignTo) =>
       AssignmentTag(f(value), assignTo)
@@ -32,9 +31,9 @@ sealed trait OpTag {
 
 }
 
-sealed trait NoAirTag extends OpTag
+sealed trait NoExecTag extends RawTag
 
-sealed trait GroupTag extends OpTag
+sealed trait GroupTag extends RawTag
 sealed trait SeqGroupTag extends GroupTag
 
 case object SeqTag extends SeqGroupTag
@@ -43,38 +42,31 @@ case object ParTag extends GroupTag
 case object XorTag extends GroupTag {
   case object LeftBiased extends GroupTag
 }
-case class XorParTag(xor: FuncOp, par: FuncOp) extends OpTag
+case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag
 case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag
-case class NextTag(item: String) extends OpTag
+case class NextTag(item: String) extends RawTag
 
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
     extends SeqGroupTag
 case class ForTag(item: String, iterable: ValueModel) extends SeqGroupTag
 
-case class MetaTag(
-  skipTopology: Boolean = false,
-  comment: Option[String] = None,
-  op: OpTag
-) extends OpTag
-
 case class CallArrowTag(
   funcName: String,
   call: Call
-) extends OpTag
+) extends RawTag
 
 case class AssignmentTag(
   value: ValueModel,
   assignTo: String
-) extends NoAirTag
+) extends NoExecTag
 
 case class AbilityIdTag(
   value: ValueModel,
   service: String
-) extends NoAirTag
+) extends NoExecTag
 
 case class CallServiceTag(
   serviceId: ValueModel,
   funcName: String,
-  call: Call,
-  peerId: Option[ValueModel] = None
-) extends OpTag
+  call: Call
+) extends RawTag

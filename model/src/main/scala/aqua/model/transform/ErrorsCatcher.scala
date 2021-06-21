@@ -2,7 +2,7 @@ package aqua.model.transform
 
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.model.func.Call
-import aqua.model.func.body.{FuncOp, FuncOps, MatchMismatchTag, OnTag, OpTag, XorTag}
+import aqua.model.func.raw.{FuncOp, FuncOps, MatchMismatchTag, OnTag, RawTag, XorTag}
 import aqua.types.LiteralType
 import cats.Eval
 import cats.data.Chain
@@ -19,7 +19,7 @@ case class ErrorsCatcher(
     if (enabled) {
       var i = 0
       op
-        .cata[Cofree[Chain, OpTag]] {
+        .cata[Cofree[Chain, RawTag]] {
           case (tag, children)
               if children.length == 1 && children.headOption.exists(
                 _.head == XorTag.LeftBiased

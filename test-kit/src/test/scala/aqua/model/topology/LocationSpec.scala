@@ -1,6 +1,6 @@
 package aqua.model.topology
 
-import aqua.model.func.body.SeqTag
+import aqua.model.func.raw.SeqTag
 import aqua.model.topology.ChainZipper.Matchers.`head`
 import aqua.model.topology.Location.Matchers._
 import cats.Eval

@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.Model
-import aqua.model.func.body.{AbilityIdTag, FuncOp}
+import aqua.model.func.raw.{AbilityIdTag, FuncOp}
 import aqua.parser.expr.AbilityIdExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
