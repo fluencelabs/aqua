@@ -29,13 +29,19 @@ abstract class ChainCursor[C <: ChainCursor[C, T], T](make: NonEmptyList[ChainZi
 
   def moveUp: Option[C] = NonEmptyList.fromList(tree.tail).map(make)
 
+  def pathToRoot: LazyList[C] = LazyList.unfold(this)(_.moveUp.map(c => c -> c))
+
   def moveDown(focusOn: ChainZipper[T]): C = make(focusOn :: tree)
 
   def moveLeft: Option[C] =
-    tree.head.moveLeft.map(p => make(tree.copy(p))) orElse moveUp.flatMap(_.moveLeft)
+    toPrevSibling orElse moveUp.flatMap(_.moveLeft)
 
   def moveRight: Option[C] =
-    tree.head.moveRight.map(p => make(tree.copy(p))) orElse moveUp.flatMap(_.moveRight)
+    toNextSibling orElse moveUp.flatMap(_.moveRight)
+
+  def toNextSibling: Option[C] = tree.head.moveRight.map(p => make(tree.copy(p)))
+
+  def toPrevSibling: Option[C] = tree.head.moveLeft.map(p => make(tree.copy(p)))
 
   def allToLeft: LazyList[C] =
     LazyList.unfold(this)(_.moveLeft.map(c => c -> c))

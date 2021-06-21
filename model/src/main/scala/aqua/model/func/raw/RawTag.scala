@@ -43,7 +43,12 @@ case object XorTag extends GroupTag {
   case object LeftBiased extends GroupTag
 }
 case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag
-case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag
+
+case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag {
+
+  override def toString: String =
+    s"(on $peerId${if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""})"
+}
 case class NextTag(item: String) extends RawTag
 
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
@@ -69,4 +74,6 @@ case class CallServiceTag(
   serviceId: ValueModel,
   funcName: String,
   call: Call
-) extends RawTag
+) extends RawTag {
+  override def toString: String = s"(call ? ($serviceId $funcName) $call)"
+}

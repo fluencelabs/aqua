@@ -22,6 +22,8 @@ object ValueModel {
 
 case class LiteralModel(value: String, `type`: Type) extends ValueModel {
   override def lastType: Type = `type`
+
+  override def toString: String = s"{$value: ${`type`}}"
 }
 
 object LiteralModel {

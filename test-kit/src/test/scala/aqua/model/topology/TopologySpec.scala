@@ -49,7 +49,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc: Node.Res = Topology.resolve(init)
 
-    val expected =
+    val expected: Node.Res =
       MakeRes.seq(through(relay), callRes(1, otherPeer), callRes(2, otherPeer))
 
     proc should be(expected)
@@ -72,7 +72,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc: Node.Res = Topology.resolve(init)
 
-    val expected =
+    val expected: Node.Res =
       MakeRes.seq(
         through(relay),
         through(otherRelay),
@@ -316,7 +316,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc: Node.Res = Topology.resolve(init)
 
-    val expected =
+    val expected: Node.Res =
       MakeRes.seq(
         through(relay),
         through(otherRelay),

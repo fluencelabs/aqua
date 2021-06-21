@@ -33,40 +33,60 @@ object Topology extends LogSupport {
       }
       .value
 
-  def resolveOnMoves(op: Tree): Eval[Res] =
-    RawCursor(NonEmptyList.one(ChainZipper.one(op))).cata { rc =>
-      info(s"Hello from $rc")
-      OptionT[Eval, ChainZipper[Res]](
-        ({
-          case SeqTag => SeqRes
-          case _: OnTag => SeqRes
-          case ForTag(item, iter) => FoldRes(item, iter)
-          case ParTag => ParRes
-          case XorTag => XorRes
-          case NextTag(item) => NextRes(item)
-          case CallServiceTag(serviceId, funcName, call) =>
-            CallServiceRes(
-              serviceId,
-              funcName,
-              call,
-              rc.currentPeerId
-                .getOrElse(LiteralModel.initPeerId)
-            )
-        }: PartialFunction[RawTag, ResolvedOp]).lift
-          .apply(rc.tag)
-          .map(MakeRes.leaf)
-          .traverse(c =>
-            Eval.later(
-              ChainZipper(
-                through(rc.pathFromPrev),
-                c,
-                through(rc.pathToNext)
-              )
-            )
-          )
-      )
+  def wrap(cz: ChainZipper[Res]): Chain[Res] =
+    Chain.one(
+      if (cz.prev.nonEmpty || cz.next.nonEmpty) Cofree(SeqRes, Eval.now(cz.chain))
+      else cz.current
+    )
 
-    }
+  def resolveOnMoves(op: Tree): Eval[Res] =
+    RawCursor(NonEmptyList.one(ChainZipper.one(op)))
+      .cata(wrap) { rc =>
+        warn(s"<:> $rc")
+        OptionT[Eval, ChainZipper[Res]](
+          ({
+            case SeqTag => SeqRes
+            case _: OnTag => SeqRes
+            case MatchMismatchTag(a, b, s) => MatchMismatchRes(a, b, s)
+            case ForTag(item, iter) => FoldRes(item, iter)
+            case ParTag => ParRes
+            case XorTag => XorRes
+            case NextTag(item) => NextRes(item)
+            case CallServiceTag(serviceId, funcName, call) =>
+              CallServiceRes(
+                serviceId,
+                funcName,
+                call,
+                rc.currentPeerId
+                  .getOrElse(LiteralModel.initPeerId)
+              )
+          }: PartialFunction[RawTag, ResolvedOp]).lift
+            .apply(rc.tag)
+            .map(MakeRes.leaf)
+            .traverse(c =>
+              Eval.later(c.head match {
+                case _: CallServiceRes | ParRes | XorRes | _ =>
+                  val cz = ChainZipper(
+                    through(rc.pathFromPrev),
+                    c,
+                    through(rc.pathToNext)
+                  )
+                  if (cz.next.nonEmpty || cz.prev.nonEmpty) {
+                    error(s"Resolved   $rc -> $c")
+                    if (cz.prev.nonEmpty)
+                      info("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
+                    if (cz.next.nonEmpty)
+                      info("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
+                  }
+                  cz
+                case _ =>
+                  // TODO remove?
+                  ChainZipper.one(c)
+              })
+            )
+        )
+
+      }
       .map(NonEmptyChain.fromChain(_).map(_.uncons))
       .map {
         case None =>

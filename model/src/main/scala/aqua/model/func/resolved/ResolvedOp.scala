@@ -14,7 +14,9 @@ case object XorRes extends ResolvedOp
 case class NextRes(item: String) extends ResolvedOp
 
 case class MatchMismatchRes(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
-    extends ResolvedOp
+    extends ResolvedOp {
+  override def toString: String = s"(${if (shouldMatch) "match" else "mismatch"} $left $right)"
+}
 case class FoldRes(item: String, iterable: ValueModel) extends ResolvedOp
 
 case class AbilityIdRes(
@@ -27,4 +29,6 @@ case class CallServiceRes(
   funcName: String,
   call: Call,
   peerId: ValueModel
-) extends ResolvedOp
+) extends ResolvedOp {
+  override def toString: String = s"(call $peerId ($serviceId $funcName) $call)"
+}

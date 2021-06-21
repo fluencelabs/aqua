@@ -73,8 +73,8 @@ case class Node[+T](label: T, children: List[Node[T]] = Nil) {
   def equalsOrPrintDiff[TT](other: Node[TT]): Boolean =
     if (this == other) true
     else {
-      println("Given: " + this)
-      println("Other: " + other)
+      println(Console.CYAN + "Given: " + this)
+      println(Console.YELLOW + "Other: " + other + Console.RESET)
       false
     }
 }

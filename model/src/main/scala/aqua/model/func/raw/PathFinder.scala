@@ -9,13 +9,39 @@ import scala.annotation.tailrec
 
 object PathFinder extends LogSupport {
 
-  def find(from: RawCursor, to: RawCursor): Chain[ValueModel] =
-    findPath(
-      Chain.fromSeq(from.pathOn).reverse,
-      Chain.fromSeq(to.pathOn).reverse,
-      Chain.fromOption(from.currentPeerId),
-      Chain.fromOption(to.currentPeerId)
+  def find(from: RawCursor, to: RawCursor): Chain[ValueModel] = {
+
+    val fromOn = Chain.fromSeq(from.pathOn).reverse
+    val toOn = Chain.fromSeq(to.pathOn).reverse
+
+    val wasHandled = to.pathToRoot.collectFirst {
+      case c if c.parentTag.exists(_.isInstanceOf[GroupTag]) =>
+        c.pathOn
+    }.exists(cclp =>
+      cclp == to.pathOn && {
+        val (c1, _) = skipCommonPrefix(fromOn, Chain.fromSeq(cclp).reverse)
+        c1.isEmpty
+      }
     )
+
+    if (wasHandled) {
+      warn("Was handled")
+      info(from)
+      info(to)
+      Chain.empty
+    } else {
+
+      warn("Find path")
+      info(from)
+      info(to)
+      findPath(
+        fromOn,
+        toOn,
+        Chain.fromOption(from.currentPeerId),
+        Chain.fromOption(to.currentPeerId)
+      )
+    }
+  }
 
   def optimizePath(
     peerIds: Chain[ValueModel],
@@ -45,9 +71,10 @@ object PathFinder extends LogSupport {
     val fromTo = fromFix.reverse.flatMap(_.via.reverse) ++ toFix.flatMap(_.via)
     val optimized = optimizePath(fromPeer ++ fromTo ++ toPeer, fromPeer, toPeer)
 
-    debug("FIND PATH " + fromFix)
-    debug("       -> " + toFix)
-    debug("                     Optimized: " + optimized)
+    info("FIND PATH " + fromFix)
+    info("       -> " + toFix)
+    info(s"$fromPeer $toPeer")
+    info("                     Optimized: " + optimized)
     optimized
   }
 
