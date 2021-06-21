@@ -1,8 +1,11 @@
 package aqua.model.topology
 
 import aqua.Node
+import aqua.model.VarModel
+import aqua.model.func.Call
 import aqua.model.func.raw.FuncOps
 import aqua.model.func.resolved.MakeRes
+import aqua.types.ScalarType
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -78,6 +81,48 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         through(otherRelay),
         callRes(1, otherPeer),
         callRes(2, otherPeer)
+      )
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
+  "topology resolver" should "build return path in par if there are exported variables" in {
+    val export = Some(Call.Export("result", ScalarType.string))
+    val result = VarModel("result", ScalarType.string)
+
+    val init = on(
+      initPeer,
+      relay :: Nil,
+      FuncOps.seq(
+        FuncOps.par(
+          on(
+            otherPeer,
+            otherRelay :: Nil,
+            callTag(1, export)
+          ),
+          callTag(2)
+        ),
+        callTag(3, None, result :: Nil)
+      )
+    )
+
+    val proc = Topology.resolve(init)
+
+    val expected: Node.Res =
+      MakeRes.seq(
+        MakeRes.par(
+          MakeRes.seq(
+            through(relay),
+            through(otherRelay),
+            callRes(1, otherPeer, export),
+            through(otherRelay),
+            through(relay),
+            // we should return to a caller to continue execution
+            through(initPeer)
+          ),
+          callRes(2, initPeer)
+        ),
+        callRes(3, initPeer, None, result :: Nil)
       )
 
     proc.equalsOrPrintDiff(expected) should be(true)

@@ -57,28 +57,34 @@ object Node {
   val varNode = VarModel("node-id", ScalarType.string)
   val viaList = VarModel("other-relay-2", ArrayType(ScalarType.string))
 
-  def callRes(i: Int, on: ValueModel): Res = Node(
-    CallServiceRes(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(Nil, None), on)
+  def callRes(
+    i: Int,
+    on: ValueModel,
+    exportTo: Option[Call.Export] = None,
+    args: List[ValueModel] = Nil
+  ): Res = Node(
+    CallServiceRes(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(args, exportTo), on)
   )
 
-  def callTag(i: Int): Raw = Node(
-    CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(Nil, None))
-  )
+  def callTag(i: Int, exportTo: Option[Call.Export] = None, args: List[ValueModel] = Nil): Raw =
+    Node(
+      CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(args, exportTo))
+    )
 
-  def callLiteralRes(i: Int, on: ValueModel): Res = Node(
+  def callLiteralRes(i: Int, on: ValueModel, exportTo: Option[Call.Export] = None): Res = Node(
     CallServiceRes(
       LiteralModel("\"srv" + i + "\"", LiteralType.string),
       s"fn$i",
-      Call(Nil, None),
+      Call(Nil, exportTo),
       on
     )
   )
 
-  def callLiteralRaw(i: Int): Raw = Node(
+  def callLiteralRaw(i: Int, exportTo: Option[Call.Export] = None): Raw = Node(
     CallServiceTag(
       LiteralModel("\"srv" + i + "\"", LiteralType.string),
       s"fn$i",
-      Call(Nil, None)
+      Call(Nil, exportTo)
     )
   )
 
