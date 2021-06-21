@@ -1,6 +1,7 @@
 package aqua
 
 import aqua.model.func.Call
+import aqua.model.func.raw.XorTag.LeftBiased
 import aqua.model.func.raw._
 import aqua.model.func.resolved.{CallServiceRes, MakeRes, MatchMismatchRes, ResolvedOp}
 import aqua.model.transform.{BodyConfig, ErrorsCatcher}
@@ -127,6 +128,9 @@ object Node {
       OnTag(peer, Chain.fromSeq(via)),
       body.toList
     )
+
+  def `try`(body: Raw*) =
+    Node(LeftBiased, body.toList)
 
   def matchRes(l: ValueModel, r: ValueModel, body: Res): Res =
     Node(

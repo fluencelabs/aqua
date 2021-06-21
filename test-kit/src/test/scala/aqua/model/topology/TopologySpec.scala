@@ -4,8 +4,11 @@ import aqua.Node
 import aqua.model.VarModel
 import aqua.model.func.Call
 import aqua.model.func.raw.FuncOps
-import aqua.model.func.resolved.MakeRes
+import aqua.model.func.resolved.{MakeRes, ResolvedOp, SeqRes}
 import aqua.types.ScalarType
+import cats.Eval
+import cats.data.Chain
+import cats.free.Cofree
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -155,6 +158,16 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
 
     proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
+  "topology resolver" should "create correct calls in try" in {
+    val init = Node.`try`(callTag(1))
+
+    val proc = Topology.resolve(init)
+
+    proc.equalsOrPrintDiff(
+      Cofree[Chain, ResolvedOp](SeqRes, Eval.now(Chain.empty))
+    ) should be(false)
   }
 
   "topology resolver" should "work fine with par with on" in {
