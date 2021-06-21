@@ -2,6 +2,8 @@ package aqua.semantics
 
 import aqua.Node
 import aqua.Node._
+import aqua.model.func.raw.{FuncOp, FuncOps, SeqTag}
+import aqua.model.func.resolved.MakeRes
 import aqua.model.transform._
 import aqua.model.{AquaContext, LiteralModel}
 import aqua.parser.Ast
@@ -37,11 +39,12 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val proc = Node.cofToNode(func.body.tree)
 
-    val expected =
-      seq(
-        par(
-          on(LiteralModel("\"other-peer\"", LiteralType.string), Nil, callLiteral(1)),
-          callLiteral(1)
+    val expected: Node.Raw =
+      FuncOp.wrap(
+        SeqTag,
+        FuncOps.par(
+          on(LiteralModel("\"other-peer\"", LiteralType.string), Nil, callLiteralRaw(1)),
+          callLiteralRaw(1)
         )
       )
 

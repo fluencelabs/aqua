@@ -123,7 +123,7 @@ object Node {
     )
   )
 
-  def callLiteralRaw(i: Int, on: ValueModel): Raw = Node(
+  def callLiteralRaw(i: Int): Raw = Node(
     CallServiceTag(
       LiteralModel("\"srv" + i + "\"", LiteralType.string),
       s"fn$i",
