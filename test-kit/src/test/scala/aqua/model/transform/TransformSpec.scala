@@ -12,7 +12,7 @@ import org.scalatest.matchers.should.Matchers
 class TransformSpec extends AnyFlatSpec with Matchers {
   import Node._
 
-  "transform.forClient" should "work well with function 1 (no calls before on)" in {
+  "transform.forClient" should "work well with function 1 (no calls before on), generate correct error handling" in {
 
     val ret = LiteralModel.quote("return this")
 
@@ -95,8 +95,6 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     procFC.equalsOrPrintDiff(expectedFC) should be(true)
 
   }
-
-  "transform" should "create correct path for errors" in {}
 
   "transform.forClient" should "link funcs correctly" in {
     /*
