@@ -2,6 +2,14 @@ package aqua
 
 import aqua.model.func.Call
 import aqua.model.func.raw._
+import aqua.model.func.resolved.{
+  CallServiceRes,
+  MakeRes,
+  MatchMismatchRes,
+  ResolvedOp,
+  SeqRes,
+  XorRes
+}
 import aqua.model.transform.{BodyConfig, ErrorsCatcher}
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
@@ -12,15 +20,17 @@ import cats.free.Cofree
 import scala.language.implicitConversions
 
 // Helper to simplify building and visualizing Cofree structures
-case class Node(tag: RawTag, ops: List[Node] = Nil) {
+case class Node[T](label: T, children: List[Node[T]] = Nil) {
+
+  def cof[TT >: T]: Cofree[Chain, TT] = Node.nodeToCof(this)
 
   override def toString: String =
-    tag.toString + (if (ops.isEmpty) "\n" else s"{\n${ops.mkString}\n}\n")
+    label.toString + (if (children.isEmpty) "\n" else s"{\n${children.mkString}\n}\n")
 
-  private def equalOrNot[T](left: T, right: T): String = (if (left == right)
-                                                            Console.GREEN + left + Console.RESET
-                                                          else
-                                                            Console.BLUE + left + Console.RED + " != " + Console.YELLOW + right)
+  private def equalOrNot[TT](left: TT, right: TT): String = (if (left == right)
+                                                               Console.GREEN + left + Console.RESET
+                                                             else
+                                                               Console.BLUE + left + Console.RED + " != " + Console.YELLOW + right)
 
   private def diffArg(left: ValueModel, right: ValueModel): String =
     Console.GREEN + "(" +
@@ -40,8 +50,7 @@ case class Node(tag: RawTag, ops: List[Node] = Nil) {
     Console.GREEN + "CallServiceTag(" +
       equalOrNot(left.serviceId, right.serviceId) + Console.GREEN + ", " +
       equalOrNot(left.funcName, right.funcName) + Console.GREEN + ", " +
-      diffCall(left.call, right.call) + Console.GREEN + ", " +
-      equalOrNot(left.peerId, right.peerId) +
+      diffCall(left.call, right.call) + Console.GREEN +
       Console.GREEN + ")" + Console.RESET
 
   private def diffTags(left: RawTag, right: RawTag): String = (left, right) match {
@@ -50,40 +59,45 @@ case class Node(tag: RawTag, ops: List[Node] = Nil) {
       Console.BLUE + s"    $left ${Console.RED}\n != ${Console.YELLOW}${right}${Console.RED}"
   }
 
-  def diffToString(other: Node): String =
-    (if (tag == other.tag) Console.GREEN + tag
-     else diffTags(tag, other.tag)) + (if (ops.isEmpty && other.ops.isEmpty) "\n"
-                                       else
-                                         "{\n") + Console.RESET +
-      (if (ops.length != other.ops.length)
-         Console.RED + s"number of ops: ${ops.length} != ${other.ops.length}\n" + Console.RESET
-       else "") +
-      ops
-        .zip(other.ops)
-        .map { case (a, b) =>
-          a.diffToString(b)
-        }
-        .mkString + (if (ops.isEmpty && other.ops.isEmpty) ""
-                     else
-                       ((if (tag == other.tag) Console.GREEN
-                         else Console.RED) + "}\n" + Console.RESET))
+//  def diffToString(other: Node): String =
+//    (if (tag == other.tag) Console.GREEN + tag
+//     else diffTags(tag, other.tag)) + (if (ops.isEmpty && other.ops.isEmpty) "\n"
+//                                       else
+//                                         "{\n") + Console.RESET +
+//      (if (ops.length != other.ops.length)
+//         Console.RED + s"number of ops: ${ops.length} != ${other.ops.length}\n" + Console.RESET
+//       else "") +
+//      ops
+//        .zip(other.ops)
+//        .map { case (a, b) =>
+//          a.diffToString(b)
+//        }
+//        .mkString + (if (ops.isEmpty && other.ops.isEmpty) ""
+//                     else
+//                       ((if (tag == other.tag) Console.GREEN
+//                         else Console.RED) + "}\n" + Console.RESET))
 
-  def equalsOrPrintDiff(other: Node): Boolean =
+  def equalsOrPrintDiff(other: Node[T]): Boolean =
     if (this == other) true
     else {
-      println(diffToString(other))
+      println("Given: " + this)
+      println("Other: " + other)
       false
     }
 }
 
 object Node {
-  type Cof = Cofree[Chain, RawTag]
+  type Res = Node[ResolvedOp]
+  type Raw = Node[RawTag]
 
-  implicit def cofToNode(cof: Cof): Node =
+  implicit def cofToNode[T](cof: Cofree[Chain, T]): Node[T] =
     Node(cof.head, cof.tailForced.toList.map(cofToNode))
 
-  implicit def nodeToCof(tree: Node): Cof =
-    Cofree(tree.tag, Eval.later(Chain.fromSeq(tree.ops.map(nodeToCof))))
+  implicit def nodeToCof[T](tree: Node[T]): Cofree[Chain, T] =
+    Cofree(tree.label, Eval.later(Chain.fromSeq(tree.children.map(nodeToCof))))
+
+  implicit def rawToFuncOp(tree: Raw): FuncOp =
+    FuncOp(tree.cof)
 
   val relay = LiteralModel("-relay-", ScalarType.string)
   val relayV = VarModel("-relay-", ScalarType.string)
@@ -96,21 +110,33 @@ object Node {
   val varNode = VarModel("node-id", ScalarType.string)
   val viaList = VarModel("other-relay-2", ArrayType(ScalarType.string))
 
-  def call(i: Int, on: ValueModel = null) = Node(
-    CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(Nil, None), Option(on))
+  def callRes(i: Int, on: ValueModel): Res = Node(
+    CallServiceRes(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(Nil, None), on)
   )
 
-  def callLiteral(i: Int, on: ValueModel = null) = Node(
-    CallServiceTag(
+  def callTag(i: Int): Raw = Node(
+    CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(Nil, None))
+  )
+
+  def callLiteralRes(i: Int, on: ValueModel): Res = Node(
+    CallServiceRes(
       LiteralModel("\"srv" + i + "\"", LiteralType.string),
       s"fn$i",
       Call(Nil, None),
-      Option(on)
+      on
     )
   )
 
-  def errorCall(bc: BodyConfig, i: Int, on: ValueModel = null) = Node(
+  def callLiteralRaw(i: Int, on: ValueModel): Raw = Node(
     CallServiceTag(
+      LiteralModel("\"srv" + i + "\"", LiteralType.string),
+      s"fn$i",
+      Call(Nil, None)
+    )
+  )
+
+  def errorCall(bc: BodyConfig, i: Int, on: ValueModel = initPeer): Res = Node[ResolvedOp](
+    CallServiceRes(
       bc.errorHandlingCallback,
       bc.errorFuncName,
       Call(
@@ -120,45 +146,47 @@ object Node {
         ) :: Nil,
         None
       ),
-      Option(on)
+      on
     )
   )
 
-  def respCall(bc: BodyConfig, value: ValueModel, on: ValueModel = null) = Node(
-    CallServiceTag(
-      bc.callbackSrvId,
-      bc.respFuncName,
-      Call(value :: Nil, None),
-      Option(on)
+  def respCall(bc: BodyConfig, value: ValueModel, on: ValueModel = initPeer): Res =
+    Node[ResolvedOp](
+      CallServiceRes(
+        bc.callbackSrvId,
+        bc.respFuncName,
+        Call(value :: Nil, None),
+        on
+      )
     )
-  )
 
-  def dataCall(bc: BodyConfig, name: String, on: ValueModel = null) = Node(
-    CallServiceTag(
+  def dataCall(bc: BodyConfig, name: String, on: ValueModel = initPeer): Res = Node[ResolvedOp](
+    CallServiceRes(
       bc.dataSrvId,
       name,
       Call(Nil, Some(Call.Export(name, ScalarType.string))),
-      Option(on)
+      on
     )
   )
 
-  def seq(nodes: Node*) = Node(SeqTag, nodes.toList)
-  def xor(left: Node, right: Node) = Node(XorTag, left :: right :: Nil)
-
-  def par(left: Node, right: Node) = Node(ParTag, left :: right :: Nil)
-
-  def on(peer: ValueModel, via: List[ValueModel], body: Node*) =
+  def on(peer: ValueModel, via: List[ValueModel], body: Raw*) =
     Node(
       OnTag(peer, Chain.fromSeq(via)),
       body.toList
     )
 
-  def _match(l: ValueModel, r: ValueModel, body: Node) =
+  def matchRes(l: ValueModel, r: ValueModel, body: Res): Res =
+    Node(
+      MatchMismatchRes(l, r, shouldMatch = true),
+      body :: Nil
+    )
+
+  def matchRaw(l: ValueModel, r: ValueModel, body: Raw): Raw =
     Node(
       MatchMismatchTag(l, r, shouldMatch = true),
       body :: Nil
     )
 
-  def through(peer: ValueModel): Node =
-    FuncOps.noop(peer).tree
+  def through(peer: ValueModel): Node[ResolvedOp] =
+    cofToNode(MakeRes.noop(peer))
 }
