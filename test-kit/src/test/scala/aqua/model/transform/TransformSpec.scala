@@ -57,7 +57,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         errorCall(bc, 3, initPeer)
       )
 
-    procFC.equalsOrPrintDiff(expectedFC) should be(true)
+    Node.equalsOrPrintDiff(procFC, expectedFC) should be(true)
 
   }
 
@@ -93,6 +93,8 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     procFC.equalsOrPrintDiff(expectedFC) should be(true)
 
   }
+
+  "transform" should "create correct path for errors" in {}
 
   "transform.forClient" should "link funcs correctly" in {
     /*
