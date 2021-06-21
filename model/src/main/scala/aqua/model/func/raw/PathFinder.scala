@@ -26,14 +26,14 @@ object PathFinder extends LogSupport {
 
     if (wasHandled) {
       warn("Was handled")
-      info(from)
-      info(to)
+      info(" :: " + from)
+      info(" -> " + to)
       Chain.empty
     } else {
 
       warn("Find path")
-      info(from)
-      info(to)
+      info(" :: " + from)
+      info(" -> " + to)
       findPath(
         fromOn,
         toOn,

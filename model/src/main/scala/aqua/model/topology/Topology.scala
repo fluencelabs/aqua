@@ -21,13 +21,18 @@ object Topology extends LogSupport {
       .cata[Chain, ResolvedOp, Res](resolveOnMoves(op).value) {
         case (SeqRes, children) =>
           Eval.later(
-            Cofree(
-              SeqRes,
-              Eval.now(children.flatMap {
-                case Cofree(SeqRes, ch) => ch.value
-                case cf => Chain.one(cf)
-              })
-            )
+            children.uncons
+              .filter(_._2.isEmpty)
+              .map(_._1)
+              .getOrElse(
+                Cofree(
+                  SeqRes,
+                  Eval.now(children.flatMap {
+                    case Cofree(SeqRes, ch) => ch.value
+                    case cf => Chain.one(cf)
+                  })
+                )
+              )
           )
         case (head, children) => Eval.later(Cofree(head, Eval.now(children)))
       }

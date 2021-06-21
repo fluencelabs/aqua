@@ -61,9 +61,12 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
    */
   lazy val seqPrev: Option[RawCursor] =
     parentTag.flatMap {
-      case _: SeqGroupTag =>
-        moveLeft.flatMap(c => c.lastExecuted orElse c.seqPrev)
-      case _ => moveUp.flatMap(_.seqPrev)
+      case p: SeqGroupTag =>
+        info(s"Parent is $p, resolve ${moveLeft.getOrElse("(|)")}")
+        toPrevSibling.flatMap(c => c.lastExecuted orElse c.seqPrev)
+      case _ =>
+        error(s"GO UP TO ${moveUp.getOrElse("(|)")}")
+        moveUp.flatMap(_.seqPrev)
     }
 
   lazy val seqNext: Option[RawCursor] =
