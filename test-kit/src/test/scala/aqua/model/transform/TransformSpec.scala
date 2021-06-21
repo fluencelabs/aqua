@@ -32,7 +32,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val procFC: Node.Res = fc
 
-    val expectedFC =
+    val expectedFC: Node.Res =
       MakeRes.xor(
         MakeRes.seq(
           dataCall(bc, "-relay-", initPeer),
@@ -57,8 +57,6 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         errorCall(bc, 3, initPeer)
       )
 
-    println(procFC)
-
     procFC.equalsOrPrintDiff(expectedFC) should be(true)
 
   }
@@ -82,7 +80,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val procFC: Res = fc
 
-    val expectedFC =
+    val expectedFC: Res =
       MakeRes.seq(
         dataCall(bc, "-relay-", initPeer),
         callRes(0, initPeer),
