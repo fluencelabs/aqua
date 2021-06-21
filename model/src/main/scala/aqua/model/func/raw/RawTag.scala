@@ -75,5 +75,5 @@ case class CallServiceTag(
   funcName: String,
   call: Call
 ) extends RawTag {
-  override def toString: String = s"(call ? ($serviceId $funcName) $call)"
+  override def toString: String = s"(call _ ($serviceId $funcName) $call)"
 }

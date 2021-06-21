@@ -57,7 +57,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         errorCall(bc, 3, initPeer)
       )
 
-    println(procFC)
+    //println(procFC)
 
     Node.equalsOrPrintDiff(procFC, expectedFC) should be(true)
 

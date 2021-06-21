@@ -47,7 +47,7 @@ object Topology extends LogSupport {
   def resolveOnMoves(op: Tree): Eval[Res] =
     RawCursor(NonEmptyList.one(ChainZipper.one(op)))
       .cata(wrap) { rc =>
-        warn(s"<:> $rc")
+        debug(s"<:> $rc")
         OptionT[Eval, ChainZipper[Res]](
           ({
             case SeqTag => SeqRes
@@ -69,25 +69,21 @@ object Topology extends LogSupport {
             .apply(rc.tag)
             .map(MakeRes.leaf)
             .traverse(c =>
-              Eval.later(c.head match {
-                case _: CallServiceRes | ParRes | XorRes | _ =>
-                  val cz = ChainZipper(
-                    through(rc.pathFromPrev),
-                    c,
-                    through(rc.pathToNext)
-                  )
-                  if (cz.next.nonEmpty || cz.prev.nonEmpty) {
-                    error(s"Resolved   $rc -> $c")
-                    if (cz.prev.nonEmpty)
-                      info("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
-                    if (cz.next.nonEmpty)
-                      info("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
-                  }
-                  cz
-                case _ =>
-                  // TODO remove?
-                  ChainZipper.one(c)
-              })
+              Eval.later {
+                val cz = ChainZipper(
+                  through(rc.pathFromPrev),
+                  c,
+                  through(rc.pathToNext)
+                )
+                if (cz.next.nonEmpty || cz.prev.nonEmpty) {
+                  debug(s"Resolved   $rc -> $c")
+                  if (cz.prev.nonEmpty)
+                    trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
+                  if (cz.next.nonEmpty)
+                    trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
+                } else debug(s"EMPTY    $rc -> $c")
+                cz
+              }
             )
         )
 

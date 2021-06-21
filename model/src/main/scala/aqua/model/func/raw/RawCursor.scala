@@ -37,7 +37,8 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
       case _ => None
     })
 
-  lazy val currentPeerId: Option[ValueModel] = pathOn.headOption.map(_.peerId)
+  lazy val currentPeerId: Option[ValueModel] =
+    pathOn.headOption.map(_.peerId)
 
   // Cursor to the last sequentially executed operation, if any
   lazy val lastExecuted: Option[RawCursor] = tag match {
@@ -62,10 +63,8 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
   lazy val seqPrev: Option[RawCursor] =
     parentTag.flatMap {
       case p: SeqGroupTag if leftSiblings.nonEmpty =>
-        info(s"Parent is $p, resolve ${moveLeft.getOrElse("(|)")}")
         toPrevSibling.flatMap(c => c.lastExecuted orElse c.seqPrev)
       case _ =>
-        error(s"GO UP TO ${moveUp.getOrElse("(|)")}, left = ${leftSiblings.isEmpty}")
         moveUp.flatMap(_.seqPrev)
     }
 
@@ -83,19 +82,17 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
       .map(FuncOp(_))
       .exists(_.usesVarNames.value.intersect(names).nonEmpty)
 
-  lazy val pathFromPrev: Chain[ValueModel] = {
+  lazy val pathFromPrev: Chain[ValueModel] = pathFromPrevD()
 
+  def pathFromPrevD(forExit: Boolean = false): Chain[ValueModel] =
     parentTag.fold(Chain.empty[ValueModel]) {
       case _: GroupTag =>
-        info(s"Lookup prev path: $this")
         seqPrev
           .orElse(rootOn)
-          .fold(Chain.empty[ValueModel])(PathFinder.find(_, this))
+          .fold(Chain.empty[ValueModel])(PathFinder.find(_, this, isExit = forExit))
       case _ =>
-        info(s"Skip: $this")
         Chain.empty
     }
-  }
 
   lazy val pathToNext: Chain[ValueModel] = parentTag.fold(Chain.empty[ValueModel]) {
     case ParTag =>
@@ -104,16 +101,25 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
         seqNext.fold(Chain.empty[ValueModel])(PathFinder.find(this, _))
       else Chain.empty
     case XorTag if leftSiblings.nonEmpty =>
-      seqNext
-        .map(nxt => PathFinder.find(this, nxt) -> nxt)
-        .flatMap { case (path, nxt) =>
-          path.initLast.map(_ -> nxt)
-        }
-        .fold(Chain.empty[ValueModel]) {
-          case ((init, last), nxt) if nxt.pathFromPrev.headOption.contains(last) => init
-          case ((init, last), _) => init :+ last
-        }
-    case _ => Chain.empty
+      lastExecuted
+        .flatMap(le =>
+          seqNext
+            .map(nxt => PathFinder.find(le, nxt, isExit = true) -> nxt)
+            .flatMap {
+              case (path, nxt) if path.isEmpty && currentPeerId == nxt.currentPeerId =>
+                nxt.pathFromPrevD(true).reverse.initLast.map(_._1)
+              case (path, nxt) =>
+                path.initLast.map {
+                  case (init, last)
+                      if nxt.pathFromPrevD(forExit = true).headOption.contains(last) =>
+                    init
+                  case (init, last) => init :+ last
+                }
+            }
+        )
+        .getOrElse(Chain.empty)
+    case _ =>
+      Chain.empty
   }
 
   def cata[A](wrap: ChainZipper[Cofree[Chain, A]] => Chain[Cofree[Chain, A]])(
