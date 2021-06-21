@@ -1,6 +1,8 @@
 package aqua.model.topology
 
 import aqua.Node
+import aqua.model.func.raw.FuncOps
+import aqua.model.func.resolved.MakeRes
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -9,21 +11,21 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
   "topology resolver" should "do nothing on init peer" in {
 
-    val init = on(
+    val init: Node.Raw = on(
       initPeer,
       relay :: Nil,
-      seq(
-        call(1),
-        call(2)
+      FuncOps.seq(
+        callTag(1),
+        callTag(2)
       )
     )
 
-    val proc: Node = Topology.resolve(init)
+    val proc: Node.Res = Topology.resolve(init)
 
     val expected =
-      seq(
-        call(1, initPeer),
-        call(2, initPeer)
+      MakeRes.seq(
+        callRes(1, initPeer),
+        callRes(2, initPeer)
       )
 
     proc should be(expected)
@@ -32,23 +34,23 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
   "topology resolver" should "go through relay to any other node, directly" in {
 
-    val init = on(
+    val init: Node.Raw = on(
       initPeer,
       relay :: Nil,
       on(
         otherPeer,
         Nil,
-        seq(
-          call(1),
-          call(2)
+        FuncOps.seq(
+          callTag(1),
+          callTag(2)
         )
       )
     )
 
-    val proc: Node = Topology.resolve(init)
+    val proc: Node.Res = Topology.resolve(init)
 
     val expected =
-      seq(through(relay), call(1, otherPeer), call(2, otherPeer))
+      MakeRes.seq(through(relay), callRes(1, otherPeer), callRes(2, otherPeer))
 
     proc should be(expected)
   }
@@ -61,21 +63,21 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       on(
         otherPeer,
         otherRelay :: Nil,
-        seq(
-          call(1),
-          call(2)
+        FuncOps.seq(
+          callTag(1),
+          callTag(2)
         )
       )
     )
 
-    val proc: Node = Topology.resolve(init)
+    val proc: Node.Res = Topology.resolve(init)
 
     val expected =
-      seq(
+      MakeRes.seq(
         through(relay),
         through(otherRelay),
-        call(1, otherPeer),
-        call(2, otherPeer)
+        callRes(1, otherPeer),
+        callRes(2, otherPeer)
       )
 
     proc.equalsOrPrintDiff(expected) should be(true)
@@ -85,66 +87,62 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val init = on(
       initPeer,
       relay :: Nil,
-      par(
+      FuncOps.par(
         on(
           otherPeer,
           otherRelay :: Nil,
-          call(1)
+          callTag(1)
         ),
-        call(2)
+        callTag(2)
       )
     )
 
     val proc = Topology.resolve(init)
 
-    val expected =
-      seq(
-        par(
-          seq(
-            through(relay),
-            through(otherRelay),
-            call(1, otherPeer)
-          ),
-          call(2, initPeer)
-        )
+    val expected: Node.Res =
+      MakeRes.par(
+        MakeRes.seq(
+          through(relay),
+          through(otherRelay),
+          callRes(1, otherPeer)
+        ),
+        callRes(2, initPeer)
       )
 
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
   "topology resolver" should "work fine with par with on" in {
-    val init = on(
+    val init: Node.Raw = on(
       initPeer,
       relay :: Nil,
-      par(
+      FuncOps.par(
         on(
           otherPeer,
           otherRelay :: Nil,
-          call(1)
+          callTag(1)
         ),
         on(
           otherPeer2,
           otherRelay2 :: Nil,
-          call(2)
+          callTag(2)
         )
       )
     )
 
-    val proc = Topology.resolve(init)
+    val proc: Node.Res = Topology.resolve(init)
 
-    val expected =
-      seq(
-        par(
-          seq(
-            through(relay),
-            through(otherRelay),
-            call(1, otherPeer)
-          ),
-          seq(
-            through(relay),
-            through(otherRelay2),
-            call(2, otherPeer2)
-          )
+    val expected: Node.Res =
+      MakeRes.par(
+        MakeRes.seq(
+          through(relay),
+          through(otherRelay),
+          callRes(1, otherPeer)
+        ),
+        MakeRes.seq(
+          through(relay),
+          through(otherRelay2),
+          callRes(2, otherPeer2)
         )
       )
 
@@ -159,28 +157,28 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       on(
         otherPeer,
         otherRelay :: Nil,
-        xor(
-          seq(
-            call(1),
-            call(2)
+        FuncOps.xor(
+          FuncOps.seq(
+            callTag(1),
+            callTag(2)
           ),
-          call(3)
+          callTag(3)
         )
       )
     )
 
-    val proc: Node = Topology.resolve(init)
+    val proc: Node.Res = Topology.resolve(init)
 
-    val expected =
-      seq(
+    val expected: Node.Res =
+      MakeRes.seq(
         through(relay),
         through(otherRelay),
-        xor(
-          seq(
-            call(1, otherPeer),
-            call(2, otherPeer)
+        MakeRes.xor(
+          MakeRes.seq(
+            callRes(1, otherPeer),
+            callRes(2, otherPeer)
           ),
-          call(3, otherPeer)
+          callRes(3, otherPeer)
         )
       )
 
@@ -188,25 +186,25 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   "topology resolver" should "simplify a route with init_peer_id" in {
-    val init = on(
+    val init: Node.Raw = on(
       initPeer,
       relay :: Nil,
-      seq(
+      FuncOps.seq(
         on(
           initPeer,
           relay :: Nil,
-          call(1)
+          callTag(1)
         ),
-        call(2)
+        callTag(2)
       )
     )
 
-    val proc: Node = Topology.resolve(init)
+    val proc: Node.Res = Topology.resolve(init)
 
     val expected =
-      seq(
-        call(1, initPeer),
-        call(2, initPeer)
+      MakeRes.seq(
+        callRes(1, initPeer),
+        callRes(2, initPeer)
       )
 
     proc.equalsOrPrintDiff(expected) should be(true)
@@ -214,29 +212,29 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
   "topology resolver" should "get back to init peer" in {
 
-    val init = on(
+    val init: Node.Raw = on(
       initPeer,
       relay :: Nil,
-      seq(
+      FuncOps.seq(
         on(
           otherPeer,
           otherRelay :: Nil,
-          call(1)
+          callTag(1)
         ),
-        call(2)
+        callTag(2)
       )
     )
 
-    val proc: Node = Topology.resolve(init)
+    val proc: Node.Res = Topology.resolve(init)
 
-    val expected =
-      seq(
+    val expected: Node.Res =
+      MakeRes.seq(
         through(relay),
         through(otherRelay),
-        call(1, otherPeer),
+        callRes(1, otherPeer),
         through(otherRelay),
         through(relay),
-        call(2, initPeer)
+        callRes(2, initPeer)
       )
 
 //    println(Console.BLUE + init)
@@ -267,19 +265,19 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val init = on(
       initPeer,
       relay :: Nil,
-      seq(
-        call(1),
-        call(2),
-        call(3),
+      FuncOps.seq(
+        callTag(1),
+        callTag(2),
+        callTag(3),
         on(
           varNode,
           viaList :: Nil,
-          call(4)
+          callTag(4)
         ),
         on(
           initPeer,
           relay :: Nil,
-          call(5)
+          callTag(5)
         )
       )
     )
@@ -292,50 +290,50 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val init = on(
       initPeer,
       relay :: Nil,
-      seq(
+      FuncOps.seq(
         on(
           otherPeer,
           otherRelay :: Nil,
-          call(0),
+          callTag(0),
           on(
             otherPeer2,
             otherRelay :: Nil,
-            call(1),
-            _match(
+            callTag(1),
+            matchRaw(
               otherPeer,
               otherRelay,
               on(
                 otherPeer,
                 otherRelay :: Nil,
-                call(2)
+                callTag(2)
               )
             )
           )
         ),
-        call(3)
+        callTag(3)
       )
     )
 
-    val proc: Node = Topology.resolve(init)
+    val proc: Node.Res = Topology.resolve(init)
 
     val expected =
-      seq(
+      MakeRes.seq(
         through(relay),
         through(otherRelay),
-        call(0, otherPeer),
+        callRes(0, otherPeer),
         through(otherRelay),
-        call(1, otherPeer2),
-        _match(
+        callRes(1, otherPeer2),
+        matchRes(
           otherPeer,
           otherRelay,
-          seq(
+          MakeRes.seq(
             through(otherRelay),
-            call(2, otherPeer)
+            callRes(2, otherPeer)
           )
         ),
         through(otherRelay),
         through(relay),
-        call(3, initPeer)
+        callRes(3, initPeer)
       )
 
 //    println(Console.BLUE + init)

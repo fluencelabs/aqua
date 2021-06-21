@@ -99,6 +99,9 @@ object Node {
   implicit def rawToFuncOp(tree: Raw): FuncOp =
     FuncOp(tree.cof)
 
+  implicit def funcOpToRaw(op: FuncOp): Raw =
+    op.tree
+
   val relay = LiteralModel("-relay-", ScalarType.string)
   val relayV = VarModel("-relay-", ScalarType.string)
   val initPeer = LiteralModel.initPeerId

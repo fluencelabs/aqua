@@ -51,6 +51,19 @@ object FuncOps {
           .map(FuncOp(_))
       )
 
+  def par(ops: FuncOp*): FuncOp =
+    if (ops.length == 1) ops.head
+    else
+      FuncOp.node(
+        ParTag,
+        Chain
+          .fromSeq(ops.flatMap {
+            case FuncOp(Cofree(ParTag, subOps)) => subOps.value.toList
+            case FuncOp(cof) => cof :: Nil
+          })
+          .map(FuncOp(_))
+      )
+
   def xor(left: FuncOp, right: FuncOp): FuncOp =
     FuncOp.node(XorTag, Chain(left, right))
 
