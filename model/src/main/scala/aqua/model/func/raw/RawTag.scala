@@ -39,7 +39,7 @@ sealed trait SeqGroupTag extends GroupTag
 case object SeqTag extends SeqGroupTag
 case object ParTag extends GroupTag
 
-case object XorTag extends GroupTag {
+case object XorTag extends SeqGroupTag {
   case object LeftBiased extends GroupTag
 }
 case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag

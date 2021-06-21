@@ -65,14 +65,14 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
         info(s"Parent is $p, resolve ${moveLeft.getOrElse("(|)")}")
         toPrevSibling.flatMap(c => c.lastExecuted orElse c.seqPrev)
       case _ =>
-        error(s"GO UP TO ${moveUp.getOrElse("(|)")}")
+        error(s"GO UP TO ${moveUp.getOrElse("(|)")}, left = ${leftSiblings.isEmpty}")
         moveUp.flatMap(_.seqPrev)
     }
 
   lazy val seqNext: Option[RawCursor] =
     parentTag.flatMap {
-      case _: SeqGroupTag =>
-        moveRight.flatMap(c => c.firstExecuted orElse c.seqNext)
+      case _: SeqGroupTag if rightSiblings.nonEmpty =>
+        toNextSibling.flatMap(c => c.firstExecuted orElse c.seqNext)
       case _ => moveUp.flatMap(_.seqNext)
     }
 
@@ -97,13 +97,24 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
     }
   }
 
-  lazy val pathToNext: Chain[ValueModel] = parentTag.flatMap {
+  lazy val pathToNext: Chain[ValueModel] = parentTag.fold(Chain.empty[ValueModel]) {
     case ParTag =>
       val exports = FuncOp(current).exportsVarNames.value
-      if (exports.nonEmpty && checkNamesUsedLater(exports)) seqNext else None
-    case XorTag if leftSiblings.nonEmpty => seqNext
-    case _ => None
-  }.fold(Chain.empty[ValueModel])(PathFinder.find(this, _))
+      if (exports.nonEmpty && checkNamesUsedLater(exports))
+        seqNext.fold(Chain.empty[ValueModel])(PathFinder.find(this, _))
+      else Chain.empty
+    case XorTag if leftSiblings.nonEmpty =>
+      seqNext
+        .map(nxt => PathFinder.find(this, nxt) -> nxt)
+        .flatMap { case (path, nxt) =>
+          path.initLast.map(_ -> nxt)
+        }
+        .fold(Chain.empty[ValueModel]) {
+          case ((init, last), nxt) if nxt.pathFromPrev.headOption.contains(last) => init
+          case ((init, last), _) => init :+ last
+        }
+    case _ => Chain.empty
+  }
 
   def cata[A](wrap: ChainZipper[Cofree[Chain, A]] => Chain[Cofree[Chain, A]])(
     f: RawCursor => OptionT[Eval, ChainZipper[Cofree[Chain, A]]]
@@ -122,6 +133,7 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
                 .getOrElse(LazyList.empty)
             )
           )
+          // TODO: this can be parallelized
           .flatMap(_.traverse(_.cata(wrap)(f)))
           .map(_.flatMap(identity))
           .flatMap(addition => curr.tail.map(_ ++ addition))

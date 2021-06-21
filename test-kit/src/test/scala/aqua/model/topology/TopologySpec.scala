@@ -344,4 +344,63 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
+  "topology resolver" should "resolve xor path" in {
+
+    val init = on(
+      initPeer,
+      relay :: Nil,
+      FuncOps.seq(
+        FuncOps.xor(
+          on(
+            otherPeer,
+            otherRelay :: Nil,
+            callTag(0)
+          ),
+          on(
+            initPeer,
+            relay :: Nil,
+            callTag(1)
+          )
+        ),
+        on(
+          otherPeer,
+          otherRelay :: Nil,
+          callTag(3)
+        ),
+        callTag(4)
+      )
+    )
+
+    val proc: Node.Res = Topology.resolve(init)
+
+    val expected: Node.Res =
+      MakeRes.seq(
+        MakeRes.xor(
+          MakeRes.seq(
+            through(relay),
+            through(otherRelay),
+            callRes(0, otherPeer)
+          ),
+          MakeRes.seq(
+            through(otherRelay),
+            through(relay),
+            callRes(1, initPeer),
+            through(relay),
+            through(otherRelay)
+          )
+        ),
+        callRes(3, otherPeer),
+        through(otherRelay),
+        through(relay),
+        callRes(4, initPeer)
+      )
+
+//    println(Console.BLUE + init)
+    println(Console.YELLOW + proc)
+    println(Console.MAGENTA + expected)
+    println(Console.RESET)
+
+    Node.equalsOrPrintDiff(proc, expected) should be(true)
+  }
+
 }

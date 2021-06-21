@@ -157,9 +157,10 @@ object Node {
         equalOrNot(left.exportTo, right.exportTo) + Console.GREEN + ")"
 
   private def diffServiceCall(left: CallServiceRes, right: CallServiceRes): String =
-    Console.GREEN + "CallServiceTag(" +
-      equalOrNot(left.serviceId, right.serviceId) + Console.GREEN + ", " +
-      equalOrNot(left.funcName, right.funcName) + Console.GREEN + ", " +
+    Console.GREEN + "(call" +
+      equalOrNot(left.peerId, right.peerId) + Console.GREEN + " (" +
+      equalOrNot(left.serviceId, right.serviceId) + Console.GREEN + " " +
+      equalOrNot(left.funcName, right.funcName) + Console.GREEN + ") " +
       diffCall(left.call, right.call) + Console.GREEN +
       Console.GREEN + ")" + Console.RESET
 
@@ -181,9 +182,17 @@ object Node {
          Console.RED + s"number of ops: ${current.children.length} != ${other.children.length}\n" + Console.RESET
        else "") +
       current.children
-        .zip(other.children)
-        .map { case (a, b) =>
-          diffToString(a, b)
+        .map(Option(_))
+        .zipAll(other.children.map(Option(_)), None, None)
+        .map {
+          case (Some(a), Some(b)) =>
+            diffToString(a, b)
+          case (Some(a), _) =>
+            Console.BLUE + a + Console.RESET
+          case (_, Some(b)) =>
+            Console.YELLOW + b + Console.RESET
+          case _ =>
+            Console.RED + "???" + Console.RESET
         }
         .mkString + (if (current.children.isEmpty && other.children.isEmpty) ""
                      else
