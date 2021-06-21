@@ -50,6 +50,7 @@ object Node {
   val initPeer = LiteralModel.initPeerId
   val emptyCall = Call(Nil, None)
   val otherPeer = LiteralModel("other-peer", ScalarType.string)
+  val otherPeerL = LiteralModel("\"other-peer\"", LiteralType.string)
   val otherRelay = LiteralModel("other-relay", ScalarType.string)
   val otherPeer2 = LiteralModel("other-peer-2", ScalarType.string)
   val otherRelay2 = LiteralModel("other-relay-2", ScalarType.string)
