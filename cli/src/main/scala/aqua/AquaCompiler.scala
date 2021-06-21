@@ -1,11 +1,11 @@
 package aqua
 
 import aqua.backend.air.FuncAirGen
-import aqua.backend.ts.TypescriptFile
 import aqua.backend.js.JavaScriptFile
+import aqua.backend.ts.TypescriptFile
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
-import aqua.model.{AquaContext, VarModel}
+import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{RulesViolated, SemanticError, Semantics}
@@ -129,7 +129,7 @@ object AquaCompiler extends LogSupport {
     prepareFiles(srcPath, imports, targetPath)
       .map(_.map(_.filter { p =>
         val hasOutput = p.hasOutput(compileTo)
-        if (!hasOutput) info(s"Source ${p.srcPath}: compilation OK (nothing to emit)")
+        if (!hasOutput) info(s"Source ${p.modFile}: compilation OK (nothing to emit)")
         hasOutput
       }))
       .flatMap[ValidatedNec[String, Chain[String]]] {
