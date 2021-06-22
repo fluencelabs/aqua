@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.Model
-import aqua.model.func.body.{FuncOp, XorTag}
+import aqua.model.func.raw.{FuncOp, XorTag}
 import aqua.parser.expr.ElseOtherwiseExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.abilities.AbilitiesAlgebra

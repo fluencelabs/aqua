@@ -2,6 +2,7 @@ package aqua.semantics
 
 import aqua.Node
 import aqua.Node._
+import aqua.model.func.raw.{FuncOp, FuncOps, SeqTag}
 import aqua.model.transform._
 import aqua.model.{AquaContext, LiteralModel}
 import aqua.parser.Ast
@@ -13,7 +14,7 @@ import org.scalatest.matchers.should.Matchers
 class SemanticsSpec extends AnyFlatSpec with Matchers {
 
   // use it to fix https://github.com/fluencelabs/aqua/issues/90
-  ignore should "create right model" in {
+  "sem" should "create right model" in {
     implicit val fileLift: LiftParser[Span.F] = Span.spanLiftParser
 
     val script =
@@ -37,15 +38,16 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val proc = Node.cofToNode(func.body.tree)
 
-    val expected =
-      seq(
-        par(
-          on(LiteralModel("\"other-peer\"", LiteralType.string), Nil, callLiteral(1)),
-          callLiteral(1)
+    val expected: Node.Raw =
+      FuncOp.wrap(
+        SeqTag,
+        FuncOps.par(
+          on(LiteralModel("\"other-peer\"", LiteralType.string), Nil, callLiteralRaw(1)),
+          callLiteralRaw(1)
         )
       )
 
-//    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrPrintDiff(expected) should be(true)
 
   }
 }

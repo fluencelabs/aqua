@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.model.func.body.{CallServiceTag, FuncOp}
+import aqua.model.func.raw.{CallServiceTag, FuncOp}
 import aqua.model.func.{ArgsCall, FuncCallable, FuncModel}
 import aqua.types.{ProductType, Type}
 import cats.Monoid
@@ -8,6 +8,7 @@ import cats.data.NonEmptyMap
 import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.syntax.monoid._
+import wvlet.log.LogSupport
 
 import scala.collection.immutable.SortedMap
 
@@ -64,7 +65,7 @@ case class AquaContext(
       .map(ProductType(name, _))
 }
 
-object AquaContext {
+object AquaContext extends LogSupport {
 
   trait Implicits {
     implicit val aquaContextMonoid: Monoid[AquaContext]
@@ -99,7 +100,7 @@ object AquaContext {
           FuncCallable(
             fnName,
             // TODO: capture ability resolution, get ID from the call context
-            FuncOp.leaf(CallServiceTag(serviceId, fnName, call, None)),
+            FuncOp.leaf(CallServiceTag(serviceId, fnName, call)),
             args,
             (ret.map(_.model), arrowType.res).mapN(_ -> _),
             Map.empty,

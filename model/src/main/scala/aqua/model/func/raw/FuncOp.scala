@@ -1,4 +1,4 @@
-package aqua.model.func.body
+package aqua.model.func.raw
 
 import aqua.model.func.Call
 import aqua.model.{Model, ValueModel, VarModel}
@@ -9,8 +9,8 @@ import cats.kernel.Semigroup
 import cats.syntax.apply._
 import cats.syntax.functor._
 
-case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
-  def head: OpTag = tree.head
+case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
+  def head: RawTag = tree.head
 
   lazy val isRightAssoc: Boolean = head match {
     case XorTag | ParTag => true
@@ -18,13 +18,13 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
     case _ => false
   }
 
-  def cata[T](folder: (OpTag, Chain[T]) => Eval[T]): Eval[T] =
+  def cata[T](folder: (RawTag, Chain[T]) => Eval[T]): Eval[T] =
     Cofree.cata(tree)(folder)
 
   def definesVarNames: Eval[Set[String]] = cata[Set[String]] {
     case (CallArrowTag(_, Call(_, Some(export))), acc) =>
       Eval.later(acc.foldLeft(Set(export.name))(_ ++ _))
-    case (CallServiceTag(_, _, Call(_, Some(export)), _), acc) =>
+    case (CallServiceTag(_, _, Call(_, Some(export))), acc) =>
       Eval.later(acc.foldLeft(Set(export.name))(_ ++ _))
     case (NextTag(export), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
@@ -33,25 +33,30 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
   def exportsVarNames: Eval[Set[String]] = cata[Set[String]] {
     case (CallArrowTag(_, Call(_, Some(export))), acc) =>
       Eval.later(acc.foldLeft(Set(export.name))(_ ++ _))
-    case (CallServiceTag(_, _, Call(_, Some(export)), _), acc) =>
+    case (CallServiceTag(_, _, Call(_, Some(export))), acc) =>
       Eval.later(acc.foldLeft(Set(export.name))(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }
 
+  // TODO: as it is used for checking of intersection, make it a lazy traverse with fail-fast
   def usesVarNames: Eval[Set[String]] = cata[Set[String]] {
     case (CallArrowTag(_, call), acc) =>
       Eval.later(acc.foldLeft(call.argVarNames)(_ ++ _))
-    case (CallServiceTag(_, _, call, _), acc) =>
+    case (CallServiceTag(_, _, call), acc) =>
       Eval.later(acc.foldLeft(call.argVarNames)(_ ++ _))
+    case (MatchMismatchTag(a, b, _), acc) =>
+      Eval.later(acc.foldLeft(ValueModel.varName(a).toSet ++ ValueModel.varName(b))(_ ++ _))
+    case (ForTag(_, VarModel(name, _, _)), acc) =>
+      Eval.later(acc.foldLeft(Set(name))(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }
 
   def resolveValues(vals: Map[String, ValueModel]): FuncOp =
-    FuncOp(tree.map[OpTag](_.mapValues(_.resolveWith(vals))))
+    FuncOp(tree.map[RawTag](_.mapValues(_.resolveWith(vals))))
 
   def rename(vals: Map[String, String]): FuncOp =
     FuncOp(
-      tree.map[OpTag](op =>
+      tree.map[RawTag](op =>
         op.mapValues {
           case v: VarModel if vals.contains(v.name) => v.copy(name = vals(v.name))
           case v => v
@@ -68,13 +73,29 @@ case class FuncOp(tree: Cofree[Chain, OpTag]) extends Model {
 
   def :+:(prev: FuncOp): FuncOp =
     FuncOp.RightAssocSemi.combine(prev, this)
+
+  // Function body must be fixed before function gets resolved
+  def fixXorPar: FuncOp =
+    FuncOp(cata[Cofree[Chain, RawTag]] {
+      case (XorParTag(left, right), _) =>
+        Eval.now(
+          FuncOps
+            .par(
+              FuncOp.wrap(XorTag, left),
+              right
+            )
+            .tree
+        )
+
+      case (head, tail) => Eval.now(Cofree(head, Eval.now(tail)))
+    }.value)
 }
 
 object FuncOp {
-  type Tree = Cofree[Chain, OpTag]
+  type Tree = Cofree[Chain, RawTag]
 
   def traverseA[A](cf: Tree, init: A)(
-    f: (A, OpTag) => (A, Tree)
+    f: (A, RawTag) => (A, Tree)
   ): Eval[(A, Tree)] = {
     val (headA, head) = f(init, cf.head)
     // TODO: it should be in standard library, with some other types
@@ -95,7 +116,7 @@ object FuncOp {
         FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
       case (XorTag.LeftBiased, XorTag) =>
         wrap(SeqTag, FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _))))
-      case (XorTag, ParTag) => FuncOp(Cofree[Chain, OpTag](XorParTag(x, y), Eval.now(Chain.empty)))
+      case (XorTag, ParTag) => FuncOp(Cofree[Chain, RawTag](XorParTag(x, y), Eval.now(Chain.empty)))
       case (_, ParTag | XorTag) =>
         wrap(SeqTag, FuncOp(y.tree.copy(tail = y.tree.tail.map(_.prepend(x.tree)))))
       case (_, XorParTag(xor, par)) =>
@@ -116,10 +137,10 @@ object FuncOp {
     }
   }
 
-  def leaf(tag: OpTag): FuncOp = FuncOp(Cofree[Chain, OpTag](tag, Eval.now(Chain.empty)))
+  def leaf(tag: RawTag): FuncOp = FuncOp(Cofree[Chain, RawTag](tag, Eval.now(Chain.empty)))
 
-  def wrap(tag: OpTag, child: FuncOp): FuncOp = node(tag, Chain.one(child))
+  def wrap(tag: RawTag, child: FuncOp): FuncOp = node(tag, Chain.one(child))
 
-  def node(tag: OpTag, children: Chain[FuncOp]): FuncOp =
-    FuncOp(Cofree[Chain, OpTag](tag, Eval.later(children.map(_.tree))))
+  def node(tag: RawTag, children: Chain[FuncOp]): FuncOp =
+    FuncOp(Cofree[Chain, RawTag](tag, Eval.later(children.map(_.tree))))
 }

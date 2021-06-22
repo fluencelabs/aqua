@@ -16,6 +16,9 @@ case class Call(args: List[ValueModel], exportTo: Option[Call.Export]) {
   def argVarNames: Set[String] = args.collect { case VarModel(name, _, _) =>
     name
   }.toSet
+
+  override def toString: String =
+    s"[${args.mkString(" ")}]${exportTo.map(_.model).map(" " + _).getOrElse("")}"
 }
 
 object Call {

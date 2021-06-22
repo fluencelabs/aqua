@@ -1,7 +1,7 @@
 package aqua.semantics
 
 import aqua.model.{AquaContext, Model, ScriptModel}
-import aqua.model.func.body.FuncOp
+import aqua.model.func.raw.FuncOp
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
@@ -23,8 +23,9 @@ import monocle.Lens
 import monocle.macros.GenLens
 import cats.syntax.apply._
 import cats.syntax.semigroup._
+import wvlet.log.LogSupport
 
-object Semantics {
+object Semantics extends LogSupport {
 
   def folder[F[_], G[_]](implicit
     A: AbilitiesAlgebra[F, G],
@@ -91,7 +92,7 @@ object Semantics {
       .run(CompilerState.init[F](init))
       .map {
         case (state, gen: ScriptModel) =>
-          val ctx = AquaContext.fromScriptModel(gen, aqum.empty)
+          val ctx = AquaContext.fromScriptModel(gen, init)
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[F], AquaContext]](Valid(ctx))(Invalid(_))

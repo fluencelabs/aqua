@@ -1,225 +1,129 @@
 package aqua.model.topology
 
-import aqua.model.{ValueModel, VarModel}
-import aqua.model.func.body._
+import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.model.func.raw._
 import cats.Eval
-import cats.data.Chain
-import cats.data.Chain.{:==, ==:, nil}
+import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
+import cats.data.Chain.nil
 import cats.free.Cofree
-import ChainZipper.Matchers._
-import Location.Matchers._
+import aqua.model.cursor.ChainZipper
+import aqua.model.func.resolved._
 import aqua.types.{BoxType, ScalarType}
 import wvlet.log.LogSupport
-
-import scala.annotation.tailrec
+import cats.syntax.traverse._
 
 object Topology extends LogSupport {
-  type Tree = Cofree[Chain, OpTag]
+  type Tree = Cofree[Chain, RawTag]
+  type Res = Cofree[Chain, ResolvedOp]
 
-  def resolve(op: Tree): Tree =
+  def resolve(op: Tree): Res =
     Cofree
-      .cata[Chain, OpTag, Tree](resolveOnMoves(op)) {
-        case (SeqTag | _: OnTag | MetaTag(false, _, SeqTag | _: OnTag), children) =>
+      .cata[Chain, ResolvedOp, Res](resolveOnMoves(op).value) {
+        case (SeqRes, children) =>
           Eval.later(
-            Cofree(
-              SeqTag,
-              Eval.now(children.flatMap {
-                case Cofree(SeqTag, ch) => ch.value
-                case cf => Chain.one(cf)
-              })
-            )
+            children.uncons
+              .filter(_._2.isEmpty)
+              .map(_._1)
+              .getOrElse(
+                Cofree(
+                  SeqRes,
+                  Eval.now(children.flatMap {
+                    case Cofree(SeqRes, ch) => ch.value
+                    case cf => Chain.one(cf)
+                  })
+                )
+              )
           )
         case (head, children) => Eval.later(Cofree(head, Eval.now(children)))
       }
       .value
 
-  def resolveOnMoves(op: Tree): Tree =
-    Cursor
-      .transform(op)(transformWalker)
-      .getOrElse(op)
-
-  @tailrec
-  private def transformWalker(c: Cursor): List[Tree] =
-    c match {
-      case Cursor(_, `head`(parent: MetaTag) /: _) if !parent.skipTopology =>
-        transformWalker(c.mapParent(p => p.copy(parent.op, p.tail)))
-
-      case Cursor(
-            `current`(cf),
-            loc @ `head`(parent: GroupTag) /: _
-          ) =>
-        // Set the service call IDs
-        val cfu = cf.copy(setServiceCallPeerId(cf.head, loc))
-
-        // We need to get there, finally
-        val currentPeerId = Chain.fromOption(loc.lastOn.map(_.peerId))
-
-        debug("Going to handle: " + cf.head)
-
-        val fromPrevToCurrentPath = fromPrevToCurrent(c, currentPeerId)
-        if (fromPrevToCurrentPath.nonEmpty) debug("BEFORE = " + fromPrevToCurrentPath)
-
-        val fromCurrentToNextPath = fromCurrentToNext(parent, c, currentPeerId)
-        if (fromCurrentToNextPath.nonEmpty) debug("NEXT = " + fromCurrentToNextPath)
-
-        (through(fromPrevToCurrentPath)
-          .append(cfu) ++ through(fromCurrentToNextPath, reversed = true)).toList
-
-      case Cursor(ChainZipper(_, cf, _), loc) =>
-        cf.copy(setServiceCallPeerId(cf.head, loc)) :: Nil
-    }
-
-  def fromPrevToCurrent(c: Cursor, currentPeerId: Chain[ValueModel]): Chain[ValueModel] = {
-    val prevOn = c.prevOnTags
-    val currentOn = c.loc.pathOn
-
-    val wasHandled = c.pathToRoot.collectFirst { case cc @ Cursor(_, `head`(_: GroupTag) /: _) =>
-      cc.loc.pathOn
-    }.exists(cclp =>
-      cclp == currentOn && {
-        val (c1, _) = skipCommonPrefix(prevOn, cclp)
-        c1.isEmpty
-      }
+  def wrap(cz: ChainZipper[Res]): Chain[Res] =
+    Chain.one(
+      if (cz.prev.nonEmpty || cz.next.nonEmpty) Cofree(SeqRes, Eval.now(cz.chain))
+      else cz.current
     )
 
-    // Need to get from there
-    val prevPeerId =
-      Chain.fromOption(prevOn.lastOption.map(_.peerId) orElse c.loc.firstOn.map(_.peerId))
+  def resolveOnMoves(op: Tree): Eval[Res] =
+    RawCursor(NonEmptyList.one(ChainZipper.one(op)))
+      .cata(wrap) { rc =>
+        debug(s"<:> $rc")
+        OptionT[Eval, ChainZipper[Res]](
+          ({
+            case SeqTag => SeqRes
+            case _: OnTag => SeqRes
+            case MatchMismatchTag(a, b, s) => MatchMismatchRes(a, b, s)
+            case ForTag(item, iter) => FoldRes(item, iter)
+            case ParTag => ParRes
+            case XorTag | XorTag.LeftBiased => XorRes
+            case NextTag(item) => NextRes(item)
+            case CallServiceTag(serviceId, funcName, call) =>
+              CallServiceRes(
+                serviceId,
+                funcName,
+                call,
+                rc.currentPeerId
+                  .getOrElse(LiteralModel.initPeerId)
+              )
+          }: PartialFunction[RawTag, ResolvedOp]).lift
+            .apply(rc.tag)
+            .map(MakeRes.leaf)
+            .traverse(c =>
+              Eval.later {
+                val cz = ChainZipper(
+                  through(rc.pathFromPrev),
+                  c,
+                  through(rc.pathToNext)
+                )
+                if (cz.next.nonEmpty || cz.prev.nonEmpty) {
+                  debug(s"Resolved   $rc -> $c")
+                  if (cz.prev.nonEmpty)
+                    trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
+                  if (cz.next.nonEmpty)
+                    trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
+                } else debug(s"EMPTY    $rc -> $c")
+                cz
+              }
+            )
+        )
 
-    if (wasHandled) Chain.empty[ValueModel]
-    else
-      findPath(prevOn, currentOn, prevPeerId, currentPeerId)
-  }
-
-  def fromCurrentToNext(
-    parent: OpTag,
-    c: Cursor,
-    currentPeerId: Chain[ValueModel]
-  ): Chain[ValueModel] = {
-    // Usually we don't need to go next
-    val nextOn = parent match {
-      case ParTag =>
-        val exports = FuncOp(c.point.current).exportsVarNames.value
-        if (exports.isEmpty) Chain.empty[OnTag]
-        else {
-          val isUsed = c.pathToRoot.tail.collect {
-            case Cursor(cz, `head`(gt: GroupTag) /: _) if gt != ParTag =>
-              cz.next.map(FuncOp(_)).map(_.usesVarNames)
-          }.exists(_.exists(_.value.intersect(exports).nonEmpty))
-          if (isUsed) c.nextOnTags else Chain.empty[OnTag]
-        }
-      case XorTag if c.point.prev.nonEmpty => c.nextOnTags
-      case _ => Chain.empty[OnTag]
-    }
-    val nextPeerId =
-      if (nextOn.nonEmpty) Chain.fromOption(nextOn.lastOption.map(_.peerId)) else currentPeerId
-
-    val targetOn: Option[OnTag] = c.point.current.head match {
-      case o: OnTag => Option(o)
-      case _ => None
-    }
-    val currentOn = c.loc.pathOn
-    val currentOnInside = targetOn.fold(currentOn)(currentOn :+ _)
-    findPath(
-      currentOnInside,
-      nextOn,
-      currentPeerId,
-      nextPeerId
-    )
-  }
-
-  def optimizePath(
-    peerIds: Chain[ValueModel],
-    prefix: Chain[ValueModel],
-    suffix: Chain[ValueModel]
-  ): Chain[ValueModel] = {
-    val optimized = peerIds
-      .foldLeft(Chain.empty[ValueModel]) {
-        case (acc, p) if acc.lastOption.contains(p) => acc
-        case (acc, p) if acc.contains(p) => acc.takeWhile(_ != p) :+ p
-        case (acc, p) => acc :+ p
       }
-    val noPrefix = skipPrefix(optimized, prefix, optimized)
-    skipSuffix(noPrefix, suffix, noPrefix)
-  }
-
-  def findPath(
-    fromOn: Chain[OnTag],
-    toOn: Chain[OnTag],
-    fromPeer: Chain[ValueModel],
-    toPeer: Chain[ValueModel]
-  ): Chain[ValueModel] = {
-    val (from, to) = skipCommonPrefix(fromOn, toOn)
-    val fromFix =
-      if (from.isEmpty && fromPeer != toPeer) Chain.fromOption(fromOn.lastOption) else from
-    val toFix = if (to.isEmpty && fromPeer != toPeer) Chain.fromOption(toOn.lastOption) else to
-    val fromTo = fromFix.reverse.flatMap(_.via.reverse) ++ toFix.flatMap(_.via)
-    val optimized = optimizePath(fromPeer ++ fromTo ++ toPeer, fromPeer, toPeer)
-
-    debug("FIND PATH " + fromFix)
-    debug("       -> " + toFix)
-    debug("                     Optimized: " + optimized)
-    optimized
-  }
-
-  @tailrec
-  def skipPrefix[T](chain: Chain[T], prefix: Chain[T], init: Chain[T]): Chain[T] =
-    (chain, prefix) match {
-      case (c ==: ctail, p ==: ptail) if c == p => skipPrefix(ctail, ptail, init)
-      case (_, `nil`) => chain
-      case (_, _) => init
-    }
-
-  @tailrec
-  def skipCommonPrefix[T](chain1: Chain[T], chain2: Chain[T]): (Chain[T], Chain[T]) =
-    (chain1, chain2) match {
-      case (c ==: ctail, p ==: ptail) if c == p => skipCommonPrefix(ctail, ptail)
-      case _ => chain1 -> chain2
-    }
-
-  @tailrec
-  def skipSuffix[T](chain: Chain[T], suffix: Chain[T], init: Chain[T]): Chain[T] =
-    (chain, suffix) match {
-      case (cinit :== c, pinit :== p) if c == p => skipSuffix(cinit, pinit, init)
-      case (_, `nil`) => chain
-      case (_, _) => init
-    }
+      .map(NonEmptyChain.fromChain(_).map(_.uncons))
+      .map {
+        case None =>
+          error("Topology emitted nothing")
+          Cofree(SeqRes, MakeRes.nilTail)
+        case Some((el, `nil`)) => el
+        case Some((el, tail)) =>
+          warn("Topology emitted many nodes, that's unusual")
+          Cofree(SeqRes, Eval.now(el +: tail))
+      }
 
   // Walks through peer IDs, doing a noop function on each
   // If same IDs are found in a row, does noop only once
   // if there's a chain like a -> b -> c -> ... -> b -> g, remove everything between b and b
-  def through(peerIds: Chain[ValueModel], reversed: Boolean = false): Chain[Tree] =
+  def through(peerIds: Chain[ValueModel], reversed: Boolean = false): Chain[Res] =
     peerIds.map { v =>
       v.lastType match {
         case _: BoxType =>
           val itemName = "-via-peer-"
 
-          FuncOps.meta(
-            FuncOps.fold(
-              itemName,
-              v,
-              if (reversed)
-                FuncOps.seq(
-                  FuncOps.next(itemName),
-                  FuncOps.noop(VarModel(itemName, ScalarType.string))
-                )
-              else
-                FuncOps.seq(
-                  FuncOps.noop(VarModel(itemName, ScalarType.string)),
-                  FuncOps.next(itemName)
-                )
-            ),
-            skipTopology = true
+          MakeRes.fold(
+            itemName,
+            v,
+            if (reversed)
+              MakeRes.seq(
+                MakeRes.next(itemName),
+                MakeRes.noop(VarModel(itemName, ScalarType.string))
+              )
+            else
+              MakeRes.seq(
+                MakeRes.noop(VarModel(itemName, ScalarType.string)),
+                MakeRes.next(itemName)
+              )
           )
         case _ =>
-          FuncOps.noop(v)
+          MakeRes.noop(v)
       }
     }
-      .map(_.tree)
-
-  def setServiceCallPeerId(tag: OpTag, loc: Location): OpTag = tag match {
-    case c: CallServiceTag if c.peerId.isEmpty =>
-      c.copy(peerId = loc.lastOn.map(_.peerId))
-    case t => t
-  }
 }

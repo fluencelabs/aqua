@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.{Model, ValueModel}
-import aqua.model.func.body._
+import aqua.model.func.raw._
 import aqua.parser.expr.ForExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -41,7 +41,7 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
               FuncOp.wrap(
                 ForTag(expr.item.value, vm),
                 FuncOp.node(
-                  expr.mode.map(_._2).fold[OpTag](SeqTag) {
+                  expr.mode.map(_._2).fold[RawTag](SeqTag) {
                     case ForExpr.ParMode => ParTag
                     case ForExpr.TryMode => XorTag
                   },

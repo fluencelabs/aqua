@@ -2,8 +2,8 @@ package aqua.model.transform
 
 import aqua.model.{ValueModel, VarModel}
 import aqua.model.func.Call
-import aqua.model.func.body.{FuncOp, FuncOps}
-import aqua.types.{ArrayType, DataType, OptionType, StreamType, Type}
+import aqua.model.func.raw.{FuncOp, FuncOps}
+import aqua.types.{ArrayType, DataType, StreamType}
 import cats.data.Chain
 
 trait ArgsProvider {
@@ -26,7 +26,6 @@ case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataT
         item,
         VarModel(iter, ArrayType(t.element), Chain.empty),
         FuncOps.seq(
-          // TODO: currently this does not work, as identity wraps everything with an array
           FuncOps.identity(VarModel(item, t.element), Call.Export(name, t)),
           FuncOps.next(item)
         )

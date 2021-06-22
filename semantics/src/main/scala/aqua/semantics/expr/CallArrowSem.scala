@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.func.Call
-import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
+import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp}
 import aqua.model.{Model, ValueModel}
 import aqua.parser.expr.CallArrowExpr
 import aqua.semantics.Prog
