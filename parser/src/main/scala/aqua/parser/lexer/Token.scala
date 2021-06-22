@@ -56,10 +56,7 @@ object Token {
   val ` \n` : P[Unit] =
     (` `.?.void *> (`--` *> P.charsWhile(_ != '\n')).?.void).with1 *> `\n`
 
-  val `\n ` : P[Unit] =
-    `\n` *> (` `.?.void *> (`--` *> P.charsWhile(_ != '\n')).?.void)
   val ` \n+` : P[Unit] = P.repAs[Unit, Unit](` \n`.backtrack, 1)(Accumulator0.unitAccumulator0)
-  val `\n+ ` : P[Unit] = P.repAs[Unit, Unit](`\n `.backtrack, 1)(Accumulator0.unitAccumulator0)
   val ` : \n+` : P[Unit] = ` `.?.with1 *> `:` *> ` \n+`
   val `,` : P[Unit] = P.char(',') <* ` `.?
   val `.` : P[Unit] = P.char('.')

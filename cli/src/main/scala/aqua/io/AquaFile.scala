@@ -60,6 +60,9 @@ object AquaFile {
     Files[F]
       .readAll(file, 4096)
       .fold(Vector.empty[Byte])((acc, b) => acc :+ b)
+      // TODO fix for comment on last line in air
+      // TODO should be fixed by parser
+      .map(_.appendedAll("\n\r".getBytes))
       .flatMap(fs2.Stream.emits)
       .through(text.utf8Decode)
       .attempt

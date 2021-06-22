@@ -1,5 +1,3 @@
-import "builtin.aqua"
-
 service OpH("op"):
   puk(s: string) -> string
   pek(s: string, -- trgtr
@@ -19,5 +17,4 @@ func a( -- ferkjn
   catch err:
     OpH.puk(err.msg)
   <- f
-
--- hello
+  -- hello

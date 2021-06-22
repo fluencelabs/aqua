@@ -23,7 +23,7 @@ object RootExpr extends Expr.Companion {
       P.repSep(
         P.oneOf(RootExpr.validChildren.map(_.ast[F]())),
         ` \n+`
-      ).between(` \n+`.?, `\n+ `.?)
+      ).surroundedBy(` \n+`.?)
         .map(_.foldLeft[(Chain[ParserError[F]], Chain[Tree[F]])](Chain.empty -> Chain.empty) {
           case ((errs, trees), Validated.Valid(tree)) => (errs, trees :+ tree)
           case ((errs, trees), Validated.Invalid(err)) => (errs ++ err.toChain, trees)
