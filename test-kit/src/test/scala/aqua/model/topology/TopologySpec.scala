@@ -4,7 +4,7 @@ import aqua.Node
 import aqua.model.VarModel
 import aqua.model.func.Call
 import aqua.model.func.raw.FuncOps
-import aqua.model.func.resolved.{MakeRes, ResolvedOp, SeqRes}
+import aqua.model.func.resolved.{MakeRes, ResolvedOp, SeqRes, XorRes}
 import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
@@ -109,7 +109,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    val proc = Topology.resolve(init)
+    val proc: Node.Res = Topology.resolve(init)
 
     val expected: Node.Res =
       MakeRes.seq(
@@ -128,7 +128,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(3, initPeer, None, result :: Nil)
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    Node.equalsOrPrintDiff(proc, expected) should be(true)
   }
 
   "topology resolver" should "work fine with par" in {
@@ -165,11 +165,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc = Topology.resolve(init)
 
-    println(proc: Node.Res)
-
     proc.equalsOrPrintDiff(
-      Cofree[Chain, ResolvedOp](SeqRes, Eval.now(Chain.empty))
-    ) should be(false)
+      Cofree[Chain, ResolvedOp](XorRes, Eval.now(Chain.one(callRes(1, initPeer))))
+    ) should be(true)
   }
 
   "topology resolver" should "work fine with par with on" in {
