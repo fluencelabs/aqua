@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.model.func.body.FuncOp
+import aqua.model.func.raw.FuncOp
 import cats.kernel.Semigroup
 
 trait Model

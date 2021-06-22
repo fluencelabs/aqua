@@ -130,8 +130,8 @@ object Expr {
                     case block if block.isBlock =>
                       acc.copy(block = Some(indent -> currentExpr))
                     // create leaf if token is on current level
-                    case e =>
-                      acc.copy(currentChildren = acc.currentChildren.append(leaf(e)))
+                    case _ =>
+                      acc.copy(currentChildren = acc.currentChildren.append(currentExpr))
                   }
                 // if we have root companion, gather all expressions that have indent > than current
                 case r @ Some((_, block)) =>
@@ -163,10 +163,10 @@ object Expr {
                                 window = Chain.empty
                               )
                             // create leaf if token is on current level
-                            case e =>
+                            case _ =>
                               acc.copy(
                                 block = None,
-                                currentChildren = withTree.append(leaf(e)),
+                                currentChildren = withTree.append(currentExpr),
                                 window = Chain.empty
                               )
                           }

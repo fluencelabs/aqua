@@ -1,4 +1,4 @@
-package aqua.model.func.body
+package aqua.model.func.raw
 
 import cats.Show
 import cats.free.Cofree

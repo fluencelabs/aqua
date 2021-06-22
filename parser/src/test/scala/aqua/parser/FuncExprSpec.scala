@@ -267,4 +267,14 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     qGenComplex.d() shouldBe elseCall
     qGenComplex.d() shouldBe CallServiceTag(local, "gt", Call(List(), Some("three")), None)*/
   }
+
+  "function with par" should "be parsed correctly" in {
+    val script =
+      """func topologyTest():
+        |    on "friend":
+        |        str2 <- LocalPrint.print("in on")
+        |    par LocalPrint.print("in par")""".stripMargin
+
+    val tree = parser[Id]().parseAll(script).value.toEither.value
+  }
 }

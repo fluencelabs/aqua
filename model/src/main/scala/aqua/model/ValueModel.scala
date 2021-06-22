@@ -18,10 +18,18 @@ object ValueModel {
   implicit object ValueModelEq extends Eq[ValueModel] {
     override def eqv(x: ValueModel, y: ValueModel): Boolean = x == y
   }
+
+  def varName(vm: ValueModel): Option[String] =
+    vm match {
+      case VarModel(name, _, _) => Some(name)
+      case _ => None
+    }
 }
 
 case class LiteralModel(value: String, `type`: Type) extends ValueModel {
   override def lastType: Type = `type`
+
+  override def toString: String = s"{$value: ${`type`}}"
 }
 
 object LiteralModel {

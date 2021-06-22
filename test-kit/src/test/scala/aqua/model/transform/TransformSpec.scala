@@ -1,7 +1,8 @@
 package aqua.model.transform
 
 import aqua.Node
-import aqua.model.func.body.{CallArrowTag, CallServiceTag, FuncOp}
+import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
+import aqua.model.func.resolved.{CallServiceRes, MakeRes}
 import aqua.model.func.{ArgsDef, Call, FuncCallable}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.types.ScalarType
@@ -11,14 +12,14 @@ import org.scalatest.matchers.should.Matchers
 class TransformSpec extends AnyFlatSpec with Matchers {
   import Node._
 
-  "transform.forClient" should "work well with function 1 (no calls before on)" in {
+  "transform.forClient" should "work well with function 1 (no calls before on), generate correct error handling" in {
 
     val ret = LiteralModel.quote("return this")
 
     val func: FuncCallable =
       FuncCallable(
         "ret",
-        FuncOp(on(otherPeer, otherRelay :: Nil, call(1))),
+        on(otherPeer, otherRelay :: Nil, callTag(1)),
         ArgsDef.empty,
         Some((ret, ScalarType.string)),
         Map.empty,
@@ -29,17 +30,17 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val fc = Transform.forClient(func, bc)
 
-    val procFC: Node = fc
+    val procFC: Node.Res = fc
 
-    val expectedFC = seq(
-      xor(
-        seq(
+    val expectedFC: Node.Res =
+      MakeRes.xor(
+        MakeRes.seq(
           dataCall(bc, "-relay-", initPeer),
           through(relayV),
           through(otherRelay),
-          xor(
-            call(1, otherPeer),
-            seq(
+          MakeRes.xor(
+            callRes(1, otherPeer),
+            MakeRes.seq(
               through(otherRelay),
               through(relayV),
               errorCall(bc, 1, initPeer),
@@ -48,22 +49,17 @@ class TransformSpec extends AnyFlatSpec with Matchers {
           ),
           through(otherRelay),
           through(relayV),
-          xor(
+          MakeRes.xor(
             respCall(bc, ret, initPeer),
-            seq(
-              errorCall(bc, 2, initPeer)
-            )
+            errorCall(bc, 2, initPeer)
           )
         ),
-        seq(
-          errorCall(bc, 3, initPeer)
-        )
+        errorCall(bc, 3, initPeer)
       )
-    )
 
-    println(procFC)
+    //println(procFC)
 
-    procFC.equalsOrPrintDiff(expectedFC) should be(true)
+    Node.equalsOrPrintDiff(procFC, expectedFC) should be(true)
 
   }
 
@@ -73,7 +69,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val func: FuncCallable = FuncCallable(
       "ret",
-      FuncOp(seq(call(0), on(otherPeer, Nil, call(1)))),
+      FuncOps.seq(callTag(0), on(otherPeer, Nil, callTag(1))),
       ArgsDef.empty,
       Some((ret, ScalarType.string)),
       Map.empty,
@@ -84,14 +80,14 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val fc = Transform.forClient(func, bc)
 
-    val procFC: Node = fc
+    val procFC: Res = fc
 
-    val expectedFC =
-      seq(
+    val expectedFC: Res =
+      MakeRes.seq(
         dataCall(bc, "-relay-", initPeer),
-        call(0, initPeer),
+        callRes(0, initPeer),
         through(relayV),
-        call(1, otherPeer),
+        callRes(1, otherPeer),
         through(relayV),
         respCall(bc, ret, initPeer)
       )
@@ -119,10 +115,9 @@ class TransformSpec extends AnyFlatSpec with Matchers {
             CallServiceTag(
               LiteralModel.quote("srv1"),
               "foo",
-              Call(Nil, Some(Call.Export("v", ScalarType.string))),
-              None
+              Call(Nil, Some(Call.Export("v", ScalarType.string)))
             )
-          )
+          ).cof
         ),
         ArgsDef.empty,
         Some((VarModel("v", ScalarType.string), ScalarType.string)),
@@ -134,7 +129,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       FuncCallable(
         "f2",
         FuncOp(
-          Node(CallArrowTag("callable", Call(Nil, Some(Call.Export("v", ScalarType.string)))))
+          Node(CallArrowTag("callable", Call(Nil, Some(Call.Export("v", ScalarType.string))))).cof
         ),
         ArgsDef.empty,
         Some((VarModel("v", ScalarType.string), ScalarType.string)),
@@ -144,17 +139,17 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val bc = BodyConfig(wrapWithXor = false)
 
-    val res = Transform.forClient(f2, bc): Node
+    val res = Transform.forClient(f2, bc): Node.Res
 
     res.equalsOrPrintDiff(
-      seq(
+      MakeRes.seq(
         dataCall(bc, "-relay-", initPeer),
         Node(
-          CallServiceTag(
+          CallServiceRes(
             LiteralModel.quote("srv1"),
             "foo",
             Call(Nil, Some(Call.Export("v", ScalarType.string))),
-            Some(initPeer)
+            initPeer
           )
         ),
         respCall(bc, VarModel("v", ScalarType.string), initPeer)
