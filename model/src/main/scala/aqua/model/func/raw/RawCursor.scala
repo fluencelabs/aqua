@@ -100,7 +100,7 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
       if (exports.nonEmpty && checkNamesUsedLater(exports))
         seqNext.fold(Chain.empty[ValueModel])(nxt =>
           PathFinder.find(this, nxt) ++
-            // we need to "wake up" the target peer to enable join behaviour
+            // we need to "wake" the target peer to enable join behaviour
             Chain.fromOption(nxt.currentPeerId)
         )
       else Chain.empty
