@@ -6,3 +6,9 @@ func topologyTest():
     on "friend":
         str2 <- CustomId.id("in on")
     par CustomId.id("in par")
+
+func betterMessage(relay: string):
+    on relay:
+        isOnline <- CustomId.id(relay)
+    if isOnline == "yes":
+        CustomId.ids()

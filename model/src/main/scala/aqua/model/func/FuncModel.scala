@@ -15,6 +15,6 @@ case class FuncModel(
     arrows: Map[String, FuncCallable],
     constants: Map[String, ValueModel]
   ): FuncCallable =
-    FuncCallable(name, body, args, ret, arrows, constants)
+    FuncCallable(name, body.fixXorPar, args, ret, arrows, constants)
 
 }

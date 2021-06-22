@@ -44,6 +44,10 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
       Eval.later(acc.foldLeft(call.argVarNames)(_ ++ _))
     case (CallServiceTag(_, _, call), acc) =>
       Eval.later(acc.foldLeft(call.argVarNames)(_ ++ _))
+    case (MatchMismatchTag(a, b, _), acc) =>
+      Eval.later(acc.foldLeft(ValueModel.varName(a).toSet ++ ValueModel.varName(b))(_ ++ _))
+    case (ForTag(_, VarModel(name, _, _)), acc) =>
+      Eval.later(acc.foldLeft(Set(name))(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }
 
@@ -69,6 +73,22 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
 
   def :+:(prev: FuncOp): FuncOp =
     FuncOp.RightAssocSemi.combine(prev, this)
+
+  // Function body must be fixed before function gets resolved
+  def fixXorPar: FuncOp =
+    FuncOp(cata[Cofree[Chain, RawTag]] {
+      case (XorParTag(left, right), _) =>
+        Eval.now(
+          FuncOps
+            .par(
+              FuncOp.wrap(XorTag, left),
+              right
+            )
+            .tree
+        )
+
+      case (head, tail) => Eval.now(Cofree(head, Eval.now(tail)))
+    }.value)
 }
 
 object FuncOp {

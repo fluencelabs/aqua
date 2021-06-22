@@ -2,11 +2,9 @@ package aqua.model.transform
 
 import aqua.model.func.FuncCallable
 import aqua.model.VarModel
-import aqua.model.func.raw.{FuncOp, FuncOps, RawTag, XorParTag, XorTag}
 import aqua.model.func.resolved.{NoAir, ResolvedOp}
 import aqua.model.topology.Topology
 import aqua.types.ScalarType
-import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 import wvlet.log.LogSupport
@@ -23,25 +21,6 @@ object Transform extends LogSupport {
     filter: ResolvedOp => Boolean = defaultFilter
   ): Cofree[Chain, ResolvedOp] =
     tree.copy(tail = tree.tail.map(_.filter(t => filter(t.head)).map(clear(_, filter))))
-
-  def fixXorParTag(op: FuncOp): FuncOp =
-    FuncOp(
-      op
-        .cata[Cofree[Chain, RawTag]] {
-          case (XorParTag(left, right), _) =>
-            Eval.now(
-              FuncOps
-                .par(
-                  FuncOp.wrap(XorTag, left),
-                  right
-                )
-                .tree
-            )
-
-          case (head, tail) => Eval.now(Cofree(head, Eval.now(tail)))
-        }
-        .value
-    )
 
   def forClient(func: FuncCallable, conf: BodyConfig): Cofree[Chain, ResolvedOp] = {
     val initCallable: InitPeerCallable = InitViaRelayCallable(
@@ -75,9 +54,7 @@ object Transform extends LogSupport {
       Topology.resolve(
         errorsCatcher
           .transform(
-            fixXorParTag(
-              wrapFunc.resolve(func).value
-            )
+            wrapFunc.resolve(func).value
           )
           .tree
       )
