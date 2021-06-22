@@ -100,7 +100,7 @@ object AppOps {
       .options[String]("const", "Constant that will be used in an aqua code", "c")
       .mapValidated { strs =>
         val parsed = strs.map(s => ConstantExpr.onlyLiteral.parseAll(s))
-        println(parsed)
+
         val errors = parsed.collect { case Left(er) =>
           er
         }
