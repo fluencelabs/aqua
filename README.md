@@ -22,7 +22,7 @@ or simply download the latest JAR file from the [releases](https://github.com/fl
 It requires `java` to run Aqua compiler from the command line:
 
 ```commandline
-java -jar aqua-cli-%version_number%.jar path/to/input/dir path/to/output/dir
+java -jar aqua-cli-%version_number%.jar -i path/to/input/dir -o path/to/output/dir
 ```
 
 Input directory should contain files with `aqua` scripts.
