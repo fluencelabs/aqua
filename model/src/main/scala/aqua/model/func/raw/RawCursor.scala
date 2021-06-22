@@ -98,7 +98,11 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
     case ParTag =>
       val exports = FuncOp(current).exportsVarNames.value
       if (exports.nonEmpty && checkNamesUsedLater(exports))
-        seqNext.fold(Chain.empty[ValueModel])(PathFinder.find(this, _))
+        seqNext.fold(Chain.empty[ValueModel])(nxt =>
+          PathFinder.find(this, nxt) ++
+            // we need to "wake up" the target peer to enable join behaviour
+            Chain.fromOption(nxt.currentPeerId)
+        )
       else Chain.empty
     case XorTag if leftSiblings.nonEmpty =>
       lastExecuted
