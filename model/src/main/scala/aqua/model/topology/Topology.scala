@@ -55,7 +55,7 @@ object Topology extends LogSupport {
             case MatchMismatchTag(a, b, s) => MatchMismatchRes(a, b, s)
             case ForTag(item, iter) => FoldRes(item, iter)
             case ParTag => ParRes
-            case XorTag => XorRes
+            case XorTag | XorTag.LeftBiased => XorRes
             case NextTag(item) => NextRes(item)
             case CallServiceTag(serviceId, funcName, call) =>
               CallServiceRes(

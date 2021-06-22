@@ -52,7 +52,14 @@ object AirGen extends LogSupport {
       case ParRes =>
         Eval later ops.toList.reduceLeftOption(ParGen).getOrElse(NullGen)
       case XorRes =>
-        Eval later ops.toList.reduceLeftOption(XorGen).getOrElse(NullGen)
+        Eval later (ops.toList match {
+          case o :: Nil => XorGen(o, NullGen)
+          case _ =>
+            ops.toList.reduceLeftOption(XorGen).getOrElse {
+              warn("XorRes with no children converted to Null")
+              NullGen
+            }
+        })
 
       case NextRes(item) =>
         Eval later NextGen(item)

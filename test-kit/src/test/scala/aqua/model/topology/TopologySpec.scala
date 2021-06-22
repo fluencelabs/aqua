@@ -165,6 +165,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc = Topology.resolve(init)
 
+    println(proc: Node.Res)
+
     proc.equalsOrPrintDiff(
       Cofree[Chain, ResolvedOp](SeqRes, Eval.now(Chain.empty))
     ) should be(false)
