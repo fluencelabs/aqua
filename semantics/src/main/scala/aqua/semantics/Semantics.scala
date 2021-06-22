@@ -92,7 +92,7 @@ object Semantics extends LogSupport {
       .run(CompilerState.init[F](init))
       .map {
         case (state, gen: ScriptModel) =>
-          val ctx = AquaContext.fromScriptModel(gen, aqum.empty)
+          val ctx = AquaContext.fromScriptModel(gen, init)
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[F], AquaContext]](Valid(ctx))(Invalid(_))

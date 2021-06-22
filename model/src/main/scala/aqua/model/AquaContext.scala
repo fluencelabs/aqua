@@ -8,6 +8,7 @@ import cats.data.NonEmptyMap
 import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.syntax.monoid._
+import wvlet.log.LogSupport
 
 import scala.collection.immutable.SortedMap
 
@@ -64,7 +65,7 @@ case class AquaContext(
       .map(ProductType(name, _))
 }
 
-object AquaContext {
+object AquaContext extends LogSupport {
 
   trait Implicits {
     implicit val aquaContextMonoid: Monoid[AquaContext]
