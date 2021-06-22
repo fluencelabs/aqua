@@ -93,6 +93,8 @@ jobs:
 
       ### create release
       - uses: marvinpinto/action-automatic-releases@latest
+        # if inputs.release if an empty string, we're running automatically
+        if: ${{ github.event.inputs.release != '' }}
         with:
           # changelog will be automatically generated from the history
           # between tag env.BASE_VERSION (eg 0.1.0 or 0.2.0, etc)
