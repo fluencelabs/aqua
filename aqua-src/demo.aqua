@@ -1,14 +1,5 @@
-service CustomId("cid"):
-  id(s: string) -> string
-  ids() -> string
+import "print.aqua"
 
-func topologyTest():
-    on "friend":
-        str2 <- CustomId.id("in on")
-    par CustomId.id("in par")
-
-func betterMessage(relay: string):
-    on relay:
-        isOnline <- CustomId.id(relay)
-    if isOnline == "yes":
-        CustomId.ids()
+func iterateAndPrint(strings: []string):
+    for s <- strings:
+        print(s)

@@ -1,0 +1,5 @@
+service Println("println-service-id"):
+    print: string -> ()
+
+func print(str: string):
+    Println.print(str)
