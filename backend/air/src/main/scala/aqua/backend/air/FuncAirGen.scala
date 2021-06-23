@@ -12,13 +12,4 @@ case class FuncAirGen(func: FuncCallable) {
     AirGen(
       Transform.forClient(func, conf)
     ).generate
-
-  /**
-   * Generates AIR from the optimized function body, assuming client is behind a relay
-   * @return
-   */
-  def generateClientAir(conf: BodyConfig = BodyConfig()): Air =
-    AirGen(
-      Transform.forClient(func, conf)
-    ).generate
 }

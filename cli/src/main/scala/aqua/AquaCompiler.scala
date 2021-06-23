@@ -1,8 +1,9 @@
 package aqua
 
-import aqua.backend.air.FuncAirGen
-import aqua.backend.js.JavaScriptFile
-import aqua.backend.ts.TypescriptFile
+import aqua.backend.Backend
+import aqua.backend.air.AirBackend
+import aqua.backend.js.JavaScriptBackend
+import aqua.backend.ts.TypeScriptBackend
 import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
 import aqua.linker.Linker
 import aqua.model.AquaContext
@@ -16,7 +17,6 @@ import cats.effect.kernel.Concurrent
 import cats.kernel.Monoid
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.syntax.show._
 import fs2.io.file.Files
 import fs2.text
 import wvlet.log.LogSupport
@@ -35,7 +35,7 @@ object AquaCompiler extends LogSupport {
       case _ => context.funcs.nonEmpty
     }
 
-    def targetPath(ext: String): Validated[Throwable, Path] =
+    def targetPath(fileName: String): Validated[Throwable, Path] =
       Validated.catchNonFatal {
         val srcDir = if (srcPath.toFile.isDirectory) srcPath else srcPath.getParent
         val srcFilePath = srcDir.toAbsolutePath
@@ -49,13 +49,7 @@ object AquaCompiler extends LogSupport {
               srcFilePath
             )
 
-        val fileName = targetAqua.getFileName
-        if (fileName == null) {
-          throw new Exception(s"Unexpected: 'fileName' is null in path $targetAqua")
-        } else {
-          // rename `.aqua` file name to `.ext`
-          targetAqua.getParent.resolve(fileName.toString.stripSuffix(".aqua") + s".$ext")
-        }
+        targetAqua.getParent.resolve(fileName)
       }
   }
 
@@ -118,6 +112,17 @@ object AquaCompiler extends LogSupport {
         "Semantic error"
     }
 
+  def targetToBackend(target: CompileTarget): Backend = {
+    target match {
+      case TypescriptTarget =>
+        TypeScriptBackend
+      case JavaScriptTarget =>
+        JavaScriptBackend
+      case AirTarget =>
+        AirBackend
+    }
+  }
+
   def compileFilesTo[F[_]: Files: Concurrent](
     srcPath: Path,
     imports: LazyList[Path],
@@ -136,89 +141,47 @@ object AquaCompiler extends LogSupport {
         case Validated.Invalid(e) =>
           Applicative[F].pure(Validated.invalid(e))
         case Validated.Valid(preps) =>
-          (compileTo match {
-            case TypescriptTarget =>
-              preps.map { p =>
-                p.targetPath("ts") match {
-                  case Invalid(t) =>
-                    EitherT.pure(t.getMessage)
-                  case Valid(tp) =>
-                    writeFile(tp, TypescriptFile(p.context).generateTS(bodyConfig)).flatTap { _ =>
-                      EitherT.pure(
-                        Validated.catchNonFatal(
-                          info(
-                            s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
-                          )
-                        )
-                      )
-                    }
-                }
-
-              }
-
-            case JavaScriptTarget =>
-              preps.map { p =>
-                p.targetPath("js") match {
-                  case Invalid(t) =>
-                    EitherT.pure(t.getMessage)
-                  case Valid(tp) =>
-                    writeFile(tp, JavaScriptFile(p.context).generateJS(bodyConfig)).flatTap { _ =>
-                      EitherT.pure(
-                        Validated.catchNonFatal(
-                          info(
-                            s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
-                          )
-                        )
-                      )
-                    }
-                }
-
-              }
-
-            // TODO add function name to AirTarget class
-            case AirTarget =>
-              preps
-                .flatMap(p =>
-                  Chain
-                    .fromSeq(p.context.funcs.values.toSeq)
-                    .map(fc => fc.funcName -> FuncAirGen(fc).generateAir(bodyConfig).show)
-                    .map { case (fnName, generated) =>
-                      val tpV = p.targetPath(fnName + ".air")
-                      tpV match {
-                        case Invalid(t) =>
-                          EitherT.pure(t.getMessage)
-                        case Valid(tp) =>
-                          writeFile(
-                            tp,
-                            generated
-                          ).flatTap { _ =>
-                            EitherT.pure(
-                              Validated.catchNonFatal(
-                                info(
-                                  s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
-                                )
-                              )
-                            )
-                          }
-                      }
-                    }
+          val backend = targetToBackend(compileTo)
+          preps
+            .flatMap(p =>
+              Chain.fromSeq(backend.generate(p.context, bodyConfig)).map { compiled =>
+                val tpV = p.targetPath(
+                  p.modFile.getFileName.toString.stripSuffix(".aqua") + compiled.suffix
                 )
-
-          }).foldLeft(
-            EitherT.rightT[F, NonEmptyChain[String]](Chain.empty[String])
-          ) { case (accET, writeET) =>
-            EitherT(for {
-              a <- accET.value
-              w <- writeET.value
-            } yield (a, w) match {
-              case (Left(errs), Left(err)) => Left(errs :+ err)
-              case (Right(res), Right(_)) => Right(res)
-              case (Left(errs), _) => Left(errs)
-              case (_, Left(err)) => Left(NonEmptyChain.of(err))
-            })
-          }.value
+                tpV match {
+                  case Invalid(t) =>
+                    EitherT.pure(t.getMessage)
+                  case Valid(tp) =>
+                    writeFile(
+                      tp,
+                      compiled.content
+                    ).flatTap { _ =>
+                      EitherT.pure(
+                        Validated.catchNonFatal(
+                          info(
+                            s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
+                          )
+                        )
+                      )
+                    }
+                }
+              }
+            )
+            .foldLeft(
+              EitherT.rightT[F, NonEmptyChain[String]](Chain.empty[String])
+            ) { case (accET, writeET) =>
+              EitherT(for {
+                a <- accET.value
+                w <- writeET.value
+              } yield (a, w) match {
+                case (Left(errs), Left(err)) => Left(errs :+ err)
+                case (Right(res), Right(_)) => Right(res)
+                case (Left(errs), _) => Left(errs)
+                case (_, Left(err)) => Left(NonEmptyChain.of(err))
+              })
+            }
+            .value
             .map(Validated.fromEither)
-
       }
   }
 
