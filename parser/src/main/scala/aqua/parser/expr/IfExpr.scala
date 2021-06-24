@@ -18,6 +18,8 @@ object IfExpr extends Expr.AndIndented {
       CallArrowExpr ::
       AbilityIdExpr ::
       AssignmentExpr ::
+      Expr.defer(ParExpr) ::
+      Expr.defer(CoExpr) ::
       Expr.defer(TryExpr) ::
       Expr.defer(ForExpr) ::
       Expr.defer(IfExpr) ::

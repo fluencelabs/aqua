@@ -35,12 +35,16 @@ sealed trait NoExecTag extends RawTag
 
 sealed trait GroupTag extends RawTag
 sealed trait SeqGroupTag extends GroupTag
+sealed trait ParGroupTag extends GroupTag
 
 case object SeqTag extends SeqGroupTag
-case object ParTag extends GroupTag
+
+case object ParTag extends ParGroupTag {
+  case object Detach extends ParGroupTag
+}
 
 case object XorTag extends SeqGroupTag {
-  case object LeftBiased extends GroupTag
+  case object LeftBiased extends SeqGroupTag
 }
 case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag
 

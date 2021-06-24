@@ -42,6 +42,7 @@ object Token {
   val `try`: P[Unit] = P.string("try")
   val `catch`: P[Unit] = P.string("catch")
   val `par`: P[Unit] = P.string("par")
+  val `co`: P[Unit] = P.string("co")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
 

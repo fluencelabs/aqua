@@ -64,6 +64,9 @@ object FuncOps {
           .map(FuncOp(_))
       )
 
+  def co(ops: FuncOp*): FuncOp =
+    FuncOp.wrap(ParTag.Detach, seq(ops: _*))
+
   def xor(left: FuncOp, right: FuncOp): FuncOp =
     FuncOp.node(XorTag, Chain(left, right))
 

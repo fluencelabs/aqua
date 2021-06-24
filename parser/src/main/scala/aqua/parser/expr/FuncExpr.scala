@@ -30,6 +30,7 @@ object FuncExpr extends Expr.AndIndented {
       ElseOtherwiseExpr ::
       CatchExpr ::
       ParExpr ::
+      CoExpr ::
       DeclareStreamExpr ::
       Nil
 
