@@ -18,7 +18,7 @@ object PathFinder extends LogSupport {
       !isExit &&
         to.leftSiblings.isEmpty &&
         to.moveUp.exists(_.pathOn == to.pathOn) &&
-        !to.parentTag.contains(ParTag)
+        !to.parentTag.exists(_.isInstanceOf[ParGroupTag])
 
     if (wasHandled) {
       debug("Was handled")

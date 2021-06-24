@@ -44,14 +44,14 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
   lazy val lastExecuted: Option[RawCursor] = tag match {
     case XorTag => toFirstChild.flatMap(_.lastExecuted)
     case _: SeqGroupTag => toLastChild.flatMap(_.lastExecuted)
-    case ParTag => None
+    case _: ParGroupTag => None
     case _: NoExecTag => None
     case _ => Some(this)
   }
 
   lazy val firstExecuted: Option[RawCursor] = tag match {
     case _: SeqGroupTag => toLastChild.flatMap(_.lastExecuted)
-    case ParTag => None
+    case _: ParGroupTag => None
     case _: NoExecTag => None
     case _ => Some(this)
   }
@@ -95,7 +95,7 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
     }
 
   lazy val pathToNext: Chain[ValueModel] = parentTag.fold(Chain.empty[ValueModel]) {
-    case ParTag =>
+    case _: ParGroupTag =>
       val exports = FuncOp(current).exportsVarNames.value
       if (exports.nonEmpty && checkNamesUsedLater(exports))
         seqNext.fold(Chain.empty[ValueModel])(nxt =>
