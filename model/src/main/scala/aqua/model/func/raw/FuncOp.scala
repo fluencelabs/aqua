@@ -111,7 +111,8 @@ object FuncOp {
   object RightAssocSemi extends Semigroup[FuncOp] {
 
     override def combine(x: FuncOp, y: FuncOp): FuncOp = (x.tree.head, y.tree.head) match {
-      case (ParTag, ParTag) => FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
+      case (_: ParGroupTag, ParTag) =>
+        FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
       case (XorTag, XorTag) =>
         FuncOp(y.tree.copy(tail = (x.tree.tail, y.tree.tail).mapN(_ ++ _)))
       case (XorTag.LeftBiased, XorTag) =>
