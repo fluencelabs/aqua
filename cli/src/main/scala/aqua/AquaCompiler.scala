@@ -186,21 +186,23 @@ object AquaCompiler extends LogSupport {
   def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, Unit] =
     EitherT
       .right[String](Files[F].deleteIfExists(file))
-      .map(_ =>
-        fs2.Stream
-          .emit(
-            content
-          )
-          .through(text.utf8Encode)
-          .through(Files[F].writeAll(file))
-          .attempt
-          .map { e =>
-            e.left
-              .map(t => s"Error on writing file $file" + t)
-          }
-          .compile
-          .drain
-          .map(_ => Right(()))
+      .flatMap(_ =>
+        EitherT[F, String, Unit](
+          fs2.Stream
+            .emit(
+              content
+            )
+            .through(text.utf8Encode)
+            .through(Files[F].writeAll(file))
+            .attempt
+            .map { e =>
+              e.left
+                .map(t => s"Error on writing file $file" + t)
+            }
+            .compile
+            .drain
+            .map(_ => Right(()))
+        )
       )
 
 }
