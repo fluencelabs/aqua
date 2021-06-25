@@ -11,11 +11,11 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
   "cli" should "compile aqua code in js" in {
     val src = Paths.get("./cli/src/test/aqua")
     val targetTs = Paths.get("./cli/src/test/compiled/ts")
-    if (Files.exists(targetTs)) Files.createDirectory(targetTs)
+    if (!Files.exists(targetTs)) Files.createDirectory(targetTs)
     val targetJs = Paths.get("./cli/src/test/compiled/js")
-    if (Files.exists(targetJs)) Files.createDirectory(targetJs)
+    if (!Files.exists(targetJs)) Files.createDirectory(targetJs)
     val targetAir = Paths.get("./cli/src/test/compiled/air")
-    if (Files.exists(targetAir)) Files.createDirectory(targetAir)
+    if (!Files.exists(targetAir)) Files.createDirectory(targetAir)
 
     val bc = BodyConfig()
     AquaCompiler
