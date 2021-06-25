@@ -4,7 +4,7 @@ import aqua.backend.Backend
 import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
-import aqua.io.{AquaFileError, AquaFiles, FileModuleId, Unresolvable}
+import aqua.io._
 import aqua.linker.Linker
 import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
@@ -17,7 +17,6 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.{Applicative, Monad}
 import fs2.io.file.Files
-import fs2.text
 import wvlet.log.LogSupport
 
 import java.nio.file.Path
@@ -114,16 +113,16 @@ object AquaCompiler extends LogSupport {
   }
 
   private def gatherResults[F[_]: Monad](
-    results: Chain[EitherT[F, String, Unit]]
+    results: List[EitherT[F, String, Unit]]
   ): F[Validated[NonEmptyChain[String], Chain[String]]] = {
     results
       .foldLeft(
         EitherT.rightT[F, NonEmptyChain[String]](Chain.empty[String])
       ) { case (accET, writeET) =>
         EitherT(for {
-          a <- accET.value
-          w <- writeET.value
-        } yield (a, w) match {
+          acc <- accET.value
+          writeResult <- writeET.value
+        } yield (acc, writeResult) match {
           case (Left(errs), Left(err)) => Left(errs :+ err)
           case (Right(res), Right(_)) => Right(res)
           case (Left(errs), _) => Left(errs)
@@ -153,9 +152,9 @@ object AquaCompiler extends LogSupport {
           Applicative[F].pure(Validated.invalid(e))
         case Validated.Valid(preps) =>
           val backend = targetToBackend(compileTo)
-          val results: Chain[EitherT[F, String, Unit]] = preps
+          val results = preps.toList
             .flatMap(p =>
-              Chain.fromSeq(backend.generate(p.context, bodyConfig)).map { compiled =>
+              backend.generate(p.context, bodyConfig).map { compiled =>
                 val targetPath = p.targetPath(
                   p.srcFile.getFileName.toString.stripSuffix(".aqua") + compiled.suffix
                 )
@@ -163,18 +162,20 @@ object AquaCompiler extends LogSupport {
                 targetPath.fold(
                   t => EitherT.leftT[F, Unit](t.getMessage),
                   tp =>
-                    writeFile(
-                      tp,
-                      compiled.content
-                    ).flatTap { _ =>
-                      EitherT.pure(
-                        Validated.catchNonFatal(
-                          info(
-                            s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
+                    FileOps
+                      .writeFile(
+                        tp,
+                        compiled.content
+                      )
+                      .flatTap { _ =>
+                        EitherT.pure(
+                          Validated.catchNonFatal(
+                            info(
+                              s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
+                            )
                           )
                         )
-                      )
-                    }
+                      }
                 )
               }
             )
@@ -182,27 +183,5 @@ object AquaCompiler extends LogSupport {
           gatherResults(results)
       }
   }
-
-  def writeFile[F[_]: Files: Concurrent](file: Path, content: String): EitherT[F, String, Unit] =
-    EitherT
-      .right[String](Files[F].deleteIfExists(file))
-      .flatMap(_ =>
-        EitherT[F, String, Unit](
-          fs2.Stream
-            .emit(
-              content
-            )
-            .through(text.utf8Encode)
-            .through(Files[F].writeAll(file))
-            .attempt
-            .map { e =>
-              e.left
-                .map(t => s"Error on writing file $file" + t)
-            }
-            .compile
-            .drain
-            .map(_ => Right(()))
-        )
-      )
 
 }
