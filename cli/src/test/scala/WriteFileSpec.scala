@@ -10,12 +10,9 @@ import java.nio.file.{Files, Paths}
 class WriteFileSpec extends AnyFlatSpec with Matchers {
   "cli" should "compile aqua code in js" in {
     val src = Paths.get("./cli/src/test/aqua")
-    val targetTs = Paths.get("./cli/src/test/compiled/ts")
-    if (!Files.exists(targetTs)) Files.createDirectory(targetTs)
-    val targetJs = Paths.get("./cli/src/test/compiled/js")
-    if (!Files.exists(targetJs)) Files.createDirectory(targetJs)
-    val targetAir = Paths.get("./cli/src/test/compiled/air")
-    if (!Files.exists(targetAir)) Files.createDirectory(targetAir)
+    val targetTs = Files.createTempDirectory("ts")
+    val targetJs = Files.createTempDirectory("js")
+    val targetAir = Files.createTempDirectory("air")
 
     val bc = BodyConfig()
     AquaCompiler
