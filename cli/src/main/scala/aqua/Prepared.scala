@@ -8,6 +8,13 @@ import java.nio.file.Path
 
 object Prepared {
 
+  /**
+   * @param srcFile aqua source
+   * @param srcPath a main source path with all aqua files
+   * @param targetPath a main path where all output files will be written
+   * @param context processed aqua code
+   * @return
+   */
   def apply(
     srcFile: Path,
     srcPath: Path,
@@ -31,7 +38,13 @@ object Prepared {
     }
 }
 
-case class Prepared(targetDir: Path, srcFile: Path, context: AquaContext) {
+/**
+ * All info that can be used to write a final output.
+ * @param targetDir a directory to write to
+ * @param srcFile file with a source (aqua code)
+ * @param context processed code
+ */
+case class Prepared private (targetDir: Path, srcFile: Path, context: AquaContext) {
 
   def hasOutput(target: CompileTarget): Boolean = target match {
     case _ => context.funcs.nonEmpty

@@ -27,7 +27,7 @@ object AquaCompiler extends LogSupport {
   case object JavaScriptTarget extends CompileTarget
   case object AirTarget extends CompileTarget
 
-  private def gatherPrepared(
+  private def gatherPreparedFiles(
     srcPath: Path,
     targetPath: Path,
     files: Map[FileModuleId, ValidatedNec[SemanticError[FileSpan.F], AquaContext]]
@@ -56,6 +56,9 @@ object AquaCompiler extends LogSupport {
       .fold(Validated.validNec[String, Chain[Prepared]](preps))(Validated.invalid)
   }
 
+  /**
+   * Create a structure that will be used to create output by a backend
+   */
   def prepareFiles[F[_]: Files: Concurrent](
     srcPath: Path,
     imports: LazyList[Path],
@@ -78,7 +81,7 @@ object AquaCompiler extends LogSupport {
             ids => Unresolvable(ids.map(_.id.file.toString).mkString(" -> "))
           ) match {
             case Validated.Valid(files) ⇒
-              gatherPrepared(srcPath, targetPath, files)
+              gatherPreparedFiles(srcPath, targetPath, files)
 
             case Validated.Invalid(errs) ⇒
               Validated.invalid(
