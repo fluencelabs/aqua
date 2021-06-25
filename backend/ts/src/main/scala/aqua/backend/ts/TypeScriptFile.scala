@@ -4,16 +4,16 @@ import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
 import cats.data.Chain
 
-case class TypescriptFile(context: AquaContext) {
+case class TypeScriptFile(context: AquaContext) {
 
-  def funcs: Chain[TypescriptFunc] =
-    Chain.fromSeq(context.funcs.values.toSeq).map(TypescriptFunc(_))
+  def funcs: Chain[TypeScriptFunc] =
+    Chain.fromSeq(context.funcs.values.toSeq).map(TypeScriptFunc(_))
 
   def generateTS(conf: BodyConfig = BodyConfig()): String =
-    TypescriptFile.Header + "\n\n" + funcs.map(_.generateTypescript(conf)).toList.mkString("\n\n")
+    TypeScriptFile.Header + "\n\n" + funcs.map(_.generateTypescript(conf)).toList.mkString("\n\n")
 }
 
-object TypescriptFile {
+object TypeScriptFile {
 
   val Header: String =
     s"""/**

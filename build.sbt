@@ -55,7 +55,7 @@ lazy val cli = project
       "com.monovore"  %% "decline-enumeratum" % declineEnumV
     )
   )
-  .dependsOn(semantics, `backend-air`, `backend-ts`, `backend-js`, linker)
+  .dependsOn(semantics, `backend-air`, `backend-ts`, `backend-js`, linker, backend)
 
 lazy val types = project
   .settings(commons)
@@ -94,6 +94,7 @@ lazy val model = project
   .dependsOn(types)
 
 lazy val `test-kit` = project
+  .in(file("model/test-kit"))
   .settings(commons: _*)
   .dependsOn(model)
 
@@ -107,10 +108,15 @@ lazy val semantics = project
   )
   .dependsOn(model, `test-kit` % Test, parser)
 
+lazy val backend = project
+  .in(file("backend"))
+  .settings(commons: _*)
+  .dependsOn(model)
+
 lazy val `backend-air` = project
   .in(file("backend/air"))
   .settings(commons: _*)
-  .dependsOn(model)
+  .dependsOn(backend)
 
 lazy val `backend-ts` = project
   .in(file("backend/ts"))

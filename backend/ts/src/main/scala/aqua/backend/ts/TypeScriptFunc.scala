@@ -7,9 +7,9 @@ import aqua.types._
 import cats.syntax.functor._
 import cats.syntax.show._
 
-case class TypescriptFunc(func: FuncCallable) {
+case class TypeScriptFunc(func: FuncCallable) {
 
-  import TypescriptFunc._
+  import TypeScriptFunc._
 
   def argsTypescript: String =
     func.args.args.map(ad => s"${ad.name}: " + typeToTs(ad.`type`)).mkString(", ")
@@ -25,7 +25,7 @@ case class TypescriptFunc(func: FuncCallable) {
 
   def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
 
-    val tsAir = FuncAirGen(func).generateClientAir(conf)
+    val tsAir = FuncAirGen(func).generateAir(conf)
 
     val returnCallback = func.ret.as {
       s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
@@ -102,7 +102,7 @@ case class TypescriptFunc(func: FuncCallable) {
 
 }
 
-object TypescriptFunc {
+object TypeScriptFunc {
 
   def typeToTs(t: Type): String = t match {
     case OptionType(t) => typeToTs(t) + " | null"

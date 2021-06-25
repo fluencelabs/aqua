@@ -1,0 +1,18 @@
+service CustomId("cid"):
+  id() -> string
+
+func first(node_id: string, viaAr: []string) -> string:
+    on node_id via viaAr:
+        p <- CustomId.id()
+    <- p
+
+
+func second(node_id: string, viaStr: *string) -> string:
+    on node_id via viaStr:
+        p <- CustomId.id()
+    <- p
+
+func third(relay: string, node_id: string, viaOpt: ?string) -> string:
+    on node_id via viaOpt:
+        p <- CustomId.id()
+    <- p

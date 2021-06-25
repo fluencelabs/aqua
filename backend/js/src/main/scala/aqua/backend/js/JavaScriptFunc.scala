@@ -16,7 +16,7 @@ case class JavaScriptFunc(func: FuncCallable) {
 
   def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
 
-    val tsAir = FuncAirGen(func).generateClientAir(conf)
+    val tsAir = FuncAirGen(func).generateAir(conf)
 
     val returnCallback = func.ret.as {
       s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
@@ -86,8 +86,7 @@ case class JavaScriptFunc(func: FuncCallable) {
 object JavaScriptFunc {
 
   def argsToTs(at: ArrowType): String =
-    at.args
-      .zipWithIndex
+    at.args.zipWithIndex
       .map(_.swap)
       .map(kv => "arg" + kv._1)
       .mkString(", ")

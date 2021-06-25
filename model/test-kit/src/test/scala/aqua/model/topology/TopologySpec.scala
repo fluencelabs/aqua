@@ -4,7 +4,7 @@ import aqua.Node
 import aqua.model.VarModel
 import aqua.model.func.Call
 import aqua.model.func.raw.FuncOps
-import aqua.model.func.resolved.{MakeRes, ResolvedOp, SeqRes, XorRes}
+import aqua.model.func.resolved.{MakeRes, ResolvedOp, XorRes}
 import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
@@ -295,31 +295,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(2, initPeer)
       )
 
-//    println(Console.BLUE + init)
-//    println(Console.YELLOW + proc)
-//    println(Console.MAGENTA + expected)
-//    println(Console.RESET)
-
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
   "topology resolver" should "not stackoverflow" in {
-    /*
-    OnTag(LiteralModel(%init_peer_id%,ScalarType(string)),Chain(VarModel(-relay-,ScalarType(string),Chain()))) {
-        SeqTag{
-          CallServiceTag(LiteralModel("getDataSrv",ScalarType(string)),-relay-,Call(List(),Some(Export(-relay-,ScalarType(string)))),None)
-          CallServiceTag(LiteralModel("getDataSrv",ScalarType(string)),node_id,Call(List(),Some(Export(node_id,ScalarType(string)))),None)
-          CallServiceTag(LiteralModel("getDataSrv",ScalarType(string)),viaAr,Call(List(),Some(Export(viaAr,[]ScalarType(string)))),None)
-          OnTag(VarModel(node_id,ScalarType(string),Chain()),Chain(VarModel(viaAr,[]ScalarType(string),Chain()))) {
-            CallServiceTag(LiteralModel("cid",Literal(string)),ids,Call(List(),Some(Export(p,ScalarType(string)))),None)
-          }
-          OnTag(LiteralModel(%init_peer_id%,ScalarType(string)),Chain(VarModel(-relay-,ScalarType(string),Chain()))) {
-            CallServiceTag(LiteralModel("callbackSrv",ScalarType(string)),response,Call(List(VarModel(p,ScalarType(string),Chain())),None),None)
-          }
-        }
-      }
-
-     */
     val init = on(
       initPeer,
       relay :: Nil,
@@ -394,11 +373,6 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(3, initPeer)
       )
 
-//    println(Console.BLUE + init)
-//    println(Console.YELLOW + proc)
-//    println(Console.MAGENTA + expected)
-//    println(Console.RESET)
-
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
@@ -452,11 +426,6 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         through(relay),
         callRes(4, initPeer)
       )
-
-//    println(Console.BLUE + init)
-    println(Console.YELLOW + proc)
-    println(Console.MAGENTA + expected)
-    println(Console.RESET)
 
     Node.equalsOrPrintDiff(proc, expected) should be(true)
   }
