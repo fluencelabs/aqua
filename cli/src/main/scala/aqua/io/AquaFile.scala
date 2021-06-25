@@ -10,7 +10,6 @@ import cats.effect.Concurrent
 import cats.syntax.apply._
 import cats.syntax.functor._
 import fs2.io.file.Files
-import fs2.text
 
 import java.nio.file.{Path, Paths}
 
@@ -54,36 +53,25 @@ case class AquaFile(
 
 object AquaFile {
 
-  def readSourceText[F[_]: Files: Concurrent](
+  def readAst[F[_]: Files: Concurrent](
     file: Path
-  ): fs2.Stream[F, Either[AquaFileError, String]] =
-    Files[F]
-      .readAll(file, 4096)
-      .fold(Vector.empty[Byte])((acc, b) => acc :+ b)
-      // TODO fix for comment on last line in air
-      // TODO should be fixed by parser
-      .map(_.appendedAll("\n\r".getBytes))
-      .flatMap(fs2.Stream.emits)
-      .through(text.utf8Decode)
-      .attempt
+  ): fs2.Stream[F, Either[AquaFileError, (String, Ast[FileSpan.F])]] =
+    FileOps
+      .readSourceText[F](file)
       .map {
         _.left
           .map(t => FileSystemError(t))
       }
-
-  def readAst[F[_]: Files: Concurrent](
-    file: Path
-  ): fs2.Stream[F, Either[AquaFileError, (String, Ast[FileSpan.F])]] =
-    readSourceText[F](file).map(
-      _.flatMap(source =>
-        Aqua
-          .parseFileString(file.toString, source)
-          .map(source -> _)
-          .toEither
-          .left
-          .map(AquaScriptErrors(_))
+      .map(
+        _.flatMap(source =>
+          Aqua
+            .parseFileString(file.toString, source)
+            .map(source -> _)
+            .toEither
+            .left
+            .map(AquaScriptErrors(_))
+        )
       )
-    )
 
   def read[F[_]: Files: Concurrent](file: Path): EitherT[F, AquaFileError, AquaFile] =
     EitherT(readAst[F](file).compile.last.map(_.getOrElse(Left(EmptyFileError(file))))).map {

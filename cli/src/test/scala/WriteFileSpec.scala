@@ -18,6 +18,11 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
     AquaCompiler
       .compileFilesTo[IO](src, LazyList.empty, targetTs, AquaCompiler.TypescriptTarget, bc)
       .unsafeRunSync()
+      .leftMap { err =>
+        println(err)
+        err
+      }
+      .isValid should be(true)
     val targetTsFile = targetTs.resolve("test.ts")
     targetTsFile.toFile.exists() should be(true)
     Files.deleteIfExists(targetTsFile)
@@ -25,6 +30,11 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
     AquaCompiler
       .compileFilesTo[IO](src, LazyList.empty, targetJs, AquaCompiler.JavaScriptTarget, bc)
       .unsafeRunSync()
+      .leftMap { err =>
+        println(err)
+        err
+      }
+      .isValid should be(true)
     val targetJsFile = targetJs.resolve("test.js")
     targetJsFile.toFile.exists() should be(true)
     Files.deleteIfExists(targetJsFile)
@@ -32,6 +42,11 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
     AquaCompiler
       .compileFilesTo[IO](src, LazyList.empty, targetAir, AquaCompiler.AirTarget, bc)
       .unsafeRunSync()
+      .leftMap { err =>
+        println(err)
+        err
+      }
+      .isValid should be(true)
     val targetAirFileFirst = targetAir.resolve("test.first.air")
     val targetAirFileSecond = targetAir.resolve("test.second.air")
     val targetAirFileThird = targetAir.resolve("test.third.air")

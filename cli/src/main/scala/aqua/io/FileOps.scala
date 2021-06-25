@@ -1,7 +1,7 @@
 package aqua.io
 
 import cats.data.EitherT
-import cats.effect.kernel.Concurrent
+import cats.effect.Concurrent
 import cats.implicits.toFunctorOps
 import fs2.io.file.Files
 import fs2.text
@@ -31,4 +31,17 @@ object FileOps {
             .map(_ => Right(()))
         )
       )
+
+  def readSourceText[F[_]: Files: Concurrent](
+    file: Path
+  ): fs2.Stream[F, Either[Throwable, String]] =
+    Files[F]
+      .readAll(file, 4096)
+      .fold(Vector.empty[Byte])((acc, b) => acc :+ b)
+      // TODO fix for comment on last line in air
+      // TODO should be fixed by parser
+      .map(_.appendedAll("\n\r".getBytes))
+      .flatMap(fs2.Stream.emits)
+      .through(text.utf8Decode)
+      .attempt
 }
