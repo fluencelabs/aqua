@@ -94,6 +94,7 @@ lazy val model = project
   .dependsOn(types)
 
 lazy val `test-kit` = project
+  .in(file("model/test-kit"))
   .settings(commons: _*)
   .dependsOn(model)
 
