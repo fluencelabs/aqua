@@ -17,7 +17,7 @@ object Test extends IOApp.Simple {
     AquaCompiler
       .compileFilesTo[IO](
         Paths.get("./aqua-src"),
-        LazyList(Paths.get("./aqua")),
+        List(Paths.get("./aqua")),
         Paths.get("./target"),
         AquaCompiler.TypescriptTarget,
         BodyConfig()

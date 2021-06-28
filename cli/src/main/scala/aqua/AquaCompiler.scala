@@ -61,14 +61,14 @@ object AquaCompiler extends LogSupport {
    */
   def prepareFiles[F[_]: Files: Concurrent](
     srcPath: Path,
-    imports: LazyList[Path],
+    imports: List[Path],
     targetPath: Path
   )(implicit aqum: Monoid[AquaContext]): F[ValidatedNec[String, Chain[Prepared]]] =
     AquaFiles
       .readAndResolve[F, ValidatedNec[SemanticError[FileSpan.F], AquaContext]](
         srcPath,
         imports,
-        ast => _.andThen(ctx => Semantics.process(ast, ctx))
+        ast => context => context.andThen(ctx => Semantics.process(ast, ctx))
       )
       .value
       .map {
@@ -138,7 +138,7 @@ object AquaCompiler extends LogSupport {
 
   def compileFilesTo[F[_]: Files: Concurrent](
     srcPath: Path,
-    imports: LazyList[Path],
+    imports: List[Path],
     targetPath: Path,
     compileTo: CompileTarget,
     bodyConfig: BodyConfig

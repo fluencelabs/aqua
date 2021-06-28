@@ -9,17 +9,18 @@ case class Modules[I, E, T](
   exports: Set[I] = Set.empty[I]
 ) {
 
-  def add(m: AquaModule[I, E, T], export: Boolean = false): Modules[I, E, T] =
-    if (loaded.contains(m.id)) this
+  def add(aquaModule: AquaModule[I, E, T], export: Boolean = false): Modules[I, E, T] =
+    if (loaded.contains(aquaModule.id)) this
     else
       copy(
-        loaded = loaded + (m.id -> m),
-        dependsOn = m.dependsOn.foldLeft(dependsOn - m.id) {
-          case (deps, (mId, _)) if loaded.contains(mId) || mId == m.id => deps
-          case (deps, (mId, err)) =>
-            deps.updatedWith(mId)(_.fold(NonEmptyChain.one(err))(_.append(err)).some)
+        loaded = loaded + (aquaModule.id -> aquaModule),
+        dependsOn = aquaModule.dependsOn.foldLeft(dependsOn - aquaModule.id) {
+          case (deps, (moduleId, _)) if loaded.contains(moduleId) || moduleId == aquaModule.id =>
+            deps
+          case (deps, (moduleId, err)) =>
+            deps.updatedWith(moduleId)(_.fold(NonEmptyChain.one(err))(_.append(err)).some)
         },
-        exports = if (export) exports + m.id else exports
+        exports = if (export) exports + aquaModule.id else exports
       )
 
   def isResolved: Boolean = dependsOn.isEmpty
