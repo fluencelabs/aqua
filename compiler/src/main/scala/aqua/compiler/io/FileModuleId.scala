@@ -1,4 +1,4 @@
-package aqua.io
+package aqua.compiler.io
 
 import aqua.parser.lift.FileSpan
 import cats.data.EitherT

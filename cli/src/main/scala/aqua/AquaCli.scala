@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.compiler.AquaCompiler
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id

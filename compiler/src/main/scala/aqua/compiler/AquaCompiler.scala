@@ -1,10 +1,10 @@
-package aqua
+package aqua.compiler
 
 import aqua.backend.Backend
 import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
-import aqua.io._
+import aqua.compiler.io._
 import aqua.linker.Linker
 import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig

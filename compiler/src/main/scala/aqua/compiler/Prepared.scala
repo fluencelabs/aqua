@@ -1,6 +1,6 @@
-package aqua
+package aqua.compiler
 
-import aqua.AquaCompiler.CompileTarget
+import aqua.compiler.AquaCompiler.CompileTarget
 import aqua.model.AquaContext
 import cats.data.Validated
 

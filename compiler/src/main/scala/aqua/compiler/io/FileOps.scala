@@ -1,4 +1,4 @@
-package aqua.io
+package aqua.compiler.io
 
 import cats.data.EitherT
 import cats.effect.Concurrent

@@ -1,12 +1,12 @@
-package aqua.io
+package aqua.compiler.io
 
-import aqua.io.AquaFiles.ETC
+import aqua.compiler.io.AquaFiles.ETC
+import aqua.compiler.{CustomSyntaxError, SyntaxError}
 import aqua.linker.AquaModule
 import aqua.parser.head.ImportExpr
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, LiftParser, Span}
 import aqua.parser.{Ast, BlockIndentError, FuncReturnError, LexerError}
-import aqua.{CustomSyntaxError, SyntaxError}
 import cats.Eval
 import cats.data.{EitherT, NonEmptyChain}
 import cats.effect.Concurrent
@@ -52,6 +52,7 @@ case class AquaFile(
     val resolvedImports = imports.map { case (pathString, focus) =>
       FileModuleId
         .resolve(focus, Paths.get(pathString), id.file.getParent +: importFrom)
+        // 'FileNotFound' will be used later if there will be problems in compilation
         .map(id => (id -> FileNotFound(focus, id.file, importFrom)))
     }
 

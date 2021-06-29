@@ -20,6 +20,8 @@ val declineV = "2.0.0-RC1" // Scala3 issue: https://github.com/bkirwi/decline/is
 val declineEnumV = "1.3.0"
 
 val airframeLog = "org.wvlet.airframe" %% "airframe-log" % airframeLogV
+val catsEffect = "org.typelevel"       %% "cats-effect"  % catsEffectV
+val fs2Io = "co.fs2"                   %% "fs2-io"       % fs2V
 
 name := "aqua-hll"
 
@@ -44,18 +46,18 @@ lazy val cli = project
     assembly / mainClass       := Some("aqua.AquaCli"),
     assembly / assemblyJarName := "aqua-cli-" + version.value + ".jar",
     libraryDependencies ++= Seq(
-      "com.monovore"  %% "decline"            % declineV,
-      "com.monovore"  %% "decline-effect"     % declineV,
-      "org.typelevel" %% "cats-effect"        % catsEffectV,
-      "co.fs2"        %% "fs2-core"           % fs2V,
-      "co.fs2"        %% "fs2-io"             % fs2V,
+      "com.monovore" %% "decline"        % declineV,
+      "com.monovore" %% "decline-effect" % declineV,
+      catsEffect,
+      "co.fs2" %% "fs2-core" % fs2V,
+      fs2Io,
       "org.typelevel" %% "log4cats-slf4j"     % log4catsV,
       "com.beachape"  %% "enumeratum"         % enumeratumV,
       "org.slf4j"      % "slf4j-jdk14"        % slf4jV,
       "com.monovore"  %% "decline-enumeratum" % declineEnumV
     )
   )
-  .dependsOn(semantics, `backend-air`, `backend-ts`, `backend-js`, linker, backend, compiler)
+  .dependsOn(semantics, linker, backend, compiler)
 
 lazy val types = project
   .settings(commons)
@@ -111,7 +113,13 @@ lazy val semantics = project
 lazy val compiler = project
   .in(file("compiler"))
   .settings(commons: _*)
-  .dependsOn(model)
+  .settings(
+    libraryDependencies ++= Seq(
+      catsEffect,
+      fs2Io
+    )
+  )
+  .dependsOn(model, semantics, linker, backend, `backend-air`, `backend-ts`, `backend-js`)
 
 lazy val backend = project
   .in(file("backend"))

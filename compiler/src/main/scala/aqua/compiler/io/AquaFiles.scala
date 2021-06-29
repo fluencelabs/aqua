@@ -1,4 +1,4 @@
-package aqua.io
+package aqua.compiler.io
 
 import aqua.linker.Modules
 import aqua.parser.Ast

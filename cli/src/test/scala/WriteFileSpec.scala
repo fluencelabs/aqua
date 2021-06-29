@@ -1,4 +1,4 @@
-import aqua.AquaCompiler
+import aqua.compiler.AquaCompiler
 import aqua.model.transform.BodyConfig
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global

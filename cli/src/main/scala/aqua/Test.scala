@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.compiler.AquaCompiler
 import aqua.model.transform.BodyConfig
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
