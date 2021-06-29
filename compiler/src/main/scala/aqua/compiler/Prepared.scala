@@ -1,6 +1,5 @@
 package aqua.compiler
 
-import aqua.compiler.AquaCompiler.CompileTarget
 import aqua.model.AquaContext
 import cats.data.Validated
 
@@ -46,9 +45,7 @@ object Prepared {
  */
 case class Prepared private (targetDir: Path, srcFile: Path, context: AquaContext) {
 
-  def hasOutput(target: CompileTarget): Boolean = target match {
-    case _ => context.funcs.nonEmpty
-  }
+  def hasOutput: Boolean = context.funcs.nonEmpty
 
   def targetPath(fileName: String): Validated[Throwable, Path] =
     Validated.catchNonFatal {

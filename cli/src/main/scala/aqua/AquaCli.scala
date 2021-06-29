@@ -1,6 +1,11 @@
 package aqua
 
+import aqua.backend.Backend
+import aqua.backend.air.AirBackend
+import aqua.backend.js.JavaScriptBackend
+import aqua.backend.ts.TypeScriptBackend
 import aqua.compiler.AquaCompiler
+import aqua.compiler.AquaCompiler.{AirTarget, CompileTarget, JavaScriptTarget, TypescriptTarget}
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
@@ -28,6 +33,17 @@ object CustomLogFormatter extends LogFormatter {
 
 object AquaCli extends IOApp with LogSupport {
   import AppOps._
+
+  def targetToBackend(target: CompileTarget): Backend = {
+    target match {
+      case TypescriptTarget =>
+        TypeScriptBackend
+      case JavaScriptTarget =>
+        JavaScriptBackend
+      case AirTarget =>
+        AirBackend
+    }
+  }
 
   def main[F[_]: Concurrent: Files: ConsoleEff: Logger]: Opts[F[ExitCode]] = {
     versionOpt
@@ -69,7 +85,7 @@ object AquaCli extends IOApp with LogSupport {
               input,
               imports,
               output,
-              target,
+              targetToBackend(target),
               bc
             )
             .map {

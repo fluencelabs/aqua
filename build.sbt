@@ -55,7 +55,7 @@ lazy val cli = project
       "com.monovore"  %% "decline-enumeratum" % declineEnumV
     )
   )
-  .dependsOn(compiler)
+  .dependsOn(compiler, `backend-air`, `backend-ts`, `backend-js`)
 
 lazy val types = project
   .settings(commons)
@@ -117,7 +117,7 @@ lazy val compiler = project
       fs2Io
     )
   )
-  .dependsOn(model, semantics, linker, backend, `backend-air`, `backend-ts`, `backend-js`)
+  .dependsOn(model, semantics, linker, backend)
 
 lazy val backend = project
   .in(file("backend"))

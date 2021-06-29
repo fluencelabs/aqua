@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.backend.ts.TypeScriptBackend
 import aqua.compiler.AquaCompiler
 import aqua.model.transform.BodyConfig
 import cats.data.Validated
@@ -20,7 +21,7 @@ object Test extends IOApp.Simple {
         Paths.get("./aqua-src"),
         List(Paths.get("./aqua")),
         Paths.get("./target"),
-        AquaCompiler.TypescriptTarget,
+        TypeScriptBackend,
         BodyConfig()
       )
       .map {
