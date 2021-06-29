@@ -49,8 +49,6 @@ lazy val cli = project
       "com.monovore" %% "decline"        % declineV,
       "com.monovore" %% "decline-effect" % declineV,
       catsEffect,
-      "co.fs2" %% "fs2-core" % fs2V,
-      fs2Io,
       "org.typelevel" %% "log4cats-slf4j"     % log4catsV,
       "com.beachape"  %% "enumeratum"         % enumeratumV,
       "org.slf4j"      % "slf4j-jdk14"        % slf4jV,
