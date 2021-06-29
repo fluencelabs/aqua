@@ -17,10 +17,6 @@ import wvlet.log.LogSupport
 import java.nio.file.Path
 
 object AquaCompiler extends LogSupport {
-  sealed trait CompileTarget
-  case object TypescriptTarget extends CompileTarget
-  case object JavaScriptTarget extends CompileTarget
-  case object AirTarget extends CompileTarget
 
   private def gatherPreparedFiles(
     srcPath: Path,

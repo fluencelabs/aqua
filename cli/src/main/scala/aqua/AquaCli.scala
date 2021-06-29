@@ -5,7 +5,6 @@ import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.compiler.{AquaCompiler, AquaIO}
-import aqua.compiler.AquaCompiler.{AirTarget, CompileTarget, JavaScriptTarget, TypescriptTarget}
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
@@ -33,6 +32,11 @@ object CustomLogFormatter extends LogFormatter {
 
 object AquaCli extends IOApp with LogSupport {
   import AppOps._
+
+  sealed trait CompileTarget
+  case object TypescriptTarget extends CompileTarget
+  case object JavaScriptTarget extends CompileTarget
+  case object AirTarget extends CompileTarget
 
   def targetToBackend(target: CompileTarget): Backend = {
     target match {
@@ -74,9 +78,9 @@ object AquaCli extends IOApp with LogSupport {
         // otherwise continue program execution
         h.map(_ => helpAndExit) orElse v.map(_ => versionAndExit) getOrElse {
           val target =
-            if (toAir) AquaCompiler.AirTarget
-            else if (toJs) AquaCompiler.JavaScriptTarget
-            else AquaCompiler.TypescriptTarget
+            if (toAir) AirTarget
+            else if (toJs) JavaScriptTarget
+            else TypescriptTarget
           val bc = {
             val bc = BodyConfig(wrapWithXor = !noXor, constants = constants)
             bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
