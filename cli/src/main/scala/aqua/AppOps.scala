@@ -61,7 +61,7 @@ object AppOps {
   val outputOpts: Opts[Path] =
     Opts.option[Path]("output", "Path to the output directory", "o").mapValidated(checkPath)
 
-  val importOpts: Opts[LazyList[Path]] =
+  val importOpts: Opts[List[Path]] =
     Opts
       .options[Path]("import", "Path to the directory to import from", "m")
       .mapValidated { ps =>
@@ -91,9 +91,9 @@ object AppOps {
         }.traverse {
           case Valid(a) => Validated.validNel(a)
           case Invalid(e) => Validated.invalidNel(e)
-        }.map(_.to(LazyList))
+        }
       }
-      .withDefault(LazyList.empty)
+      .withDefault(List.empty)
 
   def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[Constant]] =
     Opts

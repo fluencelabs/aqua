@@ -1,4 +1,4 @@
-package aqua
+package aqua.compiler
 
 import aqua.parser.lift.FileSpan
 import cats.data.NonEmptyList

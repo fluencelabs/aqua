@@ -1,5 +1,7 @@
 package aqua
 
+import aqua.backend.ts.TypeScriptBackend
+import aqua.compiler.AquaCompiler
 import aqua.model.transform.BodyConfig
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
@@ -17,9 +19,9 @@ object Test extends IOApp.Simple {
     AquaCompiler
       .compileFilesTo[IO](
         Paths.get("./aqua-src"),
-        LazyList(Paths.get("./aqua")),
+        List(Paths.get("./aqua")),
         Paths.get("./target"),
-        AquaCompiler.TypescriptTarget,
+        TypeScriptBackend,
         BodyConfig()
       )
       .map {

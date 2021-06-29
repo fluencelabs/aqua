@@ -1,10 +1,7 @@
-package aqua
+package aqua.compiler
 
 import aqua.backend.Backend
-import aqua.backend.air.AirBackend
-import aqua.backend.js.JavaScriptBackend
-import aqua.backend.ts.TypeScriptBackend
-import aqua.io._
+import aqua.compiler.io._
 import aqua.linker.Linker
 import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
@@ -61,14 +58,14 @@ object AquaCompiler extends LogSupport {
    */
   def prepareFiles[F[_]: Files: Concurrent](
     srcPath: Path,
-    imports: LazyList[Path],
+    imports: List[Path],
     targetPath: Path
   )(implicit aqum: Monoid[AquaContext]): F[ValidatedNec[String, Chain[Prepared]]] =
     AquaFiles
       .readAndResolve[F, ValidatedNec[SemanticError[FileSpan.F], AquaContext]](
         srcPath,
         imports,
-        ast => _.andThen(ctx => Semantics.process(ast, ctx))
+        ast => context => context.andThen(ctx => Semantics.process(ast, ctx))
       )
       .value
       .map {
@@ -104,17 +101,6 @@ object AquaCompiler extends LogSupport {
         "Semantic error"
     }
 
-  def targetToBackend(target: CompileTarget): Backend = {
-    target match {
-      case TypescriptTarget =>
-        TypeScriptBackend
-      case JavaScriptTarget =>
-        JavaScriptBackend
-      case AirTarget =>
-        AirBackend
-    }
-  }
-
   private def gatherResults[F[_]: Monad](
     results: List[EitherT[F, String, Unit]]
   ): F[Validated[NonEmptyChain[String], Chain[String]]] = {
@@ -138,15 +124,15 @@ object AquaCompiler extends LogSupport {
 
   def compileFilesTo[F[_]: Files: Concurrent](
     srcPath: Path,
-    imports: LazyList[Path],
+    imports: List[Path],
     targetPath: Path,
-    compileTo: CompileTarget,
+    backend: Backend,
     bodyConfig: BodyConfig
   ): F[ValidatedNec[String, Chain[String]]] = {
     import bodyConfig.aquaContextMonoid
     prepareFiles(srcPath, imports, targetPath)
       .map(_.map(_.filter { p =>
-        val hasOutput = p.hasOutput(compileTo)
+        val hasOutput = p.hasOutput
         if (!hasOutput) info(s"Source ${p.srcFile}: compilation OK (nothing to emit)")
         hasOutput
       }))
@@ -154,7 +140,6 @@ object AquaCompiler extends LogSupport {
         case Validated.Invalid(e) =>
           Applicative[F].pure(Validated.invalid(e))
         case Validated.Valid(preps) =>
-          val backend = targetToBackend(compileTo)
           val results = preps.toList
             .flatMap(p =>
               backend.generate(p.context, bodyConfig).map { compiled =>

@@ -1,6 +1,6 @@
-package aqua.io
+package aqua.compiler.io
 
-import aqua.AquaError
+import aqua.compiler.AquaError
 import aqua.parser.lift.FileSpan
 import cats.data.NonEmptyChain
 

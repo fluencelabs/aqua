@@ -1,4 +1,4 @@
-package aqua.io
+package aqua.compiler.io
 
 import aqua.linker.Modules
 import aqua.parser.Ast
@@ -58,13 +58,13 @@ object AquaFiles {
           }
       )
 
-  def sourceModules[F[_]: Concurrent, T](
+  def createModules[F[_]: Concurrent, T](
     sources: Chain[AquaFile],
-    importFromPaths: LazyList[Path],
+    importFromPaths: List[Path],
     transpile: Ast[FileSpan.F] => T => T
   ): ETC[F, Mods[T]] =
     sources
-      .map(_.module(transpile, importFromPaths))
+      .map(_.createModule(transpile, importFromPaths))
       .foldLeft[ETC[F, Mods[T]]](
         EitherT.rightT(Modules())
       ) { case (modulesF, modF) =>
@@ -76,14 +76,14 @@ object AquaFiles {
 
   def resolveModules[F[_]: Files: Concurrent, T](
     modules: Modules[FileModuleId, AquaFileError, T],
-    importFromPaths: LazyList[Path],
+    importFromPaths: List[Path],
     transpile: Ast[FileSpan.F] => T => T
   ): ETC[F, Mods[T]] =
     modules.dependsOn.map { case (moduleId, unresolvedErrors) =>
       AquaFile
         .read[F](moduleId.file)
         .leftMap(unresolvedErrors.prepend)
-        .flatMap(_.module(transpile, importFromPaths))
+        .flatMap(_.createModule(transpile, importFromPaths))
 
     }.foldLeft[ETC[F, Mods[T]]](
       EitherT.rightT(modules)
@@ -100,13 +100,13 @@ object AquaFiles {
 
   def readAndResolve[F[_]: Files: Concurrent, T](
     sourcePath: Path,
-    importFromPaths: LazyList[Path],
+    importFromPaths: List[Path],
     transpile: Ast[FileSpan.F] => T => T
   ): ETC[F, Mods[T]] =
     for {
-      srcs <- readSources(sourcePath)
-      srcMods <- sourceModules(srcs, importFromPaths, transpile)
-      resMods <- resolveModules(srcMods, importFromPaths, transpile)
-    } yield resMods
+      sources <- readSources(sourcePath)
+      sourceModules <- createModules(sources, importFromPaths, transpile)
+      resolvedModules <- resolveModules(sourceModules, importFromPaths, transpile)
+    } yield resolvedModules
 
 }

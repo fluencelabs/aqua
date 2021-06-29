@@ -1,4 +1,4 @@
-package aqua.io
+package aqua.compiler.io
 
 import aqua.parser.lift.FileSpan
 import cats.data.EitherT
@@ -7,12 +7,12 @@ import cats.syntax.applicative._
 
 import java.nio.file.Path
 
-case class FileModuleId(file: Path) {}
+case class FileModuleId(file: Path)
 
 object FileModuleId {
 
   private def findFirstF[F[_]: Concurrent](
-    in: LazyList[Path],
+    in: List[Path],
     notFound: EitherT[F, AquaFileError, FileModuleId]
   ): EitherT[F, AquaFileError, FileModuleId] =
     in.headOption.fold(notFound)(p =>
@@ -31,10 +31,13 @@ object FileModuleId {
         }
     )
 
+  /**
+   * Checks if a file existed in the list of possible paths
+   */
   def resolve[F[_]: Concurrent](
     focus: FileSpan.Focus,
     src: Path,
-    imports: LazyList[Path]
+    imports: List[Path]
   ): EitherT[F, AquaFileError, FileModuleId] =
     findFirstF(
       imports
