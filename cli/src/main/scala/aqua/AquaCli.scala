@@ -4,7 +4,7 @@ import aqua.backend.Backend
 import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
-import aqua.compiler.AquaCompiler
+import aqua.compiler.{AquaCompiler, AquaIO}
 import aqua.compiler.AquaCompiler.{AirTarget, CompileTarget, JavaScriptTarget, TypescriptTarget}
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
@@ -67,6 +67,8 @@ object AquaCli extends IOApp with LogSupport {
       case (input, imports, output, toAir, toJs, noRelay, noXor, h, v, logLevel, constants) =>
         WLogger.setDefaultLogLevel(LogLevel.toLogLevel(logLevel))
         WLogger.setDefaultFormatter(CustomLogFormatter)
+
+        implicit val aio: AquaIO[F] = new AquaFilesIO[F]
 
         // if there is `--help` or `--version` flag - show help and version
         // otherwise continue program execution
