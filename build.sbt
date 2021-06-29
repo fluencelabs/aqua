@@ -57,7 +57,7 @@ lazy val cli = project
       "com.monovore"  %% "decline-enumeratum" % declineEnumV
     )
   )
-  .dependsOn(semantics, linker, backend, compiler)
+  .dependsOn(compiler)
 
 lazy val types = project
   .settings(commons)
