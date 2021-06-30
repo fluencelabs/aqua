@@ -78,7 +78,7 @@ object AquaFile {
             FileSpan(
               name,
               input,
-              Eval.later(LocationMap(input)),
+              Eval.later(LocationMap(input)).memoize,
               Span(pe.failedAtOffset, pe.failedAtOffset + 1)
             )
           SyntaxError(fileSpan, pe.expected)
