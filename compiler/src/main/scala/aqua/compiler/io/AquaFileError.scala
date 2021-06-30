@@ -29,6 +29,10 @@ case class FileSystemError(err: Throwable) extends Exception(err) with AquaFileE
   override def showForConsole: String = s"File system error: ${err.getMessage}"
 }
 
+case class FileWriteError(file: Path, err: Throwable) extends Exception(err) with AquaFileError {
+  override def showForConsole: String = s"Cannot write a file $file: ${err.getMessage}"
+}
+
 case class Unresolvable(msg: String) extends AquaFileError {
   override def showForConsole: String = s"Unresolvable: $msg"
 }

@@ -22,6 +22,8 @@ val declineEnumV = "1.3.0"
 val airframeLog = "org.wvlet.airframe" %% "airframe-log" % airframeLogV
 val catsEffect = "org.typelevel"       %% "cats-effect"  % catsEffectV
 val fs2Io = "co.fs2"                   %% "fs2-io"       % fs2V
+val catsFree = "org.typelevel"         %% "cats-free"    % catsV
+val cats = "org.typelevel"             %% "cats-core"    % catsV
 
 name := "aqua-hll"
 
@@ -49,6 +51,7 @@ lazy val cli = project
       "com.monovore" %% "decline"        % declineV,
       "com.monovore" %% "decline-effect" % declineV,
       catsEffect,
+      fs2Io,
       "org.typelevel" %% "log4cats-slf4j"     % log4catsV,
       "com.beachape"  %% "enumeratum"         % enumeratumV,
       "org.slf4j"      % "slf4j-jdk14"        % slf4jV,
@@ -61,7 +64,7 @@ lazy val types = project
   .settings(commons)
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % catsV
+      cats
     )
   )
 
@@ -70,7 +73,7 @@ lazy val parser = project
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-parse" % catsParseV,
-      "org.typelevel" %% "cats-free"  % catsV
+      catsFree
     )
   )
   .dependsOn(types)
@@ -79,7 +82,7 @@ lazy val linker = project
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.wvlet.airframe" %% "airframe-log" % airframeLogV
+      airframeLog
     )
   )
   .dependsOn(parser)
@@ -88,7 +91,7 @@ lazy val model = project
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-free" % catsV
+      catsFree
     )
   )
   .dependsOn(types)
@@ -111,13 +114,7 @@ lazy val semantics = project
 lazy val compiler = project
   .in(file("compiler"))
   .settings(commons: _*)
-  .settings(
-    libraryDependencies ++= Seq(
-      catsEffect,
-      fs2Io
-    )
-  )
-  .dependsOn(model, semantics, linker, backend)
+  .dependsOn(semantics, linker, backend)
 
 lazy val backend = project
   .in(file("backend"))

@@ -1,19 +1,17 @@
 package aqua.compiler.io
 
 import aqua.compiler.io.AquaFiles.ETC
-import aqua.compiler.{CustomSyntaxError, SyntaxError}
+import aqua.compiler.{AquaIO, CustomSyntaxError, SyntaxError}
 import aqua.linker.AquaModule
 import aqua.parser.head.ImportExpr
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, LiftParser, Span}
 import aqua.parser.{Ast, BlockIndentError, FuncReturnError, LexerError}
-import cats.Eval
+import cats.{Eval, Monad}
 import cats.data.{EitherT, NonEmptyChain}
-import cats.effect.Concurrent
 import cats.parse.LocationMap
 import cats.syntax.apply._
 import cats.syntax.functor._
-import fs2.io.file.Files
 
 import java.nio.file.{Path, Paths}
 import scala.collection.immutable
@@ -28,9 +26,9 @@ case class AquaFile(
   /**
    * Gathers all errors and results
    */
-  private def gatherResolvedResults[F[_]: Concurrent](
+  private def gatherResolvedResults[F[_]: Monad](
     results: immutable.Iterable[EitherT[F, AquaFileError, (FileModuleId, FileNotFound)]]
-  ): ETC[F, Map[FileModuleId, AquaFileError]] = {
+  ): ETC[F, Map[FileModuleId, AquaFileError]] =
     results
       .foldLeft[AquaFiles.ETC[F, Map[FileModuleId, AquaFileError]]](EitherT.rightT(Map())) {
         case (files, nextFile) =>
@@ -43,15 +41,15 @@ case class AquaFile(
               Left(errs.append(err))
           })
       }
-  }
 
-  def createModule[F[_]: Concurrent, T](
+  def createModule[F[_]: AquaIO: Monad, T](
     transpile: Ast[FileSpan.F] => T => T,
     importFrom: List[Path]
   ): AquaFiles.ETC[F, AquaModule[FileModuleId, AquaFileError, T]] = {
     val resolvedImports = imports.map { case (pathString, focus) =>
-      FileModuleId
+      AquaIO[F]
         .resolve(focus, Paths.get(pathString), id.file.getParent +: importFrom)
+        .map(FileModuleId)
         // 'FileNotFound' will be used later if there will be problems in compilation
         .map(id => (id -> FileNotFound(focus, id.file, importFrom)))
     }
@@ -90,22 +88,10 @@ object AquaFile {
       .map(AquaScriptErrors(_))
   }
 
-  def read[F[_]: Files: Concurrent](file: Path): EitherT[F, AquaFileError, AquaFile] = {
+  def read[F[_]: AquaIO: Monad](file: Path): EitherT[F, AquaFileError, AquaFile] =
     for {
-      sourceOp <- EitherT.right(
-        FileOps
-          .readSourceText[F](file)
-          .map {
-            _.left
-              .map(t => FileSystemError(t))
-          }
-          .compile
-          .last
-      )
-      source <- EitherT.fromEither(sourceOp.getOrElse(Left(EmptyFileError(file))))
-      _ <- EitherT.fromEither(
-        if (source.isEmpty) Left(EmptyFileError(file): AquaFileError) else Right(())
-      )
+      source <- AquaIO[F].readFile(file)
+      _ <- EitherT.cond[F](source.nonEmpty, (), EmptyFileError(file))
       ast <- EitherT.fromEither(parseAst(file.toString, source))
       imports = ast.head.tailForced
         .map(_.head)
@@ -119,13 +105,10 @@ object AquaFile {
         }
         .toList
         .toMap
-    } yield {
-      AquaFile(
-        FileModuleId(file.toAbsolutePath.normalize()),
-        imports,
-        source,
-        ast
-      )
-    }
-  }
+    } yield AquaFile(
+      FileModuleId(file.toAbsolutePath.normalize()),
+      imports,
+      source,
+      ast
+    )
 }

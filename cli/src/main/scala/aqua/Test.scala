@@ -1,7 +1,7 @@
 package aqua
 
 import aqua.backend.ts.TypeScriptBackend
-import aqua.compiler.AquaCompiler
+import aqua.compiler.{AquaCompiler, AquaIO}
 import aqua.model.transform.BodyConfig
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
@@ -14,6 +14,8 @@ object Test extends IOApp.Simple {
 
   implicit def logger[F[_]: Sync]: SelfAwareStructuredLogger[F] =
     Slf4jLogger.getLogger[F]
+
+  implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
   override def run: IO[Unit] =
     AquaCompiler

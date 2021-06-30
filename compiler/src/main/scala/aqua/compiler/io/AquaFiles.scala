@@ -1,64 +1,42 @@
 package aqua.compiler.io
 
+import aqua.compiler.AquaIO
 import aqua.linker.Modules
 import aqua.parser.Ast
 import aqua.parser.lift.FileSpan
-import cats.data.{Chain, EitherT, NonEmptyChain}
-import cats.effect.kernel.Concurrent
-import cats.syntax.apply._
-import fs2.io.file.Files
+import cats.Monad
+import cats.data.{Chain, EitherT, NonEmptyChain, Validated, ValidatedNec}
+import cats.syntax.functor._
+import cats.syntax.traverse._
+import cats.syntax.flatMap._
+import cats.syntax.applicative._
 
 import java.nio.file.Path
-import scala.util.Try
 
 object AquaFiles {
   type Mods[T] = Modules[FileModuleId, AquaFileError, T]
   type ETC[F[_], T] = EitherT[F, NonEmptyChain[AquaFileError], T]
 
-  def readSources[F[_]: Files: Concurrent](
+  def readSources[F[_]: AquaIO: Monad](
     sourcePath: Path
   ): ETC[F, Chain[AquaFile]] =
-    // TODO use effect instead of Try
-    EitherT
-      .fromEither[F](
-        Try {
-          val f = sourcePath.toFile
-          if (f.isDirectory) {
-            f.listFiles().toList
-          } else {
-            List(f)
-          }
-        }.toEither
-      )
-      .leftMap[AquaFileError](FileSystemError)
-      .leftMap(NonEmptyChain.one)
-      .flatMap(
-        _.collect {
-          case f if f.isFile && f.getName.endsWith(".aqua") =>
-            AquaFile
-              .read(f.toPath.toAbsolutePath.normalize())
-              .map(Chain(_))
+    EitherT(
+      AquaIO[F]
+        .listAqua(sourcePath)
+        .flatMap[ValidatedNec[AquaFileError, Chain[AquaFile]]] {
+          case Validated.Invalid(e) =>
+            Validated.invalid[NonEmptyChain[AquaFileError], Chain[AquaFile]](e).pure[F]
+          case Validated.Valid(paths) =>
+            paths
+              .traverse(AquaFile.read(_))
               .leftMap(NonEmptyChain.one)
-          case f if f.isDirectory =>
-            readSources(f.toPath)
+              .value
+              .map(Validated.fromEither)
         }
-          .foldLeft[ETC[F, Chain[AquaFile]]](
-            EitherT.rightT(Chain.empty)
-          ) { case (accF, nextF) =>
-            EitherT((accF.value, nextF.value).mapN {
-              case (Right(acc), Right(v)) =>
-                Right(acc ++ v)
-              case (Left(acc), Left(v)) =>
-                Left(acc ++ v)
-              case (Left(acc), _) =>
-                Left(acc)
-              case (_, Left(v)) =>
-                Left(v)
-            })
-          }
-      )
+        .map(_.toEither)
+    )
 
-  def createModules[F[_]: Concurrent, T](
+  def createModules[F[_]: AquaIO: Monad, T](
     sources: Chain[AquaFile],
     importFromPaths: List[Path],
     transpile: Ast[FileSpan.F] => T => T
@@ -74,7 +52,7 @@ object AquaFiles {
         } yield ms.add(m, export = true)
       }
 
-  def resolveModules[F[_]: Files: Concurrent, T](
+  def resolveModules[F[_]: AquaIO: Monad, T](
     modules: Modules[FileModuleId, AquaFileError, T],
     importFromPaths: List[Path],
     transpile: Ast[FileSpan.F] => T => T
@@ -98,7 +76,7 @@ object AquaFiles {
       case ms => resolveModules(ms, importFromPaths, transpile)
     }
 
-  def readAndResolve[F[_]: Files: Concurrent, T](
+  def readAndResolve[F[_]: AquaIO: Monad, T](
     sourcePath: Path,
     importFromPaths: List[Path],
     transpile: Ast[FileSpan.F] => T => T

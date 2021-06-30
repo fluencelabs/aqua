@@ -8,21 +8,15 @@ import aqua.model.transform.BodyConfig
 import aqua.parser.lift.FileSpan
 import aqua.semantics.{RulesViolated, SemanticError, Semantics}
 import cats.data._
-import cats.effect.kernel.Concurrent
 import cats.kernel.Monoid
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.{Applicative, Monad}
-import fs2.io.file.Files
 import wvlet.log.LogSupport
 
 import java.nio.file.Path
 
 object AquaCompiler extends LogSupport {
-  sealed trait CompileTarget
-  case object TypescriptTarget extends CompileTarget
-  case object JavaScriptTarget extends CompileTarget
-  case object AirTarget extends CompileTarget
 
   private def gatherPreparedFiles(
     srcPath: Path,
@@ -56,7 +50,7 @@ object AquaCompiler extends LogSupport {
   /**
    * Create a structure that will be used to create output by a backend
    */
-  def prepareFiles[F[_]: Files: Concurrent](
+  def prepareFiles[F[_]: AquaIO: Monad](
     srcPath: Path,
     imports: List[Path],
     targetPath: Path
@@ -103,7 +97,7 @@ object AquaCompiler extends LogSupport {
 
   private def gatherResults[F[_]: Monad](
     results: List[EitherT[F, String, Unit]]
-  ): F[Validated[NonEmptyChain[String], Chain[String]]] = {
+  ): F[ValidatedNec[String, Chain[String]]] = {
     results
       .foldLeft(
         EitherT.rightT[F, NonEmptyChain[String]](Chain.empty[String])
@@ -122,7 +116,7 @@ object AquaCompiler extends LogSupport {
       .map(Validated.fromEither)
   }
 
-  def compileFilesTo[F[_]: Files: Concurrent](
+  def compileFilesTo[F[_]: AquaIO: Monad](
     srcPath: Path,
     imports: List[Path],
     targetPath: Path,
@@ -150,11 +144,8 @@ object AquaCompiler extends LogSupport {
                 targetPath.fold(
                   t => EitherT.leftT[F, Unit](t.getMessage),
                   tp =>
-                    FileOps
-                      .writeFile(
-                        tp,
-                        compiled.content
-                      )
+                    AquaIO[F]
+                      .writeFile(tp, compiled.content)
                       .flatTap { _ =>
                         EitherT.pure(
                           Validated.catchNonFatal(
@@ -164,6 +155,7 @@ object AquaCompiler extends LogSupport {
                           )
                         )
                       }
+                      .leftMap(_.showForConsole)
                 )
               }
             )
