@@ -43,12 +43,15 @@ case class JavaScriptFunc(func: FuncCallable) {
     val returnVal =
       func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
+    val configArgName ="config"
+
     s"""
        |export async function ${func.funcName}(client${if (func.args.isEmpty) ""
-    else ", "}${argsJavaScript}) {
+    else ", "}${argsJavaScript}, $configArgName) {
        |    let request;
+       |    $configArgName = $configArgName || {};
        |    const promise = new Promise((resolve, reject) => {
-       |        request = new RequestFlowBuilder()
+       |        var r = new RequestFlowBuilder()
        |            .disableInjections()
        |            .withRawScript(
        |                `
@@ -73,7 +76,10 @@ case class JavaScriptFunc(func: FuncCallable) {
        |            .handleTimeout(() => {
        |                reject('Request timed out for ${func.funcName}');
        |            })
-       |            .build();
+       |        if(${configArgName}.ttl) {
+       |            r.withTTL(${configArgName}.ttl)
+       |        }
+       |        request = r.build();
        |    });
        |    await client.initiateFlow(request);
        |    return ${returnVal};
