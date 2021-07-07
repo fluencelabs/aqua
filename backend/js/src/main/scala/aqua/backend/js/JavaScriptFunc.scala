@@ -43,13 +43,16 @@ case class JavaScriptFunc(func: FuncCallable) {
     val returnVal =
       func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
+    val configArgName ="config"
+
     s"""
        |export async function ${func.funcName}(client${if (func.args.isEmpty) ""
-    else ", "}${argsJavaScript}) {
+    else ", "}${argsJavaScript}, $configArgName) {
        |    let request;
        |    const promise = new Promise((resolve, reject) => {
        |        request = new RequestFlowBuilder()
        |            .disableInjections()
+       |            .withTTL($configArgName?.ttl || 7000)
        |            .withRawScript(
        |                `
        |${tsAir.show}

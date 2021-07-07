@@ -68,7 +68,7 @@ case class TypeScriptFunc(func: FuncCallable) {
        |    const promise = new Promise<$retType>((resolve, reject) => {
        |        request = new RequestFlowBuilder()
        |            .disableInjections()
-       |            .withTTL($configArgName?.ttl || 5000)
+       |            .withTTL($configArgName?.ttl || 7000)
        |            .withRawScript(
        |                `
        |${tsAir.show}
