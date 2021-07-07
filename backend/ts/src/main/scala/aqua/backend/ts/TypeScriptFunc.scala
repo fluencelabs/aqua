@@ -66,9 +66,8 @@ case class TypeScriptFunc(func: FuncCallable) {
     else ", "}${argsTypescript}, $configArgName?: $configType): Promise<$retType> {
        |    let request: RequestFlow;
        |    const promise = new Promise<$retType>((resolve, reject) => {
-       |        request = new RequestFlowBuilder()
+       |        const r = new RequestFlowBuilder()
        |            .disableInjections()
-       |            .withTTL($configArgName?.ttl || 7000)
        |            .withRawScript(
        |                `
        |${tsAir.show}
@@ -92,7 +91,10 @@ case class TypeScriptFunc(func: FuncCallable) {
        |            .handleTimeout(() => {
        |                reject('Request timed out for ${func.funcName}');
        |            })
-       |            .build();
+       |        if(${configArgName}?.ttl) {
+       |            r.withTTL(${configArgName}.ttl)
+       |        }
+       |        request = r.build();
        |    });
        |    await $clientArgName.initiateFlow(request!);
        |    return ${returnVal};
