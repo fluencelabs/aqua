@@ -49,10 +49,12 @@ case class JavaScriptFunc(func: FuncCallable) {
        |export async function ${func.funcName}(client${if (func.args.isEmpty) ""
     else ", "}${argsJavaScript}, $configArgName) {
        |    let request;
+       |    $configArgName = $configArgName || {};
+       |    $configArgName.ttl = $configArgName.ttl || 7000;
        |    const promise = new Promise((resolve, reject) => {
        |        request = new RequestFlowBuilder()
        |            .disableInjections()
-       |            .withTTL($configArgName?.ttl || 7000)
+       |            .withTTL($configArgName.ttl)
        |            .withRawScript(
        |                `
        |${tsAir.show}
