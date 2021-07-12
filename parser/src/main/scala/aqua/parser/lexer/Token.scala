@@ -45,6 +45,7 @@ object Token {
   val `co`: P[Unit] = P.string("co")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
+  val `anum_*` : P[Unit] = P.charsWhile(anum_).void
 
   val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).string
 
