@@ -63,43 +63,6 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
   }
 
-  "transform.forClient" should "work with this case" in {
-    val ret = LiteralModel.quote("res1")
-
-    val export0 = Some(Call.Export("res1", ScalarType.string))
-    val call0 = callTag(0, export0)
-    val body = FuncOps.seq(call0, on(otherRelay, Nil, on(otherPeer, Nil, callTag(1))))
-
-    val func: FuncCallable = FuncCallable(
-      "ret",
-      body,
-      ArgsDef.empty,
-      Some((ret, ScalarType.string)),
-      Map.empty,
-      Map.empty
-    )
-
-    val bc = BodyConfig(wrapWithXor = false)
-
-    val fc = Transform.forClient(func, bc)
-
-    val procFC: Res = fc
-
-    val expectedFC: Res =
-      MakeRes.seq(
-        dataCall(bc, "-relay-", initPeer),
-        callRes(0, initPeer),
-        through(relayV),
-        through(otherRelay),
-        callRes(1, otherPeer),
-        through(otherRelay),
-        through(relayV),
-        respCall(bc, ret, initPeer)
-      )
-
-    procFC.equalsOrPrintDiff(expectedFC) should be(true)
-  }
-
   "transform.forClient" should "work well with function 2 (with a call before on)" in {
 
     val ret = LiteralModel.quote("return this")
