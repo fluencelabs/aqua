@@ -1,13 +1,11 @@
 package aqua.model.transform
 
-import aqua.model.{ValueModel, VarModel}
-import aqua.model.func.{ArgDef, ArgsCall, ArgsDef, Call, FuncCallable}
 import aqua.model.func.raw.{FuncOp, FuncOps}
+import aqua.model.func._
+import aqua.model.{ValueModel, VarModel}
 import aqua.types.ArrowType
 import cats.Eval
 import cats.syntax.apply._
-import cats.syntax.functor._
-import wvlet.log.Logger
 
 case class ResolveFunc(
   transform: FuncOp => FuncOp,
@@ -16,9 +14,6 @@ case class ResolveFunc(
   wrapCallableName: String = "funcAround",
   arrowCallbackPrefix: String = "init_peer_callable_"
 ) {
-
-  private val logger = Logger.of[ResolveFunc]
-  import logger._
 
   def returnCallback(retModel: ValueModel): FuncOp =
     callback(

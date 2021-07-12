@@ -1,9 +1,11 @@
 service OpH("op"):
-  puk(s: string) -> string
-  pek(s: string, -- trgtr
-      c: string) -> string
+  str() -> string
+  brr(s: string) -> string
 
-func a(c: string):
-    false_value <- OpH.pek("TRY THIS", -- gtrg
-            c)
-    OpH.puk(false_value)
+
+func a(testn: string) -> string:
+    res <- OpH.str()
+    on testn:
+        on res:
+          OpH.str()
+    <- res
