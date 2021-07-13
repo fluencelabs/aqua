@@ -5,6 +5,13 @@ service OpH("op"):
   identity: ⊤ -> ⊥
   pok: []bool -> string
 
+func onTest(b: string, c: string) -> string:
+    res <- OpH.puk(b)
+    on b:
+      on c:
+        OpH.pek(b, c)
+    <- res
+
 func a( -- ferkjn
   b: string, -- fr
   c: string, -- asdf
