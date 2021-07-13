@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.types.{ProductType, ScalarType, Type}
+import aqua.types.{DataType, ProductType, ScalarType, StreamType, Type}
 import cats.Eq
 import cats.data.{Chain, NonEmptyMap}
 import wvlet.log.LogSupport
@@ -109,5 +109,10 @@ object VarModel {
         "peer_id" -> ScalarType.string
       )
     )
+  )
+
+  val nil: VarModel = VarModel(
+    "nil",
+    StreamType(DataType.Bottom)
   )
 }

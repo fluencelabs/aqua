@@ -37,6 +37,18 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     accepts(f32, LiteralType.number) should be(true)
   }
 
+  "top type" should "accept anything" in {
+    accepts(DataType.Top, u64) should be(true)
+    accepts(DataType.Top, LiteralType.bool) should be(true)
+    accepts(DataType.Top, `*`(u64)) should be(true)
+  }
+
+  "bottom type" should "be accepted by everything" in {
+    accepts(u64, DataType.Bottom) should be(true)
+    accepts(LiteralType.bool, DataType.Bottom) should be(true)
+    accepts(`*`(u64), DataType.Bottom) should be(true)
+  }
+
   "arrays of scalars" should "be variant" in {
     (`[]`(u32): Type) <= u32 should be(false)
     (`[]`(u32): Type) >= u32 should be(false)
@@ -55,8 +67,8 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     val two: Type = ProductType("two", NonEmptyMap.of("field" -> u64, "other" -> string))
     val three: Type = ProductType("three", NonEmptyMap.of("field" -> u32))
 
-    one < two should be(true)
-    two > one should be(true)
+    accepts(one, two) should be(true)
+    accepts(two, one) should be(false)
     PartialOrder[Type].eqv(one, three) should be(true)
   }
 

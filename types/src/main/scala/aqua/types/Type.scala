@@ -15,6 +15,11 @@ sealed trait Type {
 }
 sealed trait DataType extends Type
 
+object DataType {
+  case object Top extends DataType
+  case object Bottom extends DataType
+}
+
 case class ScalarType private (name: String) extends DataType {
   override def toString: String = name
 }
@@ -137,19 +142,21 @@ object Type {
         lf.toSortedMap.toList.map(_._2),
         rf.toSortedMap.view.filterKeys(lf.keys.contains).toList.map(_._2)
       ) == -1.0
-    ) -1.0
+    ) 1.0
     else if (
       rf.keys.forall(lf.contains) && cmpTypesList(
         lf.toSortedMap.view.filterKeys(rf.keys.contains).toList.map(_._2),
         rf.toSortedMap.toList.map(_._2)
       ) == 1.0
-    ) 1.0
+    ) -1.0
     else NaN
 
   private def cmp(l: Type, r: Type): Double =
     if (l == r) 0.0
     else
       (l, r) match {
+        case (DataType.Top, _: DataType) | (_: DataType, DataType.Bottom) => 1.0
+        case (DataType.Bottom, _: DataType) | (_: DataType, DataType.Top) => -1.0
         case (x: ScalarType, y: ScalarType) => ScalarType.scalarOrder.partialCompare(x, y)
         case (LiteralType(xs, _), y: ScalarType) if xs == Set(y) => 0.0
         case (LiteralType(xs, _), y: ScalarType) if xs(y) => -1.0

@@ -1,11 +1,33 @@
 service OpH("op"):
-  str() -> string
-  brr(s: string) -> string
+  puk(s: string) -> string
+  pek(s: string, -- trgtr
+      c: string) -> string
+  identity: ⊤ -> ⊥
+  pok: []bool -> string
+
+func a( -- ferkjn
+  b: string, -- fr
+  c: string, -- asdf
+  g: string
+  ) -> string: -- rgtr
+
+  try:
+    f = "world"
+    OpH "planet"
+    OpH.pek("TRY THIS", -- gtrg
+            c)
+  catch err:
+    OpH.puk(err.msg)
+  <- f
+  -- hello
+
+func z(t: ?string, b: []u32, c: *bool):
+  OpH.puk(t!)
+  OpH.pyk(b)
+  OpH.pok(c)
+  c <- OpH.identity(true)
+  c <- OpH.identity("string")
 
 
-func a(testn: string) -> string:
-    res <- OpH.str()
-    on testn:
-        on res:
-          OpH.str()
-    <- res
+func k():
+  z(nil, nil, nil)
