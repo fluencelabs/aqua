@@ -50,6 +50,9 @@ case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag
 
 case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag {
 
+  lazy val fullPath: Chain[ValueModel] = via ++ Chain.one(peerId)
+  lazy val fullReversedPath: Chain[ValueModel] = Chain.one(peerId) ++ via.reverse
+
   override def toString: String =
     s"(on $peerId${if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""})"
 }

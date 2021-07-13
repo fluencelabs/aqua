@@ -90,17 +90,19 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   "topology resolver" should "create correct path" in {
-    val export0 = Some(Call.Export("res1", ScalarType.string))
-    val call0 = callTag(0, export0)
-    val init = FuncOps.seq(call0, on(otherRelay, Nil, on(otherPeer, Nil, callTag(1))))
+    val init = FuncOps.seq(
+      on(initPeer, Nil, callTag(0), on(otherRelay, Nil, on(otherPeer, Nil, callTag(1))), callTag(2))
+    )
 
     val proc: Node.Res = Topology.resolve(init.tree)
 
     val expected: Node.Res =
       MakeRes.seq(
-        callRes(0, initPeer, export0),
+        callRes(0, initPeer),
         through(otherRelay),
-        callRes(1, otherPeer)
+        callRes(1, otherPeer),
+        through(otherRelay),
+        callRes(2, initPeer)
       )
 
     Node.equalsOrPrintDiff(proc, expected) should be(true)
@@ -340,7 +342,6 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   "topology resolver" should "get back to init peer after a long chain" in {
-
     val init = on(
       initPeer,
       relay :: Nil,
