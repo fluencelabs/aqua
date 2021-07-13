@@ -14,6 +14,7 @@ import aqua.parser.lexer.{
   OptionTypeToken,
   StreamTypeToken,
   Token,
+  TopBottomToken,
   TypeToken
 }
 import aqua.types.{ArrayType, ArrowType, DataType, OptionType, ProductType, StreamType, Type}
@@ -30,6 +31,8 @@ case class TypesState[F[_]](
 
   def resolveTypeToken(tt: TypeToken[F]): Option[Type] =
     tt match {
+      case TopBottomToken(_, isTop) =>
+        Option(if (isTop) DataType.Top else DataType.Bottom)
       case ArrayTypeToken(_, dtt) =>
         resolveTypeToken(dtt).collect { case it: DataType =>
           ArrayType(it)
