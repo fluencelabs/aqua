@@ -1,6 +1,7 @@
 package aqua.model.transform
 
 import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
+import aqua.types.{DataType, OptionType}
 import cats.kernel.Monoid
 
 case class Constant(name: String, value: ValueModel)
@@ -26,7 +27,12 @@ case class BodyConfig(
     AquaContext
       .implicits(
         AquaContext.blank
-          .copy(values = Map(VarModel.lastError.name -> VarModel.lastError) ++ constantsMap)
+          .copy(values =
+            Map(
+              VarModel.lastError.name -> VarModel.lastError,
+              VarModel.nil.name -> VarModel.nil
+            ) ++ constantsMap
+          )
       )
       .aquaContextMonoid
   }

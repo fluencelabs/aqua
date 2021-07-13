@@ -2,6 +2,9 @@ service OpH("op"):
   puk(s: string) -> string
   pek(s: string, -- trgtr
       c: string) -> string
+  pyk: []u32 -> string
+  pok: []bool -> string
+  identity: ⊤ -> ⊥
 
 func a( -- ferkjn
   b: string, -- fr
@@ -18,3 +21,14 @@ func a( -- ferkjn
     OpH.puk(err.msg)
   <- f
   -- hello
+
+func z(t: ?string, b: []u32, c: *bool):
+  OpH.puk(t!)
+  OpH.pyk(b)
+  OpH.pok(c)
+  c <- OpH.identity(true)
+  c <- OpH.identity("string")
+
+
+func k():
+  z(nil, nil, nil)

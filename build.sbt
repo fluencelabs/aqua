@@ -28,7 +28,7 @@ val cats = "org.typelevel"             %% "cats-core"    % catsV
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.1.8",
+  baseAquaVersion := "0.1.9",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
