@@ -12,6 +12,12 @@ import cats.syntax.functor._
 sealed trait TypeToken[F[_]] extends Token[F]
 sealed trait DataTypeToken[F[_]] extends TypeToken[F]
 
+case class TopBottomToken[F[_]: Comonad](override val unit: F[Unit], isTop: Boolean)
+    extends DataTypeToken[F] {
+  override def as[T](v: T): F[T] = unit.as(v)
+  def isBottom: Boolean = !isTop
+}
+
 case class ArrayTypeToken[F[_]: Comonad](override val unit: F[Unit], data: DataTypeToken[F])
     extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = unit.as(v)
@@ -106,13 +112,17 @@ object DataTypeToken {
   def `arraytypedef`[F[_]: LiftParser: Comonad]: P[ArrayTypeToken[F]] =
     (`[]`.lift ~ `datatypedef`[F]).map(ud => ArrayTypeToken(ud._1, ud._2))
 
+  def `topbottomdef`[F[_]: LiftParser: Comonad]: P[TopBottomToken[F]] =
+    `⊥`.lift.map(TopBottomToken(_, isTop = false)) | `⊤`.lift.map(TopBottomToken(_, isTop = true))
+
   def `datatypedef`[F[_]: LiftParser: Comonad]: P[DataTypeToken[F]] =
     P.oneOf(
       P.defer(`arraytypedef`[F]) :: P.defer(StreamTypeToken.`streamtypedef`) :: P.defer(
         OptionTypeToken.`optiontypedef`
       ) :: BasicTypeToken
-        .`basictypedef`[F] :: CustomTypeToken.ct[F] :: Nil
+        .`basictypedef`[F] :: CustomTypeToken.ct[F] :: `topbottomdef` :: Nil
     )
+
 }
 
 object TypeToken {
