@@ -1,12 +1,12 @@
 package aqua.parser.lexer
 
-import org.scalatest.EitherValues
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.ScalarType
 import aqua.types.ScalarType.u32
 import cats.Id
+import org.scalatest.EitherValues
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.language.implicitConversions
 
@@ -27,6 +27,11 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     ArrowTypeToken.`arrowdef`.parseAll("A -> B").right.value should be(
       ArrowTypeToken[Id]((), CustomTypeToken[Id]("A") :: Nil, Some(CustomTypeToken[Id]("B")))
     )
+
+    ArrowTypeToken.`arrowWithNames`.parseAll("(a: A) -> B").right.value should be(
+      ArrowTypeToken[Id]((), CustomTypeToken[Id]("A") :: Nil, Some(CustomTypeToken[Id]("B")))
+    )
+
     ArrowTypeToken.`arrowdef`.parseAll("u32 -> Boo").right.value should be(
       ArrowTypeToken[Id]((), (u32: BasicTypeToken[Id]) :: Nil, Some(CustomTypeToken[Id]("Boo")))
     )

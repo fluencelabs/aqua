@@ -1,26 +1,27 @@
 package aqua.model.topology
 
-import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.model.func.raw._
-import cats.Eval
-import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
-import cats.data.Chain.nil
-import cats.free.Cofree
 import aqua.model.cursor.ChainZipper
+import aqua.model.func.raw._
 import aqua.model.func.resolved._
+import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{BoxType, ScalarType}
-import wvlet.log.LogSupport
+import cats.Eval
+import cats.data.Chain.nil
+import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
+import cats.free.Cofree
 import cats.syntax.traverse._
+import wvlet.log.LogSupport
 
 object Topology extends LogSupport {
   type Tree = Cofree[Chain, RawTag]
   type Res = Cofree[Chain, ResolvedOp]
 
-  def resolve(op: Tree): Res =
+  def resolve(op: Tree): Res = {
+    val resolved = resolveOnMoves(op).value
     Cofree
-      .cata[Chain, ResolvedOp, Res](resolveOnMoves(op).value) {
+      .cata[Chain, ResolvedOp, Res](resolved) {
         case (SeqRes, children) =>
-          Eval.later(
+          Eval.later {
             children.uncons
               .filter(_._2.isEmpty)
               .map(_._1)
@@ -33,10 +34,11 @@ object Topology extends LogSupport {
                   })
                 )
               )
-          )
+          }
         case (head, children) => Eval.later(Cofree(head, Eval.now(children)))
       }
       .value
+  }
 
   def wrap(cz: ChainZipper[Res]): Chain[Res] =
     Chain.one(
@@ -44,60 +46,64 @@ object Topology extends LogSupport {
       else cz.current
     )
 
-  def resolveOnMoves(op: Tree): Eval[Res] =
-    RawCursor(NonEmptyList.one(ChainZipper.one(op)))
+  private def rawToResolved(
+    currentPeerId: Option[ValueModel]
+  ): PartialFunction[RawTag, ResolvedOp] = {
+    case SeqTag => SeqRes
+    case _: OnTag => SeqRes
+    case MatchMismatchTag(a, b, s) => MatchMismatchRes(a, b, s)
+    case ForTag(item, iter) => FoldRes(item, iter)
+    case ParTag | ParTag.Detach => ParRes
+    case XorTag | XorTag.LeftBiased => XorRes
+    case NextTag(item) => NextRes(item)
+    case CallServiceTag(serviceId, funcName, call) =>
+      CallServiceRes(
+        serviceId,
+        funcName,
+        call,
+        currentPeerId
+          .getOrElse(LiteralModel.initPeerId)
+      )
+  }
+
+  def resolveOnMoves(op: Tree): Eval[Res] = {
+    val cursor = RawCursor(NonEmptyList.one(ChainZipper.one(op)))
+    val resolvedCofree = cursor
       .cata(wrap) { rc =>
         debug(s"<:> $rc")
-        OptionT[Eval, ChainZipper[Res]](
-          ({
-            case SeqTag => SeqRes
-            case _: OnTag => SeqRes
-            case MatchMismatchTag(a, b, s) => MatchMismatchRes(a, b, s)
-            case ForTag(item, iter) => FoldRes(item, iter)
-            case ParTag | ParTag.Detach => ParRes
-            case XorTag | XorTag.LeftBiased => XorRes
-            case NextTag(item) => NextRes(item)
-            case CallServiceTag(serviceId, funcName, call) =>
-              CallServiceRes(
-                serviceId,
-                funcName,
-                call,
-                rc.currentPeerId
-                  .getOrElse(LiteralModel.initPeerId)
-              )
-          }: PartialFunction[RawTag, ResolvedOp]).lift
-            .apply(rc.tag)
-            .map(MakeRes.leaf)
-            .traverse(c =>
-              Eval.later {
-                val cz = ChainZipper(
-                  through(rc.pathFromPrev),
-                  c,
-                  through(rc.pathToNext)
-                )
-                if (cz.next.nonEmpty || cz.prev.nonEmpty) {
-                  debug(s"Resolved   $rc -> $c")
-                  if (cz.prev.nonEmpty)
-                    trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
-                  if (cz.next.nonEmpty)
-                    trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
-                } else debug(s"EMPTY    $rc -> $c")
-                cz
-              }
+        val resolved = rawToResolved(rc.currentPeerId).lift
+          .apply(rc.tag)
+          .map(MakeRes.leaf)
+        val chainZipperEv = resolved.traverse(cofree =>
+          Eval.later {
+            val cz = ChainZipper(
+              through(rc.pathFromPrev),
+              cofree,
+              through(rc.pathToNext)
             )
+            if (cz.next.nonEmpty || cz.prev.nonEmpty) {
+              debug(s"Resolved   $rc -> $cofree")
+              if (cz.prev.nonEmpty)
+                trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
+              if (cz.next.nonEmpty)
+                trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
+            } else debug(s"EMPTY    $rc -> $cofree")
+            cz
+          }
         )
+        OptionT[Eval, ChainZipper[Res]](chainZipperEv)
+      }
 
-      }
-      .map(NonEmptyChain.fromChain(_).map(_.uncons))
-      .map {
-        case None =>
-          error("Topology emitted nothing")
-          Cofree(SeqRes, MakeRes.nilTail)
-        case Some((el, `nil`)) => el
-        case Some((el, tail)) =>
-          warn("Topology emitted many nodes, that's unusual")
-          Cofree(SeqRes, Eval.now(el +: tail))
-      }
+    resolvedCofree.map(NonEmptyChain.fromChain(_).map(_.uncons)).map {
+      case None =>
+        error("Topology emitted nothing")
+        Cofree(SeqRes, MakeRes.nilTail)
+      case Some((el, `nil`)) => el
+      case Some((el, tail)) =>
+        warn("Topology emitted many nodes, that's unusual")
+        Cofree(SeqRes, Eval.now(el +: tail))
+    }
+  }
 
   // Walks through peer IDs, doing a noop function on each
   // If same IDs are found in a row, does noop only once

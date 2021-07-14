@@ -323,7 +323,6 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   "topology resolver" should "get back to init peer after a long chain" in {
-
     val init = on(
       initPeer,
       relay :: Nil,
