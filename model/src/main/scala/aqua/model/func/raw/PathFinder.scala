@@ -57,14 +57,6 @@ object PathFinder extends LogSupport {
     skipSuffix(noPrefix, suffix, noPrefix)
   }
 
-  def pathWithoutLast(ons: Chain[OnTag]): Chain[ValueModel] = ons.initLast.map {
-    case (head, last) => head.map(_.fullPath).flatMap(identity) ++ last.via
-  }.getOrElse(Chain.empty)
-
-  def reversedPathWithoutFirst(ons: Chain[OnTag]): Chain[ValueModel] = ons.initLast.map {
-    case (head, last) => last.via ++ head.map(_.fullReversedPath).flatMap(identity)
-  }.getOrElse(Chain.empty).reverse
-
   def findPath(
     fromOn: Chain[OnTag],
     toOn: Chain[OnTag],
@@ -82,7 +74,7 @@ object PathFinder extends LogSupport {
     trace("FIND PATH FROM | " + fromFix)
     trace("            TO | " + toFix)
 
-    val fromTo = reversedPathWithoutFirst(fromFix) ++ pathWithoutLast(toFix)
+    val fromTo = fromFix.reverse.flatMap(_.via.reverse) ++ toFix.flatMap(_.via)
     trace(s"FROM TO: $fromTo")
 
     val fromPeerCh = Chain.fromOption(fromPeer)

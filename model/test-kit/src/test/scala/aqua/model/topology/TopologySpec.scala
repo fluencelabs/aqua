@@ -89,25 +89,6 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
-  "topology resolver" should "create correct path" in {
-    val init = FuncOps.seq(
-      on(initPeer, Nil, callTag(0), on(otherRelay, Nil, on(otherPeer, Nil, callTag(1))), callTag(2))
-    )
-
-    val proc: Node.Res = Topology.resolve(init.tree)
-
-    val expected: Node.Res =
-      MakeRes.seq(
-        callRes(0, initPeer),
-        through(otherRelay),
-        callRes(1, otherPeer),
-        through(otherRelay),
-        callRes(2, initPeer)
-      )
-
-    Node.equalsOrPrintDiff(proc, expected) should be(true)
-  }
-
   "topology resolver" should "build return path in par if there are exported variables" in {
     val export = Some(Call.Export("result", ScalarType.string))
     val result = VarModel("result", ScalarType.string)
