@@ -131,6 +131,46 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     Node.equalsOrPrintDiff(proc, expected) should be(true)
   }
 
+  "topology resolver" should "optimize path over fold" in {
+    val i = VarModel("i", ScalarType.string)
+    val init = {
+      on(
+        initPeer,
+        Nil,
+        fold(
+          "i",
+          valueArray,
+          on(
+            i,
+            relay :: Nil,
+            callTag(1)
+          )
+        )
+      )
+
+    }
+
+    val proc = Topology.resolve(init)
+
+    val expected: Node.Res = {
+      MakeRes.seq(
+        through(relay),
+        MakeRes.fold(
+          "i",
+          valueArray,
+          callRes(1, i),
+          MakeRes.seq(
+            through(relay),
+            nextRes("i")
+          )
+        )
+      )
+
+    }
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
   "topology resolver" should "work fine with par" in {
     val init = on(
       initPeer,

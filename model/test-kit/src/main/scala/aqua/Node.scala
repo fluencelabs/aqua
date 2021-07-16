@@ -2,7 +2,7 @@ package aqua
 
 import aqua.model.func.Call
 import aqua.model.func.raw._
-import aqua.model.func.resolved.{CallServiceRes, MakeRes, MatchMismatchRes, ResolvedOp}
+import aqua.model.func.resolved._
 import aqua.model.transform.{BodyConfig, ErrorsCatcher}
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
@@ -56,6 +56,7 @@ object Node {
   val otherRelay2 = LiteralModel("other-relay-2", ScalarType.string)
   val varNode = VarModel("node-id", ScalarType.string)
   val viaList = VarModel("other-relay-2", ArrayType(ScalarType.string))
+  val valueArray = VarModel("array", ArrayType(ScalarType.string))
 
   def callRes(
     i: Int,
@@ -122,10 +123,24 @@ object Node {
     )
   )
 
+  def fold(item: String, iter: ValueModel, body: Raw*) =
+    Node(
+      ForTag(item, iter),
+      body.toList :+ next(item)
+    )
+
   def on(peer: ValueModel, via: List[ValueModel], body: Raw*) =
     Node(
       OnTag(peer, Chain.fromSeq(via)),
       body.toList
+    )
+
+  def nextRes(item: String): Res =
+    Node(NextRes(item))
+
+  def next(item: String): Raw =
+    Node(
+      NextTag(item)
     )
 
   def `try`(body: Raw*) =
