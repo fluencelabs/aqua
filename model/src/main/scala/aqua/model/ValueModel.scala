@@ -95,6 +95,10 @@ case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Cha
       case None => this // Should not happen
     }
   }
+
+  override def toString: String =
+    s"var{$name: ${`type`}${if (lastType != `type`) " -> " + lastType else ""}${if (lambda.isEmpty) ""
+    else " "}${lambda.toList.mkString}}"
 }
 
 object VarModel {

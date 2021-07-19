@@ -74,6 +74,7 @@ object Topology extends LogSupport {
         val resolved = rawToResolved(rc.currentPeerId).lift
           .apply(rc.tag)
           .map(MakeRes.leaf)
+
         val chainZipperEv = resolved.traverse(cofree =>
           Eval.later {
             val cz = ChainZipper(

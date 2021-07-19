@@ -1,11 +1,8 @@
 service OpH("op"):
-  get_str(s: string) -> string
-  pr() -> []string
   op()
-  get_arr() -> []string
-  identity: ⊤ -> ⊥
 
 func registerKeyPutValue(nodes: []string):
-  for n <- nodes:
+  for n <- nodes par:
     on n:
       OpH.op()
+  OpH.op()
