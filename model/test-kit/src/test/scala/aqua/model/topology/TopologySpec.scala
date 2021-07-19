@@ -131,8 +131,55 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     Node.equalsOrPrintDiff(proc, expected) should be(true)
   }
 
-  "topology resolver" should "crete returning hops on nested 'on'" in {
-    val i = VarModel("i", ScalarType.string)
+  // func registerKeyPutValue(node_id: string) -> []string:
+  //  on node_id:
+  //    nodes <- OpH.pr()
+  //  on node_id:
+  //      for n <- nodes par:
+  //        on n:
+  //          OpH.op("in")
+  //  <- nodes
+  // this example doesn't create a hop on relay after fold
+  // but the test create it, so there is not a one-on-one simulation
+  // change it or write an integration test
+  "topology resolver" should "create returning hops on chain of 'on'" in {
+    val init =
+      on(
+        initPeer,
+        relay :: Nil,
+        on(
+          otherPeer,
+          Nil,
+          callTag(0)
+        ),
+        on(
+          otherPeer,
+          Nil,
+          foldPar(
+            "i",
+            valueArray,
+            on(
+              otherPeer2,
+              Nil,
+              callTag(2)
+            )
+          )
+        ),
+        callTag(3)
+      )
+
+    val proc: Node.Res = Topology.resolve(init)
+
+    /*val expected: Node.Res =
+      MakeRes.seq(
+        callRes(0, initPeer),
+        callRes(1, otherRelay),
+      )
+
+    proc.equalsOrPrintDiff(expected) should be(true)*/
+  }
+
+  "topology resolver" should "create returning hops on nested 'on'" in {
     val init =
       on(
         initPeer,

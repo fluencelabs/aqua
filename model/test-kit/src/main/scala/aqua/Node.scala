@@ -129,6 +129,16 @@ object Node {
       body.toList :+ next(item)
     )
 
+  def foldPar(item: String, iter: ValueModel, body: Raw*) = {
+    val ops = Node(SeqTag, body.toList)
+    Node(
+      ForTag(item, iter),
+      List(
+        Node(ParTag, List(ops, next(item)))
+      )
+    )
+  }
+
   def on(peer: ValueModel, via: List[ValueModel], body: Raw*) =
     Node(
       OnTag(peer, Chain.fromSeq(via)),

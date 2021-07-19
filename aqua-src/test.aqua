@@ -1,8 +1,14 @@
 service OpH("op"):
-  op()
+  get_str() -> string
+  pr() -> []string
+  op(s: string)
+  get_arr() -> []string
 
-func registerKeyPutValue(nodes: []string):
-  for n <- nodes par:
-    on n:
-      OpH.op()
-  OpH.op()
+func registerKeyPutValue(node_id: string) -> []string:
+  on node_id:
+    nodes <- OpH.pr()
+  on node_id:
+      for n <- nodes par:
+        on n:
+          OpH.op("in")
+  <- nodes
