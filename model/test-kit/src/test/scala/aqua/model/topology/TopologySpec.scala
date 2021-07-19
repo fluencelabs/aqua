@@ -131,6 +131,49 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     Node.equalsOrPrintDiff(proc, expected) should be(true)
   }
 
+  "topology resolver" should "crete returning hops on nested 'on'" in {
+    val i = VarModel("i", ScalarType.string)
+    val init =
+      on(
+        initPeer,
+        Nil,
+        callTag(0),
+        on(
+          otherRelay,
+          Nil,
+          callTag(1),
+          fold(
+            "i",
+            valueArray,
+            on(
+              otherRelay2,
+              otherRelay :: Nil,
+              callTag(2)
+            )
+          )
+        ),
+        callTag(3)
+      )
+
+    val proc: Node.Res = Topology.resolve(init)
+
+    val expected: Node.Res =
+      MakeRes.seq(
+        callRes(0, initPeer),
+        callRes(1, otherRelay),
+        MakeRes.fold(
+          "i",
+          valueArray,
+          callRes(2, otherRelay2),
+          nextRes("i")
+        ),
+        through(otherRelay),
+        callRes(3, initPeer)
+      )
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
   "topology resolver" should "optimize path over fold" in {
     val i = VarModel("i", ScalarType.string)
     val init = {
