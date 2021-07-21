@@ -1,6 +1,6 @@
 package aqua.model.func
 
-import aqua.model.func.raw.{AssignmentTag, CallArrowTag, CallServiceTag, FuncOp, RawTag}
+import aqua.model.func.raw.{AssignmentTag, CallArrowTag, FuncOp, RawTag}
 import aqua.model.{Model, ValueModel, VarModel}
 import aqua.types.{ArrowType, Type}
 import cats.Eval
@@ -47,15 +47,21 @@ case class FuncCallable(
     // Collect all arguments: what names are used inside the function, what values are received
     val argsFull = args.call(call)
     // DataType arguments
-    val argsToData = argsFull.dataArgs
+    val argsToDataRaw = argsFull.dataArgs
     // Arrow arguments: expected type is Arrow, given by-name
-    val argsToArrows = argsFull.arrowArgs(arrows)
+    val argsToArrowsRaw = argsFull.arrowArgs(arrows)
+
+    // Find all duplicates in arguments
+    val argsShouldRename = findNewNames(forbiddenNames, (argsToDataRaw ++ argsToArrowsRaw).keySet)
+    val argsToData = argsToDataRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
+    val argsToArrows = argsToArrowsRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
 
     // Going to resolve arrows: collect them all. Names should never collide: it's semantically checked
     val allArrows = capturedArrows ++ argsToArrows
 
     // Substitute arguments (referenced by name and optional lambda expressions) with values
-    val treeWithValues = body.resolveValues(argsToData)
+    // Also rename all renamed arguments in the body
+    val treeWithValues = body.rename(argsShouldRename).resolveValues(argsToData)
 
     // Function body on its own defines some values; collect their names
     val treeDefines = treeWithValues.definesVarNames.value -- call.exportTo.map(_.name)
