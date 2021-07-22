@@ -1,8 +1,13 @@
-service AquaDHT("aqua-dht"):
-  put_host_value(key: string, value: string, service_id: []string)
+service StringOp("op"):
+    array(s: string) -> []string
 
-func putHostValue(key: string, value: string, service_id: ?string):
-    AquaDHT.put_host_value(key, value, service_id)
+func use_name1() -> []string:
+    results <- StringOp.array("hello")
+    <- results
 
-func create_client_util(service_id: string):
-    putHostValue("client-util", service_id, nil)
+func use_name2() -> [][]string:
+    results: *[]string
+    results <- use_name1()
+    results <- use_name1()
+    results <- use_name1()
+    <- results

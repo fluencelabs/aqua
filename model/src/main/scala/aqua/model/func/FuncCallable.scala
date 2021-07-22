@@ -1,8 +1,8 @@
 package aqua.model.func
 
-import aqua.model.func.raw.{AssignmentTag, CallArrowTag, FuncOp, RawTag}
+import aqua.model.func.raw._
 import aqua.model.{Model, ValueModel, VarModel}
-import aqua.types.{ArrowType, Type}
+import aqua.types.{ArrowType, StreamType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -64,12 +64,14 @@ case class FuncCallable(
     val treeWithValues = body.rename(argsShouldRename).resolveValues(argsToData)
 
     // Function body on its own defines some values; collect their names
-    val treeDefines = treeWithValues.definesVarNames.value -- call.exportTo.map(_.name)
+    val treeDefines = treeWithValues.definesVarNames.value
 
     // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
     val shouldRename = findNewNames(forbiddenNames, treeDefines)
     // If there was a collision, rename exports and usages with new names
     val treeRenamed = treeWithValues.rename(shouldRename)
+    val renamedExport =
+      call.exportTo.map(e => e.copy(name = shouldRename.getOrElse(e.name, e.name)))
 
     // Result could be derived from arguments, or renamed; take care about that
     val result = ret.map(_._1).map(_.resolveWith(argsToData)).map {
@@ -129,9 +131,24 @@ case class FuncCallable(
             Eval.now(Chain.empty)
           )
       }
-      .map { case ((_, resolvedExports), b) =>
+      .map { case ((_, resolvedExports), callableFuncBody) =>
         // If return value is affected by any of internal functions, resolve it
-        FuncOp(b) -> result.map(_.resolveWith(resolvedExports))
+        (for {
+          exp <- call.exportTo
+          res <- result
+          pair <- exp match {
+            // TODO check variable, not string
+            case Call.Export(name, StreamType(_)) if name != "-return-" =>
+              // path nested function results to a stream
+              Some(FuncOps.seq(FuncOp(callableFuncBody), FuncOps.identity(res, exp)) -> result)
+            case Call.Export(_, StreamType(_)) =>
+              // don't create identity for `-return-` stream
+              Some(FuncOp(callableFuncBody) -> result)
+            case _ => None
+          }
+        } yield {
+          pair
+        }).getOrElse(FuncOp(callableFuncBody) -> result.map(_.resolveWith(resolvedExports)))
       }
   }
 

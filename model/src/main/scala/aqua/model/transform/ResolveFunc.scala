@@ -12,7 +12,8 @@ case class ResolveFunc(
   callback: (String, Call) => FuncOp,
   respFuncName: String,
   wrapCallableName: String = "funcAround",
-  arrowCallbackPrefix: String = "init_peer_callable_"
+  arrowCallbackPrefix: String = "init_peer_callable_",
+  returnVar: String = "-return-"
 ) {
 
   def returnCallback(retModel: ValueModel): FuncOp =
@@ -46,12 +47,12 @@ case class ResolveFunc(
               func.funcName,
               Call(
                 func.args.toCallArgs,
-                func.ret.map(rmv => Call.Export("-return-", rmv._1.lastType))
+                func.ret.map(rmv => Call.Export(returnVar, rmv._1.lastType))
               )
             ) ::
             func.ret
               .map(_._1)
-              .map(rmv => VarModel("-return-", rmv.lastType))
+              .map(rmv => VarModel(returnVar, rmv.lastType))
               .map(returnCallback)
               .toList: _*
         )
