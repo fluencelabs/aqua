@@ -69,8 +69,7 @@ case class FuncCallable(
     // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
     val shouldRename = findNewNames(forbiddenNames, treeDefines)
     // If there was a collision, rename exports and usages with new names
-    val treeRenamed =
-      if (shouldRename.isEmpty) treeWithValues else treeWithValues.rename(shouldRename)
+    val treeRenamed = treeWithValues.rename(shouldRename)
 
     // Result could be derived from arguments, or renamed; take care about that
     val result = ret.map(_._1).map(_.resolveWith(argsToData)).map {

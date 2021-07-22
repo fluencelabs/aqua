@@ -54,22 +54,26 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
   def resolveValues(vals: Map[String, ValueModel]): FuncOp =
     FuncOp(tree.map[RawTag](_.mapValues(_.resolveWith(vals))))
 
-  def rename(vals: Map[String, String]): FuncOp =
-    FuncOp(
-      tree.map[RawTag](op =>
-        op.mapValues {
-          case v: VarModel if vals.contains(v.name) => v.copy(name = vals(v.name))
-          case v => v
-        } match {
-          case c: CallArrowTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
-          case c: CallServiceTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
-          case a: AssignmentTag => a.copy(assignTo = vals.getOrElse(a.assignTo, a.assignTo))
-          case t: ForTag if vals.contains(t.item) => t.copy(item = vals(t.item))
-          case t: NextTag if vals.contains(t.item) => t.copy(item = vals(t.item))
-          case t => t
-        }
+  def rename(vals: Map[String, String]): FuncOp = {
+    if (vals.isEmpty)
+      this
+    else
+      FuncOp(
+        tree.map[RawTag](op =>
+          op.mapValues {
+            case v: VarModel if vals.contains(v.name) => v.copy(name = vals(v.name))
+            case v => v
+          } match {
+            case c: CallArrowTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
+            case c: CallServiceTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
+            case a: AssignmentTag => a.copy(assignTo = vals.getOrElse(a.assignTo, a.assignTo))
+            case t: ForTag if vals.contains(t.item) => t.copy(item = vals(t.item))
+            case t: NextTag if vals.contains(t.item) => t.copy(item = vals(t.item))
+            case t => t
+          }
+        )
       )
-    )
+  }
 
   def :+:(prev: FuncOp): FuncOp =
     FuncOp.RightAssocSemi.combine(prev, this)
