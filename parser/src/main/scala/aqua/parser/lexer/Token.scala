@@ -45,6 +45,7 @@ object Token {
   val `co`: P[Unit] = P.string("co")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
+  val `anum_*` : P[Unit] = P.charsWhile(anum_).void
 
   val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).string
 
@@ -55,7 +56,7 @@ object Token {
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
 
   val ` \n` : P[Unit] =
-    (` `.?.void *> (`--` *> P.charsWhile(_ != '\n')).?.void).with1 *> `\n`
+    (` `.?.void *> (`--` *> P.charsWhile0(_ != '\n')).?.void).with1 *> `\n`
 
   val ` \n+` : P[Unit] = P.repAs[Unit, Unit](` \n`.backtrack, 1)(Accumulator0.unitAccumulator0)
   val ` : \n+` : P[Unit] = ` `.?.with1 *> `:` *> ` \n+`

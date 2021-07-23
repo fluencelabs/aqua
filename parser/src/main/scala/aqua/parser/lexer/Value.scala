@@ -4,10 +4,10 @@ import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
 import aqua.types.LiteralType
-import cats.{Comonad, Functor}
 import cats.parse.{Numbers, Parser => P}
-import cats.syntax.functor._
 import cats.syntax.comonad._
+import cats.syntax.functor._
+import cats.{Comonad, Functor}
 
 sealed trait Value[F[_]] extends Token[F]
 
@@ -32,7 +32,7 @@ object Value {
     P.oneOf(
       ("true" :: "false" :: Nil)
         .map(t ⇒ P.string(t).lift.map(fu => Literal(fu.as(t), LiteralType.bool)))
-    )
+    ) <* P.not(`anum_*`)
 
   def initPeerId[F[_]: LiftParser: Comonad]: P[Literal[F]] =
     `%init_peer_id%`.string.lift.map(Literal(_, LiteralType.string))
@@ -57,7 +57,7 @@ object Value {
       .map(Literal(_, LiteralType.string))
 
   def literal[F[_]: LiftParser: Comonad]: P[Literal[F]] =
-    P.oneOf(bool :: float.backtrack :: num :: string :: Nil)
+    P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
   def `value`[F[_]: LiftParser: Comonad]: P[Value[F]] =
     P.oneOf(literal.backtrack :: initPeerId.backtrack :: varLambda :: Nil)

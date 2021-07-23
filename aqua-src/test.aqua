@@ -1,0 +1,8 @@
+service AquaDHT("aqua-dht"):
+  put_host_value(key: string, value: string, service_id: []string)
+
+func putHostValue(key: string, value: string, service_id: ?string):
+    AquaDHT.put_host_value(key, value, service_id)
+
+func create_client_util(service_id: string):
+    putHostValue("client-util", service_id, nil)

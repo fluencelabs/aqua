@@ -127,27 +127,26 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
   }
 
   def cata[A](wrap: ChainZipper[Cofree[Chain, A]] => Chain[Cofree[Chain, A]])(
-    f: RawCursor => OptionT[Eval, ChainZipper[Cofree[Chain, A]]]
+    folder: RawCursor => OptionT[Eval, ChainZipper[Cofree[Chain, A]]]
   ): Eval[Chain[Cofree[Chain, A]]] =
-    f(this).map { case ChainZipper(prev, curr, next) =>
-      val inner = curr.copy(tail =
-        Eval
-          .later(
-            Chain.fromSeq(
-              toFirstChild
-                .map(fc =>
-                  LazyList
-                    .unfold(fc) { _.toNextSibling.map(c => c -> c) }
-                    .prepended(fc)
-                )
-                .getOrElse(LazyList.empty)
+    folder(this).map { case ChainZipper(prev, curr, next) =>
+      val tail = Eval.later {
+        Chain.fromSeq(
+          toFirstChild
+            .map(folderCursor =>
+              LazyList
+                .unfold(folderCursor) { _.toNextSibling.map(cursor => cursor -> cursor) }
+                .prepended(folderCursor)
             )
-          )
-          // TODO: this can be parallelized
-          .flatMap(_.traverse(_.cata(wrap)(f)))
-          .map(_.flatMap(identity))
-          .flatMap(addition => curr.tail.map(_ ++ addition))
-      )
+            .getOrElse(LazyList.empty)
+        )
+      }
+      // TODO: this can be parallelized
+        .flatMap(_.traverse(_.cata(wrap)(folder)))
+        .map(_.flatMap(identity))
+        .flatMap(addition => curr.tail.map(_ ++ addition))
+
+      val inner = curr.copy(tail = tail)
       wrap(ChainZipper(prev, inner, next))
     }.getOrElse(Chain.empty).memoize
 
