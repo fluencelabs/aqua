@@ -1,13 +1,10 @@
-service StringOp("op"):
-    array(s: string) -> []string
+service TestService("test-service"):
+    get_records(key: string) -> []string
 
-func use_name1() -> []string:
-    results <- StringOp.array("hello")
-    <- results
+func append_records(peer: string, srum: *[]string):
+  srum <- TestService.get_records(peer)
 
-func use_name2() -> [][]string:
-    results: *[]string
-    results <- use_name1()
-    results <- use_name1()
-    results <- use_name1()
-    <- results
+func retrieve_records(peer: string) -> [][]string:
+    records: *[]string
+    append_records(peer, records)
+    <- records

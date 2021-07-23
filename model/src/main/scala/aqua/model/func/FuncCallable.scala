@@ -1,5 +1,6 @@
 package aqua.model.func
 
+import aqua.model.ValueModel.varName
 import aqua.model.func.raw._
 import aqua.model.{Model, ValueModel, VarModel}
 import aqua.types.{ArrowType, StreamType, Type}
@@ -35,6 +36,14 @@ case class FuncCallable(
         .head)
     }
 
+  def extractStreamArgs(args: Map[String, ValueModel]): Map[String, ValueModel] =
+    args.filter { arg =>
+      arg._2.`type` match {
+        case StreamType(_) => true
+        case _ => false
+      }
+    }
+
   // Apply a callable function, get its fully resolved body & optional value, if any
   def resolve(
     call: Call,
@@ -51,6 +60,13 @@ case class FuncCallable(
     // Arrow arguments: expected type is Arrow, given by-name
     val argsToArrowsRaw = argsFull.arrowArgs(arrows)
 
+    // collect arguments with stream type
+    // to exclude it from resolving and rename it with a higher-level stream that passed by argument
+    val streamArgs = extractStreamArgs(argsToDataRaw)
+    val streamToRename = streamArgs.map { case (k, v) => (k, varName(v)) }.collect {
+      case (k, Some(v)) => (k, v)
+    }
+
     // Find all duplicates in arguments
     val argsShouldRename = findNewNames(forbiddenNames, (argsToDataRaw ++ argsToArrowsRaw).keySet)
     val argsToData = argsToDataRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
@@ -61,17 +77,16 @@ case class FuncCallable(
 
     // Substitute arguments (referenced by name and optional lambda expressions) with values
     // Also rename all renamed arguments in the body
-    val treeWithValues = body.rename(argsShouldRename).resolveValues(argsToData)
+    val treeWithValues = body.rename(argsShouldRename ++ streamToRename).resolveValues(argsToData)
 
     // Function body on its own defines some values; collect their names
-    val treeDefines = treeWithValues.definesVarNames.value
+    // except stream arguments. They should be already renamed
+    val treeDefines = treeWithValues.definesVarNames.value -- streamArgs.keySet
 
     // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
     val shouldRename = findNewNames(forbiddenNames, treeDefines)
     // If there was a collision, rename exports and usages with new names
     val treeRenamed = treeWithValues.rename(shouldRename)
-    val renamedExport =
-      call.exportTo.map(e => e.copy(name = shouldRename.getOrElse(e.name, e.name)))
 
     // Result could be derived from arguments, or renamed; take care about that
     val result = ret.map(_._1).map(_.resolveWith(argsToData)).map {
@@ -138,12 +153,12 @@ case class FuncCallable(
           res <- result
           pair <- exp match {
             // TODO check variable, not string
-            case Call.Export(name, StreamType(_)) if name != "-return-" =>
-              // path nested function results to a stream
-              Some(FuncOps.seq(FuncOp(callableFuncBody), FuncOps.identity(res, exp)) -> result)
-            case Call.Export(_, StreamType(_)) =>
+            case Call.Export(name, StreamType(_)) if name == "-return-" =>
               // don't create identity for `-return-` stream
               Some(FuncOp(callableFuncBody) -> result)
+            case Call.Export(name, StreamType(_)) =>
+              // path nested function results to a stream
+              Some(FuncOps.seq(FuncOp(callableFuncBody), FuncOps.identity(res, exp)) -> result)
             case _ => None
           }
         } yield {

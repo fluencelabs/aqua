@@ -1,7 +1,7 @@
 package aqua.model.transform
 
-import aqua.model.func.raw.{FuncOp, FuncOps}
 import aqua.model.func._
+import aqua.model.func.raw.{FuncOp, FuncOps}
 import aqua.model.{ValueModel, VarModel}
 import aqua.types.ArrowType
 import cats.Eval
