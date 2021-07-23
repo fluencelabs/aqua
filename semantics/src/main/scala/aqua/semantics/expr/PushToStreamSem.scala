@@ -1,7 +1,8 @@
 package aqua.semantics.expr
 
-import aqua.model.Model
-import aqua.model.func.raw.{FuncOp, PushToStreamTag}
+import aqua.model.func.Call
+import aqua.model.func.raw.{CallServiceTag, FuncOp}
+import aqua.model.{LiteralModel, Model}
 import aqua.parser.expr.PushToStreamExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -17,8 +18,14 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
   ): Prog[Alg, Model] =
     V.valueToModel(expr.value).flatMap {
       case Some(vm) =>
-        N.define(expr.variable, vm.lastType) as (FuncOp
-          .leaf(PushToStreamTag(vm, expr.variable.value)): Model)
+        N.read(expr.variable) as (FuncOp
+          .leaf(
+            CallServiceTag(
+              LiteralModel.quote("op"),
+              "identity",
+              Call(vm :: Nil, Some(Call.Export(expr.variable.value, vm.`type`)))
+            )
+          ): Model)
       case _ => Free.pure[Alg, Model](Model.error("Cannot resolve stream type"))
     }
 

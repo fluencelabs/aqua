@@ -4,5 +4,6 @@ service OpA("pop"):
 func create_client_util() -> []string:
     results: *string
     results <<- "hello"
-    results <<- OpA.get_str()
+    str <- OpA.get_str()
+    results <<- str
     <- results

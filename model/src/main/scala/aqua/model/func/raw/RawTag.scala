@@ -24,8 +24,6 @@ sealed trait RawTag {
       )
     case AssignmentTag(value, assignTo) =>
       AssignmentTag(f(value), assignTo)
-    case PushToStreamTag(value, assignTo) =>
-      PushToStreamTag(f(value), assignTo)
     case AbilityIdTag(value, ability) =>
       AbilityIdTag(f(value), ability)
     case _ => this
@@ -67,11 +65,6 @@ case class CallArrowTag(
 ) extends RawTag
 
 case class AssignmentTag(
-  value: ValueModel,
-  assignTo: String
-) extends NoExecTag
-
-case class PushToStreamTag(
   value: ValueModel,
   assignTo: String
 ) extends NoExecTag
