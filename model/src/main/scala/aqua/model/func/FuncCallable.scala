@@ -81,7 +81,8 @@ case class FuncCallable(
 
     // Function body on its own defines some values; collect their names
     // except stream arguments. They should be already renamed
-    val treeDefines = treeWithValues.definesVarNames.value -- streamArgs.keySet
+    val treeDefines =
+      treeWithValues.definesVarNames.value -- streamArgs.keySet -- call.exportTo.map(_.name)
 
     // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
     val shouldRename = findNewNames(forbiddenNames, treeDefines)
@@ -152,13 +153,12 @@ case class FuncCallable(
           exp <- call.exportTo
           res <- result
           pair <- exp match {
-            // TODO check variable, not string
-            case Call.Export(name, StreamType(_)) if name == "-return-" =>
-              // don't create identity for `-return-` stream
-              Some(FuncOp(callableFuncBody) -> result)
             case Call.Export(name, StreamType(_)) =>
               // path nested function results to a stream
-              Some(FuncOps.seq(FuncOp(callableFuncBody), FuncOps.identity(res, exp)) -> result)
+              Some(
+                FuncOps.seq(FuncOp(callableFuncBody), FuncOps.identity(res, exp)) -> result
+                  .map(_.resolveWith(resolvedExports))
+              )
             case _ => None
           }
         } yield {

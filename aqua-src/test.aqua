@@ -1,10 +1,21 @@
-service TestService("test-service"):
-    get_records(key: string) -> []string
+data DT:
+  field: string
 
-func append_records(peer: string, srum: *[]string):
-  srum <- TestService.get_records(peer)
+service DTGetter("get-dt"):
+    get_dt(s: string) -> DT
 
-func retrieve_records(peer: string) -> [][]string:
-    records: *[]string
-    append_records(peer, records)
-    <- records
+func use_name1(name: string) -> string:
+    results <- DTGetter.get_dt(name)
+    <- results.field
+
+func use_name2(name: string) -> []string:
+    results: *string
+    results <- use_name1(name)
+    results <- use_name1(name)
+    results <- use_name1(name)
+    <- results
+
+func use_name3(name: string) -> []string:
+    DTGetter.get_dt("yoyo literal")
+    results <- use_name2(name)
+    <- results
