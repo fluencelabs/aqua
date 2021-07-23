@@ -91,7 +91,7 @@ case class TypeScriptFunc(func: FuncCallable) {
        |            .handleTimeout(() => {
        |                reject('Request timed out for ${func.funcName}');
        |            })
-       |        if(${configArgName}?.ttl) {
+       |        if(${configArgName} && ${configArgName}.ttl) {
        |            r.withTTL(${configArgName}.ttl)
        |        }
        |        request = r.build();
