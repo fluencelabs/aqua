@@ -148,11 +148,11 @@ class TransformSpec extends AnyFlatSpec with Matchers {
           CallServiceRes(
             LiteralModel.quote("srv1"),
             "foo",
-            Call(Nil, Some(Call.Export("v0", ScalarType.string))),
+            Call(Nil, Some(Call.Export("v", ScalarType.string))),
             initPeer
           )
         ),
-        respCall(bc, VarModel("v0", ScalarType.string), initPeer)
+        respCall(bc, VarModel("v", ScalarType.string), initPeer)
       )
     ) should be(true)
   }
