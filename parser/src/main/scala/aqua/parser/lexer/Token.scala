@@ -74,6 +74,7 @@ object Token {
   val ` -> ` : P[Unit] = P.string("->").surroundedBy(` `.?)
   val ` <- ` : P[Unit] = P.string("<-").surroundedBy(` `.?)
   val `=` : P[Unit] = P.string("=")
+  val ` <<- ` : P[Unit] = P.string("<<-").surroundedBy(` `.?)
   val ` = ` : P[Unit] = P.string("=").surroundedBy(` `.?)
   val `?` : P[Unit] = P.string("?")
   val `<-` : P[Unit] = P.string("<-")

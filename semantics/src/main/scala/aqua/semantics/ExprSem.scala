@@ -20,6 +20,7 @@ object ExprSem {
     expr match {
       case expr: AbilityIdExpr[F] => new AbilityIdSem(expr).program[G]
       case expr: AssignmentExpr[F] => new AssignmentSem(expr).program[G]
+      case expr: PushToStreamExpr[F] => new PushToStreamSem(expr).program[G]
       case expr: AliasExpr[F] => new AliasSem(expr).program[G]
       case expr: ConstantExpr[F] => new ConstantSem(expr).program[G]
       case expr: DeclareStreamExpr[F] => new DeclareStreamSem(expr).program[G]

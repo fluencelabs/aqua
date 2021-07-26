@@ -26,6 +26,7 @@ object ForExpr extends Expr.AndIndented {
       CallArrowExpr ::
       AbilityIdExpr ::
       AssignmentExpr ::
+      PushToStreamExpr ::
       Expr.defer(TryExpr) ::
       Expr.defer(IfExpr) ::
       Expr.defer(ElseOtherwiseExpr) ::

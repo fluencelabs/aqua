@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
-import aqua.model.{Model, ValueModel}
 import aqua.model.func.raw.{FuncOp, OnTag}
+import aqua.model.{Model, ValueModel}
 import aqua.parser.expr.OnExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -12,7 +12,6 @@ import cats.Traverse
 import cats.data.Chain
 import cats.free.Free
 import cats.syntax.apply._
-import cats.syntax.functor._
 import cats.syntax.flatMap._
 
 class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
