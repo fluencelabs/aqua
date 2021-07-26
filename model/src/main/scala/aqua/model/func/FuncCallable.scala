@@ -67,8 +67,6 @@ case class FuncCallable(
       case (k, Some(v)) => (k, v)
     }
 
-    println("stream to rename: " + streamToRename)
-
     // Find all duplicates in arguments
     val argsShouldRename = findNewNames(forbiddenNames, (argsToDataRaw ++ argsToArrowsRaw).keySet)
     val argsToData = argsToDataRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
@@ -94,8 +92,6 @@ case class FuncCallable(
     // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
     val shouldRename = findNewNames(forbiddenNames, treeDefines)
 
-    println("forbidden names: " + forbiddenNames)
-    println("should rename: " + shouldRename)
     // If there was a collision, rename exports and usages with new names
     val treeRenamed = treeWithValues.rename(shouldRename)
 
@@ -131,8 +127,6 @@ case class FuncCallable(
             m
           }.toSet
 
-          println("nonames: " + noNames)
-
           val (appliedOp, value) =
             allArrows(fn)
               .resolve(callResolved, allArrows.view.filterKeys(possibleArrowNames).toMap, noNames)
@@ -141,7 +135,6 @@ case class FuncCallable(
           // Function defines new names inside its body – need to collect them
           // TODO: actually it's done and dropped – so keep and pass it instead
           val newNames = appliedOp.definesVarNames.value
-          println("new names: " + newNames)
           // At the very end, will need to resolve what is used as results with the result values
           (
             noNames ++ newNames,
@@ -167,12 +160,12 @@ case class FuncCallable(
           res <- result
           pair <- exp match {
             case Call.Export(name, StreamType(_)) =>
-              println("NAME: " + name)
-              println("res: " + res)
+              val resolved = res.resolveWith(resolvedExports)
               // path nested function results to a stream
               Some(
-                FuncOps.seq(FuncOp(callableFuncBody), FuncOps.identity(res, exp)) -> result
-                  .map(_.resolveWith(resolvedExports))
+                FuncOps.seq(FuncOp(callableFuncBody), FuncOps.identity(resolved, exp)) -> Some(
+                  exp.model
+                )
               )
             case _ => None
           }
