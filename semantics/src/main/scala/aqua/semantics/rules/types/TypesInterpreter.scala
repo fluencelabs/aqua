@@ -2,7 +2,7 @@ package aqua.semantics.rules.types
 
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.ReportError
-import aqua.types.{ArrowType, ProductType, StreamType}
+import aqua.types.{ArrowType, ProductType}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.flatMap._
@@ -103,37 +103,6 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
         else
           report(etm.token, s"Types mismatch, expected: ${etm.expected}, given: ${etm.`given`}")
             .as(false)
-
-      case exs: ExpectStreamMember[F] =>
-        exs.streamType match {
-          case StreamType(t) =>
-            exs.memberType match {
-              case Some(mt) =>
-                if (t.acceptsValueOf(mt)) State.pure(())
-                else
-                  report(exs.token, s"Types mismatch, expected: $t, given: $mt")
-                    .as(())
-              case None =>
-                report(exs.token, s"Cannot resolve type.")
-                  .as(())
-            }
-
-          case _ =>
-            report(
-              exs.token,
-              "Types mismatch. Values could be pushed only into streams"
-            ).as(())
-        }
-
-      case exs: ExpectStream[F] =>
-        exs.`type` match {
-          case StreamType(_) => State.pure(())
-          case _ =>
-            report(
-              exs.token,
-              "Types mismatch. Variable should be a stream"
-            ).as(())
-        }
 
       case ene: ExpectNoExport[F] =>
         report(

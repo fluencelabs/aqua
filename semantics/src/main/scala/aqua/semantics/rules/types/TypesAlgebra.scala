@@ -33,12 +33,6 @@ class TypesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]) {
   def resolveLambda(root: Type, ops: List[LambdaOp[F]]): Free[Alg, List[LambdaModel]] =
     Free.liftInject[Alg](ResolveLambda(root, ops))
 
-  def expectStream(token: Token[F], stream: Type): Free[Alg, Unit] =
-    Free.liftInject[Alg](ExpectStream[F](token, stream))
-
-  def expectStreamMember(token: Token[F], stream: Type, member: Option[Type]): Free[Alg, Unit] =
-    Free.liftInject[Alg](ExpectStreamMember[F](token, stream, member))
-
   def ensureTypeMatches(token: Token[F], expected: Type, given: Type): Free[Alg, Boolean] =
     Free.liftInject[Alg](EnsureTypeMatches[F](token, expected, given))
 

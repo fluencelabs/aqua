@@ -23,11 +23,6 @@ case class ResolveLambda[F[_]](root: Type, ops: List[LambdaOp[F]])
 case class EnsureTypeMatches[F[_]](token: Token[F], expected: Type, given: Type)
     extends TypeOp[F, Boolean]
 
-case class ExpectStream[F[_]](token: Token[F], `type`: Type) extends TypeOp[F, Unit]
-
-case class ExpectStreamMember[F[_]](token: Token[F], streamType: Type, memberType: Option[Type])
-    extends TypeOp[F, Unit]
-
 case class ExpectNoExport[F[_]](token: Token[F]) extends TypeOp[F, Unit]
 
 case class CheckArgumentsNum[F[_]](token: Token[F], expected: Int, given: Int)
