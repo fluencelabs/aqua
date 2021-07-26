@@ -72,6 +72,9 @@ trait AquaSpec extends EitherValues {
   def parseAssign(str: String): AssignmentExpr[Id] =
     AssignmentExpr.p[Id].parseAll(str).value
 
+  def parsePush(str: String): PushToStreamExpr[Id] =
+    PushToStreamExpr.p[Id].parseAll(str).value
+
   def parseConstant(str: String): ConstantExpr[Id] =
     ConstantExpr.p[Id].parseAll(str).value
 
