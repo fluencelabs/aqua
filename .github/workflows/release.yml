@@ -15,17 +15,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-        # with:
-        #   fetch-depth: 0
 
       ### Setup
       - uses: olafurpg/setup-scala@v10
 
       ### Update & build
-      # - name: Assembly
-      #   run: sbt cli/assembly
-      #   env:
-      #     BUILD_NUMBER: ${{ github.run_number }}
+      - name: Assembly
+        run: sbt cli/assembly
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
 
       - name: Get project version
         # In CI sbt appends a new line after its output, so we need `tail -n3 | head -n2` to get last two non-empty lines
@@ -49,11 +47,11 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
 
-      # - name: Check .jar exists
-      #   run: |
-      #     JAR="cli/target/scala-2.13/aqua-cli-${{ env.VERSION }}.jar"
-      #     stat "$JAR"
-      #     echo "JAR=$JAR" >> $GITHUB_ENV
+      - name: Check .jar exists
+        run: |
+          JAR="cli/target/scala-2.13/aqua-cli-${{ env.VERSION }}.jar"
+          stat "$JAR"
+          echo "JAR=$JAR" >> $GITHUB_ENV
 
       ### Publish to NPM registry
       - uses: actions/setup-node@v1
@@ -61,15 +59,15 @@ jobs:
           node-version: "14"
           registry-url: "https://registry.npmjs.org"
 
-      # - run: cp ${{ env.JAR }} ./npm/aqua-cli.jar
+      - run: cp ${{ env.JAR }} ./npm/aqua-cli.jar
 
-      # - run: npm version ${{ env.VERSION }}
-      #   working-directory: ./npm
+      - run: npm version ${{ env.VERSION }}
+        working-directory: ./npm
 
-      # - run: npm publish --access public
-      #   working-directory: ./npm
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --access public
+        working-directory: ./npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       ### create release
       - name: Push tag ${{ env.BASE_VERSION }}
