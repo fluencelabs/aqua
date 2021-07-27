@@ -120,7 +120,7 @@ jobs:
           name: Aqua Compiler ${{ env.VERSION }}
           tag_name: ${{ env.VERSION }}
           body: ${{steps.github_release.outputs.changelog}}
-          draft: true
+          draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
