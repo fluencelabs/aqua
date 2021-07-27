@@ -2,9 +2,6 @@ name: "release"
 
 on:
   push:
-    # uncomment to release only on tags starting with 'v'
-    # tags:
-    #   - "v*"
     branches:
       - "main"
 
@@ -18,8 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
+        # with:
+        #   fetch-depth: 0
 
       ### Setup
       - uses: olafurpg/setup-scala@v10
@@ -30,7 +27,6 @@ jobs:
       #   env:
       #     BUILD_NUMBER: ${{ github.run_number }}
 
-      ### Create release
       - name: Get project version
         # In CI sbt appends a new line after its output, so we need `tail -n3 | head -n2` to get last two non-empty lines
         run: |
@@ -65,11 +61,7 @@ jobs:
           node-version: "14"
           registry-url: "https://registry.npmjs.org"
 
-      # - name: Install jq and prepare package
-      #   run: |
-      #     sudo apt-get update && sudo apt-get --yes --force-yes install jq
-      #     PKG_NAME="$(cat package.json | jq -r .name)"
-      #     cp ${{ env.JAR }} ./npm/aqua-cli.jar
+      # - run: cp ${{ env.JAR }} ./npm/aqua-cli.jar
 
       # - run: npm version ${{ env.VERSION }}
       #   working-directory: ./npm
@@ -79,9 +71,8 @@ jobs:
       #   env:
       #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  ### create release
-
-      - name: Bump version and push tag
+      ### create release
+      - name: Push tag ${{ env.BASE_VERSION }}
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.5
         with:
@@ -103,7 +94,7 @@ jobs:
         with:
           name: Aqua Compiler ${{ env.VERSION }}
           tag_name: ${{ steps.tag_version.outputs.new_tag }}
-          body: ${{steps.github_release.outputs.changelog}}
+          body: ${{ steps.github_release.outputs.changelog }}
           draft: false
           prerelease: false
         env:
