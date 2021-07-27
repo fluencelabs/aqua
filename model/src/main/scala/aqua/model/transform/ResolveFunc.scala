@@ -1,9 +1,9 @@
 package aqua.model.transform
 
-import aqua.model.func.raw.{FuncOp, FuncOps}
 import aqua.model.func._
+import aqua.model.func.raw.{FuncOp, FuncOps}
 import aqua.model.{ValueModel, VarModel}
-import aqua.types.ArrowType
+import aqua.types.{ArrayType, ArrowType, StreamType}
 import cats.Eval
 import cats.syntax.apply._
 
@@ -14,6 +14,8 @@ case class ResolveFunc(
   wrapCallableName: String = "funcAround",
   arrowCallbackPrefix: String = "init_peer_callable_"
 ) {
+
+  private val returnVar: String = "-return-"
 
   def returnCallback(retModel: ValueModel): FuncOp =
     callback(
@@ -36,7 +38,13 @@ case class ResolveFunc(
     )
   }
 
-  def wrap(func: FuncCallable): FuncCallable =
+  def wrap(func: FuncCallable): FuncCallable = {
+    val returnType = func.ret.map(_._1.lastType).map {
+      // we mustn't return a stream in response callback to avoid pushing stream to `-return-` value
+      case StreamType(t) => ArrayType(t)
+      case t => t
+    }
+
     FuncCallable(
       wrapCallableName,
       transform(
@@ -46,12 +54,11 @@ case class ResolveFunc(
               func.funcName,
               Call(
                 func.args.toCallArgs,
-                func.ret.map(rmv => Call.Export("-return-", rmv._1.lastType))
+                returnType.map(t => Call.Export(returnVar, t))
               )
             ) ::
-            func.ret
-              .map(_._1)
-              .map(rmv => VarModel("-return-", rmv.lastType))
+            returnType
+              .map(t => VarModel(returnVar, t))
               .map(returnCallback)
               .toList: _*
         )
@@ -63,6 +70,7 @@ case class ResolveFunc(
       }.toList.toMap,
       Map.empty
     )
+  }
 
   def resolve(
     func: FuncCallable,

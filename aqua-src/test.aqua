@@ -1,8 +1,21 @@
-service AquaDHT("aqua-dht"):
-  put_host_value(key: string, value: string, service_id: []string)
+data DT:
+  field: string
 
-func putHostValue(key: string, value: string, service_id: ?string):
-    AquaDHT.put_host_value(key, value, service_id)
+service DTGetter("get-dt"):
+    get_dt(s: string) -> DT
 
-func create_client_util(service_id: string):
-    putHostValue("client-util", service_id, nil)
+func use_name1(name: string) -> string:
+    results <- DTGetter.get_dt(name)
+    <- results.field
+
+func use_name2(name: string) -> []string:
+    results: *string
+    results <- use_name1(name)
+    results <- use_name1(name)
+    results <- use_name1(name)
+    <- results
+
+func use_name3(name: string) -> []string:
+    DTGetter.get_dt("yoyo literal")
+    results <- use_name2(name)
+    <- results
