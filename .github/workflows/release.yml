@@ -120,7 +120,7 @@ jobs:
           files: |
             ./service/ipfs-adapter.tar.gz
           body: ${{steps.github_release.outputs.changelog}}
-          draft: false
+          draft: true
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
