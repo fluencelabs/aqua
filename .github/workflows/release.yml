@@ -91,15 +91,36 @@ jobs:
             echo "DRAFT=true" >> $GITHUB_ENV
           fi
 
-      ### create release
-      - uses: marvinpinto/action-automatic-releases@latest
-        # if inputs.release if an empty string, we're running automatically
-        if: ${{ github.event.inputs.release != '' }}
+      # ### create release
+      # - uses: marvinpinto/action-automatic-releases@latest
+      #   # if inputs.release if an empty string, we're running automatically
+      #   if: ${{ github.event.inputs.release != '' }}
+      #   with:
+      #     automatic_release_tag: "latest"
+      #     title: "Aqua Compiler ${{ env.VERSION }}"
+      #     files: |
+      #       ${{ env.JAR }}
+      #     draft: ${{ env.DRAFT }}
+      #     prerelease: false
+      #     repo_token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v1
         with:
-          automatic_release_tag: "latest"
-          title: "Aqua Compiler ${{ env.VERSION }}"
+          configuration: ".github/workflows/changelog_config.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ipfs-adapter ${{ env.RELEASE_VERSION }}
+          tag_name: ${{ env.RELEASE_VERSION }}
           files: |
-            ${{ env.JAR }}
-          draft: ${{ env.DRAFT }}
+            ./service/ipfs-adapter.tar.gz
+          body: ${{steps.github_release.outputs.changelog}}
+          draft: false
           prerelease: false
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
