@@ -68,19 +68,19 @@ jobs:
           node-version: "14"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install jq and prepare package
-        run: |
-          sudo apt-get update && sudo apt-get --yes --force-yes install jq
-          PKG_NAME="$(cat package.json | jq -r .name)"
-          cp ${{ env.JAR }} ./npm/aqua-cli.jar
+      # - name: Install jq and prepare package
+      #   run: |
+      #     sudo apt-get update && sudo apt-get --yes --force-yes install jq
+      #     PKG_NAME="$(cat package.json | jq -r .name)"
+      #     cp ${{ env.JAR }} ./npm/aqua-cli.jar
 
-      - run: npm version ${{ env.VERSION }}
-        working-directory: ./npm
+      # - run: npm version ${{ env.VERSION }}
+      #   working-directory: ./npm
 
-      - run: npm publish --access public
-        working-directory: ./npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # - run: npm publish --access public
+      #   working-directory: ./npm
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Determine if release should be drafted
         run: |
