@@ -1,9 +1,21 @@
-service OpH("oph"):
-  get_str() -> string
+data DT:
+  field: string
 
-func create_client_util() -> []string:
+service DTGetter("get-dt"):
+    get_dt(s: string) -> DT
+
+func use_name1(name: string) -> string:
+    results <- DTGetter.get_dt(name)
+    <- results.field
+
+func use_name2(name: string) -> []string:
     results: *string
-    results <<- "hello"
-    str <- OpH.get_str()
-    results <<- str
+    results <- use_name1(name)
+    results <- use_name1(name)
+    results <- use_name1(name)
+    <- results
+
+func use_name3(name: string) -> []string:
+    DTGetter.get_dt("yoyo literal")
+    results <- use_name2(name)
     <- results
