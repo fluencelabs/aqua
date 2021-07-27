@@ -106,12 +106,20 @@ jobs:
       #     prerelease: false
       #     repo_token: "${{ secrets.GITHUB_TOKEN }}"
 
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v5.5
+        with:
+          custom_tag: ${{ env.BASE_VERSION }}
+          tag_prefix: ""
+          github_token: ${{ secrets.PERSONAL_TOKEN }}
+
       - name: Build Changelog
         id: github_release
         uses: mikepenz/release-changelog-builder-action@v1
         with:
           configuration: ".github/workflows/changelog_config.json"
-          toTag: ${{ env.BASE_VERSION }}
+          toTag: ${{ steps.tag_version.outputs.new_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -119,7 +127,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: Aqua Compiler ${{ env.VERSION }}
-          tag_name: ${{ env.BASE_VERSION }}
+          tag_name: ${{ steps.tag_version.outputs.new_tag }}
           body: ${{steps.github_release.outputs.changelog}}
           draft: false
           prerelease: false
