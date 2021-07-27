@@ -12,9 +12,10 @@ case class ResolveFunc(
   callback: (String, Call) => FuncOp,
   respFuncName: String,
   wrapCallableName: String = "funcAround",
-  arrowCallbackPrefix: String = "init_peer_callable_",
-  returnVar: String = "-return-"
+  arrowCallbackPrefix: String = "init_peer_callable_"
 ) {
+
+  private val returnVar: String = "-return-"
 
   def returnCallback(retModel: ValueModel): FuncOp =
     callback(
