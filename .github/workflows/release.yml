@@ -9,11 +9,6 @@ on:
       - "main"
 
   workflow_dispatch:
-    inputs:
-      release:
-        description: "Draft or public release?\nPut 'draft' to make a draft release"
-        required: false
-        default: 'public'
 
 jobs:
   release:
@@ -84,27 +79,7 @@ jobs:
       #   env:
       #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Determine if release should be drafted
-        run: |
-          set -x
-          if [ "${{ github.event.inputs.release }}" = "public" ]; then
-            echo "DRAFT=false" >> $GITHUB_ENV
-          else
-            echo "DRAFT=true" >> $GITHUB_ENV
-          fi
-
-      # ### create release
-      # - uses: marvinpinto/action-automatic-releases@latest
-      #   # if inputs.release if an empty string, we're running automatically
-      #   if: ${{ github.event.inputs.release != '' }}
-      #   with:
-      #     automatic_release_tag: "latest"
-      #     title: "Aqua Compiler ${{ env.VERSION }}"
-      #     files: |
-      #       ${{ env.JAR }}
-      #     draft: ${{ env.DRAFT }}
-      #     prerelease: false
-      #     repo_token: "${{ secrets.GITHUB_TOKEN }}"
+  ### create release
 
       - name: Bump version and push tag
         id: tag_version
