@@ -1,43 +1,18 @@
 package aqua.compiler
 
-import aqua.parser.lift.FileSpan
-import cats.data.NonEmptyList
-import cats.parse.Parser.Expectation
+import aqua.parser.ParserError
+import aqua.parser.lexer.Token
+import aqua.semantics.SemanticError
 
-sealed trait AquaError {
-  def showForConsole: String
-}
+trait AquaError[I, E, S[_]]
+case class SourcesErr[I, E, S[_]](err: E) extends AquaError[I, E, S]
+case class ParserErr[I, E, S[_]](err: ParserError[S]) extends AquaError[I, E, S]
 
-case class CustomSyntaxError(span: FileSpan, message: String) extends AquaError {
+case class ResolveImportsErr[I, E, S[_]](fromFile: I, token: Token[S], err: E)
+    extends AquaError[I, E, S]
+case class ImportErr[I, E, S[_]](token: Token[S]) extends AquaError[I, E, S]
 
-  override def showForConsole: String =
-    span
-      .focus(3)
-      .map(
-        _.toConsoleStr(
-          message,
-          Console.RED
-        )
-      )
-      .getOrElse(
-        "(offset is beyond the script, syntax errors) Error: " + Console.RED + message
-          .mkString(", ")
-      ) + Console.RESET + "\n"
-}
+case class CycleError[I, E, S[_]](modules: List[I]) extends AquaError[I, E, S]
 
-case class SyntaxError(span: FileSpan, expectations: NonEmptyList[Expectation]) extends AquaError {
-
-  override def showForConsole: String =
-    span
-      .focus(3)
-      .map(spanFocus =>
-        spanFocus.toConsoleStr(
-          s"Syntax error, expected: ${expectations.toList.mkString(", ")}",
-          Console.RED
-        )
-      )
-      .getOrElse(
-        "(offset is beyond the script, syntax errors) " + Console.RED + expectations.toList
-          .mkString(", ")
-      ) + Console.RESET + "\n"
-}
+case class CompileError[I, E, S[_]](err: SemanticError[S]) extends AquaError[I, E, S]
+case class OutputError[I, E, S[_]](compiled: AquaCompiled[I], err: E) extends AquaError[I, E, S]

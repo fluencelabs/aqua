@@ -1,24 +1,17 @@
-package aqua
+package aqua.files
 
-import aqua.compiler.AquaIO
-import aqua.compiler.io.{
-  AquaFileError,
-  EmptyFileError,
-  FileNotFound,
-  FileSystemError,
-  FileWriteError
-}
+import aqua.io._
 import aqua.parser.lift.FileSpan
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, EitherT, NonEmptyChain, Validated, ValidatedNec}
-import cats.syntax.functor._
-import cats.syntax.either._
+import cats.data._
 import cats.effect.kernel.Concurrent
+import cats.syntax.applicative._
+import cats.syntax.apply._
+import cats.syntax.either._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import fs2.io.file.Files
 import fs2.text
-import cats.syntax.applicative._
-import cats.syntax.flatMap._
-import cats.syntax.apply._
 
 import java.nio.file.Path
 import scala.util.Try

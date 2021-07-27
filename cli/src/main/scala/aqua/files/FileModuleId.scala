@@ -1,4 +1,4 @@
-package aqua.compiler.io
+package aqua.files
 
 import java.nio.file.Path
 

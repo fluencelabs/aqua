@@ -1,4 +1,4 @@
-package aqua.compiler
+package aqua.io
 
 import aqua.model.AquaContext
 import cats.data.Validated

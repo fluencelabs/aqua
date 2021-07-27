@@ -1,7 +1,7 @@
+import aqua.AquaPathCompiler
 import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
-import aqua.compiler.AquaCompiler
 import aqua.model.transform.BodyConfig
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
@@ -20,7 +20,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
     import aqua.AquaFilesIO.summon
 
     val bc = BodyConfig()
-    AquaCompiler
+    AquaPathCompiler
       .compileFilesTo[IO](src, List.empty, targetTs, TypeScriptBackend, bc)
       .unsafeRunSync()
       .leftMap { err =>
@@ -32,7 +32,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
     targetTsFile.toFile.exists() should be(true)
     Files.deleteIfExists(targetTsFile)
 
-    AquaCompiler
+    AquaPathCompiler
       .compileFilesTo[IO](src, List.empty, targetJs, JavaScriptBackend, bc)
       .unsafeRunSync()
       .leftMap { err =>
@@ -44,7 +44,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
     targetJsFile.toFile.exists() should be(true)
     Files.deleteIfExists(targetJsFile)
 
-    AquaCompiler
+    AquaPathCompiler
       .compileFilesTo[IO](src, List.empty, targetAir, AirBackend, bc)
       .unsafeRunSync()
       .leftMap { err =>

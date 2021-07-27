@@ -1,6 +1,5 @@
-package aqua.compiler
+package aqua.io
 
-import aqua.compiler.io.AquaFileError
 import aqua.parser.lift.FileSpan
 import cats.data.{Chain, EitherT, ValidatedNec}
 

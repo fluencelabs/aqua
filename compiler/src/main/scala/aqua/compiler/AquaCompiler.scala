@@ -1,167 +1,92 @@
 package aqua.compiler
 
 import aqua.backend.Backend
-import aqua.compiler.io._
 import aqua.linker.Linker
 import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
-import aqua.parser.lift.FileSpan
-import aqua.semantics.{RulesViolated, SemanticError, Semantics}
-import cats.data._
-import cats.kernel.Monoid
-import cats.syntax.flatMap._
+import aqua.parser.lift.LiftParser
+import aqua.semantics.Semantics
+import cats.{Comonad, Monad}
+import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.syntax.functor._
-import cats.{Applicative, Monad}
-import wvlet.log.LogSupport
+import cats.syntax.flatMap._
+import cats.syntax.applicative._
+import cats.syntax.traverse._
 
-import java.nio.file.Path
+object AquaCompiler {
 
-object AquaCompiler extends LogSupport {
-
-  private def gatherPreparedFiles(
-    srcPath: Path,
-    targetPath: Path,
-    files: Map[FileModuleId, ValidatedNec[SemanticError[FileSpan.F], AquaContext]]
-  ): ValidatedNec[String, Chain[Prepared]] = {
-    val (errs, _, preps) = files.toSeq.foldLeft[(Chain[String], Set[String], Chain[Prepared])](
-      (Chain.empty, Set.empty, Chain.empty)
-    ) { case ((errs, errsSet, preps), (modId, proc)) =>
-      proc.fold(
-        es => {
-          val newErrs = showProcErrors(es.toChain).filterNot(errsSet.contains)
-          (errs ++ newErrs, errsSet ++ newErrs.iterator, preps)
-        },
-        c => {
-          Prepared(modId.file, srcPath, targetPath, c) match {
-            case Validated.Valid(p) ⇒
-              (errs, errsSet, preps :+ p)
-            case Validated.Invalid(err) ⇒
-              (errs :+ err.getMessage, errsSet, preps)
-          }
-
-        }
-      )
-    }
-    NonEmptyChain
-      .fromChain(errs)
-      .fold(Validated.validNec[String, Chain[Prepared]](preps))(Validated.invalid)
-  }
-
-  /**
-   * Create a structure that will be used to create output by a backend
-   */
-  def prepareFiles[F[_]: AquaIO: Monad](
-    srcPath: Path,
-    imports: List[Path],
-    targetPath: Path
-  )(implicit aqum: Monoid[AquaContext]): F[ValidatedNec[String, Chain[Prepared]]] =
-    AquaFiles
-      .readAndResolve[F, ValidatedNec[SemanticError[FileSpan.F], AquaContext]](
-        srcPath,
-        imports,
-        ast => context => context.andThen(ctx => Semantics.process(ast, ctx))
-      )
-      .value
-      .map {
-        case Left(fileErrors) =>
-          Validated.invalid(fileErrors.map(_.showForConsole))
-
-        case Right(modules) =>
-          Linker[FileModuleId, AquaFileError, ValidatedNec[SemanticError[FileSpan.F], AquaContext]](
-            modules,
-            ids => Unresolvable(ids.map(_.id.file.toString).mkString(" -> "))
-          ) match {
-            case Validated.Valid(files) ⇒
-              gatherPreparedFiles(srcPath, targetPath, files)
-
-            case Validated.Invalid(errs) ⇒
-              Validated.invalid(
-                errs
-                  .map(_.showForConsole)
-              )
-          }
-      }
-
-  def showProcErrors(
-    errors: Chain[SemanticError[FileSpan.F]]
-  ): Chain[String] =
-    errors.map {
-      case RulesViolated(token, hint) =>
-        token.unit._1
-          .focus(2)
-          .map(_.toConsoleStr(hint, Console.CYAN))
-          .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
-      case _ =>
-        "Semantic error"
-    }
-
-  private def gatherResults[F[_]: Monad](
-    results: List[EitherT[F, String, Unit]]
-  ): F[ValidatedNec[String, Chain[String]]] = {
-    results
-      .foldLeft(
-        EitherT.rightT[F, NonEmptyChain[String]](Chain.empty[String])
-      ) { case (accET, writeET) =>
-        EitherT(for {
-          acc <- accET.value
-          writeResult <- writeET.value
-        } yield (acc, writeResult) match {
-          case (Left(errs), Left(err)) => Left(errs :+ err)
-          case (Right(res), Right(_)) => Right(res)
-          case (Left(errs), _) => Left(errs)
-          case (_, Left(err)) => Left(NonEmptyChain.of(err))
-        })
-      }
-      .value
-      .map(Validated.fromEither)
-  }
-
-  def compileFilesTo[F[_]: AquaIO: Monad](
-    srcPath: Path,
-    imports: List[Path],
-    targetPath: Path,
+  def compile[F[_]: Monad, E, I, S[_]: Comonad](
+    sources: AquaSources[F, E, I],
+    liftI: I => LiftParser[S],
     backend: Backend,
-    bodyConfig: BodyConfig
-  ): F[ValidatedNec[String, Chain[String]]] = {
-    import bodyConfig.aquaContextMonoid
-    prepareFiles(srcPath, imports, targetPath)
-      .map(_.map(_.filter { p =>
-        val hasOutput = p.hasOutput
-        if (!hasOutput) info(s"Source ${p.srcFile}: compilation OK (nothing to emit)")
-        hasOutput
-      }))
-      .flatMap[ValidatedNec[String, Chain[String]]] {
-        case Validated.Invalid(e) =>
-          Applicative[F].pure(Validated.invalid(e))
-        case Validated.Valid(preps) =>
-          val results = preps.toList
-            .flatMap(p =>
-              backend.generate(p.context, bodyConfig).map { compiled =>
-                val targetPath = p.targetPath(
-                  p.srcFile.getFileName.toString.stripSuffix(".aqua") + compiled.suffix
+    config: BodyConfig
+  ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
+    import config.aquaContextMonoid
+    type Err = AquaError[I, E, S]
+    new AquaParser[F, E, I, S](sources, liftI)
+      .resolve[ValidatedNec[Err, AquaContext]](ast =>
+        context =>
+          context.andThen(ctx => Semantics.process(ast, ctx).leftMap(_.map[Err](CompileError(_))))
+      )
+      .map {
+        case Validated.Valid(modules) =>
+          Linker[I, AquaError[I, E, S], ValidatedNec[Err, AquaContext]](
+            modules,
+            cycle => CycleError[I, E, S](cycle.map(_.id))
+          ) match {
+            case Validated.Valid(files) =>
+              files
+                .foldLeft[ValidatedNec[Err, Chain[AquaProcessed[I]]]](
+                  Validated.validNec(Chain.nil)
+                ) {
+                  case (acc, (i, Validated.Valid(res))) =>
+                    acc combine Validated.validNec(Chain.one(AquaProcessed(i, res)))
+                  case (acc, (_, Validated.Invalid(errs))) =>
+                    acc combine Validated.invalid(errs)
+                }
+                .map(
+                  _.flatMap(ap =>
+                    Chain fromSeq backend
+                      .generate(ap.context, config)
+                      .map(AquaCompiled(ap.id, _))
+                  )
                 )
 
-                targetPath.fold(
-                  t => EitherT.leftT[F, Unit](t.getMessage),
-                  tp =>
-                    AquaIO[F]
-                      .writeFile(tp, compiled.content)
-                      .flatTap { _ =>
-                        EitherT.pure(
-                          Validated.catchNonFatal(
-                            info(
-                              s"Result ${tp.toAbsolutePath}: compilation OK (${p.context.funcs.size} functions)"
-                            )
-                          )
-                        )
-                      }
-                      .leftMap(_.showForConsole)
-                )
-              }
-            )
-
-          gatherResults(results)
+            case Validated.Invalid(errs) =>
+              Validated.invalid(errs)
+          }
+        case Validated.Invalid(errs) =>
+          Validated.invalid(errs)
       }
   }
 
+  def compileTo[F[_]: Monad, E, I, S[_]: Comonad, T](
+    sources: AquaSources[F, E, I],
+    liftI: I => LiftParser[S],
+    backend: Backend,
+    config: BodyConfig,
+    write: AquaCompiled[I] => F[Validated[E, T]]
+  ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
+    compile[F, E, I, S](sources, liftI, backend, config).flatMap {
+      case Validated.Valid(compiled) =>
+        compiled
+          .map(ac =>
+            write(ac).map(
+              _.bimap[NonEmptyChain[AquaError[I, E, S]], Chain[T]](
+                e => NonEmptyChain.one(OutputError(ac, e)),
+                Chain.one
+              )
+            )
+          )
+          .toList
+          .traverse(identity)
+          .map(
+            _.foldLeft[ValidatedNec[AquaError[I, E, S], Chain[T]]](Validated.validNec(Chain.nil))(
+              _ combine _
+            )
+          )
+
+      case Validated.Invalid(errs) =>
+        Validated.invalid[NonEmptyChain[AquaError[I, E, S]], Chain[T]](errs).pure[F]
+    }
 }

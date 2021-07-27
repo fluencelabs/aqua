@@ -4,7 +4,8 @@ import aqua.backend.Backend
 import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
-import aqua.compiler.{AquaCompiler, AquaIO}
+import aqua.files.AquaFilesIO
+import aqua.io.AquaIO
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
@@ -86,7 +87,7 @@ object AquaCli extends IOApp with LogSupport {
             bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
           }
           info(s"Aqua Compiler ${versionStr}")
-          AquaCompiler
+          AquaPathCompiler
             .compileFilesTo[F](
               input,
               imports,

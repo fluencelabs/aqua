@@ -1,7 +1,8 @@
 package aqua
 
 import aqua.backend.ts.TypeScriptBackend
-import aqua.compiler.{AquaCompiler, AquaIO}
+import aqua.files.AquaFilesIO
+import aqua.io.AquaIO
 import aqua.model.transform.BodyConfig
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
@@ -18,7 +19,7 @@ object Test extends IOApp.Simple {
   implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
   override def run: IO[Unit] =
-    AquaCompiler
+    AquaPathCompiler
       .compileFilesTo[IO](
         Paths.get("./aqua-src"),
         List(Paths.get("./aqua")),

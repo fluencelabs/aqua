@@ -2,10 +2,13 @@ package aqua.compiler
 
 import cats.data.{Chain, ValidatedNec}
 
-trait AquaSources[F[_], E, I] {
-  def sources: F[ValidatedNec[E, Chain[(I, String)]]]
+trait AquaSources[F[_], Err, I] {
+  // Read the sources in the sources directory as I, String pairs
+  def sources: F[ValidatedNec[Err, Chain[(I, String)]]]
 
-  def resolve(from: I, imp: String): F[ValidatedNec[E, I]]
+  // Resolve id of the imported imp string from I file
+  def resolve(from: I, imp: String): F[ValidatedNec[Err, I]]
 
-  def load(file: I): F[ValidatedNec[E, String]]
+  // Load file by its resolved I
+  def load(file: I): F[ValidatedNec[Err, String]]
 }

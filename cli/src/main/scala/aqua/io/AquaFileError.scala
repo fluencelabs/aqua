@@ -1,6 +1,5 @@
-package aqua.compiler.io
+package aqua.io
 
-import aqua.compiler.AquaError
 import aqua.parser.lift.FileSpan
 import cats.data.NonEmptyChain
 
@@ -38,7 +37,7 @@ case class Unresolvable(msg: String) extends AquaFileError {
 }
 
 // TODO there should be no AquaErrors, as they does not fit
-case class AquaScriptErrors(errors: NonEmptyChain[AquaError]) extends AquaFileError {
+case class AquaScriptErrors(errors: NonEmptyChain[AquaFileSpanError]) extends AquaFileError {
 
   override def showForConsole: String =
     errors.map(_.showForConsole).toChain.toList.mkString("\n")

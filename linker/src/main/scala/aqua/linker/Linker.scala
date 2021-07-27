@@ -11,9 +11,9 @@ object Linker extends LogSupport {
 
   @tailrec
   def iter[I, E, T: Semigroup](
-    mods: List[AquaModule[I, E, T]],
+    mods: List[AquaModule[I, E, T => T]],
     proc: Map[I, T => T],
-    cycleError: List[AquaModule[I, E, T]] => E
+    cycleError: List[AquaModule[I, E, T => T]] => E
   ): Either[E, Map[I, T => T]] =
     mods match {
       case Nil => Right(proc)
@@ -48,8 +48,8 @@ object Linker extends LogSupport {
     }
 
   def apply[I, E, T: Monoid](
-    modules: Modules[I, E, T],
-    cycleError: List[AquaModule[I, E, T]] => E
+    modules: Modules[I, E, T => T],
+    cycleError: List[AquaModule[I, E, T => T]] => E
   ): ValidatedNec[E, Map[I, T]] =
     if (modules.dependsOn.nonEmpty) Validated.invalid(modules.dependsOn.values.reduce(_ ++ _))
     else

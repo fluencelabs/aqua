@@ -1,7 +1,8 @@
-package aqua.compiler.io
+package aqua.io
 
-import aqua.compiler.io.AquaFiles.ETC
-import aqua.compiler.{AquaIO, CustomSyntaxError, SyntaxError}
+import aqua.files
+import aqua.files.FileModuleId
+import aqua.io.AquaFiles.ETC
 import aqua.linker.AquaModule
 import aqua.parser.head.ImportExpr
 import aqua.parser.lift.FileSpan.F
@@ -45,7 +46,7 @@ case class AquaFile(
   def createModule[F[_]: AquaIO: Monad, T](
     transpile: Ast[FileSpan.F] => T => T,
     importFrom: List[Path]
-  ): AquaFiles.ETC[F, AquaModule[FileModuleId, AquaFileError, T]] = {
+  ): AquaFiles.ETC[F, AquaModule[FileModuleId, AquaFileError, T => T]] = {
     val resolvedImports = imports.map { case (pathString, focus) =>
       AquaIO[F]
         .resolve(focus, Paths.get(pathString), id.file.getParent +: importFrom)
@@ -106,7 +107,7 @@ object AquaFile {
         .toList
         .toMap
     } yield AquaFile(
-      FileModuleId(file.toAbsolutePath.normalize()),
+      files.FileModuleId(file.toAbsolutePath.normalize()),
       imports,
       source,
       ast

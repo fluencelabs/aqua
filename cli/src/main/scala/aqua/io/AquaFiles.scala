@@ -1,6 +1,6 @@
-package aqua.compiler.io
+package aqua.io
 
-import aqua.compiler.AquaIO
+import aqua.files.FileModuleId
 import aqua.linker.Modules
 import aqua.parser.Ast
 import aqua.parser.lift.FileSpan
@@ -14,7 +14,7 @@ import cats.syntax.applicative._
 import java.nio.file.Path
 
 object AquaFiles {
-  type Mods[T] = Modules[FileModuleId, AquaFileError, T]
+  type Mods[T] = Modules[FileModuleId, AquaFileError, T => T]
   type ETC[F[_], T] = EitherT[F, NonEmptyChain[AquaFileError], T]
 
   def readSources[F[_]: AquaIO: Monad](
@@ -53,7 +53,7 @@ object AquaFiles {
       }
 
   def resolveModules[F[_]: AquaIO: Monad, T](
-    modules: Modules[FileModuleId, AquaFileError, T],
+    modules: Modules[FileModuleId, AquaFileError, T => T],
     importFromPaths: List[Path],
     transpile: Ast[FileSpan.F] => T => T
   ): ETC[F, Mods[T]] =
