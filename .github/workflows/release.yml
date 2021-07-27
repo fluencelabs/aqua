@@ -111,6 +111,7 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@v1
         with:
           configuration: ".github/workflows/changelog_config.json"
+          toTag: ${{ env.BASE_VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -118,7 +119,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: Aqua Compiler ${{ env.VERSION }}
-          tag_name: ${{ env.VERSION }}
+          tag_name: ${{ env.BASE_VERSION }}
           body: ${{steps.github_release.outputs.changelog}}
           draft: false
           prerelease: false
