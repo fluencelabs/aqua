@@ -96,10 +96,7 @@ jobs:
         # if inputs.release if an empty string, we're running automatically
         if: ${{ github.event.inputs.release != '' }}
         with:
-          # changelog will be automatically generated from the history
-          # between tag env.BASE_VERSION (eg 0.1.0 or 0.2.0, etc)
-          # and the current commit
-          automatic_release_tag: "${{ env.BASE_VERSION }}"
+          automatic_release_tag: "latest"
           title: "Aqua Compiler ${{ env.VERSION }}"
           files: |
             ${{ env.JAR }}
