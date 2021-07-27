@@ -1,6 +1,5 @@
 package aqua.io
 
-import aqua.parser.lift.FileSpan
 import cats.data.NonEmptyChain
 
 import java.nio.file.Path
@@ -11,13 +10,10 @@ sealed trait AquaFileError {
   override def toString: String = showForConsole
 }
 
-case class FileNotFound(focus: FileSpan.Focus, name: Path, imports: Seq[Path])
-    extends AquaFileError {
+case class FileNotFound(name: Path, imports: Seq[Path]) extends AquaFileError {
 
-  override def showForConsole: String = focus.toConsoleStr(
-    s"File not found at $name, looking in ${imports.mkString(", ")}",
-    Console.YELLOW
-  )
+  override def showForConsole: String =
+    s"File not found at $name, looking in ${imports.mkString(", ")}"
 }
 
 case class EmptyFileError(path: Path) extends AquaFileError {

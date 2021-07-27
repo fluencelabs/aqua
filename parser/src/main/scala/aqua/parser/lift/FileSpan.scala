@@ -37,7 +37,7 @@ object FileSpan {
 
   def fileSpanLiftParser(name: String, source: String): LiftParser[F] = new LiftParser[F] {
 
-    val memoizedLocationMap = Eval.later(LocationMap(source)).memoize
+    private val memoizedLocationMap = Eval.later(LocationMap(source)).memoize
 
     override def lift[T](p: P[T]): P[F[T]] = {
       implicitly[LiftParser[Span.F]].lift(p).map { case (span, value) =>

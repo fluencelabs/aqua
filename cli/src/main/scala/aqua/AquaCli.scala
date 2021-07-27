@@ -5,7 +5,6 @@ import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.files.AquaFilesIO
-import aqua.io.AquaIO
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id

@@ -17,7 +17,7 @@ object AquaCompiler {
 
   def compile[F[_]: Monad, E, I, S[_]: Comonad](
     sources: AquaSources[F, E, I],
-    liftI: I => LiftParser[S],
+    liftI: (I, String) => LiftParser[S],
     backend: Backend,
     config: BodyConfig
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
@@ -45,7 +45,8 @@ object AquaCompiler {
                     acc combine Validated.invalid(errs)
                 }
                 .map(
-                  _.flatMap(ap =>
+                  // TODO: write skipped file to logs, or make AquaCompiled with empty content
+                  _.filter(_.hasOutput).flatMap(ap =>
                     Chain fromSeq backend
                       .generate(ap.context, config)
                       .map(AquaCompiled(ap.id, _))
@@ -62,7 +63,7 @@ object AquaCompiler {
 
   def compileTo[F[_]: Monad, E, I, S[_]: Comonad, T](
     sources: AquaSources[F, E, I],
-    liftI: I => LiftParser[S],
+    liftI: (I, String) => LiftParser[S],
     backend: Backend,
     config: BodyConfig,
     write: AquaCompiled[I] => F[Validated[E, T]]

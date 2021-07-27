@@ -13,7 +13,7 @@ import cats.syntax.applicative._
 
 class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
   sources: AquaSources[F, E, I],
-  liftI: I => LiftParser[S]
+  liftI: (I, String) => LiftParser[S]
 ) {
 
   type Body = Ast[S]
@@ -24,7 +24,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
     sources.sources
       .map(
         _.leftMap(_.map[Err](SourcesErr(_))).andThen(_.map { case (i, s) =>
-          implicit val lift: LiftParser[S] = liftI(i)
+          implicit val lift: LiftParser[S] = liftI(i, s)
           Ast.fromString[S](s).bimap(_.map[Err](ParserErr(_)), ast => Chain.one(i -> ast))
         }.foldLeft(Validated.validNec[Err, Chain[(I, Body)]](Chain.nil))(_ combine _))
       )
@@ -68,7 +68,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
     sources
       .load(imp)
       .map(_.leftMap(_.map[Err](SourcesErr(_))).andThen { src =>
-        implicit val lift: LiftParser[S] = liftI(imp)
+        implicit val lift: LiftParser[S] = liftI(imp, src)
         Ast.fromString[S](src).leftMap(_.map[Err](ParserErr(_)))
       })
       .flatMap {

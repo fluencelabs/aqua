@@ -17,7 +17,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
     val targetJs = Files.createTempDirectory("js")
     val targetAir = Files.createTempDirectory("air")
 
-    import aqua.AquaFilesIO.summon
+    import aqua.files.AquaFilesIO.summon
 
     val bc = BodyConfig()
     AquaPathCompiler

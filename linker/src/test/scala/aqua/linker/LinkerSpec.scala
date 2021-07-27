@@ -8,12 +8,16 @@ class LinkerSpec extends AnyFlatSpec with Matchers {
 
   "linker" should "resolve dependencies" in {
 
-    val empty = Modules[String, String, String]()
+    val empty = Modules[String, String, String => String]()
 
     val withMod1 =
       empty
         .add(
-          AquaModule("mod1", Map("mod2" -> "unresolved mod2 in mod1"), _ ++ " | mod1"),
+          AquaModule[String, String, String => String](
+            "mod1",
+            Map("mod2" -> "unresolved mod2 in mod1"),
+            _ ++ " | mod1"
+          ),
           export = true
         )
     withMod1.isResolved should be(false)

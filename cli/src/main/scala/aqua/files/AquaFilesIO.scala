@@ -1,7 +1,7 @@
 package aqua.files
 
+import aqua.AquaIO
 import aqua.io._
-import aqua.parser.lift.FileSpan
 import cats.data.Validated.{Invalid, Valid}
 import cats.data._
 import cats.effect.kernel.Concurrent
@@ -60,14 +60,13 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
    * Checks if a file exists in the list of possible paths
    */
   def resolve(
-    focus: FileSpan.Focus,
     src: Path,
     imports: List[Path]
   ): EitherT[F, AquaFileError, Path] =
     findFirstF(
       imports
         .map(_.resolve(src)),
-      EitherT.leftT(FileNotFound(focus, src, imports))
+      EitherT.leftT(FileNotFound(src, imports))
     )
 
   override def listAqua(folder: Path): F[ValidatedNec[AquaFileError, Chain[Path]]] =
