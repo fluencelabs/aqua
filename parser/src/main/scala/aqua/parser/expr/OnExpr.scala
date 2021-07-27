@@ -16,6 +16,7 @@ object OnExpr extends Expr.AndIndented {
       CallArrowExpr ::
       AbilityIdExpr ::
       AssignmentExpr ::
+      PushToStreamExpr ::
       ParExpr ::
       CoExpr ::
       Expr.defer(TryExpr) ::

@@ -1,14 +1,12 @@
 package aqua.semantics.expr
 
 import aqua.model.Model
-import aqua.model.func.raw.{AssignmentTag, FuncOp, FuncOps}
-import aqua.parser.expr.{AbilityIdExpr, AssignmentExpr}
+import aqua.model.func.raw.{AssignmentTag, FuncOp}
+import aqua.parser.expr.AssignmentExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
-import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import cats.free.Free
-import cats.syntax.flatMap._
 import cats.syntax.functor._
 
 class AssignmentSem[F[_]](val expr: AssignmentExpr[F]) extends AnyVal {

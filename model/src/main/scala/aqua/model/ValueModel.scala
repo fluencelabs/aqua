@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.types.{DataType, ProductType, ScalarType, StreamType, Type}
+import aqua.types._
 import cats.Eq
 import cats.data.{Chain, NonEmptyMap}
 import wvlet.log.LogSupport
@@ -51,7 +51,7 @@ case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Cha
 
   override val lastType: Type = lambda.lastOption.map(_.`type`).getOrElse(`type`)
 
-  override def resolveWith(map: Map[String, ValueModel]): ValueModel = {
+  override def resolveWith(map: Map[String, ValueModel]): ValueModel =
     map.get(name) match {
       case Some(vv: VarModel) =>
         map.get(vv.name) match {
@@ -94,7 +94,6 @@ case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Cha
       case Some(vv) => vv // TODO check that lambda is empty, otherwise error
       case None => this // Should not happen
     }
-  }
 
   override def toString: String =
     s"var{$name: ${`type`}${if (lastType != `type`) " -> " + lastType else ""}${if (lambda.isEmpty) ""
