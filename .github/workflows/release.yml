@@ -28,10 +28,10 @@ jobs:
       - uses: olafurpg/setup-scala@v10
 
       ### Update & build
-      - name: Assembly
-        run: sbt cli/assembly
-        env:
-          BUILD_NUMBER: ${{ github.run_number }}
+      # - name: Assembly
+      #   run: sbt cli/assembly
+      #   env:
+      #     BUILD_NUMBER: ${{ github.run_number }}
 
       ### Create release
       - name: Get project version
@@ -115,10 +115,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: ipfs-adapter ${{ env.RELEASE_VERSION }}
-          tag_name: ${{ env.RELEASE_VERSION }}
-          files: |
-            ./service/ipfs-adapter.tar.gz
+          name: Aqua Compiler ${{ env.VERSION }}
+          tag_name: ${{ env.VERSION }}
           body: ${{steps.github_release.outputs.changelog}}
           draft: true
           prerelease: false
