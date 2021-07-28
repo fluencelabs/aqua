@@ -30,13 +30,11 @@ object AquaCompiler {
       )
       .map {
         case Validated.Valid(modules) =>
-          println(modules)
           Linker.link[I, AquaError[I, E, S], ValidatedNec[Err, AquaContext]](
             modules,
             cycle => CycleError[I, E, S](cycle.map(_.id))
           ) match {
             case Validated.Valid(files) =>
-              println("f: " + files)
               files
                 .foldLeft[ValidatedNec[Err, Chain[AquaProcessed[I]]]](
                   Validated.validNec(Chain.nil)

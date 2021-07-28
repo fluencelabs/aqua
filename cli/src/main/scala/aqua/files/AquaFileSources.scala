@@ -25,12 +25,8 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
               .readFile(f)
               .value
               .map[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] {
-                case Left(err) =>
-                  println(err)
-                  Validated.invalidNec(err)
-                case Right(content) =>
-                  println(content)
-                  Validated.validNec(Chain.one(FileModuleId(f) -> content))
+                case Left(err) => Validated.invalidNec(err)
+                case Right(content) => Validated.validNec(Chain.one(FileModuleId(f) -> content))
               }
           )
           .traverse(identity)
@@ -39,9 +35,7 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
               Validated.validNec(Chain.nil)
             )(_ combine _)
           )
-      case err @ Validated.Invalid(e) =>
-        println(e)
-
+      case Validated.Invalid(e) =>
         Validated.invalidNec[AquaFileError, Chain[(FileModuleId, String)]](e.head).pure[F]
     }
 
@@ -65,7 +59,7 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
     val target = targetPath.resolve(
       ac.sourceId.file.getFileName.toString.stripSuffix(".aqua") + ac.compiled.suffix
     )
-    println(target)
+
     filesIO
       .writeFile(
         target,

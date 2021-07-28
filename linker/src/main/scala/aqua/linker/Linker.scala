@@ -14,9 +14,7 @@ object Linker extends LogSupport {
     mods: List[AquaModule[I, E, T => T]],
     proc: Map[I, T => T],
     cycleError: List[AquaModule[I, E, T => T]] => E
-  ): Either[E, Map[I, T => T]] = {
-    println("mods iter: " + mods.map(_.id))
-    println("proc iter: " + proc.keySet)
+  ): Either[E, Map[I, T => T]] =
     mods match {
       case Nil =>
         Right(proc)
@@ -41,7 +39,6 @@ object Linker extends LogSupport {
               }
             acc + (m.id -> m.body.compose(deps))
           }
-          println("folded: " + folded.keySet)
           iter(
             postpone,
             // TODO can be done in parallel
@@ -50,7 +47,6 @@ object Linker extends LogSupport {
           )
         }
     }
-  }
 
   def link[I, E, T: Monoid](
     modules: Modules[I, E, T => T],
@@ -58,18 +54,11 @@ object Linker extends LogSupport {
   ): ValidatedNec[E, Map[I, T]] =
     if (modules.dependsOn.nonEmpty) Validated.invalid(modules.dependsOn.values.reduce(_ ++ _))
     else {
-      println(modules.loaded.values.toList)
-      println(modules.exports)
       val result = iter(modules.loaded.values.toList, Map.empty[I, T => T], cycleError)
 
-      println(
-        "iter result: " + result
-          .map(a => a.view.filterKeys(a => modules.exports.contains(a)).toMap)
-      )
-      println("modules exports: " + modules.exports)
       Validated.fromEither(
         result
-          .map(a => a.view.filterKeys(modules.exports).mapValues(_.apply(Monoid[T].empty)).toMap)
+          .map(_.view.filterKeys(modules.exports).mapValues(_.apply(Monoid[T].empty)).toMap)
           .left
           .map(NonEmptyChain.one)
       )
