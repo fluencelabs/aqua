@@ -6,12 +6,12 @@ import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.LiftParser
 import aqua.semantics.Semantics
-import cats.{Comonad, Monad}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.syntax.functor._
-import cats.syntax.flatMap._
 import cats.syntax.applicative._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import cats.syntax.traverse._
+import cats.{Comonad, Monad}
 
 object AquaCompiler {
 
@@ -30,11 +30,13 @@ object AquaCompiler {
       )
       .map {
         case Validated.Valid(modules) =>
-          Linker[I, AquaError[I, E, S], ValidatedNec[Err, AquaContext]](
+          println(modules)
+          Linker.link[I, AquaError[I, E, S], ValidatedNec[Err, AquaContext]](
             modules,
             cycle => CycleError[I, E, S](cycle.map(_.id))
           ) match {
             case Validated.Valid(files) =>
+              println("f: " + files)
               files
                 .foldLeft[ValidatedNec[Err, Chain[AquaProcessed[I]]]](
                   Validated.validNec(Chain.nil)
@@ -54,6 +56,7 @@ object AquaCompiler {
                 )
 
             case Validated.Invalid(errs) =>
+              println(errs)
               Validated.invalid(errs)
           }
         case Validated.Invalid(errs) =>
@@ -70,6 +73,7 @@ object AquaCompiler {
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
     compile[F, E, I, S](sources, liftI, backend, config).flatMap {
       case Validated.Valid(compiled) =>
+        println(compiled)
         compiled
           .map(ac =>
             write(ac).map(

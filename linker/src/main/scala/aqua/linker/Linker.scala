@@ -47,17 +47,22 @@ object Linker extends LogSupport {
         }
     }
 
-  def apply[I, E, T: Monoid](
+  def link[I, E, T: Monoid](
     modules: Modules[I, E, T => T],
     cycleError: List[AquaModule[I, E, T => T]] => E
   ): ValidatedNec[E, Map[I, T]] =
     if (modules.dependsOn.nonEmpty) Validated.invalid(modules.dependsOn.values.reduce(_ ++ _))
-    else
-      Validated.fromEither(
+    else {
+      println(modules.loaded.values.toList)
+      println(modules.exports)
+      val a = Validated.fromEither(
         iter(modules.loaded.values.toList, Map.empty[I, T => T], cycleError)
           .map(_.view.filterKeys(modules.exports).mapValues(_.apply(Monoid[T].empty)).toMap)
           .left
           .map(NonEmptyChain.one)
       )
+      println(a)
+      a
+    }
 
 }

@@ -22,7 +22,7 @@ class LinkerSpec extends AnyFlatSpec with Matchers {
         )
     withMod1.isResolved should be(false)
 
-    Linker[String, String, String](
+    Linker.link[String, String, String](
       withMod1,
       cycle => cycle.map(_.id).mkString(" -> ")
     ) should be(Validated.invalidNec("unresolved mod2 in mod1"))
@@ -32,7 +32,7 @@ class LinkerSpec extends AnyFlatSpec with Matchers {
 
     withMod2.isResolved should be(true)
 
-    Linker[String, String, String](
+    Linker.link[String, String, String](
       withMod2,
       cycle => cycle.map(_.id + "?").mkString(" -> ")
     ) should be(Validated.validNec(Map("mod1" -> " | mod2 | mod1")))

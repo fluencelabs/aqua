@@ -5,6 +5,7 @@ import aqua.compiler.{AquaCompiled, AquaSources}
 import aqua.io.AquaFileError
 import cats.Monad
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
+import cats.implicits.catsSyntaxApplicativeId
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
@@ -16,25 +17,32 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
   private val filesIO = implicitly[AquaIO[F]]
 
   override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =
-    filesIO.listAqua(sourcesPath).flatMap { case Validated.Valid(files) =>
-      files
-        .map(f =>
-          filesIO
-            .readFile(f)
-            .value
-            .map[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] {
-              case Left(err) =>
-                Validated.invalidNec(err)
-              case Right(content) =>
-                Validated.validNec(Chain.one(FileModuleId(f) -> content))
-            }
-        )
-        .traverse(identity)
-        .map(
-          _.foldLeft[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]](
-            Validated.validNec(Chain.nil)
-          )(_ combine _)
-        )
+    filesIO.listAqua(sourcesPath).flatMap {
+      case Validated.Valid(files) =>
+        files
+          .map(f =>
+            filesIO
+              .readFile(f)
+              .value
+              .map[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] {
+                case Left(err) =>
+                  println(err)
+                  Validated.invalidNec(err)
+                case Right(content) =>
+                  println(content)
+                  Validated.validNec(Chain.one(FileModuleId(f) -> content))
+              }
+          )
+          .traverse(identity)
+          .map(
+            _.foldLeft[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]](
+              Validated.validNec(Chain.nil)
+            )(_ combine _)
+          )
+      case err @ Validated.Invalid(e) =>
+        println(e)
+
+        Validated.invalidNec[AquaFileError, Chain[(FileModuleId, String)]](e.head).pure[F]
     }
 
   override def resolve(
@@ -57,6 +65,7 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
     val target = targetPath.resolve(
       ac.sourceId.file.getFileName.toString.stripSuffix(".aqua") + ac.compiled.suffix
     )
+    println(target)
     filesIO
       .writeFile(
         target,
