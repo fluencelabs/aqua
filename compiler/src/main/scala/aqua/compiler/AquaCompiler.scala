@@ -53,12 +53,9 @@ object AquaCompiler {
                   )
                 )
 
-            case Validated.Invalid(errs) =>
-              println(errs)
-              Validated.invalid(errs)
+            case Validated.Invalid(errs) => Validated.invalid(errs)
           }
-        case Validated.Invalid(errs) =>
-          Validated.invalid(errs)
+        case Validated.Invalid(errs) => Validated.invalid(errs)
       }
   }
 
@@ -71,7 +68,6 @@ object AquaCompiler {
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
     compile[F, E, I, S](sources, liftI, backend, config).flatMap {
       case Validated.Valid(compiled) =>
-        println(compiled)
         compiled
           .map(ac =>
             write(ac).map(
