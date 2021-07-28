@@ -1,21 +1,7 @@
-data DT:
-  field: string
+service Op("op"):
+    noop: -> ()
 
-service DTGetter("get-dt"):
-    get_dt(s: string) -> DT
-
-func use_name1(name: string) -> string:
-    results <- DTGetter.get_dt(name)
-    <- results.field
-
-func use_name2(name: string) -> []string:
-    results: *string
-    results <- use_name1(name)
-    results <- use_name1(name)
-    results <- use_name1(name)
-    <- results
-
-func use_name3(name: string) -> []string:
-    DTGetter.get_dt("yoyo literal")
-    results <- use_name2(name)
-    <- results
+func return_none() -> ?string:
+    result: *string
+    Op.noop()
+    <- result

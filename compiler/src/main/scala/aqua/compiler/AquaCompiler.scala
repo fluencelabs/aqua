@@ -6,7 +6,7 @@ import aqua.linker.Linker
 import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.FileSpan
-import aqua.semantics.{RulesViolated, SemanticError, Semantics}
+import aqua.semantics.{RulesViolated, SemanticError, Semantics, WrongAST}
 import cats.data._
 import cats.kernel.Monoid
 import cats.syntax.flatMap._
@@ -91,7 +91,7 @@ object AquaCompiler extends LogSupport {
           .focus(2)
           .map(_.toConsoleStr(hint, Console.CYAN))
           .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
-      case _ =>
+      case WrongAST(_) =>
         "Semantic error"
     }
 

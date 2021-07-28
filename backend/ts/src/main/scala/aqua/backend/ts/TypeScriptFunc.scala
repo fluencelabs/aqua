@@ -4,7 +4,6 @@ import aqua.backend.air.FuncAirGen
 import aqua.model.func.{ArgDef, FuncCallable}
 import aqua.model.transform.BodyConfig
 import aqua.types._
-import cats.syntax.functor._
 import cats.syntax.show._
 
 case class TypeScriptFunc(func: FuncCallable) {
@@ -23,17 +22,43 @@ case class TypeScriptFunc(func: FuncCallable) {
     args.find(_ == name).map(_ => generateUniqueArgName(args, basis, attempt + 1)).getOrElse(name)
   }
 
+  private def genReturnCallback(
+    retType: Type,
+    callbackService: String,
+    respFuncName: String
+  ): String = {
+    val body = retType match {
+      case OptionType(_) =>
+        """  let [opt] = args;
+          |  if (Array.isArray(opt)) {
+          |      if (opt.length === 0) { resolve(null); }
+          |      opt = opt[0];
+          |  }
+          |  if (opt === null) { resolve(null); }
+          |  return resolve(opt);""".stripMargin
+      case _ =>
+        """  const [res] = args;
+          |  resolve(res);""".stripMargin
+
+    }
+    s"""h.onEvent('$callbackService', '$respFuncName', (args) => {
+       |  $body
+       |});
+       |""".stripMargin
+  }
+
   def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
 
     val tsAir = FuncAirGen(func).generateAir(conf)
 
-    val returnCallback = func.ret.as {
-      s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
-         |  const [res] = args;
-         |  resolve(res);
-         |});
-         |""".stripMargin
-    }
+    val retType = func.ret
+      .map(_._2)
+      .fold("void")(typeToTs)
+
+    val returnCallback = func.ret
+      .map(_._2)
+      .map(t => genReturnCallback(t, conf.callbackService, conf.respFuncName))
+      .getOrElse("")
 
     val setCallbacks = func.args.args.map {
       case ArgDef.Data(argName, OptionType(_)) =>
@@ -47,10 +72,6 @@ case class TypeScriptFunc(func: FuncCallable) {
         val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
         s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
     }.mkString("\n")
-
-    val retType = func.ret
-      .map(_._2)
-      .fold("void")(typeToTs)
 
     val returnVal =
       func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
@@ -80,7 +101,7 @@ case class TypeScriptFunc(func: FuncCallable) {
        |                });""".stripMargin
     }}
        |                $setCallbacks
-       |                ${returnCallback.getOrElse("")}
+       |                $returnCallback
        |                h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
        |                    // assuming error is the single argument
        |                    const [err] = args;

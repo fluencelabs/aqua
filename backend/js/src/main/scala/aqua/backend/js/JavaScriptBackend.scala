@@ -14,7 +14,7 @@ object JavaScriptBackend extends Backend {
     Seq(
       Compiled(
         ext,
-        JavaScriptFile.Header + "\n\n" + funcs.map(_.generateTypescript(bc)).toList.mkString("\n\n")
+        JavaScriptFile.Header + "\n\n" + funcs.map(_.generateJavascript(bc)).toList.mkString("\n\n")
       )
     )
   }
