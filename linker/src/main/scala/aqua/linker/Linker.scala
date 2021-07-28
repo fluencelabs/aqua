@@ -14,9 +14,12 @@ object Linker extends LogSupport {
     mods: List[AquaModule[I, E, T => T]],
     proc: Map[I, T => T],
     cycleError: List[AquaModule[I, E, T => T]] => E
-  ): Either[E, Map[I, T => T]] =
+  ): Either[E, Map[I, T => T]] = {
+    println("mods iter: " + mods.map(_.id))
+    println("proc iter: " + proc.keySet)
     mods match {
-      case Nil => Right(proc)
+      case Nil =>
+        Right(proc)
       case _ =>
         val (canHandle, postpone) = mods.partition(_.dependsOn.keySet.forall(proc.contains))
         debug("ITERATE, can handle: " + canHandle.map(_.id))
@@ -38,6 +41,7 @@ object Linker extends LogSupport {
               }
             acc + (m.id -> m.body.compose(deps))
           }
+          println("folded: " + folded.keySet)
           iter(
             postpone,
             // TODO can be done in parallel
@@ -46,6 +50,7 @@ object Linker extends LogSupport {
           )
         }
     }
+  }
 
   def link[I, E, T: Monoid](
     modules: Modules[I, E, T => T],
@@ -55,14 +60,19 @@ object Linker extends LogSupport {
     else {
       println(modules.loaded.values.toList)
       println(modules.exports)
-      val a = Validated.fromEither(
-        iter(modules.loaded.values.toList, Map.empty[I, T => T], cycleError)
-          .map(_.view.filterKeys(modules.exports).mapValues(_.apply(Monoid[T].empty)).toMap)
+      val result = iter(modules.loaded.values.toList, Map.empty[I, T => T], cycleError)
+
+      println(
+        "iter result: " + result
+          .map(a => a.view.filterKeys(a => modules.exports.contains(a)).toMap)
+      )
+      println("modules exports: " + modules.exports)
+      Validated.fromEither(
+        result
+          .map(a => a.view.filterKeys(modules.exports).mapValues(_.apply(Monoid[T].empty)).toMap)
           .left
           .map(NonEmptyChain.one)
       )
-      println(a)
-      a
     }
 
 }
