@@ -62,21 +62,65 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
   override def load(file: FileModuleId): F[ValidatedNec[AquaFileError, String]] =
     filesIO.readFile(file.file).leftMap(NonEmptyChain.one).value.map(Validated.fromEither)
 
-  def write(
-    targetPath: Path
-  )(ac: AquaCompiled[FileModuleId]): F[Validated[AquaFileError, String]] = {
-    // TODO: this does not respect source subfolders
-    val target = targetPath.resolve(
-      ac.sourceId.file.getFileName.toString.stripSuffix(".aqua") + ac.compiled.suffix
-    )
+  /**
+   * @param srcFile aqua source
+   * @param srcPath a main source path with all aqua files
+   * @param targetPath a main path where all output files will be written
+   * @param fileName name of a target
+   * @return
+   */
+  def resolveTargetPath(
+    srcFile: Path,
+    srcPath: Path,
+    targetPath: Path,
+    fileName: String
+  ): Validated[Throwable, Path] =
+    Validated.catchNonFatal {
+      val srcDir = if (srcPath.toFile.isDirectory) srcPath else srcPath.getParent
+      val srcFilePath = srcDir.toAbsolutePath
+        .normalize()
+        .relativize(srcFile.toAbsolutePath.normalize())
 
-    filesIO
-      .writeFile(
-        target,
-        ac.compiled.content
-      )
-      .as(target.toString)
-      .value
-      .map(Validated.fromEither)
+      val targetDir =
+        targetPath.toAbsolutePath
+          .normalize()
+          .resolve(
+            srcFilePath
+          )
+
+      targetDir.getParent.resolve(fileName)
+    }
+
+  def write(
+    srcPath: Path,
+    targetPath: Path
+  )(ac: AquaCompiled[FileModuleId]): F[Seq[Validated[AquaFileError, String]]] = {
+    if (ac.compiled.isEmpty)
+      Seq(
+        Validated.valid[AquaFileError, String](
+          s"Source ${ac.sourceId.file}: compilation OK (nothing to emit)"
+        )
+      ).pure[F]
+    else
+      ac.compiled.map { compiled =>
+        resolveTargetPath(
+          ac.sourceId.file,
+          srcPath,
+          targetPath,
+          ac.sourceId.file.getFileName.toString.stripSuffix(".aqua") + compiled.suffix
+        ).leftMap(FileSystemError)
+          .map { target =>
+            filesIO
+              .writeFile(
+                target,
+                compiled.content
+              )
+              .as(s"Result $target: compilation OK (${ac.compiled.size} functions)")
+              .value
+              .map(Validated.fromEither)
+          }
+          .traverse(identity)
+      }.traverse(identity)
+        .map(_.map(_.andThen(identity)))
   }
 }

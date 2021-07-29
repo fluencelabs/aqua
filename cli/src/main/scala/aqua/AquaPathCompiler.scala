@@ -6,10 +6,10 @@ import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io._
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.FileSpan
-import cats.data._
 import cats.Monad
-import wvlet.log.LogSupport
+import cats.data._
 import cats.syntax.functor._
+import wvlet.log.LogSupport
 
 import java.nio.file.Path
 
@@ -29,9 +29,9 @@ object AquaPathCompiler extends LogSupport {
         (fmid, src) => FileSpan.fileSpanLiftParser(fmid.file.toString, src),
         backend,
         bodyConfig,
-        sources.write(targetPath)
+        sources.write(srcPath, targetPath)
       )
-      .map(_.leftMap(_.map { case err =>
+      .map(_.leftMap(_.map { err =>
         // TODO: render errors properly
         err.toString
       }))

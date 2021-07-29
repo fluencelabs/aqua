@@ -96,10 +96,10 @@ object AquaCli extends IOApp with LogSupport {
             )
             .map {
               case Validated.Invalid(errs) =>
-                errs.map(println)
+                errs.map(error(_))
                 ExitCode.Error
               case Validated.Valid(results) =>
-                results.map(println)
+                results.map(info(_))
                 ExitCode.Success
             }
         }

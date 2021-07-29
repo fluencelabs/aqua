@@ -11,7 +11,8 @@ import aqua.model.transform.BodyConfig
 case class Compiled(suffix: String, content: String)
 
 /**
- * Describes how context can be finalized
+ * Describes how context can be finalized.
+ * If there is no functions in context - return empty seq
  */
 trait Backend {
   def generate(context: AquaContext, bc: BodyConfig): Seq[Compiled]

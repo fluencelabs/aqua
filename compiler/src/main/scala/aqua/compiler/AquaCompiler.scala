@@ -6,6 +6,7 @@ import aqua.model.AquaContext
 import aqua.model.transform.BodyConfig
 import aqua.parser.lift.LiftParser
 import aqua.semantics.Semantics
+import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.syntax.applicative._
 import cats.syntax.flatMap._
@@ -29,33 +30,30 @@ object AquaCompiler {
           context.andThen(ctx => Semantics.process(ast, ctx).leftMap(_.map[Err](CompileError(_))))
       )
       .map {
-        case Validated.Valid(modules) =>
+        case Valid(modules) =>
           Linker.link[I, AquaError[I, E, S], ValidatedNec[Err, AquaContext]](
             modules,
             cycle => CycleError[I, E, S](cycle.map(_.id))
           ) match {
-            case Validated.Valid(files) =>
-              files
+            case Valid(filesWithContext) =>
+              filesWithContext
                 .foldLeft[ValidatedNec[Err, Chain[AquaProcessed[I]]]](
-                  Validated.validNec(Chain.nil)
+                  validNec(Chain.nil)
                 ) {
-                  case (acc, (i, Validated.Valid(res))) =>
-                    acc combine Validated.validNec(Chain.one(AquaProcessed(i, res)))
-                  case (acc, (_, Validated.Invalid(errs))) =>
-                    acc combine Validated.invalid(errs)
+                  case (acc, (i, Valid(context))) =>
+                    acc combine validNec(Chain.one(AquaProcessed(i, context)))
+                  case (acc, (_, Invalid(errs))) =>
+                    acc combine Invalid(errs)
                 }
                 .map(
-                  // TODO: write skipped file to logs, or make AquaCompiled with empty content
-                  _.filter(_.hasOutput).flatMap(ap =>
-                    Chain fromSeq backend
-                      .generate(ap.context, config)
-                      .map(AquaCompiled(ap.id, _))
-                  )
+                  _.map { ap =>
+                    val compiled = backend.generate(ap.context, config)
+                    AquaCompiled(ap.id, compiled)
+                  }
                 )
-
-            case Validated.Invalid(errs) => Validated.invalid(errs)
+            case i @ Invalid(_) => i
           }
-        case Validated.Invalid(errs) => Validated.invalid(errs)
+        case i @ Invalid(_) => i
       }
   }
 
@@ -64,25 +62,26 @@ object AquaCompiler {
     liftI: (I, String) => LiftParser[S],
     backend: Backend,
     config: BodyConfig,
-    write: AquaCompiled[I] => F[Validated[E, T]]
+    write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
     compile[F, E, I, S](sources, liftI, backend, config).flatMap {
-      case Validated.Valid(compiled) =>
-        compiled
-          .map(ac =>
-            write(ac).map(
+      case Valid(compiled) =>
+        compiled.map { ac =>
+          write(ac).map(
+            _.map(
               _.bimap[NonEmptyChain[AquaError[I, E, S]], Chain[T]](
                 e => NonEmptyChain.one(OutputError(ac, e)),
                 Chain.one
               )
             )
           )
-          .toList
+        }.toList
           .traverse(identity)
           .map(
-            _.foldLeft[ValidatedNec[AquaError[I, E, S], Chain[T]]](Validated.validNec(Chain.nil))(
-              _ combine _
-            )
+            _.flatten
+              .foldLeft[ValidatedNec[AquaError[I, E, S], Chain[T]]](validNec(Chain.nil))(
+                _ combine _
+              )
           )
 
       case Validated.Invalid(errs) =>
