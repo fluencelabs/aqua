@@ -21,6 +21,8 @@ object Linker extends LogSupport {
       case _ =>
         val (canHandle, postpone) = mods.partition(_.dependsOn.keySet.forall(proc.contains))
         debug("ITERATE, can handle: " + canHandle.map(_.id))
+        debug(s"dependsOn = ${mods.map(_.dependsOn.keySet)}")
+        debug(s"postpone = ${postpone.map(_.id)}")
         debug(s"proc = ${proc.keySet}")
 
         if (canHandle.isEmpty && postpone.nonEmpty)
