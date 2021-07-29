@@ -36,6 +36,8 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
         )
     )
 
+  // Find first existed file in list of paths
+  // If there is no existed files - throw an error
   private def findFirstF(
     in: List[Path],
     notFound: EitherT[F, AquaFileError, Path]
@@ -71,17 +73,18 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
 
   override def listAqua(folder: Path): F[ValidatedNec[AquaFileError, Chain[Path]]] =
     Validated
-      .fromTry(
+      .fromEither(
         Try {
           val f = folder.toFile
-          if (f.isDirectory) {
-            f.listFiles().toList
+          if (!f.exists()) {
+            Left(FileNotFound(folder, Nil))
+          } else if (f.isDirectory) {
+            Right(f.listFiles().toList)
           } else {
-            f :: Nil
+            Right(f :: Nil)
           }
-        }
+        }.toEither.leftMap[AquaFileError](FileSystemError).flatMap(identity)
       )
-      .leftMap[AquaFileError](FileSystemError)
       .leftMap(NonEmptyChain.one)
       .pure[F]
       .flatMap {

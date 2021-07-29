@@ -2,15 +2,17 @@ package aqua.files
 
 import aqua.AquaIO
 import aqua.compiler.{AquaCompiled, AquaSources}
-import aqua.io.AquaFileError
+import aqua.io.{AquaFileError, FileSystemError}
 import cats.Monad
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.implicits.catsSyntaxApplicativeId
+import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 
-import java.nio.file.Path
+import java.nio.file.{Path, Paths}
+import scala.util.Try
 
 class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[Path])
     extends AquaSources[F, AquaFileError, FileModuleId] {
@@ -42,12 +44,18 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
   override def resolve(
     from: FileModuleId,
     imp: String
-  ): F[ValidatedNec[AquaFileError, FileModuleId]] =
-    filesIO
-      .resolve(from.file, importFrom)
-      .bimap(NonEmptyChain.one, FileModuleId(_))
-      .value
-      .map(Validated.fromEither)
+  ): F[ValidatedNec[AquaFileError, FileModuleId]] = {
+    Validated.fromEither(Try(Paths.get(imp)).toEither.leftMap(FileSystemError)) match {
+      case Validated.Valid(importP) =>
+        filesIO
+          .resolve(from.file, importP +: importFrom)
+          .bimap(NonEmptyChain.one, FileModuleId(_))
+          .value
+          .map(Validated.fromEither)
+      case Validated.Invalid(err) => Validated.invalidNec[AquaFileError, FileModuleId](err).pure[F]
+    }
+
+  }
 
   override def load(file: FileModuleId): F[ValidatedNec[AquaFileError, String]] =
     filesIO.readFile(file.file).leftMap(NonEmptyChain.one).value.map(Validated.fromEither)
