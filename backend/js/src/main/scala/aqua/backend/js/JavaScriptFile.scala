@@ -10,7 +10,7 @@ case class JavaScriptFile(context: AquaContext) {
     Chain.fromSeq(context.funcs.values.toSeq).map(JavaScriptFunc(_))
 
   def generateJS(conf: BodyConfig = BodyConfig()): String =
-    JavaScriptFile.Header + "\n\n" + funcs.map(_.generateTypescript(conf)).toList.mkString("\n\n")
+    JavaScriptFile.Header + "\n\n" + funcs.map(_.generateJavascript(conf)).toList.mkString("\n\n")
 }
 
 object JavaScriptFile {
