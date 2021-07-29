@@ -4,7 +4,6 @@ import aqua.backend.air.FuncAirGen
 import aqua.model.func.{ArgDef, FuncCallable}
 import aqua.model.transform.BodyConfig
 import aqua.types._
-import cats.syntax.functor._
 import cats.syntax.show._
 
 case class JavaScriptFunc(func: FuncCallable) {
@@ -14,18 +13,34 @@ case class JavaScriptFunc(func: FuncCallable) {
   def argsJavaScript: String =
     func.args.args.map(ad => s"${ad.name}").mkString(", ")
 
-  def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
-
-    val tsAir = FuncAirGen(func).generateAir(conf)
-
-    val returnCallback = func.ret.as {
-      s"""h.onEvent('${conf.callbackService}', '${conf.respFuncName}', (args) => {
-         |  const [res] = args;
-         |  resolve(res);
-         |});
-         |""".stripMargin
+  // TODO: use common functions between TypeScript and JavaScript backends
+  private def genReturnCallback(
+    retType: Type,
+    callbackService: String,
+    respFuncName: String
+  ): String = {
+    val body = retType match {
+      case OptionType(_) =>
+        """  let [opt] = args;
+          |  if (Array.isArray(opt)) {
+          |      if (opt.length === 0) { resolve(null); }
+          |      opt = opt[0];
+          |  }          
+          |  return resolve(opt);""".stripMargin
+      case _ =>
+        """  const [res] = args;
+          |  resolve(res);""".stripMargin
 
     }
+    s"""h.onEvent('$callbackService', '$respFuncName', (args) => {
+       |  $body
+       |});
+       |""".stripMargin
+  }
+
+  def generateJavascript(conf: BodyConfig = BodyConfig()): String = {
+
+    val tsAir = FuncAirGen(func).generateAir(conf)
 
     val setCallbacks = func.args.args.map {
       case ArgDef.Data(argName, OptionType(_)) =>
@@ -40,10 +55,16 @@ case class JavaScriptFunc(func: FuncCallable) {
         s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
     }.mkString("\n")
 
+    val returnCallback = func.ret
+      .map(_._2)
+      .map(t => genReturnCallback(t, conf.callbackService, conf.respFuncName))
+      .getOrElse("")
+
     val returnVal =
       func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
-    val configArgName ="config"
+    // TODO: it could be non-unique
+    val configArgName = "config"
 
     s"""
        |export async function ${func.funcName}(client${if (func.args.isEmpty) ""
@@ -65,7 +86,7 @@ case class JavaScriptFunc(func: FuncCallable) {
        |                });""".stripMargin
     }}
        |                $setCallbacks
-       |                ${returnCallback.getOrElse("")}
+       |                $returnCallback
        |                h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
        |                    // assuming error is the single argument
        |                    const [err] = args;

@@ -1,7 +1,7 @@
 package aqua.semantics
 
-import aqua.model.{AquaContext, Model, ScriptModel}
 import aqua.model.func.raw.FuncOp
+import aqua.model.{AquaContext, Model, ScriptModel}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
@@ -16,13 +16,13 @@ import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, Types
 import cats.Eval
 import cats.arrow.FunctionK
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, EitherK, NonEmptyChain, State, Validated, ValidatedNec}
+import cats.data._
 import cats.free.Free
 import cats.kernel.Monoid
-import monocle.Lens
-import monocle.macros.GenLens
 import cats.syntax.apply._
 import cats.syntax.semigroup._
+import monocle.Lens
+import monocle.macros.GenLens
 import wvlet.log.LogSupport
 
 object Semantics extends LogSupport {
@@ -96,8 +96,11 @@ object Semantics extends LogSupport {
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[F], AquaContext]](Valid(ctx))(Invalid(_))
-        case (_, _) =>
-          Validated.invalidNec[SemanticError[F], AquaContext](WrongAST(ast))
+        case (state, _) =>
+          NonEmptyChain
+            .fromChain(state.errors)
+            .map(Invalid(_))
+            .getOrElse(Validated.invalidNec[SemanticError[F], AquaContext](WrongAST(ast)))
       }
       .value
 }
