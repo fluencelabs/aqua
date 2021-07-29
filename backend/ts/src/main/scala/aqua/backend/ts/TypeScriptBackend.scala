@@ -11,10 +11,23 @@ object TypeScriptBackend extends Backend {
 
   override def generate(context: AquaContext, bc: BodyConfig): Seq[Compiled] = {
     val funcs = Chain.fromSeq(context.funcs.values.toSeq).map(TypeScriptFunc(_))
+    val services = Chain.fromSeq(context.services.values.toSeq).map(TypeScriptService(_))
+    val twoSlashn = System.lineSeparator() + System.lineSeparator()
     Seq(
       Compiled(
         ext,
-        TypeScriptFile.Header + "\n\n" + funcs.map(_.generateTypescript(bc)).toList.mkString("\n\n")
+        TypeScriptFile.Header
+          + twoSlashn
+
+          + services
+            .map(_.generateTypescript(bc))
+            .toList
+            .mkString(twoSlashn)
+
+          + funcs
+            .map(_.generateTypescript(bc))
+            .toList
+            .mkString(twoSlashn)
       )
     )
   }

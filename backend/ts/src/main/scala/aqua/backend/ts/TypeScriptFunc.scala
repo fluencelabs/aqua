@@ -8,7 +8,7 @@ import cats.syntax.show._
 
 case class TypeScriptFunc(func: FuncCallable) {
 
-  import TypeScriptFunc._
+  import TypeScriptCommon._
 
   def argsTypescript: String =
     func.args.args.map(ad => s"${ad.name}: " + typeToTs(ad.`type`)).mkString(", ")
@@ -65,30 +65,14 @@ case class TypeScriptFunc(func: FuncCallable) {
       case ArgDef.Data(argName, _) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
       case ArgDef.Arrow(argName, at) =>
-        val callCallbackStatement = s"$argName(${argsCallToTsForUseStatement(
-          at
-        )})"
-        val callCallbackStatementAndReturn =
-          at.res.fold(s"${callCallbackStatement}; resp.result = {}")(_ =>
-            s"resp.result = ${callCallbackStatement}"
-          )
         s"""
-         | h.use((req, resp, next) => {
-         | if(req.serviceId === '${conf.callbackService}' && req.fnaAme === '$argName') {
-         | const callParams = {
-         |         ...req.particleContext,
-         |         tetraplets: {
-         |             arg0: req.tetraplets[0],
-         |             arg1: req.tetraplets[1],
-         |         },
-         |     };
-         |     resp.retCode = ResultCodes.success;
-         |     const res = ${callCallbackStatementAndReturn}
-         |     resp.result = {};
-         | }
-         | next();
-         | }) 
-        """
+           | h.use((req, resp, next) => {
+           | if(req.serviceId === '${conf.callbackService}' && req.fnaAme === '$argName') {
+           |     ${callBackExprBody(at, argName)}
+           | }
+           | next();
+           | });
+        """.stripMargin
     }.mkString("\n")
 
     val returnVal =
@@ -140,48 +124,5 @@ case class TypeScriptFunc(func: FuncCallable) {
        |}
       """.stripMargin
   }
-
-}
-
-object TypeScriptFunc {
-
-  def typeToTs(t: Type): String = t match {
-    case OptionType(t) => typeToTs(t) + " | null"
-    case ArrayType(t) => typeToTs(t) + "[]"
-    case StreamType(t) => typeToTs(t) + "[]"
-    case pt: ProductType =>
-      s"{${pt.fields.map(typeToTs).toNel.map(kv => kv._1 + ":" + kv._2).toList.mkString(";")}}"
-    case st: ScalarType if ScalarType.number(st) => "number"
-    case ScalarType.bool => "boolean"
-    case ScalarType.string => "string"
-    case lt: LiteralType if lt.oneOf.exists(ScalarType.number) => "number"
-    case lt: LiteralType if lt.oneOf(ScalarType.bool) => "boolean"
-    case lt: LiteralType if lt.oneOf(ScalarType.string) => "string"
-    case _: DataType => "any"
-    case at: ArrowType =>
-      s"(${argsToTs(at)}) => ${at.res
-        .fold("void")(typeToTs)}"
-  }
-
-  def argsToTs(at: ArrowType): String =
-    at.args
-      .map(typeToTs)
-      .zipWithIndex
-      .map(_.swap)
-      .map(kv => "arg" + kv._1 + ": " + kv._2)
-      .mkString(", ")
-
-  def argsCallToTsForUseStatement(at: ArrowType): String =
-    at.args.zipWithIndex
-      .map(_._2)
-      .map(idx => s"req.args[$idx]")
-      .concat(List("callParams"))
-      .mkString(", ")
-
-  def argsCallToTsForTetraplets(at: ArrowType): String =
-    at.args.zipWithIndex
-      .map(_._2)
-      .map(idx => s"arg${idx}: req.tetraplets[${idx}]]")
-      .mkString("," + System.lineSeparator)
 
 }

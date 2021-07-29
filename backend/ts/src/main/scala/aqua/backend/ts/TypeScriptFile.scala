@@ -9,8 +9,15 @@ case class TypeScriptFile(context: AquaContext) {
   def funcs: Chain[TypeScriptFunc] =
     Chain.fromSeq(context.funcs.values.toSeq).map(TypeScriptFunc(_))
 
+  def services: Chain[TypeScriptService] =
+    Chain.fromSeq(context.services.values.toSeq).map(TypeScriptService(_))
+
+  val twoSlashn = System.lineSeparator() + System.lineSeparator()
+
   def generateTS(conf: BodyConfig = BodyConfig()): String =
-    TypeScriptFile.Header + "\n\n" + funcs.map(_.generateTypescript(conf)).toList.mkString("\n\n")
+    TypeScriptFile.Header + twoSlashn +
+      services.map(_.generateTypescript(conf)).toList.mkString(twoSlashn) +
+      funcs.map(_.generateTypescript(conf)).toList.mkString(twoSlashn)
 }
 
 object TypeScriptFile {
