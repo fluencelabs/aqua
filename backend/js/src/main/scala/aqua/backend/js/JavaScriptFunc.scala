@@ -25,8 +25,7 @@ case class JavaScriptFunc(func: FuncCallable) {
           |  if (Array.isArray(opt)) {
           |      if (opt.length === 0) { resolve(null); }
           |      opt = opt[0];
-          |  }
-          |  if (opt === null) { resolve(null); }
+          |  }          
           |  return resolve(opt);""".stripMargin
       case _ =>
         """  const [res] = args;
@@ -64,6 +63,7 @@ case class JavaScriptFunc(func: FuncCallable) {
     val returnVal =
       func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
+    // TODO: it could be non-unique
     val configArgName = "config"
 
     s"""

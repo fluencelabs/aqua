@@ -33,8 +33,7 @@ case class TypeScriptFunc(func: FuncCallable) {
           |  if (Array.isArray(opt)) {
           |      if (opt.length === 0) { resolve(null); }
           |      opt = opt[0];
-          |  }
-          |  if (opt === null) { resolve(null); }
+          |  }          
           |  return resolve(opt);""".stripMargin
       case _ =>
         """  const [res] = args;
