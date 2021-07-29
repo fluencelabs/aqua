@@ -33,7 +33,7 @@ case class TypeScriptFunc(func: FuncCallable) {
           |  if (Array.isArray(opt)) {
           |      if (opt.length === 0) { resolve(null); }
           |      opt = opt[0];
-          |  }          
+          |  }
           |  return resolve(opt);""".stripMargin
       case _ =>
         """  const [res] = args;
@@ -65,11 +65,30 @@ case class TypeScriptFunc(func: FuncCallable) {
       case ArgDef.Data(argName, _) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
       case ArgDef.Arrow(argName, at) =>
-        val value = s"$argName(${argsCallToTs(
+        val callCallbackStatement = s"$argName(${argsCallToTsForUseStatement(
           at
         )})"
-        val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
-        s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
+        val callCallbackStatementAndReturn =
+          at.res.fold(s"${callCallbackStatement}; resp.result = {}")(_ =>
+            s"resp.result = ${callCallbackStatement}"
+          )
+        s"""
+         | h.use((req, resp, next) => {
+         | if(req.serviceId === '${conf.callbackService}' && req.fnaAme === '$argName') {
+         | const callParams = {
+         |         ...req.particleContext,
+         |         tetraplets: {
+         |             arg0: req.tetraplets[0],
+         |             arg1: req.tetraplets[1],
+         |         },
+         |     };
+         |     resp.retCode = ResultCodes.success;
+         |     const res = ${callCallbackStatementAndReturn}
+         |     resp.result = {};
+         | }
+         | next();
+         | }) 
+        """
     }.mkString("\n")
 
     val returnVal =
@@ -152,7 +171,17 @@ object TypeScriptFunc {
       .map(kv => "arg" + kv._1 + ": " + kv._2)
       .mkString(", ")
 
-  def argsCallToTs(at: ArrowType): String =
-    at.args.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
+  def argsCallToTsForUseStatement(at: ArrowType): String =
+    at.args.zipWithIndex
+      .map(_._2)
+      .map(idx => s"req.args[$idx]")
+      .concat(List("callParams"))
+      .mkString(", ")
+
+  def argsCallToTsForTetraplets(at: ArrowType): String =
+    at.args.zipWithIndex
+      .map(_._2)
+      .map(idx => s"arg${idx}: req.tetraplets[${idx}]]")
+      .mkString("," + System.lineSeparator)
 
 }
