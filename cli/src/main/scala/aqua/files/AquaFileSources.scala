@@ -41,6 +41,8 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
         Validated.invalidNec[AquaFileError, Chain[(FileModuleId, String)]](e.head).pure[F]
     }
 
+  // Resolve an import that was written in a 'from' file
+  // Try to find it in a list of given imports or near 'from' file
   override def resolve(
     from: FileModuleId,
     imp: String
@@ -48,7 +50,7 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
     Validated.fromEither(Try(Paths.get(imp)).toEither.leftMap(FileSystemError)) match {
       case Validated.Valid(importP) =>
         filesIO
-          .resolve(from.file, importP +: importFrom)
+          .resolve(importP, from.file.getParent +: importFrom)
           .bimap(NonEmptyChain.one, FileModuleId(_))
           .value
           .map(Validated.fromEither)
