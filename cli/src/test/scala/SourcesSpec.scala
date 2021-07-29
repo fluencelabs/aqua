@@ -71,7 +71,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     // near src file but in another directory
     val sourceGen2 = new AquaFileSources[IO](srcPath, List())
     val result3 =
-      sourceGen
+      sourceGen2
         .resolve(FileModuleId(srcPath), "imports/import.aqua")
         .unsafeRunSync()
 
