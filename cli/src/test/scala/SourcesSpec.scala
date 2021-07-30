@@ -44,7 +44,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
 
     val sourceGen = new AquaFileSources[IO](path, List(importPath))
     val result =
-      sourceGen.resolve(FileModuleId(path.resolve("no-file.aqua")), "no/file").unsafeRunSync()
+      sourceGen.resolveImport(FileModuleId(path.resolve("no-file.aqua")), "no/file").unsafeRunSync()
     result.isInvalid shouldBe true
   }
 
@@ -57,7 +57,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     // should be found in importPath
     val result =
       sourceGen
-        .resolve(FileModuleId(srcPath), "imports/import.aqua")
+        .resolveImport(FileModuleId(srcPath), "imports/import.aqua")
         .unsafeRunSync()
 
     result.isValid shouldBe true
@@ -66,7 +66,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     // should be found near src file
     val result2 =
       sourceGen
-        .resolve(FileModuleId(srcPath), "importNear.aqua")
+        .resolveImport(FileModuleId(srcPath), "importNear.aqua")
         .unsafeRunSync()
 
     result2.isValid shouldBe true
@@ -76,7 +76,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     val sourceGen2 = new AquaFileSources[IO](srcPath, List())
     val result3 =
       sourceGen2
-        .resolve(FileModuleId(srcPath), "imports/import.aqua")
+        .resolveImport(FileModuleId(srcPath), "imports/import.aqua")
         .unsafeRunSync()
 
     result3.isValid shouldBe true

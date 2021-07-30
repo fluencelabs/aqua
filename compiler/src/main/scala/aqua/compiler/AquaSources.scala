@@ -7,7 +7,7 @@ trait AquaSources[F[_], Err, I] {
   def sources: F[ValidatedNec[Err, Chain[(I, String)]]]
 
   // Resolve id of the imported imp string from I file
-  def resolve(from: I, imp: String): F[ValidatedNec[Err, I]]
+  def resolveImport(from: I, imp: String): F[ValidatedNec[Err, I]]
 
   // Load file by its resolved I
   def load(file: I): F[ValidatedNec[Err, String]]

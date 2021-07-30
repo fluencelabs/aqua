@@ -43,7 +43,7 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
 
   // Resolve an import that was written in a 'from' file
   // Try to find it in a list of given imports or near 'from' file
-  override def resolve(
+  override def resolveImport(
     from: FileModuleId,
     imp: String
   ): F[ValidatedNec[AquaFileError, FileModuleId]] = {

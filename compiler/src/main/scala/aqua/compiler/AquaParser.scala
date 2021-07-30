@@ -1,16 +1,17 @@
 package aqua.compiler
 
 import aqua.linker.{AquaModule, Modules}
+import aqua.parser.Ast
 import aqua.parser.head.ImportExpr
 import aqua.parser.lift.LiftParser
-import aqua.parser.Ast
-import cats.{Comonad, Monad}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.syntax.traverse._
-import cats.syntax.functor._
-import cats.syntax.flatMap._
 import cats.syntax.applicative._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
+import cats.syntax.traverse._
+import cats.{Comonad, Monad}
 
+// TODO: add tests
 class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
   sources: AquaSources[F, E, I],
   liftI: (I, String) => LiftParser[S]
@@ -35,7 +36,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
       .map(_.head)
       .collect { case ImportExpr(filename) =>
         sources
-          .resolve(id, filename.value.drop(1).dropRight(1))
+          .resolveImport(id, filename.value.drop(1).dropRight(1))
           .map(
             _.bimap(
               _.map(ResolveImportsErr(id, filename, _)),
