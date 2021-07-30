@@ -29,7 +29,7 @@ object AquaPathCompiler extends LogSupport {
         (fmid, src) => FileSpan.fileSpanLiftParser(fmid.file.toString, src),
         backend,
         bodyConfig,
-        sources.write(srcPath, targetPath)
+        sources.write(targetPath)
       )
       .map(_.leftMap(_.map { err =>
         // TODO: render errors properly

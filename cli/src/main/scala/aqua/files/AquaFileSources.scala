@@ -64,19 +64,17 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
 
   /**
    * @param srcFile aqua source
-   * @param srcPath a main source path with all aqua files
    * @param targetPath a main path where all output files will be written
-   * @param fileName name of a target
+   * @param suffix `.aqua` will be replaced with this suffix
    * @return
    */
   def resolveTargetPath(
     srcFile: Path,
-    srcPath: Path,
     targetPath: Path,
-    fileName: String
+    suffix: String
   ): Validated[Throwable, Path] =
     Validated.catchNonFatal {
-      val srcDir = if (srcPath.toFile.isDirectory) srcPath else srcPath.getParent
+      val srcDir = if (sourcesPath.toFile.isDirectory) sourcesPath else sourcesPath.getParent
       val srcFilePath = srcDir.toAbsolutePath
         .normalize()
         .relativize(srcFile.toAbsolutePath.normalize())
@@ -88,13 +86,12 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
             srcFilePath
           )
 
-      targetDir.getParent.resolve(fileName)
+      targetDir.getParent.resolve(srcFile.getFileName.toString.stripSuffix(".aqua") + suffix)
     }
 
   def write(
-    srcPath: Path,
     targetPath: Path
-  )(ac: AquaCompiled[FileModuleId]): F[Seq[Validated[AquaFileError, String]]] = {
+  )(ac: AquaCompiled[FileModuleId]): F[Seq[Validated[AquaFileError, String]]] =
     if (ac.compiled.isEmpty)
       Seq(
         Validated.valid[AquaFileError, String](
@@ -105,9 +102,8 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
       ac.compiled.map { compiled =>
         resolveTargetPath(
           ac.sourceId.file,
-          srcPath,
           targetPath,
-          ac.sourceId.file.getFileName.toString.stripSuffix(".aqua") + compiled.suffix
+          compiled.suffix
         ).leftMap(FileSystemError)
           .map { target =>
             filesIO
@@ -122,5 +118,4 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
           .traverse(identity)
       }.traverse(identity)
         .map(_.map(_.andThen(identity)))
-  }
 }

@@ -108,15 +108,15 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
           Validated.invalid[NonEmptyChain[AquaFileError], Chain[Path]](errs).pure[F]
       }
 
+  // Writes to a file, creates directories if they do not exist
   override def writeFile(file: Path, content: String): EitherT[F, AquaFileError, Unit] =
     EitherT
       .right[AquaFileError](Files[F].deleteIfExists(file))
+      .flatMap(_ => EitherT.right[AquaFileError](Files[F].createDirectories(file.getParent)))
       .flatMap(_ =>
         EitherT[F, AquaFileError, Unit](
           fs2.Stream
-            .emit(
-              content
-            )
+            .emit(content)
             .through(text.utf8Encode)
             .through(Files[F].writeAll(file))
             .attempt
@@ -125,8 +125,8 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
                 .map(t => FileWriteError(file, t))
             }
             .compile
-            .drain
-            .map(_ => Right(()))
+            .last
+            .map(res => res.getOrElse(Right()))
         )
       )
 }
