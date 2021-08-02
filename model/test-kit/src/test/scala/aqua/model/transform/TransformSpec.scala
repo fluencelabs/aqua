@@ -26,7 +26,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         Map.empty
       )
 
-    val bc = BodyConfig()
+    val bc = GenerationConfig()
 
     val fc = Transform.forClient(func, bc)
 
@@ -76,7 +76,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       Map.empty
     )
 
-    val bc = BodyConfig(wrapWithXor = false)
+    val bc = GenerationConfig(wrapWithXor = false)
 
     val fc = Transform.forClient(func, bc)
 
@@ -137,7 +137,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         Map.empty
       )
 
-    val bc = BodyConfig(wrapWithXor = false)
+    val bc = GenerationConfig(wrapWithXor = false)
 
     val res = Transform.forClient(f2, bc): Node.Res
 

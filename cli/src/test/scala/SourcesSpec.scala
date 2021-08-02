@@ -1,5 +1,5 @@
 import aqua.AquaIO
-import aqua.backend.Compiled
+import aqua.backend.Generated
 import aqua.compiler.AquaCompiled
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import cats.data.Chain
@@ -119,7 +119,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     val content = "some random content"
     val compiled = AquaCompiled[FileModuleId](
       FileModuleId(filePath),
-      Seq(Compiled("_hey.custom", content))
+      Seq(Generated("_hey.custom", content))
     )
 
     val resolved = sourceGen.write(targetPath)(compiled).unsafeRunSync()

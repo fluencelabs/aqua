@@ -1,7 +1,7 @@
 package aqua
 
 import aqua.model.LiteralModel
-import aqua.model.transform.Constant
+import aqua.model.transform.GenerationConfig
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
 import cats.data.Validated.{Invalid, Valid}
@@ -95,7 +95,7 @@ object AppOps {
       }
       .withDefault(List.empty)
 
-  def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[Constant]] =
+  def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[GenerationConfig.Const]] =
     Opts
       .options[String]("const", "Constant that will be used in an aqua code", "c")
       .mapValidated { strs =>
@@ -108,8 +108,9 @@ object AppOps {
         NonEmptyList
           .fromList(errors)
           .fold(
-            Validated.validNel[String, List[Constant]](parsed.collect { case Right(v) =>
-              Constant(v._1.value, LiteralModel(v._2.value, v._2.ts))
+            Validated.validNel[String, List[GenerationConfig.Const]](parsed.collect {
+              case Right(v) =>
+                GenerationConfig.Const(v._1.value, LiteralModel(v._2.value, v._2.ts))
             })
           ) { errors =>
             Validated.invalid(errors.map(_.toString))

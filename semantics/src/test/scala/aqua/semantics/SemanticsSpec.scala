@@ -29,7 +29,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
     val ast = Ast.fromString(script).toList.head
 
     val ctx = AquaContext.blank
-    val bc = BodyConfig()
+    val bc = GenerationConfig()
     import bc.aquaContextMonoid
 
     val p = Semantics.process(ast, ctx)

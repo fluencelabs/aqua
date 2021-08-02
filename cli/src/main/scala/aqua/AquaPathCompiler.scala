@@ -4,7 +4,7 @@ import aqua.backend.Backend
 import aqua.compiler.AquaCompiler
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io._
-import aqua.model.transform.BodyConfig
+import aqua.model.transform.GenerationConfig
 import aqua.parser.lift.FileSpan
 import cats.Monad
 import cats.data._
@@ -20,7 +20,7 @@ object AquaPathCompiler extends LogSupport {
     imports: List[Path],
     targetPath: Path,
     backend: Backend,
-    bodyConfig: BodyConfig
+    bodyConfig: GenerationConfig
   ): F[ValidatedNec[String, Chain[String]]] = {
     val sources = new AquaFileSources[F](srcPath, imports)
     AquaCompiler

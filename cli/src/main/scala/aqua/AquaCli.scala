@@ -5,7 +5,7 @@ import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.files.AquaFilesIO
-import aqua.model.transform.BodyConfig
+import aqua.model.transform.GenerationConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
 import cats.data.Validated
@@ -18,17 +18,7 @@ import com.monovore.decline.effect.CommandIOApp
 import fs2.io.file.Files
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.typelevel.log4cats.{Logger, SelfAwareStructuredLogger}
-import wvlet.log.LogFormatter.{appendStackTrace, highlightLog}
-import wvlet.log.{LogFormatter, LogRecord, LogSupport, Logger => WLogger}
-
-object CustomLogFormatter extends LogFormatter {
-
-  override def formatLog(r: LogRecord): String = {
-    val log =
-      s"[${highlightLog(r.level, r.level.name)}] ${highlightLog(r.level, r.getMessage)}"
-    appendStackTrace(log, r)
-  }
-}
+import wvlet.log.{LogSupport, Logger => WLogger}
 
 object AquaCli extends IOApp with LogSupport {
   import AppOps._
@@ -82,7 +72,7 @@ object AquaCli extends IOApp with LogSupport {
             else if (toJs) JavaScriptTarget
             else TypescriptTarget
           val bc = {
-            val bc = BodyConfig(wrapWithXor = !noXor, constants = constants)
+            val bc = GenerationConfig(wrapWithXor = !noXor, constants = constants)
             bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
           }
           info(s"Aqua Compiler ${versionStr}")

@@ -2,7 +2,7 @@ import aqua.AquaPathCompiler
 import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
-import aqua.model.transform.BodyConfig
+import aqua.model.transform.GenerationConfig
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import org.scalatest.flatspec.AnyFlatSpec
@@ -19,7 +19,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
 
     import aqua.files.AquaFilesIO.summon
 
-    val bc = BodyConfig()
+    val bc = GenerationConfig()
     AquaPathCompiler
       .compileFilesTo[IO](src, List.empty, targetTs, TypeScriptBackend, bc)
       .unsafeRunSync()

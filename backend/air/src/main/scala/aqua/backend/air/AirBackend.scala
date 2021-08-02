@@ -1,17 +1,17 @@
 package aqua.backend.air
 
-import aqua.backend.{Backend, Compiled}
+import aqua.backend.{Backend, Generated}
 import aqua.model.AquaContext
-import aqua.model.transform.BodyConfig
+import aqua.model.transform.GenerationConfig
 import cats.implicits.toShow
 
 object AirBackend extends Backend {
 
   val ext = ".air"
 
-  override def generate(context: AquaContext, bc: BodyConfig): Seq[Compiled] = {
+  override def generate(context: AquaContext, genConf: GenerationConfig): Seq[Generated] = {
     context.funcs.values.toList.map(fc =>
-      Compiled("." + fc.funcName + ext, FuncAirGen(fc).generateAir(bc).show)
+      Generated("." + fc.funcName + ext, FuncAirGen(fc).generateAir(genConf).show)
     )
   }
 }

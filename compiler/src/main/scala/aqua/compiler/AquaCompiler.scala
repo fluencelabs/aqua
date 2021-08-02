@@ -3,7 +3,7 @@ package aqua.compiler
 import aqua.backend.Backend
 import aqua.linker.Linker
 import aqua.model.AquaContext
-import aqua.model.transform.BodyConfig
+import aqua.model.transform.GenerationConfig
 import aqua.parser.lift.LiftParser
 import aqua.semantics.Semantics
 import cats.data.Validated.{validNec, Invalid, Valid}
@@ -20,7 +20,7 @@ object AquaCompiler {
     sources: AquaSources[F, E, I],
     liftI: (I, String) => LiftParser[S],
     backend: Backend,
-    config: BodyConfig
+    config: GenerationConfig
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
     import config.aquaContextMonoid
     type Err = AquaError[I, E, S]
@@ -61,7 +61,7 @@ object AquaCompiler {
     sources: AquaSources[F, E, I],
     liftI: (I, String) => LiftParser[S],
     backend: Backend,
-    config: BodyConfig,
+    config: GenerationConfig,
     write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
     compile[F, E, I, S](sources, liftI, backend, config).flatMap {

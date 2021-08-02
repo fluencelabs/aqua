@@ -1,7 +1,7 @@
 package aqua.backend.js
 
 import aqua.model.AquaContext
-import aqua.model.transform.BodyConfig
+import aqua.model.transform.GenerationConfig
 import cats.data.Chain
 
 case class JavaScriptFile(context: AquaContext) {
@@ -9,7 +9,7 @@ case class JavaScriptFile(context: AquaContext) {
   def funcs: Chain[JavaScriptFunc] =
     Chain.fromSeq(context.funcs.values.toSeq).map(JavaScriptFunc(_))
 
-  def generateJS(conf: BodyConfig = BodyConfig()): String =
+  def generateJS(conf: GenerationConfig = GenerationConfig()): String =
     JavaScriptFile.Header + "\n\n" + funcs.map(_.generateJavascript(conf)).toList.mkString("\n\n")
 }
 

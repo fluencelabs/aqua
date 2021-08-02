@@ -2,7 +2,7 @@ package aqua.backend.ts
 
 import aqua.backend.air.FuncAirGen
 import aqua.model.func.{ArgDef, FuncCallable}
-import aqua.model.transform.BodyConfig
+import aqua.model.transform.GenerationConfig
 import aqua.types._
 import cats.syntax.show._
 
@@ -46,7 +46,7 @@ case class TypeScriptFunc(func: FuncCallable) {
        |""".stripMargin
   }
 
-  def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
+  def generateTypescript(conf: GenerationConfig = GenerationConfig()): String = {
 
     val tsAir = FuncAirGen(func).generateAir(conf)
 
