@@ -115,6 +115,7 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
               .value
               .map(Validated.fromEither)
           }
+          // TODO: we use both EitherT and F[Validated] to handle errors, that's why so weird
           .traverse(identity)
       }.traverse(identity)
         .map(_.map(_.andThen(identity)))

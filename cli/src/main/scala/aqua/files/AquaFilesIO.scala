@@ -36,8 +36,10 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
         )
     )
 
-  // Find first existed file in list of paths
-  // If there is no existed files - throw an error
+  /**
+   * Find the first file that exists in the given list of paths
+   * If there is no such file - error
+   */
   private def findFirstF(
     in: List[Path],
     notFound: EitherT[F, AquaFileError, Path]

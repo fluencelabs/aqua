@@ -19,7 +19,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     val path = Paths.get("cli/src/test/test-dir/path-test")
     val importPath = path.resolve("imports")
 
-    val sourceGen = new AquaFileSources[IO](path, List(importPath))
+    val sourceGen = new AquaFileSources[IO](path, importPath :: Nil)
 
     val result = sourceGen.sources.unsafeRunSync()
     result.isValid shouldBe true
@@ -37,7 +37,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
   "AquaFileSources" should "throw an error if a source file doesn't exist" in {
     val path = Paths.get("some/random/path")
 
-    val sourceGen = new AquaFileSources[IO](path, List())
+    val sourceGen = new AquaFileSources[IO](path, Nil)
 
     val result = sourceGen.sources.unsafeRunSync()
     result.isInvalid shouldBe true
@@ -47,7 +47,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     val path = Paths.get("cli/src/test/test-dir")
     val importPath = path.resolve("random/import/path")
 
-    val sourceGen = new AquaFileSources[IO](path, List(importPath))
+    val sourceGen = new AquaFileSources[IO](path, importPath :: Nil)
     val result =
       sourceGen.resolveImport(FileModuleId(path.resolve("no-file.aqua")), "no/file").unsafeRunSync()
     result.isInvalid shouldBe true
@@ -57,7 +57,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     val srcPath = Paths.get("cli/src/test/test-dir/index.aqua")
     val importPath = srcPath.resolve("imports")
 
-    val sourceGen = new AquaFileSources[IO](srcPath, List(importPath))
+    val sourceGen = new AquaFileSources[IO](srcPath, importPath :: Nil)
 
     // should be found in importPath
     val result =
@@ -78,7 +78,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     result2.getOrElse(FileModuleId(Paths.get("/some/random"))).file.toFile.exists() shouldBe true
 
     // near src file but in another directory
-    val sourceGen2 = new AquaFileSources[IO](srcPath, List())
+    val sourceGen2 = new AquaFileSources[IO](srcPath, Nil)
     val result3 =
       sourceGen2
         .resolveImport(FileModuleId(srcPath), "imports/import.aqua")
@@ -94,7 +94,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
 
     val targetPath = Paths.get("/target/dir/")
 
-    val sourceGen = new AquaFileSources[IO](path, List())
+    val sourceGen = new AquaFileSources[IO](path, Nil)
 
     val suffix = "_custom.super"
 
@@ -115,7 +115,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     val resultPath = Paths.get("cli/src/test/test-dir/target/imports/import_hey.custom")
     Files[IO].deleteIfExists(resultPath).unsafeRunSync()
 
-    val sourceGen = new AquaFileSources[IO](path, List())
+    val sourceGen = new AquaFileSources[IO](path, Nil)
     val content = "some random content"
     val compiled = AquaCompiled[FileModuleId](
       FileModuleId(filePath),
