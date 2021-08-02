@@ -33,9 +33,14 @@ object TypeScriptFile {
       .getOrElse("Unknown")}
        | *
        | */
-       |import { FluenceClient, PeerIdB58 } from '@fluencelabs/fluence';
-       |import { RequestFlowBuilder } from '@fluencelabs/fluence/dist/api.unstable';
-       |import { RequestFlow } from '@fluencelabs/fluence/dist/internal/RequestFlow';
+       |import {
+       |    createClient,
+       |    FluenceClient,
+       |    ResultCodes,
+       |    RequestFlow,
+       |    RequestFlowBuilder,
+       |    CallParams,
+       |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v1';
        |""".stripMargin
 
 }
