@@ -6,7 +6,8 @@ import cats.{Comonad, Eval}
 import scala.language.implicitConversions
 
 // TODO: rewrite FileSpan and Span under one trait
-case class FileSpan(name: String, source: String, locationMap: Eval[LocationMap], span: Span) {
+// TODO: move FileSpan to another package?
+case class FileSpan(name: String, locationMap: Eval[LocationMap], span: Span) {
 
   def focus(ctx: Int): Option[FileSpan.Focus] =
     span.focus(locationMap, ctx).map(FileSpan.Focus(name, locationMap, ctx, _))
@@ -41,13 +42,13 @@ object FileSpan {
 
     override def lift[T](p: P[T]): P[F[T]] = {
       implicitly[LiftParser[Span.F]].lift(p).map { case (span, value) =>
-        (FileSpan(name, source, memoizedLocationMap, span), value)
+        (FileSpan(name, memoizedLocationMap, span), value)
       }
     }
 
     override def lift0[T](p0: Parser0[T]): Parser0[(FileSpan, T)] = {
       implicitly[LiftParser[Span.F]].lift0(p0).map { case (span, value) =>
-        (FileSpan(name, source, memoizedLocationMap, span), value)
+        (FileSpan(name, memoizedLocationMap, span), value)
       }
     }
   }

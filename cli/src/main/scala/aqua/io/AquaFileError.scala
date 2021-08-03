@@ -1,7 +1,5 @@
 package aqua.io
 
-import cats.data.NonEmptyChain
-
 import java.nio.file.Path
 
 sealed trait AquaFileError {
@@ -13,7 +11,10 @@ sealed trait AquaFileError {
 case class FileNotFound(name: Path, imports: Seq[Path]) extends AquaFileError {
 
   override def showForConsole: String =
-    s"File not found at $name, looking in ${imports.mkString(", ")}"
+    if (imports.nonEmpty)
+      s"File '$name' not found, looking in ${imports.mkString(", ")}"
+    else
+      s"File '$name' not found"
 }
 
 case class EmptyFileError(path: Path) extends AquaFileError {
@@ -30,11 +31,4 @@ case class FileWriteError(file: Path, err: Throwable) extends Exception(err) wit
 
 case class Unresolvable(msg: String) extends AquaFileError {
   override def showForConsole: String = s"Unresolvable: $msg"
-}
-
-// TODO there should be no AquaErrors, as they does not fit
-case class AquaScriptErrors(errors: NonEmptyChain[AquaFileSpanError]) extends AquaFileError {
-
-  override def showForConsole: String =
-    errors.map(_.showForConsole).toChain.toList.mkString("\n")
 }
