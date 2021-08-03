@@ -8,6 +8,7 @@ import aqua.model.transform.GenerationConfig
 import aqua.parser.lift.FileSpan
 import cats.data._
 import cats.syntax.functor._
+import cats.syntax.show._
 import cats.{Monad, Show}
 import wvlet.log.LogSupport
 
@@ -32,9 +33,7 @@ object AquaPathCompiler extends LogSupport {
         bodyConfig,
         sources.write(targetPath)
       )
-      .map(_.leftMap(_.map { err: AquaError[FileModuleId, AquaFileError, FileSpan.F] =>
-        Show[AquaError[FileModuleId, AquaFileError, FileSpan.F]].show(err)
-      }))
+      .map(_.leftMap(_.map(_.show)))
   }
 
 }
