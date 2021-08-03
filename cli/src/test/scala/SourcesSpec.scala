@@ -24,9 +24,14 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     val result = sourceGen.sources.unsafeRunSync()
     result.isValid shouldBe true
 
-    val listResult = result.getOrElse(Chain.empty).toList.map { case (fid, s) =>
-      (fid.file.toString.split("/").last, s)
-    }
+    val listResult = result
+      .getOrElse(Chain.empty)
+      .toList
+      .map { case (fid, s) =>
+        (fid.file.toString.split("/").last, s)
+      }
+      .sortBy(_._1) // sort cause different systems have different order of file reading
+
     val (id, importFile) = listResult.head
     id shouldBe "index.aqua"
     importFile.nonEmpty shouldBe true
