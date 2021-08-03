@@ -27,7 +27,7 @@ object Ast {
     parser[F]()
       .parseAll(script) match {
       case Right(value) => value
-      case Left(e) => Validated.invalidNec(LexerError[F](e))
+      case Left(e) => Validated.invalidNec(LexerError[F](script, e))
     }
 
 }

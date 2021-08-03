@@ -3,10 +3,11 @@ package aqua
 import aqua.compiler._
 import aqua.files.FileModuleId
 import aqua.io.AquaFileError
-import aqua.parser.lift.FileSpan
+import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{BlockIndentError, FuncReturnError, LexerError}
 import aqua.semantics.{RulesViolated, WrongAST}
-import cats.Show
+import cats.parse.LocationMap
+import cats.{Eval, Show}
 
 object ErrorRendering {
 
@@ -29,16 +30,26 @@ object ErrorRendering {
       err match {
         case BlockIndentError(indent, message) => showForConsole(indent._1, message)
         case FuncReturnError(point, message) => showForConsole(point._1, message)
-        case LexerError(pe) =>
-          // TODO: get FileSpan somehow
-//          val fileSpan =
-//            FileSpan(
-//              name,
-//              input,
-//              Eval.later(LocationMap(input)),
-//              Span(pe.failedAtOffset, pe.failedAtOffset + 1)
-//            )
-          pe.toString
+        case LexerError(input, pe) =>
+          // TODO: get name somehow
+          val fileSpan =
+            FileSpan(
+              "name",
+              Eval.later(LocationMap(input)),
+              Span(pe.failedAtOffset, pe.failedAtOffset + 1)
+            )
+          fileSpan
+            .focus(3)
+            .map(spanFocus =>
+              spanFocus.toConsoleStr(
+                s"Syntax error, expected: ${pe.expected.toList.mkString(", ")}",
+                Console.RED
+              )
+            )
+            .getOrElse(
+              "(offset is beyond the script, syntax errors) " + Console.RED + pe.expected.toList
+                .mkString(", ")
+            ) + Console.RESET + "\n"
       }
     case SourcesErr(err) =>
       Console.RED + err.showForConsole + Console.RESET
