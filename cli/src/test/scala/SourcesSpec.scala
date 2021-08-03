@@ -32,11 +32,11 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
       }
       .sortBy(_._1) // sort cause different systems have different order of file reading
 
-    val (id, importFile) = listResult.head
+    val (id, importFile) = listResult(1)
     id shouldBe "index.aqua"
     importFile.nonEmpty shouldBe true
 
-    val (importNearId, importFileNear) = listResult(1)
+    val (importNearId, importFileNear) = listResult.head
     importNearId shouldBe "importNear.aqua"
     importFileNear.nonEmpty shouldBe true
   }
