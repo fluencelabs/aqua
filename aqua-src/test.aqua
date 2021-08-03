@@ -1,5 +1,5 @@
 service Op("op"):
-    noop: -> ()
+    Noop: -> ()
 
 func return_none() -> ?string:
     result: *string

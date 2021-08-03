@@ -3,6 +3,7 @@ package aqua.parser
 import aqua.parser.expr._
 import aqua.parser.head.{HeadExpr, HeaderExpr}
 import aqua.parser.lift.LiftParser
+import aqua.parser.lift.LiftParser._
 import cats.data.{Chain, Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.{Parser0 => P0}
@@ -27,7 +28,7 @@ object Ast {
     parser[F]()
       .parseAll(script) match {
       case Right(value) => value
-      case Left(e) => Validated.invalidNec(LexerError[F](script, e))
+      case Left(e) => Validated.invalidNec(LexerError[F](e.wrapErr))
     }
 
 }

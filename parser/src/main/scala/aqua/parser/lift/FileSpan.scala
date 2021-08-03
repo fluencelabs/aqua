@@ -51,5 +51,14 @@ object FileSpan {
         (FileSpan(name, memoizedLocationMap, span), value)
       }
     }
+
+    override def wrapErr(e: P.Error): (FileSpan, P.Error) = (
+      FileSpan(
+        name,
+        memoizedLocationMap,
+        Span(e.failedAtOffset, e.failedAtOffset + 1)
+      ),
+      e
+    )
   }
 }

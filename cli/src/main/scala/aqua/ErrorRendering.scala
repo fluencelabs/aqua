@@ -3,11 +3,10 @@ package aqua
 import aqua.compiler._
 import aqua.files.FileModuleId
 import aqua.io.AquaFileError
-import aqua.parser.lift.{FileSpan, Span}
+import aqua.parser.lift.FileSpan
 import aqua.parser.{BlockIndentError, FuncReturnError, LexerError}
 import aqua.semantics.{RulesViolated, WrongAST}
-import cats.parse.LocationMap
-import cats.{Eval, Show}
+import cats.Show
 
 object ErrorRendering {
 
@@ -30,24 +29,17 @@ object ErrorRendering {
       err match {
         case BlockIndentError(indent, message) => showForConsole(indent._1, message)
         case FuncReturnError(point, message) => showForConsole(point._1, message)
-        case LexerError(input, pe) =>
-          // TODO: get name somehow
-          val fileSpan =
-            FileSpan(
-              "name",
-              Eval.later(LocationMap(input)),
-              Span(pe.failedAtOffset, pe.failedAtOffset + 1)
-            )
-          fileSpan
+        case LexerError((span, e)) =>
+          span
             .focus(3)
             .map(spanFocus =>
               spanFocus.toConsoleStr(
-                s"Syntax error, expected: ${pe.expected.toList.mkString(", ")}",
+                s"Syntax error, expected: ${e.expected.toList.mkString(", ")}",
                 Console.RED
               )
             )
             .getOrElse(
-              "(offset is beyond the script, syntax errors) " + Console.RED + pe.expected.toList
+              "(offset is beyond the script, syntax errors) " + Console.RED + e.expected.toList
                 .mkString(", ")
             ) + Console.RESET + "\n"
       }
