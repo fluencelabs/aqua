@@ -1,11 +1,19 @@
 package aqua.io
 
+import cats.data.NonEmptyChain
+
 import java.nio.file.Path
 
 sealed trait AquaFileError {
   def showForConsole: String
 
   override def toString: String = showForConsole
+}
+
+case class ListAquaErrors(errors: NonEmptyChain[AquaFileError]) extends AquaFileError {
+
+  override def showForConsole: String =
+    s"Cannot read '*.aqua' files:\n" + errors.map(_.showForConsole)
 }
 
 case class FileNotFound(name: Path, imports: Seq[Path]) extends AquaFileError {

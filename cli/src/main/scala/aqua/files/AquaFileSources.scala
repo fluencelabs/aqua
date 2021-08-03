@@ -2,7 +2,7 @@ package aqua.files
 
 import aqua.AquaIO
 import aqua.compiler.{AquaCompiled, AquaSources}
-import aqua.io.{AquaFileError, FileSystemError}
+import aqua.io.{AquaFileError, FileSystemError, ListAquaErrors}
 import cats.Monad
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.implicits.catsSyntaxApplicativeId
@@ -38,7 +38,9 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
             )(_ combine _)
           )
       case Validated.Invalid(e) =>
-        Validated.invalidNec[AquaFileError, Chain[(FileModuleId, String)]](e.head).pure[F]
+        Validated
+          .invalidNec[AquaFileError, Chain[(FileModuleId, String)]](ListAquaErrors(e))
+          .pure[F]
     }
 
   // Resolve an import that was written in a 'from' file
