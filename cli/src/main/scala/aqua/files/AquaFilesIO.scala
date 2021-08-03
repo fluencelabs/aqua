@@ -10,6 +10,7 @@ import cats.syntax.apply._
 import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import cats.syntax.applicativeError._
 import fs2.io.file.Files
 import fs2.text
 
@@ -110,27 +111,27 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
           Validated.invalid[NonEmptyChain[AquaFileError], Chain[Path]](errs).pure[F]
       }
 
+  private def deleteIfExists(file: Path): EitherT[F, AquaFileError, Boolean] =
+    Files[F].deleteIfExists(file).attemptT.leftMap(FileSystemError)
+
+  private def createDirectories(path: Path): EitherT[F, AquaFileError, Path] =
+    Files[F].createDirectories(path).attemptT.leftMap(FileSystemError)
+
   // Writes to a file, creates directories if they do not exist
   override def writeFile(file: Path, content: String): EitherT[F, AquaFileError, Unit] =
-    EitherT
-      .right[AquaFileError](Files[F].deleteIfExists(file))
-      .flatMap(_ => EitherT.right[AquaFileError](Files[F].createDirectories(file.getParent)))
-      .flatMap(_ =>
-        EitherT[F, AquaFileError, Unit](
-          fs2.Stream
-            .emit(content)
-            .through(text.utf8Encode)
-            .through(Files[F].writeAll(file))
-            .attempt
-            .map { e =>
-              e.left
-                .map(t => FileWriteError(file, t))
-            }
-            .compile
-            .last
-            .map(res => res.getOrElse(Right()))
-        )
+    deleteIfExists(file) >> createDirectories(file.getParent) >>
+      EitherT(
+        fs2.Stream
+          .emit(content)
+          .through(text.utf8Encode)
+          .through(Files[F].writeAll(file))
+          .attempt
+          .compile
+          .last
+          .map(_.getOrElse(Right()))
       )
+        .leftMap(FileWriteError(file, _))
+
 }
 
 object AquaFilesIO {

@@ -22,8 +22,7 @@ object AquaPathCompiler extends LogSupport {
     backend: Backend,
     bodyConfig: GenerationConfig
   ): F[ValidatedNec[String, Chain[String]]] = {
-    implicit val showError: Show[AquaError[FileModuleId, AquaFileError, FileSpan.F]] =
-      ErrorRendering.showError
+    import ErrorRendering.showError
     val sources = new AquaFileSources[F](srcPath, imports)
     AquaCompiler
       .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](
