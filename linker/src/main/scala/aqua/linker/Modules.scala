@@ -24,4 +24,13 @@ case class Modules[I, E, T](
       )
 
   def isResolved: Boolean = dependsOn.isEmpty
+
+  def map[TT](f: T => TT): Modules[I, E, TT] =
+    copy(loaded = loaded.view.mapValues(_.map(f)).toMap)
+
+  def mapErr[EE](f: E => EE): Modules[I, EE, T] =
+    copy(
+      loaded = loaded.view.mapValues(_.mapErr(f)).toMap,
+      dependsOn = dependsOn.view.mapValues(_.map(f)).toMap
+    )
 }

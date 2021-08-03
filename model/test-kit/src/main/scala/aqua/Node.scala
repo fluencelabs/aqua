@@ -3,7 +3,7 @@ package aqua
 import aqua.model.func.Call
 import aqua.model.func.raw._
 import aqua.model.func.resolved.{CallServiceRes, MakeRes, MatchMismatchRes, ResolvedOp}
-import aqua.model.transform.{BodyConfig, ErrorsCatcher}
+import aqua.model.transform.{ErrorsCatcher, GenerationConfig}
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval
@@ -88,7 +88,7 @@ object Node {
     )
   )
 
-  def errorCall(bc: BodyConfig, i: Int, on: ValueModel = initPeer): Res = Node[ResolvedOp](
+  def errorCall(bc: GenerationConfig, i: Int, on: ValueModel = initPeer): Res = Node[ResolvedOp](
     CallServiceRes(
       bc.errorHandlingCallback,
       bc.errorFuncName,
@@ -103,7 +103,7 @@ object Node {
     )
   )
 
-  def respCall(bc: BodyConfig, value: ValueModel, on: ValueModel = initPeer): Res =
+  def respCall(bc: GenerationConfig, value: ValueModel, on: ValueModel = initPeer): Res =
     Node[ResolvedOp](
       CallServiceRes(
         bc.callbackSrvId,
@@ -113,14 +113,15 @@ object Node {
       )
     )
 
-  def dataCall(bc: BodyConfig, name: String, on: ValueModel = initPeer): Res = Node[ResolvedOp](
-    CallServiceRes(
-      bc.dataSrvId,
-      name,
-      Call(Nil, Some(Call.Export(name, ScalarType.string))),
-      on
+  def dataCall(bc: GenerationConfig, name: String, on: ValueModel = initPeer): Res =
+    Node[ResolvedOp](
+      CallServiceRes(
+        bc.dataSrvId,
+        name,
+        Call(Nil, Some(Call.Export(name, ScalarType.string))),
+        on
+      )
     )
-  )
 
   def on(peer: ValueModel, via: List[ValueModel], body: Raw*) =
     Node(

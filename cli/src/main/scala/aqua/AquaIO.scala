@@ -1,7 +1,6 @@
-package aqua.compiler
+package aqua
 
-import aqua.compiler.io.AquaFileError
-import aqua.parser.lift.FileSpan
+import aqua.io.AquaFileError
 import cats.data.{Chain, EitherT, ValidatedNec}
 
 import java.nio.file.Path
@@ -10,7 +9,6 @@ trait AquaIO[F[_]] {
   def readFile(file: Path): EitherT[F, AquaFileError, String]
 
   def resolve(
-    focus: FileSpan.Focus,
     src: Path,
     imports: List[Path]
   ): EitherT[F, AquaFileError, Path]

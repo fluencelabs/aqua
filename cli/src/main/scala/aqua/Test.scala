@@ -1,8 +1,8 @@
 package aqua
 
 import aqua.backend.ts.TypeScriptBackend
-import aqua.compiler.{AquaCompiler, AquaIO}
-import aqua.model.transform.BodyConfig
+import aqua.files.AquaFilesIO
+import aqua.model.transform.GenerationConfig
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
 import org.typelevel.log4cats.SelfAwareStructuredLogger
@@ -18,19 +18,19 @@ object Test extends IOApp.Simple {
   implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
   override def run: IO[Unit] =
-    AquaCompiler
+    AquaPathCompiler
       .compileFilesTo[IO](
         Paths.get("./aqua-src"),
         List(Paths.get("./aqua")),
         Paths.get("./target"),
         TypeScriptBackend,
-        BodyConfig()
+        GenerationConfig()
       )
       .map {
         case Validated.Invalid(errs) =>
-          errs.map(println)
-        case Validated.Valid(_) =>
-
+          errs.map(System.err.println)
+        case Validated.Valid(res) =>
+          res.map(println)
       }
 
 }

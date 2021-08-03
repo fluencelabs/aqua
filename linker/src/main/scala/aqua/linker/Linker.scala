@@ -11,15 +11,18 @@ object Linker extends LogSupport {
 
   @tailrec
   def iter[I, E, T: Semigroup](
-    mods: List[AquaModule[I, E, T]],
+    mods: List[AquaModule[I, E, T => T]],
     proc: Map[I, T => T],
-    cycleError: List[AquaModule[I, E, T]] => E
+    cycleError: List[AquaModule[I, E, T => T]] => E
   ): Either[E, Map[I, T => T]] =
     mods match {
-      case Nil => Right(proc)
+      case Nil =>
+        Right(proc)
       case _ =>
         val (canHandle, postpone) = mods.partition(_.dependsOn.keySet.forall(proc.contains))
         debug("ITERATE, can handle: " + canHandle.map(_.id))
+        debug(s"dependsOn = ${mods.map(_.dependsOn.keySet)}")
+        debug(s"postpone = ${postpone.map(_.id)}")
         debug(s"proc = ${proc.keySet}")
 
         if (canHandle.isEmpty && postpone.nonEmpty)
@@ -47,17 +50,20 @@ object Linker extends LogSupport {
         }
     }
 
-  def apply[I, E, T: Monoid](
-    modules: Modules[I, E, T],
-    cycleError: List[AquaModule[I, E, T]] => E
+  def link[I, E, T: Monoid](
+    modules: Modules[I, E, T => T],
+    cycleError: List[AquaModule[I, E, T => T]] => E
   ): ValidatedNec[E, Map[I, T]] =
     if (modules.dependsOn.nonEmpty) Validated.invalid(modules.dependsOn.values.reduce(_ ++ _))
-    else
+    else {
+      val result = iter(modules.loaded.values.toList, Map.empty[I, T => T], cycleError)
+
       Validated.fromEither(
-        iter(modules.loaded.values.toList, Map.empty[I, T => T], cycleError)
+        result
           .map(_.view.filterKeys(modules.exports).mapValues(_.apply(Monoid[T].empty)).toMap)
           .left
           .map(NonEmptyChain.one)
       )
+    }
 
 }

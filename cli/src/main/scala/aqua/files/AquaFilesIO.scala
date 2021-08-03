@@ -1,24 +1,18 @@
-package aqua
+package aqua.files
 
-import aqua.compiler.AquaIO
-import aqua.compiler.io.{
-  AquaFileError,
-  EmptyFileError,
-  FileNotFound,
-  FileSystemError,
-  FileWriteError
-}
-import aqua.parser.lift.FileSpan
+import aqua.AquaIO
+import aqua.io._
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, EitherT, NonEmptyChain, Validated, ValidatedNec}
-import cats.syntax.functor._
-import cats.syntax.either._
+import cats.data._
 import cats.effect.kernel.Concurrent
+import cats.syntax.applicative._
+import cats.syntax.apply._
+import cats.syntax.either._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
+import cats.syntax.applicativeError._
 import fs2.io.file.Files
 import fs2.text
-import cats.syntax.applicative._
-import cats.syntax.flatMap._
-import cats.syntax.apply._
 
 import java.nio.file.Path
 import scala.util.Try
@@ -43,6 +37,10 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
         )
     )
 
+  /**
+   * Find the first file that exists in the given list of paths
+   * If there is no such file - error
+   */
   private def findFirstF(
     in: List[Path],
     notFound: EitherT[F, AquaFileError, Path]
@@ -67,29 +65,29 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
    * Checks if a file exists in the list of possible paths
    */
   def resolve(
-    focus: FileSpan.Focus,
     src: Path,
     imports: List[Path]
   ): EitherT[F, AquaFileError, Path] =
     findFirstF(
       imports
         .map(_.resolve(src)),
-      EitherT.leftT(FileNotFound(focus, src, imports))
+      EitherT.leftT(FileNotFound(src, imports))
     )
 
   override def listAqua(folder: Path): F[ValidatedNec[AquaFileError, Chain[Path]]] =
     Validated
-      .fromTry(
+      .fromEither(
         Try {
           val f = folder.toFile
-          if (f.isDirectory) {
-            f.listFiles().toList
+          if (!f.exists()) {
+            Left(FileNotFound(folder, Nil))
+          } else if (f.isDirectory) {
+            Right(f.listFiles().toList)
           } else {
-            f :: Nil
+            Right(f :: Nil)
           }
-        }
+        }.toEither.leftMap[AquaFileError](FileSystemError).flatMap(identity)
       )
-      .leftMap[AquaFileError](FileSystemError)
       .leftMap(NonEmptyChain.one)
       .pure[F]
       .flatMap {
@@ -113,27 +111,27 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
           Validated.invalid[NonEmptyChain[AquaFileError], Chain[Path]](errs).pure[F]
       }
 
+  private def deleteIfExists(file: Path): EitherT[F, AquaFileError, Boolean] =
+    Files[F].deleteIfExists(file).attemptT.leftMap(FileSystemError)
+
+  private def createDirectories(path: Path): EitherT[F, AquaFileError, Path] =
+    Files[F].createDirectories(path).attemptT.leftMap(FileSystemError)
+
+  // Writes to a file, creates directories if they do not exist
   override def writeFile(file: Path, content: String): EitherT[F, AquaFileError, Unit] =
-    EitherT
-      .right[AquaFileError](Files[F].deleteIfExists(file))
-      .flatMap(_ =>
-        EitherT[F, AquaFileError, Unit](
-          fs2.Stream
-            .emit(
-              content
-            )
-            .through(text.utf8Encode)
-            .through(Files[F].writeAll(file))
-            .attempt
-            .map { e =>
-              e.left
-                .map(t => FileWriteError(file, t))
-            }
-            .compile
-            .drain
-            .map(_ => Right(()))
-        )
+    deleteIfExists(file) >> createDirectories(file.getParent) >>
+      EitherT(
+        fs2.Stream
+          .emit(content)
+          .through(text.utf8Encode)
+          .through(Files[F].writeAll(file))
+          .attempt
+          .compile
+          .last
+          .map(_.getOrElse(Right()))
       )
+        .leftMap(FileWriteError(file, _))
+
 }
 
 object AquaFilesIO {

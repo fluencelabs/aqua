@@ -12,7 +12,7 @@ Therefore, Aqua scripts are compiled into several targets at once, with AIR and 
 
 ## Using Aqua
 
-Please refer to [aqua-playground](https://github.com/fluencelabs/aqua-playground) to learn how to use Aqua.
+Please refer to [Aqua Book](https://doc.fluence.dev/aqua-book/) to learn how to use Aqua.
 
 ## Compiler CLI
 
@@ -34,6 +34,8 @@ Input directory should contain files with `aqua` scripts.
 - **[model](./model)** - middle-end, internal representation of the code, optimizations and transfromations
 - **[semantics](./semantics)** - rules to convert source AST into the model
 - **[linker](./linker)** - checks dependencies between modules, builds and combines an abstract dependencies tree
+- **[backend](./backend)** - compilation backend interface
+- **[compiler](./compiler)** - compiler as a pure function made from _linker_, _semantics_ and _backend_
 - **[backend/air](./backend/air)** – generates AIR code from the middle-end model
 - **[backend/ts](./backend/ts)** - generates AIR code and Typescript wrappers for use with Fluence JS SDK
 - **[cli](./cli)** - CLI interface

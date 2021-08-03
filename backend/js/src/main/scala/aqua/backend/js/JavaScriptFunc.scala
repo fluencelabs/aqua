@@ -2,7 +2,7 @@ package aqua.backend.js
 
 import aqua.backend.air.FuncAirGen
 import aqua.model.func.{ArgDef, FuncCallable}
-import aqua.model.transform.BodyConfig
+import aqua.model.transform.GenerationConfig
 import aqua.types._
 import cats.syntax.show._
 
@@ -38,7 +38,7 @@ case class JavaScriptFunc(func: FuncCallable) {
        |""".stripMargin
   }
 
-  def generateJavascript(conf: BodyConfig = BodyConfig()): String = {
+  def generateJavascript(conf: GenerationConfig = GenerationConfig()): String = {
 
     val tsAir = FuncAirGen(func).generateAir(conf)
 

@@ -8,17 +8,21 @@ class LinkerSpec extends AnyFlatSpec with Matchers {
 
   "linker" should "resolve dependencies" in {
 
-    val empty = Modules[String, String, String]()
+    val empty = Modules[String, String, String => String]()
 
     val withMod1 =
       empty
         .add(
-          AquaModule("mod1", Map("mod2" -> "unresolved mod2 in mod1"), _ ++ " | mod1"),
+          AquaModule[String, String, String => String](
+            "mod1",
+            Map("mod2" -> "unresolved mod2 in mod1"),
+            _ ++ " | mod1"
+          ),
           export = true
         )
     withMod1.isResolved should be(false)
 
-    Linker[String, String, String](
+    Linker.link[String, String, String](
       withMod1,
       cycle => cycle.map(_.id).mkString(" -> ")
     ) should be(Validated.invalidNec("unresolved mod2 in mod1"))
@@ -28,7 +32,7 @@ class LinkerSpec extends AnyFlatSpec with Matchers {
 
     withMod2.isResolved should be(true)
 
-    Linker[String, String, String](
+    Linker.link[String, String, String](
       withMod2,
       cycle => cycle.map(_.id + "?").mkString(" -> ")
     ) should be(Validated.validNec(Map("mod1" -> " | mod2 | mod1")))

@@ -105,6 +105,9 @@ object Span {
       (P.index ~ p0).map { case (i, v) ⇒
         (Span(i, i), v)
       }
+
+    override def wrapErr(e: P.Error): (Span, P.Error) =
+      (Span(e.failedAtOffset, e.failedAtOffset + 1), e)
   }
 
 }

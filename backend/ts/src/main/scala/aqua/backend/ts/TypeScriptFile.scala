@@ -1,7 +1,7 @@
 package aqua.backend.ts
 
 import aqua.model.AquaContext
-import aqua.model.transform.BodyConfig
+import aqua.model.transform.GenerationConfig
 import cats.data.Chain
 
 case class TypeScriptFile(context: AquaContext) {
@@ -9,7 +9,7 @@ case class TypeScriptFile(context: AquaContext) {
   def funcs: Chain[TypeScriptFunc] =
     Chain.fromSeq(context.funcs.values.toSeq).map(TypeScriptFunc(_))
 
-  def generateTS(conf: BodyConfig = BodyConfig()): String =
+  def generateTS(conf: GenerationConfig = GenerationConfig()): String =
     TypeScriptFile.Header + "\n\n" + funcs.map(_.generateTypescript(conf)).toList.mkString("\n\n")
 }
 
