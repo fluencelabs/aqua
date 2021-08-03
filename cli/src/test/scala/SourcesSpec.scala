@@ -24,13 +24,15 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     val result = sourceGen.sources.unsafeRunSync()
     result.isValid shouldBe true
 
-    val listResult = result.getOrElse(Chain.empty).toList
+    val listResult = result.getOrElse(Chain.empty).toList.map { case (fid, s) =>
+      (fid.file.toString.split("/").last, s)
+    }
     val (id, importFile) = listResult.head
-    id.file.toString.split("/").last shouldBe "index.aqua"
+    id shouldBe "index.aqua"
     importFile.nonEmpty shouldBe true
 
     val (importNearId, importFileNear) = listResult(1)
-    importNearId.file.toString.split("/").last shouldBe "importNear.aqua"
+    importNearId shouldBe "importNear.aqua"
     importFileNear.nonEmpty shouldBe true
   }
 
