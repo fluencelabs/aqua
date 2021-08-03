@@ -59,7 +59,7 @@ object ErrorRendering {
             .map(_.toConsoleStr(message, Console.CYAN))
             .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
         case WrongAST(ast) =>
-          s"Semantic error: $ast"
+          s"Semantic error"
 
       }
 
