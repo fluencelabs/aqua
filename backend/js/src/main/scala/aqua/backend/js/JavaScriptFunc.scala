@@ -58,8 +58,8 @@ case class JavaScriptFunc(func: FuncCallable) {
       }
       .mkString("\n")
 
-    val returnCallback = func.ret
-      .map(_.lastType)
+    val returnCallback = func.arrowType.codomain.uncons
+      .map(_._1)
       .map(t => genReturnCallback(t, conf.callbackService, conf.respFuncName))
       .getOrElse("")
 
