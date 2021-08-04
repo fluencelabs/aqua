@@ -5,12 +5,14 @@ import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
 import aqua.model.func.resolved.{CallServiceRes, MakeRes}
 import aqua.model.func.{ArgsDef, Call, FuncCallable}
 import aqua.model.{LiteralModel, VarModel}
-import aqua.types.ScalarType
+import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class TransformSpec extends AnyFlatSpec with Matchers {
   import Node._
+
+  val stringArrow: ArrowType = ArrowType(NilType, ProductType(ScalarType.string :: Nil))
 
   "transform.forClient" should "work well with function 1 (no calls before on), generate correct error handling" in {
 
@@ -20,8 +22,8 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       FuncCallable(
         "ret",
         on(otherPeer, otherRelay :: Nil, callTag(1)),
-        ArgsDef.empty,
-        Some((ret, ScalarType.string)),
+        stringArrow,
+        Some(ret),
         Map.empty,
         Map.empty
       )
@@ -70,8 +72,8 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val func: FuncCallable = FuncCallable(
       "ret",
       FuncOps.seq(callTag(0), on(otherPeer, Nil, callTag(1))),
-      ArgsDef.empty,
-      Some((ret, ScalarType.string)),
+      stringArrow,
+      Some(ret),
       Map.empty,
       Map.empty
     )
@@ -119,8 +121,8 @@ class TransformSpec extends AnyFlatSpec with Matchers {
             )
           ).cof
         ),
-        ArgsDef.empty,
-        Some((VarModel("v", ScalarType.string), ScalarType.string)),
+        stringArrow,
+        Some(VarModel("v", ScalarType.string)),
         Map.empty,
         Map.empty
       )
@@ -131,8 +133,8 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         FuncOp(
           Node(CallArrowTag("callable", Call(Nil, Some(Call.Export("v", ScalarType.string))))).cof
         ),
-        ArgsDef.empty,
-        Some((VarModel("v", ScalarType.string), ScalarType.string)),
+        stringArrow,
+        Some(VarModel("v", ScalarType.string)),
         Map("callable" -> f1),
         Map.empty
       )
