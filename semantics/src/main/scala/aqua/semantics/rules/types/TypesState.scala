@@ -23,6 +23,7 @@ import aqua.types.{
   BottomType,
   DataType,
   OptionType,
+  ProductType,
   StreamType,
   StructType,
   TopType,
@@ -65,7 +66,7 @@ case class TypesState[F[_]](
           dt
         }
         Option.when(strictRes.isDefined == res.isDefined && strictArgs.length == args.length)(
-          ArrowType(strictArgs, strictRes)
+          ArrowType(ProductType(strictArgs), ProductType(strictRes.toList))
         )
     }
 
@@ -82,7 +83,7 @@ case class TypesState[F[_]](
         NonEmptyChain
           .fromChain(errs)
           .fold[ValidatedNec[(Token[F], String), ArrowType]](
-            Valid(ArrowType(argTypes.toList, resType))
+            Valid(ArrowType(ProductType(argTypes.toList), ProductType(resType.toList)))
           )(Invalid(_))
 
       case _ =>

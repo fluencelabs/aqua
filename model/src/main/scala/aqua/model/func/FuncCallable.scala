@@ -3,7 +3,7 @@ package aqua.model.func
 import aqua.model.ValueModel.varName
 import aqua.model.func.raw._
 import aqua.model.{Model, ValueModel, VarModel}
-import aqua.types.{ArrowType, StreamType, Type}
+import aqua.types.{ArrowType, ProductType, StreamType}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -12,8 +12,8 @@ import wvlet.log.Logger
 case class FuncCallable(
   funcName: String,
   body: FuncOp,
-  args: ArgsDef,
-  ret: Option[(ValueModel, Type)],
+  arrowType: ArrowType,
+  ret: Option[ValueModel],
   capturedArrows: Map[String, FuncCallable],
   capturedValues: Map[String, ValueModel]
 ) extends Model {
@@ -21,11 +21,7 @@ case class FuncCallable(
   private val logger = Logger.of[FuncCallable]
   import logger._
 
-  def arrowType: ArrowType =
-    ArrowType(
-      args.types,
-      ret.map(_._2)
-    )
+  def args: ProductType = arrowType.domain
 
   def findNewNames(forbidden: Set[String], introduce: Set[String]): Map[String, String] =
     (forbidden intersect introduce).foldLeft(Map.empty[String, String]) { case (acc, name) =>
@@ -54,7 +50,7 @@ case class FuncCallable(
     debug("Call: " + call)
 
     // Collect all arguments: what names are used inside the function, what values are received
-    val argsFull = args.call(call)
+    val argsFull = ArgsCall(arrowType.domain, call.args)
     // DataType arguments
     val argsToDataRaw = argsFull.dataArgs
     // Arrow arguments: expected type is Arrow, given by-name
@@ -96,7 +92,7 @@ case class FuncCallable(
     val treeRenamed = treeWithValues.rename(shouldRename)
 
     // Result could be derived from arguments, or renamed; take care about that
-    val result = ret.map(_._1).map(_.resolveWith(argsToData)).map {
+    val result = ret.map(_.resolveWith(argsToData)).map {
       case v: VarModel if shouldRename.contains(v.name) => v.copy(shouldRename(v.name))
       case v => v
     }

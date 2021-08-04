@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.func.raw.{FuncOp, FuncOps}
-import aqua.model.func.{ArgDef, ArgsDef, FuncModel}
+import aqua.model.func.FuncModel
 import aqua.model.{Model, ReturnModel, ValueModel}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.Arg
@@ -10,7 +10,7 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrowType, DataType, Type}
+import aqua.types.{ArrowType, ProductType, Type}
 import cats.Applicative
 import cats.data.Chain
 import cats.free.Free
@@ -32,15 +32,15 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
         args
           .foldLeft(
             // Begin scope -- for mangling
-            N.beginScope(name).as[Chain[Type]](Chain.empty)
+            N.beginScope(name).as[Chain[(String, Type)]](Chain.empty)
           ) { case (f, Arg(argName, argType)) =>
             // Resolve arg type, remember it
             f.flatMap(acc =>
               T.resolveType(argType).flatMap {
                 case Some(t: ArrowType) =>
-                  N.defineArrow(argName, t, isRoot = false).as(acc.append(t))
+                  N.defineArrow(argName, t, isRoot = false).as(acc.append(argName.value -> t))
                 case Some(t) =>
-                  N.define(argName, t).as(acc.append(t))
+                  N.define(argName, t).as(acc.append(argName.value -> t))
                 case None =>
                   Free.pure(acc)
               }
@@ -50,7 +50,9 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
         // Resolve return type
         ret.fold(Free.pure[Alg, Option[Type]](None))(T.resolveType(_))
       )
-      .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2))
+      .map(argsAndRes =>
+        ArrowType(ProductType.labelled(argsAndRes._1), ProductType(argsAndRes._2.toList))
+      )
 
   def generateFuncModel[Alg[_]](funcArrow: ArrowType, retModel: Option[ValueModel], body: FuncOp)(
     implicit N: NamesAlgebra[F, Alg]
@@ -59,15 +61,8 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
 
     val model = FuncModel(
       name = name.value,
-      args = ArgsDef(
-        argNames
-          .zip(funcArrow.args)
-          .map {
-            case (n, dt: DataType) => ArgDef.Data(n, dt)
-            case (n, at: ArrowType) => ArgDef.Arrow(n, at)
-          }
-      ),
-      ret = retModel zip funcArrow.res,
+      arrowType = funcArrow,
+      ret = retModel,
       body = body
     )
 

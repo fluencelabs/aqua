@@ -35,9 +35,7 @@ object Transform extends LogSupport {
     val argsProvider: ArgsProvider =
       ArgsFromService(
         conf.dataSrvId,
-        conf.relayVarName.map(_ -> ScalarType.string).toList ::: func.args.dataArgs.toList.map(
-          add => add.name -> add.dataType
-        )
+        conf.relayVarName.map(_ -> ScalarType.string).toList ::: func.arrowType.domain.labelledData
       )
 
     val transform =

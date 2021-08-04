@@ -5,7 +5,6 @@ import aqua.model.func.{ArgsCall, FuncCallable, FuncModel}
 import aqua.types.{StructType, Type}
 import cats.Monoid
 import cats.data.NonEmptyMap
-import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.syntax.monoid._
 import wvlet.log.LogSupport
@@ -101,8 +100,8 @@ object AquaContext extends LogSupport {
             fnName,
             // TODO: capture ability resolution, get ID from the call context
             FuncOp.leaf(CallServiceTag(serviceId, fnName, call)),
-            args,
-            (ret.map(_.model), arrowType.res).mapN(_ -> _),
+            arrowType,
+            ret.map(_.model),
             Map.empty,
             Map.empty
           )

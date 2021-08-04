@@ -17,10 +17,44 @@ sealed trait Type {
 }
 
 sealed trait ProductType extends Type {
+  def isEmpty: Boolean = this == NilType
 
   def uncons: Option[(Type, ProductType)] = this match {
     case ConsType(t, pt) => Some(t -> pt)
     case _ => None
+  }
+
+  def toList: List[Type] = this match {
+    case ConsType(t, pt) => t :: pt.toList
+    case _ => Nil
+  }
+
+  def toLabelledList(prefix: String = "arg", index: Int = 0): List[(String, Type)] = this match {
+    case LabelledConsType(label, t, pt) => (label -> t) :: pt.toLabelledList(prefix, index + 1)
+    case UnlabelledConsType(t, pt) =>
+      (s"$prefix$index" -> t) :: pt.toLabelledList(prefix, index + 1)
+    case _ => Nil
+  }
+
+  def labelledData: List[(String, DataType)] = this match {
+    case LabelledConsType(label, t: DataType, pt) => (label -> t) :: pt.labelledData
+    case UnlabelledConsType(_, pt) => pt.labelledData
+    case _ => Nil
+  }
+}
+
+object ProductType {
+
+  def apply(types: List[Type]): ProductType = types match {
+    case h :: t =>
+      ConsType.cons(h, ProductType(t))
+    case _ => NilType
+  }
+
+  def labelled(types: List[(String, Type)]): ProductType = types match {
+    case (l, h) :: t =>
+      ConsType.cons(l, h, ProductType.labelled(t))
+    case _ => NilType
   }
 }
 
@@ -149,7 +183,10 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends D
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
-case class ArrowType(args: List[Type], res: Option[Type]) extends Type {
+case class ArrowType(domain: ProductType, codomain: ProductType) extends Type {
+
+  def args: List[Type] = domain.toList
+  def res: Option[Type] = codomain.uncons.map(_._1)
 
   def acceptsAsArguments(valueTypes: List[Type]): Boolean =
     (args.length == valueTypes.length) && args
@@ -157,7 +194,7 @@ case class ArrowType(args: List[Type], res: Option[Type]) extends Type {
       .forall(av => av._1.acceptsValueOf(av._2))
 
   override def toString: String =
-    args.map(_.toString).mkString(", ") + " -> " + res.map(_.toString).getOrElse("()")
+    s"$domain -> $codomain"
 }
 
 case class StreamType(element: Type) extends BoxType
@@ -222,24 +259,17 @@ object Type {
           else {
             val tailCmp = cmp(ltail, rtail)
             // If one is >, and another eq, it's >, and vice versa
-            println(s"head = $headCmp | tail = $tailCmp")
             if (headCmp >= 0 && tailCmp >= 0) 1.0
             else if (headCmp <= 0 && tailCmp <= 0) -1.0
             else NaN
           }
 
-        case (l: ArrowType, r: ArrowType) =>
-          val argL = l.args
-          val resL = l.res
-          val argR = r.args
-          val resR = r.res
-          val cmpTypes = cmpTypesList(argR, argL)
-          val cmpRes =
-            if (resL == resR) 0.0
-            else (resL, resR).mapN(cmp).getOrElse(NaN)
+        case (ArrowType(ldom, lcodom), ArrowType(rdom, rcodom)) =>
+          val cmpDom = cmp(ldom, rdom)
+          val cmpCodom = cmp(lcodom, rcodom)
 
-          if (cmpTypes >= 0 && cmpRes >= 0) 1.0
-          else if (cmpTypes <= 0 && cmpRes <= 0) -1.0
+          if (cmpDom >= 0 && cmpCodom >= 0) -1.0
+          else if (cmpDom <= 0 && cmpCodom <= 0) 1.0
           else NaN
 
         case _ =>

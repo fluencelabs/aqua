@@ -4,10 +4,9 @@ import aqua.model.VarModel
 import aqua.types.Type
 import cats.data.Chain
 
+// TODO replace with ProductType
 case class ArgsDef(args: List[ArgDef]) {
   def isEmpty: Boolean = args.isEmpty
-
-  def call(c: Call): ArgsCall = ArgsCall(args, c.args)
 
   def types: List[Type] = args.map(_.`type`)
 

@@ -73,18 +73,21 @@ class TypeSpec extends AnyFlatSpec with Matchers {
   }
 
   "arrows" should "be contravariant on arguments" in {
-    val one: Type = ArrowType(u32 :: Nil, None)
-    val two: Type = ArrowType(u64 :: Nil, None)
+    val one: Type = ArrowType(ProductType(u32 :: Nil), NilType)
+    val onePrime: Type = ArrowType(ProductType(u32 :: bool :: Nil), NilType)
+    val two: Type = ArrowType(ProductType(u64 :: Nil), NilType)
 
+    accepts(one, onePrime) should be(true)
     accepts(one, two) should be(true)
+    accepts(onePrime, two) should be(false)
 
     one > two should be(true)
     two < one should be(true)
   }
 
   "arrows" should "be variant on results" in {
-    val one: Type = ArrowType(Nil, Some(u64))
-    val two: Type = ArrowType(Nil, Some(u32))
+    val one: Type = ArrowType(NilType, ProductType(u64 :: Nil))
+    val two: Type = ArrowType(NilType, ProductType(u32 :: Nil))
 
     accepts(one, two) should be(true)
 
@@ -93,10 +96,10 @@ class TypeSpec extends AnyFlatSpec with Matchers {
   }
 
   "arrows" should "respect both args and results" in {
-    val one: Type = ArrowType(bool :: f64 :: Nil, Some(u64))
-    val two: Type = ArrowType(bool :: Nil, Some(u64))
-    val three: Type = ArrowType(bool :: f32 :: Nil, Some(u64))
-    val four: Type = ArrowType(bool :: f32 :: Nil, Some(u32))
+    val one: Type = ArrowType(ProductType(bool :: f64 :: Nil), ProductType(u64 :: Nil))
+    val two: Type = ArrowType(ProductType(bool :: Nil), ProductType(u64 :: Nil))
+    val three: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u64 :: Nil))
+    val four: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u32 :: Nil))
 
     accepts(one, two) should be(false)
     accepts(two, one) should be(false)
@@ -140,6 +143,9 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     accepts(longer, empty) should be(false)
     accepts(longer, smth) should be(false)
     accepts(ConsType.cons("label", string, empty), longer) should be(true)
+
+    accepts(ConsType.cons(u64, empty), ConsType.cons(u32, empty)) should be(true)
+    accepts(ConsType.cons(u32, empty), ConsType.cons(u64, empty)) should be(false)
   }
 
 }

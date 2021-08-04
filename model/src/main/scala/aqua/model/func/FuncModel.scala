@@ -2,12 +2,12 @@ package aqua.model.func
 
 import aqua.model.func.raw.FuncOp
 import aqua.model.{Model, ValueModel}
-import aqua.types.Type
+import aqua.types.ArrowType
 
 case class FuncModel(
   name: String,
-  args: ArgsDef,
-  ret: Option[(ValueModel, Type)],
+  arrowType: ArrowType,
+  ret: Option[ValueModel],
   body: FuncOp
 ) extends Model {
 
@@ -15,6 +15,6 @@ case class FuncModel(
     arrows: Map[String, FuncCallable],
     constants: Map[String, ValueModel]
   ): FuncCallable =
-    FuncCallable(name, body.fixXorPar, args, ret, arrows, constants)
+    FuncCallable(name, body.fixXorPar, arrowType, ret, arrows, constants)
 
 }

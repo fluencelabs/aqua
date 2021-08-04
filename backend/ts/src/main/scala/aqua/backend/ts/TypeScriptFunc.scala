@@ -11,7 +11,7 @@ case class TypeScriptFunc(func: FuncCallable) {
   import TypeScriptFunc._
 
   def argsTypescript: String =
-    func.args.args.map(ad => s"${ad.name}: " + typeToTs(ad.`type`)).mkString(", ")
+    func.arrowType.domain.toLabelledList().map(ad => s"${ad._1}: " + typeToTs(ad._2)).mkString(", ")
 
   def generateUniqueArgName(args: List[String], basis: String, attempt: Int): String = {
     val name = if (attempt == 0) {
@@ -51,32 +51,35 @@ case class TypeScriptFunc(func: FuncCallable) {
     val tsAir = FuncAirGen(func).generateAir(conf)
 
     val retType = func.ret
-      .map(_._2)
+      .map(_.lastType)
       .fold("void")(typeToTs)
 
     val returnCallback = func.ret
-      .map(_._2)
+      .map(_.lastType)
       .map(t => genReturnCallback(t, conf.callbackService, conf.respFuncName))
       .getOrElse("")
 
-    val setCallbacks = func.args.args.map {
-      case ArgDef.Data(argName, OptionType(_)) =>
-        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
-      case ArgDef.Data(argName, _) =>
-        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
-      case ArgDef.Arrow(argName, at) =>
-        val value = s"$argName(${argsCallToTs(
-          at
-        )})"
-        val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
-        s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
-    }.mkString("\n")
+    val setCallbacks = func.args
+      .toLabelledList()
+      .map {
+        case (argName, OptionType(_)) =>
+          s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
+        case (argName, _: DataType) =>
+          s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
+        case (argName, at: ArrowType) =>
+          val value = s"$argName(${argsCallToTs(
+            at
+          )})"
+          val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
+          s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
+      }
+      .mkString("\n")
 
     val returnVal =
       func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
-    val clientArgName = generateUniqueArgName(func.args.args.map(_.name), "client", 0)
-    val configArgName = generateUniqueArgName(func.args.args.map(_.name), "config", 0)
+    val clientArgName = generateUniqueArgName(func.args.toLabelledList().map(_._1), "client", 0)
+    val configArgName = generateUniqueArgName(func.args.toLabelledList().map(_._1), "config", 0)
 
     val configType = "{ttl?: number}"
 
