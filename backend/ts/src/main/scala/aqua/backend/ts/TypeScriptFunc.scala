@@ -61,7 +61,7 @@ case class TypeScriptFunc(func: FuncCallable) {
 
     val setCallbacks = func.args
       .toLabelledList()
-      .map {
+      .collect { // Product types are not handled
         case (argName, OptionType(_)) =>
           s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
         case (argName, _: DataType) =>
@@ -145,14 +145,15 @@ object TypeScriptFunc {
     case at: ArrowType =>
       s"(${argsToTs(at)}) => ${at.res
         .fold("void")(typeToTs)}"
+    case _ =>
+      // TODO: handle product types in returns
+      "any"
   }
 
   def argsToTs(at: ArrowType): String =
-    at.args
-      .map(typeToTs)
-      .zipWithIndex
-      .map(_.swap)
-      .map(kv => "arg" + kv._1 + ": " + kv._2)
+    at.domain
+      .toLabelledList()
+      .map(nt => nt._1 + ": " + typeToTs(nt._2))
       .mkString(", ")
 
   def argsCallToTs(at: ArrowType): String =

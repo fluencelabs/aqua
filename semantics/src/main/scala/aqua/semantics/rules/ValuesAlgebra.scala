@@ -43,15 +43,16 @@ class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlge
         }
     }
 
-  def checkArguments(token: Token[F], arr: ArrowType, args: List[Value[F]]): Free[Alg, Boolean] = {
-    T.checkArgumentsNumber(token, arr.args.length, args.length).flatMap {
+  def checkArguments(token: Token[F], arr: ArrowType, args: List[Value[F]]): Free[Alg, Boolean] =
+    // TODO: do we really need to check this?
+    T.checkArgumentsNumber(token, arr.domain.length, args.length).flatMap {
       case false => Free.pure[Alg, Boolean](false)
       case true =>
         args
           .map[Free[Alg, Option[(Token[F], Type)]]](tkn =>
             resolveType(tkn).map(_.map(t => tkn -> t))
           )
-          .zip(arr.args)
+          .zip(arr.domain.toList)
           .foldLeft(
             Free.pure[Alg, Boolean](true)
           ) { case (f, (ft, t)) =>
@@ -66,7 +67,6 @@ class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlge
             ).mapN(_ && _)
           }
     }
-  }
 
 }
 

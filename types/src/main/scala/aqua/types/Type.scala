@@ -20,6 +20,8 @@ sealed trait Type {
 sealed trait ProductType extends Type {
   def isEmpty: Boolean = this == NilType
 
+  def length: Int
+
   def uncons: Option[(Type, ProductType)] = this match {
     case ConsType(t, pt) => Some(t -> pt)
     case _ => None
@@ -62,6 +64,8 @@ object ProductType {
 sealed trait ConsType extends ProductType {
   def `type`: Type
   def tail: ProductType
+
+  override lazy val length: Int = 1 + tail.length
 }
 
 object ConsType {
@@ -84,6 +88,8 @@ object NilType extends ProductType {
   override def toString: String = "∅"
 
   override def isInhabited: Boolean = false
+
+  override def length: Int = 0
 }
 
 sealed trait DataType extends Type
@@ -191,9 +197,7 @@ case class ArrowType(domain: ProductType, codomain: ProductType) extends Type {
   def res: Option[Type] = codomain.uncons.map(_._1)
 
   def acceptsAsArguments(valueTypes: List[Type]): Boolean =
-    (args.length == valueTypes.length) && args
-      .zip(valueTypes)
-      .forall(av => av._1.acceptsValueOf(av._2))
+    domain.acceptsValueOf(ProductType(valueTypes))
 
   override def toString: String =
     s"$domain -> $codomain"

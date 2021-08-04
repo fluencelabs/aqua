@@ -116,12 +116,9 @@ case class JavaScriptFunc(func: FuncCallable) {
 object JavaScriptFunc {
 
   def argsToTs(at: ArrowType): String =
-    at.args.zipWithIndex
-      .map(_.swap)
-      .map(kv => "arg" + kv._1)
-      .mkString(", ")
+    at.domain.toLabelledList().map(_._1).mkString(", ")
 
   def argsCallToJs(at: ArrowType): String =
-    at.args.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
+    at.domain.toList.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
 
 }
