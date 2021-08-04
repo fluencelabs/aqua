@@ -2,6 +2,7 @@ package aqua.model.func.raw
 
 import aqua.model.func.Call
 import aqua.model.{LiteralModel, ValueModel}
+import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 
@@ -78,4 +79,8 @@ object FuncOps {
 
   def next(item: String): FuncOp =
     FuncOp.leaf(NextTag(item))
+
+  lazy val empty: FuncOp =
+    FuncOp(Cofree[Chain, RawTag](EmptyTag, Eval.now(Chain.empty)))
+
 }

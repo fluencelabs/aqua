@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.model.func.raw.{EmptyTag, FuncOp, RawTag}
+import aqua.model.func.raw.{FuncOp, FuncOps}
 import aqua.model.func.{ArgDef, ArgsDef, FuncModel}
 import aqua.model.{Model, ReturnModel, ValueModel}
 import aqua.parser.expr.FuncExpr
@@ -11,11 +11,11 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, DataType, Type}
+import cats.Applicative
 import cats.data.Chain
-import cats.free.{Cofree, Free}
+import cats.free.Free
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.{Applicative, Eval}
 
 class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
   import expr._
@@ -100,11 +100,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
         case body: FuncOp if ret.isDefined == retValue.isDefined =>
           generateFuncModel[Alg](funcArrow, retModel, body)
         case ReturnModel =>
-          generateFuncModel[Alg](
-            funcArrow,
-            retModel,
-            FuncOp(Cofree[Chain, RawTag](EmptyTag, Eval.now(Chain.empty)))
-          )
+          generateFuncModel[Alg](funcArrow, retModel, FuncOps.empty)
         case m => Free.pure[Alg, Model](Model.error("Function body is not a funcOp, it's " + m))
       })
     )
