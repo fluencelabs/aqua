@@ -17,7 +17,17 @@ import aqua.parser.lexer.{
   TopBottomToken,
   TypeToken
 }
-import aqua.types.{ArrayType, ArrowType, DataType, OptionType, ProductType, StreamType, Type}
+import aqua.types.{
+  ArrayType,
+  ArrowType,
+  BottomType,
+  DataType,
+  OptionType,
+  StreamType,
+  StructType,
+  TopType,
+  Type
+}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
@@ -32,7 +42,7 @@ case class TypesState[F[_]](
   def resolveTypeToken(tt: TypeToken[F]): Option[Type] =
     tt match {
       case TopBottomToken(_, isTop) =>
-        Option(if (isTop) DataType.Top else DataType.Bottom)
+        Option(if (isTop) TopType else BottomType)
       case ArrayTypeToken(_, dtt) =>
         resolveTypeToken(dtt).collect { case it: DataType =>
           ArrayType(it)
@@ -95,7 +105,7 @@ case class TypesState[F[_]](
         }
       case (i @ IntoField(_)) :: tail =>
         rootT match {
-          case pt @ ProductType(_, fields) =>
+          case pt @ StructType(_, fields) =>
             fields(i.value)
               .toRight(i -> s"Field `${i.value}` not found in type `${pt.name}``")
               .flatMap(t => resolveOps(t, tail).map(IntoFieldModel(i.value, t) :: _))

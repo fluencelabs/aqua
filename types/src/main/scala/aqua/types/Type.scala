@@ -12,12 +12,55 @@ sealed trait Type {
     import cats.syntax.partialOrder._
     this >= incoming
   }
+
+  def isInhabited: Boolean = true
 }
+
+sealed trait ProductType extends Type {
+
+  def uncons: Option[(Type, ProductType)] = this match {
+    case ConsType(t, pt) => Some(t -> pt)
+    case _ => None
+  }
+}
+
+sealed trait ConsType extends ProductType {
+  def `type`: Type
+  def tail: ProductType
+}
+
+object ConsType {
+  def unapply(cons: ConsType): Option[(Type, ProductType)] = Some(cons.`type` -> cons.tail)
+  def cons(`type`: Type, tail: ProductType): ConsType = UnlabelledConsType(`type`, tail)
+
+  def cons(label: String, `type`: Type, tail: ProductType): ConsType =
+    LabelledConsType(label, `type`, tail)
+}
+
+case class LabelledConsType(label: String, `type`: Type, tail: ProductType) extends ConsType {
+  override def toString: String = s"($label: " + `type` + s" :: $tail"
+}
+
+case class UnlabelledConsType(`type`: Type, tail: ProductType) extends ConsType {
+  override def toString: String = `type` + s" :: $tail"
+}
+
+object NilType extends ProductType {
+  override def toString: String = "∅"
+
+  override def isInhabited: Boolean = false
+}
+
 sealed trait DataType extends Type
 
-object DataType {
-  case object Top extends DataType
-  case object Bottom extends DataType
+case object TopType extends DataType {
+  override def toString: String = "⊤"
+}
+
+case object BottomType extends DataType {
+  override def toString: String = "⊥"
+
+  override def isInhabited: Boolean = false
 }
 
 case class ScalarType private (name: String) extends DataType {
@@ -100,7 +143,7 @@ case class OptionType(element: Type) extends BoxType {
   override def toString: String = "?" + element
 }
 
-case class ProductType(name: String, fields: NonEmptyMap[String, Type]) extends DataType {
+case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends DataType {
 
   override def toString: String =
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
@@ -155,8 +198,8 @@ object Type {
     if (l == r) 0.0
     else
       (l, r) match {
-        case (DataType.Top, _: DataType) | (_: DataType, DataType.Bottom) => 1.0
-        case (DataType.Bottom, _: DataType) | (_: DataType, DataType.Top) => -1.0
+        case (TopType, _) | (_, BottomType) => 1.0
+        case (BottomType, _) | (_, TopType) => -1.0
         case (x: ScalarType, y: ScalarType) => ScalarType.scalarOrder.partialCompare(x, y)
         case (LiteralType(xs, _), y: ScalarType) if xs == Set(y) => 0.0
         case (LiteralType(xs, _), y: ScalarType) if xs(y) => -1.0
@@ -168,8 +211,23 @@ object Type {
         case (x: OptionType, y: StreamType) => cmp(x.element, y.element)
         case (x: OptionType, y: ArrayType) => cmp(x.element, y.element)
         case (x: StreamType, y: StreamType) => cmp(x.element, y.element)
-        case (ProductType(_, xFields), ProductType(_, yFields)) =>
+        case (StructType(_, xFields), StructType(_, yFields)) =>
           cmpProd(xFields, yFields)
+        case (_: ConsType, NilType) => -1.0
+        case (NilType, _: ConsType) => 1.0
+        case (ConsType(lhead, ltail), ConsType(rhead, rtail)) =>
+          // If any is not Cons, than it's Bottom and already handled
+          val headCmp = cmp(lhead, rhead)
+          if (headCmp.isNaN) NaN
+          else {
+            val tailCmp = cmp(ltail, rtail)
+            // If one is >, and another eq, it's >, and vice versa
+            println(s"head = $headCmp | tail = $tailCmp")
+            if (headCmp >= 0 && tailCmp >= 0) 1.0
+            else if (headCmp <= 0 && tailCmp <= 0) -1.0
+            else NaN
+          }
+
         case (l: ArrowType, r: ArrowType) =>
           val argL = l.args
           val resL = l.res

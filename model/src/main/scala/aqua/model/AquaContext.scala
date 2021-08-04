@@ -2,7 +2,7 @@ package aqua.model
 
 import aqua.model.func.raw.{CallServiceTag, FuncOp}
 import aqua.model.func.{ArgsCall, FuncCallable, FuncModel}
-import aqua.types.{ProductType, Type}
+import aqua.types.{StructType, Type}
 import cats.Monoid
 import cats.data.NonEmptyMap
 import cats.syntax.apply._
@@ -49,7 +49,7 @@ case class AquaContext(
       }
       .map(_.swap.map(prefix + _).swap)
 
-  def `type`(name: String): Option[ProductType] =
+  def `type`(name: String): Option[StructType] =
     NonEmptyMap
       .fromMap(
         SortedMap.from(
@@ -62,7 +62,7 @@ case class AquaContext(
             }
         )
       )
-      .map(ProductType(name, _))
+      .map(StructType(name, _))
 }
 
 object AquaContext extends LogSupport {

@@ -130,7 +130,7 @@ object TypeScriptFunc {
     case OptionType(t) => typeToTs(t) + " | null"
     case ArrayType(t) => typeToTs(t) + "[]"
     case StreamType(t) => typeToTs(t) + "[]"
-    case pt: ProductType =>
+    case pt: StructType =>
       s"{${pt.fields.map(typeToTs).toNel.map(kv => kv._1 + ":" + kv._2).toList.mkString(";")}}"
     case st: ScalarType if ScalarType.number(st) => "number"
     case ScalarType.bool => "boolean"

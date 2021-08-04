@@ -38,15 +38,15 @@ class TypeSpec extends AnyFlatSpec with Matchers {
   }
 
   "top type" should "accept anything" in {
-    accepts(DataType.Top, u64) should be(true)
-    accepts(DataType.Top, LiteralType.bool) should be(true)
-    accepts(DataType.Top, `*`(u64)) should be(true)
+    accepts(TopType, u64) should be(true)
+    accepts(TopType, LiteralType.bool) should be(true)
+    accepts(TopType, `*`(u64)) should be(true)
   }
 
   "bottom type" should "be accepted by everything" in {
-    accepts(u64, DataType.Bottom) should be(true)
-    accepts(LiteralType.bool, DataType.Bottom) should be(true)
-    accepts(`*`(u64), DataType.Bottom) should be(true)
+    accepts(u64, BottomType) should be(true)
+    accepts(LiteralType.bool, BottomType) should be(true)
+    accepts(`*`(u64), BottomType) should be(true)
   }
 
   "arrays of scalars" should "be variant" in {
@@ -62,10 +62,10 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     (`[]`(`[]`(u32)): Type) <= `[]`(`[]`(u64)) should be(true)
   }
 
-  "products of scalars" should "be variant" in {
-    val one: Type = ProductType("one", NonEmptyMap.of("field" -> u32))
-    val two: Type = ProductType("two", NonEmptyMap.of("field" -> u64, "other" -> string))
-    val three: Type = ProductType("three", NonEmptyMap.of("field" -> u32))
+  "structs of scalars" should "be variant" in {
+    val one: Type = StructType("one", NonEmptyMap.of("field" -> u32))
+    val two: Type = StructType("two", NonEmptyMap.of("field" -> u64, "other" -> string))
+    val three: Type = StructType("three", NonEmptyMap.of("field" -> u32))
 
     accepts(one, two) should be(true)
     accepts(two, one) should be(false)
@@ -124,6 +124,22 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     accepts(opt, stream) should be(true)
     accepts(stream, opt) should be(false)
     accepts(opt, opt) should be(true)
+  }
+
+  "products" should "compare" in {
+    val empty: ProductType = NilType
+    val smth: ProductType = ConsType.cons(bool, empty)
+
+    accepts(empty, smth) should be(true)
+    accepts(smth, empty) should be(false)
+
+    val longer = ConsType.cons(string, smth)
+    accepts(empty, longer) should be(true)
+    accepts(smth, longer) should be(false)
+    accepts(longer, longer) should be(true)
+    accepts(longer, empty) should be(false)
+    accepts(longer, smth) should be(false)
+    accepts(ConsType.cons("label", string, empty), longer) should be(true)
   }
 
 }

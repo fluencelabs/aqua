@@ -1,6 +1,6 @@
 package aqua.model
 
-import aqua.types.{ArrowType, ProductType}
+import aqua.types.{ArrowType, StructType}
 import cats.data.NonEmptyMap
 
 case class ServiceModel(
@@ -8,5 +8,5 @@ case class ServiceModel(
   arrows: NonEmptyMap[String, ArrowType],
   defaultId: Option[ValueModel]
 ) extends Model {
-  def `type`: ProductType = ProductType(name, arrows)
+  def `type`: StructType = StructType(name, arrows)
 }
