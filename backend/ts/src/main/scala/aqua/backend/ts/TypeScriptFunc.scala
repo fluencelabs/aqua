@@ -50,8 +50,9 @@ case class TypeScriptFunc(func: FuncCallable) {
 
     val tsAir = FuncAirGen(func).generateAir(conf)
 
-    val retType = func.ret
-      .map(_.lastType)
+    // TODO: support multi return
+    val retType = func.arrowType.codomain.uncons
+      .map(_._1)
       .fold("void")(typeToTs)
 
     val returnCallback = func.ret

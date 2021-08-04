@@ -65,7 +65,7 @@ sealed trait ConsType extends ProductType {
   def `type`: Type
   def tail: ProductType
 
-  override lazy val length: Int = 1 + tail.length
+  override def length: Int = 1 + tail.length
 }
 
 object ConsType {
