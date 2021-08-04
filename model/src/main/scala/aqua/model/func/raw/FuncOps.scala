@@ -78,4 +78,8 @@ object FuncOps {
 
   def next(item: String): FuncOp =
     FuncOp.leaf(NextTag(item))
+
+  lazy val empty: FuncOp =
+    FuncOp.leaf(EmptyTag)
+
 }

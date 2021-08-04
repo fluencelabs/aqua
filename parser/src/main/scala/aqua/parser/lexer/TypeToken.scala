@@ -120,7 +120,7 @@ object DataTypeToken {
       P.defer(`arraytypedef`[F]) :: P.defer(StreamTypeToken.`streamtypedef`) :: P.defer(
         OptionTypeToken.`optiontypedef`
       ) :: BasicTypeToken
-        .`basictypedef`[F] :: CustomTypeToken.ct[F] :: `topbottomdef` :: Nil
+        .`basictypedef`[F] :: CustomTypeToken.ct[F] :: Nil
     )
 
 }

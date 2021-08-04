@@ -1,8 +1,8 @@
 package aqua.semantics.expr
 
-import aqua.model.func.raw.FuncOp
-import aqua.model.{Model, ValueModel}
+import aqua.model.func.raw.{FuncOp, FuncOps}
 import aqua.model.func.{ArgDef, ArgsDef, FuncModel}
+import aqua.model.{Model, ReturnModel, ValueModel}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.Arg
 import aqua.semantics.Prog
@@ -52,6 +52,32 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
       )
       .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2))
 
+  def generateFuncModel[Alg[_]](funcArrow: ArrowType, retModel: Option[ValueModel], body: FuncOp)(
+    implicit N: NamesAlgebra[F, Alg]
+  ): Free[Alg, Model] = {
+    val argNames = args.map(_.name.value)
+
+    val model = FuncModel(
+      name = name.value,
+      args = ArgsDef(
+        argNames
+          .zip(funcArrow.args)
+          .map {
+            case (n, dt: DataType) => ArgDef.Data(n, dt)
+            case (n, at: ArrowType) => ArgDef.Arrow(n, at)
+          }
+      ),
+      ret = retModel zip funcArrow.res,
+      body = body
+    )
+
+    N.defineArrow(
+      name,
+      funcArrow,
+      isRoot = true
+    ) as (model: Model)
+  }
+
   def after[Alg[_]](funcArrow: ArrowType, bodyGen: Model)(implicit
     T: TypesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
@@ -71,28 +97,10 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
       // Erase arguments and internal variables
     }).flatMap(retModel =>
       A.endScope() >> N.endScope() >> (bodyGen match {
-        case bg: FuncOp if ret.isDefined == retValue.isDefined =>
-          val argNames = args.map(_.name.value)
-
-          val model = FuncModel(
-            name = name.value,
-            args = ArgsDef(
-              argNames
-                .zip(funcArrow.args)
-                .map {
-                  case (n, dt: DataType) => ArgDef.Data(n, dt)
-                  case (n, at: ArrowType) => ArgDef.Arrow(n, at)
-                }
-            ),
-            ret = retModel zip funcArrow.res,
-            body = bg
-          )
-
-          N.defineArrow(
-            name,
-            funcArrow,
-            isRoot = true
-          ) as model
+        case body: FuncOp if ret.isDefined == retValue.isDefined =>
+          generateFuncModel[Alg](funcArrow, retModel, body)
+        case ReturnModel =>
+          generateFuncModel[Alg](funcArrow, retModel, FuncOps.empty)
         case m => Free.pure[Alg, Model](Model.error("Function body is not a funcOp, it's " + m))
       })
     )
