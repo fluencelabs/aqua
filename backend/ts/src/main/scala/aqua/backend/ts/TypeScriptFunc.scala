@@ -53,10 +53,10 @@ case class TypeScriptFunc(func: FuncCallable) {
     // TODO: support multi return
     val retType = func.arrowType.codomain.uncons
       .map(_._1)
+    val retTypeTs = retType
       .fold("void")(typeToTs)
 
-    val returnCallback = func.ret
-      .map(_.lastType)
+    val returnCallback = retType
       .map(t => genReturnCallback(t, conf.callbackService, conf.respFuncName))
       .getOrElse("")
 
@@ -87,9 +87,9 @@ case class TypeScriptFunc(func: FuncCallable) {
     s"""
        |export async function ${func.funcName}($clientArgName: FluenceClient${if (func.args.isEmpty)
       ""
-    else ", "}${argsTypescript}, $configArgName?: $configType): Promise<$retType> {
+    else ", "}${argsTypescript}, $configArgName?: $configType): Promise<$retTypeTs> {
        |    let request: RequestFlow;
-       |    const promise = new Promise<$retType>((resolve, reject) => {
+       |    const promise = new Promise<$retTypeTs>((resolve, reject) => {
        |        const r = new RequestFlowBuilder()
        |            .disableInjections()
        |            .withRawScript(
