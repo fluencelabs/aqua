@@ -69,6 +69,8 @@ case class AssignmentTag(
   assignTo: String
 ) extends NoExecTag
 
+object EmptyTag extends NoExecTag
+
 case class AbilityIdTag(
   value: ValueModel,
   service: String

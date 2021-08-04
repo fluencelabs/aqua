@@ -1,7 +1,11 @@
 service Op("op"):
     noop: -> ()
+    bz: string -> string
 
-func return_none() -> ?string:
-    result: *string
-    Op.noop()
-    <- result
+func return_none() -> string:
+    <- "some result in string"
+
+func use() -> string:
+    res <- return_none()
+    res2 <- Op.bz(res)
+    <- res
