@@ -16,6 +16,7 @@ sealed trait Type {
   def isInhabited: Boolean = true
 }
 
+// Product is an ordered list of types, optionally labelled
 sealed trait ProductType extends Type {
   def isEmpty: Boolean = this == NilType
 
@@ -177,6 +178,7 @@ case class OptionType(element: Type) extends BoxType {
   override def toString: String = "?" + element
 }
 
+// Struct is an unordered collection of labelled types
 case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends DataType {
 
   override def toString: String =
@@ -215,7 +217,7 @@ object Type {
         case _ => NaN
       }
 
-  private def cmpProd(lf: NonEmptyMap[String, Type], rf: NonEmptyMap[String, Type]): Double =
+  private def cmpStruct(lf: NonEmptyMap[String, Type], rf: NonEmptyMap[String, Type]): Double =
     if (lf.toSortedMap == rf.toSortedMap) 0.0
     else if (
       lf.keys.forall(rf.contains) && cmpTypesList(
@@ -231,17 +233,42 @@ object Type {
     ) -1.0
     else NaN
 
+  private def cmpProd(l: ProductType, r: ProductType, contra: Boolean): Double = (l, r) match {
+    case (NilType, NilType) => 0.0
+    case (_: ConsType, NilType) => -1.0
+    case (NilType, _: ConsType) => 1.0
+    case (ConsType(lhead, ltail), ConsType(rhead, rtail)) =>
+      // If any is not Cons, than it's Bottom and already handled
+      val headCmp = if (contra) {
+        val c = cmp(lhead, rhead)
+        if (c.isNaN) NaN
+        else -c
+      } else cmp(lhead, rhead)
+      if (headCmp.isNaN) NaN
+      else {
+        val tailCmp = cmpProd(ltail, rtail, contra)
+        // If one is >, and another eq, it's >, and vice versa
+        if (headCmp >= 0 && tailCmp >= 0) 1.0
+        else if (headCmp <= 0 && tailCmp <= 0) -1.0
+        else NaN
+      }
+  }
+
   private def cmp(l: Type, r: Type): Double =
     if (l == r) 0.0
     else
       (l, r) match {
         case (TopType, _) | (_, BottomType) => 1.0
         case (BottomType, _) | (_, TopType) => -1.0
+
+        // Literals and scalars
         case (x: ScalarType, y: ScalarType) => ScalarType.scalarOrder.partialCompare(x, y)
         case (LiteralType(xs, _), y: ScalarType) if xs == Set(y) => 0.0
         case (LiteralType(xs, _), y: ScalarType) if xs(y) => -1.0
         case (x: ScalarType, LiteralType(ys, _)) if ys == Set(x) => 0.0
         case (x: ScalarType, LiteralType(ys, _)) if ys(x) => 1.0
+
+        // Collections
         case (x: ArrayType, y: ArrayType) => cmp(x.element, y.element)
         case (x: ArrayType, y: StreamType) => cmp(x.element, y.element)
         case (x: ArrayType, y: OptionType) => cmp(x.element, y.element)
@@ -249,27 +276,18 @@ object Type {
         case (x: OptionType, y: ArrayType) => cmp(x.element, y.element)
         case (x: StreamType, y: StreamType) => cmp(x.element, y.element)
         case (StructType(_, xFields), StructType(_, yFields)) =>
-          cmpProd(xFields, yFields)
-        case (_: ConsType, NilType) => -1.0
-        case (NilType, _: ConsType) => 1.0
-        case (ConsType(lhead, ltail), ConsType(rhead, rtail)) =>
-          // If any is not Cons, than it's Bottom and already handled
-          val headCmp = cmp(lhead, rhead)
-          if (headCmp.isNaN) NaN
-          else {
-            val tailCmp = cmp(ltail, rtail)
-            // If one is >, and another eq, it's >, and vice versa
-            if (headCmp >= 0 && tailCmp >= 0) 1.0
-            else if (headCmp <= 0 && tailCmp <= 0) -1.0
-            else NaN
-          }
+          cmpStruct(xFields, yFields)
 
+        // Products
+        case (l: ProductType, r: ProductType) => cmpProd(l, r, contra = false)
+
+        // Arrows
         case (ArrowType(ldom, lcodom), ArrowType(rdom, rcodom)) =>
-          val cmpDom = cmp(ldom, rdom)
+          val cmpDom = cmpProd(ldom, rdom, contra = true)
           val cmpCodom = cmp(lcodom, rcodom)
 
-          if (cmpDom >= 0 && cmpCodom >= 0) -1.0
-          else if (cmpDom <= 0 && cmpCodom <= 0) 1.0
+          if (cmpDom <= 0 && cmpCodom <= 0) -1.0
+          else if (cmpDom >= 0 && cmpCodom >= 0) 1.0
           else NaN
 
         case _ =>

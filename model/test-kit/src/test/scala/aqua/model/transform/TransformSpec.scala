@@ -3,7 +3,7 @@ package aqua.model.transform
 import aqua.Node
 import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
 import aqua.model.func.resolved.{CallServiceRes, MakeRes}
-import aqua.model.func.{ArgsDef, Call, FuncCallable}
+import aqua.model.func.{Call, FuncCallable}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec

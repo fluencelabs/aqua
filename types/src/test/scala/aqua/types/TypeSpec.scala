@@ -72,45 +72,6 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     PartialOrder[Type].eqv(one, three) should be(true)
   }
 
-  "arrows" should "be contravariant on arguments" in {
-    val one: Type = ArrowType(ProductType(u32 :: Nil), NilType)
-    val onePrime: Type = ArrowType(ProductType(u32 :: bool :: Nil), NilType)
-    val two: Type = ArrowType(ProductType(u64 :: Nil), NilType)
-
-    accepts(one, onePrime) should be(true)
-    accepts(one, two) should be(true)
-    accepts(onePrime, two) should be(false)
-
-    one > two should be(true)
-    two < one should be(true)
-  }
-
-  "arrows" should "be variant on results" in {
-    val one: Type = ArrowType(NilType, ProductType(u64 :: Nil))
-    val two: Type = ArrowType(NilType, ProductType(u32 :: Nil))
-
-    accepts(one, two) should be(true)
-
-    one > two should be(true)
-    two < one should be(true)
-  }
-
-  "arrows" should "respect both args and results" in {
-    val one: Type = ArrowType(ProductType(bool :: f64 :: Nil), ProductType(u64 :: Nil))
-    val two: Type = ArrowType(ProductType(bool :: Nil), ProductType(u64 :: Nil))
-    val three: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u64 :: Nil))
-    val four: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u32 :: Nil))
-
-    accepts(one, two) should be(false)
-    accepts(two, one) should be(false)
-
-    accepts(one, three) should be(false)
-    accepts(three, one) should be(true)
-
-    accepts(one, four) should be(false)
-    accepts(four, one) should be(false)
-  }
-
   "streams" should "be accepted as an array, but not vice versa" in {
     val stream: Type = StreamType(bool)
     val array: Type = ArrayType(bool)
@@ -146,6 +107,50 @@ class TypeSpec extends AnyFlatSpec with Matchers {
 
     accepts(ConsType.cons(u64, empty), ConsType.cons(u32, empty)) should be(true)
     accepts(ConsType.cons(u32, empty), ConsType.cons(u64, empty)) should be(false)
+  }
+
+  "arrows" should "be contravariant on arguments" in {
+    val one: Type = ArrowType(ProductType(u32 :: Nil), NilType)
+    val onePrime: Type = ArrowType(ProductType(u32 :: bool :: Nil), NilType)
+    val two: Type = ArrowType(ProductType(u64 :: Nil), NilType)
+
+    accepts(one, onePrime) should be(true)
+    accepts(one, two) should be(true)
+    accepts(onePrime, two) should be(false)
+
+    one > two should be(true)
+    two < one should be(true)
+  }
+
+  "arrows" should "be variant on results" in {
+    val one: Type = ArrowType(NilType, ProductType(u64 :: Nil))
+    val two: Type = ArrowType(NilType, ProductType(u32 :: Nil))
+    val three: Type = ArrowType(NilType, ProductType(u32 :: bool :: Nil))
+
+    accepts(one, two) should be(true)
+    accepts(one, three) should be(true)
+    accepts(three, two) should be(false)
+    accepts(three, one) should be(false)
+    accepts(two, one) should be(false)
+
+    one > two should be(true)
+    two < one should be(true)
+  }
+
+  "arrows" should "respect both args and results" in {
+    val one: Type = ArrowType(ProductType(bool :: f64 :: Nil), ProductType(u64 :: Nil))
+    val two: Type = ArrowType(ProductType(bool :: Nil), ProductType(u64 :: Nil))
+    val three: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u64 :: Nil))
+    val four: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u32 :: Nil))
+
+    accepts(one, two) should be(false)
+    accepts(two, one) should be(true)
+
+    accepts(one, three) should be(false)
+    accepts(three, one) should be(true)
+
+    accepts(one, four) should be(false)
+    accepts(four, one) should be(false)
   }
 
 }
