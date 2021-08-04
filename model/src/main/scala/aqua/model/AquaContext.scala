@@ -26,28 +26,28 @@ case class AquaContext(
       .foldLeft(types) { case (ts, (k, v)) =>
         ts ++ v.allTypes(k + ".")
       }
-      .map(_.swap.map(prefix + _).swap)
+    .map{ case (s, t) => (prefix + s, t) }
 
   def allFuncs(prefix: String = ""): Map[String, FuncCallable] =
     abilities
       .foldLeft(funcs) { case (ts, (k, v)) =>
         ts ++ v.allFuncs(k + ".")
       }
-      .map(_.swap.map(prefix + _).swap)
+      .map{ case (s, t) => (prefix + s, t) }
 
   def allValues(prefix: String = ""): Map[String, ValueModel] =
     abilities
       .foldLeft(values) { case (ts, (k, v)) =>
         ts ++ v.allValues(k + ".")
       }
-      .map(_.swap.map(prefix + _).swap)
+      .map{ case (s, t) => (prefix + s, t) }
 
   def allServices(prefix: String = ""): Map[String, ServiceModel] =
     abilities
       .foldLeft(services) { case (ts, (k, v)) =>
         ts ++ v.allServices(k + ".")
       }
-      .map(_.swap.map(prefix + _).swap)
+      .map{ case (s, t) => (prefix + s, t) }
 
   def `type`(name: String): Option[ProductType] =
     NonEmptyMap

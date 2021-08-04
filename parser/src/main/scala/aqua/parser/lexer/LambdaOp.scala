@@ -1,12 +1,12 @@
 package aqua.parser.lexer
 
-import aqua.parser.lexer.Token._
+import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
-import aqua.parser.lift.LiftParser._
+import aqua.parser.lift.LiftParser.*
 import cats.data.NonEmptyList
-import cats.parse.{Numbers, Parser => P, Parser0 => P0}
-import cats.syntax.comonad._
-import cats.syntax.functor._
+import cats.parse.{Numbers, Parser as P, Parser0 as P0}
+import cats.syntax.comonad.*
+import cats.syntax.functor.*
 import cats.{Comonad, Functor}
 
 sealed trait LambdaOp[F[_]] extends Token[F]
@@ -34,10 +34,11 @@ object LambdaOp {
 
   private def parseArr[F[_]: LiftParser: Comonad]: P[LambdaOp[F]] = `*`.lift.map(IntoArray(_))
 
-  private val intP0: P0[Int] = Numbers.nonNegativeIntString.map(_.toInt).?.map(_.getOrElse(0))
+  private val nonNegativeIntP0: P0[Int] =
+    Numbers.nonNegativeIntString.map(_.toInt).?.map(_.getOrElse(0))
 
   private def parseIdx[F[_]: LiftParser: Comonad]: P[LambdaOp[F]] =
-    ((`!`: P[Unit]) *> intP0).lift.map(IntoIndex(_))
+    (`!` *> nonNegativeIntP0).lift.map(IntoIndex(_))
 
   private def parseOp[F[_]: LiftParser: Comonad]: P[LambdaOp[F]] =
     P.oneOf(parseField.backtrack :: parseArr :: parseIdx :: Nil)
