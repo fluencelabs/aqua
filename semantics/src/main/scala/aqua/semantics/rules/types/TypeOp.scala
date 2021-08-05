@@ -20,10 +20,10 @@ case class DefineAlias[F[_]](name: CustomTypeToken[F], target: Type) extends Typ
 case class ResolveLambda[F[_]](root: Type, ops: List[LambdaOp[F]])
     extends TypeOp[F, List[LambdaModel]]
 
-case class EnsureTypeMatches[F[_]](token: Token[F], expected: Type, given: Type)
+case class EnsureTypeMatches[F[_]](token: Token[F], expected: Type, givenType: Type)
     extends TypeOp[F, Boolean]
 
 case class ExpectNoExport[F[_]](token: Token[F]) extends TypeOp[F, Unit]
 
-case class CheckArgumentsNum[F[_]](token: Token[F], expected: Int, given: Int)
+case class CheckArgumentsNum[F[_]](token: Token[F], expected: Int, givenType: Int)
     extends TypeOp[F, Boolean]

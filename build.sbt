@@ -23,6 +23,19 @@ val cats = "org.typelevel"             %% "cats-core"    % catsV
 
 name := "aqua-hll"
 
+scalacOptions ++= {
+  Seq(
+    "-encoding",
+    "UTF-8",
+    "-feature",
+    "-language:implicitConversions",
+    "-unchecked",
+    "-source:3"
+    // disabled during the migration
+    // "-Xfatal-warnings"
+  )
+}
+
 val commons = Seq(
   baseAquaVersion := "0.1.12",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),

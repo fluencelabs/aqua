@@ -102,9 +102,9 @@ object Expr {
 
     case class Acc[F[_]](
       block: Option[(F[String], Tree[F])] = None,
-      window: Chain[(F[String], Tree[F])] = Chain.empty,
-      currentChildren: Chain[Ast.Tree[F]] = Chain.empty,
-      error: Chain[ParserError[F]] = Chain.empty
+      window: Chain[(F[String], Tree[F])] = Chain.empty[(F[String], Tree[F])],
+      currentChildren: Chain[Ast.Tree[F]] = Chain.empty[Ast.Tree[F]],
+      error: Chain[ParserError[F]] = Chain.empty[ParserError[F]]
     )
 
     // converts list of expressions to a tree

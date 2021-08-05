@@ -10,12 +10,12 @@ import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
 
-class AbilitiesInterpreter[F[_], X](implicit
+class AbilitiesInterpreter[F[?], X](implicit
   lens: Lens[X, AbilitiesState[F]],
   error: ReportError[F, X]
 ) extends StackInterpreter[F, X, AbilitiesState[F], AbilitiesState.Frame[F]](
       GenLens[AbilitiesState[F]](_.stack)
-    ) with (AbilityOp[F, *] ~> State[X, *]) {
+    ) with (AbilityOp[F, _] ~> State[X, _]) {
 
   // TODO: resolve abilities as well
   private def getService(name: String): S[Option[ServiceModel]] =

@@ -111,7 +111,7 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
         ).as(())
 
       case ca: CheckArgumentsNum[F] =>
-        if (ca.expected == ca.given) State.pure(true)
+        if (ca.expected == ca.givenType) State.pure(true)
         else
           report(
             ca.token,

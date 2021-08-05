@@ -16,7 +16,7 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "Basic type" should "parse" in {
     BasicTypeToken.`basictypedef`.parseAll("u32").right.value should be(u32: BasicTypeToken[Id])
-    BasicTypeToken.`basictypedef`.parseAll("()") should be('left)
+    BasicTypeToken.`basictypedef`.parseAll("()") should be("left")
   }
 
   "Arrow type" should "parse" in {

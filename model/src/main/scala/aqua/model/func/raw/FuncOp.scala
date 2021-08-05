@@ -106,9 +106,9 @@ object FuncOp {
     cf.tail
       .map(_.foldLeft[(A, Chain[Tree])]((headA, head.tailForced)) {
         case ((aggrA, aggrTail), child) =>
-          traverseA(child, aggrA)(f).value.map(aggrTail.append)
+          traverseA(child, aggrA)(f).value match { case (a, tree) => (a, aggrTail.append(tree)) }
       })
-      .map(_.map(ch => head.copy(tail = Eval.now(ch))))
+      .map { case (a, ch) => (a, head.copy(tail = Eval.now(ch))) }
   }
 
   // Semigroup for foldRight processing

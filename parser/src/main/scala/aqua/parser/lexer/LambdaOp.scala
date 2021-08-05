@@ -8,6 +8,7 @@ import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{Comonad, Functor}
+import scala.language.postfixOps
 
 sealed trait LambdaOp[F[_]] extends Token[F]
 
@@ -38,7 +39,7 @@ object LambdaOp {
     Numbers.nonNegativeIntString.map(_.toInt).?.map(_.getOrElse(0))
 
   private def parseIdx[F[_]: LiftParser: Comonad]: P[LambdaOp[F]] =
-    (`!` *> nonNegativeIntP0).lift.map(IntoIndex(_))
+    (exclamation *> nonNegativeIntP0).lift.map(IntoIndex(_))
 
   private def parseOp[F[_]: LiftParser: Comonad]: P[LambdaOp[F]] =
     P.oneOf(parseField.backtrack :: parseArr :: parseIdx :: Nil)
