@@ -114,9 +114,10 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     val onePrime: Type = ArrowType(ProductType(u32 :: bool :: Nil), NilType)
     val two: Type = ArrowType(ProductType(u64 :: Nil), NilType)
 
-    accepts(one, onePrime) should be(true)
+    accepts(one, onePrime) should be(false)
+    accepts(onePrime, one) should be(true)
     accepts(one, two) should be(true)
-    accepts(onePrime, two) should be(false)
+    accepts(onePrime, two) should be(true)
 
     one > two should be(true)
     two < one should be(true)
@@ -143,8 +144,8 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     val three: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u64 :: Nil))
     val four: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u32 :: Nil))
 
-    accepts(one, two) should be(false)
-    accepts(two, one) should be(true)
+    accepts(one, two) should be(true)
+    accepts(two, one) should be(false)
 
     accepts(one, three) should be(false)
     accepts(three, one) should be(true)

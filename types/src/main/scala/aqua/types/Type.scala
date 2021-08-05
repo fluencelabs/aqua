@@ -237,20 +237,16 @@ object Type {
     ) -1.0
     else NaN
 
-  private def cmpProd(l: ProductType, r: ProductType, contra: Boolean): Double = (l, r) match {
+  private def cmpProd(l: ProductType, r: ProductType): Double = (l, r) match {
     case (NilType, NilType) => 0.0
     case (_: ConsType, NilType) => -1.0
     case (NilType, _: ConsType) => 1.0
     case (ConsType(lhead, ltail), ConsType(rhead, rtail)) =>
       // If any is not Cons, than it's Bottom and already handled
-      val headCmp = if (contra) {
-        val c = cmp(lhead, rhead)
-        if (c.isNaN) NaN
-        else -c
-      } else cmp(lhead, rhead)
+      val headCmp = cmp(lhead, rhead)
       if (headCmp.isNaN) NaN
       else {
-        val tailCmp = cmpProd(ltail, rtail, contra)
+        val tailCmp = cmpProd(ltail, rtail)
         // If one is >, and another eq, it's >, and vice versa
         if (headCmp >= 0 && tailCmp >= 0) 1.0
         else if (headCmp <= 0 && tailCmp <= 0) -1.0
@@ -283,15 +279,15 @@ object Type {
           cmpStruct(xFields, yFields)
 
         // Products
-        case (l: ProductType, r: ProductType) => cmpProd(l, r, contra = false)
+        case (l: ProductType, r: ProductType) => cmpProd(l, r)
 
         // Arrows
         case (ArrowType(ldom, lcodom), ArrowType(rdom, rcodom)) =>
-          val cmpDom = cmpProd(ldom, rdom, contra = true)
+          val cmpDom = cmp(ldom, rdom)
           val cmpCodom = cmp(lcodom, rcodom)
 
-          if (cmpDom <= 0 && cmpCodom <= 0) -1.0
-          else if (cmpDom >= 0 && cmpCodom >= 0) 1.0
+          if (cmpDom >= 0 && cmpCodom <= 0) -1.0
+          else if (cmpDom <= 0 && cmpCodom >= 0) 1.0
           else NaN
 
         case _ =>
