@@ -191,9 +191,22 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends D
 
 case class ArrowType(domain: ProductType, codomain: ProductType) extends Type {
 
+  @deprecated(
+    "Use .domain to get arguments, add .args helper to the typed object, if needed",
+    "5.08.2021"
+  )
   def args: List[Type] = domain.toList
+
+  @deprecated(
+    "Use .codomain to get results, add .res helper to the typed object, if needed; consider multi-value return",
+    "5.08.2021"
+  )
   def res: Option[Type] = codomain.uncons.map(_._1)
 
+  @deprecated(
+    "Replace with this function's body",
+    "5.08.2021"
+  )
   def acceptsAsArguments(valueTypes: List[Type]): Boolean =
     domain.acceptsValueOf(ProductType(valueTypes))
 
