@@ -18,7 +18,7 @@ class LinkerSpec extends AnyFlatSpec with Matchers {
             Map("mod2" -> "unresolved mod2 in mod1"),
             _ ++ " | mod1"
           ),
-          export = true
+          toExport = true
         )
     withMod1.isResolved should be(false)
 

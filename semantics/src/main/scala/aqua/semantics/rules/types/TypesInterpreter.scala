@@ -99,9 +99,9 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
 
       case etm: EnsureTypeMatches[F] =>
         // TODO in case of two literals, check for types intersection?
-        if (etm.expected.acceptsValueOf(etm.`given`)) State.pure(true)
+        if (etm.expected.acceptsValueOf(etm.givenType)) State.pure(true)
         else
-          report(etm.token, s"Types mismatch, expected: ${etm.expected}, given: ${etm.`given`}")
+          report(etm.token, s"Types mismatch, expected: ${etm.expected}, given: ${etm.givenType}")
             .as(false)
 
       case ene: ExpectNoExport[F] =>
@@ -115,7 +115,7 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
         else
           report(
             ca.token,
-            s"Number of arguments doesn't match the function type, expected: ${ca.expected}, given: ${ca.`given`}"
+            s"Number of arguments doesn't match the function type, expected: ${ca.expected}, given: ${ca.givenType}"
           ).as(false)
     }
 }

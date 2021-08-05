@@ -12,7 +12,6 @@ import cats.syntax.functor._
 import cats.syntax.traverse._
 import cats.{Comonad, Functor}
 import com.monovore.decline.Opts.help
-import com.monovore.decline.enumeratum._
 import com.monovore.decline.{Opts, Visibility}
 
 import java.nio.file.Path

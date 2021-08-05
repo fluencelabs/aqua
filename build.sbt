@@ -1,4 +1,4 @@
-val dottyVersion = "3.0.0"
+val dottyVersion = "3.0.1"
 
 scalaVersion := dottyVersion
 
@@ -23,19 +23,6 @@ val cats = "org.typelevel"             %% "cats-core"    % catsV
 
 name := "aqua-hll"
 
-scalacOptions ++= {
-  Seq(
-    "-encoding",
-    "UTF-8",
-    "-feature",
-    "-language:implicitConversions",
-    "-unchecked",
-    "-source:3"
-    // disabled during the migration
-    // "-Xfatal-warnings"
-  )
-}
-
 val commons = Seq(
   baseAquaVersion := "0.1.12",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
@@ -44,7 +31,20 @@ val commons = Seq(
     "org.typelevel" %% "log4cats-core" % log4catsV,
     airframeLog,
     "org.scalatest" %% "scalatest" % scalaTestV % Test
-  )
+  ),
+  scalacOptions ++= {
+    Seq(
+      "-encoding",
+      "UTF-8",
+      "-feature",
+      "-language:implicitConversions",
+      "-unchecked",
+      "-Ykind-projector"
+      //    "-source:3.0-migration"
+      // disabled during the migration
+      // "-Xfatal-warnings"
+    )
+  }
 )
 
 commons
@@ -111,7 +111,8 @@ lazy val semantics = project
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.julien-truffaut" %% "monocle-core" % monocleV
+      "com.github.julien-truffaut" %% "monocle-core"  % monocleV,
+      "com.github.julien-truffaut" %% "monocle-macro" % monocleV
     )
   )
   .dependsOn(model, `test-kit` % Test, parser)

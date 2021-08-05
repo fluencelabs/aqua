@@ -1,6 +1,5 @@
 package aqua
 
-import enumeratum._
 import wvlet.log.{LogLevel => WLogLevel}
 
 sealed trait LogLevel extends EnumEntry with EnumEntry.Lowercase

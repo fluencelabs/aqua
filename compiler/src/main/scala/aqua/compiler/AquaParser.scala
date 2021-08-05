@@ -63,7 +63,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
         )
       case Validated.Invalid(errs) =>
         Validated.invalid[NonEmptyChain[Err], Chain[AquaModule[I, Err, Body]]](errs).pure[F]
-    }.map(_.map(_.foldLeft(Modules[I, Err, Body]())(_.add(_, export = true))))
+    }.map(_.map(_.foldLeft(Modules[I, Err, Body]())(_.add(_, toExport = true))))
 
   def loadModule(imp: I): F[ValidatedNec[Err, AquaModule[I, Err, Ast[S]]]] =
     sources

@@ -9,6 +9,8 @@ import cats.free.Free
 
 class TypesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]) {
 
+  val xs: List[?] = List(1, 2, 3)
+
   def resolveType(token: TypeToken[F]): Free[Alg, Option[Type]] =
     Free.liftInject[Alg](ResolveType(token))
 

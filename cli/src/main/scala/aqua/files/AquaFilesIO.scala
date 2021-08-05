@@ -128,7 +128,7 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
           .attempt
           .compile
           .last
-          .map(_.getOrElse(Right()))
+          .map(_.getOrElse(Right(())))
       )
         .leftMap(FileWriteError(file, _))
 

@@ -7,7 +7,7 @@ import cats.InjectK
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.free.Free
 
-class AbilitiesAlgebra[F[?], Alg[?]](implicit A: InjectK[AbilityOp[F, _], Alg]) {
+class AbilitiesAlgebra[F[_], Alg[_]](implicit A: InjectK[AbilityOp[F, *], Alg]) {
 
   def defineArrow(arrow: Name[F], `type`: ArrowType): Free[Alg, Boolean] =
     Free.liftInject[Alg](DefineArrow[F](arrow, `type`))
@@ -42,7 +42,7 @@ class AbilitiesAlgebra[F[?], Alg[?]](implicit A: InjectK[AbilityOp[F, _], Alg]) 
 object AbilitiesAlgebra {
 
   implicit def abilitiesAlgebra[F[_], Alg[_]](implicit
-    A: InjectK[AbilityOp[F, _], Alg]
+    A: InjectK[AbilityOp[F, *], Alg]
   ): AbilitiesAlgebra[F, Alg] =
     new AbilitiesAlgebra[F, Alg]()
 }
