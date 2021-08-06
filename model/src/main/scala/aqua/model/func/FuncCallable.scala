@@ -153,11 +153,21 @@ case class FuncCallable(
       .map { case ((_, resolvedExports), callableFuncBody) =>
         // If return value is affected by any of internal functions, resolve it
         val resolvedResult = result.map(_.resolveWith(resolvedExports))
-        FuncOps.seq(FuncOp(callableFuncBody) :: (call.exportTo zip resolvedResult).collect {
-          case (exp @ Call.Export(_, StreamType(_)), res) =>
-            // pass nested function results to a stream
-            FuncOps.identity(res, exp)
-        }: _*) -> resolvedResult
+
+        val (ops, rets) = (call.exportTo zip resolvedResult)
+          .map[(Option[FuncOp], ValueModel)] {
+            case (exp @ Call.Export(_, StreamType(_)), res) =>
+              // pass nested function results to a stream
+              Some(FuncOps.identity(res, exp)) -> exp.model
+            case (_, res) =>
+              None -> res
+          }
+          .foldLeft[(List[FuncOp], List[ValueModel])]((FuncOp(callableFuncBody) :: Nil, Nil)) {
+            case ((ops, rets), (Some(fo), r)) => (fo :: ops, r :: rets)
+            case ((ops, rets), (_, r)) => (ops, r :: rets)
+          }
+
+        FuncOps.seq(ops: _*) -> rets
       }
   }
 
