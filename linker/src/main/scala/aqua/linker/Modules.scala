@@ -9,7 +9,7 @@ case class Modules[I, E, T](
   exports: Set[I] = Set.empty[I]
 ) {
 
-  def add(aquaModule: AquaModule[I, E, T], export: Boolean = false): Modules[I, E, T] =
+  def add(aquaModule: AquaModule[I, E, T], toExport: Boolean = false): Modules[I, E, T] =
     if (loaded.contains(aquaModule.id)) this
     else
       copy(
@@ -20,7 +20,7 @@ case class Modules[I, E, T](
           case (deps, (moduleId, err)) =>
             deps.updatedWith(moduleId)(_.fold(NonEmptyChain.one(err))(_.append(err)).some)
         },
-        exports = if (export) exports + aquaModule.id else exports
+        exports = if (toExport) exports + aquaModule.id else exports
       )
 
   def isResolved: Boolean = dependsOn.isEmpty

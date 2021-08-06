@@ -49,7 +49,7 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
     from: FileModuleId,
     imp: String
   ): F[ValidatedNec[AquaFileError, FileModuleId]] = {
-    Validated.fromEither(Try(Paths.get(imp)).toEither.leftMap(FileSystemError)) match {
+    Validated.fromEither(Try(Paths.get(imp)).toEither.leftMap(FileSystemError.apply)) match {
       case Validated.Valid(importP) =>
         filesIO
           .resolve(importP, from.file.getParent +: importFrom)
@@ -106,7 +106,7 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
           ac.sourceId.file,
           targetPath,
           compiled.suffix
-        ).leftMap(FileSystemError)
+        ).leftMap(FileSystemError.apply)
           .map { target =>
             filesIO
               .writeFile(

@@ -8,12 +8,12 @@ import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.effect.ExitCode
 import cats.effect.std.Console
-import cats.syntax.functor._
-import cats.syntax.traverse._
+import cats.syntax.functor.*
+import cats.syntax.traverse.*
 import cats.{Comonad, Functor}
 import com.monovore.decline.Opts.help
-import com.monovore.decline.enumeratum._
 import com.monovore.decline.{Opts, Visibility}
+import wvlet.log.{LogLevel => WLogLevel}
 
 import java.nio.file.Path
 
@@ -25,8 +25,22 @@ object AppOps {
   val versionOpt: Opts[Unit] =
     Opts.flag("version", help = "Show version", "v", Visibility.Partial)
 
-  val logLevelOpt: Opts[LogLevel] =
-    Opts.option[LogLevel]("log-level", help = "Set log level").withDefault(LogLevel.Info)
+  val logLevelOpt: Opts[WLogLevel] =
+    Opts.option[String]("log-level", help = "Set log level").withDefault("info").mapValidated {
+      str =>
+        Validated.fromEither(toLogLevel(str))
+    }
+
+  def toLogLevel(logLevel: String): Either[NonEmptyList[String], WLogLevel] = {
+    LogLevel.stringToLogLevel
+      .get(logLevel.toLowerCase)
+      .toRight(
+        NonEmptyList(
+          "log-level could be only 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'",
+          Nil
+        )
+      )
+  }
 
   def checkPath: Path => ValidatedNel[String, Path] = { p =>
     Validated

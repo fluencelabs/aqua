@@ -6,8 +6,9 @@ import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 import cats.kernel.Semigroup
-import cats.syntax.apply._
-import cats.syntax.functor._
+import cats.syntax.apply.*
+import cats.syntax.functor.*
+import cats.instances.tuple.*
 
 case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
   def head: RawTag = tree.head
@@ -22,19 +23,19 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
     Cofree.cata(tree)(folder)
 
   def definesVarNames: Eval[Set[String]] = cata[Set[String]] {
-    case (CallArrowTag(_, Call(_, Some(export))), acc) =>
-      Eval.later(acc.foldLeft(Set(export.name))(_ ++ _))
-    case (CallServiceTag(_, _, Call(_, Some(export))), acc) =>
-      Eval.later(acc.foldLeft(Set(export.name))(_ ++ _))
-    case (NextTag(export), acc) => Eval.later(acc.foldLeft(Set(export))(_ ++ _))
+    case (CallArrowTag(_, Call(_, Some(exportTo))), acc) =>
+      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
+    case (CallServiceTag(_, _, Call(_, Some(exportTo))), acc) =>
+      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
+    case (NextTag(exportTo), acc) => Eval.later(acc.foldLeft(Set(exportTo))(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }
 
   def exportsVarNames: Eval[Set[String]] = cata[Set[String]] {
-    case (CallArrowTag(_, Call(_, Some(export))), acc) =>
-      Eval.later(acc.foldLeft(Set(export.name))(_ ++ _))
-    case (CallServiceTag(_, _, Call(_, Some(export))), acc) =>
-      Eval.later(acc.foldLeft(Set(export.name))(_ ++ _))
+    case (CallArrowTag(_, Call(_, Some(exportTo))), acc) =>
+      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
+    case (CallServiceTag(_, _, Call(_, Some(exportTo))), acc) =>
+      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }
 
@@ -106,9 +107,9 @@ object FuncOp {
     cf.tail
       .map(_.foldLeft[(A, Chain[Tree])]((headA, head.tailForced)) {
         case ((aggrA, aggrTail), child) =>
-          traverseA(child, aggrA)(f).value.map(aggrTail.append)
+          traverseA(child, aggrA)(f).value match { case (a, tree) => (a, aggrTail.append(tree)) }
       })
-      .map(_.map(ch => head.copy(tail = Eval.now(ch))))
+      .map { case (a, ch) => (a, head.copy(tail = Eval.now(ch))) }
   }
 
   // Semigroup for foldRight processing

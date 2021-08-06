@@ -1,6 +1,4 @@
-val dottyVersion = "2.13.5"
-
-//val dottyVersion = "3.0.0"
+val dottyVersion = "3.0.1"
 
 scalaVersion := dottyVersion
 
@@ -8,16 +6,14 @@ val baseAquaVersion = settingKey[String]("base aqua version")
 
 val catsV = "2.6.1"
 val catsParseV = "0.3.4"
-val monocleV = "3.0.0-M5"
+val monocleV = "3.0.0-M6"
 val scalaTestV = "3.2.9"
-val fs2V = "3.0.4"
-val catsEffectV = "3.1.1"
+val fs2V = "3.0.6"
+val catsEffectV = "3.2.1"
 val airframeLogV = "21.5.4"
 val log4catsV = "2.1.1"
-val enumeratumV = "1.6.1" // Scala3 issue: https://github.com/lloydmeta/enumeratum/issues/300
 val slf4jV = "1.7.30"
-val declineV = "2.0.0-RC1" // Scala3 issue: https://github.com/bkirwi/decline/issues/260
-val declineEnumV = "1.3.0"
+val declineV = "2.1.0"
 
 val airframeLog = "org.wvlet.airframe" %% "airframe-log" % airframeLogV
 val catsEffect = "org.typelevel"       %% "cats-effect"  % catsEffectV
@@ -36,7 +32,17 @@ val commons = Seq(
     airframeLog,
     "org.scalatest" %% "scalatest" % scalaTestV % Test
   ),
-  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full)
+  scalacOptions ++= {
+    Seq(
+      "-encoding",
+      "UTF-8",
+      "-feature",
+      "-language:implicitConversions",
+      "-unchecked",
+      "-Ykind-projector"
+//      "-Xfatal-warnings"
+    )
+  }
 )
 
 commons
@@ -52,10 +58,8 @@ lazy val cli = project
       "com.monovore" %% "decline-effect" % declineV,
       catsEffect,
       fs2Io,
-      "org.typelevel" %% "log4cats-slf4j"     % log4catsV,
-      "com.beachape"  %% "enumeratum"         % enumeratumV,
-      "org.slf4j"      % "slf4j-jdk14"        % slf4jV,
-      "com.monovore"  %% "decline-enumeratum" % declineEnumV
+      "org.typelevel" %% "log4cats-slf4j" % log4catsV,
+      "org.slf4j"      % "slf4j-jdk14"    % slf4jV
     )
   )
   .dependsOn(compiler, `backend-air`, `backend-ts`, `backend-js`)

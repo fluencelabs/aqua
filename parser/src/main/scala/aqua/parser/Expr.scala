@@ -1,16 +1,16 @@
 package aqua.parser
 
 import aqua.parser.Ast.Tree
-import aqua.parser.lexer.Token._
+import aqua.parser.lexer.Token
+import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
-import aqua.parser.lift.LiftParser._
+import aqua.parser.lift.LiftParser.*
+import cats.data.Chain.:==
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.free.Cofree
-import cats.parse.{Parser => P}
-import cats.syntax.comonad._
+import cats.parse.Parser as P
+import cats.syntax.comonad.*
 import cats.{Comonad, Eval}
-import Chain.:==
-import aqua.parser.lexer.Token
 
 abstract class Expr[F[_]](val companion: Expr.Companion, val token: Token[F]) {
 
@@ -102,9 +102,9 @@ object Expr {
 
     case class Acc[F[_]](
       block: Option[(F[String], Tree[F])] = None,
-      window: Chain[(F[String], Tree[F])] = Chain.empty,
-      currentChildren: Chain[Ast.Tree[F]] = Chain.empty,
-      error: Chain[ParserError[F]] = Chain.empty
+      window: Chain[(F[String], Tree[F])] = Chain.empty[(F[String], Tree[F])],
+      currentChildren: Chain[Ast.Tree[F]] = Chain.empty[Ast.Tree[F]],
+      error: Chain[ParserError[F]] = Chain.empty[ParserError[F]]
     )
 
     // converts list of expressions to a tree
@@ -119,7 +119,7 @@ object Expr {
           val initialIndent = lHead._1.extract.length
           // recursively creating a tree
           // moving a window on a list depending on the nesting of the code
-          val acc = exprs.foldLeft(
+          val acc = exprs.foldLeft[Acc[F]](
             Acc[F]()
           ) {
             case (acc, (indent, currentExpr)) if acc.error.isEmpty =>

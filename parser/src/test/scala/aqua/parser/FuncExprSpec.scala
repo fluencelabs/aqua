@@ -2,14 +2,14 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.Ast.parser
-import aqua.parser.expr._
-import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp, Token}
+import aqua.parser.expr.*
+import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp, Literal, Token, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import aqua.types.ScalarType._
+import aqua.types.ScalarType.*
 import cats.Id
 import cats.data.Chain
 import cats.free.Cofree
-import cats.syntax.foldable._
+import cats.syntax.foldable.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -161,12 +161,17 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     // Local service
     qTree.d() shouldBe ServiceExpr(toAb("Local"), Some(toStr("local")))
     qTree.d() shouldBe ArrowTypeExpr("gt", toArrowType(Nil, Some(scToBt(bool))))
-    qTree.d() shouldBe FuncExpr("tryGen", Nil, Some(scToBt(bool)), Some("v"))
+    qTree.d() shouldBe FuncExpr("tryGen", Nil, Some(scToBt(bool)), Some("v": VarLambda[Id]))
     qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")))
     qTree.d() shouldBe CallArrowExpr(Some("v"), Some(toAb("Local")), "gt", Nil)
     qTree.d() shouldBe ReturnExpr(toVar("v"))
     // genC function
-    qTree.d() shouldBe FuncExpr("genC", List(toArgSc("val", string)), Some(boolSc), Some("two"))
+    qTree.d() shouldBe FuncExpr(
+      "genC",
+      List(toArgSc("val", string)),
+      Some(boolSc),
+      Some("two": VarLambda[Id])
+    )
     qTree.d() shouldBe CallArrowExpr(Some("one"), Some(toAb("Local")), "gt", List())
     qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
     qTree.d() shouldBe CallArrowExpr(Some("two"), None, "tryGen", List())

@@ -5,8 +5,8 @@ import aqua.model.func.{ArgsCall, FuncCallable, FuncModel}
 import aqua.types.{StructType, Type}
 import cats.Monoid
 import cats.data.NonEmptyMap
-import cats.syntax.functor._
-import cats.syntax.monoid._
+import cats.syntax.functor.*
+import cats.syntax.monoid.*
 import wvlet.log.LogSupport
 
 import scala.collection.immutable.SortedMap
@@ -19,34 +19,37 @@ case class AquaContext(
   // TODO: merge this with abilities, when have ability resolution variance
   services: Map[String, ServiceModel]
 ) {
+  
+  private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
+    (prefix + pair._1, pair._2)
 
   def allTypes(prefix: String = ""): Map[String, Type] =
     abilities
       .foldLeft(types) { case (ts, (k, v)) =>
         ts ++ v.allTypes(k + ".")
       }
-      .map(_.swap.map(prefix + _).swap)
+    .map(prefixFirst(prefix, _))
 
   def allFuncs(prefix: String = ""): Map[String, FuncCallable] =
     abilities
       .foldLeft(funcs) { case (ts, (k, v)) =>
         ts ++ v.allFuncs(k + ".")
       }
-      .map(_.swap.map(prefix + _).swap)
+      .map(prefixFirst(prefix, _))
 
   def allValues(prefix: String = ""): Map[String, ValueModel] =
     abilities
       .foldLeft(values) { case (ts, (k, v)) =>
         ts ++ v.allValues(k + ".")
       }
-      .map(_.swap.map(prefix + _).swap)
+      .map(prefixFirst(prefix, _))
 
   def allServices(prefix: String = ""): Map[String, ServiceModel] =
     abilities
       .foldLeft(services) { case (ts, (k, v)) =>
         ts ++ v.allServices(k + ".")
       }
-      .map(_.swap.map(prefix + _).swap)
+      .map(prefixFirst(prefix, _))
 
   def `type`(name: String): Option[StructType] =
     NonEmptyMap
@@ -117,7 +120,7 @@ object AquaContext extends LogSupport {
   ): AquaContext =
     sm.models
       .foldLeft((init, Monoid.empty[AquaContext])) {
-        case ((ctx, export), c: ConstantModel) =>
+        case ((ctx, exportContext), c: ConstantModel) =>
           val add =
             Monoid
               .empty[AquaContext]
@@ -125,17 +128,17 @@ object AquaContext extends LogSupport {
                 if (c.allowOverrides && ctx.values.contains(c.name)) ctx.values
                 else ctx.values.updated(c.name, c.value.resolveWith(ctx.values))
               )
-          (ctx |+| add, export |+| add)
-        case ((ctx, export), func: FuncModel) =>
+          (ctx |+| add, exportContext |+| add)
+        case ((ctx, exportContext), func: FuncModel) =>
           val fr = func.capture(ctx.funcs, ctx.values)
           val add =
             Monoid.empty[AquaContext].copy(funcs = ctx.funcs.updated(func.name, fr))
-          (ctx |+| add, export |+| add)
-        case ((ctx, export), t: TypeModel) =>
+          (ctx |+| add, exportContext |+| add)
+        case ((ctx, exportContext), t: TypeModel) =>
           val add =
             Monoid.empty[AquaContext].copy(types = ctx.types.updated(t.name, t.`type`))
-          (ctx |+| add, export |+| add)
-        case ((ctx, export), m: ServiceModel) =>
+          (ctx |+| add, exportContext |+| add)
+        case ((ctx, exportContext), m: ServiceModel) =>
           val add =
             Monoid
               .empty[AquaContext]
@@ -145,7 +148,7 @@ object AquaContext extends LogSupport {
                 ),
                 services = ctx.services.updated(m.name, m)
               )
-          (ctx |+| add, export |+| add)
+          (ctx |+| add, exportContext |+| add)
         case (ce, _) => ce
       }
       ._2

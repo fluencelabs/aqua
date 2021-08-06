@@ -8,31 +8,31 @@ import org.scalatest.matchers.should.Matchers
 class TokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "\\n token" should "be parsed" in {
-    ` \n`.parseAll("\n") should be('right)
-    ` \n`.parseAll(" \n") should be('right)
-    ` \n`.parseAll("         \n") should be('right)
-    ` \n`.parseAll("               \n") should be('right)
-    ` \n`.parseAll("--comment\n") should be('right)
-    ` \n`.parseAll(" --comment\n") should be('right)
-    ` \n`.parseAll("    --comment\n") should be('right)
-    ` \n`.parseAll("    --comment with many words\n") should be('right)
-    ` \n`.parseAll("    --comment with many words      \n") should be('right)
-    ` \n`.parse("    --comment with many words      \n").right.value should be(("", ()))
-    ` \n`.parse("    --comment with many words      \n     ").right.value should be(("     ", ()))
+    ` \n`.parseAll("\n").isRight should be(true)
+    ` \n`.parseAll(" \n").isRight should be(true)
+    ` \n`.parseAll("         \n").isRight should be(true)
+    ` \n`.parseAll("               \n").isRight should be(true)
+    ` \n`.parseAll("--comment\n").isRight should be(true)
+    ` \n`.parseAll(" --comment\n").isRight should be(true)
+    ` \n`.parseAll("    --comment\n").isRight should be(true)
+    ` \n`.parseAll("    --comment with many words\n").isRight should be(true)
+    ` \n`.parseAll("    --comment with many words      \n").isRight should be(true)
+    ` \n`.parse("    --comment with many words      \n").value should be(("", ()))
+    ` \n`.parse("    --comment with many words      \n     ").value should be(("     ", ()))
   }
 
   "\\n* token" should "match the same strings" in {
-    ` \n+`.parseAll("\n") should be('right)
-    ` \n+`.parseAll(" \n") should be('right)
-    ` \n+`.parseAll("         \n") should be('right)
-    ` \n+`.parseAll("               \n") should be('right)
-    ` \n+`.parseAll("--comment\n") should be('right)
-    ` \n+`.parseAll(" --comment\n") should be('right)
-    ` \n+`.parseAll("    --comment\n") should be('right)
-    ` \n+`.parseAll("    --comment with many words\n") should be('right)
-    ` \n+`.parseAll("    --comment with many words      \n") should be('right)
-    ` \n+`.parse("    --comment with many words      \n").right.value should be(("", ()))
-    ` \n+`.parse("    --comment with many words      \n     ").right.value should be(("     ", ()))
+    ` \n+`.parseAll("\n").isRight should be(true)
+    ` \n+`.parseAll(" \n").isRight should be(true)
+    ` \n+`.parseAll("         \n").isRight should be(true)
+    ` \n+`.parseAll("               \n").isRight should be(true)
+    ` \n+`.parseAll("--comment\n").isRight should be(true)
+    ` \n+`.parseAll(" --comment\n").isRight should be(true)
+    ` \n+`.parseAll("    --comment\n").isRight should be(true)
+    ` \n+`.parseAll("    --comment with many words\n").isRight should be(true)
+    ` \n+`.parseAll("    --comment with many words      \n").isRight should be(true)
+    ` \n+`.parse("    --comment with many words      \n").value should be(("", ()))
+    ` \n+`.parse("    --comment with many words      \n     ").value should be(("     ", ()))
   }
 
   "\\n* token" should "match multi-line comments" in {
@@ -41,7 +41,7 @@ class TokenSpec extends AnyFlatSpec with Matchers with EitherValues {
                       |
                       |              -- line 3
                       |              -- line 4
-                      |""".stripMargin).right.value should be(())
+                      |""".stripMargin).value should be(())
   }
 
 }
