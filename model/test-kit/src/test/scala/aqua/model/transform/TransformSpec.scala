@@ -117,7 +117,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
             CallServiceTag(
               LiteralModel.quote("srv1"),
               "foo",
-              Call(Nil, Some(Call.Export("v", ScalarType.string)))
+              Call(Nil, Call.Export("v", ScalarType.string) :: Nil)
             )
           ).cof
         ),
