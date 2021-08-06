@@ -7,7 +7,7 @@ import aqua.types.ArrowType
 case class FuncModel(
   name: String,
   arrowType: ArrowType,
-  ret: Option[ValueModel],
+  ret: List[ValueModel],
   body: FuncOp
 ) extends Model {
 

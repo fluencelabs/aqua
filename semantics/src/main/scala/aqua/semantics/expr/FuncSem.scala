@@ -54,7 +54,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
         ArrowType(ProductType.labelled(argsAndRes._1), ProductType(argsAndRes._2.toList))
       )
 
-  def generateFuncModel[Alg[_]](funcArrow: ArrowType, retModel: Option[ValueModel], body: FuncOp)(
+  def generateFuncModel[Alg[_]](funcArrow: ArrowType, retModel: List[ValueModel], body: FuncOp)(
     implicit N: NamesAlgebra[F, Alg]
   ): Free[Alg, Model] = {
     val argNames = args.map(_.name.value)
@@ -82,12 +82,14 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
     // Check return value type
     ((funcArrow.res, retValue) match {
       case (Some(t), Some(v)) =>
-        V.valueToModel(v).flatTap {
-          case Some(vt) => T.ensureTypeMatches(v, t, vt.lastType).void
-          case None => Free.pure[Alg, Unit](())
-        }
-      case _ =>
-        Free.pure[Alg, Option[ValueModel]](None)
+        V.valueToModel(v)
+          .flatTap {
+            case Some(vt) => T.ensureTypeMatches(v, t, vt.lastType).void
+            case None => Free.pure[Alg, Unit](())
+          }
+          .map(_.toList)
+      case (_, _) =>
+        Free.pure[Alg, List[ValueModel]](Nil)
 
       // Erase arguments and internal variables
     }).flatMap(retModel =>

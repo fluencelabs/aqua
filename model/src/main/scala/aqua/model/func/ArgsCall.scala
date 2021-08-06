@@ -31,18 +31,18 @@ object ArgsCall {
     arrow: ArrowType,
     argPrefix: String = "arg",
     retName: String = "init_call_res"
-  ): (ProductType, Call, Option[Call.Export]) = {
+  ): (ProductType, Call, List[Call.Export]) = {
     val argNamesTypes = arrow.domain.toLabelledList(argPrefix)
-    val res = arrow.codomain.toList.headOption
+    val res = arrow.codomain.toLabelledList(retName).map(Call.Export(_, _))
 
     val call = Call(
       argNamesTypes.map { case (a, t) =>
         VarModel(a, t)
       },
-      res.map(Call.Export(retName, _))
+      res
     )
 
-    (arrow.domain, call, arrow.res.map(t => Call.Export(retName, t)))
+    (arrow.domain, call, res)
   }
 
 }

@@ -172,6 +172,13 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends D
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
+/**
+ * ArrowType is a profunctor pointing its domain to codomain.
+ * Profunctor means variance: Arrow is contravariant on domain, and variant on codomain.
+ * See tests for details.
+ * @param domain Where this Arrow is defined
+ * @param codomain Where this Arrow points on
+ */
 case class ArrowType(domain: ProductType, codomain: ProductType) extends Type {
 
   @deprecated(

@@ -27,7 +27,7 @@ case class AbilityIdRes(
 case class CallServiceRes(
   serviceId: ValueModel,
   funcName: String,
-  call: Call,
+  call: CallRes,
   peerId: ValueModel
 ) extends ResolvedOp {
   override def toString: String = s"(call $peerId ($serviceId $funcName) $call)"

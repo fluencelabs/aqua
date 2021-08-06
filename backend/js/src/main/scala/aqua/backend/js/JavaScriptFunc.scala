@@ -58,13 +58,15 @@ case class JavaScriptFunc(func: FuncCallable) {
       }
       .mkString("\n")
 
+    // TODO support multi-return
     val returnCallback = func.arrowType.codomain.uncons
       .map(_._1)
       .map(t => genReturnCallback(t, conf.callbackService, conf.respFuncName))
       .getOrElse("")
 
+    // TODO support multi-return
     val returnVal =
-      func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
+      func.ret.headOption.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
     // TODO: it could be non-unique
     val configArgName = "config"

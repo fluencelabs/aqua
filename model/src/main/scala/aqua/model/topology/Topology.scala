@@ -46,32 +46,14 @@ object Topology extends LogSupport {
       else cz.current
     )
 
-  private def rawToResolved(
-    currentPeerId: Option[ValueModel]
-  ): PartialFunction[RawTag, ResolvedOp] = {
-    case SeqTag => SeqRes
-    case _: OnTag => SeqRes
-    case MatchMismatchTag(a, b, s) => MatchMismatchRes(a, b, s)
-    case ForTag(item, iter) => FoldRes(item, iter)
-    case ParTag | ParTag.Detach => ParRes
-    case XorTag | XorTag.LeftBiased => XorRes
-    case NextTag(item) => NextRes(item)
-    case CallServiceTag(serviceId, funcName, call) =>
-      CallServiceRes(
-        serviceId,
-        funcName,
-        call,
-        currentPeerId
-          .getOrElse(LiteralModel.initPeerId)
-      )
-  }
-
   def resolveOnMoves(op: Tree): Eval[Res] = {
     val cursor = RawCursor(NonEmptyList.one(ChainZipper.one(op)))
     val resolvedCofree = cursor
       .cata(wrap) { rc =>
         debug(s"<:> $rc")
-        val resolved = rawToResolved(rc.currentPeerId).lift
+        val resolved = MakeRes
+          .resolve(rc.currentPeerId)
+          .lift
           .apply(rc.tag)
           .map(MakeRes.leaf)
         val chainZipperEv = resolved.traverse(cofree =>

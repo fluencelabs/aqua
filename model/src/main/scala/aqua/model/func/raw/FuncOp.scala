@@ -23,19 +23,19 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
     Cofree.cata(tree)(folder)
 
   def definesVarNames: Eval[Set[String]] = cata[Set[String]] {
-    case (CallArrowTag(_, Call(_, Some(exportTo))), acc) =>
-      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
-    case (CallServiceTag(_, _, Call(_, Some(exportTo))), acc) =>
-      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
+    case (CallArrowTag(_, Call(_, exportTo)), acc) if exportTo.nonEmpty =>
+      Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
+    case (CallServiceTag(_, _, Call(_, exportTo)), acc) if exportTo.nonEmpty =>
+      Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
     case (NextTag(exportTo), acc) => Eval.later(acc.foldLeft(Set(exportTo))(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }
 
   def exportsVarNames: Eval[Set[String]] = cata[Set[String]] {
-    case (CallArrowTag(_, Call(_, Some(exportTo))), acc) =>
-      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
-    case (CallServiceTag(_, _, Call(_, Some(exportTo))), acc) =>
-      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
+    case (CallArrowTag(_, Call(_, exportTo)), acc) if exportTo.nonEmpty =>
+      Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
+    case (CallServiceTag(_, _, Call(_, exportTo)), acc) if exportTo.nonEmpty =>
+      Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
     case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
   }
 

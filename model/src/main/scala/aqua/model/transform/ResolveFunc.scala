@@ -1,9 +1,9 @@
 package aqua.model.transform
 
-import aqua.model.func._
+import aqua.model.func.*
 import aqua.model.func.raw.{FuncOp, FuncOps}
 import aqua.model.{ValueModel, VarModel}
-import aqua.types.{ArrayType, ArrowType, ConsType, NilType, StreamType}
+import aqua.types.{ArrayType, ArrowType, ConsType, NilType, ProductType, StreamType}
 import cats.Eval
 
 case class ResolveFunc(
@@ -21,7 +21,7 @@ case class ResolveFunc(
       respFuncName,
       Call(
         retModel :: Nil,
-        None
+        Nil
       )
     )
 
@@ -38,11 +38,11 @@ case class ResolveFunc(
   }
 
   def wrap(func: FuncCallable): FuncCallable = {
-    val returnType = func.ret.map(_.lastType).map {
+    val returnType = ProductType(func.ret.map(_.lastType).map {
       // we mustn't return a stream in response callback to avoid pushing stream to `-return-` value
       case StreamType(t) => ArrayType(t)
       case t => t
-    }
+    }).toLabelledList(returnVar)
 
     FuncCallable(
       wrapCallableName,
@@ -53,17 +53,15 @@ case class ResolveFunc(
               func.funcName,
               Call(
                 func.arrowType.domain.toLabelledList().map(ad => VarModel(ad._1, ad._2)),
-                returnType.map(t => Call.Export(returnVar, t))
+                returnType.map { case (l, t) => Call.Export(l, t) }
               )
             ) ::
-            returnType
-              .map(t => VarModel(returnVar, t))
-              .map(returnCallback)
-              .toList: _*
+            returnType.map { case (l, t) => VarModel(l, t) }
+              .map(returnCallback): _*
         )
       ),
       ArrowType(ConsType.cons(func.funcName, func.arrowType, NilType), NilType),
-      None,
+      Nil,
       func.arrowType.domain
         .toLabelledList()
         .collect { case (argName, arrowType: ArrowType) =>
@@ -80,7 +78,7 @@ case class ResolveFunc(
   ): Eval[FuncOp] =
     wrap(func)
       .resolve(
-        Call(VarModel(funcArgName, func.arrowType) :: Nil, None),
+        Call(VarModel(funcArgName, func.arrowType) :: Nil, Nil),
         Map(funcArgName -> func),
         Set.empty
       )

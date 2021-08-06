@@ -76,8 +76,9 @@ case class TypeScriptFunc(func: FuncCallable) {
       }
       .mkString("\n")
 
+    // TODO support multi return
     val returnVal =
-      func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
+      func.ret.headOption.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
     val clientArgName = generateUniqueArgName(func.args.toLabelledList().map(_._1), "client", 0)
     val configArgName = generateUniqueArgName(func.args.toLabelledList().map(_._1), "config", 0)
