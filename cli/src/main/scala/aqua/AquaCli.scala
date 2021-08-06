@@ -59,7 +59,7 @@ object AquaCli extends IOApp with LogSupport {
       constantOpts[Id]
     ).mapN {
       case (input, imports, output, toAir, toJs, noRelay, noXor, h, v, logLevel, constants) =>
-        WLogger.setDefaultLogLevel(LogLevel.toLogLevel(logLevel))
+        WLogger.setDefaultLogLevel(logLevel)
         WLogger.setDefaultFormatter(CustomLogFormatter)
 
         implicit val aio: AquaIO[F] = new AquaFilesIO[F]

@@ -28,9 +28,9 @@ object Test extends IOApp.Simple {
       )
       .map {
         case Validated.Invalid(errs) =>
-          errs.map(System.err.println)
+          errs.map(System.err.println): Unit
         case Validated.Valid(res) =>
-          res.map(println)
+          res.map(println): Unit
       }
 
 }

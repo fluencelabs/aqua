@@ -33,7 +33,9 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
         .compile
         .last
         .map(
-          _.fold((EmptyFileError(file): AquaFileError).asLeft[String])(_.left.map(FileSystemError))
+          _.fold((EmptyFileError(file): AquaFileError).asLeft[String])(
+            _.left.map(FileSystemError.apply)
+          )
         )
     )
 
@@ -49,13 +51,13 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
       EitherT(
         Concurrent[F].attempt(p.toFile.isFile.pure[F])
       )
-        .leftMap[AquaFileError](FileSystemError)
+        .leftMap[AquaFileError](FileSystemError.apply)
         .recover({ case _ => false })
         .flatMap {
           case true =>
             EitherT(
               Concurrent[F].attempt(p.toAbsolutePath.normalize().pure[F])
-            ).leftMap[AquaFileError](FileSystemError)
+            ).leftMap[AquaFileError](FileSystemError.apply)
           case false =>
             findFirstF(in.tail, notFound)
         }
@@ -86,7 +88,7 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
           } else {
             Right(f :: Nil)
           }
-        }.toEither.leftMap[AquaFileError](FileSystemError).flatMap(identity)
+        }.toEither.leftMap[AquaFileError](FileSystemError.apply).flatMap(identity)
       )
       .leftMap(NonEmptyChain.one)
       .pure[F]
@@ -98,7 +100,7 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
                 .fromTry(
                   Try(Chain.one(f.toPath.toAbsolutePath.normalize()))
                 )
-                .leftMap(FileSystemError)
+                .leftMap(FileSystemError.apply)
                 .leftMap(NonEmptyChain.one)
                 .pure[F]
             case f if f.isDirectory =>
@@ -112,10 +114,10 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
       }
 
   private def deleteIfExists(file: Path): EitherT[F, AquaFileError, Boolean] =
-    Files[F].deleteIfExists(file).attemptT.leftMap(FileSystemError)
+    Files[F].deleteIfExists(file).attemptT.leftMap(FileSystemError.apply)
 
   private def createDirectories(path: Path): EitherT[F, AquaFileError, Path] =
-    Files[F].createDirectories(path).attemptT.leftMap(FileSystemError)
+    Files[F].createDirectories(path).attemptT.leftMap(FileSystemError.apply)
 
   // Writes to a file, creates directories if they do not exist
   override def writeFile(file: Path, content: String): EitherT[F, AquaFileError, Unit] =
