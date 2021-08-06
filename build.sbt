@@ -39,10 +39,8 @@ val commons = Seq(
       "-feature",
       "-language:implicitConversions",
       "-unchecked",
-      "-Ykind-projector"
-      //    "-source:3.0-migration"
-      // disabled during the migration
-      // "-Xfatal-warnings"
+      "-Ykind-projector",
+      "-Xfatal-warnings"
     )
   }
 )

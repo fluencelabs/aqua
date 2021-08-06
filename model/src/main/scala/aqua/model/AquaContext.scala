@@ -20,34 +20,37 @@ case class AquaContext(
   // TODO: merge this with abilities, when have ability resolution variance
   services: Map[String, ServiceModel]
 ) {
+  
+  private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
+    (prefix + pair._1, pair._2)
 
   def allTypes(prefix: String = ""): Map[String, Type] =
     abilities
       .foldLeft(types) { case (ts, (k, v)) =>
         ts ++ v.allTypes(k + ".")
       }
-    .map{ case (s, t) => (prefix + s, t) }
+    .map(prefixFirst(prefix, _))
 
   def allFuncs(prefix: String = ""): Map[String, FuncCallable] =
     abilities
       .foldLeft(funcs) { case (ts, (k, v)) =>
         ts ++ v.allFuncs(k + ".")
       }
-      .map{ case (s, t) => (prefix + s, t) }
+      .map(prefixFirst(prefix, _))
 
   def allValues(prefix: String = ""): Map[String, ValueModel] =
     abilities
       .foldLeft(values) { case (ts, (k, v)) =>
         ts ++ v.allValues(k + ".")
       }
-      .map{ case (s, t) => (prefix + s, t) }
+      .map(prefixFirst(prefix, _))
 
   def allServices(prefix: String = ""): Map[String, ServiceModel] =
     abilities
       .foldLeft(services) { case (ts, (k, v)) =>
         ts ++ v.allServices(k + ".")
       }
-      .map{ case (s, t) => (prefix + s, t) }
+      .map(prefixFirst(prefix, _))
 
   def `type`(name: String): Option[ProductType] =
     NonEmptyMap
