@@ -60,28 +60,26 @@ case class TypeScriptFunc(func: FuncCallable) {
       .map(t => genReturnCallback(t, conf.callbackService, conf.respFuncName))
       .getOrElse("")
 
-    val setCallbacks = func.args
-      .toLabelledList()
-      .collect { // Product types are not handled
-        case (argName, OptionType(_)) =>
-          s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
-        case (argName, _: DataType) =>
-          s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
-        case (argName, at: ArrowType) =>
-          val value = s"$argName(${argsCallToTs(
-            at
-          )})"
-          val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
-          s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
-      }
+    val setCallbacks = func.args.collect { // Product types are not handled
+      case (argName, OptionType(_)) =>
+        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
+      case (argName, _: DataType) =>
+        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
+      case (argName, at: ArrowType) =>
+        val value = s"$argName(${argsCallToTs(
+          at
+        )})"
+        val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
+        s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
+    }
       .mkString("\n")
 
     // TODO support multi return
     val returnVal =
       func.ret.headOption.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
-    val clientArgName = generateUniqueArgName(func.args.toLabelledList().map(_._1), "client", 0)
-    val configArgName = generateUniqueArgName(func.args.toLabelledList().map(_._1), "config", 0)
+    val clientArgName = generateUniqueArgName(func.argNames, "client", 0)
+    val configArgName = generateUniqueArgName(func.argNames, "config", 0)
 
     val configType = "{ttl?: number}"
 

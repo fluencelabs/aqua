@@ -11,7 +11,7 @@ case class JavaScriptFunc(func: FuncCallable) {
   import JavaScriptFunc._
 
   def argsJavaScript: String =
-    func.args.toLabelledList().map(ad => s"${ad._1}").mkString(", ")
+    func.argNames.mkString(", ")
 
   // TODO: use common functions between TypeScript and JavaScript backends
   private def genReturnCallback(
@@ -42,20 +42,18 @@ case class JavaScriptFunc(func: FuncCallable) {
 
     val tsAir = FuncAirGen(func).generateAir(conf)
 
-    val setCallbacks = func.args
-      .toLabelledList()
-      .collect {
-        case (argName, OptionType(_)) =>
-          s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
-        case (argName, _: DataType) =>
-          s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
-        case (argName, at: ArrowType) =>
-          val value = s"$argName(${argsCallToJs(
-            at
-          )})"
-          val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
-          s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
-      }
+    val setCallbacks = func.args.collect {
+      case (argName, OptionType(_)) =>
+        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
+      case (argName, _: DataType) =>
+        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
+      case (argName, at: ArrowType) =>
+        val value = s"$argName(${argsCallToJs(
+          at
+        )})"
+        val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
+        s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
+    }
       .mkString("\n")
 
     // TODO support multi-return

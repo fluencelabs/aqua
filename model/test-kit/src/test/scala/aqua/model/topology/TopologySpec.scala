@@ -90,7 +90,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   "topology resolver" should "build return path in par if there are exported variables" in {
-    val exportTo = Some(Call.Export("result", ScalarType.string))
+    val exportTo = Call.Export("result", ScalarType.string) :: Nil
     val result = VarModel("result", ScalarType.string)
 
     val init = on(
@@ -105,7 +105,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           ),
           callTag(2)
         ),
-        callTag(3, None, result :: Nil)
+        callTag(3, Nil, result :: Nil)
       )
     )
 
@@ -117,7 +117,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           MakeRes.seq(
             through(relay),
             through(otherRelay),
-            callRes(1, otherPeer, exportTo),
+            callRes(1, otherPeer, exportTo.headOption),
             through(otherRelay),
             through(relay),
             // we should return to a caller to continue execution

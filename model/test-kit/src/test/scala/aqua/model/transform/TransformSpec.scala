@@ -2,7 +2,7 @@ package aqua.model.transform
 
 import aqua.Node
 import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
-import aqua.model.func.resolved.{CallServiceRes, MakeRes}
+import aqua.model.func.resolved.{CallRes, CallServiceRes, MakeRes}
 import aqua.model.func.{Call, FuncCallable}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
@@ -23,7 +23,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         "ret",
         on(otherPeer, otherRelay :: Nil, callTag(1)),
         stringArrow,
-        Some(ret),
+        ret :: Nil,
         Map.empty,
         Map.empty
       )
@@ -73,7 +73,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       "ret",
       FuncOps.seq(callTag(0), on(otherPeer, Nil, callTag(1))),
       stringArrow,
-      Some(ret),
+      ret :: Nil,
       Map.empty,
       Map.empty
     )
@@ -122,7 +122,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
           ).cof
         ),
         stringArrow,
-        Some(VarModel("v", ScalarType.string)),
+        VarModel("v", ScalarType.string) :: Nil,
         Map.empty,
         Map.empty
       )
@@ -131,10 +131,10 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       FuncCallable(
         "f2",
         FuncOp(
-          Node(CallArrowTag("callable", Call(Nil, Some(Call.Export("v", ScalarType.string))))).cof
+          Node(CallArrowTag("callable", Call(Nil, Call.Export("v", ScalarType.string) :: Nil))).cof
         ),
         stringArrow,
-        Some(VarModel("v", ScalarType.string)),
+        VarModel("v", ScalarType.string) :: Nil,
         Map("callable" -> f1),
         Map.empty
       )
@@ -150,7 +150,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
           CallServiceRes(
             LiteralModel.quote("srv1"),
             "foo",
-            Call(Nil, Some(Call.Export("v", ScalarType.string))),
+            CallRes(Nil, Some(Call.Export("v", ScalarType.string))),
             initPeer
           )
         ),

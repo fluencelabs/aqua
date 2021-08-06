@@ -1,9 +1,9 @@
 package aqua.model.func
 
 import aqua.model.ValueModel.varName
-import aqua.model.func.raw._
+import aqua.model.func.raw.*
 import aqua.model.{Model, ValueModel, VarModel}
-import aqua.types.{ArrowType, ProductType, StreamType}
+import aqua.types.{ArrowType, ProductType, StreamType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -21,7 +21,8 @@ case class FuncCallable(
   private val logger = Logger.of[FuncCallable]
   import logger._
 
-  def args: ProductType = arrowType.domain
+  lazy val args: List[(String, Type)] = arrowType.domain.toLabelledList()
+  lazy val argNames: List[String] = args.map(_._1)
 
   def findNewNames(forbidden: Set[String], introduce: Set[String]): Map[String, String] =
     (forbidden intersect introduce).foldLeft(Map.empty[String, String]) { case (acc, name) =>
