@@ -167,7 +167,7 @@ case class FuncCallable(
             case ((ops, rets), (_, r)) => (ops, r :: rets)
           }
 
-        FuncOps.seq(ops: _*) -> rets
+        FuncOps.seq(ops.reverse: _*) -> rets
       }
   }
 
