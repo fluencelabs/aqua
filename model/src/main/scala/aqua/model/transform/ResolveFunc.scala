@@ -1,11 +1,10 @@
 package aqua.model.transform
 
-import aqua.model.func._
+import aqua.model.func.*
 import aqua.model.func.raw.{FuncOp, FuncOps}
 import aqua.model.{ValueModel, VarModel}
-import aqua.types.{ArrayType, ArrowType, StreamType}
+import aqua.types.{ArrayType, ArrowType, ConsType, NilType, ProductType, StreamType}
 import cats.Eval
-import cats.syntax.apply._
 
 case class ResolveFunc(
   transform: FuncOp => FuncOp,
@@ -22,7 +21,7 @@ case class ResolveFunc(
       respFuncName,
       Call(
         retModel :: Nil,
-        None
+        Nil
       )
     )
 
@@ -31,19 +30,19 @@ case class ResolveFunc(
     FuncCallable(
       arrowCallbackPrefix + name,
       callback(name, call),
-      args,
-      (ret.map(_.model), arrowType.res).mapN(_ -> _),
+      arrowType,
+      ret.map(_.model),
       Map.empty,
       Map.empty
     )
   }
 
   def wrap(func: FuncCallable): FuncCallable = {
-    val returnType = func.ret.map(_._1.lastType).map {
+    val returnType = ProductType(func.ret.map(_.lastType).map {
       // we mustn't return a stream in response callback to avoid pushing stream to `-return-` value
       case StreamType(t) => ArrayType(t)
       case t => t
-    }
+    }).toLabelledList(returnVar)
 
     FuncCallable(
       wrapCallableName,
@@ -53,21 +52,22 @@ case class ResolveFunc(
             .callArrow(
               func.funcName,
               Call(
-                func.args.toCallArgs,
-                returnType.map(t => Call.Export(returnVar, t))
+                func.arrowType.domain.toLabelledList().map(ad => VarModel(ad._1, ad._2)),
+                returnType.map { case (l, t) => Call.Export(l, t) }
               )
             ) ::
-            returnType
-              .map(t => VarModel(returnVar, t))
-              .map(returnCallback)
-              .toList: _*
+            returnType.map { case (l, t) => VarModel(l, t) }
+              .map(returnCallback): _*
         )
       ),
-      ArgsDef(ArgDef.Arrow(func.funcName, func.arrowType) :: Nil),
-      None,
-      func.args.arrowArgs.map { case ArgDef.Arrow(argName, arrowType) =>
-        argName -> arrowToCallback(argName, arrowType)
-      }.toList.toMap,
+      ArrowType(ConsType.cons(func.funcName, func.arrowType, NilType), NilType),
+      Nil,
+      func.arrowType.domain
+        .toLabelledList()
+        .collect { case (argName, arrowType: ArrowType) =>
+          argName -> arrowToCallback(argName, arrowType)
+        }
+        .toMap,
       Map.empty
     )
   }
@@ -78,7 +78,7 @@ case class ResolveFunc(
   ): Eval[FuncOp] =
     wrap(func)
       .resolve(
-        Call(VarModel(funcArgName, func.arrowType) :: Nil, None),
+        Call(VarModel(funcArgName, func.arrowType) :: Nil, Nil),
         Map(funcArgName -> func),
         Set.empty
       )

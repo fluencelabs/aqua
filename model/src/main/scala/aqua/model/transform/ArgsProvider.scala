@@ -20,7 +20,7 @@ case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataT
       FuncOps.callService(
         dataServiceId,
         name,
-        Call(Nil, Some(Call.Export(iter, ArrayType(t.element))))
+        Call(Nil, Call.Export(iter, ArrayType(t.element)) :: Nil)
       ),
       FuncOps.fold(
         item,
@@ -41,7 +41,7 @@ case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataT
         FuncOps.callService(
           dataServiceId,
           name,
-          Call(Nil, Some(Call.Export(name, t)))
+          Call(Nil, Call.Export(name, t) :: Nil)
         )
     }
 

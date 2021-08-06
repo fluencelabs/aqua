@@ -1,8 +1,8 @@
 package aqua
 
 import aqua.model.func.Call
-import aqua.model.func.raw._
-import aqua.model.func.resolved.{CallServiceRes, MakeRes, MatchMismatchRes, ResolvedOp}
+import aqua.model.func.raw.*
+import aqua.model.func.resolved.{CallRes, CallServiceRes, MakeRes, MatchMismatchRes, ResolvedOp}
 import aqua.model.transform.{ErrorsCatcher, GenerationConfig}
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
@@ -48,7 +48,7 @@ object Node {
   val relay = LiteralModel("-relay-", ScalarType.string)
   val relayV = VarModel("-relay-", ScalarType.string)
   val initPeer = LiteralModel.initPeerId
-  val emptyCall = Call(Nil, None)
+  val emptyCall = Call(Nil, Nil)
   val otherPeer = LiteralModel("other-peer", ScalarType.string)
   val otherPeerL = LiteralModel("\"other-peer\"", LiteralType.string)
   val otherRelay = LiteralModel("other-relay", ScalarType.string)
@@ -63,10 +63,10 @@ object Node {
     exportTo: Option[Call.Export] = None,
     args: List[ValueModel] = Nil
   ): Res = Node(
-    CallServiceRes(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(args, exportTo), on)
+    CallServiceRes(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", CallRes(args, exportTo), on)
   )
 
-  def callTag(i: Int, exportTo: Option[Call.Export] = None, args: List[ValueModel] = Nil): Raw =
+  def callTag(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueModel] = Nil): Raw =
     Node(
       CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(args, exportTo))
     )
@@ -75,12 +75,12 @@ object Node {
     CallServiceRes(
       LiteralModel("\"srv" + i + "\"", LiteralType.string),
       s"fn$i",
-      Call(Nil, exportTo),
+      CallRes(Nil, exportTo),
       on
     )
   )
 
-  def callLiteralRaw(i: Int, exportTo: Option[Call.Export] = None): Raw = Node(
+  def callLiteralRaw(i: Int, exportTo: List[Call.Export] = Nil): Raw = Node(
     CallServiceTag(
       LiteralModel("\"srv" + i + "\"", LiteralType.string),
       s"fn$i",
@@ -92,7 +92,7 @@ object Node {
     CallServiceRes(
       bc.errorHandlingCallback,
       bc.errorFuncName,
-      Call(
+      CallRes(
         ErrorsCatcher.lastErrorArg :: LiteralModel(
           i.toString,
           LiteralType.number
@@ -108,7 +108,7 @@ object Node {
       CallServiceRes(
         bc.callbackSrvId,
         bc.respFuncName,
-        Call(value :: Nil, None),
+        CallRes(value :: Nil, None),
         on
       )
     )
@@ -118,7 +118,7 @@ object Node {
       CallServiceRes(
         bc.dataSrvId,
         name,
-        Call(Nil, Some(Call.Export(name, ScalarType.string))),
+        CallRes(Nil, Some(Call.Export(name, ScalarType.string))),
         on
       )
     )
@@ -156,7 +156,7 @@ object Node {
     Console.GREEN + "(" +
       equalOrNot(left, right) + Console.GREEN + ")"
 
-  private def diffCall(left: Call, right: Call): String =
+  private def diffCall(left: CallRes, right: CallRes): String =
     if (left == right) Console.GREEN + left + Console.RESET
     else
       Console.GREEN + "Call(" +

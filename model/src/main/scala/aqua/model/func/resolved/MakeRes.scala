@@ -1,6 +1,17 @@
 package aqua.model.func.resolved
 
 import aqua.model.func.Call
+import aqua.model.func.raw.{
+  CallServiceTag,
+  ForTag,
+  MatchMismatchTag,
+  NextTag,
+  OnTag,
+  ParTag,
+  RawTag,
+  SeqTag,
+  XorTag
+}
 import aqua.model.topology.Topology.Res
 import aqua.model.{LiteralModel, ValueModel}
 import cats.Eval
@@ -28,5 +39,25 @@ object MakeRes {
     Cofree[Chain, ResolvedOp](FoldRes(item, iter), Eval.now(Chain.one(body)))
 
   def noop(onPeer: ValueModel): Res =
-    leaf(CallServiceRes(LiteralModel.quote("op"), "noop", Call(Nil, None), onPeer))
+    leaf(CallServiceRes(LiteralModel.quote("op"), "noop", CallRes(Nil, None), onPeer))
+
+  def resolve(
+    currentPeerId: Option[ValueModel]
+  ): PartialFunction[RawTag, ResolvedOp] = {
+    case SeqTag => SeqRes
+    case _: OnTag => SeqRes
+    case MatchMismatchTag(a, b, s) => MatchMismatchRes(a, b, s)
+    case ForTag(item, iter) => FoldRes(item, iter)
+    case ParTag | ParTag.Detach => ParRes
+    case XorTag | XorTag.LeftBiased => XorRes
+    case NextTag(item) => NextRes(item)
+    case CallServiceTag(serviceId, funcName, Call(args, exportTo)) =>
+      CallServiceRes(
+        serviceId,
+        funcName,
+        CallRes(args, exportTo.headOption),
+        currentPeerId
+          .getOrElse(LiteralModel.initPeerId)
+      )
+  }
 }

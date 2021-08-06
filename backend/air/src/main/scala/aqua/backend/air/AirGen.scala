@@ -80,7 +80,7 @@ object AirGen extends LogSupport {
 
       case FoldRes(item, iterable) =>
         Eval later ForGen(valueToData(iterable), item, opsToSingle(ops))
-      case CallServiceRes(serviceId, funcName, Call(args, exportTo), peerId) =>
+      case CallServiceRes(serviceId, funcName, CallRes(args, exportTo), peerId) =>
         Eval.later(
           ServiceCallGen(
             valueToData(peerId),

@@ -55,10 +55,11 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
               .map(t =>
                 FuncOp
                   .leaf(
+                    // TODO: replace with Apply
                     CallServiceTag(
                       LiteralModel.quote("op"),
                       "identity",
-                      Call(vm :: Nil, Some(Call.Export(expr.stream.value, t)))
+                      Call(vm :: Nil, Call.Export(expr.stream.value, t) :: Nil)
                     )
                   ): Model
               )

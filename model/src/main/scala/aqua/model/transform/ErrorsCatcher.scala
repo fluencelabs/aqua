@@ -58,6 +58,6 @@ object ErrorsCatcher {
 
   def lastErrorCall(i: Int): Call = Call(
     lastErrorArg :: LiteralModel(i.toString, LiteralType.number) :: Nil,
-    None
+    Nil
   )
 }

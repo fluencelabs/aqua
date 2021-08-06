@@ -113,7 +113,8 @@ object DataTypeToken {
     (`[]`.lift ~ `datatypedef`[F]).map(ud => ArrayTypeToken(ud._1, ud._2))
 
   def `topbottomdef`[F[_]: LiftParser: Comonad]: P[TopBottomToken[F]] =
-    `⊥`.lift.map(TopBottomToken(_, isTop = false)) | `⊤`.lift.map(TopBottomToken(_, isTop = true))
+    `⊥`.lift.map(TopBottomToken(_, isTop = false)) |
+      `⊤`.lift.map(TopBottomToken(_, isTop = true))
 
   def `datatypedef`[F[_]: LiftParser: Comonad]: P[DataTypeToken[F]] =
     P.oneOf(

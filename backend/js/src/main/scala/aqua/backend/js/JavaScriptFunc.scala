@@ -1,7 +1,7 @@
 package aqua.backend.js
 
 import aqua.backend.air.FuncAirGen
-import aqua.model.func.{ArgDef, FuncCallable}
+import aqua.model.func.FuncCallable
 import aqua.model.transform.GenerationConfig
 import aqua.types._
 import cats.syntax.show._
@@ -11,7 +11,7 @@ case class JavaScriptFunc(func: FuncCallable) {
   import JavaScriptFunc._
 
   def argsJavaScript: String =
-    func.args.args.map(ad => s"${ad.name}").mkString(", ")
+    func.argNames.mkString(", ")
 
   // TODO: use common functions between TypeScript and JavaScript backends
   private def genReturnCallback(
@@ -42,26 +42,29 @@ case class JavaScriptFunc(func: FuncCallable) {
 
     val tsAir = FuncAirGen(func).generateAir(conf)
 
-    val setCallbacks = func.args.args.map {
-      case ArgDef.Data(argName, OptionType(_)) =>
+    val setCallbacks = func.args.collect {
+      case (argName, OptionType(_)) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
-      case ArgDef.Data(argName, _) =>
+      case (argName, _: DataType) =>
         s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
-      case ArgDef.Arrow(argName, at) =>
+      case (argName, at: ArrowType) =>
         val value = s"$argName(${argsCallToJs(
           at
         )})"
         val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
         s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
-    }.mkString("\n")
+    }
+      .mkString("\n")
 
-    val returnCallback = func.ret
-      .map(_._2)
+    // TODO support multi-return
+    val returnCallback = func.arrowType.codomain.uncons
+      .map(_._1)
       .map(t => genReturnCallback(t, conf.callbackService, conf.respFuncName))
       .getOrElse("")
 
+    // TODO support multi-return
     val returnVal =
-      func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
+      func.ret.headOption.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
     // TODO: it could be non-unique
     val configArgName = "config"
@@ -113,12 +116,9 @@ case class JavaScriptFunc(func: FuncCallable) {
 object JavaScriptFunc {
 
   def argsToTs(at: ArrowType): String =
-    at.args.zipWithIndex
-      .map(_.swap)
-      .map(kv => "arg" + kv._1)
-      .mkString(", ")
+    at.domain.toLabelledList().map(_._1).mkString(", ")
 
   def argsCallToJs(at: ArrowType): String =
-    at.args.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
+    at.domain.toList.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
 
 }

@@ -100,7 +100,7 @@ object VarModel {
 
   val lastError: VarModel = VarModel(
     "%last_error%",
-    ProductType(
+    StructType(
       "LastError",
       NonEmptyMap.of(
         "instruction" -> ScalarType.string,
@@ -112,6 +112,6 @@ object VarModel {
 
   val nil: VarModel = VarModel(
     "nil",
-    StreamType(DataType.Bottom)
+    StreamType(BottomType)
   )
 }

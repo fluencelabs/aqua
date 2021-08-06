@@ -1,9 +1,9 @@
 package aqua.model.func
 
 import aqua.model.ValueModel.varName
-import aqua.model.func.raw._
+import aqua.model.func.raw.*
 import aqua.model.{Model, ValueModel, VarModel}
-import aqua.types.{ArrowType, StreamType, Type}
+import aqua.types.{ArrowType, ProductType, StreamType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -12,8 +12,8 @@ import wvlet.log.Logger
 case class FuncCallable(
   funcName: String,
   body: FuncOp,
-  args: ArgsDef,
-  ret: Option[(ValueModel, Type)],
+  arrowType: ArrowType,
+  ret: List[ValueModel],
   capturedArrows: Map[String, FuncCallable],
   capturedValues: Map[String, ValueModel]
 ) extends Model {
@@ -21,11 +21,8 @@ case class FuncCallable(
   private val logger = Logger.of[FuncCallable]
   import logger._
 
-  def arrowType: ArrowType =
-    ArrowType(
-      args.types,
-      ret.map(_._2)
-    )
+  lazy val args: List[(String, Type)] = arrowType.domain.toLabelledList()
+  lazy val argNames: List[String] = args.map(_._1)
 
   def findNewNames(forbidden: Set[String], introduce: Set[String]): Map[String, String] =
     (forbidden intersect introduce).foldLeft(Map.empty[String, String]) { case (acc, name) =>
@@ -49,12 +46,12 @@ case class FuncCallable(
     call: Call,
     arrows: Map[String, FuncCallable],
     forbiddenNames: Set[String]
-  ): Eval[(FuncOp, Option[ValueModel])] = {
+  ): Eval[(FuncOp, List[ValueModel])] = {
 
     debug("Call: " + call)
 
     // Collect all arguments: what names are used inside the function, what values are received
-    val argsFull = args.call(call)
+    val argsFull = ArgsCall(arrowType.domain, call.args)
     // DataType arguments
     val argsToDataRaw = argsFull.dataArgs
     // Arrow arguments: expected type is Arrow, given by-name
@@ -96,7 +93,7 @@ case class FuncCallable(
     val treeRenamed = treeWithValues.rename(shouldRename)
 
     // Result could be derived from arguments, or renamed; take care about that
-    val result = ret.map(_._1).map(_.resolveWith(argsToData)).map {
+    val result: List[ValueModel] = ret.map(_.resolveWith(argsToData)).map {
       case v: VarModel if shouldRename.contains(v.name) => v.copy(shouldRename(v.name))
       case v => v
     }
@@ -155,23 +152,22 @@ case class FuncCallable(
       }
       .map { case ((_, resolvedExports), callableFuncBody) =>
         // If return value is affected by any of internal functions, resolve it
-        (for {
-          exp <- call.exportTo
-          res <- result
-          pair <- exp match {
-            case Call.Export(name, StreamType(_)) =>
-              val resolved = res.resolveWith(resolvedExports)
-              // path nested function results to a stream
-              Some(
-                FuncOps.seq(FuncOp(callableFuncBody), FuncOps.identity(resolved, exp)) -> Some(
-                  exp.model
-                )
-              )
-            case _ => None
+        val resolvedResult = result.map(_.resolveWith(resolvedExports))
+
+        val (ops, rets) = (call.exportTo zip resolvedResult)
+          .map[(Option[FuncOp], ValueModel)] {
+            case (exp @ Call.Export(_, StreamType(_)), res) =>
+              // pass nested function results to a stream
+              Some(FuncOps.identity(res, exp)) -> exp.model
+            case (_, res) =>
+              None -> res
           }
-        } yield {
-          pair
-        }).getOrElse(FuncOp(callableFuncBody) -> result.map(_.resolveWith(resolvedExports)))
+          .foldLeft[(List[FuncOp], List[ValueModel])]((FuncOp(callableFuncBody) :: Nil, Nil)) {
+            case ((ops, rets), (Some(fo), r)) => (fo :: ops, r :: rets)
+            case ((ops, rets), (_, r)) => (ops, r :: rets)
+          }
+
+        FuncOps.seq(ops.reverse: _*) -> rets
       }
   }
 

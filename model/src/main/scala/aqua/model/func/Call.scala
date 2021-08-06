@@ -3,7 +3,7 @@ package aqua.model.func
 import aqua.model.{ValueModel, VarModel}
 import aqua.types.Type
 
-case class Call(args: List[ValueModel], exportTo: Option[Call.Export]) {
+case class Call(args: List[ValueModel], exportTo: List[Call.Export]) {
 
   def mapValues(f: ValueModel => ValueModel): Call =
     Call(
@@ -18,7 +18,7 @@ case class Call(args: List[ValueModel], exportTo: Option[Call.Export]) {
   }.toSet
 
   override def toString: String =
-    s"[${args.mkString(" ")}]${exportTo.map(_.model).map(" " + _).getOrElse("")}"
+    s"[${args.mkString(" ")}]${exportTo.map(_.model).map(" " + _).mkString(",")}"
 }
 
 object Call {

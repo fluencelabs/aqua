@@ -2,7 +2,7 @@ package aqua.semantics.rules.types
 
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.ReportError
-import aqua.types.{ArrowType, ProductType}
+import aqua.types.{ArrowType, StructType}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.flatMap._
@@ -71,7 +71,7 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
           case None =>
             modify(st =>
               st.copy(
-                strict = st.strict.updated(ddt.name.value, ProductType(ddt.name.value, ddt.fields)),
+                strict = st.strict.updated(ddt.name.value, StructType(ddt.name.value, ddt.fields)),
                 definitions = st.definitions.updated(ddt.name.value, ddt.name)
               )
             )

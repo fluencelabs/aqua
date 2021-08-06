@@ -2,10 +2,9 @@ package aqua.model
 
 import aqua.model.func.raw.{CallServiceTag, FuncOp}
 import aqua.model.func.{ArgsCall, FuncCallable, FuncModel}
-import aqua.types.{ProductType, Type}
+import aqua.types.{StructType, Type}
 import cats.Monoid
 import cats.data.NonEmptyMap
-import cats.syntax.apply.*
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import wvlet.log.LogSupport
@@ -52,7 +51,7 @@ case class AquaContext(
       }
       .map(prefixFirst(prefix, _))
 
-  def `type`(name: String): Option[ProductType] =
+  def `type`(name: String): Option[StructType] =
     NonEmptyMap
       .fromMap(
         SortedMap.from(
@@ -65,7 +64,7 @@ case class AquaContext(
             }
         )
       )
-      .map(ProductType(name, _))
+      .map(StructType(name, _))
 }
 
 object AquaContext extends LogSupport {
@@ -104,8 +103,8 @@ object AquaContext extends LogSupport {
             fnName,
             // TODO: capture ability resolution, get ID from the call context
             FuncOp.leaf(CallServiceTag(serviceId, fnName, call)),
-            args,
-            (ret.map(_.model), arrowType.res).mapN(_ -> _),
+            arrowType,
+            ret.map(_.model),
             Map.empty,
             Map.empty
           )
