@@ -8,6 +8,7 @@ import cats.free.Cofree
 import cats.kernel.Semigroup
 import cats.syntax.apply.*
 import cats.syntax.functor.*
+import cats.instances.tuple.*
 
 case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
   def head: RawTag = tree.head

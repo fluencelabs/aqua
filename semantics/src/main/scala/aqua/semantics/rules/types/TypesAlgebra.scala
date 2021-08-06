@@ -9,8 +9,6 @@ import cats.free.Free
 
 class TypesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]) {
 
-  val xs: List[?] = List(1, 2, 3)
-
   def resolveType(token: TypeToken[F]): Free[Alg, Option[Type]] =
     Free.liftInject[Alg](ResolveType(token))
 
@@ -41,8 +39,8 @@ class TypesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]) {
   def expectNoExport(token: Token[F]): Free[Alg, Unit] =
     Free.liftInject[Alg](ExpectNoExport[F](token))
 
-  def checkArgumentsNumber(token: Token[F], expected: Int, givenType: Int): Free[Alg, Boolean] =
-    Free.liftInject[Alg](CheckArgumentsNum(token, expected, givenType))
+  def checkArgumentsNumber(token: Token[F], expected: Int, givenNum: Int): Free[Alg, Boolean] =
+    Free.liftInject[Alg](CheckArgumentsNum(token, expected, givenNum))
 }
 
 object TypesAlgebra {

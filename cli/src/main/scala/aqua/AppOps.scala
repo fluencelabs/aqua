@@ -13,7 +13,7 @@ import cats.syntax.traverse.*
 import cats.{Comonad, Functor}
 import com.monovore.decline.Opts.help
 import com.monovore.decline.{Opts, Visibility}
-import wvlet.log.LogLevel
+import wvlet.log.{LogLevel => WLogLevel}
 
 import java.nio.file.Path
 
@@ -25,29 +25,21 @@ object AppOps {
   val versionOpt: Opts[Unit] =
     Opts.flag("version", help = "Show version", "v", Visibility.Partial)
 
-  val logLevelOpt: Opts[LogLevel] =
+  val logLevelOpt: Opts[WLogLevel] =
     Opts.option[String]("log-level", help = "Set log level").withDefault("info").mapValidated {
       str =>
         Validated.fromEither(toLogLevel(str))
     }
 
-  def toLogLevel(logLevel: String): Either[NonEmptyList[String], LogLevel] = {
-    logLevel.toLowerCase match {
-      case "debug" => Right(LogLevel.DEBUG)
-      case "trace" => Right(LogLevel.TRACE)
-      case "info" => Right(LogLevel.INFO)
-      case "off" => Right(LogLevel.OFF)
-      case "warn" => Right(LogLevel.WARN)
-      case "error" => Right(LogLevel.ERROR)
-      case "all" => Right(LogLevel.ALL)
-      case _ =>
-        Left(
-          NonEmptyList(
-            "log-level could be only 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'",
-            Nil
-          )
+  def toLogLevel(logLevel: String): Either[NonEmptyList[String], WLogLevel] = {
+    LogLevel.stringToLogLevel
+      .get(logLevel.toLowerCase)
+      .toRight(
+        NonEmptyList(
+          "log-level could be only 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'",
+          Nil
         )
-    }
+      )
   }
 
   def checkPath: Path => ValidatedNel[String, Path] = { p =>

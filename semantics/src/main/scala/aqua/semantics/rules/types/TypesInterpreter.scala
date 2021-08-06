@@ -111,11 +111,11 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
         ).as(())
 
       case ca: CheckArgumentsNum[F] =>
-        if (ca.expected == ca.givenType) State.pure(true)
+        if (ca.expected == ca.givenNum) State.pure(true)
         else
           report(
             ca.token,
-            s"Number of arguments doesn't match the function type, expected: ${ca.expected}, given: ${ca.givenType}"
+            s"Number of arguments doesn't match the function type, expected: ${ca.expected}, given: ${ca.givenNum}"
           ).as(false)
     }
 }

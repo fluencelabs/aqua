@@ -25,5 +25,5 @@ case class EnsureTypeMatches[F[_]](token: Token[F], expected: Type, givenType: T
 
 case class ExpectNoExport[F[_]](token: Token[F]) extends TypeOp[F, Unit]
 
-case class CheckArgumentsNum[F[_]](token: Token[F], expected: Int, givenType: Int)
+case class CheckArgumentsNum[F[_]](token: Token[F], expected: Int, givenNum: Int)
     extends TypeOp[F, Boolean]
