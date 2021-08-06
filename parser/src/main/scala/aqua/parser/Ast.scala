@@ -6,7 +6,7 @@ import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
 import cats.data.{Chain, Validated, ValidatedNec}
 import cats.free.Cofree
-import cats.parse.{Parser0 => P0}
+import cats.parse.Parser0 as P0
 import cats.{Comonad, Eval}
 
 case class Ast[F[_]](head: Ast.Head[F], tree: Ast.Tree[F]) {

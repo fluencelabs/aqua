@@ -30,7 +30,7 @@ object Linker extends LogSupport {
         else {
           val folded = canHandle.foldLeft(proc) { case (acc, m) =>
             val importKeys = m.dependsOn.keySet
-            debug(m.id + " dependsOn " + importKeys)
+            debug(s"${m.id} dependsOn $importKeys")
             val deps: T => T =
               importKeys.map(acc).foldLeft[T => T](identity) { case (fAcc, f) =>
                 debug("COMBINING ONE TIME ")

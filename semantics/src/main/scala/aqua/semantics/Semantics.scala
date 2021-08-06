@@ -57,7 +57,7 @@ object Semantics extends LogSupport {
     ast.cata(folder[F, Alg[F, *]]).value
 
   def interpret[F[_]](free: Free[Alg[F, *], Model]): State[CompilerState[F], Model] = {
-    import monocle.macros.syntax.all._
+    import monocle.syntax.all._
 
     implicit val re: ReportError[F, CompilerState[F]] =
       (st: CompilerState[F], token: Token[F], hint: String) =>

@@ -10,7 +10,7 @@ import wvlet.log.LogSupport
 
 // Can be heavily optimized by caching parent cursors, not just list of zippers
 case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
-    extends ChainCursor[RawCursor, FuncOp.Tree](RawCursor) with LogSupport {
+    extends ChainCursor[RawCursor, FuncOp.Tree](RawCursor.apply) with LogSupport {
   def tag: RawTag = current.head
   def parentTag: Option[RawTag] = parent.map(_.head)
 

@@ -64,7 +64,7 @@ object Token {
   val `.` : P[Unit] = P.char('.')
   val `"` : P[Unit] = P.char('"')
   val `*` : P[Unit] = P.char('*')
-  val `!` : P[Unit] = P.char('!')
+  val exclamation : P[Unit] = P.char('!')
   val `[]` : P[Unit] = P.string("[]")
   val `⊤` : P[Unit] = P.char('⊤')
   val `⊥` : P[Unit] = P.char('⊥')

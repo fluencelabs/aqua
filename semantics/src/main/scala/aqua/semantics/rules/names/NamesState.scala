@@ -51,7 +51,7 @@ object NamesState {
 
   def init[F[_]](context: AquaContext): NamesState[F] =
     NamesState(
-      rootArrows = context.allFuncs().map(_.map(_.arrowType)),
-      constants = context.allValues().map(_.map(_.lastType))
+      rootArrows = context.allFuncs().map { case (s, fc) => (s, fc.arrowType) },
+      constants = context.allValues().map { case (s, vm) => (s, vm.lastType) }
     )
 }

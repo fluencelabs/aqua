@@ -33,14 +33,14 @@ class TypesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]) {
   def resolveLambda(root: Type, ops: List[LambdaOp[F]]): Free[Alg, List[LambdaModel]] =
     Free.liftInject[Alg](ResolveLambda(root, ops))
 
-  def ensureTypeMatches(token: Token[F], expected: Type, given: Type): Free[Alg, Boolean] =
-    Free.liftInject[Alg](EnsureTypeMatches[F](token, expected, given))
+  def ensureTypeMatches(token: Token[F], expected: Type, givenType: Type): Free[Alg, Boolean] =
+    Free.liftInject[Alg](EnsureTypeMatches[F](token, expected, givenType))
 
   def expectNoExport(token: Token[F]): Free[Alg, Unit] =
     Free.liftInject[Alg](ExpectNoExport[F](token))
 
-  def checkArgumentsNumber(token: Token[F], expected: Int, given: Int): Free[Alg, Boolean] =
-    Free.liftInject[Alg](CheckArgumentsNum(token, expected, given))
+  def checkArgumentsNumber(token: Token[F], expected: Int, givenNum: Int): Free[Alg, Boolean] =
+    Free.liftInject[Alg](CheckArgumentsNum(token, expected, givenNum))
 }
 
 object TypesAlgebra {

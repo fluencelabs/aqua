@@ -2,7 +2,7 @@ package aqua.model.func
 
 import aqua.model.{ValueModel, VarModel}
 import aqua.types.{ArrowType, DataType}
-import cats.syntax.functor._
+import cats.syntax.functor.*
 
 /**
  * Wraps argument definitions of a function, along with values provided when this function is called
@@ -33,7 +33,7 @@ object ArgsCall {
     argPrefix: String = "arg",
     retName: String = "init_call_res"
   ): (ArgsDef, Call, Option[Call.Export]) = {
-    val argNamesTypes = arrow.args.zipWithIndex.map(iv => iv.map(i => argPrefix + i).swap)
+    val argNamesTypes = arrow.args.zipWithIndex.map { case (t, i) => (argPrefix + i, t) }
 
     val argsDef = ArgsDef(argNamesTypes.map {
       case (a, t: DataType) => ArgDef.Data(a, t)
