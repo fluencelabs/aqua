@@ -39,8 +39,8 @@ val commons = Seq(
       "-feature",
       "-language:implicitConversions",
       "-unchecked",
-      "-Ykind-projector",
-      "-Xfatal-warnings"
+      "-Ykind-projector"
+//      "-Xfatal-warnings"
     )
   }
 )
