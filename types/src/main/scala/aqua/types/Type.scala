@@ -79,7 +79,7 @@ case class LabelledConsType(label: String, `type`: Type, tail: ProductType) exte
 }
 
 case class UnlabelledConsType(`type`: Type, tail: ProductType) extends ConsType {
-  override def toString: String = `type` + s" :: $tail"
+  override def toString: String = `type`.toString + s" :: $tail"
 }
 
 object NilType extends ProductType {
