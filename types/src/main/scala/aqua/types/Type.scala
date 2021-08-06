@@ -25,11 +25,18 @@ sealed trait ProductType extends Type {
     case _ => None
   }
 
-  def toList: List[Type] = this match {
+  lazy val toList: List[Type] = this match {
     case ConsType(t, pt) => t :: pt.toList
     case _ => Nil
   }
 
+  /**
+   * Converts product type to a list of types, labelling each of them with a string
+   * Label is either got from the types with labels, or from the given prefix and index of a type.
+   * @param prefix Prefix to generate a missing label
+   * @param index Index to ensure generated labels are unique
+   * @return
+   */
   def toLabelledList(prefix: String = "arg", index: Int = 0): List[(String, Type)] = this match {
     case LabelledConsType(label, t, pt) => (label -> t) :: pt.toLabelledList(prefix, index + 1)
     case UnlabelledConsType(t, pt) =>
@@ -37,7 +44,7 @@ sealed trait ProductType extends Type {
     case _ => Nil
   }
 
-  def labelledData: List[(String, DataType)] = this match {
+  lazy val labelledData: List[(String, DataType)] = this match {
     case LabelledConsType(label, t: DataType, pt) => (label -> t) :: pt.labelledData
     case UnlabelledConsType(_, pt) => pt.labelledData
     case _ => Nil
@@ -59,6 +66,10 @@ object ProductType {
   }
 }
 
+/**
+ * ConsType adds a type to the ProductType, and delegates all the others to tail
+ * Corresponds to Cons (::) in the List
+ */
 sealed trait ConsType extends ProductType {
   def `type`: Type
   def tail: ProductType
@@ -128,34 +139,6 @@ object ScalarType {
   val signed = float ++ Set(i8, i16, i32, i64)
   val number = signed ++ Set(u8, u16, u32, u64)
   val all = number ++ Set(bool, string)
-
-  private def isLessThen(a: ScalarType, b: ScalarType): Boolean = (a, b) match {
-    // Signed numbers
-    case (`i32` | `i16` | `i8`, `i64`) => true
-    case (`i16` | `i8`, `i32`) => true
-    case (`i8`, `i16`) => true
-
-    // Unsigned numbers -- can fit into larger signed ones too
-    case (`u32` | `u16` | `u8`, `u64` | `i64`) => true
-    case (`u16` | `u8`, `u32` | `i32`) => true
-    case (`u8`, `u16` | `i16`) => true
-
-    // Floats
-    case (`f32`, `f64`) => true
-
-    case (`i8` | `i16` | `u8` | `u16`, `f32` | `f64`) => true
-    case (`i32` | `u32`, `f64`) => true
-
-    case _ => false
-  }
-
-  val scalarOrder: PartialOrder[ScalarType] =
-    PartialOrder.from {
-      case (a, b) if a == b => 0.0
-      case (a, b) if isLessThen(a, b) => -1.0
-      case (a, b) if isLessThen(b, a) => 1.0
-      case _ => Double.NaN
-    }
 }
 
 case class LiteralType private (oneOf: Set[ScalarType], name: String) extends DataType {
@@ -219,5 +202,5 @@ case class StreamType(element: Type) extends BoxType
 object Type {
 
   implicit lazy val typesPartialOrder: PartialOrder[Type] =
-    PartialOrder.from(CompareTypes.apply)
+    CompareTypes.partialOrder
 }
