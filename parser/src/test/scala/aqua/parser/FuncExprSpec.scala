@@ -98,10 +98,10 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       ).toList
 
     ifBody.head.head should be(
-      CallArrowExpr(Some(toName("x")), Some(toAb("Ab")), "func", Nil)
+      CallArrowExpr(List(toName("x")), Some(toAb("Ab")), "func", Nil)
     )
     ifBody(1).head should be(AbilityIdExpr(toAb("Peer"), toStr("some id")))
-    ifBody(2).head should be(CallArrowExpr(None, None, "call", List(toBool(true))))
+    ifBody(2).head should be(CallArrowExpr(Nil, None, "call", List(toBool(true))))
 
   }
 
@@ -167,7 +167,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       List("v": VarLambda[Id])
     )
     qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")))
-    qTree.d() shouldBe CallArrowExpr(Some("v"), Some(toAb("Local")), "gt", Nil)
+    qTree.d() shouldBe CallArrowExpr(List("v"), Some(toAb("Local")), "gt", Nil)
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("v")))
     // genC function
     qTree.d() shouldBe FuncExpr(
@@ -175,10 +175,10 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       toNamedArrow(("val" -> string) :: Nil, boolSc :: Nil),
       List("two": VarLambda[Id])
     )
-    qTree.d() shouldBe CallArrowExpr(Some("one"), Some(toAb("Local")), "gt", List())
+    qTree.d() shouldBe CallArrowExpr(List("one"), Some(toAb("Local")), "gt", List())
     qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
-    qTree.d() shouldBe CallArrowExpr(Some("two"), None, "tryGen", List())
-    qTree.d() shouldBe CallArrowExpr(Some("three"), Some(toAb("Local")), "gt", List())
+    qTree.d() shouldBe CallArrowExpr(List("two"), None, "tryGen", List())
+    qTree.d() shouldBe CallArrowExpr(List("three"), Some(toAb("Local")), "gt", List())
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("two")))
     /* TODO this is semantics, not parser test
 

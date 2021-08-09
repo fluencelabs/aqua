@@ -20,7 +20,7 @@ class CoExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
           Chain(
             Cofree[Chain, Expr[Id]](
               CallArrowExpr(
-                Some(AquaSpec.toName("x")),
+                List(AquaSpec.toName("x")),
                 None,
                 AquaSpec.toName("y"),
                 Nil
