@@ -47,8 +47,19 @@ val commons = Seq(
 
 commons
 
-lazy val cli = project
+lazy val cli = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("cli"))
   .settings(commons: _*)
+
+lazy val cliJS = cli.js
+  .settings(
+    scalaJSUseMainModuleInitializer := true
+  )
+  .enablePlugins(ScalaJSPlugin)
+
+lazy val cliJVM = cli.jvm
   .settings(
     Compile / run / mainClass  := Some("aqua.AquaCli"),
     assembly / mainClass       := Some("aqua.AquaCli"),
