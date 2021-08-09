@@ -44,7 +44,7 @@ case class TypeScriptFunc(func: FuncCallable) {
              |  }""".stripMargin
         }.mkString
 
-        s""" let opt = args;
+        s""" let opt: any = args;
            |$unwrapOpts
            | return resolve(opt);""".stripMargin
       case _ =>
