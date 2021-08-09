@@ -70,28 +70,38 @@ case class TypesState[F[_]](
         )
     }
 
-  def resolveArrowDef(ad: ArrowTypeToken[F]): ValidatedNec[(Token[F], String), ArrowType] =
-    ad.res.flatMap(resolveTypeToken) match {
-      case resType if resType.length == ad.res.length =>
-        val (errs, argTypes) = ad.argTypes
-          .map(tt => resolveTypeToken(tt).toRight(tt -> s"Type unresolved"))
-          .foldLeft[(Chain[(Token[F], String)], Chain[Type])]((Chain.empty, Chain.empty)) {
+  def resolveArrowDef(ad: ArrowTypeToken[F]): ValidatedNec[(Token[F], String), ArrowType] = {
+    val resType = ad.res.map(resolveTypeToken)
+
+    NonEmptyChain
+      .fromChain(Chain.fromSeq(ad.res.zip(resType).collect { case (dt, None) =>
+        dt -> "Cannot resolve the result type"
+      }))
+      .fold[ValidatedNec[(Token[F], String), ArrowType]] {
+        val (errs, argTypes) = ad.args.map { (argName, tt) =>
+          resolveTypeToken(tt)
+            .toRight(tt -> s"Type unresolved")
+            .map(argName.map(_.value) -> _)
+        }
+          .foldLeft[(Chain[(Token[F], String)], Chain[(Option[String], Type)])](
+            (Chain.empty, Chain.empty)
+          ) {
             case ((errs, argTypes), Right(at)) => (errs, argTypes.append(at))
             case ((errs, argTypes), Left(e)) => (errs.append(e), argTypes)
           }
 
         NonEmptyChain
           .fromChain(errs)
-          .fold[ValidatedNec[(Token[F], String), ArrowType]]( // TODO: get names
-            Valid(ArrowType(ProductType(argTypes.toList), ProductType(resType.toList)))
+          .fold[ValidatedNec[(Token[F], String), ArrowType]](
+            Valid(
+              ArrowType(
+                ProductType.maybeLabelled(argTypes.toList),
+                ProductType(resType.flatten.toList)
+              )
+            )
           )(Invalid(_))
-
-      case _ =>
-        // TODO: error to ther right type! the head might be resolved
-        Invalid(
-          NonEmptyChain.one(ad.res.headOption.getOrElse(ad) -> "Cannot resolve the result type")
-        )
-    }
+      }(Invalid(_))
+  }
 
   def resolveOps(
     rootT: Type,

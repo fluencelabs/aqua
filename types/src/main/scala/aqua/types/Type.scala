@@ -59,6 +59,14 @@ object ProductType {
     case _ => NilType
   }
 
+  def maybeLabelled(types: List[(Option[String], Type)]): ProductType = types match {
+    case (Some(l), h) :: t =>
+      ConsType.cons(l, h, ProductType.maybeLabelled(t))
+    case (None, h) :: t =>
+      ConsType.cons(h, ProductType.maybeLabelled(t))
+    case _ => NilType
+  }
+
   def labelled(types: List[(String, Type)]): ProductType = types match {
     case (l, h) :: t =>
       ConsType.cons(l, h, ProductType.labelled(t))
