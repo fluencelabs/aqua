@@ -29,7 +29,7 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Free[Alg, List[ValueModel]] =
+  ): Free[Alg, (List[ValueModel], List[Type])] =
     V.checkArguments(expr.funcName, at, args) >> variables
       .foldLeft(freeUnit[Alg].as((List.empty[Type], at.codomain.toList)))((f, exportVar) =>
         f.flatMap {
@@ -46,7 +46,7 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
         }
       )
       .map(_._1) >>= { (v: List[Type]) =>
-      Traverse[List].traverse(args)(V.valueToModel).map(_.flatten)
+      Traverse[List].traverse(args)(V.valueToModel).map(_.flatten -> v.reverse)
     }
 
   private def toModel[Alg[_]](implicit
@@ -77,12 +77,12 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
   ): Free[Alg, FuncOp] = {
-    checkArgsRes(arrowType).flatMap { argsResolved =>
+    checkArgsRes(arrowType).flatMap { (argsResolved, resTypes) =>
       variables
         .drop(arrowType.codomain.length)
         .headOption
         .fold(
-          Free.pure((variables zip arrowType.codomain.toList).map { case (v, t) =>
+          Free.pure((variables zip resTypes).map { case (v, t) =>
             Call.Export(v.value, t)
           })
         )(T.expectNoExport(_).as(Nil))
