@@ -10,11 +10,11 @@ import cats.data._
 import cats.syntax.functor._
 import cats.syntax.show._
 import cats.{Monad, Show}
-import wvlet.log.LogSupport
+import scribe.Logging
 
 import java.nio.file.Path
 
-object AquaPathCompiler extends LogSupport {
+object AquaPathCompiler extends Logging {
 
   def compileFilesTo[F[_]: AquaIO: Monad](
     srcPath: Path,

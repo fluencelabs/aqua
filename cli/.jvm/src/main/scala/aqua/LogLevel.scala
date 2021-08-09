@@ -1,16 +1,16 @@
 package aqua
 
-import wvlet.log.{LogLevel => WLogLevel}
+import scribe.Level
 
 object LogLevel {
 
-  val stringToLogLevel: Map[String, WLogLevel] = Map(
-    ("debug" -> WLogLevel.DEBUG),
-    ("trace" -> WLogLevel.TRACE),
-    ("info" -> WLogLevel.INFO),
-    ("off" -> WLogLevel.OFF),
-    ("warn" -> WLogLevel.WARN),
-    ("error" -> WLogLevel.ERROR),
-    ("all" -> WLogLevel.ALL)
+  val stringToLogLevel: Map[String, Level] = Map(
+    ("debug" -> Level.Debug),
+    ("trace" -> Level.Trace),
+    ("info" -> Level.Info),
+    ("off" -> Level.Fatal),
+    ("warn" -> Level.Warn),
+    ("error" -> Level.Error),
+    ("all" -> Level.Trace)
   )
 }

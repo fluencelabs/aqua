@@ -23,9 +23,9 @@ import cats.syntax.apply._
 import cats.syntax.semigroup._
 import monocle.Lens
 import monocle.macros.GenLens
-import wvlet.log.LogSupport
+import scribe.Logging
 
-object Semantics extends LogSupport {
+object Semantics extends Logging {
 
   def folder[F[_], G[_]](implicit
     A: AbilitiesAlgebra[F, G],

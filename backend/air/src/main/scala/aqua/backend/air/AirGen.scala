@@ -7,14 +7,14 @@ import aqua.types.StreamType
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
-import wvlet.log.LogSupport
+import scribe.Logging
 
 sealed trait AirGen {
   def generate: Air
 
 }
 
-object AirGen extends LogSupport {
+object AirGen extends Logging {
 
   def lambdaToString(ls: List[LambdaModel]): String = ls match {
     case Nil => ""
@@ -54,7 +54,7 @@ object AirGen extends LogSupport {
           case o :: Nil => ParGen(o, NullGen)
           case _ =>
             ops.toList.reduceLeftOption(ParGen(_, _)).getOrElse {
-              warn("ParRes with no children converted to Null")
+              logger.warn("ParRes with no children converted to Null")
               NullGen
             }
         })
@@ -63,7 +63,7 @@ object AirGen extends LogSupport {
           case o :: Nil => XorGen(o, NullGen)
           case _ =>
             ops.toList.reduceLeftOption(XorGen(_, _)).getOrElse {
-              warn("XorRes with no children converted to Null")
+              logger.warn("XorRes with no children converted to Null")
               NullGen
             }
         })

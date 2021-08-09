@@ -7,7 +7,7 @@ import aqua.types.{ArrowType, ProductType, StreamType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
-import wvlet.log.Logger
+import scribe.Logging
 
 case class FuncCallable(
   funcName: String,
@@ -16,10 +16,7 @@ case class FuncCallable(
   ret: List[ValueModel],
   capturedArrows: Map[String, FuncCallable],
   capturedValues: Map[String, ValueModel]
-) extends Model {
-
-  private val logger = Logger.of[FuncCallable]
-  import logger._
+) extends Model with Logging {
 
   lazy val args: List[(String, Type)] = arrowType.domain.toLabelledList()
   lazy val argNames: List[String] = args.map(_._1)
@@ -48,7 +45,7 @@ case class FuncCallable(
     forbiddenNames: Set[String]
   ): Eval[(FuncOp, List[ValueModel])] = {
 
-    debug("Call: " + call)
+    logger.debug("Call: " + call)
 
     // Collect all arguments: what names are used inside the function, what values are received
     val argsFull = ArgsCall(arrowType.domain, call.args)
@@ -140,7 +137,7 @@ case class FuncCallable(
         case (acc @ (_, resolvedExports), tag) =>
           tag match {
             case CallArrowTag(fn, _) if !allArrows.contains(fn) =>
-              error(s"UNRESOLVED $fn in $funcName, skipping, will become (null) in AIR!")
+              logger.error(s"UNRESOLVED $fn in $funcName, skipping, will become (null) in AIR!")
             case _ =>
           }
 

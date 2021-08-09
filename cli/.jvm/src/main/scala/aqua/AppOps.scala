@@ -13,7 +13,7 @@ import cats.syntax.traverse.*
 import cats.{Comonad, Functor}
 import com.monovore.decline.Opts.help
 import com.monovore.decline.{Opts, Visibility}
-import wvlet.log.{LogLevel => WLogLevel}
+import scribe.Level
 
 import java.nio.file.Path
 
@@ -25,13 +25,13 @@ object AppOps {
   val versionOpt: Opts[Unit] =
     Opts.flag("version", help = "Show version", "v", Visibility.Partial)
 
-  val logLevelOpt: Opts[WLogLevel] =
+  val logLevelOpt: Opts[Level] =
     Opts.option[String]("log-level", help = "Set log level").withDefault("info").mapValidated {
       str =>
         Validated.fromEither(toLogLevel(str))
     }
 
-  def toLogLevel(logLevel: String): Either[NonEmptyList[String], WLogLevel] = {
+  def toLogLevel(logLevel: String): Either[NonEmptyList[String], Level] = {
     LogLevel.stringToLogLevel
       .get(logLevel.toLowerCase)
       .toRight(

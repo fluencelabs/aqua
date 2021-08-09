@@ -7,9 +7,9 @@ import aqua.model.topology.Topology
 import aqua.types.ScalarType
 import cats.data.Chain
 import cats.free.Cofree
-import wvlet.log.LogSupport
+import scribe.Logging
 
-object Transform extends LogSupport {
+object Transform extends Logging {
 
   def defaultFilter(t: ResolvedOp): Boolean = t match {
     case _: NoAir => false

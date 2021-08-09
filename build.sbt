@@ -10,7 +10,6 @@ val monocleV = "3.0.0-M6"
 val scalaTestV = "3.2.9"
 val fs2V = "3.0.6"
 val catsEffectV = "3.2.1"
-val airframeLogV = "21.5.4"
 val log4catsV = "2.1.1"
 val slf4jV = "1.7.30"
 val declineV = "2.1.0"
@@ -22,9 +21,9 @@ val commons = Seq(
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
-    "org.typelevel"      %%% "log4cats-core" % log4catsV,
-    "org.wvlet.airframe" %%% "airframe-log"  % airframeLogV,
-    "org.scalatest"      %%% "scalatest"     % scalaTestV % Test
+    "org.typelevel" %%% "log4cats-core" % log4catsV,
+    "com.outr"      %%% "scribe"        % "3.5.5",
+    "org.scalatest" %%% "scalatest"     % scalaTestV % Test
   ),
   scalacOptions ++= {
     Seq(
@@ -86,7 +85,7 @@ lazy val parser = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel"  %% "cats-parse" % catsParseV,
+      "org.typelevel" %%% "cats-parse" % catsParseV,
       "org.typelevel" %%% "cats-free"  % catsV
     )
   )
@@ -122,8 +121,8 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.julien-truffaut" %% "monocle-core"  % monocleV,
-      "com.github.julien-truffaut" %% "monocle-macro" % monocleV
+      "com.github.julien-truffaut" %%% "monocle-core"  % monocleV,
+      "com.github.julien-truffaut" %%% "monocle-macro" % monocleV
     )
   )
   .dependsOn(model, `test-kit` % Test, parser)

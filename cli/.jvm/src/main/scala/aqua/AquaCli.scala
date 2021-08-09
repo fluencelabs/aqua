@@ -9,18 +9,18 @@ import aqua.model.transform.GenerationConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
 import cats.data.Validated
-import cats.effect._
-import cats.effect.std.{Console => ConsoleEff}
-import cats.syntax.apply._
-import cats.syntax.functor._
+import cats.effect.*
+import cats.effect.std.Console as ConsoleEff
+import cats.syntax.apply.*
+import cats.syntax.functor.*
 import com.monovore.decline.Opts
 import com.monovore.decline.effect.CommandIOApp
 import fs2.io.file.Files
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.typelevel.log4cats.{Logger, SelfAwareStructuredLogger}
-import wvlet.log.{LogSupport, Logger => WLogger}
+import scribe.Logging
 
-object AquaCli extends IOApp with LogSupport {
+object AquaCli extends IOApp with Logging {
   import AppOps._
 
   sealed trait CompileTarget
@@ -59,8 +59,11 @@ object AquaCli extends IOApp with LogSupport {
       constantOpts[Id]
     ).mapN {
       case (input, imports, output, toAir, toJs, noRelay, noXor, h, v, logLevel, constants) =>
-        WLogger.setDefaultLogLevel(logLevel)
-        WLogger.setDefaultFormatter(CustomLogFormatter)
+        scribe.Logger.root
+          .clearHandlers()
+          .clearModifiers()
+          .withHandler(minimumLevel = Some(logLevel))
+          .replace()
 
         implicit val aio: AquaIO[F] = new AquaFilesIO[F]
 
@@ -75,7 +78,7 @@ object AquaCli extends IOApp with LogSupport {
             val bc = GenerationConfig(wrapWithXor = !noXor, constants = constants)
             bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
           }
-          info(s"Aqua Compiler ${versionStr}")
+          logger.info(s"Aqua Compiler ${versionStr}")
           AquaPathCompiler
             .compileFilesTo[F](
               input,
@@ -89,7 +92,7 @@ object AquaCli extends IOApp with LogSupport {
                 errs.map(System.out.println)
                 ExitCode.Error
               case Validated.Valid(results) =>
-                results.map(info(_))
+                results.map(logger.info(_))
                 ExitCode.Success
             }
         }
