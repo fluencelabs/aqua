@@ -1,3 +1,3 @@
 package aqua.model
 
-object ReturnModel extends Model {}
+object ReturnModel extends Model 

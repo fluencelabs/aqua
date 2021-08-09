@@ -70,7 +70,7 @@ object CompareTypes {
     ) -1.0
     else NaN
 
-  private def compareProducts(l: ProductType, r: ProductType): Double = (l, r) match {
+  private def compareProducts(l: ProductType, r: ProductType): Double = ((l, r): @unchecked) match {
     case (NilType, NilType) => 0.0
     case (_: ConsType, NilType) => -1.0
     case (NilType, _: ConsType) => 1.0

@@ -59,20 +59,20 @@ case class TypesState[F[_]](
       case ctt: CustomTypeToken[F] => strict.get(ctt.value)
       case btt: BasicTypeToken[F] => Some(btt.value)
       case ArrowTypeToken(_, args, res) =>
-        val strictArgs = args.map(resolveTypeToken).collect { case Some(dt: DataType) =>
+        val strictArgs = args.map(_._2).map(resolveTypeToken).collect { case Some(dt: DataType) =>
           dt
         }
-        val strictRes = res.flatMap(resolveTypeToken).collect { case dt: DataType =>
+        val strictRes: List[DataType] = res.flatMap(resolveTypeToken).collect { case dt: DataType =>
           dt
         }
-        Option.when(strictRes.isDefined == res.isDefined && strictArgs.length == args.length)(
+        Option.when(strictRes.length == res.length && strictArgs.length == args.length)(
           ArrowType(ProductType(strictArgs), ProductType(strictRes.toList))
         )
     }
 
   def resolveArrowDef(ad: ArrowTypeToken[F]): ValidatedNec[(Token[F], String), ArrowType] =
-    ad.resType.flatMap(resolveTypeToken) match {
-      case resType if resType.isDefined == ad.resType.isDefined =>
+    ad.res.flatMap(resolveTypeToken) match {
+      case resType if resType.length == ad.res.length =>
         val (errs, argTypes) = ad.argTypes
           .map(tt => resolveTypeToken(tt).toRight(tt -> s"Type unresolved"))
           .foldLeft[(Chain[(Token[F], String)], Chain[Type])]((Chain.empty, Chain.empty)) {
@@ -82,12 +82,15 @@ case class TypesState[F[_]](
 
         NonEmptyChain
           .fromChain(errs)
-          .fold[ValidatedNec[(Token[F], String), ArrowType]](
+          .fold[ValidatedNec[(Token[F], String), ArrowType]]( // TODO: get names
             Valid(ArrowType(ProductType(argTypes.toList), ProductType(resType.toList)))
           )(Invalid(_))
 
       case _ =>
-        Invalid(NonEmptyChain.one(ad.resType.getOrElse(ad) -> "Cannot resolve the result type"))
+        // TODO: error to ther right type! the head might be resolved
+        Invalid(
+          NonEmptyChain.one(ad.res.headOption.getOrElse(ad) -> "Cannot resolve the result type")
+        )
     }
 
   def resolveOps(

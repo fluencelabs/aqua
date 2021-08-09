@@ -40,7 +40,7 @@ object AirGen extends LogSupport {
   def opsToSingle(ops: Chain[AirGen]): AirGen = ops.toList match {
     case Nil => NullGen
     case h :: Nil => h
-    case list => list.reduceLeft(SeqGen)
+    case list => list.reduceLeft(SeqGen(_, _))
   }
 
   private def folder(op: ResolvedOp, ops: Chain[AirGen]): Eval[AirGen] =
@@ -48,12 +48,12 @@ object AirGen extends LogSupport {
 //      case mt: MetaTag =>
 //        folder(mt.op, ops).map(ag => mt.comment.fold(ag)(CommentGen(_, ag)))
       case SeqRes =>
-        Eval later ops.toList.reduceLeftOption(SeqGen).getOrElse(NullGen)
+        Eval later ops.toList.reduceLeftOption(SeqGen(_, _)).getOrElse(NullGen)
       case ParRes =>
         Eval later (ops.toList match {
           case o :: Nil => ParGen(o, NullGen)
           case _ =>
-            ops.toList.reduceLeftOption(ParGen).getOrElse {
+            ops.toList.reduceLeftOption(ParGen(_, _)).getOrElse {
               warn("ParRes with no children converted to Null")
               NullGen
             }
@@ -62,7 +62,7 @@ object AirGen extends LogSupport {
         Eval later (ops.toList match {
           case o :: Nil => XorGen(o, NullGen)
           case _ =>
-            ops.toList.reduceLeftOption(XorGen).getOrElse {
+            ops.toList.reduceLeftOption(XorGen(_, _)).getOrElse {
               warn("XorRes with no children converted to Null")
               NullGen
             }

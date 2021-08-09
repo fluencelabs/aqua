@@ -20,38 +20,56 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "Arrow type" should "parse" in {
+    val arrowdef = ArrowTypeToken.`arrowdef`[Id](DataTypeToken.`datatypedef`[Id])
+    val arrowWithNames = ArrowTypeToken.`arrowWithNames`[Id](DataTypeToken.`datatypedef`[Id])
 
-    ArrowTypeToken.`arrowdef`.parseAll("-> B").value should be(
-      ArrowTypeToken[Id]((), Nil, Some(CustomTypeToken[Id]("B")))
+    arrowdef.parseAll("-> B").value should be(
+      ArrowTypeToken[Id]((), Nil, List(CustomTypeToken[Id]("B")))
     )
-    ArrowTypeToken.`arrowdef`.parseAll("A -> B").value should be(
-      ArrowTypeToken[Id]((), CustomTypeToken[Id]("A") :: Nil, Some(CustomTypeToken[Id]("B")))
-    )
-
-    ArrowTypeToken.`arrowWithNames`.parseAll("(a: A) -> B").value should be(
-      ArrowTypeToken[Id]((), CustomTypeToken[Id]("A") :: Nil, Some(CustomTypeToken[Id]("B")))
-    )
-
-    ArrowTypeToken.`arrowdef`.parseAll("u32 -> Boo").value should be(
-      ArrowTypeToken[Id]((), (u32: BasicTypeToken[Id]) :: Nil, Some(CustomTypeToken[Id]("Boo")))
-    )
-    TypeToken.`typedef`.parseAll("u32 -> ()").value should be(
-      ArrowTypeToken[Id]((), (u32: BasicTypeToken[Id]) :: Nil, None)
-    )
-    ArrowTypeToken.`arrowdef`.parseAll("A, u32 -> B").value should be(
+    arrowdef.parseAll("A -> B").value should be(
       ArrowTypeToken[Id](
         (),
-        CustomTypeToken[Id]("A") :: (u32: BasicTypeToken[Id]) :: Nil,
-        Some(CustomTypeToken[Id]("B"))
+        (None -> CustomTypeToken[Id]("A")) :: Nil,
+        List(CustomTypeToken[Id]("B"))
       )
     )
-    ArrowTypeToken.`arrowdef`.parseAll("[]Absolutely, u32 -> B").value should be(
+
+    arrowWithNames.parseAll("(a: A) -> B").value should be(
       ArrowTypeToken[Id](
         (),
-        ArrayTypeToken[Id]((), CustomTypeToken[Id]("Absolutely")) :: (u32: BasicTypeToken[
+        (Some(Name[Id]("a")) -> CustomTypeToken[Id]("A")) :: Nil,
+        List(CustomTypeToken[Id]("B"))
+      )
+    )
+
+    arrowdef.parseAll("u32 -> Boo").value should be(
+      ArrowTypeToken[Id](
+        (),
+        (None -> (u32: BasicTypeToken[Id])) :: Nil,
+        List(CustomTypeToken[Id]("Boo"))
+      )
+    )
+    TypeToken.`typedef`.parseAll("u32 -> ()").value should be(
+      ArrowTypeToken[Id]((), (None -> (u32: BasicTypeToken[Id])) :: Nil, Nil)
+    )
+    arrowdef.parseAll("A, u32 -> B").value should be(
+      ArrowTypeToken[Id](
+        (),
+        (None -> CustomTypeToken[Id]("A")) :: (None -> (u32: BasicTypeToken[Id])) :: Nil,
+        List(CustomTypeToken[Id]("B"))
+      )
+    )
+    arrowdef.parseAll("[]Absolutely, u32 -> B, C").value should be(
+      ArrowTypeToken[Id](
+        (),
+        (Option.empty[Name[Id]] -> ArrayTypeToken[Id](
+          (),
+          CustomTypeToken[Id]("Absolutely")
+        )) :: (Option.empty[Name[Id]] -> (u32: BasicTypeToken[
           Id
-        ]) :: Nil,
-        Some(CustomTypeToken[Id]("B"))
+        ])) :: Nil,
+        CustomTypeToken[Id]("B") ::
+          CustomTypeToken[Id]("C") :: Nil
       )
     )
 

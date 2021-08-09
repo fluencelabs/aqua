@@ -1,7 +1,7 @@
 package aqua.parser.expr
 
-import aqua.parser.lexer.Token._
-import aqua.parser.lexer.{Arg, DataTypeToken, Name, Value}
+import aqua.parser.lexer.Token.*
+import aqua.parser.lexer.{Arg, ArrowTypeToken, DataTypeToken, Name, TypeToken, Value}
 import aqua.parser.lift.LiftParser
 import aqua.parser.{Ast, Expr, FuncReturnError, ParserError}
 import cats.Comonad
@@ -11,10 +11,11 @@ import cats.parse.Parser
 
 case class FuncExpr[F[_]](
   name: Name[F],
-  args: List[Arg[F]],
-  ret: Option[DataTypeToken[F]],
-  retValue: Option[Value[F]]
-) extends Expr[F](FuncExpr, name)
+  arrowTypeExpr: ArrowTypeToken[F],
+  retValue: List[Value[F]]
+) extends Expr[F](FuncExpr, name) {
+  def ret = arrowTypeExpr.res
+}
 
 object FuncExpr extends Expr.AndIndented {
 
@@ -36,10 +37,10 @@ object FuncExpr extends Expr.AndIndented {
       Nil
 
   override def p[F[_]: LiftParser: Comonad]: Parser[FuncExpr[F]] =
-    ((`func` *> ` ` *> Name.p[F])
-      ~ comma0(Arg.p.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
-      ~ (` -> ` *> DataTypeToken.`datatypedef`).?).map { case ((name, args), ret) =>
-      FuncExpr(name, args, ret, None)
+    ((`func` *> ` ` *> Name.p[F]) ~ ArrowTypeToken.`arrowWithNames`[F](
+      TypeToken.`typedef`[F]
+    )).map { case (name, arrow) =>
+      FuncExpr(name, arrow.copy(unit = name.unit), Nil)
     }
 
   override def ast[F[_]: LiftParser: Comonad](): Parser[ValidatedNec[ParserError[F], Ast.Tree[F]]] =
@@ -49,34 +50,65 @@ object FuncExpr extends Expr.AndIndented {
         _.andThen(tree =>
           tree.head match {
             case funcExpr: FuncExpr[F] =>
+              // Find the return expression which might be the last one in the function body
+              val maybeReturn =
+                tree.tail.value.lastOption.map(_.head).collect { case re: ReturnExpr[F] =>
+                  re
+                }
+              // Find correspondance between returned values and declared return types
               funcExpr.ret match {
-                case Some(ret) =>
-                  tree.tail.value.lastOption.map(_.head) match {
-                    case Some(re: ReturnExpr[F]) =>
-                      Validated
-                        .validNec(Cofree(funcExpr.copy(retValue = Some(re.value)), tree.tail))
-
-                    case _ =>
-                      Validated.invalidNec(
-                        FuncReturnError[F](
-                          ret.unit,
-                          "Return type is defined for function, but nothing returned. Use `<- value` as the last expression inside function body."
-                        )
+                case Nil =>
+                  // Nothing should be returned
+                  maybeReturn.fold(Validated.validNec(tree))(re =>
+                    // Declared nothing, but smth is returned
+                    Validated.invalidNec(
+                      FuncReturnError[F](
+                        re.token.unit,
+                        "Trying to return a value from function that has no return type. Please add return type to function declaration, e.g. `func foo() -> RetType:`"
                       )
+                    )
+                  )
+                case rets =>
+                  // Something is expected to be returned
+                  maybeReturn.fold(
+                    // No values are returned at all, no return expression
+                    Validated.invalidNec(
+                      FuncReturnError[F](
+                        rets.head.unit,
+                        "Return type is defined for function, but nothing returned. Use `<- value` as the last expression inside function body."
+                      )
+                    )
+                  ) { re =>
+                    // Something is returned, so check that numbers are the same
+                    def checkRet(typeDef: List[DataTypeToken[F]], values: List[Value[F]])
+                      : ValidatedNec[ParserError[F], Ast.Tree[F]] =
+                      (typeDef, values) match {
+                        case (Nil, Nil) =>
+                          // Everything checked, ok
+                          Validated
+                            .validNec(Cofree(funcExpr.copy(retValue = re.values.toList), tree.tail))
+                        case (_ :: tTail, _ :: vTail) =>
+                          // One more element checked, advance
+                          checkRet(tTail, vTail)
+                        case (t :: _, Nil) =>
+                          // No more values, but still have declared types
+                          Validated.invalidNec(
+                            FuncReturnError[F](
+                              t.unit,
+                              "Return type is defined for function, but nothing returned. Use `<- value, ...` as the last expression inside function body."
+                            )
+                          )
+                        case (_, v :: _) =>
+                          Validated.invalidNec(
+                            FuncReturnError[F](
+                              v.unit,
+                              "Return type is not defined for function, but something is returned."
+                            )
+                          )
+                      }
+                    checkRet(rets, re.values.toList)
                   }
 
-                case None =>
-                  tree.tail.value.lastOption.map(_.head) match {
-                    case Some(re: ReturnExpr[F]) =>
-                      Validated.invalidNec(
-                        FuncReturnError[F](
-                          re.value.unit,
-                          "Trying to return a value from function that has no return type. Please add return type to function declaration, e.g. `func foo() -> RetType:`"
-                        )
-                      )
-                    case _ =>
-                      Validated.validNec(tree)
-                  }
               }
 
             case _ => Validated.validNec(tree)

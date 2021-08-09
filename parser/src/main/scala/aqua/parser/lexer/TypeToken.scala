@@ -72,38 +72,32 @@ object BasicTypeToken {
       .map(BasicTypeToken(_))
 }
 
-sealed trait ArrowDef[F[_]] {
-  def argTypes: List[TypeToken[F]]
-  def resType: Option[DataTypeToken[F]]
-}
-
 case class ArrowTypeToken[F[_]: Comonad](
   override val unit: F[Unit],
-  args: List[DataTypeToken[F]],
-  res: Option[DataTypeToken[F]]
-) extends TypeToken[F] with ArrowDef[F] {
+  args: List[(Option[Name[F]], TypeToken[F])],
+  res: List[DataTypeToken[F]]
+) extends TypeToken[F] {
   override def as[T](v: T): F[T] = unit.as(v)
 
-  override def argTypes: List[TypeToken[F]] = args
-
-  override def resType: Option[DataTypeToken[F]] = res
+  def argTypes: List[TypeToken[F]] = args.map(_._2)
 }
 
 object ArrowTypeToken {
 
-  def `arrowdef`[F[_]: LiftParser: Comonad]: P[ArrowTypeToken[F]] =
-    (comma0(DataTypeToken.`datatypedef`).with1 ~ ` -> `.lift ~
-      (DataTypeToken.`datatypedef`
-        .map(Some(_)) | `()`.as(None))).map { case ((args, point), res) ⇒
-      ArrowTypeToken(point, args, res)
+  def `arrowdef`[F[_]: LiftParser: Comonad](argTypeP: P[TypeToken[F]]): P[ArrowTypeToken[F]] =
+    (comma0(argTypeP).with1 ~ ` -> `.lift ~
+      (comma(DataTypeToken.`datatypedef`).map(_.toList)
+        | `()`.as(Nil))).map { case ((args, point), res) ⇒
+      ArrowTypeToken(point, args.map(Option.empty[Name[F]] -> _), res)
     }
 
-  def `arrowWithNames`[F[_]: LiftParser: Comonad]: P[ArrowTypeToken[F]] =
+  def `arrowWithNames`[F[_]: LiftParser: Comonad](argTypeP: P[TypeToken[F]]): P[ArrowTypeToken[F]] =
     (((`(`.lift <* `/s*`) ~ comma0(
-      (Name.p[F] *> ` : ` *> DataTypeToken.`datatypedef`).surroundedBy(`/s*`)
+      (Name.p[F].map(Option(_)) ~ (` : ` *> (argTypeP | argTypeP.between(`(`, `)`))))
+        .surroundedBy(`/s*`)
     ) <* (`/s*` *> `)`)) ~
-      (` -> ` *> DataTypeToken.`datatypedef`).?).map { case ((point, args), res) =>
-      ArrowTypeToken(point, args, res)
+      (` -> ` *> comma(DataTypeToken.`datatypedef`)).?).map { case ((point, args), res) =>
+      ArrowTypeToken(point, args, res.toList.flatMap(_.toList))
     }
 }
 
@@ -130,7 +124,9 @@ object TypeToken {
 
   def `typedef`[F[_]: LiftParser: Comonad]: P[TypeToken[F]] =
     P.oneOf(
-      ArrowTypeToken.`arrowdef`.backtrack :: DataTypeToken.`datatypedef` :: Nil
+      ArrowTypeToken
+        .`arrowdef`((DataTypeToken.`datatypedef`[F]))
+        .backtrack :: DataTypeToken.`datatypedef` :: Nil
     )
 
 }
