@@ -16,11 +16,11 @@ case class ResolveFunc(
 
   private val returnVar: String = "-return-"
 
-  def returnCallback(retModel: ValueModel): FuncOp =
+  def returnCallback(retModel: List[ValueModel]): FuncOp =
     callback(
       respFuncName,
       Call(
-        retModel :: Nil,
+        retModel,
         Nil
       )
     )
@@ -55,9 +55,9 @@ case class ResolveFunc(
                 func.arrowType.domain.toLabelledList().map(ad => VarModel(ad._1, ad._2)),
                 returnType.map { case (l, t) => Call.Export(l, t) }
               )
-            ) ::
-            returnType.map { case (l, t) => VarModel(l, t) }
-              .map(returnCallback): _*
+            ) :: returnType.headOption
+            .map(_ => returnCallback(returnType.map { case (l, t) => VarModel(l, t) }))
+            .toList: _*
         )
       ),
       ArrowType(ConsType.cons(func.funcName, func.arrowType, NilType), NilType),

@@ -59,23 +59,33 @@ case class TypesState[F[_]](
       case ctt: CustomTypeToken[F] => strict.get(ctt.value)
       case btt: BasicTypeToken[F] => Some(btt.value)
       case ArrowTypeToken(_, args, res) =>
-        val strictArgs = args.map(resolveTypeToken).collect { case Some(dt: DataType) =>
+        val strictArgs = args.map(_._2).map(resolveTypeToken).collect { case Some(dt: DataType) =>
           dt
         }
-        val strictRes = res.flatMap(resolveTypeToken).collect { case dt: DataType =>
+        val strictRes: List[DataType] = res.flatMap(resolveTypeToken).collect { case dt: DataType =>
           dt
         }
-        Option.when(strictRes.isDefined == res.isDefined && strictArgs.length == args.length)(
+        Option.when(strictRes.length == res.length && strictArgs.length == args.length)(
           ArrowType(ProductType(strictArgs), ProductType(strictRes.toList))
         )
     }
 
-  def resolveArrowDef(ad: ArrowTypeToken[F]): ValidatedNec[(Token[F], String), ArrowType] =
-    ad.resType.flatMap(resolveTypeToken) match {
-      case resType if resType.isDefined == ad.resType.isDefined =>
-        val (errs, argTypes) = ad.argTypes
-          .map(tt => resolveTypeToken(tt).toRight(tt -> s"Type unresolved"))
-          .foldLeft[(Chain[(Token[F], String)], Chain[Type])]((Chain.empty, Chain.empty)) {
+  def resolveArrowDef(ad: ArrowTypeToken[F]): ValidatedNec[(Token[F], String), ArrowType] = {
+    val resType = ad.res.map(resolveTypeToken)
+
+    NonEmptyChain
+      .fromChain(Chain.fromSeq(ad.res.zip(resType).collect { case (dt, None) =>
+        dt -> "Cannot resolve the result type"
+      }))
+      .fold[ValidatedNec[(Token[F], String), ArrowType]] {
+        val (errs, argTypes) = ad.args.map { (argName, tt) =>
+          resolveTypeToken(tt)
+            .toRight(tt -> s"Type unresolved")
+            .map(argName.map(_.value) -> _)
+        }
+          .foldLeft[(Chain[(Token[F], String)], Chain[(Option[String], Type)])](
+            (Chain.empty, Chain.empty)
+          ) {
             case ((errs, argTypes), Right(at)) => (errs, argTypes.append(at))
             case ((errs, argTypes), Left(e)) => (errs.append(e), argTypes)
           }
@@ -83,12 +93,15 @@ case class TypesState[F[_]](
         NonEmptyChain
           .fromChain(errs)
           .fold[ValidatedNec[(Token[F], String), ArrowType]](
-            Valid(ArrowType(ProductType(argTypes.toList), ProductType(resType.toList)))
+            Valid(
+              ArrowType(
+                ProductType.maybeLabelled(argTypes.toList),
+                ProductType(resType.flatten.toList)
+              )
+            )
           )(Invalid(_))
-
-      case _ =>
-        Invalid(NonEmptyChain.one(ad.resType.getOrElse(ad) -> "Cannot resolve the result type"))
-    }
+      }(Invalid(_))
+  }
 
   def resolveOps(
     rootT: Type,

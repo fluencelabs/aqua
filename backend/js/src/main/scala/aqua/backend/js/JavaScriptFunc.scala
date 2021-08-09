@@ -27,6 +27,18 @@ case class JavaScriptFunc(func: FuncCallable) {
           |      opt = opt[0];
           |  }          
           |  return resolve(opt);""".stripMargin
+      case pt: ProductType =>
+        val unwrapOpts = pt.toList.zipWithIndex.collect { case (OptionType(_), i) =>
+          s"""
+             |  if(Array.isArray(opt[$i])) {
+             |     if (opt[$i].length === 0) { opt[$i] = null; }
+             |     else {opt[$i] = opt[$i][0]; }
+             |  }""".stripMargin
+        }.mkString
+
+        s""" let opt = args;
+           |$unwrapOpts
+           | return resolve(opt);""".stripMargin
       case _ =>
         """  const [res] = args;
           |  resolve(res);""".stripMargin
@@ -51,18 +63,15 @@ case class JavaScriptFunc(func: FuncCallable) {
         val value = s"$argName(${argsCallToJs(
           at
         )})"
-        val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
+        val expr = at.codomain.uncons.fold(s"$value; return {}")(_ => s"return $value")
         s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
     }
       .mkString("\n")
 
-    // TODO support multi-return
     val returnCallback = func.arrowType.codomain.uncons
-      .map(_._1)
-      .map(t => genReturnCallback(t, conf.callbackService, conf.respFuncName))
+      .map(_ => genReturnCallback(func.arrowType.codomain, conf.callbackService, conf.respFuncName))
       .getOrElse("")
 
-    // TODO support multi-return
     val returnVal =
       func.ret.headOption.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 

@@ -11,10 +11,10 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
 
   "func calls" should "parse func()" in {
-    parseExpr("func()") should be(CallArrowExpr[Id](None, None, toName("func"), List()))
+    parseExpr("func()") should be(CallArrowExpr[Id](Nil, None, toName("func"), List()))
     parseExpr("Ab.func(arg)") should be(
       CallArrowExpr[Id](
-        None,
+        Nil,
         Some(toAb("Ab")),
         Name[Id]("func"),
         List(VarLambda[Id](toName("arg")))
@@ -23,7 +23,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     parseExpr("func(arg.doSomething)") should be(
       CallArrowExpr[Id](
-        None,
+        Nil,
         None,
         Name[Id]("func"),
         List(toVarLambda("arg", List("doSomething")))
@@ -32,7 +32,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     parseExpr("func(arg.doSomething.and.doSomethingElse)") should be(
       CallArrowExpr[Id](
-        None,
+        Nil,
         None,
         Name[Id]("func"),
         List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse")))
@@ -41,7 +41,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     parseExpr("func(arg.doSomething.and.doSomethingElse)") should be(
       CallArrowExpr[Id](
-        None,
+        Nil,
         None,
         Name[Id]("func"),
         List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse")))
@@ -50,7 +50,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     parseExpr("Ab.func(arg.doSomething.and.doSomethingElse, arg2.someFunc)") should be(
       CallArrowExpr[Id](
-        None,
+        Nil,
         Some(toAb("Ab")),
         Name[Id]("func"),
         List(
@@ -62,7 +62,18 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     parseExpr("x <- func(arg.doSomething)") should be(
       CallArrowExpr[Id](
-        Some(toName("x")),
+        List(toName("x")),
+        None,
+        Name[Id]("func"),
+        List(
+          toVarLambda("arg", List("doSomething"))
+        )
+      )
+    )
+
+    parseExpr("x, y, z <- func(arg.doSomething)") should be(
+      CallArrowExpr[Id](
+        toName("x") :: toName("y") :: toName("z") :: Nil,
         None,
         Name[Id]("func"),
         List(

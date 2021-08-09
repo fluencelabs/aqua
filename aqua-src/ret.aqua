@@ -1,16 +1,15 @@
-data DT:
-  field: string
+service Getter("test"):
+    createStr: u32 -> string
 
-service DTGetter("get-dt"):
-    get_dt(s: string) -> DT
+service OpO("op"):
+    identity: string -> string
 
-func use_name1(name: string) -> string:
-    results <- DTGetter.get_dt(name)
-    <- results.field
+-- a question mark means that this constant could be rewritten before this definition
+const anotherConst ?= "default-str"
+const uniqueConst ?= 5
 
-func use_name2(name: string) -> []string:
-    results: *string
-    results <- use_name1(name)
-    results <- use_name1(name)
-    results <- use_name1(name)
-    <- results
+func callConstant() -> []string, u8:
+    res: *string
+    res <- Getter.createStr(uniqueConst)
+    res <- OpO.identity(anotherConst)
+    <- res, 5

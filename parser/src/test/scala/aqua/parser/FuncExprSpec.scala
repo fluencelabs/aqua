@@ -7,7 +7,7 @@ import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp, Literal, Token, 
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.ScalarType.*
 import cats.Id
-import cats.data.Chain
+import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import cats.syntax.foldable.*
 import org.scalatest.flatspec.AnyFlatSpec
@@ -21,43 +21,43 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "func header" should "parse" in {
     funcExpr("func some() -> bool") should be(
-      FuncExpr("some", List(), Some(bool: BasicTypeToken[Id]), None)
+      FuncExpr("some", toNamedArrow(Nil, List(bool: BasicTypeToken[Id])), Nil)
     )
-    funcExpr("func some()") should be(FuncExpr("some", List(), None, None))
+    funcExpr("func some()") should be(FuncExpr("some", toNamedArrow(Nil, Nil), Nil))
 
     val arrowToken =
-      ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u8)), Some(BasicTypeToken[Id](bool)))
+      ArrowTypeToken[Id]((), List(None -> BasicTypeToken[Id](u8)), List(BasicTypeToken[Id](bool)))
     funcExpr("func some(peer: PeerId, other: u8 -> bool)") should be(
       FuncExpr(
         toName("some"),
-        List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken)),
-        None,
-        None
+        toNamedArrow(("peer" -> toCustomType("PeerId")) :: ("other" -> arrowToken) :: Nil, Nil),
+        Nil
       )
     )
 
     val arrowToken2 =
       ArrowTypeToken[Id](
         (),
-        List(BasicTypeToken[Id](u32), BasicTypeToken[Id](u64)),
-        Some(BasicTypeToken[Id](bool))
+        List(None -> BasicTypeToken[Id](u32), None -> BasicTypeToken[Id](u64)),
+        List(BasicTypeToken[Id](bool))
       )
     funcExpr("func some(peer: PeerId, other: u32, u64 -> bool)") should be(
       FuncExpr(
         toName("some"),
-        List(toCustomArg("peer", "PeerId"), toArg("other", arrowToken2)),
-        None,
-        None
+        toNamedArrow(("peer" -> toCustomType("PeerId")) :: ("other" -> arrowToken2) :: Nil, Nil),
+        Nil
       )
     )
 
-    val arrowToken3 = ArrowTypeToken[Id]((), List(BasicTypeToken[Id](u32)), None)
-    funcExpr("func getTime(peer: PeerId, ret: u32 -> ()) -> string") should be(
+    val arrowToken3 = ArrowTypeToken[Id]((), List(None -> BasicTypeToken[Id](u32)), Nil)
+    funcExpr("func getTime(peer: PeerId, ret: u32 -> ()) -> string, u32") should be(
       FuncExpr(
         toName("getTime"),
-        List(toCustomArg("peer", "PeerId"), toArg("ret", arrowToken3)),
-        Some(BasicTypeToken[Id](string)),
-        None
+        toNamedArrow(
+          ("peer" -> toCustomType("PeerId")) :: ("ret" -> arrowToken3) :: Nil,
+          BasicTypeToken[Id](string) :: BasicTypeToken[Id](u32) :: Nil
+        ),
+        Nil
       )
     )
   }
@@ -88,7 +88,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |  call(true)""".stripMargin
 
     val tree = FuncExpr.ast[Id]().parseAll(script).value.toEither.value
-    val funcBody = checkHeadGetTail(tree, FuncExpr("a", Nil, None, None), 1).toList
+    val funcBody = checkHeadGetTail(tree, FuncExpr("a", toNamedArrow(Nil, Nil), Nil), 1).toList
 
     val ifBody =
       checkHeadGetTail(
@@ -98,10 +98,10 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       ).toList
 
     ifBody.head.head should be(
-      CallArrowExpr(Some(toName("x")), Some(toAb("Ab")), "func", Nil)
+      CallArrowExpr(List(toName("x")), Some(toAb("Ab")), "func", Nil)
     )
     ifBody(1).head should be(AbilityIdExpr(toAb("Peer"), toStr("some id")))
-    ifBody(2).head should be(CallArrowExpr(None, None, "call", List(toBool(true))))
+    ifBody(2).head should be(CallArrowExpr(Nil, None, "call", List(toBool(true))))
 
   }
 
@@ -161,22 +161,25 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     // Local service
     qTree.d() shouldBe ServiceExpr(toAb("Local"), Some(toStr("local")))
     qTree.d() shouldBe ArrowTypeExpr("gt", toArrowType(Nil, Some(scToBt(bool))))
-    qTree.d() shouldBe FuncExpr("tryGen", Nil, Some(scToBt(bool)), Some("v": VarLambda[Id]))
+    qTree.d() shouldBe FuncExpr(
+      "tryGen",
+      toNamedArrow(Nil, scToBt(bool) :: Nil),
+      List("v": VarLambda[Id])
+    )
     qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")))
-    qTree.d() shouldBe CallArrowExpr(Some("v"), Some(toAb("Local")), "gt", Nil)
-    qTree.d() shouldBe ReturnExpr(toVar("v"))
+    qTree.d() shouldBe CallArrowExpr(List("v"), Some(toAb("Local")), "gt", Nil)
+    qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("v")))
     // genC function
     qTree.d() shouldBe FuncExpr(
       "genC",
-      List(toArgSc("val", string)),
-      Some(boolSc),
-      Some("two": VarLambda[Id])
+      toNamedArrow(("val" -> string) :: Nil, boolSc :: Nil),
+      List("two": VarLambda[Id])
     )
-    qTree.d() shouldBe CallArrowExpr(Some("one"), Some(toAb("Local")), "gt", List())
+    qTree.d() shouldBe CallArrowExpr(List("one"), Some(toAb("Local")), "gt", List())
     qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
-    qTree.d() shouldBe CallArrowExpr(Some("two"), None, "tryGen", List())
-    qTree.d() shouldBe CallArrowExpr(Some("three"), Some(toAb("Local")), "gt", List())
-    qTree.d() shouldBe ReturnExpr(toVar("two"))
+    qTree.d() shouldBe CallArrowExpr(List("two"), None, "tryGen", List())
+    qTree.d() shouldBe CallArrowExpr(List("three"), Some(toAb("Local")), "gt", List())
+    qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("two")))
     /* TODO this is semantics, not parser test
 
     val f =

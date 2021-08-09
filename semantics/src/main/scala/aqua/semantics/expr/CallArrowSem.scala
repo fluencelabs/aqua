@@ -29,21 +29,24 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Free[Alg, (List[ValueModel], Option[Type])] =
-    V.checkArguments(expr.funcName, at, args) >> variable
-      .fold(freeUnit[Alg].as(Option.empty[Type]))(exportVar =>
-        at.res.fold(
-          // TODO: error! we're trying to export variable, but function has no export type
-          freeUnit[Alg].as(Option.empty[Type])
-        )(resType =>
-          N.read(exportVar, mustBeDefined = false).flatMap {
-            case Some(t @ StreamType(st)) =>
-              T.ensureTypeMatches(exportVar, st, resType).as(Option(t))
-            case _ => N.define(exportVar, resType).as(at.res)
-          }
-        )
-      ) >>= { (v: Option[Type]) =>
-      Traverse[List].traverse(args)(V.valueToModel).map(_.flatten).map(_ -> v)
+  ): Free[Alg, (List[ValueModel], List[Type])] =
+    V.checkArguments(expr.funcName, at, args) >> variables
+      .foldLeft(freeUnit[Alg].as((List.empty[Type], at.codomain.toList)))((f, exportVar) =>
+        f.flatMap {
+          case (exports, Nil) =>
+            freeUnit[Alg].as(exports -> Nil)
+
+          case (exports, resType :: codom) =>
+            N.read(exportVar, mustBeDefined = false).flatMap {
+              case Some(t @ StreamType(st)) =>
+                T.ensureTypeMatches(exportVar, st, resType).as((t :: exports, codom))
+              case _ =>
+                N.define(exportVar, resType).as((resType :: exports, codom))
+            }
+        }
+      )
+      .map(_._1) >>= { (v: List[Type]) =>
+      Traverse[List].traverse(args)(V.valueToModel).map(_.flatten -> v.reverse)
     }
 
   private def toModel[Alg[_]](implicit
@@ -74,30 +77,30 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
   ): Free[Alg, FuncOp] = {
-    checkArgsRes(arrowType).flatMap { case (argsResolved, tOp) =>
-      ((variable, tOp) match {
-        case (Some(v), Some(t)) =>
-          Free.pure[Alg, Option[Call.Export]](Option(Call.Export(v.value, t)))
-        case (Some(v), None) =>
-          T.expectNoExport(v).map(_ => None)
-        case _ =>
-          Free.pure[Alg, Option[Call.Export]](None)
-
-      }).map(maybeExport =>
-        FuncOp.leaf(serviceId match {
-          case Some(sid) =>
-            CallServiceTag(
-              serviceId = sid,
-              funcName = funcName.value,
-              Call(argsResolved, maybeExport.toList)
-            )
-          case None =>
-            CallArrowTag(
-              funcName = funcName.value,
-              Call(argsResolved, maybeExport.toList)
-            )
-        })
-      )
+    checkArgsRes(arrowType).flatMap { (argsResolved, resTypes) =>
+      variables
+        .drop(arrowType.codomain.length)
+        .headOption
+        .fold(
+          Free.pure((variables zip resTypes).map { case (v, t) =>
+            Call.Export(v.value, t)
+          })
+        )(T.expectNoExport(_).as(Nil))
+        .map(maybeExport =>
+          FuncOp.leaf(serviceId match {
+            case Some(sid) =>
+              CallServiceTag(
+                serviceId = sid,
+                funcName = funcName.value,
+                Call(argsResolved, maybeExport)
+              )
+            case None =>
+              CallArrowTag(
+                funcName = funcName.value,
+                Call(argsResolved, maybeExport)
+              )
+          })
+        )
     }
   }
 
