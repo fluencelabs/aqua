@@ -50,12 +50,12 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     val arrowToken3 = ArrowTypeToken[Id]((), List(None -> BasicTypeToken[Id](u32)), Nil)
-    funcExpr("func getTime(peer: PeerId, ret: u32 -> ()) -> string") should be(
+    funcExpr("func getTime(peer: PeerId, ret: u32 -> ()) -> string, u32") should be(
       FuncExpr(
         toName("getTime"),
         toNamedArrow(
           ("peer" -> toCustomType("PeerId")) :: ("ret" -> arrowToken3) :: Nil,
-          BasicTypeToken[Id](string) :: Nil
+          BasicTypeToken[Id](string) :: BasicTypeToken[Id](u32) :: Nil
         ),
         Nil
       )

@@ -56,7 +56,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
         )
       )
       .map(argsAndRes =>
-        ArrowType(ProductType.labelled(argsAndRes._1), ProductType(argsAndRes._2.toList))
+        ArrowType(ProductType.labelled(argsAndRes._1), ProductType(argsAndRes._2.reverse))
       )
 
   def generateFuncModel[Alg[_]](funcArrow: ArrowType, retModel: List[ValueModel], body: FuncOp)(

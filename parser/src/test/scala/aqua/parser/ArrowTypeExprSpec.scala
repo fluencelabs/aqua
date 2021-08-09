@@ -2,6 +2,7 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.ArrowTypeExpr
+import aqua.parser.lexer.ArrowTypeToken
 import aqua.types.ScalarType.{string, u32}
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
@@ -31,6 +32,17 @@ class ArrowTypeExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       ArrowTypeExpr[Id](
         "onIn",
         toArrowType(List("Custom", string, u32, "Custom3"), Some("Custom2"))
+      )
+    )
+    parseArrow("onIn: Custom, string, u32, Custom3 -> Custom2, string") should be(
+      ArrowTypeExpr[Id](
+        "onIn",
+        ArrowTypeToken[Id](
+          (),
+          List(toCustomType("Custom"), scToBt(string), scToBt(u32), toCustomType("Custom3"))
+            .map(None -> _),
+          List(toCustomType("Custom2"), scToBt(string))
+        )
       )
     )
   }
