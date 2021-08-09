@@ -15,12 +15,6 @@ val log4catsV = "2.1.1"
 val slf4jV = "1.7.30"
 val declineV = "2.1.0"
 
-val airframeLog = "org.wvlet.airframe" %% "airframe-log" % airframeLogV
-val catsEffect = "org.typelevel"       %% "cats-effect"  % catsEffectV
-val fs2Io = "co.fs2"                   %% "fs2-io"       % fs2V
-val catsFree = "org.typelevel"         %% "cats-free"    % catsV
-val cats = "org.typelevel"             %% "cats-core"    % catsV
-
 name := "aqua-hll"
 
 val commons = Seq(
@@ -28,9 +22,9 @@ val commons = Seq(
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "log4cats-core" % log4catsV,
-    airframeLog,
-    "org.scalatest" %% "scalatest" % scalaTestV % Test
+    "org.typelevel"      %%% "log4cats-core" % log4catsV,
+    "org.wvlet.airframe" %%% "airframe-log"  % airframeLogV,
+    "org.scalatest"      %%% "scalatest"     % scalaTestV % Test
   ),
   scalacOptions ++= {
     Seq(
@@ -52,12 +46,15 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("cli"))
   .settings(commons: _*)
+  .dependsOn(compiler, `backend-air`, `backend-ts`, `backend-js`)
 
 lazy val cliJS = cli.js
   .settings(
-    scalaJSUseMainModuleInitializer := true
+    scalaJSUseMainModuleInitializer := true,
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-effect" % catsEffectV
+    )
   )
-  .enablePlugins(ScalaJSPlugin)
 
 lazy val cliJVM = cli.jvm
   .settings(
@@ -65,58 +62,63 @@ lazy val cliJVM = cli.jvm
     assembly / mainClass       := Some("aqua.AquaCli"),
     assembly / assemblyJarName := "aqua-cli-" + version.value + ".jar",
     libraryDependencies ++= Seq(
-      "com.monovore" %% "decline"        % declineV,
-      "com.monovore" %% "decline-effect" % declineV,
-      catsEffect,
-      fs2Io,
+      "com.monovore"  %% "decline"        % declineV,
+      "com.monovore"  %% "decline-effect" % declineV,
+      "co.fs2"        %% "fs2-io"         % fs2V,
       "org.typelevel" %% "log4cats-slf4j" % log4catsV,
       "org.slf4j"      % "slf4j-jdk14"    % slf4jV
     )
   )
-  .dependsOn(compiler, `backend-air`, `backend-ts`, `backend-js`)
 
-lazy val types = project
+lazy val types = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .settings(commons)
   .settings(
     libraryDependencies ++= Seq(
-      cats
+      "org.typelevel" %%% "cats-core" % catsV
     )
   )
 
-lazy val parser = project
+lazy val parser = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-parse" % catsParseV,
-      catsFree
+      "org.typelevel"  %% "cats-parse" % catsParseV,
+      "org.typelevel" %%% "cats-free"  % catsV
     )
   )
   .dependsOn(types)
 
-lazy val linker = project
+lazy val linker = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .settings(commons: _*)
-  .settings(
-    libraryDependencies ++= Seq(
-      airframeLog
-    )
-  )
   .dependsOn(parser)
 
-lazy val model = project
+lazy val model = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      catsFree
+      "org.typelevel" %%% "cats-free" % catsV
     )
   )
   .dependsOn(types)
 
-lazy val `test-kit` = project
+lazy val `test-kit` = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .in(file("model/test-kit"))
   .settings(commons: _*)
   .dependsOn(model)
 
-lazy val semantics = project
+lazy val semantics = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
@@ -126,27 +128,37 @@ lazy val semantics = project
   )
   .dependsOn(model, `test-kit` % Test, parser)
 
-lazy val compiler = project
+lazy val compiler = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .in(file("compiler"))
   .settings(commons: _*)
   .dependsOn(semantics, linker, backend)
 
-lazy val backend = project
+lazy val backend = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .in(file("backend"))
   .settings(commons: _*)
   .dependsOn(model)
 
-lazy val `backend-air` = project
+lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .in(file("backend/air"))
   .settings(commons: _*)
   .dependsOn(backend)
 
-lazy val `backend-ts` = project
+lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .in(file("backend/ts"))
   .settings(commons: _*)
   .dependsOn(`backend-air`)
 
-lazy val `backend-js` = project
+lazy val `backend-js` = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .in(file("backend/js"))
   .settings(commons: _*)
   .dependsOn(`backend-air`)
