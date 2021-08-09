@@ -35,6 +35,18 @@ case class TypeScriptFunc(func: FuncCallable) {
           |      opt = opt[0];
           |  }          
           |  return resolve(opt);""".stripMargin
+      case pt: ProductType =>
+        val unwrapOpts = pt.toList.zipWithIndex.collect { case (OptionType(_), i) =>
+          s"""
+             |  if(Array.isArray(opt[$i])) {
+             |     if (opt[$i].length === 0) { opt[$i] = null; }
+             |     else {opt[$i] = opt[$i][0]; }
+             |  }""".stripMargin
+        }.mkString
+
+        s""" let opt = args;
+           |$unwrapOpts
+           | return resolve(opt);""".stripMargin
       case _ =>
         """  const [res] = args;
           |  resolve(res);""".stripMargin
@@ -51,8 +63,9 @@ case class TypeScriptFunc(func: FuncCallable) {
     val tsAir = FuncAirGen(func).generateAir(conf)
 
     // TODO: support multi return
-    val retType = func.arrowType.codomain.uncons
-      .map(_._1)
+    val retType =
+      if (func.arrowType.codomain.length > 1) Some(func.arrowType.codomain)
+      else func.arrowType.codomain.uncons.map(_._1)
     val retTypeTs = retType
       .fold("void")(typeToTs)
 
@@ -133,8 +146,10 @@ object TypeScriptFunc {
     case OptionType(t) => typeToTs(t) + " | null"
     case ArrayType(t) => typeToTs(t) + "[]"
     case StreamType(t) => typeToTs(t) + "[]"
-    case pt: StructType =>
-      s"{${pt.fields.map(typeToTs).toNel.map(kv => kv._1 + ":" + kv._2).toList.mkString(";")}}"
+    case pt: ProductType =>
+      "[" + pt.toList.map(typeToTs).mkString(", ") + "]"
+    case st: StructType =>
+      s"{${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ":" + kv._2).toList.mkString(";")}}"
     case st: ScalarType if ScalarType.number(st) => "number"
     case ScalarType.bool => "boolean"
     case ScalarType.string => "string"
@@ -157,6 +172,6 @@ object TypeScriptFunc {
       .mkString(", ")
 
   def argsCallToTs(at: ArrowType): String =
-    at.args.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
+    at.domain.toList.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
 
 }

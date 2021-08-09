@@ -8,8 +8,8 @@ service OpO("op"):
 const anotherConst ?= "default-str"
 const uniqueConst ?= 5
 
-func callConstant() -> []string:
+func callConstant() -> []string, u8:
     res: *string
     res <- Getter.createStr(uniqueConst)
     res <- OpO.identity(anotherConst)
-    <- res
+    <- res, 5
