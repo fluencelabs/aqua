@@ -51,7 +51,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "throw an error if there is no import that is indicated in a source" in {
-    val path = Paths.get("cli/src/test/test-dir")
+    val path = Paths.get("cli/.jvm/src/test/test-dir")
     val importPath = path.resolve("random/import/path")
 
     val sourceGen = new AquaFileSources[IO](path, importPath :: Nil)
@@ -96,7 +96,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "resolve correct path for target" in {
-    val path = Paths.get("cli/src/test/test-dir")
+    val path = Paths.get("cli/.jvm/src/test/test-dir")
     val filePath = path.resolve("some-dir/file.aqua")
 
     val targetPath = Paths.get("/target/dir/")
@@ -113,13 +113,13 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "write correct file with correct path" in {
-    val path = Paths.get("cli/src/test/test-dir")
+    val path = Paths.get("cli/.jvm/src/test/test-dir")
     val filePath = path.resolve("imports/import.aqua")
 
     val targetPath = path.resolve("target/")
 
     // clean up
-    val resultPath = Paths.get("cli/src/test/test-dir/target/imports/import_hey.custom")
+    val resultPath = Paths.get("cli/.jvm/src/test/test-dir/target/imports/import_hey.custom")
     Files[IO].deleteIfExists(resultPath).unsafeRunSync()
 
     val sourceGen = new AquaFileSources[IO](path, Nil)
