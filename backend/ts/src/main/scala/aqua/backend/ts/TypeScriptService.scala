@@ -18,31 +18,6 @@ case class TypeScriptService(service: ServiceModel) {
     """.stripMargin
   }
 
-  def fnDef(arrow: ArrowType, memberName: String) = {
-    val argsWithTypes = arrow.args
-      .map(typeToTs)
-      .zipWithIndex
-      .map(_.swap)
-      .map(kv => ("arg" + kv._1, kv._2))
-
-    val callParamsGeneric = if (argsWithTypes.length > 0) {
-      val prep = argsWithTypes
-        .map(kv => kv._1)
-        .mkString(" | ")
-
-      "'" + prep + "'"
-    } else {
-      "null"
-    }
-
-    val args = argsWithTypes
-      .map(kv => kv._1 + ": " + kv._2)
-      .concat(List(s"callParams: CallParams<${callParamsGeneric}>"))
-      .mkString(", ")
-
-    s"${memberName}: (${args}) => ${arrow.res.fold("void")(typeToTs)};"
-  }
-
   def generateTypescript(conf: BodyConfig = BodyConfig()): String = {
     val twoSlashn = System.lineSeparator() + System.lineSeparator()
     val list = service.arrows.toNel.toList
@@ -54,29 +29,49 @@ case class TypeScriptService(service: ServiceModel) {
 
     val fnDefs = list
       .map({ case (name, arrow) =>
-        fnDef(arrow, name)
+        s"${name}: ${fnBodyDef(arrow)};"
       })
       .mkString("" + System.lineSeparator())
 
+    val registerName = s"register${service.name}"
+
+    val registerNameImpl = s"register${service.name}Impl"
+
+    val registerServiceType = s""" (
+       |     options: { serviceId: string },
+       |        service: {
+       |            ${fnDefs}
+       |        },
+       | )"""
+
     s"""
-       |export function register${service.name}(
-       |    client: FluenceClient,
-       |    id: string,
-       |    service: {
-       |        ${fnDefs}
-       |    },
-       |) {
-       |    client.callServiceHandler.use((req, resp, next) => {
-       |        if (req.serviceId !== id) {
-       |            next();
-       |            return;
-       |        }
+       | const ${registerNameImpl} = (peer: FluencePeer) => {
+       |     return ${registerServiceType} => {
+       |           peer.callServiceHandler.use((req, resp, next) => {
+       |               if (req.serviceId !== options.serviceId) {
+       |                   next();
+       |                   return;
+       |               }
+       |       
+       |               ${fnHandlers}
+       |       
+       |               next();
+       |           });
+       |       }
+       | }
+       | 
+       | export const ${registerName} = ${registerNameImpl}(FluencePeer.default);
+       | 
+       | declare module "@fluencelabs/fluence" {
+       |     interface FluencePeer {
+       |         ${registerName}: ${registerServiceType} => void;
+       |     }
+       | }
        |
-       |        ${fnHandlers}
-       |
-       |        next();
-       |    });
-       |}
+       | FluencePeer.prototype.${registerName} = function (o, s) {
+       |    return ${registerNameImpl}(this)(o, s);
+       | };
+
     """.stripMargin
   }
 

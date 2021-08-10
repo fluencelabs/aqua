@@ -21,9 +21,7 @@ object TypeScriptCommon {
     case lt: LiteralType if lt.oneOf(ScalarType.bool) => "boolean"
     case lt: LiteralType if lt.oneOf(ScalarType.string) => "string"
     case _: DataType => "any"
-    case at: ArrowType =>
-      s"(${arrowArgumentsToTsArgumentList(at)}) => ${at.res
-        .fold("void")(typeToTs)}"
+    case at: ArrowType => fnBodyDef(at)
   }
 
   def callBackExprBody(at: ArrowType, callbackName: String): String = {
@@ -53,6 +51,7 @@ object TypeScriptCommon {
       .zipWithIndex
       .map(_.swap)
       .map(kv => "arg" + kv._1 + ": " + kv._2)
+      .concat(List("callParams: CallParams"))
       .mkString(", ")
 
   def arrowArgumentsToCallbackArgumentsList(at: ArrowType): String =
@@ -67,5 +66,30 @@ object TypeScriptCommon {
       .map(_._2)
       .map(idx => s"arg${idx}: req.tetraplets[${idx}]")
       .mkString("," + System.lineSeparator())
+
+  def fnBodyDef(arrow: ArrowType) = {
+    val argsWithTypes = arrow.args
+      .map(typeToTs)
+      .zipWithIndex
+      .map(_.swap)
+      .map(kv => ("arg" + kv._1, kv._2))
+
+    val callParamsGeneric = if (argsWithTypes.length > 0) {
+      val prep = argsWithTypes
+        .map(kv => kv._1)
+        .mkString("' | '")
+
+      "'" + prep + "'"
+    } else {
+      "null"
+    }
+
+    val args = argsWithTypes
+      .map(kv => kv._1 + ": " + kv._2)
+      .concat(List(s"callParams: CallParams<${callParamsGeneric}>"))
+      .mkString(", ")
+
+    s"(${args}) => ${arrow.res.fold("void")(typeToTs)}"
+  }
 
 }

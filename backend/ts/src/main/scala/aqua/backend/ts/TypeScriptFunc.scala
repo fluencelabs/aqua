@@ -78,50 +78,68 @@ case class TypeScriptFunc(func: FuncCallable) {
     val returnVal =
       func.ret.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
-    val clientArgName = generateUniqueArgName(func.args.args.map(_.name), "client", 0)
+    val peerArgName = generateUniqueArgName(func.args.args.map(_.name), "client", 0)
     val configArgName = generateUniqueArgName(func.args.args.map(_.name), "config", 0)
 
     val configType = "{ttl?: number}"
 
+    val funcNameImpl = s"${func.funcName}Impl"
+
+    val funcName = s"${func.funcName}"
+
+    val funcTypeArg = s"(${argsTypescript}, $configArgName?: $configType)"
+    val funcTypeRes = s"Promise<$retType>"
+
     s"""
-       |export async function ${func.funcName}($clientArgName: FluenceClient${if (func.args.isEmpty)
-      ""
-    else ", "}${argsTypescript}, $configArgName?: $configType): Promise<$retType> {
-       |    let request: RequestFlow;
-       |    const promise = new Promise<$retType>((resolve, reject) => {
-       |        const r = new RequestFlowBuilder()
-       |            .disableInjections()
-       |            .withRawScript(
-       |                `
-       |${tsAir.show}
-       |            `,
-       |            )
-       |            .configHandler((h) => {
-       |                ${conf.relayVarName.fold("") { r =>
+       | const ${funcNameImpl} = (peer: FluencePeer) => {
+       |     return async  ${funcTypeArg}: ${funcTypeRes} => {
+       |        let request: RequestFlow;
+       |        const promise = new Promise<$retType>((resolve, reject) => {
+       |            const r = new RequestFlowBuilder()
+       |                .disableInjections()
+       |                .withRawScript(
+       |                    `
+       |    ${tsAir.show}
+       |                `,
+       |                )
+       |                .configHandler((h) => {
+       |                    ${conf.relayVarName.fold("") { r =>
       s"""h.on('${conf.getDataService}', '$r', () => {
-       |                    return $clientArgName.relayPeerId!;
-       |                });""".stripMargin
-    }}
-       |                $setCallbacks
-       |                $returnCallback
-       |                h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
-       |                    // assuming error is the single argument
-       |                    const [err] = args;
-       |                    reject(err);
-       |                });
-       |            })
-       |            .handleScriptError(reject)
-       |            .handleTimeout(() => {
-       |                reject('Request timed out for ${func.funcName}');
-       |            })
-       |        if(${configArgName} && ${configArgName}.ttl) {
-       |            r.withTTL(${configArgName}.ttl)
-       |        }
-       |        request = r.build();
-       |    });
-       |    await $clientArgName.initiateFlow(request!);
-       |    return ${returnVal};
+       |                        return peer.connectionInfo.connectedRelays[0];
+       |                    });""".stripMargin
+    }}    
+       |                    $setCallbacks
+       |                    $returnCallback
+       |                    h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
+       |                        const [err] = args;
+       |                        reject(err);
+       |                    });
+       |                })
+       |                .handleScriptError(reject)
+       |                .handleTimeout(() => {
+       |                    reject('Request timed out for ${func.funcName}');
+       |                })
+       |            if(${configArgName} && ${configArgName}.ttl) {
+       |                r.withTTL(${configArgName}.ttl)
+       |            }
+       |            request = r.build();
+       |        });
+       |        await peer.initiateFlow(request!);
+       |        return ${returnVal};
+       |    }
        |}
+       |
+       | export const ${funcName} = ${funcNameImpl}(FluencePeer.default);
+       | 
+       | declare module "@fluencelabs/fluence" {
+       |     interface FluencePeer {
+       |         ${funcName}: ${funcTypeArg} => ${funcTypeRes}
+       |     }
+       | }
+       |
+       |FluencePeer.prototype.${funcName} = function (...args) {
+       |    return ${funcNameImpl}(this)(...args);
+       | };
       """.stripMargin
   }
 

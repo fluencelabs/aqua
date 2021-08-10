@@ -34,13 +34,12 @@ object TypeScriptFile {
        | *
        | */
        |import {
-       |    createClient,
-       |    FluenceClient,
        |    ResultCodes,
        |    RequestFlow,
        |    RequestFlowBuilder,
        |    CallParams,
        |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v1';
+       |import { FluencePeer } from '@fluencelabs/fluence';
        |""".stripMargin
 
 }
