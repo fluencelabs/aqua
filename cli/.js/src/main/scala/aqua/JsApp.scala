@@ -32,16 +32,17 @@ object JsApp {
   }
 
   def main(args: Array[String]): Unit = {
-    val sources = new Sources[IO]()
-    val bodyConfig = GenerationConfig()
-    val b = AquaCompiler
-      .compileTo[IO, AquaJsError, FileId, FileSpan.F, String](
-        sources,
-        (fmid, src) => FileSpan.fileSpanLiftParser(fmid.name, src),
-        TypeScriptBackend,
-        bodyConfig,
-        (a) => ???
-      )
+    // test code
+//    val sources = new Sources[IO]()
+//    val bodyConfig = GenerationConfig()
+//    val b = AquaCompiler
+//      .compileTo[IO, AquaJsError, FileId, FileSpan.F, String](
+//        sources,
+//        (fmid, src) => FileSpan.fileSpanLiftParser(fmid.name, src),
+//        TypeScriptBackend,
+//        bodyConfig,
+//        (a) => ???
+//      )
     println("Hello world!")
   }
 }

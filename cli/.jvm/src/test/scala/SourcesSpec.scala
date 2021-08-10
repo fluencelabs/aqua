@@ -16,7 +16,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
   implicit val aquaIO: AquaIO[IO] = AquaFilesIO.summon[IO]
 
   "AquaFileSources" should "generate correct fileId with imports" in {
-    val path = Paths.get("cli/src/test/test-dir/path-test")
+    val path = Paths.get("cli/.jvm/src/test/test-dir/path-test")
     val importPath = path.resolve("imports")
 
     val sourceGen = new AquaFileSources[IO](path, importPath :: Nil)
@@ -61,7 +61,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "find correct imports" in {
-    val srcPath = Paths.get("cli/src/test/test-dir/index.aqua")
+    val srcPath = Paths.get("cli/.jvm/src/test/test-dir/index.aqua")
     val importPath = srcPath.resolve("imports")
 
     val sourceGen = new AquaFileSources[IO](srcPath, importPath :: Nil)
