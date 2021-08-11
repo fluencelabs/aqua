@@ -44,6 +44,13 @@ case class ResolveFunc(
       case t => t
     }).toLabelledList(returnVar)
 
+    val retModel = returnType.map { case (l, t) => VarModel(l, t) }
+
+    val funcCall = Call(
+      func.arrowType.domain.toLabelledList().map(ad => VarModel(ad._1, ad._2)),
+      returnType.map { case (l, t) => Call.Export(l, t) }
+    )
+
     FuncCallable(
       wrapCallableName,
       transform(
@@ -51,13 +58,10 @@ case class ResolveFunc(
           FuncOps
             .callArrow(
               func.funcName,
-              Call(
-                func.arrowType.domain.toLabelledList().map(ad => VarModel(ad._1, ad._2)),
-                returnType.map { case (l, t) => Call.Export(l, t) }
-              )
-            ) :: returnType.headOption
-            .map(_ => returnCallback(returnType.map { case (l, t) => VarModel(l, t) }))
-            .toList: _*
+              funcCall
+            ) :: (returnType.headOption
+            .map(_ => returnCallback(retModel))
+            .toList): _*
         )
       ),
       ArrowType(ConsType.cons(func.funcName, func.arrowType, NilType), NilType),

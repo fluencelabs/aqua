@@ -96,6 +96,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
             .map(vs.prependedAll)
         )
       })
+      .map(_.reverse)
       .flatMap(retModel =>
         // Erase arguments and internal variables
         A.endScope() >> N.endScope() >> (bodyGen match {
