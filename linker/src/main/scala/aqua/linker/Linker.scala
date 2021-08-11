@@ -3,11 +3,11 @@ package aqua.linker
 import cats.data.{NonEmptyChain, Validated, ValidatedNec}
 import cats.kernel.{Monoid, Semigroup}
 import cats.syntax.monoid._
-import wvlet.log.LogSupport
+import scribe.Logging
 
 import scala.annotation.tailrec
 
-object Linker extends LogSupport {
+object Linker extends Logging {
 
   @tailrec
   def iter[I, E, T: Semigroup](
@@ -20,22 +20,22 @@ object Linker extends LogSupport {
         Right(proc)
       case _ =>
         val (canHandle, postpone) = mods.partition(_.dependsOn.keySet.forall(proc.contains))
-        debug("ITERATE, can handle: " + canHandle.map(_.id))
-        debug(s"dependsOn = ${mods.map(_.dependsOn.keySet)}")
-        debug(s"postpone = ${postpone.map(_.id)}")
-        debug(s"proc = ${proc.keySet}")
+        logger.debug("ITERATE, can handle: " + canHandle.map(_.id))
+        logger.debug(s"dependsOn = ${mods.map(_.dependsOn.keySet)}")
+        logger.debug(s"postpone = ${postpone.map(_.id)}")
+        logger.debug(s"proc = ${proc.keySet}")
 
         if (canHandle.isEmpty && postpone.nonEmpty)
           Left(cycleError(postpone))
         else {
           val folded = canHandle.foldLeft(proc) { case (acc, m) =>
             val importKeys = m.dependsOn.keySet
-            debug(s"${m.id} dependsOn $importKeys")
+            logger.debug(s"${m.id} dependsOn $importKeys")
             val deps: T => T =
               importKeys.map(acc).foldLeft[T => T](identity) { case (fAcc, f) =>
-                debug("COMBINING ONE TIME ")
+                logger.debug("COMBINING ONE TIME ")
                 t => {
-                  debug(s"call combine $t")
+                  logger.debug(s"call combine $t")
                   fAcc(t) |+| f(t)
                 }
               }

@@ -3,7 +3,7 @@ package aqua.model
 import aqua.types._
 import cats.Eq
 import cats.data.{Chain, NonEmptyMap}
-import wvlet.log.LogSupport
+import scribe.Logging
 
 sealed trait ValueModel {
   def `type`: Type
@@ -46,7 +46,8 @@ case class IntoFieldModel(field: String, `type`: Type) extends LambdaModel
 case class IntoIndexModel(idx: Int, `type`: Type) extends LambdaModel
 
 case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Chain.empty)
-    extends ValueModel with LogSupport {
+    extends ValueModel with Logging {
+
   def deriveFrom(vm: VarModel): VarModel = vm.copy(lambda = vm.lambda ++ lambda)
 
   override val lastType: Type = lambda.lastOption.map(_.`type`).getOrElse(`type`)
@@ -81,7 +82,7 @@ case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Cha
                     deriveFrom(nvm)
                   case valueModel =>
                     if (lambda.nonEmpty)
-                      error(
+                      logger.error(
                         s"Var $name derived from scalar $valueModel, but lambda is lost: $lambda"
                       )
                     valueModel

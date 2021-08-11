@@ -6,11 +6,12 @@ import cats.Eval
 import cats.data.{Chain, NonEmptyList, OptionT}
 import cats.free.Cofree
 import cats.syntax.traverse._
-import wvlet.log.LogSupport
+import scribe.Logging
 
 // Can be heavily optimized by caching parent cursors, not just list of zippers
 case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
-    extends ChainCursor[RawCursor, FuncOp.Tree](RawCursor.apply) with LogSupport {
+    extends ChainCursor[RawCursor, FuncOp.Tree](RawCursor.apply) with Logging {
+
   def tag: RawTag = current.head
   def parentTag: Option[RawTag] = parent.map(_.head)
 

@@ -3,19 +3,22 @@ package aqua.files
 import aqua.AquaIO
 import aqua.compiler.{AquaCompiled, AquaSources}
 import aqua.io.{AquaFileError, FileSystemError, ListAquaErrors}
-import cats.Monad
+import cats.{Functor, Monad}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.implicits.catsSyntaxApplicativeId
-import cats.syntax.either._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.traverse._
+import cats.syntax.either.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.monad.*
+import cats.syntax.traverse.*
+import fs2.io.file.{Files, Path}
 
-import java.nio.file.{Path, Paths}
 import scala.util.Try
 
-class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[Path])
-    extends AquaSources[F, AquaFileError, FileModuleId] {
+class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
+  sourcesPath: Path,
+  importFrom: List[Path]
+) extends AquaSources[F, AquaFileError, FileModuleId] {
   private val filesIO = implicitly[AquaIO[F]]
 
   override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =
@@ -49,10 +52,11 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
     from: FileModuleId,
     imp: String
   ): F[ValidatedNec[AquaFileError, FileModuleId]] = {
-    Validated.fromEither(Try(Paths.get(imp)).toEither.leftMap(FileSystemError.apply)) match {
+    val validatedPath = Validated.fromEither(Try(Path(imp)).toEither.leftMap(FileSystemError.apply))
+    validatedPath match {
       case Validated.Valid(importP) =>
         filesIO
-          .resolve(importP, from.file.getParent +: importFrom)
+          .resolve(importP, importFrom.prependedAll(from.file.parent))
           .bimap(NonEmptyChain.one, FileModuleId(_))
           .value
           .map(Validated.fromEither)
@@ -64,6 +68,15 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
   override def load(file: FileModuleId): F[ValidatedNec[AquaFileError, String]] =
     filesIO.readFile(file.file).leftMap(NonEmptyChain.one).value.map(Validated.fromEither)
 
+  // Get a directory of a file, or this file if it is a directory itself
+  private def getDir(path: Path): F[Path] = {
+    Files[F]
+      .isDirectory(path)
+      .map { res =>
+        if (res) path else path.parent.getOrElse(path)
+      }
+  }
+
   /**
    * @param srcFile aqua source
    * @param targetPath a main path where all output files will be written
@@ -74,22 +87,35 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
     srcFile: Path,
     targetPath: Path,
     suffix: String
-  ): Validated[Throwable, Path] =
-    Validated.catchNonFatal {
-      val srcDir = if (sourcesPath.toFile.isDirectory) sourcesPath else sourcesPath.getParent
-      val srcFilePath = srcDir.toAbsolutePath
-        .normalize()
-        .relativize(srcFile.toAbsolutePath.normalize())
+  ): F[Validated[Throwable, Path]] =
+    getDir(sourcesPath).map { srcDir =>
+      Validated.catchNonFatal {
+        val srcFilePath = srcDir.absolute.normalize
+          .relativize(srcFile.absolute.normalize)
 
-      val targetDir =
-        targetPath.toAbsolutePath
-          .normalize()
-          .resolve(
-            srcFilePath
-          )
+        val targetDir =
+          targetPath.absolute.normalize
+            .resolve(
+              srcFilePath
+            )
 
-      targetDir.getParent.resolve(srcFile.getFileName.toString.stripSuffix(".aqua") + suffix)
+        targetDir.parent
+          .getOrElse(targetDir)
+          .resolve(srcFile.fileName.toString.stripSuffix(".aqua") + suffix)
+      }
     }
+
+  // Write content to a file and return a success message
+  private def writeWithResult(target: Path, content: String, size: Int) = {
+    filesIO
+      .writeFile(
+        target,
+        content
+      )
+      .as(s"Result $target: compilation OK ($size functions)")
+      .value
+      .map(Validated.fromEither)
+  }
 
   def write(
     targetPath: Path
@@ -106,19 +132,14 @@ class AquaFileSources[F[_]: AquaIO: Monad](sourcesPath: Path, importFrom: List[P
           ac.sourceId.file,
           targetPath,
           compiled.suffix
-        ).leftMap(FileSystemError.apply)
-          .map { target =>
-            filesIO
-              .writeFile(
-                target,
-                compiled.content
-              )
-              .as(s"Result $target: compilation OK (${ac.compiled.size} functions)")
-              .value
-              .map(Validated.fromEither)
-          }
-          // TODO: we use both EitherT and F[Validated] to handle errors, that's why so weird
-          .traverse(identity)
+        ).flatMap { result =>
+          result
+            .leftMap(FileSystemError.apply)
+            .map { target =>
+              writeWithResult(target, compiled.content, ac.compiled.size)
+            }
+            .traverse(identity)
+        }
       }.traverse(identity)
         .map(_.map(_.andThen(identity)))
 }

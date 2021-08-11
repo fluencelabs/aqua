@@ -10,9 +10,9 @@ import cats.data.Chain.nil
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
 import cats.free.Cofree
 import cats.syntax.traverse._
-import wvlet.log.LogSupport
+import scribe.Logging
 
-object Topology extends LogSupport {
+object Topology extends Logging {
   type Tree = Cofree[Chain, RawTag]
   type Res = Cofree[Chain, ResolvedOp]
 
@@ -50,7 +50,7 @@ object Topology extends LogSupport {
     val cursor = RawCursor(NonEmptyList.one(ChainZipper.one(op)))
     val resolvedCofree = cursor
       .cata(wrap) { rc =>
-        debug(s"<:> $rc")
+        logger.debug(s"<:> $rc")
         val resolved = MakeRes
           .resolve(rc.currentPeerId)
           .lift
@@ -64,12 +64,12 @@ object Topology extends LogSupport {
               through(rc.pathToNext)
             )
             if (cz.next.nonEmpty || cz.prev.nonEmpty) {
-              debug(s"Resolved   $rc -> $cofree")
+              logger.debug(s"Resolved   $rc -> $cofree")
               if (cz.prev.nonEmpty)
-                trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
+                logger.trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
               if (cz.next.nonEmpty)
-                trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
-            } else debug(s"EMPTY    $rc -> $cofree")
+                logger.trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
+            } else logger.debug(s"EMPTY    $rc -> $cofree")
             cz
           }
         )
@@ -78,11 +78,11 @@ object Topology extends LogSupport {
 
     resolvedCofree.map(NonEmptyChain.fromChain(_).map(_.uncons)).map {
       case None =>
-        error("Topology emitted nothing")
+        logger.error("Topology emitted nothing")
         Cofree(SeqRes, MakeRes.nilTail)
       case Some((el, `nil`)) => el
       case Some((el, tail)) =>
-        warn("Topology emitted many nodes, that's unusual")
+        logger.warn("Topology emitted many nodes, that's unusual")
         Cofree(SeqRes, Eval.now(el +: tail))
     }
   }

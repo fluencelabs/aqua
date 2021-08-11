@@ -7,7 +7,7 @@ import cats.Monoid
 import cats.data.NonEmptyMap
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
-import wvlet.log.LogSupport
+import scribe.Logging
 
 import scala.collection.immutable.SortedMap
 
@@ -19,7 +19,7 @@ case class AquaContext(
   // TODO: merge this with abilities, when have ability resolution variance
   services: Map[String, ServiceModel]
 ) {
-  
+
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
 
@@ -28,7 +28,7 @@ case class AquaContext(
       .foldLeft(types) { case (ts, (k, v)) =>
         ts ++ v.allTypes(k + ".")
       }
-    .map(prefixFirst(prefix, _))
+      .map(prefixFirst(prefix, _))
 
   def allFuncs(prefix: String = ""): Map[String, FuncCallable] =
     abilities
@@ -67,7 +67,7 @@ case class AquaContext(
       .map(StructType(name, _))
 }
 
-object AquaContext extends LogSupport {
+object AquaContext extends Logging {
 
   trait Implicits {
     implicit val aquaContextMonoid: Monoid[AquaContext]

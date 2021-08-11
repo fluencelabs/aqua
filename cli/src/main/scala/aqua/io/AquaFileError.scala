@@ -2,7 +2,7 @@ package aqua.io
 
 import cats.data.NonEmptyChain
 
-import java.nio.file.Path
+import fs2.io.file.Path
 
 sealed trait AquaFileError {
   def showForConsole: String

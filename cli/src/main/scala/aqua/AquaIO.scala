@@ -3,7 +3,7 @@ package aqua
 import aqua.io.AquaFileError
 import cats.data.{Chain, EitherT, ValidatedNec}
 
-import java.nio.file.Path
+import fs2.io.file.Path
 
 trait AquaIO[F[_]] {
   def readFile(file: Path): EitherT[F, AquaFileError, String]

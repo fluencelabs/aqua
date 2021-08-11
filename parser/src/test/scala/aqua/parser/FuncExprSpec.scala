@@ -113,7 +113,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |  <- v
         |""".stripMargin
 
-    parser[Id]().parseAll(script).value.toEither shouldBe Symbol("left")
+    parser[Id]().parseAll(script).value.toEither.isLeft shouldBe true
   }
 
   "function with multiline definitions" should "parse without error" in {
@@ -121,7 +121,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       """func tryGen(a: string,
         |            b: string)""".stripMargin
 
-    FuncExpr.p[Id].parseAll(script) shouldBe Symbol("right")
+    FuncExpr.p[Id].parseAll(script).isRight shouldBe true
   }
 
   "function with root expression without children" should "parse with error" in {
@@ -131,7 +131,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |    <- v
         |""".stripMargin
 
-    parser[Id]().parseAll(script).value.toEither shouldBe Symbol("left")
+    parser[Id]().parseAll(script).value.toEither.isLeft shouldBe true
   }
 
   "multi function expression" should "parse" in {
