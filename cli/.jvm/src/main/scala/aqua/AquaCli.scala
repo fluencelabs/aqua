@@ -37,7 +37,8 @@ object AquaCli extends IOApp with Logging {
     }
   }
 
-  def main[F[_]: Concurrent: Files: ConsoleEff]: Opts[F[ExitCode]] = {
+  def main[F[_]: Concurrent: Files: ConsoleEff](runtime: unsafe.IORuntime): Opts[F[ExitCode]] = {
+    implicit val r = runtime
     versionOpt
       .as(
         versionAndExit
@@ -98,14 +99,13 @@ object AquaCli extends IOApp with Logging {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-
     CommandIOApp.run[IO](
       "aqua-c",
       "Aquamarine compiler",
       helpFlag = false,
       None
     )(
-      main[IO],
+      main[IO](runtime),
       // Weird ugly hack: in case version flag or help flag is present, ignore other options,
       // be it correct or not
       args match {

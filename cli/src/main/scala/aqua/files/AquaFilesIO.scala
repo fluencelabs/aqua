@@ -90,9 +90,9 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
       else
         Files[F].isRegularFile(f).map { isFile =>
           if (isFile)
-            Validated.Valid(Chain.one(f.absolute.normalize))
+            Validated.validNec(Chain.one(f.absolute.normalize))
           else
-            Validated.Invalid(NonEmptyChain.one(FileNotFound(f, Nil)))
+            Validated.invalidNec(FileNotFound(f, Nil))
         }
     }
   }

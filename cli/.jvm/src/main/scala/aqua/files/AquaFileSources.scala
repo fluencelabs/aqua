@@ -56,7 +56,7 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
     validatedPath match {
       case Validated.Valid(importP) =>
         filesIO
-          .resolve(importP, from.file.parent.map(List(_)).getOrElse(List.empty) ++ importFrom)
+          .resolve(importP, importFrom.prependedAll(from.file.parent))
           .bimap(NonEmptyChain.one, FileModuleId(_))
           .value
           .map(Validated.fromEither)

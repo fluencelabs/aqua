@@ -6,8 +6,7 @@ import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
-import cats.effect.unsafe.implicits.global
-import cats.effect.{ExitCode, IO}
+import cats.effect.{unsafe, ExitCode, IO}
 import cats.effect.std.Console
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
@@ -42,29 +41,37 @@ object AppOps {
       )
   }
 
-  def checkPath: String => ValidatedNel[String, Path] = { pathStr =>
-    Validated
-      .fromEither(Validated.catchNonFatal {
-        val p = Path(pathStr)
-        // TODO: use effects somehow
-        if (Files[IO].exists(p).unsafeRunSync()) {
-          if (Files[IO].isRegularFile(p).unsafeRunSync()) {
-            val filename = p.fileName.toString
-            val ext = Option(filename)
-              .filter(_.contains("."))
-              .map(f => f.substring(f.lastIndexOf(".") + 1))
-              .getOrElse("")
-            if (ext != "aqua") Left("File must be with 'aqua' extension")
-            else Right(p)
-          } else Right(p)
-        } else {
-          Left(s"There is no path '${p.toString}'")
-        }
-      }.toEither.left.map(t => s"An error occurred on imports reading: ${t.getMessage}").flatten)
-      .toValidatedNel
+  def checkPath(implicit runtime: unsafe.IORuntime): String => ValidatedNel[String, Path] = {
+    pathStr =>
+      Validated
+        .fromEither(Validated.catchNonFatal {
+          val p = Path(pathStr)
+          Files[IO]
+            .exists(p)
+            .flatMap { exists =>
+              if (exists)
+                Files[IO].isRegularFile(p).map { isFile =>
+                  if (isFile) {
+                    val filename = p.fileName.toString
+                    val ext = Option(filename)
+                      .filter(_.contains("."))
+                      .map(f => f.substring(f.lastIndexOf(".") + 1))
+                      .getOrElse("")
+                    if (ext != "aqua") Left("File must be with 'aqua' extension")
+                    else Right(p)
+                  } else
+                    Right(p)
+                }
+              else
+                IO(Left(s"There is no path '${p.toString}'"))
+            }
+            // TODO: make it with correct effects
+            .unsafeRunSync()
+        }.toEither.left.map(t => s"An error occurred on imports reading: ${t.getMessage}").flatten)
+        .toValidatedNel
   }
 
-  val inputOpts: Opts[Path] =
+  def inputOpts(implicit runtime: unsafe.IORuntime): Opts[Path] =
     Opts
       .option[String](
         "input",
@@ -73,10 +80,10 @@ object AppOps {
       )
       .mapValidated(checkPath)
 
-  val outputOpts: Opts[Path] =
+  def outputOpts(implicit runtime: unsafe.IORuntime): Opts[Path] =
     Opts.option[String]("output", "Path to the output directory", "o").mapValidated(checkPath)
 
-  val importOpts: Opts[List[Path]] =
+  def importOpts(implicit runtime: unsafe.IORuntime): Opts[List[Path]] =
     Opts
       .options[String]("import", "Path to the directory to import from", "m")
       .mapValidated { ps =>
@@ -84,15 +91,18 @@ object AppOps {
           .map(pStr => {
             Validated.catchNonFatal {
               val p = Path(pStr)
-              if (Files[IO].exists(p).unsafeRunSync() && Files[IO].isDirectory(p).unsafeRunSync()) {
-                Right(p)
-              } else {
-                Left(s"There is no path ${p.toString} or it is not a directory")
-              }
+              (for {
+                exists <- Files[IO].exists(p)
+                isDir <- Files[IO].isDirectory(p)
+              } yield {
+                if (exists && isDir) Right(p)
+                else Left(s"There is no path ${p.toString} or it is not a directory")
+              })
+                // TODO: make it with correct effects
+                .unsafeRunSync()
             }
           })
           .toList
-
         checked.map {
           case Validated.Valid(pE) =>
             pE match {
