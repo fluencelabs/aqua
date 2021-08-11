@@ -8,7 +8,7 @@ val catsV = "2.6.1"
 val catsParseV = "0.3.4"
 val monocleV = "3.0.0-M6"
 val scalaTestV = "3.2.9"
-val fs2V = "3.0.6"
+val fs2V = "3.1.0"
 val catsEffectV = "3.2.1"
 val log4catsV = "2.1.1"
 val slf4jV = "1.7.30"
@@ -21,9 +21,8 @@ val commons = Seq(
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "log4cats-core" % log4catsV,
-    "com.outr"      %%% "scribe"        % "3.5.5",
-    "org.scalatest" %%% "scalatest"     % scalaTestV % Test
+    "com.outr"      %%% "scribe"    % "3.5.5",
+    "org.scalatest" %%% "scalatest" % scalaTestV % Test
   ),
   scalacOptions ++= {
     Seq(
@@ -45,14 +44,19 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("cli"))
   .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-effect"    % catsEffectV,
+      "com.monovore"  %%% "decline"        % declineV,
+      "com.monovore"  %%% "decline-effect" % declineV,
+      "co.fs2"        %%% "fs2-io"         % fs2V
+    )
+  )
   .dependsOn(compiler, `backend-air`, `backend-ts`, `backend-js`)
 
 lazy val cliJS = cli.js
   .settings(
-    scalaJSUseMainModuleInitializer := true,
-    libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-effect" % catsEffectV
-    )
+    scalaJSUseMainModuleInitializer := true
   )
 
 lazy val cliJVM = cli.jvm
@@ -61,11 +65,6 @@ lazy val cliJVM = cli.jvm
     assembly / mainClass       := Some("aqua.AquaCli"),
     assembly / assemblyJarName := "aqua-cli-" + version.value + ".jar",
     libraryDependencies ++= Seq(
-      "com.monovore"  %% "decline"        % declineV,
-      "com.monovore"  %% "decline-effect" % declineV,
-      "co.fs2"        %% "fs2-io"         % fs2V,
-      "org.typelevel" %% "log4cats-slf4j" % log4catsV,
-      "org.slf4j"      % "slf4j-jdk14"    % slf4jV
     )
   )
 

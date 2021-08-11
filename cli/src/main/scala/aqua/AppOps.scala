@@ -6,7 +6,8 @@ import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
-import cats.effect.ExitCode
+import cats.effect.unsafe.implicits.global
+import cats.effect.{ExitCode, IO}
 import cats.effect.std.Console
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
@@ -14,8 +15,7 @@ import cats.{Comonad, Functor}
 import com.monovore.decline.Opts.help
 import com.monovore.decline.{Opts, Visibility}
 import scribe.Level
-
-import java.nio.file.Path
+import fs2.io.file.{Files, Path}
 
 object AppOps {
 
@@ -42,13 +42,13 @@ object AppOps {
       )
   }
 
-  def checkPath: Path => ValidatedNel[String, Path] = { p =>
+  def checkPath: String => ValidatedNel[String, Path] = { pathStr =>
     Validated
       .fromEither(Validated.catchNonFatal {
-        val f = p.toFile
-        if (f.exists()) {
-          if (f.isFile) {
-            val filename = f.getName
+        val p = Path(pathStr)
+        if (Files[IO].exists(p).unsafeRunSync()) {
+          if (Files[IO].isRegularFile(p).unsafeRunSync()) {
+            val filename = p.fileName.toString
             val ext = Option(filename)
               .filter(_.contains("."))
               .map(f => f.substring(f.lastIndexOf(".") + 1))
@@ -65,7 +65,7 @@ object AppOps {
 
   val inputOpts: Opts[Path] =
     Opts
-      .option[Path](
+      .option[String](
         "input",
         "Path to an aqua file or an input directory that contains your .aqua files",
         "i"
@@ -73,17 +73,17 @@ object AppOps {
       .mapValidated(checkPath)
 
   val outputOpts: Opts[Path] =
-    Opts.option[Path]("output", "Path to the output directory", "o").mapValidated(checkPath)
+    Opts.option[String]("output", "Path to the output directory", "o").mapValidated(checkPath)
 
   val importOpts: Opts[List[Path]] =
     Opts
-      .options[Path]("import", "Path to the directory to import from", "m")
+      .options[String]("import", "Path to the directory to import from", "m")
       .mapValidated { ps =>
         val checked = ps
-          .map(p => {
+          .map(pStr => {
             Validated.catchNonFatal {
-              val f = p.toFile
-              if (f.exists() && f.isDirectory) {
+              val p = Path(pStr)
+              if (Files[IO].exists(p).unsafeRunSync() && Files[IO].isDirectory(p).unsafeRunSync()) {
                 Right(p)
               } else {
                 Left(s"There is no path ${p.toString} or it is not a directory")

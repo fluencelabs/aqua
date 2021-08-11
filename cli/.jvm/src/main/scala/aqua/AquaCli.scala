@@ -16,8 +16,6 @@ import cats.syntax.functor.*
 import com.monovore.decline.Opts
 import com.monovore.decline.effect.CommandIOApp
 import fs2.io.file.Files
-import org.typelevel.log4cats.slf4j.Slf4jLogger
-import org.typelevel.log4cats.{Logger, SelfAwareStructuredLogger}
 import scribe.Logging
 
 object AquaCli extends IOApp with Logging {
@@ -39,7 +37,7 @@ object AquaCli extends IOApp with Logging {
     }
   }
 
-  def main[F[_]: Concurrent: Files: ConsoleEff: Logger]: Opts[F[ExitCode]] = {
+  def main[F[_]: Concurrent: Files: ConsoleEff]: Opts[F[ExitCode]] = {
     versionOpt
       .as(
         versionAndExit
@@ -62,7 +60,7 @@ object AquaCli extends IOApp with Logging {
         scribe.Logger.root
           .clearHandlers()
           .clearModifiers()
-          .withHandler(minimumLevel = Some(logLevel))
+          .withHandler(formatter = LogFormatter.formatter, minimumLevel = Some(logLevel))
           .replace()
 
         implicit val aio: AquaIO[F] = new AquaFilesIO[F]
@@ -100,9 +98,6 @@ object AquaCli extends IOApp with Logging {
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
-
-    implicit def logger[F[_]: Sync]: SelfAwareStructuredLogger[F] =
-      Slf4jLogger.getLogger[F]
 
     CommandIOApp.run[IO](
       "aqua-c",
