@@ -1,15 +1,20 @@
-service Getter("test"):
-    createStr: u32 -> string
+service GetStr("multiret-test"):
+    retStr: string -> string
 
-service OpO("op"):
-    identity: string -> string
+service GetNum("multiret-num"):
+    retNum: -> u8
 
--- a question mark means that this constant could be rewritten before this definition
-const anotherConst ?= "default-str"
-const uniqueConst ?= 5
+const someNum = 5
+const someStr = "some-str"
 
-func callConstant() -> []string, u8:
+func tupleFunc() -> string, u8:
+    str <- GetStr.retStr(someStr)
+    n <- GetNum.retNum()
+    <- str, n
+
+func multiReturnFunc(somethingToReturn: []u8, smthOption: ?string) -> []string, u8, string, []u8, ?string, u8:
     res: *string
-    res <- Getter.createStr(uniqueConst)
-    res <- OpO.identity(anotherConst)
-    <- res, 5
+    res <- GetStr.retStr(someStr)
+    res <- GetStr.retStr("random-str")
+    res, tNum <- tupleFunc()
+    <- res, 5, someStr, somethingToReturn, smthOption, tNum
