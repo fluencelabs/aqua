@@ -91,5 +91,6 @@ jobs:
           body: ${{ steps.github_release.outputs.changelog }}
           draft: false
           prerelease: false
+          files: ${{ env.JAR }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
