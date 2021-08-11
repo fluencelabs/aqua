@@ -94,7 +94,7 @@ object ConsType {
 }
 
 case class LabelledConsType(label: String, `type`: Type, tail: ProductType) extends ConsType {
-  override def toString: String = s"($label: " + `type` + s" :: $tail"
+  override def toString: String = s"($label: " + `type` + s") :: $tail"
 }
 
 case class UnlabelledConsType(`type`: Type, tail: ProductType) extends ConsType {
