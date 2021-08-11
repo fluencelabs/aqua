@@ -46,6 +46,7 @@ object AppOps {
     Validated
       .fromEither(Validated.catchNonFatal {
         val p = Path(pathStr)
+        // TODO: use effects somehow
         if (Files[IO].exists(p).unsafeRunSync()) {
           if (Files[IO].isRegularFile(p).unsafeRunSync()) {
             val filename = p.fileName.toString

@@ -5,18 +5,16 @@ import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import cats.data.Chain
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import fs2.io.file.Files
 import fs2.text
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-
-import java.nio.file.Paths
+import fs2.io.file.{Files, Path}
 
 class SourcesSpec extends AnyFlatSpec with Matchers {
   implicit val aquaIO: AquaIO[IO] = AquaFilesIO.summon[IO]
 
   "AquaFileSources" should "generate correct fileId with imports" in {
-    val path = Paths.get("cli/.jvm/src/test/test-dir/path-test")
+    val path = Path("cli/.jvm/src/test/test-dir/path-test")
     val importPath = path.resolve("imports")
 
     val sourceGen = new AquaFileSources[IO](path, importPath :: Nil)
@@ -42,7 +40,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "throw an error if a source file doesn't exist" in {
-    val path = Paths.get("some/random/path")
+    val path = Path("some/random/path")
 
     val sourceGen = new AquaFileSources[IO](path, Nil)
 
@@ -51,7 +49,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "throw an error if there is no import that is indicated in a source" in {
-    val path = Paths.get("cli/.jvm/src/test/test-dir")
+    val path = Path("cli/.jvm/src/test/test-dir")
     val importPath = path.resolve("random/import/path")
 
     val sourceGen = new AquaFileSources[IO](path, importPath :: Nil)
@@ -61,7 +59,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "find correct imports" in {
-    val srcPath = Paths.get("cli/.jvm/src/test/test-dir/index.aqua")
+    val srcPath = Path("cli/.jvm/src/test/test-dir/index.aqua")
     val importPath = srcPath.resolve("imports")
 
     val sourceGen = new AquaFileSources[IO](srcPath, importPath :: Nil)
@@ -73,7 +71,8 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
         .unsafeRunSync()
 
     result.isValid shouldBe true
-    result.getOrElse(FileModuleId(Paths.get("/some/random"))).file.toFile.exists() shouldBe true
+    val file = result.getOrElse(FileModuleId(Path("/some/random"))).file
+    Files[IO].exists(file).unsafeRunSync() shouldBe true
 
     // should be found near src file
     val result2 =
@@ -82,7 +81,8 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
         .unsafeRunSync()
 
     result2.isValid shouldBe true
-    result2.getOrElse(FileModuleId(Paths.get("/some/random"))).file.toFile.exists() shouldBe true
+    val file2 = result2.getOrElse(FileModuleId(Path("/some/random"))).file
+    Files[IO].exists(file2).unsafeRunSync() shouldBe true
 
     // near src file but in another directory
     val sourceGen2 = new AquaFileSources[IO](srcPath, Nil)
@@ -92,20 +92,21 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
         .unsafeRunSync()
 
     result3.isValid shouldBe true
-    result3.getOrElse(FileModuleId(Paths.get("/some/random"))).file.toFile.exists() shouldBe true
+    val file3 = result3.getOrElse(FileModuleId(Path("/some/random"))).file
+    Files[IO].exists(file3).unsafeRunSync() shouldBe true
   }
 
   "AquaFileSources" should "resolve correct path for target" in {
-    val path = Paths.get("cli/.jvm/src/test/test-dir")
+    val path = Path("cli/.jvm/src/test/test-dir")
     val filePath = path.resolve("some-dir/file.aqua")
 
-    val targetPath = Paths.get("/target/dir/")
+    val targetPath = Path("/target/dir/")
 
     val sourceGen = new AquaFileSources[IO](path, Nil)
 
     val suffix = "_custom.super"
 
-    val resolved = sourceGen.resolveTargetPath(filePath, targetPath, suffix)
+    val resolved = sourceGen.resolveTargetPath(filePath, targetPath, suffix).unsafeRunSync()
     resolved.isValid shouldBe true
 
     val targetFilePath = resolved.toOption.get
@@ -113,13 +114,13 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "write correct file with correct path" in {
-    val path = Paths.get("cli/.jvm/src/test/test-dir")
+    val path = Path("cli/.jvm/src/test/test-dir")
     val filePath = path.resolve("imports/import.aqua")
 
     val targetPath = path.resolve("target/")
 
     // clean up
-    val resultPath = Paths.get("cli/.jvm/src/test/test-dir/target/imports/import_hey.custom")
+    val resultPath = Path("cli/.jvm/src/test/test-dir/target/imports/import_hey.custom")
     Files[IO].deleteIfExists(resultPath).unsafeRunSync()
 
     val sourceGen = new AquaFileSources[IO](path, Nil)
@@ -136,13 +137,13 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     Files[IO].exists(resultPath).unsafeRunSync() shouldBe true
 
     val resultText = Files[IO]
-      .readAll(resultPath, 1000)
+      .readAll(resultPath)
       .fold(
         Vector
           .empty[Byte]
       )((acc, b) => acc :+ b)
       .flatMap(fs2.Stream.emits)
-      .through(text.utf8Decode)
+      .through(text.utf8.decode)
       .attempt
       .compile
       .last
