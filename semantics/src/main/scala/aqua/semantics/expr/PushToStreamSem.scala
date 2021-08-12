@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.model.func.Call
-import aqua.model.func.raw.{CallServiceTag, FuncOp}
+import aqua.model.func.raw.{ApTag, FuncOp}
 import aqua.model.{LiteralModel, Model}
 import aqua.parser.expr.PushToStreamExpr
 import aqua.parser.lexer.Token
@@ -55,12 +55,7 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
               .map(t =>
                 FuncOp
                   .leaf(
-                    // TODO: replace with Apply
-                    CallServiceTag(
-                      LiteralModel.quote("op"),
-                      "identity",
-                      Call(vm :: Nil, Call.Export(expr.stream.value, t) :: Nil)
-                    )
+                    ApTag(vm, Call.Export(expr.stream.value, t))
                   ): Model
               )
               .getOrElse(Model.error("Cannot resolve stream type"))

@@ -43,6 +43,11 @@ object AirGen extends Logging {
     case list => list.reduceLeft(SeqGen(_, _))
   }
 
+  def exportToString(exportTo: Call.Export): String = exportTo match {
+    case Call.Export(name, _: StreamType) => "$" + name
+    case Call.Export(name, _) => name
+  }
+
   private def folder(op: ResolvedOp, ops: Chain[AirGen]): Eval[AirGen] =
     op match {
 //      case mt: MetaTag =>
@@ -87,11 +92,13 @@ object AirGen extends Logging {
             valueToData(serviceId),
             funcName,
             args.map(valueToData),
-            exportTo.map {
-              case Call.Export(name, _: StreamType) => "$" + name
-              case Call.Export(name, _) => name
-            }
+            exportTo.map(exportToString)
           )
+        )
+
+      case ApRes(operand, exportTo) =>
+        Eval.later(
+          ApGen(valueToData(operand), exportToString(exportTo))
         )
 
       case _: NoAir =>
@@ -120,6 +127,12 @@ case class CommentGen(comment: String, op: AirGen) extends AirGen {
 
   override def generate: Air =
     Air.Comment(comment, op.generate)
+}
+
+case class ApGen(operand: DataView, result: String) extends AirGen {
+
+  override def generate: Air =
+    Air.Ap(operand, result)
 }
 
 case class MatchMismatchGen(

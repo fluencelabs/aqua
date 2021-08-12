@@ -1,6 +1,6 @@
 package aqua.model.func.resolved
 
-import aqua.model.ValueModel
+import aqua.model.{ValueModel, VarModel}
 import aqua.model.func.Call
 
 sealed trait ResolvedOp
@@ -31,4 +31,15 @@ case class CallServiceRes(
   peerId: ValueModel
 ) extends ResolvedOp {
   override def toString: String = s"(call $peerId ($serviceId $funcName) $call)"
+}
+
+case class ApRes(operand: ValueModel, exportTo: Call.Export) extends ResolvedOp {
+  override def toString: String = s"(ap $operand $exportTo)"
+
+  def mapValues(f: ValueModel => ValueModel): ApRes =
+    ApRes(f(operand), exportTo)
+
+  def mapExport(f: String => String): ApRes = copy(exportTo = exportTo.mapName(f))
+
+  def argVarNames: Set[String] = ValueModel.varName(operand).toSet
 }
