@@ -20,10 +20,8 @@ import com.monovore.decline.effect.CommandIOApp
 import fs2.io.file.Files
 import scribe.Logging
 
-import scala.collection.View.FlatMap
-
 object AquaCli extends IOApp with Logging {
-  import AppOps._
+  import AppOps.*
 
   sealed trait CompileTarget
   case object TypescriptTarget extends CompileTarget
@@ -84,7 +82,10 @@ object AquaCli extends IOApp with Logging {
           logger.info(s"Aqua Compiler ${versionStr}")
 
           // TODO: do it better
-          def toError[F[_]: Monad, T, G](opt: F[ValidatedNec[String, T]], op: T => F[ExitCode]): F[ExitCode] = {
+          def toError[F[_]: Monad, T, G](
+            opt: F[ValidatedNec[String, T]],
+            op: T => F[ExitCode]
+          ): F[ExitCode] = {
             opt.flatMap {
               case Validated.Valid(optValue) =>
                 op(optValue)
@@ -94,21 +95,34 @@ object AquaCli extends IOApp with Logging {
             }
           }
 
-          toError(inputF, input => toError(outputF, output => toError(importsF, imports => AquaPathCompiler
-            .compileFilesTo[F](
-              input,
-              imports,
-              output,
-              targetToBackend(target),
-              bc
-            ).map {
-            case Validated.Invalid(errs) =>
-              errs.map(System.out.println)
-              ExitCode.Error
-            case Validated.Valid(results) =>
-              results.map(logger.info(_))
-              ExitCode.Success
-          })))
+          toError(
+            inputF,
+            input =>
+              toError(
+                outputF,
+                output =>
+                  toError(
+                    importsF,
+                    imports =>
+                      AquaPathCompiler
+                        .compileFilesTo[F](
+                          input,
+                          imports,
+                          output,
+                          targetToBackend(target),
+                          bc
+                        )
+                        .map {
+                          case Validated.Invalid(errs) =>
+                            errs.map(System.out.println)
+                            ExitCode.Error
+                          case Validated.Valid(results) =>
+                            results.map(logger.info(_))
+                            ExitCode.Success
+                        }
+                  )
+              )
+          )
         }
     }
   }
