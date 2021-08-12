@@ -7,16 +7,20 @@ import aqua.backend.ts.TypeScriptBackend
 import aqua.files.AquaFilesIO
 import aqua.model.transform.GenerationConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import cats.Id
-import cats.data.Validated
+import cats.{Functor, Id, Monad}
+import cats.data.{Chain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import cats.effect.*
 import cats.effect.std.Console as ConsoleEff
 import cats.syntax.apply.*
 import cats.syntax.functor.*
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
 import com.monovore.decline.Opts
 import com.monovore.decline.effect.CommandIOApp
 import fs2.io.file.Files
 import scribe.Logging
+
+import scala.collection.View.FlatMap
 
 object AquaCli extends IOApp with Logging {
   import AppOps._
@@ -45,9 +49,9 @@ object AquaCli extends IOApp with Logging {
       ) orElse helpOpt.as(
       helpAndExit
     ) orElse (
-      inputOpts,
-      importOpts,
-      outputOpts,
+      inputOpts[F],
+      importOpts[F],
+      outputOpts[F],
       compileToAir,
       compileToJs,
       noRelay,
@@ -57,7 +61,7 @@ object AquaCli extends IOApp with Logging {
       logLevelOpt,
       constantOpts[Id]
     ).mapN {
-      case (input, imports, output, toAir, toJs, noRelay, noXor, h, v, logLevel, constants) =>
+      case (inputF, importsF, outputF, toAir, toJs, noRelay, noXor, h, v, logLevel, constants) =>
         scribe.Logger.root
           .clearHandlers()
           .clearModifiers()
@@ -78,22 +82,33 @@ object AquaCli extends IOApp with Logging {
             bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
           }
           logger.info(s"Aqua Compiler ${versionStr}")
-          AquaPathCompiler
+
+          // TODO: do it better
+          def toError[F[_]: Monad, T, G](opt: F[ValidatedNec[String, T]], op: T => F[ExitCode]): F[ExitCode] = {
+            opt.flatMap {
+              case Validated.Valid(optValue) =>
+                op(optValue)
+              case Validated.Invalid(errs) =>
+                errs.map(System.out.println)
+                ExitCode.Error.pure[F]
+            }
+          }
+
+          toError(inputF, input => toError(outputF, output => toError(importsF, imports => AquaPathCompiler
             .compileFilesTo[F](
               input,
               imports,
               output,
               targetToBackend(target),
               bc
-            )
-            .map {
-              case Validated.Invalid(errs) =>
-                errs.map(System.out.println)
-                ExitCode.Error
-              case Validated.Valid(results) =>
-                results.map(logger.info(_))
-                ExitCode.Success
-            }
+            ).map {
+            case Validated.Invalid(errs) =>
+              errs.map(System.out.println)
+              ExitCode.Error
+            case Validated.Valid(results) =>
+              results.map(logger.info(_))
+              ExitCode.Success
+          })))
         }
     }
   }
