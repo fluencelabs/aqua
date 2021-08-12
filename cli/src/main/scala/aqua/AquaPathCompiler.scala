@@ -16,12 +16,12 @@ import fs2.io.file.{Files, Path}
 object AquaPathCompiler extends Logging {
 
   def compileFilesTo[F[_]: AquaIO: Monad: Files](
-    srcPath: Path,
-    imports: List[Path],
-    targetPath: Path,
-    backend: Backend,
-    bodyConfig: GenerationConfig
-  ): F[ValidatedNec[String, Chain[String]]] = {
+                                                  srcPath: Path,
+                                                  imports: List[Path],
+                                                  targetPath: Path,
+                                                  backend: Backend,
+                                                  bodyConfig: GenerationConfig
+                                                ): F[ValidatedNec[String, Chain[String]]] = {
     import ErrorRendering.showError
     val sources = new AquaFileSources[F](srcPath, imports)
     AquaCompiler

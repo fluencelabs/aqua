@@ -1,6 +1,6 @@
 package aqua
 
-import aqua.compiler._
+import aqua.compiler.*
 import aqua.files.FileModuleId
 import aqua.io.AquaFileError
 import aqua.parser.lift.FileSpan
