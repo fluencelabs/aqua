@@ -19,7 +19,6 @@ jobs:
         run: |
           curl -L https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 -o /usr/local/bin/jq
           chmod +x /usr/local/bin/jq
-          echo test | sponge
 
       ### Update & build
       - name: Assembly
@@ -74,7 +73,8 @@ jobs:
       
       - name: Publish to NPM as aqua
         run: |
-          jq '.name = "aqua"' package.json | sponge package.json
+          CONTENTS="$(jq '.name = "aqua"' package.json)"
+          echo "$CONTENTS" > package.json
           npm publish --access public
         working-directory: ./npm
         env:
