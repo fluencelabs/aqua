@@ -15,6 +15,12 @@ jobs:
       ### Setup
       - uses: olafurpg/setup-scala@v10
 
+      - name: Download jq
+        run: |
+          curl -L https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 -o /usr/local/bin/jq
+          chmod +x /usr/local/bin/jq
+          echo test | sponge
+
       ### Update & build
       - name: Assembly
         run: sbt cli/assembly
@@ -60,7 +66,16 @@ jobs:
       - run: npm version ${{ env.VERSION }}
         working-directory: ./npm
 
-      - run: npm publish --access public
+      - name: Publish to NPM as aqua-cli
+        run: npm publish --access public
+        working-directory: ./npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      - name: Publish to NPM as aqua
+        run: |
+          jq '.name = "aqua"' package.json | sponge package.json
+          npm publish --access public
         working-directory: ./npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
