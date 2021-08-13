@@ -81,6 +81,21 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       ### create release
+      - name: Remove tag if exists
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+                await github.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: "tags/${{ env.BASE_VERSION }}"
+                })
+            } catch (e) {
+              console.log("The ${{ env.BASE_VERSION }} tag doesn't exist yet: " + e)
+            }
+
       - name: Push tag ${{ env.BASE_VERSION }}
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.5
