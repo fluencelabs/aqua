@@ -1,7 +1,7 @@
 package aqua.backend.ts
 
 import aqua.backend.Version
-import aqua.model.res.AquaRes
+import aqua.model.result.AquaRes
 
 case class TypeScriptFile(res: AquaRes) {
 

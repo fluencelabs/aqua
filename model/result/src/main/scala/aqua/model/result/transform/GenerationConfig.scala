@@ -1,4 +1,4 @@
-package aqua.model.transform
+package aqua.model.result.transform
 
 import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
 import aqua.types.ScalarType

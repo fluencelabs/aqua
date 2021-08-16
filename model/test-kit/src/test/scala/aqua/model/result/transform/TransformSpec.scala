@@ -1,8 +1,8 @@
-package aqua.model.transform
+package aqua.model.result.transform
 
 import aqua.Node
 import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
-import aqua.model.func.resolved.{CallRes, CallServiceRes, MakeRes}
+import aqua.model.result.resolved.{CallRes, CallServiceRes, MakeRes}
 import aqua.model.func.{Call, FuncCallable}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}

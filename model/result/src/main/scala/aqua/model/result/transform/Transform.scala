@@ -1,10 +1,10 @@
-package aqua.model.transform
+package aqua.model.result.transform
 
 import aqua.model.func.FuncCallable
 import aqua.model.VarModel
-import aqua.model.func.resolved.{NoAir, ResolvedOp}
-import aqua.model.res.FuncRes
-import aqua.model.topology.Topology
+import aqua.model.result.resolved.{NoAir, ResolvedOp}
+import aqua.model.result.topology.Topology
+import aqua.model.result.FuncRes
 import aqua.types.ScalarType
 import cats.data.Chain
 import cats.free.Cofree

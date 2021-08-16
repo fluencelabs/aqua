@@ -1,4 +1,4 @@
-package aqua.model.func.resolved
+package aqua.model.result.resolved
 
 import aqua.model.func.Call
 import aqua.model.func.raw.{
@@ -12,7 +12,7 @@ import aqua.model.func.raw.{
   SeqTag,
   XorTag
 }
-import aqua.model.topology.Topology.Res
+import aqua.model.result.topology.Topology.Res
 import aqua.model.{LiteralModel, ValueModel}
 import cats.Eval
 import cats.data.Chain

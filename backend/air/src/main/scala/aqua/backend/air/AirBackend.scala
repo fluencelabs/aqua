@@ -1,7 +1,7 @@
 package aqua.backend.air
 
 import aqua.backend.{Backend, Generated}
-import aqua.model.res.AquaRes
+import aqua.model.result.AquaRes
 import cats.syntax.show.*
 
 object AirBackend extends Backend {

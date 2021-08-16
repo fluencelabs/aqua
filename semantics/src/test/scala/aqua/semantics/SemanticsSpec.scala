@@ -3,7 +3,7 @@ package aqua.semantics
 import aqua.Node
 import aqua.Node._
 import aqua.model.func.raw.{FuncOp, FuncOps, SeqTag}
-import aqua.model.transform._
+import aqua.model.result.transform._
 import aqua.model.{AquaContext, LiteralModel}
 import aqua.parser.Ast
 import aqua.parser.lift.{LiftParser, Span}

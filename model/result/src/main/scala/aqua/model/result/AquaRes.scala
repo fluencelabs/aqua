@@ -1,7 +1,8 @@
-package aqua.model.res
+package aqua.model.result
 
 import aqua.model.AquaContext
-import aqua.model.transform.{GenerationConfig, Transform}
+import aqua.model.result.AquaRes
+import aqua.model.result.transform.{GenerationConfig, Transform}
 import cats.data.Chain
 
 case class AquaRes(funcs: Chain[FuncRes], services: Chain[ServiceRes]) {

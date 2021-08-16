@@ -1,8 +1,8 @@
-package aqua.model.topology
+package aqua.model.result.topology
 
-import aqua.model.cursor.ChainZipper
+import aqua.model.result.cursor.ChainZipper
 import aqua.model.func.raw._
-import aqua.model.func.resolved._
+import aqua.model.result.resolved._
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{BoxType, ScalarType}
 import cats.Eval

@@ -1,7 +1,7 @@
 package aqua
 
 import aqua.model.LiteralModel
-import aqua.model.transform.GenerationConfig
+import aqua.model.result.transform.GenerationConfig
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
 import cats.data.Validated.{Invalid, Valid}

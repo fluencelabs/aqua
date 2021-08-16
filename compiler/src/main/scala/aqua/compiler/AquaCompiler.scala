@@ -3,11 +3,11 @@ package aqua.compiler
 import aqua.backend.Backend
 import aqua.linker.Linker
 import aqua.model.AquaContext
-import aqua.model.res.AquaRes
-import aqua.model.transform.GenerationConfig
+import aqua.model.result.AquaRes
+import aqua.model.result.transform.GenerationConfig
 import aqua.parser.lift.LiftParser
 import aqua.semantics.Semantics
-import cats.data.Validated.{validNec, Invalid, Valid}
+import cats.data.Validated.{Invalid, Valid, validNec}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*

@@ -4,7 +4,7 @@ import aqua.backend.Backend
 import aqua.compiler.{AquaCompiler, AquaError}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io.*
-import aqua.model.transform.GenerationConfig
+import aqua.model.result.transform.GenerationConfig
 import aqua.parser.lift.FileSpan
 import cats.data.*
 import cats.syntax.functor.*

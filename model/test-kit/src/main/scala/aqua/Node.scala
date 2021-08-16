@@ -2,8 +2,8 @@ package aqua
 
 import aqua.model.func.Call
 import aqua.model.func.raw.*
-import aqua.model.func.resolved.{CallRes, CallServiceRes, MakeRes, MatchMismatchRes, ResolvedOp}
-import aqua.model.transform.{ErrorsCatcher, GenerationConfig}
+import aqua.model.result.resolved.{CallRes, CallServiceRes, MakeRes, MatchMismatchRes, ResolvedOp}
+import aqua.model.result.transform.{ErrorsCatcher, GenerationConfig}
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval

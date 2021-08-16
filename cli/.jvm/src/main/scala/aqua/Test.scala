@@ -2,7 +2,7 @@ package aqua
 
 import aqua.backend.ts.TypeScriptBackend
 import aqua.files.AquaFilesIO
-import aqua.model.transform.GenerationConfig
+import aqua.model.result.transform.GenerationConfig
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
 

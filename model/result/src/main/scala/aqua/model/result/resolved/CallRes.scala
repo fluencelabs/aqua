@@ -1,4 +1,4 @@
-package aqua.model.func.resolved
+package aqua.model.result.resolved
 
 import aqua.model.ValueModel
 import aqua.model.func.Call

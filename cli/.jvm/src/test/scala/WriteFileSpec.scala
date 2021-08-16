@@ -2,7 +2,7 @@ import aqua.AquaPathCompiler
 import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
-import aqua.model.transform.GenerationConfig
+import aqua.model.result.transform.GenerationConfig
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import org.scalatest.flatspec.AnyFlatSpec

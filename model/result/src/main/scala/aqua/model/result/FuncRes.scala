@@ -1,8 +1,9 @@
-package aqua.model.res
+package aqua.model.result
 
 import aqua.model.func.FuncCallable
-import aqua.model.func.resolved.ResolvedOp
-import aqua.model.transform.GenerationConfig
+import aqua.model.result.resolved.ResolvedOp
+import aqua.model.result.FuncRes
+import aqua.model.result.transform.GenerationConfig
 import aqua.types.{ArrowType, Type}
 import cats.data.Chain
 import cats.free.Cofree
@@ -12,7 +13,7 @@ case class FuncRes(
   conf: GenerationConfig,
   body: Cofree[Chain, ResolvedOp]
 ) {
-  import FuncRes._
+  import FuncRes.*
 
   lazy val funcName = source.funcName
 

@@ -1,4 +1,4 @@
-package aqua.model.transform
+package aqua.model.result.transform
 
 import aqua.model.func.*
 import aqua.model.func.raw.{FuncOp, FuncOps}
