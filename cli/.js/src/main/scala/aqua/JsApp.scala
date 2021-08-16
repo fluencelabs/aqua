@@ -3,7 +3,7 @@ package aqua
 import aqua.backend.Backend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.compiler.{AquaCompiler, AquaError, AquaSources}
-import aqua.model.transform.GenerationConfig
+import aqua.model.transform.TransformConfig
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.data.*

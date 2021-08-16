@@ -4,7 +4,7 @@ import aqua.backend.Backend
 import aqua.compiler.{AquaCompiler, AquaError}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io.*
-import aqua.model.transform.GenerationConfig
+import aqua.model.transform.TransformConfig
 import aqua.parser.lift.FileSpan
 import cats.data.*
 import cats.syntax.functor.*
@@ -20,7 +20,7 @@ object AquaPathCompiler extends Logging {
     imports: List[Path],
     targetPath: Path,
     backend: Backend,
-    bodyConfig: GenerationConfig
+    bodyConfig: TransformConfig
   ): F[ValidatedNec[String, Chain[String]]] = {
     import ErrorRendering.showError
     val sources = new AquaFileSources[F](srcPath, imports)

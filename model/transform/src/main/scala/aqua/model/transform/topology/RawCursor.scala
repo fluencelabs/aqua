@@ -1,11 +1,12 @@
-package aqua.model.func.raw
+package aqua.model.transform.topology
 
 import aqua.model.ValueModel
-import aqua.model.cursor.{ChainCursor, ChainZipper}
+import aqua.model.func.raw.*
 import cats.Eval
 import cats.data.{Chain, NonEmptyList, OptionT}
-import cats.free.Cofree
+import aqua.model.transform.cursor._
 import cats.syntax.traverse._
+import cats.free.Cofree
 import scribe.Logging
 
 // Can be heavily optimized by caching parent cursors, not just list of zippers

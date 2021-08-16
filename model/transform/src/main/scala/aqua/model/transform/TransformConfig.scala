@@ -4,7 +4,7 @@ import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
 import aqua.types.ScalarType
 import cats.kernel.Monoid
 
-case class GenerationConfig(
+case class TransformConfig(
   getDataService: String = "getDataSrv",
   callbackService: String = "callbackSrv",
   errorHandlingService: String = "errorHandlingSrv",
@@ -12,7 +12,7 @@ case class GenerationConfig(
   respFuncName: String = "response",
   relayVarName: Option[String] = Some("-relay-"),
   wrapWithXor: Boolean = true,
-  constants: List[GenerationConfig.Const] = Nil
+  constants: List[TransformConfig.Const] = Nil
 ) {
 
   val errorId: ValueModel = LiteralModel.quote(errorFuncName)
@@ -22,8 +22,8 @@ case class GenerationConfig(
 
   // Host peer id holds %init_peer_id% in case Aqua is not compiled to be executed behind a relay,
   // or relay's variable otherwise
-  val hostPeerId: GenerationConfig.Const =
-    GenerationConfig.Const(
+  val hostPeerId: TransformConfig.Const =
+    TransformConfig.Const(
       "host_peer_id",
       relayVarName.fold[ValueModel](LiteralModel.initPeerId)(r => VarModel(r, ScalarType.string))
     )
@@ -45,9 +45,9 @@ case class GenerationConfig(
 
 }
 
-object GenerationConfig {
+object TransformConfig {
   case class Const(name: String, value: ValueModel)
 
-  def forHost: GenerationConfig =
-    GenerationConfig(wrapWithXor = false, relayVarName = None)
+  def forHost: TransformConfig =
+    TransformConfig(wrapWithXor = false, relayVarName = None)
 }

@@ -1,4 +1,4 @@
-package aqua.model.transform
+package aqua.model.transform.funcop
 
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.model.func.Call

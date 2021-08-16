@@ -1,18 +1,8 @@
-package aqua.model.func.resolved
+package aqua.model.transform.res
 
 import aqua.model.func.Call
-import aqua.model.func.raw.{
-  CallServiceTag,
-  ForTag,
-  MatchMismatchTag,
-  NextTag,
-  OnTag,
-  ParTag,
-  RawTag,
-  SeqTag,
-  XorTag
-}
-import aqua.model.topology.Topology.Res
+import aqua.model.func.raw.*
+import aqua.model.transform.topology.Topology.Res
 import aqua.model.{LiteralModel, ValueModel}
 import cats.Eval
 import cats.data.Chain

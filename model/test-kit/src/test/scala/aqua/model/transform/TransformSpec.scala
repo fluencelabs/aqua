@@ -2,15 +2,16 @@ package aqua.model.transform
 
 import aqua.Node
 import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
-import aqua.model.func.resolved.{CallRes, CallServiceRes, MakeRes}
 import aqua.model.func.{Call, FuncCallable}
+import aqua.model.transform.res.{CallRes, CallServiceRes, MakeRes}
+import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class TransformSpec extends AnyFlatSpec with Matchers {
-  import Node._
+  import Node.*
 
   val stringArrow: ArrowType = ArrowType(NilType, ProductType(ScalarType.string :: Nil))
 
@@ -28,7 +29,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         Map.empty
       )
 
-    val bc = GenerationConfig()
+    val bc = TransformConfig()
 
     val fc = Transform.fn(func, bc)
 
@@ -78,7 +79,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       Map.empty
     )
 
-    val bc = GenerationConfig(wrapWithXor = false)
+    val bc = TransformConfig(wrapWithXor = false)
 
     val fc = Transform.fn(func, bc)
 
@@ -139,7 +140,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         Map.empty
       )
 
-    val bc = GenerationConfig(wrapWithXor = false)
+    val bc = TransformConfig(wrapWithXor = false)
 
     val res = Transform.fn(f2, bc).body: Node.Res
 
