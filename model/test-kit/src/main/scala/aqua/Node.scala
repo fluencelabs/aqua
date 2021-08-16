@@ -2,8 +2,9 @@ package aqua
 
 import aqua.model.func.Call
 import aqua.model.func.raw.*
-import aqua.model.result.resolved.{CallRes, CallServiceRes, MakeRes, MatchMismatchRes, ResolvedOp}
-import aqua.model.result.transform.{ErrorsCatcher, GenerationConfig}
+import aqua.model.transform.TransformConfig
+import aqua.model.transform.res.{CallRes, CallServiceRes, MakeRes, MatchMismatchRes, ResolvedOp}
+import aqua.model.transform.funcop.ErrorsCatcher
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval
@@ -88,7 +89,7 @@ object Node {
     )
   )
 
-  def errorCall(bc: GenerationConfig, i: Int, on: ValueModel = initPeer): Res = Node[ResolvedOp](
+  def errorCall(bc: TransformConfig, i: Int, on: ValueModel = initPeer): Res = Node[ResolvedOp](
     CallServiceRes(
       bc.errorHandlingCallback,
       bc.errorFuncName,
@@ -103,7 +104,7 @@ object Node {
     )
   )
 
-  def respCall(bc: GenerationConfig, value: ValueModel, on: ValueModel = initPeer): Res =
+  def respCall(bc: TransformConfig, value: ValueModel, on: ValueModel = initPeer): Res =
     Node[ResolvedOp](
       CallServiceRes(
         bc.callbackSrvId,
@@ -113,7 +114,7 @@ object Node {
       )
     )
 
-  def dataCall(bc: GenerationConfig, name: String, on: ValueModel = initPeer): Res =
+  def dataCall(bc: TransformConfig, name: String, on: ValueModel = initPeer): Res =
     Node[ResolvedOp](
       CallServiceRes(
         bc.dataSrvId,

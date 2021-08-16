@@ -5,7 +5,7 @@ import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.files.AquaFilesIO
-import aqua.model.result.transform.GenerationConfig
+import aqua.model.transform.TransformConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.Id
 import cats.data.Validated
@@ -74,7 +74,7 @@ object AquaCli extends IOApp with Logging {
             else if (toJs) JavaScriptTarget
             else TypescriptTarget
           val bc = {
-            val bc = GenerationConfig(wrapWithXor = !noXor, constants = constants)
+            val bc = TransformConfig(wrapWithXor = !noXor, constants = constants)
             bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
           }
           logger.info(s"Aqua Compiler ${versionStr}")

@@ -2,12 +2,11 @@ import aqua.AquaPathCompiler
 import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
-import aqua.model.result.transform.GenerationConfig
+import aqua.model.transform.TransformConfig
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-
 import fs2.io.file.{Files, Path}
 
 class WriteFileSpec extends AnyFlatSpec with Matchers {
@@ -19,7 +18,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
 
     import aqua.files.AquaFilesIO.summon
 
-    val bc = GenerationConfig()
+    val bc = TransformConfig()
     AquaPathCompiler
       .compileFilesTo[IO](src, List.empty, targetTs, TypeScriptBackend, bc)
       .unsafeRunSync()

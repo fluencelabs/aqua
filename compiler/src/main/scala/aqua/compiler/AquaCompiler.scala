@@ -3,8 +3,8 @@ package aqua.compiler
 import aqua.backend.Backend
 import aqua.linker.Linker
 import aqua.model.AquaContext
-import aqua.model.result.AquaRes
-import aqua.model.result.transform.GenerationConfig
+import aqua.model.transform.TransformConfig
+import aqua.model.transform.res.AquaRes
 import aqua.parser.lift.LiftParser
 import aqua.semantics.Semantics
 import cats.data.Validated.{Invalid, Valid, validNec}
@@ -21,7 +21,7 @@ object AquaCompiler {
     sources: AquaSources[F, E, I],
     liftI: (I, String) => LiftParser[S],
     backend: Backend,
-    config: GenerationConfig
+    config: TransformConfig
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
     import config.aquaContextMonoid
     type Err = AquaError[I, E, S]
@@ -59,11 +59,11 @@ object AquaCompiler {
   }
 
   def compileTo[F[_]: Monad, E, I, S[_]: Comonad, T](
-    sources: AquaSources[F, E, I],
-    liftI: (I, String) => LiftParser[S],
-    backend: Backend,
-    config: GenerationConfig,
-    write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
+                                                      sources: AquaSources[F, E, I],
+                                                      liftI: (I, String) => LiftParser[S],
+                                                      backend: Backend,
+                                                      config: TransformConfig,
+                                                      write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
     compile[F, E, I, S](sources, liftI, backend, config).flatMap {
       case Valid(compiled) =>

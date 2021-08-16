@@ -1,6 +1,6 @@
 package aqua.backend.air
 
-import aqua.model.result.FuncRes
+import aqua.model.transform.res.FuncRes
 
 case class FuncAirGen(func: FuncRes) {
 

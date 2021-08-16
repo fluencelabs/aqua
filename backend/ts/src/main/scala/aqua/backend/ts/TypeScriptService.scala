@@ -1,6 +1,6 @@
 package aqua.backend.ts
 
-import aqua.model.result.ServiceRes
+import aqua.model.transform.res.ServiceRes
 
 case class TypeScriptService(srv: ServiceRes) {
 

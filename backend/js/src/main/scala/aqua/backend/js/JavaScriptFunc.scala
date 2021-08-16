@@ -1,7 +1,7 @@
 package aqua.backend.js
 
 import aqua.backend.air.FuncAirGen
-import aqua.model.result.FuncRes
+import aqua.model.transform.res.FuncRes
 import aqua.types.*
 import cats.syntax.show.*
 
