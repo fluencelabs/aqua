@@ -1,15 +1,15 @@
-package aqua.model.topology
+package aqua.model.transform.topology
 
-import aqua.model.cursor.ChainZipper
-import aqua.model.func.raw._
-import aqua.model.func.resolved._
+import aqua.model.transform.cursor.ChainZipper
+import aqua.model.func.raw.*
+import aqua.model.transform.res.*
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{BoxType, ScalarType}
 import cats.Eval
 import cats.data.Chain.nil
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
 import cats.free.Cofree
-import cats.syntax.traverse._
+import cats.syntax.traverse.*
 import scribe.Logging
 
 object Topology extends Logging {

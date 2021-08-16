@@ -2,7 +2,7 @@ package aqua
 
 import aqua.backend.ts.TypeScriptBackend
 import aqua.files.AquaFilesIO
-import aqua.model.transform.GenerationConfig
+import aqua.model.transform.TransformConfig
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
 import fs2.io.file.Path
@@ -18,7 +18,7 @@ object Test extends IOApp.Simple {
         List(Path("./aqua")),
         Path("./target"),
         TypeScriptBackend,
-        GenerationConfig()
+        TransformConfig()
       )
       .map {
         case Validated.Invalid(errs) =>

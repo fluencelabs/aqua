@@ -1,4 +1,4 @@
-package aqua.model.cursor
+package aqua.model.transform.cursor
 
 import cats.data.{Chain, NonEmptyList}
 

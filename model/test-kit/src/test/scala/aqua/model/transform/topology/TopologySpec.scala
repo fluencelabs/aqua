@@ -1,10 +1,10 @@
-package aqua.model.topology
+package aqua.model.transform.topology
 
 import aqua.Node
 import aqua.model.VarModel
 import aqua.model.func.Call
 import aqua.model.func.raw.FuncOps
-import aqua.model.func.resolved.{MakeRes, ResolvedOp, XorRes}
+import aqua.model.transform.res.{MakeRes, ResolvedOp, XorRes}
 import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain

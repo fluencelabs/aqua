@@ -32,6 +32,8 @@ Input directory should contain files with `aqua` scripts.
 - **[types](./types)** – data types, arrows, stream types definitions and variance
 - **[parser](./parser)** - parser, takes source text and produces a source AST
 - **[model](./model)** - middle-end, internal representation of the code, optimizations and transfromations
+- **[model/transform](./model/transform)** - optimizations and transfromations, converting model to the result, ready to be rendered
+- **[model/test-kit](./model/test-kit)** - tests and test helpers for the model and transformations
 - **[semantics](./semantics)** - rules to convert source AST into the model
 - **[linker](./linker)** - checks dependencies between modules, builds and combines an abstract dependencies tree
 - **[backend](./backend)** - compilation backend interface

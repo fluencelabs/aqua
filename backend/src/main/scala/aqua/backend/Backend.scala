@@ -1,7 +1,6 @@
 package aqua.backend
 
-import aqua.model.AquaContext
-import aqua.model.transform.GenerationConfig
+import aqua.model.transform.res.AquaRes
 
 /**
  * Compiler backend generates output based on the processed model
@@ -9,11 +8,10 @@ import aqua.model.transform.GenerationConfig
 trait Backend {
 
   /**
-   * Generate the result based on the given [[AquaContext]] and [[GenerationConfig]]
+   * Generate the result based on the given [[AquaRes]]
    *
-   * @param context Source file context, processed, transformed
-   * @param genConf Generation configuration
+   * @param aqua Source file context, processed, transformed
    * @return Zero or more [[Generated]] objects, based on arguments
    */
-  def generate(context: AquaContext, genConf: GenerationConfig): Seq[Generated]
+  def generate(aqua: AquaRes): Seq[Generated]
 }

@@ -1,9 +1,10 @@
 package aqua.semantics
 
 import aqua.Node
-import aqua.Node._
+import aqua.Node.*
 import aqua.model.func.raw.{FuncOp, FuncOps, SeqTag}
-import aqua.model.transform._
+import aqua.model.transform.TransformConfig
+import aqua.model.transform.funcop.*
 import aqua.model.{AquaContext, LiteralModel}
 import aqua.parser.Ast
 import aqua.parser.lift.{LiftParser, Span}
@@ -29,7 +30,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
     val ast = Ast.fromString(script).toList.head
 
     val ctx = AquaContext.blank
-    val bc = GenerationConfig()
+    val bc = TransformConfig()
     import bc.aquaContextMonoid
 
     val p = Semantics.process(ast, ctx)
