@@ -30,9 +30,9 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val bc = GenerationConfig()
 
-    val fc = Transform.forClient(func, bc)
+    val fc = Transform.fn(func, bc)
 
-    val procFC: Node.Res = fc
+    val procFC: Node.Res = fc.body
 
     val expectedFC: Node.Res =
       MakeRes.xor(
@@ -80,9 +80,9 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val bc = GenerationConfig(wrapWithXor = false)
 
-    val fc = Transform.forClient(func, bc)
+    val fc = Transform.fn(func, bc)
 
-    val procFC: Res = fc
+    val procFC: Res = fc.body
 
     val expectedFC: Res =
       MakeRes.seq(
@@ -141,7 +141,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val bc = GenerationConfig(wrapWithXor = false)
 
-    val res = Transform.forClient(f2, bc): Node.Res
+    val res = Transform.fn(f2, bc).body: Node.Res
 
     res.equalsOrPrintDiff(
       MakeRes.seq(
