@@ -1,25 +1,22 @@
 package aqua.backend.js
 
 import aqua.backend.air.FuncAirGen
-import aqua.model.func.FuncCallable
-import aqua.model.transform.GenerationConfig
-import aqua.types._
-import cats.syntax.show._
+import aqua.model.res.FuncRes
+import aqua.types.*
+import cats.syntax.show.*
 
-case class JavaScriptFunc(func: FuncCallable) {
+case class JavaScriptFunc(func: FuncRes) {
 
   import JavaScriptFunc._
+  import FuncRes._
+  import func._
 
   def argsJavaScript: String =
-    func.argNames.mkString(", ")
+    argNames.mkString(", ")
 
   // TODO: use common functions between TypeScript and JavaScript backends
-  private def genReturnCallback(
-    retType: Type,
-    callbackService: String,
-    respFuncName: String
-  ): String = {
-    val body = retType match {
+  private def returnCallback: String = returnType.fold("") { retType =>
+    val respBody = retType match {
       case OptionType(_) =>
         """  let [opt] = args;
           |  if (Array.isArray(opt)) {
@@ -44,42 +41,38 @@ case class JavaScriptFunc(func: FuncCallable) {
           |  resolve(res);""".stripMargin
 
     }
-    s"""h.onEvent('$callbackService', '$respFuncName', (args) => {
-       |  $body
+    s"""h.onEvent('$callbackServiceId', '$respFuncName', (args) => {
+       |  $respBody
        |});
        |""".stripMargin
   }
 
-  def generateJavascript(conf: GenerationConfig = GenerationConfig()): String = {
+  def generate: String = {
 
-    val tsAir = FuncAirGen(func).generateAir(conf)
+    val jsAir = FuncAirGen(func).generate
 
     val setCallbacks = func.args.collect {
-      case (argName, OptionType(_)) =>
-        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
-      case (argName, _: DataType) =>
-        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
-      case (argName, at: ArrowType) =>
+      case Arg(argName, OptionType(_)) =>
+        s"""h.on('$dataServiceId', '$argName', () => {return $argName === null ? [] : [$argName];});"""
+      case Arg(argName, _: DataType) =>
+        s"""h.on('$dataServiceId, '$argName', () => {return $argName;});"""
+      case Arg(argName, at: ArrowType) =>
         val value = s"$argName(${argsCallToJs(
           at
         )})"
-        val expr = at.codomain.uncons.fold(s"$value; return {}")(_ => s"return $value")
-        s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
+        val expr = arrowToRes(at).fold(s"$value; return {}")(_ => s"return $value")
+        s"""h.on('$callbackServiceId', '$argName', (args) => {$expr;});"""
     }
       .mkString("\n")
 
-    val returnCallback = func.arrowType.codomain.uncons
-      .map(_ => genReturnCallback(func.arrowType.codomain, conf.callbackService, conf.respFuncName))
-      .getOrElse("")
-
     val returnVal =
-      func.ret.headOption.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
+      returnType.headOption.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
-    // TODO: it could be non-unique
-    val configArgName = "config"
+    val clientArgName = genArgName("client")
+    val configArgName = genArgName("config")
 
     s"""
-       |export async function ${func.funcName}(client${if (func.args.isEmpty) ""
+       |export async function ${func.funcName}(${clientArgName}${if (func.args.isEmpty) ""
     else ", "}${argsJavaScript}, $configArgName) {
        |    let request;
        |    $configArgName = $configArgName || {};
@@ -88,18 +81,18 @@ case class JavaScriptFunc(func: FuncCallable) {
        |            .disableInjections()
        |            .withRawScript(
        |                `
-       |${tsAir.show}
+       |${jsAir.show}
        |            `,
        |            )
        |            .configHandler((h) => {
-       |                ${conf.relayVarName.fold("") { r =>
-      s"""h.on('${conf.getDataService}', '$r', () => {
+       |                ${relayVarName.fold("") { r =>
+      s"""h.on('$dataServiceId', '$r', () => {
        |                    return client.relayPeerId;
        |                });""".stripMargin
     }}
        |                $setCallbacks
        |                $returnCallback
-       |                h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
+       |                h.onEvent('$errorHandlerId', '$errorFuncName', (args) => {
        |                    // assuming error is the single argument
        |                    const [err] = args;
        |                    reject(err);
@@ -107,14 +100,14 @@ case class JavaScriptFunc(func: FuncCallable) {
        |            })
        |            .handleScriptError(reject)
        |            .handleTimeout(() => {
-       |                reject('Request timed out for ${func.funcName}');
+       |                reject('Request timed out for ${funcName}');
        |            })
        |        if(${configArgName}.ttl) {
        |            r.withTTL(${configArgName}.ttl)
        |        }
        |        request = r.build();
        |    });
-       |    await client.initiateFlow(request);
+       |    await ${clientArgName}.initiateFlow(request);
        |    return ${returnVal};
        |}
       """.stripMargin
@@ -124,10 +117,7 @@ case class JavaScriptFunc(func: FuncCallable) {
 
 object JavaScriptFunc {
 
-  def argsToTs(at: ArrowType): String =
-    at.domain.toLabelledList().map(_._1).mkString(", ")
-
   def argsCallToJs(at: ArrowType): String =
-    at.domain.toList.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
+    FuncRes.arrowArgIndices(at).map(idx => s"args[$idx]").mkString(", ")
 
 }

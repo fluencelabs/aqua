@@ -3,6 +3,7 @@ package aqua.model.transform
 import aqua.model.func.FuncCallable
 import aqua.model.VarModel
 import aqua.model.func.resolved.{NoAir, ResolvedOp}
+import aqua.model.res.FuncRes
 import aqua.model.topology.Topology
 import aqua.types.ScalarType
 import cats.data.Chain
@@ -22,7 +23,7 @@ object Transform extends Logging {
   ): Cofree[Chain, ResolvedOp] =
     tree.copy(tail = tree.tail.map(_.filter(t => filter(t.head)).map(clear(_, filter))))
 
-  def forClient(func: FuncCallable, conf: GenerationConfig): Cofree[Chain, ResolvedOp] = {
+  def apply(func: FuncCallable, conf: GenerationConfig): FuncRes = {
     val initCallable: InitPeerCallable = InitViaRelayCallable(
       Chain.fromOption(conf.relayVarName).map(VarModel(_, ScalarType.string))
     )
@@ -48,13 +49,18 @@ object Transform extends Logging {
       callback,
       conf.respFuncName
     )
-    clear(
-      Topology.resolve(
-        errorsCatcher
-          .transform(
-            wrapFunc.resolve(func).value
-          )
-          .tree
+
+    FuncRes(
+      func,
+      conf,
+      clear(
+        Topology.resolve(
+          errorsCatcher
+            .transform(
+              wrapFunc.resolve(func).value
+            )
+            .tree
+        )
       )
     )
   }

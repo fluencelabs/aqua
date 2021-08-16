@@ -1,18 +1,6 @@
 package aqua.backend.ts
 
 import aqua.backend.Version
-import aqua.model.AquaContext
-import aqua.model.transform.GenerationConfig
-import cats.data.Chain
-
-case class TypeScriptFile(context: AquaContext) {
-
-  def funcs: Chain[TypeScriptFunc] =
-    Chain.fromSeq(context.funcs.values.toSeq).map(TypeScriptFunc(_))
-
-  def generateTS(conf: GenerationConfig = GenerationConfig()): String =
-    TypeScriptFile.Header + "\n\n" + funcs.map(_.generateTypescript(conf)).toList.mkString("\n\n")
-}
 
 object TypeScriptFile {
 
