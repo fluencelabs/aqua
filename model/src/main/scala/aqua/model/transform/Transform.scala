@@ -23,7 +23,7 @@ object Transform extends Logging {
   ): Cofree[Chain, ResolvedOp] =
     tree.copy(tail = tree.tail.map(_.filter(t => filter(t.head)).map(clear(_, filter))))
 
-  def apply(func: FuncCallable, conf: GenerationConfig): FuncRes = {
+  def fn(func: FuncCallable, conf: GenerationConfig): FuncRes = {
     val initCallable: InitPeerCallable = InitViaRelayCallable(
       Chain.fromOption(conf.relayVarName).map(VarModel(_, ScalarType.string))
     )

@@ -1,18 +1,16 @@
 package aqua.backend.js
 
 import aqua.backend.{Backend, Generated}
-import aqua.model.AquaContext
-import aqua.model.transform.{GenerationConfig, Transform}
+import aqua.model.res.AquaRes
 import cats.data.NonEmptyChain
 
 object JavaScriptBackend extends Backend {
 
   val ext = ".js"
 
-  override def generate(context: AquaContext, genConf: GenerationConfig): Seq[Generated] = {
-    val funcs = NonEmptyChain.fromSeq(
-      context.funcs.values.toSeq
-        .map(Transform.apply(_, genConf))
+  override def generate(aqua: AquaRes): Seq[Generated] = {
+    val funcs = NonEmptyChain.fromChain(
+      aqua.funcs
         .map(JavaScriptFunc(_))
     )
     funcs

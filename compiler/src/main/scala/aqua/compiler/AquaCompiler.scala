@@ -3,15 +3,16 @@ package aqua.compiler
 import aqua.backend.Backend
 import aqua.linker.Linker
 import aqua.model.AquaContext
+import aqua.model.res.AquaRes
 import aqua.model.transform.GenerationConfig
 import aqua.parser.lift.LiftParser
 import aqua.semantics.Semantics
 import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.syntax.applicative._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.traverse._
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.traverse.*
 import cats.{Comonad, Monad}
 
 object AquaCompiler {
@@ -47,7 +48,7 @@ object AquaCompiler {
                 }
                 .map(
                   _.map { ap =>
-                    val compiled = backend.generate(ap.context, config)
+                    val compiled = backend.generate(AquaRes.fromContext(ap.context, config))
                     AquaCompiled(ap.id, compiled)
                   }
                 )
