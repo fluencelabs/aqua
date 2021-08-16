@@ -1,16 +1,20 @@
 package aqua.backend.ts
 
-import aqua.model.ServiceModel
+import aqua.model.res.ServiceRes
 
-case class TypeScriptService(srv: ServiceModel) {
+case class TypeScriptService(srv: ServiceRes) {
+
+  import TypeScriptFunc.typeToTs
 
   def generate: String =
     s"""
        |//${srv.name}
+       |//defaultId = ${srv.defaultId.getOrElse("undefined")}
        |
-       |${srv.arrows.toMap.map { case (n, v) =>
-      s"//${n}(${TypeScriptFunc.argsToTs(v)})"
-    }.toList.mkString("\n")}
+       |${srv.members.map { case (n, v) =>
+      s"//${n}: ${typeToTs(v)}"
+    }.mkString("\n")}
+       |//END ${srv.name}
        |
        |""".stripMargin
 }
