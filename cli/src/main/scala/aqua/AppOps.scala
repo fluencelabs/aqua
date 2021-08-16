@@ -1,12 +1,13 @@
 package aqua
 
+import aqua.backend.Version
 import aqua.model.LiteralModel
 import aqua.model.transform.GenerationConfig
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
-import cats.effect.{unsafe, ExitCode, IO}
+import cats.effect.{ExitCode, IO}
 import cats.effect.std.Console
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
@@ -147,7 +148,7 @@ object AppOps {
       .withDefault(false)
 
   lazy val versionStr: String =
-    Option(getClass.getPackage.getImplementationVersion).filter(_.nonEmpty).getOrElse("no version")
+    Version.version
 
   def versionAndExit[F[_]: Console: Functor]: F[ExitCode] = Console[F]
     .println(versionStr)

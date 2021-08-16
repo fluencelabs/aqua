@@ -5,7 +5,6 @@ import aqua.files.AquaFilesIO
 import aqua.model.transform.GenerationConfig
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
-
 import fs2.io.file.Path
 
 object Test extends IOApp.Simple {
