@@ -100,4 +100,7 @@ object Token {
 
   def comma0[T](p: P[T]): P0[List[T]] =
     P.repSep0(p, `,` <* ` \n+`.rep0)
+
+  def asOpt[T](p: P[T]): P[(T, Option[T])] =
+    p ~ (` as ` *> p).?
 }

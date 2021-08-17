@@ -15,7 +15,11 @@ case class Ability[F[_]: Comonad](name: F[String]) extends Token[F] {
 }
 
 object Ability {
+  type As[F[_]] = (Ability[F], Option[Ability[F]])
 
   def ab[F[_]: LiftParser: Comonad]: P[Ability[F]] =
     `Class`.lift.map(Ability(_))
+
+  def abAs[F[_]: LiftParser: Comonad]: P[As[F]] =
+    asOpt(ab[F])
 }

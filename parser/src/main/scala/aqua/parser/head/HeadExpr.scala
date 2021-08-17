@@ -13,11 +13,11 @@ case class HeadExpr[F[_]](module: Option[ModuleExpr[F]]) extends HeaderExpr[F]
 object HeadExpr {
 
   def headExprs: List[HeaderExpr.Companion] =
-    UseFromExpr :: UseExpr :: ImportExpr :: Nil
+    UseFromExpr :: UseExpr :: ImportFromExpr :: ImportExpr :: Nil
 
   def ast[F[_]: LiftParser: Comonad]: P0[Ast.Head[F]] =
     ((ModuleExpr.p[F] <* ` \n+`).? ~
-      P.repSep0(P.oneOf(headExprs.map(_.ast[F])), ` \n+`).map(Chain.fromSeq))
+      P.repSep0(P.oneOf(headExprs.map(_.ast[F].backtrack)), ` \n+`).map(Chain.fromSeq))
       .surroundedBy(` \n+`.?)
       .?
       .map {
