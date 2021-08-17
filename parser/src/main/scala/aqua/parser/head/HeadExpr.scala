@@ -13,7 +13,7 @@ case class HeadExpr[F[_]](module: Option[ModuleExpr[F]]) extends HeaderExpr[F]
 object HeadExpr {
 
   def headExprs: List[HeaderExpr.Companion] =
-    UseFromExpr :: UseExpr :: ImportFromExpr :: ImportExpr :: PubExpr :: Nil
+    UseFromExpr :: UseExpr :: ImportFromExpr :: ImportExpr :: ExportExpr :: Nil
 
   def ast[F[_]: LiftParser: Comonad]: P0[Ast.Head[F]] =
     ((ModuleExpr.p[F] <* ` \n+`).? ~

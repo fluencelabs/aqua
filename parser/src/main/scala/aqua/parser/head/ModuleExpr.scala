@@ -9,10 +9,10 @@ import cats.Comonad
 import cats.parse.Parser
 
 case class ModuleExpr[F[_]](
-  name: Ability[F],
-  exportAll: Option[Token[F]],
-  exportNames: List[Name[F]],
-  exportCustom: List[Ability[F]]
+                             name: Ability[F],
+                             exportAll: Option[Token[F]],
+                             declareNames: List[Name[F]],
+                             declareCustom: List[Ability[F]]
 ) extends HeaderExpr[F]
 
 object ModuleExpr extends HeaderExpr.Leaf {
@@ -30,7 +30,7 @@ object ModuleExpr extends HeaderExpr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[ModuleExpr[F]] =
     (`module` *> ` ` *> Ability.ab[F] ~
-      (` exports ` *> nameOrAbListOrAll[F]).?).map {
+      (` declares ` *> nameOrAbListOrAll[F]).?).map {
       case (name, None) =>
         ModuleExpr(name, None, Nil, Nil)
       case (name, Some(Left(exportMembers))) =>
