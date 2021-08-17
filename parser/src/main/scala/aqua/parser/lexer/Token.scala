@@ -29,6 +29,7 @@ object Token {
   val `exports`: P[Unit] = P.string("exports")
   val ` exports ` : P[Unit] = `exports`.surroundedBy(` `)
   val `_export`: P[Unit] = P.string("export")
+  val `pub`: P[Unit] = P.string("pub")
   val `star`: P[Unit] = P.char('*')
   val `use`: P[Unit] = P.string("use")
   val `from`: P[Unit] = P.string("from")
