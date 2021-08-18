@@ -23,7 +23,6 @@ object AquaPathCompiler extends Logging {
     bodyConfig: TransformConfig
   ): F[ValidatedNec[String, Chain[String]]] = {
     import ErrorRendering.showError
-    logger.info("compileFilesTo")
     val sources = new AquaFileSources[F](srcPath, imports)
     AquaCompiler
       .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](

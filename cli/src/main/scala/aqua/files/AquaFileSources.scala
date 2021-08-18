@@ -25,7 +25,6 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
   override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =
     filesIO.listAqua(sourcesPath).flatMap {
       case Validated.Valid(files) =>
-        logger.info(s"files list: $files")
         files
           .map(f =>
             filesIO
@@ -33,9 +32,7 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
               .value
               .map[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] {
                 case Left(err) => Validated.invalidNec(err)
-                case Right(content) =>
-//                  logger.info("files read")
-                  Validated.validNec(Chain.one(FileModuleId(f) -> content))
+                case Right(content) => Validated.validNec(Chain.one(FileModuleId(f) -> content))
               }
           )
           .traverse(identity)

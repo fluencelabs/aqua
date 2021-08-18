@@ -55,7 +55,6 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
   def sourceModules: F[ValidatedNec[Err, Modules[I, Err, Body]]] =
     parseSources.flatMap {
       case Validated.Valid(srcs) =>
-        logger.info("parsed")
         srcs.traverse { case (id, ast) =>
           resolveImports(id, ast).map(_.map(AquaModule(id, _, ast)).map(Chain.one))
         }.map(
@@ -103,9 +102,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
 
   def resolveSources: F[ValidatedNec[Err, Modules[I, Err, Ast[S]]]] =
     sourceModules.flatMap {
-      case Validated.Valid(ms) =>
-        logger.info("sources resolved")
-        resolveModules(ms)
+      case Validated.Valid(ms) => resolveModules(ms)
       case err => err.pure[F]
     }
 

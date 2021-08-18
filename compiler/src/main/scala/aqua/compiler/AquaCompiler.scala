@@ -26,31 +26,21 @@ object AquaCompiler extends Logging {
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
     import config.aquaContextMonoid
     type Err = AquaError[I, E, S]
-    logger.info("before resolve")
     new AquaParser[F, E, I, S](sources, liftI)
       .resolve[ValidatedNec[Err, AquaContext]] { ast => context =>
-        logger.info("transpile")
         context.andThen { ctx =>
-          logger.info("after context")
           Semantics
             .process(ast, ctx)
-            .map { a =>
-              logger.info("after semantics process")
-              a
-
-            }
             .leftMap(_.map[Err](CompileError(_)))
         }
       }
       .map {
         case Valid(modules) =>
-          logger.info("after resolve")
           Linker.link[I, AquaError[I, E, S], ValidatedNec[Err, AquaContext]](
             modules,
             cycle => CycleError[I, E, S](cycle.map(_.id))
           ) match {
             case Valid(filesWithContext) =>
-              logger.info("after link")
               filesWithContext
                 .foldLeft[ValidatedNec[Err, Chain[AquaProcessed[I]]]](
                   validNec(Chain.nil)
@@ -81,7 +71,6 @@ object AquaCompiler extends Logging {
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
     compile[F, E, I, S](sources, liftI, backend, config).flatMap {
       case Valid(compiled) =>
-        logger.info("compiled")
         compiled.map { ac =>
           write(ac).map(
             _.map(
