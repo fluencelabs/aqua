@@ -13,7 +13,7 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Comonad, Monad}
+import cats.{Comonad, Monad, Monoid}
 import scribe.Logging
 
 object AquaCompiler extends Logging {
@@ -26,27 +26,41 @@ object AquaCompiler extends Logging {
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
     import config.aquaContextMonoid
     type Err = AquaError[I, E, S]
+    type Ctx = Map[I, AquaContext]
+    type ValidatedCtx = ValidatedNec[Err, Ctx]
+
     new AquaParser[F, E, I, S](sources, liftI)
-      .resolve[ValidatedNec[Err, AquaContext]] { ast => context =>
-        context.andThen { ctx =>
-          Semantics
-            .process(ast, ctx)
-            .leftMap(_.map[Err](CompileError(_)))
-        }
-      }
-      .map {
-        case Valid(modules) =>
-          Linker.link[I, AquaError[I, E, S], ValidatedNec[Err, AquaContext]](
-            modules,
-            cycle => CycleError[I, E, S](cycle.map(_.id))
-          ) match {
-            case Valid(filesWithContext) =>
+      .resolve[ValidatedCtx](ast =>
+        context =>
+          context.andThen(ctx =>
+            // TODO: for the ast, we should know how it was derived
+            Semantics
+              .process(
+                ast,
+                // TODO: there should be exactly one value
+                ctx.values
+                  .reduceLeftOption(Monoid[AquaContext].combine)
+                  .getOrElse(Monoid[AquaContext].empty)
+              )
+              .leftMap(_.map[Err](CompileError(_)))
+          )
+      )
+      .map(
+        _.andThen(modules =>
+          Linker
+            .link[I, AquaError[I, E, S], ValidatedCtx](
+              modules,
+              cycle => CycleError[I, E, S](cycle.map(_.id))
+            )
+            .andThen { filesWithContext =>
               filesWithContext
                 .foldLeft[ValidatedNec[Err, Chain[AquaProcessed[I]]]](
                   validNec(Chain.nil)
                 ) {
                   case (acc, (i, Valid(context))) =>
-                    acc combine validNec(Chain.one(AquaProcessed(i, context)))
+                    acc combine validNec(
+                      Chain.fromSeq(context.toSeq.map((i, c) => AquaProcessed(i, c)))
+                    )
                   case (acc, (_, Invalid(errs))) =>
                     acc combine Invalid(errs)
                 }
@@ -56,10 +70,9 @@ object AquaCompiler extends Logging {
                     AquaCompiled(ap.id, compiled)
                   }
                 )
-            case i @ Invalid(_) => i
-          }
-        case i @ Invalid(_) => i
-      }
+            }
+        )
+      )
   }
 
   def compileTo[F[_]: Monad, E, I, S[_]: Comonad, T](

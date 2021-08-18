@@ -13,6 +13,9 @@ case class Ast[F[_]](head: Ast.Head[F], tree: Ast.Tree[F]) {
 
   def cata[T](folder: (Expr[F], Chain[T]) => Eval[T]): Eval[T] =
     Cofree.cata[Chain, Expr[F], T](tree)(folder)
+
+  def cataHead[T](folder: (HeaderExpr[F], Chain[T]) => Eval[T]): Eval[T] =
+    Cofree.cata[Chain, HeaderExpr[F], T](head)(folder)
 }
 
 object Ast {
