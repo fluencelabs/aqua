@@ -107,7 +107,7 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
         } else {
           Files[F].isDirectory(folder).flatMap { isDir =>
             if (isDir) {
-              Files[F].list(folder).evalFilter(p => Files[F].isDirectory(p).map(isDir => isDir || p.extName == ".aqua"))
+              Files[F].list(folder).evalFilter(p => if (p.extName == ".aqua") true.pure[F] else Files[F].isDirectory(p))
                 .compile.toList.map(Right(_))
             } else {
               Right(folder :: Nil).pure[F]
