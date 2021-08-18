@@ -81,48 +81,35 @@ object AquaCli extends IOApp with Logging {
           }
           logger.info(s"Aqua Compiler ${versionStr}")
 
-          // TODO: do it better
-          def toError[F[_]: Monad, T, G](
-            opt: F[ValidatedNec[String, T]],
-            op: T => F[ExitCode]
-          ): F[ExitCode] = {
-            opt.flatMap {
-              case Validated.Valid(optValue) =>
-                op(optValue)
+          (inputF, outputF, importsF).mapN {(i, o, imp) =>
+            i.andThen { input =>
+              o.andThen { output =>
+                imp.map { imports =>
+                  AquaPathCompiler
+                    .compileFilesTo[F](
+                      input,
+                      imports,
+                      output,
+                      targetToBackend(target),
+                      bc
+                    )
+                  }
+                }
+              }
+            }.flatMap {
               case Validated.Invalid(errs) =>
-                errs.map(System.out.println)
+                errs.map(logger.error(_))
                 ExitCode.Error.pure[F]
+              case Validated.Valid(result) =>
+                result.map {
+                  case Validated.Invalid(errs) =>
+                    errs.map(logger.error(_))
+                    ExitCode.Error
+                  case Validated.Valid(results) =>
+                    results.map(logger.info(_))
+                    ExitCode.Success
+                }
             }
-          }
-
-          toError(
-            inputF,
-            input =>
-              toError(
-                outputF,
-                output =>
-                  toError(
-                    importsF,
-                    imports =>
-                      AquaPathCompiler
-                        .compileFilesTo[F](
-                          input,
-                          imports,
-                          output,
-                          targetToBackend(target),
-                          bc
-                        )
-                        .map {
-                          case Validated.Invalid(errs) =>
-                            errs.map(System.out.println)
-                            ExitCode.Error
-                          case Validated.Valid(results) =>
-                            results.map(logger.info(_))
-                            ExitCode.Success
-                        }
-                  )
-              )
-          )
         }
     }
   }

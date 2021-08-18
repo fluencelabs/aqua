@@ -52,12 +52,7 @@ object AppOps {
         if (exists)
           Files[F].isRegularFile(p).map { isFile =>
             if (isFile) {
-              val filename = p.fileName.toString
-              val ext = Option(filename)
-                .filter(_.contains("."))
-                .map(f => f.substring(f.lastIndexOf(".") + 1))
-                .getOrElse("")
-              if (ext != "aqua") Validated.invalidNec("File must be with 'aqua' extension")
+              if (p.extName != ".aqua") Validated.invalidNec("File must be with 'aqua' extension")
               else Validated.validNec(p)
             } else
               Validated.validNec(p)
