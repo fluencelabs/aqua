@@ -32,7 +32,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
       )
 
   // Resolve imports (not parse, just resolve) of the given file
-  def resolveImports(id: I, ast: Ast[S]): F[ValidatedNec[Err, Map[I, Err]]] =
+  def resolveImports(id: I, ast: Body): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
     ast.head.tailForced
       .map(_.head)
       .collect { case fe: FilenameExpr[F] =>
@@ -41,14 +41,28 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
           .map(
             _.bimap(
               _.map[Err](ResolveImportsErr(id, fe.filename, _)),
-              importId => Chain.one[(I, Err)](importId -> ImportErr(fe.filename))
+              importId =>
+                Chain.one[(I, (String, Err))](importId -> (fe.fileValue, ImportErr(fe.filename)))
             )
           )
       }
       .traverse(identity)
       .map(
-        _.foldLeft(Validated.validNec[Err, Chain[(I, Err)]](Chain.nil))(_ combine _)
-          .map(_.toList.toMap)
+        _.foldLeft(Validated.validNec[Err, Chain[(I, (String, Err))]](Chain.nil))(_ combine _).map {
+          collected =>
+            AquaModule[I, Err, Body](
+              id,
+              // How filenames correspond to the resolved IDs
+              collected.map { case (i, (fn, _)) =>
+                fn -> i
+              }.toList.toMap[String, I],
+              // Resolved IDs to errors that point to the import in source code
+              collected.map { case (i, (_, err)) =>
+                i -> err
+              }.toList.toMap[I, Err],
+              ast
+            )
+        }
       )
 
   // Parse sources, convert to modules
@@ -56,7 +70,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
     parseSources.flatMap {
       case Validated.Valid(srcs) =>
         srcs.traverse { case (id, ast) =>
-          resolveImports(id, ast).map(_.map(AquaModule(id, _, ast)).map(Chain.one))
+          resolveImports(id, ast).map(_.map(Chain.one))
         }.map(
           _.foldLeft(Validated.validNec[Err, Chain[AquaModule[I, Err, Body]]](Chain.empty))(
             _ combine _
@@ -66,7 +80,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
         Validated.invalid[NonEmptyChain[Err], Chain[AquaModule[I, Err, Body]]](errs).pure[F]
     }.map(_.map(_.foldLeft(Modules[I, Err, Body]())(_.add(_, toExport = true))))
 
-  def loadModule(imp: I): F[ValidatedNec[Err, AquaModule[I, Err, Ast[S]]]] =
+  def loadModule(imp: I): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
     sources
       .load(imp)
       .map(_.leftMap(_.map[Err](SourcesErr(_))).andThen { src =>
@@ -75,7 +89,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
       })
       .flatMap {
         case Validated.Valid(ast) =>
-          resolveImports(imp, ast).map(_.map(AquaModule(imp, _, ast)))
+          resolveImports(imp, ast)
         case Validated.Invalid(errs) =>
           Validated.invalid[NonEmptyChain[Err], AquaModule[I, Err, Ast[S]]](errs).pure[F]
       }
@@ -106,7 +120,9 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
       case err => err.pure[F]
     }
 
-  def resolve[T](transpile: Ast[S] => T => T): F[ValidatedNec[Err, Modules[I, Err, T => T]]] =
-    resolveSources.map(_.map(_.map(transpile)))
+  def resolve[T](
+    transpile: AquaModule[I, Err, Body] => T => T
+  ): F[ValidatedNec[Err, Modules[I, Err, T => T]]] =
+    resolveSources.map(_.map(_.mapModuleToBody(transpile)))
 
 }
