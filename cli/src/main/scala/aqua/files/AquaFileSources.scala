@@ -12,13 +12,14 @@ import cats.syntax.functor.*
 import cats.syntax.monad.*
 import cats.syntax.traverse.*
 import fs2.io.file.{Files, Path}
+import scribe.Logging
 
 import scala.util.Try
 
 class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
   sourcesPath: Path,
   importFrom: List[Path]
-) extends AquaSources[F, AquaFileError, FileModuleId] {
+) extends AquaSources[F, AquaFileError, FileModuleId] with Logging {
   private val filesIO = implicitly[AquaIO[F]]
 
   override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =

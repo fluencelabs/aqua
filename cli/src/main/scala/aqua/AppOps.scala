@@ -1,16 +1,19 @@
 package aqua
 
+import aqua.backend.Version
 import aqua.model.LiteralModel
 import aqua.model.transform.TransformConfig
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{NonEmptyList, Validated, ValidatedNel}
-import cats.effect.{ExitCode, IO, unsafe}
+import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
+import cats.effect.{ExitCode, IO}
 import cats.effect.std.Console
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Comonad, Functor}
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.{Comonad, Functor, Monad}
 import com.monovore.decline.Opts.help
 import com.monovore.decline.{Opts, Visibility}
 import scribe.Level
@@ -41,84 +44,56 @@ object AppOps {
       )
   }
 
-  def checkPath(implicit runtime: unsafe.IORuntime): String => ValidatedNel[String, Path] = {
-    pathStr =>
-      Validated
-        .fromEither(Validated.catchNonFatal {
-          val p = Path(pathStr)
-          Files[IO]
-            .exists(p)
-            .flatMap { exists =>
-              if (exists)
-                Files[IO].isRegularFile(p).map { isFile =>
-                  if (isFile) {
-                    val filename = p.fileName.toString
-                    val ext = Option(filename)
-                      .filter(_.contains("."))
-                      .map(f => f.substring(f.lastIndexOf(".") + 1))
-                      .getOrElse("")
-                    if (ext != "aqua") Left("File must be with 'aqua' extension")
-                    else Right(p)
-                  } else
-                    Right(p)
-                }
-              else
-                IO(Left(s"There is no path '${p.toString}'"))
-            }
-            // TODO: make it with correct effects
-            .unsafeRunSync()
-        }.toEither.left.map(t => s"An error occurred on imports reading: ${t.getMessage}").flatten)
-        .toValidatedNel
+  def checkPath[F[_]: Monad: Files](pathStr: String): F[ValidatedNec[String, Path]] = {
+    val p = Path(pathStr)
+    Files[F]
+      .exists(p)
+      .flatMap { exists =>
+        if (exists)
+          Files[F].isRegularFile(p).map { isFile =>
+            if (isFile) {
+              if (p.extName != ".aqua") Validated.invalidNec("File must be with 'aqua' extension")
+              else Validated.validNec(p)
+            } else
+              Validated.validNec(p)
+          }
+        else
+          Validated.invalidNec(s"There is no path '${p.toString}'").pure[F]
+      }
   }
 
-  def inputOpts(implicit runtime: unsafe.IORuntime): Opts[Path] =
+  def inputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Path]]] =
     Opts
       .option[String](
         "input",
         "Path to an aqua file or an input directory that contains your .aqua files",
         "i"
       )
-      .mapValidated(checkPath)
+      .map(s => checkPath[F](s))
 
-  def outputOpts(implicit runtime: unsafe.IORuntime): Opts[Path] =
-    Opts.option[String]("output", "Path to the output directory", "o").mapValidated(checkPath)
+  def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Path]]] =
+    Opts.option[String]("output", "Path to the output directory", "o").map(s => checkPath[F](s))
 
-  def importOpts(implicit runtime: unsafe.IORuntime): Opts[List[Path]] =
+  def importOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, List[Path]]]] =
     Opts
       .options[String]("import", "Path to the directory to import from", "m")
-      .mapValidated { ps =>
-        val checked = ps
-          .map(pStr => {
-            Validated.catchNonFatal {
-              val p = Path(pStr)
-              (for {
-                exists <- Files[IO].exists(p)
-                isDir <- Files[IO].isDirectory(p)
-              } yield {
-                if (exists && isDir) Right(p)
-                else Left(s"There is no path ${p.toString} or it is not a directory")
-              })
-                // TODO: make it with correct effects
-                .unsafeRunSync()
-            }
+      .map { ps =>
+        val checked: List[F[ValidatedNec[String, Path]]] = ps.toList.map { pStr =>
+          val p = Path(pStr)
+          (for {
+            exists <- Files[F].exists(p)
+            isDir <- Files[F].isDirectory(p)
+          } yield {
+            if (exists && isDir) Validated.validNec[String, Path](p)
+            else
+              Validated.invalidNec[String, Path](
+                s"There is no path ${p.toString} or it is not a directory"
+              )
           })
-          .toList
-        checked.map {
-          case Validated.Valid(pE) =>
-            pE match {
-              case Right(p) =>
-                Validated.Valid(p)
-              case Left(e) =>
-                Validated.Invalid(e)
-            }
-          case Validated.Invalid(e) =>
-            Validated.Invalid(s"Error occurred on imports reading: ${e.getMessage}")
-        }.traverse {
-          case Valid(a) => Validated.validNel(a)
-          case Invalid(e) => Validated.invalidNel(e)
         }
+
+        checked.sequence.map(_.sequence)
       }
-      .withDefault(List.empty)
 
   def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[TransformConfig.Const]] =
     Opts
@@ -168,7 +143,7 @@ object AppOps {
       .withDefault(false)
 
   lazy val versionStr: String =
-    Option(getClass.getPackage.getImplementationVersion).filter(_.nonEmpty).getOrElse("no version")
+    Version.version
 
   def versionAndExit[F[_]: Console: Functor]: F[ExitCode] = Console[F]
     .println(versionStr)

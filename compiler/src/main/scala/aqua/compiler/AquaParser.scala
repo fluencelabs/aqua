@@ -5,17 +5,18 @@ import aqua.parser.Ast
 import aqua.parser.head.ImportExpr
 import aqua.parser.lift.LiftParser
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.syntax.applicative._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.traverse._
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.traverse.*
 import cats.{Comonad, Monad}
+import scribe.Logging
 
 // TODO: add tests
 class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
   sources: AquaSources[F, E, I],
   liftI: (I, String) => LiftParser[S]
-) {
+) extends Logging {
 
   type Body = Ast[S]
   type Err = AquaError[I, E, S]
