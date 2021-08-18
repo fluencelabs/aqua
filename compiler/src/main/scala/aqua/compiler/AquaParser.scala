@@ -10,12 +10,13 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.{Comonad, Monad}
+import scribe.Logging
 
 // TODO: add tests
 class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
   sources: AquaSources[F, E, I],
   liftI: (I, String) => LiftParser[S]
-) {
+) extends Logging {
 
   type Body = Ast[S]
   type Err = AquaError[I, E, S]

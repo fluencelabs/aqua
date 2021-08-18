@@ -6,11 +6,11 @@ import cats.data.Chain
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import fs2.text
-import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import fs2.io.file.{Files, Path}
+import org.scalatest.flatspec.AsyncFlatSpec
 
-class SourcesSpec extends AnyFlatSpec with Matchers {
+class SourcesSpec extends AsyncFlatSpec with Matchers {
   implicit val aquaIO: AquaIO[IO] = AquaFilesIO.summon[IO]
 
   "AquaFileSources" should "generate correct fileId with imports" in {
@@ -18,25 +18,25 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     val importPath = path.resolve("imports")
 
     val sourceGen = new AquaFileSources[IO](path, importPath :: Nil)
+    sourceGen.sources.map { result =>
+      result.isValid shouldBe true
 
-    val result = sourceGen.sources.unsafeRunSync()
-    result.isValid shouldBe true
+      val listResult = result
+        .getOrElse(Chain.empty)
+        .toList
+        .map { case (fid, s) =>
+          (fid.file.toString.split("/").last, s)
+        }
+        .sortBy(_._1) // sort cause different systems have different order of file reading
 
-    val listResult = result
-      .getOrElse(Chain.empty)
-      .toList
-      .map { case (fid, s) =>
-        (fid.file.toString.split("/").last, s)
-      }
-      .sortBy(_._1) // sort cause different systems have different order of file reading
+      val (id, importFile) = listResult(1)
+      id shouldBe "index.aqua"
+      importFile.nonEmpty shouldBe true
 
-    val (id, importFile) = listResult(1)
-    id shouldBe "index.aqua"
-    importFile.nonEmpty shouldBe true
-
-    val (importNearId, importFileNear) = listResult.head
-    importNearId shouldBe "importNear.aqua"
-    importFileNear.nonEmpty shouldBe true
+      val (importNearId, importFileNear) = listResult.head
+      importNearId shouldBe "importNear.aqua"
+      importFileNear.nonEmpty shouldBe true
+    }.unsafeToFuture()
   }
 
   "AquaFileSources" should "throw an error if a source file doesn't exist" in {
@@ -44,8 +44,7 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
 
     val sourceGen = new AquaFileSources[IO](path, Nil)
 
-    val result = sourceGen.sources.unsafeRunSync()
-    result.isInvalid shouldBe true
+    sourceGen.sources.map(result => result.isInvalid shouldBe true).unsafeToFuture()
   }
 
   "AquaFileSources" should "throw an error if there is no import that is indicated in a source" in {
@@ -53,9 +52,10 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
     val importPath = path.resolve("random/import/path")
 
     val sourceGen = new AquaFileSources[IO](path, importPath :: Nil)
-    val result =
-      sourceGen.resolveImport(FileModuleId(path.resolve("no-file.aqua")), "no/file").unsafeRunSync()
-    result.isInvalid shouldBe true
+    sourceGen
+      .resolveImport(FileModuleId(path.resolve("no-file.aqua")), "no/file")
+      .map(result => result.isInvalid shouldBe true)
+      .unsafeToFuture()
   }
 
   "AquaFileSources" should "find correct imports" in {
@@ -64,36 +64,33 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
 
     val sourceGen = new AquaFileSources[IO](srcPath, importPath :: Nil)
 
-    // should be found in importPath
-    val result =
-      sourceGen
-        .resolveImport(FileModuleId(srcPath), "imports/import.aqua")
-        .unsafeRunSync()
+    (for {
+      // should be found in importPath
+      result <- sourceGen.resolveImport(FileModuleId(srcPath), "imports/import.aqua")
+      exists <- {
+        result.isValid shouldBe true
+        val file = result.getOrElse(FileModuleId(Path("/some/random"))).file
+        Files[IO].exists(file)
+      }
+      _ = exists shouldBe true
 
-    result.isValid shouldBe true
-    val file = result.getOrElse(FileModuleId(Path("/some/random"))).file
-    Files[IO].exists(file).unsafeRunSync() shouldBe true
-
-    // should be found near src file
-    val result2 =
-      sourceGen
-        .resolveImport(FileModuleId(srcPath), "importNear.aqua")
-        .unsafeRunSync()
-
-    result2.isValid shouldBe true
-    val file2 = result2.getOrElse(FileModuleId(Path("/some/random"))).file
-    Files[IO].exists(file2).unsafeRunSync() shouldBe true
-
-    // near src file but in another directory
-    val sourceGen2 = new AquaFileSources[IO](srcPath, Nil)
-    val result3 =
-      sourceGen2
-        .resolveImport(FileModuleId(srcPath), "imports/import.aqua")
-        .unsafeRunSync()
-
-    result3.isValid shouldBe true
-    val file3 = result3.getOrElse(FileModuleId(Path("/some/random"))).file
-    Files[IO].exists(file3).unsafeRunSync() shouldBe true
+      // should be found near src file
+      result2 <- sourceGen.resolveImport(FileModuleId(srcPath), "importNear.aqua")
+      exists2 <- {
+        result2.isValid shouldBe true
+        val file2 = result2.getOrElse(FileModuleId(Path("/some/random"))).file
+        Files[IO].exists(file2)
+      }
+      _ = exists2 shouldBe true
+      // near src file but in another directory
+      sourceGen2 = new AquaFileSources[IO](srcPath, Nil)
+      result3 <- sourceGen2.resolveImport(FileModuleId(srcPath), "imports/import.aqua")
+      exists3 <- {
+        result3.isValid shouldBe true
+        val file3 = result3.getOrElse(FileModuleId(Path("/some/random"))).file
+        Files[IO].exists(file3)
+      }
+    } yield { exists3 shouldBe true }).unsafeToFuture()
   }
 
   "AquaFileSources" should "resolve correct path for target" in {
@@ -106,11 +103,15 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
 
     val suffix = "_custom.super"
 
-    val resolved = sourceGen.resolveTargetPath(filePath, targetPath, suffix).unsafeRunSync()
-    resolved.isValid shouldBe true
+    sourceGen
+      .resolveTargetPath(filePath, targetPath, suffix)
+      .map { resolved =>
+        resolved.isValid shouldBe true
 
-    val targetFilePath = resolved.toOption.get
-    targetFilePath.toString shouldBe "/target/dir/some-dir/file_custom.super"
+        val targetFilePath = resolved.toOption.get
+        targetFilePath.toString shouldBe "/target/dir/some-dir/file_custom.super"
+      }
+      .unsafeToFuture()
   }
 
   "AquaFileSources" should "write correct file with correct path" in {
@@ -121,38 +122,36 @@ class SourcesSpec extends AnyFlatSpec with Matchers {
 
     // clean up
     val resultPath = Path("cli/.jvm/src/test/test-dir/target/imports/import_hey.custom")
-    Files[IO].deleteIfExists(resultPath).unsafeRunSync()
-
-    val sourceGen = new AquaFileSources[IO](path, Nil)
-    val content = "some random content"
-    val compiled = AquaCompiled[FileModuleId](
-      FileModuleId(filePath),
-      Seq(Generated("_hey.custom", content))
-    )
-
-    val resolved = sourceGen.write(targetPath)(compiled).unsafeRunSync()
-    resolved.size shouldBe 1
-    resolved.head.isValid shouldBe true
-
-    Files[IO].exists(resultPath).unsafeRunSync() shouldBe true
-
-    val resultText = Files[IO]
-      .readAll(resultPath)
-      .fold(
-        Vector
-          .empty[Byte]
-      )((acc, b) => acc :+ b)
-      .flatMap(fs2.Stream.emits)
-      .through(text.utf8.decode)
-      .attempt
-      .compile
-      .last
-      .unsafeRunSync()
-      .get
-      .right
-      .get
-    resultText shouldBe content
-
-    Files[IO].deleteIfExists(resultPath).unsafeRunSync()
+    (for {
+      _ <- Files[IO].deleteIfExists(resultPath)
+      sourceGen = new AquaFileSources[IO](path, Nil)
+      content = "some random content"
+      compiled = AquaCompiled[FileModuleId](
+        FileModuleId(filePath),
+        Seq(Generated("_hey.custom", content))
+      )
+      resolved <- sourceGen.write(targetPath)(compiled)
+      _ = {
+        resolved.size shouldBe 1
+        resolved.head.isValid shouldBe true
+      }
+      exists <- Files[IO].exists(resultPath)
+      _ = exists shouldBe true
+      result <- Files[IO]
+        .readAll(resultPath)
+        .fold(
+          Vector
+            .empty[Byte]
+        )((acc, b) => acc :+ b)
+        .flatMap(fs2.Stream.emits)
+        .through(text.utf8.decode)
+        .attempt
+        .compile
+        .last
+      resultText = result.get.right.get
+      _ <- Files[IO].deleteIfExists(resultPath)
+    } yield {
+      resultText shouldBe content
+    }).unsafeToFuture()
   }
 }

@@ -7,19 +7,21 @@ import aqua.backend.ts.TypeScriptBackend
 import aqua.files.AquaFilesIO
 import aqua.model.transform.TransformConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import cats.Id
-import cats.data.Validated
+import cats.{Functor, Id, Monad}
+import cats.data.{Chain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import cats.effect.*
 import cats.effect.std.Console as ConsoleEff
 import cats.syntax.apply.*
 import cats.syntax.functor.*
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
 import com.monovore.decline.Opts
 import com.monovore.decline.effect.CommandIOApp
 import fs2.io.file.Files
 import scribe.Logging
 
 object AquaCli extends IOApp with Logging {
-  import AppOps._
+  import AppOps.*
 
   sealed trait CompileTarget
   case object TypescriptTarget extends CompileTarget
@@ -45,9 +47,9 @@ object AquaCli extends IOApp with Logging {
       ) orElse helpOpt.as(
       helpAndExit
     ) orElse (
-      inputOpts,
-      importOpts,
-      outputOpts,
+      inputOpts[F],
+      importOpts[F],
+      outputOpts[F],
       compileToAir,
       compileToJs,
       noRelay,
@@ -57,7 +59,7 @@ object AquaCli extends IOApp with Logging {
       logLevelOpt,
       constantOpts[Id]
     ).mapN {
-      case (input, imports, output, toAir, toJs, noRelay, noXor, h, v, logLevel, constants) =>
+      case (inputF, importsF, outputF, toAir, toJs, noRelay, noXor, h, v, logLevel, constants) =>
         scribe.Logger.root
           .clearHandlers()
           .clearModifiers()
@@ -78,21 +80,35 @@ object AquaCli extends IOApp with Logging {
             bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
           }
           logger.info(s"Aqua Compiler ${versionStr}")
-          AquaPathCompiler
-            .compileFilesTo[F](
-              input,
-              imports,
-              output,
-              targetToBackend(target),
-              bc
-            )
-            .map {
+
+          (inputF, outputF, importsF).mapN {(i, o, imp) =>
+            i.andThen { input =>
+              o.andThen { output =>
+                imp.map { imports =>
+                  AquaPathCompiler
+                    .compileFilesTo[F](
+                      input,
+                      imports,
+                      output,
+                      targetToBackend(target),
+                      bc
+                    )
+                  }
+                }
+              }
+            }.flatMap {
               case Validated.Invalid(errs) =>
-                errs.map(System.out.println)
-                ExitCode.Error
-              case Validated.Valid(results) =>
-                results.map(logger.info(_))
-                ExitCode.Success
+                errs.map(logger.error(_))
+                ExitCode.Error.pure[F]
+              case Validated.Valid(result) =>
+                result.map {
+                  case Validated.Invalid(errs) =>
+                    errs.map(logger.error(_))
+                    ExitCode.Error
+                  case Validated.Valid(results) =>
+                    results.map(logger.info(_))
+                    ExitCode.Success
+                }
             }
         }
     }

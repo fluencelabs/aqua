@@ -56,6 +56,7 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
 
 lazy val cliJS = cli.js
   .settings(
+    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true
   )
 
