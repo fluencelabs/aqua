@@ -7,15 +7,16 @@ import aqua.model.transform.TransformConfig
 import aqua.model.transform.res.AquaRes
 import aqua.parser.lift.LiftParser
 import aqua.semantics.Semantics
-import cats.data.Validated.{Invalid, Valid, validNec}
+import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.{Comonad, Monad}
+import scribe.Logging
 
-object AquaCompiler {
+object AquaCompiler extends Logging {
 
   def compile[F[_]: Monad, E, I, S[_]: Comonad](
     sources: AquaSources[F, E, I],
@@ -25,18 +26,31 @@ object AquaCompiler {
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
     import config.aquaContextMonoid
     type Err = AquaError[I, E, S]
+    logger.info("before resolve")
     new AquaParser[F, E, I, S](sources, liftI)
-      .resolve[ValidatedNec[Err, AquaContext]](ast =>
-        context =>
-          context.andThen(ctx => Semantics.process(ast, ctx).leftMap(_.map[Err](CompileError(_))))
-      )
+      .resolve[ValidatedNec[Err, AquaContext]] { ast => context =>
+        logger.info("transpile")
+        context.andThen { ctx =>
+          logger.info("after context")
+          Semantics
+            .process(ast, ctx)
+            .map { a =>
+              logger.info("after semantics process")
+              a
+
+            }
+            .leftMap(_.map[Err](CompileError(_)))
+        }
+      }
       .map {
         case Valid(modules) =>
+          logger.info("after resolve")
           Linker.link[I, AquaError[I, E, S], ValidatedNec[Err, AquaContext]](
             modules,
             cycle => CycleError[I, E, S](cycle.map(_.id))
           ) match {
             case Valid(filesWithContext) =>
+              logger.info("after link")
               filesWithContext
                 .foldLeft[ValidatedNec[Err, Chain[AquaProcessed[I]]]](
                   validNec(Chain.nil)
@@ -59,14 +73,15 @@ object AquaCompiler {
   }
 
   def compileTo[F[_]: Monad, E, I, S[_]: Comonad, T](
-                                                      sources: AquaSources[F, E, I],
-                                                      liftI: (I, String) => LiftParser[S],
-                                                      backend: Backend,
-                                                      config: TransformConfig,
-                                                      write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
+    sources: AquaSources[F, E, I],
+    liftI: (I, String) => LiftParser[S],
+    backend: Backend,
+    config: TransformConfig,
+    write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
     compile[F, E, I, S](sources, liftI, backend, config).flatMap {
       case Valid(compiled) =>
+        logger.info("compiled")
         compiled.map { ac =>
           write(ac).map(
             _.map(
