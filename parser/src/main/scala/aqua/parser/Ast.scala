@@ -9,29 +9,29 @@ import cats.free.Cofree
 import cats.parse.Parser0 as P0
 import cats.{Comonad, Eval}
 
-case class Ast[F[_]](head: Ast.Head[F], tree: Ast.Tree[F]) {
+case class Ast[S[_]](head: Ast.Head[S], tree: Ast.Tree[S]) {
 
-  def cata[T](folder: (Expr[F], Chain[T]) => Eval[T]): Eval[T] =
-    Cofree.cata[Chain, Expr[F], T](tree)(folder)
+  def cata[T](folder: (Expr[S], Chain[T]) => Eval[T]): Eval[T] =
+    Cofree.cata[Chain, Expr[S], T](tree)(folder)
 
-  def cataHead[T](folder: (HeaderExpr[F], Chain[T]) => Eval[T]): Eval[T] =
-    Cofree.cata[Chain, HeaderExpr[F], T](head)(folder)
+  def cataHead[T](folder: (HeaderExpr[S], Chain[T]) => Eval[T]): Eval[T] =
+    Cofree.cata[Chain, HeaderExpr[S], T](head)(folder)
 }
 
 object Ast {
-  type Tree[F[_]] = Cofree[Chain, Expr[F]]
-  type Head[F[_]] = Cofree[Chain, HeaderExpr[F]]
+  type Tree[S[_]] = Cofree[Chain, Expr[S]]
+  type Head[S[_]] = Cofree[Chain, HeaderExpr[S]]
 
-  def parser[F[_]: LiftParser: Comonad](): P0[ValidatedNec[ParserError[F], Ast[F]]] =
-    (HeadExpr.ast[F].with1 ~ RootExpr.ast[F]()).map { case (head, bodyMaybe) =>
+  def parser[S[_]: LiftParser: Comonad](): P0[ValidatedNec[ParserError[S], Ast[S]]] =
+    (HeadExpr.ast[S].with1 ~ RootExpr.ast[S]()).map { case (head, bodyMaybe) =>
       bodyMaybe.map(Ast(head, _))
     }
 
-  def fromString[F[_]: LiftParser: Comonad](script: String): ValidatedNec[ParserError[F], Ast[F]] =
-    parser[F]()
+  def fromString[S[_]: LiftParser: Comonad](script: String): ValidatedNec[ParserError[S], Ast[S]] =
+    parser[S]()
       .parseAll(script) match {
       case Right(value) => value
-      case Left(e) => Validated.invalidNec(LexerError[F](e.wrapErr))
+      case Left(e) => Validated.invalidNec(LexerError[S](e.wrapErr))
     }
 
 }

@@ -9,11 +9,13 @@ import cats.Comonad
 import cats.parse.Parser
 
 case class ModuleExpr[F[_]](
-                             name: Ability[F],
-                             exportAll: Option[Token[F]],
-                             declareNames: List[Name[F]],
-                             declareCustom: List[Ability[F]]
-) extends HeaderExpr[F]
+  name: Ability[F],
+  exportAll: Option[Token[F]],
+  declareNames: List[Name[F]],
+  declareCustom: List[Ability[F]]
+) extends HeaderExpr[F] {
+  override def token: Token[F] = name
+}
 
 object ModuleExpr extends HeaderExpr.Leaf {
 

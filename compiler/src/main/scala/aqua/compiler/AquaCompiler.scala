@@ -54,7 +54,7 @@ object AquaCompiler extends Logging {
                     headerSem.initCtx
                   )
                   // Handle exports, declares – finalize the resulting context
-                  .andThen(headerSem.finalize)
+                  .andThen(headerSem.finCtx)
                   .map(rc => NonEmptyMap.one(mod.id, rc))
               }
               // The whole chain returns a semantics error finally
