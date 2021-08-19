@@ -1,0 +1,25 @@
+service HelloWorld("hello_world"):
+    hello(s: string)
+
+func sayHello():
+    HelloWorld.hello("hello, world")
+
+service MoreMembers:
+    member1()
+    member2(s1: string)
+    member3(s1: string, s2: string)
+    member4(s1: string, s2: string, i: i32) -> i32
+    member5(s1: string, s2: string, i: i32) -> i32
+
+func f1(callback: string, i32 -> ()):
+    callback("hello, world", 42)
+
+func f2(num: i32, callback: string, i32 -> ()):
+    callback("hello, world", 42)
+
+func f3(num: i32, callback: string, i32 -> ()) -> string:
+    callback("hello, world", 42)
+    <- "hello world"
+
+func callBackZeroArgs(callback: -> ()):
+    callback()
