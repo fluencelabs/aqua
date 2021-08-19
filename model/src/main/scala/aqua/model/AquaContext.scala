@@ -12,6 +12,7 @@ import scribe.Logging
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
+  module: Option[String],
   funcs: Map[String, FuncCallable],
   types: Map[String, Type],
   values: Map[String, ValueModel],
@@ -73,7 +74,7 @@ object AquaContext extends Logging {
     implicit val aquaContextMonoid: Monoid[AquaContext]
   }
 
-  val blank: AquaContext = AquaContext(Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+  val blank: AquaContext = AquaContext(None, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
 
   def implicits(init: AquaContext): Implicits = new Implicits {
 
@@ -83,8 +84,10 @@ object AquaContext extends Logging {
         override def empty: AquaContext =
           init
 
+        // TODO is it the right way?
         override def combine(x: AquaContext, y: AquaContext): AquaContext =
           AquaContext(
+            x.module.orElse(y.module),
             x.funcs ++ y.funcs,
             x.types ++ y.types,
             x.values ++ y.values,
@@ -96,6 +99,7 @@ object AquaContext extends Logging {
 
   def fromServiceModel(sm: ServiceModel, serviceId: ValueModel): AquaContext =
     AquaContext(
+      module = None,
       funcs = sm.arrows.toSortedMap.map { case (fnName, arrowType) =>
         val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
         fnName ->
