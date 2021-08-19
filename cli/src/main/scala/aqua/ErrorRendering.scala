@@ -5,7 +5,7 @@ import aqua.files.FileModuleId
 import aqua.io.AquaFileError
 import aqua.parser.lift.FileSpan
 import aqua.parser.{BlockIndentError, FuncReturnError, LexerError}
-import aqua.semantics.{RulesViolated, WrongAST}
+import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
 import cats.Show
 
 object ErrorRendering {
@@ -57,6 +57,11 @@ object ErrorRendering {
     case CompileError(err) =>
       err match {
         case RulesViolated(token, message) =>
+          token.unit._1
+            .focus(2)
+            .map(_.toConsoleStr(message, Console.CYAN))
+            .getOrElse("(Dup error, but offset is beyond the script)") + "\n"
+        case HeaderError(token, message) =>
           token.unit._1
             .focus(2)
             .map(_.toConsoleStr(message, Console.CYAN))

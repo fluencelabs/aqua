@@ -8,6 +8,7 @@ import aqua.model.transform.res.AquaRes
 import aqua.parser.lift.LiftParser
 import aqua.parser.Ast
 import aqua.semantics.Semantics
+import aqua.semantics.header.HeaderSem
 import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
 import cats.syntax.applicative.*
@@ -31,35 +32,33 @@ object AquaCompiler extends Logging {
     type Ctx = NonEmptyMap[I, AquaContext]
     type ValidatedCtx = ValidatedNec[Err, Ctx]
 
-    // TODO factor out
-    // TODO handle errors as ValidatedNec
-    // TODO return prepare exports as well
-    def prepareImports[S[_]](
-      imports: Map[String, AquaContext],
-      header: Ast.Head[S]
-    ): ValidatedNec[Err, AquaContext] =
-      validNec(imports.values.foldLeft(Monoid[AquaContext].empty)(Monoid[AquaContext].combine))
-
     new AquaParser[F, E, I, S](sources, liftI)
       .resolve[ValidatedCtx](mod =>
         context =>
+          // Context with prepared imports
           context.andThen(ctx =>
-            prepareImports(
-              // TODO factor out
-              mod.imports.view
-                .mapValues(ctx(_))
-                .collect { case (fn, Some(fc)) => fn -> fc }
-                .toMap,
-              mod.body.head
-            ).andThen(initCtx =>
-              Semantics
-                .process(
-                  mod.body,
-                  initCtx
-                )
-                .leftMap(_.map[Err](CompileError(_)))
-                .map(rc => NonEmptyMap.one(mod.id, rc))
-            )
+            // To manage imports, exports run HeaderSem
+            HeaderSem
+              .sem(
+                mod.imports.view
+                  .mapValues(ctx(_))
+                  .collect { case (fn, Some(fc)) => fn -> fc }
+                  .toMap,
+                mod.body.head
+              )
+              .andThen { headerSem =>
+                // Analyze the body, with prepared initial context
+                Semantics
+                  .process(
+                    mod.body,
+                    headerSem.initCtx
+                  )
+                  // Handle exports, declares – finalize the resulting context
+                  .andThen(headerSem.finalize)
+                  .map(rc => NonEmptyMap.one(mod.id, rc))
+              }
+              // The whole chain returns a semantics error finally
+              .leftMap(_.map[Err](CompileError(_)))
           )
       )
       .map(
@@ -68,6 +67,7 @@ object AquaCompiler extends Logging {
             .link[I, AquaError[I, E, S], ValidatedCtx](
               modules,
               cycle => CycleError[I, E, S](cycle.map(_.id)),
+              // By default, provide an empty context for this module's id
               i => validNec(NonEmptyMap.one(i, Monoid.empty[AquaContext]))
             )
             .andThen { filesWithContext =>

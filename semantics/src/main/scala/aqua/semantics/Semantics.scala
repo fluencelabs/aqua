@@ -102,5 +102,6 @@ object Semantics extends Logging {
             .map(Invalid(_))
             .getOrElse(Validated.invalidNec[SemanticError[F], AquaContext](WrongAST(ast)))
       }
+      // TODO: return as Eval
       .value
 }
