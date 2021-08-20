@@ -47,5 +47,8 @@ object AbilitiesState {
     }
 
   def init[F[_]](context: AquaContext): AbilitiesState[F] =
-    AbilitiesState(services = context.allServices(), abilities = context.abilities)
+    AbilitiesState(
+      services = context.allServices(),
+      abilities = context.abilities // TODO is it the right way to collect abilities? Why?
+    )
 }

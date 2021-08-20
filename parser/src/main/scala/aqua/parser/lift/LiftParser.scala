@@ -3,26 +3,26 @@ package aqua.parser.lift
 import cats.Id
 import cats.parse.{Parser, Parser0}
 
-trait LiftParser[F[_]] {
-  def lift[T](p: Parser[T]): Parser[F[T]]
+trait LiftParser[S[_]] {
+  def lift[T](p: Parser[T]): Parser[S[T]]
 
-  def lift0[T](p0: Parser0[T]): Parser0[F[T]]
+  def lift0[T](p0: Parser0[T]): Parser0[S[T]]
 
-  def wrapErr(e: Parser.Error): F[Parser.Error]
+  def wrapErr(e: Parser.Error): S[Parser.Error]
 }
 
 object LiftParser {
 
-  implicit class LiftErrorOps[F[_]: LiftParser, T](e: Parser.Error) {
-    def wrapErr: F[Parser.Error] = implicitly[LiftParser[F]].wrapErr(e)
+  implicit class LiftErrorOps[S[_]: LiftParser, T](e: Parser.Error) {
+    def wrapErr: S[Parser.Error] = implicitly[LiftParser[S]].wrapErr(e)
   }
 
-  implicit class LiftParserOps[F[_]: LiftParser, T](parser: Parser[T]) {
-    def lift: Parser[F[T]] = implicitly[LiftParser[F]].lift(parser)
+  implicit class LiftParserOps[S[_]: LiftParser, T](parser: Parser[T]) {
+    def lift: Parser[S[T]] = implicitly[LiftParser[S]].lift(parser)
   }
 
-  implicit class LiftParser0Ops[F[_]: LiftParser, T](parser0: Parser0[T]) {
-    def lift0: Parser0[F[T]] = implicitly[LiftParser[F]].lift0(parser0)
+  implicit class LiftParser0Ops[S[_]: LiftParser, T](parser0: Parser0[T]) {
+    def lift0: Parser0[S[T]] = implicitly[LiftParser[S]].lift0(parser0)
   }
 
   object Implicits {

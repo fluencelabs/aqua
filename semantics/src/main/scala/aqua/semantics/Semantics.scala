@@ -27,13 +27,13 @@ import scribe.Logging
 
 object Semantics extends Logging {
 
-  def folder[F[_], G[_]](implicit
-    A: AbilitiesAlgebra[F, G],
-    N: NamesAlgebra[F, G],
-    T: TypesAlgebra[F, G]
-  ): (Expr[F], Chain[Free[G, Model]]) => Eval[Free[G, Model]] = { case (expr, inners) =>
+  def folder[S[_], G[_]](implicit
+    A: AbilitiesAlgebra[S, G],
+    N: NamesAlgebra[S, G],
+    T: TypesAlgebra[S, G]
+  ): (Expr[S], Chain[Free[G, Model]]) => Eval[Free[G, Model]] = { case (expr, inners) =>
     Eval later ExprSem
-      .getProg[F, G](expr)
+      .getProg[S, G](expr)
       .apply(
         // TODO instead of foldRight, do slidingWindow for 2 elements, merge right associative ones
         // Then foldLeft just like now
@@ -50,57 +50,58 @@ object Semantics extends Logging {
       )
   }
 
-  type Alg0[F[_], A] = EitherK[AbilityOp[F, *], NameOp[F, *], A]
-  type Alg[F[_], A] = EitherK[TypeOp[F, *], Alg0[F, *], A]
+  type Alg0[S[_], A] = EitherK[AbilityOp[S, *], NameOp[S, *], A]
+  type Alg[S[_], A] = EitherK[TypeOp[S, *], Alg0[S, *], A]
 
-  def transpile[F[_]](ast: Ast[F]): Free[Alg[F, *], Model] =
-    ast.cata(folder[F, Alg[F, *]]).value
+  def transpile[S[_]](ast: Ast[S]): Free[Alg[S, *], Model] =
+    ast.cata(folder[S, Alg[S, *]]).value
 
-  def interpret[F[_]](free: Free[Alg[F, *], Model]): State[CompilerState[F], Model] = {
+  def interpret[S[_]](free: Free[Alg[S, *], Model]): State[CompilerState[S], Model] = {
     import monocle.syntax.all._
 
-    implicit val re: ReportError[F, CompilerState[F]] =
-      (st: CompilerState[F], token: Token[F], hint: String) =>
+    implicit val re: ReportError[S, CompilerState[S]] =
+      (st: CompilerState[S], token: Token[S], hint: String) =>
         st.focus(_.errors).modify(_.append(RulesViolated(token, hint)))
 
-    implicit val ns: Lens[CompilerState[F], NamesState[F]] = GenLens[CompilerState[F]](_.names)
+    implicit val ns: Lens[CompilerState[S], NamesState[S]] = GenLens[CompilerState[S]](_.names)
 
-    val names = new NamesInterpreter[F, CompilerState[F]]()
+    val names = new NamesInterpreter[S, CompilerState[S]]()
 
-    implicit val as: Lens[CompilerState[F], AbilitiesState[F]] =
-      GenLens[CompilerState[F]](_.abilities)
+    implicit val as: Lens[CompilerState[S], AbilitiesState[S]] =
+      GenLens[CompilerState[S]](_.abilities)
 
-    val abilities = new AbilitiesInterpreter[F, CompilerState[F]]()
+    val abilities = new AbilitiesInterpreter[S, CompilerState[S]]()
 
-    implicit val ts: Lens[CompilerState[F], TypesState[F]] = GenLens[CompilerState[F]](_.types)
+    implicit val ts: Lens[CompilerState[S], TypesState[S]] = GenLens[CompilerState[S]](_.types)
 
-    val types = new TypesInterpreter[F, CompilerState[F]]()
+    val types = new TypesInterpreter[S, CompilerState[S]]()
 
-    val interpreter0: FunctionK[Alg0[F, *], State[CompilerState[F], *]] = abilities or names
-    val interpreter: FunctionK[Alg[F, *], State[CompilerState[F], *]] = types or interpreter0
+    val interpreter0: FunctionK[Alg0[S, *], State[CompilerState[S], *]] = abilities or names
+    val interpreter: FunctionK[Alg[S, *], State[CompilerState[S], *]] = types or interpreter0
 
-    free.foldMap[State[CompilerState[F], *]](interpreter)
+    free.foldMap[State[CompilerState[S], *]](interpreter)
   }
 
-  private def astToState[F[_]](ast: Ast[F]): State[CompilerState[F], Model] =
-    (transpile[F] _ andThen interpret[F])(ast)
+  private def astToState[S[_]](ast: Ast[S]): State[CompilerState[S], Model] =
+    (transpile[S] _ andThen interpret[S])(ast)
 
-  def process[F[_]](ast: Ast[F], init: AquaContext)(implicit
+  def process[S[_]](ast: Ast[S], init: AquaContext)(implicit
     aqum: Monoid[AquaContext]
-  ): ValidatedNec[SemanticError[F], AquaContext] =
-    astToState[F](ast)
-      .run(CompilerState.init[F](init))
+  ): ValidatedNec[SemanticError[S], AquaContext] =
+    astToState[S](ast)
+      .run(CompilerState.init[S](init))
       .map {
         case (state, gen: ScriptModel) =>
           val ctx = AquaContext.fromScriptModel(gen, init)
           NonEmptyChain
             .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[F], AquaContext]](Valid(ctx))(Invalid(_))
+            .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(ctx))(Invalid(_))
         case (state, _) =>
           NonEmptyChain
             .fromChain(state.errors)
             .map(Invalid(_))
-            .getOrElse(Validated.invalidNec[SemanticError[F], AquaContext](WrongAST(ast)))
+            .getOrElse(Validated.invalidNec[SemanticError[S], AquaContext](WrongAST(ast)))
       }
+      // TODO: return as Eval
       .value
 }

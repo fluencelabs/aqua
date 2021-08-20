@@ -28,7 +28,7 @@ class AbilitiesAlgebra[F[_], Alg[_]](implicit A: InjectK[AbilityOp[F, *], Alg]) 
   def setServiceId(name: Ability[F], id: Value[F], vm: ValueModel): Free[Alg, Boolean] =
     Free.liftInject[Alg](SetServiceId[F](name, id, vm))
 
-  def getServiceId(name: Ability[F]): Free[Alg, Option[ValueModel]] =
+  def getServiceId(name: Ability[F]): Free[Alg, Either[Boolean, ValueModel]] =
     Free.liftInject[Alg](GetServiceId[F](name))
 
   def beginScope(token: Token[F]): Free[Alg, Unit] =

@@ -156,5 +156,6 @@ object TypesState {
       )
   }
 
-  def init[F[_]](context: AquaContext): TypesState[F] = TypesState(strict = context.allTypes())
+  def init[F[_]](context: AquaContext): TypesState[F] =
+    TypesState(strict = context.allTypes())
 }

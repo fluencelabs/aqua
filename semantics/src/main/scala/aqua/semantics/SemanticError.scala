@@ -3,6 +3,7 @@ package aqua.semantics
 import aqua.parser.Ast
 import aqua.parser.lexer.Token
 
-sealed trait SemanticError[F[_]]
-case class RulesViolated[F[_]](token: Token[F], message: String) extends SemanticError[F]
-case class WrongAST[F[_]](ast: Ast[F]) extends SemanticError[F]
+sealed trait SemanticError[S[_]]
+case class RulesViolated[S[_]](token: Token[S], message: String) extends SemanticError[S]
+case class HeaderError[S[_]](token: Token[S], message: String) extends SemanticError[S]
+case class WrongAST[S[_]](ast: Ast[S]) extends SemanticError[S]
