@@ -10,7 +10,7 @@ import cats.parse.Parser
 
 case class ModuleExpr[F[_]](
   name: Ability[F],
-  exportAll: Option[Token[F]],
+  declareAll: Option[Token[F]],
   declareNames: List[Name[F]],
   declareCustom: List[Ability[F]]
 ) extends HeaderExpr[F] {

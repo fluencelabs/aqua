@@ -13,6 +13,8 @@ import scala.collection.immutable.SortedMap
 
 case class AquaContext(
   module: Option[String],
+  declares: Set[String],
+  exports: Option[AquaContext],
   funcs: Map[String, FuncCallable],
   types: Map[String, Type],
   values: Map[String, ValueModel],
@@ -23,6 +25,22 @@ case class AquaContext(
 
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
+
+  def pick(name: String, rename: Option[String], declared: Boolean = true): Option[AquaContext] =
+    Option
+      .when(!declared || declares(name)) {
+        val targetName = rename.getOrElse(name)
+        def getter[T](g: AquaContext => Map[String, T]): Map[String, T] =
+          g(this).get(name).map(targetName -> _).map(Map(_)).getOrElse(Map.empty)
+        AquaContext.blank.copy(
+          funcs = getter(_.funcs),
+          types = getter(_.types),
+          values = getter(_.values),
+          abilities = getter(_.abilities),
+          services = getter(_.services)
+        )
+      }
+      .filter(_.`type`(name).nonEmpty)
 
   def allTypes(prefix: String = ""): Map[String, Type] =
     abilities
@@ -74,7 +92,8 @@ object AquaContext extends Logging {
     implicit val aquaContextMonoid: Monoid[AquaContext]
   }
 
-  val blank: AquaContext = AquaContext(None, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+  val blank: AquaContext =
+    AquaContext(None, Set.empty, None, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
 
   def implicits(init: AquaContext): Implicits = new Implicits {
 
@@ -88,6 +107,11 @@ object AquaContext extends Logging {
         override def combine(x: AquaContext, y: AquaContext): AquaContext =
           AquaContext(
             x.module.orElse(y.module),
+            x.declares ++ y.declares,
+            x.exports
+              .flatMap(xe => y.exports.map(combine(xe, _)))
+              .orElse(x.exports)
+              .orElse(y.exports),
             x.funcs ++ y.funcs,
             x.types ++ y.types,
             x.values ++ y.values,
@@ -99,7 +123,9 @@ object AquaContext extends Logging {
 
   def fromServiceModel(sm: ServiceModel, serviceId: ValueModel): AquaContext =
     AquaContext(
-      module = None,
+      module = Some(sm.name),
+      declares = sm.`type`.fields.toNel.map(_._1).toList.toSet,
+      exports = None,
       funcs = sm.arrows.toSortedMap.map { case (fnName, arrowType) =>
         val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
         fnName ->
