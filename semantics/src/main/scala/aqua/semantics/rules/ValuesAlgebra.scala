@@ -37,7 +37,10 @@ class ValuesAlgebra[F[_], Alg[_]](implicit N: NamesAlgebra[F, Alg], T: TypesAlge
       case VarLambda(name, ops) =>
         N.read(name).flatMap {
           case Some(t) =>
-            T.resolveLambda(t, ops).map(Chain.fromSeq).map(VarModel(name.value, t, _)).map(Some(_))
+            T.resolveLambda(t, ops)
+              .map(Chain.fromSeq)
+              .map(VarModel(name.value.replace('.', '_'), t, _))
+              .map(Some(_))
           case None =>
             Free.pure(None)
         }
