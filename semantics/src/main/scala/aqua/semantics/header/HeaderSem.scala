@@ -23,7 +23,9 @@ object HeaderSem {
   type Res[S[_]] = ValidatedNec[SemanticError[S], HeaderSem[S]]
   type ResAC[S[_]] = ValidatedNec[SemanticError[S], AquaContext]
 
-  implicit def headerSemMonoid[S[_]](implicit acm: Monoid[AquaContext]): Monoid[HeaderSem[S]] =
+  private implicit def headerSemMonoid[S[_]](implicit
+    acm: Monoid[AquaContext]
+  ): Monoid[HeaderSem[S]] =
     new Monoid[HeaderSem[S]] {
       override def empty: HeaderSem[S] = HeaderSem(acm.empty, validNec(_))
 
@@ -34,17 +36,20 @@ object HeaderSem {
         )
     }
 
+  // Helper: monoidal combine of all the childrens after parent res
   private def combineAnd[S[_]](children: Chain[Res[S]])(parent: Res[S])(implicit
     acm: Monoid[AquaContext]
   ): Eval[Res[S]] =
     Eval.later(parent |+| children.combineAll)
 
+  // Error generator with token pointer
   private def error[S[_], T](token: Token[S], msg: String): ValidatedNec[SemanticError[S], T] =
     invalidNec(HeaderError(token, msg))
 
   def sem[S[_]: Comonad](imports: Map[String, AquaContext], header: Ast.Head[S])(implicit
     acm: Monoid[AquaContext]
   ): Res[S] = {
+    // Resolve a filename from given imports or fail
     def resolve(f: FilenameExpr[S]): ResAC[S] =
       imports
         .get(f.fileValue)
@@ -52,6 +57,7 @@ object HeaderSem {
           error(f.token, "Cannot resolve the import")
         )(validNec)
 
+    // Get part of the declared context (for import/use ... from ... expressions)
     def getFrom(f: FromExpr[S], ctx: AquaContext): ResAC[S] =
       f.imports
         .map[ResAC[S]](
@@ -72,6 +78,7 @@ object HeaderSem {
         )
         .reduce
 
+    // Convert an imported context into a module (ability)
     def toModule(ctx: AquaContext, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S] =
       rename
         .map(_.value)
@@ -83,15 +90,19 @@ object HeaderSem {
           )
         )(modName => validNec(acm.empty.copy(abilities = Map(modName -> ctx))))
 
+    // Handler for every header expression, will be combined later
     val onExpr: PartialFunction[HeaderExpr[S], Res[S]] = {
+      // Module header, like `module A declares *`
       case ModuleExpr(name, declareAll, declareNames, declareCustom) =>
         validNec(
           HeaderSem[S](
+            // Save module header info
             acm.empty.copy(
               module = Some(name.value),
               declares = declareNames.map(_.value).toSet ++ declareCustom.map(_.value)
             ),
             ctx =>
+              // When file is handled, check that all the declarations exists
               if (declareAll.nonEmpty)
                 validNec(
                   ctx.copy(declares =
@@ -104,6 +115,7 @@ object HeaderSem {
                 ).map[ValidatedNec[SemanticError[S], Int]] { case (n, t) =>
                   ctx
                     .pick(n, None)
+                    // We just validate, nothing more
                     .map(_ => validNec(1))
                     .getOrElse(
                       error(
@@ -117,26 +129,32 @@ object HeaderSem {
         )
 
       case f @ ImportExpr(_) =>
+        // Import everything from a file
         resolve(f).map(fc => HeaderSem[S](fc, validNec(_)))
       case f @ ImportFromExpr(_, _) =>
+        // Import, map declarations
         resolve(f)
           .andThen(getFrom(f, _))
           .map(ctx => HeaderSem[S](ctx, validNec(_)))
 
       case f @ UseExpr(_, asModule) =>
+        // Import, move into a module scope
         resolve(f)
           .andThen(toModule(_, f.token, asModule))
           .map(fc => HeaderSem[S](fc, validNec(_)))
 
       case f @ UseFromExpr(_, _, asModule) =>
+        // Import, cherry-pick declarations, move to a module scope
         resolve(f)
           .andThen(getFrom(f, _))
           .andThen(toModule(_, f.token, Some(asModule)))
           .map(fc => HeaderSem[S](fc, validNec(_)))
 
       case ExportExpr(pubs) =>
+        // Save exports, finally handle them
         validNec(
           HeaderSem[S](
+            // Nothing there
             acm.empty,
             ctx =>
               pubs
@@ -164,6 +182,10 @@ object HeaderSem {
                 .map(expCtx => ctx.copy(exports = Some(expCtx)))
           )
         )
+
+      case HeadExpr(token) =>
+        // Old file exports everything
+        validNec(HeaderSem[S](acm.empty, ctx => validNec(ctx.copy(exports = Some(ctx)))))
 
       case f: FilenameExpr[S] =>
         resolve(f).map(fc => HeaderSem[S](fc, validNec(_)))

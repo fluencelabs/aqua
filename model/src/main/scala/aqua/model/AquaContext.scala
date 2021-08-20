@@ -26,7 +26,11 @@ case class AquaContext(
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
 
-  def pick(name: String, rename: Option[String], declared: Boolean = true): Option[AquaContext] =
+  def pick(
+    name: String,
+    rename: Option[String],
+    declared: Boolean = module.nonEmpty
+  ): Option[AquaContext] =
     Option
       .when(!declared || declares(name)) {
         val targetName = rename.getOrElse(name)
