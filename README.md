@@ -16,7 +16,7 @@ Please refer to [Aqua Book](https://doc.fluence.dev/aqua-book/) to learn how to 
 
 ## Compiler CLI
 
-To build the Aqua compiler, clone the repo & run `sbt assembly`,
+To build the Aqua compiler, clone the repo & run `sbt cli/assembly`,
 or simply download the latest JAR file from the [releases](https://github.com/fluencelabs/aqua/releases) page.
 
 It requires `java` to run Aqua compiler from the command line:
@@ -32,6 +32,8 @@ Input directory should contain files with `aqua` scripts.
 - **[types](./types)** – data types, arrows, stream types definitions and variance
 - **[parser](./parser)** - parser, takes source text and produces a source AST
 - **[model](./model)** - middle-end, internal representation of the code, optimizations and transfromations
+- **[model/transform](./model/transform)** - optimizations and transfromations, converting model to the result, ready to be rendered
+- **[model/test-kit](./model/test-kit)** - tests and test helpers for the model and transformations
 - **[semantics](./semantics)** - rules to convert source AST into the model
 - **[linker](./linker)** - checks dependencies between modules, builds and combines an abstract dependencies tree
 - **[backend](./backend)** - compilation backend interface

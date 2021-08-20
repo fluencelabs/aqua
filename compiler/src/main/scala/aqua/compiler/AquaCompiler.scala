@@ -3,65 +3,101 @@ package aqua.compiler
 import aqua.backend.Backend
 import aqua.linker.Linker
 import aqua.model.AquaContext
-import aqua.model.transform.GenerationConfig
+import aqua.model.transform.TransformConfig
+import aqua.model.transform.res.AquaRes
 import aqua.parser.lift.LiftParser
+import aqua.parser.Ast
 import aqua.semantics.Semantics
+import aqua.semantics.header.HeaderSem
 import cats.data.Validated.{validNec, Invalid, Valid}
-import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.syntax.applicative._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.traverse._
-import cats.{Comonad, Monad}
+import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.traverse.*
+import cats.syntax.monoid.*
+import cats.{Comonad, Monad, Monoid, Order}
+import scribe.Logging
 
-object AquaCompiler {
+object AquaCompiler extends Logging {
 
-  def compile[F[_]: Monad, E, I, S[_]: Comonad](
+  def compile[F[_]: Monad, E, I: Order, S[_]: Comonad](
     sources: AquaSources[F, E, I],
     liftI: (I, String) => LiftParser[S],
     backend: Backend,
-    config: GenerationConfig
+    config: TransformConfig
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
     import config.aquaContextMonoid
     type Err = AquaError[I, E, S]
+    type Ctx = NonEmptyMap[I, AquaContext]
+    type ValidatedCtx = ValidatedNec[Err, Ctx]
+
     new AquaParser[F, E, I, S](sources, liftI)
-      .resolve[ValidatedNec[Err, AquaContext]](ast =>
+      .resolve[ValidatedCtx](mod =>
         context =>
-          context.andThen(ctx => Semantics.process(ast, ctx).leftMap(_.map[Err](CompileError(_))))
+          // Context with prepared imports
+          context.andThen(ctx =>
+            // To manage imports, exports run HeaderSem
+            HeaderSem
+              .sem(
+                mod.imports.view
+                  .mapValues(ctx(_))
+                  .collect { case (fn, Some(fc)) => fn -> fc }
+                  .toMap,
+                mod.body.head
+              )
+              .andThen { headerSem =>
+                // Analyze the body, with prepared initial context
+                Semantics
+                  .process(
+                    mod.body,
+                    headerSem.initCtx
+                  )
+                  // Handle exports, declares – finalize the resulting context
+                  .andThen(headerSem.finCtx)
+                  .map(rc => NonEmptyMap.one(mod.id, rc))
+              }
+              // The whole chain returns a semantics error finally
+              .leftMap(_.map[Err](CompileError(_)))
+          )
       )
-      .map {
-        case Valid(modules) =>
-          Linker.link[I, AquaError[I, E, S], ValidatedNec[Err, AquaContext]](
-            modules,
-            cycle => CycleError[I, E, S](cycle.map(_.id))
-          ) match {
-            case Valid(filesWithContext) =>
+      .map(
+        _.andThen(modules =>
+          Linker
+            .link[I, AquaError[I, E, S], ValidatedCtx](
+              modules,
+              cycle => CycleError[I, E, S](cycle.map(_.id)),
+              // By default, provide an empty context for this module's id
+              i => validNec(NonEmptyMap.one(i, Monoid.empty[AquaContext]))
+            )
+            .andThen { filesWithContext =>
               filesWithContext
                 .foldLeft[ValidatedNec[Err, Chain[AquaProcessed[I]]]](
                   validNec(Chain.nil)
                 ) {
                   case (acc, (i, Valid(context))) =>
-                    acc combine validNec(Chain.one(AquaProcessed(i, context)))
+                    acc combine validNec(
+                      Chain.fromSeq(context.toNel.toList.map { case (i, c) => AquaProcessed(i, c) })
+                    )
                   case (acc, (_, Invalid(errs))) =>
                     acc combine Invalid(errs)
                 }
                 .map(
                   _.map { ap =>
-                    val compiled = backend.generate(ap.context, config)
+                    val compiled = backend.generate(AquaRes.fromContext(ap.context, config))
                     AquaCompiled(ap.id, compiled)
                   }
                 )
-            case i @ Invalid(_) => i
-          }
-        case i @ Invalid(_) => i
-      }
+            }
+        )
+      )
   }
 
-  def compileTo[F[_]: Monad, E, I, S[_]: Comonad, T](
+  def compileTo[F[_]: Monad, E, I: Order, S[_]: Comonad, T](
     sources: AquaSources[F, E, I],
     liftI: (I, String) => LiftParser[S],
     backend: Backend,
-    config: GenerationConfig,
+    config: TransformConfig,
     write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
     compile[F, E, I, S](sources, liftI, backend, config).flatMap {

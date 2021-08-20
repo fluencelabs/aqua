@@ -18,7 +18,7 @@ object CallArrowExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[CallArrowExpr[F]] =
     ((comma(Name.p[F]) <* ` <- `).backtrack.?.with1 ~
-      ((Ability.ab[F] <* `.`).?.with1 ~
+      ((Ability.dotted[F] <* `.`).?.with1 ~
         Name.p[F] ~
         comma0(Value.`value`[F].surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`))).map {
       case (variables, ((ability, funcName), args)) =>

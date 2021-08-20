@@ -1,33 +1,21 @@
 package aqua.backend.ts
 
 import aqua.backend.air.FuncAirGen
-import aqua.model.func.FuncCallable
-import aqua.model.transform.GenerationConfig
-import aqua.types._
-import cats.syntax.show._
+import aqua.model.transform.res.FuncRes
+import aqua.types.*
+import cats.syntax.show.*
 
-case class TypeScriptFunc(func: FuncCallable) {
+case class TypeScriptFunc(func: FuncRes) {
 
   import TypeScriptFunc._
+  import FuncRes._
+  import func._
 
   def argsTypescript: String =
-    func.arrowType.domain.toLabelledList().map(ad => s"${ad._1}: " + typeToTs(ad._2)).mkString(", ")
+    args.map(ad => s"${ad.name}: " + typeToTs(ad.`type`)).mkString(", ")
 
-  def generateUniqueArgName(args: List[String], basis: String, attempt: Int): String = {
-    val name = if (attempt == 0) {
-      basis
-    } else {
-      basis + attempt
-    }
-    args.find(_ == name).map(_ => generateUniqueArgName(args, basis, attempt + 1)).getOrElse(name)
-  }
-
-  private def genReturnCallback(
-    retType: Type,
-    callbackService: String,
-    respFuncName: String
-  ): String = {
-    val body = retType match {
+  private def returnCallback: String = returnType.fold("") { retType =>
+    val respBody = retType match {
       case OptionType(_) =>
         """  let [opt] = args;
           |  if (Array.isArray(opt)) {
@@ -52,52 +40,43 @@ case class TypeScriptFunc(func: FuncCallable) {
           |  resolve(res);""".stripMargin
 
     }
-    s"""h.onEvent('$callbackService', '$respFuncName', (args) => {
-       |  $body
+    s"""h.onEvent('$callbackServiceId', '$respFuncName', (args) => {
+       |  $respBody
        |});
        |""".stripMargin
   }
 
-  def generateTypescript(conf: GenerationConfig = GenerationConfig()): String = {
+  def generate: String = {
 
-    val tsAir = FuncAirGen(func).generateAir(conf)
+    val tsAir = FuncAirGen(func).generate
 
-    // TODO: support multi return
-    val retType =
-      if (func.arrowType.codomain.length > 1) Some(func.arrowType.codomain)
-      else func.arrowType.codomain.uncons.map(_._1)
-    val retTypeTs = retType
+    val retTypeTs = func.returnType
       .fold("void")(typeToTs)
 
-    val returnCallback = retType
-      .map(t => genReturnCallback(t, conf.callbackService, conf.respFuncName))
-      .getOrElse("")
-
     val setCallbacks = func.args.collect { // Product types are not handled
-      case (argName, OptionType(_)) =>
-        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName === null ? [] : [$argName];});"""
-      case (argName, _: DataType) =>
-        s"""h.on('${conf.getDataService}', '$argName', () => {return $argName;});"""
-      case (argName, at: ArrowType) =>
+      case Arg(argName, OptionType(_)) =>
+        s"""h.on('$dataServiceId', '$argName', () => {return $argName === null ? [] : [$argName];});"""
+      case Arg(argName, _: DataType) =>
+        s"""h.on('$dataServiceId', '$argName', () => {return $argName;});"""
+      case Arg(argName, at: ArrowType) =>
         val value = s"$argName(${argsCallToTs(
           at
         )})"
-        val expr = at.res.fold(s"$value; return {}")(_ => s"return $value")
-        s"""h.on('${conf.callbackService}', '$argName', (args) => {$expr;});"""
+        val expr = arrowToRes(at).fold(s"$value; return {}")(_ => s"return $value")
+        s"""h.on('$callbackServiceId', '$argName', (args) => {$expr;});"""
     }
       .mkString("\n")
 
-    // TODO support multi return
     val returnVal =
-      func.ret.headOption.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
+      returnType.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
-    val clientArgName = generateUniqueArgName(func.argNames, "client", 0)
-    val configArgName = generateUniqueArgName(func.argNames, "config", 0)
+    val clientArgName = genArgName("client")
+    val configArgName = genArgName("config")
 
     val configType = "{ttl?: number}"
 
     s"""
-       |export async function ${func.funcName}($clientArgName: FluenceClient${if (func.args.isEmpty)
+       |export async function ${funcName}($clientArgName: FluenceClient${if (args.isEmpty)
       ""
     else ", "}${argsTypescript}, $configArgName?: $configType): Promise<$retTypeTs> {
        |    let request: RequestFlow;
@@ -110,14 +89,14 @@ case class TypeScriptFunc(func: FuncCallable) {
        |            `,
        |            )
        |            .configHandler((h) => {
-       |                ${conf.relayVarName.fold("") { r =>
-      s"""h.on('${conf.getDataService}', '$r', () => {
+       |                ${relayVarName.fold("") { r =>
+      s"""h.on('$dataServiceId', '$r', () => {
        |                    return $clientArgName.relayPeerId!;
        |                });""".stripMargin
     }}
        |                $setCallbacks
        |                $returnCallback
-       |                h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
+       |                h.onEvent('$errorHandlerId', '$errorFuncName', (args) => {
        |                    // assuming error is the single argument
        |                    const [err] = args;
        |                    reject(err);
@@ -125,7 +104,7 @@ case class TypeScriptFunc(func: FuncCallable) {
        |            })
        |            .handleScriptError(reject)
        |            .handleTimeout(() => {
-       |                reject('Request timed out for ${func.funcName}');
+       |                reject('Request timed out for ${funcName}');
        |            })
        |        if(${configArgName} && ${configArgName}.ttl) {
        |            r.withTTL(${configArgName}.ttl)
@@ -158,20 +137,18 @@ object TypeScriptFunc {
     case lt: LiteralType if lt.oneOf(ScalarType.string) => "string"
     case _: DataType => "any"
     case at: ArrowType =>
-      s"(${argsToTs(at)}) => ${at.res
+      s"(${argsToTs(at)}) => ${FuncRes
+        .arrowToRes(at)
         .fold("void")(typeToTs)}"
-    case _ =>
-      // TODO: handle product types in returns
-      "any"
   }
 
   def argsToTs(at: ArrowType): String =
-    at.domain
-      .toLabelledList()
-      .map(nt => nt._1 + ": " + typeToTs(nt._2))
+    FuncRes
+      .arrowArgs(at)
+      .map(nt => nt.name + ": " + typeToTs(nt.`type`))
       .mkString(", ")
 
   def argsCallToTs(at: ArrowType): String =
-    at.domain.toList.zipWithIndex.map(_._2).map(idx => s"args[$idx]").mkString(", ")
+    FuncRes.arrowArgIndices(at).map(idx => s"args[$idx]").mkString(", ")
 
 }

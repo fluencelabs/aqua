@@ -2,7 +2,7 @@ package aqua.linker
 
 import cats.data.{NonEmptyChain, Validated, ValidatedNec}
 import cats.kernel.{Monoid, Semigroup}
-import cats.syntax.monoid._
+import cats.syntax.semigroup._
 import scribe.Logging
 
 import scala.annotation.tailrec
@@ -50,9 +50,10 @@ object Linker extends Logging {
         }
     }
 
-  def link[I, E, T: Monoid](
+  def link[I, E, T: Semigroup](
     modules: Modules[I, E, T => T],
-    cycleError: List[AquaModule[I, E, T => T]] => E
+    cycleError: List[AquaModule[I, E, T => T]] => E,
+    empty: I => T
   ): ValidatedNec[E, Map[I, T]] =
     if (modules.dependsOn.nonEmpty) Validated.invalid(modules.dependsOn.values.reduce(_ ++ _))
     else {
@@ -60,7 +61,7 @@ object Linker extends Logging {
 
       Validated.fromEither(
         result
-          .map(_.view.filterKeys(modules.exports).mapValues(_.apply(Monoid[T].empty)).toMap)
+          .map(_.collect { case (i, f) if modules.exports(i) => i -> f(empty(i)) })
           .left
           .map(NonEmptyChain.one)
       )
