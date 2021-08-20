@@ -25,8 +25,17 @@ object Token {
   val `const`: P[Unit] = P.string("const")
   val `data`: P[Unit] = P.string("data")
   val `import`: P[Unit] = P.string("import")
+  val `module`: P[Unit] = P.string("module")
+  val `declares`: P[Unit] = P.string("declares")
+  val ` declares ` : P[Unit] = `declares`.surroundedBy(` `)
+  val `declare`: P[Unit] = P.string("declare")
+  val `_export`: P[Unit] = P.string("export")
+  val `star`: P[Unit] = P.char('*')
   val `use`: P[Unit] = P.string("use")
+  val `from`: P[Unit] = P.string("from")
+  val ` from ` : P[Unit] = `from`.surroundedBy(` `)
   val `as`: P[Unit] = P.string("as")
+  val ` as ` : P[Unit] = `as`.surroundedBy(` `)
   val `alias`: P[Unit] = P.string("alias")
   val `service`: P[Unit] = P.string("service")
   val `func`: P[Unit] = P.string("func")
@@ -64,7 +73,7 @@ object Token {
   val `.` : P[Unit] = P.char('.')
   val `"` : P[Unit] = P.char('"')
   val `*` : P[Unit] = P.char('*')
-  val exclamation : P[Unit] = P.char('!')
+  val exclamation: P[Unit] = P.char('!')
   val `[]` : P[Unit] = P.string("[]")
   val `⊤` : P[Unit] = P.char('⊤')
   val `⊥` : P[Unit] = P.char('⊥')
@@ -92,4 +101,7 @@ object Token {
 
   def comma0[T](p: P[T]): P0[List[T]] =
     P.repSep0(p, `,` <* ` \n+`.rep0)
+
+  def asOpt[T](p: P[T]): P[(T, Option[T])] =
+    p ~ (` as ` *> p).?
 }

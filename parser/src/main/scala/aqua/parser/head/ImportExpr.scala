@@ -6,7 +6,7 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 
-case class ImportExpr[F[_]](filename: Literal[F]) extends HeaderExpr[F]
+case class ImportExpr[F[_]](filename: Literal[F]) extends FilenameExpr[F]
 
 object ImportExpr extends HeaderExpr.Leaf {
 

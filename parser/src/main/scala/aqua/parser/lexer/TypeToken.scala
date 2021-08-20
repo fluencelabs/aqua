@@ -54,7 +54,12 @@ case class CustomTypeToken[F[_]: Comonad](name: F[String]) extends DataTypeToken
 }
 
 object CustomTypeToken {
-  def ct[F[_]: LiftParser: Comonad]: P[CustomTypeToken[F]] = `Class`.lift.map(CustomTypeToken(_))
+
+  def ct[F[_]: LiftParser: Comonad]: P[CustomTypeToken[F]] =
+    `Class`.lift.map(CustomTypeToken(_))
+
+  def dotted[F[_]: LiftParser: Comonad]: P[CustomTypeToken[F]] =
+    `Class`.repSep(`.`).string.lift.map(CustomTypeToken(_))
 }
 
 case class BasicTypeToken[F[_]: Comonad](scalarType: F[ScalarType]) extends DataTypeToken[F] {
@@ -115,7 +120,7 @@ object DataTypeToken {
       P.defer(`arraytypedef`[F]) :: P.defer(StreamTypeToken.`streamtypedef`) :: P.defer(
         OptionTypeToken.`optiontypedef`
       ) :: BasicTypeToken
-        .`basictypedef`[F] :: CustomTypeToken.ct[F] :: Nil
+        .`basictypedef`[F] :: CustomTypeToken.dotted[F] :: Nil
     )
 
 }

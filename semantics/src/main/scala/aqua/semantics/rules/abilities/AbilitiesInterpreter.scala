@@ -1,11 +1,11 @@
 package aqua.semantics.rules.abilities
 
-import aqua.model.{ServiceModel, ValueModel}
+import aqua.model.{AquaContext, ServiceModel, ValueModel}
 import aqua.parser.lexer.Name
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, State}
-import cats.syntax.functor._
+import cats.syntax.functor.*
 import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
@@ -17,9 +17,11 @@ class AbilitiesInterpreter[F[_], X](implicit
       GenLens[AbilitiesState[F]](_.stack)
     ) with (AbilityOp[F, *] ~> State[X, *]) {
 
-  // TODO: resolve abilities as well
   private def getService(name: String): S[Option[ServiceModel]] =
     getState.map(_.services.get(name))
+
+  private def getAbility(name: String): S[Option[AquaContext]] =
+    getState.map(_.abilities.get(name))
 
   override def apply[A](fa: AbilityOp[F, A]): State[X, A] =
     (fa match {
@@ -45,12 +47,25 @@ class AbilitiesInterpreter[F[_], X](implicit
               .fold(
                 report(
                   ga.arrow,
-                  s"Service found, but arrow is undefined, available: ${arrows.value.keys.toNonEmptyList.toList
+                  s"Service is found, but arrow is undefined, available: ${arrows.value.keys.toNonEmptyList.toList
                     .mkString(", ")}"
                 ).as(Option.empty[ArrowType])
               )(a => State.pure(Some(a)))
           case None =>
-            report(ga.name, "Ability with this name is undefined").as(Option.empty[ArrowType])
+            getAbility(ga.name.value).flatMap {
+              case Some(abCtx) =>
+                abCtx.funcs
+                  .get(ga.arrow.value)
+                  .fold(
+                    report(
+                      ga.arrow,
+                      s"Ability is found, but arrow is undefined, available: ${abCtx.funcs.keys.toList
+                        .mkString(", ")}"
+                    ).as(Option.empty[ArrowType])
+                  )(a => State.pure(Some(a)))
+              case None =>
+                report(ga.name, "Ability with this name is undefined").as(Option.empty[ArrowType])
+            }
         }
 
       case s: SetServiceId[F] =>
@@ -68,24 +83,35 @@ class AbilitiesInterpreter[F[_], X](implicit
         }
 
       case s: GetServiceId[F] =>
-        getState.flatMap(st =>
-          st.stack
-            .flatMap(_.serviceIds.get(s.name.value).map(_._2))
-            .headOption orElse st.rootServiceIds
-            .get(
-              s.name.value
-            )
-            .map(_._2) orElse st.services.get(s.name.value).flatMap(_.defaultId) match {
-            case None =>
-              report(
-                s.name,
-                s"Service ID unresolved, use `${s.name.value} id` expression to set it"
-              )
-                .as(Option.empty[ValueModel])
+        getService(s.name.value).flatMap {
+          case Some(_) =>
+            getState.flatMap(st =>
+              st.stack
+                .flatMap(_.serviceIds.get(s.name.value).map(_._2))
+                .headOption orElse st.rootServiceIds
+                .get(
+                  s.name.value
+                )
+                .map(_._2) orElse st.services.get(s.name.value).flatMap(_.defaultId) match {
+                case None =>
+                  report(
+                    s.name,
+                    s"Service ID unresolved, use `${s.name.value} id` expression to set it"
+                  )
+                    .as(Left[Boolean, ValueModel](false))
 
-            case v => State.pure(v)
-          }
-        )
+                case Some(v) => State.pure(Right(v))
+              }
+            )
+          case None =>
+            getAbility(s.name.value).flatMap {
+              case Some(_) => State.pure(Left[Boolean, ValueModel](true))
+              case None =>
+                report(s.name, "Ability with this name is undefined").as(
+                  Left[Boolean, ValueModel](false)
+                )
+            }
+        }
 
       case da: DefineArrow[F] =>
         mapStackHeadE(
