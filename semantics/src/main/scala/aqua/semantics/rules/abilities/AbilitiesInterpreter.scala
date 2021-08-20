@@ -100,7 +100,7 @@ class AbilitiesInterpreter[F[_], X](implicit
                   )
                     .as(Left[Boolean, ValueModel](false))
 
-                case v => State.pure(Right(v))
+                case Some(v) => State.pure(Right(v))
               }
             )
           case None =>
