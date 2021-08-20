@@ -20,6 +20,9 @@ object Ability {
   def ab[F[_]: LiftParser: Comonad]: P[Ability[F]] =
     `Class`.lift.map(Ability(_))
 
+  def dotted[F[_]: LiftParser: Comonad]: P[Ability[F]] =
+    P.repSep(`Class`, `.`).map(_.toList.mkString(".")).lift.map(Ability(_))
+
   def abAs[F[_]: LiftParser: Comonad]: P[As[F]] =
     asOpt(ab[F])
 }
