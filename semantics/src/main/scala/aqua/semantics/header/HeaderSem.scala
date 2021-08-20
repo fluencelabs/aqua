@@ -96,7 +96,7 @@ object HeaderSem {
             tkn,
             "Used module has no `module` header. Please add `module` header or use ... as ModuleName, or switch to import"
           )
-        )(modName => validNec(acm.empty.copy(abilities = Map(mn -> modCtx))))
+        )(modName => validNec(acm.empty.copy(abilities = Map(modName -> ctx))))
 
     val onExpr: PartialFunction[HeaderExpr[S], Res[S]] = {
       case ModuleExpr(name, exportAll, declareNames, declareCustom) =>
