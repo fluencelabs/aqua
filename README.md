@@ -16,7 +16,7 @@ Please refer to [Aqua Book](https://doc.fluence.dev/aqua-book/) to learn how to 
 
 ## Compiler CLI
 
-To build the Aqua compiler, clone the repo & run `sbt assembly`,
+To build the Aqua compiler, clone the repo & run `sbt cli/assembly`,
 or simply download the latest JAR file from the [releases](https://github.com/fluencelabs/aqua/releases) page.
 
 It requires `java` to run Aqua compiler from the command line:
