@@ -58,12 +58,12 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
     ability match {
       case Some(ab) =>
         (A.getArrow(ab, funcName), A.getServiceId(ab)).mapN {
-          case (Some(at), Some(sid)) =>
-            Option(at -> sid) // Here we assume that Ability is a Service that must be resolved
+          case (Some(at), Right(sid)) =>
+            Some(callServiceTag(at, Option(sid)))
+          case (Some(at), Left(true)) =>
+            Some(callServiceTag(at, None))
           case _ => None
-        }.flatMap(_.map { case (arrowType, serviceId) =>
-          callServiceTag(arrowType, Option(serviceId))
-        }.traverse(identity))
+        }.flatMap(_.traverse(identity))
       case None =>
         N.readArrow(funcName)
           .flatMap(_.map { arrowType =>
@@ -96,7 +96,7 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
               )
             case None =>
               CallArrowTag(
-                funcName = funcName.value,
+                funcName = ability.map(_.value + "." + funcName.value).getOrElse(funcName.value),
                 Call(argsResolved, maybeExport)
               )
           })

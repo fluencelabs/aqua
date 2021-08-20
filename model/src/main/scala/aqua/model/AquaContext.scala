@@ -164,7 +164,7 @@ object AquaContext extends Logging {
               )
           (ctx |+| add, exportContext |+| add)
         case ((ctx, exportContext), func: FuncModel) =>
-          val fr = func.capture(ctx.funcs, ctx.values)
+          val fr = func.capture(ctx.allFuncs(), ctx.allValues())
           val add =
             Monoid.empty[AquaContext].copy(funcs = ctx.funcs.updated(func.name, fr))
           (ctx |+| add, exportContext |+| add)
