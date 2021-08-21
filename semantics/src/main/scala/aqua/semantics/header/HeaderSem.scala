@@ -66,13 +66,23 @@ object HeaderSem {
               ctx
                 .pick(n.value, rn.map(_.value))
                 .map(validNec)
-                .getOrElse(error(n, s"Imported file has no ${n.value} declaration"))
+                .getOrElse(
+                  error(
+                    n,
+                    s"Imported file declares [${ctx.declares.mkString(", ")}], no ${n.value} declared. Try adding `declares *` to that file."
+                  )
+                )
             },
             { case (n, rn) =>
               ctx
                 .pick(n.value, rn.map(_.value))
                 .map(validNec)
-                .getOrElse(error(n, s"Imported file has no ${n.value} declaration"))
+                .getOrElse(
+                  error(
+                    n,
+                    s"Imported file declares [${ctx.declares.mkString(", ")}], no ${n.value} declared. Try adding `declares *` to that file."
+                  )
+                )
             }
           )
         )
@@ -86,7 +96,7 @@ object HeaderSem {
         .fold[ResAC[S]](
           error(
             tkn,
-            "Used module has no `module` header. Please add `module` header or use ... as ModuleName, or switch to import"
+            s"Used module has no `module` header. Please add `module` header or use ... as ModuleName, or switch to import"
           )
         )(modName => validNec(acm.empty.copy(abilities = Map(modName -> ctx))))
 
@@ -94,12 +104,13 @@ object HeaderSem {
     val onExpr: PartialFunction[HeaderExpr[S], Res[S]] = {
       // Module header, like `module A declares *`
       case ModuleExpr(name, declareAll, declareNames, declareCustom) =>
+        val shouldDeclare = declareNames.map(_.value).toSet ++ declareCustom.map(_.value)
         validNec(
           HeaderSem[S](
             // Save module header info
             acm.empty.copy(
               module = Some(name.value),
-              declares = declareNames.map(_.value).toSet ++ declareCustom.map(_.value)
+              declares = shouldDeclare
             ),
             ctx =>
               // When file is handled, check that all the declarations exists
@@ -124,7 +135,10 @@ object HeaderSem {
                       )
                     )
                 }.combineAll
-                  .map(_ => ctx)
+                  .map(_ =>
+                    // TODO: why module name and declares is lost? where is it lost?
+                    ctx.copy(module = Some(name.value), declares = shouldDeclare)
+                  )
           )
         )
 
