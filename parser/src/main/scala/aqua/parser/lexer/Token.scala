@@ -103,5 +103,5 @@ object Token {
     P.repSep0(p, `,` <* ` \n+`.rep0)
 
   def asOpt[T](p: P[T]): P[(T, Option[T])] =
-    p ~ (` as ` *> p).?
+    p ~ (` as `.backtrack *> p).?
 }

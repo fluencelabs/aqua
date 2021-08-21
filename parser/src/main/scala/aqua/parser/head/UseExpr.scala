@@ -14,7 +14,7 @@ case class UseExpr[F[_]](
 object UseExpr extends HeaderExpr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: Parser[HeaderExpr[F]] =
-    (`use` *> Value
+    (`use` *> ` ` *> Value
       .string[F] ~ (` as ` *> Ability.ab[F]).?).map { case (filename, asModule) =>
       UseExpr(filename, asModule)
     }

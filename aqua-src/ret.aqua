@@ -1,3 +1,10 @@
+module Ret
+
+import Service from "service.aqua"
+
+use "error.aqua"
+export GetStr, tupleFunc, Service as S
+
 service GetStr("multiret-test"):
     retStr: string -> string
 
@@ -10,6 +17,7 @@ const someStr = "some-str"
 func tupleFunc() -> string, u8:
     str <- GetStr.retStr(someStr)
     n <- GetNum.retNum()
+    Err.Peer.is_connected("Connected?")
     <- str, n
 
 func multiReturnFunc(somethingToReturn: []u8, smthOption: ?string) -> []string, u8, string, []u8, ?string, u8:
