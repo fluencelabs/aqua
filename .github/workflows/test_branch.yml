@@ -49,7 +49,7 @@ jobs:
       ### Update & build
       - name: Integration test
         run: |
-          git clone https://github.com/fluencelabs/aqua-playground.git
+          git clone https://github.com/fluencelabs/aqua-playground.git --branch crdt_interpreter
           cd aqua-playground
           npm i
           cd ..
