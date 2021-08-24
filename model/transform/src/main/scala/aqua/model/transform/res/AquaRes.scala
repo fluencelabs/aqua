@@ -16,8 +16,16 @@ object AquaRes {
     ctx.exports
       .map(ex =>
         AquaRes(
-          funcs = Chain.fromSeq(ex.funcs.values.toSeq).map(Transform.fn(_, conf)),
-          services = Chain.fromSeq(ex.services.values.toSeq).map(ServiceRes.fromModel(_))
+          funcs = Chain
+            .fromSeq(ex.funcs.map { case (fnName, fn) =>
+              fn.copy(funcName = fnName)
+            }.toSeq)
+            .map(Transform.fn(_, conf)),
+          services = Chain
+            .fromSeq(ex.services.map { case (srvName, srv) =>
+              srv.copy(name = srvName)
+            }.toSeq)
+            .map(ServiceRes.fromModel(_))
         )
       )
       .getOrElse(blank)

@@ -1,3 +1,5 @@
+module Srv declares *
+
 import "chatApp.aqua"
 
 service Service("affinidi/chat"):

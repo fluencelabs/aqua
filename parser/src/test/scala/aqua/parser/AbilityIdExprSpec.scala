@@ -8,7 +8,7 @@ import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class AbilitIdExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
+class AbilityIdExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
 
   "abilities" should "be parsed" in {
