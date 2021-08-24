@@ -1,7 +1,8 @@
 package aqua.semantics.expr
 
+import aqua.model.ValueModel.varName
 import aqua.model.func.Call
-import aqua.model.func.raw.{ApTag, FuncOp}
+import aqua.model.func.raw.{ApTag, FuncOp, FuncOps}
 import aqua.model.{LiteralModel, Model}
 import aqua.parser.expr.PushToStreamExpr
 import aqua.parser.lexer.Token
@@ -11,7 +12,7 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{StreamType, Type}
 import cats.free.Free
-import cats.syntax.apply._
+import cats.syntax.apply.*
 
 class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
 
@@ -52,12 +53,7 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
         } yield {
           if (ensure)
             resolvedStreamTypeOp
-              .map(t =>
-                FuncOp
-                  .leaf(
-                    ApTag(vm, Call.Export(expr.stream.value, t))
-                  ): Model
-              )
+              .map(t => FuncOps.ap(vm, Call.Export(expr.stream.value, t)): Model)
               .getOrElse(Model.error("Cannot resolve stream type"))
           else
             Model.error("Stream and pushed element types are not matches")

@@ -105,19 +105,10 @@ case class FuncCallable(
           // Functions may export variables, so collect them
           capturedValues
       ) {
-        // TODO: unify processing of AssignmentTag and ApTag
         case ((noNames, resolvedExports), tag @ AssignmentTag(value, assignTo)) =>
           (
             noNames,
             resolvedExports + (assignTo -> value.resolveWith(resolvedExports))
-          ) -> Cofree[Chain, RawTag](
-            tag.mapValues(_.resolveWith(resolvedExports)),
-            Eval.now(Chain.empty)
-          )
-        case ((noNames, resolvedExports), tag @ ApTag(operand, exportTo)) =>
-          (
-            noNames,
-            resolvedExports + (exportTo.name -> operand.resolveWith(resolvedExports))
           ) -> Cofree[Chain, RawTag](
             tag.mapValues(_.resolveWith(resolvedExports)),
             Eval.now(Chain.empty)
@@ -164,7 +155,7 @@ case class FuncCallable(
           .map[(Option[FuncOp], ValueModel)] {
             case (exp @ Call.Export(_, StreamType(_)), res) =>
               // pass nested function results to a stream
-              Some(FuncOps.identity(res, exp)) -> exp.model
+              Some(FuncOps.ap(res, exp)) -> exp.model
             case (_, res) =>
               None -> res
           }
