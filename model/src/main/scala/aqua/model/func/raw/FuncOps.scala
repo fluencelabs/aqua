@@ -10,9 +10,9 @@ object FuncOps {
   def noop: FuncOp =
     FuncOp.leaf(CallServiceTag(LiteralModel.quote("op"), "identity", Call(Nil, Nil)))
 
-  def identity(what: ValueModel, to: Call.Export): FuncOp =
+  def ap(what: ValueModel, to: Call.Export): FuncOp =
     FuncOp.leaf(
-      CallServiceTag(LiteralModel.quote("op"), "identity", Call(what :: Nil, to :: Nil))
+      ApTag(what, to)
     )
 
   def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =

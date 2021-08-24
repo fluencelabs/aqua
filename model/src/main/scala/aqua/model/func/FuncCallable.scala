@@ -155,7 +155,7 @@ case class FuncCallable(
           .map[(Option[FuncOp], ValueModel)] {
             case (exp @ Call.Export(_, StreamType(_)), res) =>
               // pass nested function results to a stream
-              Some(FuncOps.identity(res, exp)) -> exp.model
+              Some(FuncOps.ap(res, exp)) -> exp.model
             case (_, res) =>
               None -> res
           }

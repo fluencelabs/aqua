@@ -36,6 +36,11 @@ object LiteralModel {
   def quote(str: String): LiteralModel = LiteralModel("\"" + str + "\"", ScalarType.string)
 
   val initPeerId: LiteralModel = LiteralModel("%init_peer_id%", ScalarType.string)
+
+  val nil: LiteralModel = LiteralModel(
+    "[]",
+    StreamType(BottomType)
+  )
 }
 
 sealed trait LambdaModel {
@@ -109,10 +114,5 @@ object VarModel {
         "peer_id" -> ScalarType.string
       )
     )
-  )
-
-  val nil: VarModel = VarModel(
-    "nil",
-    StreamType(BottomType)
   )
 }
