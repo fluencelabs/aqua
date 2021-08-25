@@ -53,13 +53,13 @@ case class TypeScriptFunc(func: FuncRes) {
 
     val setCallbacks = func.args.collect { // Product types are not handled
       case Arg(argName, OptionType(_)) =>
-        s"""h.on('$dataServiceId', '$argName', () => {return $argName === null ? [] : [$argName];});"""
+        s"""h.on('$dataServiceId', '$argName', () => {return ${fixupArgName(argName)} === null ? [] : [${fixupArgName(argName)}];});"""
       case Arg(argName, _: DataType) =>
-        s"""h.on('$dataServiceId', '$argName', () => {return $argName;});"""
+        s"""h.on('$dataServiceId', '$argName', () => {return ${fixupArgName(argName)};});"""
       case Arg(argName, at: ArrowType) =>
         s"""
            | h.use((req, resp, next) => {
-           | if(req.serviceId === '${conf.callbackService}' && req.fnaAme === '$argName') {
+           | if(req.serviceId === '${conf.callbackService}' && req.fnName === '$argName') {
            |     ${callBackExprBody(at, argName)}
            | }
            | next();
