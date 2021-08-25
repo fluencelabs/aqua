@@ -79,37 +79,41 @@ case class TypeScriptFunc(func: FuncRes) {
     val funcName = s"${func.funcName}"
 
     val argsTypescript = args
-      .map(ad => s"${fixupArgName(ad.name)}: " + typeToTs(ad.`type`))
+      .map(arg => s"${fixupArgName(arg.name)}: " + typeToTs(arg.`type`))
       .concat(List(s"config?: $configType"))
     
-    var funcTypeArg1 = argsTypescript.mkString(", ")
-    var funcTypeArg2 = ("peer: FluencePeer" :: argsTypescript).mkString(", ")
+    // defines different types for overloaded service registration function.
+    var funcTypeOverload1 = argsTypescript.mkString(", ")
+    var funcTypeOverload2 = ("peer: FluencePeer" :: argsTypescript).mkString(", ")
 
-    val argsLets = args.map(ad => s"let ${fixupArgName(ad.name)};").mkString("\n")
+    val argsLets = args.map(arg => s"let ${fixupArgName(arg.name)};").mkString("\n")
 
     val argsFormAssn = args
-      .map(ad => fixupArgName(ad.name))
+      .map(arg => fixupArgName(arg.name))
       .concat(List("config"))
       .zipWithIndex
 
-    var argsAssnFrom1 = argsFormAssn.map((name, ix) => s"${name} = args[${ix + 1}];").mkString("\n")
-    var argsAssnFrom0 = argsFormAssn.map((name, ix) => s"${name} = args[${ix}];").mkString("\n")
+    // argument upnacking has two forms. 
+    // One starting from the first (by index) argument,
+    // One starting from zero
+    var argsAssignmentStartingFrom1 = argsFormAssn.map((name, ix) => s"${name} = args[${ix + 1}];").mkString("\n")
+    var argsAssignmentStartingFrom0 = argsFormAssn.map((name, ix) => s"${name} = args[${ix}];").mkString("\n")
 
     val funcTypeRes = s"Promise<$retTypeTs>"
 
     s"""
-       | export async function ${func.funcName}(${funcTypeArg1}) : ${funcTypeRes};
-       | export async function ${func.funcName}(${funcTypeArg2}) : ${funcTypeRes};
+       | export async function ${func.funcName}(${funcTypeOverload1}) : ${funcTypeRes};
+       | export async function ${func.funcName}(${funcTypeOverload2}) : ${funcTypeRes};
        | export async function ${func.funcName}(...args) {
        |     let peer: FluencePeer;
        |     ${argsLets}
        |     let config;
        |     if (args[0] instanceof FluencePeer) {
        |         peer = args[0];
-       |         ${argsAssnFrom1}
+       |         ${argsAssignmentStartingFrom1}
        |     } else {
        |         peer = FluencePeer.default;
-       |         ${argsAssnFrom0}
+       |         ${argsAssignmentStartingFrom0}
        |     }
        |    
        |     let request: RequestFlow;

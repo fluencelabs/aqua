@@ -20,25 +20,32 @@ case class TypeScriptService(srv: ServiceRes) {
 
   def generate: String =
     val fnHandlers = srv.members
-      .map({ case (name, arrow) =>
+      .map{ case (name, arrow) =>
         fnHandler(arrow, name)
-      })
+      }
       .mkString("\n\n")
 
     val fnDefs = srv.members
-      .map({ case (name, arrow) =>
+      .map{ case (name, arrow) =>
         s"${name}: ${fnDef(arrow)};"
-      })
+      }
       .mkString("\n")
 
     val registerName = s"register${srv.name}"
 
+    // defined arguments used in overloads below
     val peerDecl = "peer: FluencePeer";
     val serviceIdDecl = "serviceId: string";
     val serviceDecl = s"""service: {
           ${fnDefs}
       }"""
     
+    // Service registration functions has several overloads.
+    // Depending on whether the the service has the default id or not
+    // there would be different number of overloads
+    // This variable contain defines the list of lists where 
+    // the outmost list describes the list of overloads
+    // and the innermost one defines the list of arguments in the overload
     val registerServiceArgsSource = srv.defaultId.fold(
       List(
         List(serviceIdDecl, serviceDecl),

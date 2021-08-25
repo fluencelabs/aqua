@@ -49,11 +49,9 @@ object TypeScriptCommon {
 
   def callParamsArg(at: ArrowType): String =
     val args = FuncRes.arrowArgs(at)
-    var generic = if (args.length > 0) {
+    val generic = if (args.length > 0) {
       val prep = args
-        .map(x => {
-          x.name
-        })
+        .map(_.name)
         .mkString("' | '")
 
       "'" + prep + "'"
