@@ -100,15 +100,15 @@ case class TypeScriptService(srv: ServiceRes) {
       |        service = args[2];
       |    }
       |
-      |      peer.callServiceHandler.use((req, resp, next) => {
+      |      peer.callServiceHandler.use(async (req, resp, next) => {
       |          if (req.serviceId !== serviceId) {
-      |              next();
+      |              await next();
       |              return;
       |          }
       |  
       |          ${fnHandlers}
       |  
-      |          next();
+      |          await next();
       |      });
       | }
       """.stripMargin

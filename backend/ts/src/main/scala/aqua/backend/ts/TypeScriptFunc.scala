@@ -58,11 +58,11 @@ case class TypeScriptFunc(func: FuncRes) {
         s"""h.on('$dataServiceId', '$argName', () => {return ${fixupArgName(argName)};});"""
       case Arg(argName, at: ArrowType) =>
         s"""
-           | h.use((req, resp, next) => {
+           | h.use(async (req, resp, next) => {
            | if(req.serviceId === '${conf.callbackService}' && req.fnName === '$argName') {
            |     ${callBackExprBody(at, argName)}
            | }
-           | next();
+           | await next();
            | });
         """.stripMargin
     }

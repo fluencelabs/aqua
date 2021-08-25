@@ -40,7 +40,7 @@ object TypeScriptCommon {
       .concat(List(callParamsArg(at)))
       .mkString(", ")
 
-    s"(${args}) => ${returnType(at)}"
+    s"(${args}) => Promise<${returnType(at)}>"
 
   def argsToTs(at: ArrowType): List[String] =
     FuncRes
@@ -72,7 +72,7 @@ object TypeScriptCommon {
         .concat(List("callParams"))
         .mkString(", ")
 
-    val callCallbackStatement = s"$callbackName(${arrowArgumentsToCallbackArgumentsList})"
+    val callCallbackStatement = s"await $callbackName(${arrowArgumentsToCallbackArgumentsList})"
     
     val callCallbackStatementAndReturn =
       at.res.fold(s"${callCallbackStatement}; resp.result = {}")(_ =>
