@@ -26,7 +26,7 @@ case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataT
         item,
         VarModel(iter, ArrayType(t.element), Chain.empty),
         FuncOps.seq(
-          FuncOps.identity(VarModel(item, t.element), Call.Export(name, t)),
+          FuncOps.ap(VarModel(item, t.element), Call.Export(name, t)),
           FuncOps.next(item)
         )
       )

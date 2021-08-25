@@ -55,7 +55,7 @@ case class JavaScriptFunc(func: FuncRes) {
       case Arg(argName, OptionType(_)) =>
         s"""h.on('$dataServiceId', '$argName', () => {return $argName === null ? [] : [$argName];});"""
       case Arg(argName, _: DataType) =>
-        s"""h.on('$dataServiceId, '$argName', () => {return $argName;});"""
+        s"""h.on('$dataServiceId', '$argName', () => {return $argName;});"""
       case Arg(argName, at: ArrowType) =>
         val value = s"$argName(${argsCallToJs(
           at

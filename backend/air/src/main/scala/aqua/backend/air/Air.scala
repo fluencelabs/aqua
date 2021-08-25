@@ -20,6 +20,8 @@ object Keyword {
 
   case object Call extends Keyword("call")
 
+  case object Ap extends Keyword("ap")
+
   case object Seq extends Keyword("seq")
 
   case object Par extends Keyword("par")
@@ -94,6 +96,8 @@ object Air {
   case class Call(triplet: Triplet, args: List[DataView], result: Option[String])
       extends Air(Keyword.Call)
 
+  case class Ap(op: DataView, result: String) extends Air(Keyword.Ap)
+
   case class Comment(comment: String, air: Air) extends Air(Keyword.NA)
 
   private def show(depth: Int, air: Air): String = {
@@ -120,6 +124,7 @@ object Air {
             case Air.Xor(l, r) ⇒ s"\n${showNext(l)}${showNext(r)}$space"
             case Air.Call(triplet, args, res) ⇒
               s" ${triplet.show} [${args.map(_.show).mkString(" ")}]${res.fold("")(" " + _)}"
+            case Air.Ap(operand, result) ⇒ s" ${operand.show} $result"
             case Air.Comment(_, _) => ";; Should not be displayed"
           }) + ")\n"
     }

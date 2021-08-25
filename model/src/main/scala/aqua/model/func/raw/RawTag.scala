@@ -22,6 +22,11 @@ sealed trait RawTag {
         funcName,
         call.mapValues(f)
       )
+    case ApTag(operand, exportTo) =>
+      ApTag(
+        f(operand),
+        exportTo
+      )
     case AssignmentTag(value, assignTo) =>
       AssignmentTag(f(value), assignTo)
     case AbilityIdTag(value, ability) =>
@@ -82,4 +87,8 @@ case class CallServiceTag(
   call: Call
 ) extends RawTag {
   override def toString: String = s"(call _ ($serviceId $funcName) $call)"
+}
+
+case class ApTag(operand: ValueModel, exportTo: Call.Export) extends RawTag {
+  override def toString: String = s"(ap $operand $exportTo)"
 }

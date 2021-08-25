@@ -36,7 +36,7 @@ case class TransformConfig(
           .copy(values =
             Map(
               VarModel.lastError.name -> VarModel.lastError,
-              VarModel.nil.name -> VarModel.nil
+              "nil" -> LiteralModel.nil
             ) ++ constantsMap
           )
       )
