@@ -79,16 +79,16 @@ case class TypeScriptFunc(func: FuncRes) {
     val funcName = s"${func.funcName}"
 
     val argsTypescript = args
-      .map(ad => s"${ad.name}: " + typeToTs(ad.`type`))
+      .map(ad => s"${fixupArgName(ad.name)}: " + typeToTs(ad.`type`))
       .concat(List(s"config?: $configType"))
     
     var funcTypeArg1 = argsTypescript.mkString(", ")
     var funcTypeArg2 = ("peer: FluencePeer" :: argsTypescript).mkString(", ")
 
-    val argsLets = args.map(ad => s"let ${ad.name};").mkString("\n")
+    val argsLets = args.map(ad => s"let ${fixupArgName(ad.name)};").mkString("\n")
 
     val argsFormAssn = args
-      .map(ad => ad.name)
+      .map(ad => fixupArgName(ad.name))
       .concat(List("config"))
       .zipWithIndex
 

@@ -25,6 +25,13 @@ object TypeScriptCommon {
     case at: ArrowType => fnDef(at)
   }
 
+  def fixupArgName(arg: String): String =
+    if(arg == "peer" || arg == "config") {
+      arg + "_"
+    } else {
+      arg
+    }
+
   def returnType(at: ArrowType): String =
     at.res.fold("void")(typeToTs)
 

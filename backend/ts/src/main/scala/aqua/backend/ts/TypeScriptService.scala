@@ -60,6 +60,13 @@ case class TypeScriptService(srv: ServiceRes) {
       })
       .mkString("\n");
 
+    val defaultServiceIdBranch = srv.defaultId.fold("")(x => 
+      s""" 
+      | else {
+      |     serviceId = ${x}
+      |}""".stripMargin
+    )
+
     s"""
       | ${registerServiceArgs}
       | export function ${registerName}(...args) {
@@ -76,9 +83,7 @@ case class TypeScriptService(srv: ServiceRes) {
       |        serviceId = args[0];
       |    } else if (typeof args[1] === 'string') {
       |        serviceId = args[1];
-      |    } else {
-      |        serviceId = '${srv.defaultId.fold("")(x => x)}';
-      |    }
+      |    } ${defaultServiceIdBranch}
       |
       |    if (!(args[0] instanceof FluencePeer) && typeof args[0] === 'object') {
       |        service = args[0];
