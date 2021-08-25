@@ -19,15 +19,13 @@ case class TypeScriptService(srv: ServiceRes) {
   }
 
   def generate: String =
-    val list = srv.members
-
-    val fnHandlers = list
+    val fnHandlers = srv.members
       .map({ case (name, arrow) =>
         fnHandler(arrow, name)
       })
       .mkString("\n\n")
 
-    val fnDefs = list
+    val fnDefs = srv.members
       .map({ case (name, arrow) =>
         s"${name}: ${fnDef(arrow)};"
       })
@@ -35,42 +33,71 @@ case class TypeScriptService(srv: ServiceRes) {
 
     val registerName = s"register${srv.name}"
 
-    val registerNameImpl = s"register${srv.name}Impl"
+    val peerDecl = "peer: FluencePeer";
+    val serviceIdDecl = "serviceId: string";
+    val serviceDecl = s"""service: {
+          ${fnDefs}
+      }"""
+    
+    val registerServiceArgsSource = srv.defaultId.fold(
+      List(
+        List(serviceIdDecl, serviceDecl),
+        List(peerDecl, serviceIdDecl, serviceDecl)
+      )
+    )(_ => 
+      List(
+        List(serviceDecl),
+        List(serviceIdDecl, serviceDecl),
+        List(peerDecl, serviceDecl),
+        List(peerDecl, serviceIdDecl, serviceDecl),
+      )
+    )
 
-    val registerServiceType = s""" (
-        |     options: { serviceId: string },
-        |        service: {
-        |            ${fnDefs}
-        |        },
-        | )"""
+    val registerServiceArgs = registerServiceArgsSource.
+      map(x => {
+        val args = x.mkString(", ")
+        s"export function ${registerName}(${args}): void;"
+      })
+      .mkString("\n");
 
     s"""
-      | const ${registerNameImpl} = (peer: FluencePeer) => {
-      |     return ${registerServiceType} => {
-      |           peer.callServiceHandler.use((req, resp, next) => {
-      |               if (req.serviceId !== options.serviceId) {
-      |                   next();
-      |                   return;
-      |               }
-      |       
-      |               ${fnHandlers}
-      |       
-      |               next();
-      |           });
-      |       }
-      | }
-      | 
-      | export const ${registerName} = ${registerNameImpl}(FluencePeer.default);
-      | 
-      | declare module "@fluencelabs/fluence" {
-      |     interface FluencePeer {
-      |         ${registerName}: ${registerServiceType} => void;
-      |     }
-      | }
+      | ${registerServiceArgs}
+      | export function ${registerName}(...args) {
+      |    let peer: FluencePeer;
+      |    let serviceId;
+      |    let service;
+      |    if (args[0] instanceof FluencePeer) {
+      |        peer = args[0];
+      |    } else {
+      |        peer = FluencePeer.default;
+      |    }
       |
-      | FluencePeer.prototype.${registerName} = function (o, s) {
-      |    return ${registerNameImpl}(this)(o, s);
-      | };
-
+      |    if (typeof args[0] === 'string') {
+      |        serviceId = args[0];
+      |    } else if (typeof args[1] === 'string') {
+      |        serviceId = args[1];
+      |    } else {
+      |        serviceId = '${srv.defaultId.fold("")(x => x)}';
+      |    }
+      |
+      |    if (!(args[0] instanceof FluencePeer) && typeof args[0] === 'object') {
+      |        service = args[0];
+      |    } else if (typeof args[1] === 'object') {
+      |        service = args[1];
+      |    } else {
+      |        service = args[2];
+      |    }
+      |
+      |      peer.callServiceHandler.use((req, resp, next) => {
+      |          if (req.serviceId !== serviceId) {
+      |              next();
+      |              return;
+      |          }
+      |  
+      |          ${fnHandlers}
+      |  
+      |          next();
+      |      });
+      | }
       """.stripMargin
 }

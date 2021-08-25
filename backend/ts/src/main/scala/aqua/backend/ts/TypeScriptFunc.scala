@@ -76,68 +76,75 @@ case class TypeScriptFunc(func: FuncRes) {
 
     val configType = "{ttl?: number}"
 
-    val funcNameImpl = s"${func.funcName}Impl"
-
     val funcName = s"${func.funcName}"
 
     val argsTypescript = args
       .map(ad => s"${ad.name}: " + typeToTs(ad.`type`))
-      .concat(List(s"$configArgName?: $configType"))
-      .mkString(", ")
+      .concat(List(s"config?: $configType"))
+    
+    var funcTypeArg1 = argsTypescript.mkString(", ")
+    var funcTypeArg2 = ("peer: FluencePeer" :: argsTypescript).mkString(", ")
 
-    val funcTypeArg = s"(${argsTypescript})"
+    val argsLets = args.map(ad => s"let ${ad.name};").mkString("\n")
+
+    val argsFormAssn = args
+      .map(ad => ad.name)
+      .concat(List("config"))
+      .zipWithIndex
+
+    var argsAssnFrom1 = argsFormAssn.map((name, ix) => s"${name} = args[${ix + 1}];").mkString("\n")
+    var argsAssnFrom0 = argsFormAssn.map((name, ix) => s"${name} = args[${ix}];").mkString("\n")
+
     val funcTypeRes = s"Promise<$retTypeTs>"
 
     s"""
-       | const ${funcNameImpl} = (peer: FluencePeer) => {
-       |     return async  ${funcTypeArg}: ${funcTypeRes} => {
-       |        let request: RequestFlow;
-       |        const promise = new Promise<$retTypeTs>((resolve, reject) => {
-       |            const r = new RequestFlowBuilder()
-       |                .disableInjections()
-       |                .withRawScript(
-       |                    `
-       |    ${tsAir.show}
-       |                `,
-       |                )
-       |                .configHandler((h) => {
-       |                    ${conf.relayVarName.fold("") { r =>
-      s"""h.on('${conf.getDataService}', '$r', () => {
-       |                        return peer.connectionInfo.connectedRelays[0];
-       |                    });""".stripMargin
-    }}    
-       |                    $setCallbacks
-       |                    $returnCallback
-       |                    h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
-       |                        const [err] = args;
-       |                        reject(err);
-       |                    });
-       |                })
-       |                .handleScriptError(reject)
-       |                .handleTimeout(() => {
-       |                    reject('Request timed out for ${func.funcName}');
-       |                })
-       |            if(${configArgName} && ${configArgName}.ttl) {
-       |                r.withTTL(${configArgName}.ttl)
-       |            }
-       |            request = r.build();
-       |        });
-       |        await peer.initiateFlow(request!);
-       |        return ${returnVal};
-       |    }
-       |}
-       |
-       | export const ${funcName} = ${funcNameImpl}(FluencePeer.default);
-       | 
-       | declare module "@fluencelabs/fluence" {
-       |     interface FluencePeer {
-       |         ${funcName}: ${funcTypeArg} => ${funcTypeRes}
+       | export async function ${func.funcName}(${funcTypeArg1}) : ${funcTypeRes};
+       | export async function ${func.funcName}(${funcTypeArg2}) : ${funcTypeRes};
+       | export async function ${func.funcName}(...args) {
+       |     let peer: FluencePeer;
+       |     ${argsLets}
+       |     let config;
+       |     if (args[0] instanceof FluencePeer) {
+       |         peer = args[0];
+       |         ${argsAssnFrom1}
+       |     } else {
+       |         peer = FluencePeer.default;
+       |         ${argsAssnFrom0}
        |     }
-       | }
-       |
-       |FluencePeer.prototype.${funcName} = function (...args) {
-       |    return ${funcNameImpl}(this)(...args);
-       | };
+       |    
+       |     let request: RequestFlow;
+       |     const promise = new Promise<$retTypeTs>((resolve, reject) => {
+       |         const r = new RequestFlowBuilder()
+       |                 .disableInjections()
+       |                 .withRawScript(
+       |                     `
+       |     ${tsAir.show}
+       |                 `,
+       |                 )
+       |                 .configHandler((h) => {
+       |                     ${conf.relayVarName.fold("") { r =>
+      s"""h.on('${conf.getDataService}', '$r', () => {
+       |                    return peer.connectionInfo.connectedRelays[0];
+       |                });""".stripMargin  }}
+       |                $setCallbacks
+       |                $returnCallback
+       |                h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
+       |                    const [err] = args;
+       |                    reject(err);
+       |                });
+       |            })
+       |            .handleScriptError(reject)
+       |            .handleTimeout(() => {
+       |                reject('Request timed out for ${func.funcName}');
+       |            })
+       |        if(${configArgName} && ${configArgName}.ttl) {
+       |            r.withTTL(${configArgName}.ttl)
+       |        }
+       |        request = r.build();
+       |    });
+       |    await peer.initiateFlow(request!);
+       |    return ${returnVal};
+       |}
       """.stripMargin
   }
 
