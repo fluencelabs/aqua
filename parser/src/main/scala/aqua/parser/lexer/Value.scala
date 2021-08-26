@@ -1,22 +1,30 @@
 package aqua.parser.lexer
 
-import aqua.parser.lexer.Token._
+import aqua.parser.{Expr, FunctorK}
+import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
-import aqua.parser.lift.LiftParser._
+import aqua.parser.lift.LiftParser.*
 import aqua.types.LiteralType
-import cats.parse.{Numbers, Parser => P}
-import cats.syntax.comonad._
-import cats.syntax.functor._
+import cats.parse.{Numbers, Parser as P}
+import cats.syntax.comonad.*
+import cats.syntax.functor.*
 import cats.{Comonad, Functor}
+import cats.~>
 
-sealed trait Value[F[_]] extends Token[F]
+sealed trait Value[F[_]] extends Token[F] {
+  def mapK[K[_]: Comonad](fk: F ~> K): Value[K]
+}
 
 case class VarLambda[F[_]](name: Name[F], lambda: List[LambdaOp[F]] = Nil) extends Value[F] {
   override def as[T](v: T): F[T] = name.as(v)
+
+  def mapK[K[_]: Comonad](fk: F ~> K): VarLambda[K] = copy(name.mapK(fk), lambda.map(_.mapK(fk)))
 }
 
 case class Literal[F[_]: Comonad](valueToken: F[String], ts: LiteralType) extends Value[F] {
   override def as[T](v: T): F[T] = valueToken.as(v)
+
+  def mapK[K[_]: Comonad](fk: F ~> K): Literal[K] = copy(fk(valueToken), ts)
 
   def value: String = valueToken.extract
 }

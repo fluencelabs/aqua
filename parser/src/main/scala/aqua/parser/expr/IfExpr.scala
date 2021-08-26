@@ -7,9 +7,13 @@ import aqua.parser.lift.LiftParser
 import aqua.types.LiteralType
 import cats.Comonad
 import cats.parse.{Parser => P}
+import cats.~>
 
 case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F])
-    extends Expr[F](IfExpr, eqOp)
+    extends Expr[F](IfExpr, eqOp) {
+  override def mapK[K[_]: Comonad](fk: F ~> K): IfExpr[K] =
+    copy(left.mapK(fk), eqOp.mapK(fk), right.mapK(fk))
+}
 
 object IfExpr extends Expr.AndIndented {
 

@@ -6,9 +6,14 @@ import aqua.parser.lexer.{DataTypeToken, Name}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
+import cats.~>
 
 case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F])
-    extends Expr[F](FieldTypeExpr, name)
+    extends Expr[F](FieldTypeExpr, name) {
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): FieldTypeExpr[K] =
+    copy(name.mapK(fk), `type`.mapK(fk))
+}
 
 object FieldTypeExpr extends Expr.Leaf {
 

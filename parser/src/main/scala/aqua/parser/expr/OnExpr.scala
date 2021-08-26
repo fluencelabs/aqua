@@ -6,8 +6,13 @@ import aqua.parser.lexer.Value
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.{Parser => P}
+import cats.~>
 
-case class OnExpr[F[_]](peerId: Value[F], via: List[Value[F]]) extends Expr[F](OnExpr, peerId)
+case class OnExpr[F[_]](peerId: Value[F], via: List[Value[F]]) extends Expr[F](OnExpr, peerId) {
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): OnExpr[K] =
+    copy(peerId.mapK(fk), via.map(_.mapK(fk)))
+}
 
 object OnExpr extends Expr.AndIndented {
 

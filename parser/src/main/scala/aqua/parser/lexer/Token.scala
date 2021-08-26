@@ -95,6 +95,8 @@ object Token {
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
     override def as[T](v: T): F[T] = Functor[F].as(point, v)
+    override def mapK[K[_]: Comonad](fk: F ~> K): LiftToken[K, A] =
+      copy(fk(point))
   }
 
   def lift[F[_]: Functor, A](point: F[A]): Token[F] = LiftToken(point)

@@ -6,12 +6,17 @@ import aqua.parser.lexer.{Literal, Name, Value}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.{Parser => P}
+import cats.~>
 
 case class ConstantExpr[F[_]](
   name: Name[F],
   value: Value[F],
   skipIfAlreadyDefined: Boolean
-) extends Expr[F](ConstantExpr, name)
+) extends Expr[F](ConstantExpr, name) {
+
+  def mapK[K[_]: Comonad](fk: F ~> K): ConstantExpr[K] =
+    copy(name.mapK(fk), value.mapK(fk), skipIfAlreadyDefined)
+}
 
 object ConstantExpr extends Expr.Leaf {
 

@@ -8,24 +8,33 @@ import cats.Comonad
 import cats.parse.{Parser => P}
 import cats.syntax.comonad._
 import cats.syntax.functor._
+import cats.~>
 
-sealed trait TypeToken[F[_]] extends Token[F]
-sealed trait DataTypeToken[F[_]] extends TypeToken[F]
+sealed trait TypeToken[F[_]] extends Token[F] {
+  def mapK[K[_]: Comonad](fk: F ~> K): TypeToken[K]
+}
+
+sealed trait DataTypeToken[F[_]] extends TypeToken[F] {
+  override def mapK[K[_]: Comonad](fk: F ~> K): DataTypeToken[K]
+}
 
 case class TopBottomToken[F[_]: Comonad](override val unit: F[Unit], isTop: Boolean)
     extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = unit.as(v)
   def isBottom: Boolean = !isTop
+  override def mapK[K[_]: Comonad](fk: F ~> K): TopBottomToken[K] = copy(fk(unit), isTop)
 }
 
 case class ArrayTypeToken[F[_]: Comonad](override val unit: F[Unit], data: DataTypeToken[F])
     extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = unit.as(v)
+  override def mapK[K[_]: Comonad](fk: F ~> K): ArrayTypeToken[K] = copy(fk(unit), data.mapK(fk))
 }
 
 case class StreamTypeToken[F[_]: Comonad](override val unit: F[Unit], data: DataTypeToken[F])
     extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = unit.as(v)
+  override def mapK[K[_]: Comonad](fk: F ~> K): StreamTypeToken[K] = copy(fk(unit), data.mapK(fk))
 }
 
 object StreamTypeToken {
@@ -38,6 +47,9 @@ object StreamTypeToken {
 case class OptionTypeToken[F[_]: Comonad](override val unit: F[Unit], data: DataTypeToken[F])
     extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = unit.as(v)
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): OptionTypeToken[K] =
+    copy(fk(unit), data.mapK(fk))
 }
 
 object OptionTypeToken {
@@ -49,6 +61,8 @@ object OptionTypeToken {
 
 case class CustomTypeToken[F[_]: Comonad](name: F[String]) extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): CustomTypeToken[K] = copy(fk(name))
 
   def value: String = name.extract
 }
@@ -65,6 +79,8 @@ object CustomTypeToken {
 case class BasicTypeToken[F[_]: Comonad](scalarType: F[ScalarType]) extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = scalarType.as(v)
 
+  override def mapK[K[_]: Comonad](fk: F ~> K): BasicTypeToken[K] =
+    copy(fk(scalarType))
   def value: ScalarType = scalarType.extract
 }
 
@@ -84,6 +100,12 @@ case class ArrowTypeToken[F[_]: Comonad](
 ) extends TypeToken[F] {
   override def as[T](v: T): F[T] = unit.as(v)
 
+  override def mapK[K[_]: Comonad](fk: F ~> K): ArrowTypeToken[K] =
+    copy(
+      fk(unit),
+      args.map { case (n, t) => (n.map(_.mapK(fk)), t.mapK(fk)) },
+      res.map(_.mapK(fk))
+    )
   def argTypes: List[TypeToken[F]] = args.map(_._2)
 }
 
