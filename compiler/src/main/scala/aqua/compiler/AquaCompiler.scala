@@ -25,7 +25,7 @@ object AquaCompiler extends Logging {
 
   def compile[F[_]: Monad, E, I: Order, K[_]: Comonad: LiftParser, S[_]: Comonad](
     sources: AquaSources[F, E, I],
-    modify: (I, String) => K ~> S,
+    nat: (I, String) => K ~> S,
     parser: Parser0[ValidatedNec[ParserError[K], Ast[K]]],
     backend: Backend,
     config: TransformConfig
@@ -35,7 +35,7 @@ object AquaCompiler extends Logging {
     type Ctx = NonEmptyMap[I, AquaContext]
     type ValidatedCtx = ValidatedNec[Err, Ctx]
 
-    new AquaParser[F, E, I, K, S](sources, modify, parser)
+    new AquaParser[F, E, I, K, S](sources, nat, parser)
       .resolve[ValidatedCtx](mod =>
         context =>
           // Context with prepared imports
@@ -98,13 +98,13 @@ object AquaCompiler extends Logging {
 
   def compileTo[F[_]: Monad, E, I: Order, K[_]: Comonad: LiftParser, S[_]: Comonad, T](
     sources: AquaSources[F, E, I],
-    modify: (I, String) => K ~> S,
+    nat: (I, String) => K ~> S,
     parser: Parser0[ValidatedNec[ParserError[K], Ast[K]]],
     backend: Backend,
     config: TransformConfig,
     write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
-    compile[F, E, I, K, S](sources, modify, parser, backend, config).flatMap {
+    compile[F, E, I, K, S](sources, nat, parser, backend, config).flatMap {
       case Valid(compiled) =>
         compiled.map { ac =>
           write(ac).map(

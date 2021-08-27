@@ -28,14 +28,14 @@ object Ast {
       bodyMaybe.map(Ast(head, _))
     }
 
-  def fromString[K[_]: Comonad: LiftParser, S[_]: Comonad](parser: P0[ValidatedNec[ParserError[K], Ast[K]]], script: String, modify: K ~> S): ValidatedNec[ParserError[S], Ast[S]] =
+  def fromString[K[_]: Comonad: LiftParser, S[_]: Comonad](parser: P0[ValidatedNec[ParserError[K], Ast[K]]], script: String, nat: K ~> S): ValidatedNec[ParserError[S], Ast[S]] =
     parser
       .parseAll(script) match {
       case Right(value) => value.bimap(
-        e => e.map(_.mapK(modify)),
-        ast => Ast[S](ast.head.map(_.mapK(modify)), ast.tree.map(_.mapK(modify)))
+        e => e.map(_.mapK(nat)),
+        ast => Ast[S](ast.head.map(_.mapK(nat)), ast.tree.map(_.mapK(nat)))
       )
-      case Left(e) => Validated.invalidNec(LexerError[K](e.wrapErr).mapK(modify))
+      case Left(e) => Validated.invalidNec(LexerError[K](e.wrapErr).mapK(nat))
     }
 
 }
