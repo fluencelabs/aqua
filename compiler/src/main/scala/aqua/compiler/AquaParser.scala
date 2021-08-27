@@ -1,21 +1,24 @@
 package aqua.compiler
 
 import aqua.linker.{AquaModule, Modules}
-import aqua.parser.Ast
+import aqua.parser.{Ast, ParserError}
 import aqua.parser.head.{FilenameExpr, ImportExpr}
-import aqua.parser.lift.LiftParser
+import aqua.parser.lift.{LiftParser, Span}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
+import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.{Comonad, Monad}
 import scribe.Logging
+import cats.~>
 
 // TODO: add tests
-class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
+class AquaParser[F[_]: Monad, E, I, K[_]: Comonad: LiftParser, S[_]: Comonad](
   sources: AquaSources[F, E, I],
-  liftI: (I, String) => LiftParser[S]
+  modify: (I, String) => K ~> S,
+  parser: Parser0[ValidatedNec[ParserError[K], Ast[K]]]
 ) extends Logging {
 
   type Body = Ast[S]
@@ -26,8 +29,9 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
     sources.sources
       .map(
         _.leftMap(_.map[Err](SourcesErr(_))).andThen(_.map { case (i, s) =>
-          implicit val lift: LiftParser[S] = liftI(i, s)
-          Ast.fromString[S](s).bimap(_.map[Err](ParserErr(_)), ast => Chain.one(i -> ast))
+          Ast
+            .fromString[K, S](parser, s, modify(i, s))
+            .bimap(_.map[Err](ParserErr(_)), ast => Chain.one(i -> ast))
         }.foldLeft(Validated.validNec[Err, Chain[(I, Body)]](Chain.nil))(_ combine _))
       )
 
@@ -84,8 +88,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
     sources
       .load(imp)
       .map(_.leftMap(_.map[Err](SourcesErr(_))).andThen { src =>
-        implicit val lift: LiftParser[S] = liftI(imp, src)
-        Ast.fromString[S](src).leftMap(_.map[Err](ParserErr(_)))
+        Ast.fromString[K, S](parser, src, modify(imp, src)).leftMap(_.map[Err](ParserErr(_)))
       })
       .flatMap {
         case Validated.Valid(ast) =>

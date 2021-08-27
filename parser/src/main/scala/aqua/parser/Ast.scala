@@ -8,6 +8,7 @@ import cats.data.{Chain, Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.Parser0 as P0
 import cats.{Comonad, Eval}
+import cats.~>
 
 case class Ast[S[_]](head: Ast.Head[S], tree: Ast.Tree[S]) {
 
@@ -27,11 +28,14 @@ object Ast {
       bodyMaybe.map(Ast(head, _))
     }
 
-  def fromString[S[_]: LiftParser: Comonad](script: String): ValidatedNec[ParserError[S], Ast[S]] =
-    parser[S]()
+  def fromString[K[_]: Comonad: LiftParser, S[_]: Comonad](parser: P0[ValidatedNec[ParserError[K], Ast[K]]], script: String, modify: K ~> S): ValidatedNec[ParserError[S], Ast[S]] =
+    parser
       .parseAll(script) match {
-      case Right(value) => value
-      case Left(e) => Validated.invalidNec(LexerError[S](e.wrapErr))
+      case Right(value) => value.bimap(
+        e => e.map(_.mapK(modify)),
+        ast => Ast[S](ast.head.map(_.mapK(modify)), ast.tree.map(_.mapK(modify)))
+      )
+      case Left(e) => Validated.invalidNec(LexerError[K](e.wrapErr).mapK(modify))
     }
 
 }
