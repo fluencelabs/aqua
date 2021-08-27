@@ -17,7 +17,6 @@ import aqua.parser.lift.LiftParser.LiftErrorOps
 object Parser {
 
   import Span.spanLiftParser
-
   lazy val spanParser = parserSchema[Span.F]()
   import LiftParser.Implicits.idLiftParser
   lazy val idParser = parserSchema[Id]()
@@ -27,17 +26,21 @@ object Parser {
       bodyMaybe.map(Ast(head, _))
     }
 
-  def parser[S[_] : LiftParser : Comonad, K[_] : Comonad]
+  def parser[S[_] : LiftParser : Comonad](p: P0[ValidatedNec[ParserError[S], Ast[S]]])(source: String): ValidatedNec[ParserError[S], Ast[S]] = {
+    p.parseAll(source) match {
+      case Right(value) => value
+      case Left(e) => Validated.invalidNec(LexerError(e.wrapErr))
+    }
+  }
+
+  def natParser[S[_] : LiftParser : Comonad, K[_] : Comonad]
   (p: P0[ValidatedNec[ParserError[S], Ast[S]]],
    nat: S ~> K
   )(source: String): ValidatedNec[ParserError[K], Ast[K]] = {
-    p.parseAll(source) match {
-      case Right(value) =>
-        value.bimap(
-          e => e.map(_.mapK(nat)),
-          ast => Ast[K](ast.head.map(_.mapK(nat)), ast.tree.map(_.mapK(nat)))
-        )
-      case Left(e) => Validated.invalidNec(LexerError(e.wrapErr).mapK(nat))
-    }
+
+    parser[S](p)(source).bimap(
+      e => e.map(_.mapK(nat)),
+      ast => Ast[K](ast.head.map(_.mapK(nat)), ast.tree.map(_.mapK(nat)))
+    )
   }
 }

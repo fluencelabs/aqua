@@ -34,17 +34,19 @@ object AquaPathCompiler extends Logging {
     AquaCompiler
       .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](
         sources,
-        (id, source) => {
-          val nat = new (Span.F ~> FileSpan.F) {
-            override def apply[A](span: Span.F[A]): FileSpan.F[A] = {
-              (
-                FileSpan(id.file.fileName.toString, Eval.later(LocationMap(source)), span._1),
-                span._2
-              )
+        id => {
+          source => {
+            val nat = new (Span.F ~> FileSpan.F) {
+              override def apply[A](span: Span.F[A]): FileSpan.F[A] = {
+                (
+                  FileSpan(id.file.fileName.toString, Eval.later(LocationMap(source)), span._1),
+                  span._2
+                )
+              }
             }
+            import Span.spanLiftParser
+            Parser.natParser(Parser.spanParser, nat)(source)
           }
-          import Span.spanLiftParser
-          Parser.parser(Parser.spanParser, nat)(source)
         },
         backend,
         bodyConfig,

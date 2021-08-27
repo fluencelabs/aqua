@@ -22,7 +22,7 @@ object Ast {
   type Tree[S[_]] = Cofree[Chain, Expr[S]]
   type Head[S[_]] = Cofree[Chain, HeaderExpr[S]]
 
-  def fromString[I, S[_]: Comonad](parser: (I, String) => ValidatedNec[ParserError[S], Ast[S]], script: String, id: I): ValidatedNec[ParserError[S], Ast[S]] =
-    parser(id, script)
+  def fromString[S[_]: Comonad](parser: String => ValidatedNec[ParserError[S], Ast[S]], script: String): ValidatedNec[ParserError[S], Ast[S]] =
+    parser(script)
 
 }

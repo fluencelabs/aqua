@@ -16,14 +16,10 @@ import cats.~>
 
 class SemanticsSpec extends AnyFlatSpec with Matchers {
 
-  val idNat = new (Span.F ~> Span.F) {
-    override def apply[A](span: Span.F[A]): Span.F[A] = span
-  }
-
   // use it to fix https://github.com/fluencelabs/aqua/issues/90
   "sem" should "create right model" in {
     implicit val fileLift: LiftParser[Span.F] = Span.spanLiftParser
-    val parser = Parser.spanParser
+    val parser = Parser.parser(Parser.spanParser)
 
     val script =
       """service A("srv1"):
@@ -34,7 +30,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
         |        A.fn1()       
         |    par A.fn1()""".stripMargin
 
-    val ast = Ast.fromString[Any, Span.F]((_, s) => Parser.parser(parser, idNat)(s), script, {}).toList.head
+    val ast = Ast.fromString[Span.F](parser, script).toList.head
 
     val ctx = AquaContext.blank
     val bc = TransformConfig()
