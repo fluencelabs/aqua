@@ -128,7 +128,7 @@ case class TypeScriptFunc(func: FuncRes) {
        |                 .configHandler((h) => {
        |                     ${conf.relayVarName.fold("") { r =>
       s"""h.on('${conf.getDataService}', '$r', async () => {
-       |                    return peer.connectionInfo.connectedRelays[0];
+       |                    return peer.connectionInfo.connectedRelays[0] || null;
        |                });""".stripMargin  }}
        |                $setCallbacks
        |                $returnCallback
