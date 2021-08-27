@@ -11,6 +11,7 @@ import cats.free.Cofree
 import cats.parse.Parser as P
 import cats.syntax.comonad.*
 import cats.{Comonad, Eval}
+import cats.~>
 
 abstract class Expr[F[_]](val companion: Expr.Companion, val token: Token[F]) {
 
@@ -18,6 +19,8 @@ abstract class Expr[F[_]](val companion: Expr.Companion, val token: Token[F]) {
     case _: Expr.Block => true
     case _ => false
   }
+
+  def mapK[K[_]: Comonad](fk: F ~> K): Expr[K]
 }
 
 object Expr {

@@ -8,6 +8,7 @@ import cats.Comonad
 import cats.data.{Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.Parser
+import cats.~>
 
 case class FuncExpr[F[_]](
   name: Name[F],
@@ -15,6 +16,9 @@ case class FuncExpr[F[_]](
   retValue: List[Value[F]]
 ) extends Expr[F](FuncExpr, name) {
   def ret = arrowTypeExpr.res
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): FuncExpr[K] =
+    copy(name.mapK(fk), arrowTypeExpr.mapK(fk), retValue.map(_.mapK(fk)))
 }
 
 object FuncExpr extends Expr.AndIndented {

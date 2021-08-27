@@ -9,11 +9,16 @@ import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{Comonad, Functor}
 import scala.language.postfixOps
+import cats.~>
 
-sealed trait LambdaOp[F[_]] extends Token[F]
+sealed trait LambdaOp[F[_]] extends Token[F] {
+  def mapK[K[_]: Comonad](fk: F ~> K): LambdaOp[K]
+}
 
 case class IntoField[F[_]: Comonad](name: F[String]) extends LambdaOp[F] {
   override def as[T](v: T): F[T] = name.as(v)
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): LambdaOp[K] = copy(fk(name))
 
   def value: String = name.extract
 }
@@ -21,11 +26,15 @@ case class IntoField[F[_]: Comonad](name: F[String]) extends LambdaOp[F] {
 case class IntoIndex[F[_]: Comonad](idx: F[Int]) extends LambdaOp[F] {
   override def as[T](v: T): F[T] = idx.as(v)
 
+  override def mapK[K[_]: Comonad](fk: F ~> K): IntoIndex[K] = copy(fk(idx))
+
   def value: Int = idx.extract
 }
 
 case class IntoArray[F[_]: Functor](override val unit: F[Unit]) extends LambdaOp[F] {
   override def as[T](v: T): F[T] = unit.as(v)
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): IntoArray[K] = copy(fk(unit))
 }
 
 object LambdaOp {

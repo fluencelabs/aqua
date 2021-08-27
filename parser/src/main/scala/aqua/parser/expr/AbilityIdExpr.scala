@@ -6,9 +6,15 @@ import aqua.parser.lexer.{Ability, Value}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.{Parser => P}
+import cats.~>
 
 case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F])
-    extends Expr[F](AbilityIdExpr, ability)
+    extends Expr[F](AbilityIdExpr, ability) {
+  
+  def mapK[K[_]: Comonad](fk: F ~> K): AbilityIdExpr[K] =
+    copy(ability.copy(fk(ability.name)), id.mapK(fk))
+  
+}
 
 object AbilityIdExpr extends Expr.Leaf {
 

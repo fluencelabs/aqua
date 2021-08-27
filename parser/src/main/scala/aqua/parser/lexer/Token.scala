@@ -1,11 +1,14 @@
 package aqua.parser.lexer
 
-import cats.Functor
+import cats.{Comonad, Functor}
 import cats.data.NonEmptyList
-import cats.parse.{Accumulator0, Parser => P, Parser0 => P0}
+import cats.parse.{Accumulator0, Parser as P, Parser0 as P0}
+import cats.~>
 
 trait Token[F[_]] {
   def as[T](v: T): F[T]
+
+  def mapK[K[_]: Comonad](fk: F ~> K): Token[K]
 
   def unit: F[Unit] = as(())
 }
@@ -92,6 +95,8 @@ object Token {
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
     override def as[T](v: T): F[T] = Functor[F].as(point, v)
+    override def mapK[K[_]: Comonad](fk: F ~> K): LiftToken[K, A] =
+      copy(fk(point))
   }
 
   def lift[F[_]: Functor, A](point: F[A]): Token[F] = LiftToken(point)

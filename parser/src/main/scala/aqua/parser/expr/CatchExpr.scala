@@ -6,8 +6,11 @@ import aqua.parser.lexer.Token._
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
+import cats.~>
 
-case class CatchExpr[F[_]](name: Name[F]) extends Expr[F](CatchExpr, name)
+case class CatchExpr[F[_]](name: Name[F]) extends Expr[F](CatchExpr, name) {
+  def mapK[K[_]: Comonad](fk: F ~> K): CatchExpr[K] = copy(name.mapK(fk))
+}
 
 object CatchExpr extends Expr.AndIndented {
 

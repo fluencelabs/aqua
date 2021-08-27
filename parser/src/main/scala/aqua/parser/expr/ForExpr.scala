@@ -8,12 +8,17 @@ import aqua.parser.lift.LiftParser._
 import cats.Comonad
 import cats.parse.{Parser => P}
 import cats.syntax.comonad._
+import cats.~>
 
 case class ForExpr[F[_]](
   item: Name[F],
   iterable: Value[F],
   mode: Option[(F[ForExpr.Mode], ForExpr.Mode)]
-) extends Expr[F](ForExpr, item)
+) extends Expr[F](ForExpr, item) {
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): ForExpr[K] =
+    copy(item.mapK(fk), iterable.mapK(fk), mode.map { case (mF, m) => (fk(mF), m) })
+}
 
 object ForExpr extends Expr.AndIndented {
   sealed trait Mode

@@ -9,8 +9,13 @@ import cats.data.Chain
 import cats.free.Cofree
 import cats.parse.{Parser => P, Parser0 => P0}
 import aqua.parser.lexer.Token
+import cats.~>
 
-case class HeadExpr[S[_]](token: Token[S]) extends HeaderExpr[S]
+case class HeadExpr[S[_]](token: Token[S]) extends HeaderExpr[S] {
+
+  def mapK[K[_]: Comonad](fk: S ~> K): HeadExpr[K] =
+    copy(token.mapK(fk))
+}
 
 object HeadExpr {
 

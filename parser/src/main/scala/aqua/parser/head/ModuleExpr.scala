@@ -7,6 +7,7 @@ import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import cats.Comonad
 import cats.parse.Parser
+import cats.~>
 
 case class ModuleExpr[F[_]](
   name: Ability[F],
@@ -15,6 +16,14 @@ case class ModuleExpr[F[_]](
   declareCustom: List[Ability[F]]
 ) extends HeaderExpr[F] {
   override def token: Token[F] = name
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): ModuleExpr[K] =
+    copy(
+      name.mapK(fk),
+      declareAll.map(_.mapK(fk)),
+      declareNames.map(_.mapK(fk)),
+      declareCustom.map(_.mapK(fk))
+    )
 }
 
 object ModuleExpr extends HeaderExpr.Leaf {

@@ -7,9 +7,12 @@ import cats.{Comonad, Eval}
 import cats.data.Chain
 import cats.free.Cofree
 import cats.parse.Parser as P
+import cats.~>
 
 trait HeaderExpr[S[_]] {
   def token: Token[S]
+  
+  def mapK[K[_]: Comonad](fk: S ~> K): HeaderExpr[K]
 }
 
 object HeaderExpr {
