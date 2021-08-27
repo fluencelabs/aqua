@@ -21,8 +21,4 @@ case class Ast[S[_]](head: Ast.Head[S], tree: Ast.Tree[S]) {
 object Ast {
   type Tree[S[_]] = Cofree[Chain, Expr[S]]
   type Head[S[_]] = Cofree[Chain, HeaderExpr[S]]
-
-  def fromString[S[_]: Comonad](parser: String => ValidatedNec[ParserError[S], Ast[S]], script: String): ValidatedNec[ParserError[S], Ast[S]] =
-    parser(script)
-
 }

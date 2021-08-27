@@ -30,7 +30,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
         |        A.fn1()       
         |    par A.fn1()""".stripMargin
 
-    val ast = Ast.fromString[Span.F](parser, script).toList.head
+    val ast = parser(script).toList.head
 
     val ctx = AquaContext.blank
     val bc = TransformConfig()

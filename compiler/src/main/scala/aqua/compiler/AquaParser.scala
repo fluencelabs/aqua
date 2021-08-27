@@ -28,8 +28,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
     sources.sources
       .map(
         _.leftMap(_.map[Err](SourcesErr(_))).andThen(_.map { case (i, s) =>
-          Ast
-            .fromString[S](parser(i), s)
+          parser(i)(s)
             .bimap(_.map[Err](ParserErr(_)), ast => Chain.one(i -> ast))
         }.foldLeft(Validated.validNec[Err, Chain[(I, Body)]](Chain.nil))(_ combine _))
       )
@@ -87,7 +86,7 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
     sources
       .load(imp)
       .map(_.leftMap(_.map[Err](SourcesErr(_))).andThen { src =>
-        Ast.fromString[S](parser(imp), src).leftMap(_.map[Err](ParserErr(_)))
+        parser(imp)(src).leftMap(_.map[Err](ParserErr(_)))
       })
       .flatMap {
         case Validated.Valid(ast) =>

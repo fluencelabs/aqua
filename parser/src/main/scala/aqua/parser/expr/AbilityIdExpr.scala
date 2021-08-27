@@ -11,7 +11,7 @@ import cats.~>
 case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F])
     extends Expr[F](AbilityIdExpr, ability) {
   
-  def mapK[K[_]: Comonad](fk: F ~> K): Expr[K] =
+  def mapK[K[_]: Comonad](fk: F ~> K): AbilityIdExpr[K] =
     copy(ability.copy(fk(ability.name)), id.mapK(fk))
   
 }

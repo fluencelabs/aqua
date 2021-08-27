@@ -33,14 +33,12 @@ object Parser {
     }
   }
 
-  def natParser[S[_] : LiftParser : Comonad, K[_] : Comonad]
-  (p: P0[ValidatedNec[ParserError[S], Ast[S]]],
-   nat: S ~> K
-  )(source: String): ValidatedNec[ParserError[K], Ast[K]] = {
-
+  def natParser[S[_] : LiftParser : Comonad, K[_] : Comonad](
+    p: P0[ValidatedNec[ParserError[S], Ast[S]]],
+    nat: S ~> K
+  )(source: String): ValidatedNec[ParserError[K], Ast[K]] =
     parser[S](p)(source).bimap(
       e => e.map(_.mapK(nat)),
       ast => Ast[K](ast.head.map(_.mapK(nat)), ast.tree.map(_.mapK(nat)))
     )
-  }
 }

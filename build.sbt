@@ -86,8 +86,7 @@ lazy val parser = crossProject(JVMPlatform, JSPlatform)
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-parse"          % catsParseV,
-      "org.typelevel" %%% "cats-free"           % catsV,
-      "org.typelevel" %%% "shapeless3-deriving" % "3.0.1"
+      "org.typelevel" %%% "cats-free"           % catsV
     )
   )
   .dependsOn(types)
