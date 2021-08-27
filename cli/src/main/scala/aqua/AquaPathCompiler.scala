@@ -15,6 +15,7 @@ import scribe.Logging
 import fs2.io.file.{Files, Path}
 import aqua.parser.lift.{LiftParser, Span}
 import cats.parse.LocationMap
+import cats.~>
 
 object AquaPathCompiler extends Logging {
 
@@ -34,11 +35,14 @@ object AquaPathCompiler extends Logging {
       .compileTo[F, AquaFileError, FileModuleId, Span.F, FileSpan.F, String](
         sources,
         (id, source) =>
-          (span: Span.F[?]) =>
-            (
-              FileSpan(id.file.fileName.toString, Eval.later(LocationMap(source)), span._1),
-              span._2
-            ): FileSpan.F[?],
+          new (Span.F ~> FileSpan.F) {
+            override def apply[A](span: Span.F[A]): FileSpan.F[A] = {
+              (
+                FileSpan(id.file.fileName.toString, Eval.later(LocationMap(source)), span._1),
+                span._2
+              )
+            }
+          },
         spanParser,
         backend,
         bodyConfig,
