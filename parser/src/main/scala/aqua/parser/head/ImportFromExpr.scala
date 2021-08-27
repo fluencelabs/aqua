@@ -6,11 +6,15 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.data.NonEmptyList
 import cats.parse.Parser
+import cats.~>
 
 case class ImportFromExpr[F[_]](
   imports: NonEmptyList[FromExpr.NameOrAbAs[F]],
   filename: Literal[F]
-) extends FilenameExpr[F] with FromExpr[F]
+) extends FilenameExpr[F] with FromExpr[F] {
+  override def mapK[K[_]: Comonad](fk: F ~> K): ImportFromExpr[K] =
+    copy(FromExpr.mapK(imports)(fk), filename.mapK(fk))
+}
 
 object ImportFromExpr extends HeaderExpr.Leaf {
 

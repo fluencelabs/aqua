@@ -5,8 +5,12 @@ import aqua.parser.lexer.{Literal, Value}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
+import cats.~>
 
-case class ImportExpr[F[_]](filename: Literal[F]) extends FilenameExpr[F]
+case class ImportExpr[F[_]](filename: Literal[F]) extends FilenameExpr[F] {
+  override def mapK[K[_]: Comonad](fk: F ~> K): ImportExpr[K] =
+    copy(filename.mapK(fk))
+}
 
 object ImportExpr extends HeaderExpr.Leaf {
 
