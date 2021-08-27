@@ -28,9 +28,8 @@ object Ast {
       bodyMaybe.map(Ast(head, _))
     }
 
-  def fromString[K[_]: Comonad: LiftParser, S[_]: Comonad](parser: P0[ValidatedNec[ParserError[K], Ast[K]]], script: String, nat: K ~> S): ValidatedNec[ParserError[S], Ast[S]] =
-    parser
-      .parseAll(script) match {
+  def fromString[I, S[_]: Comonad](parser: (I, String) => ValidatedNec[ParserError[S], Ast[S]], script: String, id: I): ValidatedNec[ParserError[S], Ast[S]] =
+    parser(id, script) match {
       case Right(value) => value.bimap(
         e => e.map(_.mapK(nat)),
         ast => Ast[S](ast.head.map(_.mapK(nat)), ast.tree.map(_.mapK(nat)))

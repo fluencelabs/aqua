@@ -15,10 +15,9 @@ import scribe.Logging
 import cats.~>
 
 // TODO: add tests
-class AquaParser[F[_]: Monad, E, I, K[_]: Comonad: LiftParser, S[_]: Comonad](
+class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
   sources: AquaSources[F, E, I],
-  nat: (I, String) => K ~> S,
-  parser: Parser0[ValidatedNec[ParserError[K], Ast[K]]]
+  parser: (I, String) => ValidatedNec[ParserError[S], Ast[S]]
 ) extends Logging {
 
   type Body = Ast[S]
@@ -30,7 +29,7 @@ class AquaParser[F[_]: Monad, E, I, K[_]: Comonad: LiftParser, S[_]: Comonad](
       .map(
         _.leftMap(_.map[Err](SourcesErr(_))).andThen(_.map { case (i, s) =>
           Ast
-            .fromString[K, S](parser, s, nat(i, s))
+            .fromString[I, S](parser, s, i)
             .bimap(_.map[Err](ParserErr(_)), ast => Chain.one(i -> ast))
         }.foldLeft(Validated.validNec[Err, Chain[(I, Body)]](Chain.nil))(_ combine _))
       )
@@ -88,7 +87,7 @@ class AquaParser[F[_]: Monad, E, I, K[_]: Comonad: LiftParser, S[_]: Comonad](
     sources
       .load(imp)
       .map(_.leftMap(_.map[Err](SourcesErr(_))).andThen { src =>
-        Ast.fromString[K, S](parser, src, nat(imp, src)).leftMap(_.map[Err](ParserErr(_)))
+        Ast.fromString[I, S](parser, src, imp).leftMap(_.map[Err](ParserErr(_)))
       })
       .flatMap {
         case Validated.Valid(ast) =>

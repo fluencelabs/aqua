@@ -5,6 +5,7 @@ import aqua.compiler.{AquaCompiler, AquaError}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io.*
 import aqua.model.transform.TransformConfig
+import aqua.parser.{Ast, LexerError}
 import aqua.parser.Ast.parser
 import aqua.parser.lift.FileSpan
 import cats.data.*
@@ -34,15 +35,25 @@ object AquaPathCompiler extends Logging {
     AquaCompiler
       .compileTo[F, AquaFileError, FileModuleId, Span.F, FileSpan.F, String](
         sources,
-        (id, source) =>
-          new (Span.F ~> FileSpan.F) {
+        (id, source) => {
+          val nat = new (Span.F ~> FileSpan.F) {
             override def apply[A](span: Span.F[A]): FileSpan.F[A] = {
               (
                 FileSpan(id.file.fileName.toString, Eval.later(LocationMap(source)), span._1),
                 span._2
               )
             }
-          },
+          }
+          parser
+            .parseAll(script) match {
+            case Right(value) =>
+              value.bimap(
+                e => e.map(_.mapK(nat)),
+                ast => Ast[S](ast.head.map(_.mapK(nat)), ast.tree.map(_.mapK(nat)))
+              )
+            case Left(e) => Validated.invalidNec(LexerError[K](e.wrapErr).mapK(nat))
+          }
+        },
         spanParser,
         backend,
         bodyConfig,
