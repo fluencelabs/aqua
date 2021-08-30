@@ -28,7 +28,7 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
 
       - name: JS build
-        run: sbt cli/fullLinkJS
+        run: sbt cliJS/fullLinkJS
         env:
           BUILD_NUMBER: ${{ github.run_number }}
 
