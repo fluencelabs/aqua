@@ -90,7 +90,7 @@ jobs:
         run: |
           CONTENTS="$(jq '.name = "@fluencelabs/aqua"' package.json)"
           echo "$CONTENTS" > package.json
-          npm publish --dry-run
+          npm publish
         working-directory: ./npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
