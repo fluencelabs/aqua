@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "description": "Aqua compiler",
   "files": [
-    "aqua-cli.jar"
+    "aqua-cli.jar",
+    "aqua-cli-experimental"
   ],
   "bin": {
     "aqua": "index.js",
