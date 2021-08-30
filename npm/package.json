@@ -1,11 +1,14 @@
 {
-  "name": "@fluencelabs/aqua-cli",
+  "name": "@fluencelabs/aqua",
   "version": "0.0.0",
   "description": "Aqua compiler",
   "files": [
     "aqua-cli.jar"
   ],
-  "bin": "index.js",
+  "bin": {
+    "aqua": "index.js",
+    "aqua-js-experimental": "main.js"
+  },
   "scripts": {},
   "repository": {
     "type": "git",

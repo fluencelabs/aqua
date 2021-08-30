@@ -1,7 +1,8 @@
 name: "release"
 
 on:
-  workflow_dispatch:
+#  workflow_dispatch:
+  push:
 
 jobs:
   release:
@@ -23,6 +24,11 @@ jobs:
       ### Update & build
       - name: Assembly
         run: sbt cli/assembly
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+
+      - name: JS build
+        run: sbt cli/fullLinkJS
         env:
           BUILD_NUMBER: ${{ github.run_number }}
 
@@ -54,13 +60,21 @@ jobs:
           stat "$JAR"
           echo "JAR=$JAR" >> $GITHUB_ENV
 
+      - name: Check .js exists
+        run: |
+          JS="cli/.js/target/scala-3.0.1/cli-opt/aqua-cli-experimental-${{ env.VERSION }}.js"
+          mv cli/.js/target/scala-3.0.1/cli-opt/main.js "$JS"
+          stat "$JS"
+          echo "JS=$JS" >> $GITHUB_ENV
+
       ### Publish to NPM registry
       - uses: actions/setup-node@v1
         with:
-          node-version: "14"
+          node-version: "15"
           registry-url: "https://registry.npmjs.org"
 
       - run: cp ${{ env.JAR }} ./npm/aqua-cli.jar
+      - run: cp ${{ env.JS }} ./npm/aqua-cli-experimental.js
 
       - run: npm version ${{ env.VERSION }}
         working-directory: ./npm
@@ -75,7 +89,7 @@ jobs:
         run: |
           CONTENTS="$(jq '.name = "@fluencelabs/aqua"' package.json)"
           echo "$CONTENTS" > package.json
-          npm publish --access public
+          npm publish --access public --dry-run
         working-directory: ./npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -121,6 +135,8 @@ jobs:
           body: ${{ steps.github_release.outputs.changelog }}
           draft: false
           prerelease: false
-          files: ${{ env.JAR }}
+          files: |
+            ${{ env.JAR }}
+            ${{ env.JS }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
