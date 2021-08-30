@@ -1,8 +1,7 @@
 name: "release"
 
 on:
-#  workflow_dispatch:
-  push:
+  workflow_dispatch:
 
 jobs:
   release:
@@ -80,8 +79,7 @@ jobs:
         working-directory: ./npm
 
       - name: Publish to NPM as aqua-cli
-        run: |
-          npm publish --dry-run
+        run: npm publish --access public
         working-directory: ./npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -90,7 +88,7 @@ jobs:
         run: |
           CONTENTS="$(jq '.name = "@fluencelabs/aqua"' package.json)"
           echo "$CONTENTS" > package.json
-          npm publish
+          npm publish --access public
         working-directory: ./npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -111,33 +109,33 @@ jobs:
               console.log("The ${{ env.BASE_VERSION }} tag doesn't exist yet: " + e)
             }
 
-#      - name: Push tag ${{ env.BASE_VERSION }}
-#        id: tag_version
-#        uses: mathieudutour/github-tag-action@v5.5
-#        with:
-#          custom_tag: ${{ env.BASE_VERSION }}
-#          tag_prefix: ""
-#          github_token: ${{ secrets.PERSONAL_TOKEN }}
-#
-#      - name: Build Changelog
-#        id: github_release
-#        uses: mikepenz/release-changelog-builder-action@v1
-#        with:
-#          configuration: ".github/workflows/changelog_config.json"
-#          toTag: ${{ steps.tag_version.outputs.new_tag }}
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push tag ${{ env.BASE_VERSION }}
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v5.5
+        with:
+          custom_tag: ${{ env.BASE_VERSION }}
+          tag_prefix: ""
+          github_token: ${{ secrets.PERSONAL_TOKEN }}
 
-#      - name: Release
-#        uses: softprops/action-gh-release@v1
-#        with:
-#          name: Aqua Compiler ${{ env.VERSION }}
-#          tag_name: ${{ steps.tag_version.outputs.new_tag }}
-#          body: ${{ steps.github_release.outputs.changelog }}
-#          draft: false
-#          prerelease: false
-#          files: |
-#            ${{ env.JAR }}
-#            ${{ env.JS }}
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v1
+        with:
+          configuration: ".github/workflows/changelog_config.json"
+          toTag: ${{ steps.tag_version.outputs.new_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Aqua Compiler ${{ env.VERSION }}
+          tag_name: ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.github_release.outputs.changelog }}
+          draft: false
+          prerelease: false
+          files: |
+            ${{ env.JAR }}
+            ${{ env.JS }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
