@@ -15,7 +15,7 @@ if (fs.existsSync(nm) && fs.lstatSync(nm).isDirectory()) {
 
 const args = [
   "node",
-  path.join(__dirname, "aqua-cli.jar"),
+  path.join(__dirname, "aqua-cli-experimental.js"),
     ...importArgs,
   ...process.argv.slice(2),
 ];
