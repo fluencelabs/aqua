@@ -62,7 +62,7 @@ class AbilitiesInterpreter[F[_], X](implicit
                       s"Ability is found, but arrow is undefined, available: ${abCtx.funcs.keys.toList
                         .mkString(", ")}"
                     ).as(Option.empty[ArrowType])
-                  )(a => State.pure(Some(a)))
+                  )(fn => State.pure(Some(fn.arrowType)))
               case None =>
                 report(ga.name, "Ability with this name is undefined").as(Option.empty[ArrowType])
             }

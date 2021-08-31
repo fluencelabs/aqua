@@ -1,6 +1,11 @@
 -- import.aqua
-import "export.aqua"
+module Import
+import foobar from "export.aqua"
 
+use "export.aqua"
+
+export foo_wrapper as wrap, foobar as barfoo
 
 func foo_wrapper() -> string:
-    <- "say something"
+    z <- Export.foo()
+    <- z

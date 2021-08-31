@@ -74,7 +74,7 @@ object HeaderSem {
                 .getOrElse(
                   error(
                     n,
-                    s"Imported file declares [${ctx.declares.mkString(", ")}], no ${n.value} declared. Try adding `declares *` to that file."
+                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no ${n.value} declared. Try adding `declares ${n.value}` to that file."
                   )
                 )
             },
@@ -85,7 +85,7 @@ object HeaderSem {
                 .getOrElse(
                   error(
                     n,
-                    s"Imported file declares [${ctx.declares.mkString(", ")}], no ${n.value} declared. Try adding `declares *` to that file."
+                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no ${n.value} declared. Try adding `declares ${n.value}` to that file."
                   )
                 )
             }

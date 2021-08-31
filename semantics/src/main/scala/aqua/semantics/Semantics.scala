@@ -92,13 +92,7 @@ object Semantics extends Logging {
       .run(CompilerState.init[S](init))
       .map {
         case (state, gen: ScriptModel) =>
-          logger.warn("=====================    BEGIN")
           val ctx = AquaContext.fromScriptModel(gen, init)
-          logger.info("GEN = " + gen)
-          logger.info("INIT = " + init.`type`("init"))
-          logger.info("CTX = " + ctx)
-          logger.info("CTX = " + ctx.`type`("export"))
-          logger.warn("---------------------    END")
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(ctx))(Invalid(_))

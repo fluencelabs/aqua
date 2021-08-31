@@ -1,4 +1,4 @@
-module Export
+module Export declares foobar, foo
 
 func bar() -> string:
     <- " I am MyFooBar bar"
