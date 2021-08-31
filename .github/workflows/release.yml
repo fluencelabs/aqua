@@ -26,6 +26,11 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
 
+      - name: JS build
+        run: sbt cliJS/fullLinkJS
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+
       - name: Get project version
         # In CI sbt appends a new line after its output, so we need `tail -n3 | head -n2` to get last two non-empty lines
         run: |
@@ -54,13 +59,21 @@ jobs:
           stat "$JAR"
           echo "JAR=$JAR" >> $GITHUB_ENV
 
+      - name: Check .js exists
+        run: |
+          JS="cli/.js/target/scala-3.0.1/cli-opt/aqua-cli-experimental-${{ env.VERSION }}.js"
+          mv cli/.js/target/scala-3.0.1/cli-opt/main.js "$JS"
+          stat "$JS"
+          echo "JS=$JS" >> $GITHUB_ENV
+
       ### Publish to NPM registry
       - uses: actions/setup-node@v1
         with:
-          node-version: "14"
+          node-version: "15"
           registry-url: "https://registry.npmjs.org"
 
       - run: cp ${{ env.JAR }} ./npm/aqua-cli.jar
+      - run: cp ${{ env.JS }} ./npm/aqua-cli-experimental.js
 
       - run: npm version ${{ env.VERSION }}
         working-directory: ./npm
@@ -121,6 +134,8 @@ jobs:
           body: ${{ steps.github_release.outputs.changelog }}
           draft: false
           prerelease: false
-          files: ${{ env.JAR }}
+          files: |
+            ${{ env.JAR }}
+            ${{ env.JS }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
