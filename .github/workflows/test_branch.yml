@@ -58,7 +58,7 @@ jobs:
           npm run examples
           cd ..
           sbt "cliJS/fastOptJS"
-          rm -rf aqua-playground/src/compiled/examples
+          rm -rf aqua-playground/src/compiled/examples/*
           node cli/.js/target/scala-3.0.1/cli-fastopt.js -i aqua-playground/aqua/examples -o aqua-playground/src/compiled/examples -m aqua-playground/node_modules -c "uniqueConst = 1" -c "anotherConst = \"ab\""
           cd aqua-playground
           npm run examples
