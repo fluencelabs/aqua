@@ -1,4 +1,4 @@
-module Export declares foobar, foo
+module Export.Test declares foobar, foo, bar
 
 func bar() -> string:
     <- " I am MyFooBar bar"

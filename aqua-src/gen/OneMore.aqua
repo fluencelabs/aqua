@@ -1,2 +1,3 @@
 service OneMore:
   more_call()
+  consume(s: string)
