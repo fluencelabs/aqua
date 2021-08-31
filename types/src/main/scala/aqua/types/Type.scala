@@ -199,7 +199,9 @@ case class ArrowType(domain: ProductType, codomain: ProductType) extends Type {
     s"$domain -> $codomain"
 }
 
-case class StreamType(element: Type) extends BoxType
+case class StreamType(element: Type) extends BoxType {
+  override def toString: String = s"*$element"
+}
 
 object Type {
 

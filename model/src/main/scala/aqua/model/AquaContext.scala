@@ -5,6 +5,7 @@ import aqua.model.func.{ArgsCall, FuncCallable, FuncModel}
 import aqua.types.{StructType, Type}
 import cats.Monoid
 import cats.data.NonEmptyMap
+import cats.kernel.Semigroup
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import scribe.Logging
@@ -150,37 +151,34 @@ object AquaContext extends Logging {
     )
 
   def fromScriptModel(sm: ScriptModel, init: AquaContext)(implicit
-    aqum: Monoid[AquaContext]
+    aqum: Semigroup[AquaContext]
   ): AquaContext =
     sm.models
-      .foldLeft((init, Monoid.empty[AquaContext])) {
+      .foldLeft((init, blank)) {
         case ((ctx, exportContext), c: ConstantModel) =>
           val add =
-            Monoid
-              .empty[AquaContext]
+            blank
               .copy(values =
-                if (c.allowOverrides && ctx.values.contains(c.name)) ctx.values
-                else ctx.values.updated(c.name, c.value.resolveWith(ctx.values))
+                if (c.allowOverrides && ctx.values.contains(c.name)) Map.empty
+                else Map(c.name -> c.value.resolveWith(ctx.values))
               )
           (ctx |+| add, exportContext |+| add)
         case ((ctx, exportContext), func: FuncModel) =>
           val fr = func.capture(ctx.allFuncs(), ctx.allValues())
           val add =
-            Monoid.empty[AquaContext].copy(funcs = ctx.funcs.updated(func.name, fr))
+            blank.copy(funcs = Map(func.name -> fr))
           (ctx |+| add, exportContext |+| add)
         case ((ctx, exportContext), t: TypeModel) =>
           val add =
-            Monoid.empty[AquaContext].copy(types = ctx.types.updated(t.name, t.`type`))
+            blank.copy(types = Map(t.name -> t.`type`))
           (ctx |+| add, exportContext |+| add)
         case ((ctx, exportContext), m: ServiceModel) =>
           val add =
-            Monoid
-              .empty[AquaContext]
+            blank
               .copy(
-                abilities = m.defaultId.fold(ctx.abilities)(id =>
-                  ctx.abilities.updated(m.name, fromServiceModel(m, id))
-                ),
-                services = ctx.services.updated(m.name, m)
+                abilities =
+                  m.defaultId.fold(Map.empty)(id => Map(m.name -> fromServiceModel(m, id))),
+                services = Map(m.name -> m)
               )
           (ctx |+| add, exportContext |+| add)
         case (ce, _) => ce

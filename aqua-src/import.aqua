@@ -1,0 +1,6 @@
+-- import.aqua
+import "export.aqua"
+
+
+func foo_wrapper() -> string:
+    <- "say something"
