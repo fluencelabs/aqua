@@ -24,7 +24,7 @@ class AbilitiesInterpreter[F[_], X](implicit
     getState.map(_.abilities.get(name))
 
   override def apply[A](fa: AbilityOp[F, A]): State[X, A] =
-    (fa match {
+    fa match {
       case bs: BeginScope[F] =>
         beginScope(AbilitiesState.Frame[F](bs.token))
 
@@ -145,5 +145,5 @@ class AbilitiesInterpreter[F[_], X](implicit
             ).as(true)
         }
 
-    }).asInstanceOf[State[X, A]]
+    }
 }
