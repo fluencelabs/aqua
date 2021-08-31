@@ -13,11 +13,16 @@ import cats.syntax.semigroup.*
 import cats.instances.list.*
 import cats.instances.option.*
 import cats.free.Cofree
+import cats.kernel.Semigroup
 
 case class HeaderSem[S[_]](
   initCtx: AquaContext,
-  finCtx: AquaContext => ValidatedNec[SemanticError[S], AquaContext]
-)
+  finInitCtx: (AquaContext, AquaContext) => ValidatedNec[SemanticError[S], AquaContext]
+) {
+
+  def finCtx: AquaContext => ValidatedNec[SemanticError[S], AquaContext] =
+    finInitCtx(_, initCtx)
+}
 
 object HeaderSem {
   type Res[S[_]] = ValidatedNec[SemanticError[S], HeaderSem[S]]
@@ -27,12 +32,12 @@ object HeaderSem {
     acm: Monoid[AquaContext]
   ): Monoid[HeaderSem[S]] =
     new Monoid[HeaderSem[S]] {
-      override def empty: HeaderSem[S] = HeaderSem(acm.empty, validNec(_))
+      override def empty: HeaderSem[S] = HeaderSem(acm.empty, (c, _) => validNec(c))
 
       override def combine(a: HeaderSem[S], b: HeaderSem[S]): HeaderSem[S] =
         HeaderSem(
           a.initCtx |+| b.initCtx,
-          a.finCtx.andThen(_.andThen(b.finCtx))
+          (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
         )
     }
 
@@ -69,7 +74,7 @@ object HeaderSem {
                 .getOrElse(
                   error(
                     n,
-                    s"Imported file declares [${ctx.declares.mkString(", ")}], no ${n.value} declared. Try adding `declares *` to that file."
+                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no ${n.value} declared. Try adding `declares ${n.value}` to that file."
                   )
                 )
             },
@@ -80,7 +85,7 @@ object HeaderSem {
                 .getOrElse(
                   error(
                     n,
-                    s"Imported file declares [${ctx.declares.mkString(", ")}], no ${n.value} declared. Try adding `declares *` to that file."
+                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no ${n.value} declared. Try adding `declares ${n.value}` to that file."
                   )
                 )
             }
@@ -112,7 +117,7 @@ object HeaderSem {
               module = Some(name.value),
               declares = shouldDeclare
             ),
-            ctx =>
+            (ctx, _) =>
               // When file is handled, check that all the declarations exists
               if (declareAll.nonEmpty)
                 validNec(
@@ -144,25 +149,25 @@ object HeaderSem {
 
       case f @ ImportExpr(_) =>
         // Import everything from a file
-        resolve(f).map(fc => HeaderSem[S](fc, validNec(_)))
+        resolve(f).map(fc => HeaderSem[S](fc, (c, _) => validNec(c)))
       case f @ ImportFromExpr(_, _) =>
         // Import, map declarations
         resolve(f)
           .andThen(getFrom(f, _))
-          .map(ctx => HeaderSem[S](ctx, validNec(_)))
+          .map(ctx => HeaderSem[S](ctx, (c, _) => validNec(c)))
 
       case f @ UseExpr(_, asModule) =>
         // Import, move into a module scope
         resolve(f)
           .andThen(toModule(_, f.token, asModule))
-          .map(fc => HeaderSem[S](fc, validNec(_)))
+          .map(fc => HeaderSem[S](fc, (c, _) => validNec(c)))
 
       case f @ UseFromExpr(_, _, asModule) =>
         // Import, cherry-pick declarations, move to a module scope
         resolve(f)
           .andThen(getFrom(f, _))
           .andThen(toModule(_, f.token, Some(asModule)))
-          .map(fc => HeaderSem[S](fc, validNec(_)))
+          .map(fc => HeaderSem[S](fc, (c, _) => validNec(c)))
 
       case ExportExpr(pubs) =>
         // Save exports, finally handle them
@@ -170,12 +175,12 @@ object HeaderSem {
           HeaderSem[S](
             // Nothing there
             acm.empty,
-            ctx =>
+            (ctx, initCtx) =>
               pubs
                 .map(
                   _.fold(
                     { case (n, rn) =>
-                      ctx
+                      (initCtx |+| ctx)
                         .pick(n.value, rn.map(_.value), declared = false)
                         .map(validNec)
                         .getOrElse(
@@ -183,7 +188,7 @@ object HeaderSem {
                         )
                     },
                     { case (n, rn) =>
-                      ctx
+                      (initCtx |+| ctx)
                         .pick(n.value, rn.map(_.value), declared = false)
                         .map(validNec)
                         .getOrElse(
@@ -198,11 +203,11 @@ object HeaderSem {
         )
 
       case HeadExpr(token) =>
-        // Old file exports everything
-        validNec(HeaderSem[S](acm.empty, ctx => validNec(ctx.copy(exports = Some(ctx)))))
+        // Old file exports everything that it declares
+        validNec(HeaderSem[S](acm.empty, (ctx, _) => validNec(ctx.copy(exports = Some(ctx)))))
 
       case f: FilenameExpr[S] =>
-        resolve(f).map(fc => HeaderSem[S](fc, validNec(_)))
+        resolve(f).map(fc => HeaderSem[S](fc, (c, _) => validNec(c)))
     }
 
     Cofree

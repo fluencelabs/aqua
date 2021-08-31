@@ -17,7 +17,7 @@ val declineV = "2.1.0"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.2.0",
+  baseAquaVersion := "0.2.1",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
@@ -85,8 +85,8 @@ lazy val parser = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-parse"          % catsParseV,
-      "org.typelevel" %%% "cats-free"           % catsV
+      "org.typelevel" %%% "cats-parse" % catsParseV,
+      "org.typelevel" %%% "cats-free"  % catsV
     )
   )
   .dependsOn(types)

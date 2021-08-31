@@ -40,7 +40,7 @@ object ModuleExpr extends HeaderExpr.Leaf {
     nameOrAbList[F].map(Left(_)) | `star`.lift.map(Token.lift(_)).map(Right(_))
 
   override def p[F[_]: LiftParser: Comonad]: Parser[ModuleExpr[F]] =
-    (`module` *> ` ` *> Ability.ab[F] ~
+    (`module` *> ` ` *> Ability.dotted[F] ~
       (` declares ` *> nameOrAbListOrAll[F]).?).map {
       case (name, None) =>
         ModuleExpr(name, None, Nil, Nil)
