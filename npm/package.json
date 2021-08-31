@@ -9,7 +9,7 @@
   ],
   "bin": {
     "aqua": "index.js",
-    "aqua-js-experimental": "index-experimental.js"
+    "aqua-js": "index-experimental.js"
   },
   "scripts": {},
   "repository": {

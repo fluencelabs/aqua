@@ -22,10 +22,10 @@ const args = [
 
 const argsString = args.join(" ");
 
-console.log(argsString);
+console.log("Aqua JS: " + argsString);
 exec(argsString, (err, stdout, stderr) => {
-  console.error(stderr);
-  console.log(stdout);
+  console.error("Aqua JS: " + stderr);
+  console.log("Aqua JS: " + stdout);
 
   if (err) {
     process.exit(err.code);
