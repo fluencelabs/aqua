@@ -24,6 +24,9 @@ object Name {
   def p[F[_]: LiftParser: Comonad]: P[Name[F]] =
     `name`.lift.map(Name(_))
 
+  def upper[F[_]: LiftParser: Comonad]: P[Name[F]] =
+    upperName.lift.map(Name(_))
+
   def dotted[F[_]: LiftParser: Comonad]: P[Name[F]] =
     ((`Class`.repSep(`.`).map(_.toList.mkString(".")) ~ `.`).?.with1 ~ `name`).string.lift
       .map(Name(_))

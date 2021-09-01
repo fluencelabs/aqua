@@ -19,8 +19,10 @@ object Token {
   private val AZ = ('A' to 'Z').toSet
   private val f09 = ('0' to '9').toSet
   private val anum = az ++ AZ ++ f09
+  private val upperAnum = AZ ++ f09
   private val f_ = Set('_')
   private val anum_ = anum ++ f_
+  private val upperAnum_ = upperAnum ++ f_
   private val nl = Set('\n', '\r')
 
   val ` *` : P0[String] = P.charsWhile0(fSpaces)
@@ -59,6 +61,7 @@ object Token {
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
   val `anum_*` : P[Unit] = P.charsWhile(anum_).void
 
+  val upperName: P[String] = (P.charIn(AZ) ~ P.charsWhile(upperAnum_).?).string
   val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).string
 
   val `Class`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).?).map { case (c, s) ⇒

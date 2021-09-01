@@ -97,12 +97,12 @@ object AppOps {
 
   def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[TransformConfig.Const]] =
     Opts
-      .options[String]("const", "Constant that will be used in an aqua code", "c")
+      .options[String]("const", "Constant that will be used in an aqua code. Constant name must be upper cased.", "c")
       .mapValidated { strs =>
         val parsed = strs.map(s => ConstantExpr.onlyLiteral.parseAll(s))
 
-        val errors = parsed.collect { case Left(er) =>
-          er
+        val errors = parsed.zip(strs).collect { case (Left(er), str) =>
+          str
         }
 
         NonEmptyList
@@ -113,7 +113,8 @@ object AppOps {
                 TransformConfig.Const(v._1.value, LiteralModel(v._2.value, v._2.ts))
             })
           ) { errors =>
-            Validated.invalid(errors.map(_.toString))
+            val errorMsgs = errors.map (str => s"Invalid constant definition '$str'.")
+            Validated.invalid(errorMsgs)
           }
       }
       .withDefault(List.empty)

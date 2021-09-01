@@ -32,7 +32,7 @@ case class Literal[F[_]: Comonad](valueToken: F[String], ts: LiteralType) extend
 object Value {
 
   def varLambda[F[_]: LiftParser: Comonad]: P[VarLambda[F]] =
-    (Name.dotted[F] ~ LambdaOp.ops[F].?).map { case (n, l) ⇒
+    (((Name.dotted[F]).backtrack | Name.upper[F]) ~ LambdaOp.ops[F].?).map { case (n, l) ⇒
       VarLambda(n, l.fold[List[LambdaOp[F]]](Nil)(_.toList))
     }
 
