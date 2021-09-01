@@ -27,4 +27,4 @@ case class GetServiceId[F[_]](name: Ability[F]) extends AbilityOp[F, Either[Bool
 
 case class BeginScope[F[_]](token: Token[F]) extends AbilityOp[F, Unit]
 
-case class EndScope[F[_]]() extends AbilityOp[F, Boolean]
+case class EndScope[F[_]]() extends AbilityOp[F, Unit]
