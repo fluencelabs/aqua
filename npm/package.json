@@ -9,6 +9,7 @@
   ],
   "bin": {
     "aqua": "index.js",
+    "aqua-cli": "index.js",
     "aqua-js": "index-experimental.js"
   },
   "scripts": {},
