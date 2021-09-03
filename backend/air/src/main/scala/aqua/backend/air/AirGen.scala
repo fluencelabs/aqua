@@ -29,10 +29,10 @@ object AirGen extends Logging {
   def valueToData(vm: ValueModel): DataView = vm match {
     case LiteralModel(value, _) => DataView.StringScalar(value)
     case VarModel(name, t, lambda) =>
-      val n = t match {
+      val n = (t match {
         case _: StreamType => "$" + name
         case _ => name
-      }
+      }).replace('.', '_')
       if (lambda.isEmpty) DataView.Variable(n)
       else DataView.VarLens(n, lambdaToString(lambda.toList))
   }
@@ -43,10 +43,10 @@ object AirGen extends Logging {
     case list => list.reduceLeft(SeqGen(_, _))
   }
 
-  def exportToString(exportTo: Call.Export): String = exportTo match {
+  def exportToString(exportTo: Call.Export): String = (exportTo match {
     case Call.Export(name, _: StreamType) => "$" + name
     case Call.Export(name, _) => name
-  }
+  }).replace('.', '_')
 
   private def folder(op: ResolvedOp, ops: Chain[AirGen]): Eval[AirGen] =
     op match {
