@@ -13,7 +13,7 @@ object JavaScriptFile {
        | * Aqua version: ${Version.version}
        | *
        | */
-       |import { RequestFlowBuilder } from '@fluencelabs/fluence/dist/api.unstable';
+       |import { RequestFlowBuilder } from '@fluencelabs/fluence/dist/api.unstable.js';
        |""".stripMargin
 
 }
