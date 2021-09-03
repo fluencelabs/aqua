@@ -46,6 +46,7 @@ case class FuncCallable(
   ): Eval[(FuncOp, List[ValueModel])] = {
 
     logger.debug("Call: " + call)
+    logger.info(s"${funcName}: ${capturedValues}")
 
     // Collect all arguments: what names are used inside the function, what values are received
     val argsFull = ArgsCall(arrowType.domain, call.args)

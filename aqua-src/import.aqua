@@ -1,8 +1,8 @@
 -- import.aqua
 module Import.Test
-import foobar from "export.aqua"
+import foobar, FA as C, ExpSrv from "export.aqua"
 
-use foo as f from "export.aqua" as Exp
+use foo as f, FA from "export.aqua" as Exp
 
 use "export.aqua"
 
@@ -10,7 +10,7 @@ import "gen/OneMore.aqua"
 
 import OneMore as OM from "gen/OneMore.aqua"
 
-export foo_wrapper as wrap, foobar as barfoo
+export foo_wrapper as main--, foobar as barfoo
 
 func foo_wrapper() -> string:
     z <- Exp.f()
@@ -20,4 +20,6 @@ func foo_wrapper() -> string:
     OM "ohmygod"
     OM.more_call()
     OM.consume(q)
+    ExpSrv.log(C)
+    ExpSrv.log(Exp.FA)
     <- z
