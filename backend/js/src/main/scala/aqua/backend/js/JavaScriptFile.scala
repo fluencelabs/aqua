@@ -36,7 +36,7 @@ object JavaScriptFile {
        |    RequestFlow,
        |    RequestFlowBuilder,
        |    CallParams,
-       |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v1';
+       |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v1.js';
        |""".stripMargin
 
 }
