@@ -39,8 +39,10 @@ object TypeScriptCommon {
     val args = argsToTs(at)
       .concat(List(callParamsArg(at)))
       .mkString(", ")
+    
+    val retType = returnType(at)
 
-    s"(${args}) => Promise<${returnType(at)}>"
+    s"(${args}) => Promise<${retType}> | ${retType}"
 
   def argsToTs(at: ArrowType): List[String] =
     FuncRes

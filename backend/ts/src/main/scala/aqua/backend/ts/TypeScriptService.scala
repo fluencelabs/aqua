@@ -31,14 +31,14 @@ case class TypeScriptService(srv: ServiceRes) {
       }
       .mkString("\n")
 
+    val serviceTypeName = s"${srv.name}Def";
+
     val registerName = s"register${srv.name}"
 
     // defined arguments used in overloads below
     val peerDecl = "peer: FluencePeer";
     val serviceIdDecl = "serviceId: string";
-    val serviceDecl = s"""service: {
-          ${fnDefs}
-      }"""
+    val serviceDecl = s"service: ${serviceTypeName}"
     
     // Service registration functions has several overloads.
     // Depending on whether the the service has the default id or not
@@ -75,6 +75,10 @@ case class TypeScriptService(srv: ServiceRes) {
     )
 
     s"""
+      | export interface ${serviceTypeName} {
+      |     ${fnDefs}
+      | }
+      |
       | ${registerServiceArgs}
       | export function ${registerName}(...args) {
       |    let peer: FluencePeer;
