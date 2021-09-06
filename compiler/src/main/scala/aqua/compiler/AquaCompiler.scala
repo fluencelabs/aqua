@@ -5,12 +5,13 @@ import aqua.linker.Linker
 import aqua.model.AquaContext
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.res.AquaRes
-import aqua.parser.lift.LiftParser
-import aqua.parser.Ast
+import aqua.parser.lift.{LiftParser, Span}
+import aqua.parser.{Ast, ParserError}
 import aqua.semantics.Semantics
 import aqua.semantics.header.HeaderSem
 import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
+import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -18,12 +19,13 @@ import cats.syntax.traverse.*
 import cats.syntax.monoid.*
 import cats.{Comonad, Monad, Monoid, Order}
 import scribe.Logging
+import cats.~>
 
 object AquaCompiler extends Logging {
 
   def compile[F[_]: Monad, E, I: Order, S[_]: Comonad](
     sources: AquaSources[F, E, I],
-    liftI: (I, String) => LiftParser[S],
+    parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
     backend: Backend,
     config: TransformConfig
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
@@ -32,7 +34,7 @@ object AquaCompiler extends Logging {
     type Ctx = NonEmptyMap[I, AquaContext]
     type ValidatedCtx = ValidatedNec[Err, Ctx]
 
-    new AquaParser[F, E, I, S](sources, liftI)
+    new AquaParser[F, E, I, S](sources, parser)
       .resolve[ValidatedCtx](mod =>
         context =>
           // Context with prepared imports
@@ -95,12 +97,12 @@ object AquaCompiler extends Logging {
 
   def compileTo[F[_]: Monad, E, I: Order, S[_]: Comonad, T](
     sources: AquaSources[F, E, I],
-    liftI: (I, String) => LiftParser[S],
+    parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
     backend: Backend,
     config: TransformConfig,
     write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
-    compile[F, E, I, S](sources, liftI, backend, config).flatMap {
+    compile[F, E, I, S](sources, parser, backend, config).flatMap {
       case Valid(compiled) =>
         compiled.map { ac =>
           write(ac).map(

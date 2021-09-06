@@ -6,13 +6,23 @@ import aqua.parser.lexer.{Ability, Name, Value}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.{Parser => P}
+import cats.~>
 
 case class CallArrowExpr[F[_]](
   variables: List[Name[F]],
   ability: Option[Ability[F]],
   funcName: Name[F],
   args: List[Value[F]]
-) extends Expr[F](CallArrowExpr, funcName)
+) extends Expr[F](CallArrowExpr, funcName) {
+
+  def mapK[K[_]: Comonad](fk: F ~> K): CallArrowExpr[K] =
+    copy(
+      variables.map(_.mapK(fk)),
+      ability.map(_.mapK(fk)),
+      funcName.mapK(fk),
+      args.map(_.mapK(fk))
+    )
+}
 
 object CallArrowExpr extends Expr.Leaf {
 

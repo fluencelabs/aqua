@@ -7,9 +7,12 @@ import cats.Comonad
 import cats.parse.{Parser => P}
 import cats.syntax.functor._
 import cats.syntax.comonad._
+import cats.~>
 
 case class Name[F[_]: Comonad](name: F[String]) extends Token[F] {
   override def as[T](v: T): F[T] = name.as(v)
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): Name[K] = copy(fk(name))
 
   def value: String = name.extract
 }

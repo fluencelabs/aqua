@@ -7,8 +7,13 @@ import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
 import cats.Comonad
 import cats.parse.{Parser => P}
+import cats.~>
 
-case class TryExpr[F[_]](point: Token[F]) extends Expr[F](TryExpr, point)
+case class TryExpr[F[_]](point: Token[F]) extends Expr[F](TryExpr, point) {
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): TryExpr[K] =
+    copy(point.mapK(fk))
+}
 
 object TryExpr extends Expr.AndIndented {
 

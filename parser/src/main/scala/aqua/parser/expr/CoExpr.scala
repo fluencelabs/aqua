@@ -7,8 +7,11 @@ import aqua.parser.lift.LiftParser._
 import cats.Comonad
 import cats.parse.Parser
 import Token.`co`
+import cats.~>
 
-case class CoExpr[F[_]](point: Token[F]) extends Expr[F](CoExpr, point)
+case class CoExpr[F[_]](point: Token[F]) extends Expr[F](CoExpr, point) {
+  def mapK[K[_]: Comonad](fk: F ~> K): CoExpr[K] = copy(point.mapK(fk))
+}
 
 object CoExpr extends Expr.Prefix {
   override def continueWith: List[Expr.Lexem] = ParExpr.continueWith

@@ -31,7 +31,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
     }
 
   override def apply[A](fa: NameOp[F, A]): State[X, A] =
-    (fa match {
+    fa match {
       case rn: ReadName[F] =>
         OptionT(constantDefined(rn.name.value))
           .orElseF(readName(rn.name.value))
@@ -107,5 +107,5 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
         beginScope(NamesState.Frame(bs.token))
       case _: EndScope[F] =>
         endScope
-    }).asInstanceOf[State[X, A]]
+    }
 }

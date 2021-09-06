@@ -6,11 +6,14 @@ import aqua.parser.lexer.{Name, Value}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.{Parser => P}
+import cats.~>
 
 case class AssignmentExpr[F[_]](
   variable: Name[F],
   value: Value[F]
-) extends Expr[F](AssignmentExpr, variable)
+) extends Expr[F](AssignmentExpr, variable) {
+  def mapK[K[_]: Comonad](fk: F ~> K): AssignmentExpr[K] = copy(variable.mapK(fk), value.mapK(fk))
+}
 
 object AssignmentExpr extends Expr.Leaf {
 

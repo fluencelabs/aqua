@@ -1,0 +1,23 @@
+-- import.aqua
+module Import.Test
+import foobar from "export.aqua"
+
+use foo as f from "export.aqua" as Exp
+
+use "export.aqua"
+
+import "gen/OneMore.aqua"
+
+import OneMore as OM from "gen/OneMore.aqua"
+
+export foo_wrapper as wrap, foobar as barfoo
+
+func foo_wrapper() -> string:
+    z <- Exp.f()
+    q <- Export.Test.bar()
+    OneMore "hello"
+    OneMore.more_call()
+    OM "ohmygod"
+    OM.more_call()
+    OM.consume(q)
+    <- z

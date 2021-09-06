@@ -6,12 +6,20 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.data.NonEmptyList
 import cats.parse.Parser as P
+import cats.~>
 
 trait FromExpr[F[_]] {
   def imports: NonEmptyList[FromExpr.NameOrAbAs[F]]
 }
 
 object FromExpr {
+
+  def mapK[F[_], K[_]: Comonad](imports: NonEmptyList[FromExpr.NameOrAbAs[F]])(fk: F ~> K): NonEmptyList[FromExpr.NameOrAbAs[K]] =
+    imports.map {
+      case Left((n, nOp)) => Left((n.mapK(fk), nOp.map(_.mapK(fk))))
+      case Right(a, aOp) => Right((a.mapK(fk), aOp.map(_.mapK(fk))))
+    }
+
   type NameOrAbAs[F[_]] = Either[Name.As[F], Ability.As[F]]
 
   def nameOrAbAs[F[_]: LiftParser: Comonad]: P[NameOrAbAs[F]] =

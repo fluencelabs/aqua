@@ -34,7 +34,7 @@ class AbilitiesAlgebra[F[_], Alg[_]](implicit A: InjectK[AbilityOp[F, *], Alg]) 
   def beginScope(token: Token[F]): Free[Alg, Unit] =
     Free.liftInject[Alg](BeginScope[F](token))
 
-  def endScope(): Free[Alg, Boolean] =
+  def endScope(): Free[Alg, Unit] =
     Free.liftInject[Alg](EndScope[F]())
 
 }

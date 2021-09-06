@@ -10,8 +10,13 @@ import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.{Parser => P}
 import cats.{Comonad, Eval}
+import cats.~>
 
-case class RootExpr[F[_]](point: Token[F]) extends Expr[F](RootExpr, point)
+case class RootExpr[F[_]](point: Token[F]) extends Expr[F](RootExpr, point) {
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): RootExpr[K] =
+    copy(point.mapK(fk))
+}
 
 object RootExpr extends Expr.Companion {
 

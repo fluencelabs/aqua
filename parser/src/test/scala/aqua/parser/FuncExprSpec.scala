@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.Ast.parser
+
 import aqua.parser.expr.*
 import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp, Literal, Token, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
@@ -18,6 +18,8 @@ import scala.language.implicitConversions
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
+
+  val parser = Parser.idParser
 
   "func header" should "parse" in {
     funcExpr("func some() -> bool") should be(
@@ -113,7 +115,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |  <- v
         |""".stripMargin
 
-    parser[Id]().parseAll(script).value.toEither.isLeft shouldBe true
+    parser.parseAll(script).value.toEither.isLeft shouldBe true
   }
 
   "function with multiline definitions" should "parse without error" in {
@@ -131,7 +133,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |    <- v
         |""".stripMargin
 
-    parser[Id]().parseAll(script).value.toEither.isLeft shouldBe true
+    parser.parseAll(script).value.toEither.isLeft shouldBe true
   }
 
   "multi function expression" should "parse" in {
@@ -151,7 +153,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |    three <- Local.gt() 
         |    <- two""".stripMargin
 
-    val tree = parser[Id]().parseAll(script).value.toEither.value
+    val tree = parser.parseAll(script).value.toEither.value
 
     val qTree = tree.tree.foldLeft(mutable.Queue.empty[Expr[Id]]) { case (acc, tag) =>
       acc.enqueue(tag)
@@ -283,6 +285,6 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |        str2 <- LocalPrint.print("in on")
         |    par LocalPrint.print("in par")""".stripMargin
 
-    val tree = parser[Id]().parseAll(script).value.toEither.value
+    val tree = parser.parseAll(script).value.toEither.value
   }
 }

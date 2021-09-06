@@ -3,9 +3,15 @@
   "version": "0.0.0",
   "description": "Aqua compiler",
   "files": [
-    "aqua-cli.jar"
+    "aqua-cli.jar",
+    "aqua-cli-experimental.js",
+    "index-experimental.js"
   ],
-  "bin": "index.js",
+  "bin": {
+    "aqua": "index.js",
+    "aqua-cli": "index.js",
+    "aqua-js": "index-experimental.js"
+  },
   "scripts": {},
   "repository": {
     "type": "git",

@@ -7,8 +7,11 @@ import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser._
 import cats.Comonad
 import cats.parse.Parser
+import cats.~>
 
-case class ElseOtherwiseExpr[F[_]](point: Token[F]) extends Expr[F](ElseOtherwiseExpr, point)
+case class ElseOtherwiseExpr[F[_]](point: Token[F]) extends Expr[F](ElseOtherwiseExpr, point) {
+  override def mapK[K[_]: Comonad](fk: F ~> K): ElseOtherwiseExpr[K] = copy(point.mapK(fk))
+}
 
 object ElseOtherwiseExpr extends Expr.AndIndented {
 

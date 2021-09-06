@@ -24,7 +24,7 @@ class AbilitiesInterpreter[F[_], X](implicit
     getState.map(_.abilities.get(name))
 
   override def apply[A](fa: AbilityOp[F, A]): State[X, A] =
-    (fa match {
+    fa match {
       case bs: BeginScope[F] =>
         beginScope(AbilitiesState.Frame[F](bs.token))
 
@@ -62,7 +62,7 @@ class AbilitiesInterpreter[F[_], X](implicit
                       s"Ability is found, but arrow is undefined, available: ${abCtx.funcs.keys.toList
                         .mkString(", ")}"
                     ).as(Option.empty[ArrowType])
-                  )(a => State.pure(Some(a)))
+                  )(fn => State.pure(Some(fn.arrowType)))
               case None =>
                 report(ga.name, "Ability with this name is undefined").as(Option.empty[ArrowType])
             }
@@ -145,5 +145,5 @@ class AbilitiesInterpreter[F[_], X](implicit
             ).as(true)
         }
 
-    }).asInstanceOf[State[X, A]]
+    }
 }

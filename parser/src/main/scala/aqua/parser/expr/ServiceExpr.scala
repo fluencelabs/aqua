@@ -6,9 +6,14 @@ import aqua.parser.lexer.{Ability, Value}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
+import cats.~>
 
 case class ServiceExpr[F[_]](name: Ability[F], id: Option[Value[F]])
-    extends Expr[F](ServiceExpr, name)
+    extends Expr[F](ServiceExpr, name) {
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): ServiceExpr[K] =
+    copy(name.mapK(fk), id.map(_.mapK(fk)))
+}
 
 object ServiceExpr extends Expr.AndIndented {
 

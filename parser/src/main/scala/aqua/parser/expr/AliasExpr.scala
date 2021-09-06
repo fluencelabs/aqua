@@ -6,9 +6,12 @@ import aqua.parser.lexer.{CustomTypeToken, TypeToken}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
+import cats.~>
 
 case class AliasExpr[F[_]](name: CustomTypeToken[F], target: TypeToken[F])
-    extends Expr[F](AliasExpr, name)
+    extends Expr[F](AliasExpr, name) {
+  def mapK[K[_]: Comonad](fk: F ~> K): AliasExpr[K] = copy(name.mapK(fk), target.mapK(fk))
+}
 
 object AliasExpr extends Expr.Leaf {
 
