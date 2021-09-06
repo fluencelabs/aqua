@@ -146,6 +146,11 @@ lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("backend"))
   .settings(commons: _*)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "aqua.backend"
+  )
   .dependsOn(transform)
 
 lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
