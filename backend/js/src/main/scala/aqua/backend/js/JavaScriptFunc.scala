@@ -129,7 +129,7 @@ case class JavaScriptFunc(func: FuncRes) {
        |        }
        |        request = r.build();
        |    });
-       |    await peer.initiateFlow(request);
+       |    await peer.internals.initiateFlow(request);
        |    return ${returnVal};
        |}
       """.stripMargin
