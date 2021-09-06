@@ -1,26 +1,21 @@
 package aqua.semantics
 
 import aqua.model.func.raw.FuncOp
-import aqua.model.{AquaContext, Model, ScriptModel}
+import aqua.model.{AquaContext, EmptyModel, Model, ScriptModel}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
-import aqua.semantics.rules.abilities.{
-  AbilitiesAlgebra,
-  AbilitiesInterpreter,
-  AbilitiesState,
-  AbilityOp
-}
+import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState, AbilityOp}
 import aqua.semantics.rules.names.{NameOp, NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, TypesState}
 import cats.Eval
 import cats.arrow.FunctionK
 import cats.data.Validated.{Invalid, Valid}
-import cats.data._
+import cats.data.*
 import cats.free.Free
 import cats.kernel.Monoid
-import cats.syntax.apply._
-import cats.syntax.semigroup._
+import cats.syntax.apply.*
+import cats.syntax.semigroup.*
 import monocle.Lens
 import monocle.macros.GenLens
 import scribe.Logging
@@ -96,7 +91,9 @@ object Semantics extends Logging {
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(ctx))(Invalid(_))
-        case (state, _) =>
+        case (_, _: EmptyModel) =>
+          Valid(init)
+        case (state, m) =>
           NonEmptyChain
             .fromChain(state.errors)
             .map(Invalid(_))

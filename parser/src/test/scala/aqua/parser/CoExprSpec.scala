@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.expr.{CallArrowExpr, CoExpr}
+import aqua.parser.expr.{CallArrowExpr, CoExpr, RootExpr}
 import aqua.parser.lexer.Token
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.data.Chain
