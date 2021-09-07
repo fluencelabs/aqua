@@ -12,8 +12,9 @@ object Test extends IOApp.Simple {
   implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
   override def run: IO[Unit] =
-    IO.println("Start ms: " + System.currentTimeMillis()) *>
-      AquaPathCompiler
+    for {
+      start <- IO(System.currentTimeMillis())
+      _ <- AquaPathCompiler
         .compileFilesTo[IO](
           Path("./aqua-src"),
           List(Path("./aqua")),
@@ -26,6 +27,8 @@ object Test extends IOApp.Simple {
             errs.map(System.err.println): Unit
           case Validated.Valid(res) =>
             res.map(println): Unit
-        } <* IO.println("End ms  : " + System.currentTimeMillis())
+        }
+      _ <- IO.println("Compilation ends in : " + (System.currentTimeMillis() - start) + " ms")
+    } yield ()
 
 }
