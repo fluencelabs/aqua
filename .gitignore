@@ -6,8 +6,3 @@
 metals.sbt
 target
 project/target
-
-# scala metals metals
-*.bloop
-.metals
-metals.sbt

@@ -88,7 +88,7 @@ case class TypeScriptFunc(func: FuncRes) {
 
     val argsLets = args.map(arg => s"let ${fixupArgName(arg.name)};").mkString("\n")
 
-    val argsFormAssn = args
+    val argsFormAssingment = args
       .map(arg => fixupArgName(arg.name))
       .concat(List("config"))
       .zipWithIndex
@@ -96,8 +96,8 @@ case class TypeScriptFunc(func: FuncRes) {
     // argument upnacking has two forms. 
     // One starting from the first (by index) argument,
     // One starting from zero
-    var argsAssignmentStartingFrom1 = argsFormAssn.map((name, ix) => s"${name} = args[${ix + 1}];").mkString("\n")
-    var argsAssignmentStartingFrom0 = argsFormAssn.map((name, ix) => s"${name} = args[${ix}];").mkString("\n")
+    val argsAssignmentStartingFrom1 = argsFormAssingment.map((name, ix) => s"${name} = args[${ix + 1}];").mkString("\n")
+    val argsAssignmentStartingFrom0 = argsFormAssingment.map((name, ix) => s"${name} = args[${ix}];").mkString("\n")
 
     val funcTypeRes = s"Promise<$retTypeTs>"
 

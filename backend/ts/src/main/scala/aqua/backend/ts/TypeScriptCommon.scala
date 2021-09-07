@@ -25,6 +25,7 @@ object TypeScriptCommon {
     case at: ArrowType => fnDef(at)
   }
 
+  // TODO: handle cases if there is already peer_ or config_ variable defined
   def fixupArgName(arg: String): String =
     if(arg == "peer" || arg == "config") {
       arg + "_"

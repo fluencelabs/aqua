@@ -60,6 +60,12 @@ case class TypeScriptService(srv: ServiceRes) {
       )
     )
 
+    // Service registration functions has several overloads.
+    // Depending on whether the the service has the default id or not
+    // there would be different number of overloads
+    // This variable contain defines the list of lists where 
+    // the outmost list describes the list of overloads
+    // and the innermost one defines the list of arguments in the overload
     val registerServiceArgs = registerServiceArgsSource.
       map(x => {
         val args = x.mkString(", ")

@@ -46,7 +46,7 @@ case class JavaScriptFunc(func: FuncRes) {
 
   def generate: String = {
 
-    val tsAir = FuncAirGen(func).generate
+    val jsAir = FuncAirGen(func).generate
 
     val setCallbacks = func.args.collect { // Product types are not handled
       case Arg(argName, OptionType(_)) =>
@@ -75,16 +75,16 @@ case class JavaScriptFunc(func: FuncRes) {
 
     val argsLets = args.map(arg => s"let ${fixupArgName(arg.name)};").mkString("\n")
 
-    val argsFormAssn = args
+    val argsFormAssingment = args
       .map(arg => fixupArgName(arg.name))
       .concat(List("config"))
       .zipWithIndex
 
-    // argument upnacking has two forms. 
+    // Argument unpacking has two forms:
     // One starting from the first (by index) argument,
     // One starting from zero
-    var argsAssignmentStartingFrom1 = argsFormAssn.map((name, ix) => s"${name} = args[${ix + 1}];").mkString("\n")
-    var argsAssignmentStartingFrom0 = argsFormAssn.map((name, ix) => s"${name} = args[${ix}];").mkString("\n")
+    val argsAssignmentStartingFrom1 = argsFormAssingment.map((name, ix) => s"${name} = args[${ix + 1}];").mkString("\n")
+    val argsAssignmentStartingFrom0 = argsFormAssingment.map((name, ix) => s"${name} = args[${ix}];").mkString("\n")
 
     s"""
        | export function ${func.funcName}(...args) {
@@ -105,7 +105,7 @@ case class JavaScriptFunc(func: FuncRes) {
        |                 .disableInjections()
        |                 .withRawScript(
        |                     `
-       |     ${tsAir.show}
+       |     ${jsAir.show}
        |                 `,
        |                 )
        |                 .configHandler((h) => {
