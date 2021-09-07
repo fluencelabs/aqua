@@ -39,7 +39,7 @@ case class TypeScriptFunc(func: FuncRes) {
         }
       case None => ""
     }
-    s"""h.onEvent('$callbackServiceId', '$respFuncName', async (args) => {
+    s"""h.onEvent('$callbackServiceId', '$respFuncName', (args) => {
        |  $respBody
        |});
        |""".stripMargin
@@ -53,16 +53,16 @@ case class TypeScriptFunc(func: FuncRes) {
 
     val setCallbacks = func.args.collect { // Product types are not handled
       case Arg(argName, OptionType(_)) =>
-        s"""h.on('$dataServiceId', '$argName', async () => {return ${fixupArgName(argName)} === null ? [] : [${fixupArgName(argName)}];});"""
+        s"""h.on('$dataServiceId', '$argName', () => {return ${fixupArgName(argName)} === null ? [] : [${fixupArgName(argName)}];});"""
       case Arg(argName, _: DataType) =>
-        s"""h.on('$dataServiceId', '$argName', async () => {return ${fixupArgName(argName)};});"""
+        s"""h.on('$dataServiceId', '$argName', () => {return ${fixupArgName(argName)};});"""
       case Arg(argName, at: ArrowType) =>
         s"""
-           | h.use(async (req, resp, next) => {
+           | h.use((req, resp, next) => {
            | if(req.serviceId === '${conf.callbackService}' && req.fnName === '$argName') {
            |     ${callBackExprBody(at, argName)}
            | }
-           | await next();
+           | next();
            | });
         """.stripMargin
     }
@@ -102,9 +102,9 @@ case class TypeScriptFunc(func: FuncRes) {
     val funcTypeRes = s"Promise<$retTypeTs>"
 
     s"""
-       | export async function ${func.funcName}(${funcTypeOverload1}) : ${funcTypeRes};
-       | export async function ${func.funcName}(${funcTypeOverload2}) : ${funcTypeRes};
-       | export async function ${func.funcName}(...args) {
+       | export function ${func.funcName}(${funcTypeOverload1}) : ${funcTypeRes};
+       | export function ${func.funcName}(${funcTypeOverload2}) : ${funcTypeRes};
+       | export function ${func.funcName}(...args) {
        |     let peer: FluencePeer;
        |     ${argsLets}
        |     let config;
@@ -127,12 +127,12 @@ case class TypeScriptFunc(func: FuncRes) {
        |                 )
        |                 .configHandler((h) => {
        |                     ${conf.relayVarName.fold("") { r =>
-      s"""h.on('${conf.getDataService}', '$r', async () => {
+      s"""h.on('${conf.getDataService}', '$r', () => {
        |                    return peer.connectionInfo.connectedRelays[0] || null;
        |                });""".stripMargin  }}
        |                $setCallbacks
        |                $returnCallback
-       |                h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', async (args) => {
+       |                h.onEvent('${conf.errorHandlingService}', '${conf.errorFuncName}', (args) => {
        |                    const [err] = args;
        |                    reject(err);
        |                });
@@ -146,7 +146,7 @@ case class TypeScriptFunc(func: FuncRes) {
        |        }
        |        request = r.build();
        |    });
-       |    await peer.internals.initiateFlow(request!);
+       |    peer.internals.initiateFlow(request!);
        |    return ${returnVal};
        |}
       """.stripMargin
