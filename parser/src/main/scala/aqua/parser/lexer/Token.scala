@@ -74,6 +74,7 @@ object Token {
     (` `.?.void *> (`--` *> P.charsWhile0(_ != '\n')).?.void).with1 *> `\n`
 
   val ` \n+` : P[Unit] = P.repAs[Unit, Unit](` \n`.backtrack, 1)(Accumulator0.unitAccumulator0)
+  val ` \n*` : P0[Unit] = P.repAs0[Unit, Unit](` \n`.backtrack)(Accumulator0.unitAccumulator0)
   val ` : \n+` : P[Unit] = ` `.?.with1 *> `:` *> ` \n+`
   val `,` : P[Unit] = P.char(',') <* ` `.?
   val `.` : P[Unit] = P.char('.')

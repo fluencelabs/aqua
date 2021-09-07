@@ -1,0 +1,9 @@
+-- import.aqua
+module Import.Test
+import foobar from "export.aqua"
+
+use foo as f from "export.aqua" as Exp
+
+use "export.aqua"
+
+export foobar as barfoo
