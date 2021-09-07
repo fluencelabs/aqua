@@ -1,4 +1,6 @@
-module Export.Test declares foobar, foo, bar
+module Export.Test declares foobar, foo, bar, ExpSrv, FA
+
+const FA = "constant"
 
 func bar() -> string:
     <- " I am MyFooBar bar"
@@ -12,5 +14,6 @@ func foobar() -> []string:
     res <- bar()
     <- res
 
-service ExpSrv:
+service ExpSrv("exp-srv"):
    baz()
+   log: string -> ()

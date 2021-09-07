@@ -44,4 +44,12 @@ class TokenSpec extends AnyFlatSpec with Matchers with EitherValues {
                       |""".stripMargin).value should be(())
   }
 
+  "name token" should "parse" in {
+    `name`.parseAll("some_name").value should be("some_name")
+  }
+
+  "NAME token" should "parse" in {
+    NAME.parseAll("SOME_NAME").value should be("SOME_NAME")
+  }
+
 }

@@ -100,6 +100,8 @@ case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel] = Cha
       case Some(vv) => vv // TODO check that lambda is empty, otherwise error
       case None => this // Should not happen
     }
+
+  override def toString(): String = s"var{$name: " + `type` + s"}.${lambda.toList.mkString(".")}"
 }
 
 object VarModel {

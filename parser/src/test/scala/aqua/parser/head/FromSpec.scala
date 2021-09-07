@@ -14,6 +14,12 @@ class FromSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   import AquaSpec.*
 
+  "from constants" should "be parsed" in {
+    FromExpr.nameOrAbAs[Id].parseAll("SOME_CONSTANT").value shouldBe Right((toAb("SOME_CONSTANT"), None))
+
+    FromExpr.nameOrAbAs[Id].parseAll("SOME_CONSTANT as SC").value shouldBe Right((toAb("SOME_CONSTANT"), Some(toAb("SC"))))
+  }
+
   "from expression" should "be parsed" in {
     FromExpr.nameOrAbAs[Id].parseAll("Ability").value should be(Right(toAb("Ability") -> None))
     FromExpr.nameOrAbAs[Id].parseAll("Ability as Ab").value should be(
