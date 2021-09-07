@@ -36,7 +36,7 @@ object RootExpr extends Expr.Companion {
       ` \n+`
     ).surroundedBy(` \n+`.?)
 
-  private def rootToken[F[_]: LiftParser: Comonad] =
+  private def rootToken[F[_]: LiftParser: Comonad]: P0[Token[F]] =
     P.unit.lift0.map(Token.lift[F, Unit](_))
 
   private def parserSchema[F[_]: LiftParser: Comonad](): P[(Token[F], (Chain[ParserError[F]], Chain[Tree[F]]))] =
@@ -49,6 +49,7 @@ object RootExpr extends Expr.Companion {
 
   // Could handle empty body
   def ast0[F[_]: LiftParser: Comonad](): P0[ValidatedNec[ParserError[F], Tree[F]]] =
+    // `empty` is first to handle errors from `ast` at a first place
     empty().backtrack | ast()
 
   override def ast[F[_]: LiftParser: Comonad](): P[ValidatedNec[ParserError[F], Tree[F]]] =

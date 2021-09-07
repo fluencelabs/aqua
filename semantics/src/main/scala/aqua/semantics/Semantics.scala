@@ -91,8 +91,10 @@ object Semantics extends Logging {
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(ctx))(Invalid(_))
-        case (_, _: EmptyModel) =>
-          Valid(init)
+        case (state, _: EmptyModel) =>
+          NonEmptyChain
+            .fromChain(state.errors)
+            .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(init))(Invalid(_))
         case (state, m) =>
           NonEmptyChain
             .fromChain(state.errors)
