@@ -27,6 +27,9 @@ case class AquaContext(
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
 
+  def isEmpty: Boolean = this == AquaContext.blank
+  def nonEmpty: Boolean = !isEmpty
+
   def pick(
     name: String,
     rename: Option[String],
@@ -45,7 +48,19 @@ case class AquaContext(
           services = getter(_.services)
         )
       }
-      .filter(_.`type`(name).nonEmpty)
+      .filter(_.nonEmpty)
+
+  def pickHeader: AquaContext =
+    AquaContext.blank.copy(module = module, declares = declares, exports = exports)
+
+  def pickDeclared(implicit semi: Semigroup[AquaContext]): AquaContext =
+    if (module.isEmpty) this
+    else
+      declares
+        .flatMap(pick(_, None))
+        .foldLeft(pickHeader)(
+          _ |+| _
+        )
 
   def allTypes(prefix: String = ""): Map[String, Type] =
     abilities
@@ -83,6 +98,7 @@ case class AquaContext(
             types ++
             values.view.mapValues(_.lastType) ++
             services.view.mapValues(_.`type`) ++
+            // TODO do we need to pass abilities as type?
             abilities.flatMap { case (n, c) =>
               c.`type`(n).map(n -> _)
             }

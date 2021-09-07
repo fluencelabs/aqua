@@ -27,4 +27,10 @@ object FromExpr {
 
   def importFrom[F[_]: LiftParser: Comonad]: P[NonEmptyList[NameOrAbAs[F]]] =
       comma[NameOrAbAs[F]](nameOrAbAs[F]) <* ` ` <* `from`
+
+  def show[F[_]](ne: NonEmptyList[NameOrAbAs[F]]): String =
+    ne.toList.map(_.fold(
+      non => non._1.value + non._2.map(_.value).fold("")(" as "+_),
+      non => non._1.value + non._2.map(_.value).fold("")(" as "+_)
+    )).mkString(", ")
 }

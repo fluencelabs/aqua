@@ -17,7 +17,7 @@ val declineV = "2.1.0"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.2.2",
+  baseAquaVersion := "0.3.0",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
@@ -146,6 +146,11 @@ lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("backend"))
   .settings(commons: _*)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "aqua.backend"
+  )
   .dependsOn(transform)
 
 lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)

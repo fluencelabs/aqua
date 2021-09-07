@@ -24,21 +24,39 @@ case class TransformConfig(
   // or relay's variable otherwise
   val hostPeerId: TransformConfig.Const =
     TransformConfig.Const(
-      "host_peer_id",
+      "HOST_PEER_ID",
       relayVarName.fold[ValueModel](LiteralModel.initPeerId)(r => VarModel(r, ScalarType.string))
     )
 
+  val initPeerId: TransformConfig.Const =
+    TransformConfig.Const(
+      "INIT_PEER_ID",
+      LiteralModel.initPeerId
+    )
+
+  val nil: TransformConfig.Const =
+    TransformConfig.Const(
+      "nil", // TODO: shouldn't it be NIL?
+      LiteralModel.nil
+    )
+
+  val lastError: TransformConfig.Const =
+    TransformConfig.Const(
+      "LAST_ERROR",
+      VarModel.lastError
+    )
+
+  val constantsMap =
+    (hostPeerId :: initPeerId :: nil :: lastError :: constants)
+      .map(c => c.name -> c.value)
+      .toMap
+
   implicit val aquaContextMonoid: Monoid[AquaContext] = {
-    val constantsMap = (hostPeerId :: constants).map(c => c.name -> c.value).toMap
+
     AquaContext
       .implicits(
         AquaContext.blank
-          .copy(values =
-            Map(
-              VarModel.lastError.name -> VarModel.lastError,
-              "nil" -> LiteralModel.nil
-            ) ++ constantsMap
-          )
+          .copy(values = constantsMap)
       )
       .aquaContextMonoid
   }

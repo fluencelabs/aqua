@@ -22,14 +22,14 @@ object ConstantExpr extends Expr.Leaf {
 
   override def p[F[_]: LiftParser: Comonad]: P[ConstantExpr[F]] =
     ((((`const` *> ` ` *> Name
-      .p[F] <* ` `) ~ `?`.?).with1 <* `=` <* ` `) ~ Value.`value`).map {
+      .upper[F] <* ` `) ~ `?`.?).with1 <* `=` <* ` `) ~ Value.`value`).map {
       case ((name, mark), value) =>
         ConstantExpr(name, value, mark.nonEmpty)
     }
 
   def onlyLiteral[F[_]: LiftParser: Comonad]: P[(Name[F], Literal[F])] =
     ((((Name
-      .p[F] <* ` `) ~ `?`.?).with1 <* `=` <* ` `) ~ Value.literal).map { case ((name, _), value) =>
+      .upper[F] <* ` `) ~ `?`.?).with1 <* `=` <* ` `) ~ Value.literal).map { case ((name, _), value) =>
       (name, value)
     }
 }

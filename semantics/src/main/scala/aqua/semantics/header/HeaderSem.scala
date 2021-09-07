@@ -58,6 +58,7 @@ object HeaderSem {
     def resolve(f: FilenameExpr[S]): ResAC[S] =
       imports
         .get(f.fileValue)
+        .map(_.pickDeclared)
         .fold[ResAC[S]](
           error(f.token, "Cannot resolve the import")
         )(validNec)
@@ -91,7 +92,7 @@ object HeaderSem {
             }
           )
         )
-        .reduce
+        .foldLeft[ResAC[S]](validNec(ctx.pickHeader))(_ |+| _)
 
     // Convert an imported context into a module (ability)
     def toModule(ctx: AquaContext, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S] =
@@ -103,7 +104,7 @@ object HeaderSem {
             tkn,
             s"Used module has no `module` header. Please add `module` header or use ... as ModuleName, or switch to import"
           )
-        )(modName => validNec(acm.empty.copy(abilities = Map(modName -> ctx))))
+        )(modName => validNec(AquaContext.blank.copy(abilities = Map(modName -> ctx))))
 
     // Handler for every header expression, will be combined later
     val onExpr: PartialFunction[HeaderExpr[S], Res[S]] = {
@@ -154,27 +155,33 @@ object HeaderSem {
         // Import, map declarations
         resolve(f)
           .andThen(getFrom(f, _))
-          .map(ctx => HeaderSem[S](ctx, (c, _) => validNec(c)))
+          .map { ctx =>
+            HeaderSem[S](ctx, (c, _) => validNec(c))
+          }
 
       case f @ UseExpr(_, asModule) =>
         // Import, move into a module scope
         resolve(f)
           .andThen(toModule(_, f.token, asModule))
-          .map(fc => HeaderSem[S](fc, (c, _) => validNec(c)))
+          .map { fc =>
+            HeaderSem[S](fc, (c, _) => validNec(c))
+          }
 
       case f @ UseFromExpr(_, _, asModule) =>
         // Import, cherry-pick declarations, move to a module scope
         resolve(f)
           .andThen(getFrom(f, _))
           .andThen(toModule(_, f.token, Some(asModule)))
-          .map(fc => HeaderSem[S](fc, (c, _) => validNec(c)))
+          .map { fc =>
+            HeaderSem[S](fc, (c, _) => validNec(c))
+          }
 
       case ExportExpr(pubs) =>
         // Save exports, finally handle them
         validNec(
           HeaderSem[S](
             // Nothing there
-            acm.empty,
+            AquaContext.blank,
             (ctx, initCtx) =>
               pubs
                 .map(
@@ -197,7 +204,7 @@ object HeaderSem {
                     }
                   )
                 )
-                .foldLeft[ResAC[S]](validNec(ctx.exports.getOrElse(acm.empty)))(_ |+| _)
+                .foldLeft[ResAC[S]](validNec(ctx.exports.getOrElse(AquaContext.blank)))(_ |+| _)
                 .map(expCtx => ctx.copy(exports = Some(expCtx)))
           )
         )
