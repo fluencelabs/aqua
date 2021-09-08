@@ -51,7 +51,6 @@ jobs:
         run: |
           git clone https://github.com/fluencelabs/aqua-playground.git
           cd aqua-playground
-          git checkout new-js-sdk-api
           rm -rf src/compiled/examples/*
           npm i
           cd ..
