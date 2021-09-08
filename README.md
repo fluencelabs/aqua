@@ -23,13 +23,13 @@ Or simply download the latest JS or JAR file from the [releases](https://github.
 It requires `node` to run Aqua compiler in `.js` file from the command line:
 
 ```commandline
-node aqua-cli-%version_number%.js -i path/to/input/dir -o path/to/output/dir
+node aqua-%version_number%.js -i path/to/input/dir -o path/to/output/dir
 ```
 
 It requires `java` to run Aqua compiler in `.jar` file from the command line:
 
 ```commandline
-java -jar aqua-cli-%version_number%.jar -i path/to/input/dir -o path/to/output/dir
+java -jar aqua-%version_number%.jar -i path/to/input/dir -o path/to/output/dir
 ```
 
 Input directory should contain files with `aqua` scripts.

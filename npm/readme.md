@@ -8,18 +8,16 @@ or in parallel, forming a single-use coordination network.
 Aqua's runtime is heterogeneous: it includes browsers, servers, devices, all involved in solving a single task.
 Therefore, Aqua scripts are compiled into several targets at once, with AIR and Typescript as a default.
 
-## aqua-cli
+## aqua
 
-The package contains a convenience `aqua-cli` wrapper for usage in npm-based projects.
+The package contains a convenience `aqua` wrapper for usage in npm-based projects.
 
 ### usage
-
-**Warning: the package requires java to be installed (it will call "java -jar ... ") ** 
 
 Get the latest package
 
 ```bash
-npm i --save-dev @fluencelabs/aqua-cli
+npm i --save-dev @fluencelabs/aqua
 ```
 
 Create a directory for the source files: `.aqua` and for compiled files: `.ts`
@@ -31,7 +29,7 @@ mkdir aqua compiled
 To compile files run:
 
 ```bash
-npx aqua -i ./src/aqua/ -o ./src/compiled
+aqua -i ./src/aqua/ -o ./src/compiled
 ```
 
 Alternatively the compilation script can be put into scripts section of `package.json`

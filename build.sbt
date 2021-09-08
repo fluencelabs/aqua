@@ -64,7 +64,7 @@ lazy val cliJVM = cli.jvm
   .settings(
     Compile / run / mainClass  := Some("aqua.AquaCli"),
     assembly / mainClass       := Some("aqua.AquaCli"),
-    assembly / assemblyJarName := "aqua-cli-" + version.value + ".jar",
+    assembly / assemblyJarName := "aqua-" + version.value + ".jar",
     libraryDependencies ++= Seq(
     )
   )
