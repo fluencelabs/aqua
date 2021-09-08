@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       do_release:
-        description: "Set to 'true' to make a release"
+        description: "Set to 'true' to make a GitHub release"
         required: true
         default: "false"
 
