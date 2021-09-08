@@ -2,11 +2,18 @@ name: "release"
 
 on:
   workflow_dispatch:
+    inputs:
+      do_release:
+        description: "Set to 'true' to make a GitHub release"
+        required: true
+        default: "false"
 
 jobs:
   release:
-    name: "Release"
+    name: "Publish ${{ github.event.inputs.do_release == 'true' && 'and release' || 'to NPM' }}"
     runs-on: "ubuntu-latest"
+    env:
+      DO_RELEASE: ${{ github.event.inputs.do_release || 'false' }}
 
     steps:
       - name: Checkout repository
@@ -14,11 +21,6 @@ jobs:
 
       ### Setup
       - uses: olafurpg/setup-scala@v10
-
-      - name: Download jq
-        run: |
-          curl -L https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 -o /usr/local/bin/jq
-          chmod +x /usr/local/bin/jq
 
       ### Update & build
       - name: Assembly
@@ -85,22 +87,10 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       ### create release
-      - name: Remove tag if exists
-        uses: actions/github-script@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            try {
-                await github.git.deleteRef({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  ref: "tags/${{ env.BASE_VERSION }}"
-                })
-            } catch (e) {
-              console.log("The ${{ env.BASE_VERSION }} tag doesn't exist yet: " + e)
-            }
 
+      # 'Push tag' will fail if such tag already exists
       - name: Push tag ${{ env.BASE_VERSION }}
+        if: ${{ env.DO_RELEASE == 'true' }}
         id: tag_version
         uses: mathieudutour/github-tag-action@v5.5
         with:
@@ -109,6 +99,7 @@ jobs:
           github_token: ${{ secrets.PERSONAL_TOKEN }}
 
       - name: Build Changelog
+        if: ${{ env.DO_RELEASE == 'true' }}
         id: github_release
         uses: mikepenz/release-changelog-builder-action@v1
         with:
@@ -118,6 +109,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release
+        if: ${{ env.DO_RELEASE == 'true' }}
         uses: softprops/action-gh-release@v1
         with:
           name: Aqua Compiler ${{ env.VERSION }}
