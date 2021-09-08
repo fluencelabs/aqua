@@ -86,7 +86,7 @@ case class TypeScriptFunc(func: FuncRes) {
     var funcTypeOverload1 = argsTypescript.mkString(", ")
     var funcTypeOverload2 = ("peer: FluencePeer" :: argsTypescript).mkString(", ")
 
-    val argsLets = args.map(arg => s"let ${fixupArgName(arg.name)};").mkString("\n")
+    val argsLets = args.map(arg => s"let ${fixupArgName(arg.name)}: any;").mkString("\n")
 
     val argsFormAssingment = args
       .map(arg => fixupArgName(arg.name))
@@ -104,10 +104,10 @@ case class TypeScriptFunc(func: FuncRes) {
     s"""
        | export function ${func.funcName}(${funcTypeOverload1}) : ${funcTypeRes};
        | export function ${func.funcName}(${funcTypeOverload2}) : ${funcTypeRes};
-       | export function ${func.funcName}(...args) {
+       | export function ${func.funcName}(...args: any) {
        |     let peer: FluencePeer;
        |     ${argsLets}
-       |     let config;
+       |     let config: any;
        |     if (args[0] instanceof FluencePeer) {
        |         peer = args[0];
        |         ${argsAssignmentStartingFrom1}
