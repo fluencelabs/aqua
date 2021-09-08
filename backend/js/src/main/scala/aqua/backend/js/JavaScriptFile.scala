@@ -1,6 +1,23 @@
 package aqua.backend.js
 
 import aqua.backend.Version
+import aqua.model.transform.res.AquaRes
+
+case class JavaScriptFile(res: AquaRes) {
+
+  import JavaScriptFile.Header
+
+  def generate: String =
+    s"""${Header}
+       |
+       |// Services
+       |${res.services.map(JavaScriptService(_)).map(_.generate).toList.mkString("\n\n")}
+       |
+       |// Functions
+       |${res.funcs.map(JavaScriptFunc(_)).map(_.generate).toList.mkString("\n\n")}
+       |""".stripMargin
+
+}
 
 object JavaScriptFile {
 
@@ -13,7 +30,13 @@ object JavaScriptFile {
        | * Aqua version: ${Version.version}
        | *
        | */
-       |import { RequestFlowBuilder } from '@fluencelabs/fluence/dist/api.unstable.js';
+       |import { FluencePeer } from '@fluencelabs/fluence';
+       |import {
+       |    ResultCodes,
+       |    RequestFlow,
+       |    RequestFlowBuilder,
+       |    CallParams,
+       |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v1.js';
        |""".stripMargin
 
 }

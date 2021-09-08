@@ -8,24 +8,6 @@ object JavaScriptBackend extends Backend {
 
   val ext = ".js"
 
-  override def generate(aqua: AquaRes): Seq[Generated] = {
-    val funcs = NonEmptyChain.fromChain(
-      aqua.funcs
-        .map(JavaScriptFunc(_))
-    )
-    funcs
-      .map(fs =>
-        Seq(
-          Generated(
-            ext,
-            JavaScriptFile.Header + "\n\n" + fs
-              .map(_.generate)
-              .toChain
-              .toList
-              .mkString("\n\n")
-          )
-        )
-      )
-      .getOrElse(Seq.empty)
-  }
+  override def generate(res: AquaRes): Seq[Generated] =
+    if (res.isEmpty) Nil else Generated(ext, JavaScriptFile(res).generate) :: Nil
 }

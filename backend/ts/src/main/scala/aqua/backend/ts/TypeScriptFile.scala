@@ -30,9 +30,13 @@ object TypeScriptFile {
        | * Aqua version: ${Version.version}
        | *
        | */
-       |import { FluenceClient, PeerIdB58 } from '@fluencelabs/fluence';
-       |import { RequestFlowBuilder } from '@fluencelabs/fluence/dist/api.unstable';
-       |import { RequestFlow } from '@fluencelabs/fluence/dist/internal/RequestFlow';
+       |import { FluencePeer } from '@fluencelabs/fluence';
+       |import {
+       |    ResultCodes,
+       |    RequestFlow,
+       |    RequestFlowBuilder,
+       |    CallParams,
+       |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v1';
        |""".stripMargin
 
 }
