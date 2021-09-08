@@ -1,5 +1,5 @@
 {
-  "name": "@fluencelabs/aqua-cli",
+  "name": "@fluencelabs/aqua",
   "version": "0.0.0",
   "description": "Aqua compiler",
   "files": [
