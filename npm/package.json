@@ -4,8 +4,10 @@
   "description": "Aqua compiler",
   "files": [
     "aqua-cli.jar",
-    "aqua-cli-experimental.js",
-    "index-experimental.js"
+    "aqua-cli.js",
+    "index.js",
+    "index-java.js",
+    "error.js"
   ],
   "bin": {
     "aqua": "index.js",

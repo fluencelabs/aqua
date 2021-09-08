@@ -50,7 +50,6 @@ jobs:
       - name: Integration test
         run: |
           git clone https://github.com/fluencelabs/aqua-playground.git
-          git checkout new-js-sdk-api
           cd aqua-playground
           rm -rf src/compiled/examples/*
           npm i
