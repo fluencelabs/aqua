@@ -86,10 +86,10 @@ case class TypeScriptService(srv: ServiceRes) {
       | }
       |
       | ${registerServiceArgs}
-      | export function ${registerName}(...args) {
+      | export function ${registerName}(...args: any) {
       |    let peer: FluencePeer;
-      |    let serviceId;
-      |    let service;
+      |    let serviceId: any;
+      |    let service: any;
       |    if (args[0] instanceof FluencePeer) {
       |        peer = args[0];
       |    } else {
