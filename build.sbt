@@ -1,4 +1,4 @@
-val dottyVersion = "3.0.1"
+val dottyVersion = "3.0.2"
 
 scalaVersion := dottyVersion
 
@@ -64,7 +64,7 @@ lazy val cliJVM = cli.jvm
   .settings(
     Compile / run / mainClass  := Some("aqua.AquaCli"),
     assembly / mainClass       := Some("aqua.AquaCli"),
-    assembly / assemblyJarName := "aqua-cli-" + version.value + ".jar",
+    assembly / assemblyJarName := "aqua-" + version.value + ".jar",
     libraryDependencies ++= Seq(
     )
   )

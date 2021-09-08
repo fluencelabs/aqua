@@ -14,18 +14,19 @@ if (fs.existsSync(nm) && fs.lstatSync(nm).isDirectory()) {
 }
 
 const args = [
-  "node",
-  path.join(__dirname, "aqua-cli-experimental.js"),
+  "java",
+  "-jar",
+  path.join(__dirname, "aqua.jar"),
     ...importArgs,
   ...process.argv.slice(2),
 ];
 
 const argsString = args.join(" ");
 
-console.log("Aqua JS: " + argsString);
+console.log("Aqua Java " + argsString);
 exec(argsString, (err, stdout, stderr) => {
-  console.error("Aqua JS: " + stderr);
-  console.log("Aqua JS: " + stdout);
+  console.error("Aqua Java: " + stderr);
+  console.log("Aqua Java: " + stdout);
 
   if (err) {
     process.exit(err.code);

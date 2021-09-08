@@ -55,14 +55,14 @@ jobs:
 
       - name: Check .jar exists
         run: |
-          JAR="cli/.jvm/target/scala-3.0.1/aqua-cli-${{ env.VERSION }}.jar"
+          JAR="cli/.jvm/target/scala-3.0.2/aqua-${{ env.VERSION }}.jar"
           stat "$JAR"
           echo "JAR=$JAR" >> $GITHUB_ENV
 
       - name: Check .js exists
         run: |
-          JS="cli/.js/target/scala-3.0.1/cli-opt/aqua-cli-experimental-${{ env.VERSION }}.js"
-          mv cli/.js/target/scala-3.0.1/cli-opt/main.js "$JS"
+          JS="cli/.js/target/scala-3.0.2/cli-opt/aqua-${{ env.VERSION }}.js"
+          mv cli/.js/target/scala-3.0.2/cli-opt/main.js "$JS"
           stat "$JS"
           echo "JS=$JS" >> $GITHUB_ENV
 
@@ -72,23 +72,14 @@ jobs:
           node-version: "15"
           registry-url: "https://registry.npmjs.org"
 
-      - run: cp ${{ env.JAR }} ./npm/aqua-cli.jar
-      - run: cp ${{ env.JS }} ./npm/aqua-cli-experimental.js
+      - run: cp ${{ env.JAR }} ./npm/aqua.jar
+      - run: cp ${{ env.JS }} ./npm/aqua.js
 
       - run: npm version ${{ env.VERSION }}
         working-directory: ./npm
 
-      - name: Publish to NPM as aqua-cli
-        run: npm publish --access public
-        working-directory: ./npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
       - name: Publish to NPM as aqua
-        run: |
-          CONTENTS="$(jq '.name = "@fluencelabs/aqua"' package.json)"
-          echo "$CONTENTS" > package.json
-          npm publish --access public
+        run: npm publish --access public
         working-directory: ./npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
