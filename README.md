@@ -16,8 +16,9 @@ Please refer to [Aqua Book](https://doc.fluence.dev/aqua-book/) to learn how to 
 
 ## Compiler CLI
 
-To build the Aqua compiler, clone the repo & run `sbt cliJS/fullLinkOpt` to build JavaScript file or `sbt cli/assembly` to build JAR file,
-or simply download the latest JS or JAR file from the [releases](https://github.com/fluencelabs/aqua/releases) page.
+To build the Aqua compiler, clone the repo & run `sbt cliJS/fullLinkOpt` to build JavaScript file. File location: `cli/.js/target/scala-%scala-version%/cli-opt`.
+Or `sbt cli/assembly` to build JAR file. File location: `cli/.jvm/target/scala-%scala-version%/`
+Or simply download the latest JS or JAR file from the [releases](https://github.com/fluencelabs/aqua/releases) page.
 
 It requires `node` to run Aqua compiler in `.js` file from the command line:
 
