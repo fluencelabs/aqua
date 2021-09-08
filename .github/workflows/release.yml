@@ -55,14 +55,14 @@ jobs:
 
       - name: Check .jar exists
         run: |
-          JAR="cli/.jvm/target/scala-3.0.1/aqua-${{ env.VERSION }}.jar"
+          JAR="cli/.jvm/target/scala-3.0.2/aqua-${{ env.VERSION }}.jar"
           stat "$JAR"
           echo "JAR=$JAR" >> $GITHUB_ENV
 
       - name: Check .js exists
         run: |
-          JS="cli/.js/target/scala-3.0.1/cli-opt/aqua-${{ env.VERSION }}.js"
-          mv cli/.js/target/scala-3.0.1/cli-opt/main.js "$JS"
+          JS="cli/.js/target/scala-3.0.2/cli-opt/aqua-${{ env.VERSION }}.js"
+          mv cli/.js/target/scala-3.0.2/cli-opt/main.js "$JS"
           stat "$JS"
           echo "JS=$JS" >> $GITHUB_ENV
 
