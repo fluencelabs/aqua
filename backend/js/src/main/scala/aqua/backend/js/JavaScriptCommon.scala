@@ -18,8 +18,15 @@ object JavaScriptCommon {
   def callBackExprBody(at: ArrowType, callbackName: String): String = {
     val arrowArgumentsToCallbackArgumentsList =
       at.domain.toList.zipWithIndex
-        .map(_._2)
-        .map(idx => s"req.args[$idx]")
+        .map((`type`, idx) => {
+          val valueFromArg = s"req.args[$idx]"
+          `type` match {
+            case OptionType(t) =>
+              s"${valueFromArg}.length === 0 ? null : ${valueFromArg}[0]" +
+                s""
+            case _ => valueFromArg
+          }
+        })
         .concat(List("callParams"))
         .mkString(", ")
 
