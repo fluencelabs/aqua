@@ -1,19 +1,5 @@
-module Export.Test declares foobar, foo, bar, ExpSrv, FA
-
-const FA = "constant"
-
-func bar() -> string:
-    <- " I am MyFooBar bar"
+-- exports3.aqua
+module Export declares *
 
 func foo() -> string:
     <- "I am MyFooBar foo"
-
-func foobar() -> []string:
-    res: *string
-    res <- foo()
-    res <- bar()
-    <- res
-
-service ExpSrv("exp-srv"):
-   baz()
-   log: string -> ()

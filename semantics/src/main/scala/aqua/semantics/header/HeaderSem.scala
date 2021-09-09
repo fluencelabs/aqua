@@ -120,13 +120,13 @@ object HeaderSem {
             ),
             (ctx, _) =>
               // When file is handled, check that all the declarations exists
-              if (declareAll.nonEmpty)
+              if (declareAll.nonEmpty) {
+                val all =
+                  ctx.`type`("").map(_.fields.toNel.map(_._1).toList.toSet).getOrElse(Set.empty)
                 validNec(
-                  ctx.copy(declares =
-                    ctx.`type`("").map(_.fields.toNel.map(_._1).toList.toSet).getOrElse(Set.empty)
-                  )
+                  ctx.copy(module = Some(name.value), declares = all)
                 )
-              else
+              } else
                 (
                   declareNames.map(n => n.value -> n) ::: declareCustom.map(a => a.value -> a)
                 ).map[ValidatedNec[SemanticError[S], Int]] { case (n, t) =>
