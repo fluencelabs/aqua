@@ -10,29 +10,46 @@ or in parallel, forming a single-use coordination network.
 Aqua's runtime is heterogeneous: it includes browsers, servers, devices, all involved in solving a single task.
 Therefore, Aqua scripts are compiled into several targets at once, with AIR and Typescript as a default.
 
-## Using Aqua
+Please refer to [Aqua Book](https://doc.fluence.dev/aqua-book/) to learn more about Aqua language.
 
-Please refer to [Aqua Book](https://doc.fluence.dev/aqua-book/) to learn how to use Aqua.
+## Install and run
 
-## Compiler CLI
+The easiest way to use Aqua is to download the latest build from npm: [@fluencelabs/aqua](https://www.npmjs.com/package/@fluencelabs/aqua).
 
-To build the Aqua compiler, clone the repo & run `sbt cliJS/fullLinkOpt` to build JavaScript file. File location: `cli/.js/target/scala-%scala-version%/cli-opt`.
-Or `sbt cli/assembly` to build JAR file. File location: `cli/.jvm/target/scala-%scala-version%/`
-Or simply download the latest JS or JAR file from the [releases](https://github.com/fluencelabs/aqua/releases) page.
+```bash
+npm i -g @fluencelabs/aqua
+aqua --input src/aqua --output src/generated
+```
 
-It requires `node` to run Aqua compiler in `.js` file from the command line:
+Input directory should contain files with `.aqua` scripts.
 
-```commandline
+## Build from sources
+
+If you want to build Aqua compiler from the sourcecode, you need [Scala](https://www.scala-lang.org/)'s `sbt` installed.
+
+Aqua compiler itself can be compiled to and distributed either as JavaScript or Java file.
+
+### Build to JS
+
+Run `sbt cliJS/fullLinkOpt` to build JavaScript file. You can find the compiled file in: `cli/.js/target/scala-%scala-version%/cli-opt`.
+
+Then run it with `node`:
+
+```bash
 node aqua-%version_number%.js -i path/to/input/dir -o path/to/output/dir
 ```
 
+Javascript build is the default for Aqua.
+
+### Build to JVM
+
+Run `sbt cli/assembly` to build JAR file. It is located in `cli/.jvm/target/scala-%scala-version%/`
+
 It requires `java` to run Aqua compiler in `.jar` file from the command line:
 
-```commandline
+```bash
 java -jar aqua-%version_number%.jar -i path/to/input/dir -o path/to/output/dir
 ```
-
-Input directory should contain files with `aqua` scripts.
 
 ## Repository structure
 
@@ -48,3 +65,11 @@ Input directory should contain files with `aqua` scripts.
 - **[backend/air](./backend/air)** – generates AIR code from the middle-end model
 - **[backend/ts](./backend/ts)** - generates AIR code and Typescript wrappers for use with Fluence JS SDK
 - **[cli](./cli)** - CLI interface
+
+## References
+
+- [Aqua Book](https://doc.fluence.dev/aqua-book/)
+- [Aqua Changelog](https://doc.fluence.dev/aqua-book/changelog)
+- [Fluence docs](https://fluence.dev/)
+- [Examples & tutorials](https://github.com/fluencelabs/examples)
+- [Aqua Playground](https://github.com/fluencelabs/aqua-playground)
