@@ -1,6 +1,7 @@
 ## Aqua
 
 [![release](https://github.com/fluencelabs/aqua/actions/workflows/release.yml/badge.svg)](https://github.com/fluencelabs/aqua/actions/workflows/release.yml)
+[![npm](https://img.shields.io/npm/v/@fluencelabs/aqua)](https://www.npmjs.com/package/@fluencelabs/aqua)
 
 Aqua is a new-gen language for distributed systems.
 
