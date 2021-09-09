@@ -91,7 +91,7 @@ case class JavaScriptFunc(func: FuncRes) {
        |     let peer;
        |     ${argsLets}
        |     let config;
-       |     if (args[0] instanceof FluencePeer) {
+       |     if (FluencePeer.isInstance(args[0])) {
        |         peer = args[0];
        |         ${argsAssignmentStartingFrom1}
        |     } else {

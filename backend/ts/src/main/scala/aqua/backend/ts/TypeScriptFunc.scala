@@ -108,7 +108,7 @@ case class TypeScriptFunc(func: FuncRes) {
        |     let peer: FluencePeer;
        |     ${argsLets}
        |     let config: any;
-       |     if (args[0] instanceof FluencePeer) {
+       |     if (FluencePeer.isInstance(args[0])) {
        |         peer = args[0];
        |         ${argsAssignmentStartingFrom1}
        |     } else {
