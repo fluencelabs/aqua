@@ -1,32 +1,7 @@
--- import.aqua
-module Import.Test
-import foobar, FA as C, ExpSrv from "export.aqua"
-
-use foo as f, FA as U from "export.aqua" as Exp
-use foo as f, FA from "export.aqua" as Exp1
+module Import
 
 use "export.aqua"
 
-import "gen/OneMore.aqua"
-
-import OneMore as OM from "gen/OneMore.aqua"
-
-export consts as main--, foobar as barfoo
-
-func consts():
-   ExpSrv.log(C)
-   ExpSrv.log(Exp.U)
-   ExpSrv.log(Exp1.FA)
-   ExpSrv.log(Export.Test.FA)
-
 func foo_wrapper() -> string:
-    z <- Exp.f()
-    q <- Export.Test.bar()
-    OneMore "hello"
-    OneMore.more_call()
-    OM "ohmygod"
-    OM.more_call()
-    OM.consume(q)
-    ExpSrv.log(C)
-    ExpSrv.log(Exp.U)
+    z <- Export.foo()
     <- z
