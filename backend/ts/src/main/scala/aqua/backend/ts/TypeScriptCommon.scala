@@ -83,8 +83,14 @@ object TypeScriptCommon {
     val callCallbackStatement = s"$callbackName(${arrowArgumentsToCallbackArgumentsList})"
     
     val callCallbackStatementAndReturn =
-      at.res.fold(s"${callCallbackStatement}; resp.result = {}")(_ =>
-        s"resp.result = ${callCallbackStatement}"
+      at.res.fold(s"${callCallbackStatement}; resp.result = {}")(`type` =>
+        `type` match {
+          case OptionType(t) => s"""
+                                   | var respResult = ${callCallbackStatement};
+                                   | resp.result = respResult === null ? [] : [respResult]
+                                   |""".stripMargin
+          case _ => s"resp.result = ${callCallbackStatement}"
+        }
       )
 
     val tetraplets = FuncRes
