@@ -22,8 +22,7 @@ object JavaScriptCommon {
           val valueFromArg = s"req.args[$idx]"
           `type` match {
             case OptionType(t) =>
-              s"${valueFromArg}.length === 0 ? null : ${valueFromArg}[0]" +
-                s""
+              s"${valueFromArg}.length === 0 ? null : ${valueFromArg}[0]"
             case _ => valueFromArg
           }
         })
