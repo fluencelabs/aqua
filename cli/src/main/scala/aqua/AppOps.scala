@@ -93,7 +93,8 @@ object AppOps {
 
   def importOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, List[Path]]]] =
     Opts
-      .options[String]("import", "Path to the directory to import from", "m").orEmpty
+      .options[String]("import", "Path to the directory to import from", "m")
+      .orEmpty
       .map { ps =>
         val checked: List[F[ValidatedNec[String, Path]]] = ps.toList.map { pStr =>
           val p = Path(pStr)
@@ -114,7 +115,11 @@ object AppOps {
 
   def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[TransformConfig.Const]] =
     Opts
-      .options[String]("const", "Constant that will be used in an aqua code. Constant name must be upper cased.", "c")
+      .options[String](
+        "const",
+        "Constant that will be used in an aqua code. Constant name must be upper cased.",
+        "c"
+      )
       .mapValidated { strs =>
         val parsed = strs.map(s => ConstantExpr.onlyLiteral.parseAll(s))
 
@@ -130,7 +135,7 @@ object AppOps {
                 TransformConfig.Const(v._1.value, LiteralModel(v._2.value, v._2.ts))
             })
           ) { errors =>
-            val errorMsgs = errors.map (str => s"Invalid constant definition '$str'.")
+            val errorMsgs = errors.map(str => s"Invalid constant definition '$str'.")
             Validated.invalid(errorMsgs)
           }
       }
@@ -157,6 +162,12 @@ object AppOps {
   val noXorWrapper: Opts[Boolean] =
     Opts
       .flag("no-xor", "Do not generate a wrapper that catches and displays errors")
+      .map(_ => true)
+      .withDefault(false)
+
+  val dryOpt: Opts[Boolean] =
+    Opts
+      .flag("dry", "Generate .air file instead of typescript")
       .map(_ => true)
       .withDefault(false)
 

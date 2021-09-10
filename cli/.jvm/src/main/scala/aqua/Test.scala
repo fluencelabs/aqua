@@ -20,7 +20,8 @@ object Test extends IOApp.Simple {
           List(Path("./aqua")),
           Path("./target"),
           TypeScriptBackend,
-          TransformConfig()
+          TransformConfig(),
+          false
         )
         .map {
           case Validated.Invalid(errs) =>
