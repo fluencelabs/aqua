@@ -1,6 +1,7 @@
 package aqua.parser.lift
 
-import cats.parse.{LocationMap, Parser0, Parser => P}
+import cats.data.NonEmptyList
+import cats.parse.{LocationMap, Parser0, Parser as P}
 import cats.{Comonad, Eval}
 
 import scala.language.implicitConversions
@@ -54,12 +55,13 @@ object Span {
     }
 
     def toConsoleStr(
-      msg: String,
+      msgs: List[String],
       onLeft: String,
       onRight: String = Console.RESET
     ): String = {
       val line3Length = line._3.length
       val line3Mult = if (line3Length == 0) 1 else line3Length
+      val message = msgs.map(m => (" " * (line._2.length + lastNSize + 1)) + m).mkString("\n")
       pre.map(formatLine(_, onLeft, onRight)).mkString("\n") +
         "\n" +
         formatLN(line._1, onLeft, onRight) +
@@ -75,9 +77,8 @@ object Span {
         ("=" * line._4.length) +
         onRight +
         "\n" +
-        (" " * (line._2.length + lastNSize + 1)) +
         onLeft +
-        msg +
+        message +
         onRight +
         "\n" +
         post.map(formatLine(_, onLeft, onRight)).mkString("\n")
@@ -106,8 +107,15 @@ object Span {
         (Span(i, i), v)
       }
 
-    override def wrapErr(e: P.Error): (Span, P.Error) =
-      (Span(e.failedAtOffset, e.failedAtOffset + 1), e)
+    override def wrapErr(e: P.Error): (Span, P.Error) = {
+      // Find all WithContext expectations, get last by offset.
+      // This will be the final error handled by hand.
+      val withContext = e.expected.collect {
+        case e@P.Expectation.WithContext(_, _) => e
+      }.sortBy(_.offset).headOption
+      val exp = withContext.map(e => P.Error(e.offset, NonEmptyList.one(e))).getOrElse(e)
+      (Span(exp.failedAtOffset, exp.failedAtOffset + 1), exp)
+    }
   }
 
 }

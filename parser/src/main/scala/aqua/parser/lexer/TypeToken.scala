@@ -1,13 +1,13 @@
 package aqua.parser.lexer
 
-import aqua.parser.lexer.Token._
+import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
-import aqua.parser.lift.LiftParser._
+import aqua.parser.lift.LiftParser.*
 import aqua.types.ScalarType
 import cats.Comonad
-import cats.parse.{Parser => P}
-import cats.syntax.comonad._
-import cats.syntax.functor._
+import cats.parse.{Accumulator0, Parser as P}
+import cats.syntax.comonad.*
+import cats.syntax.functor.*
 import cats.~>
 
 sealed trait TypeToken[F[_]] extends Token[F] {
@@ -40,7 +40,9 @@ case class StreamTypeToken[F[_]: Comonad](override val unit: F[Unit], data: Data
 object StreamTypeToken {
 
   def `streamtypedef`[F[_]: LiftParser: Comonad]: P[StreamTypeToken[F]] =
-    (`*`.lift ~ DataTypeToken.`datatypedef`[F]).map(ud => StreamTypeToken(ud._1, ud._2))
+    ((`*`.lift <* P.not(`*`).withContext("Nested streams '**type' is prohibited"))
+      ~ DataTypeToken.`withoutstreamdatatypedef`[F])
+      .map(ud => StreamTypeToken(ud._1, ud._2))
 
 }
 
@@ -136,6 +138,14 @@ object DataTypeToken {
   def `topbottomdef`[F[_]: LiftParser: Comonad]: P[TopBottomToken[F]] =
     `⊥`.lift.map(TopBottomToken(_, isTop = false)) |
       `⊤`.lift.map(TopBottomToken(_, isTop = true))
+
+  def `withoutstreamdatatypedef`[F[_]: LiftParser: Comonad]: P[DataTypeToken[F]] =
+    P.oneOf(
+      P.defer(`arraytypedef`[F]) :: P.defer(
+        OptionTypeToken.`optiontypedef`
+      ) :: BasicTypeToken
+        .`basictypedef`[F] :: CustomTypeToken.dotted[F] :: Nil
+    )
 
   def `datatypedef`[F[_]: LiftParser: Comonad]: P[DataTypeToken[F]] =
     P.oneOf(

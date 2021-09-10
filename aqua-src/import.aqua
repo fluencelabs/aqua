@@ -1,7 +1,12 @@
-module Import
+service SomeService("erf"):
+  someCall()
 
-use "export.aqua"
+func string_nil() -> *string:
+  value_nil: *string
+  SomeService.someCall()
+  <- value_nil
 
-func foo_wrapper() -> string:
-    z <- Export.foo()
-    <- z
+func post() -> *string:
+  relay_nil: **string
+  relay_nil <- string_nil()
+  <- relay_nil
