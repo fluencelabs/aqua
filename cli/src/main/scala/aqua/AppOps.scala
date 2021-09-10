@@ -44,6 +44,23 @@ object AppOps {
       )
   }
 
+  def checkOutput[F[_]: Monad: Files](pathStr: String): F[ValidatedNec[String, Path]] = {
+    val p = Path(pathStr)
+    Files[F]
+      .exists(p)
+      .flatMap { exists =>
+        if (exists)
+          Files[F].isRegularFile(p).map { isFile =>
+            if (isFile) {
+              Validated.invalidNec(s"Output path should be a directory. Current: '$p'")
+            } else
+              Validated.validNec(p)
+          }
+        else
+          Files[F].createDirectories(p).map(_ => Validated.validNec(p))
+      }
+  }
+
   def checkPath[F[_]: Monad: Files](pathStr: String): F[ValidatedNec[String, Path]] = {
     val p = Path(pathStr)
     Files[F]
@@ -72,7 +89,7 @@ object AppOps {
       .map(s => checkPath[F](s))
 
   def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Path]]] =
-    Opts.option[String]("output", "Path to the output directory", "o").map(s => checkPath[F](s))
+    Opts.option[String]("output", "Path to the output directory", "o").map(s => checkOutput[F](s))
 
   def importOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, List[Path]]]] =
     Opts
