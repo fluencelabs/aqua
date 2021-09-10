@@ -89,7 +89,7 @@ object AppOps {
       .map(s => checkPath[F](s))
 
   def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Path]]] =
-    Opts.option[String]("output", "Path to the output directory", "o").map(s => checkOutput[F](s))
+    Opts.option[String]("output", "Path to the output directory. Will be created if not exists", "o").map(s => checkOutput[F](s))
 
   def importOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, List[Path]]]] =
     Opts
