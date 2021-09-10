@@ -56,8 +56,12 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
     val validatedPath = Validated.fromEither(Try(Path(imp)).toEither.leftMap(FileSystemError.apply))
     validatedPath match {
       case Validated.Valid(importP) =>
+        // if there is no `.aqua` extension, than add it
+        val renamedImport =
+          if (importP.extName != ".aqua") importP.resolveSibling(importP.fileName.toString + ".aqua")
+          else importP
         filesIO
-          .resolve(importP, importFrom.prependedAll(from.file.parent))
+          .resolve(renamedImport, importFrom.prependedAll(from.file.parent))
           .bimap(NonEmptyChain.one, FileModuleId(_))
           .value
           .map(Validated.fromEither)
