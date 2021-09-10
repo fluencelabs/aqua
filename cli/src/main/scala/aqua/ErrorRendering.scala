@@ -13,11 +13,14 @@ import cats.parse.Parser.Expectation.*
 
 object ErrorRendering {
 
-  def expectationToString(expectation: Expectation, locationMap: Eval[LocationMap], currentColumn: Int): String = {
+  def expectationToString(expectation: Expectation, locationMap: Eval[LocationMap], currentOffset: Int): String = {
     // add column number if it is not on the current offset
     def makeMsg(msg: String, offset: Int): String = {
-      val column = Span(offset, offset + 1).focus(locationMap, 0).map(_.column).filter(_ != currentColumn)
-      column.map(c => s"$msg on $c's symbol").getOrElse(msg)
+      if (offset == currentOffset) msg
+      else {
+        val focus = Span(offset, offset + 1).focus(locationMap, 0)
+        focus.map(f => s"$msg on ${f.line._1}:${f.column}").getOrElse(msg)
+      }
     }
 
     // TODO: match all expectations
@@ -56,7 +59,7 @@ object ErrorRendering {
           span
             .focus(3)
             .map { spanFocus =>
-              val errorMessages = e.expected.map(exp => expectationToString(exp, span.locationMap, spanFocus.spanFocus.column))
+              val errorMessages = e.expected.map(exp => expectationToString(exp, span.locationMap, span.span.startIndex))
               spanFocus.toConsoleStr(
                 s"Syntax error: ${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t),
                 Console.RED
