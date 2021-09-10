@@ -108,11 +108,11 @@ case class TypeScriptFunc(func: FuncRes) {
        |     let peer: FluencePeer;
        |     ${argsLets}
        |     let config: any;
-       |     if (args[0] instanceof FluencePeer) {
+       |     if (FluencePeer.isInstance(args[0])) {
        |         peer = args[0];
        |         ${argsAssignmentStartingFrom1}
        |     } else {
-       |         peer = FluencePeer.default;
+       |         peer = Fluence.getPeer();
        |         ${argsAssignmentStartingFrom0}
        |     }
        |    
@@ -128,7 +128,7 @@ case class TypeScriptFunc(func: FuncRes) {
        |                 .configHandler((h) => {
        |                     ${conf.relayVarName.fold("") { r =>
       s"""h.on('${conf.getDataService}', '$r', () => {
-       |                    return peer.connectionInfo.connectedRelay ;
+       |                    return peer.getStatus().relayPeerId;
        |                });""".stripMargin  }}
        |                $setCallbacks
        |                $returnCallback
