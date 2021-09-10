@@ -116,8 +116,8 @@ object AquaCli extends IOApp with Logging {
 
   override def run(args: List[String]): IO[ExitCode] = {
     CommandIOApp.run[IO](
-      "aqua-c",
-      "Aquamarine compiler",
+      "aqua",
+      "Aqua Compiler",
       helpFlag = false,
       None
     )(

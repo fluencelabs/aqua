@@ -23,7 +23,7 @@ npm i --save-dev @fluencelabs/aqua
 Create a directory for the source files: `.aqua` and for compiled files: `.ts`
 
 ```
-mkdir aqua compiled
+mkdir src/aqua src/compiled
 ```
 
 To compile files run:
