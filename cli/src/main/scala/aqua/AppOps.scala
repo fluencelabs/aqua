@@ -93,7 +93,7 @@ object AppOps {
 
   def importOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, List[Path]]]] =
     Opts
-      .options[String]("import", "Path to the directory to import from", "m")
+      .options[String]("import", "Path to the directory to import from. May be used several times", "m")
       .orEmpty
       .map { ps =>
         val checked: List[F[ValidatedNec[String, Path]]] = ps.toList.map { pStr =>
