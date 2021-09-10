@@ -39,10 +39,10 @@ case class JavaScriptService(srv: ServiceRes) {
       |    let peer;
       |    let serviceId;
       |    let service;
-      |    if (args[0] instanceof FluencePeer) {
+      |    if (FluencePeer.isInstance(args[0])) {
       |        peer = args[0];
       |    } else {
-      |        peer = FluencePeer.default;
+      |        peer = Fluence.getPeer();
       |    }
       |
       |    if (typeof args[0] === 'string') {
@@ -51,7 +51,7 @@ case class JavaScriptService(srv: ServiceRes) {
       |        serviceId = args[1];
       |    } ${defaultServiceIdBranch}
       |
-      |    if (!(args[0] instanceof FluencePeer) && typeof args[0] === 'object') {
+      |    if (!(FluencePeer.isInstance(args[0])) && typeof args[0] === 'object') {
       |        service = args[0];
       |    } else if (typeof args[1] === 'object') {
       |        service = args[1];
