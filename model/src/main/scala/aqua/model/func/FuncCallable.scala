@@ -30,13 +30,14 @@ case class FuncCallable(
         .head)
     }
 
-  def extractStreamArgs(args: Map[String, ValueModel]): Map[String, ValueModel] =
-    args.filter { arg =>
-      arg._2.`type` match {
-        case StreamType(_) => true
-        case _ => false
-      }
+  def isStream(vm: ValueModel): Boolean =
+    vm.`type` match {
+      case StreamType(_) => true
+      case _ => false
     }
+
+  def extractStreamArgs(args: Map[String, ValueModel]): Map[String, ValueModel] =
+    args.filter(arg => isStream(arg._2))
 
   // Apply a callable function, get its fully resolved body & optional value, if any
   def resolve(
@@ -153,7 +154,10 @@ case class FuncCallable(
 
         val (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(Option[FuncOp], ValueModel)] {
+            case (exp @ Call.Export(_, StreamType(_)), res) if isStream(res) =>
+              None -> res
             case (exp @ Call.Export(_, StreamType(_)), res) =>
+              res.`type`
               // pass nested function results to a stream
               Some(FuncOps.ap(res, exp)) -> exp.model
             case (_, res) =>

@@ -23,7 +23,7 @@ object JavaScriptCommon {
         .concat(List("callParams"))
         .mkString(", ")
 
-    val callCallbackStatement = s"$callbackName(${arrowArgumentsToCallbackArgumentsList})"
+    val callCallbackStatement = s"$callbackName($arrowArgumentsToCallbackArgumentsList)"
 
     val callCallbackStatementAndReturn =
       at.res.fold(s"${callCallbackStatement}; resp.result = {}")(_ =>
