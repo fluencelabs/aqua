@@ -16,11 +16,12 @@ object Test extends IOApp.Simple {
       start <- IO(System.currentTimeMillis())
       _ <- AquaPathCompiler
         .compileFilesTo[IO](
-          Path("./aqua-src/import.aqua"),
+          Path("./aqua-src/"),
           List(Path("./aqua")),
           Path("./target"),
           TypeScriptBackend,
-          TransformConfig()
+          TransformConfig(),
+          false
         )
         .map {
           case Validated.Invalid(errs) =>
