@@ -30,7 +30,7 @@ object JavaScriptFile {
        | * Aqua version: ${Version.version}
        | *
        | */
-       |import { FluencePeer } from '@fluencelabs/fluence';
+       |import { Fluence, FluencePeer } from '@fluencelabs/fluence';
        |import {
        |    ResultCodes,
        |    RequestFlow,

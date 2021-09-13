@@ -90,10 +90,10 @@ case class TypeScriptService(srv: ServiceRes) {
       |    let peer: FluencePeer;
       |    let serviceId: any;
       |    let service: any;
-      |    if (args[0] instanceof FluencePeer) {
+      |    if (FluencePeer.isInstance(args[0])) {
       |        peer = args[0];
       |    } else {
-      |        peer = FluencePeer.default;
+      |        peer = Fluence.getPeer();
       |    }
       |
       |    if (typeof args[0] === 'string') {
@@ -102,7 +102,12 @@ case class TypeScriptService(srv: ServiceRes) {
       |        serviceId = args[1];
       |    } ${defaultServiceIdBranch}
       |
-      |    if (!(args[0] instanceof FluencePeer) && typeof args[0] === 'object') {
+      |    // Figuring out which overload is the service.
+      |    // If the first argument is not Fluence Peer and it is an object, then it can only be the service def
+      |    // If the first argument is peer, we are checking further. The second argument might either be
+      |    // an object, that it must be the service object
+      |    // or a string, which is the service id. In that case the service is the third argument
+      |    if (!(FluencePeer.isInstance(args[0])) && typeof args[0] === 'object') {
       |        service = args[0];
       |    } else if (typeof args[1] === 'object') {
       |        service = args[1];
