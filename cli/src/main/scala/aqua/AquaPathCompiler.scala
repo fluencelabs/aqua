@@ -41,7 +41,7 @@ object AquaPathCompiler extends Logging {
             val nat = new (Span.F ~> FileSpan.F) {
               override def apply[A](span: Span.F[A]): FileSpan.F[A] = {
                 (
-                  FileSpan(id.file.fileName.toString, Eval.later(LocationMap(source)), span._1),
+                  FileSpan(id.file.absolute.toString, Eval.later(LocationMap(source)), span._1),
                   span._2
                 )
               }

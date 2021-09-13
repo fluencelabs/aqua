@@ -1,9 +1,6 @@
-module Import
+service GetStr("multiret-test"):
+    retStr(s: *string, a: *string)
 
-use "export"
 
-export foo_wrapper
-
-func foo_wrapper() -> string:
-    z <- Export.foo()
-    <- z
+func foo_wrapper():
+    GetStr.retStr(nil nil)

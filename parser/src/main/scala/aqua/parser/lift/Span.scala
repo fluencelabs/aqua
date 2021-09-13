@@ -62,6 +62,7 @@ object Span {
       val line3Length = line._3.length
       val line3Mult = if (line3Length == 0) 1 else line3Length
       val message = msgs.map(m => (" " * (line._2.length + lastNSize + 1)) + m).mkString("\n")
+
       pre.map(formatLine(_, onLeft, onRight)).mkString("\n") +
         "\n" +
         formatLN(line._1, onLeft, onRight) +

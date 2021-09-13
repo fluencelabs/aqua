@@ -10,15 +10,15 @@ import scala.language.implicitConversions
 case class FileSpan(name: String, locationMap: Eval[LocationMap], span: Span) {
 
   def focus(ctx: Int): Option[FileSpan.Focus] =
-    span.focus(locationMap, ctx).map(FileSpan.Focus(name, locationMap, ctx, _))
+    span.focus(locationMap, ctx, ctx).map(FileSpan.Focus(name, locationMap, ctx, _))
 }
 
 object FileSpan {
 
   case class Focus(name: String, locationMap: Eval[LocationMap], ctx: Int, spanFocus: Span.Focus) {
 
-    def toConsoleStr(msgs: List[String], onLeft: String, onRight: String = Console.RESET): String =
-      s"$name:${spanFocus.line._1 + 1}:${spanFocus.column + 1}\n" +
+    def toConsoleStr(errorType: String, msgs: List[String], onLeft: String, onRight: String = Console.RESET): String =
+      onLeft + "---- " + errorType + ": " + s"$name:${spanFocus.line._1 + 1}:${spanFocus.column + 1}" + onRight +
         spanFocus.toConsoleStr(
           msgs,
           onLeft,
