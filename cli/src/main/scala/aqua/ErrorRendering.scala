@@ -53,8 +53,8 @@ object ErrorRendering {
   implicit val showError: Show[AquaError[FileModuleId, AquaFileError, FileSpan.F]] = Show.show {
     case ParserErr(err) =>
       err match {
-        case BlockIndentError(indent, message) => showForConsole("Syntext error", indent._1, message :: Nil)
-        case FuncReturnError(point, message) => showForConsole("Syntext error", point._1, message :: Nil)
+        case BlockIndentError(indent, message) => showForConsole("Syntax error", indent._1, message :: Nil)
+        case FuncReturnError(point, message) => showForConsole("Syntax error", point._1, message :: Nil)
         case LexerError((span, e)) =>
           e.expected.toList.groupBy(_.offset).map { case (offset, exps) =>
             val localSpan = Span(offset, offset + 1)
@@ -62,7 +62,7 @@ object ErrorRendering {
               .map { spanFocus =>
                 val errorMessages = exps.map(exp => expectationToString(exp))
                 spanFocus.toConsoleStr(
-                  "Syntext error",
+                  "Syntax error",
                   s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t),
                   Console.RED
                 )
