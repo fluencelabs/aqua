@@ -10,7 +10,7 @@ import scala.language.implicitConversions
 case class FileSpan(name: String, locationMap: Eval[LocationMap], span: Span) {
 
   def focus(ctx: Int): Option[FileSpan.Focus] =
-    span.focus(locationMap, ctx, ctx).map(FileSpan.Focus(name, locationMap, ctx, _))
+    span.focus(locationMap, ctx).map(FileSpan.Focus(name, locationMap, ctx, _))
 }
 
 object FileSpan {

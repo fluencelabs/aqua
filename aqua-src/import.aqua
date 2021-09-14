@@ -3,4 +3,4 @@ service GetStr("multiret-test"):
 
 
 func foo_wrapper():
-    GetStr.retStr(nil nil)
+    GetStr.retStr(nil, nil)

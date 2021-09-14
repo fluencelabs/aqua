@@ -1,6 +1,6 @@
 module Ret
 
-import Service from "service.aqua"
+import Service from "service"
 
 use "error.aqua"
 export GetStr, multiReturnFunc, Service as S
