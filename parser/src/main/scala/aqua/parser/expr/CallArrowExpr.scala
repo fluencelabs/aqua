@@ -1,11 +1,12 @@
 package aqua.parser.expr
 
 import aqua.parser.Expr
-import aqua.parser.lexer.Token._
+import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Ability, Name, Value}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
-import cats.parse.{Parser => P}
+import cats.data.NonEmptyList
+import cats.parse.{Parser as P, Parser0 as P0}
 import cats.~>
 
 case class CallArrowExpr[F[_]](
@@ -26,13 +27,19 @@ case class CallArrowExpr[F[_]](
 
 object CallArrowExpr extends Expr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: P[CallArrowExpr[F]] =
-    ((comma(Name.p[F]) <* ` <- `).backtrack.?.with1 ~
-      ((Ability.dotted[F] <* `.`).?.with1 ~
-        Name.p[F] ~
-        comma0(Value.`value`[F].surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`))).map {
-      case (variables, ((ability, funcName), args)) =>
+  override def p[F[_]: LiftParser: Comonad]: P[CallArrowExpr[F]] = {
+    val variables: P0[Option[NonEmptyList[Name[F]]]] = (comma(Name.p[F]) <* ` <- `).backtrack.?
+    val ability: P0[Option[Ability[F]]] = (Ability.dotted[F] <* `.`).?
+    val functionCallWithArgs = Name.p[F]
+      ~ comma0(Value.`value`[F].surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
+
+    (variables.with1 ~
+      (ability.with1 ~ functionCallWithArgs)
+        .withContext("Only results of a function call can be written to a stream")
+      ).map {
+      case (variables, (ability, (funcName, args))) =>
         CallArrowExpr(variables.toList.flatMap(_.toList), ability, funcName, args)
     }
+  }
 
 }

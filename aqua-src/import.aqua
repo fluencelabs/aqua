@@ -4,3 +4,8 @@ service GetStr("multiret-test"):
 
 func foo_wrapper():
     GetStr.retStr(nil, nil)
+
+func invalid_append():
+    stream: *string
+    variable <- Op.identity("hello")
+    stream <- variable

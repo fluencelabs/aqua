@@ -109,13 +109,7 @@ object Span {
       }
 
     override def wrapErr(e: P.Error): (Span, P.Error) = {
-      // Find all WithContext expectations, get last by offset.
-      // This will be the final error handled by hand.
-      val withContext = e.expected.collect {
-        case e@P.Expectation.WithContext(_, _) => e
-      }.sortBy(_.offset).headOption
-      val exp = withContext.map(e => P.Error(e.offset, NonEmptyList.one(e))).getOrElse(e)
-      (Span(exp.failedAtOffset, exp.failedAtOffset + 1), exp)
+      (Span(e.failedAtOffset, e.failedAtOffset + 1), e)
     }
   }
 

@@ -24,7 +24,7 @@ object ErrorRendering {
   def expectationToString(expectation: Expectation): String = {
     // TODO: match all expectations
     expectation match {
-      case wc@WithContext(str, offset) => str
+      case wc@WithContext(str, exp) => s"$str (${expectationToString(exp)})"
       case InRange(offset, lower, upper) =>
         if (lower == upper)
           s"Expected symbol '${betterSymbol(lower)}'"
