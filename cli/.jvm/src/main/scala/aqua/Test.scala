@@ -18,10 +18,9 @@ object Test extends IOApp.Simple {
         .compileFilesTo[IO](
           Path("./aqua-src/"),
           List(Path("./aqua")),
-          Path("./target"),
+          Option(Path("./target")),
           TypeScriptBackend,
-          TransformConfig(),
-          false
+          TransformConfig()
         )
         .map {
           case Validated.Invalid(errs) =>

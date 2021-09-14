@@ -44,7 +44,7 @@ object AppOps {
       )
   }
 
-  def checkOutput[F[_]: Monad: Files](pathStr: String): F[ValidatedNec[String, Path]] = {
+  def checkOutput[F[_]: Monad: Files](pathStr: String): F[ValidatedNec[String, Option[Path]]] = {
     val p = Path(pathStr)
     Files[F]
       .exists(p)
@@ -54,10 +54,10 @@ object AppOps {
             if (isFile) {
               Validated.invalidNec(s"Output path should be a directory. Current: '$p'")
             } else
-              Validated.validNec(p)
+              Validated.validNec(Option(p))
           }
         else
-          Files[F].createDirectories(p).map(_ => Validated.validNec(p))
+          Files[F].createDirectories(p).map(_ => Validated.validNec(Option(p)))
       }
   }
 
@@ -88,8 +88,11 @@ object AppOps {
       )
       .map(s => checkPath[F](s))
 
-  def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Path]]] =
-    Opts.option[String]("output", "Path to the output directory. Will be created if not exists", "o").map(s => checkOutput[F](s))
+  def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Option[Path]]]] =
+    Opts.option[String]("output", "Path to the output directory. Will be created if not exists", "o")
+      .map(s => Option(s))
+      .withDefault(None)
+      .map(_.map(checkOutput[F]).getOrElse(Validated.validNec[String, Option[Path]](None).pure[F]))
 
   def importOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, List[Path]]]] =
     Opts
@@ -167,7 +170,7 @@ object AppOps {
 
   val dryOpt: Opts[Boolean] =
     Opts
-      .flag("dry", "Generate .air file instead of typescript")
+      .flag("dry", "Checks if compilation is succeeded, without output")
       .map(_ => true)
       .withDefault(false)
 
