@@ -14,7 +14,7 @@ object TypeScriptCommon {
     case pt: ProductType =>
       "[" + pt.toList.map(typeToTs).mkString(", ") + "]"
     case st: StructType => 
-      s"{${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ":" + kv._2).toList.mkString(";")}}"
+      s"{ ${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ": " + kv._2).toList.mkString("; ")} }"
     case st: ScalarType if ScalarType.number(st) => "number"
     case ScalarType.bool => "boolean"
     case ScalarType.string => "string"
@@ -66,7 +66,7 @@ object TypeScriptCommon {
   def argsCallToTs(at: ArrowType): List[String] =
     FuncRes.arrowArgIndices(at).map(idx => s"args[$idx]")
 
-  def callBackExprBody(at: ArrowType, callbackName: String): String = {
+  def callBackExprBody(at: ArrowType, callbackName: String, leftSpace: Int): String = {
     val arrowArgumentsToCallbackArgumentsList =
       at.domain.toList
         .zipWithIndex
@@ -101,16 +101,16 @@ object TypeScriptCommon {
       })
       .mkString(",")
 
-    s"""
-       | const callParams = {
-       |     ...req.particleContext,
-       |     tetraplets: {
-       |         ${tetraplets}
-       |     },
-       | };
-       | resp.retCode = ResultCodes.success;
-       | ${callCallbackStatementAndReturn}
-       |""".stripMargin
+    val left = " " * leftSpace
+
+    s"""${left}const callParams = {
+       |$left    ...req.particleContext,
+       |$left    tetraplets: {
+       |$left        ${tetraplets}
+       |$left    },
+       |$left};
+       |${left}resp.retCode = ResultCodes.success;
+       |$left${callCallbackStatementAndReturn}""".stripMargin
   }
 
 }

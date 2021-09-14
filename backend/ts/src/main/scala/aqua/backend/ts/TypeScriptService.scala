@@ -11,11 +11,9 @@ case class TypeScriptService(srv: ServiceRes) {
   import TypeScriptCommon._
 
   def fnHandler(arrow: ArrowType, memberName: String) = {
-    s"""
-       | if (req.fnName === '${memberName}') {
-       |     ${callBackExprBody(arrow, "service." + memberName)}
-       | }
-    """.stripMargin
+    s"""if (req.fnName === '${memberName}') {
+       |${callBackExprBody(arrow, "service." + memberName, 12)}
+        }""".stripMargin
   }
 
   def generate: String =
@@ -66,27 +64,25 @@ case class TypeScriptService(srv: ServiceRes) {
     // This variable contain defines the list of lists where 
     // the outmost list describes the list of overloads
     // and the innermost one defines the list of arguments in the overload
-    val registerServiceArgs = registerServiceArgsSource.
-      map(x => {
+    val registerServiceArgs = registerServiceArgsSource.map{ x =>
         val args = x.mkString(", ")
         s"export function ${registerName}(${args}): void;"
-      })
+      }
       .mkString("\n");
 
     val defaultServiceIdBranch = srv.defaultId.fold("")(x => 
-      s""" 
-      | else {
-      |     serviceId = ${x}
-      |}""".stripMargin
+      s"""else {
+      |        serviceId = ${x}
+      |    }""".stripMargin
     )
 
     s"""
-      | export interface ${serviceTypeName} {
-      |     ${fnDefs}
-      | }
+      |export interface ${serviceTypeName} {
+      |    ${fnDefs}
+      |}
       |
-      | ${registerServiceArgs}
-      | export function ${registerName}(...args: any) {
+      |$registerServiceArgs
+      |export function ${registerName}(...args: any) {
       |    let peer: FluencePeer;
       |    let serviceId: any;
       |    let service: any;
@@ -115,16 +111,16 @@ case class TypeScriptService(srv: ServiceRes) {
       |        service = args[2];
       |    }
       |
-      |      peer.internals.callServiceHandler.use((req, resp, next) => {
-      |          if (req.serviceId !== serviceId) {
-      |              next();
-      |              return;
-      |          }
-      |  
-      |          ${fnHandlers}
-      |  
-      |          next();
-      |      });
-      | }
+      |    peer.internals.callServiceHandler.use((req, resp, next) => {
+      |        if (req.serviceId !== serviceId) {
+      |            next();
+      |            return;
+      |        }
+      |
+      |        ${fnHandlers}
+      |
+      |        next();
+      |    });
+      |}
       """.stripMargin
 }
