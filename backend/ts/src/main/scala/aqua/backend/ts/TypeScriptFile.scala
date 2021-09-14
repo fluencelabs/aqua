@@ -12,7 +12,6 @@ case class TypeScriptFile(res: AquaRes) {
        |
        |// Services
        |${res.services.map(TypeScriptService(_)).map(_.generate).toList.mkString("\n\n")}
-       |
        |// Functions
        |${res.funcs.map(TypeScriptFunc(_)).map(_.generate).toList.mkString("\n\n")}
        |""".stripMargin
