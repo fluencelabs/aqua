@@ -11,7 +11,7 @@ import cats.data.*
 import cats.syntax.functor.*
 import cats.syntax.applicative.*
 import cats.syntax.show.*
-import cats.{Eval, Monad, Show, ~>, Applicative}
+import cats.{~>, Applicative, Eval, Monad, Show}
 import scribe.Logging
 import fs2.io.file.{Files, Path}
 import aqua.parser.lift.{LiftParser, Span}
@@ -23,13 +23,20 @@ import aqua.parser.Parser
 
 object AquaPathCompiler extends Logging {
 
+  /**
+   * @param srcPath path to aqua sources
+   * @param imports additional paths to possible aqua imports
+   * @param targetPath path where compiled files will be created. Creates no output if empty
+   * @param backend creates output (TS, JS, ...) from a model
+   * @param transformConfig transformation configuration for a model
+   * @return errors or result messages
+   */
   def compileFilesTo[F[_]: AquaIO: Monad: Files](
     srcPath: Path,
     imports: List[Path],
-    targetPath: Path,
+    targetPath: Option[Path],
     backend: Backend,
-    bodyConfig: TransformConfig,
-    isDryRun: Boolean
+    transformConfig: TransformConfig
   ): F[ValidatedNec[String, Chain[String]]] = {
     import ErrorRendering.showError
     val sources = new AquaFileSources[F](srcPath, imports)
@@ -41,7 +48,7 @@ object AquaPathCompiler extends Logging {
             val nat = new (Span.F ~> FileSpan.F) {
               override def apply[A](span: Span.F[A]): FileSpan.F[A] = {
                 (
-                  FileSpan(id.file.fileName.toString, Eval.later(LocationMap(source)), span._1),
+                  FileSpan(id.file.absolute.toString, Eval.later(LocationMap(source)), span._1),
                   span._2
                 )
               }
@@ -51,13 +58,15 @@ object AquaPathCompiler extends Logging {
           }
         },
         backend,
-        bodyConfig,
-        {if (isDryRun) dry[F] else sources.write(targetPath)}
+        transformConfig,
+        targetPath.map(sources.write).getOrElse(dry[F])
       )
       .map(_.leftMap(_.map(_.show)))
   }
 
-  def dry[F[_]: Applicative](ac: AquaCompiled[FileModuleId]): F[Seq[Validated[AquaFileError, String]]] =
+  def dry[F[_]: Applicative](
+    ac: AquaCompiled[FileModuleId]
+  ): F[Seq[Validated[AquaFileError, String]]] =
     Seq(
       Validated.valid[AquaFileError, String](
         s"Source ${ac.sourceId.file}: compilation OK"

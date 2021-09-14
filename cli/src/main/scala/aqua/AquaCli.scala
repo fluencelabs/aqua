@@ -86,32 +86,43 @@ object AquaCli extends IOApp with Logging {
             i.andThen { input =>
               o.andThen { output =>
                 imp.map { imports =>
-                  AquaPathCompiler
-                    .compileFilesTo[F](
-                      input,
-                      imports,
-                      output,
-                      targetToBackend(target),
-                      bc,
-                      isDryRun
-                    )
+                  if (output.isEmpty && !isDryRun)
+                    Validated.invalidNec(
+                      "Output path should be specified ('--output' or '-o'). " +
+                        "Add '--dry' to check compilation without output")
+                      .pure[F]
+                  else {
+                    val resultOutput = if (isDryRun) {
+                      None
+                    } else {
+                      output
+                    }
+                    AquaPathCompiler
+                      .compileFilesTo[F](
+                        input,
+                        imports,
+                        resultOutput,
+                        targetToBackend(target),
+                        bc
+                      )
                   }
                 }
               }
-            }.flatMap {
-              case Validated.Invalid(errs) =>
-                errs.map(logger.error(_))
-                ExitCode.Error.pure[F]
-              case Validated.Valid(result) =>
-                result.map {
-                  case Validated.Invalid(errs) =>
-                    errs.map(logger.error(_))
-                    ExitCode.Error
-                  case Validated.Valid(results) =>
-                    results.map(logger.info(_))
-                    ExitCode.Success
-                }
             }
+          }.flatMap {
+            case Validated.Invalid(errs) =>
+              errs.map(logger.error(_))
+              ExitCode.Error.pure[F]
+            case Validated.Valid(result) =>
+              result.map {
+                case Validated.Invalid(errs) =>
+                  errs.map(logger.error(_))
+                  ExitCode.Error
+                case Validated.Valid(results) =>
+                  results.map(logger.info(_))
+                  ExitCode.Success
+              }
+          }
         }
     }
   }
