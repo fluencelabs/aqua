@@ -2,6 +2,7 @@ package aqua.semantics.rules.abilities
 
 import aqua.model.{AquaContext, ServiceModel, ValueModel}
 import aqua.parser.lexer.Name
+import aqua.semantics.Levenshtein
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, State}
@@ -47,8 +48,11 @@ class AbilitiesInterpreter[F[_], X](implicit
               .fold(
                 report(
                   ga.arrow,
-                  s"Service is found, but arrow is undefined, available: ${arrows.value.keys.toNonEmptyList.toList
-                    .mkString(", ")}"
+                  Levenshtein.genMessage(
+                    s"Service is found, but arrow '${ga.arrow.value}' is undefined",
+                    ga.arrow.value,
+                    arrows.value.keys.toNonEmptyList.toList
+                  )
                 ).as(Option.empty[ArrowType])
               )(a => State.pure(Some(a)))
           case None =>
@@ -59,8 +63,11 @@ class AbilitiesInterpreter[F[_], X](implicit
                   .fold(
                     report(
                       ga.arrow,
-                      s"Ability is found, but arrow is undefined, available: ${abCtx.funcs.keys.toList
-                        .mkString(", ")}"
+                      Levenshtein.genMessage(
+                        s"Ability is found, but arrow '${ga.arrow.value}' is undefined",
+                        ga.arrow.value,
+                        abCtx.funcs.keys.toList
+                      )
                     ).as(Option.empty[ArrowType])
                   )(fn => State.pure(Some(fn.arrowType)))
               case None =>
