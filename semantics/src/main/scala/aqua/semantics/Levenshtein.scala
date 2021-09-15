@@ -27,6 +27,7 @@ object Levenshtein {
     memoizedCosts(s1.length, s2.length)
   }
 
+  // Get most similar to 'str' from list of strings
   def mostSimilar(str: String, possiblySimilar: NonEmptyList[String], count: Int) = {
     possiblySimilar.map(s => (s, levenshtein(str, s))).sortBy(_._2).take(count).map(_._1)
   }
@@ -34,6 +35,7 @@ object Levenshtein {
   // TODO: add to a config?
   val SIMILAR_COUNT = 5
 
+  // Generate a message based on similarity of strings
   def genMessage(prefix: String, str: String, possiblySimilar: List[String]) = {
     val possiblySimNel = NonEmptyList.fromList(possiblySimilar)
     possiblySimNel match {
