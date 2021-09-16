@@ -43,7 +43,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
                 report(
                   rn.name,
                   Levenshtein
-                    .genMessage(s"'${rn.name.value}' undefined", rn.name.value, st.allNames.toList)
+                    .genMessage(s"Name '${rn.name.value}' not found in scope", rn.name.value, st.allNames.toList)
                 )
               )
             case _ => State.pure(())
@@ -58,7 +58,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
             getState.flatMap(st =>
               report(
                 ra.name,
-                Levenshtein.genMessage(s"'${ra.name.value}' undefined", ra.name.value, st.allNames.toList)
+                Levenshtein.genMessage(s"Name '${ra.name.value}' not found in scope", ra.name.value, st.allNames.toList)
               )
                 .as(Option.empty[ArrowType])
             )

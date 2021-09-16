@@ -21,7 +21,7 @@ case class ConstantExpr[F[_]](
 object ConstantExpr extends Expr.Leaf {
   
   private def constName[F[_]: LiftParser: Comonad]: P[Name[F]] =
-    `const` *> ` ` *> Name.upper[F].withContext("Constants must be upper-cased") <* ` `
+    `const` *> ` ` *> Name.upper[F].withContext("Constant's names must be in UPPERCASE") <* ` `
   
 
   override def p[F[_]: LiftParser: Comonad]: P[ConstantExpr[F]] =

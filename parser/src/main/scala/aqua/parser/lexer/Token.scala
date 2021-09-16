@@ -61,7 +61,7 @@ object Token {
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
   val `anum_*` : P[Unit] = P.charsWhile(anum_).void
 
-  val NAME: P[String] = (P.charIn(AZ) ~ P.charsWhile(upperAnum_)).string
+  val NAME: P[String] = (P.charIn(AZ) ~ P.charsWhile(upperAnum_).?).string
   val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).string
 
   val `Class`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).backtrack.?).map { case (c, s) ⇒
