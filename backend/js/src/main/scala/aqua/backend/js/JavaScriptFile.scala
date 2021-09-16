@@ -10,6 +10,14 @@ case class JavaScriptFile(res: AquaRes) {
   def generate: String =
     s"""${Header}
        |
+       |function missedFields(obj, fields) {
+       |    return fields.map((f) => {
+       |        if (!obj[f]) {
+       |            return f
+       |        }
+       |    }).filter(n => n)       
+       |}
+       |
        |// Services
        |${res.services.map(JavaScriptService(_)).map(_.generate).toList.mkString("\n\n")}
        |
