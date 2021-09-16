@@ -76,6 +76,8 @@ case class TypeScriptService(srv: ServiceRes) {
       |    }""".stripMargin
     )
 
+    val membersNames = srv.members.map(_._1)
+
     s"""
       |export interface ${serviceTypeName} {
       |    ${fnDefs}
@@ -109,6 +111,11 @@ case class TypeScriptService(srv: ServiceRes) {
       |        service = args[1];
       |    } else {
       |        service = args[2];
+      |    }
+      |
+      |    let incorrectServiceDefinitions = missingFields(service, [${membersNames.map { n => s"'$n'" }.mkString(", ")}]);
+      |    if (!incorrectServiceDefinitions.length) {
+      |        throw new Error("Error registering service ${srv.name}: missing functions: " + incorrectServiceDefinitions.map((d) => "'" + d + "'").join(", "))
       |    }
       |
       |    peer.internals.callServiceHandler.use((req, resp, next) => {
