@@ -108,13 +108,13 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
     }
 
   // Write content to a file and return a success message
-  private def writeWithResult(target: Path, content: String, size: Int) = {
+  private def writeWithResult(target: Path, content: String, funcsCount: Int, servicesCount: Int) = {
     filesIO
       .writeFile(
         target,
         content
       )
-      .as(s"Result $target: compilation OK ($size functions)")
+      .as(s"Result $target: compilation OK ($funcsCount functions, $servicesCount services)")
       .value
       .map(Validated.fromEither)
   }
@@ -138,7 +138,7 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
           result
             .leftMap(FileSystemError.apply)
             .map { target =>
-              writeWithResult(target, compiled.content, ac.compiled.size)
+              writeWithResult(target, compiled.content, ac.funcsCount, ac.servicesCount)
             }
             .traverse(identity)
         }
