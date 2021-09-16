@@ -114,7 +114,7 @@ case class TypeScriptService(srv: ServiceRes) {
       |    }
       |
       |    let incorrectServiceDefinitions = missingFields(service, [${membersNames.map { n => s"'$n'" }.mkString(", ")}]);
-      |    if (!incorrectServiceDefinitions.length) {
+      |    if (!!incorrectServiceDefinitions.length) {
       |        throw new Error("Error registering service ${srv.name}: missing functions: " + incorrectServiceDefinitions.map((d) => "'" + d + "'").join(", "))
       |    }
       |
