@@ -6,34 +6,35 @@ import scala.collection.mutable
 
 object Levenshtein {
 
-  // copied from https://rosettacode.org/wiki/Levenshtein_distance#Scala
-  def levenshtein(s1: String, s2: String): Int = {
-    val memoizedCosts = mutable.Map[(Int, Int), Int]()
+  def countDistance(str1: String, str2: String): Int = {
+    val allDistances = mutable.Map[(Int, Int), Int]()
 
-    def lev: ((Int, Int)) => Int = { case (k1, k2) =>
-      memoizedCosts.getOrElseUpdate(
-        (k1, k2),
-        (k1, k2) match {
+    def distance(left: Int, right: Int): Int = {
+      allDistances.getOrElseUpdate(
+        (left, right),
+        (left, right) match {
           case (i, 0) => i
           case (0, j) => j
           case (i, j) =>
-            Seq(
-              1 + lev((i - 1, j)),
-              1 + lev((i, j - 1)),
-              lev((i - 1, j - 1))
-                + (if (s1(i - 1) != s2(j - 1)) 1 else 0)
+            Set(
+              1 + distance(i - 1, j),
+              1 + distance(i, j - 1),
+              distance(i - 1, j - 1)
+                + (if (str1(i - 1) != str2(j - 1)) 1 else 0)
             ).min
         }
       )
     }
 
-    lev((s1.length, s2.length))
-    memoizedCosts(s1.length, s2.length)
+    distance(str1.length, str2.length)
+
+    // get last distance
+    allDistances(str1.length, str2.length)
   }
 
   // Get most similar to 'str' from list of strings
   def mostSimilar(str: String, possiblySimilar: NonEmptyList[String], count: Int) = {
-    possiblySimilar.map(s => (s, levenshtein(str, s))).sortBy(_._2).take(count).map(_._1)
+    possiblySimilar.map(s => (s, countDistance(str, s))).sortBy(_._2).take(count).map(_._1)
   }
 
   // TODO: add to a config?
