@@ -34,8 +34,10 @@ case class JavaScriptService(srv: ServiceRes) {
       |}""".stripMargin
     )
 
+    val membersNames = srv.members.map(_._1)
+
     s"""
-      | export function ${registerName}(...args) {
+      |export function ${registerName}(...args) {
       |    let peer;
       |    let serviceId;
       |    let service;
@@ -50,7 +52,7 @@ case class JavaScriptService(srv: ServiceRes) {
       |    } else if (typeof args[1] === 'string') {
       |        serviceId = args[1];
       |    } ${defaultServiceIdBranch}
-      |    
+      |
       |    // Figuring out which overload is the service.
       |    // If the first argument is not Fluence Peer and it is an object, then it can only be the service def
       |    // If the first argument is peer, we are checking further. The second argument might either be
@@ -64,16 +66,21 @@ case class JavaScriptService(srv: ServiceRes) {
       |        service = args[2];
       |    }
       |
-      |      peer.internals.callServiceHandler.use((req, resp, next) => {
-      |          if (req.serviceId !== serviceId) {
-      |              next();
-      |              return;
-      |          }
-      |  
-      |          ${fnHandlers}
-      |  
-      |          next();
-      |      });
+      |    const incorrectServiceDefinitions = missingFields(service, [${membersNames.map { n => s"'$n'"}.mkString(", ")}]);
+      |    if (!incorrectServiceDefinitions.length) {
+      |        throw new Error("Error registering service ${srv.name}: missing functions: " + incorrectServiceDefinitions.map((d) => "'" + d + "'").join(", "))
+      |    }
+      |
+      |    peer.internals.callServiceHandler.use((req, resp, next) => {
+      |        if (req.serviceId !== serviceId) {
+      |            next();
+      |                return;
+      |            }
+      |
+      |${fnHandlers}
+      |
+      |            next();
+      |        });
       | }
       """.stripMargin
 }
