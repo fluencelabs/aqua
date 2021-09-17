@@ -7,6 +7,8 @@ import cats.syntax.show.*
 
 object TypeScriptCommon {
 
+  def typeToTsAdd(t: Type) = ": " + typeToTs(t)
+
   def typeToTs(t: Type): String = t match {
     case OptionType(t) => typeToTs(t) + " | null"
     case ArrayType(t) => typeToTs(t) + "[]"
@@ -36,9 +38,10 @@ object TypeScriptCommon {
   def returnType(at: ArrowType): String =
     at.res.fold("void")(typeToTs)
 
+  def fnDefAdd(at: ArrowType): String = ": " + fnDef(at)
+  
   def fnDef(at: ArrowType): String =
-    val args = argsToTs(at)
-      .concat(List(callParamsArg(at)))
+    val args = (argsToTs(at) :+ callParamsArg(at))
       .mkString(", ")
     
     val retType = returnType(at)

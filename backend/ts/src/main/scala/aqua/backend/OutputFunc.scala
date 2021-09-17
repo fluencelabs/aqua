@@ -1,17 +1,28 @@
-package aqua.backend.ts
+package aqua.backend
 
 import aqua.backend.air.FuncAirGen
+import aqua.backend.ts.TypeScriptCommon.{callBackExprBody, fixupArgName}
+import aqua.backend.ts.{TSFuncTypes, TypeScriptCommon}
 import aqua.model.transform.res.FuncRes
-import aqua.types.*
+import aqua.model.transform.res.FuncRes.Arg
+import aqua.types.{ArrowType, DataType, OptionType, ProductType}
 import cats.syntax.show.*
 
-case class TypeScriptFunc(func: FuncRes) {
+case class OutputFunc(func: FuncRes, types: Types) {
 
-  import TypeScriptCommon._
-  import FuncRes._
-  import func._
+  import FuncRes.*
+  import TypeScriptCommon.*
+  import types.*
+  import func.*
+  val funcTypes = types.funcType(func)
+  import funcTypes.*
 
-  private def returnCallback: String = 
+  val argsFormAssingment = args
+    .map(arg => fixupArgName(arg.name))
+    .appended("config")
+    .zipWithIndex
+
+  private def returnCallback: String =
     val respBody = func.returnType match {
       case Some(x) => x match {
         case OptionType(_) =>
@@ -29,7 +40,7 @@ case class TypeScriptFunc(func: FuncRes) {
                |                        }""".stripMargin
           }.mkString
 
-          s"""                    let opt: any = args;
+          s"""                    let opt$any = args;
              |$unwrapOpts
              |                    return resolve(opt);""".stripMargin
         case _ =>
@@ -45,9 +56,6 @@ case class TypeScriptFunc(func: FuncRes) {
   def generate: String = {
 
     val tsAir = FuncAirGen(func).generate
-
-    val retTypeTs = func.returnType
-      .fold("void")(typeToTs)
 
     val setCallbacks = func.args.collect { // Product types are not handled
       case Arg(argName, OptionType(_)) =>
@@ -68,45 +76,24 @@ case class TypeScriptFunc(func: FuncRes) {
     val returnVal =
       func.returnType.fold("Promise.race([promise, Promise.resolve()])")(_ => "promise")
 
-    val clientArgName = genArgName("client")
     val configArgName = genArgName("config")
 
-    val configType = "{ttl?: number}"
+    val codeLeftSpace = " " * 20
 
-    val funcName = s"${func.funcName}"
+    val argsLets = args.map(arg => s"    let ${fixupArgName(arg.name)}$any;").mkString("\n")
 
-    val argsTypescript = args
-      .map(arg => s"${fixupArgName(arg.name)}: " + typeToTs(arg.`type`))
-      .concat(List(s"config?: $configType"))
-    
-    // defines different types for overloaded service registration function.
-    var funcTypeOverload1 = argsTypescript.mkString(", ")
-    var funcTypeOverload2 = ("peer: FluencePeer" :: argsTypescript).mkString(", ")
-
-    val argsLets = args.map(arg => s"    let ${fixupArgName(arg.name)}: any;").mkString("\n")
-
-    val argsFormAssingment = args
-      .map(arg => fixupArgName(arg.name))
-      .concat(List("config"))
-      .zipWithIndex
-
-    // argument upnacking has two forms. 
+    // argument upnacking has two forms.
     // One starting from the first (by index) argument,
     // One starting from zero
     val argsAssignmentStartingFrom1 = argsFormAssingment.map((name, ix) => s"        ${name} = args[${ix + 1}];").mkString("\n")
     val argsAssignmentStartingFrom0 = argsFormAssingment.map((name, ix) => s"        ${name} = args[${ix}];").mkString("\n")
 
-    val funcTypeRes = s"Promise<$retTypeTs>"
-
-    val codeLeftSpace = " " * 20
-
     s"""
-       |export function ${func.funcName}(${funcTypeOverload1}) : ${funcTypeRes};
-       |export function ${func.funcName}(${funcTypeOverload2}) : ${funcTypeRes};
-       |export function ${func.funcName}(...args: any) {
-       |    let peer: FluencePeer;
+       |${funcTypes.generate}
+       |export function ${func.funcName}(...args$any) {
+       |    let peer$fluencePeer;
        |${argsLets}
-       |    let config: any;
+       |    let config$any;
        |    if (FluencePeer.isInstance(args[0])) {
        |        peer = args[0];
        |${argsAssignmentStartingFrom1}
@@ -115,8 +102,8 @@ case class TypeScriptFunc(func: FuncRes) {
        |${argsAssignmentStartingFrom0}
        |    }
        |
-       |    let request: RequestFlow;
-       |    const promise = new Promise<$retTypeTs>((resolve, reject) => {
+       |    let request$requestFlow;
+       |    const promise = new Promise$retTypeTs((resolve, reject) => {
        |        const r = new RequestFlowBuilder()
        |                .disableInjections()
        |                .withRawScript(`
@@ -146,7 +133,7 @@ case class TypeScriptFunc(func: FuncRes) {
        |
        |                request = r.build();
        |    });
-       |    peer.internals.initiateFlow(request!);
+       |    peer.internals.initiateFlow(request$excl);
        |    return ${returnVal};
        |}""".stripMargin
   }
