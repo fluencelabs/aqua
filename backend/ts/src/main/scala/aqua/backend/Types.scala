@@ -1,6 +1,6 @@
 package aqua.backend
 
-import aqua.backend.ts.TypeScriptCommon.{fixupArgName, fnDefAdd, typeToTs, typeToTsAdd}
+import aqua.backend.ts.{TSFuncTypes, TSServiceTypes}
 import aqua.model.transform.res.{FuncRes, ServiceRes}
 
 trait Types {
@@ -12,14 +12,11 @@ trait Types {
 }
 
 trait FuncTypes {
-  def exportTypes: String
-  def retTypeTs: String
+  def retTypeTs: (Option[String], String)
   def generate: String
 }
 
 trait ServiceTypes {
-  def exportInterface: String
-  def registerServiceArgs: String
   def generate: String
 }
 
@@ -28,13 +25,10 @@ object EmptyTypes extends Types {
   override def generic(field: String, `type`: String): String = field
   override def bang(field: String): String = field
   override def funcType(f: FuncRes): FuncTypes = new FuncTypes {
-    override def exportTypes: String = ""
-    override def retTypeTs: String = ""
+    override def retTypeTs: (Option[String], String) = (None, "")
     override def generate: String = ""
   } 
   override def serviceType(s: ServiceRes): ServiceTypes = new ServiceTypes {
-    override def exportInterface: String = ""
-    override def registerServiceArgs: String = ""
     override def generate: String = ""
   }
 }

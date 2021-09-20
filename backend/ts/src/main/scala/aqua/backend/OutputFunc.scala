@@ -103,7 +103,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
        |    }
        |
        |    let ${typed("request", "RequestFlow")};
-       |    const promise = new ${generic("Promise", retTypeTs)}((resolve, reject) => {
+       |    const promise = new ${generic("Promise", retTypeTs._2)}((resolve, reject) => {
        |        const r = new RequestFlowBuilder()
        |                .disableInjections()
        |                .withRawScript(`

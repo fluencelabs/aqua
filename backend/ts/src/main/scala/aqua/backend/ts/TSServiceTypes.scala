@@ -1,7 +1,7 @@
 package aqua.backend.ts
 
 import aqua.backend.ServiceTypes
-import aqua.backend.ts.TypeScriptCommon.fnDefAdd
+import aqua.backend.ts.TypeScriptCommon.fnDef
 import aqua.model.transform.res.ServiceRes
 
 case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
@@ -9,7 +9,7 @@ case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
 
   private val serviceTypeName = s"${srv.name}Def";
 
-  override def registerServiceArgs = {
+  def registerServiceArgs = {
 
     // defined arguments used in overloads below
     val peerDecl = s"${typed("peer", "FluencePeer")}";
@@ -49,9 +49,9 @@ case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
       .mkString("\n")
   }
 
-  override def exportInterface = {
+  def exportInterface = {
     val fnDefs = srv.members.map { case (name, arrow) =>
-      s"${name}${fnDefAdd(arrow)};"
+      s"${typed(name, fnDef(arrow))};"
     }
       .mkString("\n")
 
