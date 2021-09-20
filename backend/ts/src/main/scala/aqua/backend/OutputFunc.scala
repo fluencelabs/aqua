@@ -88,8 +88,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
     val argsAssignmentStartingFrom1 = argsFormAssingment.map((name, ix) => s"        ${name} = args[${ix + 1}];").mkString("\n")
     val argsAssignmentStartingFrom0 = argsFormAssingment.map((name, ix) => s"        ${name} = args[${ix}];").mkString("\n")
 
-    s"""
-       |${funcTypes.generate}
+    s"""${funcTypes.generate}
        |export function ${func.funcName}(${typed("...args", "any")}) {
        |    let ${typed("peer", "FluencePeer")};
        |${argsLets}

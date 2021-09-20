@@ -7,7 +7,19 @@ import cats.syntax.show.*
 
 object TypeScriptCommon {
 
-  
+  def genTypeName(t: Type, name: String): (Option[String], String) = {
+    val genType = typeToTs(t)
+    t match {
+      case tt: ProductType =>
+        val gen = s"type $name = $genType"
+        (Some(gen), name)
+      case tt: StructType =>
+        val gen = s"type $name = $genType"
+        (Some(gen), name)
+      case _ => (None, genType)
+
+    }
+  }
 
   def typeToTs(t: Type): String = t match {
     case OptionType(t) => typeToTs(t) + " | null"
@@ -16,7 +28,9 @@ object TypeScriptCommon {
     case pt: ProductType =>
       "[" + pt.toList.map(typeToTs).mkString(", ") + "]"
     case st: StructType => 
-      s"{ ${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ": " + kv._2).toList.mkString("; ")} }"
+      s"""{
+         |${st.fields.map(typeToTs).toNel.map(kv => "    " + kv._1 + ": " + kv._2 + ";").toList.mkString("\n")}
+         |}""".stripMargin
     case st: ScalarType if ScalarType.number(st) => "number"
     case ScalarType.bool => "boolean"
     case ScalarType.string => "string"

@@ -1,26 +1,12 @@
 package aqua.backend.ts
 
 import aqua.backend.FuncTypes
-import aqua.backend.ts.TypeScriptCommon.{fixupArgName, typeToTs}
+import aqua.backend.ts.TypeScriptCommon.{fixupArgName, typeToTs, genTypeName}
 import aqua.model.transform.res.FuncRes
 import aqua.types.*
 
 case class TSFuncTypes(func: FuncRes) extends FuncTypes {
   import TypeScriptTypes._
-
-  def genTypeName(t: Type, name: String): (Option[String], String) = {
-    val genType = typeToTs(t)
-    t match {
-      case tt: ProductType =>
-        val gen = s"type $name = $genType"
-        (Some(gen), name)
-      case tt: StructType =>
-        val gen = s"type $name = $genType"
-        (Some(gen), name)
-      case _ => (None, genType)
-
-    }
-  }
 
   override val retTypeTs = func.returnType
     .fold((None, "void")) { t => genTypeName(t, func.funcName.capitalize + "Result") }
@@ -29,15 +15,21 @@ case class TSFuncTypes(func: FuncRes) extends FuncTypes {
     val configType = "?: {ttl?: number}"
 
     val argsTypescript = func.args
-      .map(arg => s"${typed(fixupArgName(arg.name), typeToTs(arg.`type`))}") :+ s"config$configType"
+      .map { arg =>
+        val (typeDesc, t) = genTypeName(arg.`type`, func.funcName.capitalize + "Arg" + arg.name.capitalize)
+        (typeDesc, s"${typed(fixupArgName(arg.name), t)}")
+      } :+ (None, s"config$configType")
+
+    val args = argsTypescript.map(_._2)
+    val argsDesc = argsTypescript.map(_._1).flatten
 
     // defines different types for overloaded service registration function.
-    var funcTypeOverload1 = argsTypescript.mkString(", ")
-    var funcTypeOverload2 = (typed("peer", "FluencePeer") :: argsTypescript).mkString(", ")
+    var funcTypeOverload1 = args.mkString(", ")
+    var funcTypeOverload2 = (typed("peer", "FluencePeer") :: args).mkString(", ")
 
     val (resTypeDesc, resType) = retTypeTs
 
-    s"""
+    s"""${argsDesc.mkString("\n")} 
        |${resTypeDesc.getOrElse("")}
        |export function ${func.funcName}(${funcTypeOverload1}): ${generic("Promise", resType)};
        |export function ${func.funcName}(${funcTypeOverload2}): ${generic("Promise", resType)};""".stripMargin

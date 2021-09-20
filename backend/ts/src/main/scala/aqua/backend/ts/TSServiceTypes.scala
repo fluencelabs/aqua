@@ -61,9 +61,7 @@ case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
   }
 
   def generate = {
-    s"""
-       |$exportInterface
-       |
+    s"""$exportInterface
        |$registerServiceArgs
        """
   }
