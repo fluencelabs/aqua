@@ -86,8 +86,9 @@ object AquaCompiler extends Logging {
                 }
                 .map(
                   _.map { ap =>
-                    val compiled = backend.generate(AquaRes.fromContext(ap.context, config))
-                    AquaCompiled(ap.id, compiled)
+                    val res = AquaRes.fromContext(ap.context, config)
+                    val compiled = backend.generate(res)
+                    AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
                   }
                 )
             }

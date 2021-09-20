@@ -10,6 +10,10 @@ case class JavaScriptFile(res: AquaRes) {
   def generate: String =
     s"""${Header}
        |
+       |function missingFields(obj, fields) {
+       |    return fields.filter(f => !(f in obj))
+       |}
+       |
        |// Services
        |${res.services.map(JavaScriptService(_)).map(_.generate).toList.mkString("\n\n")}
        |

@@ -10,6 +10,10 @@ case class TypeScriptFile(res: AquaRes) {
   def generate: String =
     s"""${Header}
        |
+       |function missingFields(obj: any, fields: string[]): string[] {
+       |    return fields.filter(f => !(f in obj))
+       |}
+       |
        |// Services
        |${res.services.map(TypeScriptService(_)).map(_.generate).toList.mkString("\n\n")}
        |// Functions
