@@ -4,12 +4,9 @@ import aqua.backend.ts.TypeScriptCommon.{fixupArgName, fnDefAdd, typeToTs, typeT
 import aqua.model.transform.res.{FuncRes, ServiceRes}
 
 trait Types {
-  def any: String
-  def excl: String
-  def fluencePeer: String
-  def string: String
-  def stringArr: String
-  def requestFlow: String
+  def typed(field: String, `type`: String): String
+  def generic(field: String, `type`: String): String
+  def bang(field: String): String
   def funcType(f: FuncRes): FuncTypes
   def serviceType(s: ServiceRes): ServiceTypes
 }
@@ -27,12 +24,9 @@ trait ServiceTypes {
 }
 
 object EmptyTypes extends Types {
-  override val any = ""
-  override val fluencePeer = ""
-  override val string = ""
-  override val requestFlow = ""
-  override def stringArr: String = ""
-  override def excl: String = ""
+  override def typed(field: String, `type`: String): String = field
+  override def generic(field: String, `type`: String): String = field
+  override def bang(field: String): String = field
   override def funcType(f: FuncRes): FuncTypes = new FuncTypes {
     override def exportTypes: String = ""
     override def retTypeTs: String = ""

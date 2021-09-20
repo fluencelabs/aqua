@@ -8,7 +8,7 @@ case class TSFuncTypes(func: FuncRes) extends FuncTypes {
   import TypeScriptTypes._
 
   override lazy val retTypeTs = func.returnType
-    .fold("<void>")(t => s"<${typeToTs(t)}>")
+    .fold("void")(t => s"${typeToTs(t)}")
 
   override lazy val exportTypes = {
     val configType = "?: {ttl?: number}"
@@ -18,12 +18,10 @@ case class TSFuncTypes(func: FuncRes) extends FuncTypes {
 
     // defines different types for overloaded service registration function.
     var funcTypeOverload1 = argsTypescript.mkString(", ")
-    var funcTypeOverload2 = ("peer: FluencePeer" :: argsTypescript).mkString(", ")
+    var funcTypeOverload2 = (typed("peer", "FluencePeer") :: argsTypescript).mkString(", ")
 
-    val funcTypeRes = s"Promise$retTypeTs"
-
-    s"""export function ${func.funcName}(${funcTypeOverload1}) : ${funcTypeRes};
-       |export function ${func.funcName}(${funcTypeOverload2}) : ${funcTypeRes};""".stripMargin
+    s"""export function ${func.funcName}(${funcTypeOverload1}): ${generic("Promise", retTypeTs)};
+       |export function ${func.funcName}(${funcTypeOverload2}): ${generic("Promise", retTypeTs)};""".stripMargin
   }
 
   def generate = exportTypes

@@ -40,7 +40,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
                |                        }""".stripMargin
           }.mkString
 
-          s"""                    let opt$any = args;
+          s"""                    let ${typed("opt", "any")} = args;
              |$unwrapOpts
              |                    return resolve(opt);""".stripMargin
         case _ =>
@@ -80,7 +80,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
 
     val codeLeftSpace = " " * 20
 
-    val argsLets = args.map(arg => s"    let ${fixupArgName(arg.name)}$any;").mkString("\n")
+    val argsLets = args.map(arg => s"    let ${typed(fixupArgName(arg.name), "any")};").mkString("\n")
 
     // argument upnacking has two forms.
     // One starting from the first (by index) argument,
@@ -90,10 +90,10 @@ case class OutputFunc(func: FuncRes, types: Types) {
 
     s"""
        |${funcTypes.generate}
-       |export function ${func.funcName}(...args$any) {
-       |    let peer$fluencePeer;
+       |export function ${func.funcName}(${typed("...args", "any")}) {
+       |    let ${typed("peer", "FluencePeer")};
        |${argsLets}
-       |    let config$any;
+       |    let ${typed("config", "any")};
        |    if (FluencePeer.isInstance(args[0])) {
        |        peer = args[0];
        |${argsAssignmentStartingFrom1}
@@ -102,8 +102,8 @@ case class OutputFunc(func: FuncRes, types: Types) {
        |${argsAssignmentStartingFrom0}
        |    }
        |
-       |    let request$requestFlow;
-       |    const promise = new Promise$retTypeTs((resolve, reject) => {
+       |    let ${typed("request", "RequestFlow")};
+       |    const promise = new ${generic("Promise", retTypeTs)}((resolve, reject) => {
        |        const r = new RequestFlowBuilder()
        |                .disableInjections()
        |                .withRawScript(`
@@ -133,7 +133,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
        |
        |                request = r.build();
        |    });
-       |    peer.internals.initiateFlow(request$excl);
+       |    peer.internals.initiateFlow(${bang("request")});
        |    return ${returnVal};
        |}""".stripMargin
   }

@@ -36,10 +36,10 @@ case class OutputService(srv: ServiceRes, types: Types) {
     s"""
       |${serviceTypes.generate}
       |
-      |export function register${srv.name}(...args$any) {
-      |    let peer$fluencePeer;
-      |    let serviceId$any;
-      |    let service$any;
+      |export function register${srv.name}(${typed("...args", "any")}) {
+      |    let ${typed("peer", "FluencePeer")};
+      |    let ${typed("serviceId", "any")};
+      |    let ${typed("service", "any")};
       |    if (FluencePeer.isInstance(args[0])) {
       |        peer = args[0];
       |    } else {

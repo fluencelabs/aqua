@@ -8,14 +8,13 @@ case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
   import TypeScriptTypes._
 
   private val serviceTypeName = s"${srv.name}Def";
-  private val serviceType = s": $serviceTypeName";
 
   override def registerServiceArgs = {
 
     // defined arguments used in overloads below
-    val peerDecl = s"peer$fluencePeer";
-    val serviceIdDecl = s"serviceId$string";
-    val serviceDecl = s"service$serviceType"
+    val peerDecl = s"${typed("peer", "FluencePeer")}";
+    val serviceIdDecl = s"${typed("serviceId", "string")}";
+    val serviceDecl = s"${typed("service", serviceTypeName)}"
 
     // Service registration functions has several overloads.
     // Depending on whether the the service has the default id or not

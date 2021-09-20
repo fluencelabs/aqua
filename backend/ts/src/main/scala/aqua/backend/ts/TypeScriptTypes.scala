@@ -4,12 +4,9 @@ import aqua.backend.{FuncTypes, ServiceTypes, Types}
 import aqua.model.transform.res.{FuncRes, ServiceRes}
 
 object TypeScriptTypes extends Types {
-  override val any = ": any"
-  override val fluencePeer = ": FluencePeer"
-  override val string = ": string"
-  override val requestFlow = ": RequestFlow"
-  override def stringArr: String = ": string[]"
-  override def excl: String = "!"
+  override def typed(field: String, t: String): String = s"$field: $t"
+  override def generic(field: String, t: String): String = s"$field<$t>"
+  override def bang(field: String): String = s"$field!"
 
   override def funcType(f: FuncRes): FuncTypes = TSFuncTypes(f)
 

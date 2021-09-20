@@ -17,7 +17,9 @@ case class OutputFile(res: AquaRes) {
       res.funcs.map(f => OutputFunc(f, types)).map(_.generate).toList.mkString("\n\n")
     s"""${Header.header(false)}
        |
-       |function missingFields(obj$any, fields$stringArr)$stringArr {
+       |function ${typed(
+      s"""missingFields(${typed("obj", "any")}, ${typed("fields", "string[]")})""", 
+      "string[]")} {
        |    return fields.filter(f => !(f in obj))
        |}
        |
