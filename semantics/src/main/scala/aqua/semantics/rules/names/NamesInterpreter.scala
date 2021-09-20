@@ -1,10 +1,11 @@
 package aqua.semantics.rules.names
 
+import aqua.semantics.Levenshtein
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, Type}
 import cats.data.{OptionT, State}
-import cats.syntax.flatMap._
-import cats.syntax.functor._
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
@@ -39,7 +40,11 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
           .flatTap {
             case None if rn.mustBeDefined =>
               getState.flatMap(st =>
-                report(rn.name, "Undefined name, available: " + st.allNames.mkString(", "))
+                report(
+                  rn.name,
+                  Levenshtein
+                    .genMessage(s"Name '${rn.name.value}' isn't found in scope", rn.name.value, st.allNames.toList)
+                )
               )
             case _ => State.pure(())
           }
@@ -51,7 +56,10 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
           case Some(g) => State.pure(Option(g))
           case None =>
             getState.flatMap(st =>
-              report(ra.name, "Undefined arrow, available: " + st.allNames.mkString(", "))
+              report(
+                ra.name,
+                Levenshtein.genMessage(s"Name '${ra.name.value}' not found in scope", ra.name.value, st.allNames.toList)
+              )
                 .as(Option.empty[ArrowType])
             )
         }

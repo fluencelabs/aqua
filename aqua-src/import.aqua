@@ -5,7 +5,11 @@ service GetStr("multiret-test"):
 func foo_wrapper():
     GetStr.retStr(nil, nil)
 
-func invalid_append():
+func invalid_append() -> *string:
     stream: *string
-    variable <- Op.identity("hello")
-    stream <- variable
+    cream: *string
+    dream: *string
+    str: *string
+    asdasd: *string
+    GetStr.retStr(stream, nil)
+    <- streem
