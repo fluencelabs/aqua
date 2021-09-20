@@ -6,7 +6,7 @@ import scala.collection.mutable
 
 object Levenshtein {
 
-  def countDistance(str1: String, str2: String): Int = {
+  def calculateDistance(str1: String, str2: String): Int = {
     val allDistances = mutable.Map[(Int, Int), Int]()
 
     def distance(left: Int, right: Int): Int = {
@@ -34,18 +34,18 @@ object Levenshtein {
 
   // Get most similar to 'str' from list of strings
   def mostSimilar(str: String, possiblySimilar: NonEmptyList[String], count: Int) = {
-    possiblySimilar.map(s => (s, countDistance(str, s))).sortBy(_._2).take(count).map(_._1)
+    possiblySimilar.map(s => (s, calculateDistance(str, s))).sortBy(_._2).take(count).map(_._1)
   }
 
   // TODO: add to a config?
-  val SIMILAR_COUNT = 5
+  val SIMILARITY_THRESHOLD = 5
 
   // Generate a message based on similarity of strings
   def genMessage(prefix: String, str: String, possiblySimilar: List[String]) = {
     val possiblySimNel = NonEmptyList.fromList(possiblySimilar)
     possiblySimNel match {
       case Some(nel) =>
-        val similar = mostSimilar(str, nel, SIMILAR_COUNT)
+        val similar = mostSimilar(str, nel, SIMILARITY_THRESHOLD)
         s"$prefix. Did you mean any of this? ${similar.map(s => s"'$s'").mkString(", ")}"
       case None =>
         s"$prefix"

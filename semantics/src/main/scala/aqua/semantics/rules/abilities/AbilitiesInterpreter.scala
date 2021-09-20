@@ -49,7 +49,7 @@ class AbilitiesInterpreter[F[_], X](implicit
                 report(
                   ga.arrow,
                   Levenshtein.genMessage(
-                    s"Service is found, but arrow '${ga.arrow.value}' not found in scope",
+                    s"Service is found, but arrow '${ga.arrow.value}' isn't found in scope",
                     ga.arrow.value,
                     arrows.value.keys.toNonEmptyList.toList
                   )
@@ -64,7 +64,7 @@ class AbilitiesInterpreter[F[_], X](implicit
                     report(
                       ga.arrow,
                       Levenshtein.genMessage(
-                        s"Ability is found, but arrow '${ga.arrow.value}' not found in scope",
+                        s"Ability is found, but arrow '${ga.arrow.value}' isn't found in scope",
                         ga.arrow.value,
                         abCtx.funcs.keys.toList
                       )

@@ -43,7 +43,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
                 report(
                   rn.name,
                   Levenshtein
-                    .genMessage(s"Name '${rn.name.value}' not found in scope", rn.name.value, st.allNames.toList)
+                    .genMessage(s"Name '${rn.name.value}' isn't found in scope", rn.name.value, st.allNames.toList)
                 )
               )
             case _ => State.pure(())
