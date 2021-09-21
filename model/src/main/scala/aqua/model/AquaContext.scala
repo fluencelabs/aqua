@@ -56,7 +56,7 @@ case class AquaContext(
   def pickDeclared(implicit semi: Semigroup[AquaContext]): AquaContext =
     if (module.isEmpty) this
     else
-      declares
+      declares.toList
         .flatMap(pick(_, None))
         .foldLeft(pickHeader)(
           _ |+| _
