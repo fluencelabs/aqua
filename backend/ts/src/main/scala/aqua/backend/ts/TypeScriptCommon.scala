@@ -28,9 +28,7 @@ object TypeScriptCommon {
     case pt: ProductType =>
       "[" + pt.toList.map(typeToTs).mkString(", ") + "]"
     case st: StructType => 
-      s"""{
-         |${st.fields.map(typeToTs).toNel.map(kv => "    " + kv._1 + ": " + kv._2 + ";").toList.mkString("\n")}
-         |}""".stripMargin
+      s"{ ${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ": " + kv._2 + ";").toList.mkString(" ")} }"
     case st: ScalarType if ScalarType.number(st) => "number"
     case ScalarType.bool => "boolean"
     case ScalarType.string => "string"
@@ -77,9 +75,6 @@ object TypeScriptCommon {
       "null"
     }
     s"callParams: CallParams<${generic}>"
-
-  def argsCallToTs(at: ArrowType): List[String] =
-    FuncRes.arrowArgIndices(at).map(idx => s"args[$idx]")
 
   def callBackExprBody(at: ArrowType, callbackName: String, leftSpace: Int): String = {
     val arrowArgumentsToCallbackArgumentsList =
