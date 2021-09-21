@@ -19,17 +19,21 @@ case class ConstantExpr[F[_]](
 }
 
 object ConstantExpr extends Expr.Leaf {
+  
+  private def constName[F[_]: LiftParser: Comonad]: P[Name[F]] =
+    `const` *> ` ` *> Name.upper[F].withContext("Constant's names must be in UPPERCASE") <* ` `
+  
 
   override def p[F[_]: LiftParser: Comonad]: P[ConstantExpr[F]] =
-    ((((`const` *> ` ` *> Name
-      .upper[F] <* ` `) ~ `?`.?).with1 <* `=` <* ` `) ~ Value.`value`).map {
-      case ((name, mark), value) =>
-        ConstantExpr(name, value, mark.nonEmpty)
+    (((constName ~ `?`.?).with1 <* `=` <* ` `) ~ Value.`value`)
+    .map { case ((name, mark), value) =>
+      ConstantExpr(name, value, mark.nonEmpty)
     }
 
   def onlyLiteral[F[_]: LiftParser: Comonad]: P[(Name[F], Literal[F])] =
     ((((Name
-      .upper[F] <* ` `) ~ `?`.?).with1 <* `=` <* ` `) ~ Value.literal).map { case ((name, _), value) =>
-      (name, value)
+      .upper[F] <* ` `) ~ `?`.?).with1 <* `=` <* ` `) ~ Value.literal).map {
+      case ((name, _), value) =>
+        (name, value)
     }
 }
