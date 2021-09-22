@@ -31,10 +31,10 @@ if ((initArgs.includes('-v') || initArgs.includes('--version'))) {
 
 const argsString = args.join(" ");
 
-console.log("Aqua JS: " + argsString);
+console.log("Aqua: " + argsString);
 exec(argsString, (err, stdout, stderr) => {
-  console.error("Aqua JS: " + stderr);
-  console.log("Aqua JS: " + stdout);
+  console.error("Aqua: " + stderr);
+  console.log("Aqua: " + stdout);
 
   if (err) {
     process.exit(err.code);
