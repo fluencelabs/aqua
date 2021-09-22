@@ -11,10 +11,10 @@ object TypeScriptCommon {
     val genType = typeToTs(t)
     t match {
       case tt: ProductType =>
-        val gen = s"type $name = $genType"
+        val gen = s"export type $name = $genType"
         (Some(gen), name)
       case tt: StructType =>
-        val gen = s"type $name = $genType"
+        val gen = s"export type $name = $genType"
         (Some(gen), name)
       case _ => (None, genType)
 
