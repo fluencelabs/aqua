@@ -51,12 +51,7 @@ jobs:
         run: |
           git clone https://github.com/fluencelabs/aqua-playground.git
           cd aqua-playground
-          rm -rf src/compiled/examples/*
           npm i
-          cd ..
-          sbt "cli/run -i aqua-playground/aqua/examples -o aqua-playground/src/compiled/examples -m aqua-playground/node_modules -c \"UNIQUE_CONST = 1\" -c \"ANOTHER_CONST = \\\"ab\\\"\""
-          cd aqua-playground
-          npm run examples
           cd ..
           sbt "cliJS/fastOptJS"
           rm -rf aqua-playground/src/compiled/examples/*

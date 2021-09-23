@@ -1,21 +1,21 @@
-package aqua.backend.js
+package aqua.backend
 
-import aqua.backend.air.FuncAirGen
-import aqua.model.transform.res.FuncRes
-import aqua.types.*
-import cats.syntax.show.*
+import aqua.backend.ts.TypeScriptCommon.callBackExprBody
+import aqua.backend.ts.TypeScriptCommon
 import aqua.model.transform.res.ServiceRes
+import aqua.types.ArrowType
 
-case class JavaScriptService(srv: ServiceRes) {
+case class OutputService(srv: ServiceRes, types: Types) {
 
-  import JavaScriptCommon._
+  import TypeScriptCommon.*
+  import types.*
+  val serviceTypes = types.serviceType(srv)
+  import serviceTypes.*
 
   def fnHandler(arrow: ArrowType, memberName: String) = {
-    s"""
-       | if (req.fnName === '${memberName}') {
-       |     ${callBackExprBody(arrow, "service." + memberName)}
-       | }
-    """.stripMargin
+    s"""if (req.fnName === '${memberName}') {
+       |${callBackExprBody(arrow, "service." + memberName, 12)}
+        }""".stripMargin
   }
 
   def generate: String =
@@ -25,22 +25,21 @@ case class JavaScriptService(srv: ServiceRes) {
       }
       .mkString("\n\n")
 
-    val registerName = s"register${srv.name}"
-
-    val defaultServiceIdBranch = srv.defaultId.fold("")(x => 
-      s""" 
-      | else {
-      |     serviceId = ${x}
-      |}""".stripMargin
+    val defaultServiceIdBranch = srv.defaultId.fold("")(x =>
+      s"""else {
+      |        serviceId = ${x}
+      |    }""".stripMargin
     )
 
     val membersNames = srv.members.map(_._1)
 
     s"""
-      |export function ${registerName}(...args) {
-      |    let peer;
-      |    let serviceId;
-      |    let service;
+      |${serviceTypes.generate}
+      |
+      |export function register${srv.name}(${typed("...args", "any")}) {
+      |    let ${typed("peer", "FluencePeer")};
+      |    let ${typed("serviceId", "any")};
+      |    let ${typed("service", "any")};
       |    if (FluencePeer.isInstance(args[0])) {
       |        peer = args[0];
       |    } else {
@@ -66,21 +65,21 @@ case class JavaScriptService(srv: ServiceRes) {
       |        service = args[2];
       |    }
       |
-      |    const incorrectServiceDefinitions = missingFields(service, [${membersNames.map { n => s"'$n'"}.mkString(", ")}]);
-      |    if (!incorrectServiceDefinitions.length) {
+      |    const incorrectServiceDefinitions = missingFields(service, [${membersNames.map { n => s"'$n'" }.mkString(", ")}]);
+      |    if (!!incorrectServiceDefinitions.length) {
       |        throw new Error("Error registering service ${srv.name}: missing functions: " + incorrectServiceDefinitions.map((d) => "'" + d + "'").join(", "))
       |    }
       |
       |    peer.internals.callServiceHandler.use((req, resp, next) => {
       |        if (req.serviceId !== serviceId) {
       |            next();
-      |                return;
-      |            }
+      |            return;
+      |        }
       |
-      |${fnHandlers}
+      |        ${fnHandlers}
       |
-      |            next();
-      |        });
-      | }
+      |        next();
+      |    });
+      |}
       """.stripMargin
 }

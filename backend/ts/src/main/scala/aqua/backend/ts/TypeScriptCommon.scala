@@ -7,6 +7,20 @@ import cats.syntax.show.*
 
 object TypeScriptCommon {
 
+  def genTypeName(t: Type, name: String): (Option[String], String) = {
+    val genType = typeToTs(t)
+    t match {
+      case tt: ProductType =>
+        val gen = s"export type $name = $genType"
+        (Some(gen), name)
+      case tt: StructType =>
+        val gen = s"export type $name = $genType"
+        (Some(gen), name)
+      case _ => (None, genType)
+
+    }
+  }
+
   def typeToTs(t: Type): String = t match {
     case OptionType(t) => typeToTs(t) + " | null"
     case ArrayType(t) => typeToTs(t) + "[]"
@@ -14,7 +28,7 @@ object TypeScriptCommon {
     case pt: ProductType =>
       "[" + pt.toList.map(typeToTs).mkString(", ") + "]"
     case st: StructType => 
-      s"{ ${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ": " + kv._2).toList.mkString("; ")} }"
+      s"{ ${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ": " + kv._2 + ";").toList.mkString(" ")} }"
     case st: ScalarType if ScalarType.number(st) => "number"
     case ScalarType.bool => "boolean"
     case ScalarType.string => "string"
@@ -35,10 +49,9 @@ object TypeScriptCommon {
 
   def returnType(at: ArrowType): String =
     at.res.fold("void")(typeToTs)
-
+  
   def fnDef(at: ArrowType): String =
-    val args = argsToTs(at)
-      .concat(List(callParamsArg(at)))
+    val args = (argsToTs(at) :+ callParamsArg(at))
       .mkString(", ")
     
     val retType = returnType(at)
@@ -62,9 +75,6 @@ object TypeScriptCommon {
       "null"
     }
     s"callParams: CallParams<${generic}>"
-
-  def argsCallToTs(at: ArrowType): List[String] =
-    FuncRes.arrowArgIndices(at).map(idx => s"args[$idx]")
 
   def callBackExprBody(at: ArrowType, callbackName: String, leftSpace: Int): String = {
     val arrowArgumentsToCallbackArgumentsList =

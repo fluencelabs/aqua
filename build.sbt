@@ -52,7 +52,7 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
       "co.fs2"        %%% "fs2-io"         % fs2V
     )
   )
-  .dependsOn(compiler, `backend-air`, `backend-ts`, `backend-js`)
+  .dependsOn(compiler, `backend-air`, `backend-ts`)
 
 lazy val cliJS = cli.js
   .settings(
@@ -164,12 +164,5 @@ lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("backend/ts"))
-  .settings(commons: _*)
-  .dependsOn(`backend-air`)
-
-lazy val `backend-js` = crossProject(JVMPlatform, JSPlatform)
-  .withoutSuffixFor(JVMPlatform)
-  .crossType(CrossType.Pure)
-  .in(file("backend/js"))
   .settings(commons: _*)
   .dependsOn(`backend-air`)
