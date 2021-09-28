@@ -2,6 +2,7 @@
   "name": "@fluencelabs/aqua",
   "version": "0.0.0",
   "description": "Aqua compiler",
+  "type": "module",
   "files": [
     "aqua.jar",
     "aqua.js",
@@ -14,7 +15,12 @@
     "aqua-cli": "error.js",
     "aqua-j": "index-java.js"
   },
-  "scripts": {},
+  "scripts": {
+    "run": "node index.js"
+  },
+  "dependencies": {
+    "@fluencelabs/fluence": "0.12.1"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fluencelabs/aqua.git"

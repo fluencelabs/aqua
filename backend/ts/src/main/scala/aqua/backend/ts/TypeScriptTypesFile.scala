@@ -5,7 +5,7 @@ import aqua.model.transform.res.AquaRes
 
 case class TypeScriptTypesFile(res: AquaRes) {
   def generate: String =
-    s"""${Header.header(false)}
+    s"""${Header.header(false, false)}
        |
        |// Services
        |${res.services.map(TSServiceTypes(_)).map(_.generate).toList.mkString("\n\n")}

@@ -2,9 +2,13 @@
 
 "use strict";
 
-const { exec } = require("child_process");
-const path = require("path");
-const fs = require('fs');
+import { exec } from "child_process";
+import * as path from 'path';
+import fs from 'fs';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const nm = path.join("./", "node_modules")
 let initArgs = process.argv.slice(2)
