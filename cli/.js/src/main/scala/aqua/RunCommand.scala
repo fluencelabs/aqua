@@ -28,13 +28,41 @@ import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.*
 
+trait ParticleContext {
+  def particleId: String
+  def initPeerId: String
+  def timestamp: Int
+  def ttl: Int
+  def signature: String
+}
+
+object ResultCodes {
+  val success = 0
+  val unknownError = 1
+  val exceptionInHandler = 2
+}
+
+trait CallServiceResult extends js.Object {
+  def retCode: Int
+  def retCode_=(code: Int): Unit
+  def result: js.Any
+  def result_=(res: js.Any): Unit
+}
+
+trait CallServiceData extends js.Object {
+  def serviceId: String
+  def fnName: String
+  def args: js.Array[js.Any]
+  def particleContext: ParticleContext
+  def tetraplets: js.Any
+}
+
 trait Internals extends js.Object {
-//  def initiateFlow(r: RequestFlow) = js.native
   def initiateFlow(r: RequestFlow): Promise[js.Any]
+  def callServiceHandler: CallServiceHandler
 }
 
 trait Status extends js.Object {
-  //  def initiateFlow(r: RequestFlow) = js.native
   def relayPeerId: String
 }
 
@@ -67,6 +95,8 @@ class CallServiceHandler extends js.Object {
     fnName: String,
     handler: js.Function2[js.Array[js.Any], js.Any, js.Any]
   ): js.Function0[CallServiceHandler] = js.native
+
+  def use(f: js.Function3[CallServiceData, CallServiceResult, js.Function0[Unit], Unit]): CallServiceHandler = js.native
 }
 
 @js.native
@@ -77,21 +107,13 @@ class RequestFlow extends js.Object {}
 @JSImport("@fluencelabs/fluence/dist/internal/compilerSupport/v1.js", "RequestFlowBuilder")
 class RequestFlowBuilder extends js.Object {
   def withRawScript(air: String): RequestFlowBuilder = js.native
-
   def configHandler(f: js.Function2[CallServiceHandler, js.Any, Unit]): RequestFlowBuilder =
     js.native
   def disableInjections(): RequestFlowBuilder = js.native
   def build(): RequestFlow = js.native
   def handleScriptError(f: js.Function1[js.Any, Unit]): RequestFlowBuilder = js.native
   def handleTimeout(f: js.Function0[Unit]): RequestFlowBuilder = js.native
-
 }
-
-//@js.native
-//@JSImport("./compiled/caller.js", JSImport.Namespace)
-//object Caller extends js.Object {
-//  def callFunc(str: String): js.Promise[js.Any] = js.native
-//}
 
 object RunCommand {
   implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
@@ -102,6 +124,18 @@ object RunCommand {
     .withHandler(formatter = LogFormatter.formatter, minimumLevel = Some(scribe.Level.Info))
     .replace()
 
+  def registerService(peer: FluencePeer, serviceId: String, fnName: String, f: (js.Array[js.Any]) => Unit) = {
+    peer.internals.callServiceHandler.use((req, resp, next) => {
+      if (req.serviceId == serviceId && req.fnName == fnName) {
+        f(req.args)
+        resp.retCode = ResultCodes.success
+        resp.result = new js.Object {}
+      }
+
+      next()
+    })
+  }
+
   def rb(
     fnName: String,
     air: String,
@@ -109,12 +143,13 @@ object RunCommand {
     funcRes: FuncRes
   ): Future[Any] = {
     val peer = Fluence.getPeer()
-    // result type in promise
     val pr: Promise[js.Any] = Promise[js.Any]()
 
     val rb = new RequestFlowBuilder()
     val relayPeerId = peer.getStatus().relayPeerId
-    println("air: " + air)
+
+    registerService(peer, "console", "print", args => println("print: " + args))
+
     rb
       .disableInjections()
       .withRawScript(air)
@@ -190,8 +225,6 @@ object RunCommand {
               )
 
             } yield {
-              println("RESULTING: ")
-              println("RESULT: " + result)
             })
           case None =>
             Future.failed(new RuntimeException("something wrong, no FuncRes"))
