@@ -29,8 +29,19 @@ object RunOpts {
       .option[String]("func", "Function to call with args", "f")
 
   def runOptions[F[_]: Monad: Files: AquaIO](implicit F: Future ~> F): Opts[F[cats.effect.ExitCode]] =
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcNameOpt).mapN { (i, imp, multiaddr, func) =>
-      RunCommand.run(multiaddr, func).map(_ => cats.effect.ExitCode.Success)
+    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcNameOpt).mapN { (inputF, importF, multiaddr, func) =>
+      for {
+        inputV <- inputF
+        impsV <- importF
+        result <- inputV.fold(_ => cats.effect.ExitCode.Error.pure[F], { input =>
+          impsV.fold(_ => cats.effect.ExitCode.Error.pure[F], { imps =>
+            RunCommand.run(multiaddr, func, input, imps).map(_ => cats.effect.ExitCode.Success)
+          })
+        })
+      } yield {
+        result
+      }
+
     }
 
   def runCommand[F[_]: Monad: Files: AquaIO](implicit F: Future ~> F): Command[F[ExitCode]] = Command(
