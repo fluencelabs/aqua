@@ -17,9 +17,12 @@ import cats.{Comonad, Functor, Monad}
 import com.monovore.decline.Opts.help
 import com.monovore.decline.{Opts, Visibility}
 import scribe.Level
+import cats.~>
 import fs2.io.file.{Files, Path}
 
-object AppOps {
+import scala.concurrent.Future
+
+object AppOpts {
 
   val helpOpt: Opts[Unit] =
     Opts.flag("help", help = "Display this help text", "h", Visibility.Partial).asHelp.as(())
@@ -32,6 +35,8 @@ object AppOps {
       str =>
         Validated.fromEither(toLogLevel(str))
     }
+
+  def runCom[F[_]: Monad: Files: AquaIO](implicit F: Future ~> F): Opts[F[ExitCode]] = Opts.subcommand(RunOpts.runCommand[F])
 
   def toLogLevel(logLevel: String): Either[NonEmptyList[String], Level] = {
     LogLevel.stringToLogLevel

@@ -1,5 +1,7 @@
 package aqua.backend
 
+import aqua.model.transform.res.FuncRes
+
 /**
  * Compilation result
  *
@@ -7,4 +9,4 @@ package aqua.backend
  * @param content compiled code
  * @param suffix info (func name for Air backend) that will be added to a resulted file name
  */
-case class Generated(extension: String, content: String, suffix: Option[String] = None)
+case class Generated(extension: String, content: String, func: Option[FuncRes] = None)

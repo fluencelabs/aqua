@@ -28,8 +28,8 @@ if ((initArgs.includes('-v') || initArgs.includes('--version'))) {
     args = [
       "node",
       path.join(__dirname, "aqua.js"),
-      ...importArgs,
       ...initArgs,
+      ...importArgs,
     ];
 }
 

@@ -1,6 +1,9 @@
-service Some("s"):
-  sCall() -> string
+service Console("console"):
+    print(s: string)
 
+-- caller.aqua
 func callFunc(str: string, str2: string) -> string, string:
+    Console.print(str)
+    Console.print(str2)
     <- str, str2
 

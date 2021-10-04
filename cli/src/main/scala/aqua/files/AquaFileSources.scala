@@ -133,7 +133,7 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
         resolveTargetPath(
           ac.sourceId.file,
           targetPath,
-          compiled.suffix.map("." + _).getOrElse("") + compiled.extension
+          compiled.func.map(_.funcName).map("." + _).getOrElse("") + compiled.extension
         ).flatMap { result =>
           result
             .leftMap(FileSystemError.apply)
