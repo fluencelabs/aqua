@@ -20,16 +20,20 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.monad.*
 import cats.syntax.functor.*
+import cats.syntax.show.*
 import cats.~>
 import cats.Id
 import aqua.parser.lexer.Literal
+import cats.data.{NonEmptyList, NonEmptyChain}
+import cats.data.ValidatedNel
 
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.*
 import scala.concurrent.ExecutionContext
+import scribe.Logging
 
-object RunCommand {
+object RunCommand extends Logging {
   def registerService(peer: FluencePeer, serviceId: String, fnName: String, f: (js.Array[js.Any]) => Unit) = {
     peer.internals.callServiceHandler.use((req, resp, next) => {
       if (req.serviceId == serviceId && req.fnName == fnName) {
@@ -101,16 +105,14 @@ object RunCommand {
 
   val funcName = "callerUniqueFunction"
 
-  def funcCall(multiaddr: String, air: Chain[AquaCompiled[FileModuleId]])(implicit F: Future ~> F, ec: ExecutionContext) = {
+  def funcCall(multiaddr: String, air: Chain[AquaCompiled[FileModuleId]])(implicit ec: ExecutionContext): Future[Validated[String, Unit]] = {
 
     val z = air.toList
       .map(g => g.compiled.find(_.func.map(_.funcName).filter(f => f == funcName).isDefined))
       .flatten
     if (z.length > 1) {
-      Future.failed(
-        new RuntimeException(
-          "something wrong, there is multiple number of functions with the same name"
-        )
+      Future.successful(
+        Validated.Invalid("Unexpected. There is multiple number of functions with the same name")
       )
     } else {
       z.headOption.map { gen =>
@@ -128,12 +130,13 @@ object RunCommand {
               )
 
             } yield {
+              Validated.Valid({})
             })
           case None =>
-            Future.failed(new RuntimeException("something wrong, no FuncRes"))
+            Future.successful(Validated.Invalid("Unexpected. No FuncRes in generated object"))
         }
 
-      }.getOrElse(Future.failed(new RuntimeException("there is no such func")))
+      }.getOrElse(Future.successful(Validated.Invalid("Unexpected. Cannot find ")))
     }
   }
 
@@ -161,13 +164,25 @@ object RunCommand {
           TransformConfig()
         )
       _ = println("Parsing ends in : " + (System.currentTimeMillis() - start) + " ms")
-      air: Chain[AquaCompiled[FileModuleId]] = airV.getOrElse(Chain.empty)
-      _ <- F {
-        funcCall(multiaddr, air)
+      result <- {
+        airV match {
+          case Validated.Valid(air) =>
+            F {
+              funcCall(multiaddr, air).map(_.toValidatedNec)
+            }
+          case Validated.Invalid(errs) =>
+            import ErrorRendering.showError
+            Validated.invalid(errs.map(_.show)).pure[F]
+
+        }
       }
 
       _ = println("Compilation ends in : " + (System.currentTimeMillis() - start) + " ms")
-    } yield ()
+    } yield {
+      result.fold({ (errs: NonEmptyChain[String]) =>
+        errs.toChain.toList.foreach(err => println(err + "\n"))
+      }, identity)
+    }
   }
 
 }
