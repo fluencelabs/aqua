@@ -46,6 +46,7 @@ object AquaCli extends IOApp with Logging {
   def main[F[_]: Concurrent: Files: ConsoleEff](runtime: unsafe.IORuntime)(implicit F: Future ~> F): Opts[F[ExitCode]] = {
     implicit val r = runtime
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]
+    implicit val ec = r.compute
 
     runCom orElse versionOpt
       .as(

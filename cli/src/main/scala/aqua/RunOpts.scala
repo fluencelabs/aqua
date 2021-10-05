@@ -14,6 +14,7 @@ import cats.~>
 import cats.Id
 import cats.data.{NonEmptyList, Validated}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import scala.concurrent.ExecutionContext
 
 import scala.concurrent.Future
 
@@ -28,7 +29,7 @@ object RunOpts {
     Opts
       .option[String]("func", "Function to call with args", "f")
 
-  def runOptions[F[_]: Monad: Files: AquaIO](implicit F: Future ~> F): Opts[F[cats.effect.ExitCode]] =
+  def runOptions[F[_]: Monad: Files: AquaIO](implicit F: Future ~> F, ec: ExecutionContext): Opts[F[cats.effect.ExitCode]] =
     (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcNameOpt).mapN { (inputF, importF, multiaddr, func) =>
       for {
         inputV <- inputF
@@ -44,7 +45,7 @@ object RunOpts {
 
     }
 
-  def runCommand[F[_]: Monad: Files: AquaIO](implicit F: Future ~> F): Command[F[ExitCode]] = Command(
+  def runCommand[F[_]: Monad: Files: AquaIO](implicit F: Future ~> F, ec: ExecutionContext): Command[F[ExitCode]] = Command(
     name = "run",
     header = "Run a function from an aqua code"
   ) {

@@ -27,16 +27,9 @@ import aqua.parser.lexer.Literal
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.*
+import scala.concurrent.ExecutionContext
 
 object RunCommand {
-  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
-
-  scribe.Logger.root
-    .clearHandlers()
-    .clearModifiers()
-    .withHandler(formatter = LogFormatter.formatter, minimumLevel = Some(scribe.Level.Info))
-    .replace()
-
   def registerService(peer: FluencePeer, serviceId: String, fnName: String, f: (js.Array[js.Any]) => Unit) = {
     peer.internals.callServiceHandler.use((req, resp, next) => {
       if (req.serviceId == serviceId && req.fnName == fnName) {
@@ -56,62 +49,60 @@ object RunCommand {
     funcRes: FuncRes
   ): Future[Any] = {
     val peer = Fluence.getPeer()
-    val pr: Promise[js.Any] = Promise[js.Any]()
+    val resultPromise: Promise[js.Any] = Promise[js.Any]()
 
-    val rb = new RequestFlowBuilder()
+    val requestBuilder = new RequestFlowBuilder()
     val relayPeerId = peer.getStatus().relayPeerId
 
     registerService(peer, "console", "print", args => println("print: " + args))
 
-    rb
+    requestBuilder
       .disableInjections()
       .withRawScript(air)
-      .configHandler((h, r) => {
-        h.on("getDataSrv", "-relay-", (_, _) => { relayPeerId })
+      .configHandler((handler, r) => {
+        handler.on("getDataSrv", "-relay-", (_, _) => { relayPeerId })
         args.foreach { (fnName, arg) =>
-          h.on("getDataSrv", fnName, (_, _) => arg)
+          handler.on("getDataSrv", fnName, (_, _) => arg)
         }
-        h.onEvent(
+        handler.onEvent(
           "callbackSrv",
           "response",
           (args, _) => {
             if (args.length == 1) {
-              pr.success(args.pop())
+              resultPromise.success(args.pop())
             } else if (args.length == 0) {
-              pr.success({})
+              resultPromise.success({})
             } else {
-              pr.success(args)
+              resultPromise.success(args)
             }
             {}
           }
         )
-        h.onEvent(
+        handler.onEvent(
           "errorHandlingSrv",
           "error",
           (args, _) => {
-
-            println("ERROR HANDLING: " + js.JSON.stringify(args))
-            pr.failure(new RuntimeException(args.pop().toString))
+            resultPromise.failure(new RuntimeException(args.pop().toString))
             {}
           }
         )
       })
       .handleScriptError((err) => {
-        println("HANDLE SCRIPT ERROR: " + js.JSON.stringify(err))
-        pr.failure(new RuntimeException("script error: " + err.toString))
+        resultPromise.failure(new RuntimeException("script error: " + err.toString))
       })
       .handleTimeout(() => {
-        if (!pr.isCompleted) pr.failure(new RuntimeException(s"Request timed out for $fnName"))
+        if (!resultPromise.isCompleted) resultPromise.failure(new RuntimeException(s"Request timed out for $fnName"))
       })
 
-    peer.internals.initiateFlow(rb.build())
+    peer.internals.initiateFlow(requestBuilder.build())
 
-    funcRes.returnType.fold(Future.unit)(_ => pr.future)
+    funcRes.returnType.fold(Future.unit)(_ => resultPromise.future)
   }
 
-  val funcName = "myRandomFunc"
+  val funcName = "callerUniqueFunction"
 
-  def funcCall(multiaddr: String, air: Chain[AquaCompiled[FileModuleId]]) = {
+  def funcCall(multiaddr: String, air: Chain[AquaCompiled[FileModuleId]])(implicit F: Future ~> F, ec: ExecutionContext) = {
+
     val z = air.toList
       .map(g => g.compiled.find(_.func.map(_.funcName).filter(f => f == funcName).isDefined))
       .flatten
@@ -146,7 +137,7 @@ object RunCommand {
     }
   }
 
-  def run[F[_]: Monad: Files: AquaIO](multiaddr: String, func: String, input: Path, imps: List[Path])(implicit F: Future ~> F): F[Unit] = {
+  def run[F[_]: Monad: Files: AquaIO](multiaddr: String, func: String, input: Path, imps: List[Path])(implicit F: Future ~> F, ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     for {
       start <- System.currentTimeMillis().pure[F]

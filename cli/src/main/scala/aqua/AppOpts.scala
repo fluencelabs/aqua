@@ -20,7 +20,7 @@ import scribe.Level
 import cats.~>
 import fs2.io.file.{Files, Path}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 object AppOpts {
 
@@ -36,7 +36,7 @@ object AppOpts {
         Validated.fromEither(toLogLevel(str))
     }
 
-  def runCom[F[_]: Monad: Files: AquaIO](implicit F: Future ~> F): Opts[F[ExitCode]] = Opts.subcommand(RunOpts.runCommand[F])
+  def runCom[F[_]: Monad: Files: AquaIO](implicit F: Future ~> F, ec: ExecutionContext): Opts[F[ExitCode]] = Opts.subcommand(RunOpts.runCommand[F])
 
   def toLogLevel(logLevel: String): Either[NonEmptyList[String], Level] = {
     LogLevel.stringToLogLevel
