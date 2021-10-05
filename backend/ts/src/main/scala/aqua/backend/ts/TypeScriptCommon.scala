@@ -96,10 +96,10 @@ object TypeScriptCommon {
       at.res.fold(s"${callCallbackStatement}; resp.result = {}")(`type` =>
         `type` match {
           case OptionType(t) => s"""
-                                   | var respResult = ${callCallbackStatement};
+                                   | var respResult = await ${callCallbackStatement};
                                    | resp.result = respResult === null ? [] : [respResult]
                                    |""".stripMargin
-          case _ => s"resp.result = ${callCallbackStatement}"
+          case _ => s"resp.result = await ${callCallbackStatement}"
         }
       )
 

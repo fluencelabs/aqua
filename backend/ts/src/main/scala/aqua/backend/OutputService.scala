@@ -70,15 +70,15 @@ case class OutputService(srv: ServiceRes, types: Types) {
       |        throw new Error("Error registering service ${srv.name}: missing functions: " + incorrectServiceDefinitions.map((d) => "'" + d + "'").join(", "))
       |    }
       |
-      |    peer.internals.callServiceHandler.use((req, resp, next) => {
+      |    peer.internals.callServiceHandler.use(async (req, resp, next) => {
       |        if (req.serviceId !== serviceId) {
-      |            next();
+      |            await next();
       |            return;
       |        }
       |
       |        ${fnHandlers}
       |
-      |        next();
+      |        await next();
       |    });
       |}
       """.stripMargin
