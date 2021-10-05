@@ -9,103 +9,27 @@ import aqua.io.AquaFileError
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.res.FuncRes
 import aqua.parser.expr.CallArrowExpr
+import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
-import cats.Monad
-import cats.data.Validated
+import cats.data.*
 import cats.effect.{IO, IOApp, Sync}
-import fs2.io.file.{Files, Path}
-import cats.data.Chain
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.monad.*
 import cats.syntax.functor.*
+import cats.syntax.monad.*
 import cats.syntax.show.*
-import cats.~>
-import cats.Id
-import aqua.parser.lexer.Literal
-import cats.data.{NonEmptyList, NonEmptyChain}
-import cats.data.ValidatedNel
-
-import scala.concurrent.{Future, Promise}
-import scala.scalajs.js
-import scala.scalajs.js.annotation.*
-import scala.concurrent.ExecutionContext
+import cats.{Id, Monad, ~>}
+import fs2.io.file.{Files, Path}
 import scribe.Logging
 
+import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.scalajs.js
+import scala.scalajs.js.annotation.*
+
 object RunCommand extends Logging {
-  def registerService(peer: FluencePeer, serviceId: String, fnName: String, f: (js.Array[js.Any]) => Unit) = {
-    peer.internals.callServiceHandler.use((req, resp, next) => {
-      if (req.serviceId == serviceId && req.fnName == fnName) {
-        f(req.args)
-        resp.retCode = ResultCodes.success
-        resp.result = new js.Object {}
-      }
 
-      next()
-    })
-  }
-
-  def funcCallJs(
-    fnName: String,
-    air: String,
-    args: List[(String, js.Any)],
-    funcRes: FuncRes
-  ): Future[Any] = {
-    val peer = Fluence.getPeer()
-    val resultPromise: Promise[js.Any] = Promise[js.Any]()
-
-    val requestBuilder = new RequestFlowBuilder()
-    val relayPeerId = peer.getStatus().relayPeerId
-
-    registerService(peer, "console", "print", args => println("print: " + args))
-
-    requestBuilder
-      .disableInjections()
-      .withRawScript(air)
-      .configHandler((handler, r) => {
-        handler.on("getDataSrv", "-relay-", (_, _) => { relayPeerId })
-        args.foreach { (fnName, arg) =>
-          handler.on("getDataSrv", fnName, (_, _) => arg)
-        }
-        handler.onEvent(
-          "callbackSrv",
-          "response",
-          (args, _) => {
-            if (args.length == 1) {
-              resultPromise.success(args.pop())
-            } else if (args.length == 0) {
-              resultPromise.success({})
-            } else {
-              resultPromise.success(args)
-            }
-            {}
-          }
-        )
-        handler.onEvent(
-          "errorHandlingSrv",
-          "error",
-          (args, _) => {
-            resultPromise.failure(new RuntimeException(args.pop().toString))
-            {}
-          }
-        )
-      })
-      .handleScriptError((err) => {
-        resultPromise.failure(new RuntimeException("script error: " + err.toString))
-      })
-      .handleTimeout(() => {
-        if (!resultPromise.isCompleted) resultPromise.failure(new RuntimeException(s"Request timed out for $fnName"))
-      })
-
-    peer.internals.initiateFlow(requestBuilder.build())
-
-    funcRes.returnType.fold(Future.unit)(_ => resultPromise.future)
-  }
-
-  val funcName = "callerUniqueFunction"
-
-  def funcCall(multiaddr: String, air: Chain[AquaCompiled[FileModuleId]])(implicit ec: ExecutionContext): Future[Validated[String, Unit]] = {
+  def funcCall(multiaddr: String, funcName: String, air: Chain[AquaCompiled[FileModuleId]])(implicit ec: ExecutionContext): Future[Validated[String, Unit]] = {
 
     val z = air.toList
       .map(g => g.compiled.find(_.func.map(_.funcName).filter(f => f == funcName).isDefined))
@@ -117,16 +41,19 @@ object RunCommand extends Logging {
     } else {
       z.headOption.map { gen =>
         gen.func match {
-          case Some(f) =>
+          case Some(funcRes) =>
             (for {
               _ <- Fluence
                 .start(multiaddr)
                 .toFuture
-              result <- funcCallJs(
+              peer = Fluence.getPeer()
+              _ = CallJsFunction.registerUnitService(peer, "console", "print", args => println("print: " + args))
+              result <- CallJsFunction.funcCallJs(
+                peer,
                 funcName,
                 gen.content,
                 Nil,
-                f
+                funcRes
               )
 
             } yield {
@@ -140,17 +67,19 @@ object RunCommand extends Logging {
     }
   }
 
+  val generatedFuncName = "callerUniqueFunction"
+
   def run[F[_]: Monad: Files: AquaIO](multiaddr: String, func: String, input: Path, imps: List[Path])(implicit F: Future ~> F, ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     for {
       start <- System.currentTimeMillis().pure[F]
-      _ = println("run on " + start)
+      _ = println("Started at: " + start + " ms")
       generatedFile = Path("./.aqua/call0.aqua").absolute
       absInput = input.absolute
       code =
         s"""import "${absInput.toString}"
            |
-           |func $funcName():
+           |func $generatedFuncName():
            |  $func
            |""".stripMargin
       _ <- AquaIO[F].writeFile(generatedFile, code).value
@@ -163,12 +92,13 @@ object RunCommand extends Logging {
           AirBackend,
           TransformConfig()
         )
-      _ = println("Parsing ends in : " + (System.currentTimeMillis() - start) + " ms")
+      parsingTime = System.currentTimeMillis()
+      _ = println("Parsing ends in : " + (parsingTime - start) + " ms")
       result <- {
         airV match {
           case Validated.Valid(air) =>
             F {
-              funcCall(multiaddr, air).map(_.toValidatedNec)
+              funcCall(multiaddr, generatedFuncName, air).map(_.toValidatedNec)
             }
           case Validated.Invalid(errs) =>
             import ErrorRendering.showError
@@ -177,7 +107,7 @@ object RunCommand extends Logging {
         }
       }
 
-      _ = println("Compilation ends in : " + (System.currentTimeMillis() - start) + " ms")
+      _ = println("Function call ends in : " + (System.currentTimeMillis() - parsingTime) + " ms")
     } yield {
       result.fold({ (errs: NonEmptyChain[String]) =>
         errs.toChain.toList.foreach(err => println(err + "\n"))
