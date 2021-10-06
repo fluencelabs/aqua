@@ -12,6 +12,8 @@ import aqua.parser.expr.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
 import cats.data.*
+import cats.effect.kernel.Async
+import cats.effect.syntax.async.*
 import cats.effect.{IO, IOApp, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
@@ -69,7 +71,7 @@ object RunCommand extends Logging {
 
   val generatedFuncName = "callerUniqueFunction"
 
-  def run[F[_]: Monad: Files: AquaIO](multiaddr: String, func: String, input: Path, imps: List[Path])(implicit F: Future ~> F, ec: ExecutionContext): F[Unit] = {
+  def run[F[_]: Monad: Files: AquaIO: Async](multiaddr: String, func: String, input: Path, imps: List[Path])(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     for {
       start <- System.currentTimeMillis().pure[F]
@@ -97,8 +99,8 @@ object RunCommand extends Logging {
       result <- {
         airV match {
           case Validated.Valid(air) =>
-            F {
-              funcCall(multiaddr, generatedFuncName, air).map(_.toValidatedNec)
+            Async[F].fromFuture {
+              funcCall(multiaddr, generatedFuncName, air).map(_.toValidatedNec).pure[F]
             }
           case Validated.Invalid(errs) =>
             import ErrorRendering.showError

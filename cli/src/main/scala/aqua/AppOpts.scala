@@ -7,18 +7,18 @@ import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
-import cats.effect.{ExitCode, IO}
+import cats.effect.kernel.Async
 import cats.effect.std.Console
-import cats.syntax.functor.*
-import cats.syntax.traverse.*
+import cats.effect.{ExitCode, IO}
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
-import cats.{Comonad, Functor, Monad}
+import cats.syntax.functor.*
+import cats.syntax.traverse.*
+import cats.{Comonad, Functor, Monad, ~>}
 import com.monovore.decline.Opts.help
 import com.monovore.decline.{Opts, Visibility}
-import scribe.Level
-import cats.~>
 import fs2.io.file.{Files, Path}
+import scribe.Level
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,7 +36,7 @@ object AppOpts {
         Validated.fromEither(toLogLevel(str))
     }
 
-  def runCom[F[_]: Monad: Files: AquaIO](implicit F: Future ~> F, ec: ExecutionContext): Opts[F[ExitCode]] = Opts.subcommand(RunOpts.runCommand[F])
+  def runCom[F[_]: Monad: Files: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] = Opts.subcommand(RunOpts.runCommand[F])
 
   def toLogLevel(logLevel: String): Either[NonEmptyList[String], Level] = {
     LogLevel.stringToLogLevel

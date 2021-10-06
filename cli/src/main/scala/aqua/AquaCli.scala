@@ -7,20 +7,19 @@ import aqua.backend.ts.TypeScriptBackend
 import aqua.files.AquaFilesIO
 import aqua.model.transform.TransformConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import cats.{Functor, Id, Monad}
-import cats.data.{Chain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
+import cats.data.*
 import cats.effect.*
 import cats.effect.std.Console as ConsoleEff
-import cats.syntax.apply.*
-import cats.syntax.functor.*
 import cats.syntax.applicative.*
+import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import com.monovore.decline.Opts
+import cats.syntax.functor.*
+import cats.{Functor, Id, Monad, ~>}
 import com.monovore.decline
+import com.monovore.decline.Opts
 import com.monovore.decline.effect.CommandIOApp
 import fs2.io.file.Files
 import scribe.Logging
-import cats.~>
 
 import scala.concurrent.Future
 
@@ -43,7 +42,7 @@ object AquaCli extends IOApp with Logging {
     }
   }
 
-  def main[F[_]: Concurrent: Files: ConsoleEff](runtime: unsafe.IORuntime)(implicit F: Future ~> F): Opts[F[ExitCode]] = {
+  def main[F[_]: Concurrent: Files: ConsoleEff: Async](runtime: unsafe.IORuntime): Opts[F[ExitCode]] = {
     implicit val r = runtime
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]
     implicit val ec = r.compute
