@@ -4,7 +4,6 @@
   "description": "Aqua compiler",
   "type": "module",
   "files": [
-    "aqua.jar",
     "aqua.js",
     "index.js",
     "index-java.js",
@@ -12,8 +11,7 @@
   ],
   "bin": {
     "aqua": "index.js",
-    "aqua-cli": "error.js",
-    "aqua-j": "index-java.js"
+    "aqua-cli": "error.js"
   },
   "scripts": {
     "run": "node index.js"
