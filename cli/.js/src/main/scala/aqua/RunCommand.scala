@@ -58,7 +58,6 @@ object RunCommand extends Logging {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     for {
       start <- System.currentTimeMillis().pure[F]
-      _ = println("Started at: " + start + " ms")
       generatedFile = Path("./.aqua/call0.aqua").absolute
       absInput = input.absolute
       code =
@@ -78,7 +77,6 @@ object RunCommand extends Logging {
           TransformConfig()
         )
       parsingTime = System.currentTimeMillis()
-      _ = println("Parsing ends in : " + (parsingTime - start) + " ms")
       result <- {
         airV match {
           case Validated.Valid(airC: Chain[AquaCompiled[FileModuleId]]) =>
@@ -96,8 +94,6 @@ object RunCommand extends Logging {
 
         }
       }
-
-      _ = println("Function call ends in : " + (System.currentTimeMillis() - parsingTime) + " ms")
     } yield {
       result.fold({ (errs: NonEmptyChain[String]) =>
         errs.toChain.toList.foreach(err => println(err + "\n"))
