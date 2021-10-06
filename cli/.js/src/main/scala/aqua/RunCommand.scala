@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.backend.Generated
 import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
@@ -31,43 +32,24 @@ import scala.scalajs.js.annotation.*
 
 object RunCommand extends Logging {
 
-  def funcCall(multiaddr: String, funcName: String, air: Chain[AquaCompiled[FileModuleId]])(implicit ec: ExecutionContext): Future[Validated[String, Unit]] = {
-
-    val z = air.toList
-      .map(g => g.compiled.find(_.func.map(_.funcName).filter(f => f == funcName).isDefined))
-      .flatten
-    if (z.length > 1) {
-      Future.successful(
-        Validated.Invalid("Unexpected. There is multiple number of functions with the same name")
+  def funcCall(multiaddr: String, funcName: String, air: Generated)(implicit ec: ExecutionContext): Future[Validated[String, Unit]] = {
+    (for {
+      _ <- Fluence
+        .start(multiaddr)
+        .toFuture
+      peer = Fluence.getPeer()
+      _ = CallJsFunction.registerUnitService(peer, "console", "print", args => println("print: " + args))
+      result <- CallJsFunction.funcCallJs(
+        peer,
+        funcName,
+        air.content,
+        Nil,
+        None // TODO
       )
-    } else {
-      z.headOption.map { gen =>
-        gen.func match {
-          case Some(funcRes) =>
-            (for {
-              _ <- Fluence
-                .start(multiaddr)
-                .toFuture
-              peer = Fluence.getPeer()
-              _ = CallJsFunction.registerUnitService(peer, "console", "print", args => println("print: " + args))
-              result <- CallJsFunction.funcCallJs(
-                peer,
-                funcName,
-                gen.content,
-                Nil,
-                funcRes
-              )
-              _ <- peer.stop().toFuture
-            } yield {
-
-              Validated.Valid({})
-            })
-          case None =>
-            Future.successful(Validated.Invalid("Unexpected. No FuncRes in generated object"))
-        }
-
-      }.getOrElse(Future.successful(Validated.Invalid("Unexpected. Cannot find ")))
-    }
+      _ <- peer.stop().toFuture
+    } yield {
+      Validated.Valid({})
+    })
   }
 
   val generatedFuncName = "callerUniqueFunction"
@@ -99,9 +81,14 @@ object RunCommand extends Logging {
       _ = println("Parsing ends in : " + (parsingTime - start) + " ms")
       result <- {
         airV match {
-          case Validated.Valid(air) =>
-            Async[F].fromFuture {
-              funcCall(multiaddr, generatedFuncName, air).map(_.toValidatedNec).pure[F]
+          case Validated.Valid(airC: Chain[AquaCompiled[FileModuleId]]) =>
+            // Cause we generate input with only one function, we should have only one air compiled content
+            airC.headOption.flatMap(_.compiled.headOption).map { air =>
+              Async[F].fromFuture {
+                funcCall(multiaddr, generatedFuncName, air).map(_.toValidatedNec).pure[F]
+              }
+            }.getOrElse {
+              Validated.invalidNec("Unexpected. There could be only one generated function.").pure[F]
             }
           case Validated.Invalid(errs) =>
             import ErrorRendering.showError

@@ -1,6 +1,7 @@
 package aqua
 
 import aqua.model.transform.res.FuncRes
+import aqua.types.Type
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.scalajs.js
@@ -31,7 +32,7 @@ object CallJsFunction {
     fnName: String,
     air: String,
     args: List[(String, js.Any)],
-    funcRes: FuncRes
+    returnType: Option[Type]
   )(implicit ec: ExecutionContext): Future[Any] = {
     val resultPromise: Promise[js.Any] = Promise[js.Any]()
 
@@ -78,7 +79,7 @@ object CallJsFunction {
       })
 
     peer.internals.initiateFlow(requestBuilder.build()).toFuture.flatMap { _ =>
-      funcRes.returnType.fold(resultPromise.success({}).future)(_ => resultPromise.future)
+      returnType.fold(resultPromise.success({}).future)(_ => resultPromise.future)
     }
   }
 }

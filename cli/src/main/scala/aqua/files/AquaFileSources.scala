@@ -3,7 +3,6 @@ package aqua.files
 import aqua.AquaIO
 import aqua.compiler.{AquaCompiled, AquaSources}
 import aqua.io.{AquaFileError, FileSystemError, ListAquaErrors}
-import cats.{Functor, Monad}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.implicits.catsSyntaxApplicativeId
 import cats.syntax.either.*
@@ -11,6 +10,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.monad.*
 import cats.syntax.traverse.*
+import cats.{Functor, Monad}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -133,7 +133,7 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
         resolveTargetPath(
           ac.sourceId.file,
           targetPath,
-          compiled.func.map(_.funcName).map("." + _).getOrElse("") + compiled.extension
+          compiled.suffix
         ).flatMap { result =>
           result
             .leftMap(FileSystemError.apply)

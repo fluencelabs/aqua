@@ -5,13 +5,13 @@ import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{Ast, Parser, ParserError}
 import cats.data.*
 import cats.parse.LocationMap
-import cats.{Comonad, Eval, Monad, Monoid, Order}
-import cats.~>
+import cats.{Comonad, Eval, Monad, Monoid, Order, ~>}
 
-object SpanParser {
+object SpanParser extends scribe.Logging {
   def parser: FileModuleId => String => ValidatedNec[ParserError[FileSpan.F], Ast[FileSpan.F]] = {
     id => {
       source => {
+        logger.trace("creating parser...")
         val nat = new (Span.F ~> FileSpan.F) {
           override def apply[A](span: Span.F[A]): FileSpan.F[A] = {
             (
@@ -21,7 +21,9 @@ object SpanParser {
           }
         }
         import Span.spanLiftParser
-        Parser.natParser(Parser.spanParser, nat)(source)
+        val parser = Parser.natParser(Parser.spanParser, nat)(source)
+        logger.trace("parser created")
+        parser
       }
     }
   }

@@ -1,32 +1,32 @@
 package aqua.parser
 
-import cats.data.{Validated, ValidatedNec}
-import aqua.parser.Ast
 import aqua.parser.Ast.Tree
-import aqua.parser.ParserError
-import aqua.parser.LexerError
+import aqua.parser.{Ast, LexerError, ParserError}
 import aqua.parser.expr.RootExpr
 import aqua.parser.head.HeadExpr
 import aqua.parser.lexer.Token
-import aqua.parser.lift.{FileSpan, LiftParser, Span}
-import cats.{Comonad, Eval, ~>}
-import cats.parse.LocationMap
-import cats.parse.{Parser as P, Parser0 as P0}
-import cats.Id
 import aqua.parser.lift.LiftParser.LiftErrorOps
+import aqua.parser.lift.{FileSpan, LiftParser, Span}
+import cats.data.{Validated, ValidatedNec}
+import cats.parse.{LocationMap, Parser as P, Parser0 as P0}
+import cats.{Comonad, Eval, Id, ~>}
 
 
-object Parser {
+object Parser extends scribe.Logging {
 
   import Span.spanLiftParser
-  lazy val spanParser = parserSchema[Span.F]()
+  val spanParser = parserSchema[Span.F]()
   import LiftParser.Implicits.idLiftParser
   lazy val idParser = parserSchema[Id]()
 
-  def parserSchema[S[_] : LiftParser : Comonad](): P0[ValidatedNec[ParserError[S], Ast[S]]] =
-    (HeadExpr.ast[S] ~ RootExpr.ast0[S]()).map { case (head, bodyMaybe) =>
+  def parserSchema[S[_] : LiftParser : Comonad](): P0[ValidatedNec[ParserError[S], Ast[S]]] = {
+    logger.trace("creating schema...")
+    val parser = (HeadExpr.ast[S] ~ RootExpr.ast0[S]()).map { case (head, bodyMaybe) =>
       bodyMaybe.map(Ast(head, _))
     }
+    logger.trace("schema created")
+    parser
+  }
 
   def parser[S[_] : LiftParser : Comonad](p: P0[ValidatedNec[ParserError[S], Ast[S]]])(source: String): ValidatedNec[ParserError[S], Ast[S]] = {
     p.parseAll(source) match {

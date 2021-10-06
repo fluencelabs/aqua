@@ -10,6 +10,6 @@ object AirBackend extends Backend {
 
   override def generate(aqua: AquaRes): Seq[Generated] = {
     aqua.funcs.toList
-      .map(fr => Generated(ext, FuncAirGen(fr).generate.show, Some(fr)))
+      .map(fr => Generated("." + fr.funcName + ext, FuncAirGen(fr).generate.show))
   }
 }
