@@ -139,10 +139,6 @@ object AquaCli extends IOApp with Logging {
       None
     )(
       {
-        implicit val f = new (Future ~> IO) {
-          override def apply[A](f: Future[A]): IO[A] =
-            IO.fromFuture(IO(f))
-        }
          main[IO](runtime)
       },
       // Weird ugly hack: in case version flag or help flag is present, ignore other options,

@@ -2,7 +2,7 @@ package aqua
 
 import aqua.model.transform.res.FuncRes
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.scalajs.js
 
 object CallJsFunction {
@@ -32,7 +32,7 @@ object CallJsFunction {
     air: String,
     args: List[(String, js.Any)],
     funcRes: FuncRes
-  ): Future[Any] = {
+  )(implicit ec: ExecutionContext): Future[Any] = {
     val resultPromise: Promise[js.Any] = Promise[js.Any]()
 
     val requestBuilder = new RequestFlowBuilder()
@@ -77,8 +77,8 @@ object CallJsFunction {
           resultPromise.failure(new RuntimeException(s"Request timed out for $fnName"))
       })
 
-    peer.internals.initiateFlow(requestBuilder.build())
-
-    funcRes.returnType.fold(Future.unit)(_ => resultPromise.future)
+    peer.internals.initiateFlow(requestBuilder.build()).toFuture.flatMap { _ =>
+      funcRes.returnType.fold(resultPromise.success({}).future)(_ => resultPromise.future)
+    }
   }
 }

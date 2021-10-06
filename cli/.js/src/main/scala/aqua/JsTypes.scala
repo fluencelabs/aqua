@@ -34,7 +34,7 @@ trait CallServiceData extends js.Object {
 }
 
 trait Internals extends js.Object {
-  def initiateFlow(r: RequestFlow): Promise[js.Any]
+  def initiateFlow(r: RequestFlow): js.Promise[js.Any]
   def callServiceHandler: CallServiceHandler
 }
 
@@ -47,6 +47,7 @@ trait Status extends js.Object {
 class FluencePeer extends js.Object {
   val internals: Internals = js.native
   def getStatus(): Status = js.native
+  def stop(): js.Promise[Unit] = js.native
 }
 
 @js.native

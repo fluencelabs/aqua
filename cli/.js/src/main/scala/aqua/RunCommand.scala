@@ -57,8 +57,9 @@ object RunCommand extends Logging {
                 Nil,
                 funcRes
               )
-
+              _ <- peer.stop().toFuture
             } yield {
+
               Validated.Valid({})
             })
           case None =>
