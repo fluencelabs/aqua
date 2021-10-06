@@ -7,8 +7,8 @@ import fs2.io.file.{Files, Path}
 import cats.~>
 import cats.Id
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 object RunCommand {
-  run[F[_]: Monad: Files: AquaIO](multiaddr: String, func: String, input: Path, imps: List[Path])(implicit F: Future ~> F, ec: ExecutionContext)
+  def run[F[_]: Monad: Files: AquaIO](multiaddr: String, func: String, input: Path, imps: List[Path])(implicit F: Future ~> F, ec: ExecutionContext): F[Unit] = ???
 }
