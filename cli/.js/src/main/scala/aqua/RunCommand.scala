@@ -13,7 +13,7 @@ import aqua.parser.expr.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
 import cats.data.*
-import cats.effect.kernel.Async
+import cats.effect.kernel.{Async, Clock}
 import cats.effect.syntax.async.*
 import cats.effect.{IO, IOApp, Sync}
 import cats.syntax.applicative.*
@@ -82,28 +82,29 @@ object RunCommand extends Logging {
     config: TransformConfig = TransformConfig()
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+
+    val generatedFile = Path("./.aqua/call0.aqua").absolute
+    val absInput = input.absolute
+    val code =
+      s"""import "${absInput.toString}"
+         |
+         |func $generatedFuncName():
+         |  $func
+         |""".stripMargin
+
     for {
-      start <- System.currentTimeMillis().pure[F]
-      generatedFile = Path("./.aqua/call0.aqua").absolute
-      absInput = input.absolute
-      code =
-        s"""import "${absInput.toString}"
-           |
-           |func $generatedFuncName():
-           |  $func
-           |""".stripMargin
       _ <- AquaIO[F].writeFile(generatedFile, code).value
       importsWithInput = absInput +: imports.map(_.absolute)
       sources = new AquaFileSources[F](generatedFile, importsWithInput)
-      airV <- AquaCompiler
+      compileResult <- Clock[F].timed(AquaCompiler
         .compile[F, AquaFileError, FileModuleId, FileSpan.F](
           sources,
           SpanParser.parser,
           AirBackend,
           config
-        )
-      parsingTime = System.currentTimeMillis()
-      result <- {
+        ))
+      (compileTime, airV) = compileResult
+      callResult <- Clock[F].timed {
         airV match {
           case Validated.Valid(airC: Chain[AquaCompiled[FileModuleId]]) =>
             // Cause we generate input with only one function, we should have only one air compiled content
@@ -125,7 +126,10 @@ object RunCommand extends Logging {
 
         }
       }
+      (callTime, result) = callResult
     } yield {
+      logger.debug(s"Compile time: ${compileTime.toMillis}ms")
+      logger.debug(s"Call time: ${callTime.toMillis}ms")
       result.fold(
         { (errs: NonEmptyChain[String]) =>
           errs.toChain.toList.foreach(err => println(err + "\n"))
