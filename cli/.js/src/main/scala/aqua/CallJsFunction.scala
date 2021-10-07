@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.model.transform.TransformConfig
 import aqua.model.transform.res.FuncRes
 import aqua.types.Type
 
@@ -32,7 +33,8 @@ object CallJsFunction {
     fnName: String,
     air: String,
     args: List[(String, js.Any)],
-    returnType: Option[Type]
+    returnType: Option[Type],
+    config: TransformConfig
   )(implicit ec: ExecutionContext): Future[Any] = {
     val resultPromise: Promise[js.Any] = Promise[js.Any]()
 
@@ -43,30 +45,30 @@ object CallJsFunction {
       .disableInjections()
       .withRawScript(air)
       .configHandler((handler, r) => {
-        handler.on("getDataSrv", "-relay-", (_, _) => { relayPeerId })
+        handler.on(config.getDataService, config.relayVarName.getOrElse("-relay-"), (_, _) => { relayPeerId })
         args.foreach { (fnName, arg) =>
-          handler.on("getDataSrv", fnName, (_, _) => arg)
+          handler.on(config.getDataService, fnName, (_, _) => arg)
         }
         handler.onEvent(
-          "callbackSrv",
-          "response",
+          config.callbackService,
+          config.respFuncName,
           (args, _) => {
             if (args.length == 1) {
               resultPromise.success(args.pop())
             } else if (args.length == 0) {
-              resultPromise.success({})
+              resultPromise.success(())
             } else {
               resultPromise.success(args)
             }
-            {}
+            ()
           }
         )
         handler.onEvent(
-          "errorHandlingSrv",
-          "error",
+          config.errorHandlingService,
+          config.errorFuncName,
           (args, _) => {
             resultPromise.failure(new RuntimeException(args.pop().toString))
-            {}
+            ()
           }
         )
       })
@@ -79,7 +81,7 @@ object CallJsFunction {
       })
 
     peer.internals.initiateFlow(requestBuilder.build()).toFuture.flatMap { _ =>
-      returnType.fold(resultPromise.success({}).future)(_ => resultPromise.future)
+      returnType.fold(resultPromise.success(()).future)(_ => resultPromise.future)
     }
   }
 }

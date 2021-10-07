@@ -32,19 +32,27 @@ import scala.scalajs.js.annotation.*
 
 object RunCommand extends Logging {
 
-  def funcCall(multiaddr: String, funcName: String, air: Generated)(implicit ec: ExecutionContext): Future[Validated[String, Unit]] = {
+  def funcCall(multiaddr: String, funcName: String, air: Generated, config: TransformConfig)(
+    implicit ec: ExecutionContext
+  ): Future[Validated[String, Unit]] = {
     (for {
       _ <- Fluence
         .start(multiaddr)
         .toFuture
       peer = Fluence.getPeer()
-      _ = CallJsFunction.registerUnitService(peer, "console", "print", args => println("print: " + args))
+      _ = CallJsFunction.registerUnitService(
+        peer,
+        "console",
+        "print",
+        args => println("print: " + args)
+      )
       result <- CallJsFunction.funcCallJs(
         peer,
         funcName,
         air.content,
         Nil,
-        None // TODO
+        None, // TODO
+        config
       )
       _ <- peer.stop().toFuture
     } yield {
@@ -54,7 +62,13 @@ object RunCommand extends Logging {
 
   val generatedFuncName = "callerUniqueFunction"
 
-  def run[F[_]: Monad: Files: AquaIO: Async](multiaddr: String, func: String, input: Path, imps: List[Path])(implicit ec: ExecutionContext): F[Unit] = {
+  def run[F[_]: Monad: Files: AquaIO: Async](
+    multiaddr: String,
+    func: String,
+    input: Path,
+    imps: List[Path],
+    config: TransformConfig = TransformConfig()
+  )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     for {
       start <- System.currentTimeMillis().pure[F]
@@ -74,20 +88,25 @@ object RunCommand extends Logging {
           sources,
           SpanParser.parser,
           AirBackend,
-          TransformConfig()
+          config
         )
       parsingTime = System.currentTimeMillis()
       result <- {
         airV match {
           case Validated.Valid(airC: Chain[AquaCompiled[FileModuleId]]) =>
             // Cause we generate input with only one function, we should have only one air compiled content
-            airC.headOption.flatMap(_.compiled.headOption).map { air =>
-              Async[F].fromFuture {
-                funcCall(multiaddr, generatedFuncName, air).map(_.toValidatedNec).pure[F]
+            airC.headOption
+              .flatMap(_.compiled.headOption)
+              .map { air =>
+                Async[F].fromFuture {
+                  funcCall(multiaddr, generatedFuncName, air, config).map(_.toValidatedNec).pure[F]
+                }
               }
-            }.getOrElse {
-              Validated.invalidNec("Unexpected. There could be only one generated function.").pure[F]
-            }
+              .getOrElse {
+                Validated
+                  .invalidNec("Unexpected. There could be only one generated function.")
+                  .pure[F]
+              }
           case Validated.Invalid(errs) =>
             import ErrorRendering.showError
             Validated.invalid(errs.map(_.show)).pure[F]
@@ -95,9 +114,12 @@ object RunCommand extends Logging {
         }
       }
     } yield {
-      result.fold({ (errs: NonEmptyChain[String]) =>
-        errs.toChain.toList.foreach(err => println(err + "\n"))
-      }, identity)
+      result.fold(
+        { (errs: NonEmptyChain[String]) =>
+          errs.toChain.toList.foreach(err => println(err + "\n"))
+        },
+        identity
+      )
     }
   }
 
