@@ -32,8 +32,14 @@ import scala.scalajs.js.annotation.*
 
 object RunCommand extends Logging {
 
-  def funcCall(multiaddr: String, funcName: String, air: Generated, config: TransformConfig)(
-    implicit ec: ExecutionContext
+  /**
+   * Calls an air code with FluenceJS SDK.
+   * @param multiaddr relay to connect to
+   * @param air code to call
+   * @return
+   */
+  def funcCall(multiaddr: String, air: Generated, config: TransformConfig)(implicit
+    ec: ExecutionContext
   ): Future[Validated[String, Unit]] = {
     (for {
       _ <- Fluence
@@ -48,7 +54,6 @@ object RunCommand extends Logging {
       )
       result <- CallJsFunction.funcCallJs(
         peer,
-        funcName,
         air.content,
         Nil,
         None, // TODO
@@ -56,17 +61,24 @@ object RunCommand extends Logging {
       )
       _ <- peer.stop().toFuture
     } yield {
-      Validated.Valid({})
+      Validated.Valid(())
     })
   }
 
   val generatedFuncName = "callerUniqueFunction"
 
-  def run[F[_]: Monad: Files: AquaIO: Async](
+  /**
+   * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
+   * @param multiaddr relay to connect to
+   * @param func function name
+   * @param input path to an aqua code with a function
+   * @param imports the sources the input needs
+   */
+  def run[F[_]: Files: AquaIO: Async](
     multiaddr: String,
     func: String,
     input: Path,
-    imps: List[Path],
+    imports: List[Path],
     config: TransformConfig = TransformConfig()
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
@@ -81,8 +93,8 @@ object RunCommand extends Logging {
            |  $func
            |""".stripMargin
       _ <- AquaIO[F].writeFile(generatedFile, code).value
-      imports = absInput +: imps.map(_.absolute)
-      sources = new AquaFileSources[F](generatedFile, imports)
+      importsWithInput = absInput +: imports.map(_.absolute)
+      sources = new AquaFileSources[F](generatedFile, importsWithInput)
       airV <- AquaCompiler
         .compile[F, AquaFileError, FileModuleId, FileSpan.F](
           sources,
@@ -99,7 +111,7 @@ object RunCommand extends Logging {
               .flatMap(_.compiled.headOption)
               .map { air =>
                 Async[F].fromFuture {
-                  funcCall(multiaddr, generatedFuncName, air, config).map(_.toValidatedNec).pure[F]
+                  funcCall(multiaddr, air, config).map(_.toValidatedNec).pure[F]
                 }
               }
               .getOrElse {

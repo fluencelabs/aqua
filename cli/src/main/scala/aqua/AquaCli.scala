@@ -47,7 +47,7 @@ object AquaCli extends IOApp with Logging {
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]
     implicit val ec = r.compute
 
-    runCom orElse versionOpt
+    runOpt orElse versionOpt
       .as(
         versionAndExit
       ) orElse helpOpt.as(
@@ -138,9 +138,7 @@ object AquaCli extends IOApp with Logging {
       helpFlag = false,
       None
     )(
-      {
-         main[IO](runtime)
-      },
+      main[IO](runtime),
       // Weird ugly hack: in case version flag or help flag is present, ignore other options,
       // be it correct or not
       args match {

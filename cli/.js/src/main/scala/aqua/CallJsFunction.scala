@@ -30,7 +30,6 @@ object CallJsFunction {
   // Call a function with generated air script
   def funcCallJs(
     peer: FluencePeer,
-    fnName: String,
     air: String,
     args: List[(String, js.Any)],
     returnType: Option[Type],
@@ -77,7 +76,7 @@ object CallJsFunction {
       })
       .handleTimeout(() => {
         if (!resultPromise.isCompleted)
-          resultPromise.failure(new RuntimeException(s"Request timed out for $fnName"))
+          resultPromise.failure(new RuntimeException(s"Request timed out"))
       })
 
     peer.internals.initiateFlow(requestBuilder.build()).toFuture.flatMap { _ =>
