@@ -1,7 +1,5 @@
 package aqua.backend
 
-import aqua.model.transform.res.FuncRes
-
 /**
  * Compilation result
  *
