@@ -1,7 +1,8 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.expr.{CallArrowExpr, ParExpr}
+import aqua.parser.expr.ParExpr
+import aqua.parser.expr.func.{CallArrowExpr, ParExpr}
 import aqua.parser.lexer.Token
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

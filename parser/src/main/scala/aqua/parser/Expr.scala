@@ -9,6 +9,7 @@ import cats.data.Chain.:==
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.Parser as P
+import cats.parse.Parser0 as P0
 import cats.syntax.comonad.*
 import cats.{Comonad, Eval}
 import cats.~>
@@ -69,17 +70,21 @@ object Expr {
     override def readLine[F[_]: LiftParser: Comonad]: P[Ast.Tree[F]] = super.readLine[F] <* ` : `
   }
 
-  trait Prefix extends Lexem {
+  abstract class Prefix(sep: P0[Any] = ` `) extends Lexem {
     def continueWith: List[Lexem]
 
     override def readLine[F[_]: LiftParser: Comonad]: P[Ast.Tree[F]] =
-      ((super.readLine[F] <* ` `) ~ P.oneOf(continueWith.map(_.readLine.backtrack))).map {
-        case (h, t) => h.copy(tail = Eval.now(Chain.one(t)))
+      ((super.readLine[F] <* sep) ~ P.oneOf(continueWith.map(_.readLine.backtrack))).map {
+        case (h, t) =>
+          println("read prefixed line "+t)
+          h.copy(tail = Eval.now(Chain.one(t)))
       }
 
     override def ast[F[_]: LiftParser: Comonad](): P[ValidatedNec[ParserError[F], Tree[F]]] =
-      ((super.readLine[F] <* ` `) ~ P.oneOf(continueWith.map(_.ast().backtrack))).map {
-        case (h, tm) => tm.map(t => h.copy(tail = Eval.now(Chain.one(t))))
+      ((super.readLine[F] <* sep) ~ P.oneOf(continueWith.map(_.ast().backtrack))).map {
+        case (h, tm) =>
+          println("ast "+tm)
+          tm.map(t => h.copy(tail = Eval.now(Chain.one(t))))
       }
   }
 
@@ -203,6 +208,7 @@ object Expr {
                     // create a tree from the last expressions if the window is not empty
                     // this may happen if a function ended in a nested expression
                     val tree = listToTree[F](headExpr, acc.window)
+                    println(Console.GREEN + tree + Console.RESET)
                     tree.map(t => setLeafs(head, acc.currentChildren :+ t))
                   }
                 case None =>

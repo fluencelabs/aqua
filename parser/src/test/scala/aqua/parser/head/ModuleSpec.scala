@@ -1,7 +1,7 @@
 package aqua.parser.head
 
 import aqua.AquaSpec
-import aqua.parser.expr.AbilityIdExpr
+import aqua.parser.expr.func.AbilityIdExpr
 import aqua.parser.lexer.{Literal, Token}
 import aqua.types.LiteralType
 import cats.Id

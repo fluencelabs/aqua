@@ -2,8 +2,10 @@ package aqua.semantics
 
 import aqua.model.Model
 import aqua.parser.Expr
-import aqua.parser.expr._
-import aqua.semantics.expr._
+import aqua.parser.expr.*
+import aqua.parser.expr.func.*
+import aqua.semantics.expr.*
+import aqua.semantics.expr.func.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
@@ -29,6 +31,8 @@ object ExprSem {
       case expr: DataStructExpr[F] => new DataStructSem(expr).program[G]
       case expr: FieldTypeExpr[F] => new FieldTypeSem(expr).program[G]
       case expr: FuncExpr[F] => new FuncSem(expr).program[G]
+      case expr: ClosureExpr[F] => new ClosureSem(expr).program[G]
+      case expr: ArrowExpr[F] => new ArrowSem(expr).program[G]
       case expr: OnExpr[F] => new OnSem(expr).program[G]
       case expr: ForExpr[F] => new ForSem(expr).program[G]
       case expr: IfExpr[F] => new IfSem(expr).program[G]

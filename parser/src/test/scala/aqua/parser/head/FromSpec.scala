@@ -1,7 +1,7 @@
 package aqua.parser.head
 
 import aqua.AquaSpec
-import aqua.parser.expr.AbilityIdExpr
+import aqua.parser.expr.func.AbilityIdExpr
 import aqua.parser.lexer.{Literal, Token}
 import aqua.parser.lift.LiftParser.Implicits.*
 import aqua.types.LiteralType
@@ -15,9 +15,13 @@ class FromSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec.*
 
   "from constants" should "be parsed" in {
-    FromExpr.nameOrAbAs[Id].parseAll("SOME_CONSTANT").value shouldBe Right((toAb("SOME_CONSTANT"), None))
+    FromExpr.nameOrAbAs[Id].parseAll("SOME_CONSTANT").value shouldBe Right(
+      (toAb("SOME_CONSTANT"), None)
+    )
 
-    FromExpr.nameOrAbAs[Id].parseAll("SOME_CONSTANT as SC").value shouldBe Right((toAb("SOME_CONSTANT"), Some(toAb("SC"))))
+    FromExpr.nameOrAbAs[Id].parseAll("SOME_CONSTANT as SC").value shouldBe Right(
+      (toAb("SOME_CONSTANT"), Some(toAb("SC")))
+    )
   }
 
   "from expression" should "be parsed" in {

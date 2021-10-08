@@ -1,7 +1,7 @@
 package aqua.model.func.raw
 
 import aqua.model.ValueModel
-import aqua.model.func.Call
+import aqua.model.func.{Call, FuncModel}
 import cats.data.Chain
 
 sealed trait RawTag {
@@ -72,6 +72,10 @@ case class CallArrowTag(
 case class AssignmentTag(
   value: ValueModel,
   assignTo: String
+) extends NoExecTag
+
+case class ClosureTag(
+  func: FuncModel
 ) extends NoExecTag
 
 object EmptyTag extends NoExecTag

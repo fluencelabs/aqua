@@ -1,7 +1,18 @@
 package aqua
 
-import aqua.parser.expr._
-import aqua.parser.lexer._
+import aqua.parser.expr.*
+import aqua.parser.expr.func.{
+  AbilityIdExpr,
+  AssignmentExpr,
+  CallArrowExpr,
+  ElseOtherwiseExpr,
+  ForExpr,
+  IfExpr,
+  OnExpr,
+  PushToStreamExpr,
+  ReturnExpr
+}
+import aqua.parser.lexer.*
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.LiteralType.{bool, number, string}
 import aqua.types.{LiteralType, ScalarType}

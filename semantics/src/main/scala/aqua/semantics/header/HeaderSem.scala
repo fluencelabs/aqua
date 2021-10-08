@@ -191,7 +191,11 @@ object HeaderSem {
                         .pick(n.value, rn.map(_.value), declared = false)
                         .map(validNec)
                         .getOrElse(
-                          error(n, s"File has no ${n.value} declaration or import, cannot export")
+                          error(
+                            n,
+                            s"File has no ${n.value} declaration or import, cannot export, available funcs: ${(initCtx |+| ctx).funcs.keys
+                              .mkString(", ")}"
+                          )
                         )
                     },
                     { case (n, rn) =>
@@ -199,7 +203,11 @@ object HeaderSem {
                         .pick(n.value, rn.map(_.value), declared = false)
                         .map(validNec)
                         .getOrElse(
-                          error(n, s"File has no ${n.value} declaration or import, cannot export")
+                          error(
+                            n,
+                            s"File has no ${n.value} declaration or import, cannot export, available funcs: ${(initCtx |+| ctx).funcs.keys
+                              .mkString(", ")}"
+                          )
                         )
                     }
                   )

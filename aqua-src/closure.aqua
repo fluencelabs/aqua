@@ -1,0 +1,17 @@
+module Closure declares *
+
+export smth
+
+service Srv("srv"):
+  noop: string -> ()
+  inside: -> ()
+
+func smth() -> bool:
+  variable = "const"
+  closure = () -> string:
+    Srv.inside()
+    <- variable
+
+  c <- closure()
+  Srv.noop(c)
+  <- true
