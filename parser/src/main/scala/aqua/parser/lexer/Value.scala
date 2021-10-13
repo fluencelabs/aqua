@@ -6,11 +6,10 @@ import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.types.LiteralType
-import cats.parse.{Numbers, Parser as P}
+import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
-import cats.{Comonad, Functor}
-import cats.~>
+import cats.{Comonad, Functor, ~>}
 
 sealed trait Value[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): Value[K]
@@ -46,8 +45,11 @@ object Value {
   def initPeerId[F[_]: LiftParser: Comonad]: P[Literal[F]] =
     `%init_peer_id%`.string.lift.map(Literal(_, LiteralType.string))
 
+  val minus = P.char('-')
+  val dot = P.char('.')
+
   def num[F[_]: LiftParser: Comonad]: P[Literal[F]] =
-    (P.char('-').?.with1 ~ Numbers.nonNegativeIntString).lift.map(fu =>
+    (minus.?.with1 ~ Numbers.nonNegativeIntString).lift.map(fu =>
       fu.extract match {
         case (Some(_), n) ⇒ Literal(fu.as(s"-$n"), LiteralType.signed)
         case (None, n) ⇒ Literal(fu.as(n), LiteralType.number)
@@ -55,14 +57,14 @@ object Value {
     )
 
   def float[F[_]: LiftParser: Comonad]: P[Literal[F]] =
-    (P.char('-').?.with1 ~ (Numbers.nonNegativeIntString <* P.char(
-      '.'
-    )) ~ Numbers.nonNegativeIntString).string.lift
+    (minus.?.with1 ~ (Numbers.nonNegativeIntString <* dot) ~ Numbers.nonNegativeIntString).string.lift
       .map(Literal(_, LiteralType.float))
+
+  val charsWhileQuotes = P.charsWhile0(_ != '"')
 
   // TODO make more sophisticated escaping/unescaping
   def string[F[_]: LiftParser: Comonad]: P[Literal[F]] =
-    (`"` *> P.charsWhile0(_ != '"') <* `"`).string.lift
+    (`"` *> charsWhileQuotes <* `"`).string.lift
       .map(Literal(_, LiteralType.string))
 
   def literal[F[_]: LiftParser: Comonad]: P[Literal[F]] =

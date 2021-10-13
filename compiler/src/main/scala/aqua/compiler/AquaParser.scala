@@ -1,18 +1,18 @@
 package aqua.compiler
 
+import aqua.compiler.AquaCompiler.logger
 import aqua.linker.{AquaModule, Modules}
-import aqua.parser.{Ast, ParserError}
 import aqua.parser.head.{FilenameExpr, ImportExpr}
 import aqua.parser.lift.{LiftParser, Span}
+import aqua.parser.{Ast, ParserError}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Comonad, Monad}
+import cats.{Comonad, Monad, ~>}
 import scribe.Logging
-import cats.~>
 
 // TODO: add tests
 class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](

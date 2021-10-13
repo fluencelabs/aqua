@@ -2,7 +2,25 @@ package aqua.backend
 
 object Header {
 
-  def header(isJs: Boolean): String =
+  def header(isJs: Boolean, isCommonJS: Boolean): String = {
+    val imports = if (isCommonJS) {
+      """
+        |const { Fluence, FluencePeer } = require('@fluencelabs/fluence');
+        |const {
+        |    ResultCodes,
+        |    RequestFlow,
+        |    RequestFlowBuilder,
+        |    CallParams,} = require('@fluencelabs/fluence/dist/internal/compilerSupport/v1${if (isJs) ".js" else ""}');
+        |""".stripMargin
+    } else {
+      s"""import { Fluence, FluencePeer } from '@fluencelabs/fluence';
+        |import {
+        |    ResultCodes,
+        |    RequestFlow,
+        |    RequestFlowBuilder,
+        |    CallParams
+        |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v1${if (isJs) ".js" else ""}';""".stripMargin
+    }
     s"""/**
        | *
        | * This file is auto-generated. Do not edit manually: changes may be erased.
@@ -11,17 +29,7 @@ object Header {
        | * Aqua version: ${Version.version}
        | *
        | */
-       |import { Fluence, FluencePeer } from '@fluencelabs/fluence';
-       |import {
-       |    extractFunctionArgs,
-       |    CallParams,
-       |    ResultCodes,
-       |    registerParticleSpecificHandler,
-       |    handleTimeout,
-       |    extractServiceArgs,
-       |    registerCommonHandler,
-       |    callFunction,
-       |    regService,
-       |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v2${if (isJs) ".js" else ""}';
+       |$imports
        |""".stripMargin
+  }
 }
