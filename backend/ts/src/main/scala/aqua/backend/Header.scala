@@ -13,10 +13,15 @@ object Header {
        | */
        |import { Fluence, FluencePeer } from '@fluencelabs/fluence';
        |import {
-       |    ResultCodes,
-       |    RequestFlow,
-       |    RequestFlowBuilder,
+       |    extractFunctionArgs,
        |    CallParams,
-       |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v1${if (isJs) ".js" else ""}';
+       |    ResultCodes,
+       |    registerParticleSpecificHandler,
+       |    handleTimeout,
+       |    extractServiceArgs,
+       |    registerCommonHandler,
+       |    callFunction,
+       |    regService,
+       |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v2${if (isJs) ".js" else ""}';
        |""".stripMargin
 }
