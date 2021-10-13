@@ -9,17 +9,16 @@ import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
 import aqua.semantics.Semantics
 import aqua.semantics.header.HeaderSem
-import cats.data.Validated.{validNec, Invalid, Valid}
-import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
+import cats.data.Validated.{Invalid, Valid, validNec}
+import cats.data.*
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.traverse.*
 import cats.syntax.monoid.*
-import cats.{Comonad, Monad, Monoid, Order}
+import cats.syntax.traverse.*
+import cats.{Comonad, Monad, Monoid, Order, ~>}
 import scribe.Logging
-import cats.~>
 
 object AquaCompiler extends Logging {
 
@@ -33,7 +32,7 @@ object AquaCompiler extends Logging {
     type Err = AquaError[I, E, S]
     type Ctx = NonEmptyMap[I, AquaContext]
     type ValidatedCtx = ValidatedNec[Err, Ctx]
-
+    logger.trace("starting resolving sources...")
     new AquaParser[F, E, I, S](sources, parser)
       .resolve[ValidatedCtx](mod =>
         context =>
@@ -50,6 +49,7 @@ object AquaCompiler extends Logging {
               )
               .andThen { headerSem =>
                 // Analyze the body, with prepared initial context
+                logger.trace("semantic processing...")
                 Semantics
                   .process(
                     mod.body,
@@ -65,6 +65,7 @@ object AquaCompiler extends Logging {
       )
       .map(
         _.andThen(modules =>
+          logger.trace("linking modules...")
           Linker
             .link[I, AquaError[I, E, S], ValidatedCtx](
               modules,
@@ -73,6 +74,7 @@ object AquaCompiler extends Logging {
               i => validNec(NonEmptyMap.one(i, Monoid.empty[AquaContext]))
             )
             .andThen { filesWithContext =>
+              logger.trace("linking finished")
               filesWithContext
                 .foldLeft[ValidatedNec[Err, Chain[AquaProcessed[I]]]](
                   validNec(Chain.nil)
@@ -86,6 +88,7 @@ object AquaCompiler extends Logging {
                 }
                 .map(
                   _.map { ap =>
+                    logger.trace("generating output...")
                     val res = AquaRes.fromContext(ap.context, config)
                     val compiled = backend.generate(res)
                     AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)

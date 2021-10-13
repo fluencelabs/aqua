@@ -32,7 +32,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
     Files[IO].deleteIfExists(targetTsFile).unsafeRunSync()
 
     AquaPathCompiler
-      .compileFilesTo[IO](src, List.empty, Option(targetJs), JavaScriptBackend, bc)
+      .compileFilesTo[IO](src, List.empty, Option(targetJs), JavaScriptBackend(false), bc)
       .unsafeRunSync()
       .leftMap { err =>
         println(err)

@@ -27,15 +27,20 @@ case class CallArrowExpr[F[_]](
 
 object CallArrowExpr extends Expr.Leaf {
 
+  def ability[F[_]: LiftParser: Comonad]: P0[Option[Ability[F]]] = (Ability.dotted[F] <* `.`).?
+  def functionCallWithArgs[F[_]: LiftParser: Comonad] = Name.p[F]
+    ~ comma0(Value.`value`[F].surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
+  def funcCall[F[_]: LiftParser: Comonad] = ability.with1 ~ functionCallWithArgs
+  
+  def funcOnly[F[_]: LiftParser: Comonad] = funcCall.map {
+    case (ab, (name, args)) =>
+      CallArrowExpr(Nil, ab, name, args)
+  }
+
   override def p[F[_]: LiftParser: Comonad]: P[CallArrowExpr[F]] = {
     val variables: P0[Option[NonEmptyList[Name[F]]]] = (comma(Name.p[F]) <* ` <- `).backtrack.?
-    val ability: P0[Option[Ability[F]]] = (Ability.dotted[F] <* `.`).?
-    val functionCallWithArgs = Name.p[F]
-      ~ comma0(Value.`value`[F].surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
 
-    (variables.with1 ~
-      (ability.with1 ~ functionCallWithArgs)
-        .withContext("Only results of a function call can be written to a stream")
+    (variables.with1 ~ funcCall.withContext("Only results of a function call can be written to a stream")
       ).map {
       case (variables, (ability, (funcName, args))) =>
         CallArrowExpr(variables.toList.flatMap(_.toList), ability, funcName, args)

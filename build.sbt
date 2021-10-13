@@ -17,7 +17,7 @@ val declineV = "2.1.0"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.3.1",
+  baseAquaVersion := "0.3.2",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
@@ -56,7 +56,7 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
 
 lazy val cliJS = cli.js
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true
   )
 
