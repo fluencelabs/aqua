@@ -1,9 +1,8 @@
 package aqua.parser.lexer
 
-import cats.{Comonad, Functor}
 import cats.data.NonEmptyList
 import cats.parse.{Accumulator0, Parser as P, Parser0 as P0}
-import cats.~>
+import cats.{Comonad, Functor, ~>}
 
 trait Token[F[_]] {
   def as[T](v: T): F[T]
@@ -24,6 +23,10 @@ object Token {
   private val anum_ = anum ++ f_
   private val upperAnum_ = upperAnum ++ f_
   private val nl = Set('\n', '\r')
+
+  val inAZ = P.charIn(AZ)
+  val inaz = P.charIn(az)
+  val whileAnum = P.charsWhile(anum_)
 
   val ` *` : P0[String] = P.charsWhile0(fSpaces)
   val ` ` : P[String] = P.charsWhile(fSpaces)
@@ -59,12 +62,12 @@ object Token {
   val `co`: P[Unit] = P.string("co")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
-  val `anum_*` : P[Unit] = P.charsWhile(anum_).void
+  val `anum_*` : P[Unit] = whileAnum.void
 
-  val NAME: P[String] = (P.charIn(AZ) ~ P.charsWhile(upperAnum_).?).string
-  val `name`: P[String] = (P.charIn(az) ~ P.charsWhile(anum_).?).string
+  val NAME: P[String] = (inAZ ~ P.charsWhile(upperAnum_).?).string
+  val `name`: P[String] = (inaz ~ whileAnum.?).string
 
-  val `Class`: P[String] = (P.charIn(AZ) ~ P.charsWhile(anum_).backtrack.?).map { case (c, s) ⇒
+  val `Class`: P[String] = (inAZ ~ whileAnum.backtrack.?).map { case (c, s) ⇒
     c.toString ++ s.getOrElse("")
   }
   val `\n` : P[Unit] = P.string("\n\r") | P.char('\n') | P.string("\r\n")
