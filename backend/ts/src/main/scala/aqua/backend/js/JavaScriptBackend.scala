@@ -4,7 +4,7 @@ import aqua.backend.ts.TypeScriptTypes
 import aqua.backend.{Backend, EmptyTypes, Generated, Header, OutputFile, OutputFunc, OutputService}
 import aqua.model.transform.res.AquaRes
 
-object JavaScriptBackend extends Backend {
+case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
 
   val ext = ".js"
   val tsExt = ".d.ts"
@@ -18,7 +18,7 @@ object JavaScriptBackend extends Backend {
     val functions =
       res.funcs.map(f => TypeScriptTypes.funcType(f)).map(_.generate).toList.mkString("\n\n")
 
-    val body = s"""${Header.header(false)}
+    val body = s"""${Header.header(false, false)}
        |
        |// Services
        |$services
@@ -33,6 +33,6 @@ object JavaScriptBackend extends Backend {
   override def generate(res: AquaRes): Seq[Generated] =
     if (res.isEmpty) Nil
     else {
-      Generated(ext, OutputFile(res).generate(EmptyTypes)):: typesFile(res) :: Nil
+      Generated(ext, OutputFile(res).generate(EmptyTypes, isCommonJS)):: typesFile(res) :: Nil
     }
 }
