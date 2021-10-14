@@ -104,9 +104,9 @@ object AppOpts {
       .options[String]("import", "Path to the directory to import from. May be used several times", "m")
       .orEmpty
       .map { ps =>
-        val checked: List[F[ValidatedNec[String, Path]]] = ps.toList.map { pStr =>
+        val checked: List[F[ValidatedNec[String, Path]]] = ps.map { pStr =>
           val p = Path(pStr)
-          (for {
+          for {
             exists <- Files[F].exists(p)
             isDir <- Files[F].isDirectory(p)
           } yield {
@@ -115,10 +115,24 @@ object AppOpts {
               Validated.invalidNec[String, Path](
                 s"There is no path ${p.toString} or it is not a directory"
               )
-          })
+          }
         }
 
-        checked.sequence.map(_.sequence)
+        // check if node_modules directory exists and add it in imports list
+        val nodeModules = Path("node_modules")
+        val nodeImportF: F[Option[Path]] = Files[F].exists(nodeModules).flatMap {
+          case true =>
+            Files[F].isDirectory(nodeModules).map(isDir => if (isDir) Some(nodeModules) else None )
+          case false => None.pure[F]
+        }
+
+
+        for {
+          result <- checked.sequence.map(_.sequence)
+          nodeImport <- nodeImportF
+        } yield {
+          result.map(_ ++ nodeImport)
+        }
       }
 
   def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[TransformConfig.Const]] =
