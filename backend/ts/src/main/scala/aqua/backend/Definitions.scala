@@ -89,7 +89,7 @@ case class Names(
 
 case class FunctionBodyDef(functionName: String, argDefs: List[ArgDef], returnType: ReturnType)
 
-case class ServiceDef(functions: List[FunctionBodyDef])
+case class ServiceDef(defaultServiceId: Option[String], functions: List[FunctionBodyDef])
 
 case class FunctionCallDef(
   functionName: String,

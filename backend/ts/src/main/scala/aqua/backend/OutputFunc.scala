@@ -32,10 +32,10 @@ case class OutputFunc(func: FuncRes, types: Types) {
       config.relayVarName.getOrElse("-relay-"),
       config.getDataService,
       config.callbackService,
+      config.callbackService,
       config.respFuncName,
       config.errorHandlingService,
-      config.errorFuncName,
-      config.respFuncName
+      config.errorFuncName
     )
     val funcDef = FunctionCallDef(
       func.funcName,

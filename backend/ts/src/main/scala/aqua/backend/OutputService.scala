@@ -22,7 +22,7 @@ case class OutputService(srv: ServiceRes, types: Types) {
       FunctionBodyDef(m._1, cDef.argDefs, cDef.returnType)
     }
 
-    val serviceDef = ServiceDef(functions)
+    val serviceDef = ServiceDef(srv.defaultId.map(s => s.replace("\"", "")), functions)
 
     s"""
       |${serviceTypes.generate}
