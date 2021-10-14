@@ -6,26 +6,14 @@ object Header {
     val imports = if (isCommonJS) {
       """const { Fluence, FluencePeer } = require('@fluencelabs/fluence');
         |const {
-        |    extractFunctionArgs,
         |    CallParams,
-        |    ResultCodes,
-        |    registerParticleSpecificHandler,
-        |    handleTimeout,
-        |    extractServiceArgs,
-        |    registerCommonHandler,
         |    callFunction,
         |    registerService,
         |} = require('@fluencelabs/fluence/dist/internal/compilerSupport/v2${if (isJs) ".js" else ""}');""".stripMargin
     } else {
       s"""import { Fluence, FluencePeer } from '@fluencelabs/fluence';
          |import {
-         |    extractFunctionArgs,
          |    CallParams,
-         |    ResultCodes,
-         |    registerParticleSpecificHandler,
-         |    handleTimeout,
-         |    extractServiceArgs,
-         |    registerCommonHandler,
          |    callFunction,
          |    registerService,
          |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v2${if (isJs) ".js" else ""}';""".stripMargin

@@ -4,11 +4,10 @@ import aqua.backend.ts.TypeScriptCommon
 import aqua.backend.ts.TypeScriptCommon.callBackExprBody
 import aqua.model.transform.res.ServiceRes
 import aqua.types.ArrowType
-
-import scala.io.circe.*
-import scala.io.circe.generic.auto.*
-import scala.io.circe.parser.*
-import scala.io.circe.syntax.*
+import io.circe.*
+import io.circe.generic.auto.*
+import io.circe.parser.*
+import io.circe.syntax.*
 
 case class OutputService(srv: ServiceRes, types: Types) {
 
@@ -20,7 +19,7 @@ case class OutputService(srv: ServiceRes, types: Types) {
   def generate: String =
     val functions = srv.members.map{ m =>
       val cDef = CallbackDef(m._2)
-      FunctionBodyDef(m._1, cDef.argNames, cDef.returnType)
+      FunctionBodyDef(m._1, cDef.argDefs, cDef.returnType)
     }
 
     val serviceDef = ServiceDef(functions)

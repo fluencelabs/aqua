@@ -1,22 +1,44 @@
 package aqua.backend
 
-import aqua.types.{ArrowType, OptionType}
+import aqua.types.{ArrowType, OptionType, Type}
+import io.circe.*
+import io.circe.generic.auto.*
+import io.circe.parser.*
+import io.circe.syntax.*
+
+import scala.annotation.tailrec
 
 case class ReturnType(isVoid: Boolean, isOptional: Boolean)
 
-case class CallbackDef(argNames: List[String], returnType: ReturnType)
+object ReturnType {
+
+  def apply(t: Type): ReturnType = {
+    t match {
+      case OptionType(t) =>
+        ReturnType(isVoid = false, isOptional = true)
+      case _ => ReturnType(isVoid = false, isOptional = false)
+    }
+  }
+}
+
+case class CallbackDef(argDefs: List[ArgDef], returnType: ReturnType)
 
 object CallbackDef {
+
+  implicit val encodeCallbackDef: Encoder[CallbackDef] = new Encoder[CallbackDef] {
+
+    final def apply(a: CallbackDef): Json = Json.obj(
+      ("argDefs", a.argDefs.asJson),
+      ("returnType", a.returnType.asJson)
+    )
+  }
+
   def apply(arrow: ArrowType): CallbackDef = {
-    val args = arrow.codomain.toLabelledList().map(a => a._1)
+    val args = arrow.codomain.toLabelledList().map(arg => ArgDef.argToDef(arg._1, arg._2))
     val returns = arrow.domain.toList
     val returnType = returns match {
       case head :: Nil =>
-        head match {
-          case OptionType(t) =>
-            ReturnType(isVoid = false, isOptional = true)
-          case _ => ReturnType(isVoid = false, isOptional = false)
-        }
+        ReturnType(head)
       case head :: x =>
         ReturnType(isVoid = false, isOptional = false)
       case Nil =>
@@ -32,6 +54,29 @@ case class ArgDef(
   callbackDef: Option[CallbackDef]
 )
 
+object ArgDef {
+
+  def argToDef(name: String, `type`: Type, isOptional: Boolean = false): ArgDef = {
+    `type` match {
+      case OptionType(t) =>
+        argToDef(name, t, isOptional = true)
+      case a @ ArrowType(_, _) =>
+        val callbackDef = CallbackDef(a)
+        ArgDef(name, isOptional, Some(callbackDef))
+      case _ => ArgDef(name, isOptional, None)
+    }
+  }
+
+  implicit val encodeArgDef: Encoder[ArgDef] = new Encoder[ArgDef] {
+
+    final def apply(a: ArgDef): Json = Json.obj(
+      ("name", Json.fromString(a.name)),
+      ("isOptional", Json.fromBoolean(a.isOptional)),
+      ("callbackDef", a.callbackDef.asJson)
+    )
+  }
+}
+
 case class Names(
   relay: String,
   getDataSrv: String,
@@ -42,13 +87,13 @@ case class Names(
   errorFnName: String
 )
 
-case class FunctionBodyDef(functionName: String, argNames: List[String], returnType: ReturnType)
+case class FunctionBodyDef(functionName: String, argDefs: List[ArgDef], returnType: ReturnType)
 
 case class ServiceDef(functions: List[FunctionBodyDef])
 
 case class FunctionCallDef(
   functionName: String,
-  isVoid: Boolean,
-  args: List[ArgDef],
+  returnType: ReturnType,
+  argDefs: List[ArgDef],
   names: Names
 )

@@ -7,11 +7,10 @@ import aqua.model.transform.res.FuncRes
 import aqua.model.transform.res.FuncRes.Arg
 import aqua.types.*
 import cats.syntax.show.*
-
-import scala.io.circe.*
-import scala.io.circe.generic.auto.*
-import scala.io.circe.parser.*
-import scala.io.circe.syntax.*
+import io.circe.*
+import io.circe.generic.auto.*
+import io.circe.parser.*
+import io.circe.syntax.*
 
 case class OutputFunc(func: FuncRes, types: Types) {
 
@@ -22,23 +21,12 @@ case class OutputFunc(func: FuncRes, types: Types) {
   val funcTypes = types.funcType(func)
   import funcTypes.*
 
-  def argToDef(name: String, `type`: Type, isOptional: Boolean = false): ArgDef = {
-    `type` match {
-      case OptionType(t) =>
-        argToDef(name, t, isOptional = true)
-      case a@ArrowType(_, _) =>
-        val callbackDef = CallbackDef(a)
-        ArgDef(name, isOptional, Some(callbackDef))
-      case _ => ArgDef(name, isOptional, None)
-    }
-  }
-
   def generate: String = {
     val tsAir = FuncAirGen(func).generate
     val codeLeftSpace = " " * 20
 
     val script = tsAir.show.linesIterator.map(codeLeftSpace + _).mkString("\n")
-    val args = func.args.map(a => argToDef(a.name, a.`type`))
+    val args = func.args.map(a => ArgDef.argToDef(a.name, a.`type`))
     val config = func.conf
     val names = Names(
       config.relayVarName.getOrElse("-relay-"),
@@ -49,7 +37,14 @@ case class OutputFunc(func: FuncRes, types: Types) {
       config.errorFuncName,
       config.respFuncName
     )
-    val funcDef = FunctionCallDef(func.funcName, func.returnType.isEmpty, args, names)
+    val funcDef = FunctionCallDef(
+      func.funcName,
+      func.returnType
+        .map(ReturnType.apply)
+        .getOrElse(ReturnType(isVoid = true, isOptional = false)),
+      args,
+      names
+    )
 
     s"""${funcTypes.generate}
        |export function ${func.funcName}(${typed("...args", "any")}) {
