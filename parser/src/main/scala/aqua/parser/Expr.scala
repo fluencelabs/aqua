@@ -83,7 +83,6 @@ object Expr {
     override def ast[F[_]: LiftParser: Comonad](): P[ValidatedNec[ParserError[F], Tree[F]]] =
       ((super.readLine[F] <* sep) ~ P.oneOf(continueWith.map(_.ast().backtrack))).map {
         case (h, tm) =>
-          println("ast "+tm)
           tm.map(t => h.copy(tail = Eval.now(Chain.one(t))))
       }
   }

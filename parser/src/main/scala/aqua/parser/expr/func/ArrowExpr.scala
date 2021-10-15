@@ -46,12 +46,11 @@ object ArrowExpr extends Expr.AndIndented {
       )
       .map(ArrowExpr(_, Nil))
 
-  def checkReturnValue[F[_]: Comonad]
+  override def afterTreeParsed[F[_]: Comonad]
     : ValidatedNec[ParserError[F], Ast.Tree[F]] => ValidatedNec[ParserError[F], Ast.Tree[F]] =
     _.andThen(tree =>
       tree.head match {
         case arrowExpr: ArrowExpr[F] =>
-          println("GOT ARROW EXPR IN ARROW EXPR: " + arrowExpr)
           // Find the return expression which might be the last one in the function body
           val maybeReturn =
             tree.tail.value.lastOption.map(_.head).collect { case re: ReturnExpr[F] =>
@@ -60,7 +59,6 @@ object ArrowExpr extends Expr.AndIndented {
           // Find correspondance between returned values and declared return types
           arrowExpr.arrowTypeExpr.res match {
             case Nil =>
-              println("EXPECT NOTHING")
               // Nothing should be returned
               maybeReturn.fold(Validated.validNec(tree))(re =>
                 // Declared nothing, but smth is returned
@@ -72,8 +70,6 @@ object ArrowExpr extends Expr.AndIndented {
                 )
               )
             case rets =>
-              println(s"EXPECT $rets")
-              println(s"MAYBE $maybeReturn")
               // Something is expected to be returned
               maybeReturn.fold(
                 // No values are returned at all, no return expression
@@ -84,7 +80,6 @@ object ArrowExpr extends Expr.AndIndented {
                   )
                 )
               ) { re =>
-                println("Return: " + re)
                 // Something is returned, so check that numbers are the same
                 def checkRet(
                   typeDef: List[DataTypeToken[F]],
@@ -120,17 +115,7 @@ object ArrowExpr extends Expr.AndIndented {
           }
 
         case _ =>
-          println("WTF?")
           Validated.validNec(tree)
       }
     )
-
-  override def ast[F[_]: LiftParser: Comonad](): Parser[ValidatedNec[ParserError[F], Ast.Tree[F]]] =
-    super
-      .ast()
-      .map { a =>
-        println(Console.BLUE + a + Console.RESET)
-        a
-      }
-      .map(checkReturnValue)
 }
