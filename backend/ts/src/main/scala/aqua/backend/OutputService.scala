@@ -28,9 +28,10 @@ case class OutputService(srv: ServiceRes, types: Types) {
       |${serviceTypes.generate}
       |
       |export function register${srv.name}(${typed("...args", "any")}) {
+      |    let serviceDefinition = ${serviceDef.asJson.spaces4}
       |    registerService(
       |        args,
-      |        ${serviceDef.asJson.spaces4}
+      |        serviceDefinition
       |    );
       |}
       """.stripMargin
