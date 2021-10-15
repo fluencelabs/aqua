@@ -34,8 +34,8 @@ object CallbackDef {
   }
 
   def apply(arrow: ArrowType): CallbackDef = {
-    val args = arrow.codomain.toLabelledList().map(arg => ArgDef.argToDef(arg._1, arg._2))
-    val returns = arrow.domain.toList
+    val args = arrow.domain.toLabelledList().map(arg => ArgDef.argToDef(arg._1, arg._2))
+    val returns = arrow.codomain.toList
     val returnType = returns match {
       case head :: Nil =>
         ReturnType(head)
