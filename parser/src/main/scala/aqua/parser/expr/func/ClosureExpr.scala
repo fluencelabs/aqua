@@ -24,11 +24,4 @@ object ClosureExpr extends Expr.Prefix() {
   override def p[F[_]: LiftParser: Comonad]: Parser[ClosureExpr[F]] =
     (Name.p[F] <* ` ` <* `=`).map(ClosureExpr(_))
 
-  override def ast[F[_]: LiftParser: Comonad](): Parser[ValidatedNec[ParserError[F], Ast.Tree[F]]] =
-    super
-      .ast()
-      .map { a =>
-        println(Console.YELLOW + a + Console.RESET)
-        a
-      }
 }

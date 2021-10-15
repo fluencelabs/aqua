@@ -20,7 +20,6 @@ class ClosureSem[F[_]](val expr: ClosureExpr[F]) extends AnyVal {
   ): Prog[Alg, Model] =
     Prog.after {
       case arrow: ArrowModel =>
-        println(s"GOING TO REGISTER ${expr.name}")
         N.defineArrow(
           expr.name,
           arrow.`type`,
@@ -28,7 +27,6 @@ class ClosureSem[F[_]](val expr: ClosureExpr[F]) extends AnyVal {
         ) as FuncOp.leaf(ClosureTag(FuncModel(expr.name.value, arrow)))
 
       case m =>
-        println(Console.RED + s"WRONG SHIT INSIDE ${expr.name.value}: ${m}" + Console.RESET)
         Free.pure[Alg, Model](Model.error("Closure must continue with an arrow definition"))
     }
 

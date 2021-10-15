@@ -207,7 +207,6 @@ object Expr {
                     // create a tree from the last expressions if the window is not empty
                     // this may happen if a function ended in a nested expression
                     val tree = listToTree[F](headExpr, acc.window)
-                    println(Console.GREEN + tree + Console.RESET)
                     tree.map(t => setLeafs(head, acc.currentChildren :+ t))
                   }
                 case None =>

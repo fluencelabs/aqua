@@ -131,7 +131,7 @@ case class FuncCallable(
           )
 
         case ((noNames, resolvedExports, resolvedArrows), CallArrowTag(fn, c))
-            if allArrows.contains(fn) =>
+            if resolvedArrows.contains(fn) =>
           // Apply arguments to a function – recursion
           val callResolved = c.mapValues(_.resolveWith(resolvedExports))
           val possibleArrowNames = callResolved.args.collect { case VarModel(m, _: ArrowType, _) =>
