@@ -18,7 +18,7 @@ case class OutputService(srv: ServiceRes, types: Types) {
 
   def generate: String =
     val functions = srv.members.map{ m =>
-      val cDef = CallbackDef(m._2)
+      val cDef = CallbackDefinition(m._2)
       FunctionBodyDef(m._1, cDef.argDefs, cDef.returnType)
     }
 

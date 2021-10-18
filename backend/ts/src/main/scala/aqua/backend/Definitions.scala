@@ -6,104 +6,103 @@ import io.circe.generic.auto.*
 import io.circe.parser.*
 import io.circe.syntax.*
 
-sealed trait DefType {
+import scala.annotation.tailrec
+
+sealed trait TypeDefinition {
   def tag: String
 }
 
-object DefType {
-  implicit val encodeDefType: Encoder[DefType] = new Encoder[DefType] {
+object TypeDefinition {
 
-    final def apply(d: DefType): Json = {
-      d match {
-        case OptionalType | VoidType | PrimitiveType =>
-          Json.obj(
-            ("tag", Json.fromString(d.tag))
-          )
-        case CallbackType(cDef) =>
-          Json.obj(
-            ("tag", Json.fromString(d.tag)),
-            ("callback", cDef.asJson)
-          )
-        case MultiReturnType(returnItems) =>
-          Json.obj(
-            ("tag", Json.fromString(d.tag)),
-            ("returnItems", returnItems.asJson)
-          )
-      }
-    }
+  implicit val encodeDefType: Encoder[TypeDefinition] = {
+    case d@(OptionalType | VoidType | PrimitiveType) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag))
+      )
+    case d@CallbackType(cDef) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("callback", cDef.asJson)
+      )
+    case d@MultiReturnType(returnItems) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("returnItems", returnItems.asJson)
+      )
   }
 
-  def apply(t: Type): DefType = {
+  def apply(t: Option[Type]): TypeDefinition = t.map(apply).getOrElse(VoidType)
+
+  def apply(t: Type): TypeDefinition = {
     t match {
       case OptionType(t) =>
         OptionalType
       case pt: ProductType =>
-        MultiReturnType(pt.toList.map(DefType.apply))
+        MultiReturnType(pt.toList.map(TypeDefinition.apply))
       case _ => PrimitiveType
     }
   }
 }
 
-case object OptionalType extends DefType { val tag = "optional" }
-case object VoidType extends DefType { val tag = "void" }
-case object PrimitiveType extends DefType { val tag = "primitive" }
-case class CallbackType(cDef: CallbackDef) extends DefType { val tag = "callback" }
-case class MultiReturnType(returnItems: List[DefType]) extends DefType { val tag = "multiReturn" }
+case object OptionalType extends TypeDefinition { val tag = "optional" }
+case object VoidType extends TypeDefinition { val tag = "void" }
+case object PrimitiveType extends TypeDefinition { val tag = "primitive" }
+case class CallbackType(cDef: CallbackDefinition) extends TypeDefinition { val tag = "callback" }
 
-case class CallbackDef(argDefs: List[ArgDef], returnType: DefType)
+case class MultiReturnType(returnItems: List[TypeDefinition]) extends TypeDefinition {
+  val tag = "multiReturn"
+}
 
-object CallbackDef {
+case class CallbackDefinition(argDefs: List[ArgDefinition], returnType: TypeDefinition)
 
-  implicit val encodeCallbackDef: Encoder[CallbackDef] = new Encoder[CallbackDef] {
+object CallbackDefinition {
 
-    final def apply(a: CallbackDef): Json = Json.obj(
-      ("argDefs", a.argDefs.asJson),
-      ("returnType", a.returnType.asJson)
-    )
-  }
+  implicit val encodeCallbackDef: Encoder[CallbackDefinition] = (cbDef: CallbackDefinition) => Json.obj(
+    ("argDefs", cbDef.argDefs.asJson),
+    ("returnType", cbDef.returnType.asJson)
+  )
 
-  def apply(arrow: ArrowType): CallbackDef = {
-    val args = arrow.domain.toLabelledList().map(arg => ArgDef.argToDef(arg._1, arg._2))
+  def apply(arrow: ArrowType): CallbackDefinition = {
+    val args = arrow.domain.toLabelledList().map(arg => ArgDefinition.argToDef(arg._1, arg._2))
     val returns = arrow.codomain.toList
     val returnType = returns match {
       case head :: Nil =>
-        DefType(head)
-      case head :: x =>
-        MultiReturnType(returns.map(DefType.apply))
+        TypeDefinition(head)
       case Nil =>
         VoidType
+      case _ =>
+        MultiReturnType(returns.map(TypeDefinition.apply))
     }
-    CallbackDef(args, returnType)
+    CallbackDefinition(args, returnType)
   }
 }
 
-case class ArgDef(
+case class ArgDefinition(
   name: String,
-  argType: DefType
+  argType: TypeDefinition
 )
 
-object ArgDef {
+object ArgDefinition {
 
-  def argToDef(name: String, `type`: Type, isOptional: Boolean = false): ArgDef = {
+  @tailrec
+  def argToDef(name: String, `type`: Type, isOptional: Boolean = false): ArgDefinition = {
     `type` match {
       case OptionType(t) =>
         argToDef(name, t, isOptional = true)
       case a @ ArrowType(_, _) =>
-        val callbackDef = CallbackDef(a)
-        ArgDef(name, CallbackType(callbackDef))
-      case _ => ArgDef(name, if (isOptional) OptionalType else PrimitiveType)
+        val callbackDef = CallbackDefinition(a)
+        ArgDefinition(name, CallbackType(callbackDef))
+      case _ => ArgDefinition(name, if (isOptional) OptionalType else PrimitiveType)
     }
   }
 
-  implicit val encodeArgDef: Encoder[ArgDef] = new Encoder[ArgDef] {
-
-    final def apply(a: ArgDef): Json = Json.obj(
-      ("name", Json.fromString(a.name)),
-      ("argType", a.argType.asJson)
-    )
-  }
+  implicit val encodeArgDef: Encoder[ArgDefinition] = (a: ArgDefinition) => Json.obj(
+    ("name", Json.fromString(a.name)),
+    ("argType", a.argType.asJson)
+  )
 }
 
+// Names of services and functions that are used in air
 case class Names(
   relay: String,
   getDataSrv: String,
@@ -114,13 +113,17 @@ case class Names(
   errorFnName: String
 )
 
-case class FunctionBodyDef(functionName: String, argDefs: List[ArgDef], returnType: DefType)
+case class FunctionBodyDef(
+  functionName: String,
+  argDefs: List[ArgDefinition],
+  returnType: TypeDefinition
+)
 
 case class ServiceDef(defaultServiceId: Option[String], functions: List[FunctionBodyDef])
 
 case class FunctionCallDef(
   functionName: String,
-  returnType: DefType,
-  argDefs: List[ArgDef],
+  returnType: TypeDefinition,
+  argDefs: List[ArgDefinition],
   names: Names
 )

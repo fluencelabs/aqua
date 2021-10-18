@@ -18,6 +18,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
   import TypeScriptCommon.*
   import func.*
   import types.*
+
   val funcTypes = types.funcType(func)
   import funcTypes.*
 
@@ -26,7 +27,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
     val codeLeftSpace = " " * 20
 
     val script = tsAir.show.linesIterator.map(codeLeftSpace + _).mkString("\n")
-    val args = func.args.map(a => ArgDef.argToDef(a.name, a.`type`))
+    val args = func.args.map(a => ArgDefinition.argToDef(a.name, a.`type`))
     val config = func.conf
     val names = Names(
       config.relayVarName.getOrElse("-relay-"),
@@ -39,9 +40,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
     )
     val funcDef = FunctionCallDef(
       func.funcName,
-      func.returnType
-        .map(DefType.apply)
-        .getOrElse(VoidType),
+      TypeDefinition(func.returnType),
       args,
       names
     )
