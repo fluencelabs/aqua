@@ -40,8 +40,8 @@ case class OutputFunc(func: FuncRes, types: Types) {
     val funcDef = FunctionCallDef(
       func.funcName,
       func.returnType
-        .map(ReturnType.apply)
-        .getOrElse(ReturnType(isVoid = true, isOptional = false)),
+        .map(DefType.apply)
+        .getOrElse(VoidType),
       args,
       names
     )

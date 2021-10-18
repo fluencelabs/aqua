@@ -6,22 +6,49 @@ import io.circe.generic.auto.*
 import io.circe.parser.*
 import io.circe.syntax.*
 
-import scala.annotation.tailrec
+sealed trait DefType {
+  def tag: String
+}
 
-case class ReturnType(isVoid: Boolean, isOptional: Boolean)
+object DefType {
+  implicit val encodeDefType: Encoder[DefType] = new Encoder[DefType] {
 
-object ReturnType {
+    final def apply(d: DefType): Json = {
+      d match {
+        case OptionalType | VoidType | PrimitiveType =>
+          Json.obj(
+            ("tag", Json.fromString(d.tag))
+          )
+        case CallbackType(cDef) =>
+          Json.obj(
+            ("tag", Json.fromString(d.tag)),
+            ("callback", cDef.asJson)
+          )
+        case MultiReturnType(returnItems) =>
+          Json.obj(
+            ("tag", Json.fromString(d.tag)),
+            ("returnItems", returnItems.asJson)
+          )
+      }
+    }
+  }
 
-  def apply(t: Type): ReturnType = {
+  def apply(t: Type): DefType = {
     t match {
       case OptionType(t) =>
-        ReturnType(isVoid = false, isOptional = true)
-      case _ => ReturnType(isVoid = false, isOptional = false)
+        OptionalType
+      case _ => PrimitiveType
     }
   }
 }
 
-case class CallbackDef(argDefs: List[ArgDef], returnType: ReturnType)
+case object OptionalType extends DefType { val tag = "optional" }
+case object VoidType extends DefType { val tag = "void" }
+case object PrimitiveType extends DefType { val tag = "primitive" }
+case class CallbackType(cDef: CallbackDef) extends DefType { val tag = "callback" }
+case class MultiReturnType(returnItems: List[ArgDef]) extends DefType { val tag = "multiReturn" }
+
+case class CallbackDef(argDefs: List[ArgDef], returnType: DefType)
 
 object CallbackDef {
 
@@ -38,11 +65,11 @@ object CallbackDef {
     val returns = arrow.codomain.toList
     val returnType = returns match {
       case head :: Nil =>
-        ReturnType(head)
+        DefType(head)
       case head :: x =>
-        ReturnType(isVoid = false, isOptional = false)
+        PrimitiveType
       case Nil =>
-        ReturnType(isVoid = true, isOptional = false)
+        VoidType
     }
     CallbackDef(args, returnType)
   }
@@ -50,8 +77,7 @@ object CallbackDef {
 
 case class ArgDef(
   name: String,
-  isOptional: Boolean,
-  callbackDef: Option[CallbackDef]
+  argType: DefType
 )
 
 object ArgDef {
@@ -62,8 +88,8 @@ object ArgDef {
         argToDef(name, t, isOptional = true)
       case a @ ArrowType(_, _) =>
         val callbackDef = CallbackDef(a)
-        ArgDef(name, isOptional, Some(callbackDef))
-      case _ => ArgDef(name, isOptional, None)
+        ArgDef(name, CallbackType(callbackDef))
+      case _ => ArgDef(name, if (isOptional) OptionalType else PrimitiveType)
     }
   }
 
@@ -71,8 +97,7 @@ object ArgDef {
 
     final def apply(a: ArgDef): Json = Json.obj(
       ("name", Json.fromString(a.name)),
-      ("isOptional", Json.fromBoolean(a.isOptional)),
-      ("callbackDef", a.callbackDef.asJson)
+      ("argType", a.argType.asJson)
     )
   }
 }
@@ -87,13 +112,13 @@ case class Names(
   errorFnName: String
 )
 
-case class FunctionBodyDef(functionName: String, argDefs: List[ArgDef], returnType: ReturnType)
+case class FunctionBodyDef(functionName: String, argDefs: List[ArgDef], returnType: DefType)
 
 case class ServiceDef(defaultServiceId: Option[String], functions: List[FunctionBodyDef])
 
 case class FunctionCallDef(
   functionName: String,
-  returnType: ReturnType,
+  returnType: DefType,
   argDefs: List[ArgDef],
   names: Names
 )
