@@ -1,6 +1,6 @@
 package aqua.backend
 
-import aqua.types.{ArrowType, OptionType, Type}
+import aqua.types.{ArrowType, OptionType, ProductType, Type}
 import io.circe.*
 import io.circe.generic.auto.*
 import io.circe.parser.*
@@ -37,6 +37,8 @@ object DefType {
     t match {
       case OptionType(t) =>
         OptionalType
+      case pt: ProductType =>
+        MultiReturnType(pt.toList.map(DefType.apply))
       case _ => PrimitiveType
     }
   }
