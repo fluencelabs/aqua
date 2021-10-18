@@ -46,7 +46,7 @@ case object OptionalType extends DefType { val tag = "optional" }
 case object VoidType extends DefType { val tag = "void" }
 case object PrimitiveType extends DefType { val tag = "primitive" }
 case class CallbackType(cDef: CallbackDef) extends DefType { val tag = "callback" }
-case class MultiReturnType(returnItems: List[ArgDef]) extends DefType { val tag = "multiReturn" }
+case class MultiReturnType(returnItems: List[DefType]) extends DefType { val tag = "multiReturn" }
 
 case class CallbackDef(argDefs: List[ArgDef], returnType: DefType)
 
@@ -67,7 +67,7 @@ object CallbackDef {
       case head :: Nil =>
         DefType(head)
       case head :: x =>
-        PrimitiveType
+        MultiReturnType(returns.map(DefType.apply))
       case Nil =>
         VoidType
     }
