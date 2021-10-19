@@ -23,17 +23,22 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "func header" should "parse" in {
     funcExpr("func some() -> bool") should be(
-      FuncExpr("some", toNamedArrow(Nil, List(bool: BasicTypeToken[Id])), Nil)
+//      FuncExpr[Id](toName("some"), toNamedArrow(Nil, List(bool: BasicTypeToken[Id])), Nil)
+      FuncExpr[Id](toName("some"))
     )
-    funcExpr("func some()") should be(FuncExpr("some", toNamedArrow(Nil, Nil), Nil))
+//    funcExpr("func some()") should be(FuncExpr[Id](toName("some"), toNamedArrow(Nil, Nil), Nil))
+    funcExpr("func some()") should be(FuncExpr[Id](toName("some")))
 
     val arrowToken =
       ArrowTypeToken[Id]((), List(None -> BasicTypeToken[Id](u8)), List(BasicTypeToken[Id](bool)))
     funcExpr("func some(peer: PeerId, other: u8 -> bool)") should be(
-      FuncExpr(
-        toName("some"),
-        toNamedArrow(("peer" -> toCustomType("PeerId")) :: ("other" -> arrowToken) :: Nil, Nil),
-        Nil
+//      FuncExpr[Id](
+//        toName("some"),
+//        toNamedArrow(("peer" -> toCustomType("PeerId")) :: ("other" -> arrowToken) :: Nil, Nil),
+//        Nil
+//      )
+      FuncExpr[Id](
+        toName("some")
       )
     )
 
@@ -44,22 +49,22 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         List(BasicTypeToken[Id](bool))
       )
     funcExpr("func some(peer: PeerId, other: u32, u64 -> bool)") should be(
-      FuncExpr(
+      FuncExpr[Id](
         toName("some"),
-        toNamedArrow(("peer" -> toCustomType("PeerId")) :: ("other" -> arrowToken2) :: Nil, Nil),
-        Nil
+//        toNamedArrow(("peer" -> toCustomType("PeerId")) :: ("other" -> arrowToken2) :: Nil, Nil),
+//        Nil
       )
     )
 
     val arrowToken3 = ArrowTypeToken[Id]((), List(None -> BasicTypeToken[Id](u32)), Nil)
     funcExpr("func getTime(peer: PeerId, ret: u32 -> ()) -> string, u32") should be(
-      FuncExpr(
+      FuncExpr[Id](
         toName("getTime"),
-        toNamedArrow(
-          ("peer" -> toCustomType("PeerId")) :: ("ret" -> arrowToken3) :: Nil,
-          BasicTypeToken[Id](string) :: BasicTypeToken[Id](u32) :: Nil
-        ),
-        Nil
+//        toNamedArrow(
+//          ("peer" -> toCustomType("PeerId")) :: ("ret" -> arrowToken3) :: Nil,
+//          BasicTypeToken[Id](string) :: BasicTypeToken[Id](u32) :: Nil
+//        ),
+//        Nil
       )
     )
   }
@@ -90,7 +95,8 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |  call(true)""".stripMargin
 
     val tree = FuncExpr.ast[Id]().parseAll(script).value.toEither.value
-    val funcBody = checkHeadGetTail(tree, FuncExpr("a", toNamedArrow(Nil, Nil), Nil), 1).toList
+//    val funcBody = checkHeadGetTail(tree, FuncExpr(toName("a"), toNamedArrow(Nil, Nil), Nil), 1).toList
+    val funcBody = checkHeadGetTail(tree, FuncExpr(toName("a")), 1).toList
 
     val ifBody =
       checkHeadGetTail(
