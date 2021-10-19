@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.expr.OnExpr
+import aqua.parser.expr.func.OnExpr
 import aqua.parser.expr.func.ElseOtherwiseExpr
 import aqua.parser.lexer.Token
 import aqua.types.LiteralType.{number, string}

@@ -10,7 +10,8 @@ import aqua.parser.expr.func.{
   IfExpr,
   OnExpr,
   PushToStreamExpr,
-  ReturnExpr
+  ReturnExpr,
+  ArrowExpr
 }
 import aqua.parser.lexer.*
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
@@ -120,6 +121,7 @@ trait AquaSpec extends EitherValues {
     ArrowTypeExpr.p[Id].parseAll(str).value
 
   def funcExpr(str: String): FuncExpr[Id] = FuncExpr.p[Id].parseAll(str).value
+  def arrowExpr(str: String): ArrowExpr[Id] = ArrowExpr.p[Id].parseAll(str).value
 
   implicit class QueueHelper[T](q: mutable.Queue[T]) {
     def d(): T = q.dequeue()
