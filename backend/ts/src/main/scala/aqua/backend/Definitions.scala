@@ -8,6 +8,8 @@ import io.circe.syntax.*
 
 import scala.annotation.tailrec
 
+
+// Represents the Aqua types
 sealed trait TypeDefinition {
   def tag: String
 }
@@ -53,6 +55,7 @@ case class MultiReturnType(returnItems: List[TypeDefinition]) extends TypeDefini
   val tag = "multiReturn"
 }
 
+// Describes callbacks
 case class CallbackDefinition(argDefs: List[ArgDefinition], returnType: TypeDefinition)
 
 object CallbackDefinition {
@@ -77,6 +80,7 @@ object CallbackDefinition {
   }
 }
 
+// Describes arguments in functions and callbacks
 case class ArgDefinition(
   name: String,
   argType: TypeDefinition
@@ -113,14 +117,17 @@ case class Names(
   errorFnName: String
 )
 
+// Describes a body of functions, services and callbacks
 case class FunctionBodyDef(
   functionName: String,
   argDefs: List[ArgDefinition],
   returnType: TypeDefinition
 )
 
+// Describes service
 case class ServiceDef(defaultServiceId: Option[String], functions: List[FunctionBodyDef])
 
+// Describes top-level function
 case class FunctionCallDef(
   functionName: String,
   returnType: TypeDefinition,
