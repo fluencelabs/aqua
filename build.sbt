@@ -170,7 +170,6 @@ lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-core",
       "io.circe" %%% "circe-generic",
-      "io.circe" %%% "circe-parser",
       "io.circe" %%% "circe-parser"
     ).map(_ % circeVersion)
   )
