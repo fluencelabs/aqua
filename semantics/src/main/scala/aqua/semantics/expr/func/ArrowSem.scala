@@ -64,6 +64,7 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
         ArrowType(ProductType.labelled(argsAndRes._1), ProductType(argsAndRes._2.reverse))
       )
 
+  // TODO: rename, it is not only checks return value
   def checkReturnValue[Alg[_]](
     funcArrow: ArrowType,
     retValue: NonEmptyList[ValueModel],
