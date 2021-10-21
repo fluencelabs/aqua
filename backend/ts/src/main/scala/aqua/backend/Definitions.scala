@@ -55,7 +55,7 @@ case class MultiReturnType(returnItems: List[TypeDefinition]) extends TypeDefini
   val tag = "multiReturn"
 }
 
-// Describes callbacks
+// Describes callbacks that passes as arguments in functions
 case class CallbackDefinition(argDefs: List[ArgDefinition], returnType: TypeDefinition)
 
 object CallbackDefinition {
