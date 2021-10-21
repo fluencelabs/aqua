@@ -56,7 +56,7 @@ object TypeScriptCommon {
     
     val retType = returnType(at)
 
-    s"(${args}) => ${retType}"
+    s"(${args}) => ${retType} | Promise<${retType}>"
 
   def argsToTs(at: ArrowType): List[String] =
     FuncRes
