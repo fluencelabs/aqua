@@ -1,7 +1,7 @@
 package aqua.backend
 
 import aqua.backend.air.FuncAirGen
-import aqua.backend.ts.TypeScriptCommon.{callBackExprBody, fixupArgName}
+import aqua.backend.ts.TypeScriptCommon.fixupArgName
 import aqua.backend.ts.{TSFuncTypes, TypeScriptCommon}
 import aqua.model.transform.res.FuncRes
 import aqua.model.transform.res.FuncRes.Arg
@@ -29,7 +29,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
     val script = tsAir.show.linesIterator.map(codeLeftSpace + _).mkString("\n")
     val args = func.args.map(a => ArgDefinition.argToDef(a.name, a.`type`))
     val config = func.conf
-    val names = Names(
+    val names = NamesConfig(
       config.relayVarName.getOrElse("-relay-"),
       config.getDataService,
       config.callbackService,
@@ -38,7 +38,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
       config.errorHandlingService,
       config.errorFuncName
     )
-    val funcDef = FunctionCallDef(
+    val funcDef = FunctionDef(
       func.funcName,
       TypeDefinition(func.returnType),
       args,

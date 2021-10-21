@@ -1,7 +1,6 @@
 package aqua.backend
 
 import aqua.backend.ts.TypeScriptCommon
-import aqua.backend.ts.TypeScriptCommon.callBackExprBody
 import aqua.model.transform.res.ServiceRes
 import aqua.types.ArrowType
 import io.circe.*
@@ -19,7 +18,7 @@ case class OutputService(srv: ServiceRes, types: Types) {
   def generate: String =
     val functions = srv.members.map{ m =>
       val cDef = CallbackDefinition(m._2)
-      FunctionBodyDef(m._1, cDef.argDefs, cDef.returnType)
+      ServiceFunctionDef(m._1, cDef.argDefs, cDef.returnType)
     }
 
     val serviceDef = ServiceDef(srv.defaultId.map(s => s.replace("\"", "")), functions)

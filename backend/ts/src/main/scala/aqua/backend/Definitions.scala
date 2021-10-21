@@ -107,7 +107,7 @@ object ArgDefinition {
 }
 
 // Names of services and functions that are used in air
-case class Names(
+case class NamesConfig(
   relay: String,
   getDataSrv: String,
   callbackSrv: String,
@@ -118,19 +118,19 @@ case class Names(
 )
 
 // Describes a body of functions, services and callbacks
-case class FunctionBodyDef(
+case class ServiceFunctionDef(
   functionName: String,
   argDefs: List[ArgDefinition],
   returnType: TypeDefinition
 )
 
 // Describes service
-case class ServiceDef(defaultServiceId: Option[String], functions: List[FunctionBodyDef])
+case class ServiceDef(defaultServiceId: Option[String], functions: List[ServiceFunctionDef])
 
 // Describes top-level function
-case class FunctionCallDef(
+case class FunctionDef(
   functionName: String,
   returnType: TypeDefinition,
   argDefs: List[ArgDefinition],
-  names: Names
+  names: NamesConfig
 )
