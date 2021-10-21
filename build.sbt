@@ -13,11 +13,12 @@ val catsEffectV = "3.2.1"
 val log4catsV = "2.1.1"
 val slf4jV = "1.7.30"
 val declineV = "2.1.0"
+val circeVersion = "0.14.1"
 
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.3.2",
+  baseAquaVersion := "0.4.0",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
@@ -165,4 +166,11 @@ lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("backend/ts"))
   .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.circe" %%% "circe-core",
+      "io.circe" %%% "circe-generic",
+      "io.circe" %%% "circe-parser"
+    ).map(_ % circeVersion)
+  )
   .dependsOn(`backend-air`)
