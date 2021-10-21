@@ -29,7 +29,7 @@ case class OutputService(srv: ServiceRes, types: Types) {
       |export function register${srv.name}(${typed("...args", "any")}) {
       |    registerService(
       |        args,
-      |        ${serviceDef.asJson.spaces4}
+      |        ${serviceDef.asJson.deepDropNullValues.spaces4}
       |    );
       |}
       """.stripMargin

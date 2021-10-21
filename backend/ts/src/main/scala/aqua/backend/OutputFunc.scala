@@ -53,7 +53,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
        |    `
        |    return callFunction(
        |        args,
-       |        ${funcDef.asJson.spaces4},
+       |        ${funcDef.asJson.deepDropNullValues.spaces4},
        |        script
        |    )
        |}""".stripMargin
