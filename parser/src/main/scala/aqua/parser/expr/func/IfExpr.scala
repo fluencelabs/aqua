@@ -8,6 +8,8 @@ import aqua.parser.lift.LiftParser
 import aqua.types.LiteralType
 import cats.parse.Parser as P
 import cats.{Comonad, ~>}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class IfExpr[F[_]](left: Value[F], eqOp: EqOp[F], right: Value[F])
     extends Expr[F](IfExpr, eqOp) {
@@ -20,8 +22,8 @@ object IfExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Lexem] = ForExpr.validChildren
 
-  override def p[F[_]: LiftParser: Comonad]: P[IfExpr[F]] =
-    (`if` *> ` ` *> Value.`value`[F] ~ (` ` *> EqOp.p[F] ~ (` ` *> Value.`value`[F])).?).map {
+  override val p: P[IfExpr[Span.F]] =
+    (`if` *> ` ` *> Value.`value` ~ (` ` *> EqOp.p ~ (` ` *> Value.`value`)).?).map {
       case (left, Some((e, right))) =>
         IfExpr(left, e, right)
       case (left, None) =>

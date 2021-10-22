@@ -3,7 +3,7 @@ package aqua.parser.expr
 import aqua.parser.Ast.Tree
 import aqua.parser.lexer.Token
 import aqua.parser.lexer.Token.*
-import aqua.parser.lift.LiftParser
+import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.lift.LiftParser.*
 import aqua.parser.{Expr, ParserError}
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, Validated, ValidatedNec}
@@ -19,6 +19,7 @@ case class RootExpr[F[_]](point: Token[F]) extends Expr[F](RootExpr, point) {
 }
 
 object RootExpr extends Expr.Companion {
+  import Span.*
 
   def validChildren: List[Expr.Lexem] =
     ServiceExpr :: AliasExpr :: DataStructExpr :: ConstantExpr :: FuncExpr :: Nil
@@ -30,35 +31,35 @@ object RootExpr extends Expr.Companion {
     }
   }
 
-  private def linesParser[F[_]: LiftParser: Comonad](): P[NonEmptyList[ValidatedNec[ParserError[F], Tree[F]]]] =
+  private val linesParser: P[NonEmptyList[ValidatedNec[ParserError[Span.F], Tree[Span.F]]]] =
     P.repSep(
-      P.oneOf(RootExpr.validChildren.map(_.ast[F]())),
+      P.oneOf(RootExpr.validChildren.map(_.ast)),
       ` \n+`
     ).surroundedBy(` \n+`.?)
 
-  private def rootToken[F[_]: LiftParser: Comonad]: P0[Token[F]] =
-    P.unit.lift0.map(Token.lift[F, Unit](_))
+  private val rootToken: P0[Token[Span.F]] =
+    P.unit.lift0.map(Token.lift[Span.F, Unit](_))
 
-  private def parserSchema[F[_]: LiftParser: Comonad](): P[(Token[F], (Chain[ParserError[F]], Chain[Tree[F]]))] =
+  private val parserSchema: P[(Token[Span.F], (Chain[ParserError[Span.F]], Chain[Tree[Span.F]]))] =
     rootToken.with1 ~
-      linesParser().map(l => gatherResults(l))
+      linesParser.map(l => gatherResults(l))
 
-  def empty[F[_] : LiftParser : Comonad](): P0[ValidatedNec[ParserError[F], Tree[F]]] =
+  val empty: P0[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
     (rootToken <* (Token.` \n*` *> Token.` `.? *> P.end))
-      .map(point => Validated.validNec(Cofree(RootExpr[F](point), Eval.now(Chain.empty))))
+      .map(point => Validated.validNec(Cofree(RootExpr[Span.F](point), Eval.now(Chain.empty))))
 
   // Could handle empty body
-  def ast0[F[_]: LiftParser: Comonad](): P0[ValidatedNec[ParserError[F], Tree[F]]] =
+  val ast0: P0[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
     // `empty` is first to handle errors from `ast` at a first place
-    empty().backtrack | ast()
+    empty.backtrack | ast
 
-  override def ast[F[_]: LiftParser: Comonad](): P[ValidatedNec[ParserError[F], Tree[F]]] =
-    parserSchema()
+  override val ast: P[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
+    parserSchema
         .map { case (point, (errs, trees)) =>
       NonEmptyChain
         .fromChain(errs)
-        .fold[ValidatedNec[ParserError[F], Tree[F]]](
-          Validated.validNec(Cofree(RootExpr[F](point), Eval.now(trees)))
+        .fold[ValidatedNec[ParserError[Span.F], Tree[Span.F]]](
+          Validated.validNec(Cofree(RootExpr[Span.F](point), Eval.now(trees)))
         )(Validated.invalid)
     }
 }

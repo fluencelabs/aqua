@@ -20,8 +20,8 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "Arrow type" should "parse" in {
-    val arrowdef = ArrowTypeToken.`arrowdef`[Id](DataTypeToken.`datatypedef`[Id])
-    val arrowWithNames = ArrowTypeToken.`arrowWithNames`[Id](DataTypeToken.`datatypedef`[Id])
+    val arrowdef = ArrowTypeToken.`arrowdef`(DataTypeToken.`datatypedef`)
+    val arrowWithNames = ArrowTypeToken.`arrowWithNames`(DataTypeToken.`datatypedef`)
 
     arrowdef.parseAll("-> B").value should be(
       ArrowTypeToken[Id]((), Nil, List(CustomTypeToken[Id]("B")))

@@ -13,7 +13,7 @@ import org.scalatest.matchers.should.Matchers
 class CoExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "co" should "be parsed" in {
-    CoExpr.readLine[Id].parseAll("co x <- y()").value should be(
+    CoExpr.readLine.parseAll("co x <- y()").value should be(
       Cofree[Chain, Expr[Id]](
         CoExpr[Id](Token.lift[Id, Unit](())),
         Eval.now(

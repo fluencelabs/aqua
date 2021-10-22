@@ -9,6 +9,8 @@ import cats.parse.{Accumulator0, Parser as P}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 sealed trait TypeToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): TypeToken[K]
@@ -39,9 +41,9 @@ case class StreamTypeToken[F[_]: Comonad](override val unit: F[Unit], data: Data
 
 object StreamTypeToken {
 
-  def `streamtypedef`[F[_]: LiftParser: Comonad]: P[StreamTypeToken[F]] =
+  val `streamtypedef`: P[StreamTypeToken[Span.F]] =
     ((`*`.lift <* P.not(`*`).withContext("Nested streams '**type' is prohibited"))
-      ~ DataTypeToken.`withoutstreamdatatypedef`[F])
+      ~ DataTypeToken.`withoutstreamdatatypedef`)
       .map(ud => StreamTypeToken(ud._1, ud._2))
 
 }
@@ -56,8 +58,8 @@ case class OptionTypeToken[F[_]: Comonad](override val unit: F[Unit], data: Data
 
 object OptionTypeToken {
 
-  def `optiontypedef`[F[_]: LiftParser: Comonad]: P[OptionTypeToken[F]] =
-    (`?`.lift ~ DataTypeToken.`datatypedef`[F]).map(ud => OptionTypeToken(ud._1, ud._2))
+  val `optiontypedef`: P[OptionTypeToken[Span.F]] =
+    (`?`.lift ~ DataTypeToken.`datatypedef`).map(ud => OptionTypeToken(ud._1, ud._2))
 
 }
 
@@ -71,10 +73,10 @@ case class CustomTypeToken[F[_]: Comonad](name: F[String]) extends DataTypeToken
 
 object CustomTypeToken {
 
-  def ct[F[_]: LiftParser: Comonad]: P[CustomTypeToken[F]] =
+  val ct: P[CustomTypeToken[Span.F]] =
     `Class`.lift.map(CustomTypeToken(_))
 
-  def dotted[F[_]: LiftParser: Comonad]: P[CustomTypeToken[F]] =
+  def dotted: P[CustomTypeToken[Span.F]] =
     `Class`.repSep(`.`).string.lift.map(CustomTypeToken(_))
 }
 
@@ -88,7 +90,7 @@ case class BasicTypeToken[F[_]: Comonad](scalarType: F[ScalarType]) extends Data
 
 object BasicTypeToken {
 
-  def `basictypedef`[F[_]: LiftParser: Comonad]: P[BasicTypeToken[F]] =
+  val `basictypedef`: P[BasicTypeToken[Span.F]] =
     P.oneOf(
       ScalarType.all.map(n ⇒ P.string(n.name).as(n)).toList
     ).lift
@@ -113,16 +115,16 @@ case class ArrowTypeToken[F[_]: Comonad](
 
 object ArrowTypeToken {
 
-  def `arrowdef`[F[_]: LiftParser: Comonad](argTypeP: P[TypeToken[F]]): P[ArrowTypeToken[F]] =
+  def `arrowdef`(argTypeP: P[TypeToken[Span.F]]): P[ArrowTypeToken[Span.F]] =
     (comma0(argTypeP).with1 ~ ` -> `.lift ~
       (comma(DataTypeToken.`datatypedef`).map(_.toList)
         | `()`.as(Nil))).map { case ((args, point), res) ⇒
-      ArrowTypeToken(point, args.map(Option.empty[Name[F]] -> _), res)
+      ArrowTypeToken(point, args.map(Option.empty[Name[Span.F]] -> _), res)
     }
 
-  def `arrowWithNames`[F[_]: LiftParser: Comonad](argTypeP: P[TypeToken[F]]): P[ArrowTypeToken[F]] =
+  def `arrowWithNames`(argTypeP: P[TypeToken[Span.F]]): P[ArrowTypeToken[Span.F]] =
     (((`(`.lift <* `/s*`) ~ comma0(
-      (Name.p[F].map(Option(_)) ~ (` : ` *> (argTypeP | argTypeP.between(`(`, `)`))))
+      (Name.p.map(Option(_)) ~ (` : ` *> (argTypeP | argTypeP.between(`(`, `)`))))
         .surroundedBy(`/s*`)
     ) <* (`/s*` *> `)`)) ~
       (` -> ` *> comma(DataTypeToken.`datatypedef`)).?).map { case ((point, args), res) =>
@@ -132,37 +134,37 @@ object ArrowTypeToken {
 
 object DataTypeToken {
 
-  def `arraytypedef`[F[_]: LiftParser: Comonad]: P[ArrayTypeToken[F]] =
-    (`[]`.lift ~ `datatypedef`[F]).map(ud => ArrayTypeToken(ud._1, ud._2))
+  val `arraytypedef`: P[ArrayTypeToken[Span.F]] =
+    (`[]`.lift ~ `datatypedef`).map(ud => ArrayTypeToken(ud._1, ud._2))
 
-  def `topbottomdef`[F[_]: LiftParser: Comonad]: P[TopBottomToken[F]] =
+  val `topbottomdef`: P[TopBottomToken[Span.F]] =
     `⊥`.lift.map(TopBottomToken(_, isTop = false)) |
       `⊤`.lift.map(TopBottomToken(_, isTop = true))
 
-  def `withoutstreamdatatypedef`[F[_]: LiftParser: Comonad]: P[DataTypeToken[F]] =
+  val `withoutstreamdatatypedef`: P[DataTypeToken[Span.F]] =
     P.oneOf(
-      P.defer(`arraytypedef`[F]) :: P.defer(
+      P.defer(`arraytypedef`) :: P.defer(
         OptionTypeToken.`optiontypedef`
       ) :: BasicTypeToken
-        .`basictypedef`[F] :: CustomTypeToken.dotted[F] :: Nil
+        .`basictypedef` :: CustomTypeToken.dotted :: Nil
     )
 
-  def `datatypedef`[F[_]: LiftParser: Comonad]: P[DataTypeToken[F]] =
+  val `datatypedef`: P[DataTypeToken[Span.F]] =
     P.oneOf(
-      P.defer(`arraytypedef`[F]) :: P.defer(StreamTypeToken.`streamtypedef`) :: P.defer(
+      P.defer(`arraytypedef`) :: P.defer(StreamTypeToken.`streamtypedef`) :: P.defer(
         OptionTypeToken.`optiontypedef`
       ) :: BasicTypeToken
-        .`basictypedef`[F] :: CustomTypeToken.dotted[F] :: Nil
+        .`basictypedef` :: CustomTypeToken.dotted :: Nil
     )
 
 }
 
 object TypeToken {
 
-  def `typedef`[F[_]: LiftParser: Comonad]: P[TypeToken[F]] =
+  val `typedef`: P[TypeToken[Span.F]] =
     P.oneOf(
       ArrowTypeToken
-        .`arrowdef`((DataTypeToken.`datatypedef`[F]))
+        .`arrowdef`((DataTypeToken.`datatypedef`))
         .backtrack :: DataTypeToken.`datatypedef` :: Nil
     )
 

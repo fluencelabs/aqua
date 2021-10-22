@@ -1,12 +1,14 @@
 package aqua.parser.head
 
-import aqua.parser.lexer.Token._
+import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Ability, Name}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.data.NonEmptyList
 import cats.parse.Parser as P
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 trait FromExpr[F[_]] {
   def imports: NonEmptyList[FromExpr.NameOrAbAs[F]]
@@ -22,11 +24,11 @@ object FromExpr {
 
   type NameOrAbAs[F[_]] = Either[Name.As[F], Ability.As[F]]
 
-  def nameOrAbAs[F[_]: LiftParser: Comonad]: P[NameOrAbAs[F]] =
-    Name.nameAs[F].map(Left(_)) | Ability.abAs[F].map(Right(_))
+  val nameOrAbAs: P[NameOrAbAs[Span.F]] =
+    Name.nameAs.map(Left(_)) | Ability.abAs.map(Right(_))
 
-  def importFrom[F[_]: LiftParser: Comonad]: P[NonEmptyList[NameOrAbAs[F]]] =
-      comma[NameOrAbAs[F]](nameOrAbAs[F]) <* ` ` <* `from`
+  val importFrom: P[NonEmptyList[NameOrAbAs[Span.F]]] =
+      comma[NameOrAbAs[Span.F]](nameOrAbAs) <* ` ` <* `from`
 
   def show[F[_]](ne: NonEmptyList[NameOrAbAs[F]]): String =
     ne.toList.map(_.fold(

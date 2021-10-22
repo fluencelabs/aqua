@@ -16,7 +16,7 @@ import scala.collection.mutable
 class ClosureExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
 
-  val parser = Parser.idParser
+  val parser = Parser.spanParser
 
   "closure header" should "parse" in {
     closureExpr("someName =") should be(
@@ -37,7 +37,7 @@ class ClosureExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     val tree = parser.parseAll(script).value.toEither.value
 
     val qTree = tree.tree.foldLeft(mutable.Queue.empty[Expr[Id]]) { case (acc, tag) =>
-      acc.enqueue(tag)
+      acc.enqueue(tag.mapK(nat))
     }
 
     qTree.d() shouldBe RootExpr(Token.lift[Id, Unit](()))

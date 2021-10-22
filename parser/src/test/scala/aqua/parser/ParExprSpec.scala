@@ -13,7 +13,7 @@ import cats.free.Cofree
 class ParExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "par" should "be parsed" in {
-    ParExpr.readLine[Id].parseAll("par x <- y()").value should be(
+    ParExpr.readLine.parseAll("par x <- y()").value should be(
       Cofree[Chain, Expr[Id]](
         ParExpr[Id](Token.lift[Id, Unit](())),
         Eval.now(

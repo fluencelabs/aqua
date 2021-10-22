@@ -12,14 +12,17 @@ import cats.free.Cofree
 import cats.syntax.foldable.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import cats.~>
 
 import scala.collection.mutable
 import scala.language.implicitConversions
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
 
-  val parser = Parser.idParser
+  val parser = Parser.spanParser
 
   "func header" should "parse" in {
     funcExpr("func some") should be(
@@ -58,11 +61,11 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   }
 
   def checkHeadGetTail(
-    tree: Cofree[Chain, Expr[Id]],
+    tree: Cofree[Chain, Expr[Span.F]],
     headCheck: Expr[Id],
     lengthCheck: Int
-  ): Chain[Cofree[Chain, Expr[Id]]] = {
-    tree.head should be(headCheck)
+  ): Chain[Cofree[Chain, Expr[Span.F]]] = {
+    tree.head.mapK(nat) should be(headCheck)
     val tail = tree.tailForced
     tail.length should be(lengthCheck)
     tail
@@ -82,7 +85,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         |  Peer "some id"
         |  call(true)""".stripMargin
 
-    val tree = FuncExpr.ast[Id]().parseAll(script).value.toEither.value
+    val tree = FuncExpr.ast.parseAll(script).value.toEither.value
     val funcBody = checkHeadGetTail(tree, FuncExpr(toName("a")), 1).toList
 
     val arrowExpr =
@@ -153,7 +156,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     val tree = parser.parseAll(script).value.toEither.value
 
     val qTree = tree.tree.foldLeft(mutable.Queue.empty[Expr[Id]]) { case (acc, tag) =>
-      acc.enqueue(tag)
+      acc.enqueue(tag.mapK(nat))
     }
 
     qTree.d() shouldBe RootExpr(Token.lift[Id, Unit](()))

@@ -15,40 +15,40 @@ class FromSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec.*
 
   "from constants" should "be parsed" in {
-    FromExpr.nameOrAbAs[Id].parseAll("SOME_CONSTANT").value shouldBe Right(
+    FromExpr.nameOrAbAs.parseAll("SOME_CONSTANT").value shouldBe Right(
       (toAb("SOME_CONSTANT"), None)
     )
 
-    FromExpr.nameOrAbAs[Id].parseAll("SOME_CONSTANT as SC").value shouldBe Right(
+    FromExpr.nameOrAbAs.parseAll("SOME_CONSTANT as SC").value shouldBe Right(
       (toAb("SOME_CONSTANT"), Some(toAb("SC")))
     )
   }
 
   "from expression" should "be parsed" in {
-    FromExpr.nameOrAbAs[Id].parseAll("Ability").value should be(Right(toAb("Ability") -> None))
-    FromExpr.nameOrAbAs[Id].parseAll("Ability as Ab").value should be(
+    FromExpr.nameOrAbAs.parseAll("Ability").value should be(Right(toAb("Ability") -> None))
+    FromExpr.nameOrAbAs.parseAll("Ability as Ab").value should be(
       Right(toAb("Ability") -> Some(toAb("Ab")))
     )
-    FromExpr.nameOrAbAs[Id].parseAll("function").value should be(
+    FromExpr.nameOrAbAs.parseAll("function").value should be(
       Left(toName("function") -> None)
     )
-    FromExpr.nameOrAbAs[Id].parseAll("function as fn").value should be(
+    FromExpr.nameOrAbAs.parseAll("function as fn").value should be(
       Left(toName("function") -> Some(toName("fn")))
     )
   }
 
   "from list" should "be parsed" in {
-    Token.comma(FromExpr.nameOrAbAs[Id]).parseAll("Ability").value.head should be(
+    Token.comma(FromExpr.nameOrAbAs).parseAll("Ability").value.head should be(
       Right(toAb("Ability") -> None)
     )
-    Token.comma(FromExpr.nameOrAbAs[Id]).parseAll("Ability as Ab").value.head should be(
+    Token.comma(FromExpr.nameOrAbAs).parseAll("Ability as Ab").value.head should be(
       Right(toAb("Ability") -> Some(toAb("Ab")))
     )
 
-    FromExpr.importFrom[Id].parseAll("Ability as Ab from").value should be(
+    FromExpr.importFrom.parseAll("Ability as Ab from").value should be(
       NonEmptyList.one(Right(toAb("Ability") -> Some(toAb("Ab"))))
     )
-    FromExpr.importFrom[Id].parseAll("Ability from").value should be(
+    FromExpr.importFrom.parseAll("Ability from").value should be(
       NonEmptyList.one(Right(toAb("Ability") -> None))
     )
   }

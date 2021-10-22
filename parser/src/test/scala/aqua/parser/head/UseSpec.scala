@@ -16,7 +16,7 @@ class UseSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "use" should "be parsed" in {
     UseFromExpr
-      .p[Id]
+      .p
       .parseAll("use DECLARE_CONST2 as DC2 from \"declare.aqua\" as Declare")
       .value shouldBe
       UseFromExpr(
@@ -25,7 +25,7 @@ class UseSpec extends AnyFlatSpec with Matchers with AquaSpec {
         toAb("Declare")
       )
 
-    UseFromExpr.p[Id].parseAll("use DECLARE_CONST from \"declare.aqua\" as Declare").value shouldBe
+    UseFromExpr.p.parseAll("use DECLARE_CONST from \"declare.aqua\" as Declare").value shouldBe
       UseFromExpr(
         NonEmptyList.one(Right((toAb("DECLARE_CONST"), None))),
         toStr("declare.aqua"),

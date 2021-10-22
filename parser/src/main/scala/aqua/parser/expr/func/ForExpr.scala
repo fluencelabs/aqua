@@ -9,6 +9,8 @@ import aqua.parser.lift.LiftParser.*
 import cats.parse.Parser as P
 import cats.syntax.comonad.*
 import cats.{Comonad, ~>}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ForExpr[F[_]](
   item: Name[F],
@@ -40,9 +42,9 @@ object ForExpr extends Expr.AndIndented {
       Expr.defer(CoExpr) ::
       Nil
 
-  override def p[F[_]: LiftParser: Comonad]: P[ForExpr[F]] =
-    ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value
-      .`value`[F] ~ (` ` *> (`par`.as(ParMode: Mode).lift | `try`.as(TryMode: Mode).lift)).?).map {
+  override def p: P[ForExpr[Span.F]] =
+    ((`for` *> ` ` *> Name.p <* ` <- `) ~ Value
+      .`value` ~ (` ` *> (`par`.as(ParMode: Mode).lift | `try`.as(TryMode: Mode).lift)).?).map {
       case ((item, iterable), mode) =>
         ForExpr(item, iterable, mode.map(m => m -> m.extract))
     }

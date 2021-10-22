@@ -8,6 +8,8 @@ import aqua.parser.lift.LiftParser
 import cats.data.NonEmptyList
 import cats.parse.{Parser as P, Parser0 as P0}
 import cats.{Comonad, ~>}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class CallArrowExpr[F[_]](
   variables: List[Name[F]],
@@ -27,18 +29,18 @@ case class CallArrowExpr[F[_]](
 
 object CallArrowExpr extends Expr.Leaf {
 
-  def ability[F[_]: LiftParser: Comonad]: P0[Option[Ability[F]]] = (Ability.dotted[F] <* `.`).?
-  def functionCallWithArgs[F[_]: LiftParser: Comonad] = Name.p[F]
-    ~ comma0(Value.`value`[F].surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
-  def funcCall[F[_]: LiftParser: Comonad] = ability.with1 ~ functionCallWithArgs
+  val ability: P0[Option[Ability[Span.F]]] = (Ability.dotted <* `.`).?
+  val functionCallWithArgs = Name.p
+    ~ comma0(Value.`value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
+  val funcCall = ability.with1 ~ functionCallWithArgs
   
-  def funcOnly[F[_]: LiftParser: Comonad] = funcCall.map {
+  val funcOnly = funcCall.map {
     case (ab, (name, args)) =>
       CallArrowExpr(Nil, ab, name, args)
   }
 
-  override def p[F[_]: LiftParser: Comonad]: P[CallArrowExpr[F]] = {
-    val variables: P0[Option[NonEmptyList[Name[F]]]] = (comma(Name.p[F]) <* ` <- `).backtrack.?
+  override val p: P[CallArrowExpr[Span.F]] = {
+    val variables: P0[Option[NonEmptyList[Name[Span.F]]]] = (comma(Name.p) <* ` <- `).backtrack.?
 
     (variables.with1 ~ funcCall.withContext("Only results of a function call can be written to a stream")
       ).map {
