@@ -104,6 +104,7 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
             val srcFilePath = srcDir.absolute.normalize
               .relativize(srcFile.absolute.normalize)
 
+            // use `srcFilePath` as a suffix for target file path, so the directory structure is replicated
             val targetDir =
               targetPath.absolute.normalize
                 .resolve(
