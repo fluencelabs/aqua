@@ -94,9 +94,8 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
     Files[F].isDirectory(sourcesPath).flatMap {
       case false =>
         Validated.catchNonFatal {
-          val tp = targetPath.absolute.normalize
-          println("tp: " + tp)
-          tp.resolve(srcFile.fileName.toString.stripSuffix(".aqua") + suffix)
+          targetPath.absolute.normalize
+            .resolve(srcFile.fileName.toString.stripSuffix(".aqua") + suffix)
         }.pure[F]
       case true =>
         getDir(sourcesPath).map { srcDir =>
