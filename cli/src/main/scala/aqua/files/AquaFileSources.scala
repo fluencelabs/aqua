@@ -8,6 +8,7 @@ import cats.implicits.catsSyntaxApplicativeId
 import cats.syntax.either.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.applicative.*
 import cats.syntax.monad.*
 import cats.syntax.traverse.*
 import cats.{Functor, Monad}
@@ -90,21 +91,30 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
     targetPath: Path,
     suffix: String
   ): F[Validated[Throwable, Path]] =
-    getDir(sourcesPath).map { srcDir =>
-      Validated.catchNonFatal {
-        val srcFilePath = srcDir.absolute.normalize
-          .relativize(srcFile.absolute.normalize)
+    Files[F].isDirectory(sourcesPath).flatMap {
+      case false =>
+        Validated.catchNonFatal {
+          val tp = targetPath.absolute.normalize
+          println("tp: " + tp)
+          tp.resolve(srcFile.fileName.toString.stripSuffix(".aqua") + suffix)
+        }.pure[F]
+      case true =>
+        getDir(sourcesPath).map { srcDir =>
+          Validated.catchNonFatal {
+            val srcFilePath = srcDir.absolute.normalize
+              .relativize(srcFile.absolute.normalize)
 
-        val targetDir =
-          targetPath.absolute.normalize
-            .resolve(
-              srcFilePath
-            )
+            val targetDir =
+              targetPath.absolute.normalize
+                .resolve(
+                  srcFilePath
+                )
 
-        targetDir.parent
-          .getOrElse(targetDir)
-          .resolve(srcFile.fileName.toString.stripSuffix(".aqua") + suffix)
-      }
+            targetDir.parent
+              .getOrElse(targetDir)
+              .resolve(srcFile.fileName.toString.stripSuffix(".aqua") + suffix)
+          }
+        }
     }
 
   // Write content to a file and return a success message
