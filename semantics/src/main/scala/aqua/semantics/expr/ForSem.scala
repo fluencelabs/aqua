@@ -38,16 +38,20 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
         (stOpt: Option[ValueModel], ops: Model) =>
           N.endScope() as ((stOpt, ops) match {
             case (Some(vm), op: FuncOp) =>
-              FuncOp.wrap(
+              // Fix: continue execution after fold par immediately, without finding a path out from par branches
+              val innerTag = expr.mode.map(_._2).fold[RawTag](SeqTag) {
+                case ForExpr.ParMode => ParTag
+                case ForExpr.TryMode => XorTag
+              }
+              val forTag = FuncOp.wrap(
                 ForTag(expr.item.value, vm),
                 FuncOp.node(
-                  expr.mode.map(_._2).fold[RawTag](SeqTag) {
-                    case ForExpr.ParMode => ParTag
-                    case ForExpr.TryMode => XorTag
-                  },
+                  innerTag,
                   Chain(op, FuncOp.leaf(NextTag(expr.item.value)))
                 )
               )
+              if (innerTag == ParTag) FuncOp.node(ParTag, Chain(forTag, FuncOps.empty))
+              else forTag
             case _ => Model.error("Wrong body of For expr")
           })
       )
