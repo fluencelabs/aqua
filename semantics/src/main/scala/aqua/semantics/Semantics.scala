@@ -5,7 +5,12 @@ import aqua.model.{AquaContext, EmptyModel, Model, ScriptModel}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.ReportError
-import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState, AbilityOp}
+import aqua.semantics.rules.abilities.{
+  AbilitiesAlgebra,
+  AbilitiesInterpreter,
+  AbilitiesState,
+  AbilityOp
+}
 import aqua.semantics.rules.names.{NameOp, NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypeOp, TypesAlgebra, TypesInterpreter, TypesState}
 import cats.Eval
@@ -70,6 +75,9 @@ object Semantics extends Logging {
     implicit val ts: Lens[CompilerState[S], TypesState[S]] = GenLens[CompilerState[S]](_.types)
 
     val types = new TypesInterpreter[S, CompilerState[S]]()
+
+    val interpreter = new TypesInterpreter[S, CompilerState[S]]
+      with AbilitiesInterpreter[S, CompilerState[S]]
 
     val interpreter0: FunctionK[Alg0[S, *], State[CompilerState[S], *]] = abilities or names
     val interpreter: FunctionK[Alg[S, *], State[CompilerState[S], *]] = types or interpreter0

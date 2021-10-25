@@ -11,9 +11,12 @@ import monocle.Lens
 import monocle.macros.GenLens
 
 class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: ReportError[F, X])
-    extends StackInterpreter[F, X, NamesState[F], NamesState.Frame[F]](
-      GenLens[NamesState[F]](_.stack)
-    ) with (NameOp[F, *] ~> State[X, *]) {
+    extends (NameOp[F, *] ~> State[X, *]) {
+
+  val stackInt = new StackInterpreter[F, X, NamesState[F], NamesState.Frame[F]](
+    GenLens[NamesState[F]](_.stack)
+  )
+  import stackInt._
 
   def readName(name: String): S[Option[Type]] =
     getState.map { st =>
@@ -43,7 +46,11 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
                 report(
                   rn.name,
                   Levenshtein
-                    .genMessage(s"Name '${rn.name.value}' isn't found in scope", rn.name.value, st.allNames.toList)
+                    .genMessage(
+                      s"Name '${rn.name.value}' isn't found in scope",
+                      rn.name.value,
+                      st.allNames.toList
+                    )
                 )
               )
             case _ => State.pure(())
@@ -58,7 +65,11 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
             getState.flatMap(st =>
               report(
                 ra.name,
-                Levenshtein.genMessage(s"Name '${ra.name.value}' not found in scope", ra.name.value, st.allNames.toList)
+                Levenshtein.genMessage(
+                  s"Name '${ra.name.value}' not found in scope",
+                  ra.name.value,
+                  st.allNames.toList
+                )
               )
                 .as(Option.empty[ArrowType])
             )

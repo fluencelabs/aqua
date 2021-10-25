@@ -1,19 +1,20 @@
 package aqua.semantics.rules.types
 
-import aqua.parser.lexer.Token
+import aqua.model.LambdaModel
+import aqua.parser.lexer.{ArrowTypeToken, CustomTypeToken, LambdaOp, Name, Token, TypeToken}
 import aqua.semantics.rules.ReportError
-import aqua.types.{ArrowType, StructType}
+import aqua.types.{ArrowType, StructType, Type}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyMap, State}
-import cats.syntax.flatMap._
-import cats.syntax.functor._
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 import cats.~>
 import monocle.Lens
 
 import scala.collection.immutable.SortedMap
 
 class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: ReportError[F, X])
-    extends (TypeOp[F, *] ~> State[X, *]) {
+    extends TypesAlgebra[F, State[X, *]] {
 
   type S[A] = State[X, A]
   type St = TypesState[F]
@@ -27,95 +28,106 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
   protected def modify(f: St => St): S[Unit] =
     State.modify(lens.modify(f))
 
-  override def apply[A](fa: TypeOp[F, A]): State[X, A] =
-    fa match {
-      case rt: ResolveType[F] =>
-        getState.map(_.resolveTypeToken(rt.token)).flatMap {
-          case Some(t) => State.pure(Some(t))
-          case None => report(rt.token, s"Unresolved type").as(None)
-        }
-      case ra: ResolveArrowDef[F] =>
-        getState.map(_.resolveArrowDef(ra.arrowDef)).flatMap {
-          case Valid(t) => State.pure[X, Option[ArrowType]](Some(t))
-          case Invalid(errs) =>
-            errs
-              .foldLeft[S[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
-                report(tkn, hint) >> n
-              }
-        }
-
-      case df: DefineField[F] =>
-        getState.map(_.fields.get(df.name.value)).flatMap {
-          case None =>
-            modify(st => st.copy(fields = st.fields.updated(df.name.value, df.name -> df.`type`)))
-              .as(true)
-          case Some(_) =>
-            report(df.name, s"Cannot define field `${df.name.value}`, it was already defined above")
-              .as(false)
-        }
-      case pf: PurgeFields[F] =>
-        getState
-          .map(_.fields.view.mapValues(_._2))
-          .map(SortedMap.from(_))
-          .map(NonEmptyMap.fromMap(_))
-          .flatMap {
-            case Some(fs) => modify(_.copy(fields = Map.empty)).as(Some(fs))
-            case None => report(pf.token, "Cannot define a data type without fields").as(None)
-          }
-
-      case ddt: DefineDataType[F] =>
-        getState.map(_.definitions.get(ddt.name.value)).flatMap {
-          case Some(n) if n == ddt.name => State.pure(false)
-          case Some(_) =>
-            report(ddt.name, s"Type `${ddt.name.value}` was already defined").as(false)
-          case None =>
-            modify(st =>
-              st.copy(
-                strict = st.strict.updated(ddt.name.value, StructType(ddt.name.value, ddt.fields)),
-                definitions = st.definitions.updated(ddt.name.value, ddt.name)
-              )
-            )
-              .as(true)
-        }
-
-      case da: DefineAlias[F] =>
-        getState.map(_.definitions.get(da.name.value)).flatMap {
-          case Some(n) if n == da.name => State.pure(false)
-          case Some(_) => report(da.name, s"Type `${da.name.value}` was already defined").as(false)
-          case None =>
-            modify(st =>
-              st.copy(
-                strict = st.strict.updated(da.name.value, da.target),
-                definitions = st.definitions.updated(da.name.value, da.name)
-              )
-            ).as(true)
-        }
-
-      case rl: ResolveLambda[F] =>
-        getState.map(_.resolveOps(rl.root, rl.ops)).flatMap {
-          case Left((tkn, hint)) => report(tkn, hint).as(Nil)
-          case Right(ts) => State.pure(ts)
-        }
-
-      case etm: EnsureTypeMatches[F] =>
-        // TODO in case of two literals, check for types intersection?
-        if (etm.expected.acceptsValueOf(etm.givenType)) State.pure(true)
-        else
-          report(etm.token, s"Types mismatch, expected: ${etm.expected}, given: ${etm.givenType}")
-            .as(false)
-
-      case ene: ExpectNoExport[F] =>
-        report(
-          ene.token,
-          "Types mismatch. Cannot assign to a variable the result of a call that returns nothing"
-        ).as(())
-
-      case ca: CheckArgumentsNum[F] =>
-        if (ca.expected == ca.givenNum) State.pure(true)
-        else
-          report(
-            ca.token,
-            s"Number of arguments doesn't match the function type, expected: ${ca.expected}, given: ${ca.givenNum}"
-          ).as(false)
+  override def resolveType(token: TypeToken[F]): State[X, Option[Type]] =
+    getState.map(_.resolveTypeToken(token)).flatMap {
+      case Some(t) => State.pure(Some(t))
+      case None => report(token, s"Unresolved type").as(None)
     }
+
+  override def resolveArrowDef(arrowDef: ArrowTypeToken[F]): State[X, Option[ArrowType]] =
+    getState.map(_.resolveArrowDef(arrowDef)).flatMap {
+      case Valid(t) => State.pure[X, Option[ArrowType]](Some(t))
+      case Invalid(errs) =>
+        errs
+          .foldLeft[S[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
+            report(tkn, hint) >> n
+          }
+    }
+
+  override def defineField(name: Name[F], `type`: Type): State[X, Boolean] =
+    getState.map(_.fields.get(name.value)).flatMap {
+      case None =>
+        modify(st => st.copy(fields = st.fields.updated(name.value, name -> df.`type`)))
+          .as(true)
+      case Some(_) =>
+        report(name, s"Cannot define field `${name.value}`, it was already defined above")
+          .as(false)
+    }
+
+  override def purgeFields(token: Token[F]): State[X, Option[NonEmptyMap[String, Type]]] =
+    getState
+      .map(_.fields.view.mapValues(_._2))
+      .map(SortedMap.from(_))
+      .map(NonEmptyMap.fromMap(_))
+      .flatMap {
+        case Some(fs) => modify(_.copy(fields = Map.empty)).as(Some(fs))
+        case None => report(token, "Cannot define a data type without fields").as(None)
+      }
+
+  override def defineDataType(
+    name: CustomTypeToken[F],
+    fields: NonEmptyMap[String, Type]
+  ): State[X, Boolean] =
+    getState.map(_.definitions.get(name.value)).flatMap {
+      case Some(n) if n == name => State.pure(false)
+      case Some(_) =>
+        report(name, s"Type `${name.value}` was already defined").as(false)
+      case None =>
+        modify(st =>
+          st.copy(
+            strict = st.strict.updated(name.value, StructType(name.value, fields)),
+            definitions = st.definitions.updated(name.value, name)
+          )
+        )
+          .as(true)
+    }
+
+  override def defineAlias(name: CustomTypeToken[F], target: Type): State[X, Boolean] =
+    getState.map(_.definitions.get(name.value)).flatMap {
+      case Some(n) if n == name => State.pure(false)
+      case Some(_) => report(name, s"Type `${name.value}` was already defined").as(false)
+      case None =>
+        modify(st =>
+          st.copy(
+            strict = st.strict.updated(name.value, target),
+            definitions = st.definitions.updated(name.value, name)
+          )
+        ).as(true)
+    }
+
+  override def resolveLambda(root: Type, ops: List[LambdaOp[F]]): State[X, List[LambdaModel]] =
+    getState.map(_.resolveOps(root, ops)).flatMap {
+      case Left((tkn, hint)) => report(tkn, hint).as(Nil)
+      case Right(ts) => State.pure(ts)
+    }
+
+  override def ensureTypeMatches(
+    token: Token[F],
+    expected: Type,
+    givenType: Type
+  ): State[X, Boolean] =
+    // TODO in case of two literals, check for types intersection?
+    if (expected.acceptsValueOf(givenType)) State.pure(true)
+    else
+      report(token, s"Types mismatch, expected: ${expected}, given: ${givenType}")
+        .as(false)
+
+  override def expectNoExport(token: Token[F]): State[X, Unit] =
+    report(
+      token,
+      "Types mismatch. Cannot assign to a variable the result of a call that returns nothing"
+    ).as(())
+
+  override def checkArgumentsNumber(
+    token: Token[F],
+    expected: Int,
+    givenNum: Int
+  ): State[X, Boolean] =
+    if (expected == givenNum) State.pure(true)
+    else
+      report(
+        token,
+        s"Number of arguments doesn't match the function type, expected: ${expected}, given: ${givenNum}"
+      ).as(false)
+
 }
