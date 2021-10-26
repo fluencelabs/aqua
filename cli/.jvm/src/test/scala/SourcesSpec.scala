@@ -114,6 +114,27 @@ class SourcesSpec extends AsyncFlatSpec with Matchers {
       .unsafeToFuture()
   }
 
+  "AquaFileSources" should "resolve correct path for target when file is in current directory" in {
+    val path = Path("cli/.jvm/src/test/test-dir")
+    val filePath = path.resolve("file.aqua")
+
+    val targetPath = Path("/target/dir/")
+
+    val sourceGen = new AquaFileSources[IO](path, Nil)
+
+    val suffix = "_custom.super"
+
+    sourceGen
+      .resolveTargetPath(filePath, targetPath, suffix)
+      .map { resolved =>
+        resolved.isValid shouldBe true
+
+        val targetFilePath = resolved.toOption.get
+        targetFilePath.toString shouldBe "/target/dir/file_custom.super"
+      }
+      .unsafeToFuture()
+  }
+
   "AquaFileSources" should "write correct file with correct path" in {
     val path = Path("cli/.jvm/src/test/test-dir")
     val filePath = path.resolve("imports/import.aqua")
