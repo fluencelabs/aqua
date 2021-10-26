@@ -3,7 +3,7 @@ package aqua.model.func
 import aqua.model.ValueModel.varName
 import aqua.model.func.raw.*
 import aqua.model.{Model, ValueModel, VarModel}
-import aqua.types.{ArrowType, ProductType, StreamType, Type}
+import aqua.types.{ArrayType, ArrowType, ProductType, StreamType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -178,9 +178,33 @@ case class FuncCallable(
         val (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(Option[FuncOp], ValueModel)] {
             case (exp @ Call.Export(_, StreamType(_)), res) if isStream(res) =>
-              None -> res
+              // TODO move this logic to ReturnSem
+              // Fix for https://github.com/fluencelabs/aqua/issues/277
+              val definedNames =
+                FuncOp(callableFuncBody).definesVarNames.value ++ resolvedExports.keySet
+
+              val resName = ValueModel.varName(res).getOrElse(exp.name)
+
+              val opaqueName = LazyList.from(0, 1).map(n => s"$resName-$n").collectFirst {
+                case n if !definedNames(n) => n
+              }
+              val opaqueType = res.`type` match {
+                case StreamType(s) => ArrayType(s)
+                case _ => res.`type`
+              }
+              opaqueName.map(opN =>
+                FuncOps.seq(
+                  FuncOps.can(res, Call.Export(opN, opaqueType)),
+                  FuncOps.ap(
+                    VarModel(
+                      opN,
+                      opaqueType
+                    ),
+                    exp
+                  )
+                )
+              ) -> exp.model
             case (exp @ Call.Export(_, StreamType(_)), res) =>
-              res.`type`
               // pass nested function results to a stream
               Some(FuncOps.ap(res, exp)) -> exp.model
             case (_, res) =>

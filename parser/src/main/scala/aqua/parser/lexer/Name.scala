@@ -16,6 +16,8 @@ case class Name[F[_]: Comonad](name: F[String]) extends Token[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): Name[K] = copy(fk(name))
 
+  def rename(newName: String): Name[F] = copy(name.as(newName))
+
   def value: String = name.extract
 }
 

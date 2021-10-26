@@ -1,9 +1,9 @@
-package aqua.semantics.expr.func
+package aqua.semantics.expr
 
 import aqua.model.ValueModel.varName
 import aqua.model.func.Call
 import aqua.model.func.raw.{ApTag, FuncOp, FuncOps}
-import aqua.model.{LiteralModel, Model}
+import aqua.model.{LiteralModel, Model, VarModel}
 import aqua.parser.expr.func.PushToStreamExpr
 import aqua.parser.lexer.Token
 import aqua.semantics.Prog

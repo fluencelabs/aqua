@@ -20,6 +20,9 @@ class NamesAlgebra[F[_], Alg[_]](implicit V: InjectK[NameOp[F, *], Alg]) {
   def define(name: Name[F], `type`: Type): Free[Alg, Boolean] =
     Free.liftInject[Alg](DefineName(name, `type`))
 
+  def defineOpaque(name: Name[F], `type`: Type): Free[Alg, Name[F]] =
+    Free.liftInject[Alg](DefineOpaqueName(name, `type`))
+
   def defineConstant(name: Name[F], `type`: Type): Free[Alg, Boolean] =
     Free.liftInject[Alg](DefineConstant(name, `type`))
 

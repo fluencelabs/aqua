@@ -8,11 +8,20 @@ import cats.free.Cofree
 object FuncOps {
 
   def noop: FuncOp =
-    FuncOp.leaf(CallServiceTag(LiteralModel.quote("op"), "identity", Call(Nil, Nil)))
+    FuncOp.leaf(CallServiceTag(LiteralModel.quote("op"), "noop", Call(Nil, Nil)))
 
   def ap(what: ValueModel, to: Call.Export): FuncOp =
     FuncOp.leaf(
       ApTag(what, to)
+    )
+
+  /**
+   * Canonicalizes [[what]] into [[to]], [[what]] is expected to be a stream.
+   * As we don't have canonicalization at the moment, op identity is used instead
+   */
+  def can(what: ValueModel, to: Call.Export): FuncOp =
+    FuncOp.leaf(
+      CallServiceTag(LiteralModel.quote("op"), "identity", Call(what :: Nil, to :: Nil))
     )
 
   def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =
