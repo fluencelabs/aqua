@@ -60,7 +60,7 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
                 vm.lastType match {
                   case StreamType(lt) =>
                     // https://github.com/fluencelabs/aqua/issues/277
-                    // TODO: get Name from value for the opaque thing
+                    // TODO: get Name from Value for the opaque name, as it points on Value, not on the stream
                     N.defineOpaque(expr.stream, ArrayType(lt)).map { n =>
                       val opaqueVar = VarModel(n.value, ArrayType(lt))
                       FuncOps.seq(

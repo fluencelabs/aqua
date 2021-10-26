@@ -15,6 +15,10 @@ object FuncOps {
       ApTag(what, to)
     )
 
+  /**
+   * Canonicalizes [[what]] into [[to]], [[what]] is expected to be a stream.
+   * As we don't have canonicalization at the moment, op identity is used instead
+   */
   def can(what: ValueModel, to: Call.Export): FuncOp =
     FuncOp.leaf(
       CallServiceTag(LiteralModel.quote("op"), "identity", Call(what :: Nil, to :: Nil))

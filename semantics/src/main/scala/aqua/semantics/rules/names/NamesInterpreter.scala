@@ -98,12 +98,12 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
         }
       case dn: DefineOpaqueName[F] =>
         getState.flatMap { st =>
-          def findUniqueI(i: Int): String = {
+          def findUniqueName(i: Int): String = {
             val n = dn.name.value + "-" + i
-            st.opaque.get(n).fold(n)(_ => findUniqueI(i + 1))
+            st.opaque.get(n).fold(n)(_ => findUniqueName(i + 1))
           }
 
-          val n = findUniqueI(0)
+          val n = findUniqueName(0)
           modify(
             _.copy(
               opaque = st.opaque.updated(n, dn.`type`)
