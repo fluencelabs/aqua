@@ -10,6 +10,8 @@ import cats.data.{Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.Parser
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class FuncExpr[F[_]](
   name: Name[F]
@@ -22,6 +24,6 @@ case class FuncExpr[F[_]](
 object FuncExpr extends Expr.Prefix(` `.?) {
   override def continueWith: List[Expr.Lexem] = ArrowExpr :: Nil
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[FuncExpr[F]] =
-    (`func` *> ` ` *> Name.p[F]).map(FuncExpr(_))
+  override val p: Parser[FuncExpr[Span.F]] =
+    (`func` *> ` ` *> Name.p).map(FuncExpr(_))
 }

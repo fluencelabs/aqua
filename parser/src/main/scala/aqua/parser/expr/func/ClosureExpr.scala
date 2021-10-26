@@ -8,7 +8,9 @@ import aqua.parser.{Ast, Expr, ParserError}
 import cats.data.{Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.Parser
-import cats.{~>, Comonad}
+import cats.{Comonad, ~>}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ClosureExpr[F[_]](
   name: Name[F]
@@ -21,7 +23,7 @@ case class ClosureExpr[F[_]](
 object ClosureExpr extends Expr.Prefix() {
   override def continueWith: List[Expr.Lexem] = Expr.defer(ArrowExpr) :: Nil
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[ClosureExpr[F]] =
-    (Name.p[F] <* ` ` <* `=`).map(ClosureExpr(_))
+  override val p: Parser[ClosureExpr[Span.F]] =
+    (Name.p <* ` ` <* `=`).map(ClosureExpr(_))
 
 }

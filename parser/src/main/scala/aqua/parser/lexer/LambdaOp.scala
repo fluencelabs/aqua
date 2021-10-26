@@ -8,8 +8,11 @@ import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{Comonad, Functor}
+
 import scala.language.postfixOps
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 sealed trait LambdaOp[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): LambdaOp[K]
@@ -39,21 +42,21 @@ case class IntoArray[F[_]: Functor](override val unit: F[Unit]) extends LambdaOp
 
 object LambdaOp {
 
-  private def parseField[F[_]: LiftParser: Comonad]: P[LambdaOp[F]] =
+  private val parseField: P[LambdaOp[Span.F]] =
     (`.` *> `name`).lift.map(IntoField(_))
 
-  private def parseArr[F[_]: LiftParser: Comonad]: P[LambdaOp[F]] = `*`.lift.map(IntoArray(_))
+  private val parseArr: P[LambdaOp[Span.F]] = `*`.lift.map(IntoArray(_))
 
   private val nonNegativeIntP0: P0[Int] =
     Numbers.nonNegativeIntString.map(_.toInt).?.map(_.getOrElse(0))
 
-  private def parseIdx[F[_]: LiftParser: Comonad]: P[LambdaOp[F]] =
+  private val parseIdx: P[LambdaOp[Span.F]] =
     (exclamation *> nonNegativeIntP0).lift.map(IntoIndex(_))
 
-  private def parseOp[F[_]: LiftParser: Comonad]: P[LambdaOp[F]] =
+  private val parseOp: P[LambdaOp[Span.F]] =
     P.oneOf(parseField.backtrack :: parseArr :: parseIdx :: Nil)
 
-  def ops[F[_]: LiftParser: Comonad]: P[NonEmptyList[LambdaOp[F]]] =
+  val ops: P[NonEmptyList[LambdaOp[Span.F]]] =
     parseOp.rep
 
 }

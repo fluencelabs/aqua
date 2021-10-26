@@ -7,6 +7,8 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F])
     extends Expr[F](ArrowTypeExpr, name) {
@@ -15,11 +17,11 @@ case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F])
 
 object ArrowTypeExpr extends Expr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[ArrowTypeExpr[F]] =
+  override val p: Parser[ArrowTypeExpr[Span.F]] =
     (Name
-      .p[F] ~ ((` : ` *> ArrowTypeToken.`arrowdef`[F](
-      DataTypeToken.`datatypedef`[F]
-    )) | ArrowTypeToken.`arrowWithNames`(DataTypeToken.`datatypedef`[F]))).map { case (name, t) =>
+      .p ~ ((` : ` *> ArrowTypeToken.`arrowdef`(
+      DataTypeToken.`datatypedef`
+    )) | ArrowTypeToken.`arrowWithNames`(DataTypeToken.`datatypedef`))).map { case (name, t) =>
       ArrowTypeExpr(name, t)
     }
 }

@@ -6,6 +6,8 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ArrowExpr[F[_]](arrowTypeExpr: ArrowTypeToken[F])
     extends Expr[F](ArrowExpr, arrowTypeExpr) {
@@ -37,10 +39,10 @@ object ArrowExpr extends Expr.AndIndented {
   override val validChildren: List[Expr.Lexem] =
     ReturnExpr :: funcChildren
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[ArrowExpr[F]] =
+  override val p: Parser[ArrowExpr[Span.F]] =
     ArrowTypeToken
-      .`arrowWithNames`[F](
-        TypeToken.`typedef`[F]
+      .`arrowWithNames`(
+        TypeToken.`typedef`
       )
       .map(ArrowExpr(_))
 }

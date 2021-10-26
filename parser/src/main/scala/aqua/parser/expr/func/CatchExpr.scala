@@ -6,7 +6,9 @@ import aqua.parser.lexer.Name
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import cats.parse.Parser
-import cats.{~>, Comonad}
+import cats.{Comonad, ~>}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class CatchExpr[F[_]](name: Name[F]) extends Expr[F](CatchExpr, name) {
   def mapK[K[_]: Comonad](fk: F ~> K): CatchExpr[K] = copy(name.mapK(fk))
@@ -16,7 +18,7 @@ object CatchExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Lexem] = TryExpr.validChildren
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[Expr[F]] =
-    (`catch` *> ` ` *> Name.p[F]).map(CatchExpr(_))
+  override val p: Parser[Expr[Span.F]] =
+    (`catch` *> ` ` *> Name.p).map(CatchExpr(_))
 
 }

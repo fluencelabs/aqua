@@ -8,6 +8,8 @@ import aqua.parser.lift.LiftParser
 import cats.data.NonEmptyList
 import cats.parse.Parser
 import cats.{~>, Comonad}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ReturnExpr[F[_]](values: NonEmptyList[Value[F]])
     extends Expr[F](ReturnExpr, values.head) {
@@ -18,6 +20,6 @@ case class ReturnExpr[F[_]](values: NonEmptyList[Value[F]])
 
 object ReturnExpr extends Expr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[ReturnExpr[F]] =
-    (`<-` *> ` ` *> comma(Value.`value`[F])).map(ReturnExpr(_))
+  override val p: Parser[ReturnExpr[Span.F]] =
+    (`<-` *> ` ` *> comma(Value.`value`)).map(ReturnExpr(_))
 }
