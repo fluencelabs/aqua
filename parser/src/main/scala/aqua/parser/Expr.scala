@@ -77,7 +77,7 @@ object Expr {
     override def readLine: P[Ast.Tree[Span.F]] =
       ((super.readLine <* sep) ~ P.oneOf(continueWith.map(_.readLine.backtrack))).map {
         case (h, t) =>
-          println("read prefixed line "+t)
+//          println("read prefixed line "+t)
           h.copy(tail = Eval.now(Chain.one(t)))
       }
 

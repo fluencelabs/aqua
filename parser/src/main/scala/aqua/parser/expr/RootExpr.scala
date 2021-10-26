@@ -53,7 +53,7 @@ object RootExpr extends Expr.Companion {
     // `empty` is first to handle errors from `ast` at a first place
     empty.backtrack | ast
 
-  override def ast: P[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
+  override val ast: P[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
     parserSchema
         .map { case (point, (errs, trees)) =>
       NonEmptyChain

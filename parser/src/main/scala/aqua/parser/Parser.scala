@@ -27,7 +27,7 @@ object Parser extends scribe.Logging {
     parser
   }
 
-  def parser[S[_] : LiftParser : Comonad](p: P0[ValidatedNec[ParserError[S], Ast[S]]])(source: String): ValidatedNec[ParserError[S], Ast[S]] = {
+  def parse[S[_] : LiftParser : Comonad](p: P0[ValidatedNec[ParserError[S], Ast[S]]])(source: String): ValidatedNec[ParserError[S], Ast[S]] = {
     p.parseAll(source) match {
       case Right(value) => value
       case Left(e) => Validated.invalidNec(LexerError(e.wrapErr))
@@ -38,7 +38,7 @@ object Parser extends scribe.Logging {
     p: P0[ValidatedNec[ParserError[S], Ast[S]]],
     nat: S ~> K
   )(source: String): ValidatedNec[ParserError[K], Ast[K]] =
-    parser[S](p)(source).bimap(
+    parse[S](p)(source).bimap(
       e => e.map(_.mapK(nat)),
       ast => Ast[K](ast.head.map(_.mapK(nat)), ast.tree.map(_.mapK(nat)))
     )
