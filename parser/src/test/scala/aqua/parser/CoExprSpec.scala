@@ -1,6 +1,7 @@
 package aqua.parser
 
 import aqua.AquaSpec
+import aqua.AquaSpec.spanToId
 import aqua.parser.expr.func.{CallArrowExpr, CoExpr}
 import aqua.parser.lexer.Token
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
@@ -13,7 +14,7 @@ import org.scalatest.matchers.should.Matchers
 class CoExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "co" should "be parsed" in {
-    CoExpr.readLine.parseAll("co x <- y()").value should be(
+    CoExpr.readLine.parseAll("co x <- y()").value.map(_.mapK(spanToId)).forceAll should be(
       Cofree[Chain, Expr[Id]](
         CoExpr[Id](Token.lift[Id, Unit](())),
         Eval.now(

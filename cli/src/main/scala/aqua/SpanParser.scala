@@ -11,7 +11,7 @@ object SpanParser extends scribe.Logging {
   def parser: FileModuleId => String => ValidatedNec[ParserError[FileSpan.F], Ast[FileSpan.F]] = {
     id => {
       source => {
-        logger.trace("creating parser...")
+        logger.trace(s"creating parser for $id...")
         val nat = new (Span.F ~> FileSpan.F) {
           override def apply[A](span: Span.F[A]): FileSpan.F[A] = {
             (

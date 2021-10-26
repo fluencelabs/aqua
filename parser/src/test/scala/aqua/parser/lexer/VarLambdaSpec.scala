@@ -9,8 +9,10 @@ import org.scalatest.matchers.should.Matchers
 
 class VarLambdaSpec extends AnyFlatSpec with Matchers with EitherValues {
 
+  import aqua.AquaSpec._
+
   "var lambda" should "parse" in {
-    val opsP = (s: String) => Name.dotted.parseAll(s).value
+    val opsP = (s: String) => Name.dotted.parseAll(s).value.mapK(spanToId)
     
     opsP("SomeClass.some_val") should be(Name[Id]("SomeClass.some_val"))
     

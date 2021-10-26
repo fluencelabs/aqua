@@ -149,7 +149,7 @@ object DataTypeToken {
         .`basictypedef` :: CustomTypeToken.dotted :: Nil
     )
 
-  val `datatypedef`: P[DataTypeToken[Span.F]] =
+  def `datatypedef`: P[DataTypeToken[Span.F]] =
     P.oneOf(
       P.defer(`arraytypedef`) :: P.defer(StreamTypeToken.`streamtypedef`) :: P.defer(
         OptionTypeToken.`optiontypedef`

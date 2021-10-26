@@ -31,7 +31,7 @@ object RootExpr extends Expr.Companion {
     }
   }
 
-  private val linesParser: P[NonEmptyList[ValidatedNec[ParserError[Span.F], Tree[Span.F]]]] =
+  private lazy val linesParser: P[NonEmptyList[ValidatedNec[ParserError[Span.F], Tree[Span.F]]]] =
     P.repSep(
       P.oneOf(RootExpr.validChildren.map(_.ast)),
       ` \n+`
@@ -40,20 +40,20 @@ object RootExpr extends Expr.Companion {
   private val rootToken: P0[Token[Span.F]] =
     P.unit.lift0.map(Token.lift[Span.F, Unit](_))
 
-  private val parserSchema: P[(Token[Span.F], (Chain[ParserError[Span.F]], Chain[Tree[Span.F]]))] =
+  private def parserSchema: P[(Token[Span.F], (Chain[ParserError[Span.F]], Chain[Tree[Span.F]]))] =
     rootToken.with1 ~
       linesParser.map(l => gatherResults(l))
 
-  val empty: P0[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
+  def empty: P0[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
     (rootToken <* (Token.` \n*` *> Token.` `.? *> P.end))
       .map(point => Validated.validNec(Cofree(RootExpr[Span.F](point), Eval.now(Chain.empty))))
 
   // Could handle empty body
-  val ast0: P0[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
+  def ast0: P0[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
     // `empty` is first to handle errors from `ast` at a first place
     empty.backtrack | ast
 
-  override val ast: P[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
+  override def ast: P[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
     parserSchema
         .map { case (point, (errs, trees)) =>
       NonEmptyChain

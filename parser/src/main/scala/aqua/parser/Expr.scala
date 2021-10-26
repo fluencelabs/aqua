@@ -221,7 +221,7 @@ object Expr {
 
     }
 
-    override val ast: P[ValidatedNec[ParserError[Span.F], Ast.Tree[Span.F]]] =
+    override lazy val ast: P[ValidatedNec[ParserError[Span.F], Ast.Tree[Span.F]]] =
       (readLine ~ (` \n+` *>
         (P.repSep(
           ` `.lift ~ P.oneOf(validChildren.map(_.readLine.backtrack)),

@@ -15,10 +15,10 @@ import cats.{Comonad, Eval, Id, ~>}
 object Parser extends scribe.Logging {
 
   import Span.spanLiftParser
-  val spanParser = parserSchema
+  lazy val spanParser = parserSchema
   import LiftParser.Implicits.idLiftParser
 
-  lazy val parserSchema: P0[ValidatedNec[ParserError[Span.F], Ast[Span.F]]] = {
+  def parserSchema: P0[ValidatedNec[ParserError[Span.F], Ast[Span.F]]] = {
     logger.trace("creating schema...")
     val parser = (HeadExpr.ast ~ RootExpr.ast0).map { case (head, bodyMaybe) =>
       bodyMaybe.map(Ast(head, _))

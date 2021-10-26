@@ -22,7 +22,7 @@ import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
 
-  val parser = Parser.spanParser
+  private val parser = Parser.spanParser
 
   "func header" should "parse" in {
     funcExpr("func some") should be(
@@ -98,11 +98,11 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         3
       ).toList
 
-    ifBody.head.head should be(
+    ifBody.head.head.mapK(spanToId) should be(
       CallArrowExpr(List(toName("x")), Some(toAb("Ab")), "func", Nil)
     )
-    ifBody(1).head should be(AbilityIdExpr(toAb("Peer"), toStr("some id")))
-    ifBody(2).head should be(CallArrowExpr(Nil, None, "call", List(toBool(true))))
+    ifBody(1).head.mapK(spanToId) should be(AbilityIdExpr(toAb("Peer"), toStr("some id")))
+    ifBody(2).head.mapK(spanToId) should be(CallArrowExpr(Nil, None, "call", List(toBool(true))))
 
   }
 
