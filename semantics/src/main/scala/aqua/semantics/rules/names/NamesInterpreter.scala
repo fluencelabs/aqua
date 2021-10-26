@@ -17,7 +17,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
 
   def readName(name: String): S[Option[Type]] =
     getState.map { st =>
-      st.constants.get(name) orElse st.stack.collectFirst {
+      st.constants.get(name) orElse st.opaque.get(name) orElse st.stack.collectFirst {
         case frame if frame.names.contains(name) => frame.names(name)
         case frame if frame.arrows.contains(name) => frame.arrows(name)
       } orElse st.rootArrows.get(name)
@@ -43,7 +43,11 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
                 report(
                   rn.name,
                   Levenshtein
-                    .genMessage(s"Name '${rn.name.value}' isn't found in scope", rn.name.value, st.allNames.toList)
+                    .genMessage(
+                      s"Name '${rn.name.value}' isn't found in scope",
+                      rn.name.value,
+                      st.allNames.toList
+                    )
                 )
               )
             case _ => State.pure(())
@@ -58,7 +62,11 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
             getState.flatMap(st =>
               report(
                 ra.name,
-                Levenshtein.genMessage(s"Name '${ra.name.value}' not found in scope", ra.name.value, st.allNames.toList)
+                Levenshtein.genMessage(
+                  s"Name '${ra.name.value}' not found in scope",
+                  ra.name.value,
+                  st.allNames.toList
+                )
               )
                 .as(Option.empty[ArrowType])
             )
@@ -88,6 +96,21 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
                 .as(false)
             )(fr => fr.addName(dn.name.value, dn.`type`) -> true)
         }
+      case dn: DefineOpaqueName[F] =>
+        getState.flatMap { st =>
+          def findUniqueI(i: Int): String = {
+            val n = dn.name.value + "-" + i
+            st.opaque.get(n).fold(n)(_ => findUniqueI(i + 1))
+          }
+
+          val n = findUniqueI(0)
+          modify(
+            _.copy(
+              opaque = st.opaque.updated(n, dn.`type`)
+            )
+          ).as(dn.name.rename(n))
+        }
+
       case da: DefineArrow[F] =>
         readName(da.name.value).flatMap {
           case Some(_) =>
