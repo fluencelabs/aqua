@@ -2,7 +2,7 @@ package aqua.semantics.expr
 
 import aqua.model.{Model, ValueModel}
 import aqua.model.func.raw.{FuncOp, MatchMismatchTag, XorTag}
-import aqua.parser.expr.IfExpr
+import aqua.parser.expr.func.IfExpr
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.semantics.Prog
@@ -57,5 +57,5 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
               }
           }
       )
-      .abilitiesScope(expr.token)
+      .abilitiesScope[F](expr.token)
 }

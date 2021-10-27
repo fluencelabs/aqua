@@ -10,6 +10,7 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, BoxType}
 import cats.data.Chain
+import aqua.parser.expr.func.ForExpr
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.applicative._
@@ -52,5 +53,5 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
             case _ => Model.error("Wrong body of For expr")
           })
       )
-      .abilitiesScope(expr.token)
+      .abilitiesScope[F](expr.token)
 }

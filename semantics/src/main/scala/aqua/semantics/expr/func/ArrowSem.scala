@@ -20,18 +20,20 @@ import cats.free.Cofree
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.apply.*
+import cats.syntax.applicative.*
+import cats.Monad
 
 class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
 
   import expr.arrowTypeExpr
 
-  def before[Alg[_]](implicit
+  def before[Alg[_]: Monad](implicit
     T: TypesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
-  ): Free[Alg, ArrowType] =
-    A.beginScope(arrowTypeExpr) >> Applicative[Free[Alg, *]]
+  ): Alg[ArrowType] =
+    A.beginScope(arrowTypeExpr) >> Applicative[Alg]
       .product(
         // Collect argument types, define local variables
         arrowTypeExpr.args
@@ -48,7 +50,7 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
                   case Some(t) =>
                     N.define(argName, t).as(acc.append(argName.value -> t))
                   case None =>
-                    Free.pure(acc)
+                    acc.pure[Alg]
                 }
               )
             // Unnamed argument
@@ -56,7 +58,7 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
           }
           .map(_.toList),
         // Resolve return type
-        arrowTypeExpr.res.foldLeft(Free.pure[Alg, List[Type]](Nil))((f, t) =>
+        arrowTypeExpr.res.foldLeft[Alg[List[Type]]](Nil.pure[Alg])((f, t) =>
           f.flatMap(ts => T.resolveType(t).map(ts.prependedAll))
         )
       )
@@ -65,20 +67,18 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
       )
 
   // TODO: rename, it is not only checks return value
-  def checkReturnValue[Alg[_]](
+  def checkReturnValue[Alg[_]: Monad](
     funcArrow: ArrowType,
     retValue: NonEmptyList[ValueModel],
     body: FuncOp
-  )(implicit T: TypesAlgebra[F, Alg], V: ValuesAlgebra[F, Alg]): Free[Alg, Model] =
+  )(implicit T: TypesAlgebra[F, Alg], V: ValuesAlgebra[F, Alg]): Alg[Model] =
     if (funcArrow.codomain.length != retValue.length)
-      Free.pure[Alg, Model](
         Model.error(
           s"Number of return types does not match: ${arrowTypeExpr.res} declared, ${retValue} returned"
-        )
-      )
+        ).pure[Alg]
     else
       ((funcArrow.codomain.toList zip retValue.toList)
-        .foldLeft(Free.pure[Alg, List[ValueModel]](Nil)) { case (f, (t, v)) =>
+        .foldLeft[Alg[List[ValueModel]]](Nil.pure[Alg]) { case (f, (t, v)) =>
           //f.flatMap(vs =>
           // TODO: here we don't have Value[F] as it was handled within ReturnSem
           // Can we pass info about the expected return types to semantics (before), and check that types match in ReturnSem?
@@ -103,15 +103,15 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
         )
 
   // TODO: handle all kinds of errors very carefully
-  def after[Alg[_]](funcArrow: ArrowType, bodyGen: Model)(implicit
+  def after[Alg[_]: Monad](funcArrow: ArrowType, bodyGen: Model)(implicit
     T: TypesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
-  ): Free[Alg, Model] =
+  ): Alg[Model] =
     (bodyGen match {
       case m: FuncOp if arrowTypeExpr.res.isEmpty =>
-        Free.pure(ArrowModel(funcArrow, Nil, m))
+        ArrowModel(funcArrow, Nil, m).pure[Alg]
 
       case m @ FuncOp(Cofree(ReturnTag(retValues), _)) =>
         checkReturnValue(funcArrow, retValues, m)
@@ -121,27 +121,21 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
           case Some(Cofree(ReturnTag(retValues), _)) =>
             checkReturnValue(funcArrow, retValues, m)
           case _ =>
-            Free.pure[Alg, Model](
               Model.error(
                 "Expected last expression to be <- value, ..."
-              )
-            )
+              ).pure[Alg]
         }
-
       case m: FuncOp =>
         // TODO: error with pointer on arrow's return types declaration telling that return value is expected
-        Free.pure[Alg, Model](
           Model.error(
             "Return type is defined for the arrow, but nothing returned. Use `<- value, ...` as the last expression inside function body."
-          )
-        )
-
+          ).pure[Alg]
       case m =>
-        Free.pure[Alg, Model](Model.error("Arrow body is not a funcOp, it's " + m))
+        Model.error("Arrow body is not a funcOp, it's " + m).pure[Alg]
     }) <* A.endScope() <* N
       .endScope()
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     T: TypesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg],

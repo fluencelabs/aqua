@@ -11,6 +11,7 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, StreamType, Type}
 import cats.Traverse
+import aqua.parser.expr.func.CallArrowExpr
 import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.functor._

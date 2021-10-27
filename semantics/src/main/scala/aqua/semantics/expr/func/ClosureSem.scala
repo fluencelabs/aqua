@@ -10,12 +10,13 @@ import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
 import cats.Applicative
 import cats.data.Chain
-import cats.free.Free
 import cats.syntax.functor.*
+import cats.syntax.applicative.*
+import cats.Monad
 
 class ClosureSem[F[_]](val expr: ClosureExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[F, Alg]
   ): Prog[Alg, Model] =
     Prog.after {
@@ -27,7 +28,7 @@ class ClosureSem[F[_]](val expr: ClosureExpr[F]) extends AnyVal {
         ) as FuncOp.leaf(ClosureTag(FuncModel(expr.name.value, arrow)))
 
       case m =>
-        Free.pure[Alg, Model](Model.error("Closure must continue with an arrow definition"))
+        Model.error("Closure must continue with an arrow definition").pure[Alg]
     }
 
 }

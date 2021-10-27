@@ -3,12 +3,13 @@ package aqua.semantics.expr
 import aqua.model.Model
 import aqua.model.func.raw.{AbilityIdTag, FuncOp}
 import aqua.parser.expr.AbilityIdExpr
+import aqua.parser.expr.func.AbilityIdExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.applicative._
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.applicative.*
 import cats.Monad
 
 class AbilityIdSem[F[_]](val expr: AbilityIdExpr[F]) extends AnyVal {

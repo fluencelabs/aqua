@@ -4,7 +4,7 @@ import aqua.model.func.raw.FuncOp
 import aqua.model.{AquaContext, EmptyModel, Model, ScriptModel}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
-import aqua.semantics.rules.ReportError
+import aqua.semantics.rules.{ReportError, ValuesAlgebra}
 import aqua.semantics.rules.abilities.{
   AbilitiesAlgebra,
   AbilitiesInterpreter,
@@ -25,16 +25,17 @@ import monocle.Lens
 import monocle.macros.GenLens
 import scribe.Logging
 import cats.Monad
-import cats.syntax.applicative._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 
 object Semantics extends Logging {
 
   def folder[S[_], G[_]: Monad](implicit
     A: AbilitiesAlgebra[S, G],
     N: NamesAlgebra[S, G],
-    T: TypesAlgebra[S, G]
+    T: TypesAlgebra[S, G],
+    V: ValuesAlgebra[S, G]
   ): (Expr[S], Chain[G[Model]]) => Eval[G[Model]] = { case (expr, inners) =>
     Eval later ExprSem
       .getProg[S, G](expr)
@@ -42,13 +43,12 @@ object Semantics extends Logging {
         // TODO instead of foldRight, do slidingWindow for 2 elements, merge right associative ones
         // Then foldLeft just like now
         inners
-          .foldRight[G[List[Model]]](List.empty[Model].pure[G]) {
-            case (a, b) =>
-              (a, b).mapN {
-                case (prev: FuncOp, (next: FuncOp) :: tail) if next.isRightAssoc =>
-                  (prev :+: next) :: tail
-                case (prev, acc) => prev :: acc
-              }
+          .foldRight[G[List[Model]]](List.empty[Model].pure[G]) { case (a, b) =>
+            (a, b).mapN {
+              case (prev: FuncOp, (next: FuncOp) :: tail) if next.isRightAssoc =>
+                (prev :+: next) :: tail
+              case (prev, acc) => prev :: acc
+            }
           }
           .map(_.reduceLeftOption(_ |+| _).getOrElse(Model.empty("AST is empty")))
       )
@@ -57,10 +57,10 @@ object Semantics extends Logging {
   type Alg0[S[_], A] = EitherK[AbilityOp[S, *], NameOp[S, *], A]
   type Alg[S[_], A] = EitherK[TypeOp[S, *], Alg0[S, *], A]
 
-  def transpile[S[_]](ast: Ast[S]): Free[Alg[S, *], Model] =
+  def transpile[S[_]](ast: Ast[S]): S[Model] =
     ast.cata(folder[S, Alg[S, *]]).value
 
-  def interpret[S[_]](free: Free[Alg[S, *], Model]): State[CompilerState[S], Model] = {
+  def interpret[S[_]](): State[CompilerState[S], Model] = {
     import monocle.syntax.all._
 
     implicit val re: ReportError[S, CompilerState[S]] =
@@ -95,7 +95,7 @@ object Semantics extends Logging {
   def process[S[_]](ast: Ast[S], init: AquaContext)(implicit
     aqum: Monoid[AquaContext]
   ): ValidatedNec[SemanticError[S], AquaContext] =
-    astToState[S](ast)
+    (transpile[S] _ andThen interpret[S])(ast)(ast)
       .run(CompilerState.init[S](init))
       .map {
         case (state, gen: ScriptModel) =>

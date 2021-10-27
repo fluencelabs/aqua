@@ -5,6 +5,7 @@ import aqua.model.func.raw.{AssignmentTag, FuncOp}
 import aqua.parser.expr.AssignmentExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
+import aqua.parser.expr.func.AssignmentExpr
 import aqua.semantics.rules.names.NamesAlgebra
 import cats.syntax.functor._
 import cats.syntax.applicative._

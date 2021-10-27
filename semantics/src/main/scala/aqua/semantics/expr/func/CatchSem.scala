@@ -6,6 +6,7 @@ import aqua.parser.expr.CatchExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
+import aqua.parser.expr.func.CatchExpr
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.applicative._
@@ -35,6 +36,6 @@ class CatchSem[F[_]](val expr: CatchExpr[F]) extends AnyVal {
               N.endScope() as g
           }
       )
-      .abilitiesScope(expr.token)
+      .abilitiesScope[F](expr.token)
 
 }

@@ -8,10 +8,12 @@ import aqua.semantics.rules.ValuesAlgebra
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.data.NonEmptyList
+import cats.syntax.flatMap.*
+import cats.Monad
 
 class ReturnSem[F[_]](val expr: ReturnExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit V: ValuesAlgebra[F, Alg]): Prog[Alg, Model] =
+  def program[Alg[_]: Monad](implicit V: ValuesAlgebra[F, Alg]): Prog[Alg, Model] =
     expr.values
       .traverse(V.valueToModel)
       .map(_.toList.flatten)
