@@ -41,7 +41,7 @@ object MakeRes {
     case ParTag | ParTag.Detach => ParRes
     case XorTag | XorTag.LeftBiased => XorRes
     case NextTag(item) => NextRes(item)
-    case ApTag(operand, exportTo) => ApRes(operand, exportTo)
+    case PushToStreamTag(operand, exportTo) => ApRes(operand, exportTo)
     case CallServiceTag(serviceId, funcName, Call(args, exportTo)) =>
       CallServiceRes(
         serviceId,

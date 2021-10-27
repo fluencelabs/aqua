@@ -2,7 +2,7 @@ package aqua.semantics.expr
 
 import aqua.model.ValueModel.varName
 import aqua.model.func.Call
-import aqua.model.func.raw.{ApTag, FuncOp, FuncOps}
+import aqua.model.func.raw.{FuncOp, FuncOps, PushToStreamTag}
 import aqua.model.{LiteralModel, Model, VarModel}
 import aqua.parser.expr.PushToStreamExpr
 import aqua.parser.lexer.Token
@@ -53,25 +53,11 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
               expr.value,
               t,
               vm.lastType
-            ).flatMap {
+            ).map {
               case false =>
-                Free.pure[Alg, Model](Model.error("Stream type and element type does not match"))
+                Model.error("Stream type and element type does not match")
               case true =>
-                vm.lastType match {
-                  case StreamType(lt) =>
-                    // https://github.com/fluencelabs/aqua/issues/277
-                    // TODO: get Name from Value for the opaque name, as it points on Value, not on the stream
-                    N.defineOpaque(expr.stream, ArrayType(lt)).map { n =>
-                      val opaqueVar = VarModel(n.value, ArrayType(lt))
-                      FuncOps.seq(
-                        FuncOps.can(vm, Call.Export(opaqueVar.name, opaqueVar.lastType)),
-                        FuncOps.ap(opaqueVar, Call.Export(expr.stream.value, t))
-                      ): Model
-                    }
-
-                  case _ =>
-                    Free.pure[Alg, Model](FuncOps.ap(vm, Call.Export(expr.stream.value, t)): Model)
-                }
+                FuncOps.pushToStream(vm, Call.Export(expr.stream.value, t)): Model
             }
         }
 
