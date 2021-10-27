@@ -27,6 +27,11 @@ sealed trait RawTag {
         f(operand),
         exportTo
       )
+    case CanonicalizeTag(operand, exportTo) =>
+      CanonicalizeTag(
+        f(operand),
+        exportTo
+      )
     case AssignmentTag(value, assignTo) =>
       AssignmentTag(f(value), assignTo)
     case AbilityIdTag(value, ability) =>
