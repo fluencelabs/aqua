@@ -177,36 +177,9 @@ case class FuncCallable(
 
         val (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(Option[FuncOp], ValueModel)] {
-            case (exp @ Call.Export(_, StreamType(_)), res) if isStream(res) =>
-              // TODO move this logic to ReturnSem
-              // Fix for https://github.com/fluencelabs/aqua/issues/277
-              val definedNames =
-                FuncOp(callableFuncBody).definesVarNames.value ++ resolvedExports.keySet
-
-              val resName = ValueModel.varName(res).getOrElse(exp.name)
-
-              val opaqueName = LazyList.from(0, 1).map(n => s"$resName-$n").collectFirst {
-                case n if !definedNames(n) => n
-              }
-              val opaqueType = res.`type` match {
-                case StreamType(s) => ArrayType(s)
-                case _ => res.`type`
-              }
-              opaqueName.map(opN =>
-                FuncOps.seq(
-                  FuncOps.can(res, Call.Export(opN, opaqueType)),
-                  FuncOps.ap(
-                    VarModel(
-                      opN,
-                      opaqueType
-                    ),
-                    exp
-                  )
-                )
-              ) -> exp.model
             case (exp @ Call.Export(_, StreamType(_)), res) =>
               // pass nested function results to a stream
-              Some(FuncOps.ap(res, exp)) -> exp.model
+              Some(FuncOps.pushToStream(res, exp)) -> exp.model
             case (_, res) =>
               None -> res
           }

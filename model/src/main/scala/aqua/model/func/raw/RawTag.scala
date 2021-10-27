@@ -23,8 +23,13 @@ sealed trait RawTag {
         funcName,
         call.mapValues(f)
       )
-    case ApTag(operand, exportTo) =>
-      ApTag(
+    case PushToStreamTag(operand, exportTo) =>
+      PushToStreamTag(
+        f(operand),
+        exportTo
+      )
+    case CanonicalizeTag(operand, exportTo) =>
+      CanonicalizeTag(
         f(operand),
         exportTo
       )
@@ -109,6 +114,10 @@ case class CallServiceTag(
   override def toString: String = s"(call _ ($serviceId $funcName) $call)"
 }
 
-case class ApTag(operand: ValueModel, exportTo: Call.Export) extends RawTag {
-  override def toString: String = s"(ap $operand $exportTo)"
+case class PushToStreamTag(operand: ValueModel, exportTo: Call.Export) extends RawTag {
+  override def toString: String = s"(push $operand $exportTo)"
+}
+
+case class CanonicalizeTag(operand: ValueModel, exportTo: Call.Export) extends RawTag {
+  override def toString: String = s"(can $operand $exportTo)"
 }

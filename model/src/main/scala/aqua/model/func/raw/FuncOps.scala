@@ -10,18 +10,17 @@ object FuncOps {
   def noop: FuncOp =
     FuncOp.leaf(CallServiceTag(LiteralModel.quote("op"), "noop", Call(Nil, Nil)))
 
-  def ap(what: ValueModel, to: Call.Export): FuncOp =
+  def pushToStream(what: ValueModel, to: Call.Export): FuncOp =
     FuncOp.leaf(
-      ApTag(what, to)
+      PushToStreamTag(what, to)
     )
 
   /**
-   * Canonicalizes [[what]] into [[to]], [[what]] is expected to be a stream.
-   * As we don't have canonicalization at the moment, op identity is used instead
+   * Canonicalizes [[what]] into [[to]], [[what]] is expected to be a stream
    */
-  def can(what: ValueModel, to: Call.Export): FuncOp =
+  def canonicalize(what: ValueModel, to: Call.Export): FuncOp =
     FuncOp.leaf(
-      CallServiceTag(LiteralModel.quote("op"), "identity", Call(what :: Nil, to :: Nil))
+      CanonicalizeTag(what, to)
     )
 
   def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =
