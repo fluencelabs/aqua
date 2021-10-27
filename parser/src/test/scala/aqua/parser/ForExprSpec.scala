@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.expr.ForExpr
+import aqua.parser.expr.func.ForExpr
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

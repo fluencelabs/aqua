@@ -1,13 +1,15 @@
-package aqua.parser.expr
+package aqua.parser.expr.func
 
 import aqua.parser.Expr
+import aqua.parser.expr.func.ReturnExpr
 import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.Value
 import aqua.parser.lift.LiftParser
-import cats.Comonad
 import cats.data.NonEmptyList
 import cats.parse.Parser
-import cats.~>
+import cats.{~>, Comonad}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ReturnExpr[F[_]](values: NonEmptyList[Value[F]])
     extends Expr[F](ReturnExpr, values.head) {
@@ -18,6 +20,6 @@ case class ReturnExpr[F[_]](values: NonEmptyList[Value[F]])
 
 object ReturnExpr extends Expr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[ReturnExpr[F]] =
-    (`<-` *> ` ` *> comma(Value.`value`[F])).map(ReturnExpr(_))
+  override val p: Parser[ReturnExpr[Span.F]] =
+    (`<-` *> ` ` *> comma(Value.`value`)).map(ReturnExpr(_))
 }

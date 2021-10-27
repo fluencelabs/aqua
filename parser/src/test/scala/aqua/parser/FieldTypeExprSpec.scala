@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.expr.{ElseOtherwiseExpr, FieldTypeExpr}
+import aqua.parser.expr.FieldTypeExpr
 import aqua.types.ScalarType.bool
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec

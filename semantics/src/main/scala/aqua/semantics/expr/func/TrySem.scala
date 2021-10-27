@@ -1,8 +1,8 @@
-package aqua.semantics.expr
+package aqua.semantics.expr.func
 
 import aqua.model.Model
 import aqua.model.func.raw.{FuncOp, XorTag}
-import aqua.parser.expr.TryExpr
+import aqua.parser.expr.func.TryExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra

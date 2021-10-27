@@ -3,7 +3,7 @@ package aqua.model.func
 import aqua.model.ValueModel.varName
 import aqua.model.func.raw.*
 import aqua.model.{Model, ValueModel, VarModel}
-import aqua.types.{ArrowType, ProductType, StreamType, Type}
+import aqua.types.{ArrayType, ArrowType, ProductType, StreamType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -102,20 +102,36 @@ case class FuncCallable(
         // Use the new op tree (args are replaced with values, names are unique & safe)
         treeRenamed.tree,
         // Accumulator: all used names are forbidden, if we set any more names -- forbid them as well
-        (forbiddenNames ++ shouldRename.values ++ treeDefines) ->
+        (
+          forbiddenNames ++ shouldRename.values ++ treeDefines,
           // Functions may export variables, so collect them
-          capturedValues
+          capturedValues,
+          // They also can define arrows!
+          allArrows
+        )
       ) {
-        case ((noNames, resolvedExports), tag @ AssignmentTag(value, assignTo)) =>
+        case ((noNames, resolvedExports, resolvedArrows), tag @ AssignmentTag(value, assignTo)) =>
           (
             noNames,
-            resolvedExports + (assignTo -> value.resolveWith(resolvedExports))
+            resolvedExports + (assignTo -> value.resolveWith(resolvedExports)),
+            resolvedArrows
           ) -> Cofree[Chain, RawTag](
             tag.mapValues(_.resolveWith(resolvedExports)),
             Eval.now(Chain.empty)
           )
 
-        case ((noNames, resolvedExports), CallArrowTag(fn, c)) if allArrows.contains(fn) =>
+        case ((noNames, resolvedExports, resolvedArrows), tag @ ClosureTag(arrow)) =>
+          (
+            noNames,
+            resolvedExports,
+            resolvedArrows + (arrow.name -> arrow.capture(resolvedArrows, resolvedExports))
+          ) -> Cofree[Chain, RawTag](
+            tag.mapValues(_.resolveWith(resolvedExports)),
+            Eval.now(Chain.empty)
+          )
+
+        case ((noNames, resolvedExports, resolvedArrows), CallArrowTag(fn, c))
+            if resolvedArrows.contains(fn) =>
           // Apply arguments to a function – recursion
           val callResolved = c.mapValues(_.resolveWith(resolvedExports))
           val possibleArrowNames = callResolved.args.collect { case VarModel(m, _: ArrowType, _) =>
@@ -123,8 +139,12 @@ case class FuncCallable(
           }.toSet
 
           val (appliedOp, value) =
-            allArrows(fn)
-              .resolve(callResolved, allArrows.view.filterKeys(possibleArrowNames).toMap, noNames)
+            resolvedArrows(fn)
+              .resolve(
+                callResolved,
+                resolvedArrows.view.filterKeys(possibleArrowNames).toMap,
+                noNames
+              )
               .value
 
           // Function defines new names inside its body – need to collect them
@@ -133,12 +153,15 @@ case class FuncCallable(
           // At the very end, will need to resolve what is used as results with the result values
           (
             noNames ++ newNames,
-            resolvedExports ++ c.exportTo.map(_.name).zip(value)
+            resolvedExports ++ c.exportTo.map(_.name).zip(value),
+            resolvedArrows
           ) -> appliedOp.tree
-        case (acc @ (_, resolvedExports), tag) =>
+        case (acc @ (_, resolvedExports, resolvedArrows), tag) =>
           tag match {
-            case CallArrowTag(fn, _) if !allArrows.contains(fn) =>
-              logger.error(s"UNRESOLVED $fn in $funcName, skipping, will become (null) in AIR!")
+            case CallArrowTag(fn, _) if !resolvedArrows.contains(fn) =>
+              logger.error(
+                s"UNRESOLVED arrow $fn in $funcName, skipping, will become (null) in AIR!"
+              )
             case _ =>
           }
 
@@ -148,18 +171,15 @@ case class FuncCallable(
             Eval.now(Chain.empty)
           )
       }
-      .map { case ((_, resolvedExports), callableFuncBody) =>
+      .map { case ((_, resolvedExports, _), callableFuncBody) =>
         // If return value is affected by any of internal functions, resolve it
         val resolvedResult = result.map(_.resolveWith(resolvedExports))
 
         val (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(Option[FuncOp], ValueModel)] {
-            case (exp @ Call.Export(_, StreamType(_)), res) if isStream(res) =>
-              None -> res
             case (exp @ Call.Export(_, StreamType(_)), res) =>
-              res.`type`
               // pass nested function results to a stream
-              Some(FuncOps.ap(res, exp)) -> exp.model
+              Some(FuncOps.pushToStream(res, exp)) -> exp.model
             case (_, res) =>
               None -> res
           }

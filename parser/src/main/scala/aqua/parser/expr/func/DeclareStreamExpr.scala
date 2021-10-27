@@ -1,12 +1,14 @@
-package aqua.parser.expr
+package aqua.parser.expr.func
 
 import aqua.parser.Expr
-import aqua.parser.lexer.Token._
+import aqua.parser.expr.func.DeclareStreamExpr
+import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Name, Token, TypeToken}
 import aqua.parser.lift.LiftParser
-import cats.Comonad
 import cats.parse.Parser
-import cats.~>
+import cats.{Comonad, ~>}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class DeclareStreamExpr[F[_]](name: Name[F], `type`: TypeToken[F])
     extends Expr[F](DeclareStreamExpr, name) {
@@ -17,8 +19,8 @@ case class DeclareStreamExpr[F[_]](name: Name[F], `type`: TypeToken[F])
 
 object DeclareStreamExpr extends Expr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[DeclareStreamExpr[F]] =
-    ((Name.p[F] <* ` : `) ~ TypeToken.`typedef`[F]).map { case (name, t) =>
+  override val p: Parser[DeclareStreamExpr[Span.F]] =
+    ((Name.p <* ` : `) ~ TypeToken.`typedef`).map { case (name, t) =>
       DeclareStreamExpr(name, t)
     }
 

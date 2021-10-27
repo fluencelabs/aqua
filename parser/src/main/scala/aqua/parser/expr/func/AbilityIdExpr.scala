@@ -1,12 +1,14 @@
-package aqua.parser.expr
+package aqua.parser.expr.func
 
 import aqua.parser.Expr
-import aqua.parser.lexer.Token._
+import aqua.parser.expr.func.AbilityIdExpr
+import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Ability, Value}
 import aqua.parser.lift.LiftParser
-import cats.Comonad
-import cats.parse.{Parser => P}
-import cats.~>
+import cats.parse.Parser as P
+import cats.{Comonad, ~>}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F])
     extends Expr[F](AbilityIdExpr, ability) {
@@ -18,8 +20,8 @@ case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F])
 
 object AbilityIdExpr extends Expr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: P[AbilityIdExpr[F]] =
-    ((Ability.dotted[F] <* ` `) ~ Value.`value`).map { case (ability, id) =>
+  override val p: P[AbilityIdExpr[Span.F]] =
+    ((Ability.dotted <* ` `) ~ Value.`value`).map { case (ability, id) =>
       AbilityIdExpr(ability, id)
     }
 

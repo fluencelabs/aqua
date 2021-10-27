@@ -8,6 +8,8 @@ import cats.data.NonEmptyList
 import cats.parse.Parser
 import cats.syntax.either.*
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ExportExpr[F[_]](pubs: NonEmptyList[FromExpr.NameOrAbAs[F]]) extends HeaderExpr[F] {
   override def token: Token[F] = 
@@ -19,6 +21,6 @@ case class ExportExpr[F[_]](pubs: NonEmptyList[FromExpr.NameOrAbAs[F]]) extends 
 
 object ExportExpr extends HeaderExpr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[ExportExpr[F]] =
-    (`_export` *> ` `) *> comma(FromExpr.nameOrAbAs[F]).map(ExportExpr(_))
+  override val p: Parser[ExportExpr[Span.F]] =
+    (`_export` *> ` `) *> comma(FromExpr.nameOrAbAs).map(ExportExpr(_))
 }

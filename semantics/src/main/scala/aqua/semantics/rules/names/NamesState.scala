@@ -10,6 +10,7 @@ case class NamesState[F[_]](
   stack: List[NamesState.Frame[F]] = Nil,
   rootArrows: Map[String, ArrowType] = Map.empty,
   constants: Map[String, Type] = Map.empty[String, Type],
+  opaque: Map[String, Type] = Map.empty[String, Type],
   definitions: Map[String, Name[F]] = Map.empty[String, Name[F]]
 ) {
 

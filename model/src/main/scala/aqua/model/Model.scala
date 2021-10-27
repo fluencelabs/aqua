@@ -14,8 +14,6 @@ object Model {
     override def combine(x: Model, y: Model): Model = (x, y) match {
       case (l: FuncOp, r: FuncOp) =>
         FuncOp.FuncOpSemigroup.combine(l, r)
-      case (l: FuncOp, ReturnModel) =>
-        l
       case (l: ScriptModel, r: ScriptModel) =>
         ScriptModel.SMMonoid.combine(l, r)
 

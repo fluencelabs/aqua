@@ -1,19 +1,18 @@
-package aqua.semantics.expr
+package aqua.semantics.expr.func
 
 import aqua.model.Model
 import aqua.model.func.raw.{FuncOp, ParTag}
-import aqua.parser.expr.ParExpr
+import aqua.parser.expr.func.CoExpr
 import aqua.semantics.Prog
-import cats.free.Free
 import cats.syntax.applicative._
 import cats.Monad
 
-class ParSem[F[_]](val expr: ParExpr[F]) extends AnyVal {
+class CoSem[F[_]](val expr: CoExpr[F]) extends AnyVal {
 
   def program[Alg[_]: Monad]: Prog[Alg, Model] =
     Prog.after[Alg, Model] {
       case g: FuncOp =>
-        FuncOp.wrap(ParTag, g).pure[Alg]
+        FuncOp.wrap(ParTag.Detach, g).pure[Alg]
       case g => g.pure[Alg]
     }
 }

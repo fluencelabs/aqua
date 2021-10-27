@@ -96,6 +96,15 @@ object Span {
     override def map[A, B](fa: F[A])(f: A ⇒ B): F[B] = fa.copy(_2 = f(fa._2))
   }
 
+  implicit class PToSpan[T](p: P[T]) {
+    def lift: P[Span.F[T]] = Span.spanLiftParser.lift(p)
+  }
+
+  implicit class P0ToSpan[T](p: Parser0[T]) {
+    def lift0: Parser0[Span.F[T]] = Span.spanLiftParser.lift0(p)
+  }
+
+
   implicit object spanLiftParser extends LiftParser[F] {
 
     override def lift[T](p: P[T]): P[F[T]] =

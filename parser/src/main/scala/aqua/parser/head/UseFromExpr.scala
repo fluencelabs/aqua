@@ -7,6 +7,8 @@ import cats.Comonad
 import cats.data.NonEmptyList
 import cats.parse.Parser
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class UseFromExpr[F[_]](
   imports: NonEmptyList[FromExpr.NameOrAbAs[F]],
@@ -23,9 +25,9 @@ case class UseFromExpr[F[_]](
 
 object UseFromExpr extends HeaderExpr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[HeaderExpr[F]] =
-    (`use` *> FromExpr.importFrom[F].surroundedBy(` `) ~ Value
-      .string[F] ~ (` as ` *> Ability.ab[F])).map { case ((imports, filename), asModule) =>
+  override val p: Parser[UseFromExpr[Span.F]] =
+    (`use` *> FromExpr.importFrom.surroundedBy(` `) ~ Value
+      .string ~ (` as ` *> Ability.ab)).map { case ((imports, filename), asModule) =>
       UseFromExpr(imports, filename, asModule)
     }
 }

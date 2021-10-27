@@ -1,12 +1,14 @@
-package aqua.parser.expr
+package aqua.parser.expr.func
 
 import aqua.parser.Expr
-import aqua.parser.lexer.Token._
+import aqua.parser.expr.func.PushToStreamExpr
+import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Name, Value}
 import aqua.parser.lift.LiftParser
-import cats.Comonad
-import cats.parse.{Parser => P}
-import cats.~>
+import cats.parse.Parser as P
+import cats.{Comonad, ~>}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class PushToStreamExpr[F[_]](
   stream: Name[F],
@@ -19,8 +21,8 @@ case class PushToStreamExpr[F[_]](
 
 object PushToStreamExpr extends Expr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: P[PushToStreamExpr[F]] =
-    ((Name.p[F] <* ` <<- `).with1 ~ Value.`value`).map { case (variable, value) =>
+  override val p: P[PushToStreamExpr[Span.F]] =
+    ((Name.p <* ` <<- `).with1 ~ Value.`value`).map { case (variable, value) =>
       PushToStreamExpr(variable, value)
     }
 }

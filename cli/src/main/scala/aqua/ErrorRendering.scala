@@ -4,7 +4,7 @@ import aqua.compiler.*
 import aqua.files.FileModuleId
 import aqua.io.AquaFileError
 import aqua.parser.lift.{FileSpan, Span}
-import aqua.parser.{BlockIndentError, FuncReturnError, LexerError}
+import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError}
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
 import cats.{Eval, Show}
 import cats.parse.LocationMap
@@ -24,7 +24,7 @@ object ErrorRendering {
   def expectationToString(expectation: Expectation): String = {
     // TODO: match all expectations
     expectation match {
-      case wc@WithContext(str, exp) => s"$str (${expectationToString(exp)})"
+      case wc @ WithContext(str, exp) => s"$str (${expectationToString(exp)})"
       case InRange(offset, lower, upper) =>
         if (lower == upper)
           s"Expected symbol '${betterSymbol(lower)}'"
@@ -47,32 +47,44 @@ object ErrorRendering {
         )
       )
       .getOrElse(
-        "(offset is beyond the script, syntax errors) Error: " + Console.RED + messages.mkString(", ")
+        "(offset is beyond the script, syntax errors) Error: " + Console.RED + messages.mkString(
+          ", "
+        )
       ) + Console.RESET + "\n"
 
   implicit val showError: Show[AquaError[FileModuleId, AquaFileError, FileSpan.F]] = Show.show {
     case ParserErr(err) =>
       err match {
-        case BlockIndentError(indent, message) => showForConsole("Syntax error", indent._1, message :: Nil)
-        case FuncReturnError(point, message) => showForConsole("Syntax error", point._1, message :: Nil)
+        case BlockIndentError(indent, message) =>
+          showForConsole("Syntax error", indent._1, message :: Nil)
+        case ArrowReturnError(point, message) =>
+          showForConsole("Syntax error", point._1, message :: Nil)
         case LexerError((span, e)) =>
-          e.expected.toList.groupBy(_.offset).map { case (offset, exps) =>
-            val localSpan = Span(offset, offset + 1)
-            val msg = FileSpan(span.name, span.locationMap, localSpan).focus(0)
-              .map { spanFocus =>
-                val errorMessages = exps.map(exp => expectationToString(exp))
-                spanFocus.toConsoleStr(
-                  "Syntax error",
-                  s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t),
-                  Console.RED
-                )
-              }
-              .getOrElse(
-                "(offset is beyond the script, syntax errors) " + Console.RED + e.expected.toList
-                  .mkString(", ")
-              ) + Console.RESET
-            (offset, msg)
-          }.toList.sortBy(_._1).map(_._2).reverse.mkString("\n")
+          e.expected.toList
+            .groupBy(_.offset)
+            .map { case (offset, exps) =>
+              val localSpan = Span(offset, offset + 1)
+              val msg = FileSpan(span.name, span.locationMap, localSpan)
+                .focus(0)
+                .map { spanFocus =>
+                  val errorMessages = exps.map(exp => expectationToString(exp))
+                  spanFocus.toConsoleStr(
+                    "Syntax error",
+                    s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t),
+                    Console.RED
+                  )
+                }
+                .getOrElse(
+                  "(offset is beyond the script, syntax errors) " + Console.RED + e.expected.toList
+                    .mkString(", ")
+                ) + Console.RESET
+              (offset, msg)
+            }
+            .toList
+            .sortBy(_._1)
+            .map(_._2)
+            .reverse
+            .mkString("\n")
       }
     case SourcesErr(err) =>
       Console.RED + err.showForConsole + Console.RESET

@@ -1,6 +1,5 @@
 package aqua
 
-import aqua.parser.expr.CallArrowExpr
 import cats.Monad
 import cats.effect.IO
 import cats.effect.kernel.Async

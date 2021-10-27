@@ -1,14 +1,16 @@
-package aqua.parser.expr
+package aqua.parser.expr.func
 
 import aqua.parser.Expr
-import aqua.parser.lexer.Token._
+import aqua.parser.expr.*
+import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Name, Value}
 import aqua.parser.lift.LiftParser
-import aqua.parser.lift.LiftParser._
-import cats.Comonad
-import cats.parse.{Parser => P}
-import cats.syntax.comonad._
-import cats.~>
+import aqua.parser.lift.LiftParser.*
+import cats.parse.Parser as P
+import cats.syntax.comonad.*
+import cats.{Comonad, ~>}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ForExpr[F[_]](
   item: Name[F],
@@ -36,11 +38,13 @@ object ForExpr extends Expr.AndIndented {
       Expr.defer(IfExpr) ::
       Expr.defer(ElseOtherwiseExpr) ::
       Expr.defer(CatchExpr) ::
+      Expr.defer(ParExpr) ::
+      Expr.defer(CoExpr) ::
       Nil
 
-  override def p[F[_]: LiftParser: Comonad]: P[ForExpr[F]] =
-    ((`for` *> ` ` *> Name.p[F] <* ` <- `) ~ Value
-      .`value`[F] ~ (` ` *> (`par`.as(ParMode: Mode).lift | `try`.as(TryMode: Mode).lift)).?).map {
+  override def p: P[ForExpr[Span.F]] =
+    ((`for` *> ` ` *> Name.p <* ` <- `) ~ Value
+      .`value` ~ (` ` *> (`par`.as(ParMode: Mode).lift | `try`.as(TryMode: Mode).lift)).?).map {
       case ((item, iterable), mode) =>
         ForExpr(item, iterable, mode.map(m => m -> m.extract))
     }

@@ -12,21 +12,23 @@ import scala.language.implicitConversions
 
 class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 
+  import aqua.AquaSpec._
+
   implicit def strToBt(st: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](st)
 
   "Basic type" should "parse" in {
-    BasicTypeToken.`basictypedef`.parseAll("u32").value should be(u32: BasicTypeToken[Id])
+    BasicTypeToken.`basictypedef`.parseAll("u32").value.mapK(spanToId) should be(strToBt(u32))
     BasicTypeToken.`basictypedef`.parseAll("()").isLeft should be(true)
   }
 
   "Arrow type" should "parse" in {
-    val arrowdef = ArrowTypeToken.`arrowdef`[Id](DataTypeToken.`datatypedef`[Id])
-    val arrowWithNames = ArrowTypeToken.`arrowWithNames`[Id](DataTypeToken.`datatypedef`[Id])
+    def arrowdef(str: String) = ArrowTypeToken.`arrowdef`(DataTypeToken.`datatypedef`).parseAll(str).value.mapK(spanToId)
+    def arrowWithNames(str: String) = ArrowTypeToken.`arrowWithNames`(DataTypeToken.`datatypedef`).parseAll(str).value.mapK(spanToId)
 
-    arrowdef.parseAll("-> B").value should be(
+    arrowdef("-> B") should be(
       ArrowTypeToken[Id]((), Nil, List(CustomTypeToken[Id]("B")))
     )
-    arrowdef.parseAll("A -> B").value should be(
+    arrowdef("A -> B") should be(
       ArrowTypeToken[Id](
         (),
         (None -> CustomTypeToken[Id]("A")) :: Nil,
@@ -34,7 +36,7 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
       )
     )
 
-    arrowWithNames.parseAll("(a: A) -> B").value should be(
+    arrowWithNames("(a: A) -> B") should be(
       ArrowTypeToken[Id](
         (),
         (Some(Name[Id]("a")) -> CustomTypeToken[Id]("A")) :: Nil,
@@ -42,32 +44,28 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
       )
     )
 
-    arrowdef.parseAll("u32 -> Boo").value should be(
+    arrowdef("u32 -> Boo") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> (u32: BasicTypeToken[Id])) :: Nil,
+        (None -> strToBt(u32)) :: Nil,
         List(CustomTypeToken[Id]("Boo"))
       )
     )
-    TypeToken.`typedef`.parseAll("u32 -> ()").value should be(
-      ArrowTypeToken[Id]((), (None -> (u32: BasicTypeToken[Id])) :: Nil, Nil)
+    TypeToken.`typedef`.parseAll("u32 -> ()").value.mapK(spanToId) should be(
+      ArrowTypeToken[Id]((), (None -> strToBt(u32)) :: Nil, Nil)
     )
-    arrowdef.parseAll("A, u32 -> B").value should be(
+    arrowdef("A, u32 -> B") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> CustomTypeToken[Id]("A")) :: (None -> (u32: BasicTypeToken[Id])) :: Nil,
+        (None -> CustomTypeToken[Id]("A")) :: (None -> strToBt(u32)) :: Nil,
         List(CustomTypeToken[Id]("B"))
       )
     )
-    arrowdef.parseAll("[]Absolutely, u32 -> B, C").value should be(
+    arrowdef("[]Absolutely, u32 -> B, C") should be(
       ArrowTypeToken[Id](
         (),
-        (Option.empty[Name[Id]] -> ArrayTypeToken[Id](
-          (),
-          CustomTypeToken[Id]("Absolutely")
-        )) :: (Option.empty[Name[Id]] -> (u32: BasicTypeToken[
-          Id
-        ])) :: Nil,
+        (Option.empty[Name[Id]] -> ArrayTypeToken[Id]((), CustomTypeToken[Id]("Absolutely"))) ::
+          (Option.empty[Name[Id]] -> strToBt(u32)) :: Nil,
         CustomTypeToken[Id]("B") ::
           CustomTypeToken[Id]("C") :: Nil
       )
@@ -76,14 +74,16 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "Array type" should "parse" in {
-    TypeToken.`typedef`.parseAll("[]Something") should be(
-      Right(ArrayTypeToken[Id]((), CustomTypeToken[Id]("Something")))
+    def typedef(str: String) = TypeToken.`typedef`.parseAll(str).value.mapK(spanToId)
+
+    typedef("[]Something") should be(
+      ArrayTypeToken[Id]((), CustomTypeToken[Id]("Something"))
     )
-    TypeToken.`typedef`.parseAll("[]u32") should be(
-      Right(ArrayTypeToken[Id]((), u32: BasicTypeToken[Id]))
+    typedef("[]u32") should be(
+      ArrayTypeToken[Id]((), strToBt(u32))
     )
-    TypeToken.`typedef`.parseAll("[][]u32") should be(
-      Right(ArrayTypeToken[Id]((), ArrayTypeToken[Id]((), u32: BasicTypeToken[Id])))
+    typedef("[][]u32") should be(
+      ArrayTypeToken[Id]((), ArrayTypeToken[Id]((), strToBt(u32)))
     )
   }
 

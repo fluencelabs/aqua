@@ -6,15 +6,13 @@ import aqua.types.ArrowType
 
 case class FuncModel(
   name: String,
-  arrowType: ArrowType,
-  ret: List[ValueModel],
-  body: FuncOp
+  arrow: ArrowModel
 ) extends Model {
 
   def capture(
     arrows: Map[String, FuncCallable],
     constants: Map[String, ValueModel]
   ): FuncCallable =
-    FuncCallable(name, body.fixXorPar, arrowType, ret, arrows, constants)
+    FuncCallable(name, arrow.body.fixXorPar, arrow.`type`, arrow.ret, arrows, constants)
 
 }

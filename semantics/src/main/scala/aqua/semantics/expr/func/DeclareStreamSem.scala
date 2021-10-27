@@ -1,7 +1,7 @@
-package aqua.semantics.expr
+package aqua.semantics.expr.func
 
 import aqua.model.Model
-import aqua.parser.expr.DeclareStreamExpr
+import aqua.parser.expr.func.DeclareStreamExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra

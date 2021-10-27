@@ -48,14 +48,21 @@ object Topology extends Logging {
 
   def resolveOnMoves(op: Tree): Eval[Res] = {
     val cursor = RawCursor(NonEmptyList.one(ChainZipper.one(op)))
+    // TODO: remove var
+    var i = 0
+    def nextI = {
+      i = i + 1
+      i
+    }
     val resolvedCofree = cursor
       .cata(wrap) { rc =>
         logger.debug(s"<:> $rc")
-        val resolved = MakeRes
-          .resolve(rc.currentPeerId)
-          .lift
-          .apply(rc.tag)
-          .map(MakeRes.leaf)
+        val resolved =
+          MakeRes
+            .resolve(rc.currentPeerId, nextI)
+            .lift
+            .apply(rc.tag)
+
         val chainZipperEv = resolved.traverse(cofree =>
           Eval.later {
             val cz = ChainZipper(
@@ -73,6 +80,7 @@ object Topology extends Logging {
             cz
           }
         )
+
         OptionT[Eval, ChainZipper[Res]](chainZipperEv)
       }
 
