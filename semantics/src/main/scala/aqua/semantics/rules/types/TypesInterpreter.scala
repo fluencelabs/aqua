@@ -16,16 +16,15 @@ import scala.collection.immutable.SortedMap
 class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: ReportError[F, X])
     extends TypesAlgebra[F, State[X, *]] {
 
-  type S[A] = State[X, A]
-  type St = TypesState[F]
+  type ST[A] = State[X, A]
 
-  protected def getState: S[St] = State.get.map(lens.get)
-  protected def setState(st: St): S[Unit] = State.modify(s => lens.replace(st)(s))
+  protected def getState: ST[TypesState[F]] = State.get.map(lens.get)
+  protected def setState(st: TypesState[F]): ST[Unit] = State.modify(s => lens.replace(st)(s))
 
-  protected def report(t: Token[F], hint: String): S[Unit] =
+  protected def report(t: Token[F], hint: String): ST[Unit] =
     State.modify(error(_, t, hint))
 
-  protected def modify(f: St => St): S[Unit] =
+  protected def modify(f: TypesState[F] => TypesState[F]): ST[Unit] =
     State.modify(lens.modify(f))
 
   override def resolveType(token: TypeToken[F]): State[X, Option[Type]] =
@@ -39,7 +38,7 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
       case Valid(t) => State.pure[X, Option[ArrowType]](Some(t))
       case Invalid(errs) =>
         errs
-          .foldLeft[S[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
+          .foldLeft[ST[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
             report(tkn, hint) >> n
           }
     }
@@ -47,7 +46,7 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
   override def defineField(name: Name[F], `type`: Type): State[X, Boolean] =
     getState.map(_.fields.get(name.value)).flatMap {
       case None =>
-        modify(st => st.copy(fields = st.fields.updated(name.value, name -> df.`type`)))
+        modify(st => st.copy(fields = st.fields.updated(name.value, name -> `type`)))
           .as(true)
       case Some(_) =>
         report(name, s"Cannot define field `${name.value}`, it was already defined above")

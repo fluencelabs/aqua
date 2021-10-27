@@ -7,11 +7,12 @@ import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import cats.free.Free
+import cats.syntax.applicative._
+import cats.Monad
 
 class TrySem[F[_]](val expr: TryExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     V: ValuesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
@@ -19,11 +20,9 @@ class TrySem[F[_]](val expr: TryExpr[F]) extends AnyVal {
     Prog
       .after[Alg, Model] {
         case o: FuncOp =>
-          Free.pure[Alg, Model](
-            FuncOp.wrap(XorTag.LeftBiased, o)
-          )
+          FuncOp.wrap(XorTag.LeftBiased, o).pure[Alg]
         case _ =>
-          Free.pure[Alg, Model](Model.error("Wrong body of the try expression"))
+          Model.error("Wrong body of the try expression").pure[Alg]
       }
       .abilitiesScope(expr.token)
 }

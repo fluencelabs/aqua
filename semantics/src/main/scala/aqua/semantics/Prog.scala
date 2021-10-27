@@ -37,7 +37,7 @@ case class RunAfter[Alg[_]: Monad, A](prog: Alg[A]) extends Prog[Alg, A] {
 
 }
 
-case class RunAround[Alg[_], R, A](before: Alg[R], after: (R, A) => Alg[A]) extends Prog[Alg, A] {
+case class RunAround[Alg[_]: Monad, R, A](before: Alg[R], after: (R, A) => Alg[A]) extends Prog[Alg, A] {
 
   override def apply(v1: Alg[A]): Alg[A] =
     before >>= (r => v1 >>= (a => after(r, a)))
@@ -45,7 +45,7 @@ case class RunAround[Alg[_], R, A](before: Alg[R], after: (R, A) => Alg[A]) exte
 
 object Prog {
 
-  implicit def leaf[Alg[_]: Monad, A](prog: Free[Alg, A]): Prog[Alg, A] =
+  implicit def leaf[Alg[_]: Monad, A](prog: Alg[A]): Prog[Alg, A] =
     RunAfter(prog)
 
   def after[Alg[_]: Monad, A](prog: A => Alg[A]): Prog[Alg, A] =

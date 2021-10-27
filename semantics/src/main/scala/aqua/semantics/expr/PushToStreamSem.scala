@@ -13,17 +13,21 @@ import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{StreamType, Type}
 import cats.free.Free
 import cats.syntax.apply.*
+import cats.syntax.applicative._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
+import cats.Monad
 
 class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
 
-  private def ensureStreamElementMatches[Alg[_]](
+  private def ensureStreamElementMatches[Alg[_]: Monad](
     streamToken: Token[F],
     elementToken: Token[F],
     streamOp: Option[Type],
     elementOp: Option[Type]
   )(implicit
     T: TypesAlgebra[F, Alg]
-  ): Free[Alg, Boolean] =
+  ): Alg[Boolean] =
     (streamOp, elementOp).mapN { case (stream, element) =>
       stream match {
         case StreamType(st) =>
@@ -32,9 +36,9 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
           T.ensureTypeMatches(streamToken, StreamType(element), stream)
       }
 
-    }.getOrElse(Free.pure[Alg, Boolean](false))
+    }.getOrElse(false.pure[Alg])
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
@@ -59,7 +63,7 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
             Model.error("Stream and pushed element types are not matches")
         }
 
-      case _ => Free.pure[Alg, Model](Model.error("Cannot resolve value"))
+      case _ => Model.error("Cannot resolve value").pure[Alg]
     }
 
 }

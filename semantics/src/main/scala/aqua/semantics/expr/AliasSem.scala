@@ -4,7 +4,6 @@ import aqua.model.{Model, TypeModel}
 import aqua.parser.expr.AliasExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.types.TypesAlgebra
-import cats.free.Free
 import cats.syntax.functor._
 import cats.Monad
 import cats.Applicative

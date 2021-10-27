@@ -7,13 +7,15 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import cats.free.Free
 import cats.syntax.apply._
 import cats.syntax.flatMap._
+import cats.syntax.functor._
+import cats.syntax.applicative._
+import cats.Monad
 
 class ServiceSem[F[_]](val expr: ServiceExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     A: AbilitiesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
@@ -28,14 +30,14 @@ class ServiceSem[F[_]](val expr: ServiceExpr[F]) extends AnyVal {
             for {
               defaultId <- expr.id
                 .map(v => V.valueToModel(v))
-                .getOrElse(Free.pure[Alg, Option[ValueModel]](None))
+                .getOrElse(None.pure[Alg])
               defineResult <- A.defineService(
                 expr.name,
                 arrows,
                 defaultId
               )
               _ <- (expr.id zip defaultId)
-                .fold(Free.pure[Alg, Unit](()))(idV =>
+                .fold(().pure[Alg])(idV =>
                   (V.ensureIsString(idV._1) >> A.setServiceId(expr.name, idV._1, idV._2)).map(_ =>
                     ()
                   )
@@ -46,7 +48,7 @@ class ServiceSem[F[_]](val expr: ServiceExpr[F]) extends AnyVal {
               } else Model.empty("Service not created due to validation errors")
 
           case None =>
-            Free.pure(Model.error("Service has no arrows, fails"))
+            Model.error("Service has no arrows, fails").pure[Alg]
 
         }
     )

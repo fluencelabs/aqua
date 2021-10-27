@@ -8,10 +8,12 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import cats.syntax.applicative._
+import cats.Monad
 
 class CatchSem[F[_]](val expr: CatchExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
   ): Prog[Alg, Model] =

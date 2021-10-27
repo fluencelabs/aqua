@@ -7,42 +7,26 @@ import cats.InjectK
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.free.Free
 
-class AbilitiesAlgebra[F[_], Alg[_]](implicit A: InjectK[AbilityOp[F, *], Alg]) {
+trait AbilitiesAlgebra[F[_], Alg[_]] {
 
-  def defineArrow(arrow: Name[F], `type`: ArrowType): Free[Alg, Boolean] =
-    Free.liftInject[Alg](DefineArrow[F](arrow, `type`))
+  def defineArrow(arrow: Name[F], `type`: ArrowType): Alg[Boolean]
 
-  def purgeArrows(token: Token[F]): Free[Alg, Option[NonEmptyList[(Name[F], ArrowType)]]] =
-    Free.liftInject[Alg](PurgeArrows[F](token))
+  def purgeArrows(token: Token[F]): Alg[Option[NonEmptyList[(Name[F], ArrowType)]]]
 
   def defineService(
     name: Ability[F],
     arrows: NonEmptyMap[String, ArrowType],
     defaultId: Option[ValueModel]
-  ): Free[Alg, Boolean] =
-    Free.liftInject[Alg](DefineService[F](name, arrows, defaultId))
+  ): Alg[Boolean]
 
-  def getArrow(name: Ability[F], arrow: Name[F]): Free[Alg, Option[ArrowType]] =
-    Free.liftInject[Alg](GetArrow[F](name, arrow))
+  def getArrow(name: Ability[F], arrow: Name[F]): Alg[Option[ArrowType]]
 
-  def setServiceId(name: Ability[F], id: Value[F], vm: ValueModel): Free[Alg, Boolean] =
-    Free.liftInject[Alg](SetServiceId[F](name, id, vm))
+  def setServiceId(name: Ability[F], id: Value[F], vm: ValueModel): Alg[Boolean]
 
-  def getServiceId(name: Ability[F]): Free[Alg, Either[Boolean, ValueModel]] =
-    Free.liftInject[Alg](GetServiceId[F](name))
+  def getServiceId(name: Ability[F]): Alg[Either[Boolean, ValueModel]]
 
-  def beginScope(token: Token[F]): Free[Alg, Unit] =
-    Free.liftInject[Alg](BeginScope[F](token))
+  def beginScope(token: Token[F]): Alg[Unit]
 
-  def endScope(): Free[Alg, Unit] =
-    Free.liftInject[Alg](EndScope[F]())
+  def endScope(): Alg[Unit]
 
-}
-
-object AbilitiesAlgebra {
-
-  implicit def abilitiesAlgebra[F[_], Alg[_]](implicit
-    A: InjectK[AbilityOp[F, *], Alg]
-  ): AbilitiesAlgebra[F, Alg] =
-    new AbilitiesAlgebra[F, Alg]()
 }

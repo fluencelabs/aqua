@@ -6,11 +6,14 @@ import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, OptionType, StreamType}
-import cats.free.Free
+import cats.syntax.applicative._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
+import cats.Monad
 
 class DeclareStreamSem[F[_]](val expr: DeclareStreamExpr[F]) {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg]
   ): Prog[Alg, Model] =
@@ -26,7 +29,7 @@ class DeclareStreamSem[F[_]](val expr: DeclareStreamExpr[F]) {
           case Some(t) =>
             T.ensureTypeMatches(expr.`type`, StreamType(t), t)
           case None =>
-            Free.pure[Alg, Boolean](false)
+            false.pure[Alg]
         }
         .map {
           case true => Model.empty(s"Name `${expr.name.value}` defined successfully")

@@ -13,10 +13,13 @@ import cats.data.Chain
 import cats.free.Free
 import cats.syntax.apply._
 import cats.syntax.flatMap._
+import cats.syntax.functor._
+import cats.syntax.applicative._
+import cats.Monad
 
 class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     V: ValuesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
@@ -34,7 +37,7 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
                   case _ =>
                     T.ensureTypeMatches(v, ScalarType.string, vm.lastType)
                 }
-              case None => Free.pure(false)
+              case None => false.pure[Alg]
             }
           )
           .map(_.flatten)
@@ -58,7 +61,7 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
                 Model.error("OnSem: Impossible error")
             }
 
-          case m => Free.pure[Alg, Model](Model.error("On body is not an op, it's " + m))
+          case m => Model.error("On body is not an op, it's " + m).pure[Alg]
         })
     )
 }

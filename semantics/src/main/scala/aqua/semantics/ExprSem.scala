@@ -7,10 +7,11 @@ import aqua.semantics.expr._
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
+import cats.Monad
 
 object ExprSem {
 
-  def getProg[F[_], G[_]](
+  def getProg[F[_], G[_]: Monad](
     expr: Expr[F]
   )(implicit
     A: AbilitiesAlgebra[F, G],

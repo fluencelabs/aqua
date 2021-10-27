@@ -24,21 +24,25 @@ import cats.syntax.semigroup.*
 import monocle.Lens
 import monocle.macros.GenLens
 import scribe.Logging
+import cats.Monad
+import cats.syntax.applicative._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 
 object Semantics extends Logging {
 
-  def folder[S[_], G[_]](implicit
+  def folder[S[_], G[_]: Monad](implicit
     A: AbilitiesAlgebra[S, G],
     N: NamesAlgebra[S, G],
     T: TypesAlgebra[S, G]
-  ): (Expr[S], Chain[Free[G, Model]]) => Eval[Free[G, Model]] = { case (expr, inners) =>
+  ): (Expr[S], Chain[G[Model]]) => Eval[G[Model]] = { case (expr, inners) =>
     Eval later ExprSem
       .getProg[S, G](expr)
       .apply(
         // TODO instead of foldRight, do slidingWindow for 2 elements, merge right associative ones
         // Then foldLeft just like now
         inners
-          .foldRight[Free[G, List[Model]]](Free.pure[G, List[Model]](List.empty[Model])) {
+          .foldRight[G[List[Model]]](List.empty[Model].pure[G]) {
             case (a, b) =>
               (a, b).mapN {
                 case (prev: FuncOp, (next: FuncOp) :: tail) if next.isRightAssoc =>
