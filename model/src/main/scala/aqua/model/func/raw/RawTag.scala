@@ -92,3 +92,7 @@ case class CallServiceTag(
 case class PushToStreamTag(operand: ValueModel, exportTo: Call.Export) extends RawTag {
   override def toString: String = s"(push $operand $exportTo)"
 }
+
+case class CanonicalizeTag(operand: ValueModel, exportTo: Call.Export) extends RawTag {
+  override def toString: String = s"(can $operand $exportTo)"
+}

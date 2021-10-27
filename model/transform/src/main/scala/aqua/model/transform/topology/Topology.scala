@@ -63,7 +63,7 @@ object Topology extends Logging {
             .lift
             .apply(rc.tag)
         )
-        val chainZipperEv = resolved.map(
+        val chainZipperEv = resolved.flatMap(
           _.traverse(cofree =>
             Eval.later {
               val cz = ChainZipper(

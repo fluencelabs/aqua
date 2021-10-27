@@ -69,6 +69,13 @@ object MakeRes {
         case _ =>
           leaf(ApRes(operand, exportTo))
       }
+    case CanonicalizeTag(operand, exportTo) =>
+      canon(
+        currentPeerId
+          .getOrElse(LiteralModel.initPeerId),
+        operand,
+        exportTo
+      )
     case CallServiceTag(serviceId, funcName, Call(args, exportTo)) =>
       leaf(
         CallServiceRes(
