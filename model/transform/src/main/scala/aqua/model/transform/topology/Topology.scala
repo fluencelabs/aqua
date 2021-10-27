@@ -48,29 +48,39 @@ object Topology extends Logging {
 
   def resolveOnMoves(op: Tree): Eval[Res] = {
     val cursor = RawCursor(NonEmptyList.one(ChainZipper.one(op)))
+    // TODO: remove var
+    var i = 0
+    val nextI = Eval.later {
+      i += 1
+      i
+    }
     val resolvedCofree = cursor
       .cata(wrap) { rc =>
         logger.debug(s"<:> $rc")
-        val resolved = MakeRes
-          .resolve(rc.currentPeerId)
-          .lift
-          .apply(rc.tag)
-        val chainZipperEv = resolved.traverse(cofree =>
-          Eval.later {
-            val cz = ChainZipper(
-              through(rc.pathFromPrev),
-              cofree,
-              through(rc.pathToNext)
-            )
-            if (cz.next.nonEmpty || cz.prev.nonEmpty) {
-              logger.debug(s"Resolved   $rc -> $cofree")
-              if (cz.prev.nonEmpty)
-                logger.trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
-              if (cz.next.nonEmpty)
-                logger.trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
-            } else logger.debug(s"EMPTY    $rc -> $cofree")
-            cz
-          }
+        val resolved = nextI.map(cnt =>
+          MakeRes
+            .resolve(rc.currentPeerId, cnt)
+            .lift
+            .apply(rc.tag)
+        )
+        val chainZipperEv = resolved.map(
+          _.traverse(cofree =>
+            Eval.later {
+              val cz = ChainZipper(
+                through(rc.pathFromPrev),
+                cofree,
+                through(rc.pathToNext)
+              )
+              if (cz.next.nonEmpty || cz.prev.nonEmpty) {
+                logger.debug(s"Resolved   $rc -> $cofree")
+                if (cz.prev.nonEmpty)
+                  logger.trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
+                if (cz.next.nonEmpty)
+                  logger.trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
+              } else logger.debug(s"EMPTY    $rc -> $cofree")
+              cz
+            }
+          )
         )
         OptionT[Eval, ChainZipper[Res]](chainZipperEv)
       }
