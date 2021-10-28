@@ -2,7 +2,6 @@ package aqua.semantics.expr
 
 import aqua.model.func.raw.{AssignmentTag, FuncOp, FuncOps, XorTag}
 import aqua.model.{Model, VarModel}
-import aqua.parser.expr.CatchExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra

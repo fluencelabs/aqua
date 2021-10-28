@@ -3,7 +3,6 @@ package aqua.semantics.expr
 import aqua.model.func.Call
 import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp}
 import aqua.model.{Model, ValueModel}
-import aqua.parser.expr.CallArrowExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra

@@ -31,7 +31,7 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
     }
 
   override def read(name: Name[F], mustBeDefined: Boolean = true): SN[Option[Type]] =
-    OptionT(constantDefined(name.value))
+    OptionT(constantDefined(name))
       .orElseF(readName(name.value))
       .value
       .flatTap {
@@ -50,8 +50,8 @@ class NamesInterpreter[F[_], X](implicit lens: Lens[X, NamesState[F]], error: Re
         case _ => State.pure(())
       }
 
-  override def constantDefined(name: String): SN[Option[Type]] =
-    getState.map(_.constants.get(name))
+  override def constantDefined(name: Name[F]): SN[Option[Type]] =
+    getState.map(_.constants.get(name.value))
 
   def readArrow(name: Name[F]): SN[Option[ArrowType]] =
     readArrowHelper(name.value).flatMap {

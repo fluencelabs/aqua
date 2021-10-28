@@ -13,7 +13,10 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.Monad
 
-class ValuesAlgebra[F[_], Alg[_]: Monad](implicit N: NamesAlgebra[F, Alg], T: TypesAlgebra[F, Alg]) {
+class ValuesAlgebra[F[_], Alg[_]: Monad](implicit
+  N: NamesAlgebra[F, Alg],
+  T: TypesAlgebra[F, Alg]
+) {
 
   def ensureIsString(v: Value[F]): Alg[Boolean] =
     ensureTypeMatches(v, LiteralType.string)
@@ -56,9 +59,7 @@ class ValuesAlgebra[F[_], Alg[_]: Monad](implicit N: NamesAlgebra[F, Alg], T: Ty
       case false => false.pure[Alg]
       case true =>
         args
-          .map[Alg[Option[(Token[F], Type)]]](tkn =>
-            resolveType(tkn).map(_.map(t => tkn -> t))
-          )
+          .map[Alg[Option[(Token[F], Type)]]](tkn => resolveType(tkn).map(_.map(t => tkn -> t)))
           .zip(arr.domain.toList)
           .foldLeft(
             true.pure[Alg]
@@ -75,4 +76,13 @@ class ValuesAlgebra[F[_], Alg[_]: Monad](implicit N: NamesAlgebra[F, Alg], T: Ty
           }
     }
 
+}
+
+object ValuesAlgebra {
+
+  implicit def deriveValuesAlgebra[F[_], Alg[_]: Monad](implicit
+    N: NamesAlgebra[F, Alg],
+    T: TypesAlgebra[F, Alg]
+  ): ValuesAlgebra[F, Alg] =
+    new ValuesAlgebra[F, Alg]
 }

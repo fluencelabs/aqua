@@ -2,7 +2,6 @@ package aqua.semantics.expr
 
 import aqua.model.Model
 import aqua.model.func.raw.{AssignmentTag, FuncOp}
-import aqua.parser.expr.AssignmentExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.parser.expr.func.AssignmentExpr
