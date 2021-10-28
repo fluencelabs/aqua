@@ -4,15 +4,10 @@ import aqua.model.func.raw.FuncOp
 import aqua.model.{AquaContext, EmptyModel, Model, ScriptModel}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
-import aqua.semantics.rules.abilities.{
-  AbilitiesAlgebra,
-  AbilitiesInterpreter,
-  AbilitiesState
-}
+import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
 import aqua.semantics.rules.{ReportError, ValuesAlgebra}
-import cats.{Eval, Monad}
 import cats.arrow.FunctionK
 import cats.data.*
 import cats.data.Validated.{Invalid, Valid}
@@ -23,6 +18,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.semigroup.*
+import cats.{Eval, Monad}
 import monocle.Lens
 import monocle.macros.GenLens
 import scribe.Logging
@@ -73,10 +69,14 @@ object Semantics extends Logging {
 
     implicit val ts: Lens[CompilerState[S], TypesState[S]] = GenLens[CompilerState[S]](_.types)
 
-    implicit val typesInterpreter: TypesInterpreter[S, CompilerState[S]] = new TypesInterpreter[S, CompilerState[S]]
-    implicit val abilitiesInterpreter: AbilitiesInterpreter[S, CompilerState[S]] = new AbilitiesInterpreter[S, CompilerState[S]]
-    implicit val namesInterpreter: NamesInterpreter[S, CompilerState[S]] = new NamesInterpreter[S, CompilerState[S]]
-    implicit val valuesInterpreter: ValuesAlgebra[S, Interpreter[S, *]] = ValuesAlgebra.deriveValuesAlgebra[S, Interpreter[S, *]]
+    implicit val typesInterpreter: TypesInterpreter[S, CompilerState[S]] =
+      new TypesInterpreter[S, CompilerState[S]]
+    implicit val abilitiesInterpreter: AbilitiesInterpreter[S, CompilerState[S]] =
+      new AbilitiesInterpreter[S, CompilerState[S]]
+    implicit val namesInterpreter: NamesInterpreter[S, CompilerState[S]] =
+      new NamesInterpreter[S, CompilerState[S]]
+    implicit val valuesInterpreter: ValuesAlgebra[S, Interpreter[S, *]] =
+      ValuesAlgebra.deriveValuesAlgebra[S, Interpreter[S, *]]
 
     ast.cata(folder[S, Interpreter[S, *]]).value
   }
