@@ -1,4 +1,4 @@
-package aqua.semantics.expr
+package aqua.semantics.expr.func
 
 import aqua.model.func.raw.{FuncOp, OnTag}
 import aqua.model.{Model, ValueModel}
@@ -8,14 +8,13 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{BoxType, OptionType, ScalarType}
-import cats.Traverse
+import cats.{Monad, Traverse}
 import cats.data.Chain
 import cats.free.Free
+import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.applicative.*
-import cats.Monad
 
 class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
 

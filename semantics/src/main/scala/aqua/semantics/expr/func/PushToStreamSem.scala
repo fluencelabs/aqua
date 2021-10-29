@@ -1,4 +1,4 @@
-package aqua.semantics.expr
+package aqua.semantics.expr.func
 
 import aqua.model.ValueModel.varName
 import aqua.model.func.Call
@@ -8,15 +8,14 @@ import aqua.parser.expr.func.PushToStreamExpr
 import aqua.parser.lexer.Token
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
-import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, StreamType, Type}
-import cats.syntax.apply.*
+import cats.Monad
 import cats.syntax.applicative.*
+import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.Monad
 
 class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
 

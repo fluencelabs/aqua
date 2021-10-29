@@ -28,8 +28,7 @@ object Semantics extends Logging {
   def folder[S[_], G[_]: Monad](implicit
     A: AbilitiesAlgebra[S, G],
     N: NamesAlgebra[S, G],
-    T: TypesAlgebra[S, G],
-    V: ValuesAlgebra[S, G]
+    T: TypesAlgebra[S, G]
   ): (Expr[S], Chain[G[Model]]) => Eval[G[Model]] = { case (expr, inners) =>
     Eval later ExprSem
       .getProg[S, G](expr)
@@ -75,9 +74,6 @@ object Semantics extends Logging {
       new AbilitiesInterpreter[S, CompilerState[S]]
     implicit val namesInterpreter: NamesInterpreter[S, CompilerState[S]] =
       new NamesInterpreter[S, CompilerState[S]]
-    implicit val valuesInterpreter: ValuesAlgebra[S, Interpreter[S, *]] =
-      ValuesAlgebra.deriveValuesAlgebra[S, Interpreter[S, *]]
-
     ast.cata(folder[S, Interpreter[S, *]]).value
   }
 

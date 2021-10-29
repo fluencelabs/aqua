@@ -1,15 +1,15 @@
-package aqua.semantics.expr
+package aqua.semantics.expr.func
 
 import aqua.model.func.raw.{AssignmentTag, FuncOp, FuncOps, XorTag}
 import aqua.model.{Model, VarModel}
+import aqua.parser.expr.func.CatchExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
-import aqua.parser.expr.func.CatchExpr
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.applicative._
 import cats.Monad
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 
 class CatchSem[F[_]](val expr: CatchExpr[F]) extends AnyVal {
 

@@ -1,26 +1,25 @@
-package aqua.semantics.expr
+package aqua.semantics.expr.func
 
 import aqua.model.func.Call
 import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp}
 import aqua.model.{Model, ValueModel}
+import aqua.parser.expr.func.CallArrowExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, StreamType, Type}
-import cats.Traverse
-import aqua.parser.expr.func.CallArrowExpr
-import cats.syntax.apply._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.traverse._
-import cats.syntax.applicative._
-import cats.Monad
+import cats.{Monad, Traverse}
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.traverse.*
 
 class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
 
-  import expr._
+  import expr.*
 
   private def algUnit[Alg[_]: Monad]: Alg[Unit] = ().pure[Alg]
 

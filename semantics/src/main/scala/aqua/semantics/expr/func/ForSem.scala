@@ -1,19 +1,19 @@
-package aqua.semantics.expr
+package aqua.semantics.expr.func
 
+import aqua.model.func.raw.*
 import aqua.model.{Model, ValueModel}
-import aqua.model.func.raw._
+import aqua.parser.expr.func.ForExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, BoxType}
-import cats.data.Chain
-import aqua.parser.expr.func.ForExpr
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.applicative._
 import cats.Monad
+import cats.data.Chain
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 
 class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
 
@@ -39,7 +39,12 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
         (stOpt: Option[ValueModel], ops: Model) =>
           N.endScope() as ((stOpt, ops) match {
             case (Some(vm), op: FuncOp) =>
-              FuncOp.wrap(
+              // Fix: continue execution after fold par immediately, without finding a path out from par branches
+              val innerTag = expr.mode.map(_._2).fold[RawTag](SeqTag) {
+                case ForExpr.ParMode => ParTag
+                case ForExpr.TryMode => XorTag
+              }
+              val forTag = FuncOp.wrap(
                 ForTag(expr.item.value, vm),
                 FuncOp.node(
                   expr.mode.map(_._2).fold[RawTag](SeqTag) {
@@ -49,6 +54,8 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
                   Chain(op, FuncOp.leaf(NextTag(expr.item.value)))
                 )
               )
+              if (innerTag == ParTag) FuncOp.node(ParTag, Chain(forTag, FuncOps.empty))
+              else forTag
             case _ => Model.error("Wrong body of For expr")
           })
       )

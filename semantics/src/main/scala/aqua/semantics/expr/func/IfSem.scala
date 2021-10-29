@@ -1,17 +1,17 @@
-package aqua.semantics.expr
+package aqua.semantics.expr.func
 
-import aqua.model.{Model, ValueModel}
 import aqua.model.func.raw.{FuncOp, MatchMismatchTag, XorTag}
+import aqua.model.{Model, ValueModel}
 import aqua.parser.expr.func.IfExpr
-import aqua.semantics.rules.ValuesAlgebra
-import aqua.semantics.rules.types.TypesAlgebra
 import aqua.semantics.Prog
+import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.Type
-import cats.syntax.functor._
-import cats.syntax.applicative._
-import cats.syntax.flatMap._
 import cats.Monad
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 
 class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
 
