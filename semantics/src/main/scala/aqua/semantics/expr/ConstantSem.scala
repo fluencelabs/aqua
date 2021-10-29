@@ -6,12 +6,14 @@ import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import cats.free.Free
 import cats.syntax.functor._
+import cats.syntax.applicative._
+import cats.syntax.flatMap._
+import cats.Monad
 
 class ConstantSem[F[_]](val expr: ConstantExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     V: ValuesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg]
@@ -28,9 +30,9 @@ class ConstantSem[F[_]](val expr: ConstantExpr[F]) extends AnyVal {
               Model.error(s"Constant with name ${expr.name} was defined with different type")
           }
         case (Some(_), _, _) =>
-          Free.pure[Alg, Model](Model.error(s"Name '${expr.name.value}' was already defined"))
+          Model.error(s"Name '${expr.name.value}' was already defined").pure[Alg]
         case (_, None, _) =>
-          Free.pure[Alg, Model](Model.error(s"There is no such variable ${expr.value}"))
+          Model.error(s"There is no such variable ${expr.value}").pure[Alg]
         case (_, Some(t), _) =>
           N.defineConstant(expr.name, t._2) as (ConstantModel(
             expr.name.value,

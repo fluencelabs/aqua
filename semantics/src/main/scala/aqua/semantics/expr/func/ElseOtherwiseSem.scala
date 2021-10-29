@@ -5,15 +5,16 @@ import aqua.model.func.raw.{FuncOp, XorTag}
 import aqua.parser.expr.func.ElseOtherwiseExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
-import cats.free.Free
+import cats.syntax.applicative._
+import cats.Monad
 
 class ElseOtherwiseSem[F[_]](val expr: ElseOtherwiseExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Model] =
+  def program[Alg[_]: Monad](implicit A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Model] =
     Prog
       .after[Alg, Model] {
-        case g: FuncOp => Free.pure[Alg, Model](FuncOp.wrap(XorTag, g))
-        case g => Free.pure[Alg, Model](g)
+        case g: FuncOp => FuncOp.wrap(XorTag, g).pure[Alg]
+        case g => g.pure[Alg]
       }
       .abilitiesScope(expr.token)
 }

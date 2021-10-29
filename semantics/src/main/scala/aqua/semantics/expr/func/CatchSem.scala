@@ -6,12 +6,14 @@ import aqua.parser.expr.func.CatchExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
+import cats.Monad
+import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
 class CatchSem[F[_]](val expr: CatchExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
   ): Prog[Alg, Model] =
@@ -33,6 +35,6 @@ class CatchSem[F[_]](val expr: CatchExpr[F]) extends AnyVal {
               N.endScope() as g
           }
       )
-      .abilitiesScope(expr.token)
+      .abilitiesScope[F](expr.token)
 
 }

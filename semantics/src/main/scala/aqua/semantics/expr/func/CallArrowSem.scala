@@ -10,8 +10,8 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, StreamType, Type}
-import cats.Traverse
-import cats.free.Free
+import cats.{Monad, Traverse}
+import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -21,20 +21,20 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
 
   import expr.*
 
-  private def freeUnit[Alg[_]]: Free[Alg, Unit] = Free.pure[Alg, Unit](())
+  private def algUnit[Alg[_]: Monad]: Alg[Unit] = ().pure[Alg]
 
-  private def checkArgsRes[Alg[_]](
+  private def checkArgsRes[Alg[_]: Monad](
     at: ArrowType
   )(implicit
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Free[Alg, (List[ValueModel], List[Type])] =
+  ): Alg[(List[ValueModel], List[Type])] =
     V.checkArguments(expr.funcName, at, args) >> variables
-      .foldLeft(freeUnit[Alg].as((List.empty[Type], at.codomain.toList)))((f, exportVar) =>
+      .foldLeft(algUnit[Alg].as((List.empty[Type], at.codomain.toList)))((f, exportVar) =>
         f.flatMap {
           case (exports, Nil) =>
-            freeUnit[Alg].as(exports -> Nil)
+            algUnit[Alg].as(exports -> Nil)
 
           case (exports, resType :: codom) =>
             N.read(exportVar, mustBeDefined = false).flatMap {
@@ -49,12 +49,12 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
       Traverse[List].traverse(args)(V.valueToModel).map(_.flatten -> v.reverse)
     }
 
-  private def toModel[Alg[_]](implicit
+  private def toModel[Alg[_]: Monad](implicit
     N: NamesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Free[Alg, Option[FuncOp]] =
+  ): Alg[Option[FuncOp]] =
     ability match {
       case Some(ab) =>
         (A.getArrow(ab, funcName), A.getServiceId(ab)).mapN {
@@ -71,20 +71,20 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
           }.traverse(identity))
     }
 
-  def callServiceTag[Alg[_]](arrowType: ArrowType, serviceId: Option[ValueModel])(implicit
+  def callServiceTag[Alg[_]: Monad](arrowType: ArrowType, serviceId: Option[ValueModel])(implicit
     N: NamesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
-  ): Free[Alg, FuncOp] = {
+  ): Alg[FuncOp] = {
     checkArgsRes(arrowType).flatMap { (argsResolved, resTypes) =>
       variables
         .drop(arrowType.codomain.length)
         .headOption
         .fold(
-          Free.pure((variables zip resTypes).map { case (v, t) =>
+          (variables zip resTypes).map { case (v, t) =>
             Call.Export(v.value, t)
-          })
+          }.pure[Alg]
         )(T.expectNoExport(_).as(Nil))
         .map(maybeExport =>
           FuncOp.leaf(serviceId match {
@@ -104,7 +104,7 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
     }
   }
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],

@@ -11,10 +11,12 @@ import cats.data.Chain
 import cats.free.Free
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.applicative.*
+import cats.Monad
 
 class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[F, Alg]
   ): Prog[Alg, Model] =
     Prog.after {
@@ -22,7 +24,7 @@ class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
         N.defineArrow(expr.name, arrow.`type`, isRoot = true) as FuncModel(expr.name.value, arrow)
 
       case m =>
-        Free.pure[Alg, Model](Model.error("Func must continue with an arrow definition"))
+        Model.error("Func must continue with an arrow definition").pure[Alg]
     }
 
 }

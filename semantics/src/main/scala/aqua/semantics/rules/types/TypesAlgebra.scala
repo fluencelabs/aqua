@@ -3,50 +3,30 @@ package aqua.semantics.rules.types
 import aqua.model.LambdaModel
 import aqua.parser.lexer._
 import aqua.types.{ArrowType, Type}
-import cats.InjectK
 import cats.data.NonEmptyMap
-import cats.free.Free
 
-class TypesAlgebra[F[_], Alg[_]](implicit T: InjectK[TypeOp[F, *], Alg]) {
+trait TypesAlgebra[S[_], Alg[_]] {
 
-  def resolveType(token: TypeToken[F]): Free[Alg, Option[Type]] =
-    Free.liftInject[Alg](ResolveType(token))
+  def resolveType(token: TypeToken[S]): Alg[Option[Type]]
 
-  def resolveArrowDef(arrowDef: ArrowTypeToken[F]): Free[Alg, Option[ArrowType]] =
-    Free.liftInject[Alg](ResolveArrowDef(arrowDef))
+  def resolveArrowDef(arrowDef: ArrowTypeToken[S]): Alg[Option[ArrowType]]
 
-  def defineField(name: Name[F], `type`: Type): Free[Alg, Boolean] =
-    Free.liftInject[Alg](DefineField[F](name, `type`))
+  def defineField(name: Name[S], `type`: Type): Alg[Boolean]
 
-  def purgeFields(token: Token[F]): Free[Alg, Option[NonEmptyMap[String, Type]]] =
-    Free.liftInject[Alg](PurgeFields[F](token))
+  def purgeFields(token: Token[S]): Alg[Option[NonEmptyMap[String, Type]]]
 
   def defineDataType(
-    name: CustomTypeToken[F],
+    name: CustomTypeToken[S],
     fields: NonEmptyMap[String, Type]
-  ): Free[Alg, Boolean] =
-    Free.liftInject[Alg](DefineDataType(name, fields))
+  ): Alg[Boolean]
 
-  def defineAlias(name: CustomTypeToken[F], target: Type): Free[Alg, Boolean] =
-    Free.liftInject[Alg](DefineAlias(name, target))
+  def defineAlias(name: CustomTypeToken[S], target: Type): Alg[Boolean]
 
-  def resolveLambda(root: Type, ops: List[LambdaOp[F]]): Free[Alg, List[LambdaModel]] =
-    Free.liftInject[Alg](ResolveLambda(root, ops))
+  def resolveLambda(root: Type, ops: List[LambdaOp[S]]): Alg[List[LambdaModel]]
 
-  def ensureTypeMatches(token: Token[F], expected: Type, givenType: Type): Free[Alg, Boolean] =
-    Free.liftInject[Alg](EnsureTypeMatches[F](token, expected, givenType))
+  def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 
-  def expectNoExport(token: Token[F]): Free[Alg, Unit] =
-    Free.liftInject[Alg](ExpectNoExport[F](token))
+  def expectNoExport(token: Token[S]): Alg[Unit]
 
-  def checkArgumentsNumber(token: Token[F], expected: Int, givenNum: Int): Free[Alg, Boolean] =
-    Free.liftInject[Alg](CheckArgumentsNum(token, expected, givenNum))
-}
-
-object TypesAlgebra {
-
-  implicit def typesAlgebra[F[_], Alg[_]](implicit
-    T: InjectK[TypeOp[F, *], Alg]
-  ): TypesAlgebra[F, Alg] =
-    new TypesAlgebra[F, Alg]()
+  def checkArgumentsNumber(token: Token[S], expected: Int, givenNum: Int): Alg[Boolean]
 }

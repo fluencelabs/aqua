@@ -8,12 +8,14 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.Type
-import cats.free.Free
+import cats.Monad
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
 class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     V: ValuesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
@@ -27,18 +29,18 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
                 T.ensureTypeMatches(expr.right, lt.lastType, rt.lastType)
                   .map(m => Some(lt -> rt).filter(_ => m))
               case None =>
-                Free.pure[Alg, Option[(ValueModel, ValueModel)]](None)
+                None.pure[Alg]
             }
           case None =>
             V.resolveType(expr.right).as[Option[(ValueModel, ValueModel)]](None)
         },
         (r: Option[(ValueModel, ValueModel)], ops: Model) =>
-          r.fold(Free.pure[Alg, Model](Model.error("If expression errored in matching types"))) {
+          r.fold(Model.error("If expression errored in matching types").pure[Alg]) {
             case (lt, rt) =>
               ops match {
                 case op: FuncOp =>
-                  Free.pure[Alg, Model](
-                    FuncOp.wrap(
+                  FuncOp
+                    .wrap(
                       XorTag.LeftBiased,
                       FuncOp.wrap(
                         MatchMismatchTag(
@@ -49,10 +51,11 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
                         op
                       )
                     )
-                  )
-                case _ => Free.pure[Alg, Model](Model.error("Wrong body of the if expression"))
+                    .pure[Alg]
+
+                case _ => Model.error("Wrong body of the if expression").pure[Alg]
               }
           }
       )
-      .abilitiesScope(expr.token)
+      .abilitiesScope[F](expr.token)
 }

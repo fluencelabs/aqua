@@ -8,15 +8,17 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{BoxType, OptionType, ScalarType}
-import cats.Traverse
+import cats.{Monad, Traverse}
 import cats.data.Chain
 import cats.free.Free
+import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 
 class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     V: ValuesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     A: AbilitiesAlgebra[F, Alg]
@@ -34,7 +36,7 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
                   case _ =>
                     T.ensureTypeMatches(v, ScalarType.string, vm.lastType)
                 }
-              case None => Free.pure(false)
+              case None => false.pure[Alg]
             }
           )
           .map(_.flatten)
@@ -58,7 +60,7 @@ class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
                 Model.error("OnSem: Impossible error")
             }
 
-          case m => Free.pure[Alg, Model](Model.error("On body is not an op, it's " + m))
+          case m => Model.error("On body is not an op, it's " + m).pure[Alg]
         })
     )
 }

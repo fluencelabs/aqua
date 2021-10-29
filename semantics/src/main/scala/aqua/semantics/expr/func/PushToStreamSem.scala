@@ -1,4 +1,4 @@
-package aqua.semantics.expr
+package aqua.semantics.expr.func
 
 import aqua.model.ValueModel.varName
 import aqua.model.func.Call
@@ -8,23 +8,25 @@ import aqua.parser.expr.func.PushToStreamExpr
 import aqua.parser.lexer.Token
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
-import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, StreamType, Type}
-import cats.free.Free
+import cats.Monad
+import cats.syntax.applicative.*
 import cats.syntax.apply.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 
 class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
 
-  private def ensureStreamElementMatches[Alg[_]](
+  private def ensureStreamElementMatches[Alg[_]: Monad](
     streamToken: Token[F],
     elementToken: Token[F],
     stream: Type,
     element: Type
   )(implicit
     T: TypesAlgebra[F, Alg]
-  ): Free[Alg, Boolean] =
+  ): Alg[Boolean] =
     stream match {
       case StreamType(st) =>
         T.ensureTypeMatches(elementToken, st, element)
@@ -39,7 +41,7 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
         )
     }
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
     V: ValuesAlgebra[F, Alg]
@@ -47,7 +49,7 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
     V.valueToModel(expr.value).flatMap {
       case Some(vm) =>
         N.read(expr.stream).flatMap {
-          case None => Free.pure[Alg, Model](Model.error("Cannot resolve stream type"))
+          case None => Model.error("Cannot resolve stream type").pure[Alg]
           case Some(t) =>
             ensureStreamElementMatches(
               expr.token,
@@ -62,7 +64,7 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
             }
         }
 
-      case _ => Free.pure[Alg, Model](Model.error("Cannot resolve value"))
+      case _ => Model.error("Cannot resolve value").pure[Alg]
     }
 
 }

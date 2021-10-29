@@ -9,14 +9,15 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, BoxType}
+import cats.Monad
 import cats.data.Chain
-import cats.free.Free
+import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
 class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
 
-  def program[Alg[_]](implicit
+  def program[Alg[_]: Monad](implicit
     V: ValuesAlgebra[F, Alg],
     N: NamesAlgebra[F, Alg],
     T: TypesAlgebra[F, Alg],
@@ -33,7 +34,7 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
                 T.ensureTypeMatches(expr.iterable, ArrayType(dt), dt).as(Option.empty[ValueModel])
             }
 
-          case _ => Free.pure[Alg, Option[ValueModel]](None)
+          case _ => None.pure[Alg]
         },
         (stOpt: Option[ValueModel], ops: Model) =>
           N.endScope() as ((stOpt, ops) match {
@@ -46,7 +47,10 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
               val forTag = FuncOp.wrap(
                 ForTag(expr.item.value, vm),
                 FuncOp.node(
-                  innerTag,
+                  expr.mode.map(_._2).fold[RawTag](SeqTag) {
+                    case ForExpr.ParMode => ParTag
+                    case ForExpr.TryMode => XorTag
+                  },
                   Chain(op, FuncOp.leaf(NextTag(expr.item.value)))
                 )
               )
@@ -55,5 +59,5 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
             case _ => Model.error("Wrong body of For expr")
           })
       )
-      .abilitiesScope(expr.token)
+      .abilitiesScope[F](expr.token)
 }
