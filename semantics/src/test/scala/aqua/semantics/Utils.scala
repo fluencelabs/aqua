@@ -3,13 +3,14 @@ package aqua.semantics
 import aqua.model.{AquaContext, Model}
 import aqua.parser.expr.func.ClosureExpr
 import aqua.parser.lexer.{Name, Token}
+import aqua.parser.lift.Span
 import aqua.semantics.expr.func.ClosureSem
 import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.abilities.{AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.names.{NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesInterpreter, TypesState}
-import cats.Id
 import cats.data.State
+import cats.{Id, ~>}
 import monocle.Lens
 import monocle.macros.GenLens
 import monocle.syntax.all.*
@@ -29,6 +30,12 @@ object Utils {
     new TypesInterpreter[Id, CompilerState[Id]]
   implicit val abilitiesInterpreter: AbilitiesInterpreter[Id, CompilerState[Id]] =
     new AbilitiesInterpreter[Id, CompilerState[Id]]
+
+  def spanToId: Span.F ~> Id = new (Span.F ~> Id) {
+    override def apply[A](span: Span.F[A]): Id[A] = {
+      span._2
+    }
+  }
 
   def getModel(prog: Prog[State[CompilerState[cats.Id], *], Model]): Model = {
     prog.apply(emptyS).run(blankCS).value._2
