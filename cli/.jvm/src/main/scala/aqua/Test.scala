@@ -16,7 +16,7 @@ object Test extends IOApp.Simple {
     scribe.Logger.root
       .clearHandlers()
       .clearModifiers()
-      .withHandler(formatter = LogFormatter.formatter, minimumLevel = Some(Level.Trace))
+      .withHandler(formatter = LogFormatter.formatterWithFilename, minimumLevel = Some(Level.Trace))
       .replace()
     for {
       start <- IO(System.currentTimeMillis())
