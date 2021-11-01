@@ -27,8 +27,6 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
       Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
     case (PushToStreamTag(_, exportTo), acc) =>
       Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
-    case (DeclareStreamTag(_, name), acc) =>
-      Eval.later(acc.foldLeft(Set(name))(_ ++ _))
     case (CanonicalizeTag(_, exportTo), acc) =>
       Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
     case (CallServiceTag(_, _, Call(_, exportTo)), acc) if exportTo.nonEmpty =>
@@ -42,8 +40,6 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
       Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
     case (CallServiceTag(_, _, Call(_, exportTo)), acc) if exportTo.nonEmpty =>
       Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
-    case (DeclareStreamTag(_, name), acc) =>
-      Eval.later(acc.foldLeft(Set(name))(_ ++ _))
     case (PushToStreamTag(_, exportTo), acc) =>
       Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
     case (CanonicalizeTag(_, exportTo), acc) =>
@@ -61,8 +57,6 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
       Eval.later(acc.foldLeft(ValueModel.varName(operand).toSet)(_ ++ _))
     case (CanonicalizeTag(operand, _), acc) =>
       Eval.later(acc.foldLeft(ValueModel.varName(operand).toSet)(_ ++ _))
-    case (DeclareStreamTag(_, name), acc) =>
-      Eval.later(acc.foldLeft(Set(name))(_ ++ _))
     case (MatchMismatchTag(a, b, _), acc) =>
       Eval.later(acc.foldLeft(ValueModel.varName(a).toSet ++ ValueModel.varName(b))(_ ++ _))
     case (ForTag(_, VarModel(name, _, _)), acc) =>
@@ -90,7 +84,6 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
             case a: CanonicalizeTag =>
               a.copy(exportTo = a.exportTo.mapName(n => vals.getOrElse(n, n)))
             case a: AssignmentTag => a.copy(assignTo = vals.getOrElse(a.assignTo, a.assignTo))
-            case a: DeclareStreamTag => a.copy(name = vals.getOrElse(a.name, a.name))
             case t: ForTag if vals.contains(t.item) => t.copy(item = vals(t.item))
             case t: NextTag if vals.contains(t.item) => t.copy(item = vals(t.item))
             case t => t

@@ -12,4 +12,4 @@ func invalid_append() -> *string:
     str: *string
     asdasd: *string
     GetStr.retStr(stream, nil)
-    <- streem
+    <- stream

@@ -115,15 +115,6 @@ case class FuncCallable(
             Eval.now(Chain.empty)
           )
 
-        case ((noNames, resolvedExports), tag @ DeclareStreamTag(value, name)) =>
-          (
-            noNames,
-            resolvedExports + (name -> value.resolveWith(resolvedExports))
-          ) -> Cofree[Chain, RawTag](
-            tag.mapValues(_.resolveWith(resolvedExports)),
-            Eval.now(Chain.empty)
-          )
-
         case ((noNames, resolvedExports), CallArrowTag(fn, c)) if allArrows.contains(fn) =>
           // Apply arguments to a function – recursion
           val callResolved = c.mapValues(_.resolveWith(resolvedExports))
