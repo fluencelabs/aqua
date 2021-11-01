@@ -9,6 +9,7 @@ import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.abilities.{AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.names.{NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesInterpreter, TypesState}
+import aqua.types.*
 import cats.data.State
 import cats.{Id, ~>}
 import monocle.Lens
@@ -41,8 +42,20 @@ object Utils {
     prog.apply(emptyS).run(blankCS).value._2
   }
 
+  def getModel(startState: Model)(prog: Prog[State[CompilerState[cats.Id], *], Model]): Model = {
+    prog.apply(State.pure[CompilerState[Id], Model](startState)).run(blankCS).value._2
+  }
+
   def blankCS: CompilerState[Id] = {
     CompilerState.init[Id](AquaContext.blank)
+  }
+
+  def labelled(label: String, `type`: Type, tail: ProductType = NilType): LabelledConsType = {
+    LabelledConsType(label, `type`, tail)
+  }
+
+  def productType(`type`: Type, tail: ProductType = NilType): UnlabelledConsType = {
+    UnlabelledConsType(`type`, tail)
   }
 
   def blank: State[CompilerState[Id], CompilerState[Id]] = State.pure[CompilerState[Id], CompilerState[Id]](blankCS)
