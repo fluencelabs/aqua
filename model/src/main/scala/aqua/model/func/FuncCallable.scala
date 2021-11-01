@@ -3,7 +3,7 @@ package aqua.model.func
 import aqua.model.ValueModel.varName
 import aqua.model.func.raw.*
 import aqua.model.{Model, ValueModel, VarModel}
-import aqua.types.{ArrayType, ArrowType, ProductType, StreamType, Type}
+import aqua.types.*
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -110,6 +110,15 @@ case class FuncCallable(
           (
             noNames,
             resolvedExports + (assignTo -> value.resolveWith(resolvedExports))
+          ) -> Cofree[Chain, RawTag](
+            tag.mapValues(_.resolveWith(resolvedExports)),
+            Eval.now(Chain.empty)
+          )
+
+        case ((noNames, resolvedExports), tag @ DeclareStreamTag(value, name)) =>
+          (
+            noNames,
+            resolvedExports + (name -> value.resolveWith(resolvedExports))
           ) -> Cofree[Chain, RawTag](
             tag.mapValues(_.resolveWith(resolvedExports)),
             Eval.now(Chain.empty)
