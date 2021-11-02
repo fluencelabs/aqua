@@ -63,8 +63,7 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
         ArrowType(ProductType.labelled(argsAndRes._1), ProductType(argsAndRes._2.reverse))
       )
 
-  // TODO: rename, it is not only checks return value
-  def checkReturnValue[Alg[_]: Monad](
+  def checkReturnValueCreateModel[Alg[_]: Monad](
     funcArrow: ArrowType,
     retValue: NonEmptyList[ValueModel],
     body: FuncOp
@@ -112,12 +111,12 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
         ArrowModel(funcArrow, Nil, m).pure[Alg]
 
       case m @ FuncOp(Cofree(ReturnTag(retValues), _)) =>
-        checkReturnValue(funcArrow, retValues, m)
+        checkReturnValueCreateModel(funcArrow, retValues, m)
 
       case m @ FuncOp(Cofree(SeqTag, tail)) =>
         tail.value.toList.lastOption match {
           case Some(Cofree(ReturnTag(retValues), _)) =>
-            checkReturnValue(funcArrow, retValues, m)
+            checkReturnValueCreateModel(funcArrow, retValues, m)
           case _ =>
             Model
               .error(
