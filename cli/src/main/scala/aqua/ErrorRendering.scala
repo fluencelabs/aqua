@@ -6,10 +6,10 @@ import aqua.io.AquaFileError
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{BlockIndentError, FuncReturnError, LexerError}
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
-import cats.{Eval, Show}
 import cats.parse.LocationMap
 import cats.parse.Parser.Expectation
 import cats.parse.Parser.Expectation.*
+import cats.{Eval, Show}
 
 object ErrorRendering {
 
@@ -21,18 +21,20 @@ object ErrorRendering {
     }
   }
 
-  def expectationToString(expectation: Expectation): String = {
+  def expectationToString(expectation: Expectation, acc: List[String] = Nil): List[String] = {
     // TODO: match all expectations
     expectation match {
-      case wc@WithContext(str, exp) => s"$str (${expectationToString(exp)})"
+      // get the deepest context
+      case WithContext(str, exp: WithContext) => expectationToString(exp, List(str))
+      case WithContext(str, exp) => s"$str (${expectationToString(exp)})" +: acc
       case InRange(offset, lower, upper) =>
         if (lower == upper)
-          s"Expected symbol '${betterSymbol(lower)}'"
+          s"Expected symbol '${betterSymbol(lower)}'" +: acc
         else
-          s"Expected symbols from '${betterSymbol(lower)}' to '${betterSymbol(upper)}'"
+          s"Expected symbols from '${betterSymbol(lower)}' to '${betterSymbol(upper)}'" +: acc
       case OneOfStr(offset, strs) =>
-        s"Expected one of these strings: ${strs.map(s => s"'$s'").mkString(", ")}"
-      case e => "Expected: " + e.toString
+        s"Expected one of these strings: ${strs.map(s => s"'$s'").mkString(", ")}" +: acc
+      case e => ("Expected: " + e.toString) +: acc
     }
   }
 
@@ -47,32 +49,44 @@ object ErrorRendering {
         )
       )
       .getOrElse(
-        "(offset is beyond the script, syntax errors) Error: " + Console.RED + messages.mkString(", ")
+        "(offset is beyond the script, syntax errors) Error: " + Console.RED + messages.mkString(
+          ", "
+        )
       ) + Console.RESET + "\n"
 
   implicit val showError: Show[AquaError[FileModuleId, AquaFileError, FileSpan.F]] = Show.show {
     case ParserErr(err) =>
       err match {
-        case BlockIndentError(indent, message) => showForConsole("Syntax error", indent._1, message :: Nil)
-        case FuncReturnError(point, message) => showForConsole("Syntax error", point._1, message :: Nil)
+        case BlockIndentError(indent, message) =>
+          showForConsole("Syntax error", indent._1, message :: Nil)
+        case FuncReturnError(point, message) =>
+          showForConsole("Syntax error", point._1, message :: Nil)
         case LexerError((span, e)) =>
-          e.expected.toList.groupBy(_.offset).map { case (offset, exps) =>
-            val localSpan = Span(offset, offset + 1)
-            val msg = FileSpan(span.name, span.locationMap, localSpan).focus(0)
-              .map { spanFocus =>
-                val errorMessages = exps.map(exp => expectationToString(exp))
-                spanFocus.toConsoleStr(
-                  "Syntax error",
-                  s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t),
-                  Console.RED
-                )
-              }
-              .getOrElse(
-                "(offset is beyond the script, syntax errors) " + Console.RED + e.expected.toList
-                  .mkString(", ")
-              ) + Console.RESET
-            (offset, msg)
-          }.toList.sortBy(_._1).map(_._2).reverse.mkString("\n")
+          e.expected.toList
+            .groupBy(_.offset)
+            .map { case (offset, exps) =>
+              val localSpan = Span(offset, offset + 1)
+              val msg = FileSpan(span.name, span.locationMap, localSpan)
+                .focus(0)
+                .map { spanFocus =>
+                  val errorMessages = exps.flatMap(exp => expectationToString(exp))
+                  spanFocus.toConsoleStr(
+                    "Syntax error",
+                    s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t),
+                    Console.RED
+                  )
+                }
+                .getOrElse(
+                  "(offset is beyond the script, syntax errors) " + Console.RED + e.expected.toList
+                    .mkString(", ")
+                ) + Console.RESET
+              (offset, msg)
+            }
+            .toList
+            .sortBy(_._1)
+            .map(_._2)
+            .reverse
+            .mkString("\n")
       }
     case SourcesErr(err) =>
       Console.RED + err.showForConsole + Console.RESET

@@ -4,10 +4,9 @@ import aqua.parser.Expr
 import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{Ability, Name, Value}
 import aqua.parser.lift.LiftParser
-import cats.Comonad
 import cats.data.NonEmptyList
 import cats.parse.{Parser as P, Parser0 as P0}
-import cats.~>
+import cats.{Comonad, ~>}
 
 case class CallArrowExpr[F[_]](
   variables: List[Name[F]],
@@ -30,9 +29,10 @@ object CallArrowExpr extends Expr.Leaf {
   def ability[F[_]: LiftParser: Comonad]: P0[Option[Ability[F]]] = (Ability.dotted[F] <* `.`).?
   def functionCallWithArgs[F[_]: LiftParser: Comonad] = Name.p[F]
     ~ comma0(Value.`value`[F].surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
-  def funcCall[F[_]: LiftParser: Comonad] = ability.with1 ~ functionCallWithArgs
+  private def funcCall[F[_]: LiftParser: Comonad] = ability.with1 ~ functionCallWithArgs
+  .withContext("Missing braces '()' after the function call. Arrow '<-' could be used only with function calls.")
   
-  def funcOnly[F[_]: LiftParser: Comonad] = funcCall.map {
+  private def funcOnly[F[_]: LiftParser: Comonad] = funcCall.map {
     case (ab, (name, args)) =>
       CallArrowExpr(Nil, ab, name, args)
   }
