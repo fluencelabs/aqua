@@ -6,10 +6,10 @@ import aqua.io.AquaFileError
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{BlockIndentError, FuncReturnError, LexerError}
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
-import cats.{Eval, Show}
 import cats.parse.LocationMap
 import cats.parse.Parser.Expectation
 import cats.parse.Parser.Expectation.*
+import cats.{Eval, Show}
 
 object ErrorRendering {
 
@@ -24,6 +24,8 @@ object ErrorRendering {
   def expectationToString(expectation: Expectation): String = {
     // TODO: match all expectations
     expectation match {
+      // get the deepest context
+      case wc@WithContext(str, exp: WithContext) => expectationToString(exp)
       case wc@WithContext(str, exp) => s"$str (${expectationToString(exp)})"
       case InRange(offset, lower, upper) =>
         if (lower == upper)
