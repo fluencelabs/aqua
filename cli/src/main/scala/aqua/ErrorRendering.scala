@@ -21,20 +21,20 @@ object ErrorRendering {
     }
   }
 
-  def expectationToString(expectation: Expectation): String = {
+  def expectationToString(expectation: Expectation, acc: List[String] = Nil): List[String] = {
     // TODO: match all expectations
     expectation match {
       // get the deepest context
-      case wc@WithContext(str, exp: WithContext) => expectationToString(exp)
-      case wc@WithContext(str, exp) => s"$str (${expectationToString(exp)})"
+      case WithContext(str, exp: WithContext) => expectationToString(exp, List(str))
+      case WithContext(str, exp) => s"$str (${expectationToString(exp)})" +: acc
       case InRange(offset, lower, upper) =>
         if (lower == upper)
-          s"Expected symbol '${betterSymbol(lower)}'"
+          s"Expected symbol '${betterSymbol(lower)}'" +: acc
         else
-          s"Expected symbols from '${betterSymbol(lower)}' to '${betterSymbol(upper)}'"
+          s"Expected symbols from '${betterSymbol(lower)}' to '${betterSymbol(upper)}'" +: acc
       case OneOfStr(offset, strs) =>
-        s"Expected one of these strings: ${strs.map(s => s"'$s'").mkString(", ")}"
-      case e => "Expected: " + e.toString
+        s"Expected one of these strings: ${strs.map(s => s"'$s'").mkString(", ")}" +: acc
+      case e => ("Expected: " + e.toString) +: acc
     }
   }
 
@@ -62,7 +62,7 @@ object ErrorRendering {
             val localSpan = Span(offset, offset + 1)
             val msg = FileSpan(span.name, span.locationMap, localSpan).focus(0)
               .map { spanFocus =>
-                val errorMessages = exps.map(exp => expectationToString(exp))
+                val errorMessages = exps.flatMap(exp => expectationToString(exp))
                 spanFocus.toConsoleStr(
                   "Syntax error",
                   s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t),
