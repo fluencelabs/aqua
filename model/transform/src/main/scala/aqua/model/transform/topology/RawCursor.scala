@@ -31,6 +31,7 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
     o
   }
 
+  // Assume that the very first tag is `on` tag
   lazy val rootOn: Option[RawCursor] = moveUp
     .flatMap(_.rootOn)
     .orElse(tag match {
@@ -39,6 +40,7 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
       case _ => None
     })
 
+  // The closest peerId
   lazy val currentPeerId: Option[ValueModel] =
     pathOn.headOption.map(_.peerId)
 
@@ -52,8 +54,8 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
   }
 
   lazy val firstExecuted: Option[RawCursor] = tag match {
-    case _: SeqGroupTag => toLastChild.flatMap(_.lastExecuted)
-    case _: ParGroupTag => None
+    case _: SeqGroupTag => toFirstChild.flatMap(_.firstExecuted)
+    case _: ParGroupTag => None // TODO why?
     case _: NoExecTag => None
     case _ => Some(this)
   }
@@ -66,7 +68,7 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
     parentTag.flatMap {
       case p: SeqGroupTag if leftSiblings.nonEmpty =>
         toPrevSibling.flatMap(c => c.lastExecuted orElse c.seqPrev)
-      case _ =>
+      case p =>
         moveUp.flatMap(_.seqPrev)
     }
 

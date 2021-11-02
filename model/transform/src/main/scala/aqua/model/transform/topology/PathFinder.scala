@@ -22,14 +22,14 @@ object PathFinder extends Logging {
         !to.parentTag.exists(_.isInstanceOf[ParGroupTag])
 
     if (wasHandled) {
-      logger.debug("Was handled")
-      logger.debug(" :: " + from)
-      logger.debug(" -> " + to)
+      logger.trace("Was handled")
+      logger.trace(" :: " + from)
+      logger.trace(" -> " + to)
       Chain.empty
     } else {
-      logger.debug("Find path")
-      logger.debug(" :: " + from)
-      logger.debug(" -> " + to)
+      logger.trace("Find path")
+      logger.trace(" :: " + from)
+      logger.trace(" -> " + to)
       findPath(
         fromOn,
         toOn,

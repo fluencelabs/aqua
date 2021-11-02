@@ -16,13 +16,13 @@ object Test extends IOApp.Simple {
     scribe.Logger.root
       .clearHandlers()
       .clearModifiers()
-      .withHandler(formatter = LogFormatter.formatterWithFilename, minimumLevel = Some(Level.Trace))
+      .withHandler(formatter = LogFormatter.formatterWithFilename, minimumLevel = Some(Level.Debug))
       .replace()
     for {
       start <- IO(System.currentTimeMillis())
       _ <- AquaPathCompiler
         .compileFilesTo[IO](
-          Path("./aqua-src/"),
+          Path("./aqua-src/via.aqua"),
           List(Path("./aqua")),
           Option(Path("./target")),
           TypeScriptBackend,

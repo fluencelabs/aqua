@@ -1,7 +1,7 @@
 service MyOp("op"):
   identity(s: string) -> string
 
-func viaArr(node_id: string, viaAr: []string) -> string:
-    on node_id via viaAr:
+func viaArr(viaAr: []string) -> string:
+    on "custom node" via viaAr:
         p <- MyOp.identity("123")
     <- p
