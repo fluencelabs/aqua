@@ -45,6 +45,7 @@ object AquaPathCompiler extends Logging {
         transformConfig,
         targetPath.map(sources.write).getOrElse(dry[F])
       )
+      // 'distinct' to delete all duplicated errors
       .map(_.leftMap(_.map(_.show).distinct))
   }
 
