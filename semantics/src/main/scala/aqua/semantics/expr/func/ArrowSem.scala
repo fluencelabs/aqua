@@ -5,23 +5,20 @@ import aqua.model.func.raw.{FuncOp, FuncOps, ReturnTag, SeqTag}
 import aqua.model.{Model, ValueModel}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.expr.func.ArrowExpr
-import aqua.parser.lexer.Arg
+import aqua.parser.lexer.{Arg, DataTypeToken}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, ProductType, Type}
-import cats.Applicative
-import cats.data.Chain
-import cats.data.NonEmptyList
-import cats.free.Free
-import cats.free.Cofree
+import cats.{Applicative, Monad}
+import cats.data.{Chain, NonEmptyList}
+import cats.free.{Cofree, Free}
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.apply.*
-import cats.syntax.applicative.*
-import cats.Monad
 
 class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
 
@@ -72,26 +69,27 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
     retValue: NonEmptyList[ValueModel],
     body: FuncOp
   )(implicit T: TypesAlgebra[F, Alg], V: ValuesAlgebra[F, Alg]): Alg[Model] =
-    if (funcArrow.codomain.length != retValue.length)
-        Model.error(
+    if (
+      funcArrow.codomain.length != retValue.length || retValue.length != expr.arrowTypeExpr.res.length
+    )
+      Model
+        .error(
           s"Number of return types does not match: ${arrowTypeExpr.res} declared, ${retValue} returned"
-        ).pure[Alg]
-    else
-      ((funcArrow.codomain.toList zip retValue.toList)
-        .foldLeft[Alg[List[ValueModel]]](Nil.pure[Alg]) { case (f, (t, v)) =>
-          //f.flatMap(vs =>
-          // TODO: here we don't have Value[F] as it was handled within ReturnSem
-          // Can we pass info about the expected return types to semantics (before), and check that types match in ReturnSem?
-//            V.valueToModel(v)
-//              .flatTap {
-//                case Some(vt) => T.ensureTypeMatches(v, t, vt.lastType).void
-//                case None => Free.pure[Alg, Unit](())
-//              }
-//              .map(vs.prependedAll)
-          //)
-          // TODO: check the types
-          f.map(v :: _)
-        })
+        )
+        .pure[Alg]
+    else {
+      funcArrow.codomain.toList
+        .lazyZip(retValue.toList)
+        .lazyZip(expr.arrowTypeExpr.res)
+        .map(identity)
+        .foldLeft[Alg[List[ValueModel]]](Nil.pure[Alg]) {
+          case (acc, (returnType, returnValue, token)) =>
+            acc.flatMap { a =>
+              T.ensureTypeMatches(token, returnType, returnValue.`type`)
+                .void
+                .map(_ => returnValue :: a)
+            }
+        }
         .map(_.reverse)
         .map(
           ArrowModel(
@@ -101,6 +99,7 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
             body
           )
         )
+    }
 
   // TODO: handle all kinds of errors very carefully
   def after[Alg[_]: Monad](funcArrow: ArrowType, bodyGen: Model)(implicit
@@ -121,15 +120,19 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
           case Some(Cofree(ReturnTag(retValues), _)) =>
             checkReturnValue(funcArrow, retValues, m)
           case _ =>
-              Model.error(
+            Model
+              .error(
                 "Expected last expression to be <- value, ..."
-              ).pure[Alg]
+              )
+              .pure[Alg]
         }
       case m: FuncOp =>
         // TODO: error with pointer on arrow's return types declaration telling that return value is expected
-          Model.error(
+        Model
+          .error(
             "Return type is defined for the arrow, but nothing returned. Use `<- value, ...` as the last expression inside function body."
-          ).pure[Alg]
+          )
+          .pure[Alg]
       case m =>
         Model.error("Arrow body is not a funcOp, it's " + m).pure[Alg]
     }) <* A.endScope() <* N
