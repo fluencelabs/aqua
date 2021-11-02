@@ -6,10 +6,10 @@ import aqua.io.AquaFileError
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError}
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
-import cats.{Eval, Show}
 import cats.parse.LocationMap
 import cats.parse.Parser.Expectation
 import cats.parse.Parser.Expectation.*
+import cats.{Eval, Show}
 
 object ErrorRendering {
 
@@ -21,18 +21,20 @@ object ErrorRendering {
     }
   }
 
-  def expectationToString(expectation: Expectation): String = {
+  def expectationToString(expectation: Expectation, acc: List[String] = Nil): List[String] = {
     // TODO: match all expectations
     expectation match {
-      case wc @ WithContext(str, exp) => s"$str (${expectationToString(exp)})"
+      // get the deepest context
+      case WithContext(str, exp: WithContext) => expectationToString(exp, List(str))
+      case WithContext(str, exp) => s"$str (${expectationToString(exp)})" +: acc
       case InRange(offset, lower, upper) =>
         if (lower == upper)
-          s"Expected symbol '${betterSymbol(lower)}'"
+          s"Expected symbol '${betterSymbol(lower)}'" +: acc
         else
-          s"Expected symbols from '${betterSymbol(lower)}' to '${betterSymbol(upper)}'"
+          s"Expected symbols from '${betterSymbol(lower)}' to '${betterSymbol(upper)}'" +: acc
       case OneOfStr(offset, strs) =>
-        s"Expected one of these strings: ${strs.map(s => s"'$s'").mkString(", ")}"
-      case e => "Expected: " + e.toString
+        s"Expected one of these strings: ${strs.map(s => s"'$s'").mkString(", ")}" +: acc
+      case e => ("Expected: " + e.toString) +: acc
     }
   }
 

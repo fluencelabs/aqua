@@ -114,6 +114,7 @@ object CompareTypes {
         case (x: ArrayType, y: ArrayType) => apply(x.element, y.element)
         case (x: ArrayType, y: StreamType) => apply(x.element, y.element)
         case (x: ArrayType, y: OptionType) => apply(x.element, y.element)
+        case (x: OptionType, y: OptionType) => apply(x.element, y.element)
         case (x: OptionType, y: StreamType) => apply(x.element, y.element)
         case (x: OptionType, y: ArrayType) => apply(x.element, y.element)
         case (x: StreamType, y: StreamType) => apply(x.element, y.element)

@@ -5,7 +5,7 @@ import aqua.backend.ts.TypeScriptCommon.fnDef
 import aqua.model.transform.res.ServiceRes
 
 case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
-  import TypeScriptTypes._
+  import TypeScriptTypes.*
 
   private val serviceTypeName = s"${srv.name}Def";
 
@@ -49,18 +49,18 @@ case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
       .mkString("\n")
   }
 
-  def exportInterface = {
+  private def exportInterface = {
     val fnDefs = srv.members.map { case (name, arrow) =>
-      s"${typed(name, fnDef(arrow))};"
+      s"    ${typed(name, fnDef(arrow))};"
     }
       .mkString("\n")
 
     s"""export interface ${serviceTypeName} {
-       |    ${fnDefs}
+       |${fnDefs}
        |}""".stripMargin
   }
 
-  def generate = {
+  def generate: String = {
     s"""$exportInterface
        |$registerServiceArgs
        """

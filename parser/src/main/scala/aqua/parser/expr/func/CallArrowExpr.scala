@@ -33,7 +33,7 @@ object CallArrowExpr extends Expr.Leaf {
   val functionCallWithArgs = Name.p
     ~ comma0(Value.`value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
   val funcCall = ability.with1 ~ functionCallWithArgs
-  
+    .withContext("Missing braces '()' after the function call. Arrow '<-' could be used only with function calls.")
   val funcOnly = funcCall.map {
     case (ab, (name, args)) =>
       CallArrowExpr(Nil, ab, name, args)
