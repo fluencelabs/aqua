@@ -4,9 +4,8 @@ import aqua.model.Model
 import aqua.model.func.raw.{FuncOp, ParTag}
 import aqua.parser.expr.func.ParExpr
 import aqua.semantics.Prog
-import cats.free.Free
-import cats.syntax.applicative._
 import cats.Monad
+import cats.syntax.applicative.*
 
 class ParSem[F[_]](val expr: ParExpr[F]) extends AnyVal {
 

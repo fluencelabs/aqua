@@ -1,17 +1,16 @@
 package aqua.semantics.rules
 
-import aqua.model._
-import aqua.parser.lexer._
+import aqua.model.*
+import aqua.parser.lexer.*
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, LiteralType, Type}
-import cats.data.Chain
-import cats.free.Free
-import cats.syntax.apply._
-import cats.syntax.applicative._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
 import cats.Monad
+import cats.data.Chain
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 
 class ValuesAlgebra[F[_], Alg[_]: Monad](implicit
   N: NamesAlgebra[F, Alg],

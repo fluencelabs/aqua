@@ -11,7 +11,6 @@ import aqua.semantics.rules.{ReportError, ValuesAlgebra}
 import cats.arrow.FunctionK
 import cats.data.*
 import cats.data.Validated.{Invalid, Valid}
-import cats.free.Free
 import cats.kernel.Monoid
 import cats.syntax.applicative.*
 import cats.syntax.apply.*

@@ -5,7 +5,6 @@ import aqua.parser.lexer.{Ability, Name, Token, Value}
 import aqua.types.ArrowType
 import cats.InjectK
 import cats.data.{NonEmptyList, NonEmptyMap}
-import cats.free.Free
 
 trait AbilitiesAlgebra[F[_], Alg[_]] {
 

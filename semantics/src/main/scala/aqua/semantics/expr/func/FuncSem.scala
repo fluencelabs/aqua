@@ -1,18 +1,16 @@
 package aqua.semantics.expr.func
 
-import aqua.model.func.{ArrowModel, FuncModel}
 import aqua.model.Model
+import aqua.model.func.{ArrowModel, FuncModel}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.lexer.Arg
 import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
-import cats.Applicative
+import cats.{Applicative, Monad}
 import cats.data.Chain
-import cats.free.Free
+import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.applicative.*
-import cats.Monad
 
 class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
 

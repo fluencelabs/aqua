@@ -3,7 +3,6 @@ package aqua.semantics.rules.names
 import aqua.parser.lexer.{Literal, Name, Token, Value}
 import aqua.types.{ArrowType, Type}
 import cats.InjectK
-import cats.free.Free
 
 trait NamesAlgebra[F[_], Alg[_]] {
 

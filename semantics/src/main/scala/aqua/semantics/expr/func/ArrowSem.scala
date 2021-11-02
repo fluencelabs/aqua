@@ -12,13 +12,13 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, ProductType, Type}
-import cats.{Applicative, Monad}
 import cats.data.{Chain, NonEmptyList}
 import cats.free.{Cofree, Free}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.{Applicative, Monad}
 
 class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
 
@@ -85,9 +85,8 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
         .foldLeft[Alg[List[ValueModel]]](Nil.pure[Alg]) {
           case (acc, (returnType, returnValue, token)) =>
             acc.flatMap { a =>
-              T.ensureTypeMatches(token, returnType, returnValue.`type`)
-                .void
-                .map(_ => returnValue :: a)
+              T.ensureTypeMatches(token, returnType, returnValue.lastType)
+                .as(returnValue :: a)
             }
         }
         .map(_.reverse)
