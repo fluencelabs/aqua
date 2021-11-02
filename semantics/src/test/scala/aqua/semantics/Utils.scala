@@ -42,6 +42,10 @@ object Utils {
     prog.apply(emptyS).run(blankCS).value._2
   }
 
+  def getState(startState: Model)(prog: Prog[State[CompilerState[cats.Id], *], Model]): CompilerState[Id] = {
+    prog.apply(State.pure[CompilerState[Id], Model](startState)).run(blankCS).value._1
+  }
+  
   def getModel(startState: Model)(prog: Prog[State[CompilerState[cats.Id], *], Model]): Model = {
     prog.apply(State.pure[CompilerState[Id], Model](startState)).run(blankCS).value._2
   }
