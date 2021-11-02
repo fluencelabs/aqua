@@ -64,6 +64,8 @@ case class FuncCallable(
 
     // Find all duplicates in arguments
     val argsShouldRename = findNewNames(forbiddenNames, (argsToDataRaw ++ argsToArrowsRaw).keySet)
+      // we shoudln't rename arguments that will be renamed by 'streamToRename'
+      .filter{case (k, _) => !streamToRename.contains(k)}
     val argsToData = argsToDataRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
     val argsToArrows = argsToArrowsRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
 
