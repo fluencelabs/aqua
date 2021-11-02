@@ -1,15 +1,17 @@
 package aqua.semantics.expr.func
 
-import aqua.model.Model
+import aqua.model.func.raw.{DeclareStreamTag, FuncOp}
+import aqua.model.{Model, VarModel}
 import aqua.parser.expr.func.DeclareStreamExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, OptionType, StreamType}
-import cats.syntax.applicative._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
 import cats.Monad
+import cats.data.Chain
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 
 class DeclareStreamSem[F[_]](val expr: DeclareStreamExpr[F]) {
 
