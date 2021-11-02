@@ -5,21 +5,18 @@ import aqua.compiler.{AquaCompiled, AquaCompiler, AquaError}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io.*
 import aqua.model.transform.TransformConfig
-import aqua.parser.{Ast, LexerError}
-import aqua.parser.lift.FileSpan
-import cats.data.*
-import cats.syntax.functor.*
-import cats.syntax.applicative.*
-import cats.syntax.show.*
-import cats.{~>, Applicative, Eval, Monad, Show}
-import scribe.Logging
-import fs2.io.file.{Files, Path}
-import aqua.parser.lift.{LiftParser, Span}
-import cats.parse.LocationMap
-import cats.~>
 import aqua.parser.lift.LiftParser.LiftErrorOps
-import Span.spanLiftParser
-import aqua.parser.Parser
+import aqua.parser.lift.Span.spanLiftParser
+import aqua.parser.lift.{FileSpan, LiftParser, Span}
+import aqua.parser.{Ast, LexerError, Parser}
+import cats.data.*
+import cats.parse.LocationMap
+import cats.syntax.applicative.*
+import cats.syntax.functor.*
+import cats.syntax.show.*
+import cats.{Applicative, Eval, Monad, Show, ~>}
+import fs2.io.file.{Files, Path}
+import scribe.Logging
 
 object AquaPathCompiler extends Logging {
 
@@ -48,7 +45,7 @@ object AquaPathCompiler extends Logging {
         transformConfig,
         targetPath.map(sources.write).getOrElse(dry[F])
       )
-      .map(_.leftMap(_.map(_.show)))
+      .map(_.leftMap(_.map(_.show).distinct))
   }
 
   def dry[F[_]: Applicative](
