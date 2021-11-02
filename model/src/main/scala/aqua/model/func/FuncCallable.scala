@@ -3,7 +3,7 @@ package aqua.model.func
 import aqua.model.ValueModel.varName
 import aqua.model.func.raw.*
 import aqua.model.{Model, ValueModel, VarModel}
-import aqua.types.{ArrayType, ArrowType, ProductType, StreamType, Type}
+import aqua.types.*
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -64,6 +64,8 @@ case class FuncCallable(
 
     // Find all duplicates in arguments
     val argsShouldRename = findNewNames(forbiddenNames, (argsToDataRaw ++ argsToArrowsRaw).keySet)
+      // we shoudln't rename arguments that will be renamed by 'streamToRename'
+      .filter{case (k, _) => !streamToRename.contains(k)}
     val argsToData = argsToDataRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
     val argsToArrows = argsToArrowsRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
 
@@ -72,7 +74,8 @@ case class FuncCallable(
 
     // Substitute arguments (referenced by name and optional lambda expressions) with values
     // Also rename all renamed arguments in the body
-    val treeWithValues = body.rename(argsShouldRename ++ streamToRename).resolveValues(argsToData)
+    val treeWithValues =
+      body.rename(argsShouldRename).resolveValues(argsToData).rename(streamToRename)
 
     // Function body on its own defines some values; collect their names
     // except stream arguments. They should be already renamed

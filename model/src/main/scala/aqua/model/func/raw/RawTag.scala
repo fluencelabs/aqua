@@ -37,6 +37,8 @@ sealed trait RawTag {
       AssignmentTag(f(value), assignTo)
     case ReturnTag(values) =>
       ReturnTag(values.map(f))
+    case DeclareStreamTag(value) =>
+      DeclareStreamTag(f(value))
     case AbilityIdTag(value, ability) =>
       AbilityIdTag(f(value), ability)
     case ClosureTag(func) =>
@@ -85,6 +87,10 @@ case class CallArrowTag(
   funcName: String,
   call: Call
 ) extends RawTag
+
+case class DeclareStreamTag(
+  value: ValueModel
+) extends NoExecTag
 
 case class AssignmentTag(
   value: ValueModel,
