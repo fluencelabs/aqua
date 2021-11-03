@@ -3,7 +3,7 @@ package aqua.semantics.rules.abilities
 import aqua.model.{AquaContext, ServiceModel, ValueModel}
 import aqua.parser.lexer.{Ability, Name, Token, Value}
 import aqua.semantics.Levenshtein
-import aqua.semantics.rules.{ReportError, StackInterpreter, abilities}
+import aqua.semantics.rules.{abilities, ReportError, StackInterpreter}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.syntax.functor.*
@@ -11,20 +11,20 @@ import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
 
-class AbilitiesInterpreter[F[_], X](implicit
-  lens: Lens[X, AbilitiesState[F]],
-  error: ReportError[F, X]
-) extends AbilitiesAlgebra[F, State[X, *]] {
+class AbilitiesInterpreter[S[_], X](implicit
+  lens: Lens[X, AbilitiesState[S]],
+  error: ReportError[S, X]
+) extends AbilitiesAlgebra[S, State[X, *]] {
 
-  type SA[A] = State[X, A]
+  type SX[A] = State[X, A]
 
-  val stackInt = new StackInterpreter[F, X, AbilitiesState[F], AbilitiesState.Frame[F]](
-    GenLens[AbilitiesState[F]](_.stack)
+  val stackInt = new StackInterpreter[S, X, AbilitiesState[S], AbilitiesState.Frame[S]](
+    GenLens[AbilitiesState[S]](_.stack)
   )
 
-  import stackInt.{report, modify, mapStackHead, getState, mapStackHeadE, setState}
+  import stackInt.{getState, mapStackHead, mapStackHeadE, modify, report, setState}
 
-  override def defineArrow(arrow: Name[F], `type`: ArrowType): SA[Boolean] =
+  override def defineArrow(arrow: Name[S], `type`: ArrowType): SX[Boolean] =
     mapStackHeadE(
       report(arrow, "No abilities definition scope is found").as(false)
     )(h =>
@@ -38,20 +38,20 @@ class AbilitiesInterpreter[F[_], X](implicit
       }
     )
 
-  override def purgeArrows(token: Token[F]): SA[Option[NonEmptyList[(Name[F], ArrowType)]]] =
+  override def purgeArrows(token: Token[S]): SX[Option[NonEmptyList[(Name[S], ArrowType)]]] =
     getState.map(_.purgeArrows).flatMap {
       case Some((arrs, nextState)) =>
-        setState(nextState).as(Option[NonEmptyList[(Name[F], ArrowType)]](arrs))
+        setState(nextState).as(Option[NonEmptyList[(Name[S], ArrowType)]](arrs))
       case _ =>
         report(token, "Cannot purge arrows, no arrows provided")
-          .as(Option.empty[NonEmptyList[(Name[F], ArrowType)]])
+          .as(Option.empty[NonEmptyList[(Name[S], ArrowType)]])
     }
 
   override def defineService(
-    name: Ability[F],
+    name: Ability[S],
     arrows: NonEmptyMap[String, ArrowType],
     defaultId: Option[ValueModel]
-  ): SA[Boolean] =
+  ): SX[Boolean] =
     getService(name.value).flatMap {
       case Some(_) =>
         getState.map(_.definitions.get(name.value).exists(_ == name)).flatMap {
@@ -69,7 +69,7 @@ class AbilitiesInterpreter[F[_], X](implicit
         ).as(true)
     }
 
-  override def getArrow(name: Ability[F], arrow: Name[F]): SA[Option[ArrowType]] =
+  override def getArrow(name: Ability[S], arrow: Name[S]): SX[Option[ArrowType]] =
     getService(name.value).map(_.map(_.arrows)).flatMap {
       case Some(arrows) =>
         arrows(arrow.value)
@@ -103,13 +103,11 @@ class AbilitiesInterpreter[F[_], X](implicit
         }
     }
 
-  override def setServiceId(name: Ability[F], id: Value[F], vm: ValueModel): SA[Boolean] =
+  override def setServiceId(name: Ability[S], id: Value[S], vm: ValueModel): SX[Boolean] =
     getService(name.value).flatMap {
       case Some(_) =>
         mapStackHead(
-          modify(st =>
-            st.copy(rootServiceIds = st.rootServiceIds.updated(name.value, id -> vm))
-          )
+          modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(name.value, id -> vm)))
             .as(true)
         )(h => h.copy(serviceIds = h.serviceIds.updated(name.value, id -> vm)) -> true)
 
@@ -117,7 +115,7 @@ class AbilitiesInterpreter[F[_], X](implicit
         report(name, "Service with this name is not registered, can't set its ID").as(false)
     }
 
-  override def getServiceId(name: Ability[F]): SA[Either[Boolean, ValueModel]] =
+  override def getServiceId(name: Ability[S]): SX[Either[Boolean, ValueModel]] =
     getService(name.value).flatMap {
       case Some(_) =>
         getState.flatMap(st =>
@@ -148,14 +146,14 @@ class AbilitiesInterpreter[F[_], X](implicit
         }
     }
 
-  override def beginScope(token: Token[F]): SA[Unit] =
-    stackInt.beginScope(AbilitiesState.Frame[F](token))
+  override def beginScope(token: Token[S]): SX[Unit] =
+    stackInt.beginScope(AbilitiesState.Frame[S](token))
 
-  override def endScope(): SA[Unit] = stackInt.endScope
+  override def endScope(): SX[Unit] = stackInt.endScope
 
-  private def getService(name: String): SA[Option[ServiceModel]] =
+  private def getService(name: String): SX[Option[ServiceModel]] =
     getState.map(_.services.get(name))
 
-  private def getAbility(name: String): SA[Option[AquaContext]] =
+  private def getAbility(name: String): SX[Option[AquaContext]] =
     getState.map(_.abilities.get(name))
 }

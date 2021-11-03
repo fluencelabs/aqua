@@ -11,11 +11,11 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class CatchSem[F[_]](val expr: CatchExpr[F]) extends AnyVal {
+class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    N: NamesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog
       .around(
@@ -35,6 +35,6 @@ class CatchSem[F[_]](val expr: CatchExpr[F]) extends AnyVal {
               N.endScope() as g
           }
       )
-      .abilitiesScope[F](expr.token)
+      .abilitiesScope[S](expr.token)
 
 }

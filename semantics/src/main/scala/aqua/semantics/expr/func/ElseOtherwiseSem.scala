@@ -8,9 +8,9 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import cats.syntax.applicative._
 import cats.Monad
 
-class ElseOtherwiseSem[F[_]](val expr: ElseOtherwiseExpr[F]) extends AnyVal {
+class ElseOtherwiseSem[S[_]](val expr: ElseOtherwiseExpr[S]) extends AnyVal {
 
-  def program[Alg[_]: Monad](implicit A: AbilitiesAlgebra[F, Alg]): Prog[Alg, Model] =
+  def program[Alg[_]: Monad](implicit A: AbilitiesAlgebra[S, Alg]): Prog[Alg, Model] =
     Prog
       .after[Alg, Model] {
         case g: FuncOp => FuncOp.wrap(XorTag, g).pure[Alg]

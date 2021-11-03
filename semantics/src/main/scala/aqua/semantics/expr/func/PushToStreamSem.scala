@@ -17,15 +17,15 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
+class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
 
   private def ensureStreamElementMatches[Alg[_]: Monad](
-    streamToken: Token[F],
-    elementToken: Token[F],
+    streamToken: Token[S],
+    elementToken: Token[S],
     stream: Type,
     element: Type
   )(implicit
-    T: TypesAlgebra[F, Alg]
+    T: TypesAlgebra[S, Alg]
   ): Alg[Boolean] =
     stream match {
       case StreamType(st) =>
@@ -42,9 +42,9 @@ class PushToStreamSem[F[_]](val expr: PushToStreamExpr[F]) extends AnyVal {
     }
 
   def program[Alg[_]: Monad](implicit
-    N: NamesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     V.valueToModel(expr.value).flatMap {
       case Some(vm) =>

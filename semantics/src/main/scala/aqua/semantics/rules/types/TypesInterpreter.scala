@@ -13,27 +13,27 @@ import monocle.Lens
 
 import scala.collection.immutable.SortedMap
 
-class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: ReportError[F, X])
-    extends TypesAlgebra[F, State[X, *]] {
+class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: ReportError[S, X])
+    extends TypesAlgebra[S, State[X, *]] {
 
   type ST[A] = State[X, A]
 
-  protected def getState: ST[TypesState[F]] = State.get.map(lens.get)
-  protected def setState(st: TypesState[F]): ST[Unit] = State.modify(s => lens.replace(st)(s))
+  protected def getState: ST[TypesState[S]] = State.get.map(lens.get)
+  protected def setState(st: TypesState[S]): ST[Unit] = State.modify(s => lens.replace(st)(s))
 
-  protected def report(t: Token[F], hint: String): ST[Unit] =
+  protected def report(t: Token[S], hint: String): ST[Unit] =
     State.modify(error(_, t, hint))
 
-  protected def modify(f: TypesState[F] => TypesState[F]): ST[Unit] =
+  protected def modify(f: TypesState[S] => TypesState[S]): ST[Unit] =
     State.modify(lens.modify(f))
 
-  override def resolveType(token: TypeToken[F]): State[X, Option[Type]] =
+  override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
     getState.map(_.resolveTypeToken(token)).flatMap {
       case Some(t) => State.pure(Some(t))
       case None => report(token, s"Unresolved type").as(None)
     }
 
-  override def resolveArrowDef(arrowDef: ArrowTypeToken[F]): State[X, Option[ArrowType]] =
+  override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
     getState.map(_.resolveArrowDef(arrowDef)).flatMap {
       case Valid(t) => State.pure[X, Option[ArrowType]](Some(t))
       case Invalid(errs) =>
@@ -43,7 +43,7 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
           }
     }
 
-  override def defineField(name: Name[F], `type`: Type): State[X, Boolean] =
+  override def defineField(name: Name[S], `type`: Type): State[X, Boolean] =
     getState.map(_.fields.get(name.value)).flatMap {
       case None =>
         modify(st => st.copy(fields = st.fields.updated(name.value, name -> `type`)))
@@ -53,7 +53,7 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
           .as(false)
     }
 
-  override def purgeFields(token: Token[F]): State[X, Option[NonEmptyMap[String, Type]]] =
+  override def purgeFields(token: Token[S]): State[X, Option[NonEmptyMap[String, Type]]] =
     getState
       .map(_.fields.view.mapValues(_._2))
       .map(SortedMap.from(_))
@@ -64,7 +64,7 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
       }
 
   override def defineDataType(
-    name: CustomTypeToken[F],
+    name: CustomTypeToken[S],
     fields: NonEmptyMap[String, Type]
   ): State[X, Boolean] =
     getState.map(_.definitions.get(name.value)).flatMap {
@@ -81,7 +81,7 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
           .as(true)
     }
 
-  override def defineAlias(name: CustomTypeToken[F], target: Type): State[X, Boolean] =
+  override def defineAlias(name: CustomTypeToken[S], target: Type): State[X, Boolean] =
     getState.map(_.definitions.get(name.value)).flatMap {
       case Some(n) if n == name => State.pure(false)
       case Some(_) => report(name, s"Type `${name.value}` was already defined").as(false)
@@ -94,14 +94,14 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
         ).as(true)
     }
 
-  override def resolveLambda(root: Type, ops: List[LambdaOp[F]]): State[X, List[LambdaModel]] =
+  override def resolveLambda(root: Type, ops: List[LambdaOp[S]]): State[X, List[LambdaModel]] =
     getState.map(_.resolveOps(root, ops)).flatMap {
       case Left((tkn, hint)) => report(tkn, hint).as(Nil)
       case Right(ts) => State.pure(ts)
     }
 
   override def ensureTypeMatches(
-    token: Token[F],
+    token: Token[S],
     expected: Type,
     givenType: Type
   ): State[X, Boolean] =
@@ -111,14 +111,14 @@ class TypesInterpreter[F[_], X](implicit lens: Lens[X, TypesState[F]], error: Re
       report(token, s"Types mismatch, expected: ${expected}, given: ${givenType}")
         .as(false)
 
-  override def expectNoExport(token: Token[F]): State[X, Unit] =
+  override def expectNoExport(token: Token[S]): State[X, Unit] =
     report(
       token,
       "Types mismatch. Cannot assign to a variable the result of a call that returns nothing"
     ).as(())
 
   override def checkArgumentsNumber(
-    token: Token[F],
+    token: Token[S],
     expected: Int,
     givenNum: Int
   ): State[X, Boolean] =

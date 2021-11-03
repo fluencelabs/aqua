@@ -11,9 +11,9 @@ import cats.data.NonEmptyList
 import cats.syntax.flatMap.*
 import cats.Monad
 
-class ReturnSem[F[_]](val expr: ReturnExpr[F]) extends AnyVal {
+class ReturnSem[S[_]](val expr: ReturnExpr[S]) extends AnyVal {
 
-  def program[Alg[_]: Monad](implicit V: ValuesAlgebra[F, Alg]): Prog[Alg, Model] =
+  def program[Alg[_]: Monad](implicit V: ValuesAlgebra[S, Alg]): Prog[Alg, Model] =
     expr.values
       .traverse(V.valueToModel)
       .map(_.toList.flatten)

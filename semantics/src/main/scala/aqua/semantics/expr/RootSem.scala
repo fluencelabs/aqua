@@ -6,7 +6,7 @@ import aqua.semantics.Prog
 import cats.syntax.applicative._
 import cats.Monad
 
-class RootSem[F[_]](val expr: RootExpr[F]) extends AnyVal {
+class RootSem[S[_]](val expr: RootExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad]: Prog[Alg, Model] =
     Prog.after {

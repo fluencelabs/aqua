@@ -6,6 +6,7 @@ import aqua.parser.expr.func.OnExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.topology.TopologyAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{BoxType, OptionType, ScalarType}
 import cats.data.Chain
@@ -15,12 +16,12 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.{Monad, Traverse}
 
-class OnSem[F[_]](val expr: OnExpr[F]) extends AnyVal {
+class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    V: ValuesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg]
+    V: ValuesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog.around(
       (

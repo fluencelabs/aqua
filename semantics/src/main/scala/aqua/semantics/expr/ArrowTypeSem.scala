@@ -10,11 +10,11 @@ import cats.syntax.applicative._
 import cats.syntax.flatMap._
 import cats.Monad
 
-class ArrowTypeSem[F[_]](val expr: ArrowTypeExpr[F]) extends AnyVal {
+class ArrowTypeSem[S[_]](val expr: ArrowTypeExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    T: TypesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg]
+    T: TypesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     T.resolveArrowDef(expr.`type`).flatMap {
       case Some(t) => A.defineArrow(expr.name, t) as (TypeModel(expr.name.value, t): Model)

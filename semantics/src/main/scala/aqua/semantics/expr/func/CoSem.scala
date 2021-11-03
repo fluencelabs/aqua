@@ -7,7 +7,7 @@ import aqua.semantics.Prog
 import cats.syntax.applicative._
 import cats.Monad
 
-class CoSem[F[_]](val expr: CoExpr[F]) extends AnyVal {
+class CoSem[S[_]](val expr: CoExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad]: Prog[Alg, Model] =
     Prog.after[Alg, Model] {

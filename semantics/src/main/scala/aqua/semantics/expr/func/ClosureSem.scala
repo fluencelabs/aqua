@@ -14,10 +14,10 @@ import cats.syntax.functor.*
 import cats.syntax.applicative.*
 import cats.Monad
 
-class ClosureSem[F[_]](val expr: ClosureExpr[F]) extends AnyVal {
+class ClosureSem[S[_]](val expr: ClosureExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    N: NamesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog.after {
       case arrow: ArrowModel =>

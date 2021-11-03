@@ -6,25 +6,25 @@ import aqua.types.ArrowType
 import cats.InjectK
 import cats.data.{NonEmptyList, NonEmptyMap}
 
-trait AbilitiesAlgebra[F[_], Alg[_]] {
+trait AbilitiesAlgebra[S[_], Alg[_]] {
 
-  def defineArrow(arrow: Name[F], `type`: ArrowType): Alg[Boolean]
+  def defineArrow(arrow: Name[S], `type`: ArrowType): Alg[Boolean]
 
-  def purgeArrows(token: Token[F]): Alg[Option[NonEmptyList[(Name[F], ArrowType)]]]
+  def purgeArrows(token: Token[S]): Alg[Option[NonEmptyList[(Name[S], ArrowType)]]]
 
   def defineService(
-    name: Ability[F],
+    name: Ability[S],
     arrows: NonEmptyMap[String, ArrowType],
     defaultId: Option[ValueModel]
   ): Alg[Boolean]
 
-  def getArrow(name: Ability[F], arrow: Name[F]): Alg[Option[ArrowType]]
+  def getArrow(name: Ability[S], arrow: Name[S]): Alg[Option[ArrowType]]
 
-  def setServiceId(name: Ability[F], id: Value[F], vm: ValueModel): Alg[Boolean]
+  def setServiceId(name: Ability[S], id: Value[S], vm: ValueModel): Alg[Boolean]
 
-  def getServiceId(name: Ability[F]): Alg[Either[Boolean, ValueModel]]
+  def getServiceId(name: Ability[S]): Alg[Either[Boolean, ValueModel]]
 
-  def beginScope(token: Token[F]): Alg[Unit]
+  def beginScope(token: Token[S]): Alg[Unit]
 
   def endScope(): Alg[Unit]
 

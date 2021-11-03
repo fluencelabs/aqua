@@ -13,11 +13,11 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class DeclareStreamSem[F[_]](val expr: DeclareStreamExpr[F]) {
+class DeclareStreamSem[S[_]](val expr: DeclareStreamExpr[S]) {
 
   def program[Alg[_]: Monad](implicit
-    N: NamesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog.leaf(
       T.resolveType(expr.`type`)

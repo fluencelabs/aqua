@@ -33,14 +33,14 @@ import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
 
-case class TypesState[F[_]](
-  fields: Map[String, (Name[F], Type)] = Map.empty[String, (Name[F], Type)],
+case class TypesState[S[_]](
+  fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],
   strict: Map[String, Type] = Map.empty[String, Type],
-  definitions: Map[String, CustomTypeToken[F]] = Map.empty[String, CustomTypeToken[F]]
+  definitions: Map[String, CustomTypeToken[S]] = Map.empty[String, CustomTypeToken[S]]
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
 
-  def resolveTypeToken(tt: TypeToken[F]): Option[Type] =
+  def resolveTypeToken(tt: TypeToken[S]): Option[Type] =
     tt match {
       case TopBottomToken(_, isTop) =>
         Option(if (isTop) TopType else BottomType)
@@ -56,8 +56,8 @@ case class TypesState[F[_]](
         resolveTypeToken(dtt).collect { case it: DataType =>
           OptionType(it)
         }
-      case ctt: CustomTypeToken[F] => strict.get(ctt.value)
-      case btt: BasicTypeToken[F] => Some(btt.value)
+      case ctt: CustomTypeToken[S] => strict.get(ctt.value)
+      case btt: BasicTypeToken[S] => Some(btt.value)
       case ArrowTypeToken(_, args, res) =>
         val strictArgs = args.map(_._2).map(resolveTypeToken).collect { case Some(dt: DataType) =>
           dt
@@ -70,20 +70,20 @@ case class TypesState[F[_]](
         )
     }
 
-  def resolveArrowDef(ad: ArrowTypeToken[F]): ValidatedNec[(Token[F], String), ArrowType] = {
+  def resolveArrowDef(ad: ArrowTypeToken[S]): ValidatedNec[(Token[S], String), ArrowType] = {
     val resType = ad.res.map(resolveTypeToken)
 
     NonEmptyChain
       .fromChain(Chain.fromSeq(ad.res.zip(resType).collect { case (dt, None) =>
         dt -> "Cannot resolve the result type"
       }))
-      .fold[ValidatedNec[(Token[F], String), ArrowType]] {
+      .fold[ValidatedNec[(Token[S], String), ArrowType]] {
         val (errs, argTypes) = ad.args.map { (argName, tt) =>
           resolveTypeToken(tt)
             .toRight(tt -> s"Type unresolved")
             .map(argName.map(_.value) -> _)
         }
-          .foldLeft[(Chain[(Token[F], String)], Chain[(Option[String], Type)])](
+          .foldLeft[(Chain[(Token[S], String)], Chain[(Option[String], Type)])](
             (Chain.empty, Chain.empty)
           ) {
             case ((errs, argTypes), Right(at)) => (errs, argTypes.append(at))
@@ -92,7 +92,7 @@ case class TypesState[F[_]](
 
         NonEmptyChain
           .fromChain(errs)
-          .fold[ValidatedNec[(Token[F], String), ArrowType]](
+          .fold[ValidatedNec[(Token[S], String), ArrowType]](
             Valid(
               ArrowType(
                 ProductType.maybeLabelled(argTypes.toList),
@@ -105,8 +105,8 @@ case class TypesState[F[_]](
 
   def resolveOps(
     rootT: Type,
-    ops: List[LambdaOp[F]]
-  ): Either[(Token[F], String), List[LambdaModel]] =
+    ops: List[LambdaOp[S]]
+  ): Either[(Token[S], String), List[LambdaModel]] =
     ops match {
       case Nil => Right(Nil)
       case (i @ IntoArray(_)) :: tail =>
@@ -146,16 +146,16 @@ case class TypesState[F[_]](
 
 object TypesState {
 
-  implicit def typesStateMonoid[F[_]]: Monoid[TypesState[F]] = new Monoid[TypesState[F]] {
-    override def empty: TypesState[F] = TypesState()
+  implicit def typesStateMonoid[S[_]]: Monoid[TypesState[S]] = new Monoid[TypesState[S]] {
+    override def empty: TypesState[S] = TypesState()
 
-    override def combine(x: TypesState[F], y: TypesState[F]): TypesState[F] =
+    override def combine(x: TypesState[S], y: TypesState[S]): TypesState[S] =
       TypesState(
         strict = x.strict ++ y.strict,
         definitions = x.definitions ++ y.definitions
       )
   }
 
-  def init[F[_]](context: AquaContext): TypesState[F] =
+  def init[S[_]](context: AquaContext): TypesState[S] =
     TypesState(strict = context.allTypes())
 }

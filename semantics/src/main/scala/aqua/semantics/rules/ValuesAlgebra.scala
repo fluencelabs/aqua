@@ -12,20 +12,20 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class ValuesAlgebra[F[_], Alg[_]: Monad](implicit
-  N: NamesAlgebra[F, Alg],
-  T: TypesAlgebra[F, Alg]
+class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
+  N: NamesAlgebra[S, Alg],
+  T: TypesAlgebra[S, Alg]
 ) {
 
-  def ensureIsString(v: Value[F]): Alg[Boolean] =
+  def ensureIsString(v: Value[S]): Alg[Boolean] =
     ensureTypeMatches(v, LiteralType.string)
 
-  def ensureTypeMatches(v: Value[F], expected: Type): Alg[Boolean] =
+  def ensureTypeMatches(v: Value[S], expected: Type): Alg[Boolean] =
     resolveType(v).flatMap {
       case Some(vt) =>
         T.ensureTypeMatches(
           v match {
-            case l: Literal[F] => l
+            case l: Literal[S] => l
             case VarLambda(n, lambda) => lambda.lastOption.getOrElse(n)
           },
           expected,
@@ -34,12 +34,12 @@ class ValuesAlgebra[F[_], Alg[_]: Monad](implicit
       case None => false.pure[Alg]
     }
 
-  def resolveType(v: Value[F]): Alg[Option[Type]] =
+  def resolveType(v: Value[S]): Alg[Option[Type]] =
     valueToModel(v).map(_.map(_.lastType))
 
-  def valueToModel(v: Value[F]): Alg[Option[ValueModel]] =
+  def valueToModel(v: Value[S]): Alg[Option[ValueModel]] =
     v match {
-      case l: Literal[F] => Some(LiteralModel(l.value, l.ts)).pure[Alg]
+      case l: Literal[S] => Some(LiteralModel(l.value, l.ts)).pure[Alg]
       case VarLambda(name, ops) =>
         N.read(name).flatMap {
           case Some(t) =>
@@ -52,13 +52,13 @@ class ValuesAlgebra[F[_], Alg[_]: Monad](implicit
         }
     }
 
-  def checkArguments(token: Token[F], arr: ArrowType, args: List[Value[F]]): Alg[Boolean] =
+  def checkArguments(token: Token[S], arr: ArrowType, args: List[Value[S]]): Alg[Boolean] =
     // TODO: do we really need to check this?
     T.checkArgumentsNumber(token, arr.domain.length, args.length).flatMap {
       case false => false.pure[Alg]
       case true =>
         args
-          .map[Alg[Option[(Token[F], Type)]]](tkn => resolveType(tkn).map(_.map(t => tkn -> t)))
+          .map[Alg[Option[(Token[S], Type)]]](tkn => resolveType(tkn).map(_.map(t => tkn -> t)))
           .zip(arr.domain.toList)
           .foldLeft(
             true.pure[Alg]
@@ -79,9 +79,9 @@ class ValuesAlgebra[F[_], Alg[_]: Monad](implicit
 
 object ValuesAlgebra {
 
-  implicit def deriveValuesAlgebra[F[_], Alg[_]: Monad](implicit
-    N: NamesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg]
-  ): ValuesAlgebra[F, Alg] =
-    new ValuesAlgebra[F, Alg]
+  implicit def deriveValuesAlgebra[S[_], Alg[_]: Monad](implicit
+    N: NamesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg]
+  ): ValuesAlgebra[S, Alg] =
+    new ValuesAlgebra[S, Alg]
 }

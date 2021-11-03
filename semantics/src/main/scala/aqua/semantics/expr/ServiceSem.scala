@@ -13,13 +13,13 @@ import cats.syntax.functor._
 import cats.syntax.applicative._
 import cats.Monad
 
-class ServiceSem[F[_]](val expr: ServiceExpr[F]) extends AnyVal {
+class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    A: AbilitiesAlgebra[F, Alg],
-    N: NamesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg]
+    A: AbilitiesAlgebra[S, Alg],
+    N: NamesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog.around(
       A.beginScope(expr.name),

@@ -20,15 +20,15 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.{Applicative, Monad}
 
-class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
+class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
 
   import expr.arrowTypeExpr
 
   def before[Alg[_]: Monad](implicit
-    T: TypesAlgebra[F, Alg],
-    N: NamesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg]
+    T: TypesAlgebra[S, Alg],
+    N: NamesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
   ): Alg[ArrowType] =
     A.beginScope(arrowTypeExpr) >> Applicative[Alg]
       .product(
@@ -67,7 +67,7 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
     funcArrow: ArrowType,
     retValue: NonEmptyList[ValueModel],
     body: FuncOp
-  )(implicit T: TypesAlgebra[F, Alg], V: ValuesAlgebra[F, Alg]): Alg[Model] =
+  )(implicit T: TypesAlgebra[S, Alg], V: ValuesAlgebra[S, Alg]): Alg[Model] =
     if (
       funcArrow.codomain.length != retValue.length || retValue.length != expr.arrowTypeExpr.res.length
     )
@@ -101,10 +101,10 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
 
   // TODO: handle all kinds of errors very carefully
   def after[Alg[_]: Monad](funcArrow: ArrowType, bodyGen: Model)(implicit
-    T: TypesAlgebra[F, Alg],
-    N: NamesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg]
+    T: TypesAlgebra[S, Alg],
+    N: NamesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
   ): Alg[Model] =
     (bodyGen match {
       case m: FuncOp if arrowTypeExpr.res.isEmpty =>
@@ -137,10 +137,10 @@ class ArrowSem[F[_]](val expr: ArrowExpr[F]) extends AnyVal {
       .endScope()
 
   def program[Alg[_]: Monad](implicit
-    T: TypesAlgebra[F, Alg],
-    N: NamesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg]
+    T: TypesAlgebra[S, Alg],
+    N: NamesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog.around(
       before[Alg],

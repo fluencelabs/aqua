@@ -11,11 +11,11 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class AssignmentSem[F[_]](val expr: AssignmentExpr[F]) extends AnyVal {
+class AssignmentSem[S[_]](val expr: AssignmentExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    N: NamesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     V.valueToModel(expr.value).flatMap {
       case Some(vm) =>

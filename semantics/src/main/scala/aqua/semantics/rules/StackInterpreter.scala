@@ -5,22 +5,22 @@ import cats.data.State
 import monocle.Lens
 import cats.syntax.functor._
 
-case class StackInterpreter[F[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(implicit
+case class StackInterpreter[S[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(implicit
   lens: Lens[X, St],
-  error: ReportError[F, X]
+  error: ReportError[S, X]
 ) {
-  type S[A] = State[X, A]
+  type SX[A] = State[X, A]
 
-  def getState: S[St] = State.get.map(lens.get)
-  def setState(st: St): S[Unit] = State.modify(s => lens.replace(st)(s))
+  def getState: SX[St] = State.get.map(lens.get)
+  def setState(st: St): SX[Unit] = State.modify(s => lens.replace(st)(s))
 
-  def report(t: Token[F], hint: String): S[Unit] =
+  def report(t: Token[S], hint: String): SX[Unit] =
     State.modify(error(_, t, hint))
 
-  def modify(f: St => St): S[Unit] =
+  def modify(f: St => St): SX[Unit] =
     State.modify(lens.modify(f))
 
-  def mapStackHead[A](ifStackEmpty: S[A])(f: Fr => (Fr, A)): S[A] =
+  def mapStackHead[A](ifStackEmpty: SX[A])(f: Fr => (Fr, A)): SX[A] =
     getState.map(stackLens.get).flatMap {
       case h :: tail =>
         val (updated, result) = f(h)
@@ -30,8 +30,8 @@ case class StackInterpreter[F[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(impl
     }
 
   def mapStackHeadE[A](
-    ifStackEmpty: S[A]
-  )(f: Fr => Either[(Token[F], String, A), (Fr, A)]): S[A] =
+    ifStackEmpty: SX[A]
+  )(f: Fr => Either[(Token[S], String, A), (Fr, A)]): SX[A] =
     getState.map(stackLens.get).flatMap {
       case h :: tail =>
         f(h) match {
@@ -44,9 +44,9 @@ case class StackInterpreter[F[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(impl
         ifStackEmpty
     }
 
-  def endScope: S[Unit] =
+  def endScope: SX[Unit] =
     modify(stackLens.modify(_.tail))
 
-  def beginScope(emptyFrame: Fr): S[Unit] =
+  def beginScope(emptyFrame: Fr): SX[Unit] =
     modify(stackLens.modify(emptyFrame :: _))
 }

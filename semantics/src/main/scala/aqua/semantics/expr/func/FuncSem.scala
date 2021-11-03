@@ -12,10 +12,10 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class FuncSem[F[_]](val expr: FuncExpr[F]) extends AnyVal {
+class FuncSem[S[_]](val expr: FuncExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    N: NamesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog.after {
       case arrow: ArrowModel =>

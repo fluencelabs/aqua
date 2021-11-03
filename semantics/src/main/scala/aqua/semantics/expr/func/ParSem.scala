@@ -7,7 +7,7 @@ import aqua.semantics.Prog
 import cats.Monad
 import cats.syntax.applicative.*
 
-class ParSem[F[_]](val expr: ParExpr[F]) extends AnyVal {
+class ParSem[S[_]](val expr: ParExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad]: Prog[Alg, Model] =
     Prog.after[Alg, Model] {

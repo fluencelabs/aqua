@@ -15,13 +15,13 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
+class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    V: ValuesAlgebra[F, Alg],
-    N: NamesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg]
+    V: ValuesAlgebra[S, Alg],
+    N: NamesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog
       .around(
@@ -59,5 +59,5 @@ class ForSem[F[_]](val expr: ForExpr[F]) extends AnyVal {
             case _ => Model.error("Wrong body of For expr")
           })
       )
-      .abilitiesScope[F](expr.token)
+      .abilitiesScope[S](expr.token)
 }

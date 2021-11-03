@@ -17,7 +17,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
 
-class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
+class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
   import expr.*
 
@@ -26,9 +26,9 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
   private def checkArgsRes[Alg[_]: Monad](
     at: ArrowType
   )(implicit
-    N: NamesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg]
   ): Alg[(List[ValueModel], List[Type])] =
     V.checkArguments(expr.funcName, at, args) >> variables
       .foldLeft(algUnit[Alg].as((List.empty[Type], at.codomain.toList)))((f, exportVar) =>
@@ -50,10 +50,10 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
     }
 
   private def toModel[Alg[_]: Monad](implicit
-    N: NamesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg]
   ): Alg[Option[FuncOp]] =
     ability match {
       case Some(ab) =>
@@ -72,10 +72,10 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
     }
 
   def callServiceTag[Alg[_]: Monad](arrowType: ArrowType, serviceId: Option[ValueModel])(implicit
-    N: NamesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg]
   ): Alg[FuncOp] = {
     checkArgsRes(arrowType).flatMap { (argsResolved, resTypes) =>
       variables
@@ -105,10 +105,10 @@ class CallArrowSem[F[_]](val expr: CallArrowExpr[F]) extends AnyVal {
   }
 
   def program[Alg[_]: Monad](implicit
-    N: NamesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     toModel[Alg].map(_.getOrElse(Model.error("CallArrow can't be converted to Model")))
 

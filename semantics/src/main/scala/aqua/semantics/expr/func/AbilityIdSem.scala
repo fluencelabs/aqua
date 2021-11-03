@@ -11,11 +11,11 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class AbilityIdSem[F[_]](val expr: AbilityIdExpr[F]) extends AnyVal {
+class AbilityIdSem[S[_]](val expr: AbilityIdExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    A: AbilitiesAlgebra[F, Alg],
-    V: ValuesAlgebra[F, Alg]
+    A: AbilitiesAlgebra[S, Alg],
+    V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     V.ensureIsString(expr.id) >> V.valueToModel(
       expr.id

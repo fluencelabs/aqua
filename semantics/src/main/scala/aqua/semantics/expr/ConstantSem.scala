@@ -11,12 +11,12 @@ import cats.syntax.applicative._
 import cats.syntax.flatMap._
 import cats.Monad
 
-class ConstantSem[F[_]](val expr: ConstantExpr[F]) extends AnyVal {
+class ConstantSem[S[_]](val expr: ConstantExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    V: ValuesAlgebra[F, Alg],
-    N: NamesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg]
+    V: ValuesAlgebra[S, Alg],
+    N: NamesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg]
   ): Prog[Alg, Model] = {
     for {
       defined <- N.constantDefined(expr.name)

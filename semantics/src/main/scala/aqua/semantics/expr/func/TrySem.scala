@@ -10,12 +10,12 @@ import aqua.semantics.rules.types.TypesAlgebra
 import cats.syntax.applicative._
 import cats.Monad
 
-class TrySem[F[_]](val expr: TryExpr[F]) extends AnyVal {
+class TrySem[S[_]](val expr: TryExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    V: ValuesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg]
+    V: ValuesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog
       .after[Alg, Model] {

@@ -11,11 +11,11 @@ import cats.syntax.applicative._
 import cats.syntax.flatMap._
 import cats.Monad
 
-class DataStructSem[F[_]](val expr: DataStructExpr[F]) extends AnyVal {
+class DataStructSem[S[_]](val expr: DataStructExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    N: NamesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg]
+    N: NamesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog.after((_: Model) =>
       T.purgeFields(expr.name).flatMap {

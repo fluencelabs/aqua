@@ -15,6 +15,7 @@ func smth() -> bool:
     Srv.inside()
     <- variable
 
-  c <- closure()
-  Srv.noop(c)
+  on "other":
+    c <- closure()
+    Srv.noop(c)
   <- true

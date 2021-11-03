@@ -21,7 +21,7 @@ sealed abstract class Prog[Alg[_]: Monad, A] extends (Alg[A] => Alg[A]) {
   def wrap[R](ar: RunAround[Alg, R, A]): Prog[Alg, A] =
     wrap(ar.before, ar.after)
 
-  def abilitiesScope[F[_]](token: Token[F])(implicit Ab: AbilitiesAlgebra[F, Alg]): Prog[Alg, A] =
+  def abilitiesScope[S[_]](token: Token[S])(implicit Ab: AbilitiesAlgebra[S, Alg]): Prog[Alg, A] =
     wrap(
       RunAround(
         Ab.beginScope(token),
@@ -37,7 +37,8 @@ case class RunAfter[Alg[_]: Monad, A](prog: Alg[A]) extends Prog[Alg, A] {
 
 }
 
-case class RunAround[Alg[_]: Monad, R, A](before: Alg[R], after: (R, A) => Alg[A]) extends Prog[Alg, A] {
+case class RunAround[Alg[_]: Monad, R, A](before: Alg[R], after: (R, A) => Alg[A])
+    extends Prog[Alg, A] {
 
   override def apply(v1: Alg[A]): Alg[A] =
     before >>= (r => v1 >>= (a => after(r, a)))

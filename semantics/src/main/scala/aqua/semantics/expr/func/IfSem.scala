@@ -13,12 +13,12 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
+class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
-    V: ValuesAlgebra[F, Alg],
-    T: TypesAlgebra[F, Alg],
-    A: AbilitiesAlgebra[F, Alg]
+    V: ValuesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog
       .around(
@@ -57,5 +57,5 @@ class IfSem[F[_]](val expr: IfExpr[F]) extends AnyVal {
               }
           }
       )
-      .abilitiesScope[F](expr.token)
+      .abilitiesScope[S](expr.token)
 }
