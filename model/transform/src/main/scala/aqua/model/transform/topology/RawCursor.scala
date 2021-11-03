@@ -48,15 +48,17 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
   lazy val lastExecuted: Option[RawCursor] = tag match {
     case XorTag => toFirstChild.flatMap(_.lastExecuted)
     case _: SeqGroupTag => toLastChild.flatMap(_.lastExecuted)
-    case _: ParGroupTag => None
-    case _: NoExecTag => None
+    case _: ParGroupTag =>
+      None // ParGroup builds exit path within itself; there's no "lastExecuted", they are many
+    case _: NoExecTag => moveLeft.flatMap(_.lastExecuted)
     case _ => Some(this)
   }
 
   lazy val firstExecuted: Option[RawCursor] = tag match {
     case _: SeqGroupTag => toFirstChild.flatMap(_.firstExecuted)
-    case _: ParGroupTag => None // TODO why?
-    case _: NoExecTag => None
+    case _: ParGroupTag =>
+      None // As many branches are executed simultaneously, no definition of first
+    case _: NoExecTag => moveRight.flatMap(_.firstExecuted)
     case _ => Some(this)
   }
 
