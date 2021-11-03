@@ -64,9 +64,10 @@ object AquaCli extends IOApp with Logging {
       wrapWithOption(versionOpt),
       logLevelOpt,
       constantOpts[Id],
-      dryOpt
+      dryOpt,
+      scriptOpt
     ).mapN {
-      case (inputF, importsF, outputF, toAir, toJs, noRelay, noXor, h, v, logLevel, constants, isDryRun) =>
+      case (inputF, importsF, outputF, toAir, toJs, noRelay, noXor, h, v, logLevel, constants, isDryRun, isScriptStorage) =>
         scribe.Logger.root
           .clearHandlers()
           .clearModifiers()
@@ -77,12 +78,13 @@ object AquaCli extends IOApp with Logging {
         // otherwise continue program execution
         h.map(_ => helpAndExit) orElse v.map(_ => versionAndExit) getOrElse {
           val target =
-            if (toAir) AirTarget
+            if (isScriptStorage) AirTarget
+            else if (toAir) AirTarget
             else if (toJs) JavaScriptTarget
             else TypescriptTarget
           val bc = {
-            val bc = TransformConfig(wrapWithXor = !noXor, constants = constants)
-            bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
+            val bc = TransformConfig(wrapWithXor = !(noXor || isScriptStorage), constants = constants)
+            bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay || isScriptStorage))
           }
           logger.info(s"Aqua Compiler ${versionStr}")
 

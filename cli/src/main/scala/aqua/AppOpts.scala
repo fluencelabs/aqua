@@ -193,6 +193,12 @@ object AppOpts {
       .map(_ => true)
       .withDefault(false)
 
+  val scriptOpt: Opts[Boolean] =
+    Opts
+      .flag("script", "Generate code for script storage")
+      .map(_ => true)
+      .withDefault(false)
+
   lazy val versionStr: String =
     Version.version
 
