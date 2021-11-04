@@ -195,7 +195,7 @@ object AppOpts {
 
   val scriptOpt: Opts[Boolean] =
     Opts
-      .flag("script", "Generate code for script storage. Will ignore other options")
+      .flag("scheduled", "Generate air code for script storage. Without error handling wrappers and hops on relay. Will ignore other options")
       .map(_ => true)
       .withDefault(false)
 
