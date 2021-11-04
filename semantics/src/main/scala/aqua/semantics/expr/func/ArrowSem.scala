@@ -37,9 +37,7 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
       )
       .flatMap((arrowType: ArrowType) =>
         // Create local variables
-        expr.arrowTypeExpr.args
-          .map(_._1)
-          .flatten
+        expr.arrowTypeExpr.args.flatMap(_._1)
           .zip(
             arrowType.domain.toList
           )

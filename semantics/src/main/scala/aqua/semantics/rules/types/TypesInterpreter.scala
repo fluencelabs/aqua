@@ -1,19 +1,18 @@
 package aqua.semantics.rules.types
 
 import aqua.model.{LambdaModel, ValueModel}
-import aqua.parser.lexer.{ArrowTypeToken, CustomTypeToken, LambdaOp, Name, Token, TypeToken, Value}
+import aqua.parser.lexer.*
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, ProductType, StructType, Type}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, State}
+import cats.instances.list.*
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.apply.*
-import cats.syntax.applicative.*
 import cats.syntax.traverse.*
-import cats.instances.list.*
-import cats.~>
-import cats.Applicative
+import cats.{Applicative, ~>}
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -25,7 +24,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
   val stack = new StackInterpreter[S, X, TypesState[S], TypesState.Frame[S]](
     GenLens[TypesState[S]](_.stack)
   )
-  import stack.{getState, mapStackHead, mapStackHeadE, modify, report, setState}
+  import stack.*
 
   type ST[A] = State[X, A]
 
@@ -218,7 +217,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
                       false
                     )
                   )
-                else Right(returnValue :: a)
+                else Right(a :+ returnValue)
               }
           }
           .map(res => frame.copy(retVals = Some(res)) -> true)
