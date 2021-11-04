@@ -17,7 +17,7 @@ case class AliasExpr[F[_]](name: CustomTypeToken[F], target: TypeToken[F])
 
 object AliasExpr extends Expr.Leaf {
 
-  override val p: Parser[AliasExpr[Span.F]] =
+  override val p: Parser[AliasExpr[Span.S]] =
     ((`alias` *> ` ` *> CustomTypeToken.ct <* ` : `) ~ TypeToken.`typedef`).map {
       case (name, target) =>
         AliasExpr(name, target)

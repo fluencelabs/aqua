@@ -20,6 +20,6 @@ case class ReturnExpr[F[_]](values: NonEmptyList[Value[F]])
 
 object ReturnExpr extends Expr.Leaf {
 
-  override val p: Parser[ReturnExpr[Span.F]] =
+  override val p: Parser[ReturnExpr[Span.S]] =
     (`<-` *> ` ` *> comma(Value.`value`)).map(ReturnExpr(_))
 }

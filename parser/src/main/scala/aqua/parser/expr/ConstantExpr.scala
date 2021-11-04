@@ -22,17 +22,17 @@ case class ConstantExpr[F[_]](
 
 object ConstantExpr extends Expr.Leaf {
   
-  private val constName: P[Name[Span.F]] =
+  private val constName: P[Name[Span.S]] =
     `const` *> ` ` *> Name.upper.withContext("Constant's names must be in UPPERCASE") <* ` `
   
 
-  override val p: P[ConstantExpr[Span.F]] =
+  override val p: P[ConstantExpr[Span.S]] =
     (((constName ~ `?`.?).with1 <* `=` <* ` `) ~ Value.`value`)
     .map { case ((name, mark), value) =>
       ConstantExpr(name, value, mark.nonEmpty)
     }
 
-  val onlyLiteral: P[(Name[Span.F], Literal[Span.F])] =
+  val onlyLiteral: P[(Name[Span.S], Literal[Span.S])] =
     ((((Name
       .upper <* ` `) ~ `?`.?).with1 <* `=` <* ` `) ~ Value.literal).map {
       case ((name, _), value) =>

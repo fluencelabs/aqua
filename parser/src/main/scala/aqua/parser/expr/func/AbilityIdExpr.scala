@@ -20,7 +20,7 @@ case class AbilityIdExpr[F[_]](ability: Ability[F], id: Value[F])
 
 object AbilityIdExpr extends Expr.Leaf {
 
-  override val p: P[AbilityIdExpr[Span.F]] =
+  override val p: P[AbilityIdExpr[Span.S]] =
     ((Ability.dotted <* ` `) ~ Value.`value`).map { case (ability, id) =>
       AbilityIdExpr(ability, id)
     }

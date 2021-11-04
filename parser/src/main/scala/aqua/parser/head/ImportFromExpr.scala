@@ -23,7 +23,7 @@ case class ImportFromExpr[F[_]](
 
 object ImportFromExpr extends HeaderExpr.Leaf {
 
-  override val p: Parser[HeaderExpr[Span.F]] =
+  override val p: Parser[HeaderExpr[Span.S]] =
     (`import` *> FromExpr.importFrom.surroundedBy(` `) ~ Value.string).map {
       case (imports, filename) => ImportFromExpr(imports, filename)
     }

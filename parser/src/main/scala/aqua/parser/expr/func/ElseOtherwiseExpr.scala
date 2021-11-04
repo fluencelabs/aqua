@@ -7,7 +7,7 @@ import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import cats.parse.Parser
-import cats.{Comonad, ~>}
+import cats.{~>, Comonad}
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
@@ -19,6 +19,6 @@ object ElseOtherwiseExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Lexem] = ForExpr.validChildren
 
-  override val p: Parser[ElseOtherwiseExpr[Span.F]] =
-    (`else` | `otherwise`).lift.map(Token.lift[Span.F, Unit](_)).map(ElseOtherwiseExpr(_))
+  override val p: Parser[ElseOtherwiseExpr[Span.S]] =
+    (`else` | `otherwise`).lift.map(Token.lift[Span.S, Unit](_)).map(ElseOtherwiseExpr(_))
 }

@@ -21,7 +21,7 @@ object ServiceExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Lexem] = ArrowTypeExpr :: Nil
 
-  override val p: Parser[ServiceExpr[Span.F]] =
+  override val p: Parser[ServiceExpr[Span.S]] =
     (`service` *> ` ` *> Ability.ab ~ Value.`value`.between(`(`, `)`).backtrack.?).map {
       case (name, id) =>
         ServiceExpr(name, id)

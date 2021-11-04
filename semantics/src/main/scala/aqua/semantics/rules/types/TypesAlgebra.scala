@@ -1,9 +1,10 @@
 package aqua.semantics.rules.types
 
-import aqua.model.LambdaModel
-import aqua.parser.lexer._
+import aqua.model.{LambdaModel, ValueModel}
+import aqua.parser.lexer.*
 import aqua.types.{ArrowType, Type}
 import cats.data.NonEmptyMap
+import cats.data.NonEmptyList
 
 trait TypesAlgebra[S[_], Alg[_]] {
 
@@ -29,4 +30,12 @@ trait TypesAlgebra[S[_], Alg[_]] {
   def expectNoExport(token: Token[S]): Alg[Unit]
 
   def checkArgumentsNumber(token: Token[S], expected: Int, givenNum: Int): Alg[Boolean]
+
+  def beginArrowScope(token: ArrowTypeToken[S]): Alg[ArrowType]
+
+  // Check return types
+  def checkArrowReturn(values: NonEmptyList[(Value[S], ValueModel)]): Alg[Boolean]
+
+  // End scope; if return was expected but not checked, fail
+  def endArrowScope(token: Token[S]): Alg[List[ValueModel]]
 }

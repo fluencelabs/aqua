@@ -17,7 +17,12 @@ object FileSpan {
 
   case class Focus(name: String, locationMap: Eval[LocationMap], ctx: Int, spanFocus: Span.Focus) {
 
-    def toConsoleStr(errorType: String, msgs: List[String], onLeft: String, onRight: String = Console.RESET): String =
+    def toConsoleStr(
+      errorType: String,
+      msgs: List[String],
+      onLeft: String,
+      onRight: String = Console.RESET
+    ): String =
       onLeft + "---- " + errorType + ": " + s"$name:${spanFocus.line._1 + 1}:${spanFocus.column + 1}" + onRight +
         spanFocus.toConsoleStr(
           msgs,
@@ -41,13 +46,13 @@ object FileSpan {
     private val memoizedLocationMap = Eval.later(LocationMap(source)).memoize
 
     override def lift[T](p: P[T]): P[F[T]] = {
-      implicitly[LiftParser[Span.F]].lift(p).map { case (span, value) =>
+      implicitly[LiftParser[Span.S]].lift(p).map { case (span, value) =>
         (FileSpan(name, memoizedLocationMap, span), value)
       }
     }
 
     override def lift0[T](p0: Parser0[T]): Parser0[(FileSpan, T)] = {
-      implicitly[LiftParser[Span.F]].lift0(p0).map { case (span, value) =>
+      implicitly[LiftParser[Span.S]].lift0(p0).map { case (span, value) =>
         (FileSpan(name, memoizedLocationMap, span), value)
       }
     }

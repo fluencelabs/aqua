@@ -24,16 +24,16 @@ object HeadExpr {
   def headExprs: List[HeaderExpr.Companion] =
     UseFromExpr :: UseExpr :: ImportFromExpr :: ImportExpr :: ExportExpr :: Nil
 
-  val ast: P0[Ast.Head[Span.F]] =
+  val ast: P0[Ast.Head[Span.S]] =
     (P.unit.lift0.map(Token.lift) ~ ((ModuleExpr.p <* ` \n+`).? ~
       P.repSep0(P.oneOf(headExprs.map(_.ast.backtrack)), ` \n+`).map(Chain.fromSeq))
       .surroundedBy(` \n+`.?)
       .?).map {
       case (p, Some((maybeMod, exprs))) =>
         Cofree(
-          maybeMod.getOrElse(HeadExpr[Span.F](p)),
+          maybeMod.getOrElse(HeadExpr[Span.S](p)),
           Eval.now(exprs)
         )
-      case (p, None) => Cofree(HeadExpr[Span.F](p), Eval.now(Chain.nil))
+      case (p, None) => Cofree(HeadExpr[Span.S](p), Eval.now(Chain.nil))
     }
 }

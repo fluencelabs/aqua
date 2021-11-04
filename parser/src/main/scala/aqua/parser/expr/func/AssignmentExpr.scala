@@ -19,7 +19,7 @@ case class AssignmentExpr[F[_]](
 
 object AssignmentExpr extends Expr.Leaf {
 
-  override val p: P[AssignmentExpr[Span.F]] =
+  override val p: P[AssignmentExpr[Span.S]] =
     ((Name.p <* ` = `).with1 ~ Value.`value`).map { case (variable, value) =>
       AssignmentExpr(variable, value)
     }

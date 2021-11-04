@@ -21,6 +21,6 @@ object TryExpr extends Expr.AndIndented {
   override def validChildren: List[Expr.Lexem] =
     IfExpr.validChildren
 
-  override val p: P[TryExpr[Span.F]] =
-    `try`.lift.map(Token.lift[Span.F, Unit](_)).map(TryExpr(_))
+  override val p: P[TryExpr[Span.S]] =
+    `try`.lift.map(Token.lift[Span.S, Unit](_)).map(TryExpr(_))
 }

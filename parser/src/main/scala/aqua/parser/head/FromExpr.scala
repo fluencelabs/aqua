@@ -24,11 +24,11 @@ object FromExpr {
 
   type NameOrAbAs[F[_]] = Either[Name.As[F], Ability.As[F]]
 
-  val nameOrAbAs: P[NameOrAbAs[Span.F]] =
+  val nameOrAbAs: P[NameOrAbAs[Span.S]] =
     Name.nameAs.map(Left(_)) | Ability.abAs.map(Right(_))
 
-  val importFrom: P[NonEmptyList[NameOrAbAs[Span.F]]] =
-      comma[NameOrAbAs[Span.F]](nameOrAbAs) <* ` ` <* `from`
+  val importFrom: P[NonEmptyList[NameOrAbAs[Span.S]]] =
+      comma[NameOrAbAs[Span.S]](nameOrAbAs) <* ` ` <* `from`
 
   def show[F[_]](ne: NonEmptyList[NameOrAbAs[F]]): String =
     ne.toList.map(_.fold(

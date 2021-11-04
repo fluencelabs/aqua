@@ -21,7 +21,7 @@ case class PushToStreamExpr[F[_]](
 
 object PushToStreamExpr extends Expr.Leaf {
 
-  override val p: P[PushToStreamExpr[Span.F]] =
+  override val p: P[PushToStreamExpr[Span.S]] =
     ((Name.p <* ` <<- `).with1 ~ Value.`value`).map { case (variable, value) =>
       PushToStreamExpr(variable, value)
     }

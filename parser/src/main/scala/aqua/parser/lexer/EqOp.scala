@@ -22,6 +22,6 @@ case class EqOp[F[_]: Comonad](eq: F[Boolean]) extends Token[F] {
 
 object EqOp {
 
-  val p: P[EqOp[Span.F]] =
+  val p: P[EqOp[Span.S]] =
     (`eqs`.as(true).lift | `neq`.as(false).lift).map(EqOp(_))
 }

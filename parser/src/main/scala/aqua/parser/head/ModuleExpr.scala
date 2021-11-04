@@ -32,16 +32,16 @@ object ModuleExpr extends HeaderExpr.Leaf {
 
   type NameOrAb[F[_]] = Either[Name[F], Ability[F]]
 
-  val nameOrAb: Parser[NameOrAb[Span.F]] =
+  val nameOrAb: Parser[NameOrAb[Span.S]] =
     Name.p.map(Left(_)) | Ability.ab.map(Right(_))
 
-  val nameOrAbList: Parser[List[NameOrAb[Span.F]]] =
-    comma[NameOrAb[Span.F]](nameOrAb).map(_.toList)
+  val nameOrAbList: Parser[List[NameOrAb[Span.S]]] =
+    comma[NameOrAb[Span.S]](nameOrAb).map(_.toList)
 
-  val nameOrAbListOrAll: Parser[Either[List[NameOrAb[Span.F]], Token[Span.F]]] =
+  val nameOrAbListOrAll: Parser[Either[List[NameOrAb[Span.S]], Token[Span.S]]] =
     nameOrAbList.map(Left(_)) | `star`.lift.map(Token.lift(_)).map(Right(_))
 
-  override val p: Parser[ModuleExpr[Span.F]] =
+  override val p: Parser[ModuleExpr[Span.S]] =
     (`module` *> ` ` *> Ability.dotted ~
       (` declares ` *> nameOrAbListOrAll).?).map {
       case (name, None) =>

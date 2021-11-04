@@ -17,9 +17,8 @@ case class ArrowTypeExpr[F[_]](name: Name[F], `type`: ArrowTypeToken[F])
 
 object ArrowTypeExpr extends Expr.Leaf {
 
-  override val p: Parser[ArrowTypeExpr[Span.F]] =
-    (Name
-      .p ~ ((` : ` *> ArrowTypeToken.`arrowdef`(
+  override val p: Parser[ArrowTypeExpr[Span.S]] =
+    (Name.p ~ ((` : ` *> ArrowTypeToken.`arrowdef`(
       DataTypeToken.`datatypedef`
     )) | ArrowTypeToken.`arrowWithNames`(DataTypeToken.`datatypedef`))).map { case (name, t) =>
       ArrowTypeExpr(name, t)

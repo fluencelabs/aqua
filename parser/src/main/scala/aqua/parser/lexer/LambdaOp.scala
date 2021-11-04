@@ -42,21 +42,21 @@ case class IntoArray[F[_]: Functor](override val unit: F[Unit]) extends LambdaOp
 
 object LambdaOp {
 
-  private val parseField: P[LambdaOp[Span.F]] =
+  private val parseField: P[LambdaOp[Span.S]] =
     (`.` *> `name`).lift.map(IntoField(_))
 
-  private val parseArr: P[LambdaOp[Span.F]] = `*`.lift.map(IntoArray(_))
+  private val parseArr: P[LambdaOp[Span.S]] = `*`.lift.map(IntoArray(_))
 
   private val nonNegativeIntP0: P0[Int] =
     Numbers.nonNegativeIntString.map(_.toInt).?.map(_.getOrElse(0))
 
-  private val parseIdx: P[LambdaOp[Span.F]] =
+  private val parseIdx: P[LambdaOp[Span.S]] =
     (exclamation *> nonNegativeIntP0).lift.map(IntoIndex(_))
 
-  private val parseOp: P[LambdaOp[Span.F]] =
+  private val parseOp: P[LambdaOp[Span.S]] =
     P.oneOf(parseField.backtrack :: parseArr :: parseIdx :: Nil)
 
-  val ops: P[NonEmptyList[LambdaOp[Span.F]]] =
+  val ops: P[NonEmptyList[LambdaOp[Span.S]]] =
     parseOp.rep
 
 }

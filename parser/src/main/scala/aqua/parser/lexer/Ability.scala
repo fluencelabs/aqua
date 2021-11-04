@@ -22,12 +22,12 @@ case class Ability[F[_]: Comonad](name: F[String]) extends Token[F] {
 object Ability {
   type As[F[_]] = (Ability[F], Option[Ability[F]])
 
-  val ab: P[Ability[Span.F]] =
+  val ab: P[Ability[Span.S]] =
     `Class`.lift.map(Ability(_))
 
-  val dotted: P[Ability[Span.F]] =
+  val dotted: P[Ability[Span.S]] =
     P.repSep(`Class`, `.`).map(_.toList.mkString(".")).lift.map(Ability(_))
 
-  val abAs: P[As[Span.F]] =
+  val abAs: P[As[Span.S]] =
     asOpt(ab)
 }

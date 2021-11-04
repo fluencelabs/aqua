@@ -18,6 +18,7 @@ import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.traverse.*
 import cats.{Applicative, Monad}
 
 class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
@@ -27,119 +28,48 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
   def before[Alg[_]: Monad](implicit
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
-    V: ValuesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
   ): Alg[ArrowType] =
-    A.beginScope(arrowTypeExpr) >> Applicative[Alg]
-      .product(
-        // Collect argument types, define local variables
-        arrowTypeExpr.args
-          .foldLeft(
-            // Begin scope -- for mangling
-            N.beginScope(arrowTypeExpr).as[Chain[(String, Type)]](Chain.empty)
-          ) {
-            case (f, (Some(argName), argType)) =>
-              // Resolve arg type, remember it
-              f.flatMap(acc =>
-                T.resolveType(argType).flatMap {
-                  case Some(t: ArrowType) =>
-                    N.defineArrow(argName, t, isRoot = false).as(acc.append(argName.value -> t))
-                  case Some(t) =>
-                    N.define(argName, t).as(acc.append(argName.value -> t))
-                  case None =>
-                    acc.pure[Alg]
-                }
-              )
-            // Unnamed argument
-            case (f, _) => f
-          }
-          .map(_.toList),
-        // Resolve return type
-        arrowTypeExpr.res.foldLeft[Alg[List[Type]]](Nil.pure[Alg])((f, t) =>
-          f.flatMap(ts => T.resolveType(t).map(ts.prependedAll))
-        )
+    // Begin scope -- for mangling
+    A.beginScope(arrowTypeExpr) *> N.beginScope(arrowTypeExpr) *> T
+      .beginArrowScope(
+        arrowTypeExpr
       )
-      .map(argsAndRes =>
-        ArrowType(ProductType.labelled(argsAndRes._1), ProductType(argsAndRes._2.reverse))
-      )
-
-  def checkReturnValueCreateModel[Alg[_]: Monad](
-    funcArrow: ArrowType,
-    retValue: NonEmptyList[ValueModel],
-    body: FuncOp
-  )(implicit T: TypesAlgebra[S, Alg], V: ValuesAlgebra[S, Alg]): Alg[Model] =
-    if (
-      funcArrow.codomain.length != retValue.length || retValue.length != expr.arrowTypeExpr.res.length
-    )
-      Model
-        .error(
-          s"Number of return types does not match: ${arrowTypeExpr.res} declared, ${retValue} returned"
-        )
-        .pure[Alg]
-    else {
-      funcArrow.codomain.toList
-        .lazyZip(retValue.toList)
-        .lazyZip(expr.arrowTypeExpr.res)
-        .map(identity)
-        .foldLeft[Alg[List[ValueModel]]](Nil.pure[Alg]) {
-          case (acc, (returnType, returnValue, token)) =>
-            acc.flatMap { a =>
-              T.ensureTypeMatches(token, returnType, returnValue.lastType)
-                .as(returnValue :: a)
-            }
-        }
-        .map(_.reverse)
-        .map(
-          ArrowModel(
-            funcArrow,
-            _,
-            // TODO: wrap with local on...via...
-            body
+      .flatMap((arrowType: ArrowType) =>
+        // Create local variables
+        expr.arrowTypeExpr.args
+          .map(_._1)
+          .flatten
+          .zip(
+            arrowType.domain.toList
           )
-        )
-    }
+          .traverse {
+            case (argName, t: ArrowType) =>
+              N.defineArrow(argName, t, isRoot = false)
+            case (argName, t) =>
+              N.define(argName, t)
+          }
+          .as(arrowType)
+      )
 
-  // TODO: handle all kinds of errors very carefully
   def after[Alg[_]: Monad](funcArrow: ArrowType, bodyGen: Model)(implicit
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
-    V: ValuesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
   ): Alg[Model] =
-    (bodyGen match {
-      case m: FuncOp if arrowTypeExpr.res.isEmpty =>
-        ArrowModel(funcArrow, Nil, m).pure[Alg]
-
-      case m @ FuncOp(Cofree(ReturnTag(retValues), _)) =>
-        checkReturnValueCreateModel(funcArrow, retValues, m)
-
-      case m @ FuncOp(Cofree(SeqTag, tail)) =>
-        tail.value.toList.lastOption match {
-          case Some(Cofree(ReturnTag(retValues), _)) =>
-            checkReturnValueCreateModel(funcArrow, retValues, m)
-          case _ =>
-            Model
-              .error(
-                "Expected last expression to be <- value, ..."
-              )
-              .pure[Alg]
-        }
-      case m: FuncOp =>
-        // TODO: error with pointer on arrow's return types declaration telling that return value is expected
-        Model
-          .error(
-            "Return type is defined for the arrow, but nothing returned. Use `<- value, ...` as the last expression inside function body."
-          )
-          .pure[Alg]
-      case m =>
-        Model.error("Arrow body is not a funcOp, it's " + m).pure[Alg]
-    }) <* A.endScope() <* N
-      .endScope()
+    A.endScope() *> N.endScope() *> T.endArrowScope(expr.arrowTypeExpr).map { retValues =>
+      bodyGen match {
+        case m: FuncOp =>
+          // TODO: wrap with local on...via...
+          ArrowModel(funcArrow, retValues, m)
+        case m =>
+          m
+      }
+    }
 
   def program[Alg[_]: Monad](implicit
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
-    V: ValuesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
   ): Prog[Alg, Model] =
     Prog.around(

@@ -33,7 +33,7 @@ object OnExpr extends Expr.AndIndented {
       Expr.defer(CatchExpr) ::
       Nil
 
-  override def p: P[OnExpr[Span.F]] = {
+  override def p: P[OnExpr[Span.S]] = {
     (`on` *> ` ` *> Value
       .`value` ~ (` ` *> `via` *> ` ` *> Value.`value`).rep0).map { case (peerId, via) =>
       OnExpr(peerId, via)

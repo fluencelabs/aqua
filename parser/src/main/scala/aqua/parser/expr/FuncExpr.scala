@@ -24,6 +24,6 @@ case class FuncExpr[F[_]](
 object FuncExpr extends Expr.Prefix(` `.?) {
   override def continueWith: List[Expr.Lexem] = ArrowExpr :: Nil
 
-  override val p: Parser[FuncExpr[Span.F]] =
+  override val p: Parser[FuncExpr[Span.S]] =
     (`func` *> ` ` *> Name.p).map(FuncExpr(_))
 }

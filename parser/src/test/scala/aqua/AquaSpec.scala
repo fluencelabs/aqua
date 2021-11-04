@@ -2,14 +2,26 @@ package aqua
 
 import aqua.AquaSpec.spanToId
 import aqua.parser.expr.*
-import aqua.parser.expr.func.{AbilityIdExpr, ArrowExpr, AssignmentExpr, CallArrowExpr, ClosureExpr, ElseOtherwiseExpr, ForExpr, IfExpr, OnExpr, PushToStreamExpr, ReturnExpr}
+import aqua.parser.expr.func.{
+  AbilityIdExpr,
+  ArrowExpr,
+  AssignmentExpr,
+  CallArrowExpr,
+  ClosureExpr,
+  ElseOtherwiseExpr,
+  ForExpr,
+  IfExpr,
+  OnExpr,
+  PushToStreamExpr,
+  ReturnExpr
+}
 import aqua.parser.head.FromExpr.NameOrAbAs
 import aqua.parser.head.{FromExpr, UseFromExpr}
 import aqua.parser.lexer.*
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.LiteralType.{bool, number, string}
 import aqua.types.{LiteralType, ScalarType}
-import cats.{Id, ~>}
+import cats.{~>, Id}
 import org.scalatest.EitherValues
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
@@ -21,8 +33,9 @@ import scala.language.implicitConversions
 
 object AquaSpec {
 
-  def spanToId: Span.F ~> Id = new (Span.F ~> Id) {
-    override def apply[A](span: Span.F[A]): Id[A] = {
+  def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
+
+    override def apply[A](span: Span.S[A]): Id[A] = {
       span._2
     }
   }
@@ -78,8 +91,11 @@ object AquaSpec {
 
 trait AquaSpec extends EitherValues {
 
-  def fromExprToId(fromExpr: NameOrAbAs[Span.F]): NameOrAbAs[Id] =
-    fromExpr.bimap(a => (a._1.mapK(spanToId), a._2.map(_.mapK(spanToId))), a => (a._1.mapK(spanToId), a._2.map(_.mapK(spanToId))))
+  def fromExprToId(fromExpr: NameOrAbAs[Span.S]): NameOrAbAs[Id] =
+    fromExpr.bimap(
+      a => (a._1.mapK(spanToId), a._2.map(_.mapK(spanToId))),
+      a => (a._1.mapK(spanToId), a._2.map(_.mapK(spanToId)))
+    )
 
   def parseNameOrAbs(str: String): NameOrAbAs[Id] =
     fromExprToId(FromExpr.nameOrAbAs.parseAll(str).value)
@@ -136,9 +152,9 @@ trait AquaSpec extends EitherValues {
   def closureExpr(str: String): ClosureExpr[Id] = ClosureExpr.p.parseAll(str).value.mapK(spanToId)
   def arrowExpr(str: String): ArrowExpr[Id] = ArrowExpr.p.parseAll(str).value.mapK(spanToId)
 
+  val nat = new (Span.S ~> Id) {
 
-  val nat = new (Span.F ~> Id) {
-    override def apply[A](span: Span.F[A]): A = {
+    override def apply[A](span: Span.S[A]): A = {
       span._2
     }
   }

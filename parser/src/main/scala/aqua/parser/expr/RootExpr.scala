@@ -31,35 +31,35 @@ object RootExpr extends Expr.Companion {
     }
   }
 
-  private lazy val linesParser: P[NonEmptyList[ValidatedNec[ParserError[Span.F], Tree[Span.F]]]] =
+  private lazy val linesParser: P[NonEmptyList[ValidatedNec[ParserError[Span.S], Tree[Span.S]]]] =
     P.repSep(
       P.oneOf(RootExpr.validChildren.map(_.ast)),
       ` \n+`
     ).surroundedBy(` \n+`.?)
 
-  private val rootToken: P0[Token[Span.F]] =
-    P.unit.lift0.map(Token.lift[Span.F, Unit](_))
+  private val rootToken: P0[Token[Span.S]] =
+    P.unit.lift0.map(Token.lift[Span.S, Unit](_))
 
-  private def parserSchema: P[(Token[Span.F], (Chain[ParserError[Span.F]], Chain[Tree[Span.F]]))] =
+  private def parserSchema: P[(Token[Span.S], (Chain[ParserError[Span.S]], Chain[Tree[Span.S]]))] =
     rootToken.with1 ~
       linesParser.map(l => gatherResults(l))
 
-  def empty: P0[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
+  def empty: P0[ValidatedNec[ParserError[Span.S], Tree[Span.S]]] =
     (rootToken <* (Token.` \n*` *> Token.` `.? *> P.end))
-      .map(point => Validated.validNec(Cofree(RootExpr[Span.F](point), Eval.now(Chain.empty))))
+      .map(point => Validated.validNec(Cofree(RootExpr[Span.S](point), Eval.now(Chain.empty))))
 
   // Could handle empty body
-  def ast0: P0[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
+  def ast0: P0[ValidatedNec[ParserError[Span.S], Tree[Span.S]]] =
     // `empty` is first to handle errors from `ast` at a first place
     empty.backtrack | ast
 
-  override val ast: P[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
+  override val ast: P[ValidatedNec[ParserError[Span.S], Tree[Span.S]]] =
     parserSchema
         .map { case (point, (errs, trees)) =>
       NonEmptyChain
         .fromChain(errs)
-        .fold[ValidatedNec[ParserError[Span.F], Tree[Span.F]]](
-          Validated.validNec(Cofree(RootExpr[Span.F](point), Eval.now(trees)))
+        .fold[ValidatedNec[ParserError[Span.S], Tree[Span.S]]](
+          Validated.validNec(Cofree(RootExpr[Span.S](point), Eval.now(trees)))
         )(Validated.invalid)
     }
 }

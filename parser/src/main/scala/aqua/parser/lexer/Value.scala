@@ -33,24 +33,24 @@ case class Literal[F[_]: Comonad](valueToken: F[String], ts: LiteralType) extend
 
 object Value {
 
-  val varLambda: P[VarLambda[Span.F]] =
+  val varLambda: P[VarLambda[Span.S]] =
     (Name.dotted ~ LambdaOp.ops.?).map { case (n, l) ⇒
-      VarLambda(n, l.fold[List[LambdaOp[Span.F]]](Nil)(_.toList))
+      VarLambda(n, l.fold[List[LambdaOp[Span.S]]](Nil)(_.toList))
     }
 
-  val bool: P[Literal[Span.F]] =
+  val bool: P[Literal[Span.S]] =
     P.oneOf(
       ("true" :: "false" :: Nil)
         .map(t ⇒ P.string(t).lift.map(fu => Literal(fu.as(t), LiteralType.bool)))
     ) <* P.not(`anum_*`)
 
-  val initPeerId: P[Literal[Span.F]] =
+  val initPeerId: P[Literal[Span.S]] =
     `%init_peer_id%`.string.lift.map(Literal(_, LiteralType.string))
 
   val minus = P.char('-')
   val dot = P.char('.')
 
-  val num: P[Literal[Span.F]] =
+  val num: P[Literal[Span.S]] =
     (minus.?.with1 ~ Numbers.nonNegativeIntString).lift.map(fu =>
       fu.extract match {
         case (Some(_), n) ⇒ Literal(fu.as(s"-$n"), LiteralType.signed)
@@ -58,21 +58,21 @@ object Value {
       }
     )
 
-  val float: P[Literal[Span.F]] =
+  val float: P[Literal[Span.S]] =
     (minus.?.with1 ~ (Numbers.nonNegativeIntString <* dot) ~ Numbers.nonNegativeIntString).string.lift
       .map(Literal(_, LiteralType.float))
 
   val charsWhileQuotes = P.charsWhile0(_ != '"')
 
   // TODO make more sophisticated escaping/unescaping
-  val string: P[Literal[Span.F]] =
+  val string: P[Literal[Span.S]] =
     (`"` *> charsWhileQuotes <* `"`).string.lift
       .map(Literal(_, LiteralType.string))
 
-  val literal: P[Literal[Span.F]] =
+  val literal: P[Literal[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
-  val `value`: P[Value[Span.F]] =
+  val `value`: P[Value[Span.S]] =
     P.oneOf(literal.backtrack :: initPeerId.backtrack :: varLambda :: Nil)
 
 }

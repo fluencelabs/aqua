@@ -18,7 +18,7 @@ object Parser extends scribe.Logging {
   lazy val spanParser = parserSchema
   import LiftParser.Implicits.idLiftParser
 
-  def parserSchema: P0[ValidatedNec[ParserError[Span.F], Ast[Span.F]]] = {
+  def parserSchema: P0[ValidatedNec[ParserError[Span.S], Ast[Span.S]]] = {
     logger.trace("creating schema...")
     val parser = (HeadExpr.ast ~ RootExpr.ast0).map { case (head, bodyMaybe) =>
       bodyMaybe.map(Ast(head, _))

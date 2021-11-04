@@ -25,16 +25,16 @@ object Name {
 
   type As[F[_]] = (Name[F], Option[Name[F]])
 
-  val p: P[Name[Span.F]] =
+  val p: P[Name[Span.S]] =
     `name`.lift.map(Name(_))
 
-  val upper: P[Name[Span.F]] =
+  val upper: P[Name[Span.S]] =
     NAME.lift.map(Name(_))
 
-  val dotted: P[Name[Span.F]] =
+  val dotted: P[Name[Span.S]] =
     ((`Class` ~ `.`).backtrack.rep0.?.with1 ~ P.oneOf(`name` :: NAME :: Nil)).string.lift
       .map(Name(_))
 
-  val nameAs: P[As[Span.F]] =
+  val nameAs: P[As[Span.S]] =
     asOpt(p)
 }

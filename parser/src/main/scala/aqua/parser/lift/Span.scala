@@ -86,28 +86,28 @@ object Span {
     }
   }
 
-  type F[T] = (Span, T)
+  type S[T] = (Span, T)
 
-  implicit object spanComonad extends Comonad[F] {
-    override def extract[A](x: F[A]): A = x._2
+  implicit object spanComonad extends Comonad[S] {
+    override def extract[A](x: S[A]): A = x._2
 
-    override def coflatMap[A, B](fa: F[A])(f: F[A] ⇒ B): F[B] = fa.copy(_2 = f(fa))
+    override def coflatMap[A, B](fa: S[A])(f: S[A] ⇒ B): S[B] = fa.copy(_2 = f(fa))
 
-    override def map[A, B](fa: F[A])(f: A ⇒ B): F[B] = fa.copy(_2 = f(fa._2))
+    override def map[A, B](fa: S[A])(f: A ⇒ B): S[B] = fa.copy(_2 = f(fa._2))
   }
 
   implicit class PToSpan[T](p: P[T]) {
-    def lift: P[Span.F[T]] = Span.spanLiftParser.lift(p)
+    def lift: P[Span.S[T]] = Span.spanLiftParser.lift(p)
   }
 
   implicit class P0ToSpan[T](p: Parser0[T]) {
-    def lift0: Parser0[Span.F[T]] = Span.spanLiftParser.lift0(p)
+    def lift0: Parser0[Span.S[T]] = Span.spanLiftParser.lift0(p)
   }
 
 
-  implicit object spanLiftParser extends LiftParser[F] {
+  implicit object spanLiftParser extends LiftParser[S] {
 
-    override def lift[T](p: P[T]): P[F[T]] =
+    override def lift[T](p: P[T]): P[S[T]] =
       (P.index.with1 ~ p ~ P.index).map { case ((s, v), e) ⇒
         (Span(s, e), v)
       }

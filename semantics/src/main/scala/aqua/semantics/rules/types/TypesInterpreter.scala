@@ -1,31 +1,33 @@
 package aqua.semantics.rules.types
 
-import aqua.model.LambdaModel
-import aqua.parser.lexer.{ArrowTypeToken, CustomTypeToken, LambdaOp, Name, Token, TypeToken}
-import aqua.semantics.rules.ReportError
-import aqua.types.{ArrowType, StructType, Type}
+import aqua.model.{LambdaModel, ValueModel}
+import aqua.parser.lexer.{ArrowTypeToken, CustomTypeToken, LambdaOp, Name, Token, TypeToken, Value}
+import aqua.semantics.rules.{ReportError, StackInterpreter}
+import aqua.types.{ArrowType, ProductType, StructType, Type}
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{NonEmptyMap, State}
+import cats.data.{Chain, NonEmptyList, NonEmptyMap, State}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.apply.*
+import cats.syntax.applicative.*
+import cats.syntax.traverse.*
+import cats.instances.list.*
 import cats.~>
+import cats.Applicative
 import monocle.Lens
+import monocle.macros.GenLens
 
 import scala.collection.immutable.SortedMap
 
 class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: ReportError[S, X])
     extends TypesAlgebra[S, State[X, *]] {
 
+  val stack = new StackInterpreter[S, X, TypesState[S], TypesState.Frame[S]](
+    GenLens[TypesState[S]](_.stack)
+  )
+  import stack.{getState, mapStackHead, mapStackHeadE, modify, report, setState}
+
   type ST[A] = State[X, A]
-
-  protected def getState: ST[TypesState[S]] = State.get.map(lens.get)
-  protected def setState(st: TypesState[S]): ST[Unit] = State.modify(s => lens.replace(st)(s))
-
-  protected def report(t: Token[S], hint: String): ST[Unit] =
-    State.modify(error(_, t, hint))
-
-  protected def modify(f: TypesState[S] => TypesState[S]): ST[Unit] =
-    State.modify(lens.modify(f))
 
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
     getState.map(_.resolveTypeToken(token)).flatMap {
@@ -129,4 +131,114 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         s"Number of arguments doesn't match the function type, expected: ${expected}, given: ${givenNum}"
       ).as(false)
 
+  override def beginArrowScope(token: ArrowTypeToken[S]): State[X, ArrowType] =
+    Applicative[ST]
+      .product(
+        // Collect argument types
+        token.args
+          .foldLeft(Chain.empty[(String, Type)].pure[ST]) {
+            case (f, (Some(argName), argType)) =>
+              f.flatMap(acc =>
+                // Resolve arg type, remember it
+                resolveType(argType).map {
+                  case Some(t) => acc.append(argName.value -> t)
+                  case None => acc
+                }
+              )
+            // Unnamed argument
+            case (f, _) => f
+          }
+          .map(_.toList)
+          .map(ProductType.labelled),
+        // Resolve return type
+        token.res
+          .foldLeft[ST[List[Type]]](Nil.pure[ST])((f, t) =>
+            f.flatMap(ts => resolveType(t).map(ts.prependedAll))
+          )
+          .map(_.reverse)
+          .map(ProductType(_))
+      )
+      .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2))
+      .flatMap(at => stack.beginScope(TypesState.Frame(token, at, None)).as(at))
+
+  override def checkArrowReturn(
+    values: NonEmptyList[(Value[S], ValueModel)]
+  ): State[X, Boolean] =
+    mapStackHeadE[Boolean](
+      report(values.head._1, "Fatal: checkArrowReturn has no matching beginArrowScope").as(false)
+    )((frame: TypesState.Frame[S]) =>
+      if (frame.retVals.nonEmpty)
+        Left(
+          (
+            values.head._1,
+            "Return expression was already used in scope; you can use only one Return in an arrow declaration, use conditional return pattern if you need to return based on condition",
+            false
+          )
+        )
+      else if (frame.token.res.isEmpty)
+        Left(
+          (
+            values.head._1,
+            "No return type declared for this arrow, please remove `<- ...` expression or add `-> ...` return type(s) declaration to the arrow",
+            false
+          )
+        )
+      else if (frame.token.res.drop(values.length).nonEmpty)
+        Left(
+          (
+            values.last._1,
+            s"Expected ${frame.token.res.drop(values.length).length} more values to be returned, see return type declaration",
+            false
+          )
+        )
+      else if (values.toList.drop(frame.token.res.length).nonEmpty)
+        Left(
+          (
+            values.toList.drop(frame.token.res.length).headOption.getOrElse(values.last)._1,
+            s"Too many values are returned from this arrow, this one is unexpected. Defined return type:  ${frame.arrowType.codomain}",
+            false
+          )
+        )
+      else {
+
+        frame.arrowType.codomain.toList
+          .lazyZip(values.toList)
+          .foldLeft[Either[(Token[S], String, Boolean), List[ValueModel]]](Right(Nil)) {
+            case (acc, (returnType, (token, returnValue))) =>
+              acc.flatMap { a =>
+                if (!returnType.acceptsValueOf(returnValue.lastType))
+                  Left(
+                    (
+                      values.toList
+                        .drop(frame.token.res.length)
+                        .headOption
+                        .getOrElse(values.last)
+                        ._1,
+                      s"Wrong value type, expected: ${returnType}, given: ${returnValue.lastType}",
+                      false
+                    )
+                  )
+                else Right(returnValue :: a)
+              }
+          }
+          .map(res => frame.copy(retVals = Some(res)) -> true)
+      }
+    )
+
+  override def endArrowScope(token: Token[S]): State[X, List[ValueModel]] =
+    mapStackHeadE[List[ValueModel]](
+      report(token, "Fatal: endArrowScope has no matching beginArrowScope").as(Nil)
+    )(frame =>
+      if (frame.token.res.isEmpty) {
+        Right(frame -> Nil)
+      } else if (frame.retVals.isEmpty) {
+        Left(
+          (
+            frame.token.res.headOption.getOrElse(frame.token),
+            "Return type is defined for the arrow, but nothing returned. Use `<- value, ...` as the last expression inside function body.",
+            Nil
+          )
+        )
+      } else Right(frame -> frame.retVals.getOrElse(Nil))
+    ) <* stack.endScope
 }

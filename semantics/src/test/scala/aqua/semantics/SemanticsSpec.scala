@@ -18,7 +18,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
   // use it to fix https://github.com/fluencelabs/aqua/issues/90
   "sem" should "create right model" in {
-    implicit val fileLift: LiftParser[Span.F] = Span.spanLiftParser
+    implicit val fileLift: LiftParser[Span.S] = Span.spanLiftParser
     val parser = Parser.parse(Parser.spanParser)
 
     val script =

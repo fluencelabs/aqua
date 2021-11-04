@@ -42,7 +42,7 @@ object ForExpr extends Expr.AndIndented {
       Expr.defer(CoExpr) ::
       Nil
 
-  override def p: P[ForExpr[Span.F]] =
+  override def p: P[ForExpr[Span.S]] =
     ((`for` *> ` ` *> Name.p <* ` <- `) ~ Value
       .`value` ~ (` ` *> (`par`.as(ParMode: Mode).lift | `try`.as(TryMode: Mode).lift)).?).map {
       case ((item, iterable), mode) =>

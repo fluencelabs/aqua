@@ -19,6 +19,6 @@ case class ImportExpr[F[_]](filename: Literal[F]) extends FilenameExpr[F] {
 
 object ImportExpr extends HeaderExpr.Leaf {
 
-  override val p: Parser[HeaderExpr[Span.F]] =
+  override val p: Parser[HeaderExpr[Span.S]] =
     `import` *> ` ` *> Value.string.map(ImportExpr(_))
 }

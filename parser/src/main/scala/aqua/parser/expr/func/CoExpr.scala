@@ -18,7 +18,7 @@ case class CoExpr[F[_]](point: Token[F]) extends Expr[F](CoExpr, point) {
 object CoExpr extends Expr.Prefix() {
   override def continueWith: List[Expr.Lexem] = ParExpr.continueWith
 
-  override val p: Parser[Expr[Span.F]] =
-    `co`.lift.map(Token.lift[Span.F, Unit](_)).map(CoExpr(_))
+  override val p: Parser[Expr[Span.S]] =
+    `co`.lift.map(Token.lift[Span.S, Unit](_)).map(CoExpr(_))
 
 }

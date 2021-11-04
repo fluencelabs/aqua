@@ -20,14 +20,14 @@ trait HeaderExpr[S[_]] {
 object HeaderExpr {
 
   trait Companion {
-    def p: P[HeaderExpr[Span.F]]
+    def p: P[HeaderExpr[Span.S]]
 
-    def ast: P[Ast.Head[Span.F]]
+    def ast: P[Ast.Head[Span.S]]
   }
 
   abstract class Leaf extends Companion {
 
-    override def ast: P[Ast.Head[Span.F]] =
-      p.map(Cofree[Chain, HeaderExpr[Span.F]](_, Eval.now(Chain.empty)))
+    override def ast: P[Ast.Head[Span.S]] =
+      p.map(Cofree[Chain, HeaderExpr[Span.S]](_, Eval.now(Chain.empty)))
   }
 }

@@ -29,23 +29,23 @@ object Expr {
 
   trait Companion {
 
-    def ast: P[ValidatedNec[ParserError[Span.F], Ast.Tree[Span.F]]]
+    def ast: P[ValidatedNec[ParserError[Span.S], Ast.Tree[Span.S]]]
 
   }
 
   trait Lexem extends Companion {
-    def p: P[Expr[Span.F]]
+    def p: P[Expr[Span.S]]
 
-    def readLine: P[Ast.Tree[Span.F]] =
-      p.map(Cofree[Chain, Expr[Span.F]](_, Eval.now(Chain.empty)))
+    def readLine: P[Ast.Tree[Span.S]] =
+      p.map(Cofree[Chain, Expr[Span.S]](_, Eval.now(Chain.empty)))
   }
 
   trait Leaf extends Lexem {
 
-    override def ast: P[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
+    override def ast: P[ValidatedNec[ParserError[Span.S], Tree[Span.S]]] =
       p.map(e =>
         Validated.validNec(
-          Cofree[Chain, Expr[Span.F]](
+          Cofree[Chain, Expr[Span.S]](
             e,
             Eval.now(Chain.empty)
           )
@@ -56,11 +56,11 @@ object Expr {
   def defer(companion: => Lexem): Lexem = new Lexem {
     private lazy val c = companion
 
-    override def readLine: P[Ast.Tree[Span.F]] = c.readLine
+    override def readLine: P[Ast.Tree[Span.S]] = c.readLine
 
-    override def p: P[Expr[Span.F]] = c.p
+    override def p: P[Expr[Span.S]] = c.p
 
-    override def ast: P[ValidatedNec[ParserError[Span.F], Ast.Tree[Span.F]]] =
+    override def ast: P[ValidatedNec[ParserError[Span.S], Ast.Tree[Span.S]]] =
       c.ast
   }
 
@@ -68,20 +68,20 @@ object Expr {
   // that will be parsed by `ast` method to a tree
   trait Block extends Lexem {
 
-    override def readLine: P[Ast.Tree[Span.F]] = super.readLine <* ` : `
+    override def readLine: P[Ast.Tree[Span.S]] = super.readLine <* ` : `
   }
 
   abstract class Prefix(sep: P0[Any] = ` `) extends Lexem {
     def continueWith: List[Lexem]
 
-    override def readLine: P[Ast.Tree[Span.F]] =
+    override def readLine: P[Ast.Tree[Span.S]] =
       ((super.readLine <* sep) ~ P.oneOf(continueWith.map(_.readLine.backtrack))).map {
         case (h, t) =>
 //          println("read prefixed line "+t)
           h.copy(tail = Eval.now(Chain.one(t)))
       }
 
-    override def ast: P[ValidatedNec[ParserError[Span.F], Tree[Span.F]]] =
+    override def ast: P[ValidatedNec[ParserError[Span.S], Tree[Span.S]]] =
       ((super.readLine <* sep) ~ P.oneOf(continueWith.map(_.ast.backtrack))).map {
         case (h, tm) =>
           tm.map(t => h.copy(tail = Eval.now(Chain.one(t))))
@@ -221,7 +221,7 @@ object Expr {
 
     }
 
-    override lazy val ast: P[ValidatedNec[ParserError[Span.F], Ast.Tree[Span.F]]] =
+    override lazy val ast: P[ValidatedNec[ParserError[Span.S], Ast.Tree[Span.S]]] =
       (readLine ~ (` \n+` *>
         (P.repSep(
           ` `.lift ~ P.oneOf(validChildren.map(_.readLine.backtrack)),

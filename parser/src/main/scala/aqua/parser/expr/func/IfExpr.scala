@@ -22,7 +22,7 @@ object IfExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Lexem] = ForExpr.validChildren
 
-  override val p: P[IfExpr[Span.F]] =
+  override val p: P[IfExpr[Span.S]] =
     (`if` *> ` ` *> Value.`value` ~ (` ` *> EqOp.p ~ (` ` *> Value.`value`)).?).map {
       case (left, Some((e, right))) =>
         IfExpr(left, e, right)

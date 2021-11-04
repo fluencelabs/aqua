@@ -18,6 +18,6 @@ object DataStructExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Lexem] = FieldTypeExpr :: Nil
 
-  override val p: Parser[DataStructExpr[Span.F]] =
+  override val p: Parser[DataStructExpr[Span.S]] =
     `data` *> ` ` *> CustomTypeToken.ct.map(DataStructExpr(_))
 }

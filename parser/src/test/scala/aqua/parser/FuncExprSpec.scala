@@ -61,10 +61,10 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   }
 
   def checkHeadGetTail(
-    tree: Cofree[Chain, Expr[Span.F]],
+    tree: Cofree[Chain, Expr[Span.S]],
     headCheck: Expr[Id],
     lengthCheck: Int
-  ): Chain[Cofree[Chain, Expr[Span.F]]] = {
+  ): Chain[Cofree[Chain, Expr[Span.S]]] = {
     tree.head.mapK(nat) should be(headCheck)
     val tail = tree.tailForced
     tail.length should be(lengthCheck)

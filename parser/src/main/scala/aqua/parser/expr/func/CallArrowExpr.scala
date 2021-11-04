@@ -29,7 +29,7 @@ case class CallArrowExpr[F[_]](
 
 object CallArrowExpr extends Expr.Leaf {
 
-  val ability: P0[Option[Ability[Span.F]]] = (Ability.dotted <* `.`).?
+  val ability: P0[Option[Ability[Span.S]]] = (Ability.dotted <* `.`).?
   val functionCallWithArgs = Name.p
     ~ comma0(Value.`value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
   val funcCall = ability.with1 ~ functionCallWithArgs
@@ -39,8 +39,8 @@ object CallArrowExpr extends Expr.Leaf {
       CallArrowExpr(Nil, ab, name, args)
   }
 
-  override val p: P[CallArrowExpr[Span.F]] = {
-    val variables: P0[Option[NonEmptyList[Name[Span.F]]]] = (comma(Name.p) <* ` <- `).backtrack.?
+  override val p: P[CallArrowExpr[Span.S]] = {
+    val variables: P0[Option[NonEmptyList[Name[Span.S]]]] = (comma(Name.p) <* ` <- `).backtrack.?
 
     (variables.with1 ~ funcCall.withContext("Only results of a function call can be written to a stream")
       ).map {

@@ -19,7 +19,7 @@ case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F])
 
 object FieldTypeExpr extends Expr.Leaf {
 
-  override val p: Parser[FieldTypeExpr[Span.F]] =
+  override val p: Parser[FieldTypeExpr[Span.S]] =
     ((Name.p <* ` : `) ~ DataTypeToken.`datatypedef`).map { case (name, t) =>
       FieldTypeExpr(name, t)
     }

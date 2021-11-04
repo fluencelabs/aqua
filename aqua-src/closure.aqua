@@ -7,7 +7,7 @@ service Srv("srv"):
   inside: -> ()
   trial: -> ()
 
-func smth() -> bool:
+func smth() -> bool, string:
   variable = "const"
   co on "x":
     Srv.trial()
@@ -18,4 +18,4 @@ func smth() -> bool:
   on "other":
     c <- closure()
     Srv.noop(c)
-  <- true
+  <- true, "", 12

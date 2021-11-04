@@ -39,7 +39,7 @@ object ArrowExpr extends Expr.AndIndented {
   override val validChildren: List[Expr.Lexem] =
     ReturnExpr :: funcChildren
 
-  override val p: Parser[ArrowExpr[Span.F]] =
+  override val p: Parser[ArrowExpr[Span.S]] =
     ArrowTypeToken
       .`arrowWithNames`(
         TypeToken.`typedef`
