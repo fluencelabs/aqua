@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.expr.ReturnExpr
+import aqua.parser.expr.func.ReturnExpr
 import cats.Id
 import cats.data.NonEmptyList
 import org.scalatest.flatspec.AnyFlatSpec

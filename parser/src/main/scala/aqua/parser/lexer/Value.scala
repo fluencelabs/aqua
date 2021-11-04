@@ -10,6 +10,8 @@ import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{Comonad, Functor, ~>}
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 sealed trait Value[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): Value[K]
@@ -31,24 +33,24 @@ case class Literal[F[_]: Comonad](valueToken: F[String], ts: LiteralType) extend
 
 object Value {
 
-  def varLambda[F[_]: LiftParser: Comonad]: P[VarLambda[F]] =
-    (Name.dotted[F] ~ LambdaOp.ops[F].?).map { case (n, l) ⇒
-      VarLambda(n, l.fold[List[LambdaOp[F]]](Nil)(_.toList))
+  val varLambda: P[VarLambda[Span.S]] =
+    (Name.dotted ~ LambdaOp.ops.?).map { case (n, l) ⇒
+      VarLambda(n, l.fold[List[LambdaOp[Span.S]]](Nil)(_.toList))
     }
 
-  def bool[F[_]: LiftParser: Functor: Comonad]: P[Literal[F]] =
+  val bool: P[Literal[Span.S]] =
     P.oneOf(
       ("true" :: "false" :: Nil)
         .map(t ⇒ P.string(t).lift.map(fu => Literal(fu.as(t), LiteralType.bool)))
     ) <* P.not(`anum_*`)
 
-  def initPeerId[F[_]: LiftParser: Comonad]: P[Literal[F]] =
+  val initPeerId: P[Literal[Span.S]] =
     `%init_peer_id%`.string.lift.map(Literal(_, LiteralType.string))
 
   val minus = P.char('-')
   val dot = P.char('.')
 
-  def num[F[_]: LiftParser: Comonad]: P[Literal[F]] =
+  val num: P[Literal[Span.S]] =
     (minus.?.with1 ~ Numbers.nonNegativeIntString).lift.map(fu =>
       fu.extract match {
         case (Some(_), n) ⇒ Literal(fu.as(s"-$n"), LiteralType.signed)
@@ -56,21 +58,21 @@ object Value {
       }
     )
 
-  def float[F[_]: LiftParser: Comonad]: P[Literal[F]] =
+  val float: P[Literal[Span.S]] =
     (minus.?.with1 ~ (Numbers.nonNegativeIntString <* dot) ~ Numbers.nonNegativeIntString).string.lift
       .map(Literal(_, LiteralType.float))
 
   val charsWhileQuotes = P.charsWhile0(_ != '"')
 
   // TODO make more sophisticated escaping/unescaping
-  def string[F[_]: LiftParser: Comonad]: P[Literal[F]] =
+  val string: P[Literal[Span.S]] =
     (`"` *> charsWhileQuotes <* `"`).string.lift
       .map(Literal(_, LiteralType.string))
 
-  def literal[F[_]: LiftParser: Comonad]: P[Literal[F]] =
+  val literal: P[Literal[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
-  def `value`[F[_]: LiftParser: Comonad]: P[Value[F]] =
+  val `value`: P[Value[Span.S]] =
     P.oneOf(literal.backtrack :: initPeerId.backtrack :: varLambda :: Nil)
 
 }

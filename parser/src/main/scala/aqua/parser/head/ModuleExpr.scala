@@ -8,6 +8,8 @@ import aqua.parser.lift.LiftParser.*
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ModuleExpr[F[_]](
   name: Ability[F],
@@ -30,18 +32,18 @@ object ModuleExpr extends HeaderExpr.Leaf {
 
   type NameOrAb[F[_]] = Either[Name[F], Ability[F]]
 
-  def nameOrAb[F[_]: LiftParser: Comonad]: Parser[NameOrAb[F]] =
-    Name.p[F].map(Left(_)) | Ability.ab[F].map(Right(_))
+  val nameOrAb: Parser[NameOrAb[Span.S]] =
+    Name.p.map(Left(_)) | Ability.ab.map(Right(_))
 
-  def nameOrAbList[F[_]: LiftParser: Comonad]: Parser[List[NameOrAb[F]]] =
-    comma[NameOrAb[F]](nameOrAb[F]).map(_.toList)
+  val nameOrAbList: Parser[List[NameOrAb[Span.S]]] =
+    comma[NameOrAb[Span.S]](nameOrAb).map(_.toList)
 
-  def nameOrAbListOrAll[F[_]: LiftParser: Comonad]: Parser[Either[List[NameOrAb[F]], Token[F]]] =
-    nameOrAbList[F].map(Left(_)) | `star`.lift.map(Token.lift(_)).map(Right(_))
+  val nameOrAbListOrAll: Parser[Either[List[NameOrAb[Span.S]], Token[Span.S]]] =
+    nameOrAbList.map(Left(_)) | `star`.lift.map(Token.lift(_)).map(Right(_))
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[ModuleExpr[F]] =
-    (`module` *> ` ` *> Ability.dotted[F] ~
-      (` declares ` *> nameOrAbListOrAll[F]).?).map {
+  override val p: Parser[ModuleExpr[Span.S]] =
+    (`module` *> ` ` *> Ability.dotted ~
+      (` declares ` *> nameOrAbListOrAll).?).map {
       case (name, None) =>
         ModuleExpr(name, None, Nil, Nil)
       case (name, Some(Left(exportMembers))) =>

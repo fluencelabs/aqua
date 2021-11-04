@@ -1,7 +1,8 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.expr.{AssignmentExpr, ConstantExpr}
+import aqua.parser.expr.ConstantExpr
+import aqua.parser.expr.func.AssignmentExpr
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

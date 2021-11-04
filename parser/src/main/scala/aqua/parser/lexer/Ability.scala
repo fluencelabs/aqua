@@ -1,13 +1,15 @@
 package aqua.parser.lexer
 
-import aqua.parser.lexer.Token._
+import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
-import aqua.parser.lift.LiftParser._
+import aqua.parser.lift.LiftParser.*
 import cats.Comonad
-import cats.parse.{Parser => P}
-import cats.syntax.functor._
-import cats.syntax.comonad._
+import cats.parse.Parser as P
+import cats.syntax.functor.*
+import cats.syntax.comonad.*
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class Ability[F[_]: Comonad](name: F[String]) extends Token[F] {
   override def as[T](v: T): F[T] = name.as(v)
@@ -20,12 +22,12 @@ case class Ability[F[_]: Comonad](name: F[String]) extends Token[F] {
 object Ability {
   type As[F[_]] = (Ability[F], Option[Ability[F]])
 
-  def ab[F[_]: LiftParser: Comonad]: P[Ability[F]] =
+  val ab: P[Ability[Span.S]] =
     `Class`.lift.map(Ability(_))
 
-  def dotted[F[_]: LiftParser: Comonad]: P[Ability[F]] =
+  val dotted: P[Ability[Span.S]] =
     P.repSep(`Class`, `.`).map(_.toList.mkString(".")).lift.map(Ability(_))
 
-  def abAs[F[_]: LiftParser: Comonad]: P[As[F]] =
-    asOpt(ab[F])
+  val abAs: P[As[Span.S]] =
+    asOpt(ab)
 }

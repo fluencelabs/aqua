@@ -429,4 +429,135 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     Node.equalsOrPrintDiff(proc, expected) should be(true)
   }
 
+  // func registerKeyPutValue(node_id: string) -> []string:
+  //  on node_id:
+  //    nodes <- OpH.pr()
+  //  on node_id:
+  //      for n <- nodes par:
+  //        on n:
+  //          OpH.op("in")
+  //  <- nodes
+  // this example doesn't create a hop on relay after fold
+  // but the test create it, so there is not a one-on-one simulation
+  // change it or write an integration test
+  "topology resolver" should "create returning hops on chain of 'on'" in {
+    val init =
+      on(
+        initPeer,
+        relay :: Nil,
+        on(
+          otherPeer,
+          Nil,
+          callTag(0)
+        ),
+        on(
+          otherPeer,
+          Nil,
+          foldPar(
+            "i",
+            valueArray,
+            on(
+              otherPeer2,
+              Nil,
+              callTag(2)
+            )
+          )
+        ),
+        callTag(3)
+      )
+
+    val proc: Node.Res = Topology.resolve(init)
+
+    /*val expected: Node.Res =
+      MakeRes.seq(
+        callRes(0, initPeer),
+        callRes(1, otherRelay),
+      )
+    proc.equalsOrPrintDiff(expected) should be(true)*/
+  }
+
+  "topology resolver" should "create returning hops on nested 'on'" ignore {
+    val init =
+      on(
+        initPeer,
+        Nil,
+        callTag(0),
+        on(
+          otherRelay,
+          Nil,
+          callTag(1),
+          fold(
+            "i",
+            valueArray,
+            on(
+              otherRelay2,
+              otherRelay :: Nil,
+              callTag(2)
+            )
+          )
+        ),
+        callTag(3)
+      )
+
+    val proc: Node.Res = Topology.resolve(init)
+
+    val expected: Node.Res =
+      MakeRes.seq(
+        callRes(0, initPeer),
+        callRes(1, otherRelay),
+        MakeRes.fold(
+          "i",
+          valueArray,
+          MakeRes.seq(
+            callRes(2, otherRelay2),
+            nextRes("i")
+          )
+        ),
+        through(otherRelay),
+        callRes(3, initPeer)
+      )
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
+  "topology resolver" should "optimize path over fold" ignore {
+    val i = VarModel("i", ScalarType.string)
+    val init = {
+      on(
+        initPeer,
+        Nil,
+        fold(
+          "i",
+          valueArray,
+          on(
+            i,
+            relay :: Nil,
+            callTag(1)
+          )
+        )
+      )
+
+    }
+
+    val proc = Topology.resolve(init)
+
+    val expected: Node.Res = {
+      MakeRes.seq(
+        through(relay),
+        MakeRes.fold(
+          "i",
+          valueArray,
+          MakeRes.seq(
+            callRes(1, i),
+            through(relay),
+            nextRes("i")
+          )
+        )
+      )
+
+    }
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
 }

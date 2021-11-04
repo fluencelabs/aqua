@@ -18,7 +18,7 @@ val circeVersion = "0.14.1"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.4.0",
+  baseAquaVersion := "0.4.1",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
@@ -149,7 +149,7 @@ lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoKeys    := Seq[BuildInfoKey](version),
     buildInfoPackage := "aqua.backend"
   )
   .dependsOn(transform)

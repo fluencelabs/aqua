@@ -4,7 +4,7 @@ import aqua.compiler.*
 import aqua.files.FileModuleId
 import aqua.io.AquaFileError
 import aqua.parser.lift.{FileSpan, Span}
-import aqua.parser.{BlockIndentError, FuncReturnError, LexerError}
+import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError}
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
 import cats.parse.LocationMap
 import cats.parse.Parser.Expectation
@@ -59,7 +59,7 @@ object ErrorRendering {
       err match {
         case BlockIndentError(indent, message) =>
           showForConsole("Syntax error", indent._1, message :: Nil)
-        case FuncReturnError(point, message) =>
+        case ArrowReturnError(point, message) =>
           showForConsole("Syntax error", point._1, message :: Nil)
         case LexerError((span, e)) =>
           e.expected.toList
@@ -69,7 +69,7 @@ object ErrorRendering {
               val msg = FileSpan(span.name, span.locationMap, localSpan)
                 .focus(0)
                 .map { spanFocus =>
-                  val errorMessages = exps.flatMap(exp => expectationToString(exp))
+                  val errorMessages = exps.map(exp => expectationToString(exp))
                   spanFocus.toConsoleStr(
                     "Syntax error",
                     s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t),

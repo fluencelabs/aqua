@@ -6,6 +6,8 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ImportExpr[F[_]](filename: Literal[F]) extends FilenameExpr[F] {
 
@@ -17,6 +19,6 @@ case class ImportExpr[F[_]](filename: Literal[F]) extends FilenameExpr[F] {
 
 object ImportExpr extends HeaderExpr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[HeaderExpr[F]] =
-    `import` *> ` ` *> Value.string[F].map(ImportExpr(_))
+  override val p: Parser[HeaderExpr[Span.S]] =
+    `import` *> ` ` *> Value.string.map(ImportExpr(_))
 }

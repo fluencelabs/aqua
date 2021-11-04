@@ -6,12 +6,12 @@ import aqua.types.{ArrowType, Type}
 import cats.kernel.Monoid
 import cats.syntax.functor._
 
-case class NamesState[F[_]](
-  stack: List[NamesState.Frame[F]] = Nil,
+case class NamesState[S[_]](
+  stack: List[NamesState.Frame[S]] = Nil,
   rootArrows: Map[String, ArrowType] = Map.empty,
   constants: Map[String, Type] = Map.empty[String, Type],
   opaque: Map[String, Type] = Map.empty[String, Type],
-  definitions: Map[String, Name[F]] = Map.empty[String, Name[F]]
+  definitions: Map[String, Name[S]] = Map.empty[String, Name[S]]
 ) {
 
   def allNames: LazyList[String] =
@@ -27,21 +27,21 @@ case class NamesState[F[_]](
 
 object NamesState {
 
-  case class Frame[F[_]](
-    token: Token[F],
+  case class Frame[S[_]](
+    token: Token[S],
     names: Map[String, Type] = Map.empty,
     arrows: Map[String, ArrowType] = Map.empty
   ) {
-    def addName(n: String, t: Type): NamesState.Frame[F] = copy[F](names = names.updated(n, t))
+    def addName(n: String, t: Type): NamesState.Frame[S] = copy[S](names = names.updated(n, t))
 
-    def addArrow(n: String, g: ArrowType): NamesState.Frame[F] =
-      copy[F](arrows = arrows.updated(n, g))
+    def addArrow(n: String, g: ArrowType): NamesState.Frame[S] =
+      copy[S](arrows = arrows.updated(n, g))
   }
 
-  implicit def namesStateMonoid[F[_]]: Monoid[NamesState[F]] = new Monoid[NamesState[F]] {
-    override def empty: NamesState[F] = NamesState[F]()
+  implicit def namesStateMonoid[S[_]]: Monoid[NamesState[S]] = new Monoid[NamesState[S]] {
+    override def empty: NamesState[S] = NamesState[S]()
 
-    override def combine(x: NamesState[F], y: NamesState[F]): NamesState[F] =
+    override def combine(x: NamesState[S], y: NamesState[S]): NamesState[S] =
       NamesState(
         stack = Nil,
         rootArrows = x.rootArrows ++ y.rootArrows,
@@ -50,7 +50,7 @@ object NamesState {
       )
   }
 
-  def init[F[_]](context: AquaContext): NamesState[F] =
+  def init[S[_]](context: AquaContext): NamesState[S] =
     NamesState(
       rootArrows = context.allFuncs().map { case (s, fc) => (s, fc.arrowType) },
       constants = context.allValues().map { case (s, vm) => (s, vm.lastType) }

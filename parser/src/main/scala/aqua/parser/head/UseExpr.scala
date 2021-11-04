@@ -6,6 +6,8 @@ import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class UseExpr[F[_]](
   filename: Literal[F],
@@ -21,9 +23,8 @@ case class UseExpr[F[_]](
 
 object UseExpr extends HeaderExpr.Leaf {
 
-  override def p[F[_]: LiftParser: Comonad]: Parser[HeaderExpr[F]] =
-    (`use` *> ` ` *> Value
-      .string[F] ~ (` as ` *> Ability.ab[F]).?).map { case (filename, asModule) =>
+  override val p: Parser[HeaderExpr[Span.S]] =
+    (`use` *> ` ` *> Value.string ~ (` as ` *> Ability.ab).?).map { case (filename, asModule) =>
       UseExpr(filename, asModule)
     }
 }

@@ -1,7 +1,7 @@
 package aqua.parser
 
 import aqua.AquaSpec
-import aqua.parser.expr.CallArrowExpr
+import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{Name, VarLambda}
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
