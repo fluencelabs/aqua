@@ -15,20 +15,19 @@ import cats.{Comonad, Eval, Id, ~>}
 object Parser extends scribe.Logging {
 
   import Span.spanLiftParser
-  val spanParser = parserSchema[Span.F]()
+  lazy val spanParser = parserSchema
   import LiftParser.Implicits.idLiftParser
-  lazy val idParser = parserSchema[Id]()
 
-  def parserSchema[S[_] : LiftParser : Comonad](): P0[ValidatedNec[ParserError[S], Ast[S]]] = {
+  def parserSchema: P0[ValidatedNec[ParserError[Span.S], Ast[Span.S]]] = {
     logger.trace("creating schema...")
-    val parser = (HeadExpr.ast[S] ~ RootExpr.ast0[S]()).map { case (head, bodyMaybe) =>
+    val parser = (HeadExpr.ast ~ RootExpr.ast0).map { case (head, bodyMaybe) =>
       bodyMaybe.map(Ast(head, _))
     }
     logger.trace("schema created")
     parser
   }
 
-  def parser[S[_] : LiftParser : Comonad](p: P0[ValidatedNec[ParserError[S], Ast[S]]])(source: String): ValidatedNec[ParserError[S], Ast[S]] = {
+  def parse[S[_] : LiftParser : Comonad](p: P0[ValidatedNec[ParserError[S], Ast[S]]])(source: String): ValidatedNec[ParserError[S], Ast[S]] = {
     p.parseAll(source) match {
       case Right(value) => value
       case Left(e) => Validated.invalidNec(LexerError(e.wrapErr))
@@ -39,7 +38,7 @@ object Parser extends scribe.Logging {
     p: P0[ValidatedNec[ParserError[S], Ast[S]]],
     nat: S ~> K
   )(source: String): ValidatedNec[ParserError[K], Ast[K]] =
-    parser[S](p)(source).bimap(
+    parse[S](p)(source).bimap(
       e => e.map(_.mapK(nat)),
       ast => Ast[K](ast.head.map(_.mapK(nat)), ast.tree.map(_.mapK(nat)))
     )

@@ -3,15 +3,17 @@ package aqua.parser
 import aqua.parser.Ast.Tree
 import aqua.parser.lexer.Token
 import aqua.parser.lexer.Token.*
-import aqua.parser.lift.LiftParser
+import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.lift.LiftParser.*
 import cats.data.Chain.:==
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.free.Cofree
 import cats.parse.Parser as P
+import cats.parse.Parser0 as P0
 import cats.syntax.comonad.*
 import cats.{Comonad, Eval}
 import cats.~>
+import Span.{P0ToSpan, PToSpan}
 
 abstract class Expr[F[_]](val companion: Expr.Companion, val token: Token[F]) {
 
@@ -27,23 +29,23 @@ object Expr {
 
   trait Companion {
 
-    def ast[F[_]: LiftParser: Comonad](): P[ValidatedNec[ParserError[F], Ast.Tree[F]]]
+    def ast: P[ValidatedNec[ParserError[Span.S], Ast.Tree[Span.S]]]
 
   }
 
   trait Lexem extends Companion {
-    def p[F[_]: LiftParser: Comonad]: P[Expr[F]]
+    def p: P[Expr[Span.S]]
 
-    def readLine[F[_]: LiftParser: Comonad]: P[Ast.Tree[F]] =
-      p.map(Cofree[Chain, Expr[F]](_, Eval.now(Chain.empty)))
+    def readLine: P[Ast.Tree[Span.S]] =
+      p.map(Cofree[Chain, Expr[Span.S]](_, Eval.now(Chain.empty)))
   }
 
   trait Leaf extends Lexem {
 
-    override def ast[F[_]: LiftParser: Comonad](): P[ValidatedNec[ParserError[F], Tree[F]]] =
-      p[F].map(e =>
+    override def ast: P[ValidatedNec[ParserError[Span.S], Tree[Span.S]]] =
+      p.map(e =>
         Validated.validNec(
-          Cofree[Chain, Expr[F]](
+          Cofree[Chain, Expr[Span.S]](
             e,
             Eval.now(Chain.empty)
           )
@@ -54,32 +56,35 @@ object Expr {
   def defer(companion: => Lexem): Lexem = new Lexem {
     private lazy val c = companion
 
-    override def readLine[F[_]: LiftParser: Comonad]: P[Ast.Tree[F]] = c.readLine[F]
+    override def readLine: P[Ast.Tree[Span.S]] = c.readLine
 
-    override def p[F[_]: LiftParser: Comonad]: P[Expr[F]] = c.p[F]
+    override def p: P[Expr[Span.S]] = c.p
 
-    override def ast[F[_]: LiftParser: Comonad](): P[ValidatedNec[ParserError[F], Ast.Tree[F]]] =
-      c.ast[F]()
+    override def ast: P[ValidatedNec[ParserError[Span.S], Ast.Tree[Span.S]]] =
+      c.ast
   }
 
   // expression that could have children
   // that will be parsed by `ast` method to a tree
   trait Block extends Lexem {
 
-    override def readLine[F[_]: LiftParser: Comonad]: P[Ast.Tree[F]] = super.readLine[F] <* ` : `
+    override def readLine: P[Ast.Tree[Span.S]] = super.readLine <* ` : `
   }
 
-  trait Prefix extends Lexem {
+  abstract class Prefix(sep: P0[Any] = ` `) extends Lexem {
     def continueWith: List[Lexem]
 
-    override def readLine[F[_]: LiftParser: Comonad]: P[Ast.Tree[F]] =
-      ((super.readLine[F] <* ` `) ~ P.oneOf(continueWith.map(_.readLine.backtrack))).map {
-        case (h, t) => h.copy(tail = Eval.now(Chain.one(t)))
+    override def readLine: P[Ast.Tree[Span.S]] =
+      ((super.readLine <* sep) ~ P.oneOf(continueWith.map(_.readLine.backtrack))).map {
+        case (h, t) =>
+//          println("read prefixed line "+t)
+          h.copy(tail = Eval.now(Chain.one(t)))
       }
 
-    override def ast[F[_]: LiftParser: Comonad](): P[ValidatedNec[ParserError[F], Tree[F]]] =
-      ((super.readLine[F] <* ` `) ~ P.oneOf(continueWith.map(_.ast().backtrack))).map {
-        case (h, tm) => tm.map(t => h.copy(tail = Eval.now(Chain.one(t))))
+    override def ast: P[ValidatedNec[ParserError[Span.S], Tree[Span.S]]] =
+      ((super.readLine <* sep) ~ P.oneOf(continueWith.map(_.ast.backtrack))).map {
+        case (h, tm) =>
+          tm.map(t => h.copy(tail = Eval.now(Chain.one(t))))
       }
   }
 
@@ -216,10 +221,10 @@ object Expr {
 
     }
 
-    override def ast[F[_]: LiftParser: Comonad](): P[ValidatedNec[ParserError[F], Ast.Tree[F]]] =
-      (readLine[F] ~ (` \n+` *>
+    override lazy val ast: P[ValidatedNec[ParserError[Span.S], Ast.Tree[Span.S]]] =
+      (readLine ~ (` \n+` *>
         (P.repSep(
-          ` `.lift ~ P.oneOf(validChildren.map(_.readLine[F].backtrack)),
+          ` `.lift ~ P.oneOf(validChildren.map(_.readLine.backtrack)),
           ` \n+`
         ) <* ` \n`.?)))
         .map(t => listToTree(t._1, Chain.fromSeq(t._2.toList)))

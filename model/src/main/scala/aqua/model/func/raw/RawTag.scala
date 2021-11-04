@@ -1,7 +1,8 @@
 package aqua.model.func.raw
 
 import aqua.model.ValueModel
-import aqua.model.func.Call
+import aqua.model.func.{Call, FuncModel}
+import cats.data.NonEmptyList
 import cats.data.Chain
 
 sealed trait RawTag {
@@ -34,10 +35,21 @@ sealed trait RawTag {
       )
     case AssignmentTag(value, assignTo) =>
       AssignmentTag(f(value), assignTo)
+    case ReturnTag(values) =>
+      ReturnTag(values.map(f))
     case DeclareStreamTag(value) =>
       DeclareStreamTag(f(value))
     case AbilityIdTag(value, ability) =>
       AbilityIdTag(f(value), ability)
+    case ClosureTag(func) =>
+      ClosureTag(
+        func.copy(arrow =
+          func.arrow.copy(
+            ret = func.arrow.ret.map(f),
+            body = FuncOp(func.arrow.body.tree.map(_.mapValues(f)))
+          )
+        )
+      )
     case _ => this
   }
 
@@ -83,6 +95,14 @@ case class DeclareStreamTag(
 case class AssignmentTag(
   value: ValueModel,
   assignTo: String
+) extends NoExecTag
+
+case class ClosureTag(
+  func: FuncModel
+) extends NoExecTag
+
+case class ReturnTag(
+  values: NonEmptyList[ValueModel]
 ) extends NoExecTag
 
 object EmptyTag extends NoExecTag

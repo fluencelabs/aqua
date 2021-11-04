@@ -65,7 +65,7 @@ case class FuncCallable(
     // Find all duplicates in arguments
     val argsShouldRename = findNewNames(forbiddenNames, (argsToDataRaw ++ argsToArrowsRaw).keySet)
       // we shoudln't rename arguments that will be renamed by 'streamToRename'
-      .filter{case (k, _) => !streamToRename.contains(k)}
+      .filter { case (k, _) => !streamToRename.contains(k) }
     val argsToData = argsToDataRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
     val argsToArrows = argsToArrowsRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
 
@@ -105,55 +105,19 @@ case class FuncCallable(
         // Use the new op tree (args are replaced with values, names are unique & safe)
         treeRenamed.tree,
         // Accumulator: all used names are forbidden, if we set any more names -- forbid them as well
-        (forbiddenNames ++ shouldRename.values ++ treeDefines) ->
+        FuncApplyAcc(
+          forbiddenNames ++ shouldRename.values ++ treeDefines,
           // Functions may export variables, so collect them
-          capturedValues
-      ) {
-        case ((noNames, resolvedExports), tag @ AssignmentTag(value, assignTo)) =>
-          (
-            noNames,
-            resolvedExports + (assignTo -> value.resolveWith(resolvedExports))
-          ) -> Cofree[Chain, RawTag](
-            tag.mapValues(_.resolveWith(resolvedExports)),
-            Eval.now(Chain.empty)
-          )
-
-        case ((noNames, resolvedExports), CallArrowTag(fn, c)) if allArrows.contains(fn) =>
-          // Apply arguments to a function – recursion
-          val callResolved = c.mapValues(_.resolveWith(resolvedExports))
-          val possibleArrowNames = callResolved.args.collect { case VarModel(m, _: ArrowType, _) =>
-            m
-          }.toSet
-
-          val (appliedOp, value) =
-            allArrows(fn)
-              .resolve(callResolved, allArrows.view.filterKeys(possibleArrowNames).toMap, noNames)
-              .value
-
-          // Function defines new names inside its body – need to collect them
-          // TODO: actually it's done and dropped – so keep and pass it instead
-          val newNames = appliedOp.definesVarNames.value
-          // At the very end, will need to resolve what is used as results with the result values
-          (
-            noNames ++ newNames,
-            resolvedExports ++ c.exportTo.map(_.name).zip(value)
-          ) -> appliedOp.tree
-        case (acc @ (_, resolvedExports), tag) =>
-          tag match {
-            case CallArrowTag(fn, _) if !allArrows.contains(fn) =>
-              logger.error(s"UNRESOLVED $fn in $funcName, skipping, will become (null) in AIR!")
-            case _ =>
-          }
-
-          // All the other tags are already resolved and need no substitution
-          acc -> Cofree[Chain, RawTag](
-            tag.mapValues(_.resolveWith(resolvedExports)),
-            Eval.now(Chain.empty)
-          )
-      }
-      .map { case ((_, resolvedExports), callableFuncBody) =>
+          capturedValues,
+          // They also can define arrows!
+          allArrows,
+          // Function name we're handling...
+          funcName
+        )
+      )(_.handleTag(_))
+      .map { case (acc, callableFuncBody) =>
         // If return value is affected by any of internal functions, resolve it
-        val resolvedResult = result.map(_.resolveWith(resolvedExports))
+        val resolvedResult = result.map(_.resolveWith(acc.resolvedExports))
 
         val (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(Option[FuncOp], ValueModel)] {

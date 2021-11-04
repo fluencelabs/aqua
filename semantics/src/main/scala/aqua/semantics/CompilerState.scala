@@ -8,15 +8,15 @@ import cats.data.{Chain, State}
 import cats.kernel.Monoid
 import cats.syntax.monoid._
 
-case class CompilerState[F[_]](
-  errors: Chain[SemanticError[F]] = Chain.empty[SemanticError[F]],
-  names: NamesState[F] = NamesState[F](),
-  abilities: AbilitiesState[F] = AbilitiesState[F](),
-  types: TypesState[F] = TypesState[F]()
+case class CompilerState[S[_]](
+  errors: Chain[SemanticError[S]] = Chain.empty[SemanticError[S]],
+  names: NamesState[S] = NamesState[S](),
+  abilities: AbilitiesState[S] = AbilitiesState[S](),
+  types: TypesState[S] = TypesState[S]()
 )
 
 object CompilerState {
-  type S[F[_]] = State[CompilerState[F], Model]
+  type St[S[_]] = State[CompilerState[S], Model]
 
   def init[F[_]](ctx: AquaContext): CompilerState[F] =
     CompilerState(
@@ -25,14 +25,14 @@ object CompilerState {
       types = TypesState.init[F](ctx)
     )
 
-  implicit def compilerStateMonoid[F[_]]: Monoid[S[F]] = new Monoid[S[F]] {
-    override def empty: S[F] = State.pure(EmptyModel("compiler state monoid empty"))
+  implicit def compilerStateMonoid[S[_]]: Monoid[St[S]] = new Monoid[St[S]] {
+    override def empty: St[S] = State.pure(EmptyModel("compiler state monoid empty"))
 
-    override def combine(x: S[F], y: S[F]): S[F] = for {
+    override def combine(x: St[S], y: St[S]): St[S] = for {
       a <- x.get
       b <- y.get
       _ <- State.set(
-        CompilerState[F](
+        CompilerState[S](
           a.errors ++ b.errors,
           a.names |+| b.names,
           a.abilities |+| b.abilities,

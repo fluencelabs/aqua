@@ -8,6 +8,8 @@ import cats.data.Chain
 import cats.free.Cofree
 import cats.parse.Parser as P
 import cats.~>
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 trait HeaderExpr[S[_]] {
   def token: Token[S]
@@ -18,14 +20,14 @@ trait HeaderExpr[S[_]] {
 object HeaderExpr {
 
   trait Companion {
-    def p[S[_]: LiftParser: Comonad]: P[HeaderExpr[S]]
+    def p: P[HeaderExpr[Span.S]]
 
-    def ast[S[_]: LiftParser: Comonad]: P[Ast.Head[S]]
+    def ast: P[Ast.Head[Span.S]]
   }
 
   abstract class Leaf extends Companion {
 
-    override def ast[F[_]: LiftParser: Comonad]: P[Ast.Head[F]] =
-      p[F].map(Cofree[Chain, HeaderExpr[F]](_, Eval.now(Chain.empty)))
+    override def ast: P[Ast.Head[Span.S]] =
+      p.map(Cofree[Chain, HeaderExpr[Span.S]](_, Eval.now(Chain.empty)))
   }
 }

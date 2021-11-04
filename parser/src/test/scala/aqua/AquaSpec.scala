@@ -1,17 +1,45 @@
 package aqua
 
-import aqua.parser.expr._
-import aqua.parser.lexer._
+import aqua.AquaSpec.spanToId
+import aqua.parser.expr.*
+import aqua.parser.expr.func.{
+  AbilityIdExpr,
+  ArrowExpr,
+  AssignmentExpr,
+  CallArrowExpr,
+  ClosureExpr,
+  ElseOtherwiseExpr,
+  ForExpr,
+  IfExpr,
+  OnExpr,
+  PushToStreamExpr,
+  ReturnExpr
+}
+import aqua.parser.head.FromExpr.NameOrAbAs
+import aqua.parser.head.{FromExpr, UseFromExpr}
+import aqua.parser.lexer.*
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.LiteralType.{bool, number, string}
 import aqua.types.{LiteralType, ScalarType}
-import cats.Id
+import cats.{~>, Id}
 import org.scalatest.EitherValues
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import cats.~>
+import cats.syntax.bifunctor.*
 
 import scala.collection.mutable
 import scala.language.implicitConversions
 
 object AquaSpec {
+
+  def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
+
+    override def apply[A](span: Span.S[A]): Id[A] = {
+      span._2
+    }
+  }
+
   implicit def toAb(str: String): Ability[Id] = Ability[Id](str)
 
   implicit def toName(str: String): Name[Id] = Name[Id](str)
@@ -63,52 +91,73 @@ object AquaSpec {
 
 trait AquaSpec extends EitherValues {
 
+  def fromExprToId(fromExpr: NameOrAbAs[Span.S]): NameOrAbAs[Id] =
+    fromExpr.bimap(
+      a => (a._1.mapK(spanToId), a._2.map(_.mapK(spanToId))),
+      a => (a._1.mapK(spanToId), a._2.map(_.mapK(spanToId)))
+    )
+
+  def parseNameOrAbs(str: String): NameOrAbAs[Id] =
+    fromExprToId(FromExpr.nameOrAbAs.parseAll(str).value)
+
   def parseExpr(str: String): CallArrowExpr[Id] =
-    CallArrowExpr.p[Id].parseAll(str).value
+    CallArrowExpr.p.parseAll(str).value.mapK(spanToId)
+
+  def parseUse(str: String): UseFromExpr[Id] =
+    UseFromExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseAbId(str: String): AbilityIdExpr[Id] =
-    AbilityIdExpr.p[Id].parseAll(str).value
+    AbilityIdExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseOn(str: String): OnExpr[Id] =
-    OnExpr.p[Id].parseAll(str).value
+    OnExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseReturn(str: String): ReturnExpr[Id] =
-    ReturnExpr.p[Id].parseAll(str).value
+    ReturnExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseAssign(str: String): AssignmentExpr[Id] =
-    AssignmentExpr.p[Id].parseAll(str).value
+    AssignmentExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parsePush(str: String): PushToStreamExpr[Id] =
-    PushToStreamExpr.p[Id].parseAll(str).value
+    PushToStreamExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseConstant(str: String): ConstantExpr[Id] =
-    ConstantExpr.p[Id].parseAll(str).value
+    ConstantExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseService(str: String): ServiceExpr[Id] =
-    ServiceExpr.p[Id].parseAll(str).value
+    ServiceExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseIf(str: String): IfExpr[Id] =
-    IfExpr.p[Id].parseAll(str).value
+    IfExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseFor(str: String): ForExpr[Id] =
-    ForExpr.p[Id].parseAll(str).value
+    ForExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseElse(str: String): ElseOtherwiseExpr[Id] =
-    ElseOtherwiseExpr.p[Id].parseAll(str).value
+    ElseOtherwiseExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseFieldType(str: String): FieldTypeExpr[Id] =
-    FieldTypeExpr.p[Id].parseAll(str).value
+    FieldTypeExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseAlias(str: String): AliasExpr[Id] =
-    AliasExpr.p[Id].parseAll(str).value
+    AliasExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseDataStruct(str: String): DataStructExpr[Id] =
-    DataStructExpr.p[Id].parseAll(str).value
+    DataStructExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseArrow(str: String): ArrowTypeExpr[Id] =
-    ArrowTypeExpr.p[Id].parseAll(str).value
+    ArrowTypeExpr.p.parseAll(str).value.mapK(spanToId)
 
-  def funcExpr(str: String): FuncExpr[Id] = FuncExpr.p[Id].parseAll(str).value
+  def funcExpr(str: String): FuncExpr[Id] = FuncExpr.p.parseAll(str).value.mapK(spanToId)
+  def closureExpr(str: String): ClosureExpr[Id] = ClosureExpr.p.parseAll(str).value.mapK(spanToId)
+  def arrowExpr(str: String): ArrowExpr[Id] = ArrowExpr.p.parseAll(str).value.mapK(spanToId)
+
+  val nat = new (Span.S ~> Id) {
+
+    override def apply[A](span: Span.S[A]): A = {
+      span._2
+    }
+  }
 
   implicit class QueueHelper[T](q: mutable.Queue[T]) {
     def d(): T = q.dequeue()

@@ -5,44 +5,27 @@ import aqua.parser.lexer.{Ability, Name, Token, Value}
 import aqua.types.ArrowType
 import cats.InjectK
 import cats.data.{NonEmptyList, NonEmptyMap}
-import cats.free.Free
 
-class AbilitiesAlgebra[F[_], Alg[_]](implicit A: InjectK[AbilityOp[F, *], Alg]) {
+trait AbilitiesAlgebra[S[_], Alg[_]] {
 
-  def defineArrow(arrow: Name[F], `type`: ArrowType): Free[Alg, Boolean] =
-    Free.liftInject[Alg](DefineArrow[F](arrow, `type`))
+  def defineArrow(arrow: Name[S], `type`: ArrowType): Alg[Boolean]
 
-  def purgeArrows(token: Token[F]): Free[Alg, Option[NonEmptyList[(Name[F], ArrowType)]]] =
-    Free.liftInject[Alg](PurgeArrows[F](token))
+  def purgeArrows(token: Token[S]): Alg[Option[NonEmptyList[(Name[S], ArrowType)]]]
 
   def defineService(
-    name: Ability[F],
+    name: Ability[S],
     arrows: NonEmptyMap[String, ArrowType],
     defaultId: Option[ValueModel]
-  ): Free[Alg, Boolean] =
-    Free.liftInject[Alg](DefineService[F](name, arrows, defaultId))
+  ): Alg[Boolean]
 
-  def getArrow(name: Ability[F], arrow: Name[F]): Free[Alg, Option[ArrowType]] =
-    Free.liftInject[Alg](GetArrow[F](name, arrow))
+  def getArrow(name: Ability[S], arrow: Name[S]): Alg[Option[ArrowType]]
 
-  def setServiceId(name: Ability[F], id: Value[F], vm: ValueModel): Free[Alg, Boolean] =
-    Free.liftInject[Alg](SetServiceId[F](name, id, vm))
+  def setServiceId(name: Ability[S], id: Value[S], vm: ValueModel): Alg[Boolean]
 
-  def getServiceId(name: Ability[F]): Free[Alg, Either[Boolean, ValueModel]] =
-    Free.liftInject[Alg](GetServiceId[F](name))
+  def getServiceId(name: Ability[S]): Alg[Either[Boolean, ValueModel]]
 
-  def beginScope(token: Token[F]): Free[Alg, Unit] =
-    Free.liftInject[Alg](BeginScope[F](token))
+  def beginScope(token: Token[S]): Alg[Unit]
 
-  def endScope(): Free[Alg, Unit] =
-    Free.liftInject[Alg](EndScope[F]())
+  def endScope(): Alg[Unit]
 
-}
-
-object AbilitiesAlgebra {
-
-  implicit def abilitiesAlgebra[F[_], Alg[_]](implicit
-    A: InjectK[AbilityOp[F, *], Alg]
-  ): AbilitiesAlgebra[F, Alg] =
-    new AbilitiesAlgebra[F, Alg]()
 }

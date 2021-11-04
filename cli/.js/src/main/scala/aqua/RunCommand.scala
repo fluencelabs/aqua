@@ -9,7 +9,7 @@ import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.res.FuncRes
-import aqua.parser.expr.CallArrowExpr
+import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
 import cats.data.*
@@ -22,7 +22,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
-import cats.{Id, Monad, ~>}
+import cats.{~>, Id, Monad}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -96,13 +96,15 @@ object RunCommand extends Logging {
       _ <- AquaIO[F].writeFile(generatedFile, code).value
       importsWithInput = absInput +: imports.map(_.absolute)
       sources = new AquaFileSources[F](generatedFile, importsWithInput)
-      compileResult <- Clock[F].timed(AquaCompiler
-        .compile[F, AquaFileError, FileModuleId, FileSpan.F](
-          sources,
-          SpanParser.parser,
-          AirBackend,
-          config
-        ))
+      compileResult <- Clock[F].timed(
+        AquaCompiler
+          .compile[F, AquaFileError, FileModuleId, FileSpan.F](
+            sources,
+            SpanParser.parser,
+            AirBackend,
+            config
+          )
+      )
       (compileTime, airV) = compileResult
       callResult <- Clock[F].timed {
         airV match {

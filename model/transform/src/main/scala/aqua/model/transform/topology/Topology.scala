@@ -63,6 +63,8 @@ object Topology extends Logging {
             .lift
             .apply(rc.tag)
 
+        logger.trace("Resolved: " + resolved)
+
         val chainZipperEv = resolved.traverse(cofree =>
           Eval.later {
             val cz = ChainZipper(
@@ -83,6 +85,8 @@ object Topology extends Logging {
 
         OptionT[Eval, ChainZipper[Res]](chainZipperEv)
       }
+
+    logger.trace("Resolved Cofree: " + resolvedCofree.value.map(_.forceAll))
 
     resolvedCofree.map(NonEmptyChain.fromChain(_).map(_.uncons)).map {
       case None =>
