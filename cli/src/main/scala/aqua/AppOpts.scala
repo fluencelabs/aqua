@@ -193,6 +193,12 @@ object AppOpts {
       .map(_ => true)
       .withDefault(false)
 
+  val scriptOpt: Opts[Boolean] =
+    Opts
+      .flag("scheduled", "Generate air code for script storage. Without error handling wrappers and hops on relay. Will ignore other options")
+      .map(_ => true)
+      .withDefault(false)
+
   lazy val versionStr: String =
     Version.version
 

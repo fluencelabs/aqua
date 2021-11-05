@@ -64,14 +64,19 @@ object AquaCli extends IOApp with Logging {
       wrapWithOption(versionOpt),
       logLevelOpt,
       constantOpts[Id],
-      dryOpt
+      dryOpt,
+      scriptOpt
     ).mapN {
-      case (inputF, importsF, outputF, toAir, toJs, noRelay, noXor, h, v, logLevel, constants, isDryRun) =>
+      case (inputF, importsF, outputF, toAirOp, toJs, noRelayOp, noXorOp, h, v, logLevel, constants, isDryRun, isScheduled) =>
         scribe.Logger.root
           .clearHandlers()
           .clearModifiers()
           .withHandler(formatter = LogFormatter.formatter, minimumLevel = Some(logLevel))
           .replace()
+
+        val toAir = toAirOp || isScheduled
+        val noXor = noXorOp || isScheduled
+        val noRelay = noRelayOp || isScheduled
 
         // if there is `--help` or `--version` flag - show help and version
         // otherwise continue program execution
