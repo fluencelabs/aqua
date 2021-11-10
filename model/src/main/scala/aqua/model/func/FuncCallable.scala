@@ -9,6 +9,7 @@ import cats.data.Chain
 import cats.free.Cofree
 import scribe.Logging
 
+// TODO docs for class and all args
 case class FuncCallable(
   funcName: String,
   body: FuncOp,

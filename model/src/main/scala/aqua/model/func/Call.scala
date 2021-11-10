@@ -3,6 +3,7 @@ package aqua.model.func
 import aqua.model.{ValueModel, VarModel}
 import aqua.types.Type
 
+// TODO docs
 case class Call(args: List[ValueModel], exportTo: List[Call.Export]) {
 
   def mapValues(f: ValueModel => ValueModel): Call =
@@ -11,6 +12,7 @@ case class Call(args: List[ValueModel], exportTo: List[Call.Export]) {
       exportTo
     )
 
+  // TODO docs
   def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(_.mapName(f)))
 
   def argVarNames: Set[String] = args.collect { case VarModel(name, _, _) =>
@@ -22,7 +24,7 @@ case class Call(args: List[ValueModel], exportTo: List[Call.Export]) {
 }
 
 object Call {
-
+  // TODO docs
   case class Export(name: String, `type`: Type) {
     def mapName(f: String => String): Export = copy(f(name))
 

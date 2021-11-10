@@ -4,6 +4,7 @@ import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
 import aqua.types.ScalarType
 import cats.kernel.Monoid
 
+// TODO docs
 case class TransformConfig(
   getDataService: String = "getDataSrv",
   callbackService: String = "callbackSrv",
@@ -46,7 +47,7 @@ case class TransformConfig(
       VarModel.lastError
     )
 
-  val constantsMap =
+  val constantsMap: Map[String, ValueModel] =
     (hostPeerId :: initPeerId :: nil :: lastError :: constants)
       .map(c => c.name -> c.value)
       .toMap
@@ -66,6 +67,7 @@ case class TransformConfig(
 object TransformConfig {
   case class Const(name: String, value: ValueModel)
 
+  // TODO docs/rename? why it is unused
   def forHost: TransformConfig =
     TransformConfig(wrapWithXor = false, relayVarName = None)
 }

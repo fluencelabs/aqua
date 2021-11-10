@@ -1,17 +1,21 @@
 package aqua
 
-import aqua.backend.Generated
-import aqua.backend.air.AirBackend
+import aqua.backend.air.{AirBackend, FuncAirGen}
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
+import aqua.backend.{FunctionDef, Generated}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
-import aqua.model.transform.TransformConfig
-import aqua.model.transform.res.FuncRes
+import aqua.model.func.{Call, FuncCallable}
+import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
+import aqua.model.transform.{Transform, TransformConfig}
+import aqua.model.transform.res.{AquaRes, FuncRes}
+import aqua.model.{AquaContext, LiteralModel, VarModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
+import aqua.types.{ArrowType, NilType, ScalarType}
 import cats.data.*
 import cats.effect.kernel.{Async, Clock}
 import cats.effect.syntax.async.*
@@ -22,15 +26,19 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
-import cats.{~>, Id, Monad}
+import cats.{Id, Monad, ~>}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.scalajs.js
+import scala.scalajs.js.JSON
 import scala.scalajs.js.annotation.*
 
 object RunCommand extends Logging {
+
+  val consoleServiceId = "--console--"
+  val printFunction = "print"
 
   /**
    * Calls an air code with FluenceJS SDK.
@@ -38,34 +46,40 @@ object RunCommand extends Logging {
    * @param air code to call
    * @return
    */
-  def funcCall(multiaddr: String, air: Generated, config: TransformConfig)(implicit
+  def funcCall(multiaddr: String, air: String, functionDef: FunctionDef)(implicit
     ec: ExecutionContext
-  ): Future[Validated[String, Unit]] = {
+  ): Future[Unit] = {
     (for {
       _ <- Fluence
-        .start(multiaddr)
+        .start(PeerConfig(connectTo = multiaddr))
         .toFuture
       peer = Fluence.getPeer()
+      promise = Promise.apply[Unit]()
       _ = CallJsFunction.registerUnitService(
         peer,
-        "console",
-        "print",
-        args => println("print: " + args)
+        consoleServiceId,
+        printFunction,
+        args => {
+          promise.success(())
+          println("result: " + args)
+        }
       )
-      result <- CallJsFunction.funcCallJs(
-        peer,
-        air.content,
-        Nil,
-        None, // TODO
-        config
+      result = CallJsFunction.funcCallJs(
+        air,
+        functionDef,
+        List.empty
       )
+      _ <- Future.firstCompletedOf(promise.future :: result :: Nil)
       _ <- peer.stop().toFuture
-    } yield {
-      Validated.Valid(())
-    })
+    } yield {})
   }
 
   val generatedFuncName = "callerUniqueFunction"
+
+  def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncCallable] =
+    contexts
+      .flatMap(_.exports.map(e => Chain.fromSeq(e.funcs.values.toList)).getOrElse(Chain.empty))
+      .find(_.funcName == funcName)
 
   /**
    * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
@@ -77,51 +91,76 @@ object RunCommand extends Logging {
   def run[F[_]: Files: AquaIO: Async](
     multiaddr: String,
     func: String,
+    args: List[Literal[Id]],
     input: Path,
     imports: List[Path],
     config: TransformConfig = TransformConfig()
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
-    val generatedFile = Path("./.aqua/call0.aqua").absolute
-    val absInput = input.absolute
-    val code =
-      s"""import "${absInput.toString}"
-         |
-         |func $generatedFuncName():
-         |  $func
-         |""".stripMargin
+    val sources = new AquaFileSources[F](input, imports)
 
     for {
-      _ <- AquaIO[F].writeFile(generatedFile, code).value
-      importsWithInput = absInput +: imports.map(_.absolute)
-      sources = new AquaFileSources[F](generatedFile, importsWithInput)
       compileResult <- Clock[F].timed(
         AquaCompiler
-          .compile[F, AquaFileError, FileModuleId, FileSpan.F](
+          .compileToContext[F, AquaFileError, FileModuleId, FileSpan.F](
             sources,
             SpanParser.parser,
-            AirBackend,
             config
           )
       )
-      (compileTime, airV) = compileResult
+      (compileTime, contextV) = compileResult
       callResult <- Clock[F].timed {
-        airV match {
-          case Validated.Valid(airC: Chain[AquaCompiled[FileModuleId]]) =>
-            // Cause we generate input with only one function, we should have only one air compiled content
-            airC.headOption
-              .flatMap(_.compiled.headOption)
-              .map { air =>
-                Async[F].fromFuture {
-                  funcCall(multiaddr, air, config).map(_.toValidatedNec).pure[F]
-                }
+        contextV match {
+          case Validated.Valid(contextC: Chain[AquaContext]) =>
+            // find
+            findFunction(contextC, func).map { funcCallable =>
+              /*
+                make funcRes as function like:
+
+                func someFunc():
+                  res <- funcResFunc(args:_*)
+                  Console.print(res)
+
+                and then transform
+               */
+              val argsModel = args.map(l => LiteralModel(l.value, l.ts))
+              val body = funcCallable.arrowType.res match {
+                case Some(rt) =>
+                  val resultName = "res"
+                  val callFuncTag =
+                    CallArrowTag(func, Call(argsModel, List(Call.Export(resultName, rt))))
+
+                  val callServiceTag = CallServiceTag(
+                    LiteralModel.quote(consoleServiceId),
+                    printFunction,
+                    Call(List(VarModel(resultName, rt)), Nil)
+                  )
+
+                  FuncOps.seq(FuncOp.leaf(callFuncTag), FuncOp.leaf(callServiceTag))
+                case None =>
+                  FuncOp.leaf(CallArrowTag(func, Call(argsModel, Nil)))
               }
-              .getOrElse {
-                Validated
-                  .invalidNec("Unexpected. There could be only one generated function.")
-                  .pure[F]
+
+              val fCallable = FuncCallable(
+                "someFuncToRun",
+                body,
+                ArrowType(NilType, NilType),
+                Nil,
+                Map(func -> funcCallable),
+                Map.empty
+              )
+
+              val funcRes = Transform.fn(fCallable, config)
+
+              val definitions = FunctionDef(funcRes)
+              val air = FuncAirGen(funcRes).generate.show
+              Async[F].fromFuture {
+                funcCall(multiaddr, air, definitions).pure[F]
+              }.map { res =>
+                Validated.validNec(())
               }
+            }.getOrElse(Validated.invalidNec(s"There is no function called '$func'").pure[F])
           case Validated.Invalid(errs) =>
             import ErrorRendering.showError
             Validated.invalid(errs.map(_.show)).pure[F]

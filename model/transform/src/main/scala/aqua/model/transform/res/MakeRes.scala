@@ -9,6 +9,7 @@ import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 
+// TODO docs
 object MakeRes {
   val nilTail: Eval[Chain[Res]] = Eval.now(Chain.empty)
 

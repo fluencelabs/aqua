@@ -1,8 +1,9 @@
 package aqua.model.transform.res
 
-import aqua.model.{ValueModel, VarModel}
 import aqua.model.func.Call
+import aqua.model.{ValueModel, VarModel}
 
+// TODO docs to all traits and objects
 sealed trait ResolvedOp
 
 sealed trait NoAir extends ResolvedOp

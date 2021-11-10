@@ -1,10 +1,14 @@
 package aqua
 
+import aqua.backend.{ArgDefinition, FunctionDef, NamesConfig, TypeDefinition}
+
 import scala.concurrent.Promise
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSImport
+import scala.scalajs.js.JSConverters.*
+import scala.scalajs.js.annotation.{JSExportAll, JSImport}
 
-/***
+/**
+ * *
  * This is description of types from Fluence JS library.
  * See here for details https://github.com/fluencelabs/fluence-js
  */
@@ -62,6 +66,52 @@ trait PeerStatus extends js.Object {
   def relayPeerId: String
 }
 
+@JSExportAll
+case class FunctionDefJs(
+  functionName: String,
+  returnType: TypeDefinition,
+  argDefs: js.Array[ArgDefinition],
+  names: NamesConfigJs
+)
+
+object FunctionDefJs {
+
+  def apply(fd: FunctionDef): FunctionDefJs = {
+    FunctionDefJs(fd.functionName, fd.returnType, fd.argDefs.toJSArray, NamesConfigJs(fd.names))
+  }
+}
+
+@JSExportAll
+case class NamesConfigJs(
+  relay: String,
+  getDataSrv: String,
+  callbackSrv: String,
+  responseSrv: String,
+  responseFnName: String,
+  errorHandlingSrv: String,
+  errorFnName: String
+)
+
+object NamesConfigJs {
+
+  def apply(nc: NamesConfig): NamesConfigJs = {
+    NamesConfigJs(
+      nc.relay,
+      nc.getDataSrv,
+      nc.callbackSrv,
+      nc.responseSrv,
+      nc.responseFnName,
+      nc.errorHandlingSrv,
+      nc.errorFnName
+    )
+  }
+}
+
+@JSExportAll
+case class PeerConfig(
+  connectTo: String
+)
+
 /**
  * This class implements the Fluence protocol for javascript-based environments.
  * It provides all the necessary features to communicate with Fluence network
@@ -74,13 +124,24 @@ class FluencePeer extends js.Object {
   def stop(): js.Promise[Unit] = js.native
 }
 
+object V2 {
+
+  @js.native
+  @JSImport("@fluencelabs/fluence/dist/internal/compilerSupport/v2.js", "callFunction")
+  def callFunction(
+    rawFnArgs: js.Array[js.Any],
+    `def`: FunctionDefJs,
+    script: String
+  ): js.Promise[js.Any] = js.native
+}
+
 /**
  * Public interface to Fluence JS SDK
  */
 @js.native
 @JSImport("@fluencelabs/fluence", "Fluence")
 object Fluence extends js.Object {
-  def start(str: String): js.Promise[js.Any] = js.native
+  def start(config: PeerConfig): js.Promise[js.Any] = js.native
   def stop(): js.Promise[js.Any] = js.native
   def getPeer(): FluencePeer = js.native
   def getStatus(): PeerStatus = js.native
@@ -95,18 +156,20 @@ object Fluence extends js.Object {
 class CallServiceHandler extends js.Object {
 
   def on(
-          serviceId: String,
-          fnName: String,
-          handler: js.Function2[js.Array[js.Any], js.Any, js.Any]
-        ): js.Function0[CallServiceHandler] = js.native
+    serviceId: String,
+    fnName: String,
+    handler: js.Function2[js.Array[js.Any], js.Any, js.Any]
+  ): js.Function0[CallServiceHandler] = js.native
 
   def onEvent(
-               serviceId: String,
-               fnName: String,
-               handler: js.Function2[js.Array[js.Any], js.Any, js.Any]
-             ): js.Function0[CallServiceHandler] = js.native
+    serviceId: String,
+    fnName: String,
+    handler: js.Function2[js.Array[js.Any], js.Any, js.Any]
+  ): js.Function0[CallServiceHandler] = js.native
 
-  def use(f: js.Function3[CallServiceData, CallServiceResult, js.Function0[Unit], Unit]): CallServiceHandler = js.native
+  def use(
+    f: js.Function3[CallServiceData, CallServiceResult, js.Function0[Unit], Unit]
+  ): CallServiceHandler = js.native
 }
 
 /**
@@ -127,6 +190,7 @@ class RequestFlow extends js.Object {}
 @JSImport("@fluencelabs/fluence/dist/internal/compilerSupport/v1.js", "RequestFlowBuilder")
 class RequestFlowBuilder extends js.Object {
   def withRawScript(air: String): RequestFlowBuilder = js.native
+
   def configHandler(f: js.Function2[CallServiceHandler, js.Any, Unit]): RequestFlowBuilder =
     js.native
   def disableInjections(): RequestFlowBuilder = js.native

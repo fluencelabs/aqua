@@ -17,7 +17,7 @@
     "run": "node index.js"
   },
   "dependencies": {
-    "@fluencelabs/fluence": "0.12.1"
+    "@fluencelabs/fluence": "0.14.2"
   },
   "repository": {
     "type": "git",

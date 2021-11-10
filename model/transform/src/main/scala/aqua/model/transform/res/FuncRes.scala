@@ -6,6 +6,7 @@ import aqua.types.{ArrowType, Type}
 import cats.data.Chain
 import cats.free.Cofree
 
+// TODO: docs, why source and body here together?
 case class FuncRes(
   source: FuncCallable,
   conf: TransformConfig,
@@ -13,7 +14,7 @@ case class FuncRes(
 ) {
   import FuncRes.*
 
-  lazy val funcName = source.funcName
+  lazy val funcName: String = source.funcName
 
   lazy val args: List[Arg] = arrowArgs(source.arrowType)
   def argNames: List[String] = source.argNames
@@ -25,6 +26,7 @@ case class FuncRes(
   def errorHandlerId: String = conf.errorHandlingService
   def errorFuncName: String = conf.errorFuncName
 
+  // TODO: docs
   def genArgName(basis: String): String = {
     val forbidden = args.map(_._1).toSet
     def genIter(i: Int): String = {
