@@ -56,7 +56,7 @@ object RunCommand extends Logging {
       _ = CallJsFunction.registerUnitService(
         peer,
         config.consoleServiceId,
-        config.printFunction,
+        config.printFunctionName,
         args => {
           // if an input function returns a result, our success will be after it is printed
           // otherwise finish after JS SDK will finish sending a request
@@ -99,7 +99,7 @@ object RunCommand extends Logging {
 
         val callServiceTag = CallServiceTag(
           LiteralModel.quote(config.consoleServiceId),
-          config.printFunction,
+          config.printFunctionName,
           Call(List(VarModel(config.resultName, rt)), Nil)
         )
 
@@ -109,7 +109,7 @@ object RunCommand extends Logging {
     }
 
     FuncCallable(
-      config.wrapFunctionName,
+      config.functionWrapperName,
       body,
       // no arguments and returns nothing
       ArrowType(NilType, NilType),
