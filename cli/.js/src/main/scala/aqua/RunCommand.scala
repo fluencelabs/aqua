@@ -58,16 +58,18 @@ object RunCommand extends Logging {
         config.consoleServiceId,
         config.printFunction,
         args => {
-          promise.success(())
+          // if an input function returns a result, our success will be after it is printed
+          // otherwise finish after JS SDK will finish sending a request
           println("result: " + args)
+          promise.success(())
         }
       )
-      result = CallJsFunction.funcCallJs(
+      callFuture = CallJsFunction.funcCallJs(
         air,
         functionDef,
         List.empty
       )
-      _ <- Future.firstCompletedOf(promise.future :: result :: Nil)
+      _ <- Future.firstCompletedOf(promise.future :: callFuture :: Nil)
       _ <- peer.stop().toFuture
     } yield {})
   }
@@ -81,12 +83,15 @@ object RunCommand extends Logging {
   // func wrapFunc():
   //   res <- funcCallable(args:_*)
   //   Console.print(res)
+  // TODO: now it supports only one result. If funcCallable will return multiple results, only first will be printed
   private def wrapCall(
     funcName: String,
     funcCallable: FuncCallable,
     args: List[LiteralModel],
     config: RunConfig
   ): FuncCallable = {
+    // pass results to a printing service if an input function returns a result
+    // otherwise just call it
     val body = funcCallable.arrowType.res match {
       case Some(rt) =>
         val callFuncTag =
@@ -124,7 +129,7 @@ object RunCommand extends Logging {
   def run[F[_]: Files: AquaIO: Async](
     multiaddr: String,
     func: String,
-    args: List[Literal[Id]],
+    args: List[LiteralModel],
     input: Path,
     imports: List[Path],
     transformConfig: TransformConfig = TransformConfig(),
@@ -135,6 +140,7 @@ object RunCommand extends Logging {
     val sources = new AquaFileSources[F](input, imports)
 
     for {
+      // compile only context to wrap and call function later
       compileResult <- Clock[F].timed(
         AquaCompiler
           .compileToContext[F, AquaFileError, FileModuleId, FileSpan.F](
@@ -148,8 +154,8 @@ object RunCommand extends Logging {
         contextV match {
           case Validated.Valid(contextC: Chain[AquaContext]) =>
             findFunction(contextC, func).map { funcCallable =>
-              val argsModel = args.map(l => LiteralModel(l.value, l.ts))
-              val wrapped = wrapCall(func, funcCallable, argsModel, runConfig)
+              // call an input function from a generated function
+              val wrapped = wrapCall(func, funcCallable, args, runConfig)
 
               val funcRes = Transform.fn(wrapped, transformConfig)
               val definitions = FunctionDef(funcRes)

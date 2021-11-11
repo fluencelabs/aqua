@@ -1,5 +1,6 @@
 package aqua.run
 
+import aqua.model.LiteralModel
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
@@ -34,7 +35,7 @@ object RunOpts {
     }
   }
 
-  val funcNameOpt: Opts[(String, List[Literal[Id]])] =
+  val funcOpt: Opts[(String, List[LiteralModel])] =
     Opts
       .option[String]("func", "Function to call with args", "f")
       .mapValidated { str =>
@@ -49,7 +50,7 @@ object RunOpts {
               Validated.invalidNel("Function must have only literals as variables")
             } else {
               val args = expr.args.collect { case l @ Literal(_, _) =>
-                l
+                LiteralModel(l.value, l.ts)
               }
 
               Validated.validNel((expr.funcName.value, args))
@@ -61,7 +62,7 @@ object RunOpts {
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
   ): Opts[F[cats.effect.ExitCode]] =
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcNameOpt).mapN {
+    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt).mapN {
       case (inputF, importF, multiaddr, (func, args)) =>
         for {
           inputV <- inputF
