@@ -1,10 +1,10 @@
-package aqua
+package aqua.run
 
-import aqua.RunCommand
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
+import aqua.{AppOpts, AquaIO, RunCommand}
 import cats.data.{NonEmptyList, Validated}
 import cats.effect.kernel.Async
 import cats.effect.{ExitCode, IO}
@@ -16,7 +16,7 @@ import cats.{Id, Monad, ~>}
 import com.monovore.decline.{Command, Opts}
 import fs2.io.file.Files
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 object RunOpts {
 

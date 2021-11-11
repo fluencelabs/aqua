@@ -5,6 +5,7 @@ import aqua.model.LiteralModel
 import aqua.model.transform.TransformConfig
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
+import aqua.run.RunOpts
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import cats.effect.kernel.Async

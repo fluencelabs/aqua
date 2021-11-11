@@ -7,14 +7,15 @@ import aqua.backend.{FunctionDef, Generated}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
-import aqua.model.func.{Call, FuncCallable}
 import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
-import aqua.model.transform.{Transform, TransformConfig}
+import aqua.model.func.{Call, FuncCallable}
 import aqua.model.transform.res.{AquaRes, FuncRes}
+import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{AquaContext, LiteralModel, VarModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
+import aqua.run.RunConfig
 import aqua.types.{ArrowType, NilType, ScalarType}
 import cats.data.*
 import cats.effect.kernel.{Async, Clock}
@@ -37,16 +38,13 @@ import scala.scalajs.js.annotation.*
 
 object RunCommand extends Logging {
 
-  val consoleServiceId = "--console--"
-  val printFunction = "print"
-
   /**
    * Calls an air code with FluenceJS SDK.
    * @param multiaddr relay to connect to
    * @param air code to call
    * @return
    */
-  def funcCall(multiaddr: String, air: String, functionDef: FunctionDef)(implicit
+  def funcCall(multiaddr: String, air: String, functionDef: FunctionDef, config: RunConfig)(implicit
     ec: ExecutionContext
   ): Future[Unit] = {
     (for {
@@ -57,8 +55,8 @@ object RunCommand extends Logging {
       promise = Promise.apply[Unit]()
       _ = CallJsFunction.registerUnitService(
         peer,
-        consoleServiceId,
-        printFunction,
+        config.consoleServiceId,
+        config.printFunction,
         args => {
           promise.success(())
           println("result: " + args)
@@ -74,12 +72,47 @@ object RunCommand extends Logging {
     } yield {})
   }
 
-  val generatedFuncName = "callerUniqueFunction"
-
-  def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncCallable] =
+  private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncCallable] =
     contexts
       .flatMap(_.exports.map(e => Chain.fromSeq(e.funcs.values.toList)).getOrElse(Chain.empty))
       .find(_.funcName == funcName)
+
+  // Wrap a function that it will be called in another function, and pass results to a `print` service, i.e.:
+  // func wrapFunc():
+  //   res <- funcCallable(args:_*)
+  //   Console.print(res)
+  private def wrapCall(
+    funcName: String,
+    funcCallable: FuncCallable,
+    args: List[LiteralModel],
+    config: RunConfig
+  ): FuncCallable = {
+    val body = funcCallable.arrowType.res match {
+      case Some(rt) =>
+        val callFuncTag =
+          CallArrowTag(funcName, Call(args, List(Call.Export(config.resultName, rt))))
+
+        val callServiceTag = CallServiceTag(
+          LiteralModel.quote(config.consoleServiceId),
+          config.printFunction,
+          Call(List(VarModel(config.resultName, rt)), Nil)
+        )
+
+        FuncOps.seq(FuncOp.leaf(callFuncTag), FuncOp.leaf(callServiceTag))
+      case None =>
+        FuncOp.leaf(CallArrowTag(funcName, Call(args, Nil)))
+    }
+
+    FuncCallable(
+      config.wrapFunctionName,
+      body,
+      // no arguments and returns nothing
+      ArrowType(NilType, NilType),
+      Nil,
+      Map(funcName -> funcCallable),
+      Map.empty
+    )
+  }
 
   /**
    * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
@@ -94,7 +127,8 @@ object RunCommand extends Logging {
     args: List[Literal[Id]],
     input: Path,
     imports: List[Path],
-    config: TransformConfig = TransformConfig()
+    transformConfig: TransformConfig = TransformConfig(),
+    runConfig: RunConfig = RunConfig()
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
@@ -106,58 +140,25 @@ object RunCommand extends Logging {
           .compileToContext[F, AquaFileError, FileModuleId, FileSpan.F](
             sources,
             SpanParser.parser,
-            config
+            transformConfig
           )
       )
       (compileTime, contextV) = compileResult
       callResult <- Clock[F].timed {
         contextV match {
           case Validated.Valid(contextC: Chain[AquaContext]) =>
-            // find
             findFunction(contextC, func).map { funcCallable =>
-              /*
-                make funcRes as function like:
-
-                func someFunc():
-                  res <- funcResFunc(args:_*)
-                  Console.print(res)
-
-                and then transform
-               */
               val argsModel = args.map(l => LiteralModel(l.value, l.ts))
-              val body = funcCallable.arrowType.res match {
-                case Some(rt) =>
-                  val resultName = "res"
-                  val callFuncTag =
-                    CallArrowTag(func, Call(argsModel, List(Call.Export(resultName, rt))))
+              val wrapped = wrapCall(func, funcCallable, argsModel, runConfig)
 
-                  val callServiceTag = CallServiceTag(
-                    LiteralModel.quote(consoleServiceId),
-                    printFunction,
-                    Call(List(VarModel(resultName, rt)), Nil)
-                  )
-
-                  FuncOps.seq(FuncOp.leaf(callFuncTag), FuncOp.leaf(callServiceTag))
-                case None =>
-                  FuncOp.leaf(CallArrowTag(func, Call(argsModel, Nil)))
-              }
-
-              val fCallable = FuncCallable(
-                "someFuncToRun",
-                body,
-                ArrowType(NilType, NilType),
-                Nil,
-                Map(func -> funcCallable),
-                Map.empty
-              )
-
-              val funcRes = Transform.fn(fCallable, config)
-
+              val funcRes = Transform.fn(wrapped, transformConfig)
               val definitions = FunctionDef(funcRes)
+
               val air = FuncAirGen(funcRes).generate.show
+
               Async[F].fromFuture {
-                funcCall(multiaddr, air, definitions).pure[F]
-              }.map { res =>
+                funcCall(multiaddr, air, definitions, runConfig).pure[F]
+              }.map { _ =>
                 Validated.validNec(())
               }
             }.getOrElse(Validated.invalidNec(s"There is no function called '$func'").pure[F])
