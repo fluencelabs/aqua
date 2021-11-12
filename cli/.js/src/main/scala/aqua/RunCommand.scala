@@ -92,20 +92,24 @@ object RunCommand extends Logging {
   ): FuncCallable = {
     // pass results to a printing service if an input function returns a result
     // otherwise just call it
-    val body = funcCallable.arrowType.res match {
-      case Some(rt) =>
+    val body = funcCallable.arrowType.codomain.toList match {
+      case Nil =>
+        FuncOp.leaf(CallArrowTag(funcName, Call(args, Nil)))
+      case types =>
+        val (variables, exports) = types.zipWithIndex.map { case (t, idx) =>
+          val name = config.resultName + idx
+          (VarModel(name, t), Call.Export(name, t))
+        }.unzip
         val callFuncTag =
-          CallArrowTag(funcName, Call(args, List(Call.Export(config.resultName, rt))))
+          CallArrowTag(funcName, Call(args, exports))
 
         val callServiceTag = CallServiceTag(
           LiteralModel.quote(config.consoleServiceId),
           config.printFunctionName,
-          Call(List(VarModel(config.resultName, rt)), Nil)
+          Call(variables, Nil)
         )
 
         FuncOps.seq(FuncOp.leaf(callFuncTag), FuncOp.leaf(callServiceTag))
-      case None =>
-        FuncOp.leaf(CallArrowTag(funcName, Call(args, Nil)))
     }
 
     FuncCallable(
