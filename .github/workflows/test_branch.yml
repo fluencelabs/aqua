@@ -58,6 +58,7 @@ jobs:
           mv cli/.js/target/scala-3.0.2/cli-fastopt.js npm/aqua.mjs
           cd npm
           npm i
+          npm i --save-dev ../
           node aqua.mjs -i ../aqua-playground/aqua/examples -o ../aqua-playground/src/compiled/examples -m ../aqua-playground/node_modules -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
           cd ../aqua-playground
           npm run examples
