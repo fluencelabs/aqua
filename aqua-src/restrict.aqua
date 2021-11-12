@@ -16,6 +16,8 @@ func buildOpt() -> ?string:
 func buildOptUsage():
   a <- buildOpt()
   b <- buildOpt()
+  for x <- b:
+    z <- buildOpt()
 
 func keepReturn() -> *string:
   s: *string
