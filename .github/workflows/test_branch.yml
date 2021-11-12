@@ -61,3 +61,4 @@ jobs:
           node aqua.mjs -i ../aqua-playground/aqua/examples -o ../aqua-playground/src/compiled/examples -m ../aqua-playground/node_modules -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
           cd ../aqua-playground
           npm run examples
+          npm run run-aqua

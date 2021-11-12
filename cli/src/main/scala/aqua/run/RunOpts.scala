@@ -47,7 +47,7 @@ object RunOpts {
               case _ => false
             }
             if (hasVars) {
-              Validated.invalidNel("Function must have only literals as variables")
+              Validated.invalidNel("Function can have only literal arguments, no variables or constants allowed at the moment")
             } else {
               val args = expr.args.collect { case l @ Literal(_, _) =>
                 LiteralModel(l.value, l.ts)

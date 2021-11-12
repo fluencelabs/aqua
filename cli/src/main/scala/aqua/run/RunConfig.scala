@@ -2,8 +2,8 @@ package aqua.run
 
 // `run` command configuration
 case class RunConfig(
-  consoleServiceId: String = "--console--",
-  printFunctionName: String = "print",
+  consoleServiceId: String = "--after-callback-srv-service--",
+  printFunctionName: String = "print-and-stop",
   resultName: String = "res",
   functionWrapperName: String = "--someFuncToRun--"
 )

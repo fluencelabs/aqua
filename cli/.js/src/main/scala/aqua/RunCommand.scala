@@ -60,7 +60,7 @@ object RunCommand extends Logging {
         args => {
           // if an input function returns a result, our success will be after it is printed
           // otherwise finish after JS SDK will finish sending a request
-          println("result: " + args)
+          println(args)
           promise.success(())
         }
       )
