@@ -85,6 +85,8 @@ object AirGen extends Logging {
 
       case FoldRes(item, iterable) =>
         Eval later ForGen(valueToData(iterable), item, opsToSingle(ops))
+      case RestrictionRes(item, isStream) =>
+        Eval later NewGen(item, isStream, opsToSingle(ops))
       case CallServiceRes(serviceId, funcName, CallRes(args, exportTo), peerId) =>
         Eval.later(
           ServiceCallGen(
@@ -149,6 +151,12 @@ case class MatchMismatchGen(
 
 case class ForGen(iterable: DataView, item: String, body: AirGen) extends AirGen {
   override def generate: Air = Air.Fold(iterable, item, body.generate)
+}
+
+case class NewGen(item: String, isStream: Boolean, body: AirGen) extends AirGen {
+
+  override def generate: Air =
+    Air.New(if (isStream) DataView.Stream("$" + item) else DataView.Variable(item), body.generate)
 }
 
 case class NextGen(item: String) extends AirGen {

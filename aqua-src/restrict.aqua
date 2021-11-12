@@ -1,0 +1,39 @@
+module Restrict
+
+export withLoop, buildOptUsage, checkKeepReturn, checkKeepArg
+
+
+func withLoop(xs: []string):
+  for x <- xs:
+    s: *string
+    s <<- x
+
+func buildOpt() -> ?string:
+  s: *string
+  s <<- "none"
+  <- s
+
+func buildOptUsage():
+  a <- buildOpt()
+  b <- buildOpt()
+
+func keepReturn() -> *string:
+  s: *string
+  s <<- "should be not restricted"
+  <- s
+
+func checkKeepReturn() -> []string:
+  s <- keepReturn()
+  s <<- "and more"
+  <- s
+
+func keepArg(arg: *string) -> []string:
+  arg <<- "push more"
+  <- arg
+
+func checkKeepArg() -> []string, []string:
+  a: *string
+  keepArg(a)
+  y <- keepArg(a)
+  a <<- "more"
+  <- a, y
