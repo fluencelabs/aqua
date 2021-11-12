@@ -18,7 +18,7 @@ val circeVersion = "0.14.1"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.4.1",
+  baseAquaVersion := "0.5.0",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
