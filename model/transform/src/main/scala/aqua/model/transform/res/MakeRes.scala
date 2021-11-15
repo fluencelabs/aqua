@@ -46,7 +46,8 @@ object MakeRes {
     )
 
   def resolve(
-    currentPeerId: Option[ValueModel]
+    currentPeerId: Option[ValueModel],
+    i: Int
   ): PartialFunction[RawTag, Res] = {
     case SeqTag => leaf(SeqRes)
     case _: OnTag => leaf(SeqRes)
@@ -59,19 +60,19 @@ object MakeRes {
     case PushToStreamTag(operand, exportTo) =>
       operand.`type` match {
         case StreamType(st) =>
-          val tmpName = "push-to-stream"
-          wrap(
-            RestrictionRes(tmpName, isStream = false),
-            seq(
-              canon(
-                currentPeerId
-                  .getOrElse(LiteralModel.initPeerId),
-                operand,
-                Call.Export(tmpName, ArrayType(st))
-              ),
-              leaf(ApRes(VarModel(tmpName, ArrayType(st)), exportTo))
-            )
+          val tmpName = s"push-to-stream-$i"
+          // wrap (
+          //  RestrictionRes(tmpName, isStream = false),
+          seq(
+            canon(
+              currentPeerId
+                .getOrElse(LiteralModel.initPeerId),
+              operand,
+              Call.Export(tmpName, ArrayType(st))
+            ),
+            leaf(ApRes(VarModel(tmpName, ArrayType(st)), exportTo))
           )
+        // )
         case _ =>
           leaf(ApRes(operand, exportTo))
       }
