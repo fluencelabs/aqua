@@ -80,7 +80,10 @@ case class FuncCallable(
     // Function body on its own defines some values; collect their names
     // except stream arguments. They should be already renamed
     val treeDefines =
-      treeWithValues.definesVarNames.value -- streamArgs.keySet -- call.exportTo.filter { exp =>
+      treeWithValues.definesVarNames.value -- streamArgs.keySet -- streamArgs.values.collect {
+        case VarModel(streamNameWasAlreadySubstitutedAbove, _, _) =>
+          streamNameWasAlreadySubstitutedAbove
+      } -- call.exportTo.filter { exp =>
         exp.`type` match {
           case StreamType(_) => false
           case _ => true

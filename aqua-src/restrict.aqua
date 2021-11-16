@@ -1,6 +1,6 @@
 module Restrict
 
-export withLoop, buildOptUsage, checkKeepReturn, checkKeepArg
+export withLoop, buildOptUsage, checkKeepReturn, checkKeepArg, retrieve_records
 
 
 func withLoop(xs: []string):
@@ -51,9 +51,3 @@ func retrieve_records(peer: string) -> [][]string:
     records: *[]string
     append_records(peer, records)
     <- records
-
---    registerTestService({
---        get_records: (key) => {
---            return [key, key];
---        },
---    });
