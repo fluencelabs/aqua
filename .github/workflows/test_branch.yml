@@ -49,15 +49,15 @@ jobs:
       ### Update & build
       - name: Integration test
         run: |
-          git clone https://github.com/fluencelabs/aqua-playground.git
-          cd aqua-playground
-          npm i
-          cd ..
+          git clone https://github.com/fluencelabs/aqua-playground.git        
           sbt "cliJS/fastOptJS"
           rm -rf aqua-playground/src/compiled/examples/*
-          mv cli/.js/target/scala-3.0.2/cli-fastopt.js npm/aqua.mjs
+          mv cli/.js/target/scala-3.0.2/cli-fastopt.js npm/aqua.js
           cd npm
           npm i
-          node aqua.mjs -i ../aqua-playground/aqua/examples -o ../aqua-playground/src/compiled/examples -m ../aqua-playground/node_modules -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
+          cd ../aqua-playground          
+          npm i --save-dev ../npm
+          npm i
           cd ../aqua-playground
+          npm run compile-aqua -- -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
           npm run examples

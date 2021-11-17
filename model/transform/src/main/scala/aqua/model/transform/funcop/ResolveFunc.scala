@@ -3,9 +3,10 @@ package aqua.model.transform.funcop
 import aqua.model.func.*
 import aqua.model.func.raw.{FuncOp, FuncOps}
 import aqua.model.{ValueModel, VarModel}
-import aqua.types.{ArrayType, ArrowType, ConsType, NilType, ProductType, StreamType}
+import aqua.types.*
 import cats.Eval
 
+// TODO: doc
 case class ResolveFunc(
   transform: FuncOp => FuncOp,
   callback: (String, Call) => FuncOp,
@@ -16,6 +17,7 @@ case class ResolveFunc(
 
   private val returnVar: String = "-return-"
 
+  // TODO: doc
   def returnCallback(retModel: List[ValueModel]): FuncOp =
     callback(
       respFuncName,
@@ -25,6 +27,7 @@ case class ResolveFunc(
       )
     )
 
+  // TODO: doc
   def arrowToCallback(name: String, arrowType: ArrowType): FuncCallable = {
     val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
     FuncCallable(
@@ -37,6 +40,7 @@ case class ResolveFunc(
     )
   }
 
+  // TODO: doc/rename
   def wrap(func: FuncCallable): FuncCallable = {
     val returnType = ProductType(func.ret.map(_.lastType).map {
       // we mustn't return a stream in response callback to avoid pushing stream to `-return-` value
@@ -76,6 +80,7 @@ case class ResolveFunc(
     )
   }
 
+  // TODO: doc/rename
   def resolve(
     func: FuncCallable,
     funcArgName: String = "_func"

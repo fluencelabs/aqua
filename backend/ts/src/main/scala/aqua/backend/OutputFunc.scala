@@ -27,23 +27,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
     val codeLeftSpace = " " * 20
 
     val script = tsAir.show.linesIterator.map(codeLeftSpace + _).mkString("\n")
-    val args = func.args.map(a => ArgDefinition.argToDef(a.name, a.`type`))
-    val config = func.conf
-    val names = NamesConfig(
-      config.relayVarName.getOrElse("-relay-"),
-      config.getDataService,
-      config.callbackService,
-      config.callbackService,
-      config.respFuncName,
-      config.errorHandlingService,
-      config.errorFuncName
-    )
-    val funcDef = FunctionDef(
-      func.funcName,
-      TypeDefinition(func.returnType),
-      args,
-      names
-    )
+    val funcDef = FunctionDef(func)
 
     s"""${funcTypes.generate}
        |export function ${func.funcName}(${typed("...args", "any")}) {

@@ -1,5 +1,6 @@
 package aqua.backend
 
+import aqua.model.transform.res.FuncRes
 import aqua.types.{ArrowType, OptionType, ProductType, Type}
 import io.circe.*
 import io.circe.generic.auto.*
@@ -134,3 +135,25 @@ case class FunctionDef(
   argDefs: List[ArgDefinition],
   names: NamesConfig
 )
+
+object FunctionDef {
+  def apply(func: FuncRes): FunctionDef = {
+    val args = func.args.map(a => ArgDefinition.argToDef(a.name, a.`type`))
+    val config = func.conf
+    val names = NamesConfig(
+      config.relayVarName.getOrElse("-relay-"),
+      config.getDataService,
+      config.callbackService,
+      config.callbackService,
+      config.respFuncName,
+      config.errorHandlingService,
+      config.errorFuncName
+    )
+    FunctionDef(
+      func.funcName,
+      TypeDefinition(func.returnType),
+      args,
+      names
+    )
+  }
+}

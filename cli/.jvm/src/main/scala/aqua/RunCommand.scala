@@ -1,5 +1,8 @@
 package aqua
 
+import aqua.model.LiteralModel
+import aqua.model.transform.TransformConfig
+import aqua.run.RunConfig
 import cats.Monad
 import cats.effect.IO
 import cats.effect.kernel.Async
@@ -9,10 +12,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object RunCommand {
 
-  def run[F[_]: Monad: Files: AquaIO: Async](
+  def run[F[_]: Files: AquaIO: Async](
     multiaddr: String,
     func: String,
+    args: List[LiteralModel],
     input: Path,
-    imps: List[Path]
+    imports: List[Path],
+    transformConfig: TransformConfig = TransformConfig(),
+    runConfig: RunConfig = RunConfig()
   )(implicit ec: ExecutionContext): F[Unit] = ???
 }
