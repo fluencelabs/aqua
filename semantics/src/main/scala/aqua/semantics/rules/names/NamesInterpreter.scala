@@ -3,7 +3,7 @@ package aqua.semantics.rules.names
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.{ReportError, StackInterpreter}
-import aqua.types.{ArrowType, Type}
+import aqua.types.{ArrowType, StreamType, Type}
 import cats.data.{OptionT, State}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -127,6 +127,13 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
 
   override def beginScope(token: Token[S]): SX[Unit] =
     stackInt.beginScope(NamesState.Frame(token))
+
+  override def streamsDefinedWithinScope(): SX[Set[String]] =
+    stackInt.mapStackHead(State.pure(Set.empty[String])) { frame =>
+      frame -> frame.names.collect { case (n, StreamType(_)) =>
+        n
+      }.toSet
+    }
 
   override def endScope(): SX[Unit] = stackInt.endScope
 

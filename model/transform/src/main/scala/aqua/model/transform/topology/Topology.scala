@@ -54,6 +54,7 @@ object Topology extends Logging {
       i = i + 1
       i
     }
+
     val resolvedCofree = cursor
       .cata(wrap) { rc =>
         logger.debug(s"<:> $rc")

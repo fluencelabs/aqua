@@ -18,6 +18,9 @@ object MakeRes {
   def next(item: String): Res =
     leaf(NextRes(item))
 
+  def wrap(op: ResolvedOp, internal: Res): Res =
+    Cofree[Chain, ResolvedOp](op, Eval.now(Chain.one(internal)))
+
   def seq(first: Res, second: Res, more: Res*): Res =
     Cofree[Chain, ResolvedOp](SeqRes, Eval.later(first +: second +: Chain.fromSeq(more)))
 
@@ -51,6 +54,7 @@ object MakeRes {
     case _: OnTag => leaf(SeqRes)
     case MatchMismatchTag(a, b, s) => leaf(MatchMismatchRes(a, b, s))
     case ForTag(item, iter) => leaf(FoldRes(item, iter))
+    case RestrictionTag(item, isStream) => leaf(RestrictionRes(item, isStream))
     case ParTag | ParTag.Detach => leaf(ParRes)
     case XorTag | XorTag.LeftBiased => leaf(XorRes)
     case NextTag(item) => leaf(NextRes(item))
@@ -58,6 +62,8 @@ object MakeRes {
       operand.`type` match {
         case StreamType(st) =>
           val tmpName = s"push-to-stream-$i"
+          // wrap (
+          //  RestrictionRes(tmpName, isStream = false),
           seq(
             canon(
               currentPeerId
@@ -67,6 +73,7 @@ object MakeRes {
             ),
             leaf(ApRes(VarModel(tmpName, ArrayType(st)), exportTo))
           )
+        // )
         case _ =>
           leaf(ApRes(operand, exportTo))
       }

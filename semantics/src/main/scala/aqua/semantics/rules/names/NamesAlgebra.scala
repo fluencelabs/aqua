@@ -21,5 +21,7 @@ trait NamesAlgebra[S[_], Alg[_]] {
 
   def beginScope(token: Token[S]): Alg[Unit]
 
+  def streamsDefinedWithinScope(): Alg[Set[String]]
+
   def endScope(): Alg[Unit]
 }

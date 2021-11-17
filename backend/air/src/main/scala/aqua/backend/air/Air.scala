@@ -10,6 +10,7 @@ object Keyword {
 
   case object Null extends Keyword("null")
 
+  case object New extends Keyword("new")
   case object Next extends Keyword("next")
 
   case object Fold extends Keyword("fold")
@@ -78,6 +79,8 @@ object Air {
 
   case object Null extends Air(Keyword.Null)
 
+  case class New(item: DataView, instruction: Air) extends Air(Keyword.New)
+
   case class Next(label: String) extends Air(Keyword.Next)
 
   case class Fold(iterable: DataView, label: String, instruction: Air) extends Air(Keyword.Fold)
@@ -114,6 +117,7 @@ object Air {
           (air match {
             case Air.Null ⇒ ""
             case Air.Next(label) ⇒ s" $label"
+            case Air.New(item, inst) ⇒ s" ${item.show}\n${showNext(inst)}$space"
             case Air.Fold(iter, label, inst) ⇒ s" ${iter.show} $label\n${showNext(inst)}$space"
             case Air.Match(left, right, inst) ⇒
               s" ${left.show} ${right.show}\n${showNext(inst)}$space"

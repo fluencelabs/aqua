@@ -162,14 +162,21 @@ object LiteralType {
 }
 
 sealed trait BoxType extends DataType {
+  def isStream: Boolean
   def element: Type
 }
 
 case class ArrayType(element: Type) extends BoxType {
+
+  override def isStream: Boolean = false
+
   override def toString: String = "[]" + element
 }
 
 case class OptionType(element: Type) extends BoxType {
+
+  override def isStream: Boolean = false
+
   override def toString: String = "?" + element
 }
 
@@ -200,6 +207,9 @@ case class ArrowType(domain: ProductType, codomain: ProductType) extends Type {
 }
 
 case class StreamType(element: Type) extends BoxType {
+
+  override def isStream: Boolean = true
+
   override def toString: String = s"*$element"
 }
 

@@ -440,7 +440,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   // this example doesn't create a hop on relay after fold
   // but the test create it, so there is not a one-on-one simulation
   // change it or write an integration test
-  "topology resolver" should "create returning hops on chain of 'on'" in {
+  "topology resolver" should "create returning hops on chain of 'on'" ignore {
     val init =
       on(
         initPeer,
@@ -468,30 +468,31 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc: Node.Res = Topology.resolve(init)
 
-    /*val expected: Node.Res =
+    val expected: Node.Res =
       MakeRes.seq(
         callRes(0, initPeer),
-        callRes(1, otherRelay),
+        callRes(1, otherRelay)
       )
-    proc.equalsOrPrintDiff(expected) should be(true)*/
+    proc.equalsOrPrintDiff(expected) should be(true)
   }
 
+  // This behavior is correct, but as two seqs are not flattened, it's a question how to make the matching result structure
   "topology resolver" should "create returning hops on nested 'on'" ignore {
     val init =
       on(
         initPeer,
-        Nil,
+        relay :: Nil,
         callTag(0),
         on(
-          otherRelay,
+          otherPeer,
           Nil,
           callTag(1),
           fold(
             "i",
             valueArray,
             on(
-              otherRelay2,
-              otherRelay :: Nil,
+              otherPeer2,
+              otherRelay2 :: Nil,
               callTag(2)
             )
           )
@@ -509,53 +510,53 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           "i",
           valueArray,
           MakeRes.seq(
-            callRes(2, otherRelay2),
+            through(otherRelay2),
+            callRes(2, otherPeer2),
+            through(otherRelay2),
             nextRes("i")
           )
         ),
-        through(otherRelay),
+        through(relay),
         callRes(3, initPeer)
       )
 
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
+  // https://github.com/fluencelabs/aqua/issues/205
   "topology resolver" should "optimize path over fold" ignore {
     val i = VarModel("i", ScalarType.string)
-    val init = {
+    val init =
       on(
         initPeer,
-        Nil,
+        relay :: Nil,
         fold(
           "i",
           valueArray,
           on(
             i,
-            relay :: Nil,
+            otherRelay :: Nil,
             callTag(1)
           )
         )
       )
 
-    }
-
     val proc = Topology.resolve(init)
 
-    val expected: Node.Res = {
+    val expected: Node.Res =
       MakeRes.seq(
         through(relay),
+        through(otherRelay),
         MakeRes.fold(
           "i",
           valueArray,
           MakeRes.seq(
             callRes(1, i),
-            through(relay),
+            through(otherRelay),
             nextRes("i")
           )
         )
       )
-
-    }
 
     proc.equalsOrPrintDiff(expected) should be(true)
   }
