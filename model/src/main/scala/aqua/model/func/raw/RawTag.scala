@@ -78,6 +78,7 @@ case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag
     s"(on $peerId${if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""})"
 }
 case class NextTag(item: String) extends RawTag
+case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag
 
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
     extends SeqGroupTag

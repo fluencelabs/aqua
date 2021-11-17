@@ -12,17 +12,18 @@ import aqua.types.{ArrayType, BoxType}
 import cats.Monad
 import cats.data.Chain
 import cats.syntax.applicative.*
+import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
 class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
 
-  def program[Alg[_]: Monad](implicit
-    V: ValuesAlgebra[S, Alg],
-    N: NamesAlgebra[S, Alg],
-    T: TypesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg]
-  ): Prog[Alg, Model] =
+  def program[F[_]: Monad](implicit
+    V: ValuesAlgebra[S, F],
+    N: NamesAlgebra[S, F],
+    T: TypesAlgebra[S, F],
+    A: AbilitiesAlgebra[S, F]
+  ): Prog[F, Model] =
     Prog
       .around(
         N.beginScope(expr.item) >> V.valueToModel(expr.iterable).flatMap[Option[ValueModel]] {
@@ -34,30 +35,44 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                 T.ensureTypeMatches(expr.iterable, ArrayType(dt), dt).as(Option.empty[ValueModel])
             }
 
-          case _ => None.pure[Alg]
+          case _ => None.pure[F]
         },
         (stOpt: Option[ValueModel], ops: Model) =>
-          N.endScope() as ((stOpt, ops) match {
-            case (Some(vm), op: FuncOp) =>
-              // Fix: continue execution after fold par immediately, without finding a path out from par branches
-              val innerTag = expr.mode.map(_._2).fold[RawTag](SeqTag) {
-                case ForExpr.ParMode => ParTag
-                case ForExpr.TryMode => XorTag
-              }
-              val forTag = FuncOp.wrap(
-                ForTag(expr.item.value, vm),
-                FuncOp.node(
-                  expr.mode.map(_._2).fold[RawTag](SeqTag) {
+          N.streamsDefinedWithinScope()
+            .map((streams: Set[String]) =>
+              (stOpt, ops) match {
+                case (Some(vm), op: FuncOp) =>
+                  val innerTag = expr.mode.map(_._2).fold[RawTag](SeqTag) {
                     case ForExpr.ParMode => ParTag
                     case ForExpr.TryMode => XorTag
-                  },
-                  Chain(op, FuncOp.leaf(NextTag(expr.item.value)))
-                )
-              )
-              if (innerTag == ParTag) FuncOp.node(ParTag, Chain(forTag, FuncOps.empty))
-              else forTag
-            case _ => Model.error("Wrong body of For expr")
-          })
+                  }
+
+                  // Restrict the streams created within this scope
+                  val body =
+                    Chain(
+                      streams.toList.foldLeft(op) { case (b, streamName) =>
+                        FuncOp.wrap(RestrictionTag(streamName, isStream = true), b)
+                      },
+                      FuncOp.leaf(NextTag(expr.item.value))
+                    )
+
+                  val forTag = FuncOp.wrap(
+                    ForTag(expr.item.value, vm),
+                    FuncOp.node(
+                      expr.mode.map(_._2).fold[RawTag](SeqTag) {
+                        case ForExpr.ParMode => ParTag
+                        case ForExpr.TryMode => XorTag
+                      },
+                      body
+                    )
+                  )
+                  // Fix: continue execution after fold par immediately, without finding a path out from par branches
+                  if (innerTag == ParTag) FuncOp.node(ParTag, Chain(forTag, FuncOps.empty))
+                  else forTag
+                case _ =>
+                  Model.error("Wrong body of the For expression")
+              }
+            ) <* N.endScope()
       )
       .abilitiesScope[S](expr.token)
 }
