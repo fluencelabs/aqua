@@ -109,7 +109,8 @@ object NamesConfigJs {
 
 @JSExportAll
 case class PeerConfig(
-  connectTo: String
+  connectTo: String,
+  defaultTtlMs: Int
 )
 
 /**
