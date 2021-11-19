@@ -44,12 +44,12 @@ object RunCommand extends Logging {
    * @param air code to call
    * @return
    */
-  def funcCall(multiaddr: String, air: String, functionDef: FunctionDef, config: RunConfig)(implicit
+  def funcCall(multiaddr: String, air: String, functionDef: FunctionDef, timeout: Int, config: RunConfig)(implicit
     ec: ExecutionContext
   ): Future[Unit] = {
     (for {
       _ <- Fluence
-        .start(PeerConfig(connectTo = multiaddr))
+        .start(PeerConfig(multiaddr, timeout))
         .toFuture
       peer = Fluence.getPeer()
       promise = Promise.apply[Unit]()
@@ -58,9 +58,10 @@ object RunCommand extends Logging {
         config.consoleServiceId,
         config.printFunctionName,
         args => {
+          val str = JSON.stringify(args, null, 2)
           // if an input function returns a result, our success will be after it is printed
           // otherwise finish after JS SDK will finish sending a request
-          println(args)
+          println(str)
           promise.success(())
         }
       )
@@ -136,6 +137,7 @@ object RunCommand extends Logging {
     args: List[LiteralModel],
     input: Path,
     imports: List[Path],
+    timeout: Int,
     transformConfig: TransformConfig = TransformConfig(),
     runConfig: RunConfig = RunConfig()
   )(implicit ec: ExecutionContext): F[Unit] = {
@@ -167,7 +169,7 @@ object RunCommand extends Logging {
               val air = FuncAirGen(funcRes).generate.show
 
               Async[F].fromFuture {
-                funcCall(multiaddr, air, definitions, runConfig).pure[F]
+                funcCall(multiaddr, air, definitions, timeout, runConfig).pure[F]
               }.map { _ =>
                 Validated.validNec(())
               }

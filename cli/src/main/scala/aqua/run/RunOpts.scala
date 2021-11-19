@@ -21,6 +21,10 @@ import scala.concurrent.ExecutionContext
 
 object RunOpts {
 
+  val timeoutOpt: Opts[Int] =
+    Opts.option[Int]("timeout", "Request timeout in milliseconds", "t")
+      .withDefault(7000)
+  
   val multiaddrOpt: Opts[String] =
     Opts
       .option[String]("addr", "Relay multiaddress", "a")
@@ -62,8 +66,8 @@ object RunOpts {
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
   ): Opts[F[cats.effect.ExitCode]] =
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt).mapN {
-      case (inputF, importF, multiaddr, (func, args)) =>
+    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt, timeoutOpt).mapN {
+      case (inputF, importF, multiaddr, (func, args), timeout) =>
         for {
           inputV <- inputF
           impsV <- importF
@@ -74,7 +78,7 @@ object RunOpts {
                 _ => cats.effect.ExitCode.Error.pure[F],
                 { imps =>
                   RunCommand
-                    .run(multiaddr, func, args, input, imps)
+                    .run(multiaddr, func, args, input, imps, timeout)
                     .map(_ => cats.effect.ExitCode.Success)
                 }
               )

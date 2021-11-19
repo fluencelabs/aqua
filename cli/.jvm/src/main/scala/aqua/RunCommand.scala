@@ -18,6 +18,7 @@ object RunCommand {
     args: List[LiteralModel],
     input: Path,
     imports: List[Path],
+    timeout: Int,
     transformConfig: TransformConfig = TransformConfig(),
     runConfig: RunConfig = RunConfig()
   )(implicit ec: ExecutionContext): F[Unit] = ???

@@ -5,7 +5,7 @@ scalaVersion := dottyVersion
 val baseAquaVersion = settingKey[String]("base aqua version")
 
 val catsV = "2.6.1"
-val catsParseV = "0.3.4"
+val catsParseV = "0.3.5"
 val monocleV = "3.0.0-M6"
 val scalaTestV = "3.2.9"
 val fs2V = "3.1.0"
