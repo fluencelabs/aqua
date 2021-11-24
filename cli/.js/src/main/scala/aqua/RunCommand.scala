@@ -52,6 +52,7 @@ object RunCommand extends Logging {
         .start(PeerConfig(multiaddr, timeout))
         .toFuture
       peer = Fluence.getPeer()
+      _ = println("Your peerId: " + peer.getStatus().peerId)
       promise = Promise.apply[Unit]()
       _ = CallJsFunction.registerUnitService(
         peer,
