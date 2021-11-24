@@ -169,6 +169,10 @@ object RunCommand extends Logging {
 
               val air = FuncAirGen(funcRes).generate.show
 
+              if (runConfig.printAir) {
+                println(air)
+              }
+
               Async[F].fromFuture {
                 funcCall(multiaddr, air, definitions, runConfig).pure[F]
               }.map { _ =>

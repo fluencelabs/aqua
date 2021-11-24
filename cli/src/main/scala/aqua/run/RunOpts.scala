@@ -40,6 +40,12 @@ object RunOpts extends Logging {
     }
   }
 
+  val printAir: Opts[Boolean] =
+    Opts
+      .flag("print-air", "Prints generated AIR code before function execution")
+      .map(_ => true)
+      .withDefault(false)
+  
   val funcOpt: Opts[(String, List[LiteralModel])] =
     Opts
       .option[String]("func", "Function to call with args", "f")
@@ -67,8 +73,8 @@ object RunOpts extends Logging {
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
   ): Opts[F[cats.effect.ExitCode]] =
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt, timeoutOpt, AppOpts.logLevelOpt).mapN {
-      case (inputF, importF, multiaddr, (func, args), timeout, logLevel) =>
+    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt, timeoutOpt, AppOpts.logLevelOpt, printAir).mapN {
+      case (inputF, importF, multiaddr, (func, args), timeout, logLevel, printAir) =>
 
         scribe.Logger.root
           .clearHandlers()
@@ -92,7 +98,7 @@ object RunOpts extends Logging {
                 },
                 { imps =>
                   RunCommand
-                    .run(multiaddr, func, args, input, imps, RunConfig(timeout, logLevel))
+                    .run(multiaddr, func, args, input, imps, RunConfig(timeout, logLevel, printAir))
                     .map(_ => cats.effect.ExitCode.Success)
                 }
               )

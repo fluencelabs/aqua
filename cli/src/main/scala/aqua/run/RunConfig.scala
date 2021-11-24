@@ -6,6 +6,7 @@ import scribe.Level
 case class RunConfig(
   timeout: Int,
   logLevel: Level,
+  printAir: Boolean,
   consoleServiceId: String = "--after-callback-srv-service--",
   printFunctionName: String = "print-and-stop",
   resultName: String = "-some-unique-res-name-",
