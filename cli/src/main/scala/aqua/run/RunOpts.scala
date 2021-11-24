@@ -5,7 +5,7 @@ import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
-import aqua.{AppOpts, AquaIO, RunCommand}
+import aqua.{AppOpts, AquaIO, LogFormatter, RunCommand}
 import cats.data.{NonEmptyList, Validated}
 import cats.effect.kernel.Async
 import cats.effect.{ExitCode, IO}
@@ -16,10 +16,11 @@ import cats.syntax.functor.*
 import cats.{Id, Monad, ~>}
 import com.monovore.decline.{Command, Opts}
 import fs2.io.file.Files
+import scribe.Logging
 
 import scala.concurrent.ExecutionContext
 
-object RunOpts {
+object RunOpts extends Logging {
 
   val timeoutOpt: Opts[Int] =
     Opts.option[Int]("timeout", "Request timeout in milliseconds", "t")
@@ -66,16 +67,29 @@ object RunOpts {
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
   ): Opts[F[cats.effect.ExitCode]] =
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt, timeoutOpt).mapN {
-      case (inputF, importF, multiaddr, (func, args), timeout) =>
+    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt, timeoutOpt, AppOpts.logLevelOpt).mapN {
+      case (inputF, importF, multiaddr, (func, args), timeout, logLevel) =>
+
+        scribe.Logger.root
+          .clearHandlers()
+          .clearModifiers()
+          .withHandler(formatter = LogFormatter.formatter, minimumLevel = Some(logLevel))
+          .replace()
+
         for {
           inputV <- inputF
           impsV <- importF
           result <- inputV.fold(
-            _ => cats.effect.ExitCode.Error.pure[F],
+            errs => {
+              errs.map(logger.error)
+              cats.effect.ExitCode.Error.pure[F]
+            },
             { input =>
               impsV.fold(
-                _ => cats.effect.ExitCode.Error.pure[F],
+                errs => {
+                  errs.map(logger.error)
+                  cats.effect.ExitCode.Error.pure[F]
+                },
                 { imps =>
                   RunCommand
                     .run(multiaddr, func, args, input, imps, timeout)
