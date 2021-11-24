@@ -92,7 +92,7 @@ object RunOpts extends Logging {
                 },
                 { imps =>
                   RunCommand
-                    .run(multiaddr, func, args, input, imps, timeout)
+                    .run(multiaddr, func, args, input, imps, RunConfig(timeout, logLevel))
                     .map(_ => cats.effect.ExitCode.Success)
                 }
               )
