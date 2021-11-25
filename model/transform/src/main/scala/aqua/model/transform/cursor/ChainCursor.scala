@@ -12,7 +12,7 @@ abstract class ChainCursor[C <: ChainCursor[C, T], T](make: NonEmptyList[ChainZi
   val tree: NonEmptyList[ChainZipper[T]]
 
   // Parent element, if not at root
-  def parent: Option[T] = tree.tail.headOption.map(_.current)
+  def parent: Option[T] = moveUp.map(_.current)
 
   // The closest element
   def current: T = tree.head.current

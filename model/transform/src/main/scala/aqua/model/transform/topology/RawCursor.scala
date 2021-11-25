@@ -11,8 +11,10 @@ import cats.free.Cofree
 import scribe.Logging
 
 // Can be heavily optimized by caching parent cursors, not just list of zippers
-case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]], cachedParent: Option[RawCursor])
-    extends ChainCursor[RawCursor, FuncOp.Tree](RawCursor.apply(_, None)) with Logging {
+case class RawCursor(
+  tree: NonEmptyList[ChainZipper[FuncOp.Tree]],
+  cachedParent: Option[RawCursor] = None
+) extends ChainCursor[RawCursor, FuncOp.Tree](RawCursor.apply(_, None)) with Logging {
 
   override def moveUp: Option[RawCursor] = cachedParent.orElse(super.moveUp)
 
