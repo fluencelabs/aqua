@@ -87,14 +87,18 @@ object RunOpts extends Logging {
           impsV <- importF
           result <- inputV.fold(
             errs => {
-              errs.map(logger.error)
-              cats.effect.ExitCode.Error.pure[F]
+              Async[F].pure {
+                errs.map(logger.error)
+                cats.effect.ExitCode.Error
+              }
             },
             { input =>
               impsV.fold(
                 errs => {
-                  errs.map(logger.error)
-                  cats.effect.ExitCode.Error.pure[F]
+                  Async[F].pure {
+                    errs.map(logger.error)
+                    cats.effect.ExitCode.Error
+                  }
                 },
                 { imps =>
                   RunCommand
