@@ -25,6 +25,18 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
   lazy val toLastChild: Option[RawCursor] =
     ChainZipper.last(current.tail.value).map(moveDown)
 
+  def isOnTag: Boolean =
+    tag match {
+      case _: OnTag => true
+      case _ => false
+    }
+
+  def isForTag: Boolean =
+    tag match {
+      case _: ForTag => true
+      case _ => false
+    }
+
   lazy val tagsPath: NonEmptyList[RawTag] = path.map(_.head)
 
   lazy val pathOn: List[OnTag] = tagsPath.collect { case o: OnTag =>
@@ -55,7 +67,8 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
   }
 
   lazy val firstExecuted: Option[RawCursor] = tag match {
-    case _: SeqGroupTag => toFirstChild.flatMap(_.firstExecuted)
+    case _: SeqGroupTag =>
+      toFirstChild.flatMap(_.firstExecuted)
     case _: ParGroupTag =>
       None // As many branches are executed simultaneously, no definition of first
     case _: NoExecTag => moveRight.flatMap(_.firstExecuted)
@@ -88,7 +101,41 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
       .map(FuncOp(_))
       .exists(_.usesVarNames.value.intersect(names).nonEmpty)
 
-  lazy val pathFromPrev: Chain[ValueModel] = pathFromPrevD()
+  lazy val pathFromPrev: Chain[ValueModel] = tag match {
+    case ForTag(item, _) =>
+      // Move the stable part of path into for loop outside the for loop -- https://github.com/fluencelabs/aqua/issues/205
+
+      // Find the first executed element: in case of for...par, we need to dive into that par with toFirstChild (twice)
+      firstExecuted
+        .orElse(toFirstChild.flatMap(_.toFirstChild).flatMap(_.firstExecuted))
+        .flatMap(fc =>
+          // Find the first OnTag inside this For, if any
+          LazyList
+            .unfold(fc)(c =>
+              c.moveUp
+                .filterNot(_.pathOn == pathOn)
+                .map(c => c -> c)
+            )
+            .collectFirst {
+              case c if c.isOnTag =>
+                // For the deepest On, get the path
+                c.pathFromPrevD().takeWhile(v => !ValueModel.varName(v).contains(item))
+            }
+        )
+        .getOrElse(Chain.empty)
+
+    case _ =>
+      // The stable part of path inside the loop was already moved outside -- take it into account
+      // This means that this element contains the first
+      val p = pathFromPrevD()
+      LazyList
+        .unfold(this)(c => c.moveUp.map(rc => rc -> rc))
+        .collectFirst {
+          case c if c.isForTag =>
+            c.pathFromPrev
+        }
+      p
+  }
 
   def pathFromPrevD(forExit: Boolean = false): Chain[ValueModel] =
     parentTag.fold(Chain.empty[ValueModel]) {
@@ -96,6 +143,7 @@ case class RawCursor(tree: NonEmptyList[ChainZipper[FuncOp.Tree]])
         seqPrev
           .orElse(rootOn)
           .fold(Chain.empty[ValueModel])(PathFinder.find(_, this, isExit = forExit))
+
       case _ =>
         Chain.empty
     }
