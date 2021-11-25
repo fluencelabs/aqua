@@ -67,7 +67,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                     )
                   )
                   // Fix: continue execution after fold par immediately, without finding a path out from par branches
-                  if (innerTag == ParTag) FuncOp.node(ParTag, Chain(forTag, FuncOps.empty))
+                  if (innerTag == ParTag) FuncOp.wrap(ParTag.Detach, forTag)
                   else forTag
                 case _ =>
                   Model.error("Wrong body of the For expression")
