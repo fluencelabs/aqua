@@ -47,7 +47,7 @@ object Topology extends Logging {
     )
 
   def resolveOnMoves(op: Tree): Eval[Res] = {
-    val cursor = RawCursor(NonEmptyList.one(ChainZipper.one(op)))
+    val cursor = RawCursor(NonEmptyList.one(ChainZipper.one(op)), None)
     // TODO: remove var
     var i = 0
     def nextI = {
