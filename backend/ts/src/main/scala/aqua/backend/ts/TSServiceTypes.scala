@@ -9,7 +9,7 @@ case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
 
   private val serviceTypeName = s"${srv.name}Def";
 
-  def registerServiceArgs = {
+  private def registerServiceArgs = {
 
     // defined arguments used in overloads below
     val peerDecl = s"${typed("peer", "FluencePeer")}";
@@ -45,8 +45,7 @@ case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
     registerServiceArgsSource.map { x =>
       val args = x.mkString(", ")
       s"export function register${srv.name}(${args}): void;"
-    }
-      .mkString("\n")
+    }.mkString("\n")
   }
 
   private def exportInterface = {

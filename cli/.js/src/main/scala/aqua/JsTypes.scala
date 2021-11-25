@@ -107,10 +107,13 @@ object NamesConfigJs {
   }
 }
 
+type AvmLogLevel = "trace" | "debug" | "info" | "warn" | "error" | "off"
+
 @JSExportAll
 case class PeerConfig(
   connectTo: String,
-  defaultTtlMs: Int
+  defaultTtlMs: Int,
+  avmLogLevel: AvmLogLevel
 )
 
 /**
@@ -135,6 +138,16 @@ object V2 {
     script: String
   ): js.Promise[js.Any] = js.native
 }
+
+type FluenceJSLogLevel = "trace" | "debug" | "info" | "warn" | "error" | "silent"
+
+object FluenceUtils {
+
+  @js.native
+  @JSImport("@fluencelabs/fluence", "setLogLevel")
+  def setLogLevel(logLevel: FluenceJSLogLevel): Unit = js.native
+}
+
 
 /**
  * Public interface to Fluence JS SDK

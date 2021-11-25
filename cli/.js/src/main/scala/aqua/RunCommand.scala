@@ -44,14 +44,16 @@ object RunCommand extends Logging {
    * @param air code to call
    * @return
    */
-  def funcCall(multiaddr: String, air: String, functionDef: FunctionDef, timeout: Int, config: RunConfig)(implicit
+  def funcCall(multiaddr: String, air: String, functionDef: FunctionDef, config: RunConfig)(implicit
     ec: ExecutionContext
   ): Future[Unit] = {
+    FluenceUtils.setLogLevel(Utils.logLevelToFluenceJS(config.logLevel))
     (for {
       _ <- Fluence
-        .start(PeerConfig(multiaddr, timeout))
+        .start(PeerConfig(multiaddr, config.timeout, Utils.logLevelToAvm(config.logLevel)))
         .toFuture
       peer = Fluence.getPeer()
+      _ = println("Your peerId: " + peer.getStatus().peerId)
       promise = Promise.apply[Unit]()
       _ = CallJsFunction.registerUnitService(
         peer,
@@ -137,9 +139,8 @@ object RunCommand extends Logging {
     args: List[LiteralModel],
     input: Path,
     imports: List[Path],
-    timeout: Int,
-    transformConfig: TransformConfig = TransformConfig(),
-    runConfig: RunConfig = RunConfig()
+    runConfig: RunConfig,
+  transformConfig: TransformConfig = TransformConfig()
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
@@ -168,8 +169,12 @@ object RunCommand extends Logging {
 
               val air = FuncAirGen(funcRes).generate.show
 
+              if (runConfig.printAir) {
+                println(air)
+              }
+
               Async[F].fromFuture {
-                funcCall(multiaddr, air, definitions, timeout, runConfig).pure[F]
+                funcCall(multiaddr, air, definitions, runConfig).pure[F]
               }.map { _ =>
                 Validated.validNec(())
               }

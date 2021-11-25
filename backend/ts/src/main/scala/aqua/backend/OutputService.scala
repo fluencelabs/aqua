@@ -12,7 +12,7 @@ case class OutputService(srv: ServiceRes, types: Types) {
 
   import TypeScriptCommon.*
   import types.*
-  val serviceTypes = types.serviceType(srv)
+  private val serviceTypes = types.serviceType(srv)
   import serviceTypes.*
 
   def generate: String =
