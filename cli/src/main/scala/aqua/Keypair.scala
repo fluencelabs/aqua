@@ -8,12 +8,8 @@ import cats.effect.kernel.{Async}
 import cats.Monad
 import cats.implicits.catsSyntaxApplicativeId
 import cats.Applicative
-import scala.scalajs.js
-import scala.scalajs.js.JSConverters.*
 import aqua.KeyPair
 import cats.Applicative.ops.toAllApplicativeOps
-import scala.scalajs.js.JSON
-import java.util.Base64
 
 object KeypairOpts extends Logging {
 
@@ -35,13 +31,7 @@ object KeypairOpts extends Logging {
             KeyPair.randomEd25519().toFuture.pure[F]
           )
           .map(keypair =>
-            val encoder = Base64.getEncoder()
-            val kp = js.Dynamic.literal(
-                peerId = keypair.Libp2pPeerId.toB58String(),
-                secretKey = encoder.encodeToString(keypair.toEd25519PrivateKey().toArray.map(s => s.toByte)),
-                publicKey = encoder.encodeToString(keypair.Libp2pPeerId.pubKey.bytes.toArray.map(s => s.toByte)),
-            )
-            logger.info(s"keypair: ${JSON.stringify(kp, space = 2)}")
+            logger.info(s"keypair: ${KeyPairStringify.stringify(keypair)}")
             ExitCode.Success
           )
       )
