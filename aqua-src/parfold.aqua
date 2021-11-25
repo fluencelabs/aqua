@@ -1,0 +1,11 @@
+
+service Moo("tools"):
+  bla() -> []string
+
+func foo():
+  ss <- Moo.bla()
+  on HOST_PEER_ID:
+      Moo.bla()
+      for s <- ss par:
+        on s:
+          Moo.bla()
