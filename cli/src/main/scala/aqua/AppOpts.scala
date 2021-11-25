@@ -39,6 +39,8 @@ object AppOpts {
 
   def runOpt[F[_]: Files: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] = Opts.subcommand(RunOpts.runCommand[F])
 
+  def createKeypairOpt[F[_]: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] = Opts.subcommand(KeypairOpts.createKeypair[F])
+
   def toLogLevel(logLevel: String): Either[NonEmptyList[String], Level] = {
     LogLevel.stringToLogLevel
       .get(logLevel.toLowerCase)

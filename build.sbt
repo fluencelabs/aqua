@@ -51,14 +51,23 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
       "com.monovore"  %%% "decline"        % declineV,
       "com.monovore"  %%% "decline-effect" % declineV,
       "co.fs2"        %%% "fs2-io"         % fs2V
-    )
+    ),
   )
   .dependsOn(compiler, `backend-air`, `backend-ts`)
 
+import org.scalajs.linker.interface.OutputPatterns
+import org.scalajs.jsenv.nodejs.NodeJSEnv
+
 lazy val cliJS = cli.js
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
-    scalaJSUseMainModuleInitializer := true
+    scalaJSLinkerConfig             ~= (
+      _.withModuleKind(ModuleKind.ESModule)
+      // .withOutputPatterns(OutputPatterns.fromJSFile("%s.mjs"))
+    ),
+    scalaJSUseMainModuleInitializer := true,
+    // jsEnv := new NodeJSEnv(NodeJSEnv.Config().withEnv(Map("NODE_PATH" -> "./npm")))
+    // Compile / fullLinkJS / scalaJSLinkerOutputDirectory := new java.io.File("./npm"),
+    // Compile / fastLinkJS / scalaJSLinkerOutputDirectory := new java.io.File("./npm")
   )
 
 lazy val cliJVM = cli.jvm

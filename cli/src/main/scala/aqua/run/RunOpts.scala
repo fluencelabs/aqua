@@ -45,7 +45,7 @@ object RunOpts extends Logging {
       .flag("print-air", "Prints generated AIR code before function execution")
       .map(_ => true)
       .withDefault(false)
-  
+
   val funcOpt: Opts[(String, List[LiteralModel])] =
     Opts
       .option[String]("func", "Function to call with args", "f")
