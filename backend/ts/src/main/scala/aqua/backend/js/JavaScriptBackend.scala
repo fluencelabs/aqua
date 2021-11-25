@@ -1,7 +1,7 @@
 package aqua.backend.js
 
 import aqua.backend.ts.TypeScriptTypes
-import aqua.backend.{Backend, EmptyTypes, Generated, Header, OutputFile, OutputFunc, OutputService}
+import aqua.backend.*
 import aqua.model.transform.res.AquaRes
 
 case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
@@ -14,9 +14,9 @@ case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
       .map(s => TypeScriptTypes.serviceType(s))
       .map(_.generate)
       .toList
-      .mkString("\n\n")
+      .mkString("\n")
     val functions =
-      res.funcs.map(f => TypeScriptTypes.funcType(f)).map(_.generate).toList.mkString("\n\n")
+      res.funcs.map(f => TypeScriptTypes.funcType(f)).map(_.generate).toList.mkString("\n")
 
     val body = s"""${Header.header(false, false)}
        |

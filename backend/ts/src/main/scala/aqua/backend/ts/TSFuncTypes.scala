@@ -1,12 +1,12 @@
 package aqua.backend.ts
 
 import aqua.backend.FuncTypes
-import aqua.backend.ts.TypeScriptCommon.{fixupArgName, typeToTs, genTypeName}
+import aqua.backend.ts.TypeScriptCommon.{fixupArgName, genTypeName, typeToTs}
 import aqua.model.transform.res.FuncRes
 import aqua.types.*
 
 case class TSFuncTypes(func: FuncRes) extends FuncTypes {
-  import TypeScriptTypes._
+  import TypeScriptTypes.*
 
   override val retTypeTs = func.returnType
     .fold((None, "void")) { t => genTypeName(t, func.funcName.capitalize + "Result") }
@@ -20,18 +20,24 @@ case class TSFuncTypes(func: FuncRes) extends FuncTypes {
         (typeDesc, s"${typed(fixupArgName(arg.name), t)}")
       } :+ (None, s"config$configType")
 
-    val args = argsTypescript.map(_._2)
-    val argsDesc = argsTypescript.map(_._1).flatten
+    val args = argsTypescript.map(a => "    " + a._2)
+    val argsDesc = argsTypescript.flatMap(_._1)
 
     // defines different types for overloaded service registration function.
-    var funcTypeOverload1 = args.mkString(", ")
-    var funcTypeOverload2 = (typed("peer", "FluencePeer") :: args).mkString(", ")
+    val funcTypeOverload1 = args.mkString(",\n")
+    val funcTypeOverload2 = (("    " + typed("peer", "FluencePeer")) :: args).mkString(",\n")
 
     val (resTypeDesc, resType) = retTypeTs
 
     s"""${argsDesc.mkString("\n")} 
        |${resTypeDesc.getOrElse("")}
-       |export function ${func.funcName}(${funcTypeOverload1}): ${generic("Promise", resType)};
-       |export function ${func.funcName}(${funcTypeOverload2}): ${generic("Promise", resType)};""".stripMargin
+       |export function ${func.funcName}(
+       |${funcTypeOverload1}
+       |): ${generic("Promise", resType)};
+       |
+       |export function ${func.funcName}(
+       |${funcTypeOverload2}
+       |): ${generic("Promise", resType)};
+       |""".stripMargin
   }
 }
