@@ -5,7 +5,7 @@ import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
-import aqua.{AppOpts, AquaIO, RunCommand}
+import aqua.{AppOpts, AquaIO, LogFormatter, RunCommand}
 import cats.data.{NonEmptyList, Validated}
 import cats.effect.kernel.Async
 import cats.effect.{ExitCode, IO}
@@ -16,10 +16,11 @@ import cats.syntax.functor.*
 import cats.{Id, Monad, ~>}
 import com.monovore.decline.{Command, Opts}
 import fs2.io.file.Files
+import scribe.Logging
 
 import scala.concurrent.ExecutionContext
 
-object RunOpts {
+object RunOpts extends Logging {
 
   val timeoutOpt: Opts[Int] =
     Opts.option[Int]("timeout", "Request timeout in milliseconds", "t")
@@ -39,6 +40,12 @@ object RunOpts {
     }
   }
 
+  val printAir: Opts[Boolean] =
+    Opts
+      .flag("print-air", "Prints generated AIR code before function execution")
+      .map(_ => true)
+      .withDefault(false)
+  
   val funcOpt: Opts[(String, List[LiteralModel])] =
     Opts
       .option[String]("func", "Function to call with args", "f")
@@ -66,19 +73,36 @@ object RunOpts {
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
   ): Opts[F[cats.effect.ExitCode]] =
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt, timeoutOpt).mapN {
-      case (inputF, importF, multiaddr, (func, args), timeout) =>
+    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt, timeoutOpt, AppOpts.logLevelOpt, printAir).mapN {
+      case (inputF, importF, multiaddr, (func, args), timeout, logLevel, printAir) =>
+
+        scribe.Logger.root
+          .clearHandlers()
+          .clearModifiers()
+          .withHandler(formatter = LogFormatter.formatter, minimumLevel = Some(logLevel))
+          .replace()
+
         for {
           inputV <- inputF
           impsV <- importF
           result <- inputV.fold(
-            _ => cats.effect.ExitCode.Error.pure[F],
+            errs => {
+              Async[F].pure {
+                errs.map(logger.error)
+                cats.effect.ExitCode.Error
+              }
+            },
             { input =>
               impsV.fold(
-                _ => cats.effect.ExitCode.Error.pure[F],
+                errs => {
+                  Async[F].pure {
+                    errs.map(logger.error)
+                    cats.effect.ExitCode.Error
+                  }
+                },
                 { imps =>
                   RunCommand
-                    .run(multiaddr, func, args, input, imps, timeout)
+                    .run(multiaddr, func, args, input, imps, RunConfig(timeout, logLevel, printAir))
                     .map(_ => cats.effect.ExitCode.Success)
                 }
               )

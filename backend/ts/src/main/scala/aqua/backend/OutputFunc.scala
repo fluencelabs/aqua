@@ -33,7 +33,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
        |export function ${func.funcName}(${typed("...args", "any")}) {
        |
        |    let script = `
-       |    $script
+       |$script
        |    `
        |    return callFunction(
        |        args,
