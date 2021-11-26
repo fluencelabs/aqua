@@ -217,7 +217,6 @@ class RequestFlowBuilder extends js.Object {
 @JSImport("@fluencelabs/fluence", "KeyPair")
 class KeyPair extends js.Object {
   val Libp2pPeerId: PeerId = js.native
-
   def toEd25519PrivateKey(): js.typedarray.Uint8Array = js.native  
 }
 
@@ -225,7 +224,6 @@ class KeyPair extends js.Object {
 @JSImport("@fluencelabs/fluence", "KeyPair")
 object KeyPair extends js.Object {
   def fromEd25519SK(arr: js.typedarray.Uint8Array): js.Promise[KeyPair] = js.native
-
   def randomEd25519(): js.Promise[KeyPair] = js.native
 }
 
