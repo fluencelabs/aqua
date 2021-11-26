@@ -55,14 +55,9 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
   )
   .dependsOn(compiler, `backend-air`, `backend-ts`)
 
-import org.scalajs.linker.interface.OutputPatterns
-import org.scalajs.jsenv.nodejs.NodeJSEnv
-
 lazy val cliJS = cli.js
   .settings(
-    scalaJSLinkerConfig             ~= (
-      _.withModuleKind(ModuleKind.ESModule)
-    ),
+    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true,
   )
 
