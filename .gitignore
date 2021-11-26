@@ -6,3 +6,7 @@
 metals.sbt
 target
 project/target
+
+.DS_Store
+
+npm/aqua.js

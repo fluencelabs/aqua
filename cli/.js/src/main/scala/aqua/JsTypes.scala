@@ -212,3 +212,31 @@ class RequestFlowBuilder extends js.Object {
   def handleScriptError(f: js.Function1[js.Any, Unit]): RequestFlowBuilder = js.native
   def handleTimeout(f: js.Function0[Unit]): RequestFlowBuilder = js.native
 }
+
+@js.native
+@JSImport("@fluencelabs/fluence", "KeyPair")
+class KeyPair extends js.Object {
+  val Libp2pPeerId: PeerId = js.native
+  def toEd25519PrivateKey(): js.typedarray.Uint8Array = js.native  
+}
+
+@js.native
+@JSImport("@fluencelabs/fluence", "KeyPair")
+object KeyPair extends js.Object {
+  def fromEd25519SK(arr: js.typedarray.Uint8Array): js.Promise[KeyPair] = js.native
+  def randomEd25519(): js.Promise[KeyPair] = js.native
+}
+
+@js.native
+@JSImport("peer-id", "PeerId")
+class PeerId extends js.Object {
+  val pubKey: PublicKey = js.native
+  def toB58String(): String = js.native
+}
+
+@js.native
+@JSImport("libp2p-crypto", "PublicKey")
+class PublicKey extends js.Object {
+  val bytes: js.typedarray.Uint8Array = js.native
+}
+
