@@ -31,7 +31,7 @@ object KeyPairOpts extends Logging {
             KeyPair.randomEd25519().toFuture.pure[F]
           )
           .map(keypair =>
-            println(s"keypair: ${KeyPairStringify.stringify(keypair)}")
+            println(s"${KeyPairStringify.stringify(keypair)}")
             ExitCode.Success
           )
       )
