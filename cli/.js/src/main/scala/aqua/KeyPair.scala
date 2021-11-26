@@ -3,7 +3,7 @@ package aqua
 import com.monovore.decline.{Command, Opts}
 import scribe.Logging
 import scala.concurrent.{ExecutionContext, Future}
-import cats.effect.{ExitCode, IO}
+import cats.effect.ExitCode
 import cats.effect.kernel.{Async}
 import cats.Monad
 import cats.implicits.catsSyntaxApplicativeId
@@ -11,7 +11,7 @@ import cats.Applicative
 import aqua.KeyPair
 import cats.Applicative.ops.toAllApplicativeOps
 
-object KeypairOpts extends Logging {
+object KeyPairOpts extends Logging {
 
   val secretKey: Opts[String] =
     Opts.option[String]("secret-key", "Ed25519 32-byte key in base64", "sk")
