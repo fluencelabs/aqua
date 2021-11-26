@@ -65,7 +65,7 @@ object RunCommand extends Logging {
         config.consoleServiceId,
         config.printFunctionName,
         args => {
-          val str = JSON.stringify(args, null, 2)
+          val str = JSON.stringify(args, space = 2)
           // if an input function returns a result, our success will be after it is printed
           // otherwise finish after JS SDK will finish sending a request
           println(str)

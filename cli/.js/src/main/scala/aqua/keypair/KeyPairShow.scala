@@ -2,13 +2,13 @@ package aqua.keypair
 
 import scala.scalajs.js.JSON
 import scala.scalajs.js
+import java.util.Base64
 
 import aqua.KeyPair
+import cats.Show
 
-object KeyPairStringify {
+object KeyPairShow {
   def stringify(keypair: KeyPair): String = {
-    import java.util.Base64
-
     val encoder = Base64.getEncoder()
     val kp = js.Dynamic.literal(
         peerId = keypair.Libp2pPeerId.toB58String(),
@@ -18,4 +18,6 @@ object KeyPairStringify {
 
     JSON.stringify(kp, space = 4)
   }
+
+  implicit val show: Show[KeyPair] = Show.show(KeyPairShow.stringify)
 }

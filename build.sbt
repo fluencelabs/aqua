@@ -51,7 +51,7 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
       "com.monovore"  %%% "decline"        % declineV,
       "com.monovore"  %%% "decline-effect" % declineV,
       "co.fs2"        %%% "fs2-io"         % fs2V
-    ),
+    )
   )
   .dependsOn(compiler, `backend-air`, `backend-ts`)
 

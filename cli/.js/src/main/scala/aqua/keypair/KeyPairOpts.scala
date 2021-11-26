@@ -1,15 +1,18 @@
 package aqua.keypair
 
-import com.monovore.decline.{Command, Opts}
-import scribe.Logging
-import scala.concurrent.{ExecutionContext, Future}
 import cats.effect.ExitCode
 import cats.effect.kernel.{Async}
 import cats.Monad
 import cats.implicits.catsSyntaxApplicativeId
 import cats.Applicative
-import aqua.KeyPair
 import cats.Applicative.ops.toAllApplicativeOps
+import cats.syntax.show._
+import com.monovore.decline.{Command, Opts}
+import scribe.Logging
+import scala.concurrent.{ExecutionContext, Future}
+
+import aqua.KeyPair
+import KeyPairShow.show
 
 // Options and commands to work with KeyPairs
 object KeyPairOpts extends Logging {
@@ -30,7 +33,7 @@ object KeyPairOpts extends Logging {
             KeyPair.randomEd25519().toFuture.pure[F]
           )
           .map(keypair =>
-            println(s"${KeyPairStringify.stringify(keypair)}")
+            println(s"${keypair.show}")
             ExitCode.Success
           )
       )
