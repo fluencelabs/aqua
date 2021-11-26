@@ -5,7 +5,7 @@ import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
-import aqua.{AppOpts, AquaIO, LogFormatter, RunCommand}
+import aqua.{AppOpts, AquaIO, LogFormatter}
 import cats.data.{NonEmptyList, Validated}
 import cats.effect.kernel.Async
 import cats.effect.{ExitCode, IO}

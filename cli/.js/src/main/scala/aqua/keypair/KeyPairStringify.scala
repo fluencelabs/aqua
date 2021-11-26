@@ -1,7 +1,9 @@
-package aqua
+package aqua.keypair
 
 import scala.scalajs.js.JSON
 import scala.scalajs.js
+
+import aqua.KeyPair
 
 object KeyPairStringify {
   def stringify(keypair: KeyPair): String = {

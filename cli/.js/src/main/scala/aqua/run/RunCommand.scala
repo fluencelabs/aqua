@@ -1,5 +1,9 @@
-package aqua
+package aqua.run
 
+import aqua.{
+  FluenceUtils, Utils, Fluence, PeerConfig, 
+  CallJsFunction, AquaIO, SpanParser, ErrorRendering
+}
 import aqua.backend.air.{AirBackend, FuncAirGen}
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
@@ -17,6 +21,7 @@ import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
 import aqua.run.RunConfig
 import aqua.types.{ArrowType, NilType, ScalarType}
+
 import cats.data.*
 import cats.effect.kernel.{Async, Clock}
 import cats.effect.syntax.async.*

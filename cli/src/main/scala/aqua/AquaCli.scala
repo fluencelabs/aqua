@@ -47,7 +47,7 @@ object AquaCli extends IOApp with Logging {
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]
     implicit val ec = r.compute
 
-    createKeypairOpt orElse runOpt orElse versionOpt
+    PlatformOpts.opts orElse versionOpt
       .as(
         versionAndExit
       ) orElse helpOpt.as(
