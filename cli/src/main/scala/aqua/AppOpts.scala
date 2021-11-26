@@ -5,7 +5,6 @@ import aqua.model.LiteralModel
 import aqua.model.transform.TransformConfig
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
-import aqua.run.RunOpts
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import cats.effect.kernel.Async
@@ -36,8 +35,6 @@ object AppOpts {
       str =>
         Validated.fromEither(toLogLevel(str))
     }
-
-  def runOpt[F[_]: Files: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] = Opts.subcommand(RunOpts.runCommand[F])
 
   def toLogLevel(logLevel: String): Either[NonEmptyList[String], Level] = {
     LogLevel.stringToLogLevel
