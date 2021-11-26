@@ -41,7 +41,7 @@ object RunOpts extends Logging {
         val decoder = Base64.getDecoder
         Validated.catchNonFatal {
           decoder.decode(s)
-        }.leftMap(t => NonEmptyList.one("Secret key must be valid base64 string: " + t.getMessage))
+        }.leftMap(t => NonEmptyList.one("secret key isn't a valid base64 string: " + t.getMessage))
       }
 
   def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
