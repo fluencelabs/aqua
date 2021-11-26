@@ -18,6 +18,7 @@ import com.monovore.decline.{Command, Opts}
 import fs2.io.file.Files
 import scribe.Logging
 
+import java.util.Base64
 import scala.concurrent.ExecutionContext
 
 object RunOpts extends Logging {
@@ -33,6 +34,16 @@ object RunOpts extends Logging {
         "/dns4/kras-00.fluence.dev/tcp/19001/wss/p2p/12D3KooWR4cv1a8tv7pps4HH6wePNaK6gf1Hww5wcCMzeWxyNw51"
       )
 
+  val secretKeyOpt: Opts[Array[Byte]] =
+    Opts
+      .option[String]("sk", "Secret key in base64. Requests will be initialized with this key.", "s")
+      .mapValidated { s =>
+        val decoder = Base64.getDecoder
+        Validated.catchNonFatal {
+          decoder.decode(s)
+        }.leftMap(t => NonEmptyList.one("Secret key must be valid base64 string: " + t.getMessage))
+      }
+
   def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
 
     override def apply[A](span: Span.S[A]): Id[A] = {
@@ -45,6 +56,7 @@ object RunOpts extends Logging {
       .flag("print-air", "Prints generated AIR code before function execution")
       .map(_ => true)
       .withDefault(false)
+
 
   val funcOpt: Opts[(String, List[LiteralModel])] =
     Opts
@@ -73,8 +85,8 @@ object RunOpts extends Logging {
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
   ): Opts[F[cats.effect.ExitCode]] =
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt, timeoutOpt, AppOpts.logLevelOpt, printAir).mapN {
-      case (inputF, importF, multiaddr, (func, args), timeout, logLevel, printAir) =>
+    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt, timeoutOpt, AppOpts.logLevelOpt, printAir, AppOpts.wrapWithOption(secretKeyOpt)).mapN {
+      case (inputF, importF, multiaddr, (func, args), timeout, logLevel, printAir, secretKey) =>
 
         scribe.Logger.root
           .clearHandlers()
@@ -102,7 +114,7 @@ object RunOpts extends Logging {
                 },
                 { imps =>
                   RunCommand
-                    .run(multiaddr, func, args, input, imps, RunConfig(timeout, logLevel, printAir))
+                    .run(multiaddr, func, args, input, imps, RunConfig(timeout, logLevel, printAir, secretKey))
                     .map(_ => cats.effect.ExitCode.Success)
                 }
               )
