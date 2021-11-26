@@ -36,7 +36,7 @@ object RunOpts extends Logging {
 
   val secretKeyOpt: Opts[Array[Byte]] =
     Opts
-      .option[String]("sk", "Secret key in base64. Requests will be initialized with this key.", "s")
+      .option[String]("sk", "Ed25519 32-byte secret key in base64", "s")
       .mapValidated { s =>
         val decoder = Base64.getDecoder
         Validated.catchNonFatal {
