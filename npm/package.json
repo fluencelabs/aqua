@@ -15,7 +15,7 @@
   },
   "scripts": {
     "run": "node index.js",
-    "from:scalajs": "cp ../cli/.js/target/scala-3.0.2/cli-opt/main.js ./aqua.js && npm run run"
+    "from:scalajs": "cp ../cli/.js/target/scala-3.0.2/cli-opt/main.js ./aqua.js && npm run run -- $@"
   },
   "dependencies": {
     "@fluencelabs/fluence": "0.15.0"
