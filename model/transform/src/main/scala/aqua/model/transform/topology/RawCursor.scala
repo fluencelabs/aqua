@@ -39,6 +39,11 @@ case class RawCursor(
   lazy val toLastChild: Option[RawCursor] =
     ChainZipper.last(current.tail.value).map(moveDown)
 
+  lazy val children: LazyList[RawCursor] =
+    toFirstChild.fold(LazyList.empty[RawCursor])(fc =>
+      fc #:: LazyList.unfold(fc)(c => c.toNextSibling.map(rc => rc -> rc))
+    )
+
   def isOnTag: Boolean =
     tag match {
       case _: OnTag => true
@@ -89,6 +94,23 @@ case class RawCursor(
     case _ => Some(this)
   }
 
+  lazy val firstExecutedPathOn: Option[List[OnTag]] =
+    firstExecuted
+      .map(_.pathOn)
+      .orElse(
+        tag match {
+          case _: ParGroupTag =>
+            children
+              .flatMap(_.firstExecutedPathOn)
+              .map(_.reverse)
+              .reduceLeftOption[List[OnTag]] { case (a, b) =>
+                (a zip b).takeWhile(_ == _).map(_._1)
+              }
+              .map(_.reverse)
+          case _ => None
+        }
+      )
+
   /**
    * Sequentially previous cursor
    * @return
@@ -117,26 +139,44 @@ case class RawCursor(
 
   lazy val pathFromPrev: Chain[ValueModel] = tag match {
     case ForTag(item, _) =>
-      // Move the stable part of path into for loop outside the for loop -- https://github.com/fluencelabs/aqua/issues/205
-
-      // Find the first executed element: in case of for...par, we need to dive into that par with toFirstChild (twice)
-      firstExecuted
-        .orElse(toFirstChild.flatMap(_.toFirstChild).flatMap(_.firstExecuted))
-        .flatMap(fc =>
-          // Find the first OnTag inside this For, if any
-          LazyList
-            .unfold(fc)(c =>
-              c.moveUp
-                .filterNot(_.pathOn == pathOn)
-                .map(c => c -> c)
-            )
-            .collectFirst {
-              case c if c.isOnTag =>
-                // For the deepest On, get the path
-                c.pathFromPrevD().takeWhile(v => !ValueModel.varName(v).contains(item))
-            }
-        )
+      (firstExecutedPathOn zip moveUp.flatMap(_.firstExecutedPathOn))
+        .filter(_ != _)
+        .flatMap { case (thisPath, upPath) =>
+          moveUp.map(upper =>
+            PathFinder
+              .findPath(
+                Chain.fromSeq(upPath).reverse,
+                Chain.fromSeq(thisPath).reverse,
+                upper.currentPeerId,
+                currentPeerId
+              )
+              .takeWhile(p => !ValueModel.varName(p).contains(item))
+          )
+        }
         .getOrElse(Chain.empty)
+    // Move the stable part of path into for loop outside the for loop -- https://github.com/fluencelabs/aqua/issues/205
+
+    // Find the first executed element: in case of for...par, we need to dive into that par with toFirstChild (twice)
+    // TODO: what if the body is wrapped with par? It should be like "bubbling up topology": all invariants from par branches should bubble up
+//      firstExecutedPathOn
+//
+//      firstExecuted
+//        .orElse(toFirstChild.flatMap(_.toFirstChild).flatMap(_.firstExecuted))
+//        .flatMap(fc =>
+//          // Find the first OnTag inside this For, if any
+//          LazyList
+//            .unfold(fc)(c =>
+//              c.moveUp
+//                .filterNot(_.pathOn == pathOn)
+//                .map(c => c -> c)
+//            )
+//            .collectFirst {
+//              case c if c.isOnTag =>
+//                // For the deepest On, get the path
+//                c.pathFromPrevD().takeWhile(v => !ValueModel.varName(v).contains(item))
+//            }
+//        )
+//        .getOrElse(Chain.empty)
 
     case _ =>
       // The stable part of path inside the loop was already moved outside -- take it into account
