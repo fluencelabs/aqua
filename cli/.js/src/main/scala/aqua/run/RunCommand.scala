@@ -112,7 +112,6 @@ object RunCommand extends Logging {
   // func wrapFunc():
   //   res <- funcCallable(args:_*)
   //   Console.print(res)
-  // TODO: now it supports only one result. If funcCallable will return multiple results, only first will be printed
   private def wrapCall(
     funcName: String,
     funcCallable: FuncCallable,
