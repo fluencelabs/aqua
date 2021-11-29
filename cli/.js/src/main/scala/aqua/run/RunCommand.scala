@@ -7,7 +7,7 @@ import aqua.backend.ts.TypeScriptBackend
 import aqua.backend.{FunctionDef, Generated}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
-import aqua.io.AquaFileError
+import aqua.io.{AquaFileError, OutputPrinter}
 import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
 import aqua.model.func.{Call, FuncCallable}
 import aqua.model.transform.res.{AquaRes, FuncRes}
@@ -77,7 +77,7 @@ object RunCommand extends Logging {
               PeerConfig(multiaddr, config.timeout, Utils.logLevelToAvm(config.logLevel), secretKey)
             )
             .toFuture
-          _ = println("Your peerId: " + peer.getStatus().peerId)
+          _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
           promise = Promise.apply[Unit]()
           _ = CallJsFunction.registerUnitService(
             peer,
@@ -88,7 +88,7 @@ object RunCommand extends Logging {
               // if an input function returns a result, our success will be after it is printed
               // otherwise finish after JS SDK will finish sending a request
               // TODO use custom function for output
-              println(str)
+              OutputPrinter.print(str)
               promise.success(())
             }
           )
@@ -156,7 +156,7 @@ object RunCommand extends Logging {
       "Function execution failed by timeout. You can increase timeout with '--timeout' option in milliseconds or check if your code can hang while executing."
     } else t.getMessage
     // TODO use custom function for error output
-    println(message)
+    OutputPrinter.error(message)
   }
 
   /**
@@ -203,7 +203,7 @@ object RunCommand extends Logging {
               val air = FuncAirGen(funcRes).generate.show
 
               if (runConfig.printAir) {
-                println(air)
+                OutputPrinter.print(air)
               }
 
               funcCall[F](multiaddr, air, definitions, runConfig).map { _ =>
@@ -222,7 +222,7 @@ object RunCommand extends Logging {
       logger.debug(s"Call time: ${callTime.toMillis}ms")
       result.fold(
         { (errs: NonEmptyChain[String]) =>
-          errs.toChain.toList.foreach(err => println(err + "\n"))
+          errs.toChain.toList.foreach(err => OutputPrinter.error(err + "\n"))
         },
         identity
       )
