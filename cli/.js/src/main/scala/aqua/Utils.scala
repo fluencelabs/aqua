@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.js.{AvmLogLevel, FluenceJSLogLevel}
 import scribe.Level
 
 object Utils {

@@ -8,6 +8,7 @@ import aqua.backend.{FunctionDef, Generated}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
+import aqua.js.*
 import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
 import aqua.model.func.{Call, FuncCallable}
 import aqua.model.transform.res.{AquaRes, FuncRes}
@@ -34,6 +35,7 @@ import scribe.Logging
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.scalajs.js
+import scala.scalajs.js.Dynamic.global as g
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.JSON
 import scala.scalajs.js.annotation.*
@@ -176,6 +178,9 @@ object RunCommand extends Logging {
     transformConfig: TransformConfig = TransformConfig()
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+
+    val moduleMetaInfo: js.Dynamic = scala.scalajs.js.`import`.meta
+    println(moduleMetaInfo.url)
 
     val sources = new AquaFileSources[F](input, imports)
 

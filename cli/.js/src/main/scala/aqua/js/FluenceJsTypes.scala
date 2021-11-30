@@ -1,5 +1,6 @@
-package aqua
+package aqua.js
 
+import aqua.*
 import aqua.backend.{ArgDefinition, FunctionDef, NamesConfig, TypeDefinition}
 
 import scala.concurrent.Promise

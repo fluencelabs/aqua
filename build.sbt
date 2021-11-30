@@ -1,3 +1,5 @@
+import org.scalajs.linker.interface.ESVersion
+
 val dottyVersion = "3.0.2"
 
 scalaVersion := dottyVersion
@@ -57,7 +59,8 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
 
 lazy val cliJS = cli.js
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
+    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.ESModule)
+      .withESFeatures(_.withESVersion(ESVersion.ES2021))),
     scalaJSUseMainModuleInitializer := true
   )
 
