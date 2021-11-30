@@ -1,9 +1,6 @@
 package aqua.run
 
-import aqua.{
-  FluenceUtils, Utils, Fluence, PeerConfig, 
-  CallJsFunction, AquaIO, SpanParser, ErrorRendering
-}
+import aqua.*
 import aqua.backend.air.{AirBackend, FuncAirGen}
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
@@ -21,11 +18,10 @@ import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
 import aqua.run.RunConfig
 import aqua.types.{ArrowType, NilType, ScalarType}
-
 import cats.data.*
 import cats.effect.kernel.{Async, Clock}
 import cats.effect.syntax.async.*
-import cats.effect.{IO, IOApp, Sync}
+import cats.effect.{IO, IOApp, Resource, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -38,10 +34,18 @@ import scribe.Logging
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.scalajs.js
+import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.JSON
 import scala.scalajs.js.annotation.*
 
 object RunCommand extends Logging {
+
+  def keyPairOrNull(sk: Option[Array[Byte]]): Future[KeyPair] = {
+    sk.map { arr =>
+      val typedArr = js.typedarray.Uint8Array.from(arr.map(_.toShort).toJSArray)
+      KeyPair.fromEd25519SK(typedArr).toFuture
+    }.getOrElse(Future.successful[KeyPair](null))
+  }
 
   /**
    * Calls an air code with FluenceJS SDK.
@@ -49,37 +53,54 @@ object RunCommand extends Logging {
    * @param air code to call
    * @return
    */
-  def funcCall(multiaddr: String, air: String, functionDef: FunctionDef, config: RunConfig)(implicit
+  def funcCall[F[_]: Async](
+    multiaddr: String,
+    air: String,
+    functionDef: FunctionDef,
+    config: RunConfig
+  )(implicit
     ec: ExecutionContext
-  ): Future[Unit] = {
+  ): F[Unit] = {
     FluenceUtils.setLogLevel(Utils.logLevelToFluenceJS(config.logLevel))
-    (for {
-      _ <- Fluence
-        .start(PeerConfig(multiaddr, config.timeout, Utils.logLevelToAvm(config.logLevel)))
-        .toFuture
-      peer = Fluence.getPeer()
-      _ = println("Your peerId: " + peer.getStatus().peerId)
-      promise = Promise.apply[Unit]()
-      _ = CallJsFunction.registerUnitService(
-        peer,
-        config.consoleServiceId,
-        config.printFunctionName,
-        args => {
-          val str = JSON.stringify(args, space = 2)
-          // if an input function returns a result, our success will be after it is printed
-          // otherwise finish after JS SDK will finish sending a request
-          println(str)
-          promise.success(())
-        }
-      )
-      callFuture = CallJsFunction.funcCallJs(
-        air,
-        functionDef,
-        List.empty
-      )
-      _ <- Future.firstCompletedOf(promise.future :: callFuture :: Nil)
-      _ <- peer.stop().toFuture
-    } yield {})
+
+    // stops peer in any way at the end of execution
+    val resource = Resource.make(Fluence.getPeer().pure[F]) { peer =>
+      Async[F].fromFuture(Sync[F].delay(peer.stop().toFuture))
+    }
+
+    resource.use { peer =>
+      Async[F].fromFuture {
+        (for {
+          secretKey <- keyPairOrNull(config.secretKey)
+          _ <- Fluence
+            .start(
+              PeerConfig(multiaddr, config.timeout, Utils.logLevelToAvm(config.logLevel), secretKey)
+            )
+            .toFuture
+          _ = println("Your peerId: " + peer.getStatus().peerId)
+          promise = Promise.apply[Unit]()
+          _ = CallJsFunction.registerUnitService(
+            peer,
+            config.consoleServiceId,
+            config.printFunctionName,
+            args => {
+              val str = JSON.stringify(args, space = 2)
+              // if an input function returns a result, our success will be after it is printed
+              // otherwise finish after JS SDK will finish sending a request
+              // TODO use custom function for output
+              println(str)
+              promise.success(())
+            }
+          )
+          callFuture = CallJsFunction.funcCallJs(
+            air,
+            functionDef,
+            List.empty
+          )
+          _ <- Future.firstCompletedOf(promise.future :: callFuture :: Nil)
+        } yield {}).recover(handleFuncCallErrors).pure[F]
+      }
+    }
   }
 
   private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncCallable] =
@@ -131,6 +152,14 @@ object RunCommand extends Logging {
     )
   }
 
+  private def handleFuncCallErrors: PartialFunction[Throwable, Unit] = { t =>
+    val message = if (t.getMessage.contains("Request timed out after")) {
+      "Function execution failed by timeout. You can increase timeout with '--timeout' option in milliseconds or check if your code can hang while executing."
+    } else t.getMessage
+    // TODO use custom function for error output
+    println(message)
+  }
+
   /**
    * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
    * @param multiaddr relay to connect to
@@ -145,7 +174,7 @@ object RunCommand extends Logging {
     input: Path,
     imports: List[Path],
     runConfig: RunConfig,
-  transformConfig: TransformConfig = TransformConfig()
+    transformConfig: TransformConfig = TransformConfig()
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
@@ -178,9 +207,7 @@ object RunCommand extends Logging {
                 println(air)
               }
 
-              Async[F].fromFuture {
-                funcCall(multiaddr, air, definitions, runConfig).pure[F]
-              }.map { _ =>
+              funcCall[F](multiaddr, air, definitions, runConfig).map { _ =>
                 Validated.validNec(())
               }
             }.getOrElse(Validated.invalidNec(s"There is no function called '$func'").pure[F])

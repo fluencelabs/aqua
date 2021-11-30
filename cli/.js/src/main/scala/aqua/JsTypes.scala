@@ -113,7 +113,8 @@ type AvmLogLevel = "trace" | "debug" | "info" | "warn" | "error" | "off"
 case class PeerConfig(
   connectTo: String,
   defaultTtlMs: Int,
-  avmLogLevel: AvmLogLevel
+  avmLogLevel: AvmLogLevel,
+  KeyPair: KeyPair
 )
 
 /**
@@ -217,7 +218,7 @@ class RequestFlowBuilder extends js.Object {
 @JSImport("@fluencelabs/fluence", "KeyPair")
 class KeyPair extends js.Object {
   val Libp2pPeerId: PeerId = js.native
-  def toEd25519PrivateKey(): js.typedarray.Uint8Array = js.native  
+  def toEd25519PrivateKey(): js.typedarray.Uint8Array = js.native
 }
 
 @js.native
