@@ -110,7 +110,7 @@ object AquaCli extends IOApp with Logging {
                     AquaPathCompiler
                       .compileFilesTo[F](
                         input,
-                        if (disableBuiltin) imports else PlatformUtils.getBuiltinNodeModulePaths.toList,
+                        if (disableBuiltin) imports else (PlatformUtils.getBuiltinNodeModulePaths.toList ++ imports).distinct,
                         resultOutput,
                         targetToBackend(target),
                         bc
