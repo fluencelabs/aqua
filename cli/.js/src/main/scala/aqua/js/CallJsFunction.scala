@@ -13,11 +13,11 @@ object CallJsFunction {
 
   // Register a service that returns no result
   def registerUnitService(
-                           peer: FluencePeer,
-                           serviceId: String,
-                           fnName: String,
-                           handler: (js.Array[js.Any]) => Unit
-                         ): CallServiceHandler = {
+    peer: FluencePeer,
+    serviceId: String,
+    fnName: String,
+    handler: (js.Array[js.Any]) => Unit
+  ): CallServiceHandler = {
     peer.internals.callServiceHandler.use((req, resp, next) => {
       if (req.serviceId == serviceId && req.fnName == fnName) {
         handler(req.args)
@@ -31,10 +31,10 @@ object CallJsFunction {
 
   // Call a function with generated air script
   def funcCallJs(
-                  air: String,
-                  functionDef: FunctionDef,
-                  args: List[js.Any]
-                )(implicit ec: ExecutionContext): Future[Any] = {
+    air: String,
+    functionDef: FunctionDef,
+    args: List[js.Any]
+  )(implicit ec: ExecutionContext): Future[Any] = {
     V2.callFunction(
       args.toJSArray,
       FunctionDefJs(functionDef),

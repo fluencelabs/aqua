@@ -13,7 +13,7 @@ import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.{Id, Monad, ~>}
+import cats.{~>, Id, Monad}
 import com.monovore.decline.{Command, Opts}
 import fs2.io.file.Files
 import scribe.Logging
@@ -84,9 +84,9 @@ object RunOpts extends Logging {
         }
       }
 
-  def runOptions[F[_] : Files : AquaIO : Async](implicit
-                                                ec: ExecutionContext
-                                               ): Opts[F[cats.effect.ExitCode]] =
+  def runOptions[F[_]: Files: AquaIO: Async](implicit
+    ec: ExecutionContext
+  ): Opts[F[cats.effect.ExitCode]] =
     (
       AppOpts.inputOpts[F],
       AppOpts.importOpts[F],
@@ -97,18 +97,18 @@ object RunOpts extends Logging {
       printAir,
       AppOpts.wrapWithOption(secretKeyOpt),
       AppOpts.disableBuiltinOpt
-      ).mapN {
+    ).mapN {
       case (
-        inputF,
-        importF,
-        multiaddr,
-        (func, args),
-        timeout,
-        logLevel,
-        printAir,
-        secretKey,
-        disableBuiltin
-        ) =>
+            inputF,
+            importF,
+            multiaddr,
+            (func, args),
+            timeout,
+            logLevel,
+            printAir,
+            secretKey,
+            disableBuiltin
+          ) =>
         scribe.Logger.root
           .clearHandlers()
           .clearModifiers()
