@@ -4,6 +4,8 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExportAll, JSImport}
 
 object Meta {
+
+  // get `import`.meta.url info from javascript
   @js.native
   @JSImport("./utils.js", "metaUrl")
   val metaUrl: String = js.native

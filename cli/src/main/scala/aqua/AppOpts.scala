@@ -14,7 +14,7 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Comonad, Functor, Monad, ~>}
+import cats.{~>, Comonad, Functor, Monad}
 import com.monovore.decline.Opts.help
 import com.monovore.decline.{Opts, Visibility}
 import fs2.io.file.{Files, Path}
@@ -92,14 +92,20 @@ object AppOpts {
       .map(s => checkPath[F](s))
 
   def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Option[Path]]]] =
-    Opts.option[String]("output", "Path to the output directory. Will be created if not exists", "o")
+    Opts
+      .option[String]("output", "Path to the output directory. Will be created if not exists", "o")
       .map(s => Option(s))
       .withDefault(None)
       .map(_.map(checkOutput[F]).getOrElse(Validated.validNec[String, Option[Path]](None).pure[F]))
 
   def importOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, List[Path]]]] =
     Opts
-      .options[String]("import", "Path to the directory to import from. May be used several times", "m")
+      .options[String](
+        "import",
+        "Path to the directory to import from. May be used several times",
+        "m"
+      )
+      /** EndMarker */
       .orEmpty
       .map { ps =>
         val checked: List[F[ValidatedNec[String, Path]]] = ps.map { pStr =>
@@ -120,10 +126,40 @@ object AppOpts {
         val nodeModules = Path("node_modules")
         val nodeImportF: F[Option[Path]] = Files[F].exists(nodeModules).flatMap {
           case true =>
-            Files[F].isDirectory(nodeModules).map(isDir => if (isDir) Some(nodeModules) else None )
+            Files[F].isDirectory(nodeModules).map(isDir => if (isDir) Some(nodeModules) else None)
           case false => None.pure[F]
         }
 
+        for {
+          result <- checked.sequence.map(_.sequence)
+          nodeImport <- nodeImportF
+        } yield {
+          result.map(_ ++ nodeImport)
+        }
+      }
+      .orEmpty
+      .map { ps =>
+        val checked: List[F[ValidatedNec[String, Path]]] = ps.map { pStr =>
+          val p = Path(pStr)
+          for {
+            exists <- Files[F].exists(p)
+            isDir <- Files[F].isDirectory(p)
+          } yield {
+            if (exists && isDir) Validated.validNec[String, Path](p)
+            else
+              Validated.invalidNec[String, Path](
+                s"There is no path ${p.toString} or it is not a directory"
+              )
+          }
+        }
+
+        // check if node_modules directory exists and add it in imports list
+        val nodeModules = Path("node_modules")
+        val nodeImportF: F[Option[Path]] = Files[F].exists(nodeModules).flatMap {
+          case true =>
+            Files[F].isDirectory(nodeModules).map(isDir => if (isDir) Some(nodeModules) else None)
+          case false => None.pure[F]
+        }
 
         for {
           result <- checked.sequence.map(_.sequence)
@@ -193,7 +229,10 @@ object AppOpts {
 
   val scriptOpt: Opts[Boolean] =
     Opts
-      .flag("scheduled", "Generate air code for script storage. Without error handling wrappers and hops on relay. Will ignore other options")
+      .flag(
+        "scheduled",
+        "Generate air code for script storage. Without error handling wrappers and hops on relay. Will ignore other options"
+      )
       .map(_ => true)
       .withDefault(false)
 
@@ -206,11 +245,11 @@ object AppOpts {
   lazy val versionStr: String =
     Version.version
 
-  def versionAndExit[F[_] : Console : Functor]: F[ExitCode] = Console[F]
+  def versionAndExit[F[_]: Console: Functor]: F[ExitCode] = Console[F]
     .println(versionStr)
     .as(ExitCode.Success)
 
-  def helpAndExit[F[_] : Console : Functor]: F[ExitCode] = Console[F]
+  def helpAndExit[F[_]: Console: Functor]: F[ExitCode] = Console[F]
     .println(help)
     .as(ExitCode.Success)
 
