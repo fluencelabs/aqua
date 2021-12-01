@@ -179,10 +179,8 @@ object RunCommand extends Logging {
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
-    val moduleMetaInfo: js.Dynamic = scala.scalajs.js.`import`.meta
-    println(moduleMetaInfo.url)
-
-    val sources = new AquaFileSources[F](input, imports)
+    val reachedImports = if (runConfig.disableBuiltin) imports else Utils.getBuiltinNodeModulePaths.toList ++ imports
+    val sources = new AquaFileSources[F](input, reachedImports)
 
     for {
       // compile only context to wrap and call function later

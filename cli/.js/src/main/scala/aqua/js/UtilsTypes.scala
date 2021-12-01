@@ -6,18 +6,20 @@ import scala.scalajs.js.annotation.{JSExportAll, JSImport}
 @JSExportAll
 case class PathOpts(local: Boolean = false)
 
-@js.native
-@JSImport("import", JSImport.Default)
-object Imp extends js.Object {
-  val meta: js.Dynamic = js.native
+object Meta {
+  @js.native
+  @JSImport("./utils.js", "metaUrl")
+  val metaUrl: String = js.native
 }
 
 @js.native
-@JSImport("module", JSImport.Default)
+@JSImport("module", JSImport.Namespace)
 object Module extends js.Object {
   def createRequire(str: String): Require = js.native
+
+  val paths: List[Any] = js.native
 }
 
-trait Require {
-  def resolve(str: String): String
+trait Require extends js.Object {
+  def resolve(str: String): Any
 }

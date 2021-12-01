@@ -24,9 +24,10 @@ import scala.concurrent.ExecutionContext
 object RunOpts extends Logging {
 
   val timeoutOpt: Opts[Int] =
-    Opts.option[Int]("timeout", "Request timeout in milliseconds", "t")
+    Opts
+      .option[Int]("timeout", "Request timeout in milliseconds", "t")
       .withDefault(7000)
-  
+
   val multiaddrOpt: Opts[String] =
     Opts
       .option[String]("addr", "Relay multiaddress", "a")
@@ -57,7 +58,6 @@ object RunOpts extends Logging {
       .map(_ => true)
       .withDefault(false)
 
-
   val funcOpt: Opts[(String, List[LiteralModel])] =
     Opts
       .option[String]("func", "Function to call with args", "f")
@@ -70,7 +70,9 @@ object RunOpts extends Logging {
               case _ => false
             }
             if (hasVars) {
-              Validated.invalidNel("Function can have only literal arguments, no variables or constants allowed at the moment")
+              Validated.invalidNel(
+                "Function can have only literal arguments, no variables or constants allowed at the moment"
+              )
             } else {
               val args = expr.args.collect { case l @ Literal(_, _) =>
                 LiteralModel(l.value, l.ts)
@@ -82,12 +84,31 @@ object RunOpts extends Logging {
         }
       }
 
-  def runOptions[F[_]: Files: AquaIO: Async](implicit
-    ec: ExecutionContext
-  ): Opts[F[cats.effect.ExitCode]] =
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], multiaddrOpt, funcOpt, timeoutOpt, AppOpts.logLevelOpt, printAir, AppOpts.wrapWithOption(secretKeyOpt)).mapN {
-      case (inputF, importF, multiaddr, (func, args), timeout, logLevel, printAir, secretKey) =>
-
+  def runOptions[F[_] : Files : AquaIO : Async](implicit
+                                                ec: ExecutionContext
+                                               ): Opts[F[cats.effect.ExitCode]] =
+    (
+      AppOpts.inputOpts[F],
+      AppOpts.importOpts[F],
+      multiaddrOpt,
+      funcOpt,
+      timeoutOpt,
+      AppOpts.logLevelOpt,
+      printAir,
+      AppOpts.wrapWithOption(secretKeyOpt),
+      AppOpts.disableBuiltinOpt
+      ).mapN {
+      case (
+        inputF,
+        importF,
+        multiaddr,
+        (func, args),
+        timeout,
+        logLevel,
+        printAir,
+        secretKey,
+        disableBuiltin
+        ) =>
         scribe.Logger.root
           .clearHandlers()
           .clearModifiers()
@@ -114,7 +135,14 @@ object RunOpts extends Logging {
                 },
                 { imps =>
                   RunCommand
-                    .run(multiaddr, func, args, input, imps, RunConfig(timeout, logLevel, printAir, secretKey))
+                    .run(
+                      multiaddr,
+                      func,
+                      args,
+                      input,
+                      imps,
+                      RunConfig(timeout, logLevel, printAir, secretKey, disableBuiltin)
+                    )
                     .map(_ => cats.effect.ExitCode.Success)
                 }
               )

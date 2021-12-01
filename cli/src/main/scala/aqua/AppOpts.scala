@@ -197,14 +197,20 @@ object AppOpts {
       .map(_ => true)
       .withDefault(false)
 
+  val disableBuiltinOpt: Opts[Boolean] =
+    Opts
+      .flag("disable-builtin", "Put away builtins from default imports.")
+      .map(_ => true)
+      .withDefault(false)
+
   lazy val versionStr: String =
     Version.version
 
-  def versionAndExit[F[_]: Console: Functor]: F[ExitCode] = Console[F]
+  def versionAndExit[F[_] : Console : Functor]: F[ExitCode] = Console[F]
     .println(versionStr)
     .as(ExitCode.Success)
 
-  def helpAndExit[F[_]: Console: Functor]: F[ExitCode] = Console[F]
+  def helpAndExit[F[_] : Console : Functor]: F[ExitCode] = Console[F]
     .println(help)
     .as(ExitCode.Success)
 

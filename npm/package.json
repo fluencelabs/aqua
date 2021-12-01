@@ -6,8 +6,8 @@
   "files": [
     "aqua.js",
     "index.js",
-    "index-java.js",
-    "error.js"
+    "error.js",
+    "utils.js"
   ],
   "bin": {
     "aqua": "index.js",
