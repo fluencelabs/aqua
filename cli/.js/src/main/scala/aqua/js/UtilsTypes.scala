@@ -3,9 +3,6 @@ package aqua.js
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExportAll, JSImport}
 
-@JSExportAll
-case class PathOpts(local: Boolean = false)
-
 object Meta {
   @js.native
   @JSImport("./utils.js", "metaUrl")

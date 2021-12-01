@@ -179,7 +179,8 @@ object RunCommand extends Logging {
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
-    val reachedImports = if (runConfig.disableBuiltin) imports else Utils.getBuiltinNodeModulePaths.toList ++ imports
+    val reachedImports =
+      if (runConfig.disableBuiltin) imports else PlatformUtils.getBuiltinNodeModulePaths.toList ++ imports
     val sources = new AquaFileSources[F](input, reachedImports)
 
     for {
