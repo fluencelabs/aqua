@@ -21,7 +21,7 @@ object PlatformOpts extends Logging {
       Opts.subcommand(KeyPairOpts.createKeypair[F])
 
   // get path to node modules if there is `aqua-lib` module with `builtin.aqua` in it
-  def getGlobalNodeModulePaths: Option[Path] = {
+  def getGlobalNodeModulePath: Option[Path] = {
     val meta = Meta.metaUrl
     val req = Module.createRequire(meta)
     Try {

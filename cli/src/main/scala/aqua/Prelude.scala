@@ -1,6 +1,5 @@
 package aqua
 
-import aqua.LogLevelTransformer
 import cats.Monad
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
