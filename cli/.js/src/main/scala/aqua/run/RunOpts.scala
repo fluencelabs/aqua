@@ -96,7 +96,7 @@ object RunOpts extends Logging {
       AppOpts.logLevelOpt,
       printAir,
       AppOpts.wrapWithOption(secretKeyOpt),
-      AppOpts.noGlobalImports
+      AppOpts.noPrelude
     ).mapN {
       case (
             inputF,

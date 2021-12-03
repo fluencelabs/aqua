@@ -191,9 +191,9 @@ object AppOpts {
       .map(_ => true)
       .withDefault(false)
 
-  val noGlobalImports: Opts[Boolean] =
+  val noPrelude: Opts[Boolean] =
     Opts
-      .flag("no-global-imports", "Don't use default aqua import paths")
+      .flag("no-prelude", "Don't use default aqua import paths")
       .map(_ => true)
       .withDefault(false)
 
