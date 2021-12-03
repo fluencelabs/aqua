@@ -18,10 +18,10 @@ case class RawCursor(
 
   override def moveUp: Option[RawCursor] = cachedParent.orElse(super.moveUp)
 
-  override def toPrevSibling: Option[RawCursor] =
+  override lazy val toPrevSibling: Option[RawCursor] =
     super.toPrevSibling.map(_.copy(cachedParent = cachedParent))
 
-  override def toNextSibling: Option[RawCursor] =
+  override lazy val toNextSibling: Option[RawCursor] =
     super.toNextSibling.map(_.copy(cachedParent = cachedParent))
 
   override def moveDown(focusOn: ChainZipper[Tree]): RawCursor =
@@ -44,17 +44,7 @@ case class RawCursor(
       fc #:: LazyList.unfold(fc)(c => c.toNextSibling.map(rc => rc -> rc))
     )
 
-  def isOnTag: Boolean =
-    tag match {
-      case _: OnTag => true
-      case _ => false
-    }
-
-  def isForTag: Boolean =
-    tag match {
-      case _: ForTag => true
-      case _ => false
-    }
+  val topology = Topology(this)
 
   lazy val tagsPath: NonEmptyList[RawTag] = path.map(_.head)
 

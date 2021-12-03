@@ -12,6 +12,33 @@ import cats.free.Cofree
 import cats.syntax.traverse.*
 import scribe.Logging
 
+case class Topology(rc: RawCursor) {
+
+  def isOnTag: Boolean =
+    rc.tag match {
+      case _: OnTag => true
+      case _ => false
+    }
+
+  def isForTag: Boolean =
+    rc.tag match {
+      case _: ForTag => true
+      case _ => false
+    }
+
+  // Before the left boundary of this element, what was the scope
+  def wasOn: List[OnTag] = ???
+
+  // Inside the left boundary of this element, what should be the scope
+  def beginsOn: List[OnTag] = ???
+
+  // After this element is done, what is the scope
+  def endsOn: List[OnTag] = ???
+
+  // After this element is done, where should it move to prepare for the next one
+  def goingOn: List[OnTag] = ???
+}
+
 object Topology extends Logging {
   type Tree = Cofree[Chain, RawTag]
   type Res = Cofree[Chain, ResolvedOp]

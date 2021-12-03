@@ -37,6 +37,7 @@ abstract class ChainCursor[C <: ChainCursor[C, T], T](make: NonEmptyList[ChainZi
   lazy val path: NonEmptyList[T] = tree.map(_.current)
 
   // Move cursor up
+  // TODO: ensure this cursor's data is cached properly
   def moveUp: Option[C] = NonEmptyList.fromList(tree.tail).map(make)
 
   // Path to root, in form of Cursors; this is skipped
