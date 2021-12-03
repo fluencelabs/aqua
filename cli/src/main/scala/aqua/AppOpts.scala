@@ -191,12 +191,6 @@ object AppOpts {
       .map(_ => true)
       .withDefault(false)
 
-  val noPrelude: Opts[Boolean] =
-    Opts
-      .flag("no-prelude", "Don't use default aqua import paths")
-      .map(_ => true)
-      .withDefault(false)
-
   lazy val versionStr: String =
     Version.version
 

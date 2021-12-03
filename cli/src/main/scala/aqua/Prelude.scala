@@ -17,7 +17,7 @@ case class Prelude(importPaths: List[Path])
 // JS-specific functions
 object Prelude extends Logging {
 
-  def init[F[_]: Files: Monad](noPrelude: Boolean): F[Prelude] = {
+  def init[F[_]: Files: Monad](): F[Prelude] = {
     // check if node_modules directory exists and add it in imports list
     val nodeModules = Path("node_modules")
     val nodeImportF: F[Option[Path]] = Files[F].exists(nodeModules).flatMap {
@@ -28,10 +28,7 @@ object Prelude extends Logging {
 
     nodeImportF.map { nodeImport =>
       val imports =
-        if (noPrelude)
-          nodeImport.toList
-        else
-          nodeImport.toList ++ PlatformOpts.getGlobalNodeModulePath.toList
+        nodeImport.toList ++ PlatformOpts.getGlobalNodeModulePath.toList
 
       new Prelude(imports)
     }

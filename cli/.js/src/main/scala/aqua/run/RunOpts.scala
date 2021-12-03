@@ -95,8 +95,7 @@ object RunOpts extends Logging {
       timeoutOpt,
       AppOpts.logLevelOpt,
       printAir,
-      AppOpts.wrapWithOption(secretKeyOpt),
-      AppOpts.noPrelude
+      AppOpts.wrapWithOption(secretKeyOpt)
     ).mapN {
       case (
             inputF,
@@ -106,8 +105,7 @@ object RunOpts extends Logging {
             timeout,
             logLevel,
             printAir,
-            secretKey,
-            noGlobalImports
+            secretKey
           ) =>
         scribe.Logger.root
           .clearHandlers()
@@ -141,7 +139,7 @@ object RunOpts extends Logging {
                       args,
                       input,
                       imps,
-                      RunConfig(timeout, logLevel, printAir, secretKey, noGlobalImports)
+                      RunConfig(timeout, logLevel, printAir, secretKey)
                     )
                     .map(_ => cats.effect.ExitCode.Success)
                 }

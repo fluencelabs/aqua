@@ -180,7 +180,7 @@ object RunCommand extends Logging {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
     for {
-      prelude <- Prelude.init(runConfig.noPrelude)
+      prelude <- Prelude.init()
       sources = new AquaFileSources[F](input, prelude.importPaths)
       // compile only context to wrap and call function later
       compileResult <- Clock[F].timed(
