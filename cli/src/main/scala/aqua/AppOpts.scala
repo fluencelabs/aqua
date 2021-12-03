@@ -121,6 +121,7 @@ object AppOpts {
           }
         }
 
+        // TODO: move it to prelude after it will be used it in a compilation command, not only in `run`
         // check if node_modules directory exists and add it in imports list
         val nodeModules = Path("node_modules")
         val nodeImportF: F[Option[Path]] = Files[F].exists(nodeModules).flatMap {
@@ -204,9 +205,9 @@ object AppOpts {
       .map(_ => true)
       .withDefault(false)
 
-  val disableBuiltinOpt: Opts[Boolean] =
+  val noGlobalImports: Opts[Boolean] =
     Opts
-      .flag("disable-builtin", "Put away builtins from default imports.")
+      .flag("no-global-imports", "Don't use default aqua imports, i. e. builtin.aqua")
       .map(_ => true)
       .withDefault(false)
 

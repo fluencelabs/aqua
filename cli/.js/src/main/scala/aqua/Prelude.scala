@@ -1,17 +1,26 @@
 package aqua
 
-import aqua.Utils.logger
+import aqua.LogLevelTransformer
 import aqua.js.{Meta, Module}
 import fs2.io.file.Path
 import scribe.Logging
 
 import scala.util.Try
 
+/**
+ * @param pathList list of paths where imports will be searched
+ */
+case class Prelude(pathList: List[Path])
+
 // JS-specific functions
-object PlatformUtils extends Logging {
+object Prelude extends Logging {
+
+  def apply(): Prelude = {
+    new Prelude(getGlobalNodeModulePaths.toList)
+  }
 
   // get path to node modules if there is `aqua-lib` module with `builtin.aqua` in it
-  def getBuiltinNodeModulePaths: Option[Path] = {
+  def getGlobalNodeModulePaths: Option[Path] = {
     val meta = Meta.metaUrl
     val req = Module.createRequire(meta)
     Try {

@@ -65,10 +65,9 @@ object AquaCli extends IOApp with Logging {
       logLevelOpt,
       constantOpts[Id],
       dryOpt,
-      scriptOpt,
-      disableBuiltinOpt
+      scriptOpt
       ).mapN {
-      case (inputF, importsF, outputF, toAirOp, toJs, noRelayOp, noXorOp, h, v, logLevel, constants, isDryRun, isScheduled, disableBuiltin) =>
+      case (inputF, importsF, outputF, toAirOp, toJs, noRelayOp, noXorOp, h, v, logLevel, constants, isDryRun, isScheduled) =>
         scribe.Logger.root
           .clearHandlers()
           .clearModifiers()
@@ -110,7 +109,7 @@ object AquaCli extends IOApp with Logging {
                     AquaPathCompiler
                       .compileFilesTo[F](
                         input,
-                        if (disableBuiltin) imports else (PlatformUtils.getBuiltinNodeModulePaths.toList ++ imports).distinct,
+                        imports,
                         resultOutput,
                         targetToBackend(target),
                         bc

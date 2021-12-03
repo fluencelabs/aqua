@@ -63,7 +63,7 @@ object RunCommand extends Logging {
   )(implicit
     ec: ExecutionContext
   ): F[Unit] = {
-    FluenceUtils.setLogLevel(Utils.logLevelToFluenceJS(config.logLevel))
+    FluenceUtils.setLogLevel(LogLevelTransformer.logLevelToFluenceJS(config.logLevel))
 
     // stops peer in any way at the end of execution
     val resource = Resource.make(Fluence.getPeer().pure[F]) { peer =>
@@ -76,7 +76,7 @@ object RunCommand extends Logging {
           secretKey <- keyPairOrNull(config.secretKey)
           _ <- Fluence
             .start(
-              PeerConfig(multiaddr, config.timeout, Utils.logLevelToAvm(config.logLevel), secretKey)
+              PeerConfig(multiaddr, config.timeout, LogLevelTransformer.logLevelToAvm(config.logLevel), secretKey)
             )
             .toFuture
           _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
@@ -179,9 +179,11 @@ object RunCommand extends Logging {
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
+    val prelude = Prelude()
+
     val richedImports =
-      if (runConfig.disableBuiltin) imports
-      else (PlatformUtils.getBuiltinNodeModulePaths.toList ++ imports).distinct
+      if (runConfig.noGlobalImports) imports
+      else (prelude.pathList ++ imports).distinct
 
     val sources = new AquaFileSources[F](input, richedImports)
 
