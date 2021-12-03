@@ -196,8 +196,6 @@ object AppOpts {
       .flag("no-global-imports", "Don't use default aqua import paths")
       .map(_ => true)
       .withDefault(false)
-      .map(_ => true)
-      .withDefault(false)
 
   lazy val versionStr: String =
     Version.version
