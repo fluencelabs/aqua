@@ -206,8 +206,13 @@ object AppOpts {
       .withDefault(false)
 
   val noGlobalImports: Opts[Boolean] =
-    Opts
-      .flag("no-global-imports", "Don't use default aqua imports, i. e. builtin.aqua")
+    }
+
+Opts
+    .flag("no-global-imports", "Don't use default aqua import paths")
+    /** EndMarker */
+    .map(_ => true)
+    .withDefault(false)
       .map(_ => true)
       .withDefault(false)
 

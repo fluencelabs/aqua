@@ -15,9 +15,9 @@ object Meta {
 @js.native
 @JSImport("module", JSImport.Namespace)
 object Module extends js.Object {
-  def createRequire(str: String): Require = js.native
 
-  val paths: List[Any] = js.native
+  // make it possible to use `require` in ES module type
+  def createRequire(str: String): Require = js.native
 }
 
 trait Require extends js.Object {

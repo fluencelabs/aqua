@@ -8,14 +8,14 @@ import scribe.Logging
 import scala.util.Try
 
 /**
- * @param pathList list of paths where imports will be searched
+ * @param importPaths list of paths where imports will be searched
  */
-case class Prelude(pathList: List[Path])
+case class Prelude(importPaths: List[Path])
 
 // JS-specific functions
 object Prelude extends Logging {
 
-  def apply(): Prelude = {
+  def create(): Prelude = {
     new Prelude(getGlobalNodeModulePaths.toList)
   }
 
