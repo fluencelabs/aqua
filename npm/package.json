@@ -6,8 +6,8 @@
   "files": [
     "aqua.js",
     "index.js",
-    "index-java.js",
-    "error.js"
+    "error.js",
+    "utils.js"
   ],
   "bin": {
     "aqua": "index.js",
@@ -18,7 +18,8 @@
     "from:scalajs": "cp ../cli/.js/target/scala-3.0.2/cli-opt/main.js ./aqua.js && npm run run -- $@"
   },
   "dependencies": {
-    "@fluencelabs/fluence": "0.15.1"
+    "@fluencelabs/fluence": "0.15.2",
+    "@fluencelabs/aqua-lib": "0.2.1"
   },
   "repository": {
     "type": "git",

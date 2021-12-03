@@ -1,4 +1,4 @@
-package aqua
+package aqua.js
 
 import aqua.backend.{ArgDefinition, FunctionDef, NamesConfig, TypeDefinition}
 import aqua.model.transform.TransformConfig

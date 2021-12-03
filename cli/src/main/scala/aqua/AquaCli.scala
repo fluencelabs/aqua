@@ -66,7 +66,7 @@ object AquaCli extends IOApp with Logging {
       constantOpts[Id],
       dryOpt,
       scriptOpt
-    ).mapN {
+      ).mapN {
       case (inputF, importsF, outputF, toAirOp, toJs, noRelayOp, noXorOp, h, v, logLevel, constants, isDryRun, isScheduled) =>
         scribe.Logger.root
           .clearHandlers()

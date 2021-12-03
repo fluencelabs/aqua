@@ -14,7 +14,7 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Comonad, Functor, Monad, ~>}
+import cats.{~>, Comonad, Functor, Monad}
 import com.monovore.decline.Opts.help
 import com.monovore.decline.{Opts, Visibility}
 import fs2.io.file.{Files, Path}
@@ -92,14 +92,19 @@ object AppOpts {
       .map(s => checkPath[F](s))
 
   def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Option[Path]]]] =
-    Opts.option[String]("output", "Path to the output directory. Will be created if not exists", "o")
+    Opts
+      .option[String]("output", "Path to the output directory. Will be created if not exists", "o")
       .map(s => Option(s))
       .withDefault(None)
       .map(_.map(checkOutput[F]).getOrElse(Validated.validNec[String, Option[Path]](None).pure[F]))
 
   def importOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, List[Path]]]] =
     Opts
-      .options[String]("import", "Path to the directory to import from. May be used several times", "m")
+      .options[String](
+        "import",
+        "Path to the directory to import from. May be used several times",
+        "m"
+      )
       .orEmpty
       .map { ps =>
         val checked: List[F[ValidatedNec[String, Path]]] = ps.map { pStr =>
@@ -116,21 +121,7 @@ object AppOpts {
           }
         }
 
-        // check if node_modules directory exists and add it in imports list
-        val nodeModules = Path("node_modules")
-        val nodeImportF: F[Option[Path]] = Files[F].exists(nodeModules).flatMap {
-          case true =>
-            Files[F].isDirectory(nodeModules).map(isDir => if (isDir) Some(nodeModules) else None )
-          case false => None.pure[F]
-        }
-
-
-        for {
-          result <- checked.sequence.map(_.sequence)
-          nodeImport <- nodeImportF
-        } yield {
-          result.map(_ ++ nodeImport)
-        }
+        checked.sequence.map(_.sequence)
       }
 
   def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[TransformConfig.Const]] =
@@ -193,7 +184,10 @@ object AppOpts {
 
   val scriptOpt: Opts[Boolean] =
     Opts
-      .flag("scheduled", "Generate air code for script storage. Without error handling wrappers and hops on relay. Will ignore other options")
+      .flag(
+        "scheduled",
+        "Generate air code for script storage. Without error handling wrappers and hops on relay. Will ignore other options"
+      )
       .map(_ => true)
       .withDefault(false)
 
