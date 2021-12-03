@@ -28,7 +28,7 @@ object Prelude extends Logging {
     }
 
     nodeImportF.map { nodeImport =>
-      new Prelude(nodeImport.toList ++ PlatformOpts.getGlobalNodeModulePaths.toList)
+      new Prelude(nodeImport.toList ++ PlatformOpts.getGlobalNodeModulePath.toList)
     }
   }
 
