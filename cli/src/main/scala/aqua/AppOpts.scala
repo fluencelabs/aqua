@@ -121,21 +121,7 @@ object AppOpts {
           }
         }
 
-        // TODO: move it to prelude after it will be used it in a compilation command, not only in `run`
-        // check if node_modules directory exists and add it in imports list
-        val nodeModules = Path("node_modules")
-        val nodeImportF: F[Option[Path]] = Files[F].exists(nodeModules).flatMap {
-          case true =>
-            Files[F].isDirectory(nodeModules).map(isDir => if (isDir) Some(nodeModules) else None)
-          case false => None.pure[F]
-        }
-
-        for {
-          result <- checked.sequence.map(_.sequence)
-          nodeImport <- nodeImportF
-        } yield {
-          result.map(_ ++ nodeImport)
-        }
+        checked.sequence.map(_.sequence)
       }
 
   def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[TransformConfig.Const]] =
@@ -206,13 +192,10 @@ object AppOpts {
       .withDefault(false)
 
   val noGlobalImports: Opts[Boolean] =
-    }
-
-Opts
-    .flag("no-global-imports", "Don't use default aqua import paths")
-    /** EndMarker */
-    .map(_ => true)
-    .withDefault(false)
+    Opts
+      .flag("no-global-imports", "Don't use default aqua import paths")
+      .map(_ => true)
+      .withDefault(false)
       .map(_ => true)
       .withDefault(false)
 

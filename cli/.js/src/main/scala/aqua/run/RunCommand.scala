@@ -179,15 +179,12 @@ object RunCommand extends Logging {
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
-    val prelude = Prelude.create()
-
-    val richedImports =
-      if (runConfig.noGlobalImports) imports
-    else (prelude.importPaths ++ imports).distinct
-
-    val sources = new AquaFileSources[F](input, richedImports)
-
     for {
+      prelude <- Prelude.init()
+      richedImports =
+        if (runConfig.noGlobalImports) imports
+        else (prelude.importPaths ++ imports).distinct
+      sources = new AquaFileSources[F](input, richedImports)
       // compile only context to wrap and call function later
       compileResult <- Clock[F].timed(
         AquaCompiler
