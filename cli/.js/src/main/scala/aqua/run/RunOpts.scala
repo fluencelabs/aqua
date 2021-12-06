@@ -1,6 +1,6 @@
 package aqua.run
 
-import aqua.model.LiteralModel
+import aqua.model.{LiteralModel, VarModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
@@ -18,8 +18,10 @@ import com.monovore.decline.{Command, Opts}
 import fs2.io.file.Files
 import scribe.Logging
 
+import scala.scalajs.js
 import java.util.Base64
 import scala.concurrent.ExecutionContext
+import scala.scalajs.js.JSON
 
 object RunOpts extends Logging {
 
@@ -58,6 +60,13 @@ object RunOpts extends Logging {
       .map(_ => true)
       .withDefault(false)
 
+  val dataOpt: Opts[js.Dynamic] =
+    Opts.option[String]("data", "Data for aqua function in json", "d").mapValidated { str =>
+      Validated.catchNonFatal {
+        JSON.parse(str)
+      }.leftMap(t => NonEmptyList.one("Data isn't a valid JSON: " + t.getMessage))
+    }
+
   val funcOpt: Opts[(String, List[LiteralModel])] =
     Opts
       .option[String]("func", "Function to call with args", "f")
@@ -95,7 +104,8 @@ object RunOpts extends Logging {
       timeoutOpt,
       AppOpts.logLevelOpt,
       printAir,
-      AppOpts.wrapWithOption(secretKeyOpt)
+      AppOpts.wrapWithOption(secretKeyOpt),
+      AppOpts.wrapWithOption(dataOpt)
     ).mapN {
       case (
             inputF,
@@ -105,7 +115,8 @@ object RunOpts extends Logging {
             timeout,
             logLevel,
             printAir,
-            secretKey
+            secretKey,
+            data
           ) =>
         scribe.Logger.root
           .clearHandlers()
@@ -139,7 +150,7 @@ object RunOpts extends Logging {
                       args,
                       input,
                       imps,
-                      RunConfig(timeout, logLevel, printAir, secretKey)
+                      RunConfig(timeout, logLevel, printAir, secretKey, data)
                     )
                     .map(_ => cats.effect.ExitCode.Success)
                 }

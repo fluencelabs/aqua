@@ -11,22 +11,39 @@ import scala.scalajs.js.JSConverters.*
 
 object CallJsFunction {
 
+  def registerService(
+    peer: FluencePeer,
+    serviceId: String,
+    fnName: String,
+    handler: js.Array[js.Any] => js.Object
+  ): CallServiceHandler = {
+    peer.internals.callServiceHandler.use((req, resp, next) => {
+      if (req.serviceId == serviceId && req.fnName == fnName) {
+        val result = handler(req.args)
+        resp.retCode = ResultCodes.success
+        resp.result = result
+      }
+
+      next()
+    })
+  }
+
   // Register a service that returns no result
   def registerUnitService(
     peer: FluencePeer,
     serviceId: String,
     fnName: String,
-    handler: (js.Array[js.Any]) => Unit
+    handler: js.Array[js.Any] => Unit
   ): CallServiceHandler = {
-    peer.internals.callServiceHandler.use((req, resp, next) => {
-      if (req.serviceId == serviceId && req.fnName == fnName) {
-        handler(req.args)
-        resp.retCode = ResultCodes.success
-        resp.result = new js.Object {}
+    registerService(
+      peer,
+      serviceId,
+      fnName,
+      arr => {
+        handler(arr)
+        new js.Object {}
       }
-
-      next()
-    })
+    )
   }
 
   // Call a function with generated air script

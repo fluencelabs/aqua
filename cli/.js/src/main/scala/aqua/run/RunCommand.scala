@@ -59,7 +59,8 @@ object RunCommand extends Logging {
     multiaddr: String,
     air: String,
     functionDef: FunctionDef,
-    config: RunConfig
+    config: RunConfig,
+    consoleService: ConsoleService
   )(implicit
     ec: ExecutionContext
   ): F[Unit] = {
@@ -81,19 +82,7 @@ object RunCommand extends Logging {
             .toFuture
           _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
           promise = Promise.apply[Unit]()
-          _ = CallJsFunction.registerUnitService(
-            peer,
-            config.consoleServiceId,
-            config.printFunctionName,
-            args => {
-              val str = JSON.stringify(args, space = 2)
-              // if an input function returns a result, our success will be after it is printed
-              // otherwise finish after JS SDK will finish sending a request
-              // TODO use custom function for output
-              OutputPrinter.print(str)
-              promise.success(())
-            }
-          )
+          _ = consoleService.registerService(peer, promise)
           callFuture = CallJsFunction.funcCallJs(
             air,
             functionDef,
@@ -118,7 +107,8 @@ object RunCommand extends Logging {
     funcName: String,
     funcCallable: FuncCallable,
     args: List[LiteralModel],
-    config: RunConfig
+    config: RunConfig,
+    consoleService: ConsoleService
   ): FuncCallable = {
     // pass results to a printing service if an input function returns a result
     // otherwise just call it
@@ -133,11 +123,7 @@ object RunCommand extends Logging {
         val callFuncTag =
           CallArrowTag(funcName, Call(args, exports))
 
-        val callServiceTag = CallServiceTag(
-          LiteralModel.quote(config.consoleServiceId),
-          config.printFunctionName,
-          Call(variables, Nil)
-        )
+        val callServiceTag = consoleService.getCallServiceTag(variables)
 
         FuncOps.seq(FuncOp.leaf(callFuncTag), FuncOp.leaf(callServiceTag))
     }
@@ -196,8 +182,11 @@ object RunCommand extends Logging {
         contextV match {
           case Validated.Valid(contextC: Chain[AquaContext]) =>
             findFunction(contextC, func).map { funcCallable =>
+
+              val consoleService = new ConsoleService(runConfig.consoleServiceId, runConfig.printFunctionName)
+
               // call an input function from a generated function
-              val wrapped = wrapCall(func, funcCallable, args, runConfig)
+              val wrapped = wrapCall(func, funcCallable, args, runConfig, consoleService)
 
               val funcRes = Transform.fn(wrapped, transformConfig)
               val definitions = FunctionDef(funcRes)
@@ -208,7 +197,7 @@ object RunCommand extends Logging {
                 OutputPrinter.print(air)
               }
 
-              funcCall[F](multiaddr, air, definitions, runConfig).map { _ =>
+              funcCall[F](multiaddr, air, definitions, runConfig, consoleService).map { _ =>
                 Validated.validNec(())
               }
             }.getOrElse(Validated.invalidNec(s"There is no function called '$func'").pure[F])
