@@ -1,10 +1,11 @@
 package aqua.run
 
-import aqua.model.{LiteralModel, VarModel}
+import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
+import aqua.types.BottomType
 import aqua.{AppOpts, AquaIO, LogFormatter}
 import cats.data.{NonEmptyList, Validated}
 import cats.effect.kernel.Async
@@ -67,28 +68,23 @@ object RunOpts extends Logging {
       }.leftMap(t => NonEmptyList.one("Data isn't a valid JSON: " + t.getMessage))
     }
 
-  val funcOpt: Opts[(String, List[LiteralModel])] =
+  val funcOpt: Opts[(String, List[ValueModel])] =
     Opts
       .option[String]("func", "Function to call with args", "f")
       .mapValidated { str =>
         CallArrowExpr.funcOnly.parseAll(str) match {
           case Right(f) =>
             val expr = f.mapK(spanToId)
-            val hasVars = expr.args.exists {
-              case VarLambda(_, _) => true
-              case _ => false
-            }
-            if (hasVars) {
-              Validated.invalidNel(
-                "Function can have only literal arguments, no variables or constants allowed at the moment"
-              )
-            } else {
-              val args = expr.args.collect { case l @ Literal(_, _) =>
-                LiteralModel(l.value, l.ts)
-              }
 
-              Validated.validNel((expr.funcName.value, args))
+            val args = expr.args.collect {
+              case Literal(value, ts) =>
+                LiteralModel(value, ts)
+              case VarLambda(name, _) =>
+                VarModel(name.value, BottomType)
             }
+
+            Validated.validNel((expr.funcName.value, args))
+
           case Left(err) => Validated.invalid(err.expected.map(_.context.mkString("\n")))
         }
       }

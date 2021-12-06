@@ -13,7 +13,7 @@ import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
 import aqua.model.func.{Call, FuncCallable}
 import aqua.model.transform.res.{AquaRes, FuncRes}
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.model.{AquaContext, LiteralModel, VarModel}
+import aqua.model.{AquaContext, LiteralModel, VarModel, ValueModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
@@ -106,7 +106,7 @@ object RunCommand extends Logging {
   private def wrapCall(
     funcName: String,
     funcCallable: FuncCallable,
-    args: List[LiteralModel],
+    args: List[ValueModel],
     config: RunConfig,
     consoleService: ConsoleService
   ): FuncCallable = {
@@ -157,7 +157,7 @@ object RunCommand extends Logging {
   def run[F[_]: Files: AquaIO: Async](
     multiaddr: String,
     func: String,
-    args: List[LiteralModel],
+    args: List[ValueModel],
     input: Path,
     imports: List[Path],
     runConfig: RunConfig,
