@@ -159,30 +159,30 @@ object RunOpts extends Logging {
         for {
           inputV <- inputF
           impsV <- importF
-          result <- foldValid(
-            inputV,
-            { input =>
-              foldValid(
-                impsV,
-                { imps =>
-                  foldValid(
-                    checkDataGetServices(args, data),
-                    services => {
-                      RunCommand
-                        .run(
-                          multiaddr,
-                          func,
-                          args,
-                          input,
-                          imps,
-                          RunConfig(timeout, logLevel, printAir, secretKey, services)
-                        )
-                        .map(_ => cats.effect.ExitCode.Success)
-                    }
-                  )
-                }
-              )
+          resultV: ValidatedNec[String, F[Unit]] = inputV.andThen { input =>
+            impsV.andThen { imps =>
+              checkDataGetServices(args, data).andThen { services =>
+                Validated.valid(
+                  RunCommand
+                    .run(
+                      multiaddr,
+                      func,
+                      args,
+                      input,
+                      imps,
+                      RunConfig(timeout, logLevel, printAir, secretKey, services)
+                    )
+                )
+              }
             }
+          }
+          result <- resultV.fold(
+            errs =>
+              Async[F].pure {
+                errs.map(logger.error)
+                cats.effect.ExitCode.Error
+              },
+            _.map(_ => cats.effect.ExitCode.Success)
           )
         } yield {
           result
