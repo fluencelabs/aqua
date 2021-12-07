@@ -6,8 +6,8 @@ import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.types.BottomType
-import aqua.{AppOpts, AquaIO, LogFormatter}
-import cats.data.{NonEmptyList, Validated}
+import aqua.{AppOpts, AquaIO, ArgGetterService, LogFormatter}
+import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import cats.effect.kernel.Async
 import cats.effect.{ExitCode, IO}
 import cats.syntax.applicative.*
@@ -89,6 +89,42 @@ object RunOpts extends Logging {
         }
       }
 
+  def checkDataGetServices(
+    args: List[ValueModel],
+    data: Option[js.Dynamic]
+  ): ValidatedNec[String, List[ArgGetterService]] = {
+    val vars = args.collect { case v @ VarModel(_, _, _) =>
+      v
+    }
+
+    data match {
+      case None if vars.nonEmpty =>
+        Validated.invalidNec("Function have non-literals, so, data should be presented")
+      case None =>
+        Validated.validNec(Nil)
+      case Some(data) =>
+        val services = vars.map { vm =>
+          ArgGetterService.create(vm, data.selectDynamic(vm.name))
+        }
+        Validated.validNec(services)
+    }
+  }
+
+  def foldValid[F[_]: Async, T](
+    validated: ValidatedNec[String, T],
+    f: T => F[cats.effect.ExitCode]
+  ): F[cats.effect.ExitCode] = {
+    validated.fold(
+      errs => {
+        Async[F].pure {
+          errs.map(logger.error)
+          cats.effect.ExitCode.Error
+        }
+      },
+      f
+    )
+  }
+
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
   ): Opts[F[cats.effect.ExitCode]] =
@@ -123,32 +159,27 @@ object RunOpts extends Logging {
         for {
           inputV <- inputF
           impsV <- importF
-          result <- inputV.fold(
-            errs => {
-              Async[F].pure {
-                errs.map(logger.error)
-                cats.effect.ExitCode.Error
-              }
-            },
+          result <- foldValid(
+            inputV,
             { input =>
-              impsV.fold(
-                errs => {
-                  Async[F].pure {
-                    errs.map(logger.error)
-                    cats.effect.ExitCode.Error
-                  }
-                },
+              foldValid(
+                impsV,
                 { imps =>
-                  RunCommand
-                    .run(
-                      multiaddr,
-                      func,
-                      args,
-                      input,
-                      imps,
-                      RunConfig(timeout, logLevel, printAir, secretKey, data)
-                    )
-                    .map(_ => cats.effect.ExitCode.Success)
+                  foldValid(
+                    checkDataGetServices(args, data),
+                    services => {
+                      RunCommand
+                        .run(
+                          multiaddr,
+                          func,
+                          args,
+                          input,
+                          imps,
+                          RunConfig(timeout, logLevel, printAir, secretKey, services)
+                        )
+                        .map(_ => cats.effect.ExitCode.Success)
+                    }
+                  )
                 }
               )
             }

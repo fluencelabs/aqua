@@ -15,7 +15,7 @@ object CallJsFunction {
     peer: FluencePeer,
     serviceId: String,
     fnName: String,
-    handler: js.Array[js.Any] => js.Object
+    handler: js.Array[js.Any] => js.Dynamic
   ): CallServiceHandler = {
     peer.internals.callServiceHandler.use((req, resp, next) => {
       if (req.serviceId == serviceId && req.fnName == fnName) {
@@ -41,7 +41,7 @@ object CallJsFunction {
       fnName,
       arr => {
         handler(arr)
-        new js.Object {}
+        js.Dynamic.literal()
       }
     )
   }

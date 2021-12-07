@@ -8,7 +8,7 @@ import aqua.model.func.raw.CallServiceTag
 
 import scala.concurrent.Promise
 
-case class ArgGetterService(fnName: String, arg: scalajs.js.Object) {
+case class ArgGetterService(value: VarModel, fnName: String, arg: scalajs.js.Dynamic) {
 
   def registerService(peer: FluencePeer): CallServiceHandler = {
     CallJsFunction.registerService(
@@ -25,7 +25,7 @@ case class ArgGetterService(fnName: String, arg: scalajs.js.Object) {
     CallServiceTag(
       LiteralModel.quote(GETTER_SERVICE_ID),
       fnName,
-      Call(List.empty, Nil)
+      Call(List.empty, List(Call.Export(value.name, value.`type`)))
     )
   }
 
@@ -35,8 +35,8 @@ object ArgGetterService {
 
   val GETTER_SERVICE_ID = "argumentGetter"
 
-  def create(argName: String, arg: scalajs.js.Object): ArgGetterService = {
-    val fnName = s"get${argName}Fn"
-    ArgGetterService(fnName, arg)
+  def create(value: VarModel, arg: scalajs.js.Dynamic): ArgGetterService = {
+    val fnName = s"get${value.name}Fn"
+    ArgGetterService(value, fnName, arg)
   }
 }

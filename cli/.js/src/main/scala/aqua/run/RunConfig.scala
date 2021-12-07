@@ -1,5 +1,6 @@
 package aqua.run
 
+import aqua.ArgGetterService
 import scribe.Level
 
 // `run` command configuration
@@ -8,7 +9,7 @@ case class RunConfig(
   logLevel: Level,
   printAir: Boolean,
   secretKey: Option[Array[Byte]],
-  data: Option[Dynamic],
+  services: List[ArgGetterService],
   consoleServiceId: String = "--after-callback-srv-service--",
   printFunctionName: String = "print-and-stop",
   resultName: String = "-some-unique-res-name-",

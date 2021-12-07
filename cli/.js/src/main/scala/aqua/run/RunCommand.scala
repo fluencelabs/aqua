@@ -83,6 +83,7 @@ object RunCommand extends Logging {
           _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
           promise = Promise.apply[Unit]()
           _ = consoleService.registerService(peer, promise)
+          _ = config.services.map(_.registerService(peer))
           callFuture = CallJsFunction.funcCallJs(
             air,
             functionDef,
@@ -125,7 +126,11 @@ object RunCommand extends Logging {
 
         val callServiceTag = consoleService.getCallServiceTag(variables)
 
-        FuncOps.seq(FuncOp.leaf(callFuncTag), FuncOp.leaf(callServiceTag))
+        val servicesTags = config.services.map(s => FuncOp.leaf(s.getCallServiceTag()))
+
+        val allTags = servicesTags ++ List(FuncOp.leaf(callFuncTag), FuncOp.leaf(callServiceTag))
+
+        FuncOps.seq(allTags: _*)
     }
 
     FuncCallable(
