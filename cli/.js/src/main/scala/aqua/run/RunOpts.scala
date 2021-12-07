@@ -7,16 +7,17 @@ import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.types.BottomType
 import aqua.{AppOpts, AquaIO, ArgGetterService, LogFormatter}
-import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
+import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
+import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.effect.kernel.Async
-import cats.effect.{ExitCode, IO}
+import cats.effect.{Concurrent, ExitCode, IO}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.{~>, Id, Monad}
 import com.monovore.decline.{Command, Opts}
-import fs2.io.file.Files
+import fs2.io.file.{Files, Path}
 import scribe.Logging
 
 import scala.scalajs.js
@@ -61,6 +62,44 @@ object RunOpts extends Logging {
       .map(_ => true)
       .withDefault(false)
 
+  def dataFromFileOpt[F[_]: Monad: Files: Concurrent]
+    : Opts[F[ValidatedNec[String, Option[js.Dynamic]]]] =
+    Opts
+      .option[String]("data-path", "Path to file with arguments in JSON format", "p")
+      .map { str =>
+        val p = Path(str)
+        Files[F]
+          .exists(p)
+          .flatMap { exists =>
+            if (exists)
+              Files[F].isRegularFile(p).flatMap { isFile =>
+                if (isFile) {
+                  Files[F]
+                    .readAll(p)
+                    .through(fs2.text.utf8.decode)
+                    .fold(List.empty[String]) { case (acc, str) => str :: acc }
+                    .map(_.mkString(""))
+                    .map { jsonStr =>
+                      Validated.catchNonFatal {
+                        JSON.parse(jsonStr)
+                      }.leftMap(t =>
+                        NonEmptyChain
+                          .one(s"Data in ${p.toString} isn't a valid JSON: " + t.getMessage)
+                      )
+                    }
+                    .compile
+                    .last
+                    .map(_.map(_.map(v => Some(v))).getOrElse(validNec(None)))
+                } else {
+                  invalidNec(s"Path '${p.toString}' is not a file").pure[F]
+                }
+              }
+            else {
+              invalidNec(s"There is no path '${p.toString}'").pure[F]
+            }
+          }
+      }
+
   val dataOpt: Opts[js.Dynamic] =
     Opts.option[String]("data", "Data for aqua function in json", "d").mapValidated { str =>
       Validated.catchNonFatal {
@@ -83,46 +122,50 @@ object RunOpts extends Logging {
                 VarModel(name.value, BottomType)
             }
 
-            Validated.validNel((expr.funcName.value, args))
+            validNel((expr.funcName.value, args))
 
-          case Left(err) => Validated.invalid(err.expected.map(_.context.mkString("\n")))
+          case Left(err) => invalid(err.expected.map(_.context.mkString("\n")))
         }
       }
 
+  // checks if data is presented if there is non-literals in function arguments
+  // creates services to add this data into a call
   def checkDataGetServices(
     args: List[ValueModel],
     data: Option[js.Dynamic]
-  ): ValidatedNec[String, List[ArgGetterService]] = {
+  ): ValidatedNec[String, Map[String, ArgGetterService]] = {
     val vars = args.collect { case v @ VarModel(_, _, _) =>
       v
-    }
+    // one variable could be used multiple times
+    }.distinctBy(_.name)
 
     data match {
       case None if vars.nonEmpty =>
-        Validated.invalidNec("Function have non-literals, so, data should be presented")
+        invalidNec("Function have non-literals, so, data should be presented")
       case None =>
-        Validated.validNec(Nil)
+        validNec(Map.empty)
       case Some(data) =>
         val services = vars.map { vm =>
-          ArgGetterService.create(vm, data.selectDynamic(vm.name))
+          val arg = data.selectDynamic(vm.name)
+          if (arg == js.undefined) {
+            logger.warn(s"Argument ${vm.name} is undefined.")
+          }
+          vm.name -> ArgGetterService.create(vm, arg)
         }
-        Validated.validNec(services)
+        validNec(services.toMap)
     }
   }
 
-  def foldValid[F[_]: Async, T](
-    validated: ValidatedNec[String, T],
-    f: T => F[cats.effect.ExitCode]
-  ): F[cats.effect.ExitCode] = {
-    validated.fold(
-      errs => {
-        Async[F].pure {
-          errs.map(logger.error)
-          cats.effect.ExitCode.Error
-        }
-      },
-      f
-    )
+  // get data from sources
+  def getData(
+    dataFromArgument: Option[js.Dynamic],
+    dataFromFile: Option[js.Dynamic]
+  ): ValidatedNec[String, Option[js.Dynamic]] = {
+    (dataFromArgument, dataFromFile) match {
+      case (Some(_), Some(_)) =>
+        invalidNec("Pass either data argument or path to file with arguments")
+      case _ => validNec(dataFromArgument.orElse(dataFromFile))
+    }
   }
 
   def runOptions[F[_]: Files: AquaIO: Async](implicit
@@ -137,7 +180,8 @@ object RunOpts extends Logging {
       AppOpts.logLevelOpt,
       printAir,
       AppOpts.wrapWithOption(secretKeyOpt),
-      AppOpts.wrapWithOption(dataOpt)
+      AppOpts.wrapWithOption(dataOpt),
+      AppOpts.wrapWithOption(dataFromFileOpt[F])
     ).mapN {
       case (
             inputF,
@@ -148,7 +192,8 @@ object RunOpts extends Logging {
             logLevel,
             printAir,
             secretKey,
-            data
+            dataFromArgument,
+            dataFromFileF
           ) =>
         scribe.Logger.root
           .clearHandlers()
@@ -159,20 +204,25 @@ object RunOpts extends Logging {
         for {
           inputV <- inputF
           impsV <- importF
+          dataFromFileV <- dataFromFileF.getOrElse(validNec(None).pure[F])
           resultV: ValidatedNec[String, F[Unit]] = inputV.andThen { input =>
             impsV.andThen { imps =>
-              checkDataGetServices(args, data).andThen { services =>
-                Validated.valid(
-                  RunCommand
-                    .run(
-                      multiaddr,
-                      func,
-                      args,
-                      input,
-                      imps,
-                      RunConfig(timeout, logLevel, printAir, secretKey, services)
+              dataFromFileV.andThen { dataFromFile =>
+                getData(dataFromArgument, dataFromFile).andThen { data =>
+                  checkDataGetServices(args, data).andThen { services =>
+                    valid(
+                      RunCommand
+                        .run(
+                          multiaddr,
+                          func,
+                          args,
+                          input,
+                          imps,
+                          RunConfig(timeout, logLevel, printAir, secretKey, services)
+                        )
                     )
-                )
+                  }
+                }
               }
             }
           }

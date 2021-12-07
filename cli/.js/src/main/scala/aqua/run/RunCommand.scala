@@ -13,12 +13,13 @@ import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
 import aqua.model.func.{Call, FuncCallable}
 import aqua.model.transform.res.{AquaRes, FuncRes}
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.model.{AquaContext, LiteralModel, VarModel, ValueModel}
+import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
 import aqua.run.RunConfig
-import aqua.types.{ArrowType, NilType, ScalarType}
+import aqua.types.{ArrayType, ArrowType, BoxType, NilType, OptionType, ScalarType, StreamType, Type}
+import cats.syntax.list.*
 import cats.data.*
 import cats.effect.kernel.{Async, Clock}
 import cats.effect.syntax.async.*
@@ -29,6 +30,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
+import cats.syntax.traverse.*
 import cats.{Id, Monad, ~>}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
@@ -83,7 +85,7 @@ object RunCommand extends Logging {
           _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
           promise = Promise.apply[Unit]()
           _ = consoleService.registerService(peer, promise)
-          _ = config.services.map(_.registerService(peer))
+          _ = config.services.values.map(_.registerService(peer))
           callFuture = CallJsFunction.funcCallJs(
             air,
             functionDef,
@@ -100,6 +102,22 @@ object RunCommand extends Logging {
       .flatMap(_.exports.map(e => Chain.fromSeq(e.funcs.values.toList)).getOrElse(Chain.empty))
       .find(_.funcName == funcName)
 
+  def createGetters(vars: List[(String, Type)], services: Map[String, ArgGetterService]): ValidatedNec[String, List[ArgGetterService]] = {
+    vars.map {
+      (n, argType) =>
+        val serviceOp = services.get(n)
+        (serviceOp, argType) match {
+          // BoxTypes could be nulls
+          case (None, _) => Validated.invalidNec(s"Unexcepted. There is no service for '$n' argument")
+          // BoxType could be undefined, so, pass service that will return undefined for this argument
+          case (Some(s), _: BoxType) if s.arg == js.undefined => Validated.validNec(s :: Nil)
+
+          case (Some(s), _) if s.arg == js.undefined => Validated.invalidNec(s"Argument '$n' is undefined, but it's type '$argType' cannot be undefined.")
+          case (Some(s), _) => Validated.validNec(s :: Nil)
+        }
+    }.reduce(_ combine _)
+  }
+
   // Wrap a function that it will be called in another function, and pass results to a `print` service, i.e.:
   // func wrapFunc():
   //   res <- funcCallable(args:_*)
@@ -110,7 +128,7 @@ object RunCommand extends Logging {
     args: List[ValueModel],
     config: RunConfig,
     consoleService: ConsoleService
-  ): FuncCallable = {
+  ): ValidatedNec[String, FuncCallable] = {
     // pass results to a printing service if an input function returns a result
     // otherwise just call it
     val body = funcCallable.arrowType.codomain.toList match {
@@ -126,30 +144,50 @@ object RunCommand extends Logging {
 
         val callServiceTag = consoleService.getCallServiceTag(variables)
 
-        val servicesTags = config.services.map(s => FuncOp.leaf(s.getCallServiceTag()))
-
-        val allTags = servicesTags ++ List(FuncOp.leaf(callFuncTag), FuncOp.leaf(callServiceTag))
-
-        FuncOps.seq(allTags: _*)
+        FuncOps.seq(FuncOp.leaf(callFuncTag), FuncOp.leaf(callServiceTag))
     }
 
-    FuncCallable(
-      config.functionWrapperName,
-      body,
-      // no arguments and returns nothing
-      ArrowType(NilType, NilType),
-      Nil,
-      Map(funcName -> funcCallable),
-      Map.empty
-    )
+    val vars = args.zip(funcCallable.arrowType.domain.toList)
+      .collect {
+        case (VarModel(n, _, _), argType) => (n, argType)
+      }
+
+    val gettersV = createGetters(vars, config.services)
+
+    gettersV.map { getters =>
+      val gettersTags = getters.map(s => FuncOp.leaf(s.getCallServiceTag()))
+
+      FuncCallable(
+        config.functionWrapperName,
+        FuncOps.seq((gettersTags :+ body):_*),
+        // no arguments and returns nothing
+        ArrowType(NilType, NilType),
+        Nil,
+        Map(funcName -> funcCallable),
+        Map.empty
+      )
+    }
   }
 
   private def handleFuncCallErrors: PartialFunction[Throwable, Unit] = { t =>
     val message = if (t.getMessage.contains("Request timed out after")) {
       "Function execution failed by timeout. You can increase timeout with '--timeout' option in milliseconds or check if your code can hang while executing."
-    } else t.getMessage
+    } else JSON.stringify(t.toString)
     // TODO use custom function for error output
     OutputPrinter.error(message)
+  }
+
+  def genAirAndCall[F[_]: Async](multiaddr: String, wrapped: FuncCallable, consoleService: ConsoleService, transformConfig: TransformConfig, runConfig: RunConfig)(implicit ec: ExecutionContext): F[Unit] = {
+    val funcRes = Transform.fn(wrapped, transformConfig)
+    val definitions = FunctionDef(funcRes)
+
+    val air = FuncAirGen(funcRes).generate.show
+
+    if (runConfig.printAir) {
+      OutputPrinter.print(air)
+    }
+
+    funcCall[F](multiaddr, air, definitions, runConfig, consoleService)
   }
 
   /**
@@ -184,34 +222,28 @@ object RunCommand extends Logging {
       )
       (compileTime, contextV) = compileResult
       callResult <- Clock[F].timed {
-        contextV match {
-          case Validated.Valid(contextC: Chain[AquaContext]) =>
-            findFunction(contextC, func).map { funcCallable =>
-
-              val consoleService = new ConsoleService(runConfig.consoleServiceId, runConfig.printFunctionName)
-
-              // call an input function from a generated function
-              val wrapped = wrapCall(func, funcCallable, args, runConfig, consoleService)
-
-              val funcRes = Transform.fn(wrapped, transformConfig)
-              val definitions = FunctionDef(funcRes)
-
-              val air = FuncAirGen(funcRes).generate.show
-
-              if (runConfig.printAir) {
-                OutputPrinter.print(air)
-              }
-
-              funcCall[F](multiaddr, air, definitions, runConfig, consoleService).map { _ =>
-                Validated.validNec(())
-              }
-            }.getOrElse(Validated.invalidNec(s"There is no function called '$func'").pure[F])
-          case Validated.Invalid(errs) =>
-            import ErrorRendering.showError
-            Validated.invalid(errs.map(_.show)).pure[F]
-
+        val contextVStringErr: ValidatedNec[String, Chain[AquaContext]] = contextV.leftMap { errs =>
+          import ErrorRendering.showError
+          errs.map(_.show)
         }
-      }
+        val resultV: ValidatedNec[String, F[Unit]] = contextVStringErr.andThen { contextC =>
+            findFunction(contextC, func) match {
+              case Some(funcCallable) =>
+
+                val consoleService = new ConsoleService(runConfig.consoleServiceId, runConfig.printFunctionName)
+
+                // call an input function from a generated function
+                val callResult: ValidatedNec[String, F[Unit]] = wrapCall(func, funcCallable, args, runConfig, consoleService)
+                  .map { wrapped =>
+                  genAirAndCall[F](multiaddr, wrapped, consoleService, transformConfig, runConfig)
+                }
+                callResult
+              case None =>
+                Validated.invalidNec[String, F[Unit]](s"There is no function called '$func'")
+            }
+          }
+        resultV.sequence
+        }
       (callTime, result) = callResult
     } yield {
       logger.debug(s"Compile time: ${compileTime.toMillis}ms")
