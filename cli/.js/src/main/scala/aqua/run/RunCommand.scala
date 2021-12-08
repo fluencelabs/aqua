@@ -1,6 +1,7 @@
 package aqua.run
 
 import aqua.*
+import aqua.ErrorRendering.showError
 import aqua.backend.air.{AirBackend, FuncAirGen}
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
@@ -18,8 +19,7 @@ import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
 import aqua.run.RunConfig
-import aqua.types.{ArrayType, ArrowType, BoxType, NilType, OptionType, ScalarType, StreamType, Type}
-import cats.syntax.list.*
+import aqua.types.*
 import cats.data.*
 import cats.effect.kernel.{Async, Clock}
 import cats.effect.syntax.async.*
@@ -28,6 +28,7 @@ import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.list.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
@@ -218,15 +219,11 @@ object RunCommand extends Logging {
             sources,
             SpanParser.parser,
             transformConfig
-          )
+          ).map(_.leftMap(_.map(_.show)))
       )
       (compileTime, contextV) = compileResult
       callResult <- Clock[F].timed {
-        val contextVStringErr: ValidatedNec[String, Chain[AquaContext]] = contextV.leftMap { errs =>
-          import ErrorRendering.showError
-          errs.map(_.show)
-        }
-        val resultV: ValidatedNec[String, F[Unit]] = contextVStringErr.andThen { contextC =>
+        val resultV: ValidatedNec[String, F[Unit]] = contextV.andThen { contextC =>
             findFunction(contextC, func) match {
               case Some(funcCallable) =>
 

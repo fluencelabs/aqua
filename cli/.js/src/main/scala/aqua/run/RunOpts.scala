@@ -112,8 +112,8 @@ object RunOpts extends Logging {
       .option[String]("func", "Function to call with args", "f")
       .mapValidated { str =>
         CallArrowExpr.funcOnly.parseAll(str) match {
-          case Right(f) =>
-            val expr = f.mapK(spanToId)
+          case Right(exprSpan) =>
+            val expr = exprSpan.mapK(spanToId)
 
             val args = expr.args.collect {
               case Literal(value, ts) =>
