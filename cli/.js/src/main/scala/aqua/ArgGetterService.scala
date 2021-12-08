@@ -8,6 +8,7 @@ import aqua.model.func.raw.CallServiceTag
 
 import scala.concurrent.Promise
 
+// Service that can return argument to use it from a code
 case class ArgGetterService(value: VarModel, fnName: String, arg: scalajs.js.Dynamic) {
 
   def registerService(peer: FluencePeer): CallServiceHandler = {

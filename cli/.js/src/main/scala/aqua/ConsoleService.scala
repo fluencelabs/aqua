@@ -9,6 +9,7 @@ import scala.concurrent.Promise
 
 import scala.scalajs.js.JSON
 
+// Service to print any variables
 class ConsoleService(serviceId: String, fnName: String) {
 
   def getCallServiceTag(variables: List[VarModel]): CallServiceTag = {

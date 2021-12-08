@@ -110,11 +110,9 @@ object RunCommand extends Logging {
       (n, argType) =>
         val serviceOp = services.get(n)
         (serviceOp, argType) match {
-          // BoxTypes could be nulls
           case (None, _) => Validated.invalidNec(s"Unexcepted. There is no service for '$n' argument")
-          // BoxType could be undefined, so, pass service that will return undefined for this argument
+          // BoxType could be undefined, so, pass service that will return 'undefined' for this argument
           case (Some(s), _: BoxType) if s.arg == js.undefined => Validated.validNec(s :: Nil)
-
           case (Some(s), _) if s.arg == js.undefined => Validated.invalidNec(s"Argument '$n' is undefined, but it's type '$argType' cannot be undefined.")
           case (Some(s), _) => Validated.validNec(s :: Nil)
         }
