@@ -147,9 +147,6 @@ object RunOpts extends Logging {
       case Some(data) =>
         val services = vars.map { vm =>
           val arg = data.selectDynamic(vm.name)
-          if (arg == js.undefined) {
-            logger.warn(s"Argument ${vm.name} is undefined.")
-          }
           vm.name -> ArgGetterService.create(vm, arg)
         }
         validNec(services.toMap)

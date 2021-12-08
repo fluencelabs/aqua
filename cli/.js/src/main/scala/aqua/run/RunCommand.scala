@@ -103,6 +103,8 @@ object RunCommand extends Logging {
       .flatMap(_.exports.map(e => Chain.fromSeq(e.funcs.values.toList)).getOrElse(Chain.empty))
       .find(_.funcName == funcName)
 
+  // Creates getter services for variables. Return an error if there is no variable in services
+  // and type of this variable couldn't be optional
   def createGetters(vars: List[(String, Type)], services: Map[String, ArgGetterService]): ValidatedNec[String, List[ArgGetterService]] = {
     vars.map {
       (n, argType) =>
@@ -178,7 +180,7 @@ object RunCommand extends Logging {
     OutputPrinter.error(message)
   }
 
-  def genAirAndCall[F[_]: Async](multiaddr: String, wrapped: FuncCallable, consoleService: ConsoleService, transformConfig: TransformConfig, runConfig: RunConfig)(implicit ec: ExecutionContext): F[Unit] = {
+  def genAirAndMakeCall[F[_]: Async](multiaddr: String, wrapped: FuncCallable, consoleService: ConsoleService, transformConfig: TransformConfig, runConfig: RunConfig)(implicit ec: ExecutionContext): F[Unit] = {
     val funcRes = Transform.fn(wrapped, transformConfig)
     val definitions = FunctionDef(funcRes)
 
@@ -232,7 +234,7 @@ object RunCommand extends Logging {
                 // call an input function from a generated function
                 val callResult: ValidatedNec[String, F[Unit]] = wrapCall(func, funcCallable, args, runConfig, consoleService)
                   .map { wrapped =>
-                  genAirAndCall[F](multiaddr, wrapped, consoleService, transformConfig, runConfig)
+                  genAirAndMakeCall[F](multiaddr, wrapped, consoleService, transformConfig, runConfig)
                 }
                 callResult
               case None =>
