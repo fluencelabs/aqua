@@ -5,7 +5,6 @@ import aqua.js.{CallJsFunction, FluencePeer}
 import aqua.model.func.Call
 import aqua.model.{LiteralModel, VarModel}
 import aqua.model.func.raw.CallServiceTag
-import scala.concurrent.Promise
 
 import scala.scalajs.js.JSON
 
@@ -20,7 +19,7 @@ class ConsoleService(serviceId: String, fnName: String) {
     )
   }
 
-  def registerService(peer: FluencePeer, promise: Promise[Unit]) = {
+  def registerService(peer: FluencePeer) = {
     CallJsFunction.registerUnitService(
       peer,
       serviceId,
@@ -30,7 +29,6 @@ class ConsoleService(serviceId: String, fnName: String) {
         // if an input function returns a result, our success will be after it is printed
         // otherwise finish after JS SDK will finish sending a request
         OutputPrinter.print(str)
-        promise.success(())
       }
     )
   }

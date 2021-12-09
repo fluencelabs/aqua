@@ -9,13 +9,13 @@ import aqua.model.func.raw.CallServiceTag
 import scala.concurrent.Promise
 
 // Service that can return argument to use it from a code
-case class ArgGetterService(value: VarModel, fnName: String, arg: scalajs.js.Dynamic) {
+case class ArgGetterService(value: VarModel, arg: scalajs.js.Dynamic) {
 
   def registerService(peer: FluencePeer): CallServiceHandler = {
     CallJsFunction.registerService(
       peer,
       GETTER_SERVICE_ID,
-      fnName,
+      value.name,
       _ => {
         arg
       }
@@ -25,7 +25,7 @@ case class ArgGetterService(value: VarModel, fnName: String, arg: scalajs.js.Dyn
   def getCallServiceTag(): CallServiceTag = {
     CallServiceTag(
       LiteralModel.quote(GETTER_SERVICE_ID),
-      fnName,
+      value.name,
       Call(List.empty, List(Call.Export(value.name, value.`type`)))
     )
   }
@@ -34,10 +34,9 @@ case class ArgGetterService(value: VarModel, fnName: String, arg: scalajs.js.Dyn
 
 object ArgGetterService {
 
-  val GETTER_SERVICE_ID = "argumentGetter"
+  val GETTER_SERVICE_ID = "getDataSrv"
 
   def create(value: VarModel, arg: scalajs.js.Dynamic): ArgGetterService = {
-    val fnName = s"get${value.name}Fn"
-    ArgGetterService(value, fnName, arg)
+    ArgGetterService(value, arg)
   }
 }

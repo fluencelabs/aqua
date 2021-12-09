@@ -9,9 +9,11 @@ case class RunConfig(
   logLevel: Level,
   printAir: Boolean,
   secretKey: Option[Array[Byte]],
-  services: Map[String, ArgGetterService],
+  argumentGetters: Map[String, ArgGetterService],
   consoleServiceId: String = "--after-callback-srv-service--",
   printFunctionName: String = "print-and-stop",
+  finisherServiceId: String = "--finisher--",
+  finisherFnName: String = "--finish-execution--",
   resultName: String = "-some-unique-res-name-",
   functionWrapperName: String = "--someFuncToRun--"
 )
