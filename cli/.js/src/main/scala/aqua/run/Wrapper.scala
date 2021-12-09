@@ -14,7 +14,7 @@ object Wrapper {
 
   // Creates getter services for variables. Return an error if there is no variable in services
   // and type of this variable couldn't be optional
-  private def createGetters(
+  private def getGettersForVars(
     vars: List[(String, Type)],
     services: Map[String, GetterBuilder]
   ): ValidatedNec[String, List[GetterBuilder]] = {
@@ -76,7 +76,7 @@ object Wrapper {
       case (VarModel(n, _, _), argType) => (n, argType)
     }
 
-    val gettersV = createGetters(vars, config.argumentGetters)
+    val gettersV = getGettersForVars(vars, config.argumentGetters)
 
     gettersV.map { getters =>
       val gettersTags = getters.map(s => FuncOp.leaf(s.getCallServiceTag()))

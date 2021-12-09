@@ -41,14 +41,14 @@ object FuncCaller {
     resource.use { peer =>
       Async[F].fromFuture {
         (for {
-          secretKey <- keyPairOrNull(config.secretKey)
+          keyPair <- keyPairOrNull(config.secretKey)
           _ <- Fluence
             .start(
               PeerConfig(
                 multiaddr,
                 config.timeout,
                 LogLevelTransformer.logLevelToAvm(config.logLevel),
-                secretKey
+                keyPair
               )
             )
             .toFuture
