@@ -33,10 +33,14 @@ object Wrapper {
     }.reduce(_ combine _)
   }
 
-  // Wrap a function that it will be called in another function, and pass results to a `print` service, i.e.:
+  // Wrap a functino like this:
   // func wrapFunc():
+  //   arg1 <- getDataSrv()
+  //   arg2 <- getDataSrv()
+  //   ...
   //   res <- funcCallable(args:_*)
   //   Console.print(res)
+  //   Finisher.finish()
   def wrapCall(
     funcName: String,
     funcCallable: FuncCallable,
@@ -59,14 +63,14 @@ object Wrapper {
           CallArrowTag(funcName, Call(args, exports))
 
         val consoleServiceTag = consoleService.getCallServiceTag(variables)
-        val finisherServiceTag = promiseFinisherService.getCallServiceTag()
 
         FuncOps.seq(
           FuncOp.leaf(callFuncTag),
-          FuncOp.leaf(consoleServiceTag),
-          FuncOp.leaf(finisherServiceTag)
+          FuncOp.leaf(consoleServiceTag)
         )
     }
+
+    val finisherServiceTag = promiseFinisherService.getCallServiceTag()
 
     val vars = args.zip(funcCallable.arrowType.domain.toList).collect {
       case (VarModel(n, _, _), argType) => (n, argType)
@@ -79,7 +83,7 @@ object Wrapper {
 
       FuncCallable(
         config.functionWrapperName,
-        FuncOps.seq((gettersTags :+ body): _*),
+        FuncOps.seq((gettersTags :+ body :+ FuncOp.leaf(finisherServiceTag)): _*),
         // no arguments and returns nothing
         ArrowType(NilType, NilType),
         Nil,
