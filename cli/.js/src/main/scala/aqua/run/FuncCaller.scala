@@ -5,7 +5,7 @@ import aqua.backend.FunctionDef
 import aqua.builder.{ConsoleServiceBuilder, FinisherBuilder}
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, Fluence, FluenceUtils, PeerConfig}
-import aqua.run.RunCommand.keyPairOrNull
+import aqua.run.RunCommand.createKeyPair
 import cats.effect.{Resource, Sync}
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*
@@ -41,14 +41,14 @@ object FuncCaller {
     resource.use { peer =>
       Async[F].fromFuture {
         (for {
-          keyPair <- keyPairOrNull(config.secretKey)
+          keyPair <- createKeyPair(config.secretKey)
           _ <- Fluence
             .start(
               PeerConfig(
                 multiaddr,
                 config.timeout,
                 LogLevelTransformer.logLevelToAvm(config.logLevel),
-                keyPair
+                keyPair.orNull
               )
             )
             .toFuture

@@ -45,11 +45,13 @@ import scala.scalajs.js.annotation.*
 
 object RunCommand extends Logging {
 
-  def keyPairOrNull(sk: Option[Array[Byte]]): Future[KeyPair] = {
+  def createKeyPair(
+    sk: Option[Array[Byte]]
+  )(implicit ec: ExecutionContext): Future[Option[KeyPair]] = {
     sk.map { arr =>
       val typedArr = js.typedarray.Uint8Array.from(arr.map(_.toShort).toJSArray)
-      KeyPair.fromEd25519SK(typedArr).toFuture
-    }.getOrElse(Future.successful[KeyPair](null))
+      KeyPair.fromEd25519SK(typedArr).toFuture.map(Some.apply)
+    }.getOrElse(Future.successful(None))
   }
 
   def genAirAndMakeCall[F[_]: Async](
