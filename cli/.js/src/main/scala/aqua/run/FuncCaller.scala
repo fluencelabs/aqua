@@ -1,7 +1,8 @@
 package aqua.run
 
-import aqua.{ConsoleService, LogLevelTransformer, PromiseFinisherService}
+import aqua.LogLevelTransformer
 import aqua.backend.FunctionDef
+import aqua.builder.{ConsoleServiceBuilder, FinisherBuilder}
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, Fluence, FluenceUtils, PeerConfig}
 import aqua.run.RunCommand.keyPairOrNull
@@ -25,8 +26,8 @@ object FuncCaller {
     air: String,
     functionDef: FunctionDef,
     config: RunConfig,
-    consoleService: ConsoleService,
-    finisherService: PromiseFinisherService
+    consoleService: ConsoleServiceBuilder,
+    finisherService: FinisherBuilder
   )(implicit
     ec: ExecutionContext
   ): F[Unit] = {
@@ -52,16 +53,15 @@ object FuncCaller {
             )
             .toFuture
           _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
-          promise = Promise.apply[Unit]()
           _ = consoleService.registerService(peer)
-          _ = finisherService.registerService(peer, promise)
+          _ = finisherService.registerService(peer)
           _ = config.argumentGetters.values.map(_.registerService(peer))
           callFuture = CallJsFunction.funcCallJs(
             air,
             functionDef,
             List.empty
           )
-          _ <- Future.firstCompletedOf(promise.future :: callFuture :: Nil)
+          _ <- Future.firstCompletedOf(finisherService.promise.future :: callFuture :: Nil)
         } yield {}).recover(handleFuncCallErrors).pure[F]
       }
     }

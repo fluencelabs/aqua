@@ -1,15 +1,15 @@
-package aqua
+package aqua.builder
 
 import aqua.io.OutputPrinter
-import aqua.js.{CallJsFunction, FluencePeer}
+import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer}
 import aqua.model.func.Call
-import aqua.model.{LiteralModel, VarModel}
 import aqua.model.func.raw.CallServiceTag
+import aqua.model.{LiteralModel, VarModel}
 
 import scala.scalajs.js.JSON
 
 // Service to print any variables
-class ConsoleService(serviceId: String, fnName: String) {
+class ConsoleServiceBuilder(serviceId: String, fnName: String) {
 
   def getCallServiceTag(variables: List[VarModel]): CallServiceTag = {
     CallServiceTag(
@@ -19,7 +19,7 @@ class ConsoleService(serviceId: String, fnName: String) {
     )
   }
 
-  def registerService(peer: FluencePeer) = {
+  def registerService(peer: FluencePeer): CallServiceHandler = {
     CallJsFunction.registerUnitService(
       peer,
       serviceId,

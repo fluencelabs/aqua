@@ -6,9 +6,10 @@ import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.types.BottomType
-import aqua.{AppOpts, AquaIO, ArgGetterService, LogFormatter}
+import aqua.{AppOpts, AquaIO, LogFormatter}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
+import aqua.builder.GetterBuilder
 import cats.effect.kernel.Async
 import cats.effect.{Concurrent, ExitCode, IO}
 import cats.syntax.applicative.*
@@ -133,7 +134,7 @@ object RunOpts extends Logging {
   def checkDataGetServices(
     args: List[ValueModel],
     data: Option[js.Dynamic]
-  ): ValidatedNec[String, Map[String, ArgGetterService]] = {
+  ): ValidatedNec[String, Map[String, GetterBuilder]] = {
     val vars = args.collect { case v @ VarModel(_, _, _) =>
       v
     // one variable could be used multiple times
@@ -147,7 +148,7 @@ object RunOpts extends Logging {
       case Some(data) =>
         val services = vars.map { vm =>
           val arg = data.selectDynamic(vm.name)
-          vm.name -> ArgGetterService.create(vm, arg)
+          vm.name -> GetterBuilder.create(vm, arg)
         }
         validNec(services.toMap)
     }

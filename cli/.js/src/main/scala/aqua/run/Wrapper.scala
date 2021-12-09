@@ -1,6 +1,6 @@
 package aqua.run
 
-import aqua.{ArgGetterService, ConsoleService, PromiseFinisherService}
+import aqua.builder.{ConsoleServiceBuilder, FinisherBuilder, GetterBuilder}
 import aqua.model.{ValueModel, VarModel}
 import aqua.model.func.{Call, FuncCallable}
 import aqua.model.func.raw.{CallArrowTag, FuncOp, FuncOps}
@@ -16,8 +16,8 @@ object Wrapper {
   // and type of this variable couldn't be optional
   private def createGetters(
     vars: List[(String, Type)],
-    services: Map[String, ArgGetterService]
-  ): ValidatedNec[String, List[ArgGetterService]] = {
+    services: Map[String, GetterBuilder]
+  ): ValidatedNec[String, List[GetterBuilder]] = {
     vars.map { (n, argType) =>
       val serviceOp = services.get(n)
       (serviceOp, argType) match {
@@ -42,8 +42,8 @@ object Wrapper {
     funcCallable: FuncCallable,
     args: List[ValueModel],
     config: RunConfig,
-    consoleService: ConsoleService,
-    promiseFinisherService: PromiseFinisherService
+    consoleService: ConsoleServiceBuilder,
+    promiseFinisherService: FinisherBuilder
   ): ValidatedNec[String, FuncCallable] = {
     // pass results to a printing service if an input function returns a result
     // otherwise just call it

@@ -6,6 +6,7 @@ import aqua.backend.air.{AirBackend, FuncAirGen}
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.backend.{FunctionDef, Generated}
+import aqua.builder.{ConsoleServiceBuilder, FinisherBuilder}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
@@ -54,8 +55,8 @@ object RunCommand extends Logging {
   def genAirAndMakeCall[F[_]: Async](
     multiaddr: String,
     wrapped: FuncCallable,
-    consoleService: ConsoleService,
-    finisherService: PromiseFinisherService,
+    consoleService: ConsoleServiceBuilder,
+    finisherService: FinisherBuilder,
     transformConfig: TransformConfig,
     runConfig: RunConfig
   )(implicit ec: ExecutionContext): F[Unit] = {
@@ -113,9 +114,9 @@ object RunCommand extends Logging {
           findFunction(contextC, func) match {
             case Some(funcCallable) =>
               val consoleService =
-                new ConsoleService(runConfig.consoleServiceId, runConfig.printFunctionName)
+                new ConsoleServiceBuilder(runConfig.consoleServiceId, runConfig.printFunctionName)
               val promiseFinisherService =
-                new PromiseFinisherService(runConfig.finisherServiceId, runConfig.finisherFnName)
+                FinisherBuilder(runConfig.finisherServiceId, runConfig.finisherFnName)
 
               // call an input function from a generated function
               val callResult: ValidatedNec[String, F[Unit]] = Wrapper
