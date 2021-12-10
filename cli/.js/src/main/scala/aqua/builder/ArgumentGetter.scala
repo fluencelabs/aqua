@@ -8,20 +8,19 @@ import aqua.model.{LiteralModel, VarModel}
 import scala.concurrent.Promise
 
 // Service that can return argument to use it from a code
-case class GetterBuilder(serviceId: String, value: VarModel, arg: scalajs.js.Dynamic) {
+case class ArgumentGetter(serviceId: String, value: VarModel, arg: scalajs.js.Dynamic)
+    extends ServiceFunction {
 
   def registerService(peer: FluencePeer): CallServiceHandler = {
     CallJsFunction.registerService(
       peer,
       serviceId,
       value.name,
-      _ => {
-        arg
-      }
+      _ => arg
     )
   }
 
-  def getCallServiceTag(): CallServiceTag = {
+  def callTag(): CallServiceTag = {
     CallServiceTag(
       LiteralModel.quote(serviceId),
       value.name,
@@ -31,11 +30,11 @@ case class GetterBuilder(serviceId: String, value: VarModel, arg: scalajs.js.Dyn
 
 }
 
-object GetterBuilder {
+object ArgumentGetter {
 
-  val GETTER_SERVICE_ID = "getDataSrv"
+  val ServiceId = "getDataSrv"
 
-  def create(value: VarModel, arg: scalajs.js.Dynamic): GetterBuilder = {
-    GetterBuilder(GETTER_SERVICE_ID, value, arg)
+  def apply(value: VarModel, arg: scalajs.js.Dynamic): ArgumentGetter = {
+    ArgumentGetter(ServiceId, value, arg)
   }
 }

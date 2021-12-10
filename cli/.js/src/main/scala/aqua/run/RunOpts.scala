@@ -9,7 +9,7 @@ import aqua.types.BottomType
 import aqua.{AppOpts, AquaIO, LogFormatter}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
-import aqua.builder.GetterBuilder
+import aqua.builder.ArgumentGetter
 import cats.effect.kernel.Async
 import cats.effect.{Concurrent, ExitCode, IO}
 import cats.syntax.applicative.*
@@ -63,10 +63,9 @@ object RunOpts extends Logging {
       .map(_ => true)
       .withDefault(false)
 
-  def dataFromFileOpt[F[_]: Monad: Files: Concurrent]
-    : Opts[F[ValidatedNec[String, Option[js.Dynamic]]]] =
+  def dataFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, Option[js.Dynamic]]]] =
     Opts
-      .option[String]("data-path", "Path to file with arguments in JSON format", "p")
+      .option[String]("data-path", "Path to file with arguments map in JSON format", "p")
       .map { str =>
         val p = Path(str)
         Files[F]
@@ -102,10 +101,11 @@ object RunOpts extends Logging {
       }
 
   val dataOpt: Opts[js.Dynamic] =
-    Opts.option[String]("data", "Data for aqua function in json", "d").mapValidated { str =>
-      Validated.catchNonFatal {
-        JSON.parse(str)
-      }.leftMap(t => NonEmptyList.one("Data isn't a valid JSON: " + t.getMessage))
+    Opts.option[String]("data", "Argument map for aqua function in JSON format", "d").mapValidated {
+      str =>
+        Validated.catchNonFatal {
+          JSON.parse(str)
+        }.leftMap(t => NonEmptyList.one("Data isn't a valid JSON: " + t.getMessage))
     }
 
   val funcOpt: Opts[(String, List[ValueModel])] =
@@ -134,7 +134,7 @@ object RunOpts extends Logging {
   def checkDataGetServices(
     args: List[ValueModel],
     data: Option[js.Dynamic]
-  ): ValidatedNec[String, Map[String, GetterBuilder]] = {
+  ): ValidatedNec[String, Map[String, ArgumentGetter]] = {
     val vars = args.collect { case v @ VarModel(_, _, _) =>
       v
     // one variable could be used multiple times
@@ -148,7 +148,7 @@ object RunOpts extends Logging {
       case Some(data) =>
         val services = vars.map { vm =>
           val arg = data.selectDynamic(vm.name)
-          vm.name -> GetterBuilder.create(vm, arg)
+          vm.name -> ArgumentGetter(vm, arg)
         }
         validNec(services.toMap)
     }

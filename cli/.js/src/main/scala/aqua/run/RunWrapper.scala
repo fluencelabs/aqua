@@ -1,6 +1,6 @@
 package aqua.run
 
-import aqua.builder.{ConsoleServiceBuilder, FinisherBuilder, GetterBuilder}
+import aqua.builder.{ArgumentGetter, Console, Finisher}
 import aqua.model.{ValueModel, VarModel}
 import aqua.model.func.{Call, FuncCallable}
 import aqua.model.func.raw.{CallArrowTag, FuncOp, FuncOps}
@@ -9,18 +9,18 @@ import cats.data.{Validated, ValidatedNec}
 
 import scala.scalajs.js
 
-// Wraps function with service calls to run it with variables and output printing
-object Wrapper {
+// Wraps function to run with service calls to run it with variables and output printing
+object RunWrapper {
 
   // Creates getter services for variables. Return an error if there is no variable in services
   // and type of this variable couldn't be optional
   private def getGettersForVars(
     vars: List[(String, Type)],
-    services: Map[String, GetterBuilder]
-  ): ValidatedNec[String, List[GetterBuilder]] = {
+    argGetters: Map[String, ArgumentGetter]
+  ): ValidatedNec[String, List[ArgumentGetter]] = {
     vars.map { (n, argType) =>
-      val serviceOp = services.get(n)
-      (serviceOp, argType) match {
+      val argGetterOp = argGetters.get(n)
+      (argGetterOp, argType) match {
         case (None, _) => Validated.invalidNec(s"Unexcepted. There is no service for '$n' argument")
         // BoxType could be undefined, so, pass service that will return 'undefined' for this argument
         case (Some(s), _: BoxType) if s.arg == js.undefined => Validated.validNec(s :: Nil)
@@ -46,8 +46,8 @@ object Wrapper {
     funcCallable: FuncCallable,
     args: List[ValueModel],
     config: RunConfig,
-    consoleService: ConsoleServiceBuilder,
-    promiseFinisherService: FinisherBuilder
+    consoleService: Console,
+    finisherService: Finisher
   ): ValidatedNec[String, FuncCallable] = {
     // pass results to a printing service if an input function returns a result
     // otherwise just call it
@@ -62,7 +62,7 @@ object Wrapper {
         val callFuncTag =
           CallArrowTag(funcName, Call(args, exports))
 
-        val consoleServiceTag = consoleService.getCallServiceTag(variables)
+        val consoleServiceTag = consoleService.callTag(variables)
 
         FuncOps.seq(
           FuncOp.leaf(callFuncTag),
@@ -70,7 +70,7 @@ object Wrapper {
         )
     }
 
-    val finisherServiceTag = promiseFinisherService.getCallServiceTag()
+    val finisherServiceTag = finisherService.callTag()
 
     val vars = args.zip(funcCallable.arrowType.domain.toList).collect {
       case (VarModel(n, _, _), argType) => (n, argType)
@@ -79,7 +79,7 @@ object Wrapper {
     val gettersV = getGettersForVars(vars, config.argumentGetters)
 
     gettersV.map { getters =>
-      val gettersTags = getters.map(s => FuncOp.leaf(s.getCallServiceTag()))
+      val gettersTags = getters.map(s => FuncOp.leaf(s.callTag()))
 
       FuncCallable(
         config.functionWrapperName,

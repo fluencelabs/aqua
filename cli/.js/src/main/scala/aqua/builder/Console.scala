@@ -8,10 +8,10 @@ import aqua.model.{LiteralModel, VarModel}
 
 import scala.scalajs.js.JSON
 
-// Service to print any variables
-class ConsoleServiceBuilder(serviceId: String, fnName: String) {
+// Function to print any variables that passed as arguments
+class Console(serviceId: String, fnName: String) extends ServiceFunction {
 
-  def getCallServiceTag(variables: List[VarModel]): CallServiceTag = {
+  def callTag(variables: List[VarModel]): CallServiceTag = {
     CallServiceTag(
       LiteralModel.quote(serviceId),
       fnName,

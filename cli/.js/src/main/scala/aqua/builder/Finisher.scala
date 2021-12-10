@@ -10,13 +10,13 @@ import scala.concurrent.Promise
 import scala.scalajs.js.JSON
 
 // Will finish promise on service call
-class FinisherBuilder private (
+case class Finisher private (
   serviceId: String,
   fnName: String,
-  val promise: Promise[Unit]
-) {
+  promise: Promise[Unit]
+) extends ServiceFunction {
 
-  def getCallServiceTag(): CallServiceTag = {
+  def callTag(): CallServiceTag = {
     CallServiceTag(
       LiteralModel.quote(serviceId),
       fnName,
@@ -36,8 +36,8 @@ class FinisherBuilder private (
   }
 }
 
-object FinisherBuilder {
+object Finisher {
 
   def apply(serviceId: String, fnName: String) =
-    new FinisherBuilder(serviceId, fnName, Promise[Unit]())
+    new Finisher(serviceId, fnName, Promise[Unit]())
 }

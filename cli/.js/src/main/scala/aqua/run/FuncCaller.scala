@@ -2,7 +2,7 @@ package aqua.run
 
 import aqua.LogLevelTransformer
 import aqua.backend.FunctionDef
-import aqua.builder.{ConsoleServiceBuilder, FinisherBuilder}
+import aqua.builder.{Console, Finisher}
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, Fluence, FluenceUtils, PeerConfig}
 import aqua.run.RunCommand.createKeyPair
@@ -26,8 +26,8 @@ object FuncCaller {
     air: String,
     functionDef: FunctionDef,
     config: RunConfig,
-    consoleService: ConsoleServiceBuilder,
-    finisherService: FinisherBuilder
+    consoleService: Console,
+    finisherService: Finisher
   )(implicit
     ec: ExecutionContext
   ): F[Unit] = {
@@ -62,7 +62,7 @@ object FuncCaller {
             List.empty
           )
           _ <- Future.firstCompletedOf(finisherService.promise.future :: callFuture :: Nil)
-        } yield {}).recover(handleFuncCallErrors).pure[F]
+        } yield ()).recover(handleFuncCallErrors).pure[F]
       }
     }
   }

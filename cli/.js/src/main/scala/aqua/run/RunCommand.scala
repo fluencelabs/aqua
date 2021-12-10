@@ -6,7 +6,7 @@ import aqua.backend.air.{AirBackend, FuncAirGen}
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.backend.{FunctionDef, Generated}
-import aqua.builder.{ConsoleServiceBuilder, FinisherBuilder}
+import aqua.builder.{Console, Finisher}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
@@ -54,11 +54,12 @@ object RunCommand extends Logging {
     }.getOrElse(Future.successful(None))
   }
 
+  // Generates air from function, register all services and make a call through FluenceJS
   def genAirAndMakeCall[F[_]: Async](
     multiaddr: String,
     wrapped: FuncCallable,
-    consoleService: ConsoleServiceBuilder,
-    finisherService: FinisherBuilder,
+    consoleService: Console,
+    finisherService: Finisher,
     transformConfig: TransformConfig,
     runConfig: RunConfig
   )(implicit ec: ExecutionContext): F[Unit] = {
@@ -116,12 +117,12 @@ object RunCommand extends Logging {
           findFunction(contextC, func) match {
             case Some(funcCallable) =>
               val consoleService =
-                new ConsoleServiceBuilder(runConfig.consoleServiceId, runConfig.printFunctionName)
+                new Console(runConfig.consoleServiceId, runConfig.printFunctionName)
               val promiseFinisherService =
-                FinisherBuilder(runConfig.finisherServiceId, runConfig.finisherFnName)
+                Finisher(runConfig.finisherServiceId, runConfig.finisherFnName)
 
               // call an input function from a generated function
-              val callResult: ValidatedNec[String, F[Unit]] = Wrapper
+              val callResult: ValidatedNec[String, F[Unit]] = RunWrapper
                 .wrapCall(
                   func,
                   funcCallable,
