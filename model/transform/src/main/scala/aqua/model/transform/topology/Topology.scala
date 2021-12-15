@@ -25,7 +25,20 @@ sealed abstract class Topology(forceExit: Boolean = false) {
   final def prevSibling: Option[Topology] = cursor.toPrevSibling.map(_.topology)
   final def nextSibling: Option[Topology] = cursor.toNextSibling.map(_.topology)
 
+  def isNextTag: Boolean = cursor.tag match {
+    case _: NextTag => true
+    case _ => false
+  }
+
+  def isForTag: Boolean = cursor.tag match {
+    case _: ForTag => true
+    case _ => false
+  }
+
   final def parent: Option[Topology] = cursor.moveUp.map(_.topology)
+
+  final def parents: LazyList[Topology] =
+    LazyList.unfold(parent)(p => p.map(pp => pp -> pp.parent))
 
   // Before the left boundary of this element, what was the scope
   def beforeOn: List[OnTag] =
@@ -90,6 +103,12 @@ object Topology extends Logging {
       prevSibling
         .map(_.finallyOn) getOrElse super.beforeOn
 
+    override def beginsOn: List[OnTag] =
+      if (isNextTag)
+        parents.find(_.isForTag).map(_.beginsOn) getOrElse super.beginsOn
+      else
+        super.beginsOn
+
     override def endsOn: List[OnTag] =
       cursor.toLastChild
         .map(_.topology)
@@ -100,6 +119,7 @@ object Topology extends Logging {
   }
 
   case class Default(cursor: RawCursor) extends Topology()
+  case class Next(cursor: RawCursor) extends Topology()
 
   // Branch contains no executable instructions -- no need for topology
   case class NoExec(cursor: RawCursor) extends Topology() {
