@@ -170,12 +170,12 @@ case class RawCursor(
       // The stable part of path inside the loop was already moved outside -- take it into account
       // This means that this element contains the first
       val p = pathFromPrevD()
-      LazyList
-        .unfold(this)(c => c.moveUp.map(rc => rc -> rc))
-        .collectFirst {
-          case c if c.isForTag =>
-            c.pathFromPrev
-        }
+//      LazyList
+//        .unfold(this)(c => c.moveUp.map(rc => rc -> rc))
+//        .collectFirst {
+//          case c if c.isForTag =>
+//            c.pathFromPrev
+//        }
       p
   }
 
