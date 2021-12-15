@@ -4,7 +4,7 @@ import aqua.Node
 import aqua.model.VarModel
 import aqua.model.func.Call
 import aqua.model.func.raw.FuncOps
-import aqua.model.transform.res.{MakeRes, ResolvedOp, XorRes}
+import aqua.model.transform.res.{MakeRes, ResolvedOp, SeqRes, XorRes}
 import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
@@ -479,8 +479,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
-  // This behavior is correct, but as two seqs are not flattened, it's a question how to make the matching result structure
-  "topology resolver" should "create returning hops on nested 'on'" ignore {
+  "topology resolver" should "create returning hops on nested 'on'" in {
     val init =
       on(
         initPeer,
@@ -503,7 +502,20 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callTag(3)
       )
 
-    val proc: Node.Res = Topology.resolve(init)
+    val proc0: Node.Res = Topology.resolve(init)
+    // This behavior is correct, but as two seqs are not flattened, it's a question how to make the matching result structure
+    val proc: Node.Res = Cofree
+      .cata[Chain, ResolvedOp, Cofree[Chain, ResolvedOp]](proc0.cof) { case (head, children) =>
+        Eval later Cofree(
+          head,
+          Eval.later(Chain.fromSeq(children.toList.foldLeft(List.empty[Cofree[Chain, ResolvedOp]]) {
+            case ((h @ Cofree(SeqRes, _)) :: Nil, t @ Cofree(SeqRes, _)) =>
+              Cofree(SeqRes, Eval.later(h.tail.value ++ t.tail.value)) :: Nil
+            case (acc, t) => acc :+ t
+          }))
+        )
+      }
+      .value
 
     val expected: Node.Res =
       MakeRes.seq(
