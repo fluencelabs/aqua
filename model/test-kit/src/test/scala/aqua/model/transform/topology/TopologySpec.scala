@@ -440,7 +440,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   // this example doesn't create a hop on relay after fold
   // but the test create it, so there is not a one-on-one simulation
   // change it or write an integration test
-  "topology resolver" should "create returning hops on chain of 'on'" ignore {
+  "topology resolver" should "create returning hops on chain of 'on'" in {
     val init =
       on(
         initPeer,
@@ -470,8 +470,11 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val expected: Node.Res =
       MakeRes.seq(
-        callRes(0, initPeer),
-        callRes(1, otherRelay)
+        through(relay),
+        callRes(0, otherPeer),
+        MakeRes.fold("i", valueArray, MakeRes.par(callRes(2, otherPeer2), nextRes("i"))),
+        through(relay),
+        callRes(3, initPeer)
       )
     proc.equalsOrPrintDiff(expected) should be(true)
   }
