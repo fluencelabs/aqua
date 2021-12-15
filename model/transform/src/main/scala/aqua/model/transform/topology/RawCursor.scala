@@ -44,13 +44,11 @@ case class RawCursor(
       fc #:: LazyList.unfold(fc)(c => c.toNextSibling.map(rc => rc -> rc))
     )
 
-  val topology = Topology(this)
+  val topology: Topology = Topology(this)
 
   lazy val tagsPath: NonEmptyList[RawTag] = path.map(_.head)
 
-  lazy val pathOn: List[OnTag] = tagsPath.collect { case o: OnTag =>
-    o
-  }
+  def pathOn: List[OnTag] = topology.pathOn
 
   // Assume that the very first tag is `on` tag
   lazy val rootOn: Option[RawCursor] = moveUp

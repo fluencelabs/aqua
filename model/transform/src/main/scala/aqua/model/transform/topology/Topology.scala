@@ -26,17 +26,58 @@ case class Topology(rc: RawCursor) {
       case _ => false
     }
 
+  def isSeqGroupTag: Boolean =
+    rc.tag match {
+      case _: SeqGroupTag => true
+      case _ => false
+    }
+
+  lazy val pathOn: List[OnTag] = rc.tagsPath.collect { case o: OnTag =>
+    o
+  }
+
+  def isParentSeqGroupTag: Boolean =
+    rc.moveUp.exists(_.topology.isSeqGroupTag)
+
   // Before the left boundary of this element, what was the scope
-  def wasOn: List[OnTag] = ???
+  def beforeOn: List[OnTag] =
+    // If we're inside seq, see where prev tag ends
+    rc.toPrevSibling
+      .filter(_.topology.isParentSeqGroupTag)
+      .map(_.topology.afterOn) orElse
+      // Otherwise go to the parent, see where it begins
+      rc.moveUp.map(_.topology.beginsOn) getOrElse
+      // This means, we have no parent; then we're where we should be
+      beginsOn
 
   // Inside the left boundary of this element, what should be the scope
-  def beginsOn: List[OnTag] = ???
+  def beginsOn: List[OnTag] =
+    // That's just where we must be
+    rc.pathOn
 
   // After this element is done, what is the scope
-  def endsOn: List[OnTag] = ???
+  def endsOn: List[OnTag] =
+    rc.toLastChild
+      .map(_.topology)
+      .filter(_.isParentSeqGroupTag)
+      .map(_.afterOn) getOrElse beginsOn
 
   // After this element is done, where should it move to prepare for the next one
-  def goingOn: List[OnTag] = ???
+  def afterOn: List[OnTag] = endsOn
+
+  def pathBefore: Chain[ValueModel] = PathFinder.findPath(
+    Chain.fromSeq(beforeOn),
+    Chain.fromSeq(beginsOn),
+    beforeOn.headOption.map(_.peerId),
+    beginsOn.headOption.map(_.peerId)
+  )
+
+  def pathAfter: Chain[ValueModel] = PathFinder.findPath(
+    Chain.fromSeq(endsOn),
+    Chain.fromSeq(afterOn),
+    endsOn.headOption.map(_.peerId),
+    afterOn.headOption.map(_.peerId)
+  )
 }
 
 object Topology extends Logging {
@@ -96,9 +137,9 @@ object Topology extends Logging {
         val chainZipperEv = resolved.traverse(cofree =>
           Eval.later {
             val cz = ChainZipper(
-              through(rc.pathFromPrev),
+              through(rc.topology.pathBefore),
               cofree,
-              through(rc.pathToNext)
+              through(rc.topology.pathAfter)
             )
             if (cz.next.nonEmpty || cz.prev.nonEmpty) {
               logger.debug(s"Resolved   $rc -> $cofree")
