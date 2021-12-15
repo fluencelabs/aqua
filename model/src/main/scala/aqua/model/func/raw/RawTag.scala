@@ -67,8 +67,8 @@ case object ParTag extends ParGroupTag {
   case object Detach extends ParGroupTag
 }
 
-case object XorTag extends SeqGroupTag {
-  case object LeftBiased extends SeqGroupTag
+case object XorTag extends GroupTag {
+  case object LeftBiased extends GroupTag
 }
 case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag
 

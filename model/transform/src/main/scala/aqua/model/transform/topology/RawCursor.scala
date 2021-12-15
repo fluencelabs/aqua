@@ -44,26 +44,12 @@ case class RawCursor(
       fc #:: LazyList.unfold(fc)(c => c.toNextSibling.map(rc => rc -> rc))
     )
 
-  val topology: Topology = Topology(this)
+  lazy val topology: Topology = Topology(this)
 
   lazy val tagsPath: NonEmptyList[RawTag] = path.map(_.head)
 
-  def pathOn: List[OnTag] = topology.pathOn
-
-  // Assume that the very first tag is `on` tag
-  lazy val rootOn: Option[RawCursor] = moveUp
-    .flatMap(_.rootOn)
-    .orElse(tag match {
-      case _: OnTag =>
-        Some(this)
-      case _ => None
-    })
-
-  // The closest peerId
-  lazy val currentPeerId: Option[ValueModel] =
-    pathOn.headOption.map(_.peerId)
-
   // Cursor to the last sequentially executed operation, if any
+  @deprecated("Use topology", "15.12.2021")
   lazy val lastExecuted: Option[RawCursor] = tag match {
     case XorTag => toFirstChild.flatMap(_.lastExecuted)
     case _: SeqGroupTag => toLastChild.flatMap(_.lastExecuted)
@@ -73,6 +59,7 @@ case class RawCursor(
     case _ => Some(this)
   }
 
+  @deprecated("Use topology", "15.12.2021")
   lazy val firstExecuted: Option[RawCursor] = tag match {
     case _: SeqGroupTag =>
       toFirstChild.flatMap(_.firstExecuted)
@@ -82,9 +69,10 @@ case class RawCursor(
     case _ => Some(this)
   }
 
+  @deprecated("Use topology", "15.12.2021")
   lazy val firstExecutedPathOn: Option[List[OnTag]] =
     firstExecuted
-      .map(_.pathOn)
+      .map(_.topology.pathOn)
       .orElse(
         tag match {
           case _: ParGroupTag =>
@@ -103,6 +91,7 @@ case class RawCursor(
    * Sequentially previous cursor
    * @return
    */
+  @deprecated("Use topology", "15.12.2021")
   lazy val seqPrev: Option[RawCursor] =
     parentTag.flatMap {
       case p: SeqGroupTag if leftSiblings.nonEmpty =>
@@ -111,6 +100,7 @@ case class RawCursor(
         moveUp.flatMap(_.seqPrev)
     }
 
+  @deprecated("Use topology", "15.12.2021")
   lazy val seqNext: Option[RawCursor] =
     parentTag.flatMap {
       case _: SeqGroupTag if rightSiblings.nonEmpty =>
@@ -118,109 +108,25 @@ case class RawCursor(
       case _ => moveUp.flatMap(_.seqNext)
     }
 
+  def isNoExec: Boolean =
+    tag match {
+      case _: NoExecTag => true
+      case _: GroupTag => children.forall(_.isNoExec)
+      case _ => false
+    }
+
+  def hasExecLater: Boolean =
+    !allToRight.forall(_.isNoExec)
+
+  def exportsUsedLater: Boolean =
+    FuncOp(current).exportsVarNames.map(ns => ns.nonEmpty && checkNamesUsedLater(ns)).value
+
   // TODO write a test
   def checkNamesUsedLater(names: Set[String]): Boolean =
     allToRight
       .map(_.current)
       .map(FuncOp(_))
       .exists(_.usesVarNames.value.intersect(names).nonEmpty)
-
-  lazy val pathFromPrev: Chain[ValueModel] = tag match {
-    case ForTag(item, _) =>
-      (firstExecutedPathOn zip moveUp.flatMap(_.firstExecutedPathOn))
-        .filter(_ != _)
-        .flatMap { case (thisPath, upPath) =>
-          moveUp.map(upper =>
-            PathFinder
-              .findPath(
-                Chain.fromSeq(upPath).reverse,
-                Chain.fromSeq(thisPath).reverse,
-                upper.currentPeerId,
-                currentPeerId
-              )
-              .takeWhile(p => !ValueModel.varName(p).contains(item))
-          )
-        }
-        .getOrElse(Chain.empty)
-    // Move the stable part of path into for loop outside the for loop -- https://github.com/fluencelabs/aqua/issues/205
-
-    // Find the first executed element: in case of for...par, we need to dive into that par with toFirstChild (twice)
-    // TODO: what if the body is wrapped with par? It should be like "bubbling up topology": all invariants from par branches should bubble up
-//      firstExecutedPathOn
-//
-//      firstExecuted
-//        .orElse(toFirstChild.flatMap(_.toFirstChild).flatMap(_.firstExecuted))
-//        .flatMap(fc =>
-//          // Find the first OnTag inside this For, if any
-//          LazyList
-//            .unfold(fc)(c =>
-//              c.moveUp
-//                .filterNot(_.pathOn == pathOn)
-//                .map(c => c -> c)
-//            )
-//            .collectFirst {
-//              case c if c.isOnTag =>
-//                // For the deepest On, get the path
-//                c.pathFromPrevD().takeWhile(v => !ValueModel.varName(v).contains(item))
-//            }
-//        )
-//        .getOrElse(Chain.empty)
-
-    case _ =>
-      // The stable part of path inside the loop was already moved outside -- take it into account
-      // This means that this element contains the first
-      val p = pathFromPrevD()
-//      LazyList
-//        .unfold(this)(c => c.moveUp.map(rc => rc -> rc))
-//        .collectFirst {
-//          case c if c.isForTag =>
-//            c.pathFromPrev
-//        }
-      p
-  }
-
-  def pathFromPrevD(forExit: Boolean = false): Chain[ValueModel] =
-    parentTag.fold(Chain.empty[ValueModel]) {
-      case _: GroupTag =>
-        seqPrev
-          .orElse(rootOn)
-          .fold(Chain.empty[ValueModel])(PathFinder.find(_, this, isExit = forExit))
-
-      case _ =>
-        Chain.empty
-    }
-
-  lazy val pathToNext: Chain[ValueModel] = parentTag.fold(Chain.empty[ValueModel]) {
-    case _: ParGroupTag =>
-      val exports = FuncOp(current).exportsVarNames.value
-      if (exports.nonEmpty && checkNamesUsedLater(exports))
-        seqNext.fold(Chain.empty[ValueModel])(nxt =>
-          PathFinder.find(this, nxt) ++
-            // we need to "wake" the target peer to enable join behaviour
-            Chain.fromOption(nxt.currentPeerId)
-        )
-      else Chain.empty
-    case XorTag if leftSiblings.nonEmpty =>
-      lastExecuted
-        .flatMap(le =>
-          seqNext
-            .map(nxt => PathFinder.find(le, nxt, isExit = true) -> nxt)
-            .flatMap {
-              case (path, nxt) if path.isEmpty && currentPeerId == nxt.currentPeerId =>
-                nxt.pathFromPrevD(true).reverse.initLast.map(_._1)
-              case (path, nxt) =>
-                path.initLast.map {
-                  case (init, last)
-                      if nxt.pathFromPrevD(forExit = true).headOption.contains(last) =>
-                    init
-                  case (init, last) => init :+ last
-                }
-            }
-        )
-        .getOrElse(Chain.empty)
-    case _ =>
-      Chain.empty
-  }
 
   def cata[A](wrap: ChainZipper[Cofree[Chain, A]] => Chain[Cofree[Chain, A]])(
     folder: RawCursor => OptionT[Eval, ChainZipper[Cofree[Chain, A]]]

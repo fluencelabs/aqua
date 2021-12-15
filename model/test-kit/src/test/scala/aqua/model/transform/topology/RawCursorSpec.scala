@@ -195,7 +195,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
         ).tree.head
       )
     )
-    raw.lastExecuted.flatMap(_.seqPrev).map(_.pathOn).get should be(
+    raw.lastExecuted.flatMap(_.seqPrev).map(_.topology.pathOn).get should be(
       OnTag(
         VarModel("-in-fold-", ScalarType.string),
         Chain.one(VarModel("-fold-relay-", ScalarType.string))
@@ -207,7 +207,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
         Chain.one(VarModel("-relay-", ScalarType.string))
       ) :: Nil
     )
-    raw.lastExecuted.map(_.pathFromPrev).get should be(
+    raw.lastExecuted.map(_.topology.pathBefore).get should be(
       Chain(
         VarModel("-fold-relay-", ScalarType.string),
         VarModel("-external-", ScalarType.string),
