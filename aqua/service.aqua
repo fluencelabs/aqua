@@ -1,7 +1,0 @@
-module Srv declares *
-
-import "chatApp.aqua"
-
-service Service("affinidi/chat"):
-    create_user(peer_id: string, relay_id: string, nickname: string) -> string
-    chats_by_peer_id(peer_id: string) -> string

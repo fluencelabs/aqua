@@ -8,6 +8,7 @@ import aqua.model.{LiteralModel, VarModel}
 
 import scala.concurrent.Promise
 import scala.scalajs.js.JSON
+import scala.scalajs.js.Dynamic
 
 // Will finish promise on service call
 case class Finisher private (
@@ -25,12 +26,13 @@ case class Finisher private (
   }
 
   def registerService(peer: FluencePeer) = {
-    CallJsFunction.registerUnitService(
+    CallJsFunction.registerService(
       peer,
       serviceId,
       fnName,
       _ => {
         promise.success(())
+        Dynamic.literal()
       }
     )
   }

@@ -28,24 +28,6 @@ object CallJsFunction {
     })
   }
 
-  // Register a service that returns no result
-  def registerUnitService(
-    peer: FluencePeer,
-    serviceId: String,
-    fnName: String,
-    handler: js.Array[js.Any] => Unit
-  ): CallServiceHandler = {
-    registerService(
-      peer,
-      serviceId,
-      fnName,
-      arr => {
-        handler(arr)
-        js.Dynamic.literal()
-      }
-    )
-  }
-
   // Call a function with generated air script
   def funcCallJs(
     air: String,

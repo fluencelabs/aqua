@@ -1,0 +1,14 @@
+data ReadResult:
+  code: u8
+  result: []u8
+  error: string
+
+data Config:
+  name: string
+  preopenedFiles: []string
+  
+
+service FileSystem("fs"):
+  read(path: string): ReadResult
+
+func upload(path: string)
