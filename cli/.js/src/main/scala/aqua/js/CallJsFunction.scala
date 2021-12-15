@@ -1,4 +1,4 @@
-package aqua
+package aqua.js
 
 import aqua.backend.{ArgDefinition, FunctionDef, NamesConfig, TypeDefinition}
 import aqua.model.transform.TransformConfig
@@ -11,22 +11,39 @@ import scala.scalajs.js.JSConverters.*
 
 object CallJsFunction {
 
+  def registerService(
+    peer: FluencePeer,
+    serviceId: String,
+    fnName: String,
+    handler: js.Array[js.Any] => js.Dynamic
+  ): CallServiceHandler = {
+    peer.internals.callServiceHandler.use((req, resp, next) => {
+      if (req.serviceId == serviceId && req.fnName == fnName) {
+        val result = handler(req.args)
+        resp.retCode = ResultCodes.success
+        resp.result = result
+      }
+
+      next()
+    })
+  }
+
   // Register a service that returns no result
   def registerUnitService(
     peer: FluencePeer,
     serviceId: String,
     fnName: String,
-    handler: (js.Array[js.Any]) => Unit
+    handler: js.Array[js.Any] => Unit
   ): CallServiceHandler = {
-    peer.internals.callServiceHandler.use((req, resp, next) => {
-      if (req.serviceId == serviceId && req.fnName == fnName) {
-        handler(req.args)
-        resp.retCode = ResultCodes.success
-        resp.result = new js.Object {}
+    registerService(
+      peer,
+      serviceId,
+      fnName,
+      arr => {
+        handler(arr)
+        js.Dynamic.literal()
       }
-
-      next()
-    })
+    )
   }
 
   // Call a function with generated air script

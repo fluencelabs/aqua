@@ -13,8 +13,9 @@ import cats.data.*
 import cats.parse.LocationMap
 import cats.syntax.applicative.*
 import cats.syntax.functor.*
+import cats.syntax.flatMap.*
 import cats.syntax.show.*
-import cats.{Applicative, Eval, Monad, Show, ~>}
+import cats.{~>, Applicative, Eval, Monad, Show}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -36,17 +37,22 @@ object AquaPathCompiler extends Logging {
     transformConfig: TransformConfig
   ): F[ValidatedNec[String, Chain[String]]] = {
     import ErrorRendering.showError
-    val sources = new AquaFileSources[F](srcPath, imports)
-    AquaCompiler
-      .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](
-        sources,
-        SpanParser.parser,
-        backend,
-        transformConfig,
-        targetPath.map(sources.write).getOrElse(dry[F])
-      )
+    (for {
+      prelude <- Prelude.init(withPrelude = false)
+      sources = new AquaFileSources[F](srcPath, imports ++ prelude.importPaths)
+      compiler <- AquaCompiler
+        .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](
+          sources,
+          SpanParser.parser,
+          backend,
+          transformConfig,
+          targetPath.map(sources.write).getOrElse(dry[F])
+        )
+    } yield {
+      compiler
       // 'distinct' to delete all duplicated errors
-      .map(_.leftMap(_.map(_.show).distinct))
+    }).map(_.leftMap(_.map(_.show).distinct))
+
   }
 
   def dry[F[_]: Applicative](

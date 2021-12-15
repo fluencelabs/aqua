@@ -1,19 +1,19 @@
 package aqua.keypair
 
-import scala.scalajs.js.JSON
-import scala.scalajs.js
-import java.util.Base64
-
-import aqua.KeyPair
+import aqua.js.KeyPair
 import cats.Show
+
+import java.util.Base64
+import scala.scalajs.js
+import scala.scalajs.js.JSON
 
 object KeyPairShow {
   def stringify(keypair: KeyPair): String = {
     val encoder = Base64.getEncoder()
     val kp = js.Dynamic.literal(
-        peerId = keypair.Libp2pPeerId.toB58String(),
-        secretKey = encoder.encodeToString(keypair.toEd25519PrivateKey().toArray.map(s => s.toByte)),
-        publicKey = encoder.encodeToString(keypair.Libp2pPeerId.pubKey.bytes.toArray.map(s => s.toByte)),
+      peerId = keypair.Libp2pPeerId.toB58String(),
+      secretKey = encoder.encodeToString(keypair.toEd25519PrivateKey().toArray.map(s => s.toByte)),
+      publicKey = encoder.encodeToString(keypair.Libp2pPeerId.pubKey.bytes.toArray.map(s => s.toByte)),
     )
 
     JSON.stringify(kp, space = 4)
