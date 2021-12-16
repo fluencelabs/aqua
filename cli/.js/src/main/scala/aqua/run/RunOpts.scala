@@ -6,7 +6,7 @@ import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.types.BottomType
-import aqua.{AppOpts, AquaIO, LogFormatter}
+import aqua.{AppOpts, AquaIO, LogFormatter, OptUtils}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.builder.ArgumentGetter
@@ -67,37 +67,27 @@ object RunOpts extends Logging {
     Opts
       .option[String]("data-path", "Path to file with arguments map in JSON format", "p")
       .map { str =>
-        val p = Path(str)
-        Files[F]
-          .exists(p)
-          .flatMap { exists =>
-            if (exists)
-              Files[F].isRegularFile(p).flatMap { isFile =>
-                if (isFile) {
-                  Files[F]
-                    .readAll(p)
-                    .through(fs2.text.utf8.decode)
-                    .fold(List.empty[String]) { case (acc, str) => str :: acc }
-                    .map(_.mkString(""))
-                    .map { jsonStr =>
-                      Validated.catchNonFatal {
-                        JSON.parse(jsonStr)
-                      }.leftMap(t =>
-                        NonEmptyChain
-                          .one(s"Data in ${p.toString} isn't a valid JSON: " + t.getMessage)
-                      )
-                    }
-                    .compile
-                    .last
-                    .map(_.map(_.map(v => Some(v))).getOrElse(validNec(None)))
-                } else {
-                  invalidNec(s"Path '${p.toString}' is not a file").pure[F]
-                }
+        OptUtils.transformPath(
+          str,
+          p => {
+            Files[F]
+              .readAll(p)
+              .through(fs2.text.utf8.decode)
+              .fold(List.empty[String]) { case (acc, str) => str :: acc }
+              .map(_.mkString(""))
+              .map { jsonStr =>
+                Validated.catchNonFatal {
+                  JSON.parse(jsonStr)
+                }.leftMap(t =>
+                  NonEmptyChain
+                    .one(s"Data in ${p.toString} isn't a valid JSON: " + t.getMessage)
+                )
               }
-            else {
-              invalidNec(s"There is no path '${p.toString}'").pure[F]
-            }
+              .compile
+              .last
+              .map(_.map(_.map(v => Some(v))).getOrElse(validNec(None)))
           }
+        )
       }
 
   val dataOpt: Opts[js.Dynamic] =

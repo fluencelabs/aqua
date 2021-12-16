@@ -1,0 +1,5 @@
+module IpfsExports
+
+import "@fluencelabs/aqua-ipfs/ipfs-api.aqua"
+
+export set_timeout, get_external_swarm_multiaddr, get_external_api_multiaddr
