@@ -183,6 +183,7 @@ object Topology extends Logging {
       cursor.parentTag match {
         case Some(ParTag) => ParBranch
         case Some(XorTag) => XorBranch
+        case _ if cursor.isNoExec => Default
         case Some(_: SeqGroupTag) => SeqGroupBranch
         case _ => Default
       }
