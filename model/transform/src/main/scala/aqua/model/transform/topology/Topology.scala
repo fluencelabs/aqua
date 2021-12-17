@@ -76,7 +76,7 @@ object Topology extends Logging {
       // Go to the parent, see where it begins
       current.parent.map(_.beginsOn) getOrElse
         // This means, we have no parent; then we're where we should be
-        current.beginsOn
+        current.pathOn
   }
 
   trait Begins {
@@ -96,13 +96,18 @@ object Topology extends Logging {
   }
 
   trait Ends {
-    def endsOn(current: Topology): List[OnTag] = current.beginsOn
+
+    // TODO: is it always true? what's about par?
+    def endsOn(current: Topology): List[OnTag] =
+      current.cursor.toLastChild
+        .map(_.topology)
+        .map(_.finallyOn) getOrElse current.beginsOn
   }
 
   object Default extends Before with Begins with Ends with After
 
   // Parent == Seq, On
-  object SeqGroupBranch extends Before with Begins with Ends with After {
+  object SeqGroupBranch extends Before with Begins with After {
 
     override def beforeOn(current: Topology): List[OnTag] =
       current.prevSibling
@@ -113,11 +118,6 @@ object Topology extends Logging {
         current.parents.find(_.isForTag).map(_.beginsOn) getOrElse super.beginsOn(current)
       else
         super.beginsOn(current)
-
-    override def endsOn(current: Topology): List[OnTag] =
-      current.cursor.toLastChild
-        .map(_.topology)
-        .map(_.finallyOn) getOrElse super.endsOn(current)
 
     override def afterOn(current: Topology): List[OnTag] =
       current.nextSibling.map(_.beginsOn) orElse current.parent.map(_.afterOn) getOrElse super
@@ -175,15 +175,13 @@ object Topology extends Logging {
         case Some(_: SeqGroupTag) => SeqGroupBranch
         case _ => Default
       },
-      cursor.parentTag match {
+      cursor.tag match {
         case _ if cursor.isNoExec => NoExecItem
-        case Some(_: SeqGroupTag) => SeqGroupBranch
         case _ => Default
       },
       cursor.parentTag match {
         case Some(ParTag) => ParBranch
         case Some(XorTag) => XorBranch
-        case _ if cursor.isNoExec => Default
         case Some(_: SeqGroupTag) => SeqGroupBranch
         case _ => Default
       }

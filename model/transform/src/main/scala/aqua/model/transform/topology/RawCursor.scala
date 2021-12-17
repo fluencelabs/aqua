@@ -40,9 +40,7 @@ case class RawCursor(
     ChainZipper.last(current.tail.value).map(moveDown)
 
   lazy val children: LazyList[RawCursor] =
-    toFirstChild.fold(LazyList.empty[RawCursor])(fc =>
-      fc #:: LazyList.unfold(fc)(c => c.toNextSibling.map(rc => rc -> rc))
-    )
+    LazyList.unfold(toFirstChild)(_.map(c => c -> c.toNextSibling))
 
   lazy val topology: Topology = Topology.make(this)
 
