@@ -7,7 +7,8 @@
     "aqua.js",
     "index.js",
     "error.js",
-    "utils.js"
+    "utils.js",
+    "src/*"
   ],
   "bin": {
     "aqua": "index.js",
@@ -15,13 +16,18 @@
   },
   "scripts": {
     "run": "node index.js",
-    "from:scalajs": "cp ../cli/.js/target/scala-3.0.2/cli-opt/main.js ./aqua.js && npm run run -- $@"
+    "from:scalajs": "cp ../cli/.js/target/scala-3.0.2/cli-opt/main.js ./aqua.js && npm run run -- $@",
+    "build": "tsc"
   },
   "dependencies": {
     "@fluencelabs/fluence": "0.15.2",
     "@fluencelabs/aqua-lib": "0.2.1",
     "ipfs-http-client": "55.0.0",
     "@fluencelabs/aqua-ipfs": "0.5.2"
+  },
+  "devDependencies": {
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.4"
   },
   "repository": {
     "type": "git",
