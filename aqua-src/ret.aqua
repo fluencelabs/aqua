@@ -1,7 +1,11 @@
 module Ret declares *
 
-export someFunc
+export getTwoResults
 
-func someFunc(cb: []string -> ()):
-	ifaces: *string
-	cb(ifaces)
+service Peer("peer"):
+  timestamp_sec: -> u64
+
+func getTwoResults() -> u64:
+  on "other node":
+    res <- Peer.timestamp_sec()
+  <- res

@@ -12,9 +12,13 @@ import cats.free.Cofree
 import cats.syntax.traverse.*
 import scribe.Logging
 
-sealed abstract class Topology(forceExit: Boolean = false) {
-
-  def cursor: RawCursor
+case class Topology(
+  cursor: RawCursor,
+  before: Topology.Before,
+  begins: Topology.Begins,
+  ends: Topology.Ends,
+  after: Topology.After
+) {
 
   final lazy val pathOn: List[OnTag] = cursor.tagsPath.collect { case o: OnTag =>
     o
@@ -30,10 +34,11 @@ sealed abstract class Topology(forceExit: Boolean = false) {
     case _ => false
   }
 
-  def isForTag: Boolean = cursor.tag match {
-    case _: ForTag => true
-    case _ => false
+  def forTag: Option[ForTag] = Option(cursor.tag).collect { case ft: ForTag =>
+    ft
   }
+
+  def isForTag: Boolean = forTag.isDefined
 
   final def parent: Option[Topology] = cursor.moveUp.map(_.topology)
 
@@ -41,103 +46,147 @@ sealed abstract class Topology(forceExit: Boolean = false) {
     LazyList.unfold(parent)(p => p.map(pp => pp -> pp.parent))
 
   // Before the left boundary of this element, what was the scope
-  def beforeOn: List[OnTag] =
-    // Go to the parent, see where it begins
-    parent.map(_.beginsOn) getOrElse
-      // This means, we have no parent; then we're where we should be
-      beginsOn
+  def beforeOn: List[OnTag] = before.beforeOn(this)
 
   // Inside the left boundary of this element, what should be the scope
-  def beginsOn: List[OnTag] = pathOn
+  def beginsOn: List[OnTag] = begins.beginsOn(this)
 
   // After this element is done, what is the scope
-  def endsOn: List[OnTag] = beginsOn
+  def endsOn: List[OnTag] = ends.endsOn(this)
 
   // After this element is done, where should it move to prepare for the next one
-  def afterOn: List[OnTag] = endsOn
+  def afterOn: List[OnTag] = after.afterOn(this)
 
   // Where we finnaly are
-  final def finallyOn: List[OnTag] = if (forceExit) afterOn else endsOn
+  final def finallyOn: List[OnTag] = after.finallyOn(this)
 
   final def pathBefore: Chain[ValueModel] = PathFinder.findPath(beforeOn, beginsOn)
 
   def pathAfter: Chain[ValueModel] =
-    if (forceExit) PathFinder.findPath(endsOn, afterOn) else Chain.empty
+    after.pathAfter(this)
 }
 
 object Topology extends Logging {
   type Tree = Cofree[Chain, RawTag]
   type Res = Cofree[Chain, ResolvedOp]
 
-  // Parent == Xor
-  case class XorBranch(cursor: RawCursor)
-      extends Topology(forceExit = cursor.moveUp.exists(_.hasExecLater)) {
+  trait Before {
 
-    override def beforeOn: List[OnTag] =
-      prevSibling.map(_.endsOn) getOrElse super.beforeOn
-
-    override def afterOn: List[OnTag] =
-      parent.flatMap(_.nextSibling).map(_.beginsOn) orElse parent.map(
-        _.afterOn
-      ) getOrElse super.afterOn
+    def beforeOn(current: Topology): List[OnTag] =
+      // Go to the parent, see where it begins
+      current.parent.map(_.beginsOn) getOrElse
+        // This means, we have no parent; then we're where we should be
+        current.beginsOn
   }
 
-  case class ParBranch(cursor: RawCursor) extends Topology(forceExit = cursor.exportsUsedLater) {
+  trait Begins {
+    def beginsOn(current: Topology): List[OnTag] = current.pathOn
+  }
 
-    override def afterOn: List[OnTag] =
-      parent.flatMap(_.nextSibling).map(_.beginsOn) orElse parent.map(
+  trait After {
+    def forceExit(current: Topology): Boolean = false
+
+    def afterOn(current: Topology): List[OnTag] = current.endsOn
+
+    final def finallyOn(current: Topology): List[OnTag] =
+      if (forceExit(current)) current.afterOn else current.endsOn
+
+    def pathAfter(current: Topology): Chain[ValueModel] =
+      if (forceExit(current)) PathFinder.findPath(current.endsOn, current.afterOn) else Chain.empty
+  }
+
+  trait Ends {
+    def endsOn(current: Topology): List[OnTag] = current.beginsOn
+  }
+
+  object Default extends Before with Begins with Ends with After
+
+  // Parent == Seq, On
+  object SeqGroupBranch extends Before with Begins with Ends with After {
+
+    override def beforeOn(current: Topology): List[OnTag] =
+      current.prevSibling
+        .map(_.finallyOn) getOrElse super.beforeOn(current)
+
+    override def beginsOn(current: Topology): List[OnTag] =
+      if (current.isNextTag)
+        current.parents.find(_.isForTag).map(_.beginsOn) getOrElse super.beginsOn(current)
+      else
+        super.beginsOn(current)
+
+    override def endsOn(current: Topology): List[OnTag] =
+      current.cursor.toLastChild
+        .map(_.topology)
+        .map(_.finallyOn) getOrElse super.endsOn(current)
+
+    override def afterOn(current: Topology): List[OnTag] =
+      current.nextSibling.map(_.beginsOn) orElse current.parent.map(_.afterOn) getOrElse super
+        .afterOn(current)
+  }
+
+  // Parent == Xor
+  object XorBranch extends Before with After {
+
+    override def beforeOn(current: Topology): List[OnTag] =
+      current.prevSibling.map(_.endsOn) getOrElse super.beforeOn(current)
+
+    override def forceExit(current: Topology): Boolean =
+      current.cursor.moveUp.exists(_.hasExecLater)
+
+    override def afterOn(current: Topology): List[OnTag] =
+      current.parent.flatMap(_.nextSibling).map(_.beginsOn) orElse current.parent.map(
         _.afterOn
-      ) getOrElse super.afterOn
+      ) getOrElse super.afterOn(current)
+  }
 
-    override def pathAfter: Chain[ValueModel] = {
-      val pa = super.pathAfter
+  // Parent == Par
+  object ParBranch extends After {
+    override def forceExit(current: Topology): Boolean = current.cursor.exportsUsedLater
+
+    override def afterOn(current: Topology): List[OnTag] =
+      current.parent.flatMap(_.nextSibling).map(_.beginsOn) orElse current.parent.map(
+        _.afterOn
+      ) getOrElse super.afterOn(current)
+
+    override def pathAfter(current: Topology): Chain[ValueModel] = {
+      val pa = super.pathAfter(current)
       // Ping the next (join) peer to enforce its data update
-      if (pa.nonEmpty) pa ++ Chain.fromOption(afterOn.headOption.map(_.peerId)) else pa
+      if (pa.nonEmpty) pa ++ Chain.fromOption(afterOn(current).headOption.map(_.peerId)) else pa
     }
   }
 
-  // Parent == Seq, On
-  case class SeqGroupBranch(cursor: RawCursor) extends Topology() {
+  // No need to move anywhere
+  object NoExecItem extends Begins with Ends {
+    override def beginsOn(current: Topology): List[OnTag] = current.beforeOn
 
-    override def beforeOn: List[OnTag] =
-      prevSibling
-        .map(_.finallyOn) getOrElse super.beforeOn
-
-    override def beginsOn: List[OnTag] =
-      if (isNextTag)
-        parents.find(_.isForTag).map(_.beginsOn) getOrElse super.beginsOn
-      else
-        super.beginsOn
-
-    override def endsOn: List[OnTag] =
-      cursor.toLastChild
-        .map(_.topology)
-        .map(_.finallyOn) getOrElse super.endsOn
-
-    override def afterOn: List[OnTag] =
-      nextSibling.map(_.beginsOn) orElse parent.map(_.afterOn) getOrElse super.afterOn
+    override def endsOn(current: Topology): List[OnTag] = current.beginsOn
   }
 
-  case class Default(cursor: RawCursor) extends Topology()
-  case class Next(cursor: RawCursor) extends Topology()
-
-  // Branch contains no executable instructions -- no need for topology
-  case class NoExec(cursor: RawCursor) extends Topology() {
-    override def beginsOn: List[OnTag] = super.beforeOn
-
-    override def endsOn: List[OnTag] = beginsOn
-  }
-
-  def apply(cursor: RawCursor): Topology = cursor.parentTag match {
-    case _ if cursor.isNoExec => NoExec(cursor)
-    case Some(XorTag) =>
-      XorBranch(cursor)
-    case Some(ParTag) =>
-      ParBranch(cursor)
-    case Some(_: SeqGroupTag) =>
-      SeqGroupBranch(cursor)
-    case _ => Default(cursor)
-  }
+  def make(cursor: RawCursor): Topology =
+    Topology(
+      cursor,
+      cursor.parentTag match {
+        case Some(XorTag) => XorBranch
+        case Some(_: SeqGroupTag) => SeqGroupBranch
+        case _ => Default
+      },
+      cursor.parentTag match {
+        case _ if cursor.isNoExec => NoExecItem
+        case Some(_: SeqGroupTag) => SeqGroupBranch
+        case _ => Default
+      },
+      cursor.parentTag match {
+        case _ if cursor.isNoExec => NoExecItem
+        case Some(_: SeqGroupTag) => SeqGroupBranch
+        case _ => Default
+      },
+      cursor.parentTag match {
+        case Some(ParTag) => ParBranch
+        case Some(XorTag) => XorBranch
+        case Some(_: SeqGroupTag) => SeqGroupBranch
+        case _ => Default
+      }
+    )
 
   def resolve(op: Tree, debug: Boolean = false): Res = {
     val resolved = resolveOnMoves(op, debug).value
@@ -178,6 +227,8 @@ object Topology extends Logging {
       i
     }
 
+    println(op)
+
     val resolvedCofree = cursor
       .cata(wrap) { rc =>
         logger.debug(s"<:> $rc")
@@ -189,7 +240,7 @@ object Topology extends Logging {
 
         logger.trace("Resolved: " + resolved)
 
-        if (debug) {
+        if (debug || true) {
           println(Console.BLUE + rc + Console.RESET)
           println(rc.topology)
           println("Before: " + rc.topology.beforeOn)
@@ -202,7 +253,7 @@ object Topology extends Logging {
             val cz = ChainZipper(
               through(rc.topology.pathBefore),
               cofree,
-              through(rc.topology.pathAfter)
+              through(rc.topology.pathAfter, reversed = true)
             )
             if (cz.next.nonEmpty || cz.prev.nonEmpty) {
               logger.debug(s"Resolved   $rc -> $cofree")

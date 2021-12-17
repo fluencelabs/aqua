@@ -44,7 +44,7 @@ case class RawCursor(
       fc #:: LazyList.unfold(fc)(c => c.toNextSibling.map(rc => rc -> rc))
     )
 
-  lazy val topology: Topology = Topology(this)
+  lazy val topology: Topology = Topology.make(this)
 
   lazy val tagsPath: NonEmptyList[RawTag] = path.map(_.head)
 
@@ -108,7 +108,7 @@ case class RawCursor(
       case _ => moveUp.flatMap(_.seqNext)
     }
 
-  def isNoExec: Boolean =
+  lazy val isNoExec: Boolean =
     tag match {
       case _: NoExecTag => true
       case _: GroupTag => children.forall(_.isNoExec)
