@@ -97,11 +97,8 @@ object Topology extends Logging {
 
   trait Ends {
 
-    // TODO: is it always true? what's about par?
     def endsOn(current: Topology): List[OnTag] =
-      current.cursor.toLastChild
-        .map(_.topology)
-        .map(_.finallyOn) getOrElse current.beginsOn
+      current.beginsOn
   }
 
   object Default extends Before with Begins with Ends with After
@@ -122,6 +119,15 @@ object Topology extends Logging {
     override def afterOn(current: Topology): List[OnTag] =
       current.nextSibling.map(_.beginsOn) orElse current.parent.map(_.afterOn) getOrElse super
         .afterOn(current)
+
+  }
+
+  object SeqGroup extends Ends {
+
+    override def endsOn(current: Topology): List[OnTag] =
+      current.cursor.toLastChild
+        .map(_.topology)
+        .map(_.finallyOn) getOrElse current.beginsOn
   }
 
   // Parent == Xor
@@ -130,21 +136,22 @@ object Topology extends Logging {
     override def beforeOn(current: Topology): List[OnTag] =
       current.prevSibling.map(_.endsOn) getOrElse super.beforeOn(current)
 
+    // TODO: if this xor is in par that needs no forceExit, do not exit
     override def forceExit(current: Topology): Boolean =
       current.cursor.moveUp.exists(_.hasExecLater)
 
     override def afterOn(current: Topology): List[OnTag] =
-      current.parent.flatMap(_.nextSibling).map(_.beginsOn) orElse current.parent.map(
+      current.parent.map(
         _.afterOn
       ) getOrElse super.afterOn(current)
   }
 
   // Parent == Par
-  object ParBranch extends After {
+  object ParBranch extends Ends with After {
     override def forceExit(current: Topology): Boolean = current.cursor.exportsUsedLater
 
     override def afterOn(current: Topology): List[OnTag] =
-      current.parent.flatMap(_.nextSibling).map(_.beginsOn) orElse current.parent.map(
+      current.parent.map(
         _.afterOn
       ) getOrElse super.afterOn(current)
 
@@ -153,6 +160,8 @@ object Topology extends Logging {
       // Ping the next (join) peer to enforce its data update
       if (pa.nonEmpty) pa ++ Chain.fromOption(afterOn(current).headOption.map(_.peerId)) else pa
     }
+
+    override def endsOn(current: Topology): List[OnTag] = current.beforeOn
   }
 
   // No need to move anywhere
@@ -165,20 +174,25 @@ object Topology extends Logging {
   def make(cursor: RawCursor): Topology =
     Topology(
       cursor,
+      // Before
       cursor.parentTag match {
         case Some(XorTag) => XorBranch
         case Some(_: SeqGroupTag) => SeqGroupBranch
         case _ => Default
       },
+      // Begin
       cursor.parentTag match {
         case _ if cursor.isNoExec => NoExecItem
         case Some(_: SeqGroupTag) => SeqGroupBranch
         case _ => Default
       },
+      // End
       cursor.tag match {
         case _ if cursor.isNoExec => NoExecItem
+        case _: SeqGroupTag => SeqGroup
         case _ => Default
       },
+      // After
       cursor.parentTag match {
         case Some(ParTag) => ParBranch
         case Some(XorTag) => XorBranch
