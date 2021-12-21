@@ -186,7 +186,7 @@ object Topology extends Logging {
 
     override def beforeOn(current: Topology): List[OnTag] = current.beginsOn
 
-    override def afterOn(current: Topology): List[OnTag] = current.endsOn
+    override def afterOn(current: Topology): List[OnTag] = current.pathOn
 
     override def forceExit(current: Topology): Boolean = false
   }
