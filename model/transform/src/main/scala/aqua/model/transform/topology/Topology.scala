@@ -58,6 +58,8 @@ case class Topology(
   // After this element is done, where should it move to prepare for the next one
   lazy val afterOn: List[OnTag] = after.afterOn(this)
 
+  lazy val forceExit: Boolean = after.forceExit(this)
+
   // Where we finnaly are
   lazy val finallyOn: List[OnTag] = after.finallyOn(this)
 
@@ -127,7 +129,10 @@ object Topology extends Logging {
     override def toString: String = "<seq>"
 
     override def endsOn(current: Topology): List[OnTag] =
-      current.lastChild.map(_.finallyOn) getOrElse current.beginsOn
+      current.lastChild.map {
+        case lc if lc.forceExit => current.afterOn
+        case lc => lc.finallyOn
+      } getOrElse current.beginsOn
   }
 
   // Parent == Xor
