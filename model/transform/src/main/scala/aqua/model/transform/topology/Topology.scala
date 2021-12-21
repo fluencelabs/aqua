@@ -98,7 +98,7 @@ object Topology extends Logging {
     protected def lastChildFinally(current: Topology): List[OnTag] =
       current.lastChild.map {
         case lc if lc.forceExit => current.afterOn
-        case lc => lc.finallyOn
+        case lc => lc.endsOn
       } getOrElse current.beginsOn
   }
 
