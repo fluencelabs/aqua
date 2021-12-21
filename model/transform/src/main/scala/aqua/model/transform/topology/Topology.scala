@@ -66,7 +66,7 @@ case class Topology(
   lazy val pathBefore: Chain[ValueModel] = begins.pathBefore(this)
 
   lazy val pathAfter: Chain[ValueModel] =
-    after.pathAfter(this)
+    after.pathAfter(this, forceExit)
 }
 
 object Topology extends Logging {
@@ -97,8 +97,8 @@ object Topology extends Logging {
     final def finallyOn(current: Topology): List[OnTag] =
       if (forceExit(current)) current.afterOn else current.endsOn
 
-    def pathAfter(current: Topology): Chain[ValueModel] =
-      if (forceExit(current)) PathFinder.findPath(current.endsOn, current.afterOn) else Chain.empty
+    def pathAfter(current: Topology, exitForced: Boolean): Chain[ValueModel] =
+      if (exitForced) PathFinder.findPath(current.endsOn, current.afterOn) else Chain.empty
   }
 
   trait Ends {
@@ -163,10 +163,10 @@ object Topology extends Logging {
         _.afterOn
       ) getOrElse super.afterOn(current)
 
-    override def pathAfter(current: Topology): Chain[ValueModel] = {
-      val pa = super.pathAfter(current)
+    override def pathAfter(current: Topology, forceExit: Boolean): Chain[ValueModel] = {
+      val pa = super.pathAfter(current, forceExit)
       // Ping the next (join) peer to enforce its data update
-      if (pa.nonEmpty) pa ++ Chain.fromOption(afterOn(current).headOption.map(_.peerId)) else pa
+      if (pa.nonEmpty) pa ++ Chain.fromOption(current.afterOn.headOption.map(_.peerId)) else pa
     }
 
     override def endsOn(current: Topology): List[OnTag] = current.beforeOn
