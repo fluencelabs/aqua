@@ -1,0 +1,10 @@
+service CustomId("cid"):
+  id() -> string
+
+func first(node_id: string) -> string:
+    on node_id:
+        try:
+            p <- CustomId.id()
+        catch err:
+            CustomId.id()
+    <- p

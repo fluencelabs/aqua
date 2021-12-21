@@ -101,10 +101,13 @@ object Topology extends Logging {
       current.beginsOn
   }
 
-  object Default extends Before with Begins with Ends with After
+  object Default extends Before with Begins with Ends with After {
+    override def toString: String = "<default>"
+  }
 
   // Parent == Seq, On
   object SeqGroupBranch extends Before with Begins with After {
+    override def toString: String = "<seq>/*"
 
     override def beforeOn(current: Topology): List[OnTag] =
       current.prevSibling
@@ -123,6 +126,7 @@ object Topology extends Logging {
   }
 
   object SeqGroup extends Ends {
+    override def toString: String = "<seq>"
 
     override def endsOn(current: Topology): List[OnTag] =
       current.cursor.toLastChild
@@ -132,6 +136,7 @@ object Topology extends Logging {
 
   // Parent == Xor
   object XorBranch extends Before with After {
+    override def toString: String = "<xor>/*"
 
     override def beforeOn(current: Topology): List[OnTag] =
       current.prevSibling.map(_.endsOn) getOrElse super.beforeOn(current)
@@ -148,6 +153,8 @@ object Topology extends Logging {
 
   // Parent == Par
   object ParBranch extends Ends with After {
+    override def toString: String = "<par>/*"
+
     override def forceExit(current: Topology): Boolean = current.cursor.exportsUsedLater
 
     override def afterOn(current: Topology): List[OnTag] =
@@ -165,13 +172,15 @@ object Topology extends Logging {
   }
 
   // No need to move anywhere
-  object NoExecItem extends Begins with Ends {
-    override def beginsOn(current: Topology): List[OnTag] = current.beforeOn
+  object NoExecItem extends Ends {
+    override def toString: String = "<no-exec>"
 
     override def endsOn(current: Topology): List[OnTag] = current.beginsOn
   }
 
   object XorGroup extends Ends {
+    override def toString: String = "<xor>"
+
     // Xor tag ends where any child ends; can't get first one as it may lead to recursion
     override def endsOn(current: Topology): List[OnTag] =
       current.cursor.toLastChild
@@ -190,7 +199,6 @@ object Topology extends Logging {
       },
       // Begin
       cursor.parentTag match {
-        case _ if cursor.isNoExec => NoExecItem
         case Some(_: SeqGroupTag) => SeqGroupBranch
         case _ => Default
       },
