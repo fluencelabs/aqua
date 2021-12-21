@@ -14,12 +14,12 @@ import cats.syntax.traverse.*
 import scribe.Logging
 
 case class Topology(
-                     cursor: RawCursor,
-                     before: Topology.Before,
-                     begins: Topology.Begins,
-                     ends: Topology.Ends,
-                     after: Topology.After
-                   ) {
+  cursor: RawCursor,
+  before: Topology.Before,
+  begins: Topology.Begins,
+  ends: Topology.Ends,
+  after: Topology.After
+) {
 
   final lazy val pathOn: List[OnTag] = cursor.tagsPath.collect { case o: OnTag =>
     o
@@ -76,7 +76,7 @@ object Topology extends Logging {
   trait Before {
 
     def beforeOn(current: Topology): List[OnTag] =
-    // Go to the parent, see where it begins
+      // Go to the parent, see where it begins
       current.parent.map(_.beginsOn) getOrElse
         // This means, we have no parent; then we're where we should be
         current.pathOn
@@ -94,6 +94,7 @@ object Topology extends Logging {
     def endsOn(current: Topology): List[OnTag] =
       current.beginsOn
 
+    // TODO 1
     protected def lastChildFinally(current: Topology): List[OnTag] =
       current.lastChild.map {
         case lc if lc.forceExit => current.afterOn
@@ -106,10 +107,11 @@ object Topology extends Logging {
 
     def afterOn(current: Topology): List[OnTag] = current.endsOn
 
+    // TODO 3
     protected def afterParent(current: Topology): List[OnTag] =
       current.parent.map(
         _.afterOn
-      ) getOrElse current.endsOn
+      ) getOrElse current.pathOn
 
     final def finallyOn(current: Topology): List[OnTag] =
       if (current.forceExit) current.afterOn else current.endsOn
@@ -130,6 +132,7 @@ object Topology extends Logging {
       current.prevSibling
         .map(_.finallyOn) getOrElse super.beforeOn(current)
 
+    // TODO 2
     override def afterOn(current: Topology): List[OnTag] =
       current.nextSibling.map(_.beginsOn) getOrElse afterParent(current)
 
@@ -184,10 +187,12 @@ object Topology extends Logging {
 
   }
 
-  object Root extends Before with After {
+  object Root extends Before with Ends with After {
     override def toString: String = "<root>"
 
     override def beforeOn(current: Topology): List[OnTag] = current.beginsOn
+
+    override def endsOn(current: Topology): List[OnTag] = current.pathOn
 
     override def afterOn(current: Topology): List[OnTag] = current.pathOn
 
@@ -204,8 +209,8 @@ object Topology extends Logging {
           .foldLeft((true, List.empty[OnTag])) {
             case ((true, acc), OnTag(_, r)) if r.exists(ValueModel.varName(_).contains(f.item)) =>
               (false, acc)
-            case ((true, acc@(OnTag(_, r@(r0 ==: _)) :: _)), OnTag(p, _))
-              if ValueModel.varName(p).contains(f.item) =>
+            case ((true, acc @ (OnTag(_, r @ (r0 ==: _)) :: _)), OnTag(p, _))
+                if ValueModel.varName(p).contains(f.item) =>
               // This is to take the outstanding relay and force moving there
               (false, OnTag(r0, r) :: acc)
             case ((true, acc), on) => (true, on :: acc)
@@ -218,7 +223,7 @@ object Topology extends Logging {
       PathFinder.findPath(
         current.beforeOn,
         current.beginsOn match {
-          case OnTag(z, relays@y ==: _) :: tail if z == y =>
+          case OnTag(z, relays @ y ==: _) :: tail if z == y =>
             OnTag(LiteralModel.quote("impossible peer"), relays) :: tail
           case path => path
         }
@@ -256,6 +261,7 @@ object Topology extends Logging {
       cursor.tag match {
         case _: SeqGroupTag => SeqGroup
         case XorTag => XorGroup
+        case _ if cursor.parentTag.isEmpty => Root
         case _ => Default
       },
       // After

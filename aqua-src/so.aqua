@@ -6,5 +6,5 @@ func first(node_id: string) -> string:
         try:
             p <- CustomId.id()
         catch err:
-            CustomId.id()
+            co CustomId.id()
     <- p
