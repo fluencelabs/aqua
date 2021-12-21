@@ -167,13 +167,6 @@ object Topology extends Logging {
     override def endsOn(current: Topology): List[OnTag] = current.beforeOn
   }
 
-  // No need to move anywhere
-  object NoExecItem extends Ends {
-    override def toString: String = "<no-exec>"
-
-    override def endsOn(current: Topology): List[OnTag] = current.beginsOn
-  }
-
   object XorGroup extends Ends {
     override def toString: String = "<xor>"
 
@@ -181,6 +174,16 @@ object Topology extends Logging {
     override def endsOn(current: Topology): List[OnTag] =
       current.lastChild
         .map(_.finallyOn) getOrElse super.endsOn(current)
+  }
+
+  object Root extends Before with After {
+    override def toString: String = "<root>"
+
+    override def beforeOn(current: Topology): List[OnTag] = current.beginsOn
+
+    override def afterOn(current: Topology): List[OnTag] = current.endsOn
+
+    override def forceExit(current: Topology): Boolean = false
   }
 
   object For extends Begins {
@@ -229,6 +232,7 @@ object Topology extends Logging {
       cursor.parentTag match {
         case Some(XorTag) => XorBranch
         case Some(_: SeqGroupTag) => SeqGroupBranch
+        case None => Root
         case _ => Default
       },
       // Begin
@@ -242,7 +246,6 @@ object Topology extends Logging {
       },
       // End
       cursor.tag match {
-        case _ if cursor.isNoExec => NoExecItem
         case _: SeqGroupTag => SeqGroup
         case XorTag => XorGroup
         case _ => Default
@@ -252,6 +255,7 @@ object Topology extends Logging {
         case Some(ParTag) => ParBranch
         case Some(XorTag) => XorBranch
         case Some(_: SeqGroupTag) => SeqGroupBranch
+        case None => Root
         case _ => Default
       }
     )
