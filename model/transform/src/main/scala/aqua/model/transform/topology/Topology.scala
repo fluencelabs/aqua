@@ -66,7 +66,7 @@ case class Topology(
   lazy val pathBefore: Chain[ValueModel] = begins.pathBefore(this)
 
   lazy val pathAfter: Chain[ValueModel] =
-    after.pathAfter(this, forceExit)
+    after.pathAfter(this)
 }
 
 object Topology extends Logging {
@@ -89,22 +89,27 @@ object Topology extends Logging {
       PathFinder.findPath(current.beforeOn, current.beginsOn)
   }
 
+  trait Ends {
+
+    def endsOn(current: Topology): List[OnTag] =
+      current.beginsOn
+  }
+
   trait After {
     def forceExit(current: Topology): Boolean = false
 
     def afterOn(current: Topology): List[OnTag] = current.endsOn
 
+    protected def afterParent(current: Topology): List[OnTag] =
+      current.parent.map(
+        _.afterOn
+      ) getOrElse current.endsOn
+
     final def finallyOn(current: Topology): List[OnTag] =
-      if (forceExit(current)) current.afterOn else current.endsOn
+      if (current.forceExit) current.afterOn else current.endsOn
 
-    def pathAfter(current: Topology, exitForced: Boolean): Chain[ValueModel] =
-      if (exitForced) PathFinder.findPath(current.endsOn, current.afterOn) else Chain.empty
-  }
-
-  trait Ends {
-
-    def endsOn(current: Topology): List[OnTag] =
-      current.beginsOn
+    def pathAfter(current: Topology): Chain[ValueModel] =
+      if (current.forceExit) PathFinder.findPath(current.endsOn, current.afterOn) else Chain.empty
   }
 
   object Default extends Before with Begins with Ends with After {
@@ -120,8 +125,7 @@ object Topology extends Logging {
         .map(_.finallyOn) getOrElse super.beforeOn(current)
 
     override def afterOn(current: Topology): List[OnTag] =
-      current.nextSibling.map(_.beginsOn) orElse current.parent.map(_.afterOn) getOrElse super
-        .afterOn(current)
+      current.nextSibling.map(_.beginsOn) getOrElse afterParent(current)
 
   }
 
@@ -147,9 +151,7 @@ object Topology extends Logging {
       current.cursor.moveUp.exists(_.hasExecLater)
 
     override def afterOn(current: Topology): List[OnTag] =
-      current.parent.map(
-        _.afterOn
-      ) getOrElse super.afterOn(current)
+      afterParent(current)
   }
 
   // Parent == Par
@@ -159,12 +161,10 @@ object Topology extends Logging {
     override def forceExit(current: Topology): Boolean = current.cursor.exportsUsedLater
 
     override def afterOn(current: Topology): List[OnTag] =
-      current.parent.map(
-        _.afterOn
-      ) getOrElse super.afterOn(current)
+      afterParent(current)
 
-    override def pathAfter(current: Topology, forceExit: Boolean): Chain[ValueModel] = {
-      val pa = super.pathAfter(current, forceExit)
+    override def pathAfter(current: Topology): Chain[ValueModel] = {
+      val pa = super.pathAfter(current)
       // Ping the next (join) peer to enforce its data update
       if (pa.nonEmpty) pa ++ Chain.fromOption(current.afterOn.headOption.map(_.peerId)) else pa
     }
