@@ -1,5 +1,4 @@
-import { create, CID } from "ipfs-http-client";
-import { AddResult } from "ipfs-core-types/src/root";
+import {create, CID, globSource} from "ipfs-http-client";
 import { Multiaddr, protocols } from "multiaddr";
 
 import { FluencePeer } from "@fluencelabs/fluence";
@@ -7,11 +6,13 @@ import {
   get_external_api_multiaddr,
   get_external_swarm_multiaddr,
 } from "../compiled/ipfs";
+import { AddResult } from "ipfs-core-types/src/root";
+const all = require('it-all')
 
 export async function uploadFile(
-    source: string,
+    path: string,
     provider: FluencePeer
-): Promise<AddResult> {
+): Promise<string> {
   const relayPeerId = provider.getStatus().relayPeerId!;
 
   let rpcAddr;
@@ -36,8 +37,9 @@ export async function uploadFile(
   await ipfs.id();
   console.log("📗 connected to ipfs");
 
+  const source: any = await globSource(path)
   const file = await ipfs.add(source);
   console.log("📗 uploaded file:", file);
 
-  return file;
+  return file.cid.toString();
 }

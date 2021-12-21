@@ -8,6 +8,7 @@
     "index.js",
     "error.js",
     "utils.js",
+    "dist/*",
     "src/*"
   ],
   "bin": {
@@ -22,7 +23,7 @@
   "dependencies": {
     "@fluencelabs/fluence": "0.15.2",
     "@fluencelabs/aqua-lib": "0.2.1",
-    "ipfs-http-client": "55.0.0",
+    "ipfs-http-client": "50.1.2",
     "@fluencelabs/aqua-ipfs": "0.5.2"
   },
   "devDependencies": {

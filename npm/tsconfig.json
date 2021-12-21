@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowJs": true,
     "target": "es5",
-    "module": "commonjs",
+    "module": "ESNext",
     "lib": [
       "es2017",
       "es7",
@@ -15,7 +15,8 @@
     "strict": true,
     "esModuleInterop": true,
     "noImplicitAny": false,
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    "skipLibCheck": true,
   },
   "exclude": [
     "node_modules",
@@ -23,5 +24,5 @@
     "bundle",
     "src/__test__"
   ],
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "compiled/**/*"]
 }
