@@ -502,36 +502,21 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callTag(3)
       )
 
-    val proc0: Node.Res = Topology.resolve(init)
-    // This behavior is correct, but as two seqs are not flattened, it's a question how to make the matching result structure
-    val proc: Node.Res = Cofree
-      .cata[Chain, ResolvedOp, Cofree[Chain, ResolvedOp]](proc0.cof) { case (head, children) =>
-        Eval later Cofree(
-          head,
-          Eval.later(Chain.fromSeq(children.toList.foldLeft(List.empty[Cofree[Chain, ResolvedOp]]) {
-            case ((h @ Cofree(SeqRes, _)) :: Nil, t @ Cofree(SeqRes, _)) =>
-              Cofree(SeqRes, Eval.later(h.tail.value ++ t.tail.value)) :: Nil
-            case (acc, t) => acc :+ t
-          }))
-        )
-      }
-      .value
+    val proc: Node.Res = Topology.resolve(init)
 
     val expected: Node.Res =
       MakeRes.seq(
         callRes(0, initPeer),
         through(relay),
         callRes(1, otherPeer),
+        through(otherRelay2),
         MakeRes.fold(
           "i",
           valueArray,
-          MakeRes.seq(
-            through(otherRelay2),
-            callRes(2, otherPeer2),
-            through(otherRelay2),
-            nextRes("i")
-          )
+          callRes(2, otherPeer2),
+          nextRes("i")
         ),
+        through(otherRelay2),
         through(relay),
         callRes(3, initPeer)
       )
@@ -540,7 +525,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   // https://github.com/fluencelabs/aqua/issues/205
-  "topology resolver" should "optimize path over fold" ignore {
+  "topology resolver" should "optimize path over fold" in {
     val i = VarModel("i", ScalarType.string)
     val init =
       on(
@@ -562,12 +547,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected: Node.Res =
       MakeRes.seq(
         through(relay),
-        through(otherRelay),
         MakeRes.fold(
           "i",
           valueArray,
           MakeRes.seq(
-            callRes(1, i),
+            through(otherRelay),
+            callRes(1, i)
+          ),
+          MakeRes.seq(
             through(otherRelay),
             nextRes("i")
           )

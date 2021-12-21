@@ -1,12 +1,13 @@
 package aqua.model.transform.topology
 
+import aqua.model.ValueModel.varName
 import aqua.model.transform.cursor.ChainZipper
 import aqua.model.func.raw.*
 import aqua.model.transform.res.*
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.types.{BoxType, ScalarType}
 import cats.Eval
-import cats.data.Chain.nil
+import cats.data.Chain.{==:, nil}
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
 import cats.free.Cofree
 import cats.syntax.traverse.*
@@ -24,45 +25,45 @@ case class Topology(
     o
   }
 
-  final def currentPeerId: Option[ValueModel] = pathOn.headOption.map(_.peerId)
+  final lazy val currentPeerId: Option[ValueModel] = pathOn.headOption.map(_.peerId)
 
-  final def prevSibling: Option[Topology] = cursor.toPrevSibling.map(_.topology)
-  final def nextSibling: Option[Topology] = cursor.toNextSibling.map(_.topology)
+  final lazy val prevSibling: Option[Topology] = cursor.toPrevSibling.map(_.topology)
 
-  def isNextTag: Boolean = cursor.tag match {
-    case _: NextTag => true
-    case _ => false
-  }
+  final lazy val nextSibling: Option[Topology] = cursor.toNextSibling.map(_.topology)
 
-  def forTag: Option[ForTag] = Option(cursor.tag).collect { case ft: ForTag =>
+  final lazy val firstChild: Option[Topology] = cursor.toFirstChild.map(_.topology)
+
+  final lazy val lastChild: Option[Topology] = cursor.toLastChild.map(_.topology)
+
+  final val parent: Option[Topology] = cursor.moveUp.map(_.topology)
+
+  final val parents: LazyList[Topology] =
+    LazyList.unfold(parent)(p => p.map(pp => pp -> pp.parent))
+
+  lazy val forTag: Option[ForTag] = Option(cursor.tag).collect { case ft: ForTag =>
     ft
   }
 
-  def isForTag: Boolean = forTag.isDefined
-
-  final def parent: Option[Topology] = cursor.moveUp.map(_.topology)
-
-  final def parents: LazyList[Topology] =
-    LazyList.unfold(parent)(p => p.map(pp => pp -> pp.parent))
+  lazy val isForTag: Boolean = forTag.isDefined
 
   // Before the left boundary of this element, what was the scope
-  def beforeOn: List[OnTag] = before.beforeOn(this)
+  lazy val beforeOn: List[OnTag] = before.beforeOn(this)
 
   // Inside the left boundary of this element, what should be the scope
-  def beginsOn: List[OnTag] = begins.beginsOn(this)
+  lazy val beginsOn: List[OnTag] = begins.beginsOn(this)
 
   // After this element is done, what is the scope
-  def endsOn: List[OnTag] = ends.endsOn(this)
+  lazy val endsOn: List[OnTag] = ends.endsOn(this)
 
   // After this element is done, where should it move to prepare for the next one
-  def afterOn: List[OnTag] = after.afterOn(this)
+  lazy val afterOn: List[OnTag] = after.afterOn(this)
 
   // Where we finnaly are
-  final def finallyOn: List[OnTag] = after.finallyOn(this)
+  lazy val finallyOn: List[OnTag] = after.finallyOn(this)
 
-  final def pathBefore: Chain[ValueModel] = PathFinder.findPath(beforeOn, beginsOn)
+  lazy val pathBefore: Chain[ValueModel] = begins.pathBefore(this)
 
-  def pathAfter: Chain[ValueModel] =
+  lazy val pathAfter: Chain[ValueModel] =
     after.pathAfter(this)
 }
 
@@ -81,6 +82,9 @@ object Topology extends Logging {
 
   trait Begins {
     def beginsOn(current: Topology): List[OnTag] = current.pathOn
+
+    def pathBefore(current: Topology): Chain[ValueModel] =
+      PathFinder.findPath(current.beforeOn, current.beginsOn)
   }
 
   trait After {
@@ -106,18 +110,12 @@ object Topology extends Logging {
   }
 
   // Parent == Seq, On
-  object SeqGroupBranch extends Before with Begins with After {
+  object SeqGroupBranch extends Before with After {
     override def toString: String = "<seq>/*"
 
     override def beforeOn(current: Topology): List[OnTag] =
       current.prevSibling
         .map(_.finallyOn) getOrElse super.beforeOn(current)
-
-    override def beginsOn(current: Topology): List[OnTag] =
-      if (current.isNextTag)
-        current.parents.find(_.isForTag).map(_.beginsOn) getOrElse super.beginsOn(current)
-      else
-        super.beginsOn(current)
 
     override def afterOn(current: Topology): List[OnTag] =
       current.nextSibling.map(_.beginsOn) orElse current.parent.map(_.afterOn) getOrElse super
@@ -129,9 +127,7 @@ object Topology extends Logging {
     override def toString: String = "<seq>"
 
     override def endsOn(current: Topology): List[OnTag] =
-      current.cursor.toLastChild
-        .map(_.topology)
-        .map(_.finallyOn) getOrElse current.beginsOn
+      current.lastChild.map(_.finallyOn) getOrElse current.beginsOn
   }
 
   // Parent == Xor
@@ -183,9 +179,47 @@ object Topology extends Logging {
 
     // Xor tag ends where any child ends; can't get first one as it may lead to recursion
     override def endsOn(current: Topology): List[OnTag] =
-      current.cursor.toLastChild
-        .map(_.topology)
+      current.lastChild
         .map(_.finallyOn) getOrElse super.endsOn(current)
+  }
+
+  object For extends Begins {
+    override def toString: String = "<for>"
+
+    override def beginsOn(current: Topology): List[OnTag] =
+      (current.forTag zip current.firstChild.map(_.beginsOn)).map { case (f, b) =>
+        // Take path until this for's iterator is used
+        b.reverse
+          .foldLeft((true, List.empty[OnTag])) {
+            case ((true, acc), OnTag(_, r)) if r.exists(ValueModel.varName(_).contains(f.item)) =>
+              (false, acc)
+            case ((true, acc @ (OnTag(_, r @ (r0 ==: _)) :: _)), OnTag(p, _))
+                if ValueModel.varName(p).contains(f.item) =>
+              // This is to take the outstanding relay and force moving there
+              (false, OnTag(r0, r) :: acc)
+            case ((true, acc), on) => (true, on :: acc)
+            case ((false, acc), _) => (false, acc)
+          }
+          ._2
+      } getOrElse super.beginsOn(current)
+
+    override def pathBefore(current: Topology): Chain[ValueModel] =
+      PathFinder.findPath(
+        current.beforeOn,
+        current.beginsOn match {
+          case OnTag(z, relays @ y ==: _) :: tail if z == y =>
+            OnTag(LiteralModel.quote("impossible peer"), relays) :: tail
+          case path => path
+        }
+      )
+
+  }
+
+  object SeqNext extends Begins {
+    override def toString: String = "<seq>/<next>"
+
+    override def beginsOn(current: Topology): List[OnTag] =
+      current.parents.find(_.isForTag).map(_.beginsOn) getOrElse super.beginsOn(current)
   }
 
   def make(cursor: RawCursor): Topology =
@@ -198,9 +232,13 @@ object Topology extends Logging {
         case _ => Default
       },
       // Begin
-      cursor.parentTag match {
-        case Some(_: SeqGroupTag) => SeqGroupBranch
-        case _ => Default
+      (cursor.parentTag, cursor.tag) match {
+        case (Some(_: SeqGroupTag), _: NextTag) =>
+          SeqNext
+        case (_, _: ForTag) =>
+          For
+        case _ =>
+          Default
       },
       // End
       cursor.tag match {
@@ -252,6 +290,7 @@ object Topology extends Logging {
     val cursor = RawCursor(NonEmptyList.one(ChainZipper.one(op)), None)
     // TODO: remove var
     var i = 0
+
     def nextI = {
       i = i + 1
       i

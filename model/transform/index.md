@@ -1,5 +1,7 @@
 # Topology transformations
 
+Beware cycles!
+
 | Tag     | Before                   | Begin  | End               | After                      | Finally                              | Force Exit       | Comment               |
 |---------|--------------------------|--------|-------------------|----------------------------|--------------------------------------|------------------|-----------------------|
 | Default | parent.begin OR _path_   | _path_ | **<-** begin      | **<-** ends                | force ?  **<-** after :  **<-** ends | _false_          | -                     |

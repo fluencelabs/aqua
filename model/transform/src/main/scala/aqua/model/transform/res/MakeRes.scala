@@ -30,8 +30,8 @@ object MakeRes {
   def xor(first: Res, second: Res): Res =
     Cofree[Chain, ResolvedOp](XorRes, Eval.later(Chain(first, second)))
 
-  def fold(item: String, iter: ValueModel, body: Res): Res =
-    Cofree[Chain, ResolvedOp](FoldRes(item, iter), Eval.now(Chain.one(body)))
+  def fold(item: String, iter: ValueModel, body0: Res, body: Res*): Res =
+    Cofree[Chain, ResolvedOp](FoldRes(item, iter), Eval.now(Chain.one(body0) ++ Chain.fromSeq(body)))
 
   def noop(onPeer: ValueModel): Res =
     leaf(CallServiceRes(LiteralModel.quote("op"), "noop", CallRes(Nil, None), onPeer))
