@@ -171,6 +171,14 @@ object Topology extends Logging {
     override def endsOn(current: Topology): List[OnTag] = current.beginsOn
   }
 
+  object XorGroup extends Ends {
+    // Xor tag ends where any child ends; can't get first one as it may lead to recursion
+    override def endsOn(current: Topology): List[OnTag] =
+      current.cursor.toLastChild
+        .map(_.topology)
+        .map(_.finallyOn) getOrElse super.endsOn(current)
+  }
+
   def make(cursor: RawCursor): Topology =
     Topology(
       cursor,
@@ -190,6 +198,7 @@ object Topology extends Logging {
       cursor.tag match {
         case _ if cursor.isNoExec => NoExecItem
         case _: SeqGroupTag => SeqGroup
+        case XorTag => XorGroup
         case _ => Default
       },
       // After
