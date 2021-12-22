@@ -28,6 +28,21 @@ case class Topology(
     })
     .memoize
 
+  lazy val firstExecutesOn: Eval[Option[List[OnTag]]] =
+    (cursor.tag match {
+      case _: CallServiceTag => pathOn.map(Some(_))
+      case _ =>
+        children
+          .map(_.firstExecutesOn)
+          .scanLeft[Eval[Option[List[OnTag]]]](Eval.now(None)) { case (acc, el) =>
+            (acc, el).mapN(_ orElse _)
+          }
+          .collectFirst {
+            case e if e.value.isDefined => e
+          }
+          .getOrElse(Eval.now(None))
+    }).memoize
+
   lazy val currentPeerId: Option[ValueModel] = pathOn.value.headOption.map(_.peerId)
 
   lazy val prevSibling: Option[Topology] = cursor.toPrevSibling.map(_.topology)
@@ -39,6 +54,9 @@ case class Topology(
   lazy val lastChild: Option[Topology] = cursor.toLastChild.map(_.topology)
 
   lazy val children: LazyList[Topology] = cursor.children.map(_.topology)
+
+  def findInside(f: Topology => Boolean): LazyList[Topology] =
+    children.flatMap(_.findInside(f)).prependedAll(Option.when(f(this))(this))
 
   val parent: Option[Topology] = cursor.moveUp.map(_.topology)
 
@@ -90,7 +108,23 @@ object Topology extends Logging {
     def beginsOn(current: Topology): Eval[List[OnTag]] = current.pathOn
 
     def pathBefore(current: Topology): Eval[Chain[ValueModel]] =
-      (current.beforeOn, current.beginsOn).mapN(PathFinder.findPath)
+      (current.beforeOn, current.beginsOn).mapN { case (bef, beg) =>
+        PathFinder.findPath(bef, beg) -> beg
+      }.flatMap { case (pb, beg) =>
+        // Handle the case when we need to go through the relay, but miss the hop as it's the first
+        // peer where we go, but there's no service calls there
+        current.firstExecutesOn.map {
+          case Some(where) if where != beg =>
+            pb ++ Chain.fromOption(
+              beg.headOption
+                .map(_.peerId)
+                .filter(lastPeerId =>
+                  beg.tail.headOption.exists(_.via.lastOption.contains(lastPeerId))
+                )
+            )
+          case _ => pb
+        }
+      }
   }
 
   trait Ends {

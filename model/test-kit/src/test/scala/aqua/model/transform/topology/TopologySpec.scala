@@ -622,4 +622,35 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
+  "topology resolver" should "handle detach moved to relay" in {
+    val init =
+      on(
+        initPeer,
+        relay :: Nil,
+        on(
+          relay,
+          Nil,
+          co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.`type`) :: Nil)))
+        ),
+        callTag(2, Nil, varNode :: Nil)
+      )
+
+    val proc = Topology.resolve(init)
+
+    val expected: Node.Res =
+      MakeRes.seq(
+        through(relay),
+        MakeRes.par(
+          MakeRes.seq(
+            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.`type`))),
+            through(relay), // pingback
+            through(initPeer) // pingback
+          )
+        ),
+        callRes(2, initPeer, None, varNode :: Nil)
+      )
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
 }

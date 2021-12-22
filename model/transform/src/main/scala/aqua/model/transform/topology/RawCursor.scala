@@ -12,9 +12,9 @@ import scribe.Logging
 
 // Can be heavily optimized by caching parent cursors, not just list of zippers
 case class RawCursor(
-  tree: NonEmptyList[ChainZipper[FuncOp.Tree]],
-  cachedParent: Option[RawCursor] = None
-) extends ChainCursor[RawCursor, FuncOp.Tree](RawCursor.apply(_, None)) with Logging {
+                      tree: NonEmptyList[ChainZipper[FuncOp.Tree]],
+                      cachedParent: Option[RawCursor] = None
+                    ) extends ChainCursor[RawCursor, FuncOp.Tree](RawCursor.apply(_, None)) with Logging {
 
   override def moveUp: Option[RawCursor] = cachedParent.orElse(super.moveUp)
 
@@ -28,6 +28,7 @@ case class RawCursor(
     super.moveDown(focusOn).copy(cachedParent = Some(this))
 
   def tag: RawTag = current.head
+
   def parentTag: Option[RawTag] = parent.map(_.head)
 
   lazy val hasChildren: Boolean =
@@ -41,6 +42,9 @@ case class RawCursor(
 
   lazy val children: LazyList[RawCursor] =
     LazyList.unfold(toFirstChild)(_.map(c => c -> c.toNextSibling))
+
+  def findInside(f: RawCursor => Boolean): LazyList[RawCursor] =
+    children.flatMap(_.findInside(f)).prependedAll(Option.when(f(this))(this))
 
   lazy val topology: Topology = Topology.make(this)
 
@@ -75,13 +79,15 @@ case class RawCursor(
           toFirstChild
             .map(folderCursor =>
               LazyList
-                .unfold(folderCursor) { _.toNextSibling.map(cursor => cursor -> cursor) }
+                .unfold(folderCursor) {
+                  _.toNextSibling.map(cursor => cursor -> cursor)
+                }
                 .prepended(folderCursor)
             )
             .getOrElse(LazyList.empty)
         )
       }
-      // TODO: this can be parallelized
+        // TODO: this can be parallelized
         .flatMap(_.traverse(_.cata(wrap)(folder)))
         .map(_.flatMap(identity))
         .flatMap(addition => curr.tail.map(_ ++ addition))
