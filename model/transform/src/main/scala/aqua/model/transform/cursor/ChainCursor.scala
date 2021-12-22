@@ -12,7 +12,7 @@ abstract class ChainCursor[C <: ChainCursor[C, T], T](make: NonEmptyList[ChainZi
   val tree: NonEmptyList[ChainZipper[T]]
 
   // Parent element, if not at root
-  def parent: Option[T] = tree.tail.headOption.map(_.current)
+  def parent: Option[T] = moveUp.map(_.current)
 
   // The closest element
   def current: T = tree.head.current
@@ -34,13 +34,14 @@ abstract class ChainCursor[C <: ChainCursor[C, T], T](make: NonEmptyList[ChainZi
     )
 
   // Path to this position: just drop siblings
-  def path: NonEmptyList[T] = tree.map(_.current)
+  lazy val path: NonEmptyList[T] = tree.map(_.current)
 
   // Move cursor up
+  // TODO: ensure this cursor's data is cached properly
   def moveUp: Option[C] = NonEmptyList.fromList(tree.tail).map(make)
 
   // Path to root, in form of Cursors; this is skipped
-  def pathToRoot: LazyList[C] = LazyList.unfold(this)(_.moveUp.map(c => c -> c))
+  val pathToRoot: LazyList[C] = LazyList.unfold(this)(_.moveUp.map(c => c -> c))
 
   // Move down: need a ChainZipper that's below
   def moveDown(focusOn: ChainZipper[T]): C = make(focusOn :: tree)

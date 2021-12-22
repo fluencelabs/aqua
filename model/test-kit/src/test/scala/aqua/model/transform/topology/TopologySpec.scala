@@ -4,7 +4,7 @@ import aqua.Node
 import aqua.model.VarModel
 import aqua.model.func.Call
 import aqua.model.func.raw.FuncOps
-import aqua.model.transform.res.{MakeRes, ResolvedOp, XorRes}
+import aqua.model.transform.res.{MakeRes, ResolvedOp, SeqRes, XorRes}
 import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
@@ -13,6 +13,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class TopologySpec extends AnyFlatSpec with Matchers {
+
   import Node._
 
   "topology resolver" should "do nothing on init peer" in {
@@ -440,7 +441,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   // this example doesn't create a hop on relay after fold
   // but the test create it, so there is not a one-on-one simulation
   // change it or write an integration test
-  "topology resolver" should "create returning hops on chain of 'on'" ignore {
+  "topology resolver" should "create returning hops on chain of 'on'" in {
     val init =
       on(
         initPeer,
@@ -470,14 +471,16 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val expected: Node.Res =
       MakeRes.seq(
-        callRes(0, initPeer),
-        callRes(1, otherRelay)
+        through(relay),
+        callRes(0, otherPeer),
+        MakeRes.fold("i", valueArray, MakeRes.par(callRes(2, otherPeer2), nextRes("i"))),
+        through(relay),
+        callRes(3, initPeer)
       )
     proc.equalsOrPrintDiff(expected) should be(true)
   }
 
-  // This behavior is correct, but as two seqs are not flattened, it's a question how to make the matching result structure
-  "topology resolver" should "create returning hops on nested 'on'" ignore {
+  "topology resolver" should "create returning hops on nested 'on'" in {
     val init =
       on(
         initPeer,
@@ -505,17 +508,16 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected: Node.Res =
       MakeRes.seq(
         callRes(0, initPeer),
-        callRes(1, otherRelay),
+        through(relay),
+        callRes(1, otherPeer),
+        through(otherRelay2),
         MakeRes.fold(
           "i",
           valueArray,
-          MakeRes.seq(
-            through(otherRelay2),
-            callRes(2, otherPeer2),
-            through(otherRelay2),
-            nextRes("i")
-          )
+          callRes(2, otherPeer2),
+          nextRes("i")
         ),
+        through(otherRelay2),
         through(relay),
         callRes(3, initPeer)
       )
@@ -524,7 +526,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   // https://github.com/fluencelabs/aqua/issues/205
-  "topology resolver" should "optimize path over fold" ignore {
+  "topology resolver" should "optimize path over fold" in {
     val i = VarModel("i", ScalarType.string)
     val init =
       on(
@@ -546,16 +548,106 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected: Node.Res =
       MakeRes.seq(
         through(relay),
-        through(otherRelay),
         MakeRes.fold(
           "i",
           valueArray,
           MakeRes.seq(
-            callRes(1, i),
+            through(otherRelay),
+            callRes(1, i)
+          ),
+          MakeRes.seq(
             through(otherRelay),
             nextRes("i")
           )
         )
+      )
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
+  "topology resolver" should "handle detach" in {
+    val init =
+      on(
+        initPeer,
+        relay :: Nil,
+        co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.`type`) :: Nil))),
+        callTag(2, Nil, varNode :: Nil)
+      )
+
+    val proc = Topology.resolve(init)
+
+    val expected: Node.Res =
+      MakeRes.seq(
+        through(relay),
+        MakeRes.par(
+          MakeRes.seq(
+            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.`type`))),
+            through(relay),
+            through(initPeer) // pingback
+          )
+        ),
+        callRes(2, initPeer, None, varNode :: Nil)
+      )
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
+  "topology resolver" should "handle moved detach" in {
+    val init =
+      on(
+        initPeer,
+        relay :: Nil,
+        on(
+          otherPeer2,
+          Nil,
+          co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.`type`) :: Nil))),
+          callTag(2, Nil, varNode :: Nil)
+        )
+      )
+
+    val proc = Topology.resolve(init)
+
+    val expected: Node.Res =
+      MakeRes.seq(
+        through(relay),
+        MakeRes.par(
+          MakeRes.seq(
+            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.`type`))),
+            through(otherPeer2) // pingback
+          )
+        ),
+        callRes(2, otherPeer2, None, varNode :: Nil)
+      )
+
+    proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
+  "topology resolver" should "handle detach moved to relay" in {
+    val init =
+      on(
+        initPeer,
+        relay :: Nil,
+        on(
+          relay,
+          Nil,
+          co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.`type`) :: Nil)))
+        ),
+        callTag(2, Nil, varNode :: Nil)
+      )
+
+    val proc = Topology.resolve(init)
+
+    val expected: Node.Res =
+      MakeRes.seq(
+        through(relay),
+        MakeRes.par(
+          MakeRes.seq(
+            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.`type`))),
+            through(relay), // pingback
+            through(initPeer) // pingback
+          )
+        ),
+        callRes(2, initPeer, None, varNode :: Nil)
       )
 
     proc.equalsOrPrintDiff(expected) should be(true)

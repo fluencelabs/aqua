@@ -10,53 +10,19 @@ import scala.annotation.tailrec
 
 object PathFinder extends Logging {
 
-  def find(from: RawCursor, to: RawCursor, isExit: Boolean = false): Chain[ValueModel] = {
-
-    val fromOn = Chain.fromSeq(from.pathOn).reverse
-    val toOn = Chain.fromSeq(to.pathOn).reverse
-
-    val wasHandled =
-      !isExit &&
-        to.leftSiblings.isEmpty &&
-        to.moveUp.exists(_.pathOn == to.pathOn) &&
-        !to.parentTag.exists(_.isInstanceOf[ParGroupTag])
-
-    if (wasHandled) {
-      logger.trace("Was handled")
-      logger.trace(" :: " + from)
-      logger.trace(" -> " + to)
-      Chain.empty
-    } else {
-      logger.trace("Find path")
-      logger.trace(" :: " + from)
-      logger.trace(" -> " + to)
-      findPath(
-        fromOn,
-        toOn,
-        from.currentPeerId,
-        to.currentPeerId
-      )
-    }
-  }
-
-  def optimizePath(
-    peerIds: Chain[ValueModel],
-    prefix: Chain[ValueModel],
-    suffix: Chain[ValueModel]
-  ): Chain[ValueModel] = {
-    val optimized = peerIds
-      .foldLeft(Chain.empty[ValueModel]) {
-        case (acc, p) if acc.lastOption.contains(p) => acc
-        case (acc, p) if acc.contains(p) => acc.takeWhile(_ != p) :+ p
-        case (acc, p) => acc :+ p
-      }
-    logger.trace(s"PEER IDS: $optimized")
-    logger.trace(s"PREFIX: $prefix")
-    logger.trace(s"SUFFIX: $suffix")
-    logger.trace(s"OPTIMIZED WITH PREFIX AND SUFFIX: $optimized")
-    val noPrefix = skipPrefix(optimized, prefix, optimized)
-    skipSuffix(noPrefix, suffix, noPrefix)
-  }
+  /**
+   * Finds the path – chain of peers to visit to get from [[fromOn]] to [[toOn]]
+   * @param fromOn Previous location
+   * @param toOn Next location
+   * @return Chain of peers to visit in between
+   */
+  def findPath(fromOn: List[OnTag], toOn: List[OnTag]): Chain[ValueModel] =
+    findPath(
+      Chain.fromSeq(fromOn).reverse,
+      Chain.fromSeq(toOn).reverse,
+      fromOn.headOption.map(_.peerId),
+      toOn.headOption.map(_.peerId)
+    )
 
   def findPath(
     fromOn: Chain[OnTag],
@@ -87,6 +53,33 @@ object PathFinder extends Logging {
     )
     logger.trace("                     Optimized: " + optimized)
     optimized
+  }
+
+  /**
+   * Removes cycles from the path
+   *
+   * @param peerIds peers to walk trough
+   * @param prefix  getting from the previous peer
+   * @param suffix  getting to the next peer
+   * @return optimal path with no duplicates
+   */
+  def optimizePath(
+    peerIds: Chain[ValueModel],
+    prefix: Chain[ValueModel],
+    suffix: Chain[ValueModel]
+  ): Chain[ValueModel] = {
+    val optimized = peerIds
+      .foldLeft(Chain.empty[ValueModel]) {
+        case (acc, p) if acc.lastOption.contains(p) => acc
+        case (acc, p) if acc.contains(p) => acc.takeWhile(_ != p) :+ p
+        case (acc, p) => acc :+ p
+      }
+    logger.trace(s"PEER IDS: $optimized")
+    logger.trace(s"PREFIX: $prefix")
+    logger.trace(s"SUFFIX: $suffix")
+    logger.trace(s"OPTIMIZED WITH PREFIX AND SUFFIX: $optimized")
+    val noPrefix = skipPrefix(optimized, prefix, optimized)
+    skipSuffix(noPrefix, suffix, noPrefix)
   }
 
   @tailrec

@@ -1,0 +1,6 @@
+service TestS("some-id"):
+    t: string -> string
+
+func doStuff(c: bool):
+    if c:
+        TestS.t("fr")

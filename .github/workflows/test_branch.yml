@@ -52,7 +52,7 @@ jobs:
           git clone https://github.com/fluencelabs/aqua-playground.git        
           sbt "cliJS/fastOptJS"
           rm -rf aqua-playground/src/compiled/examples/*
-          mv cli/.js/target/scala-3.0.2/cli-fastopt.js npm/aqua.js
+          mv cli/.js/target/scala-3.1.0/cli-fastopt.js npm/aqua.js
           cd npm
           npm i
           cd ../aqua-playground          
