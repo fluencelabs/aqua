@@ -7,6 +7,7 @@ import aqua.keypair.KeyPairShow.show
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.ipfs.js.IpfsApi
+import aqua.run.RunCommand.createKeyPair
 import aqua.run.RunOpts
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.flatMap.*
@@ -54,13 +55,14 @@ object IpfsOpts extends Logging {
         resource.use { peer =>
           Async[F].fromFuture {
             (for {
+              keyPair <- createKeyPair(secretKey)
               _ <- Fluence
                 .start(
                   PeerConfig(
                     multiaddr,
                     timeout,
                     LogLevelTransformer.logLevelToAvm(logLevel),
-                    secretKey.orNull
+                    keyPair.orNull
                   )
                 )
                 .toFuture
@@ -68,8 +70,8 @@ object IpfsOpts extends Logging {
                 .uploadFile(
                   path,
                   peer,
-                  logger.info: Function1[String, Unit],
-                  logger.error: Function1[String, Unit]
+                  logger.info: String => Unit,
+                  logger.error: String => Unit
                 )
                 .toFuture
             } yield {
