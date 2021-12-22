@@ -30,7 +30,7 @@ object RunWrapper {
           )
         case (Some(s), _) => Validated.validNec(s :: Nil)
       }
-    }.reduce(_ combine _)
+    }.reduceOption(_ combine _).getOrElse(Validated.validNec(Nil))
   }
 
   // Wrap a functino like this:
