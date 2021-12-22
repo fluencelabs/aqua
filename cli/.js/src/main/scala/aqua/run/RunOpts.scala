@@ -67,7 +67,7 @@ object RunOpts extends Logging {
     Opts
       .option[String]("data-path", "Path to file with arguments map in JSON format", "p")
       .map { str =>
-        OptUtils.transformPath(
+        OptUtils.checkAndTransformFile(
           str,
           p => {
             Files[F]

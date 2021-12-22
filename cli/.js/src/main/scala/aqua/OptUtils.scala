@@ -14,7 +14,8 @@ import scala.scalajs.js.JSON
 
 object OptUtils {
 
-  def transformPath[F[_]: Files: Concurrent, T](
+  // Checks if a path is a file and it exists and transforms it
+  def checkAndTransformFile[F[_]: Files: Concurrent, T](
     path: String,
     transform: Path => F[ValidatedNec[String, T]]
   ): F[ValidatedNec[String, T]] = {

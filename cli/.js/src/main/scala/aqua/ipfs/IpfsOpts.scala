@@ -7,6 +7,7 @@ import aqua.keypair.KeyPairShow.show
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.ipfs.js.IpfsApi
+import aqua.run.RunOpts
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -22,7 +23,7 @@ import scribe.Logging
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 
-// Options and commands to work with KeyPairs
+// Options and commands to work with IPFS
 object IpfsOpts extends Logging {
 
   val multiaddrOpt: Opts[String] =
@@ -33,12 +34,19 @@ object IpfsOpts extends Logging {
     Opts
       .option[String]("path", "Path to file", "p")
 
+  // Uploads a file to IPFS
   def upload[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "upload",
       header = "Upload a file to IPFS"
     ) {
-      (pathOpt, multiaddrOpt, AppOpts.logLevelOpt).mapN { (path, multiaddr, logLevel) =>
+      (
+        pathOpt,
+        multiaddrOpt,
+        AppOpts.logLevelOpt,
+        AppOpts.wrapWithOption(RunOpts.secretKeyOpt),
+        RunOpts.timeoutOpt
+      ).mapN { (path, multiaddr, logLevel, secretKey, timeout) =>
         LogFormatter.initLogger(Some(logLevel))
         val resource = Resource.make(Fluence.getPeer().pure[F]) { peer =>
           Async[F].fromFuture(Sync[F].delay(peer.stop().toFuture))
@@ -50,9 +58,9 @@ object IpfsOpts extends Logging {
                 .start(
                   PeerConfig(
                     multiaddr,
-                    10000,
-                    "debug",
-                    null
+                    timeout,
+                    LogLevelTransformer.logLevelToAvm(logLevel),
+                    secretKey.orNull
                   )
                 )
                 .toFuture

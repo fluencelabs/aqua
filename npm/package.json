@@ -8,8 +8,7 @@
     "index.js",
     "error.js",
     "utils.js",
-    "dist/*",
-    "src/*"
+    "dist/*"
   ],
   "bin": {
     "aqua": "index.js",
