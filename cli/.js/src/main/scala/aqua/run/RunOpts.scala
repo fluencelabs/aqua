@@ -183,12 +183,7 @@ object RunOpts extends Logging {
             dataFromArgument,
             dataFromFileF
           ) =>
-        scribe.Logger.root
-          .clearHandlers()
-          .clearModifiers()
-          .withHandler(formatter = LogFormatter.formatter, minimumLevel = Some(logLevel))
-          .replace()
-
+        LogFormatter.initLogger(Some(logLevel))
         for {
           inputV <- inputF
           impsV <- importF

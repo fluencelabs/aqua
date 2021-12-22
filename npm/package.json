@@ -17,7 +17,7 @@
   },
   "scripts": {
     "run": "node index.js",
-    "from:scalajs": "cp ../cli/.js/target/scala-3.0.2/cli-opt/main.js ./aqua.js && npm run run -- $@",
+    "from:scalajs": "cp ../cli/.js/target/scala-3.0.2/cli-opt/main.js ./aqua.js && npm run build && npm run run -- $@",
     "build": "tsc && cp -R src/compiled dist/"
   },
   "dependencies": {

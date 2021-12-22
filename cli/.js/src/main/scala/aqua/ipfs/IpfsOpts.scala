@@ -1,6 +1,6 @@
 package aqua.ipfs
 
-import aqua.{LogLevelTransformer, OptUtils}
+import aqua.{AppOpts, LogFormatter, LogLevelTransformer, OptUtils}
 import aqua.io.OutputPrinter
 import aqua.js.{Fluence, PeerConfig}
 import aqua.keypair.KeyPairShow.show
@@ -38,7 +38,8 @@ object IpfsOpts extends Logging {
       name = "upload",
       header = "Upload a file to IPFS"
     ) {
-      (pathOpt, multiaddrOpt).mapN { (path, multiaddr) =>
+      (pathOpt, multiaddrOpt, AppOpts.logLevelOpt).mapN { (path, multiaddr, logLevel) =>
+        LogFormatter.initLogger(Some(logLevel))
         val resource = Resource.make(Fluence.getPeer().pure[F]) { peer =>
           Async[F].fromFuture(Sync[F].delay(peer.stop().toFuture))
         }
@@ -55,7 +56,14 @@ object IpfsOpts extends Logging {
                   )
                 )
                 .toFuture
-              cid <- IpfsApi.uploadFile(path, peer).toFuture
+              cid <- IpfsApi
+                .uploadFile(
+                  path,
+                  peer,
+                  logger.info: Function1[String, Unit],
+                  logger.error: Function1[String, Unit]
+                )
+                .toFuture
             } yield {
               ExitCode.Success
             }).pure[F]

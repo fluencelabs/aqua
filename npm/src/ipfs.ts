@@ -7,10 +7,13 @@ import {
   get_external_swarm_multiaddr,
 } from "./compiled/ipfs.js";
 import { AddResult } from "ipfs-core-types/src/root";
+import * as util from "util";
 
 export async function uploadFile(
     path: string,
-    provider: FluencePeer
+    provider: FluencePeer,
+    infoLogger: (s: string) => void,
+    errorLogger: (s: string) => void
 ): Promise<string> {
   const relayPeerId = provider.getStatus().relayPeerId!;
 
@@ -19,8 +22,8 @@ export async function uploadFile(
   if (result.success) {
     rpcAddr = result.multiaddr;
   } else {
-    console.error(
-        "Failed to retrieve external api multiaddr from %s: ",
+    errorLogger(
+        "Failed to retrieve external api multiaddr from " +
         relayPeerId
     );
     throw result.error;
@@ -31,14 +34,16 @@ export async function uploadFile(
   );
   // HACK: `as any` is needed because ipfs-http-client forgot to add `| Multiaddr` to the `create` types
   const ipfs = create(rpcMaddr as any);
-  console.log("📗 created ipfs client to %s", rpcMaddr);
+  infoLogger("created ipfs client to " + rpcMaddr);
 
   await ipfs.id();
-  console.log("📗 connected to ipfs");
+  infoLogger("connected to ipfs");
 
   const source: any = await globSource(path)
   const file = await ipfs.add(source);
-  console.log("📗 uploaded file:", file);
+
+  const msg = util.format("uploaded file: %s", file)
+  infoLogger(msg);
 
   return file.cid.toString();
 }
