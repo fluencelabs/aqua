@@ -46,66 +46,6 @@ case class RawCursor(
 
   lazy val tagsPath: NonEmptyList[RawTag] = path.map(_.head)
 
-  // Cursor to the last sequentially executed operation, if any
-  @deprecated("Use topology", "15.12.2021")
-  lazy val lastExecuted: Option[RawCursor] = tag match {
-    case XorTag => toFirstChild.flatMap(_.lastExecuted)
-    case _: SeqGroupTag => toLastChild.flatMap(_.lastExecuted)
-    case _: ParGroupTag =>
-      None // ParGroup builds exit path within itself; there's no "lastExecuted", they are many
-    case _: NoExecTag => moveLeft.flatMap(_.lastExecuted)
-    case _ => Some(this)
-  }
-
-  @deprecated("Use topology", "15.12.2021")
-  lazy val firstExecuted: Option[RawCursor] = tag match {
-    case _: SeqGroupTag =>
-      toFirstChild.flatMap(_.firstExecuted)
-    case _: ParGroupTag =>
-      None // As many branches are executed simultaneously, no definition of first
-    case _: NoExecTag => moveRight.flatMap(_.firstExecuted)
-    case _ => Some(this)
-  }
-
-  @deprecated("Use topology", "15.12.2021")
-  lazy val firstExecutedPathOn: Option[List[OnTag]] =
-    firstExecuted
-      .map(_.topology.pathOn)
-      .orElse(
-        tag match {
-          case _: ParGroupTag =>
-            children
-              .flatMap(_.firstExecutedPathOn)
-              .map(_.reverse)
-              .reduceLeftOption[List[OnTag]] { case (a, b) =>
-                (a zip b).takeWhile(_ == _).map(_._1)
-              }
-              .map(_.reverse)
-          case _ => None
-        }
-      )
-
-  /**
-   * Sequentially previous cursor
-   * @return
-   */
-  @deprecated("Use topology", "15.12.2021")
-  lazy val seqPrev: Option[RawCursor] =
-    parentTag.flatMap {
-      case p: SeqGroupTag if leftSiblings.nonEmpty =>
-        toPrevSibling.flatMap(c => c.lastExecuted orElse c.seqPrev)
-      case p =>
-        moveUp.flatMap(_.seqPrev)
-    }
-
-  @deprecated("Use topology", "15.12.2021")
-  lazy val seqNext: Option[RawCursor] =
-    parentTag.flatMap {
-      case _: SeqGroupTag if rightSiblings.nonEmpty =>
-        toNextSibling.flatMap(c => c.firstExecuted orElse c.seqNext)
-      case _ => moveUp.flatMap(_.seqNext)
-    }
-
   lazy val isNoExec: Boolean =
     tag match {
       case _: NoExecTag => true
