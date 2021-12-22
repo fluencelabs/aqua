@@ -605,7 +605,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         )
       )
 
-    val proc = Topology.resolve(init, debug = true)
+    val proc = Topology.resolve(init)
 
     val expected: Node.Res =
       MakeRes.seq(

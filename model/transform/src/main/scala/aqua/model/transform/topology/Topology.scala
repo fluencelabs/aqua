@@ -175,7 +175,7 @@ object Topology extends Logging {
   }
 
   // Parent == Par
-  object ParBranch extends Ends with After {
+  object ParGroupBranch extends Ends with After {
     override def toString: String = "<par>/*"
 
     override def forceExit(current: Topology): Eval[Boolean] =
@@ -189,7 +189,14 @@ object Topology extends Logging {
         case pa if pa.nonEmpty =>
           // Ping the next (join) peer to enforce its data update
           current.afterOn.map(_.headOption.map(_.peerId)).map(Chain.fromOption).map(pa ++ _)
-        case pa => Eval.now(pa)
+        case pa =>
+          (current.endsOn, current.afterOn, current.forceExit).mapN {
+            case (e, a, false) => pa
+            case (e, a, f) if e == a => pa
+            case (e, a, _) =>
+              // Pinback in case no relays involved
+              Chain.fromOption(a.headOption.map(_.peerId))
+          }
       }
 
     override def endsOn(current: Topology): Eval[List[OnTag]] = current.beforeOn
@@ -216,7 +223,7 @@ object Topology extends Logging {
     override def forceExit(current: Topology): Eval[Boolean] = Eval.now(false)
   }
 
-  object ParGroup extends Begins {
+  object ParGroup extends Begins with Ends {
     override def toString: String = "<par>"
 
     override def beginsOn(current: Topology): Eval[List[OnTag]] =
@@ -228,6 +235,17 @@ object Topology extends Logging {
           }
         }
         .map(_.map(_.reverse)) getOrElse super.beginsOn(current)
+
+    override def endsOn(current: Topology): Eval[List[OnTag]] =
+      current.children
+        .map(_.forceExit)
+        .reduceLeftOption { case (a, b) =>
+          (a, b).mapN(_ || _)
+        }
+        .map(_.flatMap {
+          case true => current.afterOn
+          case false => super.endsOn(current)
+        }) getOrElse super.endsOn(current)
   }
 
   object For extends Begins {
@@ -296,12 +314,13 @@ object Topology extends Logging {
       cursor.tag match {
         case _: SeqGroupTag => SeqGroup
         case XorTag => XorGroup
+        case ParTag | ParTag.Detach => ParGroup
         case _ if cursor.parentTag.isEmpty => Root
         case _ => Default
       },
       // After
       cursor.parentTag match {
-        case Some(ParTag | ParTag.Detach) => ParBranch
+        case Some(ParTag | ParTag.Detach) => ParGroupBranch
         case Some(XorTag) => XorBranch
         case Some(_: SeqGroupTag) => SeqGroupBranch
         case None => Root
@@ -363,14 +382,17 @@ object Topology extends Logging {
         if (debug) {
           println(Console.BLUE + rc + Console.RESET)
           println(rc.topology)
-          //println("Before: " + rc.topology.beforeOn.value)
-          //println("Begin: " + rc.topology.beginsOn.value)
-          //println("PathBefore: " + rc.topology.pathBefore.value)
+          println("Before: " + rc.topology.beforeOn.value)
+          println("Begin: " + rc.topology.beginsOn.value)
+          println("PathBefore: " + rc.topology.pathBefore.value)
+
+          println(Console.CYAN + "Parent: " + rc.topology.parent + Console.RESET)
+
           println("End  : " + rc.topology.endsOn.value)
           println("After: " + rc.topology.afterOn.value)
           println("Exit : " + rc.topology.forceExit.value)
-          println(Console.CYAN + "Parent: " + rc.topology.parent + Console.RESET)
           println("PathAfter: " + rc.topology.pathAfter.value)
+          println(Console.YELLOW + "     -     -     -     -     -" + Console.RESET)
         }
 
         val chainZipperEv = resolved.traverse(cofree =>
