@@ -14,7 +14,16 @@ import cats.syntax.traverse.*
 import cats.syntax.apply.*
 import scribe.Logging
 
-case class Topology(
+/**
+ * Wraps all the logic for topology reasoning about the tag in the AST represented by the [[cursor]]
+ *
+ * @param cursor Pointer to the current place in the AST
+ * @param before Strategy of calculating where the previous executions happened
+ * @param begins Strategy of calculating where execution of this tag/node should begin
+ * @param ends   Strategy of calculating where execution of this tag/node happens
+ * @param after  Strategy of calculating where the next execution should happen and whether we need to move there or not
+ */
+case class Topology private (
   cursor: RawCursor,
   before: Topology.Before,
   begins: Topology.Begins,
@@ -96,9 +105,11 @@ case class Topology(
   // After this element is done, where should it move to prepare for the next one
   lazy val afterOn: Eval[List[OnTag]] = after.afterOn(this).memoize
 
+  // Usually we don't care about exiting from where this tag ends into the outer scope
+  // But for some cases, like par branches, its necessary, so the exit can be forced
   lazy val forceExit: Eval[Boolean] = after.forceExit(this).memoize
 
-  // Where we finnaly are
+  // Where we finally are, after exit enforcement is applied
   lazy val finallyOn: Eval[List[OnTag]] = after.finallyOn(this).memoize
 
   lazy val pathBefore: Eval[Chain[ValueModel]] = begins.pathBefore(this).memoize
@@ -110,7 +121,8 @@ object Topology extends Logging {
   type Tree = Cofree[Chain, RawTag]
   type Res = Cofree[Chain, ResolvedOp]
 
-  private def findAppendix(bef: List[OnTag], beg: List[OnTag]): Chain[ValueModel] =
+  // Returns a peerId to go to in case it equals the last relay: useful when we do execution on the relay
+  private def findRelayPathEnforcement(bef: List[OnTag], beg: List[OnTag]): Chain[ValueModel] =
     Chain.fromOption(
       beg.headOption
         .map(_.peerId)
@@ -138,7 +150,7 @@ object Topology extends Logging {
         // peer where we go, but there's no service calls there
         current.firstExecutesOn.map {
           case Some(where) if where != beg =>
-            pb ++ findAppendix(bef, beg)
+            pb ++ findRelayPathEnforcement(bef, beg)
           case _ => pb
         }
       }
@@ -168,12 +180,16 @@ object Topology extends Logging {
         _.afterOn
       ) getOrElse current.pathOn
 
+    // In case exit is performed and pathAfter is inserted, we're actually where
+    // execution is expected to continue After this node is handled
     final def finallyOn(current: Topology): Eval[List[OnTag]] =
       current.forceExit.flatMap {
         case true => current.afterOn
         case false => current.endsOn
       }
 
+    // If exit is forced, make a path outside this node
+    // – from where it ends to where execution is expected to continue
     def pathAfter(current: Topology): Eval[Chain[ValueModel]] =
       current.forceExit.flatMap {
         case true =>
@@ -191,6 +207,7 @@ object Topology extends Logging {
   object SeqGroupBranch extends Before with After {
     override def toString: String = "<seq>/*"
 
+    // If parent is seq, then before this node we are where previous node, if any, ends
     override def beforeOn(current: Topology): Eval[List[OnTag]] =
       current.prevSibling
         .map(_.finallyOn) getOrElse super.beforeOn(current)
@@ -244,7 +261,7 @@ object Topology extends Logging {
                 Chain.fromOption(a.headOption.map(_.peerId))
               case (e, a, _) =>
                 // We wasn't at e, so need to get through the last peer in case it matches with the relay
-                findAppendix(a, e) ++ Chain.fromOption(a.headOption.map(_.peerId))
+                findRelayPathEnforcement(a, e) ++ Chain.fromOption(a.headOption.map(_.peerId))
             }
         }
         .flatMap { appendix =>
@@ -279,6 +296,9 @@ object Topology extends Logging {
   object ParGroup extends Begins with Ends {
     override def toString: String = "<par>"
 
+    // Optimization: find the longest common prefix of all the par branches, and move it outside of this par
+    // When branches will calculate their paths, they will take this move into account.
+    // So less hops will be produced
     override def beginsOn(current: Topology): Eval[List[OnTag]] =
       current.children
         .map(_.beginsOn.map(_.reverse))
@@ -289,6 +309,7 @@ object Topology extends Logging {
         }
         .map(_.map(_.reverse)) getOrElse super.beginsOn(current)
 
+    // Par block ends where all the branches end, if they have forced exit (not fire-and-forget)
     override def endsOn(current: Topology): Eval[List[OnTag]] =
       current.children
         .map(_.forceExit)
@@ -304,6 +325,8 @@ object Topology extends Logging {
   object For extends Begins {
     override def toString: String = "<for>"
 
+    // Optimization: get all the path inside the For block out of the block, to avoid repeating
+    // hops for every For iteration
     override def beginsOn(current: Topology): Eval[List[OnTag]] =
       (current.forTag zip current.firstChild.map(_.beginsOn)).map { case (f, b) =>
         // Take path until this for's iterator is used
@@ -322,16 +345,6 @@ object Topology extends Logging {
             ._2
         )
       } getOrElse super.beginsOn(current)
-
-    override def pathBefore(current: Topology): Eval[Chain[ValueModel]] =
-      (
-        current.beforeOn,
-        current.beginsOn.map {
-          case OnTag(z, relays @ y ==: _) :: tail if z == y =>
-            OnTag(LiteralModel.quote("impossible peer"), relays) :: tail
-          case path => path
-        }
-      ).mapN(PathFinder.findPath)
 
   }
 

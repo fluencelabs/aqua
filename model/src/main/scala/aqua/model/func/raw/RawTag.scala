@@ -7,6 +7,7 @@ import cats.data.NonEmptyList
 import cats.data.Chain
 
 sealed trait RawTag {
+  // What variable names this tag uses (children are not respected)
   def usesVarNames: Set[String] = Set.empty
 
   def mapValues(f: ValueModel => ValueModel): RawTag = this match {
@@ -76,7 +77,8 @@ case object XorTag extends GroupTag {
 }
 
 case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag {
-  override def usesVarNames: Set[String] = xor.head.usesVarNames ++ par.head.usesVarNames
+  // Collect all the used variable names
+  override def usesVarNames: Set[String] = xor.usesVarNames.value ++ par.usesVarNames.value
 }
 
 case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag {
@@ -97,7 +99,7 @@ case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag {
 }
 
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
-  extends SeqGroupTag {
+    extends SeqGroupTag {
 
   override def usesVarNames: Set[String] =
     ValueModel.varName(left).toSet ++ ValueModel.varName(right).toSet
@@ -108,48 +110,48 @@ case class ForTag(item: String, iterable: ValueModel) extends SeqGroupTag {
 }
 
 case class CallArrowTag(
-                         funcName: String,
-                         call: Call
-                       ) extends RawTag {
+  funcName: String,
+  call: Call
+) extends RawTag {
   override def usesVarNames: Set[String] = call.argVarNames
 }
 
 case class DeclareStreamTag(
-                             value: ValueModel
-                           ) extends NoExecTag {
+  value: ValueModel
+) extends NoExecTag {
   override def usesVarNames: Set[String] = ValueModel.varName(value).toSet
 }
 
 case class AssignmentTag(
-                          value: ValueModel,
-                          assignTo: String
-                        ) extends NoExecTag {
+  value: ValueModel,
+  assignTo: String
+) extends NoExecTag {
   override def usesVarNames: Set[String] = Set(assignTo) ++ ValueModel.varName(value)
 }
 
 case class ClosureTag(
-                       func: FuncModel
-                     ) extends NoExecTag {
+  func: FuncModel
+) extends NoExecTag {
   // TODO captured names are lost?
   override def usesVarNames: Set[String] = Set(func.name)
 }
 
 case class ReturnTag(
-                      values: NonEmptyList[ValueModel]
-                    ) extends NoExecTag
+  values: NonEmptyList[ValueModel]
+) extends NoExecTag
 
 object EmptyTag extends NoExecTag
 
 case class AbilityIdTag(
-                         value: ValueModel,
-                         service: String
-                       ) extends NoExecTag
+  value: ValueModel,
+  service: String
+) extends NoExecTag
 
 case class CallServiceTag(
-                           serviceId: ValueModel,
-                           funcName: String,
-                           call: Call
-                         ) extends RawTag {
+  serviceId: ValueModel,
+  funcName: String,
+  call: Call
+) extends RawTag {
 
   override def usesVarNames: Set[String] = ValueModel.varName(serviceId).toSet ++ call.argVarNames
 

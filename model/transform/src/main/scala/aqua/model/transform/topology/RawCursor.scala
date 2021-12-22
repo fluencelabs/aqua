@@ -12,9 +12,9 @@ import scribe.Logging
 
 // Can be heavily optimized by caching parent cursors, not just list of zippers
 case class RawCursor(
-                      tree: NonEmptyList[ChainZipper[FuncOp.Tree]],
-                      cachedParent: Option[RawCursor] = None
-                    ) extends ChainCursor[RawCursor, FuncOp.Tree](RawCursor.apply(_, None)) with Logging {
+  tree: NonEmptyList[ChainZipper[FuncOp.Tree]],
+  cachedParent: Option[RawCursor] = None
+) extends ChainCursor[RawCursor, FuncOp.Tree](RawCursor.apply(_, None)) with Logging {
 
   override def moveUp: Option[RawCursor] = cachedParent.orElse(super.moveUp)
 
@@ -50,6 +50,7 @@ case class RawCursor(
 
   lazy val tagsPath: NonEmptyList[RawTag] = path.map(_.head)
 
+  // Whether the current branch contains any AIR-executable code or not
   lazy val isNoExec: Boolean =
     tag match {
       case _: NoExecTag => true
@@ -60,6 +61,7 @@ case class RawCursor(
   def hasExecLater: Boolean =
     !allToRight.forall(_.isNoExec)
 
+  // Whether variables exported from this branch are used later in the code or not
   def exportsUsedLater: Boolean =
     FuncOp(current).exportsVarNames.map(ns => ns.nonEmpty && checkNamesUsedLater(ns)).value
 
@@ -87,7 +89,7 @@ case class RawCursor(
             .getOrElse(LazyList.empty)
         )
       }
-        // TODO: this can be parallelized
+      // TODO: this can be parallelized
         .flatMap(_.traverse(_.cata(wrap)(folder)))
         .map(_.flatMap(identity))
         .flatMap(addition => curr.tail.map(_ ++ addition))

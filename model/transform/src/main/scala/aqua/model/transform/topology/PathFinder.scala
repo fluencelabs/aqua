@@ -10,6 +10,12 @@ import scala.annotation.tailrec
 
 object PathFinder extends Logging {
 
+  /**
+   * Finds the path – chain of peers to visit to get from [[fromOn]] to [[toOn]]
+   * @param fromOn Previous location
+   * @param toOn Next location
+   * @return Chain of peers to visit in between
+   */
   def findPath(fromOn: List[OnTag], toOn: List[OnTag]): Chain[ValueModel] =
     findPath(
       Chain.fromSeq(fromOn).reverse,
@@ -49,6 +55,14 @@ object PathFinder extends Logging {
     optimized
   }
 
+  /**
+   * Removes cycles from the path
+   *
+   * @param peerIds peers to walk trough
+   * @param prefix  getting from the previous peer
+   * @param suffix  getting to the next peer
+   * @return optimal path with no duplicates
+   */
   def optimizePath(
     peerIds: Chain[ValueModel],
     prefix: Chain[ValueModel],
