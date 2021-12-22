@@ -1,10 +1,6 @@
-service CustomId("cid"):
-  id() -> string
+service TestS("some-id"):
+    t: string -> string
 
-func first(node_id: string) -> string:
-    on node_id:
-        try:
-            p <- CustomId.id()
-        catch err:
-            co CustomId.id()
-    <- p
+func doStuff(c: bool):
+    if c:
+        TestS.t("fr")

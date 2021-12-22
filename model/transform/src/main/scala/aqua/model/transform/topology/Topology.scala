@@ -105,7 +105,7 @@ object Topology extends Logging {
   trait After {
     def forceExit(current: Topology): Boolean = false
 
-    def afterOn(current: Topology): List[OnTag] = current.endsOn
+    def afterOn(current: Topology): List[OnTag] = current.pathOn
 
     // TODO 3
     protected def afterParent(current: Topology): List[OnTag] =
@@ -331,6 +331,8 @@ object Topology extends Logging {
           println("Before: " + rc.topology.beforeOn)
           println("Begin: " + rc.topology.beginsOn)
           println("PathBefore: " + rc.topology.pathBefore)
+          println(Console.CYAN + "Parent: " + rc.topology.parent + Console.RESET)
+          println("PathAfter: " + rc.topology.pathAfter)
         }
 
         val chainZipperEv = resolved.traverse(cofree =>
