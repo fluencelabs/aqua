@@ -24,14 +24,17 @@ object MakeRes {
   def seq(first: Res, second: Res, more: Res*): Res =
     Cofree[Chain, ResolvedOp](SeqRes, Eval.later(first +: second +: Chain.fromSeq(more)))
 
-  def par(first: Res, second: Res, more: Res*): Res =
-    Cofree[Chain, ResolvedOp](ParRes, Eval.later(first +: second +: Chain.fromSeq(more)))
+  def par(first: Res, more: Res*): Res =
+    Cofree[Chain, ResolvedOp](ParRes, Eval.later(first +: Chain.fromSeq(more)))
 
   def xor(first: Res, second: Res): Res =
     Cofree[Chain, ResolvedOp](XorRes, Eval.later(Chain(first, second)))
 
   def fold(item: String, iter: ValueModel, body0: Res, body: Res*): Res =
-    Cofree[Chain, ResolvedOp](FoldRes(item, iter), Eval.now(Chain.one(body0) ++ Chain.fromSeq(body)))
+    Cofree[Chain, ResolvedOp](
+      FoldRes(item, iter),
+      Eval.now(Chain.one(body0) ++ Chain.fromSeq(body))
+    )
 
   def noop(onPeer: ValueModel): Res =
     leaf(CallServiceRes(LiteralModel.quote("op"), "noop", CallRes(Nil, None), onPeer))

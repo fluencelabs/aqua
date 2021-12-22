@@ -13,6 +13,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class TopologySpec extends AnyFlatSpec with Matchers {
+
   import Node._
 
   "topology resolver" should "do nothing on init peer" in {
@@ -562,6 +563,30 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
 
     proc.equalsOrPrintDiff(expected) should be(true)
+  }
+
+  "topology resolver" should "handle detach" in {
+    val init =
+      on(
+        initPeer,
+        relay :: Nil,
+        co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.`type`) :: Nil))),
+        callTag(2, Nil, varNode :: Nil)
+      )
+
+    val proc = Topology.resolve(init)
+
+    val expected: Node.Res =
+      MakeRes.seq(
+        MakeRes.par(
+          MakeRes.seq(
+            through(relay),
+            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.`type`))),
+            through(relay)
+          )
+        ),
+        callRes(2, initPeer, None, varNode :: Nil)
+      )
   }
 
 }
