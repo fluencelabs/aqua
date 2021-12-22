@@ -1,0 +1,23 @@
+service Kademlia("kad"):
+  neighborhood: string, ?bool, ?bool -> []string
+
+service Peer("peer"):
+  timestamp_sec: -> ()
+  timeout: u32, string -> ()
+
+func ack_peers() -> []string:
+  acked_peers: *string
+
+  on HOST_PEER_ID:
+    nodes <- Kademlia.neighborhood(%init_peer_id%, nil, nil)
+    for n <- nodes par:
+      status: *string
+      on n:
+        Peer.timestamp_sec()
+        status <<- "acked"
+
+      if status! == "acked":
+        acked_peers <<- n
+
+  Peer.timeout(15000, "") -- this line's indentation triggers the bug
+  <- acked_peers

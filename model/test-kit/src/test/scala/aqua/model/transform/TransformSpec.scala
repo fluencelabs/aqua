@@ -42,16 +42,17 @@ class TransformSpec extends AnyFlatSpec with Matchers {
           through(relayV),
           through(otherRelay),
           MakeRes.xor(
-            callRes(1, otherPeer),
+            MakeRes.seq(
+              callRes(1, otherPeer),
+              through(otherRelay),
+              through(relayV)
+            ),
             MakeRes.seq(
               through(otherRelay),
               through(relayV),
-              errorCall(bc, 1, initPeer),
-              through(relayV)
+              errorCall(bc, 1, initPeer)
             )
           ),
-          through(otherRelay),
-          through(relayV),
           MakeRes.xor(
             respCall(bc, ret, initPeer),
             errorCall(bc, 2, initPeer)

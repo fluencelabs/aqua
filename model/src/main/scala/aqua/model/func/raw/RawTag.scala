@@ -1,11 +1,14 @@
 package aqua.model.func.raw
 
 import aqua.model.ValueModel
+import aqua.model.ValueModel.varName
 import aqua.model.func.{Call, FuncModel}
 import cats.data.NonEmptyList
 import cats.data.Chain
 
 sealed trait RawTag {
+  // What variable names this tag uses (children are not respected)
+  def usesVarNames: Set[String] = Set.empty
 
   def mapValues(f: ValueModel => ValueModel): RawTag = this match {
     case OnTag(peerId, via) => OnTag(f(peerId), via.map(f))
@@ -58,7 +61,9 @@ sealed trait RawTag {
 sealed trait NoExecTag extends RawTag
 
 sealed trait GroupTag extends RawTag
+
 sealed trait SeqGroupTag extends GroupTag
+
 sealed trait ParGroupTag extends GroupTag
 
 case object SeqTag extends SeqGroupTag
@@ -67,40 +72,69 @@ case object ParTag extends ParGroupTag {
   case object Detach extends ParGroupTag
 }
 
-case object XorTag extends SeqGroupTag {
-  case object LeftBiased extends SeqGroupTag
+case object XorTag extends GroupTag {
+  case object LeftBiased extends GroupTag
 }
-case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag
+
+case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag {
+  // Collect all the used variable names
+  override def usesVarNames: Set[String] = xor.usesVarNames.value ++ par.usesVarNames.value
+}
 
 case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag {
+
+  override def usesVarNames: Set[String] =
+    ValueModel.varName(peerId).toSet ++ via.iterator.flatMap(ValueModel.varName)
 
   override def toString: String =
     s"(on $peerId${if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""})"
 }
-case class NextTag(item: String) extends RawTag
-case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag
+
+case class NextTag(item: String) extends RawTag {
+  override def usesVarNames: Set[String] = Set(item)
+}
+
+case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag {
+  override def usesVarNames: Set[String] = Set(name)
+}
 
 case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
-    extends SeqGroupTag
-case class ForTag(item: String, iterable: ValueModel) extends SeqGroupTag
+    extends SeqGroupTag {
+
+  override def usesVarNames: Set[String] =
+    ValueModel.varName(left).toSet ++ ValueModel.varName(right).toSet
+}
+
+case class ForTag(item: String, iterable: ValueModel) extends SeqGroupTag {
+  override def usesVarNames: Set[String] = Set(item) ++ ValueModel.varName(iterable)
+}
 
 case class CallArrowTag(
   funcName: String,
   call: Call
-) extends RawTag
+) extends RawTag {
+  override def usesVarNames: Set[String] = call.argVarNames
+}
 
 case class DeclareStreamTag(
   value: ValueModel
-) extends NoExecTag
+) extends NoExecTag {
+  override def usesVarNames: Set[String] = ValueModel.varName(value).toSet
+}
 
 case class AssignmentTag(
   value: ValueModel,
   assignTo: String
-) extends NoExecTag
+) extends NoExecTag {
+  override def usesVarNames: Set[String] = Set(assignTo) ++ ValueModel.varName(value)
+}
 
 case class ClosureTag(
   func: FuncModel
-) extends NoExecTag
+) extends NoExecTag {
+  // TODO captured names are lost?
+  override def usesVarNames: Set[String] = Set(func.name)
+}
 
 case class ReturnTag(
   values: NonEmptyList[ValueModel]
@@ -118,13 +152,20 @@ case class CallServiceTag(
   funcName: String,
   call: Call
 ) extends RawTag {
+
+  override def usesVarNames: Set[String] = ValueModel.varName(serviceId).toSet ++ call.argVarNames
+
   override def toString: String = s"(call _ ($serviceId $funcName) $call)"
 }
 
 case class PushToStreamTag(operand: ValueModel, exportTo: Call.Export) extends RawTag {
+  override def usesVarNames: Set[String] = ValueModel.varName(operand).toSet
+
   override def toString: String = s"(push $operand $exportTo)"
 }
 
 case class CanonicalizeTag(operand: ValueModel, exportTo: Call.Export) extends RawTag {
+  override def usesVarNames: Set[String] = ValueModel.varName(operand).toSet
+
   override def toString: String = s"(can $operand $exportTo)"
 }

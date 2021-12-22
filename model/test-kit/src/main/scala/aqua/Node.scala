@@ -148,6 +148,12 @@ object Node {
     )
   }
 
+  def co(body: Raw*) = 
+    Node(
+      ParTag.Detach,
+      body.toList
+    )
+
   def on(peer: ValueModel, via: List[ValueModel], body: Raw*) =
     Node(
       OnTag(peer, Chain.fromSeq(via)),
