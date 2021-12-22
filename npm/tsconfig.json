@@ -1,13 +1,10 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "target": "es5",
+
+    "target": "esnext",
     "module": "ESNext",
     "lib": [
-      "es2017",
-      "es7",
-      "es6",
-      "dom"
+      "ESNext"
     ],
     "declaration": true,
     "outDir": "dist",
@@ -18,11 +15,12 @@
     "strictNullChecks": false,
     "skipLibCheck": true,
   },
+  "include": ["src/**/*"],
   "exclude": [
     "node_modules",
     "dist",
     "bundle",
-    "src/__test__"
-  ],
-  "include": ["src/**/*", "compiled/**/*"]
+    "src/__test__",
+    "src/compiled"
+  ]
 }

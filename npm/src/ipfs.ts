@@ -5,9 +5,8 @@ import { FluencePeer } from "@fluencelabs/fluence";
 import {
   get_external_api_multiaddr,
   get_external_swarm_multiaddr,
-} from "../compiled/ipfs";
+} from "./compiled/ipfs.js";
 import { AddResult } from "ipfs-core-types/src/root";
-const all = require('it-all')
 
 export async function uploadFile(
     path: string,

@@ -8,6 +8,6 @@ import scala.scalajs.js.annotation.{JSExportAll, JSImport}
 object IpfsApi {
 
   @js.native
-  @JSImport("./dist/src/ipfs.js", "uploadFile")
+  @JSImport("./dist/ipfs.js", "uploadFile")
   def uploadFile(path: String, provider: FluencePeer): js.Promise[String] = js.native
 }
