@@ -38,6 +38,8 @@ case class Topology(
 
   lazy val lastChild: Option[Topology] = cursor.toLastChild.map(_.topology)
 
+  lazy val children: LazyList[Topology] = cursor.children.map(_.topology)
+
   val parent: Option[Topology] = cursor.moveUp.map(_.topology)
 
   val parents: LazyList[Topology] =
@@ -214,6 +216,20 @@ object Topology extends Logging {
     override def forceExit(current: Topology): Eval[Boolean] = Eval.now(false)
   }
 
+  object ParGroup extends Begins {
+    override def toString: String = "<par>"
+
+    override def beginsOn(current: Topology): Eval[List[OnTag]] =
+      current.children
+        .map(_.beginsOn.map(_.reverse))
+        .reduceLeftOption { case (b1e, b2e) =>
+          (b1e, b2e).mapN { case (b1, b2) =>
+            (b1 zip b2).takeWhile(_ == _).map(_._1)
+          }
+        }
+        .map(_.map(_.reverse)) getOrElse super.beginsOn(current)
+  }
+
   object For extends Begins {
     override def toString: String = "<for>"
 
@@ -271,6 +287,8 @@ object Topology extends Logging {
           SeqNext
         case (_, _: ForTag) =>
           For
+        case (_, ParTag | ParTag.Detach) =>
+          ParGroup
         case _ =>
           Default
       },
@@ -345,9 +363,12 @@ object Topology extends Logging {
         if (debug) {
           println(Console.BLUE + rc + Console.RESET)
           println(rc.topology)
-          println("Before: " + rc.topology.beforeOn.value)
-          println("Begin: " + rc.topology.beginsOn.value)
-          println("PathBefore: " + rc.topology.pathBefore.value)
+          //println("Before: " + rc.topology.beforeOn.value)
+          //println("Begin: " + rc.topology.beginsOn.value)
+          //println("PathBefore: " + rc.topology.pathBefore.value)
+          println("End  : " + rc.topology.endsOn.value)
+          println("After: " + rc.topology.afterOn.value)
+          println("Exit : " + rc.topology.forceExit.value)
           println(Console.CYAN + "Parent: " + rc.topology.parent + Console.RESET)
           println("PathAfter: " + rc.topology.pathAfter.value)
         }

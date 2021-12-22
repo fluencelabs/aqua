@@ -5,6 +5,7 @@ service Peer("peer"):
   timestamp_sec: -> u64
 
 func getTwoResults():
-  co on "x":
-    z <- Peer.timestamp_sec()
-  Op2.identity(z)
+  on "other node":
+      co on "x":
+        z <- Peer.timestamp_sec()
+      Op2.identity(z)
