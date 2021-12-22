@@ -1,19 +1,18 @@
-val dottyVersion = "3.0.2"
+val dottyVersion = "3.1.0"
 
 scalaVersion := dottyVersion
 
 val baseAquaVersion = settingKey[String]("base aqua version")
 
-val catsV = "2.6.1"
-val catsParseV = "0.3.5"
+val catsV = "2.7.0"
+val catsParseV = "0.3.6"
 val monocleV = "3.0.0-M6"
-val scalaTestV = "3.2.9"
-val fs2V = "3.1.0"
-val catsEffectV = "3.2.1"
-val log4catsV = "2.1.1"
-val slf4jV = "1.7.30"
-val declineV = "2.1.0"
+val scalaTestV = "3.2.10"
+val fs2V = "3.2.3"
+val catsEffectV = "3.3.1"
+val declineV = "2.2.0"
 val circeVersion = "0.14.1"
+val scribeV = "3.6.3"
 
 name := "aqua-hll"
 
@@ -22,7 +21,7 @@ val commons = Seq(
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
-    "com.outr"      %%% "scribe"    % "3.5.5",
+    "com.outr"      %%% "scribe"    % scribeV,
     "org.scalatest" %%% "scalatest" % scalaTestV % Test
   ),
   scalacOptions ++= {
