@@ -18,7 +18,7 @@
   "scripts": {
     "run": "node index.js",
     "from:scalajs": "cp ../cli/.js/target/scala-3.0.2/cli-opt/main.js ./aqua.js && npm run build && npm run run -- $@",
-    "build": "tsc && cp -R src/compiled dist/"
+    "build": "tsc"
   },
   "dependencies": {
     "@fluencelabs/aqua-ipfs": "0.5.2",

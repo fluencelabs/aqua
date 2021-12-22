@@ -11,7 +11,7 @@ import {
     CallParams,
     callFunction,
     registerService,
-} from '@fluencelabs/fluence/dist/internal/compilerSupport/v2';
+} from '@fluencelabs/fluence/dist/internal/compilerSupport/v2.js';
 
 
 // Services
