@@ -4,16 +4,7 @@ service Op2("op"):
 service Peer("peer"):
   timestamp_sec: -> u64
 
-service Kademlia("kad"):
-  neighborhood: string, ?i32, ?i32 -> []string
-
-func getTwoResults() -> []u64:
-  on "other node":
-    nodes <- Kademlia.neighborhood(%init_peer_id%, nil, nil)
-    res: *u64
-    for n <- nodes par:
-      on n:
-        try:
-          res <- Peer.timestamp_sec()
-    Op2.identity(res!)
-  <- res
+func getTwoResults():
+  co on "x":
+    z <- Peer.timestamp_sec()
+  Op2.identity(z)

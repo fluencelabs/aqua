@@ -26,7 +26,7 @@ object Test extends IOApp.Simple {
           List(Path("./aqua")),
           Option(Path("./target")),
           TypeScriptBackend,
-          TransformConfig(wrapWithXor = true)
+          TransformConfig(wrapWithXor = false)
         )
         .map {
           case Validated.Invalid(errs) =>

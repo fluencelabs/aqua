@@ -283,7 +283,7 @@ object Topology extends Logging {
       },
       // After
       cursor.parentTag match {
-        case Some(ParTag) => ParBranch
+        case Some(ParTag | ParTag.Detach) => ParBranch
         case Some(XorTag) => XorBranch
         case Some(_: SeqGroupTag) => SeqGroupBranch
         case None => Root
@@ -345,11 +345,11 @@ object Topology extends Logging {
         if (debug) {
           println(Console.BLUE + rc + Console.RESET)
           println(rc.topology)
-          println("Before: " + rc.topology.beforeOn)
-          println("Begin: " + rc.topology.beginsOn)
-          println("PathBefore: " + rc.topology.pathBefore)
+          println("Before: " + rc.topology.beforeOn.value)
+          println("Begin: " + rc.topology.beginsOn.value)
+          println("PathBefore: " + rc.topology.pathBefore.value)
           println(Console.CYAN + "Parent: " + rc.topology.parent + Console.RESET)
-          println("PathAfter: " + rc.topology.pathAfter)
+          println("PathAfter: " + rc.topology.pathAfter.value)
         }
 
         val chainZipperEv = resolved.traverse(cofree =>
