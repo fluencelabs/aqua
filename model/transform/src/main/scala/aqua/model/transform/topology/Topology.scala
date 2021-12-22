@@ -43,6 +43,21 @@ case class Topology(
           .getOrElse(Eval.now(None))
     }).memoize
 
+  lazy val lastExecutesOn: Eval[Option[List[OnTag]]] =
+    (cursor.tag match {
+      case _: CallServiceTag => pathOn.map(Some(_))
+      case _ =>
+        children
+          .map(_.lastExecutesOn)
+          .scanRight[Eval[Option[List[OnTag]]]](Eval.now(None)) { case (acc, el) =>
+            (acc, el).mapN(_ orElse _)
+          }
+          .collectFirst {
+            case e if e.value.isDefined => e
+          }
+          .getOrElse(Eval.now(None))
+    }).memoize
+
   lazy val currentPeerId: Option[ValueModel] = pathOn.value.headOption.map(_.peerId)
 
   lazy val prevSibling: Option[Topology] = cursor.toPrevSibling.map(_.topology)
@@ -95,6 +110,14 @@ object Topology extends Logging {
   type Tree = Cofree[Chain, RawTag]
   type Res = Cofree[Chain, ResolvedOp]
 
+  private def findAppendix(bef: List[OnTag], beg: List[OnTag]): Chain[ValueModel] =
+    Chain.fromOption(
+      beg.headOption
+        .map(_.peerId)
+        .filter(lastPeerId => beg.tail.headOption.exists(_.via.lastOption.contains(lastPeerId)))
+        .filter(lastPeerId => !bef.headOption.exists(_.peerId == lastPeerId))
+    )
+
   trait Before {
 
     def beforeOn(current: Topology): Eval[List[OnTag]] =
@@ -109,19 +132,13 @@ object Topology extends Logging {
 
     def pathBefore(current: Topology): Eval[Chain[ValueModel]] =
       (current.beforeOn, current.beginsOn).mapN { case (bef, beg) =>
-        PathFinder.findPath(bef, beg) -> beg
-      }.flatMap { case (pb, beg) =>
+        (PathFinder.findPath(bef, beg), bef, beg)
+      }.flatMap { case (pb, bef, beg) =>
         // Handle the case when we need to go through the relay, but miss the hop as it's the first
         // peer where we go, but there's no service calls there
         current.firstExecutesOn.map {
           case Some(where) if where != beg =>
-            pb ++ Chain.fromOption(
-              beg.headOption
-                .map(_.peerId)
-                .filter(lastPeerId =>
-                  beg.tail.headOption.exists(_.via.lastOption.contains(lastPeerId))
-                )
-            )
+            pb ++ findAppendix(bef, beg)
           case _ => pb
         }
       }
@@ -132,7 +149,6 @@ object Topology extends Logging {
     def endsOn(current: Topology): Eval[List[OnTag]] =
       current.beginsOn
 
-    // TODO 1
     protected def lastChildFinally(current: Topology): Eval[List[OnTag]] =
       current.lastChild.map(lc =>
         lc.forceExit.flatMap {
@@ -147,7 +163,6 @@ object Topology extends Logging {
 
     def afterOn(current: Topology): Eval[List[OnTag]] = current.pathOn
 
-    // TODO 3
     protected def afterParent(current: Topology): Eval[List[OnTag]] =
       current.parent.map(
         _.afterOn
@@ -180,7 +195,6 @@ object Topology extends Logging {
       current.prevSibling
         .map(_.finallyOn) getOrElse super.beforeOn(current)
 
-    // TODO 2
     override def afterOn(current: Topology): Eval[List[OnTag]] =
       current.nextSibling.map(_.beginsOn) getOrElse afterParent(current)
 
@@ -219,19 +233,24 @@ object Topology extends Logging {
       afterParent(current)
 
     override def pathAfter(current: Topology): Eval[Chain[ValueModel]] =
-      super.pathAfter(current).flatMap {
-        case pa if pa.nonEmpty =>
+      current.forceExit
+        .flatMap[Chain[ValueModel]] {
+          case false => Eval.now(Chain.empty[ValueModel])
+          case true =>
+            (current.endsOn, current.afterOn, current.lastExecutesOn).mapN {
+              case (e, a, _) if e == a => Chain.empty[ValueModel]
+              case (e, a, l) if l.contains(e) =>
+                // Pingback in case no relays involved
+                Chain.fromOption(a.headOption.map(_.peerId))
+              case (e, a, _) =>
+                // We wasn't at e, so need to get through the last peer in case it matches with the relay
+                findAppendix(a, e) ++ Chain.fromOption(a.headOption.map(_.peerId))
+            }
+        }
+        .flatMap { appendix =>
           // Ping the next (join) peer to enforce its data update
-          current.afterOn.map(_.headOption.map(_.peerId)).map(Chain.fromOption).map(pa ++ _)
-        case pa =>
-          (current.endsOn, current.afterOn, current.forceExit).mapN {
-            case (e, a, false) => pa
-            case (e, a, f) if e == a => pa
-            case (e, a, _) =>
-              // Pinback in case no relays involved
-              Chain.fromOption(a.headOption.map(_.peerId))
-          }
-      }
+          super.pathAfter(current).map(_ ++ appendix)
+        }
 
     override def endsOn(current: Topology): Eval[List[OnTag]] = current.beforeOn
   }
