@@ -30,6 +30,9 @@ import scala.scalajs.js
 // Options and commands to work with IPFS
 object IpfsOpts extends Logging {
 
+  val IpfsAquaPath = "aqua/ipfs.aqua"
+  val UploadFuncName = "uploadFile"
+
   def pathOpt[F[_]: Files: Concurrent]: Opts[String] =
     Opts
       .option[String]("path", "Path to file", "p")
@@ -54,9 +57,9 @@ object IpfsOpts extends Logging {
         RunCommand
           .run[F](
             multiaddr,
-            "uploadFile",
+            UploadFuncName,
             LiteralModel.quote(path) :: Nil,
-            Path("aqua/ipfs.aqua"),
+            Path(IpfsAquaPath),
             Nil,
             RunConfig(timeout, logLevel, printAir, secretKey, Map.empty, ipfsUploader :: Nil)
           )
