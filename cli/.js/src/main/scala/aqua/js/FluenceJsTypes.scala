@@ -1,7 +1,7 @@
 package aqua.js
 
 import aqua.*
-import aqua.backend.{ArgDefinition, FunctionDef, NamesConfig, TypeDefinition}
+import aqua.backend.{ArgDefinition, FunctionDef, NamesConfig, ServiceDef, ServiceFunctionDef, TypeDefinition}
 
 import scala.concurrent.Promise
 import scala.scalajs.js
@@ -70,15 +70,54 @@ trait PeerStatus extends js.Object {
 @JSExportAll
 case class FunctionDefJs(
   functionName: String,
-  returnType: TypeDefinition,
-  argDefs: js.Array[ArgDefinition],
+  returnType: TypeDefinitionJs,
+  argDefs: js.Array[ArgDefinitionJs],
   names: NamesConfigJs
 )
 
 object FunctionDefJs {
 
   def apply(fd: FunctionDef): FunctionDefJs = {
-    FunctionDefJs(fd.functionName, fd.returnType, fd.argDefs.toJSArray, NamesConfigJs(fd.names))
+    FunctionDefJs(fd.functionName, TypeDefinitionJs(fd.returnType), fd.argDefs.map(ArgDefinitionJs.apply).toJSArray, NamesConfigJs(fd.names))
+  }
+}
+
+@JSExportAll
+case class ArgDefinitionJs(
+  name: String,
+  argType: TypeDefinitionJs
+)
+
+object ArgDefinitionJs {
+  def apply(ad: ArgDefinition): ArgDefinitionJs = ArgDefinitionJs(ad.name, TypeDefinitionJs(ad.argType))
+}
+
+@JSExportAll
+case class TypeDefinitionJs(tag: String)
+
+object TypeDefinitionJs {
+  def apply(td: TypeDefinition): TypeDefinitionJs = TypeDefinitionJs(td.tag)
+}
+
+@JSExportAll
+case class ServiceFunctionDefJs(
+  functionName: String,
+  argDefs: js.Array[ArgDefinitionJs],
+  returnType: TypeDefinitionJs
+)
+
+object ServiceFunctionDefJs {
+  def apply(sd: ServiceFunctionDef): ServiceFunctionDefJs = {
+    ServiceFunctionDefJs(sd.functionName, sd.argDefs.map(ArgDefinitionJs.apply).toJSArray, TypeDefinitionJs(sd.returnType))
+  }
+}
+
+@JSExportAll
+case class ServiceDefJs(defaultServiceId: Option[String], functions: js.Array[ServiceFunctionDefJs])
+
+object ServiceDefJs {
+  def apply(sd: ServiceDef): ServiceDefJs = {
+    ServiceDefJs(sd.defaultServiceId, sd.functions.map(ServiceFunctionDefJs.apply).toJSArray)
   }
 }
 
@@ -131,6 +170,10 @@ class FluencePeer extends js.Object {
 }
 
 object V2 {
+
+  @js.native
+  @JSImport("@fluencelabs/fluence/dist/internal/compilerSupport/v2.js", "registerService")
+  def registerService(args: js.Array[js.Any], `def`: ServiceDefJs): Unit = js.native
 
   @js.native
   @JSImport("@fluencelabs/fluence/dist/internal/compilerSupport/v2.js", "callFunction")

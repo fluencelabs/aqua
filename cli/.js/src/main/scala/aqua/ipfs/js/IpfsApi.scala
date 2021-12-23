@@ -10,9 +10,9 @@ object IpfsApi {
   @js.native
   @JSImport("./dist/ipfs.js", "uploadFile")
   def uploadFile(
-    path: String,
-    provider: FluencePeer,
+    path: js.Any,
+    multiaddrResult: js.Any,
     infoLogger: js.Any,
     errorLogger: js.Any
-  ): js.Promise[String] = js.native
+  ): js.Promise[js.Dynamic] = js.native
 }

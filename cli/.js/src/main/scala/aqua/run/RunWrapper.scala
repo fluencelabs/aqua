@@ -1,7 +1,7 @@
 package aqua.run
 
 import aqua.builder.{ArgumentGetter, Console, Finisher}
-import aqua.model.{ValueModel, VarModel}
+import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.model.func.{Call, FuncCallable}
 import aqua.model.func.raw.{CallArrowTag, FuncOp, FuncOps}
 import aqua.types.{ArrowType, BoxType, NilType, Type}

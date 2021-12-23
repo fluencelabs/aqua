@@ -1,5 +1,26 @@
 module IpfsExports
 
 import "@fluencelabs/aqua-ipfs/ipfs-api.aqua"
+import "@fluencelabs/aqua-ipfs/ipfs.aqua"
 
-export set_timeout, get_external_swarm_multiaddr, get_external_api_multiaddr
+export uploadFile, getExt
+
+data UploadResult:
+  cid: string
+  size: u64
+
+service IPFS("ipfs"):
+  uploadFile(path: string, multiaddr: IpfsMultiaddrResult) -> UploadResult
+
+func getExt(a: string) -> string:
+   multiaddr <- get_external_api_multiaddr(HOST_PEER_ID)
+   <- a
+
+func uploadFile(path: string) -> UploadResult:
+  on HOST_PEER_ID:
+    multiaddr <- get_external_api_multiaddr(HOST_PEER_ID)
+  result <- IPFS.uploadFile(path, multiaddr)
+  <- result
+
+
+

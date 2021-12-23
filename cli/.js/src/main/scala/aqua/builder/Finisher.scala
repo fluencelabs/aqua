@@ -1,5 +1,6 @@
 package aqua.builder
 
+import aqua.backend.{ServiceDef, ServiceFunctionDef, VoidType}
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, FluencePeer}
 import aqua.model.func.Call
@@ -7,6 +8,7 @@ import aqua.model.func.raw.CallServiceTag
 import aqua.model.{LiteralModel, VarModel}
 
 import scala.concurrent.Promise
+import scala.scalajs.js
 import scala.scalajs.js.JSON
 import scala.scalajs.js.Dynamic
 
@@ -32,8 +34,16 @@ case class Finisher private (
       fnName,
       _ => {
         promise.success(())
-        Dynamic.literal()
-      }
+        js.Promise.resolve(Dynamic.literal())
+      },
+      ServiceDef(
+        None,
+        ServiceFunctionDef(
+          fnName,
+          Nil,
+          VoidType
+        ) :: Nil
+      )
     )
   }
 }

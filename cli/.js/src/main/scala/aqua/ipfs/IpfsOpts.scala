@@ -1,14 +1,17 @@
 package aqua.ipfs
 
-import aqua.{AppOpts, LogFormatter, LogLevelTransformer, OptUtils}
+import aqua.{AppOpts, AquaIO, FluenceOpts, LogFormatter, LogLevelTransformer}
 import aqua.io.OutputPrinter
 import aqua.js.{Fluence, PeerConfig}
 import aqua.keypair.KeyPairShow.show
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
+import aqua.builder.IPFSUploader
+import aqua.files.AquaFilesIO
 import aqua.ipfs.js.IpfsApi
+import aqua.model.LiteralModel
 import aqua.run.RunCommand.createKeyPair
-import aqua.run.RunOpts
+import aqua.run.{RunCommand, RunConfig, RunOpts}
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -18,7 +21,7 @@ import cats.effect.kernel.Async
 import cats.syntax.show.*
 import cats.{Applicative, Monad}
 import com.monovore.decline.{Command, Opts}
-import fs2.io.file.Files
+import fs2.io.file.{Files, Path}
 import scribe.Logging
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -26,10 +29,6 @@ import scala.scalajs.js
 
 // Options and commands to work with IPFS
 object IpfsOpts extends Logging {
-
-  val multiaddrOpt: Opts[String] =
-    Opts
-      .option[String]("addr", "Relay multiaddress", "a")
 
   def pathOpt[F[_]: Files: Concurrent]: Opts[String] =
     Opts
@@ -43,43 +42,25 @@ object IpfsOpts extends Logging {
     ) {
       (
         pathOpt,
-        multiaddrOpt,
+        FluenceOpts.multiaddrOpt,
         AppOpts.logLevelOpt,
-        AppOpts.wrapWithOption(RunOpts.secretKeyOpt),
-        RunOpts.timeoutOpt
-      ).mapN { (path, multiaddr, logLevel, secretKey, timeout) =>
+        AppOpts.wrapWithOption(FluenceOpts.secretKeyOpt),
+        RunOpts.timeoutOpt,
+        FluenceOpts.printAir
+      ).mapN { (path, multiaddr, logLevel, secretKey, timeout, printAir) =>
         LogFormatter.initLogger(Some(logLevel))
-        val resource = Resource.make(Fluence.getPeer().pure[F]) { peer =>
-          Async[F].fromFuture(Sync[F].delay(peer.stop().toFuture))
-        }
-        resource.use { peer =>
-          Async[F].fromFuture {
-            (for {
-              keyPair <- createKeyPair(secretKey)
-              _ <- Fluence
-                .start(
-                  PeerConfig(
-                    multiaddr,
-                    timeout,
-                    LogLevelTransformer.logLevelToAvm(logLevel),
-                    keyPair.orNull
-                  )
-                )
-                .toFuture
-              cid <- IpfsApi
-                .uploadFile(
-                  path,
-                  peer,
-                  logger.info: String => Unit,
-                  logger.error: String => Unit
-                )
-                .toFuture
-            } yield {
-              ExitCode.Success
-            }).pure[F]
-          }
-        }
-
+        val ipfsUploader = new IPFSUploader("ipfs", "uploadFile")
+        implicit val aio: AquaIO[F] = new AquaFilesIO[F]
+        RunCommand
+          .run[F](
+            multiaddr,
+            "uploadFile",
+            LiteralModel.quote(path) :: Nil,
+            Path("aqua/ipfs.aqua"),
+            Nil,
+            RunConfig(timeout, logLevel, printAir, secretKey, Map.empty, ipfsUploader :: Nil)
+          )
+          .map(_ => ExitCode.Success)
       }
     }
 }

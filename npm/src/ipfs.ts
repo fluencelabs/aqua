@@ -1,32 +1,29 @@
-import {create, CID, globSource} from "ipfs-http-client";
+import {create, globSource} from "ipfs-http-client";
 import { Multiaddr, protocols } from "multiaddr";
 
-import { FluencePeer } from "@fluencelabs/fluence";
-import {
-  get_external_api_multiaddr,
-  get_external_swarm_multiaddr,
-} from "./compiled/ipfs.js";
-import { AddResult } from "ipfs-core-types/src/root";
 import * as util from "util";
+
+type UploadResult = {
+  cid: string,
+  size: number
+}
 
 export async function uploadFile(
     path: string,
-    provider: FluencePeer,
+    multiaddrResult: any,
     infoLogger: (s: string) => void,
     errorLogger: (s: string) => void
-): Promise<string> {
-  const relayPeerId = provider.getStatus().relayPeerId!;
+): Promise<UploadResult> {
 
   let rpcAddr;
-  let result = await get_external_api_multiaddr(provider, relayPeerId);
-  if (result.success) {
-    rpcAddr = result.multiaddr;
+
+  if (multiaddrResult.success) {
+    rpcAddr = multiaddrResult.multiaddr;
   } else {
     errorLogger(
-        "Failed to retrieve external api multiaddr from " +
-        relayPeerId
+        "Failed to retrieve external api multiaddr"
     );
-    throw result.error;
+    throw multiaddrResult.error;
   }
 
   let rpcMaddr = new Multiaddr(rpcAddr).decapsulateCode(
@@ -45,5 +42,8 @@ export async function uploadFile(
   const msg = util.format("uploaded file: %s", file)
   infoLogger(msg);
 
-  return file.cid.toString();
+  return {
+    cid: file.cid.toString(),
+    size: file.size
+  };
 }
