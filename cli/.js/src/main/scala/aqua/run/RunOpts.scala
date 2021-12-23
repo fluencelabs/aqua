@@ -138,8 +138,6 @@ object RunOpts extends Logging {
       case Some(data) =>
         val services = vars.map { vm =>
           val arg = data.selectDynamic(vm.name)
-          println(JSON.stringify(data))
-          println(JSON.stringify(arg))
           vm.name -> ArgumentGetter(vm, arg)
         }
         validNec(services.toMap)

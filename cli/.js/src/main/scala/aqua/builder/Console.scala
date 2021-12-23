@@ -27,11 +27,17 @@ class Console(serviceId: String, fnName: String, resultNames: List[String])
       peer,
       serviceId,
       fnName,
-      args => {
-        val str = JSON.stringify(args, space = 2)
+      varArgs => {
+        // drop last argument (tetraplets)
+        val args: Seq[js.Any] = varArgs.init
+        val toPrint = args.toList match {
+          case arg :: Nil => JSON.stringify(arg, space = 2)
+          case _ => args.map(a => JSON.stringify(a, space = 2)).mkString("[\n", ",\n", "\n]")
+        }
+
         // if an input function returns a result, our success will be after it is printed
         // otherwise finish after JS SDK will finish sending a request
-        OutputPrinter.print(str)
+        OutputPrinter.print(toPrint)
         // empty JS object
         js.Promise.resolve(Dynamic.literal())
       },
