@@ -4,6 +4,7 @@ import aqua.backend.{ArgDefinition, PrimitiveType, ServiceDef, ServiceFunctionDe
 import aqua.ipfs.js.IpfsApi
 import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer}
 import scribe.Logging
+import scalajs.js
 
 class IPFSUploader(serviceId: String, fnName: String) extends ServiceFunction with Logging {
 
@@ -13,8 +14,13 @@ class IPFSUploader(serviceId: String, fnName: String) extends ServiceFunction wi
       serviceId,
       fnName,
       args => {
+
         IpfsApi
           .uploadFile(args(0), args(1), logger.info: String => Unit, logger.error: String => Unit)
+          .`catch` { err =>
+            js.Dynamic.literal(error = "Error on uploading file: " + err)
+          }
+
       },
       ServiceDef(
         None,

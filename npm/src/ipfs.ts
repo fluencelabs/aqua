@@ -38,9 +38,8 @@ export async function uploadFile(
 
   const source: any = await globSource(path)
   const file = await ipfs.add(source);
-
-  const msg = util.format("uploaded file: %s", file)
-  infoLogger(msg);
+  
+  infoLogger("file uploaded");
 
   return {
     cid: file.cid.toString(),
