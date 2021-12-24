@@ -53,9 +53,10 @@ object FuncCaller {
             )
             .toFuture
           _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
-          _ = services.map(_.registerService(peer))
-          _ = finisherService.registerService(peer)
-          _ = config.argumentGetters.values.map(_.registerService(peer))
+          // register all services
+          _ = (services ++ config.argumentGetters.values :+ finisherService).map(
+            _.registerService(peer)
+          )
           callFuture = CallJsFunction.funcCallJs(
             air,
             functionDef,
