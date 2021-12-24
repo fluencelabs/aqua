@@ -3,9 +3,10 @@ module IpfsExports
 import "@fluencelabs/aqua-ipfs/ipfs-api.aqua"
 import "@fluencelabs/aqua-ipfs/ipfs.aqua"
 
-export uploadFile, getExt
+export uploadFile
 
 data UploadResult:
+  error: string
   cid: string
   size: u64
 

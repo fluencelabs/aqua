@@ -54,44 +54,10 @@ object RunCommand extends Logging {
     }.getOrElse(Future.successful(None))
   }
 
-  // Generates air from function, register all services and make a call through FluenceJS
-  def genAirAndMakeCall[F[_]: Async](
-    multiaddr: String,
-    wrapped: FuncCallable,
-    consoleService: Console,
-    finisherService: Finisher,
-    transformConfig: TransformConfig,
-    runConfig: RunConfig
-  )(implicit ec: ExecutionContext): F[Unit] = {
-    val funcRes = Transform.fn(wrapped, transformConfig)
-    val definitions = FunctionDef(funcRes)
-
-    val air = FuncAirGen(funcRes).generate.show
-
-    if (runConfig.printAir) {
-      OutputPrinter.print(air)
-    }
-
-    FuncCaller.funcCall[F](
-      multiaddr,
-      air,
-      definitions,
-      runConfig,
-      finisherService,
-      runConfig.services :+ consoleService
-    )
-  }
-
   private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncCallable] =
     contexts
       .flatMap(_.exports.map(e => Chain.fromSeq(e.funcs.values.toList)).getOrElse(Chain.empty))
       .find(_.funcName == funcName)
-
-  def resultVariableNames(funcCallable: FuncCallable, name: String): List[String] = {
-    funcCallable.arrowType.codomain.toList.zipWithIndex.map { case (t, idx) =>
-      name + idx
-    }
-  }
 
   /**
    * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
@@ -129,33 +95,9 @@ object RunCommand extends Logging {
         val resultV: ValidatedNec[String, F[Unit]] = contextV.andThen { contextC =>
           findFunction(contextC, func) match {
             case Some(funcCallable) =>
-              val resultNames = resultVariableNames(funcCallable, runConfig.resultName)
-              val consoleService =
-                new Console(runConfig.consoleServiceId, runConfig.printFunctionName, resultNames)
-              val promiseFinisherService =
-                Finisher(runConfig.finisherServiceId, runConfig.finisherFnName)
-
-              // call an input function from a generated function
-              val callResult: ValidatedNec[String, F[Unit]] = RunWrapper
-                .wrapCall(
-                  func,
-                  funcCallable,
-                  args,
-                  runConfig,
-                  consoleService,
-                  promiseFinisherService
-                )
-                .map { wrapped =>
-                  genAirAndMakeCall[F](
-                    multiaddr,
-                    wrapped,
-                    consoleService,
-                    promiseFinisherService,
-                    transformConfig,
-                    runConfig
-                  )
-                }
-              callResult
+              val runner =
+                new Runner(func, funcCallable, multiaddr, args, runConfig, transformConfig)
+              runner.run()
             case None =>
               Validated.invalidNec[String, F[Unit]](s"There is no function called '$func'")
           }

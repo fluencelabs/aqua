@@ -9,7 +9,9 @@ case class RunConfig(
   logLevel: Level,
   printAir: Boolean,
   secretKey: Option[Array[Byte]],
+  // services that will pass arguments to air
   argumentGetters: Map[String, ArgumentGetter],
+  // services that will be used in aqua code and need to be registered
   services: List[ServiceFunction] = Nil,
   consoleServiceId: String = "--after-callback-srv-service--",
   printFunctionName: String = "console-log",

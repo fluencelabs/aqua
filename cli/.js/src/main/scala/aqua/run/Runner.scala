@@ -1,16 +1,82 @@
 package aqua.run
 
+import aqua.backend.FunctionDef
+import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Console, Finisher}
-import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.io.OutputPrinter
+import aqua.model.{ValueModel, VarModel}
 import aqua.model.func.{Call, FuncCallable}
 import aqua.model.func.raw.{CallArrowTag, FuncOp, FuncOps}
+import aqua.model.transform.{Transform, TransformConfig}
 import aqua.types.{ArrowType, BoxType, NilType, Type}
 import cats.data.{Validated, ValidatedNec}
+import cats.effect.kernel.Async
+import cats.syntax.show.*
 
+import scala.concurrent.ExecutionContext
 import scala.scalajs.js
 
-// Wraps function to run with service calls to run it with variables and output printing
-object RunWrapper {
+class Runner(
+  funcName: String,
+  funcCallable: FuncCallable,
+  multiaddr: String,
+  args: List[ValueModel],
+  config: RunConfig,
+  transformConfig: TransformConfig
+) {
+
+  def resultVariableNames(funcCallable: FuncCallable, name: String): List[String] = {
+    funcCallable.arrowType.codomain.toList.zipWithIndex.map { case (t, idx) =>
+      name + idx
+    }
+  }
+
+  // Wraps function with necessary services, registers services and calls wrapped function with FluenceJS
+  def run[F[_]: Async]()(implicit ec: ExecutionContext): ValidatedNec[String, F[Unit]] = {
+    val resultNames = resultVariableNames(funcCallable, config.resultName)
+    val consoleService =
+      new Console(config.consoleServiceId, config.printFunctionName, resultNames)
+    val promiseFinisherService =
+      Finisher(config.finisherServiceId, config.finisherFnName)
+
+    // call an input function from a generated function
+    val callResult: ValidatedNec[String, F[Unit]] = wrapCall(
+      consoleService,
+      promiseFinisherService
+    ).map { wrapped =>
+      genAirAndMakeCall[F](
+        wrapped,
+        consoleService,
+        promiseFinisherService
+      )
+    }
+    callResult
+  }
+
+  // Generates air from function, register all services and make a call through FluenceJS
+  private def genAirAndMakeCall[F[_]: Async](
+    wrapped: FuncCallable,
+    consoleService: Console,
+    finisherService: Finisher
+  )(implicit ec: ExecutionContext): F[Unit] = {
+    val funcRes = Transform.fn(wrapped, transformConfig)
+    val definitions = FunctionDef(funcRes)
+
+    val air = FuncAirGen(funcRes).generate.show
+
+    if (config.printAir) {
+      OutputPrinter.print(air)
+    }
+
+    FuncCaller.funcCall[F](
+      multiaddr,
+      air,
+      definitions,
+      config,
+      finisherService,
+      config.services :+ consoleService
+    )
+  }
 
   // Creates getter services for variables. Return an error if there is no variable in services
   // and type of this variable couldn't be optional
@@ -41,11 +107,7 @@ object RunWrapper {
   //   res <- funcCallable(args:_*)
   //   Console.print(res)
   //   Finisher.finish()
-  def wrapCall(
-    funcName: String,
-    funcCallable: FuncCallable,
-    args: List[ValueModel],
-    config: RunConfig,
+  private def wrapCall(
     consoleService: Console,
     finisherService: Finisher
   ): ValidatedNec[String, FuncCallable] = {
@@ -92,4 +154,5 @@ object RunWrapper {
       )
     }
   }
+
 }
