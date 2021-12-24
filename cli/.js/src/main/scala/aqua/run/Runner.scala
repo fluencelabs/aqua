@@ -134,9 +134,12 @@ class Runner(
 
     val finisherServiceTag = finisherService.callTag()
 
-    val vars = args.zip(funcCallable.arrowType.domain.toList).collect {
-      case (VarModel(n, _, _), argType) => (n, argType)
-    }
+    val vars = args
+      .zip(funcCallable.arrowType.domain.toList)
+      .collect { case (VarModel(n, _, _), argType) =>
+        (n, argType)
+      }
+      .distinctBy(_._1)
 
     val gettersV = getGettersForVars(vars, config.argumentGetters)
 

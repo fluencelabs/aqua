@@ -38,7 +38,7 @@ export async function uploadFile(
 
   const source: any = await globSource(path)
   const file = await ipfs.add(source);
-  
+
   infoLogger("file uploaded");
 
   return {
