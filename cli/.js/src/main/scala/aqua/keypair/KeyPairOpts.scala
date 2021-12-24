@@ -17,10 +17,6 @@ import scala.concurrent.{ExecutionContext, Future}
 // Options and commands to work with KeyPairs
 object KeyPairOpts extends Logging {
 
-  // Used to pass existing keypair to AquaRun
-  val secretKey: Opts[String] =
-    Opts.option[String]("secret-key", "Ed25519 32-byte key in base64", "sk")
-
   // KeyPair generation
   def createKeypair[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(

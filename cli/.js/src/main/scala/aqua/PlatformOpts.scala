@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.ipfs.IpfsOpts
 import aqua.js.{Meta, Module}
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
@@ -18,7 +19,8 @@ object PlatformOpts extends Logging {
 
   def opts[F[_]: Files: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] =
     Opts.subcommand(RunOpts.runCommand[F]) orElse
-      Opts.subcommand(KeyPairOpts.createKeypair[F])
+      Opts.subcommand(KeyPairOpts.createKeypair[F]) orElse
+      Opts.subcommand(IpfsOpts.upload[F])
 
   // get path to node modules if there is `aqua-lib` module with `builtin.aqua` in it
   def getGlobalNodeModulePath: Option[Path] = {

@@ -68,11 +68,7 @@ object AquaCli extends IOApp with Logging {
       scriptOpt
       ).mapN {
       case (inputF, importsF, outputF, toAirOp, toJs, noRelayOp, noXorOp, h, v, logLevel, constants, isDryRun, isScheduled) =>
-        scribe.Logger.root
-          .clearHandlers()
-          .clearModifiers()
-          .withHandler(formatter = LogFormatter.formatter, minimumLevel = Some(logLevel))
-          .replace()
+        LogFormatter.initLogger(Some(logLevel))
 
         val toAir = toAirOp || isScheduled
         val noXor = noXorOp || isScheduled

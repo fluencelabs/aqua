@@ -6,7 +6,7 @@ import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.types.BottomType
-import aqua.{AppOpts, AquaIO, LogFormatter}
+import aqua.{AppOpts, AquaIO, FluenceOpts, LogFormatter}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.builder.ArgumentGetter
@@ -33,23 +33,6 @@ object RunOpts extends Logging {
       .option[Int]("timeout", "Request timeout in milliseconds", "t")
       .withDefault(7000)
 
-  val multiaddrOpt: Opts[String] =
-    Opts
-      .option[String]("addr", "Relay multiaddress", "a")
-      .withDefault(
-        "/dns4/kras-00.fluence.dev/tcp/19001/wss/p2p/12D3KooWR4cv1a8tv7pps4HH6wePNaK6gf1Hww5wcCMzeWxyNw51"
-      )
-
-  val secretKeyOpt: Opts[Array[Byte]] =
-    Opts
-      .option[String]("sk", "Ed25519 32-byte secret key in base64", "s")
-      .mapValidated { s =>
-        val decoder = Base64.getDecoder
-        Validated.catchNonFatal {
-          decoder.decode(s)
-        }.leftMap(t => NonEmptyList.one("secret key isn't a valid base64 string: " + t.getMessage))
-      }
-
   def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
 
     override def apply[A](span: Span.S[A]): Id[A] = {
@@ -57,47 +40,54 @@ object RunOpts extends Logging {
     }
   }
 
-  val printAir: Opts[Boolean] =
-    Opts
-      .flag("print-air", "Prints generated AIR code before function execution")
-      .map(_ => true)
-      .withDefault(false)
+  // Checks if a path is a file and it exists and transforms it
+  def checkAndTransformFile[F[_]: Files: Concurrent, T](
+    path: String,
+    transform: Path => F[ValidatedNec[String, T]]
+  ): F[ValidatedNec[String, T]] = {
+    val p = Path(path)
+    Files[F]
+      .exists(p)
+      .flatMap { exists =>
+        if (exists)
+          Files[F].isRegularFile(p).flatMap { isFile =>
+            if (isFile) {
+              transform(p)
+            } else {
+              invalidNec(s"Path '${p.toString}' is not a file").pure[F]
+            }
+          }
+        else {
+          invalidNec(s"There is no path '${p.toString}'").pure[F]
+        }
+      }
+  }
 
   def dataFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, Option[js.Dynamic]]]] =
     Opts
       .option[String]("data-path", "Path to file with arguments map in JSON format", "p")
       .map { str =>
-        val p = Path(str)
-        Files[F]
-          .exists(p)
-          .flatMap { exists =>
-            if (exists)
-              Files[F].isRegularFile(p).flatMap { isFile =>
-                if (isFile) {
-                  Files[F]
-                    .readAll(p)
-                    .through(fs2.text.utf8.decode)
-                    .fold(List.empty[String]) { case (acc, str) => str :: acc }
-                    .map(_.mkString(""))
-                    .map { jsonStr =>
-                      Validated.catchNonFatal {
-                        JSON.parse(jsonStr)
-                      }.leftMap(t =>
-                        NonEmptyChain
-                          .one(s"Data in ${p.toString} isn't a valid JSON: " + t.getMessage)
-                      )
-                    }
-                    .compile
-                    .last
-                    .map(_.map(_.map(v => Some(v))).getOrElse(validNec(None)))
-                } else {
-                  invalidNec(s"Path '${p.toString}' is not a file").pure[F]
-                }
+        checkAndTransformFile(
+          str,
+          p => {
+            Files[F]
+              .readAll(p)
+              .through(fs2.text.utf8.decode)
+              .fold(List.empty[String]) { case (acc, str) => str :: acc }
+              .map(_.mkString(""))
+              .map { jsonStr =>
+                Validated.catchNonFatal {
+                  JSON.parse(jsonStr)
+                }.leftMap(t =>
+                  NonEmptyChain
+                    .one(s"Data in ${p.toString} isn't a valid JSON: " + t.getMessage)
+                )
               }
-            else {
-              invalidNec(s"There is no path '${p.toString}'").pure[F]
-            }
+              .compile
+              .last
+              .map(_.map(_.map(v => Some(v))).getOrElse(validNec(None)))
           }
+        )
       }
 
   val dataOpt: Opts[js.Dynamic] =
@@ -172,12 +162,14 @@ object RunOpts extends Logging {
     (
       AppOpts.inputOpts[F],
       AppOpts.importOpts[F],
-      multiaddrOpt,
+      FluenceOpts.multiaddrOpt.withDefault(
+        "/dns4/kras-00.fluence.dev/tcp/19001/wss/p2p/12D3KooWR4cv1a8tv7pps4HH6wePNaK6gf1Hww5wcCMzeWxyNw51"
+      ),
       funcOpt,
       timeoutOpt,
       AppOpts.logLevelOpt,
-      printAir,
-      AppOpts.wrapWithOption(secretKeyOpt),
+      FluenceOpts.printAir,
+      AppOpts.wrapWithOption(FluenceOpts.secretKeyOpt),
       AppOpts.wrapWithOption(dataOpt),
       AppOpts.wrapWithOption(dataFromFileOpt[F])
     ).mapN {
@@ -193,12 +185,7 @@ object RunOpts extends Logging {
             dataFromArgument,
             dataFromFileF
           ) =>
-        scribe.Logger.root
-          .clearHandlers()
-          .clearModifiers()
-          .withHandler(formatter = LogFormatter.formatter, minimumLevel = Some(logLevel))
-          .replace()
-
+        LogFormatter.initLogger(Some(logLevel))
         for {
           inputV <- inputF
           impsV <- importF
