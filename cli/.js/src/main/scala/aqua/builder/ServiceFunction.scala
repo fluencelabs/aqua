@@ -1,11 +1,12 @@
 package aqua.builder
 
 import aqua.js.{CallServiceHandler, FluencePeer}
+import scalajs.js.Dynamic
 
 trait ServiceFunction {
   def registerService(peer: FluencePeer): Unit
 }
 
 object ServiceFunction {
-  val emptyObject = scalajs.js.Dynamic.literal
+  val emptyObject: Dynamic = Dynamic.literal()
 }
