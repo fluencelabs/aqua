@@ -17,12 +17,10 @@ object FuncCaller {
 
   /**
    * Register services and call an air code with FluenceJS SDK.
-   * @param multiaddr relay to connect to
    * @param air code to call
    * @return
    */
   def funcCall[F[_]: Async](
-    multiaddr: String,
     air: String,
     functionDef: FunctionDef,
     config: RunConfig,
@@ -31,7 +29,7 @@ object FuncCaller {
   )(implicit
     ec: ExecutionContext
   ): F[Unit] = {
-    FluenceUtils.setLogLevel(LogLevelTransformer.logLevelToFluenceJS(config.logLevel))
+    FluenceUtils.setLogLevel(LogLevelTransformer.logLevelToFluenceJS(config.common.logLevel))
 
     // stops peer in any way at the end of execution
     val resource = Resource.make(Fluence.getPeer().pure[F]) { peer =>
@@ -41,13 +39,13 @@ object FuncCaller {
     resource.use { peer =>
       Async[F].fromFuture {
         (for {
-          keyPair <- createKeyPair(config.secretKey)
+          keyPair <- createKeyPair(config.common.secretKey)
           _ <- Fluence
             .start(
               PeerConfig(
-                multiaddr,
-                config.timeout,
-                LogLevelTransformer.logLevelToAvm(config.logLevel),
+                config.common.multiaddr,
+                config.common.timeout,
+                LogLevelTransformer.logLevelToAvm(config.common.logLevel),
                 keyPair.orNull
               )
             )

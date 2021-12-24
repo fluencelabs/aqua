@@ -28,11 +28,6 @@ import scala.scalajs.js.JSON
 
 object RunOpts extends Logging {
 
-  val timeoutOpt: Opts[Int] =
-    Opts
-      .option[Int]("timeout", "Request timeout in milliseconds", "t")
-      .withDefault(7000)
-
   def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
 
     override def apply[A](span: Span.S[A]): Id[A] = {
@@ -160,32 +155,22 @@ object RunOpts extends Logging {
     ec: ExecutionContext
   ): Opts[F[cats.effect.ExitCode]] =
     (
+      FluenceOpts.commonOpt,
       AppOpts.inputOpts[F],
       AppOpts.importOpts[F],
-      FluenceOpts.multiaddrOpt.withDefault(
-        "/dns4/kras-00.fluence.dev/tcp/19001/wss/p2p/12D3KooWR4cv1a8tv7pps4HH6wePNaK6gf1Hww5wcCMzeWxyNw51"
-      ),
       funcOpt,
-      timeoutOpt,
-      AppOpts.logLevelOpt,
-      FluenceOpts.printAir,
-      AppOpts.wrapWithOption(FluenceOpts.secretKeyOpt),
       AppOpts.wrapWithOption(dataOpt),
       AppOpts.wrapWithOption(dataFromFileOpt[F])
     ).mapN {
       case (
+            common,
             inputF,
             importF,
-            multiaddr,
             (func, args),
-            timeout,
-            logLevel,
-            printAir,
-            secretKey,
             dataFromArgument,
             dataFromFileF
           ) =>
-        LogFormatter.initLogger(Some(logLevel))
+        LogFormatter.initLogger(Some(common.logLevel))
         for {
           inputV <- inputF
           impsV <- importF
@@ -198,12 +183,11 @@ object RunOpts extends Logging {
                     valid(
                       RunCommand
                         .run(
-                          multiaddr,
                           func,
                           args,
                           input,
                           imps,
-                          RunConfig(timeout, logLevel, printAir, secretKey, services)
+                          RunConfig(common, services)
                         )
                     )
                   }

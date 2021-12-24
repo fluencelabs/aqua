@@ -44,24 +44,19 @@ object IpfsOpts extends Logging {
       header = "Upload a file to IPFS"
     ) {
       (
-        pathOpt,
-        FluenceOpts.multiaddrOpt,
-        AppOpts.logLevelOpt,
-        AppOpts.wrapWithOption(FluenceOpts.secretKeyOpt),
-        RunOpts.timeoutOpt,
-        FluenceOpts.printAir
-      ).mapN { (path, multiaddr, logLevel, secretKey, timeout, printAir) =>
-        LogFormatter.initLogger(Some(logLevel))
+        FluenceOpts.commonOpt,
+        pathOpt
+      ).mapN { (common, path) =>
+        LogFormatter.initLogger(Some(common.logLevel))
         val ipfsUploader = new IPFSUploader("ipfs", "uploadFile")
         implicit val aio: AquaIO[F] = new AquaFilesIO[F]
         RunCommand
           .run[F](
-            multiaddr,
             UploadFuncName,
             LiteralModel.quote(path) :: Nil,
             Path(IpfsAquaPath),
             Nil,
-            RunConfig(timeout, logLevel, printAir, secretKey, Map.empty, ipfsUploader :: Nil)
+            RunConfig(common, Map.empty, ipfsUploader :: Nil)
           )
           .map(_ => ExitCode.Success)
       }
