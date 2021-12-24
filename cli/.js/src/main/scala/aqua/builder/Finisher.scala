@@ -34,7 +34,7 @@ case class Finisher private (
       fnName,
       _ => {
         promise.success(())
-        js.Promise.resolve(Dynamic.literal())
+        js.Promise.resolve(ServiceFunction.emptyObject)
       },
       ServiceDef(
         None,

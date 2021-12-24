@@ -39,7 +39,7 @@ class Console(serviceId: String, fnName: String, resultNames: List[String])
         // otherwise finish after JS SDK will finish sending a request
         OutputPrinter.print(toPrint)
         // empty JS object
-        js.Promise.resolve(Dynamic.literal())
+        js.Promise.resolve(ServiceFunction.emptyObject)
       },
       ServiceDef(
         None,
