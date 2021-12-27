@@ -6,10 +6,11 @@ import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.types.BottomType
-import aqua.{AppOpts, AquaIO, FluenceOpts, LogFormatter}
+import aqua.{AppOpts, AquaIO, Common, FluenceOpts, LogFormatter}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
-import aqua.builder.ArgumentGetter
+import aqua.builder.{ArgumentGetter, ServiceFunction}
+import aqua.files.AquaFilesIO
 import cats.effect.kernel.Async
 import cats.effect.{Concurrent, ExitCode, IO}
 import cats.syntax.applicative.*
@@ -149,6 +150,30 @@ object RunOpts extends Logging {
         invalidNec("Pass either data argument or path to file with arguments")
       case _ => validNec(dataFromArgument.orElse(dataFromFile))
     }
+  }
+
+  def execRun[F[_]: Files: Async](
+    common: Common,
+    funcName: String,
+    inputPath: Path,
+    imports: List[Path] = Nil,
+    args: List[ValueModel] = Nil,
+    argumentGetters: Map[String, ArgumentGetter] = Map.empty,
+    services: List[ServiceFunction] = Nil
+  )(implicit
+    ec: ExecutionContext
+  ): F[ExitCode] = {
+    LogFormatter.initLogger(Some(common.logLevel))
+    implicit val aio: AquaIO[F] = new AquaFilesIO[F]
+    RunCommand
+      .run[F](
+        funcName,
+        args,
+        inputPath,
+        imports,
+        RunConfig(common, argumentGetters, services)
+      )
+      .map(_ => ExitCode.Success)
   }
 
   def runOptions[F[_]: Files: AquaIO: Async](implicit

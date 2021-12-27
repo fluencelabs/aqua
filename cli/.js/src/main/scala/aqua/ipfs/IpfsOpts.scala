@@ -33,7 +33,7 @@ object IpfsOpts extends Logging {
   val IpfsAquaPath = "aqua/ipfs.aqua"
   val UploadFuncName = "uploadFile"
 
-  def pathOpt[F[_]: Files: Concurrent]: Opts[String] =
+  def pathOpt: Opts[String] =
     Opts
       .option[String]("path", "Path to file", "p")
 
@@ -47,18 +47,16 @@ object IpfsOpts extends Logging {
         FluenceOpts.commonOpt,
         pathOpt
       ).mapN { (common, path) =>
-        LogFormatter.initLogger(Some(common.logLevel))
         val ipfsUploader = new IPFSUploader("ipfs", "uploadFile")
-        implicit val aio: AquaIO[F] = new AquaFilesIO[F]
-        RunCommand
-          .run[F](
-            UploadFuncName,
-            LiteralModel.quote(path) :: Nil,
-            Path(IpfsAquaPath),
-            Nil,
-            RunConfig(common, Map.empty, ipfsUploader :: Nil)
-          )
-          .map(_ => ExitCode.Success)
+        RunOpts.execRun(
+          common,
+          UploadFuncName,
+          Path(IpfsAquaPath),
+          Nil,
+          LiteralModel.quote(path) :: Nil,
+          Map.empty,
+          ipfsUploader :: Nil
+        )
       }
     }
 }
