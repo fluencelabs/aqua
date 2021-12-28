@@ -69,6 +69,7 @@ jobs:
 
       - name: Publish to NPM as aqua
         run: |
+          npm i
           npm run build
           npm publish --access public --tag test
         working-directory: ./npm
