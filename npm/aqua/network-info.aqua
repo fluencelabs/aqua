@@ -27,13 +27,13 @@ func list_interfaces_by_peer(peer: PeerId) -> []Interface:
 
 func get_interface(serviceId: string) -> Interface:
   on ON_PEER:
-    res <- Dist.get_interface(serviceId)
+    res <- Srv.get_interface(serviceId)
   <- res
 
--- func get_module_interface(moduleHash: string) -> Interface:
---   on ON_PEER:
---     res <- Dist.get_module_interface(moduleHash)
---   <- res
+func get_module_interface(moduleHash: string) -> Interface:
+   on ON_PEER:
+     res <- Dist.get_module_interface(moduleHash)
+   <- res
 
 func list_blueprints() -> []Blueprint:
   on ON_PEER:

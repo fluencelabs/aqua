@@ -26,13 +26,16 @@ object NetworkOpts {
   val ListInterfacesByPeerFuncName = "list_interfaces_by_peer"
   val ListInterfacesFuncName = "list_services"
   val GetInterfaceFuncName = "get_interface"
+  val GetModuleInterfaceFuncName = "get_module_interface"
 
+  // All network commands
   def commands[F[_]: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] =
     Opts.subcommand(NetworkOpts.listModules[F]) orElse
       Opts.subcommand(NetworkOpts.listBlueprints[F]) orElse
       Opts.subcommand(NetworkOpts.listInterfacesByPeer[F]) orElse
       Opts.subcommand(NetworkOpts.listInterfaces[F]) orElse
-      Opts.subcommand(NetworkOpts.getInterface[F])
+      Opts.subcommand(NetworkOpts.getInterface[F]) orElse
+      Opts.subcommand(NetworkOpts.getModuleInterface[F])
 
   def peerOpt: Opts[String] =
     Opts
@@ -45,7 +48,7 @@ object NetworkOpts {
   def listModules[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "listModules",
-      header = "Get a list of modules"
+      header = "Print all modules"
     ) {
       FluenceOpts.commonOpt.map { common =>
         RunOpts.execRun(
@@ -59,7 +62,7 @@ object NetworkOpts {
   def listBlueprints[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "listBlueprints",
-      header = "Get a list of blueprints"
+      header = "Print all blueprints"
     ) {
       FluenceOpts.commonOpt.map { common =>
         RunOpts.execRun(
@@ -73,7 +76,7 @@ object NetworkOpts {
   def listInterfacesByPeer[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "listInterfaces",
-      header = "Get a peer's list of interfaces"
+      header = "Print all services on a node owned by peer"
     ) {
       (FluenceOpts.commonOpt, AppOpts.wrapWithOption(peerOpt)).mapN { (common, peer) =>
         RunOpts.execRun(
@@ -89,7 +92,7 @@ object NetworkOpts {
   def listInterfaces[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "listAllInterfaces",
-      header = "Get list of interfaces"
+      header = "Print all services on a node"
     ) {
       (FluenceOpts.commonOpt).map { common =>
         RunOpts.execRun(
@@ -105,12 +108,28 @@ object NetworkOpts {
   def getInterface[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "getInterface",
-      header = "Get an interface by service id"
+      header = "Print a service interface"
     ) {
       (FluenceOpts.commonOpt, idOpt).mapN { (common, serviceId) =>
         RunOpts.execRun(
           common,
           GetInterfaceFuncName,
+          Path(NetworkAquaPath),
+          Nil,
+          LiteralModel.quote(serviceId) :: Nil
+        )
+      }
+    }
+
+  def getModuleInterface[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+    Command(
+      name = "getModuleInterface",
+      header = "Print a module interface"
+    ) {
+      (FluenceOpts.commonOpt, idOpt).mapN { (common, serviceId) =>
+        RunOpts.execRun(
+          common,
+          GetModuleInterfaceFuncName,
           Path(NetworkAquaPath),
           Nil,
           LiteralModel.quote(serviceId) :: Nil
