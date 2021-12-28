@@ -67,10 +67,10 @@ jobs:
       - run: npm version ${{ env.VERSION }}
         working-directory: ./npm
 
-      - run: npm run build
-
       - name: Publish to NPM as aqua
-        run: npm publish --access public --tag test
+        run: |
+          npm run build
+          npm publish --access public --tag test
         working-directory: ./npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
