@@ -21,12 +21,8 @@ object PlatformOpts extends Logging {
   def opts[F[_]: Files: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] =
     Opts.subcommand(RunOpts.runCommand[F]) orElse
       Opts.subcommand(KeyPairOpts.createKeypair[F]) orElse
-      Opts.subcommand(IpfsOpts.upload[F]) orElse
-      Opts.subcommand(NetworkOpts.listModules[F]) orElse
-      Opts.subcommand(NetworkOpts.listBlueprints[F]) orElse
-      Opts.subcommand(NetworkOpts.listInterfacesByPeer[F]) orElse
-      Opts.subcommand(NetworkOpts.listInterfaces[F]) orElse
-      Opts.subcommand(NetworkOpts.getInterface[F])
+      Opts.subcommand(IpfsOpts.ipfsOpt[F]) orElse
+      NetworkOpts.commands[F]
 
   // get path to node modules if there is `aqua-lib` module with `builtin.aqua` in it
   def getGlobalNodeModulePath: Option[Path] = {

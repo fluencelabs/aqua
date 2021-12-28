@@ -5,6 +5,8 @@ import "@fluencelabs/aqua-ipfs/ipfs.aqua"
 
 export uploadFile
 
+const ON_PEER ?= HOST_PEER_ID
+
 data UploadResult:
   error: string
   cid: string
@@ -13,9 +15,9 @@ data UploadResult:
 service IPFS("ipfs"):
   uploadFile(path: string, multiaddr: IpfsMultiaddrResult) -> UploadResult
 
-func uploadFile(path: string) -> UploadResult:
-  on HOST_PEER_ID:
-    multiaddr <- get_external_api_multiaddr(HOST_PEER_ID)
+func uploadFile(path: string, peer: PeerId) -> UploadResult:
+  on ON_PEER:
+    multiaddr <- get_external_api_multiaddr(ON_PEER)
   result <- IPFS.uploadFile(path, multiaddr)
   <- result
 

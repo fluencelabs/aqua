@@ -11,6 +11,7 @@ import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, Validate
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.builder.{ArgumentGetter, ServiceFunction}
 import aqua.files.AquaFilesIO
+import aqua.model.transform.TransformConfig
 import cats.effect.kernel.Async
 import cats.effect.{Concurrent, ExitCode, IO}
 import cats.syntax.applicative.*
@@ -28,6 +29,8 @@ import scala.concurrent.ExecutionContext
 import scala.scalajs.js.JSON
 
 object RunOpts extends Logging {
+
+  val OnPeerConst = "ON_PEER"
 
   def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
 
@@ -152,6 +155,11 @@ object RunOpts extends Logging {
     }
   }
 
+  def transformConfigWithOnPeer(onPeer: Option[String]) =
+    TransformConfig(constants =
+      onPeer.map(s => TransformConfig.Const(OnPeerConst, LiteralModel.quote(s))).toList
+    )
+
   def execRun[F[_]: Files: Async](
     common: Common,
     funcName: String,
@@ -171,7 +179,8 @@ object RunOpts extends Logging {
         args,
         inputPath,
         imports,
-        RunConfig(common, argumentGetters, services)
+        RunConfig(common, argumentGetters, services),
+        transformConfigWithOnPeer(common.on)
       )
       .map(_ => ExitCode.Success)
   }
@@ -212,7 +221,8 @@ object RunOpts extends Logging {
                           args,
                           input,
                           imps,
-                          RunConfig(common, services)
+                          RunConfig(common, services),
+                          transformConfigWithOnPeer(common.on)
                         )
                     )
                   }

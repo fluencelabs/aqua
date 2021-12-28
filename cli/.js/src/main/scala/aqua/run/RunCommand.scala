@@ -71,7 +71,7 @@ object RunCommand extends Logging {
     input: Path,
     imports: List[Path],
     runConfig: RunConfig,
-    transformConfig: TransformConfig = TransformConfig()
+    transformConfig: TransformConfig
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 

@@ -15,6 +15,7 @@ case class Common(
   timeout: Int,
   logLevel: Level,
   multiaddr: String,
+  on: Option[String],
   printAir: Boolean,
   secretKey: Option[Array[Byte]]
 )
@@ -29,6 +30,12 @@ object FluenceOpts {
   val multiaddrOpt: Opts[String] =
     Opts
       .option[String]("addr", "Relay multiaddress", "a")
+
+  val onOpt: Opts[Option[String]] =
+    AppOpts.wrapWithOption(
+      Opts
+        .option[String]("on", "Where function will be run. Default: host_peer_id", "o")
+    )
 
   val secretKeyOpt: Opts[Array[Byte]] =
     Opts
@@ -64,6 +71,6 @@ object FluenceOpts {
   }
 
   val commonOpt: Opts[Common] =
-    (timeoutOpt, logLevelOpt, multiaddrOpt, printAir, AppOpts.wrapWithOption(secretKeyOpt))
+    (timeoutOpt, logLevelOpt, multiaddrOpt, onOpt, printAir, AppOpts.wrapWithOption(secretKeyOpt))
       .mapN(Common.apply)
 }

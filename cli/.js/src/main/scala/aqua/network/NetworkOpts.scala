@@ -27,6 +27,13 @@ object NetworkOpts {
   val ListInterfacesFuncName = "list_services"
   val GetInterfaceFuncName = "get_interface"
 
+  def commands[F[_]: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] =
+    Opts.subcommand(NetworkOpts.listModules[F]) orElse
+      Opts.subcommand(NetworkOpts.listBlueprints[F]) orElse
+      Opts.subcommand(NetworkOpts.listInterfacesByPeer[F]) orElse
+      Opts.subcommand(NetworkOpts.listInterfaces[F]) orElse
+      Opts.subcommand(NetworkOpts.getInterface[F])
+
   def peerOpt: Opts[String] =
     Opts
       .option[String]("peer", "PeerId", "p")
