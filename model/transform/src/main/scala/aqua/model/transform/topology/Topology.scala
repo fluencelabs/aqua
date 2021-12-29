@@ -140,6 +140,7 @@ object Topology extends Logging {
   }
 
   trait Begins {
+
     def beginsOn(current: Topology): Eval[List[OnTag]] = current.pathOn
 
     def pathBefore(current: Topology): Eval[Chain[ValueModel]] =
@@ -371,7 +372,7 @@ object Topology extends Logging {
           SeqNext
         case (_, _: ForTag) =>
           For
-        case (_, ParTag | ParTag.Detach) =>
+        case (_, ParTag) => // No begin optimization for detach
           ParGroup
         case _ =>
           Default
@@ -445,19 +446,25 @@ object Topology extends Logging {
 
         logger.trace("Resolved: " + resolved)
 
-        if (debug) {
+        if (debug || true) {
           println(Console.BLUE + rc + Console.RESET)
           println(rc.topology)
           println("Before: " + rc.topology.beforeOn.value)
           println("Begin: " + rc.topology.beginsOn.value)
-          println("PathBefore: " + rc.topology.pathBefore.value)
+          println(
+            (if (rc.topology.pathBefore.value.nonEmpty) Console.YELLOW
+             else "") + "PathBefore: " + Console.RESET + rc.topology.pathBefore.value
+          )
 
           println(Console.CYAN + "Parent: " + rc.topology.parent + Console.RESET)
 
           println("End  : " + rc.topology.endsOn.value)
           println("After: " + rc.topology.afterOn.value)
           println("Exit : " + rc.topology.forceExit.value)
-          println("PathAfter: " + rc.topology.pathAfter.value)
+          println(
+            (if (rc.topology.pathAfter.value.nonEmpty) Console.YELLOW
+             else "") + "PathAfter: " + Console.RESET + rc.topology.pathAfter.value
+          )
           println(Console.YELLOW + "     -     -     -     -     -" + Console.RESET)
         }
 
