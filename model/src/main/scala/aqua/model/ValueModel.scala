@@ -36,7 +36,6 @@ object LiteralModel {
   def quote(str: String): LiteralModel = LiteralModel("\"" + str + "\"", ScalarType.string)
 
   val initPeerId: LiteralModel = LiteralModel("%init_peer_id%", ScalarType.string)
-  val hostPeerId: LiteralModel = LiteralModel("%host_peer_id%", ScalarType.string)
 
   val nil: LiteralModel = LiteralModel(
     "[]",

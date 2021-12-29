@@ -15,7 +15,7 @@ data UploadResult:
 service IPFS("ipfs"):
   uploadFile(path: string, multiaddr: IpfsMultiaddrResult) -> UploadResult
 
-func uploadFile(path: string, peer: PeerId) -> UploadResult:
+func uploadFile(path: string) -> UploadResult:
   on ON_PEER:
     multiaddr <- get_external_api_multiaddr(ON_PEER)
   result <- IPFS.uploadFile(path, multiaddr)

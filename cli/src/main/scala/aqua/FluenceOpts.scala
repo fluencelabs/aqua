@@ -11,7 +11,7 @@ import cats.syntax.apply.*
 
 import java.util.Base64
 
-case class Common(
+case class GeneralRunOptions(
   timeout: Int,
   logLevel: Level,
   multiaddr: String,
@@ -70,7 +70,7 @@ object FluenceOpts {
       )
   }
 
-  val commonOpt: Opts[Common] =
+  val commonOpt: Opts[GeneralRunOptions] =
     (timeoutOpt, logLevelOpt, multiaddrOpt, onOpt, printAir, AppOpts.wrapWithOption(secretKeyOpt))
-      .mapN(Common.apply)
+      .mapN(GeneralRunOptions.apply)
 }

@@ -6,7 +6,7 @@ import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.types.BottomType
-import aqua.{AppOpts, AquaIO, Common, FluenceOpts, LogFormatter}
+import aqua.{AppOpts, AquaIO, FluenceOpts, GeneralRunOptions, LogFormatter}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.builder.{ArgumentGetter, ServiceFunction}
@@ -173,7 +173,7 @@ object RunOpts extends Logging {
    * @return
    */
   def execRun[F[_]: Files: Async](
-    common: Common,
+    common: GeneralRunOptions,
     funcName: String,
     inputPath: Path,
     imports: List[Path] = Nil,

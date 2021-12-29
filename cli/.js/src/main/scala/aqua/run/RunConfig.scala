@@ -1,12 +1,12 @@
 package aqua.run
 
 import aqua.builder.{ArgumentGetter, ServiceFunction}
-import aqua.Common
+import aqua.GeneralRunOptions
 import scribe.Level
 
 // `run` command configuration
 case class RunConfig(
-  common: Common,
+  common: GeneralRunOptions,
   // services that will pass arguments to air
   argumentGetters: Map[String, ArgumentGetter],
   // services that will be used in aqua code and need to be registered
