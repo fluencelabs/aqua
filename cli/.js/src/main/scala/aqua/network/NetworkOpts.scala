@@ -5,7 +5,7 @@ import aqua.builder.IPFSUploader
 import aqua.files.AquaFilesIO
 import aqua.ipfs.IpfsOpts.{pathOpt, IpfsAquaPath, UploadFuncName}
 import aqua.model.{LiteralModel, ValueModel}
-import aqua.run.{RunCommand, RunConfig, RunOpts}
+import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
 import com.monovore.decline.{Command, Opts}
@@ -50,7 +50,7 @@ object NetworkOpts {
       name = "listModules",
       header = "Print all modules"
     ) {
-      FluenceOpts.commonOpt.map { common =>
+      GeneralRunOptions.commonOpt.map { common =>
         RunOpts.execRun(
           common,
           ListModulesFuncName,
@@ -64,7 +64,7 @@ object NetworkOpts {
       name = "listBlueprints",
       header = "Print all blueprints"
     ) {
-      FluenceOpts.commonOpt.map { common =>
+      GeneralRunOptions.commonOpt.map { common =>
         RunOpts.execRun(
           common,
           ListBlueprintsFuncName,
@@ -78,7 +78,7 @@ object NetworkOpts {
       name = "listInterfaces",
       header = "Print all services on a node owned by peer"
     ) {
-      (FluenceOpts.commonOpt, AppOpts.wrapWithOption(peerOpt)).mapN { (common, peer) =>
+      (GeneralRunOptions.commonOpt, AppOpts.wrapWithOption(peerOpt)).mapN { (common, peer) =>
         RunOpts.execRun(
           common,
           ListInterfacesByPeerFuncName,
@@ -94,7 +94,7 @@ object NetworkOpts {
       name = "listAllInterfaces",
       header = "Print all services on a node"
     ) {
-      (FluenceOpts.commonOpt).map { common =>
+      (GeneralRunOptions.commonOpt).map { common =>
         RunOpts.execRun(
           common,
           ListInterfacesFuncName,
@@ -110,7 +110,7 @@ object NetworkOpts {
       name = "getInterface",
       header = "Print a service interface"
     ) {
-      (FluenceOpts.commonOpt, idOpt).mapN { (common, serviceId) =>
+      (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
         RunOpts.execRun(
           common,
           GetInterfaceFuncName,
@@ -126,7 +126,7 @@ object NetworkOpts {
       name = "getModuleInterface",
       header = "Print a module interface"
     ) {
-      (FluenceOpts.commonOpt, idOpt).mapN { (common, serviceId) =>
+      (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
         RunOpts.execRun(
           common,
           GetModuleInterfaceFuncName,

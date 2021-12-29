@@ -11,7 +11,7 @@ import aqua.files.AquaFilesIO
 import aqua.ipfs.js.IpfsApi
 import aqua.model.LiteralModel
 import aqua.run.RunCommand.createKeyPair
-import aqua.run.{RunCommand, RunConfig, RunOpts}
+import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -50,7 +50,7 @@ object IpfsOpts extends Logging {
       header = "Upload a file to IPFS"
     ) {
       (
-        FluenceOpts.commonOpt,
+        GeneralRunOptions.commonOpt,
         pathOpt
       ).mapN { (common, path) =>
         val ipfsUploader = new IPFSUploader("ipfs", "uploadFile")

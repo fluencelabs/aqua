@@ -4,21 +4,7 @@ import cats.data.{NonEmptyList, Validated}
 import com.monovore.decline.Opts
 import scribe.Level
 
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.applicative.*
-import cats.syntax.apply.*
-
 import java.util.Base64
-
-case class GeneralRunOptions(
-  timeout: Int,
-  logLevel: Level,
-  multiaddr: String,
-  on: Option[String],
-  printAir: Boolean,
-  secretKey: Option[Array[Byte]]
-)
 
 object FluenceOpts {
 
@@ -69,8 +55,4 @@ object FluenceOpts {
         )
       )
   }
-
-  val commonOpt: Opts[GeneralRunOptions] =
-    (timeoutOpt, logLevelOpt, multiaddrOpt, onOpt, printAir, AppOpts.wrapWithOption(secretKeyOpt))
-      .mapN(GeneralRunOptions.apply)
 }
