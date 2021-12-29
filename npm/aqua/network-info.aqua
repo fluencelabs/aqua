@@ -20,7 +20,7 @@ func list_interfaces_by_peer(peer: PeerId) -> []Interface:
   on ON_PEER:
     services <- Srv.list()
     interfaces: *Interface
-    for srv <- services par:
+    for srv <- services:
       if srv.owner_id == peer:
         interfaces <- Srv.get_interface(srv.id)
   <- interfaces

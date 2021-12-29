@@ -155,11 +155,23 @@ object RunOpts extends Logging {
     }
   }
 
+  // Default transform config with `onPeer` constant
   def transformConfigWithOnPeer(onPeer: Option[String]) =
     TransformConfig(constants =
       onPeer.map(s => TransformConfig.Const(OnPeerConst, LiteralModel.quote(s))).toList
     )
 
+  /**
+   * Executes a function with the specified settings
+   * @param common common settings
+   * @param funcName function name
+   * @param inputPath path to a file with a function
+   * @param imports imports that must be specified for correct compilation
+   * @param args arguments to pass into a function
+   * @param argumentGetters services to get argument if it is a variable
+   * @param services will be registered before calling for correct execution
+   * @return
+   */
   def execRun[F[_]: Files: Async](
     common: Common,
     funcName: String,
