@@ -446,7 +446,7 @@ object Topology extends Logging {
 
         logger.trace("Resolved: " + resolved)
 
-        if (debug || true) {
+        if (debug) {
           println(Console.BLUE + rc + Console.RESET)
           println(rc.topology)
           println("Before: " + rc.topology.beforeOn.value)
