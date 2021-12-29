@@ -578,9 +578,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val expected: Node.Res =
       MakeRes.seq(
-        through(relay),
         MakeRes.par(
           MakeRes.seq(
+            through(relay),
             callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.`type`))),
             through(relay),
             through(initPeer) // pingback

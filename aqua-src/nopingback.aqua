@@ -1,23 +1,14 @@
-service Kademlia("kad"):
-  neighborhood: string, ?bool, ?bool -> []string
+service HelloWorld("hello-srv"):
+  hello: string -> string
 
-service Peer("peer"):
-  timestamp_sec: -> ()
-  timeout: u32, string -> ()
+func sayHello() -> string:
+    -- execute computation on a Peer in the network
+    on "hello-peer":
+        comp <- HelloWorld.hello(%init_peer_id%)
 
-func ack_peers() -> []string:
-  acked_peers: *string
+    -- send the result to target browser in the background
+    co on "target-peer" via "target-relay":
+        res <- HelloWorld.hello(%init_peer_id%)
 
-  on HOST_PEER_ID:
-    nodes <- Kademlia.neighborhood(%init_peer_id%, nil, nil)
-    for n <- nodes par:
-      status: *string
-      on n:
-        Peer.timestamp_sec()
-        status <<- "acked"
-
-      if status! == "acked":
-        acked_peers <<- n
-
-  Peer.timeout(15000, "") -- this line's indentation triggers the bug
-  <- acked_peers
+    -- send the result to the initiator
+    <- comp
