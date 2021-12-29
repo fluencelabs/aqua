@@ -32,7 +32,7 @@ Aqua compiler itself can be compiled to and distributed either as JavaScript or 
 
 ### Build to JS
 
-Run `sbt cliJS/fullLinkJS` to build JavaScript file. You can find the compiled file in: `cli/.js/target/scala-%scala-version%/cli-opt`.
+Run `sbt cliJS/fullLinkOpt` to build JavaScript file. You can find the compiled file in: `cli/.js/target/scala-%scala-version%/cli-opt`.
 
 Then run it with `node`:
 
