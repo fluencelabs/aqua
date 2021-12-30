@@ -62,7 +62,7 @@ object AquaCli extends IOApp with Logging {
       noXorWrapper,
       wrapWithOption(helpOpt),
       wrapWithOption(versionOpt),
-      logLevelOpt,
+      FluenceOpts.logLevelOpt,
       constantOpts[Id],
       dryOpt,
       scriptOpt

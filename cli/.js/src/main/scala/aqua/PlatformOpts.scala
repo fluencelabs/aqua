@@ -10,6 +10,7 @@ import fs2.io.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import aqua.run.RunOpts
 import aqua.keypair.KeyPairOpts
+import aqua.network.NetworkOpts
 import scribe.Logging
 
 import scala.util.Try
@@ -20,7 +21,8 @@ object PlatformOpts extends Logging {
   def opts[F[_]: Files: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] =
     Opts.subcommand(RunOpts.runCommand[F]) orElse
       Opts.subcommand(KeyPairOpts.createKeypair[F]) orElse
-      Opts.subcommand(IpfsOpts.upload[F])
+      Opts.subcommand(IpfsOpts.ipfsOpt[F]) orElse
+      NetworkOpts.commands[F]
 
   // get path to node modules if there is `aqua-lib` module with `builtin.aqua` in it
   def getGlobalNodeModulePath: Option[Path] = {

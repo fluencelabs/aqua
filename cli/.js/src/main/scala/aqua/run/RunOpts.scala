@@ -9,7 +9,9 @@ import aqua.types.BottomType
 import aqua.{AppOpts, AquaIO, FluenceOpts, LogFormatter}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
-import aqua.builder.ArgumentGetter
+import aqua.builder.{ArgumentGetter, ServiceFunction}
+import aqua.files.AquaFilesIO
+import aqua.model.transform.TransformConfig
 import cats.effect.kernel.Async
 import cats.effect.{Concurrent, ExitCode, IO}
 import cats.syntax.applicative.*
@@ -28,10 +30,7 @@ import scala.scalajs.js.JSON
 
 object RunOpts extends Logging {
 
-  val timeoutOpt: Opts[Int] =
-    Opts
-      .option[Int]("timeout", "Request timeout in milliseconds", "t")
-      .withDefault(7000)
+  val OnPeerConst = "ON_PEER"
 
   def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
 
@@ -156,36 +155,68 @@ object RunOpts extends Logging {
     }
   }
 
+  // Default transform config with `onPeer` constant
+  def transformConfigWithOnPeer(onPeer: Option[String]) =
+    TransformConfig(constants =
+      onPeer.map(s => TransformConfig.Const(OnPeerConst, LiteralModel.quote(s))).toList
+    )
+
+  /**
+   * Executes a function with the specified settings
+   * @param common common settings
+   * @param funcName function name
+   * @param inputPath path to a file with a function
+   * @param imports imports that must be specified for correct compilation
+   * @param args arguments to pass into a function
+   * @param argumentGetters services to get argument if it is a variable
+   * @param services will be registered before calling for correct execution
+   * @return
+   */
+  def execRun[F[_]: Files: Async](
+    common: GeneralRunOptions,
+    funcName: String,
+    inputPath: Path,
+    imports: List[Path] = Nil,
+    args: List[ValueModel] = Nil,
+    argumentGetters: Map[String, ArgumentGetter] = Map.empty,
+    services: List[ServiceFunction] = Nil
+  )(implicit
+    ec: ExecutionContext
+  ): F[ExitCode] = {
+    LogFormatter.initLogger(Some(common.logLevel))
+    implicit val aio: AquaIO[F] = new AquaFilesIO[F]
+    RunCommand
+      .run[F](
+        funcName,
+        args,
+        inputPath,
+        imports,
+        RunConfig(common, argumentGetters, services),
+        transformConfigWithOnPeer(common.on)
+      )
+      .map(_ => ExitCode.Success)
+  }
+
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
   ): Opts[F[cats.effect.ExitCode]] =
     (
+      GeneralRunOptions.commonOpt,
       AppOpts.inputOpts[F],
       AppOpts.importOpts[F],
-      FluenceOpts.multiaddrOpt.withDefault(
-        "/dns4/kras-00.fluence.dev/tcp/19001/wss/p2p/12D3KooWR4cv1a8tv7pps4HH6wePNaK6gf1Hww5wcCMzeWxyNw51"
-      ),
       funcOpt,
-      timeoutOpt,
-      AppOpts.logLevelOpt,
-      FluenceOpts.printAir,
-      AppOpts.wrapWithOption(FluenceOpts.secretKeyOpt),
       AppOpts.wrapWithOption(dataOpt),
       AppOpts.wrapWithOption(dataFromFileOpt[F])
     ).mapN {
       case (
+            common,
             inputF,
             importF,
-            multiaddr,
             (func, args),
-            timeout,
-            logLevel,
-            printAir,
-            secretKey,
             dataFromArgument,
             dataFromFileF
           ) =>
-        LogFormatter.initLogger(Some(logLevel))
+        LogFormatter.initLogger(Some(common.logLevel))
         for {
           inputV <- inputF
           impsV <- importF
@@ -198,12 +229,12 @@ object RunOpts extends Logging {
                     valid(
                       RunCommand
                         .run(
-                          multiaddr,
                           func,
                           args,
                           input,
                           imps,
-                          RunConfig(timeout, logLevel, printAir, secretKey, services)
+                          RunConfig(common, services),
+                          transformConfigWithOnPeer(common.on)
                         )
                     )
                   }

@@ -61,19 +61,17 @@ object RunCommand extends Logging {
 
   /**
    * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
-   * @param multiaddr relay to connect to
    * @param func function name
    * @param input path to an aqua code with a function
    * @param imports the sources the input needs
    */
   def run[F[_]: Files: AquaIO: Async](
-    multiaddr: String,
     func: String,
     args: List[ValueModel],
     input: Path,
     imports: List[Path],
     runConfig: RunConfig,
-    transformConfig: TransformConfig = TransformConfig()
+    transformConfig: TransformConfig
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
@@ -96,7 +94,7 @@ object RunCommand extends Logging {
           findFunction(contextC, func) match {
             case Some(funcCallable) =>
               val runner =
-                new Runner(func, funcCallable, multiaddr, args, runConfig, transformConfig)
+                new Runner(func, funcCallable, args, runConfig, transformConfig)
               runner.run()
             case None =>
               Validated.invalidNec[String, F[Unit]](s"There is no function called '$func'")

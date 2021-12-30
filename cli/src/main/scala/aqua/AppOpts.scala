@@ -30,23 +30,6 @@ object AppOpts {
   val versionOpt: Opts[Unit] =
     Opts.flag("version", help = "Show version", "v", Visibility.Partial)
 
-  val logLevelOpt: Opts[Level] =
-    Opts.option[String]("log-level", help = "Set log level").withDefault("info").mapValidated {
-      str =>
-        Validated.fromEither(toLogLevel(str))
-    }
-
-  def toLogLevel(logLevel: String): Either[NonEmptyList[String], Level] = {
-    LogLevel.stringToLogLevel
-      .get(logLevel.toLowerCase)
-      .toRight(
-        NonEmptyList(
-          "log-level could be only 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'",
-          Nil
-        )
-      )
-  }
-
   def checkOutput[F[_]: Monad: Files](pathStr: String): F[ValidatedNec[String, Option[Path]]] = {
     val p = Path(pathStr)
     Files[F]

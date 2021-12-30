@@ -11,7 +11,7 @@ import aqua.files.AquaFilesIO
 import aqua.ipfs.js.IpfsApi
 import aqua.model.LiteralModel
 import aqua.run.RunCommand.createKeyPair
-import aqua.run.{RunCommand, RunConfig, RunOpts}
+import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -33,9 +33,15 @@ object IpfsOpts extends Logging {
   val IpfsAquaPath = "aqua/ipfs.aqua"
   val UploadFuncName = "uploadFile"
 
-  def pathOpt[F[_]: Files: Concurrent]: Opts[String] =
+  def pathOpt: Opts[String] =
     Opts
       .option[String]("path", "Path to file", "p")
+
+  def ipfsOpt[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+    Command(
+      name = "ipfs",
+      header = "Working with IPFS on peer"
+    ) { Opts.subcommand(upload) }
 
   // Uploads a file to IPFS
   def upload[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
@@ -44,26 +50,19 @@ object IpfsOpts extends Logging {
       header = "Upload a file to IPFS"
     ) {
       (
-        pathOpt,
-        FluenceOpts.multiaddrOpt,
-        AppOpts.logLevelOpt,
-        AppOpts.wrapWithOption(FluenceOpts.secretKeyOpt),
-        RunOpts.timeoutOpt,
-        FluenceOpts.printAir
-      ).mapN { (path, multiaddr, logLevel, secretKey, timeout, printAir) =>
-        LogFormatter.initLogger(Some(logLevel))
+        GeneralRunOptions.commonOpt,
+        pathOpt
+      ).mapN { (common, path) =>
         val ipfsUploader = new IPFSUploader("ipfs", "uploadFile")
-        implicit val aio: AquaIO[F] = new AquaFilesIO[F]
-        RunCommand
-          .run[F](
-            multiaddr,
-            UploadFuncName,
-            LiteralModel.quote(path) :: Nil,
-            Path(IpfsAquaPath),
-            Nil,
-            RunConfig(timeout, logLevel, printAir, secretKey, Map.empty, ipfsUploader :: Nil)
-          )
-          .map(_ => ExitCode.Success)
+        RunOpts.execRun(
+          common,
+          UploadFuncName,
+          Path(IpfsAquaPath),
+          Nil,
+          LiteralModel.quote(path) :: Nil,
+          Map.empty,
+          ipfsUploader :: Nil
+        )
       }
     }
 }

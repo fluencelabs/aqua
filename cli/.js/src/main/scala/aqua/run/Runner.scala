@@ -19,7 +19,6 @@ import scala.scalajs.js
 class Runner(
   funcName: String,
   funcCallable: FuncCallable,
-  multiaddr: String,
   args: List[ValueModel],
   config: RunConfig,
   transformConfig: TransformConfig
@@ -64,12 +63,11 @@ class Runner(
 
     val air = FuncAirGen(funcRes).generate.show
 
-    if (config.printAir) {
+    if (config.common.printAir) {
       OutputPrinter.print(air)
     }
 
     FuncCaller.funcCall[F](
-      multiaddr,
       air,
       definitions,
       config,

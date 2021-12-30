@@ -1,0 +1,41 @@
+module NetworkInfo
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+export list_modules, list_interfaces_by_peer, get_interface, list_blueprints, list_services
+
+const ON_PEER ?= HOST_PEER_ID
+
+func list_modules() -> []Module:
+  on ON_PEER:
+    res <- Dist.list_modules()
+  <- res
+
+func list_services() -> []Service:
+  on ON_PEER:
+    services <- Srv.list()
+  <- services
+
+func list_interfaces_by_peer(peer: PeerId) -> []Interface:
+  on ON_PEER:
+    services <- Srv.list()
+    interfaces: *Interface
+    for srv <- services:
+      if srv.owner_id == peer:
+        interfaces <- Srv.get_interface(srv.id)
+  <- interfaces
+
+func get_interface(serviceId: string) -> Interface:
+  on ON_PEER:
+    res <- Srv.get_interface(serviceId)
+  <- res
+
+func get_module_interface(moduleHash: string) -> Interface:
+   on ON_PEER:
+     res <- Dist.get_module_interface(moduleHash)
+   <- res
+
+func list_blueprints() -> []Blueprint:
+  on ON_PEER:
+    res <- Dist.list_blueprints()
+  <- res
