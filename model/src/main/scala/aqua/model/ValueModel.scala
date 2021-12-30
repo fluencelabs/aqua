@@ -113,8 +113,11 @@ object VarModel {
     StructType(
       "LastError",
       NonEmptyMap.of(
+        // These two fields are mandatory for all errors
+        "message" -> ScalarType.string,
+        "error_code" -> ScalarType.i64,
+        // These fields are specific to AquaVM's errors only
         "instruction" -> ScalarType.string,
-        "msg" -> ScalarType.string,
         "peer_id" -> ScalarType.string
       )
     )
