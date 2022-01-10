@@ -1,9 +1,23 @@
 package aqua.model.transform.res
 
-import aqua.model.func.raw.*
 import aqua.model.transform.topology.Topology.Res
 import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.raw.ops.{Call, CallServiceTag, CanonicalizeTag, ForTag, MatchMismatchTag, NextTag, OnTag, ParTag, PushToStreamTag, RawTag, RestrictionTag, SeqTag, XorTag}
+import aqua.raw.ops.{
+  Call,
+  CallServiceTag,
+  CanonicalizeTag,
+  ForTag,
+  MatchMismatchTag,
+  NextTag,
+  OnTag,
+  ParTag,
+  PushToStreamTag,
+  RawTag,
+  RestrictionTag,
+  SeqTag,
+  XorTag
+}
+import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.types.{ArrayType, StreamType}
 import cats.Eval
 import cats.data.Chain
@@ -12,6 +26,7 @@ import cats.free.Cofree
 // TODO docs
 object MakeRes {
   val nilTail: Eval[Chain[Res]] = Eval.now(Chain.empty)
+  val op: ValueModel = ValueModel.fromRaw(LiteralRaw.quote("op"))
 
   def leaf(op: ResolvedOp): Res = Cofree[Chain, ResolvedOp](op, nilTail)
 
@@ -37,26 +52,32 @@ object MakeRes {
     )
 
   def noop(onPeer: ValueModel): Res =
-    leaf(CallServiceRes(LiteralModel.quote("op"), "noop", CallRes(Nil, None), onPeer))
+    leaf(CallServiceRes(op, "noop", CallRes(Nil, None), onPeer))
 
   def canon(onPeer: ValueModel, operand: ValueModel, target: Call.Export): Res =
     leaf(
       CallServiceRes(
-        LiteralModel.quote("op"),
+        op,
         "identity",
         CallRes(operand :: Nil, Some(target)),
         onPeer
       )
     )
 
+  private val initPeerId = ValueModel.fromRaw(ValueRaw.InitPeerId)
+
+  private def orInit(currentPeerId: Option[ValueRaw]): ValueModel =
+    currentPeerId.fold(initPeerId)(ValueModel.fromRaw)
+
   def resolve(
-    currentPeerId: Option[ValueModel],
+    currentPeerId: Option[ValueRaw],
     i: Int
   ): PartialFunction[RawTag, Res] = {
     case SeqTag => leaf(SeqRes)
     case _: OnTag => leaf(SeqRes)
-    case MatchMismatchTag(a, b, s) => leaf(MatchMismatchRes(a, b, s))
-    case ForTag(item, iter) => leaf(FoldRes(item, iter))
+    case MatchMismatchTag(a, b, s) =>
+      leaf(MatchMismatchRes(ValueModel.fromRaw(a), ValueModel.fromRaw(b), s))
+    case ForTag(item, iter) => leaf(FoldRes(item, ValueModel.fromRaw(iter)))
     case RestrictionTag(item, isStream) => leaf(RestrictionRes(item, isStream))
     case ParTag | ParTag.Detach => leaf(ParRes)
     case XorTag | XorTag.LeftBiased => leaf(XorRes)
@@ -69,32 +90,29 @@ object MakeRes {
           //  RestrictionRes(tmpName, isStream = false),
           seq(
             canon(
-              currentPeerId
-                .getOrElse(LiteralModel.initPeerId),
-              operand,
+              orInit(currentPeerId),
+              ValueModel.fromRaw(operand),
               Call.Export(tmpName, ArrayType(st))
             ),
-            leaf(ApRes(VarModel(tmpName, ArrayType(st)), exportTo))
+            leaf(ApRes(VarModel(tmpName, ArrayType(st), Chain.empty), exportTo))
           )
         // )
         case _ =>
-          leaf(ApRes(operand, exportTo))
+          leaf(ApRes(ValueModel.fromRaw(operand), exportTo))
       }
     case CanonicalizeTag(operand, exportTo) =>
       canon(
-        currentPeerId
-          .getOrElse(LiteralModel.initPeerId),
-        operand,
+        orInit(currentPeerId),
+        ValueModel.fromRaw(operand),
         exportTo
       )
     case CallServiceTag(serviceId, funcName, Call(args, exportTo)) =>
       leaf(
         CallServiceRes(
-          serviceId,
+          ValueModel.fromRaw(serviceId),
           funcName,
-          CallRes(args, exportTo.headOption),
-          currentPeerId
-            .getOrElse(LiteralModel.initPeerId)
+          CallRes(args.map(ValueModel.fromRaw), exportTo.headOption),
+          orInit(currentPeerId)
         )
       )
   }

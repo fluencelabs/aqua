@@ -50,6 +50,4 @@ case class ApRes(operand: ValueModel, exportTo: Call.Export) extends ResolvedOp 
     ApRes(f(operand), exportTo)
 
   def mapExport(f: String => String): ApRes = copy(exportTo = exportTo.mapName(f))
-
-  def argVarNames: Set[String] = ValueModel.varName(operand).toSet
 }

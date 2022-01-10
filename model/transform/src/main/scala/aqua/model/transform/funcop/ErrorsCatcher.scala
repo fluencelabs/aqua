@@ -1,9 +1,7 @@
 package aqua.model.transform.funcop
 
-import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.model.func.raw.FuncOps
-import aqua.raw.ops
 import aqua.raw.ops.{Call, FuncOp, FuncOps, MatchMismatchTag, OnTag, RawTag, XorTag}
+import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.types.LiteralType
 import cats.Eval
 import cats.data.Chain
@@ -11,7 +9,7 @@ import cats.free.Cofree
 
 case class ErrorsCatcher(
   enabled: Boolean,
-  serviceId: ValueModel,
+  serviceId: ValueRaw,
   funcName: String,
   callable: InitPeerCallable
 ) {
@@ -34,7 +32,7 @@ case class ErrorsCatcher(
                 .wrap(
                   ot,
                   FuncOps.xor(
-                    FuncOps.seq(children.map(ops.FuncOp(_)).toList: _*),
+                    FuncOps.seq(children.map(FuncOp(_)).toList: _*),
                     callable.makeCall(
                       serviceId,
                       funcName,
@@ -47,7 +45,7 @@ case class ErrorsCatcher(
           case (tag, children) =>
             Eval.now(Cofree(tag, Eval.now(children)))
         }
-        .map(ops.FuncOp(_))
+        .map(FuncOp(_))
         .value
     } else op
 
@@ -55,10 +53,10 @@ case class ErrorsCatcher(
 
 object ErrorsCatcher {
 
-  val lastErrorArg: ValueModel = VarModel.lastError
+  val lastErrorArg: ValueRaw = ValueRaw.LastError
 
   def lastErrorCall(i: Int): Call = Call(
-    lastErrorArg :: LiteralModel(i.toString, LiteralType.number) :: Nil,
+    lastErrorArg :: LiteralRaw.number(i) :: Nil,
     Nil
   )
 }

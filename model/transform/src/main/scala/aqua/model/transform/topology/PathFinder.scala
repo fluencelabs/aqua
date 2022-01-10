@@ -1,8 +1,8 @@
 package aqua.model.transform.topology
 
-import aqua.model.ValueModel
-import aqua.model.func.raw.OnTag
 import aqua.raw.ops.OnTag
+import aqua.raw.ops.OnTag
+import aqua.raw.value.ValueRaw
 import cats.data.Chain
 import cats.data.Chain.{:==, ==:, nil}
 import scribe.Logging
@@ -17,7 +17,7 @@ object PathFinder extends Logging {
    * @param toOn Next location
    * @return Chain of peers to visit in between
    */
-  def findPath(fromOn: List[OnTag], toOn: List[OnTag]): Chain[ValueModel] =
+  def findPath(fromOn: List[OnTag], toOn: List[OnTag]): Chain[ValueRaw] =
     findPath(
       Chain.fromSeq(fromOn).reverse,
       Chain.fromSeq(toOn).reverse,
@@ -28,9 +28,9 @@ object PathFinder extends Logging {
   def findPath(
     fromOn: Chain[OnTag],
     toOn: Chain[OnTag],
-    fromPeer: Option[ValueModel],
-    toPeer: Option[ValueModel]
-  ): Chain[ValueModel] = {
+    fromPeer: Option[ValueRaw],
+    toPeer: Option[ValueRaw]
+  ): Chain[ValueRaw] = {
     logger.trace(s"FROM ON: $fromOn")
     logger.trace(s"TO ON: $toOn")
 
@@ -65,12 +65,12 @@ object PathFinder extends Logging {
    * @return optimal path with no duplicates
    */
   def optimizePath(
-    peerIds: Chain[ValueModel],
-    prefix: Chain[ValueModel],
-    suffix: Chain[ValueModel]
-  ): Chain[ValueModel] = {
+    peerIds: Chain[ValueRaw],
+    prefix: Chain[ValueRaw],
+    suffix: Chain[ValueRaw]
+  ): Chain[ValueRaw] = {
     val optimized = peerIds
-      .foldLeft(Chain.empty[ValueModel]) {
+      .foldLeft(Chain.empty[ValueRaw]) {
         case (acc, p) if acc.lastOption.contains(p) => acc
         case (acc, p) if acc.contains(p) => acc.takeWhile(_ != p) :+ p
         case (acc, p) => acc :+ p
