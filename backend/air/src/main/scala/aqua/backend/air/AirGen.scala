@@ -1,8 +1,8 @@
 package aqua.backend.air
 
 import aqua.model.*
-import aqua.model.func.Call
 import aqua.model.transform.res.*
+import aqua.raw.ops.Call
 import aqua.types.StreamType
 import cats.Eval
 import cats.data.Chain

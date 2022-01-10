@@ -1,16 +1,15 @@
-package aqua.model.func.raw
+package aqua.raw.ops
 
-import aqua.model.func.Call
-import aqua.model.{LiteralModel, ValueModel}
+import aqua.raw.value.{LiteralRaw, ValueRaw}
 import cats.data.Chain
 import cats.free.Cofree
 
 object FuncOps {
 
   def noop: FuncOp =
-    FuncOp.leaf(CallServiceTag(LiteralModel.quote("op"), "noop", Call(Nil, Nil)))
+    FuncOp.leaf(CallServiceTag(LiteralRaw.quote("op"), "noop", Call(Nil, Nil)))
 
-  def pushToStream(what: ValueModel, to: Call.Export): FuncOp =
+  def pushToStream(what: ValueRaw, to: Call.Export): FuncOp =
     FuncOp.leaf(
       PushToStreamTag(what, to)
     )
@@ -18,12 +17,12 @@ object FuncOps {
   /**
    * Canonicalizes [[what]] into [[to]], [[what]] is expected to be a stream
    */
-  def canonicalize(what: ValueModel, to: Call.Export): FuncOp =
+  def canonicalize(what: ValueRaw, to: Call.Export): FuncOp =
     FuncOp.leaf(
       CanonicalizeTag(what, to)
     )
 
-  def callService(srvId: ValueModel, funcName: String, call: Call): FuncOp =
+  def callService(srvId: ValueRaw, funcName: String, call: Call): FuncOp =
     FuncOp.leaf(
       CallServiceTag(
         srvId,
@@ -40,7 +39,7 @@ object FuncOps {
       )
     )
 
-  def onVia(on: ValueModel, via: Chain[ValueModel], wrap: FuncOp): FuncOp =
+  def onVia(on: ValueRaw, via: Chain[ValueRaw], wrap: FuncOp): FuncOp =
     FuncOp.wrap(
       OnTag(on, via),
       wrap
@@ -78,7 +77,7 @@ object FuncOps {
   def xor(left: FuncOp, right: FuncOp): FuncOp =
     FuncOp.node(XorTag, Chain(left, right))
 
-  def fold(item: String, iter: ValueModel, op: FuncOp): FuncOp =
+  def fold(item: String, iter: ValueRaw, op: FuncOp): FuncOp =
     FuncOp.wrap(
       ForTag(item, iter),
       op

@@ -32,7 +32,7 @@ val commons = Seq(
       "-language:implicitConversions",
       "-unchecked",
       "-Ykind-projector"
-//      "-Xfatal-warnings"
+      //      "-Xfatal-warnings"
     )
   }
 )
@@ -97,6 +97,18 @@ lazy val linker = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .dependsOn(parser)
 
+lazy val raw = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("model/raw"))
+  .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-free" % catsV
+    )
+  )
+  .dependsOn(types)
+
 lazy val model = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
@@ -106,14 +118,14 @@ lazy val model = crossProject(JVMPlatform, JSPlatform)
       "org.typelevel" %%% "cats-free" % catsV
     )
   )
-  .dependsOn(types)
+  .dependsOn(types, raw)
 
 lazy val transform = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("model/transform"))
   .settings(commons: _*)
-  .dependsOn(model)
+  .dependsOn(model, raw)
 
 lazy val `test-kit` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -132,7 +144,7 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
       "com.github.julien-truffaut" %%% "monocle-macro" % monocleV
     )
   )
-  .dependsOn(model, `test-kit` % Test, parser)
+  .dependsOn(raw, `test-kit` % Test, parser)
 
 lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

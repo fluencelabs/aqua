@@ -1,10 +1,10 @@
 package aqua.semantics
 
-import aqua.model.func.ArrowModel
-import aqua.model.func.raw.{EmptyTag, FuncOp}
-import aqua.model.{AquaContext, EmptyModel, Model}
 import aqua.parser.expr.func.ClosureExpr
 import aqua.parser.lexer.{Name, Token}
+import aqua.raw.arrow.ArrowRaw
+import aqua.raw.Raw
+import aqua.raw.ops.EmptyTag
 import aqua.semantics.expr.func.ClosureSem
 import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.names.{NamesInterpreter, NamesState}
@@ -21,19 +21,18 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.monad.*
 import cats.syntax.semigroup.*
-import cats.{Id, Monad, catsInstancesForId}
+import cats.{catsInstancesForId, Id, Monad}
 import monocle.Lens
 import monocle.macros.GenLens
 import monocle.syntax.all.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-
 class ClosureSemSpec extends AnyFlatSpec with Matchers {
 
   import Utils.*
 
-  val program: Prog[State[CompilerState[cats.Id], *], Model] = {
+  val program: Prog[State[CompilerState[cats.Id], *], Raw] = {
     import CompilerState.*
     val expr = ClosureExpr(Name[Id]("closure"))
     val sem = new ClosureSem[Id](expr)
@@ -43,13 +42,14 @@ class ClosureSemSpec extends AnyFlatSpec with Matchers {
 
   "sem" should "create right model" in {
 
-    val at = ArrowModel(ArrowType(ProductType(Nil), ProductType(Nil)), Nil, FuncOp.leaf(EmptyTag))
+    val at =
+      ArrowRaw(ArrowType(ProductType(Nil), ProductType(Nil)), Nil, FuncOp.leaf(EmptyTag))
     val model = getModel(program.wrap(blank, (_, _) => State.pure(at)))
-    model shouldBe(at)
+    model shouldBe (at)
   }
 
   "sem" should "create an error" in {
     val model = getModel(program)
-    model shouldBe(EmptyModel("Closure must continue with an arrow definition"))
+    model shouldBe (Raw.Empty("Closure must continue with an arrow definition"))
   }
 }

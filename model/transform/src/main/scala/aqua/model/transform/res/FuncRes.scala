@@ -1,6 +1,5 @@
 package aqua.model.transform.res
 
-import aqua.model.func.FuncCallable
 import aqua.model.transform.TransformConfig
 import aqua.types.{ArrowType, Type}
 import cats.data.Chain

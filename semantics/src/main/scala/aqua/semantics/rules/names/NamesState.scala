@@ -1,6 +1,6 @@
 package aqua.semantics.rules.names
 
-import aqua.model.AquaContext
+import aqua.raw.AquaContext
 import aqua.parser.lexer.{Name, Token}
 import aqua.types.{ArrowType, Type}
 import cats.kernel.Monoid

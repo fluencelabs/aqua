@@ -6,6 +6,8 @@ import aqua.model.func.raw.FuncOp.Tree
 import cats.Eval
 import cats.data.{Chain, NonEmptyList, OptionT}
 import aqua.model.transform.cursor.*
+import aqua.raw.ops
+import aqua.raw.ops.{FuncOp, GroupTag, NoExecTag, RawTag}
 import cats.syntax.traverse.*
 import cats.free.Cofree
 import scribe.Logging
@@ -69,7 +71,7 @@ case class RawCursor(
   def checkNamesUsedLater(names: Set[String]): Boolean =
     allToRight
       .map(_.current)
-      .map(FuncOp(_))
+      .map(ops.FuncOp(_))
       .exists(_.usesVarNames.value.intersect(names).nonEmpty)
 
   def cata[A](wrap: ChainZipper[Cofree[Chain, A]] => Chain[Cofree[Chain, A]])(

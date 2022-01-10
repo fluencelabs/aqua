@@ -1,8 +1,9 @@
 package aqua.model.transform.funcop
 
 import aqua.model.func.*
-import aqua.model.func.raw.{FuncOp, FuncOps}
+import aqua.model.func.raw.FuncOps
 import aqua.model.{ValueModel, VarModel}
+import aqua.raw.ops.{Call, FuncOp, FuncOps}
 import aqua.types.*
 import cats.Eval
 

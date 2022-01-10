@@ -1,8 +1,8 @@
 package aqua.semantics.expr.func
 
-import aqua.model.func.raw.{FuncOp, ReturnTag}
-import aqua.model.Model
+import aqua.raw.ops.{FuncOp, ReturnTag}
 import aqua.parser.expr.func.ReturnExpr
+import aqua.raw.Raw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
@@ -18,18 +18,18 @@ class ReturnSem[S[_]](val expr: ReturnExpr[S]) extends AnyVal {
   def program[Alg[_]: Monad](implicit
     V: ValuesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg]
-  ): Prog[Alg, Model] =
+  ): Prog[Alg, Raw] =
     expr.values
       .traverse(v => V.valueToModel(v).map(_.map(v -> _)))
       .map(_.toList.flatten)
       .map(NonEmptyList.fromList)
       .flatMap {
         case Some(vals) =>
-          T.checkArrowReturn(vals).map[Model] {
+          T.checkArrowReturn(vals).map[Raw] {
             case true => FuncOp.leaf(ReturnTag(vals.map(_._2)))
-            case false => Model.error("Return types validation failed")
+            case false => Raw.error("Return types validation failed")
           }
         case None =>
-          Model.error("Return types resolution failed").pure[Alg]
+          Raw.error("Return types resolution failed").pure[Alg]
       }
 }

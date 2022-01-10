@@ -1,7 +1,8 @@
-package aqua.model.func.raw
+package aqua.raw.ops
 
-import aqua.model.func.Call
-import aqua.model.{Model, ValueModel, VarModel}
+import aqua.raw.Raw
+import aqua.raw.ops
+import aqua.raw.value.{ValueRaw, VarRaw}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -10,7 +11,7 @@ import cats.kernel.Semigroup
 import cats.syntax.apply.*
 import cats.syntax.functor.*
 
-case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
+case class FuncOp(tree: Cofree[Chain, RawTag]) extends Raw {
   def head: RawTag = tree.head
 
   lazy val isRightAssoc: Boolean = head match {
@@ -58,19 +59,17 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
     case (CallServiceTag(_, _, call), acc) =>
       Eval.later(acc.foldLeft(call.argVarNames)(_ ++ _))
     case (PushToStreamTag(operand, _), acc) =>
-      Eval.later(acc.foldLeft(ValueModel.varName(operand).toSet)(_ ++ _))
+      Eval.later(acc.foldLeft(operand.usesVarNames)(_ ++ _))
     case (RestrictionTag(name, _), acc) =>
       Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _) - name)
     case (CanonicalizeTag(operand, _), acc) =>
-      Eval.later(acc.foldLeft(ValueModel.varName(operand).toSet)(_ ++ _))
-    case (MatchMismatchTag(a, b, _), acc) =>
-      Eval.later(acc.foldLeft(ValueModel.varName(a).toSet ++ ValueModel.varName(b))(_ ++ _))
-    case (ForTag(_, VarModel(name, _, _)), acc) =>
-      Eval.later(acc.foldLeft(Set(name))(_ ++ _))
-    case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
+      Eval.later(acc.foldLeft(operand.usesVarNames)(_ ++ _))
+    case (ForTag(_, iterable), acc) =>
+      Eval.later(acc.foldLeft(iterable.usesVarNames)(_ ++ _))
+    case (tag, acc) => Eval.later(acc.foldLeft(tag.usesVarNames)(_ ++ _))
   }
 
-  def resolveValues(vals: Map[String, ValueModel]): FuncOp =
+  def resolveValues(vals: Map[String, ValueRaw]): FuncOp =
     FuncOp(tree.map[RawTag](_.mapValues(_.resolveWith(vals))))
 
   def rename(vals: Map[String, String]): FuncOp = {
@@ -80,7 +79,7 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
       FuncOp(
         tree.map[RawTag](op =>
           op.mapValues {
-            case v: VarModel if vals.contains(v.name) => v.copy(name = vals(v.name))
+            case v: VarRaw if vals.contains(v.name) => v.copy(name = vals(v.name))
             case v => v
           } match {
             case c: CallArrowTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
@@ -104,7 +103,7 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Model {
 
   // Function body must be fixed before function gets resolved
   def fixXorPar: FuncOp =
-    FuncOp(cata[Cofree[Chain, RawTag]] {
+    ops.FuncOp(cata[Cofree[Chain, RawTag]] {
       case (XorParTag(left, right), _) =>
         Eval.now(
           FuncOps

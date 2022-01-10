@@ -1,26 +1,17 @@
 package aqua.model.func
 
-import aqua.model.ValueModel.varName
-import aqua.model.func.raw.*
-import aqua.model.{Model, ValueModel, VarModel}
+import aqua.model.ValueModel
+import aqua.raw.arrow.{ArgsCall, Func}
+import cats.Eval
+import scribe.Logging
+import aqua.raw.ops.{Call, FuncOp, FuncOps}
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
-import scribe.Logging
 
-// TODO docs for class and all args
-case class FuncCallable(
-  funcName: String,
-  body: FuncOp,
-  arrowType: ArrowType,
-  ret: List[ValueModel],
-  capturedArrows: Map[String, FuncCallable],
-  capturedValues: Map[String, ValueModel]
-) extends Model with Logging {
-
-  lazy val args: List[(String, Type)] = arrowType.domain.toLabelledList()
-  lazy val argNames: List[String] = args.map(_._1)
+object FuncResolver extends Logging {
 
   def findNewNames(forbidden: Set[String], introduce: Set[String]): Map[String, String] =
     (forbidden intersect introduce).foldLeft(Map.empty[String, String]) { case (acc, name) =>
@@ -31,21 +22,25 @@ case class FuncCallable(
         .head)
     }
 
-  def isStream(vm: ValueModel): Boolean =
+  def extractStreamArgs(args: Map[String, ValueRaw]): Map[String, ValueRaw] =
+    args.filter(arg => isStream(arg._2))
+
+  def isStream(vm: ValueRaw): Boolean =
     vm.`type` match {
       case StreamType(_) => true
       case _ => false
     }
 
-  def extractStreamArgs(args: Map[String, ValueModel]): Map[String, ValueModel] =
-    args.filter(arg => isStream(arg._2))
-
+  // TODO: return ValueModel – values are substituted and resolved on this stage
+  // TODO: FuncOp is also not complete: it still has topology, but not arrow calls; how to show it? ResTop?
   // Apply a callable function, get its fully resolved body & optional value, if any
   def resolve(
+    fn: Func,
     call: Call,
-    arrows: Map[String, FuncCallable],
+    arrows: Map[String, Func],
     forbiddenNames: Set[String]
-  ): Eval[(FuncOp, List[ValueModel])] = {
+  ): Eval[(FuncOp, List[ValueRaw])] = {
+    import fn._
 
     logger.debug("Call: " + call)
 
@@ -59,9 +54,8 @@ case class FuncCallable(
     // collect arguments with stream type
     // to exclude it from resolving and rename it with a higher-level stream that passed by argument
     val streamArgs = extractStreamArgs(argsToDataRaw)
-    val streamToRename = streamArgs.map { case (k, v) => (k, varName(v)) }.collect {
-      case (k, Some(v)) => (k, v)
-    }
+    // TODO: what if we have streams in lambda???
+    val streamToRename = streamArgs.collect { case (k, VarRaw(v, _, _)) => (k, v) }
 
     // Find all duplicates in arguments
     val argsShouldRename = findNewNames(forbiddenNames, (argsToDataRaw ++ argsToArrowsRaw).keySet)
@@ -82,7 +76,7 @@ case class FuncCallable(
     // except stream arguments. They should be already renamed
     val treeDefines =
       treeWithValues.definesVarNames.value -- streamArgs.keySet -- streamArgs.values.collect {
-        case VarModel(streamNameWasAlreadySubstitutedAbove, _, _) =>
+        case VarRaw(streamNameWasAlreadySubstitutedAbove, _, _) =>
           streamNameWasAlreadySubstitutedAbove
       } -- call.exportTo.filter { exp =>
         exp.`type` match {
@@ -98,8 +92,8 @@ case class FuncCallable(
     val treeRenamed = treeWithValues.rename(shouldRename)
 
     // Result could be derived from arguments, or renamed; take care about that
-    val result: List[ValueModel] = ret.map(_.resolveWith(argsToData)).map {
-      case v: VarModel if shouldRename.contains(v.name) => v.copy(shouldRename(v.name))
+    val result: List[ValueRaw] = ret.map(_.resolveWith(argsToData)).map {
+      case v: VarRaw if shouldRename.contains(v.name) => v.copy(shouldRename(v.name))
       case v => v
     }
 
@@ -124,14 +118,14 @@ case class FuncCallable(
         val resolvedResult = result.map(_.resolveWith(acc.resolvedExports))
 
         val (ops, rets) = (call.exportTo zip resolvedResult)
-          .map[(Option[FuncOp], ValueModel)] {
+          .map[(Option[FuncOp], ValueRaw)] {
             case (exp @ Call.Export(_, StreamType(_)), res) =>
               // pass nested function results to a stream
               Some(FuncOps.pushToStream(res, exp)) -> exp.model
             case (_, res) =>
               None -> res
           }
-          .foldLeft[(List[FuncOp], List[ValueModel])]((FuncOp(callableFuncBody) :: Nil, Nil)) {
+          .foldLeft[(List[FuncOp], List[ValueRaw])]((FuncOp(callableFuncBody) :: Nil, Nil)) {
             case ((ops, rets), (Some(fo), r)) => (fo :: ops, r :: rets)
             case ((ops, rets), (_, r)) => (ops, r :: rets)
           }

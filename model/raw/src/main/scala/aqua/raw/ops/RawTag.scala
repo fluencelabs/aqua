@@ -1,16 +1,14 @@
-package aqua.model.func.raw
+package aqua.raw.ops
 
-import aqua.model.ValueModel
-import aqua.model.ValueModel.varName
-import aqua.model.func.{Call, FuncModel}
-import cats.data.NonEmptyList
-import cats.data.Chain
+import aqua.raw.arrow.FuncRaw
+import aqua.raw.value.ValueRaw
+import cats.data.{Chain, NonEmptyList}
 
 sealed trait RawTag {
   // What variable names this tag uses (children are not respected)
   def usesVarNames: Set[String] = Set.empty
 
-  def mapValues(f: ValueModel => ValueModel): RawTag = this match {
+  def mapValues(f: ValueRaw => ValueRaw): RawTag = this match {
     case OnTag(peerId, via) => OnTag(f(peerId), via.map(f))
     case MatchMismatchTag(left, right, shouldMatch) =>
       MatchMismatchTag(f(left), f(right), shouldMatch)
@@ -81,10 +79,10 @@ case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag {
   override def usesVarNames: Set[String] = xor.usesVarNames.value ++ par.usesVarNames.value
 }
 
-case class OnTag(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupTag {
+case class OnTag(peerId: ValueRaw, via: Chain[ValueRaw]) extends SeqGroupTag {
 
   override def usesVarNames: Set[String] =
-    ValueModel.varName(peerId).toSet ++ via.iterator.flatMap(ValueModel.varName)
+    peerId.usesVarNames ++ via.iterator.flatMap(_.usesVarNames)
 
   override def toString: String =
     s"(on $peerId${if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""})"
@@ -98,15 +96,15 @@ case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag {
   override def usesVarNames: Set[String] = Set(name)
 }
 
-case class MatchMismatchTag(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
+case class MatchMismatchTag(left: ValueRaw, right: ValueRaw, shouldMatch: Boolean)
     extends SeqGroupTag {
 
   override def usesVarNames: Set[String] =
-    ValueModel.varName(left).toSet ++ ValueModel.varName(right).toSet
+    left.usesVarNames ++ right.usesVarNames
 }
 
-case class ForTag(item: String, iterable: ValueModel) extends SeqGroupTag {
-  override def usesVarNames: Set[String] = Set(item) ++ ValueModel.varName(iterable)
+case class ForTag(item: String, iterable: ValueRaw) extends SeqGroupTag {
+  override def usesVarNames: Set[String] = Set(item) ++ iterable.usesVarNames
 }
 
 case class CallArrowTag(
@@ -117,55 +115,55 @@ case class CallArrowTag(
 }
 
 case class DeclareStreamTag(
-  value: ValueModel
+  value: ValueRaw
 ) extends NoExecTag {
-  override def usesVarNames: Set[String] = ValueModel.varName(value).toSet
+  override def usesVarNames: Set[String] = value.usesVarNames
 }
 
 case class AssignmentTag(
-  value: ValueModel,
+  value: ValueRaw,
   assignTo: String
 ) extends NoExecTag {
-  override def usesVarNames: Set[String] = Set(assignTo) ++ ValueModel.varName(value)
+  override def usesVarNames: Set[String] = Set(assignTo) ++ value.usesVarNames
 }
 
 case class ClosureTag(
-  func: FuncModel
+  func: FuncRaw
 ) extends NoExecTag {
   // TODO captured names are lost?
   override def usesVarNames: Set[String] = Set(func.name)
 }
 
 case class ReturnTag(
-  values: NonEmptyList[ValueModel]
+  values: NonEmptyList[ValueRaw]
 ) extends NoExecTag
 
 object EmptyTag extends NoExecTag
 
 case class AbilityIdTag(
-  value: ValueModel,
+  value: ValueRaw,
   service: String
 ) extends NoExecTag
 
 case class CallServiceTag(
-  serviceId: ValueModel,
+  serviceId: ValueRaw,
   funcName: String,
   call: Call
 ) extends RawTag {
 
-  override def usesVarNames: Set[String] = ValueModel.varName(serviceId).toSet ++ call.argVarNames
+  override def usesVarNames: Set[String] = serviceId.usesVarNames ++ call.argVarNames
 
   override def toString: String = s"(call _ ($serviceId $funcName) $call)"
 }
 
-case class PushToStreamTag(operand: ValueModel, exportTo: Call.Export) extends RawTag {
-  override def usesVarNames: Set[String] = ValueModel.varName(operand).toSet
+case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends RawTag {
+  override def usesVarNames: Set[String] = operand.usesVarNames
 
   override def toString: String = s"(push $operand $exportTo)"
 }
 
-case class CanonicalizeTag(operand: ValueModel, exportTo: Call.Export) extends RawTag {
-  override def usesVarNames: Set[String] = ValueModel.varName(operand).toSet
+case class CanonicalizeTag(operand: ValueRaw, exportTo: Call.Export) extends RawTag {
+  override def usesVarNames: Set[String] = operand.usesVarNames
 
   override def toString: String = s"(can $operand $exportTo)"
 }

@@ -3,12 +3,11 @@ package aqua.semantics
 import aqua.Node
 import aqua.Node.*
 import aqua.parser.Ast
-import aqua.model.func.raw.{FuncOp, FuncOps, SeqTag}
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.funcop.*
-import aqua.model.{AquaContext, LiteralModel}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
+import aqua.raw.ops.{FuncOps, SeqTag}
 import aqua.types.LiteralType
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

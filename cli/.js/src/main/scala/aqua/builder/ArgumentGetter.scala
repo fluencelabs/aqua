@@ -2,9 +2,9 @@ package aqua.builder
 
 import aqua.backend.{ArgDefinition, PrimitiveType, ServiceDef, ServiceFunctionDef}
 import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer}
-import aqua.model.func.Call
-import aqua.model.func.raw.CallServiceTag
 import aqua.model.{LiteralModel, VarModel}
+import aqua.raw.ops
+import aqua.raw.ops.{Call, CallServiceTag}
 
 import scalajs.js
 import scala.concurrent.Promise
@@ -31,7 +31,7 @@ case class ArgumentGetter(serviceId: String, value: VarModel, arg: scalajs.js.Dy
   }
 
   def callTag(): CallServiceTag = {
-    CallServiceTag(
+    ops.CallServiceTag(
       LiteralModel.quote(serviceId),
       value.name,
       Call(List.empty, List(Call.Export(value.name, value.`type`)))

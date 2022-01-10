@@ -1,6 +1,7 @@
 package aqua.model.transform
 
-import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
+import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.raw.AquaContext
 import aqua.types.ScalarType
 import cats.kernel.Monoid
 

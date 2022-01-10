@@ -1,7 +1,7 @@
 package aqua.semantics
 
-import aqua.model.func.raw.FuncOp
-import aqua.model.{AquaContext, EmptyModel, Model, ScriptModel}
+import aqua.raw.ops.FuncOp
+import aqua.raw.{AquaContext, ContextRaw, Raw}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
@@ -28,21 +28,21 @@ object Semantics extends Logging {
     A: AbilitiesAlgebra[S, G],
     N: NamesAlgebra[S, G],
     T: TypesAlgebra[S, G]
-  ): (Expr[S], Chain[G[Model]]) => Eval[G[Model]] = { case (expr, inners) =>
+  ): (Expr[S], Chain[G[Raw]]) => Eval[G[Raw]] = { case (expr, inners) =>
     Eval later ExprSem
       .getProg[S, G](expr)
       .apply(
         // TODO instead of foldRight, do slidingWindow for 2 elements, merge right associative ones
         // Then foldLeft just like now
         inners
-          .foldRight[G[List[Model]]](List.empty[Model].pure[G]) { case (a, b) =>
+          .foldRight[G[List[Raw]]](List.empty[Raw].pure[G]) { case (a, b) =>
             (a, b).mapN {
               case (prev: FuncOp, (next: FuncOp) :: tail) if next.isRightAssoc =>
                 (prev :+: next) :: tail
               case (prev, acc) => prev :: acc
             }
           }
-          .map(_.reduceLeftOption(_ |+| _).getOrElse(Model.empty("AST is empty")))
+          .map(_.reduceLeftOption(_ |+| _).getOrElse(Raw.empty("AST is empty")))
       )
   }
 
@@ -53,7 +53,7 @@ object Semantics extends Logging {
     with NamesAlgebra[S, Interpreter[S, *]] with ValuesAlgebra[S, Interpreter[S, *]]
     with AbilitiesAlgebra[S, Interpreter[S, *]]
 
-  def transpile[S[_]](ast: Ast[S]): Interpreter[S, Model] = {
+  def transpile[S[_]](ast: Ast[S]): Interpreter[S, Raw] = {
     import monocle.syntax.all.*
 
     implicit val re: ReportError[S, CompilerState[S]] =
@@ -76,7 +76,7 @@ object Semantics extends Logging {
     ast.cata(folder[S, Interpreter[S, *]]).value
   }
 
-  private def astToState[S[_]](ast: Ast[S]): Interpreter[S, Model] =
+  private def astToState[S[_]](ast: Ast[S]): Interpreter[S, Raw] =
     transpile[S](ast)
 
   def process[S[_]](ast: Ast[S], init: AquaContext)(implicit
@@ -85,12 +85,12 @@ object Semantics extends Logging {
     astToState[S](ast)
       .run(CompilerState.init[S](init))
       .map {
-        case (state, gen: ScriptModel) =>
-          val ctx = AquaContext.fromScriptModel(gen, init)
+        case (state, gen: ContextRaw) =>
+          val ctx = AquaContext.fromRawContext(gen, init)
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(ctx))(Invalid(_))
-        case (state, _: EmptyModel) =>
+        case (state, _: Raw.Empty) =>
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(init))(Invalid(_))

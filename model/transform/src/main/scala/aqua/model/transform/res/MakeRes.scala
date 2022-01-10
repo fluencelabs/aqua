@@ -1,9 +1,9 @@
 package aqua.model.transform.res
 
-import aqua.model.func.Call
 import aqua.model.func.raw.*
 import aqua.model.transform.topology.Topology.Res
 import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.raw.ops.{Call, CallServiceTag, CanonicalizeTag, ForTag, MatchMismatchTag, NextTag, OnTag, ParTag, PushToStreamTag, RawTag, RestrictionTag, SeqTag, XorTag}
 import aqua.types.{ArrayType, StreamType}
 import cats.Eval
 import cats.data.Chain

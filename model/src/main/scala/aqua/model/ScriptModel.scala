@@ -1,6 +1,7 @@
 package aqua.model
 
-import aqua.model.func.FuncModel
+import aqua.raw.arrow.FuncRaw
+import aqua.raw.{ConstantRaw, ServiceRaw, TypeRaw}
 import cats.Monoid
 import cats.data.Chain
 
@@ -21,10 +22,10 @@ object ScriptModel {
 
   // Builds a ScriptModel if given model can be considered as a part of a script
   def toScriptPart(m: Model): Option[ScriptModel] = Option(m).filter {
-    case _: FuncModel => true
-    case _: ServiceModel => true
-    case _: TypeModel => true
-    case _: ConstantModel => true
+    case _: FuncRaw => true
+    case _: ServiceRaw => true
+    case _: TypeRaw => true
+    case _: ConstantRaw => true
     case _ => false
   }.map(Chain.one).map(ScriptModel(_))
 }

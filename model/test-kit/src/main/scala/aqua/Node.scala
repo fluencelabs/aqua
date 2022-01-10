@@ -1,18 +1,12 @@
 package aqua
 
-import aqua.model.func.Call
 import aqua.model.func.raw.*
 import aqua.model.transform.TransformConfig
-import aqua.model.transform.res.{
-  CallRes,
-  CallServiceRes,
-  MakeRes,
-  MatchMismatchRes,
-  NextRes,
-  ResolvedOp
-}
+import aqua.model.transform.res.{CallRes, CallServiceRes, MakeRes, MatchMismatchRes, NextRes, ResolvedOp}
 import aqua.model.transform.funcop.ErrorsCatcher
 import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.raw.ops
+import aqua.raw.ops.{Call, CallServiceTag, ForTag, FuncOp, MatchMismatchTag, NextTag, OnTag, ParTag, RawTag, SeqTag, XorTag}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval
 import cats.data.Chain
@@ -48,7 +42,7 @@ object Node {
     Cofree(tree.label, Eval.later(Chain.fromSeq(tree.children.map(nodeToCof))))
 
   implicit def rawToFuncOp(tree: Raw): FuncOp =
-    FuncOp(tree.cof)
+    ops.FuncOp(tree.cof)
 
   implicit def funcOpToRaw(op: FuncOp): Raw =
     op.tree
@@ -90,7 +84,7 @@ object Node {
   )
 
   def callLiteralRaw(i: Int, exportTo: List[Call.Export] = Nil): Raw = Node(
-    CallServiceTag(
+    ops.CallServiceTag(
       LiteralModel("\"srv" + i + "\"", LiteralType.string),
       s"fn$i",
       Call(Nil, exportTo)
@@ -141,7 +135,7 @@ object Node {
   def foldPar(item: String, iter: ValueModel, body: Raw*) = {
     val ops = Node(SeqTag, body.toList)
     Node(
-      ForTag(item, iter),
+      ops.ForTag(item, iter),
       List(
         Node(ParTag, List(ops, next(item)))
       )

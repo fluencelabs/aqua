@@ -1,8 +1,8 @@
 package aqua.model.transform.funcop
 
 import aqua.model.{ValueModel, VarModel}
-import aqua.model.func.Call
-import aqua.model.func.raw.{FuncOp, FuncOps}
+import aqua.model.func.raw.FuncOps
+import aqua.raw.ops.{Call, FuncOp, FuncOps}
 import aqua.types.{ArrayType, DataType, StreamType}
 import cats.data.Chain
 

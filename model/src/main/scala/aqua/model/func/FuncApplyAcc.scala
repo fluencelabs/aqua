@@ -1,14 +1,15 @@
 package aqua.model.func
 
-import aqua.model.{ValueModel, VarModel}
-import aqua.model.func.raw.{AssignmentTag, CallArrowTag, ClosureTag, FuncOp, RawTag}
+import aqua.raw.arrow.{Func, FuncRaw}
+import aqua.raw.ops.{AssignmentTag, Call, CallArrowTag, ClosureTag, FuncOp, RawTag}
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.ArrowType
 import scribe.Logging
 
 case class FuncApplyAcc(
   noNames: Set[String],
-  resolvedExports: Map[String, ValueModel],
-  resolvedArrows: Map[String, FuncCallable],
+  resolvedExports: Map[String, ValueRaw],
+  resolvedArrows: Map[String, Func],
   funcName: String,
   instructionCounter: Int = 0
 ) extends Logging {
@@ -23,13 +24,13 @@ case class FuncApplyAcc(
   def incr: FuncApplyAcc = copy(instructionCounter = instructionCounter + 1)
 
   // Register the new export
-  def withResolvedExport(exportName: String, value: ValueModel): FuncApplyAcc =
+  def withResolvedExport(exportName: String, value: ValueRaw): FuncApplyAcc =
     incr.copy(resolvedExports =
       resolvedExports + (exportName -> value.resolveWith(resolvedExports))
     )
 
   // Register the new arrow
-  def withResolvedArrow(arrow: FuncModel): FuncApplyAcc =
+  def withResolvedArrow(arrow: FuncRaw): FuncApplyAcc =
     incr.copy(resolvedArrows =
       resolvedArrows + (arrow.name -> arrow.capture(resolvedArrows, resolvedExports))
     )
@@ -38,13 +39,14 @@ case class FuncApplyAcc(
   def callArrow(name: String, call: Call): (FuncApplyAcc, FuncOp.Tree) = {
     // Apply arguments to a function – recursion
     val callResolved = call.mapValues(_.resolveWith(resolvedExports))
-    val possibleArrowNames = callResolved.args.collect { case VarModel(m, _: ArrowType, _) =>
+    val possibleArrowNames = callResolved.args.collect { case VarRaw(m, _: ArrowType, _) =>
       m
     }.toSet
 
     val (appliedOp, value) =
-      resolvedArrows(name)
+      FuncResolver
         .resolve(
+          resolvedArrows(name),
           callResolved,
           resolvedArrows.view.filterKeys(possibleArrowNames).toMap,
           noNames

@@ -1,6 +1,7 @@
 package aqua.model.transform.res
 
-import aqua.model.{LiteralModel, ServiceModel}
+import aqua.model.LiteralModel
+import aqua.raw.ServiceRaw
 import aqua.types.{ArrowType, ScalarType}
 
 // TODO: docs
@@ -8,7 +9,7 @@ case class ServiceRes(name: String, members: List[(String, ArrowType)], defaultI
 
 object ServiceRes {
 
-  def fromModel(sm: ServiceModel): ServiceRes =
+  def fromModel(sm: ServiceRaw): ServiceRes =
     ServiceRes(
       name = sm.name,
       members = sm.arrows.toNel.toList,

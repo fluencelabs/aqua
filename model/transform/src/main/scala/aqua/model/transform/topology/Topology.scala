@@ -5,6 +5,8 @@ import aqua.model.transform.cursor.ChainZipper
 import aqua.model.func.raw.*
 import aqua.model.transform.res.*
 import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.raw.ops
+import aqua.raw.ops.{CallServiceTag, ForTag, NextTag, OnTag, ParTag, RawTag, SeqGroupTag, XorTag}
 import aqua.types.{BoxType, ScalarType}
 import cats.Eval
 import cats.data.Chain.{==:, nil}
@@ -339,7 +341,7 @@ object Topology extends Logging {
               case ((true, acc @ (OnTag(_, r @ (r0 ==: _)) :: _)), OnTag(p, _))
                   if ValueModel.varName(p).contains(f.item) =>
                 // This is to take the outstanding relay and force moving there
-                (false, OnTag(r0, r) :: acc)
+                (false, ops.OnTag(r0, r) :: acc)
               case ((true, acc), on) => (true, on :: acc)
               case ((false, acc), _) => (false, acc)
             }

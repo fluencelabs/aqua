@@ -1,7 +1,6 @@
 package aqua.model.transform
 
 import aqua.model.VarModel
-import aqua.model.func.FuncCallable
 import aqua.model.transform.funcop.*
 import aqua.model.transform.res.{FuncRes, NoAir, ResolvedOp}
 import aqua.model.transform.topology.Topology
@@ -65,8 +64,7 @@ object Transform extends Logging {
           errorsCatcher
             .transform(
               // TODO: comments
-              wrapFunc.
-                resolve(func).value
+              wrapFunc.resolve(func).value
             )
             .tree
         )

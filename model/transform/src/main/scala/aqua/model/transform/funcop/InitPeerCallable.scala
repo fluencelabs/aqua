@@ -1,8 +1,8 @@
 package aqua.model.transform.funcop
 
 import aqua.model.{LiteralModel, ValueModel}
-import aqua.model.func.Call
-import aqua.model.func.raw.{FuncOp, FuncOps}
+import aqua.model.func.raw.FuncOps
+import aqua.raw.ops.{Call, FuncOp, FuncOps}
 import cats.data.Chain
 
 sealed trait InitPeerCallable {

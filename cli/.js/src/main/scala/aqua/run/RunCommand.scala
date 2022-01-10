@@ -11,14 +11,14 @@ import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
 import aqua.js.*
-import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
-import aqua.model.func.{Call, FuncCallable}
+import aqua.model.func.raw.FuncOps
 import aqua.model.transform.res.{AquaRes, FuncRes}
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
+import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
+import aqua.raw.AquaContext
 import aqua.run.RunConfig
 import aqua.types.*
 import cats.data.*

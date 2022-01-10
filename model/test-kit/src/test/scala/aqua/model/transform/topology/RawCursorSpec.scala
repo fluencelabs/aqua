@@ -1,9 +1,10 @@
 package aqua.model.transform.topology
 
-import aqua.model.func.Call
-import aqua.model.func.raw.{FuncOp, FuncOps, OnTag, ReturnTag}
+import aqua.model.func.raw.FuncOps
 import aqua.model.transform.cursor.ChainZipper
 import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.raw.ops
+import aqua.raw.ops.{Call, OnTag, ReturnTag}
 import aqua.types.{ArrayType, ScalarType}
 import cats.data.{Chain, NonEmptyList}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -11,7 +12,7 @@ import org.scalatest.matchers.should.Matchers
 
 class RawCursorSpec extends AnyFlatSpec with Matchers {
   import FuncOp.*
-  import FuncOps.*
+  import aqua.raw.ops.FuncOps.*
 
   "simple raw cursor on init_peer_id" should "move properly" in {
     val raw = RawCursor(
@@ -170,7 +171,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     )
 
     raw.tag should be(
-      OnTag(LiteralModel.initPeerId, Chain.one(VarModel("-relay-", ScalarType.string)))
+      ops.OnTag(LiteralModel.initPeerId, Chain.one(VarModel("-relay-", ScalarType.string)))
     )
 //    raw.firstExecuted.map(_.tag) should be(
 //      Some(

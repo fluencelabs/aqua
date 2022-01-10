@@ -1,8 +1,9 @@
 package aqua.semantics.expr.func
 
-import aqua.model.func.raw.{FuncOp, MatchMismatchTag, XorTag}
-import aqua.model.{Model, ValueModel}
+import aqua.raw.ops.{FuncOp, MatchMismatchTag, XorTag}
 import aqua.parser.expr.func.IfExpr
+import aqua.raw.value.ValueRaw
+import aqua.raw.Raw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -19,7 +20,7 @@ class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
     V: ValuesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
-  ): Prog[Alg, Model] =
+  ): Prog[Alg, Raw] =
     Prog
       .around(
         V.valueToModel(expr.left).flatMap {
@@ -32,29 +33,28 @@ class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
                 None.pure[Alg]
             }
           case None =>
-            V.resolveType(expr.right).as[Option[(ValueModel, ValueModel)]](None)
+            V.resolveType(expr.right).as[Option[(ValueRaw, ValueRaw)]](None)
         },
-        (r: Option[(ValueModel, ValueModel)], ops: Model) =>
-          r.fold(Model.error("If expression errored in matching types").pure[Alg]) {
-            case (lt, rt) =>
-              ops match {
-                case op: FuncOp =>
-                  FuncOp
-                    .wrap(
-                      XorTag.LeftBiased,
-                      FuncOp.wrap(
-                        MatchMismatchTag(
-                          lt,
-                          rt,
-                          expr.eqOp.value
-                        ),
-                        op
-                      )
+        (r: Option[(ValueRaw, ValueRaw)], ops: Raw) =>
+          r.fold(Raw.error("If expression errored in matching types").pure[Alg]) { case (lt, rt) =>
+            ops match {
+              case op: FuncOp =>
+                FuncOp
+                  .wrap(
+                    XorTag.LeftBiased,
+                    FuncOp.wrap(
+                      MatchMismatchTag(
+                        lt,
+                        rt,
+                        expr.eqOp.value
+                      ),
+                      op
                     )
-                    .pure[Alg]
+                  )
+                  .pure[Alg]
 
-                case _ => Model.error("Wrong body of the if expression").pure[Alg]
-              }
+              case _ => Raw.error("Wrong body of the if expression").pure[Alg]
+            }
           }
       )
       .abilitiesScope[S](expr.token)

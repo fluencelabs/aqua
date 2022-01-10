@@ -1,7 +1,8 @@
 package aqua.model.transform.topology
 
 import aqua.model.ValueModel
-import aqua.model.func.raw.{OnTag, ParGroupTag}
+import aqua.model.func.raw.OnTag
+import aqua.raw.ops.OnTag
 import cats.data.Chain
 import cats.data.Chain.{:==, ==:, nil}
 import scribe.Logging

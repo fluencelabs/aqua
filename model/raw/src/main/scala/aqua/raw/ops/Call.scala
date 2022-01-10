@@ -1,12 +1,12 @@
-package aqua.model.func
+package aqua.raw.ops
 
-import aqua.model.{ValueModel, VarModel}
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.Type
 
 // TODO docs
-case class Call(args: List[ValueModel], exportTo: List[Call.Export]) {
+case class Call(args: List[ValueRaw], exportTo: List[Call.Export]) {
 
-  def mapValues(f: ValueModel => ValueModel): Call =
+  def mapValues(f: ValueRaw => ValueRaw): Call =
     Call(
       args.map(f),
       exportTo
@@ -15,19 +15,18 @@ case class Call(args: List[ValueModel], exportTo: List[Call.Export]) {
   // TODO docs
   def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(_.mapName(f)))
 
-  def argVarNames: Set[String] = args.collect { case VarModel(name, _, _) =>
-    name
-  }.toSet
+  def argVarNames: Set[String] = args.flatMap(_.usesVarNames).toSet
 
   override def toString: String =
     s"[${args.mkString(" ")}]${exportTo.map(_.model).map(" " + _).mkString(",")}"
 }
 
 object Call {
+
   // TODO docs
   case class Export(name: String, `type`: Type) {
     def mapName(f: String => String): Export = copy(f(name))
 
-    def model: ValueModel = VarModel(name, `type`)
+    def model: ValueRaw = VarRaw(name, `type`)
   }
 }

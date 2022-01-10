@@ -1,8 +1,9 @@
 package aqua.semantics.expr.func
 
-import aqua.model.func.raw.*
-import aqua.model.{Model, ValueModel}
+import aqua.raw.Raw
 import aqua.parser.expr.func.ForExpr
+import aqua.raw.value.ValueRaw
+import aqua.raw.ops.*
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -23,21 +24,21 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, F],
     T: TypesAlgebra[S, F],
     A: AbilitiesAlgebra[S, F]
-  ): Prog[F, Model] =
+  ): Prog[F, Raw] =
     Prog
       .around(
-        N.beginScope(expr.item) >> V.valueToModel(expr.iterable).flatMap[Option[ValueModel]] {
+        N.beginScope(expr.item) >> V.valueToModel(expr.iterable).flatMap[Option[ValueRaw]] {
           case Some(vm) =>
             vm.lastType match {
               case t: BoxType =>
                 N.define(expr.item, t.element).as(Option(vm))
               case dt =>
-                T.ensureTypeMatches(expr.iterable, ArrayType(dt), dt).as(Option.empty[ValueModel])
+                T.ensureTypeMatches(expr.iterable, ArrayType(dt), dt).as(Option.empty[ValueRaw])
             }
 
           case _ => None.pure[F]
         },
-        (stOpt: Option[ValueModel], ops: Model) =>
+        (stOpt: Option[ValueRaw], ops: Raw) =>
           N.streamsDefinedWithinScope()
             .map((streams: Set[String]) =>
               (stOpt, ops) match {
@@ -70,7 +71,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                   if (innerTag == ParTag) FuncOp.wrap(ParTag.Detach, forTag)
                   else forTag
                 case _ =>
-                  Model.error("Wrong body of the For expression")
+                  Raw.error("Wrong body of the For expression")
               }
             ) <* N.endScope()
       )

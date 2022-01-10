@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
-import aqua.model.{LambdaModel, ValueModel}
 import aqua.parser.lexer.*
+import aqua.raw.value.{LambdaRaw, ValueRaw}
 import aqua.types.{ArrowType, Type}
 import cats.data.NonEmptyMap
 import cats.data.NonEmptyList
@@ -23,7 +23,7 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def defineAlias(name: CustomTypeToken[S], target: Type): Alg[Boolean]
 
-  def resolveLambda(root: Type, ops: List[LambdaOp[S]]): Alg[List[LambdaModel]]
+  def resolveLambda(root: Type, ops: List[LambdaOp[S]]): Alg[List[LambdaRaw]]
 
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 
@@ -34,8 +34,8 @@ trait TypesAlgebra[S[_], Alg[_]] {
   def beginArrowScope(token: ArrowTypeToken[S]): Alg[ArrowType]
 
   // Check return types
-  def checkArrowReturn(values: NonEmptyList[(Value[S], ValueModel)]): Alg[Boolean]
+  def checkArrowReturn(values: NonEmptyList[(Value[S], ValueRaw)]): Alg[Boolean]
 
   // End scope; if return was expected but not checked, fail
-  def endArrowScope(token: Token[S]): Alg[List[ValueModel]]
+  def endArrowScope(token: Token[S]): Alg[List[ValueRaw]]
 }

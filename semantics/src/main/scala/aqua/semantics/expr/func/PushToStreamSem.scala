@@ -1,11 +1,9 @@
 package aqua.semantics.expr.func
 
-import aqua.model.ValueModel.varName
-import aqua.model.func.Call
-import aqua.model.func.raw.{FuncOp, FuncOps, PushToStreamTag}
-import aqua.model.{LiteralModel, Model, VarModel}
+import aqua.raw.ops.{Call, FuncOp, FuncOps, PushToStreamTag}
 import aqua.parser.expr.func.PushToStreamExpr
 import aqua.parser.lexer.Token
+import aqua.raw.Raw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
@@ -45,11 +43,11 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
-  ): Prog[Alg, Model] =
+  ): Prog[Alg, Raw] =
     V.valueToModel(expr.value).flatMap {
       case Some(vm) =>
         N.read(expr.stream).flatMap {
-          case None => Model.error("Cannot resolve stream type").pure[Alg]
+          case None => Raw.error("Cannot resolve stream type").pure[Alg]
           case Some(t) =>
             ensureStreamElementMatches(
               expr.token,
@@ -58,13 +56,13 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
               vm.lastType
             ).map {
               case false =>
-                Model.error("Stream type and element type does not match")
+                Raw.error("Stream type and element type does not match")
               case true =>
-                FuncOps.pushToStream(vm, Call.Export(expr.stream.value, t)): Model
+                FuncOps.pushToStream(vm, Call.Export(expr.stream.value, t)): Raw
             }
         }
 
-      case _ => Model.error("Cannot resolve value").pure[Alg]
+      case _ => Raw.error("Cannot resolve value").pure[Alg]
     }
 
 }

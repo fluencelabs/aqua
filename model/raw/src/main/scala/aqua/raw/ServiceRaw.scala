@@ -1,12 +1,13 @@
-package aqua.model
+package aqua.raw
 
 import aqua.types.{ArrowType, StructType}
 import cats.data.NonEmptyMap
+import aqua.raw.value.ValueRaw
 
-case class ServiceModel(
+case class ServiceRaw(
   name: String,
   arrows: NonEmptyMap[String, ArrowType],
-  defaultId: Option[ValueModel]
-) extends Model {
+  defaultId: Option[ValueRaw]
+) extends Raw {
   def `type`: StructType = StructType(name, arrows)
 }

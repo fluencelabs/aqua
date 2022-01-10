@@ -5,9 +5,10 @@ import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Console, Finisher}
 import aqua.io.OutputPrinter
 import aqua.model.{ValueModel, VarModel}
-import aqua.model.func.{Call, FuncCallable}
-import aqua.model.func.raw.{CallArrowTag, FuncOp, FuncOps}
+import aqua.model.func.raw.FuncOps
 import aqua.model.transform.{Transform, TransformConfig}
+import aqua.raw.ops
+import aqua.raw.ops.{Call, CallArrowTag, FuncOps}
 import aqua.types.{ArrowType, BoxType, NilType, Type}
 import cats.data.{Validated, ValidatedNec}
 import cats.effect.kernel.Async
@@ -120,7 +121,7 @@ class Runner(
           (VarModel(name, t), Call.Export(name, t))
         }.unzip
         val callFuncTag =
-          CallArrowTag(funcName, Call(args, exports))
+          ops.CallArrowTag(funcName, Call(args, exports))
 
         val consoleServiceTag = consoleService.callTag(variables)
 

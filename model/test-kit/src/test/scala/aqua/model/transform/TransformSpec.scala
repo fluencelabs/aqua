@@ -1,11 +1,12 @@
 package aqua.model.transform
 
 import aqua.Node
-import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp, FuncOps}
-import aqua.model.func.{Call, FuncCallable}
+import aqua.model.func.raw.FuncOps
 import aqua.model.transform.res.{CallRes, CallServiceRes, MakeRes}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{LiteralModel, VarModel}
+import aqua.raw.ops
+import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, FuncOps}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -132,7 +133,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val f2: FuncCallable =
       FuncCallable(
         "f2",
-        FuncOp(
+        ops.FuncOp(
           Node(CallArrowTag("callable", Call(Nil, Call.Export("v", ScalarType.string) :: Nil))).cof
         ),
         stringArrow,

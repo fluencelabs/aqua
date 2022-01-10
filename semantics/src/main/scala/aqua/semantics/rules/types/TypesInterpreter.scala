@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
-import aqua.model.{LambdaModel, ValueModel}
 import aqua.parser.lexer.*
+import aqua.raw.value.{LambdaRaw, ValueRaw}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, ProductType, StructType, Type}
 import cats.data.Validated.{Invalid, Valid}
@@ -12,7 +12,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Applicative, ~>}
+import cats.{~>, Applicative}
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -95,7 +95,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         ).as(true)
     }
 
-  override def resolveLambda(root: Type, ops: List[LambdaOp[S]]): State[X, List[LambdaModel]] =
+  override def resolveLambda(root: Type, ops: List[LambdaOp[S]]): State[X, List[LambdaRaw]] =
     getState.map(_.resolveOps(root, ops)).flatMap {
       case Left((tkn, hint)) => report(tkn, hint).as(Nil)
       case Right(ts) => State.pure(ts)
@@ -161,7 +161,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
       .flatMap(at => stack.beginScope(TypesState.Frame(token, at, None)).as(at))
 
   override def checkArrowReturn(
-    values: NonEmptyList[(Value[S], ValueModel)]
+    values: NonEmptyList[(Value[S], ValueRaw)]
   ): State[X, Boolean] =
     mapStackHeadE[Boolean](
       report(values.head._1, "Fatal: checkArrowReturn has no matching beginArrowScope").as(false)
@@ -202,7 +202,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
 
         frame.arrowType.codomain.toList
           .lazyZip(values.toList)
-          .foldLeft[Either[(Token[S], String, Boolean), List[ValueModel]]](Right(Nil)) {
+          .foldLeft[Either[(Token[S], String, Boolean), List[ValueRaw]]](Right(Nil)) {
             case (acc, (returnType, (token, returnValue))) =>
               acc.flatMap { a =>
                 if (!returnType.acceptsValueOf(returnValue.lastType))
@@ -224,8 +224,8 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
       }
     )
 
-  override def endArrowScope(token: Token[S]): State[X, List[ValueModel]] =
-    mapStackHeadE[List[ValueModel]](
+  override def endArrowScope(token: Token[S]): State[X, List[ValueRaw]] =
+    mapStackHeadE[List[ValueRaw]](
       report(token, "Fatal: endArrowScope has no matching beginArrowScope").as(Nil)
     )(frame =>
       if (frame.token.res.isEmpty) {

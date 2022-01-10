@@ -1,8 +1,9 @@
 package aqua.model.transform.funcop
 
 import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.model.func.Call
-import aqua.model.func.raw.{FuncOp, FuncOps, MatchMismatchTag, OnTag, RawTag, XorTag}
+import aqua.model.func.raw.FuncOps
+import aqua.raw.ops
+import aqua.raw.ops.{Call, FuncOp, FuncOps, MatchMismatchTag, OnTag, RawTag, XorTag}
 import aqua.types.LiteralType
 import cats.Eval
 import cats.data.Chain
@@ -33,7 +34,7 @@ case class ErrorsCatcher(
                 .wrap(
                   ot,
                   FuncOps.xor(
-                    FuncOps.seq(children.map(FuncOp(_)).toList: _*),
+                    FuncOps.seq(children.map(ops.FuncOp(_)).toList: _*),
                     callable.makeCall(
                       serviceId,
                       funcName,
@@ -46,7 +47,7 @@ case class ErrorsCatcher(
           case (tag, children) =>
             Eval.now(Cofree(tag, Eval.now(children)))
         }
-        .map(FuncOp(_))
+        .map(ops.FuncOp(_))
         .value
     } else op
 

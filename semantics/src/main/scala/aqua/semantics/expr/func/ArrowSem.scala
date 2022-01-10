@@ -1,12 +1,12 @@
 package aqua.semantics.expr.func
 
-import aqua.model.func.ArrowModel
-import aqua.model.func.Call
-import aqua.model.func.raw.{FuncOp, FuncOps, RestrictionTag, ReturnTag, SeqTag}
-import aqua.model.{Model, ValueModel, VarModel}
+import aqua.raw.ops.{Call, FuncOp, FuncOps, RestrictionTag, ReturnTag, SeqTag}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.expr.func.ArrowExpr
 import aqua.parser.lexer.{Arg, DataTypeToken}
+import aqua.raw.Raw
+import aqua.raw.arrow.ArrowRaw
+import aqua.raw.value.VarRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -52,11 +52,11 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           .as(arrowType)
       )
 
-  def after[Alg[_]: Monad](funcArrow: ArrowType, bodyGen: Model)(implicit
+  def after[Alg[_]: Monad](funcArrow: ArrowType, bodyGen: Raw)(implicit
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
-  ): Alg[Model] =
+  ): Alg[Raw] =
     A.endScope() *> (N.streamsDefinedWithinScope(), T.endArrowScope(expr.arrowTypeExpr)).mapN {
       (streams, retValues) =>
         bodyGen match {
@@ -66,8 +66,8 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
             // These streams are returned as streams
             val retStreams: Map[String, Option[Type]] =
               (retValues zip funcArrow.codomain.toList).collect {
-                case (VarModel(n, StreamType(_), _), StreamType(_)) => n -> None
-                case (VarModel(n, StreamType(_), _), t) => n -> Some(t)
+                case (VarRaw(n, StreamType(_), _), StreamType(_)) => n -> None
+                case (VarRaw(n, StreamType(_), _), t) => n -> Some(t)
               }.toMap
 
             val builtStreams = retStreams.collect { case (n, Some(t)) =>
@@ -84,14 +84,14 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
             val (body, retValuesFix) = localStreams.foldLeft((m, retValues)) { case ((b, rs), n) =>
               if (
                 rs.exists {
-                  case VarModel(`n`, _, _) => true
+                  case VarRaw(`n`, _, _) => true
                   case _ => false
                 }
               )
                 FuncOp.wrap(
                   RestrictionTag(n, isStream = true),
                   FuncOps.seq(
-                    b :: rs.collect { case vn @ VarModel(`n`, _, _) =>
+                    b :: rs.collect { case vn @ VarRaw(`n`, _, _) =>
                       FuncOps.canonicalize(
                         vn,
                         Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.lastType))
@@ -99,14 +99,14 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
                     }: _*
                   )
                 ) -> rs.map {
-                  case vn @ VarModel(`n`, _, _) =>
-                    VarModel(s"$n-fix", builtStreams.getOrElse(n, vn.lastType))
+                  case vn @ VarRaw(`n`, _, _) =>
+                    VarRaw(s"$n-fix", builtStreams.getOrElse(n, vn.lastType))
                   case vm => vm
                 }
               else FuncOp.wrap(RestrictionTag(n, isStream = true), b) -> rs
             }
 
-            ArrowModel(funcArrow, retValuesFix, body)
+            ArrowRaw(funcArrow, retValuesFix, body)
           case m =>
             m
         }
@@ -116,7 +116,7 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
-  ): Prog[Alg, Model] =
+  ): Prog[Alg, Raw] =
     Prog.around(
       before[Alg],
       after[Alg]

@@ -1,7 +1,8 @@
 package aqua.semantics.rules.abilities
 
-import aqua.model.{AquaContext, ServiceModel, ValueModel}
 import aqua.parser.lexer.{Ability, Name, Token, Value}
+import aqua.raw.{AquaContext, ServiceRaw}
+import aqua.raw.value.ValueRaw
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.{abilities, ReportError, StackInterpreter}
 import aqua.types.ArrowType
@@ -50,7 +51,7 @@ class AbilitiesInterpreter[S[_], X](implicit
   override def defineService(
     name: Ability[S],
     arrows: NonEmptyMap[String, ArrowType],
-    defaultId: Option[ValueModel]
+    defaultId: Option[ValueRaw]
   ): SX[Boolean] =
     getService(name.value).flatMap {
       case Some(_) =>
@@ -63,7 +64,7 @@ class AbilitiesInterpreter[S[_], X](implicit
         modify(s =>
           s.copy(
             services = s.services
-              .updated(name.value, ServiceModel(name.value, arrows, defaultId)),
+              .updated(name.value, ServiceRaw(name.value, arrows, defaultId)),
             definitions = s.definitions.updated(name.value, name)
           )
         ).as(true)
@@ -103,7 +104,7 @@ class AbilitiesInterpreter[S[_], X](implicit
         }
     }
 
-  override def setServiceId(name: Ability[S], id: Value[S], vm: ValueModel): SX[Boolean] =
+  override def setServiceId(name: Ability[S], id: Value[S], vm: ValueRaw): SX[Boolean] =
     getService(name.value).flatMap {
       case Some(_) =>
         mapStackHead(
@@ -115,7 +116,7 @@ class AbilitiesInterpreter[S[_], X](implicit
         report(name, "Service with this name is not registered, can't set its ID").as(false)
     }
 
-  override def getServiceId(name: Ability[S]): SX[Either[Boolean, ValueModel]] =
+  override def getServiceId(name: Ability[S]): SX[Either[Boolean, ValueRaw]] =
     getService(name.value).flatMap {
       case Some(_) =>
         getState.flatMap(st =>
@@ -131,17 +132,17 @@ class AbilitiesInterpreter[S[_], X](implicit
                 name,
                 s"Service ID unresolved, use `${name.value} id` expression to set it"
               )
-                .as(Left[Boolean, ValueModel](false))
+                .as(Left[Boolean, ValueRaw](false))
 
             case Some(v) => State.pure(Right(v))
           }
         )
       case None =>
         getAbility(name.value).flatMap {
-          case Some(_) => State.pure(Left[Boolean, ValueModel](true))
+          case Some(_) => State.pure(Left[Boolean, ValueRaw](true))
           case None =>
             report(name, "Ability with this name is undefined").as(
-              Left[Boolean, ValueModel](false)
+              Left[Boolean, ValueRaw](false)
             )
         }
     }
@@ -151,7 +152,7 @@ class AbilitiesInterpreter[S[_], X](implicit
 
   override def endScope(): SX[Unit] = stackInt.endScope
 
-  private def getService(name: String): SX[Option[ServiceModel]] =
+  private def getService(name: String): SX[Option[ServiceRaw]] =
     getState.map(_.services.get(name))
 
   private def getAbility(name: String): SX[Option[AquaContext]] =
