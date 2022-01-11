@@ -10,6 +10,9 @@ sealed trait ValueModel {
   def `type`: Type
 
   def lastType: Type
+
+  // This is a debt: it should never be used
+  def toRaw: ValueRaw
 }
 
 object ValueModel {
@@ -33,9 +36,9 @@ object ValueModel {
       VarModel(name, t, lambdaModel) -> map
   }
 
+  // TODO it should be marked with DANGEROUS signs and so on, as THIS IS UNSAFE!!!!!!!!!!!!!!! usable only for tests
   def fromRaw(raw: ValueRaw): ValueModel = raw match {
     case VarRaw(name, t, lambda) =>
-      // TODO: handle recursive lambda
       VarModel(name, t, lambda.map(LambdaModel.fromRaw))
     case LiteralRaw(value, t) =>
       LiteralModel(value, t)
@@ -45,11 +48,15 @@ object ValueModel {
 case class LiteralModel(value: String, `type`: Type) extends ValueModel {
   override def lastType: Type = `type`
 
+  override def toRaw: ValueRaw = LiteralRaw(value, `type`)
+
   override def toString: String = s"{$value: ${`type`}}"
 }
 
 sealed trait LambdaModel {
   def `type`: Type
+
+  def toRaw: LambdaRaw
 }
 
 object LambdaModel {
@@ -80,13 +87,24 @@ object LambdaModel {
   }
 }
 
-case class IntoFieldModel(field: String, `type`: Type) extends LambdaModel
+case class IntoFieldModel(field: String, `type`: Type) extends LambdaModel {
+  override def toRaw: LambdaRaw = IntoFieldRaw(field, `type`)
+}
 
-case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel
+case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel {
+
+  override def toRaw: LambdaRaw = IntoIndexRaw(
+    if (idx.forall(Character.isDigit)) LiteralRaw.number(idx.toInt)
+    else VarRaw(idx, ScalarType.string),
+    `type`
+  )
+}
 
 case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel]) extends ValueModel {
 
   override val lastType: Type = lambda.lastOption.map(_.`type`).getOrElse(`type`)
+
+  override def toRaw: ValueRaw = VarRaw(name, `type`, lambda.map(_.toRaw))
 
   override def toString: String = s"var{$name: " + `type` + s"}.${lambda.toList.mkString(".")}"
 }
