@@ -15,7 +15,7 @@ case class FuncApplyAcc(
 ) extends Logging {
 
   // resolve values of this tag with resolved exports
-  def resolve(tag: RawTag): RawTag = tag.mapValues(_.resolveWith(resolvedExports))
+  //def resolve(tag: RawTag): RawTag = tag.mapValues(_.resolveWith(resolvedExports))
 
   // resolve values of this tag with resolved exports, lift to Cofree as a leaf
   def resolveLeaf(tag: RawTag): FuncOp.Tree =

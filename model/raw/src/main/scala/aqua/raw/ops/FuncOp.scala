@@ -23,50 +23,17 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Raw {
   def cata[T](folder: (RawTag, Chain[T]) => Eval[T]): Eval[T] =
     Cofree.cata(tree)(folder)
 
-  def definesVarNames: Eval[Set[String]] = cata[Set[String]] {
-    case (CallArrowTag(_, Call(_, exportTo)), acc) if exportTo.nonEmpty =>
-      Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
-    case (PushToStreamTag(_, exportTo), acc) =>
-      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
-    case (CanonicalizeTag(_, exportTo), acc) =>
-      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
-    case (CallServiceTag(_, _, Call(_, exportTo)), acc) if exportTo.nonEmpty =>
-      Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
-    case (NextTag(exportTo), acc) => Eval.later(acc.foldLeft(Set(exportTo))(_ ++ _))
-    case (RestrictionTag(name, _), acc) =>
-      Eval.later(acc.foldLeft(Set(name))(_ ++ _))
-    case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
+  def definesVarNames: Eval[Set[String]] = cata[Set[String]] { case (tag, acc) =>
+    Eval.later(acc.foldLeft(tag.definesVarNames)(_ ++ _))
   }
 
-  def exportsVarNames: Eval[Set[String]] = cata[Set[String]] {
-    case (CallArrowTag(_, Call(_, exportTo)), acc) if exportTo.nonEmpty =>
-      Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
-    case (CallServiceTag(_, _, Call(_, exportTo)), acc) if exportTo.nonEmpty =>
-      Eval.later(acc.foldLeft(exportTo.map(_.name).toSet)(_ ++ _))
-    case (PushToStreamTag(_, exportTo), acc) =>
-      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
-    case (RestrictionTag(name, _), acc) =>
-      Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _) - name)
-    case (CanonicalizeTag(_, exportTo), acc) =>
-      Eval.later(acc.foldLeft(Set(exportTo.name))(_ ++ _))
-    case (_, acc) => Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _))
+  def exportsVarNames: Eval[Set[String]] = cata[Set[String]] { case (tag, acc) =>
+    Eval.later(acc.foldLeft(tag.exportsVarNames)(_ ++ _) -- tag.restrictsVarNames)
   }
 
   // TODO: as it is used for checking of intersection, make it a lazy traverse with fail-fast
-  def usesVarNames: Eval[Set[String]] = cata[Set[String]] {
-    case (CallArrowTag(_, call), acc) =>
-      Eval.later(acc.foldLeft(call.argVarNames)(_ ++ _))
-    case (CallServiceTag(_, _, call), acc) =>
-      Eval.later(acc.foldLeft(call.argVarNames)(_ ++ _))
-    case (PushToStreamTag(operand, _), acc) =>
-      Eval.later(acc.foldLeft(operand.usesVarNames)(_ ++ _))
-    case (RestrictionTag(name, _), acc) =>
-      Eval.later(acc.foldLeft(Set.empty[String])(_ ++ _) - name)
-    case (CanonicalizeTag(operand, _), acc) =>
-      Eval.later(acc.foldLeft(operand.usesVarNames)(_ ++ _))
-    case (ForTag(_, iterable), acc) =>
-      Eval.later(acc.foldLeft(iterable.usesVarNames)(_ ++ _))
-    case (tag, acc) => Eval.later(acc.foldLeft(tag.usesVarNames)(_ ++ _))
+  def usesVarNames: Eval[Set[String]] = cata[Set[String]] { case (tag, acc) =>
+    Eval.later(acc.foldLeft(tag.usesVarNames)(_ ++ _) -- tag.restrictsVarNames)
   }
 
   def resolveValues(vals: Map[String, ValueRaw]): FuncOp =
@@ -77,24 +44,7 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Raw {
       this
     else
       FuncOp(
-        tree.map[RawTag](op =>
-          op.mapValues {
-            case v: VarRaw if vals.contains(v.name) => v.copy(name = vals(v.name))
-            case v => v
-          } match {
-            case c: CallArrowTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
-            case c: CallServiceTag => c.copy(call = c.call.mapExport(n => vals.getOrElse(n, n)))
-            case a: PushToStreamTag =>
-              a.copy(exportTo = a.exportTo.mapName(n => vals.getOrElse(n, n)))
-            case a: CanonicalizeTag =>
-              a.copy(exportTo = a.exportTo.mapName(n => vals.getOrElse(n, n)))
-            case a: AssignmentTag => a.copy(assignTo = vals.getOrElse(a.assignTo, a.assignTo))
-            case t: ForTag if vals.contains(t.item) => t.copy(item = vals(t.item))
-            case t: NextTag if vals.contains(t.item) => t.copy(item = vals(t.item))
-            case t: RestrictionTag if vals.contains(t.name) => t.copy(name = vals(t.name))
-            case t => t
-          }
-        )
+        tree.map[RawTag](op => op.mapValues(_.renameVars(vals)).renameExports(vals))
       )
   }
 
@@ -129,7 +79,9 @@ object FuncOp {
     cf.tail
       .map(_.foldLeft[(A, Chain[Tree])]((headA, head.tailForced)) {
         case ((aggrA, aggrTail), child) =>
-          traverseA(child, aggrA)(f).value match { case (a, tree) => (a, aggrTail.append(tree)) }
+          traverseA(child, aggrA)(f).value match {
+            case (a, tree) => (a, aggrTail.append(tree))
+          }
       })
       .map { case (a, ch) => (a, head.copy(tail = Eval.now(ch))) }
   }

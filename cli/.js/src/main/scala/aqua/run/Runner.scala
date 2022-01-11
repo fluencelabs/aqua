@@ -58,7 +58,7 @@ class Runner(
     consoleService: Console,
     finisherService: Finisher
   )(implicit ec: ExecutionContext): F[Unit] = {
-    val funcRes = Transform.fn(wrapped, transformConfig)
+    val funcRes = Transform.funcRes(wrapped, transformConfig)
     val definitions = FunctionDef(funcRes)
 
     val air = FuncAirGen(funcRes).generate.show

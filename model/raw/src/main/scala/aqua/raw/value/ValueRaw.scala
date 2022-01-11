@@ -15,6 +15,8 @@ sealed trait ValueRaw {
 
   def lastType: Type = `type`
 
+  def renameVars(map: Map[String, String]): ValueRaw = this
+
 }
 
 object ValueRaw {
@@ -46,11 +48,14 @@ object ValueRaw {
 
 case class VarRaw(name: String, `type`: Type, lambda: Chain[LambdaRaw] = Chain.empty)
     extends ValueRaw with Logging {
-  override def usesVarNames: Set[String] = Set(name)
+
+  override def usesVarNames: Set[String] =
+    lambda.toList.map(_.usesVarNames).foldLeft(Set(name))(_ ++ _)
 
   override val lastType: Type = lambda.lastOption.map(_.`type`).getOrElse(`type`)
 
-  def deriveFrom(vm: VarRaw): VarRaw = vm.copy(lambda = vm.lambda ++ lambda)
+  private def deriveFrom(vm: VarRaw, map: Map[String, ValueRaw]): VarRaw =
+    vm.copy(lambda = vm.lambda.map(_.resolveWith(map)) ++ lambda)
 
   override def resolveWith(map: Map[String, ValueRaw]): ValueRaw =
     map.get(name) match {
@@ -74,31 +79,38 @@ case class VarRaw(name: String, `type`: Type, lambda: Chain[LambdaRaw] = Chain.e
                     res <- two(variable)
                     <- variable
                */
-              case vm @ VarRaw(nn, _, _) if nn == name => deriveFrom(vm)
+              case vm @ VarRaw(nn, _, _) if nn == name => deriveFrom(vm, map)
               // it couldn't go to a cycle as long as the semantics protects it
               case _ =>
                 n.resolveWith(map) match {
                   case nvm: VarRaw =>
-                    deriveFrom(nvm)
+                    deriveFrom(nvm, map)
                   case valueModel =>
                     if (lambda.nonEmpty)
                       logger.error(
-                        s"Var $name derived from scalar $valueModel, but lambda is lost: $lambda"
+                        s"Var $name derived from literal $valueModel, but lambda is lost: $lambda"
                       )
                     valueModel
                 }
             }
           case _ =>
-            deriveFrom(vv)
+            deriveFrom(vv, map)
         }
 
       case Some(vv) =>
-        vv // TODO check that lambda is empty, otherwise error
+        if (lambda.nonEmpty)
+          logger.error(
+            s"Var $name derived from literal $vv, but lambda is lost: $lambda"
+          )
+        vv
       case None =>
         this // Should not happen
     }
 
-  override def toString(): String = s"var{$name: " + `type` + s"}.${lambda.toList.mkString(".")}"
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    VarRaw(map.getOrElse(name, name), `type`, lambda.map(_.renameVars(map)))
+
+  override def toString: String = s"var{$name: " + `type` + s"}.${lambda.toList.mkString(".")}"
 }
 
 case class LiteralRaw(value: String, `type`: Type) extends ValueRaw {
@@ -107,7 +119,9 @@ case class LiteralRaw(value: String, `type`: Type) extends ValueRaw {
 
 object LiteralRaw {
   def quote(value: String): LiteralRaw = LiteralRaw("\"" + value + "\"", LiteralType.string)
+
   def number(value: Int): LiteralRaw = LiteralRaw(value.toString, LiteralType.number)
+
   val True: LiteralRaw = LiteralRaw("true", LiteralType.bool)
   val False: LiteralRaw = LiteralRaw("false", LiteralType.bool)
 }

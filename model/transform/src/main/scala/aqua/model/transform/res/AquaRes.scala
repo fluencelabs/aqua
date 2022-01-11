@@ -22,7 +22,7 @@ object AquaRes {
             .fromSeq(ex.funcs.map { case (fnName, fn) =>
               fn.copy(funcName = fnName)
             }.toSeq)
-            .map(Transform.fn(_, conf)),
+            .map(Transform.funcRes(_, conf)),
           services = Chain
             .fromSeq(ex.services.map { case (srvName, srv) =>
               srv.copy(name = srvName)

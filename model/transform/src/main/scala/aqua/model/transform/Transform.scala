@@ -27,7 +27,7 @@ object Transform extends Logging {
     tree.copy(tail = tree.tail.map(_.filter(t => filter(t.head)).map(clear(_, filter))))
 
   // TODO: doc/rename
-  def fn(func: Func, conf: TransformConfig): FuncRes = {
+  def funcRes(func: Func, conf: TransformConfig): FuncRes = {
     val initCallable: InitPeerCallable = InitViaRelayCallable(
       Chain.fromOption(conf.relayVarName).map(VarRaw(_, ScalarType.string))
     )
