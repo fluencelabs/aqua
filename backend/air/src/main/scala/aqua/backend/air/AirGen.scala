@@ -18,12 +18,10 @@ object AirGen extends Logging {
 
   def lambdaToString(ls: List[LambdaModel]): String = ls match {
     case Nil => ""
-    case IntoArrayModel(_) :: tail =>
-      s"[@${lambdaToString(tail)}]"
     case IntoFieldModel(field, _) :: tail =>
       s".$field${lambdaToString(tail)}"
     case IntoIndexModel(idx, _) :: tail =>
-      s".[$idx]${lambdaToString(tail)}"
+      s".[${idx.fold(_.toString, identity)}]${lambdaToString(tail)}"
   }
 
   def valueToData(vm: ValueModel): DataView = vm match {

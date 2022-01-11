@@ -5,6 +5,7 @@ import aqua.model.LiteralModel
 import aqua.model.transform.TransformConfig
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
+import aqua.raw.value.LiteralRaw
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import cats.effect.kernel.Async
@@ -126,7 +127,7 @@ object AppOpts {
           .fold(
             Validated.validNel[String, List[TransformConfig.Const]](parsed.collect {
               case Right(v) =>
-                TransformConfig.Const(v._1.value, LiteralModel(v._2.value, v._2.ts))
+                TransformConfig.Const(v._1.value, LiteralRaw(v._2.value, v._2.ts))
             })
           ) { errors =>
             val errorMsgs = errors.map(str => s"Invalid constant definition '$str'.")

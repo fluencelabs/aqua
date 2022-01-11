@@ -44,8 +44,8 @@ case class FuncApplyAcc(
     }.toSet
 
     val (appliedOp, value) =
-      FuncResolver
-        .resolve(
+      ArrowInliner
+        .inline(
           resolvedArrows(name),
           callResolved,
           resolvedArrows.view.filterKeys(possibleArrowNames).toMap,

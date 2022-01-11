@@ -5,13 +5,14 @@ import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.raw.ops
 import aqua.raw.ops.{Call, CallServiceTag}
+import aqua.raw.value.LiteralRaw
 
 import scalajs.js
 import scala.concurrent.Promise
 
 // Service that can return argument to use it from a code
 case class ArgumentGetter(serviceId: String, value: VarModel, arg: scalajs.js.Dynamic)
-    extends ServiceFunction {
+  extends ServiceFunction {
 
   def registerService(peer: FluencePeer): Unit = {
     CallJsFunction.registerService(
@@ -30,13 +31,12 @@ case class ArgumentGetter(serviceId: String, value: VarModel, arg: scalajs.js.Dy
     )
   }
 
-  def callTag(): CallServiceTag = {
-    ops.CallServiceTag(
-      LiteralModel.quote(serviceId),
+  def callTag(): CallServiceTag =
+    CallServiceTag(
+      LiteralRaw.quote(serviceId),
       value.name,
       Call(List.empty, List(Call.Export(value.name, value.`type`)))
     )
-  }
 
 }
 
@@ -44,7 +44,6 @@ object ArgumentGetter {
 
   val ServiceId = "getDataSrv"
 
-  def apply(value: VarModel, arg: scalajs.js.Dynamic): ArgumentGetter = {
+  def apply(value: VarModel, arg: scalajs.js.Dynamic): ArgumentGetter =
     ArgumentGetter(ServiceId, value, arg)
-  }
 }

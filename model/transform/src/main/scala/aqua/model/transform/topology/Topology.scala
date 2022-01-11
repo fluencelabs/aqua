@@ -1,11 +1,9 @@
 package aqua.model.transform.topology
 
-import aqua.model.ValueModel.varName
 import aqua.model.transform.cursor.ChainZipper
 import aqua.raw.ops.*
 import aqua.model.transform.res.*
 import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.raw.ops
 import aqua.raw.ops.{CallServiceTag, ForTag, NextTag, OnTag, ParTag, RawTag, SeqGroupTag, XorTag}
 import aqua.raw.value.ValueRaw
 import aqua.types.{BoxType, ScalarType}

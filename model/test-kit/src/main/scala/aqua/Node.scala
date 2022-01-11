@@ -1,12 +1,31 @@
 package aqua
 
-import aqua.model.func.raw.*
 import aqua.model.transform.TransformConfig
-import aqua.model.transform.res.{CallRes, CallServiceRes, MakeRes, MatchMismatchRes, NextRes, ResolvedOp}
+import aqua.model.transform.res.{
+  CallRes,
+  CallServiceRes,
+  MakeRes,
+  MatchMismatchRes,
+  NextRes,
+  ResolvedOp
+}
+import aqua.model.ValueModel
 import aqua.model.transform.funcop.ErrorsCatcher
-import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.raw.ops
-import aqua.raw.ops.{Call, CallServiceTag, ForTag, FuncOp, MatchMismatchTag, NextTag, OnTag, ParTag, RawTag, SeqTag, XorTag}
+import aqua.model.{LiteralModel, ValueRaw, VarModel}
+import aqua.raw.ops.{
+  Call,
+  CallServiceTag,
+  ForTag,
+  FuncOp,
+  MatchMismatchTag,
+  NextTag,
+  OnTag,
+  ParTag,
+  RawTag,
+  SeqTag,
+  XorTag
+}
+import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval
 import cats.data.Chain
@@ -69,7 +88,7 @@ object Node {
     CallServiceRes(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", CallRes(args, exportTo), on)
   )
 
-  def callTag(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueModel] = Nil): Raw =
+  def callTag(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueRaw] = Nil): Raw =
     Node(
       CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(args, exportTo))
     )
@@ -85,7 +104,7 @@ object Node {
 
   def callLiteralRaw(i: Int, exportTo: List[Call.Export] = Nil): Raw = Node(
     ops.CallServiceTag(
-      LiteralModel("\"srv" + i + "\"", LiteralType.string),
+      LiteralRaw.quote("srv" + i),
       s"fn$i",
       Call(Nil, exportTo)
     )
@@ -106,7 +125,7 @@ object Node {
     )
   )
 
-  def respCall(bc: TransformConfig, value: ValueModel, on: ValueModel = initPeer): Res =
+  def respCall(bc: TransformConfig, value: ValueRaw, on: ValueModel = initPeer): Res =
     Node[ResolvedOp](
       CallServiceRes(
         bc.callbackSrvId,
@@ -126,29 +145,29 @@ object Node {
       )
     )
 
-  def fold(item: String, iter: ValueModel, body: Raw*) =
+  def fold(item: String, iter: ValueRaw, body: Raw*) =
     Node(
       ForTag(item, iter),
       body.toList :+ next(item)
     )
 
-  def foldPar(item: String, iter: ValueModel, body: Raw*) = {
+  def foldPar(item: String, iter: ValueRaw, body: Raw*) = {
     val ops = Node(SeqTag, body.toList)
     Node(
-      ops.ForTag(item, iter),
+      ForTag(item, iter),
       List(
         Node(ParTag, List(ops, next(item)))
       )
     )
   }
 
-  def co(body: Raw*) = 
+  def co(body: Raw*) =
     Node(
       ParTag.Detach,
       body.toList
     )
 
-  def on(peer: ValueModel, via: List[ValueModel], body: Raw*) =
+  def on(peer: ValueRaw, via: List[ValueRaw], body: Raw*) =
     Node(
       OnTag(peer, Chain.fromSeq(via)),
       body.toList
@@ -171,7 +190,7 @@ object Node {
       body :: Nil
     )
 
-  def matchRaw(l: ValueModel, r: ValueModel, body: Raw): Raw =
+  def matchRaw(l: ValueRaw, r: ValueRaw, body: Raw): Raw =
     Node(
       MatchMismatchTag(l, r, shouldMatch = true),
       body :: Nil
@@ -180,10 +199,11 @@ object Node {
   def through(peer: ValueModel): Node[ResolvedOp] =
     cofToNode(MakeRes.noop(peer))
 
-  private def equalOrNot[TT](left: TT, right: TT): String = (if (left == right)
-                                                               Console.GREEN + left + Console.RESET
-                                                             else
-                                                               Console.BLUE + left + Console.RED + " != " + Console.YELLOW + right)
+  private def equalOrNot[TT](left: TT, right: TT): String =
+    (if (left == right)
+       Console.GREEN + left + Console.RESET
+     else
+       Console.BLUE + left + Console.RED + " != " + Console.YELLOW + right)
 
   private def diffArg(left: ValueModel, right: ValueModel): String =
     Console.GREEN + "(" +

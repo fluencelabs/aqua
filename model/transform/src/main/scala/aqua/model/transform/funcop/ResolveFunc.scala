@@ -87,8 +87,8 @@ case class ResolveFunc(
     func: Func,
     funcArgName: String = "_func"
   ): Eval[FuncOp] =
-    FuncResolver
-      .resolve(
+    ArrowInliner
+      .inline(
         wrap(func),
         Call(VarRaw(funcArgName, func.arrowType) :: Nil, Nil),
         Map(funcArgName -> func),

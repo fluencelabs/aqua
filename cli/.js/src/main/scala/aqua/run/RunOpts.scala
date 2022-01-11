@@ -12,6 +12,7 @@ import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.builder.{ArgumentGetter, ServiceFunction}
 import aqua.files.AquaFilesIO
 import aqua.model.transform.TransformConfig
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import cats.effect.kernel.Async
 import cats.effect.{Concurrent, ExitCode, IO}
 import cats.syntax.applicative.*
@@ -97,7 +98,7 @@ object RunOpts extends Logging {
         }.leftMap(t => NonEmptyList.one("Data isn't a valid JSON: " + t.getMessage))
     }
 
-  val funcOpt: Opts[(String, List[ValueModel])] =
+  val funcOpt: Opts[(String, List[ValueRaw])] =
     Opts
       .option[String]("func", "Function to call with args", "f")
       .mapValidated { str =>
@@ -107,9 +108,10 @@ object RunOpts extends Logging {
 
             val args = expr.args.collect {
               case Literal(value, ts) =>
-                LiteralModel(value, ts)
+                LiteralRaw(value, ts)
               case VarLambda(name, _) =>
-                VarModel(name.value, BottomType)
+                // TODO why BottomType?
+                VarRaw(name.value, BottomType)
             }
 
             validNel((expr.funcName.value, args))
@@ -121,7 +123,7 @@ object RunOpts extends Logging {
   // checks if data is presented if there is non-literals in function arguments
   // creates services to add this data into a call
   def checkDataGetServices(
-    args: List[ValueModel],
+    args: List[ValueRaw],
     data: Option[js.Dynamic]
   ): ValidatedNec[String, Map[String, ArgumentGetter]] = {
     val vars = args.collect { case v @ VarModel(_, _, _) =>
@@ -158,7 +160,7 @@ object RunOpts extends Logging {
   // Default transform config with `onPeer` constant
   def transformConfigWithOnPeer(onPeer: Option[String]) =
     TransformConfig(constants =
-      onPeer.map(s => TransformConfig.Const(OnPeerConst, LiteralModel.quote(s))).toList
+      onPeer.map(s => TransformConfig.Const(OnPeerConst, LiteralRaw.quote(s))).toList
     )
 
   /**
@@ -177,7 +179,7 @@ object RunOpts extends Logging {
     funcName: String,
     inputPath: Path,
     imports: List[Path] = Nil,
-    args: List[ValueModel] = Nil,
+    args: List[ValueRaw] = Nil,
     argumentGetters: Map[String, ArgumentGetter] = Map.empty,
     services: List[ServiceFunction] = Nil
   )(implicit

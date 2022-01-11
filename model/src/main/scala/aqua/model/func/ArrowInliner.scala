@@ -11,7 +11,7 @@ import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 
-object FuncResolver extends Logging {
+object ArrowInliner extends Logging {
 
   def findNewNames(forbidden: Set[String], introduce: Set[String]): Map[String, String] =
     (forbidden intersect introduce).foldLeft(Map.empty[String, String]) { case (acc, name) =>
@@ -34,7 +34,7 @@ object FuncResolver extends Logging {
   // TODO: return ValueModel – values are substituted and resolved on this stage
   // TODO: FuncOp is also not complete: it still has topology, but not arrow calls; how to show it? ResTop?
   // Apply a callable function, get its fully resolved body & optional value, if any
-  def resolve(
+  def inline(
     fn: Func,
     call: Call,
     arrows: Map[String, Func],

@@ -11,14 +11,13 @@ import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
 import aqua.js.*
-import aqua.model.func.raw.FuncOps
 import aqua.model.transform.res.{AquaRes, FuncRes}
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
 import aqua.raw.AquaContext
+import aqua.raw.value.ValueRaw
 import aqua.run.RunConfig
 import aqua.types.*
 import cats.data.*
@@ -33,6 +32,7 @@ import cats.syntax.list.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
+import aqua.raw.arrow.Func
 import cats.{~>, Id, Monad}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
@@ -54,7 +54,7 @@ object RunCommand extends Logging {
     }.getOrElse(Future.successful(None))
   }
 
-  private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncCallable] =
+  private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[Func] =
     contexts
       .flatMap(_.exports.map(e => Chain.fromSeq(e.funcs.values.toList)).getOrElse(Chain.empty))
       .find(_.funcName == funcName)
@@ -67,7 +67,7 @@ object RunCommand extends Logging {
    */
   def run[F[_]: Files: AquaIO: Async](
     func: String,
-    args: List[ValueModel],
+    args: List[ValueRaw],
     input: Path,
     imports: List[Path],
     runConfig: RunConfig,

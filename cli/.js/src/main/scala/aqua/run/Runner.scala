@@ -5,10 +5,10 @@ import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Console, Finisher}
 import aqua.io.OutputPrinter
 import aqua.model.{ValueModel, VarModel}
-import aqua.model.func.raw.FuncOps
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.raw.ops
-import aqua.raw.ops.{Call, CallArrowTag, FuncOps}
+import aqua.raw.arrow.Func
+import aqua.raw.ops.{Call, CallArrowTag, FuncOp, FuncOps}
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrowType, BoxType, NilType, Type}
 import cats.data.{Validated, ValidatedNec}
 import cats.effect.kernel.Async
@@ -19,17 +19,16 @@ import scala.scalajs.js
 
 class Runner(
   funcName: String,
-  funcCallable: FuncCallable,
-  args: List[ValueModel],
+  funcCallable: Func,
+  args: List[ValueRaw],
   config: RunConfig,
   transformConfig: TransformConfig
 ) {
 
-  def resultVariableNames(funcCallable: FuncCallable, name: String): List[String] = {
+  def resultVariableNames(funcCallable: Func, name: String): List[String] =
     funcCallable.arrowType.codomain.toList.zipWithIndex.map { case (t, idx) =>
       name + idx
     }
-  }
 
   // Wraps function with necessary services, registers services and calls wrapped function with FluenceJS
   def run[F[_]: Async]()(implicit ec: ExecutionContext): ValidatedNec[String, F[Unit]] = {
@@ -55,7 +54,7 @@ class Runner(
 
   // Generates air from function, register all services and make a call through FluenceJS
   private def genAirAndMakeCall[F[_]: Async](
-    wrapped: FuncCallable,
+    wrapped: Func,
     consoleService: Console,
     finisherService: Finisher
   )(implicit ec: ExecutionContext): F[Unit] = {
@@ -109,7 +108,7 @@ class Runner(
   private def wrapCall(
     consoleService: Console,
     finisherService: Finisher
-  ): ValidatedNec[String, FuncCallable] = {
+  ): ValidatedNec[String, Func] = {
     // pass results to a printing service if an input function returns a result
     // otherwise just call it
     val body = funcCallable.arrowType.codomain.toList match {
@@ -118,10 +117,10 @@ class Runner(
       case types =>
         val (variables, exports) = types.zipWithIndex.map { case (t, idx) =>
           val name = config.resultName + idx
-          (VarModel(name, t), Call.Export(name, t))
+          (VarRaw(name, t), Call.Export(name, t))
         }.unzip
         val callFuncTag =
-          ops.CallArrowTag(funcName, Call(args, exports))
+          CallArrowTag(funcName, Call(args, exports))
 
         val consoleServiceTag = consoleService.callTag(variables)
 
@@ -145,7 +144,7 @@ class Runner(
     gettersV.map { getters =>
       val gettersTags = getters.map(s => FuncOp.leaf(s.callTag()))
 
-      FuncCallable(
+      Func(
         config.functionWrapperName,
         FuncOps.seq((gettersTags :+ body :+ FuncOp.leaf(finisherServiceTag)): _*),
         // no arguments and returns nothing
