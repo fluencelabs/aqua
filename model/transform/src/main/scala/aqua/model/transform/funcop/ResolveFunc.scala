@@ -84,15 +84,17 @@ case class ResolveFunc(
 
   // TODO: doc/rename
   def resolve(
-               func: FuncArrow,
-               funcArgName: String = "_func"
+    func: FuncArrow,
+    funcArgName: String = "_func"
   ): Eval[FuncOp] =
     ArrowInliner
-      .inline(
+      .inline[InlineAcc](
         wrap(func),
-        Call(VarRaw(funcArgName, func.arrowType) :: Nil, Nil),
-        Map(funcArgName -> func),
-        Set.empty
+        Call(VarRaw(funcArgName, func.arrowType) :: Nil, Nil)
       )
       .map(_._1)
+      .run(
+        InlineAcc(resolvedArrows = Map(funcArgName -> func))
+      )
+      .map(_._2)
 }

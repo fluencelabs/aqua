@@ -9,7 +9,12 @@ import cats.free.Cofree
 import cats.instances.tuple.*
 import cats.kernel.Semigroup
 import cats.syntax.apply.*
+import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.traverse.*
+import cats.Monad
+import cats.data.State
+import cats.data.StateT
 
 case class FuncOp(tree: Cofree[Chain, RawTag]) extends Raw {
   def head: RawTag = tree.head
@@ -85,6 +90,12 @@ object FuncOp {
       })
       .map { case (a, ch) => (a, head.copy(tail = Eval.now(ch))) }
   }
+
+  def traverseS[S](cf: Tree, f: RawTag => State[S, Tree]): State[S, Tree] = for {
+    headTree <- f(cf.head)
+    tail <- StateT.liftF(cf.tail)
+    tailTree <- tail.traverse(traverseS[S](_, f))
+  } yield headTree.copy(tail = headTree.tail.map(_ ++ tailTree))
 
   // Semigroup for foldRight processing
   object RightAssocSemi extends Semigroup[FuncOp] {

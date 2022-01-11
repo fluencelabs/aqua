@@ -2,11 +2,12 @@ package aqua.raw.arrow
 
 import aqua.raw.ops.Call
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{ArrowType, DataType, ProductType, Type}
+import aqua.types.{ArrowType, DataType, ProductType, StreamType, Type}
 
 /**
  * Wraps argument definitions of a function, along with values provided when this function is called
- * @param args Argument definitions
+ *
+ * @param args     Argument definitions
  * @param callWith Values provided for arguments
  */
 case class ArgsCall(args: ProductType, callWith: List[ValueRaw]) {
@@ -18,6 +19,11 @@ case class ArgsCall(args: ProductType, callWith: List[ValueRaw]) {
     zipped.collect { case ((name, _: DataType), value) =>
       name -> value
     }.toMap
+
+  lazy val streamArgs: Map[String, VarRaw] =
+    dataArgs.collect { case (k, vr @ VarRaw(n, StreamType(_), _)) =>
+      (k, vr)
+    }
 
   def arrowArgs(arrowsInScope: Map[String, FuncArrow]): Map[String, FuncArrow] =
     zipped.collect {
