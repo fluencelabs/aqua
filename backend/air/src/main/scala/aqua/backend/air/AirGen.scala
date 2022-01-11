@@ -21,7 +21,7 @@ object AirGen extends Logging {
     case IntoFieldModel(field, _) :: tail =>
       s".$field${lambdaToString(tail)}"
     case IntoIndexModel(idx, _) :: tail =>
-      s".[${idx.fold(_.toString, identity)}]${lambdaToString(tail)}"
+      s".[$idx]${lambdaToString(tail)}"
   }
 
   def valueToData(vm: ValueModel): DataView = vm match {

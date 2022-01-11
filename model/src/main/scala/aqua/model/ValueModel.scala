@@ -20,7 +20,8 @@ object ValueModel {
 
   def fromRaw(raw: ValueRaw): ValueModel = raw match {
     case VarRaw(name, t, lambda) =>
-      VarModel(name, t, Chain.empty) // TODO convert lambda
+      // TODO: handle recursive lambda
+      VarModel(name, t, lambda.map(LambdaModel.fromRaw))
     case LiteralRaw(value, t) =>
       LiteralModel(value, t)
   }
@@ -35,8 +36,24 @@ case class LiteralModel(value: String, `type`: Type) extends ValueModel {
 sealed trait LambdaModel {
   def `type`: Type
 }
+
+object LambdaModel {
+
+  def fromRaw(l: LambdaRaw): LambdaModel = l match {
+    case IntoFieldRaw(field, t) => IntoFieldModel(field, t)
+    case IntoIndexRaw(idx, t) =>
+      // TODO: handle recursive lambda
+      IntoIndexModel(
+        ValueModel.fromRaw(idx) match {
+          case VarModel(name, _, _) => name
+          case LiteralModel(value, _) => value
+        },
+        t
+      )
+  }
+}
 case class IntoFieldModel(field: String, `type`: Type) extends LambdaModel
-case class IntoIndexModel(idx: Either[Int, String], `type`: Type) extends LambdaModel
+case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel
 
 case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel]) extends ValueModel {
 

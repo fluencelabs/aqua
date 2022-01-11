@@ -11,7 +11,7 @@ import aqua.model.transform.res.{
 }
 import aqua.model.ValueModel
 import aqua.model.transform.funcop.ErrorsCatcher
-import aqua.model.{LiteralModel, ValueRaw, VarModel}
+import aqua.model.{LiteralModel, VarModel}
 import aqua.raw.ops.{
   Call,
   CallServiceTag,
@@ -61,23 +61,23 @@ object Node {
     Cofree(tree.label, Eval.later(Chain.fromSeq(tree.children.map(nodeToCof))))
 
   implicit def rawToFuncOp(tree: Raw): FuncOp =
-    ops.FuncOp(tree.cof)
+    FuncOp(tree.cof)
 
   implicit def funcOpToRaw(op: FuncOp): Raw =
     op.tree
 
   val relay = LiteralModel("-relay-", ScalarType.string)
-  val relayV = VarModel("-relay-", ScalarType.string)
-  val initPeer = LiteralModel.initPeerId
+  val relayV = LiteralModel("-relay-", ScalarType.string)
+  val initPeer = ValueModel.fromRaw(ValueRaw.InitPeerId)
   val emptyCall = Call(Nil, Nil)
   val otherPeer = LiteralModel("other-peer", ScalarType.string)
   val otherPeerL = LiteralModel("\"other-peer\"", LiteralType.string)
   val otherRelay = LiteralModel("other-relay", ScalarType.string)
   val otherPeer2 = LiteralModel("other-peer-2", ScalarType.string)
   val otherRelay2 = LiteralModel("other-relay-2", ScalarType.string)
-  val varNode = VarModel("node-id", ScalarType.string)
-  val viaList = VarModel("other-relay-2", ArrayType(ScalarType.string))
-  val valueArray = VarModel("array", ArrayType(ScalarType.string))
+  val varNode = VarModel("node-id", ScalarType.string, Chain.empty)
+  val viaList = VarModel("other-relay-2", ArrayType(ScalarType.string), Chain.empty)
+  val valueArray = VarModel("array", ArrayType(ScalarType.string), Chain.empty)
 
   def callRes(
     i: Int,
@@ -90,7 +90,7 @@ object Node {
 
   def callTag(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueRaw] = Nil): Raw =
     Node(
-      CallServiceTag(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", Call(args, exportTo))
+      CallServiceTag(LiteralRaw.quote(s"srv$i"), s"fn$i", Call(args, exportTo))
     )
 
   def callLiteralRes(i: Int, on: ValueModel, exportTo: Option[Call.Export] = None): Res = Node(
@@ -103,7 +103,7 @@ object Node {
   )
 
   def callLiteralRaw(i: Int, exportTo: List[Call.Export] = Nil): Raw = Node(
-    ops.CallServiceTag(
+    CallServiceTag(
       LiteralRaw.quote("srv" + i),
       s"fn$i",
       Call(Nil, exportTo)
@@ -112,10 +112,10 @@ object Node {
 
   def errorCall(bc: TransformConfig, i: Int, on: ValueModel = initPeer): Res = Node[ResolvedOp](
     CallServiceRes(
-      bc.errorHandlingCallback,
+      ValueModel.fromRaw(bc.errorHandlingCallback),
       bc.errorFuncName,
       CallRes(
-        ErrorsCatcher.lastErrorArg :: LiteralModel(
+        ValueModel.fromRaw(ErrorsCatcher.lastErrorArg) :: LiteralModel(
           i.toString,
           LiteralType.number
         ) :: Nil,
@@ -125,10 +125,10 @@ object Node {
     )
   )
 
-  def respCall(bc: TransformConfig, value: ValueRaw, on: ValueModel = initPeer): Res =
+  def respCall(bc: TransformConfig, value: ValueModel, on: ValueModel = initPeer): Res =
     Node[ResolvedOp](
       CallServiceRes(
-        bc.callbackSrvId,
+        ValueModel.fromRaw(bc.callbackSrvId),
         bc.respFuncName,
         CallRes(value :: Nil, None),
         on
@@ -138,7 +138,7 @@ object Node {
   def dataCall(bc: TransformConfig, name: String, on: ValueModel = initPeer): Res =
     Node[ResolvedOp](
       CallServiceRes(
-        bc.dataSrvId,
+        ValueModel.fromRaw(bc.dataSrvId),
         name,
         CallRes(Nil, Some(Call.Export(name, ScalarType.string))),
         on
