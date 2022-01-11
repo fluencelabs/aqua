@@ -19,7 +19,7 @@ case class ArgsCall(args: ProductType, callWith: List[ValueRaw]) {
       name -> value
     }.toMap
 
-  def arrowArgs(arrowsInScope: Map[String, Func]): Map[String, Func] =
+  def arrowArgs(arrowsInScope: Map[String, FuncArrow]): Map[String, FuncArrow] =
     zipped.collect {
       case ((name, _: ArrowType), VarRaw(value, _, _)) if arrowsInScope.contains(value) =>
         name -> arrowsInScope(value)

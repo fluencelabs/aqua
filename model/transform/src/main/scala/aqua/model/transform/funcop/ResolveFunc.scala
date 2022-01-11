@@ -4,7 +4,7 @@ import aqua.model.func.*
 import aqua.raw.ops.FuncOps
 import aqua.raw.ops.{Call, FuncOp, FuncOps}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.raw.arrow.{ArgsCall, Func}
+import aqua.raw.arrow.{ArgsCall, FuncArrow}
 import aqua.types.*
 import cats.Eval
 
@@ -30,9 +30,9 @@ case class ResolveFunc(
     )
 
   // TODO: doc
-  def arrowToCallback(name: String, arrowType: ArrowType): Func = {
+  def arrowToCallback(name: String, arrowType: ArrowType): FuncArrow = {
     val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
-    Func(
+    FuncArrow(
       arrowCallbackPrefix + name,
       callback(name, call),
       arrowType,
@@ -43,7 +43,7 @@ case class ResolveFunc(
   }
 
   // TODO: doc/rename
-  def wrap(func: Func): Func = {
+  def wrap(func: FuncArrow): FuncArrow = {
     val returnType = ProductType(func.ret.map(_.lastType).map {
       // we mustn't return a stream in response callback to avoid pushing stream to `-return-` value
       case StreamType(t) => ArrayType(t)
@@ -57,7 +57,7 @@ case class ResolveFunc(
       returnType.map { case (l, t) => Call.Export(l, t) }
     )
 
-    Func(
+    FuncArrow(
       wrapCallableName,
       transform(
         FuncOps.seq(
@@ -84,8 +84,8 @@ case class ResolveFunc(
 
   // TODO: doc/rename
   def resolve(
-    func: Func,
-    funcArgName: String = "_func"
+               func: FuncArrow,
+               funcArgName: String = "_func"
   ): Eval[FuncOp] =
     ArrowInliner
       .inline(

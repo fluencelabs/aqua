@@ -3,11 +3,14 @@ package aqua.semantics
 import aqua.Node
 import aqua.Node.*
 import aqua.parser.Ast
+import aqua.raw.AquaContext
+import aqua.raw.ops.FuncOp
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.funcop.*
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.raw.ops.{FuncOps, SeqTag}
+import aqua.raw.value.LiteralRaw
 import aqua.types.LiteralType
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -45,7 +48,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
       FuncOp.wrap(
         SeqTag,
         FuncOps.par(
-          on(LiteralModel("\"other-peer\"", LiteralType.string), Nil, callLiteralRaw(1)),
+          on(LiteralRaw("\"other-peer\"", LiteralType.string), Nil, callLiteralRaw(1)),
           callLiteralRaw(1)
         )
       )

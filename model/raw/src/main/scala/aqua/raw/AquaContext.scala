@@ -1,6 +1,6 @@
 package aqua.raw
 
-import aqua.raw.arrow.{ArgsCall, Func, FuncRaw}
+import aqua.raw.arrow.{ArgsCall, FuncArrow, FuncRaw}
 import aqua.raw.ops.{CallServiceTag, FuncOp}
 import aqua.raw.value.ValueRaw
 import aqua.types.{StructType, Type}
@@ -14,15 +14,15 @@ import scribe.Logging
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
-  module: Option[String],
-  declares: Set[String],
-  exports: Option[AquaContext],
-  funcs: Map[String, Func],
-  types: Map[String, Type],
-  values: Map[String, ValueRaw],
-  abilities: Map[String, AquaContext],
-  // TODO: merge this with abilities, when have ability resolution variance
-  services: Map[String, ServiceRaw]
+                        module: Option[String],
+                        declares: Set[String],
+                        exports: Option[AquaContext],
+                        funcs: Map[String, FuncArrow],
+                        types: Map[String, Type],
+                        values: Map[String, ValueRaw],
+                        abilities: Map[String, AquaContext],
+                        // TODO: merge this with abilities, when have ability resolution variance
+                        services: Map[String, ServiceRaw]
 ) {
 
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
@@ -70,7 +70,7 @@ case class AquaContext(
       }
       .map(prefixFirst(prefix, _))
 
-  def allFuncs(prefix: String = ""): Map[String, Func] =
+  def allFuncs(prefix: String = ""): Map[String, FuncArrow] =
     abilities
       .foldLeft(funcs) { case (ts, (k, v)) =>
         ts ++ v.allFuncs(k + ".")
@@ -151,7 +151,7 @@ object AquaContext extends Logging {
       funcs = sm.arrows.toSortedMap.map { case (fnName, arrowType) =>
         val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
         fnName ->
-          Func(
+          FuncArrow(
             fnName,
             // TODO: capture ability resolution, get ID from the call context
             FuncOp.leaf(CallServiceTag(serviceId, fnName, call)),

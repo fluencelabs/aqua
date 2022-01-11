@@ -1,10 +1,10 @@
 package aqua.model.transform.topology
 
-import aqua.model.func.raw.FuncOps
+import aqua.raw.ops.FuncOps
 import aqua.model.transform.cursor.ChainZipper
-import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.raw.ops
-import aqua.raw.ops.{Call, OnTag, ReturnTag}
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.raw.ops.{Call, FuncOp, OnTag, ReturnTag}
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrayType, ScalarType}
 import cats.data.{Chain, NonEmptyList}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -19,9 +19,9 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
       NonEmptyList.one(
         ChainZipper.one(
           onVia(
-            LiteralModel.initPeerId,
+            ValueRaw.InitPeerId,
             Chain.empty,
-            callService(LiteralModel.quote("calledOutside"), "fn", Call(Nil, Nil))
+            callService(LiteralRaw.quote("calledOutside"), "fn", Call(Nil, Nil))
           ).tree
         )
       )
@@ -35,13 +35,13 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
       NonEmptyList.one(
         ChainZipper.one(
           onVia(
-            LiteralModel.initPeerId,
+            ValueRaw.InitPeerId,
             Chain.empty,
             seq(
-              callService(LiteralModel.quote("1"), "fn", Call(Nil, Nil)),
-              callService(LiteralModel.quote("2"), "fn", Call(Nil, Nil)),
-              callService(LiteralModel.quote("3"), "fn", Call(Nil, Nil)),
-              callService(LiteralModel.quote("4"), "fn", Call(Nil, Nil))
+              callService(LiteralRaw.quote("1"), "fn", Call(Nil, Nil)),
+              callService(LiteralRaw.quote("2"), "fn", Call(Nil, Nil)),
+              callService(LiteralRaw.quote("3"), "fn", Call(Nil, Nil)),
+              callService(LiteralRaw.quote("4"), "fn", Call(Nil, Nil))
             )
           ).tree
         )
@@ -59,9 +59,9 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
       NonEmptyList.one(
         ChainZipper.one(
           onVia(
-            LiteralModel.initPeerId,
-            Chain.one(VarModel("-relay-", ScalarType.string)),
-            callService(LiteralModel.quote("calledOutside"), "fn", Call(Nil, Nil))
+            ValueRaw.InitPeerId,
+            Chain.one(VarRaw("-relay-", ScalarType.string)),
+            callService(LiteralRaw.quote("calledOutside"), "fn", Call(Nil, Nil))
           ).tree
         )
       )
@@ -76,26 +76,26 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
       NonEmptyList.one(
         ChainZipper.one(
           onVia(
-            LiteralModel.initPeerId,
-            Chain.one(VarModel("-relay-", ScalarType.string)),
+            ValueRaw.InitPeerId,
+            Chain.one(VarRaw("-relay-", ScalarType.string)),
             seq(
-              callService(LiteralModel.quote("calledOutside"), "fn", Call(Nil, Nil)),
+              callService(LiteralRaw.quote("calledOutside"), "fn", Call(Nil, Nil)),
               onVia(
-                VarModel("-other-", ScalarType.string),
-                Chain.one(VarModel("-external-", ScalarType.string)),
+                VarRaw("-other-", ScalarType.string),
+                Chain.one(VarRaw("-external-", ScalarType.string)),
                 seq(
                   callService(
-                    LiteralModel.quote("calledInside"),
+                    LiteralRaw.quote("calledInside"),
                     "fn",
                     Call(Nil, Call.Export("export", ScalarType.string) :: Nil)
                   ),
-                  leaf(ReturnTag(NonEmptyList.one(VarModel("export", ScalarType.string))))
+                  leaf(ReturnTag(NonEmptyList.one(VarRaw("export", ScalarType.string))))
                 )
               ),
               callService(
-                LiteralModel.quote("return"),
+                LiteralRaw.quote("return"),
                 "fn",
-                Call(VarModel("export", ScalarType.string) :: Nil, Nil)
+                Call(VarRaw("export", ScalarType.string) :: Nil, Nil)
               )
             )
           ).tree
@@ -104,26 +104,26 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     )
 
     raw.tag should be(
-      OnTag(LiteralModel.initPeerId, Chain.one(VarModel("-relay-", ScalarType.string)))
+      OnTag(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string)))
     )
 //    raw.firstExecuted.map(_.tag) should be(
 //      Some(
-//        callService(LiteralModel.quote("calledOutside"), "fn", Call(Nil, Nil)).tree.head
+//        callService(LiteralRaw.quote("calledOutside"), "fn", Call(Nil, Nil)).tree.head
 //      )
 //    )
 //    raw.lastExecuted.map(_.tag) should be(
 //      Some(
 //        callService(
-//          LiteralModel.quote("return"),
+//          LiteralRaw.quote("return"),
 //          "fn",
-//          Call(VarModel("export", ScalarType.string) :: Nil, Nil)
+//          Call(VarRaw("export", ScalarType.string) :: Nil, Nil)
 //        ).tree.head
 //      )
 //    )
 //    raw.lastExecuted.flatMap(_.seqPrev).flatMap(_.lastExecuted).map(_.tag) should be(
 //      Some(
 //        callService(
-//          LiteralModel.quote("calledInside"),
+//          LiteralRaw.quote("calledInside"),
 //          "fn",
 //          Call(Nil, Call.Export("export", ScalarType.string) :: Nil)
 //        ).tree.head
@@ -138,21 +138,21 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
       NonEmptyList.one(
         ChainZipper.one(
           onVia(
-            LiteralModel.initPeerId,
-            Chain.one(VarModel("-relay-", ScalarType.string)),
+            ValueRaw.InitPeerId,
+            Chain.one(VarRaw("-relay-", ScalarType.string)),
             seq(
-              callService(LiteralModel.quote("calledOutside"), "fn", Call(Nil, Nil)),
+              callService(LiteralRaw.quote("calledOutside"), "fn", Call(Nil, Nil)),
               onVia(
-                VarModel("-other-", ScalarType.string),
-                Chain.one(VarModel("-external-", ScalarType.string)),
+                VarRaw("-other-", ScalarType.string),
+                Chain.one(VarRaw("-external-", ScalarType.string)),
                 fold(
                   "item",
-                  VarModel("iterable", ArrayType(ScalarType.string)),
+                  VarRaw("iterable", ArrayType(ScalarType.string)),
                   onVia(
-                    VarModel("-in-fold-", ScalarType.string),
-                    Chain.one(VarModel("-fold-relay-", ScalarType.string)),
+                    VarRaw("-in-fold-", ScalarType.string),
+                    Chain.one(VarRaw("-fold-relay-", ScalarType.string)),
                     callService(
-                      LiteralModel.quote("calledInside"),
+                      LiteralRaw.quote("calledInside"),
                       "fn",
                       Call(Nil, Call.Export("export", ScalarType.string) :: Nil)
                     )
@@ -160,9 +160,9 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
                 )
               ),
               callService(
-                LiteralModel.quote("return"),
+                LiteralRaw.quote("return"),
                 "fn",
-                Call(VarModel("export", ScalarType.string) :: Nil, Nil)
+                Call(VarRaw("export", ScalarType.string) :: Nil, Nil)
               )
             )
           ).tree
@@ -171,26 +171,26 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     )
 
     raw.tag should be(
-      ops.OnTag(LiteralModel.initPeerId, Chain.one(VarModel("-relay-", ScalarType.string)))
+      OnTag(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string)))
     )
 //    raw.firstExecuted.map(_.tag) should be(
 //      Some(
-//        callService(LiteralModel.quote("calledOutside"), "fn", Call(Nil, Nil)).tree.head
+//        callService(LiteralRaw.quote("calledOutside"), "fn", Call(Nil, Nil)).tree.head
 //      )
 //    )
 //    raw.lastExecuted.map(_.tag) should be(
 //      Some(
 //        callService(
-//          LiteralModel.quote("return"),
+//          LiteralRaw.quote("return"),
 //          "fn",
-//          Call(VarModel("export", ScalarType.string) :: Nil, Nil)
+//          Call(VarRaw("export", ScalarType.string) :: Nil, Nil)
 //        ).tree.head
 //      )
 //    )
 //    raw.lastExecuted.flatMap(_.seqPrev).flatMap(_.lastExecuted).map(_.tag) should be(
 //      Some(
 //        callService(
-//          LiteralModel.quote("calledInside"),
+//          LiteralRaw.quote("calledInside"),
 //          "fn",
 //          Call(Nil, Call.Export("export", ScalarType.string) :: Nil)
 //        ).tree.head
@@ -198,21 +198,21 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
 //    )
 //    raw.lastExecuted.flatMap(_.seqPrev).map(_.topology.pathOn).get should be(
 //      OnTag(
-//        VarModel("-in-fold-", ScalarType.string),
-//        Chain.one(VarModel("-fold-relay-", ScalarType.string))
+//        VarRaw("-in-fold-", ScalarType.string),
+//        Chain.one(VarRaw("-fold-relay-", ScalarType.string))
 //      ) :: OnTag(
-//        VarModel("-other-", ScalarType.string),
-//        Chain.one(VarModel("-external-", ScalarType.string))
+//        VarRaw("-other-", ScalarType.string),
+//        Chain.one(VarRaw("-external-", ScalarType.string))
 //      ) :: OnTag(
-//        LiteralModel.initPeerId,
-//        Chain.one(VarModel("-relay-", ScalarType.string))
+//        ValueRaw.InitPeerId,
+//        Chain.one(VarRaw("-relay-", ScalarType.string))
 //      ) :: Nil
 //    )
 //    raw.lastExecuted.map(_.topology.pathBefore).get should be(
 //      Chain(
-//        VarModel("-fold-relay-", ScalarType.string),
-//        VarModel("-external-", ScalarType.string),
-//        VarModel("-relay-", ScalarType.string)
+//        VarRaw("-fold-relay-", ScalarType.string),
+//        VarRaw("-external-", ScalarType.string),
+//        VarRaw("-relay-", ScalarType.string)
 //      )
 //    )
 

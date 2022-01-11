@@ -1,16 +1,16 @@
 package aqua.model.transform.res
 
 import aqua.model.transform.TransformConfig
-import aqua.raw.arrow.Func
+import aqua.raw.arrow.FuncArrow
 import aqua.types.{ArrowType, Type}
 import cats.data.Chain
 import cats.free.Cofree
 
 // TODO: docs, why source and body here together?
 case class FuncRes(
-  source: Func,
-  conf: TransformConfig,
-  body: Cofree[Chain, ResolvedOp]
+                    source: FuncArrow,
+                    conf: TransformConfig,
+                    body: Cofree[Chain, ResolvedOp]
 ) {
   import FuncRes.*
 

@@ -9,9 +9,9 @@ case class FuncRaw(
 ) extends Raw {
 
   def capture(
-    arrows: Map[String, Func],
-    constants: Map[String, ValueRaw]
-  ): Func =
-    Func(name, arrow.body.fixXorPar, arrow.`type`, arrow.ret, arrows, constants)
+               arrows: Map[String, FuncArrow],
+               constants: Map[String, ValueRaw]
+  ): FuncArrow =
+    FuncArrow(name, arrow.body.fixXorPar, arrow.`type`, arrow.ret, arrows, constants)
 
 }

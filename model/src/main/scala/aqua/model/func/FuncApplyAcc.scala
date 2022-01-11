@@ -1,17 +1,17 @@
 package aqua.model.func
 
-import aqua.raw.arrow.{Func, FuncRaw}
+import aqua.raw.arrow.{FuncArrow, FuncRaw}
 import aqua.raw.ops.{AssignmentTag, Call, CallArrowTag, ClosureTag, FuncOp, RawTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.ArrowType
 import scribe.Logging
 
 case class FuncApplyAcc(
-  noNames: Set[String],
-  resolvedExports: Map[String, ValueRaw],
-  resolvedArrows: Map[String, Func],
-  funcName: String,
-  instructionCounter: Int = 0
+                         noNames: Set[String],
+                         resolvedExports: Map[String, ValueRaw],
+                         resolvedArrows: Map[String, FuncArrow],
+                         funcName: String,
+                         instructionCounter: Int = 0
 ) extends Logging {
 
   // resolve values of this tag with resolved exports

@@ -4,7 +4,7 @@ import aqua.parser.expr.func.ArrowExpr
 import aqua.parser.lexer.{BasicTypeToken, Name}
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
-import aqua.raw.ops.{FuncOps, ReturnTag}
+import aqua.raw.ops.{FuncOp, FuncOps, ReturnTag}
 import aqua.raw.value.LiteralRaw
 import aqua.semantics.expr.func.ArrowSem
 import aqua.types.*
@@ -50,7 +50,7 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "arrow with return type and correct state" should "create correct model" ignore {
-    val returnValue = LiteralModel("123", string)
+    val returnValue = LiteralRaw("123", string)
     val returnTag = FuncOp.wrap(ReturnTag(NonEmptyList.one(returnValue)), FuncOps.empty)
     val model = getModel(returnTag)(program("(a: string, b: u32) -> string"))
 

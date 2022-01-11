@@ -25,7 +25,7 @@ import aqua.raw.ops.{
   SeqTag,
   XorTag
 }
-import aqua.raw.value.{LiteralRaw, ValueRaw}
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval
 import cats.data.Chain
@@ -66,18 +66,25 @@ object Node {
   implicit def funcOpToRaw(op: FuncOp): Raw =
     op.tree
 
-  val relay = LiteralModel("-relay-", ScalarType.string)
-  val relayV = LiteralModel("-relay-", ScalarType.string)
-  val initPeer = ValueModel.fromRaw(ValueRaw.InitPeerId)
+  implicit def rawToValue(raw: ValueRaw): ValueModel = ValueModel.fromRaw(raw)
+
+  val relay = LiteralRaw("-relay-", ScalarType.string)
+
+  val relayV = VarRaw("-relay-", ScalarType.string)
+
+  val initPeer = ValueRaw.InitPeerId
+
   val emptyCall = Call(Nil, Nil)
-  val otherPeer = LiteralModel("other-peer", ScalarType.string)
-  val otherPeerL = LiteralModel("\"other-peer\"", LiteralType.string)
-  val otherRelay = LiteralModel("other-relay", ScalarType.string)
-  val otherPeer2 = LiteralModel("other-peer-2", ScalarType.string)
-  val otherRelay2 = LiteralModel("other-relay-2", ScalarType.string)
-  val varNode = VarModel("node-id", ScalarType.string, Chain.empty)
-  val viaList = VarModel("other-relay-2", ArrayType(ScalarType.string), Chain.empty)
-  val valueArray = VarModel("array", ArrayType(ScalarType.string), Chain.empty)
+
+  val otherPeer = VarRaw("other-peer", ScalarType.string)
+
+  val otherPeerL = LiteralRaw("\"other-peer\"", LiteralType.string)
+  val otherRelay = LiteralRaw("other-relay", ScalarType.string)
+  val otherPeer2 = LiteralRaw("other-peer-2", ScalarType.string)
+  val otherRelay2 = LiteralRaw("other-relay-2", ScalarType.string)
+  val varNode = VarRaw("node-id", ScalarType.string)
+  val viaList = VarRaw("other-relay-2", ArrayType(ScalarType.string))
+  val valueArray = VarRaw("array", ArrayType(ScalarType.string))
 
   def callRes(
     i: Int,
@@ -85,12 +92,12 @@ object Node {
     exportTo: Option[Call.Export] = None,
     args: List[ValueModel] = Nil
   ): Res = Node(
-    CallServiceRes(LiteralModel(s"srv$i", ScalarType.string), s"fn$i", CallRes(args, exportTo), on)
+    CallServiceRes(VarRaw(s"srv$i", ScalarType.string), s"fn$i", CallRes(args, exportTo), on)
   )
 
   def callTag(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueRaw] = Nil): Raw =
     Node(
-      CallServiceTag(LiteralRaw.quote(s"srv$i"), s"fn$i", Call(args, exportTo))
+      CallServiceTag(VarRaw(s"srv$i", ScalarType.string), s"fn$i", Call(args, exportTo))
     )
 
   def callLiteralRes(i: Int, on: ValueModel, exportTo: Option[Call.Export] = None): Res = Node(

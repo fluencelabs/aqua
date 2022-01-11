@@ -32,7 +32,7 @@ import cats.syntax.list.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import aqua.raw.arrow.Func
+import aqua.raw.arrow.FuncArrow
 import cats.{~>, Id, Monad}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
@@ -54,7 +54,7 @@ object RunCommand extends Logging {
     }.getOrElse(Future.successful(None))
   }
 
-  private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[Func] =
+  private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncArrow] =
     contexts
       .flatMap(_.exports.map(e => Chain.fromSeq(e.funcs.values.toList)).getOrElse(Chain.empty))
       .find(_.funcName == funcName)

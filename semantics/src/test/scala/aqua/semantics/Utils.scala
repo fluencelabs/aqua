@@ -4,6 +4,7 @@ import aqua.parser.expr.func.ClosureExpr
 import aqua.parser.lexer.{Name, Token}
 import aqua.parser.lift.Span
 import aqua.raw.Raw
+import aqua.raw.AquaContext
 import aqua.semantics.expr.func.ClosureSem
 import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.abilities.{AbilitiesInterpreter, AbilitiesState}
@@ -11,7 +12,7 @@ import aqua.semantics.rules.names.{NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesInterpreter, TypesState}
 import aqua.types.*
 import cats.data.State
-import cats.{Id, ~>}
+import cats.{~>, Id}
 import monocle.Lens
 import monocle.macros.GenLens
 import monocle.syntax.all.*
@@ -49,13 +50,13 @@ object Utils {
   }
 
   def getState(
-                startState: Raw
-              )(prog: Prog[State[CompilerState[cats.Id], *], Raw]): CompilerState[Id] = {
+    startState: Raw
+  )(prog: Prog[State[CompilerState[cats.Id], *], Raw]): CompilerState[Id] = {
     prog.apply(State.pure[CompilerState[Id], Raw](startState)).run(blankCS).value._1
   }
 
   def getModel(startState: Raw)(prog: Prog[State[CompilerState[cats.Id], *], Raw]): Raw = {
-    prog.apply(State.pure[CompilerState[Id], Model](startState)).run(blankCS).value._2
+    prog.apply(State.pure[CompilerState[Id], Raw](startState)).run(blankCS).value._2
   }
 
   def blankCS: CompilerState[Id] = {
@@ -73,5 +74,5 @@ object Utils {
   def blank: State[CompilerState[Id], CompilerState[Id]] =
     State.pure[CompilerState[Id], CompilerState[Id]](blankCS)
 
-  def emptyS[F]: State[F, Raw] = State.pure[F, Model](Raw.empty("empty"))
+  def emptyS[F]: State[F, Raw] = State.pure[F, Raw](Raw.empty("empty"))
 }

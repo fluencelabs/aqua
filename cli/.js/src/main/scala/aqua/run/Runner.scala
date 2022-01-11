@@ -6,7 +6,7 @@ import aqua.builder.{ArgumentGetter, Console, Finisher}
 import aqua.io.OutputPrinter
 import aqua.model.{ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.raw.arrow.Func
+import aqua.raw.arrow.FuncArrow
 import aqua.raw.ops.{Call, CallArrowTag, FuncOp, FuncOps}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrowType, BoxType, NilType, Type}
@@ -18,14 +18,14 @@ import scala.concurrent.ExecutionContext
 import scala.scalajs.js
 
 class Runner(
-  funcName: String,
-  funcCallable: Func,
-  args: List[ValueRaw],
-  config: RunConfig,
-  transformConfig: TransformConfig
+              funcName: String,
+              funcCallable: FuncArrow,
+              args: List[ValueRaw],
+              config: RunConfig,
+              transformConfig: TransformConfig
 ) {
 
-  def resultVariableNames(funcCallable: Func, name: String): List[String] =
+  def resultVariableNames(funcCallable: FuncArrow, name: String): List[String] =
     funcCallable.arrowType.codomain.toList.zipWithIndex.map { case (t, idx) =>
       name + idx
     }
@@ -54,9 +54,9 @@ class Runner(
 
   // Generates air from function, register all services and make a call through FluenceJS
   private def genAirAndMakeCall[F[_]: Async](
-    wrapped: Func,
-    consoleService: Console,
-    finisherService: Finisher
+                                              wrapped: FuncArrow,
+                                              consoleService: Console,
+                                              finisherService: Finisher
   )(implicit ec: ExecutionContext): F[Unit] = {
     val funcRes = Transform.funcRes(wrapped, transformConfig)
     val definitions = FunctionDef(funcRes)
@@ -108,7 +108,7 @@ class Runner(
   private def wrapCall(
     consoleService: Console,
     finisherService: Finisher
-  ): ValidatedNec[String, Func] = {
+  ): ValidatedNec[String, FuncArrow] = {
     // pass results to a printing service if an input function returns a result
     // otherwise just call it
     val body = funcCallable.arrowType.codomain.toList match {
@@ -144,7 +144,7 @@ class Runner(
     gettersV.map { getters =>
       val gettersTags = getters.map(s => FuncOp.leaf(s.callTag()))
 
-      Func(
+      FuncArrow(
         config.functionWrapperName,
         FuncOps.seq((gettersTags :+ body :+ FuncOp.leaf(finisherServiceTag)): _*),
         // no arguments and returns nothing

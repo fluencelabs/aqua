@@ -1,7 +1,7 @@
 package aqua.model.func
 
 import aqua.model.ValueModel
-import aqua.raw.arrow.{ArgsCall, Func}
+import aqua.raw.arrow.{ArgsCall, FuncArrow}
 import cats.Eval
 import scribe.Logging
 import aqua.raw.ops.{Call, FuncOp, FuncOps}
@@ -35,10 +35,10 @@ object ArrowInliner extends Logging {
   // TODO: FuncOp is also not complete: it still has topology, but not arrow calls; how to show it? ResTop?
   // Apply a callable function, get its fully resolved body & optional value, if any
   def inline(
-    fn: Func,
-    call: Call,
-    arrows: Map[String, Func],
-    forbiddenNames: Set[String]
+              fn: FuncArrow,
+              call: Call,
+              arrows: Map[String, FuncArrow],
+              forbiddenNames: Set[String]
   ): Eval[(FuncOp, List[ValueRaw])] = {
     import fn._
 
