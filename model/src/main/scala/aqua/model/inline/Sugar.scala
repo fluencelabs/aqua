@@ -9,8 +9,8 @@ import cats.syntax.traverse.*
 import cats.instances.list.*
 
 object Sugar {
-  private
-  def unfold(raw: ValueRaw, i: Int): (ValueModel, Map[String, ValueRaw]) = raw match {
+
+  private def unfold(raw: ValueRaw, i: Int): (ValueModel, Map[String, ValueRaw]) = raw match {
     case VarRaw(name, t, lambda) if lambda.isEmpty =>
       VarModel(name, t, Chain.empty) -> Map.empty
     case LiteralRaw(value, t) =>
@@ -27,7 +27,7 @@ object Sugar {
 
   private def unfoldLambda(l: LambdaRaw, i: Int): (LambdaModel, Map[String, ValueRaw]) = l match {
     case IntoFieldRaw(field, t) => IntoFieldModel(field, t) -> Map.empty
-    case IntoIndexRaw(vm@VarRaw(name, _, l), t) if l.nonEmpty =>
+    case IntoIndexRaw(vm @ VarRaw(name, _, l), t) if l.nonEmpty =>
       val ni = name + "-" + i
       IntoIndexModel(ni, t) -> Map(ni -> vm)
     case IntoIndexRaw(VarRaw(name, _, _), t) =>
@@ -68,8 +68,8 @@ object Sugar {
     )
 
   def desugarize[S: Counter](
-                              values: List[ValueRaw]
-                            ): State[S, List[(ValueRaw, Option[FuncOp])]] =
+    values: List[ValueRaw]
+  ): State[S, List[(ValueRaw, Option[FuncOp])]] =
     values.traverse(desugarize(_))
 
   def desugarize[S: Counter](call: Call): State[S, (Call, Option[FuncOp])] =

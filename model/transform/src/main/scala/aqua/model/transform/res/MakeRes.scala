@@ -2,21 +2,7 @@ package aqua.model.transform.res
 
 import aqua.model.transform.topology.Topology.Res
 import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.raw.ops.{
-  Call,
-  CallServiceTag,
-  CanonicalizeTag,
-  ForTag,
-  MatchMismatchTag,
-  NextTag,
-  OnTag,
-  ParTag,
-  PushToStreamTag,
-  RawTag,
-  RestrictionTag,
-  SeqTag,
-  XorTag
-}
+import aqua.raw.ops.*
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.types.{ArrayType, StreamType}
 import cats.Eval
