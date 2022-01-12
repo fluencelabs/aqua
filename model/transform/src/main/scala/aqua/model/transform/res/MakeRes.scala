@@ -106,6 +106,8 @@ object MakeRes {
         ValueModel.fromRaw(operand),
         exportTo
       )
+    case FlattenTag(operand, assignTo) =>
+      leaf(ApRes(ValueModel.fromRaw(operand), Call.Export(assignTo, operand.`type`)))
     case CallServiceTag(serviceId, funcName, Call(args, exportTo)) =>
       leaf(
         CallServiceRes(

@@ -75,22 +75,7 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Raw {
 
 object FuncOp {
   type Tree = Cofree[Chain, RawTag]
-
-  def traverseA[A](cf: Tree, init: A)(
-    f: (A, RawTag) => (A, Tree)
-  ): Eval[(A, Tree)] = {
-    val (headA, head) = f(init, cf.head)
-    // TODO: it should be in standard library, with some other types
-    cf.tail
-      .map(_.foldLeft[(A, Chain[Tree])]((headA, head.tailForced)) {
-        case ((aggrA, aggrTail), child) =>
-          traverseA(child, aggrA)(f).value match {
-            case (a, tree) => (a, aggrTail.append(tree))
-          }
-      })
-      .map { case (a, ch) => (a, head.copy(tail = Eval.now(ch))) }
-  }
-
+  
   def traverseS[S](cf: Tree, f: RawTag => State[S, Tree]): State[S, Tree] = for {
     headTree <- f(cf.head)
     tail <- StateT.liftF(cf.tail)

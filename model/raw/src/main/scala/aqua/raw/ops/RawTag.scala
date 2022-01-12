@@ -217,3 +217,17 @@ case class CanonicalizeTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
 
   override def toString: String = s"(can $operand $exportTo)"
 }
+
+case class FlattenTag(operand: ValueRaw, assignTo: String) extends RawTag {
+  override def usesVarNames: Set[String] = operand.usesVarNames
+
+  override def exportsVarNames: Set[String] = Set(assignTo)
+
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
+    FlattenTag(f(operand), assignTo)
+
+  override def renameExports(map: Map[String, String]): RawTag =
+    copy(assignTo = map.getOrElse(assignTo, assignTo))
+
+  override def toString: String = s"(ap $operand $assignTo)"
+}

@@ -2,12 +2,14 @@ package aqua.model.func
 
 import aqua.model.ValueModel
 import aqua.raw.arrow.{FuncArrow, FuncRaw}
-import aqua.raw.ops.{AssignmentTag, Call, CallArrowTag, ClosureTag, FuncOp, RawTag, SeqTag}
+import aqua.raw.ops.{AssignmentTag, Call, CallArrowTag, ClosureTag, FlattenTag, FuncOp, FuncOps, ParTag, RawTag, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.ArrowType
 import scribe.Logging
 import cats.data.State
 import cats.data.Chain
+import cats.syntax.traverse.*
+import cats.instances.list.*
 
 case class InlineAcc(
                       noNames: Set[String] = Set.empty,
@@ -25,19 +27,6 @@ object InlineAcc extends Logging {
     )
 
 
-  def unwrapValue[S: Counter](valueRaw: ValueRaw): State[S, Chain[FuncOp.Tree]] =
-    for {
-      _ <- Counter[S].incr
-      // Take values from a chain
-      // for each, recursiveRaw
-      // group all into par
-      // for each, recursiveRaw
-      // if anything returned, put it into seq before this
-    } yield ???
-
-  private def desugarize[S](call: Call): State[S, (Call, Option[FuncOp])] =
-    State.pure(call -> None)
-
   private def callArrow[S: Exports : Counter : Arrows : Mangler](
                                                                   arrow: FuncArrow,
                                                                   call: Call
@@ -45,8 +34,8 @@ object InlineAcc extends Logging {
     for {
       callResolved <- Exports[S].resolveCall(call)
 
-      // HERE we should take values and desugarize them!
-      cd <- desugarize(callResolved)
+      // HERE we take values and desugarize them!
+      cd <- Sugar.desugarize(callResolved)
       (callDesugarized, maybePrelude) = cd
 
       passArrows <- Arrows[S].pickArrows(callResolved.arrowArgNames)
@@ -55,7 +44,7 @@ object InlineAcc extends Logging {
       av <- Arrows[S].scope(
         for {
           _ <- Arrows[S].resolved(passArrows)
-          av <- ArrowInliner.inline(arrow, callResolved)
+          av <- ArrowInliner.inline(arrow, callDesugarized)
         } yield av
       )
       (appliedOp, value) = av
