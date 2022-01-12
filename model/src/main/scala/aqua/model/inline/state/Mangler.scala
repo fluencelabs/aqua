@@ -1,4 +1,4 @@
-package aqua.model.func
+package aqua.model.inline.state
 
 import cats.data.State
 

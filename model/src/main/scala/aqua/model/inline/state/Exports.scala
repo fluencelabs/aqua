@@ -1,20 +1,45 @@
-package aqua.model.func
+package aqua.model.inline.state
 
-import aqua.raw.value.ValueRaw
 import aqua.raw.ops.Call
+import aqua.raw.value.ValueRaw
 import cats.data.State
 
+/**
+ * Exports – trace values available in the scope
+ * @tparam S State
+ */
 trait Exports[S] extends Scoped[S] {
   self =>
+
+  /**
+   * [[value]] is accessible as [[exportName]]
+   * @param exportName Name
+   * @param value Value
+   */
   def resolved(exportName: String, value: ValueRaw): State[S, Unit]
 
+  /**
+   * Resolve the whole map of exports
+   * @param exports name -> value
+   */
   def resolved(exports: Map[String, ValueRaw]): State[S, Unit]
 
+  /**
+   * Get all the values available in the scope
+   */
   val exports: State[S, Map[String, ValueRaw]]
 
+  /**
+   * Put the available resolved values into the [[call]] object
+   * @param call Call
+   * @return Resolved Call
+   */
   final def resolveCall(call: Call): State[S, Call] =
     exports.map(res => call.mapValues(_.resolveWith(res)))
 
+  /**
+   * Change [[S]] to [[R]]
+   */
   def transformS[R](f: R => S, g: (R, S) => R): Exports[R] = new Exports[R] {
 
     override def resolved(exportName: String, value: ValueRaw): State[R, Unit] =

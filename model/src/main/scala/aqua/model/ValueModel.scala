@@ -21,21 +21,6 @@ object ValueModel {
     override def eqv(x: ValueModel, y: ValueModel): Boolean = x == y
   }
 
-  def recursiveRaw(raw: ValueRaw, i: Int): (ValueModel, Map[String, ValueRaw]) = raw match {
-    case VarRaw(name, t, lambda) if lambda.isEmpty =>
-      VarModel(name, t, Chain.empty) -> Map.empty
-    case LiteralRaw(value, t) =>
-      LiteralModel(value, t) -> Map.empty
-    case VarRaw(name, t, lambda) =>
-      val (lambdaModel, map) =
-        lambda.foldLeft(Chain.empty[LambdaModel] -> Map.empty[String, ValueRaw]) {
-          case ((lc, m), l) =>
-            val (lm, mm) = LambdaModel.flattenRaw(l, i + m.size)
-            (lc :+ lm, m ++ mm)
-        }
-      VarModel(name, t, lambdaModel) -> map
-  }
-
   // TODO it should be marked with DANGEROUS signs and so on, as THIS IS UNSAFE!!!!!!!!!!!!!!! usable only for tests
   def fromRaw(raw: ValueRaw): ValueModel = raw match {
     case VarRaw(name, t, lambda) =>
@@ -60,18 +45,6 @@ sealed trait LambdaModel {
 }
 
 object LambdaModel {
-
-  def flattenRaw(l: LambdaRaw, i: Int): (LambdaModel, Map[String, ValueRaw]) = l match {
-    case IntoFieldRaw(field, t) => IntoFieldModel(field, t) -> Map.empty
-    case IntoIndexRaw(vm @ VarRaw(name, _, l), t) if l.nonEmpty =>
-      val ni = name + "-" + i
-      IntoIndexModel(ni, t) -> Map(ni -> vm)
-    case IntoIndexRaw(VarRaw(name, _, _), t) =>
-      IntoIndexModel(name, t) -> Map.empty
-
-    case IntoIndexRaw(LiteralRaw(value, _), t) =>
-      IntoIndexModel(value, t) -> Map.empty
-  }
 
   def fromRaw(l: LambdaRaw): LambdaModel = l match {
     case IntoFieldRaw(field, t) => IntoFieldModel(field, t)

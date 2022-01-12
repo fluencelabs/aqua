@@ -1,6 +1,7 @@
 package aqua.model.transform.funcop
 
-import aqua.model.func.*
+import aqua.model.inline.*
+import aqua.model.inline.state.InliningState
 import aqua.raw.ops.FuncOps
 import aqua.raw.ops.{Call, FuncOp, FuncOps}
 import aqua.raw.value.{ValueRaw, VarRaw}
@@ -88,13 +89,13 @@ case class ResolveFunc(
     funcArgName: String = "_func"
   ): Eval[FuncOp] =
     ArrowInliner
-      .inline[InlineAcc](
+      .inline[InliningState](
         wrap(func),
         Call(VarRaw(funcArgName, func.arrowType) :: Nil, Nil)
       )
       .map(_._1)
       .run(
-        InlineAcc(resolvedArrows = Map(funcArgName -> func))
+        InliningState(resolvedArrows = Map(funcArgName -> func))
       )
       .map(_._2)
 }
