@@ -18,11 +18,11 @@ object ArrowInliner extends Logging {
   // TODO: return ValueModel – values are substituted and resolved on this stage
   // TODO: FuncOp is also not complete: it still has topology, but not arrow calls; how to show it? ResTop?
   // Apply a callable function, get its fully resolved body & optional value, if any
-  def inline[S: Mangler : Arrows : Exports : Counter](
-                                                       fn: FuncArrow,
-                                                       call: Call
-                                                     ): State[S, (FuncOp, List[ValueRaw])] =
-  // Function's internal variables will not be available outside, hence the scope
+  def inline[S: Mangler: Arrows: Exports: Counter](
+    fn: FuncArrow,
+    call: Call
+  ): State[S, (FuncOp, List[ValueRaw])] =
+    // Function's internal variables will not be available outside, hence the scope
     Exports[S].scope(
       for {
         // Process renamings, prepare environment
@@ -43,7 +43,7 @@ object ArrowInliner extends Logging {
         // Fix the return values
         (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(Option[FuncOp], ValueRaw)] {
-            case (exp@Call.Export(_, StreamType(_)), res) =>
+            case (exp @ Call.Export(_, StreamType(_)), res) =>
               // pass nested function results to a stream
               Some(FuncOps.pushToStream(res, exp)) -> exp.model
             case (_, res) =>
@@ -59,15 +59,19 @@ object ArrowInliner extends Logging {
   /**
    * Prepare the state context for this function call
    *
-   * @param fn   Function that will be called
-   * @param call Call object
-   * @tparam S State
-   * @return Tree with substituted values, list of return values prior to function calling/inlining
+   * @param fn
+   *   Function that will be called
+   * @param call
+   *   Call object
+   * @tparam S
+   *   State
+   * @return
+   *   Tree with substituted values, list of return values prior to function calling/inlining
    */
-  private def prelude[S: Mangler : Arrows](
-                                            fn: FuncArrow,
-                                            call: Call
-                                          ): State[S, (FuncOp.Tree, List[ValueRaw])] =
+  private def prelude[S: Mangler: Arrows](
+    fn: FuncArrow,
+    call: Call
+  ): State[S, (FuncOp.Tree, List[ValueRaw])] =
     for {
       // Collect all arguments: what names are used inside the function, what values are received
       argsFull <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
@@ -131,10 +135,9 @@ object ArrowInliner extends Logging {
       }
     } yield (treeRenamed.tree, result)
 
-
-  private def handleTree[S: Exports : Counter : Mangler : Arrows](
-                                                                   tree: FuncOp.Tree
-                                                                 ): State[S, FuncOp.Tree] =
+  private def handleTree[S: Exports: Counter: Mangler: Arrows](
+    tree: FuncOp.Tree
+  ): State[S, FuncOp.Tree] =
     FuncOp.traverseS(tree, handleTag(_))
 
   // resolve values of this tag with resolved exports, lift to Cofree as a leaf
@@ -143,10 +146,10 @@ object ArrowInliner extends Logging {
       FuncOp.leaf(tag.mapValues(_.resolveWith(resolvedExports))).tree
     )
 
-  private def callArrow[S: Exports : Counter : Arrows : Mangler](
-                                                                  arrow: FuncArrow,
-                                                                  call: Call
-                                                                ): State[S, FuncOp.Tree] =
+  private def callArrow[S: Exports: Counter: Arrows: Mangler](
+    arrow: FuncArrow,
+    call: Call
+  ): State[S, FuncOp.Tree] =
     for {
       callResolved <- Exports[S].resolveCall(call)
 
@@ -181,7 +184,7 @@ object ArrowInliner extends Logging {
 
     } yield fullOp.tree
 
-  private def handleTag[S: Exports : Counter : Arrows : Mangler](tag: RawTag): State[S, FuncOp.Tree] =
+  private def handleTag[S: Exports: Counter: Arrows: Mangler](tag: RawTag): State[S, FuncOp.Tree] =
     Arrows[S].arrows.flatMap(resolvedArrows =>
       tag match {
         case CallArrowTag(fn, c) if resolvedArrows.contains(fn) =>
@@ -209,4 +212,5 @@ object ArrowInliner extends Logging {
           resolveLeaf(tag)
       }
     )
+
 }

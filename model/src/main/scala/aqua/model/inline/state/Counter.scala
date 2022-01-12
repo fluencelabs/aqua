@@ -6,7 +6,8 @@ import cats.syntax.flatMap.*
 /**
  * Monotonic counter, stored within the State monad
  *
- * @tparam S State
+ * @tparam S
+ *   State
  */
 trait Counter[S] {
   self =>
