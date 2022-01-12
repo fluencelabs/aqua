@@ -5,6 +5,7 @@ import aqua.backend.ts.TypeScriptCommon.fnDef
 import aqua.model.transform.res.ServiceRes
 
 case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
+
   import TypeScriptTypes.*
 
   private val serviceTypeName = s"${srv.name}Def";

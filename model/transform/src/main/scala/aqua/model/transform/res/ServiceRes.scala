@@ -1,7 +1,7 @@
 package aqua.model.transform.res
 
-import aqua.model.LiteralModel
 import aqua.raw.ServiceRaw
+import aqua.raw.value.LiteralRaw
 import aqua.types.{ArrowType, ScalarType}
 
 // TODO: docs
@@ -14,7 +14,7 @@ object ServiceRes {
       name = sm.name,
       members = sm.arrows.toNel.toList,
       defaultId = sm.defaultId.collect {
-        case LiteralModel(value, t) if ScalarType.string.acceptsValueOf(t) =>
+        case LiteralRaw(value, t) if ScalarType.string.acceptsValueOf(t) =>
           value
       }
     )
