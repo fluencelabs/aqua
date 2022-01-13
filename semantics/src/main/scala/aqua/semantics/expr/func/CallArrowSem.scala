@@ -47,7 +47,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
         }
       )
       .map(_._1) >>= { (v: List[Type]) =>
-      Traverse[List].traverse(args)(V.valueToModel).map(_.flatten -> v.reverse)
+      Traverse[List].traverse(args)(V.valueToRaw).map(_.flatten -> v.reverse)
     }
 
   private def toModel[Alg[_]: Monad](implicit

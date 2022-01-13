@@ -44,7 +44,7 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    V.valueToModel(expr.value).flatMap {
+    V.valueToRaw(expr.value).flatMap {
       case Some(vm) =>
         N.read(expr.stream).flatMap {
           case None => Raw.error("Cannot resolve stream type").pure[Alg]

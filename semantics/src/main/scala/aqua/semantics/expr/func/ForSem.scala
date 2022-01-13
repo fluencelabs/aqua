@@ -27,7 +27,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
   ): Prog[F, Raw] =
     Prog
       .around(
-        N.beginScope(expr.item) >> V.valueToModel(expr.iterable).flatMap[Option[ValueRaw]] {
+        N.beginScope(expr.item) >> V.valueToRaw(expr.iterable).flatMap[Option[ValueRaw]] {
           case Some(vm) =>
             vm.lastType match {
               case t: BoxType =>

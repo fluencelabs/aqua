@@ -102,7 +102,7 @@ case class CallArrowTag(
   funcName: String,
   call: Call
 ) extends RawTag {
-  override def usesVarNames: Set[String] = call.argVarNames
+  override def usesVarNames: Set[String] = call.argVarNames + funcName
 
   override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
 
@@ -230,4 +230,13 @@ case class FlattenTag(operand: ValueRaw, assignTo: String) extends RawTag {
     copy(assignTo = map.getOrElse(assignTo, assignTo))
 
   override def toString: String = s"(ap $operand $assignTo)"
+}
+
+case class JoinTag(operands: NonEmptyList[ValueRaw]) extends RawTag {
+  override def usesVarNames: Set[String] = operands.toList.flatMap(_.usesVarNames).toSet
+
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
+    JoinTag(operands.map(_.map(f)))
+
+  override def toString: String = s"(join ${operands.toList.mkString(" ")})"
 }

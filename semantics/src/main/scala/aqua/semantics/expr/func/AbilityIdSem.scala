@@ -17,7 +17,7 @@ class AbilityIdSem[S[_]](val expr: AbilityIdExpr[S]) extends AnyVal {
     A: AbilitiesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    V.ensureIsString(expr.id) >> V.valueToModel(
+    V.ensureIsString(expr.id) >> V.valueToRaw(
       expr.id
     ) >>= {
       case Some(id) =>

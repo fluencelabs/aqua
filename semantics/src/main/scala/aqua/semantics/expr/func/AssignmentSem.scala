@@ -17,7 +17,7 @@ class AssignmentSem[S[_]](val expr: AssignmentExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    V.valueToModel(expr.value).flatMap {
+    V.valueToRaw(expr.value).flatMap {
       case Some(vm) =>
         N.define(expr.variable, vm.lastType) as (FuncOp
           .leaf(AssignmentTag(vm, expr.variable.value)): Raw)

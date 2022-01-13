@@ -29,7 +29,7 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
             val arrows = nel.map(kv => kv._1.value -> kv._2).toNem
             for {
               defaultId <- expr.id
-                .map(v => V.valueToModel(v))
+                .map(v => V.valueToRaw(v))
                 .getOrElse(None.pure[Alg])
               defineResult <- A.defineService(
                 expr.name,

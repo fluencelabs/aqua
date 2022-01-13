@@ -20,7 +20,7 @@ class ReturnSem[S[_]](val expr: ReturnExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
     expr.values
-      .traverse(v => V.valueToModel(v).map(_.map(v -> _)))
+      .traverse(v => V.valueToRaw(v).map(_.map(v -> _)))
       .map(_.toList.flatten)
       .map(NonEmptyList.fromList)
       .flatMap {

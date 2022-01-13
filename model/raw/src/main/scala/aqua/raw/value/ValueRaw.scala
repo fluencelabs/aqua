@@ -16,7 +16,7 @@ sealed trait ValueRaw {
   def lastType: Type = `type`
 
   def renameVars(map: Map[String, String]): ValueRaw = this
-  
+
   def map(f: ValueRaw => ValueRaw): ValueRaw
 
 }
@@ -55,7 +55,7 @@ case class VarRaw(name: String, `type`: Type, lambda: Chain[LambdaRaw] = Chain.e
     lambda.toList.map(_.usesVarNames).foldLeft(Set(name))(_ ++ _)
 
   override val lastType: Type = lambda.lastOption.map(_.`type`).getOrElse(`type`)
-  
+
   override def map(f: ValueRaw => ValueRaw): ValueRaw =
     f(copy(lambda = lambda.map(_.map(f))))
 
@@ -128,6 +128,7 @@ object LiteralRaw {
   def quote(value: String): LiteralRaw = LiteralRaw("\"" + value + "\"", LiteralType.string)
 
   def number(value: Int): LiteralRaw = LiteralRaw(value.toString, LiteralType.number)
+  val Zero: LiteralRaw = LiteralRaw("0", LiteralType.number)
 
   val True: LiteralRaw = LiteralRaw("true", LiteralType.bool)
   val False: LiteralRaw = LiteralRaw("false", LiteralType.bool)

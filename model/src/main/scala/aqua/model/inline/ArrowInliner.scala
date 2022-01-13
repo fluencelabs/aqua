@@ -153,40 +153,36 @@ object ArrowInliner extends Logging {
     for {
       callResolved <- Exports[S].resolveCall(call)
 
-      // HERE we take values and desugarize them!
-      cd <- Sugar.desugarize(callResolved)
-      (callDesugarized, maybePrelude) = cd
-
       passArrows <- Arrows[S].pickArrows(callResolved.arrowArgNames)
       noNames <- Mangler[S].getForbiddenNames
 
       av <- Arrows[S].scope(
         for {
           _ <- Arrows[S].resolved(passArrows)
-          av <- ArrowInliner.inline(arrow, callDesugarized)
+          av <- ArrowInliner.inline(arrow, callResolved)
         } yield av
       )
       (appliedOp, value) = av
 
-      // If smth needs to be added before this function tree, add it with SeqTag
-      fullOp = maybePrelude.fold(appliedOp)(prelude =>
-        FuncOp.node(SeqTag, Chain(prelude, appliedOp))
-      )
-
       // Function defines new names inside its body – need to collect them
       // TODO: actually it's done and dropped – so keep and pass it instead
       // (maybe it's already done btw, maybe we don't need to do anything)
-      newNames = fullOp.definesVarNames.value
+      newNames = appliedOp.definesVarNames.value
 
       _ <- Counter[S].incr
       _ <- Mangler[S].forbid(newNames)
       _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(value).toMap)
 
-    } yield fullOp.tree
+    } yield appliedOp.tree
 
   private def handleTag[S: Exports: Counter: Arrows: Mangler](tag: RawTag): State[S, FuncOp.Tree] =
-    Arrows[S].arrows.flatMap(resolvedArrows =>
-      tag match {
+    for {
+      resolvedArrows <- Arrows[S].arrows
+
+      desugarized <- Sugar.desugarize(tag)
+      (dTag, dPrefix) = desugarized
+
+      body <- dTag match {
         case CallArrowTag(fn, c) if resolvedArrows.contains(fn) =>
           callArrow(resolvedArrows(fn), c)
 
@@ -206,11 +202,13 @@ object ArrowInliner extends Logging {
           logger.error(
             s"UNRESOLVED arrow $fn, skipping, will become (null) in AIR! Known arrows: ${resolvedArrows.keySet}"
           )
-          resolveLeaf(tag)
+          resolveLeaf(dTag)
 
         case _ =>
-          resolveLeaf(tag)
+          resolveLeaf(dTag)
       }
-    )
+    } yield
+    // If smth needs to be added before this function tree, add it with SeqTag
+    dPrefix.fold(body)(p => FuncOp.node(SeqTag, Chain(p, FuncOp(body))).tree)
 
 }
