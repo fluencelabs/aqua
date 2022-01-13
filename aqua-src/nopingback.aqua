@@ -1,10 +1,13 @@
 service HelloWorld("hello-srv"):
   hello: string -> string
 
-func sayHello() -> string:
+data Info:
+  external: []string
+
+func sayHello(info: Info) -> string:
     -- execute computation on a Peer in the network
     on "hello-peer":
-        comp <- HelloWorld.hello(%init_peer_id%)
+        comp <- HelloWorld.hello(info.external!)
 
     -- send the result to target browser in the background
     co on "target-peer" via "target-relay":

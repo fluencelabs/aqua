@@ -1,7 +1,7 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.raw.value.{LambdaRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, LiteralType, Type}
@@ -45,21 +45,44 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case VarLambda(name, ops) =>
         N.read(name).flatMap {
           case Some(t) =>
-            ops.traverse {
-              case op: IntoField[S] =>
-                T.resolveField(t, op)
-              case op: IntoIndex[S] =>
-                op.idx
-                  .fold[Alg[Option[ValueRaw]]](Option(LiteralRaw.Zero).pure[Alg])(valueToRaw)
-                  .flatMap {
-                    case None => None.pure[Alg]
-                    case Some(vv) => T.resolveIndex(t, op, vv)
+            // Prepare lambda expression: take the last known type and the next op, add next op to accumulator
+            ops
+              .foldLeft[Alg[(Option[Type], Chain[LambdaRaw])]]((Some(t) -> Chain.empty).pure[Alg]) {
+                case (acc, op) =>
+                  acc.flatMap {
+                    // Some(tt) means that the previous lambda op was resolved successfully
+                    case (Some(tt), lamb) =>
+                      // Resolve a single lambda
+                      (op match {
+                        case op: IntoField[S] =>
+                          T.resolveField(tt, op)
+                        case op: IntoIndex[S] =>
+                          op.idx
+                            .fold[Alg[Option[ValueRaw]]](Option(LiteralRaw.Zero).pure[Alg])(
+                              valueToRaw
+                            )
+                            .flatMap {
+                              case None => None.pure[Alg]
+                              case Some(vv) => T.resolveIndex(tt, op, vv)
+                            }
+                      }).map {
+                        // Lambda op resolved, add it to accumulator and update the last known type
+                        case Some(l) => (Some(l.`type`), lamb :+ l)
+                        // Lambda op is not resolved, it's an error, stop iterations
+                        case None => (None, Chain.empty)
+                      }
+                      
+// We have already errored, do nothing
+                    case _ => (None, Chain.empty).pure[Alg]
                   }
-            }.map(_.flatten).map {
-              case lambda if lambda.length == ops.length =>
-                Some(VarRaw(name.value, t, Chain.fromSeq(lambda)))
-              case _ => None
-            }
+
+              }
+              .map {
+                // Some(_) means no errors occured
+                case (Some(_), lambda) if lambda.length == ops.length =>
+                  Some(VarRaw(name.value, t, lambda))
+                case _ => None
+              }
 
           case None =>
             None.pure[Alg]
