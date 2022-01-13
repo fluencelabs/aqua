@@ -11,6 +11,8 @@ import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.traverse.*
+import cats.instances.list.*
 
 class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   N: NamesAlgebra[S, Alg],
@@ -43,10 +45,22 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case VarLambda(name, ops) =>
         N.read(name).flatMap {
           case Some(t) =>
-            T.resolveLambda(t, ops)
-              .map(Chain.fromSeq)
-              .map(VarRaw(name.value, t, _))
-              .map(Some(_))
+            ops.traverse {
+              case op: IntoField[S] =>
+                T.resolveField(t, op)
+              case op: IntoIndex[S] =>
+                op.idx
+                  .fold[Alg[Option[ValueRaw]]](Option(LiteralRaw.Zero).pure[Alg])(valueToRaw)
+                  .flatMap {
+                    case None => None.pure[Alg]
+                    case Some(vv) => T.resolveIndex(t, op, vv)
+                  }
+            }.map(_.flatten).map {
+              case lambda if lambda.length == ops.length =>
+                Some(VarRaw(name.value, t, Chain.fromSeq(lambda)))
+              case _ => None
+            }
+
           case None =>
             None.pure[Alg]
         }
