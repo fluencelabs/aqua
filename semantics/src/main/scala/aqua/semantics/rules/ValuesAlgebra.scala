@@ -35,9 +35,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     }
 
   def resolveType(v: Value[S]): Alg[Option[Type]] =
-    valueToModel(v).map(_.map(_.lastType))
+    valueToRaw(v).map(_.map(_.lastType))
 
-  def valueToModel(v: Value[S]): Alg[Option[ValueRaw]] =
+  def valueToRaw(v: Value[S]): Alg[Option[ValueRaw]] =
     v match {
       case l: Literal[S] => Some(LiteralRaw(l.value, l.ts)).pure[Alg]
       case VarLambda(name, ops) =>

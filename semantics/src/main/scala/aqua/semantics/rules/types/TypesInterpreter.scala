@@ -1,9 +1,19 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{IntoFieldRaw, LambdaRaw, ValueRaw}
+import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, ValueRaw}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
-import aqua.types.{ArrowType, ProductType, StructType, Type}
+import aqua.types.{
+  ArrayType,
+  ArrowType,
+  BoxType,
+  OptionType,
+  ProductType,
+  ScalarType,
+  StreamType,
+  StructType,
+  Type
+}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, State}
 import cats.instances.list.*
@@ -12,7 +22,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Applicative, ~>}
+import cats.{~>, Applicative}
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -96,7 +106,8 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         ).as(true)
     }
 
-  def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[LambdaRaw]] =
+  // TODO actually it's stateless, exists there just for reporting needs
+  override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[LambdaRaw]] =
     rootT match {
       case StructType(name, fields) =>
         fields(op.value).fold(
@@ -104,19 +115,30 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
             op,
             s"Field `${op.value}` not found in type `$name`, available: ${fields.toNel.toList.map(_._1).mkString(", ")}"
           ).as(None)
-        )(t => State.pure(IntoFieldRaw(op.value, t)))
+        )(t => State.pure(Some(IntoFieldRaw(op.value, t))))
       case _ =>
         report(op, s"Expected Struct type to resolve a field, got $rootT").as(None)
     }
 
-  def resolveIndex(rootT: Type, op: IntoIndex[S], idx: ValueRaw): State[X, Option[LambdaRaw]] =
-    
-  
-  override def resolveLambda(root: Type, ops: List[LambdaOp[S]]): State[X, List[LambdaRaw]] =
-    getState.map(_.resolveOps(root, ops)).flatMap {
-      case Left((tkn, hint)) => report(tkn, hint).as(Nil)
-      case Right(ts) => State.pure(ts)
-    }
+  // TODO actually it's stateless, exists there just for reporting needs
+  override def resolveIndex(
+    rootT: Type,
+    op: IntoIndex[S],
+    idx: ValueRaw
+  ): State[X, Option[LambdaRaw]] =
+    if (!ScalarType.i64.acceptsValueOf(idx.lastType))
+      report(op, s"Expected numeric index, got $idx").as(None)
+    else
+      rootT match {
+        case ot: OptionType =>
+          op.idx.fold(
+            State.pure(Some(IntoIndexRaw(idx, ot.element)))
+          )(v => report(v, s"Options might have only one element, use ! to get it").as(None))
+        case rt: BoxType =>
+          State.pure(Some(IntoIndexRaw(idx, rt.element)))
+        case _ =>
+          report(op, s"Expected $rootT to be a collection type").as(None)
+      }
 
   override def ensureTypeMatches(
     token: Token[S],

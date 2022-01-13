@@ -103,38 +103,6 @@ case class TypesState[S[_]](
           )(Invalid(_))
       }(Invalid(_))
   }
-
-  def resolveOps(
-    rootT: Type,
-    ops: List[LambdaOp[S]]
-  ): Either[(Token[S], String), List[LambdaRaw]] =
-    ops match {
-      case Nil => Right(Nil)
-      case (i @ IntoField(_)) :: tail =>
-        rootT match {
-          case pt @ StructType(_, fields) =>
-            fields(i.value)
-              .toRight(i -> s"Field `${i.value}` not found in type `${pt.name}``")
-              .flatMap(t => resolveOps(t, tail).map(IntoFieldRaw(i.value, t) :: _))
-          case _ => Left(i -> s"Expected product to resolve a field, got $rootT")
-        }
-      case (i @ IntoIndex(idx)) :: tail =>
-        rootT match {
-          case ArrayType(intern) =>
-            resolveOps(intern, tail).map(IntoIndexRaw(LiteralRaw.number(i.value), intern) :: _)
-          case StreamType(intern) =>
-            resolveOps(intern, tail).map(IntoIndexRaw(LiteralRaw.number(i.value), intern) :: _)
-          case OptionType(intern) =>
-            i.value match {
-              case 0 =>
-                resolveOps(intern, tail).map(IntoIndexRaw(LiteralRaw.number(i.value), intern) :: _)
-              case _ =>
-                Left(i -> s"Option might have only one element, use ! to get it")
-            }
-
-          case _ => Left(i -> s"Expected $rootT to be an array or a stream")
-        }
-    }
 }
 
 object TypesState {

@@ -29,7 +29,7 @@ class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
         V.ensureIsString(expr.peerId),
         Traverse[List]
           .traverse(expr.via)(v =>
-            V.valueToModel(v).flatTap {
+            V.valueToRaw(v).flatTap {
               case Some(vm) =>
                 vm.lastType match {
                   case _: BoxType =>
@@ -48,7 +48,7 @@ class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
       (viaVM: List[ValueRaw], ops: Raw) =>
         A.endScope() >> (ops match {
           case op: FuncOp =>
-            V.valueToModel(expr.peerId).map {
+            V.valueToRaw(expr.peerId).map {
               case Some(om) =>
                 FuncOp.wrap(
                   OnTag(

@@ -23,7 +23,8 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def defineAlias(name: CustomTypeToken[S], target: Type): Alg[Boolean]
 
-  def resolveLambda(root: Type, ops: List[LambdaOp[S]]): Alg[List[LambdaRaw]]
+  def resolveIndex(rootT: Type, op: IntoIndex[S], idx: ValueRaw): Alg[Option[LambdaRaw]]
+  def resolveField(rootT: Type, op: IntoField[S]): Alg[Option[LambdaRaw]]
 
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 

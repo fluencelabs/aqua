@@ -23,9 +23,9 @@ class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     Prog
       .around(
-        V.valueToModel(expr.left).flatMap {
+        V.valueToRaw(expr.left).flatMap {
           case Some(lt) =>
-            V.valueToModel(expr.right).flatMap {
+            V.valueToRaw(expr.right).flatMap {
               case Some(rt) =>
                 T.ensureTypeMatches(expr.right, lt.lastType, rt.lastType)
                   .map(m => Some(lt -> rt).filter(_ => m))
