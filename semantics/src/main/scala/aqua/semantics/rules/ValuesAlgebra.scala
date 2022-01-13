@@ -14,10 +14,10 @@ import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.instances.list.*
 
-class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
-                                          N: NamesAlgebra[S, Alg],
-                                          T: TypesAlgebra[S, Alg]
-                                         ) {
+class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
+  N: NamesAlgebra[S, Alg],
+  T: TypesAlgebra[S, Alg]
+) {
 
   def ensureIsString(v: Value[S]): Alg[Boolean] =
     ensureTypeMatches(v, LiteralType.string)
@@ -39,10 +39,10 @@ class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
   def resolveType(v: Value[S]): Alg[Option[Type]] =
     valueToRaw(v).map(_.map(_.lastType))
 
-  private def resolveSingleLambda(op: LambdaOp[S]): Alg[Option[LambdaRaw]] =
+  private def resolveSingleLambda(rootType: Type, op: LambdaOp[S]): Alg[Option[LambdaRaw]] =
     op match {
       case op: IntoField[S] =>
-        T.resolveField(tt, op)
+        T.resolveField(rootType, op)
       case op: IntoIndex[S] =>
         op.idx
           .fold[Alg[Option[ValueRaw]]](Option(LiteralRaw.Zero).pure[Alg])(
@@ -50,7 +50,7 @@ class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
           )
           .flatMap {
             case None => None.pure[Alg]
-            case Some(vv) => T.resolveIndex(tt, op, vv)
+            case Some(vv) => T.resolveIndex(rootType, op, vv)
           }
     }
 
@@ -68,7 +68,7 @@ class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
                     // Some(tt) means that the previous lambda op was resolved successfully
                     case (Some(tt), lamb) =>
                       // Resolve a single lambda
-                      resolveSingleLambda(op).map {
+                      resolveSingleLambda(tt, op).map {
                         // Lambda op resolved, add it to accumulator and update the last known type
                         case Some(l) => (Some(l.`type`), lamb :+ l)
                         // Lambda op is not resolved, it's an error, stop iterations
@@ -93,7 +93,7 @@ class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
     }
 
   def checkArguments(token: Token[S], arr: ArrowType, args: List[Value[S]]): Alg[Boolean] =
-  // TODO: do we really need to check this?
+    // TODO: do we really need to check this?
     T.checkArgumentsNumber(token, arr.domain.length, args.length).flatMap {
       case false => false.pure[Alg]
       case true =>
@@ -111,7 +111,7 @@ class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
                 case Some((tkn, valType)) =>
                   T.ensureTypeMatches(tkn, t, valType)
               }
-              ).mapN(_ && _)
+            ).mapN(_ && _)
           }
     }
 
@@ -119,9 +119,9 @@ class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
 
 object ValuesAlgebra {
 
-  implicit def deriveValuesAlgebra[S[_], Alg[_] : Monad](implicit
-                                                         N: NamesAlgebra[S, Alg],
-                                                         T: TypesAlgebra[S, Alg]
-                                                        ): ValuesAlgebra[S, Alg] =
+  implicit def deriveValuesAlgebra[S[_], Alg[_]: Monad](implicit
+    N: NamesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg]
+  ): ValuesAlgebra[S, Alg] =
     new ValuesAlgebra[S, Alg]
 }
