@@ -6,7 +6,7 @@ import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.Value
 import aqua.parser.lift.LiftParser
 import cats.parse.Parser as P
-import cats.{Comonad, ~>}
+import cats.{~>, Comonad}
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
@@ -26,6 +26,7 @@ object OnExpr extends Expr.AndIndented {
       PushToStreamExpr ::
       ParExpr ::
       CoExpr ::
+      JoinExpr ::
       Expr.defer(TryExpr) ::
       Expr.defer(ForExpr) ::
       Expr.defer(IfExpr) ::
@@ -34,9 +35,9 @@ object OnExpr extends Expr.AndIndented {
       Nil
 
   override def p: P[OnExpr[Span.S]] = {
-    (`on` *> ` ` *> Value
-      .`value` ~ (` ` *> `via` *> ` ` *> Value.`value`).rep0).map { case (peerId, via) =>
-      OnExpr(peerId, via)
+    (`on` *> ` ` *> Value.`value` ~ (` ` *> `via` *> ` ` *> Value.`value`).rep0).map {
+      case (peerId, via) =>
+        OnExpr(peerId, via)
     }
   }
 }

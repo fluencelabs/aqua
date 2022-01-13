@@ -13,5 +13,7 @@ func sayHello(info: Info) -> string:
     co on "target-peer" via "target-relay":
         res <- HelloWorld.hello(%init_peer_id%)
 
+    join comp
+
     -- send the result to the initiator
     <- comp
