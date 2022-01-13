@@ -44,6 +44,7 @@ object ExprSem {
       case expr: ElseOtherwiseExpr[S] => new ElseOtherwiseSem(expr).program[G]
       case expr: ParExpr[S] => new ParSem(expr).program[G]
       case expr: CoExpr[S] => new CoSem(expr).program[G]
+      case expr: JoinExpr[S] => new JoinSem(expr).program[G]
       case expr: ReturnExpr[S] => new ReturnSem(expr).program[G]
       case expr: ServiceExpr[S] => new ServiceSem(expr).program[G]
       case expr: RootExpr[S] => new RootSem(expr).program[G]

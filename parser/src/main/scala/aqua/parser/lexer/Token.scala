@@ -60,6 +60,7 @@ object Token {
   val `catch`: P[Unit] = P.string("catch")
   val `par`: P[Unit] = P.string("par")
   val `co`: P[Unit] = P.string("co")
+  val `join`: P[Unit] = P.string("join")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
   val `anum_*` : P[Unit] = whileAnum.void

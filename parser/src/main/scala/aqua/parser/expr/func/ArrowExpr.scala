@@ -31,6 +31,7 @@ object ArrowExpr extends Expr.AndIndented {
       CatchExpr ::
       ParExpr ::
       CoExpr ::
+      JoinExpr ::
       DeclareStreamExpr ::
       ClosureExpr ::
       AssignmentExpr ::
