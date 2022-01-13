@@ -2,7 +2,7 @@ package aqua.parser.lexer
 
 import cats.data.NonEmptyList
 import cats.parse.{Accumulator0, Parser as P, Parser0 as P0}
-import cats.{Comonad, Functor, ~>}
+import cats.{~>, Comonad, Functor}
 
 trait Token[F[_]] {
   def as[T](v: T): F[T]
@@ -85,6 +85,8 @@ object Token {
   val `*` : P[Unit] = P.char('*')
   val exclamation: P[Unit] = P.char('!')
   val `[]` : P[Unit] = P.string("[]")
+  val `[` : P[Unit] = P.char('[').surroundedBy(` `.?)
+  val `]` : P[Unit] = P.char(']').surroundedBy(` `.?)
   val `⊤` : P[Unit] = P.char('⊤')
   val `⊥` : P[Unit] = P.char('⊥')
   val `∅` : P[Unit] = P.char('∅')
@@ -102,6 +104,7 @@ object Token {
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
     override def as[T](v: T): F[T] = Functor[F].as(point, v)
+
     override def mapK[K[_]: Comonad](fk: F ~> K): LiftToken[K, A] =
       copy(fk(point))
   }

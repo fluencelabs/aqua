@@ -26,12 +26,11 @@ case class IntoField[F[_]: Comonad](name: F[String]) extends LambdaOp[F] {
   def value: String = name.extract
 }
 
-case class IntoIndex[F[_]: Comonad](idx: F[Int]) extends LambdaOp[F] {
-  override def as[T](v: T): F[T] = idx.as(v)
+case class IntoIndex[F[_]: Comonad](token: Token[F], idx: Option[Value[F]]) extends LambdaOp[F] {
+  override def as[T](v: T): F[T] = token.as(v)
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): IntoIndex[K] = copy(fk(idx))
-
-  def value: Int = idx.extract
+  override def mapK[K[_]: Comonad](fk: F ~> K): IntoIndex[K] =
+    copy(token.mapK(fk), idx.map(_.mapK(fk)))
 }
 
 object LambdaOp {
@@ -43,7 +42,10 @@ object LambdaOp {
     Numbers.nonNegativeIntString.map(_.toInt).?.map(_.getOrElse(0))
 
   private val parseIdx: P[LambdaOp[Span.S]] =
-    (exclamation *> nonNegativeIntP0).lift.map(IntoIndex(_))
+    (Value.`value`.between(`[`, `]`) | (exclamation *> Value.`value`)).map(v =>
+      IntoIndex(v, Some(v))
+    ) |
+      exclamation.lift.map(e => IntoIndex(Token.lift[Span.S, Unit](e), None))
 
   private val parseOp: P[LambdaOp[Span.S]] =
     P.oneOf(parseField.backtrack :: parseIdx :: Nil)

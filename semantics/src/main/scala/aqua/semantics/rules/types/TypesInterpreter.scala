@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{LambdaRaw, ValueRaw}
+import aqua.raw.value.{IntoFieldRaw, LambdaRaw, ValueRaw}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, ProductType, StructType, Type}
 import cats.data.Validated.{Invalid, Valid}
@@ -12,7 +12,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{~>, Applicative}
+import cats.{Applicative, ~>}
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -24,6 +24,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
   val stack = new StackInterpreter[S, X, TypesState[S], TypesState.Frame[S]](
     GenLens[TypesState[S]](_.stack)
   )
+
   import stack.*
 
   type ST[A] = State[X, A]
@@ -95,6 +96,22 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         ).as(true)
     }
 
+  def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[LambdaRaw]] =
+    rootT match {
+      case StructType(name, fields) =>
+        fields(op.value).fold(
+          report(
+            op,
+            s"Field `${op.value}` not found in type `$name`, available: ${fields.toNel.toList.map(_._1).mkString(", ")}"
+          ).as(None)
+        )(t => State.pure(IntoFieldRaw(op.value, t)))
+      case _ =>
+        report(op, s"Expected Struct type to resolve a field, got $rootT").as(None)
+    }
+
+  def resolveIndex(rootT: Type, op: IntoIndex[S], idx: ValueRaw): State[X, Option[LambdaRaw]] =
+    
+  
   override def resolveLambda(root: Type, ops: List[LambdaOp[S]]): State[X, List[LambdaRaw]] =
     getState.map(_.resolveOps(root, ops)).flatMap {
       case Left((tkn, hint)) => report(tkn, hint).as(Nil)

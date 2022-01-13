@@ -67,7 +67,7 @@ case class TypesState[S[_]](
           dt
         }
         Option.when(strictRes.length == res.length && strictArgs.length == args.length)(
-          ArrowType(ProductType(strictArgs), ProductType(strictRes.toList))
+          ArrowType(ProductType(strictArgs), ProductType(strictRes))
         )
     }
 
@@ -118,7 +118,7 @@ case class TypesState[S[_]](
               .flatMap(t => resolveOps(t, tail).map(IntoFieldRaw(i.value, t) :: _))
           case _ => Left(i -> s"Expected product to resolve a field, got $rootT")
         }
-      case (i @ IntoIndex(_)) :: tail =>
+      case (i @ IntoIndex(idx)) :: tail =>
         rootT match {
           case ArrayType(intern) =>
             resolveOps(intern, tail).map(IntoIndexRaw(LiteralRaw.number(i.value), intern) :: _)
