@@ -42,8 +42,10 @@ object LambdaOp {
     Numbers.nonNegativeIntString.map(_.toInt).?.map(_.getOrElse(0))
 
   private val parseIdx: P[LambdaOp[Span.S]] =
-    (Value.`value`.between(`[`, `]`) | (exclamation *> Value.`value`)).map(v =>
-      IntoIndex(v, Some(v))
+    P.defer(
+      (Value.`value`.between(`[`, `]`) | (exclamation *> Value.`value`)).map(v =>
+        IntoIndex(v, Some(v))
+      )
     ) |
       exclamation.lift.map(e => IntoIndex(Token.lift[Span.S, Unit](e), None))
 
