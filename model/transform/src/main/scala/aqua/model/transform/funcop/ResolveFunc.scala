@@ -37,7 +37,7 @@ case class ResolveFunc(
       arrowCallbackPrefix + name,
       callback(name, call),
       arrowType,
-      ret.map(_.model),
+      ret.map(_.toRaw),
       Map.empty,
       Map.empty
     )

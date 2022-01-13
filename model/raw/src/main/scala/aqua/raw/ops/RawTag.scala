@@ -54,7 +54,7 @@ case class OnTag(peerId: ValueRaw, via: Chain[ValueRaw]) extends SeqGroupTag {
     peerId.usesVarNames ++ via.iterator.flatMap(_.usesVarNames)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    OnTag(f(peerId), via.map(f))
+    OnTag(peerId.map(f), via.map(_.map(f)))
 
   override def toString: String =
     s"(on $peerId${if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""})"
@@ -83,7 +83,7 @@ case class MatchMismatchTag(left: ValueRaw, right: ValueRaw, shouldMatch: Boolea
     left.usesVarNames ++ right.usesVarNames
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    MatchMismatchTag(f(left), f(right), shouldMatch)
+    MatchMismatchTag(left.map(f), right.map(f), shouldMatch)
 }
 
 case class ForTag(item: String, iterable: ValueRaw) extends SeqGroupTag {
@@ -92,7 +92,7 @@ case class ForTag(item: String, iterable: ValueRaw) extends SeqGroupTag {
   override def restrictsVarNames: Set[String] = Set(item)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    ForTag(item, f(iterable))
+    ForTag(item, iterable.map(f))
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(item = map.getOrElse(item, item))
@@ -119,7 +119,7 @@ case class DeclareStreamTag(
   override def usesVarNames: Set[String] = value.usesVarNames
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    DeclareStreamTag(f(value))
+    DeclareStreamTag(value.map(f))
 }
 
 case class AssignmentTag(
@@ -132,7 +132,7 @@ case class AssignmentTag(
     copy(assignTo = map.getOrElse(assignTo, assignTo))
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    AssignmentTag(f(value), assignTo)
+    AssignmentTag(value.map(f), assignTo)
 }
 
 case class ClosureTag(
@@ -145,7 +145,7 @@ case class ClosureTag(
     ClosureTag(
       func.copy(arrow =
         func.arrow.copy(
-          ret = func.arrow.ret.map(f),
+          ret = func.arrow.ret.map(_.map(f)),
           body = FuncOp(func.arrow.body.tree.map(_.mapValues(f)))
         )
       )
@@ -157,7 +157,7 @@ case class ReturnTag(
 ) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    ReturnTag(values.map(f))
+    ReturnTag(values.map(_.map(f)))
 }
 
 object EmptyTag extends NoExecTag
@@ -168,7 +168,7 @@ case class AbilityIdTag(
 ) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    AbilityIdTag(f(value), service)
+    AbilityIdTag(value.map(f), service)
 }
 
 case class CallServiceTag(
@@ -182,7 +182,7 @@ case class CallServiceTag(
   override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    CallServiceTag(f(serviceId), funcName, call.mapValues(f))
+    CallServiceTag(serviceId.map(f), funcName, call.mapValues(f))
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(call = call.mapExport(n => map.getOrElse(n, n)))
@@ -196,7 +196,7 @@ case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
   override def exportsVarNames: Set[String] = Set(exportTo.name)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    PushToStreamTag(f(operand), exportTo)
+    PushToStreamTag(operand.map(f), exportTo)
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(exportTo = exportTo.mapName(n => map.getOrElse(n, n)))
@@ -210,7 +210,7 @@ case class CanonicalizeTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
   override def exportsVarNames: Set[String] = Set(exportTo.name)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    CanonicalizeTag(f(operand), exportTo)
+    CanonicalizeTag(operand.map(f), exportTo)
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(exportTo = exportTo.mapName(n => map.getOrElse(n, n)))
@@ -224,7 +224,7 @@ case class FlattenTag(operand: ValueRaw, assignTo: String) extends RawTag {
   override def exportsVarNames: Set[String] = Set(assignTo)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    FlattenTag(f(operand), assignTo)
+    FlattenTag(operand.map(f), assignTo)
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(assignTo = map.getOrElse(assignTo, assignTo))

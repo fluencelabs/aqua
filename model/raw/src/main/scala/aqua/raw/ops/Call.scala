@@ -8,7 +8,7 @@ case class Call(args: List[ValueRaw], exportTo: List[Call.Export]) {
 
   def mapValues(f: ValueRaw => ValueRaw): Call =
     Call(
-      args.map(f),
+      args.map(_.map(f)),
       exportTo
     )
 
@@ -22,7 +22,7 @@ case class Call(args: List[ValueRaw], exportTo: List[Call.Export]) {
   }.toSet
 
   override def toString: String =
-    s"[${args.mkString(" ")}]${exportTo.map(_.model).map(" " + _).mkString(",")}"
+    s"[${args.mkString(" ")}]${exportTo.map(_.toRaw).map(" " + _).mkString(",")}"
 }
 
 object Call {
@@ -31,6 +31,6 @@ object Call {
   case class Export(name: String, `type`: Type) {
     def mapName(f: String => String): Export = copy(f(name))
 
-    def model: ValueRaw = VarRaw(name, `type`)
+    def toRaw: VarRaw = VarRaw(name, `type`)
   }
 }

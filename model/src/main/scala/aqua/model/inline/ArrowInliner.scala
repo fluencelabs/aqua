@@ -45,7 +45,7 @@ object ArrowInliner extends Logging {
           .map[(Option[FuncOp], ValueRaw)] {
             case (exp @ Call.Export(_, StreamType(_)), res) =>
               // pass nested function results to a stream
-              Some(FuncOps.pushToStream(res, exp)) -> exp.model
+              Some(FuncOps.pushToStream(res, exp)) -> exp.toRaw
             case (_, res) =>
               None -> res
           }
