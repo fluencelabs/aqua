@@ -43,9 +43,9 @@ object LambdaOp {
 
   private val parseIdx: P[LambdaOp[Span.S]] =
     P.defer(
-      (Value.`value`.between(`[`, `]`).backtrack | (exclamation *> Value.num)).map(v =>
-        IntoIndex(v, Some(v))
-      )
+      (Value.`value`.between(`[`, `]`) | (exclamation *> Value.num))
+        .map(v => IntoIndex(v, Some(v)))
+        .backtrack
     ) |
       exclamation.lift.map(e => IntoIndex(Token.lift[Span.S, Unit](e), None))
 
