@@ -12,10 +12,11 @@ sealed trait OpModel {
 object OpModel {
   type Tree = Cofree[Chain, OpModel]
   private val nil: Eval[Chain[Tree]] = Eval.now(Chain.empty)
+  val empty: Tree = Cofree(EmptyModel, nil)
 
   private def wrapIfNE(op: OpModel, children: List[Tree]): Tree =
     children match {
-      case Nil => op.leaf
+      case Nil => EmptyModel.leaf
       case x :: Nil => x
       case ch => Cofree(op, Eval.now(Chain.fromSeq(ch)))
     }
@@ -65,3 +66,5 @@ case class CallServiceModel(serviceId: ValueModel, funcName: String, call: CallM
 case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export) extends OpModel
 
 case class JoinModel(operands: NonEmptyList[ValueModel]) extends OpModel
+
+case object EmptyModel extends NoExecModel

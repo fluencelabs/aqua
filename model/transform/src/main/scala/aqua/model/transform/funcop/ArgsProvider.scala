@@ -1,18 +1,19 @@
 package aqua.model.transform.funcop
 
+import aqua.model.{OpModel, ValueModel}
 import aqua.raw.ops.{Call, FuncOp, FuncOps}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrayType, DataType, StreamType}
 import cats.data.Chain
 
 trait ArgsProvider {
-  def transform(op: FuncOp): FuncOp
+  def transform(op: OpModel.Tree): OpModel.Tree
 }
 
-case class ArgsFromService(dataServiceId: ValueRaw, names: List[(String, DataType)])
+case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataType)])
     extends ArgsProvider {
 
-  private def getStreamDataOp(name: String, t: StreamType): FuncOp = {
+  private def getStreamDataOp(name: String, t: StreamType): OpModel.Tree = {
     val iter = s"$name-iter"
     val item = s"$name-item"
     FuncOps.seq(
@@ -32,7 +33,7 @@ case class ArgsFromService(dataServiceId: ValueRaw, names: List[(String, DataTyp
     )
   }
 
-  def getDataOp(name: String, t: DataType): FuncOp =
+  def getDataOp(name: String, t: DataType): OpModel.Tree =
     t match {
       case st: StreamType =>
         getStreamDataOp(name, st)

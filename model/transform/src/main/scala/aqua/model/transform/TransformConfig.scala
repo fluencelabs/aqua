@@ -21,9 +21,9 @@ case class TransformConfig(
   private val quote = LiteralRaw.quote andThen LiteralModel.fromRaw
 
   val errorId: ValueModel = quote(errorFuncName)
-  val errorHandlingCallback: ValueRaw = quote(errorHandlingService)
-  val callbackSrvId: ValueRaw = quote(callbackService)
-  val dataSrvId: ValueRaw = quote(getDataService)
+  val errorHandlingCallback: ValueModel = quote(errorHandlingService)
+  val callbackSrvId: ValueModel = quote(callbackService)
+  val dataSrvId: ValueModel = quote(getDataService)
 
   // Host peer id holds %init_peer_id% in case Aqua is not compiled to be executed behind a relay,
   // or relay's variable otherwise

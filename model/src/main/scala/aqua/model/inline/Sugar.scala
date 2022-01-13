@@ -1,14 +1,38 @@
 package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
-import aqua.model.{CallModel, CallServiceModel, CanonicalizeModel, FlattenModel, ForModel, IntoFieldModel, IntoIndexModel, JoinModel, LambdaModel, LiteralModel, MatchMismatchModel, OnModel, OpModel, ParModel, PushToStreamModel, SeqModel, ValueModel, VarModel, XorModel}
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  CanonicalizeModel,
+  EmptyModel,
+  FlattenModel,
+  ForModel,
+  IntoFieldModel,
+  IntoIndexModel,
+  JoinModel,
+  LambdaModel,
+  LiteralModel,
+  MatchMismatchModel,
+  NextModel,
+  OnModel,
+  OpModel,
+  ParModel,
+  PushToStreamModel,
+  RestrictionModel,
+  SeqModel,
+  ValueModel,
+  VarModel,
+  XorModel
+}
 import aqua.raw.ops.*
 import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, ValueRaw, VarRaw}
 import cats.data.{Chain, State}
 import cats.syntax.traverse.*
 import cats.instances.list.*
+import scribe.Logging
 
-object Sugar {
+object Sugar extends Logging {
 
   // Todo: use state monad instead of counter
   private def unfold(raw: ValueRaw, i: Int): (ValueModel, Map[String, ValueRaw]) = raw match {
@@ -29,7 +53,7 @@ object Sugar {
   // Todo: use state monad instead of counter
   private def unfoldLambda(l: LambdaRaw, i: Int): (LambdaModel, Map[String, ValueRaw]) = l match {
     case IntoFieldRaw(field, t) => IntoFieldModel(field, t) -> Map.empty
-    case IntoIndexRaw(vm@VarRaw(name, _, l), t) if l.nonEmpty =>
+    case IntoIndexRaw(vm @ VarRaw(name, _, l), t) if l.nonEmpty =>
       val ni = name + "-" + i
       IntoIndexModel(ni, t) -> Map(ni -> vm)
     case IntoIndexRaw(VarRaw(name, _, _), t) =>
@@ -66,13 +90,13 @@ object Sugar {
     } yield vm -> parDesugarPrefix(ops)
 
   def desugarize[S: Counter](
-                              values: List[ValueRaw]
-                            ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
+    values: List[ValueRaw]
+  ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(desugarize(_))
 
   def desugarize[S: Counter](
-                              call: Call
-                            ): State[S, (CallModel, Option[OpModel.Tree])] =
+    call: Call
+  ): State[S, (CallModel, Option[OpModel.Tree])] =
     desugarize(call.args).map(list =>
       (
         CallModel(
@@ -89,7 +113,9 @@ object Sugar {
   private def none[S]: State[S, Option[(OpModel, Option[OpModel.Tree])]] =
     State.pure(None)
 
-  def desugarize[S: Counter : Mangler : Arrows : Exports](tag: RawTag): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
+  def desugarize[S: Counter: Mangler: Arrows: Exports](
+    tag: RawTag
+  ): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
     tag match {
       case OnTag(peerId, via) =>
         for {
@@ -105,7 +131,9 @@ object Sugar {
         for {
           ld <- desugarize(left)
           rd <- desugarize(right)
-        } yield Some(MatchMismatchModel(ld._1, rd._1, shouldMatch) -> parDesugarPrefixOpt(ld._2, rd._2))
+        } yield Some(
+          MatchMismatchModel(ld._1, rd._1, shouldMatch) -> parDesugarPrefixOpt(ld._2, rd._2)
+        )
 
       case ForTag(item, iterable) =>
         desugarize(iterable).map { case (v, p) =>
@@ -113,9 +141,8 @@ object Sugar {
         }
 
       case PushToStreamTag(operand, exportTo) =>
-        desugarize(operand).map {
-          case (v, p) =>
-            Some(PushToStreamModel(v, exportTo.name) -> p)
+        desugarize(operand).map { case (v, p) =>
+          Some(PushToStreamModel(v, exportTo.name) -> p)
         }
 
       case CallServiceTag(serviceId, funcName, call) =>
@@ -135,20 +162,43 @@ object Sugar {
           .map(nel => Some(JoinModel(nel.map(_._1)) -> parDesugarPrefix(nel.toList.flatMap(_._2))))
 
       case CallArrowTag(funcName, call) =>
-        Arrows[S].arrows.flatMap(_.get(funcName) match {
-          case Some(fn) =>
-            desugarize(call).flatMap{
-              case (cm, p) =>
-                ArrowInliner.callArrow(fn, cm).map(body => )
-            }
-        })
+        Arrows[S].arrows.flatMap(arrows =>
+          arrows.get(funcName) match {
+            case Some(fn) =>
+              desugarize(call).flatMap { case (cm, p) =>
+                ArrowInliner
+                  .callArrow(fn, cm)
+                  .map(body => Some(EmptyModel -> Option(OpModel.seq(p.toList :+ body))))
+              }
+            case None =>
+              logger.error(
+                s"Cannot find arrow ${funcName}, available: ${arrows.keys.mkString(", ")}"
+              )
+              none
+          }
+        )
+
+      case AssignmentTag(value, assignTo) =>
         for {
-          arrows <- Arrows[S].arrows
-        }desugarize(call)
+          cd <- desugarize(value)
+          _ <- Exports[S].resolved(assignTo, cd._1)
+        } yield Some(SeqModel -> cd._2)
+
+      case ClosureTag(arrow) =>
+        Arrows[S].resolved(arrow).map(_ => None)
+
+      case NextTag(item) =>
+        pure(NextModel(item))
+
+      case RestrictionTag(name, isStream) =>
+        pure(RestrictionModel(name, isStream))
 
       case SeqTag => pure(SeqModel)
       case _: ParGroupTag => pure(ParModel)
-      case XorTag => pure(XorModel)
+      case XorTag | XorTag.LeftBiased => pure(XorModel)
       case _: NoExecTag => none
+      case _ =>
+        logger.warn(s"Tag $tag must have been eliminated at this point")
+        none
     }
 }

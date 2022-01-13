@@ -42,7 +42,7 @@ object ArrowInliner extends Logging {
         // Fix the return values
         (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(List[OpModel.Tree], ValueModel)] {
-            case (Call.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
+            case (CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
               // pass nested function results to a stream
               (resDesugar.toList :+ OpModel
                 .pushToStream(res, exp)) -> VarModel(exp, st, Chain.empty)
@@ -172,33 +172,8 @@ object ArrowInliner extends Logging {
       dPrefix = desugarized.flatMap(_._2)
       dTag = desugarized.map(_._1)
 
-      body <- dTag match {
-        case CallArrow(fn, c) if resolvedArrows.contains(fn) =>
-          callArrow(resolvedArrows(fn), c)
-
-        case ClosureTag(arrow) =>
-          for {
-            _ <- Arrows[S].resolved(arrow)
-            tree <- resolveLeaf(tag)
-          } yield tree
-
-        case AssignmentTag(value, assignTo) =>
-          for {
-            _ <- Exports[S].resolved(assignTo, value)
-            tree <- resolveLeaf(tag)
-          } yield tree
-
-        case CallArrowTag(fn, _) =>
-          logger.error(
-            s"UNRESOLVED arrow $fn, skipping, will become (null) in AIR! Known arrows: ${resolvedArrows.keySet}"
-          )
-          resolveLeaf(dTag)
-
-        case _ =>
-          resolveLeaf(dTag)
-      }
     } yield
     // If smth needs to be added before this function tree, add it with Seq
-    dPrefix.fold(body)(p => OpModel.seq(p :: body :: Nil))
+    OpModel.seq(dPrefix.toList ::: dTag.map(_.leaf).toList)
 
 }

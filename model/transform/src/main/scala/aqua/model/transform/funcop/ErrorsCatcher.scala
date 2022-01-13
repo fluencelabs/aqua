@@ -1,5 +1,6 @@
 package aqua.model.transform.funcop
 
+import aqua.model.{OpModel, ValueModel}
 import aqua.raw.ops.{Call, FuncOp, FuncOps, MatchMismatchTag, OnTag, RawTag, XorTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.types.LiteralType
@@ -9,12 +10,12 @@ import cats.free.Cofree
 
 case class ErrorsCatcher(
   enabled: Boolean,
-  serviceId: ValueRaw,
+  serviceId: ValueModel,
   funcName: String,
   callable: InitPeerCallable
 ) {
 
-  def transform(op: FuncOp): FuncOp =
+  def transform(op: OpModel.Tree): OpModel.Tree =
     if (enabled) {
       var i = 0
       op

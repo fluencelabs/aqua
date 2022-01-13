@@ -1,18 +1,17 @@
 package aqua.model.transform.res
 
 import aqua.model.transform.topology.Topology.Res
-import aqua.model.{CallModel, LiteralModel, ValueModel, VarModel}
-import aqua.raw.ops.*
-import aqua.raw.value.{LiteralRaw, ValueRaw}
+import aqua.model.*
 import aqua.types.{ArrayType, StreamType}
 import cats.Eval
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
+import aqua.raw.value.LiteralRaw
 
 // TODO docs
 object MakeRes {
   val nilTail: Eval[Chain[Res]] = Eval.now(Chain.empty)
-  val op: ValueModel = ValueModel.fromRaw(LiteralRaw.quote("op"))
+  val op: ValueModel = LiteralModel.fromRaw(LiteralRaw.quote("op"))
 
   def leaf(op: ResolvedOp): Res = Cofree[Chain, ResolvedOp](op, nilTail)
 
@@ -38,7 +37,7 @@ object MakeRes {
     )
 
   def noop(onPeer: ValueModel): Res =
-    leaf(CallServiceRes(op, "noop", CallModel(Nil, None), onPeer))
+    leaf(CallServiceRes(op, "noop", CallRes(Nil, None), onPeer))
 
   def canon(onPeer: ValueModel, operand: ValueModel, target: Call.Export): Res =
     leaf(
@@ -55,7 +54,7 @@ object MakeRes {
       CallServiceRes(
         op,
         "identity",
-        CallModel(operands.toList, None),
+        CallRes(operands.toList, None),
         onPeer
       )
     )
@@ -68,17 +67,17 @@ object MakeRes {
   def resolve(
     currentPeerId: Option[ValueRaw],
     i: Int
-  ): PartialFunction[RawTag, Res] = {
-    case SeqTag => leaf(SeqRes)
-    case _: OnTag => leaf(SeqRes)
-    case MatchMismatchTag(a, b, s) =>
-      leaf(MatchMismatchRes(ValueModel.fromRaw(a), ValueModel.fromRaw(b), s))
-    case ForTag(item, iter) => leaf(FoldRes(item, ValueModel.fromRaw(iter)))
-    case RestrictionTag(item, isStream) => leaf(RestrictionRes(item, isStream))
-    case ParTag | ParTag.Detach => leaf(ParRes)
-    case XorTag | XorTag.LeftBiased => leaf(XorRes)
-    case NextTag(item) => leaf(NextRes(item))
-    case PushToStreamTag(operand, exportTo) =>
+  ): PartialFunction[OpModel, Res] = {
+    case SeqModel => leaf(SeqRes)
+    case _: OnModel => leaf(SeqRes)
+    case MatchMismatchModel(a, b, s) =>
+      leaf(MatchMismatchRes(a, b, s))
+    case ForModel(item, iter) => leaf(FoldRes(item, iter))
+    case RestrictionModel(item, isStream) => leaf(RestrictionRes(item, isStream))
+    case ParModel => leaf(ParRes)
+    case XorModel => leaf(XorRes)
+    case NextModel(item) => leaf(NextRes(item))
+    case PushToStreamModel(operand, exportTo) =>
       operand.`type` match {
         case StreamType(st) =>
           val tmpName = s"push-to-stream-$i"
@@ -87,31 +86,31 @@ object MakeRes {
           seq(
             canon(
               orInit(currentPeerId),
-              ValueModel.fromRaw(operand),
+              operand,
               Call.Export(tmpName, ArrayType(st))
             ),
             leaf(ApRes(VarModel(tmpName, ArrayType(st), Chain.empty), exportTo))
           )
         // )
         case _ =>
-          leaf(ApRes(ValueModel.fromRaw(operand), exportTo))
+          leaf(ApRes(operand, exportTo))
       }
-    case CanonicalizeTag(operand, exportTo) =>
+    case CanonicalizeModel(operand, exportTo) =>
       canon(
         orInit(currentPeerId),
-        ValueModel.fromRaw(operand),
+        operand,
         exportTo
       )
-    case FlattenTag(operand, assignTo) =>
-      leaf(ApRes(ValueModel.fromRaw(operand), Call.Export(assignTo, operand.`type`)))
-    case JoinTag(operands) =>
-      join(orInit(currentPeerId), operands.map(ValueModel.fromRaw))
-    case CallServiceTag(serviceId, funcName, Call(args, exportTo)) =>
+    case FlattenModel(operand, assignTo) =>
+      leaf(ApRes(operand, Call.Export(assignTo, operand.`type`)))
+    case JoinModel(operands) =>
+      join(orInit(currentPeerId), operands)
+    case CallServiceModel(serviceId, funcName, CallModel(args, exportTo)) =>
       leaf(
         CallServiceRes(
-          ValueModel.fromRaw(serviceId),
+          serviceId,
           funcName,
-          CallModel(args.map(ValueModel.fromRaw), exportTo.headOption),
+          CallRes(args, exportTo.headOption),
           orInit(currentPeerId)
         )
       )
