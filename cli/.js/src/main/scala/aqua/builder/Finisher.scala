@@ -3,9 +3,9 @@ package aqua.builder
 import aqua.backend.{ServiceDef, ServiceFunctionDef, VoidType}
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, FluencePeer}
-import aqua.model.func.Call
-import aqua.model.func.raw.CallServiceTag
 import aqua.model.{LiteralModel, VarModel}
+import aqua.raw.ops.{Call, CallServiceTag}
+import aqua.raw.value.LiteralRaw
 
 import scala.concurrent.Promise
 import scala.scalajs.js
@@ -21,7 +21,7 @@ case class Finisher private (
 
   def callTag(): CallServiceTag = {
     CallServiceTag(
-      LiteralModel.quote(serviceId),
+      LiteralRaw.quote(serviceId),
       fnName,
       Call(Nil, Nil)
     )

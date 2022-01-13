@@ -1,16 +1,16 @@
 package aqua.semantics.expr
 
-import aqua.model.{Model, ServiceModel, ValueModel}
 import aqua.parser.expr.ServiceExpr
+import aqua.raw.{Raw, ServiceRaw}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import cats.syntax.apply._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.applicative._
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.applicative.*
 import cats.Monad
 
 class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
@@ -20,10 +20,10 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
-  ): Prog[Alg, Model] =
+  ): Prog[Alg, Raw] =
     Prog.around(
       A.beginScope(expr.name),
-      (_: Unit, body: Model) =>
+      (_: Unit, body: Raw) =>
         (A.purgeArrows(expr.name) <* A.endScope()).flatMap {
           case Some(nel) =>
             val arrows = nel.map(kv => kv._1.value -> kv._2).toNem
@@ -44,11 +44,11 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
                 )
             } yield
               if (defineResult) {
-                ServiceModel(expr.name.value, arrows, defaultId)
-              } else Model.empty("Service not created due to validation errors")
+                ServiceRaw(expr.name.value, arrows, defaultId)
+              } else Raw.empty("Service not created due to validation errors")
 
           case None =>
-            Model.error("Service has no arrows, fails").pure[Alg]
+            Raw.error("Service has no arrows, fails").pure[Alg]
 
         }
     )

@@ -1,7 +1,7 @@
 package aqua.semantics.rules
 
-import aqua.model.*
 import aqua.parser.lexer.*
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, LiteralType, Type}
@@ -37,15 +37,15 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   def resolveType(v: Value[S]): Alg[Option[Type]] =
     valueToModel(v).map(_.map(_.lastType))
 
-  def valueToModel(v: Value[S]): Alg[Option[ValueModel]] =
+  def valueToModel(v: Value[S]): Alg[Option[ValueRaw]] =
     v match {
-      case l: Literal[S] => Some(LiteralModel(l.value, l.ts)).pure[Alg]
+      case l: Literal[S] => Some(LiteralRaw(l.value, l.ts)).pure[Alg]
       case VarLambda(name, ops) =>
         N.read(name).flatMap {
           case Some(t) =>
             T.resolveLambda(t, ops)
               .map(Chain.fromSeq)
-              .map(VarModel(name.value, t, _))
+              .map(VarRaw(name.value, t, _))
               .map(Some(_))
           case None =>
             None.pure[Alg]

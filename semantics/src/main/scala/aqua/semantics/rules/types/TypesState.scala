@@ -1,19 +1,12 @@
 package aqua.semantics.rules.types
 
-import aqua.model.{
-  AquaContext,
-  IntoArrayModel,
-  IntoFieldModel,
-  IntoIndexModel,
-  LambdaModel,
-  ValueModel
-}
+import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, ValueRaw}
+import aqua.raw.AquaContext
 import aqua.parser.lexer.{
   ArrayTypeToken,
   ArrowTypeToken,
   BasicTypeToken,
   CustomTypeToken,
-  IntoArray,
   IntoField,
   IntoIndex,
   LambdaOp,
@@ -104,7 +97,7 @@ case class TypesState[S[_]](
             Valid(
               ArrowType(
                 ProductType.maybeLabelled(argTypes.toList),
-                ProductType(resType.flatten.toList)
+                ProductType(resType.flatten)
               )
             )
           )(Invalid(_))
@@ -114,35 +107,27 @@ case class TypesState[S[_]](
   def resolveOps(
     rootT: Type,
     ops: List[LambdaOp[S]]
-  ): Either[(Token[S], String), List[LambdaModel]] =
+  ): Either[(Token[S], String), List[LambdaRaw]] =
     ops match {
       case Nil => Right(Nil)
-      case (i @ IntoArray(_)) :: tail =>
-        rootT match {
-          case ArrayType(intern) =>
-            resolveOps(intern, tail).map(IntoArrayModel(ArrayType(intern)) :: _)
-          case StreamType(intern) =>
-            resolveOps(intern, tail).map(IntoArrayModel(ArrayType(intern)) :: _)
-          case _ => Left(i -> s"Expected $rootT to be an array or a stream")
-        }
       case (i @ IntoField(_)) :: tail =>
         rootT match {
           case pt @ StructType(_, fields) =>
             fields(i.value)
               .toRight(i -> s"Field `${i.value}` not found in type `${pt.name}``")
-              .flatMap(t => resolveOps(t, tail).map(IntoFieldModel(i.value, t) :: _))
+              .flatMap(t => resolveOps(t, tail).map(IntoFieldRaw(i.value, t) :: _))
           case _ => Left(i -> s"Expected product to resolve a field, got $rootT")
         }
       case (i @ IntoIndex(_)) :: tail =>
         rootT match {
           case ArrayType(intern) =>
-            resolveOps(intern, tail).map(IntoIndexModel(i.value, intern) :: _)
+            resolveOps(intern, tail).map(IntoIndexRaw(LiteralRaw.number(i.value), intern) :: _)
           case StreamType(intern) =>
-            resolveOps(intern, tail).map(IntoIndexModel(i.value, intern) :: _)
+            resolveOps(intern, tail).map(IntoIndexRaw(LiteralRaw.number(i.value), intern) :: _)
           case OptionType(intern) =>
             i.value match {
               case 0 =>
-                resolveOps(intern, tail).map(IntoIndexModel(i.value, intern) :: _)
+                resolveOps(intern, tail).map(IntoIndexRaw(LiteralRaw.number(i.value), intern) :: _)
               case _ =>
                 Left(i -> s"Option might have only one element, use ! to get it")
             }
@@ -157,7 +142,7 @@ object TypesState {
   case class Frame[S[_]](
     token: ArrowTypeToken[S],
     arrowType: ArrowType,
-    retVals: Option[List[ValueModel]]
+    retVals: Option[List[ValueRaw]]
   )
 
   implicit def typesStateMonoid[S[_]]: Monoid[TypesState[S]] = new Monoid[TypesState[S]] {

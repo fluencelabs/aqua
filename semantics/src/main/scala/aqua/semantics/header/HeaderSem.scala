@@ -1,6 +1,6 @@
 package aqua.semantics.header
 
-import aqua.model.AquaContext
+import aqua.raw.AquaContext
 import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.{Comonad, Eval, Monoid}
 import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}

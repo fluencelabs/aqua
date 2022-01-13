@@ -1,7 +1,8 @@
-package aqua.model
+package aqua.raw
 
-import aqua.model.func.raw.{CallServiceTag, FuncOp}
-import aqua.model.func.{ArgsCall, FuncCallable, FuncModel}
+import aqua.raw.arrow.{ArgsCall, FuncArrow, FuncRaw}
+import aqua.raw.ops.{CallServiceTag, FuncOp}
+import aqua.raw.value.ValueRaw
 import aqua.types.{StructType, Type}
 import cats.Monoid
 import cats.data.NonEmptyMap
@@ -13,15 +14,15 @@ import scribe.Logging
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
-  module: Option[String],
-  declares: Set[String],
-  exports: Option[AquaContext],
-  funcs: Map[String, FuncCallable],
-  types: Map[String, Type],
-  values: Map[String, ValueModel],
-  abilities: Map[String, AquaContext],
-  // TODO: merge this with abilities, when have ability resolution variance
-  services: Map[String, ServiceModel]
+                        module: Option[String],
+                        declares: Set[String],
+                        exports: Option[AquaContext],
+                        funcs: Map[String, FuncArrow],
+                        types: Map[String, Type],
+                        values: Map[String, ValueRaw],
+                        abilities: Map[String, AquaContext],
+                        // TODO: merge this with abilities, when have ability resolution variance
+                        services: Map[String, ServiceRaw]
 ) {
 
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
@@ -69,21 +70,21 @@ case class AquaContext(
       }
       .map(prefixFirst(prefix, _))
 
-  def allFuncs(prefix: String = ""): Map[String, FuncCallable] =
+  def allFuncs(prefix: String = ""): Map[String, FuncArrow] =
     abilities
       .foldLeft(funcs) { case (ts, (k, v)) =>
         ts ++ v.allFuncs(k + ".")
       }
       .map(prefixFirst(prefix, _))
 
-  def allValues(prefix: String = ""): Map[String, ValueModel] =
+  def allValues(prefix: String = ""): Map[String, ValueRaw] =
     abilities
       .foldLeft(values) { case (ts, (k, v)) =>
         ts ++ v.allValues(k + ".")
       }
       .map(prefixFirst(prefix, _))
 
-  def allServices(prefix: String = ""): Map[String, ServiceModel] =
+  def allServices(prefix: String = ""): Map[String, ServiceRaw] =
     abilities
       .foldLeft(services) { case (ts, (k, v)) =>
         ts ++ v.allServices(k + ".")
@@ -142,7 +143,7 @@ object AquaContext extends Logging {
       }
   }
 
-  def fromServiceModel(sm: ServiceModel, serviceId: ValueModel): AquaContext =
+  def fromService(sm: ServiceRaw, serviceId: ValueRaw): AquaContext =
     AquaContext(
       module = Some(sm.name),
       declares = sm.`type`.fields.toNel.map(_._1).toList.toSet,
@@ -150,12 +151,12 @@ object AquaContext extends Logging {
       funcs = sm.arrows.toSortedMap.map { case (fnName, arrowType) =>
         val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
         fnName ->
-          FuncCallable(
+          FuncArrow(
             fnName,
             // TODO: capture ability resolution, get ID from the call context
             FuncOp.leaf(CallServiceTag(serviceId, fnName, call)),
             arrowType,
-            ret.map(_.model),
+            ret.map(_.toRaw),
             Map.empty,
             Map.empty
           )
@@ -166,12 +167,12 @@ object AquaContext extends Logging {
       services = Map.empty
     )
 
-  def fromScriptModel(sm: ScriptModel, init: AquaContext)(implicit
+  def fromRawContext(rawContext: ContextRaw, init: AquaContext)(implicit
     aqum: Semigroup[AquaContext]
   ): AquaContext =
-    sm.models
+    rawContext.parts
       .foldLeft((init, blank)) {
-        case ((ctx, exportContext), c: ConstantModel) =>
+        case ((ctx, exportContext), c: ConstantRaw) =>
           val add =
             blank
               .copy(values =
@@ -179,21 +180,20 @@ object AquaContext extends Logging {
                 else Map(c.name -> c.value.resolveWith(ctx.values))
               )
           (ctx |+| add, exportContext |+| add)
-        case ((ctx, exportContext), func: FuncModel) =>
+        case ((ctx, exportContext), func: FuncRaw) =>
           val fr = func.capture(ctx.allFuncs(), ctx.allValues())
           val add =
             blank.copy(funcs = Map(func.name -> fr))
           (ctx |+| add, exportContext |+| add)
-        case ((ctx, exportContext), t: TypeModel) =>
+        case ((ctx, exportContext), t: TypeRaw) =>
           val add =
             blank.copy(types = Map(t.name -> t.`type`))
           (ctx |+| add, exportContext |+| add)
-        case ((ctx, exportContext), m: ServiceModel) =>
+        case ((ctx, exportContext), m: ServiceRaw) =>
           val add =
             blank
               .copy(
-                abilities =
-                  m.defaultId.fold(Map.empty)(id => Map(m.name -> fromServiceModel(m, id))),
+                abilities = m.defaultId.fold(Map.empty)(id => Map(m.name -> fromService(m, id))),
                 services = Map(m.name -> m)
               )
           (ctx |+| add, exportContext |+| add)

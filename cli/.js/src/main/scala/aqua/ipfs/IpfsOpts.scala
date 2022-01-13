@@ -10,6 +10,7 @@ import aqua.builder.IPFSUploader
 import aqua.files.AquaFilesIO
 import aqua.ipfs.js.IpfsApi
 import aqua.model.LiteralModel
+import aqua.raw.value.LiteralRaw
 import aqua.run.RunCommand.createKeyPair
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
@@ -59,7 +60,7 @@ object IpfsOpts extends Logging {
           UploadFuncName,
           Path(IpfsAquaPath),
           Nil,
-          LiteralModel.quote(path) :: Nil,
+          LiteralRaw.quote(path) :: Nil,
           Map.empty,
           ipfsUploader :: Nil
         )

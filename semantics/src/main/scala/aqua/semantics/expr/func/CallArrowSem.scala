@@ -1,9 +1,10 @@
 package aqua.semantics.expr.func
 
-import aqua.model.func.Call
-import aqua.model.func.raw.{CallArrowTag, CallServiceTag, FuncOp}
-import aqua.model.{Model, ValueModel}
+import aqua.raw.ops.Call
+import aqua.raw.ops.{CallArrowTag, CallServiceTag, FuncOp}
+import aqua.raw.Raw
 import aqua.parser.expr.func.CallArrowExpr
+import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -29,7 +30,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
-  ): Alg[(List[ValueModel], List[Type])] =
+  ): Alg[(List[ValueRaw], List[Type])] =
     V.checkArguments(expr.funcName, at, args) >> variables
       .foldLeft(algUnit[Alg].as((List.empty[Type], at.codomain.toList)))((f, exportVar) =>
         f.flatMap {
@@ -71,7 +72,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
           }.traverse(identity))
     }
 
-  def callServiceTag[Alg[_]: Monad](arrowType: ArrowType, serviceId: Option[ValueModel])(implicit
+  def callServiceTag[Alg[_]: Monad](arrowType: ArrowType, serviceId: Option[ValueRaw])(implicit
     N: NamesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
@@ -109,7 +110,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     A: AbilitiesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
-  ): Prog[Alg, Model] =
-    toModel[Alg].map(_.getOrElse(Model.error("CallArrow can't be converted to Model")))
+  ): Prog[Alg, Raw] =
+    toModel[Alg].map(_.getOrElse(Raw.error("CallArrow can't be converted to Model")))
 
 }

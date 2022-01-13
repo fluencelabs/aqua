@@ -1,7 +1,7 @@
 package aqua.model.transform.res
 
-import aqua.model.func.Call
 import aqua.model.{ValueModel, VarModel}
+import aqua.raw.ops.Call
 
 // TODO docs to all traits and objects
 sealed trait ResolvedOp
@@ -50,6 +50,4 @@ case class ApRes(operand: ValueModel, exportTo: Call.Export) extends ResolvedOp 
     ApRes(f(operand), exportTo)
 
   def mapExport(f: String => String): ApRes = copy(exportTo = exportTo.mapName(f))
-
-  def argVarNames: Set[String] = ValueModel.varName(operand).toSet
 }

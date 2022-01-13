@@ -5,9 +5,10 @@ import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Console, Finisher}
 import aqua.io.OutputPrinter
 import aqua.model.{ValueModel, VarModel}
-import aqua.model.func.{Call, FuncCallable}
-import aqua.model.func.raw.{CallArrowTag, FuncOp, FuncOps}
 import aqua.model.transform.{Transform, TransformConfig}
+import aqua.raw.arrow.FuncArrow
+import aqua.raw.ops.{Call, CallArrowTag, FuncOp, FuncOps}
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrowType, BoxType, NilType, Type}
 import cats.data.{Validated, ValidatedNec}
 import cats.effect.kernel.Async
@@ -17,18 +18,17 @@ import scala.concurrent.ExecutionContext
 import scala.scalajs.js
 
 class Runner(
-  funcName: String,
-  funcCallable: FuncCallable,
-  args: List[ValueModel],
-  config: RunConfig,
-  transformConfig: TransformConfig
+              funcName: String,
+              funcCallable: FuncArrow,
+              args: List[ValueRaw],
+              config: RunConfig,
+              transformConfig: TransformConfig
 ) {
 
-  def resultVariableNames(funcCallable: FuncCallable, name: String): List[String] = {
+  def resultVariableNames(funcCallable: FuncArrow, name: String): List[String] =
     funcCallable.arrowType.codomain.toList.zipWithIndex.map { case (t, idx) =>
       name + idx
     }
-  }
 
   // Wraps function with necessary services, registers services and calls wrapped function with FluenceJS
   def run[F[_]: Async]()(implicit ec: ExecutionContext): ValidatedNec[String, F[Unit]] = {
@@ -54,11 +54,11 @@ class Runner(
 
   // Generates air from function, register all services and make a call through FluenceJS
   private def genAirAndMakeCall[F[_]: Async](
-    wrapped: FuncCallable,
-    consoleService: Console,
-    finisherService: Finisher
+                                              wrapped: FuncArrow,
+                                              consoleService: Console,
+                                              finisherService: Finisher
   )(implicit ec: ExecutionContext): F[Unit] = {
-    val funcRes = Transform.fn(wrapped, transformConfig)
+    val funcRes = Transform.funcRes(wrapped, transformConfig)
     val definitions = FunctionDef(funcRes)
 
     val air = FuncAirGen(funcRes).generate.show
@@ -108,7 +108,7 @@ class Runner(
   private def wrapCall(
     consoleService: Console,
     finisherService: Finisher
-  ): ValidatedNec[String, FuncCallable] = {
+  ): ValidatedNec[String, FuncArrow] = {
     // pass results to a printing service if an input function returns a result
     // otherwise just call it
     val body = funcCallable.arrowType.codomain.toList match {
@@ -117,7 +117,7 @@ class Runner(
       case types =>
         val (variables, exports) = types.zipWithIndex.map { case (t, idx) =>
           val name = config.resultName + idx
-          (VarModel(name, t), Call.Export(name, t))
+          (VarRaw(name, t), Call.Export(name, t))
         }.unzip
         val callFuncTag =
           CallArrowTag(funcName, Call(args, exports))
@@ -144,7 +144,7 @@ class Runner(
     gettersV.map { getters =>
       val gettersTags = getters.map(s => FuncOp.leaf(s.callTag()))
 
-      FuncCallable(
+      FuncArrow(
         config.functionWrapperName,
         FuncOps.seq((gettersTags :+ body :+ FuncOp.leaf(finisherServiceTag)): _*),
         // no arguments and returns nothing

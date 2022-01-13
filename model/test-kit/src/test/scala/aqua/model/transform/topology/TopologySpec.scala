@@ -2,9 +2,9 @@ package aqua.model.transform.topology
 
 import aqua.Node
 import aqua.model.VarModel
-import aqua.model.func.Call
-import aqua.model.func.raw.FuncOps
 import aqua.model.transform.res.{MakeRes, ResolvedOp, SeqRes, XorRes}
+import aqua.raw.ops.{Call, FuncOps}
+import aqua.raw.value.VarRaw
 import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
@@ -92,7 +92,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
   "topology resolver" should "build return path in par if there are exported variables" in {
     val exportTo = Call.Export("result", ScalarType.string) :: Nil
-    val result = VarModel("result", ScalarType.string)
+    val result = VarRaw("result", ScalarType.string)
 
     val init = on(
       initPeer,
@@ -527,7 +527,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
   // https://github.com/fluencelabs/aqua/issues/205
   "topology resolver" should "optimize path over fold" in {
-    val i = VarModel("i", ScalarType.string)
+    val i = VarRaw("i", ScalarType.string)
     val init =
       on(
         initPeer,

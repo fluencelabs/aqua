@@ -5,6 +5,7 @@ import aqua.builder.IPFSUploader
 import aqua.files.AquaFilesIO
 import aqua.ipfs.IpfsOpts.{pathOpt, IpfsAquaPath, UploadFuncName}
 import aqua.model.{LiteralModel, ValueModel}
+import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
@@ -84,7 +85,7 @@ object NetworkOpts {
           ListInterfacesByPeerFuncName,
           Path(NetworkAquaPath),
           Nil,
-          peer.map(LiteralModel.quote).getOrElse(LiteralModel.initPeerId) :: Nil
+          peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
         )
       }
     }
@@ -116,7 +117,7 @@ object NetworkOpts {
           GetInterfaceFuncName,
           Path(NetworkAquaPath),
           Nil,
-          LiteralModel.quote(serviceId) :: Nil
+          LiteralRaw.quote(serviceId) :: Nil
         )
       }
     }
@@ -132,7 +133,7 @@ object NetworkOpts {
           GetModuleInterfaceFuncName,
           Path(NetworkAquaPath),
           Nil,
-          LiteralModel.quote(serviceId) :: Nil
+          LiteralRaw.quote(serviceId) :: Nil
         )
       }
     }

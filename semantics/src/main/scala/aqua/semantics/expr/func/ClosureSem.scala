@@ -1,8 +1,8 @@
 package aqua.semantics.expr.func
 
-import aqua.model.Model
-import aqua.model.func.raw.{ClosureTag, FuncOp}
-import aqua.model.func.{ArrowModel, FuncModel}
+import aqua.raw.Raw
+import aqua.raw.ops.{ClosureTag, FuncOp}
+import aqua.raw.arrow.{ArrowRaw, FuncRaw}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.expr.func.ClosureExpr
 import aqua.parser.lexer.Arg
@@ -18,17 +18,17 @@ class ClosureSem[S[_]](val expr: ClosureExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[S, Alg]
-  ): Prog[Alg, Model] =
+  ): Prog[Alg, Raw] =
     Prog.after {
-      case arrow: ArrowModel =>
+      case arrow: ArrowRaw =>
         N.defineArrow(
           expr.name,
           arrow.`type`,
           isRoot = false
-        ) as FuncOp.leaf(ClosureTag(FuncModel(expr.name.value, arrow)))
+        ) as FuncOp.leaf(ClosureTag(FuncRaw(expr.name.value, arrow)))
 
       case m =>
-        Model.error("Closure must continue with an arrow definition").pure[Alg]
+        Raw.error("Closure must continue with an arrow definition").pure[Alg]
     }
 
 }

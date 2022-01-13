@@ -1,8 +1,8 @@
 package aqua.backend.air
 
 import aqua.model.*
-import aqua.model.func.Call
 import aqua.model.transform.res.*
+import aqua.raw.ops.Call
 import aqua.types.StreamType
 import cats.Eval
 import cats.data.Chain
@@ -18,8 +18,6 @@ object AirGen extends Logging {
 
   def lambdaToString(ls: List[LambdaModel]): String = ls match {
     case Nil => ""
-    case IntoArrayModel(_) :: tail =>
-      s"[@${lambdaToString(tail)}]"
     case IntoFieldModel(field, _) :: tail =>
       s".$field${lambdaToString(tail)}"
     case IntoIndexModel(idx, _) :: tail =>

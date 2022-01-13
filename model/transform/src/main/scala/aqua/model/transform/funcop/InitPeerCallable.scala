@@ -1,23 +1,22 @@
 package aqua.model.transform.funcop
 
-import aqua.model.{LiteralModel, ValueModel}
-import aqua.model.func.Call
-import aqua.model.func.raw.{FuncOp, FuncOps}
+import aqua.raw.ops.{Call, FuncOp, FuncOps}
+import aqua.raw.value.ValueRaw
 import cats.data.Chain
 
 sealed trait InitPeerCallable {
   def transform(op: FuncOp): FuncOp
 
-  def makeCall(serviceId: ValueModel, funcName: String, call: Call): FuncOp =
+  def makeCall(serviceId: ValueRaw, funcName: String, call: Call): FuncOp =
     transform(FuncOps.callService(serviceId, funcName, call))
 
-  def service(serviceId: ValueModel): (String, Call) => FuncOp = makeCall(serviceId, _, _)
+  def service(serviceId: ValueRaw): (String, Call) => FuncOp = makeCall(serviceId, _, _)
 }
 
-case class InitViaRelayCallable(goThrough: Chain[ValueModel]) extends InitPeerCallable {
+case class InitViaRelayCallable(goThrough: Chain[ValueRaw]) extends InitPeerCallable {
 
   // Get to init user through a relay
   override def transform(op: FuncOp): FuncOp =
-    FuncOps.onVia(LiteralModel.initPeerId, goThrough, op)
+    FuncOps.onVia(ValueRaw.InitPeerId, goThrough, op)
 
 }

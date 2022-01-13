@@ -1,11 +1,12 @@
 package aqua.model.transform.topology
 
-import aqua.model.ValueModel
-import aqua.model.func.raw.*
-import aqua.model.func.raw.FuncOp.Tree
+import aqua.raw.ops.*
+import aqua.raw.ops.FuncOp.Tree
 import cats.Eval
 import cats.data.{Chain, NonEmptyList, OptionT}
 import aqua.model.transform.cursor.*
+import aqua.raw.ops
+import aqua.raw.ops.{FuncOp, GroupTag, NoExecTag, RawTag}
 import cats.syntax.traverse.*
 import cats.free.Cofree
 import scribe.Logging

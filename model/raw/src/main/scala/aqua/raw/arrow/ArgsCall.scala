@@ -1,26 +1,33 @@
-package aqua.model.func
+package aqua.raw.arrow
 
-import aqua.model.{ValueModel, VarModel}
-import aqua.types.{ArrowType, DataType, ProductType, Type}
+import aqua.raw.ops.Call
+import aqua.raw.value.{ValueRaw, VarRaw}
+import aqua.types.{ArrowType, DataType, ProductType, StreamType, Type}
 
 /**
  * Wraps argument definitions of a function, along with values provided when this function is called
- * @param args Argument definitions
+ *
+ * @param args     Argument definitions
  * @param callWith Values provided for arguments
  */
-case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
+case class ArgsCall(args: ProductType, callWith: List[ValueRaw]) {
   // Both arguments (arg names and types how they seen from the function body)
   // and values (value models and types how they seen on the call site)
-  lazy val zipped: List[((String, Type), ValueModel)] = args.toLabelledList() zip callWith
+  lazy val zipped: List[((String, Type), ValueRaw)] = args.toLabelledList() zip callWith
 
-  lazy val dataArgs: Map[String, ValueModel] =
+  lazy val dataArgs: Map[String, ValueRaw] =
     zipped.collect { case ((name, _: DataType), value) =>
       name -> value
     }.toMap
 
-  def arrowArgs(arrowsInScope: Map[String, FuncCallable]): Map[String, FuncCallable] =
+  lazy val streamArgs: Map[String, VarRaw] =
+    dataArgs.collect { case (k, vr @ VarRaw(n, StreamType(_), _)) =>
+      (k, vr)
+    }
+
+  def arrowArgs(arrowsInScope: Map[String, FuncArrow]): Map[String, FuncArrow] =
     zipped.collect {
-      case ((name, _: ArrowType), VarModel(value, _, _)) if arrowsInScope.contains(value) =>
+      case ((name, _: ArrowType), VarRaw(value, _, _)) if arrowsInScope.contains(value) =>
         name -> arrowsInScope(value)
     }.toMap
 }
@@ -37,7 +44,7 @@ object ArgsCall {
 
     val call = Call(
       argNamesTypes.map { case (a, t) =>
-        VarModel(a, t)
+        VarRaw(a, t)
       },
       res
     )

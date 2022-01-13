@@ -1,7 +1,7 @@
 package aqua.model.transform
 
-import aqua.model.VarModel
-import aqua.model.func.FuncCallable
+import aqua.raw.value.VarRaw
+import aqua.raw.arrow.FuncArrow
 import aqua.model.transform.funcop.*
 import aqua.model.transform.res.{FuncRes, NoAir, ResolvedOp}
 import aqua.model.transform.topology.Topology
@@ -27,9 +27,9 @@ object Transform extends Logging {
     tree.copy(tail = tree.tail.map(_.filter(t => filter(t.head)).map(clear(_, filter))))
 
   // TODO: doc/rename
-  def fn(func: FuncCallable, conf: TransformConfig): FuncRes = {
+  def funcRes(func: FuncArrow, conf: TransformConfig): FuncRes = {
     val initCallable: InitPeerCallable = InitViaRelayCallable(
-      Chain.fromOption(conf.relayVarName).map(VarModel(_, ScalarType.string))
+      Chain.fromOption(conf.relayVarName).map(VarRaw(_, ScalarType.string))
     )
     val errorsCatcher = ErrorsCatcher(
       enabled = conf.wrapWithXor,
@@ -65,8 +65,7 @@ object Transform extends Logging {
           errorsCatcher
             .transform(
               // TODO: comments
-              wrapFunc.
-                resolve(func).value
+              wrapFunc.resolve(func).value
             )
             .tree
         )

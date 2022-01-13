@@ -1,8 +1,7 @@
 package aqua.model.transform.funcop
 
-import aqua.model.{ValueModel, VarModel}
-import aqua.model.func.Call
-import aqua.model.func.raw.{FuncOp, FuncOps}
+import aqua.raw.ops.{Call, FuncOp, FuncOps}
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrayType, DataType, StreamType}
 import cats.data.Chain
 
@@ -10,7 +9,7 @@ trait ArgsProvider {
   def transform(op: FuncOp): FuncOp
 }
 
-case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataType)])
+case class ArgsFromService(dataServiceId: ValueRaw, names: List[(String, DataType)])
     extends ArgsProvider {
 
   private def getStreamDataOp(name: String, t: StreamType): FuncOp = {
@@ -24,9 +23,9 @@ case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataT
       ),
       FuncOps.fold(
         item,
-        VarModel(iter, ArrayType(t.element), Chain.empty),
+        VarRaw(iter, ArrayType(t.element)),
         FuncOps.seq(
-          FuncOps.pushToStream(VarModel(item, t.element), Call.Export(name, t)),
+          FuncOps.pushToStream(VarRaw(item, t.element), Call.Export(name, t)),
           FuncOps.next(item)
         )
       )

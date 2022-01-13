@@ -3,9 +3,8 @@ package aqua.builder
 import aqua.backend.{ArgDefinition, PrimitiveType, ServiceDef, ServiceFunctionDef, VoidType}
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer}
-import aqua.model.func.Call
-import aqua.model.func.raw.CallServiceTag
-import aqua.model.{LiteralModel, VarModel}
+import aqua.raw.ops.{Call, CallServiceTag}
+import aqua.raw.value.{LiteralRaw, VarRaw}
 
 import scala.scalajs.js
 import scala.scalajs.js.{Dynamic, JSON}
@@ -14,13 +13,12 @@ import scala.scalajs.js.{Dynamic, JSON}
 class Console(serviceId: String, fnName: String, resultNames: List[String])
     extends ServiceFunction {
 
-  def callTag(variables: List[VarModel]): CallServiceTag = {
+  def callTag(variables: List[VarRaw]): CallServiceTag =
     CallServiceTag(
-      LiteralModel.quote(serviceId),
+      LiteralRaw.quote(serviceId),
       fnName,
       Call(variables, Nil)
     )
-  }
 
   def registerService(peer: FluencePeer): Unit = {
     CallJsFunction.registerService(

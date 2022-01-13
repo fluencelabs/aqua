@@ -1,12 +1,12 @@
 package aqua.semantics
 
-import aqua.model.{AquaContext, EmptyModel, Model, VarModel}
+import aqua.raw.{AquaContext, Raw}
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
 import cats.data.{Chain, State}
 import cats.kernel.Monoid
-import cats.syntax.monoid._
+import cats.syntax.monoid.*
 
 case class CompilerState[S[_]](
   errors: Chain[SemanticError[S]] = Chain.empty[SemanticError[S]],
@@ -16,7 +16,7 @@ case class CompilerState[S[_]](
 )
 
 object CompilerState {
-  type St[S[_]] = State[CompilerState[S], Model]
+  type St[S[_]] = State[CompilerState[S], Raw]
 
   def init[F[_]](ctx: AquaContext): CompilerState[F] =
     CompilerState(
@@ -26,7 +26,7 @@ object CompilerState {
     )
 
   implicit def compilerStateMonoid[S[_]]: Monoid[St[S]] = new Monoid[St[S]] {
-    override def empty: St[S] = State.pure(EmptyModel("compiler state monoid empty"))
+    override def empty: St[S] = State.pure(Raw.Empty("compiler state monoid empty"))
 
     override def combine(x: St[S], y: St[S]): St[S] = for {
       a <- x.get

@@ -1,6 +1,6 @@
 package aqua.semantics
 
-import aqua.model.Model
+import aqua.raw.Raw
 import aqua.parser.Expr
 import aqua.parser.expr.*
 import aqua.parser.expr.func.*
@@ -21,7 +21,7 @@ object ExprSem {
     N: NamesAlgebra[S, G],
     T: TypesAlgebra[S, G],
     V: ValuesAlgebra[S, G]
-  ): Prog[G, Model] =
+  ): Prog[G, Raw] =
     expr match {
       case expr: AbilityIdExpr[S] => new AbilityIdSem(expr).program[G]
       case expr: AssignmentExpr[S] => new AssignmentSem(expr).program[G]

@@ -1,9 +1,10 @@
 package aqua.semantics
 
-import aqua.model.{AquaContext, Model}
 import aqua.parser.expr.func.ClosureExpr
 import aqua.parser.lexer.{Name, Token}
 import aqua.parser.lift.Span
+import aqua.raw.Raw
+import aqua.raw.AquaContext
 import aqua.semantics.expr.func.ClosureSem
 import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.abilities.{AbilitiesInterpreter, AbilitiesState}
@@ -44,18 +45,18 @@ object Utils {
     }
   }
 
-  def getModel(prog: Prog[State[CompilerState[cats.Id], *], Model]): Model = {
+  def getModel(prog: Prog[State[CompilerState[cats.Id], *], Raw]): Raw = {
     prog.apply(emptyS).run(blankCS).value._2
   }
 
   def getState(
-    startState: Model
-  )(prog: Prog[State[CompilerState[cats.Id], *], Model]): CompilerState[Id] = {
-    prog.apply(State.pure[CompilerState[Id], Model](startState)).run(blankCS).value._1
+    startState: Raw
+  )(prog: Prog[State[CompilerState[cats.Id], *], Raw]): CompilerState[Id] = {
+    prog.apply(State.pure[CompilerState[Id], Raw](startState)).run(blankCS).value._1
   }
 
-  def getModel(startState: Model)(prog: Prog[State[CompilerState[cats.Id], *], Model]): Model = {
-    prog.apply(State.pure[CompilerState[Id], Model](startState)).run(blankCS).value._2
+  def getModel(startState: Raw)(prog: Prog[State[CompilerState[cats.Id], *], Raw]): Raw = {
+    prog.apply(State.pure[CompilerState[Id], Raw](startState)).run(blankCS).value._2
   }
 
   def blankCS: CompilerState[Id] = {
@@ -72,5 +73,6 @@ object Utils {
 
   def blank: State[CompilerState[Id], CompilerState[Id]] =
     State.pure[CompilerState[Id], CompilerState[Id]](blankCS)
-  def emptyS[F]: State[F, Model] = State.pure[F, Model](Model.empty("empty"))
+
+  def emptyS[F]: State[F, Raw] = State.pure[F, Raw](Raw.empty("empty"))
 }
