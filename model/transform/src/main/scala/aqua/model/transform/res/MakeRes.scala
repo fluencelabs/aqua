@@ -6,7 +6,7 @@ import aqua.raw.ops.*
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.types.{ArrayType, StreamType}
 import cats.Eval
-import cats.data.Chain
+import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 
 // TODO docs
@@ -46,6 +46,16 @@ object MakeRes {
         op,
         "identity",
         CallRes(operand :: Nil, Some(target)),
+        onPeer
+      )
+    )
+
+  def join(onPeer: ValueModel, operands: NonEmptyList[ValueModel]): Res =
+    leaf(
+      CallServiceRes(
+        op,
+        "identity",
+        CallRes(operands.toList, None),
         onPeer
       )
     )
@@ -94,6 +104,8 @@ object MakeRes {
       )
     case FlattenTag(operand, assignTo) =>
       leaf(ApRes(ValueModel.fromRaw(operand), Call.Export(assignTo, operand.`type`)))
+    case JoinTag(operands) =>
+      join(orInit(currentPeerId), operands.map(ValueModel.fromRaw))
     case CallServiceTag(serviceId, funcName, Call(args, exportTo)) =>
       leaf(
         CallServiceRes(

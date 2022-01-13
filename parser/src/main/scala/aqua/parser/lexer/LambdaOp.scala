@@ -43,7 +43,7 @@ object LambdaOp {
 
   private val parseIdx: P[LambdaOp[Span.S]] =
     P.defer(
-      (Value.`value`.between(`[`, `]`) | (exclamation *> Value.`value`)).map(v =>
+      (Value.`value`.between(`[`, `]`).backtrack | (exclamation *> Value.num)).map(v =>
         IntoIndex(v, Some(v))
       )
     ) |
