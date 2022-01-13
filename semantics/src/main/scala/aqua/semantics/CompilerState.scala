@@ -1,6 +1,7 @@
 package aqua.semantics
 
-import aqua.raw.{AquaContext, Raw}
+import aqua.raw.Raw
+import aqua.raw.RawContext
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
@@ -18,7 +19,7 @@ case class CompilerState[S[_]](
 object CompilerState {
   type St[S[_]] = State[CompilerState[S], Raw]
 
-  def init[F[_]](ctx: AquaContext): CompilerState[F] =
+  def init[F[_]](ctx: RawContext): CompilerState[F] =
     CompilerState(
       names = NamesState.init[F](ctx),
       abilities = AbilitiesState.init[F](ctx),
@@ -42,7 +43,7 @@ object CompilerState {
       am <- x
       ym <- y
     } yield {
-      //println(s"MONOID COMBINE $am $ym")
+      // println(s"MONOID COMBINE $am $ym")
       am |+| ym
     }
   }

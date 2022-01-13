@@ -1,9 +1,9 @@
 package aqua.model.transform
 
-import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.raw.AquaContext
+import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.ScalarType
+import cats.data.Chain
 import cats.kernel.Monoid
 
 // TODO docs
@@ -18,38 +18,42 @@ case class TransformConfig(
   constants: List[TransformConfig.Const] = Nil
 ) {
 
-  val errorId: ValueRaw = LiteralRaw.quote(errorFuncName)
-  val errorHandlingCallback: ValueRaw = LiteralRaw.quote(errorHandlingService)
-  val callbackSrvId: ValueRaw = LiteralRaw.quote(callbackService)
-  val dataSrvId: ValueRaw = LiteralRaw.quote(getDataService)
+  private val quote = LiteralRaw.quote andThen LiteralModel.fromRaw
+
+  val errorId: ValueModel = quote(errorFuncName)
+  val errorHandlingCallback: ValueRaw = quote(errorHandlingService)
+  val callbackSrvId: ValueRaw = quote(callbackService)
+  val dataSrvId: ValueRaw = quote(getDataService)
 
   // Host peer id holds %init_peer_id% in case Aqua is not compiled to be executed behind a relay,
   // or relay's variable otherwise
   val hostPeerId: TransformConfig.Const =
     TransformConfig.Const(
       "HOST_PEER_ID",
-      relayVarName.fold[ValueRaw](ValueRaw.InitPeerId)(r => VarRaw(r, ScalarType.string))
+      relayVarName.fold[ValueModel](LiteralModel.fromRaw(ValueRaw.InitPeerId))(r =>
+        VarModel(r, ScalarType.string)
+      )
     )
 
   val initPeerId: TransformConfig.Const =
     TransformConfig.Const(
       "INIT_PEER_ID",
-      ValueRaw.InitPeerId
+      LiteralModel.fromRaw(ValueRaw.InitPeerId)
     )
 
   val nil: TransformConfig.Const =
     TransformConfig.Const(
       "nil", // TODO: shouldn't it be NIL?
-      ValueRaw.Nil
+      LiteralModel.fromRaw(ValueRaw.Nil)
     )
 
   val lastError: TransformConfig.Const =
     TransformConfig.Const(
       "LAST_ERROR",
-      ValueRaw.LastError
+      VarModel(ValueRaw.LastError.name, ValueRaw.LastError.`type`, Chain.empty)
     )
 
-  val constantsMap: Map[String, ValueRaw] =
+  val constantsMap: Map[String, ValueModel] =
     (hostPeerId :: initPeerId :: nil :: lastError :: constants)
       .map(c => c.name -> c.value)
       .toMap
@@ -67,9 +71,5 @@ case class TransformConfig(
 }
 
 object TransformConfig {
-  case class Const(name: String, value: ValueRaw)
-
-  // TODO docs/rename? why it is unused
-  def forHost: TransformConfig =
-    TransformConfig(wrapWithXor = false, relayVarName = None)
+  case class Const(name: String, value: ValueModel)
 }

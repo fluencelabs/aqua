@@ -1,30 +1,10 @@
 package aqua
 
 import aqua.model.transform.TransformConfig
-import aqua.model.transform.res.{
-  CallRes,
-  CallServiceRes,
-  MakeRes,
-  MatchMismatchRes,
-  NextRes,
-  ResolvedOp
-}
-import aqua.model.ValueModel
+import aqua.model.transform.res.{CallServiceRes, MakeRes, MatchMismatchRes, NextRes, ResolvedOp}
+import aqua.model.{CallModel, LiteralModel, ValueModel, VarModel}
 import aqua.model.transform.funcop.ErrorsCatcher
-import aqua.model.{LiteralModel, VarModel}
-import aqua.raw.ops.{
-  Call,
-  CallServiceTag,
-  ForTag,
-  FuncOp,
-  MatchMismatchTag,
-  NextTag,
-  OnTag,
-  ParTag,
-  RawTag,
-  SeqTag,
-  XorTag
-}
+import aqua.raw.ops.{Call, CallServiceTag, ForTag, FuncOp, MatchMismatchTag, NextTag, OnTag, ParTag, RawTag, SeqTag, XorTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval
@@ -92,7 +72,7 @@ object Node {
     exportTo: Option[Call.Export] = None,
     args: List[ValueModel] = Nil
   ): Res = Node(
-    CallServiceRes(VarRaw(s"srv$i", ScalarType.string), s"fn$i", CallRes(args, exportTo), on)
+    CallServiceRes(VarRaw(s"srv$i", ScalarType.string), s"fn$i", CallModel(args, exportTo), on)
   )
 
   def callTag(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueRaw] = Nil): Raw =
@@ -104,7 +84,7 @@ object Node {
     CallServiceRes(
       LiteralModel("\"srv" + i + "\"", LiteralType.string),
       s"fn$i",
-      CallRes(Nil, exportTo),
+      CallModel(Nil, exportTo),
       on
     )
   )
@@ -121,7 +101,7 @@ object Node {
     CallServiceRes(
       ValueModel.fromRaw(bc.errorHandlingCallback),
       bc.errorFuncName,
-      CallRes(
+      CallModel(
         ValueModel.fromRaw(ErrorsCatcher.lastErrorArg) :: LiteralModel(
           i.toString,
           LiteralType.number
@@ -137,7 +117,7 @@ object Node {
       CallServiceRes(
         ValueModel.fromRaw(bc.callbackSrvId),
         bc.respFuncName,
-        CallRes(value :: Nil, None),
+        CallModel(value :: Nil, None),
         on
       )
     )
@@ -147,7 +127,7 @@ object Node {
       CallServiceRes(
         ValueModel.fromRaw(bc.dataSrvId),
         name,
-        CallRes(Nil, Some(Call.Export(name, ScalarType.string))),
+        CallModel(Nil, Some(Call.Export(name, ScalarType.string))),
         on
       )
     )
@@ -216,7 +196,7 @@ object Node {
     Console.GREEN + "(" +
       equalOrNot(left, right) + Console.GREEN + ")"
 
-  private def diffCall(left: CallRes, right: CallRes): String =
+  private def diffCall(left: CallModel, right: CallModel): String =
     if (left == right) Console.GREEN + left + Console.RESET
     else
       Console.GREEN + "Call(" +

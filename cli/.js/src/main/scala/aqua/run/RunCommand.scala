@@ -11,12 +11,12 @@ import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
 import aqua.js.*
+import aqua.model.{AquaContext, FuncArrow}
 import aqua.model.transform.res.{AquaRes, FuncRes}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
-import aqua.raw.AquaContext
 import aqua.raw.value.ValueRaw
 import aqua.run.RunConfig
 import aqua.types.*
@@ -32,8 +32,7 @@ import cats.syntax.list.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import aqua.raw.arrow.FuncArrow
-import cats.{~>, Id, Monad}
+import cats.{Id, Monad, ~>}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 

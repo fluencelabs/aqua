@@ -1,7 +1,8 @@
 package aqua.semantics.rules.abilities
 
 import aqua.parser.lexer.{Ability, Name, Token, Value}
-import aqua.raw.{AquaContext, ServiceRaw}
+import aqua.raw.ServiceRaw
+import aqua.raw.RawContext
 import aqua.raw.value.ValueRaw
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.{abilities, ReportError, StackInterpreter}
@@ -98,7 +99,7 @@ class AbilitiesInterpreter[S[_], X](implicit
                     abCtx.funcs.keys.toList
                   )
                 ).as(Option.empty[ArrowType])
-              )(fn => State.pure(Some(fn.arrowType)))
+              )(fn => State.pure(Some(fn.arrow.`type`)))
           case None =>
             report(name, "Ability with this name is undefined").as(Option.empty[ArrowType])
         }
@@ -155,6 +156,6 @@ class AbilitiesInterpreter[S[_], X](implicit
   private def getService(name: String): SX[Option[ServiceRaw]] =
     getState.map(_.services.get(name))
 
-  private def getAbility(name: String): SX[Option[AquaContext]] =
+  private def getAbility(name: String): SX[Option[RawContext]] =
     getState.map(_.abilities.get(name))
 }

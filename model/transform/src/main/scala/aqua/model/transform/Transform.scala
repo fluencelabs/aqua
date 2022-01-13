@@ -1,7 +1,7 @@
 package aqua.model.transform
 
+import aqua.model.FuncArrow
 import aqua.raw.value.VarRaw
-import aqua.raw.arrow.FuncArrow
 import aqua.model.transform.funcop.*
 import aqua.model.transform.res.{FuncRes, NoAir, ResolvedOp}
 import aqua.model.transform.topology.Topology

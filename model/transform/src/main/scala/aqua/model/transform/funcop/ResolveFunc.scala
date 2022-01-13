@@ -1,11 +1,12 @@
 package aqua.model.transform.funcop
 
-import aqua.model.inline.*
+import aqua.model
+import aqua.model.FuncArrow
+import aqua.model.inline.{ArgsCall, *}
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.FuncOps
 import aqua.raw.ops.{Call, FuncOp, FuncOps}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.raw.arrow.{ArgsCall, FuncArrow}
 import aqua.types.*
 import cats.Eval
 
@@ -33,7 +34,7 @@ case class ResolveFunc(
   // TODO: doc
   def arrowToCallback(name: String, arrowType: ArrowType): FuncArrow = {
     val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
-    FuncArrow(
+    model.FuncArrow(
       arrowCallbackPrefix + name,
       callback(name, call),
       arrowType,
@@ -58,7 +59,7 @@ case class ResolveFunc(
       returnType.map { case (l, t) => Call.Export(l, t) }
     )
 
-    FuncArrow(
+    model.FuncArrow(
       wrapCallableName,
       transform(
         FuncOps.seq(

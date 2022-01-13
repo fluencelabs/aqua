@@ -1,7 +1,7 @@
 package aqua.semantics
 
 import aqua.raw.ops.FuncOp
-import aqua.raw.{AquaContext, ContextRaw, Raw}
+import aqua.raw.{Raw, RawContext}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
@@ -79,26 +79,26 @@ object Semantics extends Logging {
   private def astToState[S[_]](ast: Ast[S]): Interpreter[S, Raw] =
     transpile[S](ast)
 
-  def process[S[_]](ast: Ast[S], init: AquaContext)(implicit
-    aqum: Monoid[AquaContext]
-  ): ValidatedNec[SemanticError[S], AquaContext] =
+  def process[S[_]](ast: Ast[S], init: RawContext)(implicit
+    aqum: Monoid[RawContext]
+  ): ValidatedNec[SemanticError[S], RawContext] =
     astToState[S](ast)
       .run(CompilerState.init[S](init))
       .map {
-        case (state, gen: ContextRaw) =>
-          val ctx = AquaContext.fromRawContext(gen, init)
+        case (state, gen: RawContext) =>
+          val ctx: RawContext = gen // TODO handle constants RawContext.fromRawContext(gen, init)
           NonEmptyChain
             .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(ctx))(Invalid(_))
+            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(ctx))(Invalid(_))
         case (state, _: Raw.Empty) =>
           NonEmptyChain
             .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(init))(Invalid(_))
+            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(init))(Invalid(_))
         case (state, m) =>
           NonEmptyChain
             .fromChain(state.errors)
             .map(Invalid(_))
-            .getOrElse(Validated.invalidNec[SemanticError[S], AquaContext](WrongAST(ast)))
+            .getOrElse(Validated.invalidNec[SemanticError[S], RawContext](WrongAST(ast)))
       }
       // TODO: return as Eval
       .value

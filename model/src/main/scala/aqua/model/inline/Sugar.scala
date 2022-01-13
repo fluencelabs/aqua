@@ -1,7 +1,7 @@
 package aqua.model.inline
 
-import aqua.model.inline.state.Counter
-import aqua.model.{IntoFieldModel, IntoIndexModel, LambdaModel, LiteralModel, ValueModel, VarModel}
+import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
+import aqua.model.{CallModel, CallServiceModel, CanonicalizeModel, FlattenModel, ForModel, IntoFieldModel, IntoIndexModel, JoinModel, LambdaModel, LiteralModel, MatchMismatchModel, OnModel, OpModel, ParModel, PushToStreamModel, SeqModel, ValueModel, VarModel, XorModel}
 import aqua.raw.ops.*
 import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, ValueRaw, VarRaw}
 import cats.data.{Chain, State}
@@ -39,16 +39,16 @@ object Sugar {
       IntoIndexModel(value, t) -> Map.empty
   }
 
-  private def parDesugarPrefix(ops: List[FuncOp]): Option[FuncOp] = ops match {
+  private def parDesugarPrefix(ops: List[OpModel.Tree]): Option[OpModel.Tree] = ops match {
     case Nil => None
     case x :: Nil => Option(x)
-    case _ => Option(FuncOp.node(ParTag, Chain.fromSeq(ops)))
+    case _ => Option(OpModel.par(ops))
   }
 
-  private def parDesugarPrefixOpt(ops: Option[FuncOp]*): Option[FuncOp] =
+  private def parDesugarPrefixOpt(ops: Option[OpModel.Tree]*): Option[OpModel.Tree] =
     parDesugarPrefix(ops.toList.flatten)
 
-  def desugarize[S: Counter](value: ValueRaw): State[S, (ValueRaw, Option[FuncOp])] =
+  def desugarize[S: Counter](value: ValueRaw): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
       i <- Counter[S].get
       (vm, map) = unfold(value, i)
@@ -57,26 +57,39 @@ object Sugar {
       ops <- map.toList.traverse { case (name, v) =>
         desugarize(v).map {
           case (vv, Some(op)) =>
-            FuncOp.node(SeqTag, Chain(op, FuncOp.leaf(FlattenTag(v, name))))
+            OpModel.seq(op :: FlattenModel(vv, name).leaf :: Nil)
 
-          case _ =>
-            FuncOp.leaf(FlattenTag(v, name))
+          case (vv, _) =>
+            FlattenModel(vv, name).leaf
         }
       }
-    } yield vm.toRaw -> parDesugarPrefix(ops)
+    } yield vm -> parDesugarPrefix(ops)
 
   def desugarize[S: Counter](
                               values: List[ValueRaw]
-                            ): State[S, List[(ValueRaw, Option[FuncOp])]] =
+                            ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(desugarize(_))
 
-  def desugarize[S: Counter](call: Call): State[S, (Call, Option[FuncOp])] =
+  def desugarize[S: Counter](
+                              call: Call
+                            ): State[S, (CallModel, Option[OpModel.Tree])] =
     desugarize(call.args).map(list =>
-      call.copy(list.map(_._1)) -> parDesugarPrefix(list.flatMap(_._2))
+      (
+        CallModel(
+          list.map(_._1),
+          call.exportTo.map(CallModel.callExport)
+        ),
+        parDesugarPrefix(list.flatMap(_._2))
+      )
     )
 
-  // TODO: here we should return smth in between Raw and Res (model?)
-  def desugarize[S: Counter](tag: RawTag): State[S, (RawTag, Option[FuncOp])] =
+  private def pure[S](op: OpModel): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
+    State.pure(Some(op -> None))
+
+  private def none[S]: State[S, Option[(OpModel, Option[OpModel.Tree])]] =
+    State.pure(None)
+
+  def desugarize[S: Counter : Mangler : Arrows : Exports](tag: RawTag): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
     tag match {
       case OnTag(peerId, via) =>
         for {
@@ -86,46 +99,56 @@ object Sugar {
           viaD = Chain.fromSeq(viaDe.map(_._1))
           viaF = viaDe.flatMap(_._2)
 
-        } yield OnTag(pid, viaD) -> parDesugarPrefix(viaF.prependedAll(pif))
+        } yield Some(OnModel(pid, viaD) -> parDesugarPrefix(viaF.prependedAll(pif)))
 
       case MatchMismatchTag(left, right, shouldMatch) =>
         for {
           ld <- desugarize(left)
           rd <- desugarize(right)
-        } yield MatchMismatchTag(ld._1, rd._1, shouldMatch) -> parDesugarPrefixOpt(ld._2, rd._2)
+        } yield Some(MatchMismatchModel(ld._1, rd._1, shouldMatch) -> parDesugarPrefixOpt(ld._2, rd._2))
 
       case ForTag(item, iterable) =>
         desugarize(iterable).map { case (v, p) =>
-          ForTag(item, v) -> p
+          Some(ForModel(item, v) -> p)
         }
 
-      case CallArrowTag(funcName, call) =>
-        desugarize(call).map {
-          case (c, p) => CallArrowTag(funcName, c) -> p
+      case PushToStreamTag(operand, exportTo) =>
+        desugarize(operand).map {
+          case (v, p) =>
+            Some(PushToStreamModel(v, exportTo.name) -> p)
         }
 
       case CallServiceTag(serviceId, funcName, call) =>
         for {
           cd <- desugarize(call)
           sd <- desugarize(serviceId)
-        } yield CallServiceTag(sd._1, funcName, cd._1) -> parDesugarPrefixOpt(sd._2, cd._2)
+        } yield Some(CallServiceModel(sd._1, funcName, cd._1) -> parDesugarPrefixOpt(sd._2, cd._2))
 
       case CanonicalizeTag(operand, exportTo) =>
         desugarize(operand).map { case (v, p) =>
-          CanonicalizeTag(v, exportTo) -> p
-        }
-
-      // TODO: it should not appear as a Tag, only as Res
-      case FlattenTag(operand, assignTo) =>
-        desugarize(operand).map { case (v, p) =>
-          FlattenTag(v, assignTo) -> p
+          Some(CanonicalizeModel(v, CallModel.callExport(exportTo)) -> p)
         }
 
       case JoinTag(operands) =>
-        operands.traverse(desugarize).map(nel =>
-          JoinTag(nel.map(_._1)) -> parDesugarPrefix(nel.toList.flatMap(_._2))
-        )
+        operands
+          .traverse(desugarize)
+          .map(nel => Some(JoinModel(nel.map(_._1)) -> parDesugarPrefix(nel.toList.flatMap(_._2))))
 
-      case _ => State.pure(tag -> None)
+      case CallArrowTag(funcName, call) =>
+        Arrows[S].arrows.flatMap(_.get(funcName) match {
+          case Some(fn) =>
+            desugarize(call).flatMap{
+              case (cm, p) =>
+                ArrowInliner.callArrow(fn, cm).map(body => )
+            }
+        })
+        for {
+          arrows <- Arrows[S].arrows
+        }desugarize(call)
+
+      case SeqTag => pure(SeqModel)
+      case _: ParGroupTag => pure(ParModel)
+      case XorTag => pure(XorModel)
+      case _: NoExecTag => none
     }
 }

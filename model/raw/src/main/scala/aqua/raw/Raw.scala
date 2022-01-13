@@ -14,23 +14,21 @@ object Raw {
 
   implicit object MergeRaw extends Semigroup[Raw] {
 
-    import ContextRaw.CRMonoid
+    import RawPart.RPSMonoid
     import FuncOp.FuncOpSemigroup
-    import ContextRaw.contextPart
+    import RawPart.contextPart
 
     override def combine(x: Raw, y: Raw): Raw =
       (x, y) match {
         case (l: FuncOp, r: FuncOp) =>
           FuncOpSemigroup.combine(l, r)
-        case (l: ContextRaw, r: ContextRaw) =>
-          CRMonoid.combine(l, r)
 
         case (l: Empty, r: Empty) => Empty(l.log + " |+| " + r.log)
         case (_: Empty, r) => r
         case (l, _: Empty) => l
 
         case (l, r) =>
-          CRMonoid.combine(
+          RPSMonoid.combine(
             contextPart(l),
             contextPart(r)
           )

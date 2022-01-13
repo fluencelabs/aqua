@@ -1,6 +1,6 @@
 package aqua.model.transform.res
 
-import aqua.model.{ValueModel, VarModel}
+import aqua.model.{CallModel, ValueModel, VarModel}
 import aqua.raw.ops.Call
 
 // TODO docs to all traits and objects
@@ -28,11 +28,6 @@ case class FoldRes(item: String, iterable: ValueModel) extends ResolvedOp {
 case class RestrictionRes(item: String, isStream: Boolean) extends ResolvedOp {
   override def toString: String = s"(new ${if (isStream) "$" else ""}$item "
 }
-
-case class AbilityIdRes(
-  value: ValueModel,
-  service: String
-) extends NoAir
 
 case class CallServiceRes(
   serviceId: ValueModel,

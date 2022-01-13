@@ -1,10 +1,9 @@
 package aqua.model.transform
 
-import aqua.Node
-import aqua.raw.arrow.FuncArrow
-import aqua.model.transform.res.{CallRes, CallServiceRes, MakeRes}
+import aqua.{Node, model}
+import aqua.model.transform.res.{CallServiceRes, MakeRes}
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.model.{LiteralModel, VarModel}
+import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, FuncOps}
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
@@ -21,7 +20,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val ret = LiteralRaw.quote("return this")
 
     val func: FuncArrow =
-      FuncArrow(
+      model.FuncArrow(
         "ret",
         on(otherPeer, otherRelay :: Nil, callTag(1)),
         stringArrow,
@@ -72,7 +71,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val ret = LiteralRaw.quote("return this")
 
-    val func: FuncArrow = FuncArrow(
+    val func: FuncArrow = model.FuncArrow(
       "ret",
       FuncOps.seq(callTag(0), on(otherPeer, Nil, callTag(1))),
       stringArrow,
@@ -113,7 +112,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
      */
 
     val f1: FuncArrow =
-      FuncArrow(
+      model.FuncArrow(
         "f1",
         FuncOp(
           Node(
@@ -131,7 +130,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       )
 
     val f2: FuncArrow =
-      FuncArrow(
+      model.FuncArrow(
         "f2",
         FuncOp(
           Node(CallArrowTag("callable", Call(Nil, Call.Export("v", ScalarType.string) :: Nil))).cof
@@ -153,7 +152,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
           CallServiceRes(
             LiteralRaw.quote("srv1"),
             "foo",
-            CallRes(Nil, Some(Call.Export("v", ScalarType.string))),
+            CallModel(Nil, Some(Call.Export("v", ScalarType.string))),
             initPeer
           )
         ),

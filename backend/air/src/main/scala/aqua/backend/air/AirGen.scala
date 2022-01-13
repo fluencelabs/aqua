@@ -85,7 +85,7 @@ object AirGen extends Logging {
         Eval later ForGen(valueToData(iterable), item, opsToSingle(ops))
       case RestrictionRes(item, isStream) =>
         Eval later NewGen(item, isStream, opsToSingle(ops))
-      case CallServiceRes(serviceId, funcName, CallRes(args, exportTo), peerId) =>
+      case CallServiceRes(serviceId, funcName, CallModel(args, exportTo), peerId) =>
         Eval.later(
           ServiceCallGen(
             valueToData(peerId),

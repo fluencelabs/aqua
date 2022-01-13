@@ -1,6 +1,8 @@
 package aqua.model.inline.state
 
-import aqua.raw.arrow.{ArgsCall, FuncArrow, FuncRaw}
+import aqua.model.FuncArrow
+import aqua.model.inline.ArgsCall
+import aqua.raw.arrow.FuncRaw
 import cats.data.State
 import cats.instances.list.*
 import cats.syntax.functor.*
@@ -9,7 +11,8 @@ import cats.syntax.traverse.*
 /**
  * State algebra for resolved arrows
  *
- * @tparam S State
+ * @tparam S
+ *   State
  */
 trait Arrows[S] extends Scoped[S] {
   self =>
@@ -18,21 +21,24 @@ trait Arrows[S] extends Scoped[S] {
   /**
    * Arrow is resolved – save it to the state [[S]]
    *
-   * @param arrow resolved arrow
-   * @param e     contextual Exports that an arrow captures
+   * @param arrow
+   *   resolved arrow
+   * @param e
+   *   contextual Exports that an arrow captures
    */
   final def resolved(arrow: FuncRaw)(implicit e: Exports[S]): State[S, Unit] =
     for {
       exps <- e.exports
       arrs <- arrows
-      funcArrow = arrow.capture(arrs, exps)
+      funcArrow = FuncArrow.fromRaw(arrow, arrs, exps)
       _ <- save(arrow.name, funcArrow)
     } yield ()
 
   /**
    * Save arrows to the state [[S]]
    *
-   * @param arrows Resolved arrows, accessible by key name which could differ from arrow's name
+   * @param arrows
+   *   Resolved arrows, accessible by key name which could differ from arrow's name
    */
   final def resolved(arrows: Map[String, FuncArrow]): State[S, Unit] =
     arrows.toList.traverse(save).void
@@ -45,7 +51,8 @@ trait Arrows[S] extends Scoped[S] {
   /**
    * Pick a subset of arrows by names
    *
-   * @param names What arrows should be taken
+   * @param names
+   *   What arrows should be taken
    */
   def pickArrows(names: Set[String]): State[S, Map[String, FuncArrow]] =
     arrows.map(_.view.filterKeys(names).toMap)
@@ -62,9 +69,12 @@ trait Arrows[S] extends Scoped[S] {
   /**
    * Changes the [[S]] type to [[R]]
    *
-   * @param f Lens getter
-   * @param g Lens setter
-   * @tparam R New state type
+   * @param f
+   *   Lens getter
+   * @param g
+   *   Lens setter
+   * @tparam R
+   *   New state type
    */
   def transformS[R](f: R => S, g: (R, S) => R): Arrows[R] = new Arrows[R] {
 

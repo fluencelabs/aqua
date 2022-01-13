@@ -1,8 +1,8 @@
 package aqua.model.transform.res
 
+import aqua.model.AquaContext
 import aqua.model.transform.res.*
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.raw.AquaContext
 import cats.data.Chain
 
 // TODO: doc

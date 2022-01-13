@@ -2,11 +2,11 @@ package aqua.compiler
 
 import aqua.backend.Backend
 import aqua.linker.Linker
+import aqua.model.AquaContext
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.res.AquaRes
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
-import aqua.raw.AquaContext
 import aqua.semantics.Semantics
 import aqua.semantics.header.HeaderSem
 import cats.data.*

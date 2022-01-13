@@ -24,8 +24,6 @@ case class IntoIndexRaw(idx: ValueRaw, `type`: Type) extends LambdaRaw {
 
   override def map(f: ValueRaw => ValueRaw): LambdaRaw = IntoIndexRaw(f(idx), `type`)
 
-  override def resolveWith(vals: Map[String, ValueRaw]): LambdaRaw =
-    IntoIndexRaw(idx.resolveWith(vals), `type`)
 
   override def renameVars(vals: Map[String, String]): LambdaRaw =
     IntoIndexRaw(idx.renameVars(vals), `type`)

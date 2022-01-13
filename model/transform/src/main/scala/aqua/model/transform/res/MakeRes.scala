@@ -1,7 +1,7 @@
 package aqua.model.transform.res
 
 import aqua.model.transform.topology.Topology.Res
-import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.model.{CallModel, LiteralModel, ValueModel, VarModel}
 import aqua.raw.ops.*
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.types.{ArrayType, StreamType}
@@ -38,14 +38,14 @@ object MakeRes {
     )
 
   def noop(onPeer: ValueModel): Res =
-    leaf(CallServiceRes(op, "noop", CallRes(Nil, None), onPeer))
+    leaf(CallServiceRes(op, "noop", CallModel(Nil, None), onPeer))
 
   def canon(onPeer: ValueModel, operand: ValueModel, target: Call.Export): Res =
     leaf(
       CallServiceRes(
         op,
         "identity",
-        CallRes(operand :: Nil, Some(target)),
+        CallModel(operand :: Nil, Some(target)),
         onPeer
       )
     )
@@ -55,7 +55,7 @@ object MakeRes {
       CallServiceRes(
         op,
         "identity",
-        CallRes(operands.toList, None),
+        CallModel(operands.toList, None),
         onPeer
       )
     )
@@ -111,7 +111,7 @@ object MakeRes {
         CallServiceRes(
           ValueModel.fromRaw(serviceId),
           funcName,
-          CallRes(args.map(ValueModel.fromRaw), exportTo.headOption),
+          CallModel(args.map(ValueModel.fromRaw), exportTo.headOption),
           orInit(currentPeerId)
         )
       )

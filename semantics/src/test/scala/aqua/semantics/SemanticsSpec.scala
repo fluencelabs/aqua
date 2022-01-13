@@ -2,8 +2,8 @@ package aqua.semantics
 
 import aqua.Node
 import aqua.Node.*
+import aqua.model.AquaContext
 import aqua.parser.Ast
-import aqua.raw.AquaContext
 import aqua.raw.ops.FuncOp
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.funcop.*

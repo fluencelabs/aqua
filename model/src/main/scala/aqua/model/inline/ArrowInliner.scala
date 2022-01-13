@@ -1,27 +1,26 @@
 package aqua.model.inline
 
-import aqua.model.ValueModel
+import aqua.model
+import aqua.model.{CallModel, FuncArrow, OpModel, ValueModel, VarModel}
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
-import aqua.raw.arrow.{ArgsCall, FuncArrow}
+import aqua.raw.ops.FuncOp.Tree
 import cats.Eval
 import scribe.{log, Logging}
 import aqua.raw.ops.{AssignmentTag, Call, CallArrowTag, ClosureTag, FuncOp, FuncOps, RawTag, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
+import cats.syntax.traverse.*
 import cats.Eval
-import cats.data.Chain
+import cats.data.{Chain, State, StateT}
 import cats.free.Cofree
-import cats.data.State
 
 object ArrowInliner extends Logging {
 
-  // TODO: return ValueModel – values are substituted and resolved on this stage
-  // TODO: FuncOp is also not complete: it still has topology, but not arrow calls; how to show it? ResTop?
   // Apply a callable function, get its fully resolved body & optional value, if any
-  def inline[S: Mangler: Arrows: Exports: Counter](
+  private def inline[S: Mangler: Arrows: Exports: Counter](
     fn: FuncArrow,
-    call: Call
-  ): State[S, (FuncOp, List[ValueRaw])] =
+    call: CallModel
+  ): State[S, (OpModel.Tree, List[ValueModel])] =
     // Function's internal variables will not be available outside, hence the scope
     Exports[S].scope(
       for {
@@ -31,29 +30,31 @@ object ArrowInliner extends Logging {
 
         // Register captured values as available exports
         _ <- Exports[S].resolved(fn.capturedValues)
+        _ <- Mangler[S].forbid(fn.capturedValues.keySet)
 
         // Now, substitute the arrows that were received as function arguments
         // Use the new op tree (args are replaced with values, names are unique & safe)
         callableFuncBody <- handleTree(tree)
 
         // Fix return values with exports collected in the body
-        resolvedExports <- Exports[S].exports
-        resolvedResult = result.map(_.resolveWith(resolvedExports))
+        resolvedResult <- Sugar.desugarize(result)
 
         // Fix the return values
         (ops, rets) = (call.exportTo zip resolvedResult)
-          .map[(Option[FuncOp], ValueRaw)] {
-            case (exp @ Call.Export(_, StreamType(_)), res) =>
+          .map[(List[OpModel.Tree], ValueModel)] {
+            case (Call.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
               // pass nested function results to a stream
-              Some(FuncOps.pushToStream(res, exp)) -> exp.toRaw
-            case (_, res) =>
-              None -> res
+              (resDesugar.toList :+ OpModel
+                .pushToStream(res, exp)) -> VarModel(exp, st, Chain.empty)
+            case (_, (res, resDesugar)) =>
+              resDesugar.toList -> res
           }
-          .foldLeft[(List[FuncOp], List[ValueRaw])]((FuncOp(callableFuncBody) :: Nil, Nil)) {
-            case ((ops, rets), (Some(fo), r)) => (fo :: ops, r :: rets)
-            case ((ops, rets), (_, r)) => (ops, r :: rets)
+          .foldLeft[(List[OpModel.Tree], List[ValueModel])](
+            (callableFuncBody :: Nil, Nil)
+          ) { case ((ops, rets), (fo, r)) =>
+            (fo ::: ops, r :: rets)
           }
-      } yield FuncOps.seq(ops.reverse: _*) -> rets.reverse
+      } yield OpModel.seq(ops.reverse) -> rets.reverse
     )
 
   /**
@@ -68,9 +69,9 @@ object ArrowInliner extends Logging {
    * @return
    *   Tree with substituted values, list of return values prior to function calling/inlining
    */
-  private def prelude[S: Mangler: Arrows](
+  private def prelude[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
-    call: Call
+    call: CallModel
   ): State[S, (FuncOp.Tree, List[ValueRaw])] =
     for {
       // Collect all arguments: what names are used inside the function, what values are received
@@ -94,24 +95,24 @@ object ArrowInliner extends Logging {
       )
 
       argsToData = argsToDataRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
+      _ <- Exports[S].resolved(argsToData)
+
       argsToArrows = argsToArrowsRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
 
       // Going to resolve arrows: collect them all. Names should never collide: it's semantically checked
       _ <- Arrows[S].purge
       _ <- Arrows[S].resolved(fn.capturedArrows ++ argsToArrows)
 
-      // Substitute arguments (referenced by name and optional lambda expressions) with values
-      // Also rename all renamed arguments in the body
-      treeWithValues =
+      // Rename all renamed arguments in the body
+      treeRenamed =
         fn.body
           .rename(argsShouldRename)
-          .resolveValues(argsToData)
           .rename(streamToRename)
 
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
       treeDefines =
-        treeWithValues.definesVarNames.value --
+        treeRenamed.definesVarNames.value --
           argsFull.streamArgs.keySet --
           argsFull.streamArgs.values.map(_.name) --
           call.exportTo.filter { exp =>
@@ -126,64 +127,53 @@ object ArrowInliner extends Logging {
       _ <- Mangler[S].forbid(treeDefines ++ shouldRename.values.toSet)
 
       // If there was a collision, rename exports and usages with new names
-      treeRenamed = treeWithValues.rename(shouldRename)
+      tree = treeRenamed.rename(shouldRename)
 
-      // Result could be derived from arguments, or renamed; take care about that
-      result: List[ValueRaw] = fn.ret.map(_.resolveWith(argsToData)).map {
-        case v: VarRaw if shouldRename.contains(v.name) => v.copy(shouldRename(v.name))
-        case v => v
-      }
-    } yield (treeRenamed.tree, result)
+      // Result could be renamed; take care about that
+    } yield (tree.tree, fn.ret.map(_.renameVars(shouldRename)))
+
+  private def traverseS[S](cf: Tree, f: RawTag => State[S, OpModel.Tree]): State[S, OpModel.Tree] =
+    for {
+      headTree <- f(cf.head)
+      tail <- StateT.liftF(cf.tail)
+      tailTree <- tail.traverse(traverseS[S](_, f))
+    } yield headTree.copy(tail = headTree.tail.map(_ ++ tailTree))
 
   private def handleTree[S: Exports: Counter: Mangler: Arrows](
     tree: FuncOp.Tree
-  ): State[S, FuncOp.Tree] =
-    FuncOp.traverseS(tree, handleTag(_))
+  ): State[S, OpModel.Tree] =
+    traverseS(tree, handleTag(_))
 
-  // resolve values of this tag with resolved exports, lift to Cofree as a leaf
-  private def resolveLeaf[S: Exports](tag: RawTag): State[S, FuncOp.Tree] =
-    Exports[S].exports.map(resolvedExports =>
-      FuncOp.leaf(tag.mapValues(_.resolveWith(resolvedExports))).tree
-    )
-
-  private def callArrow[S: Exports: Counter: Arrows: Mangler](
+  def callArrow[S: Exports: Counter: Arrows: Mangler](
     arrow: FuncArrow,
-    call: Call
-  ): State[S, FuncOp.Tree] =
+    call: CallModel
+  ): State[S, OpModel.Tree] =
     for {
-      callResolved <- Exports[S].resolveCall(call)
-
-      passArrows <- Arrows[S].pickArrows(callResolved.arrowArgNames)
-      noNames <- Mangler[S].getForbiddenNames
+      passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
 
       av <- Arrows[S].scope(
         for {
           _ <- Arrows[S].resolved(passArrows)
-          av <- ArrowInliner.inline(arrow, callResolved)
+          av <- ArrowInliner.inline(arrow, call)
         } yield av
       )
       (appliedOp, value) = av
 
-      // Function defines new names inside its body – need to collect them
-      // TODO: actually it's done and dropped – so keep and pass it instead
-      // (maybe it's already done btw, maybe we don't need to do anything)
-      newNames = appliedOp.definesVarNames.value
-
       _ <- Counter[S].incr
-      _ <- Mangler[S].forbid(newNames)
       _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(value).toMap)
 
-    } yield appliedOp.tree
+    } yield appliedOp
 
-  private def handleTag[S: Exports: Counter: Arrows: Mangler](tag: RawTag): State[S, FuncOp.Tree] =
+  private def handleTag[S: Exports: Counter: Arrows: Mangler](tag: RawTag): State[S, OpModel.Tree] =
     for {
       resolvedArrows <- Arrows[S].arrows
 
       desugarized <- Sugar.desugarize(tag)
-      (dTag, dPrefix) = desugarized
+      dPrefix = desugarized.flatMap(_._2)
+      dTag = desugarized.map(_._1)
 
       body <- dTag match {
-        case CallArrowTag(fn, c) if resolvedArrows.contains(fn) =>
+        case CallArrow(fn, c) if resolvedArrows.contains(fn) =>
           callArrow(resolvedArrows(fn), c)
 
         case ClosureTag(arrow) =>
@@ -208,7 +198,7 @@ object ArrowInliner extends Logging {
           resolveLeaf(dTag)
       }
     } yield
-    // If smth needs to be added before this function tree, add it with SeqTag
-    dPrefix.fold(body)(p => FuncOp.node(SeqTag, Chain(p, FuncOp(body))).tree)
+    // If smth needs to be added before this function tree, add it with Seq
+    dPrefix.fold(body)(p => OpModel.seq(p :: body :: Nil))
 
 }

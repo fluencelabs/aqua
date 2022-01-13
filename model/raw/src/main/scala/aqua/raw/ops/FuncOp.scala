@@ -41,9 +41,6 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Raw {
     Eval.later(acc.foldLeft(tag.usesVarNames)(_ ++ _) -- tag.restrictsVarNames)
   }
 
-  def resolveValues(vals: Map[String, ValueRaw]): FuncOp =
-    FuncOp(tree.map[RawTag](_.mapValues(_.resolveWith(vals))))
-
   def rename(vals: Map[String, String]): FuncOp = {
     if (vals.isEmpty)
       this
@@ -75,12 +72,6 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Raw {
 
 object FuncOp {
   type Tree = Cofree[Chain, RawTag]
-  
-  def traverseS[S](cf: Tree, f: RawTag => State[S, Tree]): State[S, Tree] = for {
-    headTree <- f(cf.head)
-    tail <- StateT.liftF(cf.tail)
-    tailTree <- tail.traverse(traverseS[S](_, f))
-  } yield headTree.copy(tail = headTree.tail.map(_ ++ tailTree))
 
   // Semigroup for foldRight processing
   object RightAssocSemi extends Semigroup[FuncOp] {

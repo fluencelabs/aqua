@@ -1,6 +1,6 @@
 package aqua.semantics.rules.abilities
 
-import aqua.raw.{AquaContext, ServiceRaw}
+import aqua.raw.{RawContext, ServiceRaw}
 import aqua.raw.value.ValueRaw
 import aqua.parser.lexer.{Ability, Name, Token, Value}
 import aqua.types.ArrowType
@@ -10,7 +10,7 @@ import cats.data.NonEmptyList
 case class AbilitiesState[S[_]](
   stack: List[AbilitiesState.Frame[S]] = Nil,
   services: Map[String, ServiceRaw] = Map.empty,
-  abilities: Map[String, AquaContext] = Map.empty,
+  abilities: Map[String, RawContext] = Map.empty,
   rootServiceIds: Map[String, (Value[S], ValueRaw)] = Map.empty[String, (Value[S], ValueRaw)],
   definitions: Map[String, Ability[S]] = Map.empty[String, Ability[S]]
 ) {
@@ -47,9 +47,9 @@ object AbilitiesState {
         )
     }
 
-  def init[S[_]](context: AquaContext): AbilitiesState[S] =
+  def init[S[_]](context: RawContext): AbilitiesState[S] =
     AbilitiesState(
-      services = context.allServices(),
+      services = context.allServices,
       abilities = context.abilities // TODO is it the right way to collect abilities? Why?
     )
 }

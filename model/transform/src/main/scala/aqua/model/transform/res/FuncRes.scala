@@ -1,7 +1,7 @@
 package aqua.model.transform.res
 
+import aqua.model.FuncArrow
 import aqua.model.transform.TransformConfig
-import aqua.raw.arrow.FuncArrow
 import aqua.types.{ArrowType, Type}
 import cats.data.Chain
 import cats.free.Cofree

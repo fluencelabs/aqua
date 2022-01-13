@@ -1,54 +1,51 @@
 package aqua.model.inline.state
 
+import aqua.model.ValueModel
 import aqua.raw.ops.Call
 import aqua.raw.value.ValueRaw
 import cats.data.State
 
 /**
  * Exports – trace values available in the scope
- * @tparam S State
+ * @tparam S
+ *   State
  */
 trait Exports[S] extends Scoped[S] {
   self =>
 
   /**
    * [[value]] is accessible as [[exportName]]
-   * @param exportName Name
-   * @param value Value
+   * @param exportName
+   *   Name
+   * @param value
+   *   Value
    */
-  def resolved(exportName: String, value: ValueRaw): State[S, Unit]
+  def resolved(exportName: String, value: ValueModel): State[S, Unit]
 
   /**
    * Resolve the whole map of exports
-   * @param exports name -> value
+   * @param exports
+   *   name -> value
    */
-  def resolved(exports: Map[String, ValueRaw]): State[S, Unit]
+  def resolved(exports: Map[String, ValueModel]): State[S, Unit]
 
   /**
    * Get all the values available in the scope
    */
-  val exports: State[S, Map[String, ValueRaw]]
-
-  /**
-   * Put the available resolved values into the [[call]] object
-   * @param call Call
-   * @return Resolved Call
-   */
-  final def resolveCall(call: Call): State[S, Call] =
-    exports.map(res => call.mapValues(_.resolveWith(res)))
+  val exports: State[S, Map[String, ValueModel]]
 
   /**
    * Change [[S]] to [[R]]
    */
   def transformS[R](f: R => S, g: (R, S) => R): Exports[R] = new Exports[R] {
 
-    override def resolved(exportName: String, value: ValueRaw): State[R, Unit] =
+    override def resolved(exportName: String, value: ValueModel): State[R, Unit] =
       self.resolved(exportName, value).transformS(f, g)
 
-    override def resolved(exports: Map[String, ValueRaw]): State[R, Unit] =
+    override def resolved(exports: Map[String, ValueModel]): State[R, Unit] =
       self.resolved(exports).transformS(f, g)
 
-    override val exports: State[R, Map[String, ValueRaw]] =
+    override val exports: State[R, Map[String, ValueModel]] =
       self.exports.transformS(f, g)
 
     override val purge: State[R, R] =
@@ -62,24 +59,27 @@ trait Exports[S] extends Scoped[S] {
 object Exports {
   def apply[S](implicit exports: Exports[S]): Exports[S] = exports
 
-  object Simple extends Exports[Map[String, ValueRaw]] {
+  object Simple extends Exports[Map[String, ValueModel]] {
 
-    override def resolved(exportName: String, value: ValueRaw): State[Map[String, ValueRaw], Unit] =
+    override def resolved(
+      exportName: String,
+      value: ValueModel
+    ): State[Map[String, ValueModel], Unit] =
       State.modify(_ + (exportName -> value))
 
-    override def resolved(exports: Map[String, ValueRaw]): State[Map[String, ValueRaw], Unit] =
+    override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
       State.modify(_ ++ exports)
 
-    override val exports: State[Map[String, ValueRaw], Map[String, ValueRaw]] =
+    override val exports: State[Map[String, ValueModel], Map[String, ValueModel]] =
       State.get
 
-    override val purge: State[Map[String, ValueRaw], Map[String, ValueRaw]] =
+    override val purge: State[Map[String, ValueModel], Map[String, ValueModel]] =
       for {
         s <- State.get
         _ <- State.set(Map.empty)
       } yield s
 
-    override protected def fill(s: Map[String, ValueRaw]): State[Map[String, ValueRaw], Unit] =
+    override protected def fill(s: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
       State.set(s)
   }
 }
