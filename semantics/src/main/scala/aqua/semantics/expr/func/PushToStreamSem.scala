@@ -53,7 +53,7 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
               expr.token,
               expr.value,
               t,
-              vm.lastType
+              vm.`type`
             ).map {
               case false =>
                 Raw.error("Stream type and element type does not match")

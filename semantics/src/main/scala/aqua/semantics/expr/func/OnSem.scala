@@ -31,11 +31,11 @@ class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
           .traverse(expr.via)(v =>
             V.valueToRaw(v).flatTap {
               case Some(vm) =>
-                vm.lastType match {
+                vm.`type` match {
                   case _: BoxType =>
-                    T.ensureTypeMatches(v, OptionType(ScalarType.string), vm.lastType)
+                    T.ensureTypeMatches(v, OptionType(ScalarType.string), vm.`type`)
                   case _ =>
-                    T.ensureTypeMatches(v, ScalarType.string, vm.lastType)
+                    T.ensureTypeMatches(v, ScalarType.string, vm.`type`)
                 }
               case None => false.pure[Alg]
             }

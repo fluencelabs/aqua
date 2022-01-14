@@ -5,6 +5,7 @@ import aqua.model.{
   CallModel,
   CallServiceModel,
   CanonicalizeModel,
+  DetachModel,
   EmptyModel,
   FlattenModel,
   ForModel,
@@ -66,7 +67,7 @@ object Sugar extends Logging {
   private def parDesugarPrefix(ops: List[OpModel.Tree]): Option[OpModel.Tree] = ops match {
     case Nil => None
     case x :: Nil => Option(x)
-    case _ => Option(OpModel.par(ops))
+    case _ => Option(ParModel.wrapIfNonEmpty(ops: _*))
   }
 
   private def parDesugarPrefixOpt(ops: Option[OpModel.Tree]*): Option[OpModel.Tree] =
@@ -81,7 +82,7 @@ object Sugar extends Logging {
       ops <- map.toList.traverse { case (name, v) =>
         desugarize(v).map {
           case (vv, Some(op)) =>
-            OpModel.seq(op :: FlattenModel(vv, name).leaf :: Nil)
+            SeqModel.wrapIfNonEmpty(op, FlattenModel(vv, name).leaf)
 
           case (vv, _) =>
             FlattenModel(vv, name).leaf
@@ -142,7 +143,7 @@ object Sugar extends Logging {
 
       case PushToStreamTag(operand, exportTo) =>
         desugarize(operand).map { case (v, p) =>
-          Some(PushToStreamModel(v, exportTo.name) -> p)
+          Some(PushToStreamModel(v, CallModel.callExport(exportTo)) -> p)
         }
 
       case CallServiceTag(serviceId, funcName, call) =>
@@ -168,7 +169,9 @@ object Sugar extends Logging {
               desugarize(call).flatMap { case (cm, p) =>
                 ArrowInliner
                   .callArrow(fn, cm)
-                  .map(body => Some(EmptyModel -> Option(OpModel.seq(p.toList :+ body))))
+                  .map(body =>
+                    Some(EmptyModel -> Option(SeqModel.wrapIfNonEmpty(p.toList :+ body: _*)))
+                  )
               }
             case None =>
               logger.error(
@@ -194,6 +197,7 @@ object Sugar extends Logging {
         pure(RestrictionModel(name, isStream))
 
       case SeqTag => pure(SeqModel)
+      case ParTag.Detach => pure(DetachModel)
       case _: ParGroupTag => pure(ParModel)
       case XorTag | XorTag.LeftBiased => pure(XorModel)
       case _: NoExecTag => none

@@ -570,7 +570,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       on(
         initPeer,
         relay :: Nil,
-        co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.`type`) :: Nil))),
+        co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.baseType) :: Nil))),
         callTag(2, Nil, varNode :: Nil)
       )
 
@@ -581,7 +581,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         MakeRes.par(
           MakeRes.seq(
             through(relay),
-            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.`type`))),
+            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.baseType))),
             through(relay),
             through(initPeer) // pingback
           )
@@ -600,7 +600,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         on(
           otherPeer2,
           Nil,
-          co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.`type`) :: Nil))),
+          co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.baseType) :: Nil))),
           callTag(2, Nil, varNode :: Nil)
         )
       )
@@ -612,7 +612,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         through(relay),
         MakeRes.par(
           MakeRes.seq(
-            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.`type`))),
+            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.baseType))),
             through(otherPeer2) // pingback
           )
         ),
@@ -630,7 +630,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         on(
           relay,
           Nil,
-          co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.`type`) :: Nil)))
+          co(on(otherPeer, Nil, callTag(1, Call.Export(varNode.name, varNode.baseType) :: Nil)))
         ),
         callTag(2, Nil, varNode :: Nil)
       )
@@ -642,7 +642,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         through(relay),
         MakeRes.par(
           MakeRes.seq(
-            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.`type`))),
+            callRes(1, otherPeer, Some(Call.Export(varNode.name, varNode.baseType))),
             through(relay), // pingback
             through(initPeer) // pingback
           )

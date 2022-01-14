@@ -50,7 +50,7 @@ case class TransformConfig(
   val lastError: TransformConfig.Const =
     TransformConfig.Const(
       "LAST_ERROR",
-      VarModel(ValueRaw.LastError.name, ValueRaw.LastError.`type`, Chain.empty)
+      VarModel(ValueRaw.LastError.name, ValueRaw.LastError.baseType, Chain.empty)
     )
 
   val constantsMap: Map[String, ValueModel] =

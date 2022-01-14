@@ -36,11 +36,6 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Raw {
     Eval.later(acc.foldLeft(tag.exportsVarNames)(_ ++ _) -- tag.restrictsVarNames)
   }
 
-  // TODO: as it is used for checking of intersection, make it a lazy traverse with fail-fast
-  def usesVarNames: Eval[Set[String]] = cata[Set[String]] { case (tag, acc) =>
-    Eval.later(acc.foldLeft(tag.usesVarNames)(_ ++ _) -- tag.restrictsVarNames)
-  }
-
   def rename(vals: Map[String, String]): FuncOp = {
     if (vals.isEmpty)
       this
@@ -53,21 +48,25 @@ case class FuncOp(tree: Cofree[Chain, RawTag]) extends Raw {
   def :+:(prev: FuncOp): FuncOp =
     FuncOp.RightAssocSemi.combine(prev, this)
 
-  // Function body must be fixed before function gets resolved
+  // Function body must be fixed before the function gets inlined
   def fixXorPar: FuncOp =
-    ops.FuncOp(cata[Cofree[Chain, RawTag]] {
-      case (XorParTag(left, right), _) =>
-        Eval.now(
-          FuncOps
-            .par(
-              FuncOp.wrap(XorTag, left),
-              right
+    FuncOp(
+      Cofree
+        .cata[Chain, RawTag, Cofree[Chain, RawTag]](tree) {
+          case (XorParTag(left, right), _) =>
+            Eval.now(
+              FuncOps
+                .par(
+                  FuncOp.wrap(XorTag, left),
+                  right
+                )
+                .tree
             )
-            .tree
-        )
 
-      case (head, tail) => Eval.now(Cofree(head, Eval.now(tail)))
-    }.value)
+          case (head, tail) => Eval.now(Cofree(head, Eval.now(tail)))
+        }
+        .value
+    )
 }
 
 object FuncOp {

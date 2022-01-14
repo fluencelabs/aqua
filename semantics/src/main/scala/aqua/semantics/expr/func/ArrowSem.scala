@@ -94,13 +94,13 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
                     b :: rs.collect { case vn @ VarRaw(`n`, _, _) =>
                       FuncOps.canonicalize(
                         vn,
-                        Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.lastType))
+                        Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
                       )
                     }: _*
                   )
                 ) -> rs.map {
                   case vn @ VarRaw(`n`, _, _) =>
-                    VarRaw(s"$n-fix", builtStreams.getOrElse(n, vn.lastType))
+                    VarRaw(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
                   case vm => vm
                 }
               else FuncOp.wrap(RestrictionTag(n, isStream = true), b) -> rs

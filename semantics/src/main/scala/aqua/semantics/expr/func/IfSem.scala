@@ -27,7 +27,7 @@ class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
           case Some(lt) =>
             V.valueToRaw(expr.right).flatMap {
               case Some(rt) =>
-                T.ensureTypeMatches(expr.right, lt.lastType, rt.lastType)
+                T.ensureTypeMatches(expr.right, lt.`type`, rt.`type`)
                   .map(m => Some(lt -> rt).filter(_ => m))
               case None =>
                 None.pure[Alg]

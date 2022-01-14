@@ -1,5 +1,6 @@
 package aqua.model.transform.res
 
+import aqua.model
 import aqua.model.transform.topology.Topology.Res
 import aqua.model.*
 import aqua.types.{ArrayType, StreamType}
@@ -7,6 +8,7 @@ import cats.Eval
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import aqua.raw.value.LiteralRaw
+import aqua.raw.value.ValueRaw
 
 // TODO docs
 object MakeRes {
@@ -39,12 +41,12 @@ object MakeRes {
   def noop(onPeer: ValueModel): Res =
     leaf(CallServiceRes(op, "noop", CallRes(Nil, None), onPeer))
 
-  def canon(onPeer: ValueModel, operand: ValueModel, target: Call.Export): Res =
+  def canon(onPeer: ValueModel, operand: ValueModel, target: CallModel.Export): Res =
     leaf(
       CallServiceRes(
         op,
         "identity",
-        CallModel(operand :: Nil, Some(target)),
+        CallRes(operand :: Nil, Some(target)),
         onPeer
       )
     )
@@ -61,11 +63,11 @@ object MakeRes {
 
   private val initPeerId = ValueModel.fromRaw(ValueRaw.InitPeerId)
 
-  private def orInit(currentPeerId: Option[ValueRaw]): ValueModel =
-    currentPeerId.fold(initPeerId)(ValueModel.fromRaw)
+  private def orInit(currentPeerId: Option[ValueModel]): ValueModel =
+    currentPeerId.getOrElse(initPeerId)
 
   def resolve(
-    currentPeerId: Option[ValueRaw],
+    currentPeerId: Option[ValueModel],
     i: Int
   ): PartialFunction[OpModel, Res] = {
     case SeqModel => leaf(SeqRes)
@@ -74,27 +76,25 @@ object MakeRes {
       leaf(MatchMismatchRes(a, b, s))
     case ForModel(item, iter) => leaf(FoldRes(item, iter))
     case RestrictionModel(item, isStream) => leaf(RestrictionRes(item, isStream))
-    case ParModel => leaf(ParRes)
+    case ParModel | DetachModel => leaf(ParRes)
     case XorModel => leaf(XorRes)
     case NextModel(item) => leaf(NextRes(item))
+    case PushToStreamModel(operand @ VarModel(_, StreamType(st), _), exportTo) =>
+      val tmpName = s"push-to-stream-$i"
+      // wrap (
+      //  RestrictionRes(tmpName, isStream = false),
+      seq(
+        canon(
+          orInit(currentPeerId),
+          operand,
+          CallModel.Export(tmpName, ArrayType(st))
+        ),
+        leaf(ApRes(VarModel(tmpName, ArrayType(st), Chain.empty), exportTo))
+      )
+    // )
     case PushToStreamModel(operand, exportTo) =>
-      operand.`type` match {
-        case StreamType(st) =>
-          val tmpName = s"push-to-stream-$i"
-          // wrap (
-          //  RestrictionRes(tmpName, isStream = false),
-          seq(
-            canon(
-              orInit(currentPeerId),
-              operand,
-              Call.Export(tmpName, ArrayType(st))
-            ),
-            leaf(ApRes(VarModel(tmpName, ArrayType(st), Chain.empty), exportTo))
-          )
-        // )
-        case _ =>
-          leaf(ApRes(operand, exportTo))
-      }
+      leaf(ApRes(operand, exportTo))
+
     case CanonicalizeModel(operand, exportTo) =>
       canon(
         orInit(currentPeerId),
@@ -102,7 +102,7 @@ object MakeRes {
         exportTo
       )
     case FlattenModel(operand, assignTo) =>
-      leaf(ApRes(operand, Call.Export(assignTo, operand.`type`)))
+      leaf(ApRes(operand, CallModel.Export(assignTo, operand.`type`)))
     case JoinModel(operands) =>
       join(orInit(currentPeerId), operands)
     case CallServiceModel(serviceId, funcName, CallModel(args, exportTo)) =>

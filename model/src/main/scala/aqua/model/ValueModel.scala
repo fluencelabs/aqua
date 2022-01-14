@@ -9,9 +9,9 @@ import scribe.Logging
 sealed trait ValueModel {
   def `type`: Type
 
-  def lastType: Type
-
   def resolveWith(map: Map[String, ValueModel]): ValueModel = this
+
+  def usesVarNames: Set[String] = Set.empty
 }
 
 object ValueModel {
@@ -31,16 +31,17 @@ object ValueModel {
 }
 
 case class LiteralModel(value: String, `type`: Type) extends ValueModel {
-  override def lastType: Type = `type`
 
   override def toString: String = s"{$value: ${`type`}}"
 }
 
 object LiteralModel {
-  def fromRaw(raw: LiteralRaw): LiteralModel = LiteralModel(raw.value, raw.`type`)
+  def fromRaw(raw: LiteralRaw): LiteralModel = LiteralModel(raw.value, raw.baseType)
 }
 
 sealed trait LambdaModel {
+  def usesVarNames: Set[String] = Set.empty
+
   def `type`: Type
 }
 
@@ -63,14 +64,19 @@ object LambdaModel {
 
 case class IntoFieldModel(field: String, `type`: Type) extends LambdaModel
 
-case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel
+case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel {
+  override lazy val usesVarNames: Set[String] = Set(idx).filterNot(_.forall(Character.isDigit))
+}
 
-case class VarModel(name: String, `type`: Type, lambda: Chain[LambdaModel])
+case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel])
     extends ValueModel with Logging {
 
-  override val lastType: Type = lambda.lastOption.map(_.`type`).getOrElse(`type`)
+  override lazy val usesVarNames: Set[String] =
+    lambda.toList.map(_.usesVarNames).foldLeft(Set(name))(_ ++ _)
 
-  override def toString: String = s"var{$name: " + `type` + s"}.${lambda.toList.mkString(".")}"
+  override val `type`: Type = lambda.lastOption.map(_.`type`).getOrElse(baseType)
+
+  override def toString: String = s"var{$name: " + baseType + s"}.${lambda.toList.mkString(".")}"
 
   private def deriveFrom(vm: VarModel): VarModel =
     vm.copy(lambda = vm.lambda ++ lambda)

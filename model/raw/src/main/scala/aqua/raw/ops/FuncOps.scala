@@ -5,10 +5,7 @@ import cats.data.Chain
 import cats.free.Cofree
 
 object FuncOps {
-
-  def noop: FuncOp =
-    FuncOp.leaf(CallServiceTag(LiteralRaw.quote("op"), "noop", Call(Nil, Nil)))
-
+  
   def pushToStream(what: ValueRaw, to: Call.Export): FuncOp =
     FuncOp.leaf(
       PushToStreamTag(what, to)

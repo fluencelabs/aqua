@@ -1,7 +1,7 @@
 package aqua.model.transform.funcop
 
 import aqua.model
-import aqua.model.FuncArrow
+import aqua.model.{CallModel, FuncArrow, OpModel, ValueModel, VarModel}
 import aqua.model.inline.{ArgsCall, *}
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.FuncOps
@@ -9,11 +9,12 @@ import aqua.raw.ops.{Call, FuncOp, FuncOps}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 import cats.Eval
+import cats.data.Chain
 
 // TODO: doc
 case class ResolveFunc(
-  transform: FuncOp => FuncOp,
-  callback: (String, Call) => FuncOp,
+  transform: OpModel.Tree => OpModel.Tree,
+  callback: (String, Call) => FuncOp.Tree,
   respFuncName: String,
   wrapCallableName: String = "funcAround",
   arrowCallbackPrefix: String = "init_peer_callable_"
@@ -34,7 +35,7 @@ case class ResolveFunc(
   // TODO: doc
   def arrowToCallback(name: String, arrowType: ArrowType): FuncArrow = {
     val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
-    model.FuncArrow(
+    FuncArrow(
       arrowCallbackPrefix + name,
       callback(name, call),
       arrowType,
@@ -46,7 +47,7 @@ case class ResolveFunc(
 
   // TODO: doc/rename
   def wrap(func: FuncArrow): FuncArrow = {
-    val returnType = ProductType(func.ret.map(_.lastType).map {
+    val returnType = ProductType(func.ret.map(_.`type`).map {
       // we mustn't return a stream in response callback to avoid pushing stream to `-return-` value
       case StreamType(t) => ArrayType(t)
       case t => t
@@ -55,11 +56,11 @@ case class ResolveFunc(
     val retModel = returnType.map { case (l, t) => VarRaw(l, t) }
 
     val funcCall = Call(
-      func.arrowType.domain.toLabelledList().map(ad => VarRaw(ad._1, ad._2)),
-      returnType.map { case (l, t) => Call.Export(l, t) }
+      func.arrowType.domain.toLabelledList().map(ad => VarModel(ad._1, ad._2, Chain.empty)),
+      returnType.map { case (l, t) => CallModel.Export(l, t) }
     )
 
-    model.FuncArrow(
+    FuncArrow(
       wrapCallableName,
       transform(
         FuncOps.seq(
@@ -88,13 +89,12 @@ case class ResolveFunc(
   def resolve(
     func: FuncArrow,
     funcArgName: String = "_func"
-  ): Eval[FuncOp] =
+  ): Eval[OpModel.Tree] =
     ArrowInliner
-      .inline[InliningState](
+      .callArrow[InliningState](
         wrap(func),
-        Call(VarRaw(funcArgName, func.arrowType) :: Nil, Nil)
+        CallModel(VarModel(funcArgName, func.arrowType, Chain.empty) :: Nil, Nil)
       )
-      .map(_._1)
       .run(
         InliningState(resolvedArrows = Map(funcArgName -> func))
       )

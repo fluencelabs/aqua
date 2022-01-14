@@ -7,11 +7,9 @@ import scribe.Logging
 
 sealed trait ValueRaw {
 
-  def usesVarNames: Set[String] = Set.empty
+  def baseType: Type
 
-  def `type`: Type
-
-  def lastType: Type = `type`
+  def `type`: Type = baseType
 
   def renameVars(map: Map[String, String]): ValueRaw = this
 
@@ -21,10 +19,7 @@ sealed trait ValueRaw {
 
 object ValueRaw {
 
-  implicit object ValueRawEq extends Eq[ValueRaw] {
-    override def eqv(x: ValueRaw, y: ValueRaw): Boolean = x == y
-  }
-
+  // TODO: move to LiteralRaw
   val InitPeerId: LiteralRaw = LiteralRaw("%init_peer_id%", ScalarType.string)
 
   val Nil: LiteralRaw = LiteralRaw("[]", StreamType(BottomType))
@@ -46,27 +41,24 @@ object ValueRaw {
 
 }
 
-case class VarRaw(name: String, `type`: Type, lambda: Chain[LambdaRaw] = Chain.empty)
+case class VarRaw(name: String, baseType: Type, lambda: Chain[LambdaRaw] = Chain.empty)
     extends ValueRaw with Logging {
 
-  override def usesVarNames: Set[String] =
-    lambda.toList.map(_.usesVarNames).foldLeft(Set(name))(_ ++ _)
-
-  override val lastType: Type = lambda.lastOption.map(_.`type`).getOrElse(`type`)
+  override val `type`: Type = lambda.lastOption.map(_.`type`).getOrElse(baseType)
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw =
     f(copy(lambda = lambda.map(_.map(f))))
 
   override def renameVars(map: Map[String, String]): ValueRaw =
-    VarRaw(map.getOrElse(name, name), `type`, lambda.map(_.renameVars(map)))
+    VarRaw(map.getOrElse(name, name), baseType, lambda.map(_.renameVars(map)))
 
-  override def toString: String = s"var{$name: " + `type` + s"}.${lambda.toList.mkString(".")}"
+  override def toString: String = s"var{$name: " + baseType + s"}.${lambda.toList.mkString(".")}"
 }
 
-case class LiteralRaw(value: String, `type`: Type) extends ValueRaw {
+case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
 
-  override def toString: String = s"{$value: ${`type`}}"
+  override def toString: String = s"{$value: ${baseType}}"
 }
 
 object LiteralRaw {

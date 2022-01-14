@@ -10,6 +10,8 @@ case class CallModel(args: List[ValueModel], exportTo: List[CallModel.Export]) {
   def arrowArgNames: Set[String] = args.collect { case VarModel(m, _: ArrowType, _) =>
     m
   }.toSet
+
+  def usesVarNames: Set[String] = args.flatMap(_.usesVarNames).toSet
 }
 
 object CallModel {

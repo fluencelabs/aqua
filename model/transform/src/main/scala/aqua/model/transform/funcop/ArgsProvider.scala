@@ -1,8 +1,14 @@
 package aqua.model.transform.funcop
 
-import aqua.model.{OpModel, ValueModel}
-import aqua.raw.ops.{Call, FuncOp, FuncOps}
-import aqua.raw.value.{ValueRaw, VarRaw}
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  OpModel,
+  PushToStreamModel,
+  SeqModel,
+  ValueModel,
+  VarModel
+}
 import aqua.types.{ArrayType, DataType, StreamType}
 import cats.data.Chain
 
@@ -16,18 +22,16 @@ case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataT
   private def getStreamDataOp(name: String, t: StreamType): OpModel.Tree = {
     val iter = s"$name-iter"
     val item = s"$name-item"
-    FuncOps.seq(
-      FuncOps.callService(
+    SeqModel.wrap(
+      CallServiceModel(
         dataServiceId,
         name,
-        Call(Nil, Call.Export(iter, ArrayType(t.element)) :: Nil)
-      ),
-      FuncOps.fold(
-        item,
-        VarRaw(iter, ArrayType(t.element)),
-        FuncOps.seq(
-          FuncOps.pushToStream(VarRaw(item, t.element), Call.Export(name, t)),
-          FuncOps.next(item)
+        CallModel(Nil, CallModel.Export(iter, ArrayType(t.element)) :: Nil)
+      ).leaf,
+      FoldModel(item, VarModel(iter, ArrayType(t.element))).wrap(
+        SeqModel.wrap(
+          PushToStreamModel(VarModel(item, t.element), CallModel.Export(name, t)).leaf,
+          NextModel(item).leaf
         )
       )
     )
@@ -38,15 +42,11 @@ case class ArgsFromService(dataServiceId: ValueModel, names: List[(String, DataT
       case st: StreamType =>
         getStreamDataOp(name, st)
       case _ =>
-        FuncOps.callService(
-          dataServiceId,
-          name,
-          Call(Nil, Call.Export(name, t) :: Nil)
-        )
+        CallServiceModel(dataServiceId, name, CallModel(Nil, CallModel.Export(name, t) :: Nil)).leaf
     }
 
-  def transform(op: FuncOp): FuncOp =
-    FuncOps.seq(
+  def transform(op: OpModel.Tree): OpModel.Tree =
+    OpModel.seq(
       names.map((getDataOp _).tupled) :+ op: _*
     )
 

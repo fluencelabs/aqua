@@ -1,10 +1,17 @@
 package aqua.model.transform.res
 
+import aqua.model
 import aqua.model.{CallModel, ValueModel, VarModel}
 import aqua.raw.ops.Call
+import cats.data.Chain
+import cats.free.Cofree
 
 // TODO docs to all traits and objects
 sealed trait ResolvedOp
+
+object ResolvedOp {
+  type Tree =  Cofree[Chain, ResolvedOp]
+}
 
 sealed trait NoAir extends ResolvedOp
 
@@ -38,11 +45,6 @@ case class CallServiceRes(
   override def toString: String = s"(call $peerId ($serviceId $funcName) $call)"
 }
 
-case class ApRes(operand: ValueModel, exportTo: Call.Export) extends ResolvedOp {
+case class ApRes(operand: ValueModel, exportTo: CallModel.Export) extends ResolvedOp {
   override def toString: String = s"(ap $operand $exportTo)"
-
-  def mapValues(f: ValueModel => ValueModel): ApRes =
-    ApRes(f(operand), exportTo)
-
-  def mapExport(f: String => String): ApRes = copy(exportTo = exportTo.mapName(f))
 }

@@ -19,7 +19,7 @@ class AssignmentSem[S[_]](val expr: AssignmentExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     V.valueToRaw(expr.value).flatMap {
       case Some(vm) =>
-        N.define(expr.variable, vm.lastType) as (FuncOp
+        N.define(expr.variable, vm.`type`) as (FuncOp
           .leaf(AssignmentTag(vm, expr.variable.value)): Raw)
       case _ => Raw.error("Cannot resolve assignment type").pure[Alg]
     }

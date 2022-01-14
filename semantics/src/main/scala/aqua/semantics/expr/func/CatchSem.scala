@@ -21,7 +21,7 @@ class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
     Prog
       .around(
         N.beginScope(expr.name) >>
-          N.define(expr.name, ValueRaw.LastError.`type`),
+          N.define(expr.name, ValueRaw.LastError.baseType),
         (_: Boolean, g: Raw) =>
           g match {
             case op: FuncOp =>

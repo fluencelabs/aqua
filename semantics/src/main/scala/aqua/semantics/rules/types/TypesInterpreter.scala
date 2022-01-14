@@ -126,7 +126,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
     op: IntoIndex[S],
     idx: ValueRaw
   ): State[X, Option[LambdaRaw]] =
-    if (!ScalarType.i64.acceptsValueOf(idx.lastType))
+    if (!ScalarType.i64.acceptsValueOf(idx.`type`))
       report(op, s"Expected numeric index, got $idx").as(None)
     else
       rootT match {
@@ -244,7 +244,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
           .foldLeft[Either[(Token[S], String, Boolean), List[ValueRaw]]](Right(Nil)) {
             case (acc, (returnType, (token, returnValue))) =>
               acc.flatMap { a =>
-                if (!returnType.acceptsValueOf(returnValue.lastType))
+                if (!returnType.acceptsValueOf(returnValue.`type`))
                   Left(
                     (
                       values.toList
@@ -252,7 +252,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
                         .headOption
                         .getOrElse(values.last)
                         ._1,
-                      s"Wrong value type, expected: ${returnType}, given: ${returnValue.lastType}",
+                      s"Wrong value type, expected: ${returnType}, given: ${returnValue.`type`}",
                       false
                     )
                   )

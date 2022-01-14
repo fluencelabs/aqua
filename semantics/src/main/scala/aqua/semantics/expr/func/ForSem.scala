@@ -29,7 +29,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
       .around(
         N.beginScope(expr.item) >> V.valueToRaw(expr.iterable).flatMap[Option[ValueRaw]] {
           case Some(vm) =>
-            vm.lastType match {
+            vm.`type` match {
               case t: BoxType =>
                 N.define(expr.item, t.element).as(Option(vm))
               case dt =>

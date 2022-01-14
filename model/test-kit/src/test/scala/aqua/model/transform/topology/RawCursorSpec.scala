@@ -15,7 +15,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
   import aqua.raw.ops.FuncOps.*
 
   "simple raw cursor on init_peer_id" should "move properly" in {
-    val raw = RawCursor(
+    val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
           onVia(
@@ -31,7 +31,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
   }
 
   "simple raw cursor with multiple calls" should "move on seqs" in {
-    val raw = RawCursor(
+    val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
           onVia(
@@ -55,7 +55,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
   }
 
   "simple raw cursor on init_peer_id via relay" should "move properly" in {
-    val raw = RawCursor(
+    val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
           onVia(
@@ -72,7 +72,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
 
   "raw cursor" should "move properly" in {
 
-    val raw = RawCursor(
+    val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
           onVia(
@@ -103,7 +103,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    raw.tag should be(
+    raw.op should be(
       OnTag(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string)))
     )
 //    raw.firstExecuted.map(_.tag) should be(
@@ -134,7 +134,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
 
   "raw cursor" should "move properly with fold" in {
 
-    val raw = RawCursor(
+    val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
           onVia(
@@ -170,7 +170,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    raw.tag should be(
+    raw.op should be(
       OnTag(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string)))
     )
 //    raw.firstExecuted.map(_.tag) should be(
