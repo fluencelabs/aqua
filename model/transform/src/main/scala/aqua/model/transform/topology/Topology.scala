@@ -411,7 +411,7 @@ object Topology extends Logging {
       }
     )
 
-  def resolve(op: OpModel.Tree, debug: Boolean = false): Res = {
+  def resolve(op: OpModel.Tree, debug: Boolean = false): Eval[Res] = {
     val resolved = resolveOnMoves(op, debug).value
     Cofree
       .cata[Chain, ResolvedOp, Res](resolved) {
@@ -432,7 +432,6 @@ object Topology extends Logging {
           }
         case (head, children) => Eval.later(Cofree(head, Eval.now(children)))
       }
-      .value
   }
 
   def wrap(cz: ChainZipper[Res]): Chain[Res] =

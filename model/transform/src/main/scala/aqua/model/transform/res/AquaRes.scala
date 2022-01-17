@@ -22,12 +22,15 @@ object AquaRes {
             .fromSeq(ex.funcs.map { case (fnName, fn) =>
               fn.copy(funcName = fnName)
             }.toSeq)
-            .map(Transform.funcRes(_, conf)),
+            .map(
+              // TODO: keeep Eval
+              Transform.funcRes(_, conf).value
+            ),
           services = Chain
             .fromSeq(ex.services.map { case (srvName, srv) =>
               srv.copy(name = srvName)
             }.toSeq)
-            .map(ServiceRes.fromModel(_))
+            .map(ServiceRes.fromModel)
         )
       )
       .getOrElse(blank)

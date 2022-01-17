@@ -18,12 +18,12 @@ case class TransformConfig(
   constants: List[TransformConfig.Const] = Nil
 ) {
 
-  private val quote = LiteralRaw.quote andThen LiteralModel.fromRaw
+  import LiteralRaw.quote
 
-  val errorId: ValueModel = quote(errorFuncName)
-  val errorHandlingCallback: ValueModel = quote(errorHandlingService)
-  val callbackSrvId: ValueModel = quote(callbackService)
-  val dataSrvId: ValueModel = quote(getDataService)
+  val errorId: ValueRaw = quote(errorFuncName)
+  val errorHandlingCallback: ValueModel = LiteralModel fromRaw quote(errorHandlingService)
+  val callbackSrvId: ValueRaw = quote(callbackService)
+  val dataSrvId: ValueRaw = quote(getDataService)
 
   // Host peer id holds %init_peer_id% in case Aqua is not compiled to be executed behind a relay,
   // or relay's variable otherwise
@@ -31,7 +31,7 @@ case class TransformConfig(
     TransformConfig.Const(
       "HOST_PEER_ID",
       relayVarName.fold[ValueModel](LiteralModel.fromRaw(ValueRaw.InitPeerId))(r =>
-        VarModel(r, ScalarType.string)
+        VarModel(r, ScalarType.string, Chain.empty)
       )
     )
 
@@ -57,16 +57,6 @@ case class TransformConfig(
     (hostPeerId :: initPeerId :: nil :: lastError :: constants)
       .map(c => c.name -> c.value)
       .toMap
-
-  implicit val aquaContextMonoid: Monoid[AquaContext] = {
-
-    AquaContext
-      .implicits(
-        AquaContext.blank
-          .copy(values = constantsMap)
-      )
-      .aquaContextMonoid
-  }
 
 }
 

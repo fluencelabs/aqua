@@ -54,7 +54,7 @@ object Sugar extends Logging {
   // Todo: use state monad instead of counter
   private def unfoldLambda(l: LambdaRaw, i: Int): (LambdaModel, Map[String, ValueRaw]) = l match {
     case IntoFieldRaw(field, t) => IntoFieldModel(field, t) -> Map.empty
-    case IntoIndexRaw(vm @ VarRaw(name, _, l), t) if l.nonEmpty =>
+    case IntoIndexRaw(vm@VarRaw(name, _, l), t) if l.nonEmpty =>
       val ni = name + "-" + i
       IntoIndexModel(ni, t) -> Map(ni -> vm)
     case IntoIndexRaw(VarRaw(name, _, _), t) =>
@@ -91,13 +91,13 @@ object Sugar extends Logging {
     } yield vm -> parDesugarPrefix(ops)
 
   def desugarize[S: Counter](
-    values: List[ValueRaw]
-  ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
+                              values: List[ValueRaw]
+                            ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(desugarize(_))
 
   def desugarize[S: Counter](
-    call: Call
-  ): State[S, (CallModel, Option[OpModel.Tree])] =
+                              call: Call
+                            ): State[S, (CallModel, Option[OpModel.Tree])] =
     desugarize(call.args).map(list =>
       (
         CallModel(
@@ -114,9 +114,9 @@ object Sugar extends Logging {
   private def none[S]: State[S, Option[(OpModel, Option[OpModel.Tree])]] =
     State.pure(None)
 
-  def desugarize[S: Counter: Mangler: Arrows: Exports](
-    tag: RawTag
-  ): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
+  def desugarize[S: Counter : Mangler : Arrows : Exports](
+                                                           tag: RawTag
+                                                         ): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
     tag match {
       case OnTag(peerId, via) =>
         for {
@@ -199,7 +199,9 @@ object Sugar extends Logging {
       case SeqTag => pure(SeqModel)
       case ParTag.Detach => pure(DetachModel)
       case _: ParGroupTag => pure(ParModel)
-      case XorTag | XorTag.LeftBiased => pure(XorModel)
+      case XorTag | XorTag.LeftBiased =>
+        // TODO should we do smth with XorTag.LeftBiased?
+        pure(XorModel)
       case _: NoExecTag => none
       case _ =>
         logger.warn(s"Tag $tag must have been eliminated at this point")
