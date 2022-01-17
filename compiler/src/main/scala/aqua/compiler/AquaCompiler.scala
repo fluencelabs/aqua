@@ -7,17 +7,18 @@ import aqua.model.transform.TransformConfig
 import aqua.model.transform.res.AquaRes
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
+import aqua.raw.RawContext
 import aqua.semantics.Semantics
 import aqua.semantics.header.HeaderSem
 import cats.data.*
-import cats.data.Validated.{Invalid, Valid, validNec}
+import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import cats.syntax.traverse.*
-import cats.{Comonad, Monad, Monoid, Order, ~>}
+import cats.{~>, Comonad, Monad, Monoid, Order}
 import scribe.Logging
 
 object AquaCompiler extends Logging {
@@ -27,9 +28,9 @@ object AquaCompiler extends Logging {
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
     config: TransformConfig
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaProcessed[I]]]] = {
-    import config.aquaContextMonoid
+    import config.rawContextMonoid
     type Err = AquaError[I, E, S]
-    type Ctx = NonEmptyMap[I, AquaContext]
+    type Ctx = NonEmptyMap[I, RawContext]
     type ValidatedCtx = ValidatedNec[Err, Ctx]
     logger.trace("starting resolving sources...")
     new AquaParser[F, E, I, S](sources, parser)
@@ -70,7 +71,7 @@ object AquaCompiler extends Logging {
               modules,
               cycle => CycleError[I, E, S](cycle.map(_.id)),
               // By default, provide an empty context for this module's id
-              i => validNec(NonEmptyMap.one(i, Monoid.empty[AquaContext]))
+              i => validNec(NonEmptyMap.one(i, Monoid.empty[RawContext]))
             )
             .andThen { filesWithContext =>
               logger.trace("linking finished")
@@ -80,7 +81,9 @@ object AquaCompiler extends Logging {
                 ) {
                   case (acc, (i, Valid(context))) =>
                     acc combine validNec(
-                      Chain.fromSeq(context.toNel.toList.map { case (i, c) => AquaProcessed(i, c) })
+                      Chain.fromSeq(context.toNel.toList.map { case (i, c) =>
+                        AquaProcessed(i, AquaContext.fromRawContext(c, AquaContext.blank))
+                      })
                     )
                   case (acc, (_, Invalid(errs))) =>
                     acc combine Invalid(errs)

@@ -100,4 +100,24 @@ case class RawContext(
 
 object RawContext {
   val blank: RawContext = RawContext()
+
+  trait Implicits {
+    implicit val rawContextMonoid: Monoid[RawContext]
+  }
+
+  def implicits(init: RawContext): Implicits = new Implicits {
+
+    override implicit val rawContextMonoid: Monoid[RawContext] = new Monoid[RawContext] {
+      override def empty: RawContext = init
+
+      override def combine(x: RawContext, y: RawContext): RawContext =
+        RawContext(
+          x.module orElse y.module,
+          x.declares ++ y.declares,
+          x.exports.flatMap(xe => y.exports.map(xe ++ _)) orElse x.exports orElse y.exports,
+          RawPart.Parts(x.parts.parts ++ y.parts.parts),
+          x.abilities ++ y.abilities
+        )
+    }
+  }
 }

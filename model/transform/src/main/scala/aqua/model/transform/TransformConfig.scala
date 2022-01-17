@@ -1,6 +1,7 @@
 package aqua.model.transform
 
 import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
+import aqua.raw.{ConstantRaw, RawContext, RawPart}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.ScalarType
 import cats.data.Chain
@@ -15,7 +16,7 @@ case class TransformConfig(
   respFuncName: String = "response",
   relayVarName: Option[String] = Some("-relay-"),
   wrapWithXor: Boolean = true,
-  constants: List[TransformConfig.Const] = Nil
+  constants: List[ConstantRaw] = Nil
 ) {
 
   import LiteralRaw.quote
@@ -27,37 +28,40 @@ case class TransformConfig(
 
   // Host peer id holds %init_peer_id% in case Aqua is not compiled to be executed behind a relay,
   // or relay's variable otherwise
-  val hostPeerId: TransformConfig.Const =
-    TransformConfig.Const(
+  val hostPeerId: ConstantRaw =
+    ConstantRaw(
       "HOST_PEER_ID",
-      relayVarName.fold[ValueModel](LiteralModel.fromRaw(ValueRaw.InitPeerId))(r =>
-        VarModel(r, ScalarType.string, Chain.empty)
-      )
+      relayVarName.fold[ValueRaw](ValueRaw.InitPeerId)(r => VarRaw(r, ScalarType.string)),
+      false
     )
 
-  val initPeerId: TransformConfig.Const =
-    TransformConfig.Const(
+  val initPeerId: ConstantRaw =
+    ConstantRaw(
       "INIT_PEER_ID",
-      LiteralModel.fromRaw(ValueRaw.InitPeerId)
+      ValueRaw.InitPeerId,
+      false
     )
 
-  val nil: TransformConfig.Const =
-    TransformConfig.Const(
+  val nil: ConstantRaw =
+    ConstantRaw(
       "nil", // TODO: shouldn't it be NIL?
-      LiteralModel.fromRaw(ValueRaw.Nil)
+      ValueRaw.Nil,
+      false
     )
 
-  val lastError: TransformConfig.Const =
-    TransformConfig.Const(
+  val lastError: ConstantRaw =
+    ConstantRaw(
       "LAST_ERROR",
-      VarModel(ValueRaw.LastError.name, ValueRaw.LastError.baseType, Chain.empty)
+      ValueRaw.LastError,
+      false
     )
 
-  val constantsMap: Map[String, ValueModel] =
-    (hostPeerId :: initPeerId :: nil :: lastError :: constants)
-      .map(c => c.name -> c.value)
-      .toMap
+  val constantsList: List[ConstantRaw] =
+    hostPeerId :: initPeerId :: nil :: lastError :: constants
 
+  implicit val rawContextMonoid: Monoid[RawContext] = RawContext
+    .implicits(RawContext.blank.copy(parts = RawPart.Parts(Chain.fromSeq(constantsList))))
+    .rawContextMonoid
 }
 
 object TransformConfig {
