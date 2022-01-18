@@ -13,7 +13,7 @@ case class FuncArrow(
                       ret: List[ValueRaw],
                       capturedArrows: Map[String, FuncArrow],
                       capturedValues: Map[String, ValueModel]
-                    ) extends Raw {
+                    ) {
 
   lazy val args: List[(String, Type)] = arrowType.domain.toLabelledList()
   lazy val argNames: List[String] = args.map(_._1)

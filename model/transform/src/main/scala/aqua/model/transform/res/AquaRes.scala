@@ -14,25 +14,21 @@ object AquaRes {
   private val blank = AquaRes(Chain.nil, Chain.nil)
 
   // TODO: doc/rename
-  def fromContext(ctx: AquaContext, conf: TransformConfig): AquaRes =
-    ctx.exports
-      .map(ex =>
-        AquaRes(
-          funcs = Chain
-            .fromSeq(ex.funcs.map { case (fnName, fn) =>
-              fn.copy(funcName = fnName)
-            }.toSeq)
-            .map(
-              // TODO: keeep Eval
-              Transform.funcRes(_, conf).value
-            ),
-          services = Chain
-            .fromSeq(ex.services.map { case (srvName, srv) =>
-              srv.copy(name = srvName)
-            }.toSeq)
-            .map(ServiceRes.fromModel)
-        )
-      )
-      .getOrElse(blank)
+  def fromContext(ex: AquaContext, conf: TransformConfig): AquaRes =
+    AquaRes(
+      funcs = Chain
+        .fromSeq(ex.funcs.map { case (fnName, fn) =>
+          fn.copy(funcName = fnName)
+        }.toSeq)
+        .map(
+          // TODO: keeep Eval
+          Transform.funcRes(_, conf).value
+        ),
+      services = Chain
+        .fromSeq(ex.services.map { case (srvName, srv) =>
+          srv.copy(name = srvName)
+        }.toSeq)
+        .map(ServiceRes.fromModel)
+    )
 
 }

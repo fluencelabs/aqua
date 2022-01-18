@@ -82,7 +82,7 @@ object AquaCompiler extends Logging {
                   case (acc, (i, Valid(context))) =>
                     acc combine validNec(
                       Chain.fromSeq(context.toNel.toList.map { case (i, c) =>
-                        AquaProcessed(i, AquaContext.fromRawContext(c, AquaContext.blank))
+                        AquaProcessed(i, AquaContext.fromRawContext(c))
                       })
                     )
                   case (acc, (_, Invalid(errs))) =>
