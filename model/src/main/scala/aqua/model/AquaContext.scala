@@ -16,15 +16,15 @@ import aqua.model.inline.ArgsCall
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
-  module: Option[String],
-  exports: Map[String, Option[String]],
-  funcs: Map[String, FuncArrow],
-  types: Map[String, Type],
-  values: Map[String, ValueModel],
-  abilities: Map[String, AquaContext],
-  // TODO: merge this with abilities, when have ability resolution variance
-  services: Map[String, ServiceModel]
-) {
+                        module: Option[String],
+                        exports: Map[String, Option[String]],
+                        funcs: Map[String, FuncArrow],
+                        types: Map[String, Type],
+                        values: Map[String, ValueModel],
+                        abilities: Map[String, AquaContext],
+                        // TODO: merge this with abilities, when have ability resolution variance
+                        services: Map[String, ServiceModel]
+                      ) {
 
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
@@ -43,9 +43,17 @@ case class AquaContext(
   lazy val allFuncs: Map[String, FuncArrow] =
     all(_.funcs)
 
+  // TODO remove this ugliness
+  def pick(name: String, maybeRename: Option[String]): AquaContext =
+    funcs.get(name).fold(AquaContext.blank)(p => AquaContext.blank.copy(funcs = Map(maybeRename.getOrElse(name) -> p))) |+|
+      types.get(name).fold(AquaContext.blank)(p => AquaContext.blank.copy(types = Map(maybeRename.getOrElse(name) -> p))) |+|
+      values.get(name).fold(AquaContext.blank)(p => AquaContext.blank.copy(values = Map(maybeRename.getOrElse(name) -> p))) |+|
+      abilities.get(name).fold(AquaContext.blank)(p => AquaContext.blank.copy(abilities = Map(maybeRename.getOrElse(name) -> p))) |+|
+      services.get(name).fold(AquaContext.blank)(p => AquaContext.blank.copy(services = Map(maybeRename.getOrElse(name) -> p)))
+
   lazy val exported: AquaContext =
-    exports.foldLeft(AquaContext.blank) { case (acc, (k, v)) =>
-    // TODO get and maybe rename
+    exports.foldLeft(AquaContext.blank.copy(module = module)) { case (acc, (k, v)) =>
+      acc |+| pick(k, v)
     }
 }
 

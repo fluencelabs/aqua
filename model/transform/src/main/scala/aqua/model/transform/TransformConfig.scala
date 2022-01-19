@@ -63,7 +63,3 @@ case class TransformConfig(
     .implicits(RawContext.blank.copy(parts = RawPart.Parts(Chain.fromSeq(constantsList))))
     .rawContextMonoid
 }
-
-object TransformConfig {
-  case class Const(name: String, value: ValueModel)
-}
