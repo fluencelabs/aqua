@@ -16,19 +16,31 @@ import aqua.model.inline.ArgsCall
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
-  module: Option[String],
-  funcs: Map[String, FuncArrow],
-  types: Map[String, Type],
-  values: Map[String, ValueModel],
-  abilities: Map[String, AquaContext],
-  // TODO: merge this with abilities, when have ability resolution variance
-  services: Map[String, ServiceModel]
-) {
+                        module: Option[String],
+                        funcs: Map[String, FuncArrow],
+                        types: Map[String, Type],
+                        values: Map[String, ValueModel],
+                        abilities: Map[String, AquaContext],
+                        // TODO: merge this with abilities, when have ability resolution variance
+                        services: Map[String, ServiceModel]
+                      ) {
 
-  def allValues: Map[String, ValueModel] = ???
+  private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
+    (prefix + pair._1, pair._2)
 
-  def allFuncs: Map[String, FuncArrow] = ???
+  // TODO: it's a duplicate
+  private def all[T](what: AquaContext => Map[String, T], prefix: String = ""): Map[String, T] =
+    abilities
+      .foldLeft(what(this)) { case (ts, (k, v)) =>
+        ts ++ v.all(what, k + ".")
+      }
+      .map(prefixFirst(prefix, _))
 
+  lazy val allValues: Map[String, ValueModel] =
+    all(_.values)
+
+  lazy val allFuncs: Map[String, FuncArrow] =
+    all(_.funcs)
 }
 
 object AquaContext extends Logging {

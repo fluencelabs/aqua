@@ -93,7 +93,7 @@ case class RawContext(
       }
       .map(prefixFirst(prefix, _))
 
-  def allValues: Map[String, ValueRaw] = all(_.values)
+  lazy val allValues: Map[String, ValueRaw] = all(_.values)
 
   def `type`(name: String): Option[StructType] =
     NonEmptyMap
