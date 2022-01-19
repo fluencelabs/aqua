@@ -5,17 +5,17 @@ import aqua.Node.*
 import aqua.model.AquaContext
 import aqua.raw.RawContext
 import aqua.parser.Ast
-import aqua.raw.ops.FuncOp
+import aqua.raw.ops.{CallServiceTag, FuncOp, FuncOps, RawTag, SeqTag}
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.funcop.*
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
-import aqua.raw.ops.{FuncOps, SeqTag}
-import aqua.raw.value.LiteralRaw
+import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.types.LiteralType
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.~>
+import cats.data.Chain
 
 class SemanticsSpec extends AnyFlatSpec with Matchers {
 
@@ -37,21 +37,29 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val ctx = RawContext.blank
     val bc = TransformConfig()
-    import bc.aquaContextMonoid
+    import bc.rawContextMonoid
 
     val p = Semantics.process(ast, ctx)
 
     val func = p.toList.head.funcs("parFunc")
 
-    val proc = Node.cofToNode(func.body.tree)
+    val proc = Node.cofToNode(func.arrow.body.tree)
 
-    val expected: Node.Op =
-      FuncOp.wrap(
-        SeqTag,
-        FuncOps.par(
-          on(LiteralRaw("\"other-peer\"", LiteralType.string), Nil, callLiteralRaw(1)),
-          callLiteralRaw(1)
-        )
+    val expected: Node[RawTag] =
+      Node.cofToNode(
+        FuncOp
+          .wrap(
+            SeqTag,
+            FuncOps.par(
+              FuncOps.onVia(
+                LiteralRaw("\"other-peer\"", LiteralType.string),
+                Chain.empty,
+                FuncOp.leaf(CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall))
+              ),
+              FuncOp.leaf(CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall))
+            )
+          )
+          .tree
       )
 
     proc.equalsOrPrintDiff(expected) should be(true)
