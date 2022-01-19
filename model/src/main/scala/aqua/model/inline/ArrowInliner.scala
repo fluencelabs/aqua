@@ -17,11 +17,11 @@ import cats.free.Cofree
 object ArrowInliner extends Logging {
 
   // Apply a callable function, get its fully resolved body & optional value, if any
-  private def inline[S: Mangler : Arrows : Exports : Counter](
-                                                               fn: FuncArrow,
-                                                               call: CallModel
-                                                             ): State[S, (OpModel.Tree, List[ValueModel])] =
-  // Function's internal variables will not be available outside, hence the scope
+  private def inline[S: Mangler: Arrows: Exports: Counter](
+    fn: FuncArrow,
+    call: CallModel
+  ): State[S, (OpModel.Tree, List[ValueModel])] =
+    // Function's internal variables will not be available outside, hence the scope
     Exports[S].scope(
       for {
         // Process renamings, prepare environment
@@ -42,7 +42,7 @@ object ArrowInliner extends Logging {
         // Fix the return values
         (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(List[OpModel.Tree], ValueModel)] {
-            case (CallModel.Export(exp, st@StreamType(_)), (res, resDesugar)) =>
+            case (CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
               // pass nested function results to a stream
               (resDesugar.toList :+ PushToStreamModel(
                 res,
@@ -67,18 +67,18 @@ object ArrowInliner extends Logging {
    * Prepare the state context for this function call
    *
    * @param fn
-   * Function that will be called
+   *   Function that will be called
    * @param call
-   * Call object
+   *   Call object
    * @tparam S
-   * State
+   *   State
    * @return
-   * Tree with substituted values, list of return values prior to function calling/inlining
+   *   Tree with substituted values, list of return values prior to function calling/inlining
    */
-  private def prelude[S: Mangler : Arrows : Exports](
-                                                      fn: FuncArrow,
-                                                      call: CallModel
-                                                    ): State[S, (FuncOp.Tree, List[ValueRaw])] =
+  private def prelude[S: Mangler: Arrows: Exports](
+    fn: FuncArrow,
+    call: CallModel
+  ): State[S, (FuncOp.Tree, List[ValueRaw])] =
     for {
       // Collect all arguments: what names are used inside the function, what values are received
       argsFull <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
@@ -145,15 +145,15 @@ object ArrowInliner extends Logging {
       tailTree <- tail.traverse(traverseS[S](_, f))
     } yield headTree.copy(tail = headTree.tail.map(_ ++ tailTree))
 
-  private def handleTree[S: Exports : Counter : Mangler : Arrows](
-                                                                   tree: FuncOp.Tree
-                                                                 ): State[S, OpModel.Tree] =
+  def handleTree[S: Exports: Counter: Mangler: Arrows](
+    tree: FuncOp.Tree
+  ): State[S, OpModel.Tree] =
     traverseS(tree, handleTag(_))
 
-  def callArrowRet[S: Exports : Counter : Arrows : Mangler](
-                                                             arrow: FuncArrow,
-                                                             call: CallModel
-                                                           ): State[S, (OpModel.Tree, List[ValueModel])] =
+  def callArrowRet[S: Exports: Counter: Arrows: Mangler](
+    arrow: FuncArrow,
+    call: CallModel
+  ): State[S, (OpModel.Tree, List[ValueModel])] =
     for {
       passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
 
@@ -170,13 +170,13 @@ object ArrowInliner extends Logging {
 
     } yield appliedOp -> value
 
-  def callArrow[S: Exports : Counter : Arrows : Mangler](
-                                                          arrow: FuncArrow,
-                                                          call: CallModel
-                                                        ): State[S, OpModel.Tree] =
+  def callArrow[S: Exports: Counter: Arrows: Mangler](
+    arrow: FuncArrow,
+    call: CallModel
+  ): State[S, OpModel.Tree] =
     callArrowRet(arrow, call).map(_._1)
 
-  private def handleTag[S: Exports : Counter : Arrows : Mangler](tag: RawTag): State[S, OpModel.Tree] =
+  private def handleTag[S: Exports: Counter: Arrows: Mangler](tag: RawTag): State[S, OpModel.Tree] =
     for {
       resolvedArrows <- Arrows[S].arrows
 
@@ -185,7 +185,7 @@ object ArrowInliner extends Logging {
       dTag = desugarized.map(_._1)
 
     } yield
-      // If smth needs to be added before this function tree, add it with Seq
-      SeqModel.wrapIfNonEmpty(dPrefix.toList ::: dTag.map(_.leaf).toList: _*)
+    // If smth needs to be added before this function tree, add it with Seq
+    SeqModel.wrapIfNonEmpty(dPrefix.toList ::: dTag.map(_.leaf).toList: _*)
 
 }

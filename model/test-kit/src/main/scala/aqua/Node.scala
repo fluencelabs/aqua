@@ -9,7 +9,22 @@ import aqua.model.transform.res.{
   NextRes,
   ResolvedOp
 }
-import aqua.model.{CallModel, LiteralModel, ValueModel, VarModel}
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  DetachModel,
+  ForModel,
+  LiteralModel,
+  MatchMismatchModel,
+  NextModel,
+  OnModel,
+  OpModel,
+  ParModel,
+  SeqModel,
+  ValueModel,
+  VarModel,
+  XorModel
+}
 import aqua.model.transform.funcop.ErrorsCatcher
 import aqua.raw.ops.{
   Call,
@@ -51,7 +66,7 @@ case class Node[+T](label: T, children: List[Node[T]] = Nil) {
 
 object Node {
   type Res = Node[ResolvedOp]
-  type Raw = Node[RawTag]
+  type Op = Node[OpModel]
 
   implicit def cofToNode[T](cof: Cofree[Chain, T]): Node[T] =
     Node[T](cof.head, cof.tailForced.toList.map(cofToNode[T]))
@@ -59,11 +74,30 @@ object Node {
   implicit def nodeToCof[T](tree: Node[T]): Cofree[Chain, T] =
     Cofree(tree.label, Eval.later(Chain.fromSeq(tree.children.map(nodeToCof))))
 
-  implicit def rawToFuncOp(tree: Raw): FuncOp =
-    FuncOp(tree.cof)
+  def seq(ops: Node.Op*): Node.Op = {
+    if (ops.length == 1) ops.head
+    else
+      Node(
+        SeqModel,
+        ops.toList
+      )
+  }
 
-  implicit def funcOpToRaw(op: FuncOp): Raw =
-    op.tree
+  def par(ops: Node.Op*): Node.Op = {
+    if (ops.length == 1) ops.head
+    else
+      Node(
+        ParModel,
+        ops.toList
+      )
+  }
+
+  def xor(left: Node.Op, right: Node.Op): Node.Op = {
+    Node(
+      XorModel,
+      left :: right :: Nil
+    )
+  }
 
   implicit def rawToValue(raw: ValueRaw): ValueModel = ValueModel.fromRaw(raw)
 
@@ -94,9 +128,13 @@ object Node {
     CallServiceRes(VarModel(s"srv$i", ScalarType.string), s"fn$i", CallRes(args, exportTo), on)
   )
 
-  def callTag(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueRaw] = Nil): Raw =
+  def callTag(i: Int, exportTo: List[CallModel.Export] = Nil, args: List[ValueRaw] = Nil): Op =
     Node(
-      CallServiceTag(VarRaw(s"srv$i", ScalarType.string), s"fn$i", Call(args, exportTo))
+      CallServiceModel(
+        VarRaw(s"srv$i", ScalarType.string),
+        s"fn$i",
+        CallModel(args.map(ValueModel.fromRaw), exportTo)
+      )
     )
 
   def callLiteralRes(i: Int, on: ValueModel, exportTo: Option[CallModel.Export] = None): Res = Node(
@@ -108,11 +146,11 @@ object Node {
     )
   )
 
-  def callLiteralRaw(i: Int, exportTo: List[Call.Export] = Nil): Raw = Node(
-    CallServiceTag(
+  def callLiteralRaw(i: Int, exportTo: List[CallModel.Export] = Nil): Op = Node(
+    CallServiceModel(
       LiteralRaw.quote("srv" + i),
       s"fn$i",
-      Call(Nil, exportTo)
+      CallModel(Nil, exportTo)
     )
   )
 
@@ -151,44 +189,44 @@ object Node {
       )
     )
 
-  def fold(item: String, iter: ValueRaw, body: Raw*) =
+  def fold(item: String, iter: ValueRaw, body: Op*) =
     Node(
-      ForTag(item, iter),
+      ForModel(item, ValueModel.fromRaw(iter)),
       body.toList :+ next(item)
     )
 
-  def foldPar(item: String, iter: ValueRaw, body: Raw*) = {
-    val ops = Node(SeqTag, body.toList)
+  def foldPar(item: String, iter: ValueRaw, body: Op*) = {
+    val ops = Node(SeqModel, body.toList)
     Node(
-      ForTag(item, iter),
+      ForModel(item, ValueModel.fromRaw(iter)),
       List(
-        Node(ParTag, List(ops, next(item)))
+        Node(ParModel, List(ops, next(item)))
       )
     )
   }
 
-  def co(body: Raw*) =
+  def co(body: Op*) =
     Node(
-      ParTag.Detach,
+      DetachModel,
       body.toList
     )
 
-  def on(peer: ValueRaw, via: List[ValueRaw], body: Raw*) =
+  def on(peer: ValueRaw, via: List[ValueRaw], body: Op*) =
     Node(
-      OnTag(peer, Chain.fromSeq(via)),
+      OnModel(ValueModel.fromRaw(peer), Chain.fromSeq(via.map(ValueModel.fromRaw))),
       body.toList
     )
 
   def nextRes(item: String): Res =
     Node(NextRes(item))
 
-  def next(item: String): Raw =
+  def next(item: String): Op =
     Node(
-      NextTag(item)
+      NextModel(item)
     )
 
-  def `try`(body: Raw*) =
-    Node(XorTag.LeftBiased, body.toList)
+  def `try`(body: Op*) =
+    Node(XorModel, body.toList)
 
   def matchRes(l: ValueModel, r: ValueModel, body: Res): Res =
     Node(
@@ -196,9 +234,9 @@ object Node {
       body :: Nil
     )
 
-  def matchRaw(l: ValueRaw, r: ValueRaw, body: Raw): Raw =
+  def matchRaw(l: ValueRaw, r: ValueRaw, body: Op): Op =
     Node(
-      MatchMismatchTag(l, r, shouldMatch = true),
+      MatchMismatchModel(ValueModel.fromRaw(l), ValueModel.fromRaw(r), shouldMatch = true),
       body :: Nil
     )
 

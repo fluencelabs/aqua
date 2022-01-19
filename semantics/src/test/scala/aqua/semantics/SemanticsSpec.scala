@@ -3,6 +3,7 @@ package aqua.semantics
 import aqua.Node
 import aqua.Node.*
 import aqua.model.AquaContext
+import aqua.raw.RawContext
 import aqua.parser.Ast
 import aqua.raw.ops.FuncOp
 import aqua.model.transform.TransformConfig
@@ -34,7 +35,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val ast = parser(script).toList.head
 
-    val ctx = AquaContext.blank
+    val ctx = RawContext.blank
     val bc = TransformConfig()
     import bc.aquaContextMonoid
 
@@ -44,7 +45,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val proc = Node.cofToNode(func.body.tree)
 
-    val expected: Node.Raw =
+    val expected: Node.Op =
       FuncOp.wrap(
         SeqTag,
         FuncOps.par(
