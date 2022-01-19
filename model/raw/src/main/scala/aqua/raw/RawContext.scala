@@ -14,29 +14,34 @@ import scala.collection.immutable.SortedMap
 /**
  * RawContext is essentially a model of the source code – the first one we get to from the AST.
  *
- * @param module    This file's module name
- * @param declares  What this file declares
- * @param exports   Defined exports: what to export, and optionally how to rename it
- * @param parts     Declarations, functions, etc of the file
- * @param abilities Abilities (e.g. used contexts) available in the scope
+ * @param module
+ *   This file's module name
+ * @param declares
+ *   What this file declares
+ * @param exports
+ *   Defined exports: what to export, and optionally how to rename it
+ * @param parts
+ *   Declarations, functions, etc of the file
+ * @param abilities
+ *   Abilities (e.g. used contexts) available in the scope
  */
 case class RawContext(
-                       module: Option[String] = None,
-                       declares: Set[String] = Set.empty,
-                       exports: Option[Map[String, Option[String]]] = None,
-                       parts: RawPart.Parts = RawPart.RPSMonoid.empty,
-                       abilities: Map[String, RawContext] = Map.empty
-                     ) {
+  module: Option[String] = None,
+  declares: Set[String] = Set.empty,
+  exports: Option[Map[String, Option[String]]] = None,
+  parts: RawPart.Parts = RawPart.RPSMonoid.empty,
+  abilities: Map[String, RawContext] = Map.empty
+) {
 
   def isEmpty: Boolean = this == RawContext.blank
 
   def nonEmpty: Boolean = !isEmpty
 
   def pick(
-            name: String,
-            rename: Option[String],
-            declared: Boolean = module.nonEmpty
-          ): Option[RawContext] =
+    name: String,
+    rename: Option[String],
+    declared: Boolean = module.nonEmpty
+  ): Option[RawContext] =
     Option
       .when(!declared || declares(name)) {
         val targetName = rename.getOrElse(name)
@@ -110,9 +115,8 @@ case class RawContext(
 object RawContext {
   val blank: RawContext = RawContext()
 
-  given Semigroup[RawContext] with
-
-    override def combine(x: RawContext, y: RawContext): RawContext =
+  implicit val semiRC: Semigroup[RawContext] =
+    (x: RawContext, y: RawContext) =>
       RawContext(
         x.module orElse y.module,
         x.declares ++ y.declares,
@@ -131,7 +135,7 @@ object RawContext {
       override def empty: RawContext = init
 
       override def combine(x: RawContext, y: RawContext): RawContext =
-        summon[Semigroup[RawContext]].combine(x, y)
+        semiRC.combine(x, y)
     }
   }
 }
