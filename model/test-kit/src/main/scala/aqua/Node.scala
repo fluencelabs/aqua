@@ -128,7 +128,7 @@ object Node {
     CallServiceRes(VarModel(s"srv$i", ScalarType.string), s"fn$i", CallRes(args, exportTo), on)
   )
 
-  def callTag(i: Int, exportTo: List[CallModel.Export] = Nil, args: List[ValueRaw] = Nil): Op =
+  def callModel(i: Int, exportTo: List[CallModel.Export] = Nil, args: List[ValueRaw] = Nil): Op =
     Node(
       CallServiceModel(
         VarRaw(s"srv$i", ScalarType.string),

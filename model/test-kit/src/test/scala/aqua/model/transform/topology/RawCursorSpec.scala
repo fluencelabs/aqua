@@ -1,5 +1,7 @@
 package aqua.model.transform.topology
 
+import aqua.Node
+import aqua.model.{CallModel, OnModel}
 import aqua.raw.ops.FuncOps
 import aqua.model.transform.cursor.ChainZipper
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
@@ -11,39 +13,39 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class RawCursorSpec extends AnyFlatSpec with Matchers {
-  import FuncOp.*
-  import aqua.raw.ops.FuncOps.*
+
+  import Node.*
 
   "simple raw cursor on init_peer_id" should "move properly" in {
     val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
-          onVia(
+          on(
             ValueRaw.InitPeerId,
-            Chain.empty,
-            callService(LiteralRaw.quote("calledOutside"), "fn", Call(Nil, Nil))
-          ).tree
+            Nil,
+            callModel(1, Nil)
+          )
         )
       )
     )
 
-    //raw.firstExecuted shouldBe raw.lastExecuted
+    // raw.firstExecuted shouldBe raw.lastExecuted
   }
 
   "simple raw cursor with multiple calls" should "move on seqs" in {
     val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
-          onVia(
+          on(
             ValueRaw.InitPeerId,
-            Chain.empty,
+            Nil,
             seq(
-              callService(LiteralRaw.quote("1"), "fn", Call(Nil, Nil)),
-              callService(LiteralRaw.quote("2"), "fn", Call(Nil, Nil)),
-              callService(LiteralRaw.quote("3"), "fn", Call(Nil, Nil)),
-              callService(LiteralRaw.quote("4"), "fn", Call(Nil, Nil))
+              callModel(1),
+              callModel(2),
+              callModel(3),
+              callModel(4)
             )
-          ).tree
+          )
         )
       )
     )
@@ -58,16 +60,16 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
-          onVia(
+          on(
             ValueRaw.InitPeerId,
-            Chain.one(VarRaw("-relay-", ScalarType.string)),
-            callService(LiteralRaw.quote("calledOutside"), "fn", Call(Nil, Nil))
-          ).tree
+            VarRaw("-relay-", ScalarType.string) :: Nil,
+            callModel(1)
+          )
         )
       )
     )
 
-    //raw.firstExecuted shouldBe raw.lastExecuted
+    // raw.firstExecuted shouldBe raw.lastExecuted
   }
 
   "raw cursor" should "move properly" in {
@@ -75,36 +77,31 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
-          onVia(
+          on(
             ValueRaw.InitPeerId,
-            Chain.one(VarRaw("-relay-", ScalarType.string)),
+            VarRaw("-relay-", ScalarType.string) :: Nil,
             seq(
-              callService(LiteralRaw.quote("calledOutside"), "fn", Call(Nil, Nil)),
-              onVia(
+              callModel(1),
+              on(
                 VarRaw("-other-", ScalarType.string),
-                Chain.one(VarRaw("-external-", ScalarType.string)),
-                seq(
-                  callService(
-                    LiteralRaw.quote("calledInside"),
-                    "fn",
-                    Call(Nil, Call.Export("export", ScalarType.string) :: Nil)
-                  ),
-                  leaf(ReturnTag(NonEmptyList.one(VarRaw("export", ScalarType.string))))
+                VarRaw("-external-", ScalarType.string) :: Nil,
+                callModel(
+                  2,
+                  CallModel.Export("export", ScalarType.string) :: Nil
                 )
               ),
-              callService(
-                LiteralRaw.quote("return"),
-                "fn",
-                Call(VarRaw("export", ScalarType.string) :: Nil, Nil)
+              callModel(
+                3,
+                Nil
               )
             )
-          ).tree
+          )
         )
       )
     )
 
     raw.op should be(
-      OnTag(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string)))
+      OnModel(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string)))
     )
 //    raw.firstExecuted.map(_.tag) should be(
 //      Some(
@@ -137,41 +134,38 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
-          onVia(
+          on(
             ValueRaw.InitPeerId,
-            Chain.one(VarRaw("-relay-", ScalarType.string)),
+            VarRaw("-relay-", ScalarType.string) :: Nil,
             seq(
-              callService(LiteralRaw.quote("calledOutside"), "fn", Call(Nil, Nil)),
-              onVia(
+              callModel(1),
+              on(
                 VarRaw("-other-", ScalarType.string),
-                Chain.one(VarRaw("-external-", ScalarType.string)),
+                VarRaw("-external-", ScalarType.string) :: Nil,
                 fold(
                   "item",
                   VarRaw("iterable", ArrayType(ScalarType.string)),
-                  onVia(
+                  on(
                     VarRaw("-in-fold-", ScalarType.string),
-                    Chain.one(VarRaw("-fold-relay-", ScalarType.string)),
-                    callService(
-                      LiteralRaw.quote("calledInside"),
-                      "fn",
-                      Call(Nil, Call.Export("export", ScalarType.string) :: Nil)
+                    VarRaw("-fold-relay-", ScalarType.string) :: Nil,
+                    callModel(
+                      2,
+                      CallModel.Export("export", ScalarType.string) :: Nil
                     )
                   )
                 )
               ),
-              callService(
-                LiteralRaw.quote("return"),
-                "fn",
-                Call(VarRaw("export", ScalarType.string) :: Nil, Nil)
+              callModel(
+                3
               )
             )
-          ).tree
+          )
         )
       )
     )
 
     raw.op should be(
-      OnTag(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string)))
+      OnModel(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string)))
     )
 //    raw.firstExecuted.map(_.tag) should be(
 //      Some(

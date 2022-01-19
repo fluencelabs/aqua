@@ -22,8 +22,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       initPeer,
       relay :: Nil,
       seq(
-        callTag(1),
-        callTag(2)
+        callModel(1),
+        callModel(2)
       )
     )
 
@@ -48,8 +48,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         otherPeer,
         Nil,
         seq(
-          callTag(1),
-          callTag(2)
+          callModel(1),
+          callModel(2)
         )
       )
     )
@@ -71,8 +71,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         otherPeer,
         otherRelay :: Nil,
         seq(
-          callTag(1),
-          callTag(2)
+          callModel(1),
+          callModel(2)
         )
       )
     )
@@ -102,11 +102,11 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           on(
             otherPeer,
             otherRelay :: Nil,
-            callTag(1, exportTo)
+            callModel(1, exportTo)
           ),
-          callTag(2)
+          callModel(2)
         ),
-        callTag(3, Nil, result :: Nil)
+        callModel(3, Nil, result :: Nil)
       )
     )
 
@@ -140,9 +140,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         on(
           otherPeer,
           otherRelay :: Nil,
-          callTag(1)
+          callModel(1)
         ),
-        callTag(2)
+        callModel(2)
       )
     )
 
@@ -162,7 +162,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   "topology resolver" should "create correct calls in try" in {
-    val init = Node.`try`(callTag(1))
+    val init = Node.`try`(callModel(1))
 
     val proc = Topology.resolve(init).value
 
@@ -179,12 +179,12 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         on(
           otherPeer,
           otherRelay :: Nil,
-          callTag(1)
+          callModel(1)
         ),
         on(
           otherPeer2,
           otherRelay2 :: Nil,
-          callTag(2)
+          callModel(2)
         )
       )
     )
@@ -218,10 +218,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         otherRelay :: Nil,
         xor(
           seq(
-            callTag(1),
-            callTag(2)
+            callModel(1),
+            callModel(2)
           ),
-          callTag(3)
+          callModel(3)
         )
       )
     )
@@ -252,9 +252,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         on(
           initPeer,
           relay :: Nil,
-          callTag(1)
+          callModel(1)
         ),
-        callTag(2)
+        callModel(2)
       )
     )
 
@@ -278,9 +278,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         on(
           otherPeer,
           otherRelay :: Nil,
-          callTag(1)
+          callModel(1)
         ),
-        callTag(2)
+        callModel(2)
       )
     )
 
@@ -304,18 +304,18 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       initPeer,
       relay :: Nil,
       seq(
-        callTag(1),
-        callTag(2),
-        callTag(3),
+        callModel(1),
+        callModel(2),
+        callModel(3),
         on(
           varNode,
           viaList :: Nil,
-          callTag(4)
+          callModel(4)
         ),
         on(
           initPeer,
           relay :: Nil,
-          callTag(5)
+          callModel(5)
         )
       )
     )
@@ -331,23 +331,23 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         on(
           otherPeer,
           otherRelay :: Nil,
-          callTag(0),
+          callModel(0),
           on(
             otherPeer2,
             otherRelay :: Nil,
-            callTag(1),
+            callModel(1),
             matchRaw(
               otherPeer,
               otherRelay,
               on(
                 otherPeer,
                 otherRelay :: Nil,
-                callTag(2)
+                callModel(2)
               )
             )
           )
         ),
-        callTag(3)
+        callModel(3)
       )
     )
 
@@ -386,20 +386,20 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           on(
             otherPeer,
             otherRelay :: Nil,
-            callTag(0)
+            callModel(0)
           ),
           on(
             initPeer,
             relay :: Nil,
-            callTag(1)
+            callModel(1)
           )
         ),
         on(
           otherPeer,
           otherRelay :: Nil,
-          callTag(3)
+          callModel(3)
         ),
-        callTag(4)
+        callModel(4)
       )
     )
 
@@ -449,7 +449,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         on(
           otherPeer,
           Nil,
-          callTag(0)
+          callModel(0)
         ),
         on(
           otherPeer,
@@ -460,11 +460,11 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             on(
               otherPeer2,
               Nil,
-              callTag(2)
+              callModel(2)
             )
           )
         ),
-        callTag(3)
+        callModel(3)
       )
 
     val proc: Node.Res = Topology.resolve(init).value
@@ -485,22 +485,22 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       on(
         initPeer,
         relay :: Nil,
-        callTag(0),
+        callModel(0),
         on(
           otherPeer,
           Nil,
-          callTag(1),
+          callModel(1),
           fold(
             "i",
             valueArray,
             on(
               otherPeer2,
               otherRelay2 :: Nil,
-              callTag(2)
+              callModel(2)
             )
           )
         ),
-        callTag(3)
+        callModel(3)
       )
 
     val proc: Node.Res = Topology.resolve(init).value
@@ -538,7 +538,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           on(
             i,
             otherRelay :: Nil,
-            callTag(1)
+            callModel(1)
           )
         )
       )
@@ -570,8 +570,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       on(
         initPeer,
         relay :: Nil,
-        co(on(otherPeer, Nil, callTag(1, CallModel.Export(varNode.name, varNode.baseType) :: Nil))),
-        callTag(2, Nil, varNode :: Nil)
+        co(
+          on(otherPeer, Nil, callModel(1, CallModel.Export(varNode.name, varNode.baseType) :: Nil))
+        ),
+        callModel(2, Nil, varNode :: Nil)
       )
 
     val proc = Topology.resolve(init).value
@@ -601,9 +603,13 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           otherPeer2,
           Nil,
           co(
-            on(otherPeer, Nil, callTag(1, CallModel.Export(varNode.name, varNode.baseType) :: Nil))
+            on(
+              otherPeer,
+              Nil,
+              callModel(1, CallModel.Export(varNode.name, varNode.baseType) :: Nil)
+            )
           ),
-          callTag(2, Nil, varNode :: Nil)
+          callModel(2, Nil, varNode :: Nil)
         )
       )
 
@@ -633,10 +639,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           relay,
           Nil,
           co(
-            on(otherPeer, Nil, callTag(1, CallModel.Export(varNode.name, varNode.baseType) :: Nil))
+            on(
+              otherPeer,
+              Nil,
+              callModel(1, CallModel.Export(varNode.name, varNode.baseType) :: Nil)
+            )
           )
         ),
-        callTag(2, Nil, varNode :: Nil)
+        callModel(2, Nil, varNode :: Nil)
       )
 
     val proc = Topology.resolve(init).value
