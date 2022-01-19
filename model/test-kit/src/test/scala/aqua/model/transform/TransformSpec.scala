@@ -1,7 +1,7 @@
 package aqua.model.transform
 
-import aqua.{Node, model}
-import aqua.model.transform.res.{CallServiceRes, MakeRes}
+import aqua.{model, Node}
+import aqua.model.transform.res.{CallRes, CallServiceRes, MakeRes}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, FuncOps}
@@ -9,11 +9,22 @@ import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import cats.data.Chain
 
 class TransformSpec extends AnyFlatSpec with Matchers {
   import Node.*
 
   val stringArrow: ArrowType = ArrowType(NilType, ProductType(ScalarType.string :: Nil))
+
+  def callOp(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueRaw] = Nil): FuncOp =
+    FuncOp.leaf(
+      CallServiceTag(
+        VarRaw(s"srv$i", ScalarType.string),
+        s"fn$i",
+        Call(args, exportTo)
+      )
+    )
 
   "transform.forClient" should "work well with function 1 (no calls before on), generate correct error handling" in {
 
@@ -22,7 +33,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val func: FuncArrow =
       model.FuncArrow(
         "ret",
-        on(otherPeer, otherRelay :: Nil, callTag(1)),
+        FuncOps.onVia(otherPeer, Chain.fromSeq(otherRelay :: Nil), callOp(1)),
         stringArrow,
         ret :: Nil,
         Map.empty,
@@ -33,7 +44,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val fc = Transform.funcRes(func, bc)
 
-    val procFC: Node.Res = fc.body
+    val procFC: Node.Res = fc.value.body
 
     val expectedFC: Node.Res =
       MakeRes.xor(
@@ -61,7 +72,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         errorCall(bc, 3, initPeer)
       )
 
-    // println(procFC)
+    println(procFC)
 
     Node.equalsOrPrintDiff(procFC, expectedFC) should be(true)
 
@@ -73,7 +84,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val func: FuncArrow = model.FuncArrow(
       "ret",
-      FuncOps.seq(callTag(0), on(otherPeer, Nil, callTag(1))),
+      FuncOps.seq(callOp(0), FuncOps.onVia(otherPeer, Chain.empty, callOp(1))),
       stringArrow,
       ret :: Nil,
       Map.empty,
@@ -84,7 +95,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val fc = Transform.funcRes(func, bc)
 
-    val procFC: Res = fc.body
+    val procFC: Res = fc.value.body
 
     val expectedFC: Res =
       MakeRes.seq(
@@ -143,7 +154,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val bc = TransformConfig(wrapWithXor = false)
 
-    val res = Transform.funcRes(f2, bc).body: Node.Res
+    val res = Transform.funcRes(f2, bc).value.body: Node.Res
 
     res.equalsOrPrintDiff(
       MakeRes.seq(
@@ -152,7 +163,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
           CallServiceRes(
             LiteralRaw.quote("srv1"),
             "foo",
-            CallModel(Nil, Some(Call.Export("v", ScalarType.string))),
+            CallRes(Nil, Some(CallModel.Export("v", ScalarType.string))),
             initPeer
           )
         ),

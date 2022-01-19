@@ -2,7 +2,6 @@ package aqua.model.transform.topology
 
 import aqua.Node
 import aqua.model.{CallModel, ParModel, SeqModel, VarModel, XorModel}
-import aqua.model.inline.ArrowInliner
 import aqua.model.transform.res.{MakeRes, ResolvedOp, SeqRes, XorRes}
 import aqua.raw.ops.{Call, FuncOps}
 import aqua.raw.value.VarRaw
