@@ -68,7 +68,7 @@ case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel {
   override lazy val usesVarNames: Set[String] = Set(idx).filterNot(_.forall(Character.isDigit))
 }
 
-case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel])
+case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel] = Chain.empty)
     extends ValueModel with Logging {
 
   override lazy val usesVarNames: Set[String] =

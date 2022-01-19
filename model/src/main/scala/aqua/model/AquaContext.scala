@@ -16,14 +16,15 @@ import aqua.model.inline.ArgsCall
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
-                        module: Option[String],
-                        funcs: Map[String, FuncArrow],
-                        types: Map[String, Type],
-                        values: Map[String, ValueModel],
-                        abilities: Map[String, AquaContext],
-                        // TODO: merge this with abilities, when have ability resolution variance
-                        services: Map[String, ServiceModel]
-                      ) {
+  module: Option[String],
+  exports: Map[String, Option[String]],
+  funcs: Map[String, FuncArrow],
+  types: Map[String, Type],
+  values: Map[String, ValueModel],
+  abilities: Map[String, AquaContext],
+  // TODO: merge this with abilities, when have ability resolution variance
+  services: Map[String, ServiceModel]
+) {
 
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
@@ -41,11 +42,17 @@ case class AquaContext(
 
   lazy val allFuncs: Map[String, FuncArrow] =
     all(_.funcs)
+
+  lazy val exported: AquaContext =
+    exports.foldLeft(AquaContext.blank) { case (acc, (k, v)) =>
+    // TODO get and maybe rename
+    }
 }
 
 object AquaContext extends Logging {
 
-  val blank: AquaContext = AquaContext(None, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+  val blank: AquaContext =
+    AquaContext(None, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
 
   given Monoid[AquaContext] with
 
@@ -55,6 +62,7 @@ object AquaContext extends Logging {
     def combine(x: AquaContext, y: AquaContext): AquaContext =
       AquaContext(
         x.module orElse y.module,
+        x.exports ++ y.exports,
         x.funcs ++ y.funcs,
         x.types ++ y.types,
         x.values ++ y.values,
@@ -82,17 +90,7 @@ object AquaContext extends Logging {
     )
 
   //
-  def fromRawContext(rawContext: RawContext): AquaContext = {
-    case class Addition(name: String, c: String => AquaContext) {
-      // Only what is explicitely exported is going to be added to exports
-      def toExports: AquaContext = rawContext.module.fold(c(name))(_ =>
-        rawContext.exports.fold(blank)(exps => exps.get(name).fold(blank)(_.fold(c(name))(c)))
-      )
-
-      // Always add to accumulator as is
-      def toAccum: AquaContext = c(name)
-    }
-
+  def fromRawContext(rawContext: RawContext): AquaContext =
     rawContext.parts.parts
       .foldLeft[(AquaContext, AquaContext)](
         // The first context is used to resolve imports
@@ -104,7 +102,8 @@ object AquaContext extends Logging {
               abilities = rawContext.abilities.view.mapValues(fromRawContext).toMap
             ),
             blank.copy(
-              module = rawContext.module
+              module = rawContext.module,
+              exports = rawContext.exports.getOrElse(Map.empty)
             )
           )
 
@@ -112,46 +111,40 @@ object AquaContext extends Logging {
       ) {
         case ((ctx, exportContext), c: ConstantRaw) =>
           // Just saving a constant
-          val add = Addition(
-            c.name,
-            n =>
-              blank
-                .copy(values =
-                  if (c.allowOverrides && ctx.values.contains(c.name)) Map.empty
-                  else Map(n -> ValueModel.fromRaw(c.value).resolveWith(ctx.allValues))
-                )
-          )
+          val add =
+            blank
+              .copy(values =
+                if (c.allowOverrides && ctx.values.contains(c.name)) Map.empty
+                else Map(c.name -> ValueModel.fromRaw(c.value).resolveWith(ctx.allValues))
+              )
 
-          (ctx |+| add.toAccum, exportContext |+| add.toExports)
+          (ctx |+| add, exportContext |+| add)
 
         case ((ctx, exportContext), func: FuncRaw) =>
           // To add a function, we have to know its scope
           val fr = FuncArrow.fromRaw(func, ctx.allFuncs, ctx.allValues)
-          val add = Addition(func.name, n => blank.copy(funcs = Map(n -> fr)))
+          val add = blank.copy(funcs = Map(func.name -> fr))
 
-          (ctx |+| add.toAccum, exportContext |+| add.toExports)
+          (ctx |+| add, exportContext |+| add)
 
         case ((ctx, exportContext), t: TypeRaw) =>
           // Just remember the type (why?)
-          val add = Addition(t.name, n => blank.copy(types = Map(n -> t.`type`)))
-          (ctx |+| add.toAccum, exportContext |+| add.toExports)
+          val add = blank.copy(types = Map(t.name -> t.`type`))
+          (ctx |+| add, exportContext |+| add)
 
         case ((ctx, exportContext), m: ServiceRaw) =>
           // To add a service, we need to resolve its ID, if any
           val id = m.defaultId.map(ValueModel.fromRaw).map(_.resolveWith(ctx.allValues))
           val srv = ServiceModel(m.name, m.arrows, id)
-          val add = Addition(
-            m.name,
-            n =>
-              blank
-                .copy(
-                  abilities = m.defaultId.fold(Map.empty)(id => Map(n -> fromService(m, id))),
-                  services = Map(n -> srv)
-                )
-          )
-          (ctx |+| add.toAccum, exportContext |+| add.toExports)
+          val add =
+            blank
+              .copy(
+                abilities = m.defaultId.fold(Map.empty)(id => Map(m.name -> fromService(m, id))),
+                services = Map(m.name -> srv)
+              )
+
+          (ctx |+| add, exportContext |+| add)
         case (ce, _) => ce
       }
       ._2
-  }
 }

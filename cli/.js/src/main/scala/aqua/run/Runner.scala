@@ -18,11 +18,11 @@ import scala.concurrent.ExecutionContext
 import scala.scalajs.js
 
 class Runner(
-              funcName: String,
-              funcCallable: FuncArrow,
-              args: List[ValueRaw],
-              config: RunConfig,
-              transformConfig: TransformConfig
+  funcName: String,
+  funcCallable: FuncArrow,
+  args: List[ValueRaw],
+  config: RunConfig,
+  transformConfig: TransformConfig
 ) {
 
   def resultVariableNames(funcCallable: FuncArrow, name: String): List[String] =
@@ -54,11 +54,12 @@ class Runner(
 
   // Generates air from function, register all services and make a call through FluenceJS
   private def genAirAndMakeCall[F[_]: Async](
-                                              wrapped: FuncArrow,
-                                              consoleService: Console,
-                                              finisherService: Finisher
+    wrapped: FuncArrow,
+    consoleService: Console,
+    finisherService: Finisher
   )(implicit ec: ExecutionContext): F[Unit] = {
-    val funcRes = Transform.funcRes(wrapped, transformConfig)
+    // TODO: prob we can turn this Eval into F
+    val funcRes = Transform.funcRes(wrapped, transformConfig).value
     val definitions = FunctionDef(funcRes)
 
     val air = FuncAirGen(funcRes).generate.show

@@ -32,7 +32,7 @@ import cats.syntax.list.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.{Id, Monad, ~>}
+import cats.{~>, Id, Monad}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -55,14 +55,16 @@ object RunCommand extends Logging {
 
   private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncArrow] =
     contexts
-      .flatMap(_.exports.map(e => Chain.fromSeq(e.funcs.values.toList)).getOrElse(Chain.empty))
-      .find(_.funcName == funcName)
+      .collectFirstSome(_.exported.funcs.get(funcName))
 
   /**
    * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
-   * @param func function name
-   * @param input path to an aqua code with a function
-   * @param imports the sources the input needs
+   * @param func
+   *   function name
+   * @param input
+   *   path to an aqua code with a function
+   * @param imports
+   *   the sources the input needs
    */
   def run[F[_]: Files: AquaIO: Async](
     func: String,
