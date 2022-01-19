@@ -2,26 +2,14 @@ package aqua.model.transform.topology
 
 import aqua.model.transform.cursor.ChainZipper
 import aqua.model.transform.res.*
-import aqua.model.{
-  CallServiceModel,
-  ForModel,
-  LiteralModel,
-  NextModel,
-  OnModel,
-  OpModel,
-  ParGroupModel,
-  ParModel,
-  SeqGroupModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
+import aqua.model.*
 import aqua.types.{BoxType, ScalarType}
 import cats.Eval
 import cats.data.Chain.{==:, nil}
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
 import cats.free.Cofree
 import cats.syntax.traverse.*
+import cats.syntax.show.*
 import cats.syntax.apply.*
 import scribe.Logging
 
@@ -225,9 +213,15 @@ object Topology extends Logging {
     override def toString: String = "<seq>/*"
 
     // If parent is seq, then before this node we are where previous node, if any, ends
-    override def beforeOn(current: Topology): Eval[List[OnModel]] =
+    override def beforeOn(current: Topology): Eval[List[OnModel]] = {
+      println(Console.RED + "--prev: " + current.prevSibling + Console.RESET)
+      println(Console.RED + "--prnt: " + current.parent + Console.RESET)
+      println(Console.RED + "--finOn:" + current.prevSibling.map(_.finallyOn.value) + Console.RESET)
+      println(Console.RED + "--super:" + super.beforeOn(current).value + Console.RESET)
+
       current.prevSibling
         .map(_.finallyOn) getOrElse super.beforeOn(current)
+    }
 
     override def afterOn(current: Topology): Eval[List[OnModel]] =
       current.nextSibling.map(_.beginsOn) getOrElse afterParent(current)
@@ -412,6 +406,7 @@ object Topology extends Logging {
     )
 
   def resolve(op: OpModel.Tree, debug: Boolean = false): Eval[Res] = {
+    println(op.show)
     val resolved = resolveOnMoves(op, debug).value
     Cofree
       .cata[Chain, ResolvedOp, Res](resolved) {
@@ -461,7 +456,7 @@ object Topology extends Logging {
 
         logger.trace("Resolved: " + resolved)
 
-        if (debug) {
+        if (debug || true) {
           println(Console.BLUE + rc + Console.RESET)
           println(rc.topology)
           println("Before: " + rc.topology.beforeOn.value)

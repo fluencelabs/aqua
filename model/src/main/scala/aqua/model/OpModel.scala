@@ -2,6 +2,7 @@ package aqua.model
 
 import cats.data.Chain
 import cats.free.Cofree
+import cats.Show
 import cats.Eval
 import cats.data.NonEmptyList
 
@@ -22,7 +23,7 @@ sealed trait OpModel {
   def wrap(children: OpModel.Tree*): OpModel.Tree = Cofree(this, Eval.now(Chain.fromSeq(children)))
 
   def wrapIfNonEmpty(children: OpModel.Tree*): OpModel.Tree =
-    children.toList match {
+    children.toList.filterNot(_ == EmptyModel) match {
       case Nil => EmptyModel.leaf
       case x :: Nil => x
       case ch => wrap(ch: _*)
@@ -33,6 +34,20 @@ object OpModel {
   type Tree = Cofree[Chain, OpModel]
   private val nil: Eval[Chain[Tree]] = Eval.now(Chain.empty)
   val empty: Tree = EmptyModel.leaf
+
+  private def showOffset(what: Tree, offset: Int): String = {
+    val spaces = " " * offset
+    spaces + what.head.toString.stripSuffix("Model") + what.tail.map {
+      case ch if ch.nonEmpty =>
+        " :\n" + ch.toList.map(showOffset(_, offset + 1)).mkString("") + "\n"
+      case ch => "\n"
+    }.value
+  }
+
+  given Show[Tree] with
+
+    override def show(t: Tree): String =
+      showOffset(t, 0)
 
   def exportsVarNames(tree: Tree): Eval[Set[String]] = Cofree.cata(tree) { case (op, acc) =>
     Eval.later(acc.foldLeft(op.exportsVarNames)(_ ++ _) -- op.restrictsVarNames)

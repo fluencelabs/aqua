@@ -82,7 +82,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val ret = LiteralRaw.quote("return this")
 
-    val func: FuncArrow = model.FuncArrow(
+    val func: FuncArrow = FuncArrow(
       "ret",
       FuncOps.seq(callOp(0), FuncOps.onVia(otherPeer, Chain.empty, callOp(1))),
       stringArrow,
