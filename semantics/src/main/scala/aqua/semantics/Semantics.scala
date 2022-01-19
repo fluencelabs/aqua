@@ -1,7 +1,7 @@
 package aqua.semantics
 
 import aqua.raw.ops.FuncOp
-import aqua.raw.{Raw, RawContext}
+import aqua.raw.{Raw, RawContext, RawPart}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
@@ -90,11 +90,17 @@ object Semantics extends Logging {
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(ctx))(Invalid(_))
+        case (state, parts: RawPart.Parts) =>
+          val ctx = RawContext.blank.copy(parts = parts)
+          NonEmptyChain
+            .fromChain(state.errors)
+            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(ctx))(Invalid(_))
         case (state, _: Raw.Empty) =>
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(init))(Invalid(_))
         case (state, m) =>
+          logger.error("Got unexpected " + m)
           NonEmptyChain
             .fromChain(state.errors)
             .map(Invalid(_))

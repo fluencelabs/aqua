@@ -112,7 +112,7 @@ object ErrorRendering {
             .map(_.toConsoleStr("Header error", message :: Nil, Console.CYAN))
             .getOrElse("(Dup error, but offset is beyond the script)")
         case WrongAST(ast) =>
-          s"Semantic error"
+          s"Semantic error: wrong AST"
 
       }
 
