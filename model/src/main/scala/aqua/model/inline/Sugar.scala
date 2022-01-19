@@ -31,38 +31,55 @@ import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, ValueR
 import cats.data.{Chain, State}
 import cats.syntax.traverse.*
 import cats.instances.list.*
-import scribe.Logging
+import cats.syntax.functor.*
+import scribe.{log, Logging}
 
 object Sugar extends Logging {
 
-  // Todo: use state monad instead of counter
-  private def unfold(raw: ValueRaw, i: Int): (ValueModel, Map[String, ValueRaw]) = raw match {
-    case VarRaw(name, t, lambda) if lambda.isEmpty =>
-      VarModel(name, t, Chain.empty) -> Map.empty
-    case LiteralRaw(value, t) =>
-      LiteralModel(value, t) -> Map.empty
-    case VarRaw(name, t, lambda) =>
-      val (lambdaModel, map) =
-        lambda.foldLeft(Chain.empty[LambdaModel] -> Map.empty[String, ValueRaw]) {
-          case ((lc, m), l) =>
-            val (lm, mm) = unfoldLambda(l, i + m.size)
-            (lc :+ lm, m ++ mm)
+  private def unfold[S: Counter: Exports](
+    raw: ValueRaw
+  ): State[S, (ValueModel, Map[String, ValueRaw])] =
+    Exports[S].exports.flatMap(exports =>
+      raw match {
+        case VarRaw(name, t, lambda) if lambda.isEmpty =>
+          val vm = VarModel(name, t, Chain.empty).resolveWith(exports)
+          State.pure(vm -> Map.empty)
+        case LiteralRaw(value, t) =>
+          State.pure(LiteralModel(value, t) -> Map.empty)
+        case VarRaw(name, t, lambda) =>
+          lambda
+            .foldLeft[State[S, (Chain[LambdaModel], Map[String, ValueRaw])]](
+              State.pure(Chain.empty[LambdaModel] -> Map.empty[String, ValueRaw])
+            ) { case (lcm, l) =>
+              lcm.flatMap { case (lc, m) =>
+                unfoldLambda(l).map { case (lm, mm) =>
+                  (lc :+ lm, m ++ mm)
+                }
+              }
+            }
+            .map { case (lambdaModel, map) =>
+              val vm = VarModel(name, t, lambdaModel).resolveWith(exports)
+              vm -> Map.empty
+            }
+      }
+    )
+
+  private def unfoldLambda[S: Counter](
+    l: LambdaRaw
+  ): State[S, (LambdaModel, Map[String, ValueRaw])] =
+    l match {
+      case IntoFieldRaw(field, t) => State.pure(IntoFieldModel(field, t) -> Map.empty)
+      case IntoIndexRaw(vm @ VarRaw(name, _, l), t) if l.nonEmpty =>
+        Counter[S].incr.map { i =>
+          val ni = name + "-" + i
+          IntoIndexModel(ni, t) -> Map(ni -> vm)
         }
-      VarModel(name, t, lambdaModel) -> map
-  }
+      case IntoIndexRaw(VarRaw(name, _, _), t) =>
+        State.pure(IntoIndexModel(name, t) -> Map.empty)
 
-  // Todo: use state monad instead of counter
-  private def unfoldLambda(l: LambdaRaw, i: Int): (LambdaModel, Map[String, ValueRaw]) = l match {
-    case IntoFieldRaw(field, t) => IntoFieldModel(field, t) -> Map.empty
-    case IntoIndexRaw(vm@VarRaw(name, _, l), t) if l.nonEmpty =>
-      val ni = name + "-" + i
-      IntoIndexModel(ni, t) -> Map(ni -> vm)
-    case IntoIndexRaw(VarRaw(name, _, _), t) =>
-      IntoIndexModel(name, t) -> Map.empty
-
-    case IntoIndexRaw(LiteralRaw(value, _), t) =>
-      IntoIndexModel(value, t) -> Map.empty
-  }
+      case IntoIndexRaw(LiteralRaw(value, _), t) =>
+        State.pure(IntoIndexModel(value, t) -> Map.empty)
+    }
 
   private def parDesugarPrefix(ops: List[OpModel.Tree]): Option[OpModel.Tree] = ops match {
     case Nil => None
@@ -73,11 +90,12 @@ object Sugar extends Logging {
   private def parDesugarPrefixOpt(ops: Option[OpModel.Tree]*): Option[OpModel.Tree] =
     parDesugarPrefix(ops.toList.flatten)
 
-  def desugarize[S: Counter](value: ValueRaw): State[S, (ValueModel, Option[OpModel.Tree])] =
+  def desugarize[S: Counter: Exports](
+    value: ValueRaw
+  ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
-      i <- Counter[S].get
-      (vm, map) = unfold(value, i)
-      _ <- Counter[S].add(map.size)
+      vmp <- unfold(value)
+      (vm, map) = vmp
 
       ops <- map.toList.traverse { case (name, v) =>
         desugarize(v).map {
@@ -90,14 +108,14 @@ object Sugar extends Logging {
       }
     } yield vm -> parDesugarPrefix(ops)
 
-  def desugarize[S: Counter](
-                              values: List[ValueRaw]
-                            ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
+  def desugarize[S: Counter: Exports](
+    values: List[ValueRaw]
+  ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(desugarize(_))
 
-  def desugarize[S: Counter](
-                              call: Call
-                            ): State[S, (CallModel, Option[OpModel.Tree])] =
+  def desugarize[S: Counter: Exports](
+    call: Call
+  ): State[S, (CallModel, Option[OpModel.Tree])] =
     desugarize(call.args).map(list =>
       (
         CallModel(
@@ -114,9 +132,9 @@ object Sugar extends Logging {
   private def none[S]: State[S, Option[(OpModel, Option[OpModel.Tree])]] =
     State.pure(None)
 
-  def desugarize[S: Counter : Mangler : Arrows : Exports](
-                                                           tag: RawTag
-                                                         ): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
+  def desugarize[S: Counter: Mangler: Arrows: Exports](
+    tag: RawTag
+  ): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
     tag match {
       case OnTag(peerId, via) =>
         for {
