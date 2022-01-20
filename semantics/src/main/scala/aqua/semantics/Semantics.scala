@@ -86,7 +86,8 @@ object Semantics extends Logging {
       .run(CompilerState.init[S](init))
       .map {
         case (state, gen: RawContext) =>
-          val ctx: RawContext = gen // TODO handle constants RawContext.fromRawContext(gen, init)
+          val ctx: RawContext =
+            gen.copy(init = Some(init).filter(_ != RawContext.blank))
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(ctx))(Invalid(_))
@@ -95,7 +96,10 @@ object Semantics extends Logging {
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(init))(Invalid(_))
         case (state, part: (RawPart | RawPart.Parts)) =>
-          val ctx = RawContext.blank.copy(parts = RawPart.contextPart(part))
+          val ctx = RawContext.blank.copy(
+            parts = RawPart.contextPart(part),
+            init = Some(init).filter(_ != RawContext.blank)
+          )
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(ctx))(Invalid(_))

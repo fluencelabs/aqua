@@ -14,6 +14,8 @@ import scala.collection.immutable.SortedMap
 /**
  * RawContext is essentially a model of the source code – the first one we get to from the AST.
  *
+ * @param init
+ *   Initial context – collected imports, needed for re-exporting in AquaContext later
  * @param module
  *   This file's module name
  * @param declares
@@ -26,6 +28,7 @@ import scala.collection.immutable.SortedMap
  *   Abilities (e.g. used contexts) available in the scope
  */
 case class RawContext(
+  init: Option[RawContext] = None,
   module: Option[String] = None,
   declares: Set[String] = Set.empty,
   exports: Option[Map[String, Option[String]]] = None,
@@ -118,6 +121,7 @@ object RawContext {
   implicit val semiRC: Semigroup[RawContext] =
     (x: RawContext, y: RawContext) =>
       RawContext(
+        x.init.flatMap(xi => y.init.map(xi |+| _)) orElse x.init orElse y.init,
         x.module orElse y.module,
         x.declares ++ y.declares,
         x.exports.flatMap(xe => y.exports.map(xe ++ _)) orElse x.exports orElse y.exports,

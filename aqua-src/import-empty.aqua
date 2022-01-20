@@ -1,7 +1,7 @@
 -- import.aqua
 module Import.Test
 import foo from "export"
-import someFunc from "ret"
+--import someFunc from "ret"
 
 use foo as f from "export" as Exp
 
