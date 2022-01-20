@@ -17,16 +17,16 @@ import scribe.Logging
  * Wraps all the logic for topology reasoning about the tag in the AST represented by the [[cursor]]
  *
  * @param cursor
- *   Pointer to the current place in the AST
+ * Pointer to the current place in the AST
  * @param before
- *   Strategy of calculating where the previous executions happened
+ * Strategy of calculating where the previous executions happened
  * @param begins
- *   Strategy of calculating where execution of this tag/node should begin
+ * Strategy of calculating where execution of this tag/node should begin
  * @param ends
- *   Strategy of calculating where execution of this tag/node happens
+ * Strategy of calculating where execution of this tag/node happens
  * @param after
- *   Strategy of calculating where the next execution should happen and whether we need to move
- *   there or not
+ * Strategy of calculating where the next execution should happen and whether we need to move
+ * there or not
  */
 case class Topology private (
   cursor: OpModelTreeCursor,
@@ -74,15 +74,28 @@ case class Topology private (
 
   lazy val currentPeerId: Option[ValueModel] = pathOn.value.headOption.map(_.peerId)
 
-  lazy val prevSibling: Option[Topology] = cursor.toPrevSibling.map(_.topology)
+  // noExec nodes are meaningless topology-wise, so filter them out
+  lazy val prevSibling: Option[Topology] = cursor.toPrevSibling.flatMap {
+    case c if c.isNoExec => c.topology.prevSibling
+    case c => Some(c.topology)
+  }
 
-  lazy val nextSibling: Option[Topology] = cursor.toNextSibling.map(_.topology)
+  lazy val nextSibling: Option[Topology] = cursor.toNextSibling.flatMap {
+    case c if c.isNoExec => c.topology.nextSibling
+    case c => Some(c.topology)
+  }
 
-  lazy val firstChild: Option[Topology] = cursor.toFirstChild.map(_.topology)
+  lazy val firstChild: Option[Topology] = cursor.toFirstChild.flatMap {
+    case c if c.isNoExec => c.topology.nextSibling
+    case c => Some(c.topology)
+  }
 
-  lazy val lastChild: Option[Topology] = cursor.toLastChild.map(_.topology)
+  lazy val lastChild: Option[Topology] = cursor.toLastChild.flatMap {
+    case c if c.isNoExec => c.topology.prevSibling
+    case c => Some(c.topology)
+  }
 
-  lazy val children: LazyList[Topology] = cursor.children.map(_.topology)
+  lazy val children: LazyList[Topology] = cursor.children.filterNot(_.isNoExec).map(_.topology)
 
   def findInside(f: Topology => Boolean): LazyList[Topology] =
     children.flatMap(_.findInside(f)).prependedAll(Option.when(f(this))(this))
@@ -120,6 +133,9 @@ case class Topology private (
   lazy val pathBefore: Eval[Chain[ValueModel]] = begins.pathBefore(this).memoize
 
   lazy val pathAfter: Eval[Chain[ValueModel]] = after.pathAfter(this).memoize
+
+  override def toString: String =
+    s"Topology(${cursor},\n\tbefore: ${before},\n\tbegins: $begins,\n\t  ends: $ends,\n\t after:$after)"
 }
 
 object Topology extends Logging {
@@ -141,6 +157,7 @@ object Topology extends Logging {
       current.parent.map(_.beginsOn) getOrElse
         // This means, we have no parent; then we're where we should be
         current.pathOn
+
   }
 
   trait Begins {
@@ -213,15 +230,10 @@ object Topology extends Logging {
     override def toString: String = "<seq>/*"
 
     // If parent is seq, then before this node we are where previous node, if any, ends
-    override def beforeOn(current: Topology): Eval[List[OnModel]] = {
-      println(Console.RED + "--prev: " + current.prevSibling + Console.RESET)
-      println(Console.RED + "--prnt: " + current.parent + Console.RESET)
-      println(Console.RED + "--finOn:" + current.prevSibling.map(_.finallyOn.value) + Console.RESET)
-      println(Console.RED + "--super:" + super.beforeOn(current).value + Console.RESET)
-
+    override def beforeOn(current: Topology): Eval[List[OnModel]] =
+      // Where we are after the previous node in the parent
       current.prevSibling
         .map(_.finallyOn) getOrElse super.beforeOn(current)
-    }
 
     override def afterOn(current: Topology): Eval[List[OnModel]] =
       current.nextSibling.map(_.beginsOn) getOrElse afterParent(current)
@@ -405,29 +417,28 @@ object Topology extends Logging {
       }
     )
 
-  def resolve(op: OpModel.Tree, debug: Boolean = false): Eval[Res] = {
-    println(op.show)
-    val resolved = resolveOnMoves(op, debug).value
-    Cofree
-      .cata[Chain, ResolvedOp, Res](resolved) {
-        case (SeqRes, children) =>
-          Eval.later {
-            children.uncons
-              .filter(_._2.isEmpty)
-              .map(_._1)
-              .getOrElse(
-                Cofree(
-                  SeqRes,
-                  Eval.now(children.flatMap {
-                    case Cofree(SeqRes, ch) => ch.value
-                    case cf => Chain.one(cf)
-                  })
+  def resolve(op: OpModel.Tree, debug: Boolean = false): Eval[Res] =
+    resolveOnMoves(op, debug).flatMap(resolved =>
+      Cofree
+        .cata[Chain, ResolvedOp, Res](resolved) {
+          case (SeqRes, children) =>
+            Eval.later {
+              children.uncons
+                .filter(_._2.isEmpty)
+                .map(_._1)
+                .getOrElse(
+                  Cofree(
+                    SeqRes,
+                    Eval.now(children.flatMap {
+                      case Cofree(SeqRes, ch) => ch.value
+                      case cf => Chain.one(cf)
+                    })
+                  )
                 )
-              )
-          }
-        case (head, children) => Eval.later(Cofree(head, Eval.now(children)))
-      }
-  }
+            }
+          case (head, children) => Eval.later(Cofree(head, Eval.now(children)))
+        }
+    )
 
   def wrap(cz: ChainZipper[Res]): Chain[Res] =
     Chain.one(
@@ -448,17 +459,18 @@ object Topology extends Logging {
     val resolvedCofree = cursor
       .cata(wrap) { rc =>
         logger.debug(s"<:> $rc")
+        val currI = nextI
         val resolved =
           MakeRes
-            .resolve(rc.topology.currentPeerId, nextI)
+            .resolve(rc.topology.currentPeerId, currI)
             .lift
             .apply(rc.op)
 
         logger.trace("Resolved: " + resolved)
 
-        if (debug || true) {
+        if (debug) {
           println(Console.BLUE + rc + Console.RESET)
-          println(rc.topology)
+          println(currI + " : " + rc.topology)
           println("Before: " + rc.topology.beforeOn.value)
           println("Begin: " + rc.topology.beginsOn.value)
           println(

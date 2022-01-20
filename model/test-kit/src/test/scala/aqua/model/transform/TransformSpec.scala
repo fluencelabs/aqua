@@ -13,6 +13,7 @@ import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import cats.data.Chain
 
 class TransformSpec extends AnyFlatSpec with Matchers {
+
   import Node.*
 
   val stringArrow: ArrowType = ArrowType(NilType, ProductType(ScalarType.string :: Nil))
@@ -71,8 +72,6 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         ),
         errorCall(bc, 3, initPeer)
       )
-
-    println(procFC)
 
     Node.equalsOrPrintDiff(procFC, expectedFC) should be(true)
 

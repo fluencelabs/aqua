@@ -5,6 +5,7 @@ import cats.Eval
 import cats.data.{Chain, NonEmptyList, OptionT}
 import aqua.model.transform.cursor.*
 import cats.syntax.traverse.*
+import cats.syntax.show.*
 import cats.free.Cofree
 import scribe.Logging
 
@@ -97,5 +98,6 @@ case class OpModelTreeCursor(
       wrap(ChainZipper(prev, inner, next))
     }.getOrElse(Chain.empty).memoize
 
-  override def toString: String = s"$op /: ${moveUp.getOrElse("(|)")}"
+  override def toString: String =
+    s"[${tree.head.prev.length}]${op.show} /: ${moveUp.getOrElse("(|)")}"
 }

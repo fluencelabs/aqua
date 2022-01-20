@@ -1,0 +1,88 @@
+package aqua.model
+
+import aqua.model.OpModel.Tree
+import cats.Show
+import cats.data.Chain
+import cats.syntax.show.*
+import cats.syntax.apply.*
+
+import scala.annotation.tailrec
+
+trait OpModelShow {
+
+  given Show[OpModel] with
+
+    override def show(t: OpModel): String =
+      t.toString.stripSuffix("Model")
+
+  private def showOffset(what: Tree, offset: Int): String = {
+    val spaces = " " * offset
+    spaces + what.head.show + what.tail.map {
+      case ch if ch.nonEmpty =>
+        " :\n" + ch.toList.map(showOffset(_, offset + 1)).mkString("") + "\n"
+      case ch => "\n"
+    }.value
+  }
+
+  private def showDiffOffset(what: (Tree, Tree), offset: Int): String = {
+    val spaces = " " * offset
+    val head =
+      if (what._1.head == what._2.head) what._1.head.show
+      else
+        Console.YELLOW + what._1.head.show + Console.RED + " != " + Console.CYAN + what._2.head.show + Console.RESET
+
+    spaces + head + (what._1.tail, what._2.tail).mapN {
+      case (c1, c2) if c1.isEmpty && c2.isEmpty => "\n"
+      case (c1, c2) =>
+        @tailrec
+        def nxt(l: List[Tree], r: List[Tree], acc: Chain[String]): List[String] = (l, r) match {
+          case (x :: tail, Nil) =>
+            nxt(tail, Nil, acc :+ (Console.YELLOW + showOffset(x, offset + 1) + Console.RESET))
+          case (Nil, y :: tail) =>
+            nxt(tail, Nil, acc :+ (Console.CYAN + showOffset(y, offset + 1) + Console.RESET))
+          case (x :: xt, y :: yt) if x.head == y.head =>
+            nxt(xt, yt, acc :+ showDiffOffset(x -> y, offset + 1))
+          case (x :: xt, yt) if yt.exists(_.head == x.head) =>
+            val yh = yt.takeWhile(_.head != x.head)
+            nxt(
+              l,
+              yt.drop(yh.length),
+              acc ++ Chain.fromSeq(
+                yh.map(y => Console.CYAN + showOffset(y, offset + 1) + Console.RESET)
+              )
+            )
+          case (xt, y :: yt) if xt.exists(_.head == y.head) =>
+            val xh = xt.takeWhile(_.head != y.head)
+            nxt(
+              xt.drop(xh.length),
+              r,
+              acc ++ Chain.fromSeq(
+                xh.map(x => Console.YELLOW + showOffset(x, offset + 1) + Console.RESET)
+              )
+            )
+          case (x :: xt, y :: yt) =>
+            nxt(xt, yt, acc :+ showDiffOffset(x -> y, offset + 1))
+          case (Nil, Nil) => acc.toList
+        }
+
+        " :" + (if (c1.length == c2.length) "\n"
+                else Console.RED + s" left ${c1.size} != right ${c2.size}\n") + nxt(
+          c1.toList,
+          c2.toList,
+          Chain.empty
+        ).mkString("")
+
+    }.value
+  }
+
+  given Show[Tree] with
+
+    override def show(t: Tree): String =
+      showOffset(t, 0)
+
+  given Show[(Tree, Tree)] with
+
+    override def show(tt: (Tree, Tree)): String =
+      showDiffOffset(tt, 0)
+
+}

@@ -6,6 +6,8 @@ import cats.Show
 import cats.Eval
 import cats.data.NonEmptyList
 
+import scala.annotation.tailrec
+
 sealed trait OpModel {
 
   // What var names are restricted only for children of this tag – CANNOT be used after this tag, only within
@@ -30,24 +32,10 @@ sealed trait OpModel {
     }
 }
 
-object OpModel {
+object OpModel extends OpModelShow {
   type Tree = Cofree[Chain, OpModel]
   private val nil: Eval[Chain[Tree]] = Eval.now(Chain.empty)
   val empty: Tree = EmptyModel.leaf
-
-  private def showOffset(what: Tree, offset: Int): String = {
-    val spaces = " " * offset
-    spaces + what.head.toString.stripSuffix("Model") + what.tail.map {
-      case ch if ch.nonEmpty =>
-        " :\n" + ch.toList.map(showOffset(_, offset + 1)).mkString("") + "\n"
-      case ch => "\n"
-    }.value
-  }
-
-  given Show[Tree] with
-
-    override def show(t: Tree): String =
-      showOffset(t, 0)
 
   def exportsVarNames(tree: Tree): Eval[Set[String]] = Cofree.cata(tree) { case (op, acc) =>
     Eval.later(acc.foldLeft(op.exportsVarNames)(_ ++ _) -- op.restrictsVarNames)
