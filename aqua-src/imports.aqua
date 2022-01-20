@@ -1,0 +1,20 @@
+module Imports declares *
+
+import decl_foo, decl_bar, DECLARE_CONST as EXPORT_CONST from "declare.aqua"
+use DECLARE_CONST, SuperFoo, DECLARE_CONST2 as DC2 from "declare.aqua" as Declare
+
+export concat_foobars
+
+service StringService("string_service"):
+    concat(a: string, b: string) -> string
+
+func concat_foobars() -> string:
+--    res1 <- decl_foo()
+--    res2 <- decl_bar()
+--    res3 <- StringService.concat(res1, res2)
+    res4 <- Declare.SuperFoo.small_foo()
+    res5 <- StringService.concat(res4, res4)
+    res6 <- StringService.concat(res5, EXPORT_CONST)
+    res7 <- StringService.concat(res6, Declare.DECLARE_CONST)
+    res8 <- StringService.concat(res7, Declare.DC2)
+    <- res8

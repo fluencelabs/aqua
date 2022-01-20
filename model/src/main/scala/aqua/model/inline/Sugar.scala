@@ -97,6 +97,11 @@ object Sugar extends Logging {
       vmp <- unfold(value)
       (vm, map) = vmp
 
+      _ = logger.trace("RAW " + value)
+      _ = logger.trace("MOD " + vm)
+      dc <- Exports[S].exports
+      _ = logger.trace("DEC " + dc)
+
       ops <- map.toList.traverse { case (name, v) =>
         desugarize(v).map {
           case (vv, Some(op)) =>
@@ -181,6 +186,7 @@ object Sugar extends Logging {
           .map(nel => Some(JoinModel(nel.map(_._1)) -> parDesugarPrefix(nel.toList.flatMap(_._2))))
 
       case CallArrowTag(funcName, call) =>
+        logger.trace(s"            $funcName")
         Arrows[S].arrows.flatMap(arrows =>
           arrows.get(funcName) match {
             case Some(fn) =>

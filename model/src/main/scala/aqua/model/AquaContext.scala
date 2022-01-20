@@ -117,8 +117,10 @@ object AquaContext extends Logging {
       }
     )
 
+  def fromRaw(rawContext: RawContext): AquaContext = fromRawContext(rawContext)._2
+
   //
-  def fromRawContext(rawContext: RawContext): AquaContext =
+  private def fromRawContext(rawContext: RawContext): (AquaContext, AquaContext) =
     rawContext.parts.parts
       .foldLeft[(AquaContext, AquaContext)](
         // The first context is used to resolve imports
@@ -127,13 +129,14 @@ object AquaContext extends Logging {
           // Laziness unefficiency happens here
           (
             rawContext.init
-              .map(fromRawContext)
-              .getOrElse(blank)
-              .copy(
-                abilities = rawContext.abilities.view.mapValues(fromRawContext).toMap
+              .map(fromRawContext(_)._1)
+              .getOrElse(
+                blank.copy(
+                  abilities = rawContext.abilities.view.mapValues(fromRawContext(_)._2).toMap
+                )
               ),
             rawContext.init
-              .map(fromRawContext)
+              .map(fromRawContext(_)._2)
               // Handle reexports
               .map(_.copy(exports = rawContext.exports.getOrElse(Map.empty)).exported)
               .getOrElse(blank)
@@ -158,6 +161,7 @@ object AquaContext extends Logging {
 
         case ((ctx, exportContext), func: FuncRaw) =>
           // To add a function, we have to know its scope
+          logger.trace(s"values for ${func.name} at ${rawContext.module} " + ctx.allValues.keySet)
           val fr = FuncArrow.fromRaw(func, ctx.allFuncs, ctx.allValues)
           val add = blank.copy(funcs = Map(func.name -> fr))
 
@@ -182,5 +186,5 @@ object AquaContext extends Logging {
           (ctx |+| add, exportContext |+| add)
         case (ce, _) => ce
       }
-      ._2
+
 }
