@@ -1,6 +1,5 @@
 package aqua.model.inline
 
-import aqua.model
 import aqua.model.{CallModel, FuncArrow, OpModel, PushToStreamModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.raw.ops.FuncOp.Tree

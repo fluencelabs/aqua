@@ -1,6 +1,5 @@
 package aqua.model.transform.res
 
-import aqua.model
 import aqua.model.transform.topology.Topology.Res
 import aqua.model.*
 import aqua.types.{ArrayType, StreamType}

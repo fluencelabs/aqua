@@ -1,6 +1,5 @@
 package aqua.model.transform.res
 
-import aqua.model
 import aqua.model.{CallModel, ValueModel, VarModel}
 import aqua.raw.ops.Call
 import cats.data.Chain
@@ -10,7 +9,7 @@ import cats.free.Cofree
 sealed trait ResolvedOp
 
 object ResolvedOp {
-  type Tree =  Cofree[Chain, ResolvedOp]
+  type Tree = Cofree[Chain, ResolvedOp]
 }
 
 sealed trait NoAir extends ResolvedOp

@@ -4,7 +4,6 @@ import aqua.backend.FunctionDef
 import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Console, Finisher}
 import aqua.io.OutputPrinter
-import aqua.model
 import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.raw.ops.{Call, CallArrowTag, FuncOp, FuncOps}
@@ -145,7 +144,7 @@ class Runner(
     gettersV.map { getters =>
       val gettersTags = getters.map(s => FuncOp.leaf(s.callTag()))
 
-      model.FuncArrow(
+      FuncArrow(
         config.functionWrapperName,
         FuncOps.seq((gettersTags :+ body :+ FuncOp.leaf(finisherServiceTag)): _*),
         // no arguments and returns nothing

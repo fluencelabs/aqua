@@ -1,6 +1,5 @@
 package aqua.backend.air
 
-import aqua.model
 import aqua.model.*
 import aqua.model.transform.res.*
 import aqua.raw.ops.Call
