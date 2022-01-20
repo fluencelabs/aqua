@@ -54,7 +54,7 @@ object MakeRes {
     leaf(
       CallServiceRes(
         op,
-        "identity",
+        "noop",
         CallRes(operands.toList, None),
         onPeer
       )
