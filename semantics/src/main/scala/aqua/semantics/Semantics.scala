@@ -90,15 +90,15 @@ object Semantics extends Logging {
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(ctx))(Invalid(_))
-        case (state, parts: RawPart.Parts) =>
-          val ctx = RawContext.blank.copy(parts = parts)
-          NonEmptyChain
-            .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(ctx))(Invalid(_))
         case (state, _: Raw.Empty) =>
           NonEmptyChain
             .fromChain(state.errors)
             .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(init))(Invalid(_))
+        case (state, part: (RawPart | RawPart.Parts)) =>
+          val ctx = RawContext.blank.copy(parts = RawPart.contextPart(part))
+          NonEmptyChain
+            .fromChain(state.errors)
+            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(ctx))(Invalid(_))
         case (state, m) =>
           logger.error("Got unexpected " + m)
           NonEmptyChain
