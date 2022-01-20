@@ -127,7 +127,7 @@ object RunOpts extends Logging {
     args: List[ValueRaw],
     data: Option[js.Dynamic]
   ): ValidatedNec[String, Map[String, ArgumentGetter]] = {
-    val vars = args.collect { case v @ VarModel(_, _, _) =>
+    val vars = args.collect { case v @ VarRaw(_, _, _) =>
       v
     // one variable could be used multiple times
     }.distinctBy(_.name)
