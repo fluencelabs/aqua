@@ -116,7 +116,7 @@ object Sugar extends Logging {
   def desugarize[S: Counter: Exports](
     call: Call
   ): State[S, (CallModel, Option[OpModel.Tree])] =
-    desugarize(call.args).map(list =>
+    desugarize(call.args).map { list =>
       (
         CallModel(
           list.map(_._1),
@@ -124,7 +124,7 @@ object Sugar extends Logging {
         ),
         parDesugarPrefix(list.flatMap(_._2))
       )
-    )
+    }
 
   private def pure[S](op: OpModel): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
     State.pure(Some(op -> None))
@@ -184,6 +184,7 @@ object Sugar extends Logging {
         Arrows[S].arrows.flatMap(arrows =>
           arrows.get(funcName) match {
             case Some(fn) =>
+              logger.trace(s"Call arrow $funcName")
               desugarize(call).flatMap { case (cm, p) =>
                 ArrowInliner
                   .callArrow(fn, cm)

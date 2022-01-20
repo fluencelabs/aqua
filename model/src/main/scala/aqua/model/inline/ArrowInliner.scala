@@ -66,13 +66,13 @@ object ArrowInliner extends Logging {
    * Prepare the state context for this function call
    *
    * @param fn
-   *   Function that will be called
+   * Function that will be called
    * @param call
-   *   Call object
+   * Call object
    * @tparam S
-   *   State
+   * State
    * @return
-   *   Tree with substituted values, list of return values prior to function calling/inlining
+   * Tree with substituted values, list of return values prior to function calling/inlining
    */
   private def prelude[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
@@ -112,7 +112,7 @@ object ArrowInliner extends Logging {
       treeRenamed =
         fn.body
           .rename(argsShouldRename)
-          .rename(streamToRename)
+      //  .rename(streamToRename)
 
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
