@@ -36,8 +36,34 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  "tag inliner" should "desugarize a single recursive raw value" in {
+  "tag inliner" should "unfold a LambdaModel" in {
+    import aqua.model.inline.state.Counter.Simple
     TagInliner
+      .unfoldLambda[Int](
+        IntoIndexRaw(
+          VarRaw(
+            "ys",
+            ArrayType(ScalarType.i8),
+            Chain.one(IntoIndexRaw(LiteralRaw.number(0), LiteralType.number))
+          ),
+          ScalarType.string
+        )
+      )
+      .run(0)
+      .value
+      ._2 should be(
+      IntoIndexModel("ys-1", ScalarType.string) -> Map(
+        "ys-1" -> VarRaw(
+          "ys",
+          ArrayType(ScalarType.i8),
+          Chain.one(IntoIndexRaw(LiteralRaw.number(0), LiteralType.number))
+        )
+      )
+    )
+  }
+
+  "tag inliner" should "desugarize a single recursive raw value" in {
+    val (resVal, resTree) = TagInliner
       .desugarize[InliningState](
         VarRaw(
           "x",
@@ -56,22 +82,28 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
       )
       .run(InliningState())
       .value
-      ._2 should be(
+      ._2
+
+    resVal should be(
       VarModel(
         "x",
         ArrayType(ScalarType.string),
         Chain.one(IntoIndexModel("ys-1", ScalarType.string))
-      ) -> Some(
-        FlattenModel(
-          VarModel(
-            "ys",
-            ArrayType(ScalarType.i8),
-            Chain.one(IntoIndexModel("0", LiteralType.number))
-          ),
-          "ys-1"
-        ).leaf
       )
     )
+
+    resTree.isEmpty should be(false)
+
+    resTree.get.equalsOrShowDiff(
+      FlattenModel(
+        VarModel(
+          "ys",
+          ArrayType(ScalarType.i8),
+          Chain.one(IntoIndexModel("0", LiteralType.number))
+        ),
+        "ys-1"
+      ).leaf
+    ) should be(true)
   }
 
 }

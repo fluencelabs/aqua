@@ -31,7 +31,7 @@ trait Counter[S] {
 object Counter {
   def apply[S](implicit counter: Counter[S]): Counter[S] = counter
 
-  object Simple extends Counter[Int] {
+  given Simple: Counter[Int] = new Counter[Int] {
 
     override val get: State[Int, Int] = State.get
 

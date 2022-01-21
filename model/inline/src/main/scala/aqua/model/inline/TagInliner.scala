@@ -11,7 +11,7 @@ import scribe.Logging
 
 object TagInliner extends Logging {
 
-  private def unfold[S: Counter: Exports](
+  private[inline] def unfold[S: Counter: Exports](
     raw: ValueRaw
   ): State[S, (ValueModel, Map[String, ValueRaw])] =
     Exports[S].exports.flatMap(exports =>
@@ -39,7 +39,7 @@ object TagInliner extends Logging {
       }
     )
 
-  private def unfoldLambda[S: Counter](
+  private[inline] def unfoldLambda[S: Counter](
     l: LambdaRaw
   ): State[S, (LambdaModel, Map[String, ValueRaw])] =
     l match {
@@ -72,7 +72,7 @@ object TagInliner extends Logging {
       vmp <- unfold(value)
       (vm, map) = vmp
 
-      _ = logger.trace("RAW " + value)
+      _ = logger.info("RAW " + value)
       _ = logger.trace("MOD " + vm)
       dc <- Exports[S].exports
       _ = logger.trace("DEC " + dc)
@@ -86,6 +86,8 @@ object TagInliner extends Logging {
             FlattenModel(vv, name).leaf
         }
       }
+      _ = logger.info("desugarized ops: " + ops)
+      _ = logger.info("map was: " + map)
     } yield vm -> parDesugarPrefix(ops)
 
   def desugarize[S: Counter: Exports](
