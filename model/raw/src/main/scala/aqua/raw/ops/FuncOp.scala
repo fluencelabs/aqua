@@ -19,5 +19,5 @@ import cats.data.StateT
 case class FuncOp(tree: RawTag.Tree) extends Raw {
   def isRightAssoc: Boolean = RawTag.isRightAssoc(tree.head)
 
-  def :+:(prev: FuncOp): FuncOp = FuncOp(prev.tree :+: tree)
+  def :+:(prev: FuncOp): FuncOp = FuncOp(RawTag.rightAssocCombine(prev.tree, tree))
 }

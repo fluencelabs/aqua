@@ -47,16 +47,14 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val expected: Node[RawTag] =
       Node.cofToNode(
-        SeqTag.wrap(
-          ParTag.wrap(
-            OnTag(
-              LiteralRaw("\"other-peer\"", LiteralType.string),
-              Chain.empty
-            ).wrap(
-              CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall).leaf
-            ),
+        ParTag.wrap(
+          OnTag(
+            LiteralRaw("\"other-peer\"", LiteralType.string),
+            Chain.empty
+          ).wrap(
             CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall).leaf
-          )
+          ),
+          CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall).leaf
         )
       )
 

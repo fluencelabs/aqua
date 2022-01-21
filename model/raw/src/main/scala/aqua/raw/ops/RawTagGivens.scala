@@ -59,9 +59,6 @@ trait RawTagGivens {
 
   extension (tree: RawTag.Tree)
 
-    def :+:(prev: RawTag.Tree): RawTag.Tree =
-      rightAssocCombine(prev, tree)
-
     def toFuncOp: FuncOp = FuncOp(tree)
 
     def rename(vals: Map[String, String]): RawTag.Tree =

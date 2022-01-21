@@ -24,6 +24,7 @@ sealed trait RawTag {
   def renameExports(map: Map[String, String]): RawTag = this
 
   def leaf: RawTag.Tree = Cofree(this, Eval.now(Chain.empty))
+
   def funcOpLeaf: FuncOp = FuncOp(Cofree(this, Eval.now(Chain.empty)))
 
   def wrap(children: RawTag.Tree*): RawTag.Tree = Cofree(this, Eval.now(Chain.fromSeq(children)))
@@ -47,8 +48,10 @@ case object SeqTag extends SeqGroupTag {
 
   override def wrap(children: Tree*): Tree = children.toList match {
     case Nil => EmptyTag.leaf
-    case x :: Nil => x
-    case _ => super.wrap(children: _*)
+    case x :: Nil =>
+      x
+    case _ =>
+      super.wrap(children: _*)
   }
 }
 
