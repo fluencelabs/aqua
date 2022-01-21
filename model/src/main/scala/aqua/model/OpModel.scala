@@ -1,5 +1,6 @@
 package aqua.model
 
+import aqua.model.OpModel.Tree
 import cats.data.Chain
 import cats.free.Cofree
 import cats.Show
@@ -24,12 +25,6 @@ sealed trait OpModel {
 
   def wrap(children: OpModel.Tree*): OpModel.Tree = Cofree(this, Eval.now(Chain.fromSeq(children)))
 
-  def wrapIfNonEmpty(children: OpModel.Tree*): OpModel.Tree =
-    children.toList.filterNot(_ == EmptyModel) match {
-      case Nil => EmptyModel.leaf
-      case x :: Nil => x
-      case ch => wrap(ch: _*)
-    }
 }
 
 object OpModel extends OpModelShow {
@@ -55,7 +50,14 @@ sealed trait SeqGroupModel extends GroupOpModel
 
 sealed trait ParGroupModel extends GroupOpModel
 
-case object SeqModel extends SeqGroupModel
+case object SeqModel extends SeqGroupModel {
+
+  override def wrap(children: Tree*): Tree = children.toList.filterNot(_ == EmptyModel) match {
+    case Nil => EmptyModel.leaf
+    case x :: Nil => x
+    case ch => super.wrap(ch: _*)
+  }
+}
 
 case object ParModel extends ParGroupModel
 

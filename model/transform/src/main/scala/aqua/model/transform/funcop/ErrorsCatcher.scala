@@ -35,7 +35,7 @@ case class ErrorsCatcher(
             i = i + 1
             Eval now ot.wrap(
               XorModel.wrap(
-                SeqModel.wrapIfNonEmpty(children.toList: _*),
+                SeqModel.wrap(children.toList: _*),
                 callable.onInitPeer.wrap(
                   CallServiceModel(
                     serviceId,

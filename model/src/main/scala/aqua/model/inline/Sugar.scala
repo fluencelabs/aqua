@@ -84,7 +84,7 @@ object Sugar extends Logging {
   private def parDesugarPrefix(ops: List[OpModel.Tree]): Option[OpModel.Tree] = ops match {
     case Nil => None
     case x :: Nil => Option(x)
-    case _ => Option(ParModel.wrapIfNonEmpty(ops: _*))
+    case _ => Option(ParModel.wrap(ops: _*))
   }
 
   private def parDesugarPrefixOpt(ops: Option[OpModel.Tree]*): Option[OpModel.Tree] =
@@ -105,7 +105,7 @@ object Sugar extends Logging {
       ops <- map.toList.traverse { case (name, v) =>
         desugarize(v).map {
           case (vv, Some(op)) =>
-            SeqModel.wrapIfNonEmpty(op, FlattenModel(vv, name).leaf)
+            SeqModel.wrap(op, FlattenModel(vv, name).leaf)
 
           case (vv, _) =>
             FlattenModel(vv, name).leaf
@@ -195,7 +195,7 @@ object Sugar extends Logging {
                 ArrowInliner
                   .callArrow(fn, cm)
                   .map(body =>
-                    Some(EmptyModel -> Option(SeqModel.wrapIfNonEmpty(p.toList :+ body: _*)))
+                    Some(EmptyModel -> Option(SeqModel.wrap(p.toList :+ body: _*)))
                   )
               }
             case None =>

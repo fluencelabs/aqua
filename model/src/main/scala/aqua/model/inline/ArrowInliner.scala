@@ -58,7 +58,7 @@ object ArrowInliner extends Logging {
           ) { case ((ops, rets), (fo, r)) =>
             (fo ::: ops, r :: rets)
           }
-      } yield SeqModel.wrapIfNonEmpty(ops.reverse: _*) -> rets.reverse
+      } yield SeqModel.wrap(ops.reverse: _*) -> rets.reverse
     )
 
   /**
@@ -187,6 +187,6 @@ object ArrowInliner extends Logging {
 
     } yield
     // If smth needs to be added before this function tree, add it with Seq
-    SeqModel.wrapIfNonEmpty(dPrefix.toList ::: dTag.map(_.leaf).toList: _*)
+    SeqModel.wrap(dPrefix.toList ::: dTag.map(_.leaf).toList: _*)
 
 }
