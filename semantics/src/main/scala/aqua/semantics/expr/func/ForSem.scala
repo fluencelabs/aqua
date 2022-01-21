@@ -42,34 +42,32 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
           N.streamsDefinedWithinScope()
             .map((streams: Set[String]) =>
               (stOpt, ops) match {
-                case (Some(vm), op: FuncOp) =>
+                case (Some(vm), FuncOp(op)) =>
                   val innerTag = expr.mode.map(_._2).fold[RawTag](SeqTag) {
                     case ForExpr.ParMode => ParTag
                     case ForExpr.TryMode => XorTag
                   }
 
-                  // Restrict the streams created within this scope
-                  val body =
-                    Chain(
-                      streams.toList.foldLeft(op) { case (b, streamName) =>
-                        FuncOp.wrap(RestrictionTag(streamName, isStream = true), b)
-                      },
-                      FuncOp.leaf(NextTag(expr.item.value))
+                  val forTag =
+                    ForTag(expr.item.value, vm).wrap(
+                      expr.mode
+                        .map(_._2)
+                        .fold[RawTag](SeqTag) {
+                          case ForExpr.ParMode => ParTag
+                          case ForExpr.TryMode => XorTag
+                        }
+                        .wrap(
+                          // Restrict the streams created within this scope
+                          streams.toList.foldLeft(op) { case (b, streamName) =>
+                            RestrictionTag(streamName, isStream = true).wrap(b)
+                          },
+                          NextTag(expr.item.value).leaf
+                        )
                     )
 
-                  val forTag = FuncOp.wrap(
-                    ForTag(expr.item.value, vm),
-                    FuncOp.node(
-                      expr.mode.map(_._2).fold[RawTag](SeqTag) {
-                        case ForExpr.ParMode => ParTag
-                        case ForExpr.TryMode => XorTag
-                      },
-                      body
-                    )
-                  )
                   // Fix: continue execution after fold par immediately, without finding a path out from par branches
-                  if (innerTag == ParTag) FuncOp.wrap(ParTag.Detach, forTag)
-                  else forTag
+                  if (innerTag == ParTag) ParTag.Detach.wrap(forTag).toFuncOp
+                  else forTag.toFuncOp
                 case _ =>
                   Raw.error("Wrong body of the For expression")
               }

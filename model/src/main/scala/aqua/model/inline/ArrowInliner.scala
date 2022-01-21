@@ -2,7 +2,6 @@ package aqua.model.inline
 
 import aqua.model.{CallModel, FuncArrow, OpModel, PushToStreamModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
-import aqua.raw.ops.FuncOp.Tree
 import cats.Eval
 import scribe.{log, Logging}
 import aqua.raw.ops.{AssignmentTag, Call, CallArrowTag, ClosureTag, FuncOp, FuncOps, RawTag, SeqTag}
@@ -77,7 +76,7 @@ object ArrowInliner extends Logging {
   private def prelude[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel
-  ): State[S, (FuncOp.Tree, List[ValueRaw])] =
+  ): State[S, (RawTag.Tree, List[ValueRaw])] =
     for {
       // Collect all arguments: what names are used inside the function, what values are received
       argsFull <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
@@ -135,9 +134,12 @@ object ArrowInliner extends Logging {
       tree = treeRenamed.rename(shouldRename)
 
       // Result could be renamed; take care about that
-    } yield (tree.tree, fn.ret.map(_.renameVars(shouldRename)))
+    } yield (tree, fn.ret.map(_.renameVars(shouldRename)))
 
-  private def traverseS[S](cf: Tree, f: RawTag => State[S, OpModel.Tree]): State[S, OpModel.Tree] =
+  private def traverseS[S](
+    cf: RawTag.Tree,
+    f: RawTag => State[S, OpModel.Tree]
+  ): State[S, OpModel.Tree] =
     for {
       headTree <- f(cf.head)
       tail <- StateT.liftF(cf.tail)
@@ -145,7 +147,7 @@ object ArrowInliner extends Logging {
     } yield headTree.copy(tail = headTree.tail.map(_ ++ tailTree))
 
   def handleTree[S: Exports: Counter: Mangler: Arrows](
-    tree: FuncOp.Tree
+    tree: RawTag.Tree
   ): State[S, OpModel.Tree] =
     traverseS(tree, handleTag(_))
 

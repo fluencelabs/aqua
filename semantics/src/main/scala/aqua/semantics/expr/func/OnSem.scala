@@ -47,16 +47,13 @@ class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
         <* A.beginScope(expr.peerId),
       (viaVM: List[ValueRaw], ops: Raw) =>
         A.endScope() >> (ops match {
-          case op: FuncOp =>
+          case FuncOp(op) =>
             V.valueToRaw(expr.peerId).map {
               case Some(om) =>
-                FuncOp.wrap(
-                  OnTag(
-                    om,
-                    Chain.fromSeq(viaVM)
-                  ),
-                  op
-                )
+                OnTag(
+                  om,
+                  Chain.fromSeq(viaVM)
+                ).wrap(op).toFuncOp
               case _ =>
                 Raw.error("OnSem: Impossible error")
             }

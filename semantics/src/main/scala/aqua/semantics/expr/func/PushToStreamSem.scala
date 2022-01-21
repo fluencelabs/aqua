@@ -58,7 +58,7 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
               case false =>
                 Raw.error("Stream type and element type does not match")
               case true =>
-                FuncOps.pushToStream(vm, Call.Export(expr.stream.value, t)): Raw
+                PushToStreamTag(vm, Call.Export(expr.stream.value, t)).funcOpLeaf
             }
         }
 

@@ -14,7 +14,7 @@ import aqua.model.transform.pre.{
 }
 import aqua.model.transform.res.{FuncRes, NoAir, ResolvedOp}
 import aqua.model.transform.topology.Topology
-import aqua.raw.ops.FuncOp
+import aqua.raw.ops.{FuncOp, RawTag}
 import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
@@ -55,7 +55,7 @@ object Transform extends Logging {
       )
 
     // Transform the body of the function: wrap it with initCallable, provide function arguments via service calls
-    val transform: FuncOp => FuncOp =
+    val transform: RawTag.Tree => RawTag.Tree =
       initCallable.transform _ compose argsProvider.transform
 
     // Callback on the init peer id, either done via relay or not

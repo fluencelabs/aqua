@@ -4,7 +4,7 @@ import aqua.parser.expr.func.ArrowExpr
 import aqua.parser.lexer.{BasicTypeToken, Name}
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
-import aqua.raw.ops.{FuncOp, FuncOps, ReturnTag}
+import aqua.raw.ops.{FuncOp, FuncOps, RawTag, ReturnTag}
 import aqua.raw.value.LiteralRaw
 import aqua.semantics.expr.func.ArrowSem
 import aqua.types.*
@@ -32,7 +32,7 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "sem" should "create error model" ignore {
-    val model = getModel(FuncOps.empty)(program("(a: string, b: u32) -> u8"))
+    val model = getModel(RawTag.empty.toFuncOp)(program("(a: string, b: u32) -> u8"))
     model shouldBe Raw.Empty(
       "Return type is defined for the arrow, but nothing returned. Use `<- value, ...` as the last expression inside function body."
     )
@@ -41,17 +41,17 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
   import aqua.types.ScalarType.*
 
   "arrow without return type" should "create right model" ignore {
-    val model = getModel(FuncOps.empty)(program("(a: string, b: u32)"))
+    val model = getModel(RawTag.empty.toFuncOp)(program("(a: string, b: u32)"))
     model shouldBe ArrowRaw(
       ArrowType(labelled("a", string, labelled("b", u32)), NilType),
       Nil,
-      FuncOps.empty
+      RawTag.empty
     )
   }
 
   "arrow with return type and correct state" should "create correct model" ignore {
     val returnValue = LiteralRaw("123", string)
-    val returnTag = FuncOp.wrap(ReturnTag(NonEmptyList.one(returnValue)), FuncOps.empty)
+    val returnTag = FuncOp.wrap(ReturnTag(NonEmptyList.one(returnValue)).wrap(RawTag.empty).toFuncOp, FuncOps.empty)
     val model = getModel(returnTag)(program("(a: string, b: u32) -> string"))
 
     val arrowType = ArrowType(labelled("a", string, labelled("b", u32)), productType(string))

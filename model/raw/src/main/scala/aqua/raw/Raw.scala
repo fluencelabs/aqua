@@ -1,7 +1,8 @@
 package aqua.raw
 
-import aqua.raw.ops.FuncOp
+import aqua.raw.ops.{FuncOp, RawTag}
 import cats.Semigroup
+import cats.syntax.semigroup.*
 
 trait Raw
 
@@ -12,16 +13,15 @@ object Raw {
 
   case class Empty(log: String) extends Raw
 
-  implicit object MergeRaw extends Semigroup[Raw] {
+  given Semigroup[Raw] with
 
     import RawPart.RPSMonoid
-    import FuncOp.FuncOpSemigroup
     import RawPart.contextPart
 
     override def combine(x: Raw, y: Raw): Raw =
       (x, y) match {
         case (l: FuncOp, r: FuncOp) =>
-          FuncOpSemigroup.combine(l, r)
+          FuncOp(l.tree |+| r.tree)
 
         case (l: Empty, r: Empty) => Empty(l.log + " |+| " + r.log)
         case (_: Empty, r) => r
@@ -34,5 +34,4 @@ object Raw {
           )
 
       }
-  }
 }

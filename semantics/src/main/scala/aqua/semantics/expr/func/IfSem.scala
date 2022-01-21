@@ -38,19 +38,16 @@ class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
         (r: Option[(ValueRaw, ValueRaw)], ops: Raw) =>
           r.fold(Raw.error("If expression errored in matching types").pure[Alg]) { case (lt, rt) =>
             ops match {
-              case op: FuncOp =>
-                FuncOp
+              case FuncOp(op) =>
+                XorTag.LeftBiased
                   .wrap(
-                    XorTag.LeftBiased,
-                    FuncOp.wrap(
-                      MatchMismatchTag(
-                        lt,
-                        rt,
-                        expr.eqOp.value
-                      ),
-                      op
-                    )
+                    MatchMismatchTag(
+                      lt,
+                      rt,
+                      expr.eqOp.value
+                    ).wrap(op)
                   )
+                  .toFuncOp
                   .pure[Alg]
 
               case _ => Raw.error("Wrong body of the if expression").pure[Alg]

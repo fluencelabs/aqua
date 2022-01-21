@@ -40,7 +40,7 @@ class DeclareStreamSem[S[_]](val expr: DeclareStreamExpr[S]) {
         .map {
           case Some(streamType) =>
             val valueModel = VarRaw(expr.name.value, streamType)
-            FuncOp.leaf(DeclareStreamTag(valueModel)): Raw
+            DeclareStreamTag(valueModel).funcOpLeaf: Raw
           case None => Raw.error(s"Name `${expr.name.value}` not defined")
         }
     )

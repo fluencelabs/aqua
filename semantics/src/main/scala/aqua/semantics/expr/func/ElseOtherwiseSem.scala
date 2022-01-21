@@ -13,7 +13,7 @@ class ElseOtherwiseSem[S[_]](val expr: ElseOtherwiseExpr[S]) extends AnyVal {
   def program[Alg[_]: Monad](implicit A: AbilitiesAlgebra[S, Alg]): Prog[Alg, Raw] =
     Prog
       .after[Alg, Raw] {
-        case g: FuncOp => FuncOp.wrap(XorTag, g).pure[Alg]
+        case FuncOp(g) => XorTag.wrap(g).toFuncOp.pure[Alg]
         case g => g.pure[Alg]
       }
       .abilitiesScope(expr.token)

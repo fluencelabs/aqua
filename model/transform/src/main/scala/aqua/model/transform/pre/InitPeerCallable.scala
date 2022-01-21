@@ -10,7 +10,7 @@ import aqua.model.{
   ValueModel,
   VarModel
 }
-import aqua.raw.ops.{Call, CallServiceTag, FuncOp, FuncOps}
+import aqua.raw.ops.{Call, CallServiceTag, OnTag, RawTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import cats.data.Chain
 import aqua.types.Type
@@ -19,10 +19,10 @@ sealed trait InitPeerCallable extends PreTransform {
 
   def onInitPeer: OnModel
 
-  def makeCall(serviceId: ValueRaw, funcName: String, call: Call): FuncOp =
-    transform(FuncOp.leaf(CallServiceTag(serviceId, funcName, call)))
+  def makeCall(serviceId: ValueRaw, funcName: String, call: Call): RawTag.Tree =
+    transform(CallServiceTag(serviceId, funcName, call).leaf)
 
-  def service(serviceId: ValueRaw): (String, Call) => FuncOp =
+  def service(serviceId: ValueRaw): (String, Call) => RawTag.Tree =
     makeCall(serviceId, _, _)
 }
 
@@ -30,12 +30,13 @@ sealed trait InitPeerCallable extends PreTransform {
 case class InitViaRelayCallable(goThrough: Chain[(String, Type)]) extends InitPeerCallable {
 
   // Get to init user through a relay
-  override def transform(op: FuncOp): FuncOp =
-    FuncOps.onVia(
+  override def transform(op: RawTag.Tree): RawTag.Tree =
+    OnTag(
       ValueRaw.InitPeerId,
       goThrough.map { case (n, t) =>
         VarRaw(n, t)
-      },
+      }
+    ).wrap(
       op
     )
 

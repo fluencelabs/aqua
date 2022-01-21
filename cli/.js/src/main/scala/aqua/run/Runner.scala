@@ -6,7 +6,7 @@ import aqua.builder.{ArgumentGetter, Console, Finisher}
 import aqua.io.OutputPrinter
 import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.raw.ops.{Call, CallArrowTag, FuncOp, FuncOps}
+import aqua.raw.ops.{Call, CallArrowTag, FuncOp, FuncOps, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrowType, BoxType, NilType, Type}
 import cats.data.{Validated, ValidatedNec}
@@ -113,7 +113,7 @@ class Runner(
     // otherwise just call it
     val body = funcCallable.arrowType.codomain.toList match {
       case Nil =>
-        FuncOp.leaf(CallArrowTag(funcName, Call(args, Nil)))
+        CallArrowTag(funcName, Call(args, Nil)).leaf
       case types =>
         val (variables, exports) = types.zipWithIndex.map { case (t, idx) =>
           val name = config.resultName + idx
@@ -124,9 +124,9 @@ class Runner(
 
         val consoleServiceTag = consoleService.callTag(variables)
 
-        FuncOps.seq(
-          FuncOp.leaf(callFuncTag),
-          FuncOp.leaf(consoleServiceTag)
+        SeqTag.wrap(
+          callFuncTag.leaf,
+          consoleServiceTag.leaf
         )
     }
 
@@ -142,11 +142,11 @@ class Runner(
     val gettersV = getGettersForVars(vars, config.argumentGetters)
 
     gettersV.map { getters =>
-      val gettersTags = getters.map(s => FuncOp.leaf(s.callTag()))
+      val gettersTags = getters.map(s => s.callTag().leaf)
 
       FuncArrow(
         config.functionWrapperName,
-        FuncOps.seq((gettersTags :+ body :+ FuncOp.leaf(finisherServiceTag)): _*),
+        SeqTag.wrap((gettersTags :+ body :+ finisherServiceTag.leaf): _*),
         // no arguments and returns nothing
         ArrowType(NilType, NilType),
         Nil,

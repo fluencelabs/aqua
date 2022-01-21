@@ -26,7 +26,7 @@ class ReturnSem[S[_]](val expr: ReturnExpr[S]) extends AnyVal {
       .flatMap {
         case Some(vals) =>
           T.checkArrowReturn(vals).map[Raw] {
-            case true => FuncOp.leaf(ReturnTag(vals.map(_._2)))
+            case true => ReturnTag(vals.map(_._2)).leaf.toFuncOp
             case false => Raw.error("Return types validation failed")
           }
         case None =>

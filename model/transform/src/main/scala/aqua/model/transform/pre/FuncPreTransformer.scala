@@ -2,18 +2,18 @@ package aqua.model.transform.pre
 
 import aqua.model.FuncArrow
 import aqua.model.inline.ArgsCall
-import aqua.raw.ops.{Call, FuncOp, FuncOps}
+import aqua.raw.ops.{Call, CallArrowTag, FuncOp, FuncOps, RawTag, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 
 // TODO: doc
 case class FuncPreTransformer(
-                               transform: FuncOp => FuncOp,
-                               callback: (String, Call) => FuncOp,
-                               respFuncName: String,
-                               wrapCallableName: String = "funcAround",
-                               arrowCallbackPrefix: String = "init_peer_callable_"
-                             ) {
+  transform: RawTag.Tree => RawTag.Tree,
+  callback: (String, Call) => RawTag.Tree,
+  respFuncName: String,
+  wrapCallableName: String = "funcAround",
+  arrowCallbackPrefix: String = "init_peer_callable_"
+) {
 
   private val returnVar: String = "-return-"
 
@@ -23,7 +23,7 @@ case class FuncPreTransformer(
    * @param retModel List of returned values
    * @return AST that consumes return values, passing them to the client
    */
-  private def returnCallback(retModel: List[ValueRaw]): FuncOp =
+  private def returnCallback(retModel: List[ValueRaw]): RawTag.Tree =
     callback(
       respFuncName,
       Call(
@@ -76,16 +76,13 @@ case class FuncPreTransformer(
     FuncArrow(
       wrapCallableName,
       transform(
-        FuncOps
-          .seq(
-            FuncOps
-              .callArrow(
-                func.funcName,
-                funcCall
-              ) :: (returnType.headOption
+        // TODO wrapNonEmpty?
+        SeqTag.wrap(
+          CallArrowTag(func.funcName, funcCall).leaf ::
+            returnType.headOption
               .map(_ => returnCallback(retModel))
-              .toList): _*
-          )
+              .toList: _*
+        )
       ),
       ArrowType(ConsType.cons(func.funcName, func.arrowType, NilType), NilType),
       Nil,

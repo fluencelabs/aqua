@@ -88,19 +88,19 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
           }.pure[Alg]
         )(T.expectNoExport(_).as(Nil))
         .map(maybeExport =>
-          FuncOp.leaf(serviceId match {
+          serviceId match {
             case Some(sid) =>
               CallServiceTag(
                 serviceId = sid,
                 funcName = funcName.value,
                 Call(argsResolved, maybeExport)
-              )
+              ).funcOpLeaf
             case None =>
               CallArrowTag(
                 funcName = ability.map(_.value + "." + funcName.value).getOrElse(funcName.value),
                 Call(argsResolved, maybeExport)
-              )
-          })
+              ).funcOpLeaf
+          }
         )
     }
   }

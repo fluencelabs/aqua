@@ -3,6 +3,10 @@ package aqua.raw.ops
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.ValueRaw
 import cats.data.{Chain, NonEmptyList}
+import cats.free.Cofree
+import cats.Eval
+import aqua.raw.Raw
+import aqua.raw.ops.RawTag.Tree
 
 sealed trait RawTag {
 
@@ -19,6 +23,16 @@ sealed trait RawTag {
 
   def renameExports(map: Map[String, String]): RawTag = this
 
+  def leaf: RawTag.Tree = Cofree(this, Eval.now(Chain.empty))
+  def funcOpLeaf: FuncOp = FuncOp(Cofree(this, Eval.now(Chain.empty)))
+
+  def wrap(children: RawTag.Tree*): RawTag.Tree = Cofree(this, Eval.now(Chain.fromSeq(children)))
+}
+
+object RawTag extends RawTagGivens {
+  type Tree = Cofree[Chain, RawTag]
+
+  val empty: Tree = EmptyTag.leaf
 }
 
 sealed trait NoExecTag extends RawTag
@@ -29,7 +43,14 @@ sealed trait SeqGroupTag extends GroupTag
 
 sealed trait ParGroupTag extends GroupTag
 
-case object SeqTag extends SeqGroupTag
+case object SeqTag extends SeqGroupTag {
+
+  override def wrap(children: Tree*): Tree = children.toList match {
+    case Nil => EmptyTag.leaf
+    case x :: Nil => x
+    case _ => super.wrap(children: _*)
+  }
+}
 
 case object ParTag extends ParGroupTag {
   case object Detach extends ParGroupTag
@@ -39,7 +60,7 @@ case object XorTag extends GroupTag {
   case object LeftBiased extends GroupTag
 }
 
-case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag
+case class XorParTag(xor: RawTag.Tree, par: RawTag.Tree) extends RawTag
 
 case class OnTag(peerId: ValueRaw, via: Chain[ValueRaw]) extends SeqGroupTag {
 
@@ -65,7 +86,7 @@ case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag {
 }
 
 case class MatchMismatchTag(left: ValueRaw, right: ValueRaw, shouldMatch: Boolean)
-  extends SeqGroupTag {
+    extends SeqGroupTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     MatchMismatchTag(left.map(f), right.map(f), shouldMatch)
@@ -83,9 +104,9 @@ case class ForTag(item: String, iterable: ValueRaw) extends SeqGroupTag {
 }
 
 case class CallArrowTag(
-                         funcName: String,
-                         call: Call
-                       ) extends RawTag {
+  funcName: String,
+  call: Call
+) extends RawTag {
 
   override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
 
@@ -97,17 +118,17 @@ case class CallArrowTag(
 }
 
 case class DeclareStreamTag(
-                             value: ValueRaw
-                           ) extends NoExecTag {
+  value: ValueRaw
+) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     DeclareStreamTag(value.map(f))
 }
 
 case class AssignmentTag(
-                          value: ValueRaw,
-                          assignTo: String
-                        ) extends NoExecTag {
+  value: ValueRaw,
+  assignTo: String
+) extends NoExecTag {
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(assignTo = map.getOrElse(assignTo, assignTo))
@@ -117,23 +138,23 @@ case class AssignmentTag(
 }
 
 case class ClosureTag(
-                       func: FuncRaw
-                     ) extends NoExecTag {
+  func: FuncRaw
+) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     ClosureTag(
       func.copy(arrow =
         func.arrow.copy(
           ret = func.arrow.ret.map(_.map(f)),
-          body = FuncOp(func.arrow.body.tree.map(_.mapValues(f)))
+          body = func.arrow.body.map(_.mapValues(f))
         )
       )
     )
 }
 
 case class ReturnTag(
-                      values: NonEmptyList[ValueRaw]
-                    ) extends NoExecTag {
+  values: NonEmptyList[ValueRaw]
+) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     ReturnTag(values.map(_.map(f)))
@@ -142,19 +163,19 @@ case class ReturnTag(
 object EmptyTag extends NoExecTag
 
 case class AbilityIdTag(
-                         value: ValueRaw,
-                         service: String
-                       ) extends NoExecTag {
+  value: ValueRaw,
+  service: String
+) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     AbilityIdTag(value.map(f), service)
 }
 
 case class CallServiceTag(
-                           serviceId: ValueRaw,
-                           funcName: String,
-                           call: Call
-                         ) extends RawTag {
+  serviceId: ValueRaw,
+  funcName: String,
+  call: Call
+) extends RawTag {
 
   override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
 

@@ -1,7 +1,7 @@
 package aqua.model.transform.pre
 
-import aqua.raw.ops.FuncOp
+import aqua.raw.ops.RawTag
 
 trait PreTransform {
-  def transform(op: FuncOp): FuncOp
+  def transform(op: RawTag.Tree): RawTag.Tree
 }

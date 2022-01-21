@@ -2,18 +2,18 @@ package aqua.model
 
 import aqua.raw.Raw
 import aqua.raw.arrow.FuncRaw
-import aqua.raw.ops.FuncOp
+import aqua.raw.ops.{FuncOp, RawTag}
 import aqua.raw.value.ValueRaw
 import aqua.types.{ArrowType, Type}
 
 case class FuncArrow(
-                      funcName: String,
-                      body: FuncOp,
-                      arrowType: ArrowType,
-                      ret: List[ValueRaw],
-                      capturedArrows: Map[String, FuncArrow],
-                      capturedValues: Map[String, ValueModel]
-                    ) {
+  funcName: String,
+  body: RawTag.Tree,
+  arrowType: ArrowType,
+  ret: List[ValueRaw],
+  capturedArrows: Map[String, FuncArrow],
+  capturedValues: Map[String, ValueModel]
+) {
 
   lazy val args: List[(String, Type)] = arrowType.domain.toLabelledList()
   lazy val argNames: List[String] = args.map(_._1)
@@ -23,13 +23,13 @@ case class FuncArrow(
 object FuncArrow {
 
   def fromRaw(
-               raw: FuncRaw,
-               arrows: Map[String, FuncArrow],
-               constants: Map[String, ValueModel]
-             ): FuncArrow =
+    raw: FuncRaw,
+    arrows: Map[String, FuncArrow],
+    constants: Map[String, ValueModel]
+  ): FuncArrow =
     FuncArrow(
       raw.name,
-      raw.arrow.body.fixXorPar,
+      RawTag.fixXorPar(raw.arrow.body),
       raw.arrow.`type`,
       raw.arrow.ret,
       arrows,

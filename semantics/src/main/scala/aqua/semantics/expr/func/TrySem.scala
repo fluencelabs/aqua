@@ -19,8 +19,8 @@ class TrySem[S[_]](val expr: TryExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     Prog
       .after[Alg, Raw] {
-        case o: FuncOp =>
-          FuncOp.wrap(XorTag.LeftBiased, o).pure[Alg]
+        case FuncOp(o) =>
+          XorTag.LeftBiased.wrap(o).toFuncOp.pure[Alg]
         case _ =>
           Raw.error("Wrong body of the try expression").pure[Alg]
       }
