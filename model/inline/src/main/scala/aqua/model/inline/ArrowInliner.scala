@@ -32,7 +32,7 @@ object ArrowInliner extends Logging {
         callableFuncBody <- handleTree(tree)
 
         // Fix return values with exports collected in the body
-        resolvedResult <- Sugar.desugarize(result)
+        resolvedResult <- TagInliner.desugarize(result)
 
         // Fix the return values
         (ops, rets) = (call.exportTo zip resolvedResult)
@@ -178,7 +178,7 @@ object ArrowInliner extends Logging {
     for {
       resolvedArrows <- Arrows[S].arrows
 
-      desugarized <- Sugar.desugarize(tag)
+      desugarized <- TagInliner.desugarize(tag)
       dPrefix = desugarized.flatMap(_._2)
       dTag = desugarized.map(_._1)
 

@@ -1,6 +1,5 @@
 package aqua.model.inline
 
-import aqua.model.inline.Sugar.logger
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
 import aqua.raw.ops.*
@@ -10,7 +9,7 @@ import cats.instances.list.*
 import cats.data.{Chain, State}
 import scribe.Logging
 
-object Sugar extends Logging {
+object TagInliner extends Logging {
 
   private def unfold[S: Counter: Exports](
     raw: ValueRaw
