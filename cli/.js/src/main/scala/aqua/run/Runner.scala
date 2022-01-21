@@ -6,7 +6,7 @@ import aqua.builder.{ArgumentGetter, Console, Finisher}
 import aqua.io.OutputPrinter
 import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.raw.ops.{Call, CallArrowTag, FuncOp, FuncOps, SeqTag}
+import aqua.raw.ops.{Call, CallArrowTag, FuncOp, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrowType, BoxType, NilType, Type}
 import cats.data.{Validated, ValidatedNec}

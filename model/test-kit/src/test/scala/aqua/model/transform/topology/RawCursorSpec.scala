@@ -2,7 +2,6 @@ package aqua.model.transform.topology
 
 import aqua.Node
 import aqua.model.{CallModel, OnModel}
-import aqua.raw.ops.FuncOps
 import aqua.model.transform.cursor.ChainZipper
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.raw.ops.{Call, FuncOp, OnTag, ReturnTag}

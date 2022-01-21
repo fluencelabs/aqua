@@ -4,7 +4,7 @@ import aqua.model.{CallModel, FuncArrow, OpModel, PushToStreamModel, SeqModel, V
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import cats.Eval
 import scribe.{log, Logging}
-import aqua.raw.ops.{AssignmentTag, Call, CallArrowTag, ClosureTag, FuncOp, FuncOps, RawTag, SeqTag}
+import aqua.raw.ops.{AssignmentTag, Call, CallArrowTag, ClosureTag, FuncOp, RawTag, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 import cats.syntax.traverse.*

@@ -5,7 +5,7 @@ import aqua.Node.*
 import aqua.model.AquaContext
 import aqua.raw.RawContext
 import aqua.parser.Ast
-import aqua.raw.ops.{CallServiceTag, FuncOp, FuncOps, OnTag, ParTag, RawTag, SeqTag}
+import aqua.raw.ops.{CallServiceTag, FuncOp, OnTag, ParTag, RawTag, SeqTag}
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.funcop.*
 import aqua.parser.Parser
@@ -43,23 +43,24 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val func = p.toList.head.funcs("parFunc")
 
-    val proc = Node.cofToNode(func.arrow.body.tree)
+    val proc = Node.cofToNode(func.arrow.body)
 
     val expected: Node[RawTag] =
       Node.cofToNode(
-
         SeqTag.wrap(
           ParTag.wrap(
             OnTag(
               LiteralRaw("\"other-peer\"", LiteralType.string),
               Chain.empty
             ).wrap(
-              CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall)
+              CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall).leaf
             ),
             CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall).leaf
           )
         )
       )
+
+    println(expected)
 
     proc.equalsOrPrintDiff(expected) should be(true)
 

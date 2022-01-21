@@ -1,6 +1,6 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{AssignmentTag, FuncOp, FuncOps, SeqTag, XorTag}
+import aqua.raw.ops.{AssignmentTag, FuncOp, SeqTag, XorTag}
 import aqua.parser.expr.func.CatchExpr
 import aqua.raw.value.ValueRaw
 import aqua.raw.Raw

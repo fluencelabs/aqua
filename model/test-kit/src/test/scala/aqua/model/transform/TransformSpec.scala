@@ -4,7 +4,7 @@ import aqua.{model, Node}
 import aqua.model.transform.res.{CallRes, CallServiceRes, MakeRes}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
-import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, FuncOps, OnTag, RawTag, SeqTag}
+import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, OnTag, RawTag, SeqTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
