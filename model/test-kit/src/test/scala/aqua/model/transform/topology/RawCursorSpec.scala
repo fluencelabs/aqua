@@ -1,7 +1,7 @@
 package aqua.model.transform.topology
 
 import aqua.Node
-import aqua.model.{CallModel, OnModel}
+import aqua.model.{CallModel, OnModel, SeqModel}
 import aqua.model.transform.cursor.ChainZipper
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.raw.ops.{Call, FuncOp, OnTag, ReturnTag}
@@ -19,9 +19,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
-          on(
-            ValueRaw.InitPeerId,
-            Nil,
+          OnModel(ValueRaw.InitPeerId, Chain.empty).wrap(
             callModel(1, Nil)
           )
         )
@@ -35,10 +33,8 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
-          on(
-            ValueRaw.InitPeerId,
-            Nil,
-            seq(
+          OnModel(ValueRaw.InitPeerId, Chain.empty).wrap(
+            SeqModel.wrap(
               callModel(1),
               callModel(2),
               callModel(3),
@@ -59,9 +55,7 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
-          on(
-            ValueRaw.InitPeerId,
-            VarRaw("-relay-", ScalarType.string) :: Nil,
+          OnModel(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string))).wrap(
             callModel(1)
           )
         )
@@ -76,14 +70,13 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
-          on(
-            ValueRaw.InitPeerId,
-            VarRaw("-relay-", ScalarType.string) :: Nil,
-            seq(
+          OnModel(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string))).wrap(
+            SeqModel.wrap(
               callModel(1),
-              on(
+              OnModel(
                 VarRaw("-other-", ScalarType.string),
-                VarRaw("-external-", ScalarType.string) :: Nil,
+                Chain.one(VarRaw("-external-", ScalarType.string))
+              ).wrap(
                 callModel(
                   2,
                   CallModel.Export("export", ScalarType.string) :: Nil
@@ -133,20 +126,20 @@ class RawCursorSpec extends AnyFlatSpec with Matchers {
     val raw = OpModelTreeCursor(
       NonEmptyList.one(
         ChainZipper.one(
-          on(
-            ValueRaw.InitPeerId,
-            VarRaw("-relay-", ScalarType.string) :: Nil,
-            seq(
+          OnModel(ValueRaw.InitPeerId, Chain.one(VarRaw("-relay-", ScalarType.string))).wrap(
+            SeqModel.wrap(
               callModel(1),
-              on(
+              OnModel(
                 VarRaw("-other-", ScalarType.string),
-                VarRaw("-external-", ScalarType.string) :: Nil,
+                Chain.one(VarRaw("-external-", ScalarType.string))
+              ).wrap(
                 fold(
                   "item",
                   VarRaw("iterable", ArrayType(ScalarType.string)),
-                  on(
+                  OnModel(
                     VarRaw("-in-fold-", ScalarType.string),
-                    VarRaw("-fold-relay-", ScalarType.string) :: Nil,
+                    Chain.one(VarRaw("-fold-relay-", ScalarType.string))
+                  ).wrap(
                     callModel(
                       2,
                       CallModel.Export("export", ScalarType.string) :: Nil

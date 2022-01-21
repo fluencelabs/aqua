@@ -43,9 +43,9 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val fc = Transform.funcRes(func, bc)
 
-    val procFC: Node.Res = fc.value.body
+    val procFC = fc.value.body
 
-    val expectedFC: Node.Res =
+    val expectedFC =
       XorRes.wrap(
         SeqRes.wrap(
           dataCall(bc, "-relay-", initPeer),
@@ -71,7 +71,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         errorCall(bc, 3, initPeer)
       )
 
-    Node.equalsOrPrintDiff(procFC, expectedFC) should be(true)
+    procFC.equalsOrShowDiff(expectedFC) should be(true)
 
   }
 
@@ -92,9 +92,9 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val fc = Transform.funcRes(func, bc)
 
-    val procFC: Res = fc.value.body
+    val procFC = fc.value.body
 
-    val expectedFC: Res =
+    val expectedFC =
       SeqRes.wrap(
         dataCall(bc, "-relay-", initPeer),
         callRes(0, initPeer),
@@ -104,7 +104,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         respCall(bc, ret, initPeer)
       )
 
-    procFC.equalsOrPrintDiff(expectedFC) should be(true)
+    procFC.equalsOrShowDiff(expectedFC) should be(true)
 
   }
 
@@ -145,19 +145,17 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val bc = TransformConfig(wrapWithXor = false)
 
-    val res = Transform.funcRes(f2, bc).value.body: Node.Res
+    val res = Transform.funcRes(f2, bc).value.body
 
-    res.equalsOrPrintDiff(
+    res.equalsOrShowDiff(
       SeqRes.wrap(
         dataCall(bc, "-relay-", initPeer),
-        Node(
-          CallServiceRes(
-            LiteralRaw.quote("srv1"),
-            "foo",
-            CallRes(Nil, Some(CallModel.Export("v", ScalarType.string))),
-            initPeer
-          )
-        ),
+        CallServiceRes(
+          LiteralRaw.quote("srv1"),
+          "foo",
+          CallRes(Nil, Some(CallModel.Export("v", ScalarType.string))),
+          initPeer
+        ).leaf,
         respCall(bc, VarRaw("v", ScalarType.string), initPeer)
       )
     ) should be(true)

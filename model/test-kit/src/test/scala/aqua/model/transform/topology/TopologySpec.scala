@@ -1,7 +1,17 @@
 package aqua.model.transform.topology
 
 import aqua.Node
-import aqua.model.{CallModel, ParModel, SeqModel, VarModel, XorModel}
+import aqua.model.{
+  CallModel,
+  DetachModel,
+  MatchMismatchModel,
+  OnModel,
+  ParModel,
+  SeqModel,
+  ValueModel,
+  VarModel,
+  XorModel
+}
 import aqua.res.*
 import aqua.raw.ops.Call
 import aqua.raw.value.VarRaw
@@ -18,68 +28,60 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
   "topology resolver" should "do nothing on init peer" in {
 
-    val init: Node.Op = on(
-      initPeer,
-      relay :: Nil,
-      seq(
+    val init = OnModel(
+      rawToValue(initPeer),
+      Chain.one(rawToValue(relay))
+    ).wrap(
+      SeqModel.wrap(
         callModel(1),
         callModel(2)
       )
     )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         callRes(1, initPeer),
         callRes(2, initPeer)
       )
 
-    proc should be(expected)
-
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "go through relay to any other node, directly" in {
 
-    val init: Node.Op = on(
-      initPeer,
-      relay :: Nil,
-      on(
-        otherPeer,
-        Nil,
-        seq(
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      OnModel(otherPeer, Chain.empty).wrap(
+        SeqModel.wrap(
           callModel(1),
           callModel(2)
         )
       )
     )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(through(relay), callRes(1, otherPeer), callRes(2, otherPeer))
 
-    proc should be(expected)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "go through relay to any other node, via another relay" in {
 
-    val init = on(
-      initPeer,
-      relay :: Nil,
-      on(
-        otherPeer,
-        otherRelay :: Nil,
-        seq(
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      OnModel(otherPeer, Chain.one(otherRelay)).wrap(
+        SeqModel.wrap(
           callModel(1),
           callModel(2)
         )
       )
     )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         through(relay),
         through(otherRelay),
@@ -87,32 +89,29 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(2, otherPeer)
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "build return path in par if there are exported variables" in {
     val exportTo = CallModel.Export("result", ScalarType.string) :: Nil
     val result = VarRaw("result", ScalarType.string)
 
-    val init = on(
-      initPeer,
-      relay :: Nil,
-      seq(
-        par(
-          on(
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      SeqModel.wrap(
+        ParModel.wrap(
+          OnModel(
             otherPeer,
-            otherRelay :: Nil,
-            callModel(1, exportTo)
-          ),
+            Chain.one(otherRelay)
+          ).wrap(callModel(1, exportTo)),
           callModel(2)
         ),
         callModel(3, Nil, result :: Nil)
       )
     )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         ParRes.wrap(
           SeqRes.wrap(
@@ -129,26 +128,23 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(3, initPeer, None, result :: Nil)
       )
 
-    Node.equalsOrPrintDiff(proc, expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "work fine with par" in {
-    val init = on(
-      initPeer,
-      relay :: Nil,
-      par(
-        on(
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      ParModel.wrap(
+        OnModel(
           otherPeer,
-          otherRelay :: Nil,
-          callModel(1)
-        ),
+          Chain.one(otherRelay)
+        ).wrap(callModel(1)),
         callModel(2)
       )
     )
 
     val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       ParRes.wrap(
         SeqRes.wrap(
           through(relay),
@@ -158,40 +154,35 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(2, initPeer)
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "create correct calls in try" in {
-    val init = Node.`try`(callModel(1))
+    val init = XorModel.wrap(callModel(1))
 
     val proc = Topology.resolve(init).value
 
-    proc.equalsOrPrintDiff(
+    proc.equalsOrShowDiff(
       Cofree[Chain, ResolvedOp](XorRes, Eval.now(Chain.one(callRes(1, initPeer))))
     ) should be(true)
   }
 
   "topology resolver" should "work fine with par with on" in {
-    val init: Node.Op = on(
-      initPeer,
-      relay :: Nil,
-      par(
-        on(
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      ParModel.wrap(
+        OnModel(
           otherPeer,
-          otherRelay :: Nil,
-          callModel(1)
-        ),
-        on(
-          otherPeer2,
-          otherRelay2 :: Nil,
+          Chain.one(otherRelay)
+        ).wrap(callModel(1)),
+        OnModel(otherPeer2, Chain.one(otherRelay2)).wrap(
           callModel(2)
         )
       )
     )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       ParRes.wrap(
         SeqRes.wrap(
           through(relay),
@@ -205,19 +196,15 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         )
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "go through relay to any other node, via another relay, in complex xor/seq" in {
 
-    val init = on(
-      initPeer,
-      relay :: Nil,
-      on(
-        otherPeer,
-        otherRelay :: Nil,
-        xor(
-          seq(
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      OnModel(otherPeer, Chain.one(otherRelay)).wrap(
+        XorModel.wrap(
+          SeqModel.wrap(
             callModel(1),
             callModel(2)
           ),
@@ -226,9 +213,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         through(relay),
         through(otherRelay),
@@ -241,24 +228,21 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         )
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "simplify a route with init_peer_id" in {
-    val init: Node.Op = on(
-      initPeer,
-      relay :: Nil,
-      seq(
-        on(
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      SeqModel.wrap(
+        OnModel(
           initPeer,
-          relay :: Nil,
-          callModel(1)
-        ),
+          Chain.one(relay)
+        ).wrap(callModel(1)),
         callModel(2)
       )
     )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
     val expected =
       SeqRes.wrap(
@@ -266,27 +250,24 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(2, initPeer)
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "get back to init peer" in {
 
-    val init: Node.Op = on(
-      initPeer,
-      relay :: Nil,
-      seq(
-        on(
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      SeqModel.wrap(
+        OnModel(
           otherPeer,
-          otherRelay :: Nil,
-          callModel(1)
-        ),
+          Chain.one(otherRelay)
+        ).wrap(callModel(1)),
         callModel(2)
       )
     )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         through(relay),
         through(otherRelay),
@@ -296,25 +277,19 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(2, initPeer)
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "not stackoverflow" in {
-    val init = on(
-      initPeer,
-      relay :: Nil,
-      seq(
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      SeqModel.wrap(
         callModel(1),
         callModel(2),
         callModel(3),
-        on(
-          varNode,
-          viaList :: Nil,
+        OnModel(varNode, Chain.one(viaList)).wrap(
           callModel(4)
         ),
-        on(
-          initPeer,
-          relay :: Nil,
+        OnModel(initPeer, Chain.one(relay)).wrap(
           callModel(5)
         )
       )
@@ -324,24 +299,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   "topology resolver" should "get back to init peer after a long chain" in {
-    val init = on(
-      initPeer,
-      relay :: Nil,
-      seq(
-        on(
-          otherPeer,
-          otherRelay :: Nil,
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      SeqModel.wrap(
+        OnModel(otherPeer, Chain.one(otherRelay)).wrap(
           callModel(0),
-          on(
-            otherPeer2,
-            otherRelay :: Nil,
+          OnModel(otherPeer2, Chain.one(otherRelay)).wrap(
             callModel(1),
-            matchRaw(
-              otherPeer,
-              otherRelay,
-              on(
-                otherPeer,
-                otherRelay :: Nil,
+            MatchMismatchModel(otherPeer, otherRelay, true).wrap(
+              OnModel(otherPeer, Chain.one(otherRelay)).wrap(
                 callModel(2)
               )
             )
@@ -351,18 +316,16 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         through(relay),
         through(otherRelay),
         callRes(0, otherPeer),
         through(otherRelay),
         callRes(1, otherPeer2),
-        matchRes(
-          otherPeer,
-          otherRelay,
+        MatchMismatchRes(otherPeer, otherRelay, true).wrap(
           SeqRes.wrap(
             through(otherRelay),
             callRes(2, otherPeer)
@@ -373,39 +336,31 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(3, initPeer)
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "resolve xor path" in {
 
-    val init = on(
-      initPeer,
-      relay :: Nil,
-      seq(
-        xor(
-          on(
-            otherPeer,
-            otherRelay :: Nil,
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      SeqModel.wrap(
+        XorModel.wrap(
+          OnModel(otherPeer, Chain.one(otherRelay)).wrap(
             callModel(0)
           ),
-          on(
-            initPeer,
-            relay :: Nil,
+          OnModel(initPeer, Chain.one(relay)).wrap(
             callModel(1)
           )
         ),
-        on(
-          otherPeer,
-          otherRelay :: Nil,
+        OnModel(otherPeer, Chain.one(otherRelay)).wrap(
           callModel(3)
         ),
         callModel(4)
       )
     )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         XorRes.wrap(
           SeqRes.wrap(
@@ -427,7 +382,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(4, initPeer)
       )
 
-    Node.equalsOrPrintDiff(proc, expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   // func registerKeyPutValue(node_id: string) -> []string:
@@ -443,23 +398,15 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   // change it or write an integration test
   "topology resolver" should "create returning hops on chain of 'on'" in {
     val init =
-      on(
-        initPeer,
-        relay :: Nil,
-        on(
-          otherPeer,
-          Nil,
+      OnModel(initPeer, Chain.one(relay)).wrap(
+        OnModel(otherPeer, Chain.empty).wrap(
           callModel(0)
         ),
-        on(
-          otherPeer,
-          Nil,
+        OnModel(otherPeer, Chain.empty).wrap(
           foldPar(
             "i",
             valueArray,
-            on(
-              otherPeer2,
-              Nil,
+            OnModel(otherPeer2, Chain.empty).wrap(
               callModel(2)
             )
           )
@@ -467,35 +414,29 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callModel(3)
       )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         through(relay),
         callRes(0, otherPeer),
-        FoldRes("i", valueArray).wrap(ParRes.wrap(callRes(2, otherPeer2), nextRes("i"))),
+        FoldRes("i", valueArray).wrap(ParRes.wrap(callRes(2, otherPeer2), NextRes("i").leaf)),
         through(relay),
         callRes(3, initPeer)
       )
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "create returning hops on nested 'on'" in {
     val init =
-      on(
-        initPeer,
-        relay :: Nil,
+      OnModel(initPeer, Chain.one(relay)).wrap(
         callModel(0),
-        on(
-          otherPeer,
-          Nil,
+        OnModel(otherPeer, Chain.empty).wrap(
           callModel(1),
           fold(
             "i",
             valueArray,
-            on(
-              otherPeer2,
-              otherRelay2 :: Nil,
+            OnModel(otherPeer2, Chain.one(otherRelay2)).wrap(
               callModel(2)
             )
           )
@@ -503,9 +444,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callModel(3)
       )
 
-    val proc: Node.Res = Topology.resolve(init).value
+    val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         callRes(0, initPeer),
         through(relay),
@@ -513,29 +454,25 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         through(otherRelay2),
         FoldRes("i", valueArray).wrap(
           callRes(2, otherPeer2),
-          nextRes("i")
+          NextRes("i").leaf
         ),
         through(otherRelay2),
         through(relay),
         callRes(3, initPeer)
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   // https://github.com/fluencelabs/aqua/issues/205
   "topology resolver" should "optimize path over fold" in {
     val i = VarRaw("i", ScalarType.string)
     val init =
-      on(
-        initPeer,
-        relay :: Nil,
+      OnModel(initPeer, Chain.one(relay)).wrap(
         fold(
           "i",
           valueArray,
-          on(
-            i,
-            otherRelay :: Nil,
+          OnModel(i, Chain.one(otherRelay)).wrap(
             callModel(1)
           )
         )
@@ -543,7 +480,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         through(relay),
         FoldRes("i", valueArray).wrap(
@@ -553,28 +490,28 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           ),
           SeqRes.wrap(
             through(otherRelay),
-            nextRes("i")
+            NextRes("i").leaf
           )
         )
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "handle detach" in {
     val init =
-      on(
-        initPeer,
-        relay :: Nil,
-        co(
-          on(otherPeer, Nil, callModel(1, CallModel.Export(varNode.name, varNode.baseType) :: Nil))
+      OnModel(initPeer, Chain.one(relay)).wrap(
+        DetachModel.wrap(
+          OnModel(otherPeer, Chain.empty).wrap(
+            callModel(1, CallModel.Export(varNode.name, varNode.baseType) :: Nil)
+          )
         ),
         callModel(2, Nil, varNode :: Nil)
       )
 
     val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         ParRes.wrap(
           SeqRes.wrap(
@@ -587,21 +524,15 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(2, initPeer, None, varNode :: Nil)
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "handle moved detach" in {
     val init =
-      on(
-        initPeer,
-        relay :: Nil,
-        on(
-          otherPeer2,
-          Nil,
-          co(
-            on(
-              otherPeer,
-              Nil,
+      OnModel(initPeer, Chain.one(relay)).wrap(
+        OnModel(otherPeer2, Chain.empty).wrap(
+          DetachModel.wrap(
+            OnModel(otherPeer, Chain.empty).wrap(
               callModel(1, CallModel.Export(varNode.name, varNode.baseType) :: Nil)
             )
           ),
@@ -611,7 +542,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         through(relay),
         ParRes.wrap(
@@ -623,21 +554,15 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(2, otherPeer2, None, varNode :: Nil)
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
   "topology resolver" should "handle detach moved to relay" in {
     val init =
-      on(
-        initPeer,
-        relay :: Nil,
-        on(
-          relay,
-          Nil,
-          co(
-            on(
-              otherPeer,
-              Nil,
+      OnModel(initPeer, Chain.one(relay)).wrap(
+        OnModel(relay, Chain.empty).wrap(
+          DetachModel.wrap(
+            OnModel(otherPeer, Chain.empty).wrap(
               callModel(1, CallModel.Export(varNode.name, varNode.baseType) :: Nil)
             )
           )
@@ -647,7 +572,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val proc = Topology.resolve(init).value
 
-    val expected: Node.Res =
+    val expected =
       SeqRes.wrap(
         through(relay),
         ParRes.wrap(
@@ -660,7 +585,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(2, initPeer, None, varNode :: Nil)
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
   }
 
 }

@@ -43,22 +43,20 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val func = p.toList.head.funcs("parFunc")
 
-    val proc = Node.cofToNode(func.arrow.body)
+    val proc = func.arrow.body
 
-    val expected: Node[RawTag] =
-      Node.cofToNode(
-        ParTag.wrap(
-          OnTag(
-            LiteralRaw("\"other-peer\"", LiteralType.string),
-            Chain.empty
-          ).wrap(
-            CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall).leaf
-          ),
+    val expected =
+      ParTag.wrap(
+        OnTag(
+          LiteralRaw("\"other-peer\"", LiteralType.string),
+          Chain.empty
+        ).wrap(
           CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall).leaf
-        )
+        ),
+        CallServiceTag(LiteralRaw.quote("srv1"), "fn1", Node.emptyCall).leaf
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
 
   }
 }
