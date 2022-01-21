@@ -34,7 +34,7 @@ object TagInliner extends Logging {
             }
             .map { case (lambdaModel, map) =>
               val vm = VarModel(name, t, lambdaModel).resolveWith(exports)
-              vm -> Map.empty
+              vm -> map
             }
       }
     )
@@ -72,7 +72,7 @@ object TagInliner extends Logging {
       vmp <- unfold(value)
       (vm, map) = vmp
 
-      _ = logger.info("RAW " + value)
+      _ = logger.trace("RAW " + value)
       _ = logger.trace("MOD " + vm)
       dc <- Exports[S].exports
       _ = logger.trace("DEC " + dc)
@@ -86,8 +86,8 @@ object TagInliner extends Logging {
             FlattenModel(vv, name).leaf
         }
       }
-      _ = logger.info("desugarized ops: " + ops)
-      _ = logger.info("map was: " + map)
+      _ = logger.trace("desugarized ops: " + ops)
+      _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops)
 
   def desugarize[S: Counter: Exports](

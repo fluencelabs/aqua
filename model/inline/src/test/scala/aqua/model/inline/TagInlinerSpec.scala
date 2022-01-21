@@ -12,6 +12,7 @@ import org.scalatest.matchers.should.Matchers
 class TagInlinerSpec extends AnyFlatSpec with Matchers {
 
   "tag inliner" should "desugarize a single non-recursive raw value" in {
+    // x[y]
     TagInliner
       .desugarize[InliningState](
         VarRaw(
@@ -38,6 +39,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
 
   "tag inliner" should "unfold a LambdaModel" in {
     import aqua.model.inline.state.Counter.Simple
+    // [ys!]
     TagInliner
       .unfoldLambda[Int](
         IntoIndexRaw(
@@ -63,6 +65,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
   }
 
   "tag inliner" should "desugarize a single recursive raw value" in {
+    // x[ys!]
     val (resVal, resTree) = TagInliner
       .desugarize[InliningState](
         VarRaw(
