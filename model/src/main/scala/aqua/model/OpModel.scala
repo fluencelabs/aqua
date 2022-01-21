@@ -6,7 +6,7 @@ import cats.free.Cofree
 import cats.Show
 import cats.Eval
 import cats.data.NonEmptyList
-import aqua.tree.TreeNode
+import aqua.tree.{TreeNode, TreeNodeCompanion}
 
 import scala.annotation.tailrec
 
@@ -23,8 +23,10 @@ sealed trait OpModel extends TreeNode[OpModel] {
 
 }
 
-object OpModel extends OpModelShow {
-  type Tree = Cofree[Chain, OpModel]
+object OpModel extends TreeNodeCompanion[OpModel] {
+
+  given showTreeLabel: Show[OpModel] =
+    (t: OpModel) => t.toString.stripSuffix("Model")
 
   def exportsVarNames(tree: Tree): Eval[Set[String]] = Cofree.cata(tree) { case (op, acc) =>
     Eval.later(acc.foldLeft(op.exportsVarNames)(_ ++ _) -- op.restrictsVarNames)

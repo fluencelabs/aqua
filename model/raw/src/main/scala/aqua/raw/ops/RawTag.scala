@@ -4,10 +4,11 @@ import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.ValueRaw
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
+import cats.Show
 import cats.Eval
 import aqua.raw.Raw
 import aqua.raw.ops.RawTag.Tree
-import aqua.tree.TreeNode
+import aqua.tree.{TreeNode, TreeNodeCompanion}
 
 sealed trait RawTag extends TreeNode[RawTag] {
 
@@ -27,8 +28,10 @@ sealed trait RawTag extends TreeNode[RawTag] {
   def funcOpLeaf: FuncOp = FuncOp(leaf)
 }
 
-object RawTag extends RawTagGivens {
-  type Tree = Cofree[Chain, RawTag]
+object RawTag extends TreeNodeCompanion[RawTag] with RawTagGivens {
+
+  given showTreeLabel: Show[RawTag] =
+    (t: RawTag) => t.toString.stripSuffix("Tag")
 
   val empty: Tree = EmptyTag.leaf
 }

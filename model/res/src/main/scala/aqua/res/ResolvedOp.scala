@@ -2,15 +2,18 @@ package aqua.res
 
 import aqua.model.{CallModel, ValueModel, VarModel}
 import aqua.raw.ops.Call
-import aqua.tree.TreeNode
+import aqua.tree.{TreeNode, TreeNodeCompanion}
 import cats.data.Chain
 import cats.free.Cofree
+import cats.Show
 
 // TODO docs to all traits and objects
 sealed trait ResolvedOp extends TreeNode[ResolvedOp]
 
-object ResolvedOp {
-  type Tree = Cofree[Chain, ResolvedOp]
+object ResolvedOp extends TreeNodeCompanion[ResolvedOp] {
+
+  given showTreeLabel: Show[ResolvedOp] =
+    (op: ResolvedOp) => op.toString.stripSuffix("Res")
 }
 
 sealed trait NoAir extends ResolvedOp

@@ -1,19 +1,19 @@
-package aqua.model
+package aqua.tree
 
-import aqua.model.OpModel.Tree
 import cats.Show
 import cats.data.Chain
+import cats.free.Cofree
+
 import cats.syntax.show.*
 import cats.syntax.apply.*
 
 import scala.annotation.tailrec
 
-trait OpModelShow {
+trait TreeNodeCompanion[T <: TreeNode[T]] {
 
-  given Show[OpModel] with
+  given showTreeLabel: Show[T]
 
-    override def show(t: OpModel): String =
-      t.toString.stripSuffix("Model")
+  type Tree = Cofree[Chain, T]
 
   private def showOffset(what: Tree, offset: Int): String = {
     val spaces = " " * offset
@@ -85,4 +85,12 @@ trait OpModelShow {
     override def show(tt: (Tree, Tree)): String =
       showDiffOffset(tt, 0)
 
+  extension (t: Tree)
+
+    def equalsOrShowDiff(other: Tree): Boolean =
+      if (t.forceAll == other.forceAll) true
+      else {
+        println((t, other).show)
+        false
+      }
 }
