@@ -1,7 +1,7 @@
 package aqua.backend
 
 import aqua.backend.ts.TypeScriptCommon
-import aqua.model.transform.res.ServiceRes
+import aqua.res.ServiceRes
 import aqua.types.ArrowType
 import io.circe.*
 import io.circe.generic.auto.*

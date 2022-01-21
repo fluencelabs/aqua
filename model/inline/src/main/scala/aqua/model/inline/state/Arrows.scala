@@ -1,7 +1,6 @@
 package aqua.model.inline.state
 
-import aqua.model.FuncArrow
-import aqua.model.inline.ArgsCall
+import aqua.model.{ArgsCall, FuncArrow}
 import aqua.raw.arrow.FuncRaw
 import cats.data.State
 import cats.instances.list.*

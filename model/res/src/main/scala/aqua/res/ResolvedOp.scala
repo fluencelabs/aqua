@@ -1,4 +1,4 @@
-package aqua.model.transform.res
+package aqua.res
 
 import aqua.model.{CallModel, ValueModel, VarModel}
 import aqua.raw.ops.Call

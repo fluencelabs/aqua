@@ -2,7 +2,7 @@ package aqua.model.transform
 
 import aqua.model.inline.ArrowInliner
 import aqua.model.inline.state.InliningState
-import aqua.model.{CallModel, FuncArrow, OpModel, VarModel}
+import aqua.model.{AquaContext, CallModel, FuncArrow, OpModel, VarModel}
 import aqua.raw.value.VarRaw
 import aqua.model.transform.funcop.*
 import aqua.model.transform.pre.{
@@ -12,9 +12,9 @@ import aqua.model.transform.pre.{
   InitPeerCallable,
   InitViaRelayCallable
 }
-import aqua.model.transform.res.{FuncRes, NoAir, ResolvedOp}
 import aqua.model.transform.topology.Topology
-import aqua.raw.ops.{FuncOp, RawTag}
+import aqua.raw.ops.RawTag
+import aqua.res.{AquaRes, FuncRes, NoAir, ResolvedOp, ServiceRes}
 import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
@@ -75,8 +75,16 @@ object Transform extends Logging {
 
     resultingTree.map(res =>
       FuncRes(
-        func,
-        conf,
+        func.funcName,
+        func.argNames,
+        FuncRes.arrowArgs(func.arrowType),
+        FuncRes.arrowToRes(func.arrowType),
+        conf.relayVarName,
+        conf.getDataService,
+        conf.callbackService,
+        conf.respFuncName,
+        conf.errorHandlingService,
+        conf.errorFuncName,
         res
       )
     )
@@ -97,4 +105,21 @@ object Transform extends Logging {
         InliningState(resolvedArrows = Map(funcArgName -> func))
       )
       .map(_._2)
+
+  def contextRes(ex: AquaContext, conf: TransformConfig): AquaRes =
+    AquaRes(
+      funcs = Chain
+        .fromSeq(ex.funcs.map { case (fnName, fn) =>
+          fn.copy(funcName = fnName)
+        }.toSeq)
+        .map(
+          // TODO: keeep Eval
+          funcRes(_, conf).value
+        ),
+      services = Chain
+        .fromSeq(ex.services.map { case (srvName, srv) =>
+          srv.copy(name = srvName)
+        }.toSeq)
+        .map(ServiceRes.fromModel)
+    )
 }

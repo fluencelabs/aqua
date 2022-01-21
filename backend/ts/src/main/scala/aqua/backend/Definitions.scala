@@ -1,6 +1,6 @@
 package aqua.backend
 
-import aqua.model.transform.res.FuncRes
+import aqua.res.FuncRes
 import aqua.types.{ArrowType, OptionType, ProductType, Type}
 import io.circe.*
 import io.circe.generic.auto.*
@@ -8,7 +8,6 @@ import io.circe.parser.*
 import io.circe.syntax.*
 
 import scala.annotation.tailrec
-
 
 // Represents the Aqua types
 sealed trait TypeDefinition {
@@ -18,16 +17,16 @@ sealed trait TypeDefinition {
 object TypeDefinition {
 
   implicit val encodeDefType: Encoder[TypeDefinition] = {
-    case d@(OptionalType | VoidType | PrimitiveType) =>
+    case d @ (OptionalType | VoidType | PrimitiveType) =>
       Json.obj(
         ("tag", Json.fromString(d.tag))
       )
-    case d@CallbackType(cDef) =>
+    case d @ CallbackType(cDef) =>
       Json.obj(
         ("tag", Json.fromString(d.tag)),
         ("callback", cDef.asJson)
       )
-    case d@MultiReturnType(returnItems) =>
+    case d @ MultiReturnType(returnItems) =>
       Json.obj(
         ("tag", Json.fromString(d.tag)),
         ("returnItems", returnItems.asJson)
@@ -61,10 +60,11 @@ case class CallbackDefinition(argDefs: List[ArgDefinition], returnType: TypeDefi
 
 object CallbackDefinition {
 
-  implicit val encodeCallbackDef: Encoder[CallbackDefinition] = (cbDef: CallbackDefinition) => Json.obj(
-    ("argDefs", cbDef.argDefs.asJson),
-    ("returnType", cbDef.returnType.asJson)
-  )
+  implicit val encodeCallbackDef: Encoder[CallbackDefinition] = (cbDef: CallbackDefinition) =>
+    Json.obj(
+      ("argDefs", cbDef.argDefs.asJson),
+      ("returnType", cbDef.returnType.asJson)
+    )
 
   def apply(arrow: ArrowType): CallbackDefinition = {
     val args = arrow.domain.toLabelledList().map(arg => ArgDefinition.argToDef(arg._1, arg._2))
@@ -101,10 +101,11 @@ object ArgDefinition {
     }
   }
 
-  implicit val encodeArgDef: Encoder[ArgDefinition] = (a: ArgDefinition) => Json.obj(
-    ("name", Json.fromString(a.name)),
-    ("argType", a.argType.asJson)
-  )
+  implicit val encodeArgDef: Encoder[ArgDefinition] = (a: ArgDefinition) =>
+    Json.obj(
+      ("name", Json.fromString(a.name)),
+      ("argType", a.argType.asJson)
+    )
 }
 
 // Names of services and functions that are used in air
@@ -137,17 +138,18 @@ case class FunctionDef(
 )
 
 object FunctionDef {
+
   def apply(func: FuncRes): FunctionDef = {
     val args = func.args.map(a => ArgDefinition.argToDef(a.name, a.`type`))
-    val config = func.conf
+
     val names = NamesConfig(
-      config.relayVarName.getOrElse("-relay-"),
-      config.getDataService,
-      config.callbackService,
-      config.callbackService,
-      config.respFuncName,
-      config.errorHandlingService,
-      config.errorFuncName
+      func.relayVarName.getOrElse("-relay-"),
+      func.dataServiceId,
+      func.callbackServiceId,
+      func.callbackServiceId,
+      func.respFuncName,
+      func.errorHandlerId,
+      func.errorFuncName
     )
     FunctionDef(
       func.funcName,

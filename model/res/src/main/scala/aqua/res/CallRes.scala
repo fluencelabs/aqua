@@ -1,7 +1,6 @@
-package aqua.model.transform.res
+package aqua.res
 
-import aqua.model.ValueModel
-import aqua.model.CallModel
+import aqua.model.{CallModel, ValueModel}
 
 // TODO docs
 case class CallRes(args: List[ValueModel], exportTo: Option[CallModel.Export]) {

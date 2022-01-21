@@ -1,4 +1,4 @@
-package aqua.model.transform.res
+package aqua.res
 
 import aqua.model.{LiteralModel, ServiceModel}
 import aqua.types.{ArrowType, ScalarType}

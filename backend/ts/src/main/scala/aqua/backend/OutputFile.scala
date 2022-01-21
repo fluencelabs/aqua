@@ -2,7 +2,7 @@ package aqua.backend
 
 import aqua.backend.ts.{TSFuncTypes, TSServiceTypes}
 import aqua.backend.{Header, OutputService}
-import aqua.model.transform.res.AquaRes
+import aqua.res.AquaRes
 
 case class OutputFile(res: AquaRes) {
 

@@ -1,7 +1,7 @@
 package aqua.model.transform
 
-import aqua.{model, Node}
-import aqua.model.transform.res.{CallRes, CallServiceRes, MakeRes}
+import aqua.{Node, model}
+import aqua.model.transform.res.CallServiceRes
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, OnTag, RawTag, SeqTag}
@@ -10,6 +10,7 @@ import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.res.{CallRes, CallServiceRes, MakeRes}
 import cats.data.Chain
 
 class TransformSpec extends AnyFlatSpec with Matchers {

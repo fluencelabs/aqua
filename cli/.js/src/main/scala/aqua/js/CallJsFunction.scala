@@ -2,7 +2,7 @@ package aqua.js
 
 import aqua.backend.{ArgDefinition, FunctionDef, NamesConfig, ServiceDef, TypeDefinition}
 import aqua.model.transform.TransformConfig
-import aqua.model.transform.res.FuncRes
+import aqua.res.FuncRes
 import aqua.types.Type
 
 import scala.concurrent.{ExecutionContext, Future, Promise}

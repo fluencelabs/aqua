@@ -1,8 +1,8 @@
 package aqua.model.transform.pre
 
 import aqua.model.FuncArrow
-import aqua.model.inline.ArgsCall
-import aqua.raw.ops.{Call, CallArrowTag, FuncOp, RawTag, SeqTag}
+import aqua.model.ArgsCall
+import aqua.raw.ops.{Call, CallArrowTag, FuncOp, FuncOps, RawTag, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 

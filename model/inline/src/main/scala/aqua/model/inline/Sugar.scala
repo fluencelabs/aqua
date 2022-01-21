@@ -1,38 +1,14 @@
 package aqua.model.inline
 
+import aqua.model.inline.Sugar.logger
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  CanonicalizeModel,
-  DetachModel,
-  EmptyModel,
-  FlattenModel,
-  ForModel,
-  IntoFieldModel,
-  IntoIndexModel,
-  JoinModel,
-  LambdaModel,
-  LiteralModel,
-  MatchMismatchModel,
-  NextModel,
-  OnModel,
-  OpModel,
-  ParModel,
-  PushToStreamModel,
-  RestrictionModel,
-  SeqModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
+import aqua.model.*
 import aqua.raw.ops.*
-import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, ValueRaw, VarRaw}
-import cats.data.{Chain, State}
+import aqua.raw.value.*
 import cats.syntax.traverse.*
 import cats.instances.list.*
-import cats.syntax.functor.*
-import scribe.{log, Logging}
+import cats.data.{Chain, State}
+import scribe.Logging
 
 object Sugar extends Logging {
 
@@ -194,9 +170,7 @@ object Sugar extends Logging {
               desugarize(call).flatMap { case (cm, p) =>
                 ArrowInliner
                   .callArrow(fn, cm)
-                  .map(body =>
-                    Some(EmptyModel -> Option(SeqModel.wrap(p.toList :+ body: _*)))
-                  )
+                  .map(body => Some(EmptyModel -> Option(SeqModel.wrap(p.toList :+ body: _*))))
               }
             case None =>
               logger.error(

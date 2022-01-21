@@ -2,7 +2,7 @@ package aqua.backend.ts
 
 import aqua.backend.FuncTypes
 import aqua.backend.ts.TypeScriptCommon.{fixupArgName, genTypeName, typeToTs}
-import aqua.model.transform.res.FuncRes
+import aqua.res.FuncRes
 import aqua.types.*
 
 case class TSFuncTypes(func: FuncRes) extends FuncTypes {

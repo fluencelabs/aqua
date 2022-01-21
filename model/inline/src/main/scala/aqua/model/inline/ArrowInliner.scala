@@ -1,16 +1,13 @@
 package aqua.model.inline
 
-import aqua.model.{CallModel, FuncArrow, OpModel, PushToStreamModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
-import cats.Eval
-import scribe.{log, Logging}
-import aqua.raw.ops.{AssignmentTag, Call, CallArrowTag, ClosureTag, FuncOp, RawTag, SeqTag}
-import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.*
-import cats.syntax.traverse.*
-import cats.Eval
+import aqua.model.*
+import aqua.raw.ops.RawTag
+import aqua.raw.value.ValueRaw
+import aqua.types.StreamType
 import cats.data.{Chain, State, StateT}
-import cats.free.Cofree
+import cats.syntax.traverse.*
+import scribe.Logging
 
 object ArrowInliner extends Logging {
 

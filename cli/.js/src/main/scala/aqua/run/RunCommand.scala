@@ -12,7 +12,6 @@ import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
 import aqua.js.*
 import aqua.model.{AquaContext, FuncArrow}
-import aqua.model.transform.res.{AquaRes, FuncRes}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal

@@ -4,10 +4,11 @@ import aqua.backend.Backend
 import aqua.linker.Linker
 import aqua.model.AquaContext
 import aqua.model.transform.TransformConfig
-import aqua.model.transform.res.AquaRes
+import aqua.model.transform.Transform
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
 import aqua.raw.RawContext
+import aqua.res.AquaRes
 import aqua.semantics.Semantics
 import aqua.semantics.header.HeaderSem
 import cats.data.*
@@ -118,7 +119,7 @@ object AquaCompiler extends Logging {
     compileRaw(sources, parser, config).map(_.map {
       _.map { ap =>
         logger.trace("generating output...")
-        val res = AquaRes.fromContext(ap.context, config)
+        val res = Transform.contextRes(ap.context, config)
         val compiled = backend.generate(res)
         AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
       }

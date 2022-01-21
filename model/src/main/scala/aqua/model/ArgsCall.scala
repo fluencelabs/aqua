@@ -1,4 +1,4 @@
-package aqua.model.inline
+package aqua.model
 
 import aqua.model.{ValueModel, VarModel}
 import aqua.raw.ops.Call

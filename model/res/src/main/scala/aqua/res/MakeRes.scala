@@ -1,16 +1,16 @@
-package aqua.model.transform.res
+package aqua.res
 
-import aqua.model.transform.topology.Topology.Res
-import aqua.model.*
 import aqua.types.{ArrayType, StreamType}
 import cats.Eval
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
-import aqua.raw.value.LiteralRaw
-import aqua.raw.value.ValueRaw
+import aqua.raw.value.{LiteralRaw, ValueRaw}
+import aqua.model.*
 
 // TODO docs
 object MakeRes {
+  type Res = ResolvedOp.Tree
+
   val nilTail: Eval[Chain[Res]] = Eval.now(Chain.empty)
   val op: ValueModel = LiteralModel.fromRaw(LiteralRaw.quote("op"))
 

@@ -11,7 +11,6 @@ import cats.kernel.Semigroup
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import scribe.Logging
-import aqua.model.inline.ArgsCall
 
 import scala.collection.immutable.SortedMap
 

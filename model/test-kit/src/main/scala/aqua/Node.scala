@@ -1,45 +1,11 @@
 package aqua
 
 import aqua.model.transform.TransformConfig
-import aqua.model.transform.res.{
-  CallRes,
-  CallServiceRes,
-  MakeRes,
-  MatchMismatchRes,
-  NextRes,
-  ResolvedOp
-}
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  DetachModel,
-  ForModel,
-  LiteralModel,
-  MatchMismatchModel,
-  NextModel,
-  OnModel,
-  OpModel,
-  ParModel,
-  SeqModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
+import aqua.model.*
 import aqua.model.transform.funcop.ErrorsCatcher
-import aqua.raw.ops.{
-  Call,
-  CallServiceTag,
-  ForTag,
-  FuncOp,
-  MatchMismatchTag,
-  NextTag,
-  OnTag,
-  ParTag,
-  RawTag,
-  SeqTag,
-  XorTag
-}
+import aqua.raw.ops.*
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.res.{CallRes, CallServiceRes, MakeRes, MatchMismatchRes, NextRes, ResolvedOp}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 import cats.Eval
 import cats.data.Chain
@@ -138,7 +104,7 @@ object Node {
     )
 
   def callLiteralRes(i: Int, on: ValueModel, exportTo: Option[CallModel.Export] = None): Res = Node(
-    CallServiceRes(
+    res.CallServiceRes(
       LiteralModel("\"srv" + i + "\"", LiteralType.string),
       s"fn$i",
       CallRes(Nil, exportTo),
@@ -155,7 +121,7 @@ object Node {
   )
 
   def errorCall(bc: TransformConfig, i: Int, on: ValueModel = initPeer): Res = Node[ResolvedOp](
-    CallServiceRes(
+    res.CallServiceRes(
       bc.errorHandlingCallback,
       bc.errorFuncName,
       CallRes(
@@ -171,7 +137,7 @@ object Node {
 
   def respCall(bc: TransformConfig, value: ValueModel, on: ValueModel = initPeer): Res =
     Node[ResolvedOp](
-      CallServiceRes(
+      res.CallServiceRes(
         ValueModel.fromRaw(bc.callbackSrvId),
         bc.respFuncName,
         CallRes(value :: Nil, None),
@@ -181,7 +147,7 @@ object Node {
 
   def dataCall(bc: TransformConfig, name: String, on: ValueModel = initPeer): Res =
     Node[ResolvedOp](
-      CallServiceRes(
+      res.CallServiceRes(
         ValueModel.fromRaw(bc.dataSrvId),
         name,
         CallRes(Nil, Some(CallModel.Export(name, ScalarType.string))),

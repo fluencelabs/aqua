@@ -1,7 +1,7 @@
 package aqua.backend.ts
 
 import aqua.backend.{Backend, Generated, OutputFile}
-import aqua.model.transform.res.AquaRes
+import aqua.res.AquaRes
 import cats.data.NonEmptyChain
 
 object TypeScriptBackend extends Backend {
