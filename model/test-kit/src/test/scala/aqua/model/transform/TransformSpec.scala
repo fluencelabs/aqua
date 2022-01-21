@@ -1,7 +1,6 @@
 package aqua.model.transform
 
-import aqua.{Node, model}
-import aqua.model.transform.res.CallServiceRes
+import aqua.{model, Node}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, OnTag, RawTag, SeqTag}
