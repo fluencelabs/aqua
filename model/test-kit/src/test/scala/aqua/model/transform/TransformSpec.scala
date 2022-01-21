@@ -4,7 +4,7 @@ import aqua.{model, Node}
 import aqua.model.transform.res.{CallRes, CallServiceRes, MakeRes}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
-import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, FuncOps}
+import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, FuncOps, OnTag, RawTag, SeqTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -18,13 +18,11 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
   val stringArrow: ArrowType = ArrowType(NilType, ProductType(ScalarType.string :: Nil))
 
-  def callOp(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueRaw] = Nil): FuncOp =
-    FuncOp.leaf(
-      CallServiceTag(
-        VarRaw(s"srv$i", ScalarType.string),
-        s"fn$i",
-        Call(args, exportTo)
-      )
+  def callOp(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueRaw] = Nil): RawTag =
+    CallServiceTag(
+      VarRaw(s"srv$i", ScalarType.string),
+      s"fn$i",
+      Call(args, exportTo)
     )
 
   "transform.forClient" should "work well with function 1 (no calls before on), generate correct error handling" in {
@@ -34,7 +32,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val func: FuncArrow =
       model.FuncArrow(
         "ret",
-        FuncOps.onVia(otherPeer, Chain.fromSeq(otherRelay :: Nil), callOp(1)),
+        OnTag(otherPeer, Chain.fromSeq(otherRelay :: Nil)).wrap(callOp(1).leaf),
         stringArrow,
         ret :: Nil,
         Map.empty,
@@ -83,7 +81,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val func: FuncArrow = FuncArrow(
       "ret",
-      FuncOps.seq(callOp(0), FuncOps.onVia(otherPeer, Chain.empty, callOp(1))),
+      SeqTag.wrap(callOp(0).leaf, OnTag(otherPeer, Chain.empty).wrap(callOp(1).leaf)),
       stringArrow,
       ret :: Nil,
       Map.empty,
@@ -124,15 +122,11 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val f1: FuncArrow =
       model.FuncArrow(
         "f1",
-        FuncOp(
-          Node(
-            CallServiceTag(
-              LiteralRaw.quote("srv1"),
-              "foo",
-              Call(Nil, Call.Export("v", ScalarType.string) :: Nil)
-            )
-          ).cof
-        ),
+        CallServiceTag(
+          LiteralRaw.quote("srv1"),
+          "foo",
+          Call(Nil, Call.Export("v", ScalarType.string) :: Nil)
+        ).leaf,
         stringArrow,
         VarRaw("v", ScalarType.string) :: Nil,
         Map.empty,
@@ -142,9 +136,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val f2: FuncArrow =
       model.FuncArrow(
         "f2",
-        FuncOp(
-          Node(CallArrowTag("callable", Call(Nil, Call.Export("v", ScalarType.string) :: Nil))).cof
-        ),
+        CallArrowTag("callable", Call(Nil, Call.Export("v", ScalarType.string) :: Nil)).leaf,
         stringArrow,
         VarRaw("v", ScalarType.string) :: Nil,
         Map("callable" -> f1),
