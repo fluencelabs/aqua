@@ -2,11 +2,12 @@ package aqua.res
 
 import aqua.model.{CallModel, ValueModel, VarModel}
 import aqua.raw.ops.Call
+import aqua.tree.TreeNode
 import cats.data.Chain
 import cats.free.Cofree
 
 // TODO docs to all traits and objects
-sealed trait ResolvedOp
+sealed trait ResolvedOp extends TreeNode[ResolvedOp]
 
 object ResolvedOp {
   type Tree = Cofree[Chain, ResolvedOp]

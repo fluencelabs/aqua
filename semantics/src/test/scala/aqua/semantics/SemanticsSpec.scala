@@ -58,8 +58,6 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
         )
       )
 
-    println(expected)
-
     proc.equalsOrPrintDiff(expected) should be(true)
 
   }

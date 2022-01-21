@@ -2,7 +2,7 @@ package aqua.model.transform.topology
 
 import aqua.model.transform.cursor.ChainZipper
 import aqua.model.*
-import aqua.res.{MakeRes, ResolvedOp, SeqRes}
+import aqua.res.{FoldRes, MakeRes, NextRes, ResolvedOp, SeqRes}
 import aqua.types.{BoxType, ScalarType}
 import cats.Eval
 import cats.data.Chain.{==:, nil}
@@ -519,11 +519,11 @@ object Topology extends Logging {
     resolvedCofree.map(NonEmptyChain.fromChain(_).map(_.uncons)).map {
       case None =>
         logger.error("Topology emitted nothing")
-        Cofree(SeqRes, MakeRes.nilTail)
+        SeqRes.leaf
       case Some((el, `nil`)) => el
       case Some((el, tail)) =>
         logger.warn("Topology emitted many nodes, that's unusual")
-        Cofree(SeqRes, Eval.now(el +: tail))
+        SeqRes.wrap((el :: tail.toList): _*)
     }
   }
 
@@ -536,18 +536,16 @@ object Topology extends Logging {
         case _: BoxType =>
           val itemName = "-via-peer-"
 
-          MakeRes.fold(
-            itemName,
-            v,
+          FoldRes(itemName, v).wrap(
             if (reversed)
-              MakeRes.seq(
-                MakeRes.next(itemName),
+              SeqRes.wrap(
+                NextRes(itemName).leaf,
                 MakeRes.noop(VarModel(itemName, ScalarType.string, Chain.empty))
               )
             else
-              MakeRes.seq(
+              SeqRes.wrap(
                 MakeRes.noop(VarModel(itemName, ScalarType.string, Chain.empty)),
-                MakeRes.next(itemName)
+                NextRes(itemName).leaf
               )
           )
         case _ =>

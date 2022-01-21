@@ -2,7 +2,7 @@ package aqua.model.transform.topology
 
 import aqua.Node
 import aqua.model.{CallModel, ParModel, SeqModel, VarModel, XorModel}
-import aqua.res.{MakeRes, ResolvedOp, SeqRes, XorRes}
+import aqua.res.*
 import aqua.raw.ops.Call
 import aqua.raw.value.VarRaw
 import aqua.types.ScalarType
@@ -30,7 +30,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         callRes(1, initPeer),
         callRes(2, initPeer)
       )
@@ -57,7 +57,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(through(relay), callRes(1, otherPeer), callRes(2, otherPeer))
+      SeqRes.wrap(through(relay), callRes(1, otherPeer), callRes(2, otherPeer))
 
     proc should be(expected)
   }
@@ -80,7 +80,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         through(relay),
         through(otherRelay),
         callRes(1, otherPeer),
@@ -113,9 +113,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
-        MakeRes.par(
-          MakeRes.seq(
+      SeqRes.wrap(
+        ParRes.wrap(
+          SeqRes.wrap(
             through(relay),
             through(otherRelay),
             callRes(1, otherPeer, exportTo.headOption),
@@ -149,8 +149,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.par(
-        MakeRes.seq(
+      ParRes.wrap(
+        SeqRes.wrap(
           through(relay),
           through(otherRelay),
           callRes(1, otherPeer)
@@ -192,13 +192,13 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.par(
-        MakeRes.seq(
+      ParRes.wrap(
+        SeqRes.wrap(
           through(relay),
           through(otherRelay),
           callRes(1, otherPeer)
         ),
-        MakeRes.seq(
+        SeqRes.wrap(
           through(relay),
           through(otherRelay2),
           callRes(2, otherPeer2)
@@ -229,11 +229,11 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         through(relay),
         through(otherRelay),
-        MakeRes.xor(
-          MakeRes.seq(
+        XorRes.wrap(
+          SeqRes.wrap(
             callRes(1, otherPeer),
             callRes(2, otherPeer)
           ),
@@ -261,7 +261,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected =
-      MakeRes.seq(
+      SeqRes.wrap(
         callRes(1, initPeer),
         callRes(2, initPeer)
       )
@@ -287,7 +287,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         through(relay),
         through(otherRelay),
         callRes(1, otherPeer),
@@ -354,7 +354,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         through(relay),
         through(otherRelay),
         callRes(0, otherPeer),
@@ -363,7 +363,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         matchRes(
           otherPeer,
           otherRelay,
-          MakeRes.seq(
+          SeqRes.wrap(
             through(otherRelay),
             callRes(2, otherPeer)
           )
@@ -406,14 +406,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
-        MakeRes.xor(
-          MakeRes.seq(
+      SeqRes.wrap(
+        XorRes.wrap(
+          SeqRes.wrap(
             through(relay),
             through(otherRelay),
             callRes(0, otherPeer)
           ),
-          MakeRes.seq(
+          SeqRes.wrap(
             through(otherRelay),
             through(relay),
             callRes(1, initPeer),
@@ -470,10 +470,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         through(relay),
         callRes(0, otherPeer),
-        MakeRes.fold("i", valueArray, MakeRes.par(callRes(2, otherPeer2), nextRes("i"))),
+        FoldRes("i", valueArray).wrap(ParRes.wrap(callRes(2, otherPeer2), nextRes("i"))),
         through(relay),
         callRes(3, initPeer)
       )
@@ -506,14 +506,12 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc: Node.Res = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         callRes(0, initPeer),
         through(relay),
         callRes(1, otherPeer),
         through(otherRelay2),
-        MakeRes.fold(
-          "i",
-          valueArray,
+        FoldRes("i", valueArray).wrap(
           callRes(2, otherPeer2),
           nextRes("i")
         ),
@@ -546,16 +544,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         through(relay),
-        MakeRes.fold(
-          "i",
-          valueArray,
-          MakeRes.seq(
+        FoldRes("i", valueArray).wrap(
+          SeqRes.wrap(
             through(otherRelay),
             callRes(1, i)
           ),
-          MakeRes.seq(
+          SeqRes.wrap(
             through(otherRelay),
             nextRes("i")
           )
@@ -579,9 +575,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
-        MakeRes.par(
-          MakeRes.seq(
+      SeqRes.wrap(
+        ParRes.wrap(
+          SeqRes.wrap(
             through(relay),
             callRes(1, otherPeer, Some(CallModel.Export(varNode.name, varNode.baseType))),
             through(relay),
@@ -616,10 +612,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         through(relay),
-        MakeRes.par(
-          MakeRes.seq(
+        ParRes.wrap(
+          SeqRes.wrap(
             callRes(1, otherPeer, Some(CallModel.Export(varNode.name, varNode.baseType))),
             through(otherPeer2) // pingback
           )
@@ -652,10 +648,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc = Topology.resolve(init).value
 
     val expected: Node.Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         through(relay),
-        MakeRes.par(
-          MakeRes.seq(
+        ParRes.wrap(
+          SeqRes.wrap(
             callRes(1, otherPeer, Some(CallModel.Export(varNode.name, varNode.baseType))),
             through(relay), // pingback
             through(initPeer) // pingback

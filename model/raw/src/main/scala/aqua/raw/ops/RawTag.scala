@@ -7,8 +7,9 @@ import cats.free.Cofree
 import cats.Eval
 import aqua.raw.Raw
 import aqua.raw.ops.RawTag.Tree
+import aqua.tree.TreeNode
 
-sealed trait RawTag {
+sealed trait RawTag extends TreeNode[RawTag] {
 
   // What var names are exported – can be used AFTER this tag is executed
   def exportsVarNames: Set[String] = Set.empty
@@ -23,11 +24,7 @@ sealed trait RawTag {
 
   def renameExports(map: Map[String, String]): RawTag = this
 
-  def leaf: RawTag.Tree = Cofree(this, Eval.now(Chain.empty))
-
-  def funcOpLeaf: FuncOp = FuncOp(Cofree(this, Eval.now(Chain.empty)))
-
-  def wrap(children: RawTag.Tree*): RawTag.Tree = Cofree(this, Eval.now(Chain.fromSeq(children)))
+  def funcOpLeaf: FuncOp = FuncOp(leaf)
 }
 
 object RawTag extends RawTagGivens {
@@ -46,13 +43,8 @@ sealed trait ParGroupTag extends GroupTag
 
 case object SeqTag extends SeqGroupTag {
 
-  override def wrap(children: Tree*): Tree = children.toList match {
-    case Nil => EmptyTag.leaf
-    case x :: Nil =>
-      x
-    case _ =>
-      super.wrap(children: _*)
-  }
+  override def wrap(children: Tree*): Tree =
+    super.wrapNonEmpty(children.filterNot(_.head == EmptyTag).toList, RawTag.empty)
 }
 
 case object ParTag extends ParGroupTag {

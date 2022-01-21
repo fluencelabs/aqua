@@ -9,7 +9,7 @@ import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.res.{CallRes, CallServiceRes, MakeRes}
+import aqua.res.{CallRes, CallServiceRes, MakeRes, SeqRes, XorRes}
 import cats.data.Chain
 
 class TransformSpec extends AnyFlatSpec with Matchers {
@@ -46,24 +46,24 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val procFC: Node.Res = fc.value.body
 
     val expectedFC: Node.Res =
-      MakeRes.xor(
-        MakeRes.seq(
+      XorRes.wrap(
+        SeqRes.wrap(
           dataCall(bc, "-relay-", initPeer),
           through(relayV),
           through(otherRelay),
-          MakeRes.xor(
-            MakeRes.seq(
+          XorRes.wrap(
+            SeqRes.wrap(
               callRes(1, otherPeer),
               through(otherRelay),
               through(relayV)
             ),
-            MakeRes.seq(
+            SeqRes.wrap(
               through(otherRelay),
               through(relayV),
               errorCall(bc, 1, initPeer)
             )
           ),
-          MakeRes.xor(
+          XorRes.wrap(
             respCall(bc, ret, initPeer),
             errorCall(bc, 2, initPeer)
           )
@@ -95,7 +95,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val procFC: Res = fc.value.body
 
     val expectedFC: Res =
-      MakeRes.seq(
+      SeqRes.wrap(
         dataCall(bc, "-relay-", initPeer),
         callRes(0, initPeer),
         through(relayV),
@@ -148,7 +148,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val res = Transform.funcRes(f2, bc).value.body: Node.Res
 
     res.equalsOrPrintDiff(
-      MakeRes.seq(
+      SeqRes.wrap(
         dataCall(bc, "-relay-", initPeer),
         Node(
           CallServiceRes(

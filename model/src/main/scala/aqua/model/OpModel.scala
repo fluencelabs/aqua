@@ -6,10 +6,11 @@ import cats.free.Cofree
 import cats.Show
 import cats.Eval
 import cats.data.NonEmptyList
+import aqua.tree.TreeNode
 
 import scala.annotation.tailrec
 
-sealed trait OpModel {
+sealed trait OpModel extends TreeNode[OpModel] {
 
   // What var names are restricted only for children of this tag – CANNOT be used after this tag, only within
   def restrictsVarNames: Set[String] = Set.empty
@@ -20,17 +21,10 @@ sealed trait OpModel {
   // What var names are exported – can be used AFTER this tag is executed
   def exportsVarNames: Set[String] = Set.empty
 
-  // Tree builders
-  val leaf: OpModel.Tree = Cofree(this, Eval.now(Chain.empty))
-
-  def wrap(children: OpModel.Tree*): OpModel.Tree = Cofree(this, Eval.now(Chain.fromSeq(children)))
-
 }
 
 object OpModel extends OpModelShow {
   type Tree = Cofree[Chain, OpModel]
-  private val nil: Eval[Chain[Tree]] = Eval.now(Chain.empty)
-  val empty: Tree = EmptyModel.leaf
 
   def exportsVarNames(tree: Tree): Eval[Set[String]] = Cofree.cata(tree) { case (op, acc) =>
     Eval.later(acc.foldLeft(op.exportsVarNames)(_ ++ _) -- op.restrictsVarNames)
@@ -52,11 +46,8 @@ sealed trait ParGroupModel extends GroupOpModel
 
 case object SeqModel extends SeqGroupModel {
 
-  override def wrap(children: Tree*): Tree = children.toList.filterNot(_ == EmptyModel) match {
-    case Nil => EmptyModel.leaf
-    case x :: Nil => x
-    case ch => super.wrap(ch: _*)
-  }
+  override def wrap(children: Tree*): Tree =
+    super.wrapNonEmpty(children.filterNot(_.head == EmptyModel).toList, EmptyModel.leaf)
 }
 
 case object ParModel extends ParGroupModel
