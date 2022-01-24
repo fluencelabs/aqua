@@ -1,6 +1,15 @@
 package aqua.model.inline
 
-import aqua.model.{CallModel, CallServiceModel, FuncArrow, LiteralModel, OpModel, SeqModel}
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  EmptyModel,
+  FuncArrow,
+  LiteralModel,
+  OpModel,
+  SeqModel,
+  ValueModel
+}
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.{
   Call,
@@ -56,11 +65,25 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   }
 
-  "arrow inliner" should "work with streams as arguments" ignore {
+  /*
+  service TestService("test-service"):
+    get_records() -> []string
+
+  func inner(inner-records: *[]string):
+    inner-records <- TestService.get_records()
+
+  func retrieve_records() -> [][]string:
+      records: *[]string
+      -- 'inner-records' argument in `inner` should be renamed as `records` in resulted AIR
+      append_records(records)
+      <- records
+   */
+  "arrow inliner" should "work with streams as arguments" in {
 
     val returnType = ArrayType(ArrayType(ScalarType.string))
     val streamType = StreamType(ArrayType(ScalarType.string))
     val recordsVar = VarRaw("records", streamType)
+    val recordsModel = ValueModel.fromRaw(recordsVar)
     val innerRecordsVar = VarRaw("inner-records", StreamType(ArrayType(ScalarType.string)))
     val innerName = "inner"
 
@@ -87,7 +110,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           SeqTag.wrap(
             DeclareStreamTag(recordsVar).leaf,
             CallArrowTag(innerName, Call(recordsVar :: Nil, Nil)).leaf,
-            ReturnTag(NonEmptyList.one(recordsVar)).leaf
+            CallServiceTag(
+              LiteralRaw.quote("callbackSrv"),
+              "response",
+              Call(recordsVar :: Nil, Nil)
+            ).leaf
           ),
           ArrowType(ProductType(Nil), ProductType(returnType :: Nil)),
           Nil,
@@ -101,11 +128,19 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ._2
 
     model.equalsOrShowDiff(
-      CallServiceModel(
-        LiteralModel("\"dumb_srv_id\"", LiteralType.string),
-        "dumb",
-        CallModel(Nil, Nil)
-      ).leaf
+      SeqModel.wrap(
+        EmptyModel.leaf,
+        CallServiceModel(
+          LiteralModel("\"test-service\"", LiteralType.string),
+          "get_records",
+          CallModel(recordsModel :: Nil, Nil)
+        ).leaf,
+        CallServiceModel(
+          LiteralModel("\"callbackSrv\"", LiteralType.string),
+          "response",
+          CallModel(recordsModel :: Nil, Nil)
+        ).leaf
+      )
     ) should be(true)
 
   }
