@@ -57,7 +57,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     val returnType = ArrayType(ArrayType(ScalarType.string))
     val streamType = StreamType(ArrayType(ScalarType.string))
     val recordsVar = VarRaw("records", streamType)
-    val recordsModel = ValueModel.fromRaw(recordsVar)
+    val recordsModel = VarModel(recordsVar.name, recordsVar.baseType)
     val innerRecordsVar = VarRaw("inner-records", StreamType(ArrayType(ScalarType.string)))
     val innerName = "inner"
 
@@ -107,7 +107,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         CallServiceModel(
           LiteralModel("\"test-service\"", LiteralType.string),
           "get_records",
-          CallModel(recordsModel :: Nil, Nil)
+          CallModel(Nil, CallModel.Export(recordsModel.name, recordsModel.`type`) :: Nil)
         ).leaf,
         CallServiceModel(
           LiteralModel("\"callbackSrv\"", LiteralType.string),
