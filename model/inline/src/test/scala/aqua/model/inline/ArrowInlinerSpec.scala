@@ -48,6 +48,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
+    val cbType = ArrowType(ProductType(ArrayType(ScalarType.string) :: Nil), ProductType(Nil))
+    val cbVal = VarModel("cb-pass", cbType)
 
     val model: OpModel.Tree = ArrowInliner
       .callArrow[InliningState](
@@ -61,7 +63,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             ProductType.labelled(
               (
                 "cb",
-                ArrowType(ProductType(ArrayType(ScalarType.string) :: Nil), ProductType(Nil))
+                cbType
               ) :: Nil
             ),
             ProductType(Nil)
@@ -70,7 +72,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           Map.empty,
           Map.empty
         ),
-        CallModel(Nil, Nil)
+        CallModel(cbVal :: Nil, Nil)
       )
       .run(InliningState())
       .value
