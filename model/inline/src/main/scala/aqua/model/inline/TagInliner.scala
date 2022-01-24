@@ -38,7 +38,8 @@ object TagInliner extends Logging {
    * @return Model (if any), and prefix (if any)
    */
   def tagToModel[S: Counter: Mangler: Arrows: Exports](
-    tag: RawTag
+    tag: RawTag,
+    treeFunctionName: String
   ): State[S, (Option[OpModel], Option[OpModel.Tree])] =
     tag match {
       case OnTag(peerId, via) =>
@@ -102,7 +103,8 @@ object TagInliner extends Logging {
               }
             case None =>
               logger.error(
-                s"Cannot find arrow ${funcName}, available: ${arrows.keys.mkString(", ")}"
+                s"Inlining ${treeFunctionName}, cannot find arrow ${funcName}, available: ${arrows.keys
+                  .mkString(", ")}"
               )
               none
           }
@@ -145,11 +147,14 @@ object TagInliner extends Logging {
       tailTree <- tail.traverse(traverseS[S](_, f))
     } yield headTree.copy(tail = headTree.tail.map(_ ++ tailTree))
 
-  private def handleTag[S: Exports: Counter: Arrows: Mangler](tag: RawTag): State[S, OpModel.Tree] =
+  private def handleTag[S: Exports: Counter: Arrows: Mangler](
+    tag: RawTag,
+    treeFunctionName: String
+  ): State[S, OpModel.Tree] =
     for {
       resolvedArrows <- Arrows[S].arrows
 
-      opModelAndPrefixTree <- TagInliner.tagToModel(tag)
+      opModelAndPrefixTree <- TagInliner.tagToModel(tag, treeFunctionName)
       (dTag, dPrefix) = opModelAndPrefixTree
 
     } yield
@@ -157,7 +162,8 @@ object TagInliner extends Logging {
     SeqModel.wrap(dPrefix.toList ::: dTag.map(_.leaf).toList: _*)
 
   def handleTree[S: Exports: Counter: Mangler: Arrows](
-    tree: RawTag.Tree
+    tree: RawTag.Tree,
+    treeFunctionName: String
   ): State[S, OpModel.Tree] =
-    traverseS(tree, handleTag(_))
+    traverseS(tree, handleTag(_, treeFunctionName))
 }

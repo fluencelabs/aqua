@@ -40,7 +40,7 @@ object ArrowInliner extends Logging {
 
         // Now, substitute the arrows that were received as function arguments
         // Use the new op tree (args are replaced with values, names are unique & safe)
-        callableFuncBody <- TagInliner.handleTree(tree)
+        callableFuncBody <- TagInliner.handleTree(tree, fn.funcName)
 
         // Fix return values with exports collected in the body
         resolvedResult <- RawValueInliner.valueListToModel(result)
