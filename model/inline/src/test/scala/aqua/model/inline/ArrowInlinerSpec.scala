@@ -39,6 +39,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   }
 
+  /*
+  func stream-callback(cb: []string -> ()):
+	records: *string
+	cb(records)
+   */
   "arrow inliner" should "pass stream to callback properly" ignore {
 
     val streamType = StreamType(ScalarType.string)
