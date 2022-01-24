@@ -41,7 +41,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
         "index.aqua" ->
           """module Foo declares X
             |
+            |export foo, foo2 as foo_two
+            |
             |const X = 5
+            |
+            |func foo() -> string:
+            |  <- "hello?"
+            |
+            |func foo2() -> string:
+            |  <- "hello2?"
             |""".stripMargin
       ),
       Map.empty
@@ -50,12 +58,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     res.isValid should be(true)
     val Validated.Valid(ctxs) = res
 
-    ctxs.headOption.isDefined should be(true)
+    ctxs.length should be(1)
     val ctx = ctxs.headOption.get
 
-    println(ctx)
-
-    ctx.values.get("X").isDefined should be(true)
+    ctx.allFuncs.contains("foo") should be(true)
+    ctx.allFuncs.contains("foo_two") should be(true)
 
   }
 
