@@ -7,7 +7,8 @@ import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
-import aqua.raw.RawContext
+import aqua.raw.RawPart.Parts
+import aqua.raw.{RawContext, RawPart}
 import aqua.res.AquaRes
 import aqua.semantics.Semantics
 import aqua.semantics.header.HeaderSem
@@ -29,7 +30,9 @@ object AquaCompiler extends Logging {
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
     config: TransformConfig
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaProcessed[I]]]] = {
-    implicit val rc = RawContext.implicits(RawContext.blank).rawContextMonoid
+    implicit val rc = RawContext
+      .implicits(RawContext.blank.copy(parts = Parts(Chain.fromSeq(config.constantsList))))
+      .rawContextMonoid
     type Err = AquaError[I, E, S]
     type Ctx = NonEmptyMap[I, RawContext]
     type ValidatedCtx = ValidatedNec[Err, Ctx]
