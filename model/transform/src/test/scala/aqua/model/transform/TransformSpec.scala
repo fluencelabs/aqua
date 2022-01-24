@@ -1,6 +1,6 @@
 package aqua.model.transform
 
-import aqua.{model, Node}
+import aqua.model.transform.ModelBuilder
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, OnTag, RawTag, SeqTag}
@@ -14,7 +14,7 @@ import cats.data.Chain
 
 class TransformSpec extends AnyFlatSpec with Matchers {
 
-  import Node.*
+  import ModelBuilder.*
 
   val stringArrow: ArrowType = ArrowType(NilType, ProductType(ScalarType.string :: Nil))
 
@@ -30,7 +30,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val ret = LiteralRaw.quote("return this")
 
     val func: FuncArrow =
-      model.FuncArrow(
+      FuncArrow(
         "ret",
         OnTag(otherPeer, Chain.fromSeq(otherRelay :: Nil)).wrap(callOp(1).leaf),
         stringArrow,
@@ -120,7 +120,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
      */
 
     val f1: FuncArrow =
-      model.FuncArrow(
+      FuncArrow(
         "f1",
         CallServiceTag(
           LiteralRaw.quote("srv1"),
@@ -134,7 +134,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       )
 
     val f2: FuncArrow =
-      model.FuncArrow(
+      FuncArrow(
         "f2",
         CallArrowTag("callable", Call(Nil, Call.Export("v", ScalarType.string) :: Nil)).leaf,
         stringArrow,

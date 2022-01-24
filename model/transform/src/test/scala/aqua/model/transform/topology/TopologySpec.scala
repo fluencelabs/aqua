@@ -1,6 +1,6 @@
 package aqua.model.transform.topology
 
-import aqua.Node
+import aqua.model.transform.ModelBuilder
 import aqua.model.{
   CallModel,
   DetachModel,
@@ -24,7 +24,7 @@ import org.scalatest.matchers.should.Matchers
 
 class TopologySpec extends AnyFlatSpec with Matchers {
 
-  import Node._
+  import ModelBuilder._
 
   "topology resolver" should "do nothing on init peer" in {
 

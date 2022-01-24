@@ -1,6 +1,6 @@
 package aqua.model.transform.topology
 
-import aqua.Node
+import aqua.model.transform.ModelBuilder
 import aqua.model.{CallModel, OnModel, SeqModel}
 import aqua.model.transform.cursor.ChainZipper
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
@@ -11,9 +11,9 @@ import cats.data.{Chain, NonEmptyList}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class RawCursorSpec extends AnyFlatSpec with Matchers {
+class OpModelTreeCursorSpec extends AnyFlatSpec with Matchers {
 
-  import Node.*
+  import ModelBuilder.*
 
   "simple raw cursor on init_peer_id" should "move properly" in {
     val raw = OpModelTreeCursor(

@@ -1,6 +1,5 @@
 package aqua.semantics
 
-import aqua.model.AquaContext
 import aqua.parser.expr.func.ClosureExpr
 import aqua.parser.lexer.{Name, Token}
 import aqua.parser.lift.Span

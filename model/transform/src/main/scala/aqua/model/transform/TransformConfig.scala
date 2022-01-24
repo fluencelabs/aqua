@@ -58,8 +58,4 @@ case class TransformConfig(
 
   val constantsList: List[ConstantRaw] =
     hostPeerId :: initPeerId :: nil :: lastError :: constants
-
-  implicit val rawContextMonoid: Monoid[RawContext] = RawContext
-    .implicits(RawContext.blank.copy(parts = RawPart.Parts(Chain.fromSeq(constantsList))))
-    .rawContextMonoid
 }

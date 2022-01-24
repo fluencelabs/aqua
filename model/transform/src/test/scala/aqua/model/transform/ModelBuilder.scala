@@ -1,20 +1,27 @@
-package aqua
+package aqua.model.transform
 
-import aqua.model.transform.TransformConfig
-import aqua.model.*
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  ForModel,
+  LiteralModel,
+  NextModel,
+  OpModel,
+  ParModel,
+  SeqModel,
+  ValueModel,
+  VarModel
+}
 import aqua.model.transform.funcop.ErrorsCatcher
-import aqua.raw.ops.*
+import aqua.raw.ops.Call
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.res.{CallRes, CallServiceRes, MakeRes, MatchMismatchRes, NextRes, ResolvedOp}
+import aqua.{model, res}
+import aqua.res.{CallRes, CallServiceRes, MakeRes}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
-import cats.Eval
-import cats.data.Chain
-import cats.free.Cofree
 
 import scala.language.implicitConversions
 
-object Node {
-
+object ModelBuilder {
   implicit def rawToValue(raw: ValueRaw): ValueModel = ValueModel.fromRaw(raw)
 
   val relay = LiteralRaw("-relay-", ScalarType.string)
@@ -115,5 +122,4 @@ object Node {
 
   def through(peer: ValueModel) =
     MakeRes.noop(peer)
-
 }

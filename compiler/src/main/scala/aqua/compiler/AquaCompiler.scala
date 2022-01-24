@@ -29,7 +29,7 @@ object AquaCompiler extends Logging {
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
     config: TransformConfig
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaProcessed[I]]]] = {
-    import config.rawContextMonoid
+    implicit val rc = RawContext.implicits(RawContext.blank).rawContextMonoid
     type Err = AquaError[I, E, S]
     type Ctx = NonEmptyMap[I, RawContext]
     type ValidatedCtx = ValidatedNec[Err, Ctx]

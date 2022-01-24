@@ -142,13 +142,6 @@ lazy val transform = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .dependsOn(model, res, inline)
 
-lazy val `test-kit` = crossProject(JVMPlatform, JSPlatform)
-  .withoutSuffixFor(JVMPlatform)
-  .crossType(CrossType.Pure)
-  .in(file("model/test-kit"))
-  .settings(commons: _*)
-  .dependsOn(transform)
-
 lazy val semantics = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
@@ -159,7 +152,7 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
       "com.github.julien-truffaut" %%% "monocle-macro" % monocleV
     )
   )
-  .dependsOn(raw, `test-kit` % Test, parser)
+  .dependsOn(raw, parser)
 
 lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
