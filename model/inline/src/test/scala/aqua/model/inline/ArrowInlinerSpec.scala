@@ -102,8 +102,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ._2
 
     model.equalsOrShowDiff(
-      SeqModel.wrapWithEmpty(
-        EmptyModel.leaf,
+      SeqModel.wrap(
         CallServiceModel(
           LiteralModel("\"test-service\"", LiteralType.string),
           "get_records",
