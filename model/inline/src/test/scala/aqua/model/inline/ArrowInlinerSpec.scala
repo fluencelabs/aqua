@@ -69,7 +69,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         Call(Nil, Call.Export(innerRecordsVar.name, streamType) :: Nil)
       ).leaf,
       ArrowType(
-        ProductType(LabelledConsType(innerRecordsVar.name, streamType, NilType) :: Nil),
+        ProductType.labelled((innerRecordsVar.name -> streamType) :: Nil),
         ProductType(Nil)
       ),
       Nil,

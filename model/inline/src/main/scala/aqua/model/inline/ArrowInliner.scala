@@ -119,7 +119,7 @@ object ArrowInliner extends Logging {
       treeRenamed =
         fn.body
           .rename(argsShouldRename)
-      //  .rename(streamToRename)
+          .rename(streamToRename)
 
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
