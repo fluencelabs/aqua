@@ -1,36 +1,10 @@
 package aqua.model.inline
 
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  EmptyModel,
-  FuncArrow,
-  LiteralModel,
-  OpModel,
-  SeqModel,
-  ValueModel
-}
+import aqua.model.*
 import aqua.model.inline.state.InliningState
-import aqua.raw.ops.{
-  Call,
-  CallArrowTag,
-  CallServiceTag,
-  DeclareStreamTag,
-  RawTag,
-  ReturnTag,
-  SeqTag
-}
+import aqua.raw.ops.*
 import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.types.{
-  ArrayType,
-  ArrowType,
-  LabelledConsType,
-  LiteralType,
-  NilType,
-  ProductType,
-  ScalarType,
-  StreamType
-}
+import aqua.types.*
 import cats.data.NonEmptyList
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -128,7 +102,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ._2
 
     model.equalsOrShowDiff(
-      SeqModel.wrap(
+      SeqModel.wrapWithEmpty(
         EmptyModel.leaf,
         CallServiceModel(
           LiteralModel("\"test-service\"", LiteralType.string),

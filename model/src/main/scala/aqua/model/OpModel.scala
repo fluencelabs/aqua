@@ -50,6 +50,10 @@ case object SeqModel extends SeqGroupModel {
 
   override def wrap(children: Tree*): Tree =
     super.wrapNonEmpty(children.filterNot(_.head == EmptyModel).toList, EmptyModel.leaf)
+
+  def wrapWithEmpty(children: Tree*): Tree =
+    super.wrapNonEmpty(children.toList, EmptyModel.leaf)
+
 }
 
 case object ParModel extends ParGroupModel
@@ -76,7 +80,7 @@ case class RestrictionModel(name: String, isStream: Boolean) extends SeqGroupMod
 }
 
 case class MatchMismatchModel(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
-    extends SeqGroupModel {
+  extends SeqGroupModel {
 
   override def usesVarNames: Set[String] =
     left.usesVarNames ++ right.usesVarNames
@@ -109,7 +113,7 @@ case class PushToStreamModel(value: ValueModel, exportTo: CallModel.Export) exte
 }
 
 case class CallServiceModel(serviceId: ValueModel, funcName: String, call: CallModel)
-    extends OpModel {
+  extends OpModel {
 
   override lazy val usesVarNames: Set[String] = serviceId.usesVarNames ++ call.usesVarNames
 

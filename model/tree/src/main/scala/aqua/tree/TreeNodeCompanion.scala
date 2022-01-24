@@ -76,7 +76,8 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
         }
 
         " :" + (if (c1.length == c2.length) "\n"
-                else Console.RED + s" left ${c1.size} != right ${c2.size}\n") + nxt(
+                else
+                  s" ${Console.YELLOW}given ${c1.size}${Console.RED} != ${Console.CYAN}expected ${c2.size}${Console.RESET}\n") + nxt(
           c1.toList,
           c2.toList,
           Chain.empty
