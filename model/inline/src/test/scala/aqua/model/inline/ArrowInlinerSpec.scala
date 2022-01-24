@@ -44,12 +44,37 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 	records: *string
 	cb(records)
    */
-  "arrow inliner" should "pass stream to callback properly" ignore {
+  "arrow inliner" should "pass stream to callback properly" in {
 
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val cbType = ArrowType(ProductType(ArrayType(ScalarType.string) :: Nil), ProductType(Nil))
     val cbVal = VarModel("cb-pass", cbType)
+
+    val cbArg = VarRaw("cbVar", ArrayType(ScalarType.string))
+
+    val cbArrow = FuncArrow(
+      "cb",
+      SeqTag.wrap(
+        CallServiceTag(
+          LiteralRaw.quote("test-service"),
+          "some-call",
+          Call(cbArg :: Nil, Nil)
+        ).leaf
+      ),
+      ArrowType(
+        ProductType.labelled(
+          (
+            cbArg.name,
+            cbArg.`type`
+          ) :: Nil
+        ),
+        ProductType(Nil)
+      ),
+      Nil,
+      Map.empty,
+      Map.empty
+    )
 
     val model: OpModel.Tree = ArrowInliner
       .callArrow[InliningState](
@@ -69,7 +94,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             ProductType(Nil)
           ),
           Nil,
-          Map.empty,
+          Map("cb" -> cbArrow),
           Map.empty
         ),
         CallModel(cbVal :: Nil, Nil)
