@@ -48,6 +48,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
+    val arrayModel = VarModel("records", ArrayType(ScalarType.string))
     val cbType = ArrowType(ProductType(ArrayType(ScalarType.string) :: Nil), ProductType(Nil))
     val cbVal = VarModel("cb-pass", cbType)
 
@@ -104,11 +105,14 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ._2
 
     model.equalsOrShowDiff(
-      CallServiceModel(
-        LiteralModel("\"dumb_srv_id\"", LiteralType.string),
-        "dumb",
-        CallModel(Nil, Nil)
-      ).leaf
+      SeqModel.wrapWithEmpty(
+        EmptyModel.leaf,
+        CallServiceModel(
+          LiteralModel("\"test-service\"", LiteralType.string),
+          "some-call",
+          CallModel(arrayModel :: Nil, Nil)
+        ).leaf
+      )
     ) should be(true)
 
   }
