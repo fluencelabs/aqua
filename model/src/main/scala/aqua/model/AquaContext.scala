@@ -119,15 +119,18 @@ object AquaContext extends Logging {
   // Convert RawContext into AquaContext, with exports handled
   def exportsFromRaw(rawContext: RawContext): AquaContext = {
     val ctx = fromRawContext(rawContext)
-    ctx.exports.foldLeft(
-      // Module name is what persists
-      blank.copy(
-        module = ctx.module
-      )
-    ) { case (acc, (k, v)) =>
-      // Pick exported things, accumulate
-      acc |+| ctx.pick(k, v)
-    }
+    // if `module` header is not defined, then export everything
+    rawContext.module.fold(ctx)(_ =>
+      ctx.exports.foldLeft(
+        // Module name is what persists
+        blank.copy(
+          module = ctx.module
+        )
+      ) { case (acc, (k, v)) =>
+        // Pick exported things, accumulate
+        acc |+| ctx.pick(k, v)
+      }
+    )
   }
 
   // Convert RawContext into AquaContext, with no exports handled
