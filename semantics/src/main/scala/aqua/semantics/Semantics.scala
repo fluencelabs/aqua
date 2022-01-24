@@ -20,7 +20,7 @@ import cats.syntax.semigroup.*
 import cats.{Eval, Monad}
 import monocle.Lens
 import monocle.macros.GenLens
-import scribe.Logging
+import scribe.{log, Logging}
 
 object Semantics extends Logging {
 

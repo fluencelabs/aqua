@@ -15,15 +15,15 @@ import scribe.Logging
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
-  module: Option[String],
-  exports: Map[String, Option[String]],
-  funcs: Map[String, FuncArrow],
-  types: Map[String, Type],
-  values: Map[String, ValueModel],
-  abilities: Map[String, AquaContext],
-  // TODO: merge this with abilities, when have ability resolution variance
-  services: Map[String, ServiceModel]
-) {
+                        module: Option[String],
+                        exports: Map[String, Option[String]],
+                        funcs: Map[String, FuncArrow],
+                        types: Map[String, Type],
+                        values: Map[String, ValueModel],
+                        abilities: Map[String, AquaContext],
+                        // TODO: merge this with abilities, when have ability resolution variance
+                        services: Map[String, ServiceModel]
+                      ) {
 
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
@@ -141,7 +141,10 @@ object AquaContext extends Logging {
         rawContext.init
           .map(fromRawContext)
           .getOrElse(blank)
-          .copy(exports = rawContext.exports.getOrElse(Map.empty))
+          .copy(
+            exports = rawContext.exports.getOrElse(Map.empty),
+            abilities = rawContext.abilities.view.mapValues(fromRawContext).toMap
+          )
       ) {
         case (ctx, c: ConstantRaw) =>
           // Just saving a constant
