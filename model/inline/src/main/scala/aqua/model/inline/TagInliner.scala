@@ -12,10 +12,11 @@ import scribe.Logging
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
  *
+ * Converts [[ValueRaw]]s into [[ValueModel]]s with [[RawValueInliner]]
+ * Inlines [[CallArrowTag]] using [[ArrowInliner]]
+ *
  * Doing so might require some tree, expressed as [[OpModel.Tree]], to be prepended before the
  * resulting node. Hence the return types: (model, Option(tree to prepend)).
- *
- * Inlines arrows with [[ArrowInliner]] if meets [[CallArrowTag]] on its way, as there's no corresponding [[OpModel]].
  */
 object TagInliner extends Logging {
 
@@ -148,9 +149,9 @@ object TagInliner extends Logging {
     for {
       resolvedArrows <- Arrows[S].arrows
 
-      desugarized <- TagInliner.tagToModel(tag)
-      dPrefix = desugarized.flatMap(_._2)
-      dTag = desugarized.map(_._1)
+      opModelAndPrefixTree <- TagInliner.tagToModel(tag)
+      dPrefix = opModelAndPrefixTree.flatMap(_._2)
+      dTag = opModelAndPrefixTree.map(_._1)
 
     } yield
       // If smth needs to be added before this function tree, add it with Seq
