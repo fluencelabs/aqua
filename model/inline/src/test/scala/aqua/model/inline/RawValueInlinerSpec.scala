@@ -9,7 +9,9 @@ import cats.data.Chain
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class TagInlinerSpec extends AnyFlatSpec with Matchers {
+class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
+
+  import RawValueInliner.{unfoldLambda, valueToModel}
 
   private def ysVarRaw(into: Int, name: String = "ys"): VarRaw = VarRaw(
     name,
@@ -67,10 +69,9 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-  "tag inliner" should "desugarize a single non-recursive raw value" in {
+  "raw value inliner" should "desugarize a single non-recursive raw value" in {
     // x[y]
-    TagInliner
-      .valueToModel[InliningState](`raw x[y]`)
+    valueToModel[InliningState](`raw x[y]`)
       .run(InliningState(noNames = Set("x", "y")))
       .value
       ._2 should be(
@@ -82,11 +83,10 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  "tag inliner" should "unfold a LambdaModel" in {
+  "raw value inliner" should "unfold a LambdaModel" in {
     import aqua.model.inline.state.Mangler.Simple
     // [ys!]
-    TagInliner
-      .unfoldLambda[Set[String]](`raw ys[0]`)
+    unfoldLambda[Set[String]](`raw ys[0]`)
       .run(Set("ys"))
       .value
       ._2 should be(
@@ -100,12 +100,11 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  "tag inliner" should "desugarize a single recursive raw value" in {
+  "raw value inliner" should "desugarize a single recursive raw value" in {
     // x[ys!]
-    val (resVal, resTree) = TagInliner
-      .valueToModel[InliningState](
-        `raw x[ys[0]]`
-      )
+    val (resVal, resTree) = valueToModel[InliningState](
+      `raw x[ys[0]]`
+    )
       .run(InliningState(noNames = Set("x", "ys")))
       .value
       ._2
@@ -132,11 +131,10 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
   }
 
-  "tag inliner" should "desugarize x[ys[0]][ys[1]] and make proper flattener tags" in {
-    val (resVal, resTree) = TagInliner
-      .valueToModel[InliningState](
-        `raw x[ys[0]][ys[1]]`
-      )
+  "raw value inliner" should "desugarize x[ys[0]][ys[1]] and make proper flattener tags" in {
+    val (resVal, resTree) = valueToModel[InliningState](
+      `raw x[ys[0]][ys[1]]`
+    )
       .run(InliningState(noNames = Set("x", "ys")))
       .value
       ._2
@@ -176,11 +174,10 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
   }
 
-  "tag inliner" should "desugarize a recursive lambda value" in {
-    val (resVal, resTree) = TagInliner
-      .valueToModel[InliningState](
-        `raw x[zs[ys[0]]][ys[1]]`
-      )
+  "raw value inliner" should "desugarize a recursive lambda value" in {
+    val (resVal, resTree) = valueToModel[InliningState](
+      `raw x[zs[ys[0]]][ys[1]]`
+    )
       .run(InliningState(noNames = Set("x", "ys", "zs")))
       .value
       ._2

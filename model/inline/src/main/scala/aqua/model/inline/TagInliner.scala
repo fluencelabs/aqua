@@ -19,103 +19,9 @@ import scribe.Logging
  */
 object TagInliner extends Logging {
 
-  private[inline] def unfold[S: Mangler: Exports](
-    raw: ValueRaw
-  ): State[S, (ValueModel, Map[String, ValueRaw])] =
-    Exports[S].exports.flatMap(exports =>
-      raw match {
-        case VarRaw(name, t, lambda) if lambda.isEmpty =>
-          val vm = VarModel(name, t, Chain.empty).resolveWith(exports)
-          State.pure(vm -> Map.empty)
-        case LiteralRaw(value, t) =>
-          State.pure(LiteralModel(value, t) -> Map.empty)
-        case VarRaw(name, t, lambda) =>
-          lambda
-            .foldLeft[State[S, (Chain[LambdaModel], Map[String, ValueRaw])]](
-              State.pure(Chain.empty[LambdaModel] -> Map.empty[String, ValueRaw])
-            ) { case (lcm, l) =>
-              lcm.flatMap { case (lc, m) =>
-                unfoldLambda(l).map { case (lm, mm) =>
-                  (lc :+ lm, m ++ mm)
-                }
-              }
-            }
-            .map { case (lambdaModel, map) =>
-              val vm = VarModel(name, t, lambdaModel).resolveWith(exports)
-              vm -> map
-            }
-      }
-    )
+  import RawValueInliner.{callToModel, valueListToModel, valueToModel}
 
-  private[inline] def unfoldLambda[S: Mangler](
-    l: LambdaRaw
-  ): State[S, (LambdaModel, Map[String, ValueRaw])] =
-    l match {
-      case IntoFieldRaw(field, t) => State.pure(IntoFieldModel(field, t) -> Map.empty)
-      case IntoIndexRaw(vm @ VarRaw(name, _, l), t) if l.nonEmpty =>
-        for {
-          nn <- Mangler[S].findNewName(name)
-          _ <- Mangler[S].forbid(Set(nn))
-        } yield IntoIndexModel(nn, t) -> Map(nn -> vm)
-
-      case IntoIndexRaw(VarRaw(name, _, _), t) =>
-        State.pure(IntoIndexModel(name, t) -> Map.empty)
-
-      case IntoIndexRaw(LiteralRaw(value, _), t) =>
-        State.pure(IntoIndexModel(value, t) -> Map.empty)
-    }
-
-  private def parDesugarPrefix(ops: List[OpModel.Tree]): Option[OpModel.Tree] = ops match {
-    case Nil => None
-    case x :: Nil => Option(x)
-    case _ => Option(ParModel.wrap(ops: _*))
-  }
-
-  private def parDesugarPrefixOpt(ops: Option[OpModel.Tree]*): Option[OpModel.Tree] =
-    parDesugarPrefix(ops.toList.flatten)
-
-  def valueToModel[S: Mangler: Exports](
-    value: ValueRaw
-  ): State[S, (ValueModel, Option[OpModel.Tree])] =
-    for {
-      vmp <- unfold(value)
-      (vm, map) = vmp
-
-      _ = logger.trace("RAW " + value)
-      _ = logger.trace("MOD " + vm)
-      dc <- Exports[S].exports
-      _ = logger.trace("DEC " + dc)
-
-      ops <- map.toList.traverse { case (name, v) =>
-        valueToModel(v).map {
-          case (vv, Some(op)) =>
-            SeqModel.wrap(op, FlattenModel(vv, name).leaf)
-
-          case (vv, _) =>
-            FlattenModel(vv, name).leaf
-        }
-      }
-      _ = logger.trace("desugarized ops: " + ops)
-      _ = logger.trace("map was: " + map)
-    } yield vm -> parDesugarPrefix(ops)
-
-  def desugarize[S: Mangler: Exports](
-    values: List[ValueRaw]
-  ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
-    values.traverse(valueToModel(_))
-
-  private def callToModel[S: Mangler: Exports](
-    call: Call
-  ): State[S, (CallModel, Option[OpModel.Tree])] =
-    desugarize(call.args).map { list =>
-      (
-        CallModel(
-          list.map(_._1),
-          call.exportTo.map(CallModel.callExport)
-        ),
-        parDesugarPrefix(list.flatMap(_._2))
-      )
-    }
+  import Inline.*
 
   private def pure[S](op: OpModel): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
     State.pure(Some(op -> None))
@@ -130,14 +36,14 @@ object TagInliner extends Logging {
    * @tparam S Current state
    * @return Model (if any), and prefix (if any)
    */
-  def tagToModel[S: Counter: Mangler: Arrows: Exports](
-    tag: RawTag
-  ): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
+  def tagToModel[S: Counter : Mangler : Arrows : Exports](
+                                                           tag: RawTag
+                                                         ): State[S, Option[(OpModel, Option[OpModel.Tree])]] =
     tag match {
       case OnTag(peerId, via) =>
         for {
           peerIdDe <- valueToModel(peerId)
-          viaDe <- desugarize(via.toList)
+          viaDe <- valueListToModel(via.toList)
           (pid, pif) = peerIdDe
           viaD = Chain.fromSeq(viaDe.map(_._1))
           viaF = viaDe.flatMap(_._2)
@@ -179,6 +85,7 @@ object TagInliner extends Logging {
           .map(nel => Some(JoinModel(nel.map(_._1)) -> parDesugarPrefix(nel.toList.flatMap(_._2))))
 
       case CallArrowTag(funcName, call) =>
+
         /**
          * Here the back hop happens from [[TagInliner]] to [[ArrowInliner.callArrow]]
          */
@@ -228,16 +135,16 @@ object TagInliner extends Logging {
     }
 
   private def traverseS[S](
-    cf: RawTag.Tree,
-    f: RawTag => State[S, OpModel.Tree]
-  ): State[S, OpModel.Tree] =
+                            cf: RawTag.Tree,
+                            f: RawTag => State[S, OpModel.Tree]
+                          ): State[S, OpModel.Tree] =
     for {
       headTree <- f(cf.head)
       tail <- StateT.liftF(cf.tail)
       tailTree <- tail.traverse(traverseS[S](_, f))
     } yield headTree.copy(tail = headTree.tail.map(_ ++ tailTree))
 
-  private def handleTag[S: Exports: Counter: Arrows: Mangler](tag: RawTag): State[S, OpModel.Tree] =
+  private def handleTag[S: Exports : Counter : Arrows : Mangler](tag: RawTag): State[S, OpModel.Tree] =
     for {
       resolvedArrows <- Arrows[S].arrows
 
@@ -246,11 +153,11 @@ object TagInliner extends Logging {
       dTag = desugarized.map(_._1)
 
     } yield
-    // If smth needs to be added before this function tree, add it with Seq
-    SeqModel.wrap(dPrefix.toList ::: dTag.map(_.leaf).toList: _*)
+      // If smth needs to be added before this function tree, add it with Seq
+      SeqModel.wrap(dPrefix.toList ::: dTag.map(_.leaf).toList: _*)
 
-  def handleTree[S: Exports: Counter: Mangler: Arrows](
-    tree: RawTag.Tree
-  ): State[S, OpModel.Tree] =
+  def handleTree[S: Exports : Counter : Mangler : Arrows](
+                                                           tree: RawTag.Tree
+                                                         ): State[S, OpModel.Tree] =
     traverseS(tree, handleTag(_))
 }

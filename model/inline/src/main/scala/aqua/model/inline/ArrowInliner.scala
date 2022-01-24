@@ -16,18 +16,18 @@ import scribe.Logging
  */
 object ArrowInliner extends Logging {
 
-  def callArrow[S: Exports : Counter : Arrows : Mangler](
-                                                          arrow: FuncArrow,
-                                                          call: CallModel
-                                                        ): State[S, OpModel.Tree] =
+  def callArrow[S: Exports: Counter: Arrows: Mangler](
+    arrow: FuncArrow,
+    call: CallModel
+  ): State[S, OpModel.Tree] =
     callArrowRet(arrow, call).map(_._1)
 
   // Apply a callable function, get its fully resolved body & optional value, if any
-  private def inline[S: Mangler : Arrows : Exports : Counter](
-                                                               fn: FuncArrow,
-                                                               call: CallModel
-                                                             ): State[S, (OpModel.Tree, List[ValueModel])] =
-  // Function's internal variables will not be available outside, hence the scope
+  private def inline[S: Mangler: Arrows: Exports: Counter](
+    fn: FuncArrow,
+    call: CallModel
+  ): State[S, (OpModel.Tree, List[ValueModel])] =
+    // Function's internal variables will not be available outside, hence the scope
     Exports[S].scope(
       for {
         // Process renamings, prepare environment
@@ -43,12 +43,12 @@ object ArrowInliner extends Logging {
         callableFuncBody <- TagInliner.handleTree(tree)
 
         // Fix return values with exports collected in the body
-        resolvedResult <- TagInliner.desugarize(result)
+        resolvedResult <- RawValueInliner.valueListToModel(result)
 
         // Fix the return values
         (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(List[OpModel.Tree], ValueModel)] {
-            case (CallModel.Export(exp, st@StreamType(_)), (res, resDesugar)) =>
+            case (CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
               // pass nested function results to a stream
               (resDesugar.toList :+ PushToStreamModel(
                 res,
@@ -81,10 +81,10 @@ object ArrowInliner extends Logging {
    * @return
    * Tree with substituted values, list of return values prior to function calling/inlining
    */
-  private def prelude[S: Mangler : Arrows : Exports](
-                                                      fn: FuncArrow,
-                                                      call: CallModel
-                                                    ): State[S, (RawTag.Tree, List[ValueRaw])] =
+  private def prelude[S: Mangler: Arrows: Exports](
+    fn: FuncArrow,
+    call: CallModel
+  ): State[S, (RawTag.Tree, List[ValueRaw])] =
     for {
       // Collect all arguments: what names are used inside the function, what values are received
       argsFull <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
@@ -144,11 +144,10 @@ object ArrowInliner extends Logging {
       // Result could be renamed; take care about that
     } yield (tree, fn.ret.map(_.renameVars(shouldRename)))
 
-
-  private def callArrowRet[S: Exports : Counter : Arrows : Mangler](
-                                                                     arrow: FuncArrow,
-                                                                     call: CallModel
-                                                                   ): State[S, (OpModel.Tree, List[ValueModel])] =
+  private def callArrowRet[S: Exports: Counter: Arrows: Mangler](
+    arrow: FuncArrow,
+    call: CallModel
+  ): State[S, (OpModel.Tree, List[ValueModel])] =
     for {
       passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
 
