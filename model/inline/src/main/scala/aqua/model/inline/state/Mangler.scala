@@ -8,6 +8,9 @@ trait Mangler[S] {
 
   def findNewNames(introduce: Set[String]): State[S, Map[String, String]]
 
+  def findNewName(introduce: String): State[S, String] =
+    findNewNames(Set(introduce)).map(_.getOrElse(introduce, introduce))
+
   def forbid(names: Set[String]): State[S, Unit]
 
   def transformS[R](f: R => S, g: (R, S) => R): Mangler[R] =
@@ -27,7 +30,7 @@ trait Mangler[S] {
 object Mangler {
   def apply[S](implicit mangler: Mangler[S]): Mangler[S] = mangler
 
-  object Simple extends Mangler[Set[String]] {
+  implicit object Simple extends Mangler[Set[String]] {
     val getForbiddenNames: State[Set[String], Set[String]] = State.get
 
     def findNewNames(introduce: Set[String]): State[Set[String], Map[String, String]] =
@@ -35,7 +38,7 @@ object Mangler {
         (forbidden intersect introduce).foldLeft(Map.empty[String, String]) { case (acc, name) =>
           acc + (name -> LazyList
             .from(0)
-            .map(name + _)
+            .map(name + "-" + _)
             .dropWhile(n => forbidden(n) || introduce(n) || acc.contains(n))
             .head)
         }

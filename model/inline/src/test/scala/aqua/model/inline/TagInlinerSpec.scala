@@ -1,6 +1,6 @@
 package aqua.model.inline
 
-import aqua.model.{FlattenModel, IntoIndexModel, ParModel, VarModel}
+import aqua.model.{FlattenModel, IntoIndexModel, ParModel, SeqModel, VarModel}
 import aqua.model.inline.state.InliningState
 import aqua.raw.value.{IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
@@ -11,10 +11,10 @@ import org.scalatest.matchers.should.Matchers
 
 class TagInlinerSpec extends AnyFlatSpec with Matchers {
 
-  private def ysVarRaw(into: Int): VarRaw = VarRaw(
-    "ys",
+  private def ysVarRaw(into: Int, name: String = "ys"): VarRaw = VarRaw(
+    name,
     ArrayType(ScalarType.i8),
-    Chain.one(IntoIndexRaw(LiteralRaw.number(0), LiteralType.number))
+    Chain.one(IntoIndexRaw(LiteralRaw.number(into), ScalarType.i8))
   )
 
   private val `raw x[y]` = VarRaw(
@@ -45,11 +45,33 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
       )
     )
 
+  private val `raw x[zs[ys[0]]][ys[1]]` =
+    VarRaw(
+      "x",
+      ArrayType(ArrayType(ScalarType.string)),
+      Chain(
+        IntoIndexRaw(
+          VarRaw(
+            "zs",
+            ArrayType(ScalarType.i8),
+            Chain.one(
+              IntoIndexRaw(
+                ysVarRaw(0),
+                ScalarType.i8
+              )
+            )
+          ),
+          ArrayType(ScalarType.string)
+        ),
+        IntoIndexRaw(ysVarRaw(1), ScalarType.string)
+      )
+    )
+
   "tag inliner" should "desugarize a single non-recursive raw value" in {
     // x[y]
     TagInliner
       .desugarize[InliningState](`raw x[y]`)
-      .run(InliningState())
+      .run(InliningState(noNames = Set("x", "y")))
       .value
       ._2 should be(
       VarModel(
@@ -61,15 +83,15 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
   }
 
   "tag inliner" should "unfold a LambdaModel" in {
-    import aqua.model.inline.state.Counter.Simple
+    import aqua.model.inline.state.Mangler.Simple
     // [ys!]
     TagInliner
-      .unfoldLambda[Int](`raw ys[0]`)
-      .run(0)
+      .unfoldLambda[Set[String]](`raw ys[0]`)
+      .run(Set("ys"))
       .value
       ._2 should be(
-      IntoIndexModel("ys-1", ScalarType.string) -> Map(
-        "ys-1" -> VarRaw(
+      IntoIndexModel("ys-0", ScalarType.string) -> Map(
+        "ys-0" -> VarRaw(
           "ys",
           ArrayType(ScalarType.i8),
           Chain.one(IntoIndexRaw(LiteralRaw.number(0), LiteralType.number))
@@ -84,7 +106,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
       .desugarize[InliningState](
         `raw x[ys[0]]`
       )
-      .run(InliningState())
+      .run(InliningState(noNames = Set("x", "ys")))
       .value
       ._2
 
@@ -92,7 +114,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
       VarModel(
         "x",
         ArrayType(ScalarType.string),
-        Chain.one(IntoIndexModel("ys-1", ScalarType.string))
+        Chain.one(IntoIndexModel("ys-0", ScalarType.string))
       )
     )
 
@@ -105,7 +127,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
           ArrayType(ScalarType.i8),
           Chain.one(IntoIndexModel("0", LiteralType.number))
         ),
-        "ys-1"
+        "ys-0"
       ).leaf
     ) should be(true)
   }
@@ -115,7 +137,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
       .desugarize[InliningState](
         `raw x[ys[0]][ys[1]]`
       )
-      .run(InliningState())
+      .run(InliningState(noNames = Set("x", "ys")))
       .value
       ._2
 
@@ -124,8 +146,8 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
         "x",
         ArrayType(ArrayType(ScalarType.string)),
         Chain(
-          IntoIndexModel("ys-1", ArrayType(ScalarType.string)),
-          IntoIndexModel("ys-2", ScalarType.string)
+          IntoIndexModel("ys-0", ArrayType(ScalarType.string)),
+          IntoIndexModel("ys-1", ScalarType.string)
         )
       )
     )
@@ -140,7 +162,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
             ArrayType(ScalarType.i8),
             Chain.one(IntoIndexModel("0", LiteralType.number))
           ),
-          "ys-1"
+          "ys-0"
         ).leaf,
         FlattenModel(
           VarModel(
@@ -148,7 +170,67 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
             ArrayType(ScalarType.i8),
             Chain.one(IntoIndexModel("1", LiteralType.number))
           ),
-          "ys-2"
+          "ys-1"
+        ).leaf
+      )
+    ) should be(true)
+  }
+
+  "tag inliner" should "desugarize a recursive lambda value" in {
+    val (resVal, resTree) = TagInliner
+      .desugarize[InliningState](
+        `raw x[zs[ys[0]]][ys[1]]`
+      )
+      .run(InliningState(noNames = Set("x", "ys", "zs")))
+      .value
+      ._2
+
+    // This is x[zs-0][ys-0]
+    // zs-0 should be zs[ys[0]], which should be already flattened
+    resVal should be(
+      VarModel(
+        "x",
+        ArrayType(ArrayType(ScalarType.string)),
+        Chain(
+          IntoIndexModel("zs-0", ArrayType(ScalarType.string)),
+          IntoIndexModel("ys-0", ScalarType.string)
+        )
+      )
+    )
+
+    resTree.isEmpty should be(false)
+
+    resTree.get.equalsOrShowDiff(
+      ParModel.wrap(
+        // Prepare the zs-0 index
+        SeqModel.wrap(
+          // First get ys[0], save as ys-1
+          FlattenModel(
+            VarModel(
+              "ys",
+              ArrayType(ScalarType.i8),
+              Chain.one(IntoIndexModel("0", ScalarType.i8))
+            ),
+            "ys-1"
+          ).leaf,
+          // Then use that ys-1 as an index of zs
+          FlattenModel(
+            VarModel(
+              "zs",
+              ArrayType(ScalarType.i8),
+              Chain.one(IntoIndexModel("ys-1", ScalarType.i8))
+            ),
+            "zs-0"
+          ).leaf
+        ),
+        // Now prepare ys-0
+        FlattenModel(
+          VarModel(
+            "ys",
+            ArrayType(ScalarType.i8),
+            Chain.one(IntoIndexModel("1", ScalarType.i8))
+          ),
+          "ys-0"
         ).leaf
       )
     ) should be(true)

@@ -28,8 +28,18 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
     val spaces = " " * offset
     val head =
       if (what._1.head == what._2.head) what._1.head.show
-      else
-        Console.YELLOW + what._1.head.show + Console.RED + " != " + Console.CYAN + what._2.head.show + Console.RESET
+      else {
+        val lft = what._1.head.show
+        val rgt = what._2.head.show
+        val commonPrefixLen = lft.zip(rgt).takeWhile(_ == _).length
+        val commonSuffixLen = rgt.reverse.zip(lft.reverse).takeWhile(_ == _).length
+        val commonPrefix = lft.take(commonPrefixLen)
+        val commonSuffix = rgt.takeRight(commonSuffixLen)
+        val lftDiff = lft.substring(commonPrefixLen, lft.length - commonSuffixLen)
+        val rgtDiff = rgt.substring(commonPrefixLen, rgt.length - commonSuffixLen)
+        commonPrefix +
+          Console.YELLOW + lftDiff + Console.RED + " != " + Console.CYAN + rgtDiff + Console.RESET + commonSuffix
+      }
 
     spaces + head + (what._1.tail, what._2.tail).mapN {
       case (c1, c2) if c1.isEmpty && c2.isEmpty => "\n"

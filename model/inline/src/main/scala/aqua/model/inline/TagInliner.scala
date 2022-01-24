@@ -9,9 +9,14 @@ import cats.instances.list.*
 import cats.data.{Chain, State}
 import scribe.Logging
 
+/**
+ * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
+ * Doing so might require some tree, expressed as [[OpModel.Tree]], to be prepended before the
+ * resulting node. Hence the return types: (model, Option(tree to prepend))
+ */
 object TagInliner extends Logging {
 
-  private[inline] def unfold[S: Counter: Exports](
+  private[inline] def unfold[S: Mangler: Exports](
     raw: ValueRaw
   ): State[S, (ValueModel, Map[String, ValueRaw])] =
     Exports[S].exports.flatMap(exports =>
@@ -39,16 +44,17 @@ object TagInliner extends Logging {
       }
     )
 
-  private[inline] def unfoldLambda[S: Counter](
+  private[inline] def unfoldLambda[S: Mangler](
     l: LambdaRaw
   ): State[S, (LambdaModel, Map[String, ValueRaw])] =
     l match {
       case IntoFieldRaw(field, t) => State.pure(IntoFieldModel(field, t) -> Map.empty)
       case IntoIndexRaw(vm @ VarRaw(name, _, l), t) if l.nonEmpty =>
-        Counter[S].incr.map { i =>
-          val ni = name + "-" + i
-          IntoIndexModel(ni, t) -> Map(ni -> vm)
-        }
+        for {
+          nn <- Mangler[S].findNewName(name)
+          _ <- Mangler[S].forbid(Set(nn))
+        } yield IntoIndexModel(nn, t) -> Map(nn -> vm)
+
       case IntoIndexRaw(VarRaw(name, _, _), t) =>
         State.pure(IntoIndexModel(name, t) -> Map.empty)
 
@@ -65,7 +71,7 @@ object TagInliner extends Logging {
   private def parDesugarPrefixOpt(ops: Option[OpModel.Tree]*): Option[OpModel.Tree] =
     parDesugarPrefix(ops.toList.flatten)
 
-  def desugarize[S: Counter: Exports](
+  def desugarize[S: Mangler: Exports](
     value: ValueRaw
   ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
@@ -90,12 +96,12 @@ object TagInliner extends Logging {
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops)
 
-  def desugarize[S: Counter: Exports](
+  def desugarize[S: Mangler: Exports](
     values: List[ValueRaw]
   ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(desugarize(_))
 
-  def desugarize[S: Counter: Exports](
+  def desugarize[S: Mangler: Exports](
     call: Call
   ): State[S, (CallModel, Option[OpModel.Tree])] =
     desugarize(call.args).map { list =>
