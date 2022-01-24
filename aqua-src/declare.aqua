@@ -12,4 +12,4 @@ func decl_foo() -> string:
     <- res1
 
 func decl_bar() -> string:
-    <- "declare all bar"
+    <- DECLARE_CONST

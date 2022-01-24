@@ -15,15 +15,15 @@ import scribe.Logging
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
-                        module: Option[String],
-                        exports: Map[String, Option[String]],
-                        funcs: Map[String, FuncArrow],
-                        types: Map[String, Type],
-                        values: Map[String, ValueModel],
-                        abilities: Map[String, AquaContext],
-                        // TODO: merge this with abilities, when have ability resolution variance
-                        services: Map[String, ServiceModel]
-                      ) {
+  module: Option[String],
+  exports: Map[String, Option[String]],
+  funcs: Map[String, FuncArrow],
+  types: Map[String, Type],
+  values: Map[String, ValueModel],
+  abilities: Map[String, AquaContext],
+  // TODO: merge this with abilities, when have ability resolution variance
+  services: Map[String, ServiceModel]
+) {
 
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
@@ -136,16 +136,16 @@ object AquaContext extends Logging {
   // Convert RawContext into AquaContext, with no exports handled
   private def fromRawContext(rawContext: RawContext): AquaContext =
     rawContext.parts.parts
-      .foldLeft[AquaContext](
+      .foldLeft[AquaContext] {
         // Laziness unefficiency happens here
+        logger.trace(s"raw: ${rawContext.module}")
         rawContext.init
           .map(fromRawContext)
           .getOrElse(blank)
           .copy(
-            exports = rawContext.exports.getOrElse(Map.empty),
-            abilities = rawContext.abilities.view.mapValues(fromRawContext).toMap
-          )
-      ) {
+            exports = rawContext.exports.getOrElse(Map.empty)
+          ) |+| blank.copy(abilities = rawContext.abilities.view.mapValues(fromRawContext).toMap)
+      } {
         case (ctx, c: ConstantRaw) =>
           // Just saving a constant
           // Actually this should have no effect, as constants are resolved by semantics
@@ -160,7 +160,6 @@ object AquaContext extends Logging {
 
         case (ctx, func: FuncRaw) =>
           // To add a function, we have to know its scope
-          logger.trace(s"values for ${func.name} at ${rawContext.module} " + ctx.allValues.keySet)
           val fr = FuncArrow.fromRaw(func, ctx.allFuncs, ctx.allValues)
           val add = blank.copy(funcs = Map(func.name -> fr))
 
