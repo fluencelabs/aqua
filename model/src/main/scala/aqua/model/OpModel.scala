@@ -49,7 +49,11 @@ sealed trait ParGroupModel extends GroupOpModel
 case object SeqModel extends SeqGroupModel {
 
   override def wrap(children: Tree*): Tree =
-    super.wrapNonEmpty(children.toList, SeqModel.leaf)
+    super.wrapNonEmpty(children.filterNot(_.head == EmptyModel).toList, EmptyModel.leaf)
+
+  // EmptyModel allowed – useful for tests
+  def wrapWithEmpty(children: Tree*): Tree =
+    super.wrapNonEmpty(children.toList, EmptyModel.leaf)
 
 }
 
@@ -128,3 +132,5 @@ case class JoinModel(operands: NonEmptyList[ValueModel]) extends OpModel {
 
   override lazy val usesVarNames: Set[String] = operands.toList.flatMap(_.usesVarNames).toSet
 }
+
+case object EmptyModel extends NoExecModel
