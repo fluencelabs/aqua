@@ -48,11 +48,6 @@ object Semantics extends Logging {
 
   type Interpreter[S[_], A] = State[CompilerState[S], A]
 
-  // todo: is it needed?
-  type Alg[S[_]] = TypesAlgebra[S, Interpreter[S, *]]
-    with NamesAlgebra[S, Interpreter[S, *]] with ValuesAlgebra[S, Interpreter[S, *]]
-    with AbilitiesAlgebra[S, Interpreter[S, *]]
-
   def transpile[S[_]](ast: Ast[S]): Interpreter[S, Raw] = {
     import monocle.syntax.all.*
 

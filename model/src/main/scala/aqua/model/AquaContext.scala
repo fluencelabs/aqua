@@ -116,39 +116,33 @@ object AquaContext extends Logging {
       }
     )
 
-  def fromRaw(rawContext: RawContext): AquaContext = fromRawContext(rawContext)._2
+  // Convert RawContext into AquaContext, with exports handled
+  def exportsFromRaw(rawContext: RawContext): AquaContext = {
+    val ctx = fromRawContext(rawContext)
+    ctx.exports.foldLeft(
+      // Module name is what persists
+      blank.copy(
+        module = ctx.module
+      )
+    ) { case (acc, (k, v)) =>
+      // Pick exported things, accumulate
+      acc |+| ctx.pick(k, v)
+    }
+  }
 
-  //
-  private def fromRawContext(rawContext: RawContext): (AquaContext, AquaContext) =
+  // Convert RawContext into AquaContext, with no exports handled
+  private def fromRawContext(rawContext: RawContext): AquaContext =
     rawContext.parts.parts
-      .foldLeft[(AquaContext, AquaContext)](
-        // The first context is used to resolve imports
-        // The second one is what is going to be exported
-        {
-          // Laziness unefficiency happens here
-          (
-            rawContext.init
-              .map(fromRawContext(_)._1)
-              .getOrElse(
-                blank.copy(
-                  abilities = rawContext.abilities.view.mapValues(fromRawContext(_)._2).toMap
-                )
-              ),
-            rawContext.init
-              .map(fromRawContext(_)._2)
-              // Handle reexports
-              .map(_.copy(exports = rawContext.exports.getOrElse(Map.empty)).exported)
-              .getOrElse(blank)
-              .copy(
-                module = rawContext.module,
-                exports = rawContext.exports.getOrElse(Map.empty)
-              )
-          )
-
-        }
+      .foldLeft[AquaContext](
+        // Laziness unefficiency happens here
+        rawContext.init
+          .map(fromRawContext)
+          .getOrElse(blank)
+          .copy(exports = rawContext.exports.getOrElse(Map.empty))
       ) {
-        case ((ctx, exportContext), c: ConstantRaw) =>
+        case (ctx, c: ConstantRaw) =>
           // Just saving a constant
+          // Actually this should have no effect, as constants are resolved by semantics
           val add =
             blank
               .copy(values =
@@ -156,22 +150,22 @@ object AquaContext extends Logging {
                 else Map(c.name -> ValueModel.fromRaw(c.value).resolveWith(ctx.allValues))
               )
 
-          (ctx |+| add, exportContext |+| add)
+          ctx |+| add
 
-        case ((ctx, exportContext), func: FuncRaw) =>
+        case (ctx, func: FuncRaw) =>
           // To add a function, we have to know its scope
           logger.trace(s"values for ${func.name} at ${rawContext.module} " + ctx.allValues.keySet)
           val fr = FuncArrow.fromRaw(func, ctx.allFuncs, ctx.allValues)
           val add = blank.copy(funcs = Map(func.name -> fr))
 
-          (ctx |+| add, exportContext |+| add)
+          ctx |+| add
 
-        case ((ctx, exportContext), t: TypeRaw) =>
-          // Just remember the type (why?)
+        case (ctx, t: TypeRaw) =>
+          // Just remember the type (why? it's can't be exported, so seems useless)
           val add = blank.copy(types = Map(t.name -> t.`type`))
-          (ctx |+| add, exportContext |+| add)
+          ctx |+| add
 
-        case ((ctx, exportContext), m: ServiceRaw) =>
+        case (ctx, m: ServiceRaw) =>
           // To add a service, we need to resolve its ID, if any
           val id = m.defaultId.map(ValueModel.fromRaw).map(_.resolveWith(ctx.allValues))
           val srv = ServiceModel(m.name, m.arrows, id)
@@ -182,8 +176,8 @@ object AquaContext extends Logging {
                 services = Map(m.name -> srv)
               )
 
-          (ctx |+| add, exportContext |+| add)
-        case (ce, _) => ce
+          ctx |+| add
+        case (ctx, _) => ctx
       }
 
 }
