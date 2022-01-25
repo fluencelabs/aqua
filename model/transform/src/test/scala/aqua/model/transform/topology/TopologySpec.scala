@@ -559,7 +559,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
   "topology resolver" should "make right hops on for-par behaviour" in {
     val init = SeqModel.wrap(
-      OnModel(otherPeer, Chain.empty).wrap(
+      OnModel(otherPeer, Chain.one(relayV)).wrap(
         callModel(1),
         foldPar(
           "i",
@@ -567,10 +567,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           OnModel(LiteralRaw("i", ScalarType.string), Chain.empty).wrap(
             callModel(2, CallModel.Export("used", StreamType(ScalarType.string)) :: Nil)
           )
+        ),
+        OnModel(otherPeer2, Chain.empty).wrap(
+          callModel(3, Nil, VarRaw("used", StreamType(ScalarType.string)) :: Nil)
         )
-      ),
-      OnModel(otherPeer2, Chain.empty).wrap(
-        callModel(3, Nil, VarRaw("used", StreamType(ScalarType.string)) :: Nil)
       )
     )
 
@@ -579,18 +579,22 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected =
       SeqRes.wrap(
         callRes(1, otherPeer),
-        FoldRes("i", valueArray).wrap(
-          ParRes.wrap(
-            SeqRes.wrap(
-              callRes(
-                2,
-                LiteralRaw("i", ScalarType.string),
-                Some(CallModel.Export("used", StreamType(ScalarType.string)))
+        ParRes.wrap(
+          FoldRes("i", valueArray).wrap(
+            ParRes.wrap(
+              SeqRes.wrap(
+                // TODO: should be outside of fold
+                through(relayV),
+                callRes(
+                  2,
+                  LiteralRaw("i", ScalarType.string),
+                  Some(CallModel.Export("used", StreamType(ScalarType.string)))
+                ),
+                // after call `i` topology should send to `otherPeer2` if it's not fire-and-forget – to trigger execution
+                through(otherPeer2)
               ),
-              // after call `i` topology should return to `otherPeer2` if it's not fire-and-forget – to trigger execution
-              through(otherPeer2)
-            ),
-            NextRes("i").leaf
+              NextRes("i").leaf
+            )
           )
         ),
         callRes(3, otherPeer2, None, VarModel("used", StreamType(ScalarType.string)) :: Nil)

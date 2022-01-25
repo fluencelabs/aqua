@@ -3,6 +3,7 @@ package aqua.model.transform
 import aqua.model.{
   CallModel,
   CallServiceModel,
+  DetachModel,
   ForModel,
   LiteralModel,
   NextModel,
@@ -117,7 +118,10 @@ object ModelBuilder {
 
   def foldPar(item: String, iter: ValueRaw, body: OpModel.Tree*) = {
     val ops = SeqModel.wrap(body: _*)
-    ForModel(item, ValueModel.fromRaw(iter)).wrap(ParModel.wrap(ops, NextModel(item).leaf))
+    DetachModel.wrap(
+      ForModel(item, ValueModel.fromRaw(iter))
+        .wrap(ParModel.wrap(ops, NextModel(item).leaf))
+    )
   }
 
   def through(peer: ValueModel) =
