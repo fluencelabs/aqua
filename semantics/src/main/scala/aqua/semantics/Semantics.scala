@@ -17,7 +17,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.semigroup.*
-import cats.{Eval, Monad}
+import cats.{Eval, Monad, Semigroup}
 import monocle.Lens
 import monocle.macros.GenLens
 import scribe.{log, Logging}
@@ -75,7 +75,7 @@ object Semantics extends Logging {
     transpile[S](ast)
 
   def process[S[_]](ast: Ast[S], init: RawContext)(implicit
-    aqum: Monoid[RawContext]
+    aqum: Semigroup[RawContext]
   ): ValidatedNec[SemanticError[S], RawContext] =
     astToState[S](ast)
       .run(CompilerState.init[S](init))

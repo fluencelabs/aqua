@@ -15,7 +15,7 @@ import aqua.model.{
 import aqua.res.*
 import aqua.raw.ops.Call
 import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.types.ScalarType
+import aqua.types.{ScalarType, StreamType}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -565,11 +565,13 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           "i",
           valueArray,
           OnModel(LiteralRaw("i", ScalarType.string), Chain.empty).wrap(
-            callModel(2)
+            callModel(2, CallModel.Export("used", StreamType(ScalarType.string)) :: Nil)
           )
         )
       ),
-      OnModel(otherPeer2, Chain.empty).wrap(callModel(3))
+      OnModel(otherPeer2, Chain.empty).wrap(
+        callModel(3, Nil, VarRaw("used", StreamType(ScalarType.string)) :: Nil)
+      )
     )
 
     val proc = Topology.resolve(init).value
@@ -579,13 +581,19 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         callRes(1, otherPeer),
         FoldRes("i", valueArray).wrap(
           ParRes.wrap(
-            callRes(2, LiteralRaw("i", ScalarType.string)),
-            // after call `i` topology should return to `otherPeer`
-            through(otherPeer),
+            SeqRes.wrap(
+              callRes(
+                2,
+                LiteralRaw("i", ScalarType.string),
+                Some(CallModel.Export("used", StreamType(ScalarType.string)))
+              ),
+              // after call `i` topology should return to `otherPeer2` if it's not fire-and-forget – to trigger execution
+              through(otherPeer2)
+            ),
             NextRes("i").leaf
           )
         ),
-        callRes(3, otherPeer2)
+        callRes(3, otherPeer2, None, VarModel("used", StreamType(ScalarType.string)) :: Nil)
       )
 
     proc.equalsOrShowDiff(expected) should be(true)
