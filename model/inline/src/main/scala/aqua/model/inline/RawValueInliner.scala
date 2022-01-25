@@ -13,9 +13,9 @@ object RawValueInliner extends Logging {
 
   import Inline.*
 
-  private[inline] def unfold[S: Mangler : Exports](
-                                                    raw: ValueRaw
-                                                  ): State[S, (ValueModel, Map[String, ValueRaw])] =
+  private[inline] def unfold[S: Mangler: Exports](
+    raw: ValueRaw
+  ): State[S, (ValueModel, Map[String, ValueRaw])] =
     Exports[S].exports.flatMap(exports =>
       raw match {
         case VarRaw(name, t, lambda) if lambda.isEmpty =>
@@ -42,11 +42,11 @@ object RawValueInliner extends Logging {
     )
 
   private[inline] def unfoldLambda[S: Mangler](
-                                                l: LambdaRaw
-                                              ): State[S, (LambdaModel, Map[String, ValueRaw])] =
+    l: LambdaRaw
+  ): State[S, (LambdaModel, Map[String, ValueRaw])] =
     l match {
       case IntoFieldRaw(field, t) => State.pure(IntoFieldModel(field, t) -> Map.empty)
-      case IntoIndexRaw(vm@VarRaw(name, _, l), t) if l.nonEmpty =>
+      case IntoIndexRaw(vm @ VarRaw(name, _, l), t) if l.nonEmpty =>
         for {
           nn <- Mangler[S].findNewName(name)
           _ <- Mangler[S].forbid(Set(nn))
@@ -59,9 +59,9 @@ object RawValueInliner extends Logging {
         State.pure(IntoIndexModel(value, t) -> Map.empty)
     }
 
-  def valueToModel[S: Mangler : Exports](
-                                          value: ValueRaw
-                                        ): State[S, (ValueModel, Option[OpModel.Tree])] =
+  def valueToModel[S: Mangler: Exports](
+    value: ValueRaw
+  ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
       vmp <- unfold(value)
       (vm, map) = vmp
@@ -84,14 +84,14 @@ object RawValueInliner extends Logging {
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops)
 
-  def valueListToModel[S: Mangler : Exports](
-                                              values: List[ValueRaw]
-                                            ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
+  def valueListToModel[S: Mangler: Exports](
+    values: List[ValueRaw]
+  ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(valueToModel(_))
 
-  def callToModel[S: Mangler : Exports](
-                                         call: Call
-                                       ): State[S, (CallModel, Option[OpModel.Tree])] =
+  def callToModel[S: Mangler: Exports](
+    call: Call
+  ): State[S, (CallModel, Option[OpModel.Tree])] =
     valueListToModel(call.args).map { list =>
       (
         CallModel(

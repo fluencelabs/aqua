@@ -3,8 +3,8 @@ package aqua.model.inline
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
 import aqua.raw.ops.RawTag
-import aqua.raw.value.ValueRaw
-import aqua.types.StreamType
+import aqua.raw.value.{ValueRaw, VarRaw}
+import aqua.types.{BoxType, StreamType}
 import cats.data.{Chain, State, StateT}
 import cats.syntax.traverse.*
 import scribe.Logging
@@ -119,6 +119,14 @@ object ArrowInliner extends Logging {
       treeRenamed =
         fn.body
           .rename(argsShouldRename)
+          .map(_.mapValues(_.map {
+            // if an argument is a BoxType (Array or Option), but we pass a stream,
+            // change a type as stream to not miss `$` sign in air
+            // @see ArrowInlinerSpec `pass stream to callback properly` test
+            case v @ VarRaw(name, baseType: BoxType, lambda) if streamToRename.contains(name) =>
+              v.copy(baseType = StreamType(baseType.element))
+            case v => v
+          }))
           .rename(streamToRename)
 
       // Function body on its own defines some values; collect their names
