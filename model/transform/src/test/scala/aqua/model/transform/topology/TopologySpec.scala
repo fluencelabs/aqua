@@ -565,18 +565,27 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           "i",
           valueArray,
           OnModel(LiteralRaw("i", ScalarType.string), Chain.empty).wrap(
-            callModel(1)
+            callModel(2)
           )
         )
       ),
-      OnModel(otherPeer2, Chain.empty).wrap(callModel(2))
+      OnModel(otherPeer2, Chain.empty).wrap(callModel(3))
     )
 
     val proc = Topology.resolve(init).value
 
     val expected =
       SeqRes.wrap(
-        callRes(2, initPeer, None, varNode :: Nil)
+        callRes(1, otherPeer),
+        FoldRes("i", valueArray).wrap(
+          ParRes.wrap(
+            callRes(2, LiteralRaw("i", ScalarType.string)),
+            // after call `i` topology should return to `otherPeer`
+            through(otherPeer),
+            NextRes("i").leaf
+          )
+        ),
+        callRes(3, otherPeer2)
       )
 
     proc.equalsOrShowDiff(expected) should be(true)
