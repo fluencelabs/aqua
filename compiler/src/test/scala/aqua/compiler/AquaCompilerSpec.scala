@@ -1,12 +1,15 @@
 package aqua.compiler
 
-import aqua.model.LiteralModel
+import aqua.model.{CallModel, LiteralModel, VarModel}
 import aqua.model.transform.TransformConfig
+import aqua.model.transform.Transform
 import aqua.parser.ParserError
 import aqua.parser.Ast
 import aqua.parser.Parser
 import aqua.parser.lift.Span
-import aqua.types.LiteralType
+import aqua.raw.value.{LiteralRaw, ValueRaw}
+import aqua.res.{ApRes, CallRes, CallServiceRes, RestrictionRes, SeqRes}
+import aqua.types.{ArrayType, LiteralType, ScalarType, StreamType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.Id
@@ -72,21 +75,52 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
   }
 
-  "aqua compiler" should "compile a callback with an empty stream argument" in {
+  "aqua compiler" should "compile with imports" in {
 
     val res = compileToContext(
       Map(
         "index.aqua" ->
-          """module Ret declares *
+          """module Import
+            |import foobar from "export2.aqua"
             |
-            |export someFunc
+            |use foo as f from "export2.aqua" as Exp
             |
-            |func someFunc(cb: []string -> ()):
-            |	ifaces: *string
-            |	cb(ifaces)
+            |import "../gen/OneMore.aqua"
+            |
+            |export foo_wrapper as wrap, foobar as barfoo
+            |
+            |func foo_wrapper() -> string:
+            |    z <- Exp.f()
+            |    OneMore "hello"
+            |    OneMore.more_call()
+            |    -- Exp.f() returns literal, this func must return literal in AIR as well
+            |    <- z
             |""".stripMargin
       ),
-      Map.empty
+      Map(
+        "export2.aqua" ->
+          """module Export declares foobar, foo
+            |
+            |func bar() -> string:
+            |    <- " I am MyFooBar bar"
+            |
+            |func foo() -> string:
+            |    <- "I am MyFooBar foo"
+            |
+            |func foobar() -> []string:
+            |    res: *string
+            |    res <- foo()
+            |    res <- bar()
+            |    <- res
+            |
+            |""".stripMargin,
+        "../gen/OneMore.aqua" ->
+          """
+            |service OneMore:
+            |  more_call()
+            |  consume(s: string)
+            |""".stripMargin
+      )
     )
 
     res.isValid should be(true)
@@ -95,8 +129,47 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     ctxs.length should be(1)
     val ctx = ctxs.headOption.get
 
-    val func = ctx.allFuncs.get("someFunc")
-    func.nonEmpty should be(true)
+    val aquaRes =
+      Transform.contextRes(ctx, TransformConfig(wrapWithXor = false, relayVarName = None))
+
+    val Some(funcWrap) = aquaRes.funcs.find(_.funcName == "wrap")
+    val Some(barfoo) = aquaRes.funcs.find(_.funcName == "barfoo")
+
+    barfoo.body.equalsOrShowDiff(
+      SeqRes.wrap(
+        RestrictionRes("res", true).wrap(
+          SeqRes.wrap(
+            // res <- foo()
+            ApRes(
+              LiteralModel.fromRaw(LiteralRaw.quote("I am MyFooBar foo")),
+              CallModel.Export("res", StreamType(ScalarType.string))
+            ).leaf,
+            // res <- bar()
+            ApRes(
+              LiteralModel.fromRaw(LiteralRaw.quote(" I am MyFooBar bar")),
+              CallModel.Export("res", StreamType(ScalarType.string))
+            ).leaf,
+            // canonicalization
+            CallServiceRes(
+              LiteralModel.fromRaw(LiteralRaw.quote("op")),
+              "identity",
+              CallRes(
+                VarModel("res", StreamType(ScalarType.string)) :: Nil,
+                Some(CallModel.Export("res-fix", ArrayType(ScalarType.string)))
+              ),
+              LiteralModel.fromRaw(ValueRaw.InitPeerId)
+            ).leaf
+          )
+        ),
+        CallServiceRes(
+          LiteralModel.fromRaw(LiteralRaw.quote("callbackSrv")),
+          "response",
+          CallRes(VarModel("res-fix", ArrayType(ScalarType.string)) :: Nil, None),
+          LiteralModel.fromRaw(ValueRaw.InitPeerId)
+        ).leaf
+      )
+    ) should be(true)
+
   }
 
 }

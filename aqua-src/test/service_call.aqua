@@ -5,7 +5,6 @@ use foo as f from "export2.aqua" as Exp
 
 import "../gen/OneMore.aqua"
 
-
 export foo_wrapper as wrap, foobar as barfoo
 
 func foo_wrapper() -> string:
