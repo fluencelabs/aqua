@@ -56,13 +56,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     val cbArrow = FuncArrow(
       "cb",
-      SeqTag.wrap(
-        CallServiceTag(
-          LiteralRaw.quote("test-service"),
-          "some-call",
-          Call(cbArg :: Nil, Nil)
-        ).leaf
-      ),
+      CallServiceTag(
+        LiteralRaw.quote("test-service"),
+        "some-call",
+        Call(cbArg :: Nil, Nil)
+      ).leaf,
       ArrowType(
         ProductType.labelled(
           (

@@ -15,14 +15,14 @@ import scribe.Logging
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
-  module: Option[String],
-  funcs: Map[String, FuncArrow],
-  types: Map[String, Type],
-  values: Map[String, ValueModel],
-  abilities: Map[String, AquaContext],
-  // TODO: merge this with abilities, when have ability resolution variance
-  services: Map[String, ServiceModel]
-) {
+                        module: Option[String],
+                        funcs: Map[String, FuncArrow],
+                        types: Map[String, Type],
+                        values: Map[String, ValueModel],
+                        abilities: Map[String, AquaContext],
+                        // TODO: merge this with abilities, when have ability resolution variance
+                        services: Map[String, ServiceModel]
+                      ) {
 
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
@@ -114,20 +114,21 @@ object AquaContext extends Logging {
     val ctx = fromRawContext(rawContext)
     logger.trace("raw: " + rawContext)
     logger.trace("ctx: " + ctx)
-    // if `module` header is not defined, then export everything
-    rawContext.module.fold(ctx)(_ =>
-      rawContext.exports
-        .getOrElse(Map.empty)
-        .foldLeft(
-          // Module name is what persists
-          blank.copy(
-            module = ctx.module
-          )
-        ) { case (acc, (k, v)) =>
-          // Pick exported things, accumulate
-          acc |+| ctx.pick(k, v)
-        }
-    )
+
+    rawContext.module
+      .fold(
+        // if `module` header is not defined, then export everything defined in rawContext
+        rawContext.parts.parts.map(_.name).map(_ -> Option.empty[String]).toList.toMap
+      )(_ => rawContext.exports.getOrElse(Map.empty))
+      .foldLeft(
+        // Module name is what persists
+        blank.copy(
+          module = ctx.module
+        )
+      ) { case (acc, (k, v)) =>
+        // Pick exported things, accumulate
+        acc |+| ctx.pick(k, v)
+      }
   }
 
   // Convert RawContext into AquaContext, with no exports handled

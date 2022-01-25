@@ -23,7 +23,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
           Validated.validNec(Chain.fromSeq(src.toSeq))
 
         override def resolveImport(from: String, imp: String): Id[ValidatedNec[String, String]] =
-          Validated.validNec(from + "/" + imp)
+          Validated.validNec(imp)
 
         override def load(file: String): Id[ValidatedNec[String, String]] =
           Validated.fromEither(

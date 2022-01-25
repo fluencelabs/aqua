@@ -22,7 +22,7 @@ object Test extends IOApp.Simple {
       start <- IO(System.currentTimeMillis())
       _ <- AquaPathCompiler
         .compileFilesTo[IO](
-          Path("./aqua-src/imports.aqua"),
+          Path("./aqua-src/test/service_call.aqua"),
           List(Path("./aqua")),
           Option(Path("./target")),
           TypeScriptBackend,
