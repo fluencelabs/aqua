@@ -81,9 +81,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       .callArrow[InliningState](
         FuncArrow(
           "stream-callback",
-          SeqTag.wrap(
-            DeclareStreamTag(streamVar).leaf,
-            CallArrowTag("cb", Call(streamVar :: Nil, Nil)).leaf
+          RestrictionTag(streamVar.name, true).wrap(
+            SeqTag.wrap(
+              DeclareStreamTag(streamVar).leaf,
+              CallArrowTag("cb", Call(streamVar :: Nil, Nil)).leaf
+            )
           ),
           ArrowType(
             ProductType.labelled(
@@ -105,13 +107,15 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ._2
 
     model.equalsOrShowDiff(
-      SeqModel.wrapWithEmpty(
-        EmptyModel.leaf,
-        CallServiceModel(
-          LiteralModel("\"test-service\"", LiteralType.string),
-          "some-call",
-          CallModel(arrayModel :: Nil, Nil)
-        ).leaf
+      RestrictionModel(streamVar.name, true).wrap(
+        SeqModel.wrapWithEmpty(
+          EmptyModel.leaf,
+          CallServiceModel(
+            LiteralModel("\"test-service\"", LiteralType.string),
+            "some-call",
+            CallModel(arrayModel :: Nil, Nil)
+          ).leaf
+        )
       )
     ) should be(true)
 
