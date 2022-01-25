@@ -14,7 +14,7 @@ import aqua.model.{
 }
 import aqua.res.*
 import aqua.raw.ops.Call
-import aqua.raw.value.VarRaw
+import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
@@ -555,6 +555,32 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
 
     proc.equalsOrShowDiff(expected) should be(true)
+  }
+
+  "topology resolver" should "make right hops on for-par behaviour" in {
+    val init = SeqModel.wrap(
+      OnModel(otherPeer, Chain.empty).wrap(
+        callModel(1),
+        foldPar(
+          "i",
+          valueArray,
+          OnModel(LiteralRaw("i", ScalarType.string), Chain.empty).wrap(
+            callModel(1)
+          )
+        )
+      ),
+      OnModel(otherPeer2, Chain.empty).wrap(callModel(2))
+    )
+
+    val proc = Topology.resolve(init).value
+
+    val expected =
+      SeqRes.wrap(
+        callRes(2, initPeer, None, varNode :: Nil)
+      )
+
+    proc.equalsOrShowDiff(expected) should be(true)
+
   }
 
   "topology resolver" should "handle detach moved to relay" in {
