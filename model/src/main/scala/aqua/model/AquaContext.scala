@@ -16,7 +16,6 @@ import scala.collection.immutable.SortedMap
 
 case class AquaContext(
   module: Option[String],
-  exports: Map[String, Option[String]],
   funcs: Map[String, FuncArrow],
   types: Map[String, Type],
   values: Map[String, ValueModel],
@@ -69,17 +68,12 @@ case class AquaContext(
         .fold(AquaContext.blank)(p =>
           AquaContext.blank.copy(services = Map(maybeRename.getOrElse(name) -> p))
         )
-
-  lazy val exported: AquaContext =
-    exports.foldLeft(AquaContext.blank.copy(module = module)) { case (acc, (k, v)) =>
-      acc |+| pick(k, v)
-    }
 }
 
 object AquaContext extends Logging {
 
   val blank: AquaContext =
-    AquaContext(None, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
+    AquaContext(None, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
 
   given Monoid[AquaContext] with
 
@@ -89,7 +83,6 @@ object AquaContext extends Logging {
     def combine(x: AquaContext, y: AquaContext): AquaContext =
       AquaContext(
         x.module orElse y.module,
-        x.exports ++ y.exports,
         x.funcs ++ y.funcs,
         x.types ++ y.types,
         x.values ++ y.values,
@@ -123,15 +116,17 @@ object AquaContext extends Logging {
     logger.trace("ctx: " + ctx)
     // if `module` header is not defined, then export everything
     rawContext.module.fold(ctx)(_ =>
-      ctx.exports.foldLeft(
-        // Module name is what persists
-        blank.copy(
-          module = ctx.module
-        )
-      ) { case (acc, (k, v)) =>
-        // Pick exported things, accumulate
-        acc |+| ctx.pick(k, v)
-      }
+      rawContext.exports
+        .getOrElse(Map.empty)
+        .foldLeft(
+          // Module name is what persists
+          blank.copy(
+            module = ctx.module
+          )
+        ) { case (acc, (k, v)) =>
+          // Pick exported things, accumulate
+          acc |+| ctx.pick(k, v)
+        }
     )
   }
 
@@ -143,10 +138,9 @@ object AquaContext extends Logging {
         logger.trace(s"raw: ${rawContext.module}")
         rawContext.init
           .map(fromRawContext)
-          .getOrElse(blank)
-          .copy(
-            exports = rawContext.exports.getOrElse(Map.empty)
-          ) |+| blank.copy(abilities = rawContext.abilities.view.mapValues(fromRawContext).toMap)
+          .getOrElse(blank) |+| blank.copy(abilities =
+          rawContext.abilities.view.mapValues(fromRawContext).toMap
+        )
       } {
         case (ctx, c: ConstantRaw) =>
           // Just saving a constant

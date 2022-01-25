@@ -54,7 +54,7 @@ object RunCommand extends Logging {
 
   private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncArrow] =
     contexts
-      .collectFirstSome(_.exported.funcs.get(funcName))
+      .collectFirstSome(_.allFuncs.get(funcName))
 
   /**
    * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
@@ -77,7 +77,7 @@ object RunCommand extends Logging {
 
     for {
       prelude <- Prelude.init()
-      sources = new AquaFileSources[F](input, prelude.importPaths)
+      sources = new AquaFileSources[F](input, prelude.importPaths ++ imports)
       // compile only context to wrap and call function later
       compileResult <- Clock[F].timed(
         AquaCompiler
