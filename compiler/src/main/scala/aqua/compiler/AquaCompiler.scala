@@ -91,8 +91,9 @@ object AquaCompiler extends Logging {
                       context.toNel.toList.foldLeft[(Chain[AquaProcessed[I]], AquaContext.Cache)](
                         Chain.nil -> cache
                       ) { case ((acc, accCache), (i, c)) =>
-                        logger.trace(s"Processed ${i}")
+                        logger.info(s"RawContext collected for ${i}, going to prepare exports...")
                         val (exp, expCache) = AquaContext.exportsFromRaw(c, accCache)
+                        logger.info(s"AquaProcessed prepared for ${i}")
                         (acc :+ AquaProcessed(i, exp)) -> expCache
                       }
                     acc.combine(
