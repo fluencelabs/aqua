@@ -27,7 +27,7 @@ object MakeRes {
       operands.toList.map(valToJoin =>
         CallServiceRes(
           op,
-          "noop",
+          "identity",
           CallRes(valToJoin :: Nil, None),
           onPeer
         ).leaf
