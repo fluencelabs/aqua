@@ -76,7 +76,8 @@ object AquaContext extends Logging {
   case class Cache(private val data: Chain[(RawContext, AquaContext)] = Chain.empty) {
     lazy val size: Long = data.size
 
-    def get(ctx: RawContext): Option[AquaContext] = data.find(_._1 == ctx).map(_._2)
+    def get(ctx: RawContext): Option[AquaContext] =
+      data.find(_._1 eq ctx).map(_._2)
 
     def updated(ctx: RawContext, aCtx: AquaContext): Cache = copy(data :+ (ctx -> aCtx))
   }
@@ -167,9 +168,11 @@ object AquaContext extends Logging {
             (i |+| blank.copy(abilities = abs)) -> absCache
           } {
             case ((ctx, ctxCache), (partContext, c: ConstantRaw)) =>
+              logger.trace("Adding constant " + c.name)
               // Just saving a constant
               // Actually this should have no effect, as constants are resolved by semantics
               val (pctx, pcache) = fromRawContext(partContext, ctxCache)
+              logger.trace("Got " + c.name + " from raw")
               val add =
                 blank
                   .copy(values =
@@ -181,8 +184,12 @@ object AquaContext extends Logging {
 
             case ((ctx, ctxCache), (partContext, func: FuncRaw)) =>
               // To add a function, we have to know its scope
+              logger.trace("Adding func " + func.name)
+
               val (pctx, pcache) = fromRawContext(partContext, ctxCache)
+              logger.trace("Got " + func.name + " from raw")
               val fr = FuncArrow.fromRaw(func, pctx.allFuncs, pctx.allValues)
+              logger.trace("Captured recursively for " + func.name)
               val add = blank.copy(funcs = Map(func.name -> fr))
 
               (ctx |+| add, pcache)
@@ -194,7 +201,9 @@ object AquaContext extends Logging {
 
             case ((ctx, ctxCache), (partContext, m: ServiceRaw)) =>
               // To add a service, we need to resolve its ID, if any
+              logger.trace("Adding service " + m.name)
               val (pctx, pcache) = fromRawContext(partContext, ctxCache)
+              logger.trace("Got " + m.name + " from raw")
               val id = m.defaultId.map(ValueModel.fromRaw).map(_.resolveWith(pctx.allValues))
               val srv = ServiceModel(m.name, m.arrows, id)
               val add =
@@ -211,6 +220,9 @@ object AquaContext extends Logging {
 
         (newCtx, newCache.updated(rawContext, newCtx))
 
-      }(_ -> cache)
+      } { ac =>
+        logger.trace("Got from cache")
+        ac -> cache
+      }
 
 }
