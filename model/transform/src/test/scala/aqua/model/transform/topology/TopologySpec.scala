@@ -11,6 +11,7 @@ import cats.data.Chain
 import cats.free.Cofree
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import cats.syntax.show._
 
 class TopologySpec extends AnyFlatSpec with Matchers {
 
@@ -547,6 +548,60 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
 
     proc.equalsOrShowDiff(expected) should be(true)
+  }
+
+  "topology resolver" should "make right hops on for-par behaviour with using result after for-par" in {
+    val result = VarRaw("used", StreamType(ScalarType.string))
+    val resultModel = rawToValue(result)
+    val init =
+      OnModel(otherPeer2, Chain.one(otherPeer2)).wrap(
+        SeqModel.wrap(
+          DeclareStreamModel(resultModel).leaf,
+          OnModel(otherPeer, Chain.empty).wrap(
+            callModel(1),
+            foldPar(
+              "i",
+              valueArray,
+              OnModel(LiteralRaw("i", ScalarType.string), Chain.empty).wrap(
+                XorModel.wrap(callModel(2, CallModel.Export(result.name, result.`type`) :: Nil))
+              )
+            )
+          )
+        ),
+        callModel(4, Nil, result :: Nil)
+      )
+
+    val proc = Topology.resolve(init).value
+
+    // wrong expected
+    val expected =
+      SeqRes.wrap(
+        callRes(1, otherPeer),
+        ParRes.wrap(
+          FoldRes("i", valueArray).wrap(
+            ParRes.wrap(
+              XorRes.wrap(
+                SeqRes.wrap(
+                  callRes(
+                    2,
+                    LiteralRaw("i", ScalarType.string),
+                    Some(CallModel.Export(result.name, result.`type`))
+                  ),
+                  // after call `i` topology should send to `otherPeer` if it's not fire-and-forget – to trigger execution
+                  through(otherPeer)
+                )
+              ),
+              NextRes("i").leaf
+            )
+          )
+        ),
+        callRes(3, otherPeer, None, result :: Nil)
+      )
+
+    println(proc.show)
+    println(expected.show)
+    proc.equalsOrShowDiff(expected) should be(true)
+
   }
 
   "topology resolver" should "make right hops on for-par behaviour" in {
