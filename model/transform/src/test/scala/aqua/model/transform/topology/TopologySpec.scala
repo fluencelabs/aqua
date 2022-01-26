@@ -1,17 +1,7 @@
 package aqua.model.transform.topology
 
 import aqua.model.transform.ModelBuilder
-import aqua.model.{
-  CallModel,
-  DetachModel,
-  MatchMismatchModel,
-  OnModel,
-  ParModel,
-  SeqModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
+import aqua.model.*
 import aqua.res.*
 import aqua.raw.ops.Call
 import aqua.raw.value.{LiteralRaw, VarRaw}
@@ -420,7 +410,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       SeqRes.wrap(
         through(relay),
         callRes(0, otherPeer),
-        FoldRes("i", valueArray).wrap(ParRes.wrap(callRes(2, otherPeer2), NextRes("i").leaf)),
+        ParRes.wrap(
+          FoldRes("i", valueArray).wrap(ParRes.wrap(callRes(2, otherPeer2), NextRes("i").leaf))
+        ),
         through(relay),
         callRes(3, initPeer)
       )
