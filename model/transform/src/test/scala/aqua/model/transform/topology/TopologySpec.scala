@@ -550,7 +550,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrShowDiff(expected) should be(true)
   }
 
-  "topology resolver" should "make right hops on for-par behaviour with using result after for-par" in {
+  "topology resolver" should "make right hops on for-par behaviour with using result after for-par" ignore {
     val result = VarRaw("used", StreamType(ScalarType.string))
     val resultModel = rawToValue(result)
     val init =
