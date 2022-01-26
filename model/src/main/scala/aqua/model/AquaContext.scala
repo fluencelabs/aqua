@@ -3,7 +3,7 @@ package aqua.model
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.{CallServiceTag, FuncOp}
 import aqua.raw.value.ValueRaw
-import aqua.raw.{ConstantRaw, RawContext, ServiceRaw, TypeRaw}
+import aqua.raw.{ConstantRaw, RawContext, RawPart, ServiceRaw, TypeRaw}
 import aqua.types.{StructType, Type}
 import cats.Monoid
 import cats.data.NonEmptyMap
@@ -72,6 +72,8 @@ case class AquaContext(
 
 object AquaContext extends Logging {
 
+  case class Cache(map: Map[(RawContext, RawPart), AquaContext] = Map.empty)
+
   val blank: AquaContext =
     AquaContext(None, Map.empty, Map.empty, Map.empty, Map.empty, Map.empty)
 
@@ -110,7 +112,7 @@ object AquaContext extends Logging {
     )
 
   // Convert RawContext into AquaContext, with exports handled
-  def exportsFromRaw(rawContext: RawContext): AquaContext = {
+  def exportsFromRaw(rawContext: RawContext, cache: Cache): (AquaContext, Cache) = {
     val ctx = fromRawContext(rawContext)
     logger.trace("raw: " + rawContext)
     logger.trace("ctx: " + ctx)
@@ -128,7 +130,7 @@ object AquaContext extends Logging {
       ) { case (acc, (k, v)) =>
         // Pick exported things, accumulate
         acc |+| ctx.pick(k, v)
-      }
+      } -> cache
   }
 
   // Convert RawContext into AquaContext, with no exports handled
