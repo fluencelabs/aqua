@@ -130,7 +130,8 @@ case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export) ex
 
 case class JoinModel(operands: NonEmptyList[ValueModel]) extends OpModel {
 
-  override lazy val usesVarNames: Set[String] = operands.toList.flatMap(_.usesVarNames).toSet
+  override lazy val usesVarNames: Set[String] =
+    operands.toList.flatMap(_.usesVarNames).toSet
 }
 
 case object EmptyModel extends NoExecModel

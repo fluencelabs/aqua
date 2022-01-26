@@ -7,6 +7,7 @@ import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{BoxType, StreamType}
 import cats.data.{Chain, State, StateT}
 import cats.syntax.traverse.*
+import cats.syntax.show.*
 import scribe.Logging
 
 /**
@@ -103,7 +104,13 @@ object ArrowInliner extends Logging {
       // Find all duplicates in arguments
       // we should not rename arguments that will be renamed by 'streamToRename'
       argsShouldRename <- Mangler[S].findNewNames(
-        argsToDataRaw.keySet ++ argsToArrowsRaw.keySet -- streamToRename.keySet
+        // Do not rename arguments if they just match external names
+        argsToDataRaw.filterNot {
+          case (localName, VarModel(externalName, _, _)) => localName == externalName
+          case _ => false
+        }.keySet ++ argsToArrowsRaw.filterNot { case (localName, fa) =>
+          localName == fa.funcName
+        }.keySet -- streamToRename.keySet
       )
 
       argsToData = argsToDataRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
@@ -123,7 +130,7 @@ object ArrowInliner extends Logging {
             // if an argument is a BoxType (Array or Option), but we pass a stream,
             // change a type as stream to not miss `$` sign in air
             // @see ArrowInlinerSpec `pass stream to callback properly` test
-            case v @ VarRaw(name, baseType: BoxType, lambda) if streamToRename.contains(name) =>
+            case v @ VarRaw(name, baseType: BoxType, _) if streamToRename.contains(name) =>
               v.copy(baseType = StreamType(baseType.element))
             case v => v
           }))
