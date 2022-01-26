@@ -1,0 +1,26 @@
+import "builtin.aqua"
+
+func joinIdxLocal(idx: i16, nodes: []string) -> []string:
+    nodes2: *string
+    for node <- nodes par:
+        nodes2 <<- node
+    join nodes2[idx], nodes
+    <- nodes2
+
+func joinIdxRelay(idx: i16, nodes: []string) -> []string:
+    on HOST_PEER_ID:
+      nodes2: *string
+      for node <- nodes par:
+        nodes2 <<- node
+      join nodes2[idx], nodes
+    <- nodes2
+
+func joinIdx(idx: i16, nodes: []string) -> []Info:
+    infos: *Info
+    nodes2: *string
+    for node <- nodes par:
+      on node:
+        infos <- Peer.identify()
+        nodes2 <<- node
+    join infos[idx], nodes2[idx]
+    <- infos

@@ -23,12 +23,16 @@ object MakeRes {
     ).leaf
 
   def join(onPeer: ValueModel, operands: NonEmptyList[ValueModel]): ResolvedOp.Tree =
-    CallServiceRes(
-      op,
-      "noop",
-      CallRes(operands.toList, None),
-      onPeer
-    ).leaf
+    SeqRes.wrap(
+      operands.toList.map(valToJoin =>
+        CallServiceRes(
+          op,
+          "noop",
+          CallRes(valToJoin :: Nil, None),
+          onPeer
+        ).leaf
+      ): _*
+    )
 
   private val initPeerId = ValueModel.fromRaw(ValueRaw.InitPeerId)
 
