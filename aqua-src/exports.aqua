@@ -1,0 +1,15 @@
+module Exports declares some_string, MyExportSrv, EXPORT_CONST, some_random_func
+
+export some_string as string_from_lib
+export MyExportSrv
+
+const EXPORT_CONST = "export_const"
+
+service MyExportSrv("my_export_srv"):
+  another_str() -> string
+
+func some_string() -> string:
+  <- "some_string_func"
+
+func some_random_func() -> string:
+  <- "wow, so random"

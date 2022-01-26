@@ -22,8 +22,8 @@ object Test extends IOApp.Simple {
       start <- IO(System.currentTimeMillis())
       _ <- AquaPathCompiler
         .compileFilesTo[IO](
-          Path("./aqua-src/foldJoin.aqua"),
-          List(Path("./aqua")),
+          Path("./aqua-src/imports.aqua"),
+          List(Path("./aqua"), Path("./aqua-src")),
           Option(Path("./target")),
           TypeScriptBackend,
           TransformConfig(wrapWithXor = false)
