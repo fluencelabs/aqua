@@ -74,33 +74,39 @@ object Semantics extends Logging {
   private def astToState[S[_]](ast: Ast[S]): Interpreter[S, Raw] =
     transpile[S](ast)
 
-  def process[S[_]](ast: Ast[S], init: RawContext)(implicit
-    aqum: Semigroup[RawContext]
-  ): ValidatedNec[SemanticError[S], RawContext] =
+  def process[S[_]](ast: Ast[S], init: RawContext): ValidatedNec[SemanticError[S], RawContext] =
     astToState[S](ast)
       .run(CompilerState.init[S](init))
       .map {
-        case (state, gen: RawContext) =>
-          val ctx: RawContext =
-            gen.copy(init =
-              Some(init.copy(module = init.module.map(_ + "|init"))).filter(_ != RawContext.blank)
-            )
-          NonEmptyChain
-            .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(ctx))(Invalid(_))
         case (state, _: Raw.Empty) =>
+          // No `parts`, but has `init`
           NonEmptyChain
             .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(init))(Invalid(_))
+            .fold[ValidatedNec[SemanticError[S], RawContext]](
+              Valid(
+                RawContext.blank.copy(
+                  init = Some(init.copy(module = init.module.map(_ + "|init")))
+                    .filter(_ != RawContext.blank)
+                )
+              )
+            )(Invalid(_))
         case (state, part: (RawPart | RawPart.Parts)) =>
-          val ctx = RawContext.blank.copy(
-            parts = RawPart.contextPart(part),
-            init =
-              Some(init.copy(module = init.module.map(_ + "|init"))).filter(_ != RawContext.blank)
-          )
+          val accCtx =
+            RawPart
+              .contextPart(part)
+              .parts
+              .foldLeft(
+                RawContext.blank.copy(
+                  init = Some(init.copy(module = init.module.map(_ + "|init")))
+                    .filter(_ != RawContext.blank)
+                )
+              ) { case (ctx, p) =>
+                ctx.copy(parts = ctx.parts :+ (ctx -> p))
+              }
+
           NonEmptyChain
             .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(ctx))(Invalid(_))
+            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(accCtx))(Invalid(_))
         case (state, m) =>
           logger.error("Got unexpected " + m)
           NonEmptyChain

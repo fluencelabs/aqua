@@ -14,16 +14,7 @@ trait RawPart extends Raw {
 
 object RawPart {
 
-  case class Parts(parts: Chain[RawPart]) extends Raw {
-
-    def collectMap[T](f: PartialFunction[RawPart, T]): Map[String, T] =
-      parts.collect {
-        case rp if f.isDefinedAt(rp) => rp.name -> f(rp)
-      }.toList.toMap
-
-    def pick(name: String, rename: Option[String]): Parts =
-      Parts(parts.filter(_.name == name).map(rp => rename.fold(rp)(rp.rename)))
-  }
+  case class Parts(parts: Chain[RawPart]) extends Raw
 
   implicit object RPSMonoid extends Monoid[Parts] {
     override def empty: Parts = Parts(Chain.empty)

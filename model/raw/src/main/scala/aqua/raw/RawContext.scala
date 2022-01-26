@@ -15,24 +15,24 @@ import scala.collection.immutable.SortedMap
  * RawContext is essentially a model of the source code – the first one we get to from the AST.
  *
  * @param init
- *   Initial context – collected imports, needed for re-exporting in AquaContext later
+ * Initial context – collected imports, needed for re-exporting in AquaContext later
  * @param module
- *   This file's module name
+ * This file's module name
  * @param declares
- *   What this file declares
+ * What this file declares
  * @param exports
- *   Defined exports: what to export, and optionally how to rename it
+ * Defined exports: what to export, and optionally how to rename it
  * @param parts
- *   Declarations, functions, etc of the file
+ * Declarations, functions, etc of the file
  * @param abilities
- *   Abilities (e.g. used contexts) available in the scope
+ * Abilities (e.g. used contexts) available in the scope
  */
 case class RawContext(
   init: Option[RawContext] = None,
   module: Option[String] = None,
   declares: Set[String] = Set.empty,
   exports: Option[Map[String, Option[String]]] = None,
-  parts: RawPart.Parts = RawPart.RPSMonoid.empty,
+  parts: Chain[(RawContext, RawPart)] = Chain.empty,
   abilities: Map[String, RawContext] = Map.empty
 ) {
 
@@ -47,11 +47,15 @@ case class RawContext(
   ): Option[RawContext] =
     Option
       .when(!declared || declares(name)) {
-        val targetName = rename.getOrElse(name)
         RawContext.blank
-          .copy(parts = parts.pick(name, rename))
+          .copy(parts = parts.filter(_._2.name == name).map { case (partContext, part) =>
+            (partContext, rename.fold(part)(part.rename))
+          })
       }
       .filter(_.nonEmpty)
+
+  private def collectPartsMap[T](f: PartialFunction[RawPart, T]): Map[String, T] =
+    parts.collect { case (_, p) if f.isDefinedAt(p) => p.name -> f(p) }.toList.toMap
 
   def pickHeader: RawContext =
     RawContext.blank.copy(module = module, declares = declares, exports = exports)
@@ -68,13 +72,13 @@ case class RawContext(
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
 
-  lazy val services: Map[String, ServiceRaw] = parts.collectMap { case srv: ServiceRaw => srv }
+  lazy val services: Map[String, ServiceRaw] = collectPartsMap { case srv: ServiceRaw => srv }
 
   lazy val allServices: Map[String, ServiceRaw] =
     all(_.services)
 
   lazy val types: Map[String, Type] =
-    parts.collectMap { case t: TypeRaw =>
+    collectPartsMap { case t: TypeRaw =>
       t.`type`
     }
 
@@ -82,7 +86,7 @@ case class RawContext(
     all(_.types)
 
   lazy val funcs: Map[String, FuncRaw] =
-    parts.collectMap { case f: FuncRaw =>
+    collectPartsMap { case f: FuncRaw =>
       f
     }
 
@@ -90,7 +94,7 @@ case class RawContext(
     all(_.funcs)
 
   lazy val values: Map[String, ValueRaw] =
-    parts.collectMap { case c: ConstantRaw =>
+    collectPartsMap { case c: ConstantRaw =>
       c.value
     }
 
@@ -107,9 +111,9 @@ case class RawContext(
     NonEmptyMap
       .fromMap(
         SortedMap.from(
-          parts.parts.collect {
-            case rp if declares(rp.name) || module.isEmpty => rp.name -> rp.rawPartType
-          }.toList.toMap
+          collectPartsMap {
+            case rp if declares(rp.name) || module.isEmpty => rp.rawPartType
+          }
         )
       )
       .map(StructType(name, _))
@@ -125,7 +129,7 @@ object RawContext {
         x.module orElse y.module,
         x.declares ++ y.declares,
         x.exports.flatMap(xe => y.exports.map(xe ++ _)) orElse x.exports orElse y.exports,
-        RawPart.Parts(x.parts.parts ++ y.parts.parts),
+        x.parts ++ y.parts,
         x.abilities ++ y.abilities
       )
 

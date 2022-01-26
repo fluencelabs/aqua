@@ -15,14 +15,14 @@ import scribe.Logging
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
-                        module: Option[String],
-                        funcs: Map[String, FuncArrow],
-                        types: Map[String, Type],
-                        values: Map[String, ValueModel],
-                        abilities: Map[String, AquaContext],
-                        // TODO: merge this with abilities, when have ability resolution variance
-                        services: Map[String, ServiceModel]
-                      ) {
+  module: Option[String],
+  funcs: Map[String, FuncArrow],
+  types: Map[String, Type],
+  values: Map[String, ValueModel],
+  abilities: Map[String, AquaContext],
+  // TODO: merge this with abilities, when have ability resolution variance
+  services: Map[String, ServiceModel]
+) {
 
   private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
     (prefix + pair._1, pair._2)
@@ -118,7 +118,7 @@ object AquaContext extends Logging {
     rawContext.module
       .fold(
         // if `module` header is not defined, then export everything defined in rawContext
-        rawContext.parts.parts.map(_.name).map(_ -> Option.empty[String]).toList.toMap
+        rawContext.parts.map(_._2).map(_.name).map(_ -> Option.empty[String]).toList.toMap
       )(_ => rawContext.exports.getOrElse(Map.empty))
       .foldLeft(
         // Module name is what persists
@@ -133,7 +133,7 @@ object AquaContext extends Logging {
 
   // Convert RawContext into AquaContext, with no exports handled
   private def fromRawContext(rawContext: RawContext): AquaContext =
-    rawContext.parts.parts
+    rawContext.parts
       .foldLeft[AquaContext] {
         // Laziness unefficiency happens here
         logger.trace(s"raw: ${rawContext.module}")
@@ -143,33 +143,36 @@ object AquaContext extends Logging {
           rawContext.abilities.view.mapValues(fromRawContext).toMap
         )
       } {
-        case (ctx, c: ConstantRaw) =>
+        case (ctx, (partContext, c: ConstantRaw)) =>
           // Just saving a constant
           // Actually this should have no effect, as constants are resolved by semantics
+          val pctx = fromRawContext(partContext)
           val add =
             blank
               .copy(values =
-                if (c.allowOverrides && ctx.values.contains(c.name)) Map.empty
-                else Map(c.name -> ValueModel.fromRaw(c.value).resolveWith(ctx.allValues))
+                if (c.allowOverrides && pctx.values.contains(c.name)) Map.empty
+                else Map(c.name -> ValueModel.fromRaw(c.value).resolveWith(pctx.allValues))
               )
 
           ctx |+| add
 
-        case (ctx, func: FuncRaw) =>
+        case (ctx, (partContext, func: FuncRaw)) =>
           // To add a function, we have to know its scope
-          val fr = FuncArrow.fromRaw(func, ctx.allFuncs, ctx.allValues)
+          val pctx = fromRawContext(partContext)
+          val fr = FuncArrow.fromRaw(func, pctx.allFuncs, pctx.allValues)
           val add = blank.copy(funcs = Map(func.name -> fr))
 
           ctx |+| add
 
-        case (ctx, t: TypeRaw) =>
+        case (ctx, (_, t: TypeRaw)) =>
           // Just remember the type (why? it's can't be exported, so seems useless)
           val add = blank.copy(types = Map(t.name -> t.`type`))
           ctx |+| add
 
-        case (ctx, m: ServiceRaw) =>
+        case (ctx, (partContext, m: ServiceRaw)) =>
           // To add a service, we need to resolve its ID, if any
-          val id = m.defaultId.map(ValueModel.fromRaw).map(_.resolveWith(ctx.allValues))
+          lazy val pctx = fromRawContext(partContext)
+          val id = m.defaultId.map(ValueModel.fromRaw).map(_.resolveWith(pctx.allValues))
           val srv = ServiceModel(m.name, m.arrows, id)
           val add =
             blank

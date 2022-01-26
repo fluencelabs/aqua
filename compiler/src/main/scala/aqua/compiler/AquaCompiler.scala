@@ -30,8 +30,11 @@ object AquaCompiler extends Logging {
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
     config: TransformConfig
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaProcessed[I]]]] = {
-    implicit val rc = RawContext
-      .implicits(RawContext.blank.copy(parts = Parts(Chain.fromSeq(config.constantsList))))
+    implicit val rc: Monoid[RawContext] = RawContext
+      .implicits(
+        RawContext.blank
+          .copy(parts = Chain.fromSeq(config.constantsList).map(const => RawContext.blank -> const))
+      )
       .rawContextMonoid
     type Err = AquaError[I, E, S]
     type Ctx = NonEmptyMap[I, RawContext]
