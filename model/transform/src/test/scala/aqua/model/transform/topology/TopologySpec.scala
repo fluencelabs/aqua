@@ -628,4 +628,48 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrShowDiff(expected) should be(true)
   }
 
+  "topology resolver" should "place ping inside par" in {
+    val i = LiteralRaw("i", ScalarType.string)
+    val used = VarRaw("used", StreamType(ScalarType.string))
+    val init =
+      OnModel(initPeer, Chain.one(relay)).wrap(
+        OnModel(relay, Chain.empty).wrap(
+          foldPar(
+            "i",
+            valueArray,
+            OnModel(i, Chain.empty).wrap(
+              callModel(1, CallModel.Export(used.name, used.`type`) :: Nil)
+            )
+          )
+        ),
+        callModel(2, Nil, used :: Nil)
+      )
+
+    val proc = Topology.resolve(init).value
+
+    val expected =
+      SeqRes.wrap(
+        through(relay),
+        ParRes.wrap(
+          FoldRes("i", ValueModel.fromRaw(valueArray)).wrap(
+            ParRes.wrap(
+              SeqRes.wrap(
+                callRes(
+                  1,
+                  ValueModel.fromRaw(i),
+                  Some(CallModel.Export(used.name, used.`type`))
+                ),
+                through(relay),
+                through(initPeer)
+              ),
+              NextRes("i").leaf
+            )
+          )
+        ),
+        callRes(2, initPeer, None, ValueModel.fromRaw(used) :: Nil)
+      )
+
+    proc.equalsOrShowDiff(expected) should be(true)
+  }
+
 }
