@@ -5,7 +5,7 @@ import aqua.model.*
 import aqua.res.*
 import aqua.raw.ops.Call
 import aqua.raw.value.{IntoIndexRaw, LiteralRaw, VarRaw}
-import aqua.types.{ScalarType, StreamType}
+import aqua.types.{LiteralType, ScalarType, StreamType}
 import cats.Eval
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
@@ -636,16 +636,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     )
     val init =
       OnModel(initPeer, Chain.one(relay)).wrap(
-        OnModel(relay, Chain.empty).wrap(
-          foldPar(
-            "i",
-            valueArray,
-            OnModel(i, Chain.empty).wrap(
-              callModel(1, CallModel.Export(used.name, used.`type`) :: Nil)
-            )
-          ),
-          JoinModel(NonEmptyList.one(usedWithIdx)).leaf
+        foldPar(
+          "i",
+          valueArray,
+          OnModel(i, Chain.empty).wrap(
+            callModel(1, CallModel.Export(used.name, used.`type`) :: Nil)
+          )
         ),
+        JoinModel(NonEmptyList.one(usedWithIdx)).leaf,
         callModel(3, Nil, used :: Nil)
       )
 
@@ -653,28 +651,29 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val expected =
       SeqRes.wrap(
-        through(relay),
         ParRes.wrap(
           FoldRes("i", ValueModel.fromRaw(valueArray)).wrap(
             ParRes.wrap(
               SeqRes.wrap(
+                through(relay),
                 callRes(
                   1,
                   ValueModel.fromRaw(i),
                   Some(CallModel.Export(used.name, used.`type`))
                 ),
                 through(relay),
-                CallServiceRes(
-                  VarModel(s"op", ScalarType.string),
-                  s"noop",
-                  CallRes(usedWithIdx :: Nil, None),
-                  initPeer
-                ).leaf
+                through(initPeer)
               ),
               NextRes("i").leaf
             )
           )
         ),
+        CallServiceRes(
+          LiteralModel(s"\"op\"", LiteralType.string),
+          s"noop",
+          CallRes(usedWithIdx :: Nil, None),
+          initPeer
+        ).leaf,
         callRes(3, initPeer, None, ValueModel.fromRaw(used) :: Nil)
       )
 

@@ -45,6 +45,7 @@ case class Topology private (
   lazy val firstExecutesOn: Eval[Option[List[OnModel]]] =
     (cursor.op match {
       case _: CallServiceModel => pathOn.map(Some(_))
+      case _: JoinModel => pathOn.map(Some(_))
       case _ =>
         children
           .map(_.firstExecutesOn)
@@ -60,6 +61,7 @@ case class Topology private (
   lazy val lastExecutesOn: Eval[Option[List[OnModel]]] =
     (cursor.op match {
       case _: CallServiceModel => pathOn.map(Some(_))
+      case _: JoinModel => pathOn.map(Some(_))
       case _ =>
         children
           .map(_.lastExecutesOn)
