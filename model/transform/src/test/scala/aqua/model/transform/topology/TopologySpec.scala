@@ -680,4 +680,59 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrShowDiff(expected) should be(true)
   }
 
+  "topology resolver" should "place ping inside par with xor" in {
+    val i = LiteralRaw("i", ScalarType.string)
+    val used = VarRaw("used", StreamType(ScalarType.string))
+    val usedWithIdx = used.copy(lambda =
+      Chain.one(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
+    )
+    val init =
+      OnModel(initPeer, Chain.one(relay)).wrap(
+        foldPar(
+          "i",
+          valueArray,
+          OnModel(i, Chain.empty).wrap(
+            XorModel.wrap(
+              callModel(1, CallModel.Export(used.name, used.`type`) :: Nil)
+            )
+          )
+        ),
+        JoinModel(NonEmptyList.one(usedWithIdx)).leaf,
+        callModel(3, Nil, used :: Nil)
+      )
+
+    val proc = Topology.resolve(init).value
+
+    val expected =
+      SeqRes.wrap(
+        ParRes.wrap(
+          FoldRes("i", ValueModel.fromRaw(valueArray)).wrap(
+            ParRes.wrap(
+              SeqRes.wrap(
+                through(relay),
+                XorRes.wrap(
+                  callRes(
+                    1,
+                    ValueModel.fromRaw(i),
+                    Some(CallModel.Export(used.name, used.`type`))
+                  )
+                ),
+                through(relay),
+                through(initPeer)
+              ),
+              NextRes("i").leaf
+            )
+          )
+        ),
+        CallServiceRes(
+          LiteralModel(s"\"op\"", LiteralType.string),
+          s"noop",
+          CallRes(usedWithIdx :: Nil, None),
+          initPeer
+        ).leaf,
+        callRes(3, initPeer, None, ValueModel.fromRaw(used) :: Nil)
+      )
+
+    proc.equalsOrShowDiff(expected) should be(true)
+  }
 }
