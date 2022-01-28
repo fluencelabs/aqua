@@ -3,9 +3,9 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
-import aqua.raw.value.{LiteralRaw, VarRaw}
+import aqua.raw.value.{IntoFieldRaw, LiteralRaw, VarRaw}
 import aqua.types.*
-import cats.data.NonEmptyList
+import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -194,6 +194,109 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           "response",
           CallModel(recordsModel :: Nil, Nil)
         ).leaf
+      )
+    ) should be(true)
+
+  }
+
+  /*
+   data Prod:
+     value: string
+
+   service OpHa("op"):
+     array(a: string, b: string) -> []string
+     identity(a: string) -> string
+
+   func doSmth(arg: Prod):
+     v = arg.value
+     OpHa.identity(v)
+   */
+  "arrow inliner" should "hold lambda" in {
+
+    // lambda that will be assigned to another variable
+    val objectVarLambda = VarRaw(
+      "object",
+      StructType("objectType", NonEmptyMap.one("field", ScalarType.string)),
+      Chain.one(IntoFieldRaw("field", ScalarType.string))
+    )
+
+    // raw object
+    val objectVar = VarRaw(
+      "object",
+      StructType("objectType", NonEmptyMap.one("field", ScalarType.string)),
+      Chain.empty
+    )
+
+    // export object
+    val getSrvTag = CallServiceTag(
+      LiteralRaw.quote("getSrv"),
+      "getObj",
+      Call(Nil, Call.Export(objectVar.name, objectVar.`type`) :: Nil)
+    )
+
+    // function where we assign object lambda to value and call service
+    val inner =
+      FuncArrow(
+        "inner",
+        SeqTag.wrap(
+          AssignmentTag(
+            objectVarLambda,
+            "fieldValue"
+          ).leaf,
+          CallServiceTag(
+            LiteralRaw.quote("callbackSrv"),
+            "response",
+            Call(VarRaw("fieldValue", ScalarType.string) :: Nil, Nil)
+          ).leaf
+        ),
+        ArrowType(
+          ProductType.labelled((objectVar.name, objectVar.`type`) :: Nil),
+          ProductType(Nil)
+        ),
+        Nil,
+        Map.empty,
+        Map.empty
+      )
+
+    // wrapper that export object and call inner function
+    val model: OpModel.Tree = ArrowInliner
+      .callArrow[InliningState](
+        FuncArrow(
+          "dumb_func",
+          SeqTag.wrap(
+            getSrvTag.leaf,
+            CallArrowTag(inner.funcName, Call(objectVar :: Nil, Nil)).leaf
+          ),
+          ArrowType(
+            ProductType(Nil),
+            ProductType(Nil)
+          ),
+          Nil,
+          Map(inner.funcName -> inner),
+          Map.empty
+        ),
+        CallModel(Nil, Nil)
+      )
+      .run(InliningState())
+      .value
+      ._2
+
+    model.equalsOrShowDiff(
+      SeqModel.wrap(
+        CallServiceModel(
+          LiteralModel("\"getSrv\"", LiteralType.string),
+          "getObj",
+          CallModel(Nil, CallModel.Export(objectVar.name, objectVar.`type`) :: Nil)
+        ).leaf,
+        SeqModel.wrap(
+          // TODO: redundant empty Seq, delete it somehow
+          SeqModel.leaf,
+          CallServiceModel(
+            LiteralModel("\"callbackSrv\"", LiteralType.string),
+            "response",
+            CallModel(ValueModel.fromRaw(objectVarLambda) :: Nil, Nil)
+          ).leaf
+        )
       )
     ) should be(true)
 

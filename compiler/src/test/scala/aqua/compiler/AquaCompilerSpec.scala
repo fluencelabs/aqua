@@ -15,6 +15,7 @@ import org.scalatest.matchers.should.Matchers
 import cats.Id
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.instances.string.*
+import cats.syntax.show._
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
