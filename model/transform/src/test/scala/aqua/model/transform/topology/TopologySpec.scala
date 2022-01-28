@@ -4,14 +4,14 @@ import aqua.model.transform.ModelBuilder
 import aqua.model.*
 import aqua.res.*
 import aqua.raw.ops.Call
-import aqua.raw.value.{LiteralRaw, VarRaw}
+import aqua.raw.value.{IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.{ScalarType, StreamType}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import cats.syntax.show._
+import cats.syntax.show.*
 
 class TopologySpec extends AnyFlatSpec with Matchers {
 
@@ -631,6 +631,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   "topology resolver" should "place ping inside par" in {
     val i = LiteralRaw("i", ScalarType.string)
     val used = VarRaw("used", StreamType(ScalarType.string))
+    val usedWithIdx = used.copy(lambda =
+      Chain.one(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
+    )
     val init =
       OnModel(initPeer, Chain.one(relay)).wrap(
         OnModel(relay, Chain.empty).wrap(
@@ -642,7 +645,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             )
           )
         ),
-        callModel(2, Nil, used :: Nil)
+        callModel(2, Nil, usedWithIdx :: Nil)
       )
 
     val proc = Topology.resolve(init).value
@@ -666,7 +669,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             )
           )
         ),
-        callRes(2, initPeer, None, ValueModel.fromRaw(used) :: Nil)
+        callRes(2, initPeer, None, ValueModel.fromRaw(usedWithIdx) :: Nil)
       )
 
     proc.equalsOrShowDiff(expected) should be(true)
