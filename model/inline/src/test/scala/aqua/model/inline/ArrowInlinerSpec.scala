@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
-import aqua.raw.value.{IntoFieldRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -297,6 +297,96 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             CallModel(ValueModel.fromRaw(objectVarLambda) :: Nil, Nil)
           ).leaf
         )
+      )
+    ) should be(true)
+
+  }
+
+  /*
+  func joinIdxLocal(idx: i16, nodes: []string):
+    join nodes[idx]
+   */
+  "arrow inliner" should "don't rename value in index array lambda" in {
+
+    // lambda that will be assigned to another variable
+    val argArray = VarRaw(
+      "nodes",
+      ArrayType(ScalarType.string)
+    )
+
+    val idxVar = VarRaw("idx", ScalarType.u32)
+
+    val arrIdx = VarRaw(
+      "nodes",
+      ArrayType(ScalarType.string),
+      Chain.one(IntoIndexRaw(idxVar, ScalarType.string))
+    )
+
+    val getArrTag = CallServiceTag(
+      LiteralRaw.quote("getSrv"),
+      "getArr",
+      Call(Nil, Call.Export(argArray.name, argArray.`type`) :: Nil)
+    ).leaf
+
+    val getIdxTag = CallServiceTag(
+      LiteralRaw.quote("getSrv"),
+      "getIdx",
+      Call(Nil, Call.Export(idxVar.name, idxVar.`type`) :: Nil)
+    ).leaf
+
+    // function where we assign object lambda to value and call service
+    val inner =
+      FuncArrow(
+        "inner",
+        JoinTag(NonEmptyList.one(arrIdx)).leaf,
+        ArrowType(
+          ProductType.labelled(
+            (idxVar.name, idxVar.`type`) :: (argArray.name, argArray.`type`) :: Nil
+          ),
+          ProductType(Nil)
+        ),
+        Nil,
+        Map.empty,
+        Map.empty
+      )
+
+    // wrapper that export object and call inner function
+    val model: OpModel.Tree = ArrowInliner
+      .callArrow[InliningState](
+        FuncArrow(
+          "dumb_func",
+          SeqTag.wrap(
+            getArrTag,
+            getIdxTag,
+            CallArrowTag(inner.funcName, Call(idxVar :: argArray :: Nil, Nil)).leaf
+          ),
+          ArrowType(
+            ProductType(Nil),
+            ProductType(Nil)
+          ),
+          Nil,
+          Map(inner.funcName -> inner),
+          Map.empty
+        ),
+        CallModel(Nil, Nil)
+      )
+      .run(InliningState())
+      .value
+      ._2
+
+    model.equalsOrShowDiff(
+      SeqModel.wrap(
+        CallServiceModel(
+          LiteralModel("\"getSrv\"", LiteralType.string),
+          "getArr",
+          CallModel(Nil, CallModel.Export(argArray.name, argArray.`type`) :: Nil)
+        ).leaf,
+        CallServiceModel(
+          LiteralModel("\"getSrv\"", LiteralType.string),
+          "getIdx",
+          CallModel(Nil, CallModel.Export(idxVar.name, idxVar.`type`) :: Nil)
+        ).leaf,
+        JoinModel(NonEmptyList.one(ValueModel.fromRaw(arrIdx))).leaf
       )
     ) should be(true)
 
