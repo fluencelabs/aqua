@@ -13,14 +13,32 @@ object RawValueInliner extends Logging {
 
   import Inline.*
 
+  private[inline] def removeLambda[S: Mangler: Exports](
+    vm: ValueModel
+  ): State[S, (ValueModel, Map[String, ValueRaw])] =
+    vm match {
+      case VarModel(nameM, btm, lambdaM) if lambdaM.nonEmpty =>
+        for {
+          nameMM <- Mangler[S].findNewName(nameM)
+          _ <- Mangler[S].forbid(Set(nameMM))
+        } yield VarModel(nameMM, vm.`type`, Chain.empty) -> Map(
+          // TODO use smth more resilient to make VarRaw from a flattened VarModel
+          nameMM -> VarRaw(nameM, btm, lambdaM.map(_.toRaw))
+        )
+      case _ =>
+        State.pure(vm -> Map.empty)
+    }
+
   private[inline] def unfold[S: Mangler: Exports](
-    raw: ValueRaw
+    raw: ValueRaw,
+    lambdaAllowed: Boolean = true
   ): State[S, (ValueModel, Map[String, ValueRaw])] =
     Exports[S].exports.flatMap(exports =>
       raw match {
         case VarRaw(name, t, lambda) if lambda.isEmpty =>
           val vm = VarModel(name, t, Chain.empty).resolveWith(exports)
-          State.pure(vm -> Map.empty)
+          if (lambdaAllowed) State.pure(vm -> Map.empty) else removeLambda(vm)
+
         case LiteralRaw(value, t) =>
           State.pure(LiteralModel(value, t) -> Map.empty)
         case VarRaw(name, t, lambda) =>
@@ -34,14 +52,18 @@ object RawValueInliner extends Logging {
                 }
               }
             }
-            .map { case (lambdaModel, map) =>
+            .flatMap { case (lambdaModel, map) =>
               val vm = VarModel(name, t, lambdaModel).resolveWith(exports)
-              vm -> map
+              if (lambdaAllowed) State.pure(vm -> map)
+              else
+                removeLambda(vm).map { case (vmm, mpp) =>
+                  vmm -> (mpp ++ map)
+                }
             }
       }
     )
 
-  private[inline] def unfoldLambda[S: Mangler](
+  private[inline] def unfoldLambda[S: Mangler: Exports](
     l: LambdaRaw
   ): State[S, (LambdaModel, Map[String, ValueRaw])] =
     l match {
@@ -52,8 +74,11 @@ object RawValueInliner extends Logging {
           _ <- Mangler[S].forbid(Set(nn))
         } yield IntoIndexModel(nn, t) -> Map(nn -> vm)
 
-      case IntoIndexRaw(VarRaw(name, _, _), t) =>
-        State.pure(IntoIndexModel(name, t) -> Map.empty)
+      case IntoIndexRaw(vr: VarRaw, t) =>
+        unfold(vr, lambdaAllowed = false).map {
+          case (VarModel(name, _, _), map) => IntoIndexModel(name, t) -> map
+          case (LiteralModel(v, _), map) => IntoIndexModel(v, t) -> map
+        }
 
       case IntoIndexRaw(LiteralRaw(value, _), t) =>
         State.pure(IntoIndexModel(value, t) -> Map.empty)

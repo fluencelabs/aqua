@@ -1,6 +1,6 @@
 package aqua.model.inline
 
-import aqua.model.{FlattenModel, IntoIndexModel, ParModel, SeqModel, VarModel}
+import aqua.model.{FlattenModel, IntoIndexModel, ParModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.state.InliningState
 import aqua.raw.value.{IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
@@ -32,6 +32,11 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
 
   private val `raw ys[0]` = IntoIndexRaw(
     ysVarRaw(0),
+    ScalarType.string
+  )
+
+  private val `raw ys[xyz!]` = IntoIndexRaw(
+    ysVarRaw(0, "xyz"),
     ScalarType.string
   )
 
@@ -86,8 +91,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   "raw value inliner" should "unfold a LambdaModel" in {
     import aqua.model.inline.state.Mangler.Simple
     // [ys!]
-    unfoldLambda[Set[String]](`raw ys[0]`)
-      .run(Set("ys"))
+    unfoldLambda[InliningState](`raw ys[0]`)
+      .run(InliningState(noNames = Set("ys")))
       .value
       ._2 should be(
       IntoIndexModel("ys-0", ScalarType.string) -> Map(

@@ -306,7 +306,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   func joinIdxLocal(idx: i16, nodes: []string):
     join nodes[idx]
    */
-  "arrow inliner" should "don't rename value in index array lambda" in {
+  "arrow inliner" should "not rename value in index array lambda" in {
 
     // lambda that will be assigned to another variable
     val argArray = VarRaw(

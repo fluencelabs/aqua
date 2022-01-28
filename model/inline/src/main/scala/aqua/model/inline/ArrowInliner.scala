@@ -104,16 +104,13 @@ object ArrowInliner extends Logging {
       // Find all duplicates in arguments
       // we should not rename arguments that will be renamed by 'streamToRename'
       argsShouldRename <- Mangler[S].findNewNames(
-        // Do not rename arguments if they just match external names
-        argsToDataRaw.filterNot {
-          case (localName, VarModel(externalName, _, _)) => localName == externalName
-          case _ => false
-        }.keySet ++ argsToArrowsRaw.filterNot { case (localName, fa) =>
-          localName == fa.funcName
-        }.keySet -- streamToRename.keySet
+        argsToDataRaw.keySet ++ argsToArrowsRaw.keySet -- streamToRename.keySet
       )
 
-      argsToData = argsToDataRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
+      // Do not rename arguments if they just match external names
+      argsToData = argsToDataRaw.map { case (k, v) =>
+        argsShouldRename.getOrElse(k, k) -> v
+      }
       _ <- Exports[S].resolved(argsToData)
 
       argsToArrows = argsToArrowsRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
