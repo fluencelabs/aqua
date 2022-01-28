@@ -7,7 +7,7 @@ import aqua.raw.ops.Call
 import aqua.raw.value.{IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.{ScalarType, StreamType}
 import cats.Eval
-import cats.data.Chain
+import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -643,9 +643,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             OnModel(i, Chain.empty).wrap(
               callModel(1, CallModel.Export(used.name, used.`type`) :: Nil)
             )
-          )
+          ),
+          JoinModel(NonEmptyList.one(usedWithIdx)).leaf
         ),
-        callModel(2, Nil, usedWithIdx :: Nil)
+        callModel(3, Nil, used :: Nil)
       )
 
     val proc = Topology.resolve(init).value
@@ -663,13 +664,18 @@ class TopologySpec extends AnyFlatSpec with Matchers {
                   Some(CallModel.Export(used.name, used.`type`))
                 ),
                 through(relay),
-                through(initPeer)
+                CallServiceRes(
+                  VarModel(s"op", ScalarType.string),
+                  s"noop",
+                  CallRes(usedWithIdx :: Nil, None),
+                  initPeer
+                ).leaf
               ),
               NextRes("i").leaf
             )
           )
         ),
-        callRes(2, initPeer, None, ValueModel.fromRaw(usedWithIdx) :: Nil)
+        callRes(3, initPeer, None, ValueModel.fromRaw(used) :: Nil)
       )
 
     proc.equalsOrShowDiff(expected) should be(true)
