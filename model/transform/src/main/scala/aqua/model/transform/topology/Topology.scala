@@ -258,10 +258,22 @@ object Topology extends Logging {
 
     // TODO: if this xor is in par that needs no forceExit, do not exit
     override def forceExit(current: Topology): Eval[Boolean] =
-      Eval.later(current.cursor.moveUp.exists(_.hasExecLater))
+      current.parent.flatMap(_.parent).map(t => t -> t.cursor.op) match {
+        case Some((t, ParModel | DetachModel)) =>
+          // In case this XOR is in PAR that needs no exit, than do not exit from xor
+          t.forceExit
+        case _ => Eval.later(current.cursor.moveUp.exists(_.hasExecLater))
+      }
 
     override def afterOn(current: Topology): Eval[List[OnModel]] =
       afterParent(current)
+
+    // Parent of this branch's parent xor – fixes the case when this xor is in par
+    override def pathAfter(current: Topology): Eval[Chain[ValueModel]] =
+      current.parent
+        .flatMap(_.parent)
+        .map(_.after.pathAfter(current))
+        .getOrElse(super.pathAfter(current))
   }
 
   // Parent == Par

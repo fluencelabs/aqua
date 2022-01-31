@@ -15,7 +15,11 @@ case class CallModel(args: List[ValueModel], exportTo: List[CallModel.Export]) {
 }
 
 object CallModel {
-  case class Export(name: String, `type`: Type)
+
+  case class Export(name: String, `type`: Type) {
+
+    override def toString: String = s"$name:${`type`}"
+  }
 
   def callExport(ex: Call.Export): Export = Export(ex.name, ex.`type`)
 }

@@ -717,10 +717,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
                       ValueModel.fromRaw(i),
                       Some(CallModel.Export(used.name, used.`type`))
                     ),
-                    through(relay)
+                    through(relay),
+                    through(initPeer)
                   )
-                ),
-                through(initPeer)
+                )
               ),
               NextRes("i").leaf
             )

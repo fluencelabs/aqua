@@ -65,6 +65,9 @@ case object XorModel extends GroupOpModel
 
 case class OnModel(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupModel {
 
+  override def toString: String =
+    s"on $peerId${if (via.nonEmpty) s" via ${via.toList.mkString(", ")}" else ""}"
+
   override lazy val usesVarNames: Set[String] =
     peerId.usesVarNames ++ via.iterator.flatMap(_.usesVarNames)
 }
