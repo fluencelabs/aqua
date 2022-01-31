@@ -19,4 +19,14 @@ As example, use `test/sample.aqua` with args from `test/data.json` running on `/
 npm run from:scalajs -- run -f "identityArgsAndReturn(structField, stringField, numberField)" -i test/sample.aqua --data-path test/data.json --addr /dns4/kras-04.fluence.dev/tcp/19001/wss/p2p/12D3KooWFEwNWcHqi9rtsmDhsYcDbRUCDXH84RC4FW6UfsFWaoHi
 ```
 
+## Node addresses
+
 Different Fluence network addresses could be found here: https://github.com/fluencelabs/fluence-network-environment/blob/main/src/index.ts
+
+## Useful flags
+- `--print-air` to print resulted air
+- `--no-xor` to disable xor wrapping aroung service calls
+- `--sk secret_key` send request signed with specific secret key
+- `--data "json""` use instead of `--data-path` to pass arguments through command line
+- `--timeout 10000` to change timeout
+- `--log-level debug/trace/info...` to change log level
