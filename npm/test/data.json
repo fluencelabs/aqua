@@ -1,0 +1,8 @@
+{
+  "stringField": "some string",
+  "numberField": 123,
+  "structField": {
+    "numField": 42,
+    "arrField": ["str1", "str2"]
+  }
+}
