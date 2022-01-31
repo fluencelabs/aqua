@@ -11,8 +11,16 @@ import aqua.model.*
 object MakeRes {
   val op: ValueModel = LiteralModel.fromRaw(LiteralRaw.quote("op"))
 
-  def noop(onPeer: ValueModel): ResolvedOp.Tree =
-    CallServiceRes(op, "noop", CallRes(Nil, None), onPeer).leaf
+  def noop(onPeer: ValueModel, log: String = null): ResolvedOp.Tree =
+    CallServiceRes(
+      op,
+      "noop",
+      CallRes(
+        Option(log).filter(_ == "").map(LiteralRaw.quote).map(LiteralModel.fromRaw).toList,
+        None
+      ),
+      onPeer
+    ).leaf
 
   def canon(onPeer: ValueModel, operand: ValueModel, target: CallModel.Export): ResolvedOp.Tree =
     CallServiceRes(

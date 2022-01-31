@@ -215,12 +215,37 @@ object Topology extends Logging {
     // If exit is forced, make a path outside this node
     // – from where it ends to where execution is expected to continue
     def pathAfter(current: Topology): Eval[Chain[ValueModel]] =
+      pathAfterVia(current)
+
+    // If exit is forced, make a path outside this node
+    // – from where it ends to where execution is expected to continue
+    private def pathAfterVia(current: Topology): Eval[Chain[ValueModel]] =
       current.forceExit.flatMap {
         case true =>
           (current.endsOn, current.afterOn).mapN(PathFinder.findPath)
         case false =>
           Eval.now(Chain.empty)
       }
+
+    def pathAfterAndPingNext(current: Topology): Eval[Chain[ValueModel]] =
+      current.forceExit
+        .flatMap[Chain[ValueModel]] {
+          case false => Eval.now(Chain.empty[ValueModel])
+          case true =>
+            (current.endsOn, current.afterOn, current.lastExecutesOn).mapN {
+              case (e, a, _) if e == a => Chain.empty[ValueModel]
+              case (e, a, l) if l.contains(e) =>
+                // Pingback in case no relays involved
+                Chain.fromOption(a.headOption.map(_.peerId))
+              case (e, a, _) =>
+                // We wasn't at e, so need to get through the last peer in case it matches with the relay
+                findRelayPathEnforcement(a, e) ++ Chain.fromOption(a.headOption.map(_.peerId))
+            }
+        }
+        .flatMap { appendix =>
+          // Ping the next (join) peer to enforce its data update
+          pathAfterVia(current).map(_ ++ appendix)
+        }
   }
 
   object Default extends Before with Begins with Ends with After {
@@ -251,29 +276,35 @@ object Topology extends Logging {
 
   // Parent == Xor
   object XorBranch extends Before with After {
-    override def toString: String = "<xor>/*"
+    override def toString: String = Console.RED + "<xor>/*" + Console.RESET
 
     override def beforeOn(current: Topology): Eval[List[OnModel]] =
       current.prevSibling.map(_.endsOn) getOrElse super.beforeOn(current)
 
-    // TODO: if this xor is in par that needs no forceExit, do not exit
+    private def closestParExit(current: Topology): Option[Topology] =
+      current.parents
+        .map(t => t -> t.parent.map(_.cursor.op))
+        .takeWhile {
+          case (t, Some(_: ParGroupModel)) => true
+          case (t, _) => t.nextSibling.isEmpty
+        }
+        .map(_._1)
+        .map(t => t -> t.cursor.op)
+        .collectFirst { case (t, _: ParGroupModel) =>
+          // println(Console.GREEN + s"collect ${t}" + Console.RESET)
+          t
+        }
+
     override def forceExit(current: Topology): Eval[Boolean] =
-      current.parent.flatMap(_.parent).map(t => t -> t.cursor.op) match {
-        case Some((t, ParModel | DetachModel)) =>
-          // In case this XOR is in PAR that needs no exit, than do not exit from xor
-          t.forceExit
-        case _ => Eval.later(current.cursor.moveUp.exists(_.hasExecLater))
-      }
+      closestParExit(current)
+        .fold(Eval.later(current.cursor.moveUp.exists(_.hasExecLater)))(_.forceExit)
 
     override def afterOn(current: Topology): Eval[List[OnModel]] =
-      afterParent(current)
+      closestParExit(current).fold(afterParent(current))(_.afterOn)
 
     // Parent of this branch's parent xor – fixes the case when this xor is in par
     override def pathAfter(current: Topology): Eval[Chain[ValueModel]] =
-      current.parent
-        .flatMap(_.parent)
-        .map(_.after.pathAfter(current))
-        .getOrElse(super.pathAfter(current))
+      closestParExit(current).fold(super.pathAfter(current))(_ => pathAfterAndPingNext(current))
   }
 
   // Parent == Par
@@ -287,24 +318,7 @@ object Topology extends Logging {
       afterParent(current)
 
     override def pathAfter(current: Topology): Eval[Chain[ValueModel]] =
-      current.forceExit
-        .flatMap[Chain[ValueModel]] {
-          case false => Eval.now(Chain.empty[ValueModel])
-          case true =>
-            (current.endsOn, current.afterOn, current.lastExecutesOn).mapN {
-              case (e, a, _) if e == a => Chain.empty[ValueModel]
-              case (e, a, l) if l.contains(e) =>
-                // Pingback in case no relays involved
-                Chain.fromOption(a.headOption.map(_.peerId))
-              case (e, a, _) =>
-                // We wasn't at e, so need to get through the last peer in case it matches with the relay
-                findRelayPathEnforcement(a, e) ++ Chain.fromOption(a.headOption.map(_.peerId))
-            }
-        }
-        .flatMap { appendix =>
-          // Ping the next (join) peer to enforce its data update
-          super.pathAfter(current).map(_ ++ appendix)
-        }
+      pathAfterAndPingNext(current)
 
     override def endsOn(current: Topology): Eval[List[OnModel]] = current.beforeOn
   }
@@ -492,7 +506,7 @@ object Topology extends Logging {
              else "") + "PathBefore: " + Console.RESET + rc.topology.pathBefore.value
           )
 
-          println(Console.CYAN + "Parent: " + rc.topology.parent + Console.RESET)
+          println("Parent: " + Console.CYAN + rc.topology.parent.getOrElse("-") + Console.RESET)
 
           println("End  : " + rc.topology.endsOn.value)
           println("After: " + rc.topology.afterOn.value)
@@ -506,8 +520,8 @@ object Topology extends Logging {
 
         val chainZipperEv = resolved.traverse(cofree =>
           (
-            rc.topology.pathBefore.map(through(_)),
-            rc.topology.pathAfter.map(through(_, reversed = true))
+            rc.topology.pathBefore.map(through(_, s"before ${currI}")),
+            rc.topology.pathAfter.map(through(_, s"after ${currI}", reversed = true))
           ).mapN { case (pathBefore, pathAfter) =>
             val cz = ChainZipper(
               pathBefore,
@@ -544,7 +558,11 @@ object Topology extends Logging {
   // Walks through peer IDs, doing a noop function on each
   // If same IDs are found in a row, does noop only once
   // if there's a chain like a -> b -> c -> ... -> b -> g, remove everything between b and b
-  def through(peerIds: Chain[ValueModel], reversed: Boolean = false): Chain[Res] =
+  def through(
+    peerIds: Chain[ValueModel],
+    log: String = null,
+    reversed: Boolean = false
+  ): Chain[Res] =
     peerIds.map { v =>
       v.`type` match {
         case _: BoxType =>
@@ -554,16 +572,16 @@ object Topology extends Logging {
             if (reversed)
               SeqRes.wrap(
                 NextRes(itemName).leaf,
-                MakeRes.noop(VarModel(itemName, ScalarType.string, Chain.empty))
+                MakeRes.noop(VarModel(itemName, ScalarType.string, Chain.empty), log)
               )
             else
               SeqRes.wrap(
-                MakeRes.noop(VarModel(itemName, ScalarType.string, Chain.empty)),
+                MakeRes.noop(VarModel(itemName, ScalarType.string, Chain.empty), log),
                 NextRes(itemName).leaf
               )
           )
         case _ =>
-          MakeRes.noop(v)
+          MakeRes.noop(v, log)
       }
     }
 }

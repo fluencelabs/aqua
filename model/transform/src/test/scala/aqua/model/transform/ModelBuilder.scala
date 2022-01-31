@@ -124,6 +124,6 @@ object ModelBuilder {
     )
   }
 
-  def through(peer: ValueModel) =
-    MakeRes.noop(peer)
+  def through(peer: ValueModel, log: String = null) =
+    MakeRes.noop(peer, log)
 }

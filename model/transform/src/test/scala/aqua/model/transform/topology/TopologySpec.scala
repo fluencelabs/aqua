@@ -711,16 +711,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               SeqRes.wrap(
                 through(relay),
                 XorRes.wrap(
-                  SeqRes.wrap(
-                    callRes(
-                      1,
-                      ValueModel.fromRaw(i),
-                      Some(CallModel.Export(used.name, used.`type`))
-                    ),
-                    through(relay),
-                    through(initPeer)
+                  callRes(
+                    1,
+                    ValueModel.fromRaw(i),
+                    Some(CallModel.Export(used.name, used.`type`))
                   )
-                )
+                ),
+                through(relay),
+                through(initPeer)
               ),
               NextRes("i").leaf
             )
