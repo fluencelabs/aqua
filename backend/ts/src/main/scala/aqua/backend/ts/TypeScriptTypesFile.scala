@@ -1,7 +1,7 @@
 package aqua.backend.ts
 
 import aqua.backend.Header
-import aqua.model.transform.res.AquaRes
+import aqua.res.AquaRes
 
 case class TypeScriptTypesFile(res: AquaRes) {
   def generate: String =

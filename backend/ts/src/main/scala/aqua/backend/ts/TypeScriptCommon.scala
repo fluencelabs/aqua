@@ -1,7 +1,7 @@
 package aqua.backend.ts
 
 import aqua.backend.air.FuncAirGen
-import aqua.model.transform.res.FuncRes
+import aqua.res.FuncRes
 import aqua.types.*
 import cats.syntax.show.*
 

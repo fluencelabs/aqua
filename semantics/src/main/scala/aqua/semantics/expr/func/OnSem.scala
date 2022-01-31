@@ -31,11 +31,11 @@ class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
           .traverse(expr.via)(v =>
             V.valueToRaw(v).flatTap {
               case Some(vm) =>
-                vm.lastType match {
+                vm.`type` match {
                   case _: BoxType =>
-                    T.ensureTypeMatches(v, OptionType(ScalarType.string), vm.lastType)
+                    T.ensureTypeMatches(v, OptionType(ScalarType.string), vm.`type`)
                   case _ =>
-                    T.ensureTypeMatches(v, ScalarType.string, vm.lastType)
+                    T.ensureTypeMatches(v, ScalarType.string, vm.`type`)
                 }
               case None => false.pure[Alg]
             }
@@ -47,16 +47,13 @@ class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
         <* A.beginScope(expr.peerId),
       (viaVM: List[ValueRaw], ops: Raw) =>
         A.endScope() >> (ops match {
-          case op: FuncOp =>
+          case FuncOp(op) =>
             V.valueToRaw(expr.peerId).map {
               case Some(om) =>
-                FuncOp.wrap(
-                  OnTag(
-                    om,
-                    Chain.fromSeq(viaVM)
-                  ),
-                  op
-                )
+                OnTag(
+                  om,
+                  Chain.fromSeq(viaVM)
+                ).wrap(op).toFuncOp
               case _ =>
                 Raw.error("OnSem: Impossible error")
             }

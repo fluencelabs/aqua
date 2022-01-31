@@ -18,4 +18,4 @@ func smth() -> bool, string:
   on "other":
     c <- closure()
     Srv.noop(c)
-  <- true, "", 12
+  <- true, ""

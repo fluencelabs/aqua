@@ -15,12 +15,6 @@ case class Call(args: List[ValueRaw], exportTo: List[Call.Export]) {
   // TODO docs
   def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(_.mapName(f)))
 
-  def argVarNames: Set[String] = args.flatMap(_.usesVarNames).toSet
-
-  def arrowArgNames: Set[String] = args.collect { case VarRaw(m, _: ArrowType, _) =>
-    m
-  }.toSet
-
   override def toString: String =
     s"[${args.mkString(" ")}]${exportTo.map(_.toRaw).map(" " + _).mkString(",")}"
 }

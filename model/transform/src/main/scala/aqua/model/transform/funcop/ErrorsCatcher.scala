@@ -1,7 +1,19 @@
 package aqua.model.transform.funcop
 
-import aqua.raw.ops.{Call, FuncOp, FuncOps, MatchMismatchTag, OnTag, RawTag, XorTag}
-import aqua.raw.value.{LiteralRaw, ValueRaw}
+import aqua.model.transform.pre.InitPeerCallable
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  LiteralModel,
+  MatchMismatchModel,
+  OnModel,
+  OpModel,
+  SeqModel,
+  ValueModel,
+  VarModel,
+  XorModel
+}
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.LiteralType
 import cats.Eval
 import cats.data.Chain
@@ -9,43 +21,34 @@ import cats.free.Cofree
 
 case class ErrorsCatcher(
   enabled: Boolean,
-  serviceId: ValueRaw,
+  serviceId: ValueModel,
   funcName: String,
   callable: InitPeerCallable
 ) {
 
-  def transform(op: FuncOp): FuncOp =
+  def transform(op: OpModel.Tree): OpModel.Tree =
     if (enabled) {
       var i = 0
-      op
-        .cata[Cofree[Chain, RawTag]] {
-          case (tag, children)
-              if children.length == 1 && children.headOption.exists(
-                _.head == XorTag.LeftBiased
-              ) =>
-            Eval.now(Cofree(tag, Eval.now(children)))
-
-          case (ot @ (OnTag(_, _) | MatchMismatchTag(_, _, _)), children) =>
+      Cofree
+        .cata[Chain, OpModel, OpModel.Tree](op) {
+          case (ot @ (OnModel(_, _) | MatchMismatchModel(_, _, _)), children) =>
             i = i + 1
-            Eval now
-              FuncOp
-                .wrap(
-                  ot,
-                  FuncOps.xor(
-                    FuncOps.seq(children.map(FuncOp(_)).toList: _*),
-                    callable.makeCall(
-                      serviceId,
-                      funcName,
-                      ErrorsCatcher.lastErrorCall(i)
-                    )
-                  )
+            Eval now ot.wrap(
+              XorModel.wrap(
+                SeqModel.wrap(children.toList: _*),
+                callable.onInitPeer.wrap(
+                  CallServiceModel(
+                    serviceId,
+                    funcName,
+                    ErrorsCatcher.lastErrorCall(i)
+                  ).leaf
                 )
-                .tree
+              )
+            )
 
           case (tag, children) =>
             Eval.now(Cofree(tag, Eval.now(children)))
         }
-        .map(FuncOp(_))
         .value
     } else op
 
@@ -53,10 +56,11 @@ case class ErrorsCatcher(
 
 object ErrorsCatcher {
 
-  val lastErrorArg: ValueRaw = ValueRaw.LastError
+  val lastErrorArg: ValueModel =
+    VarModel(ValueRaw.LastError.name, ValueRaw.LastError.baseType, Chain.empty)
 
-  def lastErrorCall(i: Int): Call = Call(
-    lastErrorArg :: LiteralRaw.number(i) :: Nil,
+  def lastErrorCall(i: Int): CallModel = CallModel(
+    lastErrorArg :: LiteralModel.fromRaw(LiteralRaw.number(i)) :: Nil,
     Nil
   )
 }

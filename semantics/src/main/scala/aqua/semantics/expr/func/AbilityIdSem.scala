@@ -21,9 +21,10 @@ class AbilityIdSem[S[_]](val expr: AbilityIdExpr[S]) extends AnyVal {
       expr.id
     ) >>= {
       case Some(id) =>
-        A.setServiceId(expr.ability, expr.id, id) as (FuncOp.leaf(
-          AbilityIdTag(id, expr.ability.value)
-        ): Raw)
+        A.setServiceId(expr.ability, expr.id, id) as (AbilityIdTag(
+          id,
+          expr.ability.value
+        ).funcOpLeaf: Raw)
       case _ => Raw.error("Cannot resolve ability ID").pure[Alg]
     }
 }

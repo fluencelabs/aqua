@@ -1,6 +1,6 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{Call, FuncOp, FuncOps, PushToStreamTag}
+import aqua.raw.ops.{Call, FuncOp, PushToStreamTag}
 import aqua.parser.expr.func.PushToStreamExpr
 import aqua.parser.lexer.Token
 import aqua.raw.Raw
@@ -53,12 +53,12 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
               expr.token,
               expr.value,
               t,
-              vm.lastType
+              vm.`type`
             ).map {
               case false =>
                 Raw.error("Stream type and element type does not match")
               case true =>
-                FuncOps.pushToStream(vm, Call.Export(expr.stream.value, t)): Raw
+                PushToStreamTag(vm, Call.Export(expr.stream.value, t)).funcOpLeaf
             }
         }
 

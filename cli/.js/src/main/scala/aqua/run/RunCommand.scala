@@ -11,12 +11,11 @@ import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
 import aqua.js.*
-import aqua.model.transform.res.{AquaRes, FuncRes}
+import aqua.model.{AquaContext, FuncArrow}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
-import aqua.raw.AquaContext
 import aqua.raw.value.ValueRaw
 import aqua.run.RunConfig
 import aqua.types.*
@@ -32,7 +31,6 @@ import cats.syntax.list.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import aqua.raw.arrow.FuncArrow
 import cats.{~>, Id, Monad}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
@@ -56,14 +54,16 @@ object RunCommand extends Logging {
 
   private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncArrow] =
     contexts
-      .flatMap(_.exports.map(e => Chain.fromSeq(e.funcs.values.toList)).getOrElse(Chain.empty))
-      .find(_.funcName == funcName)
+      .collectFirstSome(_.allFuncs.get(funcName))
 
   /**
    * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
-   * @param func function name
-   * @param input path to an aqua code with a function
-   * @param imports the sources the input needs
+   * @param func
+   *   function name
+   * @param input
+   *   path to an aqua code with a function
+   * @param imports
+   *   the sources the input needs
    */
   def run[F[_]: Files: AquaIO: Async](
     func: String,
@@ -77,7 +77,7 @@ object RunCommand extends Logging {
 
     for {
       prelude <- Prelude.init()
-      sources = new AquaFileSources[F](input, prelude.importPaths)
+      sources = new AquaFileSources[F](input, prelude.importPaths ++ imports)
       // compile only context to wrap and call function later
       compileResult <- Clock[F].timed(
         AquaCompiler

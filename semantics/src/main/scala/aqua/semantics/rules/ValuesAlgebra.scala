@@ -37,7 +37,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     }
 
   def resolveType(v: Value[S]): Alg[Option[Type]] =
-    valueToRaw(v).map(_.map(_.lastType))
+    valueToRaw(v).map(_.map(_.`type`))
 
   private def resolveSingleLambda(rootType: Type, op: LambdaOp[S]): Alg[Option[LambdaRaw]] =
     op match {

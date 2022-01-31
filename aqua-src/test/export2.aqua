@@ -1,0 +1,13 @@
+module Export declares foobar, foo
+
+func bar() -> string:
+    <- " I am MyFooBar bar"
+
+func foo() -> string:
+    <- "I am MyFooBar foo"
+
+func foobar() -> []string:
+    res: *string
+    res <- foo()
+    res <- bar()
+    <- res

@@ -21,7 +21,7 @@ class ConstantSem[S[_]](val expr: ConstantExpr[S]) extends AnyVal {
     for {
       defined <- N.constantDefined(expr.name)
       v <- V.valueToRaw(expr.value)
-      model <- (defined, v.map(v => v -> v.lastType), expr.skipIfAlreadyDefined) match {
+      model <- (defined, v.map(v => v -> v.`type`), expr.skipIfAlreadyDefined) match {
         case (Some(definedType), Some((vm, actualType)), true) =>
           T.ensureTypeMatches(expr.value, definedType, actualType).map {
             case true =>

@@ -35,7 +35,7 @@ case class ArgumentGetter(serviceId: String, value: VarRaw, arg: scalajs.js.Dyna
     CallServiceTag(
       LiteralRaw.quote(serviceId),
       value.name,
-      Call(List.empty, List(Call.Export(value.name, value.`type`)))
+      Call(List.empty, List(Call.Export(value.name, value.baseType)))
     )
 
 }

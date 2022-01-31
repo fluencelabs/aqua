@@ -1,6 +1,6 @@
 package aqua.backend
 
-import aqua.model.transform.res.AquaRes
+import aqua.res.AquaRes
 
 /**
  * Compiler backend generates output based on the processed model

@@ -5,6 +5,7 @@ import aqua.model.LiteralModel
 import aqua.model.transform.TransformConfig
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
+import aqua.raw.ConstantRaw
 import aqua.raw.value.LiteralRaw
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
@@ -108,7 +109,7 @@ object AppOpts {
         checked.sequence.map(_.sequence)
       }
 
-  def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[TransformConfig.Const]] =
+  def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[ConstantRaw]] =
     Opts
       .options[String](
         "const",
@@ -125,9 +126,8 @@ object AppOpts {
         NonEmptyList
           .fromList(errors)
           .fold(
-            Validated.validNel[String, List[TransformConfig.Const]](parsed.collect {
-              case Right(v) =>
-                TransformConfig.Const(v._1.value, LiteralRaw(v._2.value, v._2.ts))
+            Validated.validNel[String, List[ConstantRaw]](parsed.collect { case Right(v) =>
+              ConstantRaw(v._1.value, LiteralRaw(v._2.value, v._2.ts), false)
             })
           ) { errors =>
             val errorMsgs = errors.map(str => s"Invalid constant definition '$str'.")

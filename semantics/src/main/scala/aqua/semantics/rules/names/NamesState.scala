@@ -1,10 +1,10 @@
 package aqua.semantics.rules.names
 
-import aqua.raw.AquaContext
 import aqua.parser.lexer.{Name, Token}
+import aqua.raw.RawContext
 import aqua.types.{ArrowType, Type}
 import cats.kernel.Monoid
-import cats.syntax.functor._
+import cats.syntax.functor.*
 
 case class NamesState[S[_]](
   stack: List[NamesState.Frame[S]] = Nil,
@@ -50,9 +50,9 @@ object NamesState {
       )
   }
 
-  def init[S[_]](context: AquaContext): NamesState[S] =
+  def init[S[_]](context: RawContext): NamesState[S] =
     NamesState(
-      rootArrows = context.allFuncs().map { case (s, fc) => (s, fc.arrowType) },
-      constants = context.allValues().map { case (s, vm) => (s, vm.lastType) }
+      rootArrows = context.allFuncs.map { case (s, fc) => (s, fc.arrow.`type`) },
+      constants = context.allValues.map { case (s, vm) => (s, vm.`type`) }
     )
 }

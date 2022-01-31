@@ -1,0 +1,18 @@
+service MyOp("op"):
+  identity(s: string) -> string
+
+service Op("op"):
+  noop: -> ()
+
+-- peers is of size 2
+func gather_values(peers: []string, another_peer: string) -> []string:
+  values: *string
+
+  for peer <- peers par:
+    on peer:
+      Op.noop()
+      values <<- "hello"
+
+  on another_peer:
+    MyOp.identity(values!1)
+  <- values

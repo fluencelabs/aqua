@@ -4,7 +4,7 @@ import aqua.parser.expr.func.ClosureExpr
 import aqua.parser.lexer.{Name, Token}
 import aqua.raw.arrow.ArrowRaw
 import aqua.raw.Raw
-import aqua.raw.ops.{EmptyTag, FuncOp}
+import aqua.raw.ops.{EmptyTag, FuncOp, RawTag}
 import aqua.semantics.expr.func.ClosureSem
 import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.names.{NamesInterpreter, NamesState}
@@ -43,7 +43,7 @@ class ClosureSemSpec extends AnyFlatSpec with Matchers {
   "sem" should "create right model" in {
 
     val at =
-      ArrowRaw(ArrowType(ProductType(Nil), ProductType(Nil)), Nil, FuncOp.leaf(EmptyTag))
+      ArrowRaw(ArrowType(ProductType(Nil), ProductType(Nil)), Nil, RawTag.empty)
     val model = getModel(program.wrap(blank, (_, _) => State.pure(at)))
     model shouldBe (at)
   }

@@ -24,7 +24,7 @@ class JoinSem[S[_]](val expr: JoinExpr[S]) extends AnyVal {
       .map(NonEmptyList.fromList)
       .map {
         case Some(vals) =>
-          FuncOp.leaf(JoinTag(vals))
+          JoinTag(vals).funcOpLeaf
         case None =>
           Raw.error("Join values resolution failed")
       }

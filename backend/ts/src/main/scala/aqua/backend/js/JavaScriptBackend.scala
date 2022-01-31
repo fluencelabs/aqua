@@ -2,7 +2,7 @@ package aqua.backend.js
 
 import aqua.backend.ts.TypeScriptTypes
 import aqua.backend.*
-import aqua.model.transform.res.AquaRes
+import aqua.res.AquaRes
 
 case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
 

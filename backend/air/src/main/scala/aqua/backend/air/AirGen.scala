@@ -1,8 +1,8 @@
 package aqua.backend.air
 
 import aqua.model.*
-import aqua.model.transform.res.*
 import aqua.raw.ops.Call
+import aqua.res.*
 import aqua.types.StreamType
 import cats.Eval
 import cats.data.Chain
@@ -41,9 +41,9 @@ object AirGen extends Logging {
     case list => list.reduceLeft(SeqGen(_, _))
   }
 
-  def exportToString(exportTo: Call.Export): String = (exportTo match {
-    case Call.Export(name, _: StreamType) => "$" + name
-    case Call.Export(name, _) => name
+  def exportToString(exportTo: CallModel.Export): String = (exportTo match {
+    case CallModel.Export(name, _: StreamType) => "$" + name
+    case CallModel.Export(name, _) => name
   }).replace('.', '_')
 
   private def folder(op: ResolvedOp, ops: Chain[AirGen]): Eval[AirGen] =

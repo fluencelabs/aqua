@@ -1,9 +1,10 @@
 package aqua.model.transform
 
-import aqua.model.{LiteralModel, ValueModel, VarModel}
-import aqua.raw.AquaContext
+import aqua.model.{AquaContext, LiteralModel, ValueModel, VarModel}
+import aqua.raw.{ConstantRaw, RawContext, RawPart}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.ScalarType
+import cats.data.Chain
 import cats.kernel.Monoid
 
 // TODO docs
@@ -15,61 +16,46 @@ case class TransformConfig(
   respFuncName: String = "response",
   relayVarName: Option[String] = Some("-relay-"),
   wrapWithXor: Boolean = true,
-  constants: List[TransformConfig.Const] = Nil
+  constants: List[ConstantRaw] = Nil
 ) {
 
-  val errorId: ValueRaw = LiteralRaw.quote(errorFuncName)
-  val errorHandlingCallback: ValueRaw = LiteralRaw.quote(errorHandlingService)
-  val callbackSrvId: ValueRaw = LiteralRaw.quote(callbackService)
-  val dataSrvId: ValueRaw = LiteralRaw.quote(getDataService)
+  import LiteralRaw.quote
+
+  val errorId: ValueRaw = quote(errorFuncName)
+  val errorHandlingCallback: ValueModel = LiteralModel fromRaw quote(errorHandlingService)
+  val callbackSrvId: ValueRaw = quote(callbackService)
+  val dataSrvId: ValueRaw = quote(getDataService)
 
   // Host peer id holds %init_peer_id% in case Aqua is not compiled to be executed behind a relay,
   // or relay's variable otherwise
-  val hostPeerId: TransformConfig.Const =
-    TransformConfig.Const(
+  val hostPeerId: ConstantRaw =
+    ConstantRaw(
       "HOST_PEER_ID",
-      relayVarName.fold[ValueRaw](ValueRaw.InitPeerId)(r => VarRaw(r, ScalarType.string))
+      relayVarName.fold[ValueRaw](ValueRaw.InitPeerId)(r => VarRaw(r, ScalarType.string)),
+      false
     )
 
-  val initPeerId: TransformConfig.Const =
-    TransformConfig.Const(
+  val initPeerId: ConstantRaw =
+    ConstantRaw(
       "INIT_PEER_ID",
-      ValueRaw.InitPeerId
+      ValueRaw.InitPeerId,
+      false
     )
 
-  val nil: TransformConfig.Const =
-    TransformConfig.Const(
+  val nil: ConstantRaw =
+    ConstantRaw(
       "nil", // TODO: shouldn't it be NIL?
-      ValueRaw.Nil
+      ValueRaw.Nil,
+      false
     )
 
-  val lastError: TransformConfig.Const =
-    TransformConfig.Const(
+  val lastError: ConstantRaw =
+    ConstantRaw(
       "LAST_ERROR",
-      ValueRaw.LastError
+      ValueRaw.LastError,
+      false
     )
 
-  val constantsMap: Map[String, ValueRaw] =
-    (hostPeerId :: initPeerId :: nil :: lastError :: constants)
-      .map(c => c.name -> c.value)
-      .toMap
-
-  implicit val aquaContextMonoid: Monoid[AquaContext] = {
-
-    AquaContext
-      .implicits(
-        AquaContext.blank
-          .copy(values = constantsMap)
-      )
-      .aquaContextMonoid
-  }
-
-}
-
-object TransformConfig {
-  case class Const(name: String, value: ValueRaw)
-
-  // TODO docs/rename? why it is unused
-  def forHost: TransformConfig =
-    TransformConfig(wrapWithXor = false, relayVarName = None)
+  val constantsList: List[ConstantRaw] =
+    hostPeerId :: initPeerId :: nil :: lastError :: constants
 }

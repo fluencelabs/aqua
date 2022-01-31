@@ -17,7 +17,7 @@ val scribeV = "3.6.3"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.5.3",
+  baseAquaVersion := "0.6.0",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
@@ -97,42 +97,50 @@ lazy val linker = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .dependsOn(parser)
 
+lazy val tree = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("model/tree"))
+  .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-free" % catsV
+    )
+  )
+
 lazy val raw = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("model/raw"))
   .settings(commons: _*)
-  .settings(
-    libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-free" % catsV
-    )
-  )
-  .dependsOn(types)
+  .dependsOn(types, tree)
 
 lazy val model = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .settings(commons: _*)
-  .settings(
-    libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-free" % catsV
-    )
-  )
-  .dependsOn(types, raw)
+  .dependsOn(types, tree, raw)
+
+lazy val res = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("model/res"))
+  .settings(commons: _*)
+  .dependsOn(model)
+
+lazy val inline = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("model/inline"))
+  .settings(commons: _*)
+  .dependsOn(raw, model)
 
 lazy val transform = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("model/transform"))
   .settings(commons: _*)
-  .dependsOn(model, raw)
-
-lazy val `test-kit` = crossProject(JVMPlatform, JSPlatform)
-  .withoutSuffixFor(JVMPlatform)
-  .crossType(CrossType.Pure)
-  .in(file("model/test-kit"))
-  .settings(commons: _*)
-  .dependsOn(transform)
+  .dependsOn(model, res, inline)
 
 lazy val semantics = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -144,7 +152,7 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
       "com.github.julien-truffaut" %%% "monocle-macro" % monocleV
     )
   )
-  .dependsOn(raw, `test-kit` % Test, parser)
+  .dependsOn(raw, parser)
 
 lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

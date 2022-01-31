@@ -1,7 +1,7 @@
 package aqua.semantics
 
 import aqua.raw.ops.FuncOp
-import aqua.raw.{AquaContext, ContextRaw, Raw}
+import aqua.raw.{Raw, RawContext, RawPart}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
@@ -17,10 +17,10 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.semigroup.*
-import cats.{Eval, Monad}
+import cats.{Eval, Monad, Semigroup}
 import monocle.Lens
 import monocle.macros.GenLens
-import scribe.Logging
+import scribe.{log, Logging}
 
 object Semantics extends Logging {
 
@@ -48,11 +48,6 @@ object Semantics extends Logging {
 
   type Interpreter[S[_], A] = State[CompilerState[S], A]
 
-  // todo: is it needed?
-  type Alg[S[_]] = TypesAlgebra[S, Interpreter[S, *]]
-    with NamesAlgebra[S, Interpreter[S, *]] with ValuesAlgebra[S, Interpreter[S, *]]
-    with AbilitiesAlgebra[S, Interpreter[S, *]]
-
   def transpile[S[_]](ast: Ast[S]): Interpreter[S, Raw] = {
     import monocle.syntax.all.*
 
@@ -79,26 +74,45 @@ object Semantics extends Logging {
   private def astToState[S[_]](ast: Ast[S]): Interpreter[S, Raw] =
     transpile[S](ast)
 
-  def process[S[_]](ast: Ast[S], init: AquaContext)(implicit
-    aqum: Monoid[AquaContext]
-  ): ValidatedNec[SemanticError[S], AquaContext] =
+  def process[S[_]](ast: Ast[S], init: RawContext): ValidatedNec[SemanticError[S], RawContext] =
     astToState[S](ast)
       .run(CompilerState.init[S](init))
       .map {
-        case (state, gen: ContextRaw) =>
-          val ctx = AquaContext.fromRawContext(gen, init)
-          NonEmptyChain
-            .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(ctx))(Invalid(_))
         case (state, _: Raw.Empty) =>
+          // No `parts`, but has `init`
           NonEmptyChain
             .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[S], AquaContext]](Valid(init))(Invalid(_))
+            .fold[ValidatedNec[SemanticError[S], RawContext]](
+              Valid(
+                RawContext.blank.copy(
+                  init = Some(init.copy(module = init.module.map(_ + "|init")))
+                    .filter(_ != RawContext.blank)
+                )
+              )
+            )(Invalid(_))
+        case (state, part: (RawPart | RawPart.Parts)) =>
+          val accCtx =
+            RawPart
+              .contextPart(part)
+              .parts
+              .foldLeft(
+                RawContext.blank.copy(
+                  init = Some(init.copy(module = init.module.map(_ + "|init")))
+                    .filter(_ != RawContext.blank)
+                )
+              ) { case (ctx, p) =>
+                ctx.copy(parts = ctx.parts :+ (ctx -> p))
+              }
+
+          NonEmptyChain
+            .fromChain(state.errors)
+            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(accCtx))(Invalid(_))
         case (state, m) =>
+          logger.error("Got unexpected " + m)
           NonEmptyChain
             .fromChain(state.errors)
             .map(Invalid(_))
-            .getOrElse(Validated.invalidNec[SemanticError[S], AquaContext](WrongAST(ast)))
+            .getOrElse(Validated.invalidNec[SemanticError[S], RawContext](WrongAST(ast)))
       }
       // TODO: return as Eval
       .value

@@ -1,8 +1,7 @@
 package aqua.model.transform.topology
 
-import aqua.raw.ops.OnTag
-import aqua.raw.ops.OnTag
-import aqua.raw.value.ValueRaw
+import aqua.model.ValueModel
+import aqua.model.OnModel
 import cats.data.Chain
 import cats.data.Chain.{:==, ==:, nil}
 import scribe.Logging
@@ -13,11 +12,14 @@ object PathFinder extends Logging {
 
   /**
    * Finds the path – chain of peers to visit to get from [[fromOn]] to [[toOn]]
-   * @param fromOn Previous location
-   * @param toOn Next location
-   * @return Chain of peers to visit in between
+   * @param fromOn
+   *   Previous location
+   * @param toOn
+   *   Next location
+   * @return
+   *   Chain of peers to visit in between
    */
-  def findPath(fromOn: List[OnTag], toOn: List[OnTag]): Chain[ValueRaw] =
+  def findPath(fromOn: List[OnModel], toOn: List[OnModel]): Chain[ValueModel] =
     findPath(
       Chain.fromSeq(fromOn).reverse,
       Chain.fromSeq(toOn).reverse,
@@ -26,11 +28,11 @@ object PathFinder extends Logging {
     )
 
   def findPath(
-    fromOn: Chain[OnTag],
-    toOn: Chain[OnTag],
-    fromPeer: Option[ValueRaw],
-    toPeer: Option[ValueRaw]
-  ): Chain[ValueRaw] = {
+    fromOn: Chain[OnModel],
+    toOn: Chain[OnModel],
+    fromPeer: Option[ValueModel],
+    toPeer: Option[ValueModel]
+  ): Chain[ValueModel] = {
     logger.trace(s"FROM ON: $fromOn")
     logger.trace(s"TO ON: $toOn")
 
@@ -59,18 +61,22 @@ object PathFinder extends Logging {
   /**
    * Removes cycles from the path
    *
-   * @param peerIds peers to walk trough
-   * @param prefix  getting from the previous peer
-   * @param suffix  getting to the next peer
-   * @return optimal path with no duplicates
+   * @param peerIds
+   *   peers to walk trough
+   * @param prefix
+   *   getting from the previous peer
+   * @param suffix
+   *   getting to the next peer
+   * @return
+   *   optimal path with no duplicates
    */
   def optimizePath(
-    peerIds: Chain[ValueRaw],
-    prefix: Chain[ValueRaw],
-    suffix: Chain[ValueRaw]
-  ): Chain[ValueRaw] = {
+    peerIds: Chain[ValueModel],
+    prefix: Chain[ValueModel],
+    suffix: Chain[ValueModel]
+  ): Chain[ValueModel] = {
     val optimized = peerIds
-      .foldLeft(Chain.empty[ValueRaw]) {
+      .foldLeft(Chain.empty[ValueModel]) {
         case (acc, p) if acc.lastOption.contains(p) => acc
         case (acc, p) if acc.contains(p) => acc.takeWhile(_ != p) :+ p
         case (acc, p) => acc :+ p

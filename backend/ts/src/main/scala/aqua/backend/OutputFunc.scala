@@ -3,8 +3,7 @@ package aqua.backend
 import aqua.backend.air.FuncAirGen
 import aqua.backend.ts.TypeScriptCommon.fixupArgName
 import aqua.backend.ts.{TSFuncTypes, TypeScriptCommon}
-import aqua.model.transform.res.FuncRes
-import aqua.model.transform.res.FuncRes.Arg
+import aqua.res.FuncRes
 import aqua.types.*
 import cats.syntax.show.*
 import io.circe.*

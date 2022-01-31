@@ -1,7 +1,6 @@
 package aqua.semantics.rules.types
 
 import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, ValueRaw}
-import aqua.raw.AquaContext
 import aqua.parser.lexer.{
   ArrayTypeToken,
   ArrowTypeToken,
@@ -32,6 +31,7 @@ import aqua.types.{
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
+import aqua.raw.RawContext
 
 case class TypesState[S[_]](
   fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],
@@ -123,6 +123,6 @@ object TypesState {
       )
   }
 
-  def init[S[_]](context: AquaContext): TypesState[S] =
-    TypesState(strict = context.allTypes())
+  def init[S[_]](context: RawContext): TypesState[S] =
+    TypesState(strict = context.allTypes)
 }

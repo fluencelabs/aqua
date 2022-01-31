@@ -4,10 +4,9 @@ import aqua.backend.FunctionDef
 import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Console, Finisher}
 import aqua.io.OutputPrinter
-import aqua.model.{ValueModel, VarModel}
+import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
-import aqua.raw.arrow.FuncArrow
-import aqua.raw.ops.{Call, CallArrowTag, FuncOp, FuncOps}
+import aqua.raw.ops.{Call, CallArrowTag, FuncOp, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrowType, BoxType, NilType, Type}
 import cats.data.{Validated, ValidatedNec}
@@ -58,7 +57,8 @@ class Runner(
     consoleService: Console,
     finisherService: Finisher
   )(implicit ec: ExecutionContext): F[Unit] = {
-    val funcRes = Transform.funcRes(wrapped, transformConfig)
+    // TODO: prob we can turn this Eval into F
+    val funcRes = Transform.funcRes(wrapped, transformConfig).value
     val definitions = FunctionDef(funcRes)
 
     val air = FuncAirGen(funcRes).generate.show
@@ -113,7 +113,7 @@ class Runner(
     // otherwise just call it
     val body = funcCallable.arrowType.codomain.toList match {
       case Nil =>
-        FuncOp.leaf(CallArrowTag(funcName, Call(args, Nil)))
+        CallArrowTag(funcName, Call(args, Nil)).leaf
       case types =>
         val (variables, exports) = types.zipWithIndex.map { case (t, idx) =>
           val name = config.resultName + idx
@@ -124,9 +124,9 @@ class Runner(
 
         val consoleServiceTag = consoleService.callTag(variables)
 
-        FuncOps.seq(
-          FuncOp.leaf(callFuncTag),
-          FuncOp.leaf(consoleServiceTag)
+        SeqTag.wrap(
+          callFuncTag.leaf,
+          consoleServiceTag.leaf
         )
     }
 
@@ -142,11 +142,11 @@ class Runner(
     val gettersV = getGettersForVars(vars, config.argumentGetters)
 
     gettersV.map { getters =>
-      val gettersTags = getters.map(s => FuncOp.leaf(s.callTag()))
+      val gettersTags = getters.map(s => s.callTag().leaf)
 
       FuncArrow(
         config.functionWrapperName,
-        FuncOps.seq((gettersTags :+ body :+ FuncOp.leaf(finisherServiceTag)): _*),
+        SeqTag.wrap((gettersTags :+ body :+ finisherServiceTag.leaf): _*),
         // no arguments and returns nothing
         ArrowType(NilType, NilType),
         Nil,

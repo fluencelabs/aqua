@@ -3,8 +3,7 @@ package aqua.semantics
 import aqua.parser.expr.func.ClosureExpr
 import aqua.parser.lexer.{Name, Token}
 import aqua.parser.lift.Span
-import aqua.raw.Raw
-import aqua.raw.AquaContext
+import aqua.raw.{Raw, RawContext}
 import aqua.semantics.expr.func.ClosureSem
 import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.abilities.{AbilitiesInterpreter, AbilitiesState}
@@ -60,7 +59,7 @@ object Utils {
   }
 
   def blankCS: CompilerState[Id] = {
-    CompilerState.init[Id](AquaContext.blank)
+    CompilerState.init[Id](RawContext.blank)
   }
 
   def labelled(label: String, `type`: Type, tail: ProductType = NilType): LabelledConsType = {

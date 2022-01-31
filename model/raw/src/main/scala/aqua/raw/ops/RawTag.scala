@@ -3,10 +3,14 @@ package aqua.raw.ops
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.ValueRaw
 import cats.data.{Chain, NonEmptyList}
+import cats.free.Cofree
+import cats.Show
+import cats.Eval
+import aqua.raw.Raw
+import aqua.raw.ops.RawTag.Tree
+import aqua.tree.{TreeNode, TreeNodeCompanion}
 
-sealed trait RawTag {
-  // What variable names this tag uses (children are not respected)
-  def usesVarNames: Set[String] = Set.empty
+sealed trait RawTag extends TreeNode[RawTag] {
 
   // What var names are exported – can be used AFTER this tag is executed
   def exportsVarNames: Set[String] = Set.empty
@@ -21,6 +25,15 @@ sealed trait RawTag {
 
   def renameExports(map: Map[String, String]): RawTag = this
 
+  def funcOpLeaf: FuncOp = FuncOp(leaf)
+}
+
+object RawTag extends TreeNodeCompanion[RawTag] with RawTagGivens {
+
+  given showTreeLabel: Show[RawTag] =
+    (t: RawTag) => t.toString.stripSuffix("Tag")
+
+  val empty: Tree = EmptyTag.leaf
 }
 
 sealed trait NoExecTag extends RawTag
@@ -31,7 +44,11 @@ sealed trait SeqGroupTag extends GroupTag
 
 sealed trait ParGroupTag extends GroupTag
 
-case object SeqTag extends SeqGroupTag
+case object SeqTag extends SeqGroupTag {
+
+  override def wrap(children: Tree*): Tree =
+    super.wrapNonEmpty(children.filterNot(_.head == EmptyTag).toList, RawTag.empty)
+}
 
 case object ParTag extends ParGroupTag {
   case object Detach extends ParGroupTag
@@ -41,17 +58,9 @@ case object XorTag extends GroupTag {
   case object LeftBiased extends GroupTag
 }
 
-case class XorParTag(xor: FuncOp, par: FuncOp) extends RawTag {
-  // Collect all the used variable names
-  override def usesVarNames: Set[String] = xor.usesVarNames.value ++ par.usesVarNames.value
-
-  override def exportsVarNames: Set[String] = xor.usesVarNames.value ++ par.usesVarNames.value
-}
+case class XorParTag(xor: RawTag.Tree, par: RawTag.Tree) extends RawTag
 
 case class OnTag(peerId: ValueRaw, via: Chain[ValueRaw]) extends SeqGroupTag {
-
-  override def usesVarNames: Set[String] =
-    peerId.usesVarNames ++ via.iterator.flatMap(_.usesVarNames)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     OnTag(peerId.map(f), via.map(_.map(f)))
@@ -61,14 +70,12 @@ case class OnTag(peerId: ValueRaw, via: Chain[ValueRaw]) extends SeqGroupTag {
 }
 
 case class NextTag(item: String) extends RawTag {
-  override def usesVarNames: Set[String] = Set(item)
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(item = map.getOrElse(item, item))
 }
 
 case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag {
-  override def usesVarNames: Set[String] = Set.empty
 
   override def restrictsVarNames: Set[String] = Set(name)
 
@@ -79,15 +86,11 @@ case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag {
 case class MatchMismatchTag(left: ValueRaw, right: ValueRaw, shouldMatch: Boolean)
     extends SeqGroupTag {
 
-  override def usesVarNames: Set[String] =
-    left.usesVarNames ++ right.usesVarNames
-
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     MatchMismatchTag(left.map(f), right.map(f), shouldMatch)
 }
 
 case class ForTag(item: String, iterable: ValueRaw) extends SeqGroupTag {
-  override def usesVarNames: Set[String] = iterable.usesVarNames
 
   override def restrictsVarNames: Set[String] = Set(item)
 
@@ -102,7 +105,6 @@ case class CallArrowTag(
   funcName: String,
   call: Call
 ) extends RawTag {
-  override def usesVarNames: Set[String] = call.argVarNames + funcName
 
   override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
 
@@ -116,7 +118,6 @@ case class CallArrowTag(
 case class DeclareStreamTag(
   value: ValueRaw
 ) extends NoExecTag {
-  override def usesVarNames: Set[String] = value.usesVarNames
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     DeclareStreamTag(value.map(f))
@@ -126,7 +127,6 @@ case class AssignmentTag(
   value: ValueRaw,
   assignTo: String
 ) extends NoExecTag {
-  override def usesVarNames: Set[String] = Set(assignTo) ++ value.usesVarNames
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(assignTo = map.getOrElse(assignTo, assignTo))
@@ -138,15 +138,13 @@ case class AssignmentTag(
 case class ClosureTag(
   func: FuncRaw
 ) extends NoExecTag {
-  // TODO captured names are lost?
-  override def usesVarNames: Set[String] = Set(func.name)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     ClosureTag(
       func.copy(arrow =
         func.arrow.copy(
           ret = func.arrow.ret.map(_.map(f)),
-          body = FuncOp(func.arrow.body.tree.map(_.mapValues(f)))
+          body = func.arrow.body.map(_.mapValues(f))
         )
       )
     )
@@ -177,8 +175,6 @@ case class CallServiceTag(
   call: Call
 ) extends RawTag {
 
-  override def usesVarNames: Set[String] = serviceId.usesVarNames ++ call.argVarNames
-
   override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
@@ -191,7 +187,6 @@ case class CallServiceTag(
 }
 
 case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends RawTag {
-  override def usesVarNames: Set[String] = operand.usesVarNames
 
   override def exportsVarNames: Set[String] = Set(exportTo.name)
 
@@ -205,7 +200,6 @@ case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
 }
 
 case class CanonicalizeTag(operand: ValueRaw, exportTo: Call.Export) extends RawTag {
-  override def usesVarNames: Set[String] = operand.usesVarNames
 
   override def exportsVarNames: Set[String] = Set(exportTo.name)
 
@@ -218,22 +212,7 @@ case class CanonicalizeTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
   override def toString: String = s"(can $operand $exportTo)"
 }
 
-case class FlattenTag(operand: ValueRaw, assignTo: String) extends RawTag {
-  override def usesVarNames: Set[String] = operand.usesVarNames
-
-  override def exportsVarNames: Set[String] = Set(assignTo)
-
-  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    FlattenTag(operand.map(f), assignTo)
-
-  override def renameExports(map: Map[String, String]): RawTag =
-    copy(assignTo = map.getOrElse(assignTo, assignTo))
-
-  override def toString: String = s"(ap $operand $assignTo)"
-}
-
 case class JoinTag(operands: NonEmptyList[ValueRaw]) extends RawTag {
-  override def usesVarNames: Set[String] = operands.toList.flatMap(_.usesVarNames).toSet
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     JoinTag(operands.map(_.map(f)))

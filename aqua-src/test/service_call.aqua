@@ -1,0 +1,15 @@
+module Import
+import foobar from "export2.aqua"
+
+use foo as f from "export2.aqua" as Exp
+
+import "../gen/OneMore.aqua"
+
+export foo_wrapper as wrap, foobar as barfoo
+
+func foo_wrapper() -> string:
+    z <- Exp.f()
+    OneMore "hello"
+    OneMore.more_call()
+    -- Exp.f() returns literal, this func must return literal in AIR as well
+    <- z

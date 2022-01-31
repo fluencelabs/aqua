@@ -1,7 +1,7 @@
 package aqua.backend.ts
 
 import aqua.backend.{FuncTypes, ServiceTypes, Types}
-import aqua.model.transform.res.{FuncRes, ServiceRes}
+import aqua.res.{FuncRes, ServiceRes}
 
 object TypeScriptTypes extends Types {
   override def typed(field: String, t: String): String = s"$field: $t"

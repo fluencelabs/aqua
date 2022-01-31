@@ -2,7 +2,7 @@ package aqua.backend.ts
 
 import aqua.backend.ServiceTypes
 import aqua.backend.ts.TypeScriptCommon.fnDef
-import aqua.model.transform.res.ServiceRes
+import aqua.res.ServiceRes
 
 case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
 

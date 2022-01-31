@@ -1,17 +1,14 @@
 package aqua.raw.arrow
 
 import aqua.raw.value.ValueRaw
-import aqua.raw.Raw
+import aqua.raw.RawPart
+import aqua.types.Type
 
 case class FuncRaw(
   name: String,
   arrow: ArrowRaw
-) extends Raw {
+) extends RawPart {
+  override def rename(s: String): RawPart = copy(name = s)
 
-  def capture(
-               arrows: Map[String, FuncArrow],
-               constants: Map[String, ValueRaw]
-  ): FuncArrow =
-    FuncArrow(name, arrow.body.fixXorPar, arrow.`type`, arrow.ret, arrows, constants)
-
+  override def rawPartType: Type = arrow.`type`
 }

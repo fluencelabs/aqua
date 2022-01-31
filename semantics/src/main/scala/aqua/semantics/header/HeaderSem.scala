@@ -1,12 +1,12 @@
 package aqua.semantics.header
 
-import aqua.raw.AquaContext
 import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.{Comonad, Eval, Monoid}
 import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
 import aqua.parser.Ast
 import aqua.parser.head.*
 import aqua.parser.lexer.{Ability, Token}
+import aqua.raw.RawContext
 import aqua.semantics.{HeaderError, SemanticError}
 import cats.syntax.foldable.*
 import cats.syntax.semigroup.*
@@ -16,20 +16,21 @@ import cats.free.Cofree
 import cats.kernel.Semigroup
 
 case class HeaderSem[S[_]](
-  initCtx: AquaContext,
-  finInitCtx: (AquaContext, AquaContext) => ValidatedNec[SemanticError[S], AquaContext]
+  initCtx: RawContext,
+  finInitCtx: (RawContext, RawContext) => ValidatedNec[SemanticError[S], RawContext]
 ) {
 
-  def finCtx: AquaContext => ValidatedNec[SemanticError[S], AquaContext] =
+  def finCtx: RawContext => ValidatedNec[SemanticError[S], RawContext] =
     finInitCtx(_, initCtx)
 }
 
 object HeaderSem {
   type Res[S[_]] = ValidatedNec[SemanticError[S], HeaderSem[S]]
-  type ResAC[S[_]] = ValidatedNec[SemanticError[S], AquaContext]
+  type ResAC[S[_]] = ValidatedNec[SemanticError[S], RawContext]
+  type ResT[S[_], T] = ValidatedNec[SemanticError[S], T]
 
   private implicit def headerSemMonoid[S[_]](implicit
-    acm: Monoid[AquaContext]
+    acm: Monoid[RawContext]
   ): Monoid[HeaderSem[S]] =
     new Monoid[HeaderSem[S]] {
       override def empty: HeaderSem[S] = HeaderSem(acm.empty, (c, _) => validNec(c))
@@ -43,7 +44,7 @@ object HeaderSem {
 
   // Helper: monoidal combine of all the childrens after parent res
   private def combineAnd[S[_]](children: Chain[Res[S]])(parent: Res[S])(implicit
-    acm: Monoid[AquaContext]
+    acm: Monoid[RawContext]
   ): Eval[Res[S]] =
     Eval.later(parent |+| children.combineAll)
 
@@ -51,8 +52,8 @@ object HeaderSem {
   private def error[S[_], T](token: Token[S], msg: String): ValidatedNec[SemanticError[S], T] =
     invalidNec(HeaderError(token, msg))
 
-  def sem[S[_]: Comonad](imports: Map[String, AquaContext], header: Ast.Head[S])(implicit
-    acm: Monoid[AquaContext]
+  def sem[S[_]: Comonad](imports: Map[String, RawContext], header: Ast.Head[S])(implicit
+    acm: Monoid[RawContext]
   ): Res[S] = {
     // Resolve a filename from given imports or fail
     def resolve(f: FilenameExpr[S]): ResAC[S] =
@@ -64,7 +65,7 @@ object HeaderSem {
         )(validNec)
 
     // Get part of the declared context (for import/use ... from ... expressions)
-    def getFrom(f: FromExpr[S], ctx: AquaContext): ResAC[S] =
+    def getFrom(f: FromExpr[S], ctx: RawContext): ResAC[S] =
       f.imports
         .map[ResAC[S]](
           _.fold[ResAC[S]](
@@ -95,7 +96,7 @@ object HeaderSem {
         .foldLeft[ResAC[S]](validNec(ctx.pickHeader))(_ |+| _)
 
     // Convert an imported context into a module (ability)
-    def toModule(ctx: AquaContext, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S] =
+    def toModule(ctx: RawContext, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S] =
       rename
         .map(_.value)
         .orElse(ctx.module)
@@ -104,7 +105,7 @@ object HeaderSem {
             tkn,
             s"Used module has no `module` header. Please add `module` header or use ... as ModuleName, or switch to import"
           )
-        )(modName => validNec(AquaContext.blank.copy(abilities = Map(modName -> ctx))))
+        )(modName => validNec(RawContext.blank.copy(abilities = Map(modName -> ctx))))
 
     // Handler for every header expression, will be combined later
     val onExpr: PartialFunction[HeaderExpr[S], Res[S]] = {
@@ -181,45 +182,38 @@ object HeaderSem {
         validNec(
           HeaderSem[S](
             // Nothing there
-            AquaContext.blank,
+            RawContext.blank,
             (ctx, initCtx) =>
               pubs
                 .map(
-                  _.fold(
-                    { case (n, rn) =>
-                      (initCtx |+| ctx)
-                        .pick(n.value, rn.map(_.value), declared = false)
-                        .map(validNec)
-                        .getOrElse(
-                          error(
-                            n,
-                            s"File has no ${n.value} declaration or import, cannot export, available funcs: ${(initCtx |+| ctx).funcs.keys
-                              .mkString(", ")}"
-                          )
-                        )
-                    },
-                    { case (n, rn) =>
-                      (initCtx |+| ctx)
-                        .pick(n.value, rn.map(_.value), declared = false)
-                        .map(validNec)
-                        .getOrElse(
-                          error(
-                            n,
-                            s"File has no ${n.value} declaration or import, cannot export, available funcs: ${(initCtx |+| ctx).funcs.keys
-                              .mkString(", ")}"
-                          )
-                        )
-                    }
+                  _.fold[(Token[S], String, Option[String])](
+                    nrn => (nrn._1, nrn._1.value, nrn._2.map(_.value)),
+                    nrn => (nrn._1, nrn._1.value, nrn._2.map(_.value))
                   )
                 )
-                .foldLeft[ResAC[S]](validNec(ctx.exports.getOrElse(AquaContext.blank)))(_ |+| _)
+                .map { case (token, name, rename) =>
+                  (initCtx |+| ctx)
+                    .pick(name, rename, declared = false)
+                    .map(_ => Map(name -> rename))
+                    .map(validNec)
+                    .getOrElse(
+                      error(
+                        token,
+                        s"File has no $name declaration or import, cannot export, available funcs: ${(initCtx |+| ctx).funcs.keys
+                          .mkString(", ")}"
+                      )
+                    )
+                }
+                .foldLeft[ResT[S, Map[String, Option[String]]]](
+                  validNec(ctx.exports.getOrElse(Map.empty))
+                )(_ |+| _)
                 .map(expCtx => ctx.copy(exports = Some(expCtx)))
           )
         )
 
       case HeadExpr(token) =>
         // Old file exports everything that it declares
-        validNec(HeaderSem[S](acm.empty, (ctx, _) => validNec(ctx.copy(exports = Some(ctx)))))
+        validNec(HeaderSem[S](acm.empty, (ctx, _) => validNec(ctx.copy(exports = Some(Map.empty)))))
 
       case f: FilenameExpr[S] =>
         resolve(f).map(fc => HeaderSem[S](fc, (c, _) => validNec(c)))

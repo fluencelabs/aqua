@@ -1,22 +1,20 @@
 package aqua.semantics
 
-import aqua.Node
-import aqua.Node.*
+import aqua.raw.RawContext
 import aqua.parser.Ast
-import aqua.raw.AquaContext
-import aqua.raw.ops.FuncOp
-import aqua.model.transform.TransformConfig
-import aqua.model.transform.funcop.*
+import aqua.raw.ops.{Call, CallServiceTag, FuncOp, OnTag, ParTag, RawTag, SeqTag}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
-import aqua.raw.ops.{FuncOps, SeqTag}
-import aqua.raw.value.LiteralRaw
+import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.types.LiteralType
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.~>
+import cats.data.Chain
 
 class SemanticsSpec extends AnyFlatSpec with Matchers {
+
+  val emptyCall = Call(Nil, Nil)
 
   // use it to fix https://github.com/fluencelabs/aqua/issues/90
   "sem" should "create right model" in {
@@ -34,26 +32,26 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val ast = parser(script).toList.head
 
-    val ctx = AquaContext.blank
-    val bc = TransformConfig()
-    import bc.aquaContextMonoid
+    val ctx = RawContext.blank
 
     val p = Semantics.process(ast, ctx)
 
     val func = p.toList.head.funcs("parFunc")
 
-    val proc = Node.cofToNode(func.body.tree)
+    val proc = func.arrow.body
 
-    val expected: Node.Raw =
-      FuncOp.wrap(
-        SeqTag,
-        FuncOps.par(
-          on(LiteralRaw("\"other-peer\"", LiteralType.string), Nil, callLiteralRaw(1)),
-          callLiteralRaw(1)
-        )
+    val expected =
+      ParTag.wrap(
+        OnTag(
+          LiteralRaw("\"other-peer\"", LiteralType.string),
+          Chain.empty
+        ).wrap(
+          CallServiceTag(LiteralRaw.quote("srv1"), "fn1", emptyCall).leaf
+        ),
+        CallServiceTag(LiteralRaw.quote("srv1"), "fn1", emptyCall).leaf
       )
 
-    proc.equalsOrPrintDiff(expected) should be(true)
+    proc.equalsOrShowDiff(expected) should be(true)
 
   }
 }

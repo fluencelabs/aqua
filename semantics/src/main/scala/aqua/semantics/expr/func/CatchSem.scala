@@ -1,6 +1,6 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{AssignmentTag, FuncOp, FuncOps, XorTag}
+import aqua.raw.ops.{AssignmentTag, FuncOp, SeqTag, XorTag}
 import aqua.parser.expr.func.CatchExpr
 import aqua.raw.value.ValueRaw
 import aqua.raw.Raw
@@ -21,17 +21,18 @@ class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
     Prog
       .around(
         N.beginScope(expr.name) >>
-          N.define(expr.name, ValueRaw.LastError.`type`),
+          N.define(expr.name, ValueRaw.LastError.baseType),
         (_: Boolean, g: Raw) =>
           g match {
-            case op: FuncOp =>
-              N.endScope() as (FuncOp.wrap(
-                XorTag,
-                FuncOps.seq(
-                  FuncOp.leaf(AssignmentTag(ValueRaw.LastError, expr.name.value)),
-                  op
+            case FuncOp(op) =>
+              N.endScope() as (XorTag
+                .wrap(
+                  SeqTag.wrap(
+                    AssignmentTag(ValueRaw.LastError, expr.name.value).leaf,
+                    op
+                  )
                 )
-              ): Raw)
+                .toFuncOp: Raw)
             case _ =>
               N.endScope() as g
           }

@@ -3,7 +3,9 @@ package aqua.files
 import fs2.io.file.Path
 import cats.Order
 
-case class FileModuleId private (file: Path)
+case class FileModuleId private (file: Path) {
+  override def toString: String = s"${file}"
+}
 
 object FileModuleId {
 

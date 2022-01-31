@@ -11,8 +11,8 @@ class CoSem[S[_]](val expr: CoExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad]: Prog[Alg, Raw] =
     Prog.after[Alg, Raw] {
-      case g: FuncOp =>
-        FuncOp.wrap(ParTag.Detach, g).pure[Alg]
+      case FuncOp(g) =>
+        ParTag.Detach.wrap(g).toFuncOp.pure[Alg]
       case g => g.pure[Alg]
     }
 }

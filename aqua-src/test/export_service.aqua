@@ -1,0 +1,10 @@
+module Closure declares *
+
+export LocalSrv
+
+service LocalSrv("local_srv"):
+  inside: -> ()
+
+-- MyOp shouldn't be exported in TS
+service MyOp("op"):
+  identity(s: string) -> string

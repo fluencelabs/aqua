@@ -8,6 +8,9 @@ case class ServiceRaw(
   name: String,
   arrows: NonEmptyMap[String, ArrowType],
   defaultId: Option[ValueRaw]
-) extends Raw {
-  def `type`: StructType = StructType(name, arrows)
+) extends RawPart {
+  def rawPartType: StructType = StructType(name, arrows)
+
+  override def rename(s: String): RawPart = copy(name = s)
+
 }

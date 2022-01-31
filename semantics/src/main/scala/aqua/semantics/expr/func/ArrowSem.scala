@@ -1,6 +1,6 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{Call, FuncOp, FuncOps, RestrictionTag, ReturnTag, SeqTag}
+import aqua.raw.ops.{Call, CanonicalizeTag, FuncOp, RestrictionTag, ReturnTag, SeqTag}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.expr.func.ArrowExpr
 import aqua.parser.lexer.{Arg, DataTypeToken}
@@ -60,7 +60,7 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     A.endScope() *> (N.streamsDefinedWithinScope(), T.endArrowScope(expr.arrowTypeExpr)).mapN {
       (streams, retValues) =>
         bodyGen match {
-          case m: FuncOp =>
+          case FuncOp(m) =>
             // TODO: wrap with local on...via...
 
             // These streams are returned as streams
@@ -88,22 +88,21 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
                   case _ => false
                 }
               )
-                FuncOp.wrap(
-                  RestrictionTag(n, isStream = true),
-                  FuncOps.seq(
+                RestrictionTag(n, isStream = true).wrap(
+                  SeqTag.wrap(
                     b :: rs.collect { case vn @ VarRaw(`n`, _, _) =>
-                      FuncOps.canonicalize(
+                      CanonicalizeTag(
                         vn,
-                        Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.lastType))
-                      )
+                        Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
+                      ).leaf
                     }: _*
                   )
                 ) -> rs.map {
                   case vn @ VarRaw(`n`, _, _) =>
-                    VarRaw(s"$n-fix", builtStreams.getOrElse(n, vn.lastType))
+                    VarRaw(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
                   case vm => vm
                 }
-              else FuncOp.wrap(RestrictionTag(n, isStream = true), b) -> rs
+              else RestrictionTag(n, isStream = true).wrap(b) -> rs
             }
 
             ArrowRaw(funcArrow, retValuesFix, body)

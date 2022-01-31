@@ -1,11 +1,18 @@
+
 service Op2("op"):
     identity(s: u64)
+    neighborhood: -> []string
+    timestamp: -> u64
 
-service Peer("peer"):
-  timestamp_sec: -> u64
-
-func getTwoResults():
-  on "other node":
-      co on "x":
-        z <- Peer.timestamp_sec()
-      Op2.identity(z)
+func getTwoResults(node: string) -> []u64:
+  on node:
+    nodes <- Op2.neighborhood()
+    res: *u64
+    for n <- nodes par:
+      on n:
+        try:
+          res <- Op2.timestamp()
+    Op2.identity(res!)
+    Op2.identity(res!1)
+    Op2.identity(res!2)
+  <- res
