@@ -1,36 +1,41 @@
 package aqua.builder
 
-import aqua.backend.{ArgDefinition, PrimitiveType, ServiceDef, ServiceFunctionDef, VoidType}
+import aqua.backend.{
+  ArgDefinition,
+  PrimitiveType,
+  ServiceDef,
+  ServiceFunctionDef,
+  TypeDefinition,
+  VoidType
+}
 import aqua.ipfs.js.IpfsApi
-import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer}
+import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer, ServiceHandler}
+import cats.data.NonEmptyList
 import scribe.Logging
+
 import scalajs.js
 
-class IPFSUploader(serviceId: String, fnName: String) extends ServiceFunction with Logging {
+object IPFSUploader extends Logging {
 
-  def register(peer: FluencePeer): Unit = {
-    CallJsFunction.registerService(
-      peer,
-      serviceId,
-      (
-        fnName,
-        args => {
-          IpfsApi
-            .uploadFile(args(0), args(1), logger.info: String => Unit, logger.error: String => Unit)
-            .`catch` { err =>
-              js.Dynamic.literal(error = "Error on uploading file: " + err)
-            }
+  private def uploadFunc(funcName: String): AquaFunction = new AquaFunction {
+    override def fnName: String = funcName
 
+    override def handler: ServiceHandler = args => {
+      IpfsApi
+        .uploadFile(args(0), args(1), logger.info: String => Unit, logger.error: String => Unit)
+        .`catch` { err =>
+          js.Dynamic.literal(error = "Error on uploading file: " + err)
         }
-      ) :: Nil,
-      ServiceDef(
-        None,
-        ServiceFunctionDef(
-          fnName,
-          ArgDefinition("path", PrimitiveType) :: ArgDefinition("multiaddr", PrimitiveType) :: Nil,
-          PrimitiveType
-        ) :: Nil
-      )
-    )
+
+    }
+
+    override def argDefinitions: List[ArgDefinition] =
+      ArgDefinition("path", PrimitiveType) :: ArgDefinition("multiaddr", PrimitiveType) :: Nil
+    override def returnType: TypeDefinition = PrimitiveType
+  }
+
+  def apply(serviceId: String, fnName: String): Service = {
+    val funcs = NonEmptyList.one(uploadFunc(fnName))
+    Service(serviceId, funcs)
   }
 }

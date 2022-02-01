@@ -25,7 +25,7 @@ object Console {
 
     def handler: ServiceHandler = { varArgs =>
       OutputPrinter.print(JSON.stringify(varArgs(0), space = 2))
-      js.Promise.resolve(ServiceFunction.emptyObject)
+      js.Promise.resolve(Service.emptyObject)
     }
     def argDefinitions: List[ArgDefinition] = ArgDefinition("str", PrimitiveType) :: Nil
     def returnType: TypeDefinition = VoidType

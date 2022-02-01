@@ -1,3 +1,13 @@
+import "@fluencelabs/aqua-ipfs/ipfs.aqua"
+
 -- printing strings in console
 service Console("run-console"):
   print(str: string)
+
+data UploadResult:
+  error: string
+  cid: string
+  size: u64
+
+service IPFS("ipfs"):
+  uploadFile(path: string, multiaddr: IpfsMultiaddrResult) -> UploadResult

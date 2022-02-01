@@ -2,7 +2,7 @@ package aqua.run
 
 import aqua.LogLevelTransformer
 import aqua.backend.FunctionDef
-import aqua.builder.{Finisher, ResultPrinter, Service, ServiceFunction}
+import aqua.builder.{Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, Fluence, FluenceUtils, PeerConfig}
 import aqua.run.RunCommand.createKeyPair
@@ -25,7 +25,6 @@ object FuncCaller {
     functionDef: FunctionDef,
     config: RunConfig,
     finisherService: Finisher,
-    serviceFunctions: List[ServiceFunction],
     services: List[Service]
   )(implicit
     ec: ExecutionContext
@@ -53,10 +52,7 @@ object FuncCaller {
             .toFuture
           _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
           // register all services
-          _ = (serviceFunctions ++ config.argumentGetters.values :+ finisherService).map(
-            _.register(peer)
-          )
-          _ = services.map(_.register(peer))
+          _ = (services ++ config.argumentGetters.values :+ finisherService).map(_.register(peer))
           callFuture = CallJsFunction.funcCallJs(
             air,
             functionDef,

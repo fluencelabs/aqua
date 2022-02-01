@@ -1,19 +1,12 @@
 module IpfsExports
 
 import "@fluencelabs/aqua-ipfs/ipfs-api.aqua"
-import "@fluencelabs/aqua-ipfs/ipfs.aqua"
+import "run-builtins/run-builtins.aqua"
+
 
 export uploadFile
 
 const ON_PEER ?= HOST_PEER_ID
-
-data UploadResult:
-  error: string
-  cid: string
-  size: u64
-
-service IPFS("ipfs"):
-  uploadFile(path: string, multiaddr: IpfsMultiaddrResult) -> UploadResult
 
 func uploadFile(path: string) -> UploadResult:
   on ON_PEER:
