@@ -39,3 +39,5 @@ Different Fluence network addresses could be found here: https://github.com/flue
 
 ## Builtins for `aqua run`
 
+You can find all builtins in aqua/run-builtins/run-builtins.aqua
+
