@@ -27,15 +27,17 @@ case class Finisher private (
     )
   }
 
-  def registerService(peer: FluencePeer) = {
+  def register(peer: FluencePeer) = {
     CallJsFunction.registerService(
       peer,
       serviceId,
-      fnName,
-      _ => {
-        promise.success(())
-        js.Promise.resolve(ServiceFunction.emptyObject)
-      },
+      (
+        fnName,
+        _ => {
+          promise.success(())
+          js.Promise.resolve(ServiceFunction.emptyObject)
+        }
+      ) :: Nil,
       ServiceDef(
         None,
         ServiceFunctionDef(

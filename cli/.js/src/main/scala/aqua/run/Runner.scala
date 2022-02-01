@@ -2,7 +2,7 @@ package aqua.run
 
 import aqua.backend.FunctionDef
 import aqua.backend.air.FuncAirGen
-import aqua.builder.{ArgumentGetter, Console, Finisher}
+import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter}
 import aqua.io.OutputPrinter
 import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
@@ -33,7 +33,7 @@ class Runner(
   def run[F[_]: Async]()(implicit ec: ExecutionContext): ValidatedNec[String, F[Unit]] = {
     val resultNames = resultVariableNames(funcCallable, config.resultName)
     val consoleService =
-      new Console(config.consoleServiceId, config.printFunctionName, resultNames)
+      new ResultPrinter(config.resultPrinterServiceId, config.resultPrinterName, resultNames)
     val promiseFinisherService =
       Finisher(config.finisherServiceId, config.finisherFnName)
 
@@ -54,7 +54,7 @@ class Runner(
   // Generates air from function, register all services and make a call through FluenceJS
   private def genAirAndMakeCall[F[_]: Async](
     wrapped: FuncArrow,
-    consoleService: Console,
+    consoleService: ResultPrinter,
     finisherService: Finisher
   )(implicit ec: ExecutionContext): F[Unit] = {
     // TODO: prob we can turn this Eval into F
@@ -72,7 +72,8 @@ class Runner(
       definitions,
       config,
       finisherService,
-      config.services :+ consoleService
+      config.innerServices :+ consoleService,
+      config.services
     )
   }
 
@@ -106,7 +107,7 @@ class Runner(
   //   Console.print(res)
   //   Finisher.finish()
   private def wrapCall(
-    consoleService: Console,
+    consoleService: ResultPrinter,
     finisherService: Finisher
   ): ValidatedNec[String, FuncArrow] = {
     // pass results to a printing service if an input function returns a result

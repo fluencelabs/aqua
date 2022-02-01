@@ -1,11 +1,10 @@
 package aqua.run
 
 import aqua.FluenceOpts.{logLevelOpt, multiaddrOpt, onOpt, printAir, secretKeyOpt, timeoutOpt}
-import aqua.builder.{ArgumentGetter, ServiceFunction}
+import aqua.builder.{ArgumentGetter, Service, ServiceFunction}
 import aqua.AppOpts
 import com.monovore.decline.Opts
 import scribe.Level
-
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.applicative.*
@@ -32,10 +31,12 @@ case class RunConfig(
   common: GeneralRunOptions,
   // services that will pass arguments to air
   argumentGetters: Map[String, ArgumentGetter],
-  // services that will be used in aqua code and need to be registered
-  services: List[ServiceFunction] = Nil,
-  consoleServiceId: String = "--after-callback-srv-service--",
-  printFunctionName: String = "console-log",
+  // builtin services for aqua run, for example: Console, FileSystem, etc
+  services: List[Service],
+  // services that will be used in generated aqua code and need to be registered
+  innerServices: List[ServiceFunction] = Nil,
+  resultPrinterServiceId: String = "--after-callback-srv-service--",
+  resultPrinterName: String = "console-log",
   finisherServiceId: String = "--finisher--",
   finisherFnName: String = "--finish-execution--",
   resultName: String = "-some-unique-res-name-",

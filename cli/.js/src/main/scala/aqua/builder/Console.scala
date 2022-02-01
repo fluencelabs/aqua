@@ -1,52 +1,40 @@
 package aqua.builder
 
-import aqua.backend.{ArgDefinition, PrimitiveType, ServiceDef, ServiceFunctionDef, VoidType}
+import aqua.backend.{
+  ArgDefinition,
+  PrimitiveType,
+  ServiceDef,
+  ServiceFunctionDef,
+  TypeDefinition,
+  VoidType
+}
 import aqua.io.OutputPrinter
-import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer}
-import aqua.raw.ops.{Call, CallServiceTag}
-import aqua.raw.value.{LiteralRaw, VarRaw}
+import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
+import cats.data.NonEmptyList
 
 import scala.scalajs.js
-import scala.scalajs.js.{Dynamic, JSON}
+import scala.scalajs.js.JSON
 
-// Function to print any variables that passed as arguments
-class Console(serviceId: String, fnName: String, resultNames: List[String])
-    extends ServiceFunction {
+private case class Console(serviceId: String, functions: NonEmptyList[AquaFunction])
+    extends Service(serviceId, functions)
 
-  def callTag(variables: List[VarRaw]): CallServiceTag =
-    CallServiceTag(
-      LiteralRaw.quote(serviceId),
-      fnName,
-      Call(variables, Nil)
-    )
+object Console {
 
-  def registerService(peer: FluencePeer): Unit = {
-    CallJsFunction.registerService(
-      peer,
-      serviceId,
-      fnName,
-      varArgs => {
-        // drop last argument (tetraplets)
-        val args: Seq[js.Any] = varArgs.init
-        val toPrint = args.toList match {
-          case arg :: Nil => JSON.stringify(arg, space = 2)
-          case _ => args.map(a => JSON.stringify(a, space = 2)).mkString("[\n", ",\n", "\n]")
-        }
+  private def printFunction(funcName: String) = new AquaFunction {
+    override def fnName: String = funcName
 
-        // if an input function returns a result, our success will be after it is printed
-        // otherwise finish after JS SDK will finish sending a request
-        OutputPrinter.print(toPrint)
-        // empty JS object
-        js.Promise.resolve(ServiceFunction.emptyObject)
-      },
-      ServiceDef(
-        None,
-        ServiceFunctionDef(
-          fnName,
-          resultNames.map(n => ArgDefinition(n, PrimitiveType)),
-          VoidType
-        ) :: Nil
-      )
-    )
+    def handler: ServiceHandler = { varArgs =>
+      OutputPrinter.print(JSON.stringify(varArgs(0), space = 2))
+      js.Promise.resolve(ServiceFunction.emptyObject)
+    }
+    def argDefinitions: List[ArgDefinition] = ArgDefinition("str", PrimitiveType) :: Nil
+    def returnType: TypeDefinition = VoidType
+  }
+
+  val PrintName = "print"
+
+  def apply(serviceId: String = "run-console"): Console = {
+
+    Console(serviceId, NonEmptyList.one(printFunction(PrintName)))
   }
 }

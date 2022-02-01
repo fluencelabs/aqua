@@ -8,20 +8,21 @@ import scalajs.js
 
 class IPFSUploader(serviceId: String, fnName: String) extends ServiceFunction with Logging {
 
-  def registerService(peer: FluencePeer): Unit = {
+  def register(peer: FluencePeer): Unit = {
     CallJsFunction.registerService(
       peer,
       serviceId,
-      fnName,
-      args => {
+      (
+        fnName,
+        args => {
+          IpfsApi
+            .uploadFile(args(0), args(1), logger.info: String => Unit, logger.error: String => Unit)
+            .`catch` { err =>
+              js.Dynamic.literal(error = "Error on uploading file: " + err)
+            }
 
-        IpfsApi
-          .uploadFile(args(0), args(1), logger.info: String => Unit, logger.error: String => Unit)
-          .`catch` { err =>
-            js.Dynamic.literal(error = "Error on uploading file: " + err)
-          }
-
-      },
+        }
+      ) :: Nil,
       ServiceDef(
         None,
         ServiceFunctionDef(

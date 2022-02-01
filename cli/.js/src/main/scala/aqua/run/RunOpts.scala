@@ -201,11 +201,14 @@ object RunOpts extends Logging {
         args,
         inputPath,
         imports,
-        RunConfig(common, argumentGetters, services),
+        RunConfig(common, argumentGetters, Nil, services),
         transformConfigWithOnPeer(common.on)
       )
       .map(_ => ExitCode.Success)
   }
+
+  private val runBuiltinServices =
+    aqua.builder.Console() :: Nil
 
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
@@ -235,7 +238,7 @@ object RunOpts extends Logging {
             impsV.andThen { imps =>
               dataFromFileV.andThen { dataFromFile =>
                 getData(dataFromArgument, dataFromFile).andThen { data =>
-                  checkDataGetServices(args, data).andThen { services =>
+                  checkDataGetServices(args, data).andThen { getServices =>
                     valid(
                       RunCommand
                         .run(
@@ -243,7 +246,7 @@ object RunOpts extends Logging {
                           args,
                           input,
                           imps,
-                          RunConfig(common, services),
+                          RunConfig(common, getServices, runBuiltinServices),
                           transformConfigWithOnPeer(common.on)
                         )
                     )

@@ -1,0 +1,3 @@
+-- printing strings in console
+service Console("run-console"):
+  print(str: string)

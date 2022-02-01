@@ -18,14 +18,12 @@ object CallJsFunction {
   def registerService(
     peer: FluencePeer,
     serviceId: String,
-    fnName: String,
-    handler: ServiceHandler,
+    handlers: List[(String, ServiceHandler)],
     servideDef: ServiceDef
   ): Unit = {
-    js.Function
-    val func = js.Dynamic.literal(fnName -> handler)
+    val funcs = js.Dictionary.apply(handlers: _*)
     val args: js.Array[js.Any] =
-      js.Array(peer, serviceId, func)
+      js.Array(peer, serviceId, funcs)
     V2.registerService(args, ServiceDefJs(servideDef))
   }
 

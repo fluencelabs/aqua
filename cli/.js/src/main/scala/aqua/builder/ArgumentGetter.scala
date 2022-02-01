@@ -14,12 +14,11 @@ import scala.concurrent.Promise
 case class ArgumentGetter(serviceId: String, value: VarRaw, arg: scalajs.js.Dynamic)
     extends ServiceFunction {
 
-  def registerService(peer: FluencePeer): Unit = {
+  def register(peer: FluencePeer): Unit = {
     CallJsFunction.registerService(
       peer,
       serviceId,
-      value.name,
-      _ => js.Promise.resolve(arg),
+      (value.name, _ => js.Promise.resolve(arg)) :: Nil,
       ServiceDef(
         None,
         ServiceFunctionDef(

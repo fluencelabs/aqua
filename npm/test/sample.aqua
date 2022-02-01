@@ -1,3 +1,5 @@
+import "run-builtins.aqua"
+
 data StructType:
   numField: u32
   arrField: []string
@@ -17,4 +19,6 @@ func identityArgsAndReturn(structArg: StructType, stringArg: string, numberArg: 
     sArg <- OpString.identity(stringArg)
     nArg <- OpNumber.identity(numberArg)
     stArg <- OpStruct.identity(structArg)
+  -- it could be used only on init_peer_id
+  Console.print("hello")
   <- sArg, nArg, stArg
