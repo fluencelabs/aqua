@@ -12,6 +12,7 @@ import scalajs.js
 import scala.concurrent.Promise
 
 // Service that can return argument to use it from a code
+// TODO: create one service with multiple argument getters instead of service per argument
 abstract class ArgumentGetter(
   serviceId: String,
   val function: GetFunction
