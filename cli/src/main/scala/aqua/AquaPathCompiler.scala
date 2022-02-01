@@ -38,7 +38,7 @@ object AquaPathCompiler extends Logging {
   ): F[ValidatedNec[String, Chain[String]]] = {
     import ErrorRendering.showError
     (for {
-      prelude <- Prelude.init(withPrelude = false)
+      prelude <- Prelude.init()
       sources = new AquaFileSources[F](srcPath, imports ++ prelude.importPaths)
       compiler <- AquaCompiler
         .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](
