@@ -2,7 +2,7 @@ package aqua.run
 
 import aqua.backend.FunctionDef
 import aqua.backend.air.FuncAirGen
-import aqua.builder.{ArgumentGetter, Console, Finisher}
+import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter}
 import aqua.io.OutputPrinter
 import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
@@ -32,19 +32,19 @@ class Runner(
   // Wraps function with necessary services, registers services and calls wrapped function with FluenceJS
   def run[F[_]: Async]()(implicit ec: ExecutionContext): ValidatedNec[String, F[Unit]] = {
     val resultNames = resultVariableNames(funcCallable, config.resultName)
-    val consoleService =
-      new Console(config.consoleServiceId, config.printFunctionName, resultNames)
+    val resultPrinterService =
+      ResultPrinter(config.resultPrinterServiceId, config.resultPrinterName, resultNames)
     val promiseFinisherService =
       Finisher(config.finisherServiceId, config.finisherFnName)
 
     // call an input function from a generated function
     val callResult: ValidatedNec[String, F[Unit]] = wrapCall(
-      consoleService,
+      resultPrinterService,
       promiseFinisherService
     ).map { wrapped =>
       genAirAndMakeCall[F](
         wrapped,
-        consoleService,
+        resultPrinterService,
         promiseFinisherService
       )
     }
@@ -54,7 +54,7 @@ class Runner(
   // Generates air from function, register all services and make a call through FluenceJS
   private def genAirAndMakeCall[F[_]: Async](
     wrapped: FuncArrow,
-    consoleService: Console,
+    consoleService: ResultPrinter,
     finisherService: Finisher
   )(implicit ec: ExecutionContext): F[Unit] = {
     // TODO: prob we can turn this Eval into F
@@ -87,8 +87,8 @@ class Runner(
       (argGetterOp, argType) match {
         case (None, _) => Validated.invalidNec(s"Unexcepted. There is no service for '$n' argument")
         // BoxType could be undefined, so, pass service that will return 'undefined' for this argument
-        case (Some(s), _: BoxType) if s.arg == js.undefined => Validated.validNec(s :: Nil)
-        case (Some(s), _) if s.arg == js.undefined =>
+        case (Some(s), _: BoxType) if s.function.arg == js.undefined => Validated.validNec(s :: Nil)
+        case (Some(s), _) if s.function.arg == js.undefined =>
           Validated.invalidNec(
             s"Argument '$n' is undefined, but it's type '$argType' cannot be undefined."
           )
@@ -106,7 +106,7 @@ class Runner(
   //   Console.print(res)
   //   Finisher.finish()
   private def wrapCall(
-    consoleService: Console,
+    consoleService: ResultPrinter,
     finisherService: Finisher
   ): ValidatedNec[String, FuncArrow] = {
     // pass results to a printing service if an input function returns a result

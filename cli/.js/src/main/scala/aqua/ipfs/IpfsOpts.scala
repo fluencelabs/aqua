@@ -54,7 +54,6 @@ object IpfsOpts extends Logging {
         GeneralRunOptions.commonOpt,
         pathOpt
       ).mapN { (common, path) =>
-        val ipfsUploader = new IPFSUploader("ipfs", "uploadFile")
         RunOpts.execRun(
           common,
           UploadFuncName,
@@ -62,7 +61,7 @@ object IpfsOpts extends Logging {
           Nil,
           LiteralRaw.quote(path) :: Nil,
           Map.empty,
-          ipfsUploader :: Nil
+          Nil
         )
       }
     }

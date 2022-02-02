@@ -1,0 +1,24 @@
+import "run-builtins.aqua"
+
+data StructType:
+  numField: u32
+  arrField: []string
+
+service OpString("op"):
+  identity(s: string) -> string
+
+service OpNumber("op"):
+  identity(n: u32) -> u32
+
+service OpStruct("op"):
+  identity(st: StructType) -> StructType
+
+
+func identityArgsAndReturn(structArg: StructType, stringArg: string, numberArg: u32) -> string, u32, StructType:
+  on HOST_PEER_ID:
+    sArg <- OpString.identity(stringArg)
+    nArg <- OpNumber.identity(numberArg)
+    stArg <- OpStruct.identity(structArg)
+  -- it could be used only on init_peer_id
+  Console.print("hello")
+  <- sArg, nArg, stArg

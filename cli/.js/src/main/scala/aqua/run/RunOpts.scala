@@ -9,7 +9,7 @@ import aqua.types.BottomType
 import aqua.{AppOpts, AquaIO, FluenceOpts, LogFormatter}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
-import aqua.builder.{ArgumentGetter, ServiceFunction}
+import aqua.builder.{ArgumentGetter, Service}
 import aqua.files.AquaFilesIO
 import aqua.model.transform.TransformConfig
 import aqua.raw.ConstantRaw
@@ -189,7 +189,7 @@ object RunOpts extends Logging {
     imports: List[Path] = Nil,
     args: List[ValueRaw] = Nil,
     argumentGetters: Map[String, ArgumentGetter] = Map.empty,
-    services: List[ServiceFunction] = Nil
+    services: List[Service] = Nil
   )(implicit
     ec: ExecutionContext
   ): F[ExitCode] = {
@@ -201,11 +201,14 @@ object RunOpts extends Logging {
         args,
         inputPath,
         imports,
-        RunConfig(common, argumentGetters, services),
+        RunConfig(common, argumentGetters, services ++ builtinServices),
         transformConfigWithOnPeer(common.on)
       )
       .map(_ => ExitCode.Success)
   }
+
+  private val builtinServices =
+    aqua.builder.Console() :: aqua.builder.IPFSUploader("ipfs", "uploadFile") :: Nil
 
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
@@ -235,7 +238,7 @@ object RunOpts extends Logging {
             impsV.andThen { imps =>
               dataFromFileV.andThen { dataFromFile =>
                 getData(dataFromArgument, dataFromFile).andThen { data =>
-                  checkDataGetServices(args, data).andThen { services =>
+                  checkDataGetServices(args, data).andThen { getServices =>
                     valid(
                       RunCommand
                         .run(
@@ -243,7 +246,7 @@ object RunOpts extends Logging {
                           args,
                           input,
                           imps,
-                          RunConfig(common, services),
+                          RunConfig(common, getServices, builtinServices),
                           transformConfigWithOnPeer(common.on)
                         )
                     )

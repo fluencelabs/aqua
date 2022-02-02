@@ -83,11 +83,11 @@ object TagInliner extends Logging {
         }
 
       case JoinTag(operands) =>
-        logger.info("join " + operands)
+        logger.trace("join " + operands)
         operands
           .traverse(valueToModel)
           .map(nel => {
-            logger.info("join after " + nel.map(_._1))
+            logger.trace("join after " + nel.map(_._1))
             Some(JoinModel(nel.map(_._1))) -> parDesugarPrefix(nel.toList.flatMap(_._2))
           })
 
