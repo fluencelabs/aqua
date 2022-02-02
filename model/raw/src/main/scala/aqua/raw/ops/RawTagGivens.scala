@@ -48,7 +48,7 @@ trait RawTagGivens {
       case (XorTag, XorTag) =>
         y.copy(tail = (x.tail, y.tail).mapN(_ ++ _))
       case (XorTag.LeftBiased, XorTag) =>
-        SeqTag.wrap(y.copy(tail = (x.tail, y.tail).mapN(_ ++ _)))
+        SeqGroupTag.wrap(y.copy(tail = (x.tail, y.tail).mapN(_ ++ _)))
       case (XorTag, ParTag) => XorParTag(x, y).leaf
       case (_, ParTag | XorTag) =>
         SeqTag.wrap(y.copy(tail = y.tail.map(_.prepend(x))))

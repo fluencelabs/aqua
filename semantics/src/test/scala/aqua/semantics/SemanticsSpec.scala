@@ -2,7 +2,7 @@ package aqua.semantics
 
 import aqua.raw.RawContext
 import aqua.parser.Ast
-import aqua.raw.ops.{Call, CallServiceTag, FuncOp, OnTag, ParTag, RawTag, SeqTag}
+import aqua.raw.ops.{Call, CallServiceTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
@@ -11,6 +11,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.~>
 import cats.data.Chain
+import cats.syntax.show.*
 
 class SemanticsSpec extends AnyFlatSpec with Matchers {
 
