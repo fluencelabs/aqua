@@ -25,6 +25,8 @@ As example, use `test/sample.aqua` with args from `test/data.json` running on `/
 npm run from:scalajs -- run -f "identityArgsAndReturn(structField, stringField, numberField)" -i test/sample.aqua --data-path test/data.json --addr /dns4/kras-04.fluence.dev/tcp/19001/wss/p2p/12D3KooWFEwNWcHqi9rtsmDhsYcDbRUCDXH84RC4FW6UfsFWaoHi
 ```
 
+To simplify experience you can use `./aqua-run.sh` command and change all arguments straight in this file.
+
 ## Node addresses
 
 Different Fluence network addresses could be found here: https://github.com/fluencelabs/fluence-network-environment/blob/main/src/index.ts
