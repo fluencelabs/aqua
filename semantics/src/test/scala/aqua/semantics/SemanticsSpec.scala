@@ -42,16 +42,14 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
     val proc = func.arrow.body
 
     val expected =
-      SeqGroupTag.wrap(
-        ParTag.wrap(
-          OnTag(
-            LiteralRaw("\"other-peer\"", LiteralType.string),
-            Chain.empty
-          ).wrap(
-            CallServiceTag(LiteralRaw.quote("srv1"), "fn1", emptyCall).leaf
-          ),
+      ParTag.wrap(
+        OnTag(
+          LiteralRaw("\"other-peer\"", LiteralType.string),
+          Chain.empty
+        ).wrap(
           CallServiceTag(LiteralRaw.quote("srv1"), "fn1", emptyCall).leaf
-        )
+        ),
+        CallServiceTag(LiteralRaw.quote("srv1"), "fn1", emptyCall).leaf
       )
 
     proc.equalsOrShowDiff(expected) should be(true)

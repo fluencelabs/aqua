@@ -11,7 +11,7 @@ func something(node: string) -> string:
   service_id: *string
   on HOST_PEER_ID:
     res <- Ipfs.get("1234")
-    if res.error != "":
+    if res.error == "":
       service_id <<- "0x"
     else:
       service_id <<- "1x"

@@ -1,5 +1,5 @@
 {
-  "node": "12D3KooWMMGdfVEJ1rWe1nH1nehYDzNEHhg5ogdfiGk88AupCMnf",
+  "stringField": "some string",
   "numberField": 123,
   "structField": {
     "numField": 42,

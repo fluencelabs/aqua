@@ -51,7 +51,7 @@ trait RawTagGivens {
         SeqGroupTag.wrap(y.copy(tail = (x.tail, y.tail).mapN(_ ++ _)))
       case (XorTag, ParTag) => XorParTag(x, y).leaf
       case (_, ParTag | XorTag) =>
-        SeqGroupTag.wrap(y.copy(tail = y.tail.map(_.prepend(x))))
+        SeqTag.wrap(y.copy(tail = y.tail.map(_.prepend(x))))
       case (_, XorParTag(xor, par)) =>
         rightAssocCombine(rightAssocCombine(x, xor), par)
       case _ => x |+| y
