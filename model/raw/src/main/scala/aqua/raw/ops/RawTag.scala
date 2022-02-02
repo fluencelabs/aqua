@@ -41,6 +41,7 @@ sealed trait NoExecTag extends RawTag
 sealed trait GroupTag extends RawTag
 
 sealed trait SeqGroupTag extends GroupTag
+object SeqGroupTag extends SeqGroupTag
 
 sealed trait ParGroupTag extends GroupTag
 

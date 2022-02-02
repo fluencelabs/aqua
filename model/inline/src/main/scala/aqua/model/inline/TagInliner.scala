@@ -129,11 +129,10 @@ object TagInliner extends Logging {
       case RestrictionTag(name, isStream) =>
         pure(RestrictionModel(name, isStream))
 
-      case SeqTag => pure(SeqModel)
+      case _: SeqGroupTag => pure(SeqModel)
       case ParTag.Detach => pure(DetachModel)
       case _: ParGroupTag => pure(ParModel)
       case XorTag | XorTag.LeftBiased =>
-        // TODO should we do smth with XorTag.LeftBiased?
         pure(XorModel)
       case _: NoExecTag => none
       case _ =>
