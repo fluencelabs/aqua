@@ -41,7 +41,10 @@ sealed trait NoExecTag extends RawTag
 sealed trait GroupTag extends RawTag
 
 sealed trait SeqGroupTag extends GroupTag
-object SeqGroupTag extends SeqGroupTag
+
+object SeqGroupTag extends SeqGroupTag {
+  override def toString: String = "SeqGroup"
+}
 
 sealed trait ParGroupTag extends GroupTag
 
