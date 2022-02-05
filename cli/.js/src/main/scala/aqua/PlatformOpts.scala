@@ -1,5 +1,6 @@
 package aqua
 
+import aqua.dist.DistOpts
 import aqua.ipfs.IpfsOpts
 import aqua.js.{Meta, Module}
 import cats.effect.ExitCode
@@ -22,6 +23,7 @@ object PlatformOpts extends Logging {
     Opts.subcommand(RunOpts.runCommand[F]) orElse
       Opts.subcommand(KeyPairOpts.createKeypair[F]) orElse
       Opts.subcommand(IpfsOpts.ipfsOpt[F]) orElse
+      Opts.subcommand(DistOpts.deployOpt[F]) orElse
       NetworkOpts.commands[F]
 
   // get path to node modules if there is `aqua-lib` module with `builtin.aqua` in it
