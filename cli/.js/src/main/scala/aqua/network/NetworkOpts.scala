@@ -3,7 +3,7 @@ package aqua.network
 import aqua.{AppOpts, AquaIO, FluenceOpts, LogFormatter}
 import aqua.builder.IPFSUploader
 import aqua.files.AquaFilesIO
-import aqua.ipfs.IpfsOpts.{pathOpt, IpfsAquaPath, UploadFuncName}
+import aqua.ipfs.IpfsOpts.{pathOpt, UploadFuncName}
 import aqua.model.{LiteralModel, ValueModel}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
@@ -24,9 +24,6 @@ object NetworkOpts {
 
   val NetworkAqua = "aqua/network-info.aqua"
 
-  val NetworkAquaPath = PlatformOpts.getPackagePath
-    .map(_.resolve(NetworkAqua))
-    .getOrElse(Path(NetworkAqua))
   val ListModulesFuncName = "list_modules"
   val ListBlueprintsFuncName = "list_blueprints"
   val ListInterfacesByPeerFuncName = "list_interfaces_by_peer"
@@ -57,11 +54,13 @@ object NetworkOpts {
       header = "Print all modules"
     ) {
       GeneralRunOptions.commonOpt.map { common =>
-        RunOpts.execRun(
-          common,
-          ListModulesFuncName,
-          NetworkAquaPath
-        )
+        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
+          RunOpts.execRun(
+            common,
+            ListModulesFuncName,
+            networkAquaPath
+          )
+        }
       }
     }
 
@@ -71,11 +70,14 @@ object NetworkOpts {
       header = "Print all blueprints"
     ) {
       GeneralRunOptions.commonOpt.map { common =>
-        RunOpts.execRun(
-          common,
-          ListBlueprintsFuncName,
-          NetworkAquaPath
-        )
+        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
+          RunOpts.execRun(
+            common,
+            ListBlueprintsFuncName,
+            networkAquaPath
+          )
+        }
+
       }
     }
 
@@ -85,13 +87,16 @@ object NetworkOpts {
       header = "Print all services on a node owned by peer"
     ) {
       (GeneralRunOptions.commonOpt, AppOpts.wrapWithOption(peerOpt)).mapN { (common, peer) =>
-        RunOpts.execRun(
-          common,
-          ListInterfacesByPeerFuncName,
-          NetworkAquaPath,
-          Nil,
-          peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
-        )
+        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
+          RunOpts.execRun(
+            common,
+            ListInterfacesByPeerFuncName,
+            networkAquaPath,
+            Nil,
+            peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
+          )
+        }
+
       }
     }
 
@@ -101,13 +106,16 @@ object NetworkOpts {
       header = "Print all services on a node"
     ) {
       (GeneralRunOptions.commonOpt).map { common =>
-        RunOpts.execRun(
-          common,
-          ListInterfacesFuncName,
-          NetworkAquaPath,
-          Nil,
-          Nil
-        )
+        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
+          RunOpts.execRun(
+            common,
+            ListInterfacesFuncName,
+            networkAquaPath,
+            Nil,
+            Nil
+          )
+        }
+
       }
     }
 
@@ -117,13 +125,16 @@ object NetworkOpts {
       header = "Print a service interface"
     ) {
       (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
-        RunOpts.execRun(
-          common,
-          GetInterfaceFuncName,
-          NetworkAquaPath,
-          Nil,
-          LiteralRaw.quote(serviceId) :: Nil
-        )
+        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
+          RunOpts.execRun(
+            common,
+            GetInterfaceFuncName,
+            networkAquaPath,
+            Nil,
+            LiteralRaw.quote(serviceId) :: Nil
+          )
+        }
+
       }
     }
 
@@ -133,13 +144,15 @@ object NetworkOpts {
       header = "Print a module interface"
     ) {
       (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
-        RunOpts.execRun(
-          common,
-          GetModuleInterfaceFuncName,
-          NetworkAquaPath,
-          Nil,
-          LiteralRaw.quote(serviceId) :: Nil
-        )
+        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
+          RunOpts.execRun(
+            common,
+            GetModuleInterfaceFuncName,
+            networkAquaPath,
+            Nil,
+            LiteralRaw.quote(serviceId) :: Nil
+          )
+        }
       }
     }
 }

@@ -33,9 +33,6 @@ object IpfsOpts extends Logging {
 
   val IpfsAqua = "aqua/ipfs.aqua"
 
-  val IpfsAquaPath = PlatformOpts.getPackagePath
-    .map(_.resolve(IpfsAqua))
-    .getOrElse(Path(IpfsAqua))
   val UploadFuncName = "uploadFile"
 
   def pathOpt: Opts[String] =
@@ -58,15 +55,18 @@ object IpfsOpts extends Logging {
         GeneralRunOptions.commonOpt,
         pathOpt
       ).mapN { (common, path) =>
-        RunOpts.execRun(
-          common,
-          UploadFuncName,
-          IpfsAquaPath,
-          Nil,
-          LiteralRaw.quote(path) :: Nil,
-          Map.empty,
-          Nil
-        )
+        PlatformOpts.getPackagePath(IpfsAqua).flatMap { ipfsAquaPath =>
+          RunOpts.execRun(
+            common,
+            UploadFuncName,
+            ipfsAquaPath,
+            Nil,
+            LiteralRaw.quote(path) :: Nil,
+            Map.empty,
+            Nil
+          )
+        }
+
       }
     }
 }

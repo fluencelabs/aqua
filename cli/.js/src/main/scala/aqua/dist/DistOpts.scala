@@ -35,9 +35,6 @@ object DistOpts extends Logging {
 
   val DistAqua = "aqua/dist.aqua"
 
-  val DistAquaPath = PlatformOpts.getPackagePath
-    .map(_.resolve(DistAqua))
-    .getOrElse(Path(DistAqua))
   val DeployFuncName = "deploy"
 
   def srvNameOpt: Opts[String] =
@@ -64,30 +61,31 @@ object DistOpts extends Logging {
         srvNameOpt
       ).mapN { (common, dataFromFileF, srvName) =>
         dataFromFileF.flatMap { dff =>
-          val args = VarRaw(srvName, ScalarType.string) :: Nil
-          dff
-            .andThen(data =>
-              checkDataGetServices(args, data).map(getServices =>
-                RunOpts.execRun(
-                  common,
-                  DeployFuncName,
-                  DistAquaPath,
-                  Nil,
-                  args,
-                  getServices,
-                  Nil
+          PlatformOpts.getPackagePath(DistAqua).flatMap { distAquaPath =>
+            val args = VarRaw(srvName, ScalarType.string) :: Nil
+            dff
+              .andThen(data =>
+                checkDataGetServices(args, data).map(getServices =>
+                  RunOpts.execRun(
+                    common,
+                    DeployFuncName,
+                    distAquaPath,
+                    Nil,
+                    args,
+                    getServices,
+                    Nil
+                  )
                 )
               )
-            )
-            .fold(
-              errs =>
-                Async[F].pure {
-                  errs.map(logger.error)
-                  cats.effect.ExitCode.Error
-                },
-              identity
-            )
-
+              .fold(
+                errs =>
+                  Async[F].pure {
+                    errs.map(logger.error)
+                    cats.effect.ExitCode.Error
+                  },
+                identity
+              )
+          }
         }
 
       }
