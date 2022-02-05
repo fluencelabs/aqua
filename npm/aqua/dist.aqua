@@ -10,6 +10,9 @@ data ModuleConf:
   name: string
   path: string
   mounted_binaries: [][]string
+  preopened_files: []string
+  mapped_dirs: [][]string
+  logger_enabled: ?bool
 
 data ServiceConf:
   name: string
@@ -33,7 +36,13 @@ func deploy(serviceConf: ServiceConf) -> string:
         mbs: *[][]string
         mbs <<- m.mounted_binaries
 
-        conf <- Dist.make_module_config(m.name, nil, nil, nil, nil, nil, mbs, nil)
+        preop_files: *[]string
+        preop_files <<- m.preopened_files
+
+        mapped_dirs: *[][]string
+        mapped_dirs <<- m.mapped_dirs
+
+        conf <- Dist.make_module_config(m.name, nil, m.logger_enabled, preop_files, nil, mapped_dirs, mbs, nil)
         mod <- Dist.add_module_from_vault(hostRes.path, conf)
 
         mod_hashes <- Op.concat_strings("hash:", mod)
