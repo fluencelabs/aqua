@@ -66,6 +66,11 @@ trait RawTagGivens {
       else
         tree.map[RawTag](_.mapValues(_.renameVars(vals)).renameExports(vals))
 
+    def renameExports(vals: Map[String, String]): RawTag.Tree =
+      if (vals.isEmpty) tree
+      else
+        tree.map[RawTag](_.renameExports(vals))
+
     def definesVarNames: Eval[Set[String]] =
       Cofree.cata[Chain, RawTag, Set[String]](tree) { case (tag, acc) =>
         Eval.later(acc.foldLeft(tag.definesVarNames)(_ ++ _))

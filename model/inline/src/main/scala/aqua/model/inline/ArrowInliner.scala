@@ -129,9 +129,11 @@ object ArrowInliner extends Logging {
             // @see ArrowInlinerSpec `pass stream to callback properly` test
             case v @ VarRaw(name, baseType: BoxType, _) if streamToRename.contains(name) =>
               v.copy(baseType = StreamType(baseType.element))
+            case v: VarRaw if streamToRename.contains(v.name) =>
+              v.copy(baseType = StreamType(v.baseType))
             case v => v
           }))
-          .rename(streamToRename)
+          .renameExports(streamToRename)
 
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
