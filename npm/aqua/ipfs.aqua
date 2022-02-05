@@ -11,7 +11,7 @@ const ON_PEER ?= HOST_PEER_ID
 func uploadFile(path: string) -> UploadResult:
   on ON_PEER:
     multiaddr <- get_external_api_multiaddr(ON_PEER)
-  result <- IPFS.uploadFile(path, multiaddr)
+  result <- LocalIpfs.uploadFile(path, multiaddr)
   <- result
 
 
