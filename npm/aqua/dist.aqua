@@ -20,6 +20,16 @@ data ServiceConf:
 
 const ON_PEER ?= HOST_PEER_ID
 
+func flattenSS(input: [][]string) -> ?[][]string:
+  res: *[][]string
+  res <<- input
+  <- res
+
+func flattenS(input: []string) -> ?[]string:
+  res: *[]string
+  res <<- input
+  <- res
+
 func deploy(serviceConf: ServiceConf) -> string:
 
   on ON_PEER:
@@ -33,14 +43,11 @@ func deploy(serviceConf: ServiceConf) -> string:
       on ON_PEER:
         hostRes <- Ipfs.get(cid)
 
-        mbs: *[][]string
-        mbs <<- m.mounted_binaries
+        mbs <- flattenSS(m.mounted_binaries)
 
-        preop_files: *[]string
-        preop_files <<- m.preopened_files
+        preop_files <- flattenS(m.preopened_files)
 
-        mapped_dirs: *[][]string
-        mapped_dirs <<- m.mapped_dirs
+        mapped_dirs <- flattenSS(m.mapped_dirs)
 
         conf <- Dist.make_module_config(m.name, nil, m.logger_enabled, preop_files, nil, mapped_dirs, mbs, nil)
         mod <- Dist.add_module_from_vault(hostRes.path, conf)
