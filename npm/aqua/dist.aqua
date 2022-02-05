@@ -9,9 +9,9 @@ export deploy, remove
 data ModuleConf:
   name: string
   path: string
-  mounted_binaries: [][]string
-  preopened_files: []string
-  mapped_dirs: [][]string
+  mounted_binaries: ?[][]string
+  preopened_files: ?[]string
+  mapped_dirs: ?[][]string
   logger_enabled: ?bool
 
 data ServiceConf:
@@ -30,33 +30,45 @@ func flattenS(input: []string) -> ?[]string:
   res <<- input
   <- res
 
+service DistFix("dist"):
+   make_module_config(name: string, mem_pages_count: ?u32, max_heap_size: ?string, logger_enabled: ?bool, preopened_files: ?[]string, envs: ?Pairs, mapped_dirs: ?Pairs, mounted_binaries: ?Pairs, logging_mask: ?i32) -> ModuleConfig
+
 func deploy(serviceConf: ServiceConf) -> string:
 
   on ON_PEER:
     multiaddr <- Ipfs.get_external_api_multiaddr()
 
+--  Console.print("BEFORE THAT")
   mod_hashes: *string
   for m <- serviceConf.modules:
       -- TODO check for cache
+      Console.print("Going to upload a module...")
       uploadRes <- LocalIpfs.uploadFile(m.path, multiaddr)
       cid = uploadRes.cid
+--      Console.print(cid)
       on ON_PEER:
         hostRes <- Ipfs.get(cid)
 
-        mbs <- flattenSS(m.mounted_binaries)
+--      Console.print(hostRes.path)
+--      on ON_PEER:
 
-        preop_files <- flattenS(m.preopened_files)
+        conf <- DistFix.make_module_config(m.name, nil, nil, m.logger_enabled, m.preopened_files, nil, m.mapped_dirs, m.mounted_binaries, nil)
 
-        mapped_dirs <- flattenSS(m.mapped_dirs)
+--      Console.print("Created config")
 
-        conf <- Dist.make_module_config(m.name, nil, m.logger_enabled, preop_files, nil, mapped_dirs, mbs, nil)
+--      on ON_PEER:
+
         mod <- Dist.add_module_from_vault(hostRes.path, conf)
 
         mod_hashes <- Op.concat_strings("hash:", mod)
 
+  Console.print("Now time to make a blueprint...")
   on ON_PEER:
 
         blueprint <- Dist.make_blueprint(serviceConf.name, mod_hashes)
+
+  --Console.print("Got blueprint")
+  --on ON_PEER:
         blueprint_id <- Dist.add_blueprint(blueprint)
 
         service_id <- Srv.create(blueprint_id)
