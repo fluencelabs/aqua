@@ -8,4 +8,5 @@ import fs2.io.file.Path
 object PlatformOpts {
   def opts[F[_]]: Opts[F[ExitCode]] = Opts.never
   def getGlobalNodeModulePath: Option[Path] = None
+  def getPackagePath: Option[Path] = None
 }
