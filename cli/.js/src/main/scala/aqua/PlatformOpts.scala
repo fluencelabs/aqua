@@ -26,6 +26,22 @@ object PlatformOpts extends Logging {
       Opts.subcommand(DistOpts.deployOpt[F]) orElse
       NetworkOpts.commands[F]
 
+  def getPackagePath: Option[Path] = {
+    val meta = Meta.metaUrl
+    val req = Module.createRequire(meta)
+    Try {
+      // this can throw an error
+      val pathStr = req.resolve("@fluencelabs/aqua-lib/builtin.aqua").toString
+      // hack
+      val projectPath = Path(pathStr).parent.map(_.resolve("../../.."))
+      projectPath
+    }.getOrElse {
+      // we don't care about path if there is no builtins, but must write an error
+      logger.error("Unexpected. Cannot find project path")
+      None
+    }
+  }
+
   // get path to node modules if there is `aqua-lib` module with `builtin.aqua` in it
   def getGlobalNodeModulePath: Option[Path] = {
     val meta = Meta.metaUrl

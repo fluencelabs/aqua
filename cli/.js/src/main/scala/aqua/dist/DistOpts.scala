@@ -33,14 +33,18 @@ import scala.scalajs.js
 // Options and commands to work with IPFS
 object DistOpts extends Logging {
 
-  val DistAquaPath = "aqua/dist.aqua"
+  val DistAqua = "aqua/dist.aqua"
+
+  val DistAquaPath = PlatformOpts.getPackagePath
+    .map(_.resolve(DistAqua))
+    .getOrElse(Path(DistAqua))
   val DeployFuncName = "deploy"
 
   def srvNameOpt: Opts[String] =
     Opts
       .option[String]("service", "What service from the config file to deploy", "s")
 
-  def deployOpt[F[_] : Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+  def deployOpt[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "dist",
       header = "Distribute a service onto a remote peer"
@@ -49,7 +53,7 @@ object DistOpts extends Logging {
     }
 
   // Uploads a file to IPFS
-  def deploy[F[_] : Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+  def deploy[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "deploy",
       header = "Deploy a service onto a remote peer"
@@ -58,7 +62,7 @@ object DistOpts extends Logging {
         GeneralRunOptions.commonOpt,
         dataFromFileOpt[F],
         srvNameOpt
-        ).mapN { (common, dataFromFileF, srvName) =>
+      ).mapN { (common, dataFromFileF, srvName) =>
         dataFromFileF.flatMap { dff =>
           val args = VarRaw(srvName, ScalarType.string) :: Nil
           dff
@@ -67,7 +71,7 @@ object DistOpts extends Logging {
                 RunOpts.execRun(
                   common,
                   DeployFuncName,
-                  Path(DistAquaPath),
+                  DistAquaPath,
                   Nil,
                   args,
                   getServices,

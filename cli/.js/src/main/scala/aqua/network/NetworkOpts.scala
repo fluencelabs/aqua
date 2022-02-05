@@ -7,6 +7,7 @@ import aqua.ipfs.IpfsOpts.{pathOpt, IpfsAquaPath, UploadFuncName}
 import aqua.model.{LiteralModel, ValueModel}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
+import aqua.PlatformOpts
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
 import com.monovore.decline.{Command, Opts}
@@ -21,7 +22,11 @@ import scala.concurrent.ExecutionContext
 
 object NetworkOpts {
 
-  val NetworkAquaPath = "aqua/network-info.aqua"
+  val NetworkAqua = "aqua/network-info.aqua"
+
+  val NetworkAquaPath = PlatformOpts.getPackagePath
+    .map(_.resolve(NetworkAqua))
+    .getOrElse(Path(NetworkAqua))
   val ListModulesFuncName = "list_modules"
   val ListBlueprintsFuncName = "list_blueprints"
   val ListInterfacesByPeerFuncName = "list_interfaces_by_peer"
@@ -55,7 +60,7 @@ object NetworkOpts {
         RunOpts.execRun(
           common,
           ListModulesFuncName,
-          Path(NetworkAquaPath)
+          NetworkAquaPath
         )
       }
     }
@@ -69,7 +74,7 @@ object NetworkOpts {
         RunOpts.execRun(
           common,
           ListBlueprintsFuncName,
-          Path(NetworkAquaPath)
+          NetworkAquaPath
         )
       }
     }
@@ -83,7 +88,7 @@ object NetworkOpts {
         RunOpts.execRun(
           common,
           ListInterfacesByPeerFuncName,
-          Path(NetworkAquaPath),
+          NetworkAquaPath,
           Nil,
           peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
         )
@@ -99,7 +104,7 @@ object NetworkOpts {
         RunOpts.execRun(
           common,
           ListInterfacesFuncName,
-          Path(NetworkAquaPath),
+          NetworkAquaPath,
           Nil,
           Nil
         )
@@ -115,7 +120,7 @@ object NetworkOpts {
         RunOpts.execRun(
           common,
           GetInterfaceFuncName,
-          Path(NetworkAquaPath),
+          NetworkAquaPath,
           Nil,
           LiteralRaw.quote(serviceId) :: Nil
         )
@@ -131,7 +136,7 @@ object NetworkOpts {
         RunOpts.execRun(
           common,
           GetModuleInterfaceFuncName,
-          Path(NetworkAquaPath),
+          NetworkAquaPath,
           Nil,
           LiteralRaw.quote(serviceId) :: Nil
         )
