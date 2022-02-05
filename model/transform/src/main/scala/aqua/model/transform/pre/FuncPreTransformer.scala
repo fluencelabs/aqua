@@ -5,6 +5,7 @@ import aqua.model.ArgsCall
 import aqua.raw.ops.{Call, CallArrowTag, FuncOp, RawTag, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
+import cats.syntax.show.*
 
 // TODO: doc
 case class FuncPreTransformer(
@@ -76,7 +77,6 @@ case class FuncPreTransformer(
     FuncArrow(
       wrapCallableName,
       transform(
-        // TODO wrapNonEmpty?
         SeqTag.wrap(
           CallArrowTag(func.funcName, funcCall).leaf ::
             returnType.headOption

@@ -5,6 +5,7 @@ import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
 import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
+import cats.syntax.show.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -83,6 +84,95 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             SeqTag.wrap(
               DeclareStreamTag(streamVar).leaf,
               CallArrowTag("cb", Call(streamVar :: Nil, Nil)).leaf
+            )
+          ),
+          ArrowType(
+            ProductType.labelled(
+              (
+                "cb",
+                cbType
+              ) :: Nil
+            ),
+            ProductType(Nil)
+          ),
+          Nil,
+          Map("cb" -> cbArrow),
+          Map.empty
+        ),
+        CallModel(cbVal :: Nil, Nil)
+      )
+      .run(InliningState())
+      .value
+      ._2
+
+    model.equalsOrShowDiff(
+      RestrictionModel(streamVar.name, true).wrap(
+        SeqModel.wrapWithEmpty(
+          EmptyModel.leaf,
+          CallServiceModel(
+            LiteralModel("\"test-service\"", LiteralType.string),
+            "some-call",
+            CallModel(streamModel :: Nil, Nil)
+          ).leaf
+        )
+      )
+    ) should be(true)
+
+  } /*
+  func stream-callback(cb: string -> ()):
+	records: *string
+	cb(records!)
+   */
+
+  "arrow inliner" should "pass stream to callback properly, holding lambda" in {
+
+    val streamType = StreamType(ScalarType.string)
+    val streamVar = VarRaw("records", streamType)
+    val streamVarLambda =
+      VarRaw("records", streamType, Chain(IntoIndexRaw(LiteralRaw.number(0), ScalarType.string)))
+    val streamModel = VarModel(
+      "records",
+      StreamType(ScalarType.string),
+      Chain.one(IntoIndexModel("0", ScalarType.string))
+    )
+    val cbType = ArrowType(ProductType(ScalarType.string :: Nil), ProductType(Nil))
+    val cbVal = VarModel("cb-pass", cbType)
+
+    val cbArg =
+      VarRaw(
+        "cbVar",
+        ScalarType.string
+      )
+
+    val cbArrow = FuncArrow(
+      "cb",
+      CallServiceTag(
+        LiteralRaw.quote("test-service"),
+        "some-call",
+        Call(cbArg :: Nil, Nil)
+      ).leaf,
+      ArrowType(
+        ProductType.labelled(
+          (
+            cbArg.name,
+            cbArg.`type`
+          ) :: Nil
+        ),
+        ProductType(Nil)
+      ),
+      Nil,
+      Map.empty,
+      Map.empty
+    )
+
+    val model: OpModel.Tree = ArrowInliner
+      .callArrow[InliningState](
+        FuncArrow(
+          "stream-callback",
+          RestrictionTag(streamVar.name, true).wrap(
+            SeqTag.wrap(
+              DeclareStreamTag(streamVar).leaf,
+              CallArrowTag("cb", Call(streamVarLambda :: Nil, Nil)).leaf
             )
           ),
           ArrowType(

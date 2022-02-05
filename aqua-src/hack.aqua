@@ -1,0 +1,9 @@
+
+data RelayerSig:
+    address: string
+
+func send_vote(log: string -> ()):
+
+    maybeAck: *RelayerSig
+    log(maybeAck[0].address)
+
