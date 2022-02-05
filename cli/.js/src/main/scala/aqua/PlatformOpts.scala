@@ -13,6 +13,11 @@ import aqua.run.RunOpts
 import aqua.keypair.KeyPairOpts
 import aqua.network.NetworkOpts
 import scribe.Logging
+import cats.syntax.flatMap._
+import cats.syntax.monad._
+import cats.syntax.functor._
+import cats.syntax.apply._
+import cats.syntax.applicative._
 
 import scala.util.Try
 
@@ -25,6 +30,29 @@ object PlatformOpts extends Logging {
       Opts.subcommand(IpfsOpts.ipfsOpt[F]) orElse
       Opts.subcommand(DistOpts.deployOpt[F]) orElse
       NetworkOpts.commands[F]
+
+  // it could be global installed aqua and local installed, different paths for this
+  def getPackagePath[F[_]: Files: Async](path: String): F[Path] = {
+    val meta = Meta.metaUrl
+    val req = Module.createRequire(meta)
+    Try {
+      // this can throw an error, global or local project path
+      val builtinPath = Path(req.resolve("@fluencelabs/aqua-lib/builtin.aqua").toString)
+      val rootProjectPath = builtinPath.resolve("../../../..")
+      // hack, check if it is a local dependency or global
+      val filePath = rootProjectPath.resolve(path)
+      Files[F].exists(filePath).map {
+        // if not exists, it should be local dependency, check in node_modules
+        case false => rootProjectPath.resolve("node_modules/@fluencelabs/aqua").resolve(path)
+        case true => filePath
+
+      }
+    }.getOrElse {
+      // we don't care about path if there is no builtins, but must write an error
+      logger.error("Unexpected. Cannot find project path")
+      Path(path).pure[F]
+    }
+  }
 
   // get path to node modules if there is `aqua-lib` module with `builtin.aqua` in it
   def getGlobalNodeModulePath: Option[Path] = {

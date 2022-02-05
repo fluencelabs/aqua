@@ -1,6 +1,6 @@
 module ServiceDist declares *
 
-import "run-builtins.aqua"
+import "run-builtins/run-builtins.aqua"
 import "@fluencelabs/aqua-lib/builtin.aqua"
 import "@fluencelabs/aqua-ipfs/ipfs.aqua"
 
