@@ -7,6 +7,6 @@ import fs2.io.file.Path
 // Scala-specific options and subcommands
 object PlatformOpts {
   def opts[F[_]]: Opts[F[ExitCode]] = Opts.never
-  def getGlobalNodeModulePath: List[Path] = None
+  def getGlobalNodeModulePath: Option[Path] = None
   def getPackagePath: Option[Path] = None
 }
