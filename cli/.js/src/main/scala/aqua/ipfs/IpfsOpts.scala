@@ -1,6 +1,6 @@
 package aqua.ipfs
 
-import aqua.{AppOpts, AquaIO, FluenceOpts, LogFormatter, LogLevelTransformer}
+import aqua.{AppOpts, AquaIO, FluenceOpts, LogFormatter, LogLevelTransformer, PlatformOpts}
 import aqua.io.OutputPrinter
 import aqua.js.{Fluence, PeerConfig}
 import aqua.keypair.KeyPairShow.show
@@ -31,7 +31,11 @@ import scala.scalajs.js
 // Options and commands to work with IPFS
 object IpfsOpts extends Logging {
 
-  val IpfsAquaPath = "aqua/ipfs.aqua"
+  val IpfsAqua = "aqua/ipfs.aqua"
+
+  val IpfsAquaPath = PlatformOpts.getPackagePath
+    .map(_.resolve(IpfsAqua))
+    .getOrElse(Path(IpfsAqua))
   val UploadFuncName = "uploadFile"
 
   def pathOpt: Opts[String] =
@@ -57,7 +61,7 @@ object IpfsOpts extends Logging {
         RunOpts.execRun(
           common,
           UploadFuncName,
-          Path(IpfsAquaPath),
+          IpfsAquaPath,
           Nil,
           LiteralRaw.quote(path) :: Nil,
           Map.empty,
