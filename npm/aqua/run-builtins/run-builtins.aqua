@@ -9,5 +9,5 @@ data UploadResult:
   cid: string
   size: u64
 
-service IPFS("ipfs"):
+service LocalIpfs("ipfs"):
   uploadFile(path: string, multiaddr: IpfsMultiaddrResult) -> UploadResult

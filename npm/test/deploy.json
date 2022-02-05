@@ -1,0 +1,13 @@
+{
+  "tsOracle": {
+    "name": "ts-oracle",
+    "modules": [
+      {
+        "name": "ts-oracle",
+        "path": "./deploy/ts_oracle.wasm",
+        "mounted_binaries": []
+      }
+    ]
+  }
+}
+

@@ -1,0 +1,52 @@
+module ServiceDist declares *
+
+import "run-builtins.aqua"
+import "@fluencelabs/aqua-lib/builtin.aqua"
+import "@fluencelabs/aqua-ipfs/ipfs.aqua"
+
+export deploy, remove
+
+data ModuleConf:
+  name: string
+  path: string
+  mounted_binaries: [][]string
+
+data ServiceConf:
+  name: string
+  modules: []ModuleConf
+
+const ON_PEER ?= HOST_PEER_ID
+
+func deploy(serviceConf: ServiceConf) -> string:
+
+  on ON_PEER:
+    multiaddr <- Ipfs.get_external_api_multiaddr()
+
+  mod_hashes: *string
+  for m <- serviceConf.modules:
+      -- TODO check for cache
+      uploadRes <- LocalIpfs.uploadFile(m.path, multiaddr)
+      cid = uploadRes.cid
+      on ON_PEER:
+        hostRes <- Ipfs.get(cid)
+
+        mbs: *[][]string
+        mbs <<- m.mounted_binaries
+
+        conf <- Dist.make_module_config(m.name, nil, nil, nil, nil, nil, mbs, nil)
+        mod <- Dist.add_module_from_vault(hostRes.path, conf)
+
+        mod_hashes <- Op.concat_strings("hash:", mod)
+
+  on ON_PEER:
+
+        blueprint <- Dist.make_blueprint(serviceConf.name, mod_hashes)
+        blueprint_id <- Dist.add_blueprint(blueprint)
+
+        service_id <- Srv.create(blueprint_id)
+
+  <- service_id
+
+func remove(service_id: string):
+  on ON_PEER:
+    Srv.remove(service_id)
