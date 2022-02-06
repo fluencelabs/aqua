@@ -1,8 +1,6 @@
 import {create, globSource} from "ipfs-http-client";
 import { Multiaddr, protocols } from "multiaddr";
 
-import * as util from "util";
-
 type UploadResult = {
   cid: string,
   size: number

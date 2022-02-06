@@ -1,10 +1,10 @@
 package aqua.dist
 
-import aqua.builder.IPFSUploader
+import aqua.builder.{ArgumentGetter, IPFSUploader}
 import aqua.files.AquaFilesIO
 import aqua.io.OutputPrinter
 import aqua.ipfs.js.IpfsApi
-import aqua.js.{Fluence, PeerConfig}
+import aqua.js.{Config, Fluence, PeerConfig}
 import aqua.keypair.KeyPairShow.show
 import aqua.model.LiteralModel
 import aqua.raw.value.{LiteralRaw, VarRaw}
@@ -49,6 +49,12 @@ object DistOpts extends Logging {
       Opts.subcommand(deploy)
     }
 
+  def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
+    val arg = getter.function.arg
+    val filledConfig = Config.fillWithEmptyArrays(arg)
+    ArgumentGetter(getter.function.value, filledConfig)
+  }
+
   // Uploads a file to IPFS
   def deploy[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
@@ -66,13 +72,18 @@ object DistOpts extends Logging {
             dff
               .andThen(data =>
                 checkDataGetServices(args, data).map(getServices =>
+                  // TODO: delete this another dirty hack
+                  // if we have default timeout, increase it
+                  val commonWithTimeout = if (common.timeout == 14000) {
+                    common.copy(timeout = 60000)
+                  } else common
                   RunOpts.execRun(
-                    common,
+                    commonWithTimeout,
                     DeployFuncName,
                     distAquaPath,
                     Nil,
                     args,
-                    getServices,
+                    getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) },
                     Nil
                   )
                 )
