@@ -73,6 +73,8 @@ func deploy(serviceConf: ServiceConf) -> string:
 
         service_id <- Srv.create(blueprint_id)
 
+  Console.print("And your service id is:")
+
   <- service_id
 
 func remove(service_id: string):

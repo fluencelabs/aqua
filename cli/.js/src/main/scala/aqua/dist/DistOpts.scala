@@ -66,8 +66,13 @@ object DistOpts extends Logging {
             dff
               .andThen(data =>
                 checkDataGetServices(args, data).map(getServices =>
+                  // TODO: delete this another dirty hack
+                  // if we have default timeout, increase it
+                  val commonWithTimeout = if (common.timeout == 7000) {
+                    common.copy(timeout = 60000)
+                  } else common
                   RunOpts.execRun(
-                    common,
+                    commonWithTimeout,
                     DeployFuncName,
                     distAquaPath,
                     Nil,
