@@ -6,7 +6,7 @@ import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.types.BottomType
-import aqua.{AppOpts, AquaIO, ArgOpts, FileOpts, FluenceOpts, LogFormatter}
+import aqua.{AppOpts, AquaIO, ArgOpts, FileOpts, FluenceOpts, FuncWithData, LogFormatter}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.ArgOpts.checkDataGetServices
@@ -87,44 +87,46 @@ object RunOpts extends Logging {
   private val builtinServices =
     aqua.builder.Console() :: aqua.builder.IPFSUploader("ipfs", "uploadFile") :: Nil
 
+  def runOptsCompose[F[_]: Files: Concurrent]
+    : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithData)]]] = {
+    (AppOpts.inputOpts[F], AppOpts.importOpts[F], ArgOpts.funcWithArgsOpt[F]).mapN {
+      case (inputF, importF, funcWithArgsF) =>
+        for {
+          inputV <- inputF
+          importV <- importF
+          funcWithArgsV <- funcWithArgsF
+        } yield {
+          (inputV, importV, funcWithArgsV).mapN { case (i, im, f) =>
+            (i, im, f)
+          }
+        }
+    }
+  }
+
   def runOptions[F[_]: Files: AquaIO: Async](implicit
     ec: ExecutionContext
   ): Opts[F[cats.effect.ExitCode]] =
     (
       GeneralRunOptions.commonOpt,
-      AppOpts.inputOpts[F],
-      AppOpts.importOpts[F],
-      ArgOpts.funcWithArgsOpt[F]
+      runOptsCompose[F]
     ).mapN {
       case (
             common,
-            inputF,
-            importF,
-            funcWithArgsF
+            optionsF
           ) =>
         LogFormatter.initLogger(Some(common.logLevel))
-        for {
-          inputV <- inputF
-          impsV <- importF
-          funcWithArgsV <- funcWithArgsF
-          resultV: ValidatedNec[String, F[Unit]] = inputV.andThen { input =>
-            impsV.andThen { imps =>
-              funcWithArgsV.andThen { funcWithArgs =>
-                valid(
-                  RunCommand
-                    .run(
-                      funcWithArgs.name,
-                      funcWithArgs.args,
-                      input,
-                      imps,
-                      RunConfig(common, funcWithArgs.getters, builtinServices),
-                      transformConfigWithOnPeer(common.on)
-                    )
-                )
-              }
-            }
-          }
-          result <- resultV.fold(
+        optionsF.flatMap(
+          _.map { case (input, imps, funcWithArgs) =>
+            RunCommand
+              .run(
+                funcWithArgs.name,
+                funcWithArgs.args,
+                input,
+                imps,
+                RunConfig(common, funcWithArgs.getters, builtinServices),
+                transformConfigWithOnPeer(common.on)
+              )
+          }.fold(
             errs =>
               Async[F].pure {
                 errs.map(logger.error)
@@ -132,10 +134,7 @@ object RunOpts extends Logging {
               },
             _.map(_ => cats.effect.ExitCode.Success)
           )
-        } yield {
-          result
-        }
-
+        )
     }
 
   def runCommand[F[_]: Files: AquaIO: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
