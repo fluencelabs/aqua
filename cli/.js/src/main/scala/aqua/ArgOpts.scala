@@ -32,6 +32,7 @@ object ArgOpts {
     }
   }
 
+  // Parses a function name and arguments from a string
   def funcOpt: Opts[(String, List[ValueRaw])] =
     Opts
       .option[String]("func", "Function to call with args", "f")
@@ -54,6 +55,7 @@ object ArgOpts {
         }
       }
 
+  // Gets data from a file or from a json string
   def dataFileOrStringOpt[F[_]: Files: Concurrent]
     : Opts[F[ValidatedNec[String, Option[js.Dynamic]]]] =
     (AppOpts.wrapWithOption(dataOpt), AppOpts.wrapWithOption(dataFromFileOpt[F])).mapN {
@@ -65,6 +67,7 @@ object ArgOpts {
         }
     }
 
+  // Creates getters based on function arguments and data, return all info
   def funcWithArgsOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, FuncWithData]]] = {
     (dataFileOrStringOpt[F], funcOpt).mapN { case (dataF, (func, args)) =>
       dataF.map { dataV =>
@@ -126,7 +129,7 @@ object ArgOpts {
     )
   }
 
-  // get data from sources
+  // get data from sources, error if both sources exist
   def getData(
     dataFromArgument: Option[js.Dynamic],
     dataFromFile: Option[js.Dynamic]

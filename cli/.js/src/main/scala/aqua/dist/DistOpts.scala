@@ -60,6 +60,7 @@ object DistOpts extends Logging {
     ArgumentGetter(getter.function.value, filledConfig)
   }
 
+  // Removes service from a node
   def remove[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "remove",
@@ -82,7 +83,7 @@ object DistOpts extends Logging {
       }
     }
 
-  // Uploads a file to IPFS
+  // Uploads a file to IPFS, creates blueprints and deploys a service
   def deploy[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "deploy",
@@ -111,6 +112,7 @@ object DistOpts extends Logging {
                       distAquaPath,
                       Nil,
                       args,
+                      // hack: air cannot use undefined fields, fill undefined arrays with nils
                       getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) },
                       Nil
                     )
