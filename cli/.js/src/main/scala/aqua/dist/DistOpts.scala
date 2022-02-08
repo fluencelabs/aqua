@@ -36,17 +36,22 @@ object DistOpts extends Logging {
   val DistAqua = "aqua/dist.aqua"
 
   val DeployFuncName = "deploy"
+  val RemoveFuncName = "remove"
 
   def srvNameOpt: Opts[String] =
     Opts
       .option[String]("service", "What service from the config file to deploy", "s")
+
+  def srvIdOpt: Opts[String] =
+    Opts
+      .option[String]("id", "Service id to delete", "i")
 
   def deployOpt[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "dist",
       header = "Distribute a service onto a remote peer"
     ) {
-      Opts.subcommand(deploy)
+      Opts.subcommand(deploy).orElse(Opts.subcommand(remove))
     }
 
   def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
@@ -54,6 +59,28 @@ object DistOpts extends Logging {
     val filledConfig = Config.fillWithEmptyArrays(arg)
     ArgumentGetter(getter.function.value, filledConfig)
   }
+
+  def remove[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+    Command(
+      name = "remove",
+      header = "Remove a service onto a remote peer"
+    ) {
+      (
+        GeneralRunOptions.commonOptWithSecretKey,
+        srvIdOpt
+      ).mapN { (common, srvId) =>
+        PlatformOpts.getPackagePath(DistAqua).flatMap { distAquaPath =>
+          val args = LiteralRaw.quote(srvId) :: Nil
+          RunOpts.execRun(
+            common,
+            RemoveFuncName,
+            distAquaPath,
+            Nil,
+            args
+          )
+        }
+      }
+    }
 
   // Uploads a file to IPFS
   def deploy[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =

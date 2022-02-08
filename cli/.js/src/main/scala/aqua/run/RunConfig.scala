@@ -31,6 +31,17 @@ object GeneralRunOptions {
       AppOpts.wrapWithOption(secretKeyOpt)
     )
       .mapN(GeneralRunOptions.apply)
+
+  val commonOptWithSecretKey: Opts[GeneralRunOptions] =
+    (
+      AppOpts.wrapWithOption(timeoutOpt),
+      logLevelOpt,
+      multiaddrOpt,
+      onOpt,
+      printAir,
+      secretKeyOpt.map(Some.apply)
+    )
+      .mapN(GeneralRunOptions.apply)
 }
 
 // `run` command configuration

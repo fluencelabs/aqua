@@ -82,3 +82,4 @@ func deploy(serviceConf: ServiceConf) -> string:
 func remove(service_id: string):
   on ON_PEER:
     Srv.remove(service_id)
+  Console.print("Service was deleted")
