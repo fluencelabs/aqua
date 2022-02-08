@@ -11,7 +11,7 @@ import cats.syntax.applicative.*
 import cats.syntax.apply.*
 
 case class GeneralRunOptions(
-  timeout: Int,
+  timeout: Option[Int],
   logLevel: Level,
   multiaddr: String,
   on: Option[String],
@@ -22,7 +22,14 @@ case class GeneralRunOptions(
 object GeneralRunOptions {
 
   val commonOpt: Opts[GeneralRunOptions] =
-    (timeoutOpt, logLevelOpt, multiaddrOpt, onOpt, printAir, AppOpts.wrapWithOption(secretKeyOpt))
+    (
+      AppOpts.wrapWithOption(timeoutOpt),
+      logLevelOpt,
+      multiaddrOpt,
+      onOpt,
+      printAir,
+      AppOpts.wrapWithOption(secretKeyOpt)
+    )
       .mapN(GeneralRunOptions.apply)
 }
 

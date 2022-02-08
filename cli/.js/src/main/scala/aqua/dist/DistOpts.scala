@@ -74,8 +74,8 @@ object DistOpts extends Logging {
                 checkDataGetServices(args, data).map(getServices =>
                   // TODO: delete this another dirty hack
                   // if we have default timeout, increase it
-                  val commonWithTimeout = if (common.timeout == 14000) {
-                    common.copy(timeout = 60000)
+                  val commonWithTimeout = if (common.timeout.isEmpty) {
+                    common.copy(timeout = Some(60000))
                   } else common
                   RunOpts.execRun(
                     commonWithTimeout,

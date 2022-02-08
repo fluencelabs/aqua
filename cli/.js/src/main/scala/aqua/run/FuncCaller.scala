@@ -44,7 +44,7 @@ object FuncCaller {
             .start(
               PeerConfig(
                 config.common.multiaddr,
-                config.common.timeout,
+                config.common.timeout.getOrElse(scalajs.js.undefined),
                 LogLevelTransformer.logLevelToAvm(config.common.logLevel),
                 keyPair.orNull
               )
