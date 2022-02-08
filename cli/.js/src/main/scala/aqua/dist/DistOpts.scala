@@ -11,7 +11,7 @@ import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.run.RunCommand.createKeyPair
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import aqua.*
-import aqua.run.RunOpts.{checkDataGetServices, dataFromFileOpt, logger}
+import aqua.run.RunOpts.logger
 import aqua.types.ScalarType
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.*
@@ -90,7 +90,7 @@ object DistOpts extends Logging {
     ) {
       (
         GeneralRunOptions.commonOpt,
-        dataFromFileOpt[F],
+        ArgOpts.dataFromFileOpt[F],
         srvNameOpt
       ).mapN { (common, dataFromFileF, srvName) =>
         dataFromFileF.flatMap { dff =>
@@ -98,21 +98,23 @@ object DistOpts extends Logging {
             val args = VarRaw(srvName, ScalarType.string) :: Nil
             dff
               .andThen(data =>
-                checkDataGetServices(args, Some(data)).map(getServices =>
-                  // if we have default timeout, increase it
-                  val commonWithTimeout = if (common.timeout.isEmpty) {
-                    common.copy(timeout = Some(60000))
-                  } else common
-                  RunOpts.execRun(
-                    commonWithTimeout,
-                    DeployFuncName,
-                    distAquaPath,
-                    Nil,
-                    args,
-                    getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) },
-                    Nil
+                ArgOpts
+                  .checkDataGetServices(args, Some(data))
+                  .map(getServices =>
+                    // if we have default timeout, increase it
+                    val commonWithTimeout = if (common.timeout.isEmpty) {
+                      common.copy(timeout = Some(60000))
+                    } else common
+                    RunOpts.execRun(
+                      commonWithTimeout,
+                      DeployFuncName,
+                      distAquaPath,
+                      Nil,
+                      args,
+                      getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) },
+                      Nil
+                    )
                   )
-                )
               )
               .fold(
                 errs =>
