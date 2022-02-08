@@ -49,32 +49,20 @@ object AppOpts {
       }
   }
 
-  def checkPath[F[_]: Monad: Files](pathStr: String): F[ValidatedNec[String, Path]] = {
-    val p = Path(pathStr)
-    Files[F]
-      .exists(p)
-      .flatMap { exists =>
-        if (exists)
-          Files[F].isRegularFile(p).map { isFile =>
-            if (isFile) {
-              if (p.extName != ".aqua") Validated.invalidNec("File must be with 'aqua' extension")
-              else Validated.validNec(p)
-            } else
-              Validated.validNec(p)
-          }
-        else
-          Validated.invalidNec(s"There is no path '${p.toString}'").pure[F]
-      }
+  def inputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Path]]] = {
+    FileOpts.pathOpt(
+      "input",
+      "Path to an aqua file or an input directory that contains your .aqua files",
+      "i",
+      s =>
+        FileOpts
+          .checkFile(s)
+          .map(_.andThen(p => {
+            if (p.extName != ".aqua") Validated.invalidNec("File must be with 'aqua' extension")
+            else Validated.validNec(p)
+          }))
+    )
   }
-
-  def inputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Path]]] =
-    Opts
-      .option[String](
-        "input",
-        "Path to an aqua file or an input directory that contains your .aqua files",
-        "i"
-      )
-      .map(s => checkPath[F](s))
 
   def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Option[Path]]]] =
     Opts

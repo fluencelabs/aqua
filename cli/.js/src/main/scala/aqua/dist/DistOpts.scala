@@ -98,8 +98,7 @@ object DistOpts extends Logging {
             val args = VarRaw(srvName, ScalarType.string) :: Nil
             dff
               .andThen(data =>
-                checkDataGetServices(args, data).map(getServices =>
-                  // TODO: delete this another dirty hack
+                checkDataGetServices(args, Some(data)).map(getServices =>
                   // if we have default timeout, increase it
                   val commonWithTimeout = if (common.timeout.isEmpty) {
                     common.copy(timeout = Some(60000))
