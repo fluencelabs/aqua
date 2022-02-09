@@ -1,21 +1,31 @@
 package aqua.compiler
 
-import aqua.model.{CallModel, LiteralModel, VarModel}
+import aqua.model.{CallModel, IntoIndexModel, LiteralModel, ValueModel, VarModel}
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
 import aqua.parser.ParserError
 import aqua.parser.Ast
 import aqua.parser.Parser
 import aqua.parser.lift.Span
-import aqua.raw.value.{LiteralRaw, ValueRaw}
-import aqua.res.{ApRes, CallRes, CallServiceRes, RestrictionRes, SeqRes}
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.res.{
+  ApRes,
+  CallRes,
+  CallServiceRes,
+  FoldRes,
+  MakeRes,
+  NextRes,
+  ParRes,
+  RestrictionRes,
+  SeqRes
+}
 import aqua.types.{ArrayType, LiteralType, ScalarType, StreamType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.Id
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.instances.string.*
-import cats.syntax.show._
+import cats.syntax.show.*
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
@@ -76,6 +86,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
   }
 
+  def through(peer: ValueModel, log: String = null) =
+    MakeRes.noop(peer, log)
+
+  val relay = LiteralRaw("-relay-", ScalarType.string)
+
   "aqua compiler" should "create right topology" in {
 
     val res = compileToContext(
@@ -107,8 +122,74 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
     val Some(exec) = aquaRes.funcs.find(_.funcName == "exec")
 
-    println(exec.body.show)
+    val peers = VarModel("peers", ArrayType(ScalarType.string))
+    val peer = VarModel("peer", ScalarType.string)
+    val results = VarModel("results", StreamType(ScalarType.string))
+    val initPeer = LiteralModel.fromRaw(ValueRaw.InitPeerId)
 
+    val expected =
+      SeqRes.wrap(
+        CallServiceRes(
+          LiteralModel.fromRaw(LiteralRaw.quote("getDataSrv")),
+          "peers",
+          CallRes(Nil, Some(CallModel.Export(peers.name, peers.`type`))),
+          LiteralModel.fromRaw(ValueRaw.InitPeerId)
+        ).leaf,
+        RestrictionRes("results", true).wrap(
+          SeqRes.wrap(
+            ParRes.wrap(
+              FoldRes("peer", peers).wrap(
+                ParRes.wrap(
+                  // better if first relay will be outside `for`
+                  SeqRes.wrap(
+                    CallServiceRes(
+                      LiteralModel.fromRaw(LiteralRaw.quote("op")),
+                      "identity",
+                      CallRes(
+                        LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
+                        Some(CallModel.Export(results.name, results.`type`))
+                      ),
+                      peer
+                    ).leaf,
+                    through(ValueModel.fromRaw(relay)),
+                    through(initPeer)
+                  ),
+                  NextRes("peer").leaf
+                )
+              )
+            ),
+            CallServiceRes(
+              LiteralModel.fromRaw(LiteralRaw.quote("op")),
+              "noop",
+              CallRes(
+                results.copy(lambda = Chain.one(IntoIndexModel("2", ScalarType.string))) :: Nil,
+                None
+              ),
+              initPeer
+            ).leaf,
+            CallServiceRes(
+              LiteralModel.fromRaw(LiteralRaw.quote("op")),
+              "identity",
+              CallRes(
+                results :: Nil,
+                Some(CallModel.Export("results-fix", ArrayType(ScalarType.string)))
+              ),
+              initPeer
+            ).leaf
+          )
+        ),
+        CallServiceRes(
+          LiteralModel.fromRaw(LiteralRaw.quote("callbackSrv")),
+          "response",
+          CallRes(
+            VarModel("results-fix", ArrayType(ScalarType.string)) :: Nil,
+            None
+          ),
+          initPeer
+        ).leaf
+      )
+
+    exec.body.equalsOrShowDiff(expected) shouldBe (true)
   }
 
   "aqua compiler" should "compile with imports" in {
