@@ -2,7 +2,7 @@ package aqua
 
 import cats.effect.ExitCode
 import com.monovore.decline.Opts
-import fs2.io.file.Path
+import fs2.io.file.{Files, Path}
 import cats.syntax.applicative._
 
 // Scala-specific options and subcommands
