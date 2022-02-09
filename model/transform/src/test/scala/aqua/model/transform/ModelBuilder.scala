@@ -39,6 +39,7 @@ object ModelBuilder {
   val otherRelay = LiteralRaw("other-relay", ScalarType.string)
   val otherPeer2 = LiteralRaw("other-peer-2", ScalarType.string)
   val otherRelay2 = LiteralRaw("other-relay-2", ScalarType.string)
+  val iRelay = VarRaw("i", ScalarType.string)
   val varNode = VarRaw("node-id", ScalarType.string)
   val viaList = VarRaw("other-relay-2", ArrayType(ScalarType.string))
   val valueArray = VarRaw("array", ArrayType(ScalarType.string))

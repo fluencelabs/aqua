@@ -420,6 +420,37 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrShowDiff(expected) should be(true)
   }
 
+  "topology resolver" should "create returning hops after for-par with inner `on`" in {
+    val init =
+      OnModel(initPeer, Chain.one(relay)).wrap(
+        foldPar(
+          "i",
+          valueArray,
+          OnModel(iRelay, Chain.empty).wrap(
+            callModel(2)
+          )
+        ),
+        callModel(3)
+      )
+
+    val proc = Topology.resolve(init).value
+
+    val expected =
+      SeqRes.wrap(
+        ParRes.wrap(
+          FoldRes("i", valueArray).wrap(
+            ParRes.wrap(
+              // better if first relay will be outside `for`
+              SeqRes.wrap(through(relay), callRes(2, iRelay), through(relay)),
+              NextRes("i").leaf
+            )
+          )
+        ),
+        callRes(3, initPeer)
+      )
+    proc.equalsOrShowDiff(expected) should be(true)
+  }
+
   "topology resolver" should "create returning hops on nested 'on'" in {
     val init =
       OnModel(initPeer, Chain.one(relay)).wrap(
