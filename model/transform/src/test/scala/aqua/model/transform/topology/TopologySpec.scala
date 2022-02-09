@@ -421,32 +421,50 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   }
 
   "topology resolver" should "create returning hops after for-par with inner `on`" in {
+
+    val streamRaw = VarRaw("stream", StreamType(ScalarType.string))
+    val stream = ValueModel.fromRaw(streamRaw)
+
     val init =
-      OnModel(initPeer, Chain.one(relay)).wrap(
-        foldPar(
-          "i",
-          valueArray,
-          OnModel(iRelay, Chain.empty).wrap(
-            callModel(2)
-          )
-        ),
-        callModel(3)
+      SeqModel.wrap(
+        DeclareStreamModel(stream).leaf,
+        OnModel(initPeer, Chain.one(relay)).wrap(
+          foldPar(
+            "i",
+            valueArray,
+            OnModel(iRelay, Chain.empty).wrap(
+              callModel(2, CallModel.Export(streamRaw.name, streamRaw.`type`) :: Nil)
+            )
+          ),
+          JoinModel(NonEmptyList.one(stream)).leaf
+        )
       )
 
     val proc = Topology.resolve(init).value
 
     val expected =
       SeqRes.wrap(
+        through(relay),
         ParRes.wrap(
           FoldRes("i", valueArray).wrap(
             ParRes.wrap(
               // better if first relay will be outside `for`
-              SeqRes.wrap(through(relay), callRes(2, iRelay), through(relay)),
+              SeqRes.wrap(
+                through(relay),
+                callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                through(relay),
+                through(initPeer)
+              ),
               NextRes("i").leaf
             )
           )
         ),
-        callRes(3, initPeer)
+        CallServiceRes(
+          LiteralModel(s"\"op\"", LiteralType.string),
+          s"noop",
+          CallRes(stream :: Nil, None),
+          initPeer
+        ).leaf
       )
     proc.equalsOrShowDiff(expected) should be(true)
   }
