@@ -56,11 +56,7 @@ object AppOpts {
       "i",
       s =>
         FileOpts
-          .checkFile(s)
-          .map(_.andThen(p => {
-            if (p.extName != ".aqua") Validated.invalidNec("File must be with 'aqua' extension")
-            else Validated.validNec(p)
-          }))
+          .checkDirOrFile(s)
     )
   }
 

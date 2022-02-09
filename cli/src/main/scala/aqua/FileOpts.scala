@@ -82,6 +82,27 @@ object FileOpts {
       }
   }
 
+  // Checks if the path is a file and it exists
+  def checkDirOrFile[F[_]: Files: Monad](
+    path: String,
+    isAqua: Boolean = true
+  ): F[ValidatedNec[String, Path]] = {
+    val p = Path(path)
+    Files[F]
+      .exists(p)
+      .flatMap { exists =>
+        if (exists)
+          Files[F].isRegularFile(p).map { isFile =>
+            if (isFile && p.extName != ".aqua")
+              Validated.invalidNec("File must be with 'aqua' extension")
+            else Validated.validNec(p)
+          }
+        else {
+          invalidNec(s"There is no path '${p.toString}'").pure[F]
+        }
+      }
+  }
+
   // Checks a path and transforms it
   def checkAndTransformPath[F[_]: Files: Concurrent, T](
     path: String,
