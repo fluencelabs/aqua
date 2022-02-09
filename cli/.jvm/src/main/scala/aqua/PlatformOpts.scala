@@ -1,6 +1,7 @@
 package aqua
 
 import cats.effect.ExitCode
+import cats.effect.kernel.Async
 import com.monovore.decline.Opts
 import fs2.io.file.{Files, Path}
 import cats.syntax.applicative._
