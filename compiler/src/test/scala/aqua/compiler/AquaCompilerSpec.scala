@@ -76,6 +76,41 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
   }
 
+  "aqua compiler" should "create right topology" in {
+
+    val res = compileToContext(
+      Map(
+        "index.aqua" ->
+          """service Op("op"):
+            |  identity(s: string) -> string
+            |
+            |func exec(peers: []string) -> []string:
+            |    results: *string
+            |    for peer <- peers par:
+            |        on peer:
+            |            results <- Op.identity("hahahahah")
+            |
+            |    join results[2]
+            |    <- results""".stripMargin
+      ),
+      Map.empty
+    )
+
+    res.isValid should be(true)
+    val Validated.Valid(ctxs) = res
+
+    ctxs.length should be(1)
+    val ctx = ctxs.headOption.get
+
+    val aquaRes =
+      Transform.contextRes(ctx, TransformConfig(wrapWithXor = false, relayVarName = None))
+
+    val Some(exec) = aquaRes.funcs.find(_.funcName == "exec")
+
+    println(exec.body.show)
+
+  }
+
   "aqua compiler" should "compile with imports" in {
 
     val res = compileToContext(
