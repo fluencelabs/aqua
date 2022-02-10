@@ -82,7 +82,7 @@ object FileOpts {
       }
   }
 
-  // Checks if the path is a file and it exists
+  // Checks if the path is a file or a directory and it exists
   def checkDirOrFile[F[_]: Files: Monad](
     path: String,
     isAqua: Boolean = true
