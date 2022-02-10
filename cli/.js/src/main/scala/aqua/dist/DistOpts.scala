@@ -68,7 +68,7 @@ object DistOpts extends Logging {
       ).mapN { (common, dataFromFileF, srvName) =>
         dataFromFileF.flatMap { dff =>
           PlatformOpts.getPackagePath(DistAqua).flatMap { distAquaPath =>
-            val args = VarRaw(srvName, ScalarType.string) :: Nil
+            val args = LiteralRaw.quote(srvName) :: VarRaw(srvName, ScalarType.string) :: Nil
             dff
               .andThen(data =>
                 checkDataGetServices(args, data).map(getServices =>
