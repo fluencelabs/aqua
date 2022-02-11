@@ -19,7 +19,7 @@ import aqua.res.{
   RestrictionRes,
   SeqRes
 }
-import aqua.types.{ArrayType, LiteralType, ScalarType, StreamType}
+import aqua.types.{ArrayType, LiteralType, ScalarType, StreamType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.Id
@@ -89,7 +89,16 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
   def through(peer: ValueModel, log: String = null) =
     MakeRes.noop(peer, log)
 
-  val relay = LiteralRaw("-relay-", ScalarType.string)
+  val relay = VarRaw("-relay-", ScalarType.string)
+
+  def getDataSrv(name: String, t: Type) = {
+    CallServiceRes(
+      LiteralModel.fromRaw(LiteralRaw.quote("getDataSrv")),
+      name,
+      CallRes(Nil, Some(CallModel.Export(name, t))),
+      LiteralModel.fromRaw(ValueRaw.InitPeerId)
+    ).leaf
+  }
 
   "aqua compiler" should "create right topology" in {
 
@@ -118,7 +127,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val ctx = ctxs.headOption.get
 
     val aquaRes =
-      Transform.contextRes(ctx, TransformConfig(wrapWithXor = false, relayVarName = None))
+      Transform.contextRes(ctx, TransformConfig(wrapWithXor = false))
 
     val Some(exec) = aquaRes.funcs.find(_.funcName == "exec")
 
@@ -129,12 +138,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
     val expected =
       SeqRes.wrap(
-        CallServiceRes(
-          LiteralModel.fromRaw(LiteralRaw.quote("getDataSrv")),
-          "peers",
-          CallRes(Nil, Some(CallModel.Export(peers.name, peers.`type`))),
-          LiteralModel.fromRaw(ValueRaw.InitPeerId)
-        ).leaf,
+        getDataSrv("-relay-", ScalarType.string),
+        getDataSrv(peers.name, peers.`type`),
         RestrictionRes("results", true).wrap(
           SeqRes.wrap(
             ParRes.wrap(
@@ -142,6 +147,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
                 ParRes.wrap(
                   // better if first relay will be outside `for`
                   SeqRes.wrap(
+                    through(ValueModel.fromRaw(relay)),
                     CallServiceRes(
                       LiteralModel.fromRaw(LiteralRaw.quote("op")),
                       "identity",
