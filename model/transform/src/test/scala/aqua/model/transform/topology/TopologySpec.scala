@@ -420,7 +420,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrShowDiff(expected) should be(true)
   }
 
-  "topology resolver" should "create returning hops after for-par with inner `on`" in {
+  def noop() = {}
+
+  "topology resolver" should "create returning hops after for-par with inner `on` and xor" in {
 
     val streamRaw = VarRaw("stream", StreamType(ScalarType.string))
     val streamRawEl = VarRaw(
@@ -439,7 +441,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             "i",
             valueArray,
             OnModel(iRelay, Chain.empty).wrap(
-              callModel(2, CallModel.Export(streamRaw.name, streamRaw.`type`) :: Nil)
+              XorModel.wrap(
+                callModel(2, CallModel.Export(streamRaw.name, streamRaw.`type`) :: Nil),
+                SeqModel.wrap(
+                  OnModel(initPeer, Chain.one(relay)).wrap(
+                    callModel(4, Nil, Nil)
+                  )
+                )
+              )
             )
           ),
           JoinModel(NonEmptyList.one(streamEl)).leaf,
@@ -458,7 +467,13 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               // better if first relay will be outside `for`
               SeqRes.wrap(
                 through(relay),
-                callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                XorRes.wrap(
+                  callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                  SeqRes.wrap(
+                    through(relay),
+                    callRes(4, initPeer)
+                  )
+                ),
                 through(relay),
                 through(initPeer)
               ),
