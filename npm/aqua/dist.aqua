@@ -15,7 +15,6 @@ data ModuleConf:
   logger_enabled: ?bool
 
 data ServiceConf:
-  name: string
   modules: []ModuleConf
 
 const ON_PEER ?= HOST_PEER_ID
@@ -30,10 +29,7 @@ func flattenS(input: []string) -> ?[]string:
   res <<- input
   <- res
 
-service DistFix("dist"):
-   make_module_config(name: string, mem_pages_count: ?u32, max_heap_size: ?string, logger_enabled: ?bool, preopened_files: ?[]string, envs: ?Pairs, mapped_dirs: ?Pairs, mounted_binaries: ?Pairs, logging_mask: ?i32) -> ModuleConfig
-
-func deploy(serviceConf: ServiceConf) -> string:
+func deploy(serviceName: string, serviceConf: ServiceConf) -> string:
 
   on ON_PEER:
     multiaddr <- Ipfs.get_external_api_multiaddr()
@@ -52,7 +48,7 @@ func deploy(serviceConf: ServiceConf) -> string:
 --      Console.print(hostRes.path)
 --      on ON_PEER:
 
-        conf <- DistFix.make_module_config(m.name, nil, nil, m.logger_enabled, m.preopened_files, nil, m.mapped_dirs, m.mounted_binaries, nil)
+        conf <- Dist.make_module_config(m.name, nil, nil, m.logger_enabled, m.preopened_files, nil, m.mapped_dirs, m.mounted_binaries, nil)
 
 --      Console.print("Created config")
 
@@ -65,7 +61,7 @@ func deploy(serviceConf: ServiceConf) -> string:
   Console.print("Now time to make a blueprint...")
   on ON_PEER:
 
-        blueprint <- Dist.make_blueprint(serviceConf.name, mod_hashes)
+        blueprint <- Dist.make_blueprint(serviceName, mod_hashes)
 
   --Console.print("Got blueprint")
   --on ON_PEER:
