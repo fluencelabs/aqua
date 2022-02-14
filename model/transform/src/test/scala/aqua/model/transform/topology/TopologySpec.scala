@@ -420,8 +420,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrShowDiff(expected) should be(true)
   }
 
-  def noop() = {}
-
+  // https://github.com/fluencelabs/aqua/issues/427
   "topology resolver" should "create returning hops after for-par with inner `on` and xor" in {
 
     val streamRaw = VarRaw("stream", StreamType(ScalarType.string))
@@ -443,10 +442,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             OnModel(iRelay, Chain.empty).wrap(
               XorModel.wrap(
                 callModel(2, CallModel.Export(streamRaw.name, streamRaw.`type`) :: Nil),
-                SeqModel.wrap(
-                  OnModel(initPeer, Chain.one(relay)).wrap(
-                    callModel(4, Nil, Nil)
-                  )
+                OnModel(initPeer, Chain.one(relay)).wrap(
+                  callModel(4, Nil, Nil)
                 )
               )
             )

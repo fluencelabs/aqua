@@ -185,13 +185,22 @@ object Topology extends Logging {
     def endsOn(current: Topology): Eval[List[OnModel]] =
       current.beginsOn
 
-    protected def lastChildFinally(current: Topology): Eval[List[OnModel]] =
-      current.lastChild.map(lc =>
+    private def childFinally(
+      current: Topology,
+      child: Topology => Option[Topology]
+    ): Eval[List[OnModel]] =
+      child(current).map(lc =>
         lc.forceExit.flatMap {
           case true => current.afterOn
           case false => lc.endsOn
         }
       ) getOrElse current.beginsOn
+
+    protected def lastChildFinally(current: Topology): Eval[List[OnModel]] =
+      childFinally(current, _.lastChild)
+
+    protected def firstChildFinally(current: Topology): Eval[List[OnModel]] =
+      childFinally(current, _.firstChild)
   }
 
   trait After {
@@ -328,7 +337,7 @@ object Topology extends Logging {
 
     // Xor tag ends where any child ends; can't get first one as it may lead to recursion
     override def endsOn(current: Topology): Eval[List[OnModel]] =
-      lastChildFinally(current)
+      firstChildFinally(current)
 
   }
 
