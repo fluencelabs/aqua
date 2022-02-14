@@ -40,6 +40,8 @@ object OpModel extends TreeNodeCompanion[OpModel] {
 
 sealed trait NoExecModel extends OpModel
 
+sealed trait ForceExecModel extends OpModel
+
 sealed trait GroupOpModel extends OpModel
 
 sealed trait SeqGroupModel extends GroupOpModel
@@ -117,21 +119,22 @@ case class PushToStreamModel(value: ValueModel, exportTo: CallModel.Export) exte
 }
 
 case class CallServiceModel(serviceId: ValueModel, funcName: String, call: CallModel)
-    extends OpModel {
+    extends ForceExecModel {
 
   override lazy val usesVarNames: Set[String] = serviceId.usesVarNames ++ call.usesVarNames
 
   override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
 }
 
-case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export) extends OpModel {
+case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export)
+    extends ForceExecModel {
 
   override def exportsVarNames: Set[String] = Set(exportTo.name)
 
   override def usesVarNames: Set[String] = operand.usesVarNames
 }
 
-case class JoinModel(operands: NonEmptyList[ValueModel]) extends OpModel {
+case class JoinModel(operands: NonEmptyList[ValueModel]) extends ForceExecModel {
 
   override lazy val usesVarNames: Set[String] =
     operands.toList.flatMap(_.usesVarNames).toSet
