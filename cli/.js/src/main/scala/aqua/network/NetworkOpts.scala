@@ -8,8 +8,10 @@ import aqua.model.{LiteralModel, ValueModel}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import aqua.PlatformOpts
+import aqua.js.FluenceEnvironment
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
+import cats.Applicative
 import com.monovore.decline.{Command, Opts}
 import fs2.io.file.Path
 import cats.syntax.functor.*
@@ -19,6 +21,7 @@ import cats.syntax.applicative.*
 import cats.syntax.apply.*
 
 import scala.concurrent.ExecutionContext
+import scala.scalajs.js
 
 object NetworkOpts {
 
@@ -31,6 +34,10 @@ object NetworkOpts {
   val GetInterfaceFuncName = "get_interface"
   val GetModuleInterfaceFuncName = "get_module_interface"
 
+  val Krasnodar = "krasnodar"
+  val Stage = "stage"
+  val TestNet = "testnet"
+
   // All network commands
   def commands[F[_]: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] =
     Opts.subcommand(NetworkOpts.listModules[F]) orElse
@@ -38,7 +45,8 @@ object NetworkOpts {
       Opts.subcommand(NetworkOpts.listInterfacesByPeer[F]) orElse
       Opts.subcommand(NetworkOpts.listInterfaces[F]) orElse
       Opts.subcommand(NetworkOpts.getInterface[F]) orElse
-      Opts.subcommand(NetworkOpts.getModuleInterface[F])
+      Opts.subcommand(NetworkOpts.getModuleInterface[F]) orElse
+      Opts.subcommand(NetworkOpts.envCom[F])
 
   def peerOpt: Opts[String] =
     Opts
@@ -47,6 +55,11 @@ object NetworkOpts {
   def idOpt: Opts[String] =
     Opts
       .option[String]("id", "Service ID", "s")
+
+  def envArg: Opts[String] =
+    Opts
+      .argument[String]()
+      .withDefault(Krasnodar)
 
   def listModules[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
@@ -155,4 +168,35 @@ object NetworkOpts {
         }
       }
     }
+
+  def envCom[F[_]: Applicative](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+    Command(
+      name = "env",
+      header = "Show nodes in currently selected environment"
+    ) {
+      envArg.map { env =>
+        val envList = env match {
+          case Krasnodar =>
+            Some(FluenceEnvironment.krasnodar)
+          case TestNet =>
+            Some(FluenceEnvironment.testnet)
+          case Stage =>
+            Some(FluenceEnvironment.stage)
+          case e =>
+            None
+        }
+
+        envList match {
+          case Some(envs) =>
+            println(envs.toList.map(n => n.selectDynamic("multiaddr")).mkString("\n"))
+            ExitCode.Success.pure[F]
+          case None =>
+            println(
+              s"There is no environment '$env' in our list. Use this: 'krasnodar', 'testnet', 'stage'"
+            )
+            ExitCode.Success.pure[F]
+        }
+      }
+    }
+
 }
