@@ -489,6 +489,84 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrShowDiff(expected) should be(true)
   }
 
+  // https://github.com/fluencelabs/aqua/issues/427
+  "topology resolver" should "create returning hops after for-par with inner `on` and xor, version 2" in {
+
+    val streamRaw = VarRaw("stream", StreamType(ScalarType.string))
+    val streamRawEl = VarRaw(
+      "stream",
+      StreamType(ScalarType.string),
+      Chain.one(IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string))
+    )
+    val stream = ValueModel.fromRaw(streamRaw)
+    val streamEl = ValueModel.fromRaw(streamRawEl)
+
+    val init =
+      SeqModel.wrap(
+        DeclareStreamModel(stream).leaf,
+        OnModel(initPeer, Chain.one(relay)).wrap(
+          foldPar(
+            "i",
+            valueArray,
+            OnModel(iRelay, Chain.empty).wrap(
+              XorModel.wrap(
+                XorModel.wrap(
+                  callModel(2, CallModel.Export(streamRaw.name, streamRaw.`type`) :: Nil)
+                ),
+                OnModel(initPeer, Chain.one(relay)).wrap(
+                  callModel(4, Nil, Nil)
+                )
+              )
+            )
+          ),
+          JoinModel(NonEmptyList.one(streamEl)).leaf,
+          callModel(3, Nil, streamRaw :: Nil)
+        )
+      )
+
+    val proc = Topology.resolve(init).value
+
+    val expected =
+      SeqRes.wrap(
+        through(relay),
+        ParRes.wrap(
+          FoldRes("i", valueArray).wrap(
+            ParRes.wrap(
+              // better if first relay will be outside `for`
+              SeqRes.wrap(
+                through(relay),
+                XorRes.wrap(
+                  XorRes.wrap(
+                    callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`)))
+                  ),
+                  SeqRes.wrap(
+                    through(relay),
+                    callRes(4, initPeer)
+                  )
+                ),
+                through(relay),
+                through(initPeer)
+              ),
+              NextRes("i").leaf
+            )
+          )
+        ),
+        CallServiceRes(
+          LiteralModel(s"\"op\"", LiteralType.string),
+          s"noop",
+          CallRes(streamEl :: Nil, None),
+          initPeer
+        ).leaf,
+        callRes(3, initPeer, None, stream :: Nil)
+      )
+
+    // println(Console.MAGENTA + init.show + Console.RESET)
+    // println(Console.YELLOW + proc.show + Console.RESET)
+    // println(Console.BLUE + expected.show + Console.RESET)
+
+    proc.equalsOrShowDiff(expected) should be(true)
+  }
+
   "topology resolver" should "create returning hops on nested 'on'" in {
     val init =
       OnModel(initPeer, Chain.one(relay)).wrap(

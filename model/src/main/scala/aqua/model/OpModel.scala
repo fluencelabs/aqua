@@ -88,11 +88,15 @@ case class RestrictionModel(name: String, isStream: Boolean) extends SeqGroupMod
 case class MatchMismatchModel(left: ValueModel, right: ValueModel, shouldMatch: Boolean)
     extends SeqGroupModel {
 
+  override def toString: String = s"if $left ${if (shouldMatch) "==" else "!="} $right"
+
   override def usesVarNames: Set[String] =
     left.usesVarNames ++ right.usesVarNames
 }
 
 case class ForModel(item: String, iterable: ValueModel) extends SeqGroupModel {
+
+  override def toString: String = s"for $item <- $iterable"
 
   override def restrictsVarNames: Set[String] = Set(item)
 
@@ -101,6 +105,7 @@ case class ForModel(item: String, iterable: ValueModel) extends SeqGroupModel {
 }
 
 case class DeclareStreamModel(value: ValueModel) extends NoExecModel {
+  override def toString: String = s"declare $value"
 
   override def usesVarNames: Set[String] = value.usesVarNames
 }
@@ -121,6 +126,8 @@ case class PushToStreamModel(value: ValueModel, exportTo: CallModel.Export) exte
 case class CallServiceModel(serviceId: ValueModel, funcName: String, call: CallModel)
     extends ForceExecModel {
 
+  override def toString: String = s"(call _ ($serviceId $funcName) $call)"
+
   override lazy val usesVarNames: Set[String] = serviceId.usesVarNames ++ call.usesVarNames
 
   override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
@@ -135,6 +142,8 @@ case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export)
 }
 
 case class JoinModel(operands: NonEmptyList[ValueModel]) extends ForceExecModel {
+
+  override def toString: String = s"join ${operands.toList.mkString(", ")}"
 
   override lazy val usesVarNames: Set[String] =
     operands.toList.flatMap(_.usesVarNames).toSet
