@@ -44,8 +44,7 @@ case class Topology private (
 
   lazy val firstExecutesOn: Eval[Option[List[OnModel]]] =
     (cursor.op match {
-      case _: CallServiceModel => pathOn.map(Some(_))
-      case _: JoinModel => pathOn.map(Some(_))
+      case _: ForceExecModel => pathOn.map(Some(_))
       case _ =>
         children
           .map(_.firstExecutesOn)
@@ -60,8 +59,7 @@ case class Topology private (
 
   lazy val lastExecutesOn: Eval[Option[List[OnModel]]] =
     (cursor.op match {
-      case _: CallServiceModel => pathOn.map(Some(_))
-      case _: JoinModel => pathOn.map(Some(_))
+      case _: ForceExecModel => pathOn.map(Some(_))
       case _ =>
         children
           .map(_.lastExecutesOn)
@@ -185,13 +183,22 @@ object Topology extends Logging {
     def endsOn(current: Topology): Eval[List[OnModel]] =
       current.beginsOn
 
-    protected def lastChildFinally(current: Topology): Eval[List[OnModel]] =
-      current.lastChild.map(lc =>
+    private def childFinally(
+      current: Topology,
+      child: Topology => Option[Topology]
+    ): Eval[List[OnModel]] =
+      child(current).map(lc =>
         lc.forceExit.flatMap {
           case true => current.afterOn
           case false => lc.endsOn
         }
       ) getOrElse current.beginsOn
+
+    protected def lastChildFinally(current: Topology): Eval[List[OnModel]] =
+      childFinally(current, _.lastChild)
+
+    protected def firstChildFinally(current: Topology): Eval[List[OnModel]] =
+      childFinally(current, _.firstChild)
   }
 
   trait After {
@@ -286,7 +293,8 @@ object Topology extends Logging {
         .map(t => t -> t.parent.map(_.cursor.op))
         .takeWhile {
           case (t, Some(_: ParGroupModel)) => true
-          case (t, _) => t.nextSibling.isEmpty
+          case (t, Some(_: SeqGroupModel)) => t.nextSibling.isEmpty
+          case _ => false
         }
         .map(_._1)
         .map(t => t -> t.cursor.op)
@@ -300,7 +308,11 @@ object Topology extends Logging {
         .fold(Eval.later(current.cursor.moveUp.exists(_.hasExecLater)))(_.forceExit)
 
     override def afterOn(current: Topology): Eval[List[OnModel]] =
-      closestParExit(current).fold(afterParent(current))(_.afterOn)
+      current.forceExit.flatMap {
+        case true =>
+          closestParExit(current).fold(afterParent(current))(_.afterOn)
+        case false => super.afterOn(current)
+      }
 
     // Parent of this branch's parent xor – fixes the case when this xor is in par
     override def pathAfter(current: Topology): Eval[Chain[ValueModel]] =
@@ -328,7 +340,7 @@ object Topology extends Logging {
 
     // Xor tag ends where any child ends; can't get first one as it may lead to recursion
     override def endsOn(current: Topology): Eval[List[OnModel]] =
-      lastChildFinally(current)
+      firstChildFinally(current)
 
   }
 
@@ -496,7 +508,7 @@ object Topology extends Logging {
 
         logger.trace("Resolved: " + resolved)
 
-        if (debug) {
+        if (debug /*|| currI == 11 || currI == 12 || currI == 14*/ ) {
           println(Console.BLUE + rc + Console.RESET)
           println(currI + " : " + rc.topology)
           println("Before: " + rc.topology.beforeOn.value)
@@ -510,7 +522,10 @@ object Topology extends Logging {
 
           println("End  : " + rc.topology.endsOn.value)
           println("After: " + rc.topology.afterOn.value)
-          println("Exit : " + rc.topology.forceExit.value)
+          println(
+            "Exit : " + (if (rc.topology.forceExit.value) Console.MAGENTA + "true" + Console.RESET
+                         else "false")
+          )
           println(
             (if (rc.topology.pathAfter.value.nonEmpty) Console.YELLOW
              else "") + "PathAfter: " + Console.RESET + rc.topology.pathAfter.value
