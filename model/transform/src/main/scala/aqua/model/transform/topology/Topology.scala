@@ -311,7 +311,7 @@ object Topology extends Logging {
       current.forceExit.flatMap {
         case true =>
           closestParExit(current).fold(afterParent(current))(_.afterOn)
-        case false => afterParent(current)
+        case false => super.afterOn(current)
       }
 
     // Parent of this branch's parent xor – fixes the case when this xor is in par
