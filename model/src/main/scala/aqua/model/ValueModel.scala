@@ -65,17 +65,25 @@ object LambdaModel {
 }
 
 case class IntoFieldModel(field: String, `type`: Type) extends LambdaModel {
+  override def toString: String = s".$field:${`type`}"
+
   override def toRaw: LambdaRaw = IntoFieldRaw(field, `type`)
 }
 
 case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel {
   override lazy val usesVarNames: Set[String] = Set(idx).filterNot(_.forall(Character.isDigit))
 
-  override def toRaw: LambdaRaw = IntoIndexRaw(if (idx.forall(Character.isDigit)) LiteralRaw(idx, LiteralType.number) else VarRaw(idx, LiteralType.number), `type`)
+  override def toString: String = s"[$idx -> ${`type`}]"
+
+  override def toRaw: LambdaRaw = IntoIndexRaw(
+    if (idx.forall(Character.isDigit)) LiteralRaw(idx, LiteralType.number)
+    else VarRaw(idx, LiteralType.number),
+    `type`
+  )
 }
 
 case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel] = Chain.empty)
-  extends ValueModel with Logging {
+    extends ValueModel with Logging {
 
   override lazy val usesVarNames: Set[String] =
     lambda.toList.map(_.usesVarNames).foldLeft(Set(name))(_ ++ _)
@@ -109,7 +117,7 @@ case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel] = C
                     res <- two(variable)
                     <- variable
                */
-              case vm@VarModel(nn, _, _) if nn == name => deriveFrom(vm)
+              case vm @ VarModel(nn, _, _) if nn == name => deriveFrom(vm)
               // it couldn't go to a cycle as long as the semantics protects it
               case _ =>
                 n.resolveWith(vals) match {

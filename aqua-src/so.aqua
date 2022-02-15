@@ -1,6 +1,22 @@
-service TestS("some-id"):
-    t: string -> string
+service Kademlia("kad"):
+  neighborhood: -> []string
 
-func doStuff(c: bool):
-    if c:
-        TestS.t("fr")
+service Peer("peer"):
+  timestamp_sec: -> u64
+
+service Op2("op"):
+  identity: u64 -> u64
+
+func getTwoResults(node: string) -> []u64:
+  on node:
+    nodes <- Kademlia.neighborhood()
+    res: *u64
+    for n <- nodes par:
+      on n:
+        try:
+          res <- Peer.timestamp_sec()
+    Op2.identity(res!)
+    Op2.identity(res!1)
+    Op2.identity(res!2)
+  <- res
+
