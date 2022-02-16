@@ -7,9 +7,9 @@ type Module = {
     preopened_files: string[],
     envs: string[][],
     mapped_dirs: string[],
-    logging_mask?: number,
-    mem_pages_count?: number,
-    max_heap_size?: string
+    logging_mask: number[],
+    mem_pages_count: number[],
+    max_heap_size: string[]
 }
 
 type Config = {
