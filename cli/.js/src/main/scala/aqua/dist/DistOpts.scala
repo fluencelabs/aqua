@@ -64,7 +64,7 @@ object DistOpts extends Logging {
   def remove[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "remove",
-      header = "Remove a service onto a remote peer"
+      header = "Remove a service from a remote peer"
     ) {
       (
         GeneralRunOptions.commonOptWithSecretKey,
