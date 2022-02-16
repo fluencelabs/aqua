@@ -508,7 +508,7 @@ object Topology extends Logging {
 
         logger.trace("Resolved: " + resolved)
 
-        if (debug /*|| currI == 11 || currI == 12 || currI == 14*/ ) {
+        if (debug) {
           println(Console.BLUE + rc + Console.RESET)
           println(currI + " : " + rc.topology)
           println("Before: " + rc.topology.beforeOn.value)
