@@ -5,7 +5,11 @@ type Module = {
     mounted_binaries: string[][],
     logger_enabled: boolean[],
     preopened_files: string[],
-    mapped_dirs: string[]
+    envs: string[][],
+    mapped_dirs: string[],
+    logging_mask?: number,
+    mem_pages_count?: number,
+    max_heap_size?: string
 }
 
 type Config = {
@@ -26,6 +30,18 @@ export function fillWithEmptyArrays(config: Config): Config {
         }
         if (!m.mapped_dirs) {
             m.mapped_dirs = []
+        }
+        if (!m.envs) {
+            m.envs = []
+        }
+        if (!m.logging_mask) {
+            m.logging_mask = []
+        }
+        if (!m.mem_pages_count) {
+            m.mem_pages_count = []
+        }
+        if (!m.max_heap_size) {
+            m.max_heap_size = []
         }
         return m
     })
