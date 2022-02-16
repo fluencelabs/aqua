@@ -10,8 +10,9 @@ import cats.effect.{Resource, Sync}
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.scalajs.js.JSON
+import scala.scalajs.js.timers
 
 object FuncCaller {
 
@@ -60,16 +61,42 @@ object FuncCaller {
           )
           // error will be thrown on failed call
           _ <- callFuture
-          _ <- finisherService.promise.future
+          finisherFuture = finisherService.promise.future
+          // use a timeout in finisher if we have an async function and it hangs on node's side
+          finisher = config.common.timeout.map { t =>
+            setTimeout(finisherFuture, t)
+          }.getOrElse(finisherFuture)
+          _ <- finisher
         } yield ()).recover(handleFuncCallErrors).pure[F]
       }
     }
   }
 
+  private def setTimeout[T](f: Future[T], timeout: Int)(implicit
+    ec: ExecutionContext
+  ): Future[T] = {
+    val p = Promise[T]()
+    val timeoutHandle =
+      timers.setTimeout(timeout)(p.tryFailure(new TimeoutException(TimeoutErrorMessage)))
+    f.onComplete { result =>
+      timers.clearTimeout(timeoutHandle)
+      p.tryComplete(result)
+    }
+    p.future
+  }
+
+  val TimeoutErrorMessage =
+    "Function execution failed by timeout. You can increase timeout with '--timeout' option in milliseconds or check if your code can hang while executing."
+
   private def handleFuncCallErrors: PartialFunction[Throwable, Unit] = { t =>
-    val message = if (t.getMessage.contains("Request timed out after")) {
-      "Function execution failed by timeout. You can increase timeout with '--timeout' option in milliseconds or check if your code can hang while executing."
-    } else JSON.stringify(t.toString)
+    val message =
+      t match {
+        case te: TimeoutException => te.getMessage
+        case _ =>
+          if (t.getMessage.contains("Request timed out after")) {
+            TimeoutErrorMessage
+          } else JSON.stringify(t.toString)
+      }
 
     OutputPrinter.error(message)
   }
