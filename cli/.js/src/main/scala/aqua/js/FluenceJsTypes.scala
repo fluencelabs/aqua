@@ -1,7 +1,14 @@
 package aqua.js
 
 import aqua.*
-import aqua.backend.{ArgDefinition, FunctionDef, NamesConfig, ServiceDef, ServiceFunctionDef, TypeDefinition}
+import aqua.backend.{
+  ArgDefinition,
+  FunctionDef,
+  NamesConfig,
+  ServiceDef,
+  ServiceFunctionDef,
+  TypeDefinition
+}
 
 import scala.concurrent.Promise
 import scala.scalajs.js
@@ -78,7 +85,12 @@ case class FunctionDefJs(
 object FunctionDefJs {
 
   def apply(fd: FunctionDef): FunctionDefJs = {
-    FunctionDefJs(fd.functionName, TypeDefinitionJs(fd.returnType), fd.argDefs.map(ArgDefinitionJs.apply).toJSArray, NamesConfigJs(fd.names))
+    FunctionDefJs(
+      fd.functionName,
+      TypeDefinitionJs(fd.returnType),
+      fd.argDefs.map(ArgDefinitionJs.apply).toJSArray,
+      NamesConfigJs(fd.names)
+    )
   }
 }
 
@@ -89,7 +101,9 @@ case class ArgDefinitionJs(
 )
 
 object ArgDefinitionJs {
-  def apply(ad: ArgDefinition): ArgDefinitionJs = ArgDefinitionJs(ad.name, TypeDefinitionJs(ad.argType))
+
+  def apply(ad: ArgDefinition): ArgDefinitionJs =
+    ArgDefinitionJs(ad.name, TypeDefinitionJs(ad.argType))
 }
 
 @JSExportAll
@@ -107,8 +121,13 @@ case class ServiceFunctionDefJs(
 )
 
 object ServiceFunctionDefJs {
+
   def apply(sd: ServiceFunctionDef): ServiceFunctionDefJs = {
-    ServiceFunctionDefJs(sd.functionName, sd.argDefs.map(ArgDefinitionJs.apply).toJSArray, TypeDefinitionJs(sd.returnType))
+    ServiceFunctionDefJs(
+      sd.functionName,
+      sd.argDefs.map(ArgDefinitionJs.apply).toJSArray,
+      TypeDefinitionJs(sd.returnType)
+    )
   }
 }
 
@@ -116,6 +135,7 @@ object ServiceFunctionDefJs {
 case class ServiceDefJs(defaultServiceId: Option[String], functions: js.Array[ServiceFunctionDefJs])
 
 object ServiceDefJs {
+
   def apply(sd: ServiceDef): ServiceDefJs = {
     ServiceDefJs(sd.defaultServiceId, sd.functions.map(ServiceFunctionDefJs.apply).toJSArray)
   }
@@ -152,7 +172,7 @@ type AvmLogLevel = "trace" | "debug" | "info" | "warn" | "error" | "off"
 @JSExportAll
 case class PeerConfig(
   connectTo: String,
-  defaultTtlMs: Int,
+  defaultTtlMs: js.UndefOr[Int],
   avmLogLevel: AvmLogLevel,
   KeyPair: KeyPair
 )
@@ -192,7 +212,6 @@ object FluenceUtils {
   @JSImport("@fluencelabs/fluence", "setLogLevel")
   def setLogLevel(logLevel: FluenceJSLogLevel): Unit = js.native
 }
-
 
 /**
  * Public interface to Fluence JS SDK
@@ -284,4 +303,3 @@ class PeerId extends js.Object {
 class PublicKey extends js.Object {
   val bytes: js.typedarray.Uint8Array = js.native
 }
-

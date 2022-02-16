@@ -11,7 +11,6 @@ object FluenceOpts {
   val timeoutOpt: Opts[Int] =
     Opts
       .option[Int]("timeout", "Request timeout in milliseconds", "t")
-      .withDefault(14000)
 
   val multiaddrOpt: Opts[String] =
     Opts

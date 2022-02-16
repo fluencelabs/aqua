@@ -11,7 +11,7 @@ import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.run.RunCommand.createKeyPair
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import aqua.*
-import aqua.run.RunOpts.{checkDataGetServices, dataFromFileOpt, logger}
+import aqua.run.RunOpts.logger
 import aqua.types.ScalarType
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.*
@@ -36,17 +36,22 @@ object DistOpts extends Logging {
   val DistAqua = "aqua/dist.aqua"
 
   val DeployFuncName = "deploy"
+  val RemoveFuncName = "remove"
 
   def srvNameOpt: Opts[String] =
     Opts
       .option[String]("service", "What service from the config file to deploy", "s")
+
+  def srvIdOpt: Opts[String] =
+    Opts
+      .option[String]("id", "Service id to delete", "i")
 
   def deployOpt[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "dist",
       header = "Distribute a service onto a remote peer"
     ) {
-      Opts.subcommand(deploy)
+      Opts.subcommand(deploy).orElse(Opts.subcommand(remove))
     }
 
   def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
@@ -55,7 +60,30 @@ object DistOpts extends Logging {
     ArgumentGetter(getter.function.value, filledConfig)
   }
 
-  // Uploads a file to IPFS
+  // Removes service from a node
+  def remove[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+    Command(
+      name = "remove",
+      header = "Remove a service from a remote peer"
+    ) {
+      (
+        GeneralRunOptions.commonOptWithSecretKey,
+        srvIdOpt
+      ).mapN { (common, srvId) =>
+        PlatformOpts.getPackagePath(DistAqua).flatMap { distAquaPath =>
+          val args = LiteralRaw.quote(srvId) :: Nil
+          RunOpts.execRun(
+            common,
+            RemoveFuncName,
+            distAquaPath,
+            Nil,
+            args
+          )
+        }
+      }
+    }
+
+  // Uploads a file to IPFS, creates blueprints and deploys a service
   def deploy[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(
       name = "deploy",
@@ -63,7 +91,7 @@ object DistOpts extends Logging {
     ) {
       (
         GeneralRunOptions.commonOpt,
-        dataFromFileOpt[F],
+        ArgOpts.dataFromFileOpt[F],
         srvNameOpt
       ).mapN { (common, dataFromFileF, srvName) =>
         dataFromFileF.flatMap { dff =>
@@ -71,22 +99,24 @@ object DistOpts extends Logging {
             val args = LiteralRaw.quote(srvName) :: VarRaw(srvName, ScalarType.string) :: Nil
             dff
               .andThen(data =>
-                checkDataGetServices(args, data).map(getServices =>
-                  // TODO: delete this another dirty hack
-                  // if we have default timeout, increase it
-                  val commonWithTimeout = if (common.timeout == 14000) {
-                    common.copy(timeout = 60000)
-                  } else common
-                  RunOpts.execRun(
-                    commonWithTimeout,
-                    DeployFuncName,
-                    distAquaPath,
-                    Nil,
-                    args,
-                    getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) },
-                    Nil
+                ArgOpts
+                  .checkDataGetServices(args, Some(data))
+                  .map(getServices =>
+                    // if we have default timeout, increase it
+                    val commonWithTimeout = if (common.timeout.isEmpty) {
+                      common.copy(timeout = Some(60000))
+                    } else common
+                    RunOpts.execRun(
+                      commonWithTimeout,
+                      DeployFuncName,
+                      distAquaPath,
+                      Nil,
+                      args,
+                      // hack: air cannot use undefined fields, fill undefined arrays with nils
+                      getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) },
+                      Nil
+                    )
                   )
-                )
               )
               .fold(
                 errs =>

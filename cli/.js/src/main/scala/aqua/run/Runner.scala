@@ -7,8 +7,8 @@ import aqua.io.OutputPrinter
 import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.raw.ops.{Call, CallArrowTag, FuncOp, SeqTag}
-import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{ArrowType, BoxType, NilType, Type}
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.types.{ArrowType, BoxType, NilType, ScalarType, Type, UnlabelledConsType}
 import cats.data.{Validated, ValidatedNec}
 import cats.effect.kernel.Async
 import cats.syntax.show.*
@@ -109,9 +109,10 @@ class Runner(
     consoleService: ResultPrinter,
     finisherService: Finisher
   ): ValidatedNec[String, FuncArrow] = {
+    val codomain = funcCallable.arrowType.codomain.toList
     // pass results to a printing service if an input function returns a result
     // otherwise just call it
-    val body = funcCallable.arrowType.codomain.toList match {
+    val body = codomain match {
       case Nil =>
         CallArrowTag(funcName, Call(args, Nil)).leaf
       case types =>
@@ -144,12 +145,20 @@ class Runner(
     gettersV.map { getters =>
       val gettersTags = getters.map(s => s.callTag().leaf)
 
+      // return something to wait a result if we have return value in function
+      // this is needed to catch an error if it will be occurred
+      val (returnCodomain, ret) = if (codomain.isEmpty) {
+        (NilType, Nil)
+      } else {
+        (UnlabelledConsType(ScalarType.string, NilType), LiteralRaw.quote("ok") :: Nil)
+      }
+
       FuncArrow(
         config.functionWrapperName,
         SeqTag.wrap((gettersTags :+ body :+ finisherServiceTag.leaf): _*),
-        // no arguments and returns nothing
-        ArrowType(NilType, NilType),
-        Nil,
+        // no arguments and returns "ok" string
+        ArrowType(NilType, returnCodomain),
+        ret,
         Map(funcName -> funcCallable),
         Map.empty
       )
