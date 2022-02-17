@@ -12,7 +12,11 @@ data ModuleConf:
   mounted_binaries: ?[][]string
   preopened_files: ?[]string
   mapped_dirs: ?[][]string
+  envs: ?[][]string
   logger_enabled: ?bool
+  logging_mask: ?i32
+  mem_pages_count: ?u32
+  max_heap_size: ?string
 
 data ServiceConf:
   modules: []ModuleConf
@@ -48,7 +52,7 @@ func deploy(serviceName: string, serviceConf: ServiceConf) -> string:
 --      Console.print(hostRes.path)
 --      on ON_PEER:
 
-        conf <- Dist.make_module_config(m.name, nil, nil, m.logger_enabled, m.preopened_files, nil, m.mapped_dirs, m.mounted_binaries, nil)
+        conf <- Dist.make_module_config(m.name, m.mem_pages_count, m.max_heap_size, m.logger_enabled, m.preopened_files, m.envs, m.mapped_dirs, m.mounted_binaries, m.logging_mask)
 
 --      Console.print("Created config")
 
