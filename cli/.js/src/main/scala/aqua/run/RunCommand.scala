@@ -74,37 +74,20 @@ object RunCommand extends Logging {
     transformConfig: TransformConfig
   )(implicit ec: ExecutionContext): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
 
     for {
-      prelude <- Prelude.init(withRunImports = true)
-      sources = new AquaFileSources[F](input, prelude.importPaths ++ imports)
-      // compile only context to wrap and call function later
-      compileResult <- Clock[F].timed(
-        AquaCompiler
-          .compileToContext[F, AquaFileError, FileModuleId, FileSpan.F](
-            sources,
-            SpanParser.parser,
-            transformConfig
-          )
-          .map(_.leftMap(_.map(_.show)))
-      )
-      (compileTime, contextV) = compileResult
+      funcArrowV <- funcCompiler.compile(func)
       callResult <- Clock[F].timed {
-        val resultV: ValidatedNec[String, F[Unit]] = contextV.andThen { contextC =>
-          findFunction(contextC, func) match {
-            case Some(funcCallable) =>
-              val runner =
-                new Runner(func, funcCallable, args, runConfig, transformConfig)
-              runner.run()
-            case None =>
-              Validated.invalidNec[String, F[Unit]](s"There is no function called '$func'")
-          }
+        val resultV: ValidatedNec[String, F[Unit]] = funcArrowV.andThen { funcCallable =>
+          val runner =
+            new Runner(func, funcCallable, args, runConfig, transformConfig)
+          runner.run()
         }
         resultV.sequence
       }
       (callTime, result) = callResult
     } yield {
-      logger.debug(s"Compile time: ${compileTime.toMillis}ms")
       logger.debug(s"Call time: ${callTime.toMillis}ms")
       result.fold(
         { (errs: NonEmptyChain[String]) =>

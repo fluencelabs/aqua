@@ -7,7 +7,7 @@ import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.Span
-import aqua.types.BottomType
+import aqua.types.{BottomType, LiteralType}
 import cats.{~>, Id}
 import cats.effect.Concurrent
 import com.monovore.decline.Opts
@@ -22,6 +22,7 @@ import scala.scalajs.js
 import scala.scalajs.js.JSON
 
 case class FuncWithData(name: String, args: List[ValueRaw], getters: Map[String, ArgumentGetter])
+case class FuncWithLiteralArgs(name: String, args: List[LiteralRaw])
 
 object ArgOpts {
 
@@ -80,6 +81,20 @@ object ArgOpts {
     }
   }
 
+  // Func with only primitive arguments (strings or numbers)
+  def funcWithLiteralsOpt[F[_]: Files: Concurrent]
+    : Opts[F[ValidatedNec[String, FuncWithLiteralArgs]]] = {
+    (dataFileOrStringOpt[F], funcOpt).mapN { case (dataF, (func, args)) =>
+      dataF.map { dataV =>
+        dataV.andThen { data =>
+          replaceVarsWithLiterals(args, data).map { literals =>
+            FuncWithLiteralArgs(func, literals)
+          }
+        }
+      }
+    }
+  }
+
   // checks if data is presented if there is non-literals in function arguments
   // creates services to add this data into a call
   def checkDataGetServices(
@@ -103,6 +118,27 @@ object ArgOpts {
         }
         validNec(services.toMap)
     }
+  }
+
+  def replaceVarsWithLiterals(
+    args: List[ValueRaw],
+    data: Option[js.Dynamic]
+  ): ValidatedNec[String, List[LiteralRaw]] = {
+    val literals = args.map {
+      case l: LiteralRaw => validNec(l)
+      case v @ VarRaw(name, _, _) =>
+        data.map { d =>
+          val arg = d.selectDynamic(name)
+          js.typeOf(arg) match {
+            case "number" => validNec(LiteralRaw(arg.toString, LiteralType.number))
+            case "string" => validNec(LiteralRaw(arg.toString, LiteralType.string))
+            case t =>
+              invalidNec(s"Arguments can be only 'string' or 'number' type in scheduled scripts")
+          }
+        }.getOrElse(invalidNec(s"No argument with name '$name' in data"))
+    }
+
+    literals.traverse(identity)
   }
 
   def dataOpt: Opts[js.Dynamic] =

@@ -44,7 +44,7 @@ object DistOpts extends Logging {
 
   def srvIdOpt: Opts[String] =
     Opts
-      .option[String]("id", "Service id to delete", "i")
+      .option[String]("id", "Service id to remove", "i")
 
   def deployOpt[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     Command(

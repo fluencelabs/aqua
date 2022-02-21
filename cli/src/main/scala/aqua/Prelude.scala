@@ -29,7 +29,10 @@ object Prelude extends Logging {
     }
 
     nodeImportF.map { nodeImport =>
-      val imports = nodeImport.toList ++ PlatformOpts.getGlobalNodeModulePath.toList ++ runImports
+      val imports =
+        nodeImport.toList ++ PlatformOpts.getGlobalNodeModulePath.toList ++ (if (withRunImports)
+                                                                               runImports
+                                                                             else Nil)
 
       new Prelude(imports)
     }
