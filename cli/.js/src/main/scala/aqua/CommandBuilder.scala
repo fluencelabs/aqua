@@ -102,7 +102,7 @@ object SubCommandBuilder {
 }
 
 // Builds top command with subcommands
-class CommandBuilder(
+case class CommandBuilder(
   name: String,
   header: String,
   subcommands: NonEmptyList[SubCommandBuilder]
