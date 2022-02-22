@@ -37,6 +37,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
         Validated.invalidNec[String, FuncArrow](s"There is no function called '$funcName'")
       )
 
+  // Compile and get only one function
   def compile(funcName: String): F[ValidatedNec[String, FuncArrow]] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
