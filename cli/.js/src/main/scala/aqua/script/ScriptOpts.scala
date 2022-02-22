@@ -47,14 +47,11 @@ object ScriptOpts extends Logging {
   val ListFuncName = "list"
 
   def scriptOpt[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
+    CommandBuilder(
       name = "script",
-      header = "Manage scheduled scripts"
-    ) {
-      Opts.subcommand(schedule) orElse
-        Opts.subcommand(remove) orElse
-        Opts.subcommand(list)
-    }
+      header = "Manage scheduled scripts",
+      NonEmptyList(schedule, list :: remove :: Nil)
+    ).command
 
   def intervalOpt: Opts[Option[Int]] =
     AppOpts.wrapWithOption(
@@ -75,57 +72,66 @@ object ScriptOpts extends Logging {
     AirGen(funcRes.body).generate.show
   }
 
-  def schedule[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
+  private def compileAir[F[_]: Async](
+    input: Path,
+    imports: List[Path],
+    funcWithArgs: FuncWithLiteralArgs
+  ): F[ValidatedNec[String, String]] = {
+    implicit val aio: AquaIO[F] = new AquaFilesIO[F]
+    val tConfig = TransformConfig(relayVarName = None, wrapWithXor = false)
+    val funcCompiler =
+      new FuncCompiler[F](
+        input,
+        imports,
+        tConfig,
+        withRunImport = true
+      )
+
+    for {
+      callableV <- funcCompiler.compile(funcWithArgs.name)
+      wrappedBody = CallArrowTag(funcWithArgs.name, Call(funcWithArgs.args, Nil)).leaf
+      result = callableV
+        .map(callable =>
+          generateAir(
+            FuncArrow(
+              funcWithArgs.name + "_scheduled",
+              wrappedBody,
+              ArrowType(NilType, NilType),
+              Nil,
+              Map(funcWithArgs.name -> callable),
+              Map.empty
+            ),
+            tConfig
+          )
+        )
+    } yield result
+  }
+
+  def schedule[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
+    SubCommandBuilder.applyF(
       name = "add",
-      header = "Upload aqua function as a scheduled script."
-    ) {
+      header = "Upload aqua function as a scheduled script.",
       (
         GeneralRunOptions.commonOptWithSecretKey,
         scheduleOptsCompose[F],
         intervalOpt
       ).mapN { (common, optionsF, intervalOp) =>
-        LogFormatter.initLogger(Some(common.logLevel))
-        optionsF.flatMap(
-          _.map { case (input, imports, funcWithArgs, aquaPath) =>
-            implicit val aio: AquaIO[F] = new AquaFilesIO[F]
-            val tConfig = TransformConfig(relayVarName = None, wrapWithXor = false)
-            val funcCompiler =
-              new FuncCompiler[F](
-                input,
-                imports,
-                tConfig,
-                withRunImport = true
-              )
+        val res: F[ValidatedNec[String, RunInfo]] = optionsF
+          .flatMap(
+            _.map { case (input, imports, funcWithArgs) =>
+              val intervalArg =
+                intervalOp
+                  .map(i => LiteralRaw(i.toString, LiteralType.number))
+                  .getOrElse(ValueRaw.Nil)
 
-            val intervalArg =
-              intervalOp
-                .map(i => LiteralRaw(i.toString, LiteralType.number))
-                .getOrElse(ValueRaw.Nil)
-
-            for {
-              callableV <- funcCompiler.compile(funcWithArgs.name)
-              wrappedBody = CallArrowTag(funcWithArgs.name, Call(funcWithArgs.args, Nil)).leaf
-              result: ValidatedNec[String, ExitCode] <- callableV
-                .map(callable =>
-                  generateAir(
-                    FuncArrow(
-                      funcWithArgs.name + "_scheduled",
-                      wrappedBody,
-                      ArrowType(NilType, NilType),
-                      Nil,
-                      Map(funcWithArgs.name -> callable),
-                      Map.empty
-                    ),
-                    tConfig
-                  )
-                )
-                .map { script =>
+              val someRes: F[ValidatedNec[String, RunInfo]] = for {
+                scriptV <- compileAir(input, imports, funcWithArgs)
+                result: ValidatedNec[String, RunInfo] = scriptV.map { script =>
                   val scriptVar = VarRaw("script", ScalarType.string)
-                  RunOpts.execRun(
+                  RunInfo(
                     common,
                     AddFuncName,
-                    aquaPath,
+                    PackagePath(ScriptAqua),
                     Nil,
                     scriptVar :: intervalArg :: Nil,
                     Map(
@@ -136,87 +142,57 @@ object ScriptOpts extends Logging {
                     )
                   )
                 }
-                .sequence
-            } yield {
-              result
-            }
-          }.fold(
-            errs =>
-              Async[F].pure {
-                errs.map(logger.error)
-                cats.effect.ExitCode.Error
-              },
-            res =>
-              res.map {
-                case Validated.Invalid(errs) =>
-                  errs.map(logger.error)
-                  cats.effect.ExitCode.Error
-                case Validated.Valid(ec) => ec
-
+              } yield {
+                result
               }
+
+              someRes
+            }.fold(
+              errs => Validated.Invalid[NonEmptyChain[String]](errs).pure[F],
+              identity
+            )
           )
-        )
+        res
       }
-    }
+    )
 
   def scheduleOptsCompose[F[_]: Files: Async]
-    : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithLiteralArgs, Path)]]] = {
+    : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithLiteralArgs)]]] = {
     (AppOpts.inputOpts[F], AppOpts.importOpts[F], ArgOpts.funcWithLiteralsOpt[F]).mapN {
       case (inputF, importF, funcWithLiteralsF) =>
         for {
           inputV <- inputF
           importV <- importF
           funcWithLiteralsV <- funcWithLiteralsF
-          aquaPath <- PlatformOpts.getPackagePath[F](ScriptAqua)
         } yield {
           (inputV, importV, funcWithLiteralsV).mapN { case (i, im, f) =>
-            (i, im, f, aquaPath)
+            (i, im, f)
           }
         }
     }
   }
 
   // Removes scheduled script from a node
-  def remove[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "remove",
-      header = "Remove a service from a remote peer"
-    ) {
+  def remove[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
+    SubCommandBuilder.valid[F](
+      "remove",
+      "Remove a service from a remote peer",
       (
         GeneralRunOptions.commonOptWithSecretKey,
         scriptIdOpt
       ).mapN { (common, scriptId) =>
-        PlatformOpts.getPackagePath(ScriptAqua).flatMap { distAquaPath =>
-          val args = LiteralRaw.quote(scriptId) :: Nil
-          RunOpts.execRun(
-            common,
-            RemoveFuncName,
-            distAquaPath,
-            Nil,
-            args
-          )
-        }
+        RunInfo(
+          common,
+          RemoveFuncName,
+          PackagePath(ScriptAqua),
+          Nil,
+          LiteralRaw.quote(scriptId) :: Nil
+        )
       }
-    }
+    )
 
   // Print all scheduled scripts
-  def list[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "list",
-      header = "Print all scheduled scripts"
-    ) {
-      (
-        GeneralRunOptions.commonOpt
-      ).map { common =>
-        PlatformOpts.getPackagePath(ScriptAqua).flatMap { distAquaPath =>
-          RunOpts.execRun(
-            common,
-            ListFuncName,
-            distAquaPath,
-            Nil,
-            Nil
-          )
-        }
-      }
-    }
+  def list[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
+    SubCommandBuilder
+      .simple[F]("list", "Print all scheduled scripts", PackagePath(ScriptAqua), ListFuncName)
 }
