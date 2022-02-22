@@ -59,7 +59,7 @@ object RunOpts extends Logging {
    *   will be registered before calling for correct execution
    * @return
    */
-  def execRun[F[_]: Files: Async](
+  def execRun[F[_]: Async](
     common: GeneralRunOptions,
     funcName: String,
     inputPath: Path,

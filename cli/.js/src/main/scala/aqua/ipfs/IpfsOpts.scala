@@ -54,7 +54,7 @@ object IpfsOpts extends Logging {
     CommandBuilder("ipfs", "Working with IPFS on peer", NonEmptyList.one(upload[F])).command
 
   // Uploads a file to IPFS
-  def upload[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder =
+  def upload[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
     SubCommandBuilder.valid(
       "upload",
       "Upload a file to IPFS",

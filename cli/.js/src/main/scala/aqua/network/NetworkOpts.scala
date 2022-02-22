@@ -70,7 +70,7 @@ object NetworkOpts {
       .argument[String]()
       .withDefault(Krasnodar)
 
-  def listModules[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder =
+  def listModules[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
     SubCommandBuilder.simple(
       "listModules",
       "Print all modules",
@@ -78,7 +78,7 @@ object NetworkOpts {
       ListModulesFuncName
     )
 
-  def listBlueprints[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder =
+  def listBlueprints[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
     SubCommandBuilder.simple(
       "listBlueprints",
       "Print all blueprints",
@@ -86,7 +86,7 @@ object NetworkOpts {
       ListBlueprintsFuncName
     )
 
-  def listInterfacesByPeer[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder =
+  def listInterfacesByPeer[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
     SubCommandBuilder.valid(
       "listInterfaces",
       "Print all services on a node owned by peer",
@@ -101,7 +101,7 @@ object NetworkOpts {
       }
     )
 
-  def listInterfaces[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder =
+  def listInterfaces[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
     SubCommandBuilder.simple(
       "listAllInterfaces",
       "Print all services on a node",
@@ -109,7 +109,7 @@ object NetworkOpts {
       ListInterfacesFuncName
     )
 
-  def getInterface[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder =
+  def getInterface[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
     SubCommandBuilder.valid(
       "getInterface",
       "Print a service interface",
@@ -124,7 +124,7 @@ object NetworkOpts {
       }
     )
 
-  def getModuleInterface[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder =
+  def getModuleInterface[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
     SubCommandBuilder.valid(
       "getModuleInterface",
       "Print a module interface",

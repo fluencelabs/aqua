@@ -34,7 +34,7 @@ object PlatformOpts extends Logging {
       NetworkOpts.commands[F]
 
   // it could be global installed aqua and local installed, different paths for this
-  def getPackagePath[F[_]: Files: Async](path: String): F[Path] = {
+  def getPackagePath[F[_]: Async](path: String): F[Path] = {
     val meta = Meta.metaUrl
     val req = Module.createRequire(meta)
     Try {

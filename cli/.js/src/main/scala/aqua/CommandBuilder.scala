@@ -13,6 +13,7 @@ import cats.syntax.monad.*
 import cats.syntax.functor.*
 import cats.data.{NonEmptyList, Validated, ValidatedNec}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
+import cats.{Applicative, Monad}
 import scribe.Logging
 
 import scala.concurrent.ExecutionContext
@@ -36,56 +37,72 @@ case class RunInfo(
 )
 
 // Builds subcommand
-class SubCommandBuilder(name: String, header: String, opts: Opts[ValidatedNec[String, RunInfo]])
-    extends Logging {
+class SubCommandBuilder[F[_]: Async](
+  name: String,
+  header: String,
+  opts: Opts[F[ValidatedNec[String, RunInfo]]]
+) extends Logging {
 
-  def command[F[_]: Files: Async](implicit
+  def command(implicit
     ec: ExecutionContext
   ): Command[F[ExitCode]] = Command(name, header) {
-    opts.map {
-      case Validated.Valid(ri) =>
-        (ri.input match {
-          case PackagePath(p) => PlatformOpts.getPackagePath(p)
-          case RelativePath(p) => Path(p).pure[F]
-        }).flatMap { path =>
-          RunOpts.execRun(
-            ri.common,
-            ri.funcName,
-            path,
-            ri.imports,
-            ri.args,
-            ri.argumentGetters,
-            ri.services
-          )
-        }
-      case Validated.Invalid(errs) =>
-        errs.map(logger.error)
-        ExitCode.Error.pure[F]
-
+    opts.map { riF =>
+      riF.flatMap {
+        case Validated.Valid(ri) =>
+          (ri.input match {
+            case PackagePath(p) => PlatformOpts.getPackagePath(p)
+            case RelativePath(p) => Path(p).pure[F]
+          }).flatMap { path =>
+            RunOpts.execRun(
+              ri.common,
+              ri.funcName,
+              path,
+              ri.imports,
+              ri.args,
+              ri.argumentGetters,
+              ri.services
+            )
+          }
+        case Validated.Invalid(errs) =>
+          errs.map(logger.error)
+          ExitCode.Error.pure[F]
+      }
     }
   }
 }
 
 object SubCommandBuilder {
 
-  def apply(
+  def apply[F[_]: Async](
     name: String,
     header: String,
     opts: Opts[ValidatedNec[String, RunInfo]]
-  ): SubCommandBuilder = {
+  ): SubCommandBuilder[F] = {
+    new SubCommandBuilder(name, header, opts.map(_.pure[F]))
+  }
+
+  def applyF[F[_]: Async](
+    name: String,
+    header: String,
+    opts: Opts[F[ValidatedNec[String, RunInfo]]]
+  ): SubCommandBuilder[F] = {
     new SubCommandBuilder(name, header, opts)
   }
 
-  def valid(name: String, header: String, opts: Opts[RunInfo]): SubCommandBuilder = {
-    new SubCommandBuilder(name, header, opts.map(ri => validNec[String, RunInfo](ri)))
+  def valid[F[_]: Async](
+    name: String,
+    header: String,
+    opts: Opts[RunInfo]
+  ): SubCommandBuilder[F] = {
+    SubCommandBuilder(name, header, opts.map(ri => validNec[String, RunInfo](ri)))
   }
 
-  def simple(
+  def simple[F[_]: Async](
     name: String,
     header: String,
     path: AquaPath,
     funcName: String
-  ): SubCommandBuilder =
+  ): SubCommandBuilder[F] =
     SubCommandBuilder
       .valid(
         name,
@@ -95,24 +112,24 @@ object SubCommandBuilder {
         }
       )
 
-  def subcommands[F[_]: Files: Async](subs: NonEmptyList[SubCommandBuilder])(implicit
+  def subcommands[F[_]: Async](subs: NonEmptyList[SubCommandBuilder[F]])(implicit
     ec: ExecutionContext
   ): Opts[F[ExitCode]] =
-    Opts.subcommands(subs.head.command[F], subs.tail.map(_.command[F]): _*)
+    Opts.subcommands(subs.head.command, subs.tail.map(_.command): _*)
 }
 
 // Builds top command with subcommands
-case class CommandBuilder(
+case class CommandBuilder[F[_]: Async](
   name: String,
   header: String,
-  subcommands: NonEmptyList[SubCommandBuilder]
+  subcommands: NonEmptyList[SubCommandBuilder[F]]
 ) {
 
-  def command[F[_]: Files: Async](implicit
+  def command(implicit
     ec: ExecutionContext
   ): Command[F[ExitCode]] = {
     Command(name = name, header = header) {
-      Opts.subcommands(subcommands.head.command[F], subcommands.tail.map(_.command[F]): _*)
+      Opts.subcommands(subcommands.head.command, subcommands.tail.map(_.command): _*)
     }
   }
 }
