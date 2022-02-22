@@ -41,52 +41,6 @@ object RunOpts extends Logging {
       onPeer.map(s => ConstantRaw(OnPeerConst, LiteralRaw.quote(s), false)).toList
     )
 
-  /**
-   * Executes a function with the specified settings
-   * @param common
-   *   common settings
-   * @param funcName
-   *   function name
-   * @param inputPath
-   *   path to a file with a function
-   * @param imports
-   *   imports that must be specified for correct compilation
-   * @param args
-   *   arguments to pass into a function
-   * @param argumentGetters
-   *   services to get argument if it is a variable
-   * @param services
-   *   will be registered before calling for correct execution
-   * @return
-   */
-  def execRun[F[_]: Async](
-    common: GeneralRunOptions,
-    funcName: String,
-    inputPath: Path,
-    imports: List[Path] = Nil,
-    args: List[ValueRaw] = Nil,
-    argumentGetters: Map[String, ArgumentGetter] = Map.empty,
-    services: List[Service] = Nil
-  )(implicit
-    ec: ExecutionContext
-  ): F[ExitCode] = {
-    LogFormatter.initLogger(Some(common.logLevel))
-    implicit val aio: AquaIO[F] = new AquaFilesIO[F]
-    RunCommand
-      .run[F](
-        funcName,
-        args,
-        inputPath,
-        imports,
-        RunConfig(common, argumentGetters, services ++ builtinServices),
-        transformConfigWithOnPeer(common.on)
-      )
-      .map(_ => ExitCode.Success)
-  }
-
-  private val builtinServices =
-    aqua.builder.Console() :: aqua.builder.IPFSUploader("ipfs", "uploadFile") :: Nil
-
   def runOptsCompose[F[_]: Files: Concurrent]
     : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithData)]]] = {
     (AppOpts.inputOpts[F], AppOpts.importOpts[F], ArgOpts.funcWithArgsOpt[F]).mapN {
@@ -118,13 +72,13 @@ object RunOpts extends Logging {
         optionsF.flatMap(
           _.map { case (input, imps, funcWithArgs) =>
             RunCommand
-              .run(
+              .execRun[F](
+                common,
                 funcWithArgs.name,
-                funcWithArgs.args,
                 input,
                 imps,
-                RunConfig(common, funcWithArgs.getters, builtinServices),
-                transformConfigWithOnPeer(common.on)
+                funcWithArgs.args,
+                funcWithArgs.getters
               )
           }.fold(
             errs =>

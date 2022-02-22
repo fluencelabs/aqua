@@ -6,7 +6,7 @@ import aqua.backend.air.{AirBackend, FuncAirGen}
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.backend.{FunctionDef, Generated}
-import aqua.builder.{Finisher, ResultPrinter}
+import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
@@ -18,11 +18,12 @@ import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
 import aqua.raw.value.ValueRaw
 import aqua.run.RunConfig
+import aqua.run.RunOpts.transformConfigWithOnPeer
 import aqua.types.*
 import cats.data.*
 import cats.effect.kernel.{Async, Clock}
 import cats.effect.syntax.async.*
-import cats.effect.{IO, IOApp, Resource, Sync}
+import cats.effect.{ExitCode, IO, IOApp, Resource, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -96,6 +97,52 @@ object RunCommand extends Logging {
         identity
       )
     }
+  }
+
+  private val builtinServices =
+    aqua.builder.Console() :: aqua.builder.IPFSUploader("ipfs", "uploadFile") :: Nil
+
+  /**
+   * Executes a function with the specified settings
+   * @param common
+   *   common settings
+   * @param funcName
+   *   function name
+   * @param inputPath
+   *   path to a file with a function
+   * @param imports
+   *   imports that must be specified for correct compilation
+   * @param args
+   *   arguments to pass into a function
+   * @param argumentGetters
+   *   services to get argument if it is a variable
+   * @param services
+   *   will be registered before calling for correct execution
+   * @return
+   */
+  def execRun[F[_]: Async](
+    common: GeneralRunOptions,
+    funcName: String,
+    inputPath: Path,
+    imports: List[Path] = Nil,
+    args: List[ValueRaw] = Nil,
+    argumentGetters: Map[String, ArgumentGetter] = Map.empty,
+    services: List[Service] = Nil
+  )(implicit
+    ec: ExecutionContext
+  ): F[ExitCode] = {
+    LogFormatter.initLogger(Some(common.logLevel))
+    implicit val aio: AquaIO[F] = new AquaFilesIO[F]
+    RunCommand
+      .run[F](
+        funcName,
+        args,
+        inputPath,
+        imports,
+        RunConfig(common, argumentGetters, services ++ builtinServices),
+        transformConfigWithOnPeer(common.on)
+      )
+      .map(_ => ExitCode.Success)
   }
 
 }

@@ -2,7 +2,7 @@ package aqua
 
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.raw.value.ValueRaw
-import aqua.run.{GeneralRunOptions, RunOpts}
+import aqua.run.{GeneralRunOptions, RunCommand, RunOpts}
 import com.monovore.decline.{Command, Opts}
 import fs2.io.file.{Files, Path}
 import cats.effect.ExitCode
@@ -54,7 +54,7 @@ class SubCommandBuilder[F[_]: Async](
             case PackagePath(p) => PlatformOpts.getPackagePath(p)
             case RelativePath(p) => Path(p).pure[F]
           }).flatMap { path =>
-            RunOpts.execRun(
+            RunCommand.execRun(
               ri.common,
               ri.funcName,
               path,

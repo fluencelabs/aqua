@@ -46,7 +46,7 @@ object ScriptOpts extends Logging {
   val RemoveFuncName = "remove"
   val ListFuncName = "list"
 
-  def scriptOpt[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+  def scriptOpt[F[_]: Async: AquaIO](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     CommandBuilder(
       name = "script",
       header = "Manage scheduled scripts",
@@ -72,12 +72,11 @@ object ScriptOpts extends Logging {
     AirGen(funcRes.body).generate.show
   }
 
-  private def compileAir[F[_]: Async](
+  private def compileAir[F[_]: Async: AquaIO](
     input: Path,
     imports: List[Path],
     funcWithArgs: FuncWithLiteralArgs
   ): F[ValidatedNec[String, String]] = {
-    implicit val aio: AquaIO[F] = new AquaFilesIO[F]
     val tConfig = TransformConfig(relayVarName = None, wrapWithXor = false)
     val funcCompiler =
       new FuncCompiler[F](
@@ -107,7 +106,7 @@ object ScriptOpts extends Logging {
     } yield result
   }
 
-  def schedule[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
+  def schedule[F[_]: Async: AquaIO](implicit ec: ExecutionContext): SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
       name = "add",
       header = "Upload aqua function as a scheduled script.",
