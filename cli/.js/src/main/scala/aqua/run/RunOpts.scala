@@ -6,7 +6,19 @@ import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.types.BottomType
-import aqua.{AppOpts, AquaIO, ArgOpts, FileOpts, FluenceOpts, FuncWithData, LogFormatter}
+import aqua.{
+  AppOpts,
+  AquaIO,
+  ArgOpts,
+  CommandBuilder,
+  FileOpts,
+  FluenceOpts,
+  FuncWithData,
+  LogFormatter,
+  RelativePath,
+  RunInfo,
+  SubCommandBuilder
+}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.ArgOpts.checkDataGetServices
@@ -57,45 +69,36 @@ object RunOpts extends Logging {
     }
   }
 
-  def runOptions[F[_]: Files: AquaIO: Async](implicit
+  def runOptions[F[_]: AquaIO: Async](implicit
     ec: ExecutionContext
-  ): Opts[F[cats.effect.ExitCode]] =
-    (
-      GeneralRunOptions.commonOpt,
-      runOptsCompose[F]
-    ).mapN {
-      case (
-            common,
-            optionsF
-          ) =>
-        LogFormatter.initLogger(Some(common.logLevel))
-        optionsF.flatMap(
-          _.map { case (input, imps, funcWithArgs) =>
-            RunCommand
-              .execRun[F](
+  ): SubCommandBuilder[F] =
+    SubCommandBuilder.applyF(
+      name = "run",
+      header = "Run a function from an aqua code",
+      (
+        GeneralRunOptions.commonOpt,
+        runOptsCompose[F]
+      ).mapN {
+        case (
+              common,
+              optionsF
+            ) =>
+          LogFormatter.initLogger(Some(common.logLevel))
+          optionsF.map(
+            _.map { case (input, imps, funcWithArgs) =>
+              RunInfo(
                 common,
                 funcWithArgs.name,
-                input,
+                RelativePath(input),
                 imps,
                 funcWithArgs.args,
                 funcWithArgs.getters
               )
-          }.fold(
-            errs =>
-              Async[F].pure {
-                errs.map(logger.error)
-                cats.effect.ExitCode.Error
-              },
-            _.map(_ => cats.effect.ExitCode.Success)
+            }
           )
-        )
-    }
+      }
+    )
 
   def runCommand[F[_]: Files: AquaIO: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "run",
-      header = "Run a function from an aqua code"
-    ) {
-      runOptions
-    }
+    runOptions.command
 }

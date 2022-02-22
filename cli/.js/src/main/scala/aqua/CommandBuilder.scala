@@ -18,13 +18,11 @@ import scribe.Logging
 
 import scala.concurrent.ExecutionContext
 
-sealed trait AquaPath {
-  val path: String
-}
+sealed trait AquaPath
 // Path for package relative files
 case class PackagePath(path: String) extends AquaPath
 // Path for absolute or call path relative files
-case class RelativePath(path: String) extends AquaPath
+case class RelativePath(path: Path) extends AquaPath
 
 case class RunInfo(
   common: GeneralRunOptions,
@@ -52,7 +50,7 @@ class SubCommandBuilder[F[_]: Async](
           LogFormatter.initLogger(Some(ri.common.logLevel))
           (ri.input match {
             case PackagePath(p) => PlatformOpts.getPackagePath(p)
-            case RelativePath(p) => Path(p).pure[F]
+            case RelativePath(p) => p.pure[F]
           }).flatMap { path =>
             RunCommand.execRun(
               ri.common,
