@@ -32,7 +32,7 @@ object CallJsFunction {
     air: String,
     functionDef: FunctionDef,
     args: List[js.Any]
-  )(implicit ec: ExecutionContext): Future[Any] = {
+  ): Future[Any] = {
     V2.callFunction(
       args.toJSArray,
       FunctionDefJs(functionDef),

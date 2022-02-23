@@ -6,7 +6,7 @@ import aqua.backend.air.{AirBackend, FuncAirGen}
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.backend.{FunctionDef, Generated}
-import aqua.builder.{Finisher, ResultPrinter}
+import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
@@ -18,11 +18,12 @@ import aqua.parser.lexer.Literal
 import aqua.parser.lift.FileSpan
 import aqua.raw.value.ValueRaw
 import aqua.run.RunConfig
+import aqua.run.RunOpts.transformConfigWithOnPeer
 import aqua.types.*
 import cats.data.*
 import cats.effect.kernel.{Async, Clock}
 import cats.effect.syntax.async.*
-import cats.effect.{IO, IOApp, Resource, Sync}
+import cats.effect.{ExitCode, IO, IOApp, Resource, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -45,10 +46,10 @@ object RunCommand extends Logging {
 
   def createKeyPair(
     sk: Option[Array[Byte]]
-  )(implicit ec: ExecutionContext): Future[Option[KeyPair]] = {
+  ): Future[Option[KeyPair]] = {
     sk.map { arr =>
       val typedArr = js.typedarray.Uint8Array.from(arr.map(_.toShort).toJSArray)
-      KeyPair.fromEd25519SK(typedArr).toFuture.map(Some.apply)
+      KeyPair.fromEd25519SK(typedArr).`then`(sk => Some(sk)).toFuture
     }.getOrElse(Future.successful(None))
   }
 
@@ -72,39 +73,22 @@ object RunCommand extends Logging {
     imports: List[Path],
     runConfig: RunConfig,
     transformConfig: TransformConfig
-  )(implicit ec: ExecutionContext): F[Unit] = {
+  ): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
 
     for {
-      prelude <- Prelude.init(withRunImports = true)
-      sources = new AquaFileSources[F](input, prelude.importPaths ++ imports)
-      // compile only context to wrap and call function later
-      compileResult <- Clock[F].timed(
-        AquaCompiler
-          .compileToContext[F, AquaFileError, FileModuleId, FileSpan.F](
-            sources,
-            SpanParser.parser,
-            transformConfig
-          )
-          .map(_.leftMap(_.map(_.show)))
-      )
-      (compileTime, contextV) = compileResult
+      funcArrowV <- funcCompiler.compile(func)
       callResult <- Clock[F].timed {
-        val resultV: ValidatedNec[String, F[Unit]] = contextV.andThen { contextC =>
-          findFunction(contextC, func) match {
-            case Some(funcCallable) =>
-              val runner =
-                new Runner(func, funcCallable, args, runConfig, transformConfig)
-              runner.run()
-            case None =>
-              Validated.invalidNec[String, F[Unit]](s"There is no function called '$func'")
-          }
+        val resultV: ValidatedNec[String, F[Unit]] = funcArrowV.andThen { funcCallable =>
+          val runner =
+            new Runner(func, funcCallable, args, runConfig, transformConfig)
+          runner.run()
         }
         resultV.sequence
       }
       (callTime, result) = callResult
     } yield {
-      logger.debug(s"Compile time: ${compileTime.toMillis}ms")
       logger.debug(s"Call time: ${callTime.toMillis}ms")
       result.fold(
         { (errs: NonEmptyChain[String]) =>
@@ -113,6 +97,50 @@ object RunCommand extends Logging {
         identity
       )
     }
+  }
+
+  private val builtinServices =
+    aqua.builder.Console() :: aqua.builder.IPFSUploader("ipfs", "uploadFile") :: Nil
+
+  /**
+   * Executes a function with the specified settings
+   * @param common
+   *   common settings
+   * @param funcName
+   *   function name
+   * @param inputPath
+   *   path to a file with a function
+   * @param imports
+   *   imports that must be specified for correct compilation
+   * @param args
+   *   arguments to pass into a function
+   * @param argumentGetters
+   *   services to get argument if it is a variable
+   * @param services
+   *   will be registered before calling for correct execution
+   * @return
+   */
+  def execRun[F[_]: Async](
+    common: GeneralRunOptions,
+    funcName: String,
+    inputPath: Path,
+    imports: List[Path] = Nil,
+    args: List[ValueRaw] = Nil,
+    argumentGetters: Map[String, ArgumentGetter] = Map.empty,
+    services: List[Service] = Nil
+  ): F[ExitCode] = {
+    LogFormatter.initLogger(Some(common.logLevel))
+    implicit val aio: AquaIO[F] = new AquaFilesIO[F]
+    RunCommand
+      .run[F](
+        funcName,
+        args,
+        inputPath,
+        imports,
+        RunConfig(common, argumentGetters, services ++ builtinServices),
+        transformConfigWithOnPeer(common.on)
+      )
+      .map(_ => ExitCode.Success)
   }
 
 }

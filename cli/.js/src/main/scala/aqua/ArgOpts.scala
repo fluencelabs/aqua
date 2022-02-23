@@ -7,7 +7,7 @@ import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{Literal, VarLambda}
 import aqua.parser.lift.Span
-import aqua.types.BottomType
+import aqua.types.{BottomType, LiteralType}
 import cats.{~>, Id}
 import cats.effect.Concurrent
 import com.monovore.decline.Opts

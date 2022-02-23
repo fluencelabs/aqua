@@ -9,6 +9,7 @@ import aqua.run.RunCommand.createKeyPair
 import cats.effect.{Resource, Sync}
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
 
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.scalajs.js.JSON
@@ -27,8 +28,6 @@ object FuncCaller {
     config: RunConfig,
     finisherService: Finisher,
     services: List[Service]
-  )(implicit
-    ec: ExecutionContext
   ): F[Unit] = {
     FluenceUtils.setLogLevel(LogLevelTransformer.logLevelToFluenceJS(config.common.logLevel))
 
@@ -38,37 +37,40 @@ object FuncCaller {
     }
 
     resource.use { peer =>
-      Async[F].fromFuture {
-        (for {
-          keyPair <- createKeyPair(config.common.secretKey)
-          _ <- Fluence
-            .start(
-              PeerConfig(
-                config.common.multiaddr,
-                config.common.timeout.getOrElse(scalajs.js.undefined),
-                LogLevelTransformer.logLevelToAvm(config.common.logLevel),
-                keyPair.orNull
+      Async[F].executionContext.flatMap { implicit ec =>
+        Async[F].fromFuture {
+          (for {
+            keyPair <- createKeyPair(config.common.secretKey)
+            _ <- Fluence
+              .start(
+                PeerConfig(
+                  config.common.multiaddr,
+                  config.common.timeout.getOrElse(scalajs.js.undefined),
+                  LogLevelTransformer.logLevelToAvm(config.common.logLevel),
+                  keyPair.orNull
+                )
               )
+              .toFuture
+            _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
+            // register all services
+            _ = (services ++ config.argumentGetters.values :+ finisherService).map(_.register(peer))
+            callFuture = CallJsFunction.funcCallJs(
+              air,
+              functionDef,
+              List.empty
             )
-            .toFuture
-          _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
-          // register all services
-          _ = (services ++ config.argumentGetters.values :+ finisherService).map(_.register(peer))
-          callFuture = CallJsFunction.funcCallJs(
-            air,
-            functionDef,
-            List.empty
-          )
-          // error will be thrown on failed call
-          _ <- callFuture
-          finisherFuture = finisherService.promise.future
-          // use a timeout in finisher if we have an async function and it hangs on node's side
-          finisher = config.common.timeout.map { t =>
-            setTimeout(finisherFuture, t)
-          }.getOrElse(finisherFuture)
-          _ <- finisher
-        } yield ()).recover(handleFuncCallErrors).pure[F]
+            // error will be thrown on failed call
+            _ <- callFuture
+            finisherFuture = finisherService.promise.future
+            // use a timeout in finisher if we have an async function and it hangs on node's side
+            finisher = config.common.timeout.map { t =>
+              setTimeout(finisherFuture, t)
+            }.getOrElse(finisherFuture)
+            _ <- finisher
+          } yield ()).recover(handleFuncCallErrors).pure[F]
+        }
       }
+
     }
   }
 

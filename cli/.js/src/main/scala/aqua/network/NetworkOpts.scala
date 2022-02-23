@@ -1,13 +1,21 @@
 package aqua.network
 
-import aqua.{AppOpts, AquaIO, FluenceOpts, LogFormatter}
+import aqua.{
+  AppOpts,
+  AquaIO,
+  FluenceOpts,
+  LogFormatter,
+  PackagePath,
+  PlatformOpts,
+  RunInfo,
+  SubCommandBuilder
+}
 import aqua.builder.IPFSUploader
 import aqua.files.AquaFilesIO
 import aqua.ipfs.IpfsOpts.{pathOpt, UploadFuncName}
 import aqua.model.{LiteralModel, ValueModel}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
-import aqua.PlatformOpts
 import aqua.js.FluenceEnvironment
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
@@ -19,6 +27,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
+import cats.data.NonEmptyList
 
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js
@@ -39,13 +48,13 @@ object NetworkOpts {
   val TestNet = "testnet"
 
   // All network commands
-  def commands[F[_]: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] =
-    Opts.subcommand(NetworkOpts.listModules[F]) orElse
-      Opts.subcommand(NetworkOpts.listBlueprints[F]) orElse
-      Opts.subcommand(NetworkOpts.listInterfacesByPeer[F]) orElse
-      Opts.subcommand(NetworkOpts.listInterfaces[F]) orElse
-      Opts.subcommand(NetworkOpts.getInterface[F]) orElse
-      Opts.subcommand(NetworkOpts.getModuleInterface[F]) orElse
+  def commands[F[_]: AquaIO: Async]: Opts[F[ExitCode]] =
+    SubCommandBuilder.subcommands(
+      NonEmptyList(
+        listModules,
+        listBlueprints :: listInterfaces :: listInterfacesByPeer :: getInterface :: Nil
+      )
+    ) orElse
       Opts.subcommand(NetworkOpts.envCom[F])
 
   def peerOpt: Opts[String] =
@@ -61,115 +70,76 @@ object NetworkOpts {
       .argument[String]()
       .withDefault(Krasnodar)
 
-  def listModules[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "listModules",
-      header = "Print all modules"
-    ) {
-      GeneralRunOptions.commonOpt.map { common =>
-        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
-          RunOpts.execRun(
-            common,
-            ListModulesFuncName,
-            networkAquaPath
-          )
-        }
-      }
-    }
+  def listModules[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.simple(
+      "listModules",
+      "Print all modules",
+      PackagePath(NetworkAqua),
+      ListModulesFuncName
+    )
 
-  def listBlueprints[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "listBlueprints",
-      header = "Print all blueprints"
-    ) {
-      GeneralRunOptions.commonOpt.map { common =>
-        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
-          RunOpts.execRun(
-            common,
-            ListBlueprintsFuncName,
-            networkAquaPath
-          )
-        }
+  def listBlueprints[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.simple(
+      "listBlueprints",
+      "Print all blueprints",
+      PackagePath(NetworkAqua),
+      ListBlueprintsFuncName
+    )
 
-      }
-    }
-
-  def listInterfacesByPeer[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "listInterfaces",
-      header = "Print all services on a node owned by peer"
-    ) {
+  def listInterfacesByPeer[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.valid(
+      "listInterfaces",
+      "Print all services on a node owned by peer",
       (GeneralRunOptions.commonOpt, AppOpts.wrapWithOption(peerOpt)).mapN { (common, peer) =>
-        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
-          RunOpts.execRun(
-            common,
-            ListInterfacesByPeerFuncName,
-            networkAquaPath,
-            Nil,
-            peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
-          )
-        }
-
+        RunInfo(
+          common,
+          ListInterfacesByPeerFuncName,
+          PackagePath(NetworkAqua),
+          Nil,
+          peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
+        )
       }
-    }
+    )
 
-  def listInterfaces[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "listAllInterfaces",
-      header = "Print all services on a node"
-    ) {
-      (GeneralRunOptions.commonOpt).map { common =>
-        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
-          RunOpts.execRun(
-            common,
-            ListInterfacesFuncName,
-            networkAquaPath,
-            Nil,
-            Nil
-          )
-        }
+  def listInterfaces[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.simple(
+      "listAllInterfaces",
+      "Print all services on a node",
+      PackagePath(NetworkAqua),
+      ListInterfacesFuncName
+    )
 
-      }
-    }
-
-  def getInterface[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "getInterface",
-      header = "Print a service interface"
-    ) {
+  def getInterface[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.valid(
+      "getInterface",
+      "Print a service interface",
       (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
-        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
-          RunOpts.execRun(
-            common,
-            GetInterfaceFuncName,
-            networkAquaPath,
-            Nil,
-            LiteralRaw.quote(serviceId) :: Nil
-          )
-        }
-
+        RunInfo(
+          common,
+          GetInterfaceFuncName,
+          PackagePath(NetworkAqua),
+          Nil,
+          LiteralRaw.quote(serviceId) :: Nil
+        )
       }
-    }
+    )
 
-  def getModuleInterface[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "getModuleInterface",
-      header = "Print a module interface"
-    ) {
+  def getModuleInterface[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.valid(
+      "getModuleInterface",
+      "Print a module interface",
       (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
-        PlatformOpts.getPackagePath(NetworkAqua).flatMap { networkAquaPath =>
-          RunOpts.execRun(
-            common,
-            GetModuleInterfaceFuncName,
-            networkAquaPath,
-            Nil,
-            LiteralRaw.quote(serviceId) :: Nil
-          )
-        }
+        RunInfo(
+          common,
+          GetModuleInterfaceFuncName,
+          PackagePath(NetworkAqua),
+          Nil,
+          LiteralRaw.quote(serviceId) :: Nil
+        )
       }
-    }
+    )
 
-  def envCom[F[_]: Applicative](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+  def envCom[F[_]: Applicative]: Command[F[ExitCode]] =
     Command(
       name = "env",
       header = "Show nodes in currently selected environment"

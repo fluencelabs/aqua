@@ -12,12 +12,13 @@ import scala.concurrent.ExecutionContext
 import aqua.run.RunOpts
 import aqua.keypair.KeyPairOpts
 import aqua.network.NetworkOpts
+import aqua.script.ScriptOpts
 import scribe.Logging
-import cats.syntax.flatMap._
-import cats.syntax.monad._
-import cats.syntax.functor._
-import cats.syntax.apply._
-import cats.syntax.applicative._
+import cats.syntax.flatMap.*
+import cats.syntax.monad.*
+import cats.syntax.functor.*
+import cats.syntax.apply.*
+import cats.syntax.applicative.*
 
 import scala.util.Try
 
@@ -29,10 +30,11 @@ object PlatformOpts extends Logging {
       Opts.subcommand(KeyPairOpts.createKeypair[F]) orElse
       Opts.subcommand(IpfsOpts.ipfsOpt[F]) orElse
       Opts.subcommand(DistOpts.deployOpt[F]) orElse
+      Opts.subcommand(ScriptOpts.scriptOpt[F]) orElse
       NetworkOpts.commands[F]
 
   // it could be global installed aqua and local installed, different paths for this
-  def getPackagePath[F[_]: Files: Async](path: String): F[Path] = {
+  def getPackagePath[F[_]: Async](path: String): F[Path] = {
     val meta = Meta.metaUrl
     val req = Module.createRequire(meta)
     Try {

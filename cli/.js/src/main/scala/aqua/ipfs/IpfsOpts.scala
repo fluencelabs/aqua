@@ -1,6 +1,17 @@
 package aqua.ipfs
 
-import aqua.{AppOpts, AquaIO, FluenceOpts, LogFormatter, LogLevelTransformer, PlatformOpts}
+import aqua.{
+  AppOpts,
+  AquaIO,
+  CommandBuilder,
+  FluenceOpts,
+  LogFormatter,
+  LogLevelTransformer,
+  PackagePath,
+  PlatformOpts,
+  RunInfo,
+  SubCommandBuilder
+}
 import aqua.io.OutputPrinter
 import aqua.js.{Fluence, PeerConfig}
 import aqua.keypair.KeyPairShow.show
@@ -39,34 +50,22 @@ object IpfsOpts extends Logging {
     Opts
       .option[String]("path", "Path to file", "p")
 
-  def ipfsOpt[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "ipfs",
-      header = "Working with IPFS on peer"
-    ) { Opts.subcommand(upload) }
+  def ipfsOpt[F[_]: Async]: Command[F[ExitCode]] =
+    CommandBuilder("ipfs", "Working with IPFS on peer", NonEmptyList.one(upload[F])).command
 
   // Uploads a file to IPFS
-  def upload[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "upload",
-      header = "Upload a file to IPFS"
-    ) {
-      (
-        GeneralRunOptions.commonOpt,
-        pathOpt
-      ).mapN { (common, path) =>
-        PlatformOpts.getPackagePath(IpfsAqua).flatMap { ipfsAquaPath =>
-          RunOpts.execRun(
-            common,
-            UploadFuncName,
-            ipfsAquaPath,
-            Nil,
-            LiteralRaw.quote(path) :: Nil,
-            Map.empty,
-            Nil
-          )
-        }
-
+  def upload[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.valid(
+      "upload",
+      "Upload a file to IPFS",
+      (GeneralRunOptions.commonOpt, pathOpt).mapN { (common, path) =>
+        RunInfo(
+          common,
+          UploadFuncName,
+          PackagePath(IpfsAqua),
+          Nil,
+          LiteralRaw.quote(path) :: Nil
+        )
       }
-    }
+    )
 }
