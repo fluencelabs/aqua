@@ -24,7 +24,10 @@ object Console {
     override def fnName: String = funcName
 
     def handler: ServiceHandler = { varArgs =>
-      OutputPrinter.print(JSON.stringify(varArgs(0), space = 2))
+      js.typeOf(varArgs(0)) match {
+        case "string" | "number" | "boolean" => OutputPrinter.print(varArgs(0).toString)
+        case _ => OutputPrinter.print(JSON.stringify(varArgs(0), space = 2))
+      }
       js.Promise.resolve(Service.emptyObject)
     }
     def argDefinitions: List[ArgDefinition] = ArgDefinition("str", PrimitiveType) :: Nil
