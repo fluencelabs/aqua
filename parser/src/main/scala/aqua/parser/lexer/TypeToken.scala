@@ -98,9 +98,9 @@ object BasicTypeToken {
 }
 
 case class ArrowTypeToken[S[_]: Comonad](
-                                          override val unit: S[Unit],
-                                          args: List[(Option[Name[S]], TypeToken[S])],
-                                          res: List[DataTypeToken[S]]
+  override val unit: S[Unit],
+  args: List[(Option[Name[S]], TypeToken[S])],
+  res: List[DataTypeToken[S]]
 ) extends TypeToken[S] {
   override def as[T](v: T): S[T] = unit.as(v)
 
@@ -143,18 +143,18 @@ object DataTypeToken {
 
   val `withoutstreamdatatypedef`: P[DataTypeToken[Span.S]] =
     P.oneOf(
-      P.defer(`arraytypedef`) :: P.defer(
+      P.defer(`topbottomdef`) :: P.defer(`arraytypedef`) :: P.defer(
         OptionTypeToken.`optiontypedef`
-      ) :: BasicTypeToken
-        .`basictypedef` :: CustomTypeToken.dotted :: Nil
+      ) :: BasicTypeToken.`basictypedef` :: CustomTypeToken.dotted :: Nil
     )
 
   def `datatypedef`: P[DataTypeToken[Span.S]] =
     P.oneOf(
-      P.defer(`arraytypedef`) :: P.defer(StreamTypeToken.`streamtypedef`) :: P.defer(
+      P.defer(`topbottomdef`) :: P.defer(`arraytypedef`) :: P.defer(
+        StreamTypeToken.`streamtypedef`
+      ) :: P.defer(
         OptionTypeToken.`optiontypedef`
-      ) :: BasicTypeToken
-        .`basictypedef` :: CustomTypeToken.dotted :: Nil
+      ) :: BasicTypeToken.`basictypedef` :: CustomTypeToken.dotted :: Nil
     )
 
 }
