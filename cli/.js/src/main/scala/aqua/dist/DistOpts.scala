@@ -21,6 +21,7 @@ import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.traverse.*
 import cats.syntax.show.*
 import cats.{Applicative, Monad}
 import com.monovore.decline.{Command, Opts}
@@ -44,15 +45,14 @@ object DistOpts extends Logging {
 
   def srvIdOpt: Opts[String] =
     Opts
-      .option[String]("id", "Service id to delete", "i")
+      .option[String]("id", "Service id to remove", "i")
 
-  def deployOpt[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "dist",
-      header = "Distribute a service onto a remote peer"
-    ) {
-      Opts.subcommand(deploy).orElse(Opts.subcommand(remove))
-    }
+  def deployOpt[F[_]: Async]: Command[F[ExitCode]] =
+    CommandBuilder(
+      "dist",
+      "Distribute a service onto a remote peer",
+      NonEmptyList(deploy, remove :: Nil)
+    ).command
 
   def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
     val arg = getter.function.arg
@@ -61,74 +61,55 @@ object DistOpts extends Logging {
   }
 
   // Removes service from a node
-  def remove[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "remove",
-      header = "Remove a service from a remote peer"
-    ) {
-      (
-        GeneralRunOptions.commonOptWithSecretKey,
-        srvIdOpt
-      ).mapN { (common, srvId) =>
-        PlatformOpts.getPackagePath(DistAqua).flatMap { distAquaPath =>
-          val args = LiteralRaw.quote(srvId) :: Nil
-          RunOpts.execRun(
-            common,
-            RemoveFuncName,
-            distAquaPath,
-            Nil,
-            args
-          )
-        }
+  def remove[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.valid(
+      "remove",
+      "Remove a service from a remote peer",
+      (GeneralRunOptions.commonOpt, srvIdOpt).mapN { (common, srvId) =>
+        RunInfo(
+          common,
+          RemoveFuncName,
+          PackagePath(DistAqua),
+          Nil,
+          LiteralRaw.quote(srvId) :: Nil
+        )
       }
-    }
+    )
 
   // Uploads a file to IPFS, creates blueprints and deploys a service
-  def deploy[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
-    Command(
-      name = "deploy",
-      header = "Deploy a service onto a remote peer"
-    ) {
+  def deploy[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.applyF(
+      "deploy",
+      "Deploy a service onto a remote peer",
       (
         GeneralRunOptions.commonOpt,
         ArgOpts.dataFromFileOpt[F],
         srvNameOpt
       ).mapN { (common, dataFromFileF, srvName) =>
-        dataFromFileF.flatMap { dff =>
-          PlatformOpts.getPackagePath(DistAqua).flatMap { distAquaPath =>
-            val args = LiteralRaw.quote(srvName) :: VarRaw(srvName, ScalarType.string) :: Nil
-            dff
-              .andThen(data =>
-                ArgOpts
-                  .checkDataGetServices(args, Some(data))
-                  .map(getServices =>
-                    // if we have default timeout, increase it
-                    val commonWithTimeout = if (common.timeout.isEmpty) {
-                      common.copy(timeout = Some(60000))
-                    } else common
-                    RunOpts.execRun(
-                      commonWithTimeout,
-                      DeployFuncName,
-                      distAquaPath,
-                      Nil,
-                      args,
-                      // hack: air cannot use undefined fields, fill undefined arrays with nils
-                      getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) },
-                      Nil
-                    )
+        dataFromFileF.map { dff =>
+          val args = LiteralRaw.quote(srvName) :: VarRaw(srvName, ScalarType.string) :: Nil
+          dff
+            .andThen(data =>
+              ArgOpts
+                .checkDataGetServices(args, Some(data))
+                .map(getServices =>
+                  // if we have default timeout, increase it
+                  val commonWithTimeout = if (common.timeout.isEmpty) {
+                    common.copy(timeout = Some(60000))
+                  } else common
+                  RunInfo(
+                    commonWithTimeout,
+                    DeployFuncName,
+                    PackagePath(DistAqua),
+                    Nil,
+                    args,
+                    // hack: air cannot use undefined fields, fill undefined arrays with nils
+                    getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) },
+                    Nil
                   )
-              )
-              .fold(
-                errs =>
-                  Async[F].pure {
-                    errs.map(logger.error)
-                    cats.effect.ExitCode.Error
-                  },
-                identity
-              )
-          }
+                )
+            )
         }
-
       }
-    }
+    )
 }

@@ -30,7 +30,7 @@ class Runner(
     }
 
   // Wraps function with necessary services, registers services and calls wrapped function with FluenceJS
-  def run[F[_]: Async]()(implicit ec: ExecutionContext): ValidatedNec[String, F[Unit]] = {
+  def run[F[_]: Async](): ValidatedNec[String, F[Unit]] = {
     val resultNames = resultVariableNames(funcCallable, config.resultName)
     val resultPrinterService =
       ResultPrinter(config.resultPrinterServiceId, config.resultPrinterName, resultNames)
@@ -56,7 +56,7 @@ class Runner(
     wrapped: FuncArrow,
     consoleService: ResultPrinter,
     finisherService: Finisher
-  )(implicit ec: ExecutionContext): F[Unit] = {
+  ): F[Unit] = {
     // TODO: prob we can turn this Eval into F
     val funcRes = Transform.funcRes(wrapped, transformConfig).value
     val definitions = FunctionDef(funcRes)
