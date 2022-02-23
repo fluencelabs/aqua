@@ -12,7 +12,7 @@ import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import aqua.*
 import aqua.run.RunOpts.logger
 import aqua.types.{ArrowType, LiteralType, NilType, ScalarType}
-import aqua.ArgOpts.{funcWithArgsOpt, funcWithLiteralsOpt}
+import aqua.ArgOpts.{dataFileOrStringOpt, funcOpt, funcWithArgsOpt}
 import aqua.backend.Generated
 import aqua.backend.air.{AirBackend, AirGen, FuncAirGen}
 import aqua.builder.ArgumentGetter
@@ -37,6 +37,7 @@ import fs2.io.file.{Files, Path}
 import scribe.Logging
 
 import scala.concurrent.ExecutionContext
+import scala.scalajs.js
 
 object ScriptOpts extends Logging {
 
@@ -45,6 +46,46 @@ object ScriptOpts extends Logging {
   val AddFuncName = "schedule"
   val RemoveFuncName = "remove"
   val ListFuncName = "list"
+
+  case class FuncWithLiteralArgs(name: String, args: List[LiteralRaw])
+
+  // Func with only literal arguments (strings, booleans or numbers)
+  def funcWithLiteralsOpt[F[_]: Files: Concurrent]
+    : Opts[F[ValidatedNec[String, FuncWithLiteralArgs]]] = {
+    (dataFileOrStringOpt[F], funcOpt).mapN { case (dataF, (func, args)) =>
+      dataF.map { dataV =>
+        dataV.andThen { data =>
+          resolveOnlyLiteralsFromData(args, data).map { literals =>
+            FuncWithLiteralArgs(func, literals)
+          }
+        }
+      }
+    }
+  }
+
+  private def resolveOnlyLiteralsFromData(
+    args: List[ValueRaw],
+    data: Option[js.Dynamic]
+  ): ValidatedNec[String, List[LiteralRaw]] = {
+    val literals = args.map {
+      case l: LiteralRaw => validNec(l)
+      case v @ VarRaw(name, _, _) =>
+        data.map { d =>
+          val arg = d.selectDynamic(name)
+          js.typeOf(arg) match {
+            case "number" => validNec(LiteralRaw(arg.toString, LiteralType.number))
+            case "string" => validNec(LiteralRaw(arg.toString, LiteralType.string))
+            case "boolean" => validNec(LiteralRaw(arg.toString, LiteralType.bool))
+            case t =>
+              invalidNec(
+                s"Arguments can be only 'string', 'boolean' or 'number' type in scheduled scripts"
+              )
+          }
+        }.getOrElse(invalidNec(s"No argument with name '$name' in data"))
+    }
+
+    literals.traverse(identity)
+  }
 
   def scriptOpt[F[_]: Async: AquaIO](implicit ec: ExecutionContext): Command[F[ExitCode]] =
     CommandBuilder(
@@ -157,7 +198,7 @@ object ScriptOpts extends Logging {
 
   def scheduleOptsCompose[F[_]: Files: Async]
     : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithLiteralArgs)]]] = {
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], ArgOpts.funcWithLiteralsOpt[F]).mapN {
+    (AppOpts.inputOpts[F], AppOpts.importOpts[F], funcWithLiteralsOpt[F]).mapN {
       case (inputF, importF, funcWithLiteralsF) =>
         for {
           inputV <- inputF

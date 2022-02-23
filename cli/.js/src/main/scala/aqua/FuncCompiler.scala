@@ -19,6 +19,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.show.*
 import scribe.Logging
 
+// Function compiler
 class FuncCompiler[F[_]: Files: AquaIO: Async](
   input: Path,
   imports: List[Path],

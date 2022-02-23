@@ -24,6 +24,7 @@ case class PackagePath(path: String) extends AquaPath
 // Path for absolute or call path relative files
 case class RelativePath(path: Path) extends AquaPath
 
+// All info to run any aqua function
 case class RunInfo(
   common: GeneralRunOptions,
   funcName: String,
