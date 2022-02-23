@@ -47,7 +47,7 @@ object DistOpts extends Logging {
     Opts
       .option[String]("id", "Service id to remove", "i")
 
-  def deployOpt[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+  def deployOpt[F[_]: Async]: Command[F[ExitCode]] =
     CommandBuilder(
       "dist",
       "Distribute a service onto a remote peer",
@@ -61,7 +61,7 @@ object DistOpts extends Logging {
   }
 
   // Removes service from a node
-  def remove[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
+  def remove[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid(
       "remove",
       "Remove a service from a remote peer",
@@ -77,7 +77,7 @@ object DistOpts extends Logging {
     )
 
   // Uploads a file to IPFS, creates blueprints and deploys a service
-  def deploy[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
+  def deploy[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
       "deploy",
       "Deploy a service onto a remote peer",

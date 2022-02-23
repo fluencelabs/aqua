@@ -42,9 +42,7 @@ class SubCommandBuilder[F[_]: Async](
   opts: Opts[F[ValidatedNec[String, RunInfo]]]
 ) extends Logging {
 
-  def command(implicit
-    ec: ExecutionContext
-  ): Command[F[ExitCode]] = Command(name, header) {
+  def command: Command[F[ExitCode]] = Command(name, header) {
     opts.map { riF =>
       riF.flatMap {
         case Validated.Valid(ri) =>
@@ -112,9 +110,7 @@ object SubCommandBuilder {
         }
       )
 
-  def subcommands[F[_]: Async](subs: NonEmptyList[SubCommandBuilder[F]])(implicit
-    ec: ExecutionContext
-  ): Opts[F[ExitCode]] =
+  def subcommands[F[_]: Async](subs: NonEmptyList[SubCommandBuilder[F]]): Opts[F[ExitCode]] =
     Opts.subcommands(subs.head.command, subs.tail.map(_.command): _*)
 }
 
@@ -125,9 +121,7 @@ case class CommandBuilder[F[_]: Async](
   subcommands: NonEmptyList[SubCommandBuilder[F]]
 ) {
 
-  def command(implicit
-    ec: ExecutionContext
-  ): Command[F[ExitCode]] = {
+  def command: Command[F[ExitCode]] = {
     Command(name = name, header = header) {
       Opts.subcommands(subcommands.head.command, subcommands.tail.map(_.command): _*)
     }

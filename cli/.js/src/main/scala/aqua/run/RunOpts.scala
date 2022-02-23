@@ -69,9 +69,7 @@ object RunOpts extends Logging {
     }
   }
 
-  def runOptions[F[_]: AquaIO: Async](implicit
-    ec: ExecutionContext
-  ): SubCommandBuilder[F] =
+  def runOptions[F[_]: AquaIO: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
       name = "run",
       header = "Run a function from an aqua code",
@@ -99,6 +97,6 @@ object RunOpts extends Logging {
       }
     )
 
-  def runCommand[F[_]: Files: AquaIO: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+  def runCommand[F[_]: Files: AquaIO: Async]: Command[F[ExitCode]] =
     runOptions.command
 }

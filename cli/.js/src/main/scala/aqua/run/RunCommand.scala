@@ -46,10 +46,10 @@ object RunCommand extends Logging {
 
   def createKeyPair(
     sk: Option[Array[Byte]]
-  )(implicit ec: ExecutionContext): Future[Option[KeyPair]] = {
+  ): Future[Option[KeyPair]] = {
     sk.map { arr =>
       val typedArr = js.typedarray.Uint8Array.from(arr.map(_.toShort).toJSArray)
-      KeyPair.fromEd25519SK(typedArr).toFuture.map(Some.apply)
+      KeyPair.fromEd25519SK(typedArr).`then`(sk => Some(sk)).toFuture
     }.getOrElse(Future.successful(None))
   }
 
@@ -73,7 +73,7 @@ object RunCommand extends Logging {
     imports: List[Path],
     runConfig: RunConfig,
     transformConfig: TransformConfig
-  )(implicit ec: ExecutionContext): F[Unit] = {
+  ): F[Unit] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
 
@@ -128,8 +128,6 @@ object RunCommand extends Logging {
     args: List[ValueRaw] = Nil,
     argumentGetters: Map[String, ArgumentGetter] = Map.empty,
     services: List[Service] = Nil
-  )(implicit
-    ec: ExecutionContext
   ): F[ExitCode] = {
     LogFormatter.initLogger(Some(common.logLevel))
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]

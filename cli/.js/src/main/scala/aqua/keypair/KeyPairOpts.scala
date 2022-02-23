@@ -18,7 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object KeyPairOpts extends Logging {
 
   // KeyPair generation
-  def createKeypair[F[_]: Async](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+  def createKeypair[F[_]: Async]: Command[F[ExitCode]] =
     Command(
       name = "create_keypair",
       header = "Create a new keypair"

@@ -87,7 +87,7 @@ object ScriptOpts extends Logging {
     literals.traverse(identity)
   }
 
-  def scriptOpt[F[_]: Async: AquaIO](implicit ec: ExecutionContext): Command[F[ExitCode]] =
+  def scriptOpt[F[_]: Async: AquaIO]: Command[F[ExitCode]] =
     CommandBuilder(
       name = "script",
       header = "Manage scheduled scripts",
@@ -147,7 +147,7 @@ object ScriptOpts extends Logging {
     } yield result
   }
 
-  def schedule[F[_]: Async: AquaIO](implicit ec: ExecutionContext): SubCommandBuilder[F] =
+  def schedule[F[_]: Async: AquaIO]: SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
       name = "add",
       header = "Upload aqua function as a scheduled script.",
@@ -213,7 +213,7 @@ object ScriptOpts extends Logging {
   }
 
   // Removes scheduled script from a node
-  def remove[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
+  def remove[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid[F](
       "remove",
       "Remove a service from a remote peer",
@@ -232,7 +232,7 @@ object ScriptOpts extends Logging {
     )
 
   // Print all scheduled scripts
-  def list[F[_]: Async](implicit ec: ExecutionContext): SubCommandBuilder[F] =
+  def list[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder
       .simple[F]("list", "Print all scheduled scripts", PackagePath(ScriptAqua), ListFuncName)
 }
