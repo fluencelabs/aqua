@@ -91,7 +91,7 @@ object ScriptOpts extends Logging {
     CommandBuilder(
       name = "script",
       header = "Manage scheduled scripts",
-      NonEmptyList(schedule, list :: remove :: Nil)
+      NonEmptyList(add, list :: remove :: Nil)
     ).command
 
   def intervalOpt: Opts[Option[Int]] =
@@ -147,7 +147,7 @@ object ScriptOpts extends Logging {
     } yield result
   }
 
-  def schedule[F[_]: Async: AquaIO]: SubCommandBuilder[F] =
+  def add[F[_]: Async: AquaIO]: SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
       name = "add",
       header = "Upload aqua function as a scheduled script.",
