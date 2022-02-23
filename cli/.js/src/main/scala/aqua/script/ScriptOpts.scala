@@ -102,7 +102,7 @@ object ScriptOpts extends Logging {
 
   def scriptIdOpt: Opts[String] =
     Opts
-      .option[String]("script-id", "Script id to remove", "i")
+      .option[String]("script-id", "Script id to remove", "c")
 
   private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncArrow] =
     contexts
@@ -177,6 +177,8 @@ object ScriptOpts extends Logging {
                     Map(
                       "script" -> ArgumentGetter(
                         scriptVar,
+                        // hack, cannot create unnamed Dynamic
+                        // TODO: fix it
                         scalajs.js.Dynamic.literal("script" -> script).selectDynamic("script")
                       )
                     )
