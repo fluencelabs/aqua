@@ -3,7 +3,7 @@ package aqua.types
 import cats.Monoid
 import cats.data.NonEmptyMap
 
-object UniteTypes extends Monoid[Type] :
+object UniteTypes extends Monoid[Type]:
 
   override def empty: Type = BottomType
 
@@ -17,7 +17,7 @@ object UniteTypes extends Monoid[Type] :
       case 1.0 => a
       case -1.0 => b
       case 0.0 => a
-      case Double.NaN =>
+      case _ =>
         // Uncomparable types
         // But can we unite them?
         // And find such a type that inherits both a, b
@@ -57,8 +57,21 @@ object UniteTypes extends Monoid[Type] :
           case (ac: StreamType, bc: StreamType) =>
             StreamType(ac.element `∩` bc.element)
 
+          case (ScalarType.i8, ScalarType.u8) | (ScalarType.u8, ScalarType.i8) => ScalarType.i16
+          case (ScalarType.i8 | ScalarType.i16, ScalarType.u8 | ScalarType.u16) |
+              (ScalarType.u8 | ScalarType.u16, ScalarType.i8 | ScalarType.i16) =>
+            ScalarType.i32
+          case (
+                ScalarType.i8 | ScalarType.i16 | ScalarType.i32,
+                ScalarType.u8 | ScalarType.u16 | ScalarType.u32
+              ) | (
+                ScalarType.u8 | ScalarType.u16 | ScalarType.u32,
+                ScalarType.i8 | ScalarType.i16 | ScalarType.i32
+              ) =>
+            ScalarType.i64
+
           case _ =>
-            empty
+            TopType
         }
 
     }
