@@ -5,7 +5,7 @@ import cats.data.NonEmptyMap
 
 import scala.annotation.tailrec
 
-object UniteTypes extends Monoid[Type]:
+case class UniteTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]:
 
   override def empty: Type = BottomType
 
@@ -15,7 +15,7 @@ object UniteTypes extends Monoid[Type]:
         case (Nil, Nil) => ProductType(res)
         case (_ :: _, Nil) => ProductType(res.reverse ::: l)
         case (Nil, _ :: _) => ProductType(res.reverse ::: r)
-        case (l :: lt, r :: rt) => step(lt, rt, IntersectTypes.combine(l, r) :: res)
+        case (l :: lt, r :: rt) => step(lt, rt, IntersectTypes.bottom.combine(l, r) :: res)
       }
 
     step(a.toList, b.toList, Nil)
@@ -23,6 +23,8 @@ object UniteTypes extends Monoid[Type]:
 
   override def combine(a: Type, b: Type): Type =
     (a, b) match {
+      case _ if CompareTypes(a, b) == 0.0 => a
+
       case (ap: ProductType, bp: ProductType) =>
         combineProducts(ap, bp)
 
@@ -41,7 +43,7 @@ object UniteTypes extends Monoid[Type]:
         // TODO test that both aa, bb are supertypes of this arrow
         ArrowType(
           combineProducts(aa.domain, bb.domain),
-          IntersectTypes.combineProducts(aa.codomain, bb.codomain)
+          IntersectTypes.bottom.combineProducts(aa.codomain, bb.codomain)
         )
 
       case (ac: OptionType, bc: ArrayType) =>
@@ -58,25 +60,20 @@ object UniteTypes extends Monoid[Type]:
       case (ac: StreamType, bc: StreamType) =>
         StreamType(ac.element `∩` bc.element)
 
-      case (ScalarType.i8, ScalarType.u8) | (ScalarType.u8, ScalarType.i8) => ScalarType.i16
-      case (ScalarType.i8 | ScalarType.i16, ScalarType.u8 | ScalarType.u16) |
-          (ScalarType.u8 | ScalarType.u16, ScalarType.i8 | ScalarType.i16) =>
-        ScalarType.i32
-      case (
-            ScalarType.i8 | ScalarType.i16 | ScalarType.i32,
-            ScalarType.u8 | ScalarType.u16 | ScalarType.u32
-          ) | (
-            ScalarType.u8 | ScalarType.u16 | ScalarType.u32,
-            ScalarType.i8 | ScalarType.i16 | ScalarType.i32
-          ) =>
-        ScalarType.i64
+      case (a: ScalarType, b: ScalarType) =>
+        scalarsCombine(a, b)
 
       case _ =>
         CompareTypes.apply(a, b) match {
           case 1.0 => a
           case -1.0 => b
           case 0.0 => a
-          case _ => TopType
+          case _ =>
+            TopType
         }
 
     }
+
+object UniteTypes:
+  val top: UniteTypes = UniteTypes(ScalarsCombine.top)
+  val bottom: UniteTypes = UniteTypes(ScalarsCombine.bottom)

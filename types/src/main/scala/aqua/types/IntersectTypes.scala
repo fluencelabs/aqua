@@ -3,7 +3,12 @@ package aqua.types
 import cats.Monoid
 import cats.data.NonEmptyMap
 
-object IntersectTypes extends Monoid[Type]:
+/**
+ * Intersection of types makes a new type that can be found in both arguments
+ *
+ * For simple types it means
+ */
+case class IntersectTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]:
 
   override def empty: Type = TopType
 
@@ -14,6 +19,8 @@ object IntersectTypes extends Monoid[Type]:
 
   override def combine(a: Type, b: Type): Type =
     (a, b) match {
+      case _ if CompareTypes(a, b) == 0.0 => a
+
       case (ap: ProductType, bp: ProductType) =>
         combineProducts(ap, bp)
 
@@ -26,7 +33,7 @@ object IntersectTypes extends Monoid[Type]:
 
       case (aa: ArrowType, bb: ArrowType) =>
         ArrowType(
-          UniteTypes.combineProducts(aa.domain, bb.domain),
+          UniteTypes.top.combineProducts(aa.domain, bb.domain),
           combineProducts(aa.codomain, bb.codomain)
         )
 
@@ -43,18 +50,9 @@ object IntersectTypes extends Monoid[Type]:
       case (ac: StreamType, bc: StreamType) =>
         StreamType(ac.element `∩` bc.element)
 
-      case (ScalarType.i64, ScalarType.u64) | (ScalarType.u64, ScalarType.i64) => ScalarType.u32
-      case (ScalarType.i64 | ScalarType.i32, ScalarType.u64 | ScalarType.u32) |
-          (ScalarType.u64 | ScalarType.u32, ScalarType.i64 | ScalarType.i32) =>
-        ScalarType.u16
-      case (
-            ScalarType.i64 | ScalarType.i16 | ScalarType.i32,
-            ScalarType.u64 | ScalarType.u16 | ScalarType.u32
-          ) | (
-            ScalarType.u64 | ScalarType.u16 | ScalarType.u32,
-            ScalarType.i64 | ScalarType.i16 | ScalarType.i32
-          ) =>
-        ScalarType.u8
+      case (a: ScalarType, b: ScalarType) =>
+        scalarsCombine(a, b)
+
       case _ =>
         CompareTypes.apply(a, b) match {
           case 1.0 => b
@@ -64,3 +62,7 @@ object IntersectTypes extends Monoid[Type]:
             BottomType
         }
     }
+
+object IntersectTypes:
+  val top: IntersectTypes = IntersectTypes(ScalarsCombine.top)
+  val bottom: IntersectTypes = IntersectTypes(ScalarsCombine.bottom)

@@ -13,8 +13,15 @@ sealed trait Type {
 
   def isInhabited: Boolean = true
 
-  infix def `∩`(other: Type): Type = IntersectTypes.combine(this, other)
-  infix def `∪`(other: Type): Type = UniteTypes.combine(this, other)
+  infix def `∩`(other: Type): Type = intersectBottom(other)
+  def intersectTop(other: Type): Type = IntersectTypes.top.combine(this, other)
+  def intersectBottom(other: Type): Type = IntersectTypes.bottom.combine(this, other)
+
+  infix def `∪`(other: Type): Type = uniteTop(other)
+
+  def uniteTop(other: Type): Type = UniteTypes.top.combine(this, other)
+
+  def uniteBottom(other: Type): Type = UniteTypes.bottom.combine(this, other)
 }
 
 // Product is a list of (optionally labelled) types
