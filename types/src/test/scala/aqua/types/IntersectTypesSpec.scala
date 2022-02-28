@@ -52,7 +52,7 @@ class IntersectTypesSpec extends AnyFlatSpec with Matchers {
     )
 
     val x1_x2: Type = StructType(
-      "x1 ∩ x2",
+      "x1_x_x2",
       NonEmptyMap.of[String, Type](
         "1" -> ScalarType.u8,
         "2" -> ProductType(ScalarType.i8 :: Nil)

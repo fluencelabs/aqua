@@ -22,10 +22,9 @@ object IntersectTypes extends Monoid[Type]:
           .fromMap(as.fields.toSortedMap.flatMap { case (ak, at) =>
             bs.fields.lookup(ak).map(bt => ak -> combine(at, bt))
           })
-          .fold(empty)(fields => StructType(s"${as.name} ∩ ${bs.name}", fields))
+          .fold(empty)(fields => StructType(s"${as.name}_x_${bs.name}", fields))
 
       case (aa: ArrowType, bb: ArrowType) =>
-        // TODO test that both aa, bb are subtypes of this arrow
         ArrowType(
           UniteTypes.combineProducts(aa.domain, bb.domain),
           combineProducts(aa.codomain, bb.codomain)
