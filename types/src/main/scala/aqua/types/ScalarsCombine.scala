@@ -1,4 +1,5 @@
 package aqua.types
+import cats.syntax.partialOrder.*
 
 object ScalarsCombine {
   type T = (ScalarType, ScalarType) => Type
@@ -9,21 +10,15 @@ object ScalarsCombine {
       case -1.0 => a
       case 0.0 => b
       case _ =>
-        (a, b) match {
-          case (ScalarType.i64, ScalarType.u64) | (ScalarType.u64, ScalarType.i64) => ScalarType.u32
-          case (ScalarType.i64 | ScalarType.i32, ScalarType.u64 | ScalarType.u32) |
-              (ScalarType.u64 | ScalarType.u32, ScalarType.i64 | ScalarType.i32) =>
-            ScalarType.u16
-          case (
-                ScalarType.i64 | ScalarType.i16 | ScalarType.i32,
-                ScalarType.u64 | ScalarType.u16 | ScalarType.u32
-              ) | (
-                ScalarType.u64 | ScalarType.u16 | ScalarType.u32,
-                ScalarType.i64 | ScalarType.i16 | ScalarType.i32
-              ) =>
-            ScalarType.u8
-          case _ => BottomType
-        }
+        ScalarType.all
+          .filter((_: Type) <= a)
+          .filter((_: Type) <= b)
+          .filter(x => (ScalarType.float(a) || ScalarType.float(b)) || !ScalarType.float(x))
+          .filter(x => (ScalarType.signed(a) || ScalarType.signed(b)) || !ScalarType.signed(x))
+          .toList
+          .sortWith((_: Type) > _)
+          .headOption
+          .getOrElse(BottomType)
     }
 
   def top(a: ScalarType, b: ScalarType): Type =
@@ -32,21 +27,15 @@ object ScalarsCombine {
       case -1.0 => b
       case 0.0 => a
       case _ =>
-        (a, b) match {
-          case (ScalarType.i8, ScalarType.u8) | (ScalarType.u8, ScalarType.i8) => ScalarType.i16
-          case (ScalarType.i8 | ScalarType.i16, ScalarType.u8 | ScalarType.u16) |
-              (ScalarType.u8 | ScalarType.u16, ScalarType.i8 | ScalarType.i16) =>
-            ScalarType.i32
-          case (
-                ScalarType.i8 | ScalarType.i16 | ScalarType.i32,
-                ScalarType.u8 | ScalarType.u16 | ScalarType.u32
-              ) | (
-                ScalarType.u8 | ScalarType.u16 | ScalarType.u32,
-                ScalarType.i8 | ScalarType.i16 | ScalarType.i32
-              ) =>
-            ScalarType.i64
-          case _ => TopType
-        }
+        ScalarType.all
+          .filter((_: Type) >= a)
+          .filter((_: Type) >= b)
+          .filter(x => (ScalarType.float(a) || ScalarType.float(b)) || !ScalarType.float(x))
+          .filter(x => (ScalarType.signed(a) || ScalarType.signed(b)) || !ScalarType.signed(x))
+          .toList
+          .sortWith((_: Type) < _)
+          .headOption
+          .getOrElse(TopType)
     }
 
 }

@@ -159,7 +159,8 @@ object ScalarType {
 
   val float = Set(f32, f64)
   val signed = float ++ Set(i8, i16, i32, i64)
-  val number = signed ++ Set(u8, u16, u32, u64)
+  val unsigned = Set(u8, u16, u32, u64)
+  val number = signed ++ unsigned
   val all = number ++ Set(bool, string)
 }
 
