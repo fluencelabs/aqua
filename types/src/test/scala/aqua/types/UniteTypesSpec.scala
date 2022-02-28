@@ -33,9 +33,9 @@ class UniteTypesSpec extends AnyFlatSpec with Matchers {
       ScalarType.i8 :: ScalarType.string :: Nil
     )
 
-//    p1 <= p1_p2 should be(true)
-//    p2 <= p1_p2 should be(true)
-//    p1 `∪` p2 should be(p1_p2)
+    p1 <= p1_p2 should be(true)
+    // TODO: variance does not work here p2 <= p1_p2 should be(true)
+    p1 `∪` p2 should be(p1_p2)
 
   }
 
