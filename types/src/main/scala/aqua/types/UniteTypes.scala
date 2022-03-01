@@ -5,6 +5,13 @@ import cats.data.NonEmptyMap
 
 import scala.annotation.tailrec
 
+/**
+ * Union of types makes a new type that can take arguments of both types
+ *
+ * X := Union of A, B =>
+ * A belongs to X
+ * B belongs to X
+ */
 case class UniteTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]:
 
   override def empty: Type = BottomType

@@ -1,6 +1,12 @@
 package aqua.types
 import cats.syntax.partialOrder.*
 
+/**
+ * Scalar types combiner for unions and intersections.
+ * There are two combiners:
+ * bot: X belongs to A and B (like intersection)
+ * top: A and B belong to X (like union)
+ */
 object ScalarsCombine {
   type T = (ScalarType, ScalarType) => Type
 

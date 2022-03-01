@@ -6,7 +6,9 @@ import cats.data.NonEmptyMap
 /**
  * Intersection of types makes a new type that can be found in both arguments
  *
- * For simple types it means
+ * X := Intersection of A, B =>
+ * X belongs to A
+ * X belongs to B
  */
 case class IntersectTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]:
 
