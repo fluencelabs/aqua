@@ -12,7 +12,9 @@ class TypeSpec extends AnyFlatSpec with Matchers {
   import aqua.types.ScalarType._
 
   def `[]`(t: DataType): DataType = ArrayType(t)
+
   def `?`(t: DataType): DataType = OptionType(t)
+
   def `*`(t: DataType): DataType = StreamType(t)
 
   def accepts(recv: Type, incoming: Type) =
@@ -107,6 +109,12 @@ class TypeSpec extends AnyFlatSpec with Matchers {
 
     accepts(ConsType.cons(u64, empty), ConsType.cons(u32, empty)) should be(true)
     accepts(ConsType.cons(u32, empty), ConsType.cons(u64, empty)) should be(false)
+
+    def p(types: Type*): Type = ProductType(types.toList)
+
+    p(u32) < p(u64) should be(true)
+    p(u32) < p(u64, string) should be(false)
+    p(u64).acceptsValueOf(p(u16, string)) should be(true)
   }
 
   "arrows" should "be contravariant on arguments" in {

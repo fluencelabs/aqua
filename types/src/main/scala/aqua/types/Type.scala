@@ -12,6 +12,16 @@ sealed trait Type {
   }
 
   def isInhabited: Boolean = true
+
+  infix def `∩`(other: Type): Type = intersectBottom(other)
+  def intersectTop(other: Type): Type = IntersectTypes.top.combine(this, other)
+  def intersectBottom(other: Type): Type = IntersectTypes.bottom.combine(this, other)
+
+  infix def `∪`(other: Type): Type = uniteTop(other)
+
+  def uniteTop(other: Type): Type = UniteTypes.top.combine(this, other)
+
+  def uniteBottom(other: Type): Type = UniteTypes.bottom.combine(this, other)
 }
 
 // Product is a list of (optionally labelled) types
@@ -33,8 +43,9 @@ sealed trait ProductType extends Type {
   /**
    * Converts product type to a list of types, labelling each of them with a string
    * Label is either got from the types with labels, or from the given prefix and index of a type.
+   *
    * @param prefix Prefix to generate a missing label
-   * @param index Index to ensure generated labels are unique
+   * @param index  Index to ensure generated labels are unique
    * @return
    */
   def toLabelledList(prefix: String = "arg", index: Int = 0): List[(String, Type)] = this match {
@@ -81,6 +92,7 @@ object ProductType {
  */
 sealed trait ConsType extends ProductType {
   def `type`: Type
+
   def tail: ProductType
 
   override def length: Int = 1 + tail.length
@@ -88,6 +100,7 @@ sealed trait ConsType extends ProductType {
 
 object ConsType {
   def unapply(cons: ConsType): Option[(Type, ProductType)] = Some(cons.`type` -> cons.tail)
+
   def cons(`type`: Type, tail: ProductType): ConsType = UnlabelledConsType(`type`, tail)
 
   def cons(label: String, `type`: Type, tail: ProductType): ConsType =
@@ -146,7 +159,8 @@ object ScalarType {
 
   val float = Set(f32, f64)
   val signed = float ++ Set(i8, i16, i32, i64)
-  val number = signed ++ Set(u8, u16, u32, u64)
+  val unsigned = Set(u8, u16, u32, u64)
+  val number = signed ++ unsigned
   val all = number ++ Set(bool, string)
 }
 
@@ -164,6 +178,7 @@ object LiteralType {
 
 sealed trait BoxType extends DataType {
   def isStream: Boolean
+
   def element: Type
 }
 
@@ -192,7 +207,8 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends D
  * ArrowType is a profunctor pointing its domain to codomain.
  * Profunctor means variance: Arrow is contravariant on domain, and variant on codomain.
  * See tests for details.
- * @param domain Where this Arrow is defined
+ *
+ * @param domain   Where this Arrow is defined
  * @param codomain Where this Arrow points on
  */
 case class ArrowType(domain: ProductType, codomain: ProductType) extends Type {
