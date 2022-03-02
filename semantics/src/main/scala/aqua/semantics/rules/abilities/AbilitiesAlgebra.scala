@@ -1,6 +1,6 @@
 package aqua.semantics.rules.abilities
 
-import aqua.parser.lexer.{Ability, Name, Token, Value}
+import aqua.parser.lexer.{Ability, Name, Token, ValueToken}
 import aqua.raw.value.ValueRaw
 import aqua.types.ArrowType
 import cats.InjectK
@@ -20,7 +20,7 @@ trait AbilitiesAlgebra[S[_], Alg[_]] {
 
   def getArrow(name: Ability[S], arrow: Name[S]): Alg[Option[ArrowType]]
 
-  def setServiceId(name: Ability[S], id: Value[S], vm: ValueRaw): Alg[Boolean]
+  def setServiceId(name: Ability[S], id: ValueToken[S], vm: ValueRaw): Alg[Boolean]
 
   def getServiceId(name: Ability[S]): Alg[Either[Boolean, ValueRaw]]
 

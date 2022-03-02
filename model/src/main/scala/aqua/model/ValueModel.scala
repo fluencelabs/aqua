@@ -26,6 +26,7 @@ object ValueModel {
       VarModel(name, t, lambda.map(LambdaModel.fromRaw))
     case LiteralRaw(value, t) =>
       LiteralModel(value, t)
+    case _ => ???  
   }
 
 }

@@ -200,7 +200,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
       .flatMap(at => stack.beginScope(TypesState.Frame(token, at, None)).as(at))
 
   override def checkArrowReturn(
-    values: NonEmptyList[(Value[S], ValueRaw)]
+    values: NonEmptyList[(ValueToken[S], ValueRaw)]
   ): State[X, Boolean] =
     mapStackHeadE[Boolean](
       report(values.head._1, "Fatal: checkArrowReturn has no matching beginArrowScope").as(false)

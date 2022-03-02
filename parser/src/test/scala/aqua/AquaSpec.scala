@@ -48,17 +48,17 @@ object AquaSpec {
   implicit def toFields(fields: List[String]): List[IntoField[Id]] =
     fields.map(f => IntoField[Id](f))
 
-  implicit def toVar(name: String): VarLambda[Id] = VarLambda[Id](toName(name), Nil)
+  implicit def toVar(name: String): VarToken[Id] = VarToken[Id](toName(name), Nil)
 
-  implicit def toVarOp(name: Option[String]): Option[VarLambda[Id]] =
-    name.map(s => VarLambda[Id](toName(s), Nil))
+  implicit def toVarOp(name: Option[String]): Option[VarToken[Id]] =
+    name.map(s => VarToken[Id](toName(s), Nil))
 
-  implicit def toVarLambda(name: String, fields: List[String]): VarLambda[Id] =
-    VarLambda[Id](toName(name), toFields(fields))
-  implicit def toLiteral(name: String, t: LiteralType): Literal[Id] = Literal[Id](name, t)
-  implicit def toNumber(n: Int): Literal[Id] = Literal[Id](n.toString, number)
-  implicit def toBool(n: Boolean): Literal[Id] = Literal[Id](n.toString, bool)
-  implicit def toStr(n: String): Literal[Id] = Literal[Id]("\"" + n + "\"", string)
+  implicit def toVarLambda(name: String, fields: List[String]): VarToken[Id] =
+    VarToken[Id](toName(name), toFields(fields))
+  implicit def toLiteral(name: String, t: LiteralType): LiteralToken[Id] = LiteralToken[Id](name, t)
+  implicit def toNumber(n: Int): LiteralToken[Id] = LiteralToken[Id](n.toString, number)
+  implicit def toBool(n: Boolean): LiteralToken[Id] = LiteralToken[Id](n.toString, bool)
+  implicit def toStr(n: String): LiteralToken[Id] = LiteralToken[Id]("\"" + n + "\"", string)
 
   implicit def toCustomType(str: String): CustomTypeToken[Id] = CustomTypeToken[Id](str)
   def toArrayType(str: String): ArrayTypeToken[Id] = ArrayTypeToken[Id]((), str)

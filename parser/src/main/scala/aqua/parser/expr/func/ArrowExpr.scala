@@ -1,7 +1,7 @@
 package aqua.parser.expr.func
 
 import aqua.parser.{ArrowReturnError, Ast, Expr, ParserError}
-import aqua.parser.lexer.{ArrowTypeToken, DataTypeToken, TypeToken, Value}
+import aqua.parser.lexer.{ArrowTypeToken, DataTypeToken, TypeToken, ValueToken}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser

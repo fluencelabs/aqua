@@ -5,7 +5,7 @@ import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.parser.expr.func.CallArrowExpr
-import aqua.parser.lexer.{Literal, VarLambda}
+import aqua.parser.lexer.{LiteralToken, VarToken}
 import aqua.parser.lift.Span
 import aqua.types.{BottomType, LiteralType}
 import cats.{~>, Id}
@@ -42,9 +42,9 @@ object ArgOpts {
             val expr = exprSpan.mapK(spanToId)
 
             val args = expr.args.collect {
-              case Literal(value, ts) =>
+              case LiteralToken(value, ts) =>
                 LiteralRaw(value, ts)
-              case VarLambda(name, _) =>
+              case VarToken(name, _) =>
                 // TODO why BottomType?
                 VarRaw(name.value, BottomType)
             }

@@ -1,6 +1,6 @@
 package aqua.semantics.rules.names
 
-import aqua.parser.lexer.{Literal, Name, Token, Value}
+import aqua.parser.lexer.{LiteralToken, Name, Token, ValueToken}
 import aqua.types.{ArrowType, Type}
 import cats.InjectK
 

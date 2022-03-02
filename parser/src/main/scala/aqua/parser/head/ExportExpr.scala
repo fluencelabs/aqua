@@ -1,7 +1,7 @@
 package aqua.parser.head
 
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{Literal, Token, Value}
+import aqua.parser.lexer.{LiteralToken, Token, ValueToken}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.data.NonEmptyList

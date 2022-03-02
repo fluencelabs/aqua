@@ -7,8 +7,6 @@ sealed trait LambdaRaw {
 
   def map(f: ValueRaw => ValueRaw): LambdaRaw
 
-  def resolveWith(vals: Map[String, ValueRaw]): LambdaRaw = this
-
   def renameVars(vals: Map[String, String]): LambdaRaw = this
 
 }
