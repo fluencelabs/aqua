@@ -1,6 +1,6 @@
 package aqua.raw.value
 
-import aqua.types.{BottomType, BoxType, LiteralType, ScalarType, StreamType, StructType, Type}
+import aqua.types.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import cats.Eq
 import scribe.Logging
@@ -72,11 +72,9 @@ object LiteralRaw {
   val False: LiteralRaw = LiteralRaw("false", LiteralType.bool)
 }
 
-case class CollectionRaw(values: NonEmptyList[ValueRaw], baseType: BoxType) extends ValueRaw {
+case class CollectionRaw(values: NonEmptyList[ValueRaw]) extends ValueRaw {
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f({
-    val newValues = values.map(f)
-    val newElType = newValues.map(_.`type`).reduceLeft(_ `∩` _)
-    copy(newValues, baseType.withElement(newElType))
-  })
+  override lazy val baseType: Type = ArrayType(values.map(_.`type`).reduceLeft(_ `∩` _))
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(values.map(f)))
 }

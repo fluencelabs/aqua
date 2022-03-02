@@ -96,8 +96,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case CollectionToken(values) =>
         values.traverse(valueToRaw).map(_.toList.flatten).map(NonEmptyList.fromList).map {
           case Some(raws) if raws.size == values.size =>
-            val resultingType = raws.map(_.`type`).reduce(_ `∩` _)
-            Some(CollectionRaw(raws, ArrayType(resultingType)))
+            Some(CollectionRaw(raws))
           case _ => None
         }
     }
