@@ -1,7 +1,7 @@
 package aqua.backend
 
 import aqua.res.FuncRes
-import aqua.types.{ArrowType, OptionType, ProductType, Type}
+import aqua.types.{ArrowType, OptionType, ProductType, StructType, Type}
 import io.circe.*
 import io.circe.generic.auto.*
 import io.circe.parser.*
@@ -39,6 +39,8 @@ object TypeDefinition {
     t match {
       case OptionType(t) =>
         OptionalType
+      case StructType(name, fields) =>
+        StructTypeDef(name, fields.toMap.view.mapValues(TypeDefinition.apply))
       case pt: ProductType =>
         MultiReturnType(pt.toList.map(TypeDefinition.apply))
       case _ => PrimitiveType
@@ -50,6 +52,22 @@ case object OptionalType extends TypeDefinition { val tag = "optional" }
 case object VoidType extends TypeDefinition { val tag = "void" }
 case object PrimitiveType extends TypeDefinition { val tag = "primitive" }
 case class CallbackType(cDef: CallbackDefinition) extends TypeDefinition { val tag = "callback" }
+
+case class StructTypeDef(name: String, fields: Map[String, TypeDefinition]) extends TypeDefinition {
+  val tag = "struct"
+}
+
+case class LabelledProductTypeDef(items: List[(String, TypeDefinition)]) extends TypeDefinition {
+  val tag = "labelledProduct"
+}
+
+case class UnlabelledProductTypeDef(items: List[TypeDefinition]) extends TypeDefinition {
+  val tag = "unlabelledProduct"
+}
+
+case class ArrowTypeDef(name: String, fields: Map[String, TypeDefinition]) extends TypeDefinition {
+  val tag = "arrow"
+}
 
 case class MultiReturnType(returnItems: List[TypeDefinition]) extends TypeDefinition {
   val tag = "multiReturn"
