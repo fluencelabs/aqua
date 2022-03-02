@@ -24,7 +24,7 @@ object RawValueInliner extends Logging {
           nameMM <- Mangler[S].findAndForbidName(nameM)
         } yield VarModel(nameMM, vm.`type`, Chain.empty) -> Inline.preload(
           // TODO use smth more resilient to make VarRaw from a flattened VarModel
-          nameMM -> VarRaw(nameM, btm, lambdaM.map(_.toRaw))
+          nameMM -> ApplyLambdaRaw.fromChain(VarRaw(nameM, btm), lambdaM.map(_.toRaw))
         )
       case _ =>
         State.pure(vm -> Inline.empty)
@@ -36,14 +36,15 @@ object RawValueInliner extends Logging {
   ): State[S, (ValueModel, Inline)] =
     Exports[S].exports.flatMap(exports =>
       raw match {
-        case VarRaw(name, t, lambda) if lambda.isEmpty =>
+        case VarRaw(name, t) =>
           val vm = VarModel(name, t, Chain.empty).resolveWith(exports)
-          if (lambdaAllowed) State.pure(vm -> Inline.empty) else removeLambda(vm)
+          State.pure(vm -> Inline.empty)
 
         case LiteralRaw(value, t) =>
           State.pure(LiteralModel(value, t) -> Inline.empty)
 
-        case VarRaw(name, t, lambda) =>
+        case alr: ApplyLambdaRaw =>
+          val (raw, lambda) = alr.unwind
           lambda
             .foldLeft[State[S, (Chain[LambdaModel], Inline)]](
               State.pure(Chain.empty[LambdaModel] -> Inline.empty)
@@ -55,12 +56,19 @@ object RawValueInliner extends Logging {
               }
             }
             .flatMap { case (lambdaModel, map) =>
-              val vm = VarModel(name, t, lambdaModel).resolveWith(exports)
-              if (lambdaAllowed) State.pure(vm -> map)
-              else
-                removeLambda(vm).map { case (vmm, mpp) =>
-                  vmm -> (mpp |+| map)
-                }
+              unfold(raw, lambdaAllowed).flatMap {
+                case (v: VarModel, prefix) =>
+                  val vm = v.copy(lambda = lambdaModel).resolveWith(exports)
+                  if (lambdaAllowed) State.pure(vm -> (prefix |+| map))
+                  else
+                    removeLambda(vm).map { case (vmm, mpp) =>
+                      vmm -> (prefix |+| mpp |+| map)
+                    }
+                case (v, prefix) =>
+                  // What does it mean actually? I've no ides
+                  State.pure((v, prefix |+| map))
+              }
+
             }
 
         case cr @ CollectionRaw(values, boxType) =>
@@ -113,10 +121,9 @@ object RawValueInliner extends Logging {
   ): State[S, (LambdaModel, Inline)] = // TODO lambda for collection
     l match {
       case IntoFieldRaw(field, t) => State.pure(IntoFieldModel(field, t) -> Inline.empty)
-      case IntoIndexRaw(vm @ VarRaw(name, _, l), t) if l.nonEmpty =>
+      case IntoIndexRaw(vm: ApplyLambdaRaw, t) =>
         for {
-          nn <- Mangler[S].findNewName(name)
-          _ <- Mangler[S].forbid(Set(nn))
+          nn <- Mangler[S].findAndForbidName("ap-lambda")
         } yield IntoIndexModel(nn, t) -> Inline.preload(nn -> vm)
 
       case IntoIndexRaw(vr: VarRaw, t) =>

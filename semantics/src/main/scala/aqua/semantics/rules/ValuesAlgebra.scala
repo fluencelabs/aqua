@@ -86,7 +86,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               .map {
                 // Some(_) means no errors occured
                 case (Some(_), lambda) if lambda.length == ops.length =>
-                  Some(VarRaw(name.value, t, lambda))
+                  Some(lambda.foldLeft[ValueRaw](VarRaw(name.value, t)) { case (v, l) =>
+                    ApplyLambdaRaw(v, l)
+                  })
                 case _ => None
               }
 

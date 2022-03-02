@@ -41,18 +41,45 @@ object ValueRaw {
 
 }
 
-case class VarRaw(name: String, baseType: Type, lambda: Chain[LambdaRaw] = Chain.empty)
-    extends ValueRaw with Logging {
+case class ApplyLambdaRaw(value: ValueRaw, lambda: LambdaRaw) extends ValueRaw {
+  override def baseType: Type = value.baseType
 
-  override val `type`: Type = lambda.lastOption.map(_.`type`).getOrElse(baseType)
-
-  override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(copy(lambda = lambda.map(_.map(f))))
+  override def `type`: Type = lambda.`type`
 
   override def renameVars(map: Map[String, String]): ValueRaw =
-    VarRaw(map.getOrElse(name, name), baseType, lambda.map(_.renameVars(map)))
+    ApplyLambdaRaw(value.renameVars(map), lambda.renameVars(map))
 
-  override def toString: String = s"var{$name: " + baseType + s"}.${lambda.toList.mkString(".")}"
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(ApplyLambdaRaw(f(value), lambda.map(f)))
+
+  override def toString: String = s"$value.$lambda"
+
+  def unwind: (ValueRaw, Chain[LambdaRaw]) = value match {
+    case alr: ApplyLambdaRaw =>
+      val (v, i) = alr.unwind
+      (v, i :+ lambda)
+    case _ =>
+      (value, Chain.one(lambda))
+  }
+}
+
+object ApplyLambdaRaw {
+
+  def fromChain(value: ValueRaw, lambdas: Chain[LambdaRaw]): ValueRaw =
+    lambdas.foldLeft(value) { case (v, l) =>
+      ApplyLambdaRaw(v, l)
+    }
+}
+
+case class VarRaw(name: String, baseType: Type) extends ValueRaw {
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(map.getOrElse(name, name))
+
+  override def toString: String = s"var{$name: " + baseType + s"}"
+
+  def withLambda(lambda: LambdaRaw*): ValueRaw = ApplyLambdaRaw.fromChain(this, Chain.fromSeq(lambda))
 }
 
 case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {

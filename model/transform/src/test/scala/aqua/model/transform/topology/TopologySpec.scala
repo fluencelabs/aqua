@@ -424,10 +424,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   "topology resolver" should "create returning hops after for-par with inner `on` and xor" in {
 
     val streamRaw = VarRaw("stream", StreamType(ScalarType.string))
-    val streamRawEl = VarRaw(
-      "stream",
-      StreamType(ScalarType.string),
-      Chain.one(IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string))
+    val streamRawEl = VarRaw("stream", StreamType(ScalarType.string)).withLambda(
+      IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string)
     )
     val stream = ValueModel.fromRaw(streamRaw)
     val streamEl = ValueModel.fromRaw(streamRawEl)
@@ -493,10 +491,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   "topology resolver" should "create returning hops after for-par with inner `on` and xor, version 2" in {
 
     val streamRaw = VarRaw("stream", StreamType(ScalarType.string))
-    val streamRawEl = VarRaw(
-      "stream",
-      StreamType(ScalarType.string),
-      Chain.one(IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string))
+    val streamRawEl = VarRaw("stream", StreamType(ScalarType.string)).withLambda(
+      IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string)
     )
     val stream = ValueModel.fromRaw(streamRaw)
     val streamEl = ValueModel.fromRaw(streamRawEl)
@@ -778,9 +774,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   "topology resolver" should "place ping inside par" in {
     val i = LiteralRaw("i", ScalarType.string)
     val used = VarRaw("used", StreamType(ScalarType.string))
-    val usedWithIdx = used.copy(lambda =
-      Chain.one(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
-    )
+    val usedWithIdx =
+      used.withLambda(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
+
     val init =
       OnModel(initPeer, Chain.one(relay)).wrap(
         foldPar(
@@ -830,9 +826,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   "topology resolver" should "place ping inside par with xor" in {
     val i = LiteralRaw("i", ScalarType.string)
     val used = VarRaw("used", StreamType(ScalarType.string))
-    val usedWithIdx = used.copy(lambda =
-      Chain.one(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
-    )
+    val usedWithIdx =
+      used.withLambda(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
     val init =
       OnModel(initPeer, Chain.one(relay)).wrap(
         foldPar(

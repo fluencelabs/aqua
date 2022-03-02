@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
-import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.{ApplyLambdaRaw, IntoFieldRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
 import cats.syntax.show.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
@@ -129,7 +129,10 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamVarLambda =
-      VarRaw("records", streamType, Chain(IntoIndexRaw(LiteralRaw.number(0), ScalarType.string)))
+      ApplyLambdaRaw(
+        VarRaw("records", streamType),
+        IntoIndexRaw(LiteralRaw.number(0), ScalarType.string)
+      )
     val streamModel = VarModel(
       "records",
       StreamType(ScalarType.string),
@@ -304,17 +307,16 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   "arrow inliner" should "hold lambda" in {
 
     // lambda that will be assigned to another variable
-    val objectVarLambda = VarRaw(
-      "object",
-      StructType("objectType", NonEmptyMap.one("field", ScalarType.string)),
-      Chain.one(IntoFieldRaw("field", ScalarType.string))
-    )
+    val objectVarLambda =
+      VarRaw("object", StructType("objectType", NonEmptyMap.one("field", ScalarType.string)))
+        .withLambda(
+          IntoFieldRaw("field", ScalarType.string)
+        )
 
     // raw object
     val objectVar = VarRaw(
       "object",
-      StructType("objectType", NonEmptyMap.one("field", ScalarType.string)),
-      Chain.empty
+      StructType("objectType", NonEmptyMap.one("field", ScalarType.string))
     )
 
     // export object
@@ -406,10 +408,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     val idxVar = VarRaw("idx", ScalarType.u32)
 
-    val arrIdx = VarRaw(
-      "nodes",
-      ArrayType(ScalarType.string),
-      Chain.one(IntoIndexRaw(idxVar, ScalarType.string))
+    val arrIdx = VarRaw("nodes", ArrayType(ScalarType.string)).withLambda(
+      IntoIndexRaw(idxVar, ScalarType.string)
     )
 
     val getArrTag = CallServiceTag(
