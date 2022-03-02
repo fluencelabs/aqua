@@ -95,11 +95,13 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
       .run(InliningState(noNames = Set("ys")))
       .value
       ._2 should be(
-      IntoIndexModel("ys-0", ScalarType.string) -> Map(
-        "ys-0" -> VarRaw(
-          "ys",
-          ArrayType(ScalarType.i8),
-          Chain.one(IntoIndexRaw(LiteralRaw.number(0), ScalarType.i8))
+      IntoIndexModel("ys-0", ScalarType.string) -> Inline(
+        Map(
+          "ys-0" -> VarRaw(
+            "ys",
+            ArrayType(ScalarType.i8),
+            Chain.one(IntoIndexRaw(LiteralRaw.number(0), ScalarType.i8))
+          )
         )
       )
     )

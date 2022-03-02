@@ -20,3 +20,6 @@ func getTwoResults(node: string) -> []u64:
     Op2.identity(res!2)
   <- res
 
+
+func makeList() -> []u64:
+  <- [1, 3, 5]

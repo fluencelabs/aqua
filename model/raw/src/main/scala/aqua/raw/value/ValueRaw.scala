@@ -42,7 +42,7 @@ object ValueRaw {
 }
 
 case class VarRaw(name: String, baseType: Type, lambda: Chain[LambdaRaw] = Chain.empty)
-    extends ValueRaw with Logging {
+  extends ValueRaw with Logging {
 
   override val `type`: Type = lambda.lastOption.map(_.`type`).getOrElse(baseType)
 
@@ -74,7 +74,9 @@ object LiteralRaw {
 
 case class CollectionRaw(values: NonEmptyList[ValueRaw]) extends ValueRaw {
 
-  override lazy val baseType: Type = ArrayType(values.map(_.`type`).reduceLeft(_ `∩` _))
+  lazy val elementType: Type = values.map(_.`type`).reduceLeft(_ `∩` _)
+
+  override lazy val baseType: Type = ArrayType(elementType)
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(values.map(f)))
 }
