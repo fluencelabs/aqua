@@ -4,7 +4,7 @@ import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{ArrayType, StreamType}
+import aqua.types.{ArrayType, OptionType, StreamType}
 import cats.syntax.traverse.*
 import cats.syntax.monoid.*
 import cats.instances.list.*
@@ -63,9 +63,14 @@ object RawValueInliner extends Logging {
                 }
             }
 
-        case cr @ CollectionRaw(values) =>
+        case cr @ CollectionRaw(values, boxType) =>
+          val prefix = boxType match {
+            case _: StreamType => "stream"
+            case _: ArrayType => "array"
+            case _: OptionType => "option"
+          }
           for {
-            streamName <- Mangler[S].findAndForbidName("stream-sugar")
+            streamName <- Mangler[S].findAndForbidName(s"$prefix-sugar")
 
             stream = VarModel(streamName, StreamType(cr.elementType))
             streamExp = CallModel.Export(stream.name, stream.`type`)
@@ -78,12 +83,26 @@ object RawValueInliner extends Logging {
                 Chain.fromOption(t) :+ PushToStreamModel(v, streamExp).leaf
               })
 
-            canonName <- Mangler[S].findAndForbidName("stream-sugar-can")
-            canon = CallModel.Export(canonName, cr.`type`)
-          } yield VarModel(canonName, cr.`type`) -> Inline.tree(
-            RestrictionModel(streamName, isStream = true).wrap(
-              SeqModel.wrap((vals :+ CanonicalizeModel(stream, canon).leaf).toList: _*)
-            )
+            canonName <-
+              if (boxType.isStream) State.pure(streamName)
+              else Mangler[S].findAndForbidName(streamName)
+            canon = CallModel.Export(canonName, boxType)
+          } yield VarModel(canonName, boxType) -> Inline.tree(
+            boxType match {
+              case ArrayType(_) =>
+                RestrictionModel(streamName, isStream = true).wrap(
+                  SeqModel.wrap((vals :+ CanonicalizeModel(stream, canon).leaf).toList: _*)
+                )
+              case OptionType(_) =>
+                RestrictionModel(streamName, isStream = true).wrap(
+                  SeqModel.wrap(
+                    XorModel.wrap(vals.toList: _*),
+                    CanonicalizeModel(stream, canon).leaf
+                  )
+                )
+              case StreamType(_) =>
+                SeqModel.wrap(vals.toList: _*)
+            }
           )
 
       }

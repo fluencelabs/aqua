@@ -33,11 +33,28 @@ case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
   def value: String = valueToken.extract
 }
 
-case class CollectionToken[F[_]: Comonad](values: NonEmptyList[ValueToken[F]])
-    extends ValueToken[F] {
+case class CollectionToken[F[_]: Comonad](
+  values: NonEmptyList[ValueToken[F]],
+  mode: CollectionToken.Mode
+) extends ValueToken[F] {
   override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] = copy(values.map(_.mapK(fk)))
 
   override def as[T](v: T): F[T] = values.head.as(v)
+}
+
+object CollectionToken {
+
+  enum Mode:
+    case StreamMode, OptionMode, ArrayMode
+
+  def collection: P[CollectionToken[Span.S]] =
+    ((`*`.as(Mode.StreamMode: Mode) | `?`.as(Mode.OptionMode: Mode)).?.map(
+      _.getOrElse(Mode.ArrayMode: Mode)
+    ).with1 ~ (`[` *> P
+      .defer(ValueToken.`_value`)
+      .repSep(`,`) <* `]`)).map { case (mode, vals) =>
+      CollectionToken(vals, mode)
+    }
 }
 
 object ValueToken {
@@ -81,11 +98,12 @@ object ValueToken {
   val literal: P[LiteralToken[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
-  def collection: P[CollectionToken[Span.S]] =
-    (`[` *> P.defer(`_value`).repSep(`,`) <* `]`).map(CollectionToken(_))
-
   def `_value`: P[ValueToken[Span.S]] =
-    P.oneOf(literal.backtrack :: initPeerId.backtrack :: P.defer(collection) :: varLambda :: Nil)
+    P.oneOf(
+      literal.backtrack :: initPeerId.backtrack :: P.defer(
+        CollectionToken.collection
+      ) :: varLambda :: Nil
+    )
 
   val `value`: P[ValueToken[Span.S]] =
     P.defer(`_value`)

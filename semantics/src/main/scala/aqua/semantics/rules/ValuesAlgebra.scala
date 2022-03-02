@@ -4,7 +4,7 @@ import aqua.parser.lexer.*
 import aqua.raw.value.*
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, ArrowType, LiteralType, Type}
+import aqua.types.*
 import cats.Monad
 import cats.data.Chain
 import cats.syntax.applicative.*
@@ -93,10 +93,20 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           case None =>
             None.pure[Alg]
         }
-      case CollectionToken(values) =>
+      case CollectionToken(values, mode) =>
         values.traverse(valueToRaw).map(_.toList.flatten).map(NonEmptyList.fromList).map {
           case Some(raws) if raws.size == values.size =>
-            Some(CollectionRaw(raws))
+            val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
+            Some(
+              CollectionRaw(
+                raws,
+                mode match {
+                  case CollectionToken.Mode.StreamMode => StreamType(element)
+                  case CollectionToken.Mode.ArrayMode => ArrayType(element)
+                  case CollectionToken.Mode.OptionMode => OptionType(element)
+                }
+              )
+            )
           case _ => None
         }
     }
