@@ -82,25 +82,22 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
 
             // Restrict all the local streams
             val (body, retValuesFix) = localStreams.foldLeft((m, retValues)) { case ((b, rs), n) =>
-              if (
-                rs.exists {
-                  case VarRaw(`n`, _) => true
-                  case _ => false
-                }
-              )
+              if (rs.exists(_.varNames(n)))
                 RestrictionTag(n, isStream = true).wrap(
                   SeqTag.wrap(
-                    b :: rs.collect { case vn @ VarRaw(`n`, _) =>
-                      CanonicalizeTag(
-                        vn,
-                        Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
-                      ).leaf
+                    b :: rs.collect {
+                      case vn if vn.varNames(n) =>
+                        CanonicalizeTag(
+                          vn,
+                          Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
+                        ).leaf
                     }: _*
                   )
                 ) -> rs.map {
-                  case vn @ VarRaw(`n`, _) =>
+                  case vn if vn.varNames(n) =>
                     VarRaw(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
-                  case vm => vm
+                  case vm =>
+                    vm
                 }
               else RestrictionTag(n, isStream = true).wrap(b) -> rs
             }

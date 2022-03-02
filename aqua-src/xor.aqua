@@ -1,0 +1,12 @@
+service OpR("op"):
+  identity: string -> string
+
+func ifCorrectXorWrap(node: string) -> string:
+  service_id: *string
+  on node:
+    res <- OpR.identity("1234")
+    if res == "":
+      service_id <<- "0x"
+    else:
+      service_id <<- "1x"
+  <- service_id!

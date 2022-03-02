@@ -104,6 +104,7 @@ case class ForModel(item: String, iterable: ValueModel) extends SeqGroupModel {
 
 }
 
+// TODO how is it used? remove, if it's not
 case class DeclareStreamModel(value: ValueModel) extends NoExecModel {
   override def toString: String = s"declare $value"
 

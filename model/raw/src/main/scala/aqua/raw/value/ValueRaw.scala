@@ -15,6 +15,8 @@ sealed trait ValueRaw {
 
   def map(f: ValueRaw => ValueRaw): ValueRaw
 
+  def varNames: Set[String]
+
 }
 
 object ValueRaw {
@@ -60,6 +62,8 @@ case class ApplyLambdaRaw(value: ValueRaw, lambda: LambdaRaw) extends ValueRaw {
     case _ =>
       (value, Chain.one(lambda))
   }
+
+  override def varNames: Set[String] = value.varNames ++ lambda.varNames
 }
 
 object ApplyLambdaRaw {
@@ -79,13 +83,18 @@ case class VarRaw(name: String, baseType: Type) extends ValueRaw {
 
   override def toString: String = s"var{$name: " + baseType + s"}"
 
-  def withLambda(lambda: LambdaRaw*): ValueRaw = ApplyLambdaRaw.fromChain(this, Chain.fromSeq(lambda))
+  def withLambda(lambda: LambdaRaw*): ValueRaw =
+    ApplyLambdaRaw.fromChain(this, Chain.fromSeq(lambda))
+
+  override def varNames: Set[String] = Set(name)
 }
 
 case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
 
   override def toString: String = s"{$value: ${baseType}}"
+
+  override def varNames: Set[String] = Set.empty
 }
 
 object LiteralRaw {
@@ -110,4 +119,6 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
     val el = vals.map(_.`type`).reduceLeft(_ `∩` _)
     f(copy(vals, boxType.withElement(el)))
   }
+
+  override def varNames: Set[String] = values.toList.flatMap(_.varNames).toSet
 }
