@@ -101,6 +101,9 @@ object AirGen extends Logging {
           ApGen(valueToData(operand), exportToString(exportTo))
         )
 
+      case NullRes =>
+        Eval.now(NullGen)
+
       case _: NoAir =>
         Eval later NullGen
 

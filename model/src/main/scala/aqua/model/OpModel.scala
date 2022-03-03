@@ -151,3 +151,4 @@ case class JoinModel(operands: NonEmptyList[ValueModel]) extends ForceExecModel 
 }
 
 case object EmptyModel extends NoExecModel
+case object NullModel extends NoExecModel
