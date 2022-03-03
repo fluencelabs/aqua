@@ -1,5 +1,5 @@
-func arraySugar() -> []u32:
+func optionSugar() -> []u32:
   str: *u32
-  for i <- [4]:
+  for i <- ?[4, 5]:
     str <<- i
   <- str

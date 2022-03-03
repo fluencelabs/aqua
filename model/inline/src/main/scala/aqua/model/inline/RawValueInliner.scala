@@ -104,7 +104,7 @@ object RawValueInliner extends Logging {
               case OptionType(_) =>
                 RestrictionModel(streamName, isStream = true).wrap(
                   SeqModel.wrap(
-                    XorModel.wrap(vals.toList: _*),
+                    XorModel.wrap((vals :+ EmptyModel.leaf).toList: _*),
                     CanonicalizeModel(stream, canon).leaf
                   )
                 )
