@@ -1,6 +1,6 @@
 package aqua.semantics.rules.abilities
 
-import aqua.parser.lexer.{Ability, Name, Token, Value}
+import aqua.parser.lexer.{Ability, Name, Token, ValueToken}
 import aqua.raw.ServiceRaw
 import aqua.raw.RawContext
 import aqua.raw.value.ValueRaw
@@ -105,7 +105,7 @@ class AbilitiesInterpreter[S[_], X](implicit
         }
     }
 
-  override def setServiceId(name: Ability[S], id: Value[S], vm: ValueRaw): SX[Boolean] =
+  override def setServiceId(name: Ability[S], id: ValueToken[S], vm: ValueRaw): SX[Boolean] =
     getService(name.value).flatMap {
       case Some(_) =>
         mapStackHead(

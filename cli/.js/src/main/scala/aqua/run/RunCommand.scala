@@ -14,7 +14,7 @@ import aqua.js.*
 import aqua.model.{AquaContext, FuncArrow}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.parser.expr.func.CallArrowExpr
-import aqua.parser.lexer.Literal
+import aqua.parser.lexer.LiteralToken
 import aqua.parser.lift.FileSpan
 import aqua.raw.value.ValueRaw
 import aqua.run.RunConfig

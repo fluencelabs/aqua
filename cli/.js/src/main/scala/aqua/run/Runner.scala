@@ -135,7 +135,7 @@ class Runner(
 
     val vars = args
       .zip(funcCallable.arrowType.domain.toList)
-      .collect { case (VarRaw(n, _, _), argType) =>
+      .collect { case (VarRaw(n, _), argType) =>
         (n, argType)
       }
       .distinctBy(_._1)

@@ -4,7 +4,9 @@ import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
 import aqua.raw.ops.*
 import aqua.raw.value.*
+import aqua.types.{ArrayType, OptionType, StreamType}
 import cats.syntax.traverse.*
+import cats.syntax.monoid.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
 import scribe.Logging
@@ -15,64 +17,114 @@ object RawValueInliner extends Logging {
 
   private[inline] def removeLambda[S: Mangler: Exports](
     vm: ValueModel
-  ): State[S, (ValueModel, Map[String, ValueRaw])] =
+  ): State[S, (ValueModel, Inline)] =
     vm match {
       case VarModel(nameM, btm, lambdaM) if lambdaM.nonEmpty =>
         for {
-          nameMM <- Mangler[S].findNewName(nameM)
-          _ <- Mangler[S].forbid(Set(nameMM))
-        } yield VarModel(nameMM, vm.`type`, Chain.empty) -> Map(
+          nameMM <- Mangler[S].findAndForbidName(nameM)
+        } yield VarModel(nameMM, vm.`type`, Chain.empty) -> Inline.preload(
           // TODO use smth more resilient to make VarRaw from a flattened VarModel
-          nameMM -> VarRaw(nameM, btm, lambdaM.map(_.toRaw))
+          nameMM -> ApplyLambdaRaw.fromChain(VarRaw(nameM, btm), lambdaM.map(_.toRaw))
         )
       case _ =>
-        State.pure(vm -> Map.empty)
+        State.pure(vm -> Inline.empty)
     }
 
   private[inline] def unfold[S: Mangler: Exports](
     raw: ValueRaw,
     lambdaAllowed: Boolean = true
-  ): State[S, (ValueModel, Map[String, ValueRaw])] =
+  ): State[S, (ValueModel, Inline)] =
     Exports[S].exports.flatMap(exports =>
       raw match {
-        case VarRaw(name, t, lambda) if lambda.isEmpty =>
+        case VarRaw(name, t) =>
           val vm = VarModel(name, t, Chain.empty).resolveWith(exports)
-          if (lambdaAllowed) State.pure(vm -> Map.empty) else removeLambda(vm)
+          State.pure(vm -> Inline.empty)
 
         case LiteralRaw(value, t) =>
-          State.pure(LiteralModel(value, t) -> Map.empty)
-        case VarRaw(name, t, lambda) =>
+          State.pure(LiteralModel(value, t) -> Inline.empty)
+
+        case alr: ApplyLambdaRaw =>
+          val (raw, lambda) = alr.unwind
           lambda
-            .foldLeft[State[S, (Chain[LambdaModel], Map[String, ValueRaw])]](
-              State.pure(Chain.empty[LambdaModel] -> Map.empty[String, ValueRaw])
+            .foldLeft[State[S, (Chain[LambdaModel], Inline)]](
+              State.pure(Chain.empty[LambdaModel] -> Inline.empty)
             ) { case (lcm, l) =>
               lcm.flatMap { case (lc, m) =>
                 unfoldLambda(l).map { case (lm, mm) =>
-                  (lc :+ lm, m ++ mm)
+                  (lc :+ lm, m |+| mm)
                 }
               }
             }
             .flatMap { case (lambdaModel, map) =>
-              val vm = VarModel(name, t, lambdaModel).resolveWith(exports)
-              if (lambdaAllowed) State.pure(vm -> map)
-              else
-                removeLambda(vm).map { case (vmm, mpp) =>
-                  vmm -> (mpp ++ map)
-                }
+              unfold(raw, lambdaAllowed).flatMap {
+                case (v: VarModel, prefix) =>
+                  val vm = v.copy(lambda = lambdaModel).resolveWith(exports)
+                  if (lambdaAllowed) State.pure(vm -> (prefix |+| map))
+                  else
+                    removeLambda(vm).map { case (vmm, mpp) =>
+                      vmm -> (prefix |+| mpp |+| map)
+                    }
+                case (v, prefix) =>
+                  // What does it mean actually? I've no ides
+                  State.pure((v, prefix |+| map))
+              }
+
             }
+
+        case cr @ CollectionRaw(values, boxType) =>
+          val prefix = boxType match {
+            case _: StreamType => "stream"
+            case _: ArrayType => "array"
+            case _: OptionType => "option"
+          }
+          for {
+            streamName <- Mangler[S].findAndForbidName(s"$prefix-sugar")
+
+            stream = VarModel(streamName, StreamType(cr.elementType))
+            streamExp = CallModel.Export(stream.name, stream.`type`)
+
+            vals <- values
+              .traverse(valueToModel(_))
+              .map(_.toList)
+              .map(Chain.fromSeq)
+              .map(_.flatMap { case (v, t) =>
+                Chain.fromOption(t) :+ PushToStreamModel(v, streamExp).leaf
+              })
+
+            canonName <-
+              if (boxType.isStream) State.pure(streamName)
+              else Mangler[S].findAndForbidName(streamName)
+            canon = CallModel.Export(canonName, boxType)
+          } yield VarModel(canonName, boxType) -> Inline.tree(
+            boxType match {
+              case ArrayType(_) =>
+                RestrictionModel(streamName, isStream = true).wrap(
+                  SeqModel.wrap((vals :+ CanonicalizeModel(stream, canon).leaf).toList: _*)
+                )
+              case OptionType(_) =>
+                RestrictionModel(streamName, isStream = true).wrap(
+                  SeqModel.wrap(
+                    XorModel.wrap((vals :+ NullModel.leaf).toList: _*),
+                    CanonicalizeModel(stream, canon).leaf
+                  )
+                )
+              case StreamType(_) =>
+                SeqModel.wrap(vals.toList: _*)
+            }
+          )
+
       }
     )
 
   private[inline] def unfoldLambda[S: Mangler: Exports](
     l: LambdaRaw
-  ): State[S, (LambdaModel, Map[String, ValueRaw])] =
+  ): State[S, (LambdaModel, Inline)] = // TODO lambda for collection
     l match {
-      case IntoFieldRaw(field, t) => State.pure(IntoFieldModel(field, t) -> Map.empty)
-      case IntoIndexRaw(vm @ VarRaw(name, _, l), t) if l.nonEmpty =>
+      case IntoFieldRaw(field, t) => State.pure(IntoFieldModel(field, t) -> Inline.empty)
+      case IntoIndexRaw(vm: ApplyLambdaRaw, t) =>
         for {
-          nn <- Mangler[S].findNewName(name)
-          _ <- Mangler[S].forbid(Set(nn))
-        } yield IntoIndexModel(nn, t) -> Map(nn -> vm)
+          nn <- Mangler[S].findAndForbidName("ap-lambda")
+        } yield IntoIndexModel(nn, t) -> Inline.preload(nn -> vm)
 
       case IntoIndexRaw(vr: VarRaw, t) =>
         unfold(vr, lambdaAllowed = false).map {
@@ -81,8 +133,21 @@ object RawValueInliner extends Logging {
         }
 
       case IntoIndexRaw(LiteralRaw(value, _), t) =>
-        State.pure(IntoIndexModel(value, t) -> Map.empty)
+        State.pure(IntoIndexModel(value, t) -> Inline.empty)
     }
+
+  private[inline] def inlineToTree[S: Mangler: Exports](
+    inline: Inline
+  ): State[S, List[OpModel.Tree]] =
+    inline.flattenValues.toList.traverse { case (name, v) =>
+      valueToModel(v).map {
+        case (vv, Some(op)) =>
+          SeqModel.wrap(op, FlattenModel(vv, name).leaf)
+
+        case (vv, _) =>
+          FlattenModel(vv, name).leaf
+      }
+    }.map(inline.predo.toList ::: _)
 
   def valueToModel[S: Mangler: Exports](
     value: ValueRaw
@@ -96,15 +161,7 @@ object RawValueInliner extends Logging {
       dc <- Exports[S].exports
       _ = logger.trace("DEC " + dc)
 
-      ops <- map.toList.traverse { case (name, v) =>
-        valueToModel(v).map {
-          case (vv, Some(op)) =>
-            SeqModel.wrap(op, FlattenModel(vv, name).leaf)
-
-          case (vv, _) =>
-            FlattenModel(vv, name).leaf
-        }
-      }
+      ops <- inlineToTree(map)
       _ = logger.trace("desugarized ops: " + ops)
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops)

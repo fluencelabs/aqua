@@ -1,11 +1,11 @@
 package aqua.parser.head
 
-import aqua.parser.lexer.{Literal, Token}
+import aqua.parser.lexer.{LiteralToken, Token}
 import cats.Comonad
 import cats.~>
 
 trait FilenameExpr[F[_]] extends HeaderExpr[F] {
-  def filename: Literal[F]
+  def filename: LiteralToken[F]
 
   override def token: Token[F] = filename
 

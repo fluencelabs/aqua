@@ -2,7 +2,7 @@ package aqua.parser.expr
 
 import aqua.parser.Expr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{Literal, Name, Value}
+import aqua.parser.lexer.{LiteralToken, Name, ValueToken}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser as P
@@ -11,9 +11,9 @@ import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ConstantExpr[F[_]](
-  name: Name[F],
-  value: Value[F],
-  skipIfAlreadyDefined: Boolean
+                               name: Name[F],
+                               value: ValueToken[F],
+                               skipIfAlreadyDefined: Boolean
 ) extends Expr[F](ConstantExpr, name) {
 
   def mapK[K[_]: Comonad](fk: F ~> K): ConstantExpr[K] =
@@ -27,14 +27,14 @@ object ConstantExpr extends Expr.Leaf {
   
 
   override val p: P[ConstantExpr[Span.S]] =
-    (((constName ~ `?`.?).with1 <* `=` <* ` `) ~ Value.`value`)
+    (((constName ~ `?`.?).with1 <* `=` <* ` `) ~ ValueToken.`value`)
     .map { case ((name, mark), value) =>
       ConstantExpr(name, value, mark.nonEmpty)
     }
 
-  val onlyLiteral: P[(Name[Span.S], Literal[Span.S])] =
+  val onlyLiteral: P[(Name[Span.S], LiteralToken[Span.S])] =
     ((((Name
-      .upper <* ` `) ~ `?`.?).with1 <* `=` <* ` `) ~ Value.literal).map {
+      .upper <* ` `) ~ `?`.?).with1 <* `=` <* ` `) ~ ValueToken.literal).map {
       case ((name, _), value) =>
         (name, value)
     }

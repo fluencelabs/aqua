@@ -26,7 +26,7 @@ case class IntoField[F[_]: Comonad](name: F[String]) extends LambdaOp[F] {
   def value: String = name.extract
 }
 
-case class IntoIndex[F[_]: Comonad](token: Token[F], idx: Option[Value[F]]) extends LambdaOp[F] {
+case class IntoIndex[F[_]: Comonad](token: Token[F], idx: Option[ValueToken[F]]) extends LambdaOp[F] {
   override def as[T](v: T): F[T] = token.as(v)
 
   override def mapK[K[_]: Comonad](fk: F ~> K): IntoIndex[K] =
@@ -43,7 +43,7 @@ object LambdaOp {
 
   private val parseIdx: P[LambdaOp[Span.S]] =
     P.defer(
-      (Value.`value`.between(`[`, `]`) | (exclamation *> Value.num))
+      (ValueToken.`value`.between(`[`, `]`) | (exclamation *> ValueToken.num))
         .map(v => IntoIndex(v, Some(v)))
         .backtrack
     ) |

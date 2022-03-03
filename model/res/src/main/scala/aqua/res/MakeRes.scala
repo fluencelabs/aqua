@@ -90,5 +90,8 @@ object MakeRes {
         orInit(currentPeerId)
       ).leaf
 
+    case NullModel =>
+      NullRes.leaf
+
   }
 }

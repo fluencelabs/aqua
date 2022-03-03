@@ -68,8 +68,8 @@ object ScriptOpts extends Logging {
     data: Option[js.Dynamic]
   ): ValidatedNec[String, List[LiteralRaw]] = {
     val literals = args.map {
-      case l: LiteralRaw => validNec(l)
-      case v @ VarRaw(name, _, _) =>
+      case l: LiteralRaw => validNec(l) // TODO handle CollectionRaw?
+      case v @ VarRaw(name, _) =>
         data.map { d =>
           val arg = d.selectDynamic(name)
           js.typeOf(arg) match {

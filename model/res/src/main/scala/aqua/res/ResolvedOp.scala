@@ -51,3 +51,7 @@ case class CallServiceRes(
 case class ApRes(operand: ValueModel, exportTo: CallModel.Export) extends ResolvedOp {
   override def toString: String = s"(ap $operand $exportTo)"
 }
+
+case object NullRes extends ResolvedOp {
+  override def toString: String = "(null)"
+}

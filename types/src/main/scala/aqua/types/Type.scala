@@ -14,7 +14,9 @@ sealed trait Type {
   def isInhabited: Boolean = true
 
   infix def `∩`(other: Type): Type = intersectBottom(other)
+
   def intersectTop(other: Type): Type = IntersectTypes.top.combine(this, other)
+
   def intersectBottom(other: Type): Type = IntersectTypes.bottom.combine(this, other)
 
   infix def `∪`(other: Type): Type = uniteTop(other)
@@ -180,6 +182,8 @@ sealed trait BoxType extends DataType {
   def isStream: Boolean
 
   def element: Type
+
+  def withElement(t: Type): BoxType
 }
 
 case class ArrayType(element: Type) extends BoxType {
@@ -187,6 +191,8 @@ case class ArrayType(element: Type) extends BoxType {
   override def isStream: Boolean = false
 
   override def toString: String = "[]" + element
+
+  override def withElement(t: Type): BoxType = copy(element = t)
 }
 
 case class OptionType(element: Type) extends BoxType {
@@ -194,6 +200,8 @@ case class OptionType(element: Type) extends BoxType {
   override def isStream: Boolean = false
 
   override def toString: String = "?" + element
+
+  override def withElement(t: Type): BoxType = copy(element = t)
 }
 
 // Struct is an unordered collection of labelled types
@@ -228,6 +236,8 @@ case class StreamType(element: Type) extends BoxType {
   override def isStream: Boolean = true
 
   override def toString: String = s"*$element"
+
+  override def withElement(t: Type): BoxType = copy(element = t)
 }
 
 object Type {

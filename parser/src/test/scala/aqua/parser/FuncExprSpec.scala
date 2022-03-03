@@ -3,7 +3,7 @@ package aqua.parser
 import aqua.AquaSpec
 import aqua.parser.expr.*
 import aqua.parser.expr.func.{AbilityIdExpr, ArrowExpr, CallArrowExpr, IfExpr, OnExpr, ReturnExpr}
-import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp, Literal, Token, VarLambda}
+import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp, LiteralToken, Token, VarToken}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.ScalarType.*
 import cats.Id

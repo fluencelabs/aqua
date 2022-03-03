@@ -7,14 +7,15 @@ sealed trait LambdaRaw {
 
   def map(f: ValueRaw => ValueRaw): LambdaRaw
 
-  def resolveWith(vals: Map[String, ValueRaw]): LambdaRaw = this
-
   def renameVars(vals: Map[String, String]): LambdaRaw = this
 
+  def varNames: Set[String]
 }
 
 case class IntoFieldRaw(field: String, `type`: Type) extends LambdaRaw {
   override def map(f: ValueRaw => ValueRaw): LambdaRaw = this
+
+  override def varNames: Set[String] = Set.empty
 }
 
 case class IntoIndexRaw(idx: ValueRaw, `type`: Type) extends LambdaRaw {
@@ -23,4 +24,6 @@ case class IntoIndexRaw(idx: ValueRaw, `type`: Type) extends LambdaRaw {
 
   override def renameVars(vals: Map[String, String]): LambdaRaw =
     IntoIndexRaw(idx.renameVars(vals), `type`)
+
+  override def varNames: Set[String] = idx.varNames
 }
