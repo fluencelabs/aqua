@@ -142,31 +142,20 @@ object TagInliner extends Logging {
 
   private def traverseS[S](
     cf: RawTag.Tree,
-    f: RawTag => State[S, OpModel.Tree]
+    f: RawTag => State[S, (Option[OpModel], Option[OpModel.Tree])]
   ): State[S, OpModel.Tree] =
     for {
       headTree <- f(cf.head)
       tail <- StateT.liftF(cf.tail)
       tailTree <- tail.traverse(traverseS[S](_, f))
-    } yield headTree.copy(tail = headTree.tail.map(_ ++ tailTree))
-
-  private def handleTag[S: Exports: Counter: Arrows: Mangler](
-    tag: RawTag,
-    treeFunctionName: String
-  ): State[S, OpModel.Tree] =
-    for {
-      resolvedArrows <- Arrows[S].arrows
-
-      opModelAndPrefixTree <- TagInliner.tagToModel(tag, treeFunctionName)
-      (dTag, dPrefix) = opModelAndPrefixTree
-
-    } yield
-    // If smth needs to be added before this function tree, add it with Seq
-    SeqModel.wrap(dPrefix.toList ::: dTag.map(_.leaf).toList: _*)
+    } yield headTree match {
+      case (Some(m), prefix) => SeqModel.wrap(prefix.toList :+ m.wrap(tailTree.toList: _*): _*)
+      case (None, prefix) => SeqModel.wrap(prefix.toList ++ tailTree.toList: _*)
+    }
 
   def handleTree[S: Exports: Counter: Mangler: Arrows](
     tree: RawTag.Tree,
     treeFunctionName: String
   ): State[S, OpModel.Tree] =
-    traverseS(tree, handleTag(_, treeFunctionName))
+    traverseS(tree, tagToModel(_, treeFunctionName))
 }

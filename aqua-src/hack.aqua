@@ -1,9 +1,5 @@
-
-data RelayerSig:
-    address: string
-
-func send_vote(log: string -> ()):
-
-    maybeAck: *RelayerSig
-    log(maybeAck[0].address)
-
+func arraySugar() -> []u32:
+  str: *u32
+  for i <- [4]:
+    str <<- i
+  <- str

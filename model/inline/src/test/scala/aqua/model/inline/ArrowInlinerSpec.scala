@@ -107,14 +107,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, true).wrap(
-        SeqModel.wrapWithEmpty(
-          EmptyModel.leaf,
-          CallServiceModel(
-            LiteralModel("\"test-service\"", LiteralType.string),
-            "some-call",
-            CallModel(streamModel :: Nil, Nil)
-          ).leaf
-        )
+        CallServiceModel(
+          LiteralModel("\"test-service\"", LiteralType.string),
+          "some-call",
+          CallModel(streamModel :: Nil, Nil)
+        ).leaf
       )
     ) should be(true)
 
@@ -199,14 +196,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, true).wrap(
-        SeqModel.wrapWithEmpty(
-          EmptyModel.leaf,
-          CallServiceModel(
-            LiteralModel("\"test-service\"", LiteralType.string),
-            "some-call",
-            CallModel(streamModel :: Nil, Nil)
-          ).leaf
-        )
+        CallServiceModel(
+          LiteralModel("\"test-service\"", LiteralType.string),
+          "some-call",
+          CallModel(streamModel :: Nil, Nil)
+        ).leaf
       )
     ) should be(true)
 
@@ -275,8 +269,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ._2
 
     model.equalsOrShowDiff(
-      SeqModel.wrapWithEmpty(
-        EmptyModel.leaf,
+      SeqModel.wrap(
         CallServiceModel(
           LiteralModel("\"test-service\"", LiteralType.string),
           "get_records",
@@ -380,15 +373,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           "getObj",
           CallModel(Nil, CallModel.Export(objectVar.name, objectVar.`type`) :: Nil)
         ).leaf,
-        SeqModel.wrap(
-          // TODO: redundant empty Seq, delete it somehow
-          SeqModel.leaf,
-          CallServiceModel(
-            LiteralModel("\"callbackSrv\"", LiteralType.string),
-            "response",
-            CallModel(ValueModel.fromRaw(objectVarLambda) :: Nil, Nil)
-          ).leaf
-        )
+        CallServiceModel(
+          LiteralModel("\"callbackSrv\"", LiteralType.string),
+          "response",
+          CallModel(ValueModel.fromRaw(objectVarLambda) :: Nil, Nil)
+        ).leaf
       )
     ) should be(true)
 
