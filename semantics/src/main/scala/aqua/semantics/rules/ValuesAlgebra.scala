@@ -15,10 +15,10 @@ import cats.syntax.traverse.*
 import cats.instances.list.*
 import cats.data.NonEmptyList
 
-class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
-                                          N: NamesAlgebra[S, Alg],
-                                          T: TypesAlgebra[S, Alg]
-                                         ) {
+class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
+  N: NamesAlgebra[S, Alg],
+  T: TypesAlgebra[S, Alg]
+) {
 
   def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
     ensureTypeMatches(v, LiteralType.string)
@@ -95,17 +95,21 @@ class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
           case None =>
             None.pure[Alg]
         }
-      case ct@CollectionToken(_, values) =>
+      case ct @ CollectionToken(_, values) =>
         values.traverse(valueToRaw).map(_.toList.flatten).map(NonEmptyList.fromList).map {
           case Some(raws) if raws.size == values.size =>
             val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
+            // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
+            // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
+            // make any decision about the structure of type, but can push anything inside
+            val elementNotBottom = if (element == BottomType) TopType else element
             Some(
               CollectionRaw(
                 raws,
                 ct.mode match {
-                  case CollectionToken.Mode.StreamMode => StreamType(element)
-                  case CollectionToken.Mode.ArrayMode => ArrayType(element)
-                  case CollectionToken.Mode.OptionMode => OptionType(element)
+                  case CollectionToken.Mode.StreamMode => StreamType(elementNotBottom)
+                  case CollectionToken.Mode.ArrayMode => ArrayType(elementNotBottom)
+                  case CollectionToken.Mode.OptionMode => OptionType(elementNotBottom)
                 }
               )
             )
@@ -115,7 +119,7 @@ class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
     }
 
   def checkArguments(token: Token[S], arr: ArrowType, args: List[ValueToken[S]]): Alg[Boolean] =
-  // TODO: do we really need to check this?
+    // TODO: do we really need to check this?
     T.checkArgumentsNumber(token, arr.domain.length, args.length).flatMap {
       case false => false.pure[Alg]
       case true =>
@@ -133,7 +137,7 @@ class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
                 case Some((tkn, valType)) =>
                   T.ensureTypeMatches(tkn, t, valType)
               }
-              ).mapN(_ && _)
+            ).mapN(_ && _)
           }
     }
 
@@ -141,9 +145,9 @@ class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
 
 object ValuesAlgebra {
 
-  implicit def deriveValuesAlgebra[S[_], Alg[_] : Monad](implicit
-                                                         N: NamesAlgebra[S, Alg],
-                                                         T: TypesAlgebra[S, Alg]
-                                                        ): ValuesAlgebra[S, Alg] =
+  implicit def deriveValuesAlgebra[S[_], Alg[_]: Monad](implicit
+    N: NamesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg]
+  ): ValuesAlgebra[S, Alg] =
     new ValuesAlgebra[S, Alg]
 }
