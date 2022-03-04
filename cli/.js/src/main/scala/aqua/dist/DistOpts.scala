@@ -68,10 +68,8 @@ object DistOpts extends Logging {
       (GeneralRunOptions.commonOpt, srvIdOpt).mapN { (common, srvId) =>
         RunInfo(
           common,
-          RemoveFuncName,
-          PackagePath(DistAqua),
-          Nil,
-          LiteralRaw.quote(srvId) :: Nil
+          CliFunc(RemoveFuncName, LiteralRaw.quote(srvId) :: Nil),
+          PackagePath(DistAqua)
         )
       }
     )
@@ -99,13 +97,11 @@ object DistOpts extends Logging {
                   } else common
                   RunInfo(
                     commonWithTimeout,
-                    DeployFuncName,
+                    CliFunc(DeployFuncName, args),
                     PackagePath(DistAqua),
                     Nil,
-                    args,
                     // hack: air cannot use undefined fields, fill undefined arrays with nils
-                    getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) },
-                    Nil
+                    getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) }
                   )
                 )
             )
