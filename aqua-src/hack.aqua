@@ -1,8 +1,12 @@
-func optionSugar() -> []u32, ?u32:
-  str: *u32
-  for i <- ?[4, 5]:
-    str <<- i
-  <- str, ?[]
-
-func emptySugar() -> ?u32, []u32:
-  <- [], ?[], *[]
+func emptySugar() -> []u32, []string, []string, *string, ?u32, []u32, ?string:
+  numOp = ?[]
+  strArr = []
+  strStream = *[]
+  strEmptyStream: *string
+  for i <- ?[]:
+    strEmptyStream <<- "some"
+  for i <- *[]:
+    strEmptyStream <<- "some"
+  for i <- []:
+    strEmptyStream <<- "some"
+  <- numOp, strArr, strStream, strEmptyStream, [], ?[], *[]
