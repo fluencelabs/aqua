@@ -95,20 +95,25 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           case None =>
             None.pure[Alg]
         }
-      case CollectionToken(values, mode) =>
+      case ct @ CollectionToken(_, values) =>
         values.traverse(valueToRaw).map(_.toList.flatten).map(NonEmptyList.fromList).map {
           case Some(raws) if raws.size == values.size =>
             val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
+            // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
+            // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
+            // make any decision about the structure of type, but can push anything inside
+            val elementNotBottom = if (element == BottomType) TopType else element
             Some(
               CollectionRaw(
                 raws,
-                mode match {
-                  case CollectionToken.Mode.StreamMode => StreamType(element)
-                  case CollectionToken.Mode.ArrayMode => ArrayType(element)
-                  case CollectionToken.Mode.OptionMode => OptionType(element)
+                ct.mode match {
+                  case CollectionToken.Mode.StreamMode => StreamType(elementNotBottom)
+                  case CollectionToken.Mode.ArrayMode => ArrayType(elementNotBottom)
+                  case CollectionToken.Mode.OptionMode => OptionType(elementNotBottom)
                 }
               )
             )
+          case _ if values.isEmpty => Some(ValueRaw.Nil)
           case _ => None
         }
     }

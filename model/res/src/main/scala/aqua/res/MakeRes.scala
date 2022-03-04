@@ -43,6 +43,11 @@ object MakeRes {
   private def orInit(currentPeerId: Option[ValueModel]): ValueModel =
     currentPeerId.getOrElse(initPeerId)
 
+  private def isNillLiteral(vm: ValueModel): Boolean = vm match {
+    case LiteralModel(value, t) if value == ValueRaw.Nil.value && t == ValueRaw.Nil.`type` => true
+    case _ => false
+  }
+
   def resolve(
     currentPeerId: Option[ValueModel],
     i: Int
@@ -51,7 +56,7 @@ object MakeRes {
     case _: OnModel => SeqRes.leaf
     case MatchMismatchModel(a, b, s) =>
       MatchMismatchRes(a, b, s).leaf
-    case ForModel(item, iter) => FoldRes(item, iter).leaf
+    case ForModel(item, iter) if !isNillLiteral(iter) => FoldRes(item, iter).leaf
     case RestrictionModel(item, isStream) => RestrictionRes(item, isStream).leaf
     case ParModel | DetachModel => ParRes.leaf
     case XorModel => XorRes.leaf
