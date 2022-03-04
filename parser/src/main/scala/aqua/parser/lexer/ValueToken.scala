@@ -34,7 +34,7 @@ case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
 }
 
 case class CollectionToken[F[_]: Comonad](
-  values: NonEmptyList[ValueToken[F]],
+  values: List[ValueToken[F]],
   mode: CollectionToken.Mode
 ) extends ValueToken[F] {
   override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] = copy(values.map(_.mapK(fk)))
@@ -52,7 +52,7 @@ object CollectionToken {
       _.getOrElse(Mode.ArrayMode: Mode)
     ).with1 ~ (`[` *> P
       .defer(ValueToken.`_value`)
-      .repSep(`,`) <* `]`)).map { case (mode, vals) =>
+      .repSep0(`,`) <* `]`)).map { case (mode, vals) =>
       CollectionToken(vals, mode)
     }
 }

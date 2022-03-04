@@ -109,6 +109,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                 }
               )
             )
+          case _ if values.isEmpty => Some(ValueRaw.Nil)  
           case _ => None
         }
     }
