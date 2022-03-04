@@ -15,10 +15,10 @@ import cats.syntax.traverse.*
 import cats.instances.list.*
 import cats.data.NonEmptyList
 
-class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
-  N: NamesAlgebra[S, Alg],
-  T: TypesAlgebra[S, Alg]
-) {
+class ValuesAlgebra[S[_], Alg[_] : Monad](implicit
+                                          N: NamesAlgebra[S, Alg],
+                                          T: TypesAlgebra[S, Alg]
+                                         ) {
 
   def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
     ensureTypeMatches(v, LiteralType.string)
@@ -95,27 +95,27 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           case None =>
             None.pure[Alg]
         }
-      case CollectionToken(values, mode) =>
+      case ct@CollectionToken(_, values) =>
         values.traverse(valueToRaw).map(_.toList.flatten).map(NonEmptyList.fromList).map {
           case Some(raws) if raws.size == values.size =>
             val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
             Some(
               CollectionRaw(
                 raws,
-                mode match {
+                ct.mode match {
                   case CollectionToken.Mode.StreamMode => StreamType(element)
                   case CollectionToken.Mode.ArrayMode => ArrayType(element)
                   case CollectionToken.Mode.OptionMode => OptionType(element)
                 }
               )
             )
-          case _ if values.isEmpty => Some(ValueRaw.Nil)  
+          case _ if values.isEmpty => Some(ValueRaw.Nil)
           case _ => None
         }
     }
 
   def checkArguments(token: Token[S], arr: ArrowType, args: List[ValueToken[S]]): Alg[Boolean] =
-    // TODO: do we really need to check this?
+  // TODO: do we really need to check this?
     T.checkArgumentsNumber(token, arr.domain.length, args.length).flatMap {
       case false => false.pure[Alg]
       case true =>
@@ -133,7 +133,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                 case Some((tkn, valType)) =>
                   T.ensureTypeMatches(tkn, t, valType)
               }
-            ).mapN(_ && _)
+              ).mapN(_ && _)
           }
     }
 
@@ -141,9 +141,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
 
 object ValuesAlgebra {
 
-  implicit def deriveValuesAlgebra[S[_], Alg[_]: Monad](implicit
-    N: NamesAlgebra[S, Alg],
-    T: TypesAlgebra[S, Alg]
-  ): ValuesAlgebra[S, Alg] =
+  implicit def deriveValuesAlgebra[S[_], Alg[_] : Monad](implicit
+                                                         N: NamesAlgebra[S, Alg],
+                                                         T: TypesAlgebra[S, Alg]
+                                                        ): ValuesAlgebra[S, Alg] =
     new ValuesAlgebra[S, Alg]
 }

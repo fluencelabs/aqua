@@ -3,3 +3,6 @@ func optionSugar() -> []u32, ?u32:
   for i <- ?[4, 5]:
     str <<- i
   <- str, ?[]
+
+func emptySugar() -> ?u32, []u32:
+  <- [], ?[], *[]

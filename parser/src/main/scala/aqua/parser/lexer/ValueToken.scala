@@ -34,12 +34,16 @@ case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
 }
 
 case class CollectionToken[F[_]: Comonad](
-  values: List[ValueToken[F]],
-  mode: CollectionToken.Mode
+  point: F[CollectionToken.Mode],
+  values: List[ValueToken[F]]
 ) extends ValueToken[F] {
-  override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] = copy(values.map(_.mapK(fk)))
 
-  override def as[T](v: T): F[T] = values.head.as(v)
+  override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] =
+    copy(fk(point), values.map(_.mapK(fk)))
+
+  override def as[T](v: T): F[T] = point.as(v)
+
+  def mode: CollectionToken.Mode = point.extract
 }
 
 object CollectionToken {
@@ -48,12 +52,14 @@ object CollectionToken {
     case StreamMode, OptionMode, ArrayMode
 
   def collection: P[CollectionToken[Span.S]] =
-    ((`*`.as(Mode.StreamMode: Mode) | `?`.as(Mode.OptionMode: Mode)).?.map(
-      _.getOrElse(Mode.ArrayMode: Mode)
-    ).with1 ~ (`[` *> P
+    ((
+      `*[`.as[Mode](Mode.StreamMode) |
+        `?[`.as[Mode](Mode.OptionMode) |
+        `[`.as[Mode](Mode.ArrayMode)
+    ).lift ~ (P
       .defer(ValueToken.`_value`)
       .repSep0(`,`) <* `]`)).map { case (mode, vals) =>
-      CollectionToken(vals, mode)
+      CollectionToken(mode, vals)
     }
 }
 
