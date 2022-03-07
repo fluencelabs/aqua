@@ -4,7 +4,7 @@ import "run-builtins/run-builtins.aqua"
 import "@fluencelabs/aqua-lib/builtin.aqua"
 import "@fluencelabs/aqua-ipfs/ipfs.aqua"
 
-export deploy, remove
+export deploy, remove, createService
 
 data ModuleConf:
   name: string
@@ -83,3 +83,8 @@ func remove(service_id: string):
   on ON_PEER:
     Srv.remove(service_id)
   Console.print("Service was deleted")
+
+func createService(blueprint_id: string) -> string:
+  on ON_PEER:
+    service_id <- Srv.create(blueprint_id)
+  <- service_id

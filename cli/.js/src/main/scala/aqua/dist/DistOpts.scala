@@ -38,6 +38,7 @@ object DistOpts extends Logging {
 
   val DeployFuncName = "deploy"
   val RemoveFuncName = "remove"
+  val CreateServiceFuncName = "createService"
 
   def srvNameOpt: Opts[String] =
     Opts
@@ -47,11 +48,15 @@ object DistOpts extends Logging {
     Opts
       .option[String]("id", "Service id to remove", "i")
 
+  def blueprintIdOpt: Opts[String] =
+    Opts
+      .option[String]("id", "Blueprint id", "i")
+
   def deployOpt[F[_]: Async]: Command[F[ExitCode]] =
     CommandBuilder(
       "dist",
       "Distribute a service onto a remote peer",
-      NonEmptyList(deploy, remove :: Nil)
+      NonEmptyList(deploy, remove :: createService :: Nil)
     ).command
 
   def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
@@ -69,6 +74,19 @@ object DistOpts extends Logging {
         RunInfo(
           common,
           CliFunc(RemoveFuncName, LiteralRaw.quote(srvId) :: Nil),
+          PackagePath(DistAqua)
+        )
+      }
+    )
+
+  def createService[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.valid(
+      "create_service",
+      "Create a service",
+      (GeneralRunOptions.commonOpt, blueprintIdOpt).mapN { (common, blueprintId) =>
+        RunInfo(
+          common,
+          CliFunc(CreateServiceFuncName, LiteralRaw.quote(blueprintId) :: Nil),
           PackagePath(DistAqua)
         )
       }
