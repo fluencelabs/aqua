@@ -69,7 +69,8 @@ object PlatformOpts extends Logging {
       // Also hack. If we found installed `aqua-lib`, it should be in `node_modules` global path.
       // In global `node_modules` could be installed aqua libs and we must use them,
       // if they were imported in aqua files
-      val globalNodeModulesPath = globalAquaPath.flatMap(_.parent.flatMap(_.parent))
+      val globalNodeModulesPath =
+        globalAquaPath.flatMap(_.parent.flatMap(_.parent.flatMap(_.parent)))
 
       globalAquaPath.toList ++ globalNodeModulesPath.toList
     }.getOrElse {
