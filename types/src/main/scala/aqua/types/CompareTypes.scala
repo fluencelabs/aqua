@@ -105,11 +105,6 @@ object CompareTypes {
 
         // Literals and scalars
         case (x: ScalarType, y: ScalarType) => scalarOrder.partialCompare(x, y)
-        case (LiteralType(xs, _), LiteralType(ys, _)) =>
-          if (xs.intersect(ys).isEmpty)
-            Double.NaN
-          else
-            1.0
         case (LiteralType(xs, _), y: ScalarType) if xs == Set(y) => 0.0
         case (LiteralType(xs, _), y: ScalarType) if xs(y) => -1.0
         case (x: ScalarType, LiteralType(ys, _)) if ys == Set(x) => 0.0

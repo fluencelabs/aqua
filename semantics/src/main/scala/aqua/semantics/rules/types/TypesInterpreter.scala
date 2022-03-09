@@ -7,6 +7,7 @@ import aqua.types.{
   ArrayType,
   ArrowType,
   BoxType,
+  LiteralType,
   OptionType,
   ProductType,
   ScalarType,
@@ -145,8 +146,16 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
     expected: Type,
     givenType: Type
   ): State[X, Boolean] =
-    // TODO in case of two literals, check for types intersection?
-    if (expected.acceptsValueOf(givenType)) State.pure(true)
+    val canCompare = (expected, givenType) match {
+      case (LiteralType(xs, _), LiteralType(ys, _)) =>
+        if (xs.intersect(ys).isEmpty)
+          false
+        else
+          true
+      case _ =>
+        expected.acceptsValueOf(givenType)
+    }
+    if (canCompare) State.pure(true)
     else
       report(token, s"Types mismatch, expected: ${expected}, given: ${givenType}")
         .as(false)
