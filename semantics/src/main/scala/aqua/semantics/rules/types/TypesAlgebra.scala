@@ -26,6 +26,8 @@ trait TypesAlgebra[S[_], Alg[_]] {
   def resolveIndex(rootT: Type, op: IntoIndex[S], idx: ValueRaw): Alg[Option[LambdaRaw]]
   def resolveField(rootT: Type, op: IntoField[S]): Alg[Option[LambdaRaw]]
 
+  def ensureValuesComparable(token: Token[S], left: Type, right: Type): Alg[Boolean]
+
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 
   def expectNoExport(token: Token[S]): Alg[Unit]
