@@ -7,6 +7,7 @@ import aqua.types.{
   ArrayType,
   ArrowType,
   BoxType,
+  LiteralType,
   OptionType,
   ProductType,
   ScalarType,
@@ -140,15 +141,32 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
           report(op, s"Expected $rootT to be a collection type").as(None)
       }
 
+  override def ensureValuesComparable(
+    token: Token[S],
+    left: Type,
+    right: Type
+  ): State[X, Boolean] = {
+    val isComparable = (left, right) match {
+      case (LiteralType(xs, _), LiteralType(ys, _)) =>
+        xs.intersect(ys).nonEmpty
+      case _ =>
+        left.acceptsValueOf(right)
+    }
+
+    if (isComparable) State.pure(true)
+    else
+      report(token, s"Cannot compare '$left' with '$right''")
+        .as(false)
+  }
+
   override def ensureTypeMatches(
     token: Token[S],
     expected: Type,
     givenType: Type
   ): State[X, Boolean] =
-    // TODO in case of two literals, check for types intersection?
     if (expected.acceptsValueOf(givenType)) State.pure(true)
     else
-      report(token, s"Types mismatch, expected: ${expected}, given: ${givenType}")
+      report(token, s"Types mismatch, expected: $expected, given: $givenType")
         .as(false)
 
   override def expectNoExport(token: Token[S]): State[X, Unit] =
