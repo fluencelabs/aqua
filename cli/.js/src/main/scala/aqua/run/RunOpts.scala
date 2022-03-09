@@ -86,10 +86,9 @@ object RunOpts extends Logging {
             _.map { case (input, imps, funcWithArgs) =>
               RunInfo(
                 common,
-                funcWithArgs.name,
+                funcWithArgs.func,
                 RelativePath(input),
                 imps,
-                funcWithArgs.args,
                 funcWithArgs.getters
               )
             }
