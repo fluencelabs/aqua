@@ -1,14 +1,7 @@
 package aqua.js
 
 import aqua.*
-import aqua.backend.{
-  ArgDefinition,
-  FunctionDef,
-  NamesConfig,
-  ServiceDef,
-  ServiceFunctionDef,
-  TypeDefinition
-}
+import aqua.backend.*
 
 import scala.concurrent.Promise
 import scala.scalajs.js

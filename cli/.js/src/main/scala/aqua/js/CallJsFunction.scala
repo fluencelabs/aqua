@@ -1,6 +1,6 @@
 package aqua.js
 
-import aqua.backend.{ArgDefinition, FunctionDef, NamesConfig, ServiceDef, TypeDefinition}
+import aqua.backend.*
 import aqua.model.transform.TransformConfig
 import aqua.res.FuncRes
 import aqua.types.Type

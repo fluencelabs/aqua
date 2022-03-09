@@ -1,19 +1,13 @@
 package aqua.builder
 
-import aqua.backend.{
-  ArgDefinition,
-  PrimitiveType,
-  ServiceDef,
-  ServiceFunctionDef,
-  TypeDefinition,
-  VoidType
-}
+import aqua.backend.*
 import aqua.ipfs.js.IpfsApi
 import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer, ServiceHandler}
+import aqua.types.ScalarType
 import cats.data.NonEmptyList
 import scribe.Logging
 
-import scalajs.js
+import scala.scalajs.js
 
 object IPFSUploader extends Logging {
 
@@ -28,6 +22,23 @@ object IPFSUploader extends Logging {
         }
 
     }
+
+    def arrow: ArrowTypeDef = ArrowTypeDef(
+      LabelledProductTypeDef(
+        ("path", ScalarTypeDef.fromScalar(ScalarType.string)) :: (
+          "multiaddr",
+          ScalarTypeDef.fromScalar(ScalarType.string)
+        ) :: Nil
+      ),
+      StructTypeDef(
+        "UploadResult",
+        Map(
+          "error" -> ScalarTypeDef.fromScalar(ScalarType.string),
+          "cid" -> ScalarTypeDef.fromScalar(ScalarType.string),
+          "size" -> ScalarTypeDef.fromScalar(ScalarType.u64)
+        )
+      )
+    )
 
     override def argDefinitions: List[ArgDefinition] =
       ArgDefinition("path", PrimitiveType) :: ArgDefinition("multiaddr", PrimitiveType) :: Nil

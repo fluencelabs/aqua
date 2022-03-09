@@ -1,15 +1,9 @@
 package aqua.builder
 
-import aqua.backend.{
-  ArgDefinition,
-  PrimitiveType,
-  ServiceDef,
-  ServiceFunctionDef,
-  TypeDefinition,
-  VoidType
-}
+import aqua.backend.*
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
+import aqua.types.ScalarType
 import cats.data.NonEmptyList
 
 import scala.scalajs.js
@@ -30,7 +24,11 @@ object Console {
       }
       js.Promise.resolve(Service.emptyObject)
     }
-    def argDefinitions: List[ArgDefinition] = ArgDefinition("str", PrimitiveType) :: Nil
+
+    def arrow: ArrowTypeDef = ArrowTypeDef(
+      LabelledProductTypeDef(("str", ScalarTypeDef.fromScalar(ScalarType.string)) :: Nil),
+      NilTypeDef
+    )
     def returnType: TypeDefinition = VoidType
   }
 

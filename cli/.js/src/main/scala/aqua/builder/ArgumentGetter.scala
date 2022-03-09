@@ -1,6 +1,6 @@
 package aqua.builder
 
-import aqua.backend.{ArgDefinition, PrimitiveType, ServiceDef, ServiceFunctionDef, TypeDefinition}
+import aqua.backend.*
 import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer, ServiceHandler}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.raw.ops
@@ -8,8 +8,8 @@ import aqua.raw.ops.{Call, CallServiceTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import cats.data.NonEmptyList
 
-import scalajs.js
 import scala.concurrent.Promise
+import scala.scalajs.js
 
 // Service that can return argument to use it from a code
 // TODO: create one service with multiple argument getters instead of service per argument

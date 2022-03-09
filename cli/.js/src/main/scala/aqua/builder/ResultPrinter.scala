@@ -1,17 +1,11 @@
 package aqua.builder
 
-import aqua.backend.{
-  ArgDefinition,
-  PrimitiveType,
-  ServiceDef,
-  ServiceFunctionDef,
-  TypeDefinition,
-  VoidType
-}
+import aqua.backend.*
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer, ServiceHandler}
 import aqua.raw.ops.{Call, CallServiceTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
+import aqua.types.ScalarType
 import cats.data.NonEmptyList
 
 import scala.scalajs.js
@@ -44,10 +38,10 @@ object ResultPrinter {
       js.Promise.resolve(Service.emptyObject)
     }
 
-    // TODO it depends on result types
-    override def argDefinitions: List[ArgDefinition] =
-      resultNames.map(n => ArgDefinition(n, PrimitiveType))
-    override def returnType: TypeDefinition = VoidType
+    def arrow: ArrowTypeDef = ArrowTypeDef(
+      LabelledProductTypeDef(resultNames.map(n => ArgDefinition(n, TopTypeDef))),
+      NilTypeDef
+    )
   }
 
   def apply(serviceId: String, fnName: String, resultNames: List[String]): ResultPrinter = {

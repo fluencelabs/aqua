@@ -1,6 +1,6 @@
 package aqua.builder
 
-import aqua.backend.{ArgDefinition, ServiceDef, ServiceFunctionDef, TypeDefinition, VoidType}
+import aqua.backend.*
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.model.{LiteralModel, VarModel}
@@ -10,8 +10,7 @@ import cats.data.NonEmptyList
 
 import scala.concurrent.Promise
 import scala.scalajs.js
-import scala.scalajs.js.JSON
-import scala.scalajs.js.Dynamic
+import scala.scalajs.js.{Dynamic, JSON}
 
 // Will finish promise on service call
 abstract class Finisher private (
@@ -32,8 +31,7 @@ object Finisher {
       promise.success(())
       js.Promise.resolve(Service.emptyObject)
     }
-    def argDefinitions: List[ArgDefinition] = Nil
-    def returnType: TypeDefinition = VoidType
+    def arrow: ArrowTypeDef = ArrowTypeDef(NilTypeDef, NilTypeDef)
   }
 
   def apply(servId: String, fnName: String): Finisher = {
