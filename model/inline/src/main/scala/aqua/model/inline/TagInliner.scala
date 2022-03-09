@@ -121,7 +121,10 @@ object TagInliner extends Logging {
         } yield Some(SeqModel) -> cd._2
 
       case ClosureTag(arrow) =>
-        Arrows[S].resolved(arrow).map(_ => None -> None)
+        for {
+          t <- Mangler[S].findAndForbidName("topology")
+          _ <- Arrows[S].resolved(arrow, Some(t))
+        } yield Some(CaptureTopologyModel(t)) -> None
 
       case NextTag(item) =>
         pure(NextModel(item))

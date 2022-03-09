@@ -150,5 +150,8 @@ case class JoinModel(operands: NonEmptyList[ValueModel]) extends ForceExecModel 
     operands.toList.flatMap(_.usesVarNames).toSet
 }
 
+case class CaptureTopologyModel(name: String) extends NoExecModel
+case class ApplyTopologyModel(name: String) extends NoExecModel
+
 case object EmptyModel extends NoExecModel
 case object NullModel extends NoExecModel

@@ -139,7 +139,8 @@ object ScriptOpts extends Logging {
               ArrowType(NilType, NilType),
               Nil,
               Map(funcWithArgs.name -> callable),
-              Map.empty
+              Map.empty,
+              None
             ),
             tConfig
           )

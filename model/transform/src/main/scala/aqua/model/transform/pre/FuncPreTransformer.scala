@@ -48,7 +48,8 @@ case class FuncPreTransformer(
       arrowType,
       ret.map(_.toRaw),
       Map.empty,
-      Map.empty
+      Map.empty,
+      None
     )
   }
 
@@ -92,7 +93,8 @@ case class FuncPreTransformer(
           argName -> arrowToCallback(argName, arrowType)
         }
         .toMap,
-      Map.empty
+      Map.empty,
+      None
     )
   }
 }

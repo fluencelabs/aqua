@@ -36,11 +36,34 @@ case class Topology private (
   after: Topology.After
 ) {
 
-  val pathOn: Eval[List[OnModel]] = Eval
-    .later(cursor.tagsPath.collect { case o: OnModel =>
-      o
-    })
-    .memoize
+  val parent: Option[Topology] = cursor.moveUp.map(_.topology)
+
+  val parents: LazyList[Topology] =
+    LazyList.unfold(parent)(p => p.map(pp => pp -> pp.parent))
+
+  val pathOn: Eval[List[OnModel]] =
+    cursor.current.head match {
+      case o: OnModel => parent.fold[Eval[List[OnModel]]](Eval.now(o :: Nil))(_.pathOn.map(o :: _))
+      case ApplyTopologyModel(name) =>
+        Eval
+          .later(
+            // TODO: cache captured topologies in a map
+            cursor.allToLeft.find(c =>
+              c.current.head match {
+                case CaptureTopologyModel(`name`) => true
+                case _ => false
+              }
+            )
+          )
+          .memoize
+          .flatMap(
+            _.fold[Eval[List[OnModel]]](
+              // TODO: this should never happen, it's an error definitely
+              Eval.now(Nil)
+            )(_.topology.pathOn)
+          )
+      case _ => parent.fold[Eval[List[OnModel]]](Eval.now(Nil))(_.pathOn)
+    }
 
   lazy val firstExecutesOn: Eval[Option[List[OnModel]]] =
     (cursor.op match {
@@ -99,11 +122,6 @@ case class Topology private (
 
   def findInside(f: Topology => Boolean): LazyList[Topology] =
     children.flatMap(_.findInside(f)).prependedAll(Option.when(f(this))(this))
-
-  val parent: Option[Topology] = cursor.moveUp.map(_.topology)
-
-  val parents: LazyList[Topology] =
-    LazyList.unfold(parent)(p => p.map(pp => pp -> pp.parent))
 
   lazy val forModel: Option[ForModel] = Option(cursor.op).collect { case ft: ForModel =>
     ft

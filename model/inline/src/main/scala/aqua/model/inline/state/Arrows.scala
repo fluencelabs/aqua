@@ -25,11 +25,11 @@ trait Arrows[S] extends Scoped[S] {
    * @param e
    *   contextual Exports that an arrow captures
    */
-  final def resolved(arrow: FuncRaw)(implicit e: Exports[S]): State[S, Unit] =
+  final def resolved(arrow: FuncRaw, topology: Option[String])(implicit e: Exports[S]): State[S, Unit] =
     for {
       exps <- e.exports
       arrs <- arrows
-      funcArrow = FuncArrow.fromRaw(arrow, arrs, exps)
+      funcArrow = FuncArrow.fromRaw(arrow, arrs, exps, topology)
       _ <- save(arrow.name, funcArrow)
     } yield ()
 
