@@ -41,29 +41,33 @@ case class Topology private (
   val parents: LazyList[Topology] =
     LazyList.unfold(parent)(p => p.map(pp => pp -> pp.parent))
 
+  val capturedTopologies: Eval[Map[String, Topology]] =
+    cursor.moveLeft
+      .fold(Eval.now(Map.empty[String, Topology]))(_.topology.capturedTopologies)
+      .map(tops =>
+        cursor.current.head match {
+          case CaptureTopologyModel(name) => tops + (name -> this)
+          case _ => tops
+        }
+      )
+      .memoize
+
   val pathOn: Eval[List[OnModel]] =
-    cursor.current.head match {
-      case o: OnModel => parent.fold[Eval[List[OnModel]]](Eval.now(o :: Nil))(_.pathOn.map(o :: _))
-      case ApplyTopologyModel(name) =>
-        Eval
-          .later(
-            // TODO: cache captured topologies in a map
-            cursor.allToLeft.find(c =>
-              c.current.head match {
-                case CaptureTopologyModel(`name`) => true
-                case _ => false
-              }
-            )
-          )
-          .memoize
-          .flatMap(
-            _.fold[Eval[List[OnModel]]](
+    Eval
+      .later(cursor.current.head match {
+        case o: OnModel =>
+          parent.fold[Eval[List[OnModel]]](Eval.now(o :: Nil))(_.pathOn.map(o :: _))
+        case ApplyTopologyModel(name) =>
+          capturedTopologies.flatMap(
+            _.get(name).fold(
               // TODO: this should never happen, it's an error definitely
-              Eval.now(Nil)
-            )(_.topology.pathOn)
+              Eval.now(List.empty[OnModel])
+            )(_.pathOn)
           )
-      case _ => parent.fold[Eval[List[OnModel]]](Eval.now(Nil))(_.pathOn)
-    }
+        case _ => parent.fold[Eval[List[OnModel]]](Eval.now(Nil))(_.pathOn)
+      })
+      .flatMap(identity)
+      .memoize
 
   lazy val firstExecutesOn: Eval[Option[List[OnModel]]] =
     (cursor.op match {

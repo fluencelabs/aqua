@@ -34,7 +34,7 @@ class ClosureSemSpec extends AnyFlatSpec with Matchers {
 
   val program: Prog[State[CompilerState[cats.Id], *], Raw] = {
     import CompilerState.*
-    val expr = ClosureExpr(Name[Id]("closure"))
+    val expr = ClosureExpr(Name[Id]("closure"), None)
     val sem = new ClosureSem[Id](expr)
 
     sem.program[State[CompilerState[Id], *]]
