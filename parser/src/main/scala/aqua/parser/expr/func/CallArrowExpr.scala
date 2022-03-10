@@ -3,7 +3,7 @@ package aqua.parser.expr.func
 import aqua.parser.Expr
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{Ability, Name, Value, VarLambda}
+import aqua.parser.lexer.{Ability, Name, ValueToken, VarToken}
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import cats.data.NonEmptyList
@@ -14,7 +14,7 @@ case class CallArrowExpr[F[_]](
   variables: List[Name[F]],
   ability: Option[Ability[F]],
   funcName: Name[F],
-  args: List[Value[F]]
+  args: List[ValueToken[F]]
 ) extends Expr[F](CallArrowExpr, funcName) {
 
   def mapK[K[_]: Comonad](fk: F ~> K): CallArrowExpr[K] =
@@ -30,7 +30,7 @@ object CallArrowExpr extends Expr.Leaf {
 
   val ability: P0[Option[Ability[Span.S]]] = (Ability.dotted <* `.`).?
   val functionCallWithArgs = Name.p
-    ~ comma0(Value.`value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
+    ~ comma0(ValueToken.`value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`)
   val funcCall = ability.with1 ~ functionCallWithArgs
     .withContext("Missing braces '()' after the function call. Arrow '<-' could be used only with function calls.")
   val funcOnly = funcCall.map {

@@ -2,7 +2,7 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.func.CallArrowExpr
-import aqua.parser.lexer.{Name, VarLambda}
+import aqua.parser.lexer.{Name, VarToken}
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -17,7 +17,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
         Nil,
         Some(toAb("Ab")),
         Name[Id]("func"),
-        List(VarLambda[Id](toName("arg")))
+        List(VarToken[Id](toName("arg")))
       )
     )
 

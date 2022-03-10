@@ -9,8 +9,7 @@ import aqua.parser.lift.LiftParser.LiftErrorOps
 import aqua.parser.lift.{FileSpan, LiftParser, Span}
 import cats.data.{Validated, ValidatedNec}
 import cats.parse.{LocationMap, Parser as P, Parser0 as P0}
-import cats.{Comonad, Eval, Id, ~>}
-
+import cats.{~>, Comonad, Eval, Id}
 
 object Parser extends scribe.Logging {
 
@@ -27,14 +26,16 @@ object Parser extends scribe.Logging {
     parser
   }
 
-  def parse[S[_] : LiftParser : Comonad](p: P0[ValidatedNec[ParserError[S], Ast[S]]])(source: String): ValidatedNec[ParserError[S], Ast[S]] = {
+  def parse[S[_]: LiftParser: Comonad](
+    p: P0[ValidatedNec[ParserError[S], Ast[S]]]
+  )(source: String): ValidatedNec[ParserError[S], Ast[S]] = {
     p.parseAll(source) match {
       case Right(value) => value
       case Left(e) => Validated.invalidNec(LexerError(e.wrapErr))
     }
   }
 
-  def natParser[S[_] : LiftParser : Comonad, K[_] : Comonad](
+  def natParser[S[_]: LiftParser: Comonad, K[_]: Comonad](
     p: P0[ValidatedNec[ParserError[S], Ast[S]]],
     nat: S ~> K
   )(source: String): ValidatedNec[ParserError[K], Ast[K]] =

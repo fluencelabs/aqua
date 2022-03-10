@@ -1,9 +1,4 @@
-
-data RelayerSig:
-    address: string
-
-func send_vote(log: string -> ()):
-
-    maybeAck: *RelayerSig
-    log(maybeAck[0].address)
+func optionSugar(numSome: ?u32, numNone: ?u32) -> []u32:
+  arr = ?[numNone!, numSome!, "123"]
+  <- arr
 

@@ -11,6 +11,12 @@ trait Mangler[S] {
   def findNewName(introduce: String): State[S, String] =
     findNewNames(Set(introduce)).map(_.getOrElse(introduce, introduce))
 
+  def findAndForbidName(introduce: String): State[S, String] =
+    for {
+      n <- findNewName(introduce)
+      _ <- forbid(Set(n))
+    } yield n
+
   def forbid(names: Set[String]): State[S, Unit]
 
   def transformS[R](f: R => S, g: (R, S) => R): Mangler[R] =

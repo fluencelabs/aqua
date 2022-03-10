@@ -2,7 +2,7 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.func.AbilityIdExpr
-import aqua.parser.lexer.Literal
+import aqua.parser.lexer.LiteralToken
 import aqua.types.LiteralType
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
@@ -17,11 +17,11 @@ class AbilityIdExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     parseAbId("Ab \"a\"") should be(
-      AbilityIdExpr[Id](toAb("Ab"), Literal[Id]("\"a\"", LiteralType.string))
+      AbilityIdExpr[Id](toAb("Ab"), LiteralToken[Id]("\"a\"", LiteralType.string))
     )
 
     parseAbId("Ab 1") should be(
-      AbilityIdExpr[Id](toAb("Ab"), Literal[Id]("1", LiteralType.number))
+      AbilityIdExpr[Id](toAb("Ab"), LiteralToken[Id]("1", LiteralType.number))
     )
 
     parseAbId("Ab a.id") should be(

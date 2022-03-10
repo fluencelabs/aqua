@@ -20,3 +20,13 @@ func getTwoResults(node: string) -> []u64:
     Op2.identity(res!2)
   <- res
 
+
+func makeArray() -> []u64:
+  <- [1, 3, 5]
+
+
+func makeOption() -> ?u64:
+  <- ?[1, 3, 5]
+
+func makeStream() -> *u64:
+  <- *[1, 3, 5]

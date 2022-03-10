@@ -14,7 +14,7 @@ import aqua.js.*
 import aqua.model.{AquaContext, FuncArrow}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.parser.expr.func.CallArrowExpr
-import aqua.parser.lexer.Literal
+import aqua.parser.lexer.LiteralToken
 import aqua.parser.lift.FileSpan
 import aqua.raw.value.ValueRaw
 import aqua.run.RunConfig
@@ -67,8 +67,7 @@ object RunCommand extends Logging {
    *   the sources the input needs
    */
   def run[F[_]: Files: AquaIO: Async](
-    func: String,
-    args: List[ValueRaw],
+    func: CliFunc,
     input: Path,
     imports: List[Path],
     runConfig: RunConfig,
@@ -82,7 +81,7 @@ object RunCommand extends Logging {
       callResult <- Clock[F].timed {
         val resultV: ValidatedNec[String, F[Unit]] = funcArrowV.andThen { funcCallable =>
           val runner =
-            new Runner(func, funcCallable, args, runConfig, transformConfig)
+            new Runner(func, funcCallable, runConfig, transformConfig)
           runner.run()
         }
         resultV.sequence
@@ -122,10 +121,9 @@ object RunCommand extends Logging {
    */
   def execRun[F[_]: Async](
     common: GeneralRunOptions,
-    funcName: String,
+    func: CliFunc,
     inputPath: Path,
     imports: List[Path] = Nil,
-    args: List[ValueRaw] = Nil,
     argumentGetters: Map[String, ArgumentGetter] = Map.empty,
     services: List[Service] = Nil
   ): F[ExitCode] = {
@@ -133,8 +131,7 @@ object RunCommand extends Logging {
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]
     RunCommand
       .run[F](
-        funcName,
-        args,
+        func,
         inputPath,
         imports,
         RunConfig(common, argumentGetters, services ++ builtinServices),

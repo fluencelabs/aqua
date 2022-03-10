@@ -27,10 +27,9 @@ case class RelativePath(path: Path) extends AquaPath
 // All info to run any aqua function
 case class RunInfo(
   common: GeneralRunOptions,
-  funcName: String,
+  func: CliFunc,
   input: AquaPath,
   imports: List[Path] = Nil,
-  args: List[ValueRaw] = Nil,
   argumentGetters: Map[String, ArgumentGetter] = Map.empty,
   services: List[Service] = Nil
 )
@@ -53,10 +52,9 @@ class SubCommandBuilder[F[_]: Async](
           }).flatMap { path =>
             RunCommand.execRun(
               ri.common,
-              ri.funcName,
+              ri.func,
               path,
               ri.imports,
-              ri.args,
               ri.argumentGetters,
               ri.services
             )
@@ -106,7 +104,7 @@ object SubCommandBuilder {
         name,
         header,
         GeneralRunOptions.commonOpt.map { c =>
-          RunInfo(c, funcName, path)
+          RunInfo(c, CliFunc(funcName), path)
         }
       )
 

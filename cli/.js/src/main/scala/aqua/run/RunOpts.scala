@@ -2,7 +2,7 @@ package aqua.run
 
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.parser.expr.func.CallArrowExpr
-import aqua.parser.lexer.{Literal, VarLambda}
+import aqua.parser.lexer.{LiteralToken, VarToken}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.types.BottomType
@@ -86,10 +86,9 @@ object RunOpts extends Logging {
             _.map { case (input, imps, funcWithArgs) =>
               RunInfo(
                 common,
-                funcWithArgs.name,
+                funcWithArgs.func,
                 RelativePath(input),
                 imps,
-                funcWithArgs.args,
                 funcWithArgs.getters
               )
             }

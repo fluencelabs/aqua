@@ -5,7 +5,7 @@ import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.parser.expr.func.CallArrowExpr
-import aqua.parser.lexer.{Literal, VarLambda}
+import aqua.parser.lexer.{LiteralToken, VarToken}
 import aqua.parser.lift.Span
 import aqua.types.{BottomType, LiteralType}
 import cats.{~>, Id}
@@ -21,7 +21,8 @@ import fs2.io.file.Files
 import scala.scalajs.js
 import scala.scalajs.js.JSON
 
-case class FuncWithData(name: String, args: List[ValueRaw], getters: Map[String, ArgumentGetter])
+case class FuncWithData(func: CliFunc, getters: Map[String, ArgumentGetter])
+case class CliFunc(name: String, args: List[ValueRaw] = Nil, ability: Option[String] = None)
 
 object ArgOpts {
 
@@ -33,7 +34,7 @@ object ArgOpts {
   }
 
   // Parses a function name and arguments from a string
-  def funcOpt: Opts[(String, List[ValueRaw])] =
+  def funcOpt: Opts[CliFunc] =
     Opts
       .option[String]("func", "Function to call with args", "f")
       .mapValidated { str =>
@@ -42,14 +43,14 @@ object ArgOpts {
             val expr = exprSpan.mapK(spanToId)
 
             val args = expr.args.collect {
-              case Literal(value, ts) =>
+              case LiteralToken(value, ts) =>
                 LiteralRaw(value, ts)
-              case VarLambda(name, _) =>
+              case VarToken(name, _) =>
                 // TODO why BottomType?
                 VarRaw(name.value, BottomType)
             }
 
-            validNel((expr.funcName.value, args))
+            validNel(CliFunc(expr.funcName.value, args, expr.ability.map(_.name)))
 
           case Left(err) => invalid(err.expected.map(_.context.mkString("\n")))
         }
@@ -69,11 +70,11 @@ object ArgOpts {
 
   // Creates getters based on function arguments and data, return all info
   def funcWithArgsOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, FuncWithData]]] = {
-    (dataFileOrStringOpt[F], funcOpt).mapN { case (dataF, (func, args)) =>
+    (dataFileOrStringOpt[F], funcOpt).mapN { case (dataF, func) =>
       dataF.map { dataV =>
         dataV.andThen { data =>
-          checkDataGetServices(args, data).map { getters =>
-            FuncWithData(func, args, getters)
+          checkDataGetServices(func.args, data).map { getters =>
+            FuncWithData(func, getters)
           }
         }
       }
@@ -86,7 +87,7 @@ object ArgOpts {
     args: List[ValueRaw],
     data: Option[js.Dynamic]
   ): ValidatedNec[String, Map[String, ArgumentGetter]] = {
-    val vars = args.collect { case v @ VarRaw(_, _, _) =>
+    val vars = args.collect { case v @ VarRaw(_, _) =>
       v
     // one variable could be used multiple times
     }.distinctBy(_.name)

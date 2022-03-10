@@ -1,7 +1,7 @@
 package aqua.parser.head
 
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{Literal, Value}
+import aqua.parser.lexer.{LiteralToken, ValueToken}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.data.NonEmptyList
@@ -12,7 +12,7 @@ import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ImportFromExpr[F[_]](
   imports: NonEmptyList[FromExpr.NameOrAbAs[F]],
-  filename: Literal[F]
+  filename: LiteralToken[F]
 ) extends FilenameExpr[F] with FromExpr[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): ImportFromExpr[K] =
@@ -24,7 +24,7 @@ case class ImportFromExpr[F[_]](
 object ImportFromExpr extends HeaderExpr.Leaf {
 
   override val p: Parser[HeaderExpr[Span.S]] =
-    (`import` *> FromExpr.importFrom.surroundedBy(` `) ~ Value.string).map {
+    (`import` *> FromExpr.importFrom.surroundedBy(` `) ~ ValueToken.string).map {
       case (imports, filename) => ImportFromExpr(imports, filename)
     }
 }

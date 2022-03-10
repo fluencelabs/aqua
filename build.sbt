@@ -6,18 +6,18 @@ val baseAquaVersion = settingKey[String]("base aqua version")
 
 val catsV = "2.7.0"
 val catsParseV = "0.3.6"
-val monocleV = "3.0.0-M6"
+val monocleV = "3.1.0"
 val scalaTestV = "3.2.10"
-val fs2V = "3.2.3"
-val catsEffectV = "3.3.1"
+val fs2V = "3.2.5"
+val catsEffectV = "3.3.7"
 val declineV = "2.2.0"
 val circeVersion = "0.14.1"
-val scribeV = "3.6.3"
+val scribeV = "3.6.6"
 
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.6.2",
+  baseAquaVersion := "0.6.3",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
@@ -148,8 +148,8 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.julien-truffaut" %%% "monocle-core"  % monocleV,
-      "com.github.julien-truffaut" %%% "monocle-macro" % monocleV
+      "dev.optics" %%% "monocle-core"  % monocleV,
+      "dev.optics" %%% "monocle-macro" % monocleV
     )
   )
   .dependsOn(raw, parser)

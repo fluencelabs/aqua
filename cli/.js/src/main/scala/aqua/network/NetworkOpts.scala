@@ -3,6 +3,7 @@ package aqua.network
 import aqua.{
   AppOpts,
   AquaIO,
+  CliFunc,
   FluenceOpts,
   LogFormatter,
   PackagePath,
@@ -93,10 +94,11 @@ object NetworkOpts {
       (GeneralRunOptions.commonOpt, AppOpts.wrapWithOption(peerOpt)).mapN { (common, peer) =>
         RunInfo(
           common,
-          ListInterfacesByPeerFuncName,
-          PackagePath(NetworkAqua),
-          Nil,
-          peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
+          CliFunc(
+            ListInterfacesByPeerFuncName,
+            peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
+          ),
+          PackagePath(NetworkAqua)
         )
       }
     )
@@ -116,10 +118,8 @@ object NetworkOpts {
       (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
         RunInfo(
           common,
-          GetInterfaceFuncName,
-          PackagePath(NetworkAqua),
-          Nil,
-          LiteralRaw.quote(serviceId) :: Nil
+          CliFunc(GetInterfaceFuncName, LiteralRaw.quote(serviceId) :: Nil),
+          PackagePath(NetworkAqua)
         )
       }
     )
@@ -131,10 +131,8 @@ object NetworkOpts {
       (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
         RunInfo(
           common,
-          GetModuleInterfaceFuncName,
-          PackagePath(NetworkAqua),
-          Nil,
-          LiteralRaw.quote(serviceId) :: Nil
+          CliFunc(GetModuleInterfaceFuncName, LiteralRaw.quote(serviceId) :: Nil),
+          PackagePath(NetworkAqua)
         )
       }
     )
