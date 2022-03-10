@@ -14,7 +14,7 @@ class Service(serviceId: String, functions: NonEmptyList[AquaFunction]) extends 
   def register(peer: FluencePeer): Unit = {
     val handlers = functions.map(f => (f.fnName, f.handler))
     val defs = LabelledProductTypeDef(
-      functions.map(f => (f.fnName, ArrowTypeDef(f.argDefinitions, f.returnType)))
+      functions.map(f => (f.fnName, f.arrow)).toList
     )
 
     logger.debug(
@@ -27,7 +27,7 @@ class Service(serviceId: String, functions: NonEmptyList[AquaFunction]) extends 
       handlers.toList,
       ServiceDef(
         None,
-        defs.toList
+        defs
       )
     )
   }

@@ -26,8 +26,7 @@ case class GetFunction(value: VarRaw, arg: scalajs.js.Dynamic) extends AquaFunct
   override def fnName: String = value.name
 
   def handler: ServiceHandler = _ => js.Promise.resolve(arg)
-  def argDefinitions: List[ArgDefinition] = Nil
-  def returnType: TypeDefinition = PrimitiveType
+  def arrow: ArrowTypeDef = ArrowTypeDef(NilTypeDef, UnlabelledProductTypeDef(TopTypeDef :: Nil))
 }
 
 object ArgumentGetter {

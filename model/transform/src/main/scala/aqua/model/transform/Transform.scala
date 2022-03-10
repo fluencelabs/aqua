@@ -78,7 +78,7 @@ object Transform extends Logging {
         func.funcName,
         func.argNames,
         FuncRes.arrowArgs(func.arrowType),
-        FuncRes.arrowToRes(func.arrowType),
+        func.arrowType.codomain,
         conf.relayVarName,
         conf.getDataService,
         conf.callbackService,

@@ -16,21 +16,20 @@ case class OutputService(srv: ServiceRes, types: Types) {
   import serviceTypes.*
 
   def generate: String =
-    val functions = srv.members.map{ m =>
-      val cDef = CallbackDefinition(m._2)
-      ServiceFunctionDef(m._1, cDef.argDefs, cDef.returnType)
-    }
+    val functions = LabelledProductTypeDef(
+      srv.members.map { case (n, a) => (n, ArrowTypeDef(a)) }
+    )
 
     val serviceDef = ServiceDef(srv.defaultId.map(s => s.replace("\"", "")), functions)
 
     s"""
-      |${serviceTypes.generate}
-      |
-      |export function register${srv.name}(${typed("...args", "any")}) {
-      |    registerService(
-      |        args,
-      |        ${serviceDef.asJson.deepDropNullValues.spaces4}
-      |    );
-      |}
+       |${serviceTypes.generate}
+       |
+       |export function register${srv.name}(${typed("...args", "any")}) {
+       |    registerService(
+       |        args,
+       |        ${serviceDef.asJson.deepDropNullValues.spaces4}
+       |    );
+       |}
       """.stripMargin
 }

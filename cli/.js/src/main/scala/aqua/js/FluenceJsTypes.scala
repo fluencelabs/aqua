@@ -70,8 +70,7 @@ trait PeerStatus extends js.Object {
 @JSExportAll
 case class FunctionDefJs(
   functionName: String,
-  returnType: TypeDefinitionJs,
-  argDefs: js.Array[ArgDefinitionJs],
+  arrow: ArrowTypeDef,
   names: NamesConfigJs
 )
 
@@ -80,23 +79,10 @@ object FunctionDefJs {
   def apply(fd: FunctionDef): FunctionDefJs = {
     FunctionDefJs(
       fd.functionName,
-      TypeDefinitionJs(fd.returnType),
-      fd.argDefs.map(ArgDefinitionJs.apply).toJSArray,
+      fd.arrow,
       NamesConfigJs(fd.names)
     )
   }
-}
-
-@JSExportAll
-case class ArgDefinitionJs(
-  name: String,
-  argType: TypeDefinitionJs
-)
-
-object ArgDefinitionJs {
-
-  def apply(ad: ArgDefinition): ArgDefinitionJs =
-    ArgDefinitionJs(ad.name, TypeDefinitionJs(ad.argType))
 }
 
 @JSExportAll
@@ -107,30 +93,15 @@ object TypeDefinitionJs {
 }
 
 @JSExportAll
-case class ServiceFunctionDefJs(
-  functionName: String,
-  argDefs: js.Array[ArgDefinitionJs],
-  returnType: TypeDefinitionJs
+case class ServiceDefJs(
+  defaultServiceId: Option[String],
+  functions: LabelledProductTypeDef
 )
-
-object ServiceFunctionDefJs {
-
-  def apply(sd: ServiceFunctionDef): ServiceFunctionDefJs = {
-    ServiceFunctionDefJs(
-      sd.functionName,
-      sd.argDefs.map(ArgDefinitionJs.apply).toJSArray,
-      TypeDefinitionJs(sd.returnType)
-    )
-  }
-}
-
-@JSExportAll
-case class ServiceDefJs(defaultServiceId: Option[String], functions: js.Array[ServiceFunctionDefJs])
 
 object ServiceDefJs {
 
   def apply(sd: ServiceDef): ServiceDefJs = {
-    ServiceDefJs(sd.defaultServiceId, sd.functions.map(ServiceFunctionDefJs.apply).toJSArray)
+    ServiceDefJs(sd.defaultServiceId, sd.functions)
   }
 }
 

@@ -29,7 +29,6 @@ object Console {
       LabelledProductTypeDef(("str", ScalarTypeDef.fromScalar(ScalarType.string)) :: Nil),
       NilTypeDef
     )
-    def returnType: TypeDefinition = VoidType
   }
 
   val PrintName = "print"

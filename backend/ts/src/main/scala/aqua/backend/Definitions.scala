@@ -17,23 +17,50 @@ sealed trait TypeDefinition {
 object TypeDefinition {
 
   implicit val encodeDefType: Encoder[TypeDefinition] = {
-    case d @ (NilTypeDef, TopTypeDef, BottomTypeDef) =>
+    case d @ ScalarTypeDef(name) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("name", Json.fromString(name))
+      )
+    case d @ ArrayTypeDef(t) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("type", t.asJson)
+      )
+    case d @ StructTypeDef(name, fields) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("name", Json.fromString(name)),
+        ("fields", Json.fromFields(fields.toList.map { case (n, t) => (n, t.asJson) }))
+      )
+    case d @ LabelledProductTypeDef(fields) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("fields", Json.fromFields(fields.map { case (n, t) => (n, t.asJson) }))
+      )
+    case d @ UnlabelledProductTypeDef(items) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("items", Json.fromValues(items.map(_.asJson)))
+      )
+    case d @ OptionalType(t) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("type", t.asJson)
+      )
+    case d @ ArrowTypeDef(domain, codomain) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("domain", domain.asJson),
+        ("codomain", codomain.asJson)
+      )
+    case d =>
       Json.obj(
         ("tag", Json.fromString(d.tag))
       )
-    case d @ CallbackType(cDef) =>
-      Json.obj(
-        ("tag", Json.fromString(d.tag)),
-        ("callback", cDef.asJson)
-      )
-    case d @ MultiReturnType(returnItems) =>
-      Json.obj(
-        ("tag", Json.fromString(d.tag)),
-        ("returnItems", returnItems.asJson)
-      )
   }
 
-  def apply(t: Option[Type]): TypeDefinition = t.map(apply).getOrElse(NilType)
+  def apply(t: Option[Type]): TypeDefinition = t.map(apply).getOrElse(NilTypeDef)
 
   def apply(t: Type): TypeDefinition = {
     t match {
@@ -41,18 +68,18 @@ object TypeDefinition {
         OptionalType(TypeDefinition(t))
       case t: BoxType => ArrayTypeDef(TypeDefinition(t.element))
       case StructType(name, fields) =>
-        StructTypeDef(name, fields.toMap.view.mapValues(TypeDefinition.apply))
+        StructTypeDef(name, fields.toSortedMap.view.mapValues(TypeDefinition.apply).toMap)
       case t: ScalarType => ScalarTypeDef.fromScalar(t)
       case t: ProductType => ProductTypeDef(t)
-      case ArrowType(d, cd) =>
-        ArrowTypeDef(ProductTypeDef(d), ProductTypeDef(cd))
-      case t: TopType => TopTypeDef
-      case t: BottomType => BottomTypeDef
+      case t: ArrowType =>
+        ArrowTypeDef(t)
+      case TopType => TopTypeDef
+      case BottomType => BottomTypeDef
     }
   }
 }
 
-type ProductTypeDef = LabelledProductTypeDef | UnlabelledProductTypeDef | NilTypeDef
+sealed trait ProductTypeDef extends TypeDefinition
 
 object ProductTypeDef {
 
@@ -76,13 +103,19 @@ object ScalarTypeDef {
   def fromScalar(s: ScalarType) = ScalarTypeDef(s.name)
 }
 
-case class ArrayTypeDef(t: TypeDefinition) extends TypeDefinition { val tag = "array" }
+case class ArrayTypeDef(`type`: TypeDefinition) extends TypeDefinition { val tag = "array" }
 
 case class ArrowTypeDef(domain: ProductTypeDef, codomain: ProductTypeDef) extends TypeDefinition {
   val tag = "arrow"
 }
 
-case object NilTypeDef extends TypeDefinition {
+object ArrowTypeDef {
+
+  def apply(at: ArrowType): ArrowTypeDef =
+    ArrowTypeDef(ProductTypeDef(at.domain), ProductTypeDef(at.codomain))
+}
+
+case object NilTypeDef extends ProductTypeDef {
   val tag = "nil"
 }
 
@@ -98,53 +131,12 @@ case class StructTypeDef(name: String, fields: Map[String, TypeDefinition]) exte
   val tag = "struct"
 }
 
-case class LabelledProductTypeDef(items: List[(String, TypeDefinition)]) extends TypeDefinition {
+case class LabelledProductTypeDef(items: List[(String, TypeDefinition)]) extends ProductTypeDef {
   val tag = "labeledProduct"
 }
 
-case class UnlabelledProductTypeDef(items: List[TypeDefinition]) extends TypeDefinition {
+case class UnlabelledProductTypeDef(items: List[TypeDefinition]) extends ProductTypeDef {
   val tag = "unlabeledProduct"
-}
-
-// Describes callbacks that passes as arguments in functions
-case class CallbackDefinition(argDefs: List[ArgDefinition], returnType: TypeDefinition)
-
-object CallbackDefinition {
-
-  implicit val encodeCallbackDef: Encoder[CallbackDefinition] = (cbDef: CallbackDefinition) =>
-    Json.obj(
-      ("argDefs", cbDef.argDefs.asJson),
-      ("returnType", cbDef.returnType.asJson)
-    )
-
-  def apply(arrow: ArrowType): CallbackDefinition = {
-    val args = arrow.domain.toLabelledList().map(arg => ArgDefinition.argToDef(arg._1, arg._2))
-    val returns = arrow.codomain.toList
-    val returnType = returns match {
-      case head :: Nil =>
-        TypeDefinition(head)
-      case Nil =>
-        NilTypeDef
-      case _ =>
-        UnlabelledProductTypeDef(returns.map(TypeDefinition.apply))
-    }
-    CallbackDefinition(args, returnType)
-  }
-}
-
-// Describes arguments in functions and callbacks
-case class ArgDefinition(
-  name: String,
-  argType: TypeDefinition
-)
-
-object ArgDefinition {
-
-  implicit val encodeArgDef: Encoder[ArgDefinition] = (a: ArgDefinition) =>
-    Json.obj(
-      ("name", Json.fromString(a.name)),
-      ("argType", a.argType.asJson)
-    )
 }
 
 // Names of services and functions that are used in air
@@ -159,12 +151,12 @@ case class NamesConfig(
 )
 
 // Describes service
-case class ServiceDef(defaultServiceId: Option[String], functions: List[LabelledProductTypeDef])
+case class ServiceDef(defaultServiceId: Option[String], functions: LabelledProductTypeDef)
 
 // Describes top-level function
 case class FunctionDef(
   functionName: String,
-  arrowTypeDef: ArrowTypeDef,
+  arrow: ArrowTypeDef,
   names: NamesConfig
 )
 
@@ -184,7 +176,7 @@ object FunctionDef {
     )
     FunctionDef(
       func.funcName,
-      ArrowTypeDef(args, TypeDefinition(func.returnType)),
+      ArrowTypeDef(args, ProductTypeDef(func.returnType)),
       names
     )
   }

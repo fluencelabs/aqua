@@ -30,19 +30,17 @@ object IPFSUploader extends Logging {
           ScalarTypeDef.fromScalar(ScalarType.string)
         ) :: Nil
       ),
-      StructTypeDef(
-        "UploadResult",
-        Map(
-          "error" -> ScalarTypeDef.fromScalar(ScalarType.string),
-          "cid" -> ScalarTypeDef.fromScalar(ScalarType.string),
-          "size" -> ScalarTypeDef.fromScalar(ScalarType.u64)
-        )
+      UnlabelledProductTypeDef(
+        StructTypeDef(
+          "UploadResult",
+          Map(
+            "error" -> ScalarTypeDef.fromScalar(ScalarType.string),
+            "cid" -> ScalarTypeDef.fromScalar(ScalarType.string),
+            "size" -> ScalarTypeDef.fromScalar(ScalarType.u64)
+          )
+        ) :: Nil
       )
     )
-
-    override def argDefinitions: List[ArgDefinition] =
-      ArgDefinition("path", PrimitiveType) :: ArgDefinition("multiaddr", PrimitiveType) :: Nil
-    override def returnType: TypeDefinition = PrimitiveType
   }
 
   def apply(serviceId: String, fnName: String): Service = {

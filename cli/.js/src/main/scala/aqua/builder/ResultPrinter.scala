@@ -39,7 +39,7 @@ object ResultPrinter {
     }
 
     def arrow: ArrowTypeDef = ArrowTypeDef(
-      LabelledProductTypeDef(resultNames.map(n => ArgDefinition(n, TopTypeDef))),
+      LabelledProductTypeDef(resultNames.map(n => (n, TopTypeDef))),
       NilTypeDef
     )
   }
