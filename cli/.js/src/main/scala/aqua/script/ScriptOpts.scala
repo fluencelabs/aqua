@@ -47,15 +47,15 @@ object ScriptOpts extends Logging {
   val RemoveFuncName = "remove"
   val ListFuncName = "list"
 
-  case class FuncWithLiteralArgs(name: String, args: List[LiteralRaw])
+  case class FuncWithLiteralArgs(func: CliFunc, args: List[LiteralRaw])
 
   // Func with only literal arguments (strings, booleans or numbers)
   def funcWithLiteralsOpt[F[_]: Files: Concurrent]
     : Opts[F[ValidatedNec[String, FuncWithLiteralArgs]]] = {
-    (dataFileOrStringOpt[F], funcOpt).mapN { case (dataF, (func, args)) =>
+    (dataFileOrStringOpt[F], funcOpt).mapN { case (dataF, func) =>
       dataF.map { dataV =>
         dataV.andThen { data =>
-          resolveOnlyLiteralsFromData(args, data).map { literals =>
+          resolveOnlyLiteralsFromData(func.args, data).map { literals =>
             FuncWithLiteralArgs(func, literals)
           }
         }
@@ -127,18 +127,20 @@ object ScriptOpts extends Logging {
         withRunImport = true
       )
 
+    val funcName = funcWithArgs.func.name
+
     for {
-      callableV <- funcCompiler.compile(funcWithArgs.name)
-      wrappedBody = CallArrowTag(funcWithArgs.name, Call(funcWithArgs.args, Nil)).leaf
+      callableV <- funcCompiler.compile(funcWithArgs.func)
+      wrappedBody = CallArrowTag(funcName, Call(funcWithArgs.func.args, Nil)).leaf
       result = callableV
         .map(callable =>
           generateAir(
             FuncArrow(
-              funcWithArgs.name + "_scheduled",
+              funcName + "_scheduled",
               wrappedBody,
               ArrowType(NilType, NilType),
               Nil,
-              Map(funcWithArgs.name -> callable),
+              Map(funcName -> callable),
               Map.empty,
               None
             ),
@@ -171,10 +173,9 @@ object ScriptOpts extends Logging {
                   val scriptVar = VarRaw("script", ScalarType.string)
                   RunInfo(
                     common,
-                    AddFuncName,
+                    CliFunc(AddFuncName, scriptVar :: intervalArg :: Nil),
                     PackagePath(ScriptAqua),
                     Nil,
-                    scriptVar :: intervalArg :: Nil,
                     Map(
                       "script" -> ArgumentGetter(
                         scriptVar,
@@ -226,10 +227,8 @@ object ScriptOpts extends Logging {
       ).mapN { (common, scriptId) =>
         RunInfo(
           common,
-          RemoveFuncName,
-          PackagePath(ScriptAqua),
-          Nil,
-          LiteralRaw.quote(scriptId) :: Nil
+          CliFunc(RemoveFuncName, LiteralRaw.quote(scriptId) :: Nil),
+          PackagePath(ScriptAqua)
         )
       }
     )

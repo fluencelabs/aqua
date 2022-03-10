@@ -29,17 +29,17 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
 
   private def findFunction(
     contexts: Chain[AquaContext],
-    funcName: String
+    func: CliFunc
   ): ValidatedNec[String, FuncArrow] =
     contexts
-      .collectFirstSome(_.allFuncs.get(funcName))
+      .collectFirstSome(_.allFuncs.get(func.name))
       .map(validNec)
       .getOrElse(
-        Validated.invalidNec[String, FuncArrow](s"There is no function called '$funcName'")
+        Validated.invalidNec[String, FuncArrow](s"There is no function called '${func.name}'")
       )
 
   // Compile and get only one function
-  def compile(funcName: String): F[ValidatedNec[String, FuncArrow]] = {
+  def compile(func: CliFunc): F[ValidatedNec[String, FuncArrow]] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
     for {
@@ -58,7 +58,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       (compileTime, contextV) = compileResult
     } yield {
       logger.debug(s"Compile time: ${compileTime.toMillis}ms")
-      contextV.andThen(c => findFunction(c, funcName))
+      contextV.andThen(c => findFunction(c, func))
     }
   }
 }

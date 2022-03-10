@@ -12,7 +12,7 @@ import aqua.run.RunCommand.createKeyPair
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import aqua.*
 import aqua.run.RunOpts.logger
-import aqua.types.ScalarType
+import aqua.types.{ArrayType, ScalarType, StructType}
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.*
 import cats.effect.kernel.Async
@@ -28,6 +28,8 @@ import com.monovore.decline.{Command, Opts}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
+import scala.collection.immutable.SortedMap
+import scala.scalajs.js.JSConverters.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 
@@ -38,6 +40,8 @@ object DistOpts extends Logging {
 
   val DeployFuncName = "deploy"
   val RemoveFuncName = "remove"
+  val CreateServiceFuncName = "createService"
+  val AddBlueprintFuncName = "addBlueprint"
 
   def srvNameOpt: Opts[String] =
     Opts
@@ -47,11 +51,23 @@ object DistOpts extends Logging {
     Opts
       .option[String]("id", "Service id to remove", "i")
 
+  def blueprintIdOpt: Opts[String] =
+    Opts
+      .option[String]("id", "Blueprint id", "i")
+
+  def blueprintNameOpt: Opts[String] =
+    Opts
+      .option[String]("name", "Blueprint name", "n")
+
+  def dependencyOpt: Opts[NonEmptyList[String]] =
+    Opts
+      .options[String]("dependency", "Blueprint dependency. May be used several times", "d")
+
   def deployOpt[F[_]: Async]: Command[F[ExitCode]] =
     CommandBuilder(
       "dist",
       "Distribute a service onto a remote peer",
-      NonEmptyList(deploy, remove :: Nil)
+      NonEmptyList(deploy, remove :: createService :: addBlueprint :: Nil)
     ).command
 
   def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
@@ -68,11 +84,59 @@ object DistOpts extends Logging {
       (GeneralRunOptions.commonOpt, srvIdOpt).mapN { (common, srvId) =>
         RunInfo(
           common,
-          RemoveFuncName,
-          PackagePath(DistAqua),
-          Nil,
-          LiteralRaw.quote(srvId) :: Nil
+          CliFunc(RemoveFuncName, LiteralRaw.quote(srvId) :: Nil),
+          PackagePath(DistAqua)
         )
+      }
+    )
+
+  def createService[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.valid(
+      "create_service",
+      "Create a service",
+      (GeneralRunOptions.commonOpt, blueprintIdOpt).mapN { (common, blueprintId) =>
+        RunInfo(
+          common,
+          CliFunc(CreateServiceFuncName, LiteralRaw.quote(blueprintId) :: Nil),
+          PackagePath(DistAqua)
+        )
+      }
+    )
+
+  def addBlueprint[F[_]: Async]: SubCommandBuilder[F] =
+    SubCommandBuilder.valid(
+      "add_blueprint",
+      "Add a blueprint to a node",
+      (GeneralRunOptions.commonOpt, blueprintNameOpt, dependencyOpt).mapN {
+        (common, blueprintName, dependencies) =>
+          val depsWithHash = dependencies.map { d =>
+            if (d.startsWith("hash:"))
+              d
+            else
+              "hash:" + d
+          }
+          val addBlueprintType = StructType(
+            "AddBlueprint",
+            NonEmptyMap(
+              ("name", ScalarType.string),
+              SortedMap(("dependencies", ArrayType(ScalarType.string)))
+            )
+          )
+          val addBlueprintRequestVar =
+            VarRaw("addBlueprint", addBlueprintType)
+          RunInfo(
+            common,
+            CliFunc(AddBlueprintFuncName, addBlueprintRequestVar :: Nil),
+            PackagePath(DistAqua),
+            Nil,
+            Map(
+              addBlueprintRequestVar.name -> ArgumentGetter(
+                addBlueprintRequestVar,
+                js.Dynamic
+                  .literal("name" -> blueprintName, "dependencies" -> depsWithHash.toList.toJSArray)
+              )
+            )
+          )
       }
     )
 
@@ -99,13 +163,11 @@ object DistOpts extends Logging {
                   } else common
                   RunInfo(
                     commonWithTimeout,
-                    DeployFuncName,
+                    CliFunc(DeployFuncName, args),
                     PackagePath(DistAqua),
                     Nil,
-                    args,
                     // hack: air cannot use undefined fields, fill undefined arrays with nils
-                    getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) },
-                    Nil
+                    getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) }
                   )
                 )
             )

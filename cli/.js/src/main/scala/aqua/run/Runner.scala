@@ -17,9 +17,8 @@ import scala.concurrent.ExecutionContext
 import scala.scalajs.js
 
 class Runner(
-  funcName: String,
+  func: CliFunc,
   funcCallable: FuncArrow,
-  args: List[ValueRaw],
   config: RunConfig,
   transformConfig: TransformConfig
 ) {
@@ -114,14 +113,14 @@ class Runner(
     // otherwise just call it
     val body = codomain match {
       case Nil =>
-        CallArrowTag(funcName, Call(args, Nil)).leaf
+        CallArrowTag(func.name, Call(func.args, Nil)).leaf
       case types =>
         val (variables, exports) = types.zipWithIndex.map { case (t, idx) =>
           val name = config.resultName + idx
           (VarRaw(name, t), Call.Export(name, t))
         }.unzip
         val callFuncTag =
-          CallArrowTag(funcName, Call(args, exports))
+          CallArrowTag(func.name, Call(func.args, exports))
 
         val consoleServiceTag = consoleService.callTag(variables)
 
@@ -133,7 +132,7 @@ class Runner(
 
     val finisherServiceTag = finisherService.callTag()
 
-    val vars = args
+    val vars = func.args
       .zip(funcCallable.arrowType.domain.toList)
       .collect { case (VarRaw(n, _), argType) =>
         (n, argType)
@@ -159,7 +158,7 @@ class Runner(
         // no arguments and returns "ok" string
         ArrowType(NilType, returnCodomain),
         ret,
-        Map(funcName -> funcCallable),
+        Map(func.name -> funcCallable),
         Map.empty,
         None
       )

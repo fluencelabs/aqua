@@ -3,6 +3,7 @@ package aqua.ipfs
 import aqua.{
   AppOpts,
   AquaIO,
+  CliFunc,
   CommandBuilder,
   FluenceOpts,
   LogFormatter,
@@ -61,10 +62,8 @@ object IpfsOpts extends Logging {
       (GeneralRunOptions.commonOpt, pathOpt).mapN { (common, path) =>
         RunInfo(
           common,
-          UploadFuncName,
-          PackagePath(IpfsAqua),
-          Nil,
-          LiteralRaw.quote(path) :: Nil
+          CliFunc(UploadFuncName, LiteralRaw.quote(path) :: Nil),
+          PackagePath(IpfsAqua)
         )
       }
     )

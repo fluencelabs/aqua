@@ -57,18 +57,26 @@ object PlatformOpts extends Logging {
   }
 
   // get path to node modules if there is `aqua-lib` module with `builtin.aqua` in it
-  def getGlobalNodeModulePath: Option[Path] = {
+  def getGlobalNodeModulePath: List[Path] = {
     val meta = Meta.metaUrl
     val req = Module.createRequire(meta)
     Try {
       // this can throw an error
       val pathStr = req.resolve("@fluencelabs/aqua-lib/builtin.aqua").toString
       // hack
-      Path(pathStr).parent.map(_.resolve("../.."))
+      val globalAquaPath = Path(pathStr).parent.flatMap(_.parent.flatMap(_.parent))
+
+      // Also hack. If we found installed `aqua-lib`, it should be in `node_modules` global path.
+      // In global `node_modules` could be installed aqua libs and we must use them,
+      // if they were imported in aqua files
+      val globalNodeModulesPath =
+        globalAquaPath.flatMap(_.parent.flatMap(_.parent.flatMap(_.parent)))
+
+      globalAquaPath.toList ++ globalNodeModulesPath.toList
     }.getOrElse {
       // we don't care about path if there is no builtins, but must write an error
       logger.error("Unexpected. Cannot find 'aqua-lib' dependency with `builtin.aqua` in it")
-      None
+      Nil
     }
 
   }
