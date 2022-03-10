@@ -1,21 +1,51 @@
 module Closure declares *
 
-export smth
+import "builtin.aqua"
 
-service Srv("srv"):
-  noop: string -> ()
+export LocalSrv, closureIn, closureOut, closureBig
+
+service MyOp("op"):
+  identity(s: string) -> string
+
+service LocalSrv("local_srv"):
   inside: -> ()
-  trial: -> ()
 
-func smth() -> bool, string:
+func closureIn(peer1: string) -> string:
   variable = "const"
-  co on "x":
-    Srv.trial()
-  closure = () -> string:
-    Srv.inside()
-    <- variable
+  co on peer1:
+    p1Id <- MyOp.identity("co on")
+  closure = (s: string) -> string:
+    if s == "in":
+        LocalSrv.inside()
+    p2Id <- MyOp.identity(s)
+    <- p2Id
+  p <- closure("in")
+  <- p
 
-  on "other":
-    c <- closure()
-    Srv.noop(c)
-  <- true, ""
+func closureOut(peer2: string) -> Info:
+  closure = (s: string) -> Info:
+    if s == "in":
+        LocalSrv.inside()
+    p2Id <- Peer.identify()
+    <- p2Id
+  on peer2:
+    p2Id <- closure("on")
+  <- p2Id
+
+func closureBig(peer1: string, peer2: string) -> string, string:
+  variable = "const"
+  co on peer1:
+    p1Id <- MyOp.identity("co on")
+  closure = (s: string) -> string:
+    p2Id: *string
+    if s == "in":
+      p2 <- MyOp.identity(s)
+      p2Id <<- p2
+    else:
+      p2Info <- Peer.identify()
+      p2Id <<- p2Info.external_addresses!0
+    <- p2Id!
+  p <- closure("in")
+  on peer2:
+      p2Id <- closure("on")
+  <- p, p2Id

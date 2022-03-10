@@ -49,11 +49,9 @@ object MakeRes {
   }
 
   def resolve(
-    currentPeerId: Option[ValueModel],
-    i: Int
-  ): PartialFunction[OpModel, ResolvedOp.Tree] = {
-    case SeqModel => SeqRes.leaf
-    case _: OnModel => SeqRes.leaf
+               currentPeerId: Option[ValueModel],
+               i: Int
+             ): PartialFunction[OpModel, ResolvedOp.Tree] = {
     case MatchMismatchModel(a, b, s) =>
       MatchMismatchRes(a, b, s).leaf
     case ForModel(item, iter) if !isNillLiteral(iter) => FoldRes(item, iter).leaf
@@ -61,7 +59,7 @@ object MakeRes {
     case ParModel | DetachModel => ParRes.leaf
     case XorModel => XorRes.leaf
     case NextModel(item) => NextRes(item).leaf
-    case PushToStreamModel(operand @ VarModel(_, StreamType(st), _), exportTo) =>
+    case PushToStreamModel(operand@VarModel(_, StreamType(st), _), exportTo) =>
       val tmpName = s"push-to-stream-$i"
       // wrap (
       //  RestrictionRes(tmpName, isStream = false),
@@ -97,6 +95,8 @@ object MakeRes {
 
     case NullModel =>
       NullRes.leaf
+
+    case _: SeqGroupModel => SeqRes.leaf
 
   }
 }
