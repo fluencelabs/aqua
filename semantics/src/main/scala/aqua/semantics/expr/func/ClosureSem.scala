@@ -21,11 +21,12 @@ class ClosureSem[S[_]](val expr: ClosureExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     Prog.after {
       case arrow: ArrowRaw =>
+        // TODO: if detached, clear all locally-defined abilities
         N.defineArrow(
           expr.name,
           arrow.`type`,
           isRoot = false
-        ) as ClosureTag(FuncRaw(expr.name.value, arrow)).funcOpLeaf
+        ) as ClosureTag(FuncRaw(expr.name.value, arrow), expr.detach.isDefined).funcOpLeaf
 
       case m =>
         Raw.error("Closure must continue with an arrow definition").pure[Alg]

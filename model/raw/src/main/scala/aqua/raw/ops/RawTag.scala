@@ -140,11 +140,12 @@ case class AssignmentTag(
 }
 
 case class ClosureTag(
-  func: FuncRaw
+  func: FuncRaw,
+  detach: Boolean
 ) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    ClosureTag(
+    copy(
       func.copy(arrow =
         func.arrow.copy(
           ret = func.arrow.ret.map(_.map(f)),

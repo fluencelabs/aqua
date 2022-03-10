@@ -23,7 +23,7 @@ func closureIn(peer1: string) -> string:
   <- p
 
 func closureOut(peer2: string) -> Info:
-  closure = (s: string) -> Info:
+  closure = func (s: string) -> Info:
     if s == "in":
         LocalSrv.inside()
     p2Id <- Peer.identify()
