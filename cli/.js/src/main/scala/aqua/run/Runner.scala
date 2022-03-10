@@ -1,5 +1,6 @@
 package aqua.run
 
+import aqua.CliFunc
 import aqua.backend.FunctionDef
 import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter}
