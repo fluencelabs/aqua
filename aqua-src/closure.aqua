@@ -2,7 +2,7 @@ module Closure declares *
 
 import "builtin.aqua"
 
-export closureOut2
+export closureOut2, closureIn, closureOut, closureBig, closureOut3
 
 service MyOp("op"):
   identity(s: string) -> string
@@ -29,6 +29,16 @@ func closureIn(peer1: string) -> string:
   p <- closure("in")
   <- p
 
+func closureOut3(peer2: string) -> Info:
+  on peer2:
+      closure = (s: string) -> Info:
+        if s == "in":
+            LocalSrv.inside()
+        p2Id <- Peer.identify()
+        <- p2Id
+  p2Id <- closure("on")
+  <- p2Id
+
 func closureOut(peer2: string) -> Info:
   closure = func (s: string) -> Info:
     if s == "in":
@@ -43,7 +53,7 @@ func closureBig(peer1: string, peer2: string) -> string, string:
   variable = "const"
   co on peer1:
     p1Id <- MyOp.identity("co on")
-  closure = (s: string) -> string:
+  closure = func (s: string) -> string:
     p2Id: *string
     if s == "in":
       p2 <- MyOp.identity(s)

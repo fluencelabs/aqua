@@ -4,8 +4,10 @@ import aqua.model.transform.pre.InitPeerCallable
 import aqua.model.{
   CallModel,
   CallServiceModel,
+  ForceExecModel,
   LiteralModel,
   MatchMismatchModel,
+  NoExecModel,
   OnModel,
   OpModel,
   SeqModel,
@@ -26,12 +28,21 @@ case class ErrorsCatcher(
   callable: InitPeerCallable
 ) {
 
+  private def hasExec(children: Chain[OpModel.Tree]): Boolean =
+    children.exists {
+      case Cofree(head: ForceExecModel, _) =>
+        true
+      case Cofree(_, tail) =>
+        hasExec(tail.value)
+    }
+
   def transform(op: OpModel.Tree): OpModel.Tree =
     if (enabled) {
       var i = 0
       Cofree
         .cata[Chain, OpModel, OpModel.Tree](op) {
-          case (ot @ (OnModel(_, _) | MatchMismatchModel(_, _, _)), children) =>
+          case (ot @ (OnModel(_, _) | MatchMismatchModel(_, _, _)), children)
+              if hasExec(children) =>
             i = i + 1
             Eval now ot.wrap(
               XorModel.wrap(
