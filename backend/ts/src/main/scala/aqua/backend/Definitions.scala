@@ -50,7 +50,7 @@ object TypeDefinition {
         ("fields", Json.fromFields(fields.toList.map { case (n, t) => (n, t.asJson) }))
       )
 
-    case d @ OptionalType(t) =>
+    case d @ OptionTypeDef(t) =>
       Json.obj(
         ("tag", Json.fromString(d.tag)),
         ("type", t.asJson)
@@ -101,7 +101,7 @@ object TypeDefinition {
   def apply(t: Type): TypeDefinition = {
     t match {
       case OptionType(t) =>
-        OptionalType(TypeDefinition(t))
+        OptionTypeDef(TypeDefinition(t))
       case t: BoxType => ArrayTypeDef(TypeDefinition(t.element))
       case StructType(name, fields) =>
         StructTypeDef(name, fields.toSortedMap.view.mapValues(TypeDefinition.apply).toMap)
@@ -132,11 +132,11 @@ object ProductTypeDef {
   }
 }
 
-case class OptionalType(t: TypeDefinition) extends TypeDefinition { val tag = "option" }
+case class OptionTypeDef(t: TypeDefinition) extends TypeDefinition { val tag = "option" }
 case class ScalarTypeDef private (name: String) extends TypeDefinition { val tag = "scalar" }
 
 object ScalarTypeDef {
-  def fromScalar(s: ScalarType) = ScalarTypeDef(s.name)
+  def fromScalar(s: ScalarType): ScalarTypeDef = ScalarTypeDef(s.name)
 }
 
 case class ArrayTypeDef(`type`: TypeDefinition) extends TypeDefinition { val tag = "array" }
