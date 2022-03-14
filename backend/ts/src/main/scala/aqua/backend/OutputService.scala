@@ -4,7 +4,6 @@ import aqua.backend.ts.TypeScriptCommon
 import aqua.res.ServiceRes
 import aqua.types.ArrowType
 import io.circe.*
-import io.circe.generic.auto.*
 import io.circe.parser.*
 import io.circe.syntax.*
 
@@ -13,7 +12,9 @@ case class OutputService(srv: ServiceRes, types: Types) {
   import TypeScriptCommon.*
   import types.*
   private val serviceTypes = types.serviceType(srv)
+
   import serviceTypes.*
+  import TypeDefinition._
 
   def generate: String =
     val functions = LabelledProductTypeDef(

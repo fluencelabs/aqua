@@ -9,7 +9,7 @@ case class TSFuncTypes(func: FuncRes) extends FuncTypes {
   import TypeScriptTypes.*
 
   override val retTypeTs =
-    if (func.returnType.length > 1)
+    if (func.returnType.length > 0)
       genTypeName(func.returnType, func.funcName.capitalize + "Result")
     else (None, "void")
 

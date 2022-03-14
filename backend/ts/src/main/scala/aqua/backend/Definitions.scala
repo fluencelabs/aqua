@@ -3,7 +3,6 @@ package aqua.backend
 import aqua.res.FuncRes
 import aqua.types.*
 import io.circe.*
-import io.circe.generic.auto.*
 import io.circe.parser.*
 import io.circe.syntax.*
 
@@ -15,6 +14,23 @@ sealed trait TypeDefinition {
 }
 
 object TypeDefinition {
+
+  implicit val encodeProdDefType: Encoder[ProductTypeDef] = {
+    case d @ LabelledProductTypeDef(fields) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("fields", Json.fromFields(fields.map { case (n, t) => (n, t.asJson) }))
+      )
+    case d @ UnlabelledProductTypeDef(items) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("items", Json.fromValues(items.map(_.asJson)))
+      )
+    case d @ NilTypeDef =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag))
+      )
+  }
 
   implicit val encodeDefType: Encoder[TypeDefinition] = {
     case d @ ScalarTypeDef(name) =>
@@ -33,16 +49,7 @@ object TypeDefinition {
         ("name", Json.fromString(name)),
         ("fields", Json.fromFields(fields.toList.map { case (n, t) => (n, t.asJson) }))
       )
-    case d @ LabelledProductTypeDef(fields) =>
-      Json.obj(
-        ("tag", Json.fromString(d.tag)),
-        ("fields", Json.fromFields(fields.map { case (n, t) => (n, t.asJson) }))
-      )
-    case d @ UnlabelledProductTypeDef(items) =>
-      Json.obj(
-        ("tag", Json.fromString(d.tag)),
-        ("items", Json.fromValues(items.map(_.asJson)))
-      )
+
     case d @ OptionalType(t) =>
       Json.obj(
         ("tag", Json.fromString(d.tag)),
@@ -57,6 +64,27 @@ object TypeDefinition {
     case d =>
       Json.obj(
         ("tag", Json.fromString(d.tag))
+      )
+  }
+
+  implicit val encodeServiceDefType: Encoder[ServiceDef] = { case ServiceDef(sId, functions) =>
+    Json.obj(
+      ("defaultServiceId", sId.asJson),
+      ("functions", encodeProdDefType(functions))
+    )
+  }
+
+  implicit val encodeNamesConfig: Encoder[NamesConfig] = { case n: NamesConfig =>
+    import io.circe.generic.auto.*
+    n.asJson
+  }
+
+  implicit val encodeFunctionDefType: Encoder[FunctionDef] = {
+    case FunctionDef(fName, arrow, names) =>
+      Json.obj(
+        ("functionName", Json.fromString(fName)),
+        ("arrow", encodeDefType(arrow)),
+        ("names", names.asJson)
       )
   }
 
@@ -105,7 +133,10 @@ object ScalarTypeDef {
 
 case class ArrayTypeDef(`type`: TypeDefinition) extends TypeDefinition { val tag = "array" }
 
-case class ArrowTypeDef(domain: ProductTypeDef, codomain: ProductTypeDef) extends TypeDefinition {
+case class ArrowTypeDef(
+  domain: ProductTypeDef,
+  codomain: ProductTypeDef
+) extends TypeDefinition {
   val tag = "arrow"
 }
 
@@ -131,7 +162,7 @@ case class StructTypeDef(name: String, fields: Map[String, TypeDefinition]) exte
   val tag = "struct"
 }
 
-case class LabelledProductTypeDef(items: List[(String, TypeDefinition)]) extends ProductTypeDef {
+case class LabelledProductTypeDef(fields: List[(String, TypeDefinition)]) extends ProductTypeDef {
   val tag = "labeledProduct"
 }
 

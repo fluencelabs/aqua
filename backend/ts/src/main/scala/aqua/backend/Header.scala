@@ -6,17 +6,24 @@ object Header {
     val imports = if (isCommonJS) {
       """const { Fluence, FluencePeer } = require('@fluencelabs/fluence');
         |const {
-        |    CallParams,
         |    callFunction,
         |    registerService,
-        |} = require('@fluencelabs/fluence/dist/internal/compilerSupport/v3${if (isJs) ".js" else ""}');""".stripMargin
+        |} = require('@fluencelabs/fluence/dist/internal/compilerSupport/v3${if (isJs) ".js" else ""}');
+        |
+        |const {
+        |    CallParams        
+        |} = require('@fluencelabs/fluence/dist/internal/compilerSupport/v2${if (isJs) ".js" else ""}');""".stripMargin
     } else {
       s"""import { Fluence, FluencePeer } from '@fluencelabs/fluence';
          |import {
-         |    CallParams,
          |    callFunction,
          |    registerService,
          |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v3${if (isJs) ".js"
+      else ""}';
+         |
+         |import {
+         |    CallParams
+         |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v2${if (isJs) ".js"
       else ""}';""".stripMargin
     }
     s"""/**
