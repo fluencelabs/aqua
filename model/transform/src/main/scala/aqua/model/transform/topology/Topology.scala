@@ -34,7 +34,7 @@ case class Topology private (
   begins: Topology.Begins,
   ends: Topology.Ends,
   after: Topology.After
-) {
+) extends Logging {
 
   val parent: Option[Topology] = cursor.moveUp.map(_.topology)
 
@@ -44,10 +44,16 @@ case class Topology private (
   val capturedTopologies: Eval[Map[String, Topology]] =
     cursor.moveLeft
       .fold(Eval.now(Map.empty[String, Topology]))(_.topology.capturedTopologies)
-      .map(tops =>
+      .flatMap(tops =>
         cursor.current.head match {
-          case CaptureTopologyModel(name) => tops + (name -> this)
-          case _ => tops
+          case CaptureTopologyModel(name) =>
+            logger.trace(s"Capturing topology `$name`")
+            Eval.now(tops + (name -> this))
+          case x =>
+            logger.trace(s"Skip $x")
+            cursor.toLastChild
+              .map(_.topology.capturedTopologies.map(_ ++ tops))
+              .getOrElse(Eval.now(tops))
         }
       )
       .memoize
@@ -61,7 +67,10 @@ case class Topology private (
           capturedTopologies.flatMap(
             _.get(name).fold(
               // TODO: this should never happen, it's an error definitely
-              Eval.now(List.empty[OnModel])
+              Eval.later {
+                logger.error(s"Captured topology `$name` not found")
+                List.empty[OnModel]
+              }
             )(_.pathOn)
           )
         case _ => parent.fold[Eval[List[OnModel]]](Eval.now(Nil))(_.pathOn)

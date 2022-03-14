@@ -2,13 +2,20 @@ module Closure declares *
 
 import "builtin.aqua"
 
-export LocalSrv, closureIn, closureOut, closureBig
+export closureOut2
 
 service MyOp("op"):
   identity(s: string) -> string
 
 service LocalSrv("local_srv"):
   inside: -> ()
+
+func closureOut2():
+  on HOST_PEER_ID:
+      closure = () -> Info:
+        p2Id <- Peer.identify()
+        <- p2Id
+  closure()
 
 func closureIn(peer1: string) -> string:
   variable = "const"
