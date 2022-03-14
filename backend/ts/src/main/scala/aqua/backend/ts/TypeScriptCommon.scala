@@ -5,14 +5,21 @@ import aqua.res.FuncRes
 import aqua.types.*
 import cats.syntax.show.*
 
+import scala.annotation.tailrec
+
 object TypeScriptCommon {
 
+  @tailrec
   def genTypeName(t: Type, name: String): (Option[String], String) = {
     val genType = typeToTs(t)
     t match {
-      case tt: ProductType =>
+      case NilType =>
+        (None, "void")
+      case tt: ProductType if tt.length > 1 =>
         val gen = s"export type $name = $genType"
         (Some(gen), name)
+      case tt: ProductType if tt.length == 1 =>
+        genTypeName(tt.toList.head, name)
       case tt: StructType =>
         val gen = s"export type $name = $genType"
         (Some(gen), name)

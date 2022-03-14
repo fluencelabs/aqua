@@ -9,9 +9,7 @@ case class TSFuncTypes(func: FuncRes) extends FuncTypes {
   import TypeScriptTypes.*
 
   override val retTypeTs =
-    if (func.returnType.length > 0)
-      genTypeName(func.returnType, func.funcName.capitalize + "Result")
-    else (None, "void")
+    genTypeName(func.returnType, func.funcName.capitalize + "Result")
 
   override def generate = {
     val configType = "?: {ttl?: number}"

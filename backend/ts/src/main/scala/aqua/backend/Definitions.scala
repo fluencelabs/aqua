@@ -75,8 +75,16 @@ object TypeDefinition {
   }
 
   implicit val encodeNamesConfig: Encoder[NamesConfig] = { case n: NamesConfig =>
-    import io.circe.generic.auto.*
-    n.asJson
+    import n.*
+    Json.obj(
+      ("relay", Json.fromString(relay)),
+      ("getDataSrv", Json.fromString(getDataSrv)),
+      ("callbackSrv", Json.fromString(callbackSrv)),
+      ("responseSrv", Json.fromString(responseSrv)),
+      ("responseFnName", Json.fromString(responseFnName)),
+      ("errorHandlingSrv", Json.fromString(errorHandlingSrv)),
+      ("errorFnName", Json.fromString(errorFnName))
+    )
   }
 
   implicit val encodeFunctionDefType: Encoder[FunctionDef] = {
