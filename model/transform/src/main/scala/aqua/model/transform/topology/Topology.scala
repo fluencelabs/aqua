@@ -41,6 +41,7 @@ case class Topology private (
   val parents: LazyList[Topology] =
     LazyList.unfold(parent)(p => p.map(pp => pp -> pp.parent))
 
+  // Map of all previously-seen Captured Topologies -- see CaptureTopologyModel, ApplyTopologyModel
   val capturedTopologies: Eval[Map[String, Topology]] =
     cursor.moveLeft
       .fold(Eval.now(Map.empty[String, Topology]))(_.topology.capturedTopologies)
@@ -58,6 +59,8 @@ case class Topology private (
       )
       .memoize
 
+  // Current topology location – stack of OnModel's collected from parents branch
+  // ApplyTopologyModel shifts topology to pathOn where this topology was Captured
   val pathOn: Eval[List[OnModel]] =
     Eval
       .later(cursor.current.head match {
@@ -66,7 +69,6 @@ case class Topology private (
         case ApplyTopologyModel(name) =>
           capturedTopologies.flatMap(
             _.get(name).fold(
-              // TODO: this should never happen, it's an error definitely
               Eval.later {
                 logger.error(s"Captured topology `$name` not found")
                 List.empty[OnModel]
