@@ -43,8 +43,11 @@ case class OpModelTreeCursor(
   lazy val children: LazyList[OpModelTreeCursor] =
     LazyList.unfold(toFirstChild)(_.map(c => c -> c.toNextSibling))
 
+  lazy val subtree: LazyList[OpModelTreeCursor] =
+    children.flatMap(c => c #:: c.subtree).prepended(this)
+
   def findInside(f: OpModelTreeCursor => Boolean): LazyList[OpModelTreeCursor] =
-    children.flatMap(_.findInside(f)).prependedAll(Option.when(f(this))(this))
+    subtree.filter(f)
 
   lazy val topology: Topology = Topology.make(this)
 

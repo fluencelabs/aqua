@@ -22,7 +22,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           ArrowType(ProductType(Nil), ProductType(Nil)),
           Nil,
           Map.empty,
-          Map.empty
+          Map.empty,
+          None
         ),
         CallModel(Nil, Nil)
       )
@@ -73,7 +74,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ),
       Nil,
       Map.empty,
-      Map.empty
+      Map.empty,
+      None
     )
 
     val model: OpModel.Tree = ArrowInliner
@@ -97,7 +99,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           ),
           Nil,
           Map("cb" -> cbArrow),
-          Map.empty
+          Map.empty,
+          None
         ),
         CallModel(cbVal :: Nil, Nil)
       )
@@ -162,7 +165,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ),
       Nil,
       Map.empty,
-      Map.empty
+      Map.empty,
+      None
     )
 
     val model: OpModel.Tree = ArrowInliner
@@ -186,7 +190,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           ),
           Nil,
           Map("cb" -> cbArrow),
-          Map.empty
+          Map.empty,
+          None
         ),
         CallModel(cbVal :: Nil, Nil)
       )
@@ -241,7 +246,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ),
       Nil,
       Map.empty,
-      Map.empty
+      Map.empty,
+      None
     )
 
     val model: OpModel.Tree = ArrowInliner
@@ -260,7 +266,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           ArrowType(ProductType(Nil), ProductType(returnType :: Nil)),
           Nil,
           Map(innerName -> inner),
-          Map.empty
+          Map.empty,
+          None
         ),
         CallModel(Nil, Nil)
       )
@@ -340,7 +347,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         ),
         Nil,
         Map.empty,
-        Map.empty
+        Map.empty,
+        None
       )
 
     // wrapper that export object and call inner function
@@ -358,7 +366,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           ),
           Nil,
           Map(inner.funcName -> inner),
-          Map.empty
+          Map.empty,
+          None
         ),
         CallModel(Nil, Nil)
       )
@@ -426,7 +435,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         ),
         Nil,
         Map.empty,
-        Map.empty
+        Map.empty,
+        None
       )
 
     // wrapper that export object and call inner function
@@ -445,7 +455,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           ),
           Nil,
           Map(inner.funcName -> inner),
-          Map.empty
+          Map.empty,
+          None
         ),
         CallModel(Nil, Nil)
       )

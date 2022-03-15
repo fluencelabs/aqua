@@ -160,7 +160,8 @@ class Runner(
         ArrowType(NilType, returnCodomain),
         ret,
         Map(func.name -> funcCallable),
-        Map.empty
+        Map.empty,
+        None
       )
     }
   }

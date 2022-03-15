@@ -52,8 +52,7 @@ object MakeRes {
     currentPeerId: Option[ValueModel],
     i: Int
   ): PartialFunction[OpModel, ResolvedOp.Tree] = {
-    case SeqModel => SeqRes.leaf
-    case _: OnModel => SeqRes.leaf
+    case SeqModel | _: OnModel | _: ApplyTopologyModel => SeqRes.leaf
     case MatchMismatchModel(a, b, s) =>
       MatchMismatchRes(a, b, s).leaf
     case ForModel(item, iter) if !isNillLiteral(iter) => FoldRes(item, iter).leaf
