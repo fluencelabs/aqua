@@ -14,18 +14,24 @@ import cats.data.NonEmptyList
 import scala.collection.mutable
 
 class ClosureExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
+
   import AquaSpec._
 
   val parser = Parser.spanParser
 
   "closure header" should "parse" in {
     closureExpr("someName =") should be(
-      ClosureExpr[Id](toName("someName"))
+      ClosureExpr[Id](toName("someName"), None)
+    )
+
+    closureExpr("someName = func") should be(
+      ClosureExpr[Id](toName("someName"), Some(()))
     )
   }
 
   "closure" should "parse" in {
-    val script = """func f() -> string:
+    val script =
+      """func f() -> string:
         |  closure = (s: string) -> string:
         |    LocalSrv.inside()
         |    p2Id <- Peer.identify()
@@ -43,12 +49,22 @@ class ClosureExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     qTree.d() shouldBe RootExpr(Token.lift[Id, Unit](()))
     qTree.d() shouldBe FuncExpr("f")
     qTree.d() shouldBe ArrowExpr(toArrowType(Nil, Some(scToBt(string))))
-    qTree.d() shouldBe ClosureExpr("closure")
+    qTree.d() shouldBe ClosureExpr("closure", None)
     qTree.d() shouldBe ArrowExpr(toNamedArrow(("s", scToBt(string)) :: Nil, scToBt(string) :: Nil))
     qTree.d() shouldBe CallArrowExpr(Nil, Some(Ability[Id]("LocalSrv")), toName("inside"), Nil)
-    qTree.d() shouldBe CallArrowExpr(toName("p2Id") :: Nil, Some(Ability[Id]("Peer")), toName("identify"), Nil)
+    qTree.d() shouldBe CallArrowExpr(
+      toName("p2Id") :: Nil,
+      Some(Ability[Id]("Peer")),
+      toName("identify"),
+      Nil
+    )
     qTree.d() shouldBe ReturnExpr(NonEmptyList(VarToken[Id](toName("p2Id")), Nil))
-    qTree.d() shouldBe CallArrowExpr(toName("v") :: Nil, None, toName("closure"), toStr("input") :: Nil)
+    qTree.d() shouldBe CallArrowExpr(
+      toName("v") :: Nil,
+      None,
+      toName("closure"),
+      toStr("input") :: Nil
+    )
     qTree.d() shouldBe ReturnExpr(NonEmptyList(VarToken[Id](toName("v")), Nil))
   }
 }

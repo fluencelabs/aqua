@@ -22,11 +22,11 @@ object Test extends IOApp.Simple {
       start <- IO(System.currentTimeMillis())
       _ <- AquaPathCompiler
         .compileFilesTo[IO](
-          Path("./aqua-src/hack.aqua"),
+          Path("./aqua-src/closure.aqua"),
           List(Path("./aqua")),
           Option(Path("./target")),
           TypeScriptBackend,
-          TransformConfig(wrapWithXor = false)
+          TransformConfig(wrapWithXor = true)
         )
         .map {
           case Validated.Invalid(errs) =>

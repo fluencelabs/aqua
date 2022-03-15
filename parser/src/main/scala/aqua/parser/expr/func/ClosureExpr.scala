@@ -13,17 +13,18 @@ import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ClosureExpr[F[_]](
-  name: Name[F]
+  name: Name[F],
+  detach: Option[F[Unit]]
 ) extends Expr[F](ClosureExpr, name) {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): ClosureExpr[K] =
-    copy(name.mapK(fk))
+    copy(name.mapK(fk), detach.map(fk.apply))
 }
 
 object ClosureExpr extends Expr.Prefix() {
   override def continueWith: List[Expr.Lexem] = Expr.defer(ArrowExpr) :: Nil
 
   override val p: Parser[ClosureExpr[Span.S]] =
-    (Name.p <* ` ` <* `=`).map(ClosureExpr(_))
+    ((Name.p <* ` ` <* `=`) ~ (` ` *> `func`.lift).backtrack.?).map(ClosureExpr(_, _))
 
 }

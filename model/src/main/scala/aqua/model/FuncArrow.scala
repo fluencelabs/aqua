@@ -12,7 +12,8 @@ case class FuncArrow(
   arrowType: ArrowType,
   ret: List[ValueRaw],
   capturedArrows: Map[String, FuncArrow],
-  capturedValues: Map[String, ValueModel]
+  capturedValues: Map[String, ValueModel],
+  capturedTopology: Option[String]
 ) {
 
   lazy val args: List[(String, Type)] = arrowType.domain.toLabelledList()
@@ -25,7 +26,8 @@ object FuncArrow {
   def fromRaw(
     raw: FuncRaw,
     arrows: Map[String, FuncArrow],
-    constants: Map[String, ValueModel]
+    constants: Map[String, ValueModel],
+    topology: Option[String] = None
   ): FuncArrow =
     FuncArrow(
       raw.name,
@@ -33,6 +35,7 @@ object FuncArrow {
       raw.arrow.`type`,
       raw.arrow.ret,
       arrows,
-      constants
+      constants,
+      topology
     )
 }

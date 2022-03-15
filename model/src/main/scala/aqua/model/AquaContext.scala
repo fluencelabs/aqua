@@ -114,7 +114,8 @@ object AquaContext extends Logging {
             arrowType,
             ret.map(_.toRaw),
             Map.empty,
-            Map.empty
+            Map.empty,
+            None
           )
       }
     )
@@ -188,7 +189,7 @@ object AquaContext extends Logging {
 
               val (pctx, pcache) = fromRawContext(partContext, ctxCache)
               logger.trace("Got " + func.name + " from raw")
-              val fr = FuncArrow.fromRaw(func, pctx.allFuncs, pctx.allValues)
+              val fr = FuncArrow.fromRaw(func, pctx.allFuncs, pctx.allValues, None)
               logger.trace("Captured recursively for " + func.name)
               val add = blank.copy(funcs = Map(func.name -> fr))
 

@@ -36,7 +36,8 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         stringArrow,
         ret :: Nil,
         Map.empty,
-        Map.empty
+        Map.empty,
+        None
       )
 
     val bc = TransformConfig()
@@ -85,7 +86,8 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       stringArrow,
       ret :: Nil,
       Map.empty,
-      Map.empty
+      Map.empty,
+      None
     )
 
     val bc = TransformConfig(wrapWithXor = false)
@@ -130,7 +132,8 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         stringArrow,
         VarRaw("v", ScalarType.string) :: Nil,
         Map.empty,
-        Map.empty
+        Map.empty,
+        None
       )
 
     val f2: FuncArrow =
@@ -140,7 +143,8 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         stringArrow,
         VarRaw("v", ScalarType.string) :: Nil,
         Map("callable" -> f1),
-        Map.empty
+        Map.empty,
+        None
       )
 
     val bc = TransformConfig(wrapWithXor = false)
