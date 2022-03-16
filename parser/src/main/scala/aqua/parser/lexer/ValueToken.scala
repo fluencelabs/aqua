@@ -51,7 +51,7 @@ object CollectionToken {
   enum Mode:
     case StreamMode, OptionMode, ArrayMode
 
-  def collection: P[CollectionToken[Span.S]] =
+  val collection: P[CollectionToken[Span.S]] =
     ((
       `*[`.as[Mode](Mode.StreamMode) |
         `?[`.as[Mode](Mode.OptionMode) |
@@ -60,6 +60,31 @@ object CollectionToken {
       .defer(ValueToken.`_value`)
       .repSep0(`,`) <* `]`)).map { case (mode, vals) =>
       CollectionToken(mode, vals)
+    }
+}
+
+case class CallArrowToken[F[_]: Comonad](
+  ability: Option[Ability[F]],
+  funcName: Name[F],
+  args: List[ValueToken[F]]
+) extends ValueToken[F] {
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): CallArrowToken[K] =
+    copy(ability.map(_.mapK(fk)), funcName.mapK(fk), args.map(_.mapK(fk)))
+
+  override def as[T](v: T): F[T] = funcName.as(v)
+}
+
+object CallArrowToken {
+
+  val callArrow: P[CallArrowToken[Span.S]] =
+    ((Ability.dotted <* `.`).?.with1 ~
+      (Name.p
+        ~ comma0(ValueToken.`_value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`))
+        .withContext(
+          "Missing braces '()' after the function call"
+        )).map { case (ab, (fn, args)) =>
+      CallArrowToken(ab, fn, args)
     }
 }
 
@@ -106,9 +131,14 @@ object ValueToken {
 
   def `_value`: P[ValueToken[Span.S]] =
     P.oneOf(
-      literal.backtrack :: initPeerId.backtrack :: P.defer(
-        CollectionToken.collection
-      ) :: varLambda :: Nil
+      literal.backtrack ::
+        initPeerId.backtrack ::
+        P.defer(
+          CollectionToken.collection
+        ) ::
+        P.defer(CallArrowToken.callArrow) ::
+        varLambda ::
+        Nil
     )
 
   val `value`: P[ValueToken[Span.S]] =

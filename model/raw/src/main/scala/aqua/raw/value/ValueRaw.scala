@@ -122,3 +122,17 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
 
   override def varNames: Set[String] = values.toList.flatMap(_.varNames).toSet
 }
+
+case class CallArrowRaw(
+  ability: Option[String],
+  function: String,
+  arguments: List[ValueRaw],
+  baseType: ArrowType
+) extends ValueRaw {
+  override def `type`: Type = baseType.codomain.uncons.map(_._1).getOrElse(baseType)
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(arguments = arguments.map(f)))
+
+  override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
+}

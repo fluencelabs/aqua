@@ -116,6 +116,10 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           case _ if values.isEmpty => Some(ValueRaw.Nil)
           case _ => None
         }
+
+      case ca @ CallArrowToken(ability, funcName, args) =>
+        // TODO: implement this
+        ???
     }
 
   def checkArguments(token: Token[S], arr: ArrowType, args: List[ValueToken[S]]): Alg[Boolean] =

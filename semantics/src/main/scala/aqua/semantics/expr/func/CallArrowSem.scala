@@ -21,6 +21,7 @@ import cats.syntax.traverse.*
 class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
   import expr.*
+  import callArrow.*
 
   private def algUnit[Alg[_]: Monad]: Alg[Unit] = ().pure[Alg]
 
@@ -31,7 +32,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Alg[(List[ValueRaw], List[Type])] =
-    V.checkArguments(expr.funcName, at, args) >> variables
+    V.checkArguments(funcName, at, args) >> variables
       .foldLeft(algUnit[Alg].as((List.empty[Type], at.codomain.toList)))((f, exportVar) =>
         f.flatMap {
           case (exports, Nil) =>

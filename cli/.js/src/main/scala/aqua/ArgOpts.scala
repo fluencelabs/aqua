@@ -5,7 +5,7 @@ import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.parser.expr.func.CallArrowExpr
-import aqua.parser.lexer.{LiteralToken, VarToken}
+import aqua.parser.lexer.{CallArrowToken, LiteralToken, VarToken}
 import aqua.parser.lift.Span
 import aqua.types.{BottomType, LiteralType}
 import cats.{~>, Id}
@@ -38,7 +38,7 @@ object ArgOpts {
     Opts
       .option[String]("func", "Function to call with args", "f")
       .mapValidated { str =>
-        CallArrowExpr.funcOnly.parseAll(str) match {
+        CallArrowToken.callArrow.parseAll(str) match {
           case Right(exprSpan) =>
             val expr = exprSpan.mapK(spanToId)
 
