@@ -54,7 +54,7 @@ object NetworkOpts {
   def commands[F[_]: AquaIO: Async]: Command[F[ExitCode]] =
     CommandBuilder(
       "net",
-      "Tools for interaction with the network and services",
+      "Create services and query network",
       NonEmptyList(
         deploy,
         remove :: createService :: addBlueprint :: listModules :: listBlueprints :: listInterfaces :: getInterface :: Nil
