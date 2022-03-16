@@ -74,7 +74,7 @@ object DistOpts extends Logging {
   def remove[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid(
       "remove",
-      "Remove a service from a remote peer",
+      "Remove service",
       (GeneralRunOptions.commonOpt, srvIdOpt).mapN { (common, srvId) =>
         RunInfo(
           common,
@@ -87,7 +87,7 @@ object DistOpts extends Logging {
   def createService[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid(
       "create_service",
-      "Create a service",
+      "Deploy service from existing blueprint",
       (GeneralRunOptions.commonOpt, blueprintIdOpt).mapN { (common, blueprintId) =>
         RunInfo(
           common,
@@ -100,7 +100,7 @@ object DistOpts extends Logging {
   def addBlueprint[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid(
       "add_blueprint",
-      "Add a blueprint to a node",
+      "Add blueprint to a peer",
       (GeneralRunOptions.commonOpt, blueprintNameOpt, dependencyOpt).mapN {
         (common, blueprintName, dependencies) =>
           val depsWithHash = dependencies.map { d =>
@@ -142,7 +142,7 @@ object DistOpts extends Logging {
   def deploy[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
       "deploy",
-      "Deploy a service onto a remote peer",
+      "Deploy service from WASM modules",
       (
         GeneralRunOptions.commonOpt,
         configFromFileOpt[F],
