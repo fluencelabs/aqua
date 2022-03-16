@@ -24,13 +24,13 @@ object IPFSUploader extends Logging {
     }
 
     def arrow: ArrowTypeDef = ArrowTypeDef(
-      LabelledProductTypeDef(
+      LabeledProductTypeDef(
         ("path", ScalarTypeDef.fromScalar(ScalarType.string)) :: (
           "multiaddr",
           ScalarTypeDef.fromScalar(ScalarType.string)
         ) :: Nil
       ),
-      UnlabelledProductTypeDef(
+      UnlabeledProductTypeDef(
         StructTypeDef(
           "UploadResult",
           Map(

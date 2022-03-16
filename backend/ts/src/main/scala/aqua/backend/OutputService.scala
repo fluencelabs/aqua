@@ -17,7 +17,7 @@ case class OutputService(srv: ServiceRes, types: Types) {
   import TypeDefinition._
 
   def generate: String =
-    val functions = LabelledProductTypeDef(
+    val functions = LabeledProductTypeDef(
       srv.members.map { case (n, a) => (n, ArrowTypeDef(a)) }
     )
 

@@ -68,7 +68,7 @@ trait PeerStatus extends js.Object {
 }
 
 @JSExportAll
-case class LabelledProductTypeDefJs(fields: Map[String, TypeDefinition])
+case class LabeledProductTypeDefJs(fields: Map[String, TypeDefinition])
 
 @JSExportAll
 case class ArrowTypeDefJs(
@@ -109,13 +109,13 @@ object TypeDefinitionJs {
 @JSExportAll
 case class ServiceDefJs(
   defaultServiceId: Option[String],
-  functions: LabelledProductTypeDefJs
+  functions: LabeledProductTypeDefJs
 )
 
 object ServiceDefJs {
 
   def apply(sd: ServiceDef): ServiceDefJs = {
-    ServiceDefJs(sd.defaultServiceId, LabelledProductTypeDefJs(sd.functions.fields.toMap))
+    ServiceDefJs(sd.defaultServiceId, LabeledProductTypeDefJs(sd.functions.fields.toMap))
   }
 }
 

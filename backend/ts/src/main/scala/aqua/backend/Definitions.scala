@@ -16,12 +16,12 @@ sealed trait TypeDefinition {
 object TypeDefinition {
 
   implicit val encodeProdDefType: Encoder[ProductTypeDef] = {
-    case d @ LabelledProductTypeDef(fields) =>
+    case d @ LabeledProductTypeDef(fields) =>
       Json.obj(
         ("tag", Json.fromString(d.tag)),
         ("fields", Json.fromFields(fields.map { case (n, t) => (n, t.asJson) }))
       )
-    case d @ UnlabelledProductTypeDef(items) =>
+    case d @ UnlabeledProductTypeDef(items) =>
       Json.obj(
         ("tag", Json.fromString(d.tag)),
         ("items", Json.fromValues(items.map(_.asJson)))
@@ -121,12 +121,12 @@ object ProductTypeDef {
 
   def apply(t: ProductType): ProductTypeDef = {
     t match {
-      case lt: LabelledConsType =>
-        LabelledProductTypeDef(
+      case lt: LabeledConsType =>
+        LabeledProductTypeDef(
           lt.toLabelledList().map { case (n, t) => (n, TypeDefinition(t)) }
         )
-      case ut: UnlabelledConsType =>
-        UnlabelledProductTypeDef(ut.toList.map(TypeDefinition.apply))
+      case ut: UnlabeledConsType =>
+        UnlabeledProductTypeDef(ut.toList.map(TypeDefinition.apply))
       case NilType => NilTypeDef
     }
   }
@@ -170,11 +170,11 @@ case class StructTypeDef(name: String, fields: Map[String, TypeDefinition]) exte
   val tag = "struct"
 }
 
-case class LabelledProductTypeDef(fields: List[(String, TypeDefinition)]) extends ProductTypeDef {
+case class LabeledProductTypeDef(fields: List[(String, TypeDefinition)]) extends ProductTypeDef {
   val tag = "labeledProduct"
 }
 
-case class UnlabelledProductTypeDef(items: List[TypeDefinition]) extends ProductTypeDef {
+case class UnlabeledProductTypeDef(items: List[TypeDefinition]) extends ProductTypeDef {
   val tag = "unlabeledProduct"
 }
 
@@ -190,7 +190,7 @@ case class NamesConfig(
 )
 
 // Describes service
-case class ServiceDef(defaultServiceId: Option[String], functions: LabelledProductTypeDef)
+case class ServiceDef(defaultServiceId: Option[String], functions: LabeledProductTypeDef)
 
 // Describes top-level function
 case class FunctionDef(
@@ -202,7 +202,7 @@ case class FunctionDef(
 object FunctionDef {
 
   def apply(func: FuncRes): FunctionDef = {
-    val args = LabelledProductTypeDef(func.args.map(a => (a.name, TypeDefinition(a.`type`))))
+    val args = LabeledProductTypeDef(func.args.map(a => (a.name, TypeDefinition(a.`type`))))
 
     val names = NamesConfig(
       func.relayVarName.getOrElse("-relay-"),

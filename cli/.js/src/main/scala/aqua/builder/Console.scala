@@ -26,7 +26,7 @@ object Console {
     }
 
     def arrow: ArrowTypeDef = ArrowTypeDef(
-      LabelledProductTypeDef(("str", ScalarTypeDef.fromScalar(ScalarType.string)) :: Nil),
+      LabeledProductTypeDef(("str", ScalarTypeDef.fromScalar(ScalarType.string)) :: Nil),
       NilTypeDef
     )
   }

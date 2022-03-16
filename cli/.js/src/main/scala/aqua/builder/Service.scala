@@ -13,7 +13,7 @@ class Service(serviceId: String, functions: NonEmptyList[AquaFunction]) extends 
 
   def register(peer: FluencePeer): Unit = {
     val handlers = functions.map(f => (f.fnName, f.handler))
-    val defs = LabelledProductTypeDef(
+    val defs = LabeledProductTypeDef(
       functions.map(f => (f.fnName, f.arrow)).toList
     )
 
