@@ -115,6 +115,14 @@ object ArgOpts {
     }
 
   def dataFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, js.Dynamic]]] = {
+    jsonFromFileOpt("data-path", "Path to file with arguments map in JSON format", "p")
+  }
+
+  def jsonFromFileOpt[F[_]: Files: Concurrent](
+    name: String,
+    help: String = "",
+    short: String = ""
+  ): Opts[F[ValidatedNec[String, js.Dynamic]]] = {
     FileOpts.fileOpt(
       "data-path",
       "Path to file with arguments map in JSON format",

@@ -29,9 +29,8 @@ object PlatformOpts extends Logging {
     Opts.subcommand(RunOpts.runCommand[F]) orElse
       Opts.subcommand(KeyPairOpts.createKeypair[F]) orElse
       Opts.subcommand(IpfsOpts.ipfsOpt[F]) orElse
-      Opts.subcommand(DistOpts.deployOpt[F]) orElse
       Opts.subcommand(ScriptOpts.scriptOpt[F]) orElse
-      NetworkOpts.commands[F]
+      Opts.subcommand(NetworkOpts.commands[F])
 
   // it could be global installed aqua and local installed, different paths for this
   def getPackagePath[F[_]: Async](path: String): F[Path] = {

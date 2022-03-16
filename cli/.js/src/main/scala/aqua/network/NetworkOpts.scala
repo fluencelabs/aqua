@@ -4,6 +4,7 @@ import aqua.{
   AppOpts,
   AquaIO,
   CliFunc,
+  CommandBuilder,
   FluenceOpts,
   LogFormatter,
   PackagePath,
@@ -12,6 +13,7 @@ import aqua.{
   SubCommandBuilder
 }
 import aqua.builder.IPFSUploader
+import aqua.dist.DistOpts.*
 import aqua.files.AquaFilesIO
 import aqua.ipfs.IpfsOpts.{pathOpt, UploadFuncName}
 import aqua.model.{LiteralModel, ValueModel}
@@ -49,18 +51,25 @@ object NetworkOpts {
   val TestNet = "testnet"
 
   // All network commands
-  def commands[F[_]: AquaIO: Async]: Opts[F[ExitCode]] =
-    SubCommandBuilder.subcommands(
+  def commands[F[_]: AquaIO: Async]: Command[F[ExitCode]] =
+    CommandBuilder(
+      "net",
+      "Tools for interaction with the network and services",
       NonEmptyList(
-        listModules,
-        listBlueprints :: listInterfaces :: listInterfacesByPeer :: getInterface :: Nil
+        deploy,
+        remove :: createService :: addBlueprint :: listModules :: listBlueprints :: listInterfaces :: getInterface :: Nil
       )
-    ) orElse
-      Opts.subcommand(NetworkOpts.envCom[F])
+    ).command
 
   def peerOpt: Opts[String] =
     Opts
       .option[String]("peer", "PeerId", "p")
+
+  def allFlag: Opts[Boolean] =
+    Opts
+      .flag("all", "Get all services on a node")
+      .map(_ => true)
+      .withDefault(false)
 
   def idOpt: Opts[String] =
     Opts
@@ -68,12 +77,12 @@ object NetworkOpts {
 
   def envArg: Opts[String] =
     Opts
-      .argument[String]()
+      .argument[String]("krasnodar | stage | testnet")
       .withDefault(Krasnodar)
 
   def listModules[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.simple(
-      "listModules",
+      ListModulesFuncName,
       "Print all modules",
       PackagePath(NetworkAqua),
       ListModulesFuncName
@@ -81,39 +90,42 @@ object NetworkOpts {
 
   def listBlueprints[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.simple(
-      "listBlueprints",
+      ListBlueprintsFuncName,
       "Print all blueprints",
       PackagePath(NetworkAqua),
       ListBlueprintsFuncName
     )
 
-  def listInterfacesByPeer[F[_]: Async]: SubCommandBuilder[F] =
-    SubCommandBuilder.valid(
-      "listInterfaces",
-      "Print all services on a node owned by peer",
-      (GeneralRunOptions.commonOpt, AppOpts.wrapWithOption(peerOpt)).mapN { (common, peer) =>
-        RunInfo(
-          common,
-          CliFunc(
-            ListInterfacesByPeerFuncName,
-            peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
-          ),
-          PackagePath(NetworkAqua)
-        )
-      }
-    )
-
   def listInterfaces[F[_]: Async]: SubCommandBuilder[F] =
-    SubCommandBuilder.simple(
-      "listAllInterfaces",
-      "Print all services on a node",
-      PackagePath(NetworkAqua),
-      ListInterfacesFuncName
+    SubCommandBuilder.valid(
+      "list_interfaces",
+      "Print all services on a node owned by peer",
+      (GeneralRunOptions.commonOpt, AppOpts.wrapWithOption(peerOpt), allFlag).mapN {
+        (common, peer, printAll) =>
+          if (printAll)
+            RunInfo(
+              common,
+              CliFunc(
+                ListInterfacesFuncName,
+                Nil
+              ),
+              PackagePath(NetworkAqua)
+            )
+          else
+            RunInfo(
+              common,
+              CliFunc(
+                ListInterfacesByPeerFuncName,
+                peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
+              ),
+              PackagePath(NetworkAqua)
+            )
+      }
     )
 
   def getInterface[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid(
-      "getInterface",
+      GetInterfaceFuncName,
       "Print a service interface",
       (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
         RunInfo(
@@ -126,7 +138,7 @@ object NetworkOpts {
 
   def getModuleInterface[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid(
-      "getModuleInterface",
+      GetModuleInterfaceFuncName,
       "Print a module interface",
       (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
         RunInfo(

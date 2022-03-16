@@ -11,6 +11,7 @@ import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.run.RunCommand.createKeyPair
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import aqua.*
+import aqua.ArgOpts.jsonFromFileOpt
 import aqua.run.RunOpts.logger
 import aqua.types.{ArrayType, ScalarType, StructType}
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
@@ -62,13 +63,6 @@ object DistOpts extends Logging {
   def dependencyOpt: Opts[NonEmptyList[String]] =
     Opts
       .options[String]("dependency", "Blueprint dependency. May be used several times", "d")
-
-  def deployOpt[F[_]: Async]: Command[F[ExitCode]] =
-    CommandBuilder(
-      "dist",
-      "Distribute a service onto a remote peer",
-      NonEmptyList(deploy, remove :: createService :: addBlueprint :: Nil)
-    ).command
 
   def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
     val arg = getter.function.arg
@@ -140,6 +134,10 @@ object DistOpts extends Logging {
       }
     )
 
+  def configFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, js.Dynamic]]] = {
+    jsonFromFileOpt("config-path", "Path to a deploy config", "p")
+  }
+
   // Uploads a file to IPFS, creates blueprints and deploys a service
   def deploy[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
@@ -147,7 +145,7 @@ object DistOpts extends Logging {
       "Deploy a service onto a remote peer",
       (
         GeneralRunOptions.commonOpt,
-        ArgOpts.dataFromFileOpt[F],
+        configFromFileOpt[F],
         srvNameOpt
       ).mapN { (common, dataFromFileF, srvName) =>
         dataFromFileF.map { dff =>
