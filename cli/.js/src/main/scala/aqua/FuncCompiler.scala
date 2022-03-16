@@ -35,7 +35,9 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       .collectFirstSome(_.allFuncs.get(func.name))
       .map(validNec)
       .getOrElse(
-        Validated.invalidNec[String, FuncArrow](s"There is no function called '${func.name}'")
+        Validated.invalidNec[String, FuncArrow](
+          s"There is no function called '${func.name}'. Maybe this function is not exported and you need to add 'export ${func.name}?'"
+        )
       )
 
   // Compile and get only one function
