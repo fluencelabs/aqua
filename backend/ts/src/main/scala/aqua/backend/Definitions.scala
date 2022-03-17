@@ -132,7 +132,7 @@ object ProductTypeDef {
   }
 }
 
-case class OptionTypeDef(t: TypeDefinition) extends TypeDefinition { val tag = "option" }
+case class OptionTypeDef(`type`: TypeDefinition) extends TypeDefinition { val tag = "option" }
 case class ScalarTypeDef private (name: String) extends TypeDefinition { val tag = "scalar" }
 
 object ScalarTypeDef {
@@ -159,11 +159,11 @@ case object NilTypeDef extends ProductTypeDef {
 }
 
 case object TopTypeDef extends TypeDefinition {
-  val tag = "top"
+  val tag = "topType"
 }
 
 case object BottomTypeDef extends TypeDefinition {
-  val tag = "bottom"
+  val tag = "bottomType"
 }
 
 case class StructTypeDef(name: String, fields: Map[String, TypeDefinition]) extends TypeDefinition {
