@@ -7,7 +7,6 @@ import aqua.res.FuncRes
 import aqua.types.*
 import cats.syntax.show.*
 import io.circe.*
-import io.circe.generic.auto.*
 import io.circe.parser.*
 import io.circe.syntax.*
 
@@ -19,7 +18,9 @@ case class OutputFunc(func: FuncRes, types: Types) {
   import types.*
 
   val funcTypes = types.funcType(func)
+
   import funcTypes.*
+  import TypeDefinition.*
 
   def generate: String = {
     val tsAir = FuncAirGen(func).generate

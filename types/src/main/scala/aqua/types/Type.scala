@@ -51,16 +51,16 @@ sealed trait ProductType extends Type {
    * @return
    */
   def toLabelledList(prefix: String = "arg", index: Int = 0): List[(String, Type)] = this match {
-    case LabelledConsType(label, t, pt) => (label -> t) :: pt.toLabelledList(prefix, index + 1)
-    case UnlabelledConsType(t, pt) =>
+    case LabeledConsType(label, t, pt) => (label -> t) :: pt.toLabelledList(prefix, index + 1)
+    case UnlabeledConsType(t, pt) =>
       (s"$prefix$index" -> t) :: pt.toLabelledList(prefix, index + 1)
     case _ => Nil
   }
 
   lazy val labelledData: List[(String, DataType)] = this match {
-    case LabelledConsType(label, t: DataType, pt) => (label -> t) :: pt.labelledData
-    case LabelledConsType(label, t: ArrowType, pt) => pt.labelledData
-    case UnlabelledConsType(_, pt) => pt.labelledData
+    case LabeledConsType(label, t: DataType, pt) => (label -> t) :: pt.labelledData
+    case LabeledConsType(label, t: ArrowType, pt) => pt.labelledData
+    case UnlabeledConsType(_, pt) => pt.labelledData
     case _ => Nil
   }
 }
@@ -103,17 +103,17 @@ sealed trait ConsType extends ProductType {
 object ConsType {
   def unapply(cons: ConsType): Option[(Type, ProductType)] = Some(cons.`type` -> cons.tail)
 
-  def cons(`type`: Type, tail: ProductType): ConsType = UnlabelledConsType(`type`, tail)
+  def cons(`type`: Type, tail: ProductType): ConsType = UnlabeledConsType(`type`, tail)
 
   def cons(label: String, `type`: Type, tail: ProductType): ConsType =
-    LabelledConsType(label, `type`, tail)
+    LabeledConsType(label, `type`, tail)
 }
 
-case class LabelledConsType(label: String, `type`: Type, tail: ProductType) extends ConsType {
+case class LabeledConsType(label: String, `type`: Type, tail: ProductType) extends ConsType {
   override def toString: String = s"($label: " + `type` + s") :: $tail"
 }
 
-case class UnlabelledConsType(`type`: Type, tail: ProductType) extends ConsType {
+case class UnlabeledConsType(`type`: Type, tail: ProductType) extends ConsType {
   override def toString: String = `type`.toString + s" :: $tail"
 }
 
