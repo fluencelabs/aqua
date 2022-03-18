@@ -1,23 +1,14 @@
-package aqua.dist
+package aqua.remote
 
-import aqua.builder.{ArgumentGetter, IPFSUploader}
-import aqua.files.AquaFilesIO
-import aqua.io.OutputPrinter
-import aqua.ipfs.js.IpfsApi
-import aqua.js.{Config, Fluence, PeerConfig}
-import aqua.keypair.KeyPairShow.show
-import aqua.model.LiteralModel
-import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.run.RunCommand.createKeyPair
-import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
-import aqua.*
 import aqua.ArgOpts.jsonFromFileOpt
-import aqua.run.RunOpts.logger
+import aqua.builder.ArgumentGetter
+import aqua.js.Config
+import aqua.raw.value.{LiteralRaw, VarRaw}
+import aqua.run.GeneralRunOptions
 import aqua.types.{ArrayType, ScalarType, StructType}
-import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
-import cats.data.*
-import cats.effect.kernel.Async
-import cats.effect.{Concurrent, ExitCode, Resource, Sync}
+import aqua.*
+import cats.data.{NonEmptyList, NonEmptyMap, ValidatedNec}
+import cats.effect.{Async, Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -25,16 +16,15 @@ import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.syntax.show.*
 import cats.{Applicative, Monad}
-import com.monovore.decline.{Command, Opts}
-import fs2.io.file.{Files, Path}
+import com.monovore.decline.Opts
+import fs2.io.file.Files
 import scribe.Logging
 
 import scala.collection.immutable.SortedMap
 import scala.scalajs.js.JSConverters.*
-import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 
-// Options and commands to work with IPFS
+// Options and commands to work blueprints, modules and services
 object DistOpts extends Logging {
 
   val DistAqua = "aqua/dist.aqua"

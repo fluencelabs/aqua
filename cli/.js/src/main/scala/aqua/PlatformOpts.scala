@@ -1,25 +1,24 @@
 package aqua
 
-import aqua.dist.DistOpts
+import aqua.config.ConfigOpts
 import aqua.ipfs.IpfsOpts
 import aqua.js.{Meta, Module}
+import aqua.keypair.KeyPairOpts
+import aqua.remote.{DistOpts, RemoteOpts}
+import aqua.run.RunOpts
+import aqua.script.ScriptOpts
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.monad.*
 import com.monovore.decline.Opts
 import fs2.io.file.{Files, Path}
+import scribe.Logging
 
 import scala.concurrent.ExecutionContext
-import aqua.run.RunOpts
-import aqua.keypair.KeyPairOpts
-import aqua.network.NetworkOpts
-import aqua.script.ScriptOpts
-import scribe.Logging
-import cats.syntax.flatMap.*
-import cats.syntax.monad.*
-import cats.syntax.functor.*
-import cats.syntax.apply.*
-import cats.syntax.applicative.*
-
 import scala.util.Try
 
 // JS-specific options and subcommands
@@ -27,10 +26,11 @@ object PlatformOpts extends Logging {
 
   def opts[F[_]: Files: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] =
     Opts.subcommand(RunOpts.runCommand[F]) orElse
-      Opts.subcommand(KeyPairOpts.createKeypair[F]) orElse
+      Opts.subcommand(KeyPairOpts.command[F]) orElse
       Opts.subcommand(IpfsOpts.ipfsOpt[F]) orElse
       Opts.subcommand(ScriptOpts.scriptOpt[F]) orElse
-      Opts.subcommand(NetworkOpts.commands[F])
+      Opts.subcommand(RemoteOpts.commands[F]) orElse
+      Opts.subcommand(ConfigOpts.command[F])
 
   // it could be global installed aqua and local installed, different paths for this
   def getPackagePath[F[_]: Async](path: String): F[Path] = {
