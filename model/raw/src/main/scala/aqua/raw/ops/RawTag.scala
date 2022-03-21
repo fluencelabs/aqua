@@ -2,6 +2,7 @@ package aqua.raw.ops
 
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.ValueRaw
+import aqua.raw.value.CallArrowRaw
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import cats.Show
@@ -105,6 +106,21 @@ case class ForTag(item: String, iterable: ValueRaw) extends SeqGroupTag {
     copy(item = map.getOrElse(item, item))
 }
 
+case class CallArrowRawTag(
+  exportTo: List[Call.Export],
+  value: ValueRaw
+) extends RawTag {
+
+  override def exportsVarNames: Set[String] = exportTo.map(_.name).toSet
+
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
+    CallArrowRawTag(exportTo, value.map(f))
+
+  override def renameExports(map: Map[String, String]): RawTag =
+    copy(exportTo = exportTo.map(_.mapName(n => map.getOrElse(n, n))))
+}
+
+@deprecated("use CallArrowRawTag", "21.03.2022")
 case class CallArrowTag(
   funcName: String,
   call: Call
@@ -174,6 +190,7 @@ case class AbilityIdTag(
     AbilityIdTag(value.map(f), service)
 }
 
+@deprecated("use CallArrowRawTag", "21.03.2022")
 case class CallServiceTag(
   serviceId: ValueRaw,
   funcName: String,
