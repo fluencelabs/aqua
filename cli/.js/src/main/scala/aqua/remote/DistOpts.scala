@@ -64,7 +64,7 @@ object DistOpts extends Logging {
   // Removes service from a node
   def remove[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid(
-      "remove",
+      "remove_service",
       "Remove service",
       (GeneralRunOptions.commonOpt, srvIdOpt).mapN { (common, srvId) =>
         RunInfo(
