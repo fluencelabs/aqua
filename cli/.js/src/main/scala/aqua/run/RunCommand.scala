@@ -72,19 +72,20 @@ object RunCommand extends Logging {
     imports: List[Path],
     runConfig: RunConfig,
     transformConfig: TransformConfig
-  ): F[Unit] = {
+  ): F[ExitCode] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
 
     for {
       funcArrowV <- funcCompiler.compile(func)
       callResult <- Clock[F].timed {
-        val resultV: ValidatedNec[String, F[Unit]] = funcArrowV.andThen { funcCallable =>
-          val runner =
-            new Runner(func, funcCallable, runConfig, transformConfig)
-          runner.run()
+        funcArrowV match {
+          case Validated.Valid(funcCallable) =>
+            val runner =
+              new Runner(func, funcCallable, runConfig, transformConfig)
+            runner.run()
+          case i @ Validated.Invalid(_) => i.pure[F]
         }
-        resultV.sequence
       }
       (callTime, result) = callResult
     } yield {
@@ -92,8 +93,9 @@ object RunCommand extends Logging {
       result.fold(
         { (errs: NonEmptyChain[String]) =>
           errs.toChain.toList.foreach(err => OutputPrinter.error(err + "\n"))
+          ExitCode.Error
         },
-        identity
+        _ => ExitCode.Success
       )
     }
   }
@@ -137,7 +139,6 @@ object RunCommand extends Logging {
         RunConfig(common, argumentGetters, services ++ builtinServices),
         transformConfigWithOnPeer(common.on)
       )
-      .map(_ => ExitCode.Success)
   }
 
 }
