@@ -8,6 +8,7 @@ import aqua.run.GeneralRunOptions
 import aqua.types.{ArrayType, ScalarType, StructType}
 import aqua.*
 import cats.data.{NonEmptyList, NonEmptyMap, ValidatedNec}
+import cats.data.Validated.{invalidNec, validNec}
 import cats.effect.{Async, Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
@@ -137,27 +138,37 @@ object DistOpts extends Logging {
         GeneralRunOptions.commonOpt,
         configFromFileOpt[F],
         srvNameOpt
-      ).mapN { (common, dataFromFileF, srvName) =>
-        dataFromFileF.map { dff =>
-          val args = LiteralRaw.quote(srvName) :: VarRaw(srvName, ScalarType.string) :: Nil
+      ).mapN { (common, configFromFileF, srvName) =>
+        configFromFileF.map { dff =>
+          val srvArg = VarRaw(srvName, ScalarType.string)
+          val args = LiteralRaw.quote(srvName) :: srvArg :: Nil
           dff
-            .andThen(data =>
-              ArgOpts
-                .checkDataGetServices(args, Some(data))
-                .map(getServices =>
+            .andThen(config =>
+              val srvConfig = {
+                val c = config.selectDynamic(srvName)
+                if (js.isUndefined(c)) None
+                else Some(c)
+              }
+              srvConfig match {
+                case Some(c) =>
                   // if we have default timeout, increase it
                   val commonWithTimeout = if (common.timeout.isEmpty) {
                     common.copy(timeout = Some(60000))
                   } else common
-                  RunInfo(
-                    commonWithTimeout,
-                    CliFunc(DeployFuncName, args),
-                    PackagePath(DistAqua),
-                    Nil,
-                    // hack: air cannot use undefined fields, fill undefined arrays with nils
-                    getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) }
+                  validNec(
+                    RunInfo(
+                      commonWithTimeout,
+                      CliFunc(DeployFuncName, args),
+                      PackagePath(DistAqua),
+                      Nil,
+                      // hack: air cannot use undefined fields, fill undefined arrays with nils
+                      Map(srvName -> fillConfigOptionalFields(ArgumentGetter(srvArg, c)))
+                    )
                   )
-                )
+                case None =>
+                  invalidNec(s"No service '$srvName' in config.")
+
+              }
             )
         }
       }

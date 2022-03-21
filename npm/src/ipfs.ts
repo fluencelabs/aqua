@@ -1,5 +1,6 @@
 import {create, globSource} from "ipfs-http-client";
 import { Multiaddr, protocols } from "multiaddr";
+import { existsSync } from "fs";
 
 type UploadResult = {
   cid: string,
@@ -33,6 +34,14 @@ export async function uploadFile(
 
   await ipfs.id();
   infoLogger("connected to ipfs");
+
+  if (!existsSync(path)) {
+    let errMsg = "File does not exist: " + path
+    errorLogger(
+        errMsg
+    );
+    throw errMsg;
+  }
 
   const source: any = await globSource(path)
   const file = await ipfs.add(source);

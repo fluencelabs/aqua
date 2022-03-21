@@ -99,7 +99,12 @@ object ArgOpts {
         validNec(Map.empty)
       case Some(data) =>
         val services = vars.map { vm =>
-          val arg = data.selectDynamic(vm.name)
+          val arg = {
+            val a = data.selectDynamic(vm.name)
+            if (js.isUndefined(a)) null
+            else a
+          }
+
           vm.name -> ArgumentGetter(vm, arg)
         }
         validNec(services.toMap)
