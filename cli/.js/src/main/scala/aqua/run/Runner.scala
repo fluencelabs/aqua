@@ -13,6 +13,8 @@ import aqua.types.{ArrowType, BoxType, NilType, ScalarType, Type, UnlabeledConsT
 import cats.data.{Validated, ValidatedNec}
 import cats.effect.kernel.Async
 import cats.syntax.show.*
+import cats.syntax.traverse.*
+import cats.syntax.applicative.*
 
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js
@@ -30,25 +32,28 @@ class Runner(
     }
 
   // Wraps function with necessary services, registers services and calls wrapped function with FluenceJS
-  def run[F[_]: Async](): ValidatedNec[String, F[Unit]] = {
+  def run[F[_]: Async](): F[ValidatedNec[String, Unit]] = {
     val resultNames = resultVariableNames(funcCallable, config.resultName)
     val resultPrinterService =
       ResultPrinter(config.resultPrinterServiceId, config.resultPrinterName, resultNames)
     val promiseFinisherService =
       Finisher(config.finisherServiceId, config.finisherFnName)
 
-    // call an input function from a generated function
-    val callResult: ValidatedNec[String, F[Unit]] = wrapCall(
+    val wrappedV = wrapCall(
       resultPrinterService,
       promiseFinisherService
-    ).map { wrapped =>
-      genAirAndMakeCall[F](
-        wrapped,
-        resultPrinterService,
-        promiseFinisherService
-      )
+    )
+
+    // call an input function from a generated function
+    wrappedV match {
+      case Validated.Valid(wrapped) =>
+        genAirAndMakeCall[F](
+          wrapped,
+          resultPrinterService,
+          promiseFinisherService
+        )
+      case i @ Validated.Invalid(_) => i.pure[F]
     }
-    callResult
   }
 
   // Generates air from function, register all services and make a call through FluenceJS
@@ -56,7 +61,7 @@ class Runner(
     wrapped: FuncArrow,
     consoleService: ResultPrinter,
     finisherService: Finisher
-  ): F[Unit] = {
+  ): F[ValidatedNec[String, Unit]] = {
     // TODO: prob we can turn this Eval into F
     val funcRes = Transform.funcRes(wrapped, transformConfig).value
     val definitions = FunctionDef(funcRes)

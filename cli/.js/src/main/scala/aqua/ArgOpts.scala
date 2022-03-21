@@ -99,7 +99,12 @@ object ArgOpts {
         validNec(Map.empty)
       case Some(data) =>
         val services = vars.map { vm =>
-          val arg = data.selectDynamic(vm.name)
+          val arg = {
+            val a = data.selectDynamic(vm.name)
+            if (js.isUndefined(a)) null
+            else a
+          }
+
           vm.name -> ArgumentGetter(vm, arg)
         }
         validNec(services.toMap)
@@ -115,6 +120,14 @@ object ArgOpts {
     }
 
   def dataFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, js.Dynamic]]] = {
+    jsonFromFileOpt("data-path", "Path to file with arguments map in JSON format", "p")
+  }
+
+  def jsonFromFileOpt[F[_]: Files: Concurrent](
+    name: String,
+    help: String = "",
+    short: String = ""
+  ): Opts[F[ValidatedNec[String, js.Dynamic]]] = {
     FileOpts.fileOpt(
       "data-path",
       "Path to file with arguments map in JSON format",

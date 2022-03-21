@@ -116,12 +116,16 @@ object SubCommandBuilder {
 case class CommandBuilder[F[_]: Async](
   name: String,
   header: String,
-  subcommands: NonEmptyList[SubCommandBuilder[F]]
+  subcommands: NonEmptyList[SubCommandBuilder[F]],
+  rawCommands: List[Command[F[ExitCode]]] = Nil
 ) {
 
   def command: Command[F[ExitCode]] = {
     Command(name = name, header = header) {
-      Opts.subcommands(subcommands.head.command, subcommands.tail.map(_.command): _*)
+      Opts.subcommands(
+        subcommands.head.command,
+        (subcommands.tail.map(_.command) ++ rawCommands): _*
+      )
     }
   }
 }
