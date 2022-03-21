@@ -1,14 +1,7 @@
 package aqua.js
 
 import aqua.*
-import aqua.backend.{
-  ArgDefinition,
-  FunctionDef,
-  NamesConfig,
-  ServiceDef,
-  ServiceFunctionDef,
-  TypeDefinition
-}
+import aqua.backend.*
 
 import scala.concurrent.Promise
 import scala.scalajs.js
@@ -77,8 +70,7 @@ trait PeerStatus extends js.Object {
 @JSExportAll
 case class FunctionDefJs(
   functionName: String,
-  returnType: TypeDefinitionJs,
-  argDefs: js.Array[ArgDefinitionJs],
+  arrow: ArrowTypeDefJs,
   names: NamesConfigJs
 )
 
@@ -87,57 +79,106 @@ object FunctionDefJs {
   def apply(fd: FunctionDef): FunctionDefJs = {
     FunctionDefJs(
       fd.functionName,
-      TypeDefinitionJs(fd.returnType),
-      fd.argDefs.map(ArgDefinitionJs.apply).toJSArray,
+      ArrowTypeDefJs(
+        TypeDefinitionJs(fd.arrow.domain),
+        TypeDefinitionJs(fd.arrow.codomain),
+        fd.arrow.tag
+      ),
       NamesConfigJs(fd.names)
     )
   }
 }
 
 @JSExportAll
-case class ArgDefinitionJs(
+sealed trait TypeDefinitionJs
+
+@JSExportAll
+case class ArrayTypeDefJs(`type`: TypeDefinitionJs, tag: String) extends TypeDefinitionJs
+
+@JSExportAll
+case class OptionTypeDefJs(`type`: TypeDefinitionJs, tag: String) extends TypeDefinitionJs
+
+@JSExportAll
+case class ScalarTypeDefJs(name: String, tag: String) extends TypeDefinitionJs
+
+@JSExportAll
+case class StructTypeDefJs(
   name: String,
-  argType: TypeDefinitionJs
-)
-
-object ArgDefinitionJs {
-
-  def apply(ad: ArgDefinition): ArgDefinitionJs =
-    ArgDefinitionJs(ad.name, TypeDefinitionJs(ad.argType))
-}
+  fields: js.Dictionary[TypeDefinitionJs],
+  tag: String
+) extends TypeDefinitionJs
 
 @JSExportAll
-case class TypeDefinitionJs(tag: String)
+case class LabeledTypeDefJs(fields: js.Dictionary[TypeDefinitionJs], tag: String)
+    extends TypeDefinitionJs
 
-object TypeDefinitionJs {
-  def apply(td: TypeDefinition): TypeDefinitionJs = TypeDefinitionJs(td.tag)
-}
+object LabeledTypeDefJs {
 
-@JSExportAll
-case class ServiceFunctionDefJs(
-  functionName: String,
-  argDefs: js.Array[ArgDefinitionJs],
-  returnType: TypeDefinitionJs
-)
+  def apply(l: LabeledProductTypeDef): LabeledTypeDefJs = {
 
-object ServiceFunctionDefJs {
-
-  def apply(sd: ServiceFunctionDef): ServiceFunctionDefJs = {
-    ServiceFunctionDefJs(
-      sd.functionName,
-      sd.argDefs.map(ArgDefinitionJs.apply).toJSArray,
-      TypeDefinitionJs(sd.returnType)
+    LabeledTypeDefJs(
+      js.Dictionary[TypeDefinitionJs](l.fields.map { case (n, t) => (n, TypeDefinitionJs(t)) }: _*),
+      l.tag
     )
   }
 }
 
 @JSExportAll
-case class ServiceDefJs(defaultServiceId: Option[String], functions: js.Array[ServiceFunctionDefJs])
+case class UnlabeledTypeDefJs(items: js.Array[TypeDefinitionJs], tag: String)
+    extends TypeDefinitionJs
+
+@JSExportAll
+case class TopTypeDefJs(tag: String) extends TypeDefinitionJs
+
+@JSExportAll
+case class BottomTypeDefJs(tag: String) extends TypeDefinitionJs
+
+@JSExportAll
+case class NilTypeDefJs(tag: String) extends TypeDefinitionJs
+
+@JSExportAll
+case class ArrowTypeDefJs(
+  domain: TypeDefinitionJs,
+  codomain: TypeDefinitionJs,
+  tag: String
+) extends TypeDefinitionJs
+
+object TypeDefinitionJs {
+
+  def apply(td: TypeDefinition): TypeDefinitionJs = td match {
+    case o @ OptionTypeDef(t) => OptionTypeDefJs(apply(t), o.tag)
+    case a @ ArrayTypeDef(t) => ArrayTypeDefJs(apply(t), a.tag)
+    case s @ ScalarTypeDef(n) => ScalarTypeDefJs(n, s.tag)
+    case s @ StructTypeDef(n, f) =>
+      StructTypeDefJs(
+        n,
+        js.Dictionary[TypeDefinitionJs](f.toList.map { case (n, t) =>
+          (n, TypeDefinitionJs(t))
+        }: _*),
+        s.tag
+      )
+    case l: LabeledProductTypeDef =>
+      LabeledTypeDefJs(l)
+    case u @ UnlabeledProductTypeDef(items) =>
+      UnlabeledTypeDefJs(items.map(TypeDefinitionJs.apply).toJSArray, u.tag)
+    case a @ ArrowTypeDef(domain, codomain) =>
+      ArrowTypeDefJs(apply(domain), apply(codomain), a.tag)
+    case n @ NilTypeDef => NilTypeDefJs(n.tag)
+    case n @ TopTypeDef => TopTypeDefJs(n.tag)
+    case n @ BottomTypeDef => BottomTypeDefJs(n.tag)
+  }
+}
+
+@JSExportAll
+case class ServiceDefJs(
+  defaultServiceId: Option[String],
+  functions: LabeledTypeDefJs
+)
 
 object ServiceDefJs {
 
   def apply(sd: ServiceDef): ServiceDefJs = {
-    ServiceDefJs(sd.defaultServiceId, sd.functions.map(ServiceFunctionDefJs.apply).toJSArray)
+    ServiceDefJs(sd.defaultServiceId, LabeledTypeDefJs(sd.functions))
   }
 }
 
@@ -189,14 +230,14 @@ class FluencePeer extends js.Object {
   def stop(): js.Promise[Unit] = js.native
 }
 
-object V2 {
+object V3 {
 
   @js.native
-  @JSImport("@fluencelabs/fluence/dist/internal/compilerSupport/v2.js", "registerService")
+  @JSImport("@fluencelabs/fluence/dist/internal/compilerSupport/v3.js", "registerService")
   def registerService(args: js.Array[js.Any], `def`: ServiceDefJs): Unit = js.native
 
   @js.native
-  @JSImport("@fluencelabs/fluence/dist/internal/compilerSupport/v2.js", "callFunction")
+  @JSImport("@fluencelabs/fluence/dist/internal/compilerSupport/v3.js", "callFunction")
   def callFunction(
     rawFnArgs: js.Array[js.Any],
     `def`: FunctionDefJs,

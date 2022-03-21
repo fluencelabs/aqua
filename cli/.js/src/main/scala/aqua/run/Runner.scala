@@ -9,7 +9,7 @@ import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.raw.ops.{Call, CallArrowTag, FuncOp, SeqTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.types.{ArrowType, BoxType, NilType, ScalarType, Type, UnlabelledConsType}
+import aqua.types.{ArrowType, BoxType, NilType, ScalarType, Type, UnlabeledConsType}
 import cats.data.{Validated, ValidatedNec}
 import cats.effect.kernel.Async
 import cats.syntax.show.*
@@ -150,7 +150,7 @@ class Runner(
       val (returnCodomain, ret) = if (codomain.isEmpty) {
         (NilType, Nil)
       } else {
-        (UnlabelledConsType(ScalarType.string, NilType), LiteralRaw.quote("ok") :: Nil)
+        (UnlabeledConsType(ScalarType.string, NilType), LiteralRaw.quote("ok") :: Nil)
       }
 
       FuncArrow(

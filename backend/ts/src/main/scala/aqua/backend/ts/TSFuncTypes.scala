@@ -8,17 +8,17 @@ import aqua.types.*
 case class TSFuncTypes(func: FuncRes) extends FuncTypes {
   import TypeScriptTypes.*
 
-  override val retTypeTs = func.returnType
-    .fold((None, "void")) { t => genTypeName(t, func.funcName.capitalize + "Result") }
+  override val retTypeTs =
+    genTypeName(func.returnType, func.funcName.capitalize + "Result")
 
   override def generate = {
     val configType = "?: {ttl?: number}"
 
-    val argsTypescript = func.args
-      .map { arg =>
-        val (typeDesc, t) = genTypeName(arg.`type`, func.funcName.capitalize + "Arg" + arg.name.capitalize)
-        (typeDesc, s"${typed(fixupArgName(arg.name), t)}")
-      } :+ (None, s"config$configType")
+    val argsTypescript = func.args.map { arg =>
+      val (typeDesc, t) =
+        genTypeName(arg.`type`, func.funcName.capitalize + "Arg" + arg.name.capitalize)
+      (typeDesc, s"${typed(fixupArgName(arg.name), t)}")
+    } :+ (None, s"config$configType")
 
     val args = argsTypescript.map(a => "    " + a._2)
     val argsDesc = argsTypescript.flatMap(_._1)
