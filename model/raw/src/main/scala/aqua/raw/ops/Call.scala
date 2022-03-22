@@ -1,7 +1,7 @@
 package aqua.raw.ops
 
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{ArrowType, Type}
+import aqua.types.{ArrowType, ProductType, Type}
 
 // TODO docs
 case class Call(args: List[ValueRaw], exportTo: List[Call.Export]) {
@@ -14,6 +14,11 @@ case class Call(args: List[ValueRaw], exportTo: List[Call.Export]) {
 
   // TODO docs
   def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(_.mapName(f)))
+
+  def arrowType: ArrowType = ArrowType(
+    ProductType(args.map(_.`type`)),
+    ProductType.labelled(exportTo.map(e => e.name -> e.`type`))
+  )
 
   override def toString: String =
     s"[${args.mkString(" ")}]${exportTo.map(_.toRaw).map(" " + _).mkString(",")}"

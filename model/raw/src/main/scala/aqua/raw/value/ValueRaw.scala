@@ -124,13 +124,13 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
 }
 
 case class CallArrowRaw(
-  // TODO: ability should hold a type, not name
-  ability: Option[String],
-  function: String,
-  arguments: List[ValueRaw],
-  baseType: ArrowType,
-  // TODO: there should be no serviceId there
-  serviceId: Option[ValueRaw]
+                         // TODO: ability should hold a type, not name
+                         ability: Option[String],
+                         name: String,
+                         arguments: List[ValueRaw],
+                         baseType: ArrowType,
+                         // TODO: there should be no serviceId there
+                         serviceId: Option[ValueRaw]
 ) extends ValueRaw {
   override def `type`: Type = baseType.codomain.uncons.map(_._1).getOrElse(baseType)
 

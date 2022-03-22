@@ -15,7 +15,7 @@ object RawValueInliner extends Logging {
 
   import Inline.*
 
-  private[inline] def removeLambda[S: Mangler: Exports](
+  private[inline] def removeLambda[S: Mangler: Exports: Arrows](
     vm: ValueModel
   ): State[S, (ValueModel, Inline)] =
     vm match {
@@ -30,7 +30,7 @@ object RawValueInliner extends Logging {
         State.pure(vm -> Inline.empty)
     }
 
-  private[inline] def unfold[S: Mangler: Exports](
+  private[inline] def unfold[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
     lambdaAllowed: Boolean = true
   ): State[S, (ValueModel, Inline)] =
@@ -113,10 +113,67 @@ object RawValueInliner extends Logging {
             }
           )
 
+        case cr: CallArrowRaw =>
+          Mangler[S]
+            .findAndForbidName(cr.name)
+            .flatMap(n =>
+              unfoldArrow(cr, Call.Export(n, cr.`type`) :: Nil).map {
+                case (Nil, inline) => (VarModel(n, cr.`type`), inline)
+                case (h :: _, inline) => (h, inline)
+              }
+            )
+
       }
     )
 
-  private[inline] def unfoldLambda[S: Mangler: Exports](
+  private[inline] def unfoldArrow[S: Mangler: Exports: Arrows](
+    value: CallArrowRaw,
+    exportTo: List[Call.Export]
+  ): State[S, (List[ValueModel], Inline)] = {
+    val call = Call(value.arguments, exportTo)
+    value.serviceId match {
+      case Some(serviceId) =>
+        for {
+          cd <- callToModel(call)
+          sd <- valueToModel(serviceId)
+        } yield cd._1.exportTo.map(_.asVar) -> Inline(
+          Map.empty,
+          Chain.fromOption(
+            parDesugarPrefixOpt(
+              sd._2,
+              cd._2
+            )
+          ) :+ CallServiceModel(sd._1, value.name, cd._1).leaf
+        )
+      case None =>
+        /**
+         * Here the back hop happens from [[TagInliner]] to [[ArrowInliner.callArrow]]
+         */
+        val funcName = value.ability.fold(value.name)(_ + "." + value.name)
+        logger.trace(s"            $funcName")
+        Arrows[S].arrows.flatMap(arrows =>
+          arrows.get(funcName) match {
+            case Some(fn) =>
+              logger.trace(s"Call arrow $funcName")
+              callToModel(call).flatMap { case (cm, p) =>
+                ArrowInliner
+                  .callArrow(fn, cm)
+                  .map(body =>
+                    cm.exportTo.map(_.asVar) -> Inline(Map.empty, Chain.fromSeq(p.toList :+ body))
+                  )
+              }
+            case None =>
+              logger.error(
+                s"Inlining, cannot find arrow ${funcName}, available: ${arrows.keys
+                  .mkString(", ")}"
+              )
+              State.pure(Nil -> Inline.empty)
+          }
+        )
+    }
+  }
+
+  private[inline] def unfoldLambda[S: Mangler: Exports: Arrows](
     l: LambdaRaw
   ): State[S, (LambdaModel, Inline)] = // TODO lambda for collection
     l match {
@@ -136,7 +193,7 @@ object RawValueInliner extends Logging {
         State.pure(IntoIndexModel(value, t) -> Inline.empty)
     }
 
-  private[inline] def inlineToTree[S: Mangler: Exports](
+  private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
     inline: Inline
   ): State[S, List[OpModel.Tree]] =
     inline.flattenValues.toList.traverse { case (name, v) =>
@@ -149,7 +206,7 @@ object RawValueInliner extends Logging {
       }
     }.map(inline.predo.toList ::: _)
 
-  def valueToModel[S: Mangler: Exports](
+  def valueToModel[S: Mangler: Exports: Arrows](
     value: ValueRaw
   ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
@@ -166,12 +223,12 @@ object RawValueInliner extends Logging {
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops)
 
-  def valueListToModel[S: Mangler: Exports](
+  def valueListToModel[S: Mangler: Exports: Arrows](
     values: List[ValueRaw]
   ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(valueToModel(_))
 
-  def callToModel[S: Mangler: Exports](
+  def callToModel[S: Mangler: Exports: Arrows](
     call: Call
   ): State[S, (CallModel, Option[OpModel.Tree])] =
     valueListToModel(call.args).map { list =>

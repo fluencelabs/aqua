@@ -14,11 +14,14 @@ case class ArgsFromService(dataServiceId: ValueRaw, names: List[(String, DataTyp
     val iter = s"$name-iter"
     val item = s"$name-item"
     SeqTag.wrap(
-      CallServiceTag(
-        dataServiceId,
-        name,
-        Call(Nil, Call.Export(iter, ArrayType(t.element)) :: Nil)
-      ).leaf,
+      CallArrowRawTag
+        .service(
+          "data-service",
+          dataServiceId,
+          name,
+          Call(Nil, Call.Export(iter, ArrayType(t.element)) :: Nil)
+        )
+        .leaf,
       ForTag(item, VarRaw(iter, ArrayType(t.element))).wrap(
         SeqTag.wrap(
           PushToStreamTag(VarRaw(item, t.element), Call.Export(name, t)).leaf,
@@ -33,7 +36,14 @@ case class ArgsFromService(dataServiceId: ValueRaw, names: List[(String, DataTyp
       case st: StreamType =>
         getStreamDataOp(name, st)
       case _ =>
-        CallServiceTag(dataServiceId, name, Call(Nil, Call.Export(name, t) :: Nil)).leaf
+        CallArrowRawTag
+          .service(
+            "data-service",
+            dataServiceId,
+            name,
+            Call(Nil, Call.Export(name, t) :: Nil)
+          )
+          .leaf
     }
 
   def transform(op: RawTag.Tree): RawTag.Tree =

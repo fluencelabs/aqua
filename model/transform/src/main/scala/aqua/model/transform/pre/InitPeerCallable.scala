@@ -10,7 +10,7 @@ import aqua.model.{
   ValueModel,
   VarModel
 }
-import aqua.raw.ops.{Call, CallServiceTag, OnTag, RawTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, OnTag, RawTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import cats.data.Chain
 import aqua.types.Type
@@ -20,7 +20,7 @@ sealed trait InitPeerCallable extends PreTransform {
   def onInitPeer: OnModel
 
   def makeCall(serviceId: ValueRaw, funcName: String, call: Call): RawTag.Tree =
-    transform(CallServiceTag(serviceId, funcName, call).leaf)
+    transform(CallArrowRawTag.service("init-peer-callable", serviceId, funcName, call).leaf)
 
   def service(serviceId: ValueRaw): (String, Call) => RawTag.Tree =
     makeCall(serviceId, _, _)

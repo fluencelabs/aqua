@@ -136,7 +136,7 @@ object ValueToken {
         P.defer(
           CollectionToken.collection
         ) ::
-        P.defer(CallArrowToken.callArrow) ::
+        P.defer(CallArrowToken.callArrow).backtrack ::
         varLambda ::
         Nil
     )

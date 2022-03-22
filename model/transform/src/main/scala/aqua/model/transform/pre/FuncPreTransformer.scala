@@ -2,7 +2,7 @@ package aqua.model.transform.pre
 
 import aqua.model.FuncArrow
 import aqua.model.ArgsCall
-import aqua.raw.ops.{Call, CallArrowTag, FuncOp, RawTag, SeqTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, RawTag, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 import cats.syntax.show.*
@@ -79,7 +79,7 @@ case class FuncPreTransformer(
       wrapCallableName,
       transform(
         SeqTag.wrap(
-          CallArrowTag(func.funcName, funcCall).leaf ::
+          CallArrowRawTag.func(func.funcName, funcCall).leaf ::
             returnType.headOption
               .map(_ => returnCallback(retModel))
               .toList: _*

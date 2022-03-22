@@ -1,7 +1,7 @@
 package aqua.semantics.expr.func
 
 import aqua.raw.ops.Call
-import aqua.raw.ops.{CallArrowRawTag, CallArrowTag, CallServiceTag, FuncOp}
+import aqua.raw.ops.{CallArrowRawTag, FuncOp}
 import aqua.raw.Raw
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.raw.value.ValueRaw
@@ -34,9 +34,9 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
         .drop(car.baseType.codomain.length)
         .headOption
         .fold(
-          (variables zip car.baseType.codomain.toList).map { case (v, t) =>
-            Call.Export(v.value, t)
-          }.pure[Alg]
+          (variables zip car.baseType.codomain.toList).traverse { case (v, t) =>
+            N.define(v, t) as Call.Export(v.value, t)
+          }
         )(T.expectNoExport(_).as(Nil))
         .map(maybeExport => Some(CallArrowRawTag(maybeExport, car).funcOpLeaf))
   }
