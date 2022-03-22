@@ -111,7 +111,7 @@ object AquaContext extends Logging {
           FuncArrow(
             fnName,
             // TODO: capture ability resolution, get ID from the call context
-            CallArrowRawTag.service(sm.name, serviceId, fnName, call).leaf,
+            CallArrowRawTag.service(serviceId, fnName, call, sm.name).leaf,
             arrowType,
             ret.map(_.toRaw),
             Map.empty,

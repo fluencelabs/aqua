@@ -16,7 +16,6 @@ case class ArgsFromService(dataServiceId: ValueRaw, names: List[(String, DataTyp
     SeqTag.wrap(
       CallArrowRawTag
         .service(
-          "data-service",
           dataServiceId,
           name,
           Call(Nil, Call.Export(iter, ArrayType(t.element)) :: Nil)
@@ -38,7 +37,6 @@ case class ArgsFromService(dataServiceId: ValueRaw, names: List[(String, DataTyp
       case _ =>
         CallArrowRawTag
           .service(
-            "data-service",
             dataServiceId,
             name,
             Call(Nil, Call.Export(name, t) :: Nil)

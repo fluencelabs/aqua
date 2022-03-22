@@ -20,7 +20,7 @@ sealed trait InitPeerCallable extends PreTransform {
   def onInitPeer: OnModel
 
   def makeCall(serviceId: ValueRaw, funcName: String, call: Call): RawTag.Tree =
-    transform(CallArrowRawTag.service("init-peer-callable", serviceId, funcName, call).leaf)
+    transform(CallArrowRawTag.service(serviceId, funcName, call).leaf)
 
   def service(serviceId: ValueRaw): (String, Call) => RawTag.Tree =
     makeCall(serviceId, _, _)
