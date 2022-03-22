@@ -183,10 +183,10 @@ object RawValueInliner extends Logging {
           nn <- Mangler[S].findAndForbidName("ap-lambda")
         } yield IntoIndexModel(nn, t) -> Inline.preload(nn -> vm)
 
-      case IntoIndexRaw(vr: VarRaw, t) =>
+      case IntoIndexRaw(vr: (VarRaw | CallArrowRaw), t) =>
         unfold(vr, lambdaAllowed = false).map {
-          case (VarModel(name, _, _), map) => IntoIndexModel(name, t) -> map
-          case (LiteralModel(v, _), map) => IntoIndexModel(v, t) -> map
+          case (VarModel(name, _, _), inline) => IntoIndexModel(name, t) -> inline
+          case (LiteralModel(v, _), inline) => IntoIndexModel(v, t) -> inline
         }
 
       case IntoIndexRaw(LiteralRaw(value, _), t) =>
