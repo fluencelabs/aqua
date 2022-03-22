@@ -1,6 +1,7 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.*
+import aqua.parser.lexer.InfixToken.Op
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
@@ -123,14 +124,48 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
-//     TODO case it @ InfixToken(l, r, i) if i.op == "+" =>
-//        callArrowToRaw(
-//          CallArrowToken[S](
-//            Some(Ability[S](it.as("math"))),
-//            Name[S](it.as("add")),
-//            l :: r :: Nil
-//          )
-//        )
+      case it @ InfixToken(l, r, i) =>
+        (valueToRaw(l), valueToRaw(r)).mapN((ll, rr) => ll -> rr).flatMap {
+          case (Some(ll), Some(rr)) =>
+            // TODO handle literal types
+            val hasFloats = ScalarType.float
+              .exists(ft => ll.`type`.acceptsValueOf(ft) || rr.`type`.acceptsValueOf(ft))
+
+            val (lt, rt, res, id, fn) = it.op match {
+              case Op.Add =>
+                (ScalarType.i64, ScalarType.i64, None, "math", "add")
+              case Op.Sub => (ScalarType.i64, ScalarType.i64, None, "math", "sub")
+              case Op.Mul if hasFloats =>
+                // TODO may it be i32?
+                (ScalarType.f64, ScalarType.f64, Some(ScalarType.i64), "math", "fmul")
+              case Op.Mul =>
+                (ScalarType.i64, ScalarType.i64, None, "math", "mul")
+              case Op.Div => (ScalarType.i64, ScalarType.i64, None, "math", "div")
+              case Op.Rem => (ScalarType.i64, ScalarType.i64, None, "math", "rem")
+              case Op.Pow => (ScalarType.i64, ScalarType.u32, None, "math", "pow")
+              case Op.Gt => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "gt")
+              case Op.Gte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "gte")
+              case Op.Lt => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lt")
+              case Op.Lte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lte")
+            }
+            for {
+              ltm <- T.ensureTypeMatches(l, lt, ll.`type`)
+              rtm <- T.ensureTypeMatches(r, rt, rr.`type`)
+            } yield Option.when(ltm && rtm)(
+              CallArrowRaw(
+                Some(id),
+                fn,
+                ll :: rr :: Nil,
+                ArrowType(
+                  ProductType(lt :: rt :: Nil),
+                  ProductType(res.getOrElse(ll.`type` `∪` rr.`type`) :: Nil)
+                ),
+                Some(LiteralRaw.quote(id))
+              )
+            )
+
+          case _ => None.pure[Alg]
+        }
 
     }
 
