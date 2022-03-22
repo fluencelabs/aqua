@@ -129,8 +129,8 @@ object ValueToken {
   val literal: P[LiteralToken[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
-  def `_value`: P[ValueToken[Span.S]] =
-    P.oneOf(
+  def `_value`: P[ValueToken[Span.S]] = {
+    val p = P.oneOf(
       literal.backtrack ::
         initPeerId.backtrack ::
         P.defer(
@@ -140,6 +140,8 @@ object ValueToken {
         varLambda ::
         Nil
     )
+    p | p.between(`(`, `)`)
+  }
 
   val `value`: P[ValueToken[Span.S]] =
     P.defer(`_value`)
