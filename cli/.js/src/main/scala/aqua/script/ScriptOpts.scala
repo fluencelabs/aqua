@@ -82,6 +82,10 @@ object ScriptOpts extends Logging {
               )
           }
         }.getOrElse(invalidNec(s"No argument with name '$name' in data"))
+      case _ =>
+        invalidNec(
+          s"Arguments can be only 'string', 'boolean' or 'number' type in scheduled scripts"
+        )
     }
 
     literals.traverse(identity)

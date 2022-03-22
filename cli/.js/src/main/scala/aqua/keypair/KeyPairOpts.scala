@@ -17,10 +17,17 @@ import scala.concurrent.{ExecutionContext, Future}
 // Options and commands to work with KeyPairs
 object KeyPairOpts extends Logging {
 
+  def command[F[_]: Async]: Command[F[ExitCode]] =
+    Command(name = "key", header = "Manage local keys and identity") {
+      Opts.subcommands(
+        createKeypair
+      )
+    }
+
   // KeyPair generation
   def createKeypair[F[_]: Async]: Command[F[ExitCode]] =
     Command(
-      name = "create_keypair",
+      name = "create",
       header = "Create a new keypair"
     ) {
       Opts.unit.map(_ =>

@@ -62,12 +62,12 @@ object Utils {
     CompilerState.init[Id](RawContext.blank)
   }
 
-  def labelled(label: String, `type`: Type, tail: ProductType = NilType): LabelledConsType = {
-    LabelledConsType(label, `type`, tail)
+  def labelled(label: String, `type`: Type, tail: ProductType = NilType): LabeledConsType = {
+    LabeledConsType(label, `type`, tail)
   }
 
-  def productType(`type`: Type, tail: ProductType = NilType): UnlabelledConsType = {
-    UnlabelledConsType(`type`, tail)
+  def productType(`type`: Type, tail: ProductType = NilType): UnlabeledConsType = {
+    UnlabeledConsType(`type`, tail)
   }
 
   def blank: State[CompilerState[Id], CompilerState[Id]] =

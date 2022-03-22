@@ -163,13 +163,13 @@ class TypeSpec extends AnyFlatSpec with Matchers {
   }
 
   "labeled types" should "create correc labels" in {
-    val cons = LabelledConsType(
+    val cons = LabeledConsType(
       "arg1",
       ArrowType(
-        UnlabelledConsType(string, NilType),
-        UnlabelledConsType(string, NilType)
+        UnlabeledConsType(string, NilType),
+        UnlabeledConsType(string, NilType)
       ),
-      LabelledConsType("arg2", string, NilType)
+      LabeledConsType("arg2", string, NilType)
     )
 
     cons.labelledData should be(("arg2", string) :: Nil)

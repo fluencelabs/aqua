@@ -6,6 +6,8 @@ import aqua.builder.{Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, Fluence, FluenceUtils, PeerConfig}
 import aqua.run.RunCommand.createKeyPair
+import cats.data.ValidatedNec
+import cats.data.Validated.{invalidNec, validNec}
 import cats.effect.{Resource, Sync}
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*
@@ -28,7 +30,7 @@ object FuncCaller {
     config: RunConfig,
     finisherService: Finisher,
     services: List[Service]
-  ): F[Unit] = {
+  ): F[ValidatedNec[String, Unit]] = {
     FluenceUtils.setLogLevel(LogLevelTransformer.logLevelToFluenceJS(config.common.logLevel))
 
     // stops peer in any way at the end of execution
@@ -67,7 +69,7 @@ object FuncCaller {
               setTimeout(finisherFuture, t)
             }.getOrElse(finisherFuture)
             _ <- finisher
-          } yield ()).recover(handleFuncCallErrors).pure[F]
+          } yield validNec(())).recover(handleFuncCallErrors).pure[F]
         }
       }
 
@@ -90,7 +92,7 @@ object FuncCaller {
   val TimeoutErrorMessage =
     "Function execution failed by timeout. You can increase timeout with '--timeout' option in milliseconds or check if your code can hang while executing."
 
-  private def handleFuncCallErrors: PartialFunction[Throwable, Unit] = { t =>
+  private def handleFuncCallErrors: PartialFunction[Throwable, ValidatedNec[String, Unit]] = { t =>
     val message =
       t match {
         case te: TimeoutException => te.getMessage
@@ -100,6 +102,6 @@ object FuncCaller {
           } else JSON.stringify(t.toString)
       }
 
-    OutputPrinter.error(message)
+    invalidNec(message)
   }
 }

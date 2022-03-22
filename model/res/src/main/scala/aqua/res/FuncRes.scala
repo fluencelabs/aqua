@@ -1,6 +1,6 @@
 package aqua.res
 
-import aqua.types.{ArrowType, Type}
+import aqua.types.{ArrowType, ProductType, Type}
 import cats.data.Chain
 import cats.free.Cofree
 
@@ -11,7 +11,7 @@ case class FuncRes(
   funcName: String,
   argNames: List[String],
   args: List[FuncRes.Arg],
-  returnType: Option[Type],
+  returnType: ProductType,
   relayVarName: Option[String],
   dataServiceId: String,
   callbackServiceId: String,
@@ -42,8 +42,4 @@ object FuncRes {
 
   def arrowArgIndices(at: ArrowType): List[Int] =
     LazyList.from(0).take(at.domain.length).toList
-
-  def arrowToRes(at: ArrowType): Option[Type] =
-    if (at.codomain.length > 1) Some(at.codomain)
-    else at.codomain.uncons.map(_._1)
 }

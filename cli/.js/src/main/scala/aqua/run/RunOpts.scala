@@ -72,7 +72,7 @@ object RunOpts extends Logging {
   def runOptions[F[_]: AquaIO: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
       name = "run",
-      header = "Run a function from an aqua code",
+      header = "Run Aqua code",
       (
         GeneralRunOptions.commonOpt,
         runOptsCompose[F]

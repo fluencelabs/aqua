@@ -1,9 +1,8 @@
 package aqua.backend
 
 import aqua.res.FuncRes
-import aqua.types.{ArrowType, OptionType, ProductType, Type}
+import aqua.types.*
 import io.circe.*
-import io.circe.generic.auto.*
 import io.circe.parser.*
 import io.circe.syntax.*
 
@@ -16,96 +15,167 @@ sealed trait TypeDefinition {
 
 object TypeDefinition {
 
-  implicit val encodeDefType: Encoder[TypeDefinition] = {
-    case d @ (OptionalType | VoidType | PrimitiveType) =>
+  implicit val encodeProdDefType: Encoder[ProductTypeDef] = {
+    case d @ LabeledProductTypeDef(fields) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("fields", Json.fromFields(fields.map { case (n, t) => (n, t.asJson) }))
+      )
+    case d @ UnlabeledProductTypeDef(items) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("items", Json.fromValues(items.map(_.asJson)))
+      )
+    case d @ NilTypeDef =>
       Json.obj(
         ("tag", Json.fromString(d.tag))
       )
-    case d @ CallbackType(cDef) =>
+  }
+
+  implicit val encodeDefType: Encoder[TypeDefinition] = {
+    case d @ ScalarTypeDef(name) =>
       Json.obj(
         ("tag", Json.fromString(d.tag)),
-        ("callback", cDef.asJson)
+        ("name", Json.fromString(name))
       )
-    case d @ MultiReturnType(returnItems) =>
+    case d @ ArrayTypeDef(t) =>
       Json.obj(
         ("tag", Json.fromString(d.tag)),
-        ("returnItems", returnItems.asJson)
+        ("type", t.asJson)
+      )
+    case d @ StructTypeDef(name, fields) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("name", Json.fromString(name)),
+        ("fields", Json.fromFields(fields.toList.map { case (n, t) => (n, t.asJson) }))
+      )
+
+    case d @ OptionTypeDef(t) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("type", t.asJson)
+      )
+    case d @ ArrowTypeDef(domain, codomain) =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag)),
+        ("domain", domain.asJson),
+        ("codomain", codomain.asJson)
+      )
+    case d =>
+      Json.obj(
+        ("tag", Json.fromString(d.tag))
       )
   }
 
-  def apply(t: Option[Type]): TypeDefinition = t.map(apply).getOrElse(VoidType)
+  implicit val encodeServiceDefType: Encoder[ServiceDef] = { case ServiceDef(sId, functions) =>
+    Json.obj(
+      ("defaultServiceId", sId.asJson),
+      ("functions", encodeProdDefType(functions))
+    )
+  }
+
+  implicit val encodeNamesConfig: Encoder[NamesConfig] = { case n: NamesConfig =>
+    import n.*
+    Json.obj(
+      ("relay", Json.fromString(relay)),
+      ("getDataSrv", Json.fromString(getDataSrv)),
+      ("callbackSrv", Json.fromString(callbackSrv)),
+      ("responseSrv", Json.fromString(responseSrv)),
+      ("responseFnName", Json.fromString(responseFnName)),
+      ("errorHandlingSrv", Json.fromString(errorHandlingSrv)),
+      ("errorFnName", Json.fromString(errorFnName))
+    )
+  }
+
+  implicit val encodeFunctionDefType: Encoder[FunctionDef] = {
+    case FunctionDef(fName, arrow, names) =>
+      Json.obj(
+        ("functionName", Json.fromString(fName)),
+        ("arrow", encodeDefType(arrow)),
+        ("names", names.asJson)
+      )
+  }
+
+  def apply(t: Option[Type]): TypeDefinition = t.map(apply).getOrElse(NilTypeDef)
 
   def apply(t: Type): TypeDefinition = {
     t match {
       case OptionType(t) =>
-        OptionalType
-      case pt: ProductType =>
-        MultiReturnType(pt.toList.map(TypeDefinition.apply))
-      case _ => PrimitiveType
+        OptionTypeDef(TypeDefinition(t))
+      case t: BoxType => ArrayTypeDef(TypeDefinition(t.element))
+      case StructType(name, fields) =>
+        StructTypeDef(name, fields.toSortedMap.view.mapValues(TypeDefinition.apply).toMap)
+      case t: ScalarType => ScalarTypeDef.fromScalar(t)
+      case t: ProductType => ProductTypeDef(t)
+      case t: ArrowType =>
+        ArrowTypeDef(t)
+      case TopType => TopTypeDef
+      case BottomType => BottomTypeDef
     }
   }
 }
 
-case object OptionalType extends TypeDefinition { val tag = "optional" }
-case object VoidType extends TypeDefinition { val tag = "void" }
-case object PrimitiveType extends TypeDefinition { val tag = "primitive" }
-case class CallbackType(cDef: CallbackDefinition) extends TypeDefinition { val tag = "callback" }
+sealed trait ProductTypeDef extends TypeDefinition
 
-case class MultiReturnType(returnItems: List[TypeDefinition]) extends TypeDefinition {
-  val tag = "multiReturn"
-}
+object ProductTypeDef {
 
-// Describes callbacks that passes as arguments in functions
-case class CallbackDefinition(argDefs: List[ArgDefinition], returnType: TypeDefinition)
-
-object CallbackDefinition {
-
-  implicit val encodeCallbackDef: Encoder[CallbackDefinition] = (cbDef: CallbackDefinition) =>
-    Json.obj(
-      ("argDefs", cbDef.argDefs.asJson),
-      ("returnType", cbDef.returnType.asJson)
-    )
-
-  def apply(arrow: ArrowType): CallbackDefinition = {
-    val args = arrow.domain.toLabelledList().map(arg => ArgDefinition.argToDef(arg._1, arg._2))
-    val returns = arrow.codomain.toList
-    val returnType = returns match {
-      case head :: Nil =>
-        TypeDefinition(head)
-      case Nil =>
-        VoidType
-      case _ =>
-        MultiReturnType(returns.map(TypeDefinition.apply))
+  def apply(t: ProductType): ProductTypeDef = {
+    t match {
+      case lt: LabeledConsType =>
+        LabeledProductTypeDef(
+          lt.toLabelledList().map { case (n, t) => (n, TypeDefinition(t)) }
+        )
+      case ut: UnlabeledConsType =>
+        UnlabeledProductTypeDef(ut.toList.map(TypeDefinition.apply))
+      case NilType => NilTypeDef
     }
-    CallbackDefinition(args, returnType)
   }
 }
 
-// Describes arguments in functions and callbacks
-case class ArgDefinition(
-  name: String,
-  argType: TypeDefinition
-)
+case class OptionTypeDef(`type`: TypeDefinition) extends TypeDefinition { val tag = "option" }
+case class ScalarTypeDef private (name: String) extends TypeDefinition { val tag = "scalar" }
 
-object ArgDefinition {
+object ScalarTypeDef {
+  def fromScalar(s: ScalarType): ScalarTypeDef = ScalarTypeDef(s.name)
+}
 
-  @tailrec
-  def argToDef(name: String, `type`: Type, isOptional: Boolean = false): ArgDefinition = {
-    `type` match {
-      case OptionType(t) =>
-        argToDef(name, t, isOptional = true)
-      case a @ ArrowType(_, _) =>
-        val callbackDef = CallbackDefinition(a)
-        ArgDefinition(name, CallbackType(callbackDef))
-      case _ => ArgDefinition(name, if (isOptional) OptionalType else PrimitiveType)
-    }
-  }
+case class ArrayTypeDef(`type`: TypeDefinition) extends TypeDefinition { val tag = "array" }
 
-  implicit val encodeArgDef: Encoder[ArgDefinition] = (a: ArgDefinition) =>
-    Json.obj(
-      ("name", Json.fromString(a.name)),
-      ("argType", a.argType.asJson)
-    )
+case class ArrowTypeDef(
+  domain: ProductTypeDef,
+  codomain: ProductTypeDef
+) extends TypeDefinition {
+  val tag = "arrow"
+}
+
+object ArrowTypeDef {
+
+  def apply(at: ArrowType): ArrowTypeDef =
+    ArrowTypeDef(ProductTypeDef(at.domain), ProductTypeDef(at.codomain))
+}
+
+case object NilTypeDef extends ProductTypeDef {
+  val tag = "nil"
+}
+
+case object TopTypeDef extends TypeDefinition {
+  val tag = "topType"
+}
+
+case object BottomTypeDef extends TypeDefinition {
+  val tag = "bottomType"
+}
+
+case class StructTypeDef(name: String, fields: Map[String, TypeDefinition]) extends TypeDefinition {
+  val tag = "struct"
+}
+
+case class LabeledProductTypeDef(fields: List[(String, TypeDefinition)]) extends ProductTypeDef {
+  val tag = "labeledProduct"
+}
+
+case class UnlabeledProductTypeDef(items: List[TypeDefinition]) extends ProductTypeDef {
+  val tag = "unlabeledProduct"
 }
 
 // Names of services and functions that are used in air
@@ -119,28 +189,20 @@ case class NamesConfig(
   errorFnName: String
 )
 
-// Describes a body of functions, services and callbacks
-case class ServiceFunctionDef(
-  functionName: String,
-  argDefs: List[ArgDefinition],
-  returnType: TypeDefinition
-)
-
 // Describes service
-case class ServiceDef(defaultServiceId: Option[String], functions: List[ServiceFunctionDef])
+case class ServiceDef(defaultServiceId: Option[String], functions: LabeledProductTypeDef)
 
 // Describes top-level function
 case class FunctionDef(
   functionName: String,
-  returnType: TypeDefinition,
-  argDefs: List[ArgDefinition],
+  arrow: ArrowTypeDef,
   names: NamesConfig
 )
 
 object FunctionDef {
 
   def apply(func: FuncRes): FunctionDef = {
-    val args = func.args.map(a => ArgDefinition.argToDef(a.name, a.`type`))
+    val args = LabeledProductTypeDef(func.args.map(a => (a.name, TypeDefinition(a.`type`))))
 
     val names = NamesConfig(
       func.relayVarName.getOrElse("-relay-"),
@@ -153,8 +215,7 @@ object FunctionDef {
     )
     FunctionDef(
       func.funcName,
-      TypeDefinition(func.returnType),
-      args,
+      ArrowTypeDef(args, ProductTypeDef(func.returnType)),
       names
     )
   }

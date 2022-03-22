@@ -1,22 +1,15 @@
-package aqua.dist
+package aqua.remote
 
-import aqua.builder.{ArgumentGetter, IPFSUploader}
-import aqua.files.AquaFilesIO
-import aqua.io.OutputPrinter
-import aqua.ipfs.js.IpfsApi
-import aqua.js.{Config, Fluence, PeerConfig}
-import aqua.keypair.KeyPairShow.show
-import aqua.model.LiteralModel
+import aqua.ArgOpts.jsonFromFileOpt
+import aqua.builder.ArgumentGetter
+import aqua.js.Config
 import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.run.RunCommand.createKeyPair
-import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
-import aqua.*
-import aqua.run.RunOpts.logger
+import aqua.run.GeneralRunOptions
 import aqua.types.{ArrayType, ScalarType, StructType}
-import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
-import cats.data.*
-import cats.effect.kernel.Async
-import cats.effect.{Concurrent, ExitCode, Resource, Sync}
+import aqua.*
+import cats.data.{NonEmptyList, NonEmptyMap, ValidatedNec}
+import cats.data.Validated.{invalidNec, validNec}
+import cats.effect.{Async, Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -24,16 +17,15 @@ import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.syntax.show.*
 import cats.{Applicative, Monad}
-import com.monovore.decline.{Command, Opts}
-import fs2.io.file.{Files, Path}
+import com.monovore.decline.Opts
+import fs2.io.file.Files
 import scribe.Logging
 
 import scala.collection.immutable.SortedMap
 import scala.scalajs.js.JSConverters.*
-import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 
-// Options and commands to work with IPFS
+// Options and commands to work blueprints, modules and services
 object DistOpts extends Logging {
 
   val DistAqua = "aqua/dist.aqua"
@@ -63,13 +55,6 @@ object DistOpts extends Logging {
     Opts
       .options[String]("dependency", "Blueprint dependency. May be used several times", "d")
 
-  def deployOpt[F[_]: Async]: Command[F[ExitCode]] =
-    CommandBuilder(
-      "dist",
-      "Distribute a service onto a remote peer",
-      NonEmptyList(deploy, remove :: createService :: addBlueprint :: Nil)
-    ).command
-
   def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
     val arg = getter.function.arg
     val filledConfig = Config.fillWithEmptyArrays(arg)
@@ -79,8 +64,8 @@ object DistOpts extends Logging {
   // Removes service from a node
   def remove[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid(
-      "remove",
-      "Remove a service from a remote peer",
+      "remove_service",
+      "Remove service",
       (GeneralRunOptions.commonOpt, srvIdOpt).mapN { (common, srvId) =>
         RunInfo(
           common,
@@ -93,7 +78,7 @@ object DistOpts extends Logging {
   def createService[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid(
       "create_service",
-      "Create a service",
+      "Deploy service from existing blueprint",
       (GeneralRunOptions.commonOpt, blueprintIdOpt).mapN { (common, blueprintId) =>
         RunInfo(
           common,
@@ -106,7 +91,7 @@ object DistOpts extends Logging {
   def addBlueprint[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid(
       "add_blueprint",
-      "Add a blueprint to a node",
+      "Add blueprint to a peer",
       (GeneralRunOptions.commonOpt, blueprintNameOpt, dependencyOpt).mapN {
         (common, blueprintName, dependencies) =>
           val depsWithHash = dependencies.map { d =>
@@ -140,36 +125,50 @@ object DistOpts extends Logging {
       }
     )
 
+  def configFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, js.Dynamic]]] = {
+    jsonFromFileOpt("config-path", "Path to a deploy config", "p")
+  }
+
   // Uploads a file to IPFS, creates blueprints and deploys a service
   def deploy[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
       "deploy",
-      "Deploy a service onto a remote peer",
+      "Deploy service from WASM modules",
       (
         GeneralRunOptions.commonOpt,
-        ArgOpts.dataFromFileOpt[F],
+        configFromFileOpt[F],
         srvNameOpt
-      ).mapN { (common, dataFromFileF, srvName) =>
-        dataFromFileF.map { dff =>
-          val args = LiteralRaw.quote(srvName) :: VarRaw(srvName, ScalarType.string) :: Nil
+      ).mapN { (common, configFromFileF, srvName) =>
+        configFromFileF.map { dff =>
+          val srvArg = VarRaw(srvName, ScalarType.string)
+          val args = LiteralRaw.quote(srvName) :: srvArg :: Nil
           dff
-            .andThen(data =>
-              ArgOpts
-                .checkDataGetServices(args, Some(data))
-                .map(getServices =>
+            .andThen(config =>
+              val srvConfig = {
+                val c = config.selectDynamic(srvName)
+                if (js.isUndefined(c)) None
+                else Some(c)
+              }
+              srvConfig match {
+                case Some(c) =>
                   // if we have default timeout, increase it
                   val commonWithTimeout = if (common.timeout.isEmpty) {
                     common.copy(timeout = Some(60000))
                   } else common
-                  RunInfo(
-                    commonWithTimeout,
-                    CliFunc(DeployFuncName, args),
-                    PackagePath(DistAqua),
-                    Nil,
-                    // hack: air cannot use undefined fields, fill undefined arrays with nils
-                    getServices.map { (k, v) => (k, fillConfigOptionalFields(v)) }
+                  validNec(
+                    RunInfo(
+                      commonWithTimeout,
+                      CliFunc(DeployFuncName, args),
+                      PackagePath(DistAqua),
+                      Nil,
+                      // hack: air cannot use undefined fields, fill undefined arrays with nils
+                      Map(srvName -> fillConfigOptionalFields(ArgumentGetter(srvArg, c)))
+                    )
                   )
-                )
+                case None =>
+                  invalidNec(s"No service '$srvName' in config.")
+
+              }
             )
         }
       }

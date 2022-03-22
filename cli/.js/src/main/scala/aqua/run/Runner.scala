@@ -9,10 +9,12 @@ import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.raw.ops.{Call, CallArrowTag, FuncOp, SeqTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.types.{ArrowType, BoxType, NilType, ScalarType, Type, UnlabelledConsType}
+import aqua.types.{ArrowType, BoxType, NilType, ScalarType, Type, UnlabeledConsType}
 import cats.data.{Validated, ValidatedNec}
 import cats.effect.kernel.Async
 import cats.syntax.show.*
+import cats.syntax.traverse.*
+import cats.syntax.applicative.*
 
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js
@@ -30,25 +32,28 @@ class Runner(
     }
 
   // Wraps function with necessary services, registers services and calls wrapped function with FluenceJS
-  def run[F[_]: Async](): ValidatedNec[String, F[Unit]] = {
+  def run[F[_]: Async](): F[ValidatedNec[String, Unit]] = {
     val resultNames = resultVariableNames(funcCallable, config.resultName)
     val resultPrinterService =
       ResultPrinter(config.resultPrinterServiceId, config.resultPrinterName, resultNames)
     val promiseFinisherService =
       Finisher(config.finisherServiceId, config.finisherFnName)
 
-    // call an input function from a generated function
-    val callResult: ValidatedNec[String, F[Unit]] = wrapCall(
+    val wrappedV = wrapCall(
       resultPrinterService,
       promiseFinisherService
-    ).map { wrapped =>
-      genAirAndMakeCall[F](
-        wrapped,
-        resultPrinterService,
-        promiseFinisherService
-      )
+    )
+
+    // call an input function from a generated function
+    wrappedV match {
+      case Validated.Valid(wrapped) =>
+        genAirAndMakeCall[F](
+          wrapped,
+          resultPrinterService,
+          promiseFinisherService
+        )
+      case i @ Validated.Invalid(_) => i.pure[F]
     }
-    callResult
   }
 
   // Generates air from function, register all services and make a call through FluenceJS
@@ -56,7 +61,7 @@ class Runner(
     wrapped: FuncArrow,
     consoleService: ResultPrinter,
     finisherService: Finisher
-  ): F[Unit] = {
+  ): F[ValidatedNec[String, Unit]] = {
     // TODO: prob we can turn this Eval into F
     val funcRes = Transform.funcRes(wrapped, transformConfig).value
     val definitions = FunctionDef(funcRes)
@@ -150,7 +155,7 @@ class Runner(
       val (returnCodomain, ret) = if (codomain.isEmpty) {
         (NilType, Nil)
       } else {
-        (UnlabelledConsType(ScalarType.string, NilType), LiteralRaw.quote("ok") :: Nil)
+        (UnlabeledConsType(ScalarType.string, NilType), LiteralRaw.quote("ok") :: Nil)
       }
 
       FuncArrow(
