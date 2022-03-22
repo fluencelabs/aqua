@@ -2,7 +2,7 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.func.{CallArrowExpr, ParExpr}
-import aqua.parser.lexer.Token
+import aqua.parser.lexer.{CallArrowToken, Token}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.{Eval, Id}
@@ -23,9 +23,12 @@ class ParExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
             Cofree[Chain, Expr[Id]](
               CallArrowExpr(
                 List(AquaSpec.toName("x")),
-                None,
-                AquaSpec.toName("y"),
-                Nil
+                CallArrowToken(
+                  None,
+                  AquaSpec.toName("y"),
+                  Nil
+                )
+
               ),
               Eval.now(Chain.empty)
             )
