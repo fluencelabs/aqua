@@ -132,7 +132,7 @@ object DistOpts extends Logging {
   // Uploads a file to IPFS, creates blueprints and deploys a service
   def deploy[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
-      "deploy",
+      "deploy_service",
       "Deploy service from WASM modules",
       (
         GeneralRunOptions.commonOpt,
