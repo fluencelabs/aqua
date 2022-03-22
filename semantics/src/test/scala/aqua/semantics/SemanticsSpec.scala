@@ -2,7 +2,7 @@ package aqua.semantics
 
 import aqua.raw.RawContext
 import aqua.parser.Ast
-import aqua.raw.ops.{Call, CallServiceTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
@@ -47,9 +47,9 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
           LiteralRaw("\"other-peer\"", LiteralType.string),
           Chain.empty
         ).wrap(
-          CallServiceTag(LiteralRaw.quote("srv1"), "fn1", emptyCall).leaf
+          CallArrowRawTag.service(LiteralRaw.quote("srv1"), "fn1", emptyCall, "A").leaf
         ),
-        CallServiceTag(LiteralRaw.quote("srv1"), "fn1", emptyCall).leaf
+        CallArrowRawTag.service(LiteralRaw.quote("srv1"), "fn1", emptyCall, "A").leaf
       )
 
     proc.equalsOrShowDiff(expected) should be(true)
