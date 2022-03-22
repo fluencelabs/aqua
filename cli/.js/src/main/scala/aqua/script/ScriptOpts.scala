@@ -19,7 +19,7 @@ import aqua.builder.ArgumentGetter
 import aqua.compiler.AquaCompiler
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.parser.lift.FileSpan
-import aqua.raw.ops.{Call, CallArrowTag}
+import aqua.raw.ops.{Call, CallArrowRawTag}
 import aqua.res.{AquaRes, FuncRes}
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.*
@@ -135,7 +135,7 @@ object ScriptOpts extends Logging {
 
     for {
       callableV <- funcCompiler.compile(funcWithArgs.func)
-      wrappedBody = CallArrowTag(funcName, Call(funcWithArgs.func.args, Nil)).leaf
+      wrappedBody = CallArrowRawTag.func(funcName, Call(funcWithArgs.func.args, Nil)).leaf
       result = callableV
         .map(callable =>
           generateAir(

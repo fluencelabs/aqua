@@ -36,7 +36,7 @@ func closureOut3(peer2: string) -> Info:
             LocalSrv.inside()
         p2Id <- Peer.identify()
         <- p2Id
-  p2Id <- closure("on")
+  p2Id <- closure(closureIn("on"))
   <- p2Id
 
 func closureOut(peer2: string) -> Info:

@@ -4,7 +4,7 @@ import aqua.backend.*
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.model.{LiteralModel, VarModel}
-import aqua.raw.ops.{Call, CallServiceTag}
+import aqua.raw.ops.{Call, CallArrowRawTag}
 import aqua.raw.value.LiteralRaw
 import cats.data.NonEmptyList
 
@@ -19,7 +19,7 @@ abstract class Finisher private (
   val promise: Promise[Unit]
 ) extends Service(serviceId, functions) {
 
-  def callTag(): CallServiceTag
+  def callTag(): CallArrowRawTag
 }
 
 object Finisher {
@@ -38,13 +38,12 @@ object Finisher {
     val promise = Promise[Unit]()
     val funcs = NonEmptyList.one(finishFunction(fnName, promise))
     new Finisher(servId, funcs, promise) {
-      def callTag(): CallServiceTag = {
-        CallServiceTag(
+      def callTag(): CallArrowRawTag =
+        CallArrowRawTag.service(
           LiteralRaw.quote(servId),
           fnName,
           Call(Nil, Nil)
         )
-      }
     }
   }
 }
