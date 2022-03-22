@@ -2,6 +2,7 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
+import aqua.model.inline.raw.CallArrowRawInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import cats.syntax.traverse.*
@@ -86,7 +87,7 @@ object TagInliner extends Logging {
           })
 
       case CallArrowRawTag(exportTo, value: CallArrowRaw) =>
-        RawValueInliner.unfoldArrow(value, exportTo).flatMap { case (_, inline) =>
+        CallArrowRawInliner.unfoldArrow(value, exportTo).flatMap { case (_, inline) =>
           RawValueInliner.inlineToTree(inline).map(tree => (None, Some(SeqModel.wrap(tree: _*))))
         }
 
