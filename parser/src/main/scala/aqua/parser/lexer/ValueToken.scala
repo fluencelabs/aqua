@@ -15,30 +15,30 @@ import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 sealed trait ValueToken[F[_]] extends Token[F] {
-  def mapK[K[_] : Comonad](fk: F ~> K): ValueToken[K]
+  def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
 }
 
 case class VarToken[F[_]](name: Name[F], lambda: List[LambdaOp[F]] = Nil) extends ValueToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
-  def mapK[K[_] : Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk), lambda.map(_.mapK(fk)))
+  def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk), lambda.map(_.mapK(fk)))
 }
 
-case class LiteralToken[F[_] : Comonad](valueToken: F[String], ts: LiteralType)
-  extends ValueToken[F] {
+case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
+    extends ValueToken[F] {
   override def as[T](v: T): F[T] = valueToken.as(v)
 
-  def mapK[K[_] : Comonad](fk: F ~> K): LiteralToken[K] = copy(fk(valueToken), ts)
+  def mapK[K[_]: Comonad](fk: F ~> K): LiteralToken[K] = copy(fk(valueToken), ts)
 
   def value: String = valueToken.extract
 }
 
-case class CollectionToken[F[_] : Comonad](
-                                            point: F[CollectionToken.Mode],
-                                            values: List[ValueToken[F]]
-                                          ) extends ValueToken[F] {
+case class CollectionToken[F[_]: Comonad](
+  point: F[CollectionToken.Mode],
+  values: List[ValueToken[F]]
+) extends ValueToken[F] {
 
-  override def mapK[K[_] : Comonad](fk: F ~> K): ValueToken[K] =
+  override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] =
     copy(fk(point), values.map(_.mapK(fk)))
 
   override def as[T](v: T): F[T] = point.as(v)
@@ -56,20 +56,20 @@ object CollectionToken {
       `*[`.as[Mode](Mode.StreamMode) |
         `?[`.as[Mode](Mode.OptionMode) |
         `[`.as[Mode](Mode.ArrayMode)
-      ).lift ~ (P
+    ).lift ~ (P
       .defer(ValueToken.`_value`)
       .repSep0(`,`) <* `]`)).map { case (mode, vals) =>
       CollectionToken(mode, vals)
     }
 }
 
-case class CallArrowToken[F[_] : Comonad](
-                                           ability: Option[Ability[F]],
-                                           funcName: Name[F],
-                                           args: List[ValueToken[F]]
-                                         ) extends ValueToken[F] {
+case class CallArrowToken[F[_]: Comonad](
+  ability: Option[Ability[F]],
+  funcName: Name[F],
+  args: List[ValueToken[F]]
+) extends ValueToken[F] {
 
-  override def mapK[K[_] : Comonad](fk: F ~> K): CallArrowToken[K] =
+  override def mapK[K[_]: Comonad](fk: F ~> K): CallArrowToken[K] =
     copy(ability.map(_.mapK(fk)), funcName.mapK(fk), args.map(_.mapK(fk)))
 
   override def as[T](v: T): F[T] = funcName.as(v)
@@ -88,15 +88,15 @@ object CallArrowToken {
     }
 }
 
-case class InfixToken[F[_] : Comonad](
-                                       left: ValueToken[F],
-                                       right: ValueToken[F],
-                                       infix: F[String]
-                                     ) extends ValueToken[F] {
+case class InfixToken[F[_]: Comonad](
+  left: ValueToken[F],
+  right: ValueToken[F],
+  infix: F[InfixToken.Op]
+) extends ValueToken[F] {
 
-  val op: String = infix.extract
+  val op: InfixToken.Op = infix.extract
 
-  override def mapK[K[_] : Comonad](fk: F ~> K): ValueToken[K] =
+  override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] =
     copy(left.mapK(fk), right.mapK(fk), fk(infix))
 
   override def as[T](v: T): F[T] = infix.as(v)
@@ -104,11 +104,35 @@ case class InfixToken[F[_] : Comonad](
 
 object InfixToken {
 
+  enum Op:
+    case Add
+    case Sub
+    case Mul
+    case Div
+    case Rem
+    case Pow
+    case Gt
+    case Gte
+    case Lt
+    case Lte
+
+  val ops: List[P[Span.S[Op]]] =
+    List(
+      `+`.as(Op.Add),
+      `-`.as(Op.Sub),
+      `/`.as(Op.Div),
+      `%`.as(Op.Rem),
+      `*`.as(Op.Mul),
+      `**`.as(Op.Pow),
+      `>`.as(Op.Gt),
+      `>=`.as(Op.Gte),
+      `<`.as(Op.Lt),
+      `<=`.as(Op.Lte)
+    ).map(_.lift)
+
   val postfix: P[ValueToken[Span.S] => InfixToken[Span.S]] =
     (P
-      .oneOf(List(`+`, `-`, `/`, `*`, `**`))
-      .string
-      .lift
+      .oneOf(ops)
       .surroundedBy(`/s*`) ~ ValueToken.`_value`).map { case (infix, right) =>
       InfixToken(_, right, infix)
     }
