@@ -122,6 +122,16 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
 
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])
+
+//     TODO case it @ InfixToken(l, r, i) if i.op == "+" =>
+//        callArrowToRaw(
+//          CallArrowToken[S](
+//            Some(Ability[S](it.as("math"))),
+//            Name[S](it.as("add")),
+//            l :: r :: Nil
+//          )
+//        )
+
     }
 
   def callArrowToRaw(ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] =
