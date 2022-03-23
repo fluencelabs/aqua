@@ -7,7 +7,7 @@ import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{LiteralToken, VarToken}
 import aqua.parser.lift.Span
-import aqua.types.{BottomType, LiteralType}
+import aqua.types.{ArrayType, BottomType, LiteralType, ScalarType, Type}
 import cats.{~>, Id}
 import cats.effect.Concurrent
 import com.monovore.decline.Opts
@@ -73,21 +73,41 @@ object ArgOpts {
     (dataFileOrStringOpt[F], funcOpt).mapN { case (dataF, func) =>
       dataF.map { dataV =>
         dataV.andThen { data =>
-          checkDataGetServices(func.args, data).map { getters =>
-            FuncWithData(func, getters)
+          checkDataGetServices(func, data).map { case (funcWithTypedArgs, getters) =>
+            FuncWithData(funcWithTypedArgs, getters)
           }
         }
       }
     }
   }
 
+  // TODO: it is hack, will be deleted after we will have context with types on this stage
+  def jsTypeToAqua(arg: js.Dynamic): Type = {
+    arg match {
+      case a if js.typeOf(a) == "string" => ScalarType.string
+      case a if js.typeOf(a) == "number" => ScalarType.u64
+      case a if js.typeOf(a) == "boolean" => ScalarType.bool
+      case a if js.Array.isArray(a) =>
+        // if all types are similar it will be array array with this type
+        // otherwise array with bottom type
+        val elementsTypes = a.asInstanceOf[js.Array[js.Dynamic]].map(jsTypeToAqua).toArray
+        val elType =
+          if (elementsTypes.length == 0) BottomType
+          else if (elementsTypes.forall(_ == elementsTypes.head)) elementsTypes.head
+          else BottomType
+
+        ArrayType(elType)
+      case _ => BottomType
+    }
+  }
+
   // checks if data is presented if there is non-literals in function arguments
   // creates services to add this data into a call
   def checkDataGetServices(
-    args: List[ValueRaw],
+    cliFunc: CliFunc,
     data: Option[js.Dynamic]
-  ): ValidatedNec[String, Map[String, ArgumentGetter]] = {
-    val vars = args.collect { case v @ VarRaw(_, _) =>
+  ): ValidatedNec[String, (CliFunc, Map[String, ArgumentGetter])] = {
+    val vars = cliFunc.args.collect { case v @ VarRaw(_, _) =>
       v
     // one variable could be used multiple times
     }.distinctBy(_.name)
@@ -96,7 +116,7 @@ object ArgOpts {
       case None if vars.nonEmpty =>
         invalidNec("Function have non-literals, so, data should be presented")
       case None =>
-        validNec(Map.empty)
+        validNec((cliFunc, Map.empty))
       case Some(data) =>
         val services = vars.map { vm =>
           val arg = {
@@ -105,9 +125,18 @@ object ArgOpts {
             else a
           }
 
-          vm.name -> ArgumentGetter(vm, arg)
+          val t = jsTypeToAqua(arg)
+
+          vm.name -> ArgumentGetter(vm.copy(baseType = t), arg)
+        }.toMap
+
+        val argsWithTypes = cliFunc.args.map {
+          case v @ VarRaw(n, t) =>
+            services.get(n).map(g => v.copy(baseType = g.function.value.baseType)).getOrElse(v)
+          case v => v
         }
-        validNec(services.toMap)
+
+        validNec((cliFunc.copy(args = argsWithTypes), services))
     }
   }
 
