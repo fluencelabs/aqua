@@ -49,10 +49,10 @@ object IpfsOpts extends Logging {
 
   def pathOpt: Opts[String] =
     Opts
-      .option[String]("path", "Path to file", "p")
+      .option[String]("path", "Path to a file", "p")
 
   def ipfsOpt[F[_]: Async]: Command[F[ExitCode]] =
-    CommandBuilder("ipfs", "Working with IPFS on peer", NonEmptyList.one(upload[F])).command
+    CommandBuilder("ipfs", "Work with IPFS on a peer", NonEmptyList.one(upload[F])).command
 
   // Uploads a file to IPFS
   def upload[F[_]: Async]: SubCommandBuilder[F] =
