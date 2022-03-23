@@ -82,22 +82,25 @@ object ArgOpts {
   }
 
   // TODO: it is hack, will be deleted after we will have context with types on this stage
-  def jsTypeToAqua(arg: js.Dynamic): Type = {
+  def jsTypeToAqua(name: String, arg: js.Dynamic): ValidatedNec[String, Type] = {
     arg match {
-      case a if js.typeOf(a) == "string" => ScalarType.string
-      case a if js.typeOf(a) == "number" => ScalarType.u64
-      case a if js.typeOf(a) == "boolean" => ScalarType.bool
+      case a if js.typeOf(a) == "string" => validNec(ScalarType.string)
+      case a if js.typeOf(a) == "number" => validNec(ScalarType.u64)
+      case a if js.typeOf(a) == "boolean" => validNec(ScalarType.bool)
       case a if js.Array.isArray(a) =>
         // if all types are similar it will be array array with this type
         // otherwise array with bottom type
-        val elementsTypes = a.asInstanceOf[js.Array[js.Dynamic]].map(jsTypeToAqua).toArray
-        val elType =
-          if (elementsTypes.length == 0) BottomType
-          else if (elementsTypes.forall(_ == elementsTypes.head)) elementsTypes.head
-          else BottomType
+        val elementsTypesV: ValidatedNec[String, List[Type]] =
+          a.asInstanceOf[js.Array[js.Dynamic]].map(ar => jsTypeToAqua(name, ar)).toList.sequence
 
-        ArrayType(elType)
-      case _ => BottomType
+        elementsTypesV.andThen { elementsTypes =>
+          if (elementsTypes.isEmpty) validNec(ArrayType(BottomType))
+          else if (elementsTypes.forall(_ == elementsTypes.head))
+            validNec(ArrayType(elementsTypes.head))
+          else invalidNec(s"All array elements in '$name' argument must be of the same type.")
+        }
+
+      case _ => validNec(BottomType)
     }
   }
 
@@ -118,25 +121,29 @@ object ArgOpts {
       case None =>
         validNec((cliFunc, Map.empty))
       case Some(data) =>
-        val services = vars.map { vm =>
+        vars.map { vm =>
           val arg = {
             val a = data.selectDynamic(vm.name)
             if (js.isUndefined(a)) null
             else a
           }
 
-          val t = jsTypeToAqua(arg)
+          val typeV = jsTypeToAqua(vm.name, arg)
 
-          vm.name -> ArgumentGetter(vm.copy(baseType = t), arg)
-        }.toMap
+          typeV.map(t => (vm.copy(baseType = t), arg))
+        }.sequence
+          .map(_.map { case (vm, arg) =>
+            vm.name -> ArgumentGetter(vm, arg)
+          }.toMap)
+          .andThen { services =>
+            val argsWithTypes = cliFunc.args.map {
+              case v @ VarRaw(n, t) =>
+                services.get(n).map(g => v.copy(baseType = g.function.value.baseType)).getOrElse(v)
+              case v => v
+            }
 
-        val argsWithTypes = cliFunc.args.map {
-          case v @ VarRaw(n, t) =>
-            services.get(n).map(g => v.copy(baseType = g.function.value.baseType)).getOrElse(v)
-          case v => v
-        }
-
-        validNec((cliFunc.copy(args = argsWithTypes), services))
+            validNec((cliFunc.copy(args = argsWithTypes), services))
+          }
     }
   }
 
