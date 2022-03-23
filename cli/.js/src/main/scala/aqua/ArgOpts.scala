@@ -138,6 +138,8 @@ object ArgOpts {
           .andThen { services =>
             val argsWithTypes = cliFunc.args.map {
               case v @ VarRaw(n, t) =>
+                // argument getters have been enriched with types derived from JSON
+                // put this types to unriched arguments in CliFunc
                 services.get(n).map(g => v.copy(baseType = g.function.value.baseType)).getOrElse(v)
               case v => v
             }
