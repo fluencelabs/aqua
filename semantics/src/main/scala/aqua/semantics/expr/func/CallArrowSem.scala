@@ -35,7 +35,12 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
         .headOption
         .fold(
           (variables zip car.baseType.codomain.toList).traverse { case (v, t) =>
-            N.define(v, t) as Call.Export(v.value, t)
+            N.read(v, mustBeDefined = false).flatMap {
+              case Some(stream @ StreamType(st)) =>
+                T.ensureTypeMatches(v, st, t).as(Call.Export(v.value, stream))
+              case _ =>
+                N.define(v, t).as(Call.Export(v.value, t))
+            }
           }
         )(T.expectNoExport(_).as(Nil))
         .map(maybeExport => Some(CallArrowRawTag(maybeExport, car).funcOpLeaf))
