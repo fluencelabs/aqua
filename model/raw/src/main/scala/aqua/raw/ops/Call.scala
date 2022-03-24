@@ -31,5 +31,7 @@ object Call {
     def mapName(f: String => String): Export = copy(f(name))
 
     def toRaw: VarRaw = VarRaw(name, `type`)
+
+    override def toString: String = s"$name:${`type`} <-"
   }
 }

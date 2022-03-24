@@ -1,0 +1,15 @@
+module CallArrow
+
+export by_idx
+
+
+service Experiment("exp"):
+  get_num: -> u32
+  get_arr: -> []string
+
+func get_num() -> u32:
+  <- Experiment.get_num()
+
+func by_idx() -> string:
+  x <- Experiment.get_arr()
+  <- x[Experiment.get_num()+get_num()]

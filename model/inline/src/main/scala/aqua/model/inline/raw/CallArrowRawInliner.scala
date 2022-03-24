@@ -15,14 +15,17 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
   private[inline] def unfoldArrow[S: Mangler: Exports: Arrows](
     value: CallArrowRaw,
     exportTo: List[Call.Export]
-  ): State[S, (List[ValueModel], Inline)] = {
+  ): State[S, (List[ValueModel], Inline)] = Exports[S].exports.flatMap { exports =>
+    logger.trace(s"${exportTo.mkString(" ")} $value")
+
     val call = Call(value.arguments, exportTo)
     value.serviceId match {
       case Some(serviceId) =>
+        logger.trace(Console.BLUE + s"call service id $serviceId" + Console.RESET)
         for {
           cd <- callToModel(call)
           sd <- valueToModel(serviceId)
-        } yield cd._1.exportTo.map(_.asVar) -> Inline(
+        } yield cd._1.exportTo.map(_.asVar.resolveWith(exports)) -> Inline(
           Map.empty,
           Chain(
             SeqModel.wrap(
@@ -40,16 +43,16 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
         Arrows[S].arrows.flatMap(arrows =>
           arrows.get(funcName) match {
             case Some(fn) =>
-              logger.trace(s"Call arrow $funcName")
+              logger.trace(Console.YELLOW + s"Call arrow $funcName" + Console.RESET)
               callToModel(call).flatMap { case (cm, p) =>
                 ArrowInliner
-                  .callArrow(fn, cm)
-                  .map(body =>
-                    cm.exportTo.map(_.asVar) -> Inline(
+                  .callArrowRet(fn, cm)
+                  .map { case (body, vars) =>
+                    vars -> Inline(
                       Map.empty,
                       Chain.one(SeqModel.wrap(p.toList :+ body: _*))
                     )
-                  )
+                  }
               }
             case None =>
               logger.error(

@@ -162,7 +162,7 @@ object ArrowInliner extends Logging {
       // Result could be renamed; take care about that
     } yield (tree, fn.ret.map(_.renameVars(shouldRename)))
 
-  private def callArrowRet[S: Exports: Arrows: Mangler](
+  private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,
     call: CallModel
   ): State[S, (OpModel.Tree, List[ValueModel])] =

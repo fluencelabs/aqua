@@ -138,4 +138,8 @@ case class CallArrowRaw(
     f(copy(arguments = arguments.map(f)))
 
   override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
+
+  override def toString: String =
+    s"(call ${ability.fold("")(a => s"|$a| ")} (${serviceId.fold("")(_.toString + " ")}$name) [${arguments
+      .mkString(" ")}] :: $baseType)"
 }
