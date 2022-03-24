@@ -89,7 +89,7 @@ case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel {
 }
 
 case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel] = Chain.empty)
-  extends ValueModel with Logging {
+    extends ValueModel with Logging {
 
   override lazy val usesVarNames: Set[String] =
     lambda.toList.map(_.usesVarNames).foldLeft(Set(name))(_ ++ _)
@@ -123,7 +123,7 @@ case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel] = C
                     res <- two(variable)
                     <- variable
                */
-              case vm@VarModel(nn, _, _) if nn == name => deriveFrom(vm)
+              case vm @ VarModel(nn, _, _) if nn == name => deriveFrom(vm)
               // it couldn't go to a cycle as long as the semantics protects it
               case _ =>
                 n.resolveWith(vals) match {
