@@ -3,7 +3,7 @@ package aqua.model.transform
 import aqua.model.transform.ModelBuilder
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
-import aqua.raw.ops.{Call, CallArrowTag, CallServiceTag, FuncOp, OnTag, RawTag, SeqTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, RawTag, SeqTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -19,7 +19,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
   val stringArrow: ArrowType = ArrowType(NilType, ProductType(ScalarType.string :: Nil))
 
   def callOp(i: Int, exportTo: List[Call.Export] = Nil, args: List[ValueRaw] = Nil): RawTag =
-    CallServiceTag(
+    CallArrowRawTag.service(
       VarRaw(s"srv$i", ScalarType.string),
       s"fn$i",
       Call(args, exportTo)
@@ -124,11 +124,13 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val f1: FuncArrow =
       FuncArrow(
         "f1",
-        CallServiceTag(
-          LiteralRaw.quote("srv1"),
-          "foo",
-          Call(Nil, Call.Export("v", ScalarType.string) :: Nil)
-        ).leaf,
+        CallArrowRawTag
+          .service(
+            LiteralRaw.quote("srv1"),
+            "foo",
+            Call(Nil, Call.Export("v", ScalarType.string) :: Nil)
+          )
+          .leaf,
         stringArrow,
         VarRaw("v", ScalarType.string) :: Nil,
         Map.empty,
@@ -139,7 +141,9 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val f2: FuncArrow =
       FuncArrow(
         "f2",
-        CallArrowTag("callable", Call(Nil, Call.Export("v", ScalarType.string) :: Nil)).leaf,
+        CallArrowRawTag
+          .func("callable", Call(Nil, Call.Export("v", ScalarType.string) :: Nil))
+          .leaf,
         stringArrow,
         VarRaw("v", ScalarType.string) :: Nil,
         Map("callable" -> f1),
