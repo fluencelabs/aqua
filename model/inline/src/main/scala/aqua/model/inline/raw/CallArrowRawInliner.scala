@@ -1,7 +1,7 @@
 package aqua.model.inline.raw
 
 import aqua.model.inline.Inline.parDesugarPrefixOpt
-import aqua.model.{CallServiceModel, ValueModel, VarModel}
+import aqua.model.{CallServiceModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
 import aqua.model.inline.RawValueInliner.{callToModel, valueToModel}
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
@@ -24,12 +24,13 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
           sd <- valueToModel(serviceId)
         } yield cd._1.exportTo.map(_.asVar) -> Inline(
           Map.empty,
-          Chain.fromOption(
-            parDesugarPrefixOpt(
-              sd._2,
-              cd._2
-            )
-          ) :+ CallServiceModel(sd._1, value.name, cd._1).leaf
+          Chain(
+            SeqModel.wrap(
+              sd._2.toList ++
+                cd._2.toList: _*
+            ),
+            CallServiceModel(sd._1, value.name, cd._1).leaf
+          )
         )
       case None =>
         /**
@@ -45,7 +46,10 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
                 ArrowInliner
                   .callArrow(fn, cm)
                   .map(body =>
-                    cm.exportTo.map(_.asVar) -> Inline(Map.empty, Chain.fromSeq(p.toList :+ body))
+                    cm.exportTo.map(_.asVar) -> Inline(
+                      Map.empty,
+                      Chain.one(SeqModel.wrap(p.toList :+ body: _*))
+                    )
                   )
               }
             case None =>
