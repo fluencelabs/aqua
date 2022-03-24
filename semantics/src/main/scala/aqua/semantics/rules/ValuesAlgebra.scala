@@ -30,13 +30,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     resolveType(v).flatMap {
       case Some(vt) =>
         T.ensureTypeMatches(
-          v match {
-            case l: LiteralToken[S] => l
-            case VarToken(n, lambda) => lambda.lastOption.getOrElse(n)
-            case c: CollectionToken[S] =>
-              c.values.head // TODO: actually it should point on the whole expression
-            case ca: CallArrowToken[S] => ca.funcName
-          },
+          v,
           expected,
           vt
         )
@@ -124,6 +118,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
+      case bt: BracketsToken[S] =>
+        valueToRaw(bt.value)
+
       case it @ InfixToken(l, r, i) =>
         (valueToRaw(l), valueToRaw(r)).mapN((ll, rr) => ll -> rr).flatMap {
           case (Some(ll), Some(rr)) =>
@@ -131,6 +128,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
             val hasFloats = ScalarType.float
               .exists(ft => ll.`type`.acceptsValueOf(ft) || rr.`type`.acceptsValueOf(ft))
 
+            // https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
             val (lt, rt, res, id, fn) = it.op match {
               case Op.Add =>
                 (ScalarType.i64, ScalarType.i64, None, "math", "add")

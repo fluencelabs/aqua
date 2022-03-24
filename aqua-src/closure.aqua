@@ -48,7 +48,7 @@ func closureOut(peer2: string) -> Info:
     <- p2Id
   on peer2:
     p2Id <- closure("on")
-    LocalSrv.withNums(3+5)
+    LocalSrv.withNums(3+5 * 2)
   <- p2Id
 
 func closureBig(peer1: string, peer2: string) -> string, string:

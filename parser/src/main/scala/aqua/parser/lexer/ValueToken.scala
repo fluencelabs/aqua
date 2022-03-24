@@ -118,12 +118,12 @@ object InfixToken {
 
   val ops: List[P[Span.S[Op]]] =
     List(
-      `+`.as(Op.Add),
-      `-`.as(Op.Sub),
+      `**`.as(Op.Pow),
+      `*`.as(Op.Mul),
       `/`.as(Op.Div),
       `%`.as(Op.Rem),
-      `*`.as(Op.Mul),
-      `**`.as(Op.Pow),
+      `+`.as(Op.Add),
+      `-`.as(Op.Sub),
       `>`.as(Op.Gt),
       `>=`.as(Op.Gte),
       `<`.as(Op.Lt),
@@ -134,8 +134,26 @@ object InfixToken {
     (P
       .oneOf(ops)
       .surroundedBy(`/s*`) ~ ValueToken.`_value`).map { case (infix, right) =>
-      InfixToken(_, right, infix)
+      // TODO: take left, check if any of (left, right) is an infix token, and re-order them
+      {
+        case left: InfixToken[Span.S] if left.op.ordinal > infix._2.ordinal =>
+          InfixToken(left.left, InfixToken(left.right, right, infix), left.infix)
+        case left =>
+          InfixToken(left, right, infix)
+      }
     }
+}
+
+case class BracketsToken[F[_]: Comonad](value: ValueToken[F]) extends ValueToken[F] {
+  override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] = copy(value.mapK(fk))
+
+  override def as[T](v: T): F[T] = value.as(v)
+}
+
+object BracketsToken {
+
+  val brackets: P[BracketsToken[Span.S]] =
+    ValueToken.`_value`.between(`(`, `)`).map(BracketsToken(_))
 }
 
 object ValueToken {
@@ -187,15 +205,15 @@ object ValueToken {
           CollectionToken.collection
         ) ::
         P.defer(CallArrowToken.callArrow).backtrack ::
+        P.defer(BracketsToken.brackets) ::
         varLambda ::
         Nil
     )
-    val p1 = (p ~ P.defer(InfixToken.postfix.backtrack).?).map {
+    (p ~ P.defer(InfixToken.postfix.backtrack).?).map {
       case (left, Some(infixF)) =>
         infixF(left)
       case (left, _) => left
     }
-    p1 | p1.between(`(`, `)`)
   }
 
   val `value`: P[ValueToken[Span.S]] =
