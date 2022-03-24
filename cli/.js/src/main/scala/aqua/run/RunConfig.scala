@@ -6,8 +6,8 @@ import aqua.FluenceOpts.{
   onOpt,
   printAir,
   secretKeyOpt,
-  timeoutOpt,
-  verboseOpt
+  showSKOpt,
+  timeoutOpt
 }
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.AppOpts
@@ -25,7 +25,7 @@ case class GeneralRunOptions(
   on: Option[String],
   printAir: Boolean,
   secretKey: Option[Array[Byte]],
-  verbose: Boolean
+  showSK: Boolean
 )
 
 object GeneralRunOptions {
@@ -38,7 +38,7 @@ object GeneralRunOptions {
       onOpt,
       printAir,
       AppOpts.wrapWithOption(secretKeyOpt),
-      verboseOpt
+      showSKOpt
     )
       .mapN(GeneralRunOptions.apply)
 
@@ -50,7 +50,7 @@ object GeneralRunOptions {
       onOpt,
       printAir,
       secretKeyOpt.map(Some.apply),
-      verboseOpt
+      showSKOpt
     )
       .mapN(GeneralRunOptions.apply)
 }

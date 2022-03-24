@@ -55,7 +55,7 @@ object FuncCaller {
               )
               .toFuture
             _ =
-              if (config.common.verbose) OutputPrinter.print(keyPair.show)
+              if (config.common.showSK) OutputPrinter.print(keyPair.show)
               else OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
 
             // register all services

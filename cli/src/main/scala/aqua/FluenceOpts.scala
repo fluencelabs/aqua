@@ -22,9 +22,9 @@ object FluenceOpts {
         .option[String]("on", "Where function will be run. Default: host_peer_id", "o")
     )
 
-  val verboseOpt: Opts[Boolean] =
+  val showSKOpt: Opts[Boolean] =
     Opts
-      .flag("verbose", "Show your secret key")
+      .flag("show-sk", "Show your secret key")
       .map(_ => true)
       .withDefault(false)
 
