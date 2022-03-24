@@ -1,36 +1,35 @@
 package aqua.script
 
-import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
-import aqua.io.{AquaFileError, OutputPrinter}
-import aqua.ipfs.js.IpfsApi
-import aqua.js.{Config, Fluence, PeerConfig}
-import aqua.keypair.KeyPairShow.show
-import aqua.model.{AquaContext, FuncArrow, LiteralModel}
-import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.run.RunCommand.createKeyPair
-import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import aqua.*
-import aqua.run.RunOpts.logger
-import aqua.types.{ArrowType, LiteralType, NilType, ScalarType}
 import aqua.ArgOpts.{dataFileOrStringOpt, funcOpt, funcWithArgsOpt}
 import aqua.backend.Generated
 import aqua.backend.air.{AirBackend, AirGen, FuncAirGen}
 import aqua.builder.ArgumentGetter
 import aqua.compiler.AquaCompiler
+import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
+import aqua.io.{AquaFileError, OutputPrinter}
+import aqua.ipfs.js.IpfsApi
+import aqua.js.{Config, Fluence, PeerConfig}
+import aqua.keypair.KeyPairShow.show
 import aqua.model.transform.{Transform, TransformConfig}
+import aqua.model.{AquaContext, FuncArrow, LiteralModel}
 import aqua.parser.lift.FileSpan
 import aqua.raw.ops.{Call, CallArrowTag}
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.res.{AquaRes, FuncRes}
-import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
+import aqua.run.RunOpts.logger
+import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
+import aqua.types.{ArrowType, LiteralType, NilType, ScalarType}
 import cats.data.*
+import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.effect.kernel.{Async, Clock}
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
-import cats.syntax.traverse.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.show.*
+import cats.syntax.traverse.*
 import cats.{Applicative, Monad}
 import com.monovore.decline.{Command, Opts}
 import fs2.io.file.{Files, Path}

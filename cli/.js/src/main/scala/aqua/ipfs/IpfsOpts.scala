@@ -23,7 +23,6 @@ import aqua.files.AquaFilesIO
 import aqua.ipfs.js.IpfsApi
 import aqua.model.LiteralModel
 import aqua.raw.value.LiteralRaw
-import aqua.run.RunCommand.createKeyPair
 import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.flatMap.*

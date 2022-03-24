@@ -5,17 +5,18 @@ import aqua.backend.FunctionDef
 import aqua.builder.{Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, Fluence, FluenceUtils, PeerConfig}
+import aqua.keypair.KeyPairShow.show
 import aqua.run.RunCommand.createKeyPair
-import cats.data.ValidatedNec
 import cats.data.Validated.{invalidNec, validNec}
-import cats.effect.{Resource, Sync}
+import cats.data.ValidatedNec
 import cats.effect.kernel.Async
+import cats.effect.{Resource, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
+import cats.syntax.show.*
 
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
-import scala.scalajs.js.JSON
-import scala.scalajs.js.timers
+import scala.scalajs.js.{timers, JSON}
 
 object FuncCaller {
 
@@ -49,11 +50,14 @@ object FuncCaller {
                   config.common.multiaddr,
                   config.common.timeout.getOrElse(scalajs.js.undefined),
                   LogLevelTransformer.logLevelToAvm(config.common.logLevel),
-                  keyPair.orNull
+                  keyPair
                 )
               )
               .toFuture
-            _ = OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
+            _ =
+              if (config.common.verbose) OutputPrinter.print(keyPair.show)
+              else OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
+
             // register all services
             _ = (services ++ config.argumentGetters.values :+ finisherService).map(_.register(peer))
             callFuture = CallJsFunction.funcCallJs(

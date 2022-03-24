@@ -5,16 +5,16 @@ import aqua.backend.FunctionDef
 import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter}
 import aqua.io.OutputPrinter
-import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.model.transform.{Transform, TransformConfig}
+import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowTag, FuncOp, SeqTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.types.{ArrowType, BoxType, NilType, ScalarType, Type, UnlabeledConsType}
+import aqua.types.*
 import cats.data.{Validated, ValidatedNec}
 import cats.effect.kernel.Async
+import cats.syntax.applicative.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.syntax.applicative.*
 
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js
