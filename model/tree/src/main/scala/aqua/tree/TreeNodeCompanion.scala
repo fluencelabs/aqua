@@ -35,8 +35,14 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
         val commonSuffixLen = rgt.reverse.zip(lft.reverse).takeWhile(_ == _).length
         val commonPrefix = lft.take(commonPrefixLen)
         val commonSuffix = rgt.takeRight(commonSuffixLen)
-        val lftDiff = lft.substring(commonPrefixLen, lft.length - commonSuffixLen)
-        val rgtDiff = rgt.substring(commonPrefixLen, rgt.length - commonSuffixLen)
+        val lSuffix = lft.length - commonSuffixLen
+        val lftDiff =
+          if (commonPrefixLen - lSuffix < lft.length) lft.substring(commonPrefixLen, lSuffix)
+          else ""
+        val rSuffix = rgt.length - commonSuffixLen
+        val rgtDiff =
+          if (commonPrefixLen + rSuffix < rgt.length) rgt.substring(commonPrefixLen, rSuffix)
+          else ""
         commonPrefix +
           Console.YELLOW + lftDiff + Console.RED + " != " + Console.CYAN + rgtDiff + Console.RESET + commonSuffix
       }
