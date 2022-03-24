@@ -1,5 +1,6 @@
 package aqua.model.inline
 
+import aqua.model.inline.raw.ApplyLambdaRawInliner
 import aqua.model.{FlattenModel, IntoIndexModel, ParModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.state.InliningState
 import aqua.raw.value.{ApplyLambdaRaw, IntoIndexRaw, LiteralRaw, VarRaw}
@@ -11,7 +12,7 @@ import org.scalatest.matchers.should.Matchers
 
 class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
 
-  import RawValueInliner.{unfoldLambda, valueToModel}
+  import RawValueInliner.valueToModel
 
   private def ysVarRaw(into: Int, name: String = "ys") =
     VarRaw(name, ArrayType(ScalarType.i8)).withLambda(
@@ -74,7 +75,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   "raw value inliner" should "unfold a LambdaModel" in {
     import aqua.model.inline.state.Mangler.Simple
     // [ys!]
-    unfoldLambda[InliningState](`raw ys[0]`)
+    ApplyLambdaRawInliner
+      .unfoldLambda[InliningState](`raw ys[0]`)
       .run(InliningState(noNames = Set("ys")))
       .value
       ._2 should be(
