@@ -1,21 +1,21 @@
 package aqua
 
 import aqua.builder.ArgumentGetter
-import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
-import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{CallArrowToken, LiteralToken, VarToken}
 import aqua.parser.lift.Span
-import aqua.types.{ArrayType, BottomType, LiteralType, ScalarType, Type}
-import cats.{~>, Id}
+import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.types.*
+import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
+import cats.data.*
 import cats.effect.Concurrent
-import com.monovore.decline.Opts
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
+import cats.{~>, Id}
+import com.monovore.decline.Opts
 import fs2.io.file.Files
 
 import scala.scalajs.js
