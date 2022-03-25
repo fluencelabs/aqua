@@ -15,4 +15,4 @@ service Experiment("exp"):
 --  <- x[Experiment.get_num()+get_num()]
 
 func order() -> i32:
-  <- 10+3*2-10
+  <- 1*2-3+4

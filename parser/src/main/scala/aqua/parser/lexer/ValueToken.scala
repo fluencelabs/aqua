@@ -31,6 +31,8 @@ case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
   def mapK[K[_]: Comonad](fk: F ~> K): LiteralToken[K] = copy(fk(valueToken), ts)
 
   def value: String = valueToken.extract
+
+  override def toString: String = s"$value"
 }
 
 case class CollectionToken[F[_]: Comonad](
@@ -100,17 +102,19 @@ case class InfixToken[F[_]: Comonad](
     copy(left.mapK(fk), right.mapK(fk), fk(infix))
 
   override def as[T](v: T): F[T] = infix.as(v)
+
+  override def toString: String = s"($op $left $right)"
 }
 
 object InfixToken {
 
   enum Op:
-    case Add
-    case Sub
+    case Pow
     case Mul
     case Div
     case Rem
-    case Pow
+    case Add
+    case Sub
     case Gt
     case Gte
     case Lt
@@ -135,11 +139,11 @@ object InfixToken {
       .oneOf(ops)
       .surroundedBy(`/s*`) ~ ValueToken.`_value`).map {
       case (infix, right) => {
-        case left: InfixToken[Span.S] if left.op.ordinal < infix._2.ordinal =>
+        case left: InfixToken[Span.S] if left.op.ordinal > infix._2.ordinal =>
           InfixToken(left.left, InfixToken(left.right, right, infix), left.infix)
         case left =>
           right match {
-            case r: InfixToken[Span.S] if r.op.ordinal < infix._2.ordinal =>
+            case r: InfixToken[Span.S] if r.op.ordinal > infix._2.ordinal =>
               InfixToken(InfixToken(left, r.left, infix), r.right, r.infix)
             case _ =>
               InfixToken(left, right, infix)
@@ -152,6 +156,8 @@ case class BracketsToken[F[_]: Comonad](value: ValueToken[F]) extends ValueToken
   override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] = copy(value.mapK(fk))
 
   override def as[T](v: T): F[T] = value.as(v)
+
+  override def toString: String = s" ( $value ) "
 }
 
 object BracketsToken {
