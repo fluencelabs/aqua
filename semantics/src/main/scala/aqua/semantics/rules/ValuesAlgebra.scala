@@ -123,13 +123,14 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
 
       case it @ InfixToken(l, r, i) =>
         (valueToRaw(l), valueToRaw(r)).mapN((ll, rr) => ll -> rr).flatMap {
-          case (Some(ll), Some(rr)) =>
+          case (Some(leftRaw), Some(rightRaw)) =>
             // TODO handle literal types
             val hasFloats = ScalarType.float
-              .exists(ft => ll.`type`.acceptsValueOf(ft) || rr.`type`.acceptsValueOf(ft))
+              .exists(ft => leftRaw.`type`.acceptsValueOf(ft) || rightRaw.`type`.acceptsValueOf(ft))
 
             // https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
-            val (lt, rt, res, id, fn) = it.op match {
+            // Expected types of left and right operands, result type if known, service ID and function name
+            val (leftType, rightType, res, id, fn) = it.op match {
               case Op.Add =>
                 (ScalarType.i64, ScalarType.i64, None, "math", "add")
               case Op.Sub => (ScalarType.i64, ScalarType.i64, None, "math", "sub")
@@ -147,16 +148,22 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               case Op.Lte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lte")
             }
             for {
-              ltm <- T.ensureTypeMatches(l, lt, ll.`type`)
-              rtm <- T.ensureTypeMatches(r, rt, rr.`type`)
+              ltm <- T.ensureTypeMatches(l, leftType, leftRaw.`type`)
+              rtm <- T.ensureTypeMatches(r, rightType, rightRaw.`type`)
             } yield Option.when(ltm && rtm)(
               CallArrowRaw(
                 Some(id),
                 fn,
-                ll :: rr :: Nil,
+                leftRaw :: rightRaw :: Nil,
                 ArrowType(
-                  ProductType(lt :: rt :: Nil),
-                  ProductType(res.getOrElse(ll.`type` `∪` rr.`type`) :: Nil)
+                  ProductType(leftType :: rightType :: Nil),
+                  ProductType(
+                    res.getOrElse(
+                      // If result type is not known/enforced, then assume it's the widest type of operands
+                      // E.g. 1:i8 + 1:i8 -> i8, not i64
+                      leftRaw.`type` `∪` rightRaw.`type`
+                    ) :: Nil
+                  )
                 ),
                 Some(LiteralRaw.quote(id))
               )

@@ -90,6 +90,7 @@ object CallArrowToken {
     }
 }
 
+// Two values as operands, with an infix between them
 case class InfixToken[F[_]: Comonad](
   left: ValueToken[F],
   right: ValueToken[F],
@@ -126,8 +127,8 @@ object InfixToken {
       `*`.as(Op.Mul),
       `/`.as(Op.Div),
       `%`.as(Op.Rem),
-      `+`.as(Op.Add),
       `-`.as(Op.Sub),
+      `+`.as(Op.Add),
       `>`.as(Op.Gt),
       `>=`.as(Op.Gte),
       `<`.as(Op.Lt),
@@ -139,7 +140,7 @@ object InfixToken {
       .oneOf(ops)
       .surroundedBy(`/s*`) ~ ValueToken.`_value`).map {
       case (infix, right) => {
-        case left: InfixToken[Span.S] if left.op.ordinal > infix._2.ordinal =>
+        case left: InfixToken[Span.S] if left.op.ordinal < infix._2.ordinal =>
           InfixToken(left.left, InfixToken(left.right, right, infix), left.infix)
         case left =>
           right match {
