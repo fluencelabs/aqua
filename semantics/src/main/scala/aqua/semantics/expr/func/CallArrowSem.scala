@@ -1,9 +1,8 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.Call
-import aqua.raw.ops.{CallArrowRawTag, FuncOp}
-import aqua.raw.Raw
 import aqua.parser.expr.func.CallArrowExpr
+import aqua.raw.Raw
+import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp}
 import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -11,12 +10,12 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrowType, StreamType, Type}
-import cats.{Monad, Traverse}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
+import cats.{Monad, Traverse}
 
 class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
