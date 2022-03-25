@@ -1,32 +1,20 @@
 package aqua.run
 
+import aqua.ArgOpts.checkDataGetServices
+import aqua.builder.{ArgumentGetter, Service}
+import aqua.files.AquaFilesIO
+import aqua.model.transform.TransformConfig
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{LiteralToken, VarToken}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
-import aqua.types.BottomType
-import aqua.{
-  AppOpts,
-  AquaIO,
-  ArgOpts,
-  CommandBuilder,
-  FileOpts,
-  FluenceOpts,
-  FuncWithData,
-  LogFormatter,
-  RelativePath,
-  RunInfo,
-  SubCommandBuilder
-}
-import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
-import Validated.{invalid, invalidNec, valid, validNec, validNel}
-import aqua.ArgOpts.checkDataGetServices
-import aqua.builder.{ArgumentGetter, Service}
-import aqua.files.AquaFilesIO
-import aqua.model.transform.TransformConfig
 import aqua.raw.ConstantRaw
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.types.BottomType
+import aqua.*
+import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
+import cats.data.*
 import cats.effect.kernel.Async
 import cats.effect.{Concurrent, ExitCode, IO}
 import cats.syntax.applicative.*
@@ -38,9 +26,9 @@ import com.monovore.decline.{Command, Opts}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
-import scala.scalajs.js
 import java.util.Base64
 import scala.concurrent.ExecutionContext
+import scala.scalajs.js
 import scala.scalajs.js.JSON
 
 object RunOpts extends Logging {

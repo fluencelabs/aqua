@@ -135,7 +135,7 @@ object DistOpts extends Logging {
       "deploy_service",
       "Deploy service from WASM modules",
       (
-        GeneralRunOptions.commonOpt,
+        GeneralRunOptions.commonOptWithSecretKey,
         configFromFileOpt[F],
         srvNameOpt
       ).mapN { (common, configFromFileF, srvName) =>

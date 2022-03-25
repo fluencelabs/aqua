@@ -1,6 +1,14 @@
 package aqua.run
 
-import aqua.FluenceOpts.{logLevelOpt, multiaddrOpt, onOpt, printAir, secretKeyOpt, timeoutOpt}
+import aqua.FluenceOpts.{
+  logLevelOpt,
+  multiaddrOpt,
+  onOpt,
+  printAir,
+  secretKeyOpt,
+  showSKOpt,
+  timeoutOpt
+}
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.AppOpts
 import com.monovore.decline.Opts
@@ -16,7 +24,8 @@ case class GeneralRunOptions(
   multiaddr: String,
   on: Option[String],
   printAir: Boolean,
-  secretKey: Option[Array[Byte]]
+  secretKey: Option[Array[Byte]],
+  showSK: Boolean
 )
 
 object GeneralRunOptions {
@@ -28,7 +37,8 @@ object GeneralRunOptions {
       multiaddrOpt,
       onOpt,
       printAir,
-      AppOpts.wrapWithOption(secretKeyOpt)
+      AppOpts.wrapWithOption(secretKeyOpt),
+      showSKOpt
     )
       .mapN(GeneralRunOptions.apply)
 
@@ -39,7 +49,8 @@ object GeneralRunOptions {
       multiaddrOpt,
       onOpt,
       printAir,
-      secretKeyOpt.map(Some.apply)
+      secretKeyOpt.map(Some.apply),
+      showSKOpt
     )
       .mapN(GeneralRunOptions.apply)
 }

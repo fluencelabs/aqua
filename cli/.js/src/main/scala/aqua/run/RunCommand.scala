@@ -46,11 +46,11 @@ object RunCommand extends Logging {
 
   def createKeyPair(
     sk: Option[Array[Byte]]
-  ): Future[Option[KeyPair]] = {
+  ): Future[KeyPair] = {
     sk.map { arr =>
       val typedArr = js.typedarray.Uint8Array.from(arr.map(_.toShort).toJSArray)
-      KeyPair.fromEd25519SK(typedArr).`then`(sk => Some(sk)).toFuture
-    }.getOrElse(Future.successful(None))
+      KeyPair.fromEd25519SK(typedArr).toFuture
+    }.getOrElse(KeyPair.randomEd25519().toFuture)
   }
 
   private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncArrow] =
