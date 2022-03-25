@@ -133,13 +133,17 @@ object InfixToken {
   val postfix: P[ValueToken[Span.S] => InfixToken[Span.S]] =
     (P
       .oneOf(ops)
-      .surroundedBy(`/s*`) ~ ValueToken.`_value`).map { case (infix, right) =>
-      // TODO: take left, check if any of (left, right) is an infix token, and re-order them
-      {
-        case left: InfixToken[Span.S] if left.op.ordinal > infix._2.ordinal =>
+      .surroundedBy(`/s*`) ~ ValueToken.`_value`).map {
+      case (infix, right) => {
+        case left: InfixToken[Span.S] if left.op.ordinal < infix._2.ordinal =>
           InfixToken(left.left, InfixToken(left.right, right, infix), left.infix)
         case left =>
-          InfixToken(left, right, infix)
+          right match {
+            case r: InfixToken[Span.S] if r.op.ordinal < infix._2.ordinal =>
+              InfixToken(InfixToken(left, r.left, infix), r.right, r.infix)
+            case _ =>
+              InfixToken(left, right, infix)
+          }
       }
     }
 }

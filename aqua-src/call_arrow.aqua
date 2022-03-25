@@ -1,15 +1,18 @@
 module CallArrow
 
-export by_idx
+export order
 
 
 service Experiment("exp"):
   get_num: -> u32
   get_arr: -> []string
 
-func get_num() -> u32:
-  <- Experiment.get_num()
+--func get_num() -> u32:
+--  <- Experiment.get_num()
 
-func by_idx() -> string:
-  x <- Experiment.get_arr()
-  <- x[Experiment.get_num()+get_num()]
+--func by_idx() -> string:
+--  x <- Experiment.get_arr()
+--  <- x[Experiment.get_num()+get_num()]
+
+func order() -> i32:
+  <- 10+3*2-10
