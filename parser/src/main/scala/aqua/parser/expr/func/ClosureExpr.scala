@@ -21,7 +21,7 @@ case class ClosureExpr[F[_]](
     copy(name.mapK(fk), detach.map(fk.apply))
 }
 
-object ClosureExpr extends Expr.Prefix() {
+object ClosureExpr extends Expr.Prefix(` `.?) {
   override def continueWith: List[Expr.Lexem] = Expr.defer(ArrowExpr) :: Nil
 
   override val p: Parser[ClosureExpr[Span.S]] =
