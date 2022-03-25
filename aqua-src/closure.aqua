@@ -9,6 +9,7 @@ service MyOp("op"):
 
 service LocalSrv("local_srv"):
   inside: -> ()
+  withNums: i64 -> i64
 
 func closureOut2():
   on HOST_PEER_ID:
@@ -36,7 +37,7 @@ func closureOut3(peer2: string) -> Info:
             LocalSrv.inside()
         p2Id <- Peer.identify()
         <- p2Id
-  p2Id <- closure("on")
+  p2Id <- closure( ( closureIn("on") ) )
   <- p2Id
 
 func closureOut(peer2: string) -> Info:
@@ -47,6 +48,7 @@ func closureOut(peer2: string) -> Info:
     <- p2Id
   on peer2:
     p2Id <- closure("on")
+    LocalSrv.withNums(3+5 * 2)
   <- p2Id
 
 func closureBig(peer1: string, peer2: string) -> string, string:

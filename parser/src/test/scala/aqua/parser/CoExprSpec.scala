@@ -3,7 +3,7 @@ package aqua.parser
 import aqua.AquaSpec
 import aqua.AquaSpec.spanToId
 import aqua.parser.expr.func.{CallArrowExpr, CoExpr}
-import aqua.parser.lexer.Token
+import aqua.parser.lexer.{CallArrowToken, Token}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.data.Chain
 import cats.free.Cofree
@@ -22,9 +22,7 @@ class CoExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
             Cofree[Chain, Expr[Id]](
               CallArrowExpr(
                 List(AquaSpec.toName("x")),
-                None,
-                AquaSpec.toName("y"),
-                Nil
+                CallArrowToken(None, AquaSpec.toName("y"), Nil)
               ),
               Eval.now(Chain.empty)
             )

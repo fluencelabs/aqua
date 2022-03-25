@@ -122,3 +122,24 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
 
   override def varNames: Set[String] = values.toList.flatMap(_.varNames).toSet
 }
+
+case class CallArrowRaw(
+  // TODO: ability should hold a type, not name
+  ability: Option[String],
+  name: String,
+  arguments: List[ValueRaw],
+  baseType: ArrowType,
+  // TODO: there should be no serviceId there
+  serviceId: Option[ValueRaw]
+) extends ValueRaw {
+  override def `type`: Type = baseType.codomain.uncons.map(_._1).getOrElse(baseType)
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(arguments = arguments.map(f)))
+
+  override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
+
+  override def toString: String =
+    s"(call ${ability.fold("")(a => s"|$a| ")} (${serviceId.fold("")(_.toString + " ")}$name) [${arguments
+      .mkString(" ")}] :: $baseType)"
+}

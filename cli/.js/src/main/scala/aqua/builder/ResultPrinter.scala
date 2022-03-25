@@ -3,7 +3,7 @@ package aqua.builder
 import aqua.backend.*
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer, ServiceHandler}
-import aqua.raw.ops.{Call, CallServiceTag}
+import aqua.raw.ops.{Call, CallArrowRawTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.types.ScalarType
 import cats.data.NonEmptyList
@@ -15,7 +15,7 @@ import scala.scalajs.js.{Dynamic, JSON}
 abstract class ResultPrinter(serviceId: String, functions: NonEmptyList[AquaFunction])
     extends Service(serviceId, functions) {
 
-  def callTag(variables: List[VarRaw]): CallServiceTag
+  def callTag(variables: List[VarRaw]): CallArrowRawTag
 }
 
 object ResultPrinter {
@@ -47,8 +47,8 @@ object ResultPrinter {
   def apply(serviceId: String, fnName: String, resultNames: List[String]): ResultPrinter = {
     val funcs = NonEmptyList.one(resultPrinterFunc(fnName, resultNames))
     new ResultPrinter(serviceId, funcs) {
-      def callTag(variables: List[VarRaw]): CallServiceTag =
-        CallServiceTag(
+      def callTag(variables: List[VarRaw]): CallArrowRawTag =
+        CallArrowRawTag.service(
           LiteralRaw.quote(serviceId),
           fnName,
           Call(variables, Nil)

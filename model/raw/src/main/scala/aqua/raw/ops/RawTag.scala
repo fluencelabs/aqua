@@ -2,6 +2,7 @@ package aqua.raw.ops
 
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.ValueRaw
+import aqua.raw.value.CallArrowRaw
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import cats.Show
@@ -9,6 +10,7 @@ import cats.Eval
 import aqua.raw.Raw
 import aqua.raw.ops.RawTag.Tree
 import aqua.tree.{TreeNode, TreeNodeCompanion}
+import aqua.types.{ArrowType, ProductType}
 
 sealed trait RawTag extends TreeNode[RawTag] {
 
@@ -105,18 +107,53 @@ case class ForTag(item: String, iterable: ValueRaw) extends SeqGroupTag {
     copy(item = map.getOrElse(item, item))
 }
 
-case class CallArrowTag(
-  funcName: String,
-  call: Call
+case class CallArrowRawTag(
+  exportTo: List[Call.Export],
+  value: ValueRaw
 ) extends RawTag {
 
-  override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
+  override def exportsVarNames: Set[String] = exportTo.map(_.name).toSet
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    CallArrowTag(funcName, call.mapValues(f))
+    CallArrowRawTag(exportTo, value.map(f))
 
   override def renameExports(map: Map[String, String]): RawTag =
-    copy(call = call.mapExport(n => map.getOrElse(n, n)))
+    copy(exportTo = exportTo.map(_.mapName(n => map.getOrElse(n, n))))
+}
+
+object CallArrowRawTag {
+
+  def service(
+    serviceId: ValueRaw,
+    fnName: String,
+    call: Call,
+    name: String = null,
+    arrowType: ArrowType = null
+  ): CallArrowRawTag =
+    CallArrowRawTag(
+      call.exportTo,
+      CallArrowRaw(
+        Option(name),
+        fnName,
+        call.args,
+        Option(arrowType).getOrElse(
+          call.arrowType
+        ),
+        Some(serviceId)
+      )
+    )
+
+  def func(fnName: String, call: Call): CallArrowRawTag =
+    CallArrowRawTag(
+      call.exportTo,
+      CallArrowRaw(
+        None,
+        fnName,
+        call.args,
+        call.arrowType,
+        None
+      )
+    )
 }
 
 case class DeclareStreamTag(
@@ -172,23 +209,6 @@ case class AbilityIdTag(
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     AbilityIdTag(value.map(f), service)
-}
-
-case class CallServiceTag(
-  serviceId: ValueRaw,
-  funcName: String,
-  call: Call
-) extends RawTag {
-
-  override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
-
-  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    CallServiceTag(serviceId.map(f), funcName, call.mapValues(f))
-
-  override def renameExports(map: Map[String, String]): RawTag =
-    copy(call = call.mapExport(n => map.getOrElse(n, n)))
-
-  override def toString: String = s"(call _ ($serviceId $funcName) $call)"
 }
 
 case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends RawTag {

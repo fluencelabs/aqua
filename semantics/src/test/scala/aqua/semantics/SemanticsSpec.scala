@@ -2,11 +2,11 @@ package aqua.semantics
 
 import aqua.raw.RawContext
 import aqua.parser.Ast
-import aqua.raw.ops.{Call, CallServiceTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
-import aqua.types.LiteralType
+import aqua.types.{ArrowType, ConsType, LiteralType, NilType, ScalarType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.~>
@@ -41,15 +41,19 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val proc = func.arrow.body
 
+    val arrowType = ArrowType(NilType, ConsType.cons(ScalarType.string, NilType))
+    val serviceCall =
+      CallArrowRawTag.service(LiteralRaw.quote("srv1"), "fn1", emptyCall, "A", arrowType).leaf
+
     val expected =
       ParTag.wrap(
         OnTag(
           LiteralRaw("\"other-peer\"", LiteralType.string),
           Chain.empty
         ).wrap(
-          CallServiceTag(LiteralRaw.quote("srv1"), "fn1", emptyCall).leaf
+          serviceCall
         ),
-        CallServiceTag(LiteralRaw.quote("srv1"), "fn1", emptyCall).leaf
+        serviceCall
       )
 
     proc.equalsOrShowDiff(expected) should be(true)

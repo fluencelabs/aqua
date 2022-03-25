@@ -3,7 +3,15 @@ package aqua.parser
 import aqua.AquaSpec
 import aqua.parser.expr.*
 import aqua.parser.expr.func.{AbilityIdExpr, ArrowExpr, CallArrowExpr, IfExpr, OnExpr, ReturnExpr}
-import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, EqOp, LiteralToken, Token, VarToken}
+import aqua.parser.lexer.{
+  ArrowTypeToken,
+  BasicTypeToken,
+  CallArrowToken,
+  EqOp,
+  LiteralToken,
+  Token,
+  VarToken
+}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.ScalarType.*
 import cats.Id
@@ -99,10 +107,12 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       ).toList
 
     ifBody.head.head.mapK(spanToId) should be(
-      CallArrowExpr(List(toName("x")), Some(toAb("Ab")), "func", Nil)
+      CallArrowExpr(List(toName("x")), CallArrowToken(Some(toAb("Ab")), "func", Nil))
     )
     ifBody(1).head.mapK(spanToId) should be(AbilityIdExpr(toAb("Peer"), toStr("some id")))
-    ifBody(2).head.mapK(spanToId) should be(CallArrowExpr(Nil, None, "call", List(toBool(true))))
+    ifBody(2).head.mapK(spanToId) should be(
+      CallArrowExpr(Nil, CallArrowToken(None, "call", List(toBool(true))))
+    )
 
   }
 
@@ -168,7 +178,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
     qTree.d() shouldBe ArrowExpr(toArrowType(Nil, Some(scToBt(bool))))
     qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")))
-    qTree.d() shouldBe CallArrowExpr(List("v"), Some(toAb("Local")), "gt", Nil)
+    qTree.d() shouldBe CallArrowExpr(List("v"), CallArrowToken(Some(toAb("Local")), "gt", Nil))
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("v")))
     // genC function
     qTree.d() shouldBe FuncExpr(
@@ -177,10 +187,13 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 //      List("two": VarLambda[Id])
     )
     qTree.d() shouldBe ArrowExpr(toNamedArrow(("val" -> string) :: Nil, boolSc :: Nil))
-    qTree.d() shouldBe CallArrowExpr(List("one"), Some(toAb("Local")), "gt", List())
+    qTree.d() shouldBe CallArrowExpr(List("one"), CallArrowToken(Some(toAb("Local")), "gt", List()))
     qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
-    qTree.d() shouldBe CallArrowExpr(List("two"), None, "tryGen", List())
-    qTree.d() shouldBe CallArrowExpr(List("three"), Some(toAb("Local")), "gt", List())
+    qTree.d() shouldBe CallArrowExpr(List("two"), CallArrowToken(None, "tryGen", List()))
+    qTree.d() shouldBe CallArrowExpr(
+      List("three"),
+      CallArrowToken(Some(toAb("Local")), "gt", List())
+    )
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("two")))
   }
 

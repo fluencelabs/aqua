@@ -4,7 +4,7 @@ import aqua.backend.*
 import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer, ServiceHandler}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.raw.ops
-import aqua.raw.ops.{Call, CallServiceTag}
+import aqua.raw.ops.{Call, CallArrowRawTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import cats.data.NonEmptyList
 
@@ -18,7 +18,7 @@ abstract class ArgumentGetter(
   val function: GetFunction
 ) extends Service(serviceId, NonEmptyList.one(function)) {
 
-  def callTag(): CallServiceTag
+  def callTag(): CallArrowRawTag
 
 }
 
@@ -38,8 +38,8 @@ object ArgumentGetter {
   def apply(value: VarRaw, arg: scalajs.js.Dynamic): ArgumentGetter =
     new ArgumentGetter(ServiceId, getFunction(value, arg)) {
 
-      override def callTag(): CallServiceTag =
-        CallServiceTag(
+      override def callTag(): CallArrowRawTag =
+        CallArrowRawTag.service(
           LiteralRaw.quote(ServiceId),
           value.name,
           Call(List.empty, List(Call.Export(value.name, value.baseType)))

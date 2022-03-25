@@ -1,8 +1,9 @@
 package aqua.model
 
 import aqua.raw.arrow.FuncRaw
-import aqua.raw.ops.{CallServiceTag, FuncOp}
+import aqua.raw.ops.{CallArrowRawTag, FuncOp}
 import aqua.raw.value.ValueRaw
+import aqua.raw.value.CallArrowRaw
 import aqua.raw.{ConstantRaw, RawContext, RawPart, ServiceRaw, TypeRaw}
 import aqua.types.{StructType, Type}
 import cats.Monoid
@@ -110,7 +111,7 @@ object AquaContext extends Logging {
           FuncArrow(
             fnName,
             // TODO: capture ability resolution, get ID from the call context
-            CallServiceTag(serviceId, fnName, call).leaf,
+            CallArrowRawTag.service(serviceId, fnName, call, sm.name).leaf,
             arrowType,
             ret.map(_.toRaw),
             Map.empty,

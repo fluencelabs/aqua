@@ -1,7 +1,9 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.*
+import aqua.parser.lexer.InfixToken.Op
 import aqua.raw.value.*
+import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
@@ -17,7 +19,8 @@ import cats.data.NonEmptyList
 
 class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   N: NamesAlgebra[S, Alg],
-  T: TypesAlgebra[S, Alg]
+  T: TypesAlgebra[S, Alg],
+  A: AbilitiesAlgebra[S, Alg]
 ) {
 
   def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
@@ -27,12 +30,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     resolveType(v).flatMap {
       case Some(vt) =>
         T.ensureTypeMatches(
-          v match {
-            case l: LiteralToken[S] => l
-            case VarToken(n, lambda) => lambda.lastOption.getOrElse(n)
-            case c: CollectionToken[S] =>
-              c.values.head // TODO: actually it should point on the whole expression
-          },
+          v,
           expected,
           vt
         )
@@ -116,7 +114,128 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           case _ if values.isEmpty => Some(ValueRaw.Nil)
           case _ => None
         }
+
+      case ca: CallArrowToken[S] =>
+        callArrowToRaw(ca).map(_.widen[ValueRaw])
+
+      case bt: BracketsToken[S] =>
+        valueToRaw(bt.value)
+
+      case it @ InfixToken(l, r, i) =>
+        (valueToRaw(l), valueToRaw(r)).mapN((ll, rr) => ll -> rr).flatMap {
+          case (Some(leftRaw), Some(rightRaw)) =>
+            // TODO handle literal types
+            val hasFloats = ScalarType.float
+              .exists(ft => leftRaw.`type`.acceptsValueOf(ft) || rightRaw.`type`.acceptsValueOf(ft))
+
+            // https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
+            // Expected types of left and right operands, result type if known, service ID and function name
+            val (leftType, rightType, res, id, fn) = it.op match {
+              case Op.Add =>
+                (ScalarType.i64, ScalarType.i64, None, "math", "add")
+              case Op.Sub => (ScalarType.i64, ScalarType.i64, None, "math", "sub")
+              case Op.Mul if hasFloats =>
+                // TODO may it be i32?
+                (ScalarType.f64, ScalarType.f64, Some(ScalarType.i64), "math", "fmul")
+              case Op.Mul =>
+                (ScalarType.i64, ScalarType.i64, None, "math", "mul")
+              case Op.Div => (ScalarType.i64, ScalarType.i64, None, "math", "div")
+              case Op.Rem => (ScalarType.i64, ScalarType.i64, None, "math", "rem")
+              case Op.Pow => (ScalarType.i64, ScalarType.u32, None, "math", "pow")
+              case Op.Gt => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "gt")
+              case Op.Gte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "gte")
+              case Op.Lt => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lt")
+              case Op.Lte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lte")
+            }
+            for {
+              ltm <- T.ensureTypeMatches(l, leftType, leftRaw.`type`)
+              rtm <- T.ensureTypeMatches(r, rightType, rightRaw.`type`)
+            } yield Option.when(ltm && rtm)(
+              CallArrowRaw(
+                Some(id),
+                fn,
+                leftRaw :: rightRaw :: Nil,
+                ArrowType(
+                  ProductType(leftType :: rightType :: Nil),
+                  ProductType(
+                    res.getOrElse(
+                      // If result type is not known/enforced, then assume it's the widest type of operands
+                      // E.g. 1:i8 + 1:i8 -> i8, not i64
+                      leftRaw.`type` `∪` rightRaw.`type`
+                    ) :: Nil
+                  )
+                ),
+                Some(LiteralRaw.quote(id))
+              )
+            )
+
+          case _ => None.pure[Alg]
+        }
+
     }
+
+  def callArrowToRaw(ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] =
+    ca.ability
+      .fold(
+        N.readArrow(ca.funcName)
+          .map(
+            _.map(
+              CallArrowRaw(
+                None,
+                ca.funcName.value,
+                Nil,
+                _,
+                None
+              )
+            )
+          )
+      )(ab =>
+        (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
+          case (Some(at), Right(sid)) =>
+            // Service call, actually
+            Some(
+              CallArrowRaw(
+                Some(ab.value),
+                ca.funcName.value,
+                Nil,
+                at,
+                Some(sid)
+              )
+            )
+          case (Some(at), Left(true)) =>
+            // Ability function call, actually
+            Some(
+              CallArrowRaw(
+                Some(ab.value),
+                ca.funcName.value,
+                Nil,
+                at,
+                None
+              )
+            )
+          case _ => None
+        }
+      )
+      .flatMap {
+        case Some(r) =>
+          val arr = r.baseType
+          T.checkArgumentsNumber(ca.funcName, arr.domain.length, ca.args.length).flatMap {
+            case false => Option.empty[CallArrowRaw].pure[Alg]
+            case true =>
+              (ca.args zip arr.domain.toList).traverse { case (tkn, tp) =>
+                valueToRaw(tkn).flatMap {
+                  case Some(v) => T.ensureTypeMatches(tkn, tp, v.`type`).map(Option.when(_)(v))
+                  case None => None.pure[Alg]
+                }
+              }.map(_.toList.flatten).map {
+                case args: List[ValueRaw] if args.length == arr.domain.length =>
+                  Some(r.copy(arguments = args))
+                case _ => None
+              }
+          }
+
+        case None => Option.empty[CallArrowRaw].pure[Alg]
+      }
 
   def checkArguments(token: Token[S], arr: ArrowType, args: List[ValueToken[S]]): Alg[Boolean] =
     // TODO: do we really need to check this?
@@ -147,7 +266,8 @@ object ValuesAlgebra {
 
   implicit def deriveValuesAlgebra[S[_], Alg[_]: Monad](implicit
     N: NamesAlgebra[S, Alg],
-    T: TypesAlgebra[S, Alg]
+    T: TypesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
   ): ValuesAlgebra[S, Alg] =
     new ValuesAlgebra[S, Alg]
 }

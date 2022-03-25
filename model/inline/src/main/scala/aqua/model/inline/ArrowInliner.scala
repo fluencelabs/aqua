@@ -17,14 +17,14 @@ import scribe.Logging
  */
 object ArrowInliner extends Logging {
 
-  def callArrow[S: Exports: Counter: Arrows: Mangler](
+  def callArrow[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,
     call: CallModel
   ): State[S, OpModel.Tree] =
     callArrowRet(arrow, call).map(_._1)
 
   // Apply a callable function, get its fully resolved body & optional value, if any
-  private def inline[S: Mangler: Arrows: Exports: Counter](
+  private def inline[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel
   ): State[S, (OpModel.Tree, List[ValueModel])] =
@@ -162,7 +162,7 @@ object ArrowInliner extends Logging {
       // Result could be renamed; take care about that
     } yield (tree, fn.ret.map(_.renameVars(shouldRename)))
 
-  private def callArrowRet[S: Exports: Counter: Arrows: Mangler](
+  private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,
     call: CallModel
   ): State[S, (OpModel.Tree, List[ValueModel])] =
@@ -177,7 +177,6 @@ object ArrowInliner extends Logging {
       )
       (appliedOp, value) = av
 
-      _ <- Counter[S].incr
       _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(value).toMap)
 
     } yield appliedOp -> value

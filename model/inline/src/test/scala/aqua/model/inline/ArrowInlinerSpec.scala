@@ -18,7 +18,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       .callArrow[InliningState](
         FuncArrow(
           "dumb_func",
-          CallServiceTag(LiteralRaw.quote("dumb_srv_id"), "dumb", Call(Nil, Nil)).leaf,
+          CallArrowRawTag.service(LiteralRaw.quote("dumb_srv_id"), "dumb", Call(Nil, Nil)).leaf,
           ArrowType(ProductType(Nil), ProductType(Nil)),
           Nil,
           Map.empty,
@@ -58,11 +58,13 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     val cbArrow = FuncArrow(
       "cb",
-      CallServiceTag(
-        LiteralRaw.quote("test-service"),
-        "some-call",
-        Call(cbArg :: Nil, Nil)
-      ).leaf,
+      CallArrowRawTag
+        .service(
+          LiteralRaw.quote("test-service"),
+          "some-call",
+          Call(cbArg :: Nil, Nil)
+        )
+        .leaf,
       ArrowType(
         ProductType.labelled(
           (
@@ -85,7 +87,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           RestrictionTag(streamVar.name, true).wrap(
             SeqTag.wrap(
               DeclareStreamTag(streamVar).leaf,
-              CallArrowTag("cb", Call(streamVar :: Nil, Nil)).leaf
+              CallArrowRawTag.func("cb", Call(streamVar :: Nil, Nil)).leaf
             )
           ),
           ArrowType(
@@ -149,11 +151,13 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     val cbArrow = FuncArrow(
       "cb",
-      CallServiceTag(
-        LiteralRaw.quote("test-service"),
-        "some-call",
-        Call(cbArg :: Nil, Nil)
-      ).leaf,
+      CallArrowRawTag
+        .service(
+          LiteralRaw.quote("test-service"),
+          "some-call",
+          Call(cbArg :: Nil, Nil)
+        )
+        .leaf,
       ArrowType(
         ProductType.labelled(
           (
@@ -176,7 +180,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           RestrictionTag(streamVar.name, true).wrap(
             SeqTag.wrap(
               DeclareStreamTag(streamVar).leaf,
-              CallArrowTag("cb", Call(streamVarLambda :: Nil, Nil)).leaf
+              CallArrowRawTag.func("cb", Call(streamVarLambda :: Nil, Nil)).leaf
             )
           ),
           ArrowType(
@@ -235,11 +239,13 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     val inner = FuncArrow(
       innerName,
-      CallServiceTag(
-        LiteralRaw.quote("test-service"),
-        "get_records",
-        Call(Nil, Call.Export(innerRecordsVar.name, streamType) :: Nil)
-      ).leaf,
+      CallArrowRawTag
+        .service(
+          LiteralRaw.quote("test-service"),
+          "get_records",
+          Call(Nil, Call.Export(innerRecordsVar.name, streamType) :: Nil)
+        )
+        .leaf,
       ArrowType(
         ProductType.labelled((innerRecordsVar.name -> streamType) :: Nil),
         ProductType(Nil)
@@ -256,12 +262,14 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           "outer",
           SeqTag.wrap(
             DeclareStreamTag(recordsVar).leaf,
-            CallArrowTag(innerName, Call(recordsVar :: Nil, Nil)).leaf,
-            CallServiceTag(
-              LiteralRaw.quote("callbackSrv"),
-              "response",
-              Call(recordsVar :: Nil, Nil)
-            ).leaf
+            CallArrowRawTag.func(innerName, Call(recordsVar :: Nil, Nil)).leaf,
+            CallArrowRawTag
+              .service(
+                LiteralRaw.quote("callbackSrv"),
+                "response",
+                Call(recordsVar :: Nil, Nil)
+              )
+              .leaf
           ),
           ArrowType(ProductType(Nil), ProductType(returnType :: Nil)),
           Nil,
@@ -320,7 +328,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     )
 
     // export object
-    val getSrvTag = CallServiceTag(
+    val getSrvTag = CallArrowRawTag.service(
       LiteralRaw.quote("getSrv"),
       "getObj",
       Call(Nil, Call.Export(objectVar.name, objectVar.`type`) :: Nil)
@@ -335,11 +343,13 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             objectVarLambda,
             "fieldValue"
           ).leaf,
-          CallServiceTag(
-            LiteralRaw.quote("callbackSrv"),
-            "response",
-            Call(VarRaw("fieldValue", ScalarType.string) :: Nil, Nil)
-          ).leaf
+          CallArrowRawTag
+            .service(
+              LiteralRaw.quote("callbackSrv"),
+              "response",
+              Call(VarRaw("fieldValue", ScalarType.string) :: Nil, Nil)
+            )
+            .leaf
         ),
         ArrowType(
           ProductType.labelled((objectVar.name, objectVar.`type`) :: Nil),
@@ -358,7 +368,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           "dumb_func",
           SeqTag.wrap(
             getSrvTag.leaf,
-            CallArrowTag(inner.funcName, Call(objectVar :: Nil, Nil)).leaf
+            CallArrowRawTag.func(inner.funcName, Call(objectVar :: Nil, Nil)).leaf
           ),
           ArrowType(
             ProductType(Nil),
@@ -410,17 +420,21 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       IntoIndexRaw(idxVar, ScalarType.string)
     )
 
-    val getArrTag = CallServiceTag(
-      LiteralRaw.quote("getSrv"),
-      "getArr",
-      Call(Nil, Call.Export(argArray.name, argArray.`type`) :: Nil)
-    ).leaf
+    val getArrTag = CallArrowRawTag
+      .service(
+        LiteralRaw.quote("getSrv"),
+        "getArr",
+        Call(Nil, Call.Export(argArray.name, argArray.`type`) :: Nil)
+      )
+      .leaf
 
-    val getIdxTag = CallServiceTag(
-      LiteralRaw.quote("getSrv"),
-      "getIdx",
-      Call(Nil, Call.Export(idxVar.name, idxVar.`type`) :: Nil)
-    ).leaf
+    val getIdxTag = CallArrowRawTag
+      .service(
+        LiteralRaw.quote("getSrv"),
+        "getIdx",
+        Call(Nil, Call.Export(idxVar.name, idxVar.`type`) :: Nil)
+      )
+      .leaf
 
     // function where we assign object lambda to value and call service
     val inner =
@@ -447,7 +461,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           SeqTag.wrap(
             getArrTag,
             getIdxTag,
-            CallArrowTag(inner.funcName, Call(idxVar :: argArray :: Nil, Nil)).leaf
+            CallArrowRawTag.func(inner.funcName, Call(idxVar :: argArray :: Nil, Nil)).leaf
           ),
           ArrowType(
             ProductType(Nil),

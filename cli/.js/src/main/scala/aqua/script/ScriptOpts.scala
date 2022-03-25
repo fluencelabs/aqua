@@ -14,7 +14,7 @@ import aqua.keypair.KeyPairShow.show
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{AquaContext, FuncArrow, LiteralModel}
 import aqua.parser.lift.FileSpan
-import aqua.raw.ops.{Call, CallArrowTag}
+import aqua.raw.ops.{Call, CallArrowRawTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.res.{AquaRes, FuncRes}
 import aqua.run.RunOpts.logger
@@ -134,7 +134,7 @@ object ScriptOpts extends Logging {
 
     for {
       callableV <- funcCompiler.compile(funcWithArgs.func)
-      wrappedBody = CallArrowTag(funcName, Call(funcWithArgs.func.args, Nil)).leaf
+      wrappedBody = CallArrowRawTag.func(funcName, Call(funcWithArgs.func.args, Nil)).leaf
       result = callableV
         .map(callable =>
           generateAir(

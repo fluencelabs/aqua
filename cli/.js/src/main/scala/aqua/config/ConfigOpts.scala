@@ -26,7 +26,7 @@ object ConfigOpts {
 
   def envArg: Opts[js.Array[js.Dynamic]] =
     Opts
-      .argument[String]("krasnodar | stage | testnet")
+      .argument[String](s"$Krasnodar | $Stage | $TestNet")
       .withDefault(Krasnodar)
       .mapValidated {
         case Krasnodar =>
@@ -37,7 +37,7 @@ object ConfigOpts {
           validNel(FluenceEnvironment.stage)
         case e =>
           invalidNel(
-            s"There is no environment '$e' in our list. Use this: 'krasnodar', 'testnet', 'stage'"
+            s"There is no environment '$e' in our list. Use this: '$Krasnodar', '$TestNet', '$Stage'"
           )
       }
 

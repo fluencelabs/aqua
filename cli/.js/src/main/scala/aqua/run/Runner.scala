@@ -7,7 +7,7 @@ import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter}
 import aqua.io.OutputPrinter
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{FuncArrow, ValueModel, VarModel}
-import aqua.raw.ops.{Call, CallArrowTag, FuncOp, SeqTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, SeqTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
 import cats.data.{Validated, ValidatedNec}
@@ -119,14 +119,14 @@ class Runner(
     // otherwise just call it
     val body = codomain match {
       case Nil =>
-        CallArrowTag(func.name, Call(func.args, Nil)).leaf
+        CallArrowRawTag.func(func.name, Call(func.args, Nil)).leaf
       case types =>
         val (variables, exports) = types.zipWithIndex.map { case (t, idx) =>
           val name = config.resultName + idx
           (VarRaw(name, t), Call.Export(name, t))
         }.unzip
         val callFuncTag =
-          CallArrowTag(func.name, Call(func.args, exports))
+          CallArrowRawTag.func(func.name, Call(func.args, exports))
 
         val consoleServiceTag = consoleService.callTag(variables)
 

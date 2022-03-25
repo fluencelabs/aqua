@@ -2,6 +2,7 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
+import aqua.model.inline.raw.CallArrowRawInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import cats.syntax.traverse.*
@@ -37,7 +38,7 @@ object TagInliner extends Logging {
    * @tparam S Current state
    * @return Model (if any), and prefix (if any)
    */
-  def tagToModel[S: Counter: Mangler: Arrows: Exports](
+  def tagToModel[S: Mangler: Arrows: Exports](
     tag: RawTag,
     treeFunctionName: String
   ): State[S, (Option[OpModel], Option[OpModel.Tree])] =
@@ -71,12 +72,6 @@ object TagInliner extends Logging {
           Some(PushToStreamModel(v, CallModel.callExport(exportTo))) -> p
         }
 
-      case CallServiceTag(serviceId, funcName, call) =>
-        for {
-          cd <- callToModel(call)
-          sd <- valueToModel(serviceId)
-        } yield Some(CallServiceModel(sd._1, funcName, cd._1)) -> parDesugarPrefixOpt(sd._2, cd._2)
-
       case CanonicalizeTag(operand, exportTo) =>
         valueToModel(operand).map { case (v, p) =>
           Some(CanonicalizeModel(v, CallModel.callExport(exportTo))) -> p
@@ -91,28 +86,10 @@ object TagInliner extends Logging {
             Some(JoinModel(nel.map(_._1))) -> parDesugarPrefix(nel.toList.flatMap(_._2))
           })
 
-      case CallArrowTag(funcName, call) =>
-        /**
-         * Here the back hop happens from [[TagInliner]] to [[ArrowInliner.callArrow]]
-         */
-        logger.trace(s"            $funcName")
-        Arrows[S].arrows.flatMap(arrows =>
-          arrows.get(funcName) match {
-            case Some(fn) =>
-              logger.trace(s"Call arrow $funcName")
-              callToModel(call).flatMap { case (cm, p) =>
-                ArrowInliner
-                  .callArrow(fn, cm)
-                  .map(body => None -> Some(SeqModel.wrap(p.toList :+ body: _*)))
-              }
-            case None =>
-              logger.error(
-                s"Inlining ${treeFunctionName}, cannot find arrow ${funcName}, available: ${arrows.keys
-                  .mkString(", ")}"
-              )
-              none
-          }
-        )
+      case CallArrowRawTag(exportTo, value: CallArrowRaw) =>
+        CallArrowRawInliner.unfoldArrow(value, exportTo).flatMap { case (_, inline) =>
+          RawValueInliner.inlineToTree(inline).map(tree => (None, Some(SeqModel.wrap(tree: _*))))
+        }
 
       case AssignmentTag(value, assignTo) =>
         for {
@@ -158,7 +135,7 @@ object TagInliner extends Logging {
       case (None, prefix) => SeqModel.wrap(prefix.toList ++ tailTree.toList: _*)
     }
 
-  def handleTree[S: Exports: Counter: Mangler: Arrows](
+  def handleTree[S: Exports: Mangler: Arrows](
     tree: RawTag.Tree,
     treeFunctionName: String
   ): State[S, OpModel.Tree] =
