@@ -3,17 +3,17 @@ package aqua
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.raw.value.ValueRaw
 import aqua.run.{GeneralRunOptions, RunCommand, RunOpts}
-import com.monovore.decline.{Command, Opts}
-import fs2.io.file.{Files, Path}
+import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
+import cats.data.{NonEmptyList, Validated, ValidatedNec}
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
-import cats.syntax.monad.*
 import cats.syntax.functor.*
-import cats.data.{NonEmptyList, Validated, ValidatedNec}
-import Validated.{invalid, invalidNec, valid, validNec, validNel}
+import cats.syntax.monad.*
 import cats.{Applicative, Monad}
+import com.monovore.decline.{Command, Opts}
+import fs2.io.file.{Files, Path}
 import scribe.Logging
 
 import scala.concurrent.ExecutionContext

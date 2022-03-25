@@ -3,11 +3,12 @@ package aqua.keypair
 import aqua.io.OutputPrinter
 import aqua.js.KeyPair
 import aqua.keypair.KeyPairShow.show
-import cats.Applicative.ops.toAllApplicativeOps
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
 import cats.implicits.catsSyntaxApplicativeId
 import cats.syntax.show.*
+import cats.syntax.applicative.*
+import cats.syntax.functor.*
 import cats.{Applicative, Monad}
 import com.monovore.decline.{Command, Opts}
 import scribe.Logging

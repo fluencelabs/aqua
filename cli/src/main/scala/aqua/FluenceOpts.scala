@@ -22,6 +22,12 @@ object FluenceOpts {
         .option[String]("on", "Where function will be run. Default: host_peer_id", "o")
     )
 
+  val showSKOpt: Opts[Boolean] =
+    Opts
+      .flag("show-sk", "Show your secret key")
+      .map(_ => true)
+      .withDefault(false)
+
   val secretKeyOpt: Opts[Array[Byte]] =
     Opts
       .option[String]("sk", "Ed25519 32-byte secret key in base64", "s")

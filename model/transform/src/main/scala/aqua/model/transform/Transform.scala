@@ -2,19 +2,13 @@ package aqua.model.transform
 
 import aqua.model.inline.ArrowInliner
 import aqua.model.inline.state.InliningState
-import aqua.model.{AquaContext, CallModel, FuncArrow, OpModel, VarModel}
-import aqua.raw.value.VarRaw
 import aqua.model.transform.funcop.*
-import aqua.model.transform.pre.{
-  ArgsFromService,
-  ArgsProvider,
-  FuncPreTransformer,
-  InitPeerCallable,
-  InitViaRelayCallable
-}
+import aqua.model.transform.pre.*
 import aqua.model.transform.topology.Topology
+import aqua.model.*
 import aqua.raw.ops.RawTag
-import aqua.res.{AquaRes, FuncRes, NoAir, ResolvedOp, ServiceRes}
+import aqua.raw.value.VarRaw
+import aqua.res.*
 import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
