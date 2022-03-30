@@ -58,6 +58,8 @@ object FuncCaller {
               if (config.common.showConfig) {
                 val configJson = KeyPairOp.toDynamicJSON(keyPair)
                 configJson.updateDynamic("relay")(config.common.multiaddr)
+                config.common.timeout.foreach(t => configJson.updateDynamic("timeout")(t))
+                configJson.updateDynamic("log-level")(config.common.logLevel.name)
                 OutputPrinter.print(JSON.stringify(configJson, null, 4))
               }
 
