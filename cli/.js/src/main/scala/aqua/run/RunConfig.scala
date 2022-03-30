@@ -47,7 +47,9 @@ object GeneralRunOptions {
               case Stage =>
                 validNel(FluenceEnvironment.stage(index).multiaddr)
               case _ =>
-                invalidNel("Invalid multiaddr format.")
+                invalidNel(
+                  "Invalid multiaddr format. Run 'aqua config default_peers' for valid multiaddress."
+                )
             }
           }.andThen(identity)
             .leftMap(_ =>
