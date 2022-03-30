@@ -4,7 +4,7 @@ import aqua.LogLevelTransformer
 import aqua.backend.FunctionDef
 import aqua.builder.{Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
-import aqua.js.{CallJsFunction, Fluence, FluenceUtils, PeerConfig}
+import aqua.js.{CallJsFunction, Fluence, FluenceUtils, KeyPair, KeyPairOp, PeerConfig}
 import aqua.keypair.KeyPairShow.show
 import aqua.run.RunCommand.createKeyPair
 import cats.data.Validated.{invalidNec, validNec}
@@ -55,8 +55,11 @@ object FuncCaller {
               )
               .toFuture
             _ =
-              if (config.common.showSK) OutputPrinter.print(keyPair.show)
-              else OutputPrinter.print("Your peerId: " + peer.getStatus().peerId)
+              if (config.common.showConfig) {
+                val configJson = KeyPairOp.toDynamicJSON(keyPair)
+                configJson.updateDynamic("relay")(config.common.multiaddr)
+                OutputPrinter.print(JSON.stringify(configJson, null, 4))
+              }
 
             // register all services
             _ = (services ++ config.argumentGetters.values :+ finisherService).map(_.register(peer))

@@ -1,6 +1,6 @@
 package aqua.run
 
-import aqua.FluenceOpts.{logLevelOpt, onOpt, printAir, secretKeyOpt, showSKOpt, timeoutOpt}
+import aqua.FluenceOpts.{logLevelOpt, onOpt, printAir, secretKeyOpt, showConfigOpt, timeoutOpt}
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.AppOpts
 import aqua.config.ConfigOpts.{Krasnodar, Stage, TestNet}
@@ -24,7 +24,7 @@ case class GeneralRunOptions(
   on: Option[String],
   printAir: Boolean,
   secretKey: Option[Array[Byte]],
-  showSK: Boolean
+  showConfig: Boolean
 )
 
 object GeneralRunOptions {
@@ -66,7 +66,7 @@ object GeneralRunOptions {
       onOpt,
       printAir,
       AppOpts.wrapWithOption(secretKeyOpt),
-      showSKOpt
+      showConfigOpt
     )
       .mapN(GeneralRunOptions.apply)
 
@@ -78,7 +78,7 @@ object GeneralRunOptions {
       onOpt,
       printAir,
       secretKeyOpt.map(Some.apply),
-      showSKOpt
+      showConfigOpt
     )
       .mapN(GeneralRunOptions.apply)
 }
