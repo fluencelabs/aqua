@@ -109,17 +109,17 @@ case class InfixToken[F[_]: Comonad](
 
 object InfixToken {
 
-  enum Op:
-    case Pow
-    case Mul
-    case Div
-    case Rem
-    case Add
-    case Sub
-    case Gt
-    case Gte
-    case Lt
-    case Lte
+  enum Op(val weight: Int):
+    case Pow extends Op(10)
+    case Mul extends Op(6)
+    case Div extends Op(6)
+    case Rem extends Op(6)
+    case Add extends Op(3)
+    case Sub extends Op(3)
+    case Gt extends Op(1)
+    case Gte extends Op(1)
+    case Lt extends Op(1)
+    case Lte extends Op(1)
 
   val ops: List[P[Span.S[Op]]] =
     List(
