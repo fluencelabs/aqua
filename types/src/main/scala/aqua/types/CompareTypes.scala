@@ -81,7 +81,8 @@ object CompareTypes {
       else {
         val tailCmp = compareProducts(ltail, rtail)
         // If one is >, and another eq, it's >, and vice versa
-        if (headCmp >= 0 && tailCmp >= 0) 1.0
+        if (headCmp == 0 && tailCmp == 0) 0
+        else if (headCmp >= 0 && tailCmp >= 0) 1.0
         else if (headCmp <= 0 && tailCmp <= 0) -1.0
         else NaN
       }
@@ -129,7 +130,8 @@ object CompareTypes {
           val cmpDom = apply(ldom, rdom)
           val cmpCodom = apply(lcodom, rcodom)
 
-          if (cmpDom >= 0 && cmpCodom <= 0) -1.0
+          if (cmpDom == 0 && cmpCodom == 0) 0
+          else if (cmpDom >= 0 && cmpCodom <= 0) -1.0
           else if (cmpDom <= 0 && cmpCodom >= 0) 1.0
           else NaN
 
