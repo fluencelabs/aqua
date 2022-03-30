@@ -12,10 +12,6 @@ object FluenceOpts {
     Opts
       .option[Int]("timeout", "Request timeout in milliseconds", "t")
 
-  val multiaddrOpt: Opts[String] =
-    Opts
-      .option[String]("addr", "Relay multiaddress", "a")
-
   val onOpt: Opts[Option[String]] =
     AppOpts.wrapWithOption(
       Opts

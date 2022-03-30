@@ -1,13 +1,13 @@
 package aqua.config
 
-import aqua.js.FluenceEnvironment
+import aqua.js.{FluenceEnvironment, FluenceNode}
 import cats.Applicative
 import cats.data.Validated
+import cats.data.Validated.{invalidNel, validNel}
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
-import com.monovore.decline.{Command, Opts}
-import Validated.{invalidNel, validNel}
 import cats.syntax.applicative.*
+import com.monovore.decline.{Command, Opts}
 
 import scala.scalajs.js
 
@@ -24,7 +24,7 @@ object ConfigOpts {
   val Stage = "stage"
   val TestNet = "testnet"
 
-  def envArg: Opts[js.Array[js.Dynamic]] =
+  def envArg: Opts[js.Array[FluenceNode]] =
     Opts
       .argument[String](s"$Krasnodar | $Stage | $TestNet")
       .withDefault(Krasnodar)
@@ -47,7 +47,7 @@ object ConfigOpts {
       header = "List addresses of default peers in Fluence network"
     ) {
       envArg.map { env =>
-        println(env.toList.map(n => n.selectDynamic("multiaddr")).mkString("\n"))
+        println(env.toList.map(n => n.multiaddr).mkString("\n"))
         ExitCode.Success.pure[F]
       }
     }
