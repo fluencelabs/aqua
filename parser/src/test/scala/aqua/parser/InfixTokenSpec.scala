@@ -19,16 +19,59 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
     }
   }
 
-  def literal(n: Int) = LiteralToken[Id](n.toString, LiteralType.number)
+  private def literal(n: Int) = LiteralToken[Id](n.toString, LiteralType.number)
 
   import AquaSpec._
 
-  ignore should "be parsed" in {
+  "primitive math expression" should "be parsed" in {
 
-    val a = ValueToken.`_value`.parseAll("(3 - 2 + 5) + 5 + (4 - 7)")
+    val vt = ValueToken.`_value`.parseAll("3 - 2").right.get.mapK(spanToId)
 
-    val res = vtRotate(a.right.get)
-    res shouldBe (
+    val res = vtRotate(vt)
+    res shouldBe
+      InfixToken[Id](literal(3), literal(2), Sub)
+
+  }
+
+  "primitive math expression with multiplication" should "be parsed" ignore {
+
+    val vt = ValueToken.`_value`.parseAll("(3 - 2) * 4").right.get.mapK(spanToId)
+    val vt2 = ValueToken.`_value`.parseAll("3 - 2 * 4").right.get.mapK(spanToId)
+
+    val res = vtRotate(vt)
+    val res2 = vtRotate(vt2)
+
+    res shouldBe
+      InfixToken(
+        BracketsToken(InfixToken(literal(3), literal(2), Sub)),
+        literal(4),
+        Mul
+      )
+
+    res2 shouldBe
+      InfixToken(
+        literal(3),
+        InfixToken(literal(2), literal(4), Mul),
+        Div
+      )
+  }
+
+  "math expression" should "be parsed" in {
+
+    val vt = ValueToken.`_value`.parseAll("3 - 2 + 5").right.get.mapK(spanToId)
+
+    val res = vtRotate(vt)
+    res shouldBe
+      InfixToken(InfixToken(literal(3), literal(2), Sub), literal(5), Add)
+
+  }
+
+  "complex math expression" should "be parsed" in {
+
+    val vt = ValueToken.`_value`.parseAll("(3 - 2 + 5) + 5 + (4 - 7)").right.get.mapK(spanToId)
+
+    val res = vtRotate(vt)
+    res shouldBe
       InfixToken(
         InfixToken(
           BracketsToken(InfixToken(InfixToken(literal(3), literal(2), Sub), literal(5), Add)),
@@ -38,10 +81,31 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
         BracketsToken(InfixToken(literal(4), literal(7), Sub)),
         Add
       )
-    )
+  }
+
+  "complex math expression with multiplication" should "be parsed" ignore {
+
+    val vt = ValueToken.`_value`.parseAll("(3 - 2) * 2 + (4 - 7) * 3").right.get.mapK(spanToId)
+
+    val res = vtRotate(vt)
+    res shouldBe
+      InfixToken(
+        InfixToken(
+          BracketsToken(InfixToken(literal(3), literal(2), Sub)),
+          literal(2),
+          Mul
+        ),
+        InfixToken(
+          BracketsToken(InfixToken(literal(4), literal(7), Sub)),
+          literal(3),
+          Mul
+        ),
+        Add
+      )
   }
 
   // rotate tree of ops. Don't work properly with operations with weights
+  // TODO: delete this
   def vtRotate[F[_]: Comonad](vt: ValueToken[F]): ValueToken[F] = {
     vt match {
       case BracketsToken(value) =>
