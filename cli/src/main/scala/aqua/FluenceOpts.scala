@@ -12,19 +12,15 @@ object FluenceOpts {
     Opts
       .option[Int]("timeout", "Request timeout in milliseconds", "t")
 
-  val multiaddrOpt: Opts[String] =
-    Opts
-      .option[String]("addr", "Relay multiaddress", "a")
-
   val onOpt: Opts[Option[String]] =
     AppOpts.wrapWithOption(
       Opts
         .option[String]("on", "Where function will be run. Default: host_peer_id", "o")
     )
 
-  val showSKOpt: Opts[Boolean] =
+  val showConfigOpt: Opts[Boolean] =
     Opts
-      .flag("show-sk", "Show your secret key")
+      .flag("show-config", "Print current configuration on start")
       .map(_ => true)
       .withDefault(false)
 

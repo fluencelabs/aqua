@@ -3,6 +3,7 @@ package aqua.js
 import aqua.*
 import aqua.backend.*
 
+import java.util.Base64
 import scala.concurrent.Promise
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
@@ -323,6 +324,18 @@ class RequestFlowBuilder extends js.Object {
 class KeyPair extends js.Object {
   val Libp2pPeerId: PeerId = js.native
   def toEd25519PrivateKey(): js.typedarray.Uint8Array = js.native
+}
+
+object KeyPairOp {
+
+  def toDynamicJSON(kp: KeyPair) = {
+    val encoder = Base64.getEncoder()
+    js.Dynamic.literal(
+      peerId = kp.Libp2pPeerId.toB58String(),
+      secretKey = encoder.encodeToString(kp.toEd25519PrivateKey().toArray.map(s => s.toByte)),
+      publicKey = encoder.encodeToString(kp.Libp2pPeerId.pubKey.bytes.toArray.map(s => s.toByte))
+    )
+  }
 }
 
 @js.native
