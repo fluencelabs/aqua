@@ -72,7 +72,7 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
       .flatMap { case (lambdaModel, map) =>
         unfold(raw, lambdaAllowed).flatMap {
           case (v: VarModel, prefix) =>
-            val vm = v.copy(lambda = lambdaModel).resolveWith(exports)
+            val vm = v.copy(lambda = v.lambda ++ lambdaModel).resolveWith(exports)
             if (lambdaAllowed) State.pure(vm -> (prefix |+| map))
             else
               removeLambda(vm).map { case (vmm, mpp) =>
