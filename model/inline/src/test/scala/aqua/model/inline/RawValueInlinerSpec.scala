@@ -1,14 +1,24 @@
 package aqua.model.inline
 
 import aqua.model.inline.raw.ApplyLambdaRawInliner
-import aqua.model.{FlattenModel, IntoIndexModel, ParModel, SeqModel, ValueModel, VarModel}
+import aqua.model.{
+  FlattenModel,
+  IntoFieldModel,
+  IntoIndexModel,
+  ParModel,
+  SeqModel,
+  ValueModel,
+  VarModel
+}
 import aqua.model.inline.state.InliningState
-import aqua.raw.value.{ApplyLambdaRaw, IntoIndexRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.{ApplyLambdaRaw, IntoFieldRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
 import cats.data.NonEmptyMap
 import cats.data.Chain
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+
+import scala.collection.immutable.SortedMap
 
 class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
 
@@ -22,6 +32,27 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   private val `raw x[y]` = VarRaw("x", ArrayType(ScalarType.string)).withLambda(
     IntoIndexRaw(
       VarRaw("y", ScalarType.i8),
+      ScalarType.string
+    )
+  )
+
+  private val bType =
+    StructType("objectType", NonEmptyMap(("c", ScalarType.string), SortedMap.empty))
+
+  private val aType = StructType(
+    "objectType",
+    NonEmptyMap(
+      ("b", bType),
+      SortedMap.empty
+    )
+  )
+
+  private val `raw res.c` = VarRaw(
+    "res",
+    bType
+  ).withLambda(
+    IntoFieldRaw(
+      "c",
       ScalarType.string
     )
   )
@@ -68,6 +99,25 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         "x",
         ArrayType(ScalarType.string),
         Chain.one(IntoIndexModel("y", ScalarType.string))
+      ) -> None
+    )
+  }
+
+  "raw value inliner" should "unfold an IntoField LambdaModel" in {
+    import aqua.model.inline.state.Mangler.Simple
+    // a.field1.field2
+    valueToModel[InliningState](`raw res.c`)
+      .run(
+        InliningState(resolvedExports =
+          Map("res" -> VarModel("a", aType, Chain.one(IntoFieldModel("b", bType))))
+        )
+      )
+      .value
+      ._2 should be(
+      VarModel(
+        "a",
+        aType,
+        Chain(IntoFieldModel("b", bType), IntoFieldModel("c", ScalarType.string))
       ) -> None
     )
   }
