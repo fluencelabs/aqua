@@ -27,6 +27,7 @@ object ErrorRendering {
       // get the deepest context
       case WithContext(str, exp: WithContext) => expectationToString(exp, List(str))
       case WithContext(str, exp) => s"$str (${expectationToString(exp)})" +: acc
+      case FailWith(_, message) => message +: acc
       case InRange(offset, lower, upper) =>
         if (lower == upper)
           s"Expected symbol '${betterSymbol(lower)}'" +: acc
@@ -69,7 +70,7 @@ object ErrorRendering {
               val msg = FileSpan(span.name, span.locationMap, localSpan)
                 .focus(0)
                 .map { spanFocus =>
-                  val errorMessages = exps.map(exp => expectationToString(exp))
+                  val errorMessages = exps.flatMap(exp => expectationToString(exp))
                   spanFocus.toConsoleStr(
                     "Syntax error",
                     s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t),
