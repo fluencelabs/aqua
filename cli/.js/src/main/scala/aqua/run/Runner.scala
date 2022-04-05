@@ -68,7 +68,7 @@ class Runner(
 
     val air = FuncAirGen(funcRes).generate.show
 
-    if (config.common.printAir) {
+    if (config.common.flags.printAir) {
       OutputPrinter.print(air)
     }
 

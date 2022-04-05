@@ -72,7 +72,8 @@ object AppOpts {
       .options[String](
         "import",
         "Path to the directory to import from. May be used several times",
-        "m"
+        "m",
+        "path"
       )
       .orEmpty
       .map { ps =>
@@ -93,12 +94,13 @@ object AppOpts {
         checked.sequence.map(_.sequence)
       }
 
-  def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[ConstantRaw]] =
+  def constantOpts: Opts[List[ConstantRaw]] =
     Opts
       .options[String](
         "const",
         "Constant that will be used in an aqua code. Constant name must be upper cased.",
-        "c"
+        "c",
+        "NAME=value"
       )
       .mapValidated { strs =>
         val parsed = strs.map(s => ConstantExpr.onlyLiteral.parseAll(s))

@@ -58,7 +58,7 @@ object IpfsOpts extends Logging {
     SubCommandBuilder.valid(
       "upload",
       "Upload a file to IPFS",
-      (GeneralRunOptions.commonOpt, pathOpt).mapN { (common, path) =>
+      (GeneralRunOptions.commonGeneralOpt, pathOpt).mapN { (common, path) =>
         RunInfo(
           common,
           CliFunc(UploadFuncName, LiteralRaw.quote(path) :: Nil),

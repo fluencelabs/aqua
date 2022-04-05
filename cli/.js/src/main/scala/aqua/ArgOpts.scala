@@ -36,7 +36,7 @@ object ArgOpts {
   // Parses a function name and arguments from a string
   def funcOpt: Opts[CliFunc] =
     Opts
-      .option[String]("func", "Function to call with args", "f")
+      .option[String]("func", "Function to call with args", "f", "funcName(args)")
       .mapValidated { str =>
         CallArrowToken.callArrow.parseAll(str) match {
           case Right(exprSpan) =>
@@ -150,12 +150,13 @@ object ArgOpts {
   }
 
   def dataOpt: Opts[js.Dynamic] =
-    Opts.option[String]("data", "Argument map for aqua function in JSON format", "d").mapValidated {
-      str =>
+    Opts
+      .option[String]("data", "Argument map for aqua function in JSON format", "d", "json")
+      .mapValidated { str =>
         Validated.catchNonFatal {
           JSON.parse(str)
         }.leftMap(t => NonEmptyList.one("Data isn't a valid JSON: " + t.getMessage))
-    }
+      }
 
   def dataFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, js.Dynamic]]] = {
     jsonFromFileOpt("data-path", "Path to file with arguments map in JSON format", "p")
