@@ -24,7 +24,7 @@ case class GeneralRunOptions(
   on: Option[String],
   flags: Flags,
   secretKey: Option[Array[Byte]],
-  constants: List[ConstantRaw] = Nil
+  constants: List[ConstantRaw]
 )
 
 object GeneralRunOptions {

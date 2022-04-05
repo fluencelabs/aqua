@@ -31,7 +31,7 @@ object FileOpts {
     check: String => F[ValidatedNec[String, Path]]
   ): Opts[F[ValidatedNec[String, Path]]] =
     Opts
-      .option[String](long, help, short)
+      .option[String](long, help, short, "path")
       .map(check)
 
   // Validate, read and transform a file
@@ -42,7 +42,7 @@ object FileOpts {
     transform: (Path, String) => ValidatedNec[String, A]
   ): Opts[F[ValidatedNec[String, A]]] = {
     Opts
-      .option[String](long, help, short)
+      .option[String](long, help, short, "path")
       .map { str =>
         checkAndTransformPath(
           str,
