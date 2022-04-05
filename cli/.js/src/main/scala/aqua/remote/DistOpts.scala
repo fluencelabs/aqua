@@ -66,7 +66,7 @@ object DistOpts extends Logging {
     SubCommandBuilder.valid(
       "remove_service",
       "Remove service",
-      (GeneralRunOptions.commonOpt, srvIdOpt).mapN { (common, srvId) =>
+      (GeneralRunOptions.commonGeneralOpt, srvIdOpt).mapN { (common, srvId) =>
         RunInfo(
           common,
           CliFunc(RemoveFuncName, LiteralRaw.quote(srvId) :: Nil),
@@ -79,7 +79,7 @@ object DistOpts extends Logging {
     SubCommandBuilder.valid(
       "create_service",
       "Deploy service from existing blueprint",
-      (GeneralRunOptions.commonOpt, blueprintIdOpt).mapN { (common, blueprintId) =>
+      (GeneralRunOptions.commonGeneralOpt, blueprintIdOpt).mapN { (common, blueprintId) =>
         RunInfo(
           common,
           CliFunc(CreateServiceFuncName, LiteralRaw.quote(blueprintId) :: Nil),
@@ -92,7 +92,7 @@ object DistOpts extends Logging {
     SubCommandBuilder.valid(
       "add_blueprint",
       "Add blueprint to a peer",
-      (GeneralRunOptions.commonOpt, blueprintNameOpt, dependencyOpt).mapN {
+      (GeneralRunOptions.commonGeneralOpt, blueprintNameOpt, dependencyOpt).mapN {
         (common, blueprintName, dependencies) =>
           val depsWithHash = dependencies.map { d =>
             if (d.startsWith("hash:"))
@@ -135,7 +135,7 @@ object DistOpts extends Logging {
       "deploy_service",
       "Deploy service from WASM modules",
       (
-        GeneralRunOptions.commonOptWithSecretKey,
+        GeneralRunOptions.commonGeneralOptWithSecretKey,
         configFromFileOpt[F],
         srvNameOpt
       ).mapN { (common, configFromFileF, srvName) =>

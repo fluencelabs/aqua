@@ -36,10 +36,19 @@ object RunOpts extends Logging {
   val OnPeerConst = "ON_PEER"
 
   // Default transform config with `onPeer` constant
-  def transformConfigWithOnPeer(onPeer: Option[String]) =
-    TransformConfig(constants =
-      onPeer.map(s => ConstantRaw(OnPeerConst, LiteralRaw.quote(s), false)).toList
+  def transformConfig(
+    onPeer: Option[String],
+    constants: List[ConstantRaw],
+    noXor: Boolean,
+    noRelay: Boolean
+  ): TransformConfig = {
+    val tc = TransformConfig(
+      constants =
+        onPeer.map(s => ConstantRaw(OnPeerConst, LiteralRaw.quote(s), false)).toList ++ constants,
+      wrapWithXor = !noXor
     )
+    tc.copy(relayVarName = tc.relayVarName.filterNot(_ => noRelay))
+  }
 
   def runOptsCompose[F[_]: Files: Concurrent]
     : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithData)]]] = {
@@ -62,7 +71,7 @@ object RunOpts extends Logging {
       name = "run",
       header = "Run Aqua code",
       (
-        GeneralRunOptions.commonOpt,
+        GeneralRunOptions.commonGeneralRunOpt,
         runOptsCompose[F]
       ).mapN {
         case (

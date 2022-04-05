@@ -69,7 +69,7 @@ object RemoteInfoOpts {
     SubCommandBuilder.valid(
       "list_interfaces",
       "List all service interfaces on a peer by a given owner",
-      (GeneralRunOptions.commonOpt, AppOpts.wrapWithOption(ownerOpt), allFlag).mapN {
+      (GeneralRunOptions.commonGeneralOpt, AppOpts.wrapWithOption(ownerOpt), allFlag).mapN {
         (common, peer, printAll) =>
           if (printAll)
             RunInfo(
@@ -96,7 +96,7 @@ object RemoteInfoOpts {
     SubCommandBuilder.valid(
       GetInterfaceFuncName,
       "Show interface of a service",
-      (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
+      (GeneralRunOptions.commonGeneralOpt, idOpt).mapN { (common, serviceId) =>
         RunInfo(
           common,
           CliFunc(GetInterfaceFuncName, LiteralRaw.quote(serviceId) :: Nil),
@@ -109,7 +109,7 @@ object RemoteInfoOpts {
     SubCommandBuilder.valid(
       GetModuleInterfaceFuncName,
       "Print a module interface",
-      (GeneralRunOptions.commonOpt, idOpt).mapN { (common, serviceId) =>
+      (GeneralRunOptions.commonGeneralOpt, idOpt).mapN { (common, serviceId) =>
         RunInfo(
           common,
           CliFunc(GetModuleInterfaceFuncName, LiteralRaw.quote(serviceId) :: Nil),

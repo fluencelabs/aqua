@@ -93,7 +93,7 @@ object AppOpts {
         checked.sequence.map(_.sequence)
       }
 
-  def constantOpts[F[_]: LiftParser: Comonad]: Opts[List[ConstantRaw]] =
+  def constantOpts: Opts[List[ConstantRaw]] =
     Opts
       .options[String](
         "const",

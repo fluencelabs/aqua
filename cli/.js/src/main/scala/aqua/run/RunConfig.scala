@@ -1,30 +1,30 @@
 package aqua.run
 
-import aqua.FluenceOpts.{logLevelOpt, onOpt, printAir, secretKeyOpt, showConfigOpt, timeoutOpt}
-import aqua.builder.{ArgumentGetter, Service}
 import aqua.AppOpts
+import aqua.FluenceOpts.*
+import aqua.builder.{ArgumentGetter, Service}
 import aqua.config.ConfigOpts.{Krasnodar, Stage, TestNet}
 import aqua.js.FluenceEnvironment
-import com.monovore.decline.Opts
-import scribe.Level
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
+import aqua.raw.ConstantRaw
+import cats.data.{NonEmptyList, Validated}
+import cats.data.Validated.{invalidNel, validNel}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
-import cats.data.Validated
-import cats.data.Validated.{invalidNel, validNel}
-import cats.data.NonEmptyList
+import com.monovore.decline.Opts
+import scribe.Level
 
 import scala.util.Try
+
+case class Flags(printAir: Boolean, showConfig: Boolean, noXor: Boolean, noRelay: Boolean)
 
 case class GeneralRunOptions(
   timeout: Option[Int],
   logLevel: Level,
   multiaddr: String,
   on: Option[String],
-  printAir: Boolean,
+  flags: Flags,
   secretKey: Option[Array[Byte]],
-  showConfig: Boolean
+  constants: List[ConstantRaw] = Nil
 )
 
 object GeneralRunOptions {
@@ -60,29 +60,36 @@ object GeneralRunOptions {
         }
       }
 
-  val commonOpt: Opts[GeneralRunOptions] =
-    (
-      AppOpts.wrapWithOption(timeoutOpt),
-      logLevelOpt,
-      multiaddrOpt,
-      onOpt,
+  def flagsOpt(isRun: Boolean): Opts[Flags] =
+    ((
       printAir,
-      AppOpts.wrapWithOption(secretKeyOpt),
       showConfigOpt
-    )
-      .mapN(GeneralRunOptions.apply)
+    ) ++ {
+      if (isRun)
+        (AppOpts.noXorWrapper, AppOpts.noRelay)
+      else
+        (false.pure[Opts], false.pure[Opts])
+    }).mapN(Flags.apply)
 
-  val commonOptWithSecretKey: Opts[GeneralRunOptions] =
+  def commonOpt(
+    isRun: Boolean,
+    withSecret: Boolean,
+    withConstants: Boolean
+  ): Opts[GeneralRunOptions] =
     (
       AppOpts.wrapWithOption(timeoutOpt),
-      logLevelOpt,
+      logLevelOpt.withDefault(Level.Fatal),
       multiaddrOpt,
       onOpt,
-      printAir,
-      secretKeyOpt.map(Some.apply),
-      showConfigOpt
-    )
-      .mapN(GeneralRunOptions.apply)
+      flagsOpt(isRun),
+      if (withSecret) { secretKeyOpt.map(Some.apply) }
+      else { AppOpts.wrapWithOption(secretKeyOpt) },
+      if (withConstants) AppOpts.constantOpts else Nil.pure[Opts]
+    ).mapN(GeneralRunOptions.apply)
+
+  val commonGeneralOpt: Opts[GeneralRunOptions] = commonOpt(false, false, false)
+  val commonGeneralRunOpt: Opts[GeneralRunOptions] = commonOpt(true, false, true)
+  val commonGeneralOptWithSecretKey: Opts[GeneralRunOptions] = commonOpt(false, true, false)
 }
 
 // `run` command configuration

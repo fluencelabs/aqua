@@ -14,7 +14,7 @@ import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.{Functor, Id, Monad, ~>}
+import cats.{~>, Functor, Id, Monad}
 import com.monovore.decline
 import com.monovore.decline.Opts
 import com.monovore.decline.effect.CommandIOApp
@@ -63,11 +63,25 @@ object AquaCli extends IOApp with Logging {
       wrapWithOption(helpOpt),
       wrapWithOption(versionOpt),
       FluenceOpts.logLevelOpt,
-      constantOpts[Id],
+      constantOpts,
       dryOpt,
       scriptOpt
-      ).mapN {
-      case (inputF, importsF, outputF, toAirOp, toJs, noRelayOp, noXorOp, h, v, logLevel, constants, isDryRun, isScheduled) =>
+    ).mapN {
+      case (
+            inputF,
+            importsF,
+            outputF,
+            toAirOp,
+            toJs,
+            noRelayOp,
+            noXorOp,
+            h,
+            v,
+            logLevel,
+            constants,
+            isDryRun,
+            isScheduled
+          ) =>
         LogFormatter.initLogger(Some(logLevel))
 
         val toAir = toAirOp || isScheduled
@@ -87,14 +101,16 @@ object AquaCli extends IOApp with Logging {
           }
           logger.info(s"Aqua Compiler ${versionStr}")
 
-          (inputF, outputF, importsF).mapN {(i, o, imp) =>
+          (inputF, outputF, importsF).mapN { (i, o, imp) =>
             i.andThen { input =>
               o.andThen { output =>
                 imp.map { imports =>
                   if (output.isEmpty && !isDryRun)
-                    Validated.invalidNec(
-                      "Output path should be specified ('--output' or '-o'). " +
-                        "Add '--dry' to check compilation without output")
+                    Validated
+                      .invalidNec(
+                        "Output path should be specified ('--output' or '-o'). " +
+                          "Add '--dry' to check compilation without output"
+                      )
                       .pure[F]
                   else {
                     val resultOutput = if (isDryRun) {

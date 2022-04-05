@@ -116,6 +116,8 @@ object ScriptOpts extends Logging {
     AirGen(funcRes.body).generate.show
   }
 
+  private def commonScriptOpts = GeneralRunOptions.commonOpt(false, true, true)
+
   private def compileAir[F[_]: Async: AquaIO](
     input: Path,
     imports: List[Path],
@@ -158,7 +160,7 @@ object ScriptOpts extends Logging {
       name = "add",
       header = "Upload aqua function as a scheduled script.",
       (
-        GeneralRunOptions.commonOptWithSecretKey,
+        commonScriptOpts,
         scheduleOptsCompose[F],
         intervalOpt
       ).mapN { (common, optionsF, intervalOp) =>
@@ -225,7 +227,7 @@ object ScriptOpts extends Logging {
       "remove",
       "Remove a service from a remote peer",
       (
-        GeneralRunOptions.commonOptWithSecretKey,
+        commonScriptOpts,
         scriptIdOpt
       ).mapN { (common, scriptId) =>
         RunInfo(
