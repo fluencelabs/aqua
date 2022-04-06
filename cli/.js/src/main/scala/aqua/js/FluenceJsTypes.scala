@@ -212,11 +212,15 @@ object NamesConfigJs {
 type AvmLogLevel = "trace" | "debug" | "info" | "warn" | "error" | "off"
 
 @JSExportAll
+case class Debug(printParticleId: js.UndefOr[Boolean])
+
+@JSExportAll
 case class PeerConfig(
   connectTo: String,
   defaultTtlMs: js.UndefOr[Int],
   avmLogLevel: AvmLogLevel,
-  KeyPair: KeyPair
+  KeyPair: KeyPair,
+  debug: js.UndefOr[Debug]
 )
 
 /**
