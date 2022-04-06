@@ -55,7 +55,7 @@ object FuncCaller {
               )
               .toFuture
             _ =
-              if (config.common.showConfig) {
+              if (config.common.flags.showConfig) {
                 val configJson = KeyPairOp.toDynamicJSON(keyPair)
                 configJson.updateDynamic("relay")(config.common.multiaddr)
                 config.common.timeout.foreach(t => configJson.updateDynamic("timeout")(t))

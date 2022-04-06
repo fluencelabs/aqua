@@ -34,16 +34,10 @@ class ArrowTypeExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         toArrowType(List("Custom", string, u32, "Custom3"), Some("Custom2"))
       )
     )
-    parseArrow("onIn: Custom, string, u32, Custom3 -> Custom2, string") should be(
-      ArrowTypeExpr[Id](
-        "onIn",
-        ArrowTypeToken[Id](
-          (),
-          List(toCustomType("Custom"), scToBt(string), scToBt(u32), toCustomType("Custom3"))
-            .map(None -> _),
-          List(toCustomType("Custom2"), scToBt(string))
-        )
+    ArrowTypeExpr.p
+      .parseAll(
+        "onIn: Custom, string, u32, Custom3 -> Custom2, string"
       )
-    )
+      .isLeft shouldBe (true)
   }
 }

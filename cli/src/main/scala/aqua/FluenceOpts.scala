@@ -15,7 +15,7 @@ object FluenceOpts {
   val onOpt: Opts[Option[String]] =
     AppOpts.wrapWithOption(
       Opts
-        .option[String]("on", "Where function will be run. Default: host_peer_id", "o")
+        .option[String]("on", "Where function will be run. Default: host_peer_id", "o", "peerId")
     )
 
   val showConfigOpt: Opts[Boolean] =
@@ -26,7 +26,7 @@ object FluenceOpts {
 
   val secretKeyOpt: Opts[Array[Byte]] =
     Opts
-      .option[String]("sk", "Ed25519 32-byte secret key in base64", "s")
+      .option[String]("sk", "Ed25519 32-byte secret key in base64", "s", "base64")
       .mapValidated { s =>
         val decoder = Base64.getDecoder
         Validated.catchNonFatal {

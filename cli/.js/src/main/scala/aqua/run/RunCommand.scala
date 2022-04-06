@@ -18,7 +18,7 @@ import aqua.parser.lexer.LiteralToken
 import aqua.parser.lift.FileSpan
 import aqua.raw.value.ValueRaw
 import aqua.run.RunConfig
-import aqua.run.RunOpts.transformConfigWithOnPeer
+import aqua.run.RunOpts.transformConfig
 import aqua.types.*
 import cats.data.*
 import cats.effect.kernel.{Async, Clock}
@@ -137,7 +137,7 @@ object RunCommand extends Logging {
         inputPath,
         imports,
         RunConfig(common, argumentGetters, services ++ builtinServices),
-        transformConfigWithOnPeer(common.on)
+        transformConfig(common.on, common.constants, common.flags.noXor, common.flags.noRelay)
       )
   }
 

@@ -1,11 +1,11 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{Call, CanonicalizeTag, FuncOp, RestrictionTag, ReturnTag, SeqTag}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.expr.func.ArrowExpr
 import aqua.parser.lexer.{Arg, DataTypeToken}
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
+import aqua.raw.ops.*
 import aqua.raw.value.VarRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra

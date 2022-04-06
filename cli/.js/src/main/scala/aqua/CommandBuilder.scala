@@ -103,7 +103,7 @@ object SubCommandBuilder {
       .valid(
         name,
         header,
-        GeneralRunOptions.commonOpt.map { c =>
+        GeneralRunOptions.commonGeneralOpt.map { c =>
           RunInfo(c, CliFunc(funcName), path)
         }
       )
