@@ -12,7 +12,7 @@ import cats.syntax.functor.*
 import cats.{~>, Comonad, Functor}
 import cats.data.NonEmptyList
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
 
 sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
@@ -135,22 +135,26 @@ object InfixToken {
       `<=`.as(Op.Lte)
     ).map(_.lift)
 
-  val postfix: P[ValueToken[Span.S] => InfixToken[Span.S]] =
-    (P
-      .oneOf(ops)
-      .surroundedBy(`/s*`) ~ ValueToken.`_value`).map {
-      case (infix, right) => {
-        case left: InfixToken[Span.S] if left.op.ordinal < infix._2.ordinal =>
-          InfixToken(left.left, InfixToken(left.right, right, infix), left.infix)
-        case left =>
-          right match {
-            case r: InfixToken[Span.S] if r.op.ordinal > infix._2.ordinal =>
-              InfixToken(InfixToken(left, r.left, infix), r.right, r.infix)
-            case _ =>
-              InfixToken(left, right, infix)
-          }
+  def infixParser(basic: P[ValueToken[S]], ops: List[P[Op]]) =
+    (basic ~ (P
+      .oneOf(ops.map(_.lift))
+      .surroundedBy(`/s*`) ~ basic).backtrack.rep0).map { case (vt, list) =>
+      list.foldLeft(vt) { case (acc, (op, value)) =>
+        InfixToken(acc, value, op)
       }
     }
+
+  val pow: P[ValueToken[Span.S]] =
+    infixParser(ValueToken.atom, `**`.as(Op.Pow) :: Nil)
+
+  val mult: P[ValueToken[Span.S]] =
+    infixParser(pow, `*`.as(Op.Mul) :: `/`.as(Op.Div) :: `%`.as(Op.Div) :: Nil)
+
+  val add: P[ValueToken[Span.S]] =
+    infixParser(mult, `+`.as(Op.Add) :: `-`.as(Op.Sub) :: Nil)
+
+  val compare: P[ValueToken[Span.S]] =
+    infixParser(add, `>`.as(Op.Gt) :: `>=`.as(Op.Gte) :: `<`.as(Op.Lt) :: `<=`.as(Op.Lte) :: Nil)
 }
 
 case class BracketsToken[F[_]: Comonad](value: ValueToken[F]) extends ValueToken[F] {
@@ -208,23 +212,20 @@ object ValueToken {
   val literal: P[LiteralToken[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
+  val atom: P[ValueToken[S]] = P.oneOf(
+    literal.backtrack ::
+      initPeerId.backtrack ::
+      P.defer(
+        CollectionToken.collection
+      ) ::
+      P.defer(CallArrowToken.callArrow).backtrack ::
+      P.defer(BracketsToken.brackets) ::
+      varLambda ::
+      Nil
+  )
+
   def `_value`: P[ValueToken[Span.S]] = {
-    val p = P.oneOf(
-      literal.backtrack ::
-        initPeerId.backtrack ::
-        P.defer(
-          CollectionToken.collection
-        ) ::
-        P.defer(CallArrowToken.callArrow).backtrack ::
-        P.defer(BracketsToken.brackets) ::
-        varLambda ::
-        Nil
-    )
-    (p ~ P.defer(InfixToken.postfix.backtrack).?).map {
-      case (left, Some(infixF)) =>
-        infixF(left)
-      case (left, _) => left
-    }
+    InfixToken.compare
   }
 
   val `value`: P[ValueToken[Span.S]] =

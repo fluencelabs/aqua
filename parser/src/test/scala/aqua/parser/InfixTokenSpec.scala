@@ -10,6 +10,7 @@ import cats.syntax.comonad.*
 import cats.{~>, Comonad, Id}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 
 class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
@@ -24,30 +25,41 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   import AquaSpec._
 
-  "primitive math expression" should "be parsed" ignore {
+  "primitive math expression" should "be parfvfsed" in {
+
+    val vt = ValueToken.atom.parseAll("3").right.get.mapK(spanToId)
+    val vt2 = InfixToken.mult.parseAll("3 * 2 * 5").right.get.mapK(spanToId)
+
+    val vt31 = ValueToken.`_value`.parseAll("3 + 1 * 2 - 2").right.get.mapK(spanToId)
+    val vt32 = ValueToken.`_value`.parseAll("5 + 6 + 10 + 20 + 1 + 2 + 4").right.get.mapK(spanToId)
+    val vt4 = ValueToken.`_value`.parseAll("3 * 2 * 5 + 3").right.get.mapK(spanToId)
+    val vt5 = ValueToken.`_value`.parseAll("2 + 3 * 2 - 3 * 5 + 2").right.get.mapK(spanToId)
+    val vt6 = ValueToken.`_value`.parseAll("2 * 3 / 5 * 4").right.get.mapK(spanToId)
+    val vt7 = ValueToken.`_value`
+      .parseAll("3 - 2 + 3 * 3 / 5 * 2 - 4 / 4 ** 2 ** 2 % 2 + 1 - 4 > 2 * 3 - 5 + 1 * 2 / 2")
+    val vt8 = ValueToken.`_value`
+      .parseAll("5 > 4")
+
+    println(vt7)
+    println(vt8)
+  }
+
+  "primitive math expression" should "be parsed" in {
 
     val vt = ValueToken.`_value`.parseAll("3 - 2").right.get.mapK(spanToId)
 
-    val res = vtRotate(vt)
-    res shouldBe
+    vt shouldBe
       InfixToken[Id](literal(3), literal(2), Sub)
 
   }
 
-  "primitive math expression with multiplication" should "be parsed" ignore {
+  "primitive math expression with multiplication" should "be parsed" in {
 
-    val vt = ValueToken.`_value`.parseAll("(3 - 2) * 4").right.get.mapK(spanToId)
-    val vt2 = ValueToken.`_value`.parseAll("3 - 2 * 4").right.get.mapK(spanToId)
-    val vt3 = ValueToken.`_value`.parseAll("3 - 2 * 4 + 5 - 3 * 2").right.get.mapK(spanToId)
-    val vt4 = ValueToken.`_value`.parseAll("3 * 2 - 4").right.get.mapK(spanToId)
-    val vt5 = ValueToken.`_value`.parseAll("3 - 2 * 4 + 5").right.get.mapK(spanToId)
-
-    val res = vtRotate(vt)
-
-    val res2 = vtRotate(vt2)
-    val res3 = vtRotate(vt3)
-    val res4 = vtRotate(vt4)
-    val res5 = vtRotate(vt5)
+    val res = ValueToken.`_value`.parseAll("(3 - 2) * 4").right.get.mapK(spanToId)
+    val res2 = ValueToken.`_value`.parseAll("3 - 2 * 4").right.get.mapK(spanToId)
+    val res3 = ValueToken.`_value`.parseAll("3 - 2 * 4 + 5 - 3 * 2").right.get.mapK(spanToId)
+    val res4 = ValueToken.`_value`.parseAll("3 * 2 - 4").right.get.mapK(spanToId)
+    val res5 = ValueToken.`_value`.parseAll("3 - 2 * 4 + 5").right.get.mapK(spanToId)
 
     res shouldBe
       InfixToken(
@@ -98,21 +110,19 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   }
 
-  "math expression" should "be parsed" ignore {
+  "math expression" should "be parsed" in {
 
     val vt = ValueToken.`_value`.parseAll("3 - 2 + 5").right.get.mapK(spanToId)
 
-    val res = vtRotate(vt)
-    res shouldBe
+    vt shouldBe
       InfixToken(InfixToken(literal(3), literal(2), Sub), literal(5), Add)
 
   }
 
-  "complex math expression" should "be parsed" ignore {
+  "complex math expression" should "be parsed" in {
 
-    val vt = ValueToken.`_value`.parseAll("(3 - 2 + 5) + 5 + (4 - 7)").right.get.mapK(spanToId)
+    val res = ValueToken.`_value`.parseAll("(3 - 2 + 5) + 5 + (4 - 7)").right.get.mapK(spanToId)
 
-    val res = vtRotate(vt)
     res shouldBe
       InfixToken(
         InfixToken(
@@ -125,12 +135,11 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
       )
   }
 
-  "complex math expression with multiplication" should "be parsed" ignore {
+  "complex math expression with multiplication" should "be parsed" in {
 
     val vt = ValueToken.`_value`.parseAll("(3 - 2) * 2 + (4 - 7) * 3").right.get.mapK(spanToId)
 
-    val res = vtRotate(vt)
-    res shouldBe
+    vt shouldBe
       InfixToken(
         InfixToken(
           BracketsToken(InfixToken(literal(3), literal(2), Sub)),
@@ -144,45 +153,6 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
         ),
         Add
       )
-  }
-
-  /*
-case (infix, right) => {
-        case left: InfixToken[Span.S] if left.op.ordinal < infix._2.ordinal =>
-          InfixToken(left.left, InfixToken(left.right, right, infix), left.infix)
-        case left =>
-          right match {
-            case r: InfixToken[Span.S] if r.op.ordinal > infix._2.ordinal =>
-              InfixToken(InfixToken(left, r.left, infix), r.right, r.infix)
-            case _ =>
-              InfixToken(left, right, infix)
-          }
-      }
-   */
-
-  // rotate tree of ops. Don't work properly with operations with weights
-  // TODO: delete this
-  def vtRotate[F[_]: Comonad](vt: ValueToken[F]): ValueToken[F] = {
-    vt match {
-      case BracketsToken(value) =>
-        BracketsToken(vtRotate(value))
-      case o @ InfixToken(l, r, op) =>
-        println(o)
-        val res = r match {
-          case InfixToken(ll, rl, opl) if opl.extract.weight <= op.extract.weight =>
-            val newT = InfixToken(vtRotate(l), vtRotate(ll), op)
-            val newR = InfixToken(newT, rl, opl)
-            vtRotate(newR)
-          case b @ BracketsToken(value) =>
-            o.copy(right = b.copy(value = vtRotate(value)))
-          case vr =>
-            InfixToken(vtRotate(l), vtRotate(vr), op)
-        }
-
-        res
-      case v =>
-        v
-    }
   }
 
 }
