@@ -4,7 +4,7 @@ import aqua.LogLevelTransformer
 import aqua.backend.FunctionDef
 import aqua.builder.{Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
-import aqua.js.{CallJsFunction, Fluence, FluenceUtils, KeyPair, KeyPairOp, PeerConfig}
+import aqua.js.{CallJsFunction, Debug, Fluence, FluenceUtils, KeyPair, KeyPairOp, PeerConfig}
 import aqua.keypair.KeyPairShow.show
 import aqua.run.RunCommand.createKeyPair
 import cats.data.Validated.{invalidNec, validNec}
@@ -50,7 +50,8 @@ object FuncCaller {
                   config.common.multiaddr,
                   config.common.timeout.getOrElse(scalajs.js.undefined),
                   LogLevelTransformer.logLevelToAvm(config.common.logLevel),
-                  keyPair
+                  keyPair,
+                  Debug(printParticleId = config.common.flags.verbose)
                 )
               )
               .toFuture

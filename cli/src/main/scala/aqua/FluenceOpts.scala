@@ -24,6 +24,12 @@ object FluenceOpts {
       .map(_ => true)
       .withDefault(false)
 
+  val verboseOpt: Opts[Boolean] =
+    Opts
+      .flag("verbose", "Show additional information about the call")
+      .map(_ => true)
+      .withDefault(false)
+
   val secretKeyOpt: Opts[Array[Byte]] =
     Opts
       .option[String]("sk", "Ed25519 32-byte secret key in base64", "s", "base64")

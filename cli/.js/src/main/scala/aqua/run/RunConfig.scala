@@ -15,7 +15,13 @@ import scribe.Level
 
 import scala.util.Try
 
-case class Flags(printAir: Boolean, showConfig: Boolean, noXor: Boolean, noRelay: Boolean)
+case class Flags(
+  printAir: Boolean,
+  showConfig: Boolean,
+  verbose: Boolean,
+  noXor: Boolean,
+  noRelay: Boolean
+)
 
 case class GeneralRunOptions(
   timeout: Option[Int],
@@ -63,7 +69,8 @@ object GeneralRunOptions {
   def flagsOpt(isRun: Boolean): Opts[Flags] =
     ((
       printAir,
-      showConfigOpt
+      showConfigOpt,
+      verboseOpt
     ) ++ {
       if (isRun)
         (AppOpts.noXorWrapper, AppOpts.noRelay)
