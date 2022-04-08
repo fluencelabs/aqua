@@ -135,7 +135,7 @@ object InfixToken {
       `<=`.as(Op.Lte)
     ).map(_.lift)
 
-  def infixParser(basic: P[ValueToken[S]], ops: List[P[Op]]) =
+  private def infixParserLeft(basic: P[ValueToken[S]], ops: List[P[Op]]) =
     (basic ~ (P
       .oneOf(ops.map(_.lift))
       .surroundedBy(`/s*`) ~ basic).backtrack.rep0).map { case (vt, list) =>
@@ -144,47 +144,37 @@ object InfixToken {
       }
     }
 
-  def infixRightParser(basic: P[ValueToken[S]], ops: List[P[Op]]): P[ValueToken[S]] =
-    (basic ~ (P
-      .oneOf(ops.map(_.lift))
-      .surroundedBy(`/s*`) ~ basic).backtrack.rep0).map { case (vt, list) =>
-      list match {
-        case Nil => vt
-        case _ =>
-          val (ops: List[S[Op]], tokens: List[ValueToken[S]]) = list.unzip
-          val last = tokens.last
-          val leftTokens = vt +: tokens.init
-          ops.zip(leftTokens).foldRight(last) { case ((op, value), acc) =>
-            InfixToken(value, acc, op)
-          }
-      }
+  private def infixParserRight(basic: P[ValueToken[S]], ops: List[P[Op]]): P[ValueToken[S]] = P.recursive { recurse =>
+    (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ recurse).backtrack.?).map {
+      case (vt, Some((op, recVt))) =>
+        InfixToken(vt, recVt, op)
+      case (vt, None) =>
+        vt
+    }
+  }
+
+  private def infixParserNone(basic: P[ValueToken[S]], ops: List[P[Op]]) =
+    (basic ~ P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).map {
+      case ((leftVt, op), rightVt) => InfixToken(leftVt, rightVt, op)
     }
 
   val pow: P[ValueToken[Span.S]] =
-    infixRightParser(ValueToken.atom, `**`.as(Op.Pow) :: Nil)
+    infixParserRight(ValueToken.atom, `**`.as(Op.Pow) :: Nil)
 
   val mult: P[ValueToken[Span.S]] =
-    infixParser(pow, `*`.as(Op.Mul) :: `/`.as(Op.Div) :: `%`.as(Op.Div) :: Nil)
+    infixParserLeft(pow, `*`.as(Op.Mul) :: `/`.as(Op.Div) :: `%`.as(Op.Div) :: Nil)
 
   val add: P[ValueToken[Span.S]] =
-    infixParser(mult, `+`.as(Op.Add) :: `-`.as(Op.Sub) :: Nil)
+    infixParserLeft(mult, `+`.as(Op.Add) :: `-`.as(Op.Sub) :: Nil)
 
   val compare: P[ValueToken[Span.S]] =
-    infixParser(add, `>`.as(Op.Gt) :: `>=`.as(Op.Gte) :: `<`.as(Op.Lt) :: `<=`.as(Op.Lte) :: Nil)
-}
+    infixParserNone(add, `>`.as(Op.Gt) :: `>=`.as(Op.Gte) :: `<`.as(Op.Lt) :: `<=`.as(Op.Lte) :: Nil)
 
-case class BracketsToken[F[_]: Comonad](value: ValueToken[F]) extends ValueToken[F] {
-  override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] = copy(value.mapK(fk))
+  val arithmeticExpr = add
 
-  override def as[T](v: T): F[T] = value.as(v)
+  val logicExpr: P[ValueToken[Span.S]] = P.recursive { recurse => compare | ValueToken.brackets(recurse) | ValueToken.bool }
 
-  override def toString: String = s" ( $value ) "
-}
-
-object BracketsToken {
-
-  val brackets: P[BracketsToken[Span.S]] =
-    ValueToken.`_value`.between(`(`, `)`).map(BracketsToken(_))
+  val mathExpr =  logicExpr.backtrack | arithmeticExpr
 }
 
 object ValueToken {
@@ -226,7 +216,9 @@ object ValueToken {
       .map(LiteralToken(_, LiteralType.string))
 
   val literal: P[LiteralToken[Span.S]] =
-    P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
+    P.oneOf(float.backtrack :: num.backtrack :: string :: Nil)
+
+  def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] = basic.between(`(`, `)`).backtrack
 
   val atom: P[ValueToken[S]] = P.oneOf(
     literal.backtrack ::
@@ -235,13 +227,13 @@ object ValueToken {
         CollectionToken.collection
       ) ::
       P.defer(CallArrowToken.callArrow).backtrack ::
-      P.defer(BracketsToken.brackets) ::
+      P.defer(brackets(InfixToken.arithmeticExpr)) ::
       varLambda ::
       Nil
   )
 
   def `_value`: P[ValueToken[Span.S]] = {
-    InfixToken.compare
+    InfixToken.mathExpr
   }
 
   val `value`: P[ValueToken[Span.S]] =

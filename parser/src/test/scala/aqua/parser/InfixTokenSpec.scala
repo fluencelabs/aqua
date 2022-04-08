@@ -3,7 +3,7 @@ package aqua.parser
 import aqua.AquaSpec
 import aqua.parser.expr.func.IfExpr
 import aqua.parser.lexer.InfixToken.Op
-import aqua.parser.lexer.{BracketsToken, EqOp, InfixToken, LiteralToken, ValueToken}
+import aqua.parser.lexer.{EqOp, InfixToken, LiteralToken, ValueToken}
 import aqua.parser.lexer.InfixToken.Op.*
 import aqua.parser.lift.Span
 import aqua.types.LiteralType
@@ -110,7 +110,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     res shouldBe
       InfixToken(
-        BracketsToken(InfixToken(literal(3), literal(2), Sub)),
+        InfixToken(literal(3), literal(2), Sub),
         literal(4),
         Mul
       )
@@ -173,11 +173,11 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
     res shouldBe
       InfixToken(
         InfixToken(
-          BracketsToken(InfixToken(InfixToken(literal(3), literal(2), Sub), literal(5), Add)),
+          InfixToken(InfixToken(literal(3), literal(2), Sub), literal(5), Add),
           literal(5),
           Add
         ),
-        BracketsToken(InfixToken(literal(4), literal(7), Sub)),
+        InfixToken(literal(4), literal(7), Sub),
         Add
       )
   }
@@ -189,17 +189,74 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
     vt shouldBe
       InfixToken(
         InfixToken(
-          BracketsToken(InfixToken(literal(3), literal(2), Sub)),
+          InfixToken(literal(3), literal(2), Sub),
           literal(2),
           Mul
         ),
         InfixToken(
-          BracketsToken(InfixToken(literal(4), literal(7), Sub)),
+          InfixToken(literal(4), literal(7), Sub),
           literal(3),
           Mul
         ),
         Add
       )
+  }
+
+  "simple math expression with exp" should "be parsed" in {
+    // Correct (1 ** (2 ** 3))
+    val vt = ValueToken.`_value`.parseAll("1**2**3").right.get.mapK(spanToId)
+
+    vt shouldBe
+      InfixToken(literal(1), InfixToken(literal(2), literal(3), Pow), Pow)
+
+  }
+  "complex math expression with exp" should "be parsed" in {
+    // Correct ((1 ** 2) + (((3 ** 4) * (5 ** (6 ** 7))) * 9))
+    val vt = ValueToken.`_value`.parseAll("1 ** 2 + 3**4* 5**6 ** 7*9").right.get.mapK(spanToId)
+
+    vt shouldBe
+      InfixToken(
+        InfixToken(
+          literal(1),
+          literal(2),
+          Pow
+        ),
+        InfixToken(
+          InfixToken(
+            InfixToken(
+              literal(3),
+              literal(4),
+              Pow
+            ),
+          InfixToken(
+            literal(5),
+            InfixToken(
+              literal(6),
+              literal(7),
+              Pow),
+            Pow),
+          Mul),
+          literal(9),
+          Mul
+        ),
+        Add
+      )
+
+  }
+
+  "simple cmp math expression " should "be parsed" in {
+    val vt = ValueToken.`_value`.parseAll("1 > 3").right.get.mapK(spanToId)
+    vt shouldBe InfixToken(literal(1), literal(3), Gt)
+  }
+
+  "simple cmp math expression in brackets " should "be parsed" in {
+    val vt = ValueToken.`_value`.parseAll("(1 > 3)").right.get.mapK(spanToId)
+    vt shouldBe InfixToken(literal(1), literal(3), Gt)
+  }
+
+  "simple cmp math expression " should "not be parsed" in {
+    val vt = ValueToken.`_value`.parseAll("1 > (3 > 3)")
+    vt.isLeft shouldBe true
   }
 
 }
