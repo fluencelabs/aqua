@@ -253,10 +253,4 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
     val vt = ValueToken.`_value`.parseAll("(1 > 3)").right.get.mapK(spanToId)
     vt shouldBe InfixToken(literal(1), literal(3), Gt)
   }
-
-  "simple cmp math expression " should "not be parsed" in {
-    val vt = ValueToken.`_value`.parseAll("1 > (3 > 3)")
-    vt.isLeft shouldBe true
-  }
-
 }

@@ -127,14 +127,14 @@ object InfixToken {
     ).map(_.lift)
 
   private def infixParserLeft(basic: P[ValueToken[S]], ops: List[P[Op]]) =
-    (basic ~ ((P.oneOf(ops.map(_.lift)) <* `/s*`) ~ basic).rep0).map { case (vt, list) =>
+    (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).backtrack.rep0).map { case (vt, list) =>
       list.foldLeft(vt) { case (acc, (op, value)) =>
         InfixToken(acc, value, op)
       }
     }
 
   private def infixParserRight(basic: P[ValueToken[S]], ops: List[P[Op]]): P[ValueToken[S]] = P.recursive { recurse =>
-    (basic ~ ((P.oneOf(ops.map(_.lift)) <* `/s*`) ~ recurse).?).map {
+    (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ recurse).backtrack.?).map {
       case (vt, Some((op, recVt))) =>
         InfixToken(vt, recVt, op)
       case (vt, None) =>
@@ -143,12 +143,15 @@ object InfixToken {
   }
 
   private def infixParserNone(basic: P[ValueToken[S]], ops: List[P[Op]]) =
-    (basic ~ (P.oneOf(ops.map(_.lift)) <* `/s*`) ~ basic).map {
-      case ((leftVt, op), rightVt) => InfixToken(leftVt, rightVt, op)
+    (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).backtrack.?) map {
+      case (leftVt, Some((op, rightVt))) =>
+        InfixToken(leftVt, rightVt, op)
+      case (vt, None) =>
+        vt
     }
 
   val pow: P[ValueToken[Span.S]] =
-    infixParserRight(ValueToken.atom <* `/s*`, `**`.as(Op.Pow) :: Nil)
+    infixParserRight(ValueToken.atom, `**`.as(Op.Pow) :: Nil)
 
   val mult: P[ValueToken[Span.S]] =
     infixParserLeft(pow, `*`.as(Op.Mul) :: `/`.as(Op.Div) :: `%`.as(Op.Div) :: Nil)
@@ -159,11 +162,7 @@ object InfixToken {
   val compare: P[ValueToken[Span.S]] =
     infixParserNone(add, `>`.as(Op.Gt) :: `>=`.as(Op.Gte) :: `<`.as(Op.Lt) :: `<=`.as(Op.Lte) :: Nil)
 
-  val arithmeticExpr = add
-
-  val logicExpr: P[ValueToken[Span.S]] = P.recursive { recurse => ValueToken.bool | compare | ValueToken.brackets(recurse) }
-
-  val mathExpr = logicExpr.backtrack | arithmeticExpr
+  val mathExpr = compare
 }
 
 object ValueToken {
@@ -205,7 +204,7 @@ object ValueToken {
       .map(LiteralToken(_, LiteralType.string))
 
   val literal: P[LiteralToken[Span.S]] =
-    P.oneOf(float.backtrack :: num.backtrack :: string :: Nil)
+    P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
   def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] = basic.between(`(`, `)`).backtrack
 
@@ -216,14 +215,14 @@ object ValueToken {
         CollectionToken.collection
       ) ::
       P.defer(CallArrowToken.callArrow).backtrack ::
-      P.defer(brackets(InfixToken.arithmeticExpr)) ::
+      P.defer(brackets(InfixToken.mathExpr)) ::
       varLambda ::
       Nil
   )
 
   // One of entry points for parsing the whole math expression
   def `_value`: P[ValueToken[Span.S]] = {
-    `/s*`.with1 *> InfixToken.mathExpr
+    InfixToken.mathExpr
   }
 
   // One of entry points for parsing the whole math expression
