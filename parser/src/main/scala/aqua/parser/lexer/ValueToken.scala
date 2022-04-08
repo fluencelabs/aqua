@@ -109,17 +109,8 @@ case class InfixToken[F[_]: Comonad](
 
 object InfixToken {
 
-  enum Op(val weight: Int):
-    case Pow extends Op(10)
-    case Mul extends Op(6)
-    case Div extends Op(6)
-    case Rem extends Op(6)
-    case Add extends Op(3)
-    case Sub extends Op(3)
-    case Gt extends Op(1)
-    case Gte extends Op(1)
-    case Lt extends Op(1)
-    case Lte extends Op(1)
+  enum Op:
+    case Pow, Mul, Div, Rem, Add, Sub, Gt, Gte, Lt, Lte
 
   val ops: List[P[Span.S[Op]]] =
     List(
@@ -136,16 +127,14 @@ object InfixToken {
     ).map(_.lift)
 
   private def infixParserLeft(basic: P[ValueToken[S]], ops: List[P[Op]]) =
-    (basic ~ (P
-      .oneOf(ops.map(_.lift))
-      .surroundedBy(`/s*`) ~ basic).backtrack.rep0).map { case (vt, list) =>
+    (basic ~ ((P.oneOf(ops.map(_.lift)) <* `/s*`) ~ basic).rep0).map { case (vt, list) =>
       list.foldLeft(vt) { case (acc, (op, value)) =>
         InfixToken(acc, value, op)
       }
     }
 
   private def infixParserRight(basic: P[ValueToken[S]], ops: List[P[Op]]): P[ValueToken[S]] = P.recursive { recurse =>
-    (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ recurse).backtrack.?).map {
+    (basic ~ ((P.oneOf(ops.map(_.lift)) <* `/s*`) ~ recurse).?).map {
       case (vt, Some((op, recVt))) =>
         InfixToken(vt, recVt, op)
       case (vt, None) =>
@@ -154,12 +143,12 @@ object InfixToken {
   }
 
   private def infixParserNone(basic: P[ValueToken[S]], ops: List[P[Op]]) =
-    (basic ~ P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).map {
+    (basic ~ (P.oneOf(ops.map(_.lift)) <* `/s*`) ~ basic).map {
       case ((leftVt, op), rightVt) => InfixToken(leftVt, rightVt, op)
     }
 
   val pow: P[ValueToken[Span.S]] =
-    infixParserRight(ValueToken.atom, `**`.as(Op.Pow) :: Nil)
+    infixParserRight(ValueToken.atom <* `/s*`, `**`.as(Op.Pow) :: Nil)
 
   val mult: P[ValueToken[Span.S]] =
     infixParserLeft(pow, `*`.as(Op.Mul) :: `/`.as(Op.Div) :: `%`.as(Op.Div) :: Nil)
@@ -172,9 +161,9 @@ object InfixToken {
 
   val arithmeticExpr = add
 
-  val logicExpr: P[ValueToken[Span.S]] = P.recursive { recurse => compare | ValueToken.brackets(recurse) | ValueToken.bool }
+  val logicExpr: P[ValueToken[Span.S]] = P.recursive { recurse => ValueToken.bool | compare | ValueToken.brackets(recurse) }
 
-  val mathExpr =  logicExpr.backtrack | arithmeticExpr
+  val mathExpr = logicExpr.backtrack | arithmeticExpr
 }
 
 object ValueToken {
@@ -232,10 +221,12 @@ object ValueToken {
       Nil
   )
 
+  // One of entry points for parsing the whole math expression
   def `_value`: P[ValueToken[Span.S]] = {
-    InfixToken.mathExpr
+    `/s*`.with1 *> InfixToken.mathExpr
   }
 
+  // One of entry points for parsing the whole math expression
   val `value`: P[ValueToken[Span.S]] =
     P.defer(`_value`)
 
