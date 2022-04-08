@@ -47,6 +47,9 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
   private def pow(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
     infixToken(left, right, Pow)
 
+  private def gt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Gt)
+
   "primitive math expression" should "be parfvfsed" in {
 
     val vt = ValueToken.atom.parseAll("3").right.get.mapK(spanToId)
@@ -67,6 +70,11 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
       .right
       .get
       .mapK(spanToId)
+    val vt10 = ValueToken.`_value`
+      .parseAll("2 ** 3 ** 4")
+      .right
+      .get
+      .mapK(spanToId)
 
     vt shouldBe literal(3)
     vt2 shouldBe mul(mul(3, 2), 5)
@@ -78,6 +86,9 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     // todo: add after pow will be right-associative
     // vt8 shouldBe
+
+    vt9 shouldBe gt(5, 4)
+    vt10 shouldBe pow(2, pow(3, 4))
   }
 
   "primitive math expression" should "be parsed" in {

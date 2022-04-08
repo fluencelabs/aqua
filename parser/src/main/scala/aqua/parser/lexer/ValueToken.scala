@@ -144,8 +144,24 @@ object InfixToken {
       }
     }
 
+  def infixRightParser(basic: P[ValueToken[S]], ops: List[P[Op]]): P[ValueToken[S]] =
+    (basic ~ (P
+      .oneOf(ops.map(_.lift))
+      .surroundedBy(`/s*`) ~ basic).backtrack.rep0).map { case (vt, list) =>
+      list match {
+        case Nil => vt
+        case _ =>
+          val (ops: List[S[Op]], tokens: List[ValueToken[S]]) = list.unzip
+          val last = tokens.last
+          val leftTokens = vt +: tokens.init
+          ops.zip(leftTokens).foldRight(last) { case ((op, value), acc) =>
+            InfixToken(value, acc, op)
+          }
+      }
+    }
+
   val pow: P[ValueToken[Span.S]] =
-    infixParser(ValueToken.atom, `**`.as(Op.Pow) :: Nil)
+    infixRightParser(ValueToken.atom, `**`.as(Op.Pow) :: Nil)
 
   val mult: P[ValueToken[Span.S]] =
     infixParser(pow, `*`.as(Op.Mul) :: `/`.as(Op.Div) :: `%`.as(Op.Div) :: Nil)
