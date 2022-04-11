@@ -53,7 +53,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
   "primitive math expression" should "be parfvfsed" in {
 
     val vt = ValueToken.atom.parseAll("3").right.get.mapK(spanToId)
-    val vt2 = InfixToken.mult.parseAll("3 * 2 * 5").right.get.mapK(spanToId)
+    val vt2 = ValueToken.value.parseAll("3 * 2 * 5").right.get.mapK(spanToId)
 
     val vt3 = ValueToken.`value`.parseAll("3 + 1 * 2 - 2").right.get.mapK(spanToId)
     val vt4 = ValueToken.`value`.parseAll("5 + 6 + 10 + 20 + 1 + 2 + 4").right.get.mapK(spanToId)

@@ -108,28 +108,25 @@ case class InfixToken[F[_]: Comonad](
 
 object InfixToken {
 
-  enum Op:
-    case Pow, Mul, Div, Rem, Add, Sub, Gt, Gte, Lt, Lte
+  enum Op(val symbol: String):
+    case Pow extends Op("**")
+    case Mul extends Op("*")
+    case Div extends Op("/")
+    case Rem extends Op("%")
+    case Add extends Op("+")
+    case Sub extends Op("-")
+    case Gt extends Op(">")
+    case Gte extends Op(">=")
+    case Lt extends Op("<")
+    case Lte extends Op("<=")
 
-  // TODO: convert it to a map or something and use it in the parser to avoid repetitions?
-  val ops: List[P[Span.S[Op]]] =
-    List(
-      `**`.as(Op.Pow),
-      `*`.as(Op.Mul),
-      `/`.as(Op.Div),
-      `%`.as(Op.Rem),
-      `-`.as(Op.Sub),
-      `+`.as(Op.Add),
-      `>`.as(Op.Gt),
-      `>=`.as(Op.Gte),
-      `<`.as(Op.Lt),
-      `<=`.as(Op.Lte)
-    ).map(_.lift)
+  private def opsParser(ops: List[Op]): P[(Span, Op)] =
+    P.oneOf(ops.map(op => P.string(op.symbol).lift.map(s => s.as(op))))
 
   // Parse left-associative operations `basic (OP basic)*`.
   // We use this form to avoid left recursion.
-  private def infixParserLeft(basic: P[ValueToken[S]], ops: List[P[Op]]) =
-    (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).backtrack.rep0).map {
+  private def infixParserLeft(basic: P[ValueToken[S]], ops: List[Op]) =
+    (basic ~ (opsParser(ops).surroundedBy(`/s*`) ~ basic).backtrack.rep0).map {
       case (vt, list) =>
         list.foldLeft(vt) { case (acc, (op, value)) =>
           InfixToken(acc, value, op)
@@ -137,9 +134,9 @@ object InfixToken {
     }
 
   // Parse right-associative operations: `basic OP recursive`.
-  private def infixParserRight(basic: P[ValueToken[S]], ops: List[P[Op]]): P[ValueToken[S]] =
+  private def infixParserRight(basic: P[ValueToken[S]], ops: List[Op]): P[ValueToken[S]] =
     P.recursive { recurse =>
-      (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ recurse).backtrack.?).map {
+      (basic ~ (opsParser(ops).surroundedBy(`/s*`) ~ recurse).backtrack.?).map {
         case (vt, Some((op, recVt))) =>
           InfixToken(vt, recVt, op)
         case (vt, None) =>
@@ -148,27 +145,27 @@ object InfixToken {
     }
 
   // Parse non-associative operations: `basic OP basic`.
-  private def infixParserNone(basic: P[ValueToken[S]], ops: List[P[Op]]) =
-    (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).backtrack.?) map {
+  private def infixParserNone(basic: P[ValueToken[S]], ops: List[Op]) =
+    (basic ~ (opsParser(ops).surroundedBy(`/s*`) ~ basic).backtrack.?) map {
       case (leftVt, Some((op, rightVt))) =>
         InfixToken(leftVt, rightVt, op)
       case (vt, None) =>
         vt
     }
 
-  val pow: P[ValueToken[Span.S]] =
-    infixParserRight(ValueToken.atom, `**`.as(Op.Pow) :: Nil)
+  private val pow: P[ValueToken[Span.S]] =
+    infixParserRight(ValueToken.atom, Op.Pow :: Nil)
 
-  val mult: P[ValueToken[Span.S]] =
-    infixParserLeft(pow, `*`.as(Op.Mul) :: `/`.as(Op.Div) :: `%`.as(Op.Rem) :: Nil)
+  private val mult: P[ValueToken[Span.S]] =
+    infixParserLeft(pow, Op.Mul :: Op.Div :: Op.Rem :: Nil)
 
-  val add: P[ValueToken[Span.S]] =
-    infixParserLeft(mult, `+`.as(Op.Add) :: `-`.as(Op.Sub) :: Nil)
+  private val add: P[ValueToken[Span.S]] =
+    infixParserLeft(mult, Op.Add :: Op.Sub :: Nil)
 
-  val compare: P[ValueToken[Span.S]] =
+  private val compare: P[ValueToken[Span.S]] =
     infixParserNone(
       add,
-      `>`.as(Op.Gt) :: `>=`.as(Op.Gte) :: `<`.as(Op.Lt) :: `<=`.as(Op.Lte) :: Nil
+      Op.Gt :: Op.Gte :: Op.Lt :: Op.Lte :: Nil
     )
 
   /**
