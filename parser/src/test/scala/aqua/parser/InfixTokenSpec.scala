@@ -55,27 +55,27 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
     val vt = ValueToken.atom.parseAll("3").right.get.mapK(spanToId)
     val vt2 = InfixToken.mult.parseAll("3 * 2 * 5").right.get.mapK(spanToId)
 
-    val vt3 = ValueToken.`_value`.parseAll("3 + 1 * 2 - 2").right.get.mapK(spanToId)
-    val vt4 = ValueToken.`_value`.parseAll("5 + 6 + 10 + 20 + 1 + 2 + 4").right.get.mapK(spanToId)
-    val vt5 = ValueToken.`_value`.parseAll("3 * 2 * 5 + 3").right.get.mapK(spanToId)
-    val vt6 = ValueToken.`_value`.parseAll("2 + 3 * 2 - 3 * 5 + 2").right.get.mapK(spanToId)
-    val vt7 = ValueToken.`_value`.parseAll("2 * 3 / 5 * 4").right.get.mapK(spanToId)
-    val vt8 = ValueToken.`_value`
+    val vt3 = ValueToken.`value`.parseAll("3 + 1 * 2 - 2").right.get.mapK(spanToId)
+    val vt4 = ValueToken.`value`.parseAll("5 + 6 + 10 + 20 + 1 + 2 + 4").right.get.mapK(spanToId)
+    val vt5 = ValueToken.`value`.parseAll("3 * 2 * 5 + 3").right.get.mapK(spanToId)
+    val vt6 = ValueToken.`value`.parseAll("2 + 3 * 2 - 3 * 5 + 2").right.get.mapK(spanToId)
+    val vt7 = ValueToken.`value`.parseAll("2 * 3 / 5 * 4").right.get.mapK(spanToId)
+    val vt8 = ValueToken.`value`
       .parseAll("3 - 2 + 3 * 3 / 5 * 2 - 4 / 4 ** 2 ** 2 % 2 + 1 - 4 > 2 * 3 - 5 + 1 * 2 / 2")
       .right
       .get
       .mapK(spanToId)
-    val vt9 = ValueToken.`_value`
+    val vt9 = ValueToken.`value`
       .parseAll("5 > 4")
       .right
       .get
       .mapK(spanToId)
-    val vt10 = ValueToken.`_value`
+    val vt10 = ValueToken.`value`
       .parseAll("2 ** 3 ** 4")
       .right
       .get
       .mapK(spanToId)
-    val vt11 = ValueToken.`_value`
+    val vt11 = ValueToken.`value`
       .parseAll("2 % 4")
       .right
       .get
@@ -95,7 +95,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "primitive math expression" should "be parsed" in {
 
-    val vt = ValueToken.`_value`.parseAll("3 - 2").right.get.mapK(spanToId)
+    val vt = ValueToken.`value`.parseAll("3 - 2").right.get.mapK(spanToId)
 
     vt shouldBe
       InfixToken[Id](literal(3), literal(2), Sub)
@@ -104,11 +104,11 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "primitive math expression with multiplication" should "be parsed" in {
 
-    val res = ValueToken.`_value`.parseAll("(3 - 2) * 4").right.get.mapK(spanToId)
-    val res2 = ValueToken.`_value`.parseAll("3 - 2 * 4").right.get.mapK(spanToId)
-    val res3 = ValueToken.`_value`.parseAll("3 - 2 * 4 + 5 - 3 * 2").right.get.mapK(spanToId)
-    val res4 = ValueToken.`_value`.parseAll("3 * 2 - 4").right.get.mapK(spanToId)
-    val res5 = ValueToken.`_value`.parseAll("3 - 2 * 4 + 5").right.get.mapK(spanToId)
+    val res = ValueToken.`value`.parseAll("(3 - 2) * 4").right.get.mapK(spanToId)
+    val res2 = ValueToken.`value`.parseAll("3 - 2 * 4").right.get.mapK(spanToId)
+    val res3 = ValueToken.`value`.parseAll("3 - 2 * 4 + 5 - 3 * 2").right.get.mapK(spanToId)
+    val res4 = ValueToken.`value`.parseAll("3 * 2 - 4").right.get.mapK(spanToId)
+    val res5 = ValueToken.`value`.parseAll("3 - 2 * 4 + 5").right.get.mapK(spanToId)
 
     res shouldBe
       InfixToken(
@@ -161,7 +161,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "math expression" should "be parsed" in {
 
-    val vt = ValueToken.`_value`.parseAll("3 - 2 + 5").right.get.mapK(spanToId)
+    val vt = ValueToken.`value`.parseAll("3 - 2 + 5").right.get.mapK(spanToId)
 
     vt shouldBe
       InfixToken(InfixToken(literal(3), literal(2), Sub), literal(5), Add)
@@ -170,7 +170,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "complex math expression" should "be parsed" in {
 
-    val res = ValueToken.`_value`.parseAll("(3 - 2 + 5) + 5 + (4 - 7)").right.get.mapK(spanToId)
+    val res = ValueToken.`value`.parseAll("(3 - 2 + 5) + 5 + (4 - 7)").right.get.mapK(spanToId)
 
     res shouldBe
       InfixToken(
@@ -186,7 +186,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "complex math expression with multiplication" should "be parsed" in {
 
-    val vt = ValueToken.`_value`.parseAll("(3 - 2) * 2 + (4 - 7) * 3").right.get.mapK(spanToId)
+    val vt = ValueToken.`value`.parseAll("(3 - 2) * 2 + (4 - 7) * 3").right.get.mapK(spanToId)
 
     vt shouldBe
       InfixToken(
@@ -206,7 +206,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "simple math expression with exp" should "be parsed" in {
     // Correct (1 ** (2 ** 3))
-    val vt = ValueToken.`_value`.parseAll("1**2**3").right.get.mapK(spanToId)
+    val vt = ValueToken.`value`.parseAll("1**2**3").right.get.mapK(spanToId)
 
     vt shouldBe
       InfixToken(literal(1), InfixToken(literal(2), literal(3), Pow), Pow)
@@ -215,7 +215,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "complex math expression with exp" should "be parsed" in {
     // Correct ((1 ** 2) + (((3 ** 4) * (5 ** (6 ** 7))) * 9))
-    val vt = ValueToken.`_value`.parseAll("1 ** 2 + 3**4* 5**6 ** 7*9").right.get.mapK(spanToId)
+    val vt = ValueToken.`value`.parseAll("1 ** 2 + 3**4* 5**6 ** 7*9").right.get.mapK(spanToId)
 
     vt shouldBe
       InfixToken(
@@ -243,12 +243,12 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
   }
 
   "simple cmp math expression " should "be parsed" in {
-    val vt = ValueToken.`_value`.parseAll("1 > 3").right.get.mapK(spanToId)
+    val vt = ValueToken.`value`.parseAll("1 > 3").right.get.mapK(spanToId)
     vt shouldBe InfixToken(literal(1), literal(3), Gt)
   }
 
   "simple cmp math expression in brackets " should "be parsed" in {
-    val vt = ValueToken.`_value`.parseAll("(1 > 3)").right.get.mapK(spanToId)
+    val vt = ValueToken.`value`.parseAll("(1 > 3)").right.get.mapK(spanToId)
     vt shouldBe InfixToken(literal(1), literal(3), Gt)
   }
 }

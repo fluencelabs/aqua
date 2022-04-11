@@ -58,8 +58,7 @@ object CollectionToken {
       `*[`.as[Mode](Mode.StreamMode) |
         `?[`.as[Mode](Mode.OptionMode) |
         `[`.as[Mode](Mode.ArrayMode)
-    ).lift ~ (P
-      .defer(ValueToken.`_value`)
+    ).lift ~ (ValueToken.`value`
       .repSep0(`,`) <* `]`)).map { case (mode, vals) =>
       CollectionToken(mode, vals)
     }
@@ -82,7 +81,7 @@ object CallArrowToken {
   val callArrow: P[CallArrowToken[Span.S]] =
     ((Ability.dotted <* `.`).?.with1 ~
       (Name.p
-        ~ comma0(ValueToken.`_value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`))
+        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`))
         .withContext(
           "Missing braces '()' after the function call"
         )).map { case (ab, (fn, args)) =>
@@ -313,12 +312,7 @@ object ValueToken {
   )
 
   // One of entry points for parsing the whole math expression
-  def `_value`: P[ValueToken[Span.S]] = {
-    InfixToken.mathExpr
-  }
-
-  // One of entry points for parsing the whole math expression
   val `value`: P[ValueToken[Span.S]] =
-    P.defer(`_value`)
+    P.defer(InfixToken.mathExpr)
 
 }
