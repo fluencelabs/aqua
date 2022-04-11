@@ -112,6 +112,7 @@ object InfixToken {
   enum Op:
     case Pow, Mul, Div, Rem, Add, Sub, Gt, Gte, Lt, Lte
 
+  // TODO: convert it to a map or something and use it in the parser to avoid repetitions?
   val ops: List[P[Span.S[Op]]] =
     List(
       `**`.as(Op.Pow),
@@ -126,6 +127,8 @@ object InfixToken {
       `<=`.as(Op.Lte)
     ).map(_.lift)
 
+  // Parse left-associative operations `basic (OP basic)*`.
+  // We use this form to avoid left recursion.
   private def infixParserLeft(basic: P[ValueToken[S]], ops: List[P[Op]]) =
     (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).backtrack.rep0).map {
       case (vt, list) =>
@@ -134,6 +137,7 @@ object InfixToken {
         }
     }
 
+  // Parse right-associative operations: `basic OP recursive`.
   private def infixParserRight(basic: P[ValueToken[S]], ops: List[P[Op]]): P[ValueToken[S]] =
     P.recursive { recurse =>
       (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ recurse).backtrack.?).map {
@@ -144,6 +148,7 @@ object InfixToken {
       }
     }
 
+  // Parse non-associative operations: `basic OP basic`.
   private def infixParserNone(basic: P[ValueToken[S]], ops: List[P[Op]]) =
     (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).backtrack.?) map {
       case (leftVt, Some((op, rightVt))) =>
@@ -167,7 +172,88 @@ object InfixToken {
       `>`.as(Op.Gt) :: `>=`.as(Op.Gte) :: `<`.as(Op.Lt) :: `<=`.as(Op.Lte) :: Nil
     )
 
-  val mathExpr = compare
+  /**
+   * The math expression parser.
+   *
+   * Fist, the general idea. We'll consider only the expressions with operations `+`, `-`, and `*`, with bracket
+   * support. This syntax would typically be defined as follows:
+   *
+   * mathExpr ->
+   *   number
+   *   | mathExpr + mathExpr
+   *   | mathExpr - mathExpr
+   *   | mathExpr * mathExpr
+   *   | ( mathExpr )
+   *
+   * However, this grammar is ambiguous. For example, there are valid two parse trees for string `1 + 3 * 4`:
+   *
+   * 1)
+   *      +
+   *    /   \
+   *   1    *
+   *      /   \
+   *     3     4
+   * 2)
+   *       *
+   *     /   \
+   *    +    4
+   *  /   \
+   * 1     3
+   *
+   * We will instead define the grammar in a way that only allows a single possible parse tree.
+   * This parse tree will have the correct precedence and associativity of the operations built in.
+   *
+   * The intuition behind such grammar rules is as follows.
+   * For example, 1 + 2 - 3 * 4 + 5 * (6 + 1) can be thought of as a string of the form
+   *             `_ + _ - _____ + ___________`, where
+   * the underscores denote products of one or more numbers or bracketed expressions.
+   *
+   * In other words, an expression of this form is *the sum of several products*. We can encode this, as
+   * well as the fact that addition and subtraction are left-associative, as this rule:
+   * addExpr
+   *   -> addExpr ADD_OP multExpr
+   *   | multExpr
+   *
+   * If we parse the string like this, then precedence of `+`, `-`, and `*` will work correctly out of the box,
+   *
+   * The grammar below expresses the operator precedence and associativity we expect from math expressions:
+   *
+   * -- Comparison is the entry point because it has the lowest priority.
+   * mathExpr
+   *   -> cmpExpr
+   *
+   * -- Comparison isn't an associative operation so it's not a recursive definition.
+   * cmpExpr
+   *   -> addExpr CMP_OP addExpr
+   *   | addExpr
+   *
+   * -- Addition is a left associative operation, so it calls itself recursively on the left.
+   * -- To avoid the left recursion problem this is implemented as `multExpr (ADD_OP multExpr)*`.
+   * addExpr
+   *   -> addExpr ADD_OP multExpr
+   *   | multExpr
+   *
+   * -- Multiplication is also a left associative operation, so it calls itself recursively on the left.
+   * -- To avoid the left recursion problem actually we employ the `expExpr (ADD_OP expExpr)*` form.
+   * multExpr
+   *   -> multExpr MULT_OP expExpr
+   *   |  expExpr
+   *
+   * -- Exponentiation is a right associative operation, so it calls itself recursively on the right.
+   * expExpr
+   *   -> atom EXP_OP exprExpr
+   *   | atom
+   *
+   * -- Atomic expression is an expression that can be parsed independently of what's going on around it.
+   * -- For example, an expression in brackets will be parsed the same way regardless of what part of the
+   * -- expression it's in.
+   * atom
+   *   -> number
+   *   | literal
+   *   | ...
+   *   | ( mathExpr )
+   */
+  val mathExpr: P[ValueToken[Span.S]] = compare
 }
 
 object ValueToken {
