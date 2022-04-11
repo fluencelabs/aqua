@@ -118,9 +118,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
-      case bt: BracketsToken[S] =>
-        valueToRaw(bt.value)
-
       case it @ InfixToken(l, r, i) =>
         (valueToRaw(l), valueToRaw(r)).mapN((ll, rr) => ll -> rr).flatMap {
           case (Some(leftRaw), Some(rightRaw)) =>

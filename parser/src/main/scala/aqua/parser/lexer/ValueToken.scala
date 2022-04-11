@@ -3,6 +3,7 @@ package aqua.parser.lexer
 import aqua.parser.Expr
 import aqua.parser.head.FilenameExpr
 import aqua.parser.lexer.Token.*
+import aqua.parser.lexer.ValueToken.{initPeerId, literal}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.types.LiteralType
@@ -12,7 +13,7 @@ import cats.syntax.functor.*
 import cats.{~>, Comonad, Functor}
 import cats.data.NonEmptyList
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
 
 sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
@@ -58,8 +59,7 @@ object CollectionToken {
       `*[`.as[Mode](Mode.StreamMode) |
         `?[`.as[Mode](Mode.OptionMode) |
         `[`.as[Mode](Mode.ArrayMode)
-    ).lift ~ (P
-      .defer(ValueToken.`_value`)
+    ).lift ~ (ValueToken.`value`
       .repSep0(`,`) <* `]`)).map { case (mode, vals) =>
       CollectionToken(mode, vals)
     }
@@ -82,7 +82,7 @@ object CallArrowToken {
   val callArrow: P[CallArrowToken[Span.S]] =
     ((Ability.dotted <* `.`).?.with1 ~
       (Name.p
-        ~ comma0(ValueToken.`_value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`))
+        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`))
         .withContext(
           "Missing braces '()' after the function call"
         )).map { case (ab, (fn, args)) =>
@@ -109,62 +109,165 @@ case class InfixToken[F[_]: Comonad](
 
 object InfixToken {
 
-  enum Op:
-    case Pow
-    case Mul
-    case Div
-    case Rem
-    case Add
-    case Sub
-    case Gt
-    case Gte
-    case Lt
-    case Lte
+  import ValueToken._
 
-  val ops: List[P[Span.S[Op]]] =
-    List(
-      `**`.as(Op.Pow),
-      `*`.as(Op.Mul),
-      `/`.as(Op.Div),
-      `%`.as(Op.Rem),
-      `-`.as(Op.Sub),
-      `+`.as(Op.Add),
-      `>`.as(Op.Gt),
-      `>=`.as(Op.Gte),
-      `<`.as(Op.Lt),
-      `<=`.as(Op.Lte)
-    ).map(_.lift)
+  enum Op(val symbol: String):
+    case Pow extends Op("**")
+    case Mul extends Op("*")
+    case Div extends Op("/")
+    case Rem extends Op("%")
+    case Add extends Op("+")
+    case Sub extends Op("-")
+    case Gt extends Op(">")
+    case Gte extends Op(">=")
+    case Lt extends Op("<")
+    case Lte extends Op("<=")
 
-  val postfix: P[ValueToken[Span.S] => InfixToken[Span.S]] =
-    (P
-      .oneOf(ops)
-      .surroundedBy(`/s*`) ~ ValueToken.`_value`).map {
-      case (infix, right) => {
-        case left: InfixToken[Span.S] if left.op.ordinal < infix._2.ordinal =>
-          InfixToken(left.left, InfixToken(left.right, right, infix), left.infix)
-        case left =>
-          right match {
-            case r: InfixToken[Span.S] if r.op.ordinal > infix._2.ordinal =>
-              InfixToken(InfixToken(left, r.left, infix), r.right, r.infix)
-            case _ =>
-              InfixToken(left, right, infix)
-          }
+  private def opsParser(ops: List[Op]): P[(Span, Op)] =
+    P.oneOf(ops.map(op => P.string(op.symbol).lift.map(s => s.as(op))))
+
+  // Parse left-associative operations `basic (OP basic)*`.
+  // We use this form to avoid left recursion.
+  private def infixParserLeft(basic: P[ValueToken[S]], ops: List[Op]) =
+    (basic ~ (opsParser(ops).surroundedBy(`/s*`) ~ basic).backtrack.rep0).map { case (vt, list) =>
+      list.foldLeft(vt) { case (acc, (op, value)) =>
+        InfixToken(acc, value, op)
       }
     }
-}
 
-case class BracketsToken[F[_]: Comonad](value: ValueToken[F]) extends ValueToken[F] {
-  override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] = copy(value.mapK(fk))
+  // Parse right-associative operations: `basic OP recursive`.
+  private def infixParserRight(basic: P[ValueToken[S]], ops: List[Op]): P[ValueToken[S]] =
+    P.recursive { recurse =>
+      (basic ~ (opsParser(ops).surroundedBy(`/s*`) ~ recurse).backtrack.?).map {
+        case (vt, Some((op, recVt))) =>
+          InfixToken(vt, recVt, op)
+        case (vt, None) =>
+          vt
+      }
+    }
 
-  override def as[T](v: T): F[T] = value.as(v)
+  // Parse non-associative operations: `basic OP basic`.
+  private def infixParserNone(basic: P[ValueToken[S]], ops: List[Op]) =
+    (basic ~ (opsParser(ops).surroundedBy(`/s*`) ~ basic).backtrack.?) map {
+      case (leftVt, Some((op, rightVt))) =>
+        InfixToken(leftVt, rightVt, op)
+      case (vt, None) =>
+        vt
+    }
 
-  override def toString: String = s" ( $value ) "
-}
+  def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
+    basic.between(`(`, `)`).backtrack
 
-object BracketsToken {
+  // One element of math expression
+  private val atom: P[ValueToken[S]] = P.oneOf(
+    literal.backtrack ::
+      initPeerId.backtrack ::
+      P.defer(
+        CollectionToken.collection
+      ) ::
+      P.defer(CallArrowToken.callArrow).backtrack ::
+      P.defer(brackets(InfixToken.mathExpr)) ::
+      varLambda ::
+      Nil
+  )
 
-  val brackets: P[BracketsToken[Span.S]] =
-    ValueToken.`_value`.between(`(`, `)`).map(BracketsToken(_))
+  private val pow: P[ValueToken[Span.S]] =
+    infixParserRight(atom, Op.Pow :: Nil)
+
+  private val mult: P[ValueToken[Span.S]] =
+    infixParserLeft(pow, Op.Mul :: Op.Div :: Op.Rem :: Nil)
+
+  private val add: P[ValueToken[Span.S]] =
+    infixParserLeft(mult, Op.Add :: Op.Sub :: Nil)
+
+  private val compare: P[ValueToken[Span.S]] =
+    infixParserNone(
+      add,
+      Op.Gt :: Op.Gte :: Op.Lt :: Op.Lte :: Nil
+    )
+
+  /**
+   * The math expression parser.
+   *
+   * Fist, the general idea. We'll consider only the expressions with operations `+`, `-`, and `*`, with bracket
+   * support. This syntax would typically be defined as follows:
+   *
+   * mathExpr ->
+   *   number
+   *   | mathExpr + mathExpr
+   *   | mathExpr - mathExpr
+   *   | mathExpr * mathExpr
+   *   | ( mathExpr )
+   *
+   * However, this grammar is ambiguous. For example, there are valid two parse trees for string `1 + 3 * 4`:
+   *
+   * 1)
+   *      +
+   *    /   \
+   *   1    *
+   *      /   \
+   *     3     4
+   * 2)
+   *       *
+   *     /   \
+   *    +    4
+   *  /   \
+   * 1     3
+   *
+   * We will instead define the grammar in a way that only allows a single possible parse tree.
+   * This parse tree will have the correct precedence and associativity of the operations built in.
+   *
+   * The intuition behind such grammar rules is as follows.
+   * For example, 1 + 2 - 3 * 4 + 5 * (6 + 1) can be thought of as a string of the form
+   *             `_ + _ - _____ + ___________`, where
+   * the underscores denote products of one or more numbers or bracketed expressions.
+   *
+   * In other words, an expression of this form is *the sum of several products*. We can encode this, as
+   * well as the fact that addition and subtraction are left-associative, as this rule:
+   * addExpr
+   *   -> addExpr ADD_OP multExpr
+   *   | multExpr
+   *
+   * If we parse the string like this, then precedence of `+`, `-`, and `*` will work correctly out of the box,
+   *
+   * The grammar below expresses the operator precedence and associativity we expect from math expressions:
+   *
+   * -- Comparison is the entry point because it has the lowest priority.
+   * mathExpr
+   *   -> cmpExpr
+   *
+   * -- Comparison isn't an associative operation so it's not a recursive definition.
+   * cmpExpr
+   *   -> addExpr CMP_OP addExpr
+   *   | addExpr
+   *
+   * -- Addition is a left associative operation, so it calls itself recursively on the left.
+   * -- To avoid the left recursion problem this is implemented as `multExpr (ADD_OP multExpr)*`.
+   * addExpr
+   *   -> addExpr ADD_OP multExpr
+   *   | multExpr
+   *
+   * -- Multiplication is also a left associative operation, so it calls itself recursively on the left.
+   * -- To avoid the left recursion problem actually we employ the `expExpr (ADD_OP expExpr)*` form.
+   * multExpr
+   *   -> multExpr MULT_OP expExpr
+   *   |  expExpr
+   *
+   * -- Exponentiation is a right associative operation, so it calls itself recursively on the right.
+   * expExpr
+   *   -> atom EXP_OP exprExpr
+   *   | atom
+   *
+   * -- Atomic expression is an expression that can be parsed independently of what's going on around it.
+   * -- For example, an expression in brackets will be parsed the same way regardless of what part of the
+   * -- expression it's in.
+   * atom
+   *   -> number
+   *   | literal
+   *   | ...
+   *   | ( mathExpr )
+   */
+  val mathExpr: P[ValueToken[Span.S]] = compare
 }
 
 object ValueToken {
@@ -208,26 +311,8 @@ object ValueToken {
   val literal: P[LiteralToken[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
-  def `_value`: P[ValueToken[Span.S]] = {
-    val p = P.oneOf(
-      literal.backtrack ::
-        initPeerId.backtrack ::
-        P.defer(
-          CollectionToken.collection
-        ) ::
-        P.defer(CallArrowToken.callArrow).backtrack ::
-        P.defer(BracketsToken.brackets) ::
-        varLambda ::
-        Nil
-    )
-    (p ~ P.defer(InfixToken.postfix.backtrack).?).map {
-      case (left, Some(infixF)) =>
-        infixF(left)
-      case (left, _) => left
-    }
-  }
-
+  // One of entry points for parsing the whole math expression
   val `value`: P[ValueToken[Span.S]] =
-    P.defer(`_value`)
+    P.defer(InfixToken.mathExpr)
 
 }
