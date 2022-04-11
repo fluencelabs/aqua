@@ -3,6 +3,7 @@ package aqua.parser.lexer
 import aqua.parser.Expr
 import aqua.parser.head.FilenameExpr
 import aqua.parser.lexer.Token.*
+import aqua.parser.lexer.ValueToken.{initPeerId, literal}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.types.LiteralType
@@ -108,6 +109,8 @@ case class InfixToken[F[_]: Comonad](
 
 object InfixToken {
 
+  import ValueToken._
+
   enum Op(val symbol: String):
     case Pow extends Op("**")
     case Mul extends Op("*")
@@ -126,11 +129,10 @@ object InfixToken {
   // Parse left-associative operations `basic (OP basic)*`.
   // We use this form to avoid left recursion.
   private def infixParserLeft(basic: P[ValueToken[S]], ops: List[Op]) =
-    (basic ~ (opsParser(ops).surroundedBy(`/s*`) ~ basic).backtrack.rep0).map {
-      case (vt, list) =>
-        list.foldLeft(vt) { case (acc, (op, value)) =>
-          InfixToken(acc, value, op)
-        }
+    (basic ~ (opsParser(ops).surroundedBy(`/s*`) ~ basic).backtrack.rep0).map { case (vt, list) =>
+      list.foldLeft(vt) { case (acc, (op, value)) =>
+        InfixToken(acc, value, op)
+      }
     }
 
   // Parse right-associative operations: `basic OP recursive`.
@@ -153,8 +155,24 @@ object InfixToken {
         vt
     }
 
+  def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
+    basic.between(`(`, `)`).backtrack
+
+  // One element of math expression
+  private val atom: P[ValueToken[S]] = P.oneOf(
+    literal.backtrack ::
+      initPeerId.backtrack ::
+      P.defer(
+        CollectionToken.collection
+      ) ::
+      P.defer(CallArrowToken.callArrow).backtrack ::
+      P.defer(brackets(InfixToken.mathExpr)) ::
+      varLambda ::
+      Nil
+  )
+
   private val pow: P[ValueToken[Span.S]] =
-    infixParserRight(ValueToken.atom, Op.Pow :: Nil)
+    infixParserRight(atom, Op.Pow :: Nil)
 
   private val mult: P[ValueToken[Span.S]] =
     infixParserLeft(pow, Op.Mul :: Op.Div :: Op.Rem :: Nil)
@@ -292,21 +310,6 @@ object ValueToken {
 
   val literal: P[LiteralToken[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
-
-  def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
-    basic.between(`(`, `)`).backtrack
-
-  val atom: P[ValueToken[S]] = P.oneOf(
-    literal.backtrack ::
-      initPeerId.backtrack ::
-      P.defer(
-        CollectionToken.collection
-      ) ::
-      P.defer(CallArrowToken.callArrow).backtrack ::
-      P.defer(brackets(InfixToken.mathExpr)) ::
-      varLambda ::
-      Nil
-  )
 
   // One of entry points for parsing the whole math expression
   val `value`: P[ValueToken[Span.S]] =
