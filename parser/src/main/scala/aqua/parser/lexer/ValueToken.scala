@@ -127,20 +127,22 @@ object InfixToken {
     ).map(_.lift)
 
   private def infixParserLeft(basic: P[ValueToken[S]], ops: List[P[Op]]) =
-    (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).backtrack.rep0).map { case (vt, list) =>
-      list.foldLeft(vt) { case (acc, (op, value)) =>
-        InfixToken(acc, value, op)
-      }
+    (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).backtrack.rep0).map {
+      case (vt, list) =>
+        list.foldLeft(vt) { case (acc, (op, value)) =>
+          InfixToken(acc, value, op)
+        }
     }
 
-  private def infixParserRight(basic: P[ValueToken[S]], ops: List[P[Op]]): P[ValueToken[S]] = P.recursive { recurse =>
-    (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ recurse).backtrack.?).map {
-      case (vt, Some((op, recVt))) =>
-        InfixToken(vt, recVt, op)
-      case (vt, None) =>
-        vt
+  private def infixParserRight(basic: P[ValueToken[S]], ops: List[P[Op]]): P[ValueToken[S]] =
+    P.recursive { recurse =>
+      (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ recurse).backtrack.?).map {
+        case (vt, Some((op, recVt))) =>
+          InfixToken(vt, recVt, op)
+        case (vt, None) =>
+          vt
+      }
     }
-  }
 
   private def infixParserNone(basic: P[ValueToken[S]], ops: List[P[Op]]) =
     (basic ~ (P.oneOf(ops.map(_.lift)).surroundedBy(`/s*`) ~ basic).backtrack.?) map {
@@ -154,13 +156,16 @@ object InfixToken {
     infixParserRight(ValueToken.atom, `**`.as(Op.Pow) :: Nil)
 
   val mult: P[ValueToken[Span.S]] =
-    infixParserLeft(pow, `*`.as(Op.Mul) :: `/`.as(Op.Div) :: `%`.as(Op.Div) :: Nil)
+    infixParserLeft(pow, `*`.as(Op.Mul) :: `/`.as(Op.Div) :: `%`.as(Op.Rem) :: Nil)
 
   val add: P[ValueToken[Span.S]] =
     infixParserLeft(mult, `+`.as(Op.Add) :: `-`.as(Op.Sub) :: Nil)
 
   val compare: P[ValueToken[Span.S]] =
-    infixParserNone(add, `>`.as(Op.Gt) :: `>=`.as(Op.Gte) :: `<`.as(Op.Lt) :: `<=`.as(Op.Lte) :: Nil)
+    infixParserNone(
+      add,
+      `>`.as(Op.Gt) :: `>=`.as(Op.Gte) :: `<`.as(Op.Lt) :: `<=`.as(Op.Lte) :: Nil
+    )
 
   val mathExpr = compare
 }
@@ -206,7 +211,8 @@ object ValueToken {
   val literal: P[LiteralToken[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
-  def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] = basic.between(`(`, `)`).backtrack
+  def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
+    basic.between(`(`, `)`).backtrack
 
   val atom: P[ValueToken[S]] = P.oneOf(
     literal.backtrack ::
