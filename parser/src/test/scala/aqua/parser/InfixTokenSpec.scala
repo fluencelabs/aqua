@@ -88,10 +88,6 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
     vt5 shouldBe add(mul(mul(3, 2), 5), 3)
     vt6 shouldBe add(sub(add(2, mul(3, 2)), mul(3, 5)), 2)
     vt7 shouldBe mul(div(mul(2, 3), 5), 4)
-
-    // todo: add after pow will be right-associative
-    // vt8 shouldBe
-
     vt9 shouldBe gt(5, 4)
     vt10 shouldBe pow(2, pow(3, 4))
     vt11 shouldBe rem(2, 4)
