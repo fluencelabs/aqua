@@ -75,6 +75,11 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
       .right
       .get
       .mapK(spanToId)
+    val vt11 = ValueToken.`_value`
+      .parseAll("2 % 4")
+      .right
+      .get
+      .mapK(spanToId)
 
     vt shouldBe literal(3)
     vt2 shouldBe mul(mul(3, 2), 5)
@@ -89,6 +94,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     vt9 shouldBe gt(5, 4)
     vt10 shouldBe pow(2, pow(3, 4))
+    vt11 shouldBe rem(2, 4)
   }
 
   "primitive math expression" should "be parsed" in {
@@ -210,6 +216,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
       InfixToken(literal(1), InfixToken(literal(2), literal(3), Pow), Pow)
 
   }
+
   "complex math expression with exp" should "be parsed" in {
     // Correct ((1 ** 2) + (((3 ** 4) * (5 ** (6 ** 7))) * 9))
     val vt = ValueToken.`_value`.parseAll("1 ** 2 + 3**4* 5**6 ** 7*9").right.get.mapK(spanToId)
@@ -228,14 +235,9 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
               literal(4),
               Pow
             ),
-          InfixToken(
-            literal(5),
-            InfixToken(
-              literal(6),
-              literal(7),
-              Pow),
-            Pow),
-          Mul),
+            InfixToken(literal(5), InfixToken(literal(6), literal(7), Pow), Pow),
+            Mul
+          ),
           literal(9),
           Mul
         ),
