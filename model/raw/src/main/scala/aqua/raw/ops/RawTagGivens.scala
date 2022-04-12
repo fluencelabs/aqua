@@ -51,6 +51,9 @@ trait RawTagGivens {
         SeqGroupTag.wrap(y.copy(tail = (x.tail, y.tail).mapN(_ ++ _)))
       case (XorTag, ParTag) => XorParTag(x, y).leaf
       case (_, ParTag | XorTag) =>
+        // When right-associative tag is combined with left-associative,
+        // we need result to be left-associative to prevent greedy behavior.
+        // SeqGroupTag does just this.
         SeqGroupTag.wrap(y.copy(tail = y.tail.map(_.prepend(x))))
       case (_, XorParTag(xor, par)) =>
         rightAssocCombine(rightAssocCombine(x, xor), par)
