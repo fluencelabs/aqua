@@ -13,6 +13,6 @@ func test_timeout() -> string:
 
   timeout: *string
   join results[999]
-  par timeout <- Peer.timeout(1000, "timeout")
+  par join results[123]
 
   <- timeout!
