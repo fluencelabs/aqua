@@ -165,9 +165,21 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
     givenType: Type
   ): State[X, Boolean] =
     if (expected.acceptsValueOf(givenType)) State.pure(true)
-    else
-      report(token, s"Types mismatch, expected: $expected, given: $givenType")
+    else {
+      val notes =
+        if (expected.acceptsValueOf(OptionType(givenType)))
+          "note: Try converting value to optional" :: Nil
+        else if (givenType.acceptsValueOf(OptionType(expected)))
+          "note: You're providing an optional value where normal value is expected." ::
+            "You can extract value with `!`, but be aware it may trigger join behaviour." ::
+            Nil
+        else Nil
+      reportError(
+        token,
+        "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
+      )
         .as(false)
+    }
 
   override def expectNoExport(token: Token[S]): State[X, Unit] =
     report(
