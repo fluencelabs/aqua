@@ -1,12 +1,18 @@
-func emptySugar() -> []u32, []string, []string, *string, ?u32, []u32, ?string:
-  numOp = ?[]
-  strArr = []
-  strStream = *[]
-  strEmptyStream: *string
-  for i <- ?[]:
-    strEmptyStream <<- "some"
-  for i <- *[]:
-    strEmptyStream <<- "some"
-  for i <- []:
-    strEmptyStream <<- "some"
-  <- numOp, strArr, strStream, strEmptyStream, [], ?[], *[]
+service Peer("peer"):
+  hodes: -> []string
+  timeout: i32, string -> string
+
+func test_timeout() -> string:
+  on HOST_PEER_ID:
+    nodes <- Peer.hodes()
+    results: *string
+
+    for node <- nodes par:
+      on node:
+        results <<- node
+
+  timeout: *string
+  join results[999]
+  par timeout <- Peer.timeout(1000, "timeout")
+
+  <- timeout!
