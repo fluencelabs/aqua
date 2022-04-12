@@ -1,16 +1,14 @@
 package aqua.raw.ops
 
-import aqua.raw.arrow.FuncRaw
-import aqua.raw.value.ValueRaw
-import aqua.raw.value.CallArrowRaw
-import cats.data.{Chain, NonEmptyList}
-import cats.free.Cofree
-import cats.Show
-import cats.Eval
 import aqua.raw.Raw
+import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag.Tree
+import aqua.raw.value.{CallArrowRaw, ValueRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import aqua.types.{ArrowType, ProductType}
+import cats.{Eval, Show}
+import cats.data.{Chain, NonEmptyList}
+import cats.free.Cofree
 
 sealed trait RawTag extends TreeNode[RawTag] {
 
@@ -100,7 +98,7 @@ case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag {
 }
 
 case class MatchMismatchTag(left: ValueRaw, right: ValueRaw, shouldMatch: Boolean)
-  extends SeqGroupTag {
+    extends SeqGroupTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     MatchMismatchTag(left.map(f), right.map(f), shouldMatch)
@@ -118,9 +116,9 @@ case class ForTag(item: String, iterable: ValueRaw) extends SeqGroupTag {
 }
 
 case class CallArrowRawTag(
-                            exportTo: List[Call.Export],
-                            value: ValueRaw
-                          ) extends RawTag {
+  exportTo: List[Call.Export],
+  value: ValueRaw
+) extends RawTag {
 
   override def exportsVarNames: Set[String] = exportTo.map(_.name).toSet
 
@@ -134,12 +132,12 @@ case class CallArrowRawTag(
 object CallArrowRawTag {
 
   def service(
-               serviceId: ValueRaw,
-               fnName: String,
-               call: Call,
-               name: String = null,
-               arrowType: ArrowType = null
-             ): CallArrowRawTag =
+    serviceId: ValueRaw,
+    fnName: String,
+    call: Call,
+    name: String = null,
+    arrowType: ArrowType = null
+  ): CallArrowRawTag =
     CallArrowRawTag(
       call.exportTo,
       CallArrowRaw(
@@ -167,17 +165,17 @@ object CallArrowRawTag {
 }
 
 case class DeclareStreamTag(
-                             value: ValueRaw
-                           ) extends NoExecTag {
+  value: ValueRaw
+) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     DeclareStreamTag(value.map(f))
 }
 
 case class AssignmentTag(
-                          value: ValueRaw,
-                          assignTo: String
-                        ) extends NoExecTag {
+  value: ValueRaw,
+  assignTo: String
+) extends NoExecTag {
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(assignTo = map.getOrElse(assignTo, assignTo))
@@ -187,9 +185,9 @@ case class AssignmentTag(
 }
 
 case class ClosureTag(
-                       func: FuncRaw,
-                       detach: Boolean
-                     ) extends NoExecTag {
+  func: FuncRaw,
+  detach: Boolean
+) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     copy(
@@ -203,8 +201,8 @@ case class ClosureTag(
 }
 
 case class ReturnTag(
-                      values: NonEmptyList[ValueRaw]
-                    ) extends NoExecTag {
+  values: NonEmptyList[ValueRaw]
+) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     ReturnTag(values.map(_.map(f)))
@@ -213,9 +211,9 @@ case class ReturnTag(
 object EmptyTag extends NoExecTag
 
 case class AbilityIdTag(
-                         value: ValueRaw,
-                         service: String
-                       ) extends NoExecTag {
+  value: ValueRaw,
+  service: String
+) extends NoExecTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     AbilityIdTag(value.map(f), service)
