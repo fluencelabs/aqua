@@ -1,6 +1,6 @@
 package aqua.semantics
 
-import aqua.raw.ops.FuncOp
+import aqua.raw.ops.{FuncOp, SeqGroupTag}
 import aqua.raw.{Raw, RawContext, RawPart}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
@@ -42,7 +42,10 @@ object Semantics extends Logging {
               case (prev, acc) => prev :: acc
             }
           }
-          .map(_.reduceLeftOption(_ |+| _).getOrElse(Raw.empty("AST is empty")))
+          .map(
+            _.reduceLeftOption(_ |+| _)
+              .getOrElse(Raw.empty("AST is empty"))
+          )
       )
   }
 

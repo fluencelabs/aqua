@@ -1,16 +1,14 @@
 package aqua.raw.ops
 
-import aqua.raw.arrow.FuncRaw
-import aqua.raw.value.ValueRaw
-import aqua.raw.value.CallArrowRaw
-import cats.data.{Chain, NonEmptyList}
-import cats.free.Cofree
-import cats.Show
-import cats.Eval
 import aqua.raw.Raw
+import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag.Tree
+import aqua.raw.value.{CallArrowRaw, ValueRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import aqua.types.{ArrowType, ProductType}
+import cats.{Eval, Show}
+import cats.data.{Chain, NonEmptyList}
+import cats.free.Cofree
 
 sealed trait RawTag extends TreeNode[RawTag] {
 
@@ -46,6 +44,16 @@ sealed trait SeqGroupTag extends GroupTag
 
 object SeqGroupTag extends SeqGroupTag {
   override def toString: String = "SeqGroup"
+
+  def ungroupSingle(tree: Tree): Tree = tree.head match {
+    case SeqGroupTag =>
+      val children = tree.tail.value
+      children.headOption.fold(tree) {
+        case h if children.length == 1 => h
+        case _ => tree
+      }
+    case _ => tree
+  }
 }
 
 sealed trait ParGroupTag extends GroupTag

@@ -2,9 +2,10 @@ package aqua.semantics
 
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.names.NamesAlgebra
 import cats.Monad
-import cats.syntax.flatMap._
-import cats.syntax.functor._
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 
 import scala.language.implicitConversions
 
@@ -26,6 +27,14 @@ sealed abstract class Prog[Alg[_]: Monad, A] extends (Alg[A] => Alg[A]) {
       RunAround(
         Ab.beginScope(token),
         (_: Unit, m: A) => Ab.endScope() as m
+      )
+    )
+    
+  def namesScope[S[_]](token: Token[S])(implicit N: NamesAlgebra[S, Alg]): Prog[Alg, A] =
+    wrap(
+      RunAround(
+        N.beginScope(token),
+        (_: Unit, m: A) => N.endScope() as m
       )
     )
 }
