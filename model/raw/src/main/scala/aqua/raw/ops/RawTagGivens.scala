@@ -30,15 +30,19 @@ trait RawTagGivens {
 
   given Semigroup[RawTag.Tree] with
 
-    override def combine(x: RawTag.Tree, y: RawTag.Tree): RawTag.Tree =
-      (x.head, y.head) match {
-        case (_, XorParTag(xor, par)) => combine(combine(x, xor), par)
-        case (XorParTag(xor, par), _) => combine(combine(xor, par), y)
-        case (SeqTag, SeqTag) => y.copy(tail = (x.tail, y.tail).mapN(_ ++ _))
-        case (_, SeqTag) => y.copy(tail = y.tail.map(_.prepend(x)))
-        case (SeqTag, _) => x.copy(tail = x.tail.map(_.append(y)))
-        case _ => SeqTag.wrap(x, y)
+    override def combine(x: RawTag.Tree, y: RawTag.Tree): RawTag.Tree = {
+      // Remove right-asscoc protection of Seq with single child
+      val flatX = SeqGroupTag.ungroupSingle(x)
+      val flatY = SeqGroupTag.ungroupSingle(y)
+      (flatX.head, flatY.head) match {
+        case (_, XorParTag(xor, par)) => combine(combine(flatX, xor), par)
+        case (XorParTag(xor, par), _) => combine(combine(xor, par), flatY)
+        case (SeqTag, SeqTag) => flatY.copy(tail = (flatX.tail, flatY.tail).mapN(_ ++ _))
+        case (_, SeqTag) => flatY.copy(tail = flatY.tail.map(_.prepend(flatX)))
+        case (SeqTag, _) => flatX.copy(tail = flatX.tail.map(_.append(flatY)))
+        case _ => SeqTag.wrap(flatX, flatY)
       }
+    }
 
   // Semigroup for foldRight processing
   def rightAssocCombine(x: RawTag.Tree, y: RawTag.Tree): RawTag.Tree =
