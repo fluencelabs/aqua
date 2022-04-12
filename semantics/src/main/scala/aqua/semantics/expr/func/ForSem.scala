@@ -27,7 +27,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
   ): Prog[F, Raw] =
     Prog
       .around(
-        N.beginScope(expr.item) >> V.valueToRaw(expr.iterable).flatMap[Option[ValueRaw]] {
+        V.valueToRaw(expr.iterable).flatMap[Option[ValueRaw]] {
           case Some(vm) =>
             vm.`type` match {
               case t: BoxType =>
@@ -71,7 +71,8 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                 case _ =>
                   Raw.error("Wrong body of the For expression")
               }
-            ) <* N.endScope()
+            )
       )
+      .namesScope[S](expr.token)
       .abilitiesScope[S](expr.token)
 }
