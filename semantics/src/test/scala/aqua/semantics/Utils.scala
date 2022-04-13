@@ -19,8 +19,8 @@ import monocle.syntax.all.*
 object Utils {
 
   implicit val re: ReportError[Id, CompilerState[Id]] =
-    (st: CompilerState[Id], token: Token[Id], hint: String) =>
-      st.focus(_.errors).modify(_.append(RulesViolated(token, hint)))
+    (st: CompilerState[Id], token: Token[Id], hints: List[String]) =>
+      st.focus(_.errors).modify(_.append(RulesViolated(token, hints)))
 
   implicit val ns: Lens[CompilerState[Id], NamesState[Id]] = GenLens[CompilerState[Id]](_.names)
 

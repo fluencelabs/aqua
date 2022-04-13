@@ -93,7 +93,7 @@ object ErrorRendering {
       Console.RED + err.showForConsole + Console.RESET
     case ResolveImportsErr(_, token, err) =>
       val span = token.unit._1
-      showForConsole("Cannot resolve imports", span, s"${err.showForConsole}" :: Nil)
+      showForConsole("Cannot resolve imports", span, err.showForConsole :: Nil)
 
     case ImportErr(token) =>
       val span = token.unit._1
@@ -102,10 +102,10 @@ object ErrorRendering {
       s"Cycle loops detected in imports: ${modules.map(_.file.fileName)}"
     case CompileError(err) =>
       err match {
-        case RulesViolated(token, message) =>
+        case RulesViolated(token, messages) =>
           token.unit._1
             .focus(0)
-            .map(_.toConsoleStr("Error", message :: Nil, Console.CYAN))
+            .map(_.toConsoleStr("Error", messages, Console.CYAN))
             .getOrElse("(Dup error, but offset is beyond the script)")
         case HeaderError(token, message) =>
           token.unit._1

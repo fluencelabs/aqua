@@ -55,8 +55,8 @@ object Semantics extends Logging {
     import monocle.syntax.all.*
 
     implicit val re: ReportError[S, CompilerState[S]] =
-      (st: CompilerState[S], token: Token[S], hint: String) =>
-        st.focus(_.errors).modify(_.append(RulesViolated(token, hint)))
+      (st: CompilerState[S], token: Token[S], hints: List[String]) =>
+        st.focus(_.errors).modify(_.append(RulesViolated(token, hints)))
 
     implicit val ns: Lens[CompilerState[S], NamesState[S]] = GenLens[CompilerState[S]](_.names)
 
