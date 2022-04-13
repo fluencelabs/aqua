@@ -81,7 +81,7 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
 
     state.errors.headOption.get shouldBe RulesViolated[Id](
       BasicTypeToken[Id](u32),
-      "Types mismatch, expected: u32, given: string"
+      "Types mismatch, expected: u32, given: string" :: Nil
     )
 
   }
