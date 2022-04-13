@@ -93,7 +93,7 @@ object ErrorRendering {
       Console.RED + err.showForConsole + Console.RESET
     case ResolveImportsErr(_, token, err) =>
       val span = token.unit._1
-      showForConsole("Cannot resolve imports", span, s"${err.showForConsole}" :: Nil)
+      showForConsole("Cannot resolve imports", span, err.showForConsole :: Nil)
 
     case ImportErr(token) =>
       val span = token.unit._1
