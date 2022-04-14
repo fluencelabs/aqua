@@ -18,6 +18,7 @@ import cats.{~>, Id}
 import com.monovore.decline.Opts
 import fs2.io.file.Files
 
+import scala.collection.immutable.SortedMap
 import scala.scalajs.js
 import scala.scalajs.js.JSON
 
@@ -83,10 +84,11 @@ object ArgOpts {
 
   // TODO: it is hack, will be deleted after we will have context with types on this stage
   def jsTypeToAqua(name: String, arg: js.Dynamic): ValidatedNec[String, Type] = {
+    val t = js.typeOf(arg)
     arg match {
-      case a if js.typeOf(a) == "string" => validNec(ScalarType.string)
-      case a if js.typeOf(a) == "number" => validNec(ScalarType.u64)
-      case a if js.typeOf(a) == "boolean" => validNec(ScalarType.bool)
+      case a if t == "string" => validNec(ScalarType.string)
+      case a if t == "number" => validNec(ScalarType.u64)
+      case a if t == "boolean" => validNec(ScalarType.bool)
       case a if js.Array.isArray(a) =>
         // if all types are similar it will be array array with this type
         // otherwise array with bottom type
@@ -98,6 +100,13 @@ object ArgOpts {
           else if (elementsTypes.forall(_ == elementsTypes.head))
             validNec(ArrayType(elementsTypes.head))
           else invalidNec(s"All array elements in '$name' argument must be of the same type.")
+        }
+      case a if t == "object" && !js.isUndefined(arg) && arg != null =>
+        val dict = arg.asInstanceOf[js.Dictionary[js.Dynamic]]
+        val keys = dict.keys
+        keys.map(k => jsTypeToAqua(k, arg.selectDynamic(k)).map(t => k -> t)).toList.sequence.map {
+          fields =>
+            StructType("", NonEmptyMap.fromMap(SortedMap(fields: _*)).get)
         }
 
       case _ => validNec(BottomType)
