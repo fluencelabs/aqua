@@ -54,21 +54,27 @@ object CompareTypes {
       case _ => Double.NaN
     }
 
-  private def compareStructs(lf: NonEmptyMap[String, Type], rf: NonEmptyMap[String, Type]): Double =
-    if (lf.toSortedMap == rf.toSortedMap) 0.0
+  private def compareStructs(
+    lfNEM: NonEmptyMap[String, Type],
+    rfNEM: NonEmptyMap[String, Type]
+  ): Double = {
+    val lf = lfNEM.toSortedMap
+    val rf = rfNEM.toSortedMap
+    if (lf == rf) 0.0
     else if (
       lf.keys.forall(rf.contains) && compareTypesList(
-        lf.toSortedMap.toList.map(_._2),
-        rf.toSortedMap.view.filterKeys(lf.keys.contains).toList.map(_._2)
+        lf.view.values.toList,
+        rf.view.filterKeys(lfNEM.keys.contains).values.toList
       ) == -1.0
     ) 1.0
     else if (
       rf.keys.forall(lf.contains) && compareTypesList(
-        lf.toSortedMap.view.filterKeys(rf.keys.contains).toList.map(_._2),
-        rf.toSortedMap.toList.map(_._2)
+        lf.view.filterKeys(rfNEM.keys.contains).values.toList,
+        rf.view.values.toList
       ) == 1.0
     ) -1.0
     else NaN
+  }
 
   private def compareProducts(l: ProductType, r: ProductType): Double = ((l, r): @unchecked) match {
     case (NilType, NilType) => 0.0
