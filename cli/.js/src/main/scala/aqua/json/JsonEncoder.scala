@@ -15,7 +15,22 @@ import scala.scalajs.js
 
 object JsonEncoder {
 
-  def compareAndGetBiggest(
+  /* Get widest possible type from JSON arrays. For example:
+  JSON: {
+          field1: [
+                  {
+                    a: "a",
+                    b: [1,2,3],
+                    c: 4
+                  },
+                  {
+                    c: 3
+                  }
+                  ]
+        }
+  There type in array must be { a: ?string, b: []number, c: number
+   */
+  def compareAndGetWidestType(
     name: String,
     ltV: ValidatedNec[String, Type],
     rtV: ValidatedNec[String, Type]
@@ -40,9 +55,11 @@ object JsonEncoder {
               .mapValues(_.map(_._2))
               .map {
                 case (name, t :: Nil) =>
-                  compareAndGetBiggest(name, validNec(t), validNec(BottomType)).map(t => (name, t))
+                  compareAndGetWidestType(name, validNec(t), validNec(BottomType)).map(t =>
+                    (name, t)
+                  )
                 case (name, lt :: rt :: Nil) =>
-                  compareAndGetBiggest(name, validNec(lt), validNec(rt)).map(t => (name, t))
+                  compareAndGetWidestType(name, validNec(lt), validNec(rt)).map(t => (name, t))
                 case _ => invalidNec("Unexpected")
               }
               .toList
@@ -59,9 +76,9 @@ object JsonEncoder {
       case (_, r @ Validated.Invalid(_)) =>
         r
     }
-
   }
 
+  // Gather all information about all fields in JSON and create Aqua type.
   def aquaTypeFromJson(name: String, arg: js.Dynamic): ValidatedNec[String, Type] = {
     val t = js.typeOf(arg)
     arg match {
@@ -81,7 +98,7 @@ object JsonEncoder {
             elementsTypes
               .map(el => validNec(el))
               .reduce[ValidatedNec[String, Type]] { case (l, t) =>
-                compareAndGetBiggest(name, l, t)
+                compareAndGetWidestType(name, l, t)
               }
               .map(t => ArrayType(t))
           }
