@@ -14,9 +14,12 @@ object IPFSUploader extends Logging {
   private def uploadFunc(funcName: String): AquaFunction = new AquaFunction {
     override def fnName: String = funcName
 
+    private def logError(s: String) = logger.error(s)
+    private def logInfo(s: String) = logger.info(s)
+
     override def handler: ServiceHandler = args => {
       IpfsApi
-        .uploadFile(args(0), args(1), logger.info: String => Unit, logger.error: String => Unit)
+        .uploadFile(args(0), args(1), logError, logInfo)
         .`catch` { err =>
           js.Dynamic.literal(error = "Error on uploading file: " + err)
         }
