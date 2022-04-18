@@ -48,8 +48,7 @@ object JsonEncoder {
           case (lst: StructType, rst: StructType) =>
             val lFieldsSM: SortedMap[String, Type] = lst.fields.toSortedMap
             val rFieldsSM: SortedMap[String, Type] = rst.fields.toSortedMap
-            val a = lFieldsSM.toList ++ rFieldsSM.toList
-            val z: ValidatedNec[String, NonEmptyMap[String, Type]] = a
+            (lFieldsSM.toList ++ rFieldsSM.toList)
               .groupBy(_._1)
               .view
               .mapValues(_.map(_._2))
@@ -60,12 +59,12 @@ object JsonEncoder {
                   )
                 case (name, lt :: rt :: Nil) =>
                   compareAndGetWidestType(name, validNec(lt), validNec(rt)).map(t => (name, t))
-                case _ => invalidNec("Unexpected")
+                case _ => invalidNec("Unexpected. The list can only have 1 or 2 arguments.")
               }
               .toList
               .sequence
               .map(processedFields => NonEmptyMap.fromMap(SortedMap(processedFields: _*)).get)
-            z.map(mt => StructType("", mt))
+              .map(mt => StructType("", mt))
           case (a, b) =>
             invalidNec(s"Types in '$name' array should be the same")
         }
