@@ -36,6 +36,8 @@ class Runner(
     }
   import aqua.types.Type.typesPartialOrder
 
+  // Compare and validate type generated from JSON and type from Aqua file.
+  // Also, validation will be success if array or optional field will be missed in JSON type
   def validateTypes(name: String, lt: Type, rtOp: Option[Type]): ValidatedNec[String, Unit] = {
     rtOp match {
       case None =>

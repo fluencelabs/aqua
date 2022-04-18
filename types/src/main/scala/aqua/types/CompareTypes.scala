@@ -60,17 +60,19 @@ object CompareTypes {
   ): Double = {
     val lf = lfNEM.toSortedMap
     val rf = rfNEM.toSortedMap
+    val lfView = lf.view
+    val rfView = rf.view
     if (lf == rf) 0.0
     else if (
       lf.keys.forall(rf.contains) && compareTypesList(
-        lf.view.values.toList,
-        rf.view.filterKeys(lfNEM.keys.contains).values.toList
+        lfView.values.toList,
+        rfView.filterKeys(lfNEM.keys.contains).values.toList
       ) == -1.0
     ) 1.0
     else if (
       rf.keys.forall(lf.contains) && compareTypesList(
-        lf.view.filterKeys(rfNEM.keys.contains).values.toList,
-        rf.view.values.toList
+        lfView.filterKeys(rfNEM.keys.contains).values.toList,
+        rfView.values.toList
       ) == 1.0
     ) -1.0
     else NaN
