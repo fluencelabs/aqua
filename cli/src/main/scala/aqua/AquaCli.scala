@@ -82,8 +82,6 @@ object AquaCli extends IOApp with Logging {
             isDryRun,
             isScheduled
           ) =>
-        LogFormatter.initLogger(Some(logLevel))
-
         val toAir = toAirOp || isScheduled
         val noXor = noXorOp || isScheduled
         val noRelay = noRelayOp || isScheduled

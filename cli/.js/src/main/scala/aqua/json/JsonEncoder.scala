@@ -92,7 +92,6 @@ object JsonEncoder {
           a.asInstanceOf[js.Array[js.Dynamic]].map(ar => aquaTypeFromJson(name, ar)).toList.sequence
 
         elementsTypesV.andThen { elementsTypes =>
-          println("raw: " + elementsTypes)
           if (elementsTypes.isEmpty) validNec(ArrayType(BottomType))
           else {
             elementsTypes
