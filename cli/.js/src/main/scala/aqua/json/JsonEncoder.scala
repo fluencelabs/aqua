@@ -39,12 +39,12 @@ object JsonEncoder {
       case (Validated.Valid(lt), Validated.Valid(rt)) =>
         (lt, rt) match {
           case (lt, rt) if lt == rt => validNec(lt)
-          case (_ @BottomType, ra @ ArrayType(_)) => validNec(ra)
-          case (la @ ArrayType(_), _ @BottomType) => validNec(la)
+          case (BottomType, ra @ ArrayType(_)) => validNec(ra)
+          case (la @ ArrayType(_), BottomType) => validNec(la)
           case (lo @ OptionType(lel), rtt) if lel == rtt => validNec(lo)
           case (ltt, ro @ OptionType(rel)) if ltt == rel => validNec(ro)
-          case (_ @BottomType, rb) => validNec(OptionType(rb))
-          case (lb, _ @BottomType) => validNec(OptionType(lb))
+          case (BottomType, rb) => validNec(OptionType(rb))
+          case (lb, BottomType) => validNec(OptionType(lb))
           case (lst: StructType, rst: StructType) =>
             val lFieldsSM: SortedMap[String, Type] = lst.fields.toSortedMap
             val rFieldsSM: SortedMap[String, Type] = rst.fields.toSortedMap
@@ -59,7 +59,9 @@ object JsonEncoder {
                   )
                 case (name, lt :: rt :: Nil) =>
                   compareAndGetWidestType(name, validNec(lt), validNec(rt)).map(t => (name, t))
-                case _ => invalidNec("Unexpected. The list can only have 1 or 2 arguments.")
+                case _ =>
+                  // this is internal error.This Can't happen
+                  invalidNec("Unexpected. The list can only have 1 or 2 arguments.")
               }
               .toList
               .sequence

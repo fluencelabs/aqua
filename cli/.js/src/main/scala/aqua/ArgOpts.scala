@@ -49,7 +49,6 @@ object ArgOpts {
               case LiteralToken(value, ts) =>
                 validNel(LiteralRaw(value, ts))
               case VarToken(name, _) =>
-                // TODO it will be changed after 'jsTypeToAqua'
                 validNel(VarRaw(name.value, BottomType))
               case CollectionToken(_, _) =>
                 invalidNel("Array argument in function call not supported. Pass it through JSON.")
