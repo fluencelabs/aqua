@@ -1,23 +1,26 @@
 package aqua
 
 import aqua.builder.ArgumentGetter
+import aqua.json.JsonEncoder
 import aqua.parser.expr.func.CallArrowExpr
-import aqua.parser.lexer.{CallArrowToken, LiteralToken, VarToken}
+import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToken}
 import aqua.parser.lift.Span
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
-import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
+import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.data.*
 import cats.effect.Concurrent
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
+import cats.syntax.semigroup.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{~>, Id}
+import cats.{~>, Id, Semigroup}
 import com.monovore.decline.Opts
 import fs2.io.file.Files
 
+import scala.collection.immutable.SortedMap
 import scala.scalajs.js
 import scala.scalajs.js.JSON
 
@@ -42,15 +45,19 @@ object ArgOpts {
           case Right(exprSpan) =>
             val expr = exprSpan.mapK(spanToId)
 
-            val args = expr.args.collect {
+            val argsV = expr.args.collect {
               case LiteralToken(value, ts) =>
-                LiteralRaw(value, ts)
+                validNel(LiteralRaw(value, ts))
               case VarToken(name, _) =>
-                // TODO why BottomType?
-                VarRaw(name.value, BottomType)
-            }
-
-            validNel(CliFunc(expr.funcName.value, args, expr.ability.map(_.name)))
+                validNel(VarRaw(name.value, BottomType))
+              case CollectionToken(_, _) =>
+                invalidNel("Array argument in function call not supported. Pass it through JSON.")
+              case CallArrowToken(_, _, _) =>
+                invalidNel("Function call as argument not supported.")
+            }.sequence
+            argsV.andThen(args =>
+              validNel(CliFunc(expr.funcName.value, args, expr.ability.map(_.name)))
+            )
 
           case Left(err) => invalid(err.expected.map(_.context.mkString("\n")))
         }
@@ -81,29 +88,6 @@ object ArgOpts {
     }
   }
 
-  // TODO: it is hack, will be deleted after we will have context with types on this stage
-  def jsTypeToAqua(name: String, arg: js.Dynamic): ValidatedNec[String, Type] = {
-    arg match {
-      case a if js.typeOf(a) == "string" => validNec(ScalarType.string)
-      case a if js.typeOf(a) == "number" => validNec(ScalarType.u64)
-      case a if js.typeOf(a) == "boolean" => validNec(ScalarType.bool)
-      case a if js.Array.isArray(a) =>
-        // if all types are similar it will be array array with this type
-        // otherwise array with bottom type
-        val elementsTypesV: ValidatedNec[String, List[Type]] =
-          a.asInstanceOf[js.Array[js.Dynamic]].map(ar => jsTypeToAqua(name, ar)).toList.sequence
-
-        elementsTypesV.andThen { elementsTypes =>
-          if (elementsTypes.isEmpty) validNec(ArrayType(BottomType))
-          else if (elementsTypes.forall(_ == elementsTypes.head))
-            validNec(ArrayType(elementsTypes.head))
-          else invalidNec(s"All array elements in '$name' argument must be of the same type.")
-        }
-
-      case _ => validNec(BottomType)
-    }
-  }
-
   // checks if data is presented if there is non-literals in function arguments
   // creates services to add this data into a call
   def checkDataGetServices(
@@ -128,7 +112,7 @@ object ArgOpts {
             else a
           }
 
-          val typeV = jsTypeToAqua(vm.name, arg)
+          val typeV = JsonEncoder.aquaTypeFromJson(vm.name, arg)
 
           typeV.map(t => (vm.copy(baseType = t), arg))
         }.sequence

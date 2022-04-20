@@ -5,6 +5,7 @@ import aqua.backend.FunctionDef
 import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter}
 import aqua.io.OutputPrinter
+import cats.data.Validated.{invalidNec, validNec}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, SeqTag}
@@ -14,8 +15,11 @@ import cats.data.{Validated, ValidatedNec}
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*
 import cats.syntax.show.*
+import cats.syntax.flatMap.*
 import cats.syntax.traverse.*
+import cats.syntax.partialOrder._
 
+import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js
 
@@ -30,30 +34,100 @@ class Runner(
     funcCallable.arrowType.codomain.toList.zipWithIndex.map { case (t, idx) =>
       name + idx
     }
+  import aqua.types.Type.typesPartialOrder
+
+  // Compare and validate type generated from JSON and type from Aqua file.
+  // Also, validation will be success if array or optional field will be missed in JSON type
+  def validateTypes(name: String, lt: Type, rtOp: Option[Type]): ValidatedNec[String, Unit] = {
+    rtOp match {
+      case None =>
+        lt match {
+          case tb: BoxType =>
+            validNec(())
+          case _ =>
+            invalidNec(s"Missed field $name in arguments")
+        }
+      case Some(rt) =>
+        (lt, rt) match {
+          case (l: StructType, r: StructType) =>
+            val lsm: SortedMap[String, Type] = l.fields.toSortedMap
+            val rsm: SortedMap[String, Type] = r.fields.toSortedMap
+
+            lsm.map { case (n, ltt) =>
+              validateTypes(s"$name.$n", ltt, rsm.get(n))
+            }.toList.sequence.map(_ => ())
+          case (l: BoxType, r: BoxType) =>
+            validateTypes(name, l.element, Some(r.element))
+          case (l: BoxType, r) =>
+            validateTypes(name, l.element, Some(r))
+          case (l, r) =>
+            if (l >= r) validNec(())
+            else
+              invalidNec(
+                s"Type for field '$name' mismatch with argument. Expected: '$l' Given: '$r'"
+              )
+        }
+    }
+
+  }
+
+  def validateArguments(
+    funcDomain: List[(String, Type)],
+    args: List[ValueRaw]
+  ): ValidatedNec[String, Unit] = {
+    if (funcDomain.size != args.length) {
+      invalidNec(
+        s"Number of arguments (${args.length}) does not match what the function requires (${funcDomain.size})."
+      )
+    } else {
+      funcDomain
+        .zip(args)
+        .map { case ((name, lt), rt) =>
+          rt match {
+            case VarRaw(n, t) =>
+              validateTypes(n, lt, Some(rt.`type`))
+            case _ =>
+              validateTypes(name, lt, Some(rt.`type`))
+          }
+
+        }
+        .sequence
+        .map(_ => ())
+    }
+  }
 
   // Wraps function with necessary services, registers services and calls wrapped function with FluenceJS
   def run[F[_]: Async](): F[ValidatedNec[String, Unit]] = {
-    val resultNames = resultVariableNames(funcCallable, config.resultName)
-    val resultPrinterService =
-      ResultPrinter(config.resultPrinterServiceId, config.resultPrinterName, resultNames)
-    val promiseFinisherService =
-      Finisher(config.finisherServiceId, config.finisherFnName)
+    validateArguments(
+      funcCallable.arrowType.domain.labelledData,
+      func.args
+    ) match {
+      case Validated.Valid(_) =>
+        val resultNames = resultVariableNames(funcCallable, config.resultName)
+        val resultPrinterService =
+          ResultPrinter(config.resultPrinterServiceId, config.resultPrinterName, resultNames)
+        val promiseFinisherService =
+          Finisher(config.finisherServiceId, config.finisherFnName)
 
-    val wrappedV = wrapCall(
-      resultPrinterService,
-      promiseFinisherService
-    )
-
-    // call an input function from a generated function
-    wrappedV match {
-      case Validated.Valid(wrapped) =>
-        genAirAndMakeCall[F](
-          wrapped,
+        val wrappedV = wrapCall(
           resultPrinterService,
           promiseFinisherService
         )
-      case i @ Validated.Invalid(_) => i.pure[F]
+
+        // call an input function from a generated function
+        wrappedV match {
+          case Validated.Valid(wrapped) =>
+            genAirAndMakeCall[F](
+              wrapped,
+              resultPrinterService,
+              promiseFinisherService
+            )
+          case i @ Validated.Invalid(_) => i.pure[F]
+        }
+      case v @ Validated.Invalid(_) =>
+        v.pure[F]
     }
+
   }
 
   // Generates air from function, register all services and make a call through FluenceJS

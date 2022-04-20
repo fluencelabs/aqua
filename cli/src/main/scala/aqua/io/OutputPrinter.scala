@@ -9,6 +9,6 @@ object OutputPrinter {
   }
 
   def error(str: String): Unit = {
-    println(str)
+    println(Console.RED + str + Console.RESET)
   }
 }

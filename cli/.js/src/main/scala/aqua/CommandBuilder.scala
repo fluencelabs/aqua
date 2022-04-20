@@ -60,7 +60,7 @@ class SubCommandBuilder[F[_]: Async](
             )
           }
         case Validated.Invalid(errs) =>
-          errs.map(logger.error)
+          errs.map(e => logger.error(e))
           ExitCode.Error.pure[F]
       }
     }
