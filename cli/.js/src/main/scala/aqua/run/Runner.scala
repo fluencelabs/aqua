@@ -83,7 +83,13 @@ class Runner(
       funcDomain
         .zip(args)
         .map { case ((name, lt), rt) =>
-          validateTypes(name, lt, Some(rt.`type`))
+          rt match {
+            case VarRaw(n, t) =>
+              validateTypes(n, lt, Some(rt.`type`))
+            case _ =>
+              validateTypes(name, lt, Some(rt.`type`))
+          }
+
         }
         .sequence
         .map(_ => ())
