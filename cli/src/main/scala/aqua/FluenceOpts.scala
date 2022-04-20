@@ -15,7 +15,7 @@ object FluenceOpts {
   val onOpt: Opts[Option[String]] =
     AppOpts.wrapWithOption(
       Opts
-        .option[String]("on", "Where function will be run. Default: host_peer_id", "o", "peerId")
+        .option[String]("on", "peerId of the peer that will be executing the function. Default: host_peer_id", "o", "peerId")
     )
 
   val showConfigOpt: Opts[Boolean] =
@@ -57,7 +57,8 @@ object FluenceOpts {
       .get(logLevel.toLowerCase)
       .toRight(
         NonEmptyList(
-          "log-level could be only 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'",
+          // TODO: maybe print the log level user tried to use inside the error message
+          "Unknown log-level. Please use one of these: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'",
           Nil
         )
       )

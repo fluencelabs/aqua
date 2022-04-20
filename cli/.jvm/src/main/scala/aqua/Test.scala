@@ -34,7 +34,7 @@ object Test extends IOApp.Simple {
           case Validated.Valid(res) =>
             res.map(println): Unit
         }
-      _ <- IO.println("Compilation ends in : " + (System.currentTimeMillis() - start) + " ms")
+      _ <- IO.println("Compilation ends in: " + (System.currentTimeMillis() - start) + " ms")
     } yield ()
   }
 

@@ -51,9 +51,9 @@ object ArgOpts {
               case VarToken(name, _) =>
                 validNel(VarRaw(name.value, BottomType))
               case CollectionToken(_, _) =>
-                invalidNel("Array argument in function call not supported. Pass it through JSON.")
+                invalidNel("Array arguments are currently not supported. Use JSON instead.")
               case CallArrowToken(_, _, _) =>
-                invalidNel("Function call as argument not supported.")
+                invalidNel("Function calls as arguments are not supported.")
             }.sequence
             argsV.andThen(args =>
               validNel(CliFunc(expr.funcName.value, args, expr.ability.map(_.name)))
@@ -101,7 +101,8 @@ object ArgOpts {
 
     data match {
       case None if vars.nonEmpty =>
-        invalidNec("Function have non-literals, so, data should be presented")
+        // TODO: replace someArguments with actual argument names that where present in the function call
+        invalidNec("Function call has '(someArguments)' but you didn't provide data or data-path argument when you called 'aqua run'. If you want to pass JSON data as an argument please provide data or data-path argument.")
       case None =>
         validNec((cliFunc, Map.empty))
       case Some(data) =>
@@ -135,26 +136,26 @@ object ArgOpts {
 
   def dataOpt: Opts[js.Dynamic] =
     Opts
-      .option[String]("data", "Argument map for aqua function in JSON format", "d", "json")
+      .option[String]("data", "Arguments map in JSON format. Example: aqua run -d '{\"someArg1\": [1,2,3], \"someArg2\": 1}' -f 'someFunc(someArg1, someArg2)' -i aqua -a /dns4/stage.fluence.dev/tcp/19001/wss/p2p/12D3KooWHCJbJKGDfCgHSoCuK9q4STyRnVveqLoXAPBbXHTZx9Cv", "d", "json")
       .mapValidated { str =>
         Validated.catchNonFatal {
           JSON.parse(str)
-        }.leftMap(t => NonEmptyList.one("Data isn't a valid JSON: " + t.getMessage))
+        }.leftMap(t => NonEmptyList.one("Data argument isn't a valid JSON: " + t.getMessage))
       }
 
   def dataFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, js.Dynamic]]] = {
-    jsonFromFileOpt("data-path", "Path to file with arguments map in JSON format", "p")
+    jsonFromFileOpt("data-path", "Path to a file with arguments map in JSON format. Example: aqua run -p ./some.json -f 'someFunc(someArg1, someArg2)' -i aqua -a /dns4/stage.fluence.dev/tcp/19001/wss/p2p/12D3KooWHCJbJKGDfCgHSoCuK9q4STyRnVveqLoXAPBbXHTZx9Cv", "p")
   }
 
   def jsonFromFileOpt[F[_]: Files: Concurrent](
     name: String,
-    help: String = "",
-    short: String = ""
+    help: String,
+    short: String
   ): Opts[F[ValidatedNec[String, js.Dynamic]]] = {
     FileOpts.fileOpt(
-      "data-path",
-      "Path to file with arguments map in JSON format",
-      "p",
+      name,
+      help,
+      short,
       (path, str) => {
         Validated.catchNonFatal {
           JSON.parse(str)
@@ -173,7 +174,8 @@ object ArgOpts {
   ): ValidatedNec[String, Option[js.Dynamic]] = {
     (dataFromArgument, dataFromFile) match {
       case (Some(_), Some(_)) =>
-        invalidNec("Pass either data argument or path to file with arguments")
+        // TODO: maybe allow to use both and simple merge with data argument having higher priority
+        invalidNec("Please you either data or data-path argument. Don't use both")
       case _ => validNec(dataFromArgument.orElse(dataFromFile))
     }
   }

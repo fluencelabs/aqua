@@ -37,14 +37,14 @@ object ConfigOpts {
           validNel(FluenceEnvironment.stage)
         case e =>
           invalidNel(
-            s"There is no environment '$e' in our list. Use this: '$Krasnodar', '$TestNet', '$Stage'"
+            s"There is no environment '$e' in our list. Use one of these: '$Krasnodar', '$TestNet', '$Stage'"
           )
       }
 
   def listPeers[F[_]: Applicative]: Command[F[ExitCode]] =
     Command(
       name = "default_peers",
-      header = "List addresses of default peers in Fluence network"
+      header = "List addresses of the default peers in Fluence network"
     ) {
       envArg.map { env =>
         println(env.toList.map(n => n.multiaddr).mkString("\n"))

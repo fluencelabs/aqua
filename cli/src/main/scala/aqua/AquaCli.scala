@@ -107,7 +107,7 @@ object AquaCli extends IOApp with Logging {
                     Validated
                       .invalidNec(
                         "Output path should be specified ('--output' or '-o'). " +
-                          "Add '--dry' to check compilation without output"
+                          "Use '--dry' option if you just want to check that the code compiles and you don't need any output"
                       )
                       .pure[F]
                   else {

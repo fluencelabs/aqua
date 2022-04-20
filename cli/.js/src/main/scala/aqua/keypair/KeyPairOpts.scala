@@ -28,7 +28,7 @@ object KeyPairOpts extends Logging {
   def createKeypair[F[_]: Async]: Command[F[ExitCode]] =
     Command(
       name = "create",
-      header = "Create a new keypair"
+      header = "Generate new key pair"
     ) {
       Opts.unit.map(_ =>
         Async[F]

@@ -100,7 +100,7 @@ object FuncCaller {
   }
 
   val TimeoutErrorMessage =
-    "Function execution failed by timeout. You can increase timeout with '--timeout' option in milliseconds or check if your code can hang while executing."
+    "Function execution failed by timeout. You can increase the timeout with '--timeout' option in milliseconds or check if your code can hang while executing."
 
   private def handleFuncCallErrors: PartialFunction[Throwable, ValidatedNec[String, Unit]] = { t =>
     val message =

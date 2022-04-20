@@ -37,7 +37,7 @@ object DistOpts extends Logging {
 
   def srvNameOpt: Opts[String] =
     Opts
-      .option[String]("service", "What service from the config file to deploy", "s")
+      .option[String]("service", "Service from the config file that we want to deploy", "s")
 
   def srvIdOpt: Opts[String] =
     Opts
@@ -166,7 +166,7 @@ object DistOpts extends Logging {
                     )
                   )
                 case None =>
-                  invalidNec(s"No service '$srvName' in config.")
+                  invalidNec(s"No service '$srvName' in the config.")
 
               }
             )
