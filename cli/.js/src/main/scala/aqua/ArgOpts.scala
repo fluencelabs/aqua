@@ -5,7 +5,7 @@ import aqua.json.JsonEncoder
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToken}
 import aqua.parser.lift.Span
-import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.raw.value.{CollectionRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
 import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.data.*
@@ -50,8 +50,31 @@ object ArgOpts {
                 validNel(LiteralRaw(value, ts))
               case VarToken(name, _) =>
                 validNel(VarRaw(name.value, BottomType))
-              case CollectionToken(_, _) =>
-                invalidNel("Array argument in function call not supported. Pass it through JSON.")
+              case CollectionToken(_, values) =>
+                val hasVariables = values.exists {
+                  case LiteralToken(_, _) => false
+                  case _ => true
+                }
+                if (!hasVariables) {
+                  val literals = values.collect { case LiteralToken(value, ts) =>
+                    LiteralRaw(value, ts)
+                  }
+                  val hasSameTypesOrEmpty =
+                    literals.isEmpty || literals.map(_.baseType).toSet.size == 1
+
+                  if (hasSameTypesOrEmpty) {
+                    validNel(
+                      NonEmptyList
+                        .fromList(literals)
+                        .map(l => CollectionRaw(l, ArrayType(l.head.baseType)))
+                        .getOrElse(ValueRaw.Nil)
+                    )
+                  } else
+                    invalidNel(
+                      "If the argument is an array, then it must contain elements of the same type."
+                    )
+
+                } else invalidNel("Array arguments with variables are not supported.")
               case CallArrowToken(_, _, _) =>
                 invalidNel("Function call as argument not supported.")
             }.sequence
