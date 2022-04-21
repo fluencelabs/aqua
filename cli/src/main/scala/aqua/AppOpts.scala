@@ -86,7 +86,7 @@ object AppOpts {
             if (exists && isDir) Validated.validNec[String, Path](p)
             else
               Validated.invalidNec[String, Path](
-                s"'${p.toString}' path does not lead to a directory"
+                s"${p.toString}: No such directory"
               )
           }
         }

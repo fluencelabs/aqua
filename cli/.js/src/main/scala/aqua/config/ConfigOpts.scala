@@ -44,7 +44,7 @@ object ConfigOpts {
   def listPeers[F[_]: Applicative]: Command[F[ExitCode]] =
     Command(
       name = "default_peers",
-      header = "List addresses of the default peers in Fluence network"
+      header = "List addresses of default peers in Fluence network"
     ) {
       envArg.map { env =>
         println(env.toList.map(n => n.multiaddr).mkString("\n"))

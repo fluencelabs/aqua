@@ -15,7 +15,7 @@ object FluenceOpts {
   val onOpt: Opts[Option[String]] =
     AppOpts.wrapWithOption(
       Opts
-        .option[String]("on", "peerId of the peer that will be executing the function. Default: host_peer_id", "o", "peerId")
+        .option[String]("on", "peerId of the peer that will execute the function. Default: host_peer_id", "o", "peerId")
     )
 
   val showConfigOpt: Opts[Boolean] =

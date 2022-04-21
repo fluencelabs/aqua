@@ -169,7 +169,7 @@ class Runner(
         case (Some(s), _: BoxType) if s.function.arg == js.undefined => Validated.validNec(s :: Nil)
         case (Some(s), _) if s.function.arg == js.undefined =>
           Validated.invalidNec(
-            s"Argument '$n' is undefined, but it must be of '$argType' type"
+            s"Argument '$n' is missing. Expected argument '$n' of type '$argType'"
           )
         case (Some(s), _) => Validated.validNec(s :: Nil)
       }
