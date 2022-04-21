@@ -37,11 +37,13 @@ object ConstantExpr extends Expr.Leaf {
       case ((name, mark), value) =>
         value match {
           case CollectionToken(point, _) =>
-            P.failWith("The constant cannot be an array")
+            P.failWith("The constant cannot be an array. It can only be a number or a string.")
           case CallArrowToken(_, _, _) =>
-            P.failWith("The constant cannot be a function call")
+            P.failWith(
+              "The constant cannot be a function call. It can only be a number or a string."
+            )
           case InfixToken(_, _, _) =>
-            P.failWith("The constant cannot be an expression")
+            P.failWith("The constant cannot be an expression. It can only be a number or a string.")
           case _ =>
             P.pure(ConstantExpr(name, value, mark.nonEmpty))
         }
