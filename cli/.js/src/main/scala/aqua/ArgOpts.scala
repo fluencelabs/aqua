@@ -74,7 +74,10 @@ object ArgOpts {
                       "If the argument is an array, then it must contain elements of the same type."
                     )
 
-                } else invalidNel("Array arguments with variables are not supported.")
+                } else
+                  invalidNel(
+                    "Array arguments with variables are not supported. Use only numbers or strings."
+                  )
               case CallArrowToken(_, _, _) =>
                 invalidNel("Function call as argument not supported.")
             }.sequence
