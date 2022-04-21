@@ -38,15 +38,15 @@ object ConstantExpr extends Expr.Leaf {
         value match {
           case CollectionToken(point, _) =>
             P.failWith(
-              "The constant cannot be an array. It can only be a string, a number, or a boolean."
+              s"'$name' is an array, but only strings, numbers or booleans can be used"
             )
           case CallArrowToken(_, _, _) =>
             P.failWith(
-              "The constant cannot be a function call. It can only be a string, a number, or a boolean."
+              s"'$name' is a function call, but only strings, numbers or booleans can be used"
             )
           case InfixToken(_, _, _) =>
             P.failWith(
-              "The constant cannot be an expression. It can only be a string, a number, or a boolean."
+              s"'$name' an expression, but only strings, numbers or booleans can be used"
             )
           case _ =>
             P.pure(ConstantExpr(name, value, mark.nonEmpty))
