@@ -76,7 +76,7 @@ object ArgOpts {
 
                 } else
                   invalidNel(
-                    "Array arguments with variables are not supported. Use only numbers, strings, or booleans."
+                    "Array arguments can only have numbers, strings, or booleans."
                   )
               case CallArrowToken(_, _, _) =>
                 invalidNel("Function call as argument not supported.")
