@@ -4,7 +4,7 @@ import aqua.LogLevelTransformer
 import aqua.backend.FunctionDef
 import aqua.builder.{Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
-import aqua.js.{CallJsFunction, Debug, Fluence, FluenceUtils, KeyPair, KeyPairOp, PeerConfig}
+import aqua.js.*
 import aqua.keypair.KeyPairShow.show
 import aqua.run.RunCommand.createKeyPair
 import cats.data.Validated.{invalidNec, validNec}
@@ -16,7 +16,8 @@ import cats.syntax.flatMap.*
 import cats.syntax.show.*
 
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
-import scala.scalajs.js.{timers, JSON}
+import scala.scalajs.js
+import scala.scalajs.js.{timers, JSON, JavaScriptException}
 
 object FuncCaller {
 
@@ -106,6 +107,10 @@ object FuncCaller {
     val message =
       t match {
         case te: TimeoutException => te.getMessage
+        case tjs: JavaScriptException =>
+          val msg = tjs.exception.asInstanceOf[js.Dynamic].selectDynamic("message")
+          if (scalajs.js.isUndefined(msg)) JSON.stringify(tjs.exception.asInstanceOf[js.Any])
+          else msg.toString
         case _ =>
           if (t.getMessage.contains("Request timed out after")) {
             TimeoutErrorMessage
