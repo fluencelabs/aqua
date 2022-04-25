@@ -5,6 +5,7 @@ import aqua.model.*
 import aqua.model.inline.raw.CallArrowRawInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
+import aqua.types.BoxType
 import cats.syntax.traverse.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
@@ -63,8 +64,19 @@ object TagInliner extends Logging {
         )
 
       case ForTag(item, iterable) =>
-        valueToModel(iterable).map { case (v, p) =>
-          Some(ForModel(item, v)) -> p
+        for {
+          vp <- valueToModel(iterable)
+          (v, p) = vp
+          exps <- Exports[S].exports
+          n <- Mangler[S].findAndForbidName(item)
+          elementType = iterable.`type` match {
+            case b: BoxType => b.element
+            // TODO: it is unexpected, should we handle this?
+            case _ => iterable.`type`
+          }
+          _ <- Exports[S].resolved(item, VarModel(n, elementType))
+        } yield {
+          Some(ForModel(n, v)) -> p
         }
 
       case PushToStreamTag(operand, exportTo) =>
@@ -106,7 +118,13 @@ object TagInliner extends Logging {
           } yield Some(CaptureTopologyModel(t)) -> None
 
       case NextTag(item) =>
-        pure(NextModel(item))
+        for {
+          exps <- Exports[S].exports
+        } yield {
+          exps.get(item).collect { case VarModel(n, _, _) =>
+            NextModel(n)
+          } -> None
+        }
 
       case RestrictionTag(name, isStream) =>
         pure(RestrictionModel(name, isStream))

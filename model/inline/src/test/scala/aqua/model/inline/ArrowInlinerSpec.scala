@@ -499,6 +499,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   "arrow inliner" should "rename value in arrow with same name as in for" in {
     val argVar = VarRaw("arg", ScalarType.u32)
     val iVar = VarRaw("i", ScalarType.string)
+    val iVar0 = VarRaw("i-0", ScalarType.string)
     val innerVar = VarRaw("i", ScalarType.u32)
     val returnVar = VarRaw("ret", ScalarType.u32)
 
@@ -549,6 +550,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         FuncArrow(
           "dumb_func",
           SeqTag.wrap(
+            AssignmentTag(LiteralRaw("1", LiteralType.number), argVar.name).leaf,
             foldOp
           ),
           ArrowType(
@@ -567,13 +569,13 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ._2
 
     model.equalsOrShowDiff(
-      ForModel(iVar.name, ValueModel.fromRaw(array)).wrap(
+      ForModel(iVar0.name, ValueModel.fromRaw(array)).wrap(
         CallServiceModel(
           LiteralModel.fromRaw(serviceId),
           fnName,
-          CallModel(ValueModel.fromRaw(argVar) :: Nil, Nil)
+          CallModel(LiteralModel("1", LiteralType.number) :: Nil, Nil)
         ).leaf,
-        NextModel(iVar.name).leaf
+        NextModel(iVar0.name).leaf
       )
     ) should be(true)
   }
