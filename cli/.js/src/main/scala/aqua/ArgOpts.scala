@@ -128,7 +128,7 @@ object ArgOpts {
     data match {
       case None if vars.nonEmpty =>
         // TODO: add a list  with actual argument names that where present in the function call
-        invalidNec("Undefined variables. You can provide them via --data or --data-path flags")
+        invalidNec("Missing variables. You can provide them via --data or --data-path flags")
       case None =>
         validNec((cliFunc, Map.empty))
       case Some(data) =>
