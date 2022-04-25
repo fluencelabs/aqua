@@ -68,7 +68,7 @@ object JsonEncoder {
               .map(processedFields => NonEmptyMap.fromMap(SortedMap(processedFields: _*)).get)
               .map(mt => StructType("", mt))
           case (a, b) =>
-            invalidNec(s"Types in '$name' array should be the same")
+            invalidNec(s"Items in '$name' array should be of the same type")
         }
       case (Validated.Invalid(lerr), Validated.Invalid(rerr)) =>
         Validated.Invalid(lerr ++ rerr)

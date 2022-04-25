@@ -79,7 +79,7 @@ object ArgOpts {
                     "Array arguments can only have numbers, strings, or booleans."
                   )
               case CallArrowToken(_, _, _) =>
-                invalidNel("Function call as argument not supported.")
+                invalidNel("Function calls as arguments are not supported.")
             }.sequence
             argsV.andThen(args =>
               validNel(CliFunc(expr.funcName.value, args, expr.ability.map(_.name)))
@@ -127,7 +127,8 @@ object ArgOpts {
 
     data match {
       case None if vars.nonEmpty =>
-        invalidNec("Function have non-literals, so, data should be presented")
+        // TODO: add a list  with actual argument names that where present in the function call
+        invalidNec("Missing variables. You can provide them via --data or --data-path flags")
       case None =>
         validNec((cliFunc, Map.empty))
       case Some(data) =>
@@ -161,26 +162,26 @@ object ArgOpts {
 
   def dataOpt: Opts[js.Dynamic] =
     Opts
-      .option[String]("data", "Argument map for aqua function in JSON format", "d", "json")
+      .option[String]("data", "JSON in { [argumentName]: argumentValue } format. You can call a function using these argument names", "d", "json")
       .mapValidated { str =>
         Validated.catchNonFatal {
           JSON.parse(str)
-        }.leftMap(t => NonEmptyList.one("Data isn't a valid JSON: " + t.getMessage))
+        }.leftMap(t => NonEmptyList.one("Data argument isn't a valid JSON: " + t.getMessage))
       }
 
   def dataFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, js.Dynamic]]] = {
-    jsonFromFileOpt("data-path", "Path to file with arguments map in JSON format", "p")
+    jsonFromFileOpt("data-path", "Path to a JSON file in { [argumentName]: argumentValue } format. You can call a function using these argument names", "p")
   }
 
   def jsonFromFileOpt[F[_]: Files: Concurrent](
     name: String,
-    help: String = "",
-    short: String = ""
+    help: String,
+    short: String
   ): Opts[F[ValidatedNec[String, js.Dynamic]]] = {
     FileOpts.fileOpt(
-      "data-path",
-      "Path to file with arguments map in JSON format",
-      "p",
+      name,
+      help,
+      short,
       (path, str) => {
         Validated.catchNonFatal {
           JSON.parse(str)
@@ -199,7 +200,8 @@ object ArgOpts {
   ): ValidatedNec[String, Option[js.Dynamic]] = {
     (dataFromArgument, dataFromFile) match {
       case (Some(_), Some(_)) =>
-        invalidNec("Pass either data argument or path to file with arguments")
+        // TODO: maybe allow to use both and simple merge with data argument having higher priority
+        invalidNec("Please use either --data or --data-path. Don't use both")
       case _ => validNec(dataFromArgument.orElse(dataFromFile))
     }
   }

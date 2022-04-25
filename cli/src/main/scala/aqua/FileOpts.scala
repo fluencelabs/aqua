@@ -94,11 +94,11 @@ object FileOpts {
         if (exists)
           Files[F].isRegularFile(p).map { isFile =>
             if (isFile && p.extName != ".aqua")
-              Validated.invalidNec("File must be with 'aqua' extension")
+              Validated.invalidNec("File must have '.aqua' extension")
             else Validated.validNec(p)
           }
         else {
-          invalidNec(s"There is no path '${p.toString}'").pure[F]
+          invalidNec(s"'${p.toString}': No such file or directory").pure[F]
         }
       }
   }

@@ -77,13 +77,13 @@ object ScriptOpts extends Logging {
             case "boolean" => validNec(LiteralRaw(arg.toString, LiteralType.bool))
             case t =>
               invalidNec(
-                s"Arguments can be only 'string', 'boolean' or 'number' type in scheduled scripts"
+                s"Scheduled script functions support 'string', 'boolean' and 'number' argument types only"
               )
           }
-        }.getOrElse(invalidNec(s"No argument with name '$name' in data"))
+        }.getOrElse(invalidNec(s"There is no '$name' argument in data"))
       case _ =>
         invalidNec(
-          s"Arguments can be only 'string', 'boolean' or 'number' type in scheduled scripts"
+          s"Scheduled script functions support 'string', 'boolean' and 'number' argument types only"
         )
     }
 
