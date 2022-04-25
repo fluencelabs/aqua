@@ -62,7 +62,7 @@ object AppOpts {
 
   def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Option[Path]]]] =
     Opts
-      .option[String]("output", "Path to the output directory. Will be created if not exists", "o")
+      .option[String]("output", "Path to the output directory. Will be created if it doesn't exists", "o")
       .map(s => Option(s))
       .withDefault(None)
       .map(_.map(checkOutput[F]).getOrElse(Validated.validNec[String, Option[Path]](None).pure[F]))
@@ -86,7 +86,7 @@ object AppOpts {
             if (exists && isDir) Validated.validNec[String, Path](p)
             else
               Validated.invalidNec[String, Path](
-                s"There is no path ${p.toString} or it is not a directory"
+                s"${p.toString}: No such directory"
               )
           }
         }
@@ -98,7 +98,7 @@ object AppOpts {
     Opts
       .options[String](
         "const",
-        "Constant that will be used in an aqua code. Constant name must be upper cased.",
+        "Constant that will be used in the aqua code that you run. Constant name must be upper cased.",
         "c",
         "NAME=value"
       )
@@ -124,13 +124,13 @@ object AppOpts {
 
   val compileToAir: Opts[Boolean] =
     Opts
-      .flag("air", "Generate .air file instead of typescript", "a")
+      .flag("air", "Generate .air file instead of .ts", "a")
       .map(_ => true)
       .withDefault(false)
 
   val compileToJs: Opts[Boolean] =
     Opts
-      .flag("js", "Generate .js file instead of typescript")
+      .flag("js", "Generate .js file instead of .ts")
       .map(_ => true)
       .withDefault(false)
 

@@ -37,7 +37,7 @@ object ConfigOpts {
           validNel(FluenceEnvironment.stage)
         case e =>
           invalidNel(
-            s"There is no environment '$e' in our list. Use this: '$Krasnodar', '$TestNet', '$Stage'"
+            s"There is no environment '$e' in our list. Use one of these: '$Krasnodar', '$TestNet', '$Stage'"
           )
       }
 

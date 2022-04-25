@@ -21,7 +21,7 @@ object IPFSUploader extends Logging {
       IpfsApi
         .uploadFile(args(0), args(1), logError, logInfo)
         .`catch` { err =>
-          js.Dynamic.literal(error = "Error on uploading file: " + err)
+          js.Dynamic.literal(error = "File upload error: " + err)
         }
 
     }

@@ -45,7 +45,7 @@ class Runner(
           case tb: BoxType =>
             validNec(())
           case _ =>
-            invalidNec(s"Missed field $name in arguments")
+            invalidNec(s"Missing field '$name' in arguments")
         }
       case Some(rt) =>
         (lt, rt) match {
@@ -64,7 +64,7 @@ class Runner(
             if (l >= r) validNec(())
             else
               invalidNec(
-                s"Type for field '$name' mismatch with argument. Expected: '$l' Given: '$r'"
+                s"Type of the field '$name' is incorrect. Expected: '$l' Actual: '$r'"
               )
         }
     }
@@ -77,7 +77,7 @@ class Runner(
   ): ValidatedNec[String, Unit] = {
     if (funcDomain.size != args.length) {
       invalidNec(
-        s"Number of arguments (${args.length}) does not match what the function requires (${funcDomain.size})."
+        s"Number of arguments for the function is incorrect. Expected: ${args.length}. Actual: ${funcDomain.size}"
       )
     } else {
       funcDomain
@@ -169,7 +169,7 @@ class Runner(
         case (Some(s), _: BoxType) if s.function.arg == js.undefined => Validated.validNec(s :: Nil)
         case (Some(s), _) if s.function.arg == js.undefined =>
           Validated.invalidNec(
-            s"Argument '$n' is undefined, but it's type '$argType' cannot be undefined."
+            s"Argument '$n' is missing. Expected argument '$n' of type '$argType'"
           )
         case (Some(s), _) => Validated.validNec(s :: Nil)
       }
