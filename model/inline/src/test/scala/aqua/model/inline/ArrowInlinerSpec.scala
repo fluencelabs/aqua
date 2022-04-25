@@ -502,6 +502,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     val innerVar = VarRaw("i", ScalarType.u32)
     val returnVar = VarRaw("ret", ScalarType.u32)
 
+    val array = VarRaw(
+      "nodes",
+      ArrayType(ScalarType.string)
+    )
+
     val inner =
       FuncArrow(
         "inner",
@@ -518,10 +523,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         None
       )
 
-    val array = VarRaw(
-      "nodes",
-      ArrayType(ScalarType.string)
-    )
+    val serviceId = LiteralRaw.quote("test-service")
+    val fnName = "some-call"
 
     val inFold = SeqTag.wrap(
       CallArrowRawTag
@@ -532,8 +535,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         .leaf,
       CallArrowRawTag
         .service(
-          LiteralRaw.quote("test-service"),
-          "some-call",
+          serviceId,
+          fnName,
           Call(returnVar :: Nil, Nil)
         )
         .leaf
@@ -563,7 +566,16 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       .value
       ._2
 
-    println(model)
+    model.equalsOrShowDiff(
+      ForModel(iVar.name, ValueModel.fromRaw(array)).wrap(
+        CallServiceModel(
+          LiteralModel.fromRaw(serviceId),
+          fnName,
+          CallModel(ValueModel.fromRaw(argVar) :: Nil, Nil)
+        ).leaf,
+        NextModel(iVar.name).leaf
+      )
+    ) should be(true)
   }
 
 }
