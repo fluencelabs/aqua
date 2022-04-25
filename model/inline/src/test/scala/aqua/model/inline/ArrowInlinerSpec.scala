@@ -496,4 +496,74 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   }
 
+  "arrow inliner" should "rename value in arrow with same name as in for" in {
+    val argVar = VarRaw("arg", ScalarType.u32)
+    val iVar = VarRaw("i", ScalarType.string)
+    val innerVar = VarRaw("i", ScalarType.u32)
+    val returnVar = VarRaw("ret", ScalarType.u32)
+
+    val inner =
+      FuncArrow(
+        "inner",
+        ReturnTag(NonEmptyList.one(innerVar)).leaf,
+        ArrowType(
+          ProductType.labelled(
+            (innerVar.name, innerVar.`type`) :: Nil
+          ),
+          ProductType(innerVar.`type` :: Nil)
+        ),
+        innerVar :: Nil,
+        Map.empty,
+        Map.empty,
+        None
+      )
+
+    val array = VarRaw(
+      "nodes",
+      ArrayType(ScalarType.string)
+    )
+
+    val inFold = SeqTag.wrap(
+      CallArrowRawTag
+        .func(
+          inner.funcName,
+          Call(argVar :: Nil, Call.Export(returnVar.name, returnVar.`type`) :: Nil)
+        )
+        .leaf,
+      CallArrowRawTag
+        .service(
+          LiteralRaw.quote("test-service"),
+          "some-call",
+          Call(returnVar :: Nil, Nil)
+        )
+        .leaf
+    )
+
+    val foldOp = ForTag(iVar.name, array).wrap(inFold, NextTag(iVar.name).leaf)
+
+    val model: OpModel.Tree = ArrowInliner
+      .callArrow[InliningState](
+        FuncArrow(
+          "dumb_func",
+          SeqTag.wrap(
+            foldOp
+          ),
+          ArrowType(
+            ProductType(Nil),
+            ProductType(Nil)
+          ),
+          Nil,
+          Map(inner.funcName -> inner),
+          Map.empty,
+          None
+        ),
+        CallModel(Nil, Nil)
+      )
+      .run(InliningState())
+      .value
+      ._2
+
+    println(model)
+  }
+
 }
