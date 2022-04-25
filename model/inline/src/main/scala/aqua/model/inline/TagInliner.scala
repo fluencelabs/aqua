@@ -9,7 +9,7 @@ import aqua.types.BoxType
 import cats.syntax.traverse.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
-import scribe.Logging
+import scribe.{log, Logging}
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -72,7 +72,11 @@ object TagInliner extends Logging {
           elementType = iterable.`type` match {
             case b: BoxType => b.element
             // TODO: it is unexpected, should we handle this?
-            case _ => iterable.`type`
+            case _ =>
+              logger.error(
+                s"Unexpected behaviour: non-box type variable '$iterable' in 'for' expression."
+              )
+              iterable.`type`
           }
           _ <- Exports[S].resolved(item, VarModel(n, elementType))
         } yield {
