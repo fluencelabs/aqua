@@ -7,7 +7,7 @@ import aqua.parser.lexer.{EqOp, LiteralToken, ValueToken}
 import aqua.parser.lift.LiftParser
 import aqua.types.LiteralType
 import cats.parse.Parser as P
-import cats.{Comonad, ~>}
+import cats.{~>, Comonad}
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
