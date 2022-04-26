@@ -23,5 +23,17 @@ class IfExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parseIf("if 1 != false") should be(
       IfExpr[Id](toNumber(1), EqOp[Id](false), toBool(false))
     )
+
+    parseIf("if a[1] != \"ds\"") should be(
+      IfExpr[Id](toVarIndex("a", 1), EqOp[Id](false), toStr("ds"))
+    )
+
+    parseIf("if a[1] == 43") should be(
+      IfExpr[Id](toVarIndex("a", 1), EqOp[Id](true), toNumber(43))
+    )
+
+    parseIf("if a!5 == b[3]") should be(
+      IfExpr[Id](toVarIndex("a", 5), EqOp[Id](true), toVarIndex("b", 3))
+    )
   }
 }
