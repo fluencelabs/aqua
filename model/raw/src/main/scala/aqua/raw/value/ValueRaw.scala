@@ -23,6 +23,8 @@ object ValueRaw {
 
   // TODO: move to LiteralRaw
   val InitPeerId: LiteralRaw = LiteralRaw("%init_peer_id%", ScalarType.string)
+  val ParticleTtl: LiteralRaw = LiteralRaw("%ttl%", ScalarType.u32)
+  val ParticleTimeout: LiteralRaw = LiteralRaw("%timestamp%", ScalarType.u64)
 
   val Nil: LiteralRaw = LiteralRaw("[]", StreamType(BottomType))
 
