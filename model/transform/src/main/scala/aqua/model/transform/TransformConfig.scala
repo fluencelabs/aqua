@@ -71,5 +71,5 @@ case class TransformConfig(
     )
 
   val constantsList: List[ConstantRaw] =
-    hostPeerId :: initPeerId :: particleTtl :: particleTimeout nil :: lastError :: constants
+    hostPeerId :: initPeerId :: particleTtl :: particleTimeout :: nil :: lastError :: constants
 }
