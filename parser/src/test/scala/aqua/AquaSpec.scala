@@ -55,6 +55,9 @@ object AquaSpec {
 
   implicit def toVarLambda(name: String, fields: List[String]): VarToken[Id] =
     VarToken[Id](toName(name), toFields(fields))
+
+  implicit def toVarIndex(name: String, idx: Int): VarToken[Id] =
+    VarToken[Id](toName(name), IntoIndex[Id](toNumber(idx), Some(toNumber(idx))) :: Nil)
   implicit def toLiteral(name: String, t: LiteralType): LiteralToken[Id] = LiteralToken[Id](name, t)
   implicit def toNumber(n: Int): LiteralToken[Id] = LiteralToken[Id](n.toString, number)
   implicit def toBool(n: Boolean): LiteralToken[Id] = LiteralToken[Id](n.toString, bool)
