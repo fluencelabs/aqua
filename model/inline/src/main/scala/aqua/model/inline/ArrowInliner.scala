@@ -153,7 +153,7 @@ object ArrowInliner extends Logging {
           }.map(_.name)
 
       // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
-      shouldRename <- Mangler[S].findNewNames(treeDefines)
+      shouldRename <- Mangler[S].findNewNames(treeDefines).map(_ ++ argsShouldRename)
       _ <- Mangler[S].forbid(treeDefines ++ shouldRename.values.toSet)
 
       // If there was a collision, rename exports and usages with new names

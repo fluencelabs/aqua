@@ -132,7 +132,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val Some(exec) = aquaRes.funcs.find(_.funcName == "exec")
 
     val peers = VarModel("peers", ArrayType(ScalarType.string))
-    val peer = VarModel("peer", ScalarType.string)
+    val peer = VarModel("peer-0", ScalarType.string)
     val results = VarModel("results", StreamType(ScalarType.string))
     val initPeer = LiteralModel.fromRaw(ValueRaw.InitPeerId)
 
@@ -143,7 +143,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
         RestrictionRes("results", true).wrap(
           SeqRes.wrap(
             ParRes.wrap(
-              FoldRes("peer", peers).wrap(
+              FoldRes(peer.name, peers).wrap(
                 ParRes.wrap(
                   // better if first relay will be outside `for`
                   SeqRes.wrap(
@@ -160,7 +160,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
                     through(ValueModel.fromRaw(relay)),
                     through(initPeer)
                   ),
-                  NextRes("peer").leaf
+                  NextRes(peer.name).leaf
                 )
               )
             ),
