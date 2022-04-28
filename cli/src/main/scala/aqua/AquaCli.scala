@@ -17,9 +17,9 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.{~>, Functor, Id, Monad}
 import com.monovore.decline
-import com.monovore.decline.{Command, Help, Opts, PlatformApp}
 import com.monovore.decline.effect.CommandIOApp
 import com.monovore.decline.effect.CommandIOApp.printHelp
+import com.monovore.decline.{Command, Help, Opts, PlatformApp}
 import fs2.io.file.Files
 import scribe.Logging
 
@@ -42,6 +42,12 @@ object AquaCli extends IOApp with Logging {
       case AirTarget =>
         AirBackend
     }
+  }
+
+  def printCommandErrors(errs: NonEmptyChain[String]) = {
+    errs.map(OutputPrinter.error _)
+    OutputPrinter.error("\nTry 'aqua --help' for usage instructions")
+
   }
 
   def main[F[_]: Files: ConsoleEff: Async](runtime: unsafe.IORuntime): Opts[F[ExitCode]] = {
@@ -132,12 +138,12 @@ object AquaCli extends IOApp with Logging {
             }
           }.flatMap {
             case Validated.Invalid(errs) =>
-              errs.map(OutputPrinter.error _)
+              printCommandErrors(errs)
               ExitCode.Error.pure[F]
             case Validated.Valid(result) =>
               result.map {
                 case Validated.Invalid(errs) =>
-                  errs.map(OutputPrinter.error _)
+                  printCommandErrors(errs)
                   ExitCode.Error
                 case Validated.Valid(results) =>
                   results.map(OutputPrinter.print _)
@@ -156,14 +162,13 @@ object AquaCli extends IOApp with Logging {
       )
       exitCode <- parseResult.fold(
         { h =>
-          if (h.errors.isEmpty) {
-            ConsoleEff[IO].print(h).as {
-              ExitCode.Success
+          NonEmptyChain
+            .fromSeq(h.errors)
+            .map { errs =>
+              printCommandErrors(errs)
+              ExitCode.Error.pure[IO]
             }
-          } else {
-            OutputPrinter.error(h.errors.mkString("\n"))
-            ExitCode.Error.pure[IO]
-          }
+            .getOrElse(ConsoleEff[IO].print(h).as(ExitCode.Success))
         },
         identity
       )
