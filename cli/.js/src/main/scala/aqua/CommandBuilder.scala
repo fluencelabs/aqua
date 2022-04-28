@@ -60,7 +60,7 @@ class SubCommandBuilder[F[_]: Async](
             )
           }
         case Validated.Invalid(errs) =>
-          errs.map(e => logger.error(e))
+          AquaCli.printCommandErrors(errs)
           ExitCode.Error.pure[F]
       }
     }
