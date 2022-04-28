@@ -126,7 +126,7 @@ object ArrowTypeToken {
     (((`(`.lift <* `/s*`) ~ comma0(
       (Name.p.map(Option(_)) ~ (` : ` *> (argTypeP | argTypeP.between(`(`, `)`))))
         .surroundedBy(`/s*`)
-    ) <* (`/s*` *> `)`)) ~
+    ) <* (`/s*` *> `)` <* ` `.?)) ~
       (` -> ` *> comma(DataTypeToken.`datatypedef`)).?).map { case ((point, args), res) =>
       ArrowTypeToken(point, args, res.toList.flatMap(_.toList))
     }
