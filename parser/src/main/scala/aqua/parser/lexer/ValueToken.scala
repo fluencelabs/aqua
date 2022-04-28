@@ -83,7 +83,7 @@ object CallArrowToken {
     ((Ability.dotted <* `.`).?.with1 ~
       (Name.p
         ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
-          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)` <* ` `.?))
+          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
         .withContext(
           "Missing braces '()' after the function call"
         )).map { case (ab, (fn, args)) =>
