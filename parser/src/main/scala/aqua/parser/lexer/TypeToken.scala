@@ -123,7 +123,7 @@ object ArrowTypeToken {
     }
 
   def `arrowWithNames`(argTypeP: P[TypeToken[Span.S]]): P[ArrowTypeToken[Span.S]] =
-    (((`(`.lift <* `/s*`) ~ comma0(
+    (((` `.?.with1 *> `(`.lift <* `/s*`) ~ comma0(
       (Name.p.map(Option(_)) ~ (` : ` *> (argTypeP | argTypeP.between(`(`, `)`))))
         .surroundedBy(`/s*`)
     ) <* (`/s*` *> `)` <* ` `.?)) ~

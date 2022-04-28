@@ -3,7 +3,8 @@ package aqua.parser
 import aqua.AquaSpec
 import aqua.parser.expr.func.IfExpr
 import aqua.parser.lexer.InfixToken.Op.{Add, Sub}
-import aqua.parser.lexer.{CallArrowToken, EqOp, InfixToken}
+import aqua.parser.lexer.{CallArrowToken, CollectionToken, EqOp, InfixToken}
+import aqua.parser.lexer.CollectionToken.Mode.OptionMode
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -70,6 +71,14 @@ class IfExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         CallArrowToken[Id](None, toName("funcCall"), toNumber(3) :: Nil),
         EqOp[Id](true),
         CallArrowToken[Id](None, toName("funcCall2"), toNumber(4) :: Nil)
+      )
+    )
+
+    parseIf("if ?[\"a\"] == ?[\"a\"]") should be(
+      IfExpr[Id](
+        CollectionToken[Id](OptionMode, toStr("a") :: Nil),
+        EqOp[Id](true),
+        CollectionToken[Id](OptionMode, toStr("a") :: Nil)
       )
     )
   }
