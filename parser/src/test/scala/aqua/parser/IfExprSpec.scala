@@ -64,5 +64,13 @@ class IfExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         )
       )
     )
+
+    parseIf("if funcCall(3) == funcCall2(4)") should be(
+      IfExpr[Id](
+        CallArrowToken[Id](None, toName("funcCall"), toNumber(3) :: Nil),
+        EqOp[Id](true),
+        CallArrowToken[Id](None, toName("funcCall2"), toNumber(4) :: Nil)
+      )
+    )
   }
 }
