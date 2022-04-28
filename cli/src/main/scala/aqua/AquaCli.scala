@@ -158,28 +158,6 @@ object AquaCli extends IOApp with Logging {
     val command = Command("aqua", "Aqua Compiler", false)(main[IO](runtime))
     for {
       parseResult: Either[Help, IO[ExitCode]] <- Sync[IO].delay(
-        command.parse(PlatformApp.ambientArgs getOrElse args, sys.env)
-      )
-      exitCode <- parseResult.fold(
-        { h =>
-          if (h.errors.isEmpty) {
-            ConsoleEff[IO].print(h).as {
-              ExitCode.Success
-            }
-          } else {
-            OutputPrinter.error(h.errors.mkString("\n"))
-            ExitCode.Error.pure[IO]
-          }
-        },
-        identity
-      )
-    } yield exitCode
-  }
-
-  def handleCommand(args: List[String]): IO[ExitCode] = {
-    val command = Command("aqua", "Aqua Compiler", false)(main[IO](runtime))
-    for {
-      parseResult: Either[Help, IO[ExitCode]] <- Sync[IO].delay(
         // ambientArgs returns arguments for scala.js under node.js
         command.parse(PlatformApp.ambientArgs getOrElse args, sys.env)
       )
