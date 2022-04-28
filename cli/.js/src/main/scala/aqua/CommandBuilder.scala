@@ -1,6 +1,7 @@
 package aqua
 
 import aqua.builder.{ArgumentGetter, Service}
+import aqua.io.OutputPrinter
 import aqua.raw.value.ValueRaw
 import aqua.run.{GeneralRunOptions, RunCommand, RunOpts}
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
@@ -60,7 +61,7 @@ class SubCommandBuilder[F[_]: Async](
             )
           }
         case Validated.Invalid(errs) =>
-          errs.map(e => logger.error(e))
+          errs.map(OutputPrinter.error _)
           ExitCode.Error.pure[F]
       }
     }

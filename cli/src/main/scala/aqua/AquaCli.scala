@@ -5,6 +5,7 @@ import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.files.AquaFilesIO
+import aqua.io.OutputPrinter
 import aqua.model.transform.TransformConfig
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import cats.data.*
@@ -16,8 +17,9 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.{~>, Functor, Id, Monad}
 import com.monovore.decline
-import com.monovore.decline.Opts
+import com.monovore.decline.{Command, Help, Opts, PlatformApp}
 import com.monovore.decline.effect.CommandIOApp
+import com.monovore.decline.effect.CommandIOApp.printHelp
 import fs2.io.file.Files
 import scribe.Logging
 
@@ -130,15 +132,15 @@ object AquaCli extends IOApp with Logging {
             }
           }.flatMap {
             case Validated.Invalid(errs) =>
-              errs.map(logger.error(_))
+              errs.map(OutputPrinter.error _)
               ExitCode.Error.pure[F]
             case Validated.Valid(result) =>
               result.map {
                 case Validated.Invalid(errs) =>
-                  errs.map(logger.error(_))
+                  errs.map(OutputPrinter.error _)
                   ExitCode.Error
                 case Validated.Valid(results) =>
-                  results.map(logger.info(_))
+                  results.map(OutputPrinter.print _)
                   ExitCode.Success
               }
           }
@@ -146,17 +148,33 @@ object AquaCli extends IOApp with Logging {
     }
   }
 
+  def handleCommand(args: List[String]): IO[ExitCode] = {
+    val command = Command("aqua", "Aqua Compiler", false)(main[IO](runtime))
+    for {
+      parseResult: Either[Help, IO[ExitCode]] <- Sync[IO].delay(
+        command.parse(PlatformApp.ambientArgs getOrElse args, sys.env)
+      )
+      exitCode <- parseResult.fold(
+        { h =>
+          if (h.errors.isEmpty) {
+            ConsoleEff[IO].print(h).as {
+              ExitCode.Success
+            }
+          } else {
+            OutputPrinter.error(h.errors.mkString("\n"))
+            ExitCode.Error.pure[IO]
+          }
+        },
+        identity
+      )
+    } yield exitCode
+  }
+
   override def run(args: List[String]): IO[ExitCode] = {
-    CommandIOApp.run[IO](
-      "aqua",
-      "Aqua Compiler",
-      helpFlag = false,
-      None
-    )(
-      main[IO](runtime),
-      // Weird ugly hack: in case version flag or help flag is present, ignore other options,
-      // be it correct or not
+    handleCommand(
       args match {
+        // Weird ugly hack: in case version flag or help flag is present, ignore other options,
+        // be it correct or not
         case _ if args.contains("-v") || args.contains("--version") => "-v" :: Nil
         case _ if args.contains("-h") || args.contains("--help") => "-h" :: Nil
         case _ => args
