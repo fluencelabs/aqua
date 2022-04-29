@@ -7,6 +7,7 @@ import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.run.GeneralRunOptions
 import aqua.types.{ArrayType, ScalarType, StructType}
 import aqua.*
+import aqua.json.JsonEncoder
 import cats.data.{NonEmptyList, NonEmptyMap, ValidatedNec}
 import cats.data.Validated.{invalidNec, validNec}
 import cats.effect.{Async, Concurrent, ExitCode, Resource, Sync}
@@ -54,12 +55,6 @@ object DistOpts extends Logging {
   def dependencyOpt: Opts[NonEmptyList[String]] =
     Opts
       .options[String]("dependency", "Blueprint dependency. May be used several times", "d")
-
-  def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
-    val arg = getter.function.arg
-    val filledConfig = Config.fillWithEmptyArrays(arg)
-    ArgumentGetter(getter.function.value, filledConfig)
-  }
 
   // Removes service from a node
   def remove[F[_]: Async]: SubCommandBuilder[F] =
@@ -140,8 +135,6 @@ object DistOpts extends Logging {
         srvNameOpt
       ).mapN { (common, configFromFileF, srvName) =>
         configFromFileF.map { dff =>
-          val srvArg = VarRaw(srvName, ScalarType.string)
-          val args = LiteralRaw.quote(srvName) :: srvArg :: Nil
           dff
             .andThen(config =>
               val srvConfig = {
@@ -151,20 +144,25 @@ object DistOpts extends Logging {
               }
               srvConfig match {
                 case Some(c) =>
-                  // if we have default timeout, increase it
-                  val commonWithTimeout = if (common.timeout.isEmpty) {
-                    common.copy(timeout = Some(60000))
-                  } else common
-                  validNec(
-                    RunInfo(
-                      commonWithTimeout,
-                      CliFunc(DeployFuncName, args),
-                      PackagePath(DistAqua),
-                      Nil,
-                      // hack: air cannot use undefined fields, fill undefined arrays with nils
-                      Map(srvName -> fillConfigOptionalFields(ArgumentGetter(srvArg, c)))
+                  JsonEncoder.aquaTypeFromJson(srvName, c).andThen { configType =>
+                    val srvArg = VarRaw(srvName, configType)
+                    val args = LiteralRaw.quote(srvName) :: srvArg :: Nil
+                    // if we have default timeout, increase it
+                    val commonWithTimeout = if (common.timeout.isEmpty) {
+                      common.copy(timeout = Some(60000))
+                    } else common
+                    validNec(
+                      RunInfo(
+                        commonWithTimeout,
+                        CliFunc(DeployFuncName, args),
+                        PackagePath(DistAqua),
+                        Nil,
+                        // hack: air cannot use undefined fields, fill undefined arrays with nils
+                        Map(srvName -> ArgumentGetter(srvArg, c))
+                      )
                     )
-                  )
+                  }
+
                 case None =>
                   invalidNec(s"No service '$srvName' in the config.")
 
