@@ -123,10 +123,10 @@ object ArrowTypeToken {
     }
 
   def `arrowWithNames`(argTypeP: P[TypeToken[Span.S]]): P[ArrowTypeToken[Span.S]] =
-    (((`(`.lift <* `/s*`) ~ comma0(
+    (((` `.?.with1 *> `(`.lift <* `/s*`) ~ comma0(
       (Name.p.map(Option(_)) ~ (` : ` *> (argTypeP | argTypeP.between(`(`, `)`))))
         .surroundedBy(`/s*`)
-    ) <* (`/s*` *> `)`)) ~
+    ) <* (`/s*` *> `)` <* ` `.?)) ~
       (` -> ` *> comma(DataTypeToken.`datatypedef`)).?).map { case ((point, args), res) =>
       ArrowTypeToken(point, args, res.toList.flatMap(_.toList))
     }

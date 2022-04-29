@@ -82,7 +82,8 @@ object CallArrowToken {
   val callArrow: P[CallArrowToken[Span.S]] =
     ((Ability.dotted <* `.`).?.with1 ~
       (Name.p
-        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`)).between(`(` <* `/s*`, `/s*` *> `)`))
+        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
+          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
         .withContext(
           "Missing braces '()' after the function call"
         )).map { case (ab, (fn, args)) =>
