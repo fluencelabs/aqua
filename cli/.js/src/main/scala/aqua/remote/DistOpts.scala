@@ -124,6 +124,12 @@ object DistOpts extends Logging {
     jsonFromFileOpt("config-path", "Path to a deploy config", "p")
   }
 
+  def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
+    val arg = getter.function.arg
+    val filledConfig = Config.fillWithEmptyArrays(arg)
+    ArgumentGetter(getter.function.value, filledConfig)
+  }
+
   // Uploads a file to IPFS, creates blueprints and deploys a service
   def deploy[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.applyF(
@@ -158,7 +164,7 @@ object DistOpts extends Logging {
                         PackagePath(DistAqua),
                         Nil,
                         // hack: air cannot use undefined fields, fill undefined arrays with nils
-                        Map(srvName -> ArgumentGetter(srvArg, c))
+                        Map(srvName -> fillConfigOptionalFields(ArgumentGetter(srvArg, c)))
                       )
                     )
                   }
