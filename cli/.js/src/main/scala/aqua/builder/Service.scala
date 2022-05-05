@@ -1,7 +1,6 @@
 package aqua.builder
 
 import aqua.backend.*
-import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer, ServiceHandler}
 import cats.data.NonEmptyList
 import scribe.Logging

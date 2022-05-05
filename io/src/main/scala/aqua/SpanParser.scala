@@ -22,7 +22,6 @@ object SpanParser extends scribe.Logging {
               )
             }
           }
-          import Span.spanLiftParser
           val parser = Parser.natParser(Parser.spanParser, nat)(source)
           logger.trace("parser created")
           parser

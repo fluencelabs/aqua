@@ -52,7 +52,7 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
       "co.fs2"        %%% "fs2-io"         % fs2V
     )
   )
-  .dependsOn(compiler, `backend-air`, `backend-ts`)
+  .dependsOn(compiler, `backend-air`, `backend-ts`, io)
 
 lazy val cliJS = cli.js
   .settings(
@@ -68,6 +68,35 @@ lazy val cliJVM = cli.jvm
     libraryDependencies ++= Seq(
     )
   )
+
+lazy val io = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-effect" % catsEffectV,
+      "co.fs2"        %%% "fs2-io"      % fs2V
+    )
+  )
+  .dependsOn(compiler, parser)
+
+lazy val `language-server` = project
+  .in(file("language-server"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commons: _*)
+  .settings(
+    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSUseMainModuleInitializer := true,
+    scalaJSLinkerConfig             ~= { _.withOptimizer(false) }
+  )
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-effect" % catsEffectV,
+      "co.fs2"        %%% "fs2-io"      % fs2V
+    )
+  )
+  .dependsOn(compiler.js, io.js)
 
 lazy val types = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
