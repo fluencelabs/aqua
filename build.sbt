@@ -87,8 +87,7 @@ lazy val `language-server` = project
   .settings(commons: _*)
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
-    scalaJSUseMainModuleInitializer := true,
-    scalaJSLinkerConfig             ~= { _.withOptimizer(false) }
+    scalaJSUseMainModuleInitializer := true
   )
   .settings(
     libraryDependencies ++= Seq(

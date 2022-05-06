@@ -74,7 +74,7 @@ object AquaLSP extends App {
               .reverse
         }
       case SourcesErr(err) =>
-        errorToInfo(error)
+        ErrorInfo(0, 0, err.showForConsole, None) :: Nil
       case ResolveImportsErr(_, token, err) =>
         ErrorInfo(token.unit._1, err.showForConsole) :: Nil
       case ImportErr(token) =>
@@ -102,10 +102,13 @@ object AquaLSP extends App {
   }
 
   @JSExport
-  def compile(pathStr: String): scalajs.js.Promise[List[ErrorInfo]] = {
+  def compile(pathStr: String): scalajs.js.Promise[scalajs.js.Array[ErrorInfo]] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    println("aqua files done")
     val sources = new AquaFileSources[IO](Path(pathStr), Nil)
+    println("aqua sources done")
     val config = TransformConfig()
+    println("config done")
     val proc = for {
       res <- AquaCompiler
         .compileToContext[IO, AquaFileError, FileModuleId, FileSpan.F](
@@ -114,11 +117,14 @@ object AquaLSP extends App {
           config
         )
     } yield {
-      res match {
-        case Valid(_) => Nil
+      println("compilation done")
+      val result = res match {
+        case Valid(_) => List.empty.toJSArray
         case Invalid(e: NonEmptyChain[AquaError[FileModuleId, AquaFileError, FileSpan.F]]) =>
-          e.map(errorToInfo).toNonEmptyList.toList.flatten
+          e.toNonEmptyList.toList.flatMap(errorToInfo).toJSArray
       }
+      println("result: " + result)
+      result
     }
 
     proc.unsafeToFuture().toJSPromise
