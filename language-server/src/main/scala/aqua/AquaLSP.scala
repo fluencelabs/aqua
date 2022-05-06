@@ -102,10 +102,13 @@ object AquaLSP extends App {
   }
 
   @JSExport
-  def compile(pathStr: String): scalajs.js.Promise[scalajs.js.Array[ErrorInfo]] = {
+  def compile(
+    pathStr: String,
+    imports: scalajs.js.Array[String]
+  ): scalajs.js.Promise[scalajs.js.Array[ErrorInfo]] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     println("aqua files done")
-    val sources = new AquaFileSources[IO](Path(pathStr), Nil)
+    val sources = new AquaFileSources[IO](Path(pathStr), imports.toList.map(Path.apply))
     println("aqua sources done")
     val config = TransformConfig()
     println("config done")

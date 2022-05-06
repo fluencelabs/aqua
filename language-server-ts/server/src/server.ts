@@ -17,11 +17,16 @@ import {
 	InitializeResult
 } from 'vscode-languageserver/node';
 
+import {
+	WorkspaceFolder
+} from "vscode-languageserver-protocol"
+
 import {AquaLSP} from "../js/compiler";
 
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
+import {WorkspaceFolders} from "vscode-languageserver/lib/common/workspaceFolders";
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -32,6 +37,7 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
+let folders: WorkspaceFolder[] = []
 let hasDiagnosticRelatedInformationCapability = false;
 
 connection.onInitialize((params: InitializeParams) => {
@@ -45,6 +51,11 @@ connection.onInitialize((params: InitializeParams) => {
 	hasWorkspaceFolderCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.workspaceFolders
 	);
+
+	if (params.workspaceFolders) {
+		folders = params.workspaceFolders
+	}
+
 	hasDiagnosticRelatedInformationCapability = !!(
 		capabilities.textDocument &&
 		capabilities.textDocument.publishDiagnostics &&
@@ -70,8 +81,9 @@ connection.onInitialize((params: InitializeParams) => {
 	return result;
 });
 
-connection.onInitialized(() => {
+connection.onInitialized((h) => {
 	connection.console.log("INITIALIZED")
+
 	if (hasConfigurationCapability) {
 		// Register for all configuration changes.
 		connection.client.register(DidChangeConfigurationNotification.type, undefined);
@@ -139,15 +151,25 @@ documents.onDidSave(async change => {
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	// In this simple example we get the settings for every validate run.
 	const settings = await getDocumentSettings(textDocument.uri);
-	connection.console.log("uri: " + textDocument.uri.replace("file://", ""))
+	const uri = textDocument.uri.replace("file://", "")
+	connection.console.log("uri: " + uri)
 	// The validator creates diagnostics for all uppercase words length 2 and more
 	const text = textDocument.getText();
 
 	connection.console.log("compile")
-	const errors = await AquaLSP.compile(textDocument.uri.replace("file://", ""))
-	connection.console.log("compilation finished")
 
-	connection.console.log(errors.join("\n"))
+	let imports: string[] = []
+
+	imports = imports.concat(folders.map((f) => f.uri.replace("file://", "")))
+	imports = imports.concat(folders.map((f) => f.uri.replace("file://", "")) + "/node_modules")
+	if (require.main) {
+		imports = imports.concat(require.main.paths)
+	}
+
+	connection.console.log("imports: " + imports)
+
+	const errors = await AquaLSP.compile(uri, imports)
+	connection.console.log("compilation finished")
 
 	const diagnostics: Diagnostic[] = [];
 
@@ -159,8 +181,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 					start: textDocument.positionAt(err.start),
 					end: textDocument.positionAt(err.end)
 				},
-				message: err.message,
-				source: 'ex'
+				message: err.message
 			};
 
 			if (err.location) {
