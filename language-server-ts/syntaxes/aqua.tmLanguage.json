@@ -1,0 +1,157 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "aqua",
+  "patterns": [
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#semantics"
+    }
+  ],
+  "repository": {
+    "keywords": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.aqua",
+          "match": "\\b(string|bool|u8|u16|u32|u64|s8|s16|s32|s64|f32|f64)\\b"
+        },
+        {
+          "name": "keyword.control.flow.aqua",
+          "match": "\\b(try|catch|par|if|else|otherwise|for|co|join)\\b"
+        },
+        {
+          "name": "keyword.control.other.aqua",
+          "match": "(<<-|<-|->|\\[\\]|\\*|\\?\\=|\\?|==)"
+        },
+        {
+          "name": "keyword.topology.aqua",
+          "match": "\\b(on|via|use|func|service|data|alias|const)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.aqua",
+          "match": "\\b(eqs|neq)\\b"
+        },
+        {
+          "name": "keyword.control.import",
+          "match": "\\b(import|module|export|declares|from|as)\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.topology.aqua",
+          "match": "%init_peer_id%|%last_error%|%HOST_PEER_ID%"
+        },
+        {
+          "name": "constant.numeric.aqua",
+          "match": "\\b\\d+\\b"
+        },
+        {
+          "name": "constant.language.boolean.aqua",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "constant.language.option.nil.aqua",
+          "match": "nil"
+        },
+        {
+          "//": "Defines tokens for constants used anywhere in code",
+          "name": "constant.language.other.aqua",
+          "match": "\\b[A-Z][A-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.aqua",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.aqua",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "comments": {
+      "name": "comment.line.aqua",
+      "begin": "--",
+      "end": "$"
+    },
+    "semantics": {
+      "patterns": [
+        {
+          "//": "Matches type name defined with alias clause",
+          "name": "entity.name.type",
+          "match": "(?<=alias\\s*)[A-Z]\\w*(?=\\s*:)"
+        },
+        {
+          "//": "Matches type specifier after function arguments and variables",
+          "name": "support.type.specifier",
+          "match": "(?<=alias.*?:.*?,*\\s**[\\[\\]\\*\\?]*)[A-Z][A-Za-z0-9_]*"
+        },
+        {
+          "//": "Matches type specifier in lambda type aliases",
+          "name": "support.type.specifier",
+          "match": "(?<=:\\s*[\\[\\]\\*\\?]*)[A-Z][A-Za-z0-9_]*"
+        },
+        {
+          "//": "Defines tokens for data types in Aqua (usage). Data types in aqua start with a captial letter and are followed by any space char.",
+          "name": "support.type.specifier",
+          "match": "\\b[A-Z][A-Za-z0-9_]+(?=\\s)"
+        },
+        {
+          "//": "Defines tokens for data and service definitions ('data XXX:')",
+          "name": "entity.name.type.data.aqua",
+          "match": "\\b(?<=(data)\\s+)[A-Z][A-Za-z0-9_]+(?=:)\\b"
+        },
+        {
+          "//": "Defines tokens for data and service definitions ('service YYY:')",
+          "name": "entity.name.type.service.aqua",
+          "match": "\\b(?<=(service)\\s+)[A-Z][A-Za-z0-9_]+(?=(\\(\"\\w*\"\\))*:)\\b"
+        },
+        {
+          "//": "Metod name in 'Srv.method(args)' call",
+          "name": "support.function.method.call.aqua",
+          "match": "(?<=\\.)[a-z][a-zA-Z0-9_]+(?=\\()"
+        },
+        {
+          "//": "Service name in 'Srv.method(args)' call",
+          "name": "support.type.service.aqua",
+          "match": "\\b[A-Z][A-Za-z0-9_]*(?=\\..*?\\()"
+        },
+        {
+          "//": "Matches function arguments",
+          "name": "support.variable.parameter.function.arg",
+          "match": "\\b[a-z]\\w*(?=:)\\b"
+        },
+        {
+          "//": "Matches defined variables",
+          "name": "variable.other",
+          "match": "\\b[a-z]\\w*(?=\\s*<-)\\b"
+        },
+        {
+          "//": "Matches function definition",
+          "name": "entity.name.function",
+          "match": "\\b(?<=func\\s*)[a-z]\\w*(?=\\s*\\()\\b"
+        },
+        {
+          "//": "Matches method definition",
+          "name": "entity.name.function",
+          "match": "\\b[a-z]\\w*(?=\\s*\\(.*?\\)\\s*)\\b"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.aqua"
+}

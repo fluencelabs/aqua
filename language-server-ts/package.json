@@ -7,7 +7,9 @@
 		"type": "git",
 		"url": "https://github.com/fluencelabs/aqua"
 	},
-	"categories": [],
+	"categories": [
+		"Programming Languages"
+	],
 	"keywords": [
 		"aqua vscode extension"
 	],
@@ -19,6 +21,25 @@
 	],
 	"main": "./client/out/extension",
 	"contributes": {
+		"languages": [
+			{
+				"id": "aqua",
+				"aliases": [
+					"aqua"
+				],
+				"extensions": [
+					".aqua"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "aqua",
+				"scopeName": "source.aqua",
+				"path": "./syntaxes/aqua.tmLanguage.json"
+			}
+		],
 		"configuration": {
 			"type": "object",
 			"title": "Aqua",
