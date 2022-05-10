@@ -43,7 +43,7 @@ object ErrorInfo {
 }
 
 @JSExportTopLevel("AquaLSP")
-object AquaLSP extends App {
+object AquaLSP extends App with Logging {
 
   @JSExport
   def sayHello(): Unit = {
@@ -106,12 +106,14 @@ object AquaLSP extends App {
     pathStr: String,
     imports: scalajs.js.Array[String]
   ): scalajs.js.Promise[scalajs.js.Array[ErrorInfo]] = {
+
+    logger.debug(s"Compiling '$pathStr' with imports: $imports")
+
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
-    println("aqua files done")
+
     val sources = new AquaFileSources[IO](Path(pathStr), imports.toList.map(Path.apply))
-    println("aqua sources done")
     val config = TransformConfig()
-    println("config done")
+
     val proc = for {
       res <- AquaCompiler
         .compileToContext[IO, AquaFileError, FileModuleId, FileSpan.F](
@@ -120,13 +122,16 @@ object AquaLSP extends App {
           config
         )
     } yield {
-      println("compilation done")
+      logger.debug("Compilation done.")
       val result = res match {
-        case Valid(_) => List.empty.toJSArray
+        case Valid(_) =>
+          logger.debug("No errors on compilation.")
+          List.empty.toJSArray
         case Invalid(e: NonEmptyChain[AquaError[FileModuleId, AquaFileError, FileSpan.F]]) =>
-          e.toNonEmptyList.toList.flatMap(errorToInfo).toJSArray
+          val errors = e.toNonEmptyList.toList.flatMap(errorToInfo)
+          logger.debug("Errors: " + errors.mkString("\n"))
+          errors.toJSArray
       }
-      println("result: " + result)
       result
     }
 
