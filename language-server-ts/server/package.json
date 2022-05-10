@@ -1,19 +1,21 @@
 {
-	"name": "lsp-sample-server",
-	"description": "Example implementation of a language server in node.",
-	"version": "1.0.0",
-	"author": "Microsoft Corporation",
-	"license": "MIT",
+	"name": "aqua-ls-server",
+	"description": "Implementation of an aqua language server in node.",
+	"version": "0.0.1",
+	"author": "Fluence Labs",
 	"engines": {
 		"node": "*"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
+		"url": "https://github.com/fluencelabs/aqua"
 	},
 	"dependencies": {
 		"vscode-languageserver": "^7.0.0",
-		"vscode-languageserver-textdocument": "^1.0.4"
+		"vscode-languageserver-textdocument": "^1.0.4",
+		"global-dirs": "^3.0.0"
 	},
-	"scripts": {}
+	"scripts": {
+		"get-root": "npm root --globall"
+	}
 }

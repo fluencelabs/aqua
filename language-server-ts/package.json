@@ -1,14 +1,12 @@
 {
-	"name": "lsp-sample",
-	"description": "A language server example",
+	"name": "aqua-language-server",
+	"description": "An aqua language server",
 	"author": "Microsoft Corporation",
-	"license": "MIT",
-	"version": "1.0.0",
+	"version": "0.0.1",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
+		"url": "https://github.com/fluencelabs/aqua"
 	},
-	"publisher": "vscode-samples",
 	"categories": [],
 	"keywords": [
 		"multi-root ready"
