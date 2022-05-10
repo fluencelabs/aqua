@@ -1,7 +1,7 @@
 {
 	"name": "aqua-language-server",
 	"description": "An aqua language server",
-	"author": "Microsoft Corporation",
+	"author": "Fluence Labs",
 	"version": "0.0.1",
 	"repository": {
 		"type": "git",
@@ -9,7 +9,7 @@
 	},
 	"categories": [],
 	"keywords": [
-		"multi-root ready"
+		"aqua vscode extension"
 	],
 	"engines": {
 		"vscode": "^1.63.0"
@@ -21,24 +21,13 @@
 	"contributes": {
 		"configuration": {
 			"type": "object",
-			"title": "Example configuration",
+			"title": "Aqua",
 			"properties": {
-				"languageServerExample.maxNumberOfProblems": {
+				"aquaSettings.imports": {
 					"scope": "resource",
-					"type": "number",
-					"default": 100,
-					"description": "Controls the maximum number of problems produced by the server."
-				},
-				"languageServerExample.trace.server": {
-					"scope": "window",
-					"type": "string",
-					"enum": [
-						"off",
-						"messages",
-						"verbose"
-					],
-					"default": "off",
-					"description": "Traces the communication between VS Code and the language server."
+					"type": "array",
+					"default": [],
+					"description": "Adds imports for aqua file or project"
 				}
 			}
 		}
@@ -48,8 +37,7 @@
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
-		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
-		"test": "sh ./scripts/e2e.sh"
+		"postinstall": "cd client && npm install && cd ../server && npm install && cd .."
 	},
 	"devDependencies": {
 		"@types/mocha": "^9.1.0",

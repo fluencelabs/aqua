@@ -26,11 +26,62 @@ const connection = createConnection(ProposedFeatures.all);
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
+let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let folders: WorkspaceFolder[] = []
 
+interface Settings {
+	imports: string[];
+}
+
+// The global settings, used when the `workspace/configuration` request is not supported by the client.
+// Please note that this is not the case when using this server with the client provided in this example
+// but could happen with other clients.
+const defaultSettings: Settings = { imports: [] };
+let globalSettings: Settings = defaultSettings;
+
+// Cache the settings of all open documents
+const documentSettings: Map<string, Thenable<Settings>> = new Map();
+
+connection.onDidChangeConfiguration(change => {
+
+	connection.console.log(change.settings)
+
+	globalSettings = <Settings>(
+		(change.settings.aquaSettings || defaultSettings)
+	);
+
+
+	// Revalidate all open text documents
+	documents.all().forEach(validateTextDocument);
+});
+
+function getDocumentSettings(resource: string): Thenable<Settings> {
+	if (!hasConfigurationCapability) {
+		return Promise.resolve(globalSettings);
+	}
+	let result = documentSettings.get(resource);
+	if (!result) {
+		result = connection.workspace.getConfiguration({
+			scopeUri: resource,
+			section: 'aquaSettings'
+		});
+		documentSettings.set(resource, result);
+	}
+	return result;
+}
+
+// Only keep settings for open documents
+documents.onDidClose(e => {
+	documentSettings.delete(e.document.uri);
+});
+
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
+
+	hasConfigurationCapability = !!(
+		capabilities.workspace && !!capabilities.workspace.configuration
+	);
 
 	hasWorkspaceFolderCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.workspaceFolders
@@ -72,6 +123,8 @@ documents.onDidSave(async change => {
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 
+	const settings = await getDocumentSettings(textDocument.uri);
+
 	const uri = textDocument.uri.replace("file://", "")
 
 	let imports: string[] = []
@@ -79,6 +132,8 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	// add all workspace folders to imports
 	imports = imports.concat(folders.map((f) => f.uri.replace("file://", "")))
 	imports = imports.concat(folders.map((f) => f.uri.replace("file://", "")) + "/node_modules")
+	imports = imports.concat(settings.imports.map((s) => s.replace("file://", "")))
+	imports = imports.concat(settings.imports.map((s) => s.replace("file://", "")) + "/node_modules")
 
 	if (require.main) {
 		imports = imports.concat(require.main.paths)
