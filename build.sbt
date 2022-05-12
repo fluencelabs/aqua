@@ -81,8 +81,8 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
   )
   .dependsOn(compiler, parser)
 
-lazy val `language-server` = project
-  .in(file("language-server"))
+lazy val `language-server-api` = project
+  .in(file("language-server-api"))
   .enablePlugins(ScalaJSPlugin)
   .settings(commons: _*)
   .settings(
