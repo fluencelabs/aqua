@@ -1,0 +1,27 @@
+{
+  "name": "@fluencelabs/aqua-language-server-api",
+  "version": "0.0.3",
+  "description": "Aqua Language Server API",
+  "type": "commonjs",
+  "files": [
+    "aqua-lsp-api.js",
+    "aqua-lsp-api.d.ts"
+  ],
+  "scripts": {
+    "move:scalajs": "cp ../language-server-api/target/scala-3.1.0/language-server-opt/main.js ./aqua-lsp-api.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fluencelabs/aqua.git"
+  },
+  "keywords": [
+    "aqua",
+    "fluence"
+  ],
+  "author": "Fluence Labs",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/fluencelabs/aqua/issues"
+  },
+  "homepage": "https://github.com/fluencelabs/aqua#readme"
+}
