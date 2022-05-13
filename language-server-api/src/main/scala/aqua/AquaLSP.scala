@@ -25,20 +25,25 @@ import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
 import cats.data.NonEmptyChain
 import fs2.io.file.{Files, Path}
 import cats.data.Validated.{Invalid, Valid}
-import scala.scalajs.js.JSConverters._
-import concurrent.ExecutionContext.Implicits.global
 
+import scala.scalajs.js.JSConverters.*
+import concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js.annotation.*
+import scala.scalajs.js.{undefined, UndefOr}
 
 @JSExportAll
-case class ErrorInfo(start: Int, end: Int, message: String, location: Option[String])
+case class ErrorInfo(start: Int, end: Int, message: String, location: UndefOr[String])
 
 object ErrorInfo {
 
   def apply(fileSpan: FileSpan, message: String): ErrorInfo = {
     val start = fileSpan.span.startIndex
     val end = fileSpan.span.endIndex
-    ErrorInfo(start, end, message, Some(fileSpan.name))
+    ErrorInfo(start, end, message, fileSpan.name)
+  }
+
+  def applyOp(start: Int, end: Int, message: String, location: Option[String]): ErrorInfo = {
+    ErrorInfo(start, end, message, location.getOrElse(undefined))
   }
 }
 
@@ -74,13 +79,13 @@ object AquaLSP extends App with Logging {
               .reverse
         }
       case SourcesErr(err) =>
-        ErrorInfo(0, 0, err.showForConsole, None) :: Nil
+        ErrorInfo.applyOp(0, 0, err.showForConsole, None) :: Nil
       case ResolveImportsErr(_, token, err) =>
         ErrorInfo(token.unit._1, err.showForConsole) :: Nil
       case ImportErr(token) =>
         ErrorInfo(token.unit._1, "Cannot resolve import") :: Nil
       case CycleError(modules) =>
-        ErrorInfo(
+        ErrorInfo.applyOp(
           0,
           0,
           s"Cycle loops detected in imports: ${modules.map(_.file.fileName)}",
@@ -93,11 +98,11 @@ object AquaLSP extends App with Logging {
           case HeaderError(token, message) =>
             ErrorInfo(token.unit._1, message) :: Nil
           case WrongAST(ast) =>
-            ErrorInfo(0, 0, "Semantic error: wrong AST", None) :: Nil
+            ErrorInfo.applyOp(0, 0, "Semantic error: wrong AST", None) :: Nil
 
         }
       case OutputError(_, err) =>
-        ErrorInfo(0, 0, err.showForConsole, None) :: Nil
+        ErrorInfo.applyOp(0, 0, err.showForConsole, None) :: Nil
     }
   }
 
