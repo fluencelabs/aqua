@@ -131,7 +131,7 @@ jobs:
       - name: Publish aqua LSP API to NPM
         run: |
           npm i
-          npm publish --access public --tag lsp-test
+          npm publish --access public
         working-directory: ./language-server-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
