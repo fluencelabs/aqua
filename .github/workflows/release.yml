@@ -1,6 +1,9 @@
 name: "release"
 
 on:
+  push:
+    branches:
+      - language-server
   workflow_dispatch:
     inputs:
       do_release:
@@ -24,6 +27,11 @@ jobs:
 
       - name: JS build
         run: sbt cliJS/fullLinkJS
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+
+      - name: JS language server API build
+        run: sbt language-server-api/fullLinkJS
         env:
           BUILD_NUMBER: ${{ github.run_number }}
 
@@ -56,6 +64,13 @@ jobs:
           stat "$JS"
           echo "JS=$JS" >> $GITHUB_ENV
 
+      - name: Check API .js exists
+        run: |
+          JSAPI="language-server-api/target/scala-3.1.0/cli-opt/aqua-${{ env.VERSION }}.js"
+          mv language-server-api/target/scala-3.1.0/cli-opt/main.js "$JSAPI"
+          stat "$JSAPI"
+          echo "JSAPI=$JSAPI" >> $GITHUB_ENV
+
       ### Publish to NPM registry
       - uses: actions/setup-node@v1
         with:
@@ -63,51 +78,66 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - run: cp ${{ env.JS }} ./npm/aqua.js
+      - run: cp ${{ env.JSAPI }} ./language-server-npm/aqua-lsp-api.js
 
       - run: npm version ${{ env.VERSION }}
         working-directory: ./npm
 
-      - name: Publish to NPM as aqua
-        run: |
-          npm i
-          npm run build
-          npm publish --access public
-        working-directory: ./npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # - name: Publish to NPM as aqua
+      #   run: |
+      #     npm i
+      #     npm run build
+      #     npm publish --access public
+      #   working-directory: ./npm
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       ### create release
 
       # 'Push tag' will fail if such tag already exists
-      - name: Push tag ${{ env.BASE_VERSION }}
-        if: ${{ env.DO_RELEASE == 'true' }}
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v5.5
-        with:
-          custom_tag: ${{ env.BASE_VERSION }}
-          tag_prefix: ""
-          github_token: ${{ secrets.PERSONAL_TOKEN }}
+      # - name: Push tag ${{ env.BASE_VERSION }}
+      #   if: ${{ env.DO_RELEASE == 'true' }}
+      #   id: tag_version
+      #   uses: mathieudutour/github-tag-action@v5.5
+      #   with:
+      #     custom_tag: ${{ env.BASE_VERSION }}
+      #     tag_prefix: ""
+      #     github_token: ${{ secrets.PERSONAL_TOKEN }}
+#
+      # - name: Build Changelog
+      #   if: ${{ env.DO_RELEASE == 'true' }}
+      #   id: github_release
+      #   uses: mikepenz/release-changelog-builder-action@v1
+      #   with:
+      #     configuration: ".github/workflows/changelog_config.json"
+      #     toTag: ${{ steps.tag_version.outputs.new_tag }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#
+      # - name: Release
+      #   if: ${{ env.DO_RELEASE == 'true' }}
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     name: Aqua Compiler ${{ env.VERSION }}
+      #     tag_name: ${{ steps.tag_version.outputs.new_tag }}
+      #     body: ${{ steps.github_release.outputs.changelog }}
+      #     draft: false
+      #     prerelease: false
+      #     files: |
+      #       ${{ env.JS }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Changelog
-        if: ${{ env.DO_RELEASE == 'true' }}
-        id: github_release
-        uses: mikepenz/release-changelog-builder-action@v1
-        with:
-          configuration: ".github/workflows/changelog_config.json"
-          toTag: ${{ steps.tag_version.outputs.new_tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - run: npm version ${{ env.VERSION }}
+      - run: npm version 0.0.4
+        working-directory: ./language-server-npm
 
-      - name: Release
-        if: ${{ env.DO_RELEASE == 'true' }}
-        uses: softprops/action-gh-release@v1
-        with:
-          name: Aqua Compiler ${{ env.VERSION }}
-          tag_name: ${{ steps.tag_version.outputs.new_tag }}
-          body: ${{ steps.github_release.outputs.changelog }}
-          draft: false
-          prerelease: false
-          files: |
-            ${{ env.JS }}
+      - name: Publish aqua LSP API to NPM
+        run: |
+          npm i
+          npm run build
+          npm publish --access public --tag lsp-test
+        working-directory: ./language-server-npm
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
