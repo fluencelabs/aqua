@@ -66,8 +66,8 @@ jobs:
 
       - name: Check API .js exists
         run: |
-          JSAPI="language-server-api/target/scala-3.1.0/cli-opt/aqua-${{ env.VERSION }}.js"
-          mv language-server-api/target/scala-3.1.0/cli-opt/main.js "$JSAPI"
+          JSAPI="language-server-api/target/scala-3.1.0/language-server-api-opt/aqua-${{ env.VERSION }}.js"
+          mv language-server-api/target/scala-3.1.0/language-server-api-opt/main.js "$JSAPI"
           stat "$JSAPI"
           echo "JSAPI=$JSAPI" >> $GITHUB_ENV
 
