@@ -41,7 +41,7 @@ class SubCommandBuilder[F[_]: Async](
   opts: Opts[F[ValidatedNec[String, RunInfo]]]
 ) extends Logging {
 
-  def command: Command[F[ExitCode]] = Command(name, header) {
+  def command: Command[F[ValidatedNec[String, Unit]]] = Command(name, header) {
     opts.map { riF =>
       riF.flatMap {
         case Validated.Valid(ri) =>
@@ -59,9 +59,8 @@ class SubCommandBuilder[F[_]: Async](
               ri.services
             )
           }
-        case Validated.Invalid(errs) =>
-          AquaCli.printCommandErrors(errs)
-          ExitCode.Error.pure[F]
+        case i @ Validated.Invalid(_) =>
+          i.pure[F]
       }
     }
   }
@@ -108,7 +107,9 @@ object SubCommandBuilder {
         }
       )
 
-  def subcommands[F[_]: Async](subs: NonEmptyList[SubCommandBuilder[F]]): Opts[F[ExitCode]] =
+  def subcommands[F[_]: Async](
+    subs: NonEmptyList[SubCommandBuilder[F]]
+  ): Opts[F[ValidatedNec[String, Unit]]] =
     Opts.subcommands(subs.head.command, subs.tail.map(_.command): _*)
 }
 
@@ -117,10 +118,10 @@ case class CommandBuilder[F[_]: Async](
   name: String,
   header: String,
   subcommands: NonEmptyList[SubCommandBuilder[F]],
-  rawCommands: List[Command[F[ExitCode]]] = Nil
+  rawCommands: List[Command[F[ValidatedNec[String, Unit]]]] = Nil
 ) {
 
-  def command: Command[F[ExitCode]] = {
+  def command: Command[F[ValidatedNec[String, Unit]]] = {
     Command(name = name, header = header) {
       Opts.subcommands(
         subcommands.head.command,

@@ -72,7 +72,7 @@ object RunCommand extends Logging {
     imports: List[Path],
     runConfig: RunConfig,
     transformConfig: TransformConfig
-  ): F[ExitCode] = {
+  ): F[ValidatedNec[String, Unit]] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
 
@@ -90,13 +90,7 @@ object RunCommand extends Logging {
       (callTime, result) = callResult
     } yield {
       logger.debug(s"Call time: ${callTime.toMillis}ms")
-      result.fold(
-        { (errs: NonEmptyChain[String]) =>
-          errs.toChain.toList.foreach(err => OutputPrinter.error(err + "\n"))
-          ExitCode.Error
-        },
-        _ => ExitCode.Success
-      )
+      result
     }
   }
 
@@ -128,7 +122,7 @@ object RunCommand extends Logging {
     imports: List[Path] = Nil,
     argumentGetters: Map[String, ArgumentGetter] = Map.empty,
     services: List[Service] = Nil
-  ): F[ExitCode] = {
+  ): F[ValidatedNec[String, Unit]] = {
     LogFormatter.initLogger(Some(common.logLevel))
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]
     RunCommand
