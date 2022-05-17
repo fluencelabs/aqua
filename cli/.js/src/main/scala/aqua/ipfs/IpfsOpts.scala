@@ -13,13 +13,11 @@ import aqua.{
   RunInfo,
   SubCommandBuilder
 }
-import aqua.io.OutputPrinter
 import aqua.js.{Fluence, PeerConfig}
 import aqua.keypair.KeyPairShow.show
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.builder.IPFSUploader
-import aqua.files.AquaFilesIO
 import aqua.ipfs.js.IpfsApi
 import aqua.model.LiteralModel
 import aqua.raw.value.LiteralRaw

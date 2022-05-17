@@ -118,7 +118,12 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
     }
 
   // Write content to a file and return a success message
-  private def writeWithResult(target: Path, content: String, funcsCount: Int, servicesCount: Int) = {
+  private def writeWithResult(
+    target: Path,
+    content: String,
+    funcsCount: Int,
+    servicesCount: Int
+  ) = {
     filesIO
       .writeFile(
         target,

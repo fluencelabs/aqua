@@ -6,8 +6,6 @@ import aqua.backend.Generated
 import aqua.backend.air.{AirBackend, AirGen, FuncAirGen}
 import aqua.builder.ArgumentGetter
 import aqua.compiler.AquaCompiler
-import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
-import aqua.io.{AquaFileError, OutputPrinter}
 import aqua.ipfs.js.IpfsApi
 import aqua.js.{Config, Fluence, PeerConfig}
 import aqua.keypair.KeyPairShow.show

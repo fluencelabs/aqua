@@ -27,6 +27,11 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
 
+      - name: JS language server API build
+        run: sbt language-server-api/fullLinkJS
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+
       - name: Get project version
         # In CI sbt appends a new line after its output, so we need `tail -n3 | head -n2` to get last two non-empty lines
         run: |
@@ -56,6 +61,13 @@ jobs:
           stat "$JS"
           echo "JS=$JS" >> $GITHUB_ENV
 
+      - name: Check API .js exists
+        run: |
+          JSAPI="language-server-api/target/scala-3.1.0/language-server-api-opt/aqua-${{ env.VERSION }}.js"
+          mv language-server-api/target/scala-3.1.0/language-server-api-opt/main.js "$JSAPI"
+          stat "$JSAPI"
+          echo "JSAPI=$JSAPI" >> $GITHUB_ENV
+
       ### Publish to NPM registry
       - uses: actions/setup-node@v1
         with:
@@ -63,6 +75,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - run: cp ${{ env.JS }} ./npm/aqua.js
+      - run: cp ${{ env.JSAPI }} ./language-server-npm/aqua-lsp-api.js
 
       - run: npm version ${{ env.VERSION }}
         working-directory: ./npm
@@ -111,3 +124,15 @@ jobs:
             ${{ env.JS }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: npm version  ${{ env.VERSION }}
+        working-directory: ./language-server-npm
+
+      - name: Publish aqua LSP API to NPM
+        run: |
+          npm i
+          npm publish --access public
+        working-directory: ./language-server-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
