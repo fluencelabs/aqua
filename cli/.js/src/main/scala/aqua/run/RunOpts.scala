@@ -2,7 +2,6 @@ package aqua.run
 
 import aqua.ArgOpts.checkDataGetServices
 import aqua.builder.{ArgumentGetter, Service}
-import aqua.files.AquaFilesIO
 import aqua.model.transform.TransformConfig
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.parser.expr.func.CallArrowExpr

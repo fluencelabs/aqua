@@ -78,12 +78,18 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
     )
 
   // Get all files for every path if the path in the list is a directory or this path otherwise
-  private def gatherFiles(files: List[Path], listFunction: (f: Path) => F[ValidatedNec[AquaFileError, Chain[Path]]]): List[F[ValidatedNec[AquaFileError, Chain[Path]]]] = {
+  private def gatherFiles(
+    files: List[Path],
+    listFunction: (f: Path) => F[ValidatedNec[AquaFileError, Chain[Path]]]
+  ): List[F[ValidatedNec[AquaFileError, Chain[Path]]]] = {
     files.map(f => gatherFile(f, listFunction))
   }
 
   // Get all files if the path is a directory or this path otherwise
-  private def gatherFile(f: Path, listFunction: (f: Path) => F[ValidatedNec[AquaFileError, Chain[Path]]]): F[ValidatedNec[AquaFileError, Chain[Path]]] = {
+  private def gatherFile(
+    f: Path,
+    listFunction: (f: Path) => F[ValidatedNec[AquaFileError, Chain[Path]]]
+  ): F[ValidatedNec[AquaFileError, Chain[Path]]] = {
     Files[F].isDirectory(f).flatMap { isDir =>
       if (isDir)
         listFunction(f)
@@ -107,8 +113,15 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
         } else {
           Files[F].isDirectory(folder).flatMap { isDir =>
             if (isDir) {
-              Files[F].list(folder).evalFilter(p => if (p.extName == ".aqua") true.pure[F] else Files[F].isDirectory(p))
-                .compile.toList.map(Right(_))
+              Files[F]
+                .list(folder)
+                .evalFilter(p =>
+                  if (p.extName == ".aqua") true.pure[F]
+                  else Files[F].isDirectory(p)
+                )
+                .compile
+                .toList
+                .map(Right(_))
             } else {
               Right(folder :: Nil).pure[F]
             }

@@ -1,4 +1,5 @@
-import "run-builtins.aqua"
+import "@fluencelabs/aqua-lib/builtin.aqua"
+-- import "run-builtins.aqua"
 
 data StructType:
   numField: u32
@@ -11,14 +12,33 @@ service OpNumber("op"):
   identity(n: u32) -> u32
 
 service OpStruct("op"):
-  identity(st: StructType) -> StructType
+  identity(st: StructType)  -> StructType
+  noop()
 
+func parseBug():
+    stream: *string
+    if stream[0] != "FOO":
+        Op.noop()
 
-func identityArgsAndReturn(structArg: StructType, stringArg: string, numberArg: u32) -> string, u32, StructType:
+func identityArgsAndReturn (structArg: StructType, stringArg: string, numberArg: u32) -> string, u32, StructType:
   on HOST_PEER_ID:
     sArg <- OpString.identity(stringArg)
-    nArg <- OpNumber.identity(numberArg)
+    nArg =  OpNumber.identity (numberArg)  +   OpNumber.identity (numberArg)
     stArg <- OpStruct.identity(structArg)
   -- it could be used only on init_peer_id
-  Console.print("hello")
   <- sArg, nArg, stArg
+
+service Ssss("ss"):
+  foo4: u64 -> u16
+
+func aaa(a: u64) -> u16:
+  res <- Ssss.foo4(a)
+  <- res
+
+func bar(callback: u32 -> u32):
+  callback(1)
+
+func baz():
+  bar(aaa)
+
+

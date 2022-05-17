@@ -4,7 +4,7 @@ import aqua.compiler.*
 import aqua.files.FileModuleId
 import aqua.io.AquaFileError
 import aqua.parser.lift.{FileSpan, Span}
-import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError}
+import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
 import cats.parse.LocationMap
 import cats.parse.Parser.Expectation
@@ -12,32 +12,6 @@ import cats.parse.Parser.Expectation.*
 import cats.{Eval, Show}
 
 object ErrorRendering {
-
-  def betterSymbol(symbol: Char): String = {
-    symbol match {
-      case ' ' => "whitespace"
-      case '\t' => "tabulation"
-      case c => c.toString
-    }
-  }
-
-  def expectationToString(expectation: Expectation, acc: List[String] = Nil): List[String] = {
-    // TODO: match all expectations
-    expectation match {
-      // get the deepest context
-      case WithContext(str, exp: WithContext) => expectationToString(exp, List(str))
-      case WithContext(str, exp) => s"$str (${expectationToString(exp)})" +: acc
-      case FailWith(_, message) => message +: acc
-      case InRange(offset, lower, upper) =>
-        if (lower == upper)
-          s"Expected symbol '${betterSymbol(lower)}'" +: acc
-        else
-          s"Expected symbols from '${betterSymbol(lower)}' to '${betterSymbol(upper)}'" +: acc
-      case OneOfStr(offset, strs) =>
-        s"Expected one of these strings: ${strs.map(s => s"'$s'").mkString(", ")}" +: acc
-      case e => ("Expected: " + e.toString) +: acc
-    }
-  }
 
   def showForConsole(errorType: String, span: FileSpan, messages: List[String]): String =
     span
@@ -70,7 +44,7 @@ object ErrorRendering {
               val msg = FileSpan(span.name, span.locationMap, localSpan)
                 .focus(0)
                 .map { spanFocus =>
-                  val errorMessages = exps.flatMap(exp => expectationToString(exp))
+                  val errorMessages = exps.flatMap(exp => ParserError.expectationToString(exp))
                   spanFocus.toConsoleStr(
                     "Syntax error",
                     s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t),
@@ -113,7 +87,7 @@ object ErrorRendering {
             .map(_.toConsoleStr("Header error", message :: Nil, Console.CYAN))
             .getOrElse("(Dup error, but offset is beyond the script)")
         case WrongAST(ast) =>
-          s"Semantic error: wrong AST"
+          "Semantic error: wrong AST"
 
       }
 

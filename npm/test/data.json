@@ -1,8 +1,35 @@
 {
+  "target": "12D3KooWMhVpgfQxBLkQkJed8VFNvgN4iE6MD7xCybb1ZYWW2Gtz",
+  "validators": [
+    "12D3KooWHk9BjDQBUqnavciRPhAYFvqKBe4ZiPPvde7vDaqgn5er",
+    "12D3KooWBUJifCTgaxAUrcM9JysqCcS4CS8tiYH5hExbdWCAoNwb",
+    "12D3KooWJbJFaZ3k5sNd8DjQgg3aERoKtBAnirEvPV8yp76kEXHB",
+    "12D3KooWCKCeqLPSgMnDjyFsJuWqREDtKNHx1JEBiwaMXhCLNTRb",
+    "12D3KooWKnRcsTpYx9axkJ6d69LPfpPXrkVLe96skuPTAo76LLVH",
+    "12D3KooWBSdm6TkqnEFrgBuSkpVE3dR1kr6952DsWQRNwJZjFZBv",
+    "12D3KooWGzNvhSDsgFoHwpWHAyPf1kcTYCGeRBPfznL8J6qdyu2H",
+    "12D3KooWF7gjXhQ4LaKj6j7ntxsPpGk34psdQicN2KNfBi9bFKXg",
+    "12D3KooWB9P1xmV3c7ZPpBemovbwCiRRTKd3Kq2jsVPQN4ZukDfy"
+  ],
+  "timeout": 5000,
   "stringField": "some string",
   "numberField": 123,
   "structField": {
     "numField": 42,
-    "arrField": ["str1", "str2"]
+    "arrField": ["str1", "str2", "r43r34", "ferer"],
+    "arr2": [{
+      "a": "fef",
+      "b": [1,2,3,4],
+      "c": "erfer",
+      "d": "frefe"
+    },{
+      "b": [1,2,3,4],
+      "c": "erfer",
+      "d": "frefe"
+    }, {
+        "a": "as",
+        "c": "erfer",
+        "d": "gerrt"
+      }]
   }
 }
