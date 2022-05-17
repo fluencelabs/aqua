@@ -19,7 +19,7 @@ object IPFSUploader extends Logging {
 
     override def handler: ServiceHandler = args => {
       IpfsApi
-        .uploadFile(args(0), args(1), logError, logInfo)
+        .uploadFile(args(0), args(1), logInfo, logError)
         .`catch` { err =>
           js.Dynamic.literal(error = "File upload error: " + err)
         }
