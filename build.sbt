@@ -46,10 +46,8 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-effect"    % catsEffectV,
-      "com.monovore"  %%% "decline"        % declineV,
-      "com.monovore"  %%% "decline-effect" % declineV,
-      "co.fs2"        %%% "fs2-io"         % fs2V
+      "com.monovore" %%% "decline"        % declineV,
+      "com.monovore" %%% "decline-effect" % declineV
     )
   )
   .dependsOn(compiler, `backend-air`, `backend-ts`, io)

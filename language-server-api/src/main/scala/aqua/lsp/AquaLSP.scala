@@ -1,33 +1,23 @@
-package aqua
+package aqua.lsp
 
-import scribe.Logging
-import cats.effect.IO
-import cats.effect.unsafe.implicits.global
-
-import scala.concurrent.Future
-import aqua.compiler.{
-  AquaCompiler,
-  AquaError,
-  CompileError,
-  CycleError,
-  ImportErr,
-  OutputError,
-  ParserErr,
-  ResolveImportsErr,
-  SourcesErr
-}
-import aqua.parser.lift.{FileSpan, Span}
-import aqua.io.*
+import aqua.compiler.*
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
+import aqua.io.*
 import aqua.model.transform.TransformConfig
+import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
+import aqua.{AquaIO, SpanParser}
 import cats.data.NonEmptyChain
-import fs2.io.file.{Files, Path}
 import cats.data.Validated.{Invalid, Valid}
+import cats.effect.IO
+import cats.effect.unsafe.implicits.global
+import fs2.io.file.{Files, Path}
+import scribe.Logging
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.scalajs.js.JSConverters.*
-import concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js.annotation.*
 import scala.scalajs.js.{undefined, UndefOr}
 
@@ -49,11 +39,6 @@ object ErrorInfo {
 
 @JSExportTopLevel("AquaLSP")
 object AquaLSP extends App with Logging {
-
-  @JSExport
-  def sayHello(): Unit = {
-    println("Hello world!")
-  }
 
   def errorToInfo(error: AquaError[FileModuleId, AquaFileError, FileSpan.F]): List[ErrorInfo] = {
     error match {
