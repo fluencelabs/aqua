@@ -26,9 +26,7 @@ import cats.effect.std.Console
 // JS-specific options and subcommands
 object PlatformOpts extends Logging {
 
-  def opts[F[_]: Files: AquaIO: Async: Console](implicit
-    ec: ExecutionContext
-  ): Opts[F[ValidatedNec[String, Unit]]] =
+  def opts[F[_]: Files: AquaIO: Async: Console]: Opts[F[ValidatedNec[String, Unit]]] =
     Opts.subcommand(RunOpts.runCommand[F]) orElse
       Opts.subcommand(KeyPairOpts.command[F]) orElse
       Opts.subcommand(IpfsOpts.ipfsOpt[F]) orElse
