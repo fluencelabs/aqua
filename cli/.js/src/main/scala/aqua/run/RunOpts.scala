@@ -92,6 +92,6 @@ object RunOpts extends Logging {
       }
     )
 
-  def runCommand[F[_]: Files: AquaIO: Async]: Command[F[ExitCode]] =
+  def runCommand[F[_]: Files: AquaIO: Async]: Command[F[ValidatedNec[String, Unit]]] =
     runOptions.command
 }

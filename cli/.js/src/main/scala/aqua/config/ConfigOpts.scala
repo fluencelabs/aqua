@@ -2,18 +2,19 @@ package aqua.config
 
 import aqua.js.{FluenceEnvironment, FluenceNode}
 import cats.Applicative
-import cats.data.Validated
+import cats.data.{Validated, ValidatedNec}
 import cats.data.Validated.{invalidNel, validNel}
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*
 import com.monovore.decline.{Command, Opts}
+import cats.data.Validated.{invalidNec, validNec}
 
 import scala.scalajs.js
 
 object ConfigOpts {
 
-  def command[F[_]: Async]: Command[F[ExitCode]] =
+  def command[F[_]: Async]: Command[F[ValidatedNec[String, Unit]]] =
     Command(name = "config", header = "Aqua CLI configuration") {
       Opts.subcommands(
         listPeers
@@ -41,14 +42,13 @@ object ConfigOpts {
           )
       }
 
-  def listPeers[F[_]: Applicative]: Command[F[ExitCode]] =
+  def listPeers[F[_]: Applicative]: Command[F[ValidatedNec[String, Unit]]] =
     Command(
       name = "default_peers",
       header = "List addresses of default peers in Fluence network"
     ) {
       envArg.map { env =>
-        println(env.toList.map(n => n.multiaddr).mkString("\n"))
-        ExitCode.Success.pure[F]
+        validNec(println(env.toList.map(n => n.multiaddr).mkString("\n"))).pure[F]
       }
     }
 }

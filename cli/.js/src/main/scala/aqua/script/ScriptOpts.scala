@@ -88,7 +88,7 @@ object ScriptOpts extends Logging {
     literals.traverse(identity)
   }
 
-  def scriptOpt[F[_]: Async: AquaIO]: Command[F[ExitCode]] =
+  def scriptOpt[F[_]: Async: AquaIO]: Command[F[ValidatedNec[String, Unit]]] =
     CommandBuilder(
       name = "script",
       header = "Manage scheduled scripts",

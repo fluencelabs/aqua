@@ -7,6 +7,7 @@ import aqua.keypair.KeyPairOpts
 import aqua.remote.{DistOpts, RemoteOpts}
 import aqua.run.RunOpts
 import aqua.script.ScriptOpts
+import cats.data.ValidatedNec
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*
@@ -20,11 +21,12 @@ import scribe.Logging
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
+import cats.effect.std.Console
 
 // JS-specific options and subcommands
 object PlatformOpts extends Logging {
 
-  def opts[F[_]: Files: AquaIO: Async](implicit ec: ExecutionContext): Opts[F[ExitCode]] =
+  def opts[F[_]: Files: AquaIO: Async: Console]: Opts[F[ValidatedNec[String, Unit]]] =
     Opts.subcommand(RunOpts.runCommand[F]) orElse
       Opts.subcommand(KeyPairOpts.command[F]) orElse
       Opts.subcommand(IpfsOpts.ipfsOpt[F]) orElse

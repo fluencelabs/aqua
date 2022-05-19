@@ -15,6 +15,7 @@ import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.traverse.*
 import cats.{~>, Functor, Id, Monad}
 import com.monovore.decline
 import com.monovore.decline.effect.CommandIOApp
@@ -44,9 +45,24 @@ object AquaCli extends IOApp with Logging {
     }
   }
 
-  def printCommandErrors(errs: NonEmptyChain[String]) = {
-    errs.map(OutputPrinter.error _)
-    OutputPrinter.error("\nTry 'aqua --help' for usage instructions")
+  def printErrorsOr[F[_]: Async: ConsoleEff, T](
+    result: ValidatedNec[String, T],
+    or: T => F[ExitCode]
+  ): F[ExitCode] = {
+    result match {
+      case Validated.Invalid(errs) =>
+        printCommandErrors[F](errs).as {
+          ExitCode.Error
+        }
+      case Validated.Valid(results) =>
+        or(results)
+    }
+  }
+
+  def printCommandErrors[F[_]: ConsoleEff: Async](errs: NonEmptyChain[String]): F[Unit] = {
+    errs.map(OutputPrinter.errorF _).sequence.flatMap { _ =>
+      OutputPrinter.errorF("\nTry 'aqua --help' for usage instructions")
+    }
 
   }
 
@@ -55,7 +71,16 @@ object AquaCli extends IOApp with Logging {
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]
     implicit val ec = r.compute
 
-    PlatformOpts.opts orElse versionOpt
+    PlatformOpts.opts.map { res =>
+      res.flatMap {
+        case Validated.Invalid(errs) =>
+          printCommandErrors[F](errs).as {
+            ExitCode.Error
+          }
+        case Validated.Valid(_) =>
+          ExitCode.Success.pure[F]
+      }
+    } orElse versionOpt
       .as(
         versionAndExit
       ) orElse helpOpt.as(
@@ -136,19 +161,21 @@ object AquaCli extends IOApp with Logging {
                 }
               }
             }
-          }.flatMap {
-            case Validated.Invalid(errs) =>
-              printCommandErrors(errs)
-              ExitCode.Error.pure[F]
-            case Validated.Valid(result) =>
-              result.map {
-                case Validated.Invalid(errs) =>
-                  printCommandErrors(errs)
-                  ExitCode.Error
-                case Validated.Valid(results) =>
-                  results.map(OutputPrinter.print _)
-                  ExitCode.Success
+          }.flatMap { results =>
+            printErrorsOr[F, F[ValidatedNec[String, Chain[String]]]](
+              results,
+              { res =>
+                res.flatMap {
+                  case Validated.Invalid(errs) =>
+                    printCommandErrors[F](errs).as {
+                      ExitCode.Error
+                    }
+                  case Validated.Valid(results) =>
+                    results.map(OutputPrinter.print _)
+                    ExitCode.Success.pure[F]
+                }
               }
+            )
           }
         }
     }
@@ -166,8 +193,9 @@ object AquaCli extends IOApp with Logging {
           NonEmptyChain
             .fromSeq(h.errors)
             .map { errs =>
-              printCommandErrors(errs)
-              ExitCode.Error.pure[IO]
+              printCommandErrors[IO](errs).as {
+                ExitCode.Error
+              }
             }
             .getOrElse(ConsoleEff[IO].print(h).as(ExitCode.Success))
         },

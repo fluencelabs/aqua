@@ -1,5 +1,7 @@
 package aqua.io
 
+import cats.effect.std.Console
+
 // Uses to print outputs in CLI
 // TODO: add F[_], cause it is effect
 object OutputPrinter {
@@ -8,7 +10,7 @@ object OutputPrinter {
     println(str)
   }
 
-  def error(str: String): Unit = {
-    println(Console.RED + str + Console.RESET)
+  def errorF[F[_]: Console](str: String): F[Unit] = {
+    Console[F].errorln(scala.Console.RED + str + scala.Console.RESET)
   }
 }
