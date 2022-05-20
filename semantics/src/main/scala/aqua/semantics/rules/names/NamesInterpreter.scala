@@ -1,7 +1,7 @@
 package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
-import aqua.semantics.Levenshtein
+import aqua.semantics.{Levenshtein, TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, StreamType, Type}
 import cats.data.{OptionT, State}
@@ -22,7 +22,7 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
 
   type SX[A] = State[X, A]
 
-  def readName(name: String): SX[Option[TokenInfo[S]]] =
+  def readName(name: String): SX[Option[TokenType[S]]] =
     getState.map { st =>
       st.constants.get(name) orElse st.stack.collectFirst {
         case frame if frame.names.contains(name) => frame.names(name)
@@ -49,10 +49,11 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
           )
         case Some(tokenInfo) =>
           modify(st => st.copy(locations = st.locations :+ (name, tokenInfo)))
+        case _ => State.pure(())
       }
       .map(_.map(_.tokenType))
 
-  def constantInfo(name: Name[S]): SX[Option[TokenInfo[S]]] =
+  def constantInfo(name: Name[S]): SX[Option[TokenType[S]]] =
     getState.map(_.constants.get(name.value))
 
   override def constantDefined(name: Name[S]): SX[Option[Type]] =

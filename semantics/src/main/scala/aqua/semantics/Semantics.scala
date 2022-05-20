@@ -77,7 +77,10 @@ object Semantics extends Logging {
   private def astToState[S[_]](ast: Ast[S]): Interpreter[S, Raw] =
     transpile[S](ast)
 
-  def process[S[_]](ast: Ast[S], init: RawContext): ValidatedNec[SemanticError[S], RawContext] =
+  def process[S[_]](
+    ast: Ast[S],
+    init: RawContext
+  ): ValidatedNec[SemanticError[S], (CompilerState[S], RawContext)] =
     astToState[S](ast)
       .run(CompilerState.init[S](init))
       .map {
@@ -85,11 +88,14 @@ object Semantics extends Logging {
           // No `parts`, but has `init`
           NonEmptyChain
             .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[S], RawContext]](
+            .fold[ValidatedNec[SemanticError[S], (CompilerState[S], RawContext)]](
               Valid(
-                RawContext.blank.copy(
-                  init = Some(init.copy(module = init.module.map(_ + "|init")))
-                    .filter(_ != RawContext.blank)
+                (
+                  state,
+                  RawContext.blank.copy(
+                    init = Some(init.copy(module = init.module.map(_ + "|init")))
+                      .filter(_ != RawContext.blank)
+                  )
                 )
               )
             )(Invalid(_))
@@ -109,13 +115,19 @@ object Semantics extends Logging {
 
           NonEmptyChain
             .fromChain(state.errors)
-            .fold[ValidatedNec[SemanticError[S], RawContext]](Valid(accCtx))(Invalid(_))
+            .fold[ValidatedNec[SemanticError[S], (CompilerState[S], RawContext)]](
+              Valid((state, accCtx))
+            )(Invalid(_))
         case (state, m) =>
           logger.error("Got unexpected " + m)
           NonEmptyChain
             .fromChain(state.errors)
             .map(Invalid(_))
-            .getOrElse(Validated.invalidNec[SemanticError[S], RawContext](WrongAST(ast)))
+            .getOrElse(
+              Validated.invalidNec[SemanticError[S], (CompilerState[S], RawContext)](
+                WrongAST(ast)
+              )
+            )
       }
       // TODO: return as Eval
       .value

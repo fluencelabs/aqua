@@ -4,6 +4,7 @@ import aqua.compiler.*
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.*
 import aqua.model.transform.TransformConfig
+import aqua.parser.lexer.Token
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
@@ -17,9 +18,29 @@ import scribe.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
 import scala.scalajs.js.{undefined, UndefOr}
+
+@JSExportAll
+case class CompilationResult(
+  errors: js.Array[ErrorInfo],
+  locations: js.Array[TokenLink]
+)
+
+@JSExportAll
+case class TokenLocation(name: String, start: Int, end: Int)
+
+@JSExportAll
+case class TokenLink(current: TokenLocation, definition: TokenLocation)
+
+object TokenLocation {
+
+  def apply(span: FileSpan): TokenLocation = {
+    TokenLocation(span.name, span.span.startIndex, span.span.endIndex)
+  }
+}
 
 @JSExportAll
 case class ErrorInfo(start: Int, end: Int, message: String, location: UndefOr[String])
@@ -95,7 +116,7 @@ object AquaLSP extends App with Logging {
   def compile(
     pathStr: String,
     imports: scalajs.js.Array[String]
-  ): scalajs.js.Promise[scalajs.js.Array[ErrorInfo]] = {
+  ): scalajs.js.Promise[CompilationResult] = {
 
     logger.debug(s"Compiling '$pathStr' with imports: $imports")
 
@@ -114,13 +135,26 @@ object AquaLSP extends App with Logging {
     } yield {
       logger.debug("Compilation done.")
       val result = res match {
-        case Valid(_) =>
+        case Valid((state, _)) =>
           logger.debug("No errors on compilation.")
-          List.empty.toJSArray
+          CompilationResult(
+            List.empty.toJSArray,
+            state.toList
+              .flatMap(s =>
+                (s.names.locations ++ s.abilities.locations).flatMap { case (t, tInfo) =>
+                  tInfo.definition match {
+                    case None => Nil
+                    case Some(d) =>
+                      TokenLink(TokenLocation(t.unit._1), TokenLocation(d.unit._1)) :: Nil
+                  }
+                }
+              )
+              .toJSArray
+          )
         case Invalid(e: NonEmptyChain[AquaError[FileModuleId, AquaFileError, FileSpan.F]]) =>
           val errors = e.toNonEmptyList.toList.flatMap(errorToInfo)
           logger.debug("Errors: " + errors.mkString("\n"))
-          errors.toJSArray
+          CompilationResult(errors.toJSArray, List.empty.toJSArray)
       }
       result
     }

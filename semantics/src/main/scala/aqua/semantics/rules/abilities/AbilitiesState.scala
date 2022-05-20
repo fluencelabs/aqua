@@ -3,16 +3,20 @@ package aqua.semantics.rules.abilities
 import aqua.raw.{RawContext, ServiceRaw}
 import aqua.raw.value.ValueRaw
 import aqua.parser.lexer.{Ability, Name, Token, ValueToken}
+import aqua.semantics.TokenInfo
 import aqua.types.ArrowType
 import cats.Monoid
 import cats.data.NonEmptyList
 
 case class AbilitiesState[S[_]](
-                                 stack: List[AbilitiesState.Frame[S]] = Nil,
-                                 services: Map[String, ServiceRaw] = Map.empty,
-                                 abilities: Map[String, RawContext] = Map.empty,
-                                 rootServiceIds: Map[String, (ValueToken[S], ValueRaw)] = Map.empty[String, (ValueToken[S], ValueRaw)],
-                                 definitions: Map[String, Ability[S]] = Map.empty[String, Ability[S]]
+  stack: List[AbilitiesState.Frame[S]] = Nil,
+  services: Map[String, ServiceRaw] = Map.empty,
+  abilities: Map[String, RawContext] = Map.empty,
+  rootServiceIds: Map[String, (ValueToken[S], ValueRaw)] =
+    Map.empty[String, (ValueToken[S], ValueRaw)],
+  definitions: Map[String, (Ability[S], List[(Name[S], ArrowType)])] =
+    Map.empty[String, (Ability[S], List[(Name[S], ArrowType)])],
+  locations: List[(Token[S], TokenInfo[S])] = Nil
 ) {
 
   def purgeArrows: Option[(NonEmptyList[(Name[S], ArrowType)], AbilitiesState[S])] =
@@ -30,7 +34,8 @@ object AbilitiesState {
   case class Frame[S[_]](
     token: Token[S],
     arrows: Map[String, (Name[S], ArrowType)] = Map.empty[String, (Name[S], ArrowType)],
-    serviceIds: Map[String, (ValueToken[S], ValueRaw)] = Map.empty[String, (ValueToken[S], ValueRaw)]
+    serviceIds: Map[String, (ValueToken[S], ValueRaw)] =
+      Map.empty[String, (ValueToken[S], ValueRaw)]
   )
 
   implicit def abilitiesStateMonoid[S[_]]: Monoid[AbilitiesState[S]] =
@@ -43,7 +48,8 @@ object AbilitiesState {
           x.services ++ y.services,
           x.abilities ++ y.abilities,
           x.rootServiceIds ++ y.rootServiceIds,
-          x.definitions ++ y.definitions
+          x.definitions ++ y.definitions,
+          x.locations ++ y.locations
         )
     }
 

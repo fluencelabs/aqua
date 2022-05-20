@@ -5,6 +5,7 @@ import aqua.raw.RawContext
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
+import cats.Semigroup
 import cats.data.{Chain, State}
 import cats.kernel.Monoid
 import cats.syntax.monoid.*
@@ -25,6 +26,16 @@ object CompilerState {
       abilities = AbilitiesState.init[F](ctx),
       types = TypesState.init[F](ctx)
     )
+
+  implicit def semigroupState[S[_]]: Semigroup[CompilerState[S]] =
+    (x: CompilerState[S], y: CompilerState[S]) => {
+      CompilerState[S](
+        x.errors ++ y.errors,
+        x.names |+| y.names,
+        x.abilities |+| y.abilities,
+        x.types |+| y.types
+      )
+    }
 
   implicit def compilerStateMonoid[S[_]]: Monoid[St[S]] = new Monoid[St[S]] {
     override def empty: St[S] = State.pure(Raw.Empty("compiler state monoid empty"))

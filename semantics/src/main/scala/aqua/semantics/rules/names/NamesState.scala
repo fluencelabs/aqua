@@ -2,25 +2,17 @@ package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
 import aqua.raw.RawContext
+import aqua.semantics.{TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.types.{ArrowType, Type}
 import cats.kernel.Monoid
 import cats.syntax.functor.*
 
-sealed trait TokenInfo[F[_]] {
-  def definition: Option[Token[F]]
-  def tokenType: Type
-}
-case class TokenTypeInfo[F[_]](definition: Option[Token[F]], tokenType: Type) extends TokenInfo[F]
-
-case class TokenArrowInfo[F[_]](definition: Option[Token[F]], tokenType: ArrowType)
-    extends TokenInfo[F]
-
 case class NamesState[S[_]](
   stack: List[NamesState.Frame[S]] = Nil,
   rootArrows: Map[String, TokenArrowInfo[S]] = Map.empty[String, TokenArrowInfo[S]],
-  constants: Map[String, TokenInfo[S]] = Map.empty[String, TokenInfo[S]],
+  constants: Map[String, TokenType[S]] = Map.empty[String, TokenType[S]],
   definitions: Map[String, Name[S]] = Map.empty[String, Name[S]],
-  locations: List[(Token[S], TokenInfo[S])] = Nil
+  locations: List[(Token[S], TokenType[S])] = Nil
 ) {
 
   def allNames: LazyList[String] =
@@ -38,7 +30,7 @@ object NamesState {
 
   case class Frame[S[_]](
     token: Token[S],
-    names: Map[String, TokenInfo[S]] = Map.empty[String, TokenInfo[S]],
+    names: Map[String, TokenType[S]] = Map.empty[String, TokenType[S]],
     arrows: Map[String, TokenArrowInfo[S]] = Map.empty[String, TokenArrowInfo[S]]
   ) {
 
