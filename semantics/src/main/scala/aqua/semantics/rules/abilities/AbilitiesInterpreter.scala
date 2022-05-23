@@ -72,6 +72,7 @@ class AbilitiesInterpreter[S[_], X](implicit
         ).as(true)
     }
 
+  // adds location from token to its definition
   def addServiceArrowLocation(name: Ability[S], arrow: Name[S]): SX[Unit] = {
     getState.flatMap { st =>
       st.definitions.get(name.value) match {

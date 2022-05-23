@@ -3,6 +3,7 @@ package aqua.semantics
 import aqua.parser.lexer.Token
 import aqua.types.{ArrowType, Type}
 
+// Token description with it's definition, type, etc
 sealed trait TokenInfo[F[_]] {
   def definition: Option[Token[F]]
 }

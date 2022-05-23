@@ -1,7 +1,7 @@
 package aqua.compiler
 
 import aqua.backend.Backend
-import aqua.linker.{Linker, Modules}
+import aqua.linker.{AquaModule, Linker, Modules}
 import aqua.model.AquaContext
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
@@ -36,17 +36,17 @@ object AquaCompiler extends Logging {
       I,
       Err[I, E, S],
       ValidatedCtxT[I, E, S]
-    ]
+    ],
+    cycleError: List[AquaModule[I, Err[I, E, S], ValidatedCtxT[I, E, S]]] => Err[I, E, S]
   )(implicit
     rc: Monoid[RawContext]
-  ): ValidatedNec[AquaError[I, E, S], (Chain[CompilerState[S]], Chain[AquaProcessed[I]])] = {
+  ): ValidatedNec[Err[I, E, S], (Chain[CompilerState[S]], Chain[AquaProcessed[I]])] = {
     logger.trace("linking modules...")
-    type CErr = Err[I, E, S]
-    type VCtx = ValidatedCtx[I, E, S]
+
     Linker
-      .link[I, CErr, VCtx](
+      .link(
         modules,
-        cycle => CycleError[I, E, S](cycle.map(_.id)),
+        cycleError,
         // By default, provide an empty context for this module's id
         i => validNec((CompilerState[S](), NonEmptyMap.one(i, Monoid.empty[RawContext])))
       )
@@ -55,7 +55,7 @@ object AquaCompiler extends Logging {
         filesWithContext
           .foldLeft[
             (
-              ValidatedNec[CErr, (Chain[CompilerState[S]], Chain[AquaProcessed[I]])],
+              ValidatedNec[Err[I, E, S], (Chain[CompilerState[S]], Chain[AquaProcessed[I]])],
               AquaContext.Cache
             )
           ](
@@ -133,7 +133,7 @@ object AquaCompiler extends Logging {
           }
       )
       .map(
-        _.andThen { modules => linkModules(modules) }
+        _.andThen { modules => linkModules(modules, cycle => CycleError[I, E, S](cycle.map(_.id))) }
       )
   }
 
