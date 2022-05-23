@@ -61,9 +61,9 @@ object AquaCompiler extends Logging {
           ](
             validNec((Chain.nil, Chain.nil)) -> AquaContext.Cache()
           ) {
-            case ((acc, cache), (i, Valid(context))) =>
+            case ((acc, cache), (i, Valid(result))) =>
               val (processed, cacheProcessed) =
-                context._2.toNel.toList.foldLeft[
+                result._2.toNel.toList.foldLeft[
                   ((Chain[CompilerState[S]], Chain[AquaProcessed[I]]), AquaContext.Cache)
                 ](
                   (Chain.nil, Chain.nil) -> cache
@@ -71,7 +71,7 @@ object AquaCompiler extends Logging {
                   logger.trace(s"Going to prepare exports for ${i}...")
                   val (exp, expCache) = AquaContext.exportsFromRaw(c, accCache)
                   logger.trace(s"AquaProcessed prepared for ${i}")
-                  (acc._1 :+ context._1, acc._2 :+ AquaProcessed(i, exp)) -> expCache
+                  (acc._1 :+ result._1, acc._2 :+ AquaProcessed(i, exp)) -> expCache
                 }
               acc.combine(
                 validNec(
