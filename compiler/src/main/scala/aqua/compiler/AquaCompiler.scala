@@ -22,10 +22,12 @@ import cats.syntax.semigroup.*
 import cats.{~>, Comonad, Monad, Monoid, Order}
 import scribe.Logging
 
-object AquaCompiler extends Logging {
+trait AquaCompiler[C] extends Logging {
 
   type Err[I, E, S[_]] = AquaError[I, E, S]
+  // TODO: find the way to replace RawContext with C; maybe move some functions to RawContext-specific subclasses, etc.
   type Ctx[I] = NonEmptyMap[I, RawContext]
+  // TODO: remove CompilerState[S] from the right
   type ValidatedCtx[I, E, S[_]] = ValidatedNec[Err[I, E, S], (CompilerState[S], Ctx[I])]
   type ValidatedCtxT[I, E, S[_]] = ValidatedCtx[I, E, S] => ValidatedCtx[I, E, S]
 
@@ -200,3 +202,5 @@ object AquaCompiler extends Logging {
         Validated.invalid[NonEmptyChain[AquaError[I, E, S]], Chain[T]](errs).pure[F]
     }
 }
+
+object AquaCompiler extends AquaCompiler[RawContext]
