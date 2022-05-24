@@ -49,10 +49,10 @@ case class TransformConfig(
       false
     )
 
-  val particleTimeout: ConstantRaw =
+  val particleTimestamp: ConstantRaw =
     ConstantRaw(
-      "PARTICLE_TIMEOUT",
-      ValueRaw.ParticleTimeout,
+      "PARTICLE_TIMESTAMP",
+      ValueRaw.ParticleTimestamp,
       false
     )
 
@@ -71,5 +71,5 @@ case class TransformConfig(
     )
 
   val constantsList: List[ConstantRaw] =
-    hostPeerId :: initPeerId :: particleTtl :: particleTimeout :: nil :: lastError :: constants
+    hostPeerId :: initPeerId :: particleTtl :: particleTimestamp :: nil :: lastError :: constants
 }
