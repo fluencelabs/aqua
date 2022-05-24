@@ -30,25 +30,27 @@ import cats.syntax.show.*
 class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
   private def compileToContext(src: Map[String, String], imports: Map[String, String]) =
-    AquaCompiler.compileToContext[Id, String, String, Span.S](
-      new AquaSources[Id, String, String] {
+    AquaCompiler
+      .compileToContext[Id, String, String, Span.S](
+        new AquaSources[Id, String, String] {
 
-        override def sources: Id[ValidatedNec[String, Chain[(String, String)]]] =
-          Validated.validNec(Chain.fromSeq(src.toSeq))
+          override def sources: Id[ValidatedNec[String, Chain[(String, String)]]] =
+            Validated.validNec(Chain.fromSeq(src.toSeq))
 
-        override def resolveImport(from: String, imp: String): Id[ValidatedNec[String, String]] =
-          Validated.validNec(imp)
+          override def resolveImport(from: String, imp: String): Id[ValidatedNec[String, String]] =
+            Validated.validNec(imp)
 
-        override def load(file: String): Id[ValidatedNec[String, String]] =
-          Validated.fromEither(
-            (imports ++ src)
-              .get(file)
-              .toRight(NonEmptyChain.one(s"Cannot load imported file $file"))
-          )
-      },
-      id => txt => Parser.parse(Parser.parserSchema)(txt),
-      TransformConfig(wrapWithXor = false)
-    )
+          override def load(file: String): Id[ValidatedNec[String, String]] =
+            Validated.fromEither(
+              (imports ++ src)
+                .get(file)
+                .toRight(NonEmptyChain.one(s"Cannot load imported file $file"))
+            )
+        },
+        id => txt => Parser.parse(Parser.parserSchema)(txt),
+        AquaCompilerConf()
+      )
+      .map(_._2)
 
   "aqua compiler" should "compile a simple snipped to the right context" in {
 

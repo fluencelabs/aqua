@@ -2,16 +2,17 @@ package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
 import aqua.raw.RawContext
+import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.types.{ArrowType, Type}
 import cats.kernel.Monoid
 import cats.syntax.functor.*
 
 case class NamesState[S[_]](
   stack: List[NamesState.Frame[S]] = Nil,
-  rootArrows: Map[String, ArrowType] = Map.empty,
-  constants: Map[String, Type] = Map.empty[String, Type],
-  opaque: Map[String, Type] = Map.empty[String, Type],
-  definitions: Map[String, Name[S]] = Map.empty[String, Name[S]]
+  rootArrows: Map[String, TokenArrowInfo[S]] = Map.empty[String, TokenArrowInfo[S]],
+  constants: Map[String, TokenType[S]] = Map.empty[String, TokenType[S]],
+  definitions: Map[String, Name[S]] = Map.empty[String, Name[S]],
+  locations: List[(Token[S], TokenType[S])] = Nil
 ) {
 
   def allNames: LazyList[String] =
@@ -29,13 +30,15 @@ object NamesState {
 
   case class Frame[S[_]](
     token: Token[S],
-    names: Map[String, Type] = Map.empty,
-    arrows: Map[String, ArrowType] = Map.empty
+    names: Map[String, TokenType[S]] = Map.empty[String, TokenType[S]],
+    arrows: Map[String, TokenArrowInfo[S]] = Map.empty[String, TokenArrowInfo[S]]
   ) {
-    def addName(n: String, t: Type): NamesState.Frame[S] = copy[S](names = names.updated(n, t))
 
-    def addArrow(n: String, g: ArrowType): NamesState.Frame[S] =
-      copy[S](arrows = arrows.updated(n, g))
+    def addName(n: Name[S], t: Type): NamesState.Frame[S] =
+      copy[S](names = names.updated(n.value, TokenTypeInfo(Some(n), t)))
+
+    def addArrow(n: Name[S], g: ArrowType): NamesState.Frame[S] =
+      copy[S](arrows = arrows.updated(n.value, TokenArrowInfo(Some(n), g)))
   }
 
   implicit def namesStateMonoid[S[_]]: Monoid[NamesState[S]] = new Monoid[NamesState[S]] {
@@ -52,7 +55,9 @@ object NamesState {
 
   def init[S[_]](context: RawContext): NamesState[S] =
     NamesState(
-      rootArrows = context.allFuncs.map { case (s, fc) => (s, fc.arrow.`type`) },
-      constants = context.allValues.map { case (s, vm) => (s, vm.`type`) }
+      rootArrows = context.allFuncs.map { case (s, fc) =>
+        (s, TokenArrowInfo[S](None, fc.arrow.`type`))
+      },
+      constants = context.allValues.map { case (s, vm) => (s, TokenTypeInfo[S](None, vm.`type`)) }
     )
 }

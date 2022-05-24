@@ -26,7 +26,7 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
       (_: Unit, body: Raw) =>
         (A.purgeArrows(expr.name) <* A.endScope()).flatMap {
           case Some(nel) =>
-            val arrows = nel.map(kv => kv._1.value -> kv._2).toNem
+            val arrows = nel.map(kv => kv._1.value -> (kv._1, kv._2)).toNem
             for {
               defaultId <- expr.id
                 .map(v => V.valueToRaw(v))
@@ -44,7 +44,7 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
                 )
             } yield
               if (defineResult) {
-                ServiceRaw(expr.name.value, arrows, defaultId)
+                ServiceRaw(expr.name.value, arrows.map(_._2), defaultId)
               } else Raw.empty("Service not created due to validation errors")
 
           case None =>

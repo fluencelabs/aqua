@@ -4,6 +4,7 @@ import aqua.parser.lexer.{Ability, Name, Token, ValueToken}
 import aqua.raw.ServiceRaw
 import aqua.raw.RawContext
 import aqua.raw.value.ValueRaw
+import aqua.semantics.lsp.{TokenArrowInfo, TokenDef, TokenTypeInfo}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.{abilities, ReportError, StackInterpreter}
 import aqua.types.ArrowType
@@ -51,7 +52,7 @@ class AbilitiesInterpreter[S[_], X](implicit
 
   override def defineService(
     name: Ability[S],
-    arrows: NonEmptyMap[String, ArrowType],
+    arrows: NonEmptyMap[String, (Name[S], ArrowType)],
     defaultId: Option[ValueRaw]
   ): SX[Boolean] =
     getService(name.value).flatMap {
@@ -65,11 +66,35 @@ class AbilitiesInterpreter[S[_], X](implicit
         modify(s =>
           s.copy(
             services = s.services
-              .updated(name.value, ServiceRaw(name.value, arrows, defaultId)),
-            definitions = s.definitions.updated(name.value, name)
+              .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
+            definitions =
+              s.definitions.updated(name.value, (name, arrows.toSortedMap.values.toList))
           )
         ).as(true)
     }
+
+  // adds location from token to its definition
+  def addServiceArrowLocation(name: Ability[S], arrow: Name[S]): SX[Unit] = {
+    getState.flatMap { st =>
+      st.definitions.get(name.value) match {
+        case Some((ab, arrows)) =>
+          modify(st =>
+            st.copy(locations =
+              st.locations ++ (
+                (name, TokenDef(Some(ab))) :: (
+                  arrow,
+                  TokenDef(
+                    arrows.find(_._1.value == arrow.value).map(_._1)
+                  )
+                ) :: Nil
+              )
+            )
+          )
+        case None =>
+          State.pure(())
+      }
+    }
+  }
 
   override def getArrow(name: Ability[S], arrow: Name[S]): SX[Option[ArrowType]] =
     getService(name.value).map(_.map(_.arrows)).flatMap {
@@ -84,7 +109,7 @@ class AbilitiesInterpreter[S[_], X](implicit
                 arrows.value.keys.toNonEmptyList.toList
               )
             ).as(Option.empty[ArrowType])
-          )(a => State.pure(Some(a)))
+          )(a => addServiceArrowLocation(name, arrow).as(Some(a)))
       case None =>
         getAbility(name.value).flatMap {
           case Some(abCtx) =>
@@ -99,7 +124,9 @@ class AbilitiesInterpreter[S[_], X](implicit
                     abCtx.funcs.keys.toList
                   )
                 ).as(Option.empty[ArrowType])
-              )(fn => State.pure(Some(fn.arrow.`type`)))
+              ) { fn =>
+                addServiceArrowLocation(name, arrow).as(Some(fn.arrow.`type`))
+              }
           case None =>
             report(name, "Ability with this name is undefined").as(Option.empty[ArrowType])
         }

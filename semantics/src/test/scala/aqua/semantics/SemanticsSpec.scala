@@ -37,7 +37,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
 
     val p = Semantics.process(ast, ctx)
 
-    val func = p.toList.head.funcs("parFunc")
+    val func = p.toList.head._2.funcs("parFunc")
 
     val proc = func.arrow.body
 

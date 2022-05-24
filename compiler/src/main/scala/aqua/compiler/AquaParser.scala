@@ -11,7 +11,7 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Comonad, Monad, ~>}
+import cats.{~>, Comonad, Monad}
 import scribe.Logging
 
 // TODO: add tests

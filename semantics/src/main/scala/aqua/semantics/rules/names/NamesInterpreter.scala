@@ -1,6 +1,7 @@
 package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
+import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, StreamType, Type}
@@ -22,7 +23,7 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
 
   type SX[A] = State[X, A]
 
-  def readName(name: String): SX[Option[Type]] =
+  def readName(name: String): SX[Option[TokenType[S]]] =
     getState.map { st =>
       st.constants.get(name) orElse st.stack.collectFirst {
         case frame if frame.names.contains(name) => frame.names(name)
@@ -31,7 +32,7 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
     }
 
   override def read(name: Name[S], mustBeDefined: Boolean = true): SX[Option[Type]] =
-    OptionT(constantDefined(name))
+    OptionT(constantInfo(name))
       .orElseF(readName(name.value))
       .value
       .flatTap {
@@ -47,15 +48,22 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
                 )
             )
           )
+        case Some(tokenInfo) =>
+          modify(st => st.copy(locations = st.locations :+ (name, tokenInfo)))
         case _ => State.pure(())
       }
+      .map(_.map(_.tokenType))
+
+  def constantInfo(name: Name[S]): SX[Option[TokenType[S]]] =
+    getState.map(_.constants.get(name.value))
 
   override def constantDefined(name: Name[S]): SX[Option[Type]] =
-    getState.map(_.constants.get(name.value))
+    constantInfo(name).map(_.map(_.tokenType))
 
   def readArrow(name: Name[S]): SX[Option[ArrowType]] =
     readArrowHelper(name.value).flatMap {
-      case Some(g) => State.pure(Option(g))
+      case Some(g) =>
+        modify(st => st.copy(locations = st.locations :+ (name, g))).map(_ => Option(g.tokenType))
       case None =>
         getState.flatMap(st =>
           report(
@@ -70,9 +78,11 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
         )
     }
 
-  def readArrowHelper(name: String): SX[Option[ArrowType]] =
+  def readArrowHelper(name: String): SX[Option[TokenArrowInfo[S]]] =
     getState.map { st =>
-      st.stack.flatMap(_.arrows.get(name)).headOption orElse st.rootArrows.get(name)
+      st.stack
+        .flatMap(_.arrows.get(name))
+        .headOption orElse st.rootArrows.get(name)
     }
 
   override def define(name: Name[S], `type`: Type): SX[Boolean] =
@@ -86,7 +96,7 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
         mapStackHead(
           report(name, "Cannot define a variable in the root scope")
             .as(false)
-        )(fr => fr.addName(name.value, `type`) -> true)
+        )(fr => fr.addName(name, `type`) -> true)
     }
 
   override def defineConstant(name: Name[S], `type`: Type): SX[Boolean] =
@@ -96,7 +106,7 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
       case None =>
         modify(st =>
           st.copy(
-            constants = st.constants.updated(name.value, `type`)
+            constants = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`))
           )
         ).as(true)
     }
@@ -114,7 +124,7 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
           if (isRoot)
             modify(st =>
               st.copy(
-                rootArrows = st.rootArrows.updated(name.value, gen),
+                rootArrows = st.rootArrows.updated(name.value, TokenArrowInfo(Some(name), gen)),
                 definitions = st.definitions.updated(name.value, name)
               )
             )
@@ -122,7 +132,7 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
           else
             report(name, "Cannot define a variable in the root scope")
               .as(false)
-        )(fr => fr.addArrow(name.value, gen) -> true)
+        )(fr => fr.addArrow(name, gen) -> true)
     }
 
   override def beginScope(token: Token[S]): SX[Unit] =
@@ -130,7 +140,7 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
 
   override def streamsDefinedWithinScope(): SX[Set[String]] =
     stackInt.mapStackHead(State.pure(Set.empty[String])) { frame =>
-      frame -> frame.names.collect { case (n, StreamType(_)) =>
+      frame -> frame.names.collect { case (n, TokenTypeInfo(_, StreamType(_))) =>
         n
       }.toSet
     }

@@ -14,7 +14,7 @@ trait AbilitiesAlgebra[S[_], Alg[_]] {
 
   def defineService(
     name: Ability[S],
-    arrows: NonEmptyMap[String, ArrowType],
+    arrows: NonEmptyMap[String, (Name[S], ArrowType)],
     defaultId: Option[ValueRaw]
   ): Alg[Boolean]
 
