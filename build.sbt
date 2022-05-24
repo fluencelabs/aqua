@@ -185,7 +185,8 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("compiler"))
   .settings(commons: _*)
-  .dependsOn(semantics, linker, backend)
+  // TODO: remove transform dependency from compiler, move it to backend
+  .dependsOn(semantics, linker, backend, transform)
 
 lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -197,14 +198,14 @@ lazy val backend = crossProject(JVMPlatform, JSPlatform)
     buildInfoKeys    := Seq[BuildInfoKey](version),
     buildInfoPackage := "aqua.backend"
   )
-  .dependsOn(transform)
+  .dependsOn(res)
 
 lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("backend/air"))
   .settings(commons: _*)
-  .dependsOn(backend)
+  .dependsOn(backend, transform)
 
 lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
