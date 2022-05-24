@@ -2,7 +2,7 @@ package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
 import aqua.raw.RawContext
-import aqua.semantics.{TokenArrowInfo, TokenType, TokenTypeInfo}
+import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.types.{ArrowType, Type}
 import cats.kernel.Monoid
 import cats.syntax.functor.*

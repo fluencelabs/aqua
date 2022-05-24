@@ -3,7 +3,7 @@ package aqua.semantics.rules.abilities
 import aqua.raw.{RawContext, ServiceRaw}
 import aqua.raw.value.ValueRaw
 import aqua.parser.lexer.{Ability, Name, Token, ValueToken}
-import aqua.semantics.TokenInfo
+import aqua.semantics.lsp.TokenInfo
 import aqua.types.ArrowType
 import cats.Monoid
 import cats.data.NonEmptyList

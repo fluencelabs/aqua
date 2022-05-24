@@ -27,6 +27,7 @@ object CompilerState {
       types = TypesState.init[F](ctx)
     )
 
+  // TODO remove it after switching from RawContext to LspContext[S]
   implicit def semigroupState[S[_]]: Semigroup[CompilerState[S]] =
     (x: CompilerState[S], y: CompilerState[S]) => {
       CompilerState[S](

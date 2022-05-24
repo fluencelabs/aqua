@@ -1,7 +1,8 @@
 package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
-import aqua.semantics.{Levenshtein, TokenArrowInfo, TokenType, TokenTypeInfo}
+import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenTypeInfo}
+import aqua.semantics.Levenshtein
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, StreamType, Type}
 import cats.data.{OptionT, State}

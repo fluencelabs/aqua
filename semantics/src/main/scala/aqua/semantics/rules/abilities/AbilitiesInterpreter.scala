@@ -4,7 +4,8 @@ import aqua.parser.lexer.{Ability, Name, Token, ValueToken}
 import aqua.raw.ServiceRaw
 import aqua.raw.RawContext
 import aqua.raw.value.ValueRaw
-import aqua.semantics.{Levenshtein, TokenArrowInfo, TokenDef, TokenTypeInfo}
+import aqua.semantics.lsp.{TokenArrowInfo, TokenDef, TokenTypeInfo}
+import aqua.semantics.Levenshtein
 import aqua.semantics.rules.{abilities, ReportError, StackInterpreter}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, NonEmptyMap, State}
