@@ -48,7 +48,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
             )
         },
         id => txt => Parser.parse(Parser.parserSchema)(txt),
-        TransformConfig(wrapWithXor = false)
+        AquaCompilerConf()
       )
       .map(_._2)
 

@@ -1,14 +1,18 @@
 package aqua
 
-import aqua.backend.Backend
-import aqua.compiler.{AquaCompiled, AquaCompiler, AquaError}
+import aqua.backend.{Backend, Generated}
+import aqua.compiler.{AquaCompiled, AquaCompiler, AquaCompilerConf, AquaError}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io.*
+import aqua.model.AquaContext
 import aqua.model.transform.TransformConfig
+import aqua.model.transform.Transform
 import aqua.parser.lift.LiftParser.LiftErrorOps
 import aqua.parser.lift.Span.spanLiftParser
 import aqua.parser.lift.{FileSpan, LiftParser, Span}
 import aqua.parser.{Ast, LexerError, Parser}
+import aqua.raw.ConstantRaw
+import aqua.res.AquaRes
 import cats.data.*
 import cats.parse.LocationMap
 import cats.syntax.applicative.*
@@ -44,8 +48,13 @@ object AquaPathCompiler extends Logging {
         .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](
           sources,
           SpanParser.parser,
-          backend,
-          transformConfig,
+          new Backend.Transform:
+            override def transform(ex: AquaContext): AquaRes =
+              Transform.contextRes(ex, transformConfig)
+
+            override def generate(aqua: AquaRes): Seq[Generated] = backend.generate(aqua)
+          ,
+          AquaCompilerConf(transformConfig.constantsList),
           targetPath.map(sources.write).getOrElse(dry[F])
         )
     } yield {

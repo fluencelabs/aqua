@@ -26,50 +26,6 @@ case class TransformConfig(
   val callbackSrvId: ValueRaw = quote(callbackService)
   val dataSrvId: ValueRaw = quote(getDataService)
 
-  // Host peer id holds %init_peer_id% in case Aqua is not compiled to be executed behind a relay,
-  // or relay's variable otherwise
-  val hostPeerId: ConstantRaw =
-    ConstantRaw(
-      "HOST_PEER_ID",
-      relayVarName.fold[ValueRaw](ValueRaw.InitPeerId)(r => VarRaw(r, ScalarType.string)),
-      false
-    )
-
-  val initPeerId: ConstantRaw =
-    ConstantRaw(
-      "INIT_PEER_ID",
-      ValueRaw.InitPeerId,
-      false
-    )
-
-  val particleTtl: ConstantRaw =
-    ConstantRaw(
-      "PARTICLE_TTL",
-      ValueRaw.ParticleTtl,
-      false
-    )
-
-  val particleTimestamp: ConstantRaw =
-    ConstantRaw(
-      "PARTICLE_TIMESTAMP",
-      ValueRaw.ParticleTimestamp,
-      false
-    )
-
-  val nil: ConstantRaw =
-    ConstantRaw(
-      "nil", // TODO: shouldn't it be NIL?
-      ValueRaw.Nil,
-      false
-    )
-
-  val lastError: ConstantRaw =
-    ConstantRaw(
-      "LAST_ERROR",
-      ValueRaw.LastError,
-      false
-    )
-
   val constantsList: List[ConstantRaw] =
-    hostPeerId :: initPeerId :: particleTtl :: particleTimestamp :: nil :: lastError :: constants
+    ConstantRaw.defaultConstants(relayVarName) ::: constants
 }

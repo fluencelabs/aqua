@@ -3,8 +3,6 @@ package aqua.compiler
 import aqua.backend.Backend
 import aqua.linker.{AquaModule, Linker, Modules}
 import aqua.model.AquaContext
-import aqua.model.transform.TransformConfig
-import aqua.model.transform.Transform
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
 import aqua.raw.RawPart.Parts
@@ -89,7 +87,7 @@ object AquaCompiler extends Logging {
   private def compileRaw[F[_]: Monad, E, I: Order, S[_]: Comonad](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
-    config: TransformConfig
+    config: AquaCompilerConf
   ): F[ValidatedNec[AquaError[I, E, S], (Chain[CompilerState[S]], Chain[AquaProcessed[I]])]] = {
     implicit val rc: Monoid[RawContext] = RawContext
       .implicits(
@@ -141,7 +139,7 @@ object AquaCompiler extends Logging {
   def compileToContext[F[_]: Monad, E, I: Order, S[_]: Comonad](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
-    config: TransformConfig
+    config: AquaCompilerConf
   ): F[ValidatedNec[AquaError[I, E, S], (Chain[CompilerState[S]], Chain[AquaContext])]] = {
     compileRaw(sources, parser, config).map(_.map { case (st, compiled) =>
       (
@@ -158,13 +156,13 @@ object AquaCompiler extends Logging {
   def compile[F[_]: Monad, E, I: Order, S[_]: Comonad](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
-    backend: Backend,
-    config: TransformConfig
+    backend: Backend.Transform,
+    config: AquaCompilerConf
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
     compileRaw(sources, parser, config).map(_.map { case (_, compiled) =>
       compiled.map { ap =>
         logger.trace("generating output...")
-        val res = Transform.contextRes(ap.context, config)
+        val res = backend.transform(ap.context)
         val compiled = backend.generate(res)
         AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
       }
@@ -174,8 +172,8 @@ object AquaCompiler extends Logging {
   def compileTo[F[_]: Monad, E, I: Order, S[_]: Comonad, T](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
-    backend: Backend,
-    config: TransformConfig,
+    backend: Backend.Transform,
+    config: AquaCompilerConf,
     write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
     compile[F, E, I, S](sources, parser, backend, config).flatMap {

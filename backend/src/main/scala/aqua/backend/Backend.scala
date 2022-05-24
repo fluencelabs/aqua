@@ -1,5 +1,6 @@
 package aqua.backend
 
+import aqua.model.AquaContext
 import aqua.res.AquaRes
 
 /**
@@ -14,4 +15,11 @@ trait Backend {
    * @return Zero or more [[Generated]] objects, based on arguments
    */
   def generate(aqua: AquaRes): Seq[Generated]
+}
+
+object Backend {
+
+  trait Transform extends Backend {
+    def transform(ex: AquaContext): AquaRes
+  }
 }

@@ -1,12 +1,13 @@
 package aqua
 
-import aqua.compiler.AquaCompiler
+import aqua.compiler.{AquaCompiler, AquaCompilerConf}
 import aqua.ErrorRendering.showError
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
 import aqua.model.{AquaContext, FuncArrow}
 import aqua.model.transform.TransformConfig
 import aqua.parser.lift.FileSpan
+import aqua.raw.ConstantRaw
 import aqua.run.RunCommand.logger
 import cats.data.{Chain, Validated, ValidatedNec}
 import cats.data.Validated.{invalidNec, validNec}
@@ -53,7 +54,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
           .compileToContext[F, AquaFileError, FileModuleId, FileSpan.F](
             sources,
             SpanParser.parser,
-            transformConfig
+            AquaCompilerConf(transformConfig.constantsList)
           )
           .map(_.leftMap(_.map(_.show)))
       )

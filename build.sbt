@@ -185,8 +185,7 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("compiler"))
   .settings(commons: _*)
-  // TODO: remove transform dependency from compiler, move it to backend
-  .dependsOn(semantics, linker, backend, transform)
+  .dependsOn(semantics, linker, backend, transform % Test)
 
 lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

@@ -3,7 +3,6 @@ package aqua.lsp
 import aqua.compiler.*
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.*
-import aqua.model.transform.TransformConfig
 import aqua.parser.lexer.Token
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
@@ -123,7 +122,7 @@ object AquaLSP extends App with Logging {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
     val sources = new AquaFileSources[IO](Path(pathStr), imports.toList.map(Path.apply))
-    val config = TransformConfig()
+    val config = AquaCompilerConf()
 
     val proc = for {
       res <- AquaCompiler
