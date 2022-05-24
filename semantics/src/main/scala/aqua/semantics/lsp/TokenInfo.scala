@@ -1,7 +1,6 @@
 package aqua.semantics.lsp
 
 import aqua.parser.lexer.Token
-import aqua.semantics.{TokenInfo, TokenType}
 import aqua.types.{ArrowType, Type}
 
 // Token description with it's definition, type, etc
