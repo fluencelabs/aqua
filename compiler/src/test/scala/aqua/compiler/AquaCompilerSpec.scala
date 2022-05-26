@@ -30,7 +30,7 @@ import cats.syntax.show.*
 class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
   private def compileToContext(src: Map[String, String], imports: Map[String, String]) =
-    AquaCompiler
+    IntermediateCompilation
       .compileToContext[Id, String, String, Span.S](
         new AquaSources[Id, String, String] {
 

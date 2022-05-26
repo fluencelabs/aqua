@@ -126,7 +126,7 @@ object AquaLSP extends App with Logging {
 
     val proc = for {
       // TODO: should run a custom AquaCompiler that collects RawContext + token definitions from the CompilerState to enable cross-file ctrl+click support
-      res <- AquaCompiler
+      res <- IntermediateCompilation
         .compileToContext[IO, AquaFileError, FileModuleId, FileSpan.F](
           sources,
           SpanParser.parser,

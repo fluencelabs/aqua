@@ -1,6 +1,5 @@
 package aqua.compiler
 
-import aqua.compiler.AquaCompiler.logger
 import aqua.linker.{AquaModule, Modules}
 import aqua.parser.head.{FilenameExpr, ImportExpr}
 import aqua.parser.lift.{LiftParser, Span}

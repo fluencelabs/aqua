@@ -43,33 +43,24 @@ case class AquaContext(
   lazy val allFuncs: Map[String, FuncArrow] =
     all(_.funcs)
 
+  private def pickOne[T](
+    name: String,
+    newName: String,
+    ctx: Map[String, T],
+    add: (AquaContext, Map[String, T]) => AquaContext
+  ): AquaContext = {
+    ctx.get(name).fold(AquaContext.blank)(t => add(AquaContext.blank, Map(newName -> t)))
+  }
+
   // TODO remove this ugliness
-  def pick(name: String, maybeRename: Option[String]): AquaContext =
-    funcs
-      .get(name)
-      .fold(AquaContext.blank)(p =>
-        AquaContext.blank.copy(funcs = Map(maybeRename.getOrElse(name) -> p))
-      ) |+|
-      types
-        .get(name)
-        .fold(AquaContext.blank)(p =>
-          AquaContext.blank.copy(types = Map(maybeRename.getOrElse(name) -> p))
-        ) |+|
-      values
-        .get(name)
-        .fold(AquaContext.blank)(p =>
-          AquaContext.blank.copy(values = Map(maybeRename.getOrElse(name) -> p))
-        ) |+|
-      abilities
-        .get(name)
-        .fold(AquaContext.blank)(p =>
-          AquaContext.blank.copy(abilities = Map(maybeRename.getOrElse(name) -> p))
-        ) |+|
-      services
-        .get(name)
-        .fold(AquaContext.blank)(p =>
-          AquaContext.blank.copy(services = Map(maybeRename.getOrElse(name) -> p))
-        )
+  def pick(name: String, maybeRename: Option[String]): AquaContext = {
+    val newName = maybeRename.getOrElse(name)
+    pickOne(name, newName, funcs, (ctx, el) => ctx.copy(funcs = el)) |+|
+      pickOne(name, newName, types, (ctx, el) => ctx.copy(types = el)) |+|
+      pickOne(name, newName, values, (ctx, el) => ctx.copy(values = el)) |+|
+      pickOne(name, newName, abilities, (ctx, el) => ctx.copy(abilities = el)) |+|
+      pickOne(name, newName, services, (ctx, el) => ctx.copy(services = el))
+  }
 }
 
 object AquaContext extends Logging {

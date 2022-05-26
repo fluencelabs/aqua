@@ -15,27 +15,25 @@ import cats.instances.option.*
 import cats.free.Cofree
 import cats.kernel.Semigroup
 
-case class HeaderSem[S[_]](
-  initCtx: RawContext,
-  finInitCtx: (RawContext, RawContext) => ValidatedNec[SemanticError[S], RawContext]
-) {
+type Res[S[_], C] = ValidatedNec[SemanticError[S], HeaderSem[S, C]]
+type ResAC[S[_]] = ValidatedNec[SemanticError[S], RawContext]
+type ResT[S[_], T] = ValidatedNec[SemanticError[S], T]
 
-  def finCtx: RawContext => ValidatedNec[SemanticError[S], RawContext] =
-    finInitCtx(_, initCtx)
+trait HeaderSemAct[S[_]: Comonad, C] {
+
+  def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C]
 }
 
-object HeaderSem {
-  type Res[S[_]] = ValidatedNec[SemanticError[S], HeaderSem[S]]
-  type ResAC[S[_]] = ValidatedNec[SemanticError[S], RawContext]
-  type ResT[S[_], T] = ValidatedNec[SemanticError[S], T]
+class HeaderSemRawContext[S[_]: Comonad](implicit acm: Monoid[RawContext])
+    extends HeaderSemAct[S, RawContext] {
 
-  private implicit def headerSemMonoid[S[_]](implicit
-    acm: Monoid[RawContext]
-  ): Monoid[HeaderSem[S]] =
-    new Monoid[HeaderSem[S]] {
-      override def empty: HeaderSem[S] = HeaderSem(acm.empty, (c, _) => validNec(c))
+  type RawHeaderSem = HeaderSem[S, RawContext]
 
-      override def combine(a: HeaderSem[S], b: HeaderSem[S]): HeaderSem[S] =
+  private implicit def headerSemMonoid: Monoid[RawHeaderSem] =
+    new Monoid[RawHeaderSem] {
+      override def empty: RawHeaderSem = HeaderSem(acm.empty, (c, _) => validNec(c))
+
+      override def combine(a: RawHeaderSem, b: RawHeaderSem): RawHeaderSem =
         HeaderSem(
           a.initCtx |+| b.initCtx,
           (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
@@ -43,18 +41,16 @@ object HeaderSem {
     }
 
   // Helper: monoidal combine of all the childrens after parent res
-  private def combineAnd[S[_]](children: Chain[Res[S]])(parent: Res[S])(implicit
-    acm: Monoid[RawContext]
-  ): Eval[Res[S]] =
+  private def combineAnd(children: Chain[Res[S, RawContext]])(
+    parent: Res[S, RawContext]
+  ): Eval[Res[S, RawContext]] =
     Eval.later(parent |+| children.combineAll)
 
   // Error generator with token pointer
-  private def error[S[_], T](token: Token[S], msg: String): ValidatedNec[SemanticError[S], T] =
+  private def error[T](token: Token[S], msg: String): ValidatedNec[SemanticError[S], T] =
     invalidNec(HeaderError(token, msg))
 
-  def sem[S[_]: Comonad](imports: Map[String, RawContext], header: Ast.Head[S])(implicit
-    acm: Monoid[RawContext]
-  ): Res[S] = {
+  override def sem(imports: Map[String, RawContext], header: Ast.Head[S]): Res[S, RawContext] = {
     // Resolve a filename from given imports or fail
     def resolve(f: FilenameExpr[S]): ResAC[S] =
       imports
@@ -108,12 +104,12 @@ object HeaderSem {
         )(modName => validNec(RawContext.blank.copy(abilities = Map(modName -> ctx))))
 
     // Handler for every header expression, will be combined later
-    val onExpr: PartialFunction[HeaderExpr[S], Res[S]] = {
+    val onExpr: PartialFunction[HeaderExpr[S], Res[S, RawContext]] = {
       // Module header, like `module A declares *`
       case ModuleExpr(name, declareAll, declareNames, declareCustom) =>
         val shouldDeclare = declareNames.map(_.value).toSet ++ declareCustom.map(_.value)
         validNec(
-          HeaderSem[S](
+          HeaderSem[S, RawContext](
             // Save module header info
             acm.empty.copy(
               module = Some(name.value),
@@ -151,13 +147,13 @@ object HeaderSem {
 
       case f @ ImportExpr(_) =>
         // Import everything from a file
-        resolve(f).map(fc => HeaderSem[S](fc, (c, _) => validNec(c)))
+        resolve(f).map(fc => HeaderSem[S, RawContext](fc, (c, _) => validNec(c)))
       case f @ ImportFromExpr(_, _) =>
         // Import, map declarations
         resolve(f)
           .andThen(getFrom(f, _))
           .map { ctx =>
-            HeaderSem[S](ctx, (c, _) => validNec(c))
+            HeaderSem[S, RawContext](ctx, (c, _) => validNec(c))
           }
 
       case f @ UseExpr(_, asModule) =>
@@ -165,7 +161,7 @@ object HeaderSem {
         resolve(f)
           .andThen(toModule(_, f.token, asModule))
           .map { fc =>
-            HeaderSem[S](fc, (c, _) => validNec(c))
+            HeaderSem[S, RawContext](fc, (c, _) => validNec(c))
           }
 
       case f @ UseFromExpr(_, _, asModule) =>
@@ -174,13 +170,13 @@ object HeaderSem {
           .andThen(getFrom(f, _))
           .andThen(toModule(_, f.token, Some(asModule)))
           .map { fc =>
-            HeaderSem[S](fc, (c, _) => validNec(c))
+            HeaderSem[S, RawContext](fc, (c, _) => validNec(c))
           }
 
       case ExportExpr(pubs) =>
         // Save exports, finally handle them
         validNec(
-          HeaderSem[S](
+          HeaderSem[S, RawContext](
             // Nothing there
             RawContext.blank,
             (ctx, initCtx) =>
@@ -213,17 +209,32 @@ object HeaderSem {
 
       case HeadExpr(token) =>
         // Old file exports everything that it declares
-        validNec(HeaderSem[S](acm.empty, (ctx, _) => validNec(ctx.copy(exports = Some(Map.empty)))))
+        validNec(
+          HeaderSem[S, RawContext](
+            acm.empty,
+            (ctx, _) => validNec(ctx.copy(exports = Some(Map.empty)))
+          )
+        )
 
       case f: FilenameExpr[S] =>
-        resolve(f).map(fc => HeaderSem[S](fc, (c, _) => validNec(c)))
+        resolve(f).map(fc => HeaderSem[S, RawContext](fc, (c, _) => validNec(c)))
     }
 
     Cofree
-      .cata[Chain, HeaderExpr[S], Res[S]](header) { case (expr, children) =>
+      .cata[Chain, HeaderExpr[S], Res[S, RawContext]](header) { case (expr, children) =>
         onExpr.lift.apply(expr).fold(Eval.later(children.combineAll))(combineAnd(children)(_))
       }
       .value
   }
-
 }
+
+case class HeaderSem[S[_], C](
+  initCtx: RawContext,
+  finInitCtx: (RawContext, RawContext) => ValidatedNec[SemanticError[S], C]
+) {
+
+  def finCtx: RawContext => ValidatedNec[SemanticError[S], C] =
+    finInitCtx(_, initCtx)
+}
+
+object HeaderSem {}
