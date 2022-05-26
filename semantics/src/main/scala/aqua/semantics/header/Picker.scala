@@ -25,7 +25,7 @@ final class PickerOps[A: Picker](p: A) {
 
 object Picker {
 
-  final def apply[A](implicit ev: Picker[A]): Picker[A] = ev
+  implicit final def apply[A](implicit ev: Picker[A]): Picker[A] = ev
 
   implicit final def syntaxPicker[A: Picker](a: A): PickerOps[A] =
     new PickerOps[A](a)

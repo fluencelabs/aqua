@@ -9,11 +9,13 @@ import aqua.parser.lexer.{Ability, Token}
 import aqua.raw.RawContext
 import aqua.semantics.{HeaderError, SemanticError}
 import cats.syntax.foldable.*
+import cats.syntax.monoid
 import cats.syntax.semigroup.*
 import cats.instances.list.*
 import cats.instances.option.*
 import cats.free.Cofree
 import cats.kernel.Semigroup
+
 import Picker.*
 
 type Res[S[_], C] = ValidatedNec[SemanticError[S], HeaderSem[S, C]]
@@ -27,8 +29,6 @@ class HeaderSemRawContext[S[_]: Comonad](implicit
   acm: Monoid[RawContext],
   headMonoid: Monoid[HeaderSem[S, RawContext]]
 ) extends HeaderSemAct[S, RawContext] {
-
-  import Picker.*
 
   type ResAC[S[_]] = ValidatedNec[SemanticError[S], RawContext]
   type ResT[S[_], T] = ValidatedNec[SemanticError[S], T]
