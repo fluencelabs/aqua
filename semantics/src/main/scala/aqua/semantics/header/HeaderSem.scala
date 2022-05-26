@@ -16,16 +16,19 @@ import cats.free.Cofree
 import cats.kernel.Semigroup
 
 type Res[S[_], C] = ValidatedNec[SemanticError[S], HeaderSem[S, C]]
-type ResAC[S[_]] = ValidatedNec[SemanticError[S], RawContext]
-type ResT[S[_], T] = ValidatedNec[SemanticError[S], T]
 
-trait HeaderSemAct[S[_]: Comonad, C] {
+trait HeaderSemAct[S[_], C] {
 
   def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C]
 }
 
 class HeaderSemRawContext[S[_]: Comonad](implicit acm: Monoid[RawContext])
     extends HeaderSemAct[S, RawContext] {
+
+  import Picker.*
+
+  type ResAC[S[_]] = ValidatedNec[SemanticError[S], RawContext]
+  type ResT[S[_], T] = ValidatedNec[SemanticError[S], T]
 
   type RawHeaderSem = HeaderSem[S, RawContext]
 
@@ -67,7 +70,7 @@ class HeaderSemRawContext[S[_]: Comonad](implicit acm: Monoid[RawContext])
           _.fold[ResAC[S]](
             { case (n, rn) =>
               ctx
-                .pick(n.value, rn.map(_.value))
+                .pick(n.value, rn.map(_.value), ctx.module.nonEmpty)
                 .map(validNec)
                 .getOrElse(
                   error(
@@ -78,7 +81,7 @@ class HeaderSemRawContext[S[_]: Comonad](implicit acm: Monoid[RawContext])
             },
             { case (n, rn) =>
               ctx
-                .pick(n.value, rn.map(_.value))
+                .pick(n.value, rn.map(_.value), ctx.module.nonEmpty)
                 .map(validNec)
                 .getOrElse(
                   error(
@@ -128,7 +131,7 @@ class HeaderSemRawContext[S[_]: Comonad](implicit acm: Monoid[RawContext])
                   declareNames.map(n => n.value -> n) ::: declareCustom.map(a => a.value -> a)
                 ).map[ValidatedNec[SemanticError[S], Int]] { case (n, t) =>
                   ctx
-                    .pick(n, None)
+                    .pick(n, None, ctx.module.nonEmpty)
                     // We just validate, nothing more
                     .map(_ => validNec(1))
                     .getOrElse(
