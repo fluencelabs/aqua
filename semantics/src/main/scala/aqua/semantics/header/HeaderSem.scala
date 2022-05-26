@@ -14,6 +14,7 @@ import cats.instances.list.*
 import cats.instances.option.*
 import cats.free.Cofree
 import cats.kernel.Semigroup
+import Picker.*
 
 type Res[S[_], C] = ValidatedNec[SemanticError[S], HeaderSem[S, C]]
 
@@ -22,8 +23,10 @@ trait HeaderSemAct[S[_], C] {
   def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C]
 }
 
-class HeaderSemRawContext[S[_]: Comonad](implicit acm: Monoid[RawContext])
-    extends HeaderSemAct[S, RawContext] {
+class HeaderSemRawContext[S[_]: Comonad](implicit
+  acm: Monoid[RawContext],
+  headMonoid: Monoid[HeaderSem[S, RawContext]]
+) extends HeaderSemAct[S, RawContext] {
 
   import Picker.*
 
@@ -31,17 +34,6 @@ class HeaderSemRawContext[S[_]: Comonad](implicit acm: Monoid[RawContext])
   type ResT[S[_], T] = ValidatedNec[SemanticError[S], T]
 
   type RawHeaderSem = HeaderSem[S, RawContext]
-
-  private implicit def headerSemMonoid: Monoid[RawHeaderSem] =
-    new Monoid[RawHeaderSem] {
-      override def empty: RawHeaderSem = HeaderSem(acm.empty, (c, _) => validNec(c))
-
-      override def combine(a: RawHeaderSem, b: RawHeaderSem): RawHeaderSem =
-        HeaderSem(
-          a.initCtx |+| b.initCtx,
-          (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
-        )
-    }
 
   // Helper: monoidal combine of all the childrens after parent res
   private def combineAnd(children: Chain[Res[S, RawContext]])(
@@ -104,7 +96,7 @@ class HeaderSemRawContext[S[_]: Comonad](implicit acm: Monoid[RawContext])
             tkn,
             s"Used module has no `module` header. Please add `module` header or use ... as ModuleName, or switch to import"
           )
-        )(modName => validNec(RawContext.blank.copy(abilities = Map(modName -> ctx))))
+        )(modName => validNec(acm.empty.copy(abilities = Map(modName -> ctx))))
 
     // Handler for every header expression, will be combined later
     val onExpr: PartialFunction[HeaderExpr[S], Res[S, RawContext]] = {
@@ -181,7 +173,7 @@ class HeaderSemRawContext[S[_]: Comonad](implicit acm: Monoid[RawContext])
         validNec(
           HeaderSem[S, RawContext](
             // Nothing there
-            RawContext.blank,
+            acm.empty,
             (ctx, initCtx) =>
               pubs
                 .map(

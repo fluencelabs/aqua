@@ -8,10 +8,27 @@ trait Picker[A] {
 
   def pick(name: String, rename: Option[String], declared: Boolean): Option[A]
   def pickDeclared(implicit semi: Semigroup[A]): A
-  def pickHeader: RawContext
+  def pickHeader: A
+  def module: Option[String]
+  def declares: Set[String]
+}
+
+final class PickerOps[A: Picker](p: A) {
+
+  def pick(name: String, rename: Option[String], declared: Boolean): Option[A] =
+    Picker[A].pick(name, rename, declared)
+  def pickDeclared(implicit semi: Semigroup[A]): A = Picker[A].pickDeclared
+  def pickHeader: A = Picker[A].pickHeader
+  def module: Option[String] = Picker[A].module
+  def declares: Set[String] = Picker[A].declares
 }
 
 object Picker {
+
+  final def apply[A](implicit ev: Picker[A]): Picker[A] = ev
+
+  implicit final def syntaxPicker[A: Picker](a: A): PickerOps[A] =
+    new PickerOps[A](a)
 
   implicit final def rawContextPicker(ctx: RawContext): Picker[RawContext] =
     new PickerRawContext(ctx)
@@ -19,6 +36,9 @@ object Picker {
 }
 
 class PickerRawContext(ctx: RawContext) extends Picker[RawContext] {
+
+  override def module: Option[String] = ctx.module
+  override def declares: Set[String] = ctx.declares
 
   override def pick(
     name: String,
