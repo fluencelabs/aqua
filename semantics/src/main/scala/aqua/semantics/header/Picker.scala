@@ -1,6 +1,11 @@
 package aqua.semantics.header
 
 import aqua.raw.{RawContext, RawPart}
+import aqua.semantics.CompilerState
+import aqua.semantics.lsp.{TokenArrowInfo, TokenTypeInfo}
+import aqua.semantics.rules.abilities.AbilitiesState
+import aqua.semantics.rules.names.NamesState
+import aqua.semantics.rules.types.TypesState
 import cats.Semigroup
 import cats.syntax.semigroup.*
 
@@ -21,6 +26,7 @@ trait Picker[A] {
   def setInit(ctx: A, ctxInit: Option[A]): A
   def getRawContext(ctx: A): RawContext
   def addPart(ctx: A, part: (A, RawPart)): A
+  def makeInit[S[_]](ctx: A): CompilerState[S]
 }
 
 final class PickerOps[A: Picker](p: A) {
@@ -29,6 +35,7 @@ final class PickerOps[A: Picker](p: A) {
   def all: Set[String] = Picker[A].all(p)
   def funcNames: List[String] = Picker[A].funcNames(p)
   def getRawContext: RawContext = Picker[A].getRawContext(p)
+  def makeInit[S[_]]: CompilerState[S] = Picker[A].makeInit[S](p)
 
   def pick(name: String, rename: Option[String], declared: Boolean): Option[A] =
     Picker[A].pick(p, name, rename, declared)
@@ -64,6 +71,23 @@ object Picker {
     override def exports(ctx: RawContext): Option[Map[String, Option[String]]] = ctx.exports
     override def funcNames(ctx: RawContext): List[String] = ctx.funcs.keys.toList
     override def getRawContext(ctx: RawContext): RawContext = ctx
+
+    def makeInit[S[_]](ctx: RawContext): CompilerState[S] =
+      CompilerState(
+        names = NamesState(
+          rootArrows = ctx.allFuncs.map { case (s, fc) =>
+            (s, TokenArrowInfo[S](None, fc.arrow.`type`))
+          },
+          constants = ctx.allValues.map { case (s, vm) =>
+            (s, TokenTypeInfo[S](None, vm.`type`))
+          }
+        ),
+        abilities = AbilitiesState(
+          services = ctx.allServices,
+          abilities = ctx.abilities // TODO is it the right way to collect abilities? Why?
+        ),
+        types = TypesState(strict = ctx.allTypes)
+      )
 
     override def addPart(ctx: RawContext, part: (RawContext, RawPart)): RawContext =
       ctx.copy(parts = ctx.parts :+ part)

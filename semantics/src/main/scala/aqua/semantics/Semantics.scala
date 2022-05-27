@@ -87,7 +87,7 @@ object Semantics extends Logging {
     p: Picker[C]
   ): Eval[(CompilerState[S], C)] =
     astToState[S](ast)
-      .run(CompilerState.init[S](init.getRawContext))
+      .run(init.makeInit[S])
       .map {
         case (state, _: Raw.Empty) =>
           // No `parts`, but has `init`
