@@ -25,27 +25,28 @@ trait HeaderSemAct[S[_], C] {
   def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C]
 }
 
-class HeaderSemRawContext[S[_]: Comonad](implicit
-  acm: Monoid[RawContext],
-  headMonoid: Monoid[HeaderSem[S, RawContext]]
-) extends HeaderSemAct[S, RawContext] {
+class HeaderSemRawContext[S[_]: Comonad, C](implicit
+  acm: Monoid[C],
+  headMonoid: Monoid[HeaderSem[S, C]],
+  picker: Picker[C]
+) extends HeaderSemAct[S, C] {
 
-  type ResAC[S[_]] = ValidatedNec[SemanticError[S], RawContext]
+  type ResAC[S[_]] = ValidatedNec[SemanticError[S], C]
   type ResT[S[_], T] = ValidatedNec[SemanticError[S], T]
 
-  type RawHeaderSem = HeaderSem[S, RawContext]
+  type RawHeaderSem = HeaderSem[S, C]
 
   // Helper: monoidal combine of all the childrens after parent res
-  private def combineAnd(children: Chain[Res[S, RawContext]])(
-    parent: Res[S, RawContext]
-  ): Eval[Res[S, RawContext]] =
+  private def combineAnd(children: Chain[Res[S, C]])(
+    parent: Res[S, C]
+  ): Eval[Res[S, C]] =
     Eval.later(parent |+| children.combineAll)
 
   // Error generator with token pointer
   private def error[T](token: Token[S], msg: String): ValidatedNec[SemanticError[S], T] =
     invalidNec(HeaderError(token, msg))
 
-  override def sem(imports: Map[String, RawContext], header: Ast.Head[S]): Res[S, RawContext] = {
+  override def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C] = {
     // Resolve a filename from given imports or fail
     def resolve(f: FilenameExpr[S]): ResAC[S] =
       imports
@@ -56,7 +57,7 @@ class HeaderSemRawContext[S[_]: Comonad](implicit
         )(validNec)
 
     // Get part of the declared context (for import/use ... from ... expressions)
-    def getFrom(f: FromExpr[S], ctx: RawContext): ResAC[S] =
+    def getFrom(f: FromExpr[S], ctx: C): ResAC[S] =
       f.imports
         .map[ResAC[S]](
           _.fold[ResAC[S]](
@@ -87,7 +88,7 @@ class HeaderSemRawContext[S[_]: Comonad](implicit
         .foldLeft[ResAC[S]](validNec(ctx.pickHeader))(_ |+| _)
 
     // Convert an imported context into a module (ability)
-    def toModule(ctx: RawContext, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S] =
+    def toModule(ctx: C, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S] =
       rename
         .map(_.value)
         .orElse(ctx.module)
@@ -96,27 +97,25 @@ class HeaderSemRawContext[S[_]: Comonad](implicit
             tkn,
             s"Used module has no `module` header. Please add `module` header or use ... as ModuleName, or switch to import"
           )
-        )(modName => validNec(acm.empty.copy(abilities = Map(modName -> ctx))))
+        )(modName => validNec(picker.blank.setAbility(modName, ctx)))
 
     // Handler for every header expression, will be combined later
-    val onExpr: PartialFunction[HeaderExpr[S], Res[S, RawContext]] = {
+    val onExpr: PartialFunction[HeaderExpr[S], Res[S, C]] = {
       // Module header, like `module A declares *`
       case ModuleExpr(name, declareAll, declareNames, declareCustom) =>
         val shouldDeclare = declareNames.map(_.value).toSet ++ declareCustom.map(_.value)
         validNec(
-          HeaderSem[S, RawContext](
+          HeaderSem[S, C](
             // Save module header info
-            acm.empty.copy(
-              module = Some(name.value),
-              declares = shouldDeclare
+            acm.empty.setModule(
+              name.value,
+              shouldDeclare
             ),
             (ctx, _) =>
               // When file is handled, check that all the declarations exists
               if (declareAll.nonEmpty) {
-                val all =
-                  ctx.`type`("").map(_.fields.toNel.map(_._1).toList.toSet).getOrElse(Set.empty)
                 validNec(
-                  ctx.copy(module = Some(name.value), declares = all)
+                  ctx.setModule(name.value, declares = ctx.all)
                 )
               } else
                 (
@@ -135,20 +134,20 @@ class HeaderSemRawContext[S[_]: Comonad](implicit
                 }.combineAll
                   .map(_ =>
                     // TODO: why module name and declares is lost? where is it lost?
-                    ctx.copy(module = Some(name.value), declares = shouldDeclare)
+                    ctx.setModule(name.value, declares = shouldDeclare)
                   )
           )
         )
 
       case f @ ImportExpr(_) =>
         // Import everything from a file
-        resolve(f).map(fc => HeaderSem[S, RawContext](fc, (c, _) => validNec(c)))
+        resolve(f).map(fc => HeaderSem[S, C](fc, (c, _) => validNec(c)))
       case f @ ImportFromExpr(_, _) =>
         // Import, map declarations
         resolve(f)
           .andThen(getFrom(f, _))
           .map { ctx =>
-            HeaderSem[S, RawContext](ctx, (c, _) => validNec(c))
+            HeaderSem[S, C](ctx, (c, _) => validNec(c))
           }
 
       case f @ UseExpr(_, asModule) =>
@@ -156,7 +155,7 @@ class HeaderSemRawContext[S[_]: Comonad](implicit
         resolve(f)
           .andThen(toModule(_, f.token, asModule))
           .map { fc =>
-            HeaderSem[S, RawContext](fc, (c, _) => validNec(c))
+            HeaderSem[S, C](fc, (c, _) => validNec(c))
           }
 
       case f @ UseFromExpr(_, _, asModule) =>
@@ -165,15 +164,15 @@ class HeaderSemRawContext[S[_]: Comonad](implicit
           .andThen(getFrom(f, _))
           .andThen(toModule(_, f.token, Some(asModule)))
           .map { fc =>
-            HeaderSem[S, RawContext](fc, (c, _) => validNec(c))
+            HeaderSem[S, C](fc, (c, _) => validNec(c))
           }
 
       case ExportExpr(pubs) =>
         // Save exports, finally handle them
         validNec(
-          HeaderSem[S, RawContext](
+          HeaderSem[S, C](
             // Nothing there
-            acm.empty,
+            picker.blank,
             (ctx, initCtx) =>
               pubs
                 .map(
@@ -190,7 +189,7 @@ class HeaderSemRawContext[S[_]: Comonad](implicit
                     .getOrElse(
                       error(
                         token,
-                        s"File has no $name declaration or import, cannot export, available funcs: ${(initCtx |+| ctx).funcs.keys
+                        s"File has no $name declaration or import, cannot export, available funcs: ${(initCtx |+| ctx).funcNames
                           .mkString(", ")}"
                       )
                     )
@@ -198,25 +197,25 @@ class HeaderSemRawContext[S[_]: Comonad](implicit
                 .foldLeft[ResT[S, Map[String, Option[String]]]](
                   validNec(ctx.exports.getOrElse(Map.empty))
                 )(_ |+| _)
-                .map(expCtx => ctx.copy(exports = Some(expCtx)))
+                .map(expCtx => ctx.setExports(expCtx))
           )
         )
 
       case HeadExpr(token) =>
         // Old file exports everything that it declares
         validNec(
-          HeaderSem[S, RawContext](
+          HeaderSem[S, C](
             acm.empty,
-            (ctx, _) => validNec(ctx.copy(exports = Some(Map.empty)))
+            (ctx, _) => validNec(ctx.setExports(Map.empty))
           )
         )
 
       case f: FilenameExpr[S] =>
-        resolve(f).map(fc => HeaderSem[S, RawContext](fc, (c, _) => validNec(c)))
+        resolve(f).map(fc => HeaderSem[S, C](fc, (c, _) => validNec(c)))
     }
 
     Cofree
-      .cata[Chain, HeaderExpr[S], Res[S, RawContext]](header) { case (expr, children) =>
+      .cata[Chain, HeaderExpr[S], Res[S, C]](header) { case (expr, children) =>
         onExpr.lift.apply(expr).fold(Eval.later(children.combineAll))(combineAnd(children)(_))
       }
       .value
@@ -224,11 +223,11 @@ class HeaderSemRawContext[S[_]: Comonad](implicit
 }
 
 case class HeaderSem[S[_], C](
-  initCtx: RawContext,
-  finInitCtx: (RawContext, RawContext) => ValidatedNec[SemanticError[S], C]
+  initCtx: C,
+  finInitCtx: (C, C) => ValidatedNec[SemanticError[S], C]
 ) {
 
-  def finCtx: RawContext => ValidatedNec[SemanticError[S], C] =
+  def finCtx: C => ValidatedNec[SemanticError[S], C] =
     finInitCtx(_, initCtx)
 }
 

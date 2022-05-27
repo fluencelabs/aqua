@@ -4,6 +4,7 @@ import aqua.raw.ops.{FuncOp, SeqGroupTag}
 import aqua.raw.{Raw, RawContext, RawPart}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
+import aqua.semantics.header.Picker
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
@@ -21,6 +22,8 @@ import cats.{Eval, Monad, Semigroup}
 import monocle.Lens
 import monocle.macros.GenLens
 import scribe.{log, Logging}
+
+import Picker.*
 
 object Semantics extends Logging {
 
@@ -79,17 +82,19 @@ object Semantics extends Logging {
 
   // If there are any errors, they're inside CompilerState[S]
   // TODO: pass external token definitions for the RawContext somehow
-  def interpret[S[_]](ast: Ast[S], init: RawContext): Eval[(CompilerState[S], RawContext)] =
+  // init: LspContext(RawContext(constants =...))
+  def interpret[S[_], C](ast: Ast[S], init: C)(implicit
+    p: Picker[C]
+  ): Eval[(CompilerState[S], C)] =
     astToState[S](ast)
-      .run(CompilerState.init[S](init))
+      .run(CompilerState.init[S](init.getRawContext))
       .map {
         case (state, _: Raw.Empty) =>
           // No `parts`, but has `init`
           (
             state,
-            RawContext.blank.copy(
-              init = Some(init.copy(module = init.module.map(_ + "|init")))
-                .filter(_ != RawContext.blank)
+            p.blank.setInit(
+              Some(init.setOptModule(init.module.map(_ + "|init").filter(_ != p.blank), Set.empty))
             )
           )
 
@@ -98,30 +103,31 @@ object Semantics extends Logging {
             .contextPart(part)
             .parts
             .foldLeft(
-              RawContext.blank.copy(
-                init = Some(init.copy(module = init.module.map(_ + "|init")))
-                  .filter(_ != RawContext.blank)
+              p.blank.setInit(
+                Some(
+                  init.setOptModule(init.module.map(_ + "|init").filter(_ != p.blank), Set.empty)
+                )
               )
             ) { case (ctx, p) =>
-              ctx.copy(parts = ctx.parts :+ (ctx -> p))
+              ctx.addPart(ctx -> p)
             }
         case (state: CompilerState[S], m) =>
           logger.error("Got unexpected " + m)
-          state.copy(errors = state.errors :+ WrongAST(ast)) -> RawContext.blank.copy(
-            init = Some(init.copy(module = init.module.map(_ + "|init")))
-              .filter(_ != RawContext.blank)
-          )
+          state.copy(errors = state.errors :+ WrongAST(ast)) ->
+            p.blank.setInit(
+              Some(init.setOptModule(init.module.map(_ + "|init").filter(_ != p.blank), Set.empty))
+            )
       }
 
   // TODO: return just RawContext on the right side
-  def process[S[_]](
+  def process[S[_], C](
     ast: Ast[S],
-    init: RawContext
-  ): ValidatedNec[SemanticError[S], (CompilerState[S], RawContext)] =
+    init: C
+  )(implicit p: Picker[C]): ValidatedNec[SemanticError[S], (CompilerState[S], C)] =
     interpret(ast, init).map { case (state, ctx) =>
       NonEmptyChain
         .fromChain(state.errors)
-        .fold[ValidatedNec[SemanticError[S], (CompilerState[S], RawContext)]](
+        .fold[ValidatedNec[SemanticError[S], (CompilerState[S], C)]](
           Valid(state -> ctx)
         )(Invalid(_))
     }

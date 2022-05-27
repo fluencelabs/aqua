@@ -9,7 +9,7 @@ import aqua.raw.RawPart.Parts
 import aqua.raw.{RawContext, RawPart}
 import aqua.res.AquaRes
 import aqua.semantics.{CompilerState, Semantics}
-import aqua.semantics.header.{HeaderSem, HeaderSemAct}
+import aqua.semantics.header.{HeaderSem, HeaderSemAct, Picker}
 import cats.data.*
 import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.parse.Parser0
@@ -23,7 +23,8 @@ import cats.{~>, Comonad, Monad, Monoid, Order}
 import scribe.Logging
 
 class AquaCompiler[C](implicit
-  rc: Monoid[C]
+  rc: Monoid[C],
+  p: Picker[C]
 ) extends Logging {
 
   type Err[I, E, S[_]] = AquaError[I, E, S]
