@@ -61,7 +61,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       (compileTime, contextV) = compileResult
     } yield {
       logger.debug(s"Compile time: ${compileTime.toMillis}ms")
-      contextV.andThen(c => findFunction(c._2, func))
+      contextV.andThen(c => findFunction(c, func))
     }
   }
 }

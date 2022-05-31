@@ -22,8 +22,75 @@ import cats.{Eval, Monad, Semigroup}
 import monocle.Lens
 import monocle.macros.GenLens
 import scribe.{log, Logging}
-
 import Picker.*
+import aqua.semantics.lsp.LspContext
+
+sealed trait Semantics[S[_], C] {
+
+  def process(
+    ast: Ast[S],
+    init: C
+  ): ValidatedNec[SemanticError[S], C]
+}
+
+class RawSemantics[S[_]](implicit p: Picker[RawContext]) extends Semantics[S, RawContext] {
+
+  def process(
+    ast: Ast[S],
+    init: RawContext
+  ): ValidatedNec[SemanticError[S], RawContext] =
+    Semantics
+      .interpret(ast, CompilerState.init(init), init)
+      .map { case (state, ctx) =>
+        NonEmptyChain
+          .fromChain(state.errors)
+          .fold[ValidatedNec[SemanticError[S], RawContext]](
+            Valid(ctx)
+          )(Invalid(_))
+      }
+      // TODO: return as Eval
+      .value
+}
+
+class LspSemantics[S[_]](implicit p: Picker[LspContext[S]]) extends Semantics[S, LspContext[S]] {
+
+  def process(
+    ast: Ast[S],
+    init: LspContext[S]
+  ): ValidatedNec[SemanticError[S], LspContext[S]] = {
+
+    val rawState = CompilerState.init[S](init.raw)
+    val initState = rawState.copy(
+      names = rawState.names.copy(
+        rootArrows = rawState.names.rootArrows ++ init.rootArrows,
+        constants = rawState.names.constants ++ init.constants
+      ),
+      abilities = rawState.abilities.copy(
+        definitions = rawState.abilities.definitions ++ init.abDefinitions
+      )
+    )
+
+    Semantics
+      .interpret(ast, initState, init.raw)
+      .map { case (state, ctx) =>
+        NonEmptyChain
+          .fromChain(state.errors)
+          .fold[ValidatedNec[SemanticError[S], LspContext[S]]] {
+            Valid(
+              LspContext(
+                raw = ctx,
+                rootArrows = state.names.rootArrows,
+                constants = state.names.constants,
+                abDefinitions = state.abilities.definitions,
+                locations = state.names.locations ++ state.abilities.locations
+              )
+            )
+          }(Invalid(_))
+      }
+      // TODO: return as Eval
+      .value
+  }
+}
 
 object Semantics extends Logging {
 
@@ -81,20 +148,21 @@ object Semantics extends Logging {
     transpile[S](ast)
 
   // If there are any errors, they're inside CompilerState[S]
-  // TODO: pass external token definitions for the RawContext somehow
-  // init: LspContext(RawContext(constants =...))
-  def interpret[S[_], C](ast: Ast[S], init: C)(implicit
-    p: Picker[C]
-  ): Eval[(CompilerState[S], C)] =
+  def interpret[S[_]](
+    ast: Ast[S],
+    initState: CompilerState[S],
+    init: RawContext
+  ): Eval[(CompilerState[S], RawContext)] =
     astToState[S](ast)
-      .run(init.makeInit[S])
+      .run(initState)
       .map {
         case (state, _: Raw.Empty) =>
           // No `parts`, but has `init`
           (
             state,
-            p.blank.setInit(
-              Some(init.setOptModule(init.module.map(_ + "|init").filter(_ != p.blank), Set.empty))
+            RawContext.blank.copy(
+              init = Some(init.copy(module = init.module.map(_ + "|init")))
+                .filter(_ != RawContext.blank)
             )
           )
 
@@ -103,34 +171,18 @@ object Semantics extends Logging {
             .contextPart(part)
             .parts
             .foldLeft(
-              p.blank.setInit(
-                Some(
-                  init.setOptModule(init.module.map(_ + "|init").filter(_ != p.blank), Set.empty)
-                )
+              RawContext.blank.copy(
+                init = Some(init.copy(module = init.module.map(_ + "|init")))
+                  .filter(_ != RawContext.blank)
               )
             ) { case (ctx, p) =>
-              ctx.addPart(ctx -> p)
+              ctx.copy(parts = ctx.parts :+ (ctx -> p))
             }
         case (state: CompilerState[S], m) =>
           logger.error("Got unexpected " + m)
-          state.copy(errors = state.errors :+ WrongAST(ast)) ->
-            p.blank.setInit(
-              Some(init.setOptModule(init.module.map(_ + "|init").filter(_ != p.blank), Set.empty))
-            )
+          state.copy(errors = state.errors :+ WrongAST(ast)) -> RawContext.blank.copy(
+            init = Some(init.copy(module = init.module.map(_ + "|init")))
+              .filter(_ != RawContext.blank)
+          )
       }
-
-  // TODO: return just RawContext on the right side
-  def process[S[_], C](
-    ast: Ast[S],
-    init: C
-  )(implicit p: Picker[C]): ValidatedNec[SemanticError[S], (CompilerState[S], C)] =
-    interpret(ast, init).map { case (state, ctx) =>
-      NonEmptyChain
-        .fromChain(state.errors)
-        .fold[ValidatedNec[SemanticError[S], (CompilerState[S], C)]](
-          Valid(state -> ctx)
-        )(Invalid(_))
-    }
-      // TODO: return as Eval
-      .value
 }

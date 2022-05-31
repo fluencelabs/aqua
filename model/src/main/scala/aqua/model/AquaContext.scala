@@ -52,7 +52,6 @@ case class AquaContext(
     ctx.get(name).fold(AquaContext.blank)(t => add(AquaContext.blank, Map(newName -> t)))
   }
 
-  // TODO remove this ugliness
   def pick(name: String, maybeRename: Option[String]): AquaContext = {
     val newName = maybeRename.getOrElse(name)
     pickOne(name, newName, funcs, (ctx, el) => ctx.copy(funcs = el)) |+|

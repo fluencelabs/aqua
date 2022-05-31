@@ -1,6 +1,6 @@
 package aqua.parser.lift
 
-import cats.parse.{LocationMap, Parser0, Parser => P}
+import cats.parse.{LocationMap, Parser => P, Parser0}
 import cats.{Comonad, Eval}
 
 import scala.language.implicitConversions

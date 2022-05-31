@@ -25,7 +25,7 @@ trait HeaderSemAct[S[_], C] {
   def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C]
 }
 
-class HeaderSemRawContext[S[_]: Comonad, C](implicit
+class HeaderSemActImpl[S[_]: Comonad, C](implicit
   acm: Monoid[C],
   headMonoid: Monoid[HeaderSem[S, C]],
   picker: Picker[C]

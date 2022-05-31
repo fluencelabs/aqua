@@ -7,6 +7,7 @@ import aqua.parser.ParserError
 import aqua.parser.Ast
 import aqua.parser.Parser
 import aqua.parser.lift.Span
+import aqua.parser.lift.Span.S
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.res.{
   ApRes,
@@ -19,38 +20,50 @@ import aqua.res.{
   RestrictionRes,
   SeqRes
 }
+import aqua.semantics.lsp.LspContext
 import aqua.types.{ArrayType, LiteralType, ScalarType, StreamType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.Id
-import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
+import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
 import cats.instances.string.*
 import cats.syntax.show.*
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
+  private def aquaSource(src: Map[String, String], imports: Map[String, String]) = {
+    new AquaSources[Id, String, String] {
+
+      override def sources: Id[ValidatedNec[String, Chain[(String, String)]]] =
+        Validated.validNec(Chain.fromSeq(src.toSeq))
+
+      override def resolveImport(from: String, imp: String): Id[ValidatedNec[String, String]] =
+        Validated.validNec(imp)
+
+      override def load(file: String): Id[ValidatedNec[String, String]] =
+        Validated.fromEither(
+          (imports ++ src)
+            .get(file)
+            .toRight(NonEmptyChain.one(s"Cannot load imported file $file"))
+        )
+    }
+  }
+
   private def compileToContext(src: Map[String, String], imports: Map[String, String]) =
     IntermediateCompilation
       .compileToContext[Id, String, String, Span.S](
-        new AquaSources[Id, String, String] {
-
-          override def sources: Id[ValidatedNec[String, Chain[(String, String)]]] =
-            Validated.validNec(Chain.fromSeq(src.toSeq))
-
-          override def resolveImport(from: String, imp: String): Id[ValidatedNec[String, String]] =
-            Validated.validNec(imp)
-
-          override def load(file: String): Id[ValidatedNec[String, String]] =
-            Validated.fromEither(
-              (imports ++ src)
-                .get(file)
-                .toRight(NonEmptyChain.one(s"Cannot load imported file $file"))
-            )
-        },
+        aquaSource(src, imports),
         id => txt => Parser.parse(Parser.parserSchema)(txt),
         AquaCompilerConf()
       )
-      .map(_._2)
+
+  private def compileToLsp(src: Map[String, String], imports: Map[String, String]) =
+    IntermediateCompilation
+      .compileToLsp[Id, String, String, Span.S](
+        aquaSource(src, imports),
+        id => txt => Parser.parse(Parser.parserSchema)(txt),
+        AquaCompilerConf()
+      )
 
   "aqua compiler" should "compile a simple snipped to the right context" in {
 
@@ -294,6 +307,63 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
         ).leaf
       )
     ) should be(true)
+
+  }
+
+  "aqua compiler" should "compile to lsp with imports" in {
+
+    val res = compileToLsp(
+      Map(
+        "index.aqua" ->
+          """module Import
+            |import foobar from "export2.aqua"
+            |
+            |use foo as f from "export2.aqua" as Exp
+            |
+            |import OneMore as OM from "../gen/OneMore.aqua"
+            |
+            |export foo_wrapper as wrap, foobar as barfoo
+            |
+            |func foo_wrapper() -> string:
+            |    z <- Exp.f()
+            |    OM "hello"
+            |    OM.more_call()
+            |    -- Exp.f() returns literal, this func must return literal in AIR as well
+            |    <- z
+            |""".stripMargin
+      ),
+      Map(
+        "export2.aqua" ->
+          """module Export declares foobar, foo
+            |
+            |func bar() -> string:
+            |    <- " I am MyFooBar bar"
+            |
+            |func foo() -> string:
+            |    <- "I am MyFooBar foo"
+            |
+            |func foobar() -> []string:
+            |    res: *string
+            |    res <- foo()
+            |    res <- bar()
+            |    <- res
+            |
+            |""".stripMargin,
+        "../gen/OneMore.aqua" ->
+          """
+            |service OneMore:
+            |  more_call()
+            |  consume(s: string)
+            |""".stripMargin
+      )
+    )
+
+    val e: LspContext[S] =
+      res.toOption.get("index.aqua").toOption.get("index.aqua")
+    println(e.constants)
+    println(e.abDefinitions)
+    println(e.rootArrows)
+    println(e.locations)
 
   }
 

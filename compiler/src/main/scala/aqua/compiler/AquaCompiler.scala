@@ -22,25 +22,28 @@ import cats.syntax.semigroup.*
 import cats.{~>, Comonad, Monad, Monoid, Order}
 import scribe.Logging
 
-class AquaCompiler[C](implicit
+class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C](
+  header: HeaderSemAct[S, C],
+  semantics: Semantics[S, C]
+)(implicit
   rc: Monoid[C],
   p: Picker[C]
 ) extends Logging {
 
-  type Err[I, E, S[_]] = AquaError[I, E, S]
-  type Ctx[I] = NonEmptyMap[I, C]
+  type Err = AquaError[I, E, S]
+  type Ctx = NonEmptyMap[I, C]
   // TODO: remove CompilerState[S] from the left
-  type ValidatedCtx[I, E, S[_]] = ValidatedNec[Err[I, E, S], (CompilerState[S], Ctx[I])]
-  type ValidatedCtxT[I, E, S[_]] = ValidatedCtx[I, E, S] => ValidatedCtx[I, E, S]
+  type ValidatedCtx = ValidatedNec[Err, Ctx]
+  type ValidatedCtxT = ValidatedCtx => ValidatedCtx
 
-  private def linkModules[E, I: Order, S[_]: Comonad](
+  private def linkModules(
     modules: Modules[
       I,
-      Err[I, E, S],
-      ValidatedCtxT[I, E, S]
+      Err,
+      ValidatedCtxT
     ],
-    cycleError: List[AquaModule[I, Err[I, E, S], ValidatedCtxT[I, E, S]]] => Err[I, E, S]
-  ): ValidatedNec[Err[I, E, S], Map[I, ValidatedCtx[I, E, S]]] = {
+    cycleError: List[AquaModule[I, Err, ValidatedCtxT]] => Err
+  ): ValidatedNec[Err, Map[I, ValidatedCtx]] = {
     logger.trace("linking modules...")
 
     Linker
@@ -48,24 +51,21 @@ class AquaCompiler[C](implicit
         modules,
         cycleError,
         // By default, provide an empty context for this module's id
-        i => validNec((CompilerState[S](), NonEmptyMap.one(i, Monoid.empty[C])))
+        i => validNec(NonEmptyMap.one(i, Monoid.empty[C]))
       )
   }
 
-  def compileRaw[F[_]: Monad, E, I: Order, S[_]: Comonad](
+  def compileRaw(
     sources: AquaSources[F, E, I],
-    parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
-    header: HeaderSemAct[S, C]
-  ): F[Validated[NonEmptyChain[Err[I, E, S]], Map[I, ValidatedCtx[I, E, S]]]] = {
+    parser: I => String => ValidatedNec[ParserError[S], Ast[S]]
+  ): F[Validated[NonEmptyChain[Err], Map[I, ValidatedCtx]]] = {
 
-    type CErr = Err[I, E, S]
-    type VCtx = ValidatedCtx[I, E, S]
     logger.trace("starting resolving sources...")
     new AquaParser[F, E, I, S](sources, parser)
-      .resolve[VCtx](mod =>
+      .resolve[ValidatedCtx](mod =>
         context =>
           // Context with prepared imports
-          context.andThen { case (_, ctx) =>
+          context.andThen { ctx =>
             // To manage imports, exports run HeaderSem
             header
               .sem(
@@ -78,19 +78,19 @@ class AquaCompiler[C](implicit
               .andThen { headerSem =>
                 // Analyze the body, with prepared initial context
                 logger.trace("semantic processing...")
-                Semantics
+                semantics
                   .process(
                     mod.body,
                     headerSem.initCtx
                   )
                   // Handle exports, declares - finalize the resulting context
-                  .andThen { case (state, ctx) =>
-                    headerSem.finCtx(ctx).map(r => (state, r))
+                  .andThen { ctx =>
+                    headerSem.finCtx(ctx)
                   }
-                  .map { case (state, rc) => (state, NonEmptyMap.one(mod.id, rc)) }
+                  .map { rc => NonEmptyMap.one(mod.id, rc) }
               }
               // The whole chain returns a semantics error finally
-              .leftMap(_.map[CErr](CompileError(_)))
+              .leftMap(_.map[Err](CompileError(_)))
           }
       )
       .map(
