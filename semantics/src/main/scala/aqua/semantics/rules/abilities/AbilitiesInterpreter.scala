@@ -125,7 +125,10 @@ class AbilitiesInterpreter[S[_], X](implicit
                   )
                 ).as(Option.empty[ArrowType])
               ) { fn =>
-                addServiceArrowLocation(name, arrow).as(Some(fn.arrow.`type`))
+                // TODO: add name and arrow separately
+                // TODO: find tokens somewhere
+//                addServiceArrowLocation(name, arrow).as(Some(fn.arrow.`type`))
+                State.pure(Some(fn.arrow.`type`))
               }
           case None =>
             report(name, "Ability with this name is undefined").as(Option.empty[ArrowType])

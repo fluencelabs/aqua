@@ -320,7 +320,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
             |
             |use foo as f from "export2.aqua" as Exp
             |
-            |import OneMore as OM from "../gen/OneMore.aqua"
+            |import OneMore as OM from "../gen/OneMore.aqua"          
             |
             |export foo_wrapper as wrap, foobar as barfoo
             |
@@ -360,10 +360,10 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
     val e: LspContext[S] =
       res.toOption.get("index.aqua").toOption.get("index.aqua")
-    println(e.constants)
-    println(e.abDefinitions)
-    println(e.rootArrows)
-    println(e.locations)
+    println("constants: " + e.constants)
+    println("abdefs: " + e.abDefinitions)
+    println("root arrows: " + e.rootArrows)
+    println("locations: " + e.locations)
 
   }
 
