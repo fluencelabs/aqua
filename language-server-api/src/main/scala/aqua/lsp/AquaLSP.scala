@@ -138,7 +138,7 @@ object AquaLSP extends App with Logging {
 
     val proc = for {
 
-      res <- IntermediateCompilation
+      res <- CompilerAPI
         .compileToLsp[IO, AquaFileError, FileModuleId, FileSpan.F](
           sources,
           SpanParser.parser,
@@ -149,19 +149,27 @@ object AquaLSP extends App with Logging {
         AquaError[FileModuleId, AquaFileError, FileSpan.F]
       ], LspContext[FileSpan.F]] = res
         .andThen(
-          _.getOrElse(pathId, invalidNec(SourcesErr(Unresolvable("unexpected. no file in map"))))
+          _.getOrElse(
+            pathId,
+            invalidNec(
+              SourcesErr(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
+            )
+          )
         )
         .andThen(
           _.get(pathId)
             .map(l => validNec(l))
-            .getOrElse(invalidNec(SourcesErr(Unresolvable("unexpected. no file in map"))))
+            .getOrElse(
+              invalidNec(
+                SourcesErr(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
+              )
+            )
         )
 
       logger.debug("Compilation done.")
 
       val result = fileRes match {
         case Valid(lsp) =>
-          println(lsp)
           logger.debug("No errors on compilation.")
           CompilationResult(
             List.empty.toJSArray,

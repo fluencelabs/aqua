@@ -9,6 +9,7 @@ import aqua.semantics.rules.types.TypesState
 import cats.{Comonad, Semigroup}
 import cats.syntax.semigroup.*
 
+// Able to pick info from different contexts
 trait Picker[A] {
 
   def all(ctx: A): Set[String]

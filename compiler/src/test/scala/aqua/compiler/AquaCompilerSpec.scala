@@ -50,7 +50,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
   }
 
   private def compileToContext(src: Map[String, String], imports: Map[String, String]) =
-    IntermediateCompilation
+    CompilerAPI
       .compileToContext[Id, String, String, Span.S](
         aquaSource(src, imports),
         id => txt => Parser.parse(Parser.parserSchema)(txt),
@@ -58,7 +58,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
       )
 
   private def compileToLsp(src: Map[String, String], imports: Map[String, String]) =
-    IntermediateCompilation
+    CompilerAPI
       .compileToLsp[Id, String, String, Span.S](
         aquaSource(src, imports),
         id => txt => Parser.parse(Parser.parserSchema)(txt),
@@ -309,62 +309,4 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
 
   }
-
-  "aqua compiler" should "compile to lsp with imports" in {
-
-    val res = compileToLsp(
-      Map(
-        "index.aqua" ->
-          """module Import
-            |import foobar from "export2.aqua"
-            |
-            |use foo as f from "export2.aqua" as Exp
-            |
-            |import OneMore as OM from "../gen/OneMore.aqua"          
-            |
-            |export foo_wrapper as wrap, foobar as barfoo
-            |
-            |func foo_wrapper() -> string:
-            |    z <- Exp.f()
-            |    OM "hello"
-            |    OM.more_call()
-            |    -- Exp.f() returns literal, this func must return literal in AIR as well
-            |    <- z
-            |""".stripMargin
-      ),
-      Map(
-        "export2.aqua" ->
-          """module Export declares foobar, foo
-            |
-            |func bar() -> string:
-            |    <- " I am MyFooBar bar"
-            |
-            |func foo() -> string:
-            |    <- "I am MyFooBar foo"
-            |
-            |func foobar() -> []string:
-            |    res: *string
-            |    res <- foo()
-            |    res <- bar()
-            |    <- res
-            |
-            |""".stripMargin,
-        "../gen/OneMore.aqua" ->
-          """
-            |service OneMore:
-            |  more_call()
-            |  consume(s: string)
-            |""".stripMargin
-      )
-    )
-
-    val e: LspContext[S] =
-      res.toOption.get("index.aqua").toOption.get("index.aqua")
-    println("constants: " + e.constants)
-    println("abdefs: " + e.abDefinitions)
-    println("root arrows: " + e.rootArrows)
-    println("locations: " + e.locations)
-
-  }
-
 }

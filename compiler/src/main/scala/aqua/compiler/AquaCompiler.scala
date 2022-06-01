@@ -9,7 +9,7 @@ import aqua.raw.RawPart.Parts
 import aqua.raw.{RawContext, RawPart}
 import aqua.res.AquaRes
 import aqua.semantics.{CompilerState, Semantics}
-import aqua.semantics.header.{HeaderSem, HeaderSemAct, Picker}
+import aqua.semantics.header.{HeaderHandler, HeaderSem, Picker}
 import cats.data.*
 import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.parse.Parser0
@@ -23,7 +23,7 @@ import cats.{~>, Comonad, Monad, Monoid, Order}
 import scribe.Logging
 
 class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C](
-  header: HeaderSemAct[S, C],
+  headerHandler: HeaderHandler[S, C],
   semantics: Semantics[S, C]
 )(implicit
   rc: Monoid[C],
@@ -66,8 +66,8 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C](
         context =>
           // Context with prepared imports
           context.andThen { ctx =>
-            // To manage imports, exports run HeaderSem
-            header
+            // To manage imports, exports run HeaderHandler
+            headerHandler
               .sem(
                 mod.imports.view
                   .mapValues(ctx(_))

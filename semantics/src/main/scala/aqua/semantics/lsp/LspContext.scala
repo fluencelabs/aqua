@@ -7,6 +7,7 @@ import cats.{Monoid, Semigroup}
 import cats.syntax.monoid.*
 import RawContext.semiRC
 
+// Context with info that necessary for language server
 case class LspContext[S[_]](
   raw: RawContext,
   abDefinitions: Map[String, (Ability[S], List[(Name[S], ArrowType)])] =

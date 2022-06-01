@@ -18,23 +18,15 @@ import cats.kernel.Semigroup
 
 import Picker.*
 
-type Res[S[_], C] = ValidatedNec[SemanticError[S], HeaderSem[S, C]]
-
-trait HeaderSemAct[S[_], C] {
-
-  def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C]
-}
-
-class HeaderSemActImpl[S[_]: Comonad, C](implicit
+class HeaderHandler[S[_]: Comonad, C](implicit
   acm: Monoid[C],
   headMonoid: Monoid[HeaderSem[S, C]],
   picker: Picker[C]
-) extends HeaderSemAct[S, C] {
+) {
 
+  type Res[S[_], C] = ValidatedNec[SemanticError[S], HeaderSem[S, C]]
   type ResAC[S[_]] = ValidatedNec[SemanticError[S], C]
   type ResT[S[_], T] = ValidatedNec[SemanticError[S], T]
-
-  type RawHeaderSem = HeaderSem[S, C]
 
   // Helper: monoidal combine of all the childrens after parent res
   private def combineAnd(children: Chain[Res[S, C]])(
@@ -46,7 +38,7 @@ class HeaderSemActImpl[S[_]: Comonad, C](implicit
   private def error[T](token: Token[S], msg: String): ValidatedNec[SemanticError[S], T] =
     invalidNec(HeaderError(token, msg))
 
-  override def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C] = {
+  def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C] = {
     // Resolve a filename from given imports or fail
     def resolve(f: FilenameExpr[S]): ResAC[S] =
       imports
@@ -230,5 +222,3 @@ case class HeaderSem[S[_], C](
   def finCtx: C => ValidatedNec[SemanticError[S], C] =
     finInitCtx(_, initCtx)
 }
-
-object HeaderSem {}
