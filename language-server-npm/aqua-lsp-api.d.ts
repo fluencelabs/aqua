@@ -1,7 +1,9 @@
 export interface TokenLocation {
     name: string,
-    start: number,
-    end: number
+    startLine: number,
+    startCol: number,
+    endLine: number,
+    endCol: number
 }
 
 export interface TokenLink {

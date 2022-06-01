@@ -31,15 +31,24 @@ case class CompilationResult(
 )
 
 @JSExportAll
-case class TokenLocation(name: String, start: Int, end: Int)
+case class TokenLocation(name: String, startLine: Int, startCol: Int, endLine: Int, endCol: Int)
 
 @JSExportAll
 case class TokenLink(current: TokenLocation, definition: TokenLocation)
 
 object TokenLocation {
 
-  def apply(span: FileSpan): TokenLocation = {
-    TokenLocation(span.name, span.span.startIndex, span.span.endIndex)
+  def fromSpan(span: FileSpan): Option[TokenLocation] = {
+    val start = span.locationMap.value.toLineCol(span.span.startIndex)
+    val end = span.locationMap.value.toLineCol(span.span.endIndex)
+
+    for {
+      startLC <- start
+      endLC <- end
+    } yield {
+      TokenLocation(span.name, startLC._1, startLC._2, endLC._1, endLC._2)
+    }
+
   }
 }
 
@@ -160,7 +169,20 @@ object AquaLSP extends App with Logging {
               tInfo.definition match {
                 case None => Nil
                 case Some(d) =>
-                  TokenLink(TokenLocation(t.unit._1), TokenLocation(d.unit._1)) :: Nil
+                  val fromOp = TokenLocation.fromSpan(t.unit._1)
+                  val toOp = TokenLocation.fromSpan(d.unit._1)
+
+                  val link = for {
+                    from <- fromOp
+                    to <- toOp
+                  } yield {
+                    TokenLink(from, to)
+                  }
+
+                  if (link.isEmpty)
+                    logger.warn(s"Incorrect coordinates for token '${t.unit._1.name}'")
+
+                  link.toList
               }
             }.toJSArray
           )
