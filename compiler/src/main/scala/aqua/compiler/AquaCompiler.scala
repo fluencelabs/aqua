@@ -22,17 +22,14 @@ import cats.syntax.semigroup.*
 import cats.{~>, Comonad, Monad, Monoid, Order}
 import scribe.Logging
 
-class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C](
+class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
   headerHandler: HeaderHandler[S, C],
   semantics: Semantics[S, C]
-)(implicit
-  rc: Monoid[C],
-  p: Picker[C]
 ) extends Logging {
 
   type Err = AquaError[I, E, S]
   type Ctx = NonEmptyMap[I, C]
-  // TODO: remove CompilerState[S] from the left
+
   type ValidatedCtx = ValidatedNec[Err, Ctx]
   type ValidatedCtxT = ValidatedCtx => ValidatedCtx
 
