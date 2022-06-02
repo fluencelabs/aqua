@@ -7,6 +7,7 @@ import aqua.parser.ParserError
 import aqua.parser.Ast
 import aqua.parser.Parser
 import aqua.parser.lift.Span
+import aqua.parser.lift.Span.S
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.res.{
   ApRes,
@@ -19,38 +20,50 @@ import aqua.res.{
   RestrictionRes,
   SeqRes
 }
+import aqua.semantics.lsp.LspContext
 import aqua.types.{ArrayType, LiteralType, ScalarType, StreamType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.Id
-import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
+import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
 import cats.instances.string.*
 import cats.syntax.show.*
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
+  private def aquaSource(src: Map[String, String], imports: Map[String, String]) = {
+    new AquaSources[Id, String, String] {
+
+      override def sources: Id[ValidatedNec[String, Chain[(String, String)]]] =
+        Validated.validNec(Chain.fromSeq(src.toSeq))
+
+      override def resolveImport(from: String, imp: String): Id[ValidatedNec[String, String]] =
+        Validated.validNec(imp)
+
+      override def load(file: String): Id[ValidatedNec[String, String]] =
+        Validated.fromEither(
+          (imports ++ src)
+            .get(file)
+            .toRight(NonEmptyChain.one(s"Cannot load imported file $file"))
+        )
+    }
+  }
+
   private def compileToContext(src: Map[String, String], imports: Map[String, String]) =
-    AquaCompiler
+    CompilerAPI
       .compileToContext[Id, String, String, Span.S](
-        new AquaSources[Id, String, String] {
-
-          override def sources: Id[ValidatedNec[String, Chain[(String, String)]]] =
-            Validated.validNec(Chain.fromSeq(src.toSeq))
-
-          override def resolveImport(from: String, imp: String): Id[ValidatedNec[String, String]] =
-            Validated.validNec(imp)
-
-          override def load(file: String): Id[ValidatedNec[String, String]] =
-            Validated.fromEither(
-              (imports ++ src)
-                .get(file)
-                .toRight(NonEmptyChain.one(s"Cannot load imported file $file"))
-            )
-        },
+        aquaSource(src, imports),
         id => txt => Parser.parse(Parser.parserSchema)(txt),
         AquaCompilerConf()
       )
-      .map(_._2)
+
+  private def compileToLsp(src: Map[String, String], imports: Map[String, String]) =
+    CompilerAPI
+      .compileToLsp[Id, String, String, Span.S](
+        aquaSource(src, imports),
+        id => txt => Parser.parse(Parser.parserSchema)(txt),
+        AquaCompilerConf()
+      )
 
   "aqua compiler" should "compile a simple snipped to the right context" in {
 
@@ -296,5 +309,4 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
 
   }
-
 }

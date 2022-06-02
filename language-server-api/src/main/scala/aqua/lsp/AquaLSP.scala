@@ -4,12 +4,14 @@ import aqua.compiler.*
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.*
 import aqua.parser.lexer.Token
+import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
+import aqua.semantics.lsp.LspContext
+import aqua.semantics.{CompilerState, HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
-import cats.data.NonEmptyChain
-import cats.data.Validated.{Invalid, Valid}
+import cats.data.{NonEmptyChain, Validated}
+import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import fs2.io.file.{Files, Path}
@@ -29,15 +31,24 @@ case class CompilationResult(
 )
 
 @JSExportAll
-case class TokenLocation(name: String, start: Int, end: Int)
+case class TokenLocation(name: String, startLine: Int, startCol: Int, endLine: Int, endCol: Int)
 
 @JSExportAll
 case class TokenLink(current: TokenLocation, definition: TokenLocation)
 
 object TokenLocation {
 
-  def apply(span: FileSpan): TokenLocation = {
-    TokenLocation(span.name, span.span.startIndex, span.span.endIndex)
+  def fromSpan(span: FileSpan): Option[TokenLocation] = {
+    val start = span.locationMap.value.toLineCol(span.span.startIndex)
+    val end = span.locationMap.value.toLineCol(span.span.endIndex)
+
+    for {
+      startLC <- start
+      endLC <- end
+    } yield {
+      TokenLocation(span.name, startLC._1, startLC._2, endLC._1, endLC._2)
+    }
+
   }
 }
 
@@ -116,40 +127,72 @@ object AquaLSP extends App with Logging {
     pathStr: String,
     imports: scalajs.js.Array[String]
   ): scalajs.js.Promise[CompilationResult] = {
-
     logger.debug(s"Compiling '$pathStr' with imports: $imports")
 
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
-    val sources = new AquaFileSources[IO](Path(pathStr), imports.toList.map(Path.apply))
+    val path = Path(pathStr)
+    val pathId = FileModuleId(path)
+    val sources = new AquaFileSources[IO](path, imports.toList.map(Path.apply))
     val config = AquaCompilerConf()
 
     val proc = for {
-      // TODO: should run a custom AquaCompiler that collects RawContext + token definitions from the CompilerState to enable cross-file ctrl+click support
-      res <- AquaCompiler
-        .compileToContext[IO, AquaFileError, FileModuleId, FileSpan.F](
+
+      res <- CompilerAPI
+        .compileToLsp[IO, AquaFileError, FileModuleId, FileSpan.F](
           sources,
           SpanParser.parser,
           config
         )
     } yield {
+      val fileRes: Validated[NonEmptyChain[
+        AquaError[FileModuleId, AquaFileError, FileSpan.F]
+      ], LspContext[FileSpan.F]] = res
+        .andThen(
+          _.getOrElse(
+            pathId,
+            invalidNec(
+              SourcesErr(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
+            )
+          )
+        )
+        .andThen(
+          _.get(pathId)
+            .map(l => validNec(l))
+            .getOrElse(
+              invalidNec(
+                SourcesErr(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
+              )
+            )
+        )
+
       logger.debug("Compilation done.")
-      val result = res match {
-        case Valid((state, _)) =>
+
+      val result = fileRes match {
+        case Valid(lsp) =>
           logger.debug("No errors on compilation.")
           CompilationResult(
             List.empty.toJSArray,
-            state.toList
-              .flatMap(s =>
-                (s.names.locations ++ s.abilities.locations).flatMap { case (t, tInfo) =>
-                  tInfo.definition match {
-                    case None => Nil
-                    case Some(d) =>
-                      TokenLink(TokenLocation(t.unit._1), TokenLocation(d.unit._1)) :: Nil
+            lsp.locations.flatMap { case (t, tInfo) =>
+              tInfo.definition match {
+                case None => Nil
+                case Some(d) =>
+                  val fromOp = TokenLocation.fromSpan(t.unit._1)
+                  val toOp = TokenLocation.fromSpan(d.unit._1)
+
+                  val link = for {
+                    from <- fromOp
+                    to <- toOp
+                  } yield {
+                    TokenLink(from, to)
                   }
-                }
-              )
-              .toJSArray
+
+                  if (link.isEmpty)
+                    logger.warn(s"Incorrect coordinates for token '${t.unit._1.name}'")
+
+                  link.toList
+              }
+            }.toJSArray
           )
         case Invalid(e: NonEmptyChain[AquaError[FileModuleId, AquaFileError, FileSpan.F]]) =>
           val errors = e.toNonEmptyList.toList.flatMap(errorToInfo)

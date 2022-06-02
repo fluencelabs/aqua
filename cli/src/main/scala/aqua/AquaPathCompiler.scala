@@ -1,7 +1,7 @@
 package aqua
 
 import aqua.backend.{Backend, Generated}
-import aqua.compiler.{AquaCompiled, AquaCompiler, AquaCompilerConf, AquaError}
+import aqua.compiler.{AquaCompiled, AquaCompiler, AquaCompilerConf, AquaError, CompilerAPI}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io.*
 import aqua.model.AquaContext
@@ -44,7 +44,7 @@ object AquaPathCompiler extends Logging {
     (for {
       prelude <- Prelude.init()
       sources = new AquaFileSources[F](srcPath, imports ++ prelude.importPaths)
-      compiler <- AquaCompiler
+      compiler <- CompilerAPI
         .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](
           sources,
           SpanParser.parser,

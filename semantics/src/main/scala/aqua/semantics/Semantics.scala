@@ -4,6 +4,7 @@ import aqua.raw.ops.{FuncOp, SeqGroupTag}
 import aqua.raw.{Raw, RawContext, RawPart}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
+import aqua.semantics.header.Picker
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
@@ -21,6 +22,75 @@ import cats.{Eval, Monad, Semigroup}
 import monocle.Lens
 import monocle.macros.GenLens
 import scribe.{log, Logging}
+import Picker.*
+import aqua.semantics.lsp.LspContext
+
+sealed trait Semantics[S[_], C] {
+
+  def process(
+    ast: Ast[S],
+    init: C
+  ): ValidatedNec[SemanticError[S], C]
+}
+
+class RawSemantics[S[_]](implicit p: Picker[RawContext]) extends Semantics[S, RawContext] {
+
+  def process(
+    ast: Ast[S],
+    init: RawContext
+  ): ValidatedNec[SemanticError[S], RawContext] =
+    Semantics
+      .interpret(ast, CompilerState.init(init), init)
+      .map { case (state, ctx) =>
+        NonEmptyChain
+          .fromChain(state.errors)
+          .fold[ValidatedNec[SemanticError[S], RawContext]](
+            Valid(ctx)
+          )(Invalid(_))
+      }
+      // TODO: return as Eval
+      .value
+}
+
+class LspSemantics[S[_]](implicit p: Picker[LspContext[S]]) extends Semantics[S, LspContext[S]] {
+
+  def process(
+    ast: Ast[S],
+    init: LspContext[S]
+  ): ValidatedNec[SemanticError[S], LspContext[S]] = {
+
+    val rawState = CompilerState.init[S](init.raw)
+    val initState = rawState.copy(
+      names = rawState.names.copy(
+        rootArrows = rawState.names.rootArrows ++ init.rootArrows,
+        constants = rawState.names.constants ++ init.constants
+      ),
+      abilities = rawState.abilities.copy(
+        definitions = rawState.abilities.definitions ++ init.abDefinitions
+      )
+    )
+
+    Semantics
+      .interpret(ast, initState, init.raw)
+      .map { case (state, ctx) =>
+        NonEmptyChain
+          .fromChain(state.errors)
+          .fold[ValidatedNec[SemanticError[S], LspContext[S]]] {
+            Valid(
+              LspContext(
+                raw = ctx,
+                rootArrows = state.names.rootArrows,
+                constants = state.names.constants,
+                abDefinitions = state.abilities.definitions,
+                locations = state.names.locations ++ state.abilities.locations
+              )
+            )
+          }(Invalid(_))
+      }
+      // TODO: return as Eval
+      .value
+  }
+}
 
 object Semantics extends Logging {
 
@@ -78,10 +148,13 @@ object Semantics extends Logging {
     transpile[S](ast)
 
   // If there are any errors, they're inside CompilerState[S]
-  // TODO: pass external token definitions for the RawContext somehow
-  def interpret[S[_]](ast: Ast[S], init: RawContext): Eval[(CompilerState[S], RawContext)] =
+  def interpret[S[_]](
+    ast: Ast[S],
+    initState: CompilerState[S],
+    init: RawContext
+  ): Eval[(CompilerState[S], RawContext)] =
     astToState[S](ast)
-      .run(CompilerState.init[S](init))
+      .run(initState)
       .map {
         case (state, _: Raw.Empty) =>
           // No `parts`, but has `init`
@@ -112,19 +185,4 @@ object Semantics extends Logging {
               .filter(_ != RawContext.blank)
           )
       }
-
-  // TODO: return just RawContext on the right side
-  def process[S[_]](
-    ast: Ast[S],
-    init: RawContext
-  ): ValidatedNec[SemanticError[S], (CompilerState[S], RawContext)] =
-    interpret(ast, init).map { case (state, ctx) =>
-      NonEmptyChain
-        .fromChain(state.errors)
-        .fold[ValidatedNec[SemanticError[S], (CompilerState[S], RawContext)]](
-          Valid(state -> ctx)
-        )(Invalid(_))
-    }
-      // TODO: return as Eval
-      .value
 }

@@ -40,37 +40,11 @@ case class RawContext(
 
   def nonEmpty: Boolean = !isEmpty
 
-  def pick(
-    name: String,
-    rename: Option[String],
-    declared: Boolean = module.nonEmpty
-  ): Option[RawContext] =
-    Option
-      .when(!declared || declares(name)) {
-        RawContext.blank
-          .copy(parts = parts.filter(_._2.name == name).map { case (partContext, part) =>
-            (partContext, rename.fold(part)(part.rename))
-          })
-      }
-      .filter(_.nonEmpty)
+  private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
+    (prefix + pair._1, pair._2)
 
   private def collectPartsMap[T](f: PartialFunction[RawPart, T]): Map[String, T] =
     parts.collect { case (_, p) if f.isDefinedAt(p) => p.name -> f(p) }.toList.toMap
-
-  def pickHeader: RawContext =
-    RawContext.blank.copy(module = module, declares = declares, exports = exports)
-
-  def pickDeclared(implicit semi: Semigroup[RawContext]): RawContext =
-    if (module.isEmpty) this
-    else
-      declares.toList
-        .flatMap(pick(_, None))
-        .foldLeft(pickHeader)(
-          _ |+| _
-        )
-
-  private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
-    (prefix + pair._1, pair._2)
 
   lazy val services: Map[String, ServiceRaw] = collectPartsMap { case srv: ServiceRaw => srv }
 
@@ -117,6 +91,8 @@ case class RawContext(
         )
       )
       .map(StructType(name, _))
+
+  override def toString: String = s"module: $module\ndeclares: $declares\nexports: $exports"
 }
 
 object RawContext {
@@ -145,5 +121,6 @@ object RawContext {
       override def combine(x: RawContext, y: RawContext): RawContext =
         semiRC.combine(x, y)
     }
+
   }
 }

@@ -27,17 +27,6 @@ object CompilerState {
       types = TypesState.init[F](ctx)
     )
 
-  // TODO remove it after switching from RawContext to LspContext[S]
-  implicit def semigroupState[S[_]]: Semigroup[CompilerState[S]] =
-    (x: CompilerState[S], y: CompilerState[S]) => {
-      CompilerState[S](
-        x.errors ++ y.errors,
-        x.names |+| y.names,
-        x.abilities |+| y.abilities,
-        x.types |+| y.types
-      )
-    }
-
   implicit def compilerStateMonoid[S[_]]: Monoid[St[S]] = new Monoid[St[S]] {
     override def empty: St[S] = State.pure(Raw.Empty("compiler state monoid empty"))
 

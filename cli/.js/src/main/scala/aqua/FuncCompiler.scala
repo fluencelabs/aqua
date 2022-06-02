@@ -1,6 +1,6 @@
 package aqua
 
-import aqua.compiler.{AquaCompiler, AquaCompilerConf}
+import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompilerAPI}
 import aqua.ErrorRendering.showError
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
@@ -50,7 +50,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       sources = new AquaFileSources[F](input, prelude.importPaths ++ imports)
       // compile only context to wrap and call function later
       compileResult <- Clock[F].timed(
-        AquaCompiler
+        CompilerAPI
           .compileToContext[F, AquaFileError, FileModuleId, FileSpan.F](
             sources,
             SpanParser.parser,
@@ -61,7 +61,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       (compileTime, contextV) = compileResult
     } yield {
       logger.debug(s"Compile time: ${compileTime.toMillis}ms")
-      contextV.andThen(c => findFunction(c._2, func))
+      contextV.andThen(c => findFunction(c, func))
     }
   }
 }
