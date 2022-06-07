@@ -2,7 +2,7 @@ package aqua.builder
 
 import aqua.backend.*
 import aqua.ipfs.js.IpfsApi
-import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer, ServiceHandler}
+import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.types.ScalarType
 import cats.data.NonEmptyList
 import scribe.Logging
