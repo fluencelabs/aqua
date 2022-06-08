@@ -11,7 +11,7 @@ sealed trait ValueRaw {
 
   def `type`: Type = baseType
 
-  def renameVars(map: Map[String, String]): ValueRaw = this
+  def renameVars(map: Map[String, String]): ValueRaw
 
   def map(f: ValueRaw => ValueRaw): ValueRaw
 
@@ -97,6 +97,8 @@ case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
   override def toString: String = s"{$value: ${baseType}}"
 
   override def varNames: Set[String] = Set.empty
+
+  def renameVars(map: Map[String, String]): ValueRaw = this
 }
 
 object LiteralRaw {
@@ -123,6 +125,8 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
   }
 
   override def varNames: Set[String] = values.toList.flatMap(_.varNames).toSet
+
+  def renameVars(map: Map[String, String]): ValueRaw = copy(values = values.map(_.renameVars(map)))
 }
 
 case class CallArrowRaw(
@@ -140,6 +144,8 @@ case class CallArrowRaw(
     f(copy(arguments = arguments.map(f)))
 
   override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
+
+  override def renameVars(map: Map[String, String]): ValueRaw = copy(arguments = arguments.map(_.renameVars(map)))
 
   override def toString: String =
     s"(call ${ability.fold("")(a => s"|$a| ")} (${serviceId.fold("")(_.toString + " ")}$name) [${arguments
