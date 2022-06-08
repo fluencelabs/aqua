@@ -98,7 +98,7 @@ case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
 
   override def varNames: Set[String] = Set.empty
 
-  def renameVars(map: Map[String, String]): ValueRaw = this
+  override def renameVars(map: Map[String, String]): ValueRaw = this
 }
 
 object LiteralRaw {
@@ -126,7 +126,7 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
 
   override def varNames: Set[String] = values.toList.flatMap(_.varNames).toSet
 
-  def renameVars(map: Map[String, String]): ValueRaw = copy(values = values.map(_.renameVars(map)))
+  override def renameVars(map: Map[String, String]): ValueRaw = copy(values = values.map(_.renameVars(map)))
 }
 
 case class CallArrowRaw(
