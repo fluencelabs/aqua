@@ -123,12 +123,12 @@ case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel] = C
                     res <- two(variable)
                     <- variable
                */
-              case vm @ VarModel(nn, _, _) if nn == name => deriveFrom(vm)
+              case vm @ VarModel(nn, _, _) if nn == name => deriveFrom(vv.deriveFrom(vm))
               // it couldn't go to a cycle as long as the semantics protects it
               case _ =>
                 n.resolveWith(vals) match {
                   case nvm: VarModel =>
-                    deriveFrom(nvm)
+                    deriveFrom(vv.deriveFrom(nvm))
                   case valueModel =>
                     if (lambda.nonEmpty)
                       logger.error(
