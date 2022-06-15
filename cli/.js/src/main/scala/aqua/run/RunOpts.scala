@@ -50,18 +50,25 @@ object RunOpts extends Logging {
   }
 
   def runOptsCompose[F[_]: Files: Concurrent]
-    : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithData)]]] = {
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], ArgOpts.funcWithArgsOpt[F]).mapN {
-      case (inputF, importF, funcWithArgsF) =>
-        for {
-          inputV <- inputF
-          importV <- importF
-          funcWithArgsV <- funcWithArgsF
-        } yield {
-          (inputV, importV, funcWithArgsV).mapN { case (i, im, f) =>
-            (i, im, f)
-          }
+    : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithData, Option[JsonService])]]] = {
+    (
+      AppOpts.inputOpts[F],
+      AppOpts.importOpts[F],
+      ArgOpts.funcWithArgsOpt[F],
+      AppOpts.wrapWithOption(JsonService.jsonServiceOpt)
+    ).mapN { case (inputF, importF, funcWithArgsF, jsonServiceOp) =>
+      for {
+        inputV <- inputF
+        importV <- importF
+        funcWithArgsV <- funcWithArgsF
+        jsonServiceV <- jsonServiceOp
+          .map(_.map(_.map(js => Some(js))))
+          .getOrElse(validNec[String, Option[JsonService]](None).pure[F])
+      } yield {
+        (inputV, importV, funcWithArgsV, jsonServiceV).mapN { case (i, im, f, j) =>
+          (i, im, f, j)
         }
+      }
     }
   }
 
@@ -79,13 +86,15 @@ object RunOpts extends Logging {
             ) =>
           LogFormatter.initLogger(Some(common.logLevel))
           optionsF.map(
-            _.map { case (input, imps, funcWithArgs) =>
+            _.map { case (input, imps, funcWithArgs, service) =>
               RunInfo(
                 common,
                 funcWithArgs.func,
                 RelativePath(input),
                 imps,
-                funcWithArgs.getters
+                funcWithArgs.getters,
+                Nil,
+                service.toList
               )
             }
           )

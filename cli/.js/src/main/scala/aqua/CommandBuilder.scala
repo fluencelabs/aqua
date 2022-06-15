@@ -2,7 +2,7 @@ package aqua
 
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.raw.value.ValueRaw
-import aqua.run.{GeneralRunOptions, RunCommand, RunOpts}
+import aqua.run.{GeneralRunOptions, JsonService, RunCommand, RunOpts}
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.{NonEmptyList, Validated, ValidatedNec}
 import cats.effect.ExitCode
@@ -31,7 +31,8 @@ case class RunInfo(
   input: AquaPath,
   imports: List[Path] = Nil,
   argumentGetters: Map[String, ArgumentGetter] = Map.empty,
-  services: List[Service] = Nil
+  services: List[Service] = Nil,
+  jsonServices: List[JsonService] = Nil
 )
 
 // Builds subcommand
