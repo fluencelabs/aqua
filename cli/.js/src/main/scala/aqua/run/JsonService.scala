@@ -8,14 +8,14 @@ import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToke
 import aqua.parser.lift.Span
 import aqua.raw.value.{CollectionRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
-import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.data.*
+import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.effect.Concurrent
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.semigroup.*
 import cats.syntax.functor.*
+import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
 import cats.{~>, Id, Semigroup}
 import com.monovore.decline.Opts
@@ -23,7 +23,7 @@ import fs2.io.file.Files
 
 import scala.scalajs.js
 
-case class JsonFunction(name: String, result: js.Dynamic)
+case class JsonFunction(name: String, result: js.Dynamic, resultType: Type)
 case class JsonService(name: String, functions: NonEmptyList[JsonFunction])
 
 object JsonService {
@@ -51,8 +51,11 @@ object JsonService {
                   else if (js.isUndefined(fResult))
                     invalidNec(s"Function '$fName' don't have a result")
                   else {
-                    validNec(JsonFunction(fName.asInstanceOf[String], fResult))
-                  }
+                      val funcName = fName.asInstanceOf[String]
+                      JsonEncoder
+                        .aquaTypeFromJson(funcName, fResult)
+                        .map(t => JsonFunction(funcName, fResult, t))
+                    }
                 }
                 .sequence
 
