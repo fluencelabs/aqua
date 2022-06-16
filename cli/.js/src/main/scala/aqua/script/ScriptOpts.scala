@@ -133,7 +133,7 @@ object ScriptOpts extends Logging {
     val funcName = funcWithArgs.func.name
 
     for {
-      callableV <- funcCompiler.compile(funcWithArgs.func)
+      callableV <- funcCompiler.compile(funcWithArgs.func, Nil)
       wrappedBody = CallArrowRawTag.func(funcName, Call(funcWithArgs.func.args, Nil)).leaf
       result = callableV
         .map(callable =>

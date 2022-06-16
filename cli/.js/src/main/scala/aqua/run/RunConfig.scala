@@ -107,6 +107,7 @@ case class RunConfig(
   argumentGetters: Map[String, ArgumentGetter],
   // builtin services for aqua run, for example: Console, FileSystem, etc
   services: List[Service],
+  jsonServices: List[JsonService],
   resultPrinterServiceId: String = "--after-callback-srv-service--",
   resultPrinterName: String = "console-log",
   finisherServiceId: String = "--finisher--",

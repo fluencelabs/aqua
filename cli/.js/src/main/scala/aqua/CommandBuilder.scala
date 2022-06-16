@@ -52,12 +52,8 @@ class SubCommandBuilder[F[_]: Async](
             case RelativePath(p) => p.pure[F]
           }).flatMap { path =>
             RunCommand.execRun(
-              ri.common,
-              ri.func,
-              path,
-              ri.imports,
-              ri.argumentGetters,
-              ri.services
+              ri,
+              path
             )
           }
         case i @ Validated.Invalid(_) =>

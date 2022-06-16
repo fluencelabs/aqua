@@ -73,11 +73,10 @@ object RunCommand extends Logging {
     runConfig: RunConfig,
     transformConfig: TransformConfig
   ): F[ValidatedNec[String, Unit]] = {
-    implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
 
     for {
-      funcArrowV <- funcCompiler.compile(func)
+      funcArrowV <- funcCompiler.compile(func, runConfig.jsonServices)
       callResult <- Clock[F].timed {
         funcArrowV match {
           case Validated.Valid(funcCallable) =>
@@ -116,21 +115,19 @@ object RunCommand extends Logging {
    * @return
    */
   def execRun[F[_]: Async](
-    common: GeneralRunOptions,
-    func: CliFunc,
-    inputPath: Path,
-    imports: List[Path] = Nil,
-    argumentGetters: Map[String, ArgumentGetter] = Map.empty,
-    services: List[Service] = Nil
+    runInfo: RunInfo,
+    inputPath: Path
   ): F[ValidatedNec[String, Unit]] = {
+    val common = runInfo.common
     LogFormatter.initLogger(Some(common.logLevel))
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]
+
     RunCommand
       .run[F](
-        func,
+        runInfo.func,
         inputPath,
-        imports,
-        RunConfig(common, argumentGetters, services ++ builtinServices),
+        runInfo.imports,
+        RunConfig(common, runInfo.argumentGetters, runInfo.services ++ builtinServices, runInfo.jsonServices),
         transformConfig(common.on, common.constants, common.flags.noXor, common.flags.noRelay)
       )
   }
