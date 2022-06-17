@@ -17,14 +17,14 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
-import cats.{~>, Id, Semigroup}
+import cats.{Id, Semigroup, ~>}
 import com.monovore.decline.Opts
 import fs2.io.file.Files
 
 import scala.scalajs.js
 
 case class JsonFunction(name: String, result: js.Dynamic, resultType: Type)
-case class JsonService(name: String, functions: NonEmptyList[JsonFunction])
+case class JsonService(name: String, serviceId: String, functions: NonEmptyList[JsonFunction])
 
 object JsonService {
 
@@ -34,9 +34,12 @@ object JsonService {
         b.map { case a: ValidatedNec[String, js.Dynamic] =>
           a.andThen { res =>
             val name = res.name
+            val serviceId = res.serviceId
             val functionsRaw = res.functions
             if (js.isUndefined(name) || js.typeOf(name) != "string")
               invalidNec("No name in JSON service or it is not a string")
+            else if (js.isUndefined(serviceId) || js.typeOf(serviceId) != "string")
+              invalidNec("No serviceId in JSON service or it is not a string")
             else if (js.isUndefined(functionsRaw) || !js.Array.isArray(functionsRaw))
               invalidNec("'functions' field should exists and be an array in JSON service")
             else {
@@ -62,7 +65,7 @@ object JsonService {
               functionsV.andThen { fs =>
                 NonEmptyList
                   .fromList(fs)
-                  .map(fNEL => validNec(JsonService(name.asInstanceOf[String], fNEL)))
+                  .map(fNEL => validNec(JsonService(name.asInstanceOf[String], serviceId.asInstanceOf[String], fNEL)))
                   .getOrElse(invalidNec(s"List of functions in '$name' service is empty"))
               }
             }

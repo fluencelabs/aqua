@@ -1,9 +1,12 @@
 package aqua
 
 import aqua.ErrorRendering.showError
+import aqua.backend.{ArrowTypeDef, ProductTypeDef}
+import aqua.builder.{AquaFunction, Service}
 import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompilerAPI}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
+import aqua.js.ServiceHandler
 import aqua.json.JsonEncoder
 import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow, ServiceModel}
@@ -38,7 +41,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
     contexts: Chain[AquaContext],
     func: CliFunc,
     services: List[JsonService]
-  ): ValidatedNec[String, (FuncArrow, List[TypedJsonService])] = {
+  ): ValidatedNec[String, (FuncArrow, List[Service])] = {
     contexts
       .collectFirstSome(c => c.allFuncs.get(func.name).map(f => (f, c)))
       .map(validNec)
@@ -55,13 +58,10 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       }
   }
 
-  case class TypedJsonFunction(name: String, result: js.Dynamic, resultType: ProductType)
-  case class TypedJsonService(name: String, functions: NonEmptyList[TypedJsonFunction])
-
   private def findServices(
     context: AquaContext,
     services: List[JsonService]
-  ): ValidatedNec[String, List[TypedJsonService]] = {
+  ): ValidatedNec[String, List[Service]] = {
     println(context.services.keys)
     println(context.abilities.keys)
     println(context.funcs.keys)
@@ -79,26 +79,33 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       )
       .sequence
       .andThen { l =>
-        l.map { case (js: JsonService, sm: ServiceModel) =>
-          val typedFunctions: ValidatedNec[String, NonEmptyList[TypedJsonFunction]] =
-            js.functions.map { jf =>
+        l.map { case (jsonService: JsonService, sm: ServiceModel) =>
+          val aquaFunctions: ValidatedNec[String, NonEmptyList[AquaFunction]] =
+            jsonService.functions.map { jf =>
               sm.arrows(jf.name)
                 .map { case arr: ArrowType =>
                   if (arr.domain.isEmpty)
                     Runner
                       .validateTypes(jf.name, arr.codomain, Some(ProductType(jf.resultType :: Nil)))
-                      .map(_ => TypedJsonFunction(jf.name, jf.result, arr.codomain))
+                      .map{ _ =>
+                        new AquaFunction {
+                          override def fnName: String = jf.name
+
+                          override def handler: ServiceHandler = _ => js.Promise.resolve(jf.result)
+                          override def arrow: ArrowTypeDef = ArrowTypeDef(ProductTypeDef(NilType), ProductTypeDef(arr.codomain))
+                        }
+                      }
                   else
                     invalidNec(s"Json service '${jf.name}' cannot have any arguments")
                 }
                 .getOrElse(
-                  Validated.invalidNec[String, TypedJsonFunction](
-                    s"There is no function '${jf.name}' in service '${js.name}' in aqua source. Check your 'json-service' options"
+                  Validated.invalidNec[String, AquaFunction](
+                    s"There is no function '${jf.name}' in service '${jsonService.name}' in aqua source. Check your 'json-service' options"
                   )
                 )
             }.sequence
 
-          typedFunctions.map(tfs => TypedJsonService(js.name, tfs))
+          aquaFunctions.map(funcs => Service(jsonService.serviceId, funcs))
         }.sequence
       }
   }
@@ -107,7 +114,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
   def compile(
     func: CliFunc,
     jsonServices: List[JsonService]
-  ): F[ValidatedNec[String, FuncArrow]] = {
+  ): F[ValidatedNec[String, (FuncArrow, List[Service])]] = {
     for {
       prelude <- Prelude.init[F](withRunImport)
       sources = new AquaFileSources[F](input, prelude.importPaths ++ imports)
@@ -124,7 +131,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       (compileTime, contextV) = compileResult
     } yield {
       logger.debug(s"Compile time: ${compileTime.toMillis}ms")
-      contextV.andThen(c => findFunction(c, func, jsonServices).map(_._1))
+      contextV.andThen(c => findFunction(c, func, jsonServices))
     }
   }
 }

@@ -35,10 +35,7 @@ object JsonEncoder {
     ltV: ValidatedNec[String, Type],
     rtV: ValidatedNec[String, Type]
   ): ValidatedNec[String, Type] = {
-    }
-  (ltV, rtV)
-    /** EndMarker */
-    match {
+    (ltV, rtV) match {
       case (Validated.Valid(lt), Validated.Valid(rt)) =>
         (lt, rt) match {
           case (lt, rt) if lt == rt => validNec(lt)
@@ -70,82 +67,7 @@ object JsonEncoder {
               .sequence
               .map(processedFields => NonEmptyMap.fromMap(SortedMap(processedFields: _*)).get)
               .map(mt => StructType("", mt))
-          case (a, b) =>
-            invalidNec(s"Items in '$name' array should be of the same type")
-        }
-      case (Validated.Invalid(lerr), Validated.Invalid(rerr)) =>
-        Validated.Invalid(lerr ++ rerr)
-      case (l @ Validated.Invalid(_), _) =>
-        l
-      case (_, r @ Validated.Invalid(_)) =>
-        r
-    } match {
-      case (Validated.Valid(lt), Validated.Valid(rt)) =>
-        (lt, rt)
-        /** EndMarker */
-        match {
-          case (lt, rt) if lt == rt => validNec(lt)
-          case (BottomType, ra @ ArrayType(_)) => validNec(ra)
-          case (la @ ArrayType(_), BottomType) => validNec(la)
-          case (lo @ OptionType(lel), rtt) if lel == rtt => validNec(lo)
-          case (ltt, ro @ OptionType(rel)) if ltt == rel => validNec(ro)
-          case (BottomType, rb) => validNec(OptionType(rb))
-          case (lb, BottomType) => validNec(OptionType(lb))
-          case (lst: StructType, rst: StructType) =>
-            val lFieldsSM: SortedMap[String, Type] = lst.fields.toSortedMap
-            val rFieldsSM: SortedMap[String, Type] = rst.fields.toSortedMap
-            (lFieldsSM.toList ++ rFieldsSM.toList)
-              .groupBy(_._1)
-              .view
-              .mapValues(_.map(_._2))
-              .map {
-                case (name, t :: Nil) =>
-                  compareAndGetWidestType(name, validNec(t), validNec(BottomType)).map(t =>
-                    (name, t)
-                  )
-                case (name, lt :: rt :: Nil) =>
-                  compareAndGetWidestType(name, validNec(lt), validNec(rt)).map(t => (name, t))
-                case _ =>
-                  // this is internal error.This Can't happen
-                  invalidNec("Unexpected. The list can only have 1 or 2 arguments.")
-              }
-              .toList
-              .sequence
-              .map(processedFields => NonEmptyMap.fromMap(SortedMap(processedFields: _*)).get)
-              .map(mt => StructType("", mt))
-          case (a, b) =>
-            invalidNec(s"Items in '$name' array should be of the same type")
-        } match {
-          case (lt, rt) if lt == rt => validNec(lt)
-          case (BottomType, ra @ ArrayType(_)) => validNec(ra)
-          case (la @ ArrayType(_), BottomType) => validNec(la)
-          case (lo @ OptionType(lel), rtt) if lel == rtt => validNec(lo)
-          case (ltt, ro @ OptionType(rel)) if ltt == rel => validNec(ro)
-          case (BottomType, rb) => validNec(OptionType(rb))
-          case (lb, BottomType) => validNec(OptionType(lb))
-          case (lst: StructType, rst: StructType) =>
-            val lFieldsSM: SortedMap[String, Type] = lst.fields.toSortedMap
-            val rFieldsSM: SortedMap[String, Type] = rst.fields.toSortedMap
-            (lFieldsSM.toList ++ rFieldsSM.toList)
-              .groupBy(_._1)
-              .view
-              .mapValues(_.map(_._2))
-              .map {
-                case (name, t :: Nil) =>
-                  compareAndGetWidestType(name, validNec(t), validNec(BottomType)).map(t =>
-                    (name, t)
-                  )
-                case (name, lt :: rt :: Nil) =>
-                  compareAndGetWidestType(name, validNec(lt), validNec(rt)).map(t => (name, t))
-                case _ =>
-                  // this is internal error.This Can't happen
-                  invalidNec("Unexpected. The list can only have 1 or 2 arguments.")
-              }
-              .toList
-              .sequence
-              .map(processedFields => NonEmptyMap.fromMap(SortedMap(processedFields: _*)).get)
-              .map(mt => StructType("", mt))
-          case (a, b) =>
+          case (_, _) =>
             invalidNec(s"Items in '$name' array should be of the same type")
         }
       case (Validated.Invalid(lerr), Validated.Invalid(rerr)) =>

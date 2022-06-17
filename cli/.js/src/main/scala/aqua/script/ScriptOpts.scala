@@ -143,7 +143,7 @@ object ScriptOpts extends Logging {
               wrappedBody,
               ArrowType(NilType, NilType),
               Nil,
-              Map(funcName -> callable),
+              Map(funcName -> callable._1),
               Map.empty,
               None
             ),

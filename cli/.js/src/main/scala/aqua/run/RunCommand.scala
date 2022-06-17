@@ -11,8 +11,8 @@ import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
 import aqua.js.*
-import aqua.model.{AquaContext, FuncArrow}
 import aqua.model.transform.{Transform, TransformConfig}
+import aqua.model.{AquaContext, FuncArrow}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.LiteralToken
 import aqua.parser.lift.FileSpan
@@ -21,9 +21,9 @@ import aqua.run.RunConfig
 import aqua.run.RunOpts.transformConfig
 import aqua.types.*
 import cats.data.*
+import cats.effect.*
 import cats.effect.kernel.{Async, Clock}
 import cats.effect.syntax.async.*
-import cats.effect.{ExitCode, IO, IOApp, Resource, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -32,7 +32,7 @@ import cats.syntax.list.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.{~>, Id, Monad}
+import cats.{Id, Monad, ~>}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -79,9 +79,9 @@ object RunCommand extends Logging {
       funcArrowV <- funcCompiler.compile(func, runConfig.jsonServices)
       callResult <- Clock[F].timed {
         funcArrowV match {
-          case Validated.Valid(funcCallable) =>
+          case Validated.Valid((funcCallable, jsonServices)) =>
             val runner =
-              new Runner(func, funcCallable, runConfig, transformConfig)
+              new Runner(func, funcCallable, runConfig.copy(services = runConfig.services ++ jsonServices), transformConfig)
             runner.run()
           case i @ Validated.Invalid(_) => i.pure[F]
         }
