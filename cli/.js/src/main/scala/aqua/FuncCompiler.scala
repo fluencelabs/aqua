@@ -46,7 +46,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       .collectFirstSome(c => c.allFuncs.get(func.name).map(f => (f, c)))
       .map(validNec)
       .getOrElse(
-        Validated.invalidNec[String, FuncArrow](
+        Validated.invalidNec[String, (FuncArrow, AquaContext)](
           s"There is no function '${func.name}' or it is not exported. Check the spelling or see https://doc.fluence.dev/aqua-book/language/header#export"
         )
       )
