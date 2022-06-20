@@ -52,7 +52,6 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       )
       .andThen { case (func, context) =>
         findServices(context, services).map { l =>
-          println(l)
           (func, l)
         }
       }
@@ -62,9 +61,6 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
     context: AquaContext,
     services: List[JsonService]
   ): ValidatedNec[String, List[Service]] = {
-    println(context.services.keys)
-    println(context.abilities.keys)
-    println(context.funcs.keys)
     services
       .map(js =>
         context.services
