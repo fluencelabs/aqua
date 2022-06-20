@@ -1,15 +1,15 @@
 package aqua
 
-import cats.data.{Validated, ValidatedNec}
+import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
+import cats.data.*
 import cats.effect.Concurrent
-import com.monovore.decline.Opts
-import fs2.io.file.{Files, Path}
+import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.applicative.*
-import cats.{~>, Comonad, Functor, Monad}
-import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
-import Validated.{invalid, invalidNec, valid, validNec, validNel}
+import cats.syntax.traverse.*
+import cats.{Comonad, Functor, Monad, ~>}
+import com.monovore.decline.Opts
+import fs2.io.file.{Files, Path}
 
 object FileOpts {
 
@@ -34,6 +34,27 @@ object FileOpts {
       .option[String](long, help, short, "path")
       .map(check)
 
+  def fileOptMap[A, F[_]: Files: Concurrent](
+    str: String,
+    transform: (Path, String) => ValidatedNec[String, A]
+  ): F[ValidatedNec[String, (Path, A)]] = {
+    checkAndTransformPath(
+      str,
+      checkFile,
+      p => {
+        Files[F]
+          .readAll(p)
+          .through(fs2.text.utf8.decode)
+          .fold(List.empty[String]) { case (acc, str) => str :: acc }
+          .map(_.mkString(""))
+          .map(str => transform(p, str).map(r => (p, r)))
+          .compile
+          .last
+          .map(_.getOrElse(invalidNec(s"Path ${p.toString} is empty")))
+      }
+    )
+  }
+
   // Validate, read and transform a file
   def fileOpt[A, F[_]: Files: Concurrent](
     long: String,
@@ -43,23 +64,19 @@ object FileOpts {
   ): Opts[F[ValidatedNec[String, A]]] = {
     Opts
       .option[String](long, help, short, "path")
-      .map { str =>
-        checkAndTransformPath(
-          str,
-          checkFile,
-          p => {
-            Files[F]
-              .readAll(p)
-              .through(fs2.text.utf8.decode)
-              .fold(List.empty[String]) { case (acc, str) => str :: acc }
-              .map(_.mkString(""))
-              .map(str => transform(p, str))
-              .compile
-              .last
-              .map(_.getOrElse(invalidNec(s"Path ${p.toString} is empty")))
-          }
-        )
-      }
+      .map(str => fileOptMap(str, transform).map(_.map(_._2)))
+  }
+
+  // Validate, read and transform a file
+  def fileOpts[A, F[_]: Files: Concurrent](
+    long: String,
+    help: String,
+    short: String = "",
+    transform: (Path, String) => ValidatedNec[String, A]
+  ): Opts[F[ValidatedNec[String, NonEmptyList[(Path, A)]]]] = {
+    Opts
+      .options[String](long, help, short, "path")
+      .map(strs => strs.map(str => fileOptMap(str, transform)).sequence.map(_.sequence))
   }
 
   // Checks if the path is a file and it exists

@@ -16,9 +16,9 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
-import cats.{~>, Id, Semigroup}
+import cats.{Id, Semigroup, ~>}
 import com.monovore.decline.Opts
-import fs2.io.file.Files
+import fs2.io.file.{Files, Path}
 
 import scala.collection.immutable.SortedMap
 import scala.scalajs.js
@@ -162,7 +162,12 @@ object ArgOpts {
 
   def dataOpt: Opts[js.Dynamic] =
     Opts
-      .option[String]("data", "JSON in { [argumentName]: argumentValue } format. You can call a function using these argument names", "d", "json")
+      .option[String](
+        "data",
+        "JSON in { [argumentName]: argumentValue } format. You can call a function using these argument names",
+        "d",
+        "json"
+      )
       .mapValidated { str =>
         Validated.catchNonFatal {
           JSON.parse(str)
@@ -170,7 +175,11 @@ object ArgOpts {
       }
 
   def dataFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, js.Dynamic]]] = {
-    jsonFromFileOpt("data-path", "Path to a JSON file in { [argumentName]: argumentValue } format. You can call a function using these argument names", "p")
+    jsonFromFileOpt(
+      "data-path",
+      "Path to a JSON file in { [argumentName]: argumentValue } format. You can call a function using these argument names",
+      "p"
+    )
   }
 
   def jsonFromFileOpt[F[_]: Files: Concurrent](
@@ -179,6 +188,26 @@ object ArgOpts {
     short: String
   ): Opts[F[ValidatedNec[String, js.Dynamic]]] = {
     FileOpts.fileOpt(
+      name,
+      help,
+      short,
+      (path, str) => {
+        Validated.catchNonFatal {
+          JSON.parse(str)
+        }.leftMap(t =>
+          NonEmptyChain
+            .one(s"Data in ${path.toString} isn't a valid JSON: " + t.getMessage)
+        )
+      }
+    )
+  }
+
+  def jsonFromFileOpts[F[_]: Files: Concurrent](
+    name: String,
+    help: String,
+    short: String
+  ): Opts[F[ValidatedNec[String, NonEmptyList[(Path, js.Dynamic)]]]] = {
+    FileOpts.fileOpts(
       name,
       help,
       short,
