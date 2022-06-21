@@ -37,7 +37,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
   withRunImport: Boolean = false
 ) extends Logging {
 
-  private def findFunction(
+  private def findFunctionAndServices(
     contexts: Chain[AquaContext],
     func: CliFunc,
     services: List[JsonService]
@@ -46,7 +46,12 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       .collectFirstSome(c => c.allFuncs.get(func.name).map(f => (f, c)))
       .map(validNec)
       .getOrElse(
-        Validated.invalidNec[String, (FuncArrow, AquaContext)](
+        )
+      Validated.invalidNec[String, (FuncArrow, AquaContext)]
+        /** EndMarker */
+        (
+          s"There is no function '${func.name}' or it is not exported. Check the spelling or see https://doc.fluence.dev/aqua-book/language/header#export"
+        )(
           s"There is no function '${func.name}' or it is not exported. Check the spelling or see https://doc.fluence.dev/aqua-book/language/header#export"
         )
       )
@@ -127,7 +132,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       (compileTime, contextV) = compileResult
     } yield {
       logger.debug(s"Compile time: ${compileTime.toMillis}ms")
-      contextV.andThen(c => findFunction(c, func, jsonServices))
+      contextV.andThen(c => findFunctionAndServices(c, func, jsonServices))
     }
   }
 }

@@ -34,7 +34,7 @@ object FileOpts {
       .option[String](long, help, short, "path")
       .map(check)
 
-  def fileOptMap[A, F[_]: Files: Concurrent](
+  def fileOptTransform[A, F[_]: Files: Concurrent](
     str: String,
     transform: (Path, String) => ValidatedNec[String, A]
   ): F[ValidatedNec[String, (Path, A)]] = {
@@ -42,9 +42,17 @@ object FileOpts {
       str,
       checkFile,
       p => {
-        Files[F]
+        }
+      Files[F]
           .readAll(p)
           .through(fs2.text.utf8.decode)
+          /** EndMarker */
+          .fold(List.empty[String]) { case (acc, str) => str :: acc }
+          .map(_.mkString(""))
+          .map(str => transform(p, str).map(r => (p, r)))
+          .compile
+          .last
+          .map(_.getOrElse(invalidNec(s"Path ${p.toString} is empty")))
           .fold(List.empty[String]) { case (acc, str) => str :: acc }
           .map(_.mkString(""))
           .map(str => transform(p, str).map(r => (p, r)))
@@ -64,10 +72,10 @@ object FileOpts {
   ): Opts[F[ValidatedNec[String, A]]] = {
     Opts
       .option[String](long, help, short, "path")
-      .map(str => fileOptMap(str, transform).map(_.map(_._2)))
+      .map(str => fileOptTransform(str, transform).map(_.map(_._2)))
   }
 
-  // Validate, read and transform a file
+  }/** EndMarker */
   def fileOpts[A, F[_]: Files: Concurrent](
     long: String,
     help: String,
@@ -76,7 +84,24 @@ object FileOpts {
   ): Opts[F[ValidatedNec[String, NonEmptyList[(Path, A)]]]] = {
     Opts
       .options[String](long, help, short, "path")
-      .map(strs => strs.map(str => fileOptMap(str, transform)).sequence.map(_.sequence))
+      .map(strs => strs.map(str => fileOptTransform(str, transform)).sequence.map(_.sequence))
+  }
+  // Validate, read and transform multiple files
+
+def fileOpts[A, F[_]: Files: Concurrent](
+    long: String,
+    )
+  transform: (Path, String) => ValidatedNec[String, A]
+    ,short: String = ""
+    ,help
+    /** EndMarker */
+    : String: String,
+    short: String = "",
+    transform: (Path, String) => ValidatedNec[String, A]
+  ): Opts[F[ValidatedNec[String, NonEmptyList[(Path, A)]]]] = {
+    Opts
+      .options[String](long, help, short, "path")
+      .map(strs => strs.map(str => fileOptTransform(str, transform)).sequence.map(_.sequence))
   }
 
   // Checks if the path is a file and it exists

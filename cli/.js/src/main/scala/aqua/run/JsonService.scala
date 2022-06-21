@@ -23,8 +23,9 @@ import fs2.io.file.{Files, Path}
 
 import scala.scalajs.js
 
-case class JsonFunction(name: String, result: js.Dynamic, resultType: Type)
+// Description of a service with functions that return structures
 case class JsonService(name: String, serviceId: String, functions: NonEmptyList[JsonFunction])
+case class JsonFunction(name: String, result: js.Dynamic, resultType: Type)
 
 object JsonService {
 
