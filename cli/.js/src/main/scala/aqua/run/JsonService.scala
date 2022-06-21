@@ -43,7 +43,9 @@ object JsonService {
               else if (js.isUndefined(serviceId) || js.typeOf(serviceId) != "string")
                 invalidNec(s"No serviceId in JSON service '$path' or it is not a string")
               else if (js.isUndefined(functionsRaw) || !js.Array.isArray(functionsRaw))
-                invalidNec(s"'functions' field should exists and be an array in JSON service '$path'")
+                invalidNec(
+                  s"'functions' field should exist and be an array in JSON service '$path'"
+                )
               else {
                 val functionsV: ValidatedNec[String, List[JsonFunction]] = functionsRaw
                   .asInstanceOf[js.Array[js.Dynamic]]
@@ -52,9 +54,9 @@ object JsonService {
                     val fName = f.name
                     val fResult = f.result
                     if (js.isUndefined(fName) || js.typeOf(fName) != "string")
-                      invalidNec(s"One of a functions don't have a name or it is not a string in JSON service $path")
+                      invalidNec(s"One of the functions doesn't have a name or it is not a string in JSON service '$path'")
                     else if (js.isUndefined(fResult))
-                      invalidNec(s"Function '$fName' don't have a result in $path")
+                      invalidNec(s"Function '$fName' don't have a result in '$path'")
                     else {
                       val funcName = fName.asInstanceOf[String]
                       JsonEncoder
