@@ -46,12 +46,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       .collectFirstSome(c => c.allFuncs.get(func.name).map(f => (f, c)))
       .map(validNec)
       .getOrElse(
-        )
-      Validated.invalidNec[String, (FuncArrow, AquaContext)]
-        /** EndMarker */
-        (
-          s"There is no function '${func.name}' or it is not exported. Check the spelling or see https://doc.fluence.dev/aqua-book/language/header#export"
-        )(
+        Validated.invalidNec[String, (FuncArrow, AquaContext)](
           s"There is no function '${func.name}' or it is not exported. Check the spelling or see https://doc.fluence.dev/aqua-book/language/header#export"
         )
       )
@@ -88,12 +83,13 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
                   if (arr.domain.isEmpty)
                     Runner
                       .validateTypes(jf.name, arr.codomain, Some(ProductType(jf.resultType :: Nil)))
-                      .map{ _ =>
+                      .map { _ =>
                         new AquaFunction {
                           override def fnName: String = jf.name
 
                           override def handler: ServiceHandler = _ => js.Promise.resolve(jf.result)
-                          override def arrow: ArrowTypeDef = ArrowTypeDef(ProductTypeDef(NilType), ProductTypeDef(arr.codomain))
+                          override def arrow: ArrowTypeDef =
+                            ArrowTypeDef(ProductTypeDef(NilType), ProductTypeDef(arr.codomain))
                         }
                       }
                   else

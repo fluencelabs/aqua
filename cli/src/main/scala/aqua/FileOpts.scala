@@ -7,7 +7,7 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Comonad, Functor, Monad, ~>}
+import cats.{~>, Comonad, Functor, Monad}
 import com.monovore.decline.Opts
 import fs2.io.file.{Files, Path}
 
@@ -41,18 +41,10 @@ object FileOpts {
     checkAndTransformPath(
       str,
       checkFile,
-      p => {
-        }
-      Files[F]
+      { p =>
+        Files[F]
           .readAll(p)
           .through(fs2.text.utf8.decode)
-          /** EndMarker */
-          .fold(List.empty[String]) { case (acc, str) => str :: acc }
-          .map(_.mkString(""))
-          .map(str => transform(p, str).map(r => (p, r)))
-          .compile
-          .last
-          .map(_.getOrElse(invalidNec(s"Path ${p.toString} is empty")))
           .fold(List.empty[String]) { case (acc, str) => str :: acc }
           .map(_.mkString(""))
           .map(str => transform(p, str).map(r => (p, r)))
@@ -75,27 +67,10 @@ object FileOpts {
       .map(str => fileOptTransform(str, transform).map(_.map(_._2)))
   }
 
-  }/** EndMarker */
+  // Validate, read and transform multiple files
   def fileOpts[A, F[_]: Files: Concurrent](
     long: String,
     help: String,
-    short: String = "",
-    transform: (Path, String) => ValidatedNec[String, A]
-  ): Opts[F[ValidatedNec[String, NonEmptyList[(Path, A)]]]] = {
-    Opts
-      .options[String](long, help, short, "path")
-      .map(strs => strs.map(str => fileOptTransform(str, transform)).sequence.map(_.sequence))
-  }
-  // Validate, read and transform multiple files
-
-def fileOpts[A, F[_]: Files: Concurrent](
-    long: String,
-    )
-  transform: (Path, String) => ValidatedNec[String, A]
-    ,short: String = ""
-    ,help
-    /** EndMarker */
-    : String: String,
     short: String = "",
     transform: (Path, String) => ValidatedNec[String, A]
   ): Opts[F[ValidatedNec[String, NonEmptyList[(Path, A)]]]] = {
