@@ -26,11 +26,16 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
       case VarModel(nameM, btm, lambdaM) if lambdaM.nonEmpty =>
         for {
           nameMM <- Mangler[S].findAndForbidName(nameM)
-        } yield VarModel(nameMM, vm.`type`, Chain.empty) -> Inline.preload(
-          // TODO use smth more resilient to make VarRaw from a flattened VarModel
-          nameMM -> ApplyLambdaRaw.fromChain(VarRaw(nameM, btm), lambdaM.map(_.toRaw))
-        )
+          _ = println("nameM: " + nameM)
+          _ = println("nameMM: " + nameMM)
+          inline = Inline.preload(
+            // TODO use smth more resilient to make VarRaw from a flattened VarModel
+            nameMM -> ApplyLambdaRaw.fromChain(VarRaw(nameM, btm), lambdaM.map(_.toRaw))
+          )
+          _ = println("inline: " + inline)
+        } yield VarModel(nameMM, vm.`type`, Chain.empty) -> inline
       case _ =>
+        println("empty inline for " + vm)
         State.pure(vm -> Inline.empty)
     }
 

@@ -110,6 +110,8 @@ object TagInliner extends Logging {
       case AssignmentTag(value, assignTo) =>
         for {
           cd <- valueToModel(value)
+          _ = println("value: " + value)
+          _ = println("model: " + cd)
           _ <- Exports[S].resolved(assignTo, cd._1)
         } yield Some(SeqModel) -> cd._2
 
