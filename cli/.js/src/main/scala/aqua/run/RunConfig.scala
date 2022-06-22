@@ -1,6 +1,6 @@
 package aqua.run
 
-import aqua.AppOpts
+import aqua.{AppOpts, VarJson}
 import aqua.FluenceOpts.*
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.config.ConfigOpts.{Krasnodar, Stage, TestNet}
@@ -106,7 +106,7 @@ object GeneralRunOptions {
 case class RunConfig(
   common: GeneralRunOptions,
   // services that will pass arguments to air
-  argumentGetters: Map[String, (VarRaw, js.Dynamic)],
+  argumentGetters: Map[String, VarJson],
   // builtin services for aqua run, for example: Console, FileSystem, etc
   services: List[Service],
   resultPrinterServiceId: String = "--after-callback-srv-service--",

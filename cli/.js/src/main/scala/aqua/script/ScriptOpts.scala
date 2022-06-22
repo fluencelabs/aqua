@@ -180,7 +180,7 @@ object ScriptOpts extends Logging {
                     PackagePath(ScriptAqua),
                     Nil,
                     Map(
-                      "script" -> (
+                      "script" -> VarJson(
                         scriptVar,
                         // hack, cannot create unnamed Dynamic
                         // TODO: fix it

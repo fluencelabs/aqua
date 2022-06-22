@@ -32,7 +32,7 @@ case class RunInfo(
   func: CliFunc,
   input: AquaPath,
   imports: List[Path] = Nil,
-  argumentGetters: Map[String, (VarRaw, js.Dynamic)] = Map.empty,
+  argumentGetters: Map[String, VarJson] = Map.empty,
   services: List[Service] = Nil
 )
 

@@ -1,6 +1,6 @@
 package aqua.run
 
-import aqua.CliFunc
+import aqua.{CliFunc, VarJson}
 import aqua.backend.{FunctionDef, TypeDefinition}
 import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter}
@@ -169,7 +169,7 @@ class Runner(
   // and type of this variable couldn't be optional
   private def getGettersForVars(
     vars: List[(String, Type)],
-    argGetters: Map[String, (VarRaw, js.Dynamic)]
+    argGetters: Map[String, VarJson]
   ): ValidatedNec[String, List[ArgumentGetter]] = {
     vars.map { (n, argType) =>
       val argGetterOp = argGetters.get(n)

@@ -109,7 +109,7 @@ object DistOpts extends Logging {
             PackagePath(DistAqua),
             Nil,
             Map(
-              addBlueprintRequestVar.name -> (
+              addBlueprintRequestVar.name -> VarJson(
                 addBlueprintRequestVar,
                 js.Dynamic
                   .literal("name" -> blueprintName, "dependencies" -> depsWithHash.toList.toJSArray)
@@ -157,7 +157,7 @@ object DistOpts extends Logging {
                         PackagePath(DistAqua),
                         Nil,
                         // hack: air cannot use undefined fields, fill undefined arrays with nils
-                        Map(srvName -> (srvArg, c))
+                        Map(srvName -> VarJson(srvArg, c))
                       )
                     )
                   }
