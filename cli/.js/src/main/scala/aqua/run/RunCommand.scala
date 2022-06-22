@@ -16,7 +16,7 @@ import aqua.model.transform.{Transform, TransformConfig}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.LiteralToken
 import aqua.parser.lift.FileSpan
-import aqua.raw.value.ValueRaw
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.run.RunConfig
 import aqua.run.RunOpts.transformConfig
 import aqua.types.*
@@ -120,7 +120,7 @@ object RunCommand extends Logging {
     func: CliFunc,
     inputPath: Path,
     imports: List[Path] = Nil,
-    argumentGetters: Map[String, ArgumentGetter] = Map.empty,
+    argumentGetters: Map[String, VarJson] = Map.empty,
     services: List[Service] = Nil
   ): F[ValidatedNec[String, Unit]] = {
     LogFormatter.initLogger(Some(common.logLevel))

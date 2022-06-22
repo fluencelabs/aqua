@@ -24,8 +24,11 @@ import scala.collection.immutable.SortedMap
 import scala.scalajs.js
 import scala.scalajs.js.JSON
 
-case class FuncWithData(func: CliFunc, getters: Map[String, ArgumentGetter])
+case class FuncWithData(func: CliFunc, getters: Map[String, VarJson])
 case class CliFunc(name: String, args: List[ValueRaw] = Nil, ability: Option[String] = None)
+
+// Variable and its JSON value
+case class VarJson(variable: VarRaw, value: js.Dynamic)
 
 object ArgOpts {
 
@@ -119,7 +122,7 @@ object ArgOpts {
   def checkDataGetServices(
     cliFunc: CliFunc,
     data: Option[js.Dynamic]
-  ): ValidatedNec[String, (CliFunc, Map[String, ArgumentGetter])] = {
+  ): ValidatedNec[String, (CliFunc, Map[String, VarJson])] = {
     val vars = cliFunc.args.collect { case v @ VarRaw(_, _) =>
       v
     // one variable could be used multiple times
@@ -144,14 +147,14 @@ object ArgOpts {
           typeV.map(t => (vm.copy(baseType = t), arg))
         }.sequence
           .map(_.map { case (vm, arg) =>
-            vm.name -> ArgumentGetter(vm, arg)
+            vm.name -> VarJson(vm, arg)
           }.toMap)
           .andThen { services =>
             val argsWithTypes = cliFunc.args.map {
-              case v @ VarRaw(n, t) =>
+              case v @ VarRaw(n, _) =>
                 // argument getters have been enriched with types derived from JSON
                 // put this types to unriched arguments in CliFunc
-                services.get(n).map(g => v.copy(baseType = g.function.value.baseType)).getOrElse(v)
+                services.get(n).map(g => v.copy(baseType = g._1.baseType)).getOrElse(v)
               case v => v
             }
 
@@ -162,7 +165,12 @@ object ArgOpts {
 
   def dataOpt: Opts[js.Dynamic] =
     Opts
-      .option[String]("data", "JSON in { [argumentName]: argumentValue } format. You can call a function using these argument names", "d", "json")
+      .option[String](
+        "data",
+        "JSON in { [argumentName]: argumentValue } format. You can call a function using these argument names",
+        "d",
+        "json"
+      )
       .mapValidated { str =>
         Validated.catchNonFatal {
           JSON.parse(str)
@@ -170,7 +178,11 @@ object ArgOpts {
       }
 
   def dataFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, js.Dynamic]]] = {
-    jsonFromFileOpt("data-path", "Path to a JSON file in { [argumentName]: argumentValue } format. You can call a function using these argument names", "p")
+    jsonFromFileOpt(
+      "data-path",
+      "Path to a JSON file in { [argumentName]: argumentValue } format. You can call a function using these argument names",
+      "p"
+    )
   }
 
   def jsonFromFileOpt[F[_]: Files: Concurrent](

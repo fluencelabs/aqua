@@ -1,7 +1,7 @@
 package aqua.builder
 
 import aqua.backend.*
-import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer, ServiceHandler}
+import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.raw.ops
 import aqua.raw.ops.{Call, CallArrowRawTag}
