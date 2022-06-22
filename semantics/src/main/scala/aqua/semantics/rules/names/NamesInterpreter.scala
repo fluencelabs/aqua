@@ -1,6 +1,7 @@
 package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
+import aqua.raw.value.ValueRaw
 import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.{ReportError, StackInterpreter}
@@ -99,12 +100,32 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
         )(fr => fr.addName(name, `type`) -> true)
     }
 
+  override def getDerivedFrom(token: Token[S], names: Set[String]): SX[List[ValueRaw]] =
+    mapStackHead(
+      report(token, "Cannot derive a variable in the root scope")
+        .as(Nil)
+    )(fr => fr -> names.toList.flatMap(n => fr.derivedFrom.get(n).toList))
+
+  override def deriveFrom(name: Name[S], from: ValueRaw): SX[Boolean] =
+    mapStackHead(
+      report(name, "Cannot derive a variable in the root scope")
+        .as(false)
+    )(fr => fr.deriveFrom(name.value, from) -> true)
+
   override def defineConstant(name: Name[S], `type`: Type): SX[Boolean] =
     readName(name.value).flatMap {
       case Some(_) =>
         report(name, "This name was already defined in the scope").as(false)
       case None =>
-        modify(st =>
+        modify
+
+        /** EndMarker */
+        (
+          st =>
+            st.copy(
+              constants = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`))
+            )
+        ).as(true)(st =>
           st.copy(
             constants = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`))
           )

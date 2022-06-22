@@ -3,6 +3,7 @@ package aqua.semantics.expr.func
 import aqua.raw.Raw
 import aqua.raw.ops.{AssignmentTag, FuncOp}
 import aqua.parser.expr.func.AssignmentExpr
+import aqua.raw.value.{ApplyLambdaRaw, CallArrowRaw, CollectionRaw, ValueRaw, VarRaw}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
@@ -19,10 +20,11 @@ class AssignmentSem[S[_]](val expr: AssignmentExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     V.valueToRaw(expr.value).flatMap {
       case Some(vm) =>
-        N.define(expr.variable, vm.`type`) as (AssignmentTag(
-          vm,
-          expr.variable.value
-        ).funcOpLeaf: Raw)
+      N.define(expr.variable, vm.`type`)
+        .flatMap(_ => N.deriveFrom(expr.variable, vm)) as (AssignmentTag(
+        vm,
+        expr.variable.value
+      ).funcOpLeaf: Raw)
       case _ => Raw.error("Cannot resolve assignment type").pure[Alg]
     }
 

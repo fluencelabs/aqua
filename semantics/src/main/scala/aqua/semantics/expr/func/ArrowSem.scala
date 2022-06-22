@@ -57,8 +57,12 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
   ): Alg[Raw] =
-    A.endScope() *> (N.streamsDefinedWithinScope(), T.endArrowScope(expr.arrowTypeExpr)).mapN {
-      (streams, retValues) =>
+    A.endScope() *> {
+      for {
+        streams <- N.streamsDefinedWithinScope()
+        retValues <- T.endArrowScope(expr.arrowTypeExpr)
+        retDerivedFrom <- N.getDerivedFrom(expr.token, retValues.flatMap(_.varNames).toSet)
+      } yield {
         bodyGen match {
           case FuncOp(m) =>
             // TODO: wrap with local on...via...
@@ -81,7 +85,10 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
             val localStreams = streams -- funcArrow.domain.labelledData.map(_._1) -- escapingStreams
 
             // Restrict all the local streams
-            val (body, retValuesFix) = localStreams.foldLeft((m, retValues)) { case ((b, rs), n) =>
+            val (body, retValuesFix) = localStreams.foldLeft((m, retValues ++ retDerivedFrom))
+
+            /** EndMarker */
+            { case ((b, rs), n) =>
               if (rs.exists(_.varNames(n)))
                 RestrictionTag(n, isStream = true).wrap(
                   SeqTag.wrap(
@@ -100,12 +107,33 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
                     vm
                 }
               else RestrictionTag(n, isStream = true).wrap(b) -> rs
+            } {
+              case ((b, rs), n) =>
+                if (rs.exists(_.varNames(n)))
+                  RestrictionTag(n, isStream = true).wrap(
+                    SeqTag.wrap(
+                      b :: rs.collect {
+                        case vn if vn.varNames(n) =>
+                          CanonicalizeTag(
+                            vn,
+                            Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
+                          ).leaf
+                      }: _*
+                  )
+                ) -> rs.map {
+                  case vn if vn.varNames(n) =>
+                    VarRaw(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
+                  case vm =>
+                    vm
+                }
+              else RestrictionTag(n, isStream = true).wrap(b) -> rs
             }
 
             ArrowRaw(funcArrow, retValuesFix, body)
           case m =>
             m
         }
+      }
     } <* N.endScope()
 
   def program[Alg[_]: Monad](implicit

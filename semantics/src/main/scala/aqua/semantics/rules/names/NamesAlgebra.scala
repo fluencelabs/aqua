@@ -1,6 +1,7 @@
 package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{LiteralToken, Name, Token, ValueToken}
+import aqua.raw.value.ValueRaw
 import aqua.types.{ArrowType, Type}
 import cats.InjectK
 
@@ -14,6 +15,9 @@ trait NamesAlgebra[S[_], Alg[_]] {
   def readArrow(name: Name[S]): Alg[Option[ArrowType]]
 
   def define(name: Name[S], `type`: Type): Alg[Boolean]
+
+  def deriveFrom(name: Name[S], from: ValueRaw): Alg[Boolean]
+  def getDerivedFrom(token: Token[S], names: Set[String]): Alg[List[ValueRaw]]
 
   def defineConstant(name: Name[S], `type`: Type): Alg[Boolean]
 

@@ -67,7 +67,6 @@ object TagInliner extends Logging {
         for {
           vp <- valueToModel(iterable)
           (v, p) = vp
-          exps <- Exports[S].exports
           n <- Mangler[S].findAndForbidName(item)
           elementType = iterable.`type` match {
             case b: BoxType => b.element

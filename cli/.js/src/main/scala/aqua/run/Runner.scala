@@ -104,6 +104,7 @@ class Runner(
     ) match {
       case Validated.Valid(_) =>
         val resultNames = resultVariableNames(funcCallable, config.resultName)
+        println("resultNames: " + resultNames)
         val resultPrinterService =
           ResultPrinter(config.resultPrinterServiceId, config.resultPrinterName, resultNames)
         val promiseFinisherService =
