@@ -2,7 +2,7 @@ package aqua.builder
 
 import aqua.backend.*
 import aqua.io.OutputPrinter
-import aqua.js.{CallJsFunction, CallServiceHandler, FluencePeer, ServiceHandler}
+import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.raw.ops.{Call, CallArrowRawTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.types.ScalarType

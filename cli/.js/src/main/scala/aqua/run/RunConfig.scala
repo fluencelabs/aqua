@@ -1,11 +1,12 @@
 package aqua.run
 
-import aqua.AppOpts
+import aqua.{AppOpts, VarJson}
 import aqua.FluenceOpts.*
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.config.ConfigOpts.{Krasnodar, Stage, TestNet}
 import aqua.js.FluenceEnvironment
 import aqua.raw.ConstantRaw
+import aqua.raw.value.VarRaw
 import cats.data.{NonEmptyList, Validated}
 import cats.data.Validated.{invalidNel, validNel}
 import cats.syntax.applicative.*
@@ -13,6 +14,7 @@ import cats.syntax.apply.*
 import com.monovore.decline.Opts
 import scribe.Level
 
+import scala.scalajs.js
 import scala.util.Try
 
 case class Flags(
@@ -104,7 +106,7 @@ object GeneralRunOptions {
 case class RunConfig(
   common: GeneralRunOptions,
   // services that will pass arguments to air
-  argumentGetters: Map[String, ArgumentGetter],
+  argumentGetters: Map[String, VarJson],
   // builtin services for aqua run, for example: Console, FileSystem, etc
   services: List[Service],
   jsonServices: List[JsonService],

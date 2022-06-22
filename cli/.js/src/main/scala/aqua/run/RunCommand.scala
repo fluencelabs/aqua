@@ -16,7 +16,7 @@ import aqua.model.{AquaContext, FuncArrow}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.LiteralToken
 import aqua.parser.lift.FileSpan
-import aqua.raw.value.ValueRaw
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.run.RunConfig
 import aqua.run.RunOpts.transformConfig
 import aqua.types.*

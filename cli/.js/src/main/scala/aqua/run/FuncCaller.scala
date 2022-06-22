@@ -2,7 +2,7 @@ package aqua.run
 
 import aqua.LogLevelTransformer
 import aqua.backend.FunctionDef
-import aqua.builder.{Finisher, ResultPrinter, Service}
+import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
 import aqua.js.*
 import aqua.keypair.KeyPairShow.show
@@ -31,7 +31,8 @@ object FuncCaller {
     functionDef: FunctionDef,
     config: RunConfig,
     finisherService: Finisher,
-    services: List[Service]
+    services: List[Service],
+    getters: List[ArgumentGetter]
   ): F[ValidatedNec[String, Unit]] = {
     FluenceUtils.setLogLevel(LogLevelTransformer.logLevelToFluenceJS(config.common.logLevel))
 
@@ -66,7 +67,7 @@ object FuncCaller {
               }
 
             // register all services
-            _ = (services ++ config.argumentGetters.values :+ finisherService).map(_.register(peer))
+            _ = (services ++ getters :+ finisherService).map(_.register(peer))
             callFuture = CallJsFunction.funcCallJs(
               air,
               functionDef,

@@ -2,7 +2,6 @@ package aqua.remote
 
 import aqua.ArgOpts.jsonFromFileOpt
 import aqua.builder.ArgumentGetter
-import aqua.js.Config
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.run.GeneralRunOptions
 import aqua.types.{ArrayType, ScalarType, StructType}
@@ -110,7 +109,7 @@ object DistOpts extends Logging {
             PackagePath(DistAqua),
             Nil,
             Map(
-              addBlueprintRequestVar.name -> ArgumentGetter(
+              addBlueprintRequestVar.name -> VarJson(
                 addBlueprintRequestVar,
                 js.Dynamic
                   .literal("name" -> blueprintName, "dependencies" -> depsWithHash.toList.toJSArray)
@@ -122,12 +121,6 @@ object DistOpts extends Logging {
 
   def configFromFileOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, js.Dynamic]]] = {
     jsonFromFileOpt("config-path", "Path to a deploy config", "p")
-  }
-
-  def fillConfigOptionalFields(getter: ArgumentGetter): ArgumentGetter = {
-    val arg = getter.function.arg
-    val filledConfig = Config.fillWithEmptyArrays(arg)
-    ArgumentGetter(getter.function.value, filledConfig)
   }
 
   // Uploads a file to IPFS, creates blueprints and deploys a service
@@ -164,7 +157,7 @@ object DistOpts extends Logging {
                         PackagePath(DistAqua),
                         Nil,
                         // hack: air cannot use undefined fields, fill undefined arrays with nils
-                        Map(srvName -> fillConfigOptionalFields(ArgumentGetter(srvArg, c)))
+                        Map(srvName -> VarJson(srvArg, c))
                       )
                     )
                   }

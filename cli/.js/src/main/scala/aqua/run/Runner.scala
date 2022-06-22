@@ -1,10 +1,12 @@
 package aqua.run
 
-import aqua.CliFunc
-import aqua.backend.FunctionDef
+import aqua.{CliFunc, VarJson}
+import aqua.backend.{FunctionDef, TypeDefinition}
 import aqua.backend.air.FuncAirGen
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
+import aqua.js.{Conversions, TypeDefinitionJs}
+import cats.data.Validated.{invalidNec, validNec}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, SeqTag}
@@ -18,10 +20,12 @@ import cats.syntax.flatMap.*
 import cats.syntax.partialOrder.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
+import cats.syntax.partialOrder.*
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js
+import scala.scalajs.js.JSON
 
 class Runner(
   func: CliFunc,
@@ -81,11 +85,12 @@ class Runner(
 
         // call an input function from a generated function
         wrappedV match {
-          case Validated.Valid(wrapped) =>
+          case Validated.Valid((wrapped, getters)) =>
             genAirAndMakeCall[F](
               wrapped,
               resultPrinterService,
-              promiseFinisherService
+              promiseFinisherService,
+              getters
             )
           case i @ Validated.Invalid(_) => i.pure[F]
         }
@@ -99,7 +104,8 @@ class Runner(
   private def genAirAndMakeCall[F[_]: Async](
     wrapped: FuncArrow,
     consoleService: ResultPrinter,
-    finisherService: Finisher
+    finisherService: Finisher,
+    getters: List[ArgumentGetter]
   ): F[ValidatedNec[String, Unit]] = {
     // TODO: prob we can turn this Eval into F
     val funcRes = Transform.funcRes(wrapped, transformConfig).value
@@ -116,27 +122,35 @@ class Runner(
       definitions,
       config,
       finisherService,
-      config.services :+ consoleService
+      config.services :+ consoleService,
+      getters
     )
+  }
+
+  private def createGetter(value: VarRaw, arg: js.Dynamic, argType: Type): ArgumentGetter = {
+    val converted = Conversions.ts2aqua(arg, TypeDefinitionJs(TypeDefinition(argType)))
+    ArgumentGetter(value.copy(baseType = argType), converted)
   }
 
   // Creates getter services for variables. Return an error if there is no variable in services
   // and type of this variable couldn't be optional
   private def getGettersForVars(
     vars: List[(String, Type)],
-    argGetters: Map[String, ArgumentGetter]
+    argGetters: Map[String, VarJson]
   ): ValidatedNec[String, List[ArgumentGetter]] = {
     vars.map { (n, argType) =>
       val argGetterOp = argGetters.get(n)
       (argGetterOp, argType) match {
         case (None, _) => Validated.invalidNec(s"Unexcepted. There is no service for '$n' argument")
         // BoxType could be undefined, so, pass service that will return 'undefined' for this argument
-        case (Some(s), _: BoxType) if s.function.arg == js.undefined => Validated.validNec(s :: Nil)
-        case (Some(s), _) if s.function.arg == js.undefined =>
+        case (Some(s), _: BoxType) if s._2 == js.undefined =>
+          Validated.validNec(createGetter(s._1, s._2, argType) :: Nil)
+        case (Some(s), _) if s._2 == js.undefined =>
           Validated.invalidNec(
             s"Argument '$n' is missing. Expected argument '$n' of type '$argType'"
           )
-        case (Some(s), _) => Validated.validNec(s :: Nil)
+        case (Some(s), _) =>
+          Validated.validNec(createGetter(s._1, s._2, argType) :: Nil)
       }
     }.reduceOption(_ combine _).getOrElse(Validated.validNec(Nil))
   }
@@ -152,7 +166,7 @@ class Runner(
   private def wrapCall(
     consoleService: ResultPrinter,
     finisherService: Finisher
-  ): ValidatedNec[String, FuncArrow] = {
+  ): ValidatedNec[String, (FuncArrow, List[ArgumentGetter])] = {
     val codomain = funcCallable.arrowType.codomain.toList
     // pass results to a printing service if an input function returns a result
     // otherwise just call it
@@ -197,15 +211,18 @@ class Runner(
         (UnlabeledConsType(ScalarType.string, NilType), LiteralRaw.quote("ok") :: Nil)
       }
 
-      FuncArrow(
-        config.functionWrapperName,
-        SeqTag.wrap((gettersTags :+ body :+ finisherServiceTag.leaf): _*),
-        // no arguments and returns "ok" string
-        ArrowType(NilType, returnCodomain),
-        ret,
-        Map(func.name -> funcCallable),
-        Map.empty,
-        None
+      (
+        FuncArrow(
+          config.functionWrapperName,
+          SeqTag.wrap((gettersTags :+ body :+ finisherServiceTag.leaf): _*),
+          // no arguments and returns "ok" string
+          ArrowType(NilType, returnCodomain),
+          ret,
+          Map(func.name -> funcCallable),
+          Map.empty,
+          None
+        ),
+        getters
       )
     }
   }

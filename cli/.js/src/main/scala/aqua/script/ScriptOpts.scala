@@ -7,7 +7,7 @@ import aqua.backend.air.{AirBackend, AirGen, FuncAirGen}
 import aqua.builder.ArgumentGetter
 import aqua.compiler.AquaCompiler
 import aqua.ipfs.js.IpfsApi
-import aqua.js.{Config, Fluence, PeerConfig}
+import aqua.js.{Fluence, PeerConfig}
 import aqua.keypair.KeyPairShow.show
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{AquaContext, FuncArrow, LiteralModel}
@@ -180,7 +180,7 @@ object ScriptOpts extends Logging {
                     PackagePath(ScriptAqua),
                     Nil,
                     Map(
-                      "script" -> ArgumentGetter(
+                      "script" -> VarJson(
                         scriptVar,
                         // hack, cannot create unnamed Dynamic
                         // TODO: fix it
