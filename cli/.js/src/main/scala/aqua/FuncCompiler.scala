@@ -1,12 +1,12 @@
 package aqua
 
 import aqua.ErrorRendering.showError
-import aqua.backend.{ArrowTypeDef, ProductTypeDef}
+import aqua.backend.{ArrowTypeDef, ProductTypeDef, TypeDefinition}
 import aqua.builder.{AquaFunction, Service}
 import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompilerAPI}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
-import aqua.js.ServiceHandler
+import aqua.js.{Conversions, ServiceHandler, TypeDefinitionJs}
 import aqua.json.{JsonEncoder, TypeValidator}
 import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow, ServiceModel}
@@ -87,7 +87,10 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
                         new AquaFunction {
                           override def fnName: String = jf.name
 
-                          override def handler: ServiceHandler = _ => js.Promise.resolve(jf.result)
+                          override def handler: ServiceHandler = _ => {
+                            val converted = Conversions.ts2aqua(jf.result, TypeDefinitionJs(TypeDefinition(jf.resultType)))
+                            js.Promise.resolve(converted)
+                          }
                           override def arrow: ArrowTypeDef =
                             ArrowTypeDef(ProductTypeDef(NilType), ProductTypeDef(arr.codomain))
                         }
