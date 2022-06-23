@@ -100,11 +100,18 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
         )(fr => fr.addName(name, `type`) -> true)
     }
 
-  override def getDerivedFrom(token: Token[S], names: Set[String]): SX[List[ValueRaw]] =
+  override def getDerivedFrom(
+    token: Token[S],
+    values: List[ValueRaw]
+  ): SX[List[(ValueRaw, List[ValueRaw])]] =
     mapStackHead(
       report(token, "Cannot derive a variable in the root scope")
         .as(Nil)
-    )(fr => fr -> names.toList.flatMap(n => fr.derivedFrom.get(n).toList))
+    )(fr =>
+      fr -> values.map { v =>
+        v -> v.varNames.toList.flatMap(n => fr.derivedFrom.get(n).toList)
+      }
+    )
 
   override def deriveFrom(name: Name[S], from: ValueRaw): SX[Boolean] =
     mapStackHead(
@@ -116,8 +123,8 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
     readName(name.value).flatMap {
       case Some(_) =>
         report(name, "This name was already defined in the scope").as(false)
-      case None =>
-        modify
+    case None =>
+      modify
 
         /** EndMarker */
         (
@@ -126,8 +133,20 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
               constants = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`))
             )
         ).as(true)(st =>
-          st.copy(
-            constants = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`))
+        st.copy
+            /** EndMarker */
+            (
+              constants = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`))
+            )(
+          )
+          constants
+            /** EndMarker */
+            = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`)) = st.constants.updated
+                /** EndMarker */
+                (name.value, TokenTypeInfo(Some(name), `type`))(name.value, )
+            TokenTypeInfo
+              /** EndMarker */
+              (Some(name), `type`)(Some(name), `type`))
           )
         ).as(true)
     }

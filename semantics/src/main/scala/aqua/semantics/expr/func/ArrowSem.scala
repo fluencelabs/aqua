@@ -6,7 +6,7 @@ import aqua.parser.lexer.{Arg, DataTypeToken}
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
 import aqua.raw.ops.*
-import aqua.raw.value.VarRaw
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -61,7 +61,7 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
       for {
         streams <- N.streamsDefinedWithinScope()
         retValues <- T.endArrowScope(expr.arrowTypeExpr)
-        retDerivedFrom <- N.getDerivedFrom(expr.token, retValues.flatMap(_.varNames).toSet)
+        retDerivedFrom <- N.getDerivedFrom(expr.token, retValues)
       } yield {
         bodyGen match {
           case FuncOp(m) =>
@@ -81,55 +81,44 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
               n
             }
 
-            // Remove stream arguments, and values returned as streams
             val localStreams = streams -- funcArrow.domain.labelledData.map(_._1) -- escapingStreams
+            // Remove stream arguments, and values returned as streams
 
-            // Restrict all the local streams
-            val (body, retValuesFix) = localStreams.foldLeft((m, retValues ++ retDerivedFrom))
+            println("retValues: " + retValues)
+            println("retDerivedFrom: " + retDerivedFrom)
+            println("localStreams: " + localStreams)
 
-            /** EndMarker */
-            { case ((b, rs), n) =>
-              if (rs.exists(_.varNames(n)))
-                RestrictionTag(n, isStream = true).wrap(
-                  SeqTag.wrap(
-                    b :: rs.collect {
-                      case vn if vn.varNames(n) =>
-                        CanonicalizeTag(
-                          vn,
-                          Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
-                        ).leaf
-                    }: _*
-                  )
-                ) -> rs.map {
-                  case vn if vn.varNames(n) =>
-                    VarRaw(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
-                  case vm =>
-                    vm
-                }
-              else RestrictionTag(n, isStream = true).wrap(b) -> rs
-            } {
-              case ((b, rs), n) =>
-                if (rs.exists(_.varNames(n)))
+            val (body, retValuesFix) = localStreams.foldLeft((m, retDerivedFrom)) {
+              case ((b, rs: List[(ValueRaw, List[ValueRaw])]), n) =>
+                if (rs.exists(v => v._1.varNames(n) || v._2.exists(_.varNames(n))))
+                  // with index because we can have multiple results that used one stream
+                  val indexed = rs.zipWithIndex
                   RestrictionTag(n, isStream = true).wrap(
                     SeqTag.wrap(
-                      b :: rs.collect {
-                        case vn if vn.varNames(n) =>
-                          CanonicalizeTag(
+                      b :: indexed.collect {
+                        case ((vn, derived), idx)
+                            if vn.varNames(n) || derived.exists(_.varNames(n)) =>
+                          val can = CanonicalizeTag(
                             vn,
-                            Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
+                            Call.Export(s"${vn.varNames.mkString("")}-fix-$idx", vn.`type`)
                           ).leaf
+                          println("can: " + can)
+                          can
                       }: _*
-                  )
-                ) -> rs.map {
-                  case vn if vn.varNames(n) =>
-                    VarRaw(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
-                  case vm =>
-                    vm
-                }
-              else RestrictionTag(n, isStream = true).wrap(b) -> rs
+                    )
+                  ) -> indexed.map {
+                    case ((vn, derived), idx) if vn.varNames(n) || derived.exists(_.varNames(n)) =>
+                      (VarRaw(s"${vn.varNames.mkString("")}-fix-$idx", vn.`type`), derived)
+                    case (vm, _) =>
+                      vm
+                  }
+                else RestrictionTag(n, isStream = true).wrap(b) -> rs
             }
+            // Restrict all the local streams and canonicalize results that use streams
 
-            ArrowRaw(funcArrow, retValuesFix, body)
+            println("retValuesFix: " + retValuesFix)
+
+            ArrowRaw(funcArrow, retValuesFix.map(_._1), body)
           case m =>
             m
         }

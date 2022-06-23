@@ -17,7 +17,7 @@ trait NamesAlgebra[S[_], Alg[_]] {
   def define(name: Name[S], `type`: Type): Alg[Boolean]
 
   def deriveFrom(name: Name[S], from: ValueRaw): Alg[Boolean]
-  def getDerivedFrom(token: Token[S], names: Set[String]): Alg[List[ValueRaw]]
+  def getDerivedFrom(token: Token[S], values: List[ValueRaw]): Alg[List[(ValueRaw, List[ValueRaw])]]
 
   def defineConstant(name: Name[S], `type`: Type): Alg[Boolean]
 
