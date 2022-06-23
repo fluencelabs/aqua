@@ -7,7 +7,7 @@ import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompilerAPI}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
 import aqua.js.ServiceHandler
-import aqua.json.JsonEncoder
+import aqua.json.{JsonEncoder, TypeValidator}
 import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow, ServiceModel}
 import aqua.parser.lift.FileSpan
@@ -81,7 +81,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
               sm.arrows(jf.name)
                 .map { case arr: ArrowType =>
                   if (arr.domain.isEmpty)
-                    Runner
+                    TypeValidator
                       .validateTypes(jf.name, arr.codomain, Some(ProductType(jf.resultType :: Nil)))
                       .map { _ =>
                         new AquaFunction {
