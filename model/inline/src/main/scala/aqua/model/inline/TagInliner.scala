@@ -1,15 +1,15 @@
 package aqua.model.inline
 
-import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.raw.CallArrowRawInliner
+import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.BoxType
-import cats.syntax.traverse.*
-import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
-import scribe.{log, Logging}
+import cats.instances.list.*
+import cats.syntax.traverse.*
+import scribe.{Logging, log}
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -22,9 +22,8 @@ import scribe.{log, Logging}
  */
 object TagInliner extends Logging {
 
-  import RawValueInliner.{callToModel, valueListToModel, valueToModel}
-
   import Inline.*
+  import RawValueInliner.{callToModel, valueListToModel, valueToModel}
 
   private def pure[S](op: OpModel): State[S, (Option[OpModel], Option[OpModel.Tree])] =
     State.pure(Some(op) -> None)
@@ -86,7 +85,8 @@ object TagInliner extends Logging {
         valueToModel(operand).map { case (v, p) =>
           Some(PushToStreamModel(v, CallModel.callExport(exportTo))) -> p
         }
-
+      // operand: Lambda(VarRaw("stat"), IntoIndex(0))
+      // SomeTag(operand: ValueRaw)
       case CanonicalizeTag(operand, exportTo) =>
         valueToModel(operand).map { case (v, p) =>
           Some(CanonicalizeModel(v, CallModel.callExport(exportTo))) -> p
