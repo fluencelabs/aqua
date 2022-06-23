@@ -11,8 +11,8 @@ import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.{AquaFileError, OutputPrinter}
 import aqua.js.*
-import aqua.model.{AquaContext, FuncArrow}
 import aqua.model.transform.{Transform, TransformConfig}
+import aqua.model.{AquaContext, FuncArrow}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.LiteralToken
 import aqua.parser.lift.FileSpan
@@ -21,9 +21,9 @@ import aqua.run.RunConfig
 import aqua.run.RunOpts.transformConfig
 import aqua.types.*
 import cats.data.*
+import cats.effect.*
 import cats.effect.kernel.{Async, Clock}
 import cats.effect.syntax.async.*
-import cats.effect.{ExitCode, IO, IOApp, Resource, Sync}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -32,7 +32,7 @@ import cats.syntax.list.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.{~>, Id, Monad}
+import cats.{Id, Monad, ~>}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -73,16 +73,15 @@ object RunCommand extends Logging {
     runConfig: RunConfig,
     transformConfig: TransformConfig
   ): F[ValidatedNec[String, Unit]] = {
-    implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
 
     for {
-      funcArrowV <- funcCompiler.compile(func)
+      funcArrowV <- funcCompiler.compile(func, runConfig.jsonServices)
       callResult <- Clock[F].timed {
         funcArrowV match {
-          case Validated.Valid(funcCallable) =>
+          case Validated.Valid((funcCallable, jsonServices)) =>
             val runner =
-              new Runner(func, funcCallable, runConfig, transformConfig)
+              new Runner(func, funcCallable, runConfig.copy(services = runConfig.services ++ jsonServices), transformConfig)
             runner.run()
           case i @ Validated.Invalid(_) => i.pure[F]
         }
@@ -116,21 +115,19 @@ object RunCommand extends Logging {
    * @return
    */
   def execRun[F[_]: Async](
-    common: GeneralRunOptions,
-    func: CliFunc,
-    inputPath: Path,
-    imports: List[Path] = Nil,
-    argumentGetters: Map[String, VarJson] = Map.empty,
-    services: List[Service] = Nil
+    runInfo: RunInfo,
+    inputPath: Path
   ): F[ValidatedNec[String, Unit]] = {
+    val common = runInfo.common
     LogFormatter.initLogger(Some(common.logLevel))
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]
+
     RunCommand
       .run[F](
-        func,
+        runInfo.func,
         inputPath,
-        imports,
-        RunConfig(common, argumentGetters, services ++ builtinServices),
+        runInfo.imports,
+        RunConfig(common, runInfo.argumentGetters, runInfo.services ++ builtinServices, runInfo.jsonServices),
         transformConfig(common.on, common.constants, common.flags.noXor, common.flags.noRelay)
       )
   }

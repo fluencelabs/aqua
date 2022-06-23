@@ -1,13 +1,13 @@
 package aqua.json
 
-import aqua.types.{ArrayType, BottomType, LiteralType, OptionType, StructType, Type}
-import cats.data.{NonEmptyMap, Validated, ValidatedNec}
+import aqua.types.*
 import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
+import cats.data.{NonEmptyMap, Validated, ValidatedNec}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.semigroup.*
 import cats.syntax.functor.*
+import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
 
 import scala.collection.immutable.SortedMap
@@ -30,7 +30,7 @@ object JsonEncoder {
         }
   There type in array must be { a: ?string, b: []number, c: number
    */
-  def compareAndGetWidestType(
+  private def compareAndGetWidestType(
     name: String,
     ltV: ValidatedNec[String, Type],
     rtV: ValidatedNec[String, Type]
@@ -67,7 +67,7 @@ object JsonEncoder {
               .sequence
               .map(processedFields => NonEmptyMap.fromMap(SortedMap(processedFields: _*)).get)
               .map(mt => StructType("", mt))
-          case (a, b) =>
+          case (_, _) =>
             invalidNec(s"Items in '$name' array should be of the same type")
         }
       case (Validated.Invalid(lerr), Validated.Invalid(rerr)) =>

@@ -1,5 +1,6 @@
 package aqua.run
 
+import aqua.*
 import aqua.ArgOpts.checkDataGetServices
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.model.transform.TransformConfig
@@ -11,16 +12,15 @@ import aqua.parser.lift.Span
 import aqua.raw.ConstantRaw
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.BottomType
-import aqua.*
-import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.*
+import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.effect.kernel.Async
 import cats.effect.{Concurrent, ExitCode, IO}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.{~>, Id, Monad}
+import cats.{Id, Monad, ~>}
 import com.monovore.decline.{Command, Opts}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
@@ -50,18 +50,25 @@ object RunOpts extends Logging {
   }
 
   def runOptsCompose[F[_]: Files: Concurrent]
-    : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithData)]]] = {
-    (AppOpts.inputOpts[F], AppOpts.importOpts[F], ArgOpts.funcWithArgsOpt[F]).mapN {
-      case (inputF, importF, funcWithArgsF) =>
-        for {
-          inputV <- inputF
-          importV <- importF
-          funcWithArgsV <- funcWithArgsF
-        } yield {
-          (inputV, importV, funcWithArgsV).mapN { case (i, im, f) =>
-            (i, im, f)
-          }
+    : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithData, Option[NonEmptyList[JsonService]])]]] = {
+    (
+      AppOpts.inputOpts[F],
+      AppOpts.importOpts[F],
+      ArgOpts.funcWithArgsOpt[F],
+      AppOpts.wrapWithOption(JsonService.jsonServiceOpt)
+    ).mapN { case (inputF, importF, funcWithArgsF, jsonServiceOp) =>
+      for {
+        inputV <- inputF
+        importV <- importF
+        funcWithArgsV <- funcWithArgsF
+        jsonServiceV <- jsonServiceOp
+          .map(_.map(_.map(js => Some(js))))
+          .getOrElse(validNec[String, Option[NonEmptyList[JsonService]]](None).pure[F])
+      } yield {
+        (inputV, importV, funcWithArgsV, jsonServiceV).mapN { case (i, im, f, j) =>
+          (i, im, f, j)
         }
+      }
     }
   }
 
@@ -79,13 +86,15 @@ object RunOpts extends Logging {
             ) =>
           LogFormatter.initLogger(Some(common.logLevel))
           optionsF.map(
-            _.map { case (input, imps, funcWithArgs) =>
+            _.map { case (input, imps, funcWithArgs, services) =>
               RunInfo(
                 common,
                 funcWithArgs.func,
                 RelativePath(input),
                 imps,
-                funcWithArgs.getters
+                funcWithArgs.getters,
+                Nil,
+                services.map(_.toList).getOrElse(Nil)
               )
             }
           )

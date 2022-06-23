@@ -7,18 +7,18 @@ import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToke
 import aqua.parser.lift.Span
 import aqua.raw.value.{CollectionRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
-import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.data.*
+import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.effect.Concurrent
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.semigroup.*
 import cats.syntax.functor.*
+import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
-import cats.{~>, Id, Semigroup}
+import cats.{Id, Semigroup, ~>}
 import com.monovore.decline.Opts
-import fs2.io.file.Files
+import fs2.io.file.{Files, Path}
 
 import scala.collection.immutable.SortedMap
 import scala.scalajs.js
@@ -191,6 +191,26 @@ object ArgOpts {
     short: String
   ): Opts[F[ValidatedNec[String, js.Dynamic]]] = {
     FileOpts.fileOpt(
+      name,
+      help,
+      short,
+      (path, str) => {
+        Validated.catchNonFatal {
+          JSON.parse(str)
+        }.leftMap(t =>
+          NonEmptyChain
+            .one(s"Data in ${path.toString} isn't a valid JSON: " + t.getMessage)
+        )
+      }
+    )
+  }
+
+  def jsonFromFileOpts[F[_]: Files: Concurrent](
+    name: String,
+    help: String,
+    short: String
+  ): Opts[F[ValidatedNec[String, NonEmptyList[(Path, js.Dynamic)]]]] = {
+    FileOpts.fileOpts(
       name,
       help,
       short,

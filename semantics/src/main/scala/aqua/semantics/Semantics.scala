@@ -1,10 +1,12 @@
 package aqua.semantics
 
-import aqua.raw.ops.{FuncOp, SeqGroupTag}
-import aqua.raw.{Raw, RawContext, RawPart}
 import aqua.parser.lexer.Token
 import aqua.parser.{Ast, Expr}
+import aqua.raw.ops.{FuncOp, SeqGroupTag}
+import aqua.raw.{Raw, RawContext, RawPart}
 import aqua.semantics.header.Picker
+import aqua.semantics.header.Picker.*
+import aqua.semantics.lsp.LspContext
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
@@ -21,9 +23,7 @@ import cats.syntax.semigroup.*
 import cats.{Eval, Monad, Semigroup}
 import monocle.Lens
 import monocle.macros.GenLens
-import scribe.{log, Logging}
-import Picker.*
-import aqua.semantics.lsp.LspContext
+import scribe.{Logging, log}
 
 sealed trait Semantics[S[_], C] {
 
@@ -52,7 +52,7 @@ class RawSemantics[S[_]](implicit p: Picker[RawContext]) extends Semantics[S, Ra
       .value
 }
 
-class LspSemantics[S[_]](implicit p: Picker[LspContext[S]]) extends Semantics[S, LspContext[S]] {
+class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
   def process(
     ast: Ast[S],
