@@ -2,8 +2,8 @@ package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
 import aqua.raw.value.ValueRaw
-import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.semantics.Levenshtein
+import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, StreamType, Type}
 import cats.data.{OptionT, State}
@@ -123,30 +123,10 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
     readName(name.value).flatMap {
       case Some(_) =>
         report(name, "This name was already defined in the scope").as(false)
-    case None =>
-      modify
-
-        /** EndMarker */
-        (
-          st =>
-            st.copy(
-              constants = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`))
-            )
-        ).as(true)(st =>
-        st.copy
-            /** EndMarker */
-            (
-              constants = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`))
-            )(
-          )
-          constants
-            /** EndMarker */
-            = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`)) = st.constants.updated
-                /** EndMarker */
-                (name.value, TokenTypeInfo(Some(name), `type`))(name.value, )
-            TokenTypeInfo
-              /** EndMarker */
-              (Some(name), `type`)(Some(name), `type`))
+      case None =>
+        modify(st =>
+          st.copy(
+            constants = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`))
           )
         ).as(true)
     }
