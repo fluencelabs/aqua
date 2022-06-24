@@ -73,9 +73,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
               case (VarRaw(n, StreamType(_)), t) => n -> Some(t)
             }.toMap
 
-          val builtStreams = retStreams.collect { case (n, Some(t)) =>
-            n -> t
-          }
           val escapingStreams = retStreams.collect { case (n, None) =>
             n
           }
@@ -83,7 +80,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           // Remove stream arguments, and values returned as streams
           val localStreams = streams -- funcArrow.domain.labelledData.map(_._1) -- escapingStreams
 
-          // TODO: varNames(_) -> derivedFromNames
           val derivedFromNames =
             retValuesDerivedFrom.reduceLeftOption(_ ++ _).getOrElse(Set.empty[String])
 

@@ -38,15 +38,19 @@ object RawValueInliner extends Logging {
         CallArrowRawInliner(cr, lambdaAllowed)
 
       case sr: ShadowRaw =>
+        // First, substitute values from the scope using unfold
         unfold(sr.value, lambdaAllowed).flatMap { case (vm, inl) =>
+          // Now we know what shadowed values were used
           sr.shadowValues.view
             .filterKeys(vm.usesVarNames)
             .toList
+            // Unfold/substitute all shadowed value
             .traverse { case (name, v) =>
               unfold(v, lambdaAllowed).map { case (svm, si) =>
                 (name, svm, si)
               }
             }
+            // Substitute
             .map(_.foldLeft[(ValueModel, Inline)]((vm, inl)) {
               case ((resVm, resInl), (shadowedN, shadowedVm, shadowedInl)) =>
                 resVm.resolveWith(Map(shadowedN -> shadowedVm)) -> (shadowedInl |+| resInl)

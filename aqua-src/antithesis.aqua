@@ -13,9 +13,18 @@ func test3() -> string, []string:
 
   <- stat, status
 
+service Se("se"):
+  consume: []string -> bool
+
 func test2() -> string, []string, []string:
     status: *string
     status <<- "ok"
     stat = status!
 
   <- stat, status, [status!, status!]
+
+func test4() -> string, bool, []bool:
+   status: *string
+   status <<- "ok"
+   stat = status!
+   <- status!, Se.consume(status), [Se.consume(status), true]
