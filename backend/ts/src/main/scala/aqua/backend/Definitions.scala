@@ -106,6 +106,7 @@ object TypeDefinition {
       case StructType(name, fields) =>
         StructTypeDef(name, fields.toSortedMap.view.mapValues(TypeDefinition.apply).toMap)
       case t: ScalarType => ScalarTypeDef.fromScalar(t)
+      case t: LiteralType => ScalarTypeDef.fromLiteral(t)
       case t: ProductType => ProductTypeDef(t)
       case t: ArrowType =>
         ArrowTypeDef(t)
@@ -137,6 +138,7 @@ case class ScalarTypeDef private (name: String) extends TypeDefinition { val tag
 
 object ScalarTypeDef {
   def fromScalar(s: ScalarType): ScalarTypeDef = ScalarTypeDef(s.name)
+  def fromLiteral(s: LiteralType): ScalarTypeDef = ScalarTypeDef(s.name)
 }
 
 case class ArrayTypeDef(`type`: TypeDefinition) extends TypeDefinition { val tag = "array" }
