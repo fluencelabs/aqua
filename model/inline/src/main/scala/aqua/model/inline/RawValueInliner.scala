@@ -8,6 +8,7 @@ import aqua.raw.value.*
 import aqua.types.{ArrayType, OptionType, StreamType}
 import cats.syntax.traverse.*
 import cats.syntax.monoid.*
+import cats.syntax.apply.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
 import scribe.Logging
@@ -35,6 +36,22 @@ object RawValueInliner extends Logging {
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, lambdaAllowed)
+
+      case sr: ShadowRaw =>
+        unfold(sr.value, lambdaAllowed).flatMap { case (vm, inl) =>
+          sr.shadowValues.view
+            .filterKeys(vm.usesVarNames)
+            .toList
+            .traverse { case (name, v) =>
+              unfold(v, lambdaAllowed).map { case (svm, si) =>
+                (name, svm, si)
+              }
+            }
+            .map(_.foldLeft[(ValueModel, Inline)]((vm, inl)) {
+              case ((resVm, resInl), (shadowedN, shadowedVm, shadowedInl)) =>
+                resVm.resolveWith(Map(shadowedN -> shadowedVm)) -> (shadowedInl |+| resInl)
+            })
+        }
     }
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](

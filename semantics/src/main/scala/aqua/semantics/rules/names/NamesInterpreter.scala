@@ -99,6 +99,18 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
         )(fr => fr.addName(name, `type`) -> true)
     }
 
+  override def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): State[X, Boolean] =
+    define(name, `type`).flatMap {
+      case true =>
+        mapStackHead(State.pure(true))(_.derived(name, derivedFrom) -> true)
+      case false => State.pure(false)
+    }
+
+  override def getDerivedFrom(fromNames: List[Set[String]]): State[X, List[Set[String]]] =
+    mapStackHead(State.pure(Nil))(fr =>
+      fr -> fromNames.map(ns => fr.derivedFrom.view.filterKeys(ns).values.foldLeft(ns)(_ ++ _))
+    )
+
   override def defineConstant(name: Name[S], `type`: Type): SX[Boolean] =
     readName(name.value).flatMap {
       case Some(_) =>
@@ -138,11 +150,11 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
   override def beginScope(token: Token[S]): SX[Unit] =
     stackInt.beginScope(NamesState.Frame(token))
 
-  override def streamsDefinedWithinScope(): SX[Set[String]] =
-    stackInt.mapStackHead(State.pure(Set.empty[String])) { frame =>
-      frame -> frame.names.collect { case (n, TokenTypeInfo(_, StreamType(_))) =>
-        n
-      }.toSet
+  override def streamsDefinedWithinScope(): SX[Map[String, StreamType]] =
+    stackInt.mapStackHead(State.pure(Map.empty[String, StreamType])) { frame =>
+      frame -> frame.names.collect { case (n, TokenTypeInfo(_, st @ StreamType(_))) =>
+        n -> st
+      }
     }
 
   override def endScope(): SX[Unit] = stackInt.endScope

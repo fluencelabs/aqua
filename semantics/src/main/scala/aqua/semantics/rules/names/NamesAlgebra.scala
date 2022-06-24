@@ -1,7 +1,7 @@
 package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{LiteralToken, Name, Token, ValueToken}
-import aqua.types.{ArrowType, Type}
+import aqua.types.{ArrowType, StreamType, Type}
 import cats.InjectK
 
 trait NamesAlgebra[S[_], Alg[_]] {
@@ -15,13 +15,17 @@ trait NamesAlgebra[S[_], Alg[_]] {
 
   def define(name: Name[S], `type`: Type): Alg[Boolean]
 
+  def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): Alg[Boolean]
+
+  def getDerivedFrom(fromNames: List[Set[String]]): Alg[List[Set[String]]]
+
   def defineConstant(name: Name[S], `type`: Type): Alg[Boolean]
 
   def defineArrow(name: Name[S], gen: ArrowType, isRoot: Boolean): Alg[Boolean]
 
   def beginScope(token: Token[S]): Alg[Unit]
 
-  def streamsDefinedWithinScope(): Alg[Set[String]]
+  def streamsDefinedWithinScope(): Alg[Map[String, StreamType]]
 
   def endScope(): Alg[Unit]
 }

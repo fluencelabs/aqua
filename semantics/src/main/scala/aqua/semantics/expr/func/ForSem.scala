@@ -40,6 +40,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
         },
         (stOpt: Option[ValueRaw], ops: Raw) =>
           N.streamsDefinedWithinScope()
+            .map(_.keySet)
             .map((streams: Set[String]) =>
               (stOpt, ops) match {
                 case (Some(vm), FuncOp(op)) =>

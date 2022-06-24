@@ -19,7 +19,7 @@ class AssignmentSem[S[_]](val expr: AssignmentExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     V.valueToRaw(expr.value).flatMap {
       case Some(vm) =>
-        N.define(expr.variable, vm.`type`) as (AssignmentTag(
+        N.derive(expr.variable, vm.`type`, vm.varNames) as (AssignmentTag(
           vm,
           expr.variable.value
         ).funcOpLeaf: Raw)

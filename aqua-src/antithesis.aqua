@@ -1,0 +1,21 @@
+func test() -> string:
+    status: *string
+    status <<- "ok"
+    stat = status!
+
+  <- stat
+
+
+func test3() -> string, []string:
+    status: *string
+    status <<- "ok"
+    stat = status!
+
+  <- stat, status
+
+func test2() -> string, []string, []string:
+    status: *string
+    status <<- "ok"
+    stat = status!
+
+  <- stat, status, [status!, status!]
