@@ -1,3 +1,7 @@
+module Argh
+
+export test4
+
 func test() -> string:
     status: *string
     status <<- "ok"
@@ -28,3 +32,13 @@ func test4() -> string, bool, []bool:
    status <<- "ok"
    stat = status!
    <- status!, Se.consume(status), [Se.consume(status), true]
+
+func returnCanStream() -> string:
+    status: *string
+    status <<- "ok"
+    stat = status!
+    <- stat
+
+func bugLNG63() -> string:
+    res <- returnCanStream()
+    <- res
