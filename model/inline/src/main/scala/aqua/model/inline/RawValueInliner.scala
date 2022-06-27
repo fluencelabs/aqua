@@ -8,6 +8,8 @@ import aqua.raw.value.*
 import aqua.types.{ArrayType, OptionType, StreamType}
 import cats.syntax.traverse.*
 import cats.syntax.monoid.*
+import cats.syntax.functor.*
+import cats.syntax.flatMap.*
 import cats.syntax.apply.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
@@ -38,24 +40,33 @@ object RawValueInliner extends Logging {
         CallArrowRawInliner(cr, lambdaAllowed)
 
       case sr: ShadowRaw =>
-        // First, substitute values from the scope using unfold
-        unfold(sr.value, lambdaAllowed).flatMap { case (vm, inl) =>
-          // Now we know what shadowed values were used
-          sr.shadowValues.view
-            .filterKeys(vm.usesVarNames)
-            .toList
-            // Unfold/substitute all shadowed value
-            .traverse { case (name, v) =>
-              unfold(v, lambdaAllowed).map { case (svm, si) =>
-                (name, svm, si)
-              }
+        // First, collect shadowed values
+        // TODO: might be already defined in scope!
+        sr.shadowValues.view
+          .filterKeys(sr.value.varNames) // TODO: might break if recursive
+          .toList
+          // Unfold/substitute all shadowed value
+          .traverse { case (name, v) =>
+            unfold(v, lambdaAllowed).map { case (svm, si) =>
+              (name, svm, si)
             }
-            // Substitute
-            .map(_.foldLeft[(ValueModel, Inline)]((vm, inl)) {
-              case ((resVm, resInl), (shadowedN, shadowedVm, shadowedInl)) =>
-                resVm.resolveWith(Map(shadowedN -> shadowedVm)) -> (shadowedInl |+| resInl)
-            })
-        }
+          }
+          .flatMap(fas =>
+            // Mark shadowed values as exports, isolate them into a scope
+            Exports[S]
+              .scope(
+                Exports[S].resolved(fas.map { case (n, v, _) =>
+                  n -> v
+                }.toMap) >> unfold(
+                  sr.value,
+                  lambdaAllowed
+                ) // Resolve the value in the prepared Exports scope
+              )
+              .map { case (vm, inl) =>
+                // Collect inlines to prepend before the value
+                (vm, fas.map(_._3).foldLeft(inl)(_ |+| _))
+              }
+          )
     }
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
