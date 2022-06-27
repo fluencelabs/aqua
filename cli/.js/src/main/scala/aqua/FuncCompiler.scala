@@ -41,30 +41,28 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
     contexts: Chain[AquaContext],
     func: CliFunc,
     services: List[JsonService]
-  ): ValidatedNec[String, (FuncArrow, List[Service])] = {
+  ): ValidatedNec[String, (FuncArrow, List[Service])] =
     contexts
-      .collectFirstSome(c => c.allFuncs.get(func.name).map(f => (f, c)))
+      .collectFirstSome(c => c.allFuncs.get(func.name))
       .map(validNec)
       .getOrElse(
-        Validated.invalidNec[String, (FuncArrow, AquaContext)](
+        Validated.invalidNec[String, FuncArrow](
           s"There is no function '${func.name}' or it is not exported. Check the spelling or see https://doc.fluence.dev/aqua-book/language/header#export"
         )
       )
-      .andThen { case (func, context) =>
-        findServices(context, services).map { l =>
+      .andThen { func =>
+        findServices(contexts, services).map { l =>
           (func, l)
         }
       }
-  }
 
   private def findServices(
-    context: AquaContext,
+    contexts: Chain[AquaContext],
     services: List[JsonService]
   ): ValidatedNec[String, List[Service]] = {
     services
       .map(js =>
-        context.services
-          .get(js.name)
+        contexts.collectFirstSome(_.services.get(js.name))
           .map(sm => (js, sm))
           .map(validNec)
           .getOrElse(
