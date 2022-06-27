@@ -12,7 +12,7 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrowType, ProductType, StreamType, Type}
+import aqua.types.{ArrayType, ArrowType, ProductType, StreamType, Type}
 import cats.data.{Chain, NonEmptyList}
 import cats.free.{Cofree, Free}
 import cats.syntax.applicative.*
@@ -57,55 +57,53 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
   ): Alg[Raw] =
-    A.endScope() *> (N.streamsDefinedWithinScope(), T.endArrowScope(expr.arrowTypeExpr)).mapN {
-      (streams, retValues) =>
-        bodyGen match {
-          case FuncOp(m) =>
-            // TODO: wrap with local on...via...
+    A.endScope() *> (
+      N.streamsDefinedWithinScope(),
+      T.endArrowScope(expr.arrowTypeExpr)
+        .flatMap(retValues => N.getDerivedFrom(retValues.map(_.varNames)).map(retValues -> _))
+    ).mapN { case (streams, (retValues, retValuesDerivedFrom)) =>
+      bodyGen match {
+        case FuncOp(m) =>
+          // TODO: wrap with local on...via...
 
-            // These streams are returned as streams
-            val retStreams: Map[String, Option[Type]] =
-              (retValues zip funcArrow.codomain.toList).collect {
-                case (VarRaw(n, StreamType(_)), StreamType(_)) => n -> None
-                case (VarRaw(n, StreamType(_)), t) => n -> Some(t)
-              }.toMap
+          // These streams are returned as streams
+          val retStreams: Map[String, Option[Type]] =
+            (retValues zip funcArrow.codomain.toList).collect {
+              case (VarRaw(n, StreamType(_)), StreamType(_)) => n -> None
+              case (VarRaw(n, StreamType(_)), t) => n -> Some(t)
+            }.toMap
 
-            val builtStreams = retStreams.collect { case (n, Some(t)) =>
-              n -> t
-            }
-            val escapingStreams = retStreams.collect { case (n, None) =>
-              n
-            }
+          val escapingStreams = retStreams.collect { case (n, None) =>
+            n
+          }
 
-            // Remove stream arguments, and values returned as streams
-            val localStreams = streams -- funcArrow.domain.labelledData.map(_._1) -- escapingStreams
+          // Remove stream arguments, and values returned as streams
+          val localStreams = streams -- funcArrow.domain.labelledData.map(_._1) -- escapingStreams
 
-            // Restrict all the local streams
-            val (body, retValuesFix) = localStreams.foldLeft((m, retValues)) { case ((b, rs), n) =>
-              if (rs.exists(_.varNames(n)))
+          val derivedFromNames =
+            retValuesDerivedFrom.reduceLeftOption(_ ++ _).getOrElse(Set.empty[String])
+
+          // Restrict all the local streams
+          val (body, retValuesFix) = localStreams.foldLeft((m, retValues)) {
+            case ((b, rs), (n, st)) =>
+              if (derivedFromNames(n))
                 RestrictionTag(n, isStream = true).wrap(
                   SeqTag.wrap(
-                    b :: rs.collect {
-                      case vn if vn.varNames(n) =>
-                        CanonicalizeTag(
-                          vn,
-                          Call.Export(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
-                        ).leaf
-                    }: _*
+                    b :: CanonicalizeTag(
+                      VarRaw(n, st),
+                      Call.Export(s"$n-fix", ArrayType(st.element))
+                    ).leaf :: Nil: _*
                   )
-                ) -> rs.map {
-                  case vn if vn.varNames(n) =>
-                    VarRaw(s"$n-fix", builtStreams.getOrElse(n, vn.`type`))
-                  case vm =>
-                    vm
+                ) -> rs.map { vn =>
+                  vn.shadow(n, VarRaw(s"$n-fix", ArrayType(st.element)))
                 }
               else RestrictionTag(n, isStream = true).wrap(b) -> rs
-            }
+          }
 
-            ArrowRaw(funcArrow, retValuesFix, body)
-          case m =>
-            m
-        }
+          ArrowRaw(funcArrow, retValuesFix, body)
+        case m =>
+          m
+      }
     } <* N.endScope()
 
   def program[Alg[_]: Monad](implicit

@@ -31,11 +31,17 @@ object NamesState {
   case class Frame[S[_]](
     token: Token[S],
     names: Map[String, TokenType[S]] = Map.empty[String, TokenType[S]],
+    derivedFrom: Map[String, Set[String]] = Map.empty,
     arrows: Map[String, TokenArrowInfo[S]] = Map.empty[String, TokenArrowInfo[S]]
   ) {
 
     def addName(n: Name[S], t: Type): NamesState.Frame[S] =
       copy[S](names = names.updated(n.value, TokenTypeInfo(Some(n), t)))
+
+    def derived(n: Name[S], from: Set[String]): NamesState.Frame[S] =
+      copy[S](derivedFrom =
+        derivedFrom + (n.value -> from.flatMap(f => derivedFrom.get(f).fold(Set(f))(_ + f)))
+      )
 
     def addArrow(n: Name[S], g: ArrowType): NamesState.Frame[S] =
       copy[S](arrows = arrows.updated(n.value, TokenArrowInfo(Some(n), g)))

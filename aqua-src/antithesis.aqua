@@ -1,0 +1,44 @@
+module Argh
+
+export test4
+
+func test() -> string:
+    status: *string
+    status <<- "ok"
+    stat = status!
+
+  <- stat
+
+
+func test3() -> string, []string:
+    status: *string
+    status <<- "ok"
+    stat = status!
+
+  <- stat, status
+
+service Se("se"):
+  consume: []string -> bool
+
+func test2() -> string, []string, []string:
+    status: *string
+    status <<- "ok"
+    stat = status!
+
+  <- stat, status, [status!, status!]
+
+func test4() -> string, bool, []bool:
+   status: *string
+   status <<- "ok"
+   stat = status!
+   <- status!, Se.consume(status), [Se.consume(status), true]
+
+func returnCanStream() -> string:
+    status: *string
+    status <<- "ok"
+    stat = status!
+    <- stat
+
+func bugLNG63() -> string:
+    res <- returnCanStream()
+    <- res

@@ -8,6 +8,9 @@ import aqua.raw.value.*
 import aqua.types.{ArrayType, OptionType, StreamType}
 import cats.syntax.traverse.*
 import cats.syntax.monoid.*
+import cats.syntax.functor.*
+import cats.syntax.flatMap.*
+import cats.syntax.apply.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
 import scribe.Logging
@@ -35,6 +38,35 @@ object RawValueInliner extends Logging {
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, lambdaAllowed)
+
+      case sr: ShadowRaw =>
+        // First, collect shadowed values
+        // TODO: might be already defined in scope!
+        sr.shadowValues.toList
+          // Unfold/substitute all shadowed value
+          .traverse { case (name, v) =>
+            unfold(v, lambdaAllowed).map { case (svm, si) =>
+              (name, svm, si)
+            }
+          }.flatMap { fas =>
+            val res = fas.map { case (n, v, _) =>
+              n -> v
+            }.toMap
+            // Mark shadowed values as exports, isolate them into a scope
+            Exports[S].exports
+              .flatMap(curr =>
+                Exports[S]
+                  .scope(
+                    Exports[S].resolved(res ++ curr.view.mapValues(_.resolveWith(res))) >>
+                      // Resolve the value in the prepared Exports scope
+                      unfold(sr.value, lambdaAllowed)
+                  )
+              )
+              .map { case (vm, inl) =>
+                // Collect inlines to prepend before the value
+                (vm, fas.map(_._3).foldLeft(inl)(_ |+| _))
+              }
+          }
     }
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
