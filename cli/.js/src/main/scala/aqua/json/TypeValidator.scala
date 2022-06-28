@@ -20,7 +20,7 @@ object TypeValidator {
 
   // Compare and validate type generated from JSON and type from Aqua file.
   // Also, validation will be success if array or optional field will be missed in JSON type
-  def validateTypes(name: String, lt: Type, rtOp: Option[Type]): ValidatedNec[String, Unit] = {
+  def validateTypes(name: String, lt: Type, rtOp: Option[Type], typeDescription: Option[(Type, Type)] = None): ValidatedNec[String, Unit] = {
     rtOp match {
       case None =>
         lt match {
@@ -53,15 +53,31 @@ object TypeValidator {
             lsm.map { case (n, ltt) =>
               validateTypes(s"$name.$n", ltt, rsm.get(n))
             }.toList.sequence.map(_ => ())
+          case (l: OptionType, r) =>
+            // if we have ?[][]string and [][][]string it must throw an error
+            validateTypes(name, l.element, Some(r), Some((l, r)))
           case (l: BoxType, r: BoxType) =>
-            validateTypes(name, l.element, Some(r.element))
+            validateTypes(name, l.element, Some(r.element), typeDescription.orElse(Some(l, r)))
           case (l: BoxType, r) =>
-            validateTypes(name, l.element, Some(r))
+            (l.element, typeDescription) match {
+              case (_: BoxType, Some(td)) =>
+                // if we have ?[][]string and []string it must throw an error
+                invalidNec(
+                  s"Type of the field '$name' is incorrect. Expected: '${td._1}' Actual: '${td._2}'"
+                )
+              case (ll: BoxType, None) =>
+                invalidNec(
+                  s"Type of the field '$name' is incorrect. Expected: '$ll' Actual: '$r'"
+                )
+              case _ => validateTypes(name, l.element, Some(r), Some((l, r)))
+            }
+
           case (l, r) =>
             if (l >= r) validNec(())
             else
+              val (li, ri) = typeDescription.getOrElse((l, r))
               invalidNec(
-                s"Type of the field '$name' is incorrect. Expected: '$l' Actual: '$r'"
+                s"Type of the field '$name' is incorrect. Expected: '$li' Actual: '$ri'"
               )
         }
     }
