@@ -18,19 +18,20 @@ import scala.scalajs.js.JSON
 
 object TypeValidator {
 
-  // Compare and validate type generated from JSON and type from Aqua file.
-  // Also, validation will be success if array or optional field will be missed in JSON type
-  def validateTypes(name: String, lt: Type, rtOp: Option[Type], typeDescription: Option[(Type, Type)] = None): ValidatedNec[String, Unit] = {
-    rtOp match {
+  // Compare and validate type from Aqua file and type generated from JSON.
+  // Also, validation will be success if array or optional field will be missed in JSON type.
+  // The result will be invalid if there will be the same type on the left and right.
+  def validateTypes(name: String, aquaType: Type, jsonType: Option[Type], typeDescription: Option[(Type, Type)] = None): ValidatedNec[String, Unit] = {
+    jsonType match {
       case None =>
-        lt match {
+        aquaType match {
           case _: BoxType =>
             validNec(())
           case _ =>
             invalidNec(s"Missing field '$name' in arguments")
         }
       case Some(rt) =>
-        (lt, rt) match {
+        (aquaType, rt) match {
           case (l: ProductType, r: ProductType) =>
             val ll = l.toList
             val rl = r.toList
@@ -41,8 +42,8 @@ object TypeValidator {
               )
             else
               ll.zip(rl)
-                .map { case (lt, rt) =>
-                  validateTypes(s"$name", lt, Some(rt))
+                .map { case (aquaType, rt) =>
+                  validateTypes(s"$name", aquaType, Some(rt))
                 }
                 .sequence
                 .map(_ => ())
