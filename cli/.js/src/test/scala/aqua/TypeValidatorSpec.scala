@@ -116,7 +116,11 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
   "type validator" should "return invalid if there is no field" in {
     val structType = StructType(
       "some",
-      NonEmptyMap.of(("field1", ScalarType.u8), ("field2", ScalarType.string))
+      NonEmptyMap.of(
+        ("field1", ScalarType.u8),
+        ("field2", ScalarType.string),
+        ("field3", OptionType(ScalarType.string))
+      )
     )
 
     val res1invalid = validate(
@@ -141,6 +145,25 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
     )
     res2invalid.isValid shouldBe false
 
-    validate(structType, structType).isValid shouldBe true
+    val res1 = validate(
+      structType,
+      StructType(
+        "some",
+        NonEmptyMap.of(
+          ("field1", LiteralType.number),
+          ("field2", LiteralType.string)
+        )
+      )
+    )
+    res1.isValid shouldBe true
+
+    validate(structType, StructType(
+      "some",
+      NonEmptyMap.of(
+        ("field1", ScalarType.u8),
+        ("field2", ScalarType.string),
+        ("field3", ScalarType.string)
+      )
+    )).isValid shouldBe true
   }
 }
