@@ -314,6 +314,26 @@ object Topology extends Logging {
       lastChildFinally(current)
   }
 
+  object MatchMismatchBranch extends Before with After {
+    override def toString: String = "<match>/*"
+
+    // If parent is seq, then before this node we are where previous node, if any, ends
+    override def beforeOn(current: Topology): Eval[List[OnModel]] = {
+      // Where we are after the previous node in the parent
+      val res = current.prevSibling
+        .map(_.finallyOn) getOrElse super.beforeOn(current)
+      println("beforeon: " + res.value)
+      res
+    }
+
+    override def afterOn(current: Topology): Eval[List[OnModel]] = {
+      val res = current.nextSibling.map(_.beginsOn) getOrElse afterParent(current)
+      println("afteron: " + res.value)
+      res
+    }
+
+  }
+
   // Parent == Xor
   object XorBranch extends Before with After {
     override def toString: String = Console.RED + "<xor>/*" + Console.RESET
@@ -457,6 +477,7 @@ object Topology extends Logging {
       // Before
       cursor.parentOp match {
         case Some(XorModel) => XorBranch
+        case Some(_: MatchMismatchModel) => MatchMismatchBranch
         case Some(_: SeqGroupModel) => SeqGroupBranch
         case None => Root
         case _ => Default
@@ -482,6 +503,7 @@ object Topology extends Logging {
       },
       // After
       cursor.parentOp match {
+        case Some(_: MatchMismatchModel) => MatchMismatchBranch
         case Some(_: ParGroupModel) => ParGroupBranch
         case Some(XorModel) => XorBranch
         case Some(_: SeqGroupModel) => SeqGroupBranch

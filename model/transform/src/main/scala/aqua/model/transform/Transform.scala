@@ -65,7 +65,10 @@ object Transform extends Logging {
     val preparedFunc = funcToModelTree(func, preTransformer).map(errorsCatcher.transform)
 
     // Resolve the topology, clear the resulting tree
-    val resultingTree = preparedFunc.flatMap(tree => Topology.resolve(tree).map(clear(_)))
+    val resultingTree = preparedFunc.flatMap{tree =>
+      println(tree.forceAll)
+      Topology.resolve(tree).map(clear(_))
+    }
 
     resultingTree.map(res =>
       FuncRes(

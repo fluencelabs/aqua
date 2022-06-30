@@ -900,7 +900,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    val proc = Topology.resolve(init).value
+    val proc = Topology.resolve(init, false).value
 
     val expected =
       SeqRes.wrap(
