@@ -25,7 +25,7 @@ object LogLevels {
   }
 
   lazy val error =
-    "Invalid log level format. Must be: '<log-level>' or 'compiler=<log-level>,fluencejs=<log-level>,aquavm=<log-level>', where <log-level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'"
+    "Invalid log-level format. Must be: '<log-level>' or 'compiler=<log-level>,fluencejs=<log-level>,aquavm=<log-level>', where <log-level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'"
 
   private def fromStrings(name: String, level: String, logLevels: LogLevels): Validated[NonEmptyList[String], LogLevels] = {
     levelFromString(level).andThen { level =>
@@ -41,6 +41,8 @@ object LogLevels {
     }
   }
 
+  // Format: '<log-level>' or 'compiler=<log-level>,fluencejs=<log-level>,aquavm=<log-level>',
+  // where <log-level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'
   def fromString(s: String): ValidatedNel[String, LogLevels] = {
     s.split(",").toList match {
       case l :: Nil =>
