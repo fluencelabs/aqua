@@ -877,46 +877,4 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     proc.equalsOrShowDiff(expected) should be(true)
   }
-
-  "topology resolver" should "put path to relay in match" in {
-
-    val f = rawToValue(LiteralRaw.False)
-    val t = rawToValue(LiteralRaw.True)
-
-    val init = OnModel(initPeer, Chain.one(relay)).wrap(
-      SeqModel.wrap(
-        OnModel(otherPeer, Chain.empty).wrap(
-          SeqModel.wrap(
-            callModel(1),
-            XorModel.wrap(
-              MatchMismatchModel(f, t, true)
-                .wrap(
-                  callModel(2)
-                )
-            )
-          )
-        ),
-        callModel(3)
-      )
-    )
-
-    val proc = Topology.resolve(init, false).value
-
-    val expected =
-      SeqRes.wrap(
-        through(relay),
-        callRes(1, otherPeer),
-        XorRes.wrap(
-          SeqRes.wrap(
-            MatchMismatchRes(f, t, true).wrap(
-              callRes(2, otherPeer)
-            )
-          )
-        ),
-        through(relay),
-        callRes(3, initPeer)
-      )
-
-    proc.equalsOrShowDiff(expected) should be(true)
-  }
 }
