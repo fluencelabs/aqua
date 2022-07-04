@@ -25,14 +25,14 @@ object TypeValidator {
    * @param name field name
    * @param aquaType a type from Aqua code
    * @param jsonType a type generated from JSON
-   * @param typeBeforeOption type checker needs to know types out of option type to check nested box types
+   * @param fullOptionType type checker needs to know full type of optional field to check nested box types
    * @return
    */
   def validateTypes(
     name: String,
     aquaType: Type,
     jsonType: Option[Type],
-    typeBeforeOption: Option[(Type, Type)] = None
+    fullOptionType: Option[(Type, Type)] = None
   ): ValidatedNec[String, Unit] = {
     jsonType match {
       case None =>
@@ -70,9 +70,9 @@ object TypeValidator {
             // if we have ?[][]string and [][][]string it must throw an error
             validateTypes(name, l.element, Some(r), Some((l, r)))
           case (l: BoxType, r: BoxType) =>
-            validateTypes(name, l.element, Some(r.element), typeBeforeOption.orElse(Some(l, r)))
+            validateTypes(name, l.element, Some(r.element), fullOptionType.orElse(Some(l, r)))
           case (l: BoxType, r) =>
-            (l.element, typeBeforeOption) match {
+            (l.element, fullOptionType) match {
               case (_: BoxType, Some(td)) =>
                 // if we have ?[][]string and []string it must throw an error
                 invalidNec(
@@ -88,7 +88,7 @@ object TypeValidator {
           case (l, r) =>
             if (l >= r) validNec(())
             else
-              val (li, ri) = typeBeforeOption.getOrElse((l, r))
+              val (li, ri) = fullOptionType.getOrElse((l, r))
               invalidNec(
                 s"Type of the field '$name' is incorrect. Expected: '$li' Actual: '$ri'"
               )
