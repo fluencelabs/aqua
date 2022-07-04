@@ -84,7 +84,7 @@ object RunOpts extends Logging {
               common,
               optionsF
             ) =>
-          LogFormatter.initLogger(Some(common.logLevel))
+          LogFormatter.initLogger(Some(common.logLevel.compiler))
           optionsF.map(
             _.map { case (input, imps, funcWithArgs, services) =>
               RunInfo(
