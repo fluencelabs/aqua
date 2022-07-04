@@ -8,7 +8,11 @@ import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, va
 
 import java.util.Base64
 
-case class LogLevels(compiler: Level = Level.Info, fluencejs: Level = Level.Info, aquavm: Level = Level.Info)
+case class LogLevels(
+  compiler: Level = Level.Info,
+  fluencejs: Level = Level.Info,
+  aquavm: Level = Level.Info
+)
 
 object LogLevels {
   def apply(level: Level): LogLevels = LogLevels(level, level, level)
@@ -27,7 +31,11 @@ object LogLevels {
   lazy val error =
     "Invalid log-level format. Must be: '<log-level>' or 'compiler=<log-level>,fluencejs=<log-level>,aquavm=<log-level>', where <log-level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'"
 
-  private def fromStrings(name: String, level: String, logLevels: LogLevels): Validated[NonEmptyList[String], LogLevels] = {
+  private def fromStrings(
+    name: String,
+    level: String,
+    logLevels: LogLevels
+  ): Validated[NonEmptyList[String], LogLevels] = {
     levelFromString(level).andThen { level =>
       name match {
         case "compiler" =>
@@ -36,7 +44,10 @@ object LogLevels {
           validNel(logLevels.copy(fluencejs = level))
         case "aquavm" =>
           validNel(logLevels.copy(aquavm = level))
-        case s => invalidNel[String, LogLevels](s"Unknown component '$s' in log-level. Please use one of these: 'aquavm', 'compiler' and 'fluencejs'")
+        case s =>
+          invalidNel[String, LogLevels](
+            s"Unknown component '$s' in log-level. Please use one of these: 'aquavm', 'compiler' and 'fluencejs'"
+          )
       }
     }
   }
@@ -55,11 +66,11 @@ object LogLevels {
       case arr =>
         arr.foldLeft(validNel[String, LogLevels](LogLevels())) { case (logLevelV, ss) =>
           logLevelV.andThen { logLevels =>
-              ss.split("=").toList match {
-                case n :: ll :: Nil => fromStrings(n, ll, logLevels)
-                case n :: Nil => levelFromString(n).map(apply)
-                case _ => invalidNel[String, LogLevels](error)
-              }
+            ss.split("=").toList match {
+              case n :: ll :: Nil => fromStrings(n, ll, logLevels)
+              case n :: Nil => levelFromString(n).map(apply)
+              case _ => invalidNel[String, LogLevels](error)
+            }
           }
         }
 
@@ -115,9 +126,6 @@ object FluenceOpts {
   val logLevelOpt: Opts[LogLevels] =
     Opts.option[String]("log-level", help = "Set log level").withDefault("info").mapValidated {
       str =>
-        LogLevels.fromString(str).map{ f =>
-          println(f)
-          f
-        }
+        LogLevels.fromString(str)
     }
 }
