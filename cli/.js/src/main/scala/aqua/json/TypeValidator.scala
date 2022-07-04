@@ -18,10 +18,22 @@ import scala.scalajs.js.JSON
 
 object TypeValidator {
 
-  // Compare and validate type from Aqua file and type generated from JSON.
-  // Also, validation will be success if array or optional field will be missed in JSON type.
-  // The result will be invalid if there will be the same type on the left and right.
-  def validateTypes(name: String, aquaType: Type, jsonType: Option[Type], typeDescription: Option[(Type, Type)] = None): ValidatedNec[String, Unit] = {
+  /**
+   * Compare and validate type from Aqua file and type generated from JSON.
+   *    Also, validation will be success if array or optional field will be missed in JSON type.
+   *    The result will be invalid if there will be the same type on the left and right.
+   * @param name field name
+   * @param aquaType a type from Aqua code
+   * @param jsonType a type generated from JSON
+   * @param typeBeforeOption type checker needs to know types out of option type to check nested box types
+   * @return
+   */
+  def validateTypes(
+    name: String,
+    aquaType: Type,
+    jsonType: Option[Type],
+    typeBeforeOption: Option[(Type, Type)] = None
+  ): ValidatedNec[String, Unit] = {
     jsonType match {
       case None =>
         aquaType match {
@@ -58,9 +70,9 @@ object TypeValidator {
             // if we have ?[][]string and [][][]string it must throw an error
             validateTypes(name, l.element, Some(r), Some((l, r)))
           case (l: BoxType, r: BoxType) =>
-            validateTypes(name, l.element, Some(r.element), typeDescription.orElse(Some(l, r)))
+            validateTypes(name, l.element, Some(r.element), typeBeforeOption.orElse(Some(l, r)))
           case (l: BoxType, r) =>
-            (l.element, typeDescription) match {
+            (l.element, typeBeforeOption) match {
               case (_: BoxType, Some(td)) =>
                 // if we have ?[][]string and []string it must throw an error
                 invalidNec(
@@ -76,7 +88,7 @@ object TypeValidator {
           case (l, r) =>
             if (l >= r) validNec(())
             else
-              val (li, ri) = typeDescription.getOrElse((l, r))
+              val (li, ri) = typeBeforeOption.getOrElse((l, r))
               invalidNec(
                 s"Type of the field '$name' is incorrect. Expected: '$li' Actual: '$ri'"
               )
