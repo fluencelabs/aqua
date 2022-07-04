@@ -15,6 +15,7 @@ trait RawTagGivens {
     case _ => false
   }
 
+  // convert some tags in tree to fix corner cases
   def fixCornerCases(tree: RawTag.Tree): RawTag.Tree =
     Cofree
       .cata[Chain, RawTag, RawTag.Tree](tree) {
