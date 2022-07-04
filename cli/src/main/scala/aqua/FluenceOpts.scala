@@ -57,6 +57,7 @@ object LogLevels {
           logLevelV.andThen { logLevels =>
               ss.split("=").toList match {
                 case n :: ll :: Nil => fromStrings(n, ll, logLevels)
+                case n :: Nil => levelFromString(n).map(apply)
                 case _ => invalidNel[String, LogLevels](error)
               }
           }
@@ -114,6 +115,9 @@ object FluenceOpts {
   val logLevelOpt: Opts[LogLevels] =
     Opts.option[String]("log-level", help = "Set log level").withDefault("info").mapValidated {
       str =>
-        LogLevels.fromString(str)
+        LogLevels.fromString(str).map{ f =>
+          println(f)
+          f
+        }
     }
 }
