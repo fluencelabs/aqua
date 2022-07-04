@@ -6,6 +6,7 @@ import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
 import aqua.js.*
 import aqua.keypair.KeyPairShow.show
+import aqua.plugin.Plugin
 import aqua.run.RunCommand.createKeyPair
 import cats.data.Validated.{invalidNec, validNec}
 import cats.data.ValidatedNec
@@ -17,7 +18,7 @@ import cats.syntax.show.*
 
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.scalajs.js
-import scala.scalajs.js.{timers, JSON, JavaScriptException}
+import scala.scalajs.js.{JSON, JavaScriptException, timers}
 
 object FuncCaller {
 
@@ -34,6 +35,7 @@ object FuncCaller {
     services: List[Service],
     getters: List[ArgumentGetter]
   ): F[ValidatedNec[String, Unit]] = {
+
     FluenceUtils.setLogLevel(LogLevelTransformer.logLevelToFluenceJS(config.common.logLevel.fluencejs))
 
     // stops peer in any way at the end of execution
@@ -46,6 +48,7 @@ object FuncCaller {
         Async[F].fromFuture {
           (for {
             keyPair <- createKeyPair(config.common.secretKey)
+            _ <- Plugin.get("/home/diemust/git/aqua/npm/ipfs-test/plugin.js")
             logLevel: js.UndefOr[aqua.js.LogLevel] = LogLevelTransformer.logLevelToAvm(config.common.logLevel.aquavm)
             _ <- Fluence
               .start(
