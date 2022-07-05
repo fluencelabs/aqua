@@ -130,12 +130,15 @@ object Plugin {
   ): Future[List[Plugin]] = {
     for {
       file <- js.`import`[js.Dynamic](path).toFuture
-      pluginAny <- {
-        val res = file.applyDynamic("plugins")()
-        toPromise(res).toFuture
+      plugin <- {
+        if (js.typeOf(file.plugins) == "function") {
+          val res = file.applyDynamic("plugins")()
+          toPromise(res).toFuture.map(_.asInstanceOf[js.Dictionary[js.Dictionary[js.Any]]])
+        } else {
+          Future(js.Dictionary[js.Dictionary[js.Any]]())
+        }
       }
     } yield {
-      val plugin = pluginAny.asInstanceOf[js.Dictionary[js.Dictionary[js.Any]]]
       plugin.map { case (k, v) =>
         val functions = v.map { case (kf, vf) =>
           Function(kf, vf.asInstanceOf[js.Function])
