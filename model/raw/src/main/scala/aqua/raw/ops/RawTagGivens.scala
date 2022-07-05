@@ -1,5 +1,6 @@
 package aqua.raw.ops
 
+import aqua.raw.value.LiteralRaw
 import cats.free.Cofree
 import cats.data.Chain
 import cats.{Eval, Semigroup}
@@ -14,7 +15,8 @@ trait RawTagGivens {
     case _ => false
   }
 
-  def fixXorPar(tree: RawTag.Tree): RawTag.Tree =
+  // convert some tags in tree to fix corner cases
+  def fixCornerCases(tree: RawTag.Tree): RawTag.Tree =
     Cofree
       .cata[Chain, RawTag, RawTag.Tree](tree) {
         case (XorParTag(left, right), _) =>
@@ -22,6 +24,19 @@ trait RawTagGivens {
             ParTag.wrap(
               XorTag.wrap(left),
               right
+            )
+          )
+        case (XorTag.LeftBiased, tail) =>
+          // TODO: fix me in topology
+          // https://linear.app/fluence/issue/LNG-69/if-inside-on-produces-invalid-topology
+          Eval.now(
+            Cofree(
+              XorTag,
+              Eval.now(
+                tail.append(
+                  CallArrowRawTag.service(LiteralRaw.quote("op"), "noop", Call(Nil, Nil)).leaf
+                )
+              )
             )
           )
         case (head, tail) => Eval.now(Cofree(head, Eval.now(tail)))

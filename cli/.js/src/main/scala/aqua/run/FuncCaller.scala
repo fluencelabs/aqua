@@ -34,7 +34,7 @@ object FuncCaller {
     services: List[Service],
     getters: List[ArgumentGetter]
   ): F[ValidatedNec[String, Unit]] = {
-    FluenceUtils.setLogLevel(LogLevelTransformer.logLevelToFluenceJS(config.common.logLevel))
+    FluenceUtils.setLogLevel(LogLevelTransformer.logLevelToFluenceJS(config.common.logLevel.fluencejs))
 
     // stops peer in any way at the end of execution
     val resource = Resource.make(Fluence.getPeer().pure[F]) { peer =>
@@ -46,14 +46,14 @@ object FuncCaller {
         Async[F].fromFuture {
           (for {
             keyPair <- createKeyPair(config.common.secretKey)
+            logLevel: js.UndefOr[aqua.js.LogLevel] = LogLevelTransformer.logLevelToAvm(config.common.logLevel.aquavm)
             _ <- Fluence
               .start(
                 PeerConfig(
                   config.common.multiaddr,
                   config.common.timeout.getOrElse(scalajs.js.undefined),
-                  LogLevelTransformer.logLevelToAvm(config.common.logLevel),
                   keyPair,
-                  Debug(printParticleId = config.common.flags.verbose)
+                  Debug(printParticleId = config.common.flags.verbose, marineLogLevel = logLevel)
                 )
               )
               .toFuture
@@ -62,7 +62,7 @@ object FuncCaller {
                 val configJson = KeyPairOp.toDynamicJSON(keyPair)
                 configJson.updateDynamic("relay")(config.common.multiaddr)
                 config.common.timeout.foreach(t => configJson.updateDynamic("timeout")(t))
-                configJson.updateDynamic("log-level")(config.common.logLevel.name)
+                configJson.updateDynamic("log-level")(config.common.logLevel.compiler.name)
                 OutputPrinter.print(JSON.stringify(configJson, null, 4))
               }
 

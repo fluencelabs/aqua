@@ -31,7 +31,7 @@ object FuncArrow {
   ): FuncArrow =
     FuncArrow(
       raw.name,
-      RawTag.fixXorPar(raw.arrow.body),
+      RawTag.fixCornerCases(raw.arrow.body),
       raw.arrow.`type`,
       raw.arrow.ret,
       arrows,

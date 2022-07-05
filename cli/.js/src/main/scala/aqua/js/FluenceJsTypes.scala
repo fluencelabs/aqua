@@ -204,16 +204,15 @@ object NamesConfigJs {
   }
 }
 
-type AvmLogLevel = "trace" | "debug" | "info" | "warn" | "error" | "off"
+type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "off"
 
 @JSExportAll
-case class Debug(printParticleId: js.UndefOr[Boolean])
+case class Debug(printParticleId: js.UndefOr[Boolean], marineLogLevel: js.UndefOr[LogLevel])
 
 @JSExportAll
 case class PeerConfig(
   connectTo: String,
   defaultTtlMs: js.UndefOr[Int],
-  avmLogLevel: AvmLogLevel,
   KeyPair: KeyPair,
   debug: js.UndefOr[Debug]
 )

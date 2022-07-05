@@ -1,6 +1,6 @@
 package aqua.run
 
-import aqua.{AppOpts, VarJson}
+import aqua.{AppOpts, LogLevels, VarJson}
 import aqua.FluenceOpts.*
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.config.ConfigOpts.{Krasnodar, Stage, TestNet}
@@ -27,7 +27,7 @@ case class Flags(
 
 case class GeneralRunOptions(
   timeout: Option[Int],
-  logLevel: Level,
+  logLevel: LogLevels,
   multiaddr: String,
   on: Option[String],
   flags: Flags,
@@ -88,7 +88,7 @@ object GeneralRunOptions {
   ): Opts[GeneralRunOptions] =
     (
       AppOpts.wrapWithOption(timeoutOpt),
-      logLevelOpt.withDefault(Level.Fatal),
+      logLevelOpt.withDefault(LogLevels()),
       multiaddrOpt,
       onOpt,
       flagsOpt(isRun),
