@@ -25,7 +25,7 @@ object TypeValidator {
    * @param name field name
    * @param aquaType a type from Aqua code
    * @param jsonType a type generated from JSON
-   * @param fullOptionType type checker needs to know full type of optional field to check nested box types
+   * @param fullOptionType type checker needs to know full type of optional field (both from Aqua and JSON types) to check nested box types
    * @return
    */
   def validateTypes(
