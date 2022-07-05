@@ -119,7 +119,7 @@ object RunCommand extends Logging {
     inputPath: Path
   ): F[ValidatedNec[String, Unit]] = {
     val common = runInfo.common
-    LogFormatter.initLogger(Some(common.logLevel))
+    LogFormatter.initLogger(Some(common.logLevel.compiler))
     implicit val aio: AquaIO[F] = new AquaFilesIO[F]
 
     RunCommand

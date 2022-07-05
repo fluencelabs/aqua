@@ -1,6 +1,6 @@
 package aqua
 
-import aqua.js.{AvmLogLevel, FluenceJSLogLevel, Meta, Module}
+import aqua.js.{LogLevel, FluenceJSLogLevel, Meta, Module}
 import fs2.io.file.Path
 import scribe.Level
 
@@ -8,7 +8,7 @@ import scala.util.Try
 
 object LogLevelTransformer {
 
-  def logLevelToAvm(logLevel: Level): AvmLogLevel = {
+  def logLevelToAvm(logLevel: Level): LogLevel = {
     logLevel match {
       case Level.Trace => "trace"
       case Level.Debug => "debug"

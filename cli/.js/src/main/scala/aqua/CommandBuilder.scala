@@ -48,7 +48,7 @@ class SubCommandBuilder[F[_]: Async](
     opts.map { riF =>
       riF.flatMap {
         case Validated.Valid(ri) =>
-          LogFormatter.initLogger(Some(ri.common.logLevel))
+          LogFormatter.initLogger(Some(ri.common.logLevel.compiler))
           (ri.input match {
             case PackagePath(p) => PlatformOpts.getPackagePath(p)
             case RelativePath(p) => p.pure[F]
