@@ -18,19 +18,32 @@ import scala.scalajs.js.JSON
 
 object TypeValidator {
 
-  // Compare and validate type generated from JSON and type from Aqua file.
-  // Also, validation will be success if array or optional field will be missed in JSON type
-  def validateTypes(name: String, lt: Type, rtOp: Option[Type]): ValidatedNec[String, Unit] = {
-    rtOp match {
+  /**
+   * Compare and validate type from Aqua file and type generated from JSON.
+   *    Also, the validation will succeed if the JSON type is missing an array or an optional field.
+   *    The result will be incorrect if left and right are the same type.
+   * @param name field name
+   * @param aquaType a type from Aqua code
+   * @param jsonType a type generated from JSON
+   * @param fullOptionType save full optional part of Aqua and JSON field types to print clear error message if needed
+   * @return
+   */
+  def validateTypes(
+    name: String,
+    aquaType: Type,
+    jsonType: Option[Type],
+    fullOptionType: Option[(Type, Type)] = None
+  ): ValidatedNec[String, Unit] = {
+    jsonType match {
       case None =>
-        lt match {
+        aquaType match {
           case _: BoxType =>
             validNec(())
           case _ =>
             invalidNec(s"Missing field '$name' in arguments")
         }
       case Some(rt) =>
-        (lt, rt) match {
+        (aquaType, rt) match {
           case (l: ProductType, r: ProductType) =>
             val ll = l.toList
             val rl = r.toList
@@ -41,8 +54,8 @@ object TypeValidator {
               )
             else
               ll.zip(rl)
-                .map { case (lt, rt) =>
-                  validateTypes(s"$name", lt, Some(rt))
+                .map { case (aquaType, rt) =>
+                  validateTypes(s"$name", aquaType, Some(rt))
                 }
                 .sequence
                 .map(_ => ())
@@ -53,15 +66,31 @@ object TypeValidator {
             lsm.map { case (n, ltt) =>
               validateTypes(s"$name.$n", ltt, rsm.get(n))
             }.toList.sequence.map(_ => ())
+          case (l: OptionType, r) =>
+            // if we have ?[][]string and [][][]string it must throw an error
+            validateTypes(name, l.element, Some(r), Some((l, r)))
           case (l: BoxType, r: BoxType) =>
-            validateTypes(name, l.element, Some(r.element))
+            validateTypes(name, l.element, Some(r.element), fullOptionType.orElse(Some(l, r)))
           case (l: BoxType, r) =>
-            validateTypes(name, l.element, Some(r))
+            (l.element, fullOptionType) match {
+              case (_: BoxType, Some(td)) =>
+                // if we have ?[][]string and []string it must throw an error
+                invalidNec(
+                  s"Type of the field '$name' is incorrect. Expected: '${td._1}' Actual: '${td._2}'"
+                )
+              case (ll: BoxType, None) =>
+                invalidNec(
+                  s"Type of the field '$name' is incorrect. Expected: '$ll' Actual: '$r'"
+                )
+              case _ => validateTypes(name, l.element, Some(r), Some((l, r)))
+            }
+
           case (l, r) =>
             if (l >= r) validNec(())
             else
+              val (li, ri) = fullOptionType.getOrElse((l, r))
               invalidNec(
-                s"Type of the field '$name' is incorrect. Expected: '$l' Actual: '$r'"
+                s"Type of the field '$name' is incorrect. Expected: '$li' Actual: '$ri'"
               )
         }
     }
