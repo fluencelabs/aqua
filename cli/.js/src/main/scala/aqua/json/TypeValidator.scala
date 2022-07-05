@@ -20,8 +20,8 @@ object TypeValidator {
 
   /**
    * Compare and validate type from Aqua file and type generated from JSON.
-   *    Also, validation will be success if array or optional field will be missed in JSON type.
-   *    The result will be invalid if there will be the same type on the left and right.
+   *    Also, the validation will succeed if the JSON type is missing an array or an optional field.
+   *    The result will be incorrect if left and right are the same type.
    * @param name field name
    * @param aquaType a type from Aqua code
    * @param jsonType a type generated from JSON
