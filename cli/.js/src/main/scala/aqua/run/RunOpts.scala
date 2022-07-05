@@ -11,6 +11,7 @@ import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
 import aqua.raw.ConstantRaw
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.run.plugin.Plugin
 import aqua.types.BottomType
 import cats.data.*
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
@@ -50,13 +51,14 @@ object RunOpts extends Logging {
   }
 
   def runOptsCompose[F[_]: Files: Concurrent]
-    : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithData, Option[NonEmptyList[JsonService]])]]] = {
+    : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithData, Option[NonEmptyList[JsonService]], List[String])]]] = {
     (
       AppOpts.inputOpts[F],
       AppOpts.importOpts[F],
       ArgOpts.funcWithArgsOpt[F],
-      AppOpts.wrapWithOption(JsonService.jsonServiceOpt)
-    ).mapN { case (inputF, importF, funcWithArgsF, jsonServiceOp) =>
+      AppOpts.wrapWithOption(JsonService.jsonServiceOpt),
+      AppOpts.wrapWithOption(Plugin.opt)
+    ).mapN { case (inputF, importF, funcWithArgsF, jsonServiceOp, pluginsOp) =>
       for {
         inputV <- inputF
         importV <- importF
@@ -64,9 +66,10 @@ object RunOpts extends Logging {
         jsonServiceV <- jsonServiceOp
           .map(_.map(_.map(js => Some(js))))
           .getOrElse(validNec[String, Option[NonEmptyList[JsonService]]](None).pure[F])
+        pluginsPathsV <- pluginsOp.getOrElse(validNec[String, List[String]](Nil).pure[F])
       } yield {
-        (inputV, importV, funcWithArgsV, jsonServiceV).mapN { case (i, im, f, j) =>
-          (i, im, f, j)
+        (inputV, importV, funcWithArgsV, jsonServiceV, pluginsPathsV).mapN { case (i, im, f, j, p) =>
+          (i, im, f, j, p)
         }
       }
     }
@@ -86,7 +89,7 @@ object RunOpts extends Logging {
             ) =>
           LogFormatter.initLogger(Some(common.logLevel.compiler))
           optionsF.map(
-            _.map { case (input, imps, funcWithArgs, services) =>
+            _.map { case (input, imps, funcWithArgs, services, pluginsPaths) =>
               RunInfo(
                 common,
                 funcWithArgs.func,
@@ -94,7 +97,8 @@ object RunOpts extends Logging {
                 imps,
                 funcWithArgs.getters,
                 Nil,
-                services.map(_.toList).getOrElse(Nil)
+                services.map(_.toList).getOrElse(Nil),
+                pluginsPaths
               )
             }
           )

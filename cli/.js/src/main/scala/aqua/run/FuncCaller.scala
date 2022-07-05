@@ -6,8 +6,8 @@ import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
 import aqua.js.*
 import aqua.keypair.KeyPairShow.show
-import aqua.plugin.Plugin
 import aqua.run.RunCommand.createKeyPair
+import aqua.run.plugin.Plugin
 import cats.data.Validated.{invalidNec, validNec}
 import cats.data.ValidatedNec
 import cats.effect.kernel.Async
@@ -48,7 +48,6 @@ object FuncCaller {
         Async[F].fromFuture {
           (for {
             keyPair <- createKeyPair(config.common.secretKey)
-            _ <- Plugin.get("/home/diemust/git/aqua/npm/ipfs-test/plugin.js")
             logLevel: js.UndefOr[aqua.js.LogLevel] = LogLevelTransformer.logLevelToAvm(config.common.logLevel.aquavm)
             _ <- Fluence
               .start(
@@ -71,6 +70,9 @@ object FuncCaller {
 
             // register all services
             _ = (services ++ getters :+ finisherService).map(_.register(peer))
+            // register all plugins
+            plugins <- Plugin.getPlugins(config.plugins)
+            _ = plugins.map(_.register(peer))
             callFuture = CallJsFunction.funcCallJs(
               air,
               functionDef,
