@@ -67,7 +67,7 @@ object Plugin {
 
   def opt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, List[String]]]] = {
     Opts
-      .option[String]("plugin", "Path to directory with plugins", "p", "path")
+      .option[String]("plugin", "[experimental] Path to a directory with JS plugins", "p", "path")
       .map { str =>
         val path = Path(str)
         Files[F]
