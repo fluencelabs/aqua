@@ -34,7 +34,8 @@ case class RunInfo(
   imports: List[Path] = Nil,
   argumentGetters: Map[String, VarJson] = Map.empty,
   services: List[Service] = Nil,
-  jsonServices: List[JsonService] = Nil
+  jsonServices: List[JsonService] = Nil,
+  pluginsPaths: List[String] = Nil
 )
 
 // Builds subcommand

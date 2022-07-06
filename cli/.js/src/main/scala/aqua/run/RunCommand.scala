@@ -127,7 +127,7 @@ object RunCommand extends Logging {
         runInfo.func,
         inputPath,
         runInfo.imports,
-        RunConfig(common, runInfo.argumentGetters, runInfo.services ++ builtinServices, runInfo.jsonServices),
+        RunConfig(common, runInfo.argumentGetters, runInfo.services ++ builtinServices, runInfo.jsonServices, runInfo.pluginsPaths),
         transformConfig(common.on, common.constants, common.flags.noXor, common.flags.noRelay)
       )
   }

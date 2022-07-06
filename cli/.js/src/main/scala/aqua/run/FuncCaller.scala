@@ -7,6 +7,7 @@ import aqua.io.OutputPrinter
 import aqua.js.*
 import aqua.keypair.KeyPairShow.show
 import aqua.run.RunCommand.createKeyPair
+import aqua.run.plugin.Plugin
 import cats.data.Validated.{invalidNec, validNec}
 import cats.data.ValidatedNec
 import cats.effect.kernel.Async
@@ -17,7 +18,7 @@ import cats.syntax.show.*
 
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.scalajs.js
-import scala.scalajs.js.{timers, JSON, JavaScriptException}
+import scala.scalajs.js.{JSON, JavaScriptException, timers}
 
 object FuncCaller {
 
@@ -34,6 +35,7 @@ object FuncCaller {
     services: List[Service],
     getters: List[ArgumentGetter]
   ): F[ValidatedNec[String, Unit]] = {
+
     FluenceUtils.setLogLevel(LogLevelTransformer.logLevelToFluenceJS(config.common.logLevel.fluencejs))
 
     // stops peer in any way at the end of execution
@@ -68,6 +70,9 @@ object FuncCaller {
 
             // register all services
             _ = (services ++ getters :+ finisherService).map(_.register(peer))
+            // register all plugins
+            plugins <- Plugin.getPlugins(config.plugins)
+            _ = plugins.map(_.register(peer))
             callFuture = CallJsFunction.funcCallJs(
               air,
               functionDef,
