@@ -90,7 +90,6 @@ object RunOpts extends Logging {
           LogFormatter.initLogger(Some(common.logLevel.compiler))
           optionsF.map(
             _.map { case (input, imps, funcWithArgs, services, pluginsPaths) =>
-              println("on: " + pluginsPaths)
               RunInfo(
                 common,
                 funcWithArgs.func,
