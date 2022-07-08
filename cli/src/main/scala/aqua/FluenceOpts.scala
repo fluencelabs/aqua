@@ -9,9 +9,9 @@ import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, va
 import java.util.Base64
 
 case class LogLevels(
-  compiler: Level = Level.Info,
-  fluencejs: Level = Level.Info,
-  aquavm: Level = Level.Info
+  compiler: Level = Level.Error,
+  fluencejs: Level = Level.Error,
+  aquavm: Level = Level.Error
 )
 
 object LogLevels {
