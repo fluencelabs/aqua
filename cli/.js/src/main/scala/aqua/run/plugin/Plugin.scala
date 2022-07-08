@@ -65,52 +65,57 @@ object Plugin {
   private def fileExt(p: Path): String =
     p.fileName.toString.split('.').toList.lastOption.getOrElse("")
 
-  def opt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, List[String]]]] = {
-    Opts
-      .option[String]("plugin", "[experimental] Path to a directory with JS plugins", "p", "path")
-      .map { str =>
-        val path = Path(str)
-        Files[F]
-          .exists(path)
-          .flatMap { exists =>
-            if (exists)
-              Files[F].isRegularFile(path).flatMap { isFile =>
-                if (isFile) {
-                  if (fileExt(path) == "mjs") {
-                    validNec(str :: Nil).pure[F]
-                  } else {
-                    invalidNec(s"If path '$str' is a file, it must be with '.mjs' extension")
-                      .pure[F]
-                  }
-                } else {
-                  Files[F]
-                    .list(path)
-                    .evalMap { ps =>
-                      for {
-                        isFile <- Files[F].isRegularFile(ps)
-                        files <-
-                          if (isFile) {
-                            if (fileExt(ps) == "mjs") (ps :: Nil).pure[F]
-                            else Nil.pure[F]
-                          } else if (ps.fileName.toString != "node_modules") {
-                            Files[F].list(ps).filter(pp => fileExt(pp) == "mjs").compile.toList
-                          } else {
-                            Nil.pure[F]
-                          }
-                      } yield {
-                        files
-                      }
-                    }
-                    .compile
-                    .toList
-                    .map(_.flatten.map(_.absolute.toString))
-                    .map(validNec)
-                }
+  def pathToMjsFilesList[F[_]: Files: Concurrent](str: String): F[ValidatedNec[String, List[String]]] = {
+    val path = Path(str).absolute
+    Files[F]
+      .exists(path)
+      .flatMap { exists =>
+        if (exists)
+          Files[F].isRegularFile(path).flatMap { isFile =>
+            if (isFile) {
+              if (fileExt(path) == "mjs") {
+                validNec(path.toString :: Nil).pure[F]
+              } else {
+                invalidNec(s"If path '$str' is a file, it must be with '.mjs' extension")
+                  .pure[F]
               }
-            else {
-              invalidNec(s"There is no path '$str'").pure[F]
+            } else {
+              Files[F]
+                .list(path)
+                .evalMap { ps =>
+                  val psAbs = ps.absolute
+                  for {
+                    isFile <- Files[F].isRegularFile(ps)
+                    files <-
+                      if (isFile) {
+                        if (fileExt(ps) == "mjs") (psAbs :: Nil).pure[F]
+                        else Nil.pure[F]
+                      } else if (ps.fileName.toString != "node_modules") {
+                        Files[F].list(psAbs).filter(pp => fileExt(pp) == "mjs").compile.toList
+                      } else {
+                        Nil.pure[F]
+                      }
+                  } yield {
+                    files
+                  }
+                }
+                .compile
+                .toList
+                .map(_.flatten.map(_.absolute.toString))
+                .map(validNec)
             }
           }
+        else {
+          invalidNec(s"There is no path '$str'").pure[F]
+        }
+      }
+  }
+
+  def opt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, List[String]]]] = {
+    Opts
+      .options[String]("plugin", "[experimental] Path to a directory with JS plugins", "p", "path")
+      .map { strs =>
+        strs.toList.map(s => pathToMjsFilesList(s)).sequence.map(_.sequence.map(_.flatten))
       }
   }
 

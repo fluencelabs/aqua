@@ -111,7 +111,9 @@ object JsonEncoder {
           .toList
           .sequence
           .map { fields =>
-            StructType("", NonEmptyMap.fromMap(SortedMap(fields: _*)).get)
+            // HACK: JSON can have empty object and it is possible if there is only optional fields
+            val fs = if (fields.isEmpty) List(("some_random_field_that_does_not_even_exists", BottomType)) else fields
+            StructType("", NonEmptyMap.fromMap(SortedMap(fs: _*)).get)
           }
 
       case _ => validNec(BottomType)

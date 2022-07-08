@@ -86,7 +86,13 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
                           override def fnName: String = jf.name
 
                           override def handler: ServiceHandler = _ => {
-                            val converted = Conversions.ts2aqua(jf.result, TypeDefinitionJs(TypeDefinition(jf.resultType)))
+                            val converted = arr.codomain.toList match {
+                              case h :: _ =>
+                                Conversions.ts2aqua(jf.result, TypeDefinitionJs(TypeDefinition(h)))
+                              case Nil =>
+                                Conversions.ts2aqua(jf.result, TypeDefinitionJs(TypeDefinition(NilType)))
+                            }
+
                             js.Promise.resolve(converted)
                           }
                           override def arrow: ArrowTypeDef =
