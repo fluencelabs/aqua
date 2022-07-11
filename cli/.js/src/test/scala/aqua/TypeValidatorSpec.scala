@@ -67,9 +67,9 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
     res3.isValid shouldBe true
 
     val res1invalid = validate(aquaArrType, LiteralType.number)
-    res1invalid.isValid shouldBe true
+    res1invalid.isInvalid shouldBe true
     val res2invalid = validate(aquaArrArrType, ArrayType(LiteralType.number))
-    res2invalid.isValid shouldBe true
+    res2invalid.isInvalid shouldBe true
   }
 
   "type validator" should "validate options with arrays types properly" in {
@@ -157,13 +157,34 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
     )
     res1.isValid shouldBe true
 
-    validate(structType, StructType(
+    validate(
+      structType,
+      StructType(
+        "some",
+        NonEmptyMap.of(
+          ("field1", ScalarType.u8),
+          ("field2", ScalarType.string),
+          ("field3", ScalarType.string)
+        )
+      )
+    ).isValid shouldBe true
+  }
+
+  "type validator" should "return invalid if there is one array when it must be two" in {
+    val leftType = StructType(
       "some",
       NonEmptyMap.of(
-        ("field1", ScalarType.u8),
-        ("field2", ScalarType.string),
-        ("field3", ScalarType.string)
+        ("arrr", OptionType(ArrayType(ArrayType(ScalarType.u8))))
       )
-    )).isValid shouldBe true
+    )
+
+    val rightType = StructType(
+      "some",
+      NonEmptyMap.of(
+        ("arrr", ArrayType(LiteralType.number))
+      )
+    )
+
+    validate(leftType, rightType).isInvalid shouldBe true
   }
 }
