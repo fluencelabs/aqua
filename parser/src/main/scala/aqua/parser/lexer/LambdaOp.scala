@@ -48,7 +48,7 @@ object LambdaOp {
     ) | exclamation.lift.map(e => IntoIndex(Token.lift[Span.S, Unit](e), None))).flatMap { ii =>
       ii.idx match {
         case Some(LiteralToken(_, lt)) if lt == LiteralType.signed =>
-          P.fail.withContext("Indexes in the array must be positive numbers")
+          P.fail.withContext("Collection indexes must be non-negative")
         case _ => P.pure(ii)
       }
     }
