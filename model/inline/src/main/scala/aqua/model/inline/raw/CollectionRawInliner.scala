@@ -20,18 +20,20 @@ import cats.data.{Chain, State}
 
 object CollectionRawInliner extends RawInliner[CollectionRaw] {
 
-  override def apply[S: Mangler : Exports : Arrows](
-                                                     raw: CollectionRaw,
-                                                     lambdaAllowed: Boolean
-                                                   ): State[S, (ValueModel, Inline)] =
+  override def apply[S: Mangler: Exports: Arrows](
+    raw: CollectionRaw,
+    lambdaAllowed: Boolean
+  ): State[S, (ValueModel, Inline)] =
     for {
-      streamName <- Mangler[S].findAndForbidName((
-        raw.boxType match {
-          case _: StreamType => "stream"
-          case _: ArrayType => "array"
-          case _: OptionType => "option"
-        }
-        ) + "-inline")
+      streamName <- Mangler[S].findAndForbidName(
+        (
+          raw.boxType match {
+            case _: StreamType => "stream"
+            case _: ArrayType => "array"
+            case _: OptionType => "option"
+          }
+        ) + "-inline"
+      )
 
       stream = VarModel(streamName, StreamType(raw.elementType))
       streamExp = CallModel.Export(stream.name, stream.`type`)

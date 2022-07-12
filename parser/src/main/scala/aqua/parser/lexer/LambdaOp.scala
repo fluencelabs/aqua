@@ -13,6 +13,7 @@ import scala.language.postfixOps
 import cats.~>
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.types.LiteralType
 
 sealed trait LambdaOp[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): LambdaOp[K]
@@ -39,16 +40,18 @@ object LambdaOp {
   private val parseField: P[LambdaOp[Span.S]] =
     (`.` *> `name`).lift.map(IntoField(_))
 
-  private val nonNegativeIntP0: P0[Int] =
-    Numbers.nonNegativeIntString.map(_.toInt).?.map(_.getOrElse(0))
-
   private val parseIdx: P[LambdaOp[Span.S]] =
-    P.defer(
+    (P.defer(
       (ValueToken.`value`.between(`[`, `]`) | (exclamation *> ValueToken.num))
         .map(v => IntoIndex(v, Some(v)))
         .backtrack
-    ) |
-      exclamation.lift.map(e => IntoIndex(Token.lift[Span.S, Unit](e), None))
+    ) | exclamation.lift.map(e => IntoIndex(Token.lift[Span.S, Unit](e), None))).flatMap { ii =>
+      ii.idx match {
+        case Some(LiteralToken(_, lt)) if lt == LiteralType.signed =>
+          P.fail.withContext("Collection indexes must be non-negative")
+        case _ => P.pure(ii)
+      }
+    }
 
   private val parseOp: P[LambdaOp[Span.S]] =
     P.oneOf(parseField.backtrack :: parseIdx :: Nil)
