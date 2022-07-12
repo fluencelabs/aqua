@@ -11,7 +11,7 @@ import java.util.Base64
 case class LogLevels(
   compiler: Level = Level.Error,
   fluencejs: Level = Level.Error,
-  aquavm: Level = Level.Error
+  aquavm: Level = Level.Fatal
 )
 
 object LogLevels {

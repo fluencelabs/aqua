@@ -71,19 +71,6 @@ object TypeValidator {
             validateTypes(name, l.element, Some(r), Some((l, r)))
           case (l: BoxType, r: BoxType) =>
             validateTypes(name, l.element, Some(r.element), fullOptionType.orElse(Some(l, r)))
-          case (l: BoxType, r) =>
-            (l.element, fullOptionType) match {
-              case (_: BoxType, Some(td)) =>
-                // if we have ?[][]string and []string it must throw an error
-                invalidNec(
-                  s"Type of the field '$name' is incorrect. Expected: '${td._1}' Actual: '${td._2}'"
-                )
-              case (ll: BoxType, None) =>
-                invalidNec(
-                  s"Type of the field '$name' is incorrect. Expected: '$ll' Actual: '$r'"
-                )
-              case _ => validateTypes(name, l.element, Some(r), Some((l, r)))
-            }
 
           case (l, r) =>
             if (l >= r) validNec(())
