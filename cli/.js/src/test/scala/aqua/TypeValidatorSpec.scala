@@ -38,6 +38,24 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
     res.isValid shouldBe false
   }
 
+  "type validator" should "return invalid result if there is no field" in {
+    val res = validate(
+      StructType(
+        "some",
+        NonEmptyMap.of(
+          ("field1", ScalarType.u8),
+          ("field2", ArrayType(ScalarType.string))
+        )
+      ),
+      StructType(
+        "some",
+        NonEmptyMap.of(
+          ("field1", ScalarType.u8)
+        )
+      ))
+    res.isValid shouldBe false
+  }
+
   "type validator" should "validate optional types properly" in {
     val aquaOptionalArrArrType = OptionType(ArrayType(ArrayType(ScalarType.u8)))
     val aquaOptionalArrType = OptionType(ArrayType(ScalarType.u8))

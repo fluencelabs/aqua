@@ -37,7 +37,7 @@ object TypeValidator {
     jsonType match {
       case None =>
         aquaType match {
-          case _: BoxType =>
+          case _: OptionType =>
             validNec(())
           case _ =>
             invalidNec(s"Missing field '$name' in arguments")
