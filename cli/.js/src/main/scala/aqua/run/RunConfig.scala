@@ -88,7 +88,7 @@ object GeneralRunOptions {
   ): Opts[GeneralRunOptions] =
     (
       AppOpts.wrapWithOption(timeoutOpt),
-      logLevelOpt.withDefault(LogLevels()),
+      logLevelOpt,
       multiaddrOpt,
       onOpt,
       flagsOpt(isRun),

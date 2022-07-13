@@ -124,8 +124,8 @@ object FluenceOpts {
       .withDefault(false)
 
   val logLevelOpt: Opts[LogLevels] =
-    Opts.option[String]("log-level", help = "Set log level").withDefault("info").mapValidated {
+    Opts.option[String]("log-level", help = "Set log level").mapValidated {
       str =>
         LogLevels.fromString(str)
-    }
+    }.withDefault(LogLevels())
 }
