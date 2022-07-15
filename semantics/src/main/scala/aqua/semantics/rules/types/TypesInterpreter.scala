@@ -2,19 +2,9 @@ package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
 import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, ValueRaw}
+import aqua.semantics.lsp.TokenTypeInfo
 import aqua.semantics.rules.{ReportError, StackInterpreter}
-import aqua.types.{
-  ArrayType,
-  ArrowType,
-  BoxType,
-  LiteralType,
-  OptionType,
-  ProductType,
-  ScalarType,
-  StreamType,
-  StructType,
-  Type
-}
+import aqua.types.{ArrayType, ArrowType, BoxType, LiteralType, OptionType, ProductType, ScalarType, StreamType, StructType, Type}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, State}
 import cats.instances.list.*
@@ -23,7 +13,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{~>, Applicative}
+import cats.{Applicative, ~>}
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -66,15 +56,22 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
           .as(false)
     }
 
-  override def purgeFields(token: Token[S]): State[X, Option[NonEmptyMap[String, Type]]] =
-    getState
-      .map(_.fields.view.mapValues(_._2))
-      .map(SortedMap.from(_))
-      .map(NonEmptyMap.fromMap(_))
-      .flatMap {
-        case Some(fs) => modify(_.copy(fields = Map.empty)).as(Some(fs))
+  override def purgeFields(token: CustomTypeToken[S]): State[X, Option[NonEmptyMap[String, Type]]] = {
+    getState.map(_.fields).flatMap { fields =>
+      NonEmptyMap.fromMap(SortedMap.from(fields.view.mapValues(_._2))) match {
+        case Some(fs) =>
+          modify{
+            st =>
+              val tokens = st.fieldsToken
+              val updated = tokens ++ fields.toList.map { case (n, (token, t)) =>
+                (token.value + "." + n, TokenTypeInfo(Some(token), t))
+              }
+              st.copy(fields = Map.empty, fieldsToken = updated)
+          }.map(_ => Some(fs))
         case None => report(token, "Cannot define a data type without fields").as(None)
       }
+    }
+  }
 
   override def defineDataType(
     name: CustomTypeToken[S],
@@ -85,12 +82,12 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
       case Some(_) =>
         report(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
-        modify(st =>
+        modify { st =>
           st.copy(
             strict = st.strict.updated(name.value, StructType(name.value, fields)),
             definitions = st.definitions.updated(name.value, name)
           )
-        )
+        }
           .as(true)
     }
 
@@ -107,7 +104,6 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         ).as(true)
     }
 
-  // TODO actually it's stateless, exists there just for reporting needs
   override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[LambdaRaw]] =
     rootT match {
       case StructType(name, fields) =>
@@ -116,7 +112,16 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
             op,
             s"Field `${op.value}` not found in type `$name`, available: ${fields.toNel.toList.map(_._1).mkString(", ")}"
           ).as(None)
-        )(t => State.pure(Some(IntoFieldRaw(op.value, t))))
+        ){
+          t =>
+            modify{ st =>
+              st.fieldsToken.get(name + "." + op.value) match {
+                case Some(td) => st.copy(locations = st.locations :+ (op, td))
+                case None => st
+              }
+
+            }.as(Some(IntoFieldRaw(op.value, t)))
+        }
       case _ =>
         report(op, s"Expected Struct type to resolve a field, got $rootT").as(None)
     }

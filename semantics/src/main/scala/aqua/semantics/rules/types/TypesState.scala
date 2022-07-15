@@ -1,43 +1,21 @@
 package aqua.semantics.rules.types
 
 import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, ValueRaw}
-import aqua.parser.lexer.{
-  ArrayTypeToken,
-  ArrowTypeToken,
-  BasicTypeToken,
-  CustomTypeToken,
-  IntoField,
-  IntoIndex,
-  LambdaOp,
-  Name,
-  OptionTypeToken,
-  StreamTypeToken,
-  Token,
-  TopBottomToken,
-  TypeToken
-}
-import aqua.types.{
-  ArrayType,
-  ArrowType,
-  BottomType,
-  DataType,
-  OptionType,
-  ProductType,
-  StreamType,
-  StructType,
-  TopType,
-  Type
-}
+import aqua.parser.lexer.{ArrayTypeToken, ArrowTypeToken, BasicTypeToken, CustomTypeToken, IntoField, IntoIndex, LambdaOp, Name, OptionTypeToken, StreamTypeToken, Token, TopBottomToken, TypeToken}
+import aqua.types.{ArrayType, ArrowType, BottomType, DataType, OptionType, ProductType, StreamType, StructType, TopType, Type}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
 import aqua.raw.RawContext
+import aqua.semantics.lsp.{TokenType, TokenTypeInfo}
 
 case class TypesState[S[_]](
   fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],
   strict: Map[String, Type] = Map.empty[String, Type],
   definitions: Map[String, CustomTypeToken[S]] = Map.empty[String, CustomTypeToken[S]],
-  stack: List[TypesState.Frame[S]] = Nil
+  fieldsToken: Map[String, TokenTypeInfo[S]] = Map.empty[String, TokenTypeInfo[S]],
+  stack: List[TypesState.Frame[S]] = Nil,
+  locations: List[(Token[S], TokenType[S])] = Nil
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
 

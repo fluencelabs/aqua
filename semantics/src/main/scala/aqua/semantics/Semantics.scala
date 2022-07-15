@@ -73,6 +73,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
     Semantics
       .interpret(ast, initState, init.raw)
       .map { case (state, ctx) =>
+        
         NonEmptyChain
           .fromChain(state.errors)
           .fold[ValidatedNec[SemanticError[S], LspContext[S]]] {
@@ -82,7 +83,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
                 rootArrows = state.names.rootArrows,
                 constants = state.names.constants,
                 abDefinitions = state.abilities.definitions,
-                locations = state.names.locations ++ state.abilities.locations
+                locations = state.names.locations ++ state.abilities.locations ++ state.types.locations
               )
             )
           }(Invalid(_))
