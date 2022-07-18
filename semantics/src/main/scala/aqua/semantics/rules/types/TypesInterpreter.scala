@@ -2,9 +2,20 @@ package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
 import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, ValueRaw}
-import aqua.semantics.lsp.TokenTypeInfo
+import aqua.semantics.lsp.{TokenDef, TokenTypeInfo}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
-import aqua.types.{ArrayType, ArrowType, BoxType, LiteralType, OptionType, ProductType, ScalarType, StreamType, StructType, Type}
+import aqua.types.{
+  ArrayType,
+  ArrowType,
+  BoxType,
+  LiteralType,
+  OptionType,
+  ProductType,
+  ScalarType,
+  StreamType,
+  StructType,
+  Type
+}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, State}
 import cats.instances.list.*
@@ -13,7 +24,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Applicative, ~>}
+import cats.{~>, Applicative}
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -32,13 +43,25 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
 
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
     getState.map(_.resolveTypeToken(token)).flatMap {
-      case Some(t) => State.pure(Some(t))
+      case Some(t) =>
+        val (tt, tokens) = t
+        modify(st =>
+          st.copy(locations = st.locations ++ tokens.map { case (t, td) =>
+            (t, TokenDef(Some(td)))
+          })
+        ).map(_ => Some(tt))
       case None => report(token, s"Unresolved type").as(None)
     }
 
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
     getState.map(_.resolveArrowDef(arrowDef)).flatMap {
-      case Valid(t) => State.pure[X, Option[ArrowType]](Some(t))
+      case Valid(t) =>
+        val (tt, tokens) = t
+        modify(st =>
+          st.copy(locations = st.locations ++ tokens.map { case (t, td) =>
+            (t, TokenDef(Some(td)))
+          })
+        ).map(_ => Some(tt))
       case Invalid(errs) =>
         errs
           .foldLeft[ST[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
@@ -56,17 +79,18 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
           .as(false)
     }
 
-  override def purgeFields(token: CustomTypeToken[S]): State[X, Option[NonEmptyMap[String, Type]]] = {
+  override def purgeFields(
+    token: CustomTypeToken[S]
+  ): State[X, Option[NonEmptyMap[String, Type]]] = {
     getState.map(_.fields).flatMap { fields =>
       NonEmptyMap.fromMap(SortedMap.from(fields.view.mapValues(_._2))) match {
         case Some(fs) =>
-          modify{
-            st =>
-              val tokens = st.fieldsToken
-              val updated = tokens ++ fields.toList.map { case (n, (tt, t)) =>
-                (token.value + "." + n, TokenTypeInfo(Some(tt), t))
-              }
-              st.copy(fields = Map.empty, fieldsToken = updated)
+          modify { st =>
+            val tokens = st.fieldsToken
+            val updated = tokens ++ fields.toList.map { case (n, (tt, t)) =>
+              (token.value + "." + n, TokenTypeInfo(Some(tt), t))
+            }
+            st.copy(fields = Map.empty, fieldsToken = updated)
           }.map(_ => Some(fs))
         case None => report(token, "Cannot define a data type without fields").as(None)
       }
@@ -112,15 +136,14 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
             op,
             s"Field `${op.value}` not found in type `$name`, available: ${fields.toNel.toList.map(_._1).mkString(", ")}"
           ).as(None)
-        ){
-          t =>
-            modify{ st =>
-              st.fieldsToken.get(name + "." + op.value) match {
-                case Some(td) => st.copy(locations = st.locations :+ (op, td))
-                case None => st
-              }
+        ) { t =>
+          modify { st =>
+            st.fieldsToken.get(name + "." + op.value) match {
+              case Some(td) => st.copy(locations = st.locations :+ (op, td))
+              case None => st
+            }
 
-            }.as(Some(IntoFieldRaw(op.value, t)))
+          }.as(Some(IntoFieldRaw(op.value, t)))
         }
       case _ =>
         report(op, s"Expected Struct type to resolve a field, got $rootT").as(None)
