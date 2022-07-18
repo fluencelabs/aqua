@@ -19,7 +19,7 @@ case class TypesState[S[_]](
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
 
-  // TODO: ugly return type, refactoring
+  // TODO: an ugly return type, refactoring
   // Returns type and a token with its definition
   def resolveTypeToken(tt: TypeToken[S]): Option[(Type, List[(Token[S], CustomTypeToken[S])])] =
     tt match {

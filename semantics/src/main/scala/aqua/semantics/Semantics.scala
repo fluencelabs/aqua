@@ -73,7 +73,6 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
     Semantics
       .interpret(ast, initState, init.raw)
       .map { case (state, ctx) =>
-        
         NonEmptyChain
           .fromChain(state.errors)
           .fold[ValidatedNec[SemanticError[S], LspContext[S]]] {
