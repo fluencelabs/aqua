@@ -63,8 +63,8 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
           modify{
             st =>
               val tokens = st.fieldsToken
-              val updated = tokens ++ fields.toList.map { case (n, (token, t)) =>
-                (token.value + "." + n, TokenTypeInfo(Some(token), t))
+              val updated = tokens ++ fields.toList.map { case (n, (tt, t)) =>
+                (token.value + "." + n, TokenTypeInfo(Some(tt), t))
               }
               st.copy(fields = Map.empty, fieldsToken = updated)
           }.map(_ => Some(fs))
@@ -104,7 +104,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         ).as(true)
     }
 
-  override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[LambdaRaw]] =
+  override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[LambdaRaw]] = {
     rootT match {
       case StructType(name, fields) =>
         fields(op.value).fold(
@@ -125,6 +125,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
       case _ =>
         report(op, s"Expected Struct type to resolve a field, got $rootT").as(None)
     }
+  }
 
   // TODO actually it's stateless, exists there just for reporting needs
   override def resolveIndex(
