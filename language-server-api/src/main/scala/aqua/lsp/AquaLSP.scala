@@ -3,11 +3,11 @@ package aqua.lsp
 import aqua.compiler.*
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.*
-import aqua.parser.lexer.Token
+import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.lsp.LspContext
+import aqua.semantics.lsp.{LspContext, TokenInfo}
 import aqua.semantics.{CompilerState, HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
 import cats.data.{NonEmptyChain, Validated}
@@ -27,7 +27,8 @@ import scala.scalajs.js.{undefined, UndefOr}
 @JSExportAll
 case class CompilationResult(
   errors: js.Array[ErrorInfo],
-  locations: js.Array[TokenLink]
+  locations: js.Array[TokenLink],
+  importLocations: js.Array[TokenImport]
 )
 
 @JSExportAll
@@ -35,6 +36,9 @@ case class TokenLocation(name: String, startLine: Int, startCol: Int, endLine: I
 
 @JSExportAll
 case class TokenLink(current: TokenLocation, definition: TokenLocation)
+
+@JSExportAll
+case class TokenImport(current: TokenLocation, path: String)
 
 object TokenLocation {
 
@@ -168,36 +172,50 @@ object AquaLSP extends App with Logging {
 
       logger.debug("Compilation done.")
 
+      def locationsToJs(
+        locations: List[(Token[FileSpan.F], TokenInfo[FileSpan.F])]
+      ): js.Array[TokenLink] = {
+        locations.flatMap { case (t, tInfo) =>
+          tInfo.definition match {
+            case None => Nil
+            case Some(d) =>
+              val fromOp = TokenLocation.fromSpan(t.unit._1)
+              val toOp = TokenLocation.fromSpan(d.unit._1)
+
+              val link = for {
+                from <- fromOp
+                to <- toOp
+              } yield {
+                TokenLink(from, to)
+              }
+
+              if (link.isEmpty)
+                logger.warn(s"Incorrect coordinates for token '${t.unit._1.name}'")
+
+              link.toList
+          }
+        }.toJSArray
+      }
+
+      def importsToTokenImport(imports: List[LiteralToken[FileSpan.F]]): js.Array[TokenImport] =
+        imports.flatMap { lt =>
+          val (span, str) = lt.valueToken
+          val unquoted = str.substring(1, str.length - 1)
+          TokenLocation.fromSpan(span).map(l => TokenImport(l, unquoted))
+        }.toJSArray
+
       val result = fileRes match {
         case Valid(lsp) =>
           logger.debug("No errors on compilation.")
           CompilationResult(
             List.empty.toJSArray,
-            lsp.locations.flatMap { case (t, tInfo) =>
-              tInfo.definition match {
-                case None => Nil
-                case Some(d) =>
-                  val fromOp = TokenLocation.fromSpan(t.unit._1)
-                  val toOp = TokenLocation.fromSpan(d.unit._1)
-
-                  val link = for {
-                    from <- fromOp
-                    to <- toOp
-                  } yield {
-                    TokenLink(from, to)
-                  }
-
-                  if (link.isEmpty)
-                    logger.warn(s"Incorrect coordinates for token '${t.unit._1.name}'")
-
-                  link.toList
-              }
-            }.toJSArray
+            locationsToJs(lsp.locations),
+            importsToTokenImport(lsp.importTokens)
           )
         case Invalid(e: NonEmptyChain[AquaError[FileModuleId, AquaFileError, FileSpan.F]]) =>
           val errors = e.toNonEmptyList.toList.flatMap(errorToInfo)
           logger.debug("Errors: " + errors.mkString("\n"))
-          CompilationResult(errors.toJSArray, List.empty.toJSArray)
+          CompilationResult(errors.toJSArray, List.empty.toJSArray, List.empty.toJSArray)
       }
       result
     }
