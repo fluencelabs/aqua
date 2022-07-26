@@ -1,7 +1,9 @@
 package aqua.semantics
 
+import aqua.parser.lexer.Token
 import aqua.raw.Raw
 import aqua.raw.RawContext
+import aqua.semantics.lsp.{TokenInfo, TokenType}
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
@@ -15,7 +17,9 @@ case class CompilerState[S[_]](
   names: NamesState[S] = NamesState[S](),
   abilities: AbilitiesState[S] = AbilitiesState[S](),
   types: TypesState[S] = TypesState[S]()
-)
+) {
+  lazy val locations: List[(Token[S], TokenInfo[S])] = names.locations ++ abilities.locations ++ types.locations
+}
 
 object CompilerState {
   type St[S[_]] = State[CompilerState[S], Raw]

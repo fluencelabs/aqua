@@ -1,29 +1,35 @@
 package aqua.semantics
 
-import aqua.parser.lexer.Token
+import aqua.parser.head.{HeadExpr, HeaderExpr, ImportExpr, ImportFromExpr}
+import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.{Ast, Expr}
 import aqua.raw.ops.{FuncOp, SeqGroupTag}
 import aqua.raw.{Raw, RawContext, RawPart}
 import aqua.semantics.header.Picker
 import aqua.semantics.header.Picker.*
-import aqua.semantics.lsp.LspContext
+import aqua.semantics.lsp.{LspContext, TokenDef, TokenInfo, TokenType}
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
 import aqua.semantics.rules.{ReportError, ValuesAlgebra}
 import cats.arrow.FunctionK
 import cats.data.*
+import cats.Reducible
 import cats.data.Validated.{Invalid, Valid}
 import cats.kernel.Monoid
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.foldable.*
+import cats.syntax.reducible.*
+import cats.free.CofreeInstances
 import cats.syntax.semigroup.*
 import cats.{Eval, Monad, Semigroup}
 import monocle.Lens
 import monocle.macros.GenLens
 import scribe.{Logging, log}
+import cats.free.Cofree
 
 sealed trait Semantics[S[_], C] {
 
@@ -54,6 +60,18 @@ class RawSemantics[S[_]](implicit p: Picker[RawContext]) extends Semantics[S, Ra
 
 class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
+  def getImportTokens(ast: Ast[S]): List[LiteralToken[S]] = {
+    ast.head.foldLeft[List[LiteralToken[S]]](Nil){ case (l, header) =>
+      header match {
+        case ImportExpr(fn) =>
+          println("import: " + fn)
+          l :+ fn
+        case ImportFromExpr(_, fn) => l :+ fn
+        case _ => l
+      }
+    }
+  }
+
   def process(
     ast: Ast[S],
     init: LspContext[S]
@@ -70,6 +88,9 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
       )
     )
 
+    val importTokens = getImportTokens(ast)
+
+
     Semantics
       .interpret(ast, initState, init.raw)
       .map { case (state, ctx) =>
@@ -82,7 +103,8 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
                 rootArrows = state.names.rootArrows,
                 constants = state.names.constants,
                 abDefinitions = state.abilities.definitions,
-                locations = state.names.locations ++ state.abilities.locations
+                locations = state.locations,
+                importTokens = importTokens
               )
             )
           }(Invalid(_))

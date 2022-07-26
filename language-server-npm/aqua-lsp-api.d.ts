@@ -11,6 +11,11 @@ export interface TokenLink {
     definition: TokenLocation
 }
 
+export interface TokenImport {
+    current: TokenLocation,
+    path: string
+}
+
 export interface ErrorInfo {
     start: number,
     end: number,
@@ -20,7 +25,8 @@ export interface ErrorInfo {
 
 export interface CompilationResult {
     errors: ErrorInfo[],
-    locations: TokenLink[]
+    locations: TokenLink[],
+    importLocations: TokenImport[]
 }
 
 export class Compiler {
