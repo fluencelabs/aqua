@@ -278,7 +278,7 @@ object KeyPairOp {
     js.Dynamic.literal(
       peerId = kp.Libp2pPeerId.toB58String(),
       secretKey = encoder.encodeToString(kp.toEd25519PrivateKey().toArray.map(s => s.toByte)),
-      publicKey = encoder.encodeToString(kp.Libp2pPeerId.pubKey.bytes.toArray.map(s => s.toByte))
+      publicKey = encoder.encodeToString(kp.Libp2pPeerId.pubKey.marshal().toArray.map(s => s.toByte))
     )
   }
 }
@@ -293,6 +293,8 @@ object KeyPair extends js.Object {
 @js.native
 @JSImport("peer-id", "PeerId")
 class PeerId extends js.Object {
+  def toPrint(): String = js.native
+  def toJSON(): js.Any = js.native
   val pubKey: PublicKey = js.native
   def toB58String(): String = js.native
 }
@@ -301,4 +303,5 @@ class PeerId extends js.Object {
 @JSImport("libp2p-crypto", "PublicKey")
 class PublicKey extends js.Object {
   val bytes: js.typedarray.Uint8Array = js.native
+  def marshal(): js.typedarray.Uint8Array = js.native
 }
