@@ -3,6 +3,7 @@ package aqua.backend
 object Header {
 
   def header(isJs: Boolean, isCommonJS: Boolean): String = {
+    val callParams = if (isJs) "CallParams" else "{ CallParams }"
     val imports = if (isCommonJS) {
       """const { Fluence, FluencePeer } = require('@fluencelabs/fluence');
         |const {
@@ -12,7 +13,7 @@ object Header {
         |} = require('@fluencelabs/fluence/dist/internal/compilerSupport/v3${if (isJs) ".js" else ""}');""".stripMargin
     } else {
       s"""import { Fluence, FluencePeer } from '@fluencelabs/fluence';
-         |import CallParams from '@fluencelabs/fluence/dist/internal/compilerSupport/v3${if (isJs) ".js" else ""}';
+         |import $callParams from '@fluencelabs/fluence/dist/internal/compilerSupport/v3${if (isJs) ".js" else ""}';
          |import {
          |    callFunction,
          |    registerService,
