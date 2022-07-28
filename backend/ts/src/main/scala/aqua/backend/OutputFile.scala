@@ -6,7 +6,7 @@ import aqua.res.AquaRes
 
 case class OutputFile(res: AquaRes) {
 
-  def generate(types: Types, isCommonJS: Boolean): String = {
+  def generate(types: Types, isJs: Boolean, isCommonJS: Boolean): String = {
     import types.*
     val services = res.services
       .map(s => OutputService(s, types))
@@ -15,7 +15,7 @@ case class OutputFile(res: AquaRes) {
       .mkString("\n\n")
     val functions =
       res.funcs.map(f => OutputFunc(f, types)).map(_.generate).toList.mkString("\n\n")
-    s"""${Header.header(false, isCommonJS)}
+    s"""${Header.header(isJs, isCommonJS)}
        |
        |// Services
        |$services
