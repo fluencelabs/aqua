@@ -18,7 +18,7 @@ case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
     val functions =
       res.funcs.map(f => TypeScriptTypes.funcType(f)).map(_.generate).toList.mkString("\n")
 
-    val body = s"""${Header.header(false, false)}
+    val body = s"""${Header.header(true, false)}
        |
        |// Services
        |$services
@@ -33,6 +33,6 @@ case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
   override def generate(res: AquaRes): Seq[Generated] =
     if (res.isEmpty) Nil
     else {
-      Generated(ext, OutputFile(res).generate(EmptyTypes, isCommonJS)):: typesFile(res) :: Nil
+      Generated(ext, OutputFile(res).generate(EmptyTypes, true, isCommonJS)):: typesFile(res) :: Nil
     }
 }
