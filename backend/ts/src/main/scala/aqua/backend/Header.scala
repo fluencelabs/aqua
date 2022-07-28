@@ -14,7 +14,6 @@ object Header {
       s"""import { Fluence, FluencePeer } from '@fluencelabs/fluence';
          |import CallParams from '@fluencelabs/fluence/dist/internal/compilerSupport/v3${if (isJs) ".js" else ""}';
          |import {
-         |    CallParams,
          |    callFunction,
          |    registerService,
          |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v3${if (isJs) ".js"
