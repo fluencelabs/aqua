@@ -9,15 +9,17 @@ import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.monad.*
 import cats.syntax.traverse.*
 import cats.{~>, Comonad, Monad}
 import scribe.Logging
 
 // TODO: add tests
-class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
+class AquaParser[F[_], E, I, S[_]: Comonad](
   sources: AquaSources[F, E, I],
   parser: I => String => ValidatedNec[ParserError[S], Ast[S]]
-) extends Logging {
+)(implicit F: Monad[F])
+    extends Logging {
 
   type Body = Ast[S]
   type Err = AquaError[I, E, S]
@@ -37,15 +39,16 @@ class AquaParser[F[_]: Monad, E, I, S[_]: Comonad](
     ast.head.tailForced
       .map(_.head)
       .collect { case fe: FilenameExpr[F] =>
-        sources
-          .resolveImport(id, fe.fileValue)
-          .map(
-            _.bimap(
-              _.map[Err](ResolveImportsErr(id, fe.filename, _)),
-              importId =>
-                Chain.one[(I, (String, Err))](importId -> (fe.fileValue, ImportErr(fe.filename)))
-            )
+        F.map(
+          sources
+            .resolveImport(id, fe.fileValue)
+        )(
+          _.bimap(
+            _.map[Err](ResolveImportsErr(id, fe.filename, _)),
+            importId =>
+              Chain.one[(I, (String, Err))](importId -> (fe.fileValue, ImportErr(fe.filename)))
           )
+        )
       }
       .traverse(identity)
       .map(

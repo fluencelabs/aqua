@@ -12,7 +12,7 @@ import aqua.semantics.{CompilerState, LspSemantics, RawSemantics, Semantics}
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
 import aqua.semantics.lsp.LspContext
 import cats.data.*
-import cats.data.Validated.{validNec, Invalid, Valid}
+import cats.data.Validated.{Invalid, Valid, validNec}
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*

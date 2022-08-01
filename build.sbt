@@ -1,17 +1,17 @@
-val dottyVersion = "3.1.0"
+val dottyVersion = "3.1.3"
 
 scalaVersion := dottyVersion
 
 val baseAquaVersion = settingKey[String]("base aqua version")
 
-val catsV = "2.7.0"
-val catsParseV = "0.3.6"
+val catsV = "2.8.0"
+val catsParseV = "0.3.8"
 val monocleV = "3.1.0"
 val scalaTestV = "3.2.10"
-val fs2V = "3.2.5"
-val catsEffectV = "3.3.7"
-val declineV = "2.2.0"
-val circeVersion = "0.14.1"
+val fs2V = "3.2.11"
+val catsEffectV = "3.3.14"
+val declineV = "2.3.0"
+val circeVersion = "0.14.2"
 val scribeV = "3.7.1"
 
 name := "aqua-hll"
