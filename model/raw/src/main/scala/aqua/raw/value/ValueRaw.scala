@@ -11,7 +11,7 @@ sealed trait ValueRaw {
 
   def `type`: Type = baseType
 
-  def renameVars(map: Map[String, String]): ValueRaw
+  def renameVars(map: Map[String, String], declaredStreams: Set[String]): ValueRaw
 
   def map(f: ValueRaw => ValueRaw): ValueRaw
 
@@ -52,8 +52,8 @@ case class ApplyLambdaRaw(value: ValueRaw, lambda: LambdaRaw) extends ValueRaw {
 
   override def `type`: Type = lambda.`type`
 
-  override def renameVars(map: Map[String, String]): ValueRaw =
-    ApplyLambdaRaw(value.renameVars(map), lambda.renameVars(map))
+  override def renameVars(map: Map[String, String], declaredStreams: Set[String]): ValueRaw =
+    ApplyLambdaRaw(value.renameVars(map, declaredStreams), lambda.renameVars(map, declaredStreams))
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(ApplyLambdaRaw(f(value), lambda.map(f)))
 
@@ -81,11 +81,11 @@ object ApplyLambdaRaw {
 case class ShadowRaw(value: ValueRaw, shadowValues: Map[String, ValueRaw]) extends ValueRaw {
   override def baseType: Type = value.baseType
 
-  override def renameVars(map: Map[String, String]): ValueRaw =
+  override def renameVars(map: Map[String, String], declaredStreams: Set[String]): ValueRaw =
     ShadowRaw(
-      value.renameVars(map),
+      value.renameVars(map, declaredStreams),
       shadowValues.map { case (k, v) =>
-        map.getOrElse(k, k) -> v.renameVars(map)
+        map.getOrElse(k, k) -> v.renameVars(map, declaredStreams)
       }
     )
 
@@ -103,8 +103,11 @@ case class VarRaw(name: String, baseType: Type) extends ValueRaw {
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
 
-  override def renameVars(map: Map[String, String]): ValueRaw =
-    copy(map.getOrElse(name, name))
+  override def renameVars(map: Map[String, String], declaredStreams: Set[String]): ValueRaw =
+    baseType match {
+      case StreamType(_) => if (declaredStreams.contains(name))copy(map.getOrElse(name, name)) else this
+      case _ => copy(map.getOrElse(name, name))
+    }
 
   override def toString: String = s"var{$name: " + baseType + s"}"
 
@@ -121,7 +124,7 @@ case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
 
   override def varNames: Set[String] = Set.empty
 
-  override def renameVars(map: Map[String, String]): ValueRaw = this
+  override def renameVars(map: Map[String, String], declaredStreams: Set[String]): ValueRaw = this
 
   override def shadow(name: String, v: ValueRaw): ValueRaw = this
 }
@@ -151,8 +154,8 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
 
   override def varNames: Set[String] = values.toList.flatMap(_.varNames).toSet
 
-  override def renameVars(map: Map[String, String]): ValueRaw =
-    copy(values = values.map(_.renameVars(map)))
+  override def renameVars(map: Map[String, String], declaredStreams: Set[String]): ValueRaw =
+    copy(values = values.map(_.renameVars(map, declaredStreams: Set[String])))
 }
 
 case class CallArrowRaw(
@@ -171,8 +174,8 @@ case class CallArrowRaw(
 
   override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
 
-  override def renameVars(map: Map[String, String]): ValueRaw =
-    copy(arguments = arguments.map(_.renameVars(map)))
+  override def renameVars(map: Map[String, String], declaredStreams: Set[String]): ValueRaw =
+    copy(arguments = arguments.map(_.renameVars(map, declaredStreams: Set[String])))
 
   override def toString: String =
     s"(call ${ability.fold("")(a => s"|$a| ")} (${serviceId.fold("")(_.toString + " ")}$name) [${arguments

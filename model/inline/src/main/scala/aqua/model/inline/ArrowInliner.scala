@@ -146,7 +146,7 @@ object ArrowInliner extends Logging {
       // Rename all renamed arguments in the body
       treeRenamed =
         fn.body
-          .rename(argsShouldRename)
+          .rename(argsShouldRename, declaredStreams)
           .map(_.mapValues(_.map {
             // if an argument is a BoxType (Array or Option), but we pass a stream,
             // change a type as stream to not miss `$` sign in air
@@ -165,7 +165,7 @@ object ArrowInliner extends Logging {
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
       treeDefines =
-        treeRenamed.definesVarNames.value.intersect(declaredStreams) --
+        treeRenamed.definesVarNames.value --
           argsFull.streamArgs.keySet --
           argsFull.streamArgs.values.map(_.name) --
           call.exportTo.filter { exp =>
@@ -184,10 +184,10 @@ object ArrowInliner extends Logging {
       _ <- Mangler[S].forbid(treeDefines ++ shouldRename.values.toSet)
 
       // If there was a collision, rename exports and usages with new names
-      tree = treeRenamed.rename(shouldRename)
+      tree = treeRenamed.rename(shouldRename, declaredStreams)
 
       // Result could be renamed; take care about that
-    } yield (tree, fn.ret.map(_.renameVars(shouldRename)))
+    } yield (tree, fn.ret.map(_.renameVars(shouldRename, declaredStreams)))
 
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,

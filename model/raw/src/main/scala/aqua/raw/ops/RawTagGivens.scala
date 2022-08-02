@@ -83,11 +83,11 @@ trait RawTagGivens {
 
     def toFuncOp: FuncOp = FuncOp(tree)
 
-    def rename(vals: Map[String, String]): RawTag.Tree =
+    def rename(vals: Map[String, String], declaredStreams: Set[String]): RawTag.Tree =
       println("rename: " + vals)
       if (vals.isEmpty) tree
       else
-        tree.map[RawTag](_.mapValues(_.renameVars(vals)).renameExports(vals))
+        tree.map[RawTag](_.mapValues(_.renameVars(vals, declaredStreams)).renameExports(vals))
 
     def renameExports(vals: Map[String, String]): RawTag.Tree =
       println("rename exports: " + vals)
@@ -95,7 +95,7 @@ trait RawTagGivens {
       else
         tree.map[RawTag](_.renameExports(vals))
 
-    def definesVarNames: Eval[Set[String]] =
+    def definesVarNames: Eval[Set[String]] = 
       Cofree.cata[Chain, RawTag, Set[String]](tree) { case (tag, acc) =>
         Eval.later(acc.foldLeft(tag.definesVarNames)(_ ++ _))
       }

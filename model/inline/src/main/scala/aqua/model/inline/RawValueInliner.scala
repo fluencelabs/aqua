@@ -89,14 +89,14 @@ object RawValueInliner extends Logging {
       vmp <- unfold(value)
       (vm, map) = vmp
 
-      _ = println("RAW " + value)
-      _ = println("MOD " + vm)
+      _ = logger.trace("RAW " + value)
+      _ = logger.trace("MOD " + vm)
       dc <- Exports[S].exports
-      _ = println("DEC " + dc)
+      _ = logger.trace("DEC " + dc)
 
       ops <- inlineToTree(map)
-      _ = println("desugarized ops: " + ops)
-      _ = println("map was: " + map)
+      _ = logger.trace("desugarized ops: " + ops)
+      _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops)
 
   def valueListToModel[S: Mangler: Exports: Arrows](
