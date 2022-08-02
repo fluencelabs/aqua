@@ -54,6 +54,7 @@ object ArrowInliner extends Logging {
         (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(List[OpModel.Tree], ValueModel)] {
             case (CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
+              println(s"fix values: $res $exp $st")
               // pass nested function results to a stream
               (resDesugar.toList :+ PushToStreamModel(
                 res,
@@ -93,6 +94,10 @@ object ArrowInliner extends Logging {
     for {
       // Collect all arguments: what names are used inside the function, what values are received
       argsFull <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
+
+      _ = println("prelude for: " + fn.funcName)
+      _ = println("captured: " + fn.capturedValues)
+      _ = println("aaa" + fn.body)
 
       // DataType arguments
       argsToDataRaw = argsFull.dataArgs
@@ -139,6 +144,8 @@ object ArrowInliner extends Logging {
           }))
           .renameExports(streamToRename)
 
+      _ = println("treeRenamed: " + treeRenamed.definesVarNames.value)
+
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
       treeDefines =
@@ -152,8 +159,12 @@ object ArrowInliner extends Logging {
             }
           }.map(_.name)
 
+      _ = println("treeDefines: " + treeDefines)
+
       // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
       shouldRename <- Mangler[S].findNewNames(treeDefines).map(_ ++ argsShouldRename)
+      _ = println("args should rename: " + argsShouldRename)
+      _ = println("should rename:  " + shouldRename)
       _ <- Mangler[S].forbid(treeDefines ++ shouldRename.values.toSet)
 
       // If there was a collision, rename exports and usages with new names

@@ -85,6 +85,8 @@ object TagInliner extends Logging {
 
       case PushToStreamTag(operand, exportTo) =>
         valueToModel(operand).map { case (v, p) =>
+          println("operand: " + operand)
+          println(s"pts tag: ${v} $exportTo")
           Some(PushToStreamModel(v, CallModel.callExport(exportTo))) -> p
         }
 
@@ -114,6 +116,7 @@ object TagInliner extends Logging {
         } yield Some(SeqModel) -> cd._2
 
       case ClosureTag(arrow, detach) =>
+        println(s"for arrow ${arrow.name} detached: $detach")
         if (detach) Arrows[S].resolved(arrow, None).map(_ => None -> None)
         else
           for {

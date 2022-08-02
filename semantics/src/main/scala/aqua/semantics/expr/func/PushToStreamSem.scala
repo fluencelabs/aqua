@@ -58,6 +58,7 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
               case false =>
                 Raw.error("Stream type and element type does not match")
               case true =>
+                println(s"sem: ${expr.stream.value} $vm")
                 PushToStreamTag(vm, Call.Export(expr.stream.value, t)).funcOpLeaf
             }
         }

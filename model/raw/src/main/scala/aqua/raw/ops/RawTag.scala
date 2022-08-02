@@ -19,7 +19,12 @@ sealed trait RawTag extends TreeNode[RawTag] {
   def restrictsVarNames: Set[String] = Set.empty
 
   // All variable names introduced by this tag
-  def definesVarNames: Set[String] = exportsVarNames ++ restrictsVarNames
+  def definesVarNames: Set[String] = {
+
+    val res = exportsVarNames ++ restrictsVarNames
+    println(s"defines in: $this result: $res")
+    res
+  }
 
   def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 
