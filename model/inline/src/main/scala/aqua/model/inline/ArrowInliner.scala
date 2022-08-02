@@ -2,10 +2,12 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
-import aqua.raw.ops.RawTag
+import aqua.raw.ops.{DeclareStreamTag, RawTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{BoxType, StreamType}
+import cats.Eval
 import cats.data.{Chain, State, StateT}
+import cats.free.Cofree
 import cats.syntax.traverse.*
 import cats.syntax.show.*
 import scribe.Logging
@@ -128,6 +130,19 @@ object ArrowInliner extends Logging {
       _ <- Arrows[S].purge
       _ <- Arrows[S].resolved(fn.capturedArrows ++ argsToArrows)
 
+      declaredStreams = Cofree.cata[Chain, RawTag, Set[String]](fn.body) { case (tag, acc) =>
+          tag match {
+            case DeclareStreamTag(v) =>
+              Eval.later(acc.foldLeft(v.varNames)(_ ++ _))
+            case _ =>
+              Eval.later(acc.foldLeft(Set())(_ ++ _))
+          }
+
+        }.value
+
+      _ = println("declared streams: " + declaredStreams)
+      _ = println("stream to rename: " + streamToRename)
+
       // Rename all renamed arguments in the body
       treeRenamed =
         fn.body
@@ -145,11 +160,12 @@ object ArrowInliner extends Logging {
           .renameExports(streamToRename)
 
       _ = println("treeRenamed: " + treeRenamed.definesVarNames.value)
+      _ = println("streamArgs = " + argsFull.streamArgs)
 
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
       treeDefines =
-        treeRenamed.definesVarNames.value --
+        treeRenamed.definesVarNames.value.intersect(declaredStreams) --
           argsFull.streamArgs.keySet --
           argsFull.streamArgs.values.map(_.name) --
           call.exportTo.filter { exp =>
