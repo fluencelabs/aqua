@@ -87,7 +87,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           val (body, retValuesFix) = localStreams.foldLeft((m, retValues)) {
             case ((b, rs), (n, st)) =>
               if (derivedFromNames(n))
-                println(s"first for ${n}")
                 RestrictionTag(n, isStream = true).wrap(
                   SeqTag.wrap(
                     b :: CanonicalizeTag(
@@ -99,7 +98,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
                   vn.shadow(n, VarRaw(s"$n-fix", ArrayType(st.element)))
                 }
               else
-                println(s"second for ${n}")
                 RestrictionTag(n, isStream = true).wrap(b) -> rs
           }
 

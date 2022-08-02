@@ -64,7 +64,6 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
     ast.head.foldLeft[List[LiteralToken[S]]](Nil){ case (l, header) =>
       header match {
         case ImportExpr(fn) =>
-          println("import: " + fn)
           l :+ fn
         case ImportFromExpr(_, fn) => l :+ fn
         case _ => l

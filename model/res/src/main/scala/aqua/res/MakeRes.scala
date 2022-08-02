@@ -61,7 +61,6 @@ object MakeRes {
     case XorModel => XorRes.leaf
     case NextModel(item) => NextRes(item).leaf
     case PushToStreamModel(operand @ VarModel(_, StreamType(st), _), exportTo) =>
-      println("pushtostream 1")
       val tmpName = s"push-to-stream-$i"
       // wrap (
       //  RestrictionRes(tmpName, isStream = false),
@@ -75,7 +74,6 @@ object MakeRes {
       )
     // )
     case PushToStreamModel(operand, exportTo) =>
-      println(s"pushtostream 2: $operand $exportTo")
       ApRes(operand, exportTo).leaf
 
     case CanonicalizeModel(operand, exportTo) =>
