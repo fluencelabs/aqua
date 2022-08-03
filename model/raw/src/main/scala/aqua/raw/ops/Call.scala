@@ -1,7 +1,7 @@
 package aqua.raw.ops
 
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{ArrowType, ProductType, Type}
+import aqua.types.{ArrowType, ProductType, StreamType, Type}
 
 // TODO docs
 case class Call(args: List[ValueRaw], exportTo: List[Call.Export]) {
@@ -11,9 +11,6 @@ case class Call(args: List[ValueRaw], exportTo: List[Call.Export]) {
       args.map(_.map(f)),
       exportTo
     )
-
-  // TODO docs
-  def mapExport(f: String => String): Call = copy(exportTo = exportTo.map(_.mapName(f)))
 
   def arrowType: ArrowType = ArrowType(
     ProductType(args.map(_.`type`)),
@@ -28,7 +25,12 @@ object Call {
 
   // TODO docs
   case class Export(name: String, `type`: Type) {
-    def mapName(f: String => String): Export = copy(f(name))
+    def mapName(f: String => String, declaredStreams: Set[String]): Export =
+      `type` match {
+        case StreamType(_) =>
+          if (declaredStreams.contains(name)) copy(f(name)) else this
+        case _ => copy(f(name))
+      }
 
     def toRaw: VarRaw = VarRaw(name, `type`)
 

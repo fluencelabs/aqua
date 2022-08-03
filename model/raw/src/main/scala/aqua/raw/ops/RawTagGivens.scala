@@ -86,14 +86,14 @@ trait RawTagGivens {
     def rename(vals: Map[String, String], declaredStreams: Set[String]): RawTag.Tree =
       if (vals.isEmpty) tree
       else
-        tree.map[RawTag](_.mapValues(_.renameVars(vals, declaredStreams)).renameExports(vals))
+        tree.map[RawTag](_.mapValues(_.renameVars(vals, declaredStreams)).renameExports(vals, declaredStreams))
 
-    def renameExports(vals: Map[String, String]): RawTag.Tree =
+    def renameExports(vals: Map[String, String], declaredStreams: Set[String]): RawTag.Tree =
       if (vals.isEmpty) tree
       else
-        tree.map[RawTag](_.renameExports(vals))
+        tree.map[RawTag](_.renameExports(vals, declaredStreams))
 
-    def definesVarNames: Eval[Set[String]] = 
+    def definesVarNames: Eval[Set[String]] =
       Cofree.cata[Chain, RawTag, Set[String]](tree) { case (tag, acc) =>
         Eval.later(acc.foldLeft(tag.definesVarNames)(_ ++ _))
       }

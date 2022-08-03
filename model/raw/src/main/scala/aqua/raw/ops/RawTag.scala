@@ -23,7 +23,7 @@ sealed trait RawTag extends TreeNode[RawTag] {
 
   def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 
-  def renameExports(map: Map[String, String]): RawTag = this
+  def renameExports(map: Map[String, String], declaredStreams: Set[String]): RawTag = this
 
   def funcOpLeaf: FuncOp = FuncOp(leaf)
 }
@@ -85,7 +85,7 @@ case class OnTag(peerId: ValueRaw, via: Chain[ValueRaw]) extends SeqGroupTag {
 
 case class NextTag(item: String) extends RawTag {
 
-  override def renameExports(map: Map[String, String]): RawTag =
+  override def renameExports(map: Map[String, String], declaredStreams: Set[String]): RawTag =
     copy(item = map.getOrElse(item, item))
 }
 
@@ -93,7 +93,7 @@ case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(name)
 
-  override def renameExports(map: Map[String, String]): RawTag =
+  override def renameExports(map: Map[String, String], declaredStreams: Set[String]): RawTag =
     copy(name = map.getOrElse(name, name))
 }
 
@@ -111,7 +111,7 @@ case class ForTag(item: String, iterable: ValueRaw) extends SeqGroupTag {
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     ForTag(item, iterable.map(f))
 
-  override def renameExports(map: Map[String, String]): RawTag =
+  override def renameExports(map: Map[String, String], declaredStreams: Set[String]): RawTag =
     copy(item = map.getOrElse(item, item))
 }
 
@@ -125,8 +125,8 @@ case class CallArrowRawTag(
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     CallArrowRawTag(exportTo, value.map(f))
 
-  override def renameExports(map: Map[String, String]): RawTag =
-    copy(exportTo = exportTo.map(_.mapName(n => map.getOrElse(n, n))))
+  override def renameExports(map: Map[String, String], declaredStreams: Set[String]): RawTag =
+    copy(exportTo = exportTo.map(_.mapName(n => map.getOrElse(n, n), declaredStreams)))
 }
 
 object CallArrowRawTag {
@@ -177,7 +177,7 @@ case class AssignmentTag(
   assignTo: String
 ) extends NoExecTag {
 
-  override def renameExports(map: Map[String, String]): RawTag =
+  override def renameExports(map: Map[String, String], declaredStreams: Set[String]): RawTag =
     copy(assignTo = map.getOrElse(assignTo, assignTo))
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
@@ -226,8 +226,8 @@ case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     PushToStreamTag(operand.map(f), exportTo)
 
-  override def renameExports(map: Map[String, String]): RawTag =
-    copy(exportTo = exportTo.mapName(n => map.getOrElse(n, n)))
+  override def renameExports(map: Map[String, String], declaredStreams: Set[String]): RawTag =
+    copy(exportTo = exportTo.mapName(n => map.getOrElse(n, n), declaredStreams))
 
   override def toString: String = s"(push $operand $exportTo)"
 }
@@ -239,8 +239,8 @@ case class CanonicalizeTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     CanonicalizeTag(operand.map(f), exportTo)
 
-  override def renameExports(map: Map[String, String]): RawTag =
-    copy(exportTo = exportTo.mapName(n => map.getOrElse(n, n)))
+  override def renameExports(map: Map[String, String], declaredStreams: Set[String]): RawTag =
+    copy(exportTo = exportTo.mapName(n => map.getOrElse(n, n), declaredStreams))
 
   override def toString: String = s"(can $operand $exportTo)"
 }

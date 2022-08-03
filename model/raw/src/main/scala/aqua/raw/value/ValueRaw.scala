@@ -175,7 +175,7 @@ case class CallArrowRaw(
   override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
 
   override def renameVars(map: Map[String, String], declaredStreams: Set[String]): ValueRaw =
-    copy(arguments = arguments.map(_.renameVars(map, declaredStreams: Set[String])))
+    copy(arguments = arguments.map(_.renameVars(map, declaredStreams)))
 
   override def toString: String =
     s"(call ${ability.fold("")(a => s"|$a| ")} (${serviceId.fold("")(_.toString + " ")}$name) [${arguments

@@ -133,7 +133,7 @@ object ArrowInliner extends Logging {
               Eval.later(acc.foldLeft(Set())(_ ++ _))
           }
 
-        }.value
+        }.value ++ argsFull.streamArgs.keySet
 
       // Rename all renamed arguments in the body
       treeRenamed =
@@ -149,7 +149,7 @@ object ArrowInliner extends Logging {
               v.copy(baseType = StreamType(v.baseType))
             case v => v
           }))
-          .renameExports(streamToRename)
+          .renameExports(streamToRename, declaredStreams)
 
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
