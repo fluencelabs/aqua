@@ -2,7 +2,6 @@ package aqua.backend
 
 import aqua.model.AquaContext
 import aqua.res.AquaRes
-import cats.data.ValidatedNec
 
 /**
  * Compiler backend generates output based on the processed model
@@ -15,7 +14,7 @@ trait Backend {
    * @param aqua Source file context, processed, transformed
    * @return Zero or more [[Generated]] objects, based on arguments
    */
-  def generate(aqua: AquaRes, airChecker: String => ValidatedNec[String, Unit]): ValidatedNec[String, Seq[Generated]]
+  def generate(aqua: AquaRes): Seq[Generated]
 }
 
 object Backend {

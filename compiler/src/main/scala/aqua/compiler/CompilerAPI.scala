@@ -1,6 +1,6 @@
 package aqua.compiler
 
-import aqua.backend.Backend
+import aqua.backend.{AirString, Backend}
 import aqua.linker.{AquaModule, Linker, Modules}
 import aqua.model.AquaContext
 import aqua.parser.lift.{LiftParser, Span}
@@ -134,6 +134,7 @@ object CompilerAPI extends Logging {
   def compile[F[_]: Monad, E, I: Order, S[_]: Comonad](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
+    airValidation: List[AirString] => F[ValidatedNec[String, Unit]],
     backend: Backend.Transform,
     config: AquaCompilerConf
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
@@ -144,30 +145,30 @@ object CompilerAPI extends Logging {
       .map(_.andThen { filesWithContext =>
         toAquaProcessed(filesWithContext)
       })
-      .map(_.andThen { compiled =>
+      .map(_.map { compiled =>
         compiled.map { ap =>
           logger.trace("generating output...")
           val res = backend.transform(ap.context)
-          backend
-            .generate(res, air => validNec(()))
-            .leftMap(errs => NonEmptyChain.one(AirValidationError(ap.id, errs): AquaError[I, E, S]))
-            .map(compiled =>
-              AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
-            )
-        }.sequence
+          val compiled = backend.generate(res)
+          AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
+        }
       })
   }
 
   def compileTo[F[_]: Monad, E, I: Order, S[_]: Comonad, T](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
+    airValidation: List[AirString] => F[ValidatedNec[String, Unit]],
     backend: Backend.Transform,
     config: AquaCompilerConf,
     write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
-    compile[F, E, I, S](sources, parser, backend, config).flatMap {
+    compile[F, E, I, S](sources, parser, airValidation, backend, config).flatMap {
       case Valid(compiled) =>
-        compiled.map { ac =>
+        compiled.map
+
+        /** EndMarker */
+        { ac =>
           write(ac).map(
             _.map(
               _.bimap[NonEmptyChain[AquaError[I, E, S]], Chain[T]](
@@ -176,6 +177,22 @@ object CompilerAPI extends Logging {
               )
             )
           )
+        }.toList
+          .traverse(identity)
+          .map(
+            _.flatten
+              .foldLeft[ValidatedNec[AquaError[I, E, S], Chain[T]]](validNec(Chain.nil))(
+                _ combine _
+              )
+          ) { ac =>
+            write(ac).map(
+              _.map(
+                _.bimap[NonEmptyChain[AquaError[I, E, S]], Chain[T]](
+                  e => NonEmptyChain.one(OutputError(ac, e)),
+                  Chain.one
+                )
+              )
+            )
         }.toList
           .traverse(identity)
           .map(

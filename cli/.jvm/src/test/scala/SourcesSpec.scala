@@ -148,11 +148,11 @@ class SourcesSpec extends AsyncFlatSpec with Matchers {
       sourceGen = new AquaFileSources[IO](path, Nil)
       content = "some random content"
       compiled = AquaCompiled[FileModuleId](
-        FileModuleId(filePath),
-        Seq(Generated("_hey.custom", content)),
-        1,
-        1
-      )
+          FileModuleId(filePath),
+          Seq(Generated("_hey.custom", content, Nil)),
+          1,
+          1
+        )
       resolved <- sourceGen.write(targetPath)(compiled)
       _ = {
         resolved.size shouldBe 1

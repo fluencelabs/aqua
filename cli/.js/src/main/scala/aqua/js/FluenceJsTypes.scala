@@ -264,7 +264,7 @@ object FluenceUtils {
 @js.native
 @JSImport("@fluencelabs/fluence", "Fluence")
 object Fluence extends js.Object {
-  def start(config: PeerConfig): js.Promise[js.Any] = js.native
+  def start(config: js.UndefOrOps[PeerConfig]): js.Promise[js.Any] = js.native
   def stop(): js.Promise[js.Any] = js.native
   def getPeer(): FluencePeer = js.native
   def getStatus(): PeerStatus = js.native
