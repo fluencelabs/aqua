@@ -165,10 +165,7 @@ object CompilerAPI extends Logging {
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
     compile[F, E, I, S](sources, parser, airValidation, backend, config).flatMap {
       case Valid(compiled) =>
-        compiled.map
-
-        /** EndMarker */
-        { ac =>
+        compiled.map { ac =>
           write(ac).map(
             _.map(
               _.bimap[NonEmptyChain[AquaError[I, E, S]], Chain[T]](
@@ -177,22 +174,6 @@ object CompilerAPI extends Logging {
               )
             )
           )
-        }.toList
-          .traverse(identity)
-          .map(
-            _.flatten
-              .foldLeft[ValidatedNec[AquaError[I, E, S], Chain[T]]](validNec(Chain.nil))(
-                _ combine _
-              )
-          ) { ac =>
-            write(ac).map(
-              _.map(
-                _.bimap[NonEmptyChain[AquaError[I, E, S]], Chain[T]](
-                  e => NonEmptyChain.one(OutputError(ac, e)),
-                  Chain.one
-                )
-              )
-            )
         }.toList
           .traverse(identity)
           .map(

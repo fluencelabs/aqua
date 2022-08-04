@@ -27,38 +27,6 @@ import scribe.Logging
 
 object AquaPathCompiler extends Logging {
 
-  }/** EndMarker */
-  def compileFilesTo[F[_]: AquaIO: Monad: Files: Async](
-    srcPath: Path,
-    imports: List[Path],
-    targetPath: Option[Path],
-    backend: Backend,
-    transformConfig: TransformConfig
-  ): F[ValidatedNec[String, Chain[String]]] = {
-    import ErrorRendering.showError
-    (for {
-      prelude <- Prelude.init()
-      sources = new AquaFileSources[F](srcPath, imports ++ prelude.importPaths)
-      compiler <- CompilerAPI
-        .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](
-          sources,
-          SpanParser.parser,
-          AirValidation.validate[F],
-          new Backend.Transform:
-            override def transform(ex: AquaContext): AquaRes =
-              Transform.contextRes(ex, transformConfig)
-
-            override def generate(aqua: AquaRes): Seq[Generated] = backend.generate(aqua)
-          ,
-          AquaCompilerConf(transformConfig.constantsList),
-          targetPath.map(sources.write).getOrElse(dry[F])
-        )
-    } yield {
-      compiler
-      // 'distinct' to delete all duplicated errors
-    }).map(_.leftMap(_.map(_.show).distinct))
-
-  }
   /**
    * @param srcPath path to aqua sources
    * @param imports additional paths to possible aqua imports
@@ -67,8 +35,7 @@ object AquaPathCompiler extends Logging {
    * @param transformConfig transformation configuration for a model
    * @return errors or result messages
    */
-
-def compileFilesTo[F[_]: AquaIO: Monad: Files: Async](
+  def compileFilesTo[F[_]: AquaIO: Monad: Files: Async](
     srcPath: Path,
     imports: List[Path],
     targetPath: Option[Path],

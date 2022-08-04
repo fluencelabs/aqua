@@ -23,85 +23,12 @@ import scala.scalajs.js.{timers, JSON, JavaScriptException}
 
 object FuncCaller {
 
-  }/** EndMarker */
-  def funcCall[F[_]: Async](
-    air: String,
-    functionDef: FunctionDef,
-    config: RunConfig,
-    finisherService: Finisher,
-    services: List[Service],
-    getters: List[ArgumentGetter]
-  ): F[ValidatedNec[String, Unit]] = {
-
-    FluenceUtils.setLogLevel(
-      LogLevelTransformer.logLevelToFluenceJS(config.common.logLevel.fluencejs)
-    )
-
-    // stops peer in any way at the end of execution
-    val resource = Resource.make(Fluence.getPeer().pure[F]) { peer =>
-      Async[F].fromFuture(Sync[F].delay(peer.stop().toFuture))
-    }
-
-    resource.use { peer =>
-      Async[F].executionContext.flatMap { implicit ec =>
-        Async[F].fromFuture {
-          (for {
-            keyPair <- createKeyPair(config.common.secretKey)
-            logLevel: js.UndefOr[aqua.js.LogLevel] = LogLevelTransformer.logLevelToAvm(
-              config.common.logLevel.aquavm
-            )
-            _ <- Fluence
-              .start(
-                Some(
-                  PeerConfig(
-                    config.common.multiaddr,
-                    config.common.timeout.getOrElse(scalajs.js.undefined),
-                    keyPair,
-                    Debug(printParticleId = config.common.flags.verbose, marineLogLevel = logLevel)
-                  )
-                ).orUndefined
-              )
-              .toFuture
-            _ =
-              if (config.common.flags.showConfig) {
-                val configJson = KeyPairOp.toDynamicJSON(keyPair)
-                configJson.updateDynamic("relay")(config.common.multiaddr)
-                config.common.timeout.foreach(t => configJson.updateDynamic("timeout")(t))
-                configJson.updateDynamic("log-level")(config.common.logLevel.compiler.name)
-                OutputPrinter.print(JSON.stringify(configJson, null, 4))
-              }
-
-            // register all services
-            _ = (services ++ getters :+ finisherService).map(_.register(peer))
-            // register all plugins
-            plugins <- Plugin.getPlugins(config.plugins)
-            _ = plugins.map(_.register(peer))
-            callFuture = CallJsFunction.funcCallJs(
-              air,
-              functionDef,
-              List.empty
-            )
-            // error will be thrown on failed call
-            _ <- callFuture
-            finisherFuture = finisherService.promise.future
-            // use a timeout in finisher if we have an async function and it hangs on node's side
-            finisher = config.common.timeout.map { t =>
-              setTimeout(finisherFuture, t)
-            }.getOrElse(finisherFuture)
-            _ <- finisher
-          } yield validNec(())).recover(handleFuncCallErrors).pure[F]
-        }
-      }
-
-    }
-  }
   /**
    * Register services and call an air code with FluenceJS SDK.
    * @param air code to call
    * @return
    */
-
-def funcCall[F[_]: Async](
+  def funcCall[F[_]: Async](
     air: String,
     functionDef: FunctionDef,
     config: RunConfig,
