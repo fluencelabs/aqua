@@ -3,6 +3,8 @@ package aqua.backend.js
 import aqua.backend.ts.TypeScriptTypes
 import aqua.backend.*
 import aqua.res.AquaRes
+import cats.data.ValidatedNec
+import cats.data.Validated.validNec
 
 case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
 
@@ -19,20 +21,21 @@ case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
       res.funcs.map(f => TypeScriptTypes.funcType(f)).map(_.generate).toList.mkString("\n")
 
     val body = s"""${Header.header(true, false)}
-       |
-       |// Services
-       |$services
-       |
-       |// Functions
-       |$functions
-       |""".stripMargin
+                  |
+                  |// Services
+                  |$services
+                  |
+                  |// Functions
+                  |$functions
+                  |""".stripMargin
 
     Generated(tsExt, body)
   }
 
-  override def generate(res: AquaRes): Seq[Generated] =
-    if (res.isEmpty) Nil
-    else {
-      Generated(ext, OutputFile(res).generate(EmptyTypes, true, isCommonJS)):: typesFile(res) :: Nil
-    }
+  override def generate(res: AquaRes, airChecker: String => ValidatedNec[String, Unit]): ValidatedNec[String, Seq[Generated]] =
+    if (res.isEmpty) validNec(Nil)
+    else
+      OutputFile(res, airChecker)
+        .generate(EmptyTypes, true, isCommonJS)
+        .map(r => Generated(ext, r) :: typesFile(res) :: Nil)
 }

@@ -16,6 +16,7 @@ import aqua.res.AquaRes
 import cats.data.*
 import cats.parse.LocationMap
 import cats.syntax.applicative.*
+import cats.data.Validated.validNec
 import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.show.*
@@ -52,7 +53,7 @@ object AquaPathCompiler extends Logging {
             override def transform(ex: AquaContext): AquaRes =
               Transform.contextRes(ex, transformConfig)
 
-            override def generate(aqua: AquaRes): Seq[Generated] = backend.generate(aqua)
+            override def generate(aqua: AquaRes, airChecker: String => ValidatedNec[String, Unit]): ValidatedNec[String, Seq[Generated]] = backend.generate(aqua, airChecker)
           ,
           AquaCompilerConf(transformConfig.constantsList),
           targetPath.map(sources.write).getOrElse(dry[F])

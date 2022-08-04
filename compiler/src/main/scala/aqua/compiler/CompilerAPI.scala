@@ -12,7 +12,7 @@ import aqua.semantics.{CompilerState, LspSemantics, RawSemantics, Semantics}
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
 import aqua.semantics.lsp.LspContext
 import cats.data.*
-import cats.data.Validated.{Invalid, Valid, validNec}
+import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
@@ -144,13 +144,17 @@ object CompilerAPI extends Logging {
       .map(_.andThen { filesWithContext =>
         toAquaProcessed(filesWithContext)
       })
-      .map(_.map { compiled =>
+      .map(_.andThen { compiled =>
         compiled.map { ap =>
           logger.trace("generating output...")
           val res = backend.transform(ap.context)
-          val compiled = backend.generate(res)
-          AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
-        }
+          backend
+            .generate(res, air => validNec(()))
+            .leftMap(errs => NonEmptyChain.one(AirValidationError(ap.id, errs): AquaError[I, E, S]))
+            .map(compiled =>
+              AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
+            )
+        }.sequence
       })
   }
 
