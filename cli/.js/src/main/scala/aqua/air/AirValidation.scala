@@ -22,13 +22,14 @@ object AirValidation {
         for {
           _ <- Fluence.start(js.undefined).toFuture
           statuses <- airs
-            .map(a => Fluence.getPeer().internals().parseAst(a.air).toFuture.map(s => (a.name, s)))
+            .map(a => Fluence.getPeer().internals.parseAst(a.air).toFuture.map(s => (a.name, s)))
             .sequence
         } yield {
-          val errors = NonEmptyChain.fromSeq(statuses.filterNot(_._2.status))
+          val errors = NonEmptyChain.fromSeq(statuses.filterNot(_._2.success))
           errors.map { errs =>
             val errorsStrs = errs.map { case (fName, status) =>
-              s"Cannot compile AIR for '$fName' function: ${js.JSON.stringify(status.data)}"
+              s"Cannot compile AIR for '$fName' function: ${js.JSON.stringify(status.data)}\n\n" +
+              "This is unexpected error. Please, dump your Aqua code and make an issue here https://github.com/fluencelabs/aqua/issues."
             }
             invalid(errorsStrs)
           }.getOrElse(validNec(()))

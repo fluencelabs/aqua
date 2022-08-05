@@ -17,4 +17,4 @@ case class CycleError[I, E, S[_]](modules: List[I]) extends AquaError[I, E, S]
 
 case class CompileError[I, E, S[_]](err: SemanticError[S]) extends AquaError[I, E, S]
 case class OutputError[I, E, S[_]](compiled: AquaCompiled[I], err: E) extends AquaError[I, E, S]
-case class AirValidationError[I, E, S[_]](fromFile: I, errors: NonEmptyChain[String]) extends AquaError[I, E, S]
+case class AirValidationError[I, E, S[_]](errors: NonEmptyChain[String]) extends AquaError[I, E, S]

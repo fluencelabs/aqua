@@ -12,7 +12,7 @@ import aqua.semantics.{CompilerState, LspSemantics, RawSemantics, Semantics}
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
 import aqua.semantics.lsp.LspContext
 import cats.data.*
-import cats.data.Validated.{validNec, Invalid, Valid}
+import cats.data.Validated.{validNec, Invalid, Valid, invalid}
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
@@ -145,14 +145,28 @@ object CompilerAPI extends Logging {
       .map(_.andThen { filesWithContext =>
         toAquaProcessed(filesWithContext)
       })
-      .map(_.map { compiled =>
-        compiled.map { ap =>
-          logger.trace("generating output...")
-          val res = backend.transform(ap.context)
-          val compiled = backend.generate(res)
-          AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
+      .flatMap { compiledV =>
+        compiledV.map { compiled =>
+          compiled.map { ap =>
+            logger.trace("generating output...")
+            val res = backend.transform(ap.context)
+            val compiled = backend.generate(res)
+            val res2: F[ValidatedNec[AquaError[I, E, S], AquaCompiled[I]]] = airValidation(
+              compiled.toList.flatMap(_.air)
+            ).map(
+              _.bimap(
+                errs => NonEmptyChain.one(AirValidationError(errs): AquaError[I, E, S]),
+                _ =>
+                  AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
+              )
+            )
+            res2
+          }.sequence.map(_.sequence)
+        } match {
+          case Valid(f) => f
+          case Invalid(e) => invalid[NonEmptyChain[AquaError[I, E, S]], Chain[AquaCompiled[I]]](e).pure[F]
         }
-      })
+      }
   }
 
   def compileTo[F[_]: Monad, E, I: Order, S[_]: Comonad, T](

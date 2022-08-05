@@ -216,7 +216,11 @@ case class PeerConfig(
   KeyPair: KeyPair,
   debug: js.UndefOr[Debug]
 )
-case class AstStatus(status: Boolean, data: js.Any)
+
+trait AstStatus extends js.Object {
+  def success: Boolean
+  def data: js.Any
+}
 
 trait Internals extends js.Object {
   def parseAst(air: String): js.Promise[AstStatus]
@@ -231,7 +235,7 @@ trait Internals extends js.Object {
 class FluencePeer extends js.Object {
   def getStatus(): PeerStatus = js.native
   def stop(): js.Promise[Unit] = js.native
-  def internals(): Internals = js.native
+  def internals: Internals = js.native
 }
 
 object V3 {
