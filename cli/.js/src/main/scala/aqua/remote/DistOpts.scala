@@ -37,7 +37,7 @@ object DistOpts extends Logging {
 
   def srvNameOpt: Opts[String] =
     Opts
-      .option[String]("service", "Service to deploy from the config file", "s")
+      .option[String]("service", "Service to deploy from the config file", "e")
 
   def srvIdOpt: Opts[String] =
     Opts
