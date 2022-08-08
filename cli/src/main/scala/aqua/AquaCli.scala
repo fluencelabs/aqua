@@ -130,7 +130,8 @@ object AquaCli extends IOApp with Logging {
             val bc = TransformConfig(wrapWithXor = !noXor, constants = constants)
             bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
           }
-          logger.info(s"Aqua Compiler ${versionStr}")
+          logger.info(s"Aqua Compiler $versionStr")
+          LogFormatter.initLogger(Some(logLevel.compiler))
 
           (inputF, outputF, importsF).mapN { (i, o, imp) =>
             i.andThen { input =>
@@ -197,7 +198,13 @@ object AquaCli extends IOApp with Logging {
                 ExitCode.Error
               }
             }
-            .getOrElse(ConsoleEff[IO].print(h).as(ExitCode.Success))
+            .getOrElse{
+              ConsoleEff[IO].print(h).map{_ =>
+                // hack to show last string in `help`
+                println()
+                ExitCode.Success
+              }
+            }
         },
         identity
       )
