@@ -200,6 +200,7 @@ object AquaCli extends IOApp with Logging {
             }
             .getOrElse{
               ConsoleEff[IO].print(h).map{_ =>
+                // hack to show last string in `help`
                 println()
                 ExitCode.Success
               }
