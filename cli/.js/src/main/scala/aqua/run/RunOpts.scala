@@ -80,7 +80,7 @@ object RunOpts extends Logging {
       name = "run",
       header = "Run Aqua code",
       (
-        GeneralRunOptions.commonGeneralRunOpt,
+        GeneralOptions.runOpt,
         runOptsCompose[F]
       ).mapN {
         case (
