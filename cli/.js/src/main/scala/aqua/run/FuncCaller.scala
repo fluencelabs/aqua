@@ -93,6 +93,7 @@ object FuncCaller {
               setTimeout(finisherFuture, t)
             }.getOrElse(finisherFuture)
             _ <- finisher
+            _ <- Fluence.stop().toFuture
           } yield validNec(())).recover(handleFuncCallErrors).pure[F]
         }
       }

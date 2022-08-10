@@ -1,10 +1,11 @@
 package aqua
 
 import aqua.backend.{Backend, Generated}
-import aqua.compiler.{AquaCompiled, AquaCompiler, AquaCompilerConf, AquaError, CompilerAPI}
+import aqua.compiler.{AirValidator, AquaCompiled, AquaCompiler, AquaCompilerConf, AquaError, CompilerAPI}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io.*
 import aqua.air.AirValidation
+import aqua.backend.AirString
 import aqua.model.AquaContext
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
@@ -21,7 +22,7 @@ import cats.syntax.applicative.*
 import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.show.*
-import cats.{~>, Applicative, Eval, Monad, Show}
+import cats.{Applicative, Eval, Monad, Show, ~>}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -50,7 +51,13 @@ object AquaPathCompiler extends Logging {
         .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](
           sources,
           SpanParser.parser,
-          AirValidation.validate[F],
+          new AirValidator[F] {
+            override def init(): F[Unit] = AirValidation.init[F]()
+
+            override def validate(
+              airs: List[AirString]
+            ): F[ValidatedNec[String, Unit]] = AirValidation.validate[F](airs)
+          },
           new Backend.Transform:
             override def transform(ex: AquaContext): AquaRes =
               Transform.contextRes(ex, transformConfig)

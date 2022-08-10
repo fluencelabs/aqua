@@ -7,11 +7,19 @@ import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.effect.Async
 import cats.syntax.traverse.*
 import cats.syntax.functor.*
+import cats.syntax.applicative.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js
 
 object AirValidation {
+
+  // HACK: memoize doesn't work in scalajs, so, call this function once before `validate`
+  def init[F[_]: Async](): F[Unit] = {
+    Async[F].fromFuture(Fluence.start(js.undefined).toFuture.pure[F]).as(())
+  }
 
   def validate[F[_]: Async](
     airs: List[AirString]
@@ -20,7 +28,6 @@ object AirValidation {
 
       Async[F].executionContext.map { implicit ec =>
         for {
-          _ <- Fluence.start(js.undefined).toFuture
           statuses <- airs
             .map(a => Fluence.getPeer().internals.parseAst(a.air).toFuture.map(s => (a.name, s)))
             .sequence

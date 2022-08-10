@@ -134,50 +134,53 @@ object CompilerAPI extends Logging {
   def compile[F[_]: Monad, E, I: Order, S[_]: Comonad](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
-    airValidation: List[AirString] => F[ValidatedNec[String, Unit]],
+    airValidator: AirValidator[F],
     backend: Backend.Transform,
     config: AquaCompilerConf
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
     val compiler = getAquaCompiler[F, E, I, S](config)
 
-    compiler
-      .compileRaw(sources, parser)
-      .map(_.andThen { filesWithContext =>
-        toAquaProcessed(filesWithContext)
-      })
-      .flatMap { compiledV =>
-        compiledV.map { compiled =>
+    for {
+      compiledV <- compiler
+          .compileRaw(sources, parser)
+          .map(_.andThen { filesWithContext =>
+            toAquaProcessed(filesWithContext)
+          })
+      _ <- airValidator.init()
+      result <- compiledV.map { compiled =>
           compiled.map { ap =>
             logger.trace("generating output...")
             val res = backend.transform(ap.context)
             val compiled = backend.generate(res)
-            val res2: F[ValidatedNec[AquaError[I, E, S], AquaCompiled[I]]] = airValidation(
-              compiled.toList.flatMap(_.air)
-            ).map(
-              _.bimap(
-                errs => NonEmptyChain.one(AirValidationError(errs): AquaError[I, E, S]),
-                _ =>
-                  AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
+            airValidator
+              .validate(
+                compiled.toList.flatMap(_.air)
               )
-            )
-            res2
+              .map(
+                _.bimap(
+                  errs => NonEmptyChain.one(AirValidationError(errs): AquaError[I, E, S]),
+                  _ =>
+                    AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
+                )
+              )
           }.sequence.map(_.sequence)
         } match {
           case Valid(f) => f
-          case Invalid(e) => invalid[NonEmptyChain[AquaError[I, E, S]], Chain[AquaCompiled[I]]](e).pure[F]
+          case Invalid(e) =>
+            invalid[NonEmptyChain[AquaError[I, E, S]], Chain[AquaCompiled[I]]](e).pure[F]
         }
-      }
+    } yield result
   }
 
   def compileTo[F[_]: Monad, E, I: Order, S[_]: Comonad, T](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
-    airValidation: List[AirString] => F[ValidatedNec[String, Unit]],
+    airValidator: AirValidator[F],
     backend: Backend.Transform,
     config: AquaCompilerConf,
     write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
-    compile[F, E, I, S](sources, parser, airValidation, backend, config).flatMap {
+    compile[F, E, I, S](sources, parser, airValidator, backend, config).flatMap {
       case Valid(compiled) =>
         compiled.map { ac =>
           write(ac).map(

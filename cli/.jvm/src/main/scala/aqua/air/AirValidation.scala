@@ -8,6 +8,8 @@ import scala.concurrent.ExecutionContext
 
 object AirValidation {
 
+  def init[F[_]: Async](): F[Unit] = Async[F].pure(())
+
   def validate[F[_]: Async](airs: List[AirString]): F[ValidatedNec[String, Unit]] = Async[F].pure(validNec(()))
 
 }
