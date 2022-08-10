@@ -129,7 +129,7 @@ object DistOpts extends Logging {
       "deploy_service",
       "Deploy service from WASM modules",
       (
-        GeneralRunOptions.commonGeneralOptWithSecretKey,
+        GeneralRunOptions.commonGeneralOptWithSecretKeyCustomTimeout(60000),
         configFromFileOpt[F],
         srvNameOpt
       ).mapN { (common, configFromFileF, srvName) =>
@@ -147,12 +147,9 @@ object DistOpts extends Logging {
                     val srvArg = VarRaw(srvName, configType)
                     val args = LiteralRaw.quote(srvName) :: srvArg :: Nil
                     // if we have default timeout, increase it
-                    val commonWithTimeout = if (common.timeout.isEmpty) {
-                      common.copy(timeout = Some(60000))
-                    } else common
                     validNec(
                       RunInfo(
-                        commonWithTimeout,
+                        common,
                         CliFunc(DeployFuncName, args),
                         PackagePath(DistAqua),
                         Nil,

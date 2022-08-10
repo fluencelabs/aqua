@@ -14,6 +14,8 @@ import cats.syntax.apply.*
 import com.monovore.decline.Opts
 import scribe.Level
 
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.Duration
 import scala.scalajs.js
 import scala.util.Try
 
@@ -26,7 +28,7 @@ case class Flags(
 )
 
 case class GeneralRunOptions(
-  timeout: Option[Int],
+  timeout: Duration,
   logLevel: LogLevels,
   multiaddr: String,
   on: Option[String],
@@ -84,10 +86,11 @@ object GeneralRunOptions {
   def commonOpt(
     isRun: Boolean,
     withSecret: Boolean,
-    withConstants: Boolean
+    withConstants: Boolean,
+    defaultTimeout: Duration = Duration(7000, TimeUnit.MILLISECONDS)
   ): Opts[GeneralRunOptions] =
     (
-      AppOpts.wrapWithOption(timeoutOpt),
+      timeoutOpt.withDefault(defaultTimeout),
       logLevelOpt,
       multiaddrOpt,
       onOpt,
@@ -100,6 +103,7 @@ object GeneralRunOptions {
   val commonGeneralOpt: Opts[GeneralRunOptions] = commonOpt(false, false, false)
   val commonGeneralRunOpt: Opts[GeneralRunOptions] = commonOpt(true, false, true)
   val commonGeneralOptWithSecretKey: Opts[GeneralRunOptions] = commonOpt(false, true, false)
+  def commonGeneralOptWithSecretKeyCustomTimeout(timeoutMs: Int): Opts[GeneralRunOptions] = commonOpt(false, true, false, Duration(timeoutMs, TimeUnit.MILLISECONDS))
 }
 
 // `run` command configuration

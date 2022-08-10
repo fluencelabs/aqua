@@ -58,7 +58,7 @@ object FuncCaller {
               .start(
                 PeerConfig(
                   config.common.multiaddr,
-                  config.common.timeout.getOrElse(scalajs.js.undefined),
+                  config.common.timeout.toMillis.toInt : js.UndefOr[Int],
                   keyPair,
                   Debug(printParticleId = config.common.flags.verbose, marineLogLevel = logLevel)
                 )
@@ -68,7 +68,7 @@ object FuncCaller {
               if (config.common.flags.showConfig) {
                 val configJson = KeyPairOp.toDynamicJSON(keyPair)
                 configJson.updateDynamic("relay")(config.common.multiaddr)
-                config.common.timeout.foreach(t => configJson.updateDynamic("timeout")(t))
+                configJson.updateDynamic("timeout")(config.common.timeout.toMillis)
                 configJson.updateDynamic("log-level")(config.common.logLevel.compiler.name)
                 OutputPrinter.print(JSON.stringify(configJson, null, 4))
               }
@@ -87,12 +87,10 @@ object FuncCaller {
             _ <- callFuture
             finisherFuture = finisherService.promise.future
             // use a timeout in finisher if we have an async function and it hangs on node's side
-            finisher = config.common.timeout.map { t =>
-              setTimeout(name, finisherFuture, t)
-            }.getOrElse(finisherFuture)
+            finisher = setTimeout(name, finisherFuture, config.common.timeout.toMillis)
             _ <- finisher
           } yield validNec(()))
-            .recover(handleFuncCallErrors(name, config.common.timeout))
+            .recover(handleFuncCallErrors(name, config.common.timeout.toMillis))
             .pure[F]
         }
       }
@@ -100,13 +98,13 @@ object FuncCaller {
     }
   }
 
-  private def setTimeout[T](funcName: String, f: Future[T], timeout: Int)(implicit
+  private def setTimeout[T](funcName: String, f: Future[T], timeout: Long)(implicit
     ec: ExecutionContext
   ): Future[T] = {
     val p = Promise[T]()
     val timeoutHandle =
       timers.setTimeout(timeout)(
-        p.tryFailure(new TimeoutException(timeoutErrorMessage(funcName, Some(timeout), None)))
+        p.tryFailure(new TimeoutException(timeoutErrorMessage(funcName, timeout, None)))
       )
     f.onComplete { result =>
       timers.clearTimeout(timeoutHandle)
@@ -115,16 +113,14 @@ object FuncCaller {
     p.future
   }
 
-  private def timeoutErrorMessage(funcName: String, timeout: Option[Int], pid: Option[String]) = {
-    val timeoutStr = timeout.map(t => s" after $t milliseconds").getOrElse("")
+  private def timeoutErrorMessage(funcName: String, timeoutMs: Long, pid: Option[String]) = {
     val pidStr = pid.map(s => " " + s).getOrElse("")
-    val explain = timeout.fold(" in milliseconds")(_ => "")
-    s"Function '$funcName' timed out$timeoutStr. Increase the timeout with '--timeout'$explain option or check if your code can hang while executing$pidStr."
+    s"Function '$funcName' timed out after $timeoutMs milliseconds. Increase the timeout with '--timeout' option or check if your code can hang while executing$pidStr."
   }
 
   private def handleFuncCallErrors(
     funcName: String,
-    timeout: Option[Int]
+    timeout: Long
   ): PartialFunction[Throwable, ValidatedNec[String, Unit]] = { t =>
     val message =
       t match {
