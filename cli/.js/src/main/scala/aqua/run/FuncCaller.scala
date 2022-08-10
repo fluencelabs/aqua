@@ -105,7 +105,7 @@ object FuncCaller {
     val p = Promise[T]()
     val timeoutHandle =
       timers.setTimeout(timeout.toMillis)(
-        p.tryFailure(new TimeoutException(timeoutErrorMessage(funcName, timeout.toMillis, None)))
+        p.tryFailure(new TimeoutException(timeoutErrorMessage(funcName, timeout, None)))
       )
     f.onComplete { result =>
       timers.clearTimeout(timeoutHandle)
