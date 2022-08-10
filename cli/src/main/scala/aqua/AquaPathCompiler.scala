@@ -1,7 +1,14 @@
 package aqua
 
 import aqua.backend.{Backend, Generated}
-import aqua.compiler.{AirValidator, AquaCompiled, AquaCompiler, AquaCompilerConf, AquaError, CompilerAPI}
+import aqua.compiler.{
+  AirValidator,
+  AquaCompiled,
+  AquaCompiler,
+  AquaCompilerConf,
+  AquaError,
+  CompilerAPI
+}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io.*
 import aqua.air.AirValidation
@@ -22,9 +29,10 @@ import cats.syntax.applicative.*
 import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.show.*
-import cats.{Applicative, Eval, Monad, Show, ~>}
+import cats.{~>, Applicative, Eval, Monad, Show}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
+import cats.data.Validated.validNec
 
 object AquaPathCompiler extends Logging {
 
@@ -41,23 +49,33 @@ object AquaPathCompiler extends Logging {
     imports: List[Path],
     targetPath: Option[Path],
     backend: Backend,
-    transformConfig: TransformConfig
+    transformConfig: TransformConfig,
+    disableAirValidation: Boolean
   ): F[ValidatedNec[String, Chain[String]]] = {
     import ErrorRendering.showError
     (for {
       prelude <- Prelude.init()
       sources = new AquaFileSources[F](srcPath, imports ++ prelude.importPaths)
+      validator =
+        if (disableAirValidation) {
+          new AirValidator[F] {
+            override def init(): F[Unit] = Applicative[F].pure(())
+            override def validate(airs: List[AirString]): F[ValidatedNec[String, Unit]] =
+              Applicative[F].pure(validNec(()))
+          }
+        } else {
+          new AirValidator[F] {
+            override def init(): F[Unit] = AirValidation.init[F]()
+            override def validate(
+              airs: List[AirString]
+            ): F[ValidatedNec[String, Unit]] = AirValidation.validate[F](airs)
+          }
+        }
       compiler <- CompilerAPI
         .compileTo[F, AquaFileError, FileModuleId, FileSpan.F, String](
           sources,
           SpanParser.parser,
-          new AirValidator[F] {
-            override def init(): F[Unit] = AirValidation.init[F]()
-
-            override def validate(
-              airs: List[AirString]
-            ): F[ValidatedNec[String, Unit]] = AirValidation.validate[F](airs)
-          },
+          validator,
           new Backend.Transform:
             override def transform(ex: AquaContext): AquaRes =
               Transform.contextRes(ex, transformConfig)
