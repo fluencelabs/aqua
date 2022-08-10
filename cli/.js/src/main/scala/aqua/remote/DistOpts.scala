@@ -3,7 +3,7 @@ package aqua.remote
 import aqua.ArgOpts.jsonFromFileOpt
 import aqua.builder.ArgumentGetter
 import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.run.GeneralRunOptions
+import aqua.run.GeneralOptions
 import aqua.types.{ArrayType, ScalarType, StructType}
 import aqua.*
 import aqua.json.JsonEncoder
@@ -60,7 +60,7 @@ object DistOpts extends Logging {
     SubCommandBuilder.valid(
       "remove_service",
       "Remove service",
-      (GeneralRunOptions.commonGeneralOpt, srvIdOpt).mapN { (common, srvId) =>
+      (GeneralOptions.opt, srvIdOpt).mapN { (common, srvId) =>
         RunInfo(
           common,
           CliFunc(RemoveFuncName, LiteralRaw.quote(srvId) :: Nil),
@@ -73,7 +73,7 @@ object DistOpts extends Logging {
     SubCommandBuilder.valid(
       "create_service",
       "Deploy service from existing blueprint",
-      (GeneralRunOptions.commonGeneralOpt, blueprintIdOpt).mapN { (common, blueprintId) =>
+      (GeneralOptions.opt, blueprintIdOpt).mapN { (common, blueprintId) =>
         RunInfo(
           common,
           CliFunc(CreateServiceFuncName, LiteralRaw.quote(blueprintId) :: Nil),
@@ -86,7 +86,7 @@ object DistOpts extends Logging {
     SubCommandBuilder.valid(
       "add_blueprint",
       "Add blueprint to a peer",
-      (GeneralRunOptions.commonGeneralOpt, blueprintNameOpt, dependencyOpt).mapN {
+      (GeneralOptions.opt, blueprintNameOpt, dependencyOpt).mapN {
         (common, blueprintName, dependencies) =>
           val depsWithHash = dependencies.map { d =>
             if (d.startsWith("hash:"))
@@ -129,7 +129,7 @@ object DistOpts extends Logging {
       "deploy_service",
       "Deploy service from WASM modules",
       (
-        GeneralRunOptions.commonGeneralOptWithSecretKeyCustomTimeout(60000),
+        GeneralOptions.optWithSecretKeyCustomTimeout(60000),
         configFromFileOpt[F],
         srvNameOpt
       ).mapN { (common, configFromFileF, srvName) =>

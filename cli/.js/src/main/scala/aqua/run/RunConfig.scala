@@ -27,7 +27,7 @@ case class Flags(
   noRelay: Boolean
 )
 
-case class GeneralRunOptions(
+case class GeneralOptions(
   timeout: Duration,
   logLevel: LogLevels,
   multiaddr: String,
@@ -37,7 +37,7 @@ case class GeneralRunOptions(
   constants: List[ConstantRaw]
 )
 
-object GeneralRunOptions {
+object GeneralOptions {
 
   val multiaddrOpt: Opts[String] =
     Opts
@@ -88,7 +88,7 @@ object GeneralRunOptions {
     withSecret: Boolean,
     withConstants: Boolean,
     defaultTimeout: Duration = Duration(7000, TimeUnit.MILLISECONDS)
-  ): Opts[GeneralRunOptions] =
+  ): Opts[GeneralOptions] =
     (
       timeoutOpt.withDefault(defaultTimeout),
       logLevelOpt,
@@ -98,17 +98,17 @@ object GeneralRunOptions {
       if (withSecret) { secretKeyOpt.map(Some.apply) }
       else { AppOpts.wrapWithOption(secretKeyOpt) },
       if (withConstants) AppOpts.constantOpts else Nil.pure[Opts]
-    ).mapN(GeneralRunOptions.apply)
+    ).mapN(GeneralOptions.apply)
 
-  val commonGeneralOpt: Opts[GeneralRunOptions] = commonOpt(false, false, false)
-  val commonGeneralRunOpt: Opts[GeneralRunOptions] = commonOpt(true, false, true)
-  val commonGeneralOptWithSecretKey: Opts[GeneralRunOptions] = commonOpt(false, true, false)
-  def commonGeneralOptWithSecretKeyCustomTimeout(timeoutMs: Int): Opts[GeneralRunOptions] = commonOpt(false, true, false, Duration(timeoutMs, TimeUnit.MILLISECONDS))
+  val opt: Opts[GeneralOptions] = commonOpt(false, false, false)
+  val runOpt: Opts[GeneralOptions] = commonOpt(true, false, true)
+  val optWithSecretKey: Opts[GeneralOptions] = commonOpt(false, true, false)
+  def optWithSecretKeyCustomTimeout(timeoutMs: Int): Opts[GeneralOptions] = commonOpt(false, true, false, Duration(timeoutMs, TimeUnit.MILLISECONDS))
 }
 
 // `run` command configuration
 case class RunConfig(
-  common: GeneralRunOptions,
+  common: GeneralOptions,
   // services that will pass arguments to air
   argumentGetters: Map[String, VarJson],
   // builtin services for aqua run, for example: Console, FileSystem, etc
