@@ -117,6 +117,7 @@ class Runner(
     }
 
     FuncCaller.funcCall[F](
+      func.name,
       air,
       definitions,
       config,
