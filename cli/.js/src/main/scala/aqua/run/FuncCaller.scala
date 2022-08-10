@@ -16,9 +16,10 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.show.*
 
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.scalajs.js
-import scala.scalajs.js.{timers, JSON, JavaScriptException}
+import scala.scalajs.js.{JSON, JavaScriptException, timers}
 
 object FuncCaller {
 
@@ -87,10 +88,10 @@ object FuncCaller {
             _ <- callFuture
             finisherFuture = finisherService.promise.future
             // use a timeout in finisher if we have an async function and it hangs on node's side
-            finisher = setTimeout(name, finisherFuture, config.common.timeout.toMillis)
+            finisher = setTimeout(name, finisherFuture, config.common.timeout)
             _ <- finisher
           } yield validNec(()))
-            .recover(handleFuncCallErrors(name, config.common.timeout.toMillis))
+            .recover(handleFuncCallErrors(name, config.common.timeout))
             .pure[F]
         }
       }
@@ -98,13 +99,13 @@ object FuncCaller {
     }
   }
 
-  private def setTimeout[T](funcName: String, f: Future[T], timeout: Long)(implicit
+  private def setTimeout[T](funcName: String, f: Future[T], timeout: Duration)(implicit
     ec: ExecutionContext
   ): Future[T] = {
     val p = Promise[T]()
     val timeoutHandle =
-      timers.setTimeout(timeout)(
-        p.tryFailure(new TimeoutException(timeoutErrorMessage(funcName, timeout, None)))
+      timers.setTimeout(timeout.toMillis)(
+        p.tryFailure(new TimeoutException(timeoutErrorMessage(funcName, timeout.toMillis, None)))
       )
     f.onComplete { result =>
       timers.clearTimeout(timeoutHandle)
@@ -113,14 +114,14 @@ object FuncCaller {
     p.future
   }
 
-  private def timeoutErrorMessage(funcName: String, timeoutMs: Long, pid: Option[String]) = {
+  private def timeoutErrorMessage(funcName: String, timeout: Duration, pid: Option[String]) = {
     val pidStr = pid.map(s => " " + s).getOrElse("")
-    s"Function '$funcName' timed out after $timeoutMs milliseconds. Increase the timeout with '--timeout' option or check if your code can hang while executing$pidStr."
+    s"Function '$funcName' timed out after ${timeout.toMillis} milliseconds. Increase the timeout with '--timeout' option or check if your code can hang while executing$pidStr."
   }
 
   private def handleFuncCallErrors(
     funcName: String,
-    timeout: Long
+    timeout: Duration
   ): PartialFunction[Throwable, ValidatedNec[String, Unit]] = { t =>
     val message =
       t match {
