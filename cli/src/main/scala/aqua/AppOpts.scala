@@ -62,7 +62,7 @@ object AppOpts {
 
   def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Option[Path]]]] =
     Opts
-      .option[String]("output", "Path to the output directory. Will be created if it doesn't exists", "o")
+      .option[String]("output", "Path to the output directory. Will be created if it doesn't exists", "o", "path")
       .map(s => Option(s))
       .withDefault(None)
       .map(_.map(checkOutput[F]).getOrElse(Validated.validNec[String, Option[Path]](None).pure[F]))
