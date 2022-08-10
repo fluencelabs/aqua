@@ -98,7 +98,7 @@ object FuncCaller {
   ): Future[T] = {
     val p = Promise[T]()
     val timeoutHandle =
-      timers.setTimeout(timeout)(p.tryFailure(new TimeoutException(TimeoutErrorMessage)))
+      timers.setTimeout(timeout)(p.tryFailure(new TimeoutException(timeoutErrorMessage(None))))
     f.onComplete { result =>
       timers.clearTimeout(timeoutHandle)
       p.tryComplete(result)
@@ -106,21 +106,21 @@ object FuncCaller {
     p.future
   }
 
-  val TimeoutErrorMessage =
-    "Function execution failed by timeout. You can increase the timeout with '--timeout' option in milliseconds or check if your code can hang while executing."
+  def timeoutErrorMessage(pid: Option[String]) =
+    s"Function execution failed by timeout. You can increase the timeout with '--timeout' option in milliseconds or check if your code can hang while executing ${pid.getOrElse("")}."
 
   private def handleFuncCallErrors: PartialFunction[Throwable, ValidatedNec[String, Unit]] = { t =>
     val message =
       t match {
         case te: TimeoutException => te.getMessage
+        case t if t.getMessage.contains("Request timed out after") =>
+          val msg = t.getMessage
+          timeoutErrorMessage(Some(msg.substring(msg.indexOf("particle id") - 1, msg.length)))
         case tjs: JavaScriptException =>
           val msg = tjs.exception.asInstanceOf[js.Dynamic].selectDynamic("message")
           if (scalajs.js.isUndefined(msg)) JSON.stringify(tjs.exception.asInstanceOf[js.Any])
           else msg.toString
-        case _ =>
-          if (t.getMessage.contains("Request timed out after")) {
-            TimeoutErrorMessage
-          } else JSON.stringify(t.toString)
+        case _ => t.toString
       }
 
     invalidNec(message)
