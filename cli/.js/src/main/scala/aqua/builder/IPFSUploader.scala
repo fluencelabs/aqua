@@ -11,6 +11,8 @@ import scala.scalajs.js
 
 object IPFSUploader extends Logging {
 
+  private val UploadFile = "uploadFile"
+
   private def uploadFunc(funcName: String): AquaFunction = new AquaFunction {
     override def fnName: String = funcName
 
@@ -46,8 +48,8 @@ object IPFSUploader extends Logging {
     )
   }
 
-  def apply(serviceId: String, fnName: String): Service = {
-    val funcs = NonEmptyList.one(uploadFunc(fnName))
+  def apply(serviceId: String): Service = {
+    val funcs = NonEmptyList.one(uploadFunc(UploadFile))
     Service(serviceId, funcs)
   }
 }

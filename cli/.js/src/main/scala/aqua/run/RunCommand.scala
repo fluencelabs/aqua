@@ -94,7 +94,7 @@ object RunCommand extends Logging {
   }
 
   private val builtinServices =
-    aqua.builder.Console() :: aqua.builder.IPFSUploader("ipfs", "uploadFile") :: Nil
+    aqua.builder.Console() :: aqua.builder.IPFSUploader("ipfs") :: aqua.builder.DeployHelper() :: Nil
 
   /**
    * Executes a function with the specified settings
