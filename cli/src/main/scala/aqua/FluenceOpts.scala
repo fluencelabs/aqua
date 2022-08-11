@@ -25,7 +25,7 @@ object LogLevels {
       .map(validNel)
       .getOrElse(
         invalidNel(
-          s"Unknown log-level '$s'. Please use one of these: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'"
+          s"Invalid log-level $s. Must be: '<log-level>' or 'compiler=<log-level>,fluencejs=<log-level>,aquavm=<log-level>', where <log-level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'"
         )
       )
   }
@@ -127,7 +127,7 @@ object FluenceOpts {
       .withDefault(false)
 
   val logLevelOpt: Opts[LogLevels] =
-    Opts.option[String]("log-level", help = "Set log level").mapValidated {
+    Opts.option[String]("log-level", help = "Set log level. Format: '<log-level>' or 'compiler=<log-level>,fluencejs=<log-level>,aquavm=<log-level>', where <log-level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'").mapValidated {
       str =>
         LogLevels.fromString(str)
     }.withDefault(LogLevels())
