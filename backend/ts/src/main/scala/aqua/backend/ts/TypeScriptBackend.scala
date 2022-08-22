@@ -9,5 +9,9 @@ object TypeScriptBackend extends Backend {
   val ext = ".ts"
 
   override def generate(res: AquaRes): Seq[Generated] =
-    if (res.isEmpty) Nil else Generated(ext, OutputFile(res).generate(TypeScriptTypes, false, false)) :: Nil
+    if (res.isEmpty) Nil
+    else {
+      val (airs, script) = OutputFile(res).generate(TypeScriptTypes, false, false)
+      Generated(ext, script, airs) :: Nil
+    }
 }

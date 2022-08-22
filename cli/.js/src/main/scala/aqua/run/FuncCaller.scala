@@ -19,7 +19,8 @@ import cats.syntax.show.*
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.scalajs.js
-import scala.scalajs.js.{JSON, JavaScriptException, timers}
+import scala.scalajs.js.JSConverters.*
+import scala.scalajs.js.{timers, JSON, JavaScriptException}
 
 object FuncCaller {
 
@@ -57,12 +58,14 @@ object FuncCaller {
             )
             _ <- Fluence
               .start(
-                PeerConfig(
-                  config.common.multiaddr,
-                  config.common.timeout.toMillis.toInt : js.UndefOr[Int],
-                  keyPair,
-                  Debug(printParticleId = config.common.flags.verbose, marineLogLevel = logLevel)
-                )
+                Some(
+                  PeerConfig(
+                    config.common.multiaddr,
+                    config.common.timeout.toMillis.toInt : js.UndefOr[Int],
+                    keyPair,
+                    Debug(printParticleId = config.common.flags.verbose, marineLogLevel = logLevel)
+                  )
+                ).orUndefined
               )
               .toFuture
             _ =
@@ -90,6 +93,7 @@ object FuncCaller {
             // use a timeout in finisher if we have an async function and it hangs on node's side
             finisher = setTimeout(name, finisherFuture, config.common.timeout)
             _ <- finisher
+            _ <- Fluence.stop().toFuture
           } yield validNec(()))
             .recover(handleFuncCallErrors(name, config.common.timeout))
             .pure[F]

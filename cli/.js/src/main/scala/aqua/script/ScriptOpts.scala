@@ -105,10 +105,6 @@ object ScriptOpts extends Logging {
     Opts
       .option[String]("script-id", "Script id to remove", "c")
 
-  private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncArrow] =
-    contexts
-      .collectFirstSome(_.allFuncs.get(funcName))
-
   def generateAir(callable: FuncArrow, transformConfig: TransformConfig): String = {
     val funcRes = Transform.funcRes(callable, transformConfig).value
     AirGen(funcRes.body).generate.show

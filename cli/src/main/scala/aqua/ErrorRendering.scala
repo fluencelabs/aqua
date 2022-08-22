@@ -65,6 +65,8 @@ object ErrorRendering {
       }
     case SourcesErr(err) =>
       Console.RED + err.showForConsole + Console.RESET
+    case AirValidationError(errors) =>
+      Console.RED + errors.toChain.toList.mkString("\n") + Console.RESET
     case ResolveImportsErr(_, token, err) =>
       val span = token.unit._1
       showForConsole("Cannot resolve imports", span, err.showForConsole :: Nil)

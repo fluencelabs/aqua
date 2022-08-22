@@ -21,7 +21,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
 
     val bc = TransformConfig()
     AquaPathCompiler
-      .compileFilesTo[IO](src, List.empty, Option(targetTs), TypeScriptBackend, bc)
+      .compileFilesTo[IO](src, List.empty, Option(targetTs), TypeScriptBackend, bc, false)
       .unsafeRunSync()
       .leftMap { err =>
         println(err)
@@ -33,7 +33,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
     Files[IO].deleteIfExists(targetTsFile).unsafeRunSync()
 
     AquaPathCompiler
-      .compileFilesTo[IO](src, List.empty, Option(targetJs), JavaScriptBackend(false), bc)
+      .compileFilesTo[IO](src, List.empty, Option(targetJs), JavaScriptBackend(false), bc, false)
       .unsafeRunSync()
       .leftMap { err =>
         println(err)
@@ -45,7 +45,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
     Files[IO].deleteIfExists(targetJsFile).unsafeRunSync()
 
     AquaPathCompiler
-      .compileFilesTo[IO](src, List.empty, Option(targetAir), AirBackend, bc)
+      .compileFilesTo[IO](src, List.empty, Option(targetAir), AirBackend, bc, false)
       .unsafeRunSync()
       .leftMap { err =>
         println(err)
