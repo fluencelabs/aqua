@@ -17,7 +17,7 @@ val scribeV = "3.7.1"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.7.4",
+  baseAquaVersion := "0.7.5",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(

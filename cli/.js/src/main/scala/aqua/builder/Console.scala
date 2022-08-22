@@ -5,6 +5,7 @@ import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.types.ScalarType
 import cats.data.NonEmptyList
+import scribe.Logging
 
 import scala.scalajs.js
 import scala.scalajs.js.JSON
@@ -12,15 +13,15 @@ import scala.scalajs.js.JSON
 private case class Console(serviceId: String, functions: NonEmptyList[AquaFunction])
     extends Service(serviceId, functions)
 
-object Console {
+object Console extends Logging {
 
   private def printFunction(funcName: String) = new AquaFunction {
     override def fnName: String = funcName
 
     def handler: ServiceHandler = { varArgs =>
       js.typeOf(varArgs(0)) match {
-        case "string" | "number" | "boolean" => OutputPrinter.print(varArgs(0).toString)
-        case _ => OutputPrinter.print(JSON.stringify(varArgs(0), space = 2))
+        case "string" | "number" | "boolean" => logger.info(varArgs(0).toString)
+        case _ => logger.info(JSON.stringify(varArgs(0), space = 2))
       }
       js.Promise.resolve(Service.emptyObject)
     }

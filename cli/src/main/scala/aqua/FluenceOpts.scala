@@ -25,13 +25,13 @@ object LogLevels {
       .map(validNel)
       .getOrElse(
         invalidNel(
-          s"Unknown log-level '$s'. Please use one of these: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'"
+          s"Invalid log-level '$s'. ${FluenceOpts.logHelpMessage}"
         )
       )
   }
 
   lazy val error =
-    "Invalid log-level format. Must be: '<log-level>' or 'compiler=<log-level>,fluencejs=<log-level>,aquavm=<log-level>', where <log-level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'"
+    s"Invalid log-level format. ${FluenceOpts.logHelpMessage}"
 
   private def fromStrings(
     name: String,
@@ -126,8 +126,10 @@ object FluenceOpts {
       .map(_ => true)
       .withDefault(false)
 
+  val logHelpMessage = "Format: '<level> OR <segment>=<level>[,]', where <level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'. <segment> can be 'compiler', 'fluencejs' or 'aquavm'"
+
   val logLevelOpt: Opts[LogLevels] =
-    Opts.option[String]("log-level", help = "Set log level").mapValidated {
+    Opts.option[String]("log-level", help = s"Set log level. $logHelpMessage").mapValidated {
       str =>
         LogLevels.fromString(str)
     }.withDefault(LogLevels())

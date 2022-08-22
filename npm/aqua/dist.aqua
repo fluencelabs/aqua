@@ -18,6 +18,16 @@ data ModuleConf:
   mem_pages_count: ?u32
   max_heap_size: ?string
 
+service OpC("op"):
+  array_length(arr: []ModuleConf) -> u32
+
+data DeployResult:
+  blueprint_id: string
+  service_id: string
+
+service DeployHelper("deploy_helper"):
+  create_result(bid: string, sid: string) -> DeployResult
+
 data ServiceConf:
   modules: []ModuleConf
 
@@ -33,51 +43,38 @@ func flattenS(input: []string) -> ?[]string:
   res <<- input
   <- res
 
-func deploy(serviceName: string, serviceConf: ServiceConf) -> string:
+func deploy(serviceName: string, serviceConf: ServiceConf) -> DeployResult:
 
   on ON_PEER:
     multiaddr <- Ipfs.get_external_api_multiaddr()
 
---  Console.print("BEFORE THAT")
   mod_hashes: *string
-  for m <- serviceConf.modules:
+  for m <- serviceConf.modules par:
       -- TODO check for cache
-      Console.print("Going to upload a module...")
+      Console.print(Op.concat_strings("Going to upload a module: ", m.name))
       uploadRes <- LocalIpfs.uploadFile(m.path, multiaddr)
       cid = uploadRes.cid
---      Console.print(cid)
+      Console.print(Op.concat_strings(Op.concat_strings("Module '", m.name), "' was uploaded"))
+
       on ON_PEER:
         hostRes <- Ipfs.get(cid)
 
---      Console.print(hostRes.path)
---      on ON_PEER:
-
         conf <- Dist.make_module_config(m.name, m.mem_pages_count, m.max_heap_size, m.logger_enabled, m.preopened_files, m.envs, m.mapped_dirs, m.mounted_binaries, m.logging_mask)
-
---      Console.print("Created config")
-
---      on ON_PEER:
 
         mod <- Dist.add_module_from_vault(hostRes.path, conf)
 
         mod_hashes <- Op.concat_strings("hash:", mod)
 
+  join mod_hashes[OpC.array_length(serviceConf.modules) - 1]
+
   Console.print("Now time to make a blueprint...")
   on ON_PEER:
-
         blueprint <- Dist.make_blueprint(serviceName, mod_hashes)
-
-  --Console.print("Got blueprint")
-  --on ON_PEER:
-        blueprint_id <- Dist.add_blueprint(blueprint)
-
+        blueprint_id <- Dist.add_blueprint(blueprint)  
         service_id <- Srv.create(blueprint_id)
 
-  Console.print("Blueprint id:")
-  Console.print(blueprint_id)
-  Console.print("And your service id is:")
-
-  <- service_id
+  res <- DeployHelper.create_result(blueprint_id, service_id)
+  <- res
 
 func remove(service_id: string):
   on ON_PEER:
