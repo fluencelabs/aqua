@@ -53,10 +53,6 @@ object RunCommand extends Logging {
     }.getOrElse(KeyPair.randomEd25519().toFuture)
   }
 
-  private def findFunction(contexts: Chain[AquaContext], funcName: String): Option[FuncArrow] =
-    contexts
-      .collectFirstSome(_.allFuncs.get(funcName))
-
   /**
    * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
    * @param func

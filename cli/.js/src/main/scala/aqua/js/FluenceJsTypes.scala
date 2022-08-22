@@ -217,6 +217,15 @@ case class PeerConfig(
   debug: js.UndefOr[Debug]
 )
 
+trait AstStatus extends js.Object {
+  def success: Boolean
+  def data: js.Any
+}
+
+trait Internals extends js.Object {
+  def parseAst(air: String): js.Promise[AstStatus]
+}
+
 /**
  * This class implements the Fluence protocol for javascript-based environments.
  * It provides all the necessary features to communicate with Fluence network
@@ -226,6 +235,7 @@ case class PeerConfig(
 class FluencePeer extends js.Object {
   def getStatus(): PeerStatus = js.native
   def stop(): js.Promise[Unit] = js.native
+  def internals: Internals = js.native
 }
 
 object V3 {
@@ -258,7 +268,7 @@ object FluenceUtils {
 @js.native
 @JSImport("@fluencelabs/fluence", "Fluence")
 object Fluence extends js.Object {
-  def start(config: PeerConfig): js.Promise[js.Any] = js.native
+  def start(config: js.UndefOrOps[PeerConfig]): js.Promise[js.Any] = js.native
   def stop(): js.Promise[js.Any] = js.native
   def getPeer(): FluencePeer = js.native
   def getStatus(): PeerStatus = js.native

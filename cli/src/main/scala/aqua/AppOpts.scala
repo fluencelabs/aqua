@@ -122,6 +122,12 @@ object AppOpts {
       }
       .withDefault(List.empty)
 
+  val noAirValidation: Opts[Boolean] =
+    Opts
+      .flag("no-air-validation", "Don't parse and validate AIR after compilation")
+      .map(_ => false)
+      .withDefault(true)
+
   val compileToAir: Opts[Boolean] =
     Opts
       .flag("air", "Generate .air file instead of .ts", "a")

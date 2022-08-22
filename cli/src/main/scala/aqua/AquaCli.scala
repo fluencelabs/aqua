@@ -98,7 +98,8 @@ object AquaCli extends IOApp with Logging {
       FluenceOpts.logLevelOpt,
       constantOpts,
       dryOpt,
-      scriptOpt
+      scriptOpt,
+      noAirValidation
     ).mapN {
       case (
             inputF,
@@ -113,7 +114,8 @@ object AquaCli extends IOApp with Logging {
             logLevel,
             constants,
             isDryRun,
-            isScheduled
+            isScheduled,
+            disableAirValidation
           ) =>
         val toAir = toAirOp || isScheduled
         val noXor = noXorOp || isScheduled
@@ -156,7 +158,8 @@ object AquaCli extends IOApp with Logging {
                         imports,
                         resultOutput,
                         targetToBackend(target),
-                        bc
+                        bc,
+                        disableAirValidation
                       )
                   }
                 }
