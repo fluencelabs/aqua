@@ -2,7 +2,7 @@ package aqua
 
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.run.{GeneralRunOptions, JsonService, RunCommand, RunOpts}
+import aqua.run.{GeneralOptions, JsonService, RunCommand, RunOpts}
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.{NonEmptyList, Validated, ValidatedNec}
 import cats.effect.ExitCode
@@ -28,7 +28,7 @@ case class RelativePath(path: Path) extends AquaPath
 
 // All info to run any aqua function
 case class RunInfo(
-  common: GeneralRunOptions,
+  common: GeneralOptions,
   func: CliFunc,
   input: AquaPath,
   imports: List[Path] = Nil,
@@ -102,7 +102,7 @@ object SubCommandBuilder {
       .valid(
         name,
         header,
-        GeneralRunOptions.commonGeneralOpt.map { c =>
+        GeneralOptions.opt.map { c =>
           RunInfo(c, CliFunc(funcName), path)
         }
       )

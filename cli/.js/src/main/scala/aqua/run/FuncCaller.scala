@@ -16,6 +16,7 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.show.*
 
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
@@ -29,6 +30,7 @@ object FuncCaller {
    * @return
    */
   def funcCall[F[_]: Async](
+    name: String,
     air: String,
     functionDef: FunctionDef,
     config: RunConfig,
@@ -59,7 +61,7 @@ object FuncCaller {
                 Some(
                   PeerConfig(
                     config.common.multiaddr,
-                    config.common.timeout.getOrElse(scalajs.js.undefined),
+                    config.common.timeout.toMillis.toInt : js.UndefOr[Int],
                     keyPair,
                     Debug(printParticleId = config.common.flags.verbose, marineLogLevel = logLevel)
                   )
@@ -70,7 +72,7 @@ object FuncCaller {
               if (config.common.flags.showConfig) {
                 val configJson = KeyPairOp.toDynamicJSON(keyPair)
                 configJson.updateDynamic("relay")(config.common.multiaddr)
-                config.common.timeout.foreach(t => configJson.updateDynamic("timeout")(t))
+                configJson.updateDynamic("timeout")(config.common.timeout.toMillis)
                 configJson.updateDynamic("log-level")(config.common.logLevel.compiler.name)
                 OutputPrinter.print(JSON.stringify(configJson, null, 4))
               }
@@ -89,24 +91,26 @@ object FuncCaller {
             _ <- callFuture
             finisherFuture = finisherService.promise.future
             // use a timeout in finisher if we have an async function and it hangs on node's side
-            finisher = config.common.timeout.map { t =>
-              setTimeout(finisherFuture, t)
-            }.getOrElse(finisherFuture)
+            finisher = setTimeout(name, finisherFuture, config.common.timeout)
             _ <- finisher
             _ <- Fluence.stop().toFuture
-          } yield validNec(())).recover(handleFuncCallErrors).pure[F]
+          } yield validNec(()))
+            .recover(handleFuncCallErrors(name, config.common.timeout))
+            .pure[F]
         }
       }
 
     }
   }
 
-  private def setTimeout[T](f: Future[T], timeout: Int)(implicit
+  private def setTimeout[T](funcName: String, f: Future[T], timeout: Duration)(implicit
     ec: ExecutionContext
   ): Future[T] = {
     val p = Promise[T]()
     val timeoutHandle =
-      timers.setTimeout(timeout)(p.tryFailure(new TimeoutException(TimeoutErrorMessage)))
+      timers.setTimeout(timeout.toMillis)(
+        p.tryFailure(new TimeoutException(timeoutErrorMessage(funcName, timeout, None)))
+      )
     f.onComplete { result =>
       timers.clearTimeout(timeoutHandle)
       p.tryComplete(result)
@@ -114,21 +118,30 @@ object FuncCaller {
     p.future
   }
 
-  val TimeoutErrorMessage =
-    "Function execution failed by timeout. You can increase the timeout with '--timeout' option in milliseconds or check if your code can hang while executing."
+  private def timeoutErrorMessage(funcName: String, timeout: Duration, pid: Option[String]) = {
+    val pidStr = pid.map(s => " " + s).getOrElse("")
+    s"Function '$funcName' timed out after ${timeout.toMillis} milliseconds. Increase the timeout with '--timeout' option or check if your code can hang while executing$pidStr."
+  }
 
-  private def handleFuncCallErrors: PartialFunction[Throwable, ValidatedNec[String, Unit]] = { t =>
+  private def handleFuncCallErrors(
+    funcName: String,
+    timeout: Duration
+  ): PartialFunction[Throwable, ValidatedNec[String, Unit]] = { t =>
     val message =
       t match {
         case te: TimeoutException => te.getMessage
+        case t if t.getMessage.contains("Request timed out after") =>
+          val msg = t.getMessage
+          timeoutErrorMessage(
+            funcName,
+            timeout,
+            Some(msg.substring(msg.indexOf("particle id") - 1, msg.length))
+          )
         case tjs: JavaScriptException =>
           val msg = tjs.exception.asInstanceOf[js.Dynamic].selectDynamic("message")
           if (scalajs.js.isUndefined(msg)) JSON.stringify(tjs.exception.asInstanceOf[js.Any])
           else msg.toString
-        case _ =>
-          if (t.getMessage.contains("Request timed out after")) {
-            TimeoutErrorMessage
-          } else JSON.stringify(t.toString)
+        case _ => t.toString
       }
 
     invalidNec(message)
