@@ -21,7 +21,7 @@ import aqua.builder.IPFSUploader
 import aqua.ipfs.js.IpfsApi
 import aqua.model.LiteralModel
 import aqua.raw.value.LiteralRaw
-import aqua.run.{GeneralRunOptions, RunCommand, RunConfig, RunOpts}
+import aqua.run.{GeneralOptions, RunCommand, RunConfig, RunOpts}
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -46,7 +46,7 @@ object IpfsOpts extends Logging {
 
   def pathOpt: Opts[String] =
     Opts
-      .option[String]("path", "Path to a file", "p")
+      .option[String]("path", "Path to a file", "p", "path")
 
   def ipfsOpt[F[_]: Async]: Command[F[ValidatedNec[String, Unit]]] =
     CommandBuilder("ipfs", "Work with IPFS on a peer", NonEmptyList.one(upload[F])).command
@@ -56,7 +56,7 @@ object IpfsOpts extends Logging {
     SubCommandBuilder.valid(
       "upload",
       "Upload a file to IPFS",
-      (GeneralRunOptions.commonGeneralOpt, pathOpt).mapN { (common, path) =>
+      (GeneralOptions.opt, pathOpt).mapN { (common, path) =>
         RunInfo(
           common,
           CliFunc(UploadFuncName, LiteralRaw.quote(path) :: Nil),

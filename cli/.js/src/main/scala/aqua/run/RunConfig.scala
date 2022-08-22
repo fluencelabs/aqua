@@ -14,6 +14,8 @@ import cats.syntax.apply.*
 import com.monovore.decline.Opts
 import scribe.Level
 
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.Duration
 import scala.scalajs.js
 import scala.util.Try
 
@@ -25,8 +27,8 @@ case class Flags(
   noRelay: Boolean
 )
 
-case class GeneralRunOptions(
-  timeout: Option[Int],
+case class GeneralOptions(
+  timeout: Duration,
   logLevel: LogLevels,
   multiaddr: String,
   on: Option[String],
@@ -35,7 +37,7 @@ case class GeneralRunOptions(
   constants: List[ConstantRaw]
 )
 
-object GeneralRunOptions {
+object GeneralOptions {
 
   val multiaddrOpt: Opts[String] =
     Opts
@@ -84,10 +86,11 @@ object GeneralRunOptions {
   def commonOpt(
     isRun: Boolean,
     withSecret: Boolean,
-    withConstants: Boolean
-  ): Opts[GeneralRunOptions] =
+    withConstants: Boolean,
+    defaultTimeout: Duration = Duration(7000, TimeUnit.MILLISECONDS)
+  ): Opts[GeneralOptions] =
     (
-      AppOpts.wrapWithOption(timeoutOpt),
+      timeoutOpt.withDefault(defaultTimeout),
       logLevelOpt,
       multiaddrOpt,
       onOpt,
@@ -95,16 +98,17 @@ object GeneralRunOptions {
       if (withSecret) { secretKeyOpt.map(Some.apply) }
       else { AppOpts.wrapWithOption(secretKeyOpt) },
       if (withConstants) AppOpts.constantOpts else Nil.pure[Opts]
-    ).mapN(GeneralRunOptions.apply)
+    ).mapN(GeneralOptions.apply)
 
-  val commonGeneralOpt: Opts[GeneralRunOptions] = commonOpt(false, false, false)
-  val commonGeneralRunOpt: Opts[GeneralRunOptions] = commonOpt(true, false, true)
-  val commonGeneralOptWithSecretKey: Opts[GeneralRunOptions] = commonOpt(false, true, false)
+  val opt: Opts[GeneralOptions] = commonOpt(false, false, false)
+  val runOpt: Opts[GeneralOptions] = commonOpt(true, false, true)
+  val optWithSecretKey: Opts[GeneralOptions] = commonOpt(false, true, false)
+  def optWithSecretKeyCustomTimeout(timeoutMs: Int): Opts[GeneralOptions] = commonOpt(false, true, false, Duration(timeoutMs, TimeUnit.MILLISECONDS))
 }
 
 // `run` command configuration
 case class RunConfig(
-  common: GeneralRunOptions,
+  common: GeneralOptions,
   // services that will pass arguments to air
   argumentGetters: Map[String, VarJson],
   // builtin services for aqua run, for example: Console, FileSystem, etc

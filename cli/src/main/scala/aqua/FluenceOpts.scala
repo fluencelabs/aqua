@@ -7,6 +7,8 @@ import cats.syntax.traverse.*
 import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 
 import java.util.Base64
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.Duration
 
 case class LogLevels(
   compiler: Level = Level.Error,
@@ -80,9 +82,10 @@ object LogLevels {
 
 object FluenceOpts {
 
-  val timeoutOpt: Opts[Int] =
+  val timeoutOpt: Opts[Duration] =
     Opts
       .option[Int]("timeout", "Request timeout in milliseconds", "t")
+      .map(i => Duration(i, TimeUnit.MILLISECONDS))
 
   val onOpt: Opts[Option[String]] =
     AppOpts.wrapWithOption(
