@@ -56,18 +56,15 @@ object FuncCaller {
             logLevel: js.UndefOr[aqua.js.LogLevel] = LogLevelTransformer.logLevelToAvm(
               config.common.logLevel.aquavm
             )
-            _ <- Fluence
-              .start(
-                Some(
-                  PeerConfig(
-                    config.common.multiaddr,
-                    config.common.timeout.toMillis.toInt : js.UndefOr[Int],
-                    keyPair,
-                    Debug(printParticleId = config.common.flags.verbose, marineLogLevel = logLevel)
-                  )
-                ).orUndefined
+            peerConfig = Some(
+              PeerConfig(
+                config.common.multiaddr,
+                config.common.timeout.toMillis.toInt : js.UndefOr[Int],
+                keyPair,
+                Debug(printParticleId = config.common.flags.verbose, marineLogLevel = logLevel)
               )
-              .toFuture
+            ).orUndefined
+            _ <- Fluence.start(peerConfig).toFuture
             _ =
               if (config.common.flags.showConfig) {
                 val configJson = KeyPairOp.toDynamicJSON(keyPair)

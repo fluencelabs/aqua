@@ -44,7 +44,7 @@ object ArgOpts {
     Opts
       .option[String]("func", "Function to call with args", "f", "funcName(args)")
       .mapValidated { str =>
-        CallArrowToken.callArrow.parseAll(str) match {
+        CallArrowToken.callArrow.parseAll(str.trim) match {
           case Right(exprSpan) =>
             val expr = exprSpan.mapK(spanToId)
 
