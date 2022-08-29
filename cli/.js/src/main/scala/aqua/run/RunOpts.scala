@@ -51,16 +51,20 @@ object RunOpts extends Logging {
   }
 
   def runOptsCompose[F[_]: Files: Concurrent]
-    : Opts[F[ValidatedNec[String, (Path, List[Path], FuncWithData, Option[NonEmptyList[JsonService]], List[String])]]] = {
+    : Opts[F[ValidatedNec[String, (AquaPath, List[Path], FuncWithData, Option[NonEmptyList[JsonService]], List[String])]]] = {
     (
-      AppOpts.inputOpts[F],
+      AppOpts.wrapWithOption(AppOpts.inputOpts[F]),
       AppOpts.importOpts[F],
       ArgOpts.funcWithArgsOpt[F],
       AppOpts.wrapWithOption(JsonService.jsonServiceOpt),
       AppOpts.wrapWithOption(Plugin.opt)
     ).mapN { case (inputF, importF, funcWithArgsF, jsonServiceOp, pluginsOp) =>
       for {
-        inputV <- inputF
+        inputV: ValidatedNec[String, AquaPath] <-
+          inputF.map(_.map(_.map(p => RelativePath(p)))).getOrElse {
+            println("No input specified. Default 'builtin.aqua' will be used.")
+            validNec[String, AquaPath](PackagePath.builtin).pure[F]
+          }
         importV <- importF
         funcWithArgsV <- funcWithArgsF
         jsonServiceV <- jsonServiceOp
@@ -93,7 +97,7 @@ object RunOpts extends Logging {
               RunInfo(
                 common,
                 funcWithArgs.func,
-                RelativePath(input),
+                input,
                 imps,
                 funcWithArgs.getters,
                 Nil,

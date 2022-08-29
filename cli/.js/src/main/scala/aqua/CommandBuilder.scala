@@ -26,6 +26,11 @@ case class PackagePath(path: String) extends AquaPath
 // Path for absolute or call path relative files
 case class RelativePath(path: Path) extends AquaPath
 
+object PackagePath {
+  // path to a builtin file in aqua package
+  val builtin: PackagePath = PackagePath("../aqua-lib/builtin.aqua")
+}
+
 // All info to run any aqua function
 case class RunInfo(
   common: GeneralOptions,
