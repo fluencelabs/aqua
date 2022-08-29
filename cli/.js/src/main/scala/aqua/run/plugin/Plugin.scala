@@ -113,7 +113,7 @@ object Plugin {
 
   def opt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, List[String]]]] = {
     Opts
-      .options[String]("plugin", "[experimental] Path to a directory with JS plugins", "p", "path")
+      .options[String]("plugin", "[experimental] Path to a directory with JS plugins", "", "path")
       .map { strs =>
         strs.toList.map(s => pathToMjsFilesList(s)).sequence.map(_.sequence.map(_.flatten))
       }

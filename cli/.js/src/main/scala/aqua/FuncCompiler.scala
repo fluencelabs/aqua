@@ -42,12 +42,17 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
     func: CliFunc,
     services: List[JsonService]
   ): ValidatedNec[String, (FuncArrow, List[Service])] =
-    contexts
-      .collectFirstSome(c => c.allFuncs.get(func.name))
+    func.ability
+      .fold(
+        contexts
+          .collectFirstSome(_.allFuncs.get(func.name))
+      )(ab =>
+        contexts.collectFirstSome(_.abilities.get(ab).flatMap(_.allFuncs.get(func.name)))
+      )
       .map(validNec)
       .getOrElse(
         Validated.invalidNec[String, FuncArrow](
-          s"There is no function '${func.name}' or it is not exported. Check the spelling or see https://doc.fluence.dev/aqua-book/language/header#export"
+          s"There is no function '${func.ability.map(_ + ".").getOrElse("")}${func.name}' or it is not exported. Check the spelling or see https://doc.fluence.dev/aqua-book/language/header#export"
         )
       )
       .andThen { func =>
@@ -62,7 +67,8 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
   ): ValidatedNec[String, List[Service]] = {
     services
       .map(js =>
-        contexts.collectFirstSome(_.services.get(js.name))
+        contexts
+          .collectFirstSome(_.services.get(js.name))
           .map(sm => (js, sm))
           .map(validNec)
           .getOrElse(
@@ -90,7 +96,10 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
                               case h :: _ =>
                                 Conversions.ts2aqua(jf.result, TypeDefinitionJs(TypeDefinition(h)))
                               case Nil =>
-                                Conversions.ts2aqua(jf.result, TypeDefinitionJs(TypeDefinition(NilType)))
+                                Conversions.ts2aqua(
+                                  jf.result,
+                                  TypeDefinitionJs(TypeDefinition(NilType))
+                                )
                             }
 
                             js.Promise.resolve(converted)

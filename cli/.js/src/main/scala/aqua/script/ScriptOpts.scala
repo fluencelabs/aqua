@@ -219,7 +219,7 @@ object ScriptOpts extends Logging {
   def remove[F[_]: Async]: SubCommandBuilder[F] =
     SubCommandBuilder.valid[F](
       "remove",
-      "Remove a service from a remote peer",
+      "Remove a script from a remote peer",
       (
         commonScriptOpts,
         scriptIdOpt
