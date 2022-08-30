@@ -33,7 +33,6 @@ import scala.scalajs.js
 
 // Function compiler
 class FuncCompiler[F[_]: Files: AquaIO: Async](
-  // use builtins if none
   input: Option[AquaPath],
   imports: List[Path],
   transformConfig: TransformConfig,
