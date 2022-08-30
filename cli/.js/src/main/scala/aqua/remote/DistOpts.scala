@@ -64,7 +64,7 @@ object DistOpts extends Logging {
         RunInfo(
           common,
           CliFunc(RemoveFuncName, LiteralRaw.quote(srvId) :: Nil),
-          PackagePath(DistAqua)
+          Option(PackagePath(DistAqua))
         )
       }
     )
@@ -77,7 +77,7 @@ object DistOpts extends Logging {
         RunInfo(
           common,
           CliFunc(CreateServiceFuncName, LiteralRaw.quote(blueprintId) :: Nil),
-          PackagePath(DistAqua)
+          Option(PackagePath(DistAqua))
         )
       }
     )
@@ -106,7 +106,7 @@ object DistOpts extends Logging {
           RunInfo(
             common,
             CliFunc(AddBlueprintFuncName, addBlueprintRequestVar :: Nil),
-            PackagePath(DistAqua),
+            Option(PackagePath(DistAqua)),
             Nil,
             Map(
               addBlueprintRequestVar.name -> VarJson(
@@ -151,7 +151,7 @@ object DistOpts extends Logging {
                       RunInfo(
                         common,
                         CliFunc(DeployFuncName, args),
-                        PackagePath(DistAqua),
+                        Option(PackagePath(DistAqua)),
                         Nil,
                         // hack: air cannot use undefined fields, fill undefined arrays with nils
                         Map(srvName -> VarJson(srvArg, c))

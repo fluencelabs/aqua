@@ -120,7 +120,7 @@ object ScriptOpts extends Logging {
     val tConfig = TransformConfig(relayVarName = None, wrapWithXor = false)
     val funcCompiler =
       new FuncCompiler[F](
-        input,
+        Option(RelativePath(input)),
         imports,
         tConfig,
         withRunImport = true
@@ -173,7 +173,7 @@ object ScriptOpts extends Logging {
                   RunInfo(
                     common,
                     CliFunc(AddFuncName, scriptVar :: intervalArg :: Nil),
-                    PackagePath(ScriptAqua),
+                    Option(PackagePath(ScriptAqua)),
                     Nil,
                     Map(
                       "script" -> VarJson(
@@ -227,7 +227,7 @@ object ScriptOpts extends Logging {
         RunInfo(
           common,
           CliFunc(RemoveFuncName, LiteralRaw.quote(scriptId) :: Nil),
-          PackagePath(ScriptAqua)
+          Option(PackagePath(ScriptAqua))
         )
       }
     )

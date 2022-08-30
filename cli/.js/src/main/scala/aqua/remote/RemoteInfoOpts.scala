@@ -77,7 +77,7 @@ object RemoteInfoOpts {
                 ListInterfacesFuncName,
                 Nil
               ),
-              PackagePath(NetworkAqua)
+              Option(PackagePath(NetworkAqua))
             )
           else
             RunInfo(
@@ -86,7 +86,7 @@ object RemoteInfoOpts {
                 ListInterfacesByPeerFuncName,
                 peer.map(LiteralRaw.quote).getOrElse(ValueRaw.InitPeerId) :: Nil
               ),
-              PackagePath(NetworkAqua)
+              Option(PackagePath(NetworkAqua))
             )
       }
     )
@@ -99,7 +99,7 @@ object RemoteInfoOpts {
         RunInfo(
           common,
           CliFunc(GetInterfaceFuncName, LiteralRaw.quote(serviceId) :: Nil),
-          PackagePath(NetworkAqua)
+          Option(PackagePath(NetworkAqua))
         )
       }
     )
@@ -112,7 +112,7 @@ object RemoteInfoOpts {
         RunInfo(
           common,
           CliFunc(GetModuleInterfaceFuncName, LiteralRaw.quote(serviceId) :: Nil),
-          PackagePath(NetworkAqua)
+          Option(PackagePath(NetworkAqua))
         )
       }
     )
