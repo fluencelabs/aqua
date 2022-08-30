@@ -60,7 +60,7 @@ object IpfsOpts extends Logging {
         RunInfo(
           common,
           CliFunc(UploadFuncName, LiteralRaw.quote(path) :: Nil),
-          PackagePath(IpfsAqua)
+          Option(PackagePath(IpfsAqua))
         )
       }
     )

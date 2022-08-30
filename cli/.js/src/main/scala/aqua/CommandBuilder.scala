@@ -20,17 +20,30 @@ import scalajs.js
 
 import scala.concurrent.ExecutionContext
 
-sealed trait AquaPath
+sealed trait AquaPath {
+  def getPath[F[_]: Async](): F[Path]
+}
+
 // Path for package relative files
-case class PackagePath(path: String) extends AquaPath
+case class PackagePath(path: String) extends AquaPath {
+  def getPath[F[_]: Async](): F[Path] = PlatformOpts.getPackagePath(path)
+}
+
 // Path for absolute or call path relative files
-case class RelativePath(path: Path) extends AquaPath
+case class RelativePath(path: Path) extends AquaPath {
+  def getPath[F[_]: Async](): F[Path] = path.pure[F]
+}
+
+object PackagePath {
+  // path to a builtin file in aqua package
+  val builtin: PackagePath = PackagePath("../aqua-lib/builtin.aqua")
+}
 
 // All info to run any aqua function
 case class RunInfo(
   common: GeneralOptions,
   func: CliFunc,
-  input: AquaPath,
+  input: Option[AquaPath],
   imports: List[Path] = Nil,
   argumentGetters: Map[String, VarJson] = Map.empty,
   services: List[Service] = Nil,
@@ -50,15 +63,9 @@ class SubCommandBuilder[F[_]: Async](
       riF.flatMap {
         case Validated.Valid(ri) =>
           LogFormatter.initLogger(Some(ri.common.logLevel.compiler))
-          (ri.input match {
-            case PackagePath(p) => PlatformOpts.getPackagePath(p)
-            case RelativePath(p) => p.pure[F]
-          }).flatMap { path =>
-            RunCommand.execRun(
-              ri,
-              path
-            )
-          }
+          RunCommand.execRun(
+            ri
+          )
         case i @ Validated.Invalid(_) =>
           i.pure[F]
       }
@@ -103,7 +110,7 @@ object SubCommandBuilder {
         name,
         header,
         GeneralOptions.opt.map { c =>
-          RunInfo(c, CliFunc(funcName), path)
+          RunInfo(c, CliFunc(funcName), Some(path))
         }
       )
 
