@@ -3,7 +3,7 @@ package aqua.backend.air
 import aqua.model.*
 import aqua.raw.ops.Call
 import aqua.res.*
-import aqua.types.StreamType
+import aqua.types.{ArrayType, CanonStreamType, StreamType}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -29,6 +29,7 @@ object AirGen extends Logging {
     case VarModel(name, t, lambda) =>
       val n = (t match {
         case _: StreamType => "$" + name
+        case _: CanonStreamType => "#" + name
         case _ => name
       }).replace('.', '_')
       if (lambda.isEmpty) DataView.Variable(n)
@@ -43,6 +44,7 @@ object AirGen extends Logging {
 
   def exportToString(exportTo: CallModel.Export): String = (exportTo match {
     case CallModel.Export(name, _: StreamType) => "$" + name
+    case CallModel.Export(name, a: CanonStreamType) => "#" + name
     case CallModel.Export(name, _) => name
   }).replace('.', '_')
 
@@ -101,6 +103,11 @@ object AirGen extends Logging {
           ApGen(valueToData(operand), exportToString(exportTo))
         )
 
+      case CanonRes(operand, peerId, exportTo) =>
+        Eval.later(
+          CanonGen(valueToData(operand), valueToData(peerId), exportToString(exportTo))
+        )
+
       case NullRes =>
         Eval.now(NullGen)
 
@@ -136,6 +143,12 @@ case class ApGen(operand: DataView, result: String) extends AirGen {
 
   override def generate: Air =
     Air.Ap(operand, result)
+}
+
+case class CanonGen(operand: DataView, peerId: DataView, result: String) extends AirGen {
+
+  override def generate: Air =
+    Air.Canon(operand, peerId, result)
 }
 
 case class MatchMismatchGen(

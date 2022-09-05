@@ -12,7 +12,7 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, ArrowType, ProductType, StreamType, Type}
+import aqua.types.{ArrayType, ArrowType, ProductType, StreamType, Type, CanonStreamType}
 import cats.data.{Chain, NonEmptyList}
 import cats.free.{Cofree, Free}
 import cats.syntax.applicative.*
@@ -91,11 +91,11 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
                   SeqTag.wrap(
                     b :: CanonicalizeTag(
                       VarRaw(n, st),
-                      Call.Export(s"$n-fix", ArrayType(st.element))
+                      Call.Export(s"$n-fix", CanonStreamType(st.element))
                     ).leaf :: Nil: _*
                   )
                 ) -> rs.map { vn =>
-                  vn.shadow(n, VarRaw(s"$n-fix", ArrayType(st.element)))
+                  vn.shadow(n, VarRaw(s"$n-fix", CanonStreamType(st.element)))
                 }
               else RestrictionTag(n, isStream = true).wrap(b) -> rs
           }

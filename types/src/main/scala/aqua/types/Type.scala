@@ -186,6 +186,15 @@ sealed trait BoxType extends DataType {
   def withElement(t: Type): BoxType
 }
 
+case class CanonStreamType(element: Type) extends BoxType {
+
+  override def isStream: Boolean = false
+
+  override def toString: String = "#" + element
+
+  override def withElement(t: Type): BoxType = copy(element = t)
+}
+
 case class ArrayType(element: Type) extends BoxType {
 
   override def isStream: Boolean = false
