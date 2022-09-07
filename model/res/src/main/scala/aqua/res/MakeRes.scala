@@ -71,7 +71,7 @@ object MakeRes {
           orInit(currentPeerId),
           CallModel.Export(tmpName, CanonStreamType(st))
         ).leaf,
-        ApRes(VarModel(tmpName, ArrayType(st), lambda), exportTo).leaf
+        ApRes(VarModel(tmpName, CanonStreamType(st), lambda), exportTo).leaf
       )
     // )
     case PushToStreamModel(operand, exportTo) =>

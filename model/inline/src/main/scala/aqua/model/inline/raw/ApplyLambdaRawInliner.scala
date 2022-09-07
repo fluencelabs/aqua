@@ -1,18 +1,11 @@
 package aqua.model.inline.raw
 
-import aqua.model.{IntoFieldModel, IntoIndexModel, LambdaModel, LiteralModel, ValueModel, VarModel}
+import aqua.model.{CallModel, CanonicalizeModel, IntoFieldModel, IntoIndexModel, LambdaModel, LiteralModel, ValueModel, VarModel, SeqModel}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{
-  ApplyLambdaRaw,
-  CallArrowRaw,
-  IntoFieldRaw,
-  IntoIndexRaw,
-  LambdaRaw,
-  LiteralRaw,
-  VarRaw
-}
+import aqua.raw.value.{ApplyLambdaRaw, CallArrowRaw, IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, VarRaw}
+import aqua.types.{CanonStreamType, StreamType}
 import cats.data.{Chain, State}
 import cats.syntax.monoid.*
 import cats.instances.list.*
@@ -72,12 +65,27 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
       .flatMap { case (lambdaModel, map) =>
         unfold(raw, lambdaAllowed).flatMap {
           case (v: VarModel, prefix) =>
-            val vm = v.copy(lambda = v.lambda ++ lambdaModel).resolveWith(exports)
-            if (lambdaAllowed) State.pure(vm -> (prefix |+| map))
+            val (genV, genInline) = v.`type` match {
+              // canonicalize stream
+              case st: StreamType =>
+                val canonName = v.name + "_canon"
+                val canonType = CanonStreamType(st.element)
+                val vCanon = VarModel(canonName, canonType, lambda = v.lambda ++ lambdaModel)
+                val tree = SeqModel.wrap(
+                  CanonicalizeModel(v, CallModel.Export(canonName, canonType)).leaf,
+                )
+                vCanon -> Inline.tree(tree)
+              case _ =>
+                val vm = v.copy(lambda = v.lambda ++ lambdaModel).resolveWith(exports)
+                vm -> Inline.empty
+            }
+
+            if (lambdaAllowed) State.pure(genV -> (prefix |+| map |+| genInline))
             else
-              removeLambda(vm).map { case (vmm, mpp) =>
-                vmm -> (prefix |+| mpp |+| map)
+              removeLambda(genV).map { case (vmm, mpp) =>
+                vmm -> (prefix |+| mpp |+| map |+| genInline)
               }
+
           case (v, prefix) =>
             // What does it mean actually? I've no ides
             State.pure((v, prefix |+| map))

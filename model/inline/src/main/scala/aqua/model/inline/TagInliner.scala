@@ -5,11 +5,11 @@ import aqua.model.*
 import aqua.model.inline.raw.CallArrowRawInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.BoxType
+import aqua.types.{BoxType, StreamType}
 import cats.syntax.traverse.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
-import scribe.{log, Logging}
+import scribe.{Logging, log}
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.

@@ -2,8 +2,9 @@ package aqua.model.transform.topology
 
 import aqua.model.transform.cursor.ChainZipper
 import aqua.model.*
-import aqua.res.{FoldRes, MakeRes, NextRes, ResolvedOp, SeqRes}
-import aqua.types.{BoxType, ScalarType}
+import aqua.raw.value.{LiteralRaw, ValueRaw}
+import aqua.res.{ApRes, CanonRes, FoldRes, MakeRes, NextRes, ResolvedOp, SeqRes}
+import aqua.types.{ArrayType, BoxType, CanonStreamType, ScalarType, StreamType}
 import cats.Eval
 import cats.data.Chain.{==:, nil}
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
