@@ -23,7 +23,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
       case Some(serviceId) =>
         logger.trace(Console.BLUE + s"call service id $serviceId" + Console.RESET)
         for {
-          cd <- callToModel(call)
+          cd <- callToModel(call, false)
           sd <- valueToModel(serviceId)
         } yield cd._1.exportTo.map(_.asVar.resolveWith(exports)) -> Inline(
           Map.empty,
@@ -44,7 +44,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
           arrows.get(funcName) match {
             case Some(fn) =>
               logger.trace(Console.YELLOW + s"Call arrow $funcName" + Console.RESET)
-              callToModel(call).flatMap { case (cm, p) =>
+              callToModel(call, false).flatMap { case (cm, p) =>
                 ArrowInliner
                   .callArrowRet(fn, cm)
                   .map { case (body, vars) =>
@@ -67,7 +67,8 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
 
   override def apply[S: Mangler: Exports: Arrows](
     raw: CallArrowRaw,
-    lambdaAllowed: Boolean
+    lambdaAllowed: Boolean,
+    canonicalizeStream: Boolean
   ): State[S, (ValueModel, Inline)] =
     Mangler[S]
       .findAndForbidName(raw.name)

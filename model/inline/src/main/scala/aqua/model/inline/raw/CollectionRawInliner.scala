@@ -12,7 +12,8 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
 
   override def apply[S: Mangler: Exports: Arrows](
     raw: CollectionRaw,
-    lambdaAllowed: Boolean
+    lambdaAllowed: Boolean,
+    canonicalizeStream: Boolean
   ): State[S, (ValueModel, Inline)] =
     for {
       streamName <- Mangler[S].findAndForbidName(

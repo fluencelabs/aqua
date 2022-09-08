@@ -5,8 +5,9 @@ import aqua.model.*
 import aqua.model.inline.raw.CallArrowRawInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{BoxType, StreamType}
+import aqua.types.{ArrayType, BoxType, CanonStreamType, StreamType}
 import cats.syntax.traverse.*
+import cats.syntax.applicative.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
 import scribe.{Logging, log}
@@ -48,9 +49,25 @@ object TagInliner extends Logging {
         for {
           peerIdDe <- valueToModel(peerId)
           viaDe <- valueListToModel(via.toList)
+          viaDeFlattened <- viaDe.traverse { case (vm, tree) =>
+            vm match {
+              // flatten CanonStream, because in via we are using `fold`
+              // and `fold` cannot use CanonStream with lambda
+              case VarModel(n, CanonStreamType(_), l) if l.nonEmpty =>
+                val apName = n + "_flatten"
+                Mangler[S].findAndForbidName(apName).map {s =>
+                  val apV = VarModel(s, vm.`type`)
+                  val apOp = FlattenModel(vm, s).leaf
+                  val op = Option(tree.fold(apOp)(t => SeqModel.wrap(t, apOp)))
+                  (apV, op)
+                }
+
+              case _ => State.pure((vm, tree))
+            }
+          }
           (pid, pif) = peerIdDe
-          viaD = Chain.fromSeq(viaDe.map(_._1))
-          viaF = viaDe.flatMap(_._2)
+          viaD = Chain.fromSeq(viaDeFlattened.map(_._1))
+          viaF = viaDeFlattened.flatMap(_._2)
 
         } yield Some(OnModel(pid, viaD)) -> parDesugarPrefix(viaF.prependedAll(pif))
 
@@ -67,8 +84,8 @@ object TagInliner extends Logging {
         for {
           vp <- valueToModel(iterable)
           (v, p) = vp
-          exps <- Exports[S].exports
           n <- Mangler[S].findAndForbidName(item)
+          _ = println("iterable model: " + vp)
           elementType = iterable.`type` match {
             case b: BoxType => b.element
             // TODO: it is unexpected, should we handle this?
@@ -96,7 +113,7 @@ object TagInliner extends Logging {
       case JoinTag(operands) =>
         logger.trace("join " + operands)
         operands
-          .traverse(valueToModel)
+          .traverse(o => valueToModel(o, false))
           .map(nel => {
             logger.trace("join after " + nel.map(_._1))
             Some(JoinModel(nel.map(_._1))) -> parDesugarPrefix(nel.toList.flatMap(_._2))

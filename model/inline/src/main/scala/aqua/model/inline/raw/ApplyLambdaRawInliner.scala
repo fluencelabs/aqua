@@ -1,11 +1,11 @@
 package aqua.model.inline.raw
 
-import aqua.model.{CallModel, CanonicalizeModel, IntoFieldModel, IntoIndexModel, LambdaModel, LiteralModel, ValueModel, VarModel, SeqModel}
+import aqua.model.{CallModel, CanonicalizeModel, IntoFieldModel, IntoIndexModel, LambdaModel, FlattenModel, LiteralModel, ValueModel, VarModel, SeqModel}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{ApplyLambdaRaw, CallArrowRaw, IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, VarRaw}
-import aqua.types.{CanonStreamType, StreamType}
+import aqua.types.{CanonStreamType, StreamType, ArrayType}
 import cats.data.{Chain, State}
 import cats.syntax.monoid.*
 import cats.instances.list.*
@@ -28,7 +28,8 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
     }
 
   private[inline] def unfoldLambda[S: Mangler: Exports: Arrows](
-    l: LambdaRaw
+    l: LambdaRaw,
+    canonicalizeStream: Boolean
   ): State[S, (LambdaModel, Inline)] = // TODO lambda for collection
     l match {
       case IntoFieldRaw(field, t) => State.pure(IntoFieldModel(field, t) -> Inline.empty)
@@ -38,7 +39,7 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
         } yield IntoIndexModel(nn, t) -> Inline.preload(nn -> vm)
 
       case IntoIndexRaw(vr: (VarRaw | CallArrowRaw), t) =>
-        unfold(vr, lambdaAllowed = false).map {
+        unfold(vr, lambdaAllowed = false, canonicalizeStream = canonicalizeStream).map {
           case (VarModel(name, _, _), inline) => IntoIndexModel(name, t) -> inline
           case (LiteralModel(v, _), inline) => IntoIndexModel(v, t) -> inline
         }
@@ -49,7 +50,8 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
 
   override def apply[S: Mangler: Exports: Arrows](
     alr: ApplyLambdaRaw,
-    lambdaAllowed: Boolean
+    lambdaAllowed: Boolean,
+    canonicalizeStream: Boolean
   ): State[S, (ValueModel, Inline)] = Exports[S].exports.flatMap { exports =>
     val (raw, lambda) = alr.unwind
     lambda
@@ -57,17 +59,17 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
         State.pure(Chain.empty[LambdaModel] -> Inline.empty)
       ) { case (lcm, l) =>
         lcm.flatMap { case (lc, m) =>
-          unfoldLambda(l).map { case (lm, mm) =>
+          unfoldLambda(l, canonicalizeStream).map { case (lm, mm) =>
             (lc :+ lm, m |+| mm)
           }
         }
       }
       .flatMap { case (lambdaModel, map) =>
-        unfold(raw, lambdaAllowed).flatMap {
+        unfold(raw, lambdaAllowed, canonicalizeStream).flatMap {
           case (v: VarModel, prefix) =>
             val (genV, genInline) = v.`type` match {
               // canonicalize stream
-              case st: StreamType =>
+              case st: StreamType if canonicalizeStream =>
                 val canonName = v.name + "_canon"
                 val canonType = CanonStreamType(st.element)
                 val vCanon = VarModel(canonName, canonType, lambda = v.lambda ++ lambdaModel)
