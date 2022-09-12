@@ -1,44 +1,53 @@
-module Argh
+data Record:
+    relay_id: []string
+    peer_id: string
 
-export test4
+-- func bugLng79(arr: *Record) -> u32:
+--     stream: *Record
+--     for r <- arr:
+--       stream <<- r
+--     someone = stream[0]
+--     on someone.peer_id via someone.relay_id:
+--         a = 1 + 1
+--     <- a
 
-func test() -> string:
-    status: *string
-    status <<- "ok"
-    stat = status!
+service Op1("op"):
+  array_length(array: []string) -> u32
+  noop()
+--
+-- func bugLNG63_3() -> string, u32, []u32:
+--    status: *string
+--    status <<- "ok"
+--    stat = status!
+--    num: *u32
+--    num <<- 2
+--    res = [Op1.array_length(status), num!]
+--    <- status!, Op1.array_length(status), [Op1.array_length(status), 3, num!]
 
-  <- stat
+-- func emptySugar() -> *string:
+--   strEmptyStream: *string
+--   <- strEmptyStream
 
+service Ser("ser"):
+    getRecord: -> Record
 
-func test3() -> string, []string:
-    status: *string
-    status <<- "ok"
-    stat = status!
+-- func bugLng79(log: string -> ()) -> u32:
+--     stream: *Record
+--     stream <- Ser.getRecord()
+--     someone = stream[0]
+--     on someone.peer_id via someone.relay_id:
+--         a = 1 + 1
+--     <- a
 
-  <- stat, status
-
-service Se("se"):
-  consume: []string -> bool
-
-func test2() -> string, []string, []string:
-    status: *string
-    status <<- "ok"
-    stat = status!
-
-  <- stat, status, [status!, status!]
-
-func test4() -> string, bool, []bool:
-   status: *string
-   status <<- "ok"
-   stat = status!
-   <- status!, Se.consume(status), [Se.consume(status), true]
-
-func returnCanStream() -> string:
-    status: *string
-    status <<- "ok"
-    stat = status!
-    <- stat
-
-func bugLNG63() -> string:
-    res <- returnCanStream()
-    <- res
+func emptySugar() -> []u32, []string, []string, *string, ?u32, []u32, ?string:
+  numOp = ?[]
+  strArr = []
+  strStream = *[]
+  strEmptyStream: *string
+  for i <- ?[]:
+    strEmptyStream <<- "some"
+  for i <- *[]:
+    strEmptyStream <<- "some"
+  for i <- []:
+    strEmptyStream <<- "some"
+  <- numOp, strArr, strStream, strEmptyStream, [], ?[], *[]

@@ -134,7 +134,7 @@ case class CallServiceModel(serviceId: ValueModel, funcName: String, call: CallM
   override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
 }
 
-case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export)
+case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export, withOp: Boolean = false)
     extends ForceExecModel {
 
   override def exportsVarNames: Set[String] = Set(exportTo.name)

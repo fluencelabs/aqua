@@ -77,12 +77,15 @@ object MakeRes {
     case PushToStreamModel(operand, exportTo) =>
       ApRes(operand, exportTo).leaf
 
-    case CanonicalizeModel(operand, exportTo) =>
-      CanonRes(
-        operand,
-        orInit(currentPeerId),
-        exportTo
-      ).leaf
+    case CanonicalizeModel(operand, exportTo, withOp) =>
+      if (withOp)
+        canon(orInit(currentPeerId), operand, exportTo)
+      else
+        CanonRes(
+          operand,
+          orInit(currentPeerId),
+          exportTo
+        ).leaf
 
     case FlattenModel(operand, assignTo) =>
       ApRes(operand, CallModel.Export(assignTo, operand.`type`)).leaf

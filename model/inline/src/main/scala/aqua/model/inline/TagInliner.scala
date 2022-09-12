@@ -55,7 +55,7 @@ object TagInliner extends Logging {
               // and `fold` cannot use CanonStream with lambda
               case VarModel(n, CanonStreamType(_), l) if l.nonEmpty =>
                 val apName = n + "_flatten"
-                Mangler[S].findAndForbidName(apName).map {s =>
+                Mangler[S].findAndForbidName(apName).map { s =>
                   val apV = VarModel(s, vm.`type`)
                   val apOp = FlattenModel(vm, s).leaf
                   val op = Option(tree.fold(apOp)(t => SeqModel.wrap(t, apOp)))
@@ -85,7 +85,6 @@ object TagInliner extends Logging {
           vp <- valueToModel(iterable)
           (v, p) = vp
           n <- Mangler[S].findAndForbidName(item)
-          _ = println("iterable model: " + vp)
           elementType = iterable.`type` match {
             case b: BoxType => b.element
             // TODO: it is unexpected, should we handle this?
@@ -126,7 +125,7 @@ object TagInliner extends Logging {
 
       case AssignmentTag(value, assignTo) =>
         for {
-          cd <- valueToModel(value)
+          cd <- valueToModel(value, false)
           _ <- Exports[S].resolved(assignTo, cd._1)
         } yield Some(SeqModel) -> cd._2
 
