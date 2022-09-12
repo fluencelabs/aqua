@@ -2,7 +2,7 @@ package aqua.parser.expr
 
 import aqua.parser.Expr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{DataTypeToken, Name}
+import aqua.parser.lexer.{DataTypeToken, Name, StreamTypeToken}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser
@@ -20,7 +20,11 @@ case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F])
 object FieldTypeExpr extends Expr.Leaf {
 
   override val p: Parser[FieldTypeExpr[Span.S]] =
-    ((Name.p <* ` : `) ~ DataTypeToken.`datatypedef`).map { case (name, t) =>
+    ((Name.p <* ` : `) ~ (Parser
+      .not(StreamTypeToken.`streamtypedef`)
+      .withContext(
+        "Data cannot have fields with streams."
+      ) *> DataTypeToken.`datatypedef`)).map { case (name, t) =>
       FieldTypeExpr(name, t)
     }
 }

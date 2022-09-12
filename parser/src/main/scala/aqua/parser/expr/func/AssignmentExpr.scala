@@ -3,7 +3,7 @@ package aqua.parser.expr.func
 import aqua.parser.Expr
 import aqua.parser.expr.func.AssignmentExpr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{Name, ValueToken}
+import aqua.parser.lexer.{Name, ValueToken, CollectionToken}
 import aqua.parser.lift.LiftParser
 import cats.parse.Parser as P
 import cats.{Comonad, ~>}
@@ -20,7 +20,14 @@ case class AssignmentExpr[F[_]](
 object AssignmentExpr extends Expr.Leaf {
 
   override val p: P[AssignmentExpr[Span.S]] =
-    ((Name.p <* ` = `).with1 ~ ValueToken.`value`).map { case (variable, value) =>
-      AssignmentExpr(variable, value)
+    ((Name.p <* ` = `).with1 ~ ValueToken.`value`).flatMap { case (variable, value) =>
+      value match {
+        case CollectionToken(_, values) =>
+          if (values.isEmpty)
+            P.failWith("Cannot assign an empty collection to a variable, because the type cannot be determined.")
+          else P.pure(AssignmentExpr(variable, value))
+        case _ =>
+          P.pure(AssignmentExpr(variable, value))
+      }
     }
 }
