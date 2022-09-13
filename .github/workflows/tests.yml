@@ -34,6 +34,6 @@ jobs:
 
   aqua-playground:
     needs: snapshot
-    uses: fluencelabs/aqua-playground/.github/workflows/tests.yml@aquavm-e2e
+    uses: fluencelabs/aqua-playground/.github/workflows/tests.yml@master
     with:
       aqua-version: ${{ needs.snapshot.outputs.aqua-version }}
