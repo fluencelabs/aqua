@@ -19,13 +19,6 @@ jobs:
     name: "Compile aqua"
     runs-on: ubuntu-latest
 
-    outputs:
-      aqua-version: "${{ steps.build.outputs.version }}"
-
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -126,3 +119,36 @@ jobs:
       - name: Publish to self-hosted npm repo
         working-directory: npm
         run: npm publish --tag snapshot --registry https://npm.fluence.dev
+
+  comment:
+    name: "Update comment"
+    runs-on: ubuntu-latest
+
+    needs:
+      - publish-snapshot
+
+    env:
+      AQUA_VERSION: ${{ needs.publish-snapshot.outputs.aqua-version }}
+
+    steps:
+      - name: Find comment
+        uses: peter-evans/find-comment@v1
+        id: comment
+        with:
+          issue-number: "${{ github.event.pull_request.number }}"
+          comment-author: github-actions[bot]
+          body-includes: "## Aqua version is"
+
+      - name: Update comment
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          comment-id: "${{ steps.comment.outputs.comment-id }}"
+          issue-number: "${{ github.event.pull_request.number }}"
+          edit-mode: replace
+          body: |
+            ## Aqua version is [${{ env.AQUA_VERSION }}](https://npm.fluence.dev/-/web/detail/@fluencelabs/aqua/v/${{ env.AQUA_VERSION }})
+            To install it run:
+            ```shell
+            npm login --registry https://npm.fluence.dev
+            npm i @fluencelabs/aqua@${{ env._VERSION }} --registry=https://npm.fluence.dev
+            ```
