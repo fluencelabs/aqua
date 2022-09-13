@@ -1,0 +1,128 @@
+name: Publish snapshot
+
+on:
+  workflow_call:
+    inputs:
+      fluence-js-version:
+        description: "@fluencelabs/fluencejs version"
+        type: string
+    outputs:
+      aqua-version:
+        description: "@fluencelabs/aqua version"
+        value: ${{ jobs.publish-snapshot.outputs.aqua-version }}
+
+env:
+  FORCE_COLOR: true
+
+jobs:
+  compile:
+    name: "Compile aqua"
+    runs-on: ubuntu-latest
+
+    outputs:
+      aqua-version: "${{ steps.build.outputs.version }}"
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          repository: fluencelabs/aqua
+
+      - name: Cache Scala
+        uses: coursier/cache-action@v6
+
+      - name: Setup Scala
+        uses: coursier/setup-action@v1
+
+      - name: Compile aqua
+        run: sbt "cliJS/fastOptJS"
+
+      - name: Upload compiled aqua
+        uses: actions/upload-artifact@v3
+        with:
+          name: aqua
+          path: cli/.js/target/scala-*/cli-fastopt.js
+
+  publish-snapshot:
+    name: "Publish aqua snapshot"
+    runs-on: ubuntu-latest
+
+    needs: compile
+
+    outputs:
+      aqua-version: "${{ steps.build.outputs.version }}"
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout aqua
+        uses: actions/checkout@v3
+        with:
+          repository: fluencejs/aqua
+
+      - name: Download compiled aqua
+        uses: actions/download-artifact@v3
+        with:
+          name: aqua
+          path: npm/
+
+      - run: mv cli-fastopt.js aqua.js
+        working-directory: npm
+
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2.4.2
+        with:
+          url: https://vault.fluence.dev
+          path: jwt/github
+          role: ci
+          method: jwt
+          jwtGithubAudience: "https://github.com/fluencelabs"
+          jwtTtl: 300
+          exportToken: false
+          secrets: |
+            kv/npm-registry/basicauth/ci token | NODE_AUTH_TOKEN
+
+      - name: Setup node with self-hosted npm registry
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+          registry-url: "https://npm.fluence.dev"
+          cache-dependency-path: "npm/package-lock.json"
+          cache: "npm"
+
+      - run: npm i
+        working-directory: npm
+
+      - run: npm run build
+        working-directory: npm
+
+      - name: Generate package version
+        id: version
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          echo "::set-output name=sha::$SHA"
+          echo "::set-output name=branch::${GITHUB_HEAD_REF//[^a-zA-Z0-9-]/-}"
+
+      - name: Set package version
+        id: build
+        env:
+          BRANCH: ${{ steps.version.outputs.branch }}
+          SHA: ${{ steps.version.outputs.sha }}
+          RUN: ${{ github.run_number }}
+          ATTEMPT: ${{ github.run_attempt }}
+        working-directory: npm
+        run: |
+          echo "::set-output name=version::$(\
+                npm version prerelease \
+                --no-git-tag-version \
+                --preid ${{ env.BRANCH }}-${{ env.SHA }}-${{ env.RUN }}-${{ env.ATTEMPT }})"
+
+      - name: Publish to self-hosted npm repo
+        working-directory: npm
+        run: npm publish --tag snapshot --registry https://npm.fluence.dev
