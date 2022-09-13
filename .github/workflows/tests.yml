@@ -1,7 +1,13 @@
 name: Run tests
 
 on:
-  pull_requests:
+  pull_request:
+    paths-ignode:
+      - "**.md"
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
 
 jobs:
   tests:
