@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       fluence-js-version:
-        description: "@fluencelabs/fluencejs version"
+        description: "@fluencejs/fluence version"
         type: string
     outputs:
       aqua-version:
@@ -86,6 +86,11 @@ jobs:
           registry-url: "https://npm.fluence.dev"
           cache-dependency-path: "npm/package-lock.json"
           cache: "npm"
+
+      - name: Set fluence-js version from branch
+        if: inputs.fluence-js-version != ''
+        working-directory: npm
+        run: npm i @fluencelabs/fluence@${{ inputs.fluence-js-version }}
 
       - run: npm i
         working-directory: npm
