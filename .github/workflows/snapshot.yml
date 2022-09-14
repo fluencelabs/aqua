@@ -123,18 +123,7 @@ jobs:
         working-directory: npm
         run: npm publish --tag snapshot --registry https://npm.fluence.dev
 
-  comment:
-    name: "Update comment"
-    runs-on: ubuntu-latest
-
-    needs:
-      - publish-snapshot
-
-    env:
-      AQUA_VERSION: ${{ needs.publish-snapshot.outputs.aqua-version }}
-
-    steps:
-      - name: Find comment
+      - name: Find comment in PR
         uses: peter-evans/find-comment@v1
         id: comment
         with:
@@ -142,8 +131,10 @@ jobs:
           comment-author: github-actions[bot]
           body-includes: "## Aqua version is"
 
-      - name: Update comment
+      - name: Update comment in PR
         uses: peter-evans/create-or-update-comment@v1
+        env:
+          AQUA_VERSION: ${{ steps.build.outputs.version }}
         with:
           comment-id: "${{ steps.comment.outputs.comment-id }}"
           issue-number: "${{ github.event.pull_request.number }}"
