@@ -50,6 +50,8 @@ jobs:
       aqua-version: "${{ steps.build.outputs.version }}"
 
     permissions:
+      contents: read
+      PullRequests: write
       id-token: write
 
     steps:
