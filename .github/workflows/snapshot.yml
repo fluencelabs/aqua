@@ -16,7 +16,7 @@ env:
 
 jobs:
   compile:
-    name: "Compile aqua"
+    name: "Compile"
     runs-on: ubuntu-latest
 
     steps:
@@ -41,7 +41,7 @@ jobs:
           path: cli/.js/target/scala-*/cli-fastopt.js
 
   publish-snapshot:
-    name: "Publish aqua snapshot"
+    name: "Publish snapshot"
     runs-on: ubuntu-latest
 
     needs: compile
