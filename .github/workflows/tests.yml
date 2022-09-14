@@ -30,6 +30,7 @@ jobs:
         run: sbt test
 
   snapshot:
+    name: "aqua"
     uses: ./.github/workflows/snapshot.yml
 
   aqua-playground:
