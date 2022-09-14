@@ -101,8 +101,8 @@ jobs:
       - name: Generate package version
         id: version
         run: |
-          SHA=$(git rev-parse --short HEAD)
-          echo "::set-output name=sha::$SHA"
+          SHA=${{ github.event.pull_request.head.sha }}
+          echo "::set-output name=sha::${SHA::7}"
           echo "::set-output name=branch::${GITHUB_HEAD_REF//[^a-zA-Z0-9-]/-}"
 
       - name: Set package version
