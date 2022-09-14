@@ -88,13 +88,13 @@ jobs:
           cache-dependency-path: "npm/package-lock.json"
           cache: "npm"
 
+      - run: npm i
+        working-directory: npm
+
       - name: Set fluence-js version from branch
         if: inputs.fluence-js-version != ''
         working-directory: npm
         run: npm i @fluencelabs/fluence@${{ inputs.fluence-js-version }}
-
-      - run: npm i
-        working-directory: npm
 
       - run: npm run build
         working-directory: npm
