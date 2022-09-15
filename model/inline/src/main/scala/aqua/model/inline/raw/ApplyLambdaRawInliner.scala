@@ -1,11 +1,37 @@
 package aqua.model.inline.raw
 
-import aqua.model.{CallModel, CanonicalizeModel, IntoFieldModel, IntoIndexModel, LambdaModel, FlattenModel, LiteralModel, ValueModel, VarModel, SeqModel}
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  CanonicalizeModel,
+  FlattenModel,
+  ForModel,
+  IntoFieldModel,
+  IntoIndexModel,
+  LambdaModel,
+  LiteralModel,
+  MatchMismatchModel,
+  NextModel,
+  PushToStreamModel,
+  RestrictionModel,
+  SeqModel,
+  ValueModel,
+  VarModel,
+  XorModel
+}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{ApplyLambdaRaw, CallArrowRaw, IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, VarRaw}
-import aqua.types.{CanonStreamType, StreamType, ArrayType}
+import aqua.raw.value.{
+  ApplyLambdaRaw,
+  CallArrowRaw,
+  IntoFieldRaw,
+  IntoIndexRaw,
+  LambdaRaw,
+  LiteralRaw,
+  VarRaw
+}
+import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
 import cats.data.{Chain, State}
 import cats.syntax.monoid.*
 import cats.instances.list.*
@@ -48,6 +74,23 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
         State.pure(IntoIndexModel(value, t) -> Inline.empty)
     }
 
+  private def getLength(v: ValueModel, result: VarModel) =
+    CallServiceModel(
+      LiteralModel("\"op\"", ScalarType.string),
+      "array_length",
+      CallModel(v :: Nil, CallModel.Export(result.name, result.`type`) :: Nil)
+    ).leaf
+
+  private def increment(v: ValueModel, result: VarModel) =
+    CallServiceModel(
+      LiteralModel("\"math\"", ScalarType.string),
+      "add",
+      CallModel(
+        v :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
+        CallModel.Export(result.name, result.`type`) :: Nil
+      )
+    ).leaf
+
   override def apply[S: Mangler: Exports: Arrows](
     alr: ApplyLambdaRaw,
     lambdaAllowed: Boolean,
@@ -67,16 +110,43 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
       .flatMap { case (lambdaModel, map) =>
         unfold(raw, lambdaAllowed, canonicalizeStream).flatMap {
           case (v: VarModel, prefix) =>
-            val (genV, genInline) = v.`type` match {
+            val (genV, genInline) = (v.`type`, lambdaModel.headOption) match {
               // canonicalize stream
-              case st: StreamType if canonicalizeStream =>
-                val canonName = v.name + "_canon"
-                val canonType = CanonStreamType(st.element)
-                val vCanon = VarModel(canonName, canonType, lambda = v.lambda ++ lambdaModel)
-                val tree = SeqModel.wrap(
-                  CanonicalizeModel(v, CallModel.Export(canonName, canonType)).leaf,
+              case (st: StreamType, Some(idx @ IntoIndexModel(_, _))) if canonicalizeStream =>
+                val varSTest = VarModel(v.name + "_test", st)
+                val iter = VarModel("s", st.element)
+
+                val iterCanon = VarModel(v.name + "_iter_canon", CanonStreamType(st.element))
+
+                // TODO: get unique name
+                val resultCanon = VarModel(v.name + "_result_canon", CanonStreamType(st.element))
+
+                val lengthVar = VarModel("s_length", ScalarType.i64)
+                val incrVar = VarModel("incr_idx", ScalarType.i64)
+
+                val tree = RestrictionModel(varSTest.name, true).wrap(
+                  ForModel(iter.name, v).wrap(
+                    increment(idx.idxToValueModel, incrVar),
+                    PushToStreamModel(iter, CallModel.Export(varSTest.name, varSTest.`type`)).leaf,
+                    CanonicalizeModel(
+                      varSTest,
+                      CallModel.Export(iterCanon.name, iterCanon.`type`)
+                    ).leaf,
+                    XorModel.wrap(
+                      SeqModel.wrap(
+                        getLength(iterCanon, lengthVar),
+                        MatchMismatchModel(lengthVar, incrVar, true).leaf
+                      ),
+                      NextModel(iter.name).leaf
+                    )
+                  ),
+                  CanonicalizeModel(
+                    varSTest,
+                    CallModel.Export(resultCanon.name, resultCanon.`type`)
+                  ).leaf
                 )
-                vCanon -> Inline.tree(tree)
+
+                resultCanon -> Inline.tree(tree)
               case _ =>
                 val vm = v.copy(lambda = v.lambda ++ lambdaModel).resolveWith(exports)
                 vm -> Inline.empty

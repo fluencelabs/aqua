@@ -110,12 +110,11 @@ object TagInliner extends Logging {
         }
 
       case JoinTag(operands) =>
-        logger.trace("join " + operands)
         operands
-          .traverse(o => valueToModel(o, false))
+          .traverse(o => valueToModel(o))
           .map(nel => {
             logger.trace("join after " + nel.map(_._1))
-            Some(JoinModel(nel.map(_._1))) -> parDesugarPrefix(nel.toList.flatMap(_._2))
+            None -> parDesugarPrefix(nel.toList.flatMap(_._2))
           })
 
       case CallArrowRawTag(exportTo, value: CallArrowRaw) =>
@@ -125,7 +124,7 @@ object TagInliner extends Logging {
 
       case AssignmentTag(value, assignTo) =>
         for {
-          cd <- valueToModel(value, false)
+          cd <- valueToModel(value)
           _ <- Exports[S].resolved(assignTo, cd._1)
         } yield Some(SeqModel) -> cd._2
 
