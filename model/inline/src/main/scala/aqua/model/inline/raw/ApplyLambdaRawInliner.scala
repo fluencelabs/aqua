@@ -119,7 +119,7 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
                 val iterCanon = VarModel(v.name + "_iter_canon", CanonStreamType(st.element))
 
                 // TODO: get unique name
-                val resultCanon = VarModel(v.name + "_result_canon", CanonStreamType(st.element))
+                val resultCanon = VarModel(v.name + "_result_canon", CanonStreamType(st.element), lambdaModel)
 
                 val lengthVar = VarModel("s_length", ScalarType.i64)
                 val incrVar = VarModel("incr_idx", ScalarType.i64)
@@ -142,7 +142,7 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
                   ),
                   CanonicalizeModel(
                     varSTest,
-                    CallModel.Export(resultCanon.name, resultCanon.`type`)
+                    CallModel.Export(resultCanon.name, CanonStreamType(st.element))
                   ).leaf
                 )
 
