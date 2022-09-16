@@ -33,6 +33,19 @@ object TagInliner extends Logging {
   private def none[S]: State[S, (Option[OpModel], Option[OpModel.Tree])] =
     State.pure(None -> None)
 
+  private def fixModel[S: Mangler: Arrows: Exports](vm: ValueModel, ops: Option[OpModel.Tree]): State[S, (ValueModel, Option[OpModel.Tree])] = {
+    vm match {
+      case VarModel(name, StreamType(el), l) =>
+        val canonName = name + "_canon"
+        Mangler[S].findAndForbidName(canonName).map { n =>
+          val canon = VarModel(n, CanonStreamType(el), l)
+          val canonModel = CanonicalizeModel(vm, CallModel.Export(canon.name, canon.`type`)).leaf
+          canon -> Some(ops.fold(canonModel)(t => SeqModel.wrap(t, canonModel)))
+        }
+      case _ => State.pure(vm -> ops)
+    }
+  }
+
   /**
    * Processes a single [[RawTag]] that may lead to many changes, including calling [[ArrowInliner]]
    *
@@ -75,9 +88,11 @@ object TagInliner extends Logging {
         for {
           ld <- valueToModel(left)
           rd <- valueToModel(right)
-        } yield Some(MatchMismatchModel(ld._1, rd._1, shouldMatch)) -> parDesugarPrefixOpt(
-          ld._2,
-          rd._2
+          ldfixed <- fixModel(ld._1, ld._2)
+          rdfixed <- fixModel(rd._1, rd._2)
+        } yield Some(MatchMismatchModel(ldfixed._1, rdfixed._1, shouldMatch)) -> parDesugarPrefixOpt(
+          ldfixed._2,
+          rdfixed._2
         )
 
       case ForTag(item, iterable) =>

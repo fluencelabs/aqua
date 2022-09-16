@@ -22,7 +22,7 @@ object RawValueInliner extends Logging {
   private[inline] def unfold[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
     lambdaAllowed: Boolean = true,
-    canonicalizeStream: Boolean = true
+    forceCanonicalizeStream: Boolean = true
   ): State[S, (ValueModel, Inline)] =
     raw match {
       case VarRaw(name, t) =>
@@ -32,7 +32,7 @@ object RawValueInliner extends Logging {
         State.pure(LiteralModel(value, t) -> Inline.empty)
 
       case alr: ApplyLambdaRaw =>
-        ApplyLambdaRawInliner(alr, lambdaAllowed, canonicalizeStream)
+        ApplyLambdaRawInliner(alr, lambdaAllowed, forceCanonicalizeStream)
 
       case cr: CollectionRaw =>
         CollectionRawInliner(cr, lambdaAllowed)
@@ -46,7 +46,7 @@ object RawValueInliner extends Logging {
         sr.shadowValues.toList
           // Unfold/substitute all shadowed value
           .traverse { case (name, v) =>
-            unfold(v, lambdaAllowed, canonicalizeStream).map { case (svm, si) =>
+            unfold(v, lambdaAllowed, forceCanonicalizeStream).map { case (svm, si) =>
               (name, svm, si)
             }
           }.flatMap { fas =>
@@ -60,7 +60,7 @@ object RawValueInliner extends Logging {
                   .scope(
                     Exports[S].resolved(res ++ curr.view.mapValues(_.resolveWith(res))) >>
                       // Resolve the value in the prepared Exports scope
-                      unfold(sr.value, lambdaAllowed, canonicalizeStream)
+                      unfold(sr.value, lambdaAllowed, forceCanonicalizeStream)
                   )
               )
               .map { case (vm, inl) =>
@@ -85,10 +85,10 @@ object RawValueInliner extends Logging {
 
   def valueToModel[S: Mangler: Exports: Arrows](
     value: ValueRaw,
-    canonicalizeStream: Boolean = true
+    forceCanonicalizeStream: Boolean = true
   ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
-      vmp <- unfold(value, canonicalizeStream = canonicalizeStream)
+      vmp <- unfold(value, forceCanonicalizeStream = forceCanonicalizeStream)
       (vm, map) = vmp
 
       _ = logger.trace("RAW " + value)
@@ -103,15 +103,15 @@ object RawValueInliner extends Logging {
 
   def valueListToModel[S: Mangler: Exports: Arrows](
     values: List[ValueRaw],
-    canonicalizeStream: Boolean = true
+    forceCanonicalizeStream: Boolean = true
   ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
-    values.traverse(valueToModel(_, canonicalizeStream))
+    values.traverse(valueToModel(_, forceCanonicalizeStream))
 
   def callToModel[S: Mangler: Exports: Arrows](
     call: Call,
-    canonicalizeStream: Boolean = true
+    forceCanonicalizeStream: Boolean = true
   ): State[S, (CallModel, Option[OpModel.Tree])] =
-    valueListToModel(call.args, canonicalizeStream).map { list =>
+    valueListToModel(call.args, forceCanonicalizeStream).map { list =>
       (
         CallModel(
           list.map(_._1),

@@ -65,7 +65,7 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
         } yield IntoIndexModel(nn, t) -> Inline.preload(nn -> vm)
 
       case IntoIndexRaw(vr: (VarRaw | CallArrowRaw), t) =>
-        unfold(vr, lambdaAllowed = false, canonicalizeStream = canonicalizeStream).map {
+        unfold(vr, lambdaAllowed = false, forceCanonicalizeStream = canonicalizeStream).map {
           case (VarModel(name, _, _), inline) => IntoIndexModel(name, t) -> inline
           case (LiteralModel(v, _), inline) => IntoIndexModel(v, t) -> inline
         }
@@ -110,53 +110,61 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
       .flatMap { case (lambdaModel, map) =>
         unfold(raw, lambdaAllowed, canonicalizeStream).flatMap {
           case (v: VarModel, prefix) =>
-            val (genV, genInline) = (v.`type`, lambdaModel.headOption) match {
+            ((v.`type`, lambdaModel.headOption) match {
               // canonicalize stream
               case (st: StreamType, Some(idx @ IntoIndexModel(_, _))) if canonicalizeStream =>
-                val varSTest = VarModel(v.name + "_test", st)
-                val iter = VarModel("s", st.element)
+                val resultName = v.name + "_result_canon"
+                Mangler[S].findAndForbidName(resultName).map { uniqueResultName =>
+                  val varSTest = VarModel(v.name + "_test", st)
+                  val iter = VarModel("s", st.element)
 
-                val iterCanon = VarModel(v.name + "_iter_canon", CanonStreamType(st.element))
+                  val iterCanon = VarModel(v.name + "_iter_canon", CanonStreamType(st.element))
 
-                // TODO: get unique name
-                val resultCanon = VarModel(v.name + "_result_canon", CanonStreamType(st.element), lambdaModel)
+                  // TODO: get unique name
+                  val resultCanon =
+                    VarModel(uniqueResultName, CanonStreamType(st.element), lambdaModel)
 
-                val lengthVar = VarModel("s_length", ScalarType.i64)
-                val incrVar = VarModel("incr_idx", ScalarType.i64)
+                  val lengthVar = VarModel("s_length", ScalarType.i64)
+                  val incrVar = VarModel("incr_idx", ScalarType.i64)
 
-                val tree = RestrictionModel(varSTest.name, true).wrap(
-                  ForModel(iter.name, v).wrap(
-                    increment(idx.idxToValueModel, incrVar),
-                    PushToStreamModel(iter, CallModel.Export(varSTest.name, varSTest.`type`)).leaf,
+                  val tree = RestrictionModel(varSTest.name, true).wrap(
+                    ForModel(iter.name, v).wrap(
+                      increment(idx.idxToValueModel, incrVar),
+                      PushToStreamModel(
+                        iter,
+                        CallModel.Export(varSTest.name, varSTest.`type`)
+                      ).leaf,
+                      CanonicalizeModel(
+                        varSTest,
+                        CallModel.Export(iterCanon.name, iterCanon.`type`)
+                      ).leaf,
+                      XorModel.wrap(
+                        SeqModel.wrap(
+                          getLength(iterCanon, lengthVar),
+                          MatchMismatchModel(lengthVar, incrVar, true).leaf
+                        ),
+                        NextModel(iter.name).leaf
+                      )
+                    ),
                     CanonicalizeModel(
                       varSTest,
-                      CallModel.Export(iterCanon.name, iterCanon.`type`)
-                    ).leaf,
-                    XorModel.wrap(
-                      SeqModel.wrap(
-                        getLength(iterCanon, lengthVar),
-                        MatchMismatchModel(lengthVar, incrVar, true).leaf
-                      ),
-                      NextModel(iter.name).leaf
-                    )
-                  ),
-                  CanonicalizeModel(
-                    varSTest,
-                    CallModel.Export(resultCanon.name, CanonStreamType(st.element))
-                  ).leaf
-                )
+                      CallModel.Export(resultCanon.name, CanonStreamType(st.element))
+                    ).leaf
+                  )
 
-                resultCanon -> Inline.tree(tree)
+                  resultCanon -> Inline.tree(tree)
+                }
+
               case _ =>
                 val vm = v.copy(lambda = v.lambda ++ lambdaModel).resolveWith(exports)
-                vm -> Inline.empty
+                State.pure(vm -> Inline.empty)
+            }).flatMap { case (genV, genInline) =>
+              if (lambdaAllowed) State.pure(genV -> (prefix |+| map |+| genInline))
+              else
+                removeLambda(genV).map { case (vmm, mpp) =>
+                  vmm -> (prefix |+| mpp |+| map |+| genInline)
+                }
             }
-
-            if (lambdaAllowed) State.pure(genV -> (prefix |+| map |+| genInline))
-            else
-              removeLambda(genV).map { case (vmm, mpp) =>
-                vmm -> (prefix |+| mpp |+| map |+| genInline)
-              }
 
           case (v, prefix) =>
             // What does it mean actually? I've no ides
