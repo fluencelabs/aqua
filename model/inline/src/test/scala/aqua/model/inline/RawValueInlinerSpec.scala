@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.model.inline.raw.ApplyLambdaRawInliner
 import aqua.model.{
   FlattenModel,
-  IntoFieldModel,
+  FunctorModel,
   IntoIndexModel,
   ParModel,
   SeqModel,
@@ -11,7 +11,7 @@ import aqua.model.{
   VarModel
 }
 import aqua.model.inline.state.InliningState
-import aqua.raw.value.{ApplyLambdaRaw, IntoFieldRaw, IntoIndexRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.{ApplyLambdaRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
 import cats.data.NonEmptyMap
 import cats.data.Chain
@@ -51,7 +51,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     "res",
     bType
   ).withLambda(
-    IntoFieldRaw(
+    FunctorRaw(
       "c",
       ScalarType.string
     )
@@ -109,7 +109,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     valueToModel[InliningState](`raw res.c`)
       .run(
         InliningState(resolvedExports =
-          Map("res" -> VarModel("a", aType, Chain.one(IntoFieldModel("b", bType))))
+          Map("res" -> VarModel("a", aType, Chain.one(FunctorModel("b", bType))))
         )
       )
       .value
@@ -117,7 +117,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
       VarModel(
         "a",
         aType,
-        Chain(IntoFieldModel("b", bType), IntoFieldModel("c", ScalarType.string))
+        Chain(FunctorModel("b", bType), FunctorModel("c", ScalarType.string))
       ) -> None
     )
   }

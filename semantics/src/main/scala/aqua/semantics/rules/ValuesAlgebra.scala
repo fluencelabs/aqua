@@ -84,9 +84,27 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               .map {
                 // Some(_) means no errors occured
                 case (Some(_), lambda) if lambda.length == ops.length =>
-                  Some(lambda.foldLeft[ValueRaw](VarRaw(name.value, t)) { case (v, l) =>
-                    ApplyLambdaRaw(v, l)
-                  })
+                  val functors = lambda.filter {
+                    case FunctorRaw(_, _, isField) if !isField =>
+                      true
+                    case _ =>
+                      false
+                  }
+
+                  val fields = lambda.filter {
+                    case FunctorRaw(_, _, isField) if isField =>
+                      true
+                    case _ =>
+                      false
+                  }
+                  if (functors.nonEmpty && fields.nonEmpty) {
+                    // TODO: split functors and fields in `inliner`
+                    None
+                  } else {
+                    Some(lambda.foldLeft[ValueRaw](VarRaw(name.value, t)) { case (v, l) =>
+                      ApplyLambdaRaw(v, l)
+                    })
+                  }
                 case _ => None
               }
 

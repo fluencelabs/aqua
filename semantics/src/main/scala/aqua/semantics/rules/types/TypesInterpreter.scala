@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, ValueRaw}
+import aqua.raw.value.{FunctorRaw, IntoIndexRaw, LambdaRaw, ValueRaw}
 import aqua.semantics.lsp.{TokenDef, TokenTypeInfo}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{
@@ -143,10 +143,17 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
               case None => st
             }
 
-          }.as(Some(IntoFieldRaw(op.value, t)))
+          }.as(Some(FunctorRaw(op.value, t)))
         }
-      case _ =>
-        report(op, s"Expected Struct type to resolve a field, got $rootT").as(None)
+      case t =>
+        t.properties.get(op.value)
+          .fold(
+            report(
+              op,
+              s"Expected Struct type to resolve a field '${op.value}' or a type with this property. Got: $rootT"
+            ).as(None)
+          )(t => State.pure(Some(FunctorRaw(op.value, t, false))))
+
     }
   }
 

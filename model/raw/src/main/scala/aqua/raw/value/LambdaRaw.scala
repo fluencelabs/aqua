@@ -12,7 +12,7 @@ sealed trait LambdaRaw {
   def varNames: Set[String]
 }
 
-case class IntoFieldRaw(field: String, `type`: Type) extends LambdaRaw {
+case class FunctorRaw(name: String, `type`: Type, isField: Boolean = true) extends LambdaRaw {
   override def map(f: ValueRaw => ValueRaw): LambdaRaw = this
 
   override def varNames: Set[String] = Set.empty

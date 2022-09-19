@@ -6,7 +6,7 @@ import aqua.model.{
   CanonicalizeModel,
   FlattenModel,
   ForModel,
-  IntoFieldModel,
+  FunctorModel,
   IntoIndexModel,
   LambdaModel,
   LiteralModel,
@@ -25,7 +25,7 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{
   ApplyLambdaRaw,
   CallArrowRaw,
-  IntoFieldRaw,
+  FunctorRaw,
   IntoIndexRaw,
   LambdaRaw,
   LiteralRaw,
@@ -58,7 +58,7 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
     canonicalizeStream: Boolean
   ): State[S, (LambdaModel, Inline)] = // TODO lambda for collection
     l match {
-      case IntoFieldRaw(field, t) => State.pure(IntoFieldModel(field, t) -> Inline.empty)
+      case FunctorRaw(field, t, isField) => State.pure(FunctorModel(field, t, isField) -> Inline.empty)
       case IntoIndexRaw(vm: ApplyLambdaRaw, t) =>
         for {
           nn <- Mangler[S].findAndForbidName("ap-lambda")
@@ -139,10 +139,7 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
                         CallModel.Export(iterCanon.name, iterCanon.`type`)
                       ).leaf,
                       XorModel.wrap(
-                        SeqModel.wrap(
-                          getLength(iterCanon, lengthVar),
-                          MatchMismatchModel(lengthVar, incrVar, true).leaf
-                        ),
+                        MatchMismatchModel(iterCanon.copy(lambda = Chain.one(FunctorModel("length", ScalarType.`u32`, false))), incrVar, true).leaf,
                         NextModel(iter.name).leaf
                       )
                     ),

@@ -56,7 +56,7 @@ sealed trait LambdaModel {
 object LambdaModel {
 
   def fromRaw(l: LambdaRaw): LambdaModel = l match {
-    case IntoFieldRaw(field, t) => IntoFieldModel(field, t)
+    case FunctorRaw(field, t, isField) => FunctorModel(field, t, isField)
     case IntoIndexRaw(idx, t) =>
       // TODO: handle recursive lambda
       IntoIndexModel(
@@ -70,10 +70,10 @@ object LambdaModel {
 
 }
 
-case class IntoFieldModel(field: String, `type`: Type) extends LambdaModel {
-  override def toString: String = s".$field:${`type`}"
+case class FunctorModel(name: String, `type`: Type, isField: Boolean = true) extends LambdaModel {
+  override def toString: String = s".$name:${`type`}"
 
-  override def toRaw: LambdaRaw = IntoFieldRaw(field, `type`)
+  override def toRaw: LambdaRaw = FunctorRaw(name, `type`)
 }
 
 case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel {

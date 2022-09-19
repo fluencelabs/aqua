@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
-import aqua.raw.value.{ApplyLambdaRaw, IntoFieldRaw, IntoIndexRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.{ApplyLambdaRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
 import cats.syntax.show.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
@@ -318,7 +318,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     val objectVarLambda =
       VarRaw("object", StructType("objectType", NonEmptyMap.one("field", ScalarType.string)))
         .withLambda(
-          IntoFieldRaw("field", ScalarType.string)
+          FunctorRaw("field", ScalarType.string)
         )
 
     // raw object

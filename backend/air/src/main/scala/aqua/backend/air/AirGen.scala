@@ -18,7 +18,7 @@ object AirGen extends Logging {
 
   def lambdaToString(ls: List[LambdaModel]): String = ls match {
     case Nil => ""
-    case IntoFieldModel(field, _) :: tail =>
+    case FunctorModel(field, _, isField) :: tail =>
       s".$field${lambdaToString(tail)}"
     case IntoIndexModel(idx, _) :: tail =>
       s".[$idx]${lambdaToString(tail)}"
@@ -33,7 +33,13 @@ object AirGen extends Logging {
         case _ => name
       }).replace('.', '_')
       if (lambda.isEmpty) DataView.Variable(n)
-      else DataView.VarLens(n, lambdaToString(lambda.toList))
+      else {
+        val functors = lambda.find {
+          case FunctorModel(_, _, isField) => !isField
+          case _ => false
+        }
+        DataView.VarLens(n, lambdaToString(lambda.toList), functors.isEmpty)
+      }
   }
 
   def opsToSingle(ops: Chain[AirGen]): AirGen = ops.toList match {

@@ -47,7 +47,7 @@ object DataView {
 
   case class Stream(name: String) extends DataView
 
-  case class VarLens(name: String, lens: String) extends DataView {
+  case class VarLens(name: String, lens: String, isField: Boolean = true) extends DataView {
     def append(sublens: String): VarLens = copy(lens = lens + sublens)
   }
 
@@ -57,7 +57,9 @@ object DataView {
     case LastError ⇒ "%last_error%"
     case Variable(name) ⇒ name
     case Stream(name) ⇒ name
-    case VarLens(name, lens) ⇒ name + ".$" + lens + "!"
+    case VarLens(name, lens, isField) ⇒
+      if (isField) name + ".$" + lens + "!"
+      else name + lens
   }
 }
 
