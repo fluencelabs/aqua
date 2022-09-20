@@ -40,7 +40,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   def resolveType(v: ValueToken[S]): Alg[Option[Type]] =
     valueToRaw(v).map(_.map(_.`type`))
 
-  private def resolveSingleLambda(rootType: Type, op: LambdaOp[S]): Alg[Option[LambdaRaw]] =
+  private def resolveSingleLambda(rootType: Type, op: LambdaOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
         T.resolveField(rootType, op)
@@ -63,7 +63,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           case Some(t) =>
             // Prepare lambda expression: take the last known type and the next op, add next op to accumulator
             ops
-              .foldLeft[Alg[(Option[Type], Chain[LambdaRaw])]]((Some(t) -> Chain.empty).pure[Alg]) {
+              .foldLeft[Alg[(Option[Type], Chain[PropertyRaw])]]((Some(t) -> Chain.empty).pure[Alg]) {
                 case (acc, op) =>
                   acc.flatMap {
                     // Some(tt) means that the previous lambda op was resolved successfully

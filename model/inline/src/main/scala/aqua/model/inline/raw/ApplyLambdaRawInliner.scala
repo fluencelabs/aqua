@@ -4,7 +4,7 @@ import aqua.model.{CallModel, CallServiceModel, CanonicalizeModel, FlattenModel,
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{ApplyLambdaRaw, CallArrowRaw, FunctorRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, ValueRaw, VarRaw}
+import aqua.raw.value.{ApplyLambdaRaw, CallArrowRaw, FunctorRaw, IntoIndexRaw, PropertyRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
 import cats.data.{Chain, State}
 import cats.syntax.monoid.*
@@ -27,68 +27,8 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
         State.pure(vm -> Inline.empty)
     }
 
-  private def splitFunctors[S: Mangler: Exports: Arrows](
-    vm: ValueRaw,
-    lambdaM: Chain[LambdaRaw]
-  ): State[S, (ValueModel, Inline)] = {
-    println("split: " + vm)
-    vm match {
-      case vrm@VarRaw(nameM, btm) if lambdaM.nonEmpty =>
-        val lambdas = lambdaM.toList
-        val firstFunctorIdx = lambdas.indexWhere {
-          case FunctorModel(_, _, isField) if !isField =>
-            true
-          case _ => false
-        }
-
-        if (firstFunctorIdx != -1) {
-          val (ll, lr) = lambdas.splitAt(firstFunctorIdx)
-          val withoutFunctorL = ll.dropRight(1)
-          val functor = ll.last
-          if (withoutFunctorL.nonEmpty) {
-            for {
-              nameLeftLambda <- Mangler[S].findAndForbidName(nameM)
-              nameFunctor <- Mangler[S].findAndForbidName(nameM)
-              functorSide <- unfoldLambda(functor)
-              rightSide <- splitFunctors(VarRaw(nameFunctor, btm), Chain.fromSeq(lr))
-              leftSide <- unfold(VarRaw(vrm.name, vrm.baseType).withLambda(withoutFunctorL: _*))
-            } yield {
-              val (leftVM, leftInline) = leftSide
-              val (functorL, functorInline) = functorSide
-              val (rightVM, rightInline) = rightSide
-              rightVM -> (leftInline |+| functorInline |+| Inline.tree(
-                SeqModel.wrap(
-                  FlattenModel(leftVM, nameLeftLambda).leaf,
-                  FlattenModel(VarModel(nameLeftLambda, btm, Chain.one(functorL)), nameFunctor).leaf
-                )
-              ) |+| rightInline)
-            }
-
-          } else {
-            for {
-              nameFunctor <- Mangler[S].findAndForbidName(nameM)
-              rightSide <- splitFunctors(VarModel(nameFunctor, btm, Chain.fromSeq(lr)))
-              functorSide <- unfoldLambda(functor)
-            } yield {
-              val (rightVM, rightInline) = rightSide
-              val (functorL, functorInline) = functorSide
-              rightVM -> (functorInline |+| Inline.tree(
-                SeqModel.wrap(
-                  FlattenModel(vrm.copy(lambda = Chain.one(functorL)), nameFunctor).leaf
-                )
-              ) |+| rightInline)
-            }
-          }
-        } else {
-          State.pure(vm -> Inline.empty)
-        }
-      case _ =>
-        State.pure(vm -> Inline.empty)
-    }
-  }
-
   private[inline] def unfoldLambda[S: Mangler: Exports: Arrows](
-    l: LambdaRaw
+    l: PropertyRaw
   ): State[S, (LambdaModel, Inline)] = // TODO lambda for collection
     l match {
       case FunctorRaw(field, t, isField) =>
@@ -123,7 +63,6 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
     lambdaAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = Exports[S].exports.flatMap { exports =>
     val (raw, lambda) = alr.unwind
-    println("alr: " + alr)
     lambda
       .foldLeft[State[S, (Chain[LambdaModel], Inline)]](
         State.pure(Chain.empty[LambdaModel] -> Inline.empty)
@@ -135,7 +74,6 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
         }
       }
       .flatMap { case (lambdaModel, map) =>
-        println("raw: " + raw)
         unfold(raw, lambdaAllowed)
           .flatMap {
           case (v: VarModel, prefix) =>

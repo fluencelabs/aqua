@@ -47,7 +47,7 @@ object ValueRaw {
 
 }
 
-case class ApplyLambdaRaw(value: ValueRaw, lambda: LambdaRaw) extends ValueRaw {
+case class ApplyLambdaRaw(value: ValueRaw, lambda: PropertyRaw) extends ValueRaw {
   override def baseType: Type = value.baseType
 
   override def `type`: Type = lambda.`type`
@@ -59,7 +59,30 @@ case class ApplyLambdaRaw(value: ValueRaw, lambda: LambdaRaw) extends ValueRaw {
 
   override def toString: String = s"$value.$lambda"
 
-  def unwind: (ValueRaw, Chain[LambdaRaw]) = value match {
+  def unwind: (ValueRaw, Chain[PropertyRaw]) = value match {
+    case alr: ApplyLambdaRaw =>
+      val (v, i) = alr.unwind
+      (v, i :+ lambda)
+    case _ =>
+      (value, Chain.one(lambda))
+  }
+
+  override def varNames: Set[String] = value.varNames ++ lambda.varNames
+}
+
+case class ApplyFunctorRaw(value: ValueRaw, lambda: FunctorRaw) extends ValueRaw {
+  override def baseType: Type = value.baseType
+
+  override def `type`: Type = lambda.`type`
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    ApplyLambdaRaw(value.renameVars(map), lambda.renameVars(map))
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(ApplyLambdaRaw(f(value), lambda.map(f)))
+
+  override def toString: String = s"$value.$lambda"
+
+  def unwind: (ValueRaw, Chain[PropertyRaw]) = value match {
     case alr: ApplyLambdaRaw =>
       val (v, i) = alr.unwind
       (v, i :+ lambda)
@@ -72,7 +95,7 @@ case class ApplyLambdaRaw(value: ValueRaw, lambda: LambdaRaw) extends ValueRaw {
 
 object ApplyLambdaRaw {
 
-  def fromChain(value: ValueRaw, lambdas: Chain[LambdaRaw]): ValueRaw =
+  def fromChain(value: ValueRaw, lambdas: Chain[PropertyRaw]): ValueRaw =
     lambdas.foldLeft(value) { case (v, l) =>
       ApplyLambdaRaw(v, l)
     }
@@ -108,7 +131,7 @@ case class VarRaw(name: String, baseType: Type) extends ValueRaw {
 
   override def toString: String = s"var{$name: " + baseType + s"}"
 
-  def withLambda(lambda: LambdaRaw*): ValueRaw =
+  def withLambda(lambda: PropertyRaw*): ValueRaw =
     ApplyLambdaRaw.fromChain(this, Chain.fromSeq(lambda))
 
   override def varNames: Set[String] = Set(name)
