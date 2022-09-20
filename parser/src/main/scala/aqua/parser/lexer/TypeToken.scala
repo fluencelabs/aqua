@@ -141,7 +141,7 @@ object DataTypeToken {
     `⊥`.lift.map(TopBottomToken(_, isTop = false)) |
       `⊤`.lift.map(TopBottomToken(_, isTop = true))
 
-  def `withoutstreamdatatypedef`: P[DataTypeToken[Span.S]] =
+  val `withoutstreamdatatypedef`: P[DataTypeToken[Span.S]] =
     P.oneOf(
       P.defer(`topbottomdef`) :: P.defer(`arraytypedef`) :: P.defer(
         OptionTypeToken.`optiontypedef`
