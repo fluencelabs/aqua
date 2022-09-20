@@ -23,7 +23,7 @@ object FieldTypeExpr extends Expr.Leaf {
     ((Name.p <* ` : `) ~ (Parser
       .not(StreamTypeToken.`streamtypedef`)
       .withContext(
-        "Data cannot have fields with streams."
+        "Data fields cannot be of stream type (stream is designated by '*')."
       ) *> DataTypeToken.`datatypedef`)).map { case (name, t) =>
       FieldTypeExpr(name, t)
     }

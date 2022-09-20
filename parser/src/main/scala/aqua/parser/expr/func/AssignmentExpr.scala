@@ -25,7 +25,7 @@ object AssignmentExpr extends Expr.Leaf {
         case CollectionToken(_, values) =>
           if (values.isEmpty)
             P.failWith(
-              "Cannot assign an empty collection to a variable, because the type cannot be determined."
+              "Assigning empty array to a variable is prohibited. You can create an array with values (like '[a, b, c]') or use '[]' in place."
             )
           else P.pure(AssignmentExpr(variable, value))
         case _ =>
