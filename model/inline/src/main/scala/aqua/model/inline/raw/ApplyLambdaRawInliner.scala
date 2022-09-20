@@ -1,36 +1,10 @@
 package aqua.model.inline.raw
 
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  CanonicalizeModel,
-  FlattenModel,
-  ForModel,
-  FunctorModel,
-  IntoIndexModel,
-  LambdaModel,
-  LiteralModel,
-  MatchMismatchModel,
-  NextModel,
-  PushToStreamModel,
-  RestrictionModel,
-  SeqModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
+import aqua.model.{CallModel, CallServiceModel, CanonicalizeModel, FlattenModel, ForModel, FunctorModel, IntoIndexModel, LambdaModel, LiteralModel, MatchMismatchModel, NextModel, PushToStreamModel, RestrictionModel, SeqModel, ValueModel, VarModel, XorModel}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{
-  ApplyLambdaRaw,
-  CallArrowRaw,
-  FunctorRaw,
-  IntoIndexRaw,
-  LambdaRaw,
-  LiteralRaw,
-  VarRaw
-}
+import aqua.raw.value.{ApplyLambdaRaw, CallArrowRaw, FunctorRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
 import cats.data.{Chain, State}
 import cats.syntax.monoid.*
@@ -53,19 +27,79 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
         State.pure(vm -> Inline.empty)
     }
 
+  private def splitFunctors[S: Mangler: Exports: Arrows](
+    vm: ValueRaw,
+    lambdaM: Chain[LambdaRaw]
+  ): State[S, (ValueModel, Inline)] = {
+    println("split: " + vm)
+    vm match {
+      case vrm@VarRaw(nameM, btm) if lambdaM.nonEmpty =>
+        val lambdas = lambdaM.toList
+        val firstFunctorIdx = lambdas.indexWhere {
+          case FunctorModel(_, _, isField) if !isField =>
+            true
+          case _ => false
+        }
+
+        if (firstFunctorIdx != -1) {
+          val (ll, lr) = lambdas.splitAt(firstFunctorIdx)
+          val withoutFunctorL = ll.dropRight(1)
+          val functor = ll.last
+          if (withoutFunctorL.nonEmpty) {
+            for {
+              nameLeftLambda <- Mangler[S].findAndForbidName(nameM)
+              nameFunctor <- Mangler[S].findAndForbidName(nameM)
+              functorSide <- unfoldLambda(functor)
+              rightSide <- splitFunctors(VarRaw(nameFunctor, btm), Chain.fromSeq(lr))
+              leftSide <- unfold(VarRaw(vrm.name, vrm.baseType).withLambda(withoutFunctorL: _*))
+            } yield {
+              val (leftVM, leftInline) = leftSide
+              val (functorL, functorInline) = functorSide
+              val (rightVM, rightInline) = rightSide
+              rightVM -> (leftInline |+| functorInline |+| Inline.tree(
+                SeqModel.wrap(
+                  FlattenModel(leftVM, nameLeftLambda).leaf,
+                  FlattenModel(VarModel(nameLeftLambda, btm, Chain.one(functorL)), nameFunctor).leaf
+                )
+              ) |+| rightInline)
+            }
+
+          } else {
+            for {
+              nameFunctor <- Mangler[S].findAndForbidName(nameM)
+              rightSide <- splitFunctors(VarModel(nameFunctor, btm, Chain.fromSeq(lr)))
+              functorSide <- unfoldLambda(functor)
+            } yield {
+              val (rightVM, rightInline) = rightSide
+              val (functorL, functorInline) = functorSide
+              rightVM -> (functorInline |+| Inline.tree(
+                SeqModel.wrap(
+                  FlattenModel(vrm.copy(lambda = Chain.one(functorL)), nameFunctor).leaf
+                )
+              ) |+| rightInline)
+            }
+          }
+        } else {
+          State.pure(vm -> Inline.empty)
+        }
+      case _ =>
+        State.pure(vm -> Inline.empty)
+    }
+  }
+
   private[inline] def unfoldLambda[S: Mangler: Exports: Arrows](
-    l: LambdaRaw,
-    canonicalizeStream: Boolean
+    l: LambdaRaw
   ): State[S, (LambdaModel, Inline)] = // TODO lambda for collection
     l match {
-      case FunctorRaw(field, t, isField) => State.pure(FunctorModel(field, t, isField) -> Inline.empty)
+      case FunctorRaw(field, t, isField) =>
+        State.pure(FunctorModel(field, t, isField) -> Inline.empty)
       case IntoIndexRaw(vm: ApplyLambdaRaw, t) =>
         for {
           nn <- Mangler[S].findAndForbidName("ap-lambda")
         } yield IntoIndexModel(nn, t) -> Inline.preload(nn -> vm)
 
       case IntoIndexRaw(vr: (VarRaw | CallArrowRaw), t) =>
-        unfold(vr, lambdaAllowed = false, forceCanonicalizeStream = canonicalizeStream).map {
+        unfold(vr, lambdaAllowed = false).map {
           case (VarModel(name, _, _), inline) => IntoIndexModel(name, t) -> inline
           case (LiteralModel(v, _), inline) => IntoIndexModel(v, t) -> inline
         }
@@ -73,13 +107,6 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
       case IntoIndexRaw(LiteralRaw(value, _), t) =>
         State.pure(IntoIndexModel(value, t) -> Inline.empty)
     }
-
-  private def getLength(v: ValueModel, result: VarModel) =
-    CallServiceModel(
-      LiteralModel("\"op\"", ScalarType.string),
-      "array_length",
-      CallModel(v :: Nil, CallModel.Export(result.name, result.`type`) :: Nil)
-    ).leaf
 
   private def increment(v: ValueModel, result: VarModel) =
     CallServiceModel(
@@ -93,26 +120,28 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
 
   override def apply[S: Mangler: Exports: Arrows](
     alr: ApplyLambdaRaw,
-    lambdaAllowed: Boolean,
-    canonicalizeStream: Boolean
+    lambdaAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = Exports[S].exports.flatMap { exports =>
     val (raw, lambda) = alr.unwind
+    println("alr: " + alr)
     lambda
       .foldLeft[State[S, (Chain[LambdaModel], Inline)]](
         State.pure(Chain.empty[LambdaModel] -> Inline.empty)
       ) { case (lcm, l) =>
         lcm.flatMap { case (lc, m) =>
-          unfoldLambda(l, canonicalizeStream).map { case (lm, mm) =>
+          unfoldLambda(l).map { case (lm, mm) =>
             (lc :+ lm, m |+| mm)
           }
         }
       }
       .flatMap { case (lambdaModel, map) =>
-        unfold(raw, lambdaAllowed, canonicalizeStream).flatMap {
+        println("raw: " + raw)
+        unfold(raw, lambdaAllowed)
+          .flatMap {
           case (v: VarModel, prefix) =>
             ((v.`type`, lambdaModel.headOption) match {
               // canonicalize stream
-              case (st: StreamType, Some(idx @ IntoIndexModel(_, _))) if canonicalizeStream =>
+              case (st: StreamType, Some(idx @ IntoIndexModel(_, _))) =>
                 val resultName = v.name + "_result_canon"
                 Mangler[S].findAndForbidName(resultName).map { uniqueResultName =>
                   val varSTest = VarModel(v.name + "_test", st)
@@ -120,11 +149,9 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
 
                   val iterCanon = VarModel(v.name + "_iter_canon", CanonStreamType(st.element))
 
-                  // TODO: get unique name
                   val resultCanon =
                     VarModel(uniqueResultName, CanonStreamType(st.element), lambdaModel)
 
-                  val lengthVar = VarModel("s_length", ScalarType.i64)
                   val incrVar = VarModel("incr_idx", ScalarType.i64)
 
                   val tree = RestrictionModel(varSTest.name, true).wrap(
@@ -139,7 +166,13 @@ object ApplyLambdaRawInliner extends RawInliner[ApplyLambdaRaw] {
                         CallModel.Export(iterCanon.name, iterCanon.`type`)
                       ).leaf,
                       XorModel.wrap(
-                        MatchMismatchModel(iterCanon.copy(lambda = Chain.one(FunctorModel("length", ScalarType.`u32`, false))), incrVar, true).leaf,
+                        MatchMismatchModel(
+                          iterCanon.copy(lambda =
+                            Chain.one(FunctorModel("length", ScalarType.`u32`, false))
+                          ),
+                          incrVar,
+                          true
+                        ).leaf,
                         NextModel(iter.name).leaf
                       )
                     ),

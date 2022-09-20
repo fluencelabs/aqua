@@ -73,7 +73,7 @@ object LambdaModel {
 case class FunctorModel(name: String, `type`: Type, isField: Boolean = true) extends LambdaModel {
   override def toString: String = s".$name:${`type`}"
 
-  override def toRaw: LambdaRaw = FunctorRaw(name, `type`)
+  override def toRaw: LambdaRaw = FunctorRaw(name, `type`, isField)
 }
 
 case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel {
