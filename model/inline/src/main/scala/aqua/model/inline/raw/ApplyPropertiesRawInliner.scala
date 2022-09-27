@@ -110,7 +110,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
                 val resultCanon =
                   VarModel(uniqueResultName, CanonStreamType(st.element), propertyModels)
 
-                val incrVar = VarModel("incr_idx", ScalarType.i64)
+                val incrVar = VarModel("incr_idx", ScalarType.u32)
 
                 val tree = RestrictionModel(varSTest.name, true).wrap(
                   ForModel(iter.name, v).wrap(

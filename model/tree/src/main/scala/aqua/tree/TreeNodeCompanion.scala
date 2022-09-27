@@ -43,8 +43,13 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
         val rgtDiff =
           if (commonPrefixLen + rSuffix < rgt.length) rgt.substring(commonPrefixLen, rSuffix)
           else ""
-        commonPrefix +
-          Console.YELLOW + lftDiff + Console.RED + " != " + Console.CYAN + rgtDiff + Console.RESET + commonSuffix
+        if (rgtDiff.isEmpty) {
+          commonPrefix + Console.YELLOW + lftDiff + Console.RESET + commonSuffix
+        } else {
+          commonPrefix +
+            Console.YELLOW + lftDiff + Console.RED + " != " + Console.CYAN + rgtDiff + Console.RESET + commonSuffix
+        }
+
       }
 
     spaces + head + (what._1.tail, what._2.tail).mapN {
