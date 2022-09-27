@@ -102,7 +102,7 @@ object ArrowInliner extends Logging {
 
       // collect arguments with stream type
       // to exclude it from resolving and rename it with a higher-level stream that passed by argument
-      // TODO: what if we have streams in lambda???
+      // TODO: what if we have streams in property???
       streamToRename = argsFull.streamArgs.view.mapValues(_.name).toMap
 
       // Find all duplicates in arguments

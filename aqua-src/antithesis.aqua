@@ -39,15 +39,5 @@ service Ser("ser"):
 --         a = 1 + 1
 --     <- a
 
-func emptySugar() -> []u32, []string, []string, *string, ?u32, []u32, ?string:
-  numOp = ?[]
-  strArr = []
-  strStream = *[]
-  strEmptyStream: *string
-  for i <- ?[]:
-    strEmptyStream <<- "some"
-  for i <- *[]:
-    strEmptyStream <<- "some"
-  for i <- []:
-    strEmptyStream <<- "some"
-  <- numOp, strArr, strStream, strEmptyStream, [], ?[], *[]
+func emptySugar(arr: []Record) -> u32:
+  <- arr[1].relay_id.length

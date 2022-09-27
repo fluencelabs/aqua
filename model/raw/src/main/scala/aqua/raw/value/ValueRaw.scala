@@ -47,57 +47,49 @@ object ValueRaw {
 
 }
 
-case class ApplyLambdaRaw(value: ValueRaw, lambda: PropertyRaw) extends ValueRaw {
+case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends ValueRaw {
   override def baseType: Type = value.baseType
 
-  override def `type`: Type = lambda.`type`
+  override def `type`: Type = property.`type`
 
   override def renameVars(map: Map[String, String]): ValueRaw =
-    ApplyLambdaRaw(value.renameVars(map), lambda.renameVars(map))
+    ApplyPropertyRaw(value.renameVars(map), property.renameVars(map))
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(ApplyLambdaRaw(f(value), lambda.map(f)))
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(ApplyPropertyRaw(f(value), property.map(f)))
 
-  override def toString: String = s"$value.$lambda"
+  override def toString: String = s"$value.$property"
 
   def unwind: (ValueRaw, Chain[PropertyRaw]) = value match {
-    case alr: ApplyLambdaRaw =>
+    case alr: ApplyPropertyRaw =>
       val (v, i) = alr.unwind
-      (v, i :+ lambda)
+      (v, i :+ property)
     case _ =>
-      (value, Chain.one(lambda))
+      (value, Chain.one(property))
   }
 
-  override def varNames: Set[String] = value.varNames ++ lambda.varNames
+  override def varNames: Set[String] = value.varNames ++ property.varNames
 }
 
-case class ApplyFunctorRaw(value: ValueRaw, lambda: FunctorRaw) extends ValueRaw {
+case class ApplyFunctorRaw(value: ValueRaw, functor: FunctorRaw) extends ValueRaw {
   override def baseType: Type = value.baseType
 
-  override def `type`: Type = lambda.`type`
+  override def `type`: Type = functor.`type`
 
   override def renameVars(map: Map[String, String]): ValueRaw =
-    ApplyLambdaRaw(value.renameVars(map), lambda.renameVars(map))
+    ApplyFunctorRaw(value.renameVars(map), functor.renameVars(map))
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(ApplyLambdaRaw(f(value), lambda.map(f)))
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(ApplyFunctorRaw(f(value), functor.map(f)))
 
-  override def toString: String = s"$value.$lambda"
+  override def toString: String = s"$value.$functor"
 
-  def unwind: (ValueRaw, Chain[PropertyRaw]) = value match {
-    case alr: ApplyLambdaRaw =>
-      val (v, i) = alr.unwind
-      (v, i :+ lambda)
-    case _ =>
-      (value, Chain.one(lambda))
-  }
-
-  override def varNames: Set[String] = value.varNames ++ lambda.varNames
+  override def varNames: Set[String] = value.varNames ++ functor.varNames
 }
 
-object ApplyLambdaRaw {
+object ApplyPropertyRaw {
 
-  def fromChain(value: ValueRaw, lambdas: Chain[PropertyRaw]): ValueRaw =
-    lambdas.foldLeft(value) { case (v, l) =>
-      ApplyLambdaRaw(v, l)
+  def fromChain(value: ValueRaw, properties: Chain[PropertyRaw]): ValueRaw =
+    properties.foldLeft(value) { case (v, l) =>
+      ApplyPropertyRaw(v, l)
     }
 }
 
@@ -131,8 +123,8 @@ case class VarRaw(name: String, baseType: Type) extends ValueRaw {
 
   override def toString: String = s"var{$name: " + baseType + s"}"
 
-  def withLambda(lambda: PropertyRaw*): ValueRaw =
-    ApplyLambdaRaw.fromChain(this, Chain.fromSeq(lambda))
+  def withProperty(property: PropertyRaw*): ValueRaw =
+    ApplyPropertyRaw.fromChain(this, Chain.fromSeq(property))
 
   override def varNames: Set[String] = Set(name)
 }

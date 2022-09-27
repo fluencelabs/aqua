@@ -26,7 +26,7 @@ sealed trait InitPeerCallable extends PreTransform {
     makeCall(serviceId, _, _)
 }
 
-// TODO: refactor goThrough into some supertype of VarRaw and VarModel with no lambda
+// TODO: refactor goThrough into some supertype of VarRaw and VarModel with no properties
 case class InitViaRelayCallable(goThrough: Chain[(String, Type)]) extends InitPeerCallable {
 
   // Get to init user through a relay

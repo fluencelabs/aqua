@@ -65,7 +65,7 @@ object TagInliner extends Logging {
           viaDeFlattened <- viaDe.traverse { case (vm, tree) =>
             vm match {
               // flatten CanonStream, because in via we are using `fold`
-              // and `fold` cannot use CanonStream with lambda
+              // and `fold` cannot use CanonStream with property
               case VarModel(n, CanonStreamType(_), l) if l.nonEmpty =>
                 val apName = n + "_flatten"
                 Mangler[S].findAndForbidName(apName).map { s =>

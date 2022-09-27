@@ -19,7 +19,9 @@ case class IntoFieldRaw(name: String, `type`: Type) extends PropertyRaw {
 }
 
 case class FunctorRaw(name: String, `type`: Type) extends PropertyRaw {
-  override def map(f: ValueRaw => ValueRaw): PropertyRaw = this
+  override def map(f: ValueRaw => ValueRaw): FunctorRaw = this
+
+  override def renameVars(vals: Map[String, String]): FunctorRaw = this
 
   override def varNames: Set[String] = Set.empty
 }

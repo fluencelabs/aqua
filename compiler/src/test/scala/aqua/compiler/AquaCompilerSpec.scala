@@ -183,7 +183,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
               LiteralModel.fromRaw(LiteralRaw.quote("op")),
               "noop",
               CallRes(
-                results.copy(lambda = Chain.one(IntoIndexModel("2", ScalarType.string))) :: Nil,
+                results.copy(properties = Chain.one(IntoIndexModel("2", ScalarType.string))) :: Nil,
                 None
               ),
               initPeer

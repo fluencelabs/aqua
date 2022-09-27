@@ -67,7 +67,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
 
   override def apply[S: Mangler: Exports: Arrows](
     raw: CallArrowRaw,
-    lambdaAllowed: Boolean
+    propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] =
     Mangler[S]
       .findAndForbidName(raw.name)

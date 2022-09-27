@@ -62,16 +62,16 @@ object MakeRes {
     case NextModel(item) => NextRes(item).leaf
     case PushToStreamModel(operand @ VarModel(_, StreamType(st), _), exportTo) =>
       val tmpName = s"push-to-stream-$i"
-      val lambda = operand.lambda
+      val property = operand.properties
       // wrap (
       //  RestrictionRes(tmpName, isStream = false),
       SeqRes.wrap(
         CanonRes(
-          operand.copy(lambda = Chain.empty),
+          operand.copy(properties = Chain.empty),
           orInit(currentPeerId),
           CallModel.Export(tmpName, CanonStreamType(st))
         ).leaf,
-        ApRes(VarModel(tmpName, CanonStreamType(st), lambda), exportTo).leaf
+        ApRes(VarModel(tmpName, CanonStreamType(st), property), exportTo).leaf
       )
     // )
     case PushToStreamModel(operand, exportTo) =>

@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
-import aqua.raw.value.{ApplyLambdaRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
 import cats.syntax.show.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
@@ -131,7 +131,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamVarLambda =
-      ApplyLambdaRaw(
+      ApplyPropertyRaw(
         VarRaw("records", streamType),
         IntoIndexRaw(LiteralRaw.number(0), ScalarType.string)
       )
@@ -317,7 +317,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     // lambda that will be assigned to another variable
     val objectVarLambda =
       VarRaw("object", StructType("objectType", NonEmptyMap.one("field", ScalarType.string)))
-        .withLambda(
+        .withProperty(
           FunctorRaw("field", ScalarType.string)
         )
 
@@ -416,7 +416,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     val idxVar = VarRaw("idx", ScalarType.u32)
 
-    val arrIdx = VarRaw("nodes", ArrayType(ScalarType.string)).withLambda(
+    val arrIdx = VarRaw("nodes", ArrayType(ScalarType.string)).withProperty(
       IntoIndexRaw(idxVar, ScalarType.string)
     )
 

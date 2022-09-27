@@ -20,5 +20,5 @@ case class JoinExpr[F[_]](values: NonEmptyList[VarToken[F]])
 object JoinExpr extends Expr.Leaf {
 
   override val p: Parser[JoinExpr[Span.S]] =
-    (`join` *> ` ` *> comma(ValueToken.varLambda)).map(JoinExpr(_))
+    (`join` *> ` ` *> comma(ValueToken.varProperty)).map(JoinExpr(_))
 }

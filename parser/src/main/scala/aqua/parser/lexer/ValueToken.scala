@@ -19,10 +19,10 @@ sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
 }
 
-case class VarToken[F[_]](name: Name[F], lambda: List[LambdaOp[F]] = Nil) extends ValueToken[F] {
+case class VarToken[F[_]](name: Name[F], property: List[PropertyOp[F]] = Nil) extends ValueToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
-  def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk), lambda.map(_.mapK(fk)))
+  def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk), property.map(_.mapK(fk)))
 }
 
 case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
@@ -168,7 +168,7 @@ object InfixToken {
       ) ::
       P.defer(CallArrowToken.callArrow).backtrack ::
       P.defer(brackets(InfixToken.mathExpr)) ::
-      varLambda ::
+      varProperty ::
       Nil
   )
 
@@ -273,9 +273,9 @@ object InfixToken {
 
 object ValueToken {
 
-  val varLambda: P[VarToken[Span.S]] =
-    (Name.dotted ~ LambdaOp.ops.?).map { case (n, l) ⇒
-      VarToken(n, l.fold[List[LambdaOp[Span.S]]](Nil)(_.toList))
+  val varProperty: P[VarToken[Span.S]] =
+    (Name.dotted ~ PropertyOp.ops.?).map { case (n, l) ⇒
+      VarToken(n, l.fold[List[PropertyOp[Span.S]]](Nil)(_.toList))
     }
 
   val bool: P[LiteralToken[Span.S]] =

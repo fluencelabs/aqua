@@ -16,29 +16,31 @@ sealed trait AirGen {
 
 object AirGen extends Logging {
 
-  def lambdaToString(ls: List[LambdaModel]): String = ls match {
+  def propertyToString(ls: List[PropertyModel]): String = ls match {
     case Nil => ""
-    case FunctorModel(field, _, isField) :: tail =>
-      s".$field${lambdaToString(tail)}"
+    case FunctorModel(field, _) :: tail =>
+      s".$field${propertyToString(tail)}"
+    case IntoFieldModel(field, _) :: tail =>
+      s".$field${propertyToString(tail)}"
     case IntoIndexModel(idx, _) :: tail =>
-      s".[$idx]${lambdaToString(tail)}"
+      s".[$idx]${propertyToString(tail)}"
   }
 
   def valueToData(vm: ValueModel): DataView = vm match {
     case LiteralModel(value, _) => DataView.StringScalar(value)
-    case VarModel(name, t, lambda) =>
+    case VarModel(name, t, property) =>
       val n = (t match {
         case _: StreamType => "$" + name
         case _: CanonStreamType => "#" + name
         case _ => name
       }).replace('.', '_')
-      if (lambda.isEmpty) DataView.Variable(n)
+      if (property.isEmpty) DataView.Variable(n)
       else {
-        val functors = lambda.find {
-          case FunctorModel(_, _, isField) => !isField
+        val functors = property.find {
+          case FunctorModel(_, _) => true
           case _ => false
         }
-        DataView.VarLens(n, lambdaToString(lambda.toList), functors.isEmpty)
+        DataView.VarLens(n, propertyToString(property.toList), functors.isEmpty)
       }
   }
 

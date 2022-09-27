@@ -1,6 +1,6 @@
 package aqua.model.inline
 
-import aqua.model.inline.raw.ApplyLambdaRawInliner
+import aqua.model.inline.raw.ApplyPropertiesRawInliner
 import aqua.model.{
   FlattenModel,
   FunctorModel,
@@ -11,7 +11,7 @@ import aqua.model.{
   VarModel
 }
 import aqua.model.inline.state.InliningState
-import aqua.raw.value.{ApplyLambdaRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
 import cats.data.NonEmptyMap
 import cats.data.Chain
@@ -25,11 +25,11 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   import RawValueInliner.valueToModel
 
   private def ysVarRaw(into: Int, name: String = "ys") =
-    VarRaw(name, ArrayType(ScalarType.i8)).withLambda(
+    VarRaw(name, ArrayType(ScalarType.i8)).withProperty(
       IntoIndexRaw(LiteralRaw.number(into), ScalarType.i8)
     )
 
-  private val `raw x[y]` = VarRaw("x", ArrayType(ScalarType.string)).withLambda(
+  private val `raw x[y]` = VarRaw("x", ArrayType(ScalarType.string)).withProperty(
     IntoIndexRaw(
       VarRaw("y", ScalarType.i8),
       ScalarType.string
@@ -50,7 +50,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   private val `raw res.c` = VarRaw(
     "res",
     bType
-  ).withLambda(
+  ).withProperty(
     FunctorRaw(
       "c",
       ScalarType.string
@@ -67,18 +67,18 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     ScalarType.string
   )
 
-  private val `raw x[ys[0]]` = VarRaw("x", ArrayType(ScalarType.string)).withLambda(`raw ys[0]`)
+  private val `raw x[ys[0]]` = VarRaw("x", ArrayType(ScalarType.string)).withProperty(`raw ys[0]`)
 
   private val `raw x[ys[0]][ys[1]]` =
-    VarRaw("x", ArrayType(ArrayType(ScalarType.string))).withLambda(
+    VarRaw("x", ArrayType(ArrayType(ScalarType.string))).withProperty(
       IntoIndexRaw(ysVarRaw(0), ArrayType(ScalarType.string)),
       IntoIndexRaw(ysVarRaw(1), ScalarType.string)
     )
 
   private val `raw x[zs[ys[0]]][ys[1]]` =
-    VarRaw("x", ArrayType(ArrayType(ScalarType.string))).withLambda(
+    VarRaw("x", ArrayType(ArrayType(ScalarType.string))).withProperty(
       IntoIndexRaw(
-        VarRaw("zs", ArrayType(ScalarType.i8)).withLambda(
+        VarRaw("zs", ArrayType(ScalarType.i8)).withProperty(
           IntoIndexRaw(
             ysVarRaw(0),
             ScalarType.i8
@@ -125,14 +125,14 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   "raw value inliner" should "unfold a LambdaModel" in {
     import aqua.model.inline.state.Mangler.Simple
     // [ys!]
-    ApplyLambdaRawInliner
+    ApplyPropertiesRawInliner
       .unfoldLambda[InliningState](`raw ys[0]`)
       .run(InliningState(noNames = Set("ys")))
       .value
       ._2 should be(
       IntoIndexModel("ap-lambda", ScalarType.string) -> Inline(
         Map(
-          "ap-lambda" -> VarRaw("ys", ArrayType(ScalarType.i8)).withLambda(
+          "ap-lambda" -> VarRaw("ys", ArrayType(ScalarType.i8)).withProperty(
             IntoIndexRaw(LiteralRaw.number(0), ScalarType.i8)
           )
         )

@@ -12,6 +12,8 @@ sealed trait ValueModel {
   def resolveWith(map: Map[String, ValueModel]): ValueModel = this
 
   def usesVarNames: Set[String] = Set.empty
+
+  def toRaw: ValueRaw
 }
 
 object ValueModel {
@@ -22,9 +24,9 @@ object ValueModel {
 
   // TODO it should be marked with DANGEROUS signs and so on, as THIS IS UNSAFE!!!!!!!!!!!!!!! usable only for tests
   def fromRaw(raw: ValueRaw): ValueModel = raw match {
-    case ApplyLambdaRaw(v, lambda) =>
+    case ApplyPropertyRaw(v, property) =>
       fromRaw(v) match {
-        case vm: VarModel => vm.copy(lambda = vm.lambda :+ LambdaModel.fromRaw(lambda))
+        case vm: VarModel => vm.copy(properties = vm.properties :+ PropertyModel.fromRaw(property))
         case _ => ???
       }
     case VarRaw(name, t) =>
@@ -39,13 +41,15 @@ object ValueModel {
 case class LiteralModel(value: String, `type`: Type) extends ValueModel {
 
   override def toString: String = s"{$value: ${`type`}}"
+
+  def toRaw: ValueRaw = LiteralRaw(value, `type`)
 }
 
 object LiteralModel {
   def fromRaw(raw: LiteralRaw): LiteralModel = LiteralModel(raw.value, raw.baseType)
 }
 
-sealed trait LambdaModel {
+sealed trait PropertyModel {
   def usesVarNames: Set[String] = Set.empty
 
   def `type`: Type
@@ -53,12 +57,13 @@ sealed trait LambdaModel {
   def toRaw: PropertyRaw
 }
 
-object LambdaModel {
+object PropertyModel {
 
-  def fromRaw(l: PropertyRaw): LambdaModel = l match {
-    case FunctorRaw(field, t, isField) => FunctorModel(field, t, isField)
+  def fromRaw(l: PropertyRaw): PropertyModel = l match {
+    case FunctorRaw(op, t) => FunctorModel(op, t)
+    case IntoFieldRaw(field, t) => IntoFieldModel(field, t)
     case IntoIndexRaw(idx, t) =>
-      // TODO: handle recursive lambda
+      // TODO: handle recursive property
       IntoIndexModel(
         ValueModel.fromRaw(idx) match {
           case VarModel(name, _, _) => name
@@ -70,13 +75,19 @@ object LambdaModel {
 
 }
 
-case class FunctorModel(name: String, `type`: Type, isField: Boolean = true) extends LambdaModel {
+case class FunctorModel(name: String, `type`: Type) extends PropertyModel {
   override def toString: String = s".$name:${`type`}"
 
-  override def toRaw: PropertyRaw = FunctorRaw(name, `type`, isField)
+  override def toRaw: PropertyRaw = FunctorRaw(name, `type`)
 }
 
-case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel {
+case class IntoFieldModel(name: String, `type`: Type) extends PropertyModel {
+  override def toString: String = s".$name:${`type`}"
+
+  override def toRaw: PropertyRaw = IntoFieldRaw(name, `type`)
+}
+
+case class IntoIndexModel(idx: String, `type`: Type) extends PropertyModel {
   override lazy val usesVarNames: Set[String] = Set(idx).filterNot(_.forall(Character.isDigit))
 
   override def toString: String = s"[$idx -> ${`type`}]"
@@ -93,18 +104,21 @@ case class IntoIndexModel(idx: String, `type`: Type) extends LambdaModel {
 
 }
 
-case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel] = Chain.empty)
+case class VarModel(name: String, baseType: Type, properties: Chain[PropertyModel] = Chain.empty)
     extends ValueModel with Logging {
 
   override lazy val usesVarNames: Set[String] =
-    lambda.toList.map(_.usesVarNames).foldLeft(Set(name))(_ ++ _)
+    properties.toList.map(_.usesVarNames).foldLeft(Set(name))(_ ++ _)
 
-  override val `type`: Type = lambda.lastOption.map(_.`type`).getOrElse(baseType)
+  override val `type`: Type = properties.lastOption.map(_.`type`).getOrElse(baseType)
 
-  override def toString: String = s"var{$name: " + baseType + s"}.${lambda.toList.mkString(".")}"
+  def toRaw: ValueRaw = VarRaw(name, baseType).withProperty(properties.map(_.toRaw).toList: _*)
+
+  override def toString: String =
+    s"var{$name: " + baseType + s"}.${properties.toList.mkString(".")}"
 
   private def deriveFrom(vm: VarModel): VarModel =
-    vm.copy(lambda = vm.lambda ++ lambda)
+    vm.copy(properties = vm.properties ++ properties)
 
   override def resolveWith(vals: Map[String, ValueModel]): ValueModel =
     vals.get(name) match {
@@ -135,9 +149,9 @@ case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel] = C
                   case nvm: VarModel =>
                     deriveFrom(vv.deriveFrom(nvm))
                   case valueModel =>
-                    if (lambda.nonEmpty)
+                    if (properties.nonEmpty)
                       logger.error(
-                        s"Var $name derived from literal $valueModel, but lambda is lost: $lambda"
+                        s"Var $name derived from literal $valueModel, but property is lost: $properties"
                       )
                     valueModel
                 }
@@ -147,9 +161,9 @@ case class VarModel(name: String, baseType: Type, lambda: Chain[LambdaModel] = C
         }
 
       case Some(vv) =>
-        if (lambda.nonEmpty)
+        if (properties.nonEmpty)
           logger.error(
-            s"Var $name derived from literal $vv, but lambda is lost: $lambda"
+            s"Var $name derived from literal $vv, but property is lost: $properties"
           )
         vv
       case None =>

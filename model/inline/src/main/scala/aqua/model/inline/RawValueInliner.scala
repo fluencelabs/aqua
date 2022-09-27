@@ -2,7 +2,7 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
-import aqua.model.inline.raw.{ApplyLambdaRawInliner, CallArrowRawInliner, CollectionRawInliner}
+import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, OptionType, StreamType}
@@ -21,7 +21,7 @@ object RawValueInliner extends Logging {
 
   private[inline] def unfold[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
-    lambdaAllowed: Boolean = true
+    propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Inline)] =
     raw match {
       case VarRaw(name, t) =>
@@ -30,14 +30,17 @@ object RawValueInliner extends Logging {
       case LiteralRaw(value, t) =>
         State.pure(LiteralModel(value, t) -> Inline.empty)
 
-      case alr: ApplyLambdaRaw =>
-        ApplyLambdaRawInliner(alr, lambdaAllowed)
+      case alr: ApplyPropertyRaw =>
+        ApplyPropertiesRawInliner(alr, propertiesAllowed)
+
+      case alr: ApplyFunctorRaw =>
+        ApplyFunctorRawInliner(alr, propertiesAllowed)
 
       case cr: CollectionRaw =>
-        CollectionRawInliner(cr, lambdaAllowed)
+        CollectionRawInliner(cr, propertiesAllowed)
 
       case cr: CallArrowRaw =>
-        CallArrowRawInliner(cr, lambdaAllowed)
+        CallArrowRawInliner(cr, propertiesAllowed)
 
       case sr: ShadowRaw =>
         // First, collect shadowed values
@@ -45,7 +48,7 @@ object RawValueInliner extends Logging {
         sr.shadowValues.toList
           // Unfold/substitute all shadowed value
           .traverse { case (name, v) =>
-            unfold(v, lambdaAllowed).map { case (svm, si) =>
+            unfold(v, propertiesAllowed).map { case (svm, si) =>
               (name, svm, si)
             }
           }.flatMap { fas =>
@@ -59,7 +62,7 @@ object RawValueInliner extends Logging {
                   .scope(
                     Exports[S].resolved(res ++ curr.view.mapValues(_.resolveWith(res))) >>
                       // Resolve the value in the prepared Exports scope
-                      unfold(sr.value, lambdaAllowed)
+                      unfold(sr.value, propertiesAllowed)
                   )
               )
               .map { case (vm, inl) =>
