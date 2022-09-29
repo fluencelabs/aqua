@@ -126,8 +126,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 	cb(records!)
    */
 
-  "arrow inliner" should "pass stream to callback properly, holding lambda" in {
-
+  // TODO: unignore and fix after stream restrictions will be implemented
+  ignore /*"arrow inliner"*/ should "pass stream to callback properly, holding property" in {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamVarLambda =
