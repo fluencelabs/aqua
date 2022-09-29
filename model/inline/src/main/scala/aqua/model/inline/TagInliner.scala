@@ -129,6 +129,7 @@ object TagInliner extends Logging {
           .traverse(o => valueToModel(o))
           .map(nel => {
             logger.trace("join after " + nel.map(_._1))
+            // None because join behaviour will be processed in ApplyPropertiesRawInliner
             None -> parDesugarPrefix(nel.toList.flatMap(_._2))
           })
 

@@ -7,8 +7,9 @@ import cats.data.State
 import cats.data.Chain
 import aqua.model.inline.RawValueInliner.unfold
 import cats.syntax.monoid.*
+import scribe.Logging
 
-object ApplyFunctorRawInliner  extends RawInliner[ApplyFunctorRaw] {
+object ApplyFunctorRawInliner  extends RawInliner[ApplyFunctorRaw] with Logging {
 
   override def apply[S: Mangler: Exports: Arrows](
     afr: ApplyFunctorRaw,
@@ -32,6 +33,7 @@ object ApplyFunctorRawInliner  extends RawInliner[ApplyFunctorRaw] {
         }
       case v =>
         // unexpected, properties are prohibited for literals
+        logger.error(s"Unexpected. Properties are prohibited for literals. Literal: '$v'")
         State.pure(v)
     }
   }

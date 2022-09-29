@@ -194,7 +194,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     if (leftToFunctor.length == properties.length) {
       unfoldProperties(raw, properties, propertiesAllowed)
     } else {
-
+      // split properties like this:
+      // properties -- functor -- properties with functors
+      // process properties, process functor in ApplyFunctorRawInliner
+      // then process tail recursively
       (for {
         ur <- properties.dropWhile {
           case FunctorRaw(_, _) => false
