@@ -60,33 +60,26 @@ object MakeRes {
     case ParModel | DetachModel => ParRes.leaf
     case XorModel => XorRes.leaf
     case NextModel(item) => NextRes(item).leaf
-    case PushToStreamModel(operand @ VarModel(_, t@StreamType(st), _), exportTo) =>
+    case PushToStreamModel(operand @ VarModel(_, StreamType(st), _), exportTo) =>
+      val tmpName = s"push-to-stream-$i"
       val properties = operand.properties
-      if (properties.isEmpty) {
-        ApRes(VarModel(operand.name, t, Chain.empty), exportTo).leaf
-      } else {
-          val tmpName = s"push-to-stream-$i"
-          SeqRes.wrap(
-          CanonRes(
-            operand.copy(properties = Chain.empty),
-            orInit(currentPeerId),
-            CallModel.Export(tmpName, CanonStreamType(st))
-          ).leaf,
-          ApRes(VarModel(tmpName, CanonStreamType(st), properties), exportTo).leaf
-        )
-      }
+      SeqRes.wrap(
+        CanonRes(
+          operand.copy(properties = Chain.empty),
+          orInit(currentPeerId),
+          CallModel.Export(tmpName, CanonStreamType(st))
+        ).leaf,
+        ApRes(VarModel(tmpName, CanonStreamType(st), properties), exportTo).leaf
+      )
     case PushToStreamModel(operand, exportTo) =>
       ApRes(operand, exportTo).leaf
 
-    case CanonicalizeModel(operand, exportTo, withOp) =>
-      if (withOp)
-        canon(orInit(currentPeerId), operand, exportTo)
-      else
-        CanonRes(
-          operand,
-          orInit(currentPeerId),
-          exportTo
-        ).leaf
+    case CanonicalizeModel(operand, exportTo) =>
+      CanonRes(
+        operand,
+        orInit(currentPeerId),
+        exportTo
+      ).leaf
 
     case FlattenModel(operand, assignTo) =>
       ApRes(operand, CallModel.Export(assignTo, operand.`type`)).leaf

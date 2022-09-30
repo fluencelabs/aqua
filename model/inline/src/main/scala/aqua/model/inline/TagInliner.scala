@@ -10,7 +10,7 @@ import cats.syntax.traverse.*
 import cats.syntax.applicative.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
-import scribe.{Logging, log}
+import scribe.{log, Logging}
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -33,7 +33,10 @@ object TagInliner extends Logging {
   private def none[S]: State[S, (Option[OpModel], Option[OpModel.Tree])] =
     State.pure(None -> None)
 
-  private def fixModel[S: Mangler: Arrows: Exports](vm: ValueModel, ops: Option[OpModel.Tree]): State[S, (ValueModel, Option[OpModel.Tree])] = {
+  private def fixModel[S: Mangler: Arrows: Exports](
+    vm: ValueModel,
+    ops: Option[OpModel.Tree]
+  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
     vm match {
       case VarModel(name, StreamType(el), l) =>
         val canonName = name + "_canon"
@@ -44,6 +47,50 @@ object TagInliner extends Logging {
         }
       case _ => State.pure(vm -> ops)
     }
+  }
+
+  private def flat[S: Mangler](vm: ValueModel, op: Option[OpModel.Tree], flatStream: Boolean) = {
+    vm match {
+      // flatten stream, because in via we are using `fold`
+      // and `fold` will hang on stream
+      case v @ VarModel(n, StreamType(t), l) if flatStream =>
+        val canonName = v.name + "_canon"
+        for {
+          canonN <- Mangler[S].findAndForbidName(canonName)
+          canonV = VarModel(canonN, CanonStreamType(t), l)
+          canonOp = CanonicalizeModel(
+            v.copy(properties = Chain.empty),
+            CallModel.Export(canonV.name, canonV.`type`)
+          ).leaf
+          flatResult <- flatCanonStream(canonV, Some(canonOp))
+        } yield {
+          val (resV, resOp) = flatResult
+          (resV, op.fold(resOp)(t => resOp.map(o => SeqModel.wrap(t, o))))
+        }
+      case v @ VarModel(_, CanonStreamType(t), _) =>
+        flatCanonStream(v, op)
+      case _ => State.pure((vm, op))
+    }
+  }
+
+  private def flatCanonStream[S: Mangler](
+    canonV: VarModel,
+    op: Option[OpModel.Tree]
+  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
+    if (canonV.properties.nonEmpty) {
+      val apName = canonV.name + "_flatten"
+      Mangler[S].findAndForbidName(apName).map { apN =>
+        val apV = VarModel(apN, canonV.`type`)
+        val apOp = FlattenModel(canonV, apN).leaf
+        (
+          apV,
+          Some(op.fold(apOp)(o => SeqModel.wrap(o, apOp)))
+        )
+      }
+    } else {
+      State.pure((canonV, op))
+    }
+
   }
 
   /**
@@ -63,20 +110,7 @@ object TagInliner extends Logging {
           peerIdDe <- valueToModel(peerId)
           viaDe <- valueListToModel(via.toList)
           viaDeFlattened <- viaDe.traverse { case (vm, tree) =>
-            vm match {
-              // flatten CanonStream, because in via we are using `fold`
-              // and `fold` cannot use CanonStream with property
-              case VarModel(n, CanonStreamType(_), l) if l.nonEmpty =>
-                val apName = n + "_flatten"
-                Mangler[S].findAndForbidName(apName).map { s =>
-                  val apV = VarModel(s, vm.`type`)
-                  val apOp = FlattenModel(vm, s).leaf
-                  val op = Option(tree.fold(apOp)(t => SeqModel.wrap(t, apOp)))
-                  (apV, op)
-                }
-
-              case _ => State.pure((vm, tree))
-            }
+            flat(vm, tree, true)
           }
           (pid, pif) = peerIdDe
           viaD = Chain.fromSeq(viaDeFlattened.map(_._1))
@@ -90,7 +124,9 @@ object TagInliner extends Logging {
           rd <- valueToModel(right)
           ldfixed <- fixModel(ld._1, ld._2)
           rdfixed <- fixModel(rd._1, rd._2)
-        } yield Some(MatchMismatchModel(ldfixed._1, rdfixed._1, shouldMatch)) -> parDesugarPrefixOpt(
+        } yield Some(
+          MatchMismatchModel(ldfixed._1, rdfixed._1, shouldMatch)
+        ) -> parDesugarPrefixOpt(
           ldfixed._2,
           rdfixed._2
         )
@@ -98,7 +134,9 @@ object TagInliner extends Logging {
       case ForTag(item, iterable) =>
         for {
           vp <- valueToModel(iterable)
-          (v, p) = vp
+          (vN, pN) = vp
+          flattened <- flat(vN, pN, true)
+          (v, p) = flattened
           n <- Mangler[S].findAndForbidName(item)
           elementType = iterable.`type` match {
             case b: BoxType => b.element

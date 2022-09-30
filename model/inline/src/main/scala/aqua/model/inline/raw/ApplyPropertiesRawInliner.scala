@@ -100,9 +100,11 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
           ((v.`type`, propertyModels.headOption) match {
             // canonicalize stream
             case (st: StreamType, Some(idx @ IntoIndexModel(_, _))) =>
-              val resultName = v.name + "_result_canon"
-              Mangler[S].findAndForbidName(resultName).map { uniqueResultName =>
-                val varSTest = VarModel(v.name + "_test", st)
+              for {
+                uniqueResultName <- Mangler[S].findAndForbidName(v.name + "_result_canon")
+                uniqueTestName <- Mangler[S].findAndForbidName(v.name + "_test")
+              } yield {
+                val varSTest = VarModel(uniqueTestName, st)
                 val iter = VarModel("s", st.element)
 
                 val iterCanon = VarModel(v.name + "_iter_canon", CanonStreamType(st.element))
