@@ -23,7 +23,7 @@
   "dependencies": {
     "@fluencelabs/aqua-ipfs": "0.5.5",
     "@fluencelabs/aqua-lib": "0.5.2",
-    "@fluencelabs/fluence": "0.24.1",
+    "@fluencelabs/fluence": "0.25.1",
     "@fluencelabs/fluence-network-environment": "1.0.13",
     "ipfs-http-client": "50.1.2"
   },
