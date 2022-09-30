@@ -59,7 +59,7 @@ case class OptionTypeToken[F[_]: Comonad](override val unit: F[Unit], data: Data
 object OptionTypeToken {
 
   val `optiontypedef`: P[OptionTypeToken[Span.S]] =
-    (`?`.lift ~ DataTypeToken.`datatypedef`).map(ud => OptionTypeToken(ud._1, ud._2))
+    (`?`.lift ~ DataTypeToken.`withoutstreamdatatypedef`).map(ud => OptionTypeToken(ud._1, ud._2))
 
 }
 
@@ -135,13 +135,13 @@ object ArrowTypeToken {
 object DataTypeToken {
 
   val `arraytypedef`: P[ArrayTypeToken[Span.S]] =
-    (`[]`.lift ~ `datatypedef`).map(ud => ArrayTypeToken(ud._1, ud._2))
+    (`[]`.lift ~ `withoutstreamdatatypedef`).map(ud => ArrayTypeToken(ud._1, ud._2))
 
   val `topbottomdef`: P[TopBottomToken[Span.S]] =
     `⊥`.lift.map(TopBottomToken(_, isTop = false)) |
       `⊤`.lift.map(TopBottomToken(_, isTop = true))
 
-  val `withoutstreamdatatypedef`: P[DataTypeToken[Span.S]] =
+  def `withoutstreamdatatypedef`: P[DataTypeToken[Span.S]] =
     P.oneOf(
       P.defer(`topbottomdef`) :: P.defer(`arraytypedef`) :: P.defer(
         OptionTypeToken.`optiontypedef`

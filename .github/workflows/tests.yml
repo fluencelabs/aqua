@@ -1,0 +1,40 @@
+name: Run tests
+
+on:
+  pull_request:
+    paths-ignode:
+      - "**.md"
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: "Run sbt tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          repository: fluencelabs/aqua
+
+      - name: Cache Scala
+        uses: coursier/cache-action@v6
+
+      - name: Setup Scala
+        uses: coursier/setup-action@v1
+
+      - name: Run tests
+        run: sbt test
+
+  snapshot:
+    name: "aqua"
+    uses: ./.github/workflows/snapshot.yml
+
+  aqua-playground:
+    needs: snapshot
+    uses: fluencelabs/aqua-playground/.github/workflows/tests.yml@master
+    with:
+      aqua-version: ${{ needs.snapshot.outputs.aqua-version }}
