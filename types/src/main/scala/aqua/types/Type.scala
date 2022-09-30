@@ -24,6 +24,8 @@ sealed trait Type {
   def uniteTop(other: Type): Type = UniteTypes.top.combine(this, other)
 
   def uniteBottom(other: Type): Type = UniteTypes.bottom.combine(this, other)
+
+  def properties: Map[String, Type] = Map.empty
 }
 
 // Product is a list of (optionally labelled) types
@@ -184,6 +186,18 @@ sealed trait BoxType extends DataType {
   def element: Type
 
   def withElement(t: Type): BoxType
+
+  override def properties: Map[String, Type] =
+    Map("length" -> ScalarType.u32)
+}
+
+case class CanonStreamType(element: Type) extends BoxType {
+
+  override def isStream: Boolean = false
+
+  override def toString: String = "#" + element
+
+  override def withElement(t: Type): BoxType = copy(element = t)
 }
 
 case class ArrayType(element: Type) extends BoxType {

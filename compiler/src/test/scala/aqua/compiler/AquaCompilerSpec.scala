@@ -1,6 +1,6 @@
 package aqua.compiler
 
-import aqua.model.{CallModel, IntoIndexModel, LiteralModel, ValueModel, VarModel}
+import aqua.model.{CallModel, FunctorModel, IntoIndexModel, LiteralModel, ValueModel, VarModel}
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
 import aqua.parser.ParserError
@@ -9,19 +9,9 @@ import aqua.parser.Parser
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.res.{
-  ApRes,
-  CallRes,
-  CallServiceRes,
-  FoldRes,
-  MakeRes,
-  NextRes,
-  ParRes,
-  RestrictionRes,
-  SeqRes
-}
+import aqua.res.{ApRes, CallRes, CallServiceRes, CanonRes, FoldRes, MakeRes, MatchMismatchRes, NextRes, ParRes, RestrictionRes, SeqRes, XorRes}
 import aqua.semantics.lsp.LspContext
-import aqua.types.{ArrayType, LiteralType, ScalarType, StreamType, Type}
+import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.Id
@@ -115,6 +105,36 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     ).leaf
   }
 
+  val init = LiteralModel.fromRaw(ValueRaw.InitPeerId)
+
+  private def join(vm: VarModel, length: ValueModel) = {
+    val testVM = VarModel(vm.name + "_test", vm.`type`)
+    val iter = VarModel("s", ScalarType.string)
+    val canon = VarModel(vm.name + "_iter_canon", CanonStreamType(ScalarType.string))
+    val idx = VarModel("incr_idx", ScalarType.u32)
+
+    RestrictionRes(testVM.name, true).wrap(
+      FoldRes(iter.name, vm).wrap(
+        CallServiceRes(
+          LiteralModel("\"math\"", ScalarType.string),
+          "add",
+          CallRes(
+            length :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
+            Some(CallModel.Export(idx.name, idx.`type`))
+          ),
+          init
+        ).leaf,
+        ApRes(iter, CallModel.Export(testVM.name, testVM.`type`)).leaf,
+        CanonRes(testVM, init, CallModel.Export(canon.name, canon.`type`)).leaf,
+        XorRes.wrap(
+          MatchMismatchRes(canon.copy(properties = Chain.one(FunctorModel("length", ScalarType.u32))), idx, true).leaf,
+          NextRes(iter.name).leaf
+        )
+      ),
+      CanonRes(testVM, init, CallModel.Export(vm.name + "_result_canon", canon.`type`)).leaf,
+    )
+  }
+
   "aqua compiler" should "create right topology" in {
 
     val res = compileToContext(
@@ -148,7 +168,9 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
     val peers = VarModel("peers", ArrayType(ScalarType.string))
     val peer = VarModel("peer-0", ScalarType.string)
-    val results = VarModel("results", StreamType(ScalarType.string))
+    val resultsType = StreamType(ScalarType.string)
+    val results = VarModel("results", resultsType)
+    val canonResult = VarModel(results.name + "-fix", CanonStreamType(resultsType.element))
     val initPeer = LiteralModel.fromRaw(ValueRaw.InitPeerId)
 
     val expected =
@@ -179,31 +201,15 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
                 )
               )
             ),
-            CallServiceRes(
-              LiteralModel.fromRaw(LiteralRaw.quote("op")),
-              "noop",
-              CallRes(
-                results.copy(lambda = Chain.one(IntoIndexModel("2", ScalarType.string))) :: Nil,
-                None
-              ),
-              initPeer
-            ).leaf,
-            CallServiceRes(
-              LiteralModel.fromRaw(LiteralRaw.quote("op")),
-              "identity",
-              CallRes(
-                results :: Nil,
-                Some(CallModel.Export("results-fix", ArrayType(ScalarType.string)))
-              ),
-              initPeer
-            ).leaf
+            join(results, LiteralModel.fromRaw(LiteralRaw.number(2))),
+            CanonRes(results, init, CallModel.Export(canonResult.name, canonResult.`type`)).leaf
           )
         ),
         CallServiceRes(
           LiteralModel.fromRaw(LiteralRaw.quote("callbackSrv")),
           "response",
           CallRes(
-            VarModel("results-fix", ArrayType(ScalarType.string)) :: Nil,
+            canonResult :: Nil,
             None
           ),
           initPeer
@@ -273,6 +279,9 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val Some(funcWrap) = aquaRes.funcs.find(_.funcName == "wrap")
     val Some(barfoo) = aquaRes.funcs.find(_.funcName == "barfoo")
 
+    val resVM = VarModel("res", StreamType(ScalarType.string))
+    val resCanonVM = VarModel("res-fix", CanonStreamType(ScalarType.string))
+
     barfoo.body.equalsOrShowDiff(
       SeqRes.wrap(
         RestrictionRes("res", true).wrap(
@@ -288,21 +297,17 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
               CallModel.Export("res", StreamType(ScalarType.string))
             ).leaf,
             // canonicalization
-            CallServiceRes(
-              LiteralModel.fromRaw(LiteralRaw.quote("op")),
-              "identity",
-              CallRes(
-                VarModel("res", StreamType(ScalarType.string)) :: Nil,
-                Some(CallModel.Export("res-fix", ArrayType(ScalarType.string)))
-              ),
-              LiteralModel.fromRaw(ValueRaw.InitPeerId)
+            CanonRes(
+              resVM,
+              LiteralModel.fromRaw(ValueRaw.InitPeerId),
+              CallModel.Export(resCanonVM.name, resCanonVM.`type`)
             ).leaf
           )
         ),
         CallServiceRes(
           LiteralModel.fromRaw(LiteralRaw.quote("callbackSrv")),
           "response",
-          CallRes(VarModel("res-fix", ArrayType(ScalarType.string)) :: Nil, None),
+          CallRes(resCanonVM :: Nil, None),
           LiteralModel.fromRaw(ValueRaw.InitPeerId)
         ).leaf
       )

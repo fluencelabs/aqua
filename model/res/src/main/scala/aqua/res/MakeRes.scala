@@ -1,6 +1,6 @@
 package aqua.res
 
-import aqua.types.{ArrayType, StreamType}
+import aqua.types.{ArrayType, CanonStreamType, StreamType}
 import cats.Eval
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
@@ -62,26 +62,25 @@ object MakeRes {
     case NextModel(item) => NextRes(item).leaf
     case PushToStreamModel(operand @ VarModel(_, StreamType(st), _), exportTo) =>
       val tmpName = s"push-to-stream-$i"
-      // wrap (
-      //  RestrictionRes(tmpName, isStream = false),
+      val properties = operand.properties
       SeqRes.wrap(
-        canon(
+        CanonRes(
+          operand.copy(properties = Chain.empty),
           orInit(currentPeerId),
-          operand,
-          CallModel.Export(tmpName, ArrayType(st))
-        ),
-        ApRes(VarModel(tmpName, ArrayType(st), Chain.empty), exportTo).leaf
+          CallModel.Export(tmpName, CanonStreamType(st))
+        ).leaf,
+        ApRes(VarModel(tmpName, CanonStreamType(st), properties), exportTo).leaf
       )
-    // )
     case PushToStreamModel(operand, exportTo) =>
       ApRes(operand, exportTo).leaf
 
     case CanonicalizeModel(operand, exportTo) =>
-      canon(
-        orInit(currentPeerId),
+      CanonRes(
         operand,
+        orInit(currentPeerId),
         exportTo
-      )
+      ).leaf
+
     case FlattenModel(operand, assignTo) =>
       ApRes(operand, CallModel.Export(assignTo, operand.`type`)).leaf
     case JoinModel(operands) =>

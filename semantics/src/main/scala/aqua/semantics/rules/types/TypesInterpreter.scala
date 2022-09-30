@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, ValueRaw}
+import aqua.raw.value.{FunctorRaw, IntoIndexRaw, IntoFieldRaw, PropertyRaw, ValueRaw}
 import aqua.semantics.lsp.{TokenDef, TokenTypeInfo}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{
@@ -128,7 +128,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         ).as(true)
     }
 
-  override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[LambdaRaw]] = {
+  override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[PropertyRaw]] = {
     rootT match {
       case StructType(name, fields) =>
         fields(op.value).fold(
@@ -145,8 +145,15 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
 
           }.as(Some(IntoFieldRaw(op.value, t)))
         }
-      case _ =>
-        report(op, s"Expected Struct type to resolve a field, got $rootT").as(None)
+      case t =>
+        t.properties.get(op.value)
+          .fold(
+            report(
+              op,
+              s"Expected Struct type to resolve a field '${op.value}' or a type with this property. Got: $rootT"
+            ).as(None)
+          )(t => State.pure(Some(FunctorRaw(op.value, t))))
+
     }
   }
 
@@ -155,7 +162,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
     rootT: Type,
     op: IntoIndex[S],
     idx: ValueRaw
-  ): State[X, Option[LambdaRaw]] =
+  ): State[X, Option[PropertyRaw]] =
     if (!ScalarType.i64.acceptsValueOf(idx.`type`))
       report(op, s"Expected numeric index, got $idx").as(None)
     else

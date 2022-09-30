@@ -5,8 +5,9 @@ import aqua.model.*
 import aqua.model.inline.raw.CallArrowRawInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.BoxType
+import aqua.types.{ArrayType, BoxType, CanonStreamType, StreamType}
 import cats.syntax.traverse.*
+import cats.syntax.applicative.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
 import scribe.{log, Logging}
@@ -32,6 +33,66 @@ object TagInliner extends Logging {
   private def none[S]: State[S, (Option[OpModel], Option[OpModel.Tree])] =
     State.pure(None -> None)
 
+  private def fixModel[S: Mangler: Arrows: Exports](
+    vm: ValueModel,
+    ops: Option[OpModel.Tree]
+  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
+    vm match {
+      case VarModel(name, StreamType(el), l) =>
+        val canonName = name + "_canon"
+        Mangler[S].findAndForbidName(canonName).map { n =>
+          val canon = VarModel(n, CanonStreamType(el), l)
+          val canonModel = CanonicalizeModel(vm, CallModel.Export(canon.name, canon.`type`)).leaf
+          canon -> Some(ops.fold(canonModel)(t => SeqModel.wrap(t, canonModel)))
+        }
+      case _ => State.pure(vm -> ops)
+    }
+  }
+
+  private def flat[S: Mangler](vm: ValueModel, op: Option[OpModel.Tree], flatStream: Boolean) = {
+    vm match {
+      // flatten stream, because in via we are using `fold`
+      // and `fold` will hang on stream
+      case v @ VarModel(n, StreamType(t), l) if flatStream =>
+        val canonName = v.name + "_canon"
+        for {
+          canonN <- Mangler[S].findAndForbidName(canonName)
+          canonV = VarModel(canonN, CanonStreamType(t), l)
+          canonOp = CanonicalizeModel(
+            v.copy(properties = Chain.empty),
+            CallModel.Export(canonV.name, canonV.`type`)
+          ).leaf
+          flatResult <- flatCanonStream(canonV, Some(canonOp))
+        } yield {
+          val (resV, resOp) = flatResult
+          (resV, op.fold(resOp)(t => resOp.map(o => SeqModel.wrap(t, o))))
+        }
+      case v @ VarModel(_, CanonStreamType(t), _) =>
+        flatCanonStream(v, op)
+      case _ => State.pure((vm, op))
+    }
+  }
+
+  private def flatCanonStream[S: Mangler](
+    canonV: VarModel,
+    op: Option[OpModel.Tree]
+  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
+    if (canonV.properties.nonEmpty) {
+      val apName = canonV.name + "_flatten"
+      Mangler[S].findAndForbidName(apName).map { apN =>
+        val apV = VarModel(apN, canonV.`type`)
+        val apOp = FlattenModel(canonV, apN).leaf
+        (
+          apV,
+          Some(op.fold(apOp)(o => SeqModel.wrap(o, apOp)))
+        )
+      }
+    } else {
+      State.pure((canonV, op))
+    }
+
+  }
+
   /**
    * Processes a single [[RawTag]] that may lead to many changes, including calling [[ArrowInliner]]
    *
@@ -48,9 +109,12 @@ object TagInliner extends Logging {
         for {
           peerIdDe <- valueToModel(peerId)
           viaDe <- valueListToModel(via.toList)
+          viaDeFlattened <- viaDe.traverse { case (vm, tree) =>
+            flat(vm, tree, true)
+          }
           (pid, pif) = peerIdDe
-          viaD = Chain.fromSeq(viaDe.map(_._1))
-          viaF = viaDe.flatMap(_._2)
+          viaD = Chain.fromSeq(viaDeFlattened.map(_._1))
+          viaF = viaDeFlattened.flatMap(_._2)
 
         } yield Some(OnModel(pid, viaD)) -> parDesugarPrefix(viaF.prependedAll(pif))
 
@@ -58,16 +122,21 @@ object TagInliner extends Logging {
         for {
           ld <- valueToModel(left)
           rd <- valueToModel(right)
-        } yield Some(MatchMismatchModel(ld._1, rd._1, shouldMatch)) -> parDesugarPrefixOpt(
-          ld._2,
-          rd._2
+          ldfixed <- fixModel(ld._1, ld._2)
+          rdfixed <- fixModel(rd._1, rd._2)
+        } yield Some(
+          MatchMismatchModel(ldfixed._1, rdfixed._1, shouldMatch)
+        ) -> parDesugarPrefixOpt(
+          ldfixed._2,
+          rdfixed._2
         )
 
       case ForTag(item, iterable) =>
         for {
           vp <- valueToModel(iterable)
-          (v, p) = vp
-          exps <- Exports[S].exports
+          (vN, pN) = vp
+          flattened <- flat(vN, pN, true)
+          (v, p) = flattened
           n <- Mangler[S].findAndForbidName(item)
           elementType = iterable.`type` match {
             case b: BoxType => b.element
@@ -94,12 +163,12 @@ object TagInliner extends Logging {
         }
 
       case JoinTag(operands) =>
-        logger.trace("join " + operands)
         operands
-          .traverse(valueToModel)
+          .traverse(o => valueToModel(o))
           .map(nel => {
             logger.trace("join after " + nel.map(_._1))
-            Some(JoinModel(nel.map(_._1))) -> parDesugarPrefix(nel.toList.flatMap(_._2))
+            // None because join behaviour will be processed in ApplyPropertiesRawInliner
+            None -> parDesugarPrefix(nel.toList.flatMap(_._2))
           })
 
       case CallArrowRawTag(exportTo, value: CallArrowRaw) =>

@@ -1,34 +1,25 @@
 package aqua.model.inline.raw
 
-import aqua.model.{
-  CallModel,
-  CanonicalizeModel,
-  NullModel,
-  PushToStreamModel,
-  RestrictionModel,
-  SeqModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
+import aqua.model.{CallModel, CanonicalizeModel, NullModel, PushToStreamModel, RestrictionModel, SeqModel, ValueModel, VarModel, XorModel}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.CollectionRaw
-import aqua.types.{ArrayType, OptionType, StreamType}
+import aqua.types.{ArrayType, CanonStreamType, OptionType, StreamType}
 import cats.data.{Chain, State}
 
 object CollectionRawInliner extends RawInliner[CollectionRaw] {
 
   override def apply[S: Mangler: Exports: Arrows](
     raw: CollectionRaw,
-    lambdaAllowed: Boolean
+    propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] =
     for {
       streamName <- Mangler[S].findAndForbidName(
         (
           raw.boxType match {
             case _: StreamType => "stream"
+            case _: CanonStreamType => "canon_stream"
             case _: ArrayType => "array"
             case _: OptionType => "option"
           }
@@ -49,8 +40,12 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
       canonName <-
         if (raw.boxType.isStream) State.pure(streamName)
         else Mangler[S].findAndForbidName(streamName)
-      canon = CallModel.Export(canonName, raw.boxType)
-    } yield VarModel(canonName, raw.boxType) -> Inline.tree(
+      canonType = raw.boxType match {
+        case StreamType(_) => raw.boxType
+        case _ => CanonStreamType(raw.boxType.element)
+      }
+      canon = CallModel.Export(canonName, canonType)
+    } yield VarModel(canonName, canon.`type`) -> Inline.tree(
       raw.boxType match {
         case ArrayType(_) =>
           RestrictionModel(streamName, isStream = true).wrap(
@@ -63,7 +58,7 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
               CanonicalizeModel(stream, canon).leaf
             )
           )
-        case StreamType(_) =>
+        case _ =>
           SeqModel.wrap(vals.toList: _*)
       }
     )

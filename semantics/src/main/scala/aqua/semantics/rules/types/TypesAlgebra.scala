@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{LambdaRaw, ValueRaw}
+import aqua.raw.value.{PropertyRaw, ValueRaw}
 import aqua.types.{ArrowType, Type}
 import cats.data.NonEmptyMap
 import cats.data.NonEmptyList
@@ -23,8 +23,8 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def defineAlias(name: CustomTypeToken[S], target: Type): Alg[Boolean]
 
-  def resolveIndex(rootT: Type, op: IntoIndex[S], idx: ValueRaw): Alg[Option[LambdaRaw]]
-  def resolveField(rootT: Type, op: IntoField[S]): Alg[Option[LambdaRaw]]
+  def resolveIndex(rootT: Type, op: IntoIndex[S], idx: ValueRaw): Alg[Option[PropertyRaw]]
+  def resolveField(rootT: Type, op: IntoField[S]): Alg[Option[PropertyRaw]]
 
   def ensureValuesComparable(token: Token[S], left: Type, right: Type): Alg[Boolean]
 

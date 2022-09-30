@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
-import aqua.raw.value.{IntoFieldRaw, IntoIndexRaw, LambdaRaw, LiteralRaw, ValueRaw}
-import aqua.parser.lexer.{ArrayTypeToken, ArrowTypeToken, BasicTypeToken, CustomTypeToken, IntoField, IntoIndex, LambdaOp, Name, OptionTypeToken, StreamTypeToken, Token, TopBottomToken, TypeToken}
+import aqua.raw.value.{FunctorRaw, IntoIndexRaw, PropertyRaw, LiteralRaw, ValueRaw}
+import aqua.parser.lexer.{ArrayTypeToken, ArrowTypeToken, BasicTypeToken, CustomTypeToken, IntoField, IntoIndex, PropertyOp, Name, OptionTypeToken, StreamTypeToken, Token, TopBottomToken, TypeToken}
 import aqua.types.{ArrayType, ArrowType, BottomType, DataType, OptionType, ProductType, StreamType, StructType, TopType, Type}
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}

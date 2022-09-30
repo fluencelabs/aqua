@@ -40,7 +40,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   def resolveType(v: ValueToken[S]): Alg[Option[Type]] =
     valueToRaw(v).map(_.map(_.`type`))
 
-  private def resolveSingleLambda(rootType: Type, op: LambdaOp[S]): Alg[Option[LambdaRaw]] =
+  private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
         T.resolveField(rootType, op)
@@ -61,18 +61,18 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case VarToken(name, ops) =>
         N.read(name).flatMap {
           case Some(t) =>
-            // Prepare lambda expression: take the last known type and the next op, add next op to accumulator
+            // Prepare property expression: take the last known type and the next op, add next op to accumulator
             ops
-              .foldLeft[Alg[(Option[Type], Chain[LambdaRaw])]]((Some(t) -> Chain.empty).pure[Alg]) {
+              .foldLeft[Alg[(Option[Type], Chain[PropertyRaw])]]((Some(t) -> Chain.empty).pure[Alg]) {
                 case (acc, op) =>
                   acc.flatMap {
-                    // Some(tt) means that the previous lambda op was resolved successfully
-                    case (Some(tt), lamb) =>
-                      // Resolve a single lambda
-                      resolveSingleLambda(tt, op).map {
-                        // Lambda op resolved, add it to accumulator and update the last known type
-                        case Some(l) => (Some(l.`type`), lamb :+ l)
-                        // Lambda op is not resolved, it's an error, stop iterations
+                    // Some(tt) means that the previous property op was resolved successfully
+                    case (Some(tt), prop) =>
+                      // Resolve a single property
+                      resolveSingleProperty(tt, op).map {
+                        // Property op resolved, add it to accumulator and update the last known type
+                        case Some(p) => (Some(p.`type`), prop :+ p)
+                        // Property op is not resolved, it's an error, stop iterations
                         case None => (None, Chain.empty)
                       }
 
@@ -83,10 +83,11 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               }
               .map {
                 // Some(_) means no errors occured
-                case (Some(_), lambda) if lambda.length == ops.length =>
-                  Some(lambda.foldLeft[ValueRaw](VarRaw(name.value, t)) { case (v, l) =>
-                    ApplyLambdaRaw(v, l)
+                case (Some(_), property) if property.length == ops.length =>
+                  Some(property.foldLeft[ValueRaw](VarRaw(name.value, t)) { case (v, p) =>
+                    ApplyPropertyRaw(v, p)
                   })
+
                 case _ => None
               }
 

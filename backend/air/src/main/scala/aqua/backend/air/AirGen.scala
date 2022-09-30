@@ -3,7 +3,7 @@ package aqua.backend.air
 import aqua.model.*
 import aqua.raw.ops.Call
 import aqua.res.*
-import aqua.types.StreamType
+import aqua.types.{ArrayType, CanonStreamType, StreamType}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -16,23 +16,32 @@ sealed trait AirGen {
 
 object AirGen extends Logging {
 
-  def lambdaToString(ls: List[LambdaModel]): String = ls match {
+  def propertyToString(ls: List[PropertyModel]): String = ls match {
     case Nil => ""
+    case FunctorModel(field, _) :: tail =>
+      s".$field${propertyToString(tail)}"
     case IntoFieldModel(field, _) :: tail =>
-      s".$field${lambdaToString(tail)}"
+      s".$field${propertyToString(tail)}"
     case IntoIndexModel(idx, _) :: tail =>
-      s".[$idx]${lambdaToString(tail)}"
+      s".[$idx]${propertyToString(tail)}"
   }
 
   def valueToData(vm: ValueModel): DataView = vm match {
     case LiteralModel(value, _) => DataView.StringScalar(value)
-    case VarModel(name, t, lambda) =>
+    case VarModel(name, t, property) =>
       val n = (t match {
         case _: StreamType => "$" + name
+        case _: CanonStreamType => "#" + name
         case _ => name
       }).replace('.', '_')
-      if (lambda.isEmpty) DataView.Variable(n)
-      else DataView.VarLens(n, lambdaToString(lambda.toList))
+      if (property.isEmpty) DataView.Variable(n)
+      else {
+        val functors = property.find {
+          case FunctorModel(_, _) => true
+          case _ => false
+        }
+        DataView.VarLens(n, propertyToString(property.toList), functors.isEmpty)
+      }
   }
 
   def opsToSingle(ops: Chain[AirGen]): AirGen = ops.toList match {
@@ -43,6 +52,7 @@ object AirGen extends Logging {
 
   def exportToString(exportTo: CallModel.Export): String = (exportTo match {
     case CallModel.Export(name, _: StreamType) => "$" + name
+    case CallModel.Export(name, _: CanonStreamType) => "#" + name
     case CallModel.Export(name, _) => name
   }).replace('.', '_')
 
@@ -101,6 +111,11 @@ object AirGen extends Logging {
           ApGen(valueToData(operand), exportToString(exportTo))
         )
 
+      case CanonRes(operand, peerId, exportTo) =>
+        Eval.later(
+          CanonGen(valueToData(operand), valueToData(peerId), exportToString(exportTo))
+        )
+
       case NullRes =>
         Eval.now(NullGen)
 
@@ -136,6 +151,12 @@ case class ApGen(operand: DataView, result: String) extends AirGen {
 
   override def generate: Air =
     Air.Ap(operand, result)
+}
+
+case class CanonGen(operand: DataView, peerId: DataView, result: String) extends AirGen {
+
+  override def generate: Air =
+    Air.Canon(operand, peerId, result)
 }
 
 case class MatchMismatchGen(

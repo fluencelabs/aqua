@@ -10,7 +10,7 @@ trait RawInliner[T <: ValueRaw] {
 
   def apply[S: Mangler: Exports: Arrows](
     raw: T,
-    lambdaAllowed: Boolean = true
+    propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Inline)]
 
 }

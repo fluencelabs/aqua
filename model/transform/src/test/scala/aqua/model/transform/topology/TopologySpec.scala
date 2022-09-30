@@ -424,7 +424,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   "topology resolver" should "create returning hops after for-par with inner `on` and xor" in {
 
     val streamRaw = VarRaw("stream", StreamType(ScalarType.string))
-    val streamRawEl = VarRaw("stream", StreamType(ScalarType.string)).withLambda(
+    val streamRawEl = VarRaw("stream", StreamType(ScalarType.string)).withProperty(
       IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string)
     )
     val stream = ValueModel.fromRaw(streamRaw)
@@ -491,7 +491,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   "topology resolver" should "create returning hops after for-par with inner `on` and xor, version 2" in {
 
     val streamRaw = VarRaw("stream", StreamType(ScalarType.string))
-    val streamRawEl = VarRaw("stream", StreamType(ScalarType.string)).withLambda(
+    val streamRawEl = VarRaw("stream", StreamType(ScalarType.string)).withProperty(
       IntoIndexRaw(LiteralRaw("2", ScalarType.u32), ScalarType.string)
     )
     val stream = ValueModel.fromRaw(streamRaw)
@@ -775,7 +775,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val i = LiteralRaw("i", ScalarType.string)
     val used = VarRaw("used", StreamType(ScalarType.string))
     val usedWithIdx =
-      used.withLambda(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
+      used.withProperty(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
 
     val init =
       OnModel(initPeer, Chain.one(relay)).wrap(
@@ -827,7 +827,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val i = LiteralRaw("i", ScalarType.string)
     val used = VarRaw("used", StreamType(ScalarType.string))
     val usedWithIdx =
-      used.withLambda(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
+      used.withProperty(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
     val init =
       OnModel(initPeer, Chain.one(relay)).wrap(
         foldPar(
