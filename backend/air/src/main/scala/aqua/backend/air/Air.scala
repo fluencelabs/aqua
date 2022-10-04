@@ -130,7 +130,7 @@ object Air {
             case Air.New(item, inst) ⇒ s" ${item.show}\n${showNext(inst)}$space"
             case Air.Fold(iter, label, inst, mode) ⇒
               val m = mode.map(a => show(depth + 1, a)).getOrElse("")
-              s" ${iter.show} $label\n${showNext(inst)}$space$m\n"
+              s" ${iter.show} $label\n${showNext(inst)}$m$space"
             case Air.Match(left, right, inst) ⇒
               s" ${left.show} ${right.show}\n${showNext(inst)}$space"
             case Air.Mismatch(left, right, inst) ⇒
