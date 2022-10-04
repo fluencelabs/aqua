@@ -1,6 +1,6 @@
 package aqua.compiler
 
-import aqua.model.{CallModel, FunctorModel, IntoIndexModel, LiteralModel, ValueModel, VarModel}
+import aqua.model.{CallModel, ForModel, FunctorModel, IntoIndexModel, LiteralModel, ValueModel, VarModel}
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
 import aqua.parser.ParserError
@@ -114,7 +114,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val idx = VarModel("incr_idx", ScalarType.u32)
 
     RestrictionRes(testVM.name, true).wrap(
-      FoldRes(iter.name, vm).wrap(
+      FoldRes(iter.name, vm, Some(ForModel.NeverMode)).wrap(
         CallServiceRes(
           LiteralModel("\"math\"", ScalarType.string),
           "add",
@@ -180,7 +180,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
         RestrictionRes("results", true).wrap(
           SeqRes.wrap(
             ParRes.wrap(
-              FoldRes(peer.name, peers).wrap(
+              FoldRes(peer.name, peers, Some(ForModel.NeverMode)).wrap(
                 ParRes.wrap(
                   // better if first relay will be outside `for`
                   SeqRes.wrap(

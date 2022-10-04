@@ -412,7 +412,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         through(relay),
         callRes(0, otherPeer),
         ParRes.wrap(
-          FoldRes("i", valueArray).wrap(ParRes.wrap(callRes(2, otherPeer2), NextRes("i").leaf))
+          FoldRes("i", valueArray, Some(ForModel.NeverMode)).wrap(ParRes.wrap(callRes(2, otherPeer2), NextRes("i").leaf))
         ),
         through(relay),
         callRes(3, initPeer)
@@ -457,7 +457,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       SeqRes.wrap(
         through(relay),
         ParRes.wrap(
-          FoldRes("i", valueArray).wrap(
+          FoldRes("i", valueArray, Some(ForModel.NeverMode)).wrap(
             ParRes.wrap(
               // better if first relay will be outside `for`
               SeqRes.wrap(
@@ -526,7 +526,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       SeqRes.wrap(
         through(relay),
         ParRes.wrap(
-          FoldRes("i", valueArray).wrap(
+          FoldRes("i", valueArray, Some(ForModel.NeverMode)).wrap(
             ParRes.wrap(
               // better if first relay will be outside `for`
               SeqRes.wrap(
@@ -572,6 +572,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           fold(
             "i",
             valueArray,
+            None,
             OnModel(otherPeer2, Chain.one(otherRelay2)).wrap(
               callModel(2)
             )
@@ -608,6 +609,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         fold(
           "i",
           valueArray,
+          None,
           OnModel(i, Chain.one(otherRelay)).wrap(
             callModel(1)
           )
@@ -716,7 +718,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       SeqRes.wrap(
         callRes(1, otherPeer),
         ParRes.wrap(
-          FoldRes("i", valueArray).wrap(
+          FoldRes("i", valueArray, Some(ForModel.NeverMode)).wrap(
             ParRes.wrap(
               SeqRes.wrap(
                 // TODO: should be outside of fold
@@ -795,7 +797,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected =
       SeqRes.wrap(
         ParRes.wrap(
-          FoldRes("i", ValueModel.fromRaw(valueArray)).wrap(
+          FoldRes("i", ValueModel.fromRaw(valueArray), Some(ForModel.NeverMode)).wrap(
             ParRes.wrap(
               SeqRes.wrap(
                 through(relay),
@@ -848,7 +850,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected =
       SeqRes.wrap(
         ParRes.wrap(
-          FoldRes("i", ValueModel.fromRaw(valueArray)).wrap(
+          FoldRes("i", ValueModel.fromRaw(valueArray), Some(ForModel.NeverMode)).wrap(
             ParRes.wrap(
               SeqRes.wrap(
                 through(relay),
