@@ -90,7 +90,7 @@ object Air {
 
   case class Next(label: String) extends Air(Keyword.Next)
 
-  case class Fold(iterable: DataView, label: String, instruction: Air, mode: Option[Air]) extends Air(Keyword.Fold)
+  case class Fold(iterable: DataView, label: String, instruction: Air, lastNextInstruction: Option[Air]) extends Air(Keyword.Fold)
 
   case class Match(left: DataView, right: DataView, instruction: Air) extends Air(Keyword.Match)
 
@@ -128,9 +128,9 @@ object Air {
             case Air.Never ⇒ ""
             case Air.Next(label) ⇒ s" $label"
             case Air.New(item, inst) ⇒ s" ${item.show}\n${showNext(inst)}$space"
-            case Air.Fold(iter, label, inst, mode) ⇒
-              val m = mode.map(a => show(depth + 1, a)).getOrElse("")
-              s" ${iter.show} $label\n${showNext(inst)}$m$space"
+            case Air.Fold(iter, label, inst, lastInst) ⇒
+              val l = lastInst.map(a => show(depth + 1, a)).getOrElse("")
+              s" ${iter.show} $label\n${showNext(inst)}$l$space"
             case Air.Match(left, right, inst) ⇒
               s" ${left.show} ${right.show}\n${showNext(inst)}$space"
             case Air.Mismatch(left, right, inst) ⇒
