@@ -1,7 +1,7 @@
 package aqua.backend.air
 
 import cats.Show
-import cats.syntax.show._
+import cats.syntax.show.*
 
 abstract sealed class Keyword(val value: String)
 
@@ -9,6 +9,7 @@ object Keyword {
   case object NA extends Keyword("")
 
   case object Null extends Keyword("null")
+  case object Never extends Keyword("never")
 
   case object New extends Keyword("new")
   case object Next extends Keyword("next")
@@ -83,11 +84,13 @@ object Air {
 
   case object Null extends Air(Keyword.Null)
 
+  case object Never extends Air(Keyword.Never)
+
   case class New(item: DataView, instruction: Air) extends Air(Keyword.New)
 
   case class Next(label: String) extends Air(Keyword.Next)
 
-  case class Fold(iterable: DataView, label: String, instruction: Air) extends Air(Keyword.Fold)
+  case class Fold(iterable: DataView, label: String, instruction: Air, mode: Option[Air]) extends Air(Keyword.Fold)
 
   case class Match(left: DataView, right: DataView, instruction: Air) extends Air(Keyword.Match)
 
@@ -122,9 +125,12 @@ object Air {
         s"$space(${air.keyword.value}" +
           (air match {
             case Air.Null ⇒ ""
+            case Air.Never ⇒ ""
             case Air.Next(label) ⇒ s" $label"
             case Air.New(item, inst) ⇒ s" ${item.show}\n${showNext(inst)}$space"
-            case Air.Fold(iter, label, inst) ⇒ s" ${iter.show} $label\n${showNext(inst)}$space"
+            case Air.Fold(iter, label, inst, mode) ⇒
+              val m = mode.map(a => show(depth + 1, a)).getOrElse("")
+              s" ${iter.show} $label\n${showNext(inst)}$space$m\n"
             case Air.Match(left, right, inst) ⇒
               s" ${left.show} ${right.show}\n${showNext(inst)}$space"
             case Air.Mismatch(left, right, inst) ⇒

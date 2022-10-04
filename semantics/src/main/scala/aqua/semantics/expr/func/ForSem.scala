@@ -4,6 +4,7 @@ import aqua.raw.Raw
 import aqua.parser.expr.func.ForExpr
 import aqua.raw.value.ValueRaw
 import aqua.raw.ops.*
+import aqua.raw.ops.ForTag.WaitMode
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -48,9 +49,14 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                     case ForExpr.ParMode => ParTag
                     case ForExpr.TryMode => XorTag
                   }
+                  
+                  val mode = expr.mode.map(_._2).flatMap {
+                    case ForExpr.ParMode => Some(WaitMode)
+                    case ForExpr.TryMode => None
+                  }
 
                   val forTag =
-                    ForTag(expr.item.value, vm).wrap(
+                    ForTag(expr.item.value, vm, mode).wrap(
                       expr.mode
                         .map(_._2)
                         .fold[RawTag](SeqTag) {

@@ -55,7 +55,7 @@ object MakeRes {
     case SeqModel | _: OnModel | _: ApplyTopologyModel => SeqRes.leaf
     case MatchMismatchModel(a, b, s) =>
       MatchMismatchRes(a, b, s).leaf
-    case ForModel(item, iter) if !isNillLiteral(iter) => FoldRes(item, iter).leaf
+    case ForModel(item, iter, mode) if !isNillLiteral(iter) => FoldRes(item, iter, mode).leaf
     case RestrictionModel(item, isStream) => RestrictionRes(item, isStream).leaf
     case ParModel | DetachModel => ParRes.leaf
     case XorModel => XorRes.leaf
