@@ -148,10 +148,11 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
               val vm = v.copy(properties = v.properties ++ propertyModels).resolveWith(exports)
               State.pure(vm -> Inline.empty)
           }).flatMap { case (genV, genInline) =>
-            if (propertiesAllowed) State.pure(genV -> (prefix |+| propertyPrefix |+| genInline))
+            val prefInline = Inline(propertyPrefix.flattenValues ++ genInline.flattenValues, Chain.one(SeqModel.wrap((propertyPrefix.predo ++ genInline.predo).toList:_*)))
+            if (propertiesAllowed) State.pure(genV -> (prefix |+| prefInline))
             else
               removeProperty(genV).map { case (vmm, mpp) =>
-                vmm -> (prefix |+| mpp |+| propertyPrefix |+| genInline)
+                vmm -> (prefix |+| mpp |+| prefInline)
               }
           }
 
