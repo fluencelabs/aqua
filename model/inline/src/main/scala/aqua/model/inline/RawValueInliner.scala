@@ -2,7 +2,12 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
-import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner}
+import aqua.model.inline.raw.{
+  ApplyFunctorRawInliner,
+  ApplyPropertiesRawInliner,
+  CallArrowRawInliner,
+  CollectionRawInliner
+}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, OptionType, StreamType}
@@ -107,10 +112,20 @@ object RawValueInliner extends Logging {
   ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(valueToModel(_))
 
+  /**
+   * Unfold all arguments and make CallModel
+   * @param flatStreamArguments canonicalize and flatten all stream arguments if true
+   */
   def callToModel[S: Mangler: Exports: Arrows](
-    call: Call
+    call: Call,
+    flatStreamArguments: Boolean
   ): State[S, (CallModel, Option[OpModel.Tree])] =
-    valueListToModel(call.args).map { list =>
+    valueListToModel(call.args).flatMap { args =>
+      if (flatStreamArguments)
+        args.map(arg => TagInliner.flat(arg._1, arg._2, true)).sequence
+      else
+        State.pure(args)
+    }.map { list =>
       (
         CallModel(
           list.map(_._1),
