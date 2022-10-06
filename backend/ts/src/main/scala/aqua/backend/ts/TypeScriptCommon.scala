@@ -81,5 +81,5 @@ object TypeScriptCommon {
     } else {
       "null"
     }
-    s"callParams: CallParams<${generic}>"
+    s"callParams: CallParams$$<${generic}>"
 }
