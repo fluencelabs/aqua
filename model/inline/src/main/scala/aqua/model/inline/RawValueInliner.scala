@@ -112,12 +112,16 @@ object RawValueInliner extends Logging {
   ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(valueToModel(_))
 
+  /**
+   * Unfold all arguments and make CallModel
+   * @param flatStreamArguments canonicalize and flatten all stream arguments if true
+   */
   def callToModel[S: Mangler: Exports: Arrows](
     call: Call,
-    flatStreams: Boolean
+    flatStreamArguments: Boolean
   ): State[S, (CallModel, Option[OpModel.Tree])] =
     valueListToModel(call.args).flatMap { args =>
-      if (flatStreams)
+      if (flatStreamArguments)
         args.map(arg => TagInliner.flat(arg._1, arg._2, true)).sequence
       else
         State.pure(args)
