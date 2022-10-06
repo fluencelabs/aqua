@@ -51,6 +51,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamModel = VarModel("records", StreamType(ScalarType.string))
+    val canonName = streamVar.name + "_canon"
+    val canonModel = VarModel(canonName, CanonStreamType(ScalarType.string))
     val cbType = ArrowType(ProductType(ArrayType(ScalarType.string) :: Nil), ProductType(Nil))
     val cbVal = VarModel("cb-pass", cbType)
 
@@ -112,11 +114,14 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, true).wrap(
-        CallServiceModel(
-          LiteralModel("\"test-service\"", LiteralType.string),
-          "some-call",
-          CallModel(streamModel :: Nil, Nil)
-        ).leaf
+        SeqModel.wrap(
+          CanonicalizeModel(streamModel, CallModel.Export(canonModel.name, canonModel.`type`)).leaf,
+          CallServiceModel(
+            LiteralModel("\"test-service\"", LiteralType.string),
+            "some-call",
+            CallModel(canonModel :: Nil, Nil)
+          ).leaf
+        )
       )
     ) should be(true)
 
@@ -232,8 +237,10 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     val returnType = ArrayType(ArrayType(ScalarType.string))
     val streamType = StreamType(ArrayType(ScalarType.string))
+    val canonType = CanonStreamType(ArrayType(ScalarType.string))
     val recordsVar = VarRaw("records", streamType)
     val recordsModel = VarModel(recordsVar.name, recordsVar.baseType)
+    val canonModel = VarModel(recordsVar.name + "_canon", canonType)
     val innerRecordsVar = VarRaw("inner-records", StreamType(ArrayType(ScalarType.string)))
     val innerName = "inner"
 
@@ -290,11 +297,14 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           "get_records",
           CallModel(Nil, CallModel.Export(recordsModel.name, recordsModel.`type`) :: Nil)
         ).leaf,
-        CallServiceModel(
-          LiteralModel("\"callbackSrv\"", LiteralType.string),
-          "response",
-          CallModel(recordsModel :: Nil, Nil)
-        ).leaf
+        SeqModel.wrap(
+          CanonicalizeModel(recordsModel, CallModel.Export(canonModel.name, canonType)).leaf,
+          CallServiceModel(
+            LiteralModel("\"callbackSrv\"", LiteralType.string),
+            "response",
+            CallModel(canonModel :: Nil, Nil)
+          ).leaf
+        )
       )
     ) should be(true)
 

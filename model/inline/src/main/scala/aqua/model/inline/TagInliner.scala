@@ -49,10 +49,8 @@ object TagInliner extends Logging {
     }
   }
 
-  private def flat[S: Mangler](vm: ValueModel, op: Option[OpModel.Tree], flatStream: Boolean) = {
+  def flat[S: Mangler](vm: ValueModel, op: Option[OpModel.Tree], flatStream: Boolean): State[S, (ValueModel, Option[OpModel.Tree])] = {
     vm match {
-      // flatten stream, because in via we are using `fold`
-      // and `fold` will hang on stream
       case v @ VarModel(n, StreamType(t), l) if flatStream =>
         val canonName = v.name + "_canon"
         for {
@@ -134,8 +132,7 @@ object TagInliner extends Logging {
       case ForTag(item, iterable, mode) =>
         for {
           vp <- valueToModel(iterable)
-          (vN, pN) = vp
-          flattened <- flat(vN, pN, true)
+          flattened <- flat(vp._1, vp._2, true)
           (v, p) = flattened
           n <- Mangler[S].findAndForbidName(item)
           elementType = iterable.`type` match {
