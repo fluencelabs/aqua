@@ -6,7 +6,7 @@ object Header {
     val callParams =
       if (isJs) ""
       else
-        "import type { CallParams$$ } from @fluencelabs/fluence/dist/internal/compilerSupport/v4$"
+        "import type { CallParams$$ } from '@fluencelabs/fluence/dist/internal/compilerSupport/v4'"
     val imports = if (isCommonJS) {
       """const { FluencePeer } = require('@fluencelabs/fluence');
         |const {
@@ -17,8 +17,8 @@ object Header {
       s"""import { FluencePeer } from '@fluencelabs/fluence';
          |$callParams
          |import {
-         |    callFunction$$,
-         |    registerService$$,
+         |    callFunction$$$$,
+         |    registerService$$$$,
          |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v4${if (isJs) ".js"
       else ""}';""".stripMargin
     }
