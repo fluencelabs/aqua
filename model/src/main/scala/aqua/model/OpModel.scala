@@ -94,14 +94,20 @@ case class MatchMismatchModel(left: ValueModel, right: ValueModel, shouldMatch: 
     left.usesVarNames ++ right.usesVarNames
 }
 
-case class ForModel(item: String, iterable: ValueModel) extends SeqGroupModel {
+case class ForModel(item: String, iterable: ValueModel, mode: Option[ForModel.Mode] = Some(ForModel.NullMode)) extends SeqGroupModel {
 
-  override def toString: String = s"for $item <- $iterable"
+  override def toString: String = s"for $item <- $iterable${mode.map(m => " " + m.toString).getOrElse("")}"
 
   override def restrictsVarNames: Set[String] = Set(item)
 
   override def usesVarNames: Set[String] = iterable.usesVarNames
 
+}
+
+object ForModel {
+  sealed trait Mode
+  case object NullMode extends Mode
+  case object NeverMode extends Mode
 }
 
 // TODO how is it used? remove, if it's not

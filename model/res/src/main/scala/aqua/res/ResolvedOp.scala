@@ -1,6 +1,6 @@
 package aqua.res
 
-import aqua.model.{CallModel, ValueModel, VarModel}
+import aqua.model.{CallModel, ForModel, ValueModel, VarModel}
 import aqua.raw.ops.Call
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import cats.data.Chain
@@ -31,8 +31,8 @@ case class MatchMismatchRes(left: ValueModel, right: ValueModel, shouldMatch: Bo
   override def toString: String = s"(${if (shouldMatch) "match" else "mismatch"} $left $right)"
 }
 
-case class FoldRes(item: String, iterable: ValueModel) extends ResolvedOp {
-  override def toString: String = s"(fold $iterable $item "
+case class FoldRes(item: String, iterable: ValueModel, mode: Option[ForModel.Mode] = None) extends ResolvedOp {
+  override def toString: String = s"(fold $iterable $item ${mode.map(_.toString).getOrElse("")}"
 }
 
 case class RestrictionRes(item: String, isStream: Boolean) extends ResolvedOp {

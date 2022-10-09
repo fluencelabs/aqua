@@ -104,15 +104,21 @@ case class MatchMismatchTag(left: ValueRaw, right: ValueRaw, shouldMatch: Boolea
     MatchMismatchTag(left.map(f), right.map(f), shouldMatch)
 }
 
-case class ForTag(item: String, iterable: ValueRaw) extends SeqGroupTag {
+case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = None) extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(item)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    ForTag(item, iterable.map(f))
+    ForTag(item, iterable.map(f), mode)
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(item = map.getOrElse(item, item))
+}
+
+object ForTag {
+  sealed trait Mode
+  case object WaitMode extends Mode
+  case object PassMode extends Mode
 }
 
 case class CallArrowRawTag(

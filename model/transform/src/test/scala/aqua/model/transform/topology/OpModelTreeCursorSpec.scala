@@ -136,6 +136,7 @@ class OpModelTreeCursorSpec extends AnyFlatSpec with Matchers {
                 fold(
                   "item",
                   VarRaw("iterable", ArrayType(ScalarType.string)),
+                  None,
                   OnModel(
                     VarRaw("-in-fold-", ScalarType.string),
                     Chain.one(VarRaw("-fold-relay-", ScalarType.string))

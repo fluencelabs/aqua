@@ -129,7 +129,7 @@ object TagInliner extends Logging {
           rdfixed._2
         )
 
-      case ForTag(item, iterable) =>
+      case ForTag(item, iterable, mode) =>
         for {
           vp <- valueToModel(iterable)
           flattened <- flat(vp._1, vp._2, true)
@@ -146,7 +146,12 @@ object TagInliner extends Logging {
           }
           _ <- Exports[S].resolved(item, VarModel(n, elementType))
         } yield {
-          Some(ForModel(n, v)) -> p
+          val m = mode.map {
+            case ForTag.WaitMode => ForModel.NeverMode
+            case ForTag.PassMode => ForModel.NullMode
+          }
+
+          Some(ForModel(n, v, m)) -> p
         }
 
       case PushToStreamTag(operand, exportTo) =>

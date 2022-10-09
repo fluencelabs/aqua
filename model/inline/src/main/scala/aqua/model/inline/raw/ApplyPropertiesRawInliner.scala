@@ -115,7 +115,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
                 val incrVar = VarModel("incr_idx", ScalarType.u32)
 
                 val tree = RestrictionModel(varSTest.name, true).wrap(
-                  ForModel(iter.name, v).wrap(
+                  ForModel(iter.name, v, Some(ForModel.NeverMode)).wrap(
                     increment(idx.idxToValueModel, incrVar),
                     PushToStreamModel(
                       iter,
