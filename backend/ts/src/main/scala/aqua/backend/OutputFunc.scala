@@ -37,7 +37,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
          |    let script = `
          |$script
          |    `
-         |    return callFunction(
+         |    return callFunction$$$$(
          |        args,
          |        ${funcDef.asJson.deepDropNullValues.spaces4},
          |        script
