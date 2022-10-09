@@ -27,7 +27,7 @@ case class OutputService(srv: ServiceRes, types: Types) {
        |${serviceTypes.generate}
        |
        |export function register${srv.name}(${typed("...args", "any")}) {
-       |    registerService(
+       |    registerService$$$$(
        |        args,
        |        ${serviceDef.asJson.deepDropNullValues.spaces4}
        |    );
