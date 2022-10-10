@@ -96,9 +96,6 @@ jobs:
         working-directory: npm
         run: npm i --save @fluencelabs/fluence@${{ inputs.fluence-js-version }}
 
-      - run: npm run build
-        working-directory: npm
-
       - name: Generate package version
         id: version
         run: |
@@ -119,6 +116,9 @@ jobs:
                 npm version prerelease \
                 --no-git-tag-version \
                 --preid ${{ env.BRANCH }}-${{ env.SHA }}-${{ env.RUN }}-${{ env.ATTEMPT }})"
+
+      - run: npm run build
+        working-directory: npm
 
       - name: Publish to self-hosted npm repo
         working-directory: npm
