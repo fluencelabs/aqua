@@ -25,6 +25,13 @@ jobs:
         with:
           repository: fluencelabs/aqua
 
+     - name: Generate version
+        id: version
+        run: |
+          SHA=${{ github.event.pull_request.head.sha }}
+          echo "::set-output name=sha::${SHA::7}"
+          echo "::set-output name=branch::${GITHUB_HEAD_REF//[^a-zA-Z0-9-]/-}"
+
       - name: Cache Scala
         uses: coursier/cache-action@v6
 
@@ -32,6 +39,8 @@ jobs:
         uses: coursier/setup-action@v1
 
       - name: Compile aqua
+        env:
+          SNAPSHOT: ${{ steps.version.outputs.branch }}-${{ steps.version.outputs.sha }}-${{ github.run_number }}-${{ github.run_attempt }}
         run: sbt "cliJS/fastOptJS"
 
       - name: Upload compiled aqua
