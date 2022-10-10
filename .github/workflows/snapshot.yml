@@ -94,7 +94,7 @@ jobs:
       - name: Set fluence-js version from branch
         if: inputs.fluence-js-version != ''
         working-directory: npm
-        run: npm i @fluencelabs/fluence@${{ inputs.fluence-js-version }}
+        run: npm i --save @fluencelabs/fluence@${{ inputs.fluence-js-version }}
 
       - run: npm run build
         working-directory: npm
@@ -145,5 +145,5 @@ jobs:
             To install it run:
             ```shell
             npm login --registry https://npm.fluence.dev
-            npm i @fluencelabs/aqua@${{ env.AQUA_VERSION }} --registry=https://npm.fluence.dev
+            npm i @fluencelabs/aqua@=${{ env.AQUA_VERSION }} --registry=https://npm.fluence.dev
             ```
