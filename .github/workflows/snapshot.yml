@@ -25,7 +25,7 @@ jobs:
         with:
           repository: fluencelabs/aqua
 
-     - name: Generate version
+      - name: Generate version
         id: version
         run: |
           SHA=${{ github.event.pull_request.head.sha }}
