@@ -40,7 +40,7 @@ jobs:
 
       - name: Compile aqua
         env:
-          SNAPSHOT: ${{ steps.version.outputs.branch }}-${{ steps.version.outputs.sha }}-${{ github.run_number }}-${{ github.run_attempt }}
+          BUILD_NUMBER: ${{ steps.version.outputs.branch }}-${{ steps.version.outputs.sha }}-${{ github.run_number }}-${{ github.run_attempt }}
         run: sbt "cliJS/fastOptJS"
 
       - name: Upload compiled aqua
