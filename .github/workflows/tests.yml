@@ -38,3 +38,9 @@ jobs:
     uses: fluencelabs/aqua-playground/.github/workflows/tests.yml@master
     with:
       aqua-version: "=${{ needs.snapshot.outputs.aqua-version }}"
+
+  registry:
+    needs: snapshot
+    uses: fluencelabs/registry/.github/workflows/tests.yml@master
+    with:
+      aqua-version: "=${{ needs.snapshot.outputs.aqua-version }}"
