@@ -103,7 +103,7 @@ jobs:
       - name: Set fluence-js version from branch
         if: inputs.fluence-js-version != ''
         working-directory: npm
-        run: npm i --save @fluencelabs/fluence@${{ inputs.fluence-js-version }}
+        run: npm i --save -E @fluencelabs/fluence@${{ inputs.fluence-js-version }}
 
       - run: npm run build
         working-directory: npm
