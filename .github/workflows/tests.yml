@@ -41,6 +41,6 @@ jobs:
 
   registry:
     needs: snapshot
-    uses: fluencelabs/registry/.github/workflows/tests.yml@master
+    uses: fluencelabs/registry/.github/workflows/tests.yml@main
     with:
       aqua-version: "=${{ needs.snapshot.outputs.aqua-version }}"
