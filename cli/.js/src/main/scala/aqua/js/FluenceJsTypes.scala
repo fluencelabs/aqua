@@ -209,13 +209,18 @@ type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "off"
 @JSExportAll
 case class Debug(printParticleId: js.UndefOr[Boolean], marineLogLevel: js.UndefOr[LogLevel])
 
-@JSExportAll
 case class PeerConfig(
   connectTo: String,
   defaultTtlMs: js.UndefOr[Int],
   KeyPair: KeyPair,
   debug: js.UndefOr[Debug]
-)
+) {
+  def createObj(): js.Object = {
+    val d: js.Any = defaultTtlMs.asInstanceOf[js.Any]
+    val deb: js.Any = debug.asInstanceOf[js.Any]
+    js.Dynamic.literal(connectTo = connectTo, defaultTtlMs = d, KeyPair = KeyPair, debug = deb)
+  }
+}
 
 trait AstStatus extends js.Object {
   def success: Boolean
@@ -268,7 +273,7 @@ object FluenceUtils {
 @js.native
 @JSImport("@fluencelabs/fluence", "Fluence")
 object Fluence extends js.Object {
-  def start(config: js.UndefOr[PeerConfig]): js.Promise[js.Any] = js.native
+  def start(config: js.UndefOr[js.Object]): js.Promise[js.Any] = js.native
   def stop(): js.Promise[js.Any] = js.native
   def getPeer(): FluencePeer = js.native
   def getStatus(): PeerStatus = js.native
@@ -288,7 +293,8 @@ object KeyPairOp {
     js.Dynamic.literal(
       peerId = kp.Libp2pPeerId.toB58String(),
       secretKey = encoder.encodeToString(kp.toEd25519PrivateKey().toArray.map(s => s.toByte)),
-      publicKey = encoder.encodeToString(kp.Libp2pPeerId.pubKey.marshal().toArray.map(s => s.toByte))
+      publicKey =
+        encoder.encodeToString(kp.Libp2pPeerId.pubKey.marshal().toArray.map(s => s.toByte))
     )
   }
 }
