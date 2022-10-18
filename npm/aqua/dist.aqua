@@ -48,29 +48,34 @@ func deploy(serviceName: string, serviceConf: ServiceConf) -> DeployResult:
   on ON_PEER:
     multiaddr <- Ipfs.get_external_api_multiaddr()
 
-  mod_hashes: *string
+  mod_hashes: *[]string
   for m <- serviceConf.modules par:
       -- TODO check for cache
-      Console.print(Op.concat_strings("Going to upload a module: ", m.name))
+      Console.print(Op.concat_strings("Going to upload module: ", m.name))
       uploadRes <- LocalIpfs.uploadFile(m.path, multiaddr)
       cid = uploadRes.cid
       Console.print(Op.concat_strings(Op.concat_strings("Module '", m.name), "' was uploaded"))
 
       on ON_PEER:
         hostRes <- Ipfs.get(cid)
-
         conf <- Dist.make_module_config(m.name, m.mem_pages_count, m.max_heap_size, m.logger_enabled, m.preopened_files, m.envs, m.mapped_dirs, m.mounted_binaries, m.logging_mask)
-
         mod <- Dist.add_module_from_vault(hostRes.path, conf)
-
-        mod_hashes <- Op.concat_strings("hash:", mod)
+        mod_hash <- Op.concat_strings("hash:", mod)
+        mod_hashes <<- [mod_hash, m.name]
 
   join mod_hashes[OpC.array_length(serviceConf.modules) - 1]
 
-  Console.print("Now time to make a blueprint...")
+  -- sort hashes to the same order as was in serviceConf.modules
+  sorted_hashes: *string
+  for m <- serviceConf.modules:
+    for hash_name <- mod_hashes:
+      if m.name == hash_name[1]:
+        sorted_hashes <<- hash_name[0]
+
+  Console.print("Now time to make the blueprint...")
   on ON_PEER:
-        blueprint <- Dist.make_blueprint(serviceName, mod_hashes)
-        blueprint_id <- Dist.add_blueprint(blueprint)  
+        blueprint <- Dist.make_blueprint(serviceName, sorted_hashes)
+        blueprint_id <- Dist.add_blueprint(blueprint)
         service_id <- Srv.create(blueprint_id)
 
   res <- DeployHelper.create_result(blueprint_id, service_id)
