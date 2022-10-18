@@ -7,6 +7,14 @@ on:
         description: "Set to 'true' to make a GitHub release"
         required: true
         default: "false"
+      npm_tag:
+        description: 'npm tag'
+        required: true
+        default: 'latest' 
+        type: choice
+        options:
+        - latest
+        - nightly
 
 jobs:
   release:
@@ -84,7 +92,7 @@ jobs:
         run: |
           npm i
           npm run build
-          npm publish --access public
+          npm publish --access public --tag "${{ github.event.inputs.npm_tag }}"
         working-directory: ./npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
