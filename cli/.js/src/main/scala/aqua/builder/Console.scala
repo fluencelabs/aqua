@@ -20,7 +20,7 @@ object Console extends Logging {
 
     def handler: ServiceHandler = { varArgs =>
       js.typeOf(varArgs(0)) match {
-        case "string" | "number" | "boolean" => logger.info(varArgs(0).toString)
+        case "string" | "number" | "boolean" => println(varArgs(0).toString)
         case _ => println(JSON.stringify(varArgs(0), space = 2))
       }
       js.Promise.resolve(Service.emptyObject)
