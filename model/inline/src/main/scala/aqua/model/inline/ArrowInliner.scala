@@ -26,7 +26,8 @@ object ArrowInliner extends Logging {
   // Apply a callable function, get its fully resolved body & optional value, if any
   private def inline[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
-    call: CallModel
+    call: CallModel,
+    outsideDeclaredStreams: Map[String, ValueModel]
   ): State[S, (OpModel.Tree, List[ValueModel])] =
     // Function's internal variables will not be available outside, hence the scope
     Exports[S].scope(
@@ -53,6 +54,9 @@ object ArrowInliner extends Logging {
         // Fix the return values
         (ops, rets) = (call.exportTo zip resolvedResult)
           .map[(List[OpModel.Tree], ValueModel)] {
+            case (CallModel.Export(n, StreamType(_)), (res@VarModel(_, StreamType(_), _), resDesugar))
+              if !outsideDeclaredStreams.contains(n) =>
+              resDesugar.toList -> res
             case (CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
               // pass nested function results to a stream
               (resDesugar.toList :+ PushToStreamModel(
@@ -169,10 +173,16 @@ object ArrowInliner extends Logging {
     for {
       passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
 
+      exports <- Exports[S].exports
+      declaredStreams = exports.filter {
+        case (_, VarModel(_, StreamType(_), _)) => true
+        case _ => false
+      }
+
       av <- Arrows[S].scope(
         for {
           _ <- Arrows[S].resolved(passArrows)
-          av <- ArrowInliner.inline(arrow, call)
+          av <- ArrowInliner.inline(arrow, call, declaredStreams)
         } yield av
       )
       (appliedOp, value) = av

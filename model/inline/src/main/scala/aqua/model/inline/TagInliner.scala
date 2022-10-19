@@ -209,6 +209,15 @@ object TagInliner extends Logging {
       case _: ParGroupTag => pure(ParModel)
       case XorTag | XorTag.LeftBiased =>
         pure(XorModel)
+      case DeclareStreamTag(value) =>
+        value match
+          case VarRaw(name, _) =>
+            for {
+              cd <- valueToModel(value)
+              _ <- Exports[S].resolved(name, cd._1)
+            } yield None -> cd._2
+          case _ => none
+
       case _: NoExecTag => none
       case _ =>
         logger.warn(s"Tag $tag must have been eliminated at this point")

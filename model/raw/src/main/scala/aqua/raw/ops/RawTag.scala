@@ -172,7 +172,7 @@ object CallArrowRawTag {
 
 case class DeclareStreamTag(
   value: ValueRaw
-) extends NoExecTag {
+) extends RawTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     DeclareStreamTag(value.map(f))

@@ -87,6 +87,7 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           val (body, retValuesFix) = localStreams.foldLeft((m, retValues)) {
             case ((b, rs), (n, st)) =>
               if (derivedFromNames(n))
+                // TODO: what if this stream will be unused. create ticket
                 RestrictionTag(n, isStream = true).wrap(
                   SeqTag.wrap(
                     b :: CanonicalizeTag(
