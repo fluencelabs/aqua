@@ -90,14 +90,12 @@ object RawValueInliner extends Logging {
       }
     }.map(inline.predo.toList ::: _)
 
-  def valueToModel[S: Mangler: Exports: Arrows](
-    value: ValueRaw
+  private def toModel[S: Mangler: Exports: Arrows](
+    unfoldF: State[S, (ValueModel, Inline)]
   ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
-      vmp <- unfold(value)
+      vmp <- unfoldF
       (vm, map) = vmp
-
-      _ = logger.trace("RAW " + value)
       _ = logger.trace("MOD " + vm)
       dc <- Exports[S].exports
       _ = logger.trace("DEC " + dc)
@@ -106,6 +104,21 @@ object RawValueInliner extends Logging {
       _ = logger.trace("desugarized ops: " + ops)
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops)
+
+  def collectionToModel[S: Mangler: Exports: Arrows](
+    value: CollectionRaw,
+    assignTo: Option[String]
+  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
+    logger.trace("RAW COLLECTION " + value)
+    toModel(CollectionRawInliner.unfoldCollection(value, assignTo))
+  }
+
+  def valueToModel[S: Mangler: Exports: Arrows](
+    value: ValueRaw
+  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
+    logger.trace("RAW " + value)
+    toModel(unfold(value))
+  }
 
   def valueListToModel[S: Mangler: Exports: Arrows](
     values: List[ValueRaw]

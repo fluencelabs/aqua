@@ -152,7 +152,7 @@ object LiteralRaw {
   val False: LiteralRaw = LiteralRaw("false", LiteralType.bool)
 }
 
-case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType, assignToName: Option[String] = None) extends ValueRaw {
+case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) extends ValueRaw {
 
   lazy val elementType: Type = boxType.element
 

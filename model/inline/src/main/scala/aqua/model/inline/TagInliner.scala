@@ -2,7 +2,8 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
-import aqua.model.inline.raw.CallArrowRawInliner
+import aqua.model.inline.RawValueInliner.collectionToModel
+import aqua.model.inline.raw.{CallArrowRawInliner, CollectionRawInliner}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, BoxType, CanonStreamType, StreamType}
@@ -10,7 +11,7 @@ import cats.syntax.traverse.*
 import cats.syntax.applicative.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
-import scribe.{log, Logging}
+import scribe.{Logging, log}
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -180,16 +181,17 @@ object TagInliner extends Logging {
 
       case AssignmentTag(value, assignTo) =>
         // add name to CollectionRaw for streams to resolve them
-        val fixedValue = value match {
-          case c@CollectionRaw(_, _: StreamType, _) =>
-            c.copy(assignToName = Some(assignTo))
-          case v => v
+        (value match {
+          case c@CollectionRaw(_, _: StreamType) =>
+            collectionToModel(c, Some(assignTo))
+          case v =>
+            valueToModel(v)
+        }).flatMap { cd =>
+          for {
+            _ <- Exports[S].resolved(assignTo, cd._1)
+          } yield Some(SeqModel) -> cd._2
         }
-        for {
-          cd <- valueToModel(fixedValue)
-          _ <- Exports[S].resolved(assignTo, cd._1)
-        } yield Some(SeqModel) -> cd._2
-
+        
       case ClosureTag(arrow, detach) =>
         if (detach) Arrows[S].resolved(arrow, None).map(_ => None -> None)
         else

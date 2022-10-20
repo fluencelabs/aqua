@@ -23,11 +23,16 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
   override def apply[S: Mangler: Exports: Arrows](
     raw: CollectionRaw,
     propertiesAllowed: Boolean
+  ): State[S, (ValueModel, Inline)] = unfoldCollection(raw)
+  
+  def unfoldCollection[S: Mangler: Exports: Arrows](
+    raw: CollectionRaw,
+    assignToName: Option[String] = None
   ): State[S, (ValueModel, Inline)] =
     for {
       streamName <-
         raw.boxType match {
-          case _: StreamType => raw.assignToName.map(s => State.pure(s)).getOrElse(Mangler[S].findAndForbidName("stream-inline"))
+          case _: StreamType => assignToName.map(s => State.pure(s)).getOrElse(Mangler[S].findAndForbidName("stream-inline"))
           case _: CanonStreamType => Mangler[S].findAndForbidName("canon_stream-inline")
           case _: ArrayType => Mangler[S].findAndForbidName("array-inline")
           case _: OptionType => Mangler[S].findAndForbidName("option-inline")
