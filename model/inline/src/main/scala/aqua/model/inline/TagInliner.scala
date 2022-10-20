@@ -179,8 +179,14 @@ object TagInliner extends Logging {
         }
 
       case AssignmentTag(value, assignTo) =>
+        // add name to CollectionRaw for streams to resolve them
+        val fixedValue = value match {
+          case c@CollectionRaw(_, _: StreamType, _) =>
+            c.copy(assignToName = Some(assignTo))
+          case v => v
+        }
         for {
-          cd <- valueToModel(value)
+          cd <- valueToModel(fixedValue)
           _ <- Exports[S].resolved(assignTo, cd._1)
         } yield Some(SeqModel) -> cd._2
 
