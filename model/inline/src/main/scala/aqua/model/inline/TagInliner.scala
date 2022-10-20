@@ -180,8 +180,8 @@ object TagInliner extends Logging {
         }
 
       case AssignmentTag(value, assignTo) =>
-        // add name to CollectionRaw for streams to resolve them
         (value match {
+          // if we assign collection to a stream, we must use it's name, because it is already created with 'new'
           case c@CollectionRaw(_, _: StreamType) =>
             collectionToModel(c, Some(assignTo))
           case v =>
@@ -191,7 +191,7 @@ object TagInliner extends Logging {
             _ <- Exports[S].resolved(assignTo, cd._1)
           } yield Some(SeqModel) -> cd._2
         }
-        
+
       case ClosureTag(arrow, detach) =>
         if (detach) Arrows[S].resolved(arrow, None).map(_ => None -> None)
         else
