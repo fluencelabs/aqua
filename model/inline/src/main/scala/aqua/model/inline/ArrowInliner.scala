@@ -28,65 +28,63 @@ object ArrowInliner extends Logging {
     fn: FuncArrow,
     call: CallModel
   ): State[S, (OpModel.Tree, List[ValueModel])] =
-    for {
-      exports <- Exports[S].exports
-      outsideDeclaredStreams = exports.filter {
-        case (_, VarModel(_, StreamType(_), _)) => true
-        case _ => false
-      }
-
-      _ = println("out decl streams: " + outsideDeclaredStreams)
-
-      // Function's internal variables will not be available outside, hence the scope
-      result <- Exports[S].scope(
-        for {
-          // Process renamings, prepare environment
-          tr <- prelude[S](fn, call)
-          (tree, result) = tr
-
-          // Register captured values as available exports
-          _ <- Exports[S].resolved(fn.capturedValues)
-          _ <- Mangler[S].forbid(fn.capturedValues.keySet)
-
-          // Now, substitute the arrows that were received as function arguments
-          // Use the new op tree (args are replaced with values, names are unique & safe)
-          callableFuncBodyNoTopology <- TagInliner.handleTree(tree, fn.funcName)
-          callableFuncBody =
-            fn.capturedTopology
-              .fold[OpModel](SeqModel)(ApplyTopologyModel.apply)
-              .wrap(callableFuncBodyNoTopology)
-
-          // Fix return values with exports collected in the body
-          resolvedResult <- RawValueInliner.valueListToModel(result)
-          // Fix the return values
-          (ops, rets) = (call.exportTo zip resolvedResult)
-            .map[(List[OpModel.Tree], ValueModel)] {
-              case (
-                    CallModel.Export(n, StreamType(_)),
-                    (res @ VarModel(_, StreamType(_), _), resDesugar)
-                  ) if !outsideDeclaredStreams.contains(n) =>
-                resDesugar.toList -> res
-              case (CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
-                // pass nested function results to a stream
-                (resDesugar.toList :+ PushToStreamModel(
-                  res,
-                  CallModel.Export(exp, st)
-                ).leaf) -> VarModel(
-                  exp,
-                  st,
-                  Chain.empty
-                )
-              case (_, (res, resDesugar)) =>
-                resDesugar.toList -> res
-            }
-            .foldLeft[(List[OpModel.Tree], List[ValueModel])](
-              (callableFuncBody :: Nil, Nil)
-            ) { case ((ops, rets), (fo, r)) =>
-              (fo ::: ops, r :: rets)
-            }
-        } yield SeqModel.wrap(ops.reverse: _*) -> rets.reverse
+    Exports[S].exports
+      .map(exports =>
+        exports.collect { case e @ (_, VarModel(_, StreamType(_), _)) =>
+          e
+        }
       )
-    } yield result
+      .flatMap { outsideDeclaredStreams =>
+        // Function's internal variables will not be available outside, hence the scope
+        Exports[S].scope(
+          for {
+            // Process renamings, prepare environment
+            tr <- prelude[S](fn, call)
+            (tree, result) = tr
+
+            // Register captured values as available exports
+            _ <- Exports[S].resolved(fn.capturedValues)
+            _ <- Mangler[S].forbid(fn.capturedValues.keySet)
+
+            // Now, substitute the arrows that were received as function arguments
+            // Use the new op tree (args are replaced with values, names are unique & safe)
+            callableFuncBodyNoTopology <- TagInliner.handleTree(tree, fn.funcName)
+            callableFuncBody =
+              fn.capturedTopology
+                .fold[OpModel](SeqModel)(ApplyTopologyModel.apply)
+                .wrap(callableFuncBodyNoTopology)
+
+            // Fix return values with exports collected in the body
+            resolvedResult <- RawValueInliner.valueListToModel(result)
+            // Fix the return values
+            (ops, rets) = (call.exportTo zip resolvedResult)
+              .map[(List[OpModel.Tree], ValueModel)] {
+                case (
+                      CallModel.Export(n, StreamType(_)),
+                      (res @ VarModel(_, StreamType(_), _), resDesugar)
+                    ) if !outsideDeclaredStreams.contains(n) =>
+                  resDesugar.toList -> res
+                case (CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
+                  // pass nested function results to a stream
+                  (resDesugar.toList :+ PushToStreamModel(
+                    res,
+                    CallModel.Export(exp, st)
+                  ).leaf) -> VarModel(
+                    exp,
+                    st,
+                    Chain.empty
+                  )
+                case (_, (res, resDesugar)) =>
+                  resDesugar.toList -> res
+              }
+              .foldLeft[(List[OpModel.Tree], List[ValueModel])](
+                (callableFuncBody :: Nil, Nil)
+              ) { case ((ops, rets), (fo, r)) =>
+                (fo ::: ops, r :: rets)
+              }
+          } yield SeqModel.wrap(ops.reverse: _*) -> rets.reverse
+        )
+      }
 
   /**
    * Prepare the state context for this function call
