@@ -73,11 +73,11 @@ service Op("op"):
     array_length(array: []string) -> u32
 
     -- takes any number of arguments and wraps them into a single array
-    -- see the doc on varargs https://doc.fluence.dev/aqua-book/libraries/aqua-lib#functions-with-a-variable-number-of-arguments
+    -- see the doc on varargs https://fluence.dev/docs/aqua-book/libraries/aqua-lib#functions-with-a-variable-number-of-arguments
     array(a: string, b: string, c: string, d: string) -> []string
 
     -- takes any number of arrays and flattens them by concatenating
-    -- see the doc on varargs https://doc.fluence.dev/aqua-book/libraries/aqua-lib#functions-with-a-variable-number-of-arguments
+    -- see the doc on varargs https://fluence.dev/docs/aqua-book/libraries/aqua-lib#functions-with-a-variable-number-of-arguments
     concat(a: []string, b: []string, c: []string, d: []string) -> []string
 
     -- takes a single argument and returns it back
