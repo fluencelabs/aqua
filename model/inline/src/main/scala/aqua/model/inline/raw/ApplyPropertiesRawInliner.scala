@@ -58,23 +58,83 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     }
 
   private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
-    p: PropertyRaw
+    p: PropertyRaw,
+    vOp: Option[ValueModel]
   ): State[S, (PropertyModel, Inline)] = // TODO property for collection
-    p match {
-      case IntoFieldRaw(field, t) =>
+    (vOp, p) match {
+      case (_, IntoFieldRaw(field, t)) =>
         State.pure(IntoFieldModel(field, t) -> Inline.empty)
-      case IntoIndexRaw(vm: ApplyPropertyRaw, t) =>
+      case (Some(v @ VarModel(_, st @ StreamType(_), _)), IntoIndexRaw(vr, t)) =>
+        for {
+          uniqueResultName <- Mangler[S].findAndForbidName(v.name + "_result_canon")
+          uniqueTestName <- Mangler[S].findAndForbidName(v.name + "_test")
+          idxModelInline <- unfold(vr)
+          (idxModel, idxInline) = idxModelInline
+        } yield {
+          val varSTest = VarModel(uniqueTestName, st)
+          val iter = VarModel("s", st.element)
+
+          val iterCanon = VarModel(v.name + "_iter_canon", CanonStreamType(st.element))
+
+          val resultCanon =
+            VarModel(uniqueResultName, CanonStreamType(st.element))
+
+          val incrVar = VarModel("incr_idx", ScalarType.u32)
+
+          val tree = RestrictionModel(varSTest.name, true).wrap(
+            ForModel(iter.name, v, Some(ForModel.NeverMode)).wrap(
+              increment(idxModel, incrVar),
+              PushToStreamModel(
+                iter,
+                CallModel.Export(varSTest.name, varSTest.`type`)
+              ).leaf,
+              CanonicalizeModel(
+                varSTest,
+                CallModel.Export(iterCanon.name, iterCanon.`type`)
+              ).leaf,
+              XorModel.wrap(
+                MatchMismatchModel(
+                  iterCanon
+                    .copy(properties = Chain.one(FunctorModel("length", ScalarType.`u32`))),
+                  incrVar,
+                  true
+                ).leaf,
+                NextModel(iter.name).leaf
+              )
+            ),
+            CanonicalizeModel(
+              varSTest,
+              CallModel.Export(resultCanon.name, CanonStreamType(st.element))
+            ).leaf
+          )
+
+          val iim = idxModel match {
+            case VarModel(name, _, _) => IntoIndexModel(name, t)
+            case LiteralModel(v, _) => IntoIndexModel(v, t)
+          }
+          val treeInline = Inline.tree(tree)
+
+          iim ->
+            Inline(
+              idxInline.flattenValues ++ treeInline.flattenValues,
+              Chain.one(
+                SeqModel.wrap((idxInline.predo ++ treeInline.predo).toList: _*)
+              )
+            )
+
+        }
+      case (_, IntoIndexRaw(vm: ApplyPropertyRaw, t)) =>
         for {
           nn <- Mangler[S].findAndForbidName("ap-prop")
         } yield IntoIndexModel(nn, t) -> Inline.preload(nn -> vm)
 
-      case IntoIndexRaw(vr: (VarRaw | CallArrowRaw), t) =>
+      case (_, IntoIndexRaw(vr: (VarRaw | CallArrowRaw), t)) =>
         unfold(vr, propertiesAllowed = false).map {
           case (VarModel(name, _, _), inline) => IntoIndexModel(name, t) -> inline
           case (LiteralModel(v, _), inline) => IntoIndexModel(v, t) -> inline
         }
 
-      case IntoIndexRaw(LiteralRaw(value, _), t) =>
+      case (_, IntoIndexRaw(LiteralRaw(value, _), t)) =>
         State.pure(IntoIndexModel(value, t) -> Inline.empty)
     }
 
@@ -88,83 +148,34 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
       )
     ).leaf
 
-  def unfoldRawWithPropertyModels[S: Mangler: Exports: Arrows](
-    raw: ValueRaw,
+  /*
+
+   */
+
+  def reachModelWithPropertyModels[S: Mangler: Exports: Arrows](
+    model: ValueModel,
     propertyModels: Chain[PropertyModel],
     propertyPrefix: Inline,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     Exports[S].exports.flatMap { exports =>
-      unfold(raw, propertiesAllowed).flatMap {
-        case (v: VarModel, prefix) =>
-          ((v.`type`, propertyModels.headOption) match {
-            // canonicalize stream
-            case (st: StreamType, Some(idx @ IntoIndexModel(_, _))) =>
-              for {
-                uniqueResultName <- Mangler[S].findAndForbidName(v.name + "_result_canon")
-                uniqueTestName <- Mangler[S].findAndForbidName(v.name + "_test")
-              } yield {
-                val varSTest = VarModel(uniqueTestName, st)
-                val iter = VarModel("s", st.element)
-
-                val iterCanon = VarModel(v.name + "_iter_canon", CanonStreamType(st.element))
-
-                val resultCanon =
-                  VarModel(uniqueResultName, CanonStreamType(st.element), propertyModels)
-
-                val incrVar = VarModel("incr_idx", ScalarType.u32)
-
-                val tree = RestrictionModel(varSTest.name, true).wrap(
-                  ForModel(iter.name, v, Some(ForModel.NeverMode)).wrap(
-                    increment(idx.idxToValueModel, incrVar),
-                    PushToStreamModel(
-                      iter,
-                      CallModel.Export(varSTest.name, varSTest.`type`)
-                    ).leaf,
-                    CanonicalizeModel(
-                      varSTest,
-                      CallModel.Export(iterCanon.name, iterCanon.`type`)
-                    ).leaf,
-                    XorModel.wrap(
-                      MatchMismatchModel(
-                        iterCanon
-                          .copy(properties = Chain.one(FunctorModel("length", ScalarType.`u32`))),
-                        incrVar,
-                        true
-                      ).leaf,
-                      NextModel(iter.name).leaf
-                    )
-                  ),
-                  CanonicalizeModel(
-                    varSTest,
-                    CallModel.Export(resultCanon.name, CanonStreamType(st.element))
-                  ).leaf
-                )
-
-                (resultCanon, Inline.tree(tree), true)
-              }
-
-            case _ =>
-              val vm = v.copy(properties = v.properties ++ propertyModels).resolveWith(exports)
-              State.pure((vm, Inline.empty, false))
-          }).flatMap { case (genV, genInline, isSeq) =>
-            val prefInline =
-              if (isSeq)
-                Inline(
-                  propertyPrefix.flattenValues ++ genInline.flattenValues,
-                  Chain.one(SeqModel.wrap((propertyPrefix.predo ++ genInline.predo).toList: _*))
-                )
-              else propertyPrefix |+| genInline
-            if (propertiesAllowed) State.pure(genV -> (prefix |+| prefInline))
+      model match {
+        case v: VarModel =>
+          {
+            val vm = v.copy(properties = v.properties ++ propertyModels).resolveWith(exports)
+            State.pure((vm, Inline.empty))
+          }.flatMap { case (genV, genInline) =>
+            val prefInline = propertyPrefix |+| genInline
+            if (propertiesAllowed) State.pure(genV -> prefInline)
             else
               removeProperty(genV).map { case (vmm, mpp) =>
-                vmm -> (prefix |+| mpp |+| prefInline)
+                vmm -> (mpp |+| prefInline)
               }
           }
 
-        case (v, prefix) =>
+        case v =>
           // What does it mean actually? I've no ides
-          State.pure((v, prefix |+| propertyPrefix))
+          State.pure((v, propertyPrefix))
       }
     }
   }
@@ -173,21 +184,23 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     raw: ValueRaw,
     properties: Chain[PropertyRaw],
     propertiesAllowed: Boolean
-  ): State[S, (ValueModel, Inline)] = {
-    properties
-      .foldLeft[State[S, (Chain[PropertyModel], Inline, ValueRaw)]](
-        State.pure((Chain.empty[PropertyModel], Inline.empty, raw))
-      ) { case (pcm, p) =>
-        pcm.flatMap { case (pc, m, r) =>
-          unfoldProperty(p).map { case (pm, mm) =>
-            (pc :+ pm, m |+| mm, r)
+  ): State[S, (ValueModel, Inline)] =
+    unfold(raw).flatMap { case (vm, inline) =>
+      properties
+        .foldLeft[State[S, (Chain[PropertyModel], Inline, Option[ValueModel])]](
+          State.pure((Chain.empty[PropertyModel], inline, Some(vm)))
+        ) { case (pcm, p) =>
+          pcm.flatMap { case (pc, m, vmOp) =>
+            unfoldProperty(p, vmOp).map { case (pm, mm) =>
+              // None, because we need ValueModel only on first property
+              (pc :+ pm, m |+| mm, None)
+            }
           }
         }
-      }
-      .flatMap { case (propertyModels, map, r) =>
-        unfoldRawWithPropertyModels(r, propertyModels, map, propertiesAllowed)
-      }
-  }
+        .flatMap { case (propertyModels, map, _) =>
+          reachModelWithPropertyModels(vm, propertyModels, map, propertiesAllowed)
+        }
+    }
 
   override def apply[S: Mangler: Exports: Arrows](
     apr: ApplyPropertyRaw,

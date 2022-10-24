@@ -53,20 +53,20 @@ object TagInliner extends Logging {
   def flat[S: Mangler](vm: ValueModel, op: Option[OpModel.Tree], flatStream: Boolean): State[S, (ValueModel, Option[OpModel.Tree])] = {
     vm match {
       case v @ VarModel(n, StreamType(t), l) if flatStream =>
-        val canonName = v.name + "_canon"
+        val canonName = n + "_canon"
         for {
           canonN <- Mangler[S].findAndForbidName(canonName)
           canonV = VarModel(canonN, CanonStreamType(t), l)
           canonOp = CanonicalizeModel(
             v.copy(properties = Chain.empty),
-            CallModel.Export(canonV.name, canonV.`type`)
+            CallModel.Export(canonV.name, canonV.baseType)
           ).leaf
           flatResult <- flatCanonStream(canonV, Some(canonOp))
         } yield {
           val (resV, resOp) = flatResult
           (resV, op.fold(resOp)(t => resOp.map(o => SeqModel.wrap(t, o))))
         }
-      case v @ VarModel(_, CanonStreamType(t), _) =>
+      case v @ VarModel(_, CanonStreamType(_), _) =>
         flatCanonStream(v, op)
       case _ => State.pure((vm, op))
     }

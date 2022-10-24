@@ -21,7 +21,7 @@ object ApplyFunctorRawInliner  extends RawInliner[ApplyFunctorRaw] with Logging 
       case (v@VarModel(name, bt, _), inl) =>
         for {
           apName <- Mangler[S].findAndForbidName(name + "_to_functor")
-          resultName <- Mangler[S].findAndForbidName(name)
+          resultName <- Mangler[S].findAndForbidName(s"${name}_${afr.functor.name}")
           apVar = VarModel(apName, bt, Chain.one(functorModel))
         } yield {
           val tree = inl |+| Inline.tree(SeqModel.wrap(
