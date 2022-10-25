@@ -57,11 +57,14 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
         State.pure(vm -> Inline.empty)
     }
 
+  /**
+   * @param valueWithFirstProperty pass value only with first property to check if we are trying to join stream
+   */
   private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
     p: PropertyRaw,
-    vOp: Option[ValueModel]
+    valueWithFirstProperty: Option[ValueModel]
   ): State[S, (PropertyModel, Inline)] = // TODO property for collection
-    (vOp, p) match {
+    (valueWithFirstProperty, p) match {
       case (_, IntoFieldRaw(field, t)) =>
         State.pure(IntoFieldModel(field, t) -> Inline.empty)
       case (Some(v @ VarModel(_, st @ StreamType(_), _)), IntoIndexRaw(vr, t)) =>
@@ -147,10 +150,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
         CallModel.Export(result.name, result.`type`) :: Nil
       )
     ).leaf
-
-  /*
-
-   */
 
   def reachModelWithPropertyModels[S: Mangler: Exports: Arrows](
     model: ValueModel,
