@@ -119,7 +119,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     import aqua.model.inline.state.Mangler.Simple
     // [ys!]
     ApplyPropertiesRawInliner
-      .unfoldProperty[InliningState](`raw ys[0]`)
+      .unfoldProperty[InliningState](`raw ys[0]`, None)
       .run(InliningState(noNames = Set("ys")))
       .value
       ._2 should be(
