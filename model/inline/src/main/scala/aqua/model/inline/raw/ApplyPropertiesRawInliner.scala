@@ -58,7 +58,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     }
 
   /**
-   * @param valueWithFirstProperty pass value only with first property to check if we are trying to join stream
+   * @param valueWithFirstProperty pass value only with the first property to check if we are trying to join a stream
    */
   private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
     p: PropertyRaw,
