@@ -52,7 +52,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       .map(validNec)
       .getOrElse(
         Validated.invalidNec[String, FuncArrow](
-          s"There is no function '${func.ability.map(_ + ".").getOrElse("")}${func.name}' or it is not exported. Check the spelling or see https://doc.fluence.dev/aqua-book/language/header#export"
+          s"There is no function '${func.ability.map(_ + ".").getOrElse("")}${func.name}' or it is not exported. Check the spelling or see https://fluence.dev/docs/aqua-book/language/header/#export"
         )
       )
       .andThen { func =>
@@ -73,7 +73,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
           .map(validNec)
           .getOrElse(
             Validated.invalidNec[String, ServiceModel](
-              s"There is no service '${js.name}' (described in json-service file) in aqua source or it is not exported. Check the spelling or see https://doc.fluence.dev/aqua-book/language/header#export"
+              s"There is no service '${js.name}' (described in json-service file) in aqua source or it is not exported. Check the spelling or see https://fluence.dev/docs/aqua-book/language/header/#export"
             )
           )
       )

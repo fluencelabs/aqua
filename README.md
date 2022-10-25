@@ -11,7 +11,7 @@ or in parallel, forming a single-use coordination network.
 Aqua's runtime is heterogeneous: it includes browsers, servers, devices, all involved in solving a single task.
 Therefore, Aqua scripts are compiled into several targets at once, with AIR and Typescript as a default.
 
-Please refer to [Aqua Book](https://doc.fluence.dev/aqua-book/) to learn more about Aqua language.
+Please refer to [Aqua Book](https://fluence.dev/docs/aqua-book/introduction) to learn more about Aqua language.
 
 ## Install and run
 
@@ -69,8 +69,8 @@ java -jar aqua-%version_number%.jar -i path/to/input/dir -o path/to/output/dir
 
 ## References
 
-- [Aqua Book](https://doc.fluence.dev/aqua-book/)
-- [Aqua Changelog](https://doc.fluence.dev/aqua-book/changelog)
+- [Aqua Book](https://fluence.dev/docs/aqua-book/introduction)
+- [Aqua Changelog](https://fluence.dev/docs/aqua-book/changelog)
 - [Fluence docs](https://fluence.dev/)
 - [Examples & tutorials](https://github.com/fluencelabs/examples)
 - [Aqua Playground](https://github.com/fluencelabs/aqua-playground)
