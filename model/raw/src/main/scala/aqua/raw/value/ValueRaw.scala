@@ -170,6 +170,19 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
     copy(values = values.map(_.renameVars(map)))
 }
 
+case class DataRaw(name: String, fields: NonEmptyMap[String, ValueRaw]) extends ValueRaw {
+  override lazy val baseType: Type = StructType(name, fields.map(_.baseType))
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(fields = fields.map(f)))
+
+  override def varNames: Set[String] = {
+    fields.toSortedMap.values.flatMap(_.varNames).toSet
+  }
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(fields = fields.map(_.renameVars(map)))
+}
+
 case class CallArrowRaw(
   // TODO: ability should hold a type, not name
   ability: Option[String],

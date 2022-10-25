@@ -44,6 +44,9 @@ object RawValueInliner extends Logging {
       case cr: CollectionRaw =>
         CollectionRawInliner(cr, propertiesAllowed)
 
+      case dr: DataRaw =>
+        DataRawInliner(dr, propertiesAllowed)
+
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)
 

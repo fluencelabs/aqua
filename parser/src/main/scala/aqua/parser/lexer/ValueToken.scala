@@ -19,7 +19,8 @@ sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
 }
 
-case class VarToken[F[_]](name: Name[F], property: List[PropertyOp[F]] = Nil) extends ValueToken[F] {
+case class VarToken[F[_]](name: Name[F], property: List[PropertyOp[F]] = Nil)
+    extends ValueToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
   def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk), property.map(_.mapK(fk)))
@@ -88,6 +89,30 @@ object CallArrowToken {
           "Missing braces '()' after the function call"
         )).map { case (ab, (fn, args)) =>
       CallArrowToken(ab, fn, args)
+    }
+}
+
+case class DataValueToken[F[_]: Comonad](
+  dataName: Name[F],
+  fields: List[ValueToken[F]]
+) extends ValueToken[F] {
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): DataValueToken[K] =
+    copy(dataName.mapK(fk), fields.map(_.mapK(fk)))
+
+  override def as[T](v: T): F[T] = dataName.as(v)
+}
+
+object DataValueToken {
+
+  val dataValue: P[DataValueToken[Span.S]] =
+      (`Class`.lift.map(Name(_))
+        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
+          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
+        .withContext(
+          "Missing braces '()' after the object name"
+        ).map { case (dn, args) =>
+      DataValueToken(dn, args)
     }
 }
 
