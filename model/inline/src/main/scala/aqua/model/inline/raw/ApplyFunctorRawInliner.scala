@@ -29,7 +29,7 @@ object ApplyFunctorRawInliner  extends RawInliner[ApplyFunctorRaw] with Logging 
             FlattenModel(apVar, resultName).leaf
           ))
 
-          VarModel(resultName, bt) -> tree
+          VarModel(resultName, afr.functor.`type`) -> tree
         }
       case v =>
         // unexpected, properties are prohibited for literals
