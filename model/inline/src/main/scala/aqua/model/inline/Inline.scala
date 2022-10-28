@@ -9,16 +9,7 @@ import cats.data.Chain
 private[inline] case class Inline(
   flattenValues: Map[String, ValueRaw] = Map.empty,
   predo: Chain[OpModel.Tree] = Chain.empty
-) {
-
-  def withSeq(next: Inline): Inline = {
-    val fullPredo = (predo ++ next.predo).toList
-    Inline(
-      flattenValues ++ next.flattenValues,
-      Chain.one(SeqModel.wrap(fullPredo: _*))
-    )
-  }
-}
+)
 
 // TODO may not be needed there
 private[inline] object Inline {

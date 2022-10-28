@@ -2,12 +2,7 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
-import aqua.model.inline.raw.{
-  ApplyFunctorRawInliner,
-  ApplyPropertiesRawInliner,
-  CallArrowRawInliner,
-  CollectionRawInliner
-}
+import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyGateRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, OptionType, StreamType}
@@ -40,6 +35,9 @@ object RawValueInliner extends Logging {
 
       case alr: ApplyFunctorRaw =>
         ApplyFunctorRawInliner(alr, propertiesAllowed)
+
+      case agr: ApplyGateRaw =>
+        ApplyGateRawInliner(agr, propertiesAllowed)
 
       case cr: CollectionRaw =>
         CollectionRawInliner(cr, propertiesAllowed)
@@ -80,7 +78,6 @@ object RawValueInliner extends Logging {
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
     inline: Inline
   ): State[S, List[OpModel.Tree]] = {
-    println("flattenValues: " + inline.flattenValues)
     inline.flattenValues.toList.traverse { case (name, v) =>
       valueToModel(v).map {
         case (vv, Some(op)) =>
@@ -98,13 +95,13 @@ object RawValueInliner extends Logging {
     for {
       vmp <- unfoldF
       (vm, map) = vmp
-      _ = println("MOD " + vm)
+      _ = logger.trace("MOD " + vm)
       dc <- Exports[S].exports
-      _ = println("DEC " + dc)
+      _ = logger.trace("DEC " + dc)
 
       ops <- inlineToTree(map)
-      _ = println("desugarized ops: " + ops)
-      _ = println("map was: " + map)
+      _ = logger.trace("desugarized ops: " + ops)
+      _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops)
 
   def collectionToModel[S: Mangler: Exports: Arrows](
