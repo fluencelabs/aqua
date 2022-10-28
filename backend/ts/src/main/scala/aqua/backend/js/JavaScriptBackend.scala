@@ -18,14 +18,17 @@ case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
     val functions =
       res.funcs.map(f => TypeScriptTypes.funcType(f)).map(_.generate).toList.mkString("\n")
 
-    val body = s"""${Header.header(true, false)}
+    val body = s"""/* eslint-disable */
+                  |// @ts-nocheck
+                  |${Header.header(true, false)}
                   |
                   |// Services
                   |$services
                   |
                   |// Functions
                   |$functions
-                  |""".stripMargin
+                  |
+                  |/* eslint-enable */""".stripMargin
 
     Generated(tsExt, body, Nil)
   }
