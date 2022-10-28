@@ -344,6 +344,44 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
   }
 
+  "raw value inliner" should "desugarize stream with gate" in {
+    val streamWithProps =
+      VarRaw("x", StreamType(ScalarType.string)).withProperty(
+        IntoIndexRaw(ysVarRaw(1), ScalarType.string)
+      )
+
+    val (resVal, resTree) = valueToModel[InliningState](streamWithProps)
+      .run(InliningState(noNames = Set("x", "ys")))
+      .value
+      ._2
+
+    resVal should be(
+      VarModel(
+        "x",
+        StreamType(ScalarType.string),
+        Chain(
+          IntoIndexModel("ys", ScalarType.string)
+        )
+      )
+    )
+    println(resTree)
+  }
+
+  "raw value inliner" should "desugarize stream with length" in {
+    val streamWithProps =
+      VarRaw("x", StreamType(ScalarType.string)).withProperty(
+        FunctorRaw("length", ScalarType.u32)
+      )
+
+    val (resVal, resTree) = valueToModel[InliningState](streamWithProps)
+      .run(InliningState(noNames = Set("x", "ys")))
+      .value
+      ._2
+
+//    println(resVal)
+//    println(resTree)
+  }
+
   "raw value inliner" should "desugarize a recursive lambda value" in {
     val (resVal, resTree) = valueToModel[InliningState](
       `raw x[zs[ys[0]]][ys[1]]`

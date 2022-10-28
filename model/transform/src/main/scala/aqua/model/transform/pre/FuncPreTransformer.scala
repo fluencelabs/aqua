@@ -69,6 +69,7 @@ case class FuncPreTransformer(
     }).toLabelledList(returnVar)
 
     val retModel = returnType.map { case (l, t) => VarRaw(l, t) }
+//    println("model: " + retModel)
 
     val funcCall = Call(
       func.arrowType.domain.toLabelledList().map(ad => VarRaw(ad._1, ad._2)),

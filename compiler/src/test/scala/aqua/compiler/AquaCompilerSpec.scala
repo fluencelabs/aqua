@@ -1,6 +1,14 @@
 package aqua.compiler
 
-import aqua.model.{CallModel, ForModel, FunctorModel, IntoIndexModel, LiteralModel, ValueModel, VarModel}
+import aqua.model.{
+  CallModel,
+  ForModel,
+  FunctorModel,
+  IntoIndexModel,
+  LiteralModel,
+  ValueModel,
+  VarModel
+}
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
 import aqua.parser.ParserError
@@ -9,7 +17,20 @@ import aqua.parser.Parser
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.res.{ApRes, CallRes, CallServiceRes, CanonRes, FoldRes, MakeRes, MatchMismatchRes, NextRes, ParRes, RestrictionRes, SeqRes, XorRes}
+import aqua.res.{
+  ApRes,
+  CallRes,
+  CallServiceRes,
+  CanonRes,
+  FoldRes,
+  MakeRes,
+  MatchMismatchRes,
+  NextRes,
+  ParRes,
+  RestrictionRes,
+  SeqRes,
+  XorRes
+}
 import aqua.semantics.lsp.LspContext
 import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -114,24 +135,28 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val idx = VarModel("incr_idx", ScalarType.u32)
 
     RestrictionRes(testVM.name, true).wrap(
+      CallServiceRes(
+        LiteralModel("\"math\"", ScalarType.string),
+        "add",
+        CallRes(
+          length :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
+          Some(CallModel.Export(idx.name, idx.`type`))
+        ),
+        init
+      ).leaf,
       FoldRes(iter.name, vm, Some(ForModel.NeverMode)).wrap(
-        CallServiceRes(
-          LiteralModel("\"math\"", ScalarType.string),
-          "add",
-          CallRes(
-            length :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
-            Some(CallModel.Export(idx.name, idx.`type`))
-          ),
-          init
-        ).leaf,
         ApRes(iter, CallModel.Export(testVM.name, testVM.`type`)).leaf,
         CanonRes(testVM, init, CallModel.Export(canon.name, canon.`type`)).leaf,
         XorRes.wrap(
-          MatchMismatchRes(canon.copy(properties = Chain.one(FunctorModel("length", ScalarType.u32))), idx, true).leaf,
+          MatchMismatchRes(
+            canon.copy(properties = Chain.one(FunctorModel("length", ScalarType.u32))),
+            idx,
+            true
+          ).leaf,
           NextRes(iter.name).leaf
         )
       ),
-      CanonRes(testVM, init, CallModel.Export(vm.name + "_result_canon", canon.`type`)).leaf,
+      CanonRes(testVM, init, CallModel.Export(vm.name + "_result_canon", canon.`type`)).leaf
     )
   }
 

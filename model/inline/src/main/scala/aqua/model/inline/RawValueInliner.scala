@@ -79,7 +79,8 @@ object RawValueInliner extends Logging {
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
     inline: Inline
-  ): State[S, List[OpModel.Tree]] =
+  ): State[S, List[OpModel.Tree]] = {
+    println("flattenValues: " + inline.flattenValues)
     inline.flattenValues.toList.traverse { case (name, v) =>
       valueToModel(v).map {
         case (vv, Some(op)) =>
@@ -89,6 +90,7 @@ object RawValueInliner extends Logging {
           FlattenModel(vv, name).leaf
       }
     }.map(inline.predo.toList ::: _)
+  }
 
   private def toModel[S: Mangler: Exports: Arrows](
     unfoldF: State[S, (ValueModel, Inline)]
@@ -96,13 +98,13 @@ object RawValueInliner extends Logging {
     for {
       vmp <- unfoldF
       (vm, map) = vmp
-      _ = logger.trace("MOD " + vm)
+      _ = println("MOD " + vm)
       dc <- Exports[S].exports
-      _ = logger.trace("DEC " + dc)
+      _ = println("DEC " + dc)
 
       ops <- inlineToTree(map)
-      _ = logger.trace("desugarized ops: " + ops)
-      _ = logger.trace("map was: " + map)
+      _ = println("desugarized ops: " + ops)
+      _ = println("map was: " + map)
     } yield vm -> parDesugarPrefix(ops)
 
   def collectionToModel[S: Mangler: Exports: Arrows](

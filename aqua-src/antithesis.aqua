@@ -14,6 +14,7 @@ data Record:
 service Op1("op"):
   array_length(array: []string) -> u32
   noop()
+  identity(s: *string) -> []string
 --
 -- func bugLNG63_3() -> string, u32, []u32:
 --    status: *string
@@ -39,5 +40,32 @@ service Ser("ser"):
 --         a = 1 + 1
 --     <- a
 
-func emptySugar(arr: []Record) -> u32:
-  <- arr[1].relay_id.length
+-- func streamAssignment(arr: []string) -> string:
+--    stream: *[]u32
+--    stream <<- [0]
+--    a = stream[arr.length - 1][0]
+--    b = arr[a]
+--    <- b
+
+func streamIntFunctor(arr: []u32) -> string:
+   stream: *[]string
+   stream <<- ["123"]
+   a = stream[arr[0]][arr[0]]
+   -- ap-prop = arr[0]
+   -- ap-prop inline: ap arr[0] ap-prop
+   -- *stream
+   -- gate
+   -- canon *stream -> #stream_canon_result
+   -- ap #stream_canon_result[ap-prop] -> result 
+   
+   <- a
+
+-- service Op2("op"):
+--     identity(s: u64)
+
+-- func getTwoResults(node: string) -> []u64:
+--     res: *u64
+--     Op2.identity(res!)
+--     Op2.identity(res!1)
+--     Op2.identity(res!2)
+--     <- res
