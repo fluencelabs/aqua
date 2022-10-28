@@ -5,12 +5,15 @@ import aqua.res.AquaRes
 
 case class TypeScriptTypesFile(res: AquaRes) {
   def generate: String =
-    s"""${Header.header(false, false)}
+    s"""/* eslint-disable */
+       |// @ts-nocheck
+       |${Header.header(false, false)}
        |
        |// Services
        |${res.services.map(TSServiceTypes(_)).map(_.generate).toList.mkString("\n\n")}
        |
        |// Functions
        |${res.funcs.map(TSFuncTypes(_)).map(_.generate).toList.mkString("\n\n")}
-       |""".stripMargin
+       |
+       |/* eslint-enable */""".stripMargin
 }
