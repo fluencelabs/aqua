@@ -7,7 +7,7 @@ import aqua.raw.value.{ApplyGateRaw, LiteralRaw, VarRaw}
 import cats.data.State
 import cats.data.Chain
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.types.{CanonStreamType, ScalarType, StreamType}
+import aqua.types.{CanonStreamType, ScalarType, StreamType, ArrayType}
 import cats.syntax.monoid.*
 import scribe.Logging
 
@@ -18,8 +18,10 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
     propertyAllowed: Boolean
   ): State[S, (ValueModel, Inline)] =
     for {
-      uniqueResultName <- Mangler[S].findAndForbidName(afr.name + "_result_canon")
+      uniqueCanonName <- Mangler[S].findAndForbidName(afr.name + "_result_canon")
+      uniqueResultName <- Mangler[S].findAndForbidName(afr.name + "_gate")
       uniqueTestName <- Mangler[S].findAndForbidName(afr.name + "_test")
+      uniqueIdxIncr <- Mangler[S].findAndForbidName(afr.idxName + "_incr")
     } yield {
       val varSTest = VarModel(uniqueTestName, afr.streamType)
       val iter = VarModel("s", afr.streamType.element)
@@ -27,9 +29,9 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
       val iterCanon = VarModel(afr.name + "_iter_canon", CanonStreamType(afr.streamType.element))
 
       val resultCanon =
-        VarModel(uniqueResultName, CanonStreamType(afr.streamType.element))
+        VarModel(uniqueCanonName, CanonStreamType(afr.streamType.element))
 
-      val incrVar = VarModel("incr_idx", ScalarType.u32)
+      val incrVar = VarModel(uniqueIdxIncr, ScalarType.u32)
 
       val tree = RestrictionModel(varSTest.name, true).wrap(
         increment(VarModel(afr.idxName, afr.idxType), incrVar),
@@ -55,6 +57,10 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
         CanonicalizeModel(
           varSTest,
           CallModel.Export(resultCanon.name, CanonStreamType(afr.streamType.element))
+        ).leaf,
+        FlattenModel(
+          resultCanon,
+          uniqueResultName
         ).leaf
       )
 
@@ -62,7 +68,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
         Inline.tree(tree)
 
       (
-        resultCanon,
+        VarModel(uniqueResultName, ArrayType(afr.streamType.element)),
         treeInline
       )
 
