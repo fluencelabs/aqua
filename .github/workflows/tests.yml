@@ -2,8 +2,10 @@ name: Run tests
 
 on:
   pull_request:
-    paths-ignode:
-      - "**.md"
+    paths:
+      - ".github/workflows/snapshot.yml"
+      - ".github/workflows/tests.yml"
+      - "!**.md"
 
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
