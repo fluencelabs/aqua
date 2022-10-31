@@ -29,8 +29,8 @@ jobs:
         id: version
         run: |
           SHA=${{ github.event.pull_request.head.sha }}
-          echo "::set-output name=sha::${SHA::7}"
-          echo "::set-output name=branch::${GITHUB_HEAD_REF//[^a-zA-Z0-9-]/-}"
+          echo "sha=${SHA::7}"
+          echo "branch=${GITHUB_HEAD_REF//[^a-zA-Z0-9-]/-}"
 
       - name: Cache Scala
         uses: coursier/cache-action@v6
@@ -112,8 +112,8 @@ jobs:
         id: version
         run: |
           SHA=${{ github.event.pull_request.head.sha }}
-          echo "::set-output name=sha::${SHA::7}"
-          echo "::set-output name=branch::${GITHUB_HEAD_REF//[^a-zA-Z0-9-]/-}"
+          echo "sha=${SHA::7}"
+          echo "branch=${GITHUB_HEAD_REF//[^a-zA-Z0-9-]/-}"
 
       - name: Set package version
         id: build
@@ -124,7 +124,7 @@ jobs:
           ATTEMPT: ${{ github.run_attempt }}
         working-directory: npm
         run: |
-          echo "::set-output name=version::$(\
+          echo "version=$(\
                 npm version prerelease \
                 --no-git-tag-version \
                 --preid ${{ env.BRANCH }}-${{ env.SHA }}-${{ env.RUN }}-${{ env.ATTEMPT }})"
@@ -133,26 +133,14 @@ jobs:
         working-directory: npm
         run: npm publish --tag snapshot --registry https://npm.fluence.dev
 
-      - name: Find comment in PR
-        uses: peter-evans/find-comment@v1
-        id: comment
-        with:
-          issue-number: "${{ github.event.pull_request.number }}"
-          comment-author: github-actions[bot]
-          body-includes: "## Aqua version is"
-
-      - name: Update comment in PR
-        uses: peter-evans/create-or-update-comment@v1
+      - name: Print versions to check summary
         env:
-          AQUA_VERSION: ${{ steps.build.outputs.version }}
-        with:
-          comment-id: "${{ steps.comment.outputs.comment-id }}"
-          issue-number: "${{ github.event.pull_request.number }}"
-          edit-mode: replace
-          body: |
-            ## Aqua version is [${{ env.AQUA_VERSION }}](https://npm.fluence.dev/-/web/detail/@fluencelabs/aqua/v/${{ env.AQUA_VERSION }})
-            To install it run:
-            ```shell
-            npm login --registry https://npm.fluence.dev
-            npm i @fluencelabs/aqua@=${{ env.AQUA_VERSION }} --registry=https://npm.fluence.dev
-            ```
+          VERSION: ${{ steps.build.outputs.version }}
+        run:
+          cat <<'SNAPSHOT' >> $GITHUB_STEP_SUMMARY
+          ## aqua version is [${{ env.VERSION }}](https://npm.fluence.dev/-/web/detail/@fluencelabs/aqua/v/${{ env.VERSION }})
+          To use it run:
+          ```shell
+          npm i @fluencelabs/aqua@=${{ env.VERSION }} --registry=https://npm.fluence.dev
+          ```
+          SNAPSHOT
