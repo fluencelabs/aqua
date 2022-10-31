@@ -133,17 +133,16 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     ((raw, properties.headOption) match {
       case (v @ VarRaw(name, st @ StreamType(el)), Some(IntoIndexRaw(idx, _))) =>
         Mangler[S].findAndForbidName(name + "_gate").flatMap { gateName =>
-          Mangler[S].findAndForbidName(name + "_idx").flatMap { idxName =>
-            val gateVm = VarModel(gateName, ArrayType(el))
-            val gateRaw = ApplyGateRaw(name, st, idxName, idx.`type`)
-            unfoldProperties(properties).flatMap { case (propertyModels, map) =>
-              reachModelWithPropertyModels(
-                gateVm,
-                propertyModels,
-                map |+| Inline.preload(idxName -> idx, gateName -> gateRaw),
-                propertiesAllowed
-              )
-            }
+          val gateVm = VarModel(gateName, ArrayType(el))
+          val gateRaw = ApplyGateRaw(name, st, idx)
+          unfoldProperties(properties).flatMap { case (propertyModels, map) =>
+            reachModelWithPropertyModels(
+              gateVm,
+              propertyModels,
+              map |+| Inline.preload(gateName -> gateRaw),
+              propertiesAllowed
+            )
+
           }
 
         }

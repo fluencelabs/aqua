@@ -21,20 +21,23 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
       uniqueCanonName <- Mangler[S].findAndForbidName(afr.name + "_result_canon")
       uniqueResultName <- Mangler[S].findAndForbidName(afr.name + "_gate")
       uniqueTestName <- Mangler[S].findAndForbidName(afr.name + "_test")
-      uniqueIdxIncr <- Mangler[S].findAndForbidName(afr.idxName + "_incr")
+      uniqueIdxIncr <- Mangler[S].findAndForbidName(afr.name + "_incr")
+      uniqueIterCanon <- Mangler[S].findAndForbidName(afr.name + "_iter_canon")
+      idxFolded <- unfold(afr.idx)
+      (idxModel, idxInline) = idxFolded
     } yield {
       val varSTest = VarModel(uniqueTestName, afr.streamType)
       val iter = VarModel("s", afr.streamType.element)
 
-      val iterCanon = VarModel(afr.name + "_iter_canon", CanonStreamType(afr.streamType.element))
+      val iterCanon = VarModel(uniqueIterCanon, CanonStreamType(afr.streamType.element))
 
       val resultCanon =
         VarModel(uniqueCanonName, CanonStreamType(afr.streamType.element))
 
       val incrVar = VarModel(uniqueIdxIncr, ScalarType.u32)
 
-      val tree = RestrictionModel(varSTest.name, true).wrap(
-        increment(VarModel(afr.idxName, afr.idxType), incrVar),
+      val gate = RestrictionModel(varSTest.name, true).wrap(
+        increment(idxModel, incrVar),
         ForModel(iter.name, VarModel(afr.name, afr.streamType), Some(ForModel.NeverMode)).wrap(
           PushToStreamModel(
             iter,
@@ -64,8 +67,10 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
         ).leaf
       )
 
+      val tree = SeqModel.wrap((idxInline.predo.toList :+ gate):_*)
+
       val treeInline =
-        Inline.tree(tree)
+        Inline(idxInline.flattenValues, predo = Chain.one(tree))
 
       (
         VarModel(uniqueResultName, ArrayType(afr.streamType.element)),
