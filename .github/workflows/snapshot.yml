@@ -136,7 +136,7 @@ jobs:
       - name: Print versions to check summary
         env:
           VERSION: ${{ steps.build.outputs.version }}
-        run:
+        run: |
           cat <<'SNAPSHOT' >> $GITHUB_STEP_SUMMARY
           ## aqua version is [${{ env.VERSION }}](https://npm.fluence.dev/-/web/detail/@fluencelabs/aqua/v/${{ env.VERSION }})
           To use it run:
