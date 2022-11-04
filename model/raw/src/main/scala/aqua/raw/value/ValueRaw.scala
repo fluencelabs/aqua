@@ -21,6 +21,8 @@ sealed trait ValueRaw {
     ShadowRaw(this, Map(name -> v))
 }
 
+sealed trait Assigns extends ValueRaw
+
 object ValueRaw {
 
   // TODO: move to LiteralRaw
@@ -47,7 +49,7 @@ object ValueRaw {
 
 }
 
-case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends ValueRaw {
+case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends Assigns {
   override def baseType: Type = value.baseType
 
   override def `type`: Type = property.`type`
@@ -70,7 +72,7 @@ case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends Valu
   override def varNames: Set[String] = value.varNames ++ property.varNames
 }
 
-case class ApplyFunctorRaw(value: ValueRaw, functor: FunctorRaw) extends ValueRaw {
+case class ApplyFunctorRaw(value: ValueRaw, functor: FunctorRaw) extends Assigns {
   override def baseType: Type = value.baseType
 
   override def `type`: Type = functor.`type`
@@ -93,7 +95,7 @@ object ApplyPropertyRaw {
     }
 }
 
-case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) extends ValueRaw {
+case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) extends Assigns {
   override def baseType: Type = streamType
 
   override def `type`: Type = idx.`type`

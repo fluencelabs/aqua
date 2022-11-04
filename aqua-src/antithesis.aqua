@@ -47,10 +47,10 @@ service Ser("ser"):
 --    b = arr[a]
 --    <- b
 
-func streamIntFunctor(arr: []u32) -> string:
-   stream: *[]string
-   stream <<- ["123"]
-   a = stream[arr[0]][arr[0]]
+-- func streamIntFunctor(arr: []u32) -> string:
+--    stream: *[]string
+--    stream <<- ["123"]
+--    a = stream[arr[0]][arr[0]]
    -- ap-prop = arr[0]
    -- ap-prop inline: ap arr[0] ap-prop
    -- *stream
@@ -58,7 +58,7 @@ func streamIntFunctor(arr: []u32) -> string:
    -- canon *stream -> #stream_canon_result
    -- ap #stream_canon_result[ap-prop] -> result 
    
-   <- a
+--   <- a
 
 -- service Op2("op"):
 --     identity(s: u64)
@@ -69,3 +69,10 @@ func streamIntFunctor(arr: []u32) -> string:
 --     Op2.identity(res!1)
 --     Op2.identity(res!2)
 --     <- res
+
+func streamAssignment(arr: []string) -> string:
+   stream: *[]u32
+   stream <<- [0]
+   a = stream[arr.length - 1][0]
+   b = arr[a]
+   <- b

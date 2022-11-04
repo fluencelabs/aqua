@@ -70,7 +70,7 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
               CanonicalizeModel(stream, canon).leaf
             )
           )
-        case _ =>
+        case _ => 
           SeqModel.wrap(vals.toList: _*)
       }
     )

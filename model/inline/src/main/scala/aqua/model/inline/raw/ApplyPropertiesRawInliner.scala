@@ -74,7 +74,8 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
 
       case IntoIndexRaw(vr: (VarRaw | CallArrowRaw), t) =>
         unfold(vr, propertiesAllowed = false).map {
-          case (VarModel(name, _, _), inline) => IntoIndexModel(name, t) -> inline
+          case (VarModel(name, _, _), inline) =>
+            IntoIndexModel(name, t) -> inline
           case (LiteralModel(v, _), inline) => IntoIndexModel(v, t) -> inline
         }
 
@@ -131,7 +132,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     ((raw, properties.headOption) match {
-      case (v @ VarRaw(name, st @ StreamType(el)), Some(IntoIndexRaw(idx, _))) =>
+      case (VarRaw(name, st @ StreamType(el)), Some(IntoIndexRaw(idx, _))) =>
         Mangler[S].findAndForbidName(name + "_gate").flatMap { gateName =>
           val gateVm = VarModel(gateName, ArrayType(el))
           val gateRaw = ApplyGateRaw(name, st, idx)
@@ -187,9 +188,11 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
         for {
           vmLeftInline <- unfoldRawWithProperties(raw, left, propertiesAllowed)
           (leftVM, leftInline) = vmLeftInline
+          // TODO: rewrite without `toRaw`
           fRaw = ApplyFunctorRaw(leftVM.toRaw, functor)
           vmFunctorInline <- ApplyFunctorRawInliner(fRaw, false)
           (fVM, fInline) = vmFunctorInline
+          // TODO: rewrite without `toRaw`
           vmRightInline <- unfold(ApplyPropertyRaw.fromChain(fVM.toRaw, right), propertiesAllowed)
           (vm, rightInline) = vmRightInline
         } yield {
