@@ -97,11 +97,6 @@ case class IntoIndexModel(idx: String, `type`: Type) extends PropertyModel {
     else VarRaw(idx, LiteralType.number),
     `type`
   )
-
-  def idxToValueModel: ValueModel =
-    if (idx.forall(Character.isDigit)) LiteralModel(idx, LiteralType.number)
-    else VarModel(idx, `type`)
-
 }
 
 case class VarModel(name: String, baseType: Type, properties: Chain[PropertyModel] = Chain.empty)
