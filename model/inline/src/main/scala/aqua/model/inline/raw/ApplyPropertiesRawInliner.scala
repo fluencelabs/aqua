@@ -21,6 +21,7 @@ import aqua.model.{
   XorModel
 }
 import aqua.model.inline.Inline
+import aqua.model.inline.SeqMode
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{
@@ -87,7 +88,8 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     model: ValueModel,
     propertyModels: Chain[PropertyModel],
     propertyPrefix: Inline,
-    propertiesAllowed: Boolean
+    propertiesAllowed: Boolean,
+    streamGateInline: Option[Inline] = None
   ): State[S, (ValueModel, Inline)] = {
     Exports[S].exports.flatMap { exports =>
       model match {
@@ -100,7 +102,14 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
             if (propertiesAllowed) State.pure(genV -> prefInline)
             else
               removeProperty(genV).map { case (vmm, mpp) =>
-                vmm -> (mpp |+| prefInline)
+                val resultInline = streamGateInline.map{ gInline =>
+                  Inline(
+                    prefInline.flattenValues ++ mpp.flattenValues ++ gInline.flattenValues,
+                    Chain.one(SeqModel.wrap((prefInline.predo ++ mpp.predo ++ gInline.predo).toList:_*)),
+                    SeqMode
+                  )
+                }.getOrElse(prefInline |+| mpp)
+                vmm -> resultInline
               }
           }
 
@@ -133,19 +142,17 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
   ): State[S, (ValueModel, Inline)] = {
     ((raw, properties.headOption) match {
       case (VarRaw(name, st @ StreamType(el)), Some(IntoIndexRaw(idx, _))) =>
-        Mangler[S].findAndForbidName(name + "_gate").flatMap { gateName =>
-          val gateVm = VarModel(gateName, ArrayType(el))
-          val gateRaw = ApplyGateRaw(name, st, idx)
+        val gateRaw = ApplyGateRaw(name, st, idx)
+        unfold(gateRaw).flatMap { case (gateResVal, gateResInline) =>
           unfoldProperties(properties).flatMap { case (propertyModels, map) =>
             reachModelWithPropertyModels(
-              gateVm,
+              gateResVal,
               propertyModels,
-              map |+| Inline.preload(gateName -> gateRaw),
-              propertiesAllowed
+              map,
+              false,
+              Some(gateResInline)
             )
-
           }
-
         }
 
       case (_, _) =>

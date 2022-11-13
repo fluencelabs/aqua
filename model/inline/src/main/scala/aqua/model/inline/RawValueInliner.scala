@@ -86,7 +86,11 @@ object RawValueInliner extends Logging {
         case (vv, _) =>
           FlattenModel(vv, name).leaf
       }
-    }.map(inline.predo.toList ::: _)
+    }.map{ predo =>
+      inline.mergeMode match
+        case SeqMode => SeqModel.wrap((inline.predo.toList ++ predo):_*) :: Nil
+        case _ => inline.predo.toList ::: predo
+    }
   }
 
   private def toModel[S: Mangler: Exports: Arrows](
@@ -113,10 +117,11 @@ object RawValueInliner extends Logging {
   }
 
   def valueToModel[S: Mangler: Exports: Arrows](
-    value: ValueRaw
+    value: ValueRaw,
+    propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Option[OpModel.Tree])] = {
     logger.trace("RAW " + value)
-    toModel(unfold(value))
+    toModel(unfold(value, propertiesAllowed))
   }
 
   def valueListToModel[S: Mangler: Exports: Arrows](

@@ -169,7 +169,7 @@ object LiteralRaw {
   val False: LiteralRaw = LiteralRaw("false", LiteralType.bool)
 }
 
-case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) extends ValueRaw {
+case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) extends Assigns {
 
   lazy val elementType: Type = boxType.element
 
@@ -195,7 +195,7 @@ case class CallArrowRaw(
   baseType: ArrowType,
   // TODO: there should be no serviceId there
   serviceId: Option[ValueRaw]
-) extends ValueRaw {
+) extends Assigns {
   override def `type`: Type = baseType.codomain.uncons.map(_._1).getOrElse(baseType)
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw =

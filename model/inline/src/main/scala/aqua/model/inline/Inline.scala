@@ -6,9 +6,14 @@ import aqua.raw.value.ValueRaw
 import cats.Monoid
 import cats.data.Chain
 
+sealed trait MergeMode
+object SeqMode extends MergeMode
+object ParMode extends MergeMode
+
 private[inline] case class Inline(
   flattenValues: Map[String, ValueRaw] = Map.empty,
-  predo: Chain[OpModel.Tree] = Chain.empty
+  predo: Chain[OpModel.Tree] = Chain.empty,
+  mergeMode: MergeMode = ParMode
 )
 
 // TODO may not be needed there
