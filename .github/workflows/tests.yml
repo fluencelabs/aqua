@@ -38,11 +38,9 @@ jobs:
     uses: fluencelabs/aqua-playground/.github/workflows/tests.yml@master
     with:
       aqua-version: "${{ needs.snapshot.outputs.aqua-version }}"
-      rust-peer-image: fluencelabs/fluence:minimal_nightly
 
   registry:
     needs: snapshot
     uses: fluencelabs/registry/.github/workflows/tests.yml@main
     with:
       aqua-version: "${{ needs.snapshot.outputs.aqua-version }}"
-      rust-peer-image: fluencelabs/fluence:minimal_nightly
