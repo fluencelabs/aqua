@@ -21,8 +21,6 @@ sealed trait ValueRaw {
     ShadowRaw(this, Map(name -> v))
 }
 
-sealed trait Assigns extends ValueRaw
-
 object ValueRaw {
 
   // TODO: move to LiteralRaw
@@ -49,7 +47,7 @@ object ValueRaw {
 
 }
 
-case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends Assigns {
+case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends ValueRaw {
   override def baseType: Type = value.baseType
 
   override def `type`: Type = property.`type`
@@ -72,7 +70,7 @@ case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends Assi
   override def varNames: Set[String] = value.varNames ++ property.varNames
 }
 
-case class ApplyFunctorRaw(value: ValueRaw, functor: FunctorRaw) extends Assigns {
+case class ApplyFunctorRaw(value: ValueRaw, functor: FunctorRaw) extends ValueRaw {
   override def baseType: Type = value.baseType
 
   override def `type`: Type = functor.`type`
@@ -95,7 +93,7 @@ object ApplyPropertyRaw {
     }
 }
 
-case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) extends Assigns {
+case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) extends ValueRaw {
   override def baseType: Type = streamType
 
   override def `type`: Type = idx.`type`
@@ -169,7 +167,7 @@ object LiteralRaw {
   val False: LiteralRaw = LiteralRaw("false", LiteralType.bool)
 }
 
-case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) extends Assigns {
+case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) extends ValueRaw {
 
   lazy val elementType: Type = boxType.element
 
@@ -195,7 +193,7 @@ case class CallArrowRaw(
   baseType: ArrowType,
   // TODO: there should be no serviceId there
   serviceId: Option[ValueRaw]
-) extends Assigns {
+) extends ValueRaw {
   override def `type`: Type = baseType.codomain.uncons.map(_._1).getOrElse(baseType)
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw =

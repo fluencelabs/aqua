@@ -5,8 +5,16 @@ import aqua.parser.expr.func.ArrowExpr
 import aqua.parser.lexer.{Arg, DataTypeToken}
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
-import aqua.raw.ops.*
-import aqua.raw.value.{Assigns, ValueRaw, VarRaw}
+import aqua.raw.ops.{SeqTag, *}
+import aqua.raw.value.{
+  ApplyFunctorRaw,
+  ApplyGateRaw,
+  ApplyPropertyRaw,
+  CallArrowRaw,
+  CollectionRaw,
+  ValueRaw,
+  VarRaw
+}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -51,6 +59,25 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           }
           .as(arrowType)
       )
+
+  private def assignRaw(
+    v: ValueRaw,
+    idx: Int,
+    body: RawTag.Tree,
+    returnAcc: Chain[ValueRaw]
+  ): (SeqTag.Tree, Chain[ValueRaw], Int) = {
+    val assignedReturnVar = VarRaw(s"-return-fix-$idx", v.`type`)
+    (
+      SeqTag.wrap(
+        body :: AssignmentTag(
+          v,
+          assignedReturnVar.name
+        ).leaf :: Nil: _*
+      ),
+      returnAcc :+ assignedReturnVar,
+      idx + 1
+    )
+  }
 
   def after[Alg[_]: Monad](funcArrow: ArrowType, bodyGen: Raw)(implicit
     T: TypesAlgebra[S, Alg],
@@ -116,18 +143,12 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
                         idx + 1
                       )
                     // assign and change return value for all `Apply*Raw`
-                    case (v: Assigns, _) =>
-                      val assignedReturnVar = VarRaw(s"-return-fix-$idx", v.`type`)
-                      (
-                        SeqTag.wrap(
-                          bodyAcc :: AssignmentTag(
-                            v,
-                            assignedReturnVar.name
-                          ).leaf :: Nil: _*
-                        ),
-                        returnAcc :+ assignedReturnVar,
-                        idx + 1
-                      )
+                    case (v: ApplyFunctorRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
+                    case (v: ApplyGateRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
+                    case (v: ApplyPropertyRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
+                    case (v: CallArrowRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
+                    case (v: CollectionRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
+
                     case (v, _) => (bodyAcc, returnAcc :+ v, idx)
                   }
 

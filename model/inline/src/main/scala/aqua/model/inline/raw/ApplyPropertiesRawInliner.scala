@@ -138,7 +138,32 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     ((raw, properties.headOption) match {
-      case (VarRaw(name, st @ StreamType(el)), Some(IntoIndexRaw(idx, _))) =>
+      // To wait for the element of a stream by the given index, the following model is generated:
+      //(seq
+      // (seq
+      //  (seq
+      //   (call %init_peer_id% ("math" "add") [0 1] stream_incr)
+      //   (fold $stream s
+      //    (seq
+      //     (seq
+      //      (ap s $stream_test)
+      //      (canon %init_peer_id% $stream_test  #stream_iter_canon)
+      //     )
+      //     (xor
+      //      (match #stream_iter_canon.length stream_incr
+      //       (null)
+      //      )
+      //      (next s)
+      //     )
+      //    )
+      //    (never)
+      //   )
+      //  )
+      //  (canon %init_peer_id% $stream_test  #stream_result_canon)
+      // )
+      // (ap #stream_result_canon stream_gate)
+      //)
+      case (VarRaw(name, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
         val gateRaw = ApplyGateRaw(name, st, idx)
         unfold(gateRaw).flatMap { case (gateResVal, gateResInline) =>
           unfoldProperties(properties).flatMap { case (propertyModels, map) =>
