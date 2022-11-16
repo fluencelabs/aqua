@@ -1,7 +1,16 @@
 package aqua.model.inline
 
 import aqua.model.inline.raw.ApplyPropertiesRawInliner
-import aqua.model.{FlattenModel, FunctorModel, IntoFieldModel, IntoIndexModel, ParModel, SeqModel, ValueModel, VarModel}
+import aqua.model.{
+  FlattenModel,
+  FunctorModel,
+  IntoFieldModel,
+  IntoIndexModel,
+  ParModel,
+  SeqModel,
+  ValueModel,
+  VarModel
+}
 import aqua.model.inline.state.InliningState
 import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
@@ -15,6 +24,14 @@ import scala.collection.immutable.SortedMap
 class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
 
   import RawValueInliner.valueToModel
+
+  private def numVarWithLength(name: String) =
+    VarRaw(name, ArrayType(ScalarType.u32)).withProperty(
+      FunctorRaw("length", ScalarType.u32)
+    )
+
+  private def index(n: Int) =
+    LiteralRaw.number(n)
 
   private def ysVarRaw(into: Int, name: String = "ys") =
     VarRaw(name, ArrayType(ScalarType.i8)).withProperty(
@@ -60,6 +77,30 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   )
 
   private val `raw x[ys[0]]` = VarRaw("x", ArrayType(ScalarType.string)).withProperty(`raw ys[0]`)
+
+  private val `x[xs[ys.length]][xss[yss.length]]` =
+    VarRaw("x", ArrayType(ArrayType(ScalarType.string))).withProperty(
+      IntoIndexRaw(
+        VarRaw("xs", ArrayType(ScalarType.u32))
+          .withProperty(
+            IntoIndexRaw(
+              numVarWithLength("ys"),
+              ScalarType.u32
+            )
+          ),
+        ArrayType(ScalarType.string)
+      ),
+      IntoIndexRaw(
+        VarRaw("xss", ArrayType(ScalarType.u32))
+          .withProperty(
+            IntoIndexRaw(
+              numVarWithLength("yss"),
+              ScalarType.u32
+            )
+          ),
+        ScalarType.string
+      )
+    )
 
   private val `raw x[ys[0]][ys[1]]` =
     VarRaw("x", ArrayType(ArrayType(ScalarType.string))).withProperty(
@@ -164,6 +205,102 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
   }
 
+  "raw value inliner" should "desugarize properties with functors x[ys[ys.length]][2] and make proper flattener tags" in {
+    val (resVal, resTree) = valueToModel[InliningState](
+      `x[xs[ys.length]][xss[yss.length]]`
+    ).run(InliningState(noNames = Set("x", "ys", "xs", "yss", "xss"))).value._2
+
+    resVal should be(
+      VarModel(
+        "x",
+        ArrayType(ArrayType(ScalarType.string)),
+        Chain(
+          IntoIndexModel("ap-prop", ArrayType(ScalarType.string)),
+          IntoIndexModel("ap-prop-0", ScalarType.string)
+        )
+      )
+    )
+
+    resTree.isEmpty should be(false)
+
+    resTree.get.equalsOrShowDiff(
+      ParModel.wrap(
+        SeqModel.wrap(
+          SeqModel.wrap(
+            SeqModel.wrap(
+              FlattenModel(
+                VarModel(
+                  "ys",
+                  ArrayType(ScalarType.u32)
+                ),
+                "ys_to_functor"
+              ).leaf,
+              FlattenModel(
+                VarModel(
+                  "ys_to_functor",
+                  ArrayType(ScalarType.u32),
+                  Chain.one(FunctorModel("length", ScalarType.u32))
+                ),
+                "ys_length"
+              ).leaf
+            ),
+            FlattenModel(
+              VarModel(
+                "ys_length",
+                ScalarType.u32
+              ),
+              "ap-prop-1"
+            ).leaf
+          ),
+          FlattenModel(
+            VarModel(
+              "xs",
+              ArrayType(ScalarType.u32),
+              Chain.one(IntoIndexModel("ap-prop-1", ScalarType.u32))
+            ),
+            "ap-prop"
+          ).leaf
+        ),
+        SeqModel.wrap(
+          SeqModel.wrap(
+            SeqModel.wrap(
+              FlattenModel(
+                VarModel(
+                  "yss",
+                  ArrayType(ScalarType.u32)
+                ),
+                "yss_to_functor"
+              ).leaf,
+              FlattenModel(
+                VarModel(
+                  "yss_to_functor",
+                  ArrayType(ScalarType.u32),
+                  Chain.one(FunctorModel("length", ScalarType.u32))
+                ),
+                "yss_length"
+              ).leaf
+            ),
+            FlattenModel(
+              VarModel(
+                "yss_length",
+                ScalarType.u32
+              ),
+              "ap-prop-2"
+            ).leaf
+          ),
+          FlattenModel(
+            VarModel(
+              "xss",
+              ArrayType(ScalarType.u32),
+              Chain.one(IntoIndexModel("ap-prop-2", ScalarType.u32))
+            ),
+            "ap-prop-0"
+          ).leaf
+        )
+      )
+    ) should be(true)
+  }
+
   "raw value inliner" should "desugarize x[ys[0]][ys[1]] and make proper flattener tags" in {
     val (resVal, resTree) = valueToModel[InliningState](
       `raw x[ys[0]][ys[1]]`
@@ -205,6 +342,41 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         ).leaf
       )
     ) should be(true)
+  }
+
+  "raw value inliner" should "desugarize stream with gate" in {
+    val streamWithProps =
+      VarRaw("x", StreamType(ScalarType.string)).withProperty(
+        IntoIndexRaw(ysVarRaw(1), ScalarType.string)
+      )
+
+    val (resVal, resTree) = valueToModel[InliningState](streamWithProps)
+      .run(InliningState(noNames = Set("x", "ys")))
+      .value
+      ._2
+
+    resVal should be(
+      VarModel(
+        "x_gate-0",
+        ScalarType.string
+      )
+    )
+    println(resTree)
+  }
+
+  "raw value inliner" should "desugarize stream with length" in {
+    val streamWithProps =
+      VarRaw("x", StreamType(ScalarType.string)).withProperty(
+        FunctorRaw("length", ScalarType.u32)
+      )
+
+    val (resVal, resTree) = valueToModel[InliningState](streamWithProps)
+      .run(InliningState(noNames = Set("x", "ys")))
+      .value
+      ._2
+
+//    println(resVal)
+//    println(resTree)
   }
 
   "raw value inliner" should "desugarize a recursive lambda value" in {

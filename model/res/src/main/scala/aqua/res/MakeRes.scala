@@ -80,7 +80,8 @@ object MakeRes {
         orInit(currentPeerId),
         exportTo
       ).leaf
-
+    case FlattenModel(operand@VarModel(_, CanonStreamType(el), _), assignTo) =>
+      ApRes(operand, CallModel.Export(assignTo, ArrayType(el))).leaf
     case FlattenModel(operand, assignTo) =>
       ApRes(operand, CallModel.Export(assignTo, operand.`type`)).leaf
     case JoinModel(operands) =>

@@ -2,12 +2,7 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
-import aqua.model.inline.raw.{
-  ApplyFunctorRawInliner,
-  ApplyPropertiesRawInliner,
-  CallArrowRawInliner,
-  CollectionRawInliner
-}
+import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyGateRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, OptionType, StreamType}
@@ -40,6 +35,9 @@ object RawValueInliner extends Logging {
 
       case alr: ApplyFunctorRaw =>
         ApplyFunctorRawInliner(alr, propertiesAllowed)
+
+      case agr: ApplyGateRaw =>
+        ApplyGateRawInliner(agr, propertiesAllowed)
 
       case cr: CollectionRaw =>
         CollectionRawInliner(cr, propertiesAllowed)
@@ -79,7 +77,7 @@ object RawValueInliner extends Logging {
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
     inline: Inline
-  ): State[S, List[OpModel.Tree]] =
+  ): State[S, List[OpModel.Tree]] = {
     inline.flattenValues.toList.traverse { case (name, v) =>
       valueToModel(v).map {
         case (vv, Some(op)) =>
@@ -88,7 +86,12 @@ object RawValueInliner extends Logging {
         case (vv, _) =>
           FlattenModel(vv, name).leaf
       }
-    }.map(inline.predo.toList ::: _)
+    }.map{ predo =>
+      inline.mergeMode match
+        case SeqMode => SeqModel.wrap((inline.predo.toList ++ predo):_*) :: Nil
+        case ParMode => inline.predo.toList ::: predo
+    }
+  }
 
   private def toModel[S: Mangler: Exports: Arrows](
     unfoldF: State[S, (ValueModel, Inline)]
@@ -114,10 +117,11 @@ object RawValueInliner extends Logging {
   }
 
   def valueToModel[S: Mangler: Exports: Arrows](
-    value: ValueRaw
+    value: ValueRaw,
+    propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Option[OpModel.Tree])] = {
     logger.trace("RAW " + value)
-    toModel(unfold(value))
+    toModel(unfold(value, propertiesAllowed))
   }
 
   def valueListToModel[S: Mangler: Exports: Arrows](

@@ -53,20 +53,20 @@ object TagInliner extends Logging {
   def flat[S: Mangler](vm: ValueModel, op: Option[OpModel.Tree], flatStream: Boolean): State[S, (ValueModel, Option[OpModel.Tree])] = {
     vm match {
       case v @ VarModel(n, StreamType(t), l) if flatStream =>
-        val canonName = v.name + "_canon"
+        val canonName = n + "_canon"
         for {
           canonN <- Mangler[S].findAndForbidName(canonName)
           canonV = VarModel(canonN, CanonStreamType(t), l)
           canonOp = CanonicalizeModel(
             v.copy(properties = Chain.empty),
-            CallModel.Export(canonV.name, canonV.`type`)
+            CallModel.Export(canonV.name, canonV.baseType)
           ).leaf
           flatResult <- flatCanonStream(canonV, Some(canonOp))
         } yield {
           val (resV, resOp) = flatResult
           (resV, op.fold(resOp)(t => resOp.map(o => SeqModel.wrap(t, o))))
         }
-      case v @ VarModel(_, CanonStreamType(t), _) =>
+      case v @ VarModel(_, CanonStreamType(_), _) =>
         flatCanonStream(v, op)
       case _ => State.pure((vm, op))
     }
@@ -165,6 +165,11 @@ object TagInliner extends Logging {
           Some(CanonicalizeModel(v, CallModel.callExport(exportTo))) -> p
         }
 
+      case FlattenTag(operand, assignTo) =>
+        valueToModel(operand).map { case (v, p) =>
+          Some(FlattenModel(v, assignTo)) -> p
+        }
+
       case JoinTag(operands) =>
         operands
           .traverse(o => valueToModel(o))
@@ -185,7 +190,7 @@ object TagInliner extends Logging {
           case c@CollectionRaw(_, _: StreamType) =>
             collectionToModel(c, Some(assignTo))
           case v =>
-            valueToModel(v)
+            valueToModel(v, false)
         }).flatMap { cd =>
           for {
             _ <- Exports[S].resolved(assignTo, cd._1)
