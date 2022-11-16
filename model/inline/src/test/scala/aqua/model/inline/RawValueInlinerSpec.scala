@@ -160,7 +160,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     import aqua.model.inline.state.Mangler.Simple
     // [ys!]
     ApplyPropertiesRawInliner
-      .unfoldProperty[InliningState](`raw ys[0]`, None)
+      .unfoldProperty[InliningState](`raw ys[0]`)
       .run(InliningState(noNames = Set("ys")))
       .value
       ._2 should be(
@@ -357,11 +357,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
 
     resVal should be(
       VarModel(
-        "x",
-        StreamType(ScalarType.string),
-        Chain(
-          IntoIndexModel("ys", ScalarType.string)
-        )
+        "x_gate-0",
+        ScalarType.string
       )
     )
     println(resTree)
