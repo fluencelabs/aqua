@@ -331,6 +331,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           IntoFieldRaw("field", ScalarType.string)
         )
 
+    val flattenObject = VarRaw("object-1", ScalarType.string)
+
     // raw object
     val objectVar = VarRaw(
       "object",
@@ -402,11 +404,15 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           "getObj",
           CallModel(Nil, CallModel.Export(objectVar.name, objectVar.`type`) :: Nil)
         ).leaf,
-        CallServiceModel(
-          LiteralModel("\"callbackSrv\"", LiteralType.string),
-          "response",
-          CallModel(ValueModel.fromRaw(objectVarLambda) :: Nil, Nil)
-        ).leaf
+        SeqModel.wrap(
+          FlattenModel(ValueModel.fromRaw(objectVarLambda), "object-1").leaf,
+          CallServiceModel(
+            LiteralModel("\"callbackSrv\"", LiteralType.string),
+            "response",
+            CallModel(ValueModel.fromRaw(flattenObject) :: Nil, Nil)
+          ).leaf
+        )
+
       )
     ) should be(true)
 

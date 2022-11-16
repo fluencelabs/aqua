@@ -1,5 +1,6 @@
 package aqua.model.transform
 
+import cats.syntax.show.*
 import aqua.model.inline.ArrowInliner
 import aqua.model.inline.state.InliningState
 import aqua.model.transform.funcop.*

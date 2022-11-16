@@ -21,10 +21,12 @@ import aqua.model.{
   XorModel
 }
 import aqua.model.inline.Inline
+import aqua.model.inline.SeqMode
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{
   ApplyFunctorRaw,
+  ApplyGateRaw,
   ApplyPropertyRaw,
   CallArrowRaw,
   FunctorRaw,
@@ -35,7 +37,7 @@ import aqua.raw.value.{
   ValueRaw,
   VarRaw
 }
-import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
+import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType, Type}
 import cats.data.{Chain, State}
 import cats.syntax.monoid.*
 import cats.instances.list.*
@@ -70,7 +72,8 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
 
       case IntoIndexRaw(vr: (VarRaw | CallArrowRaw), t) =>
         unfold(vr, propertiesAllowed = false).map {
-          case (VarModel(name, _, _), inline) => IntoIndexModel(name, t) -> inline
+          case (VarModel(name, _, _), inline) =>
+            IntoIndexModel(name, t) -> inline
           case (LiteralModel(v, _), inline) => IntoIndexModel(v, t) -> inline
         }
 
@@ -78,115 +81,110 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
         State.pure(IntoIndexModel(value, t) -> Inline.empty)
     }
 
-  private def increment(v: ValueModel, result: VarModel) =
-    CallServiceModel(
-      LiteralModel("\"math\"", ScalarType.string),
-      "add",
-      CallModel(
-        v :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
-        CallModel.Export(result.name, result.`type`) :: Nil
-      )
-    ).leaf
-
-  def unfoldRawWithPropertyModels[S: Mangler: Exports: Arrows](
-    raw: ValueRaw,
+  def reachModelWithPropertyModels[S: Mangler: Exports: Arrows](
+    model: ValueModel,
     propertyModels: Chain[PropertyModel],
     propertyPrefix: Inline,
-    propertiesAllowed: Boolean
+    propertiesAllowed: Boolean,
+    streamGateInline: Option[Inline] = None
   ): State[S, (ValueModel, Inline)] = {
     Exports[S].exports.flatMap { exports =>
-      unfold(raw, propertiesAllowed).flatMap {
-        case (v: VarModel, prefix) =>
-          ((v.`type`, propertyModels.headOption) match {
-            // canonicalize stream
-            case (st: StreamType, Some(idx @ IntoIndexModel(_, _))) =>
-              for {
-                uniqueResultName <- Mangler[S].findAndForbidName(v.name + "_result_canon")
-                uniqueTestName <- Mangler[S].findAndForbidName(v.name + "_test")
-              } yield {
-                val varSTest = VarModel(uniqueTestName, st)
-                val iter = VarModel("s", st.element)
-
-                val iterCanon = VarModel(v.name + "_iter_canon", CanonStreamType(st.element))
-
-                val resultCanon =
-                  VarModel(uniqueResultName, CanonStreamType(st.element), propertyModels)
-
-                val incrVar = VarModel("incr_idx", ScalarType.u32)
-
-                val tree = RestrictionModel(varSTest.name, true).wrap(
-                  ForModel(iter.name, v, Some(ForModel.NeverMode)).wrap(
-                    increment(idx.idxToValueModel, incrVar),
-                    PushToStreamModel(
-                      iter,
-                      CallModel.Export(varSTest.name, varSTest.`type`)
-                    ).leaf,
-                    CanonicalizeModel(
-                      varSTest,
-                      CallModel.Export(iterCanon.name, iterCanon.`type`)
-                    ).leaf,
-                    XorModel.wrap(
-                      MatchMismatchModel(
-                        iterCanon
-                          .copy(properties = Chain.one(FunctorModel("length", ScalarType.`u32`))),
-                        incrVar,
-                        true
-                      ).leaf,
-                      NextModel(iter.name).leaf
-                    )
-                  ),
-                  CanonicalizeModel(
-                    varSTest,
-                    CallModel.Export(resultCanon.name, CanonStreamType(st.element))
-                  ).leaf
-                )
-
-                (resultCanon, Inline.tree(tree), true)
-              }
-
-            case _ =>
-              val vm = v.copy(properties = v.properties ++ propertyModels).resolveWith(exports)
-              State.pure((vm, Inline.empty, false))
-          }).flatMap { case (genV, genInline, isSeq) =>
-            val prefInline =
-              if (isSeq)
-                Inline(
-                  propertyPrefix.flattenValues ++ genInline.flattenValues,
-                  Chain.one(SeqModel.wrap((propertyPrefix.predo ++ genInline.predo).toList: _*))
-                )
-              else propertyPrefix |+| genInline
-            if (propertiesAllowed) State.pure(genV -> (prefix |+| prefInline))
+      model match {
+        case v: VarModel =>
+          {
+            val vm = v.copy(properties = v.properties ++ propertyModels).resolveWith(exports)
+            State.pure((vm, Inline.empty))
+          }.flatMap { case (genV, genInline) =>
+            val prefInline = propertyPrefix |+| genInline
+            if (propertiesAllowed) State.pure(genV -> prefInline)
             else
               removeProperty(genV).map { case (vmm, mpp) =>
-                vmm -> (prefix |+| mpp |+| prefInline)
+                val resultInline = streamGateInline.map{ gInline =>
+                  Inline(
+                    prefInline.flattenValues ++ mpp.flattenValues ++ gInline.flattenValues,
+                    Chain.one(SeqModel.wrap((prefInline.predo ++ mpp.predo ++ gInline.predo).toList:_*)),
+                    SeqMode
+                  )
+                }.getOrElse(prefInline |+| mpp)
+                vmm -> resultInline
               }
           }
 
-        case (v, prefix) =>
+        case v =>
           // What does it mean actually? I've no ides
-          State.pure((v, prefix |+| propertyPrefix))
+          State.pure((v, propertyPrefix))
       }
     }
   }
 
   private def unfoldProperties[S: Mangler: Exports: Arrows](
+    properties: Chain[PropertyRaw]
+  ): State[S, (Chain[PropertyModel], Inline)] = {
+    properties
+      .foldLeft[State[S, (Chain[PropertyModel], Inline)]](
+        State.pure((Chain.empty[PropertyModel], Inline.empty))
+      ) { case (pcm, p) =>
+        pcm.flatMap { case (pc, m) =>
+          unfoldProperty(p).map { case (pm, mm) =>
+            (pc :+ pm, m |+| mm)
+          }
+        }
+      }
+  }
+
+  private def unfoldRawWithProperties[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
     properties: Chain[PropertyRaw],
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
-    properties
-      .foldLeft[State[S, (Chain[PropertyModel], Inline, ValueRaw)]](
-        State.pure((Chain.empty[PropertyModel], Inline.empty, raw))
-      ) { case (pcm, p) =>
-        pcm.flatMap { case (pc, m, r) =>
-          unfoldProperty(p).map { case (pm, mm) =>
-            (pc :+ pm, m |+| mm, r)
+    ((raw, properties.headOption) match {
+      // To wait for the element of a stream by the given index, the following model is generated:
+      //(seq
+      // (seq
+      //  (seq
+      //   (call %init_peer_id% ("math" "add") [0 1] stream_incr)
+      //   (fold $stream s
+      //    (seq
+      //     (seq
+      //      (ap s $stream_test)
+      //      (canon %init_peer_id% $stream_test  #stream_iter_canon)
+      //     )
+      //     (xor
+      //      (match #stream_iter_canon.length stream_incr
+      //       (null)
+      //      )
+      //      (next s)
+      //     )
+      //    )
+      //    (never)
+      //   )
+      //  )
+      //  (canon %init_peer_id% $stream_test  #stream_result_canon)
+      // )
+      // (ap #stream_result_canon stream_gate)
+      //)
+      case (VarRaw(name, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
+        val gateRaw = ApplyGateRaw(name, st, idx)
+        unfold(gateRaw).flatMap { case (gateResVal, gateResInline) =>
+          unfoldProperties(properties).flatMap { case (propertyModels, map) =>
+            reachModelWithPropertyModels(
+              gateResVal,
+              propertyModels,
+              map,
+              false,
+              Some(gateResInline)
+            )
           }
         }
-      }
-      .flatMap { case (propertyModels, map, r) =>
-        unfoldRawWithPropertyModels(r, propertyModels, map, propertiesAllowed)
-      }
+
+      case (_, _) =>
+        unfold(raw).flatMap { case (vm, prevInline) =>
+          unfoldProperties(properties).flatMap { case (propertyModels, map) =>
+            reachModelWithPropertyModels(vm, propertyModels, prevInline |+| map, propertiesAllowed)
+          }
+        }
+    })
+
   }
 
   override def apply[S: Mangler: Exports: Arrows](
@@ -201,7 +199,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     }
 
     if (leftToFunctor.length == properties.length) {
-      unfoldProperties(raw, properties, propertiesAllowed)
+      unfoldRawWithProperties(raw, properties, propertiesAllowed)
     } else {
       // split properties like this:
       // properties -- functor -- properties with functors
@@ -217,17 +215,19 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
         (leftToFunctor, functor, right)
       }).map { case (left, functor, right) =>
         for {
-          vmLeftInline <- unfoldProperties(raw, left, propertiesAllowed)
+          vmLeftInline <- unfoldRawWithProperties(raw, left, propertiesAllowed)
           (leftVM, leftInline) = vmLeftInline
+          // TODO: rewrite without `toRaw`
           fRaw = ApplyFunctorRaw(leftVM.toRaw, functor)
           vmFunctorInline <- ApplyFunctorRawInliner(fRaw, false)
           (fVM, fInline) = vmFunctorInline
+          // TODO: rewrite without `toRaw`
           vmRightInline <- unfold(ApplyPropertyRaw.fromChain(fVM.toRaw, right), propertiesAllowed)
           (vm, rightInline) = vmRightInline
         } yield {
           vm -> (leftInline |+| fInline |+| rightInline)
         }
-      }.getOrElse(unfoldProperties(raw, properties, propertiesAllowed))
+      }.getOrElse(unfoldRawWithProperties(raw, properties, propertiesAllowed))
     }
 
 }

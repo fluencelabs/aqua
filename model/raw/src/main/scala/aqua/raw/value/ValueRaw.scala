@@ -93,6 +93,21 @@ object ApplyPropertyRaw {
     }
 }
 
+case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) extends ValueRaw {
+  override def baseType: Type = streamType
+
+  override def `type`: Type = idx.`type`
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(name = map.getOrElse(name, name), idx = idx.renameVars(map))
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = this
+
+  override def toString: String = s"gate $name.$idx"
+
+  override def varNames: Set[String] = Set(name) ++ idx.varNames
+}
+
 case class ShadowRaw(value: ValueRaw, shadowValues: Map[String, ValueRaw]) extends ValueRaw {
   override def baseType: Type = value.baseType
 

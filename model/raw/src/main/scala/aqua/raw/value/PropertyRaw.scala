@@ -28,9 +28,9 @@ case class FunctorRaw(name: String, `type`: Type) extends PropertyRaw {
 
 case class IntoIndexRaw(idx: ValueRaw, `type`: Type) extends PropertyRaw {
 
-  override def map(f: ValueRaw => ValueRaw): PropertyRaw = IntoIndexRaw(f(idx), `type`)
+  override def map(f: ValueRaw => ValueRaw): IntoIndexRaw = IntoIndexRaw(f(idx), `type`)
 
-  override def renameVars(vals: Map[String, String]): PropertyRaw =
+  override def renameVars(vals: Map[String, String]): IntoIndexRaw =
     IntoIndexRaw(idx.renameVars(vals), `type`)
 
   override def varNames: Set[String] = idx.varNames
