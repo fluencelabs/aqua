@@ -89,7 +89,7 @@ object RawValueInliner extends Logging {
     }.map{ predo =>
       inline.mergeMode match
         case SeqMode => SeqModel.wrap((inline.predo.toList ++ predo):_*) :: Nil
-        case _ => inline.predo.toList ::: predo
+        case ParMode => inline.predo.toList ::: predo
     }
   }
 

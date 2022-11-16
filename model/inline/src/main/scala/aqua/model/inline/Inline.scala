@@ -10,6 +10,12 @@ sealed trait MergeMode
 object SeqMode extends MergeMode
 object ParMode extends MergeMode
 
+/**
+ *
+ * @param flattenValues values that need to be resolved before `predo`
+ * @param predo operations tree
+ * @param mergeMode how `flattenValues` and `predo` must be merged
+ */
 private[inline] case class Inline(
   flattenValues: Map[String, ValueRaw] = Map.empty,
   predo: Chain[OpModel.Tree] = Chain.empty,
