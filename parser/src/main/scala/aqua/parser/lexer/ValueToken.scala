@@ -94,7 +94,7 @@ object CallArrowToken {
 
 case class DataValueToken[F[_]: Comonad](
   dataName: Name[F],
-  fields: List[ValueToken[F]]
+  fields: NonEmptyList[ValueToken[F]]
 ) extends ValueToken[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): DataValueToken[K] =
@@ -107,7 +107,7 @@ object DataValueToken {
 
   val dataValue: P[DataValueToken[Span.S]] =
       (`Class`.lift.map(Name(_))
-        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
+        ~ comma(ValueToken.`value`.surroundedBy(`/s*`))
           .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
         .withContext(
           "Missing braces '()' after the object name"
@@ -192,6 +192,7 @@ object InfixToken {
         CollectionToken.collection
       ) ::
       P.defer(CallArrowToken.callArrow).backtrack ::
+      P.defer(DataValueToken.dataValue).backtrack ::
       P.defer(brackets(InfixToken.mathExpr)) ::
       varProperty ::
       Nil

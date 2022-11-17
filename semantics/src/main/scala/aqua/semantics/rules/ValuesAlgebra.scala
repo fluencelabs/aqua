@@ -94,6 +94,17 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           case None =>
             None.pure[Alg]
         }
+
+      case dr @ DataValueToken(dataName, fields) =>
+        T.resolveType(CustomTypeToken(dataName)).flatMap {
+          case Some(StructType(_, fieldsType)) =>
+            fields.traverse(valueToRaw).map { fieldsRawOp: NonEmptyList[Option[ValueRaw]] =>
+
+            }
+          case _ =>
+            None.pure[Alg]
+        }
+
       case ct @ CollectionToken(_, values) =>
         values.traverse(valueToRaw).map(_.toList.flatten).map(NonEmptyList.fromList).map {
           case Some(raws) if raws.size == values.size =>
