@@ -163,18 +163,24 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
       // )
       // (ap #stream_result_canon stream_gate)
       //)
-      case (VarRaw(name, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
-        val gateRaw = ApplyGateRaw(name, st, idx)
-        unfold(gateRaw).flatMap { case (gateResVal, gateResInline) =>
-          unfoldProperties(properties).flatMap { case (propertyModels, map) =>
-            reachModelWithPropertyModels(
-              gateResVal,
-              propertyModels,
-              map,
-              false,
-              Some(gateResInline)
-            )
-          }
+      case (vr@VarRaw(_, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
+        unfold(vr).flatMap {
+          case (vm@VarModel(nameVM, _, _), inl) =>
+            val gateRaw = ApplyGateRaw(nameVM, st, idx)
+            unfold(gateRaw).flatMap { case (gateResVal, gateResInline) =>
+              unfoldProperties(properties).flatMap { case (propertyModels, map) =>
+                reachModelWithPropertyModels(
+                  gateResVal,
+                  propertyModels,
+                  inl |+| map,
+                  false,
+                  Some(gateResInline)
+                )
+              }
+            }
+          case l =>
+            // unreachable. Stream cannot be literal
+            State.pure(l)
         }
 
       case (_, _) =>
