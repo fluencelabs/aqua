@@ -29,14 +29,14 @@ class JsonEncoderSpec extends AnyFlatSpec with Matchers {
 
     val elType = StructType(
       "",
-      NonEmptyMap.of(
+      NonEmptyList.of(
         ("a", LiteralType.string),
         ("b", ArrayType(LiteralType.number)),
         ("c", OptionType(LiteralType.string)),
         ("d", OptionType(LiteralType.string))
       )
     )
-    res.toOption.get shouldBe StructType("", NonEmptyMap.of(("arr2", ArrayType(elType))))
+    res.toOption.get shouldBe StructType("", NonEmptyList.of(("arr2", ArrayType(elType))))
   }
 
   "json encoder" should "get type from json 1" in {
@@ -69,14 +69,14 @@ class JsonEncoderSpec extends AnyFlatSpec with Matchers {
 
     val innerElType = StructType(
       "",
-      NonEmptyMap.of(
+      NonEmptyList.of(
         ("c", LiteralType.string),
         ("d", OptionType(LiteralType.number))
       )
     )
     val elType = StructType(
       "",
-      NonEmptyMap.of(
+      NonEmptyList.of(
         ("a", ArrayType(innerElType)),
         ("b", LiteralType.string)
       )
@@ -84,7 +84,7 @@ class JsonEncoderSpec extends AnyFlatSpec with Matchers {
 
     val t = StructType(
       "",
-      NonEmptyMap.of(
+      NonEmptyList.of(
         ("arr1", ArrayType(elType)),
         ("arr2", ArrayType(LiteralType.number)),
         ("arr3", ArrayType(LiteralType.string)),
@@ -123,7 +123,7 @@ class JsonEncoderSpec extends AnyFlatSpec with Matchers {
     val arr4InnerType = OptionType(
       StructType(
         "",
-        NonEmptyMap.of(
+        NonEmptyList.of(
           ("c", LiteralType.string),
           ("d", ArrayType(LiteralType.number))
         )
@@ -132,7 +132,7 @@ class JsonEncoderSpec extends AnyFlatSpec with Matchers {
 
     val arr4ElType = StructType(
       "",
-      NonEmptyMap.of(
+      NonEmptyList.of(
         ("a", LiteralType.string),
         ("b", arr4InnerType)
       )
@@ -140,7 +140,7 @@ class JsonEncoderSpec extends AnyFlatSpec with Matchers {
 
     val t = StructType(
       "",
-      NonEmptyMap.of(
+      NonEmptyList.of(
         ("arr4", ArrayType(arr4ElType))
       )
     )

@@ -10,7 +10,7 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
 
   val aquaType = StructType(
     "some",
-    NonEmptyMap.of(
+    NonEmptyList.of(
       ("field1", OptionType(ArrayType(ScalarType.u8))),
       ("field2", OptionType(ArrayType(OptionType(ScalarType.i32)))),
       ("field3", ArrayType(ArrayType(ArrayType(ScalarType.i64)))),
@@ -19,7 +19,7 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
         OptionType(
           StructType(
             "some2",
-            NonEmptyMap.of(
+            NonEmptyList.of(
               ("innerfield1", OptionType(ScalarType.u32)),
               ("innerfield2", ArrayType(ScalarType.i16))
             )
@@ -42,14 +42,14 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
     val res = validate(
       StructType(
         "some",
-        NonEmptyMap.of(
+        NonEmptyList.of(
           ("field1", ScalarType.u8),
           ("field2", ArrayType(ScalarType.string))
         )
       ),
       StructType(
         "some",
-        NonEmptyMap.of(
+        NonEmptyList.of(
           ("field1", ScalarType.u8)
         )
       ))
@@ -110,7 +110,7 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
       aquaType,
       StructType(
         "some",
-        NonEmptyMap.of(
+        NonEmptyList.of(
           ("field1", ArrayType(LiteralType.number)),
           ("field2", ArrayType(LiteralType.number)),
           ("field3", ArrayType(ArrayType(ArrayType(LiteralType.number)))),
@@ -118,7 +118,7 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
             "field4",
             StructType(
               "some2",
-              NonEmptyMap.of(
+              NonEmptyList.of(
                 ("innerfield1", LiteralType.number),
                 ("innerfield2", ArrayType(LiteralType.number))
               )
@@ -134,7 +134,7 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
   "type validator" should "return invalid if there is no field" in {
     val structType = StructType(
       "some",
-      NonEmptyMap.of(
+      NonEmptyList.of(
         ("field1", ScalarType.u8),
         ("field2", ScalarType.string),
         ("field3", OptionType(ScalarType.string))
@@ -145,7 +145,7 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
       structType,
       StructType(
         "some",
-        NonEmptyMap.of(
+        NonEmptyList.of(
           ("field2", LiteralType.string)
         )
       )
@@ -156,7 +156,7 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
       structType,
       StructType(
         "some",
-        NonEmptyMap.of(
+        NonEmptyList.of(
           ("field1", ScalarType.u8)
         )
       )
@@ -167,7 +167,7 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
       structType,
       StructType(
         "some",
-        NonEmptyMap.of(
+        NonEmptyList.of(
           ("field1", LiteralType.number),
           ("field2", LiteralType.string)
         )
@@ -179,7 +179,7 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
       structType,
       StructType(
         "some",
-        NonEmptyMap.of(
+        NonEmptyList.of(
           ("field1", ScalarType.u8),
           ("field2", ScalarType.string),
           ("field3", ScalarType.string)
@@ -191,14 +191,14 @@ class TypeValidatorSpec extends AnyFlatSpec with Matchers {
   "type validator" should "return invalid if there is one array when it must be two" in {
     val leftType = StructType(
       "some",
-      NonEmptyMap.of(
+      NonEmptyList.of(
         ("arrr", OptionType(ArrayType(ArrayType(ScalarType.u8))))
       )
     )
 
     val rightType = StructType(
       "some",
-      NonEmptyMap.of(
+      NonEmptyList.of(
         ("arrr", ArrayType(LiteralType.number))
       )
     )
