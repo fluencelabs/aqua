@@ -1,9 +1,10 @@
 name: Run tests
 
 on:
-  pull_request:
-    paths-ignode:
-      - "**.md"
+  # pull_request:
+  #   paths-ignode:
+  #     - "**.md"
+  push:
 
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
