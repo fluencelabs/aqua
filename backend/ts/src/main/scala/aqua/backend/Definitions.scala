@@ -103,8 +103,8 @@ object TypeDefinition {
       case OptionType(t) =>
         OptionTypeDef(TypeDefinition(t))
       case t: BoxType => ArrayTypeDef(TypeDefinition(t.element))
-      case StructType(name, fields) =>
-        StructTypeDef(name, fields.toSortedMap.view.mapValues(TypeDefinition.apply).toMap)
+      case s@StructType(name, fields) =>
+        StructTypeDef(name, s.fields.toSortedMap.view.mapValues(TypeDefinition.apply).toMap)
       case t: ScalarType => ScalarTypeDef.fromScalar(t)
       case t: LiteralType => ScalarTypeDef.fromLiteral(t)
       case t: ProductType => ProductTypeDef(t)

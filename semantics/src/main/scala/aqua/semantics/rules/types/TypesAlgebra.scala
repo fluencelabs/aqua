@@ -14,11 +14,11 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def defineField(name: Name[S], `type`: Type): Alg[Boolean]
 
-  def purgeFields(token: CustomTypeToken[S]): Alg[Option[NonEmptyMap[String, Type]]]
+  def purgeFields(token: CustomTypeToken[S]): Alg[Option[NonEmptyList[(String, Type)]]]
 
   def defineDataType(
     name: CustomTypeToken[S],
-    fields: NonEmptyMap[String, Type]
+    fields: NonEmptyList[(String, Type)]
   ): Alg[Boolean]
 
   def defineAlias(name: CustomTypeToken[S], target: Type): Alg[Boolean]
@@ -33,6 +33,8 @@ trait TypesAlgebra[S[_], Alg[_]] {
   def expectNoExport(token: Token[S]): Alg[Unit]
 
   def checkArgumentsNumber(token: Token[S], expected: Int, givenNum: Int): Alg[Boolean]
+  
+  def checkFieldsNumber(token: Token[S], expected: Int, givenNum: Int): Alg[Boolean]
 
   def beginArrowScope(token: ArrowTypeToken[S]): Alg[ArrowType]
 

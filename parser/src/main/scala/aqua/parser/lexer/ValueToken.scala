@@ -93,26 +93,26 @@ object CallArrowToken {
 }
 
 case class DataValueToken[F[_]: Comonad](
-  dataName: Name[F],
+  typeName: CustomTypeToken[F],
   fields: NonEmptyList[ValueToken[F]]
 ) extends ValueToken[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): DataValueToken[K] =
-    copy(dataName.mapK(fk), fields.map(_.mapK(fk)))
+    copy(typeName.mapK(fk), fields.map(_.mapK(fk)))
 
-  override def as[T](v: T): F[T] = dataName.as(v)
+  override def as[T](v: T): F[T] = typeName.as(v)
 }
 
 object DataValueToken {
 
   val dataValue: P[DataValueToken[Span.S]] =
-      (`Class`.lift.map(Name(_))
+      (`Class`.lift
         ~ comma(ValueToken.`value`.surroundedBy(`/s*`))
           .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
         .withContext(
           "Missing braces '()' after the object name"
         ).map { case (dn, args) =>
-      DataValueToken(dn, args)
+      DataValueToken(CustomTypeToken(dn), args)
     }
 }
 

@@ -10,7 +10,7 @@ import aqua.raw.RawContext
 import aqua.semantics.lsp.{TokenInfo, TokenType, TokenTypeInfo}
 
 case class TypesState[S[_]](
-  fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],
+  fields: List[(Name[S], Type)] = List.empty[(Name[S], Type)],
   strict: Map[String, Type] = Map.empty[String, Type],
   definitions: Map[String, CustomTypeToken[S]] = Map.empty[String, CustomTypeToken[S]],
   fieldsToken: Map[String, TokenTypeInfo[S]] = Map.empty[String, TokenTypeInfo[S]],

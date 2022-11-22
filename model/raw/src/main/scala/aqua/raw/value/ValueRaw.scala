@@ -34,7 +34,7 @@ object ValueRaw {
     "%last_error%",
     StructType(
       "LastError",
-      NonEmptyMap.of(
+      NonEmptyList.of(
         // These two fields are mandatory for all errors
         "message" -> ScalarType.string,
         "error_code" -> ScalarType.i64,
@@ -185,17 +185,19 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
     copy(values = values.map(_.renameVars(map)))
 }
 
-case class DataRaw(name: String, fields: NonEmptyMap[String, ValueRaw]) extends ValueRaw {
-  override lazy val baseType: Type = StructType(name, fields.map(_.baseType))
+case class DataRaw(name: String, fieldsList: NonEmptyList[(String, ValueRaw)]) extends ValueRaw {
+  override lazy val baseType: Type = StructType(name, fieldsList.map(f => (f._1,f._2.baseType)))
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(fields = fields.map(f)))
+  lazy val fields: NonEmptyMap[String, ValueRaw] = NonEmptyMap.of(fieldsList.head, fieldsList.tail:_*)
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(fieldsList = fieldsList.map(fl => (fl._1, f(fl._2)))))
 
   override def varNames: Set[String] = {
-    fields.toSortedMap.values.flatMap(_.varNames).toSet
+    fieldsList.map(_._2).toList.flatMap(_.varNames).toSet
   }
 
   override def renameVars(map: Map[String, String]): ValueRaw =
-    copy(fields = fields.map(_.renameVars(map)))
+    copy(fieldsList = fieldsList.map(f => (f._1, f._2.renameVars(map))))
 }
 
 case class CallArrowRaw(

@@ -70,9 +70,9 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
     }
 
   override def defineField(name: Name[S], `type`: Type): State[X, Boolean] =
-    getState.map(_.fields.get(name.value)).flatMap {
+    getState.map(_.fields.find(_._1.value == name.value)).flatMap {
       case None =>
-        modify(st => st.copy(fields = st.fields.updated(name.value, name -> `type`)))
+        modify(st => st.copy(fields = st.fields :+ name -> `type`))
           .as(true)
       case Some(_) =>
         report(name, s"Cannot define field `${name.value}`, it was already defined above")
@@ -81,17 +81,17 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
 
   override def purgeFields(
     token: CustomTypeToken[S]
-  ): State[X, Option[NonEmptyMap[String, Type]]] = {
+  ): State[X, Option[NonEmptyList[(String, Type)]]] = {
     getState.map(_.fields).flatMap { fields =>
-      NonEmptyMap.fromMap(SortedMap.from(fields.view.mapValues(_._2))) match {
+      NonEmptyList.fromList(fields) match {
         case Some(fs) =>
           modify { st =>
             val tokens = st.fieldsToken
-            val updated = tokens ++ fields.toList.map { case (n, (tt, t)) =>
-              (token.value + "." + n, TokenTypeInfo(Some(tt), t))
+            val updated = tokens ++ fields.map { case (n, t) =>
+              (token.value + "." + n.value, TokenTypeInfo(Some(n), t))
             }
-            st.copy(fields = Map.empty, fieldsToken = updated)
-          }.map(_ => Some(fs))
+            st.copy(fields = List.empty, fieldsToken = updated)
+          }.map(_ => Some(fs.map(f => (f._1.value, f._2))))
         case None => report(token, "Cannot define a data type without fields").as(None)
       }
     }
@@ -99,7 +99,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
 
   override def defineDataType(
     name: CustomTypeToken[S],
-    fields: NonEmptyMap[String, Type]
+    fields: NonEmptyList[(String, Type)]
   ): State[X, Boolean] =
     getState.map(_.definitions.get(name.value)).flatMap {
       case Some(n) if n == name => State.pure(false)
@@ -130,11 +130,11 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
 
   override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[PropertyRaw]] = {
     rootT match {
-      case StructType(name, fields) =>
-        fields(op.value).fold(
+      case s@StructType(name, fields) =>
+        s.fields(op.value).fold(
           report(
             op,
-            s"Field `${op.value}` not found in type `$name`, available: ${fields.toNel.toList.map(_._1).mkString(", ")}"
+            s"Field `${op.value}` not found in type `$name`, available: ${fields.toList.map(_._1).mkString(", ")}"
           ).as(None)
         ) { t =>
           modify { st =>
@@ -233,6 +233,18 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
       report(
         token,
         s"Number of arguments doesn't match the function type, expected: ${expected}, given: ${givenNum}"
+      ).as(false)
+
+  override def checkFieldsNumber(
+    token: Token[S],
+    expected: Int,
+    givenNum: Int
+  ): State[X, Boolean] =
+    if (expected == givenNum) State.pure(true)
+    else
+      report(
+        token,
+        s"Number of fields doesn't match the data type, expected: ${expected}, given: ${givenNum}"
       ).as(false)
 
   override def beginArrowScope(token: ArrowTypeToken[S]): State[X, ArrowType] =

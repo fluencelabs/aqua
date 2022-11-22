@@ -95,11 +95,24 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
             None.pure[Alg]
         }
 
-      case dr @ DataValueToken(dataName, fields) =>
-        T.resolveType(CustomTypeToken(dataName)).flatMap {
-          case Some(StructType(_, fieldsType)) =>
-            fields.traverse(valueToRaw).map { fieldsRawOp: NonEmptyList[Option[ValueRaw]] =>
-
+      case DataValueToken(typeName, fields) =>
+        T.resolveType(typeName).flatMap {
+          case Some(struct @ StructType(_, fieldsType)) =>
+            for {
+              fieldsRawOp: NonEmptyList[Option[ValueRaw]] <- fields.traverse(valueToRaw)
+              fieldsRaw = fieldsRawOp.toList.flatten
+              _ <- T.checkFieldsNumber(typeName, fieldsType.length, fieldsRaw.length)
+              zippedFields = NonEmptyList.fromListUnsafe(fieldsType.map(_._1).toList.zip(fieldsRaw))
+              typeFromFields = StructType(
+                typeName.value,
+                zippedFields.map(t => (t._1, t._2.`type`))
+              )
+              typeCheck <- T.ensureTypeMatches(typeName, struct, typeFromFields)
+            } yield {
+              if (typeCheck)
+                Some(DataRaw(typeName.value, zippedFields))
+              else
+                None
             }
           case _ =>
             None.pure[Alg]

@@ -68,13 +68,13 @@ object CompareTypes {
         lfView.values.toList,
         rfView.filterKeys(lfNEM.keys.contains).values.toList
       ) == -1.0
-    ) 1.0
+    ) -1.0
     else if (
       rf.keys.forall(lf.contains) && compareTypesList(
         lfView.filterKeys(rfNEM.keys.contains).values.toList,
         rfView.values.toList
       ) == 1.0
-    ) -1.0
+    ) 1.0
     else NaN
   }
 
@@ -127,8 +127,8 @@ object CompareTypes {
         case (x: OptionType, y: StreamType) => apply(x.element, y.element)
         case (x: OptionType, y: ArrayType) => apply(x.element, y.element)
         case (x: StreamType, y: StreamType) => apply(x.element, y.element)
-        case (StructType(_, xFields), StructType(_, yFields)) =>
-          compareStructs(xFields, yFields)
+        case (stl@StructType(_, _), str@StructType(_, _)) =>
+          compareStructs(stl.fields, str.fields)
 
         // Products
         case (l: ProductType, r: ProductType) => compareProducts(l, r)

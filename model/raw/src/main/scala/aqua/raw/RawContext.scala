@@ -90,7 +90,7 @@ case class RawContext(
           }
         )
       )
-      .map(StructType(name, _))
+      .map(nem => StructType(name, nem.toNel))
 
   override def toString: String = s"module: $module\ndeclares: $declares\nexports: $exports"
 }

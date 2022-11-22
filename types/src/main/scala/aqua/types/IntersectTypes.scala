@@ -31,7 +31,7 @@ case class IntersectTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]
           .fromMap(as.fields.toSortedMap.flatMap { case (ak, at) =>
             bs.fields.lookup(ak).map(bt => ak -> combine(at, bt))
           })
-          .fold(empty)(fields => StructType(s"${as.name}_x_${bs.name}", fields))
+          .fold(empty)(fields => StructType(s"${as.name}_x_${bs.name}", fields.toNel))
 
       case (aa: ArrowType, bb: ArrowType) =>
         ArrowType(
