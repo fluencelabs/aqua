@@ -326,7 +326,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     // lambda that will be assigned to another variable
     val objectVarLambda =
-      VarRaw("object", StructType("objectType", NonEmptyMap.one("field", ScalarType.string)))
+      VarRaw("object", StructType("objectType", NonEmptyList.one(("field", ScalarType.string))))
         .withProperty(
           IntoFieldRaw("field", ScalarType.string)
         )
@@ -336,7 +336,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     // raw object
     val objectVar = VarRaw(
       "object",
-      StructType("objectType", NonEmptyMap.one("field", ScalarType.string))
+      StructType("objectType", NonEmptyList.one(("field", ScalarType.string)))
     )
 
     // export object

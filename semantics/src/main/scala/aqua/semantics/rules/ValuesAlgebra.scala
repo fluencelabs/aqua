@@ -101,16 +101,15 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
             for {
               fieldsRawOp: NonEmptyList[Option[ValueRaw]] <- fields.traverse(valueToRaw)
               fieldsRaw = fieldsRawOp.toList.flatten
-              _ <- T.checkFieldsNumber(typeName, fieldsType.length, fieldsRaw.length)
               zippedFields = NonEmptyList.fromListUnsafe(fieldsType.map(_._1).toList.zip(fieldsRaw))
               typeFromFields = StructType(
                 typeName.value,
                 zippedFields.map(t => (t._1, t._2.`type`))
               )
-              typeCheck <- T.ensureTypeMatches(typeName, struct, typeFromFields)
+              typeCheck <- T.checkTypeCompatibility(typeName, struct, typeFromFields)
             } yield {
               if (typeCheck)
-                Some(DataRaw(typeName.value, zippedFields))
+                Some(DataRaw(typeName.value, zippedFields, struct))
               else
                 None
             }

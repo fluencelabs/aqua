@@ -14,8 +14,7 @@ import aqua.model.{
 import aqua.model.inline.state.InliningState
 import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
-import cats.data.NonEmptyMap
-import cats.data.Chain
+import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -46,13 +45,12 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   )
 
   private val bType =
-    StructType("objectType", NonEmptyMap(("c", ScalarType.string), SortedMap.empty))
+    StructType("objectType", NonEmptyList.one(("c", ScalarType.string)))
 
   private val aType = StructType(
     "objectType",
-    NonEmptyMap(
-      ("b", bType),
-      SortedMap.empty
+    NonEmptyList.one(
+      ("b", bType)
     )
   )
 

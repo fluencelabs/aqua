@@ -2,7 +2,7 @@ package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
 import aqua.raw.value.{PropertyRaw, ValueRaw}
-import aqua.types.{ArrowType, Type}
+import aqua.types.{ArrowType, StructType, Type}
 import cats.data.NonEmptyMap
 import cats.data.NonEmptyList
 
@@ -33,8 +33,6 @@ trait TypesAlgebra[S[_], Alg[_]] {
   def expectNoExport(token: Token[S]): Alg[Unit]
 
   def checkArgumentsNumber(token: Token[S], expected: Int, givenNum: Int): Alg[Boolean]
-  
-  def checkFieldsNumber(token: Token[S], expected: Int, givenNum: Int): Alg[Boolean]
 
   def beginArrowScope(token: ArrowTypeToken[S]): Alg[ArrowType]
 
@@ -43,4 +41,10 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   // End scope; if return was expected but not checked, fail
   def endArrowScope(token: Token[S]): Alg[List[ValueRaw]]
+
+  def checkTypeCompatibility(
+    token: TypeToken[S],
+    valueType: Type,
+    `type`: Type
+  ): Alg[Boolean]
 }

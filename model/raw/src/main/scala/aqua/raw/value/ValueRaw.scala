@@ -185,9 +185,7 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
     copy(values = values.map(_.renameVars(map)))
 }
 
-case class DataRaw(name: String, fieldsList: NonEmptyList[(String, ValueRaw)]) extends ValueRaw {
-  override lazy val baseType: Type = StructType(name, fieldsList.map(f => (f._1,f._2.baseType)))
-
+case class DataRaw(name: String, fieldsList: NonEmptyList[(String, ValueRaw)], baseType: Type) extends ValueRaw {
   lazy val fields: NonEmptyMap[String, ValueRaw] = NonEmptyMap.of(fieldsList.head, fieldsList.tail:_*)
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(fieldsList = fieldsList.map(fl => (fl._1, f(fl._2)))))

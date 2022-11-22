@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{FunctorRaw, IntoIndexRaw, IntoFieldRaw, PropertyRaw, ValueRaw}
+import aqua.raw.value.{FunctorRaw, IntoFieldRaw, IntoIndexRaw, PropertyRaw, ValueRaw}
 import aqua.semantics.lsp.{TokenDef, TokenTypeInfo}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{
@@ -130,23 +130,25 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
 
   override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[PropertyRaw]] = {
     rootT match {
-      case s@StructType(name, fields) =>
-        s.fields(op.value).fold(
-          report(
-            op,
-            s"Field `${op.value}` not found in type `$name`, available: ${fields.toList.map(_._1).mkString(", ")}"
-          ).as(None)
-        ) { t =>
-          modify { st =>
-            st.fieldsToken.get(name + "." + op.value) match {
-              case Some(td) => st.copy(locations = st.locations :+ (op, td))
-              case None => st
-            }
+      case s @ StructType(name, fields) =>
+        s.fields(op.value)
+          .fold(
+            report(
+              op,
+              s"Field `${op.value}` not found in type `$name`, available: ${fields.toList.map(_._1).mkString(", ")}"
+            ).as(None)
+          ) { t =>
+            modify { st =>
+              st.fieldsToken.get(name + "." + op.value) match {
+                case Some(td) => st.copy(locations = st.locations :+ (op, td))
+                case None => st
+              }
 
-          }.as(Some(IntoFieldRaw(op.value, t)))
-        }
+            }.as(Some(IntoFieldRaw(op.value, t)))
+          }
       case t =>
-        t.properties.get(op.value)
+        t.properties
+          .get(op.value)
           .fold(
             report(
               op,
@@ -235,18 +237,6 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         s"Number of arguments doesn't match the function type, expected: ${expected}, given: ${givenNum}"
       ).as(false)
 
-  override def checkFieldsNumber(
-    token: Token[S],
-    expected: Int,
-    givenNum: Int
-  ): State[X, Boolean] =
-    if (expected == givenNum) State.pure(true)
-    else
-      report(
-        token,
-        s"Number of fields doesn't match the data type, expected: ${expected}, given: ${givenNum}"
-      ).as(false)
-
   override def beginArrowScope(token: ArrowTypeToken[S]): State[X, ArrowType] =
     Applicative[ST]
       .product(
@@ -277,6 +267,40 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
       .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2))
       .flatMap(at => stack.beginScope(TypesState.Frame(token, at, None)).as(at))
 
+  override def checkTypeCompatibility(
+    token: TypeToken[S],
+    valueType: Type,
+    `type`: Type
+  ): State[X, Boolean] = {
+    (valueType, `type`) match {
+      case (StructType(n, valueFields), StructType(typeName, typeFields)) =>
+        if (n != typeName)
+          report(
+            token,
+            s"Wrong value type, expected: ${`type`}, given: ${valueType}"
+          ).as(false)
+        else if (valueFields.length != typeFields.length) {
+          report(
+            token,
+            s"Number of fields doesn't match the data type, expected: ${`type`}, given: ${valueType}"
+          ).as(false)
+        } else {
+          valueFields.zip(typeFields).traverse {
+            case ((valueFieldName, valueFieldType), (typeFieldName, typeFieldType)) =>
+              if (valueFieldName != typeFieldName)
+                report(
+                  token,
+                  s"Wrong value type, expected: ${`type`}, given: ${valueType}"
+                ).as(false)
+              else
+                checkTypeCompatibility(token, valueFieldType, typeFieldType)
+          }.map(_.toList.fold(true)(_ && _))
+        }
+      case _ =>
+        ensureTypeMatches(token, valueType, `type`)
+    }
+  }
+
   override def checkArrowReturn(
     values: NonEmptyList[(ValueToken[S], ValueRaw)]
   ): State[X, Boolean] =
@@ -299,15 +323,15 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
             false
           )
         )
-      else if (frame.token.res.drop(values.length).nonEmpty)
+      else if (frame.token.res.length > values.length)
         Left(
           (
             values.last._1,
-            s"Expected ${frame.token.res.drop(values.length).length} more values to be returned, see return type declaration",
+            s"Expected ${frame.token.res.length - values.length} more values to be returned, see return type declaration",
             false
           )
         )
-      else if (values.toList.drop(frame.token.res.length).nonEmpty)
+      else if (frame.token.res.length < values.length)
         Left(
           (
             values.toList.drop(frame.token.res.length).headOption.getOrElse(values.last)._1,
@@ -316,7 +340,6 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
           )
         )
       else {
-
         frame.arrowType.codomain.toList
           .lazyZip(values.toList)
           .foldLeft[Either[(Token[S], String, Boolean), List[ValueRaw]]](Right(Nil)) {
