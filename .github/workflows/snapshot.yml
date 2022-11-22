@@ -109,11 +109,11 @@ jobs:
 
       - name: Generate snapshot version
         id: version
-        uses: fluencelabs/github-actions/generate-snapshot-id@FLU-120-add-npm-publish-snapshot
+        uses: fluencelabs/github-actions/generate-snapshot-id@main
 
       - name: Publish snapshot
         id: snapshot
-        uses: fluencelabs/github-actions/npm-publish-snapshot@FLU-120-add-npm-publish-snapshot
+        uses: fluencelabs/github-actions/npm-publish-snapshot@main
         with:
           working-directory: npm
           id: ${{ steps.version.outputs.id }}

@@ -1,10 +1,12 @@
-name: Run tests
+name: "e2e"
 
 on:
-  # pull_request:
-  #   paths-ignode:
-  #     - "**.md"
+  pull_request:
+    paths-ignode:
+      - "**.md"
   push:
+    branches:
+      - "master"
 
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
@@ -30,18 +32,18 @@ jobs:
       - name: Run tests
         run: sbt test
 
-  snapshot:
+  aqua:
     name: "aqua"
     uses: ./.github/workflows/snapshot.yml
 
   aqua-playground:
-    needs: snapshot
+    needs: aqua
     uses: fluencelabs/aqua-playground/.github/workflows/tests.yml@master
     with:
-      aqua-version: "${{ needs.snapshot.outputs.aqua-version }}"
+      aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
 
   registry:
-    needs: snapshot
+    needs: aqua
     uses: fluencelabs/registry/.github/workflows/tests.yml@main
     with:
-      aqua-version: "${{ needs.snapshot.outputs.aqua-version }}"
+      aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
