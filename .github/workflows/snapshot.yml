@@ -56,7 +56,7 @@ jobs:
     needs: compile
 
     outputs:
-      aqua-version: "${{ steps.build.outputs.version }}"
+      aqua-version: "${{ steps.snapshot.outputs.version }}"
 
     permissions:
       contents: read
@@ -110,37 +110,28 @@ jobs:
 
       - name: Generate package version
         id: version
-        run: |
-          SHA=${{ github.event.pull_request.head.sha }}
-          echo "sha=${SHA::7}" >> $GITHUB_OUTPUT
-          echo "branch=${GITHUB_HEAD_REF//[^a-zA-Z0-9-]/-}" >> $GITHUB_OUTPUT
+        uses: fluencelabs/github-actions/generate-snapshot-id@FLU-120-add-npm-publish-snapshot
 
       - name: Set package version
-        id: build
-        env:
-          BRANCH: ${{ steps.version.outputs.branch }}
-          SHA: ${{ steps.version.outputs.sha }}
-          RUN: ${{ github.run_number }}
-          ATTEMPT: ${{ github.run_attempt }}
-        working-directory: npm
-        run: |
-          echo "version=$(\
-                npm version prerelease \
-                --no-git-tag-version \
-                --preid ${{ env.BRANCH }}-${{ env.SHA }}-${{ env.RUN }}-${{ env.ATTEMPT }})" >> $GITHUB_OUTPUT
+        id: snapshot
+        uses: fluencelabs/github-actions/npm-publish-snapshot@FLU-120-add-npm-publish-snapshot
+        with:
+          working-directory: npm
 
-      - name: Publish to self-hosted npm repo
-        working-directory: npm
-        run: npm publish --tag snapshot --registry https://npm.fluence.dev
-
-      - name: Print versions to check summary
-        env:
-          VERSION: ${{ steps.build.outputs.version }}
+      - name: Debug
         run: |
-          cat <<'SNAPSHOT' >> $GITHUB_STEP_SUMMARY
-          ## aqua version is [${{ env.VERSION }}](https://npm.fluence.dev/-/web/detail/@fluencelabs/aqua/v/${{ env.VERSION }})
-          To use it run:
-          ```shell
-          npm i @fluencelabs/aqua@=${{ env.VERSION }} --registry=https://npm.fluence.dev
-          ```
-          SNAPSHOT
+          echo ${{ steps.version.outputs.id }}
+          echo ${{ steps.snapshot.outputs.version }}
+          env
+
+      # - name: Print versions to check summary
+      #   env:
+      #     VERSION: ${{ steps.build.outputs.version }}
+      #   run: |
+      #     cat <<'SNAPSHOT' >> $GITHUB_STEP_SUMMARY
+      #     ## aqua version is [${{ env.VERSION }}](https://npm.fluence.dev/-/web/detail/@fluencelabs/aqua/v/${{ env.VERSION }})
+      #     To use it run:
+      #     ```shell
+      #     npm i @fluencelabs/aqua@=${{ env.VERSION }} --registry=https://npm.fluence.dev
+      #     ```
+      #     SNAPSHOT
