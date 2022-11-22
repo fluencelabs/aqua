@@ -60,7 +60,6 @@ jobs:
 
     permissions:
       contents: read
-      pull-requests: write
       id-token: write
 
     steps:
@@ -77,7 +76,7 @@ jobs:
       - run: mv scala-*/cli-fastopt.js npm/aqua.js
 
       - name: Import secrets
-        uses: hashicorp/vault-action@v2.4.2
+        uses: hashicorp/vault-action@v2.4.3
         with:
           url: https://vault.fluence.dev
           path: jwt/github
@@ -118,20 +117,3 @@ jobs:
         with:
           working-directory: npm
           id: ${{ steps.version.outputs.id }}
-
-      - name: Debug
-        run: |
-          echo ${{ steps.version.outputs.id }}
-          echo ${{ steps.snapshot.outputs.version }}
-
-      # - name: Print versions to check summary
-      #   env:
-      #     VERSION: ${{ steps.build.outputs.version }}
-      #   run: |
-      #     cat <<'SNAPSHOT' >> $GITHUB_STEP_SUMMARY
-      #     ## aqua version is [${{ env.VERSION }}](https://npm.fluence.dev/-/web/detail/@fluencelabs/aqua/v/${{ env.VERSION }})
-      #     To use it run:
-      #     ```shell
-      #     npm i @fluencelabs/aqua@=${{ env.VERSION }} --registry=https://npm.fluence.dev
-      #     ```
-      #     SNAPSHOT
