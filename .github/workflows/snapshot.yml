@@ -108,21 +108,21 @@ jobs:
       - run: npm run build
         working-directory: npm
 
-      - name: Generate package version
+      - name: Generate snapshot version
         id: version
         uses: fluencelabs/github-actions/generate-snapshot-id@FLU-120-add-npm-publish-snapshot
 
-      - name: Set package version
+      - name: Publish snapshot
         id: snapshot
         uses: fluencelabs/github-actions/npm-publish-snapshot@FLU-120-add-npm-publish-snapshot
         with:
           working-directory: npm
+          id: ${{ steps.version.outputs.id }}
 
       - name: Debug
         run: |
           echo ${{ steps.version.outputs.id }}
           echo ${{ steps.snapshot.outputs.version }}
-          env
 
       # - name: Print versions to check summary
       #   env:
