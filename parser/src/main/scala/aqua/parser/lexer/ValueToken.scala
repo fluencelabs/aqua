@@ -10,8 +10,8 @@ import aqua.types.LiteralType
 import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
-import cats.{~>, Comonad, Functor}
-import cats.data.NonEmptyList
+import cats.{Comonad, Functor, ~>}
+import cats.data.{NonEmptyList, NonEmptyMap}
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
 
@@ -94,7 +94,7 @@ object CallArrowToken {
 
 case class DataValueToken[F[_]: Comonad](
   typeName: CustomTypeToken[F],
-  fields: NonEmptyList[ValueToken[F]]
+  fields: NonEmptyMap[String, ValueToken[F]]
 ) extends ValueToken[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): DataValueToken[K] =
@@ -107,12 +107,12 @@ object DataValueToken {
 
   val dataValue: P[DataValueToken[Span.S]] =
       (`Class`.lift
-        ~ comma(ValueToken.`value`.surroundedBy(`/s*`))
+        ~ comma(((`name` <* (` `.?.with1 *> `=` *> ` `.?)).with1 ~ ValueToken.`value`).surroundedBy(`/s*`))
           .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
         .withContext(
           "Missing braces '()' after the object name"
         ).map { case (dn, args) =>
-      DataValueToken(CustomTypeToken(dn), args)
+      DataValueToken(CustomTypeToken(dn), NonEmptyMap.of(args.head, args.tail:_*))
     }
 }
 
@@ -191,8 +191,8 @@ object InfixToken {
       P.defer(
         CollectionToken.collection
       ) ::
-      P.defer(CallArrowToken.callArrow).backtrack ::
       P.defer(DataValueToken.dataValue).backtrack ::
+      P.defer(CallArrowToken.callArrow).backtrack ::
       P.defer(brackets(InfixToken.mathExpr)) ::
       varProperty ::
       Nil

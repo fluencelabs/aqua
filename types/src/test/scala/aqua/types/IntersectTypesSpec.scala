@@ -2,8 +2,8 @@ package aqua.types
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import cats.data.{NonEmptyList, NonEmptyMap}
-import cats.syntax.partialOrder.*
+import cats.data.NonEmptyMap
+import cats.syntax.partialOrder._
 
 class IntersectTypesSpec extends AnyFlatSpec with Matchers {
 
@@ -36,7 +36,7 @@ class IntersectTypesSpec extends AnyFlatSpec with Matchers {
   "intersect types" should "work for structs" in {
     val x1: Type = StructType(
       "x1",
-      NonEmptyList.of(
+      NonEmptyMap.of[String, Type](
         "0" -> ScalarType.string,
         "1" -> ScalarType.u32,
         "2" -> ProductType(ScalarType.i8 :: ScalarType.string :: Nil)
@@ -44,7 +44,7 @@ class IntersectTypesSpec extends AnyFlatSpec with Matchers {
     )
     val x2: Type = StructType(
       "x2",
-      NonEmptyList.of(
+      NonEmptyMap.of[String, Type](
         "1" -> ScalarType.i16,
         "2" -> ProductType(ScalarType.i8 :: Nil),
         "3" -> ScalarType.bool
@@ -53,7 +53,7 @@ class IntersectTypesSpec extends AnyFlatSpec with Matchers {
 
     val x1_x2: Type = StructType(
       "x1_x_x2",
-      NonEmptyList.of(
+      NonEmptyMap.of[String, Type](
         "1" -> ScalarType.u8,
         "2" -> ProductType(ScalarType.i8 :: Nil)
       )

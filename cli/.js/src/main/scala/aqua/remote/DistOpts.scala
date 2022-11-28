@@ -96,7 +96,7 @@ object DistOpts extends Logging {
           }
           val addBlueprintType = StructType(
             "AddBlueprint",
-            NonEmptyList.of(
+            NonEmptyMap.of(
               ("name", ScalarType.string),
               ("dependencies", ArrayType(ScalarType.string))
             )

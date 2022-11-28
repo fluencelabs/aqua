@@ -44,7 +44,7 @@ case class UniteTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]:
           .fromMap(asFields.flatMap { case (ak, at) =>
             bs.fields.lookup(ak).map(bt => ak -> combine(at, bt))
           } ++ (asFields -- sharedKeys) ++ (bsFields -- sharedKeys))
-          .fold(empty)(fields => StructType(s"${as.name}_U_${bs.name}", fields.toNel))
+          .fold(empty)(fields => StructType(s"${as.name}_U_${bs.name}", fields))
 
       case (aa: ArrowType, bb: ArrowType) =>
         // TODO test that both aa, bb are supertypes of this arrow

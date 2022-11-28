@@ -43,8 +43,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   /*
   func stream-callback(cb: []string -> ()):
-	records: *string
-	cb(records)
+  records: *string
+  cb(records)
    */
   "arrow inliner" should "pass stream to callback properly" in {
 
@@ -127,8 +127,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   } /*
   func stream-callback(cb: string -> ()):
-	records: *string
-	cb(records!)
+  records: *string
+  cb(records!)
    */
 
   // TODO: unignore and fix after stream restrictions will be implemented
@@ -326,7 +326,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     // lambda that will be assigned to another variable
     val objectVarLambda =
-      VarRaw("object", StructType("objectType", NonEmptyList.one(("field", ScalarType.string))))
+      VarRaw("object", StructType("objectType", NonEmptyMap.one("field", ScalarType.string)))
         .withProperty(
           IntoFieldRaw("field", ScalarType.string)
         )
@@ -336,7 +336,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     // raw object
     val objectVar = VarRaw(
       "object",
-      StructType("objectType", NonEmptyList.one(("field", ScalarType.string)))
+      StructType("objectType", NonEmptyMap.one("field", ScalarType.string))
     )
 
     // export object
@@ -412,7 +412,6 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             CallModel(ValueModel.fromRaw(flattenObject) :: Nil, Nil)
           ).leaf
         )
-
       )
     ) should be(true)
 
@@ -558,7 +557,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         .leaf
     )
 
-    val foldOp = ForTag(iVar.name, array, Some(ForTag.WaitMode)).wrap(inFold, NextTag(iVar.name).leaf)
+    val foldOp =
+      ForTag(iVar.name, array, Some(ForTag.WaitMode)).wrap(inFold, NextTag(iVar.name).leaf)
 
     val model: OpModel.Tree = ArrowInliner
       .callArrow[InliningState](

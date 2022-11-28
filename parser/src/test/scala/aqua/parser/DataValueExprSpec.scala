@@ -19,7 +19,7 @@ import aqua.types.LiteralType
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import cats.data.NonEmptyList
+import cats.data.NonEmptyMap
 
 class DataValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
@@ -33,30 +33,26 @@ class DataValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     val c = LiteralToken[Id]("\"c\"", LiteralType.string)
 
     parseData(
-      """Obj(1, "a", [1,2,3], ["b", "c"], NestedObj(2, "b", funcCall(3), value), funcCall(1), Serv.call(2))"""
+      """Obj(f1 = 1, f2 = "a", f3 = [1,2,3], f4=["b", "c"], f5 =NestedObj(i1 = 2, i2 = "b", i3= funcCall(3), i4 = value), f6=funcCall(1), f7 = Serv.call(2))"""
     ) should be(
       DataValueToken(
         CustomTypeToken[Id]("Obj"),
-        NonEmptyList.fromListUnsafe(
-          List(
-            one,
-            a,
-            CollectionToken[Id](ArrayMode, List(one, two, three)),
-            CollectionToken[Id](ArrayMode, List(b, c)),
-            DataValueToken(
-              CustomTypeToken[Id]("NestedObj"),
-              NonEmptyList(
-                two,
-                List(
-                  b,
-                  CallArrowToken(None, Name[Id]("funcCall"), List(three)),
-                  VarToken[Id](Name[Id]("value"), Nil)
-                )
-              )
-            ),
-            CallArrowToken(None, Name[Id]("funcCall"), List(one)),
-            CallArrowToken(Option(Ability[Id]("Serv")), Name[Id]("call"), List(two))
-          )
+        NonEmptyMap.of(
+          "f1" -> one,
+          "f2" -> a,
+          "f3" -> CollectionToken[Id](ArrayMode, List(one, two, three)),
+          "f4" -> CollectionToken[Id](ArrayMode, List(b, c)),
+          "f5" -> DataValueToken(
+            CustomTypeToken[Id]("NestedObj"),
+            NonEmptyMap.of(
+              "i1" -> two,
+              "i2" -> b,
+              "i3" -> CallArrowToken(None, Name[Id]("funcCall"), List(three)),
+              "i4" -> VarToken[Id](Name[Id]("value"), Nil)
+            )
+          ),
+          "f6" -> CallArrowToken(None, Name[Id]("funcCall"), List(one)),
+          "f7" -> CallArrowToken(Option(Ability[Id]("Serv")), Name[Id]("call"), List(two))
         )
       )
     )

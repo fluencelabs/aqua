@@ -2,7 +2,7 @@ package aqua.json
 
 import aqua.types.*
 import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
-import cats.data.{NonEmptyMap, NonEmptyList, Validated, ValidatedNec}
+import cats.data.{NonEmptyMap, Validated, ValidatedNec}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -31,10 +31,10 @@ object JsonEncoder {
   There type in array must be { a: ?string, b: []number, c: number
    */
   private def compareAndGetWidestType(
-    name: String,
-    ltV: ValidatedNec[String, Type],
-    rtV: ValidatedNec[String, Type]
-  ): ValidatedNec[String, Type] = {
+                                       name: String,
+                                       ltV: ValidatedNec[String, Type],
+                                       rtV: ValidatedNec[String, Type]
+                                     ): ValidatedNec[String, Type] = {
     (ltV, rtV) match {
       case (Validated.Valid(lt), Validated.Valid(rt)) =>
         (lt, rt) match {
@@ -65,7 +65,7 @@ object JsonEncoder {
               }
               .toList
               .sequence
-              .map(processedFields => NonEmptyList.fromListUnsafe(processedFields))
+              .map(processedFields => NonEmptyMap.fromMap(SortedMap(processedFields: _*)).get)
               .map(mt => StructType("", mt))
           case (_, _) =>
             invalidNec(s"Items in '$name' array should be of the same type")
@@ -113,7 +113,7 @@ object JsonEncoder {
           .map { fields =>
             // HACK: JSON can have empty object and it is possible if there is only optional fields
             val fs = if (fields.isEmpty) List(("some_random_field_that_does_not_even_exists", BottomType)) else fields
-            StructType("", NonEmptyList.fromListUnsafe(fs))
+            StructType("", NonEmptyMap.fromMap(SortedMap(fs: _*)).get)
           }
 
       case _ => validNec(BottomType)

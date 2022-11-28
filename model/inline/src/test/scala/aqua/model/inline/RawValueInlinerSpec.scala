@@ -14,7 +14,8 @@ import aqua.model.{
 import aqua.model.inline.state.InliningState
 import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
-import cats.data.{Chain, NonEmptyList, NonEmptyMap}
+import cats.data.NonEmptyMap
+import cats.data.Chain
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -45,12 +46,13 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   )
 
   private val bType =
-    StructType("objectType", NonEmptyList.one(("c", ScalarType.string)))
+    StructType("objectType", NonEmptyMap(("c", ScalarType.string), SortedMap.empty))
 
   private val aType = StructType(
     "objectType",
-    NonEmptyList.one(
-      ("b", bType)
+    NonEmptyMap(
+      ("b", bType),
+      SortedMap.empty
     )
   )
 
@@ -373,8 +375,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
       .value
       ._2
 
-//    println(resVal)
-//    println(resTree)
+    //    println(resVal)
+    //    println(resTree)
   }
 
   "raw value inliner" should "desugarize a recursive lambda value" in {

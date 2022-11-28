@@ -1,7 +1,7 @@
 package aqua.types
 
 import aqua.types.Type.typesPartialOrder
-import cats.data.{NonEmptyMap, NonEmptyList}
+import cats.data.NonEmptyMap
 import cats.kernel.PartialOrder
 import cats.syntax.partialOrder._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -65,9 +65,9 @@ class TypeSpec extends AnyFlatSpec with Matchers {
   }
 
   "structs of scalars" should "be variant" in {
-    val one: Type = StructType("one", NonEmptyList.of("field" -> u32))
-    val two: Type = StructType("two", NonEmptyList.of("field" -> u64, "other" -> string))
-    val three: Type = StructType("three", NonEmptyList.of("field" -> u32))
+    val one: Type = StructType("one", NonEmptyMap.of("field" -> u32))
+    val two: Type = StructType("two", NonEmptyMap.of("field" -> u64, "other" -> string))
+    val three: Type = StructType("three", NonEmptyMap.of("field" -> u32))
 
     accepts(one, two) should be(true)
     accepts(two, one) should be(false)

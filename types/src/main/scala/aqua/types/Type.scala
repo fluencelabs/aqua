@@ -219,9 +219,7 @@ case class OptionType(element: Type) extends BoxType {
 }
 
 // Struct is an unordered collection of labelled types
-case class StructType(name: String, fieldsList: NonEmptyList[(String, Type)]) extends DataType {
-
-  lazy val fields: NonEmptyMap[String, Type] = NonEmptyMap.of(fieldsList.head, fieldsList.tail:_*)
+case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends DataType {
 
   override def toString: String =
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
