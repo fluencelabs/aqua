@@ -12,7 +12,7 @@ import aqua.model.{
 import aqua.model.inline.raw.RawInliner
 import cats.data.Chain
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{DataRaw, LiteralRaw}
+import aqua.raw.value.{MakeStructRaw, LiteralRaw}
 import cats.data.{NonEmptyMap, State}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
@@ -23,7 +23,7 @@ import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.apply.*
 
-object DataRawInliner extends RawInliner[DataRaw] {
+object DataRawInliner extends RawInliner[MakeStructRaw] {
 
   private def createObj(fields: NonEmptyMap[String, ValueModel], result: VarModel): OpModel.Tree = {
     val args = fields.toSortedMap.toList.flatMap { case (name, value) =>
@@ -40,7 +40,7 @@ object DataRawInliner extends RawInliner[DataRaw] {
   }
 
   override def apply[S: Mangler: Exports: Arrows](
-    raw: DataRaw,
+    raw: MakeStructRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     for {

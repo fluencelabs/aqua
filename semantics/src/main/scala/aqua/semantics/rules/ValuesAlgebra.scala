@@ -113,7 +113,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                 .map(rf =>
                   (
                     StructType(typeName.value, rf.map(_.`type`)),
-                    Some(DataRaw(typeName.value, rf, struct))
+                    Some(MakeStructRaw(typeName.value, rf, struct))
                   )
                 )
                 .getOrElse(BottomType -> None)

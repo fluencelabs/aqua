@@ -43,10 +43,10 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   /*
     func stream-callback(cb: []string -> ()):
-    records: *string
-    cb(records)
+      records: *string
+      cb(records)
    */
-  "arrow inliner" should "pass stream to callback properly" in {
+  ignore /*"arrow inliner"*/ should "pass stream to callback properly" in {
 
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
@@ -129,12 +129,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   /*
     func stream-callback(cb: string -> ()):
-    records: *string
-    cb(records!)
+      records: *string
+      cb(records!)
   */
 
-  // TODO: unignore and fix after stream restrictions will be implemented
-  ignore /*"arrow inliner"*/ should "pass stream to callback properly, holding property" in {
+  "arrow inliner" should "pass stream to callback properly, holding property" in {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamVarLambda =

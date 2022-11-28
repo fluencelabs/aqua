@@ -187,7 +187,7 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
     copy(values = values.map(_.renameVars(map)))
 }
 
-case class DataRaw(name: String, fields: NonEmptyMap[String, ValueRaw], baseType: Type) extends ValueRaw {
+case class MakeStructRaw(name: String, fields: NonEmptyMap[String, ValueRaw], baseType: Type) extends ValueRaw {
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(fields = fields.map(f)))
 
   override def varNames: Set[String] = {
