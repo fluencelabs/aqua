@@ -23,7 +23,7 @@ import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.apply.*
 
-object DataRawInliner extends RawInliner[MakeStructRaw] {
+object MakeRawInliner extends RawInliner[MakeStructRaw] {
 
   private def createObj(fields: NonEmptyMap[String, ValueModel], result: VarModel): OpModel.Tree = {
     val args = fields.toSortedMap.toList.flatMap { case (name, value) =>
