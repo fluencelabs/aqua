@@ -1,7 +1,7 @@
 package aqua.types
 
 import cats.PartialOrder
-import cats.data.{NonEmptyList, NonEmptyMap}
+import cats.data.NonEmptyMap
 
 sealed trait Type {
 

@@ -31,10 +31,10 @@ object JsonEncoder {
   There type in array must be { a: ?string, b: []number, c: number
    */
   private def compareAndGetWidestType(
-                                       name: String,
-                                       ltV: ValidatedNec[String, Type],
-                                       rtV: ValidatedNec[String, Type]
-                                     ): ValidatedNec[String, Type] = {
+    name: String,
+    ltV: ValidatedNec[String, Type],
+    rtV: ValidatedNec[String, Type]
+  ): ValidatedNec[String, Type] = {
     (ltV, rtV) match {
       case (Validated.Valid(lt), Validated.Valid(rt)) =>
         (lt, rt) match {
@@ -112,7 +112,9 @@ object JsonEncoder {
           .sequence
           .map { fields =>
             // HACK: JSON can have empty object and it is possible if there is only optional fields
-            val fs = if (fields.isEmpty) List(("some_random_field_that_does_not_even_exists", BottomType)) else fields
+            val fs =
+              if (fields.isEmpty) List(("some_random_field_that_does_not_even_exists", BottomType))
+              else fields
             StructType("", NonEmptyMap.fromMap(SortedMap(fs: _*)).get)
           }
 

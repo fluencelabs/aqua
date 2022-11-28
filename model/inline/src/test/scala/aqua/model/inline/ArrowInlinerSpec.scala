@@ -42,9 +42,9 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   }
 
   /*
-  func stream-callback(cb: []string -> ()):
-  records: *string
-  cb(records)
+    func stream-callback(cb: []string -> ()):
+    records: *string
+    cb(records)
    */
   "arrow inliner" should "pass stream to callback properly" in {
 
@@ -125,11 +125,13 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       )
     ) should be(true)
 
-  } /*
-  func stream-callback(cb: string -> ()):
-  records: *string
-  cb(records!)
-   */
+  }
+
+  /*
+    func stream-callback(cb: string -> ()):
+    records: *string
+    cb(records!)
+  */
 
   // TODO: unignore and fix after stream restrictions will be implemented
   ignore /*"arrow inliner"*/ should "pass stream to callback properly, holding property" in {
@@ -221,17 +223,17 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   }
 
   /*
-  service TestService("test-service"):
-    get_records() -> []string
+    service TestService("test-service"):
+      get_records() -> []string
 
-  func inner(inner-records: *[]string):
-    inner-records <- TestService.get_records()
+    func inner(inner-records: *[]string):
+      inner-records <- TestService.get_records()
 
-  func retrieve_records() -> [][]string:
-      records: *[]string
-      -- 'inner-records' argument in `inner` should be renamed as `records` in resulted AIR
-      append_records(records)
-      <- records
+    func retrieve_records() -> [][]string:
+        records: *[]string
+        -- 'inner-records' argument in `inner` should be renamed as `records` in resulted AIR
+        append_records(records)
+        <- records
    */
   "arrow inliner" should "work with streams as arguments" in {
 
