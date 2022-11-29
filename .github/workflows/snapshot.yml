@@ -56,11 +56,10 @@ jobs:
     needs: compile
 
     outputs:
-      aqua-version: "${{ steps.build.outputs.version }}"
+      aqua-version: "${{ steps.snapshot.outputs.version }}"
 
     permissions:
       contents: read
-      pull-requests: write
       id-token: write
 
     steps:
@@ -77,7 +76,7 @@ jobs:
       - run: mv scala-*/cli-fastopt.js npm/aqua.js
 
       - name: Import secrets
-        uses: hashicorp/vault-action@v2.4.2
+        uses: hashicorp/vault-action@v2.4.3
         with:
           url: https://vault.fluence.dev
           path: jwt/github
@@ -108,39 +107,13 @@ jobs:
       - run: npm run build
         working-directory: npm
 
-      - name: Generate package version
+      - name: Generate snapshot version
         id: version
-        run: |
-          SHA=${{ github.event.pull_request.head.sha }}
-          echo "sha=${SHA::7}" >> $GITHUB_OUTPUT
-          echo "branch=${GITHUB_HEAD_REF//[^a-zA-Z0-9-]/-}" >> $GITHUB_OUTPUT
+        uses: fluencelabs/github-actions/generate-snapshot-id@main
 
-      - name: Set package version
-        id: build
-        env:
-          BRANCH: ${{ steps.version.outputs.branch }}
-          SHA: ${{ steps.version.outputs.sha }}
-          RUN: ${{ github.run_number }}
-          ATTEMPT: ${{ github.run_attempt }}
-        working-directory: npm
-        run: |
-          echo "version=$(\
-                npm version prerelease \
-                --no-git-tag-version \
-                --preid ${{ env.BRANCH }}-${{ env.SHA }}-${{ env.RUN }}-${{ env.ATTEMPT }})" >> $GITHUB_OUTPUT
-
-      - name: Publish to self-hosted npm repo
-        working-directory: npm
-        run: npm publish --tag snapshot --registry https://npm.fluence.dev
-
-      - name: Print versions to check summary
-        env:
-          VERSION: ${{ steps.build.outputs.version }}
-        run: |
-          cat <<'SNAPSHOT' >> $GITHUB_STEP_SUMMARY
-          ## aqua version is [${{ env.VERSION }}](https://npm.fluence.dev/-/web/detail/@fluencelabs/aqua/v/${{ env.VERSION }})
-          To use it run:
-          ```shell
-          npm i @fluencelabs/aqua@=${{ env.VERSION }} --registry=https://npm.fluence.dev
-          ```
-          SNAPSHOT
+      - name: Publish snapshot
+        id: snapshot
+        uses: fluencelabs/github-actions/npm-publish-snapshot@main
+        with:
+          working-directory: npm
+          id: ${{ steps.version.outputs.id }}
