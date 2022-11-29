@@ -29,12 +29,11 @@ case class IntoField[F[_]: Comonad](name: F[String]) extends PropertyOp[F] {
   override def toString: String = name.extract
 }
 
-case class IntoIndex[F[_]: Comonad](token: Token[F], idx: Option[ValueToken[F]])
+case class IntoIndex[F[_]: Comonad](point: F[Unit], idx: Option[ValueToken[F]])
     extends PropertyOp[F] {
-  override def as[T](v: T): F[T] = token.as(v)
+  override def as[T](v: T): F[T] = point.as(v)
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): IntoIndex[K] =
-    copy(token.mapK(fk), idx.map(_.mapK(fk)))
+  override def mapK[K[_]: Comonad](fk: F ~> K): IntoIndex[K] = copy(fk(point), idx.map(_.mapK(fk)))
 }
 
 object PropertyOp {
@@ -45,9 +44,9 @@ object PropertyOp {
   private val parseIdx: P[PropertyOp[Span.S]] =
     (P.defer(
       (ValueToken.`value`.between(`[`, `]`).lift | (exclamation *> ValueToken.num).lift)
-        .map(v => IntoIndex(Token.lift[Span.S, ValueToken[Span.S]](v), Some(v._2)))
+        .map(v => IntoIndex((v._1, v._2.unit), Some(v._2)))
         .backtrack
-    ) | exclamation.lift.map(e => IntoIndex(Token.lift[Span.S, Unit](e), None))).flatMap { ii =>
+    ) | exclamation.lift.map(e => IntoIndex(e, None))).flatMap { ii =>
       ii.idx match {
         case Some(LiteralToken(_, lt)) if lt == LiteralType.signed =>
           P.fail.withContext("Collection indexes must be non-negative")

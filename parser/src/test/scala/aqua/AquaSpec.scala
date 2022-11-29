@@ -2,26 +2,15 @@ package aqua
 
 import aqua.AquaSpec.spanToId
 import aqua.parser.expr.*
-import aqua.parser.expr.func.{
-  AbilityIdExpr,
-  ArrowExpr,
-  AssignmentExpr,
-  CallArrowExpr,
-  ClosureExpr,
-  ElseOtherwiseExpr,
-  ForExpr,
-  IfExpr,
-  OnExpr,
-  PushToStreamExpr,
-  ReturnExpr
-}
+import aqua.parser.expr.func.{AbilityIdExpr, ArrowExpr, AssignmentExpr, CallArrowExpr, ClosureExpr, ElseOtherwiseExpr, ForExpr, IfExpr, OnExpr, PushToStreamExpr, ReturnExpr}
 import aqua.parser.head.FromExpr.NameOrAbAs
 import aqua.parser.head.{FromExpr, UseFromExpr}
 import aqua.parser.lexer.*
+import aqua.parser.lexer.Token.LiftToken
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.LiteralType.{bool, number, string}
 import aqua.types.{LiteralType, ScalarType}
-import cats.{~>, Id}
+import cats.{Id, ~>}
 import org.scalatest.EitherValues
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
@@ -57,7 +46,7 @@ object AquaSpec {
     VarToken[Id](toName(name), toFields(fields))
 
   implicit def toVarIndex(name: String, idx: Int): VarToken[Id] =
-    VarToken[Id](toName(name), IntoIndex[Id](toNumber(idx), Some(toNumber(idx))) :: Nil)
+    VarToken[Id](toName(name), IntoIndex[Id](toNumber(idx).unit, Some(toNumber(idx))) :: Nil)
   implicit def toLiteral(name: String, t: LiteralType): LiteralToken[Id] = LiteralToken[Id](name, t)
   implicit def toNumber(n: Int): LiteralToken[Id] = LiteralToken[Id](n.toString, number)
   implicit def toBool(n: Boolean): LiteralToken[Id] = LiteralToken[Id](n.toString, bool)
