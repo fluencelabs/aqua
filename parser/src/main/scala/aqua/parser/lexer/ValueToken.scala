@@ -48,6 +48,8 @@ case class CollectionToken[F[_]: Comonad](
   override def as[T](v: T): F[T] = point.as(v)
 
   def mode: CollectionToken.Mode = point.extract
+
+  override def toString: String = s"CollectionToken(${point.extract}, $values)"
 }
 
 object CollectionToken {

@@ -19,6 +19,8 @@ case class Name[F[_]: Comonad](name: F[String]) extends Token[F] {
   def rename(newName: String): Name[F] = copy(name.as(newName))
 
   def value: String = name.extract
+
+  override def toString() = value
 }
 
 object Name {

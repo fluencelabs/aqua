@@ -266,6 +266,12 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
       .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2))
       .flatMap(at => stack.beginScope(TypesState.Frame(token, at, None)).as(at))
 
+  private def extractToken(token: Token[S]) =
+    token match {
+      case VarToken(n, properties) => properties.lastOption.getOrElse(n)
+      case t => t
+    }
+
   override def checkTypeCompatibility(
     token: Token[S],
     valueType: Type,
@@ -283,11 +289,11 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
           valueFields.toSortedMap.toList.traverse { (name, `type`) =>
             typeFields.lookup(name) match {
               case Some(t) =>
-                val nextToken = token match {
+                val nextToken = extractToken(token match {
                   case DataValueToken(_, fields) =>
                     fields.lookup(name).getOrElse(token)
-                  case _ => token
-                }
+                  case t => t
+                })
                 checkTypeCompatibility(nextToken, `type`, t)
               case None =>
                 report(

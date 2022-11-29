@@ -25,6 +25,8 @@ case class IntoField[F[_]: Comonad](name: F[String]) extends PropertyOp[F] {
   override def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K] = copy(fk(name))
 
   def value: String = name.extract
+
+  override def toString: String = name.extract
 }
 
 case class IntoIndex[F[_]: Comonad](token: Token[F], idx: Option[ValueToken[F]])
@@ -42,8 +44,8 @@ object PropertyOp {
 
   private val parseIdx: P[PropertyOp[Span.S]] =
     (P.defer(
-      (ValueToken.`value`.between(`[`, `]`) | (exclamation *> ValueToken.num))
-        .map(v => IntoIndex(v, Some(v)))
+      (ValueToken.`value`.between(`[`, `]`).lift | (exclamation *> ValueToken.num).lift)
+        .map(v => IntoIndex(Token.lift[Span.S, ValueToken[Span.S]](v), Some(v._2)))
         .backtrack
     ) | exclamation.lift.map(e => IntoIndex(Token.lift[Span.S, Unit](e), None))).flatMap { ii =>
       ii.idx match {
