@@ -267,18 +267,14 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
       .flatMap(at => stack.beginScope(TypesState.Frame(token, at, None)).as(at))
 
   override def checkTypeCompatibility(
-    token: TypeToken[S],
+    token: Token[S],
     valueType: Type,
     `type`: Type
   ): State[X, Boolean] = {
     (valueType, `type`) match {
       case (StructType(n, valueFields), StructType(typeName, typeFields)) =>
-        if (n != typeName)
-          report(
-            token,
-            s"Wrong value type, expected: ${`type`}, given: ${valueType}"
-          ).as(false)
-        else if (valueFields.length != typeFields.length) {
+        // value can have more fields
+        if (valueFields.length < typeFields.length) {
           report(
             token,
             s"Number of fields doesn't match the data type, expected: ${`type`}, given: ${valueType}"
@@ -287,7 +283,12 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
           valueFields.toSortedMap.toList.traverse { (name, `type`) =>
             typeFields.lookup(name) match {
               case Some(t) =>
-                checkTypeCompatibility(token, `type`, t)
+                val nextToken = token match {
+                  case DataValueToken(_, fields) =>
+                    fields.lookup(name).getOrElse(token)
+                  case _ => token
+                }
+                checkTypeCompatibility(nextToken, `type`, t)
               case None =>
                 report(
                   token,

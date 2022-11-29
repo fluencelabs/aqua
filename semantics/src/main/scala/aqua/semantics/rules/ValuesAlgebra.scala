@@ -100,7 +100,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
             None.pure[Alg]
         }
 
-      case DataValueToken(typeName, fields) =>
+      case dvt@DataValueToken(typeName, fields) =>
         T.resolveType(typeName).flatMap {
           case Some(struct @ StructType(_, fieldsType)) =>
             for {
@@ -118,7 +118,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                 )
                 .getOrElse(BottomType -> None)
               (typeFromFields, data) = typeFromFieldsWithData
-              typeCheck <- T.checkTypeCompatibility(typeName, struct, typeFromFields)
+              typeCheck <- T.checkTypeCompatibility(dvt, struct, typeFromFields)
             } yield {
               if (typeCheck)
                 data

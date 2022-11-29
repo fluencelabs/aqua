@@ -43,7 +43,7 @@ trait TypesAlgebra[S[_], Alg[_]] {
   def endArrowScope(token: Token[S]): Alg[List[ValueRaw]]
 
   def checkTypeCompatibility(
-    token: TypeToken[S],
+    token: Token[S],
     valueType: Type,
     `type`: Type
   ): Alg[Boolean]
