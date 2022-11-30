@@ -222,7 +222,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
               typeFields.lookup(name) match {
                 case Some(t) =>
                   val nextToken = extractToken(token match {
-                    case DataValueToken(_, fields) =>
+                    case StructValueToken(_, fields) =>
                       fields.lookup(name).getOrElse(token)
                     case t => t
                   })

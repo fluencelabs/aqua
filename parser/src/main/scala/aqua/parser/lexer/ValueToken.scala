@@ -10,7 +10,7 @@ import aqua.types.LiteralType
 import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
-import cats.{Comonad, Functor, ~>}
+import cats.{~>, Comonad, Functor}
 import cats.data.{NonEmptyList, NonEmptyMap}
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
@@ -94,28 +94,31 @@ object CallArrowToken {
     }
 }
 
-case class DataValueToken[F[_]: Comonad](
+case class StructValueToken[F[_]: Comonad](
   typeName: CustomTypeToken[F],
   fields: NonEmptyMap[String, ValueToken[F]]
 ) extends ValueToken[F] {
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): DataValueToken[K] =
+  override def mapK[K[_]: Comonad](fk: F ~> K): StructValueToken[K] =
     copy(typeName.mapK(fk), fields.map(_.mapK(fk)))
 
   override def as[T](v: T): F[T] = typeName.as(v)
 }
 
-object DataValueToken {
+object StructValueToken {
 
-  val dataValue: P[DataValueToken[Span.S]] =
-      (`Class`.lift
-        ~ comma(((`name` <* (` `.?.with1 *> `=` *> ` `.?)).with1 ~ ValueToken.`value`).surroundedBy(`/s*`))
-          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
-        .withContext(
-          "Missing braces '()' after the struct type"
-        ).map { case (dn, args) =>
-      DataValueToken(CustomTypeToken(dn), NonEmptyMap.of(args.head, args.tail:_*))
-    }
+  val dataValue: P[StructValueToken[Span.S]] =
+    (`Class`.lift
+      ~ comma(
+        ((`name` <* (` `.?.with1 *> `=` *> ` `.?)).with1 ~ ValueToken.`value`).surroundedBy(`/s*`)
+      )
+        .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
+      .withContext(
+        "Missing braces '()' after the struct type"
+      )
+      .map { case (dn, args) =>
+        StructValueToken(CustomTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
+      }
 }
 
 // Two values as operands, with an infix between them
@@ -193,7 +196,7 @@ object InfixToken {
       P.defer(
         CollectionToken.collection
       ) ::
-      P.defer(DataValueToken.dataValue).backtrack ::
+      P.defer(StructValueToken.dataValue).backtrack ::
       P.defer(CallArrowToken.callArrow).backtrack ::
       P.defer(brackets(InfixToken.mathExpr)) ::
       varProperty ::

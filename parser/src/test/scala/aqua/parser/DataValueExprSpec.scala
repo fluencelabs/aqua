@@ -10,7 +10,7 @@ import aqua.parser.lexer.{
   CallArrowToken,
   CollectionToken,
   CustomTypeToken,
-  DataValueToken,
+  StructValueToken,
   LiteralToken,
   Name,
   VarToken
@@ -35,14 +35,14 @@ class DataValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parseData(
       """Obj(f1 = 1, f2 = "a", f3 = [1,2,3], f4=["b", "c"], f5 =NestedObj(i1 = 2, i2 = "b", i3= funcCall(3), i4 = value), f6=funcCall(1), f7 = Serv.call(2))"""
     ) should be(
-      DataValueToken(
+      StructValueToken(
         CustomTypeToken[Id]("Obj"),
         NonEmptyMap.of(
           "f1" -> one,
           "f2" -> a,
           "f3" -> CollectionToken[Id](ArrayMode, List(one, two, three)),
           "f4" -> CollectionToken[Id](ArrayMode, List(b, c)),
-          "f5" -> DataValueToken(
+          "f5" -> StructValueToken(
             CustomTypeToken[Id]("NestedObj"),
             NonEmptyMap.of(
               "i1" -> two,
