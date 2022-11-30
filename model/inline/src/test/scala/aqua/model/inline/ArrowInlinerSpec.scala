@@ -42,12 +42,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   }
 
   /*
-  func stream-callback(cb: []string -> ()):
-	records: *string
-	cb(records)
+    func stream-callback(cb: []string -> ()):
+      records: *string
+      cb(records)
    */
   "arrow inliner" should "pass stream to callback properly" in {
-
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamModel = VarModel("records", StreamType(ScalarType.string))
@@ -125,14 +124,14 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       )
     ) should be(true)
 
-  } /*
-  func stream-callback(cb: string -> ()):
-	records: *string
-	cb(records!)
-   */
+  }
 
-  // TODO: unignore and fix after stream restrictions will be implemented
-  ignore /*"arrow inliner"*/ should "pass stream to callback properly, holding property" in {
+  /*
+    func stream-callback(cb: string -> ()):
+      records: *string
+      cb(records!)
+  */
+  ignore /*"arrow inliner"*/ should "pass stream with gate to callback properly" in {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamVarLambda =
@@ -221,17 +220,17 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   }
 
   /*
-  service TestService("test-service"):
-    get_records() -> []string
+    service TestService("test-service"):
+      get_records() -> []string
 
-  func inner(inner-records: *[]string):
-    inner-records <- TestService.get_records()
+    func inner(inner-records: *[]string):
+      inner-records <- TestService.get_records()
 
-  func retrieve_records() -> [][]string:
-      records: *[]string
-      -- 'inner-records' argument in `inner` should be renamed as `records` in resulted AIR
-      append_records(records)
-      <- records
+    func retrieve_records() -> [][]string:
+        records: *[]string
+        -- 'inner-records' argument in `inner` should be renamed as `records` in resulted AIR
+        append_records(records)
+        <- records
    */
   "arrow inliner" should "work with streams as arguments" in {
 
@@ -412,7 +411,6 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             CallModel(ValueModel.fromRaw(flattenObject) :: Nil, Nil)
           ).leaf
         )
-
       )
     ) should be(true)
 
@@ -558,7 +556,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         .leaf
     )
 
-    val foldOp = ForTag(iVar.name, array, Some(ForTag.WaitMode)).wrap(inFold, NextTag(iVar.name).leaf)
+    val foldOp =
+      ForTag(iVar.name, array, Some(ForTag.WaitMode)).wrap(inFold, NextTag(iVar.name).leaf)
 
     val model: OpModel.Tree = ArrowInliner
       .callArrow[InliningState](

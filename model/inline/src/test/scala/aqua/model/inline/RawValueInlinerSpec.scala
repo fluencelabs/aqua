@@ -375,8 +375,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
       .value
       ._2
 
-//    println(resVal)
-//    println(resTree)
+    //    println(resVal)
+    //    println(resTree)
   }
 
   "raw value inliner" should "desugarize a recursive lambda value" in {

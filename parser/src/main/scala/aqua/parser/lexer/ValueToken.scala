@@ -11,7 +11,7 @@ import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{~>, Comonad, Functor}
-import cats.data.NonEmptyList
+import cats.data.{NonEmptyList, NonEmptyMap}
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
 
@@ -19,7 +19,8 @@ sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
 }
 
-case class VarToken[F[_]](name: Name[F], property: List[PropertyOp[F]] = Nil) extends ValueToken[F] {
+case class VarToken[F[_]](name: Name[F], property: List[PropertyOp[F]] = Nil)
+    extends ValueToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
   def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk), property.map(_.mapK(fk)))
@@ -47,6 +48,8 @@ case class CollectionToken[F[_]: Comonad](
   override def as[T](v: T): F[T] = point.as(v)
 
   def mode: CollectionToken.Mode = point.extract
+
+  override def toString: String = s"CollectionToken(${point.extract}, $values)"
 }
 
 object CollectionToken {
@@ -89,6 +92,33 @@ object CallArrowToken {
         )).map { case (ab, (fn, args)) =>
       CallArrowToken(ab, fn, args)
     }
+}
+
+case class StructValueToken[F[_]: Comonad](
+  typeName: CustomTypeToken[F],
+  fields: NonEmptyMap[String, ValueToken[F]]
+) extends ValueToken[F] {
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): StructValueToken[K] =
+    copy(typeName.mapK(fk), fields.map(_.mapK(fk)))
+
+  override def as[T](v: T): F[T] = typeName.as(v)
+}
+
+object StructValueToken {
+
+  val dataValue: P[StructValueToken[Span.S]] =
+    (`Class`.lift
+      ~ comma(
+        ((`name` <* (` `.?.with1 *> `=` *> ` `.?)).with1 ~ ValueToken.`value`).surroundedBy(`/s*`)
+      )
+        .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
+      .withContext(
+        "Missing braces '()' after the struct type"
+      )
+      .map { case (dn, args) =>
+        StructValueToken(CustomTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
+      }
 }
 
 // Two values as operands, with an infix between them
@@ -166,6 +196,7 @@ object InfixToken {
       P.defer(
         CollectionToken.collection
       ) ::
+      P.defer(StructValueToken.dataValue).backtrack ::
       P.defer(CallArrowToken.callArrow).backtrack ::
       P.defer(brackets(InfixToken.mathExpr)) ::
       varProperty ::

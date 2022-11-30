@@ -55,7 +55,9 @@ case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends Valu
   override def renameVars(map: Map[String, String]): ValueRaw =
     ApplyPropertyRaw(value.renameVars(map), property.renameVars(map))
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(ApplyPropertyRaw(f(value), property.map(f)))
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(
+    ApplyPropertyRaw(f(value), property.map(f))
+  )
 
   override def toString: String = s"$value.$property"
 
@@ -183,6 +185,20 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
 
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(values = values.map(_.renameVars(map)))
+}
+
+case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: StructType) extends ValueRaw {
+
+  override def baseType: Type = structType
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(fields = fields.map(f)))
+
+  override def varNames: Set[String] = {
+    fields.toSortedMap.values.flatMap(_.varNames).toSet
+  }
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(fields = fields.map(_.renameVars(map)))
 }
 
 case class CallArrowRaw(

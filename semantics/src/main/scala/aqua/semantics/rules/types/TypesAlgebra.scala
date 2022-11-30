@@ -2,7 +2,7 @@ package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
 import aqua.raw.value.{PropertyRaw, ValueRaw}
-import aqua.types.{ArrowType, Type}
+import aqua.types.{ArrowType, StructType, Type}
 import cats.data.NonEmptyMap
 import cats.data.NonEmptyList
 

@@ -67,13 +67,13 @@ object CompareTypes {
       lf.keys.forall(rf.contains) && compareTypesList(
         lfView.values.toList,
         rfView.filterKeys(lfNEM.keys.contains).values.toList
-      ) == -1.0
+      ) == 1.0
     ) 1.0
     else if (
       rf.keys.forall(lf.contains) && compareTypesList(
         lfView.filterKeys(rfNEM.keys.contains).values.toList,
         rfView.values.toList
-      ) == 1.0
+      ) == -1.0
     ) -1.0
     else NaN
   }
@@ -127,8 +127,8 @@ object CompareTypes {
         case (x: OptionType, y: StreamType) => apply(x.element, y.element)
         case (x: OptionType, y: ArrayType) => apply(x.element, y.element)
         case (x: StreamType, y: StreamType) => apply(x.element, y.element)
-        case (StructType(_, xFields), StructType(_, yFields)) =>
-          compareStructs(xFields, yFields)
+        case (StructType(_, lFields), StructType(_, rFields)) =>
+          compareStructs(lFields, rFields)
 
         // Products
         case (l: ProductType, r: ProductType) => compareProducts(l, r)
@@ -139,8 +139,8 @@ object CompareTypes {
           val cmpCodom = apply(lcodom, rcodom)
 
           if (cmpDom == 0 && cmpCodom == 0) 0
-          else if (cmpDom >= 0 && cmpCodom <= 0) -1.0
           else if (cmpDom <= 0 && cmpCodom >= 0) 1.0
+          else if (cmpDom >= 0 && cmpCodom <= 0) -1.0
           else NaN
 
         case _ =>

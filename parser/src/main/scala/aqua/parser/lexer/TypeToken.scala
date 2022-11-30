@@ -69,6 +69,8 @@ case class CustomTypeToken[F[_]: Comonad](name: F[String]) extends DataTypeToken
   override def mapK[K[_]: Comonad](fk: F ~> K): CustomTypeToken[K] = copy(fk(name))
 
   def value: String = name.extract
+
+  override def toString: String = name.extract
 }
 
 object CustomTypeToken {

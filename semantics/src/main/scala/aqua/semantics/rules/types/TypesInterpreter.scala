@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{FunctorRaw, IntoIndexRaw, IntoFieldRaw, PropertyRaw, ValueRaw}
+import aqua.raw.value.{FunctorRaw, IntoFieldRaw, IntoIndexRaw, PropertyRaw, ValueRaw}
 import aqua.semantics.lsp.{TokenDef, TokenTypeInfo}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{
@@ -146,7 +146,8 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
           }.as(Some(IntoFieldRaw(op.value, t)))
         }
       case t =>
-        t.properties.get(op.value)
+        t.properties
+          .get(op.value)
           .fold(
             report(
               op,
@@ -195,6 +196,12 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         .as(false)
   }
 
+  private def extractToken(token: Token[S]) =
+    token match {
+      case VarToken(n, properties) => properties.lastOption.getOrElse(n)
+      case t => t
+    }
+
   override def ensureTypeMatches(
     token: Token[S],
     expected: Type,
@@ -202,19 +209,47 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
   ): State[X, Boolean] =
     if (expected.acceptsValueOf(givenType)) State.pure(true)
     else {
-      val notes =
-        if (expected.acceptsValueOf(OptionType(givenType)))
-          "note: Try converting value to optional" :: Nil
-        else if (givenType.acceptsValueOf(OptionType(expected)))
-          "note: You're providing an optional value where normal value is expected." ::
-            "You can extract value with `!`, but be aware it may trigger join behaviour." ::
-            Nil
-        else Nil
-      reportError(
-        token,
-        "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
-      )
-        .as(false)
+      (expected, givenType) match {
+        case (StructType(n, valueFields), StructType(typeName, typeFields)) =>
+          // value can have more fields
+          if (valueFields.length < typeFields.length) {
+            report(
+              token,
+              s"Number of fields doesn't match the data type, expected: $expected, given: $givenType"
+            ).as(false)
+          } else {
+            valueFields.toSortedMap.toList.traverse { (name, `type`) =>
+              typeFields.lookup(name) match {
+                case Some(t) =>
+                  val nextToken = extractToken(token match {
+                    case StructValueToken(_, fields) =>
+                      fields.lookup(name).getOrElse(token)
+                    case t => t
+                  })
+                  ensureTypeMatches(nextToken, `type`, t)
+                case None =>
+                  report(
+                    token,
+                    s"Wrong value type, expected: $expected, given: $givenType"
+                  ).as(false)
+              }
+            }.map(_.toList.fold(true)(_ && _))
+          }
+        case _ =>
+          val notes =
+            if (expected.acceptsValueOf(OptionType(givenType)))
+              "note: Try converting value to optional" :: Nil
+            else if (givenType.acceptsValueOf(OptionType(expected)))
+              "note: You're providing an optional value where normal value is expected." ::
+                "You can extract value with `!`, but be aware it may trigger join behaviour." ::
+                Nil
+            else Nil
+          reportError(
+            token,
+            "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
+          )
+            .as(false)
+      }
     }
 
   override def expectNoExport(token: Token[S]): State[X, Unit] =
@@ -287,15 +322,15 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
             false
           )
         )
-      else if (frame.token.res.drop(values.length).nonEmpty)
+      else if (frame.token.res.length > values.length)
         Left(
           (
             values.last._1,
-            s"Expected ${frame.token.res.drop(values.length).length} more values to be returned, see return type declaration",
+            s"Expected ${frame.token.res.length - values.length} more values to be returned, see return type declaration",
             false
           )
         )
-      else if (values.toList.drop(frame.token.res.length).nonEmpty)
+      else if (frame.token.res.length < values.length)
         Left(
           (
             values.toList.drop(frame.token.res.length).headOption.getOrElse(values.last)._1,
@@ -304,7 +339,6 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
           )
         )
       else {
-
         frame.arrowType.codomain.toList
           .lazyZip(values.toList)
           .foldLeft[Either[(Token[S], String, Boolean), List[ValueRaw]]](Right(Nil)) {

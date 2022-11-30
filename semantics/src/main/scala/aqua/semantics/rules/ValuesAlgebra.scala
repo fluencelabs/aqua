@@ -15,7 +15,9 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.instances.list.*
-import cats.data.NonEmptyList
+import cats.data.{NonEmptyList, NonEmptyMap}
+
+import scala.collection.immutable.SortedMap
 
 class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   N: NamesAlgebra[S, Alg],
@@ -63,22 +65,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           case Some(t) =>
             // Prepare property expression: take the last known type and the next op, add next op to accumulator
             ops
-              .foldLeft[Alg[(Option[Type], Chain[PropertyRaw])]]((Some(t) -> Chain.empty).pure[Alg]) {
-                case (acc, op) =>
-                  acc.flatMap {
-                    // Some(tt) means that the previous property op was resolved successfully
-                    case (Some(tt), prop) =>
-                      // Resolve a single property
-                      resolveSingleProperty(tt, op).map {
-                        // Property op resolved, add it to accumulator and update the last known type
-                        case Some(p) => (Some(p.`type`), prop :+ p)
-                        // Property op is not resolved, it's an error, stop iterations
-                        case None => (None, Chain.empty)
-                      }
+              .foldLeft[Alg[(Option[Type], Chain[PropertyRaw])]](
+                (Some(t) -> Chain.empty).pure[Alg]
+              ) { case (acc, op) =>
+                acc.flatMap {
+                  // Some(tt) means that the previous property op was resolved successfully
+                  case (Some(tt), prop) =>
+                    // Resolve a single property
+                    resolveSingleProperty(tt, op).map {
+                      // Property op resolved, add it to accumulator and update the last known type
+                      case Some(p) => (Some(p.`type`), prop :+ p)
+                      // Property op is not resolved, it's an error, stop iterations
+                      case None => (None, Chain.empty)
+                    }
 
-                    // We have already errored, do nothing
-                    case _ => (None, Chain.empty).pure[Alg]
-                  }
+                  // We have already errored, do nothing
+                  case _ => (None, Chain.empty).pure[Alg]
+                }
 
               }
               .map {
@@ -94,6 +97,31 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           case None =>
             None.pure[Alg]
         }
+
+      case dvt @ StructValueToken(typeName, fields) =>
+        T.resolveType(typeName).flatMap {
+          case Some(struct @ StructType(_, _)) =>
+            for {
+              fieldsRawOp: NonEmptyMap[String, Option[ValueRaw]] <- fields.traverse(valueToRaw)
+              fieldsRaw: List[(String, ValueRaw)] = fieldsRawOp.toSortedMap.toList.collect {
+                case (n, Some(vr)) => n -> vr
+              }
+              rawFields = NonEmptyMap.fromMap(SortedMap.from(fieldsRaw))
+              typeFromFieldsWithData = rawFields
+                .map(rf =>
+                  (
+                    StructType(typeName.value, rf.map(_.`type`)),
+                    Some(MakeStructRaw(rf, struct))
+                  )
+                )
+                .getOrElse(BottomType -> None)
+              (typeFromFields, data) = typeFromFieldsWithData
+              isTypesCompatible <- T.ensureTypeMatches(dvt, struct, typeFromFields)
+            } yield data.filter(_ => isTypesCompatible)
+          case _ =>
+            None.pure[Alg]
+        }
+
       case ct @ CollectionToken(_, values) =>
         values.traverse(valueToRaw).map(_.toList.flatten).map(NonEmptyList.fromList).map {
           case Some(raws) if raws.size == values.size =>
