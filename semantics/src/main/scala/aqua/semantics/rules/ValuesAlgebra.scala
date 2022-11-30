@@ -98,7 +98,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
             None.pure[Alg]
         }
 
-      case dvt@DataValueToken(typeName, fields) =>
+      case dvt @ DataValueToken(typeName, fields) =>
         T.resolveType(typeName).flatMap {
           case Some(struct @ StructType(_, _)) =>
             for {

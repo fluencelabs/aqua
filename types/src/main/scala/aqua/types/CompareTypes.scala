@@ -127,8 +127,8 @@ object CompareTypes {
         case (x: OptionType, y: StreamType) => apply(x.element, y.element)
         case (x: OptionType, y: ArrayType) => apply(x.element, y.element)
         case (x: StreamType, y: StreamType) => apply(x.element, y.element)
-        case (stl@StructType(_, _), str@StructType(_, _)) =>
-          compareStructs(stl.fields, str.fields)
+        case (StructType(_, lFields), StructType(_, rFields)) =>
+          compareStructs(lFields, rFields)
 
         // Products
         case (l: ProductType, r: ProductType) => compareProducts(l, r)
