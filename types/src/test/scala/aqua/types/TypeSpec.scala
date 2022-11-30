@@ -74,6 +74,14 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     PartialOrder[Type].eqv(one, three) should be(true)
   }
 
+  "structs of scalars with literals" should "be variant" in {
+    val one: Type = StructType("one", NonEmptyMap.of("field" -> u64))
+    val two: Type = StructType("two", NonEmptyMap.of("field" -> LiteralType.number, "other" -> string))
+
+    accepts(one, two) should be(true)
+    accepts(two, one) should be(false)
+  }
+
   "streams" should "be accepted as an array, but not vice versa" in {
     val stream: Type = StreamType(bool)
     val array: Type = ArrayType(bool)
