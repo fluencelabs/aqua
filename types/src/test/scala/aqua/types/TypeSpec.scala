@@ -65,12 +65,12 @@ class TypeSpec extends AnyFlatSpec with Matchers {
   }
 
   "structs of scalars" should "be variant" in {
-    val one: Type = StructType("one", NonEmptyMap.of("field" -> u32))
-    val two: Type = StructType("two", NonEmptyMap.of("field" -> u64, "other" -> string))
-    val three: Type = StructType("three", NonEmptyMap.of("field" -> u32))
+    val one: Type = StructType("one", NonEmptyMap.of("field" -> u64))
+    val two: Type = StructType("two", NonEmptyMap.of("field" -> u32, "other" -> string))
+    val three: Type = StructType("three", NonEmptyMap.of("field" -> u64))
 
-    accepts(one, two) should be(false)
-    accepts(two, one) should be(true)
+    accepts(one, two) should be(true)
+    accepts(two, one) should be(false)
     PartialOrder[Type].eqv(one, three) should be(true)
   }
 
@@ -122,13 +122,13 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     val onePrime: Type = ArrowType(ProductType(u32 :: bool :: Nil), NilType)
     val two: Type = ArrowType(ProductType(u64 :: Nil), NilType)
 
-    accepts(one, onePrime) should be(true)
-    accepts(onePrime, one) should be(false)
-    accepts(one, two) should be(false)
-    accepts(onePrime, two) should be(false)
+    accepts(one, onePrime) should be(false)
+    accepts(onePrime, one) should be(true)
+    accepts(one, two) should be(true)
+    accepts(onePrime, two) should be(true)
 
-    one > two should be(false)
-    two < one should be(false)
+    one > two should be(true)
+    two < one should be(true)
   }
 
   "arrows" should "be variant on results" in {
@@ -152,13 +152,13 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     val three: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u64 :: Nil))
     val four: Type = ArrowType(ProductType(bool :: f32 :: Nil), ProductType(u32 :: Nil))
 
-    accepts(one, two) should be(false)
-    accepts(two, one) should be(true)
+    accepts(one, two) should be(true)
+    accepts(two, one) should be(false)
 
-    accepts(one, three) should be(true)
-    accepts(three, one) should be(false)
+    accepts(one, three) should be(false)
+    accepts(three, one) should be(true)
 
-    accepts(one, four) should be(true)
+    accepts(one, four) should be(false)
     accepts(four, one) should be(false)
   }
 

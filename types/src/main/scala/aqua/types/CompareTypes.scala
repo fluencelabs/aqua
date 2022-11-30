@@ -67,14 +67,14 @@ object CompareTypes {
       lf.keys.forall(rf.contains) && compareTypesList(
         lfView.values.toList,
         rfView.filterKeys(lfNEM.keys.contains).values.toList
-      ) == -1.0
-    ) -1.0
+      ) == 1.0
+    ) 1.0
     else if (
       rf.keys.forall(lf.contains) && compareTypesList(
         lfView.filterKeys(rfNEM.keys.contains).values.toList,
         rfView.values.toList
-      ) == 1.0
-    ) 1.0
+      ) == -1.0
+    ) -1.0
     else NaN
   }
 
@@ -139,8 +139,8 @@ object CompareTypes {
           val cmpCodom = apply(lcodom, rcodom)
 
           if (cmpDom == 0 && cmpCodom == 0) 0
-          else if (cmpDom >= 0 && cmpCodom >= 0) 1.0
-          else if (cmpDom <= 0 && cmpCodom <= 0) -1.0
+          else if (cmpDom <= 0 && cmpCodom >= 0) 1.0
+          else if (cmpDom >= 0 && cmpCodom <= 0) -1.0
           else NaN
 
         case _ =>
