@@ -41,10 +41,4 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   // End scope; if return was expected but not checked, fail
   def endArrowScope(token: Token[S]): Alg[List[ValueRaw]]
-
-  def checkTypeCompatibility(
-    token: Token[S],
-    valueType: Type,
-    `type`: Type
-  ): Alg[Boolean]
 }

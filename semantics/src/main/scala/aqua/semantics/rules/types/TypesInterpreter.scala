@@ -196,6 +196,12 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         .as(false)
   }
 
+  private def extractToken(token: Token[S]) =
+    token match {
+      case VarToken(n, properties) => properties.lastOption.getOrElse(n)
+      case t => t
+    }
+
   override def ensureTypeMatches(
     token: Token[S],
     expected: Type,
@@ -203,19 +209,47 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
   ): State[X, Boolean] =
     if (expected.acceptsValueOf(givenType)) State.pure(true)
     else {
-      val notes =
-        if (expected.acceptsValueOf(OptionType(givenType)))
-          "note: Try converting value to optional" :: Nil
-        else if (givenType.acceptsValueOf(OptionType(expected)))
-          "note: You're providing an optional value where normal value is expected." ::
-            "You can extract value with `!`, but be aware it may trigger join behaviour." ::
-            Nil
-        else Nil
-      reportError(
-        token,
-        "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
-      )
-        .as(false)
+      (expected, givenType) match {
+        case (StructType(n, valueFields), StructType(typeName, typeFields)) =>
+          // value can have more fields
+          if (valueFields.length < typeFields.length) {
+            report(
+              token,
+              s"Number of fields doesn't match the data type, expected: $expected, given: $givenType"
+            ).as(false)
+          } else {
+            valueFields.toSortedMap.toList.traverse { (name, `type`) =>
+              typeFields.lookup(name) match {
+                case Some(t) =>
+                  val nextToken = extractToken(token match {
+                    case DataValueToken(_, fields) =>
+                      fields.lookup(name).getOrElse(token)
+                    case t => t
+                  })
+                  ensureTypeMatches(nextToken, `type`, t)
+                case None =>
+                  report(
+                    token,
+                    s"Wrong value type, expected: $expected, given: $givenType"
+                  ).as(false)
+              }
+            }.map(_.toList.fold(true)(_ && _))
+          }
+        case _ =>
+          val notes =
+            if (expected.acceptsValueOf(OptionType(givenType)))
+              "note: Try converting value to optional" :: Nil
+            else if (givenType.acceptsValueOf(OptionType(expected)))
+              "note: You're providing an optional value where normal value is expected." ::
+                "You can extract value with `!`, but be aware it may trigger join behaviour." ::
+                Nil
+            else Nil
+          reportError(
+            token,
+            "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
+          )
+            .as(false)
+      }
     }
 
   override def expectNoExport(token: Token[S]): State[X, Unit] =
@@ -265,48 +299,6 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
       )
       .map(argsAndRes => ArrowType(argsAndRes._1, argsAndRes._2))
       .flatMap(at => stack.beginScope(TypesState.Frame(token, at, None)).as(at))
-
-  private def extractToken(token: Token[S]) =
-    token match {
-      case VarToken(n, properties) => properties.lastOption.getOrElse(n)
-      case t => t
-    }
-
-  override def checkTypeCompatibility(
-    token: Token[S],
-    valueType: Type,
-    `type`: Type
-  ): State[X, Boolean] = {
-    (valueType, `type`) match {
-      case (StructType(n, valueFields), StructType(typeName, typeFields)) =>
-        // value can have more fields
-        if (valueFields.length < typeFields.length) {
-          report(
-            token,
-            s"Number of fields doesn't match the data type, expected: ${`type`}, given: ${valueType}"
-          ).as(false)
-        } else {
-          valueFields.toSortedMap.toList.traverse { (name, `type`) =>
-            typeFields.lookup(name) match {
-              case Some(t) =>
-                val nextToken = extractToken(token match {
-                  case DataValueToken(_, fields) =>
-                    fields.lookup(name).getOrElse(token)
-                  case t => t
-                })
-                checkTypeCompatibility(nextToken, `type`, t)
-              case None =>
-                report(
-                  token,
-                  s"Wrong value type, expected: ${`type`}, given: ${valueType}"
-                ).as(false)
-            }
-          }.map(_.toList.fold(true)(_ && _))
-        }
-      case _ =>
-        ensureTypeMatches(token, valueType, `type`)
-    }
-  }
 
   override def checkArrowReturn(
     values: NonEmptyList[(ValueToken[S], ValueRaw)]

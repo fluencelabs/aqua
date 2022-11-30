@@ -112,7 +112,7 @@ object DataValueToken {
         ~ comma(((`name` <* (` `.?.with1 *> `=` *> ` `.?)).with1 ~ ValueToken.`value`).surroundedBy(`/s*`))
           .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
         .withContext(
-          "Missing braces '()' after the object name"
+          "Missing braces '()' after the struct type"
         ).map { case (dn, args) =>
       DataValueToken(CustomTypeToken(dn), NonEmptyMap.of(args.head, args.tail:_*))
     }

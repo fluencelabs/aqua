@@ -23,7 +23,7 @@ import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.apply.*
 
-object MakeRawInliner extends RawInliner[MakeStructRaw] {
+object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
 
   private def createObj(fields: NonEmptyMap[String, ValueModel], result: VarModel): OpModel.Tree = {
     val args = fields.toSortedMap.toList.flatMap { case (name, value) =>
@@ -44,7 +44,7 @@ object MakeRawInliner extends RawInliner[MakeStructRaw] {
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     for {
-      name <- Mangler[S].findAndForbidName(raw.name + "_obj")
+      name <- Mangler[S].findAndForbidName(raw.structType.name + "_obj")
       foldedFields <- raw.fields.nonEmptyTraverse(unfold(_))
     } yield {
       val varModel = VarModel(name, raw.baseType)

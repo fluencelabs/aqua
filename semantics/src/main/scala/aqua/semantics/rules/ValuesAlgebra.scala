@@ -19,8 +19,6 @@ import cats.data.{NonEmptyList, NonEmptyMap}
 
 import scala.collection.immutable.SortedMap
 
-import java.util
-
 class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   N: NamesAlgebra[S, Alg],
   T: TypesAlgebra[S, Alg],
@@ -102,7 +100,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
 
       case dvt@DataValueToken(typeName, fields) =>
         T.resolveType(typeName).flatMap {
-          case Some(struct @ StructType(_, fieldsType)) =>
+          case Some(struct @ StructType(_, _)) =>
             for {
               fieldsRawOp: NonEmptyMap[String, Option[ValueRaw]] <- fields.traverse(valueToRaw)
               fieldsRaw: List[(String, ValueRaw)] = fieldsRawOp.toSortedMap.toList.collect {
@@ -113,18 +111,13 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                 .map(rf =>
                   (
                     StructType(typeName.value, rf.map(_.`type`)),
-                    Some(MakeStructRaw(typeName.value, rf, struct))
+                    Some(MakeStructRaw(rf, struct))
                   )
                 )
                 .getOrElse(BottomType -> None)
               (typeFromFields, data) = typeFromFieldsWithData
-              typeCheck <- T.checkTypeCompatibility(dvt, struct, typeFromFields)
-            } yield {
-              if (typeCheck)
-                data
-              else
-                None
-            }
+              isTypesCompatible <- T.ensureTypeMatches(dvt, struct, typeFromFields)
+            } yield data.filter(_ => isTypesCompatible)
           case _ =>
             None.pure[Alg]
         }

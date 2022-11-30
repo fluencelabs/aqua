@@ -43,7 +43,7 @@ object RawValueInliner extends Logging {
         CollectionRawInliner(cr, propertiesAllowed)
 
       case dr: MakeStructRaw =>
-        MakeRawInliner(dr, propertiesAllowed)
+        MakeStructRawInliner(dr, propertiesAllowed)
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)
