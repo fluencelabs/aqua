@@ -35,6 +35,7 @@ object Token {
   val `data`: P[Unit] = P.string("data")
   val `import`: P[Unit] = P.string("import")
   val `module`: P[Unit] = P.string("module")
+  val `aqua-word`: P[Unit] = P.string("aqua")
   val `declares`: P[Unit] = P.string("declares")
   val ` declares ` : P[Unit] = `declares`.surroundedBy(` `)
   val `declare`: P[Unit] = P.string("declare")

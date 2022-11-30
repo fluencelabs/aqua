@@ -42,7 +42,7 @@ object ModuleExpr extends HeaderExpr.Leaf {
     nameOrAbList.map(Left(_)) | `star`.lift.map(Token.lift(_)).map(Right(_))
 
   override val p: Parser[ModuleExpr[Span.S]] =
-    (`module` *> ` ` *> Ability.dotted ~
+    ((`module` | `aqua-word`) *> ` ` *> Ability.dotted ~
       (` declares ` *> nameOrAbListOrAll).?).map {
       case (name, None) =>
         ModuleExpr(name, None, Nil, Nil)
