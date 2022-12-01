@@ -4,7 +4,7 @@
     "config:base",
     ":semanticCommitTypeAll(chore)"
   ],
-  "enabledManagers": ["npm", "github-actions"],
+  "enabledManagers": ["sbt", "npm", "github-actions"],
   "rangeStrategy": "pin",
   "packageRules": [
     {
