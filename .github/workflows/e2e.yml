@@ -35,6 +35,8 @@ jobs:
   aqua:
     name: "aqua"
     uses: ./.github/workflows/snapshot.yml
+    with:
+      ref: ${{ github.ref }}
 
   aqua-playground:
     needs: aqua
