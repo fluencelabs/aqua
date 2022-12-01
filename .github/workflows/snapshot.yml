@@ -6,6 +6,7 @@ on:
       fluence-js-version:
         description: "@fluencejs/fluence version"
         type: string
+        default: "null"
       ref:
         description: "git ref to checkout to"
         type: string
@@ -105,7 +106,7 @@ jobs:
         working-directory: npm
 
       - name: Set fluence-js version from branch
-        if: inputs.fluence-js-version != ''
+        if: inputs.fluence-js-version != 'null'
         working-directory: npm
         run: npm i --save -E @fluencelabs/fluence@${{ inputs.fluence-js-version }}
 
