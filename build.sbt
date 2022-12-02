@@ -56,7 +56,7 @@ lazy val cliJS = cli.js
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true
-  )
+  ).dependsOn(`js-exports`, `js-imports`)
 
 lazy val cliJVM = cli.jvm
   .settings(
@@ -94,6 +94,34 @@ lazy val `language-server-api` = project
     )
   )
   .dependsOn(compiler.js, io.js)
+
+lazy val `js-exports` = project
+  .in(file("js/js-exports"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commons: _*)
+  .dependsOn(`backend-ts`.js, `backend`.js)
+
+lazy val `js-imports` = project
+  .in(file("js/js-imports"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commons: _*)
+  .dependsOn(`js-exports`)
+
+lazy val `aqua-api` = project
+  .in(file("aqua-api"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commons: _*)
+  .settings(
+    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSUseMainModuleInitializer := true
+  )
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-effect" % catsEffectV,
+      "co.fs2"        %%% "fs2-io"      % fs2V
+    )
+  )
+  .dependsOn(compiler.js, io.js, `js-exports`)
 
 lazy val types = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

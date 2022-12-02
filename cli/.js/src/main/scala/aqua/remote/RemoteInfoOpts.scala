@@ -3,7 +3,6 @@ package aqua.remote
 import aqua.builder.IPFSUploader
 import DistOpts.*
 import aqua.ipfs.IpfsOpts.{pathOpt, UploadFuncName}
-import aqua.js.FluenceEnvironment
 import aqua.model.{LiteralModel, ValueModel}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.run.{GeneralOptions, RunCommand, RunConfig, RunOpts}

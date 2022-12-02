@@ -13,7 +13,6 @@ import aqua.{
   RunInfo,
   SubCommandBuilder
 }
-import aqua.js.{Fluence, PeerConfig}
 import aqua.keypair.KeyPairShow.show
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}

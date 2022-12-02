@@ -7,7 +7,6 @@ import aqua.backend.air.{AirBackend, AirGen, FuncAirGen}
 import aqua.builder.ArgumentGetter
 import aqua.compiler.AquaCompiler
 import aqua.ipfs.js.IpfsApi
-import aqua.js.{Fluence, PeerConfig}
 import aqua.keypair.KeyPairShow.show
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{AquaContext, FuncArrow, LiteralModel}
