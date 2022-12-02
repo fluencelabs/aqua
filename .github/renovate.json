@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":semanticCommitTypeAll(chore)"
+  ],
+  "enabledManagers": ["sbt", "npm", "github-actions"],
+  "rangeStrategy": "pin",
+  "packageRules": [
+    {
+      "matchDepTypes": ["devDependencies"],
+      "prPriority": -1
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "prConcurrentLimit": 1
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "all github-actions"
+    }
+  ]
+}
