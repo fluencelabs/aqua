@@ -5,6 +5,7 @@ import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.raw.ops.{Call, CallArrowRawTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
+import aqua.definition.*
 import aqua.types.ScalarType
 import cats.data.NonEmptyList
 

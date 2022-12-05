@@ -1,8 +1,8 @@
 package aqua.run
 
 import aqua.LogLevelTransformer
-import aqua.backend.FunctionDef
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
+import aqua.definition.FunctionDef
 import aqua.io.OutputPrinter
 import aqua.js.*
 import aqua.keypair.KeyPairShow.show
@@ -20,7 +20,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
-import scala.scalajs.js.{timers, JSON, JavaScriptException}
+import scala.scalajs.js.{JSON, JavaScriptException, timers}
 
 object FuncCaller {
 

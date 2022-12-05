@@ -35,7 +35,7 @@ case class CompilationResult(
   functions: js.Map[String, AquaFunction]
 )
 
-@JSExportTopLevel("AquaLSP")
+@JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {
 
   @JSExport
@@ -50,6 +50,18 @@ object AquaAPI extends App with Logging {
     val pathId = FileModuleId(path)
     val sources = new AquaFileSources[IO](path, imports.toList.map(Path.apply))
     val config = AquaCompilerConf()
+
+    val proc = for {
+
+      res <- CompilerAPI
+        .compileToLsp[IO, AquaFileError, FileModuleId, FileSpan.F](
+          sources,
+          SpanParser.parser,
+          config
+        )
+    } yield {
+      
+    }
 
     js.Promise.resolve(CompilationResult(js.Map.empty, js.Map.empty))
 

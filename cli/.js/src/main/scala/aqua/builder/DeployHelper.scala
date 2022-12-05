@@ -4,6 +4,7 @@ import aqua.backend.*
 import aqua.ipfs.js.IpfsApi
 import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.types.ScalarType
+import aqua.definition.*
 import cats.data.NonEmptyList
 import scribe.Logging
 

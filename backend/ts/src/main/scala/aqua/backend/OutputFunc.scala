@@ -20,7 +20,8 @@ case class OutputFunc(func: FuncRes, types: Types) {
   val funcTypes = types.funcType(func)
 
   import funcTypes.*
-  import TypeDefinition.*
+  import aqua.definition.TypeDefinition.*
+  import aqua.definition.*
 
   def generate: (AirString, String) = {
     val tsAir = FuncAirGen(func).generate

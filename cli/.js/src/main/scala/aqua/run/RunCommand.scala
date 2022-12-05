@@ -5,7 +5,8 @@ import aqua.ErrorRendering.showError
 import aqua.backend.air.{AirBackend, FuncAirGen}
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
-import aqua.backend.{FunctionDef, Generated}
+import aqua.backend.Generated
+import aqua.definition.FunctionDef
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}

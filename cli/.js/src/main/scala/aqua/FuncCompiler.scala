@@ -1,9 +1,9 @@
 package aqua
 
 import aqua.ErrorRendering.showError
-import aqua.backend.{ArrowTypeDef, ProductTypeDef, TypeDefinition}
 import aqua.builder.{AquaFunction, Service}
 import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompilerAPI}
+import aqua.definition.{ArrowTypeDef, ProductTypeDef, TypeDefinition}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
 import aqua.js.{Conversions, ServiceHandler, TypeDefinitionJs}

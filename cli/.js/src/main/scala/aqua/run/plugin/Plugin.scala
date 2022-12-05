@@ -1,16 +1,10 @@
 package aqua.run.plugin
 
-import aqua.backend.{
-  ArrowTypeDef,
-  LabeledProductTypeDef,
-  ServiceDef,
-  TopTypeDef,
-  UnlabeledProductTypeDef
-}
 import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.run.JsonService
 import aqua.run.plugin.Plugin.toPromise
 import aqua.types.TopType
+import aqua.definition.*
 import cats.data.{NonEmptyList, ValidatedNec}
 import cats.effect.Concurrent
 import cats.syntax.applicative.*
