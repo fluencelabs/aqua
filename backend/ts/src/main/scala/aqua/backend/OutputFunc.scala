@@ -31,7 +31,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
     val funcDef = FunctionDef(func)
 
     (
-      AirString(func.funcName, script),
+      AirString(func.funcName, script, funcDef),
       s"""${funcTypes.generate}
          |export function ${func.funcName}(${typed("...args", "any")}) {
          |

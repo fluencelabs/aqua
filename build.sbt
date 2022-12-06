@@ -121,7 +121,7 @@ lazy val `aqua-api` = project
       "co.fs2"        %%% "fs2-io"      % fs2V
     )
   )
-  .dependsOn(compiler.js, io.js, `js-exports`)
+  .dependsOn(compiler.js, io.js, `js-exports`, `backend-api`.js)
 
 lazy val types = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -225,7 +225,7 @@ lazy val backend = crossProject(JVMPlatform, JSPlatform)
     buildInfoKeys    := Seq[BuildInfoKey](version),
     buildInfoPackage := "aqua.backend"
   )
-  .dependsOn(res)
+  .dependsOn(res, definitions)
 
 lazy val definitions = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -252,7 +252,7 @@ lazy val `backend-api` = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("backend/api"))
   .settings(commons: _*)
-  .dependsOn(backend, transform)
+  .dependsOn(backend, transform, `backend-air`)
 
 lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

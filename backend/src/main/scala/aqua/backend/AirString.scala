@@ -1,3 +1,5 @@
 package aqua.backend
 
-case class AirString(name: String, air: String)
+import aqua.definition.FunctionDef
+
+case class AirString(name: String, air: String, funcDef: FunctionDef)
