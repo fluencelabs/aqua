@@ -25,10 +25,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       ### Setup
-      - uses: olafurpg/setup-scala@v10
+      - uses: olafurpg/setup-scala@v13
 
       - name: JS build
         run: sbt cliJS/fullLinkJS
@@ -77,7 +77,7 @@ jobs:
           echo "JSAPI=$JSAPI" >> $GITHUB_ENV
 
       ### Publish to NPM registry
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v3
         with:
           node-version: "15"
           registry-url: "https://registry.npmjs.org"
@@ -103,7 +103,7 @@ jobs:
       - name: Push tag ${{ env.BASE_VERSION }}
         if: ${{ env.DO_RELEASE == 'true' }}
         id: tag_version
-        uses: mathieudutour/github-tag-action@v5.6
+        uses: mathieudutour/github-tag-action@v6.1
         with:
           custom_tag: ${{ env.BASE_VERSION }}
           tag_prefix: ""
@@ -112,7 +112,7 @@ jobs:
       - name: Build Changelog
         if: ${{ env.DO_RELEASE == 'true' }}
         id: github_release
-        uses: mikepenz/release-changelog-builder-action@v1
+        uses: mikepenz/release-changelog-builder-action@v3
         with:
           configuration: ".github/workflows/changelog_config.json"
           toTag: ${{ steps.tag_version.outputs.new_tag }}
