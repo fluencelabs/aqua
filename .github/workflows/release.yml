@@ -103,7 +103,7 @@ jobs:
       - name: Push tag ${{ env.BASE_VERSION }}
         if: ${{ env.DO_RELEASE == 'true' }}
         id: tag_version
-        uses: mathieudutour/github-tag-action@v5.5
+        uses: mathieudutour/github-tag-action@v5.6
         with:
           custom_tag: ${{ env.BASE_VERSION }}
           tag_prefix: ""
