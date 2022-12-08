@@ -9,6 +9,7 @@ import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{LiteralToken, VarToken}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
+import aqua.logging.LogFormatter
 import aqua.raw.ConstantRaw
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.run.plugin.Plugin

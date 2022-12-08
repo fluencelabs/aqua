@@ -7,6 +7,7 @@ import aqua.parser.expr.ConstantExpr
 import aqua.parser.lift.LiftParser
 import aqua.raw.ConstantRaw
 import aqua.raw.value.LiteralRaw
+import aqua.constants.Constants
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import cats.effect.kernel.Async
@@ -103,22 +104,7 @@ object AppOpts {
         "NAME=value"
       )
       .mapValidated { strs =>
-        val parsed = strs.map(s => ConstantExpr.onlyLiteral.parseAll(s))
-
-        val errors = parsed.zip(strs).collect { case (Left(er), str) =>
-          str
-        }
-
-        NonEmptyList
-          .fromList(errors)
-          .fold(
-            Validated.validNel[String, List[ConstantRaw]](parsed.collect { case Right(v) =>
-              ConstantRaw(v._1.value, LiteralRaw(v._2.value, v._2.ts), false)
-            })
-          ) { errors =>
-            val errorMsgs = errors.map(str => s"Invalid constant definition '$str'.")
-            Validated.invalid(errorMsgs)
-          }
+        Constants.parse(strs.toList)
       }
       .withDefault(List.empty)
 

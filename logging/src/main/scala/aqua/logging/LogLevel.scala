@@ -1,4 +1,4 @@
-package aqua
+package aqua.logging
 
 import scribe.Level
 

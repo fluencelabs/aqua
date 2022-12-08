@@ -3,6 +3,7 @@ package aqua
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.run.{GeneralOptions, JsonService, RunCommand, RunOpts}
+import aqua.logging.LogFormatter
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.{NonEmptyList, Validated, ValidatedNec}
 import cats.effect.ExitCode
@@ -17,7 +18,6 @@ import fs2.io.file.{Files, Path}
 import scribe.Logging
 
 import scalajs.js
-
 import scala.concurrent.ExecutionContext
 
 sealed trait AquaPath {

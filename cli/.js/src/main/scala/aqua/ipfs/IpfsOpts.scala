@@ -6,7 +6,6 @@ import aqua.{
   CliFunc,
   CommandBuilder,
   FluenceOpts,
-  LogFormatter,
   LogLevelTransformer,
   PackagePath,
   PlatformOpts,

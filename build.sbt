@@ -50,7 +50,7 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
       "com.monovore" %%% "decline-effect" % declineV
     )
   )
-  .dependsOn(compiler, `backend-air`, `backend-ts`, io, definitions)
+  .dependsOn(compiler, `backend-air`, `backend-ts`, io, definitions, logging, constants)
 
 lazy val cliJS = cli.js
   .settings(
@@ -121,7 +121,7 @@ lazy val `aqua-api` = project
       "co.fs2"        %%% "fs2-io"      % fs2V
     )
   )
-  .dependsOn(compiler.js, io.js, `js-exports`, `backend-api`.js)
+  .dependsOn(compiler.js, io.js, `js-exports`, `backend-api`.js, logging.js, constants.js)
 
 lazy val types = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -239,6 +239,28 @@ lazy val definitions = crossProject(JVMPlatform, JSPlatform)
       "io.circe" %%% "circe-parser"
     ).map(_ % circeVersion)
   ).dependsOn(res, types)
+
+lazy val logging = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("utils/logging"))
+  .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % catsV
+    )
+  )
+
+lazy val constants = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("utils/constants"))
+  .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % catsV
+    )
+  ).dependsOn(parser, raw)
 
 lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

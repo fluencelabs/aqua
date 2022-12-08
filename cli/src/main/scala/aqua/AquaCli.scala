@@ -4,6 +4,7 @@ import aqua.backend.Backend
 import aqua.backend.air.AirBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
+import aqua.logging.LogFormatter
 import aqua.files.AquaFilesIO
 import aqua.io.OutputPrinter
 import aqua.model.transform.TransformConfig
@@ -16,7 +17,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{~>, Functor, Id, Monad}
+import cats.{Functor, Id, Monad, ~>}
 import com.monovore.decline
 import com.monovore.decline.effect.CommandIOApp
 import com.monovore.decline.effect.CommandIOApp.printHelp

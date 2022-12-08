@@ -3,6 +3,8 @@ package aqua.api
 import aqua.backend.{AirString, Backend, Generated}
 import aqua.compiler.*
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
+import aqua.logging.LogLevels
+import aqua.constants.Constants
 import aqua.io.*
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
@@ -36,6 +38,9 @@ import cats.Applicative
 case class AquaFunction(funcDef: FunctionDefJs, script: String)
 
 @JSExportAll
+case class AquaConfig(logLevel: String = "info", constants: js.Map[String, String] = js.Map.empty, noXor: Boolean = false, noRelay: Boolean = false)
+
+@JSExportAll
 case class CompilationResult(
   services: js.Array[ServiceDefJs],
   functions: js.Map[String, AquaFunction]
@@ -47,10 +52,22 @@ object AquaAPI extends App with Logging {
   @JSExport
   def compile(
     pathStr: String,
-    imports: scalajs.js.Array[String]
+    imports: scalajs.js.Array[String],
+    aquaConfig: AquaConfig
   ): scalajs.js.Promise[CompilationResult] = {
 
+    LogLevels.fromString(aquaConfig.logLevel) match {
+      case Valid(level) => js.Promise.resolve("")
+      case Invalid(error) => js.Promise.reject(error)
+    }
+
+    println("SCALA")
+
     import aqua.ErrorRendering.showError
+
+    scribe.Logger.root
+      .withMinimumLevel(scribe.Level.Trace)
+      .replace()
 
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
 
@@ -72,6 +89,7 @@ object AquaAPI extends App with Logging {
           },
           new Backend.Transform:
             override def transform(ex: AquaContext): AquaRes =
+              println("AQUA CONTEXT: " + ex)
               Transform.contextRes(ex, transformConfig)
 
             override def generate(aqua: AquaRes): Seq[Generated] = APIBackend.generate(aqua)
@@ -80,7 +98,7 @@ object AquaAPI extends App with Logging {
         )
       jsResult <- res match {
         case Valid(compiled) =>
-          val allGenerated: List[Generated]  = compiled.toList.flatMap(_.compiled)
+          val allGenerated: List[Generated] = compiled.toList.flatMap(_.compiled)
           val serviceDefs = allGenerated.flatMap(_.services).map(s => ServiceDefJs(s)).toJSArray
           val functions = allGenerated.flatMap(_.air.map(as => (as.name, AquaFunction(FunctionDefJs(as.funcDef), as.air))))
 

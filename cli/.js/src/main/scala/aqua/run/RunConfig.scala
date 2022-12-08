@@ -1,12 +1,13 @@
 package aqua.run
 
-import aqua.{AppOpts, LogLevels, VarJson}
+import aqua.{AppOpts, VarJson}
 import aqua.FluenceOpts.*
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.config.ConfigOpts.{Krasnodar, Stage, TestNet}
 import aqua.js.FluenceEnvironment
 import aqua.raw.ConstantRaw
 import aqua.raw.value.VarRaw
+import aqua.logging.LogLevels
 import cats.data.{NonEmptyList, Validated}
 import cats.data.Validated.{invalidNel, validNel}
 import cats.syntax.applicative.*

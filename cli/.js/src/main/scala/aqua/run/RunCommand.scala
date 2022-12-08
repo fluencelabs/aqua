@@ -6,6 +6,7 @@ import aqua.backend.air.{AirBackend, FuncAirGen}
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.backend.Generated
+import aqua.logging.LogFormatter
 import aqua.definition.FunctionDef
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.compiler.{AquaCompiled, AquaCompiler}

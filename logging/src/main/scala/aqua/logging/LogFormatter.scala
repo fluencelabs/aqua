@@ -1,7 +1,7 @@
-package aqua
+package aqua.logging
 
-import scribe.{Level, Logger}
 import scribe.format.*
+import scribe.{Level, Logger}
 
 object LogFormatter {
   val formatter: Formatter = formatter"$date ${string("[")}$levelColored${string("]")} $message$mdc"
