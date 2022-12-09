@@ -8,9 +8,6 @@ import aqua.definition.{LabeledProductTypeDef, ArrowTypeDef, ServiceDef}
 object APIBackend extends Backend {
 
   override def generate(res: AquaRes): Seq[Generated] =
-    println("GENERATING IN BACKEND")
-    println("funcs: " + res.funcs)
-    println("services: " + res.services)
     if (res.isEmpty) Nil
     else {
       val airGenerated = AirBackend.generate(res)
@@ -22,8 +19,6 @@ object APIBackend extends Backend {
 
           ServiceDef(srv.defaultId.map(s => s.replace("\"", "")), functions)
       }.toList
-
-      println("air: " + airGenerated)
 
       Generated("", "", airGenerated.flatMap(_.air).toList, services) :: Nil
     }

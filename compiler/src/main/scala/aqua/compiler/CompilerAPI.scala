@@ -148,12 +148,10 @@ object CompilerAPI extends Logging {
           })
       _ <- airValidator.init()
       result <- compiledV.map { compiled =>
-          println("compiled: " + compiled)
           compiled.map { ap =>
             logger.trace("generating output...")
             val res = backend.transform(ap.context)
             val compiled = backend.generate(res)
-            println("compiled: " + compiled)
             airValidator
               .validate(
                 compiled.toList.flatMap(_.air)
