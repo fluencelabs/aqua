@@ -17,7 +17,7 @@ object LogLevels {
 
   def apply(level: Level): LogLevels = LogLevels(level, level, level)
 
-  private def levelFromString(s: String): ValidatedNel[String, Level] = {
+  def levelFromString(s: String): ValidatedNel[String, Level] = {
     LogLevel.stringToLogLevel
       .get(s.toLowerCase)
       .map(validNel)

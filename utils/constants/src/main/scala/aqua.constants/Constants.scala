@@ -4,14 +4,13 @@ import scala.util.Left
 import aqua.parser.expr.ConstantExpr
 import aqua.raw.ConstantRaw
 import aqua.raw.value.LiteralRaw
-import cats.data.NonEmptyList
-import cats.data.Validated
+import cats.data.{NonEmptyList, Validated, ValidatedNel}
 
 object Constants {
-  def parse(strs: List[String]) = {
+  def parse(strs: List[String]): ValidatedNel[String, List[ConstantRaw]] = {
     val parsed = strs.map(s => ConstantExpr.onlyLiteral.parseAll(s))
 
-    val errors = parsed.zip(strs).collect { case (Left(er), str) =>
+    val errors = parsed.zip(strs).collect { case (Left(_), str) =>
       str
     }
 
