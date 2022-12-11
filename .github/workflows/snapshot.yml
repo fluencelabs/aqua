@@ -63,7 +63,7 @@ jobs:
         run: sbt aqua-api/fastOptJS
 
       - name: debug
-        run: tree
+        run: tree -a
 
       - name: Upload aqua-js artifact
         uses: actions/upload-artifact@v3
