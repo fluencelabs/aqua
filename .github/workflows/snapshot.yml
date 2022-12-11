@@ -50,17 +50,19 @@ jobs:
       - name: JS build
         env:
           BUILD_NUMBER: ${{ steps.version.outputs.id }}
-        run: sbt cliJS/fullLinkJS
+        run: sbt cliJS/fastOptJS
 
       - name: JS LSP API build
         env:
           BUILD_NUMBER: ${{ steps.version.outputs.id }}
-        run: sbt language-server-api/fullLinkJS
+        run: sbt language-server-api/fastOptJS
 
       - name: JS Aqua API build
         env:
           BUILD_NUMBER: ${{ steps.version.outputs.id }}
-        run: sbt aqua-api/fullLinkJS
+        run: sbt aqua-api/fastOptJS
+
+      - debug: tree
 
       - name: Upload aqua-js artifact
         uses: actions/upload-artifact@v3
