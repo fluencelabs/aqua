@@ -62,9 +62,6 @@ jobs:
           BUILD_NUMBER: ${{ steps.version.outputs.id }}
         run: sbt aqua-api/fastOptJS
 
-      - name: debug
-        run: tree -a
-
       - name: Upload aqua-js artifact
         uses: actions/upload-artifact@v3
         with:
@@ -75,13 +72,13 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: aqua-js-lsp
-          path: language-server-api/target/scala-*/language-server-api-opt/main.js
+          path: language-server-api/target/scala-*/language-server-api-fastopt.js
 
       - name: Upload aqua-js-api artifact
         uses: actions/upload-artifact@v3
         with:
           name: aqua-js-api
-          path: aqua-api/target/scala-*/aqua-api-opt/main.js
+          path: aqua-api/target/scala-*/aqua-api-fastopt.js
 
   aqua:
     name: "Publish @fluencelabs/aqua"
@@ -178,7 +175,9 @@ jobs:
         with:
           name: aqua-js-lsp
 
-      - run: mv scala-*/main.js npm/aqua-lsp-api.js
+      - run: |
+          tree -a
+          mv scala-*/main.js npm/aqua-lsp-api.js
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.4.3
@@ -243,7 +242,9 @@ jobs:
         with:
           name: aqua-js
 
-      - run: mv scala-*/cli-fastopt.js aqua-api-npm/aqua-api.js
+      - run: |
+          tree
+          mv scala-*/cli-fastopt.js aqua-api-npm/aqua-api.js
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.4.3
