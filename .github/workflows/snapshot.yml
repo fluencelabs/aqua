@@ -175,9 +175,7 @@ jobs:
         with:
           name: aqua-js-lsp
 
-      - run: |
-          tree -a
-          mv scala-*/main.js npm/aqua-lsp-api.js
+      - run: mv scala-*/language-server-api-fastopt.js npm/aqua-lsp-api.js
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.4.3
@@ -240,11 +238,9 @@ jobs:
       - name: Download aqua-js artifact
         uses: actions/download-artifact@v3
         with:
-          name: aqua-js
+          name: aqua-js-api
 
-      - run: |
-          tree
-          mv scala-*/cli-fastopt.js aqua-api-npm/aqua-api.js
+      - run: mv scala-*/aqua-api-fastopt.js aqua-api-npm/aqua-api.js
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.4.3
