@@ -62,7 +62,8 @@ jobs:
           BUILD_NUMBER: ${{ steps.version.outputs.id }}
         run: sbt aqua-api/fastOptJS
 
-      - debug: tree
+      - name: debug
+        run: tree
 
       - name: Upload aqua-js artifact
         uses: actions/upload-artifact@v3
