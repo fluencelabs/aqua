@@ -10,3 +10,4 @@ project/target
 .DS_Store
 
 npm/aqua.js
+**/node_modules
