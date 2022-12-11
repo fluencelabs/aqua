@@ -201,9 +201,6 @@ jobs:
       - run: npm i
         working-directory: language-server-npm
 
-      - run: npm run build
-        working-directory: language-server-npm
-
       - name: Generate snapshot version
         id: version
         uses: fluencelabs/github-actions/generate-snapshot-id@main
@@ -270,9 +267,6 @@ jobs:
         if: inputs.fluence-js-version != 'null'
         working-directory: npm
         run: npm i --save-dev -E @fluencelabs/fluence@${{ inputs.fluence-js-version }}
-
-      - run: npm run build
-        working-directory: aqua-api-npm
 
       - name: Generate snapshot version
         id: version
