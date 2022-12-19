@@ -1,24 +1,24 @@
 import type {FunctionCallDef, ServiceDef} from "@fluencelabs/fluence/dist/internal/compilerSupport/v3impl/interface"
 
-export interface Config {
-    logLevel: string,
-    constants: string[],
-    noXor: boolean,
-    noRelay: boolean
+export class AquaConfig {
+    logLevel?: string
+    constants?: string[]
+    noXor?: boolean
+    noRelay?: boolean
 }
 
-export interface AquaFunction {
-    funcDef: FunctionCallDef,
+export class AquaFunction {
+    funcDef: FunctionCallDef
     script: string
 }
 
-export interface CompilationResult {
-    services: ServiceDef[],
+export class CompilationResult {
+    services: ServiceDef[]
     functions: Map<string, AquaFunction>
 }
 
 export class Compiler {
-    compile(path: string, imports: string[], config: Config): Promise<CompilationResult>;
+    compile(path: string, imports: string[], config?: AquaConfig): Promise<CompilationResult>;
 }
 
 export var Aqua: Compiler;

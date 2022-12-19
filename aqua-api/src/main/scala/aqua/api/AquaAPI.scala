@@ -38,18 +38,37 @@ import aqua.model.AquaContext
 import aqua.res.AquaRes
 import cats.Applicative
 
-@JSExportAll
+@JSExportTopLevel("AquaFunction")
 case class AquaFunction(funcDef: FunctionDefJs, script: String)
 
-@JSExportAll
-case class AquaConfig(
+case class AquaAPIConfig(
   logLevel: String = "info",
-  constants: js.Array[String] = js.Array(),
+  constants: List[String] = Nil,
   noXor: Boolean = false,
   noRelay: Boolean = false
 )
 
-@JSExportAll
+object AquaAPIConfig {
+
+  def fromJS(cjs: AquaConfig): AquaAPIConfig = {
+    AquaAPIConfig(
+      cjs.logLevel.getOrElse("info"),
+      cjs.constants.map(_.toList).getOrElse(Nil),
+      cjs.noXor.getOrElse(false),
+      cjs.noRelay.getOrElse(false)
+    )
+  }
+}
+
+@JSExportTopLevel("AquaConfig")
+case class AquaConfig(
+  logLevel: js.UndefOr[String],
+  constants: js.UndefOr[js.Array[String]],
+  noXor: js.UndefOr[Boolean],
+  noRelay: js.UndefOr[Boolean]
+)
+
+@JSExportTopLevel("CompilationResult")
 case class CompilationResult(
   services: js.Array[ServiceDefJs],
   functions: js.Map[String, AquaFunction]
@@ -61,12 +80,15 @@ object AquaAPI extends App with Logging {
   @JSExport
   def compile(
     pathStr: String,
-    imports: scalajs.js.Array[String],
-    aquaConfig: AquaConfig
-  ): scalajs.js.Promise[CompilationResult] = {
+    imports: js.Array[String],
+    aquaConfigJS: js.UndefOr[AquaConfig]
+  ): js.Promise[CompilationResult] = {
+    val aquaConfig =
+      aquaConfigJS.toOption.map(cjs => AquaAPIConfig.fromJS(cjs)).getOrElse(AquaAPIConfig())
+
     (
       LogLevels.levelFromString(aquaConfig.logLevel),
-      Constants.parse(aquaConfig.constants.toList)
+      Constants.parse(aquaConfig.constants)
     ).mapN { (level, constants) =>
       import aqua.ErrorRendering.showError
 
