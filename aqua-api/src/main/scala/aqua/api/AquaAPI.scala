@@ -39,7 +39,12 @@ import aqua.res.AquaRes
 import cats.Applicative
 
 @JSExportTopLevel("AquaFunction")
-case class AquaFunction(funcDef: FunctionDefJs, script: String)
+case class AquaFunction(
+  @JSExport
+  funcDef: FunctionDefJs,
+  @JSExport
+  script: String
+)
 
 case class AquaAPIConfig(
   logLevel: String = "info",
@@ -62,15 +67,21 @@ object AquaAPIConfig {
 
 @JSExportTopLevel("AquaConfig")
 case class AquaConfig(
+  @JSExport
   logLevel: js.UndefOr[String],
+  @JSExport
   constants: js.UndefOr[js.Array[String]],
+  @JSExport
   noXor: js.UndefOr[Boolean],
+  @JSExport
   noRelay: js.UndefOr[Boolean]
 )
 
 @JSExportTopLevel("CompilationResult")
 case class CompilationResult(
+  @JSExport
   services: js.Array[ServiceDefJs],
+  @JSExport
   functions: js.Map[String, AquaFunction]
 )
 
