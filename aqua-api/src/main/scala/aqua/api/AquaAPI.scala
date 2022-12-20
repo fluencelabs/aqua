@@ -14,8 +14,8 @@ import aqua.semantics.{CompilerState, HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.backend.api.APIBackend
-import cats.data.{NonEmptyChain, Validated, ValidatedNec}
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
+import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
+import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -32,7 +32,7 @@ import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
-import scala.scalajs.js.{undefined, UndefOr}
+import scala.scalajs.js.{UndefOr, undefined}
 import aqua.js.{FunctionDefJs, ServiceDefJs}
 import aqua.model.AquaContext
 import aqua.res.AquaRes
@@ -94,6 +94,33 @@ object AquaAPI extends App with Logging {
     imports: js.Array[String],
     aquaConfigJS: js.UndefOr[AquaConfig]
   ): js.Promise[CompilationResult] = {
+    implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    val path = Path(pathStr)
+    val sources = new AquaFileSources[IO](path, imports.toList.map(Path.apply))
+    compileRaw(aquaConfigJS, sources)
+  }
+
+  @JSExport
+  def compileString(
+    input: String,
+    imports: js.Array[String],
+    aquaConfigJS: js.UndefOr[AquaConfig]
+  ): js.Promise[CompilationResult] = {
+    implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    val path = Path("")
+    val strSources: AquaFileSources[IO] = new AquaFileSources[IO](path, imports.toList.map(Path.apply)) {
+      override def sources: IO[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] = {
+        IO.pure(Valid(Chain.one((FileModuleId(path), input))))
+      }
+    }
+    compileRaw(aquaConfigJS, strSources)
+  }
+
+  @JSExport
+  def compileRaw(
+    aquaConfigJS: js.UndefOr[AquaConfig],
+    sources: AquaSources[IO, AquaFileError, FileModuleId]
+  ): js.Promise[CompilationResult] = {
     val aquaConfig =
       aquaConfigJS.toOption.map(cjs => AquaAPIConfig.fromJS(cjs)).getOrElse(AquaAPIConfig())
 
@@ -105,10 +132,6 @@ object AquaAPI extends App with Logging {
 
       LogFormatter.initLogger(Some(level))
 
-      implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
-
-      val path = Path(pathStr)
-      val sources = new AquaFileSources[IO](path, imports.toList.map(Path.apply))
       val config = AquaCompilerConf(constants)
       val transformConfig = TransformConfig()
 

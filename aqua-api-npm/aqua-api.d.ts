@@ -19,6 +19,7 @@ export class CompilationResult {
 
 export class Compiler {
     compile(path: string, imports: string[], config?: AquaConfig): Promise<CompilationResult>;
+    compileString(input: string, imports: string[], config?: AquaConfig): Promise<CompilationResult>;
 }
 
 export var Aqua: Compiler;
