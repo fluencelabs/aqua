@@ -82,7 +82,7 @@ case class CompilationResult(
   @JSExport
   services: js.Array[ServiceDefJs],
   @JSExport
-  functions: js.Map[String, AquaFunction]
+  functions: js.Dictionary[AquaFunction]
 )
 
 @JSExportTopLevel("Aqua")
@@ -161,7 +161,7 @@ object AquaAPI extends App with Logging {
               _.air.map(as => (as.name, AquaFunction(FunctionDefJs(as.funcDef), as.air)))
             )
 
-            IO.pure(CompilationResult(serviceDefs, js.Map.apply(functions: _*)))
+            IO.pure(CompilationResult(serviceDefs, js.Dictionary.apply(functions: _*)))
           case Invalid(errChain) =>
             errChain.map(_.show).distinct.map(OutputPrinter.errorF[IO]).sequence
             IO.raiseError[CompilationResult](new Error("Compilation failed."))

@@ -14,7 +14,7 @@ export class AquaFunction {
 
 export class CompilationResult {
     services: ServiceDef[]
-    functions: Map<string, AquaFunction>
+    functions: { [key: string]: AquaFunction }
 }
 
 export class Compiler {
