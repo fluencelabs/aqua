@@ -14,7 +14,7 @@ export class AquaFunction {
 
 export class CompilationResult {
     services: ServiceDef[]
-    functions: { [key: string]: AquaFunction }
+    functions: Record<string, AquaFunction>
 }
 
 export class Compiler {
