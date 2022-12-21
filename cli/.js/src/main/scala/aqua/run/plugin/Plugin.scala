@@ -4,7 +4,7 @@ import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.run.JsonService
 import aqua.run.plugin.Plugin.toPromise
 import aqua.types.TopType
-import aqua.definition.*
+import aqua.definitions.*
 import cats.data.{NonEmptyList, ValidatedNec}
 import cats.effect.Concurrent
 import cats.syntax.applicative.*

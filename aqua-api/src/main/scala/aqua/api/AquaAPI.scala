@@ -1,6 +1,6 @@
 package aqua.api
 
-import aqua.backend.{AirString, Backend, Generated}
+import aqua.backend.{AirFunction, Backend, Generated}
 import aqua.compiler.*
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.logging.{LogFormatter, LogLevels}
@@ -142,7 +142,7 @@ object AquaAPI extends App with Logging {
             SpanParser.parser,
             new AirValidator[IO] {
               override def init(): IO[Unit] = Applicative[IO].pure(())
-              override def validate(airs: List[AirString]): IO[ValidatedNec[String, Unit]] =
+              override def validate(airs: List[AirFunction]): IO[ValidatedNec[String, Unit]] =
                 Applicative[IO].pure(validNec(()))
             },
             new Backend.Transform:

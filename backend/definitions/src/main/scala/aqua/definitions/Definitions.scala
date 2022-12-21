@@ -1,8 +1,8 @@
-package aqua.definition
+package aqua.definitions
 
 import aqua.res.FuncRes
 import aqua.types.*
-import aqua.definition.*
+import aqua.definitions.*
 import io.circe.*
 import io.circe.parser.*
 import io.circe.syntax.*

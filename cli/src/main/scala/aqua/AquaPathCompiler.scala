@@ -12,7 +12,7 @@ import aqua.compiler.{
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.io.*
 import aqua.air.AirValidation
-import aqua.backend.AirString
+import aqua.backend.AirFunction
 import aqua.model.AquaContext
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
@@ -60,14 +60,14 @@ object AquaPathCompiler extends Logging {
         if (disableAirValidation) {
           new AirValidator[F] {
             override def init(): F[Unit] = Applicative[F].pure(())
-            override def validate(airs: List[AirString]): F[ValidatedNec[String, Unit]] =
+            override def validate(airs: List[AirFunction]): F[ValidatedNec[String, Unit]] =
               Applicative[F].pure(validNec(()))
           }
         } else {
           new AirValidator[F] {
             override def init(): F[Unit] = AirValidation.init[F]()
             override def validate(
-              airs: List[AirString]
+              airs: List[AirFunction]
             ): F[ValidatedNec[String, Unit]] = AirValidation.validate[F](airs)
           }
         }

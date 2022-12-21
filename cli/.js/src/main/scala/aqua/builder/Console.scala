@@ -4,7 +4,7 @@ import aqua.backend.*
 import aqua.io.OutputPrinter
 import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.types.ScalarType
-import aqua.definition.*
+import aqua.definitions.*
 import cats.data.NonEmptyList
 import scribe.Logging
 

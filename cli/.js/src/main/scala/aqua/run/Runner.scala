@@ -1,7 +1,7 @@
 package aqua.run
 
 import aqua.backend.air.FuncAirGen
-import aqua.definition.{FunctionDef, TypeDefinition}
+import aqua.definitions.{FunctionDef, TypeDefinition}
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.io.OutputPrinter
 import aqua.js.{Conversions, TypeDefinitionJs}

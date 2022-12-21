@@ -3,7 +3,7 @@ package aqua.backend.api
 import aqua.backend.air.AirBackend
 import aqua.backend.{Backend, Generated}
 import aqua.res.AquaRes
-import aqua.definition.{LabeledProductTypeDef, ArrowTypeDef, ServiceDef}
+import aqua.definitions.{LabeledProductTypeDef, ArrowTypeDef, ServiceDef}
 
 object APIBackend extends Backend {
 

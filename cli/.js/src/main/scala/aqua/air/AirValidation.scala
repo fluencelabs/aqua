@@ -1,6 +1,6 @@
 package aqua.air
 
-import aqua.backend.AirString
+import aqua.backend.AirFunction
 import aqua.js.Fluence
 import cats.data.Validated.{invalid, validNec}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
@@ -22,7 +22,7 @@ object AirValidation {
   }
 
   def validate[F[_]: Async](
-    airs: List[AirString]
+    airs: List[AirFunction]
   ): F[ValidatedNec[String, Unit]] =
     Async[F].fromFuture {
 

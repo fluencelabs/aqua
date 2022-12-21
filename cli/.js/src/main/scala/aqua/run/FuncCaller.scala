@@ -2,7 +2,7 @@ package aqua.run
 
 import aqua.LogLevelTransformer
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
-import aqua.definition.FunctionDef
+import aqua.definitions.FunctionDef
 import aqua.io.OutputPrinter
 import aqua.js.*
 import aqua.keypair.KeyPairShow.show

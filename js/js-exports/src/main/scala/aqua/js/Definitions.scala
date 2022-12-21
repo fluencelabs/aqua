@@ -2,7 +2,7 @@ package aqua.js
 
 import aqua.*
 import aqua.backend.*
-import aqua.definition.{ArrayTypeDef, ArrowTypeDef, BottomTypeDef, FunctionDef, LabeledProductTypeDef, NamesConfig, NilTypeDef, OptionTypeDef, ScalarTypeDef, ServiceDef, StructTypeDef, TopTypeDef, TypeDefinition, UnlabeledProductTypeDef}
+import aqua.definitions.{ArrayTypeDef, ArrowTypeDef, BottomTypeDef, FunctionDef, LabeledProductTypeDef, NamesConfig, NilTypeDef, OptionTypeDef, ScalarTypeDef, ServiceDef, StructTypeDef, TopTypeDef, TypeDefinition, UnlabeledProductTypeDef}
 import aqua.res.FuncRes
 import aqua.types.{ArrowType, BottomType, BoxType, LabeledConsType, LiteralType, NilType, OptionType, ProductType, ScalarType, StructType, TopType, Type, UnlabeledConsType}
 import io.circe.{Encoder, Json}

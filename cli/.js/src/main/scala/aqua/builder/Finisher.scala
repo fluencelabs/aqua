@@ -4,7 +4,7 @@ import aqua.backend.*
 import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
 import aqua.model.{LiteralModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowRawTag}
-import aqua.definition.*
+import aqua.definitions.*
 import aqua.raw.value.LiteralRaw
 import cats.data.NonEmptyList
 

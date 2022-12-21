@@ -6,7 +6,7 @@ import aqua.model.{LiteralModel, VarModel}
 import aqua.raw.ops
 import aqua.raw.ops.{Call, CallArrowRawTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.definition.*
+import aqua.definitions.*
 import cats.data.NonEmptyList
 
 import scala.concurrent.Promise

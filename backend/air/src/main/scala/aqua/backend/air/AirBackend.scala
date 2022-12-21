@@ -1,7 +1,7 @@
 package aqua.backend.air
 
-import aqua.backend.{AirString, Backend, Generated, Version}
-import aqua.definition.FunctionDef
+import aqua.backend.{AirFunction, Backend, Generated, Version}
+import aqua.definitions.FunctionDef
 import aqua.res.AquaRes
 import cats.syntax.show.*
 
@@ -21,7 +21,7 @@ object AirBackend extends Backend {
     aqua.funcs.toList.map { fr =>
       val airStr = FuncAirGen(fr).generate.show
       val funcDef = FunctionDef(fr)
-      Generated("." + fr.funcName + ext, docs + airStr, AirString(fr.funcName, airStr, funcDef) :: Nil)
+      Generated("." + fr.funcName + ext, docs + airStr, AirFunction(fr.funcName, airStr, funcDef) :: Nil)
     }
   }
 }

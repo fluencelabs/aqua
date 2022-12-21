@@ -1,6 +1,6 @@
 package aqua.compiler
 
-import aqua.backend.{AirString, Backend}
+import aqua.backend.{AirFunction, Backend}
 import aqua.linker.{AquaModule, Linker, Modules}
 import aqua.model.AquaContext
 import aqua.parser.lift.{LiftParser, Span}

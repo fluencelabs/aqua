@@ -2,7 +2,7 @@ package aqua.builder
 
 import aqua.backend.*
 import aqua.js.{CallJsFunction, FluencePeer, ServiceHandler}
-import aqua.definition.*
+import aqua.definitions.*
 import cats.data.NonEmptyList
 import scribe.Logging
 
