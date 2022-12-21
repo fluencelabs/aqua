@@ -31,22 +31,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
     val funcDef = FunctionDef(func)
 
     (
-      )
-    s"""${funcTypes.generate}
-         |export function ${func.funcName}(${typed("...args", "any")}) {
-         |
-         |    let script = `
-         |$script
-         |    `
-         |    return callFunction$$$$(
-         |        args,
-         |        ${funcDef.asJson.deepDropNullValues.spaces4},
-         |        script
-         |    )
-         |}""".stripMargin
-      ,AirFunction
-      /** EndMarker */
-      (func.funcName, script, funcDef)(func.funcName, script, funcDef),
+      AirFunction(func.funcName, script, funcDef),
       s"""${funcTypes.generate}
          |export function ${func.funcName}(${typed("...args", "any")}) {
          |
