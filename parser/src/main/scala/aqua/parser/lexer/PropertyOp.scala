@@ -3,7 +3,7 @@ package aqua.parser.lexer
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
-import cats.data.NonEmptyList
+import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
@@ -36,10 +36,23 @@ case class IntoIndex[F[_]: Comonad](point: F[Unit], idx: Option[ValueToken[F]])
   override def mapK[K[_]: Comonad](fk: F ~> K): IntoIndex[K] = copy(fk(point), idx.map(_.mapK(fk)))
 }
 
+case class IntoCopy[F[_]: Comonad](point: F[Unit], fields: NonEmptyMap[String, ValueToken[F]])
+    extends PropertyOp[F] {
+  override def as[T](v: T): F[T] = point.as(v)
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): IntoCopy[K] =
+    copy(fk(point), fields.map(_.mapK(fk)))
+}
+
 object PropertyOp {
 
   private val parseField: P[PropertyOp[Span.S]] =
     (`.` *> `name`).lift.map(IntoField(_))
+
+  val parseCopy: P[PropertyOp[Span.S]] =
+    (`.` *> (`copy`.lift ~ namedArgs)).map { case (point, fields) =>
+      IntoCopy(point, NonEmptyMap.of(fields.head, fields.tail: _*))
+    }
 
   private val parseIdx: P[PropertyOp[Span.S]] =
     (P.defer(
@@ -55,7 +68,7 @@ object PropertyOp {
     }
 
   private val parseOp: P[PropertyOp[Span.S]] =
-    P.oneOf(parseField.backtrack :: parseIdx :: Nil)
+    P.oneOf(parseCopy.backtrack :: parseField.backtrack :: parseIdx :: Nil)
 
   val ops: P[NonEmptyList[PropertyOp[Span.S]]] =
     parseOp.rep

@@ -108,11 +108,7 @@ case class StructValueToken[F[_]: Comonad](
 object StructValueToken {
 
   val dataValue: P[StructValueToken[Span.S]] =
-    (`Class`.lift
-      ~ comma(
-        ((`name` <* (` `.?.with1 *> `=` *> ` `.?)).with1 ~ ValueToken.`value`).surroundedBy(`/s*`)
-      )
-        .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
+    (`Class`.lift ~ namedArgs)
       .withContext(
         "Missing braces '()' after the struct type"
       )
