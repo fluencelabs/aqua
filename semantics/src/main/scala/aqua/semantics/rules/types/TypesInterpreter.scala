@@ -1,7 +1,7 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{FunctorRaw, IntoFieldRaw, IntoIndexRaw, PropertyRaw, ValueRaw}
+import aqua.raw.value.{FunctorRaw, IntoCopyRaw, IntoFieldRaw, IntoIndexRaw, PropertyRaw, ValueRaw}
 import aqua.semantics.lsp.{TokenDef, TokenTypeInfo}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{
@@ -157,6 +157,26 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
 
     }
   }
+
+  // TODO actually it's stateless, exists there just for reporting needs
+  override def resolveCopy(
+    rootT: Type,
+    op: IntoCopy[S],
+    fields: NonEmptyMap[String, ValueRaw]
+  ): State[X, Option[PropertyRaw]] =
+    rootT match {
+      case st: StructType =>
+        fields.toSortedMap.toList.traverse { case (fieldName, value) =>
+          st.fields.lookup(fieldName) match {
+            case Some(t) =>
+              ensureTypeMatches(op.fields.lookup(fieldName).getOrElse(op), t, value.`type`)
+            case None => report(op, s"No field with name '$fieldName' in $rootT").as(false)
+          }
+        }.map(res => if (res.toList.fold(true)(_ && _)) Some(IntoCopyRaw(st, fields)) else None)
+
+      case _ =>
+        report(op, s"Expected $rootT to be a data type").as(None)
+    }
 
   // TODO actually it's stateless, exists there just for reporting needs
   override def resolveIndex(

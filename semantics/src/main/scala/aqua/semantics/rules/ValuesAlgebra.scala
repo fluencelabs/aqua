@@ -46,6 +46,15 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     op match {
       case op: IntoField[S] =>
         T.resolveField(rootType, op)
+      case op: IntoCopy[S] =>
+        op.fields
+          .map(valueToRaw)
+          .sequence
+          .map(_.sequence)
+          .flatMap {
+            case None => None.pure[Alg]
+            case Some(values) => T.resolveCopy(rootType, op, values)
+          }
       case op: IntoIndex[S] =>
         op.idx
           .fold[Alg[Option[ValueRaw]]](Option(LiteralRaw.Zero).pure[Alg])(
@@ -53,7 +62,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           )
           .flatMap {
             case None => None.pure[Alg]
-            case Some(vv) => T.resolveIndex(rootType, op, vv)
+            case Some(values) => T.resolveIndex(rootType, op, values)
           }
     }
 
