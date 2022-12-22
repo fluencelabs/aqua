@@ -7,7 +7,7 @@ import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.backend.Generated
 import aqua.logging.LogFormatter
-import aqua.definitions.FunctionDef
+import aqua.definitions.{FunctionDef, TypeDefinition}
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
@@ -34,7 +34,7 @@ import cats.syntax.list.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.{Id, Monad, ~>}
+import cats.{~>, Id, Monad}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -55,6 +55,39 @@ object RunCommand extends Logging {
     }.getOrElse(KeyPair.randomEd25519().toFuture)
   }
 
+  private def createGetter(value: VarRaw, arg: js.Dynamic, argType: Type): ArgumentGetter = {
+    val converted = Conversions.ts2aqua(arg, TypeDefinitionJs(TypeDefinition(argType)))
+    ArgumentGetter(value.copy(baseType = argType), converted)
+  }
+
+  // Creates getter services for variables. Return an error if there is no variable in services
+  // and type of this variable couldn't be optional
+  private def getGettersForVars(
+    vars: List[(String, Type)],
+    argGetters: Map[String, VarJson]
+  ): ValidatedNec[String, List[ArgumentGetter]] = {
+    vars.map { (n, argType) =>
+      val argGetterOp = argGetters.get(n)
+      (argGetterOp, argType) match {
+        case (None, _) => Validated.invalidNec(s"Unexcepted. There is no service for '$n' argument")
+        // BoxType could be undefined, so, pass service that will return 'undefined' for this argument
+        case (Some(s), _: BoxType) if s._2 == js.undefined =>
+          Validated.validNec(createGetter(s._1, s._2, argType) :: Nil)
+        case (Some(s), _) if s._2 == js.undefined =>
+          Validated.invalidNec(
+            s"Argument '$n' is missing. Expected argument '$n' of type '$argType'"
+          )
+        case (Some(s), _) =>
+          Validated.validNec(createGetter(s._1, s._2, argType) :: Nil)
+      }
+    }.reduceOption(_ combine _).getOrElse(Validated.validNec(Nil))
+  }
+
+  def resultVariableNames(funcCallable: FuncArrow, name: String): List[String] =
+    funcCallable.arrowType.codomain.toList.zipWithIndex.map { case (t, idx) =>
+      name + idx
+    }
+
   /**
    * Runs a function that is located in `input` file with FluenceJS SDK. Returns no output
    * @param func
@@ -69,18 +102,68 @@ object RunCommand extends Logging {
     input: Option[AquaPath],
     imports: List[Path],
     runConfig: RunConfig,
+    // services that will pass arguments to air
+    argumentGetters: Map[String, VarJson],
+    // builtin services for aqua run, for example: Console, FileSystem, etc
+    services: List[Service],
+    jsonServices: List[JsonService],
+    plugins: List[String],
     transformConfig: TransformConfig
   ): F[ValidatedNec[String, Unit]] = {
     val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
 
     for {
-      funcArrowV <- funcCompiler.compile(func, runConfig.jsonServices, true)
+      funcArrowV <- funcCompiler.compile(func, jsonServices, true)
       callResult <- Clock[F].timed {
-        funcArrowV match {
-          case Validated.Valid((funcCallable, jsonServices)) =>
-            val runner =
-              new Runner(func, funcCallable, runConfig.copy(services = runConfig.services ++ jsonServices), transformConfig)
-            runner.run()
+        funcArrowV.andThen { case (funcCallable, jsonServices) =>
+          val resultNames = resultVariableNames(funcCallable, runConfig.resultName)
+          val resultPrinterService =
+            ResultPrinter(
+              runConfig.resultPrinterServiceId,
+              runConfig.resultPrinterName,
+              resultNames
+            )
+          val promiseFinisherService =
+            Finisher(runConfig.finisherServiceId, runConfig.finisherFnName)
+
+          val vars = func.args
+            .zip(funcCallable.arrowType.domain.toList)
+            .collect { case (VarRaw(n, _), argType) =>
+              (n, argType)
+            }
+            .distinctBy(_._1)
+          val a: ValidatedNec[String, F[ValidatedNec[String, Unit]]] = getGettersForVars(vars, argumentGetters).map { getters =>
+            val gettersTags = getters.map(s => s.callTag())
+            val preparer =
+              new CallPreparer(
+                func,
+                funcCallable,
+                gettersTags,
+                resultPrinterService.callTag,
+                promiseFinisherService.callTag(),
+                runConfig,
+                transformConfig
+              )
+            preparer.prepare().map {
+              _.map { info =>
+                FuncCaller.funcCall[F](
+                  info.name,
+                  info.air,
+                  info.definitions,
+                  info.config,
+                  promiseFinisherService,
+                  services,
+                  getters,
+                  plugins
+                )
+              }
+            }
+
+          }
+          a
+        } match {
+          case Validated.Valid(f) =>
+            f
           case i @ Validated.Invalid(_) => i.pure[F]
         }
       }
@@ -92,7 +175,8 @@ object RunCommand extends Logging {
   }
 
   private val builtinServices =
-    aqua.builder.Console() :: aqua.builder.IPFSUploader("ipfs") :: aqua.builder.DeployHelper() :: Nil
+    aqua.builder
+      .Console() :: aqua.builder.IPFSUploader("ipfs") :: aqua.builder.DeployHelper() :: Nil
 
   /**
    * Executes a function with the specified settings
@@ -113,7 +197,7 @@ object RunCommand extends Logging {
    * @return
    */
   def execRun[F[_]: Async](
-    runInfo: RunInfo,
+    runInfo: RunInfo
   ): F[ValidatedNec[String, Unit]] = {
     val common = runInfo.common
     LogFormatter.initLogger(Some(common.logLevel.compiler))
@@ -124,7 +208,13 @@ object RunCommand extends Logging {
         runInfo.func,
         runInfo.input,
         runInfo.imports,
-        RunConfig(common, runInfo.argumentGetters, runInfo.services ++ builtinServices, runInfo.jsonServices, runInfo.pluginsPaths),
+        RunConfig(
+          common
+        ),
+        runInfo.argumentGetters,
+        runInfo.services ++ builtinServices,
+        runInfo.jsonServices,
+        runInfo.pluginsPaths,
         transformConfig(common.on, common.constants, common.flags.noXor, common.flags.noRelay)
       )
   }

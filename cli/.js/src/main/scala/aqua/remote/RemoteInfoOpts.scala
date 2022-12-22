@@ -5,7 +5,7 @@ import DistOpts.*
 import aqua.ipfs.IpfsOpts.{pathOpt, UploadFuncName}
 import aqua.model.{LiteralModel, ValueModel}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
-import aqua.run.{GeneralOptions, RunCommand, RunConfig, RunOpts}
+import aqua.run.{GeneralOptions, GeneralOpts, RunCommand, RunConfig, RunOpts, CliFunc}
 import aqua.*
 import cats.Applicative
 import cats.data.{NonEmptyList, Validated}
@@ -67,7 +67,7 @@ object RemoteInfoOpts {
     SubCommandBuilder.valid(
       "list_interfaces",
       "List all service interfaces on a peer by a given owner",
-      (GeneralOptions.opt, AppOpts.wrapWithOption(ownerOpt), allFlag).mapN {
+      (GeneralOpts.opt, AppOpts.wrapWithOption(ownerOpt), allFlag).mapN {
         (common, peer, printAll) =>
           if (printAll)
             RunInfo(
@@ -94,7 +94,7 @@ object RemoteInfoOpts {
     SubCommandBuilder.valid(
       GetInterfaceFuncName,
       "Show interface of a service",
-      (GeneralOptions.opt, idOpt).mapN { (common, serviceId) =>
+      (GeneralOpts.opt, idOpt).mapN { (common, serviceId) =>
         RunInfo(
           common,
           CliFunc(GetInterfaceFuncName, LiteralRaw.quote(serviceId) :: Nil),
@@ -107,7 +107,7 @@ object RemoteInfoOpts {
     SubCommandBuilder.valid(
       GetModuleInterfaceFuncName,
       "Print a module interface",
-      (GeneralOptions.opt, idOpt).mapN { (common, serviceId) =>
+      (GeneralOpts.opt, idOpt).mapN { (common, serviceId) =>
         RunInfo(
           common,
           CliFunc(GetModuleInterfaceFuncName, LiteralRaw.quote(serviceId) :: Nil),

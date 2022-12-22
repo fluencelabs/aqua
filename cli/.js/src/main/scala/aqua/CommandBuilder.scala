@@ -2,7 +2,7 @@ package aqua
 
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.run.{GeneralOptions, JsonService, RunCommand, RunOpts}
+import aqua.run.{CliFunc, GeneralOptions, GeneralOpts, JsonService, RunCommand, RunOpts}
 import aqua.logging.LogFormatter
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.{NonEmptyList, Validated, ValidatedNec}
@@ -109,7 +109,7 @@ object SubCommandBuilder {
       .valid(
         name,
         header,
-        GeneralOptions.opt.map { c =>
+        GeneralOpts.opt.map { c =>
           RunInfo(c, CliFunc(funcName), Some(path))
         }
       )

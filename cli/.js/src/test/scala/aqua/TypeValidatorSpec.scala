@@ -1,6 +1,5 @@
 package aqua
-
-import aqua.json.TypeValidator
+import aqua.run.TypeValidator
 import aqua.types.{ArrayType, LiteralType, OptionType, ScalarType, StructType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

@@ -56,7 +56,7 @@ lazy val cliJS = cli.js
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true
-  ).dependsOn(`js-exports`, `js-imports`)
+  ).dependsOn(`js-exports`, `js-imports`, `aqua-run`.js)
 
 lazy val cliJVM = cli.jvm
   .settings(
@@ -66,6 +66,13 @@ lazy val cliJVM = cli.jvm
     libraryDependencies ++= Seq(
     )
   )
+
+lazy val `aqua-run` = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("aqua-run"))
+  .settings(commons: _*)
+  .dependsOn(compiler, `backend-air`, `backend-ts`, io, definitions, logging, constants)
 
 lazy val io = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

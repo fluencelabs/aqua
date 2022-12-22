@@ -15,7 +15,7 @@ import aqua.raw.ops.{Call, CallArrowRawTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.res.{AquaRes, FuncRes}
 import aqua.run.RunOpts.logger
-import aqua.run.{GeneralOptions, RunCommand, RunConfig, RunOpts}
+import aqua.run.{GeneralOptions, GeneralOpts, RunCommand, RunConfig, RunOpts, CliFunc}
 import aqua.types.{ArrowType, LiteralType, NilType, ScalarType}
 import cats.data.*
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
@@ -109,7 +109,7 @@ object ScriptOpts extends Logging {
     AirGen(funcRes.body).generate.show
   }
 
-  private def commonScriptOpts = GeneralOptions.commonOpt(false, true, true)
+  private def commonScriptOpts = GeneralOpts.commonOpt(false, true, true)
 
   private def compileAir[F[_]: Async: AquaIO](
     input: Path,

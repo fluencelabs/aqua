@@ -3,7 +3,6 @@ package aqua.ipfs
 import aqua.{
   AppOpts,
   AquaIO,
-  CliFunc,
   CommandBuilder,
   FluenceOpts,
   LogLevelTransformer,
@@ -19,7 +18,7 @@ import aqua.builder.IPFSUploader
 import aqua.ipfs.js.IpfsApi
 import aqua.model.LiteralModel
 import aqua.raw.value.LiteralRaw
-import aqua.run.{GeneralOptions, RunCommand, RunConfig, RunOpts}
+import aqua.run.{GeneralOptions, RunCommand, RunConfig, RunOpts, GeneralOpts, CliFunc}
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -54,7 +53,7 @@ object IpfsOpts extends Logging {
     SubCommandBuilder.valid(
       "upload",
       "Upload a file to IPFS",
-      (GeneralOptions.opt, pathOpt).mapN { (common, path) =>
+      (GeneralOpts.opt, pathOpt).mapN { (common, path) =>
         RunInfo(
           common,
           CliFunc(UploadFuncName, LiteralRaw.quote(path) :: Nil),

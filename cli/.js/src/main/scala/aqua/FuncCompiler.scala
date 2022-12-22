@@ -7,13 +7,13 @@ import aqua.definitions.{ArrowTypeDef, ProductTypeDef, TypeDefinition}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
 import aqua.js.{Conversions, ServiceHandler, TypeDefinitionJs}
-import aqua.json.{JsonEncoder, TypeValidator}
+import aqua.json.JsonEncoder
 import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow, ServiceModel}
 import aqua.parser.lift.FileSpan
 import aqua.raw.ConstantRaw
 import aqua.run.RunCommand.logger
-import aqua.run.{JsonService, Runner}
+import aqua.run.{CallPreparer, JsonService, TypeValidator, CliFunc}
 import aqua.types.{ArrowType, NilType, ProductType}
 import cats.data.Validated.{invalidNec, validNec}
 import cats.data.{Chain, NonEmptyList, Validated, ValidatedNec}

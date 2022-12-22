@@ -7,6 +7,7 @@ import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToke
 import aqua.parser.lift.Span
 import aqua.raw.value.{CollectionRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
+import aqua.run.CliFunc
 import cats.data.*
 import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.effect.Concurrent
@@ -25,7 +26,6 @@ import scala.scalajs.js
 import scala.scalajs.js.JSON
 
 case class FuncWithData(func: CliFunc, getters: Map[String, VarJson])
-case class CliFunc(name: String, args: List[ValueRaw] = Nil, ability: Option[String] = None)
 
 // Variable and its JSON value
 case class VarJson(variable: VarRaw, value: js.Dynamic)

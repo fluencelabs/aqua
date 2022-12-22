@@ -1,4 +1,4 @@
-package aqua.json
+package aqua.run
 
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
@@ -13,10 +13,10 @@ import cats.syntax.traverse.*
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
-import scala.scalajs.js
-import scala.scalajs.js.JSON
 
 object TypeValidator {
+
+  import aqua.types.Type.typesPartialOrder
 
   /**
    * Compare and validate type from Aqua file and type generated from JSON.

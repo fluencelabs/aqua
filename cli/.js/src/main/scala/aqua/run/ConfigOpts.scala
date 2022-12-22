@@ -20,25 +20,7 @@ import scala.concurrent.duration.Duration
 import scala.scalajs.js
 import scala.util.Try
 
-case class Flags(
-  printAir: Boolean,
-  showConfig: Boolean,
-  verbose: Boolean,
-  noXor: Boolean,
-  noRelay: Boolean
-)
-
-case class GeneralOptions(
-  timeout: Duration,
-  logLevel: LogLevels,
-  multiaddr: String,
-  on: Option[String],
-  flags: Flags,
-  secretKey: Option[Array[Byte]],
-  constants: List[ConstantRaw]
-)
-
-object GeneralOptions {
+object GeneralOpts {
 
   val multiaddrOpt: Opts[String] =
     Opts
@@ -104,22 +86,7 @@ object GeneralOptions {
   val opt: Opts[GeneralOptions] = commonOpt(false, false, false)
   val runOpt: Opts[GeneralOptions] = commonOpt(true, false, true)
   val optWithSecretKey: Opts[GeneralOptions] = commonOpt(false, true, false)
-  def optWithSecretKeyCustomTimeout(timeoutMs: Int): Opts[GeneralOptions] = commonOpt(false, true, false, Duration(timeoutMs, TimeUnit.MILLISECONDS))
-}
 
-// `run` command configuration
-case class RunConfig(
-  common: GeneralOptions,
-  // services that will pass arguments to air
-  argumentGetters: Map[String, VarJson],
-  // builtin services for aqua run, for example: Console, FileSystem, etc
-  services: List[Service],
-  jsonServices: List[JsonService],
-  plugins: List[String],
-  resultPrinterServiceId: String = "--after-callback-srv-service--",
-  resultPrinterName: String = "console-log",
-  finisherServiceId: String = "--finisher--",
-  finisherFnName: String = "--finish-execution--",
-  resultName: String = "-some-unique-res-name-",
-  functionWrapperName: String = "--someFuncToRun--"
-)
+  def optWithSecretKeyCustomTimeout(timeoutMs: Int): Opts[GeneralOptions] =
+    commonOpt(false, true, false, Duration(timeoutMs, TimeUnit.MILLISECONDS))
+}

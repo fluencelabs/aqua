@@ -36,7 +36,8 @@ object FuncCaller {
     config: RunConfig,
     finisherService: Finisher,
     services: List[Service],
-    getters: List[ArgumentGetter]
+    getters: List[ArgumentGetter],
+    plugins: List[String]
   ): F[ValidatedNec[String, Unit]] = {
 
     FluenceUtils.setLogLevel(
@@ -78,7 +79,7 @@ object FuncCaller {
             // register all services
             _ = (services ++ getters :+ finisherService).map(_.register(peer))
             // register all plugins
-            plugins <- Plugin.getPlugins(config.plugins)
+            plugins <- Plugin.getPlugins(plugins)
             _ = plugins.map(_.register(peer))
             callFuture = CallJsFunction.funcCallJs(
               air,
