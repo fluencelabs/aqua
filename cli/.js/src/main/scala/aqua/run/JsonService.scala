@@ -1,8 +1,11 @@
 package aqua.run
 
 import aqua.ArgOpts.jsonFromFileOpts
-import aqua.builder.ArgumentGetter
+import aqua.builder.{AquaFunction, ArgumentGetter, Service}
+import aqua.definitions.{ArrowTypeDef, ProductTypeDef, TypeDefinition}
+import aqua.js.{Conversions, ServiceHandler, TypeDefinitionJs}
 import aqua.json.JsonEncoder
+import aqua.model.{AquaContext, ServiceModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToken}
 import aqua.parser.lift.Span
@@ -29,58 +32,66 @@ case class JsonFunction(name: String, result: js.Dynamic, resultType: Type)
 
 object JsonService {
 
-  def jsonServiceOpt[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[String, NonEmptyList[JsonService]]]] = {
-    jsonFromFileOpts("json-service", "Path to file that describes service with JSON result", "j")
-      .map(b =>
-        b.map { case a: ValidatedNec[String, NonEmptyList[(Path, js.Dynamic)]] =>
-          a.andThen { results =>
-            results.map { case (path, res) =>
-              val name = res.name
-              val serviceId = res.serviceId
-              val functionsRaw = res.functions
-              if (js.isUndefined(name) || js.typeOf(name) != "string")
-                invalidNec(s"No name in JSON service '$path' or it is not a string")
-              else if (js.isUndefined(serviceId) || js.typeOf(serviceId) != "string")
-                invalidNec(s"No serviceId in JSON service '$path' or it is not a string")
-              else if (js.isUndefined(functionsRaw) || !js.Array.isArray(functionsRaw))
-                invalidNec(
-                  s"'functions' field should exist and be an array in JSON service '$path'"
-                )
-              else {
-                val functionsV: ValidatedNec[String, List[JsonFunction]] = functionsRaw
-                  .asInstanceOf[js.Array[js.Dynamic]]
-                  .toList
-                  .map { f =>
-                    val fName = f.name
-                    val fResult = f.result
-                    if (js.isUndefined(fName) || js.typeOf(fName) != "string")
-                      invalidNec(s"One of the functions doesn't have a name or it is not a string in JSON service '$path'")
-                    else if (js.isUndefined(fResult))
-                      invalidNec(s"Function '$fName' don't have a result in '$path'")
-                    else {
-                      val funcName = fName.asInstanceOf[String]
-                      JsonEncoder
-                        .aquaTypeFromJson(funcName, fResult)
-                        .map(t => JsonFunction(funcName, fResult, t))
-                    }
-                  }
-                  .sequence
-
-                functionsV.andThen { fs =>
-                  NonEmptyList
-                    .fromList(fs)
-                    .map(fNEL =>
-                      validNec(
-                        JsonService(name.asInstanceOf[String], serviceId.asInstanceOf[String], fNEL)
-                      )
-                    )
-                    .getOrElse(invalidNec(s"List of functions in '$name' service is empty in $path"))
-                }
-              }
-            }.sequence
-          }
-        }
+  def findServices(
+    contexts: Chain[AquaContext],
+    services: List[JsonService]
+  ): ValidatedNec[String, List[Service]] = {
+    services
+      .map(js =>
+        contexts
+          .collectFirstSome(_.services.get(js.name))
+          .map(sm => (js, sm))
+          .map(validNec)
+          .getOrElse(
+            Validated.invalidNec[String, ServiceModel](
+              s"There is no service '${js.name}' (described in json-service file) in aqua source or it is not exported. Check the spelling or see https://fluence.dev/docs/aqua-book/language/header/#export"
+            )
+          )
       )
+      .sequence
+      .andThen { l =>
+        l.map { case (jsonService: JsonService, sm: ServiceModel) =>
+          val aquaFunctions: ValidatedNec[String, NonEmptyList[AquaFunction]] =
+            jsonService.functions.map { jf =>
+              sm.arrows(jf.name)
+                .map { case arr: ArrowType =>
+                  if (arr.domain.isEmpty)
+                    TypeValidator
+                      .validateTypes(jf.name, arr.codomain, Some(ProductType(jf.resultType :: Nil)))
+                      .map { _ =>
+                        new AquaFunction {
+                          override def fnName: String = jf.name
 
+                          override def handler: ServiceHandler = _ => {
+                            val converted = arr.codomain.toList match {
+                              case h :: _ =>
+                                Conversions.ts2aqua(jf.result, TypeDefinitionJs(TypeDefinition(h)))
+                              case Nil =>
+                                Conversions.ts2aqua(
+                                  jf.result,
+                                  TypeDefinitionJs(TypeDefinition(NilType))
+                                )
+                            }
+
+                            js.Promise.resolve(converted)
+                          }
+                          override def arrow: ArrowTypeDef =
+                            ArrowTypeDef(ProductTypeDef(NilType), ProductTypeDef(arr.codomain))
+                        }
+                      }
+                  else
+                    invalidNec(s"Json service '${jf.name}' cannot have any arguments")
+                }
+                .getOrElse(
+                  Validated.invalidNec[String, AquaFunction](
+                    s"There is no function '${jf.name}' in service '${jsonService.name}' in aqua source. Check your 'json-service' options"
+                  )
+                )
+            }.sequence
+
+          aquaFunctions.map(funcs => Service(jsonService.serviceId, funcs))
+        }.sequence
+      }
   }
+
 }

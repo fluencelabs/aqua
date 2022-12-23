@@ -57,7 +57,7 @@ object RunOpts extends Logging {
       AppOpts.wrapWithOption(AppOpts.inputOpts[F]),
       AppOpts.importOpts[F],
       ArgOpts.funcWithArgsOpt[F],
-      AppOpts.wrapWithOption(JsonService.jsonServiceOpt),
+      AppOpts.wrapWithOption(JsonServiceOpts.jsonServiceOpt),
       AppOpts.wrapWithOption(Plugin.opt)
     ).mapN { case (inputF, importF, funcWithArgsF, jsonServiceOp, pluginsOp) =>
       for {
