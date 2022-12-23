@@ -3,25 +3,25 @@ package aqua.run
 import aqua.backend.air.FuncAirGen
 import aqua.definitions.{FunctionDef, TypeDefinition}
 import aqua.io.OutputPrinter
-import aqua.raw.ops.CallArrowRawTag
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{FuncArrow, ValueModel, VarModel}
+import aqua.parser.lexer.CallArrowToken
+import aqua.parser.lift.Span
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, SeqTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
-import cats.data.Validated.{invalidNec, validNec}
-import cats.data.{Validated, ValidatedNec}
+import cats.data.Validated.{invalid, invalidNec, invalidNel, validNec, validNel}
+import cats.data.{NonEmptyList, Validated, ValidatedNec}
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.partialOrder.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
+import cats.{Id, ~>}
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
-
-case class CliFunc(name: String, args: List[ValueRaw] = Nil, ability: Option[String] = None)
 
 class CallPreparer(
   func: CliFunc,
