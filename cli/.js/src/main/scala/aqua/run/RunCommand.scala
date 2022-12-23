@@ -160,7 +160,7 @@ object RunCommand extends Logging {
                 info.config,
                 resultPrinterService,
                 promiseFinisherService,
-                services,
+                services ++ jsonServices,
                 getters,
                 plugins
               )
