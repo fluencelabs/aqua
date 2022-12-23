@@ -132,7 +132,7 @@ object RunCommand extends Logging {
               (n, argType)
             }
             .distinctBy(_._1)
-          val a: ValidatedNec[String, F[ValidatedNec[String, Unit]]] = getGettersForVars(vars, argumentGetters).map { getters =>
+          getGettersForVars(vars, argumentGetters).andThen { getters =>
             val gettersTags = getters.map(s => s.callTag())
             val preparer =
               new CallPreparer(
@@ -144,23 +144,20 @@ object RunCommand extends Logging {
                 runConfig,
                 transformConfig
               )
-            preparer.prepare().map {
-              _.map { info =>
-                FuncCaller.funcCall[F](
-                  info.name,
-                  info.air,
-                  info.definitions,
-                  info.config,
-                  promiseFinisherService,
-                  services,
-                  getters,
-                  plugins
-                )
-              }
+            preparer.prepare().map { info =>
+              FuncCaller.funcCall[F](
+                info.name,
+                info.air,
+                info.definitions,
+                info.config,
+                promiseFinisherService,
+                services,
+                getters,
+                plugins
+              )
             }
 
           }
-          a
         } match {
           case Validated.Valid(f) =>
             f
