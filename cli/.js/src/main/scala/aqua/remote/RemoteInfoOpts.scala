@@ -5,11 +5,12 @@ import DistOpts.*
 import aqua.ipfs.IpfsOpts.{pathOpt, UploadFuncName}
 import aqua.model.{LiteralModel, ValueModel}
 import aqua.raw.value.{LiteralRaw, ValueRaw}
-import aqua.run.{GeneralOptions, GeneralOpts, RunCommand, RunConfig, RunOpts, CliFunc, PackagePath}
+import aqua.run.{GeneralOptions, GeneralOpts, RunCommand, RunConfig, RunOpts, CliFunc}
 import aqua.*
 import cats.Applicative
 import cats.data.{NonEmptyList, Validated}
 import Validated.{invalidNel, validNel}
+import aqua.io.PackagePath
 import cats.effect.ExitCode
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*

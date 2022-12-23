@@ -3,9 +3,10 @@ package aqua.remote
 import aqua.ArgOpts.jsonFromFileOpt
 import aqua.builder.ArgumentGetter
 import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.run.{GeneralOptions, GeneralOpts, CliFunc, PackagePath}
+import aqua.run.{GeneralOptions, GeneralOpts, CliFunc}
 import aqua.types.{ArrayType, ScalarType, StructType}
 import aqua.*
+import aqua.io.PackagePath
 import aqua.json.JsonEncoder
 import cats.data.{NonEmptyList, NonEmptyMap, ValidatedNec}
 import cats.data.Validated.{invalidNec, validNec}

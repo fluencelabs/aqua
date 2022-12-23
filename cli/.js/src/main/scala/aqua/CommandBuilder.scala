@@ -1,8 +1,9 @@
 package aqua
 
 import aqua.builder.{ArgumentGetter, Service}
+import aqua.io.{AquaPath, PackagePath}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.run.{CliFunc, GeneralOptions, GeneralOpts, JsonService, RunCommand, RunOpts, AquaPath, PackagePath}
+import aqua.run.{CliFunc, GeneralOptions, GeneralOpts, JsonService, RunCommand, RunOpts}
 import aqua.logging.LogFormatter
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.{NonEmptyList, Validated, ValidatedNec}

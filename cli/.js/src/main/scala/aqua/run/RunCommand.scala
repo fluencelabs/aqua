@@ -11,7 +11,7 @@ import aqua.definitions.{FunctionDef, TypeDefinition}
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
-import aqua.io.{AquaFileError, OutputPrinter}
+import aqua.io.{AquaFileError, AquaPath, OutputPrinter}
 import aqua.js.*
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{AquaContext, FuncArrow}
@@ -34,7 +34,7 @@ import cats.syntax.list.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.{~>, Id, Monad}
+import cats.{Id, Monad, ~>}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 

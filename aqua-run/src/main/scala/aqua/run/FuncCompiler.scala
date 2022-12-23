@@ -4,7 +4,7 @@ import aqua.ErrorRendering.showError
 import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompilerAPI}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.{AquaIO, SpanParser}
-import aqua.io.{AquaFileError, Prelude}
+import aqua.io.{AquaFileError, AquaPath, PackagePath, Prelude}
 import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow}
 import aqua.parser.lift.FileSpan

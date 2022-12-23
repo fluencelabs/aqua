@@ -1,4 +1,5 @@
-package aqua.run
+package aqua.io
+
 import aqua.PlatformPackagePath
 import cats.effect.kernel.Async
 import cats.syntax.applicative.*

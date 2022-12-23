@@ -14,10 +14,11 @@ import aqua.keypair.KeyPairShow.show
 import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec, ValidatedNel}
 import Validated.{invalid, invalidNec, valid, validNec, validNel}
 import aqua.builder.IPFSUploader
+import aqua.io.PackagePath
 import aqua.ipfs.js.IpfsApi
 import aqua.model.LiteralModel
 import aqua.raw.value.LiteralRaw
-import aqua.run.{GeneralOptions, RunCommand, RunConfig, RunOpts, GeneralOpts, CliFunc, PackagePath}
+import aqua.run.{GeneralOptions, RunCommand, RunConfig, RunOpts, GeneralOpts, CliFunc}
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*

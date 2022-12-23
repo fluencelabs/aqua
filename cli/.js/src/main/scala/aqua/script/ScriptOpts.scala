@@ -6,7 +6,7 @@ import aqua.backend.Generated
 import aqua.backend.air.{AirBackend, AirGen, FuncAirGen}
 import aqua.builder.ArgumentGetter
 import aqua.compiler.AquaCompiler
-import aqua.io.Prelude
+import aqua.io.{PackagePath, Prelude, RelativePath}
 import aqua.ipfs.js.IpfsApi
 import aqua.keypair.KeyPairShow.show
 import aqua.model.transform.{Transform, TransformConfig}
@@ -21,8 +21,6 @@ import aqua.run.{
   FuncCompiler,
   GeneralOptions,
   GeneralOpts,
-  PackagePath,
-  RelativePath,
   RunCommand,
   RunConfig,
   RunOpts
