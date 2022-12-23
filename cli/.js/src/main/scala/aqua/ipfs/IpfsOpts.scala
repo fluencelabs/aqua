@@ -6,7 +6,6 @@ import aqua.{
   CommandBuilder,
   FluenceOpts,
   LogLevelTransformer,
-  PackagePath,
   PlatformOpts,
   RunInfo,
   SubCommandBuilder
@@ -18,7 +17,7 @@ import aqua.builder.IPFSUploader
 import aqua.ipfs.js.IpfsApi
 import aqua.model.LiteralModel
 import aqua.raw.value.LiteralRaw
-import aqua.run.{GeneralOptions, RunCommand, RunConfig, RunOpts, GeneralOpts, CliFunc}
+import aqua.run.{GeneralOptions, RunCommand, RunConfig, RunOpts, GeneralOpts, CliFunc, PackagePath}
 import cats.effect.{Concurrent, ExitCode, Resource, Sync}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*

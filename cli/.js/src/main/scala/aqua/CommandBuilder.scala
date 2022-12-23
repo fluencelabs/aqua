@@ -2,7 +2,7 @@ package aqua
 
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.run.{CliFunc, GeneralOptions, GeneralOpts, JsonService, RunCommand, RunOpts}
+import aqua.run.{CliFunc, GeneralOptions, GeneralOpts, JsonService, RunCommand, RunOpts, AquaPath, PackagePath}
 import aqua.logging.LogFormatter
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
 import cats.data.{NonEmptyList, Validated, ValidatedNec}
@@ -19,25 +19,6 @@ import scribe.Logging
 
 import scalajs.js
 import scala.concurrent.ExecutionContext
-
-sealed trait AquaPath {
-  def getPath[F[_]: Async](): F[Path]
-}
-
-// Path for package relative files
-case class PackagePath(path: String) extends AquaPath {
-  def getPath[F[_]: Async](): F[Path] = PlatformOpts.getPackagePath(path)
-}
-
-// Path for absolute or call path relative files
-case class RelativePath(path: Path) extends AquaPath {
-  def getPath[F[_]: Async](): F[Path] = path.pure[F]
-}
-
-object PackagePath {
-  // path to a builtin file in aqua package
-  val builtin: PackagePath = PackagePath("../aqua-lib/builtin.aqua")
-}
 
 // All info to run any aqua function
 case class RunInfo(

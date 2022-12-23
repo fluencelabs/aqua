@@ -1,5 +1,6 @@
-package aqua
+package aqua.io
 
+import aqua.PlatformPackagePath
 import cats.Monad
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
@@ -30,7 +31,7 @@ object Prelude extends Logging {
 
     nodeImportF.map { nodeImport =>
       val imports =
-        nodeImport.toList ++ PlatformOpts.getGlobalNodeModulePath ++ (if (withRunImports)
+        nodeImport.toList ++ PlatformPackagePath.getGlobalNodeModulePath ++ (if (withRunImports)
                                                                         runImports
                                                                       else Nil)
 

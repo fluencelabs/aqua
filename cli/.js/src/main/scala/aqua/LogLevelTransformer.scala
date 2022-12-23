@@ -1,6 +1,6 @@
 package aqua
 
-import aqua.js.{LogLevel, FluenceJSLogLevel, Meta, Module}
+import aqua.js.{LogLevel, FluenceJSLogLevel}
 import fs2.io.file.Path
 import scribe.Level
 

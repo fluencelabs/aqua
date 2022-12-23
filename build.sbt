@@ -50,13 +50,13 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
       "com.monovore" %%% "decline-effect" % declineV
     )
   )
-  .dependsOn(compiler, `backend-air`, `backend-ts`, io, definitions, logging, constants)
+  .dependsOn(compiler, `backend-air`, `backend-ts`, io, definitions, logging, constants, `aqua-run`)
 
 lazy val cliJS = cli.js
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true
-  ).dependsOn(`js-exports`, `js-imports`, `aqua-run`.js)
+  ).dependsOn(`js-exports`, `js-imports`)
 
 lazy val cliJVM = cli.jvm
   .settings(
@@ -85,6 +85,8 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
     )
   )
   .dependsOn(compiler, parser)
+
+lazy val ioJS = io.js.dependsOn(`js-imports`)
 
 lazy val `language-server-api` = project
   .in(file("language-server-api"))

@@ -11,8 +11,5 @@ import scala.concurrent.ExecutionContext
 
 // Scala-specific options and subcommands
 object PlatformOpts {
-
   def opts[F[_]: Files: AquaIO: Async: Console]: Opts[F[ValidatedNec[String, Unit]]] = Opts.never
-  def getGlobalNodeModulePath: List[Path] = Nil
-  def getPackagePath: Option[Path] = None
 }

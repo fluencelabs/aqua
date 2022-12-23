@@ -1,20 +1,14 @@
-package aqua
+package aqua.run
 
 import aqua.ErrorRendering.showError
-import aqua.builder.{AquaFunction, Service}
 import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompilerAPI}
-import aqua.definitions.{ArrowTypeDef, ProductTypeDef, TypeDefinition}
-import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
-import aqua.io.AquaFileError
-import aqua.js.{Conversions, ServiceHandler, TypeDefinitionJs}
-import aqua.json.JsonEncoder
+import aqua.files.{AquaFileSources, FileModuleId}
+import aqua.{AquaIO, SpanParser}
+import aqua.io.{AquaFileError, Prelude}
 import aqua.model.transform.TransformConfig
-import aqua.model.{AquaContext, FuncArrow, ServiceModel}
+import aqua.model.{AquaContext, FuncArrow}
 import aqua.parser.lift.FileSpan
-import aqua.raw.ConstantRaw
-import aqua.run.RunCommand.logger
-import aqua.run.{CliFunc, JsonService, TypeValidator}
-import aqua.types.{ArrowType, NilType, ProductType}
+import aqua.run.CliFunc
 import cats.data.Validated.{invalidNec, validNec}
 import cats.data.{Chain, NonEmptyList, Validated, ValidatedNec}
 import cats.effect.IO
@@ -29,9 +23,7 @@ import fs2.io.file.{Files, Path}
 import scribe.Logging
 
 import scala.concurrent.duration.Duration
-import scala.scalajs.js
 
-// Function compiler
 class FuncCompiler[F[_]: Files: AquaIO: Async](
   input: Option[AquaPath],
   imports: List[Path],

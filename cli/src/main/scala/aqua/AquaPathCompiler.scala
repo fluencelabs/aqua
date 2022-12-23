@@ -1,15 +1,9 @@
 package aqua
 
 import aqua.backend.{Backend, Generated}
-import aqua.compiler.{
-  AirValidator,
-  AquaCompiled,
-  AquaCompiler,
-  AquaCompilerConf,
-  AquaError,
-  CompilerAPI
-}
+import aqua.compiler.{AirValidator, AquaCompiled, AquaCompiler, AquaCompilerConf, AquaError, CompilerAPI}
 import aqua.files.{AquaFileSources, FileModuleId}
+import aqua.io.Prelude
 import aqua.io.*
 import aqua.air.AirValidation
 import aqua.backend.AirFunction
@@ -29,7 +23,7 @@ import cats.syntax.applicative.*
 import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.show.*
-import cats.{~>, Applicative, Eval, Monad, Show}
+import cats.{Applicative, Eval, Monad, Show, ~>}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 import cats.data.Validated.validNec

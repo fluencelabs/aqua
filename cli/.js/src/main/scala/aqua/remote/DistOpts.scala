@@ -3,7 +3,7 @@ package aqua.remote
 import aqua.ArgOpts.jsonFromFileOpt
 import aqua.builder.ArgumentGetter
 import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.run.{GeneralOptions, GeneralOpts, CliFunc}
+import aqua.run.{GeneralOptions, GeneralOpts, CliFunc, PackagePath}
 import aqua.types.{ArrayType, ScalarType, StructType}
 import aqua.*
 import aqua.json.JsonEncoder
