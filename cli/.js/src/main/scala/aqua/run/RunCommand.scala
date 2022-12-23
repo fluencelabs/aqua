@@ -113,9 +113,17 @@ object RunCommand extends Logging {
     val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
 
     for {
-      funcArrowV <- funcCompiler.compile(func, jsonServices, true)
+      contextV <- funcCompiler.compile(true)
       callResult <- Clock[F].timed {
-        funcArrowV.andThen { case (funcCallable, jsonServices) =>
+        contextV.andThen { context =>
+          FuncCompiler
+            .findFunction(context, func)
+            .andThen(callable =>
+              JsonService
+                .findServices(context, jsonServices)
+                .map(jsonServices => (callable, jsonServices))
+            )
+        }.andThen { case (funcCallable, jsonServices) =>
           val resultNames = resultVariableNames(funcCallable, runConfig.resultName)
           val resultPrinterService =
             ResultPrinter(
@@ -150,6 +158,7 @@ object RunCommand extends Logging {
                 info.air,
                 info.definitions,
                 info.config,
+                resultPrinterService,
                 promiseFinisherService,
                 services,
                 getters,

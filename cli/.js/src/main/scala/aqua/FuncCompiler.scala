@@ -13,7 +13,7 @@ import aqua.model.{AquaContext, FuncArrow, ServiceModel}
 import aqua.parser.lift.FileSpan
 import aqua.raw.ConstantRaw
 import aqua.run.RunCommand.logger
-import aqua.run.{JsonService, TypeValidator, CliFunc}
+import aqua.run.{CliFunc, JsonService, TypeValidator}
 import aqua.types.{ArrowType, NilType, ProductType}
 import cats.data.Validated.{invalidNec, validNec}
 import cats.data.{Chain, NonEmptyList, Validated, ValidatedNec}
@@ -38,28 +38,6 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
   transformConfig: TransformConfig,
   withRunImport: Boolean = false
 ) extends Logging {
-
-  private def findFunctionAndServices(
-    contexts: Chain[AquaContext],
-    func: CliFunc,
-    services: List[JsonService]
-  ): ValidatedNec[String, (FuncArrow, List[Service])] =
-    func.ability
-      .fold(
-        contexts
-          .collectFirstSome(_.allFuncs.get(func.name))
-      )(ab => contexts.collectFirstSome(_.abilities.get(ab).flatMap(_.allFuncs.get(func.name))))
-      .map(validNec)
-      .getOrElse(
-        Validated.invalidNec[String, FuncArrow](
-          s"There is no function '${func.ability.map(_ + ".").getOrElse("")}${func.name}' or it is not exported. Check the spelling or see https://fluence.dev/docs/aqua-book/language/header/#export"
-        )
-      )
-      .andThen { func =>
-        JsonService.findServices(contexts, services).map { l =>
-          (func, l)
-        }
-      }
 
   private def compileToContext(
     path: Path,
@@ -87,10 +65,8 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
 
   // Compile and get only one function
   def compile(
-    func: CliFunc,
-    jsonServices: List[JsonService],
     withBuiltins: Boolean = false
-  ): F[ValidatedNec[String, (FuncArrow, List[Service])]] = {
+  ): F[ValidatedNec[String, Chain[AquaContext]]] = {
     for {
       prelude <- Prelude.init[F](withRunImport)
       // compile builtins and add it to context
@@ -99,15 +75,34 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
         else validNec[String, Chain[AquaContext]](Chain.empty).pure[F]
       compileResult <- input.map { ap =>
         // compile only context to wrap and call function later
-        Clock[F].timed(ap.getPath().flatMap(p => compileToContext(p, prelude.importPaths ++ imports)))
+        Clock[F].timed(
+          ap.getPath().flatMap(p => compileToContext(p, prelude.importPaths ++ imports))
+        )
       }.getOrElse((Duration.Zero, validNec[String, Chain[AquaContext]](Chain.empty)).pure[F])
       (compileTime, contextV) = compileResult
     } yield {
       logger.debug(s"Compile time: ${compileTime.toMillis}ms")
       // add builtins to the end of context
-      contextV.andThen(c => builtinsV.map(bc => c ++ bc)) andThen (c =>
-        findFunctionAndServices(c, func, jsonServices)
-      )
+      contextV.andThen(c => builtinsV.map(bc => c ++ bc))
     }
   }
+}
+
+object FuncCompiler {
+
+  def findFunction(
+    contexts: Chain[AquaContext],
+    func: CliFunc
+  ): ValidatedNec[String, FuncArrow] =
+    func.ability
+      .fold(
+        contexts
+          .collectFirstSome(_.allFuncs.get(func.name))
+      )(ab => contexts.collectFirstSome(_.abilities.get(ab).flatMap(_.allFuncs.get(func.name))))
+      .map(validNec)
+      .getOrElse(
+        Validated.invalidNec[String, FuncArrow](
+          s"There is no function '${func.ability.map(_ + ".").getOrElse("")}${func.name}' or it is not exported. Check the spelling or see https://fluence.dev/docs/aqua-book/language/header/#export"
+        )
+      )
 }

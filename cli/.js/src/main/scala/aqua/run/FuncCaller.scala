@@ -34,6 +34,7 @@ object FuncCaller {
     air: String,
     functionDef: FunctionDef,
     config: RunConfig,
+    resultPrinterService: ResultPrinter,
     finisherService: Finisher,
     services: List[Service],
     getters: List[ArgumentGetter],
@@ -77,7 +78,7 @@ object FuncCaller {
               }
 
             // register all services
-            _ = (services ++ getters :+ finisherService).map(_.register(peer))
+            _ = (services ++ getters :+ finisherService :+ resultPrinterService).map(_.register(peer))
             // register all plugins
             plugins <- Plugin.getPlugins(plugins)
             _ = plugins.map(_.register(peer))
