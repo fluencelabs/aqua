@@ -175,6 +175,8 @@ case class StructTypeDef(name: String, fields: Map[String, TypeDefinition]) exte
 
 case class LabeledProductTypeDef(fields: List[(String, TypeDefinition)]) extends ProductTypeDef {
   val tag = "labeledProduct"
+
+  override def toString: String = s"LabeledProduct(${fields.map(_.toString())})"
 }
 
 case class UnlabeledProductTypeDef(items: List[TypeDefinition]) extends ProductTypeDef {

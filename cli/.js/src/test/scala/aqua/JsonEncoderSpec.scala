@@ -1,6 +1,6 @@
 package aqua
 
-import aqua.json.JsonEncoder
+import aqua.js.JsonEncoder
 import aqua.types.{ArrayType, LiteralType, OptionType, StructType}
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec

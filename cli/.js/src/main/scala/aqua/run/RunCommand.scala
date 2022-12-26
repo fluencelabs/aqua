@@ -113,7 +113,7 @@ object RunCommand extends Logging {
     val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
 
     for {
-      contextV <- funcCompiler.compile(true)
+      contextV <- funcCompiler.compile(true, true)
       callResult <- Clock[F].timed {
         contextV.andThen { context =>
           FuncCompiler

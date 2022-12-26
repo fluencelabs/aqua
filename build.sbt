@@ -130,7 +130,7 @@ lazy val `aqua-api` = project
       "co.fs2"        %%% "fs2-io"      % fs2V
     )
   )
-  .dependsOn(compiler.js, io.js, `js-exports`, `backend-api`.js, logging.js, constants.js)
+  .dependsOn(compiler.js, io.js, `js-exports`, `backend-api`.js, logging.js, constants.js, `aqua-run`.js)
 
 lazy val types = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

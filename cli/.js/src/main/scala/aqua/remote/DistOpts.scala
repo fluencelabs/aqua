@@ -7,7 +7,7 @@ import aqua.run.{GeneralOptions, GeneralOpts, CliFunc}
 import aqua.types.{ArrayType, ScalarType, StructType}
 import aqua.*
 import aqua.io.PackagePath
-import aqua.json.JsonEncoder
+import aqua.js.{JsonEncoder, VarJson}
 import cats.data.{NonEmptyList, NonEmptyMap, ValidatedNec}
 import cats.data.Validated.{invalidNec, validNec}
 import cats.effect.{Async, Concurrent, ExitCode, Resource, Sync}

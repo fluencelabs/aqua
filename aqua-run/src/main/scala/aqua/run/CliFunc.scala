@@ -4,7 +4,7 @@ import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToke
 import aqua.parser.lift.Span
 import aqua.raw.value.{CollectionRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.{ArrayType, BottomType}
-import cats.data.{NonEmptyList, Validated}
+import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.data.Validated.{invalid, invalidNel, validNel}
 import cats.{Id, ~>}
 import cats.syntax.traverse.*
@@ -20,7 +20,7 @@ object CliFunc {
     }
   }
 
-  def fromString(func: String): Validated[NonEmptyList[String], CliFunc] = {
+  def fromString(func: String): ValidatedNel[String, CliFunc] = {
     CallArrowToken.callArrow.parseAll(func.trim) match {
       case Right(exprSpan) =>
         val expr = exprSpan.mapK(spanToId)

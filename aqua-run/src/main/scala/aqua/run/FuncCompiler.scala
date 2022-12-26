@@ -57,10 +57,11 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
 
   // Compile and get only one function
   def compile(
+    withPrelude: Boolean = true,
     withBuiltins: Boolean = false
   ): F[ValidatedNec[String, Chain[AquaContext]]] = {
     for {
-      prelude <- Prelude.init[F](withRunImport)
+      importPaths <- if (withPrelude) Prelude.init[F](withRunImport).map(_.importPaths) else Nil.pure[F]
       // compile builtins and add it to context
       builtinsV <-
         if (withBuiltins) compileBuiltins()
@@ -68,7 +69,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       compileResult <- input.map { ap =>
         // compile only context to wrap and call function later
         Clock[F].timed(
-          ap.getPath().flatMap(p => compileToContext(p, prelude.importPaths ++ imports))
+          ap.getPath().flatMap(p => compileToContext(p, importPaths ++ imports))
         )
       }.getOrElse((Duration.Zero, validNec[String, Chain[AquaContext]](Chain.empty)).pure[F])
       (compileTime, contextV) = compileResult

@@ -4,7 +4,6 @@ import aqua.ArgOpts.jsonFromFileOpts
 import aqua.builder.{AquaFunction, ArgumentGetter, Service}
 import aqua.definitions.{ArrowTypeDef, ProductTypeDef, TypeDefinition}
 import aqua.js.{Conversions, ServiceHandler, TypeDefinitionJs}
-import aqua.json.JsonEncoder
 import aqua.model.{AquaContext, ServiceModel}
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToken}

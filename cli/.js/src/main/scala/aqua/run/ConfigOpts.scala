@@ -1,6 +1,6 @@
 package aqua.run
 
-import aqua.{AppOpts, VarJson}
+import aqua.AppOpts
 import aqua.FluenceOpts.*
 import aqua.builder.{ArgumentGetter, Service}
 import aqua.config.ConfigOpts.{Krasnodar, Stage, TestNet}

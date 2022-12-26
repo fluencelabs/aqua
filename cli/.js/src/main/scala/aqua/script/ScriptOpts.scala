@@ -6,6 +6,7 @@ import aqua.backend.Generated
 import aqua.backend.air.{AirBackend, AirGen, FuncAirGen}
 import aqua.builder.ArgumentGetter
 import aqua.compiler.AquaCompiler
+import aqua.js.VarJson
 import aqua.io.{PackagePath, Prelude, RelativePath}
 import aqua.ipfs.js.IpfsApi
 import aqua.keypair.KeyPairShow.show

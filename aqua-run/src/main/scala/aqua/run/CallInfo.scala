@@ -7,3 +7,9 @@ case class CallInfo(
   definitions: FunctionDef,
   config: RunConfig
 )
+
+case class RunInfo(
+  name: String,
+  air: String,
+  definitions: FunctionDef
+)

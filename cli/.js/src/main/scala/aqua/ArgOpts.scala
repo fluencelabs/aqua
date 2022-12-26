@@ -1,7 +1,7 @@
 package aqua
 
 import aqua.builder.ArgumentGetter
-import aqua.json.JsonEncoder
+import aqua.js.VarJson
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToken}
 import aqua.parser.lift.Span
@@ -17,7 +17,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
-import cats.{Id, Semigroup, ~>}
+import cats.{~>, Id, Semigroup}
 import com.monovore.decline.Opts
 import fs2.io.file.{Files, Path}
 
@@ -26,9 +26,6 @@ import scala.scalajs.js
 import scala.scalajs.js.JSON
 
 case class FuncWithData(func: CliFunc, getters: Map[String, VarJson])
-
-// Variable and its JSON value
-case class VarJson(variable: VarRaw, value: js.Dynamic)
 
 object ArgOpts {
 
@@ -57,57 +54,11 @@ object ArgOpts {
     (dataFileOrStringOpt[F], funcOpt).mapN { case (dataF, func) =>
       dataF.map { dataV =>
         dataV.andThen { data =>
-          checkDataGetServices(func, data).map { case (funcWithTypedArgs, getters) =>
-            FuncWithData(funcWithTypedArgs, getters)
+          VarJson.checkDataGetServices(func.args, data).map { case (argsWithTypes, getters) =>
+            FuncWithData(func.copy(args = argsWithTypes), getters)
           }
         }
       }
-    }
-  }
-
-  // checks if data is presented if there is non-literals in function arguments
-  // creates services to add this data into a call
-  def checkDataGetServices(
-    cliFunc: CliFunc,
-    data: Option[js.Dynamic]
-  ): ValidatedNec[String, (CliFunc, Map[String, VarJson])] = {
-    val vars = cliFunc.args.collect { case v @ VarRaw(_, _) =>
-      v
-    // one variable could be used multiple times
-    }.distinctBy(_.name)
-
-    data match {
-      case None if vars.nonEmpty =>
-        // TODO: add a list  with actual argument names that where present in the function call
-        invalidNec("Missing variables. You can provide them via --data or --data-path flags")
-      case None =>
-        validNec((cliFunc, Map.empty))
-      case Some(data) =>
-        vars.map { vm =>
-          val arg = {
-            val a = data.selectDynamic(vm.name)
-            if (js.isUndefined(a)) null
-            else a
-          }
-
-          val typeV = JsonEncoder.aquaTypeFromJson(vm.name, arg)
-
-          typeV.map(t => (vm.copy(baseType = t), arg))
-        }.sequence
-          .map(_.map { case (vm, arg) =>
-            vm.name -> VarJson(vm, arg)
-          }.toMap)
-          .andThen { services =>
-            val argsWithTypes = cliFunc.args.map {
-              case v @ VarRaw(n, _) =>
-                // argument getters have been enriched with types derived from JSON
-                // put this types to unriched arguments in CliFunc
-                services.get(n).map(g => v.copy(baseType = g._1.baseType)).getOrElse(v)
-              case v => v
-            }
-
-            validNec((cliFunc.copy(args = argsWithTypes), services))
-          }
     }
   }
 

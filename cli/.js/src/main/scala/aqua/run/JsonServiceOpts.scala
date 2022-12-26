@@ -2,7 +2,7 @@ package aqua.run
 
 import aqua.ArgOpts.jsonFromFileOpts
 import aqua.builder.ArgumentGetter
-import aqua.json.JsonEncoder
+import aqua.js.JsonEncoder
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToken}
 import aqua.parser.lift.Span

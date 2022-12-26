@@ -1,11 +1,14 @@
 package aqua.api
 
+import aqua.ErrorRendering.showError
 import aqua.backend.{AirFunction, Backend, Generated}
 import aqua.compiler.*
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.logging.{LogFormatter, LogLevels}
 import aqua.constants.Constants
 import aqua.io.*
+import aqua.raw.ops.Call
+import aqua.run.{CallInfo, CallPreparer, CliFunc, FuncCompiler, RunPreparer}
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
@@ -15,7 +18,7 @@ import aqua.{AquaIO, SpanParser}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.backend.api.APIBackend
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
+import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -32,9 +35,11 @@ import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
-import scala.scalajs.js.{UndefOr, undefined}
-import aqua.js.{FunctionDefJs, ServiceDefJs}
+import scala.scalajs.js.{undefined, UndefOr}
+import aqua.js.{FunctionDefJs, ServiceDefJs, VarJson}
 import aqua.model.AquaContext
+import aqua.raw.ops.CallArrowRawTag
+import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.res.AquaRes
 import cats.Applicative
 
@@ -88,6 +93,61 @@ case class CompilationResult(
 @JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {
 
+  def getTag(serviceId: String, value: VarRaw) = {
+    CallArrowRawTag.service(
+      LiteralRaw.quote(serviceId),
+      value.name,
+      Call(List.empty, List(Call.Export(value.name, value.baseType)))
+    )
+  }
+
+  @JSExport
+  def compileRun(
+    functionStr: String,
+    arguments: js.Dynamic,
+    pathStr: String,
+    imports: js.Array[String],
+    aquaConfigJS: js.UndefOr[AquaConfig]
+  ): js.Promise[AquaFunction] = {
+    implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    val aquaConfig: AquaAPIConfig =
+      aquaConfigJS.toOption.map(cjs => AquaAPIConfig.fromJS(cjs)).getOrElse(AquaAPIConfig())
+    LogFormatter.initLogger(Some(LogLevels.levelFromString(aquaConfig.logLevel).toOption.get))
+    val transformConfig = TransformConfig()
+
+    new FuncCompiler[IO](
+      Some(RelativePath(Path(pathStr))),
+      imports.toList.map(Path.apply),
+      transformConfig
+    ).compile(false).map { contextV =>
+      contextV.andThen { context =>
+        CliFunc.fromString(functionStr).leftMap(errs => NonEmptyChain.fromNonEmptyList(errs)).andThen { cliFunc =>
+          FuncCompiler.findFunction(context, cliFunc).andThen { arrow =>
+            VarJson.checkDataGetServices(cliFunc.args, Some(arguments)).andThen {
+              case (argsWithTypes, _) =>
+                val func = cliFunc.copy(args = argsWithTypes)
+                val preparer = new RunPreparer(
+                  func,
+                  arrow,
+                  transformConfig
+                )
+                preparer.prepare().map { ci =>
+                  AquaFunction(FunctionDefJs(ci.definitions), ci.air)
+                }
+            }
+          }
+        }
+      }
+    }.flatMap {
+      case Valid(result) => IO.pure(result)
+      case Invalid(err) =>
+        println(err)
+        err.map(_.show).distinct.map(OutputPrinter.errorF[IO]).sequence
+        IO.raiseError[AquaFunction](new Error("Compilation failed."))
+    }.unsafeToFuture().toJSPromise
+
+  }
+
   @JSExport
   def compile(
     pathStr: String,
@@ -108,15 +168,15 @@ object AquaAPI extends App with Logging {
   ): js.Promise[CompilationResult] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val path = Path("")
-    val strSources: AquaFileSources[IO] = new AquaFileSources[IO](path, imports.toList.map(Path.apply)) {
-      override def sources: IO[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] = {
-        IO.pure(Valid(Chain.one((FileModuleId(path), input))))
+    val strSources: AquaFileSources[IO] =
+      new AquaFileSources[IO](path, imports.toList.map(Path.apply)) {
+        override def sources: IO[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] = {
+          IO.pure(Valid(Chain.one((FileModuleId(path), input))))
+        }
       }
-    }
     compileRaw(aquaConfigJS, strSources)
   }
 
-  @JSExport
   def compileRaw(
     aquaConfigJS: js.UndefOr[AquaConfig],
     sources: AquaSources[IO, AquaFileError, FileModuleId]
@@ -128,7 +188,6 @@ object AquaAPI extends App with Logging {
       LogLevels.levelFromString(aquaConfig.logLevel),
       Constants.parse(aquaConfig.constants)
     ).mapN { (level, constants) =>
-      import aqua.ErrorRendering.showError
 
       LogFormatter.initLogger(Some(level))
 

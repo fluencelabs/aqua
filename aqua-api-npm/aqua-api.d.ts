@@ -18,6 +18,7 @@ export class CompilationResult {
 }
 
 export class Compiler {
+    compileRun(functionStr: string, arguments: any, path: string, imports: string[], config?: AquaConfig): Promise<AquaFunction>;
     compile(path: string, imports: string[], config?: AquaConfig): Promise<CompilationResult>;
     compileString(input: string, imports: string[], config?: AquaConfig): Promise<CompilationResult>;
 }
