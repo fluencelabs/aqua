@@ -105,7 +105,7 @@ jobs:
         with:
           name: aqua-js
 
-      - run: mv scala-*/cli-fastopt.js npm/aqua.js
+      - run: mv scala-*/cli-fastopt.js cli/cli-npm/aqua.js
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.4.3
