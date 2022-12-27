@@ -17,7 +17,7 @@ val scribeV = "3.7.1"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.8.0",
+  baseAquaVersion := "0.9.0",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
@@ -123,12 +123,6 @@ lazy val `aqua-api` = project
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true
-  )
-  .settings(
-    libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-effect" % catsEffectV,
-      "co.fs2"        %%% "fs2-io"      % fs2V
-    )
   )
   .dependsOn(`js-exports`, `aqua-run`.js, `backend-api`.js)
 

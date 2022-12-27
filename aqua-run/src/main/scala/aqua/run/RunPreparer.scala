@@ -99,6 +99,7 @@ class RunPreparer(
           val name = func.name + "_result" + idx
           (VarRaw(name, t), Call.Export(name, t))
         }.unzip
+
         val callFuncTag =
           CallArrowRawTag.func(func.name, Call(func.args, exports))
 
@@ -108,8 +109,8 @@ class RunPreparer(
     val returnCodomain = ProductType(results.map(_.`type`))
 
     // arguments is only variables, without literals
-    val argumentsType = ProductType.labelled(func.args.collect {
-      case v@VarRaw(name, _) => (name, v.`type`)
+    val argumentsType = ProductType.labelled(func.args.zip(funcCallable.arrowType.domain.labelledData).collect {
+      case (VarRaw(name, _), (_, t)) => (name, t)
     })
 
     FuncArrow(

@@ -31,10 +31,10 @@ object JsonEncoder {
   There type in array must be { a: ?string, b: []number, c: number
    */
   private def compareAndGetWidestType(
-                                       name: String,
-                                       ltV: ValidatedNec[String, Type],
-                                       rtV: ValidatedNec[String, Type]
-                                     ): ValidatedNec[String, Type] = {
+    name: String,
+    ltV: ValidatedNec[String, Type],
+    rtV: ValidatedNec[String, Type]
+  ): ValidatedNec[String, Type] = {
     (ltV, rtV) match {
       case (Validated.Valid(lt), Validated.Valid(rt)) =>
         (lt, rt) match {
