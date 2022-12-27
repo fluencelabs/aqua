@@ -125,7 +125,7 @@ jobs:
         with:
           node-version: "16"
           registry-url: "https://npm.fluence.dev"
-          cache-dependency-path: "npm/package-lock.json"
+          cache-dependency-path: "cli/cli-npm/package-lock.json"
           cache: "npm"
 
       - run: npm i
