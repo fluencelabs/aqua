@@ -66,19 +66,19 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: aqua-js
-          path: cli/.js/target/scala-*/cli-fastopt.js
+          path: cli/cli/.js/target/scala-*/cli-fastopt.js
 
       - name: Upload aqua-js-lsp artifact
         uses: actions/upload-artifact@v3
         with:
           name: aqua-js-lsp
-          path: language-server-api/target/scala-*/language-server-api-fastopt.js
+          path: language-server/language-server-api/target/scala-*/language-server-api-fastopt.js
 
       - name: Upload aqua-js-api artifact
         uses: actions/upload-artifact@v3
         with:
           name: aqua-js-api
-          path: aqua-api/target/scala-*/aqua-api-fastopt.js
+          path: api/aqua-api/target/scala-*/aqua-api-fastopt.js
 
   aqua:
     name: "Publish @fluencelabs/aqua"
@@ -129,15 +129,15 @@ jobs:
           cache: "npm"
 
       - run: npm i
-        working-directory: npm
+        working-directory: cli/cli-npm
 
       - name: Set fluence-js version from branch
         if: inputs.fluence-js-version != 'null'
-        working-directory: npm
+        working-directory: cli/cli-npm
         run: npm i --save -E @fluencelabs/fluence@${{ inputs.fluence-js-version }}
 
       - run: npm run build
-        working-directory: npm
+        working-directory: cli/cli-npm
 
       - name: Generate snapshot version
         id: version
@@ -147,7 +147,7 @@ jobs:
         id: snapshot
         uses: fluencelabs/github-actions/npm-publish-snapshot@main
         with:
-          working-directory: npm
+          working-directory: cli/cli-npm
           id: ${{ steps.version.outputs.id }}
 
   aqua-lsp:
@@ -175,7 +175,7 @@ jobs:
         with:
           name: aqua-js-lsp
 
-      - run: mv scala-*/language-server-api-fastopt.js npm/aqua-lsp-api.js
+      - run: mv scala-*/language-server-api-fastopt.js language-server/language-server-npm/aqua-lsp-api.js
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.4.3
@@ -195,11 +195,11 @@ jobs:
         with:
           node-version: "16"
           registry-url: "https://npm.fluence.dev"
-          cache-dependency-path: "language-server-npm/package-lock.json"
+          cache-dependency-path: "language-server/language-server-npm/package-lock.json"
           cache: "npm"
 
       - run: npm i
-        working-directory: language-server-npm
+        working-directory: language-server/language-server-npm
 
       - name: Generate snapshot version
         id: version
@@ -209,7 +209,7 @@ jobs:
         id: snapshot
         uses: fluencelabs/github-actions/npm-publish-snapshot@main
         with:
-          working-directory: language-server-npm
+          working-directory: language-server/language-server-npm
           id: ${{ steps.version.outputs.id }}
 
   aqua-api:
@@ -237,7 +237,7 @@ jobs:
         with:
           name: aqua-js-api
 
-      - run: mv scala-*/aqua-api-fastopt.js aqua-api-npm/aqua-api.js
+      - run: mv scala-*/aqua-api-fastopt.js api/aqua-api-npm/aqua-api.js
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.4.3
@@ -257,15 +257,15 @@ jobs:
         with:
           node-version: "16"
           registry-url: "https://npm.fluence.dev"
-          cache-dependency-path: "aqua-api-npm/package-lock.json"
+          cache-dependency-path: "api/aqua-api-npm/package-lock.json"
           cache: "npm"
 
       - run: npm i
-        working-directory: aqua-api-npm
+        working-directory: api/aqua-api-npm
 
       - name: Set fluence-js version from branch
         if: inputs.fluence-js-version != 'null'
-        working-directory: npm
+        working-directory: cli/cli-npm
         run: npm i --save-dev -E @fluencelabs/fluence@${{ inputs.fluence-js-version }}
 
       - name: Generate snapshot version
@@ -276,5 +276,5 @@ jobs:
         id: snapshot
         uses: fluencelabs/github-actions/npm-publish-snapshot@main
         with:
-          working-directory: aqua-api-npm
+          working-directory: api/aqua-api-npm
           id: ${{ steps.version.outputs.id }}
