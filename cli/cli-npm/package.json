@@ -7,7 +7,7 @@
     "aqua.js",
     "index.js",
     "error.js",
-    "utils.js",
+    "meta-utils.js",
     "dist/*",
     "aqua/*"
   ],
