@@ -42,7 +42,7 @@ commons
 lazy val cli = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
-  .in(file("cli"))
+  .in(file("cli/cli"))
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
@@ -89,7 +89,7 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
 lazy val ioJS = io.js.dependsOn(`js-imports`)
 
 lazy val `language-server-api` = project
-  .in(file("language-server-api"))
+  .in(file("language-server/language-server-api"))
   .enablePlugins(ScalaJSPlugin)
   .settings(commons: _*)
   .settings(
@@ -117,7 +117,7 @@ lazy val `js-imports` = project
   .dependsOn(`js-exports`, transform.js)
 
 lazy val `aqua-api` = project
-  .in(file("aqua-api"))
+  .in(file("api/aqua-api"))
   .enablePlugins(ScalaJSPlugin)
   .settings(commons: _*)
   .settings(
@@ -130,7 +130,7 @@ lazy val `aqua-api` = project
       "co.fs2"        %%% "fs2-io"      % fs2V
     )
   )
-  .dependsOn(compiler.js, io.js, `js-exports`, `backend-api`.js, logging.js, constants.js, `aqua-run`.js)
+  .dependsOn(`js-exports`, `aqua-run`.js, `backend-api`.js)
 
 lazy val types = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

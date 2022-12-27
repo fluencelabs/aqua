@@ -119,7 +119,7 @@ object AquaAPI extends App with Logging {
       Some(RelativePath(Path(pathStr))),
       imports.toList.map(Path.apply),
       transformConfig
-    ).compile(false).map { contextV =>
+    ).compile().map { contextV =>
       contextV.andThen { context =>
         CliFunc.fromString(functionStr).leftMap(errs => NonEmptyChain.fromNonEmptyList(errs)).andThen { cliFunc =>
           FuncCompiler.findFunction(context, cliFunc).andThen { arrow =>

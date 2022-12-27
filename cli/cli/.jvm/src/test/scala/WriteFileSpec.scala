@@ -12,7 +12,7 @@ import fs2.io.file.{Files, Path}
 class WriteFileSpec extends AnyFlatSpec with Matchers {
 
   "cli" should "compile aqua code in js" in {
-    val src = Path("./cli/.jvm/src/test/aqua")
+    val src = Path("./cli/cli/.jvm/src/test/aqua")
     val targetTs = Files[IO].createTempDirectory.unsafeRunSync()
     val targetJs = Files[IO].createTempDirectory.unsafeRunSync()
     val targetAir = Files[IO].createTempDirectory.unsafeRunSync()

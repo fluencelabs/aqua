@@ -131,14 +131,14 @@ object ScriptOpts extends Logging {
       new FuncCompiler[F](
         Option(RelativePath(input)),
         imports,
-        tConfig,
-        withRunImport = true
+        tConfig
       )
 
     val funcName = funcWithArgs.func.name
 
     for {
-      contextV <- funcCompiler.compile()
+      prelude <- Prelude.init[F](true)
+      contextV <- funcCompiler.compile(prelude.importPaths)
       wrappedBody = CallArrowRawTag.func(funcName, Call(funcWithArgs.func.args, Nil)).leaf
       result = contextV
         .andThen(context => FuncCompiler.findFunction(context, funcWithArgs.func))

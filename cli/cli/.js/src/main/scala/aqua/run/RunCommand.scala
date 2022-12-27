@@ -11,7 +11,7 @@ import aqua.definitions.{FunctionDef, TypeDefinition}
 import aqua.builder.{ArgumentGetter, Finisher, ResultPrinter, Service}
 import aqua.compiler.{AquaCompiled, AquaCompiler}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
-import aqua.io.{AquaFileError, AquaPath, OutputPrinter}
+import aqua.io.{AquaFileError, AquaPath, OutputPrinter, Prelude}
 import aqua.js.*
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{AquaContext, FuncArrow}
@@ -110,10 +110,11 @@ object RunCommand extends Logging {
     plugins: List[String],
     transformConfig: TransformConfig
   ): F[ValidatedNec[String, Unit]] = {
-    val funcCompiler = new FuncCompiler[F](input, imports, transformConfig, withRunImport = true)
+    val funcCompiler = new FuncCompiler[F](input, imports, transformConfig)
 
     for {
-      contextV <- funcCompiler.compile(true, true)
+      prelude <- Prelude.init[F](true)
+      contextV <- funcCompiler.compile(prelude.importPaths, true)
       callResult <- Clock[F].timed {
         contextV.andThen { context =>
           FuncCompiler

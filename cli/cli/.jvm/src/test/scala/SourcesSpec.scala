@@ -14,7 +14,7 @@ class SourcesSpec extends AsyncFlatSpec with Matchers {
   implicit val aquaIO: AquaIO[IO] = AquaFilesIO.summon[IO]
 
   "AquaFileSources" should "generate correct fileId with imports" in {
-    val path = Path("cli/.jvm/src/test/test-dir/path-test")
+    val path = Path("cli/cli/.jvm/src/test/test-dir/path-test")
     val importPath = path.resolve("imports")
 
     val sourceGen = new AquaFileSources[IO](path, importPath :: Nil)
@@ -48,7 +48,7 @@ class SourcesSpec extends AsyncFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "throw an error if there is no import that is indicated in a source" in {
-    val path = Path("cli/.jvm/src/test/test-dir")
+    val path = Path("cli/cli/.jvm/src/test/test-dir")
     val importPath = path.resolve("random/import/path")
 
     val sourceGen = new AquaFileSources[IO](path, importPath :: Nil)
@@ -59,7 +59,7 @@ class SourcesSpec extends AsyncFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "find correct imports" in {
-    val srcPath = Path("cli/.jvm/src/test/test-dir/index.aqua")
+    val srcPath = Path("cli/cli/.jvm/src/test/test-dir/index.aqua")
     val importPath = srcPath.resolve("imports")
 
     val sourceGen = new AquaFileSources[IO](srcPath, importPath :: Nil)
@@ -94,7 +94,7 @@ class SourcesSpec extends AsyncFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "resolve correct path for target" in {
-    val path = Path("cli/.jvm/src/test/test-dir")
+    val path = Path("cli/cli/.jvm/src/test/test-dir")
     val filePath = path.resolve("some-dir/file.aqua")
 
     val targetPath = Path("/target/dir/")
@@ -115,7 +115,7 @@ class SourcesSpec extends AsyncFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "resolve correct path for target when file is in current directory" in {
-    val path = Path("cli/.jvm/src/test/test-dir")
+    val path = Path("cli/cli/.jvm/src/test/test-dir")
     val filePath = path.resolve("file.aqua")
 
     val targetPath = Path("/target/dir/")
@@ -136,13 +136,13 @@ class SourcesSpec extends AsyncFlatSpec with Matchers {
   }
 
   "AquaFileSources" should "write correct file with correct path" in {
-    val path = Path("cli/.jvm/src/test/test-dir")
+    val path = Path("cli/cli/.jvm/src/test/test-dir")
     val filePath = path.resolve("imports/import.aqua")
 
     val targetPath = path.resolve("target/")
 
     // clean up
-    val resultPath = Path("cli/.jvm/src/test/test-dir/target/imports/import_hey.custom")
+    val resultPath = Path("cli/cli/.jvm/src/test/test-dir/target/imports/import_hey.custom")
     (for {
       _ <- Files[IO].deleteIfExists(resultPath)
       sourceGen = new AquaFileSources[IO](path, Nil)

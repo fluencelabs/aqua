@@ -27,8 +27,7 @@ import scala.concurrent.duration.Duration
 class FuncCompiler[F[_]: Files: AquaIO: Async](
   input: Option[AquaPath],
   imports: List[Path],
-  transformConfig: TransformConfig,
-  withRunImport: Boolean = false
+  transformConfig: TransformConfig
 ) extends Logging {
 
   private def compileToContext(
@@ -57,11 +56,10 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
 
   // Compile and get only one function
   def compile(
-    withPrelude: Boolean = true,
+    preludeImports: List[Path] = Nil,
     withBuiltins: Boolean = false
   ): F[ValidatedNec[String, Chain[AquaContext]]] = {
     for {
-      importPaths <- if (withPrelude) Prelude.init[F](withRunImport).map(_.importPaths) else Nil.pure[F]
       // compile builtins and add it to context
       builtinsV <-
         if (withBuiltins) compileBuiltins()
@@ -69,7 +67,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       compileResult <- input.map { ap =>
         // compile only context to wrap and call function later
         Clock[F].timed(
-          ap.getPath().flatMap(p => compileToContext(p, importPaths ++ imports))
+          ap.getPath().flatMap(p => compileToContext(p, preludeImports ++ imports))
         )
       }.getOrElse((Duration.Zero, validNec[String, Chain[AquaContext]](Chain.empty)).pure[F])
       (compileTime, contextV) = compileResult
