@@ -123,13 +123,7 @@ lazy val `aqua-api` = project
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true,
-    Test / resourceGenerators += Def.task {
-      // TODO: fix this hardcode
-      val file = (Test / target).value / "/scala-3.1.3/aqua-api-test-fastopt/meta-utils.js"
-      val contents = "const metaUrl = \"\""
-      IO.write(file, contents)
-      Seq(file)
-    }.taskValue
+    Test / test := {}
   )
   .dependsOn(`js-exports`, `aqua-run`.js, `backend-api`.js)
 
