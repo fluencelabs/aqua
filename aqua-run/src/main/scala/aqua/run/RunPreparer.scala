@@ -23,14 +23,6 @@ import cats.{~>, Id}
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
 
-// для fcli надо:
-// - аргументами передать в новую функцию значения с джсона, чтоб совпадали имена
-// - передать в вызываемую функцию вэлью (аргументы) и литералы
-// - во внешней функции указать результатами результаты внутренней функции
-//
-//
-//
-
 class RunPreparer(
   func: CliFunc,
   funcCallable: FuncArrow,

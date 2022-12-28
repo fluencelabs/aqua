@@ -141,7 +141,6 @@ object AquaAPI extends App with Logging {
     }.flatMap {
       case Valid(result) => IO.pure(result)
       case Invalid(err) =>
-        println(err)
         err.map(_.show).distinct.map(OutputPrinter.errorF[IO]).sequence
         IO.raiseError[AquaFunction](new Error("Compilation failed."))
     }.unsafeToFuture().toJSPromise
