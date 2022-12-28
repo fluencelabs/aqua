@@ -40,6 +40,11 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
 
+      - name: JS Aqua API build
+        run: sbt aqua-api/fullLinkJS
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+
       - name: Get project version
         # In CI sbt appends a new line after its output, so we need `tail -n3 | head -n2` to get last two non-empty lines
         run: |
@@ -64,15 +69,22 @@ jobs:
 
       - name: Check .js exists
         run: |
-          JS="cli/.js/target/scala-3.1.3/cli-opt/aqua-${{ env.VERSION }}.js"
-          mv cli/.js/target/scala-3.1.3/cli-opt/main.js "$JS"
+          JS="cli/cli/.js/target/scala-3.1.3/cli-opt/aqua-${{ env.VERSION }}.js"
+          mv cli/cli/.js/target/scala-3.1.3/cli-opt/main.js "$JS"
           stat "$JS"
           echo "JS=$JS" >> $GITHUB_ENV
 
-      - name: Check API .js exists
+      - name: Check LSP API .js exists
         run: |
-          JSAPI="language-server-api/target/scala-3.1.3/language-server-api-opt/aqua-${{ env.VERSION }}.js"
-          mv language-server-api/target/scala-3.1.3/language-server-api-opt/main.js "$JSAPI"
+          JSLSP="language-server/language-server-api/target/scala-3.1.3/language-server-api-opt/aqua-${{ env.VERSION }}.js"
+          mv language-server/language-server-api/target/scala-3.1.3/language-server-api-opt/main.js "$JSLSP"
+          stat "$JSLSP"
+          echo "JSLSP=$JSLSP" >> $GITHUB_ENV
+
+      - name: Check Aqua API .js exists
+        run: |
+          JSAPI="api/aqua-api/target/scala-3.1.3/aqua-api-opt/aqua-${{ env.VERSION }}.js"
+          mv api/aqua-api/target/scala-3.1.3/aqua-api-opt/main.js "$JSAPI"
           stat "$JSAPI"
           echo "JSAPI=$JSAPI" >> $GITHUB_ENV
 
@@ -83,7 +95,8 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - run: cp ${{ env.JS }} ./npm/aqua.js
-      - run: cp ${{ env.JSAPI }} ./language-server-npm/aqua-lsp-api.js
+      - run: cp ${{ env.JSLSP }} ./language-server-npm/aqua-lsp-api.js
+      - run: cp ${{ env.JSAPI }} ./aqua-api-npm/aqua-api.js
 
       - run: npm version ${{ env.VERSION }}
         working-directory: ./npm
@@ -93,7 +106,7 @@ jobs:
           npm i
           npm run build
           npm publish --access public --tag "${{ github.event.inputs.npm_tag }}"
-        working-directory: ./npm
+        working-directory: ./cli/cli-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -134,13 +147,21 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - run: npm version  ${{ env.VERSION }}
-        working-directory: ./language-server-npm
+        working-directory: ./language-server/language-server-npm
 
       - name: Publish aqua LSP API to NPM
         run: |
           npm i
           npm publish --access public
-        working-directory: ./language-server-npm
+        working-directory: ./language-server/language-server-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish aqua API to NPM
+        run: |
+          npm i
+          npm publish --access public
+        working-directory: ./api/aqua-api-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

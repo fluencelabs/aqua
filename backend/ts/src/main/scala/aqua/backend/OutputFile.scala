@@ -6,7 +6,7 @@ import aqua.res.AquaRes
 
 case class OutputFile(res: AquaRes) {
 
-  def generate(types: Types, isJs: Boolean, isCommonJS: Boolean): (List[AirString], String) = {
+  def generate(types: Types, isJs: Boolean, isCommonJS: Boolean): (List[AirFunction], String) = {
     import types.*
     val services = res.services
       .map(s => OutputService(s, types))

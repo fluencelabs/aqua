@@ -14,7 +14,8 @@ case class OutputService(srv: ServiceRes, types: Types) {
   private val serviceTypes = types.serviceType(srv)
 
   import serviceTypes.*
-  import TypeDefinition._
+  import aqua.definitions.TypeDefinition.*
+  import aqua.definitions.*
 
   def generate: String =
     val functions = LabeledProductTypeDef(

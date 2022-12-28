@@ -1,0 +1,32 @@
+{
+  "name": "@fluencelabs/aqua-api",
+  "version": "0.0.3",
+  "description": "Aqua API",
+  "type": "commonjs",
+  "files": [
+    "aqua-api.js",
+    "aqua-api.d.ts",
+    "meta-utils.js"
+  ],
+  "scripts": {
+    "move:scalajs": "cp ../aqua-api/target/scala-3.1.3/aqua-api-opt/main.js ./aqua-api.js",
+    "move:fast": "cp ../aqua-api/target/scala-3.1.3/aqua-api-fastopt/main.js ./aqua-api.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fluencelabs/aqua.git"
+  },
+  "keywords": [
+    "aqua",
+    "fluence"
+  ],
+  "author": "Fluence Labs",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/fluencelabs/aqua/issues"
+  },
+  "homepage": "https://github.com/fluencelabs/aqua#readme",
+  "devDependencies": {
+    "@fluencelabs/fluence": "^0.27.3"
+  }
+}

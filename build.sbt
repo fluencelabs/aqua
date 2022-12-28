@@ -17,7 +17,7 @@ val scribeV = "3.7.1"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.8.0",
+  baseAquaVersion := "0.9.0",
   version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
   scalaVersion    := dottyVersion,
   libraryDependencies ++= Seq(
@@ -42,7 +42,7 @@ commons
 lazy val cli = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
-  .in(file("cli"))
+  .in(file("cli/cli"))
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
@@ -50,13 +50,13 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
       "com.monovore" %%% "decline-effect" % declineV
     )
   )
-  .dependsOn(compiler, `backend-air`, `backend-ts`, io)
+  .dependsOn(compiler, `backend-air`, `backend-ts`, io, definitions, logging, constants, `aqua-run`)
 
 lazy val cliJS = cli.js
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true
-  )
+  ).dependsOn(`js-exports`, `js-imports`)
 
 lazy val cliJVM = cli.jvm
   .settings(
@@ -66,6 +66,13 @@ lazy val cliJVM = cli.jvm
     libraryDependencies ++= Seq(
     )
   )
+
+lazy val `aqua-run` = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("aqua-run"))
+  .settings(commons: _*)
+  .dependsOn(compiler, `backend-air`, `backend-ts`, io, definitions, logging, constants)
 
 lazy val io = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -79,8 +86,10 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
   )
   .dependsOn(compiler, parser)
 
+lazy val ioJS = io.js.dependsOn(`js-imports`)
+
 lazy val `language-server-api` = project
-  .in(file("language-server-api"))
+  .in(file("language-server/language-server-api"))
   .enablePlugins(ScalaJSPlugin)
   .settings(commons: _*)
   .settings(
@@ -94,6 +103,29 @@ lazy val `language-server-api` = project
     )
   )
   .dependsOn(compiler.js, io.js)
+
+lazy val `js-exports` = project
+  .in(file("js/js-exports"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commons: _*)
+  .dependsOn(`backend`.js, definitions.js)
+
+lazy val `js-imports` = project
+  .in(file("js/js-imports"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commons: _*)
+  .dependsOn(`js-exports`, transform.js)
+
+lazy val `aqua-api` = project
+  .in(file("api/aqua-api"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commons: _*)
+  .settings(
+    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSUseMainModuleInitializer := true,
+    Test / test := {}
+  )
+  .dependsOn(`js-exports`, `aqua-run`.js, `backend-api`.js)
 
 lazy val types = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -197,7 +229,42 @@ lazy val backend = crossProject(JVMPlatform, JSPlatform)
     buildInfoKeys    := Seq[BuildInfoKey](version),
     buildInfoPackage := "aqua.backend"
   )
-  .dependsOn(res)
+  .dependsOn(res, definitions)
+
+lazy val definitions = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("backend/definitions"))
+  .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.circe" %%% "circe-core",
+      "io.circe" %%% "circe-generic",
+      "io.circe" %%% "circe-parser"
+    ).map(_ % circeVersion)
+  ).dependsOn(res, types)
+
+lazy val logging = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("utils/logging"))
+  .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % catsV
+    )
+  )
+
+lazy val constants = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("utils/constants"))
+  .settings(commons: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % catsV
+    )
+  ).dependsOn(parser, raw)
 
 lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -205,6 +272,13 @@ lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
   .in(file("backend/air"))
   .settings(commons: _*)
   .dependsOn(backend, transform)
+
+lazy val `backend-api` = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("backend/api"))
+  .settings(commons: _*)
+  .dependsOn(backend, transform, `backend-air`)
 
 lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -218,4 +292,4 @@ lazy val `backend-ts` = crossProject(JVMPlatform, JSPlatform)
       "io.circe" %%% "circe-parser"
     ).map(_ % circeVersion)
   )
-  .dependsOn(`backend-air`)
+  .dependsOn(`backend-air`, definitions)

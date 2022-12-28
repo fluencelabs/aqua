@@ -1,3 +1,7 @@
+aqua FooBars declares wait
+
+export wait
+
 data Record:
     relay_id: []string
     peer_id: string
@@ -70,9 +74,25 @@ service Ser("ser"):
 --     Op2.identity(res!2)
 --     <- res
 
-func streamAssignment(arr: []string) -> string:
-   stream: *[]u32
-   stream <<- [0]
-   a = stream[arr.length - 1][0]
-   b = arr[a]
-   <- b
+data InnerObj:
+    arr: []string
+    num: u32
+
+data SomeObj:
+    str: string
+    num: u64
+    inner: InnerObj
+
+func wait(i: []u32) -> SomeObj:
+  <- SomeObj(str = "some str",
+             num = 4,
+             inner = InnerObj(arr = ["a", "b", "c"], num = i[2])
+             )
+
+-- func a(nums: []u32) -> []u32:
+--   <- nums
+--
+-- func some():
+--   a([1,2,3,4])
+
+
