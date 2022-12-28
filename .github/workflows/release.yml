@@ -94,12 +94,12 @@ jobs:
           node-version: "15"
           registry-url: "https://registry.npmjs.org"
 
-      - run: cp ${{ env.JS }} ./cli-npm/aqua.js
-      - run: cp ${{ env.JSLSP }} ./language-server-npm/aqua-lsp-api.js
-      - run: cp ${{ env.JSAPI }} ./aqua-api-npm/aqua-api.js
+      - run: cp ${{ env.JS }} ./cli/cli-npm/aqua.js
+      - run: cp ${{ env.JSLSP }} ./language-server/language-server-npm/aqua-lsp-api.js
+      - run: cp ${{ env.JSAPI }} ./api/aqua-api-npm/aqua-api.js
 
       - run: npm version ${{ env.VERSION }}
-        working-directory: ./npm
+        working-directory: ./cli/cli-npm
 
       - name: Publish to NPM as aqua
         run: |
