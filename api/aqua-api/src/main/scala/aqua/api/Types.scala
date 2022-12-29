@@ -29,7 +29,7 @@ case class AquaConfig(
 @JSExportTopLevel("CompilationRunResult")
 case class CompilationRunResult(
   @JSExport
-  function: js.UndefOr[AquaFunction],
+  aquaFunction: js.UndefOr[AquaFunction],
   @JSExport
   errors: js.Array[String]
 )

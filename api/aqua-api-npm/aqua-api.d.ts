@@ -14,12 +14,18 @@ export class AquaFunction {
 }
 
 export class CompilationResult {
-    services: ServiceDef[]
+    services: Record<string, ServiceDef>
     functions: Record<string, AquaFunction>
+    errors: string[]
+}
+
+export class CompilationRunResult {
+    aquaFunction?: AquaFunction
+    errors: string[]
 }
 
 export class Compiler {
-    compileRun(functionStr: string, arguments: any, path: string, imports: string[], config?: AquaConfig): Promise<AquaFunction>;
+    compileRun(functionStr: string, arguments: any, path: string, imports: string[], config?: AquaConfig): Promise<CompilationRunResult>;
     compile(path: string, imports: string[], config?: AquaConfig): Promise<CompilationResult>;
     compileString(input: string, imports: string[], config?: AquaConfig): Promise<CompilationResult>;
 }
