@@ -17,7 +17,7 @@ object APIBackend extends Backend {
             srv.members.map { case (n, a) => (n, ArrowTypeDef(a)) }
           )
 
-          ServiceDef(srv.defaultId.map(s => s.replace("\"", "")), functions)
+          ServiceDef(srv.defaultId.map(s => s.replace("\"", "")), functions, srv.name)
       }.toList
 
       Generated("", "", airGenerated.flatMap(_.air).toList, services) :: Nil

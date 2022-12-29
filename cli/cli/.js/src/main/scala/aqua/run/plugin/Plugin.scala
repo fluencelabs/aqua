@@ -49,7 +49,7 @@ case class Plugin(name: String, functions: List[Function]) {
       peer,
       name,
       handlers,
-      ServiceDef(Some(name), LabeledProductTypeDef(funcTypes))
+      ServiceDef(Some(name), LabeledProductTypeDef(funcTypes), "")
     )
   }
 }

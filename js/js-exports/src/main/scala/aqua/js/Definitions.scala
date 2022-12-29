@@ -116,13 +116,14 @@ object TypeDefinitionJs {
 @JSExportAll
 case class ServiceDefJs(
   defaultServiceId: Option[String],
-  functions: LabeledTypeDefJs
+  functions: LabeledTypeDefJs,
+  name: String
 )
 
 object ServiceDefJs {
 
   def apply(sd: ServiceDef): ServiceDefJs = {
-    ServiceDefJs(sd.defaultServiceId, LabeledTypeDefJs(sd.functions))
+    ServiceDefJs(sd.defaultServiceId, LabeledTypeDefJs(sd.functions), sd.name)
   }
 }
 

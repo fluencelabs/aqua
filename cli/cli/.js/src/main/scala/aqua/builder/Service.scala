@@ -27,7 +27,8 @@ class Service(serviceId: String, functions: NonEmptyList[AquaFunction]) extends 
       handlers.toList,
       ServiceDef(
         None,
-        defs
+        defs,
+        ""
       )
     )
   }

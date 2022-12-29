@@ -43,53 +43,6 @@ import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.res.AquaRes
 import cats.Applicative
 
-@JSExportTopLevel("AquaFunction")
-case class AquaFunction(
-  @JSExport
-  funcDef: FunctionDefJs,
-  @JSExport
-  script: String
-)
-
-case class AquaAPIConfig(
-  logLevel: String = "info",
-  constants: List[String] = Nil,
-  noXor: Boolean = false,
-  noRelay: Boolean = false
-)
-
-object AquaAPIConfig {
-
-  def fromJS(cjs: AquaConfig): AquaAPIConfig = {
-    AquaAPIConfig(
-      cjs.logLevel.getOrElse("info"),
-      cjs.constants.map(_.toList).getOrElse(Nil),
-      cjs.noXor.getOrElse(false),
-      cjs.noRelay.getOrElse(false)
-    )
-  }
-}
-
-@JSExportTopLevel("AquaConfig")
-case class AquaConfig(
-  @JSExport
-  logLevel: js.UndefOr[String],
-  @JSExport
-  constants: js.UndefOr[js.Array[String]],
-  @JSExport
-  noXor: js.UndefOr[Boolean],
-  @JSExport
-  noRelay: js.UndefOr[Boolean]
-)
-
-@JSExportTopLevel("CompilationResult")
-case class CompilationResult(
-  @JSExport
-  services: js.Array[ServiceDefJs],
-  @JSExport
-  functions: js.Dictionary[AquaFunction]
-)
-
 @JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {
 
@@ -108,42 +61,61 @@ object AquaAPI extends App with Logging {
     pathStr: String,
     imports: js.Array[String],
     aquaConfigJS: js.UndefOr[AquaConfig]
-  ): js.Promise[AquaFunction] = {
+  ): js.Promise[CompilationRunResult] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val aquaConfig: AquaAPIConfig =
       aquaConfigJS.toOption.map(cjs => AquaAPIConfig.fromJS(cjs)).getOrElse(AquaAPIConfig())
     LogFormatter.initLogger(Some(LogLevels.levelFromString(aquaConfig.logLevel).toOption.get))
-    val transformConfig = TransformConfig()
 
-    new FuncCompiler[IO](
-      Some(RelativePath(Path(pathStr))),
-      imports.toList.map(Path.apply),
-      transformConfig
-    ).compile().map { contextV =>
-      contextV.andThen { context =>
-        CliFunc.fromString(functionStr).leftMap(errs => NonEmptyChain.fromNonEmptyList(errs)).andThen { cliFunc =>
-          FuncCompiler.findFunction(context, cliFunc).andThen { arrow =>
-            VarJson.checkDataGetServices(cliFunc.args, Some(arguments)).andThen {
-              case (argsWithTypes, _) =>
-                val func = cliFunc.copy(args = argsWithTypes)
-                val preparer = new RunPreparer(
-                  func,
-                  arrow,
-                  transformConfig
-                )
-                preparer.prepare().map { ci =>
-                  AquaFunction(FunctionDefJs(ci.definitions), ci.air)
+    (
+      LogLevels.levelFromString(aquaConfig.logLevel),
+      Constants.parse(aquaConfig.constants)
+    ).mapN { (level, constants) =>
+
+      val transformConfig = aquaConfig.getTransformConfig.copy(constants = constants)
+
+      LogFormatter.initLogger(Some(level))
+
+      new FuncCompiler[IO](
+        Some(RelativePath(Path(pathStr))),
+        imports.toList.map(Path.apply),
+        transformConfig
+      ).compile()
+        .map { contextV =>
+          contextV.andThen { context =>
+            CliFunc
+              .fromString(functionStr)
+              .leftMap(errs => NonEmptyChain.fromNonEmptyList(errs))
+              .andThen { cliFunc =>
+                FuncCompiler.findFunction(context, cliFunc).andThen { arrow =>
+                  VarJson.checkDataGetServices(cliFunc.args, Some(arguments)).andThen {
+                    case (argsWithTypes, _) =>
+                      val func = cliFunc.copy(args = argsWithTypes)
+                      val preparer = new RunPreparer(
+                        func,
+                        arrow,
+                        transformConfig
+                      )
+                      preparer.prepare().map { ci =>
+                        AquaFunction(FunctionDefJs(ci.definitions), ci.air)
+                      }
+                  }
                 }
-            }
+              }
           }
         }
-      }
-    }.flatMap {
-      case Valid(result) => IO.pure(result)
-      case Invalid(err) =>
-        err.map(_.show).distinct.map(OutputPrinter.errorF[IO]).sequence
-        IO.raiseError[AquaFunction](new Error("Compilation failed."))
-    }.unsafeToFuture().toJSPromise
+        .flatMap {
+          case Valid(result) => IO.pure(CompilationRunResult(result, js.Array()))
+          case Invalid(err) =>
+            val errs = err.map(_.show).distinct.toChain.toList.toJSArray
+            IO.pure(CompilationRunResult(null, errs))
+        }
+        .unsafeToFuture()
+        .toJSPromise
+    } match {
+      case Valid(pr) => pr
+      case Invalid(err) => js.Promise.resolve(CompilationRunResult(null, err.toList.toJSArray))
+    }
 
   }
 
@@ -191,7 +163,7 @@ object AquaAPI extends App with Logging {
       LogFormatter.initLogger(Some(level))
 
       val config = AquaCompilerConf(constants)
-      val transformConfig = TransformConfig()
+      val transformConfig = aquaConfig.getTransformConfig
 
       val proc = for {
         res <- CompilerAPI
@@ -214,15 +186,20 @@ object AquaAPI extends App with Logging {
         jsResult <- res match {
           case Valid(compiled) =>
             val allGenerated: List[Generated] = compiled.toList.flatMap(_.compiled)
-            val serviceDefs = allGenerated.flatMap(_.services).map(s => ServiceDefJs(s)).toJSArray
+            val serviceDefs = allGenerated.flatMap(_.services).map(s => ServiceDefJs(s))
             val functions = allGenerated.flatMap(
               _.air.map(as => (as.name, AquaFunction(FunctionDefJs(as.funcDef), as.air)))
             )
 
-            IO.pure(CompilationResult(serviceDefs, js.Dictionary.apply(functions: _*)))
+            IO.pure(
+              CompilationResult.result(
+                js.Dictionary.apply(serviceDefs.map(s => s.name -> s): _*),
+                js.Dictionary.apply(functions: _*)
+              )
+            )
           case Invalid(errChain) =>
-            errChain.map(_.show).distinct.map(OutputPrinter.errorF[IO]).sequence
-            IO.raiseError[CompilationResult](new Error("Compilation failed."))
+            val errors = errChain.map(_.show).distinct.toChain.toList.toJSArray
+            IO.pure[CompilationResult](CompilationResult.errs(errors))
         }
       } yield {
         jsResult
@@ -231,7 +208,7 @@ object AquaAPI extends App with Logging {
       proc.unsafeToFuture().toJSPromise
     } match {
       case Valid(pr) => pr
-      case Invalid(err) => js.Promise.reject(err)
+      case Invalid(err) => js.Promise.resolve(CompilationResult.errs(err.toList.toJSArray))
     }
   }
 }
