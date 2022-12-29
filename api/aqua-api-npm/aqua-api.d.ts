@@ -2,6 +2,7 @@ import type {FunctionCallDef, ServiceDef} from "@fluencelabs/fluence/dist/intern
 
 export class AquaConfig {
     constructor(logLevel: string, constants: string[], noXor: boolean, noRelay: boolean);
+
     logLevel?: string
     constants?: string[]
     noXor?: boolean
@@ -14,14 +15,36 @@ export class AquaFunction {
 }
 
 export class CompilationResult {
-    services: ServiceDef[]
+    services: Record<string, ServiceDef>
     functions: Record<string, AquaFunction>
+    functionCall?: AquaFunction
+    errors: string[]
+}
+
+export class Input {
+    constructor(input: string);
+
+    input: string
+}
+
+export class Path {
+    constructor(path: string);
+
+    path: string
+}
+
+export class Call {
+    constructor(functionCall: string,
+                arguments: any,
+                input: Input | Path);
+
+    functionCall: string
+    arguments: any
+    input: Input | Path
 }
 
 export class Compiler {
-    compileRun(functionStr: string, arguments: any, path: string, imports: string[], config?: AquaConfig): Promise<AquaFunction>;
-    compile(path: string, imports: string[], config?: AquaConfig): Promise<CompilationResult>;
-    compileString(input: string, imports: string[], config?: AquaConfig): Promise<CompilationResult>;
+    compile(input: Input | Path | Call, imports: string[], config?: AquaConfig): Promise<CompilationResult>;
 }
 
 export var Aqua: Compiler;

@@ -68,7 +68,7 @@ object TypeDefinition {
       )
   }
 
-  implicit val encodeServiceDefType: Encoder[ServiceDef] = { case ServiceDef(sId, functions) =>
+  implicit val encodeServiceDefType: Encoder[ServiceDef] = { case ServiceDef(sId, functions, name) =>
     Json.obj(
       ("defaultServiceId", sId.asJson),
       ("functions", encodeProdDefType(functions))
@@ -195,7 +195,7 @@ case class NamesConfig(
 )
 
 // Describes service
-case class ServiceDef(defaultServiceId: Option[String], functions: LabeledProductTypeDef)
+case class ServiceDef(defaultServiceId: Option[String], functions: LabeledProductTypeDef, name: String)
 
 // Describes top-level function
 case class FunctionDef(
