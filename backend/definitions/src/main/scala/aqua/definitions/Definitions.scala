@@ -71,8 +71,7 @@ object TypeDefinition {
   implicit val encodeServiceDefType: Encoder[ServiceDef] = { case ServiceDef(sId, functions, name) =>
     Json.obj(
       ("defaultServiceId", sId.asJson),
-      ("functions", encodeProdDefType(functions)),
-      ("name", name.asJson)
+      ("functions", encodeProdDefType(functions))
     )
   }
 
