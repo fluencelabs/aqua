@@ -204,14 +204,14 @@ object AquaAPI extends App with Logging {
         jsResult <- res match {
           case Valid(compiled) =>
             val allGenerated: List[Generated] = compiled.toList.flatMap(_.compiled)
-            val serviceDefs = allGenerated.flatMap(_.services).map(s => ServiceDefJs(s))
+            val serviceDefs = allGenerated.flatMap(_.services).map(s => s.name -> ServiceDefJs(s))
             val functions = allGenerated.flatMap(
               _.air.map(as => (as.name, AquaFunction(FunctionDefJs(as.funcDef), as.air)))
             )
 
             IO.pure(
               CompilationResult.result(
-                js.Dictionary.apply(serviceDefs.map(s => s.name -> s): _*),
+                js.Dictionary.apply(serviceDefs: _*),
                 js.Dictionary.apply(functions: _*),
                 None
               )
