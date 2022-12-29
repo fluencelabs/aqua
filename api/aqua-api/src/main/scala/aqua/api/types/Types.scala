@@ -58,7 +58,7 @@ class CompilationResult(
   @JSExport
   val functions: js.Dictionary[AquaFunction],
   @JSExport
-  val aquaFunction: js.UndefOr[AquaFunction],
+  val functionCall: js.UndefOr[AquaFunction],
   @JSExport
   val errors: js.Array[String]
 )
@@ -86,8 +86,8 @@ case class AquaAPIConfig(
 ) {
 
   def getTransformConfig: TransformConfig =
-    if (noRelay) TransformConfig(wrapWithXor = !noXor)
-    else TransformConfig(relayVarName = None, wrapWithXor = !noXor)
+    if (noRelay) TransformConfig(relayVarName = None, wrapWithXor = !noXor)
+    else TransformConfig(wrapWithXor = !noXor)
 }
 
 object AquaAPIConfig {
