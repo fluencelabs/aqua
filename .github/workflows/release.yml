@@ -157,6 +157,9 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - run: npm version ${{ env.VERSION }}
+        working-directory: ./api/aqua-api-npm
+
       - name: Publish aqua API to NPM
         run: |
           npm i
