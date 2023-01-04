@@ -20,9 +20,10 @@ case class OutputFunc(func: FuncRes, types: Types) {
   val funcTypes = types.funcType(func)
 
   import funcTypes.*
-  import TypeDefinition.*
+  import aqua.definitions.TypeDefinition.*
+  import aqua.definitions.*
 
-  def generate: (AirString, String) = {
+  def generate: (AirFunction, String) = {
     val tsAir = FuncAirGen(func).generate
     val codeLeftSpace = " " * 20
 
@@ -30,7 +31,7 @@ case class OutputFunc(func: FuncRes, types: Types) {
     val funcDef = FunctionDef(func)
 
     (
-      AirString(func.funcName, script),
+      AirFunction(func.funcName, script, funcDef),
       s"""${funcTypes.generate}
          |export function ${func.funcName}(${typed("...args", "any")}) {
          |

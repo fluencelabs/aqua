@@ -14,14 +14,15 @@ case class OutputService(srv: ServiceRes, types: Types) {
   private val serviceTypes = types.serviceType(srv)
 
   import serviceTypes.*
-  import TypeDefinition._
+  import aqua.definitions.TypeDefinition.*
+  import aqua.definitions.*
 
   def generate: String =
     val functions = LabeledProductTypeDef(
       srv.members.map { case (n, a) => (n, ArrowTypeDef(a)) }
     )
 
-    val serviceDef = ServiceDef(srv.defaultId.map(s => s.replace("\"", "")), functions)
+    val serviceDef = ServiceDef(srv.defaultId.map(s => s.replace("\"", "")), functions, srv.name)
 
     s"""
        |${serviceTypes.generate}
