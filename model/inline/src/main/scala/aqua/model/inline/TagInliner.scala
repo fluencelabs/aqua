@@ -166,7 +166,7 @@ object TagInliner extends Logging {
 
       case CanonicalizeTag(operand, exportTo) =>
         valueToModel(operand).flatMap {
-          // literal canonicalization can be only if literal is an empty array
+          // pass literals as is
           case (l @ LiteralModel(_, _), p) =>
             for {
               _ <- Exports[S].resolved(exportTo.name, l)
@@ -177,7 +177,7 @@ object TagInliner extends Logging {
 
       case FlattenTag(operand, assignTo) =>
         valueToModel(operand).flatMap {
-          // flatten for literals can be only for an empty array
+          // pass literals as is
           case (l @ LiteralModel(_, _), p) =>
             for {
               _ <- Exports[S].resolved(assignTo, l)
