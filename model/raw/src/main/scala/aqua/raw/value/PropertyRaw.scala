@@ -1,6 +1,6 @@
 package aqua.raw.value
 
-import aqua.types.Type
+import aqua.types.{StructType, Type}
 import cats.data.NonEmptyMap
 
 sealed trait PropertyRaw {
@@ -19,10 +19,12 @@ case class IntoFieldRaw(name: String, `type`: Type) extends PropertyRaw {
   override def varNames: Set[String] = Set.empty
 }
 
-case class IntoCopyRaw(`type`: Type, fields: NonEmptyMap[String, ValueRaw]) extends PropertyRaw {
+case class IntoCopyRaw(`type`: StructType, fields: NonEmptyMap[String, ValueRaw]) extends PropertyRaw {
   override def map(f: ValueRaw => ValueRaw): IntoCopyRaw = copy(fields = fields.map(f))
 
   override def varNames: Set[String] = Set.empty
+
+  override def renameVars(vals: Map[String, String]): IntoCopyRaw = this
 }
 
 case class FunctorRaw(name: String, `type`: Type) extends PropertyRaw {

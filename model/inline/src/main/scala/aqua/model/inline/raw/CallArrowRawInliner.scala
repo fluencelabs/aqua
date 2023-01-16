@@ -10,6 +10,8 @@ import aqua.raw.value.CallArrowRaw
 import cats.data.{Chain, State}
 import scribe.Logging
 
+import scala.collection.immutable.ListMap
+
 object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
 
   private[inline] def unfoldArrow[S: Mangler: Exports: Arrows](
@@ -26,7 +28,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
           cd <- callToModel(call, true)
           sd <- valueToModel(serviceId)
         } yield cd._1.exportTo.map(_.asVar.resolveWith(exports)) -> Inline(
-          Map.empty,
+          ListMap.empty,
           Chain(
             SeqModel.wrap(
               sd._2.toList ++
@@ -49,7 +51,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
                   .callArrowRet(fn, cm)
                   .map { case (body, vars) =>
                     vars -> Inline(
-                      Map.empty,
+                      ListMap.empty,
                       Chain.one(SeqModel.wrap(p.toList :+ body: _*))
                     )
                   }

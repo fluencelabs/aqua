@@ -87,6 +87,21 @@ case class ApplyFunctorRaw(value: ValueRaw, functor: FunctorRaw) extends ValueRa
   override def varNames: Set[String] = value.varNames ++ functor.varNames
 }
 
+case class ApplyIntoCopyRaw(value: ValueRaw, intoCopy: IntoCopyRaw) extends ValueRaw {
+  override def baseType: Type = value.baseType
+
+  override def `type`: Type = intoCopy.`type`
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    ApplyIntoCopyRaw(value.renameVars(map), intoCopy.renameVars(map))
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(ApplyIntoCopyRaw(f(value), intoCopy.map(f)))
+
+  override def toString: String = s"$value.$intoCopy"
+
+  override def varNames: Set[String] = value.varNames ++ intoCopy.varNames
+}
+
 object ApplyPropertyRaw {
 
   def fromChain(value: ValueRaw, properties: Chain[PropertyRaw]): ValueRaw =

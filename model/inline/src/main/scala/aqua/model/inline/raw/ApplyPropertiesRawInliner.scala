@@ -12,6 +12,7 @@ import aqua.model.{
   LiteralModel,
   MatchMismatchModel,
   NextModel,
+  OpModel,
   PropertyModel,
   PushToStreamModel,
   RestrictionModel,
@@ -27,9 +28,11 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{
   ApplyFunctorRaw,
   ApplyGateRaw,
+  ApplyIntoCopyRaw,
   ApplyPropertyRaw,
   CallArrowRaw,
   FunctorRaw,
+  IntoCopyRaw,
   IntoFieldRaw,
   IntoIndexRaw,
   LiteralRaw,
@@ -38,7 +41,7 @@ import aqua.raw.value.{
   VarRaw
 }
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType, Type}
-import cats.data.{Chain, State}
+import cats.data.{Chain, NonEmptyMap, State}
 import cats.syntax.monoid.*
 import cats.instances.list.*
 
@@ -99,10 +102,12 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
             if (propertiesAllowed) State.pure(genV -> prefInline)
             else
               removeProperty(genV).map { case (vmm, mpp) =>
-                val resultInline = streamGateInline.map{ gInline =>
+                val resultInline = streamGateInline.map { gInline =>
                   Inline(
                     prefInline.flattenValues ++ mpp.flattenValues ++ gInline.flattenValues,
-                    Chain.one(SeqModel.wrap((prefInline.predo ++ mpp.predo ++ gInline.predo).toList:_*)),
+                    Chain.one(
+                      SeqModel.wrap((prefInline.predo ++ mpp.predo ++ gInline.predo).toList: _*)
+                    ),
                     SeqMode
                   )
                 }.getOrElse(prefInline |+| mpp)
@@ -139,7 +144,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
   ): State[S, (ValueModel, Inline)] = {
     ((raw, properties.headOption) match {
       // To wait for the element of a stream by the given index, the following model is generated:
-      //(seq
+      // (seq
       // (seq
       //  (seq
       //   (call %init_peer_id% ("math" "add") [0 1] stream_incr)
@@ -162,10 +167,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
       //  (canon %init_peer_id% $stream_test  #stream_result_canon)
       // )
       // (ap #stream_result_canon stream_gate)
-      //)
-      case (vr@VarRaw(_, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
+      // )
+      case (vr @ VarRaw(_, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
         unfold(vr).flatMap {
-          case (vm@VarModel(nameVM, _, _), inl) =>
+          case (vm @ VarModel(nameVM, _, _), inl) =>
             val gateRaw = ApplyGateRaw(nameVM, st, idx)
             unfold(gateRaw).flatMap { case (gateResVal, gateResInline) =>
               unfoldProperties(properties).flatMap { case (propertyModels, map) =>
@@ -199,39 +204,57 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
   ): State[S, (ValueModel, Inline)] =
     val (raw, properties) = apr.unwind
 
-    val leftToFunctor = properties.takeWhile {
+    // properties that will split chain of properties
+    val splitter: PropertyRaw => Boolean = {
       case FunctorRaw(_, _) => false
+      case IntoCopyRaw(_, _) => false
       case _ => true
     }
+
+    val leftToFunctor = properties.takeWhile(splitter)
 
     if (leftToFunctor.length == properties.length) {
       unfoldRawWithProperties(raw, properties, propertiesAllowed)
     } else {
       // split properties like this:
-      // properties -- functor -- properties with functors
+      // properties -- functor/copy -- properties with functors and copy
       // process properties, process functor in ApplyFunctorRawInliner
       // then process tail recursively
       (for {
-        ur <- properties.dropWhile {
-          case FunctorRaw(_, _) => false
-          case _ => true
-        }.uncons
-        (functor: FunctorRaw, right) = ur
+        ur <- properties.dropWhile(splitter).uncons
+        (functorOrCopy: PropertyRaw, right) = ur
       } yield {
-        (leftToFunctor, functor, right)
-      }).map { case (left, functor, right) =>
+        (leftToFunctor, functorOrCopy, right)
+      }).map { case (left, functorOrCopy, right) =>
         for {
           vmLeftInline <- unfoldRawWithProperties(raw, left, propertiesAllowed)
           (leftVM, leftInline) = vmLeftInline
           // TODO: rewrite without `toRaw`
-          fRaw = ApplyFunctorRaw(leftVM.toRaw, functor)
-          vmFunctorInline <- ApplyFunctorRawInliner(fRaw, false)
-          (fVM, fInline) = vmFunctorInline
+          vmSplitPropInline <- functorOrCopy match {
+            case f @ FunctorRaw(_, _) =>
+              val fRaw = ApplyFunctorRaw(leftVM.toRaw, f)
+              ApplyFunctorRawInliner(fRaw, false)
+            case ic @ IntoCopyRaw(_, _) =>
+              val icRaw = ApplyIntoCopyRaw(leftVM.toRaw, ic)
+              ApplyIntoCopyRawInliner(icRaw, false)
+          }
+          (newVM, newInline) = vmSplitPropInline
           // TODO: rewrite without `toRaw`
-          vmRightInline <- unfold(ApplyPropertyRaw.fromChain(fVM.toRaw, right), propertiesAllowed)
+          vmRightInline <- unfold(ApplyPropertyRaw.fromChain(newVM.toRaw, right), propertiesAllowed)
           (vm, rightInline) = vmRightInline
         } yield {
-          vm -> (leftInline |+| fInline |+| rightInline)
+          println("left flatten values: " + leftInline.flattenValues)
+          println("new flatten values: " + newInline.flattenValues)
+          println("right flatten values: " + rightInline.flattenValues)
+          println("===================")
+          println("left predo: " + leftInline.predo)
+          println("new predo: " + newInline.predo)
+          println("right predo: " + rightInline.predo)
+          vm -> Inline(
+            rightInline.flattenValues ++ newInline.flattenValues ++ leftInline.flattenValues,
+            rightInline.predo ++ newInline.predo ++ leftInline.predo,
+            SeqMode
+          )
         }
       }.getOrElse(unfoldRawWithProperties(raw, properties, propertiesAllowed))
     }
