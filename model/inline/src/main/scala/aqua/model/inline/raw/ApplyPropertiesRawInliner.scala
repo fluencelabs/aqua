@@ -15,7 +15,7 @@ import cats.instances.list.*
 object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
 
   // in perspective literals can have properties and functors (like `nil` with length)
-  def literalWithProperties[S: Mangler: Exports: Arrows](
+  def flatLiteralWithProperties[S: Mangler: Exports: Arrows](
     literal: LiteralModel,
     inl: Inline,
     properties: Chain[PropertyModel],
@@ -110,7 +110,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
           }
 
         case l: LiteralModel if propertyModels.nonEmpty =>
-          literalWithProperties(l, propertyPrefix, propertyModels, propertyModels.lastOption.map(_.`type`).getOrElse(l.`type`))
+          flatLiteralWithProperties(l, propertyPrefix, propertyModels, propertyModels.lastOption.map(_.`type`).getOrElse(l.`type`))
 
         case v =>
           // What does it mean actually? I've no ides

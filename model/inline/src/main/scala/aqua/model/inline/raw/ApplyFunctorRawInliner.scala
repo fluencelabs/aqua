@@ -56,7 +56,7 @@ object ApplyFunctorRawInliner extends RawInliner[ApplyFunctorRaw] with Logging {
           VarModel(resultName, afr.functor.`type`) -> tree
         }
       case (l @ LiteralModel(_, _), inl) =>
-        ApplyPropertiesRawInliner.literalWithProperties(l, inl, Chain.one(functorModel), afr.functor.`type`)
+        ApplyPropertiesRawInliner.flatLiteralWithProperties(l, inl, Chain.one(functorModel), afr.functor.`type`)
       case v =>
         // unexpected, properties are prohibited for literals
         logger.error(s"Unexpected. Properties are prohibited for literals. Literal: '$v'")
