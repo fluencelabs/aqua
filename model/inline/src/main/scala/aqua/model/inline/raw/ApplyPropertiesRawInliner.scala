@@ -1,48 +1,45 @@
 package aqua.model.inline.raw
 
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  CanonicalizeModel,
-  FlattenModel,
-  ForModel,
-  FunctorModel,
-  IntoFieldModel,
-  IntoIndexModel,
-  LiteralModel,
-  MatchMismatchModel,
-  NextModel,
-  PropertyModel,
-  PushToStreamModel,
-  RestrictionModel,
-  SeqModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
+import aqua.model.{CallModel, CallServiceModel, CanonicalizeModel, FlattenModel, ForModel, FunctorModel, IntoFieldModel, IntoIndexModel, LiteralModel, MatchMismatchModel, NextModel, PropertyModel, PushToStreamModel, RestrictionModel, SeqModel, ValueModel, VarModel, XorModel}
 import aqua.model.inline.Inline
 import aqua.model.inline.SeqMode
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{
-  ApplyFunctorRaw,
-  ApplyGateRaw,
-  ApplyPropertyRaw,
-  CallArrowRaw,
-  FunctorRaw,
-  IntoFieldRaw,
-  IntoIndexRaw,
-  LiteralRaw,
-  PropertyRaw,
-  ValueRaw,
-  VarRaw
-}
+import aqua.raw.value.{ApplyFunctorRaw, ApplyGateRaw, ApplyPropertyRaw, CallArrowRaw, FunctorRaw, IntoFieldRaw, IntoIndexRaw, LiteralRaw, PropertyRaw, ValueRaw, VarRaw}
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType, Type}
-import cats.data.{Chain, State}
+import cats.Eval
+import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.monoid.*
 import cats.instances.list.*
 
 object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
+
+  // in perspective literals can have properties and functors (like `nil` with length)
+  def literalWithProperties[S: Mangler: Exports: Arrows](
+    literal: LiteralModel,
+    inl: Inline,
+    properties: Chain[PropertyModel],
+    resultType: Type
+  ): State[S, (ValueModel, Inline)] = {
+    for {
+      apName <- Mangler[S].findAndForbidName("literal_to_functor")
+      resultName <- Mangler[S].findAndForbidName(s"literal_props")
+    } yield {
+      val cleanedType = literal.`type` match {
+        // literals cannot be streams, use it as an array to use properties
+        case StreamType(el) => ArrayType(el)
+        case tt => tt
+      }
+      val apVar = VarModel(apName, cleanedType, properties)
+      val tree = inl |+| Inline.tree(
+        SeqModel.wrap(
+          FlattenModel(literal.copy(`type` = cleanedType), apVar.name).leaf,
+          FlattenModel(apVar, resultName).leaf
+        )
+      )
+      VarModel(resultName, resultType) -> tree
+    }
+  }
 
   private[inline] def removeProperty[S: Mangler: Exports: Arrows](
     vm: ValueModel
@@ -99,16 +96,21 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
             if (propertiesAllowed) State.pure(genV -> prefInline)
             else
               removeProperty(genV).map { case (vmm, mpp) =>
-                val resultInline = streamGateInline.map{ gInline =>
+                val resultInline = streamGateInline.map { gInline =>
                   Inline(
                     prefInline.flattenValues ++ mpp.flattenValues ++ gInline.flattenValues,
-                    Chain.one(SeqModel.wrap((prefInline.predo ++ mpp.predo ++ gInline.predo).toList:_*)),
+                    Chain.one(
+                      SeqModel.wrap((prefInline.predo ++ mpp.predo ++ gInline.predo).toList: _*)
+                    ),
                     SeqMode
                   )
                 }.getOrElse(prefInline |+| mpp)
                 vmm -> resultInline
               }
           }
+
+        case l: LiteralModel if propertyModels.nonEmpty =>
+          literalWithProperties(l, propertyPrefix, propertyModels, propertyModels.lastOption.map(_.`type`).getOrElse(l.`type`))
 
         case v =>
           // What does it mean actually? I've no ides
@@ -139,7 +141,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
   ): State[S, (ValueModel, Inline)] = {
     ((raw, properties.headOption) match {
       // To wait for the element of a stream by the given index, the following model is generated:
-      //(seq
+      // (seq
       // (seq
       //  (seq
       //   (call %init_peer_id% ("math" "add") [0 1] stream_incr)
@@ -162,10 +164,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
       //  (canon %init_peer_id% $stream_test  #stream_result_canon)
       // )
       // (ap #stream_result_canon stream_gate)
-      //)
-      case (vr@VarRaw(_, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
+      // )
+      case (vr @ VarRaw(_, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
         unfold(vr).flatMap {
-          case (vm@VarModel(nameVM, _, _), inl) =>
+          case (VarModel(nameVM, _, _), inl) =>
             val gateRaw = ApplyGateRaw(nameVM, st, idx)
             unfold(gateRaw).flatMap { case (gateResVal, gateResInline) =>
               unfoldProperties(properties).flatMap { case (propertyModels, map) =>
