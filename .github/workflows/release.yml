@@ -25,6 +25,7 @@ jobs:
         id: release
         uses: google-github-actions/release-please-action@v3
         with:
+          token: ${{ secrets.FLUENCEBOT_RELEASE_PLEASE_PAT }}
           command: manifest
           config-file: .github/release-please/config.json
           manifest-file: .github/release-please/manifest.json
