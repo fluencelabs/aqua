@@ -28,7 +28,7 @@ env:
 jobs:
   compile:
     name: "Compile"
-    runs-on: ubuntu-latest
+    runs-on: builder
 
     steps:
       - name: Checkout repository
