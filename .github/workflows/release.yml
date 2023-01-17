@@ -25,6 +25,7 @@ jobs:
         id: release
         uses: google-github-actions/release-please-action@v3
         with:
+          token: ${{ secrets.FLUENCEBOT_RELEASE_PLEASE_PAT }}
           command: manifest
           config-file: .github/release-please/config.json
           manifest-file: .github/release-please/manifest.json
@@ -124,6 +125,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "16"
+          registry-url: "https://registry.npmjs.org"
           cache-dependency-path: "cli/cli-npm/package-lock.json"
           cache: "npm"
 
@@ -178,6 +180,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "16"
+          registry-url: "https://registry.npmjs.org"
           cache-dependency-path: "api/aqua-api-npm/package-lock.json"
           cache: "npm"
 
@@ -232,6 +235,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "16"
+          registry-url: "https://registry.npmjs.org"
           cache-dependency-path: "language-server/language-server-npm/package-lock.json"
           cache: "npm"
 
