@@ -2,11 +2,11 @@ name: "e2e"
 
 on:
   pull_request:
-    paths-ignode:
+    paths-ignore:
       - "**.md"
   push:
     branches:
-      - "master"
+      - "main"
 
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
@@ -28,6 +28,8 @@ jobs:
 
       - name: Setup Scala
         uses: coursier/setup-action@v1
+        with:
+          apps: sbt
 
       - name: Run tests
         run: sbt test
