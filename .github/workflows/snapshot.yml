@@ -28,7 +28,7 @@ env:
 jobs:
   compile:
     name: "Compile"
-    runs-on: ubuntu-latest
+    runs-on: builder
 
     steps:
       - name: Checkout repository
@@ -46,6 +46,8 @@ jobs:
 
       - name: Setup Scala
         uses: coursier/setup-action@v1
+        with:
+          apps: sbt
 
       - name: JS build
         env:
