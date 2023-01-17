@@ -11,7 +11,7 @@ import cats.syntax.traverse.*
 import cats.syntax.applicative.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
-import scribe.{Logging, log}
+import scribe.{log, Logging}
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -50,7 +50,11 @@ object TagInliner extends Logging {
     }
   }
 
-  def flat[S: Mangler](vm: ValueModel, op: Option[OpModel.Tree], flatStream: Boolean): State[S, (ValueModel, Option[OpModel.Tree])] = {
+  def flat[S: Mangler](
+    vm: ValueModel,
+    op: Option[OpModel.Tree],
+    flatStream: Boolean
+  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
     vm match {
       case v @ VarModel(n, StreamType(t), l) if flatStream =>
         val canonName = n + "_canon"
@@ -161,13 +165,25 @@ object TagInliner extends Logging {
         }
 
       case CanonicalizeTag(operand, exportTo) =>
-        valueToModel(operand).map { case (v, p) =>
-          Some(CanonicalizeModel(v, CallModel.callExport(exportTo))) -> p
+        valueToModel(operand).flatMap {
+          // pass literals as is
+          case (l @ LiteralModel(_, _), p) =>
+            for {
+              _ <- Exports[S].resolved(exportTo.name, l)
+            } yield Some(SeqModel) -> p
+          case (v, p) =>
+            State.pure(Some(CanonicalizeModel(v, CallModel.callExport(exportTo))) -> p)
         }
 
       case FlattenTag(operand, assignTo) =>
-        valueToModel(operand).map { case (v, p) =>
-          Some(FlattenModel(v, assignTo)) -> p
+        valueToModel(operand).flatMap {
+          // pass literals as is
+          case (l @ LiteralModel(_, _), p) =>
+            for {
+              _ <- Exports[S].resolved(assignTo, l)
+            } yield Some(SeqModel) -> p
+          case (v, p) =>
+            State.pure(Some(FlattenModel(v, assignTo)) -> p)
         }
 
       case JoinTag(operands) =>
@@ -187,7 +203,7 @@ object TagInliner extends Logging {
       case AssignmentTag(value, assignTo) =>
         (value match {
           // if we assign collection to a stream, we must use it's name, because it is already created with 'new'
-          case c@CollectionRaw(_, _: StreamType) =>
+          case c @ CollectionRaw(_, _: StreamType) =>
             collectionToModel(c, Some(assignTo))
           case v =>
             valueToModel(v, false)

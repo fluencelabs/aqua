@@ -5,6 +5,7 @@ import aqua.model.{
   CanonicalizeModel,
   FlattenModel,
   FunctorModel,
+  LiteralModel,
   SeqModel,
   ValueModel,
   VarModel
@@ -15,7 +16,7 @@ import aqua.raw.value.ApplyFunctorRaw
 import cats.data.State
 import cats.data.Chain
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.types.{CanonStreamType, StreamType}
+import aqua.types.{BoxType, CanonStreamType, StreamType, ArrayType}
 import cats.syntax.monoid.*
 import scribe.Logging
 
@@ -54,6 +55,8 @@ object ApplyFunctorRawInliner extends RawInliner[ApplyFunctorRaw] with Logging {
 
           VarModel(resultName, afr.functor.`type`) -> tree
         }
+      case (l @ LiteralModel(_, _), inl) =>
+        ApplyPropertiesRawInliner.flatLiteralWithProperties(l, inl, Chain.one(functorModel), afr.functor.`type`)
       case v =>
         // unexpected, properties are prohibited for literals
         logger.error(s"Unexpected. Properties are prohibited for literals. Literal: '$v'")
