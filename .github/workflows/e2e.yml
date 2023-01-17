@@ -28,6 +28,8 @@ jobs:
 
       - name: Setup Scala
         uses: coursier/setup-action@v1
+        with:
+          apps: sbt
 
       - name: Run tests
         run: sbt test
