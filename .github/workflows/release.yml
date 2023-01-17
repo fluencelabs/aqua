@@ -124,6 +124,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "16"
+          registry-url: "https://registry.npmjs.org"
           cache-dependency-path: "cli/cli-npm/package-lock.json"
           cache: "npm"
 
@@ -178,6 +179,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "16"
+          registry-url: "https://registry.npmjs.org"
           cache-dependency-path: "api/aqua-api-npm/package-lock.json"
           cache: "npm"
 
@@ -232,6 +234,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "16"
+          registry-url: "https://registry.npmjs.org"
           cache-dependency-path: "language-server/language-server-npm/package-lock.json"
           cache: "npm"
 
