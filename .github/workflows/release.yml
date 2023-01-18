@@ -136,6 +136,9 @@ jobs:
       - run: npm i
         working-directory: cli/cli-npm
 
+      - run: npm run build
+        working-directory: cli/cli-npm
+
       - name: Publish to NPM registry
         run: npm publish --access public
         working-directory: cli/cli-npm
