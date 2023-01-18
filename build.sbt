@@ -10,7 +10,7 @@ val monocleV = "3.1.0"
 val scalaTestV = "3.2.15"
 val fs2V = "3.2.11"
 val catsEffectV = "3.3.14"
-val declineV = "2.3.0"
+val declineV = "2.4.1"
 val circeVersion = "0.14.2"
 val scribeV = "3.7.1"
 
