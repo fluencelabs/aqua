@@ -19,6 +19,7 @@ jobs:
       release-created: ${{ steps.release.outputs.release_created }}
       tag-name: ${{ steps.release.outputs.tag_name }}
       version: ${{ steps.release.outputs.version }}
+      pr: ${{ steps.release.outputs['pr'] }}
 
     steps:
       - name: Run release-please
@@ -35,6 +36,48 @@ jobs:
         env:
           RELEASE_PLEASE_OUTPUT: ${{ toJSON(steps.release.outputs) }}
         run: echo "${RELEASE_PLEASE_OUTPUT}" | jq
+
+  bump-version:
+    if: needs.release-please.outputs.pr != null
+    runs-on: builder
+    needs:
+      - release-please
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ fromJson(needs.release-please.outputs.pr).headBranchName }}
+
+      - name: Get aqua version
+        id: version
+        run: |
+          version="$(jq -r '.[]' .github/release-please/manifest.json)"
+          echo "version=${version}" >> $GITHUB_OUTPUT
+
+      - name: Set cli version
+        run: npm version ${{ steps.version.outputs.version }}
+        working-directory: cli/cli-npm
+
+      - name: Set api version
+        run: npm version ${{ steps.version.outputs.version }}
+        working-directory: api/aqua-api-npm
+
+      - name: Set lsp version
+        run: npm version ${{ steps.version.outputs.version }}
+        working-directory: language-server/language-server-api-npm
+
+      - name: Commit version bump
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "chore: Bump aqua version to ${{ steps.version.outputs.version }}"
+          branch: ${{ fromJson(needs.release-please.outputs.pr).headBranchName }}
+          commit_user_name: fluencebot
+          commit_user_email: devops@fluence.one
+          commit_author: fluencebot <devops@fluence.one>
 
   compile:
     if: needs.release-please.outputs.release-created
