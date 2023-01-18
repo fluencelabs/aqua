@@ -60,7 +60,7 @@ jobs:
 
       - name: Set version in build.sbt
         run: |
-          sed -i 's/baseAquaVersion :=.*/baseAquaVersion := "${{ steps.version.outputs.version }}"/g' build.sbt
+          sed -i 's/auaVersion :=.*/aquaVersion = "${{ steps.version.outputs.version }}"/g' build.sbt
 
       - name: Set cli version
         run: npm version ${{ steps.version.outputs.version }}
