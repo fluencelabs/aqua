@@ -14,7 +14,7 @@ on:
     outputs:
       aqua-version:
         description: "@fluencelabs/aqua version"
-        value: ${{ jobs.aqua.outputs.version }}
+        value: ${{ jobs.aqua-cli.outputs.version }}
       aqua-lsp-version:
         description: "@fluencelabs/aqua-language-server-api version"
         value: ${{ jobs.aqua-lsp.outputs.version }}
@@ -49,41 +49,41 @@ jobs:
         with:
           apps: sbt
 
-      - name: JS build
+      - name: JS CLI build
         env:
-          BUILD_NUMBER: ${{ steps.version.outputs.id }}
+          SNAPSHOT: ${{ steps.version.outputs.id }}
         run: sbt cliJS/fastOptJS
 
-      - name: JS LSP API build
+      - name: JS LSP build
         env:
-          BUILD_NUMBER: ${{ steps.version.outputs.id }}
+          SNAPSHOT: ${{ steps.version.outputs.id }}
         run: sbt language-server-api/fastOptJS
 
-      - name: JS Aqua API build
+      - name: JS API build
         env:
-          BUILD_NUMBER: ${{ steps.version.outputs.id }}
+          SNAPSHOT: ${{ steps.version.outputs.id }}
         run: sbt aqua-api/fastOptJS
 
-      - name: Upload aqua-js artifact
+      - name: Upload aqua-cli artifact
         uses: actions/upload-artifact@v3
         with:
-          name: aqua-js
+          name: aqua-cli
           path: cli/cli/.js/target/scala-*/cli-fastopt.js
 
-      - name: Upload aqua-js-lsp artifact
+      - name: Upload aqua-api artifact
         uses: actions/upload-artifact@v3
         with:
-          name: aqua-js-lsp
-          path: language-server/language-server-api/target/scala-*/language-server-api-fastopt.js
-
-      - name: Upload aqua-js-api artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: aqua-js-api
+          name: aqua-api
           path: api/aqua-api/target/scala-*/aqua-api-fastopt.js
 
-  aqua:
-    name: "Publish @fluencelabs/aqua"
+      - name: Upload aqua-lsp artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: aqua-lsp
+          path: language-server/language-server-api/target/scala-*/language-server-api-fastopt.js
+
+  aqua-cli:
+    name: "Publish aqua-cli"
     runs-on: ubuntu-latest
 
     needs: compile
@@ -102,10 +102,10 @@ jobs:
           repository: fluencelabs/aqua
           ref: ${{ inputs.ref }}
 
-      - name: Download aqua-js artifact
+      - name: Download aqua-cli artifact
         uses: actions/download-artifact@v3
         with:
-          name: aqua-js
+          name: aqua-cli
 
       - run: mv scala-*/cli-fastopt.js cli/cli-npm/aqua.js
 
@@ -152,70 +152,8 @@ jobs:
           working-directory: cli/cli-npm
           id: ${{ steps.version.outputs.id }}
 
-  aqua-lsp:
-    name: "Publish @fluencelabs/aqua-language-server-api"
-    runs-on: ubuntu-latest
-
-    needs: compile
-
-    outputs:
-      version: "${{ steps.snapshot.outputs.version }}"
-
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          repository: fluencelabs/aqua
-          ref: ${{ inputs.ref }}
-
-      - name: Download aqua-js-lsp artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: aqua-js-lsp
-
-      - run: mv scala-*/language-server-api-fastopt.js language-server/language-server-npm/aqua-lsp-api.js
-
-      - name: Import secrets
-        uses: hashicorp/vault-action@v2.4.3
-        with:
-          url: https://vault.fluence.dev
-          path: jwt/github
-          role: ci
-          method: jwt
-          jwtGithubAudience: "https://github.com/fluencelabs"
-          jwtTtl: 300
-          exportToken: false
-          secrets: |
-            kv/npm-registry/basicauth/ci token | NODE_AUTH_TOKEN
-
-      - name: Setup node with self-hosted npm registry
-        uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-          registry-url: "https://npm.fluence.dev"
-          cache-dependency-path: "language-server/language-server-npm/package-lock.json"
-          cache: "npm"
-
-      - run: npm i
-        working-directory: language-server/language-server-npm
-
-      - name: Generate snapshot version
-        id: version
-        uses: fluencelabs/github-actions/generate-snapshot-id@main
-
-      - name: Publish snapshot
-        id: snapshot
-        uses: fluencelabs/github-actions/npm-publish-snapshot@main
-        with:
-          working-directory: language-server/language-server-npm
-          id: ${{ steps.version.outputs.id }}
-
   aqua-api:
-    name: "Publish @fluencelabs/aqua-api"
+    name: "Publish aqua-api"
     runs-on: ubuntu-latest
 
     needs: compile
@@ -234,10 +172,10 @@ jobs:
           repository: fluencelabs/aqua
           ref: ${{ inputs.ref }}
 
-      - name: Download aqua-js artifact
+      - name: Download aqua-api artifact
         uses: actions/download-artifact@v3
         with:
-          name: aqua-js-api
+          name: aqua-api
 
       - run: mv scala-*/aqua-api-fastopt.js api/aqua-api-npm/aqua-api.js
 
@@ -279,4 +217,66 @@ jobs:
         uses: fluencelabs/github-actions/npm-publish-snapshot@main
         with:
           working-directory: api/aqua-api-npm
+          id: ${{ steps.version.outputs.id }}
+
+  aqua-lsp:
+    name: "Publish aqua-lsp"
+    runs-on: ubuntu-latest
+
+    needs: compile
+
+    outputs:
+      version: "${{ steps.snapshot.outputs.version }}"
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          repository: fluencelabs/aqua
+          ref: ${{ inputs.ref }}
+
+      - name: Download aqua-lsp artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: aqua-lsp
+
+      - run: mv scala-*/language-server-api-fastopt.js language-server/language-server-npm/aqua-lsp-api.js
+
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2.4.3
+        with:
+          url: https://vault.fluence.dev
+          path: jwt/github
+          role: ci
+          method: jwt
+          jwtGithubAudience: "https://github.com/fluencelabs"
+          jwtTtl: 300
+          exportToken: false
+          secrets: |
+            kv/npm-registry/basicauth/ci token | NODE_AUTH_TOKEN
+
+      - name: Setup node with self-hosted npm registry
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+          registry-url: "https://npm.fluence.dev"
+          cache-dependency-path: "language-server/language-server-npm/package-lock.json"
+          cache: "npm"
+
+      - run: npm i
+        working-directory: language-server/language-server-npm
+
+      - name: Generate snapshot version
+        id: version
+        uses: fluencelabs/github-actions/generate-snapshot-id@main
+
+      - name: Publish snapshot
+        id: snapshot
+        uses: fluencelabs/github-actions/npm-publish-snapshot@main
+        with:
+          working-directory: language-server/language-server-npm
           id: ${{ steps.version.outputs.id }}
