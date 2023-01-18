@@ -6,7 +6,7 @@ val baseAquaVersion = settingKey[String]("base aqua version")
 
 val catsV = "2.8.0"
 val catsParseV = "0.3.8"
-val monocleV = "3.1.0"
+val monocleV = "3.2.0"
 val scalaTestV = "3.2.15"
 val fs2V = "3.2.11"
 val catsEffectV = "3.3.14"
