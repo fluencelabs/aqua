@@ -2,7 +2,7 @@ val dottyVersion = "3.1.3"
 
 scalaVersion := dottyVersion
 
-val baseAquaVersion = settingKey[String]("base aqua version")
+val aquaVersion = "0.9.1"
 
 val catsV = "2.8.0"
 val catsParseV = "0.3.8"
@@ -17,9 +17,11 @@ val scribeV = "3.7.1"
 name := "aqua-hll"
 
 val commons = Seq(
-  baseAquaVersion := "0.9.1",
-  version         := baseAquaVersion.value + "-" + sys.env.getOrElse("BUILD_NUMBER", "SNAPSHOT"),
-  scalaVersion    := dottyVersion,
+  version := {
+    val aquaSnapshot = sys.env.getOrElse("SNAPSHOT", "")
+    if (aquaSnapshot.isEmpty()) aquaVersion else aquaVersion + "-" + aquaSnapshot,
+  },
+  scalaVersion := dottyVersion,
   libraryDependencies ++= Seq(
     "com.outr"      %%% "scribe"    % scribeV,
     "org.scalatest" %%% "scalatest" % scalaTestV % Test
