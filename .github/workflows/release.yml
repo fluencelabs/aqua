@@ -72,7 +72,7 @@ jobs:
 
       - name: Set lsp version
         run: npm version ${{ steps.version.outputs.version }}
-        working-directory: language-server/language-server-api-npm
+        working-directory: language-server/language-server-npm
 
       - name: Commit version bump
         uses: stefanzweifel/git-auto-commit-action@v4
