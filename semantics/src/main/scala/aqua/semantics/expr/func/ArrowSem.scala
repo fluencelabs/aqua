@@ -7,7 +7,6 @@ import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
 import aqua.raw.ops.{SeqTag, *}
 import aqua.raw.value.{
-  ApplyFunctorRaw,
   ApplyGateRaw,
   ApplyPropertyRaw,
   CallArrowRaw,
@@ -143,7 +142,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
                         idx + 1
                       )
                     // assign and change return value for all `Apply*Raw`
-                    case (v: ApplyFunctorRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
                     case (v: ApplyGateRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
                     case (v: ApplyPropertyRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
                     case (v: CallArrowRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)

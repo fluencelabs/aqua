@@ -26,9 +26,7 @@ import aqua.model.inline.SeqMode
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{
-  ApplyFunctorRaw,
   ApplyGateRaw,
-  ApplyIntoCopyRaw,
   ApplyPropertyRaw,
   CallArrowRaw,
   FunctorRaw,
@@ -45,8 +43,9 @@ import cats.Eval
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.monoid.*
 import cats.instances.list.*
+import scribe.Logging
 
-object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
+object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Logging {
 
   // in perspective literals can have properties and functors (like `nil` with length)
   def flatLiteralWithProperties[S: Mangler: Exports: Arrows](
@@ -54,7 +53,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     inl: Inline,
     properties: Chain[PropertyModel],
     resultType: Type
-  ): State[S, (ValueModel, Inline)] = {
+  ): State[S, (VarModel, Inline)] = {
     for {
       apName <- Mangler[S].findAndForbidName("literal_to_functor")
       resultName <- Mangler[S].findAndForbidName(s"literal_props")
@@ -75,94 +74,103 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
     }
   }
 
-  private[inline] def removeProperty[S: Mangler: Exports: Arrows](
-    vm: ValueModel
-  ): State[S, (ValueModel, Inline)] =
-    vm match {
-      case VarModel(nameM, btm, propertyM) if propertyM.nonEmpty =>
-        for {
-          nameMM <- Mangler[S].findAndForbidName(nameM)
-        } yield VarModel(nameMM, vm.`type`, Chain.empty) -> Inline.preload(
-          // TODO use smth more resilient to make VarRaw from a flattened VarModel
-          nameMM -> ApplyPropertyRaw.fromChain(VarRaw(nameM, btm), propertyM.map(_.toRaw))
-        )
-      case _ =>
-        State.pure(vm -> Inline.empty)
-    }
-
-  private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
-    p: PropertyRaw
-  ): State[S, (PropertyModel, Inline)] = // TODO property for collection
-    p match {
-      case IntoFieldRaw(field, t) =>
-        State.pure(IntoFieldModel(field, t) -> Inline.empty)
-      case IntoIndexRaw(vm: ApplyPropertyRaw, t) =>
-        for {
-          nn <- Mangler[S].findAndForbidName("ap-prop")
-        } yield IntoIndexModel(nn, t) -> Inline.preload(nn -> vm)
-
-      case IntoIndexRaw(vr: (VarRaw | CallArrowRaw), t) =>
-        unfold(vr, propertiesAllowed = false).map {
-          case (VarModel(name, _, _), inline) =>
-            IntoIndexModel(name, t) -> inline
-          case (LiteralModel(v, _), inline) => IntoIndexModel(v, t) -> inline
-        }
-
-      case IntoIndexRaw(LiteralRaw(value, _), t) =>
-        State.pure(IntoIndexModel(value, t) -> Inline.empty)
-    }
-
-  def reachModelWithPropertyModels[S: Mangler: Exports: Arrows](
-    model: ValueModel,
-    propertyModels: Chain[PropertyModel],
-    propertyPrefix: Inline,
-    propertiesAllowed: Boolean,
-    streamGateInline: Option[Inline] = None
-  ): State[S, (ValueModel, Inline)] = {
-    Exports[S].exports.flatMap { exports =>
-      model match {
-        case v: VarModel =>
-          {
-            val vm = v.copy(properties = v.properties ++ propertyModels).resolveWith(exports)
-            State.pure((vm, Inline.empty))
-          }.flatMap { case (genV, genInline) =>
-            val prefInline = propertyPrefix |+| genInline
-            if (propertiesAllowed) State.pure(genV -> prefInline)
-            else
-              removeProperty(genV).map { case (vmm, mpp) =>
-                val resultInline = streamGateInline.map { gInline =>
-                  Inline(
-                    prefInline.flattenValues ++ mpp.flattenValues ++ gInline.flattenValues,
-                    Chain.one(
-                      SeqModel.wrap((prefInline.predo ++ mpp.predo ++ gInline.predo).toList: _*)
-                    ),
-                    SeqMode
-                  )
-                }.getOrElse(prefInline |+| mpp)
-                vmm -> resultInline
-              }
-          }
-
-        case l: LiteralModel if propertyModels.nonEmpty =>
-          flatLiteralWithProperties(l, propertyPrefix, propertyModels, propertyModels.lastOption.map(_.`type`).getOrElse(l.`type`))
-
-        case v =>
-          // What does it mean actually? I've no ides
-          State.pure((v, propertyPrefix))
-      }
+  private def flatVar[S: Mangler: Exports: Arrows](
+    varModel: VarModel
+  ): State[S, (VarModel, Inline)] = {
+    for {
+      nn <- Mangler[S].findAndForbidName(varModel.name + "_flat")
+    } yield {
+      val flatten = VarModel(nn, varModel.`type`)
+      flatten -> Inline.tree(FlattenModel(varModel, flatten.name).leaf)
     }
   }
 
+  private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
+    varModel: VarModel,
+    p: PropertyRaw
+  ): State[S, (VarModel, Inline)] = // TODO property for collection
+    p match {
+      case IntoFieldRaw(field, t) =>
+        State.pure(
+          varModel.copy(properties =
+            varModel.properties :+ IntoFieldModel(field, t)
+          ) -> Inline.empty
+        )
+
+      case IntoIndexRaw(LiteralRaw(value, _), t) =>
+        State.pure(
+          varModel.copy(properties =
+            varModel.properties :+ IntoIndexModel(value, t)
+          ) -> Inline.empty
+        )
+
+      case IntoIndexRaw(vr, t) =>
+        unfold(vr, propertiesAllowed = false).map {
+          case (VarModel(name, _, _), inline) =>
+            varModel.copy(properties = varModel.properties :+ IntoIndexModel(name, t)) -> inline
+          case (LiteralModel(literal, _), inline) =>
+            varModel.copy(properties = varModel.properties :+ IntoIndexModel(literal, t)) -> inline
+        }
+
+      case f @ FunctorRaw(_, _) =>
+        for {
+          flattenVI <- flatVar(varModel)
+          (flatten, inline) = flattenVI
+          newVI <- ApplyFunctorRawInliner(flatten, f)
+        } yield {
+          newVI._1 -> Inline(
+            inline.flattenValues ++ newVI._2.flattenValues,
+            inline.predo ++ newVI._2.predo,
+            mergeMode = SeqMode
+          )
+        }
+
+      case ic @ IntoCopyRaw(_, _) =>
+        for {
+          flattenVI <- flatVar(varModel)
+          (flatten, inline) = flattenVI
+          newVI <- ApplyIntoCopyRawInliner(varModel, ic)
+        } yield {
+          newVI._1 -> Inline(
+            inline.flattenValues ++ newVI._2.flattenValues,
+            inline.predo ++ newVI._2.predo,
+            mergeMode = SeqMode
+          )
+        }
+
+    }
+
+  // case l: LiteralModel if propertyModels.nonEmpty =>
+  //          flatLiteralWithProperties(l, propertyPrefix, propertyModels, propertyModels.lastOption.map(_.`type`).getOrElse(l.`type`))
+
   private def unfoldProperties[S: Mangler: Exports: Arrows](
-    properties: Chain[PropertyRaw]
-  ): State[S, (Chain[PropertyModel], Inline)] = {
+    prevInline: Inline,
+    vm: VarModel,
+    properties: Chain[PropertyRaw],
+    propertiesAllowed: Boolean
+  ): State[S, (VarModel, Inline)] = {
     properties
-      .foldLeft[State[S, (Chain[PropertyModel], Inline)]](
-        State.pure((Chain.empty[PropertyModel], Inline.empty))
-      ) { case (pcm, p) =>
-        pcm.flatMap { case (pc, m) =>
-          unfoldProperty(p).map { case (pm, mm) =>
-            (pc :+ pm, m |+| mm)
+      .foldLeft[State[S, (VarModel, Inline)]](
+        State.pure((vm, prevInline))
+      ) { case (state, property) =>
+        state.flatMap { case (vm, leftInline) =>
+          unfoldProperty(vm, property).flatMap {
+            case (v, i) if !propertiesAllowed && v.properties.nonEmpty =>
+              flatVar(v).map { case (vf, inlf) =>
+                vf -> Inline(
+                  leftInline.flattenValues ++ i.flattenValues ++ inlf.flattenValues,
+                  leftInline.predo ++ i.predo ++ inlf.predo,
+                  mergeMode = SeqMode
+                )
+              }
+            case (v, i) =>
+              State.pure(
+                v -> Inline(
+                  leftInline.flattenValues ++ i.flattenValues,
+                  leftInline.predo ++ i.predo,
+                  mergeMode = SeqMode
+                )
+              )
           }
         }
       }
@@ -203,27 +211,34 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
         unfold(vr).flatMap {
           case (vm @ VarModel(nameVM, _, _), inl) =>
             val gateRaw = ApplyGateRaw(nameVM, st, idx)
-            unfold(gateRaw).flatMap { case (gateResVal, gateResInline) =>
-              unfoldProperties(properties).flatMap { case (propertyModels, map) =>
-                reachModelWithPropertyModels(
-                  gateResVal,
-                  propertyModels,
-                  inl |+| map,
-                  false,
-                  Some(gateResInline)
-                )
-              }
+            unfold(gateRaw).flatMap {
+              case (gateResVal: VarModel, gateResInline) =>
+                unfoldProperties(gateResInline, gateResVal, properties, propertiesAllowed).map {
+                  case (v, i) =>
+                    (v: ValueModel) -> Inline(
+                      inl.flattenValues ++ i.flattenValues,
+                      inl.predo ++ i.predo,
+                      mergeMode = SeqMode
+                    )
+                }
+              case (v, i) =>
+                logger.error("Unreachable. Unfolded stream cannot be a literal")
+                State.pure(v -> i)
             }
           case l =>
-            // unreachable. Stream cannot be literal
+            logger.error("Unreachable. Unfolded stream cannot be a literal")
             State.pure(l)
         }
 
       case (_, _) =>
-        unfold(raw).flatMap { case (vm, prevInline) =>
-          unfoldProperties(properties).flatMap { case (propertyModels, map) =>
-            reachModelWithPropertyModels(vm, propertyModels, prevInline |+| map, propertiesAllowed)
-          }
+        unfold(raw).flatMap {
+          case (vm: VarModel, prevInline) =>
+            unfoldProperties(prevInline, vm, properties, propertiesAllowed).map { case (v, i) =>
+              (v: ValueModel) -> i
+            }
+          case (v, i) =>
+            logger.error("Unexpected. Unfolded stream cannot be a literal")
+            State.pure(v -> i)
         }
     })
 
@@ -232,62 +247,8 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
   override def apply[S: Mangler: Exports: Arrows](
     apr: ApplyPropertyRaw,
     propertiesAllowed: Boolean
-  ): State[S, (ValueModel, Inline)] =
+  ): State[S, (ValueModel, Inline)] = {
     val (raw, properties) = apr.unwind
-
-    // properties that will split chain of properties
-    val splitter: PropertyRaw => Boolean = {
-      case FunctorRaw(_, _) => false
-      case IntoCopyRaw(_, _) => false
-      case _ => true
-    }
-
-    val leftToFunctor = properties.takeWhile(splitter)
-
-    if (leftToFunctor.length == properties.length) {
-      unfoldRawWithProperties(raw, properties, propertiesAllowed)
-    } else {
-      // split properties like this:
-      // properties -- functor/copy -- properties with functors and copy
-      // process properties, process functor in ApplyFunctorRawInliner
-      // then process tail recursively
-      (for {
-        ur <- properties.dropWhile(splitter).uncons
-        (functorOrCopy: PropertyRaw, right) = ur
-      } yield {
-        (leftToFunctor, functorOrCopy, right)
-      }).map { case (left, functorOrCopy, right) =>
-        for {
-          vmLeftInline <- unfoldRawWithProperties(raw, left, propertiesAllowed)
-          (leftVM, leftInline) = vmLeftInline
-          // TODO: rewrite without `toRaw`
-          vmSplitPropInline <- functorOrCopy match {
-            case f @ FunctorRaw(_, _) =>
-              val fRaw = ApplyFunctorRaw(leftVM.toRaw, f)
-              ApplyFunctorRawInliner(fRaw, false)
-            case ic @ IntoCopyRaw(_, _) =>
-              val icRaw = ApplyIntoCopyRaw(leftVM.toRaw, ic)
-              ApplyIntoCopyRawInliner(icRaw, false)
-          }
-          (newVM, newInline) = vmSplitPropInline
-          // TODO: rewrite without `toRaw`
-          vmRightInline <- unfold(ApplyPropertyRaw.fromChain(newVM.toRaw, right), propertiesAllowed)
-          (vm, rightInline) = vmRightInline
-        } yield {
-          println("left flatten values: " + leftInline.flattenValues)
-          println("new flatten values: " + newInline.flattenValues)
-          println("right flatten values: " + rightInline.flattenValues)
-          println("===================")
-          println("left predo: " + leftInline.predo)
-          println("new predo: " + newInline.predo)
-          println("right predo: " + rightInline.predo)
-          vm -> Inline(
-            rightInline.flattenValues ++ newInline.flattenValues ++ leftInline.flattenValues,
-            rightInline.predo ++ newInline.predo ++ leftInline.predo,
-            SeqMode
-          )
-        }
-      }.getOrElse(unfoldRawWithProperties(raw, properties, propertiesAllowed))
-    }
-
+    unfoldRawWithProperties(raw, properties, propertiesAllowed)
+  }
 }
