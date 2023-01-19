@@ -2,6 +2,7 @@ package aqua.model.inline
 
 import aqua.model.inline.raw.ApplyPropertiesRawInliner
 import aqua.model.{
+  EmptyModel,
   FlattenModel,
   FunctorModel,
   IntoFieldModel,
@@ -132,7 +133,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         "x",
         ArrayType(ScalarType.string),
         Chain.one(IntoIndexModel("y", ScalarType.string))
-      ) -> None
+      ) -> Some(EmptyModel.leaf)
     )
   }
 
@@ -156,24 +157,6 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  "raw value inliner" should "unfold a PropertyModel" in {
-    import aqua.model.inline.state.Mangler.Simple
-    // [ys!]
-    ApplyPropertiesRawInliner
-      .unfoldProperty[InliningState](`raw ys[0]`)
-      .run(InliningState(noNames = Set("ys")))
-      .value
-      ._2 should be(
-      IntoIndexModel("ap-prop", ScalarType.string) -> Inline(
-        Map(
-          "ap-prop" -> VarRaw("ys", ArrayType(ScalarType.i8)).withProperty(
-            IntoIndexRaw(LiteralRaw.number(0), ScalarType.i8)
-          )
-        )
-      )
-    )
-  }
-
   "raw value inliner" should "desugarize a single recursive raw value" in {
     // x[ys!]
     val (resVal, resTree) = valueToModel[InliningState](
@@ -187,7 +170,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
       VarModel(
         "x",
         ArrayType(ScalarType.string),
-        Chain.one(IntoIndexModel("ap-prop", ScalarType.string))
+        Chain.one(IntoIndexModel("ys_flat", ScalarType.string))
       )
     )
 
@@ -200,7 +183,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
           ArrayType(ScalarType.i8),
           Chain.one(IntoIndexModel("0", ScalarType.i8))
         ),
-        "ap-prop"
+        "ys_flat"
       ).leaf
     ) should be(true)
   }
@@ -215,8 +198,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         "x",
         ArrayType(ArrayType(ScalarType.string)),
         Chain(
-          IntoIndexModel("ap-prop", ArrayType(ScalarType.string)),
-          IntoIndexModel("ap-prop-0", ScalarType.string)
+          IntoIndexModel("xs_flat", ArrayType(ScalarType.string)),
+          IntoIndexModel("xss_flat", ScalarType.string)
         )
       )
     )
@@ -224,79 +207,57 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     resTree.isEmpty should be(false)
 
     resTree.get.equalsOrShowDiff(
-      ParModel.wrap(
+      SeqModel.wrap(
         SeqModel.wrap(
-          SeqModel.wrap(
-            SeqModel.wrap(
-              FlattenModel(
-                VarModel(
-                  "ys",
-                  ArrayType(ScalarType.u32)
-                ),
-                "ys_to_functor"
-              ).leaf,
-              FlattenModel(
-                VarModel(
-                  "ys_to_functor",
-                  ArrayType(ScalarType.u32),
-                  Chain.one(FunctorModel("length", ScalarType.u32))
-                ),
-                "ys_length"
-              ).leaf
-            ),
-            FlattenModel(
-              VarModel(
-                "ys_length",
-                ScalarType.u32
-              ),
-              "ap-prop-1"
-            ).leaf
-          ),
           FlattenModel(
             VarModel(
-              "xs",
-              ArrayType(ScalarType.u32),
-              Chain.one(IntoIndexModel("ap-prop-1", ScalarType.u32))
+              "ys",
+              ArrayType(ScalarType.u32)
             ),
-            "ap-prop"
+            "ys_to_functor"
+          ).leaf,
+          FlattenModel(
+            VarModel(
+              "ys_to_functor",
+              ArrayType(ScalarType.u32),
+              Chain.one(FunctorModel("length", ScalarType.u32))
+            ),
+            "ys_length"
           ).leaf
         ),
-        SeqModel.wrap(
-          SeqModel.wrap(
-            SeqModel.wrap(
-              FlattenModel(
-                VarModel(
-                  "yss",
-                  ArrayType(ScalarType.u32)
-                ),
-                "yss_to_functor"
-              ).leaf,
-              FlattenModel(
-                VarModel(
-                  "yss_to_functor",
-                  ArrayType(ScalarType.u32),
-                  Chain.one(FunctorModel("length", ScalarType.u32))
-                ),
-                "yss_length"
-              ).leaf
-            ),
-            FlattenModel(
-              VarModel(
-                "yss_length",
-                ScalarType.u32
-              ),
-              "ap-prop-2"
-            ).leaf
+        FlattenModel(
+          VarModel(
+            "xs",
+            ArrayType(ScalarType.u32),
+            Chain.one(IntoIndexModel("ys_length", ScalarType.u32))
           ),
+          "xs_flat"
+        ).leaf,
+        SeqModel.wrap(
           FlattenModel(
             VarModel(
-              "xss",
-              ArrayType(ScalarType.u32),
-              Chain.one(IntoIndexModel("ap-prop-2", ScalarType.u32))
+              "yss",
+              ArrayType(ScalarType.u32)
             ),
-            "ap-prop-0"
+            "yss_to_functor"
+          ).leaf,
+          FlattenModel(
+            VarModel(
+              "yss_to_functor",
+              ArrayType(ScalarType.u32),
+              Chain.one(FunctorModel("length", ScalarType.u32))
+            ),
+            "yss_length"
           ).leaf
-        )
+        ),
+        FlattenModel(
+          VarModel(
+            "xss",
+            ArrayType(ScalarType.u32),
+            Chain.one(IntoIndexModel("yss_length", ScalarType.u32))
+          ),
+          "xss_flat"
+        ).leaf
       )
     ) should be(true)
   }
@@ -314,8 +275,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         "x",
         ArrayType(ArrayType(ScalarType.string)),
         Chain(
-          IntoIndexModel("ap-prop", ArrayType(ScalarType.string)),
-          IntoIndexModel("ap-prop-0", ScalarType.string)
+          IntoIndexModel("ys_flat", ArrayType(ScalarType.string)),
+          IntoIndexModel("ys_flat-0", ScalarType.string)
         )
       )
     )
@@ -323,14 +284,14 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     resTree.isEmpty should be(false)
 
     resTree.get.equalsOrShowDiff(
-      ParModel.wrap(
+      SeqModel.wrap(
         FlattenModel(
           VarModel(
             "ys",
             ArrayType(ScalarType.i8),
             Chain.one(IntoIndexModel("0", ScalarType.i8))
           ),
-          "ap-prop"
+          "ys_flat"
         ).leaf,
         FlattenModel(
           VarModel(
@@ -338,7 +299,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
             ArrayType(ScalarType.i8),
             Chain.one(IntoIndexModel("1", ScalarType.i8))
           ),
-          "ap-prop-0"
+          "ys_flat-0"
         ).leaf
       )
     ) should be(true)
@@ -357,8 +318,11 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
 
     resVal should be(
       VarModel(
-        "x_gate-0",
-        ScalarType.string
+        "x_gate",
+        ArrayType(ScalarType.string),
+        Chain(
+          IntoIndexModel("ys_flat", ScalarType.string)
+        )
       )
     )
     println(resTree)
@@ -394,8 +358,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         "x",
         ArrayType(ArrayType(ScalarType.string)),
         Chain(
-          IntoIndexModel("ap-prop", ArrayType(ScalarType.string)),
-          IntoIndexModel("ap-prop-0", ScalarType.string)
+          IntoIndexModel("zs_flat", ArrayType(ScalarType.string)),
+          IntoIndexModel("ys_flat-0", ScalarType.string)
         )
       )
     )
@@ -403,28 +367,23 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     resTree.isEmpty should be(false)
 
     resTree.get.equalsOrShowDiff(
-      ParModel.wrap(
-        // Prepare the zs-0 index
-        SeqModel.wrap(
-          // First get ys[0], save as ys-1
-          FlattenModel(
-            VarModel(
-              "ys",
-              ArrayType(ScalarType.i8),
-              Chain.one(IntoIndexModel("0", ScalarType.i8))
-            ),
-            "ap-prop-1"
-          ).leaf,
-          // Then use that ys-1 as an index of zs
-          FlattenModel(
-            VarModel(
-              "zs",
-              ArrayType(ScalarType.i8),
-              Chain.one(IntoIndexModel("ap-prop-1", ScalarType.i8))
-            ),
-            "ap-prop"
-          ).leaf
-        ),
+      SeqModel.wrap(
+        FlattenModel(
+          VarModel(
+            "ys",
+            ArrayType(ScalarType.i8),
+            Chain.one(IntoIndexModel("0", ScalarType.i8))
+          ),
+          "ys_flat"
+        ).leaf,
+        FlattenModel(
+          VarModel(
+            "zs",
+            ArrayType(ScalarType.i8),
+            Chain.one(IntoIndexModel("ys_flat", ScalarType.i8))
+          ),
+          "zs_flat"
+        ).leaf,
         // Now prepare ys-0
         FlattenModel(
           VarModel(
@@ -432,7 +391,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
             ArrayType(ScalarType.i8),
             Chain.one(IntoIndexModel("1", ScalarType.i8))
           ),
-          "ap-prop-0"
+          "ys_flat-0"
         ).leaf
       )
     ) should be(true)

@@ -114,7 +114,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
       case f @ FunctorRaw(_, _) =>
         for {
-          flattenVI <- flatVar(varModel)
+          flattenVI <- if (varModel.properties.nonEmpty) flatVar(varModel) else State.pure(varModel, Inline.empty)
           (flatten, inline) = flattenVI
           newVI <- ApplyFunctorRawInliner(flatten, f)
         } yield {
@@ -127,7 +127,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
       case ic @ IntoCopyRaw(_, _) =>
         for {
-          flattenVI <- flatVar(varModel)
+          flattenVI <- if (varModel.properties.nonEmpty) flatVar(varModel) else State.pure(varModel, Inline.empty)
           (flatten, inline) = flattenVI
           newVI <- ApplyIntoCopyRawInliner(varModel, ic)
         } yield {
