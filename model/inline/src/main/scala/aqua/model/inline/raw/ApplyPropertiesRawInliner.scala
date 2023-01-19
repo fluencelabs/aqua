@@ -41,11 +41,39 @@ import aqua.raw.value.{
   VarRaw
 }
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType, Type}
-import cats.data.{Chain, NonEmptyMap, State}
+import cats.Eval
+import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.monoid.*
 import cats.instances.list.*
 
 object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
+
+  // in perspective literals can have properties and functors (like `nil` with length)
+  def flatLiteralWithProperties[S: Mangler: Exports: Arrows](
+    literal: LiteralModel,
+    inl: Inline,
+    properties: Chain[PropertyModel],
+    resultType: Type
+  ): State[S, (ValueModel, Inline)] = {
+    for {
+      apName <- Mangler[S].findAndForbidName("literal_to_functor")
+      resultName <- Mangler[S].findAndForbidName(s"literal_props")
+    } yield {
+      val cleanedType = literal.`type` match {
+        // literals cannot be streams, use it as an array to use properties
+        case StreamType(el) => ArrayType(el)
+        case tt => tt
+      }
+      val apVar = VarModel(apName, cleanedType, properties)
+      val tree = inl |+| Inline.tree(
+        SeqModel.wrap(
+          FlattenModel(literal.copy(`type` = cleanedType), apVar.name).leaf,
+          FlattenModel(apVar, resultName).leaf
+        )
+      )
+      VarModel(resultName, resultType) -> tree
+    }
+  }
 
   private[inline] def removeProperty[S: Mangler: Exports: Arrows](
     vm: ValueModel
@@ -114,6 +142,9 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] {
                 vmm -> resultInline
               }
           }
+
+        case l: LiteralModel if propertyModels.nonEmpty =>
+          flatLiteralWithProperties(l, propertyPrefix, propertyModels, propertyModels.lastOption.map(_.`type`).getOrElse(l.`type`))
 
         case v =>
           // What does it mean actually? I've no ides

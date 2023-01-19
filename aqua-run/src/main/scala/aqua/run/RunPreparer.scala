@@ -35,7 +35,7 @@ class RunPreparer(
   ): ValidatedNec[String, Unit] = {
     if (funcDomain.size != args.length) {
       invalidNec(
-        s"Number of arguments for the function is incorrect. Expected: ${args.length}. Actual: ${funcDomain.size}"
+        s"Number of arguments for the function is incorrect. Expected: ${funcDomain.size}. Actual: ${args.length}"
       )
     } else {
       funcDomain

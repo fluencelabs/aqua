@@ -1,170 +1,295 @@
-name: "release"
+name: "release-please"
 
 on:
-  workflow_dispatch:
-    inputs:
-      do_release:
-        description: "Set to 'true' to make a GitHub release"
-        required: true
-        default: "false"
-      npm_tag:
-        description: 'npm tag'
-        required: true
-        default: 'latest' 
-        type: choice
-        options:
-        - latest
-        - nightly
+  push:
+    branches:
+      - "main"
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+
+env:
+  FORCE_COLOR: true
 
 jobs:
-  release:
-    name: "Publish ${{ github.event.inputs.do_release == 'true' && 'and release' || 'to NPM' }}"
-    runs-on: "ubuntu-latest"
-    env:
-      DO_RELEASE: ${{ github.event.inputs.do_release || 'false' }}
+  release-please:
+    runs-on: ubuntu-latest
+
+    outputs:
+      release-created: ${{ steps.release.outputs.release_created }}
+      tag-name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+      pr: ${{ steps.release.outputs['pr'] }}
+
+    steps:
+      - name: Run release-please
+        id: release
+        uses: google-github-actions/release-please-action@v3
+        with:
+          token: ${{ secrets.FLUENCEBOT_RELEASE_PLEASE_PAT }}
+          command: manifest
+          config-file: .github/release-please/config.json
+          manifest-file: .github/release-please/manifest.json
+
+      - name: Show output from release-please
+        if: steps.release.outputs.releases_created
+        env:
+          RELEASE_PLEASE_OUTPUT: ${{ toJSON(steps.release.outputs) }}
+        run: echo "${RELEASE_PLEASE_OUTPUT}" | jq
+
+  bump-version:
+    if: needs.release-please.outputs.pr != null
+    runs-on: ubuntu-latest
+    needs:
+      - release-please
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ fromJson(needs.release-please.outputs.pr).headBranchName }}
+
+      - name: Get aqua version
+        id: version
+        run: |
+          version="$(jq -r '.[]' .github/release-please/manifest.json)"
+          echo "version=${version}" >> $GITHUB_OUTPUT
+
+      - name: Set version in build.sbt
+        run: |
+          sed -i 's/aquaVersion =.*/aquaVersion = "${{ steps.version.outputs.version }}"/g' build.sbt
+
+      - name: Set cli version
+        run: npm version ${{ steps.version.outputs.version }}
+        working-directory: cli/cli-npm
+
+      - name: Set api version
+        run: npm version ${{ steps.version.outputs.version }}
+        working-directory: api/aqua-api-npm
+
+      - name: Set lsp version
+        run: npm version ${{ steps.version.outputs.version }}
+        working-directory: language-server/language-server-npm
+
+      - name: Commit version bump
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "chore: Bump aqua version to ${{ steps.version.outputs.version }}"
+          branch: ${{ fromJson(needs.release-please.outputs.pr).headBranchName }}
+          commit_user_name: fluencebot
+          commit_user_email: devops@fluence.one
+          commit_author: fluencebot <devops@fluence.one>
+
+  compile:
+    if: needs.release-please.outputs.release-created
+    runs-on: builder
+    needs: release-please
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache Scala
+        uses: coursier/cache-action@v6
+
+      - name: Setup Scala
+        uses: coursier/setup-action@v1
+        with:
+          apps: sbt
+
+      - name: JS CLI build
+        run: sbt cliJS/fullLinkJS
+
+      - name: JS API build
+        run: sbt aqua-api/fullLinkJS
+
+      - name: JS LSP build
+        run: sbt language-server-api/fullLinkJS
+
+      - name: Upload aqua-cli artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: aqua-cli
+          path: cli/cli/.js/target/scala-*/cli-opt/main.js
+
+      - name: Upload aqua-api artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: aqua-api
+          path: api/aqua-api/target/scala-*/aqua-api-opt/main.js
+
+      - name: Upload aqua-lsp artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: aqua-lsp
+          path: language-server/language-server-api/target/scala-*/language-server-api-opt/main.js
+
+  aqua-cli:
+    name: "Publish aqua-cli"
+    runs-on: ubuntu-latest
+
+    needs:
+      - release-please
+      - compile
+
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      ### Setup
-      - uses: olafurpg/setup-scala@v13
-
-      - name: JS build
-        run: sbt cliJS/fullLinkJS
-        env:
-          BUILD_NUMBER: ${{ github.run_number }}
-
-      - name: JS language server API build
-        run: sbt language-server-api/fullLinkJS
-        env:
-          BUILD_NUMBER: ${{ github.run_number }}
-
-      - name: JS Aqua API build
-        run: sbt aqua-api/fullLinkJS
-        env:
-          BUILD_NUMBER: ${{ github.run_number }}
-
-      - name: Get project version
-        # In CI sbt appends a new line after its output, so we need `tail -n3 | head -n2` to get last two non-empty lines
-        run: |
-          # Slower way of getting two variables from sbt. Try it if something breaks
-          #
-          # VERSION="$(sbt 'print cli/version' |& tail -n2 | head -n1)"
-          # BASE_VERSION="$(sbt 'print cli/baseAquaVersion' |& tail -n2 | head -n1)"
-
-          # print two versions as two lines
-          OUTPUT=$(sbt 'print cli/baseAquaVersion; print cli/version')
-          # read two lines to two variables
-          read -rd "\n" BASE_VERSION VERSION <<<$(echo "$OUTPUT" | tail -n3 | head -n2) || true
-
-          # debug output
-          echo "BASE_VERSION="$BASE_VERSION
-          echo "VERSION="$VERSION
-
-          echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-        env:
-          BUILD_NUMBER: ${{ github.run_number }}
-
-      - name: Check .js exists
-        run: |
-          JS="cli/cli/.js/target/scala-3.1.3/cli-opt/aqua-${{ env.VERSION }}.js"
-          mv cli/cli/.js/target/scala-3.1.3/cli-opt/main.js "$JS"
-          stat "$JS"
-          echo "JS=$JS" >> $GITHUB_ENV
-
-      - name: Check LSP API .js exists
-        run: |
-          JSLSP="language-server/language-server-api/target/scala-3.1.3/language-server-api-opt/aqua-${{ env.VERSION }}.js"
-          mv language-server/language-server-api/target/scala-3.1.3/language-server-api-opt/main.js "$JSLSP"
-          stat "$JSLSP"
-          echo "JSLSP=$JSLSP" >> $GITHUB_ENV
-
-      - name: Check Aqua API .js exists
-        run: |
-          JSAPI="api/aqua-api/target/scala-3.1.3/aqua-api-opt/aqua-${{ env.VERSION }}.js"
-          mv api/aqua-api/target/scala-3.1.3/aqua-api-opt/main.js "$JSAPI"
-          stat "$JSAPI"
-          echo "JSAPI=$JSAPI" >> $GITHUB_ENV
-
-      ### Publish to NPM registry
-      - uses: actions/setup-node@v3
+      - name: Download aqua-cli artifact
+        uses: actions/download-artifact@v3
         with:
-          node-version: "15"
+          name: aqua-cli
+
+      - run: mv scala-*/*/main.js cli/cli-npm/aqua.js
+
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2.4.3
+        with:
+          url: https://vault.fluence.dev
+          path: jwt/github
+          role: ci
+          method: jwt
+          jwtGithubAudience: "https://github.com/fluencelabs"
+          jwtTtl: 300
+          exportToken: false
+          secrets: |
+            kv/npmjs/fluencebot token | NODE_AUTH_TOKEN
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
           registry-url: "https://registry.npmjs.org"
+          cache-dependency-path: "cli/cli-npm/package-lock.json"
+          cache: "npm"
 
-      - run: cp ${{ env.JS }} ./cli/cli-npm/aqua.js
-      - run: cp ${{ env.JSLSP }} ./language-server/language-server-npm/aqua-lsp-api.js
-      - run: cp ${{ env.JSAPI }} ./api/aqua-api-npm/aqua-api.js
+      - name: Set version
+        run: npm version ${{ needs.release-please.outputs.version }}
+        working-directory: cli/cli-npm
 
-      - run: npm version ${{ env.VERSION }}
-        working-directory: ./cli/cli-npm
+      - run: npm i
+        working-directory: cli/cli-npm
 
-      - name: Publish to NPM as aqua
-        run: |
-          npm i
-          npm run build
-          npm publish --access public --tag "${{ github.event.inputs.npm_tag }}"
-        working-directory: ./cli/cli-npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm run build
+        working-directory: cli/cli-npm
 
-      ### create release
+      - name: Publish to NPM registry
+        run: npm publish --access public
+        working-directory: cli/cli-npm
 
-      # 'Push tag' will fail if such tag already exists
-      - name: Push tag ${{ env.BASE_VERSION }}
-        if: ${{ env.DO_RELEASE == 'true' }}
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.1
+  aqua-api:
+    name: "Publish aqua-api"
+    runs-on: ubuntu-latest
+
+    needs:
+      - release-please
+      - compile
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download aqua-api artifact
+        uses: actions/download-artifact@v3
         with:
-          custom_tag: ${{ env.BASE_VERSION }}
-          tag_prefix: ""
-          github_token: ${{ secrets.PERSONAL_TOKEN }}
+          name: aqua-api
 
-      - name: Build Changelog
-        if: ${{ env.DO_RELEASE == 'true' }}
-        id: github_release
-        uses: mikepenz/release-changelog-builder-action@v3
+      - run: mv scala-*/*/main.js api/aqua-api-npm/aqua-api.js
+
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2.4.3
         with:
-          configuration: ".github/workflows/changelog_config.json"
-          toTag: ${{ steps.tag_version.outputs.new_tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          url: https://vault.fluence.dev
+          path: jwt/github
+          role: ci
+          method: jwt
+          jwtGithubAudience: "https://github.com/fluencelabs"
+          jwtTtl: 300
+          exportToken: false
+          secrets: |
+            kv/npmjs/fluencebot token | NODE_AUTH_TOKEN
 
-      - name: Release
-        if: ${{ env.DO_RELEASE == 'true' }}
-        uses: softprops/action-gh-release@v1
+      - name: Setup node
+        uses: actions/setup-node@v3
         with:
-          name: Aqua Compiler ${{ env.VERSION }}
-          tag_name: ${{ steps.tag_version.outputs.new_tag }}
-          body: ${{ steps.github_release.outputs.changelog }}
-          draft: false
-          prerelease: false
-          files: |
-            ${{ env.JS }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          node-version: "16"
+          registry-url: "https://registry.npmjs.org"
+          cache-dependency-path: "api/aqua-api-npm/package-lock.json"
+          cache: "npm"
 
-      - run: npm version  ${{ env.VERSION }}
-        working-directory: ./language-server/language-server-npm
+      - name: Set version
+        run: npm version ${{ needs.release-please.outputs.version }}
+        working-directory: api/aqua-api-npm
 
-      - name: Publish aqua LSP API to NPM
-        run: |
-          npm i
-          npm publish --access public
-        working-directory: ./language-server/language-server-npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm i
+        working-directory: api/aqua-api-npm
 
-      - run: npm version ${{ env.VERSION }}
-        working-directory: ./api/aqua-api-npm
+      - name: Publish to NPM registry
+        run: npm publish --access public
+        working-directory: api/aqua-api-npm
 
-      - name: Publish aqua API to NPM
-        run: |
-          npm i
-          npm publish --access public
-        working-directory: ./api/aqua-api-npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  aqua-lsp:
+    name: "Publish aqua-lsp"
+    runs-on: ubuntu-latest
 
+    needs:
+      - release-please
+      - compile
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download aqua-lsp artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: aqua-lsp
+
+      - run: mv scala-*/*/main.js language-server/language-server-npm/aqua-lsp-api.js
+
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2.4.3
+        with:
+          url: https://vault.fluence.dev
+          path: jwt/github
+          role: ci
+          method: jwt
+          jwtGithubAudience: "https://github.com/fluencelabs"
+          jwtTtl: 300
+          exportToken: false
+          secrets: |
+            kv/npmjs/fluencebot token | NODE_AUTH_TOKEN
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+          registry-url: "https://registry.npmjs.org"
+          cache-dependency-path: "language-server/language-server-npm/package-lock.json"
+          cache: "npm"
+
+      - name: Set version
+        run: npm version ${{ needs.release-please.outputs.version }}
+        working-directory: language-server/language-server-npm
+
+      - run: npm i
+        working-directory: language-server/language-server-npm
+
+      - name: Publish to NPM registry
+        run: npm publish --access public
+        working-directory: language-server/language-server-npm

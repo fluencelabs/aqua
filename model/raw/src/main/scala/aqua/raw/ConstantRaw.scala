@@ -34,7 +34,7 @@ object ConstantRaw {
 
   val nil: ConstantRaw =
     ConstantRaw(
-      "nil", // TODO: shouldn't it be NIL?
+      "nil",
       ValueRaw.Nil,
       false
     )
