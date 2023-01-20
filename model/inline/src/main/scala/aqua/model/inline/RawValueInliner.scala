@@ -33,9 +33,6 @@ object RawValueInliner extends Logging {
       case alr: ApplyPropertyRaw =>
         ApplyPropertiesRawInliner(alr, propertiesAllowed)
 
-      case alr: ApplyFunctorRaw =>
-        ApplyFunctorRawInliner(alr, propertiesAllowed)
-
       case agr: ApplyGateRaw =>
         ApplyGateRawInliner(agr, propertiesAllowed)
 
@@ -91,7 +88,8 @@ object RawValueInliner extends Logging {
       }
     }.map{ predo =>
       inline.mergeMode match
-        case SeqMode => SeqModel.wrap((inline.predo.toList ++ predo):_*) :: Nil
+        case SeqMode =>
+          SeqModel.wrap((inline.predo.toList ++ predo):_*) :: Nil
         case ParMode => inline.predo.toList ::: predo
     }
   }

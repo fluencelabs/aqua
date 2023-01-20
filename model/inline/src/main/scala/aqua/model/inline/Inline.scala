@@ -6,18 +6,21 @@ import aqua.raw.value.ValueRaw
 import cats.Monoid
 import cats.data.Chain
 
+import scala.collection.immutable.ListMap
+
 sealed trait MergeMode
 object SeqMode extends MergeMode
 object ParMode extends MergeMode
 
 /**
  *
- * @param flattenValues values that need to be resolved before `predo`
+ * @param flattenValues values that need to be resolved before `predo`.
+ *                      ListMap for keeping order of values (mostly for debugging purposes)
  * @param predo operations tree
  * @param mergeMode how `flattenValues` and `predo` must be merged
  */
 private[inline] case class Inline(
-  flattenValues: Map[String, ValueRaw] = Map.empty,
+  flattenValues: ListMap[String, ValueRaw] = ListMap.empty,
   predo: Chain[OpModel.Tree] = Chain.empty,
   mergeMode: MergeMode = ParMode
 )
@@ -26,7 +29,7 @@ private[inline] case class Inline(
 private[inline] object Inline {
   val empty: Inline = Inline()
 
-  def preload(pairs: (String, ValueRaw)*): Inline = Inline(pairs.toMap)
+  def preload(pairs: (String, ValueRaw)*): Inline = Inline(ListMap.from(pairs))
 
   def tree(tr: OpModel.Tree): Inline = Inline(predo = Chain.one(tr))
 

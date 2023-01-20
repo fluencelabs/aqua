@@ -231,10 +231,6 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
               )
             ),
             join(results, LiteralModel.fromRaw(LiteralRaw.number(2))),
-            ApRes(
-              VarModel("results_gate", ArrayType(ScalarType.string), Chain(IntoIndexModel("2", ScalarType.string))),
-              CallModel.Export("results_gate-0", ScalarType.string)
-            ).leaf,
             CanonRes(results, init, CallModel.Export(canonResult.name, canonResult.`type`)).leaf,
           ApRes(
             canonResult,

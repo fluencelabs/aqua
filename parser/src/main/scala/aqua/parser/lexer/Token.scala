@@ -25,9 +25,9 @@ object Token {
   private val upperAnum_ = upperAnum ++ f_
   private val nl = Set('\n', '\r')
 
-  val inAZ = P.charIn(AZ)
-  val inaz = P.charIn(az)
-  val whileAnum = P.charsWhile(anum_)
+  private val inAZ = P.charIn(AZ)
+  private val inaz = P.charIn(az)
+  private val whileAnum = P.charsWhile(anum_)
 
   val ` *` : P0[String] = P.charsWhile0(fSpaces)
   val ` ` : P[String] = P.charsWhile(fSpaces)
@@ -63,6 +63,7 @@ object Token {
   val `par`: P[Unit] = P.string("par")
   val `co`: P[Unit] = P.string("co")
   val `join`: P[Unit] = P.string("join")
+  val `copy`: P[Unit] = P.string("copy")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
   val `anum_*` : P[Unit] = whileAnum.void
@@ -115,6 +116,12 @@ object Token {
   val `<=` : P[Unit] = P.string("<=")
   val `<-` : P[Unit] = P.string("<-")
   val `/s*` : P0[Any] = ` \n+` | ` *`
+
+  val namedArgs = P.defer(
+    comma(
+      ((`name` <* (` `.?.with1 *> `=` *> ` `.?)).with1 ~ ValueToken.`value`).surroundedBy(`/s*`)
+    ).between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`)
+  )
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
     override def as[T](v: T): F[T] = Functor[F].as(point, v)
