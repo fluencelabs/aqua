@@ -74,7 +74,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
-  private def flatVar[S: Mangler: Exports: Arrows](
+  private def removeProperties[S: Mangler](
     varModel: VarModel
   ): State[S, (VarModel, Inline)] = {
     for {
@@ -88,7 +88,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
   private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
     varModel: VarModel,
     p: PropertyRaw
-  ): State[S, (VarModel, Inline)] = // TODO property for collection
+  ): State[S, (VarModel, Inline)] =
     p match {
       case IntoFieldRaw(field, t) =>
         State.pure(
@@ -114,7 +114,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
       case f @ FunctorRaw(_, _) =>
         for {
-          flattenVI <- if (varModel.properties.nonEmpty) flatVar(varModel) else State.pure(varModel, Inline.empty)
+          flattenVI <- if (varModel.properties.nonEmpty) removeProperties(varModel) else State.pure(varModel, Inline.empty)
           (flatten, inline) = flattenVI
           newVI <- ApplyFunctorRawInliner(flatten, f)
         } yield {
@@ -127,7 +127,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
       case ic @ IntoCopyRaw(_, _) =>
         for {
-          flattenVI <- if (varModel.properties.nonEmpty) flatVar(varModel) else State.pure(varModel, Inline.empty)
+          flattenVI <- if (varModel.properties.nonEmpty) removeProperties(varModel) else State.pure(varModel, Inline.empty)
           (flatten, inline) = flattenVI
           newVI <- ApplyIntoCopyRawInliner(varModel, ic)
         } yield {
@@ -139,9 +139,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         }
 
     }
-
-  // case l: LiteralModel if propertyModels.nonEmpty =>
-  //          flatLiteralWithProperties(l, propertyPrefix, propertyModels, propertyModels.lastOption.map(_.`type`).getOrElse(l.`type`))
 
   private def unfoldProperties[S: Mangler: Exports: Arrows](
     prevInline: Inline,
@@ -156,7 +153,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         state.flatMap { case (vm, leftInline) =>
           unfoldProperty(vm, property).flatMap {
             case (v, i) if !propertiesAllowed && v.properties.nonEmpty =>
-              flatVar(v).map { case (vf, inlf) =>
+              removeProperties(v).map { case (vf, inlf) =>
                 vf -> Inline(
                   leftInline.flattenValues ++ i.flattenValues ++ inlf.flattenValues,
                   leftInline.predo ++ i.predo ++ inlf.predo,

@@ -42,9 +42,10 @@ jobs:
 
   aqua-playground:
     needs: aqua
-    uses: fluencelabs/aqua-playground/.github/workflows/tests.yml@object-copy
+    uses: fluencelabs/aqua-playground/.github/workflows/tests.yml@master
     with:
       aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
+      ref: object-copy
 
   registry:
     needs: aqua

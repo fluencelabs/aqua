@@ -14,7 +14,8 @@ object ParMode extends MergeMode
 
 /**
  *
- * @param flattenValues values that need to be resolved before `predo`
+ * @param flattenValues values that need to be resolved before `predo`.
+ *                      ListMap for keeping order of values (mostly for debugging purposes)
  * @param predo operations tree
  * @param mergeMode how `flattenValues` and `predo` must be merged
  */
