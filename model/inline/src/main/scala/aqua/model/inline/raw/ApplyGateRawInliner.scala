@@ -36,6 +36,31 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
 
       val incrVar = VarModel(uniqueIdxIncr, ScalarType.u32)
 
+      // To wait for the element of a stream by the given index, the following model is generated:
+      // (seq
+      // (seq
+      //  (seq
+      //   (call %init_peer_id% ("math" "add") [0 1] stream_incr)
+      //   (fold $stream s
+      //    (seq
+      //     (seq
+      //      (ap s $stream_test)
+      //      (canon %init_peer_id% $stream_test  #stream_iter_canon)
+      //     )
+      //     (xor
+      //      (match #stream_iter_canon.length stream_incr
+      //       (null)
+      //      )
+      //      (next s)
+      //     )
+      //    )
+      //    (never)
+      //   )
+      //  )
+      //  (canon %init_peer_id% $stream_test  #stream_result_canon)
+      // )
+      // (ap #stream_result_canon stream_gate)
+      // )
       val gate = RestrictionModel(varSTest.name, true).wrap(
         increment(idxModel, incrVar),
         ForModel(iter.name, VarModel(afr.name, afr.streamType), Some(ForModel.NeverMode)).wrap(

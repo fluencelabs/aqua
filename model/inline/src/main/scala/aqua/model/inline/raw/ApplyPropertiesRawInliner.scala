@@ -51,11 +51,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
   def flatLiteralWithProperties[S: Mangler: Exports: Arrows](
     literal: LiteralModel,
     inl: Inline,
-    properties: Chain[PropertyModel],
-    resultType: Type
+    properties: Chain[PropertyModel]
   ): State[S, (VarModel, Inline)] = {
     for {
-      apName <- Mangler[S].findAndForbidName("literal_to_functor")
+      apName <- Mangler[S].findAndForbidName("literal_ap")
       resultName <- Mangler[S].findAndForbidName(s"literal_props")
     } yield {
       val cleanedType = literal.`type` match {
@@ -70,7 +69,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           FlattenModel(apVar, resultName).leaf
         )
       )
-      VarModel(resultName, resultType) -> tree
+      VarModel(resultName, properties.lastOption.map(_.`type`).getOrElse(cleanedType)) -> tree
     }
   }
 
@@ -114,7 +113,9 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
       case f @ FunctorRaw(_, _) =>
         for {
-          flattenVI <- if (varModel.properties.nonEmpty) removeProperties(varModel) else State.pure(varModel, Inline.empty)
+          flattenVI <-
+            if (varModel.properties.nonEmpty) removeProperties(varModel)
+            else State.pure(varModel, Inline.empty)
           (flatten, inline) = flattenVI
           newVI <- ApplyFunctorRawInliner(flatten, f)
         } yield {
@@ -127,7 +128,9 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
       case ic @ IntoCopyRaw(_, _) =>
         for {
-          flattenVI <- if (varModel.properties.nonEmpty) removeProperties(varModel) else State.pure(varModel, Inline.empty)
+          flattenVI <-
+            if (varModel.properties.nonEmpty) removeProperties(varModel)
+            else State.pure(varModel, Inline.empty)
           (flatten, inline) = flattenVI
           newVI <- ApplyIntoCopyRawInliner(varModel, ic)
         } yield {
@@ -179,31 +182,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     ((raw, properties.headOption) match {
-      // To wait for the element of a stream by the given index, the following model is generated:
-      // (seq
-      // (seq
-      //  (seq
-      //   (call %init_peer_id% ("math" "add") [0 1] stream_incr)
-      //   (fold $stream s
-      //    (seq
-      //     (seq
-      //      (ap s $stream_test)
-      //      (canon %init_peer_id% $stream_test  #stream_iter_canon)
-      //     )
-      //     (xor
-      //      (match #stream_iter_canon.length stream_incr
-      //       (null)
-      //      )
-      //      (next s)
-      //     )
-      //    )
-      //    (never)
-      //   )
-      //  )
-      //  (canon %init_peer_id% $stream_test  #stream_result_canon)
-      // )
-      // (ap #stream_result_canon stream_gate)
-      // )
       case (vr @ VarRaw(_, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
         unfold(vr).flatMap {
           case (vm @ VarModel(nameVM, _, _), inl) =>
@@ -219,6 +197,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
                     )
                 }
               case (v, i) =>
+                // what if pass nil as stream argument?
                 logger.error("Unreachable. Unfolded stream cannot be a literal")
                 State.pure(v -> i)
             }
@@ -233,9 +212,17 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             unfoldProperties(prevInline, vm, properties, propertiesAllowed).map { case (v, i) =>
               (v: ValueModel) -> i
             }
-          case (v, i) =>
-            logger.error("Unexpected. Unfolded stream cannot be a literal")
-            State.pure(v -> i)
+          case (l: LiteralModel, inline) =>
+            flatLiteralWithProperties(
+              l,
+              inline,
+              Chain.empty
+            ).flatMap { (varModel, prevInline) =>
+              unfoldProperties(prevInline, varModel, properties, propertiesAllowed).map {
+                case (v, i) =>
+                  (v: ValueModel) -> i
+              }
+            }
         }
     })
 

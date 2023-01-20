@@ -60,8 +60,7 @@ object ApplyFunctorRawInliner extends Logging {
         ApplyPropertiesRawInliner.flatLiteralWithProperties(
           l,
           Inline.empty,
-          Chain.one(functorModel),
-          functor.`type`
+          Chain.one(functorModel)
         )
     }
   }
