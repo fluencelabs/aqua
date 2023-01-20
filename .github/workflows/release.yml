@@ -33,7 +33,6 @@ jobs:
           manifest-file: .github/release-please/manifest.json
 
       - name: Show output from release-please
-        if: steps.release.outputs.releases_created
         env:
           RELEASE_PLEASE_OUTPUT: ${{ toJSON(steps.release.outputs) }}
         run: echo "${RELEASE_PLEASE_OUTPUT}" | jq
