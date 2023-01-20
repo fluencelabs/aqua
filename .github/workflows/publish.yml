@@ -4,6 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
+        type: string
+        description: 'aqua version to publish'
+        required: true
+  workflow_call:
+    inputs:
+      version:
+        type: string
         description: 'aqua version to publish'
         required: true
 
