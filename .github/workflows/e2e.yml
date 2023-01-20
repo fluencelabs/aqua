@@ -45,7 +45,6 @@ jobs:
     uses: fluencelabs/aqua-playground/.github/workflows/tests.yml@master
     with:
       aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
-      ref: object-copy
 
   registry:
     needs: aqua
