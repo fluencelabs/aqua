@@ -106,7 +106,7 @@ jobs:
           cache: "npm"
 
       - name: Set version
-        run: npm version ${{ github.event.inputs.version }}
+        run: npm version --allow-same-version ${{ github.event.inputs.version }}
         working-directory: cli/cli-npm
 
       - run: npm i
@@ -163,7 +163,7 @@ jobs:
           cache: "npm"
 
       - name: Set version
-        run: npm version ${{ github.event.inputs.version }}
+        run: npm version --allow-same-version ${{ github.event.inputs.version }}
         working-directory: api/aqua-api-npm
 
       - run: npm i
@@ -217,7 +217,7 @@ jobs:
           cache: "npm"
 
       - name: Set version
-        run: npm version ${{ github.event.inputs.version }}
+        run: npm version --allow-same-version ${{ github.event.inputs.version }}
         working-directory: language-server/language-server-npm
 
       - run: npm i
