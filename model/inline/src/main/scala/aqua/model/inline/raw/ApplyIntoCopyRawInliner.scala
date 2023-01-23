@@ -35,12 +35,10 @@ object ApplyIntoCopyRawInliner extends Logging {
     }.map(TagInliner.canonicalizeIfStream(_, None)).sequence.map { argsWithOps =>
       val (args, ops) = argsWithOps.unzip
       val copyOp = CallServiceModel(
-        LiteralModel("\"json\"", ScalarType.string),
+        "json",
         "puts",
-        CallModel(
-          value +: args,
-          CallModel.Export(result.name, result.`type`) :: Nil
-        )
+        value +: args,
+        result
       ).leaf
       SeqModel.wrap((ops.flatten :+ copyOp): _*)
     }

@@ -35,12 +35,10 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
       val (args, ops) = argsWithOps.unzip
       val createOp =
         CallServiceModel(
-          LiteralModel("\"json\"", ScalarType.string),
+          "json",
           "obj",
-          CallModel(
-            args,
-            CallModel.Export(result.name, result.`type`) :: Nil
-          )
+          args,
+          result
         ).leaf
       SeqModel.wrap((ops.flatten :+ createOp): _*)
 
