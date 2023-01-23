@@ -34,7 +34,7 @@ object TagInliner extends Logging {
   private def none[S]: State[S, (Option[OpModel], Option[OpModel.Tree])] =
     State.pure(None -> None)
 
-  private def fixModel[S: Mangler: Arrows: Exports](
+  def canonicalizeIfStream[S: Mangler](
     vm: ValueModel,
     ops: Option[OpModel.Tree]
   ): State[S, (ValueModel, Option[OpModel.Tree])] = {
@@ -125,8 +125,8 @@ object TagInliner extends Logging {
         for {
           ld <- valueToModel(left)
           rd <- valueToModel(right)
-          ldfixed <- fixModel(ld._1, ld._2)
-          rdfixed <- fixModel(rd._1, rd._2)
+          ldfixed <- canonicalizeIfStream(ld._1, ld._2)
+          rdfixed <- canonicalizeIfStream(rd._1, rd._2)
         } yield Some(
           MatchMismatchModel(ldfixed._1, rdfixed._1, shouldMatch)
         ) -> parDesugarPrefixOpt(
