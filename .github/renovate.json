@@ -6,7 +6,17 @@
   ],
   "enabledManagers": ["sbt", "npm", "github-actions"],
   "rangeStrategy": "pin",
+  "schedule": "every weekend",
   "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchPackagePatterns": [
+        "@fluencelabs/.*"
+      ],
+      "semanticCommitType": "fix",
+      "semanticCommitScope": "deps",
+      "schedule": "at any time"
+    },
     {
       "matchDepTypes": ["devDependencies"],
       "prPriority": -1
