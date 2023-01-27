@@ -12,7 +12,7 @@ import aqua.model.{
 import aqua.model.inline.raw.RawInliner
 import cats.data.Chain
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{MakeStructRaw, LiteralRaw}
+import aqua.raw.value.{LiteralRaw, MakeStructRaw}
 import cats.data.{NonEmptyMap, State}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
@@ -25,18 +25,24 @@ import cats.syntax.apply.*
 
 object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
 
-  private def createObj(fields: NonEmptyMap[String, ValueModel], result: VarModel): OpModel.Tree = {
-    val args = fields.toSortedMap.toList.flatMap { case (name, value) =>
+  private def createObj[S: Mangler](
+    fields: NonEmptyMap[String, ValueModel],
+    result: VarModel
+  ): State[S, OpModel.Tree] = {
+    fields.toSortedMap.toList.flatMap { case (name, value) =>
       LiteralModel.fromRaw(LiteralRaw.quote(name)) :: value :: Nil
+    }.map(TagInliner.canonicalizeIfStream(_, None)).sequence.map { argsWithOps =>
+      val (args, ops) = argsWithOps.unzip
+      val createOp =
+        CallServiceModel(
+          "json",
+          "obj",
+          args,
+          result
+        ).leaf
+      SeqModel.wrap((ops.flatten :+ createOp): _*)
+
     }
-    CallServiceModel(
-      LiteralModel("\"json\"", ScalarType.string),
-      "obj",
-      CallModel(
-        args,
-        CallModel.Export(result.name, result.`type`) :: Nil
-      )
-    ).leaf
   }
 
   override def apply[S: Mangler: Exports: Arrows](
@@ -46,11 +52,11 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     for {
       name <- Mangler[S].findAndForbidName(raw.structType.name + "_obj")
       foldedFields <- raw.fields.nonEmptyTraverse(unfold(_))
+      varModel = VarModel(name, raw.baseType)
+      valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _)
+      fields = foldedFields.map(_._1)
+      objCreation <- createObj(fields, varModel)
     } yield {
-      val varModel = VarModel(name, raw.baseType)
-      val valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _)
-      val fields = foldedFields.map(_._1)
-      val objCreation = createObj(fields, varModel)
       (
         varModel,
         Inline(

@@ -9,7 +9,7 @@ import aqua.model.{
   ValueModel,
   VarModel
 }
-import aqua.model.inline.{Inline, SeqMode}
+import aqua.model.inline.{Inline, SeqMode, TagInliner}
 import aqua.model.inline.MakeStructRawInliner.createObj
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
@@ -25,22 +25,24 @@ import cats.syntax.apply.*
 
 object ApplyIntoCopyRawInliner extends Logging {
 
-  private def copyObj(
+  private def copyObj[S: Mangler](
     value: VarModel,
     fields: NonEmptyMap[String, ValueModel],
     result: VarModel
-  ): OpModel.Tree = {
-    val args = fields.toSortedMap.toList.flatMap { case (name, value) =>
+  ): State[S, OpModel.Tree] = {
+    fields.toSortedMap.toList.flatMap { case (name, value) =>
       LiteralModel.fromRaw(LiteralRaw.quote(name)) :: value :: Nil
-    }
-    CallServiceModel(
-      LiteralModel("\"json\"", ScalarType.string),
-      "puts",
-      CallModel(
+    }.map(TagInliner.canonicalizeIfStream(_, None)).sequence.map { argsWithOps =>
+      val (args, ops) = argsWithOps.unzip
+      val copyOp = CallServiceModel(
+        "json",
+        "puts",
         value +: args,
-        CallModel.Export(result.name, result.`type`) :: Nil
-      )
-    ).leaf
+        result
+      ).leaf
+      SeqModel.wrap((ops.flatten :+ copyOp): _*)
+    }
+
   }
 
   def apply[S: Mangler: Exports: Arrows](
@@ -50,16 +52,16 @@ object ApplyIntoCopyRawInliner extends Logging {
     for {
       name <- Mangler[S].findAndForbidName(value.name + "_obj_copy")
       foldedFields <- intoCopy.fields.nonEmptyTraverse(unfold(_))
+      varModel = VarModel(name, value.baseType)
+      valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _)
+      fields = foldedFields.map(_._1)
+      objCopy <- copyObj(value, fields, varModel)
     } yield {
-      val varModel = VarModel(name, value.baseType)
-      val valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _)
-      val fields = foldedFields.map(_._1)
-      val objCreation = copyObj(value, fields, varModel)
       (
         varModel,
         Inline(
           valsInline.flattenValues,
-          Chain.one(SeqModel.wrap((valsInline.predo :+ objCreation).toList: _*)),
+          Chain.one(SeqModel.wrap((valsInline.predo :+ objCopy).toList: _*)),
           SeqMode
         )
       )

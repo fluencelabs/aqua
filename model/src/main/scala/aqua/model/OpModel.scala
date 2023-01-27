@@ -7,6 +7,7 @@ import cats.Show
 import cats.Eval
 import cats.data.NonEmptyList
 import aqua.tree.{TreeNode, TreeNodeCompanion}
+import aqua.types.ScalarType
 
 import scala.annotation.tailrec
 
@@ -138,6 +139,18 @@ case class CallServiceModel(serviceId: ValueModel, funcName: String, call: CallM
   override lazy val usesVarNames: Set[String] = serviceId.usesVarNames ++ call.usesVarNames
 
   override def exportsVarNames: Set[String] = call.exportTo.map(_.name).toSet
+}
+
+object CallServiceModel {
+  def apply(serviceId: String, funcName: String, args: List[ValueModel], result: VarModel): CallServiceModel =
+    CallServiceModel(
+      LiteralModel(s"\"$serviceId\"", ScalarType.string),
+      funcName,
+      CallModel(
+        args,
+        CallModel.Export(result.name, result.`type`) :: Nil
+      )
+    )
 }
 
 case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export)
