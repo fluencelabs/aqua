@@ -57,3 +57,28 @@ jobs:
     uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
     with:
       aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
+
+  status:
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - fluence-cli
+      - registry
+      - aqua-playground
+
+    steps:
+      - uses: lwhiteley/dependent-jobs-result-check@v1
+        id: status
+        with:
+          statuses: failure,cancelled,skipped
+          dependencies: ${{ toJSON(needs) }}
+
+      - name: Log output
+        run: |
+          echo "statuses:" "${{ steps.status.outputs.statuses }}"
+          echo "jobs:" "${{ steps.status.outputs.jobs }}"
+          echo "found any?:" "${{ steps.status.outputs.found }}"
+
+      - name: Fail run
+        if: fromJSON(steps.status.outputs.found)
+        run: exit 1
