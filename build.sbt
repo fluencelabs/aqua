@@ -1,4 +1,4 @@
-val dottyVersion = "3.1.3"
+val dottyVersion = "3.2.2"
 
 scalaVersion := dottyVersion
 
