@@ -53,7 +53,7 @@ object ApplyIntoCopyRawInliner extends Logging {
       name <- Mangler[S].findAndForbidName(value.name + "_obj_copy")
       foldedFields <- intoCopy.fields.nonEmptyTraverse(unfold(_))
       varModel = VarModel(name, value.baseType)
-      valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _)
+      valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _).desugar
       fields = foldedFields.map(_._1)
       objCopy <- copyObj(value, fields, varModel)
     } yield {

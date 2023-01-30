@@ -325,7 +325,6 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         )
       )
     )
-    println(resTree)
   }
 
   "raw value inliner" should "desugarize stream with length" in {

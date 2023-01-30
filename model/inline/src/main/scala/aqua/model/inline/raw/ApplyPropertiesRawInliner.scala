@@ -184,7 +184,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     ((raw, properties.headOption) match {
       case (vr @ VarRaw(_, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
         unfold(vr).flatMap {
-          case (vm @ VarModel(nameVM, _, _), inl) =>
+          case (VarModel(nameVM, _, _), inl) =>
             val gateRaw = ApplyGateRaw(nameVM, st, idx)
             unfold(gateRaw).flatMap {
               case (gateResVal: VarModel, gateResInline) =>
