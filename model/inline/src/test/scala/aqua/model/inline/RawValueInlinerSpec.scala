@@ -17,6 +17,7 @@ import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, V
 import aqua.types.*
 import cats.data.NonEmptyMap
 import cats.data.Chain
+import cats.syntax.show.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
