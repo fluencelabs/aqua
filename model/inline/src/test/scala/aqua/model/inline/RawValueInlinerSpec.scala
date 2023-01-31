@@ -208,7 +208,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     resTree.isEmpty should be(false)
 
     resTree.get.equalsOrShowDiff(
-      SeqModel.wrap(
+      ParModel.wrap(
         SeqModel.wrap(
           FlattenModel(
             VarModel(
@@ -285,7 +285,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     resTree.isEmpty should be(false)
 
     resTree.get.equalsOrShowDiff(
-      SeqModel.wrap(
+      ParModel.wrap(
         FlattenModel(
           VarModel(
             "ys",
@@ -367,7 +367,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     resTree.isEmpty should be(false)
 
     resTree.get.equalsOrShowDiff(
-      SeqModel.wrap(
+      ParModel.wrap(
         FlattenModel(
           VarModel(
             "ys",

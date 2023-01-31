@@ -182,7 +182,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     optimizeProperties(properties).flatMap { case (optimizedProps, optimizationInline) =>
       optimizedProps
         .foldLeft[State[S, (VarModel, Inline)]](
-          State.pure((vm, prevInline.mergeWith(optimizationInline, ParMode)))
+          State.pure((vm, prevInline.mergeWith(optimizationInline, SeqMode)))
         ) { case (state, property) =>
           state.flatMap { case (vm, leftInline) =>
             property match {
