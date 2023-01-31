@@ -88,7 +88,7 @@ jobs:
       - run: mv scala-*/*/main.js cli/cli-npm/aqua.js
 
       - name: Import secrets
-        uses: hashicorp/vault-action@v2.4.3
+        uses: hashicorp/vault-action@v2.5.0
         with:
           url: https://vault.fluence.dev
           path: jwt/github
@@ -146,7 +146,7 @@ jobs:
       - run: mv scala-*/*/main.js api/aqua-api-npm/aqua-api.js
 
       - name: Import secrets
-        uses: hashicorp/vault-action@v2.4.3
+        uses: hashicorp/vault-action@v2.5.0
         with:
           url: https://vault.fluence.dev
           path: jwt/github
@@ -201,7 +201,7 @@ jobs:
       - run: mv scala-*/*/main.js language-server/language-server-npm/aqua-lsp-api.js
 
       - name: Import secrets
-        uses: hashicorp/vault-action@v2.4.3
+        uses: hashicorp/vault-action@v2.5.0
         with:
           url: https://vault.fluence.dev
           path: jwt/github
