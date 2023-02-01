@@ -116,7 +116,7 @@ jobs:
         working-directory: cli/cli-npm
 
       - name: Publish to NPM registry
-        run: npm publish --access public
+        run: npm publish --access public --tag unstable
         working-directory: cli/cli-npm
 
   aqua-api:
@@ -171,7 +171,7 @@ jobs:
         working-directory: api/aqua-api-npm
 
       - name: Publish to NPM registry
-        run: npm publish --access public
+        run: npm publish --access public --tag unstable
         working-directory: api/aqua-api-npm
 
   aqua-lsp:
@@ -226,5 +226,5 @@ jobs:
         working-directory: language-server/language-server-npm
 
       - name: Publish to NPM registry
-        run: npm publish --access public
+        run: npm publish --access public --tag unstable
         working-directory: language-server/language-server-npm
