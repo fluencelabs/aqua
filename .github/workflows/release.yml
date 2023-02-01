@@ -87,7 +87,7 @@ jobs:
     needs: release-please
     uses: ./.github/workflows/publish.yml
     with:
-      ref: ${{ github.ref }}
+      tag: ${{ github.ref }}
 
   slack:
     if: always()
