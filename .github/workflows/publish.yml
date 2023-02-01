@@ -14,9 +14,6 @@ on:
         description: "aqua version to publish"
         required: true
 
-concurrency:
-  group: "${{ github.workflow }}-${{ github.ref }}"
-
 env:
   FORCE_COLOR: true
 
