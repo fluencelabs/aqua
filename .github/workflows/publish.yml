@@ -26,7 +26,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.tag }}
 
       - name: Cache Scala
         uses: coursier/cache-action@v6
@@ -79,7 +79,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.tag }}
 
       - name: Download aqua-cli artifact
         uses: actions/download-artifact@v3
@@ -135,7 +135,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.tag }}
 
       - name: Download aqua-api artifact
         uses: actions/download-artifact@v3
@@ -188,7 +188,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.tag }}
 
       - name: Download aqua-lsp artifact
         uses: actions/download-artifact@v3
