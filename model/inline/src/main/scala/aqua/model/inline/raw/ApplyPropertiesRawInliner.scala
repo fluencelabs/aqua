@@ -143,8 +143,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         }
     }
 
-  case class PropertyRawWithModel(raw: PropertyRaw, model: Option[PropertyModel])
+  // Helper for `optimizeProperties`
+  private case class PropertyRawWithModel(raw: PropertyRaw, model: Option[PropertyModel])
 
+  // Unfold properties that we can process in parallel
   private def optimizeProperties[S: Mangler: Exports: Arrows](
     properties: Chain[PropertyRaw]
   ): State[S, (Chain[PropertyRawWithModel], Inline)] = {
