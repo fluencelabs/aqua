@@ -53,7 +53,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
       name <- Mangler[S].findAndForbidName(raw.structType.name + "_obj")
       foldedFields <- raw.fields.nonEmptyTraverse(unfold(_))
       varModel = VarModel(name, raw.baseType)
-      valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _)
+      valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _).desugar
       fields = foldedFields.map(_._1)
       objCreation <- createObj(fields, varModel)
     } yield {

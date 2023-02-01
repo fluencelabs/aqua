@@ -94,7 +94,7 @@ object RawValueInliner extends Logging {
     }
   }
 
-  private def toModel[S: Mangler: Exports: Arrows](
+  private[inline] def toModel[S: Mangler: Exports: Arrows](
     unfoldF: State[S, (ValueModel, Inline)]
   ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {

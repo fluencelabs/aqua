@@ -13,7 +13,6 @@ object SeqMode extends MergeMode
 object ParMode extends MergeMode
 
 /**
- *
  * @param flattenValues values that need to be resolved before `predo`.
  *                      ListMap for keeping order of values (mostly for debugging purposes)
  * @param predo operations tree
@@ -23,7 +22,34 @@ private[inline] case class Inline(
   flattenValues: ListMap[String, ValueRaw] = ListMap.empty,
   predo: Chain[OpModel.Tree] = Chain.empty,
   mergeMode: MergeMode = ParMode
-)
+) {
+
+  def desugar: Inline = {
+    val desugaredPredo =
+      predo.toList match {
+        case Nil => Chain.empty
+        case x :: Nil =>
+          Chain.one(x)
+        case l =>
+          mergeMode match
+            case SeqMode =>
+              Chain.one(SeqModel.wrap(l: _*))
+            case ParMode => Chain.one(ParModel.wrap(l: _*))
+      }
+
+    Inline(
+      flattenValues,
+      desugaredPredo
+    )
+  }
+
+  def mergeWith(inline: Inline, mode: MergeMode): Inline = {
+    val left = desugar
+    val right = inline.desugar
+
+    Inline(left.flattenValues ++ right.flattenValues, left.predo ++ right.predo, mode)
+  }
+}
 
 // TODO may not be needed there
 private[inline] object Inline {

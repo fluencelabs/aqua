@@ -17,6 +17,7 @@ import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, V
 import aqua.types.*
 import cats.data.NonEmptyMap
 import cats.data.Chain
+import cats.syntax.show.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -207,7 +208,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     resTree.isEmpty should be(false)
 
     resTree.get.equalsOrShowDiff(
-      SeqModel.wrap(
+      ParModel.wrap(
         SeqModel.wrap(
           FlattenModel(
             VarModel(
@@ -284,7 +285,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     resTree.isEmpty should be(false)
 
     resTree.get.equalsOrShowDiff(
-      SeqModel.wrap(
+      ParModel.wrap(
         FlattenModel(
           VarModel(
             "ys",
@@ -325,7 +326,6 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         )
       )
     )
-    println(resTree)
   }
 
   "raw value inliner" should "desugarize stream with length" in {
@@ -367,7 +367,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     resTree.isEmpty should be(false)
 
     resTree.get.equalsOrShowDiff(
-      SeqModel.wrap(
+      ParModel.wrap(
         FlattenModel(
           VarModel(
             "ys",
