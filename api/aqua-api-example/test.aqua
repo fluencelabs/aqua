@@ -1,0 +1,2 @@
+func getNumber(number: u32) -> u32:
+    <- number
