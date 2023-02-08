@@ -13,7 +13,9 @@ const call = new Call("getNumber(num)", args, aquaPath)
 
 // compile call
 const compilationResult = await Aqua.compile(call, [])
-// get function definition and AIR script
+
+// get function definition, that describes types of arguments and results of a function
+// and AIR script
 const {funcDef, script} = compilationResult.functionCall
 
 // initialize fluence client
