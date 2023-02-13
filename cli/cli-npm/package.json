@@ -21,7 +21,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@fluencelabs/aqua-ipfs": "0.5.8",
+    "@fluencelabs/aqua-ipfs": "0.5.9",
     "@fluencelabs/aqua-lib": "0.6.0",
     "@fluencelabs/fluence": "0.28.0",
     "@fluencelabs/fluence-network-environment": "1.0.13",
