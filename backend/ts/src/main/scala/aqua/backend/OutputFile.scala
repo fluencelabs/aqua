@@ -20,13 +20,16 @@ case class OutputFile(res: AquaRes) {
 
     (
       airs,
-      s"""${Header.header(isJs, isCommonJS)}
+      s"""/* eslint-disable */
+         |// @ts-nocheck
+         |${Header.header(isJs, isCommonJS)}
          |
          |// Services
          |$services
          |// Functions
          |${functions.mkString("\n\n")}
-         |""".stripMargin
+         |
+         |/* eslint-enable */""".stripMargin
     )
   }
 
