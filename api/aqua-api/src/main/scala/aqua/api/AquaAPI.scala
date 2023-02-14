@@ -99,7 +99,7 @@ object AquaAPI extends App with Logging {
 
       new FuncCompiler[IO](
         Some(RelativePath(Path(pathStr))),
-        imports.toList.map(Path.apply),
+        imports.map(Path.apply),
         transformConfig
       ).compile()
         .map { contextV =>

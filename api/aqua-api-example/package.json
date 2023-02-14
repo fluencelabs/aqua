@@ -1,0 +1,15 @@
+{
+  "name": "aqua-api-example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "call": "node index.js"
+  },
+  "author": "Fluence Labs",
+  "type": "module",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@fluencelabs/aqua-api": "0.9.4"
+  }
+}
