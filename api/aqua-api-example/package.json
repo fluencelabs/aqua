@@ -10,7 +10,6 @@
   "type": "module",
   "license": "Apache-2.0",
   "dependencies": {
-    "@fluencelabs/aqua-api": "0.9.4",
-    "@fluencelabs/fluence": "0.27.5"
+    "@fluencelabs/aqua-api": "0.9.4"
   }
 }
