@@ -18,7 +18,7 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Comonad, Functor, Monad, ~>}
+import cats.{~>, Comonad, Functor, Monad}
 import com.monovore.decline.Opts.help
 import com.monovore.decline.{Argument, Opts, Visibility}
 import fs2.io.file.{Files, Path}
@@ -64,7 +64,12 @@ object AppOpts {
 
   def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Option[Path]]]] =
     Opts
-      .option[String]("output", "Path to the output directory. Will be created if it doesn't exists", "o", "path")
+      .option[String](
+        "output",
+        "Path to the output directory. Will be created if it doesn't exists",
+        "o",
+        "path"
+      )
       .map(s => Option(s))
       .withDefault(None)
       .map(_.map(checkOutput[F]).getOrElse(Validated.validNec[String, Option[Path]](None).pure[F]))
@@ -139,15 +144,21 @@ object AppOpts {
       .map(_ => true)
       .withDefault(false)
 
-  val isNewFluenceJs: Opts[Boolean] =
+  val isOldFluenceJs: Opts[Boolean] =
     Opts
-      .option[String]("new-fluence-js", "Generate TypeScript or JavaScript files for new JS Client")
-      .mapValidated { str =>
-        str.toLowerCase match {
-          case "true" => validNel(true)
-          case "false" => validNel(false)
-          case s => invalidNel(s"'$s' must be 'true' or 'false'")
-        }
+      .flagOption[String](
+        "old-fluence-js",
+        "Generate TypeScript or JavaScript files for new JS Client"
+      )
+      .mapValidated {
+        case Some(str) =>
+          str.toLowerCase match {
+            case "true" => validNel(true)
+            case "false" => validNel(false)
+            case s => invalidNel(s"'$s' must be 'true' or 'false'")
+          }
+        case None => validNel(true)
+
       }
       .withDefault(false)
 

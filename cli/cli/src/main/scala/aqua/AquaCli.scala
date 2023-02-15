@@ -94,7 +94,7 @@ object AquaCli extends IOApp with Logging {
       compileToJs,
       noRelay,
       noXorWrapper,
-      isNewFluenceJs,
+      isOldFluenceJs,
       wrapWithOption(helpOpt),
       wrapWithOption(versionOpt),
       FluenceOpts.logLevelOpt,
@@ -111,7 +111,7 @@ object AquaCli extends IOApp with Logging {
             toJs,
             noRelayOp,
             noXorOp,
-            isNewFluenceJsOp,
+            isOldFluenceJsOp,
             h,
             v,
             logLevel,
@@ -160,7 +160,7 @@ object AquaCli extends IOApp with Logging {
                         input,
                         imports,
                         resultOutput,
-                        targetToBackend(target, !isNewFluenceJsOp),
+                        targetToBackend(target, isOldFluenceJsOp),
                         bc,
                         disableAirValidation
                       )
