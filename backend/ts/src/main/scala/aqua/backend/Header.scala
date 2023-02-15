@@ -2,26 +2,41 @@ package aqua.backend
 
 object Header {
 
-  def header(isJs: Boolean, isCommonJS: Boolean): String = {
+  private def oldFluenceJsImports(isJs: Boolean) = {
     val callParams =
       if (isJs) ""
       else
         "import type { CallParams$$ } from '@fluencelabs/fluence/dist/internal/compilerSupport/v4'"
-    val imports = if (isCommonJS) {
-      """const { FluencePeer } = require('@fluencelabs/fluence');
-        |const {
-        |    callFunction$$,
-        |    registerService$$,
-        |} = require('@fluencelabs/fluence/dist/internal/compilerSupport/v4${if (isJs) ".js" else ""}');""".stripMargin
-    } else {
-      s"""import { FluencePeer } from '@fluencelabs/fluence';
-         |$callParams
-         |import {
-         |    callFunction$$$$,
-         |    registerService$$$$,
-         |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v4${if (isJs) ".js"
-      else ""}';""".stripMargin
-    }
+
+    s"""import { FluencePeer } from '@fluencelabs/fluence';
+       |$callParams
+       |import {
+       |    callFunction$$$$,
+       |    registerService$$$$,
+       |} from '@fluencelabs/fluence/dist/internal/compilerSupport/v4${if (isJs) ".js"
+    else ""}';""".stripMargin
+  }
+
+  private def imports(isJs: Boolean) = {
+    val callParams =
+      if (isJs) ""
+      else
+        "import type { IFluenceClient as IFluenceClient$$, CallParams as CallParams$$ } from '@fluencelabs/js-client.api';"
+
+    s"""import { FluencePeer } from '@fluencelabs/fluence';
+       |$callParams
+       |import {
+       |    v5_callFunction as callFunction$$,
+       |    v5_registerService as registerService$$,
+       |} from '@fluencelabs/js-client.api';
+    else ""}';""".stripMargin
+  }
+
+  def header(isJs: Boolean, isOldFluenceJs: Boolean): String = {
+
+    if (isOldFluenceJs) oldFluenceJsImports(isJs)
+    else imports(isJs)
+
     s"""/**
        | *
        | * This file is auto-generated. Do not edit manually: changes may be erased.

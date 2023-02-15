@@ -6,7 +6,7 @@ import aqua.res.AquaRes
 
 case class OutputFile(res: AquaRes) {
 
-  def generate(types: Types, isJs: Boolean, isCommonJS: Boolean): (List[AirFunction], String) = {
+  def generate(types: Types, isJs: Boolean, isOldFluenceJs: Boolean): (List[AirFunction], String) = {
     import types.*
     val services = res.services
       .map(s => OutputService(s, types))
@@ -22,7 +22,7 @@ case class OutputFile(res: AquaRes) {
       airs,
       s"""/* eslint-disable */
          |// @ts-nocheck
-         |${Header.header(isJs, isCommonJS)}
+         |${Header.header(isJs, isOldFluenceJs)}
          |
          |// Services
          |$services

@@ -10,6 +10,7 @@ import aqua.raw.value.LiteralRaw
 import aqua.constants.Constants
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
+import cats.data.Validated.{invalidNel, validNel}
 import cats.effect.kernel.Async
 import cats.effect.std.Console
 import cats.effect.{ExitCode, IO}
@@ -17,9 +18,9 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{~>, Comonad, Functor, Monad}
+import cats.{Comonad, Functor, Monad, ~>}
 import com.monovore.decline.Opts.help
-import com.monovore.decline.{Opts, Visibility}
+import com.monovore.decline.{Argument, Opts, Visibility}
 import fs2.io.file.{Files, Path}
 import scribe.Level
 
@@ -136,6 +137,18 @@ object AppOpts {
     Opts
       .flag("no-xor", "Do not generate a wrapper that catches and displays errors")
       .map(_ => true)
+      .withDefault(false)
+
+  val isNewFluenceJs: Opts[Boolean] =
+    Opts
+      .option[String]("new-fluence-js", "Generate TypeScript or JavaScript files for new JS Client")
+      .mapValidated { str =>
+        str.toLowerCase match {
+          case "true" => validNel(true)
+          case "false" => validNel(false)
+          case s => invalidNel(s"'$s' must be 'true' or 'false'")
+        }
+      }
       .withDefault(false)
 
   val dryOpt: Opts[Boolean] =
