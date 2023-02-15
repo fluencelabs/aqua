@@ -23,18 +23,17 @@ object Header {
       else
         "import type { IFluenceClient as IFluenceClient$$, CallParams as CallParams$$ } from '@fluencelabs/js-client.api';"
 
-    s"""import { FluencePeer } from '@fluencelabs/fluence';
-       |$callParams
+    s"""$callParams
        |import {
-       |    v5_callFunction as callFunction$$,
-       |    v5_registerService as registerService$$,
+       |    v5_callFunction as callFunction$$$$,
+       |    v5_registerService as registerService$$$$,
        |} from '@fluencelabs/js-client.api';
-    else ""}';""".stripMargin
+    """.stripMargin
   }
 
   def header(isJs: Boolean, isOldFluenceJs: Boolean): String = {
 
-    if (isOldFluenceJs) oldFluenceJsImports(isJs)
+    val importsStr = if (isOldFluenceJs) oldFluenceJsImports(isJs)
     else imports(isJs)
 
     s"""/**
@@ -45,7 +44,7 @@ object Header {
        | * Aqua version: ${Version.version}
        | *
        | */
-       |$imports
+       |$importsStr
        |""".stripMargin
   }
 }
