@@ -10,6 +10,7 @@ import aqua.raw.value.LiteralRaw
 import aqua.constants.Constants
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyList, Validated, ValidatedNec, ValidatedNel}
+import cats.data.Validated.{invalidNel, validNel}
 import cats.effect.kernel.Async
 import cats.effect.std.Console
 import cats.effect.{ExitCode, IO}
@@ -19,7 +20,7 @@ import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.{~>, Comonad, Functor, Monad}
 import com.monovore.decline.Opts.help
-import com.monovore.decline.{Opts, Visibility}
+import com.monovore.decline.{Argument, Opts, Visibility}
 import fs2.io.file.{Files, Path}
 import scribe.Level
 
@@ -63,7 +64,12 @@ object AppOpts {
 
   def outputOpts[F[_]: Monad: Files]: Opts[F[ValidatedNec[String, Option[Path]]]] =
     Opts
-      .option[String]("output", "Path to the output directory. Will be created if it doesn't exists", "o", "path")
+      .option[String](
+        "output",
+        "Path to the output directory. Will be created if it doesn't exists",
+        "o",
+        "path"
+      )
       .map(s => Option(s))
       .withDefault(None)
       .map(_.map(checkOutput[F]).getOrElse(Validated.validNec[String, Option[Path]](None).pure[F]))
@@ -136,6 +142,24 @@ object AppOpts {
     Opts
       .flag("no-xor", "Do not generate a wrapper that catches and displays errors")
       .map(_ => true)
+      .withDefault(false)
+
+  val isOldFluenceJs: Opts[Boolean] =
+    Opts
+      .flagOption[String](
+        "old-fluence-js",
+        "Generate TypeScript or JavaScript files for new JS Client"
+      )
+      .mapValidated {
+        case Some(str) =>
+          str.toLowerCase match {
+            case "true" => validNel(true)
+            case "false" => validNel(false)
+            case s => invalidNel(s"'$s' must be 'true' or 'false'")
+          }
+        case None => validNel(true)
+
+      }
       .withDefault(false)
 
   val dryOpt: Opts[Boolean] =

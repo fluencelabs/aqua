@@ -4,16 +4,17 @@ import aqua.backend.ServiceTypes
 import aqua.backend.ts.TypeScriptCommon.fnDef
 import aqua.res.ServiceRes
 
-case class TSServiceTypes(srv: ServiceRes) extends ServiceTypes {
+case class TSServiceTypes(srv: ServiceRes, client: String) extends ServiceTypes {
 
-  import TypeScriptTypes.*
+  val types = TypeScriptTypes(client)
+  import types.*
 
   private val serviceTypeName = s"${srv.name}Def";
 
   private def registerServiceArgs = {
 
     // defined arguments used in overloads below
-    val peerDecl = s"${typed("peer", "FluencePeer")}";
+    val peerDecl = s"${typed("peer", client)}";
     val serviceIdDecl = s"${typed("serviceId", "string")}";
     val serviceDecl = s"${typed("service", serviceTypeName)}"
 

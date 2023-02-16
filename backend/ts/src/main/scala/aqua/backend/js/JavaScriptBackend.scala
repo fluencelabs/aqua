@@ -4,23 +4,24 @@ import aqua.backend.ts.TypeScriptTypes
 import aqua.backend.*
 import aqua.res.AquaRes
 
-case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
+case class JavaScriptBackend(isOldFluenceJs: Boolean, client: String) extends Backend {
 
   val ext = ".js"
   val tsExt = ".d.ts"
+  val types = TypeScriptTypes(client)
 
   def typesFile(res: AquaRes): Generated = {
     val services = res.services
-      .map(s => TypeScriptTypes.serviceType(s))
+      .map(s => types.serviceType(s))
       .map(_.generate)
       .toList
       .mkString("\n")
     val functions =
-      res.funcs.map(f => TypeScriptTypes.funcType(f)).map(_.generate).toList.mkString("\n")
+      res.funcs.map(f => types.funcType(f)).map(_.generate).toList.mkString("\n")
 
     val body = s"""/* eslint-disable */
                   |// @ts-nocheck
-                  |${Header.header(true, false)}
+                  |${Header.header(true, isOldFluenceJs)}
                   |
                   |// Services
                   |$services
@@ -36,7 +37,7 @@ case class JavaScriptBackend(isCommonJS: Boolean) extends Backend {
   override def generate(res: AquaRes): Seq[Generated] =
     if (res.isEmpty) Nil
     else {
-      val (airs, script) = OutputFile(res).generate(EmptyTypes, true, isCommonJS)
+      val (airs, script) = OutputFile(res).generate(EmptyTypes, true, isOldFluenceJs)
       Generated(ext, script, airs) :: typesFile(res) :: Nil
     }
 }

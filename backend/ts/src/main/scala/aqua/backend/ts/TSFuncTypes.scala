@@ -5,8 +5,9 @@ import aqua.backend.ts.TypeScriptCommon.{fixupArgName, genTypeName, typeToTs}
 import aqua.res.FuncRes
 import aqua.types.*
 
-case class TSFuncTypes(func: FuncRes) extends FuncTypes {
-  import TypeScriptTypes.*
+case class TSFuncTypes(func: FuncRes, client: String) extends FuncTypes {
+  val types = TypeScriptTypes(client) 
+  import types.*
 
   override val retTypeTs =
     genTypeName(func.returnType, func.funcName.capitalize + "Result")
@@ -25,7 +26,7 @@ case class TSFuncTypes(func: FuncRes) extends FuncTypes {
 
     // defines different types for overloaded service registration function.
     val funcTypeOverload1 = args.mkString(",\n")
-    val funcTypeOverload2 = (("    " + typed("peer", "FluencePeer")) :: args).mkString(",\n")
+    val funcTypeOverload2 = (("    " + typed("peer", client)) :: args).mkString(",\n")
 
     val (resTypeDesc, resType) = retTypeTs
 

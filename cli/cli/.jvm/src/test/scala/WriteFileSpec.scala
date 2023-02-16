@@ -21,7 +21,7 @@ class WriteFileSpec extends AnyFlatSpec with Matchers {
 
     val bc = TransformConfig()
     AquaPathCompiler
-      .compileFilesTo[IO](src, List.empty, Option(targetTs), TypeScriptBackend, bc, false)
+      .compileFilesTo[IO](src, List.empty, Option(targetTs), TypeScriptBackend(false), bc, false)
       .unsafeRunSync()
       .leftMap { err =>
         println(err)
