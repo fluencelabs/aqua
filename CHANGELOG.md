@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.10.0](https://github.com/fluencelabs/aqua/compare/aqua-v0.9.5...aqua-v0.10.0) (2023-02-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* DXJ-283 support new JS client ([#668](https://github.com/fluencelabs/aqua/issues/668))
+
+### Features
+
+* DXJ-283 support new JS client ([#668](https://github.com/fluencelabs/aqua/issues/668)) ([94cbb85](https://github.com/fluencelabs/aqua/commit/94cbb85b407d67d5c5da52db91f50d41874ab83b))
+
 ## [0.9.5](https://github.com/fluencelabs/aqua/compare/aqua-v0.9.4...aqua-v0.9.5) (2023-02-14)
 
 
