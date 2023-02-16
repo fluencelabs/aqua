@@ -36,11 +36,12 @@ object AquaCli extends IOApp with Logging {
   case object AirTarget extends CompileTarget
 
   def targetToBackend(target: CompileTarget, isOldFluenceJs: Boolean): Backend = {
+    val client = if (isOldFluenceJs) "FluencePeer" else "IFluenceClient$$"
     target match {
       case TypescriptTarget =>
-        TypeScriptBackend(isOldFluenceJs)
+        TypeScriptBackend(isOldFluenceJs, client)
       case JavaScriptTarget =>
-        JavaScriptBackend(isOldFluenceJs)
+        JavaScriptBackend(isOldFluenceJs, client)
       case AirTarget =>
         AirBackend
     }
