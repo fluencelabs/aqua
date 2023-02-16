@@ -22,16 +22,16 @@ Other ways of installing Aqua can be found in [INSTALL.md](./INSTALL.md).
 
 ## Documentation
 
-Comprehensive documentation and usage examples as well as a number of videos can be found in [Aqua Book](https://fluence.dev/docs/aqua-book/introduction). [Aqua Playground](https://github.com/fluencelabs/aqua-playground) demonstrates how to start writing Aqua and integrate it into a [TypeScript](https://www.typescriptlang.org/) application
+Comprehensive documentation and usage examples as well as a number of videos can be found in [Aqua Book](https://fluence.dev/docs/aqua-book/introduction). [Aqua Playground](https://github.com/fluencelabs/aqua-playground) demonstrates how to start writing Aqua and integrate it into a [TypeScript](https://www.typescriptlang.org/) application. Numerous videos are available at our [YouTube channel](https://www.youtube.com/@fluencelabs).
 
 
 ## Repository Structure
 
-- [**aqua**](./aqua)
+- [**aqua**](./aqua) _TO BE FILLED_
     - [aqua-api](./aqua-api)
     - [aqua-api-npm](./aqua-api-npm)
-- [**aqua-run**](./aqua-run)
-- [**aqua-src**](./aqua-src)
+- [**aqua-run**](./aqua-run) _TO BE FILLED_
+- [**aqua-src**](./aqua-src) _TO BE FILLED_
 - [**backend**](./backend)- compilation backend interface
     - [backend/air](./backend/air) – generates AIR code from the middle-end model
     - [backend/ts](./backend/ts) - generates AIR code and TypeScript wrappers for use with [Fluence JS]( https://github.com/fluencelabs/fluence-js) SDK
