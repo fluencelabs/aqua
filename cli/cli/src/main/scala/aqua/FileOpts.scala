@@ -45,7 +45,7 @@ object FileOpts {
         Files[F]
           .readAll(p)
           .through(fs2.text.utf8.decode)
-          .fold(List.empty[String]) { case (acc, str) => str :: acc }
+          .fold(List.empty[String]) { case (acc, str) => acc :+ str }
           .map(_.mkString(""))
           .map(str => transform(p, str).map(r => (p, r)))
           .compile
