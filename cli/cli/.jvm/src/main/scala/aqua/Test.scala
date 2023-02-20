@@ -26,7 +26,7 @@ object Test extends IOApp.Simple {
           Path("./aqua-src/antithesis.aqua"),
           List(Path("./aqua")),
           Option(Path("./target")),
-          TypeScriptBackend(false),
+          TypeScriptBackend(false, "IFluenceClient$$"),
           TransformConfig(wrapWithXor = false),
           false
         )

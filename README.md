@@ -1,19 +1,12 @@
-## Aqua
+# Aqua
 
 [![release](https://github.com/fluencelabs/aqua/actions/workflows/release.yml/badge.svg)](https://github.com/fluencelabs/aqua/actions/workflows/release.yml)
 [![npm](https://img.shields.io/npm/v/@fluencelabs/aqua)](https://www.npmjs.com/package/@fluencelabs/aqua)
 
-Aqua is a new-gen language for distributed systems.
+[Aqua](https://fluence.dev/docs/aqua-book/introduction) is an open-source language for distributed workflow coordination in p2p networks. Aqua programs are executed on many peers, sequentially or in parallel, forming a single-use coordination network. Applications are turned into hostless workflows over distributed function calls, which enables various levels of decentralization: from handling by a limited set of servers to complete peer-to-peer architecture by connecting user devices directly. Aqua is the core of the [Fluence](https://fluence.network/) protocol and a framework for internet or private cloud applications.
 
-Aqua programs are executed on many peers, sequentially 
-or in parallel, forming a single-use coordination network.
 
-Aqua's runtime is heterogeneous: it includes browsers, servers, devices, all involved in solving a single task.
-Therefore, Aqua scripts are compiled into several targets at once, with AIR and Typescript as a default.
-
-Please refer to [Aqua Book](https://fluence.dev/docs/aqua-book/introduction) to learn more about Aqua language.
-
-## Install and run
+## Installation and Usage
 
 The easiest way to use Aqua is to download the latest build from npm: [@fluencelabs/aqua](https://www.npmjs.com/package/@fluencelabs/aqua).
 
@@ -24,53 +17,48 @@ aqua --input src/aqua --output src/generated
 
 Input directory should contain files with `.aqua` scripts.
 
-## Build from sources
+Other ways of installing Aqua can be found in [INSTALL.md](./INSTALL.md).
 
-If you want to build Aqua compiler from the sourcecode, you need [Scala](https://www.scala-lang.org/)'s `sbt` installed.
 
-Aqua compiler itself can be compiled to and distributed either as JavaScript or Java file.
+## Documentation
 
-### Build to JS
+Comprehensive documentation and usage examples as well as a number of videos can be found in [Aqua Book](https://fluence.dev/docs/aqua-book/introduction). [Aqua Playground](https://github.com/fluencelabs/aqua-playground) demonstrates how to start writing Aqua and integrate it into a [TypeScript](https://www.typescriptlang.org/) application. Numerous videos are available at our [YouTube channel](https://www.youtube.com/@fluencelabs).
 
-Run `sbt cliJS/fullLinkOpt` to build JavaScript file. You can find the compiled file in: `cli/.js/target/scala-%scala-version%/cli-opt`.
 
-Then run it with `node`:
+## Repository Structure
 
-```bash
-node aqua-%version_number%.js -i path/to/input/dir -o path/to/output/dir
-```
+- [**api**](./api) - Aqua API for JS
+    - [aqua-api](./api/aqua-api) - Scala sources
+    - [aqua-api-npm](./api/aqua-api-npm) - JS project
+    - [aqua-api-example](./api/aqua-api-example) - usage example
+- [**aqua-run**](./aqua-run) - Aqua API to run functions
+- [**backend**](./backend) - compilation backend interface
+    - [backend/air](./backend/air) - generates AIR code from the middle-end model
+    - [backend/ts](./backend/ts) - generates AIR code and TypeScript wrappers for use with [Fluence JS]( https://github.com/fluencelabs/fluence-js) SDK
+- [**cli**](./cli) - CLI interface
+  - [cli](./cli/cli) - Scala sources
+  - [cli-npm](./cli/cli-npm) - JS project
+- [**compiler**](./compiler) - compiler as a pure function made from _linker_, _semantics_ and _backend_
+- [**model**](./model) - middle-end, internal representation of the code, optimizations and transformations
+    - [transform](./model/transform) - optimizations and transformations, converting model to the result, ready to be rendered
+    - [test-kit](./model/test-kit) - tests and test helpers for the model and transformations
+- [**linker**](./linker) - checks dependencies between modules, builds and combines an abstract dependencies tree
+- [**parser**](./parser) - parser, takes source text and produces a source AST
+- [**semantics**](./semantics) - rules to convert source AST into the model
+- [**types**](./types) - data types, arrows, stream types definitions and variance
 
-Javascript build is the default for Aqua.
 
-### Build to JVM
+## Support
 
-Run `sbt cli/assembly` to build JAR file. It is located in `cli/.jvm/target/scala-%scala-version%/`
+Please, file an [issue](https://github.com/fluencelabs/aqua/issues) if you find a bug. You can also contact us at [Discord](https://discord.com/invite/5qSnPZKh7u) or [Telegram](https://t.me/fluence_project).  We will do our best to resolve the issue ASAP.
 
-It requires `java` to run Aqua compiler in `.jar` file from the command line:
 
-```bash
-java -jar aqua-%version_number%.jar -i path/to/input/dir -o path/to/output/dir
-```
+## Contributing
 
-## Repository structure
+Any interested person is welcome to contribute to the project. Please, make sure you read and follow some basic [rules](./CONTRIBUTING.md).
 
-- **[types](./types)** – data types, arrows, stream types definitions and variance
-- **[parser](./parser)** - parser, takes source text and produces a source AST
-- **[model](./model)** - middle-end, internal representation of the code, optimizations and transfromations
-- **[model/transform](./model/transform)** - optimizations and transfromations, converting model to the result, ready to be rendered
-- **[model/test-kit](./model/test-kit)** - tests and test helpers for the model and transformations
-- **[semantics](./semantics)** - rules to convert source AST into the model
-- **[linker](./linker)** - checks dependencies between modules, builds and combines an abstract dependencies tree
-- **[backend](./backend)** - compilation backend interface
-- **[compiler](./compiler)** - compiler as a pure function made from _linker_, _semantics_ and _backend_
-- **[backend/air](./backend/air)** – generates AIR code from the middle-end model
-- **[backend/ts](./backend/ts)** - generates AIR code and Typescript wrappers for use with Fluence JS SDK
-- **[cli](./cli)** - CLI interface
 
-## References
+## License
 
-- [Aqua Book](https://fluence.dev/docs/aqua-book/introduction)
-- [Aqua Changelog](https://fluence.dev/docs/aqua-book/changelog)
-- [Fluence docs](https://fluence.dev/)
-- [Examples & tutorials](https://github.com/fluencelabs/examples)
-- [Aqua Playground](https://github.com/fluencelabs/aqua-playground)
+All software code is copyright (c) Fluence Labs, Inc. under the [Apache-2.0](./LICENSE) license.
+
