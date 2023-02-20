@@ -35,12 +35,13 @@ object AquaCli extends IOApp with Logging {
   case object JavaScriptTarget extends CompileTarget
   case object AirTarget extends CompileTarget
 
-  def targetToBackend(target: CompileTarget): Backend = {
+  def targetToBackend(target: CompileTarget, isOldFluenceJs: Boolean): Backend = {
+    val client = if (isOldFluenceJs) "FluencePeer" else "IFluenceClient$$"
     target match {
       case TypescriptTarget =>
-        TypeScriptBackend
+        TypeScriptBackend(isOldFluenceJs, client)
       case JavaScriptTarget =>
-        JavaScriptBackend(false)
+        JavaScriptBackend(isOldFluenceJs, client)
       case AirTarget =>
         AirBackend
     }
@@ -94,6 +95,7 @@ object AquaCli extends IOApp with Logging {
       compileToJs,
       noRelay,
       noXorWrapper,
+      isOldFluenceJs,
       wrapWithOption(helpOpt),
       wrapWithOption(versionOpt),
       FluenceOpts.logLevelOpt,
@@ -110,6 +112,7 @@ object AquaCli extends IOApp with Logging {
             toJs,
             noRelayOp,
             noXorOp,
+            isOldFluenceJsOp,
             h,
             v,
             logLevel,
@@ -158,7 +161,7 @@ object AquaCli extends IOApp with Logging {
                         input,
                         imports,
                         resultOutput,
-                        targetToBackend(target),
+                        targetToBackend(target, isOldFluenceJsOp),
                         bc,
                         disableAirValidation
                       )
