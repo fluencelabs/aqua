@@ -27,15 +27,17 @@ Comprehensive documentation and usage examples as well as a number of videos can
 
 ## Repository Structure
 
-- [**aqua**](./aqua) _TO BE FILLED_
-    - [aqua-api](./aqua-api)
-    - [aqua-api-npm](./aqua-api-npm)
-- [**aqua-run**](./aqua-run) _TO BE FILLED_
-- [**aqua-src**](./aqua-src) _TO BE FILLED_
-- [**backend**](./backend)- compilation backend interface
-    - [backend/air](./backend/air) – generates AIR code from the middle-end model
+- [**api**](./api) - Aqua API for JS
+    - [aqua-api](./api/aqua-api) - Scala sources
+    - [aqua-api-npm](./api/aqua-api-npm) - JS project
+    - [aqua-api-example](./api/aqua-api-example) - usage example
+- [**aqua-run**](./aqua-run) - Aqua API to run functions
+- [**backend**](./backend) - compilation backend interface
+    - [backend/air](./backend/air) - generates AIR code from the middle-end model
     - [backend/ts](./backend/ts) - generates AIR code and TypeScript wrappers for use with [Fluence JS]( https://github.com/fluencelabs/fluence-js) SDK
 - [**cli**](./cli) - CLI interface
+  - [cli](./cli/cli) - Scala sources
+  - [cli-npm](./cli/cli-npm) - JS project
 - [**compiler**](./compiler) - compiler as a pure function made from _linker_, _semantics_ and _backend_
 - [**model**](./model) - middle-end, internal representation of the code, optimizations and transformations
     - [transform](./model/transform) - optimizations and transformations, converting model to the result, ready to be rendered
@@ -43,7 +45,7 @@ Comprehensive documentation and usage examples as well as a number of videos can
 - [**linker**](./linker) - checks dependencies between modules, builds and combines an abstract dependencies tree
 - [**parser**](./parser) - parser, takes source text and produces a source AST
 - [**semantics**](./semantics) - rules to convert source AST into the model
-- [**types**](./types) – data types, arrows, stream types definitions and variance
+- [**types**](./types) - data types, arrows, stream types definitions and variance
 
 
 ## Support
