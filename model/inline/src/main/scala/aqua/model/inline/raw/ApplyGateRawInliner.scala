@@ -23,11 +23,12 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
       uniqueTestName <- Mangler[S].findAndForbidName(afr.name + "_test")
       uniqueIdxIncr <- Mangler[S].findAndForbidName(afr.name + "_incr")
       uniqueIterCanon <- Mangler[S].findAndForbidName(afr.name + "_iter_canon")
+      uniqueIter <- Mangler[S].findAndForbidName(afr.name + "_fold_var")
       idxFolded <- unfold(afr.idx)
       (idxModel, idxInline) = idxFolded
     } yield {
       val varSTest = VarModel(uniqueTestName, afr.streamType)
-      val iter = VarModel("s", afr.streamType.element)
+      val iter = VarModel(uniqueIter, afr.streamType.element)
 
       val iterCanon = VarModel(uniqueIterCanon, CanonStreamType(afr.streamType.element))
 
