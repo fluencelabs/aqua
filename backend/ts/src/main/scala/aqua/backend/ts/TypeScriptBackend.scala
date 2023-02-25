@@ -4,7 +4,7 @@ import aqua.backend.{Backend, Generated, OutputFile}
 import aqua.res.AquaRes
 import cats.data.NonEmptyChain
 
-case class TypeScriptBackend(isOldFluenceJs: Boolean, client: String) extends Backend {
+case class TypeScriptBackend(isOldFluenceJs: Boolean, client: String = Backend.client) extends Backend {
 
   val ext = ".ts"
 

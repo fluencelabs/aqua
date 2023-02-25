@@ -19,6 +19,8 @@ trait Backend {
 
 object Backend {
 
+  val client = "IFluenceClient$$"
+
   trait Transform extends Backend {
     def transform(ex: AquaContext): AquaRes
   }

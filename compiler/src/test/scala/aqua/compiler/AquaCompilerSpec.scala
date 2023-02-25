@@ -130,7 +130,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
   private def join(vm: VarModel, length: ValueModel) = {
     val testVM = VarModel(vm.name + "_test", vm.`type`)
-    val iter = VarModel("s", ScalarType.string)
+    val iter = VarModel(vm.name + "_fold_var", ScalarType.string)
     val canon = VarModel(vm.name + "_iter_canon", CanonStreamType(ScalarType.string))
     val canonRes = VarModel(vm.name + "_result_canon", CanonStreamType(ScalarType.string))
     val arrayRes = VarModel(vm.name + "_gate", ArrayType(ScalarType.string))
