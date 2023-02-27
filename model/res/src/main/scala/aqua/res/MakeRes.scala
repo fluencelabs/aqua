@@ -80,10 +80,12 @@ object MakeRes {
         orInit(currentPeerId),
         exportTo
       ).leaf
-    case FlattenModel(operand@VarModel(_, CanonStreamType(el), _), assignTo) =>
-      ApRes(operand, CallModel.Export(assignTo, ArrayType(el))).leaf
     case FlattenModel(operand, assignTo) =>
-      ApRes(operand, CallModel.Export(assignTo, operand.`type`)).leaf
+      val exportType = operand.`type` match {
+        case CanonStreamType(el) => ArrayType(el)
+        case t => t
+      }
+      ApRes(operand, CallModel.Export(assignTo, exportType)).leaf
     case JoinModel(operands) =>
       join(orInit(currentPeerId), operands)
     case CallServiceModel(serviceId, funcName, CallModel(args, exportTo)) =>

@@ -42,7 +42,7 @@ object ApplyFunctorRawInliner extends Logging {
                   CanonicalizeModel(v, CallModel.Export(apName, canonType)).leaf
                 )
               case _ =>
-                (VarModel(apName, functorModel.`type`, Chain.one(functorModel)), FlattenModel(v, apName).leaf)
+                (VarModel(apName, bt, Chain.one(functorModel)), FlattenModel(v, apName).leaf)
             }
           }
         } yield {
