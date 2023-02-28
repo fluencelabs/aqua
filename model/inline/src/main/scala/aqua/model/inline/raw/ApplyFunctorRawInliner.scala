@@ -41,6 +41,12 @@ object ApplyFunctorRawInliner extends Logging {
                   VarModel(apName, canonType, Chain.one(functorModel)),
                   CanonicalizeModel(v, CallModel.Export(apName, canonType)).leaf
                 )
+              case CanonStreamType(el) =>
+                val arrType = ArrayType(el)
+                (
+                  VarModel(apName, arrType, Chain.one(functorModel)),
+                  FlattenModel(v, apName).leaf
+                )
               case _ =>
                 (VarModel(apName, bt, Chain.one(functorModel)), FlattenModel(v, apName).leaf)
             }
