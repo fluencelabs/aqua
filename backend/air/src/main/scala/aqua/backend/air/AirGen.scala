@@ -28,8 +28,8 @@ object AirGen extends Logging {
 
   def valueToData(vm: ValueModel): DataView = vm match {
     case LiteralModel(value, _) => DataView.StringScalar(value)
-    case vm@VarModel(name, _, property) =>
-      val n = (vm.`type` match {
+    case VarModel(name, t, property) =>
+      val n = (t match {
         case _: StreamType => "$" + name
         case _: CanonStreamType => "#" + name
         case _ => name
