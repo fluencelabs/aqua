@@ -19,11 +19,12 @@ name := "aqua-hll"
 val commons = Seq(
   version := {
     val aquaSnapshot = sys.env.getOrElse("SNAPSHOT", "")
-    if (aquaSnapshot.isEmpty()) aquaVersion else aquaVersion + "-" + aquaSnapshot,
+    if (aquaSnapshot.isEmpty()) aquaVersion else aquaVersion + "-" + aquaSnapshot
+    ,
   },
   scalaVersion := dottyVersion,
   libraryDependencies ++= Seq(
-    "com.outr"      %%% "scribe"    % scribeV,
+    "com.outr" %%% "scribe" % scribeV,
     "org.scalatest" %%% "scalatest" % scalaTestV % Test
   ),
   scalacOptions ++= {
@@ -45,10 +46,25 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("cli/cli"))
+  .enablePlugins(GraalVMNativeImagePlugin)
   .settings(commons: _*)
   .settings(
+    Compile / mainClass := Some("aqua.AquaCli"),
+    graalVMNativeImageOptions ++= Seq(
+      "--no-fallback",
+      "--diagnostics-mode",
+      "--initialize-at-build-time",
+      "--initialize-at-run-time=scala.util.Random$",
+      "-H:-DeleteLocalSymbols",
+      "-H:+PreserveFramePointer",
+      "-H:+ReportExceptionStackTraces",
+      "-H:+DashboardHeap",
+      "-H:+DashboardCode",
+      "-H:+DashboardPointsTo",
+      "-H:+DashboardAll"
+    ),
     libraryDependencies ++= Seq(
-      "com.monovore" %%% "decline"        % declineV,
+      "com.monovore" %%% "decline" % declineV,
       "com.monovore" %%% "decline-effect" % declineV
     )
   )
@@ -56,14 +72,14 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
 
 lazy val cliJS = cli.js
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
+    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true
   ).dependsOn(`js-exports`, `js-imports`)
 
 lazy val cliJVM = cli.jvm
   .settings(
-    Compile / run / mainClass  := Some("aqua.AquaCli"),
-    assembly / mainClass       := Some("aqua.AquaCli"),
+    Compile / run / mainClass := Some("aqua.AquaCli"),
+    assembly / mainClass := Some("aqua.AquaCli"),
     assembly / assemblyJarName := "aqua-" + version.value + ".jar",
     libraryDependencies ++= Seq(
     )
@@ -83,7 +99,7 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-effect" % catsEffectV,
-      "co.fs2"        %%% "fs2-io"      % fs2V
+      "co.fs2" %%% "fs2-io" % fs2V
     )
   )
   .dependsOn(compiler, parser)
@@ -95,13 +111,13 @@ lazy val `language-server-api` = project
   .enablePlugins(ScalaJSPlugin)
   .settings(commons: _*)
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true
   )
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-effect" % catsEffectV,
-      "co.fs2"        %%% "fs2-io"      % fs2V
+      "co.fs2" %%% "fs2-io" % fs2V
     )
   )
   .dependsOn(compiler.js, io.js)
@@ -123,7 +139,7 @@ lazy val `aqua-api` = project
   .enablePlugins(ScalaJSPlugin)
   .settings(commons: _*)
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true,
     Test / test := {}
   )
@@ -146,7 +162,7 @@ lazy val parser = crossProject(JVMPlatform, JSPlatform)
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-parse" % catsParseV,
-      "org.typelevel" %%% "cats-free"  % catsV
+      "org.typelevel" %%% "cats-free" % catsV
     )
   )
   .dependsOn(types)
@@ -208,7 +224,7 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "dev.optics" %%% "monocle-core"  % monocleV,
+      "dev.optics" %%% "monocle-core" % monocleV,
       "dev.optics" %%% "monocle-macro" % monocleV
     )
   )
@@ -228,7 +244,7 @@ lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    buildInfoKeys    := Seq[BuildInfoKey](version),
+    buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "aqua.backend"
   )
   .dependsOn(res, definitions)
