@@ -137,7 +137,7 @@ object TagInliner extends Logging {
       case ForTag(item, iterable, mode) =>
         for {
           vp <- valueToModel(iterable)
-          flattened <- flat(vp._1, vp._2, true)
+          flattened <- flat(vp._1, vp._2, false)
           (v, p) = flattened
           n <- Mangler[S].findAndForbidName(item)
           elementType = iterable.`type` match {
