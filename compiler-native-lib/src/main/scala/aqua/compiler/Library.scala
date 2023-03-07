@@ -11,6 +11,7 @@ import cats.{Applicative, Functor, Monad}
 import cats.data.{Chain, ValidatedNec}
 import cats.data.Validated.Valid
 import cats.data.Validated.validNec
+import cats.effect.IO
 import fs2.io.file.{Files, Path}
 import cats.implicits.*
 import aqua.SpanParser
@@ -23,7 +24,8 @@ import aqua.backend.Generated
 import aqua.res.AquaRes
 import aqua.parser.lift.FileSpan
 import aqua.backend.air.AirBackend
-
+import aqua.files.AquaFilesIO.summon
+import cats.effect.unsafe.implicits.global
 object Library {
 
 
@@ -66,7 +68,14 @@ object Library {
   @CEntryPoint(name = "compile") def compile(thread: IsolateThread, codePointer: CCharPointer): Int = {
     val code = CTypeConversion.toJavaString(codePointer)
 
-    1
+    val program = compileF[IO](code, List.empty)
+    val result = program.unsafeRunSync()
+
+    if (result.isValid) {
+      0
+    } else {
+      1
+    }
   }
 
 }
