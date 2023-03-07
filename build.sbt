@@ -19,11 +19,12 @@ name := "aqua-hll"
 val commons = Seq(
   version := {
     val aquaSnapshot = sys.env.getOrElse("SNAPSHOT", "")
-    if (aquaSnapshot.isEmpty()) aquaVersion else aquaVersion + "-" + aquaSnapshot,
+    if (aquaSnapshot.isEmpty()) aquaVersion else aquaVersion + "-" + aquaSnapshot
+    ,
   },
   scalaVersion := dottyVersion,
   libraryDependencies ++= Seq(
-    "com.outr"      %%% "scribe"    % scribeV,
+    "com.outr" %%% "scribe" % scribeV,
     "org.scalatest" %%% "scalatest" % scalaTestV % Test
   ),
   scalacOptions ++= {
@@ -63,7 +64,7 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
       "-H:+DashboardAll"
     ) ++ sys.env.get("COMPILE_STATIC").filter(_.trim.toLowerCase() == "true").map(_ => Seq("--static")).getOrElse(Seq.empty),
     libraryDependencies ++= Seq(
-      "com.monovore" %%% "decline"        % declineV,
+      "com.monovore" %%% "decline" % declineV,
       "com.monovore" %%% "decline-effect" % declineV
     )
   )
@@ -71,14 +72,14 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
 
 lazy val cliJS = cli.js
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
+    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true
   ).dependsOn(`js-exports`, `js-imports`)
 
 lazy val cliJVM = cli.jvm
   .settings(
-    Compile / run / mainClass  := Some("aqua.AquaCli"),
-    assembly / mainClass       := Some("aqua.AquaCli"),
+    Compile / run / mainClass := Some("aqua.AquaCli"),
+    assembly / mainClass := Some("aqua.AquaCli"),
     assembly / assemblyJarName := "aqua-" + version.value + ".jar",
     libraryDependencies ++= Seq(
     )
@@ -98,7 +99,7 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-effect" % catsEffectV,
-      "co.fs2"        %%% "fs2-io"      % fs2V
+      "co.fs2" %%% "fs2-io" % fs2V
     )
   )
   .dependsOn(compiler, parser)
@@ -110,13 +111,13 @@ lazy val `language-server-api` = project
   .enablePlugins(ScalaJSPlugin)
   .settings(commons: _*)
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true
   )
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-effect" % catsEffectV,
-      "co.fs2"        %%% "fs2-io"      % fs2V
+      "co.fs2" %%% "fs2-io" % fs2V
     )
   )
   .dependsOn(compiler.js, io.js)
@@ -138,7 +139,7 @@ lazy val `aqua-api` = project
   .enablePlugins(ScalaJSPlugin)
   .settings(commons: _*)
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true,
     Test / test := {}
   )
@@ -161,7 +162,7 @@ lazy val parser = crossProject(JVMPlatform, JSPlatform)
   .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-parse" % catsParseV,
-      "org.typelevel" %%% "cats-free"  % catsV
+      "org.typelevel" %%% "cats-free" % catsV
     )
   )
   .dependsOn(types)
@@ -223,7 +224,7 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "dev.optics" %%% "monocle-core"  % monocleV,
+      "dev.optics" %%% "monocle-core" % monocleV,
       "dev.optics" %%% "monocle-macro" % monocleV
     )
   )
@@ -239,7 +240,7 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
 lazy val `compiler-native-lib` = project
   .in(file("compiler-native-lib"))
   .settings(commons: _*)
-  .dependsOn(compiler.jvm, io.jvm)
+  .dependsOn(compiler.jvm, io.jvm, transform.jvm)
 
 lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -248,7 +249,7 @@ lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    buildInfoKeys    := Seq[BuildInfoKey](version),
+    buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "aqua.backend"
   )
   .dependsOn(res, definitions)
