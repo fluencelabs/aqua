@@ -236,6 +236,11 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .settings(commons: _*)
   .dependsOn(semantics, linker, backend, transform % Test)
 
+lazy val `compiler-native-lib` = project
+  .in(file("compiler-native-lib"))
+  .settings(commons: _*)
+  .dependsOn(compiler.jvm, io.jvm)
+
 lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
