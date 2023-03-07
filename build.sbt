@@ -45,8 +45,23 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("cli/cli"))
+  .enablePlugins(GraalVMNativeImagePlugin)
   .settings(commons: _*)
   .settings(
+    Compile / mainClass := Some("aqua.AquaCli"),
+    graalVMNativeImageOptions ++= Seq(
+      "--no-fallback",
+      "--diagnostics-mode",
+      "--initialize-at-build-time",
+      "--initialize-at-run-time=scala.util.Random$",
+      "-H:-DeleteLocalSymbols",
+      "-H:+PreserveFramePointer",
+      "-H:+ReportExceptionStackTraces",
+      "-H:+DashboardHeap",
+      "-H:+DashboardCode",
+      "-H:+DashboardPointsTo",
+      "-H:+DashboardAll"
+    ) ++ sys.env.get("COMPILE_STATIC").filter(_.trim.toLowerCase() == "true").map(_ => Seq("--static")).getOrElse(Seq.empty),
     libraryDependencies ++= Seq(
       "com.monovore" %%% "decline"        % declineV,
       "com.monovore" %%% "decline-effect" % declineV

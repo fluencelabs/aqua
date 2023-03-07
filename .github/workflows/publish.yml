@@ -224,3 +224,25 @@ jobs:
       - name: Publish to NPM registry
         run: npm publish --access public --tag unstable
         working-directory: language-server/language-server-npm
+
+  aqua-native:
+    name: "Publish aqua-native"
+    strategy:
+      matrix:
+        runner:
+          - runs-on: ubuntu-latest
+            arch: amd64
+            os: linux
+            static: true
+          - runs-on: macos-latest
+            arch: amd64
+            os: macos
+            static: false
+    needs:
+      - compile
+    uses: ./.github/workflows/binary.yml
+    with:
+      runs-on: ${{ matrix.runner.runs-on }}
+      arch: ${{ matrix.runner.arch }}
+      os: ${{ matrix.runner.os }}
+      static: ${{ matrix.runner.static }}
