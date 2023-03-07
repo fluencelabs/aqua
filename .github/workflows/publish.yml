@@ -234,6 +234,10 @@ jobs:
             arch: amd64
             os: linux
             static: true
+          - runs-on: macos-latest
+            arch: amd64
+            os: macos
+            static: false
     needs:
       - compile
     uses: ./.github/workflows/binary.yml
