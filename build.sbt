@@ -240,7 +240,7 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
 lazy val `compiler-native-lib` = project
   .in(file("compiler-native-lib"))
   .settings(commons: _*)
-  .dependsOn(compiler.jvm, io.jvm, transform.jvm)
+  .dependsOn(compiler.jvm, io.jvm, transform.jvm, `backend-air`.jvm)
 
 lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

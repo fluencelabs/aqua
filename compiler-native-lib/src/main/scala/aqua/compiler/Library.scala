@@ -22,6 +22,7 @@ import aqua.backend.AirFunction
 import aqua.backend.Generated
 import aqua.res.AquaRes
 import aqua.parser.lift.FileSpan
+import aqua.backend.air.AirBackend
 
 object Library {
 
@@ -34,12 +35,11 @@ object Library {
     }
 
 
-  private class LocalBackendTransform(backend: Backend,
-                                      transformConfig: TransformConfig) extends Backend.Transform:
+  private class LocalBackendTransform(transformConfig: TransformConfig) extends Backend.Transform:
     override def transform(ex: AquaContext): AquaRes =
       Transform.contextRes(ex, transformConfig)
 
-    override def generate(aqua: AquaRes): Seq[Generated] = backend.generate(aqua)
+    override def generate(aqua: AquaRes): Seq[Generated] = AirBackend.generate(aqua)
 
 
   private class LocalAirValidator[F[_] : Applicative]() extends AirValidator[F]:
@@ -51,9 +51,9 @@ object Library {
 
   private def compileF[F[_] : AquaIO : Monad : Files](input: String, imports: List[String]): F[ValidatedNec[AquaError[FileModuleId, AquaFileError, FileSpan.F], Chain[AquaCompiled[FileModuleId]]]] = for {
     sources <- new RawAquaSource[F](input, imports).pure
-    backendTransform <- new LocalBackendTransform(???, ???).pure
-    validator <- new LocalAirValidator[F]().pure
     transformConfig <- TransformConfig().pure
+    backendTransform <- new LocalBackendTransform(transformConfig).pure
+    validator <- new LocalAirValidator[F]().pure
     result <- CompilerAPI
       .compile[F, AquaFileError, FileModuleId, FileSpan.F](
         sources,
