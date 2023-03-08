@@ -1,8 +1,9 @@
 package aqua.parser.lexer
 
+import aqua.parser.lift.Span.S
 import cats.data.NonEmptyList
 import cats.parse.{Accumulator0, Parser as P, Parser0 as P0}
-import cats.{~>, Comonad, Functor}
+import cats.{Comonad, Functor, ~>}
 import cats.syntax.functor.*
 
 trait Token[F[_]] {
@@ -14,6 +15,15 @@ trait Token[F[_]] {
 }
 
 object Token {
+  val whitespace: P[Unit] = P.charIn(" \t\r\n").void
+  val whitespaces0: P0[Unit] = whitespace.rep0.void
+
+  val listSep: P[Unit] =
+    P.char(',').soft.surroundedBy(whitespaces0).void
+
+  def repList[A](pa: P[A]): P0[List[A]] =
+    pa.repSep0(listSep).surroundedBy(whitespaces0)
+
   private val fSpaces = Set(' ', '\t')
   private val az = ('a' to 'z').toSet
   private val AZ = ('A' to 'Z').toSet
@@ -117,10 +127,10 @@ object Token {
   val `<-` : P[Unit] = P.string("<-")
   val `/s*` : P0[Any] = ` \n+` | ` *`
 
-  val namedArgs = P.defer(
+  val namedArgs: P[NonEmptyList[(String, ValueToken[S])]] = P.defer(
     comma(
-      ((`name` <* (` `.?.with1 *> `=` *> ` `.?)).with1 ~ ValueToken.`value`).surroundedBy(`/s*`)
-    ).between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`)
+      `name`.surroundedBy(whitespaces0) ~ `=`.void ~ ValueToken.`value`.surroundedBy(whitespaces0)
+    ).between(P.char('('), P.char(')')).map(_.map { case ((name, _), vt) => (name, vt)})
   )
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {

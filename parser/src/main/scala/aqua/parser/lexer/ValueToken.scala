@@ -42,7 +42,7 @@ case class CollectionToken[F[_]: Comonad](
   values: List[ValueToken[F]]
 ) extends ValueToken[F] {
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K] =
+  override def mapK[K[_]: Comonad](fk: F ~> K): CollectionToken[K] =
     copy(fk(point), values.map(_.mapK(fk)))
 
   override def as[T](v: T): F[T] = point.as(v)
@@ -57,13 +57,11 @@ object CollectionToken {
   enum Mode:
     case StreamMode, OptionMode, ArrayMode
 
+  private val left = P.char('[').as[Mode](Mode.ArrayMode) | P.string("?[").as[Mode](Mode.OptionMode) | P.string("*[").as[Mode](Mode.StreamMode)
+  private val right = P.char(']').void
+
   val collection: P[CollectionToken[Span.S]] =
-    ((
-      `*[`.as[Mode](Mode.StreamMode) |
-        `?[`.as[Mode](Mode.OptionMode) |
-        `[`.as[Mode](Mode.ArrayMode)
-    ).lift ~ (ValueToken.`value`
-      .repSep0(`,`) <* `]`)).map { case (mode, vals) =>
+    (left.lift ~ repList(ValueToken.`value`) ~ right).map { case ((mode, vals), _) =>
       CollectionToken(mode, vals)
     }
 }
