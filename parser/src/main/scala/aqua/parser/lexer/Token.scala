@@ -18,12 +18,6 @@ object Token {
   val whitespace: P[Unit] = P.charIn(" \t\r\n").void
   val whitespaces0: P0[Unit] = whitespace.rep0.void
 
-  val listSep: P[Unit] =
-    P.char(',').soft.surroundedBy(whitespaces0).void
-
-  def repList[A](pa: P[A]): P0[List[A]] =
-    pa.repSep0(listSep).surroundedBy(whitespaces0)
-
   private val fSpaces = Set(' ', '\t')
   private val az = ('a' to 'z').toSet
   private val AZ = ('A' to 'Z').toSet
@@ -146,7 +140,7 @@ object Token {
     P.repSep(p, `,` <* ` \n+`.rep0)
 
   def comma0[T](p: P[T]): P0[List[T]] =
-    P.repSep0(p, `,` <* ` \n+`.rep0)
+    p.repSep0(P.char(',').soft.surroundedBy(whitespaces0).void).surroundedBy(whitespaces0)
 
   def asOpt[T](p: P[T]): P[(T, Option[T])] =
     p ~ (` as `.backtrack *> p).?

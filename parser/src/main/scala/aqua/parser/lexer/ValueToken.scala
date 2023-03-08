@@ -61,7 +61,7 @@ object CollectionToken {
   private val right = P.char(']').void
 
   val collection: P[CollectionToken[Span.S]] =
-    (left.lift ~ repList(ValueToken.`value`) ~ right).map { case ((mode, vals), _) =>
+    (left.lift ~ comma0(ValueToken.`value`) ~ right).map { case ((mode, vals), _) =>
       CollectionToken(mode, vals)
     }
 }
