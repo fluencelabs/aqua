@@ -3,17 +3,16 @@ package aqua.parser
 import aqua.parser.Ast.Tree
 import aqua.parser.lexer.Token
 import aqua.parser.lexer.Token.*
-import aqua.parser.lift.{LiftParser, Span}
+import aqua.parser.expr.func.ReturnExpr
 import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.{LiftParser, Span}
 import cats.data.Chain.:==
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.free.Cofree
-import cats.parse.Parser as P
-import cats.parse.Parser0 as P0
+import cats.parse.{Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
-import cats.{Comonad, Eval}
-import cats.~>
-import Span.{P0ToSpan, PToSpan}
+import cats.{~>, Comonad, Eval}
 
 abstract class Expr[F[_]](val companion: Expr.Companion, val token: Token[F]) {
 
@@ -82,9 +81,8 @@ object Expr {
       }
 
     override def ast: P[ValidatedNec[ParserError[Span.S], Tree[Span.S]]] =
-      ((super.readLine <* sep) ~ P.oneOf(continueWith.map(_.ast.backtrack))).map {
-        case (h, tm) =>
-          tm.map(t => h.copy(tail = Eval.now(Chain.one(t))))
+      ((super.readLine <* sep) ~ P.oneOf(continueWith.map(_.ast.backtrack))).map { case (h, tm) =>
+        tm.map(t => h.copy(tail = Eval.now(Chain.one(t))))
       }
   }
 
@@ -108,6 +106,26 @@ object Expr {
           children
       })
 
+    // Check if expression can be added in current block
+    private def canAddToBlock[F[_]](block: Expr[F], expr: Expr[F]): Boolean = {
+      block.companion match {
+        case b: AndIndented =>
+          b.validChildren.contains(expr.companion)
+        case _ => false
+      }
+    }
+
+    // Generate error if expression (child) cannot be added to a block
+    private def wrongChildError[F[_]](indent: F[String], expr: Expr[F]): ParserError[F] = {
+      val msg = expr match {
+        case ReturnExpr(_) =>
+          "Return expression must be on the top indentation level and at the end of function body"
+        // could there be other expressions?
+        case _ => "This expression is on the wrong indentation level"
+      }
+      BlockIndentError(indent, msg)
+    }
+
     case class Acc[F[_]](
       block: Option[(F[String], Tree[F])] = None,
       window: Chain[(F[String], Tree[F])] = Chain.empty[(F[String], Tree[F])],
@@ -125,6 +143,7 @@ object Expr {
         .fold[ValidatedNec[ParserError[F], Ast.Tree[F]]](Validated.validNec(head)) { lHead =>
           // size of an indentation
           val initialIndent = lHead._1.extract.length
+
           // recursively creating a tree
           // moving a window on a list depending on the nesting of the code
           val acc = exprs.foldLeft[Acc[F]](
@@ -144,12 +163,17 @@ object Expr {
                 // if we have root companion, gather all expressions that have indent > than current
                 case r @ Some((_, block)) =>
                   if (indent.extract.length > initialIndent) {
-                    Acc[F](
-                      r,
-                      acc.window.append((indent, currentExpr)),
-                      acc.currentChildren,
-                      acc.error
-                    )
+                    // We cannot add some expressions to some blocks,
+                    // ie cannot add ReturnExpr to all blocks, except for the ArrowExpr
+                    if (!canAddToBlock(block.head, currentExpr.head))
+                      Acc(error = Chain.one(wrongChildError(indent, currentExpr.head)))
+                    else
+                      Acc[F](
+                        r,
+                        acc.window.append((indent, currentExpr)),
+                        acc.currentChildren,
+                        acc.error
+                      )
                   } else if (indent.extract.length == initialIndent) {
                     // if root have no tokens in it - return an error
                     if (acc.window.isEmpty) {
