@@ -52,8 +52,8 @@ object Expr {
       )
   }
 
-  def defer(companion: => Lexem): Lexem = new Lexem {
-    private lazy val c = companion
+  class LazyLexem(companion: => Lexem) extends Lexem {
+    lazy val c: Lexem = companion
 
     override def readLine: P[Ast.Tree[Span.S]] = c.readLine
 
@@ -62,6 +62,8 @@ object Expr {
     override def ast: P[ValidatedNec[ParserError[Span.S], Ast.Tree[Span.S]]] =
       c.ast
   }
+
+  def defer(companion: => Lexem): Lexem = new LazyLexem(companion)
 
   // expression that could have children
   // that will be parsed by `ast` method to a tree
@@ -76,7 +78,6 @@ object Expr {
     override def readLine: P[Ast.Tree[Span.S]] =
       ((super.readLine <* sep) ~ P.oneOf(continueWith.map(_.readLine.backtrack))).map {
         case (h, t) =>
-//          println("read prefixed line "+t)
           h.copy(tail = Eval.now(Chain.one(t)))
       }
 
@@ -107,10 +108,16 @@ object Expr {
       })
 
     // Check if expression can be added in current block
-    private def canAddToBlock[F[_]](block: Expr[F], expr: Expr[F]): Boolean = {
-      block.companion match {
+    private def canAddToBlock[F[_]](block: Tree[F], expr: Expr[F]): Boolean = {
+      block.head.companion match {
         case b: AndIndented =>
-          b.validChildren.contains(expr.companion)
+          b.validChildren.map {
+            case ll: LazyLexem => ll.c
+            case vc => vc
+          }.contains(expr.companion)
+
+        case _: Prefix =>
+          block.tail.value.headOption.exists(t => canAddToBlock(t, expr))
         case _ => false
       }
     }
@@ -165,7 +172,7 @@ object Expr {
                   if (indent.extract.length > initialIndent) {
                     // We cannot add some expressions to some blocks,
                     // ie cannot add ReturnExpr to all blocks, except for the ArrowExpr
-                    if (!canAddToBlock(block.head, currentExpr.head))
+                    if (!canAddToBlock(block, currentExpr.head))
                       Acc(error = Chain.one(wrongChildError(indent, currentExpr.head)))
                     else
                       Acc[F](
