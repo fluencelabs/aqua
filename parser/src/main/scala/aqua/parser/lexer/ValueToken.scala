@@ -57,11 +57,18 @@ object CollectionToken {
   enum Mode:
     case StreamMode, OptionMode, ArrayMode
 
-  private val left = P.char('[').as[Mode](Mode.ArrayMode) | P.string("?[").as[Mode](Mode.OptionMode) | P.string("*[").as[Mode](Mode.StreamMode)
-  private val right = P.char(']').void
+  private val left: P[Mode] =
+    (`/s*`.with1 ~ (P
+      .char('[')
+      .as[Mode](Mode.ArrayMode) | P.string("?[").as[Mode](Mode.OptionMode) | P
+      .string("*[")
+      .as[Mode](Mode.StreamMode))).map(_._2)
+  private val right: P[Unit] = P.char(']').void
 
   val collection: P[CollectionToken[Span.S]] =
-    (left.lift ~ comma0(ValueToken.`value`) ~ right).map { case ((mode, vals), _) =>
+    ((` *`.with1 *> left.lift <* `/s*`) ~ comma0(
+      ValueToken.`value`.surroundedBy(`/s*`)
+    ) <* (`/s*` *> right)).map { case (mode, vals) =>
       CollectionToken(mode, vals)
     }
 }

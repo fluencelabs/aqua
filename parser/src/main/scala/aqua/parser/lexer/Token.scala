@@ -3,7 +3,7 @@ package aqua.parser.lexer
 import aqua.parser.lift.Span.S
 import cats.data.NonEmptyList
 import cats.parse.{Accumulator0, Parser as P, Parser0 as P0}
-import cats.{Comonad, Functor, ~>}
+import cats.{~>, Comonad, Functor}
 import cats.syntax.functor.*
 
 trait Token[F[_]] {
@@ -15,9 +15,6 @@ trait Token[F[_]] {
 }
 
 object Token {
-  val whitespace: P[Unit] = P.charIn(" \t\r\n").void
-  val whitespaces0: P0[Unit] = whitespace.rep0.void
-
   private val fSpaces = Set(' ', '\t')
   private val az = ('a' to 'z').toSet
   private val AZ = ('A' to 'Z').toSet
@@ -82,11 +79,10 @@ object Token {
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
 
   val ` \n` : P[Unit] =
-    (` `.?.void *> (`--` *> P.charsWhile0(_ != '\n')).?.void).with1 *> `\n`
+    (` `.?.void *> (`--` *> P.repUntil0(P.anyChar, `\n`)).?.void).with1 *> `\n`
 
   val ` \n+` : P[Unit] = P.repAs[Unit, Unit](` \n`.backtrack, 1)(Accumulator0.unitAccumulator0)
   val ` \n*` : P0[Unit] = P.repAs0[Unit, Unit](` \n`.backtrack)(Accumulator0.unitAccumulator0)
-  val ` : \n+` : P[Unit] = ` `.?.with1 *> `:` *> ` \n+`
   val `,` : P[Unit] = P.char(',') <* ` `.?
   val `.` : P[Unit] = P.char('.')
   val `"` : P[Unit] = P.char('"')
@@ -117,12 +113,19 @@ object Token {
   val `>=` : P[Unit] = P.string(">=")
   val `<=` : P[Unit] = P.string("<=")
   val `<-` : P[Unit] = P.string("<-")
-  val `/s*` : P0[Any] = ` \n+` | ` *`
+  val `/s*` : P0[Unit] = ` \n+` | ` *`.void
+
+  val namedArg: P[(String, ValueToken[S])] =
+    P.defer(`name`.between(` *`, `/s*`) ~
+      `=`.between(` *`, `/s*`).void ~
+      ValueToken.`value`.between(` *`, `/s*`)).map { case ((name, _), vt) =>
+      (name, vt)
+    }
 
   val namedArgs: P[NonEmptyList[(String, ValueToken[S])]] = P.defer(
-    comma(
-      `name`.surroundedBy(whitespaces0) ~ `=`.void ~ ValueToken.`value`.surroundedBy(whitespaces0)
-    ).between(P.char('('), P.char(')')).map(_.map { case ((name, _), vt) => (name, vt)})
+    ((` `.?.with1 *> P.char('(') <* `/s*`) ~ comma(
+      namedArg
+    ) <* (`/s*` *> P.char(')'))).map(_._2)
   )
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
@@ -138,7 +141,7 @@ object Token {
     P.repSep(p, `,` <* ` \n+`.rep0)
 
   def comma0[T](p: P[T]): P0[List[T]] =
-    p.repSep0(P.char(',').soft.surroundedBy(whitespaces0).void).surroundedBy(whitespaces0)
+    P.repSep0(p, `,` <* ` \n+`.rep0)
 
   def asOpt[T](p: P[T]): P[(T, Option[T])] =
     p ~ (` as `.backtrack *> p).?

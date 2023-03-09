@@ -4,6 +4,7 @@ import aqua.AquaSpec
 import aqua.AquaSpec.{toNumber, toStr, toVar}
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.expr.func.AssignmentExpr
+import aqua.parser.lexer.Token
 import aqua.parser.lexer.CollectionToken.Mode.ArrayMode
 import aqua.parser.lexer.{Ability, CallArrowToken, CollectionToken, CustomTypeToken, LiteralToken, Name, StructValueToken, ValueToken, VarToken}
 import aqua.types.LiteralType
@@ -49,8 +50,19 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
   }
 
+  "one named arg" should "be parsed" in {
+    val result = aqua.parser.lexer.Token.namedArg
+      .parseAll(
+        """  a
+          | =
+          |  3""".stripMargin)
+      .map(v => (v._1, v._2.mapK(spanToId))).value
+
+    result should be(("a", toNumber(3)))
+  }
+
   "named args" should "be parsed" in {
-    val result = aqua.parser.lexer.Token.namedArgs.parseAll(
+    val result = Token.namedArgs.parseAll(
       """(
         |a = "str",
         |b = 3,
