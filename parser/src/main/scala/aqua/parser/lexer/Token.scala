@@ -89,8 +89,8 @@ object Token {
   val `*` : P[Unit] = P.char('*')
   val exclamation: P[Unit] = P.char('!')
   val `[]` : P[Unit] = P.string("[]")
-  val `[` : P[Unit] = P.char('[') <* ` `.?
-  val `]` : P[Unit] = ` `.?.with1 *> P.char(']')
+  val `[` : P[Unit] = P.char('[')
+  val `]` : P[Unit] = P.char(']')
   val `⊤` : P[Unit] = P.char('⊤')
   val `⊥` : P[Unit] = P.char('⊥')
   val `∅` : P[Unit] = P.char('∅')
@@ -113,7 +113,7 @@ object Token {
   val `>=` : P[Unit] = P.string(">=")
   val `<=` : P[Unit] = P.string("<=")
   val `<-` : P[Unit] = P.string("<-")
-  val `/s*` : P0[Unit] = ` \n+` | ` *`.void
+  val `/s*` : P0[Unit] = ` \n+`.backtrack | ` *`.void
 
   val namedArg: P[(String, ValueToken[S])] =
     P.defer(`name`.between(` *`, `/s*`) ~
