@@ -1,5 +1,6 @@
 package aqua.parser.lexer
 
+import aqua.parser.lift.Span.S
 import cats.data.NonEmptyList
 import cats.parse.{Accumulator0, Parser as P, Parser0 as P0}
 import cats.{~>, Comonad, Functor}
@@ -78,21 +79,18 @@ object Token {
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
 
   val ` \n` : P[Unit] =
-    (` `.?.void *> (`--` *> P.charsWhile0(_ != '\n')).?.void).with1 *> `\n`
+    (` `.?.void *> (`--` *> P.repUntil0(P.anyChar, `\n`)).?.void).with1 *> `\n`
 
   val ` \n+` : P[Unit] = P.repAs[Unit, Unit](` \n`.backtrack, 1)(Accumulator0.unitAccumulator0)
   val ` \n*` : P0[Unit] = P.repAs0[Unit, Unit](` \n`.backtrack)(Accumulator0.unitAccumulator0)
-  val ` : \n+` : P[Unit] = ` `.?.with1 *> `:` *> ` \n+`
   val `,` : P[Unit] = P.char(',') <* ` `.?
   val `.` : P[Unit] = P.char('.')
   val `"` : P[Unit] = P.char('"')
   val `*` : P[Unit] = P.char('*')
   val exclamation: P[Unit] = P.char('!')
   val `[]` : P[Unit] = P.string("[]")
-  val `[` : P[Unit] = P.char('[') <* ` `.?
-  val `*[` : P[Unit] = P.string("*[") <* ` `.?
-  val `?[` : P[Unit] = P.string("?[") <* ` `.?
-  val `]` : P[Unit] = ` `.?.with1 *> P.char(']')
+  val `[` : P[Unit] = P.char('[')
+  val `]` : P[Unit] = P.char(']')
   val `⊤` : P[Unit] = P.char('⊤')
   val `⊥` : P[Unit] = P.char('⊥')
   val `∅` : P[Unit] = P.char('∅')
@@ -115,12 +113,19 @@ object Token {
   val `>=` : P[Unit] = P.string(">=")
   val `<=` : P[Unit] = P.string("<=")
   val `<-` : P[Unit] = P.string("<-")
-  val `/s*` : P0[Any] = ` \n+` | ` *`
+  val `/s*` : P0[Unit] = ` \n+`.backtrack | ` *`.void
 
-  val namedArgs = P.defer(
-    comma(
-      ((`name` <* (` `.?.with1 *> `=` *> ` `.?)).with1 ~ ValueToken.`value`).surroundedBy(`/s*`)
-    ).between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`)
+  val namedArg: P[(String, ValueToken[S])] =
+    P.defer(`name`.between(` *`, `/s*`) ~
+      `=`.between(` *`, `/s*`).void ~
+      ValueToken.`value`.between(` *`, `/s*`)).map { case ((name, _), vt) =>
+      (name, vt)
+    }
+
+  val namedArgs: P[NonEmptyList[(String, ValueToken[S])]] = P.defer(
+    ((` `.?.with1 *> P.char('(') <* `/s*`) ~ comma(
+      namedArg
+    ) <* (`/s*` *> P.char(')'))).map(_._2)
   )
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {

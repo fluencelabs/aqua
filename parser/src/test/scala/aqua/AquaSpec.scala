@@ -137,6 +137,9 @@ trait AquaSpec extends EitherValues {
   def parseAlias(str: String): AliasExpr[Id] =
     AliasExpr.p.parseAll(str).value.mapK(spanToId)
 
+  def parseCollection(str: String): CollectionToken[Id] =
+    CollectionToken.collection.parseAll(str).value.mapK(spanToId)
+
   def parseDataStruct(str: String): DataStructExpr[Id] =
     DataStructExpr.p.parseAll(str).value.mapK(spanToId)
 

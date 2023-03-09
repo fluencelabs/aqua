@@ -56,7 +56,7 @@ object PropertyOp {
 
   private val parseIdx: P[PropertyOp[Span.S]] =
     (P.defer(
-      (ValueToken.`value`.between(`[`, `]`).lift | (exclamation *> ValueToken.num).lift)
+      (ValueToken.`value`.surroundedBy(`/s*`).between(`[`.between(` *`, `/s*`), `/s*` *> `]`).lift | (exclamation *> ValueToken.num).lift)
         .map(v => IntoIndex(v.map(_.unit), Some(v._2)))
         .backtrack
     ) | exclamation.lift.map(e => IntoIndex(e, None))).flatMap { ii =>

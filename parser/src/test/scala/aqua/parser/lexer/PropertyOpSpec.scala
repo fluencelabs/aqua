@@ -17,10 +17,26 @@ class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
 
     opsP(".field") should be(NonEmptyList.of(IntoField[Id]("field")))
     opsP(".field.sub") should be(NonEmptyList.of(IntoField[Id]("field"), IntoField[Id]("sub")))
+  }
+
+  "index" should "parse" in {
+
+    val idx = PropertyOp.ops.parseAll("[1]").value.map(_.mapK(spanToId)).head
+    idx shouldBe IntoIndex[Id]((), Option(toNumber(1)))
+
+    val idx2 = PropertyOp.ops.parseAll("[   1   ]").value.map(_.mapK(spanToId)).head
+    idx2 shouldBe IntoIndex[Id]((), Option(toNumber(1)))
+
+    val idx3 = PropertyOp.ops.parseAll(
+      """[ -- comment1
+        | -- comment2
+        |   1 -- comment3
+        |   -- comment4
+        |]""".stripMargin).value.map(_.mapK(spanToId)).head
+    idx3 shouldBe IntoIndex[Id]((), Option(toNumber(1)))
 
     PropertyOp.ops.parseAll("[-1]").isLeft shouldBe true
     PropertyOp.ops.parseAll("!-1").isLeft shouldBe true
-
   }
 
   "copy ops" should "parse" in {
