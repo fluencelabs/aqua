@@ -59,7 +59,7 @@ object DataView {
     case Variable(name) ⇒ name
     case Stream(name) ⇒ name
     case VarLens(name, lens, isField) ⇒
-      if (isField) name + ".$" + lens + "!"
+      if (isField) name + ".$" + lens
       else name + lens
   }
 }
