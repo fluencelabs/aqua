@@ -109,6 +109,8 @@ object Expr {
 
     // Check if expression can be added in current block
     private def canAddToBlock[F[_]](block: Tree[F], expr: Expr[F]): Boolean = {
+      println("block check: " + block)
+      println("expr check: " + expr)
       block.head.companion match {
         case b: AndIndented =>
           b.validChildren.map {
@@ -133,8 +135,12 @@ object Expr {
       BlockIndentError(indent, msg)
     }
 
+    private def headIsBlock[F[_]](tree: Tree[F]): Boolean = {
+      tree.tail.value.headOption.exists(_.head.isBlock)
+    }
+
     case class Acc[F[_]](
-      block: Option[(F[String], Tree[F])] = None,
+      block: Chain[(F[String], Tree[F])] = Chain.empty[(F[String], Tree[F])],
       window: Chain[(F[String], Tree[F])] = Chain.empty[(F[String], Tree[F])],
       currentChildren: Chain[Ast.Tree[F]] = Chain.empty[Ast.Tree[F]],
       error: Chain[ParserError[F]] = Chain.empty[ParserError[F]]
@@ -157,30 +163,39 @@ object Expr {
             Acc[F]()
           ) {
             case (acc, (indent, currentExpr)) if acc.error.isEmpty =>
-              acc.block match {
+              println("block2: " + acc.block)
+              println("current: " + last(currentExpr))
+              acc.block.lastOption match {
+
                 case None =>
-                  last(currentExpr) match {
+                  val current = last(currentExpr)
+                  current match {
                     // if next is block companion, start to gather all expressions under this block
                     case block if block.isBlock =>
-                      acc.copy(block = Some(indent -> currentExpr))
+                      println(s"add $block as block")
+                      acc.copy(block = acc.block :+ (indent -> currentExpr))
                     // create leaf if token is on current level
-                    case _ =>
-                      acc.copy(currentChildren = acc.currentChildren.append(currentExpr))
+                    case b =>
+                      b.companion match {
+                        // if prefix, then check if a child is a block and gather
+                        case _: Prefix if headIsBlock(currentExpr) =>
+                          println(s"add $b as block")
+                          acc.copy(block = acc.block :+ (indent -> currentExpr))
+                        case _ =>
+                          acc.copy(currentChildren = acc.currentChildren.append(currentExpr))
+                      }
+
                   }
                 // if we have root companion, gather all expressions that have indent > than current
                 case r @ Some((_, block)) =>
+                  println("indent to initial indent: " + (indent.extract.length > initialIndent))
                   if (indent.extract.length > initialIndent) {
-                    // We cannot add some expressions to some blocks,
-                    // ie cannot add ReturnExpr to all blocks, except for the ArrowExpr
-                    if (!canAddToBlock(block, currentExpr.head))
-                      Acc(error = Chain.one(wrongChildError(indent, currentExpr.head)))
-                    else
-                      Acc[F](
-                        r,
-                        acc.window.append((indent, currentExpr)),
-                        acc.currentChildren,
-                        acc.error
-                      )
+                    Acc[F](
+                      acc.block,
+                      acc.window.append((indent, currentExpr)),
+                      acc.currentChildren,
+                      acc.error
+                    )
                   } else if (indent.extract.length == initialIndent) {
                     // if root have no tokens in it - return an error
                     if (acc.window.isEmpty) {
@@ -196,24 +211,41 @@ object Expr {
                           last(currentExpr) match {
                             // if next expression is root companion, start to gather all tokens under this root
                             case block if block.isBlock =>
+                              println("delete last")
                               acc.copy(
-                                block = Some(indent -> currentExpr),
+                                block = acc.block.initLast.map(_._1).getOrElse(Chain.empty) :+ (indent -> currentExpr),
                                 currentChildren = withTree,
                                 window = Chain.empty
                               )
-                            // create leaf if token is on current level
-                            case _ =>
-                              acc.copy(
-                                block = None,
-                                currentChildren = withTree.append(currentExpr),
-                                window = Chain.empty
-                              )
+                            case b =>
+                              b.companion match {
+                                case _: Prefix if headIsBlock(currentExpr) =>
+                                  println("delete last")
+                                  acc.copy(
+                                    block = acc.block.initLast.map(_._1).getOrElse(Chain.empty) :+ (indent -> currentExpr),
+                                    currentChildren = withTree,
+                                    window = Chain.empty
+                                  )
+                                // create leaf if a token is on current level
+                                case _ =>
+                                  // We cannot add some expressions to some blocks,
+                                  // ie cannot add ReturnExpr to all blocks, except for the ArrowExpr
+                                  if (!canAddToBlock(block, currentExpr.head))
+                                    Acc(error = Chain.one(wrongChildError(indent, currentExpr.head)))
+                                  else
+                                    acc.copy(
+                                      block = acc.block,
+                                      currentChildren = withTree.append(currentExpr),
+                                      window = Chain.empty
+                                    )
+                              }
                           }
                         }
                       )
                     }
 
                   } else {
+                    "".toInt
                     Acc[F](error =
                       Chain.one(
                         BlockIndentError(
@@ -231,9 +263,10 @@ object Expr {
           // finalize all `tails` in the accumulator
           NonEmptyChain.fromChain(acc.error) match {
             case None =>
-              acc.block match {
+              acc.block.lastOption match {
                 case Some((i, headExpr)) =>
                   if (acc.window.isEmpty) {
+                    println("azaza")
                     Validated.invalidNec(BlockIndentError(i, "Block expression has no body"))
                   } else {
                     // create a tree from the last expressions if the window is not empty

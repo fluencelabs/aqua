@@ -29,11 +29,11 @@ object ArrowExpr extends Expr.AndIndented {
       TryExpr ::
       ElseOtherwiseExpr ::
       CatchExpr ::
-      ParExpr ::
-      CoExpr ::
-      JoinExpr ::
+      Expr.defer(ParExpr) ::
+      Expr.defer(CoExpr) ::
+      Expr.defer(JoinExpr) ::
       DeclareStreamExpr ::
-      ClosureExpr ::
+      Expr.defer(ClosureExpr) ::
       AssignmentExpr ::
       Nil
 
