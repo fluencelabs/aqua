@@ -30,18 +30,21 @@ case class OutputFunc(func: FuncRes, types: Types) {
     val script = tsAir.show.linesIterator.map(codeLeftSpace + _).mkString("\n")
     val funcDef = FunctionDef(func)
 
+    val scriptConstName = func.funcName + "_script"
+
     (
       AirFunction(func.funcName, script, funcDef),
-      s"""${funcTypes.generate}
-         |export function ${func.funcName}(${typed("...args", "any")}) {
-         |
-         |    let script = `
+      s"""export const $scriptConstName = `
          |$script
          |    `
+         |${funcTypes.generate}
+         |export function ${func.funcName}(${typed("...args", "any")}) {
+         |
+
          |    return callFunction$$$$(
          |        args,
          |        ${funcDef.asJson.deepDropNullValues.spaces4},
-         |        script
+         |        $scriptConstName
          |    )
          |}""".stripMargin
     )
