@@ -54,8 +54,9 @@ jobs:
 
   fluence-cli:
     needs: aqua
-    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
+    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@use-pnpm
     with:
+      ref: use-pnpm
       aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
 
   status:
