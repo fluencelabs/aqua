@@ -195,12 +195,15 @@ object Expr {
               }
 
             }
-          } else if (currentIndent.extract.length == initialIndent) {
+          } else if (currentIndent.extract.length <= initialIndent) {
             // add window to head and refresh
             // println("processed head: " + acc.block.forceTail)
             // println("window: " + acc.window)
             validNec((setLeafs(acc.block, acc.window), Chain.empty, (currentIndent, currentExpr) +: tail))
           } else {
+            // println("cur block: " + acc.block)
+            // println("cur indent: " + currentIndent)
+            // println("current: " + currentExpr)
             invalidNec(wrongChildError(currentIndent, current))
           }
 
