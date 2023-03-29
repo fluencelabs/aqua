@@ -110,8 +110,8 @@ object Expr {
 
     // Check if expression can be added in current block
     private def canAddToBlock[F[_]](block: Tree[F], expr: Expr[F]): Boolean = {
-      println("block check: " + block)
-      println("expr to add: " + expr)
+      // println("block check: " + block)
+      // println("expr to add: " + expr)
       block.head.companion match {
         case b: AndIndented =>
           b.validChildren.map {
@@ -137,8 +137,8 @@ object Expr {
     }
 
     private def headIsBlock[F[_]](tree: Tree[F]): Boolean = {
-      println("what is block111?: " + tree)
-      println("what is block?: " + tree.tail.value.headOption)
+      // println("what is block111?: " + tree)
+      // println("what is block?: " + tree.tail.value.headOption)
       tree.tail.value.headOption match {
         case Some(t) => t.head.isBlock
         case _ => tree.head.isBlock
@@ -167,7 +167,7 @@ object Expr {
     def listToTree[F[_]: Comonad: LiftParser](
       acc: Acc[F]
     ): ValidatedNec[ParserError[F], (Ast.Tree[F], Chain[Ast.Tree[F]], Chain[(F[String], Ast.Tree[F])])] = {
-      println("HEAD: " + acc.block.forceTail)
+      // println("HEAD: " + acc.block.forceTail)
       // if we don't have elements in a list, then head is a leaf
 
       val initialIndent = acc.initialIndentF.extract.length
@@ -175,14 +175,14 @@ object Expr {
       acc.tail.uncons match {
         case Some(((currentIndent, currentExpr), tail)) =>
           val current = last(currentExpr)
-          println("current: " + current)
-          println("current is block: " + headIsBlock(currentExpr))
+          // println("current: " + current)
+          // println("current is block: " + headIsBlock(currentExpr))
           if (currentIndent.extract.length > initialIndent) {
             if (headIsBlock(currentExpr)) {
-              println("NEW BLOCK: " + currentExpr)
+              // println("NEW BLOCK: " + currentExpr)
               listToTree(Acc(currentExpr, currentIndent, tail)).andThen { case (innerTree, window, newTail) =>
                 if (window.nonEmpty) {
-                  println("WINDOW NON EMPTY, WARNING")
+                  // println("WINDOW NON EMPTY, WARNING")
                 }
                 listToTree(acc.copy(window = acc.window :+ innerTree, tail = newTail))
               }
@@ -197,8 +197,8 @@ object Expr {
             }
           } else if (currentIndent.extract.length == initialIndent) {
             // add window to head and refresh
-            println("processed head: " + acc.block.forceTail)
-            println("window: " + acc.window)
+            // println("processed head: " + acc.block.forceTail)
+            // println("window: " + acc.window)
             validNec((setLeafs(acc.block, acc.window), Chain.empty, (currentIndent, currentExpr) +: tail))
           } else {
             invalidNec(wrongChildError(currentIndent, current))
@@ -217,10 +217,10 @@ object Expr {
           ` \n+`
         ) <* ` \n`.?))).map { t =>
         val startIndent = t._1.head.token.as("")
-        println("t1: " + t._1.head)
+        // println("t1: " + t._1.head)
         listToTree(Acc(t._1, startIndent, Chain.fromSeq(t._2.toList))).map { res =>
-          println("this must be empty: " + res._2)
-          println("result: " + res._1.forceTail)
+          // println("this must be empty: " + res._2)
+          // println("result: " + res._1.forceTail)
           res._1
         }
       }
