@@ -10,6 +10,7 @@ import aqua.parser.lift.{LiftParser, Span}
 import cats.data.Chain.:==
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.free.Cofree
+import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.parse.{Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.{~>, Comonad, Eval}
@@ -110,7 +111,7 @@ object Expr {
     // Check if expression can be added in current block
     private def canAddToBlock[F[_]](block: Tree[F], expr: Expr[F]): Boolean = {
       println("block check: " + block)
-      println("expr check: " + expr)
+      println("expr to add: " + expr)
       block.head.companion match {
         case b: AndIndented =>
           b.validChildren.map {
@@ -136,153 +137,77 @@ object Expr {
     }
 
     private def headIsBlock[F[_]](tree: Tree[F]): Boolean = {
-      tree.tail.value.headOption.exists(_.head.isBlock)
+      println("what is block111?: " + tree)
+      println("what is block?: " + tree.tail.value.headOption)
+      tree.tail.value.headOption match {
+        case Some(t) => t.head.isBlock
+        case _ => tree.head.isBlock
+      }
     }
 
     case class Acc[F[_]](
-      block: Chain[(F[String], Tree[F])] = Chain.empty[(F[String], Tree[F])],
-      window: Chain[(F[String], Tree[F])] = Chain.empty[(F[String], Tree[F])],
-      currentChildren: Chain[Ast.Tree[F]] = Chain.empty[Ast.Tree[F]],
+      block: Tree[F],
+      initialIndentF: F[String],
+      tail: Chain[(F[String], Ast.Tree[F])] = Chain.empty[(F[String], Ast.Tree[F])],
+      window: Chain[Tree[F]] = Chain.empty[Tree[F]],
       error: Chain[ParserError[F]] = Chain.empty[ParserError[F]]
-    )
+    ) {
+
+      override def toString: String = {
+        s"""Acc(
+           |    block = $block,
+           |    window = ${window.toList.mkString("\n")},
+           |    tail = $tail,
+           |    error = $error,
+           |)""".stripMargin
+      }
+    }
 
     // converts list of expressions to a tree
     def listToTree[F[_]: Comonad: LiftParser](
-      head: Tree[F],
-      exprs: Chain[(F[String], Ast.Tree[F])]
-    ): ValidatedNec[ParserError[F], Ast.Tree[F]] = {
+      acc: Acc[F]
+    ): ValidatedNec[ParserError[F], (Ast.Tree[F], Chain[Ast.Tree[F]], Chain[(F[String], Ast.Tree[F])])] = {
+      println("HEAD: " + acc.block.forceTail)
       // if we don't have elements in a list, then head is a leaf
-      exprs.headOption
-        .fold[ValidatedNec[ParserError[F], Ast.Tree[F]]](Validated.validNec(head)) { lHead =>
-          // size of an indentation
-          val initialIndent = lHead._1.extract.length
 
-          // recursively creating a tree
-          // moving a window on a list depending on the nesting of the code
-          val acc = exprs.foldLeft[Acc[F]](
-            Acc[F]()
-          ) {
-            case (acc, (indent, currentExpr)) if acc.error.isEmpty =>
-              println("block2: " + acc.block)
-              println("current: " + last(currentExpr))
-              acc.block.lastOption match {
+      val initialIndent = acc.initialIndentF.extract.length
 
-                case None =>
-                  val current = last(currentExpr)
-                  current match {
-                    // if next is block companion, start to gather all expressions under this block
-                    case block if block.isBlock =>
-                      println(s"add $block as block")
-                      acc.copy(block = acc.block :+ (indent -> currentExpr))
-                    // create leaf if token is on current level
-                    case b =>
-                      b.companion match {
-                        // if prefix, then check if a child is a block and gather
-                        case _: Prefix if headIsBlock(currentExpr) =>
-                          println(s"add $b as block")
-                          acc.copy(block = acc.block :+ (indent -> currentExpr))
-                        case _ =>
-                          acc.copy(currentChildren = acc.currentChildren.append(currentExpr))
-                      }
-
-                  }
-                // if we have root companion, gather all expressions that have indent > than current
-                case r @ Some((_, block)) =>
-                  println("indent to initial indent: " + (indent.extract.length > initialIndent))
-                  if (indent.extract.length > initialIndent) {
-                    Acc[F](
-                      acc.block,
-                      acc.window.append((indent, currentExpr)),
-                      acc.currentChildren,
-                      acc.error
-                    )
-                  } else if (indent.extract.length == initialIndent) {
-                    // if root have no tokens in it - return an error
-                    if (acc.window.isEmpty) {
-                      Acc(error =
-                        Chain.one(BlockIndentError(indent, "Block expression has no body"))
-                      )
-                    } else {
-                      // create a tree from gathered expressions and continue
-                      listToTree[F](block, acc.window).fold(
-                        e => acc.copy(error = e.toChain),
-                        tree => {
-                          val withTree = acc.currentChildren.append(tree)
-                          last(currentExpr) match {
-                            // if next expression is root companion, start to gather all tokens under this root
-                            case block if block.isBlock =>
-                              println("delete last")
-                              acc.copy(
-                                block = acc.block.initLast.map(_._1).getOrElse(Chain.empty) :+ (indent -> currentExpr),
-                                currentChildren = withTree,
-                                window = Chain.empty
-                              )
-                            case b =>
-                              b.companion match {
-                                case _: Prefix if headIsBlock(currentExpr) =>
-                                  println("delete last")
-                                  acc.copy(
-                                    block = acc.block.initLast.map(_._1).getOrElse(Chain.empty) :+ (indent -> currentExpr),
-                                    currentChildren = withTree,
-                                    window = Chain.empty
-                                  )
-                                // create leaf if a token is on current level
-                                case _ =>
-                                  // We cannot add some expressions to some blocks,
-                                  // ie cannot add ReturnExpr to all blocks, except for the ArrowExpr
-                                  if (!canAddToBlock(block, currentExpr.head))
-                                    Acc(error = Chain.one(wrongChildError(indent, currentExpr.head)))
-                                  else
-                                    acc.copy(
-                                      block = acc.block,
-                                      currentChildren = withTree.append(currentExpr),
-                                      window = Chain.empty
-                                    )
-                              }
-                          }
-                        }
-                      )
-                    }
-
-                  } else {
-                    "".toInt
-                    Acc[F](error =
-                      Chain.one(
-                        BlockIndentError(
-                          indent,
-                          "Wrong indentation. It must match the indentation of the previous expressions."
-                        )
-                      )
-                    )
-                  }
+      acc.tail.uncons match {
+        case Some(((currentIndent, currentExpr), tail)) =>
+          val current = last(currentExpr)
+          println("current: " + current)
+          println("current is block: " + headIsBlock(currentExpr))
+          if (currentIndent.extract.length > initialIndent) {
+            if (headIsBlock(currentExpr)) {
+              println("NEW BLOCK: " + currentExpr)
+              listToTree(Acc(currentExpr, currentIndent, tail)).andThen { case (innerTree, window, newTail) =>
+                if (window.nonEmpty) {
+                  println("WINDOW NON EMPTY, WARNING")
+                }
+                listToTree(acc.copy(window = acc.window :+ innerTree, tail = newTail))
               }
-            case (acc, _) =>
-              acc
+            } else {
+              // add to window
+              if (canAddToBlock(acc.block, current)) {
+                listToTree(acc.copy(window = acc.window :+ currentExpr, tail = tail))
+              } else {
+                invalidNec(wrongChildError(currentIndent, current))
+              }
+
+            }
+          } else if (currentIndent.extract.length == initialIndent) {
+            // add window to head and refresh
+            println("processed head: " + acc.block.forceTail)
+            println("window: " + acc.window)
+            validNec((setLeafs(acc.block, acc.window), Chain.empty, (currentIndent, currentExpr) +: tail))
+          } else {
+            invalidNec(wrongChildError(currentIndent, current))
           }
 
-          // finalize all `tails` in the accumulator
-          NonEmptyChain.fromChain(acc.error) match {
-            case None =>
-              acc.block.lastOption match {
-                case Some((i, headExpr)) =>
-                  if (acc.window.isEmpty) {
-                    println("azaza")
-                    Validated.invalidNec(BlockIndentError(i, "Block expression has no body"))
-                  } else {
-                    // create a tree from the last expressions if the window is not empty
-                    // this may happen if a function ended in a nested expression
-                    val tree = listToTree[F](headExpr, acc.window)
-                    tree.map(t => setLeafs(head, acc.currentChildren :+ t))
-                  }
-                case None =>
-                  Validated.validNec(setLeafs(head, acc.currentChildren))
-              }
-            // pass through an error
-            case Some(err) => Validated.invalid(err)
-          }
-
-        }
-
+        case None =>
+          // end of top-level block
+          validNec((setLeafs(acc.block, acc.window), Chain.empty, Chain.empty))
+      }
     }
 
     override lazy val ast: P[ValidatedNec[ParserError[Span.S], Ast.Tree[Span.S]]] =
@@ -290,7 +215,14 @@ object Expr {
         (P.repSep(
           ` `.lift ~ P.oneOf(validChildren.map(_.readLine.backtrack)),
           ` \n+`
-        ) <* ` \n`.?)))
-        .map(t => listToTree(t._1, Chain.fromSeq(t._2.toList)))
+        ) <* ` \n`.?))).map { t =>
+        val startIndent = t._1.head.token.as("")
+        println("t1: " + t._1.head)
+        listToTree(Acc(t._1, startIndent, Chain.fromSeq(t._2.toList))).map { res =>
+          println("this must be empty: " + res._2)
+          println("result: " + res._1.forceTail)
+          res._1
+        }
+      }
   }
 }
