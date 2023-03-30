@@ -14,6 +14,7 @@ import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, va
 import cats.parse.{Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.{~>, Comonad, Eval}
+import scribe.Logging
 
 abstract class Expr[F[_]](val companion: Expr.Companion, val token: Token[F]) {
 
@@ -88,7 +89,7 @@ object Expr {
       }
   }
 
-  abstract class AndIndented extends Block {
+  abstract class AndIndented extends Block with Logging {
     def validChildren: List[Lexem]
 
     private def leaf[F[_]](expr: Expr[F]): Ast.Tree[F] =
@@ -149,23 +150,28 @@ object Expr {
       errors: Chain[ParserError[F]] = Chain.empty[ParserError[F]]
     )
 
-    // converts list of expressions to a tree
+    // converts list of expressions to a tree of tokens
     private def listToTree[F[_]: Comonad: LiftParser](
       acc: Acc[F]
     ): ValidatedNec[ParserError[F], Acc[F]] = {
-      // if we don't have elements in a list, then head is a leaf
-
       val initialIndent = acc.initialIndentF.extract.length
 
       acc.tail.uncons match {
         case Some(((currentIndent, currentExpr), tail)) =>
           val current = last(currentExpr)
+
+          // if current indent is bigger then block indentation
+          // then add current expression to this block
           if (currentIndent.extract.length > initialIndent) {
+            // if current expression is a block, create tree of this block and return remaining tail
             if (headIsBlock(currentExpr)) {
               listToTree(Acc(currentExpr, currentIndent, tail, errors = acc.errors)).andThen {
-                case Acc(innerTree, _, newTail, window, errors) =>
-//                if (window.nonEmpty) {
-//                }
+                case a@Acc(innerTree, _, newTail, window, errors) =>
+                  if (window.nonEmpty) {
+                    logger.warn("Internal: Window cannot be empty after converting list of expressions to a tree.")
+                    logger.warn("Current state: " + a)
+                  }
+
                   listToTree(
                     acc.copy(
                       window = acc.window :+ innerTree,
@@ -175,7 +181,7 @@ object Expr {
                   )
               }
             } else {
-              // add to window
+              // if expression not a block, add it to a window until we meet the end of the block
               if (canAddToBlock(acc.block, current)) {
                 listToTree(acc.copy(window = acc.window :+ currentExpr, tail = tail))
               } else {
@@ -185,13 +191,14 @@ object Expr {
 
             }
           } else {
-            // add window to head and refresh
             val errors = if (acc.window.isEmpty) {
               // error if a block is empty
               val error = BlockIndentError(acc.initialIndentF, "Block expression has no body")
               acc.errors :+ error
             } else acc.errors
 
+            // if current indentation less or equal to block indentation,
+            // add all expressions in window to a head
             validNec(
               Acc(
                 setLeafs(acc.block, acc.window),
@@ -209,7 +216,6 @@ object Expr {
             .fromChain(acc.errors)
             .map(invalid)
             .getOrElse(validNec(Acc(setLeafs(acc.block, acc.window), acc.initialIndentF)))
-
       }
     }
 
