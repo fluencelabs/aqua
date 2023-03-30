@@ -146,7 +146,7 @@ object Expr {
       initialIndentF: F[String],
       tail: Chain[(F[String], Ast.Tree[F])] = Chain.empty[(F[String], Ast.Tree[F])],
       window: Chain[Tree[F]] = Chain.empty[Tree[F]],
-      error: Chain[ParserError[F]] = Chain.empty[ParserError[F]]
+      errors: Chain[ParserError[F]] = Chain.empty[ParserError[F]]
     )
 
     // converts list of expressions to a tree
@@ -162,15 +162,15 @@ object Expr {
           val current = last(currentExpr)
           if (currentIndent.extract.length > initialIndent) {
             if (headIsBlock(currentExpr)) {
-              listToTree(Acc(currentExpr, currentIndent, tail, error = acc.error)).andThen {
-                case Acc(innerTree, _, newTail, window, error) =>
+              listToTree(Acc(currentExpr, currentIndent, tail, errors = acc.errors)).andThen {
+                case Acc(innerTree, _, newTail, window, errors) =>
 //                if (window.nonEmpty) {
 //                }
                   listToTree(
                     acc.copy(
                       window = acc.window :+ innerTree,
                       tail = newTail,
-                      error = acc.error ++ error
+                      errors = acc.errors ++ errors
                     )
                   )
               }
@@ -179,27 +179,34 @@ object Expr {
               if (canAddToBlock(acc.block, current)) {
                 listToTree(acc.copy(window = acc.window :+ currentExpr, tail = tail))
               } else {
-                val newError = wrongChildError(currentIndent, current)
-                println("add error: " + newError)
-                validNec(acc.copy(tail = tail, error = acc.error :+ newError))
+                val error = wrongChildError(currentIndent, current)
+                validNec(acc.copy(tail = tail, errors = acc.errors :+ error))
               }
 
             }
           } else {
             // add window to head and refresh
+            val errors = if (acc.window.isEmpty) {
+              // error if a block is empty
+              val error = BlockIndentError(acc.initialIndentF, "Block expression has no body")
+              acc.errors :+ error
+            } else acc.errors
+
             validNec(
               Acc(
                 setLeafs(acc.block, acc.window),
                 acc.initialIndentF,
-                (currentIndent, currentExpr) +: tail
+                (currentIndent, currentExpr) +: tail,
+                errors = errors
               )
             )
+
           }
 
         case None =>
           // end of top-level block
           NonEmptyChain
-            .fromChain(acc.error)
+            .fromChain(acc.errors)
             .map(invalid)
             .getOrElse(validNec(Acc(setLeafs(acc.block, acc.window), acc.initialIndentF)))
 
