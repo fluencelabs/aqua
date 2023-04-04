@@ -18,21 +18,7 @@ case class OnExpr[F[_]](peerId: ValueToken[F], via: List[ValueToken[F]]) extends
 
 object OnExpr extends Expr.AndIndented {
 
-  override def validChildren: List[Expr.Lexem] =
-    Expr.defer(OnExpr) ::
-      CallArrowExpr ::
-      AbilityIdExpr ::
-      AssignmentExpr ::
-      PushToStreamExpr ::
-      ParExpr ::
-      CoExpr ::
-      JoinExpr ::
-      Expr.defer(TryExpr) ::
-      Expr.defer(ForExpr) ::
-      Expr.defer(IfExpr) ::
-      Expr.defer(ElseOtherwiseExpr) ::
-      Expr.defer(CatchExpr) ::
-      Nil
+  override def validChildren: List[Expr.Lexem] = ForExpr.validChildren
 
   override def p: P[OnExpr[Span.S]] = {
     (`on` *> ` ` *> ValueToken.`value` ~ (` ` *> `via` *> ` ` *> ValueToken.`value`).rep0).map {

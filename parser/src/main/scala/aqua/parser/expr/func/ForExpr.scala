@@ -13,9 +13,9 @@ import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ForExpr[F[_]](
-                          item: Name[F],
-                          iterable: ValueToken[F],
-                          mode: Option[(F[ForExpr.Mode], ForExpr.Mode)]
+  item: Name[F],
+  iterable: ValueToken[F],
+  mode: Option[(F[ForExpr.Mode], ForExpr.Mode)]
 ) extends Expr[F](ForExpr, item) {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): ForExpr[K] =
@@ -27,21 +27,7 @@ object ForExpr extends Expr.AndIndented {
   case object TryMode extends Mode
   case object ParMode extends Mode
 
-  override def validChildren: List[Expr.Lexem] =
-    Expr.defer(OnExpr) ::
-      Expr.defer(ForExpr) ::
-      CallArrowExpr ::
-      AbilityIdExpr ::
-      AssignmentExpr ::
-      JoinExpr ::
-      PushToStreamExpr ::
-      Expr.defer(TryExpr) ::
-      Expr.defer(IfExpr) ::
-      Expr.defer(ElseOtherwiseExpr) ::
-      Expr.defer(CatchExpr) ::
-      Expr.defer(ParExpr) ::
-      Expr.defer(CoExpr) ::
-      Nil
+  override def validChildren: List[Expr.Lexem] = ArrowExpr.funcChildren
 
   override def p: P[ForExpr[Span.S]] =
     ((`for` *> ` ` *> Name.p <* ` <- `) ~ ValueToken.`value` ~ (` ` *> (`par`

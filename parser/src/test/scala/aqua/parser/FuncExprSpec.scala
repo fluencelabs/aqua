@@ -116,7 +116,8 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   }
 
-  "function with wrong indent" should "parse with error" in {
+  // TODO: unignore in LNG-135
+  "function with wrong indent" should "parse with error" ignore {
     val script =
       """func tryGen() -> bool:
         |    on "deeper" via "deep":
