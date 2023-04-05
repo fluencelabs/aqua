@@ -1,0 +1,32 @@
+name: Run tests with workflow_call
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "git ref to checkout to"
+        type: string
+        default: "main"
+
+jobs:
+  tests:
+    name: "Run sbt tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          repository: fluencelabs/aqua
+          ref: ${{ inputs.ref }}
+
+      - name: Cache Scala
+        uses: coursier/cache-action@v6
+
+      - name: Setup Scala
+        uses: coursier/setup-action@v1
+        with:
+          apps: sbt
+
+      - name: Run tests
+        run: sbt test
