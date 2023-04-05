@@ -51,3 +51,21 @@ jobs:
     uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
     with:
       aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
+
+  aqua-native:
+    name: "aqua"
+    strategy:
+      matrix:
+        runner:
+          - runs-on: ubuntu-latest
+            arch: amd64
+            os: linux
+            static: true
+    needs:
+      - aqua
+    uses: ./.github/workflows/binary.yml
+    with:
+      runs-on: ${{ matrix.runner.runs-on }}
+      arch: ${{ matrix.runner.arch }}
+      os: ${{ matrix.runner.os }}
+      static: ${{ matrix.runner.static }}
