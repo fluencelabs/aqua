@@ -102,7 +102,7 @@ object BasicTypeToken {
 case class ArrowTypeToken[S[_]: Comonad](
   override val unit: S[Unit],
   args: List[(Option[Name[S]], TypeToken[S])],
-  res: List[DataTypeToken[S]]
+  res: List[TypeToken[S]]
 ) extends TypeToken[S] {
   override def as[T](v: T): S[T] = unit.as(v)
 
@@ -119,8 +119,9 @@ object ArrowTypeToken {
 
   def `arrowdef`(argTypeP: P[TypeToken[Span.S]]): P[ArrowTypeToken[Span.S]] =
     (comma0(argTypeP).with1 ~ ` -> `.lift ~
-      (comma(DataTypeToken.`datatypedef`).map(_.toList)
+      (comma(P.defer(TypeToken.`typedef`)).map(_.toList)
         | `()`.as(Nil))).map { case ((args, point), res) ⇒
+//      println("arrowdef res: " + res)
       ArrowTypeToken(point, args.map(Option.empty[Name[Span.S]] -> _), res)
     }
 
@@ -129,7 +130,8 @@ object ArrowTypeToken {
       (Name.p.map(Option(_)) ~ (` : ` *> (argTypeP | argTypeP.between(`(`, `)`))))
         .surroundedBy(`/s*`)
     ) <* (`/s*` *> `)` <* ` `.?)) ~
-      (` -> ` *> comma(DataTypeToken.`datatypedef`)).?).map { case ((point, args), res) =>
+      (` -> ` *> comma(P.defer(TypeToken.`typedef`))).?).map { case ((point, args), res) =>
+//      println("arrowwithnames res: " + res)
       ArrowTypeToken(point, args, res.toList.flatMap(_.toList))
     }
 }

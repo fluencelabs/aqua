@@ -20,6 +20,7 @@ case class IfExpr[F[_]](left: ValueToken[F], eqOp: EqOp[F], right: ValueToken[F]
 
 object IfExpr extends Expr.AndIndented {
 
+  // list of expressions that can be used inside this block
   override def validChildren: List[Expr.Lexem] = ForExpr.validChildren
 
   override val p: P[IfExpr[Span.S]] =

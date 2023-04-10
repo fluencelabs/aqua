@@ -4,14 +4,15 @@ import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.collectionToModel
 import aqua.model.inline.raw.{CallArrowRawInliner, CollectionRawInliner}
+import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{ArrayType, BoxType, CanonStreamType, StreamType}
+import aqua.types.{ArrayType, ArrowType, BoxType, CanonStreamType, StreamType}
 import cats.syntax.traverse.*
 import cats.syntax.applicative.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
-import scribe.{log, Logging}
+import scribe.{Logging, log}
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -201,6 +202,8 @@ object TagInliner extends Logging {
         }
 
       case AssignmentTag(value, assignTo) =>
+//        println("asstag: " + value)
+//        println("assign to: " + assignTo)
         (value match {
           // if we assign collection to a stream, we must use it's name, because it is already created with 'new'
           case c @ CollectionRaw(_, _: StreamType) =>
@@ -208,16 +211,40 @@ object TagInliner extends Logging {
           case v =>
             valueToModel(v, false)
         }).flatMap { cd =>
-          for {
-            _ <- Exports[S].resolved(assignTo, cd._1)
-          } yield Some(SeqModel) -> cd._2
+//          println("cd: " + cd)
+          cd._1 match {
+            case VarModel(name, at@ArrowType(_, _), _) =>
+              for {
+                arrs <- Arrows[S].arrows
+                exps <- Exports[S].exports
+//                _ = println("arr names: " + arrs.keys)
+//                _ = println("exps: " + exps)
+                usedArrow = arrs.get(name)
+                res <- usedArrow match {
+                  case Some(arr) =>
+                    Arrows[S].save(name, arr).map(_ => Some(SeqModel) -> cd._2)
+                  case None =>
+                    logger.error(s"Inlining, cannot find arrow '$name'")
+                    none
+                }
+                _ <- Exports[S].resolved(assignTo, cd._1)
+              } yield res
+            case _ =>
+            for {
+              _ <- Exports[S].resolved(assignTo, cd._1)
+            } yield Some(SeqModel) -> cd._2
+          }
+
         }
 
       case ClosureTag(arrow, detach) =>
+//        println("clos tag: " + arrow)
+//        println("clos tag detach: " + detach)
         if (detach) Arrows[S].resolved(arrow, None).map(_ => None -> None)
         else
           for {
             t <- Mangler[S].findAndForbidName(arrow.name)
+//            _ = println("topology: " + t)
             _ <- Arrows[S].resolved(arrow, Some(t))
           } yield Some(CaptureTopologyModel(t)) -> None
 

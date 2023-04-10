@@ -1,11 +1,12 @@
 package aqua.model.inline.raw
 
 import aqua.model.inline.Inline.parDesugarPrefixOpt
-import aqua.model.{CallServiceModel, SeqModel, ValueModel, VarModel}
+import aqua.model.{CallServiceModel, FuncArrow, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
 import aqua.model.inline.RawValueInliner.{callToModel, valueToModel}
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.Call
+import aqua.types.ArrowType
 import aqua.raw.value.CallArrowRaw
 import cats.data.{Chain, State}
 import scribe.Logging
@@ -41,31 +42,60 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
          * Here the back hop happens from [[TagInliner]] to [[ArrowInliner.callArrow]]
          */
         val funcName = value.ability.fold(value.name)(_ + "." + value.name)
+        //println("funcName: " + funcName)
         logger.trace(s"            $funcName")
-        Arrows[S].arrows.flatMap(arrows =>
-          arrows.get(funcName) match {
-            case Some(fn) =>
-              logger.trace(Console.YELLOW + s"Call arrow $funcName" + Console.RESET)
-              callToModel(call, false).flatMap { case (cm, p) =>
-                ArrowInliner
-                  .callArrowRet(fn, cm)
-                  .map { case (body, vars) =>
-                    vars -> Inline(
-                      ListMap.empty,
-                      Chain.one(SeqModel.wrap(p.toList :+ body: _*))
-                    )
-                  }
-              }
-            case None =>
-              logger.error(
-                s"Inlining, cannot find arrow ${funcName}, available: ${arrows.keys
-                  .mkString(", ")}"
-              )
-              State.pure(Nil -> Inline.empty)
-          }
-        )
+
+        resolveArrow(funcName, call)
     }
   }
+
+  private def resolveFuncArrow[S: Mangler: Exports: Arrows](fn: FuncArrow, call: Call) = {
+    logger.trace(Console.YELLOW + s"Call arrow ${fn.funcName}" + Console.RESET)
+    callToModel(call, false).flatMap { case (cm, p) =>
+      ArrowInliner
+        .callArrowRet(fn, cm)
+        .map { case (body, vars) =>
+          vars -> Inline(
+            ListMap.empty,
+            Chain.one(SeqModel.wrap(p.toList :+ body: _*))
+          )
+        }
+    }
+  }
+
+  private def resolveArrow[S: Mangler: Exports: Arrows](funcName: String, call: Call) =
+    Arrows[S].arrows.flatMap(arrows =>
+      arrows.get(funcName) match {
+        case Some(fn) =>
+          resolveFuncArrow(fn, call)
+        case None =>
+          Exports[S].exports.flatMap { exps =>
+            //println("exps in CARI: " + exps)
+            //println("arr inliner exps: " + exps.get(funcName))
+            exps.get(funcName) match {
+              case Some(VarModel(name, ArrowType(_, _), _)) =>
+                Arrows[S].arrows.flatMap(arrows =>
+                  arrows.get(name) match {
+                    case Some(fn) =>
+                      resolveFuncArrow(fn, call)
+                    case _ =>
+                      logger.error(
+                        s"Inlining, cannot find arrow $funcName, available: ${arrows.keys
+                          .mkString(", ")}"
+                      )
+                      State.pure(Nil -> Inline.empty)
+                  }
+                )
+              case _ =>
+                logger.error(
+                  s"Inlining, cannot find arrow $funcName, available: ${arrows.keys
+                    .mkString(", ")}"
+                )
+                State.pure(Nil -> Inline.empty)
+            }
+          }
+      }
+    )
 
   override def apply[S: Mangler: Exports: Arrows](
     raw: CallArrowRaw,
