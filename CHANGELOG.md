@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.10.4](https://github.com/fluencelabs/aqua/compare/aqua-v0.10.3...aqua-v0.10.4) (2023-04-10)
+
+
+### Features
+
+* **compiler:** add aqua native compilation ([#681](https://github.com/fluencelabs/aqua/issues/681)) ([5f4808b](https://github.com/fluencelabs/aqua/commit/5f4808b457fbc5f36b64fc4d025700e25f5ccfaa))
+* Multiline collections and objects creation ([#684](https://github.com/fluencelabs/aqua/issues/684)) ([f5106e3](https://github.com/fluencelabs/aqua/commit/f5106e3c838585b44503f20002db0013b2325257))
+* Remove bang in lambdas in AIR ([#688](https://github.com/fluencelabs/aqua/issues/688)) ([480720f](https://github.com/fluencelabs/aqua/commit/480720f26ed2d5e01e8a73607750fbd2fa69faea))
+
+
+### Bug Fixes
+
+* Check if expression can be added to a block ([#685](https://github.com/fluencelabs/aqua/issues/685)) ([2394a9b](https://github.com/fluencelabs/aqua/commit/2394a9b875f5de37bf3edf267c6b8f26a20f959e))
+* **deps:** update dependency @fluencelabs/fluence-network-environment to v1.0.14 ([#669](https://github.com/fluencelabs/aqua/issues/669)) ([f2713a4](https://github.com/fluencelabs/aqua/commit/f2713a4ab1a10725fce0ebb15321797326c4679a))
+
 ## [0.10.3](https://github.com/fluencelabs/aqua/compare/aqua-v0.10.2...aqua-v0.10.3) (2023-02-28)
 
 
