@@ -12,7 +12,7 @@ import cats.syntax.traverse.*
 import cats.syntax.applicative.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
-import scribe.{Logging, log}
+import scribe.{log, Logging}
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -209,26 +209,9 @@ object TagInliner extends Logging {
           case v =>
             valueToModel(v, false)
         }).flatMap { cd =>
-          cd._1 match {
-            case VarModel(name, at@ArrowType(_, _), _) =>
-              for {
-                arrs <- Arrows[S].arrows
-                usedArrow = arrs.get(name)
-                res <- usedArrow match {
-                  case Some(arr) =>
-                    Arrows[S].save(name, arr).map(_ => Some(SeqModel) -> cd._2)
-                  case None =>
-                    logger.error(s"Inlining, cannot find arrow '$name'")
-                    none
-                }
-                _ <- Exports[S].resolved(assignTo, cd._1)
-              } yield res
-            case _ =>
-            for {
-              _ <- Exports[S].resolved(assignTo, cd._1)
-            } yield Some(SeqModel) -> cd._2
-          }
-
+          for {
+            _ <- Exports[S].resolved(assignTo, cd._1)
+          } yield Some(SeqModel) -> cd._2
         }
 
       case ClosureTag(arrow, detach) =>

@@ -20,24 +20,22 @@ class AssignmentSem[S[_]](val expr: AssignmentExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    Prog.after { a =>
-      V.valueToRaw(expr.value).flatMap {
-        case Some(vm) =>
-          vm.`type` match {
-            case at @ ArrowType(_, _) =>
-              N.defineArrow(expr.variable, at, false) as (AssignmentTag(
-                vm,
-                expr.variable.value
-              ).funcOpLeaf: Raw)
-            case _ =>
-              N.derive(expr.variable, vm.`type`, vm.varNames) as (AssignmentTag(
-                vm,
-                expr.variable.value
-              ).funcOpLeaf: Raw)
-          }
+    V.valueToRaw(expr.value).flatMap {
+      case Some(vm) =>
+        vm.`type` match {
+          case at @ ArrowType(_, _) =>
+            N.defineArrow(expr.variable, at, false) as (AssignmentTag(
+              vm,
+              expr.variable.value
+            ).funcOpLeaf: Raw)
+          case _ =>
+            N.derive(expr.variable, vm.`type`, vm.varNames) as (AssignmentTag(
+              vm,
+              expr.variable.value
+            ).funcOpLeaf: Raw)
+        }
 
-        case _ => Raw.error("Cannot resolve assignment type").pure[Alg]
-      }
+      case _ => Raw.error("Cannot resolve assignment type").pure[Alg]
     }
 
 }

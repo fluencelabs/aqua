@@ -186,14 +186,15 @@ object ArrowInliner extends Logging {
         for {
           _ <- Arrows[S].resolved(passArrows)
           av <- ArrowInliner.inline(arrow, call)
+          // find and get resolved arrows if we return them
           returnedArrows = av._2.collect {
               case VarModel(name, ArrowType(_, _), _) => name
             }
-          arrsToSave <- Arrows[S].pickArrows(returnedArrows.toSet)
-        } yield av -> arrsToSave
+          arrowsToSave <- Arrows[S].pickArrows(returnedArrows.toSet)
+        } yield av -> arrowsToSave
       )
-      ((appliedOp, values), arrsToSave) = av
-      _ <- Arrows[S].resolved(arrsToSave)
+      ((appliedOp, values), arrowsToSave) = av
+      _ <- Arrows[S].resolved(arrowsToSave)
       _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(values).toMap)
     } yield appliedOp -> values
 
