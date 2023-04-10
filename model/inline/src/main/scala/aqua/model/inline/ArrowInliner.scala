@@ -186,7 +186,7 @@ object ArrowInliner extends Logging {
         for {
           _ <- Arrows[S].resolved(passArrows)
           av <- ArrowInliner.inline(arrow, call)
-          // find and get resolved arrows if we return them
+          // find and get resolved arrows if we return them from the function
           returnedArrows = av._2.collect {
               case VarModel(name, ArrowType(_, _), _) => name
             }

@@ -69,6 +69,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
           resolveFuncArrow(fn, call)
         case None =>
           Exports[S].exports.flatMap { exps =>
+            // if there is no arrow, check if it is stored in Exports as variable and try to resolve it
             exps.get(funcName) match {
               case Some(VarModel(name, ArrowType(_, _), _)) =>
                 Arrows[S].arrows.flatMap(arrows =>
