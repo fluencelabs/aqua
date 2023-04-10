@@ -202,8 +202,6 @@ object TagInliner extends Logging {
         }
 
       case AssignmentTag(value, assignTo) =>
-//        println("asstag: " + value)
-//        println("assign to: " + assignTo)
         (value match {
           // if we assign collection to a stream, we must use it's name, because it is already created with 'new'
           case c @ CollectionRaw(_, _: StreamType) =>
@@ -211,14 +209,10 @@ object TagInliner extends Logging {
           case v =>
             valueToModel(v, false)
         }).flatMap { cd =>
-//          println("cd: " + cd)
           cd._1 match {
             case VarModel(name, at@ArrowType(_, _), _) =>
               for {
                 arrs <- Arrows[S].arrows
-                exps <- Exports[S].exports
-//                _ = println("arr names: " + arrs.keys)
-//                _ = println("exps: " + exps)
                 usedArrow = arrs.get(name)
                 res <- usedArrow match {
                   case Some(arr) =>
@@ -238,13 +232,10 @@ object TagInliner extends Logging {
         }
 
       case ClosureTag(arrow, detach) =>
-//        println("clos tag: " + arrow)
-//        println("clos tag detach: " + detach)
         if (detach) Arrows[S].resolved(arrow, None).map(_ => None -> None)
         else
           for {
             t <- Mangler[S].findAndForbidName(arrow.name)
-//            _ = println("topology: " + t)
             _ <- Arrows[S].resolved(arrow, Some(t))
           } yield Some(CaptureTopologyModel(t)) -> None
 

@@ -23,9 +23,6 @@ class AssignmentSem[S[_]](val expr: AssignmentExpr[S]) extends AnyVal {
     Prog.after { a =>
       V.valueToRaw(expr.value).flatMap {
         case Some(vm) =>
-//          println("expr in sem: " + expr)
-//          println("vm: " + vm)
-//          println("vm type: " + vm.`type`)
           vm.`type` match {
             case at @ ArrowType(_, _) =>
               N.defineArrow(expr.variable, at, false) as (AssignmentTag(

@@ -110,9 +110,6 @@ object ArrowInliner extends Logging {
       // DataType arguments
       argsToDataRaw = argsFull.dataArgs
 
-      arrs <- Arrows[S].arrows
-//      _ = println(s"arrows in scope of '${fn.funcName}': " + arrs)
-
       // Arrow arguments: expected type is Arrow, given by-name
       argsToArrowsRaw <- Arrows[S].argsArrows(argsFull)
 
@@ -184,32 +181,20 @@ object ArrowInliner extends Logging {
   ): State[S, (OpModel.Tree, List[ValueModel])] =
     for {
       passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
-//      _ = println("passArrows: " + passArrows)
 
       av <- Arrows[S].scope(
         for {
           _ <- Arrows[S].resolved(passArrows)
           av <- ArrowInliner.inline(arrow, call)
-          arrsScoped <- Arrows[S].arrows
           returnedArrows = av._2.collect {
               case VarModel(name, ArrowType(_, _), _) => name
             }
           arrsToSave <- Arrows[S].pickArrows(returnedArrows.toSet)
-//          _ = println("scoped arrows: " + arrsScoped)
         } yield av -> arrsToSave
       )
       ((appliedOp, values), arrsToSave) = av
-//      _ = println("values in callArrowRet: " + values)
       _ <- Arrows[S].resolved(arrsToSave)
-      arrs <- Arrows[S].arrows
-//      _ = println(s"arrows in callArrowRet of ${arrow.funcName}: ")
-//      _ = println(arrs.mkString("\n"))
-//      _ = println("========================================")
-
       _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(values).toMap)
-      exps2 <- Exports[S].exports
-//      _ = println("exports in arrow inliner after resolving: " + exps2)
-
     } yield appliedOp -> values
 
 }

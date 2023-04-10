@@ -44,7 +44,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
         arrowTypeExpr
       )
       .flatMap((arrowType: ArrowType) =>
-//        println("arrow sem type: " + arrowType)
         // Create local variables
         expr.arrowTypeExpr.args
           .flatMap(_._1)

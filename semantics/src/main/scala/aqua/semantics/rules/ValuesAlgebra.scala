@@ -254,9 +254,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       .flatMap {
         case Some(r) =>
           val arr = r.baseType
-//          println("check arguments arr type: " + arr)
-//          println("check arguments arr type domain: " + arr.domain)
-//          println("check arguments arr type codomain: " + arr.codomain)
           T.checkArgumentsNumber(ca.funcName, arr.domain.length, ca.args.length).flatMap {
             case false => Option.empty[CallArrowRaw].pure[Alg]
             case true =>
@@ -277,9 +274,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
 
   def checkArguments(token: Token[S], arr: ArrowType, args: List[ValueToken[S]]): Alg[Boolean] =
     // TODO: do we really need to check this?
-//    println("check arguments arr type: " + arr)
-//    println("check arguments arr type domain: " + arr.domain)
-//    println("check arguments arr type codomain: " + arr.codomain)
     T.checkArgumentsNumber(token, arr.domain.length, args.length).flatMap {
       case false => false.pure[Alg]
       case true =>

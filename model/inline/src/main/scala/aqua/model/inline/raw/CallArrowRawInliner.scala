@@ -42,7 +42,6 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
          * Here the back hop happens from [[TagInliner]] to [[ArrowInliner.callArrow]]
          */
         val funcName = value.ability.fold(value.name)(_ + "." + value.name)
-        //println("funcName: " + funcName)
         logger.trace(s"            $funcName")
 
         resolveArrow(funcName, call)
@@ -70,8 +69,6 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
           resolveFuncArrow(fn, call)
         case None =>
           Exports[S].exports.flatMap { exps =>
-            //println("exps in CARI: " + exps)
-            //println("arr inliner exps: " + exps.get(funcName))
             exps.get(funcName) match {
               case Some(VarModel(name, ArrowType(_, _), _)) =>
                 Arrows[S].arrows.flatMap(arrows =>
