@@ -37,6 +37,21 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
       ArrowTypeToken[Id]((), List((None, CustomTypeToken[Id]("A"))), List(CustomTypeToken[Id]("B")))
     )
 
+    returndef("(A -> B), (C -> D)") should be(
+      List(
+        ArrowTypeToken[Id](
+          (),
+          (None, CustomTypeToken[Id]("A")) :: Nil,
+          List(CustomTypeToken[Id]("B"))
+        ),
+        ArrowTypeToken[Id](
+          (),
+          (None, CustomTypeToken[Id]("C")) :: Nil,
+          List(CustomTypeToken[Id]("D"))
+        )
+      )
+    )
+
     returndef("A, (B, C -> D, E), F -> G, H") should be(
       List(
         CustomTypeToken[Id]("A"),
@@ -102,12 +117,16 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
       )
     )
 
-    arrowdef("A -> B, (C -> D, E)") should be(
+    arrowdef("A -> (B -> F), (C -> D, E)") should be(
       ArrowTypeToken[Id](
         (),
         (None -> CustomTypeToken[Id]("A")) :: Nil,
         List(
-          CustomTypeToken[Id]("B"),
+          ArrowTypeToken[Id](
+            (),
+            (None -> CustomTypeToken[Id]("B")) :: Nil,
+            CustomTypeToken[Id]("F") :: Nil
+          ),
           ArrowTypeToken[Id](
             (),
             (None -> CustomTypeToken[Id]("C")) :: Nil,
