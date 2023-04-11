@@ -10,7 +10,7 @@ import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.~>
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
 
 sealed trait TypeToken[S[_]] extends Token[S] {
   def mapK[K[_]: Comonad](fk: S ~> K): TypeToken[K]
@@ -117,9 +117,15 @@ case class ArrowTypeToken[S[_]: Comonad](
 
 object ArrowTypeToken {
 
+  def typeDef(): P[TypeToken[S]] = P.defer(TypeToken.`typedef`.between(`(`, `)`).backtrack | TypeToken.`typedef`)
+
+  def returnDef(): P[List[TypeToken[S]]] = comma(
+    typeDef().backtrack
+  ).map(_.toList)
+
   def `arrowdef`(argTypeP: P[TypeToken[Span.S]]): P[ArrowTypeToken[Span.S]] =
     (comma0(argTypeP).with1 ~ ` -> `.lift ~
-      (comma(P.defer(TypeToken.`typedef`)).map(_.toList)
+      (returnDef().backtrack
         | `()`.as(Nil))).map { case ((args, point), res) ⇒
       ArrowTypeToken(point, args.map(Option.empty[Name[Span.S]] -> _), res)
     }
