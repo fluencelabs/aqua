@@ -65,17 +65,23 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
       case Some(g) =>
         modify(st => st.copy(locations = st.locations :+ (name, g))).map(_ => Option(g.tokenType))
       case None =>
-        getState.flatMap(st =>
-          report(
-            name,
-            Levenshtein.genMessage(
-              s"Name '${name.value}' not found in scope",
-              name.value,
-              st.allNames.toList
+        // check if we have arrow in variable
+        readName(name.value).flatMap {
+          case Some(tt@TokenTypeInfo(_, at@ArrowType(_, _))) =>
+            modify(st => st.copy(locations = st.locations :+ (name, tt))).map(_ => Option(at))
+          case _ =>
+            getState.flatMap(st =>
+              report(
+                name,
+                Levenshtein.genMessage(
+                  s"Name '${name.value}' not found in scope",
+                  name.value,
+                  st.allNames.toList
+                )
+              )
+                .as(Option.empty[ArrowType])
             )
-          )
-            .as(Option.empty[ArrowType])
-        )
+        }
     }
 
   def readArrowHelper(name: String): SX[Option[TokenArrowInfo[S]]] =

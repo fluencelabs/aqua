@@ -132,14 +132,24 @@ object ArrowInliner extends Logging {
 
       argsToArrows = argsToArrowsRaw.map { case (k, v) => argsShouldRename.getOrElse(k, k) -> v }
 
+      returnedArrows = fn.ret.collect { case VarRaw(name, ArrowType(_, _)) =>
+        name
+      }.toSet
+
+      returnedArrowsShouldRename <- Mangler[S].findNewNames(returnedArrows)
+      renamedCapturedArrows = fn.capturedArrows.map { case (k, v) =>
+        returnedArrowsShouldRename.getOrElse(k, k) -> v
+      }
+
       // Going to resolve arrows: collect them all. Names should never collide: it's semantically checked
       _ <- Arrows[S].purge
-      _ <- Arrows[S].resolved(fn.capturedArrows ++ argsToArrows)
+      _ <- Arrows[S].resolved(renamedCapturedArrows ++ argsToArrows)
 
       // Rename all renamed arguments in the body
       treeRenamed =
         fn.body
           .rename(argsShouldRename)
+          .rename(returnedArrowsShouldRename)
           .map(_.mapValues(_.map {
             // if an argument is a BoxType (Array or Option), but we pass a stream,
             // change a type as stream to not miss `$` sign in air
@@ -173,7 +183,7 @@ object ArrowInliner extends Logging {
       tree = treeRenamed.rename(shouldRename)
 
       // Result could be renamed; take care about that
-    } yield (tree, fn.ret.map(_.renameVars(shouldRename)))
+    } yield (tree, fn.ret.map(_.renameVars(shouldRename ++ returnedArrowsShouldRename)))
 
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,
@@ -187,9 +197,9 @@ object ArrowInliner extends Logging {
           _ <- Arrows[S].resolved(passArrows)
           av <- ArrowInliner.inline(arrow, call)
           // find and get resolved arrows if we return them from the function
-          returnedArrows = av._2.collect {
-              case VarModel(name, ArrowType(_, _), _) => name
-            }
+          returnedArrows = av._2.collect { case VarModel(name, ArrowType(_, _), _) =>
+            name
+          }
           arrowsToSave <- Arrows[S].pickArrows(returnedArrows.toSet)
         } yield av -> arrowsToSave
       )
@@ -197,5 +207,4 @@ object ArrowInliner extends Logging {
       _ <- Arrows[S].resolved(arrowsToSave)
       _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(values).toMap)
     } yield appliedOp -> values
-
 }
