@@ -4,9 +4,10 @@ import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.collectionToModel
 import aqua.model.inline.raw.{CallArrowRawInliner, CollectionRawInliner}
+import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{ArrayType, BoxType, CanonStreamType, StreamType}
+import aqua.types.{ArrayType, ArrowType, BoxType, CanonStreamType, StreamType}
 import cats.syntax.traverse.*
 import cats.syntax.applicative.*
 import cats.instances.list.*

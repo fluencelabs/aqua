@@ -172,7 +172,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
               ensureTypeMatches(op.fields.lookup(fieldName).getOrElse(op), t, value.`type`)
             case None => report(op, s"No field with name '$fieldName' in $rootT").as(false)
           }
-        }.map(res => if (res.toList.fold(true)(_ && _)) Some(IntoCopyRaw(st, fields)) else None)
+        }.map(res => if (res.forall(identity)) Some(IntoCopyRaw(st, fields)) else None)
 
       case _ =>
         report(op, s"Expected $rootT to be a data type").as(None)
@@ -230,7 +230,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
     if (expected.acceptsValueOf(givenType)) State.pure(true)
     else {
       (expected, givenType) match {
-        case (StructType(n, valueFields), StructType(typeName, typeFields)) =>
+        case (StructType(n, valueFields), StructType(_, typeFields)) =>
           // value can have more fields
           if (valueFields.length < typeFields.length) {
             report(
@@ -253,7 +253,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
                     s"Wrong value type, expected: $expected, given: $givenType"
                   ).as(false)
               }
-            }.map(_.toList.fold(true)(_ && _))
+            }.map(_.forall(identity))
           }
         case _ =>
           val notes =
@@ -287,7 +287,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
     else
       report(
         token,
-        s"Number of arguments doesn't match the function type, expected: ${expected}, given: ${givenNum}"
+        s"Number of arguments doesn't match the function type, expected: ${expected}, given: $givenNum"
       ).as(false)
 
   override def beginArrowScope(token: ArrowTypeToken[S]): State[X, ArrowType] =
@@ -362,7 +362,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
         frame.arrowType.codomain.toList
           .lazyZip(values.toList)
           .foldLeft[Either[(Token[S], String, Boolean), List[ValueRaw]]](Right(Nil)) {
-            case (acc, (returnType, (token, returnValue))) =>
+            case (acc, (returnType, (_, returnValue))) =>
               acc.flatMap { a =>
                 if (!returnType.acceptsValueOf(returnValue.`type`))
                   Left(
@@ -372,7 +372,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
                         .headOption
                         .getOrElse(values.last)
                         ._1,
-                      s"Wrong value type, expected: ${returnType}, given: ${returnValue.`type`}",
+                      s"Wrong value type, expected: $returnType, given: ${returnValue.`type`}",
                       false
                     )
                   )

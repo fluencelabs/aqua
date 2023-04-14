@@ -1,15 +1,10 @@
-service Console("run-console"):
-    print(any: ⊤)
-    get() -> string
-    zzz() -> string
-
-data Azazaz:
-  s: string
-
-func exec(peers: []string) -> []string:
-  on "":
-    closure = (s: Azazaz) -> Azazaz:
-      Console.get()
+func returnCall() -> string -> string:
+  closure = (s: string) -> string:
       <- s
-    Console.zzz()
-    <- peers
+  closure("123asdf")
+  <- closure
+
+func test() -> string:
+  a = returnCall()
+  b = a("arg")
+  <- b

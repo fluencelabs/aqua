@@ -4,6 +4,7 @@ import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.ScalarType
 import aqua.types.ScalarType.u32
 import cats.Id
+import cats.parse.Parser
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -21,9 +22,61 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     BasicTypeToken.`basictypedef`.parseAll("()").isLeft should be(true)
   }
 
+  "Return type" should "parse" in {
+
+    def typedef(str: String) =
+      ArrowTypeToken.typeDef().parseAll(str).value.mapK(spanToId)
+
+    def returndef(str: String) =
+      ArrowTypeToken.returnDef().parseAll(str).value.map(_.mapK(spanToId))
+
+    typedef("(A -> ())") should be(
+      ArrowTypeToken[Id]((), List((None, CustomTypeToken[Id]("A"))), Nil)
+    )
+    typedef("(A -> B)") should be(
+      ArrowTypeToken[Id]((), List((None, CustomTypeToken[Id]("A"))), List(CustomTypeToken[Id]("B")))
+    )
+
+    returndef("(A -> B), (C -> D)") should be(
+      List(
+        ArrowTypeToken[Id](
+          (),
+          (None, CustomTypeToken[Id]("A")) :: Nil,
+          List(CustomTypeToken[Id]("B"))
+        ),
+        ArrowTypeToken[Id](
+          (),
+          (None, CustomTypeToken[Id]("C")) :: Nil,
+          List(CustomTypeToken[Id]("D"))
+        )
+      )
+    )
+
+    returndef("A, (B, C -> D, E), F -> G, H") should be(
+      List(
+        CustomTypeToken[Id]("A"),
+        ArrowTypeToken[Id](
+          (),
+          (None, CustomTypeToken[Id]("B")) :: (None, CustomTypeToken[Id]("C")) :: Nil,
+          List(CustomTypeToken[Id]("D"), CustomTypeToken[Id]("E"))
+        ),
+        ArrowTypeToken[Id](
+          (),
+          (None, CustomTypeToken[Id]("F")) :: Nil,
+          List(CustomTypeToken[Id]("G"), CustomTypeToken[Id]("H"))
+        )
+      )
+    )
+  }
+
   "Arrow type" should "parse" in {
-    def arrowdef(str: String) = ArrowTypeToken.`arrowdef`(DataTypeToken.`datatypedef`).parseAll(str).value.mapK(spanToId)
-    def arrowWithNames(str: String) = ArrowTypeToken.`arrowWithNames`(DataTypeToken.`datatypedef`).parseAll(str).value.mapK(spanToId)
+    def arrowdef(str: String) =
+      ArrowTypeToken.`arrowdef`(DataTypeToken.`datatypedef`).parseAll(str).value.mapK(spanToId)
+    def arrowWithNames(str: String) = ArrowTypeToken
+      .`arrowWithNames`(DataTypeToken.`datatypedef`)
+      .parseAll(str)
+      .value
+      .mapK(spanToId)
 
     arrowdef("-> B") should be(
       ArrowTypeToken[Id]((), Nil, List(CustomTypeToken[Id]("B")))
@@ -33,6 +86,53 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
         (),
         (None -> CustomTypeToken[Id]("A")) :: Nil,
         List(CustomTypeToken[Id]("B"))
+      )
+    )
+
+    arrowdef("A -> B -> C") should be(
+      ArrowTypeToken[Id](
+        (),
+        (None -> CustomTypeToken[Id]("A")) :: Nil,
+        List(
+          ArrowTypeToken[Id](
+            (),
+            (None -> CustomTypeToken[Id]("B")) :: Nil,
+            List(CustomTypeToken[Id]("C"))
+          )
+        )
+      )
+    )
+
+    arrowdef("A -> B, C -> D") should be(
+      ArrowTypeToken[Id](
+        (),
+        (None -> CustomTypeToken[Id]("A")) :: Nil,
+        List(
+          ArrowTypeToken[Id](
+            (),
+            (None -> CustomTypeToken[Id]("B")) :: (None -> CustomTypeToken[Id]("C")) :: Nil,
+            List(CustomTypeToken[Id]("D"))
+          )
+        )
+      )
+    )
+
+    arrowdef("A -> (B -> F), (C -> D, E)") should be(
+      ArrowTypeToken[Id](
+        (),
+        (None -> CustomTypeToken[Id]("A")) :: Nil,
+        List(
+          ArrowTypeToken[Id](
+            (),
+            (None -> CustomTypeToken[Id]("B")) :: Nil,
+            CustomTypeToken[Id]("F") :: Nil
+          ),
+          ArrowTypeToken[Id](
+            (),
+            (None -> CustomTypeToken[Id]("C")) :: Nil,
+            CustomTypeToken[Id]("D") :: CustomTypeToken[Id]("E") :: Nil
+          )
+        )
       )
     )
 

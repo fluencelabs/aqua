@@ -3,7 +3,7 @@ package aqua.raw.ops
 import aqua.raw.Raw
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag.Tree
-import aqua.raw.value.{CallArrowRaw, ValueRaw}
+import aqua.raw.value.{CallArrowRaw, ValueRaw, VarRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import aqua.types.{ArrowType, ProductType}
 import cats.{Eval, Show}
@@ -104,7 +104,8 @@ case class MatchMismatchTag(left: ValueRaw, right: ValueRaw, shouldMatch: Boolea
     MatchMismatchTag(left.map(f), right.map(f), shouldMatch)
 }
 
-case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = None) extends SeqGroupTag {
+case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = None)
+    extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(item)
 
@@ -194,6 +195,9 @@ case class ClosureTag(
   func: FuncRaw,
   detach: Boolean
 ) extends NoExecTag {
+
+  override def renameExports(map: Map[String, String]): RawTag =
+    copy(func = func.copy(name = map.getOrElse(func.name, func.name)))
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     copy(

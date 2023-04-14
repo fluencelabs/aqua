@@ -10,7 +10,7 @@ import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.~>
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
 
 sealed trait TypeToken[S[_]] extends Token[S] {
   def mapK[K[_]: Comonad](fk: S ~> K): TypeToken[K]
@@ -102,7 +102,7 @@ object BasicTypeToken {
 case class ArrowTypeToken[S[_]: Comonad](
   override val unit: S[Unit],
   args: List[(Option[Name[S]], TypeToken[S])],
-  res: List[DataTypeToken[S]]
+  res: List[TypeToken[S]]
 ) extends TypeToken[S] {
   override def as[T](v: T): S[T] = unit.as(v)
 
@@ -117,9 +117,15 @@ case class ArrowTypeToken[S[_]: Comonad](
 
 object ArrowTypeToken {
 
+  def typeDef(): P[TypeToken[S]] = P.defer(TypeToken.`typedef`.between(`(`, `)`).backtrack | TypeToken.`typedef`)
+
+  def returnDef(): P[List[TypeToken[S]]] = comma(
+    typeDef().backtrack
+  ).map(_.toList)
+
   def `arrowdef`(argTypeP: P[TypeToken[Span.S]]): P[ArrowTypeToken[Span.S]] =
     (comma0(argTypeP).with1 ~ ` -> `.lift ~
-      (comma(DataTypeToken.`datatypedef`).map(_.toList)
+      (returnDef().backtrack
         | `()`.as(Nil))).map { case ((args, point), res) ⇒
       ArrowTypeToken(point, args.map(Option.empty[Name[Span.S]] -> _), res)
     }
@@ -129,7 +135,7 @@ object ArrowTypeToken {
       (Name.p.map(Option(_)) ~ (` : ` *> (argTypeP | argTypeP.between(`(`, `)`))))
         .surroundedBy(`/s*`)
     ) <* (`/s*` *> `)` <* ` `.?)) ~
-      (` -> ` *> comma(DataTypeToken.`datatypedef`)).?).map { case ((point, args), res) =>
+      (` -> ` *> returnDef()).?).map { case ((point, args), res) =>
       ArrowTypeToken(point, args, res.toList.flatMap(_.toList))
     }
 }
