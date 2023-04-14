@@ -1,6 +1,6 @@
 {
   "name": "@fluencelabs/aqua",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "description": "Aqua compiler",
   "type": "module",
   "files": [
@@ -24,12 +24,12 @@
     "@fluencelabs/aqua-ipfs": "0.5.9",
     "@fluencelabs/aqua-lib": "0.6.0",
     "@fluencelabs/fluence": "0.28.0",
-    "@fluencelabs/fluence-network-environment": "1.0.13",
+    "@fluencelabs/fluence-network-environment": "1.0.14",
     "ipfs-http-client": "50.1.2"
   },
   "devDependencies": {
     "ts-node": "10.9.1",
-    "typescript": "4.9.5"
+    "typescript": "5.0.4"
   },
   "repository": {
     "type": "git",
