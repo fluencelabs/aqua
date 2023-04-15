@@ -9,7 +9,7 @@ on:
       - "!.github/workflows/run-tests.yml"
   push:
     branches:
-      - "master"
+      - "main"
     paths-ignore:
       - "**.md"
       - ".github/**"
