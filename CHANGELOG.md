@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.5](https://github.com/fluencelabs/aqua/compare/aqua-v0.10.4...aqua-v0.10.5) (2023-04-17)
+
+
+### Features
+
+* Return arrows from functions ([#693](https://github.com/fluencelabs/aqua/issues/693)) ([8fa979c](https://github.com/fluencelabs/aqua/commit/8fa979cd3332d961f013adce332975d3e64317eb))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @fluencelabs/aqua-api to v0.10.4 ([#671](https://github.com/fluencelabs/aqua/issues/671)) ([c4144ba](https://github.com/fluencelabs/aqua/commit/c4144bad9cc7bf9253323359ca742ba82c0556dd))
+
 ## [0.10.4](https://github.com/fluencelabs/aqua/compare/aqua-v0.10.3...aqua-v0.10.4) (2023-04-10)
 
 
