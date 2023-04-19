@@ -5,6 +5,7 @@ import aqua.raw.Raw
 import aqua.raw.RawContext
 import aqua.semantics.lsp.{TokenInfo, TokenType}
 import aqua.semantics.rules.abilities.AbilitiesState
+import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
 import cats.Semigroup
@@ -16,9 +17,9 @@ case class CompilerState[S[_]](
   errors: Chain[SemanticError[S]] = Chain.empty[SemanticError[S]],
   names: NamesState[S] = NamesState[S](),
   abilities: AbilitiesState[S] = AbilitiesState[S](),
-  types: TypesState[S] = TypesState[S]()
+  types: TypesState[S] = TypesState[S](),
+  locations: LocationsState[S] = LocationsState[S]()
 ) {
-  lazy val locations: List[(Token[S], TokenInfo[S])] = names.locations ++ abilities.locations ++ types.locations
 }
 
 object CompilerState {

@@ -39,8 +39,7 @@ case class TypesState[S[_]](
   strict: Map[String, Type] = Map.empty[String, Type],
   definitions: Map[String, CustomTypeToken[S]] = Map.empty[String, CustomTypeToken[S]],
   fieldsToken: Map[String, TokenTypeInfo[S]] = Map.empty[String, TokenTypeInfo[S]],
-  stack: List[TypesState.Frame[S]] = Nil,
-  locations: List[(Token[S], TokenInfo[S])] = Nil
+  stack: List[TypesState.Frame[S]] = Nil
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
 }

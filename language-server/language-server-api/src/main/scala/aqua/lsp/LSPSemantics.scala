@@ -58,7 +58,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
                 rootArrows = state.names.rootArrows,
                 constants = state.names.constants,
                 abDefinitions = state.abilities.definitions,
-                locations = state.locations,
+                locations = state.locations.allLocations,
                 importTokens = importTokens
               )
             )

@@ -3,6 +3,7 @@ package aqua.semantics.rules.types
 import aqua.parser.lexer.*
 import aqua.raw.value.{FunctorRaw, IntoCopyRaw, IntoFieldRaw, IntoIndexRaw, PropertyRaw, ValueRaw}
 import aqua.semantics.lsp.{TokenDef, TokenTypeInfo}
+import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{
   ArrayType,
@@ -30,8 +31,11 @@ import monocle.macros.GenLens
 
 import scala.collection.immutable.SortedMap
 
-class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: ReportError[S, X])
-    extends TypesAlgebra[S, State[X, *]] {
+class TypesInterpreter[S[_], X](implicit
+  lens: Lens[X, TypesState[S]],
+  error: ReportError[S, X],
+  locations: LocationsAlgebra[S, State[X, *]]
+) extends TypesAlgebra[S, State[X, *]] {
 
   val stack = new StackInterpreter[S, X, TypesState[S], TypesState.Frame[S]](
     GenLens[TypesState[S]](_.stack)
@@ -51,11 +55,11 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
     getState.map(st => TypesStateHelper.resolveTypeToken(token, st, resolver)).flatMap {
       case Some(t) =>
         val (tt, tokens) = t
-        modify(st =>
-          st.copy(locations = st.locations ++ tokens.map { case (t, td) =>
+        locations
+          .addTypeLocations(tokens.map { case (t, td) =>
             (t, TokenDef(Some(td)))
           })
-        ).map(_ => Some(tt))
+          .map(_ => Some(tt))
       case None => report(token, s"Unresolved type").as(None)
     }
 
@@ -63,11 +67,11 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
     getState.map(st => TypesStateHelper.resolveArrowDef(arrowDef, st, resolver)).flatMap {
       case Valid(t) =>
         val (tt, tokens) = t
-        modify(st =>
-          st.copy(locations = st.locations ++ tokens.map { case (t, td) =>
+        locations
+          .addTypeLocations(tokens.map { case (t, td) =>
             (t, TokenDef(Some(td)))
           })
-        ).map(_ => Some(tt))
+          .map(_ => Some(tt))
       case Invalid(errs) =>
         errs
           .foldLeft[ST[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
@@ -143,13 +147,12 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
             s"Field `${op.value}` not found in type `$name`, available: ${fields.toNel.toList.map(_._1).mkString(", ")}"
           ).as(None)
         ) { t =>
-          modify { st =>
-            st.fieldsToken.get(name + "." + op.value) match {
-              case Some(td) => st.copy(locations = st.locations :+ (op, td))
-              case None => st
+            getState.flatMap { st =>
+              (st.fieldsToken.get(name + "." + op.value) match {
+                case Some(td) => locations.addTypeLocation(op, td).map(_ => st)
+                case None => State.pure(st)
+              }).as(Some(IntoFieldRaw(op.value, t)))
             }
-
-          }.as(Some(IntoFieldRaw(op.value, t)))
         }
       case t =>
         t.properties

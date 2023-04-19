@@ -3,6 +3,7 @@ package aqua.semantics.rules.names
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.semantics.Levenshtein
+import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{ArrowType, StreamType, Type}
 import cats.data.{OptionT, State}
@@ -12,8 +13,11 @@ import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
 
-class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: ReportError[S, X])
-    extends NamesAlgebra[S, State[X, *]] {
+class NamesInterpreter[S[_], X](implicit
+  lens: Lens[X, NamesState[S]],
+  error: ReportError[S, X],
+  locations: LocationsAlgebra[S, State[X, *]]
+) extends NamesAlgebra[S, State[X, *]] {
 
   val stackInt = new StackInterpreter[S, X, NamesState[S], NamesState.Frame[S]](
     GenLens[NamesState[S]](_.stack)
@@ -67,7 +71,7 @@ class NamesInterpreter[S[_], X](implicit lens: Lens[X, NamesState[S]], error: Re
       case None =>
         // check if we have arrow in variable
         readName(name.value).flatMap {
-          case Some(tt@TokenTypeInfo(_, at@ArrowType(_, _))) =>
+          case Some(tt @ TokenTypeInfo(_, at @ ArrowType(_, _))) =>
             modify(st => st.copy(locations = st.locations :+ (name, tt))).map(_ => Option(at))
           case _ =>
             getState.flatMap(st =>
