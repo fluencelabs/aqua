@@ -57,7 +57,12 @@ object MakeRes {
       MatchMismatchRes(a, b, s).leaf
     case ForModel(item, iter, mode) if !isNillLiteral(iter) => FoldRes(item, iter, mode).leaf
     case RestrictionModel(item, isStream) => RestrictionRes(item, isStream).leaf
-    case ParModel | DetachModel => ParRes.leaf
+    case DetachModel =>
+      println("detach")
+      ParRes.leaf
+    case ParModel =>
+      println("par")
+      ParRes.leaf
     case XorModel => XorRes.leaf
     case NextModel(item) => NextRes(item).leaf
     case PushToStreamModel(operand @ VarModel(_, StreamType(st), _), exportTo) =>
