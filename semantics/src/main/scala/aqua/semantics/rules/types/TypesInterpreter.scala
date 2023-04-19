@@ -48,7 +48,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
   }
 
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
-    getState.map(_.resolveTypeToken(token, resolver)).flatMap {
+    getState.map(st => TypesStateHelper.resolveTypeToken(token, st, resolver)).flatMap {
       case Some(t) =>
         val (tt, tokens) = t
         modify(st =>
@@ -60,7 +60,7 @@ class TypesInterpreter[S[_], X](implicit lens: Lens[X, TypesState[S]], error: Re
     }
 
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
-    getState.map(_.resolveArrowDef(arrowDef, resolver)).flatMap {
+    getState.map(st => TypesStateHelper.resolveArrowDef(arrowDef, st, resolver)).flatMap {
       case Valid(t) =>
         val (tt, tokens) = t
         modify(st =>
