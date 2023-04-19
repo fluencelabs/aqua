@@ -68,14 +68,6 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
         AquaCompilerConf()
       )
 
-  private def compileToLsp(src: Map[String, String], imports: Map[String, String]) =
-    CompilerAPI
-      .compileToLsp[Id, String, String, Span.S](
-        aquaSource(src, imports),
-        id => txt => Parser.parse(Parser.parserSchema)(txt),
-        AquaCompilerConf()
-      )
-
   "aqua compiler" should "compile a simple snipped to the right context" in {
 
     val res = compileToContext(

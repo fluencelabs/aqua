@@ -7,8 +7,8 @@ import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.lsp.{LspContext, TokenInfo}
-import aqua.semantics.{CompilerState, HeaderError, RulesViolated, WrongAST}
+import aqua.semantics.lsp.TokenInfo
+import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
 import cats.data.{NonEmptyChain, Validated}
 import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
@@ -142,7 +142,7 @@ object AquaLSP extends App with Logging {
 
     val proc = for {
 
-      res <- CompilerAPI
+      res <- LSPCompiler
         .compileToLsp[IO, AquaFileError, FileModuleId, FileSpan.F](
           sources,
           SpanParser.parser,

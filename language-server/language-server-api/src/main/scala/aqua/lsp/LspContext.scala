@@ -1,9 +1,10 @@
-package aqua.semantics.lsp
+package aqua.lsp
 
 import aqua.parser.lexer.{Ability, LiteralToken, Name, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.types.ArrowType
 import cats.{Monoid, Semigroup}
+import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenInfo}
 import cats.syntax.monoid.*
 import RawContext.semiRC
 import aqua.semantics.header.{Picker, PickerOps}

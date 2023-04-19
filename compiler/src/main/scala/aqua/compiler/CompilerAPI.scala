@@ -8,9 +8,8 @@ import aqua.parser.{Ast, ParserError}
 import aqua.raw.RawPart.Parts
 import aqua.raw.{RawContext, RawPart}
 import aqua.res.AquaRes
-import aqua.semantics.{CompilerState, LspSemantics, RawSemantics, Semantics}
+import aqua.semantics.{CompilerState, RawSemantics, Semantics}
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
-import aqua.semantics.lsp.LspContext
 import cats.data.*
 import cats.data.Validated.{validNec, Invalid, Valid, invalid}
 import cats.parse.Parser0
@@ -64,41 +63,6 @@ object CompilerAPI extends Logging {
           acc.combine(Invalid(errs)) -> cache
       }
       ._1
-  }
-
-  private def getLspAquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad](
-    config: AquaCompilerConf
-  ): AquaCompiler[F, E, I, S, LspContext[S]] = {
-    implicit val rc: Monoid[LspContext[S]] = LspContext
-      .implicits(
-        LspContext
-          .blank[S]
-          .copy(raw =
-            RawContext.blank.copy(parts =
-              Chain.fromSeq(config.constantsList).map(const => RawContext.blank -> const)
-            )
-          )
-      )
-      .lspContextMonoid
-
-    implicit val headerSemMonoid: Monoid[HeaderSem[S, LspContext[S]]] =
-      new Monoid[HeaderSem[S, LspContext[S]]] {
-        override def empty: HeaderSem[S, LspContext[S]] = HeaderSem(rc.empty, (c, _) => validNec(c))
-
-        override def combine(
-          a: HeaderSem[S, LspContext[S]],
-          b: HeaderSem[S, LspContext[S]]
-        ): HeaderSem[S, LspContext[S]] = {
-          HeaderSem(
-            a.initCtx |+| b.initCtx,
-            (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
-          )
-        }
-      }
-
-    val semantics = new LspSemantics[S]()
-
-    new AquaCompiler[F, E, I, S, LspContext[S]](new HeaderHandler[S, LspContext[S]](), semantics)
   }
 
   private def getAquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad](
@@ -203,28 +167,6 @@ object CompilerAPI extends Logging {
       case Validated.Invalid(errs) =>
         Validated.invalid[NonEmptyChain[AquaError[I, E, S]], Chain[T]](errs).pure[F]
     }
-
-  def compileToLsp[F[_]: Monad, E, I: Order, S[_]: Comonad](
-    sources: AquaSources[F, E, I],
-    parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
-    config: AquaCompilerConf
-  ): F[Validated[NonEmptyChain[AquaError[I, E, S]], Map[I, Validated[NonEmptyChain[
-    AquaError[I, E, S]
-  ], Map[I, LspContext[S]]]]]] = {
-
-    val compiler = getLspAquaCompiler[F, E, I, S](config)
-    compiler
-      .compileRaw(sources, parser)
-      .map { v =>
-        v.map { innerMap =>
-          innerMap.view.mapValues { vCtx =>
-            vCtx.map {
-              _.toSortedMap.toMap
-            }
-          }.toMap
-        }
-      }
-  }
 
   def compileToContext[F[_]: Monad, E, I: Order, S[_]: Comonad](
     sources: AquaSources[F, E, I],

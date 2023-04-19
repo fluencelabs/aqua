@@ -2,7 +2,7 @@ package aqua.semantics.header
 
 import aqua.raw.{RawContext, RawPart}
 import aqua.semantics.CompilerState
-import aqua.semantics.lsp.{LspContext, TokenArrowInfo, TokenTypeInfo}
+import aqua.semantics.lsp.{TokenArrowInfo, TokenTypeInfo}
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
