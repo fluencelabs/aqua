@@ -1,10 +1,7 @@
-func returnCall() -> string -> string:
-  closure = (s: string) -> string:
-      <- s
-  closure("123asdf")
-  <- closure
+service Op("op"):
+  noop()
 
-func test() -> string:
-  a = returnCall()
-  b = a("arg")
-  <- b
+func test():
+    a:*string
+    on a[0] via a[1]:
+        Op.noop()

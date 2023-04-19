@@ -50,10 +50,15 @@ object ArrowInliner extends Logging {
             // Now, substitute the arrows that were received as function arguments
             // Use the new op tree (args are replaced with values, names are unique & safe)
             callableFuncBodyNoTopology <- TagInliner.handleTree(tree, fn.funcName)
+
+            _ = println("func no topology: " + callableFuncBodyNoTopology.show)
+
             callableFuncBody =
               fn.capturedTopology
                 .fold[OpModel](SeqModel)(ApplyTopologyModel.apply)
                 .wrap(callableFuncBodyNoTopology)
+
+            _ = println("func topology: " + callableFuncBody.show)
 
             // Fix return values with exports collected in the body
             resolvedResult <- RawValueInliner.valueListToModel(result)
@@ -196,6 +201,7 @@ object ArrowInliner extends Logging {
         for {
           _ <- Arrows[S].resolved(passArrows)
           av <- ArrowInliner.inline(arrow, call)
+          _ = println("after inlining: " + av._1.show)
           // find and get resolved arrows if we return them from the function
           returnedArrows = av._2.collect { case VarModel(name, ArrowType(_, _), _) =>
             name

@@ -68,6 +68,8 @@ object Transform extends Logging {
     // Resolve the topology, clear the resulting tree
     val resultingTree = preparedFunc.flatMap(tree => Topology.resolve(tree).map(clear(_)))
 
+    println("resultingTree: " + resultingTree.value.show)
+
     resultingTree.map(res =>
       FuncRes(
         func.funcName,
