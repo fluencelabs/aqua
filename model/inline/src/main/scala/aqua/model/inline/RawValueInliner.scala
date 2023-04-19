@@ -107,7 +107,7 @@ object RawValueInliner extends Logging {
       ops <- inlineToTree(map)
       _ = logger.trace("desugarized ops: " + ops)
       _ = logger.trace("map was: " + map)
-    } yield vm -> parDesugarPrefix(ops)
+    } yield vm -> parDesugarPrefix(ops.filterNot(_ == EmptyModel.leaf))
 
   def collectionToModel[S: Mangler: Exports: Arrows](
     value: CollectionRaw,
