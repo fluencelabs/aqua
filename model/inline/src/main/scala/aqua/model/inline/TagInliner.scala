@@ -35,6 +35,16 @@ object TagInliner extends Logging {
   private def none[S]: State[S, (Option[OpModel], Option[OpModel.Tree])] =
     State.pure(None -> None)
 
+  private def combineOpsWithSeq(l: Option[OpModel.Tree], r: Option[OpModel.Tree]) =
+    l match {
+      case None => r
+      case Some(a) =>
+        r match {
+          case None => l
+          case Some(b) => Some(SeqModel.wrap(a, b))
+        }
+    }
+
   def canonicalizeIfStream[S: Mangler](
     vm: ValueModel,
     ops: Option[OpModel.Tree]
@@ -45,7 +55,7 @@ object TagInliner extends Logging {
         Mangler[S].findAndForbidName(canonName).map { n =>
           val canon = VarModel(n, CanonStreamType(el), l)
           val canonModel = CanonicalizeModel(vm, CallModel.Export(canon.name, canon.`type`)).leaf
-          canon -> Some(ops.fold(canonModel)(t => SeqModel.wrap(t, canonModel)))
+          canon -> combineOpsWithSeq(ops, Option(canonModel))
         }
       case _ => State.pure(vm -> ops)
     }
@@ -69,7 +79,7 @@ object TagInliner extends Logging {
           flatResult <- flatCanonStream(canonV, Some(canonOp))
         } yield {
           val (resV, resOp) = flatResult
-          (resV, op.fold(resOp)(t => resOp.map(o => SeqModel.wrap(t, o))))
+          (resV, combineOpsWithSeq(op, resOp))
         }
       case v @ VarModel(_, CanonStreamType(_), _) =>
         flatCanonStream(v, op)
@@ -88,7 +98,7 @@ object TagInliner extends Logging {
         val apOp = FlattenModel(canonV, apN).leaf
         (
           apV,
-          Some(op.fold(apOp)(o => SeqModel.wrap(o, apOp)))
+          combineOpsWithSeq(op, Option(apOp))
         )
       }
     } else {
@@ -171,7 +181,7 @@ object TagInliner extends Logging {
           case (l @ LiteralModel(_, _), p) =>
             for {
               _ <- Exports[S].resolved(exportTo.name, l)
-            } yield Some(SeqModel) -> p
+            } yield None -> p
           case (v, p) =>
             State.pure(Some(CanonicalizeModel(v, CallModel.callExport(exportTo))) -> p)
         }
@@ -182,7 +192,7 @@ object TagInliner extends Logging {
           case (l @ LiteralModel(_, _), p) =>
             for {
               _ <- Exports[S].resolved(assignTo, l)
-            } yield Some(SeqModel) -> p
+            } yield None -> p
           case (v, p) =>
             State.pure(Some(FlattenModel(v, assignTo)) -> p)
         }
@@ -211,7 +221,7 @@ object TagInliner extends Logging {
         }).flatMap { cd =>
           for {
             _ <- Exports[S].resolved(assignTo, cd._1)
-          } yield Some(SeqModel) -> cd._2
+          } yield None -> cd._2
         }
 
       case ClosureTag(arrow, detach) =>

@@ -23,7 +23,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
       .value
 
     model._1.resolvedExports(canonTo) shouldBe LiteralModel(ValueRaw.Nil.value, ValueRaw.Nil.baseType)
-    model._2._1 shouldBe Some(SeqModel)
+    model._2._1 shouldBe None
     model._2._2 shouldBe None
   }
 
@@ -42,7 +42,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
       ValueRaw.Nil.value,
       ValueRaw.Nil.baseType
     )
-    model._2._1 shouldBe Some(SeqModel)
+    model._2._1 shouldBe None
     model._2._2 shouldBe None
   }
 }
