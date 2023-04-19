@@ -1,6 +1,6 @@
 package aqua.model.inline
 
-import aqua.model.{OpModel, ParModel, SeqModel}
+import aqua.model.{EmptyModel, OpModel, ParModel, SeqModel}
 import aqua.raw.ops.RawTag
 import aqua.raw.value.ValueRaw
 import cats.Monoid
@@ -33,7 +33,10 @@ private[inline] case class Inline(
         case l =>
           mergeMode match
             case SeqMode =>
-              Chain.one(SeqModel.wrap(l: _*))
+              val wrapped = SeqModel.wrap(l: _*)
+              wrapped match
+                case EmptyModel.leaf => Chain.empty
+                case _ => Chain.one(wrapped)
             case ParMode => Chain.one(ParModel.wrap(l: _*))
       }
 
@@ -68,9 +71,7 @@ private[inline] object Inline {
   def parDesugarPrefix(ops: List[OpModel.Tree]): Option[OpModel.Tree] = ops match {
     case Nil => None
     case x :: Nil => Option(x)
-    case _ =>
-//      println("wrap with par: " + ops)
-      Option(ParModel.wrap(ops: _*))
+    case _ => Option(ParModel.wrap(ops: _*))
   }
 
   def parDesugarPrefixOpt(ops: Option[OpModel.Tree]*): Option[OpModel.Tree] =
