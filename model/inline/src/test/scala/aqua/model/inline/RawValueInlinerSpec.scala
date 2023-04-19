@@ -134,7 +134,7 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         "x",
         ArrayType(ScalarType.string),
         Chain.one(IntoIndexModel("y", ScalarType.string))
-      ) -> Some(EmptyModel.leaf)
+      ) -> None
     )
   }
 
