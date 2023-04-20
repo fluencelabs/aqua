@@ -31,7 +31,6 @@ import aqua.res.{
   SeqRes,
   XorRes
 }
-import aqua.semantics.lsp.LspContext
 import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

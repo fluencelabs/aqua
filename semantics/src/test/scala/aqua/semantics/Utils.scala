@@ -7,11 +7,12 @@ import aqua.raw.{Raw, RawContext}
 import aqua.semantics.expr.func.ClosureSem
 import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.abilities.{AbilitiesInterpreter, AbilitiesState}
+import aqua.semantics.rules.locations.DummyLocationsInterpreter
 import aqua.semantics.rules.names.{NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesInterpreter, TypesState}
 import aqua.types.*
 import cats.data.State
-import cats.{~>, Id}
+import cats.{Id, ~>}
 import monocle.Lens
 import monocle.macros.GenLens
 import monocle.syntax.all.*
@@ -21,6 +22,9 @@ object Utils {
   implicit val re: ReportError[Id, CompilerState[Id]] =
     (st: CompilerState[Id], token: Token[Id], hints: List[String]) =>
       st.focus(_.errors).modify(_.append(RulesViolated(token, hints)))
+
+  implicit val locationsInterpreter: DummyLocationsInterpreter[Id, CompilerState[Id]] =
+    new DummyLocationsInterpreter[Id, CompilerState[Id]]()
 
   implicit val ns: Lens[CompilerState[Id], NamesState[Id]] = GenLens[CompilerState[Id]](_.names)
 
