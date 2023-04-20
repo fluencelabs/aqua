@@ -39,40 +39,52 @@ case class TypesState[S[_]](
   strict: Map[String, Type] = Map.empty[String, Type],
   definitions: Map[String, CustomTypeToken[S]] = Map.empty[String, CustomTypeToken[S]],
   fieldsToken: Map[String, TokenTypeInfo[S]] = Map.empty[String, TokenTypeInfo[S]],
-  stack: List[TypesState.Frame[S]] = Nil,
-  locations: List[(Token[S], TokenInfo[S])] = Nil
+  stack: List[TypesState.Frame[S]] = Nil
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
+}
+
+object TypesStateHelper {
 
   // TODO: an ugly return type, refactoring
   // Returns type and a token with its definition
-  def resolveTypeToken(tt: TypeToken[S]): Option[(Type, List[(Token[S], CustomTypeToken[S])])] =
+  def resolveTypeToken[S[_]](
+    tt: TypeToken[S],
+    state: TypesState[S],
+    resolver: (
+      TypesState[S],
+      CustomTypeToken[S]
+    ) => Option[(Type, List[(Token[S], CustomTypeToken[S])])]
+  ): Option[(Type, List[(Token[S], CustomTypeToken[S])])] =
     tt match {
       case TopBottomToken(_, isTop) =>
         Option((if (isTop) TopType else BottomType, Nil))
       case ArrayTypeToken(_, dtt) =>
-        resolveTypeToken(dtt).collect { case (it: DataType, t) =>
+        resolveTypeToken(dtt, state, resolver).collect { case (it: DataType, t) =>
           (ArrayType(it), t)
         }
       case StreamTypeToken(_, dtt) =>
-        resolveTypeToken(dtt).collect { case (it: DataType, t) =>
+        resolveTypeToken(dtt, state, resolver).collect { case (it: DataType, t) =>
           (StreamType(it), t)
         }
       case OptionTypeToken(_, dtt) =>
-        resolveTypeToken(dtt).collect { case (it: DataType, t) =>
+        resolveTypeToken(dtt, state, resolver).collect { case (it: DataType, t) =>
           (OptionType(it), t)
         }
       case ctt: CustomTypeToken[S] =>
-        strict.get(ctt.value).map(t => (t, definitions.get(ctt.value).toList.map(ctt -> _)))
+        resolver(state, ctt)
+      //        strict.get(ctt.value).map(t => (t, definitions.get(ctt.value).toList.map(ctt -> _)))
       case btt: BasicTypeToken[S] => Some((btt.value, Nil))
       case ArrowTypeToken(_, args, res) =>
         val strictArgs =
-          args.map(_._2).map(resolveTypeToken).collect { case Some((dt: DataType, t)) =>
+          args.map(_._2).map(resolveTypeToken(_, state, resolver)).collect {
+            case Some((dt: DataType, t)) =>
+              (dt, t)
+          }
+        val strictRes =
+          res.map(resolveTypeToken(_, state, resolver)).collect { case Some((dt: DataType, t)) =>
             (dt, t)
           }
-        val strictRes = res.map(resolveTypeToken).collect { case Some((dt: DataType, t)) =>
-          (dt, t)
-        }
         Option.when(strictRes.length == res.length && strictArgs.length == args.length) {
           val (sArgs, argTokens) = strictArgs.unzip
           val (sRes, resTokens) = strictRes.unzip
@@ -80,18 +92,23 @@ case class TypesState[S[_]](
         }
     }
 
-  def resolveArrowDef(
-    ad: ArrowTypeToken[S]
+  def resolveArrowDef[S[_]](
+    arrowTypeToken: ArrowTypeToken[S],
+    state: TypesState[S],
+    resolver: (
+      TypesState[S],
+      CustomTypeToken[S]
+    ) => Option[(Type, List[(Token[S], CustomTypeToken[S])])]
   ): ValidatedNec[(Token[S], String), (ArrowType, List[(Token[S], CustomTypeToken[S])])] = {
-    val resType = ad.res.map(resolveTypeToken)
+    val resType = arrowTypeToken.res.map(resolveTypeToken(_, state, resolver))
 
     NonEmptyChain
-      .fromChain(Chain.fromSeq(ad.res.zip(resType).collect { case (dt, None) =>
+      .fromChain(Chain.fromSeq(arrowTypeToken.res.zip(resType).collect { case (dt, None) =>
         dt -> "Cannot resolve the result type"
       }))
       .fold[ValidatedNec[(Token[S], String), (ArrowType, List[(Token[S], CustomTypeToken[S])])]] {
-        val (errs, argTypes) = ad.args.map { (argName, tt) =>
-          resolveTypeToken(tt)
+        val (errs, argTypes) = arrowTypeToken.args.map { (argName, tt) =>
+          resolveTypeToken(tt, state, resolver)
             .toRight(tt -> s"Type unresolved")
             .map(argName.map(_.value) -> _)
         }
@@ -124,7 +141,7 @@ case class TypesState[S[_]](
                   ProductType.maybeLabelled(labels.zip(types.map(_._1))),
                   ProductType(resTypes)
                 ),
-                types.map(_._2).flatten ++ resTokens.flatten
+                types.flatMap(_._2) ++ resTokens.flatten
               )
             }
           )(Invalid(_))

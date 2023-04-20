@@ -31,7 +31,6 @@ import aqua.res.{
   SeqRes,
   XorRes
 }
-import aqua.semantics.lsp.LspContext
 import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -63,14 +62,6 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
   private def compileToContext(src: Map[String, String], imports: Map[String, String]) =
     CompilerAPI
       .compileToContext[Id, String, String, Span.S](
-        aquaSource(src, imports),
-        id => txt => Parser.parse(Parser.parserSchema)(txt),
-        AquaCompilerConf()
-      )
-
-  private def compileToLsp(src: Map[String, String], imports: Map[String, String]) =
-    CompilerAPI
-      .compileToLsp[Id, String, String, Span.S](
         aquaSource(src, imports),
         id => txt => Parser.parse(Parser.parserSchema)(txt),
         AquaCompilerConf()

@@ -6,6 +6,7 @@ import aqua.raw.RawContext
 import aqua.raw.value.ValueRaw
 import aqua.semantics.lsp.{TokenArrowInfo, TokenDef, TokenTypeInfo}
 import aqua.semantics.Levenshtein
+import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{abilities, ReportError, StackInterpreter}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, NonEmptyMap, State}
@@ -16,7 +17,8 @@ import monocle.macros.GenLens
 
 class AbilitiesInterpreter[S[_], X](implicit
   lens: Lens[X, AbilitiesState[S]],
-  error: ReportError[S, X]
+  error: ReportError[S, X],
+  locations: LocationsAlgebra[S, State[X, *]]
 ) extends AbilitiesAlgebra[S, State[X, *]] {
 
   type SX[A] = State[X, A]
@@ -78,17 +80,13 @@ class AbilitiesInterpreter[S[_], X](implicit
     getState.flatMap { st =>
       st.definitions.get(name.value) match {
         case Some((ab, arrows)) =>
-          modify(st =>
-            st.copy(locations =
-              st.locations ++ (
-                (name, TokenDef(Some(ab))) :: (
-                  arrow,
-                  TokenDef(
-                    arrows.find(_._1.value == arrow.value).map(_._1)
-                  )
-                ) :: Nil
+          locations.addServiceLocations(
+            (name, TokenDef(Some(ab))) :: (
+              arrow,
+              TokenDef(
+                arrows.find(_._1.value == arrow.value).map(_._1)
               )
-            )
+            ) :: Nil
           )
         case None =>
           State.pure(())
@@ -127,8 +125,7 @@ class AbilitiesInterpreter[S[_], X](implicit
               ) { fn =>
                 // TODO: add name and arrow separately
                 // TODO: find tokens somewhere
-//                addServiceArrowLocation(name, arrow).as(Some(fn.arrow.`type`))
-                State.pure(Some(fn.arrow.`type`))
+                addServiceArrowLocation(name, arrow).as(Some(fn.arrow.`type`))
               }
           case None =>
             report(name, "Ability with this name is undefined").as(Option.empty[ArrowType])
