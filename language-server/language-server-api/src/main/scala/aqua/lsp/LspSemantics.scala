@@ -3,6 +3,7 @@ package aqua.lsp
 import aqua.parser.Ast
 import aqua.parser.head.{ImportExpr, ImportFromExpr}
 import aqua.parser.lexer.LiteralToken
+import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.{CompilerState, SemanticError, Semantics}
 import cats.data.Validated.{Invalid, Valid}
 import cats.syntax.applicative.*
@@ -12,11 +13,13 @@ import cats.syntax.functor.*
 import cats.syntax.foldable.*
 import cats.syntax.reducible.*
 import cats.data.{NonEmptyChain, ValidatedNec}
+import monocle.Lens
+import monocle.macros.GenLens
 
 class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
   def getImportTokens(ast: Ast[S]): List[LiteralToken[S]] = {
-    ast.head.foldLeft[List[LiteralToken[S]]](Nil){ case (l, header) =>
+    ast.head.foldLeft[List[LiteralToken[S]]](Nil) { case (l, header) =>
       header match {
         case ImportExpr(fn) =>
           println("import: " + fn)
@@ -28,9 +31,9 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
   }
 
   def process(
-               ast: Ast[S],
-               init: LspContext[S]
-             ): ValidatedNec[SemanticError[S], LspContext[S]] = {
+    ast: Ast[S],
+    init: LspContext[S]
+  ): ValidatedNec[SemanticError[S], LspContext[S]] = {
 
     val rawState = CompilerState.init[S](init.raw)
     val initState = rawState.copy(
@@ -45,6 +48,11 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
     val importTokens = getImportTokens(ast)
 
+    implicit val ls: Lens[CompilerState[S], LocationsState[S]] =
+      GenLens[CompilerState[S]](_.locations)
+
+    implicit val locationsInterpreter: LocationsInterpreter[S, CompilerState[S]] =
+      new LocationsInterpreter[S, CompilerState[S]]()
 
     Semantics
       .interpret(ast, initState, init.raw)

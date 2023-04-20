@@ -53,7 +53,7 @@ class NamesInterpreter[S[_], X](implicit
             )
           )
         case Some(tokenInfo) =>
-          modify(st => st.copy(locations = st.locations :+ (name, tokenInfo)))
+          locations.addNameLocation(name, tokenInfo)
         case _ => State.pure(())
       }
       .map(_.map(_.tokenType))
@@ -67,12 +67,12 @@ class NamesInterpreter[S[_], X](implicit
   def readArrow(name: Name[S]): SX[Option[ArrowType]] =
     readArrowHelper(name.value).flatMap {
       case Some(g) =>
-        modify(st => st.copy(locations = st.locations :+ (name, g))).map(_ => Option(g.tokenType))
+        locations.addNameLocation(name, g).map(_ => Option(g.tokenType))
       case None =>
         // check if we have arrow in variable
         readName(name.value).flatMap {
           case Some(tt @ TokenTypeInfo(_, at @ ArrowType(_, _))) =>
-            modify(st => st.copy(locations = st.locations :+ (name, tt))).map(_ => Option(at))
+            locations.addNameLocation(name, tt).map(_ => Option(at))
           case _ =>
             getState.flatMap(st =>
               report(
