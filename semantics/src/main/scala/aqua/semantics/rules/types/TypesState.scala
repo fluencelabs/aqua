@@ -35,11 +35,11 @@ import aqua.raw.RawContext
 import aqua.semantics.lsp.{TokenInfo, TokenType, TokenTypeInfo}
 
 case class TypesState[S[_]](
-  fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],
   strict: Map[String, Type] = Map.empty[String, Type],
   definitions: Map[String, CustomTypeToken[S]] = Map.empty[String, CustomTypeToken[S]],
-  fieldsToken: Map[String, TokenTypeInfo[S]] = Map.empty[String, TokenTypeInfo[S]],
-  stack: List[TypesState.Frame[S]] = Nil
+  defsToken: Map[String, TokenTypeInfo[S]] = Map.empty[String, TokenTypeInfo[S]],
+  funcStack: List[TypesState.Frame[S]] = Nil,
+  defStack: List[TypesState.Frame[S]] = Nil
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
 }

@@ -172,7 +172,7 @@ object TypeToken {
   val `typedef`: P[TypeToken[Span.S]] =
     P.oneOf(
       ArrowTypeToken
-        .`arrowdef`((DataTypeToken.`datatypedef`))
+        .`arrowdef`(DataTypeToken.`datatypedef`)
         .backtrack :: DataTypeToken.`datatypedef` :: Nil
     )
 

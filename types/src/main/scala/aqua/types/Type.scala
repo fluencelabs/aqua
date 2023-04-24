@@ -218,11 +218,23 @@ case class OptionType(element: Type) extends BoxType {
   override def withElement(t: Type): BoxType = copy(element = t)
 }
 
+sealed trait NamedType extends Type {
+  def name: String
+  def fields: NonEmptyMap[String, Type]
+}
+
 // Struct is an unordered collection of labelled types
-case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends DataType {
+case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends DataType with NamedType {
 
   override def toString: String =
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+}
+
+// Scope is an unordered collection of labelled types and arrows
+case class ScopeType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
+
+  override def toString: String =
+    s"scope $name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
 /**

@@ -27,6 +27,14 @@ case class IntoCopyRaw(`type`: StructType, fields: NonEmptyMap[String, ValueRaw]
   override def renameVars(vals: Map[String, String]): IntoCopyRaw = this
 }
 
+case class MethodRaw(name: String, `type`: Type) extends PropertyRaw {
+  override def map(f: ValueRaw => ValueRaw): MethodRaw = this
+
+  override def renameVars(vals: Map[String, String]): MethodRaw = this
+
+  override def varNames: Set[String] = Set.empty
+}
+
 case class FunctorRaw(name: String, `type`: Type) extends PropertyRaw {
   override def map(f: ValueRaw => ValueRaw): FunctorRaw = this
 

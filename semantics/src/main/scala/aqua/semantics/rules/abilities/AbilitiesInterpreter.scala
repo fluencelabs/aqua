@@ -1,14 +1,14 @@
 package aqua.semantics.rules.abilities
 
-import aqua.parser.lexer.{Ability, Name, Token, ValueToken}
+import aqua.parser.lexer.{Ability, IntoArrow, Name, Token, ValueToken}
 import aqua.raw.ServiceRaw
 import aqua.raw.RawContext
-import aqua.raw.value.ValueRaw
+import aqua.raw.value.{FunctorRaw, PropertyRaw, ValueRaw}
 import aqua.semantics.lsp.{TokenArrowInfo, TokenDef, TokenTypeInfo}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{abilities, ReportError, StackInterpreter}
-import aqua.types.ArrowType
+import aqua.types.{ArrowType, ScopeType, Type}
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.syntax.functor.*
 import cats.~>

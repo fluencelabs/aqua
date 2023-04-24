@@ -1,10 +1,7 @@
-func returnCall() -> string -> string:
-  closure = (s: string) -> string:
-      <- s
-  closure("123asdf")
-  <- closure
+scope SomeScope:
+  var1: string
+  arrow(s: string) -> string
 
-func test() -> string:
-  a = returnCall()
-  b = a("arg")
-  <- b
+func handleScope(input: SomeScope) -> string:
+  updated = SomeScope(var1 = input.arrow(""), arrow = input.arrow)
+  <- "updated"

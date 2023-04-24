@@ -18,11 +18,12 @@ class DataStructSem[S[_]](val expr: DataStructExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
     Prog.after((_: Raw) =>
-      T.purgeFields(expr.name).flatMap {
+      T.purgeDefs(expr.name).flatMap {
         case Some(fields) =>
-          T.defineDataType(expr.name, fields) as (TypeRaw(
+          val t = StructType(expr.name.value, fields)
+          T.defineType(expr.name, t) as (TypeRaw(
             expr.name.value,
-            StructType(expr.name.value, fields)
+            t
           ): Raw)
         case None => Raw.error("Data struct types unresolved").pure[Alg]
       }

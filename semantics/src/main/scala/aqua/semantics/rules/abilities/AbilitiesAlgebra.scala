@@ -1,8 +1,8 @@
 package aqua.semantics.rules.abilities
 
-import aqua.parser.lexer.{Ability, Name, Token, ValueToken}
-import aqua.raw.value.ValueRaw
-import aqua.types.ArrowType
+import aqua.parser.lexer.{Ability, IntoArrow, Name, Token, ValueToken}
+import aqua.raw.value.{PropertyRaw, ValueRaw}
+import aqua.types.{ArrowType, Type}
 import cats.InjectK
 import cats.data.{NonEmptyList, NonEmptyMap}
 

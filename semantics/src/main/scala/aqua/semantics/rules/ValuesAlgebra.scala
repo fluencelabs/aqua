@@ -46,6 +46,15 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     op match {
       case op: IntoField[S] =>
         T.resolveField(rootType, op)
+      case op: IntoArrow[S] =>
+        op.arguments
+          .map(valueToRaw)
+          .sequence
+          .map(_.sequence)
+          .flatMap {
+            case None => None.pure[Alg]
+            case Some(arguments) => T.resolveArrow(rootType, op, arguments)
+          }
       case op: IntoCopy[S] =>
         op.fields
           .map(valueToRaw)
@@ -70,6 +79,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     v match {
       case l: LiteralToken[S] => Some(LiteralRaw(l.value, l.ts)).pure[Alg]
       case VarToken(name, ops) =>
+        println("var token name: " + name)
         N.read(name).flatMap {
           case Some(t) =>
             // Prepare property expression: take the last known type and the next op, add next op to accumulator
@@ -107,28 +117,39 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
             None.pure[Alg]
         }
 
-      case dvt @ StructValueToken(typeName, fields) =>
+      case dvt @ NamedValueToken(typeName, fields) =>
         T.resolveType(typeName).flatMap {
-          case Some(struct @ StructType(_, _)) =>
+          case Some(resolvedType) =>
             for {
               fieldsRawOp: NonEmptyMap[String, Option[ValueRaw]] <- fields.traverse(valueToRaw)
+              _ = println("fieldsRawOp: " + fieldsRawOp)
               fieldsRaw: List[(String, ValueRaw)] = fieldsRawOp.toSortedMap.toList.collect {
                 case (n, Some(vr)) => n -> vr
               }
               rawFields = NonEmptyMap.fromMap(SortedMap.from(fieldsRaw))
               typeFromFieldsWithData = rawFields
                 .map(rf =>
-                  (
-                    StructType(typeName.value, rf.map(_.`type`)),
-                    Some(MakeStructRaw(rf, struct))
-                  )
+                  resolvedType match {
+                    case struct@StructType(_, _) =>
+                      (
+                        StructType(typeName.value, rf.map(_.`type`)),
+                        Some(MakeStructRaw(rf, struct))
+                      )
+                    case scope@ScopeType(_, _) =>
+                      (
+                        ScopeType(typeName.value, rf.map(_.`type`)),
+                        Some(MakeScopeRaw(rf, scope))
+                      )
+                  }
+
                 )
                 .getOrElse(BottomType -> None)
               (typeFromFields, data) = typeFromFieldsWithData
-              isTypesCompatible <- T.ensureTypeMatches(dvt, struct, typeFromFields)
+              _ = println("typeFromFields: " + typeFromFields)
+              _ = println("resolvedType: " + resolvedType)
+              isTypesCompatible <- T.ensureTypeMatches(dvt, resolvedType, typeFromFields)
             } yield data.filter(_ => isTypesCompatible)
-          case _ =>
-            None.pure[Alg]
+          case _ => None.pure[Alg]
         }
 
       case ct @ CollectionToken(_, values) =>
@@ -262,7 +283,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                   case Some(v) => T.ensureTypeMatches(tkn, tp, v.`type`).map(Option.when(_)(v))
                   case None => None.pure[Alg]
                 }
-              }.map(_.toList.flatten).map {
+              }.map(_.flatten).map {
                 case args: List[ValueRaw] if args.length == arr.domain.length =>
                   Some(r.copy(arguments = args))
                 case _ => None

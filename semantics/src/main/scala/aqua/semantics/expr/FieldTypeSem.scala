@@ -13,7 +13,7 @@ class FieldTypeSem[S[_]](val expr: FieldTypeExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit T: TypesAlgebra[S, Alg]): Prog[Alg, Raw] =
     T.resolveType(expr.`type`).flatMap {
-      case Some(t) => T.defineField(expr.name, t) as (TypeRaw(expr.name.value, t): Raw)
+      case Some(t) => T.defineDef(expr.name, t) as (TypeRaw(expr.name.value, t): Raw)
       case None => Raw.error("Field type unresolved").pure[Alg]
     }
 

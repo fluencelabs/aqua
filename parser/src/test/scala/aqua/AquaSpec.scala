@@ -110,8 +110,19 @@ trait AquaSpec extends EitherValues {
   def parseAssign(str: String): AssignmentExpr[Id] =
     AssignmentExpr.p.parseAll(str).value.mapK(spanToId)
 
-  def parseData(str: String): StructValueToken[Id] =
-    StructValueToken.dataValue.parseAll(str).value.mapK(spanToId)
+  def parseVar(str: String): VarToken[Id] =
+    ValueToken.varProperty.parseAll(str).value.mapK(spanToId)
+
+  def parseData(str: String): NamedValueToken[Id] =
+    NamedValueToken
+      /** EndMarker */
+      .dataValue.parseAll(str).value.mapK(spanToId).dataValue.parseAll(str).value.mapK(spanToId)
+
+  def parseScope(str: String): ScopeValueToken[Id] =
+    ScopeValueToken.scopeValue.parseAll(str).value.mapK(spanToId)
+
+  def parseIntoArrow(str: String): PropertyOp[Id] =
+    PropertyOp.parseArrow.parseAll(str).value.mapK(spanToId)
 
   def parsePush(str: String): PushToStreamExpr[Id] =
     PushToStreamExpr.p.parseAll(str).value.mapK(spanToId)
