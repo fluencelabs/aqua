@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.parser.expr.ScopeExpr
-import aqua.parser.lexer.{CustomTypeToken, Name}
+import aqua.parser.lexer.{NamedTypeToken, Name}
 import aqua.raw.{Raw, ServiceRaw}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra

@@ -1,10 +1,10 @@
 package aqua.lsp
 
-import aqua.parser.lexer.{Ability, LiteralToken, Name, Token}
+import aqua.parser.lexer.{Ability, LiteralToken, Name, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.types.ArrowType
 import cats.{Monoid, Semigroup}
-import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenInfo}
+import aqua.semantics.lsp.{TokenArrowInfo, TokenInfo, TokenType}
 import cats.syntax.monoid.*
 import RawContext.semiRC
 import aqua.semantics.header.{Picker, PickerOps}
@@ -12,8 +12,8 @@ import aqua.semantics.header.{Picker, PickerOps}
 // Context with info that necessary for language server
 case class LspContext[S[_]](
   raw: RawContext,
-  abDefinitions: Map[String, (Ability[S], List[(Name[S], ArrowType)])] =
-    Map.empty[String, (Ability[S], List[(Name[S], ArrowType)])],
+  abDefinitions: Map[String, (NamedTypeToken[S], List[(Name[S], ArrowType)])] =
+    Map.empty[String, (NamedTypeToken[S], List[(Name[S], ArrowType)])],
   rootArrows: Map[String, TokenArrowInfo[S]] = Map.empty[String, TokenArrowInfo[S]],
   constants: Map[String, TokenType[S]] = Map.empty[String, TokenType[S]],
   locations: List[(Token[S], TokenInfo[S])] = Nil,

@@ -9,6 +9,7 @@ import aqua.semantics.header.Picker
 import aqua.semantics.header.Picker.*
 import aqua.semantics.lsp.{TokenDef, TokenInfo, TokenType}
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
+import aqua.semantics.rules.definitions.{DefinitionsAlgebra, DefinitionsInterpreter, DefinitionsState}
 import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra, LocationsState}
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
@@ -69,7 +70,8 @@ object Semantics extends Logging {
   private def folder[S[_], G[_]: Monad](implicit
     A: AbilitiesAlgebra[S, G],
     N: NamesAlgebra[S, G],
-    T: TypesAlgebra[S, G]
+    T: TypesAlgebra[S, G],
+    D: DefinitionsAlgebra[S, G]
   ): (Expr[S], Chain[G[Raw]]) => Eval[G[Raw]] = { case (expr, inners) =>
     Eval later ExprSem
       .getProg[S, G](expr)
@@ -93,7 +95,9 @@ object Semantics extends Logging {
 
   type Interpreter[S[_], A] = State[CompilerState[S], A]
 
-  def transpile[S[_]](ast: Ast[S])(implicit locations: LocationsAlgebra[S, Interpreter[S, *]]): Interpreter[S, Raw] = {
+  def transpile[S[_]](
+    ast: Ast[S]
+  )(implicit locations: LocationsAlgebra[S, Interpreter[S, *]]): Interpreter[S, Raw] = {
     import monocle.syntax.all.*
 
     implicit val re: ReportError[S, CompilerState[S]] =
@@ -107,16 +111,22 @@ object Semantics extends Logging {
 
     implicit val ts: Lens[CompilerState[S], TypesState[S]] = GenLens[CompilerState[S]](_.types)
 
+    implicit val ds: Lens[CompilerState[S], DefinitionsState[S]] = GenLens[CompilerState[S]](_.definitions)
+
     implicit val typesInterpreter: TypesInterpreter[S, CompilerState[S]] =
       new TypesInterpreter[S, CompilerState[S]]
     implicit val abilitiesInterpreter: AbilitiesInterpreter[S, CompilerState[S]] =
       new AbilitiesInterpreter[S, CompilerState[S]]
     implicit val namesInterpreter: NamesInterpreter[S, CompilerState[S]] =
       new NamesInterpreter[S, CompilerState[S]]
+    implicit val definitionsInterpreter: DefinitionsInterpreter[S, CompilerState[S]] =
+      new DefinitionsInterpreter[S, CompilerState[S]]
     ast.cata(folder[S, Interpreter[S, *]]).value
   }
 
-  private def astToState[S[_]](ast: Ast[S])(implicit locations: LocationsAlgebra[S, Interpreter[S, *]]): Interpreter[S, Raw] =
+  private def astToState[S[_]](ast: Ast[S])(implicit
+    locations: LocationsAlgebra[S, Interpreter[S, *]]
+  ): Interpreter[S, Raw] =
     transpile[S](ast)
 
   // If there are any errors, they're inside CompilerState[S]
@@ -124,7 +134,9 @@ object Semantics extends Logging {
     ast: Ast[S],
     initState: CompilerState[S],
     init: RawContext
-  )(implicit locations: LocationsAlgebra[S, Interpreter[S, *]]): Eval[(CompilerState[S], RawContext)] =
+  )(implicit
+    locations: LocationsAlgebra[S, Interpreter[S, *]]
+  ): Eval[(CompilerState[S], RawContext)] =
     astToState[S](ast)
       .run(initState)
       .map {

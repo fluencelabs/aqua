@@ -72,9 +72,9 @@ object CollectionToken {
 }
 
 case class CallArrowToken[F[_]: Comonad](
-  ability: Option[Ability[F]],
-  funcName: Name[F],
-  args: List[ValueToken[F]]
+                                          ability: Option[NamedTypeToken[F]],
+                                          funcName: Name[F],
+                                          args: List[ValueToken[F]]
 ) extends ValueToken[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): CallArrowToken[K] =
@@ -86,7 +86,7 @@ case class CallArrowToken[F[_]: Comonad](
 object CallArrowToken {
 
   val callArrow: P[CallArrowToken[Span.S]] =
-    ((Ability.dotted <* `.`).?.with1 ~
+    ((NamedTypeToken.dotted <* `.`).?.with1 ~
       (Name.p
         ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
           .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
@@ -98,8 +98,8 @@ object CallArrowToken {
 }
 
 case class StructValueToken[F[_]: Comonad](
-  typeName: CustomTypeToken[F],
-  fields: NonEmptyMap[String, ValueToken[F]]
+                                            typeName: NamedTypeToken[F],
+                                            fields: NonEmptyMap[String, ValueToken[F]]
 ) extends ValueToken[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): StructValueToken[K] =
@@ -116,7 +116,7 @@ object StructValueToken {
         "Missing braces '()' after the struct type"
       )
       .map { case (dn, args) =>
-        StructValueToken(CustomTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
+        StructValueToken(NamedTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
       }
 }
 

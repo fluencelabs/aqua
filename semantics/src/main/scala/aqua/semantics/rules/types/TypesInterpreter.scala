@@ -45,8 +45,8 @@ class TypesInterpreter[S[_], X](implicit
 
   type ST[A] = State[X, A]
 
-  val resolver: (TypesState[S], CustomTypeToken[S]) => Option[
-    (Type, List[(Token[S], CustomTypeToken[S])])
+  val resolver: (TypesState[S], NamedTypeToken[S]) => Option[
+    (Type, List[(Token[S], NamedTypeToken[S])])
   ] = { (state, ctt) =>
     state.strict.get(ctt.value).map(t => (t, state.definitions.get(ctt.value).toList.map(ctt -> _)))
   }
@@ -90,7 +90,7 @@ class TypesInterpreter[S[_], X](implicit
     }
 
   override def purgeFields(
-    token: CustomTypeToken[S]
+    token: NamedTypeToken[S]
   ): State[X, Option[NonEmptyMap[String, Type]]] = {
     getState.map(_.fields).flatMap { fields =>
       NonEmptyMap.fromMap(SortedMap.from(fields.view.mapValues(_._2))) match {
@@ -108,8 +108,8 @@ class TypesInterpreter[S[_], X](implicit
   }
 
   override def defineDataType(
-    name: CustomTypeToken[S],
-    fields: NonEmptyMap[String, Type]
+                               name: NamedTypeToken[S],
+                               fields: NonEmptyMap[String, Type]
   ): State[X, Boolean] =
     getState.map(_.definitions.get(name.value)).flatMap {
       case Some(n) if n == name => State.pure(false)
@@ -125,7 +125,7 @@ class TypesInterpreter[S[_], X](implicit
           .as(true)
     }
 
-  override def defineAlias(name: CustomTypeToken[S], target: Type): State[X, Boolean] =
+  override def defineAlias(name: NamedTypeToken[S], target: Type): State[X, Boolean] =
     getState.map(_.definitions.get(name.value)).flatMap {
       case Some(n) if n == name => State.pure(false)
       case Some(_) => report(name, s"Type `${name.value}` was already defined").as(false)

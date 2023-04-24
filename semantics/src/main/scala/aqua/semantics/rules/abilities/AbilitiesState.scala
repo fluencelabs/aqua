@@ -2,7 +2,7 @@ package aqua.semantics.rules.abilities
 
 import aqua.raw.{RawContext, ServiceRaw}
 import aqua.raw.value.ValueRaw
-import aqua.parser.lexer.{Ability, Name, Token, ValueToken}
+import aqua.parser.lexer.{Ability, NamedTypeToken, Name, Token, ValueToken}
 import aqua.semantics.lsp.TokenInfo
 import aqua.types.ArrowType
 import cats.Monoid
@@ -14,8 +14,8 @@ case class AbilitiesState[S[_]](
   abilities: Map[String, RawContext] = Map.empty,
   rootServiceIds: Map[String, (ValueToken[S], ValueRaw)] =
     Map.empty[String, (ValueToken[S], ValueRaw)],
-  definitions: Map[String, (Ability[S], List[(Name[S], ArrowType)])] =
-    Map.empty[String, (Ability[S], List[(Name[S], ArrowType)])],
+  definitions: Map[String, (NamedTypeToken[S], List[(Name[S], ArrowType)])] =
+    Map.empty[String, (NamedTypeToken[S], List[(Name[S], ArrowType)])],
   locations: List[(Token[S], TokenInfo[S])] = Nil
 ) {
 

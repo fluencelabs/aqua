@@ -14,14 +14,14 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def defineField(name: Name[S], `type`: Type): Alg[Boolean]
 
-  def purgeFields(token: CustomTypeToken[S]): Alg[Option[NonEmptyMap[String, Type]]]
+  def purgeFields(token: NamedTypeToken[S]): Alg[Option[NonEmptyMap[String, Type]]]
 
   def defineDataType(
-    name: CustomTypeToken[S],
-    fields: NonEmptyMap[String, Type]
+                      name: NamedTypeToken[S],
+                      fields: NonEmptyMap[String, Type]
   ): Alg[Boolean]
 
-  def defineAlias(name: CustomTypeToken[S], target: Type): Alg[Boolean]
+  def defineAlias(name: NamedTypeToken[S], target: Type): Alg[Boolean]
 
   def resolveIndex(rootT: Type, op: IntoIndex[S], idx: ValueRaw): Alg[Option[PropertyRaw]]
   def resolveCopy(rootT: Type, op: IntoCopy[S], fields: NonEmptyMap[String, ValueRaw]): Alg[Option[PropertyRaw]]
