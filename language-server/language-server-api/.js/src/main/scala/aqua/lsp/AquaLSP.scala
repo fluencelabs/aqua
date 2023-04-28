@@ -10,8 +10,8 @@ import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.semantics.lsp.TokenInfo
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
+import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
 import cats.data.{NonEmptyChain, Validated}
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import fs2.io.file.{Files, Path}
@@ -22,7 +22,7 @@ import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
-import scala.scalajs.js.{undefined, UndefOr}
+import scala.scalajs.js.{UndefOr, undefined}
 
 @JSExportAll
 case class CompilationResult(

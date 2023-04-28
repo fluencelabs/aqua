@@ -58,7 +58,7 @@ jobs:
       - name: JS LSP build
         env:
           SNAPSHOT: ${{ steps.version.outputs.id }}
-        run: sbt language-server-api/fastOptJS
+        run: sbt language-server-apiJS/fastOptJS
 
       - name: JS API build
         env:

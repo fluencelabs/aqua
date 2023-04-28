@@ -61,7 +61,11 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
       "-H:+DashboardCode",
       "-H:+DashboardPointsTo",
       "-H:+DashboardAll"
-    ) ++ sys.env.get("COMPILE_STATIC").filter(_.trim.toLowerCase() == "true").map(_ => Seq("--static")).getOrElse(Seq.empty),
+    ) ++ sys.env
+      .get("COMPILE_STATIC")
+      .filter(_.trim.toLowerCase() == "true")
+      .map(_ => Seq("--static"))
+      .getOrElse(Seq.empty),
     libraryDependencies ++= Seq(
       "com.monovore" %%% "decline"        % declineV,
       "com.monovore" %%% "decline-effect" % declineV
@@ -73,7 +77,8 @@ lazy val cliJS = cli.js
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true
-  ).dependsOn(`js-exports`, `js-imports`)
+  )
+  .dependsOn(`js-exports`, `js-imports`)
 
 lazy val cliJVM = cli.jvm
   .settings(
@@ -105,9 +110,10 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
 
 lazy val ioJS = io.js.dependsOn(`js-imports`)
 
-lazy val `language-server-api` = project
+lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .in(file("language-server/language-server-api"))
-  .enablePlugins(ScalaJSPlugin)
   .settings(commons: _*)
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
@@ -119,7 +125,15 @@ lazy val `language-server-api` = project
       "co.fs2"        %%% "fs2-io"      % fs2V
     )
   )
-  .dependsOn(compiler.js, io.js)
+  .dependsOn(compiler, io)
+
+lazy val `language-server-apiJS` = `language-server-api`.js
+  .settings(
+    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
+    scalaJSUseMainModuleInitializer := true
+  )
+  .enablePlugins(ScalaJSPlugin)
+  .dependsOn(`js-exports`, `js-imports`)
 
 lazy val `js-exports` = project
   .in(file("js/js-exports"))
@@ -140,7 +154,7 @@ lazy val `aqua-api` = project
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true,
-    Test / test := {}
+    Test / test                     := {}
   )
   .dependsOn(`js-exports`, `aqua-run`.js, `backend-api`.js)
 
@@ -259,7 +273,8 @@ lazy val definitions = crossProject(JVMPlatform, JSPlatform)
       "io.circe" %%% "circe-generic",
       "io.circe" %%% "circe-parser"
     ).map(_ % circeVersion)
-  ).dependsOn(res, types)
+  )
+  .dependsOn(res, types)
 
 lazy val logging = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -281,7 +296,8 @@ lazy val constants = crossProject(JVMPlatform, JSPlatform)
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-core" % catsV
     )
-  ).dependsOn(parser, raw)
+  )
+  .dependsOn(parser, raw)
 
 lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

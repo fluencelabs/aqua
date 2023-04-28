@@ -37,6 +37,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
   ): ValidatedNec[SemanticError[S], LspContext[S]] = {
 
     val rawState = CompilerState.init[S](init.raw)
+    println("init state for: " + init.raw.abilities.keys)
     val initState = rawState.copy(
       names = rawState.names.copy(
         rootArrows = rawState.names.rootArrows ++ init.rootArrows,
