@@ -12,8 +12,7 @@ import aqua.semantics.header.{Picker, PickerOps}
 // Context with info that necessary for language server
 case class LspContext[S[_]](
   raw: RawContext,
-  abDefinitions: Map[String, NamedTypeToken[S]] =
-    Map.empty[String, NamedTypeToken[S]],
+  abDefinitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
   rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
   constants: Map[String, Type] = Map.empty[String, Type],
   tokens: Map[String, Token[S]] = Map.empty[String, Token[S]],
@@ -64,6 +63,8 @@ object LspContext {
       ctx.copy(raw = ops(ctx).addPart(part._1.raw -> part._2))
 
     override def setInit(ctx: LspContext[S], ctxInit: Option[LspContext[S]]): LspContext[S] =
+      println("set init with tokens: " + ctxInit.map(_.tokens))
+      println("for ctx with tokens: " + ctx.tokens)
       ctx.copy(raw = ops(ctx).setInit(ctxInit.map(_.raw)))
 
     override def all(ctx: LspContext[S]): Set[String] =
@@ -74,13 +75,18 @@ object LspContext {
     override def setAbility(ctx: LspContext[S], name: String, ctxAb: LspContext[S]): LspContext[S] =
       println("set ability to: " + name)
       println("renamed tokens: " + ctx.tokens.map(kv => name + "." + kv._1 -> kv._2))
-      ctx.copy(raw = ops(ctx).setAbility(name, ctxAb.raw))
+      val prefix = name + "."
+      ctx.copy(
+        raw = ops(ctx).setAbility(name, ctxAb.raw),
+        tokens = ctx.tokens ++ ctxAb.tokens.map(kv => (prefix + kv._1) -> kv._2)
+      )
 
     override def setModule(
       ctx: LspContext[S],
       name: Option[String],
       declares: Set[String]
     ): LspContext[S] =
+      println("set module to: " + name)
       ctx.copy(raw = ops(ctx).setOptModule(name, declares))
 
     override def setExports(
@@ -96,6 +102,14 @@ object LspContext {
       declared: Boolean
     ): Option[LspContext[S]] =
       println(s"rename $name to $rename as ${ctx.raw.abilities.keys}")
+      println("pick in ctx: " + ctx.tokens)
+      println("pick in ctx module: " + ctx.raw.module)
+      println("tokens in pick: " + ctx.tokens)
+      println(
+        "tokens picked: " + ctx.tokens
+          .get(name)
+          .fold(Map.empty)(t => Map(rename.getOrElse(name) -> t))
+      )
 
       ops(ctx)
         .pick(name, rename, declared)
@@ -108,17 +122,20 @@ object LspContext {
               ctx.rootArrows.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
             constants =
               ctx.constants.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
-            tokens =
-              ctx.tokens.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t))
+            tokens = ctx.tokens.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t))
           )
         )
 
     override def pickHeader(ctx: LspContext[S]): LspContext[S] =
+      println("module in pick header: " + ctx.raw.module)
+      println("tokens in pick header: " + ctx.tokens)
       ctx.copy(raw = ops(ctx).pickHeader)
 
     override def pickDeclared(
       ctx: LspContext[S]
     )(implicit semi: Semigroup[LspContext[S]]): LspContext[S] =
+      println("module in pick declared: " + ctx.raw.module)
+      println("tokens in pick declared: " + ctx.tokens)
       ctx.copy(raw = ops(ctx).pickDeclared)
   }
 }

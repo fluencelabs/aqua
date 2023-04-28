@@ -38,6 +38,11 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
     val rawState = CompilerState.init[S](init.raw)
     println("init state for: " + init.raw.abilities.keys)
+    println("tokens: " + init.tokens)
+    println("root: " + init.rootArrows)
+    println("constants: " + init.constants)
+    println("all tokens: " + (rawState.locations.tokens ++ init.tokens))
+
     val initState = rawState.copy(
       names = rawState.names.copy(
         rootArrows = rawState.names.rootArrows ++ init.rootArrows,

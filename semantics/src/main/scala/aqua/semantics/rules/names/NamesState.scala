@@ -60,7 +60,7 @@ object NamesState {
   }
 
   def init[S[_]](context: RawContext): NamesState[S] =
-    println("constants: " + context.allValues.map { case (s, vm) => (s, vm.`type`) })
+    println("constants in names: " + context.allValues.map { case (s, vm) => (s, vm.`type`) })
     NamesState(
       rootArrows = context.allFuncs.map { case (s, fc) =>
         (s, fc.arrow.`type`)

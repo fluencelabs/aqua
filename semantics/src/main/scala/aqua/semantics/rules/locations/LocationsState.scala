@@ -9,13 +9,11 @@ case class LocationsState[S[_]](
   tokens: Map[String, Token[S]] = Map.empty[String, Token[S]],
   locations: List[(Token[S], Token[S])] = Nil,
   stack: List[LocationsState[S]] = Nil,
-  nameLocations: List[(Token[S], TokenType[S])] = Nil,
-  typeLocations: List[(Token[S], TokenInfo[S])] = Nil,
   fieldsTokens: Map[String, TokenTypeInfo[S]] = Map.empty[String, TokenTypeInfo[S]]
 ) {
 
   lazy val allLocations: List[(Token[S], TokenInfo[S])] =
-    nameLocations ++ typeLocations ++ locations.map(tt => tt._1 -> TokenDef[S](Option(tt._2)))
+    locations.map(tt => tt._1 -> TokenDef[S](Option(tt._2)))
 }
 
 object LocationsState {

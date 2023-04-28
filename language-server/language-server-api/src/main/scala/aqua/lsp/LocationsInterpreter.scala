@@ -63,6 +63,7 @@ class LocationsInterpreter[S[_], X](implicit
         case frame if frame.tokens.contains(name) => frame.tokens(name)
       } orElse st.tokens.get(name)
       println(s"new loc exists: " + newLoc.nonEmpty)
+      println(s"all tokens in interpreter: " + st.tokens)
       st.copy(locations = st.locations ++ newLoc.map(token -> _).toList)
     }
   }
