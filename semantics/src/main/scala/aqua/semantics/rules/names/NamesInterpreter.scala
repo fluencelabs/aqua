@@ -27,7 +27,7 @@ class NamesInterpreter[S[_], X](implicit
 
   type SX[A] = State[X, A]
 
-  def readName(name: String): SX[Option[TokenType[S]]] =
+  private def readName(name: String): SX[Option[Type]] =
     getState.map { st =>
       st.constants.get(name) orElse st.stack.collectFirst {
         case frame if frame.names.contains(name) => frame.names(name)
@@ -36,7 +36,8 @@ class NamesInterpreter[S[_], X](implicit
     }
 
   override def read(name: Name[S], mustBeDefined: Boolean = true): SX[Option[Type]] =
-    OptionT(constantInfo(name))
+    println("read: " + name)
+    OptionT(constantDefined(name))
       .orElseF(readName(name.value))
       .value
       .flatTap {
@@ -52,27 +53,23 @@ class NamesInterpreter[S[_], X](implicit
                 )
             )
           )
-        case Some(tokenInfo) =>
-          locations.addNameLocation(name, tokenInfo)
+        case Some(_) =>
+          locations.pointLocation(name.value, name)
         case _ => State.pure(())
       }
-      .map(_.map(_.tokenType))
-
-  def constantInfo(name: Name[S]): SX[Option[TokenType[S]]] =
-    getState.map(_.constants.get(name.value))
 
   override def constantDefined(name: Name[S]): SX[Option[Type]] =
-    constantInfo(name).map(_.map(_.tokenType))
+    getState.map(_.constants.get(name.value))
 
   def readArrow(name: Name[S]): SX[Option[ArrowType]] =
     readArrowHelper(name.value).flatMap {
-      case Some(g) =>
-        locations.addNameLocation(name, g).map(_ => Option(g.tokenType))
+      case Some(at) =>
+        locations.pointLocation(name.value, name).map(_ => Option(at))
       case None =>
         // check if we have arrow in variable
         readName(name.value).flatMap {
-          case Some(tt @ TokenTypeInfo(_, at @ ArrowType(_, _))) =>
-            locations.addNameLocation(name, tt).map(_ => Option(at))
+          case Some(at @ ArrowType(_, _)) =>
+            locations.pointLocation(name.value, name).map(_ => Option(at))
           case _ =>
             getState.flatMap(st =>
               report(
@@ -88,7 +85,7 @@ class NamesInterpreter[S[_], X](implicit
         }
     }
 
-  def readArrowHelper(name: String): SX[Option[TokenArrowInfo[S]]] =
+  private def readArrowHelper(name: String): SX[Option[ArrowType]] =
     getState.map { st =>
       st.stack
         .flatMap(_.arrows.get(name))
@@ -106,7 +103,7 @@ class NamesInterpreter[S[_], X](implicit
         mapStackHead(
           report(name, "Cannot define a variable in the root scope")
             .as(false)
-        )(fr => fr.addName(name, `type`) -> true)
+        )(fr => fr.addName(name, `type`) -> true).flatTap(_ => locations.addToken(name.value, name))
     }
 
   override def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): State[X, Boolean] =
@@ -114,7 +111,7 @@ class NamesInterpreter[S[_], X](implicit
       case true =>
         mapStackHead(State.pure(true))(_.derived(name, derivedFrom) -> true)
       case false => State.pure(false)
-    }
+    }.flatTap(_ => locations.addToken(name.value, name))
 
   override def getDerivedFrom(fromNames: List[Set[String]]): State[X, List[Set[String]]] =
     mapStackHead(State.pure(Nil))(fr =>
@@ -128,10 +125,10 @@ class NamesInterpreter[S[_], X](implicit
       case None =>
         modify(st =>
           st.copy(
-            constants = st.constants.updated(name.value, TokenTypeInfo(Some(name), `type`))
+            constants = st.constants.updated(name.value, `type`)
           )
         ).as(true)
-    }
+    }.flatTap(_ => locations.addToken(name.value, name))
 
   override def defineArrow(name: Name[S], gen: ArrowType, isRoot: Boolean): SX[Boolean] =
     readName(name.value).flatMap {
@@ -146,7 +143,7 @@ class NamesInterpreter[S[_], X](implicit
           if (isRoot)
             modify(st =>
               st.copy(
-                rootArrows = st.rootArrows.updated(name.value, TokenArrowInfo(Some(name), gen)),
+                rootArrows = st.rootArrows.updated(name.value, gen),
                 definitions = st.definitions.updated(name.value, name)
               )
             )
@@ -155,10 +152,7 @@ class NamesInterpreter[S[_], X](implicit
             report(name, "Cannot define a variable in the root scope")
               .as(false)
         )(fr => fr.addArrow(name, gen) -> true)
-    }
-
-  override def beginScope(token: Token[S]): SX[Unit] =
-    stackInt.beginScope(NamesState.Frame(token))
+    }.flatTap(_ => locations.addToken(name.value, name))
 
   override def streamsDefinedWithinScope(): SX[Map[String, StreamType]] =
     stackInt.mapStackHead(State.pure(Map.empty[String, StreamType])) { frame =>
@@ -167,6 +161,8 @@ class NamesInterpreter[S[_], X](implicit
       }
     }
 
-  override def endScope(): SX[Unit] = stackInt.endScope
+  override def beginScope(token: Token[S]): SX[Unit] =
+    stackInt.beginScope(NamesState.Frame(token))
 
+  override def endScope(): SX[Unit] = stackInt.endScope
 }

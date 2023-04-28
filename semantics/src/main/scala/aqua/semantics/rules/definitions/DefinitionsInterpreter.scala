@@ -50,22 +50,23 @@ class DefinitionsInterpreter[S[_], X](implicit
 
   override def purgeDefs(
     token: NamedTypeToken[S]
-  ): SX[Option[(NonEmptyMap[String, Type], Map[String, TokenTypeInfo[S]])]] =
+  ): SX[Option[NonEmptyMap[String, Type]]] =
     getState.map(_.definitions).flatMap { defs =>
       NonEmptyMap.fromMap(SortedMap.from(defs.view.mapValues(_._2))) match {
         case Some(fs) =>
-          modify { st =>
-            st.copy(definitions = Map.empty, definitionsTokens = Map.empty)
-          }.map { _ =>
-            Some(
-              (
-                fs,
-                defs.map { case (n, (tt, t)) =>
-                  (token.value + "." + n, TokenTypeInfo(Some(tt), t))
-                }
-              )
-            )
-          }
+          val fields = defs.map { case (n, (tt, _)) =>
+            n -> tt
+          }.toList
+          locations
+            .addTokenWithFields(token.value, token, fields)
+            .flatMap { _ =>
+              modify { st =>
+                st.copy(definitions = Map.empty)
+              }.map { _ =>
+                Some(fs)
+              }
+            }
+
         case None => report(token, "Cannot define a data type without fields").as(None)
       }
     }
@@ -79,7 +80,7 @@ class DefinitionsInterpreter[S[_], X](implicit
       arrows match {
         case Some(arrs) =>
           modify { st =>
-            st.copy(definitions = Map.empty, definitionsTokens = Map.empty)
+            st.copy(definitions = Map.empty)
           }.as(Option[NonEmptyList[(Name[S], ArrowType)]](arrs))
         case None =>
           report(token, "Cannot purge arrows, no arrows provided")

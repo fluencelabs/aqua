@@ -72,9 +72,9 @@ object CollectionToken {
 }
 
 case class CallArrowToken[F[_]: Comonad](
-                                          ability: Option[NamedTypeToken[F]],
-                                          funcName: Name[F],
-                                          args: List[ValueToken[F]]
+  ability: Option[NamedTypeToken[F]],
+  funcName: Name[F],
+  args: List[ValueToken[F]]
 ) extends ValueToken[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): CallArrowToken[K] =
@@ -98,8 +98,8 @@ object CallArrowToken {
 }
 
 case class StructValueToken[F[_]: Comonad](
-                                            typeName: NamedTypeToken[F],
-                                            fields: NonEmptyMap[String, ValueToken[F]]
+  typeName: NamedTypeToken[F],
+  fields: NonEmptyMap[String, ValueToken[F]]
 ) extends ValueToken[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): StructValueToken[K] =

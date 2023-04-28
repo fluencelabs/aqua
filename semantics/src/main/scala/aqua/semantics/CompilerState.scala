@@ -21,7 +21,7 @@ case class CompilerState[S[_]](
   types: TypesState[S] = TypesState[S](),
   definitions: DefinitionsState[S] = DefinitionsState[S](),
   locations: LocationsState[S] = LocationsState[S]()
-) {}
+)
 
 object CompilerState {
   type St[S[_]] = State[CompilerState[S], Raw]
@@ -44,7 +44,8 @@ object CompilerState {
           a.errors ++ b.errors,
           a.names |+| b.names,
           a.abilities |+| b.abilities,
-          a.types |+| b.types
+          a.types |+| b.types,
+          locations = a.locations |+| b.locations
         )
       )
       am <- x

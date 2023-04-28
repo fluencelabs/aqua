@@ -38,7 +38,6 @@ case class TypesState[S[_]](
   fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],
   strict: Map[String, Type] = Map.empty[String, Type],
   definitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
-  fieldsToken: Map[String, TokenTypeInfo[S]] = Map.empty[String, TokenTypeInfo[S]],
   stack: List[TypesState.Frame[S]] = Nil
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
@@ -73,7 +72,6 @@ object TypesStateHelper {
         }
       case ctt: NamedTypeToken[S] =>
         resolver(state, ctt)
-      //        strict.get(ctt.value).map(t => (t, definitions.get(ctt.value).toList.map(ctt -> _)))
       case btt: BasicTypeToken[S] => Some((btt.value, Nil))
       case ArrowTypeToken(_, args, res) =>
         val strictArgs =

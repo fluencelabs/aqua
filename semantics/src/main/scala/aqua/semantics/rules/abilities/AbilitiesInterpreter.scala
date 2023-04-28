@@ -48,24 +48,19 @@ class AbilitiesInterpreter[S[_], X](implicit
             services = s.services
               .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
             definitions =
-              s.definitions.updated(name.value, (name, arrows.toSortedMap.values.toList))
+              s.definitions.updated(name.value, name)
           )
-        ).as(true)
+        ).flatMap { _ =>
+          locations.addTokenWithFields(name.value, name, arrows.toNel.toList.map(t => t._1 -> t._2._1))
+        }.as(true)
     }
 
   // adds location from token to its definition
-  def addServiceArrowLocation(name: NamedTypeToken[S], arrow: Name[S]): SX[Unit] = {
+  private def addServiceArrowLocation(name: NamedTypeToken[S], arrow: Name[S]): SX[Unit] = {
     getState.flatMap { st =>
       st.definitions.get(name.value) match {
-        case Some((ab, arrows)) =>
-          locations.addServiceLocations(
-            (name, TokenDef(Some(ab))) :: (
-              arrow,
-              TokenDef(
-                arrows.find(_._1.value == arrow.value).map(_._1)
-              )
-            ) :: Nil
-          )
+        case Some(_) =>
+          locations.pointTokenWithFieldLocation(name.value, name, arrow.value, arrow)
         case None =>
           State.pure(())
       }

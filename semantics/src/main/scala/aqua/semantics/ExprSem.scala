@@ -9,6 +9,7 @@ import aqua.semantics.expr.func.*
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.definitions.DefinitionsAlgebra
+import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import cats.Monad
@@ -22,7 +23,8 @@ object ExprSem {
     N: NamesAlgebra[S, G],
     T: TypesAlgebra[S, G],
     V: ValuesAlgebra[S, G],
-    D: DefinitionsAlgebra[S, G]
+    D: DefinitionsAlgebra[S, G],
+    L: LocationsAlgebra[S, G]
   ): Prog[G, Raw] =
     expr match {
       case expr: AbilityIdExpr[S] => new AbilityIdSem(expr).program[G]

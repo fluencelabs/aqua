@@ -14,8 +14,8 @@ case class AbilitiesState[S[_]](
   abilities: Map[String, RawContext] = Map.empty,
   rootServiceIds: Map[String, (ValueToken[S], ValueRaw)] =
     Map.empty[String, (ValueToken[S], ValueRaw)],
-  definitions: Map[String, (NamedTypeToken[S], List[(Name[S], ArrowType)])] =
-    Map.empty[String, (NamedTypeToken[S], List[(Name[S], ArrowType)])],
+  definitions: Map[String, NamedTypeToken[S]] =
+    Map.empty[String, NamedTypeToken[S]],
   locations: List[(Token[S], TokenInfo[S])] = Nil
 ) {
 

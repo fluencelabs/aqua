@@ -25,8 +25,7 @@ class ScopeSem[S[_]](val expr: ScopeExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    Prog.around(
-      A.beginScope(expr.name),
-      (_: Unit, _: Raw) =>
+    Prog.after(
+      _ =>
         Raw.error("Undefined").pure[Alg])
 }

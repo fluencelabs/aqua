@@ -1,14 +1,17 @@
 package aqua.semantics.rules.locations
 import aqua.parser.lexer.Token
-import aqua.semantics.lsp.{TokenInfo, TokenType}
+import aqua.semantics.lsp.{TokenInfo, TokenType, TokenTypeInfo}
 
 trait LocationsAlgebra[S[_], Alg[_]] {
-  def addNameLocations(locs: List[(Token[S], TokenType[S])]): Alg[Unit]
-  def addNameLocation(token: Token[S], tokenType: TokenType[S]): Alg[Unit]
+  def addToken(name: String, token: Token[S]): Alg[Unit]
+  def addTokenWithFields(name: String, token: Token[S], fields: List[(String, Token[S])]): Alg[Unit]
 
-  def addTypeLocations(locs: List[(Token[S], TokenInfo[S])]): Alg[Unit]
-  def addTypeLocation(token: Token[S], tokenInfo: TokenInfo[S]): Alg[Unit]
+  def pointTokenWithFieldLocation(typeName: String, typeToken: Token[S], fieldName: String, token: Token[S]): Alg[Unit]
+  def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): Alg[Unit]
+  def pointLocation(name: String, token: Token[S]): Alg[Unit]
+  def pointLocations(locations: List[(String, Token[S])]): Alg[Unit]
 
-  def addServiceLocations(locs: List[(Token[S], TokenInfo[S])]): Alg[Unit]
-  def addServiceLocation(token: Token[S], tokenInfo: TokenInfo[S]): Alg[Unit]
+  def beginScope(): Alg[Unit]
+
+  def endScope(): Alg[Unit]
 }

@@ -2,7 +2,7 @@ package aqua.lsp
 
 import aqua.parser.lexer.{Ability, LiteralToken, Name, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
-import aqua.types.ArrowType
+import aqua.types.{ArrowType, Type}
 import cats.{Monoid, Semigroup}
 import aqua.semantics.lsp.{TokenArrowInfo, TokenInfo, TokenType}
 import cats.syntax.monoid.*
@@ -12,10 +12,11 @@ import aqua.semantics.header.{Picker, PickerOps}
 // Context with info that necessary for language server
 case class LspContext[S[_]](
   raw: RawContext,
-  abDefinitions: Map[String, (NamedTypeToken[S], List[(Name[S], ArrowType)])] =
-    Map.empty[String, (NamedTypeToken[S], List[(Name[S], ArrowType)])],
-  rootArrows: Map[String, TokenArrowInfo[S]] = Map.empty[String, TokenArrowInfo[S]],
-  constants: Map[String, TokenType[S]] = Map.empty[String, TokenType[S]],
+  abDefinitions: Map[String, NamedTypeToken[S]] =
+    Map.empty[String, NamedTypeToken[S]],
+  rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
+  constants: Map[String, Type] = Map.empty[String, Type],
+  tokens: Map[String, Token[S]] = Map.empty[String, Token[S]],
   locations: List[(Token[S], TokenInfo[S])] = Nil,
   importTokens: List[LiteralToken[S]] = Nil
 )
@@ -31,7 +32,8 @@ object LspContext {
         abDefinitions = x.abDefinitions ++ y.abDefinitions,
         rootArrows = x.rootArrows ++ y.rootArrows,
         constants = x.constants ++ y.constants,
-        locations = x.locations ++ y.locations
+        locations = x.locations ++ y.locations,
+        tokens = x.tokens ++ y.tokens
       )
 
   trait Implicits[S[_]] {
@@ -70,6 +72,8 @@ object LspContext {
     override def declares(ctx: LspContext[S]): Set[String] = ops(ctx).declares
 
     override def setAbility(ctx: LspContext[S], name: String, ctxAb: LspContext[S]): LspContext[S] =
+      println("set ability to: " + name)
+      println("renamed tokens: " + ctx.tokens.map(kv => name + "." + kv._1 -> kv._2))
       ctx.copy(raw = ops(ctx).setAbility(name, ctxAb.raw))
 
     override def setModule(
@@ -91,6 +95,8 @@ object LspContext {
       rename: Option[String],
       declared: Boolean
     ): Option[LspContext[S]] =
+      println(s"rename $name to $rename as ${ctx.raw.abilities.keys}")
+
       ops(ctx)
         .pick(name, rename, declared)
         .map(rc =>
@@ -101,7 +107,9 @@ object LspContext {
             rootArrows =
               ctx.rootArrows.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
             constants =
-              ctx.constants.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t))
+              ctx.constants.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
+            tokens =
+              ctx.tokens.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t))
           )
         )
 

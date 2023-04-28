@@ -9,7 +9,11 @@ import aqua.semantics.header.Picker
 import aqua.semantics.header.Picker.*
 import aqua.semantics.lsp.{TokenDef, TokenInfo, TokenType}
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
-import aqua.semantics.rules.definitions.{DefinitionsAlgebra, DefinitionsInterpreter, DefinitionsState}
+import aqua.semantics.rules.definitions.{
+  DefinitionsAlgebra,
+  DefinitionsInterpreter,
+  DefinitionsState
+}
 import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra, LocationsState}
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
@@ -30,7 +34,7 @@ import cats.syntax.semigroup.*
 import cats.{Eval, Monad, Semigroup}
 import monocle.Lens
 import monocle.macros.GenLens
-import scribe.{Logging, log}
+import scribe.{log, Logging}
 import cats.free.Cofree
 
 trait Semantics[S[_], C] {
@@ -71,7 +75,8 @@ object Semantics extends Logging {
     A: AbilitiesAlgebra[S, G],
     N: NamesAlgebra[S, G],
     T: TypesAlgebra[S, G],
-    D: DefinitionsAlgebra[S, G]
+    D: DefinitionsAlgebra[S, G],
+    L: LocationsAlgebra[S, G]
   ): (Expr[S], Chain[G[Raw]]) => Eval[G[Raw]] = { case (expr, inners) =>
     Eval later ExprSem
       .getProg[S, G](expr)
@@ -111,7 +116,8 @@ object Semantics extends Logging {
 
     implicit val ts: Lens[CompilerState[S], TypesState[S]] = GenLens[CompilerState[S]](_.types)
 
-    implicit val ds: Lens[CompilerState[S], DefinitionsState[S]] = GenLens[CompilerState[S]](_.definitions)
+    implicit val ds: Lens[CompilerState[S], DefinitionsState[S]] =
+      GenLens[CompilerState[S]](_.definitions)
 
     implicit val typesInterpreter: TypesInterpreter[S, CompilerState[S]] =
       new TypesInterpreter[S, CompilerState[S]]

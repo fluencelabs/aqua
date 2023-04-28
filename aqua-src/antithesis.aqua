@@ -1,10 +1,4 @@
-func returnCall() -> string -> string:
-  closure = (s: string) -> string:
-      <- s
-  closure("123asdf")
-  <- closure
+use DECLARE_CONST, DECLARE_CONST2 as DC2 from "export.aqua" as Declare
 
-func test() -> string:
-  a = returnCall()
-  b = a("arg")
-  <- b
+func f() -> string, string:
+  <- Declare.DECLARE_CONST, Declare.DC2

@@ -1,5 +1,4 @@
--- exports3.aqua
-module Export declares *
+module FooBars declares DECLARE_CONST, DECLARE_CONST2
 
-func foo() -> string:
-    <- "I am MyFooBar foo"
+const DECLARE_CONST = "declare_const"
+const DECLARE_CONST2 = "declare_const2"
