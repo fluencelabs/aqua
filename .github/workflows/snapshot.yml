@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: aqua-lsp
-          path: language-server/language-server-api/target/scala-*/language-server-api-fastopt.js
+          path: language-server/language-server-api/.js/target/scala-*/language-server-api-fastopt.js
 
   aqua-cli:
     name: "Publish aqua-cli"
