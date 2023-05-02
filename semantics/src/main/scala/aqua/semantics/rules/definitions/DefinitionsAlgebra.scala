@@ -4,6 +4,7 @@ import aqua.semantics.lsp.TokenTypeInfo
 import aqua.types.{ArrowType, Type}
 import cats.data.{NonEmptyList, NonEmptyMap}
 
+// Collect and purge arrows/values from structures, services, etc
 trait DefinitionsAlgebra[S[_], Alg[_]] {
   def defineDef(name: Name[S], `type`: Type): Alg[Boolean]
 
