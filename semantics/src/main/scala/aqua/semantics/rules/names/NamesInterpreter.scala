@@ -155,7 +155,7 @@ class NamesInterpreter[S[_], X](implicit
 
   override def streamsDefinedWithinScope(): SX[Map[String, StreamType]] =
     stackInt.mapStackHead(State.pure(Map.empty[String, StreamType])) { frame =>
-      frame -> frame.names.collect { case (n, TokenTypeInfo(_, st @ StreamType(_))) =>
+      frame -> frame.names.collect { case (n, st @ StreamType(_)) =>
         n -> st
       }
     }
