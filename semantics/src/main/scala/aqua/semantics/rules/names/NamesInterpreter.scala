@@ -1,7 +1,6 @@
 package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
-import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{ReportError, StackInterpreter}

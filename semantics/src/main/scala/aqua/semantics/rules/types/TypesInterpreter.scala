@@ -2,7 +2,6 @@ package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
 import aqua.raw.value.{FunctorRaw, IntoCopyRaw, IntoFieldRaw, IntoIndexRaw, PropertyRaw, ValueRaw}
-import aqua.semantics.lsp.{TokenDef, TokenTypeInfo}
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{

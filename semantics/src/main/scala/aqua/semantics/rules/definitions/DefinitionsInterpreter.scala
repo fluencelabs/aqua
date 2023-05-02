@@ -1,7 +1,6 @@
 package aqua.semantics.rules.definitions
 
 import aqua.parser.lexer.{Name, NamedTypeToken, Token}
-import aqua.semantics.lsp.TokenTypeInfo
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState}

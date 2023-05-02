@@ -7,7 +7,6 @@ import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.lsp.TokenInfo
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
 import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
@@ -173,14 +172,12 @@ object AquaLSP extends App with Logging {
       logger.debug("Compilation done.")
 
       def locationsToJs(
-        locations: List[(Token[FileSpan.F], TokenInfo[FileSpan.F])]
+        locations: List[(Token[FileSpan.F], Token[FileSpan.F])]
       ): js.Array[TokenLink] = {
-        locations.flatMap { case (t, tInfo) =>
-          tInfo.definition match {
-            case None => Nil
-            case Some(d) =>
-              val fromOp = TokenLocation.fromSpan(t.unit._1)
-              val toOp = TokenLocation.fromSpan(d.unit._1)
+        locations.flatMap { case (from, to) =>
+          
+              val fromOp = TokenLocation.fromSpan(from.unit._1)
+              val toOp = TokenLocation.fromSpan(to.unit._1)
 
               val link = for {
                 from <- fromOp
@@ -190,10 +187,9 @@ object AquaLSP extends App with Logging {
               }
 
               if (link.isEmpty)
-                logger.warn(s"Incorrect coordinates for token '${t.unit._1.name}'")
+                logger.warn(s"Incorrect coordinates for token '${from.unit._1.name}'")
 
               link.toList
-          }
         }.toJSArray
       }
 

@@ -7,7 +7,6 @@ import aqua.raw.ops.{FuncOp, SeqGroupTag}
 import aqua.raw.{Raw, RawContext, RawPart}
 import aqua.semantics.header.Picker
 import aqua.semantics.header.Picker.*
-import aqua.semantics.lsp.{TokenDef, TokenInfo, TokenType}
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.definitions.{
   DefinitionsAlgebra,

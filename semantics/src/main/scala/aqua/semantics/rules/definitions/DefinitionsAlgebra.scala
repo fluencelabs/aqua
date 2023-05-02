@@ -1,6 +1,5 @@
 package aqua.semantics.rules.definitions
 import aqua.parser.lexer.{NamedTypeToken, Name, Token}
-import aqua.semantics.lsp.TokenTypeInfo
 import aqua.types.{ArrowType, Type}
 import cats.data.{NonEmptyList, NonEmptyMap}
 

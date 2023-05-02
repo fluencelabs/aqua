@@ -1,7 +1,6 @@
 package aqua.lsp
 
 import aqua.parser.lexer.Token
-import aqua.semantics.lsp.{TokenInfo, TokenType, TokenTypeInfo}
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState}
 import cats.data.State

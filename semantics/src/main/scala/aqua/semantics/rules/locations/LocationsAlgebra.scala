@@ -1,6 +1,5 @@
 package aqua.semantics.rules.locations
 import aqua.parser.lexer.Token
-import aqua.semantics.lsp.{TokenInfo, TokenType, TokenTypeInfo}
 
 trait LocationsAlgebra[S[_], Alg[_]] {
   def addToken(name: String, token: Token[S]): Alg[Unit]

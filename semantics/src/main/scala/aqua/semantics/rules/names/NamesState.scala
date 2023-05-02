@@ -2,7 +2,6 @@ package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
 import aqua.raw.RawContext
-import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenTypeInfo}
 import aqua.types.{ArrowType, Type}
 import cats.kernel.Monoid
 import cats.syntax.functor.*
@@ -11,8 +10,7 @@ case class NamesState[S[_]](
   stack: List[NamesState.Frame[S]] = Nil,
   rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
   constants: Map[String, Type] = Map.empty[String, Type],
-  definitions: Map[String, Name[S]] = Map.empty[String, Name[S]],
-  locations: List[(Token[S], TokenType[S])] = Nil
+  definitions: Map[String, Name[S]] = Map.empty[String, Name[S]]
 ) {
 
   def allNames: LazyList[String] =

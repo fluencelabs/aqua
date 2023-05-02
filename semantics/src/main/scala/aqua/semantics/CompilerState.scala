@@ -3,7 +3,6 @@ package aqua.semantics
 import aqua.parser.lexer.Token
 import aqua.raw.Raw
 import aqua.raw.RawContext
-import aqua.semantics.lsp.{TokenInfo, TokenType}
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.definitions.DefinitionsState
 import aqua.semantics.rules.locations.LocationsState

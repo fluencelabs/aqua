@@ -32,7 +32,6 @@ import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
 import aqua.raw.RawContext
-import aqua.semantics.lsp.{TokenInfo, TokenType, TokenTypeInfo}
 
 case class TypesState[S[_]](
   fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],

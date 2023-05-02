@@ -1,7 +1,6 @@
 package aqua.semantics.rules.locations
 
 import aqua.parser.lexer.Token
-import aqua.semantics.lsp.{TokenInfo, TokenType, TokenTypeInfo}
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.types.TypesState
 import monocle.Lens

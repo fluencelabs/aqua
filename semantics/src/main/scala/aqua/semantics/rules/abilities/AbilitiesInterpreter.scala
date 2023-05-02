@@ -4,7 +4,6 @@ import aqua.parser.lexer.{Ability, Name, NamedTypeToken, Token, ValueToken}
 import aqua.raw.ServiceRaw
 import aqua.raw.RawContext
 import aqua.raw.value.ValueRaw
-import aqua.semantics.lsp.{TokenArrowInfo, TokenDef, TokenTypeInfo}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.definitions.DefinitionsAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra

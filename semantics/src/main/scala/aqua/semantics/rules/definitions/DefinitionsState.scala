@@ -1,7 +1,6 @@
 package aqua.semantics.rules.definitions
 
 import aqua.parser.lexer.{Name, Token}
-import aqua.semantics.lsp.TokenTypeInfo
 import aqua.types.Type
 
 case class DefinitionsState[S[_]](
