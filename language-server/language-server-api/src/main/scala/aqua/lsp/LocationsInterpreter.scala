@@ -23,7 +23,6 @@ class LocationsInterpreter[S[_], X](implicit
   import stack.{getState, mapStackHead, modify, report}
 
   override def addToken(name: String, token: Token[S]): State[X, Unit] = modify { st =>
-    println(s"add token $name")
     st.copy(tokens = st.tokens.updated(name, token))
   }
 
@@ -34,7 +33,6 @@ class LocationsInterpreter[S[_], X](implicit
     token: Token[S],
     fields: List[(String, Token[S])]
   ): State[X, Unit] = modify { st =>
-    println(s"add token for: $name with fields ${fields.map(_._1)}")
     st.copy(tokens =
       st.tokens ++ ((name, token) +: fields.map(kv => (combineFieldName(name, kv._1), kv._2))).toMap
     )
@@ -57,13 +55,9 @@ class LocationsInterpreter[S[_], X](implicit
 
   override def pointLocation(name: String, token: Token[S]): State[X, Unit] = {
     modify { st =>
-      println(s"add location for $name")
-
       val newLoc: Option[Token[S]] = st.stack.collectFirst {
         case frame if frame.tokens.contains(name) => frame.tokens(name)
       } orElse st.tokens.get(name)
-      println(s"new loc exists: " + newLoc.nonEmpty)
-      println(s"all tokens in interpreter: " + st.tokens)
       st.copy(locations = st.locations ++ newLoc.map(token -> _).toList)
     }
   }

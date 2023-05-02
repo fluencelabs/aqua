@@ -57,14 +57,7 @@ class AbilitiesInterpreter[S[_], X](implicit
 
   // adds location from token to its definition
   private def addServiceArrowLocation(name: NamedTypeToken[S], arrow: Name[S]): SX[Unit] = {
-    getState.flatMap { st =>
-      st.definitions.get(name.value) match {
-        case Some(_) =>
-          locations.pointTokenWithFieldLocation(name.value, name, arrow.value, arrow)
-        case None =>
-          State.pure(())
-      }
-    }
+    locations.pointTokenWithFieldLocation(name.value, name, arrow.value, arrow)
   }
 
   override def getArrow(name: NamedTypeToken[S], arrow: Name[S]): SX[Option[ArrowType]] =

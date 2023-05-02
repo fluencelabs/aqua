@@ -22,9 +22,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
   def getImportTokens(ast: Ast[S]): List[LiteralToken[S]] = {
     ast.head.foldLeft[List[LiteralToken[S]]](Nil) { case (l, header) =>
       header match {
-        case ImportExpr(fn) =>
-          println("AZAZA NEW VERSION import: " + fn)
-          l :+ fn
+        case ImportExpr(fn) => l :+ fn
         case ImportFromExpr(_, fn) => l :+ fn
         case _ => l
       }
@@ -37,11 +35,6 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
   ): ValidatedNec[SemanticError[S], LspContext[S]] = {
 
     val rawState = CompilerState.init[S](init.raw)
-    println("init state for: " + init.raw.abilities.keys)
-    println("tokens: " + init.tokens)
-    println("root: " + init.rootArrows)
-    println("constants: " + init.constants)
-    println("all tokens: " + (rawState.locations.tokens ++ init.tokens))
 
     val initState = rawState.copy(
       names = rawState.names.copy(

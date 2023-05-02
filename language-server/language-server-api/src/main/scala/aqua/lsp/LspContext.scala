@@ -63,8 +63,6 @@ object LspContext {
       ctx.copy(raw = ops(ctx).addPart(part._1.raw -> part._2))
 
     override def setInit(ctx: LspContext[S], ctxInit: Option[LspContext[S]]): LspContext[S] =
-      println("set init with tokens: " + ctxInit.map(_.tokens))
-      println("for ctx with tokens: " + ctx.tokens)
       ctx.copy(raw = ops(ctx).setInit(ctxInit.map(_.raw)))
 
     override def all(ctx: LspContext[S]): Set[String] =
@@ -73,8 +71,6 @@ object LspContext {
     override def declares(ctx: LspContext[S]): Set[String] = ops(ctx).declares
 
     override def setAbility(ctx: LspContext[S], name: String, ctxAb: LspContext[S]): LspContext[S] =
-      println("set ability to: " + name)
-      println("renamed tokens: " + ctx.tokens.map(kv => name + "." + kv._1 -> kv._2))
       val prefix = name + "."
       ctx.copy(
         raw = ops(ctx).setAbility(name, ctxAb.raw),
@@ -86,7 +82,6 @@ object LspContext {
       name: Option[String],
       declares: Set[String]
     ): LspContext[S] =
-      println("set module to: " + name)
       ctx.copy(raw = ops(ctx).setOptModule(name, declares))
 
     override def setExports(
@@ -101,15 +96,15 @@ object LspContext {
       rename: Option[String],
       declared: Boolean
     ): Option[LspContext[S]] =
-      println(s"rename $name to $rename as ${ctx.raw.abilities.keys}")
-      println("pick in ctx: " + ctx.tokens)
-      println("pick in ctx module: " + ctx.raw.module)
-      println("tokens in pick: " + ctx.tokens)
-      println(
-        "tokens picked: " + ctx.tokens
-          .get(name)
-          .fold(Map.empty)(t => Map(rename.getOrElse(name) -> t))
-      )
+      // rename tokens from one context with prefix addition
+      val newTokens = rename.map { renameStr =>
+        ctx.tokens.map {
+          case (tokenName, token) if tokenName.startsWith(name) =>
+            tokenName.replaceFirst(name, renameStr) -> token
+          case kv => kv
+        }
+      }.getOrElse(ctx.tokens)
+
 
       ops(ctx)
         .pick(name, rename, declared)
@@ -122,20 +117,14 @@ object LspContext {
               ctx.rootArrows.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
             constants =
               ctx.constants.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
-            tokens = ctx.tokens.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t))
+            tokens = newTokens
           )
         )
 
-    override def pickHeader(ctx: LspContext[S]): LspContext[S] =
-      println("module in pick header: " + ctx.raw.module)
-      println("tokens in pick header: " + ctx.tokens)
-      ctx.copy(raw = ops(ctx).pickHeader)
+    override def pickHeader(ctx: LspContext[S]): LspContext[S] = ctx.copy(raw = ops(ctx).pickHeader)
 
     override def pickDeclared(
       ctx: LspContext[S]
-    )(implicit semi: Semigroup[LspContext[S]]): LspContext[S] =
-      println("module in pick declared: " + ctx.raw.module)
-      println("tokens in pick declared: " + ctx.tokens)
-      ctx.copy(raw = ops(ctx).pickDeclared)
+    )(implicit semi: Semigroup[LspContext[S]]): LspContext[S] = ctx.copy(raw = ops(ctx).pickDeclared)
   }
 }

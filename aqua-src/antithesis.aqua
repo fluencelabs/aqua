@@ -1,4 +1,9 @@
-use DECLARE_CONST, DECLARE_CONST2 as DC2 from "export.aqua" as Declare
+module Import3 declares *
 
-func f() -> string, string:
-  <- Declare.DECLARE_CONST, Declare.DC2
+export foo_bar
+
+use "export.aqua"
+
+func foo_bar() -> string, string:
+  z <- FooBars.foo()
+  <- z, FooBars.DECLARE_CONST2

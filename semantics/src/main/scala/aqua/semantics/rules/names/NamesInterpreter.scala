@@ -36,7 +36,6 @@ class NamesInterpreter[S[_], X](implicit
     }
 
   override def read(name: Name[S], mustBeDefined: Boolean = true): SX[Option[Type]] =
-    println("read: " + name)
     OptionT(constantDefined(name))
       .orElseF(readName(name.value))
       .value

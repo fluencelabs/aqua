@@ -8,7 +8,7 @@
     "aqua-lsp-api.d.ts"
   ],
   "scripts": {
-    "move:scalajs": "cp ../language-server-api/target/scala-3.2.2/language-server-api-opt/main.js ./aqua-lsp-api.js"
+    "move:scalajs": "cp ../language-server-api/.js/target/scala-3.2.2/language-server-api-opt/main.js ./aqua-lsp-api.js"
   },
   "repository": {
     "type": "git",

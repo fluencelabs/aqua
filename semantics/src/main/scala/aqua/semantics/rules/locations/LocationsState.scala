@@ -22,7 +22,6 @@ object LocationsState {
     override def empty: LocationsState[S] = LocationsState()
 
     override def combine(x: LocationsState[S], y: LocationsState[S]): LocationsState[S] =
-      println(s"combine ${x.tokens.keys} with ${y.tokens.keys}")
       LocationsState(
         tokens = x.tokens ++ y.tokens
       )

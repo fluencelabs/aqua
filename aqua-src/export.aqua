@@ -1,4 +1,7 @@
-module FooBars declares DECLARE_CONST, DECLARE_CONST2
+module FooBars declares *
 
 const DECLARE_CONST = "declare_const"
 const DECLARE_CONST2 = "declare_const2"
+
+func foo() -> string:
+    <- "I am MyFooBar foo"

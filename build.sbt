@@ -116,10 +116,6 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
   .in(file("language-server/language-server-api"))
   .settings(commons: _*)
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
-    scalaJSUseMainModuleInitializer := true
-  )
-  .settings(
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-effect" % catsEffectV,
       "co.fs2"        %%% "fs2-io"      % fs2V
@@ -129,7 +125,7 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
 
 lazy val `language-server-apiJS` = `language-server-api`.js
   .settings(
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
+    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true
   )
   .enablePlugins(ScalaJSPlugin)

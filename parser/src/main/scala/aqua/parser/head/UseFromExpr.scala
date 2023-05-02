@@ -19,7 +19,7 @@ case class UseFromExpr[F[_]](
   override def mapK[K[_]: Comonad](fk: F ~> K): UseFromExpr[K] =
     copy(FromExpr.mapK(imports)(fk), filename.mapK(fk), asModule.mapK(fk))
 
-  override def toString(): String =
+  override def toString: String =
     s"use ${FromExpr.show(imports)} from ${filename.value} as ${asModule.value}"
 }
 
