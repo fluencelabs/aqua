@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.6](https://github.com/fluencelabs/aqua/compare/aqua-v0.10.5...aqua-v0.10.6) (2023-05-03)
+
+
+### Bug Fixes
+
+* `ParRes with no children converted to Null` log ([#699](https://github.com/fluencelabs/aqua/issues/699)) ([5f00b1e](https://github.com/fluencelabs/aqua/commit/5f00b1ea8dcb2bc467936053eb3927dfb36850fc))
+
 ## [0.10.5](https://github.com/fluencelabs/aqua/compare/aqua-v0.10.4...aqua-v0.10.5) (2023-04-17)
 
 
