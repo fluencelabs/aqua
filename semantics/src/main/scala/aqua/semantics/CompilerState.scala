@@ -3,8 +3,8 @@ package aqua.semantics
 import aqua.parser.lexer.Token
 import aqua.raw.Raw
 import aqua.raw.RawContext
-import aqua.semantics.lsp.{TokenInfo, TokenType}
 import aqua.semantics.rules.abilities.AbilitiesState
+import aqua.semantics.rules.definitions.DefinitionsState
 import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
@@ -18,9 +18,9 @@ case class CompilerState[S[_]](
   names: NamesState[S] = NamesState[S](),
   abilities: AbilitiesState[S] = AbilitiesState[S](),
   types: TypesState[S] = TypesState[S](),
+  definitions: DefinitionsState[S] = DefinitionsState[S](),
   locations: LocationsState[S] = LocationsState[S]()
-) {
-}
+)
 
 object CompilerState {
   type St[S[_]] = State[CompilerState[S], Raw]
@@ -43,7 +43,8 @@ object CompilerState {
           a.errors ++ b.errors,
           a.names |+| b.names,
           a.abilities |+| b.abilities,
-          a.types |+| b.types
+          a.types |+| b.types,
+          locations = a.locations |+| b.locations
         )
       )
       am <- x

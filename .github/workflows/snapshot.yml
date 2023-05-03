@@ -58,7 +58,7 @@ jobs:
       - name: JS LSP build
         env:
           SNAPSHOT: ${{ steps.version.outputs.id }}
-        run: sbt language-server-api/fastOptJS
+        run: sbt language-server-apiJS/fastOptJS
 
       - name: JS API build
         env:
@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: aqua-lsp
-          path: language-server/language-server-api/target/scala-*/language-server-api-fastopt.js
+          path: language-server/language-server-api/.js/target/scala-*/language-server-api-fastopt.js
 
   aqua-cli:
     name: "Publish aqua-cli"

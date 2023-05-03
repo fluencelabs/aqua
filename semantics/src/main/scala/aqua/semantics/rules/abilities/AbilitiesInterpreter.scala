@@ -1,13 +1,13 @@
 package aqua.semantics.rules.abilities
 
-import aqua.parser.lexer.{Ability, Name, Token, ValueToken}
+import aqua.parser.lexer.{Ability, Name, NamedTypeToken, Token, ValueToken}
 import aqua.raw.ServiceRaw
 import aqua.raw.RawContext
 import aqua.raw.value.ValueRaw
-import aqua.semantics.lsp.{TokenArrowInfo, TokenDef, TokenTypeInfo}
 import aqua.semantics.Levenshtein
+import aqua.semantics.rules.definitions.DefinitionsAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.{abilities, ReportError, StackInterpreter}
+import aqua.semantics.rules.{ReportError, StackInterpreter, abilities}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.syntax.functor.*
@@ -29,31 +29,8 @@ class AbilitiesInterpreter[S[_], X](implicit
 
   import stackInt.{getState, mapStackHead, mapStackHeadE, modify, report, setState}
 
-  override def defineArrow(arrow: Name[S], `type`: ArrowType): SX[Boolean] =
-    mapStackHeadE(
-      report(arrow, "No abilities definition scope is found").as(false)
-    )(h =>
-      h.arrows.get(arrow.value) match {
-        case Some(_) =>
-          Left((arrow, "Arrow with this name was already defined above", false))
-        case None =>
-          Right(
-            h.copy(arrows = h.arrows.updated(arrow.value, arrow -> `type`)) -> true
-          )
-      }
-    )
-
-  override def purgeArrows(token: Token[S]): SX[Option[NonEmptyList[(Name[S], ArrowType)]]] =
-    getState.map(_.purgeArrows).flatMap {
-      case Some((arrs, nextState)) =>
-        setState(nextState).as(Option[NonEmptyList[(Name[S], ArrowType)]](arrs))
-      case _ =>
-        report(token, "Cannot purge arrows, no arrows provided")
-          .as(Option.empty[NonEmptyList[(Name[S], ArrowType)]])
-    }
-
   override def defineService(
-    name: Ability[S],
+    name: NamedTypeToken[S],
     arrows: NonEmptyMap[String, (Name[S], ArrowType)],
     defaultId: Option[ValueRaw]
   ): SX[Boolean] =
@@ -70,31 +47,19 @@ class AbilitiesInterpreter[S[_], X](implicit
             services = s.services
               .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
             definitions =
-              s.definitions.updated(name.value, (name, arrows.toSortedMap.values.toList))
+              s.definitions.updated(name.value, name)
           )
-        ).as(true)
+        ).flatMap { _ =>
+          locations.addTokenWithFields(name.value, name, arrows.toNel.toList.map(t => t._1 -> t._2._1))
+        }.as(true)
     }
 
   // adds location from token to its definition
-  def addServiceArrowLocation(name: Ability[S], arrow: Name[S]): SX[Unit] = {
-    getState.flatMap { st =>
-      st.definitions.get(name.value) match {
-        case Some((ab, arrows)) =>
-          locations.addServiceLocations(
-            (name, TokenDef(Some(ab))) :: (
-              arrow,
-              TokenDef(
-                arrows.find(_._1.value == arrow.value).map(_._1)
-              )
-            ) :: Nil
-          )
-        case None =>
-          State.pure(())
-      }
-    }
+  private def addServiceArrowLocation(name: NamedTypeToken[S], arrow: Name[S]): SX[Unit] = {
+    locations.pointTokenWithFieldLocation(name.value, name, arrow.value, arrow)
   }
 
-  override def getArrow(name: Ability[S], arrow: Name[S]): SX[Option[ArrowType]] =
+  override def getArrow(name: NamedTypeToken[S], arrow: Name[S]): SX[Option[ArrowType]] =
     getService(name.value).map(_.map(_.arrows)).flatMap {
       case Some(arrows) =>
         arrows(arrow.value)
@@ -132,7 +97,7 @@ class AbilitiesInterpreter[S[_], X](implicit
         }
     }
 
-  override def setServiceId(name: Ability[S], id: ValueToken[S], vm: ValueRaw): SX[Boolean] =
+  override def setServiceId(name: NamedTypeToken[S], id: ValueToken[S], vm: ValueRaw): SX[Boolean] =
     getService(name.value).flatMap {
       case Some(_) =>
         mapStackHead(
@@ -144,7 +109,7 @@ class AbilitiesInterpreter[S[_], X](implicit
         report(name, "Service with this name is not registered, can't set its ID").as(false)
     }
 
-  override def getServiceId(name: Ability[S]): SX[Either[Boolean, ValueRaw]] =
+  override def getServiceId(name: NamedTypeToken[S]): SX[Either[Boolean, ValueRaw]] =
     getService(name.value).flatMap {
       case Some(_) =>
         getState.flatMap(st =>

@@ -31,39 +31,39 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
       ArrowTypeToken.returnDef().parseAll(str).value.map(_.mapK(spanToId))
 
     typedef("(A -> ())") should be(
-      ArrowTypeToken[Id]((), List((None, CustomTypeToken[Id]("A"))), Nil)
+      ArrowTypeToken[Id]((), List((None, NamedTypeToken[Id]("A"))), Nil)
     )
     typedef("(A -> B)") should be(
-      ArrowTypeToken[Id]((), List((None, CustomTypeToken[Id]("A"))), List(CustomTypeToken[Id]("B")))
+      ArrowTypeToken[Id]((), List((None, NamedTypeToken[Id]("A"))), List(NamedTypeToken[Id]("B")))
     )
 
     returndef("(A -> B), (C -> D)") should be(
       List(
         ArrowTypeToken[Id](
           (),
-          (None, CustomTypeToken[Id]("A")) :: Nil,
-          List(CustomTypeToken[Id]("B"))
+          (None, NamedTypeToken[Id]("A")) :: Nil,
+          List(NamedTypeToken[Id]("B"))
         ),
         ArrowTypeToken[Id](
           (),
-          (None, CustomTypeToken[Id]("C")) :: Nil,
-          List(CustomTypeToken[Id]("D"))
+          (None, NamedTypeToken[Id]("C")) :: Nil,
+          List(NamedTypeToken[Id]("D"))
         )
       )
     )
 
     returndef("A, (B, C -> D, E), F -> G, H") should be(
       List(
-        CustomTypeToken[Id]("A"),
+        NamedTypeToken[Id]("A"),
         ArrowTypeToken[Id](
           (),
-          (None, CustomTypeToken[Id]("B")) :: (None, CustomTypeToken[Id]("C")) :: Nil,
-          List(CustomTypeToken[Id]("D"), CustomTypeToken[Id]("E"))
+          (None, NamedTypeToken[Id]("B")) :: (None, NamedTypeToken[Id]("C")) :: Nil,
+          List(NamedTypeToken[Id]("D"), NamedTypeToken[Id]("E"))
         ),
         ArrowTypeToken[Id](
           (),
-          (None, CustomTypeToken[Id]("F")) :: Nil,
-          List(CustomTypeToken[Id]("G"), CustomTypeToken[Id]("H"))
+          (None, NamedTypeToken[Id]("F")) :: Nil,
+          List(NamedTypeToken[Id]("G"), NamedTypeToken[Id]("H"))
         )
       )
     )
@@ -79,25 +79,25 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
       .mapK(spanToId)
 
     arrowdef("-> B") should be(
-      ArrowTypeToken[Id]((), Nil, List(CustomTypeToken[Id]("B")))
+      ArrowTypeToken[Id]((), Nil, List(NamedTypeToken[Id]("B")))
     )
     arrowdef("A -> B") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> CustomTypeToken[Id]("A")) :: Nil,
-        List(CustomTypeToken[Id]("B"))
+        (None -> NamedTypeToken[Id]("A")) :: Nil,
+        List(NamedTypeToken[Id]("B"))
       )
     )
 
     arrowdef("A -> B -> C") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> CustomTypeToken[Id]("A")) :: Nil,
+        (None -> NamedTypeToken[Id]("A")) :: Nil,
         List(
           ArrowTypeToken[Id](
             (),
-            (None -> CustomTypeToken[Id]("B")) :: Nil,
-            List(CustomTypeToken[Id]("C"))
+            (None -> NamedTypeToken[Id]("B")) :: Nil,
+            List(NamedTypeToken[Id]("C"))
           )
         )
       )
@@ -106,12 +106,12 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     arrowdef("A -> B, C -> D") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> CustomTypeToken[Id]("A")) :: Nil,
+        (None -> NamedTypeToken[Id]("A")) :: Nil,
         List(
           ArrowTypeToken[Id](
             (),
-            (None -> CustomTypeToken[Id]("B")) :: (None -> CustomTypeToken[Id]("C")) :: Nil,
-            List(CustomTypeToken[Id]("D"))
+            (None -> NamedTypeToken[Id]("B")) :: (None -> NamedTypeToken[Id]("C")) :: Nil,
+            List(NamedTypeToken[Id]("D"))
           )
         )
       )
@@ -120,17 +120,17 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     arrowdef("A -> (B -> F), (C -> D, E)") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> CustomTypeToken[Id]("A")) :: Nil,
+        (None -> NamedTypeToken[Id]("A")) :: Nil,
         List(
           ArrowTypeToken[Id](
             (),
-            (None -> CustomTypeToken[Id]("B")) :: Nil,
-            CustomTypeToken[Id]("F") :: Nil
+            (None -> NamedTypeToken[Id]("B")) :: Nil,
+            NamedTypeToken[Id]("F") :: Nil
           ),
           ArrowTypeToken[Id](
             (),
-            (None -> CustomTypeToken[Id]("C")) :: Nil,
-            CustomTypeToken[Id]("D") :: CustomTypeToken[Id]("E") :: Nil
+            (None -> NamedTypeToken[Id]("C")) :: Nil,
+            NamedTypeToken[Id]("D") :: NamedTypeToken[Id]("E") :: Nil
           )
         )
       )
@@ -139,8 +139,8 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     arrowWithNames("(a: A) -> B") should be(
       ArrowTypeToken[Id](
         (),
-        (Some(Name[Id]("a")) -> CustomTypeToken[Id]("A")) :: Nil,
-        List(CustomTypeToken[Id]("B"))
+        (Some(Name[Id]("a")) -> NamedTypeToken[Id]("A")) :: Nil,
+        List(NamedTypeToken[Id]("B"))
       )
     )
 
@@ -148,7 +148,7 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
       ArrowTypeToken[Id](
         (),
         (None -> strToBt(u32)) :: Nil,
-        List(CustomTypeToken[Id]("Boo"))
+        List(NamedTypeToken[Id]("Boo"))
       )
     )
     TypeToken.`typedef`.parseAll("u32 -> ()").value.mapK(spanToId) should be(
@@ -157,17 +157,17 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     arrowdef("A, u32 -> B") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> CustomTypeToken[Id]("A")) :: (None -> strToBt(u32)) :: Nil,
-        List(CustomTypeToken[Id]("B"))
+        (None -> NamedTypeToken[Id]("A")) :: (None -> strToBt(u32)) :: Nil,
+        List(NamedTypeToken[Id]("B"))
       )
     )
     arrowdef("[]Absolutely, u32 -> B, C") should be(
       ArrowTypeToken[Id](
         (),
-        (Option.empty[Name[Id]] -> ArrayTypeToken[Id]((), CustomTypeToken[Id]("Absolutely"))) ::
+        (Option.empty[Name[Id]] -> ArrayTypeToken[Id]((), NamedTypeToken[Id]("Absolutely"))) ::
           (Option.empty[Name[Id]] -> strToBt(u32)) :: Nil,
-        CustomTypeToken[Id]("B") ::
-          CustomTypeToken[Id]("C") :: Nil
+        NamedTypeToken[Id]("B") ::
+          NamedTypeToken[Id]("C") :: Nil
       )
     )
 
@@ -177,7 +177,7 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     def typedef(str: String) = TypeToken.`typedef`.parseAll(str).value.mapK(spanToId)
 
     typedef("[]Something") should be(
-      ArrayTypeToken[Id]((), CustomTypeToken[Id]("Something"))
+      ArrayTypeToken[Id]((), NamedTypeToken[Id]("Something"))
     )
     typedef("[]u32") should be(
       ArrayTypeToken[Id]((), strToBt(u32))

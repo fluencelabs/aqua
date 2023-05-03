@@ -17,6 +17,7 @@ import aqua.raw.value.{
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, ArrowType, CanonStreamType, ProductType, StreamType, Type}
@@ -36,10 +37,11 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
   def before[Alg[_]: Monad](implicit
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg]
+    A: AbilitiesAlgebra[S, Alg],
+    L: LocationsAlgebra[S, Alg]
   ): Alg[ArrowType] =
     // Begin scope -- for mangling
-    A.beginScope(arrowTypeExpr) *> N.beginScope(arrowTypeExpr) *> T
+    A.beginScope(arrowTypeExpr) *> L.beginScope() *> N.beginScope(arrowTypeExpr) *> T
       .beginArrowScope(
         arrowTypeExpr
       )
@@ -81,7 +83,8 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
   def after[Alg[_]: Monad](funcArrow: ArrowType, bodyGen: Raw)(implicit
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg]
+    A: AbilitiesAlgebra[S, Alg],
+    L: LocationsAlgebra[S, Alg]
   ): Alg[Raw] =
     A.endScope() *> (
       N.streamsDefinedWithinScope(),
@@ -161,12 +164,13 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           case bodyModel =>
             bodyModel
         }
-    } <* N.endScope()
+    } <* N.endScope() <* L.endScope()
 
   def program[Alg[_]: Monad](implicit
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg]
+    A: AbilitiesAlgebra[S, Alg],
+    L: LocationsAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
     Prog.around(
       before[Alg],

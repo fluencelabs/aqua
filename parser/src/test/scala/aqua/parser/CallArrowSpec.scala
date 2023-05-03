@@ -17,7 +17,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parseExpr("Ab.func(arg)") should be(
       CallArrowExpr[Id](
         Nil,
-        CallArrowToken(Some(toAb("Ab")), Name[Id]("func"), List(VarToken[Id](toName("arg"))))
+        CallArrowToken(Some(toNamedType("Ab")), Name[Id]("func"), List(VarToken[Id](toName("arg"))))
       )
     )
 
@@ -54,7 +54,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
       CallArrowExpr[Id](
         Nil,
         CallArrowToken(
-          Some(toAb("Ab")),
+          Some(toNamedType("Ab")),
           Name[Id]("func"),
           List(
             toVarLambda("arg", List("doSomething", "and", "doSomethingElse")),

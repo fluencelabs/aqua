@@ -1,10 +1,9 @@
-func returnCall() -> string -> string:
-  closure = (s: string) -> string:
-      <- s
-  closure("123asdf")
-  <- closure
+module Import3 declares *
 
-func test() -> string:
-  a = returnCall()
-  b = a("arg")
-  <- b
+export foo_bar
+
+use "export.aqua"
+
+func foo_bar() -> string, string:
+  z <- FooBars.foo()
+  <- z, FooBars.DECLARE_CONST2

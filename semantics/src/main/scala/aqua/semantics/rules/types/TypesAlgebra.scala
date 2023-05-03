@@ -12,19 +12,20 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveArrowDef(arrowDef: ArrowTypeToken[S]): Alg[Option[ArrowType]]
 
-  def defineField(name: Name[S], `type`: Type): Alg[Boolean]
-
-  def purgeFields(token: CustomTypeToken[S]): Alg[Option[NonEmptyMap[String, Type]]]
-
   def defineDataType(
-    name: CustomTypeToken[S],
+    name: NamedTypeToken[S],
     fields: NonEmptyMap[String, Type]
-  ): Alg[Boolean]
+  ): Alg[Option[StructType]]
 
-  def defineAlias(name: CustomTypeToken[S], target: Type): Alg[Boolean]
+  def defineAlias(name: NamedTypeToken[S], target: Type): Alg[Boolean]
 
   def resolveIndex(rootT: Type, op: IntoIndex[S], idx: ValueRaw): Alg[Option[PropertyRaw]]
-  def resolveCopy(rootT: Type, op: IntoCopy[S], fields: NonEmptyMap[String, ValueRaw]): Alg[Option[PropertyRaw]]
+
+  def resolveCopy(
+    rootT: Type,
+    op: IntoCopy[S],
+    fields: NonEmptyMap[String, ValueRaw]
+  ): Alg[Option[PropertyRaw]]
   def resolveField(rootT: Type, op: IntoField[S]): Alg[Option[PropertyRaw]]
 
   def ensureValuesComparable(token: Token[S], left: Type, right: Type): Alg[Boolean]

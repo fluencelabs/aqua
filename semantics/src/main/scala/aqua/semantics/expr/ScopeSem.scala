@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.parser.expr.ScopeExpr
-import aqua.parser.lexer.{CustomTypeToken, Name}
+import aqua.parser.lexer.{NamedTypeToken, Name}
 import aqua.raw.{Raw, ServiceRaw}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -25,8 +25,7 @@ class ScopeSem[S[_]](val expr: ScopeExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    Prog.around(
-      A.beginScope(expr.name),
-      (_: Unit, _: Raw) =>
+    Prog.after(
+      _ =>
         Raw.error("Undefined").pure[Alg])
 }

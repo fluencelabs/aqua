@@ -6,7 +6,7 @@ import aqua.parser.expr.ConstantExpr
 import aqua.parser.expr.func.AssignmentExpr
 import aqua.parser.lexer.Token
 import aqua.parser.lexer.CollectionToken.Mode.ArrayMode
-import aqua.parser.lexer.{Ability, CallArrowToken, CollectionToken, CustomTypeToken, LiteralToken, Name, StructValueToken, ValueToken, VarToken}
+import aqua.parser.lexer.{Ability, CallArrowToken, CollectionToken, NamedTypeToken, LiteralToken, Name, StructValueToken, ValueToken, VarToken}
 import aqua.types.LiteralType
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
@@ -28,14 +28,14 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       str
     ) should be(
       StructValueToken(
-        CustomTypeToken[Id]("Obj"),
+        NamedTypeToken[Id]("Obj"),
         NonEmptyMap.of(
           "f1" -> one,
           "f2" -> a,
           "f3" -> CollectionToken[Id](ArrayMode, List(one, two, three)),
           "f4" -> CollectionToken[Id](ArrayMode, List(b, c)),
           "f5" -> StructValueToken(
-            CustomTypeToken[Id]("NestedObj"),
+            NamedTypeToken[Id]("NestedObj"),
             NonEmptyMap.of(
               "i1" -> two,
               "i2" -> b,
@@ -44,7 +44,7 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
             )
           ),
           "f6" -> CallArrowToken(None, Name[Id]("funcCall"), List(one)),
-          "f7" -> CallArrowToken(Option(Ability[Id]("Serv")), Name[Id]("call"), List(two))
+          "f7" -> CallArrowToken(Option(NamedTypeToken[Id]("Serv")), Name[Id]("call"), List(two))
         )
       )
     )

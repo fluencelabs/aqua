@@ -63,23 +63,23 @@ object OptionTypeToken {
 
 }
 
-case class CustomTypeToken[F[_]: Comonad](name: F[String]) extends DataTypeToken[F] {
+case class NamedTypeToken[F[_]: Comonad](name: F[String]) extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): CustomTypeToken[K] = copy(fk(name))
+  override def mapK[K[_]: Comonad](fk: F ~> K): NamedTypeToken[K] = copy(fk(name))
 
   def value: String = name.extract
 
   override def toString: String = name.extract
 }
 
-object CustomTypeToken {
+object NamedTypeToken {
 
-  val ct: P[CustomTypeToken[Span.S]] =
-    `Class`.lift.map(CustomTypeToken(_))
+  val ct: P[NamedTypeToken[Span.S]] =
+    `Class`.lift.map(NamedTypeToken(_))
 
-  def dotted: P[CustomTypeToken[Span.S]] =
-    `Class`.repSep(`.`).string.lift.map(CustomTypeToken(_))
+  def dotted: P[NamedTypeToken[Span.S]] =
+    `Class`.repSep(`.`).string.lift.map(NamedTypeToken(_))
 }
 
 case class BasicTypeToken[F[_]: Comonad](scalarType: F[ScalarType]) extends DataTypeToken[F] {
@@ -153,7 +153,7 @@ object DataTypeToken {
     P.oneOf(
       P.defer(`topbottomdef`) :: P.defer(`arraytypedef`) :: P.defer(
         OptionTypeToken.`optiontypedef`
-      ) :: BasicTypeToken.`basictypedef` :: CustomTypeToken.dotted :: Nil
+      ) :: BasicTypeToken.`basictypedef` :: NamedTypeToken.dotted :: Nil
     )
 
   def `datatypedef`: P[DataTypeToken[Span.S]] =
@@ -162,7 +162,7 @@ object DataTypeToken {
         StreamTypeToken.`streamtypedef`
       ) :: P.defer(
         OptionTypeToken.`optiontypedef`
-      ) :: BasicTypeToken.`basictypedef` :: CustomTypeToken.dotted :: Nil
+      ) :: BasicTypeToken.`basictypedef` :: NamedTypeToken.dotted :: Nil
     )
 
 }

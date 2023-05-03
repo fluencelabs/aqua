@@ -24,7 +24,7 @@ class ArrowTypeExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parseArrow("onIn(a: Custom, b: Custom2)") should be(
       ArrowTypeExpr[Id](
         "onIn",
-        toNamedArrow(List("a" -> toCustomType("Custom"), "b" -> toCustomType("Custom2")), Nil)
+        toNamedArrow(List("a" -> toNamedType("Custom"), "b" -> toNamedType("Custom2")), Nil)
       )
     )
 
