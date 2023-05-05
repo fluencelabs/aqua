@@ -23,9 +23,9 @@ trait NamesAlgebra[S[_], Alg[_]] {
 
   def defineArrow(name: Name[S], gen: ArrowType, isRoot: Boolean): Alg[Boolean]
 
-  def beginScope(token: Token[S]): Alg[Unit]
-
   def streamsDefinedWithinScope(): Alg[Map[String, StreamType]]
+
+  def beginScope(token: Token[S]): Alg[Unit]
 
   def endScope(): Alg[Unit]
 }

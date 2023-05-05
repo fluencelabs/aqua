@@ -52,7 +52,7 @@ object AquaSpec {
   implicit def toBool(n: Boolean): LiteralToken[Id] = LiteralToken[Id](n.toString, bool)
   implicit def toStr(n: String): LiteralToken[Id] = LiteralToken[Id]("\"" + n + "\"", string)
 
-  implicit def toCustomType(str: String): CustomTypeToken[Id] = CustomTypeToken[Id](str)
+  implicit def toNamedType(str: String): NamedTypeToken[Id] = NamedTypeToken[Id](str)
   def toArrayType(str: String): ArrayTypeToken[Id] = ArrayTypeToken[Id]((), str)
 
   implicit def toArrowType(
@@ -67,8 +67,8 @@ object AquaSpec {
   ): ArrowTypeToken[Id] =
     ArrowTypeToken[Id]((), args.map(ab => Some(Name[Id](ab._1)) -> ab._2), res)
 
-  implicit def toCustomArg(str: String, customType: String): Arg[Id] =
-    Arg[Id](str, toCustomType(customType))
+  implicit def toNamedArg(str: String, customType: String): Arg[Id] =
+    Arg[Id](str, toNamedType(customType))
 
   implicit def toArg(str: String, typeToken: TypeToken[Id]): Arg[Id] = Arg[Id](str, typeToken)
 

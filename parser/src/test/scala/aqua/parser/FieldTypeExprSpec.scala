@@ -16,7 +16,7 @@ class FieldTypeExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     parseFieldType("some: Custom") should be(
-      FieldTypeExpr[Id]("some", toCustomType("Custom"))
+      FieldTypeExpr[Id]("some", toNamedType("Custom"))
     )
 
     parseFieldType("some: []Custom") should be(

@@ -63,14 +63,16 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
         context =>
           // Context with prepared imports
           context.andThen { ctx =>
+            val imports = mod.imports.view
+              .mapValues(ctx(_))
+              .collect { case (fn, Some(fc)) => fn -> fc }
+              .toMap
+            val header = mod.body.head
             // To manage imports, exports run HeaderHandler
             headerHandler
               .sem(
-                mod.imports.view
-                  .mapValues(ctx(_))
-                  .collect { case (fn, Some(fc)) => fn -> fc }
-                  .toMap,
-                mod.body.head
+                imports,
+                header
               )
               .andThen { headerSem =>
                 // Analyze the body, with prepared initial context

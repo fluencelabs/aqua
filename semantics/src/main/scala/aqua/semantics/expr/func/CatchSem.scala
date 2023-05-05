@@ -6,6 +6,7 @@ import aqua.raw.value.ValueRaw
 import aqua.raw.Raw
 import aqua.semantics.Prog
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import cats.Monad
 import cats.syntax.applicative.*
@@ -16,16 +17,17 @@ class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg]
+    A: AbilitiesAlgebra[S, Alg],
+    L: LocationsAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
     Prog
       .around(
-        N.beginScope(expr.name) >>
+        N.beginScope(expr.name) >> L.beginScope() >>
           N.define(expr.name, ValueRaw.LastError.baseType),
         (_: Boolean, g: Raw) =>
           g match {
             case FuncOp(op) =>
-              N.endScope() as (XorTag
+              N.endScope() >> L.endScope() as (XorTag
                 .wrap(
                   SeqTag.wrap(
                     AssignmentTag(ValueRaw.LastError, expr.name.value).leaf,
@@ -34,7 +36,7 @@ class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
                 )
                 .toFuncOp: Raw)
             case _ =>
-              N.endScope() as g
+              N.endScope() >> L.endScope() as g
           }
       )
       .abilitiesScope[S](expr.token)

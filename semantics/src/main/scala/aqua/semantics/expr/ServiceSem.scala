@@ -5,6 +5,7 @@ import aqua.raw.{Raw, ServiceRaw}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.definitions.DefinitionsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import cats.syntax.apply.*
@@ -19,12 +20,12 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
     A: AbilitiesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
-    V: ValuesAlgebra[S, Alg]
+    V: ValuesAlgebra[S, Alg],
+    D: DefinitionsAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    Prog.around(
-      A.beginScope(expr.name),
-      (_: Unit, body: Raw) =>
-        (A.purgeArrows(expr.name) <* A.endScope()).flatMap {
+    Prog.after(
+      _ =>
+        D.purgeArrows(expr.name).flatMap {
           case Some(nel) =>
             val arrows = nel.map(kv => kv._1.value -> (kv._1, kv._2)).toNem
             for {

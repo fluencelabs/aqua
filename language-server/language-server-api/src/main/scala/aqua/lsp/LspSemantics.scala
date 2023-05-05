@@ -2,9 +2,10 @@ package aqua.lsp
 
 import aqua.parser.Ast
 import aqua.parser.head.{ImportExpr, ImportFromExpr}
-import aqua.parser.lexer.LiteralToken
+import aqua.parser.lexer.{LiteralToken, Token}
+import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.locations.LocationsState
-import aqua.semantics.{CompilerState, SemanticError, Semantics}
+import aqua.semantics.{CompilerState, RulesViolated, SemanticError, Semantics}
 import cats.data.Validated.{Invalid, Valid}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
@@ -21,9 +22,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
   def getImportTokens(ast: Ast[S]): List[LiteralToken[S]] = {
     ast.head.foldLeft[List[LiteralToken[S]]](Nil) { case (l, header) =>
       header match {
-        case ImportExpr(fn) =>
-          println("import: " + fn)
-          l :+ fn
+        case ImportExpr(fn) => l :+ fn
         case ImportFromExpr(_, fn) => l :+ fn
         case _ => l
       }
@@ -36,6 +35,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
   ): ValidatedNec[SemanticError[S], LspContext[S]] = {
 
     val rawState = CompilerState.init[S](init.raw)
+
     val initState = rawState.copy(
       names = rawState.names.copy(
         rootArrows = rawState.names.rootArrows ++ init.rootArrows,
@@ -43,6 +43,9 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
       ),
       abilities = rawState.abilities.copy(
         definitions = rawState.abilities.definitions ++ init.abDefinitions
+      ),
+      locations = rawState.locations.copy(
+        tokens = rawState.locations.tokens ++ init.tokens
       )
     )
 
@@ -50,6 +53,11 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
     implicit val ls: Lens[CompilerState[S], LocationsState[S]] =
       GenLens[CompilerState[S]](_.locations)
+
+    import monocle.syntax.all.*
+    implicit val re: ReportError[S, CompilerState[S]] =
+      (st: CompilerState[S], token: Token[S], hints: List[String]) =>
+        st.focus(_.errors).modify(_.append(RulesViolated(token, hints)))
 
     implicit val locationsInterpreter: LocationsInterpreter[S, CompilerState[S]] =
       new LocationsInterpreter[S, CompilerState[S]]()
@@ -67,7 +75,8 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
                 constants = state.names.constants,
                 abDefinitions = state.abilities.definitions,
                 locations = state.locations.allLocations,
-                importTokens = importTokens
+                importTokens = importTokens,
+                tokens = state.locations.tokens
               )
             )
           }(Invalid(_))

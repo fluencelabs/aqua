@@ -41,7 +41,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       ArrowTypeToken[Id]((), List(None -> BasicTypeToken[Id](u8)), List(BasicTypeToken[Id](bool)))
     arrowExpr("(peer: PeerId, other: u8 -> bool)") should be(
       ArrowExpr[Id](
-        toNamedArrow(("peer" -> toCustomType("PeerId")) :: ("other" -> arrowToken) :: Nil, Nil)
+        toNamedArrow(("peer" -> toNamedType("PeerId")) :: ("other" -> arrowToken) :: Nil, Nil)
       )
     )
 
@@ -53,7 +53,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       )
     arrowExpr("(peer: PeerId, other: u32, u64 -> bool)") should be(
       ArrowExpr[Id](
-        toNamedArrow(("peer" -> toCustomType("PeerId")) :: ("other" -> arrowToken2) :: Nil, Nil)
+        toNamedArrow(("peer" -> toNamedType("PeerId")) :: ("other" -> arrowToken2) :: Nil, Nil)
       )
     )
 
@@ -61,7 +61,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     arrowExpr("(peer: PeerId, ret: u32 -> ()) -> string, u32") should be(
       ArrowExpr[Id](
         toNamedArrow(
-          ("peer" -> toCustomType("PeerId")) :: ("ret" -> arrowToken3) :: Nil,
+          ("peer" -> toNamedType("PeerId")) :: ("ret" -> arrowToken3) :: Nil,
           BasicTypeToken[Id](string) :: BasicTypeToken[Id](u32) :: Nil
         )
       )
@@ -107,9 +107,9 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
       ).toList
 
     ifBody.head.head.mapK(spanToId) should be(
-      CallArrowExpr(List(toName("x")), CallArrowToken(Some(toAb("Ab")), "func", Nil))
+      CallArrowExpr(List(toName("x")), CallArrowToken(Some(toNamedType("Ab")), "func", Nil))
     )
-    ifBody(1).head.mapK(spanToId) should be(AbilityIdExpr(toAb("Peer"), toStr("some id")))
+    ifBody(1).head.mapK(spanToId) should be(AbilityIdExpr(toNamedType("Peer"), toStr("some id")))
     ifBody(2).head.mapK(spanToId) should be(
       CallArrowExpr(Nil, CallArrowToken(None, "call", List(toBool(true))))
     )
@@ -172,14 +172,14 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     qTree.d() shouldBe RootExpr(Token.lift[Id, Unit](()))
     // Local service
-    qTree.d() shouldBe ServiceExpr(toAb("Local"), Some(toStr("local")))
+    qTree.d() shouldBe ServiceExpr(toNamedType("Local"), Some(toStr("local")))
     qTree.d() shouldBe ArrowTypeExpr("gt", toArrowType(Nil, Some(scToBt(bool))))
     qTree.d() shouldBe FuncExpr(
       "tryGen"
     )
     qTree.d() shouldBe ArrowExpr(toArrowType(Nil, Some(scToBt(bool))))
     qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")))
-    qTree.d() shouldBe CallArrowExpr(List("v"), CallArrowToken(Some(toAb("Local")), "gt", Nil))
+    qTree.d() shouldBe CallArrowExpr(List("v"), CallArrowToken(Some(toNamedType("Local")), "gt", Nil))
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("v")))
     // genC function
     qTree.d() shouldBe FuncExpr(
@@ -188,12 +188,12 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 //      List("two": VarLambda[Id])
     )
     qTree.d() shouldBe ArrowExpr(toNamedArrow(("val" -> string) :: Nil, boolSc :: Nil))
-    qTree.d() shouldBe CallArrowExpr(List("one"), CallArrowToken(Some(toAb("Local")), "gt", List()))
+    qTree.d() shouldBe CallArrowExpr(List("one"), CallArrowToken(Some(toNamedType("Local")), "gt", List()))
     qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
     qTree.d() shouldBe CallArrowExpr(List("two"), CallArrowToken(None, "tryGen", List()))
     qTree.d() shouldBe CallArrowExpr(
       List("three"),
-      CallArrowToken(Some(toAb("Local")), "gt", List())
+      CallArrowToken(Some(toNamedType("Local")), "gt", List())
     )
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("two")))
   }

@@ -1,7 +1,6 @@
 package aqua.semantics.rules.locations
 
 import aqua.parser.lexer.Token
-import aqua.semantics.lsp.{TokenInfo, TokenType}
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.types.TypesState
 import monocle.Lens
@@ -10,15 +9,26 @@ import cats.data.{NonEmptyList, NonEmptyMap, State}
 
 class DummyLocationsInterpreter[S[_], X] extends LocationsAlgebra[S, State[X, *]] {
 
-  override def addNameLocations(locs: List[(Token[S], TokenType[S])]): State[X, Unit] = State.pure(())
+  def addToken(name: String, token: Token[S]): State[X, Unit] = State.pure(())
 
-  override def addNameLocation(token: Token[S], tokenType: TokenType[S]): State[X, Unit] = State.pure(())
+  def addTokenWithFields(
+    name: String,
+    token: Token[S],
+    fields: List[(String, Token[S])]
+  ): State[X, Unit] = State.pure(())
 
-  override def addTypeLocations(locs: List[(Token[S], TokenInfo[S])]): State[X, Unit] = State.pure(())
+  def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): State[X, Unit] = State.pure(())
 
-  override def addTypeLocation(token: Token[S], tokenInfo: TokenInfo[S]): State[X, Unit] = State.pure(())
+  def pointTokenWithFieldLocation(
+    typeName: String,
+    typeToken: Token[S],
+    fieldName: String,
+    token: Token[S]
+  ): State[X, Unit] = State.pure(())
+  override def pointLocation(name: String, token: Token[S]): State[X, Unit] = State.pure(())
+  override def pointLocations(locations: List[(String, Token[S])]): State[X, Unit] = State.pure(())
 
-  override def addServiceLocations(locs: List[(Token[S], TokenInfo[S])]): State[X, Unit] = State.pure(())
+  def beginScope(): State[X, Unit] = State.pure(())
 
-  override def addServiceLocation(token: Token[S], tokenInfo: TokenInfo[S]): State[X, Unit] = State.pure(())
+  def endScope(): State[X, Unit] = State.pure(())
 }

@@ -1,6 +1,6 @@
 {
   "name": "@fluencelabs/aqua-language-server-api",
-  "version": "0.10.5",
+  "version": "0.10.6",
   "description": "Aqua Language Server API",
   "type": "commonjs",
   "files": [
@@ -8,7 +8,7 @@
     "aqua-lsp-api.d.ts"
   ],
   "scripts": {
-    "move:scalajs": "cp ../language-server-api/target/scala-3.1.3/language-server-api-opt/main.js ./aqua-lsp-api.js"
+    "move:scalajs": "cp ../language-server-api/.js/target/scala-3.2.2/language-server-api-opt/main.js ./aqua-lsp-api.js"
   },
   "repository": {
     "type": "git",

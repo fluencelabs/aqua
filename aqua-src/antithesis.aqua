@@ -1,7 +1,9 @@
-scope SomeScope:
-  var1: string
-  arrow(s: string) -> string
+module Import3 declares *
 
-func handleScope(input: SomeScope) -> string:
-  updated = SomeScope(var1 = input.arrow(""), arrow = input.arrow)
-  <- "updated"
+export foo_bar
+
+use "export.aqua"
+
+func foo_bar() -> string, string:
+  z <- FooBars.foo()
+  <- z, FooBars.DECLARE_CONST2

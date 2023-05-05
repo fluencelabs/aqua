@@ -40,7 +40,7 @@ class IfExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     parseIf("if Op.identity(\"str\") == \"a\"") should be(
       IfExpr[Id](
-        CallArrowToken[Id](Some(toAb("Op")), toName("identity"), toStr("str") :: Nil),
+        CallArrowToken[Id](Some(toNamedType("Op")), toName("identity"), toStr("str") :: Nil),
         EqOp[Id](true),
         toStr("a")
       )
@@ -48,9 +48,9 @@ class IfExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     parseIf("if Op.identity(\"str\") != Op.identity(\"str\")") should be(
       IfExpr[Id](
-        CallArrowToken[Id](Some(toAb("Op")), toName("identity"), toStr("str") :: Nil),
+        CallArrowToken[Id](Some(toNamedType("Op")), toName("identity"), toStr("str") :: Nil),
         EqOp[Id](false),
-        CallArrowToken[Id](Some(toAb("Op")), toName("identity"), toStr("str") :: Nil)
+        CallArrowToken[Id](Some(toNamedType("Op")), toName("identity"), toStr("str") :: Nil)
       )
     )
 
@@ -59,7 +59,7 @@ class IfExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         InfixToken[Id](toNumber(2), toNumber(3), Sub),
         EqOp[Id](false),
         InfixToken[Id](
-          CallArrowToken[Id](Some(toAb("Op")), toName("identity"), toNumber(4) :: Nil),
+          CallArrowToken[Id](Some(toNamedType("Op")), toName("identity"), toNumber(4) :: Nil),
           toNumber(5),
           Add
         )

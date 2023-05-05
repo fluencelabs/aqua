@@ -2,7 +2,6 @@ package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
 import aqua.raw.value.{FunctorRaw, IntoCopyRaw, IntoFieldRaw, IntoIndexRaw, PropertyRaw, ValueRaw}
-import aqua.semantics.lsp.{TokenDef, TokenTypeInfo}
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{ReportError, StackInterpreter}
 import aqua.types.{
@@ -10,11 +9,9 @@ import aqua.types.{
   ArrowType,
   BoxType,
   LiteralType,
-  NamedType,
   OptionType,
   ProductType,
   ScalarType,
-  ScopeType,
   StreamType,
   StructType,
   Type
@@ -40,19 +37,15 @@ class TypesInterpreter[S[_], X](implicit
 ) extends TypesAlgebra[S, State[X, *]] {
 
   val stack = new StackInterpreter[S, X, TypesState[S], TypesState.Frame[S]](
-    GenLens[TypesState[S]](_.funcStack)
-  )
-
-  val defStack = new StackInterpreter[S, X, TypesState[S], TypesState.DefFrame[S]](
-    GenLens[TypesState[S]](_.defStack)
+    GenLens[TypesState[S]](_.stack)
   )
 
   import stack.*
 
   type ST[A] = State[X, A]
 
-  val resolver: (TypesState[S], CustomTypeToken[S]) => Option[
-    (Type, List[(Token[S], CustomTypeToken[S])])
+  val resolver: (TypesState[S], NamedTypeToken[S]) => Option[
+    (Type, List[(Token[S], NamedTypeToken[S])])
   ] = { (state, ctt) =>
     state.strict.get(ctt.value).map(t => (t, state.definitions.get(ctt.value).toList.map(ctt -> _)))
   }
@@ -61,11 +54,10 @@ class TypesInterpreter[S[_], X](implicit
     getState.map(st => TypesStateHelper.resolveTypeToken(token, st, resolver)).flatMap {
       case Some(t) =>
         val (tt, tokens) = t
-        locations
-          .addTypeLocations(tokens.map { case (t, td) =>
-            (t, TokenDef(Some(td)))
-          })
-          .map(_ => Some(tt))
+        val tokensLocs = tokens.map { case (t, n) =>
+          n.value -> t
+        }
+        locations.pointLocations(tokensLocs).map(_ => Some(tt))
       case None => report(token, s"Unresolved type").as(None)
     }
 
@@ -73,11 +65,10 @@ class TypesInterpreter[S[_], X](implicit
     getState.map(st => TypesStateHelper.resolveArrowDef(arrowDef, st, resolver)).flatMap {
       case Valid(t) =>
         val (tt, tokens) = t
-        locations
-          .addTypeLocations(tokens.map { case (t, td) =>
-            (t, TokenDef(Some(td)))
-          })
-          .map(_ => Some(tt))
+        val tokensLocs = tokens.map { case (t, n) =>
+            n.value -> t
+          }
+        locations.pointLocations(tokensLocs).map(_ => Some(tt))
       case Invalid(errs) =>
         errs
           .foldLeft[ST[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
@@ -85,35 +76,26 @@ class TypesInterpreter[S[_], X](implicit
           }
     }
 
-  override def defineDef(name: Name[S], `type`: Type): State[X, Boolean] =
-    getState.map(_.fields.get(name.value)).flatMap {
-      case None =>
-        modify(st => st.copy(fields = st.fields.updated(name.value, name -> `type`)))
-          .as(true)
+  override def defineDataType(
+    name: NamedTypeToken[S],
+    fields: NonEmptyMap[String, Type]
+  ): State[X, Option[StructType]] =
+    getState.map(_.definitions.get(name.value)).flatMap {
+      case Some(n) if n == name => State.pure(None)
       case Some(_) =>
-        report(name, s"Cannot define field `${name.value}`, it was already defined above")
-          .as(false)
+        report(name, s"Type `${name.value}` was already defined").as(None)
+      case None =>
+        val structType = StructType(name.value, fields)
+        modify { st =>
+          st.copy(
+            strict = st.strict.updated(name.value, structType),
+            definitions = st.definitions.updated(name.value, name)
+          )
+        }
+          .as(Option(structType))
     }
 
-  override def purgeDefs(
-    token: CustomTypeToken[S]
-  ): State[X, Option[NonEmptyMap[String, Type]]] = {
-    getState.map(_.defs).flatMap { defs =>
-      NonEmptyMap.fromMap(SortedMap.from(defs.view.mapValues(_._2))) match {
-        case Some(fs) =>
-          modify { st =>
-            val tokens = st.defsToken
-            val updated = tokens ++ defs.toList.map { case (n, (tt, t)) =>
-              (token.value + "." + n, TokenTypeInfo(Some(tt), t))
-            }
-            st.copy(defs = Map.empty, defsToken = updated)
-          }.map(_ => Some(fs))
-        case None => report(token, "Cannot define a data type without fields").as(None)
-      }
-    }
-  }
-
-  override def defineType(name: CustomTypeToken[S], target: Type): State[X, Boolean] =
+  override def defineAlias(name: NamedTypeToken[S], target: Type): State[X, Boolean] =
     getState.map(_.definitions.get(name.value)).flatMap {
       case Some(n) if n == name => State.pure(false)
       case Some(_) => report(name, s"Type `${name.value}` was already defined").as(false)
@@ -123,24 +105,19 @@ class TypesInterpreter[S[_], X](implicit
             strict = st.strict.updated(name.value, target),
             definitions = st.definitions.updated(name.value, name)
           )
-        ).as(true)
+        ).flatMap(_ => locations.addToken(name.value, name)).as(true)
     }
 
   override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[PropertyRaw]] = {
     rootT match {
-      case nt: NamedType =>
-        nt.fields(op.value).fold(
+      case StructType(name, fields) =>
+        fields(op.value).fold(
           report(
             op,
-            s"Field `${op.value}` not found in type `${nt.name}`, available: ${nt.fields.toNel.toList.map(_._1).mkString(", ")}"
+            s"Field `${op.value}` not found in type `$name`, available: ${fields.toNel.toList.map(_._1).mkString(", ")}"
           ).as(None)
         ) { t =>
-          getState.flatMap { st =>
-            (st.defsToken.get(nt.name + "." + op.value) match {
-              case Some(td) => locations.addTypeLocation(op, td).map(_ => st)
-              case None => State.pure(st)
-            }).as(Some(IntoFieldRaw(op.value, t)))
-          }
+            locations.pointFieldLocation(name, op.value, op).as(Some(IntoFieldRaw(op.value, t)))
         }
       case t =>
         t.properties
@@ -148,45 +125,9 @@ class TypesInterpreter[S[_], X](implicit
           .fold(
             report(
               op,
-              s"Expected Struct or Scope type to resolve a field '${op.value}' or a type with this property. Got: $rootT"
+              s"Expected Struct type to resolve a field '${op.value}' or a type with this property. Got: $rootT"
             ).as(None)
           )(t => State.pure(Some(FunctorRaw(op.value, t))))
-    }
-  }
-
-  override def resolveArrow(
-    rootT: Type,
-    op: IntoArrow[S],
-    arguments: List[ValueRaw]
-  ): State[X, Option[PropertyRaw]] = {
-    rootT match {
-      case ScopeType(name, fieldsAndArrows) =>
-        fieldsAndArrows(op.name.value).fold(
-          report(
-            op,
-            s"Arrow `${op.name.value}` not found in type `$name`, available: ${fieldsAndArrows.toNel.toList.map(_._1).mkString(", ")}"
-          ).as(None)
-        ) { t =>
-          report(
-            op,
-            s"Undefined"
-          ).as(None)
-        /*getState.flatMap { st =>
-            (st.fieldsToken.get(name + "." + op.value) match {
-              case Some(td) => locations.addTypeLocation(op, td).map(_ => st)
-              case None => State.pure(st)
-            }).as(Some(IntoFieldRaw(op.value, t)))
-          }*/
-        }
-      case t =>
-        t.properties
-          .get(op.name.value)
-          .fold(
-            report(
-              op,
-              s"Expected Scope type to resolve an arrow '${op.name.value}' or a type with this property. Got: $rootT"
-            ).as(None)
-          )(t => State.pure(Some(FunctorRaw(op.name.value, t))))
 
     }
   }
@@ -263,11 +204,7 @@ class TypesInterpreter[S[_], X](implicit
     if (expected.acceptsValueOf(givenType)) State.pure(true)
     else {
       (expected, givenType) match {
-        case (lnt: NamedType, rnt: NamedType) =>
-          val valueFields = lnt.fields
-          val typeFields = rnt.fields
-          println("value fields: " + valueFields)
-          println("type fields: " + typeFields)
+        case (StructType(n, valueFields), StructType(_, typeFields)) =>
           // value can have more fields
           if (valueFields.length < typeFields.length) {
             report(
@@ -279,7 +216,7 @@ class TypesInterpreter[S[_], X](implicit
               typeFields.lookup(name) match {
                 case Some(t) =>
                   val nextToken = extractToken(token match {
-                    case NamedValueToken(_, fields) =>
+                    case StructValueToken(_, fields) =>
                       fields.lookup(name).getOrElse(token)
                     case t => t
                   })
@@ -436,9 +373,4 @@ class TypesInterpreter[S[_], X](implicit
         )
       } else Right(frame -> frame.retVals.getOrElse(Nil))
     ) <* stack.endScope
-
-  override def beginDefScope(token: Token[S]): SX[Unit] =
-    defStack.beginScope(TypesState.DefFrame[S](token))
-
-  override def endDefScope(): SX[Unit] = defStack.endScope
 }

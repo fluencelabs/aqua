@@ -12,15 +12,15 @@ class ServiceExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "on" should "be parsed" in {
     parseService("service Local(\"local\")") should be(
-      ServiceExpr[Id](toAb("Local"), Some(toStr("local")))
+      ServiceExpr[Id](toNamedType("Local"), Some(toStr("local")))
     )
 
     parseService("service Local(1)") should be(
-      ServiceExpr[Id](toAb("Local"), Some(toNumber(1)))
+      ServiceExpr[Id](toNamedType("Local"), Some(toNumber(1)))
     )
 
     parseService("service LocalBr") should be(
-      ServiceExpr[Id](toAb("LocalBr"), None)
+      ServiceExpr[Id](toNamedType("LocalBr"), None)
     )
   }
 }

@@ -1,10 +1,9 @@
 package aqua.lsp
 
-import aqua.parser.lexer.{Ability, LiteralToken, Name, Token}
+import aqua.parser.lexer.{Ability, LiteralToken, Name, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
-import aqua.types.ArrowType
+import aqua.types.{ArrowType, Type}
 import cats.{Monoid, Semigroup}
-import aqua.semantics.lsp.{TokenArrowInfo, TokenType, TokenInfo}
 import cats.syntax.monoid.*
 import RawContext.semiRC
 import aqua.semantics.header.{Picker, PickerOps}
@@ -12,11 +11,11 @@ import aqua.semantics.header.{Picker, PickerOps}
 // Context with info that necessary for language server
 case class LspContext[S[_]](
   raw: RawContext,
-  abDefinitions: Map[String, (Ability[S], List[(Name[S], ArrowType)])] =
-    Map.empty[String, (Ability[S], List[(Name[S], ArrowType)])],
-  rootArrows: Map[String, TokenArrowInfo[S]] = Map.empty[String, TokenArrowInfo[S]],
-  constants: Map[String, TokenType[S]] = Map.empty[String, TokenType[S]],
-  locations: List[(Token[S], TokenInfo[S])] = Nil,
+  abDefinitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
+  rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
+  constants: Map[String, Type] = Map.empty[String, Type],
+  tokens: Map[String, Token[S]] = Map.empty[String, Token[S]],
+  locations: List[(Token[S], Token[S])] = Nil,
   importTokens: List[LiteralToken[S]] = Nil
 )
 
@@ -31,7 +30,8 @@ object LspContext {
         abDefinitions = x.abDefinitions ++ y.abDefinitions,
         rootArrows = x.rootArrows ++ y.rootArrows,
         constants = x.constants ++ y.constants,
-        locations = x.locations ++ y.locations
+        locations = x.locations ++ y.locations,
+        tokens = x.tokens ++ y.tokens
       )
 
   trait Implicits[S[_]] {
@@ -70,7 +70,11 @@ object LspContext {
     override def declares(ctx: LspContext[S]): Set[String] = ops(ctx).declares
 
     override def setAbility(ctx: LspContext[S], name: String, ctxAb: LspContext[S]): LspContext[S] =
-      ctx.copy(raw = ops(ctx).setAbility(name, ctxAb.raw))
+      val prefix = name + "."
+      ctx.copy(
+        raw = ops(ctx).setAbility(name, ctxAb.raw),
+        tokens = ctx.tokens ++ ctxAb.tokens.map(kv => (prefix + kv._1) -> kv._2)
+      )
 
     override def setModule(
       ctx: LspContext[S],
@@ -91,6 +95,16 @@ object LspContext {
       rename: Option[String],
       declared: Boolean
     ): Option[LspContext[S]] =
+      // rename tokens from one context with prefix addition
+      val newTokens = rename.map { renameStr =>
+        ctx.tokens.map {
+          case (tokenName, token) if tokenName.startsWith(name) =>
+            tokenName.replaceFirst(name, renameStr) -> token
+          case kv => kv
+        }
+      }.getOrElse(ctx.tokens)
+
+
       ops(ctx)
         .pick(name, rename, declared)
         .map(rc =>
@@ -101,16 +115,15 @@ object LspContext {
             rootArrows =
               ctx.rootArrows.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
             constants =
-              ctx.constants.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t))
+              ctx.constants.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
+            tokens = newTokens
           )
         )
 
-    override def pickHeader(ctx: LspContext[S]): LspContext[S] =
-      ctx.copy(raw = ops(ctx).pickHeader)
+    override def pickHeader(ctx: LspContext[S]): LspContext[S] = ctx.copy(raw = ops(ctx).pickHeader)
 
     override def pickDeclared(
       ctx: LspContext[S]
-    )(implicit semi: Semigroup[LspContext[S]]): LspContext[S] =
-      ctx.copy(raw = ops(ctx).pickDeclared)
+    )(implicit semi: Semigroup[LspContext[S]]): LspContext[S] = ctx.copy(raw = ops(ctx).pickDeclared)
   }
 }

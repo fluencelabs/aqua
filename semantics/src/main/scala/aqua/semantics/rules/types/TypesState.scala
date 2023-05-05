@@ -5,7 +5,7 @@ import aqua.parser.lexer.{
   ArrayTypeToken,
   ArrowTypeToken,
   BasicTypeToken,
-  CustomTypeToken,
+  NamedTypeToken,
   IntoField,
   IntoIndex,
   Name,
@@ -32,14 +32,12 @@ import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
 import aqua.raw.RawContext
-import aqua.semantics.lsp.{TokenInfo, TokenType, TokenTypeInfo}
 
 case class TypesState[S[_]](
+  fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],
   strict: Map[String, Type] = Map.empty[String, Type],
-  definitions: Map[String, CustomTypeToken[S]] = Map.empty[String, CustomTypeToken[S]],
-  defsToken: Map[String, TokenTypeInfo[S]] = Map.empty[String, TokenTypeInfo[S]],
-  funcStack: List[TypesState.Frame[S]] = Nil,
-  defStack: List[TypesState.Frame[S]] = Nil
+  definitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
+  stack: List[TypesState.Frame[S]] = Nil
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
 }
@@ -53,9 +51,9 @@ object TypesStateHelper {
     state: TypesState[S],
     resolver: (
       TypesState[S],
-      CustomTypeToken[S]
-    ) => Option[(Type, List[(Token[S], CustomTypeToken[S])])]
-  ): Option[(Type, List[(Token[S], CustomTypeToken[S])])] =
+      NamedTypeToken[S]
+    ) => Option[(Type, List[(Token[S], NamedTypeToken[S])])]
+  ): Option[(Type, List[(Token[S], NamedTypeToken[S])])] =
     tt match {
       case TopBottomToken(_, isTop) =>
         Option((if (isTop) TopType else BottomType, Nil))
@@ -71,9 +69,8 @@ object TypesStateHelper {
         resolveTypeToken(dtt, state, resolver).collect { case (it: DataType, t) =>
           (OptionType(it), t)
         }
-      case ctt: CustomTypeToken[S] =>
+      case ctt: NamedTypeToken[S] =>
         resolver(state, ctt)
-      //        strict.get(ctt.value).map(t => (t, definitions.get(ctt.value).toList.map(ctt -> _)))
       case btt: BasicTypeToken[S] => Some((btt.value, Nil))
       case ArrowTypeToken(_, args, res) =>
         val strictArgs =
@@ -97,16 +94,16 @@ object TypesStateHelper {
     state: TypesState[S],
     resolver: (
       TypesState[S],
-      CustomTypeToken[S]
-    ) => Option[(Type, List[(Token[S], CustomTypeToken[S])])]
-  ): ValidatedNec[(Token[S], String), (ArrowType, List[(Token[S], CustomTypeToken[S])])] = {
+      NamedTypeToken[S]
+    ) => Option[(Type, List[(Token[S], NamedTypeToken[S])])]
+  ): ValidatedNec[(Token[S], String), (ArrowType, List[(Token[S], NamedTypeToken[S])])] = {
     val resType = arrowTypeToken.res.map(resolveTypeToken(_, state, resolver))
 
     NonEmptyChain
       .fromChain(Chain.fromSeq(arrowTypeToken.res.zip(resType).collect { case (dt, None) =>
         dt -> "Cannot resolve the result type"
       }))
-      .fold[ValidatedNec[(Token[S], String), (ArrowType, List[(Token[S], CustomTypeToken[S])])]] {
+      .fold[ValidatedNec[(Token[S], String), (ArrowType, List[(Token[S], NamedTypeToken[S])])]] {
         val (errs, argTypes) = arrowTypeToken.args.map { (argName, tt) =>
           resolveTypeToken(tt, state, resolver)
             .toRight(tt -> s"Type unresolved")
@@ -115,12 +112,12 @@ object TypesStateHelper {
           .foldLeft[
             (
               Chain[(Token[S], String)],
-              Chain[(Option[String], (Type, List[(Token[S], CustomTypeToken[S])]))]
+              Chain[(Option[String], (Type, List[(Token[S], NamedTypeToken[S])]))]
             )
           ](
             (
               Chain.empty,
-              Chain.empty[(Option[String], (Type, List[(Token[S], CustomTypeToken[S])]))]
+              Chain.empty[(Option[String], (Type, List[(Token[S], NamedTypeToken[S])]))]
             )
           ) {
             case ((errs, argTypes), Right(at)) => (errs, argTypes.append(at))
@@ -131,7 +128,7 @@ object TypesStateHelper {
           .fromChain(errs)
           .fold[ValidatedNec[
             (Token[S], String),
-            (ArrowType, List[(Token[S], CustomTypeToken[S])])
+            (ArrowType, List[(Token[S], NamedTypeToken[S])])
           ]](
             Valid {
               val (labels, types) = argTypes.toList.unzip

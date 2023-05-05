@@ -13,19 +13,19 @@ class AbilityIdExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "abilities" should "be parsed" in {
     parseAbId("Ab a") should be(
-      AbilityIdExpr[Id](toAb("Ab"), toVar("a"))
+      AbilityIdExpr[Id](toNamedType("Ab"), toVar("a"))
     )
 
     parseAbId("Ab \"a\"") should be(
-      AbilityIdExpr[Id](toAb("Ab"), LiteralToken[Id]("\"a\"", LiteralType.string))
+      AbilityIdExpr[Id](toNamedType("Ab"), LiteralToken[Id]("\"a\"", LiteralType.string))
     )
 
     parseAbId("Ab 1") should be(
-      AbilityIdExpr[Id](toAb("Ab"), LiteralToken[Id]("1", LiteralType.number))
+      AbilityIdExpr[Id](toNamedType("Ab"), LiteralToken[Id]("1", LiteralType.number))
     )
 
     parseAbId("Ab a.id") should be(
-      AbilityIdExpr[Id](toAb("Ab"), toVarLambda("a", List("id")))
+      AbilityIdExpr[Id](toNamedType("Ab"), toVarLambda("a", List("id")))
     )
   }
 
