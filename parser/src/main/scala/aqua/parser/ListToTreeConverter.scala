@@ -13,11 +13,15 @@ import cats.data.{NonEmptyChain, ValidatedNec}
 import cats.data.Validated.*
 import aqua.parser.Expr.LazyLexem
 
+/**
+ * @brief Converts a list of lines to a tree
+ */
 final case class ListToTreeConverter[F[_]](
-  currentBlock: ListToTreeConverter.Block[F],
-  stack: List[ListToTreeConverter.Block[F]] = Nil,
-  errors: Chain[ParserError[F]] = Chain.empty[ParserError[F]]
-)(using Comonad[F], LiftParser[F]) {
+  currentBlock: ListToTreeConverter.Block[F], // Current block data
+  stack: List[ListToTreeConverter.Block[F]] = Nil, // Stack of opened blocks
+  errors: Chain[ParserError[F]] = Chain.empty[ParserError[F]] // Errors
+)(using Comonad[F]) {
+  // Import helper functions
   import ListToTreeConverter.*
 
   private def addError(error: ParserError[F]): ListToTreeConverter[F] =
@@ -36,6 +40,9 @@ final case class ListToTreeConverter[F[_]](
         Some(copy(currentBlock = prevBlock.add(currentBlock.close), stack = tail))
     }
 
+  /**
+   * @brief Method to call on each new line
+   */
   @scala.annotation.tailrec
   def next(indent: F[String], line: Tree[F]): ListToTreeConverter[F] =
     if (indentValue(indent) > indentValue(currentBlock.indent)) {
@@ -57,10 +64,14 @@ final case class ListToTreeConverter[F[_]](
 
       emptyChecked.popBlock match {
         case Some(blockPopped) => blockPopped.next(indent, line)
+        // This should not happen because of the way of parsing
         case _ => emptyChecked.addError(unexpectedIndentError(indent))
       }
     }
 
+  /**
+   * @brief Produce result of the conversion
+   */
   @scala.annotation.tailrec
   def result: ValidatedNec[ParserError[F], Tree[F]] =
     popBlock match {
@@ -77,15 +88,24 @@ final case class ListToTreeConverter[F[_]](
 
 object ListToTreeConverter {
 
-  def apply[F[_]](open: Tree[F])(using Comonad[F], LiftParser[F]): ListToTreeConverter[F] =
+  /**
+   * @brief Constructs a converter from block opening line
+   */
+  def apply[F[_]](open: Tree[F])(using Comonad[F]): ListToTreeConverter[F] =
     ListToTreeConverter(Block(open.head.token.as(""), open))
 
+  /**
+   * @brief Data associated with a block
+   */
   final case class Block[F[_]](
-    indent: F[String],
-    block: Tree[F],
-    content: Chain[Tree[F]] = Chain.empty[Tree[F]]
+    indent: F[String], // Indentation of the block opening line
+    block: Tree[F], // Block opening line
+    content: Chain[Tree[F]] = Chain.empty[Tree[F]] // Children of the block
   ) {
 
+    /**
+     * @brief Check if @p expr can be added to this block
+     */
     def canAdd(expr: Expr[F]): Boolean = {
       def checkFor(tree: Tree[F]): Boolean =
         tree.head.companion match {
@@ -102,12 +122,25 @@ object ListToTreeConverter {
       checkFor(block)
     }
 
+    /**
+     * @brief Add @p child to the block
+     */
     def add(child: Tree[F]): Block[F] =
       copy(content = content :+ child)
 
+    /**
+     * @brief Check if the block has no children
+     */
     def isEmpty: Boolean = content.isEmpty
 
+    /**
+     * @brief Create a tree corresponding to the block
+     */
     def close: Tree[F] = {
+
+      /**
+       * @breif Set @p children as children of the rightmost expression in @p tree
+       */
       def setLast(tree: Tree[F], children: Chain[Tree[F]]): Tree[F] =
         tree.copy(tail = tree.tail.map {
           case init :== last =>
@@ -120,6 +153,7 @@ object ListToTreeConverter {
     }
   }
 
+  // TODO: This way of counting indent does not play way with mixed tabs and spaces
   private def indentValue[F[_]](indent: F[String])(using Comonad[F]): Int =
     indent.extract.length
 
