@@ -153,7 +153,7 @@ object ListToTreeConverter {
     }
   }
 
-  // TODO: This way of counting indent does not play way with mixed tabs and spaces
+  // TODO(LNG-150): This way of counting indent does not play way with mixed tabs and spaces
   private def indentValue[F[_]](indent: F[String])(using Comonad[F]): Int =
     indent.extract.length
 
