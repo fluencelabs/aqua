@@ -1,9 +1,22 @@
-module Import3 declares *
+service SomeService(""):
+  getStr(s: string) -> string
 
-export foo_bar
+scope SomeScope:
+  var1: string
+  someArrow(s: string) -> string
+  someUnit()
 
-use "export.aqua"
+func funcStr(s: string) -> string:
+  strInFunc <- SomeService.getStr(s)
+  <- strInFunc
 
-func foo_bar() -> string, string:
-  z <- FooBars.foo()
-  <- z, FooBars.DECLARE_CONST2
+func unit():
+  funcStr("")
+
+func handleScope() -> string:
+  -- g <- funcStr("first literal")
+  newScope = SomeScope(var1 = "123", someArrow = funcStr, someUnit = unit)
+  updated = SomeScope(var1 = newScope.someArrow(""), someArrow = newScope.someArrow, someUnit = newScope.someUnit)
+  b = updated.var1
+  a = updated.someArrow("some_literal")
+  <- a

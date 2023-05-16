@@ -26,7 +26,8 @@ case class InliningState(
   noNames: Set[String] = Set.empty,
   resolvedExports: Map[String, ValueModel] = Map.empty,
   resolvedArrows: Map[String, FuncArrow] = Map.empty,
-  instructionCounter: Int = 0
+  instructionCounter: Int = 0,
+  scopes: Map[String, ScopeLinks] = Map.empty
 )
 
 object InliningState {
@@ -42,5 +43,8 @@ object InliningState {
 
   given Exports[InliningState] =
     Exports.Simple.transformS(_.resolvedExports, (acc, ex) => acc.copy(resolvedExports = ex))
+
+  given Scopes[InliningState] =
+    Scopes.Simple.transformS(s => ScopeState(s.scopes, s.resolvedExports, s.resolvedArrows), (acc, ex) => acc.copy(scopes = ex.links))
 
 }

@@ -2,18 +2,18 @@ package aqua.model.inline.raw
 
 import aqua.model.*
 import aqua.model.inline.Inline
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.{Arrows, Exports, Mangler, Scopes}
 import aqua.raw.value.{ApplyGateRaw, LiteralRaw, VarRaw}
 import cats.data.State
 import cats.data.Chain
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.types.{CanonStreamType, ScalarType, StreamType, ArrayType}
+import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
 import cats.syntax.monoid.*
 import scribe.Logging
 
 object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports: Arrows: Scopes](
     afr: ApplyGateRaw,
     propertyAllowed: Boolean
   ): State[S, (ValueModel, Inline)] =

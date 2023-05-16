@@ -85,11 +85,19 @@ case class CallArrowToken[F[_]: Comonad](
 
 object CallArrowToken {
 
+  def callBraces(): P[(Name[S], List[ValueToken[S]])] = P
+    .defer(
+      Name.p
+        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
+          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`)
+    )
+    .withContext(
+      "Missing braces '()' after the function call"
+    )
+
   val callArrow: P[CallArrowToken[Span.S]] =
     ((NamedTypeToken.dotted <* `.`).?.with1 ~
-      (Name.p
-        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
-          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
+      callBraces()
         .withContext(
           "Missing braces '()' after the function call"
         )).map { case (ab, (fn, args)) =>
@@ -97,26 +105,26 @@ object CallArrowToken {
     }
 }
 
-case class StructValueToken[F[_]: Comonad](
+case class NamedValueToken[F[_]: Comonad](
   typeName: NamedTypeToken[F],
   fields: NonEmptyMap[String, ValueToken[F]]
 ) extends ValueToken[F] {
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): StructValueToken[K] =
+  override def mapK[K[_]: Comonad](fk: F ~> K): NamedValueToken[K] =
     copy(typeName.mapK(fk), fields.map(_.mapK(fk)))
 
   override def as[T](v: T): F[T] = typeName.as(v)
 }
 
-object StructValueToken {
+object NamedValueToken {
 
-  val dataValue: P[StructValueToken[Span.S]] =
+  val dataValue: P[NamedValueToken[Span.S]] =
     (`Class`.lift ~ namedArgs)
       .withContext(
         "Missing braces '()' after the struct type"
       )
       .map { case (dn, args) =>
-        StructValueToken(NamedTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
+        NamedValueToken(NamedTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
       }
 }
 
@@ -195,7 +203,7 @@ object InfixToken {
       P.defer(
         CollectionToken.collection
       ) ::
-      P.defer(StructValueToken.dataValue).backtrack ::
+      P.defer(NamedValueToken.dataValue).backtrack ::
       P.defer(CallArrowToken.callArrow).backtrack ::
       P.defer(brackets(InfixToken.mathExpr)) ::
       varProperty ::

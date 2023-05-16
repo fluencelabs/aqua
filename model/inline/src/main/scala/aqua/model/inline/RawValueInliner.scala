@@ -1,11 +1,11 @@
 package aqua.model.inline
 
-import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
+import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler, Scopes}
 import aqua.model.*
-import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyGateRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner}
+import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyGateRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner, MakeScopeRawInliner}
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{ArrayType, OptionType, StreamType}
+import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
 import cats.syntax.traverse.*
 import cats.syntax.monoid.*
 import cats.syntax.functor.*
@@ -19,7 +19,7 @@ object RawValueInliner extends Logging {
 
   import Inline.*
 
-  private[inline] def unfold[S: Mangler: Exports: Arrows](
+  private[inline] def unfold[S: Mangler: Exports: Arrows: Scopes](
     raw: ValueRaw,
     propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Inline)] =
@@ -41,6 +41,9 @@ object RawValueInliner extends Logging {
 
       case dr: MakeStructRaw =>
         MakeStructRawInliner(dr, propertiesAllowed)
+
+      case sr: ScopeRaw =>
+        MakeScopeRawInliner(sr, propertiesAllowed)
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)
@@ -75,7 +78,7 @@ object RawValueInliner extends Logging {
           }
     }
 
-  private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
+  private[inline] def inlineToTree[S: Mangler: Exports: Arrows: Scopes](
     inline: Inline
   ): State[S, List[OpModel.Tree]] = {
     inline.flattenValues.toList.traverse { case (name, v) =>
@@ -94,7 +97,7 @@ object RawValueInliner extends Logging {
     }
   }
 
-  private[inline] def toModel[S: Mangler: Exports: Arrows](
+  private[inline] def toModel[S: Mangler: Exports: Arrows: Scopes](
     unfoldF: State[S, (ValueModel, Inline)]
   ): State[S, (ValueModel, Option[OpModel.Tree])] =
     for {
@@ -109,7 +112,7 @@ object RawValueInliner extends Logging {
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops.filterNot(_ == EmptyModel.leaf))
 
-  def collectionToModel[S: Mangler: Exports: Arrows](
+  def collectionToModel[S: Mangler: Exports: Arrows: Scopes](
     value: CollectionRaw,
     assignTo: Option[String]
   ): State[S, (ValueModel, Option[OpModel.Tree])] = {
@@ -117,7 +120,7 @@ object RawValueInliner extends Logging {
     toModel(CollectionRawInliner.unfoldCollection(value, assignTo))
   }
 
-  def valueToModel[S: Mangler: Exports: Arrows](
+  def valueToModel[S: Mangler: Exports: Arrows: Scopes](
     value: ValueRaw,
     propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Option[OpModel.Tree])] = {
@@ -125,7 +128,7 @@ object RawValueInliner extends Logging {
     toModel(unfold(value, propertiesAllowed))
   }
 
-  def valueListToModel[S: Mangler: Exports: Arrows](
+  def valueListToModel[S: Mangler: Exports: Arrows: Scopes](
     values: List[ValueRaw]
   ): State[S, List[(ValueModel, Option[OpModel.Tree])]] =
     values.traverse(valueToModel(_))
@@ -134,7 +137,7 @@ object RawValueInliner extends Logging {
    * Unfold all arguments and make CallModel
    * @param flatStreamArguments canonicalize and flatten all stream arguments if true
    */
-  def callToModel[S: Mangler: Exports: Arrows](
+  def callToModel[S: Mangler: Exports: Arrows: Scopes](
     call: Call,
     flatStreamArguments: Boolean
   ): State[S, (CallModel, Option[OpModel.Tree])] =

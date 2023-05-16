@@ -4,7 +4,7 @@ import aqua.model.inline.Inline.parDesugarPrefixOpt
 import aqua.model.{CallServiceModel, FuncArrow, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
 import aqua.model.inline.RawValueInliner.{callToModel, valueToModel}
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.{Arrows, Exports, Mangler, Scopes}
 import aqua.raw.ops.Call
 import aqua.types.ArrowType
 import aqua.raw.value.CallArrowRaw
@@ -15,7 +15,7 @@ import scala.collection.immutable.ListMap
 
 object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
 
-  private[inline] def unfoldArrow[S: Mangler: Exports: Arrows](
+  private[inline] def unfoldArrow[S: Mangler: Exports: Arrows: Scopes](
     value: CallArrowRaw,
     exportTo: List[Call.Export]
   ): State[S, (List[ValueModel], Inline)] = Exports[S].exports.flatMap { exports =>
@@ -48,7 +48,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     }
   }
 
-  private def resolveFuncArrow[S: Mangler: Exports: Arrows](fn: FuncArrow, call: Call) = {
+  private def resolveFuncArrow[S: Mangler: Exports: Arrows: Scopes](fn: FuncArrow, call: Call) = {
     logger.trace(Console.YELLOW + s"Call arrow ${fn.funcName}" + Console.RESET)
     callToModel(call, false).flatMap { case (cm, p) =>
       ArrowInliner
@@ -62,7 +62,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     }
   }
 
-  private def resolveArrow[S: Mangler: Exports: Arrows](funcName: String, call: Call) =
+  private def resolveArrow[S: Mangler: Exports: Arrows: Scopes](funcName: String, call: Call) =
     Arrows[S].arrows.flatMap(arrows =>
       arrows.get(funcName) match {
         case Some(fn) =>
@@ -95,7 +95,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
       }
     )
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports: Arrows: Scopes](
     raw: CallArrowRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] =

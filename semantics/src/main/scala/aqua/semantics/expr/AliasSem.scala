@@ -13,7 +13,7 @@ class AliasSem[S[_]](val expr: AliasExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit T: TypesAlgebra[S, Alg]): Prog[Alg, Raw] =
     T.resolveType(expr.target).flatMap {
-      case Some(t) => T.defineType(expr.name, t) as (TypeRaw(expr.name.value, t): Raw)
+      case Some(t) => T.defineAlias(expr.name, t) as (TypeRaw(expr.name.value, t): Raw)
       case None => Applicative[Alg].pure(Raw.error("Alias type unresolved"))
     }
 }

@@ -12,10 +12,10 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveArrowDef(arrowDef: ArrowTypeToken[S]): Alg[Option[ArrowType]]
 
-  def defineDataType(
+  def defineNamedType(
     name: NamedTypeToken[S],
-    fields: NonEmptyMap[String, Type]
-  ): Alg[Option[StructType]]
+    `type`: Type
+  ): Alg[Boolean]
 
   def defineAlias(name: NamedTypeToken[S], target: Type): Alg[Boolean]
 
@@ -27,6 +27,8 @@ trait TypesAlgebra[S[_], Alg[_]] {
     fields: NonEmptyMap[String, ValueRaw]
   ): Alg[Option[PropertyRaw]]
   def resolveField(rootT: Type, op: IntoField[S]): Alg[Option[PropertyRaw]]
+
+  def resolveArrow(rootT: Type, op: IntoArrow[S], arguments: List[ValueRaw]): Alg[Option[PropertyRaw]]
 
   def ensureValuesComparable(token: Token[S], left: Type, right: Type): Alg[Boolean]
 

@@ -47,6 +47,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case op: IntoField[S] =>
         T.resolveField(rootType, op)
       case op: IntoArrow[S] =>
+        println("rootType: " + rootType)
         op.arguments
           .map(valueToRaw)
           .sequence
@@ -88,10 +89,10 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                 (Some(t) -> Chain.empty).pure[Alg]
               ) { case (acc, op) =>
                 acc.flatMap {
-                  // Some(tt) means that the previous property op was resolved successfully
-                  case (Some(tt), prop) =>
+                  // Some(rootType) means that the previous property op was resolved successfully
+                  case (Some(rootType), prop) =>
                     // Resolve a single property
-                    resolveSingleProperty(tt, op).map {
+                    resolveSingleProperty(rootType, op).map {
                       // Property op resolved, add it to accumulator and update the last known type
                       case Some(p) => (Some(p.`type`), prop :+ p)
                       // Property op is not resolved, it's an error, stop iterations
@@ -136,9 +137,10 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                         Some(MakeStructRaw(rf, struct))
                       )
                     case scope@ScopeType(_, _) =>
+                      println("scope raws: " + rf)
                       (
                         ScopeType(typeName.value, rf.map(_.`type`)),
-                        Some(MakeScopeRaw(rf, scope))
+                        Some(ScopeRaw(rf, scope))
                       )
                   }
 

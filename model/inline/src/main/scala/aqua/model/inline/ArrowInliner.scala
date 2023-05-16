@@ -1,6 +1,6 @@
 package aqua.model.inline
 
-import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
+import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler, Scopes}
 import aqua.model.*
 import aqua.raw.ops.RawTag
 import aqua.types.ArrowType
@@ -18,14 +18,14 @@ import scribe.Logging
  */
 object ArrowInliner extends Logging {
 
-  def callArrow[S: Exports: Arrows: Mangler](
+  def callArrow[S: Exports: Arrows: Mangler: Scopes](
     arrow: FuncArrow,
     call: CallModel
   ): State[S, OpModel.Tree] =
     callArrowRet(arrow, call).map(_._1)
 
   // Apply a callable function, get its fully resolved body & optional value, if any
-  private def inline[S: Mangler: Arrows: Exports](
+  private def inline[S: Mangler: Arrows: Exports: Scopes](
     fn: FuncArrow,
     call: CallModel
   ): State[S, (OpModel.Tree, List[ValueModel])] =
@@ -185,7 +185,7 @@ object ArrowInliner extends Logging {
       // Result could be renamed; take care about that
     } yield (tree, fn.ret.map(_.renameVars(shouldRename ++ returnedArrowsShouldRename)))
 
-  private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
+  private[inline] def callArrowRet[S: Exports: Arrows: Mangler: Scopes](
     arrow: FuncArrow,
     call: CallModel
   ): State[S, (OpModel.Tree, List[ValueModel])] =

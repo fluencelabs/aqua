@@ -19,6 +19,15 @@ case class IntoFieldRaw(name: String, `type`: Type) extends PropertyRaw {
   override def varNames: Set[String] = Set.empty
 }
 
+case class IntoArrowRaw(name: String, arrowType: Type, arguments: List[ValueRaw]) extends PropertyRaw {
+
+  override def `type`: Type = arrowType
+  
+  override def map(f: ValueRaw => ValueRaw): PropertyRaw = this
+
+  override def varNames: Set[String] = Set.empty
+}
+
 case class IntoCopyRaw(`type`: StructType, fields: NonEmptyMap[String, ValueRaw]) extends PropertyRaw {
   override def map(f: ValueRaw => ValueRaw): IntoCopyRaw = copy(fields = fields.map(f))
 

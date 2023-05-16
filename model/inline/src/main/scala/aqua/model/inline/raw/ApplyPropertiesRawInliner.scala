@@ -24,12 +24,13 @@ import aqua.model.{
 import aqua.model.inline.Inline
 import aqua.model.inline.{ParMode, SeqMode}
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.state.{Arrows, Exports, Mangler, Scopes}
 import aqua.raw.value.{
   ApplyGateRaw,
   ApplyPropertyRaw,
   CallArrowRaw,
   FunctorRaw,
+  IntoArrowRaw,
   IntoCopyRaw,
   IntoFieldRaw,
   IntoIndexRaw,
@@ -38,7 +39,7 @@ import aqua.raw.value.{
   ValueRaw,
   VarRaw
 }
-import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType, Type}
+import aqua.types.{ArrayType, CanonStreamType, ScalarType, ScopeType, StreamType, Type}
 import cats.Eval
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.monoid.*
@@ -85,7 +86,61 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
-  private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
+  private def unfoldScopeProperty[S: Mangler: Exports: Arrows: Scopes](
+    varModel: VarModel,
+    scopeType: ScopeType,
+    p: PropertyRaw
+  ): State[S, (VarModel, Inline)] = {
+    p match {
+      case IntoArrowRaw(arrowName, t, arguments) =>
+        println("find arrow for: " + varModel)
+        println("arrow name: " + arrowName)
+        println("arrow type:" + t)
+        for {
+          _ <- Scopes[S].scopes.map { sc =>
+            println("scopes: " + sc)
+          }
+          arrowOp <- Scopes[S].getArrow(varModel.name, arrowName)
+          _ <- Arrows[S].arrows.map { arrs =>
+            println(arrs.map(_._2.funcName))
+          }
+          arrow = arrowOp.get
+          callArrow <- CallArrowRawInliner(
+            CallArrowRaw(None, arrow.funcName, arguments, arrow.arrowType, None)
+          )
+          result <- callArrow match {
+            case (vm: VarModel, inl) =>
+              State.pure((vm, inl))
+            case (lm: LiteralModel, inl) =>
+              flatLiteralWithProperties(lm, inl, Chain.empty).flatMap { case (vm, inline) =>
+                Exports[S].resolved(vm.name, vm).map(_ => (vm, inline))
+              }
+          }
+        } yield {
+          result
+        }
+
+      case IntoFieldRaw(fieldName, t) =>
+        println("find field for: " + varModel)
+        println("field name: " + fieldName)
+        println("field type:" + t)
+        for {
+          // TODO: we cannot have scope as argument in `Scopes` in exported functions
+          valueOp <- Scopes[S].getValue(varModel.name, fieldName)
+          value = valueOp.get
+          result <- value match {
+            case vm: VarModel =>
+              State.pure((vm, Inline.empty))
+            case lm: LiteralModel =>
+              flatLiteralWithProperties(lm, Inline.empty, Chain.empty)
+          }
+        } yield {
+          result
+        }
+    }
+  }
+
+  private[inline] def unfoldProperty[S: Mangler: Exports: Arrows: Scopes](
     varModel: VarModel,
     p: PropertyRaw
   ): State[S, (VarModel, Inline)] =
@@ -147,13 +202,13 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
   private case class PropertyRawWithModel(raw: PropertyRaw, model: Option[PropertyModel])
 
   // Unfold properties that we can process in parallel
-  private def optimizeProperties[S: Mangler: Exports: Arrows](
+  private def optimizeProperties[S: Mangler: Exports: Arrows: Scopes](
     properties: Chain[PropertyRaw]
   ): State[S, (Chain[PropertyRawWithModel], Inline)] = {
     properties.map {
       case iir @ IntoIndexRaw(vr, t) =>
         unfold(vr, propertiesAllowed = false).flatMap {
-          case (vm@VarModel(_, _, _), inline) if vm.properties.nonEmpty =>
+          case (vm @ VarModel(_, _, _), inline) if vm.properties.nonEmpty =>
             removeProperties(vm).map { case (vf, inlf) =>
               PropertyRawWithModel(iir, Option(IntoIndexModel(vf.name, t))) -> Inline(
                 inline.flattenValues ++ inlf.flattenValues,
@@ -175,7 +230,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
-  private def unfoldProperties[S: Mangler: Exports: Arrows](
+  private def unfoldProperties[S: Mangler: Exports: Arrows: Scopes](
     prevInline: Inline,
     vm: VarModel,
     properties: Chain[PropertyRaw],
@@ -186,36 +241,45 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         .foldLeft[State[S, (VarModel, Inline)]](
           State.pure((vm, prevInline.mergeWith(optimizationInline, SeqMode)))
         ) { case (state, property) =>
-          state.flatMap { case (vm, leftInline) =>
-            property match {
-              case PropertyRawWithModel(_, Some(model)) =>
-                State.pure(vm.copy(properties = vm.properties :+ model) -> leftInline)
-              case PropertyRawWithModel(raw, _) =>
-                unfoldProperty(vm, raw).flatMap {
-                  case (v, i) if !propertiesAllowed && v.properties.nonEmpty =>
-                    removeProperties(v).map { case (vf, inlf) =>
-                      vf -> Inline(
-                        leftInline.flattenValues ++ i.flattenValues ++ inlf.flattenValues,
-                        leftInline.predo ++ i.predo ++ inlf.predo,
-                        mergeMode = SeqMode
+          state.flatMap {
+            case (vm@VarModel(name, st@ScopeType(_, _), _), leftInline) =>
+              unfoldScopeProperty(vm, st, property.raw).map {
+                case (vm, inl) => (vm, Inline(
+                  leftInline.flattenValues ++ inl.flattenValues,
+                  leftInline.predo ++ inl.predo,
+                  mergeMode = SeqMode
+                ))
+              }
+            case (vm, leftInline) =>
+              property match {
+                case PropertyRawWithModel(_, Some(model)) =>
+                  State.pure(vm.copy(properties = vm.properties :+ model) -> leftInline)
+                case PropertyRawWithModel(raw, _) =>
+                  unfoldProperty(vm, raw).flatMap {
+                    case (v, i) if !propertiesAllowed && v.properties.nonEmpty =>
+                      removeProperties(v).map { case (vf, inlf) =>
+                        vf -> Inline(
+                          leftInline.flattenValues ++ i.flattenValues ++ inlf.flattenValues,
+                          leftInline.predo ++ i.predo ++ inlf.predo,
+                          mergeMode = SeqMode
+                        )
+                      }
+                    case (v, i) =>
+                      State.pure(
+                        v -> Inline(
+                          leftInline.flattenValues ++ i.flattenValues,
+                          leftInline.predo ++ i.predo,
+                          mergeMode = SeqMode
+                        )
                       )
-                    }
-                  case (v, i) =>
-                    State.pure(
-                      v -> Inline(
-                        leftInline.flattenValues ++ i.flattenValues,
-                        leftInline.predo ++ i.predo,
-                        mergeMode = SeqMode
-                      )
-                    )
-                }
-            }
+                  }
+              }
           }
         }
     }
   }
 
-  private def unfoldRawWithProperties[S: Mangler: Exports: Arrows](
+  private def unfoldRawWithProperties[S: Mangler: Exports: Arrows: Scopes](
     raw: ValueRaw,
     properties: Chain[PropertyRaw],
     propertiesAllowed: Boolean
@@ -229,7 +293,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
               case (gateResVal: VarModel, gateResInline) =>
                 unfoldProperties(gateResInline, gateResVal, properties, propertiesAllowed).map {
                   case (v, i) =>
-                    (v: ValueModel) -> Inline(
+                    v -> Inline(
                       inl.flattenValues ++ i.flattenValues,
                       inl.predo ++ i.predo,
                       mergeMode = SeqMode
@@ -249,7 +313,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         unfold(raw).flatMap {
           case (vm: VarModel, prevInline) =>
             unfoldProperties(prevInline, vm, properties, propertiesAllowed).map { case (v, i) =>
-              (v: ValueModel) -> i
+              v -> i
             }
           case (l: LiteralModel, inline) =>
             flatLiteralWithProperties(
@@ -259,7 +323,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             ).flatMap { (varModel, prevInline) =>
               unfoldProperties(prevInline, varModel, properties, propertiesAllowed).map {
                 case (v, i) =>
-                  (v: ValueModel) -> i
+                  v -> i
               }
             }
         }
@@ -267,7 +331,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
   }
 
-  override def apply[S: Mangler: Exports: Arrows](
+  override def apply[S: Mangler: Exports: Arrows: Scopes](
     apr: ApplyPropertyRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {

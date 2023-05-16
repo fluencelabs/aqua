@@ -23,7 +23,8 @@ object ArrowTypeExpr extends Expr.Leaf {
     )) | ArrowTypeToken.`arrowWithNames`(DataTypeToken.`datatypedef`))).flatMap { case (name, t) =>
       // services cannot return multiple results
       if (t.res.length > 1) {
-        Parser.failWith("Service functions cannot have multiple results")
+        // TODO: scopes can have multiple results
+        Parser.failWith("Service or scope functions cannot have multiple results")
       } else {
         Parser.pure(ArrowTypeExpr(name, t))
       }
