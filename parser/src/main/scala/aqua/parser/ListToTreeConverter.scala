@@ -14,7 +14,7 @@ import cats.data.Validated.*
 import aqua.parser.Expr.LazyLexem
 
 /**
- * @brief Converts a list of lines to a tree
+ * Converts a list of lines to a tree
  */
 final case class ListToTreeConverter[F[_]](
   currentBlock: ListToTreeConverter.Block[F], // Current block data
@@ -41,7 +41,7 @@ final case class ListToTreeConverter[F[_]](
     }
 
   /**
-   * @brief Method to call on each new line
+   * Method to call on each new line
    */
   @scala.annotation.tailrec
   def next(indent: F[String], line: Tree[F]): ListToTreeConverter[F] =
@@ -70,7 +70,7 @@ final case class ListToTreeConverter[F[_]](
     }
 
   /**
-   * @brief Produce result of the conversion
+   * Produce the result of the conversion
    */
   @scala.annotation.tailrec
   def result: ValidatedNec[ParserError[F], Tree[F]] =
@@ -89,13 +89,13 @@ final case class ListToTreeConverter[F[_]](
 object ListToTreeConverter {
 
   /**
-   * @brief Constructs a converter from block opening line
+   * Constructs a converter from block opening line
    */
   def apply[F[_]](open: Tree[F])(using Comonad[F]): ListToTreeConverter[F] =
     ListToTreeConverter(Block(open.head.token.as(""), open))
 
   /**
-   * @brief Data associated with a block
+   * Data associated with a block
    */
   final case class Block[F[_]](
     indent: F[String], // Indentation of the block opening line
@@ -104,7 +104,7 @@ object ListToTreeConverter {
   ) {
 
     /**
-     * @brief Check if @p expr can be added to this block
+     * Check if expr can be added to this block
      */
     def canAdd(expr: Expr[F]): Boolean = {
       def checkFor(tree: Tree[F]): Boolean =
@@ -123,23 +123,23 @@ object ListToTreeConverter {
     }
 
     /**
-     * @brief Add @p child to the block
+     * Add child to the block
      */
     def add(child: Tree[F]): Block[F] =
       copy(content = content :+ child)
 
     /**
-     * @brief Check if the block has no children
+     * Check if the block has no children
      */
     def isEmpty: Boolean = content.isEmpty
 
     /**
-     * @brief Create a tree corresponding to the block
+     * Create a tree corresponding to the block
      */
     def close: Tree[F] = {
 
       /**
-       * @breif Set @p children as children of the rightmost expression in @p tree
+       * Set children of the rightmost expression in tree
        */
       def setLast(tree: Tree[F], children: Chain[Tree[F]]): Tree[F] =
         tree.copy(tail = tree.tail.map {
