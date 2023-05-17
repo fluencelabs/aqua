@@ -71,6 +71,8 @@ final case class ListToTreeConverter[F[_]](
             consistentChecked.addError(wrongChildError(indent, expr))
           }
         }
+      // Note:    this doesn't necessarly mean that indentation is correct
+      //          next block will check it
       case IndentRelation.Sibling =>
         val emptyChecked = if (currentBlock.isEmpty) {
           addError(emptyBlockError(currentBlock.indent))
@@ -110,6 +112,9 @@ object ListToTreeConverter {
   def apply[F[_]](open: Tree[F])(using Comonad[F]): ListToTreeConverter[F] =
     ListToTreeConverter(Block(open.head.token.as(""), open))
 
+  /**
+   * Describes the realtion of next line to the current block
+   */
   enum IndentRelation {
     case Child(consistent: Boolean)
     case Sibling
@@ -126,6 +131,9 @@ object ListToTreeConverter {
     content: Chain[Tree[F]] = Chain.empty[Tree[F]] // Children of the block
   ) {
 
+    /**
+     * Classify the next line relative to the block
+     */
     def classifyIndent(lineIndent: F[String])(using Comonad[F]): IndentRelation = {
       val blockIndentStr = indent.extract
       val lineIndentStr = lineIndent.extract
