@@ -2,6 +2,7 @@ package aqua.semantics
 
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import cats.Monad
 import cats.syntax.flatMap.*
@@ -35,6 +36,14 @@ sealed abstract class Prog[Alg[_]: Monad, A] extends (Alg[A] => Alg[A]) {
       RunAround(
         N.beginScope(token),
         (_: Unit, m: A) => N.endScope() as m
+      )
+    )
+
+  def locationsScope[S[_]]()(implicit L: LocationsAlgebra[S, Alg]): Prog[Alg, A] =
+    wrap(
+      RunAround(
+        L.beginScope(),
+        (_: Unit, m: A) => L.endScope() as m
       )
     )
 }
