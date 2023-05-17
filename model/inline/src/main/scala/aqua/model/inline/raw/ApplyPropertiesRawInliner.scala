@@ -108,6 +108,12 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           callArrow <- CallArrowRawInliner(
             CallArrowRaw(None, arrow.funcName, arguments, arrow.arrowType, None)
           )
+          // stream: *[]string
+          // a = stream[1].length
+          // Exports.get("scope.subScope.someVar")
+          // let v1 = Exports.get("subScope")
+          // let v2 = Exports.get("someVar")
+          // let vResult = v2
           result <- callArrow match {
             case (vm: VarModel, inl) =>
               State.pure((vm, inl))

@@ -61,6 +61,8 @@ object Exports {
 
   object Simple extends Exports[Map[String, ValueModel]] {
 
+    // Exports[Map[NonEmptyList[String], ValueModel]]
+
     override def resolved(
       exportName: String,
       value: ValueModel

@@ -31,6 +31,8 @@ trait Scopes[S] extends Scoped[S] {
 
   def transformS[R](f: R => S, g: (R, S) => R): Scopes[R] = new Scopes[R] {
 
+//    def fullScope(name: String)
+    
     override def save(
       name: String,
       variables: Map[String, String],
