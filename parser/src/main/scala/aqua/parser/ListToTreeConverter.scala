@@ -21,6 +21,7 @@ final case class ListToTreeConverter[F[_]](
   stack: List[ListToTreeConverter.Block[F]] = Nil, // Stack of opened blocks
   errors: Chain[ParserError[F]] = Chain.empty[ParserError[F]] // Errors
 )(using Comonad[F]) {
+
   // Import helper functions
   import ListToTreeConverter.*
 
@@ -30,14 +31,22 @@ final case class ListToTreeConverter[F[_]](
   private def pushBlock(indent: F[String], line: Tree[F]): ListToTreeConverter[F] =
     copy(currentBlock = Block(indent, line), stack = currentBlock :: stack)
 
-  private def addToCurrentBlock(line: Tree[F]): ListToTreeConverter[F] =
-    copy(currentBlock = currentBlock.add(line))
+  private def addToCurrentBlock(indent: F[String], line: Tree[F]): ListToTreeConverter[F] =
+    copy(currentBlock = currentBlock.add(indent, line))
 
   private def popBlock: Option[ListToTreeConverter[F]] =
     stack match {
       case Nil => None
       case prevBlock :: tail =>
-        Some(copy(currentBlock = prevBlock.add(currentBlock.close), stack = tail))
+        Some(
+          copy(
+            currentBlock = prevBlock.add(
+              currentBlock.indent,
+              currentBlock.close
+            ),
+            stack = tail
+          )
+        )
     }
 
   /**
@@ -45,28 +54,35 @@ final case class ListToTreeConverter[F[_]](
    */
   @scala.annotation.tailrec
   def next(indent: F[String], line: Tree[F]): ListToTreeConverter[F] =
-    if (indentValue(indent) > indentValue(currentBlock.indent)) {
-      if (isBlock(line)) {
-        pushBlock(indent, line)
-      } else {
-        val expr = lastExpr(line)
+    currentBlock.classifyIndent(indent) match {
+      case IndentRelation.Child(consistent) =>
+        val consistentChecked = if (!consistent) {
+          addError(inconsistentIndentError(indent))
+        } else this
 
-        if (currentBlock.canAdd(expr)) {
-          addToCurrentBlock(line)
+        if (isBlock(line)) {
+          consistentChecked.pushBlock(indent, line)
         } else {
-          addError(wrongChildError(indent, expr))
-        }
-      }
-    } else {
-      val emptyChecked = if (currentBlock.isEmpty) {
-        addError(emptyBlockError(currentBlock.indent))
-      } else this
+          val expr = lastExpr(line)
 
-      emptyChecked.popBlock match {
-        case Some(blockPopped) => blockPopped.next(indent, line)
-        // This should not happen because of the way of parsing
-        case _ => emptyChecked.addError(unexpectedIndentError(indent))
-      }
+          if (currentBlock.isValidChild(expr)) {
+            consistentChecked.addToCurrentBlock(indent, line)
+          } else {
+            consistentChecked.addError(wrongChildError(indent, expr))
+          }
+        }
+      case IndentRelation.Sibling =>
+        val emptyChecked = if (currentBlock.isEmpty) {
+          addError(emptyBlockError(currentBlock.indent))
+        } else this
+
+        emptyChecked.popBlock match {
+          case Some(blockPopped) => blockPopped.next(indent, line)
+          // This should not happen because of the way of parsing
+          case _ => emptyChecked.addError(unexpectedIndentError(indent))
+        }
+      case IndentRelation.Unexpected =>
+        addError(unexpectedIndentError(indent))
     }
 
   /**
@@ -94,19 +110,49 @@ object ListToTreeConverter {
   def apply[F[_]](open: Tree[F])(using Comonad[F]): ListToTreeConverter[F] =
     ListToTreeConverter(Block(open.head.token.as(""), open))
 
+  enum IndentRelation {
+    case Child(consistent: Boolean)
+    case Sibling
+    case Unexpected
+  }
+
   /**
    * Data associated with a block
    */
   final case class Block[F[_]](
     indent: F[String], // Indentation of the block opening line
     block: Tree[F], // Block opening line
+    childIndent: Option[F[String]] = None, // Indentation of the first child
     content: Chain[Tree[F]] = Chain.empty[Tree[F]] // Children of the block
   ) {
+
+    def classifyIndent(lineIndent: F[String])(using Comonad[F]): IndentRelation = {
+      val blockIndentStr = indent.extract
+      val lineIndentStr = lineIndent.extract
+
+      if (lineIndentStr.startsWith(blockIndentStr)) {
+        lazy val consistentChild = childIndent
+          .map(_.extract)
+          .fold(
+            lineIndentStr.length > blockIndentStr.length
+          )(_ == lineIndentStr)
+
+        if (lineIndentStr.length == blockIndentStr.length) {
+          IndentRelation.Sibling
+        } else {
+          IndentRelation.Child(consistentChild)
+        }
+      } else if (blockIndentStr.startsWith(lineIndentStr)) {
+        IndentRelation.Sibling
+      } else {
+        IndentRelation.Unexpected
+      }
+    }
 
     /**
      * Check if expr can be added to this block
      */
-    def canAdd(expr: Expr[F]): Boolean = {
+    def isValidChild(expr: Expr[F]): Boolean = {
       def checkFor(tree: Tree[F]): Boolean =
         tree.head.companion match {
           case indented: AndIndented =>
@@ -123,10 +169,13 @@ object ListToTreeConverter {
     }
 
     /**
-     * Add child to the block
+     * Add line to the block
      */
-    def add(child: Tree[F]): Block[F] =
-      copy(content = content :+ child)
+    def add(indent: F[String], line: Tree[F]): Block[F] =
+      copy(
+        content = content :+ line,
+        childIndent = childIndent.orElse(Some(indent))
+      )
 
     /**
      * Check if the block has no children
@@ -181,6 +230,9 @@ object ListToTreeConverter {
 
   def emptyBlockError[F[_]](indent: F[String]): ParserError[F] =
     BlockIndentError(indent, "Block expression has no body")
+
+  def inconsistentIndentError[F[_]](indent: F[String]): ParserError[F] =
+    BlockIndentError(indent, "Inconsistent indentation in the block")
 
   def unexpectedIndentError[F[_]](indent: F[String]): ParserError[F] =
     BlockIndentError(indent, "Unexpected indentation")
