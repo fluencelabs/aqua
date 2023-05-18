@@ -10,6 +10,10 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.monad.*
+import cats.syntax.foldable.*
+import cats.syntax.validated.*
+import cats.data.Chain.*
+import cats.data.Validated.*
 import cats.syntax.traverse.*
 import cats.{~>, Comonad, Monad}
 import scribe.Logging
@@ -26,13 +30,12 @@ class AquaParser[F[_], E, I, S[_]: Comonad](
 
   // Parse all the source files
   def parseSources: F[ValidatedNec[Err, Chain[(I, Body)]]] =
-    sources.sources
-      .map(
-        _.leftMap(_.map[Err](SourcesErr(_))).andThen(_.map { case (i, s) =>
-          parser(i)(s)
-            .bimap(_.map[Err](ParserErr(_)), ast => Chain.one(i -> ast))
-        }.foldLeft(Validated.validNec[Err, Chain[(I, Body)]](Chain.nil))(_ combine _))
-      )
+    sources.sources.map(
+      _.leftMap(_.map[Err](SourcesErr(_))).andThen(_.map { case (i, s) =>
+        parser(i)(s)
+          .bimap(_.map[Err](ParserErr(_)), ast => Chain.one(i -> ast))
+      }.foldA)
+    )
 
   // Resolve imports (not parse, just resolve) of the given file
   def resolveImports(id: I, ast: Body): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
@@ -50,22 +53,21 @@ class AquaParser[F[_], E, I, S[_]: Comonad](
           )
         )
       }
-      .traverse(identity)
+      .sequence
       .map(
-        _.foldLeft(Validated.validNec[Err, Chain[(I, (String, Err))]](Chain.nil))(_ combine _).map {
-          collected =>
-            AquaModule[I, Err, Body](
-              id,
-              // How filenames correspond to the resolved IDs
-              collected.map { case (i, (fn, _)) =>
-                fn -> i
-              }.toList.toMap[String, I],
-              // Resolved IDs to errors that point to the import in source code
-              collected.map { case (i, (_, err)) =>
-                i -> err
-              }.toList.toMap[I, Err],
-              ast
-            )
+        _.foldA.map { collected =>
+          AquaModule[I, Err, Body](
+            id,
+            // How filenames correspond to the resolved IDs
+            collected.map { case (i, (fn, _)) =>
+              fn -> i
+            }.toList.toMap[String, I],
+            // Resolved IDs to errors that point to the import in source code
+            collected.map { case (i, (_, err)) =>
+              i -> err
+            }.toList.toMap[I, Err],
+            ast
+          )
         }
       )
 
@@ -75,13 +77,9 @@ class AquaParser[F[_], E, I, S[_]: Comonad](
       case Validated.Valid(srcs) =>
         srcs.traverse { case (id, ast) =>
           resolveImports(id, ast).map(_.map(Chain.one))
-        }.map(
-          _.foldLeft(Validated.validNec[Err, Chain[AquaModule[I, Err, Body]]](Chain.empty))(
-            _ combine _
-          )
-        )
+        }.map(_.foldA)
       case Validated.Invalid(errs) =>
-        Validated.invalid[NonEmptyChain[Err], Chain[AquaModule[I, Err, Body]]](errs).pure[F]
+        errs.invalid.pure[F]
     }.map(_.map(_.foldLeft(Modules[I, Err, Body]())(_.add(_, toExport = true))))
 
   def loadModule(imp: I): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
@@ -94,7 +92,7 @@ class AquaParser[F[_], E, I, S[_]: Comonad](
         case Validated.Valid(ast) =>
           resolveImports(imp, ast)
         case Validated.Invalid(errs) =>
-          Validated.invalid[NonEmptyChain[Err], AquaModule[I, Err, Ast[S]]](errs).pure[F]
+          errs.invalid.pure[F]
       }
 
   def resolveModules(
@@ -102,15 +100,15 @@ class AquaParser[F[_], E, I, S[_]: Comonad](
   ): F[ValidatedNec[Err, Modules[I, Err, Ast[S]]]] =
     modules.dependsOn.map { case (moduleId, unresolvedErrors) =>
       loadModule(moduleId).map(_.leftMap(_ ++ unresolvedErrors))
-    }.toList
-      .traverse(identity)
-      .map(_.foldLeft[ValidatedNec[Err, Modules[I, Err, Ast[S]]]](Validated.validNec(modules)) {
-        case (mods, m) =>
+    }.toList.sequence
+      .map(
+        _.foldLeft(modules.validNec[Err]) { case (mods, m) =>
           mods.andThen(ms => m.map(ms.add(_)))
-      })
+        }
+      )
       .flatMap {
         case Validated.Valid(ms) if ms.isResolved =>
-          Validated.validNec[Err, Modules[I, Err, Ast[S]]](ms).pure[F]
+          ms.validNec.pure[F]
         case Validated.Valid(ms) =>
           resolveModules(ms)
         case err =>
