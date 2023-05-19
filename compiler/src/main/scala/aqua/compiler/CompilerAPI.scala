@@ -11,7 +11,7 @@ import aqua.res.AquaRes
 import aqua.semantics.{CompilerState, RawSemantics, Semantics}
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
 import cats.data.*
-import cats.data.Validated.{validNec, Invalid, Valid, invalid}
+import cats.data.Validated.{invalid, validNec, Invalid, Valid}
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
@@ -19,6 +19,7 @@ import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import cats.syntax.traverse.*
 import cats.syntax.semigroup.*
+import cats.syntax.foldable.*
 import cats.{~>, Comonad, Monad, Monoid, Order}
 import scribe.Logging
 
@@ -33,36 +34,23 @@ object CompilerAPI extends Logging {
     ]
   ): ValidatedNec[AquaError[I, E, S], Chain[AquaProcessed[I]]] = {
     logger.trace("linking finished")
-    filesWithContext
-      .foldLeft[
-        (
-          ValidatedNec[AquaError[I, E, S], Chain[AquaProcessed[I]]],
-          AquaContext.Cache
-        )
-      ](
-        validNec(Chain.nil) -> AquaContext.Cache()
-      ) {
-        case ((acc, cache), (_, Valid(result))) =>
-          val (processed, cacheProcessed) =
-            result.toNel.toList.foldLeft[
-              (Chain[AquaProcessed[I]], AquaContext.Cache)
-            ](
-              Chain.nil -> cache
-            ) { case ((acc, accCache), (i, rawContext)) =>
-              logger.trace(s"Going to prepare exports for $i...")
-              val (exp, expCache) = AquaContext.exportsFromRaw(rawContext, accCache)
-              logger.trace(s"AquaProcessed prepared for $i")
-              (acc :+ AquaProcessed(i, exp)) -> expCache
-            }
-          acc.combine(
-            validNec(
-              processed
-            )
-          ) -> cacheProcessed
-        case ((acc, cache), (_, Invalid(errs))) =>
-          acc.combine(Invalid(errs)) -> cache
-      }
-      ._1
+
+    filesWithContext.values.toList
+      // Gather all RawContext in List inside ValidatedNec
+      .flatTraverse(_.map(_.toNel.toList))
+      // Process all contexts maintaining Cache
+      .traverse(_.traverse { case (i, rawContext) =>
+        for {
+          cache <- State.get[AquaContext.Cache]
+          _ = logger.trace(s"Going to prepare exports for $i...")
+          (exp, expCache) = AquaContext.exportsFromRaw(rawContext, cache)
+          _ = logger.trace(s"AquaProcessed prepared for $i")
+          _ <- State.set(expCache)
+        } yield AquaProcessed(i, exp)
+      }.runA(AquaContext.Cache()))
+      // Convert result List to Chain
+      .map(_.map(Chain.fromSeq))
+      .value
   }
 
   private def getAquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad](
@@ -105,34 +93,27 @@ object CompilerAPI extends Logging {
     val compiler = getAquaCompiler[F, E, I, S](config)
 
     for {
-      compiledV <- compiler
-          .compileRaw(sources, parser)
-          .map(_.andThen { filesWithContext =>
-            toAquaProcessed(filesWithContext)
-          })
+      compiledRaw <- compiler.compileRaw(sources, parser)
+      compiledV = compiledRaw.andThen(toAquaProcessed)
       _ <- airValidator.init()
-      result <- compiledV.map { compiled =>
-          compiled.map { ap =>
-            logger.trace("generating output...")
-            val res = backend.transform(ap.context)
-            val compiled = backend.generate(res)
-            airValidator
-              .validate(
-                compiled.toList.flatMap(_.air)
-              )
-              .map(
-                _.bimap(
-                  errs => NonEmptyChain.one(AirValidationError(errs): AquaError[I, E, S]),
-                  _ =>
-                    AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
+      result <- compiledV.traverse { compiled =>
+        compiled.traverse { ap =>
+          logger.trace("generating output...")
+          val res = backend.transform(ap.context)
+          val compiled = backend.generate(res)
+          airValidator
+            .validate(
+              compiled.toList.flatMap(_.air)
+            )
+            .map(
+              _.leftMap(errs => AirValidationError(errs): AquaError[I, E, S])
+                .as(
+                  AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
                 )
-              )
-          }.sequence.map(_.sequence)
-        } match {
-          case Valid(f) => f
-          case Invalid(e) =>
-            invalid[NonEmptyChain[AquaError[I, E, S]], Chain[AquaCompiled[I]]](e).pure[F]
-        }
+                .toValidatedNec
+            )
+        }.map(_.sequence)
+      }.map(_.andThen(identity)) // There is no flatTraverse for Validated
     } yield result
   }
 
@@ -144,29 +125,21 @@ object CompilerAPI extends Logging {
     config: AquaCompilerConf,
     write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
   ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
-    compile[F, E, I, S](sources, parser, airValidator, backend, config).flatMap {
-      case Valid(compiled) =>
-        compiled.map { ac =>
-          write(ac).map(
-            _.map(
-              _.bimap[NonEmptyChain[AquaError[I, E, S]], Chain[T]](
-                e => NonEmptyChain.one(OutputError(ac, e)),
-                Chain.one
+    compile[F, E, I, S](sources, parser, airValidator, backend, config)
+      .flatMap(
+        _.traverse(compiled =>
+          compiled.toList.flatTraverse { ac =>
+            write(ac).map(
+              _.toList.map(
+                _.bimap(
+                  e => OutputError(ac, e): AquaError[I, E, S],
+                  Chain.one
+                ).toValidatedNec
               )
             )
-          )
-        }.toList
-          .traverse(identity)
-          .map(
-            _.flatten
-              .foldLeft[ValidatedNec[AquaError[I, E, S], Chain[T]]](validNec(Chain.nil))(
-                _ combine _
-              )
-          )
-
-      case Validated.Invalid(errs) =>
-        Validated.invalid[NonEmptyChain[AquaError[I, E, S]], Chain[T]](errs).pure[F]
-    }
+          }.map(_.foldA)
+        ).map(_.andThen(identity)) // There is no flatTraverse for Validated
+      )
 
   def compileToContext[F[_]: Monad, E, I: Order, S[_]: Comonad](
     sources: AquaSources[F, E, I],
