@@ -1,0 +1,52 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/debian
+{
+	"name": "Compiler Codespace",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/devcontainers/base:bullseye",
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {
+		"ghcr.io/devcontainers-contrib/features/sbt-sdkman:2": {},
+		"ghcr.io/devcontainers-contrib/features/scala-sdkman:2": {},
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "16"
+		}
+	},
+
+	// TODO: Consider writing setup script
+	"postCreateCommand": "bash -i -c \"npm -g install @fluencelabs/cli@latest\"",
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Configure tool-specific properties.
+	"customizations": {
+		"codespaces": {
+			"repositories": {
+				"fluencelabs/docs": {
+					"permissions": "write-all"	
+				},
+				"fluencelabs/aqua-vscode": {
+					"permissions": "write-all"	
+				},
+				"fluencelabs/examples": {
+					"permissions": "write-all"	
+				},
+				"fluencelabs/aqua-playground": {
+					"permissions": "write-all"	
+				}
+			}
+		},
+		"vscode": {
+			"extensions": [
+				"FluenceLabs.aqua", 
+				"scala-lang.scala", 
+				"scalameta.metals", 
+				"yzhang.markdown-all-in-one"
+			]
+		}
+	}
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
