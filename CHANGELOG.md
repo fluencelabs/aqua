@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.0](https://github.com/fluencelabs/aqua/compare/aqua-v0.10.6...aqua-v0.11.0) (2023-05-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* add name scopes to if/else/try blocks ([#715](https://github.com/fluencelabs/aqua/issues/715))
+
+### Features
+
+* add name scopes to if/else/try blocks ([#715](https://github.com/fluencelabs/aqua/issues/715)) ([e4205df](https://github.com/fluencelabs/aqua/commit/e4205dfbbf6838f0fd0aae3cb6190b8433c7745a))
+* **devcontainer:** Add devcontainer spec [fixes LNG-148] ([#712](https://github.com/fluencelabs/aqua/issues/712)) ([9539c81](https://github.com/fluencelabs/aqua/commit/9539c812364a531dc33db47b618a93e98691439b))
+* **parser:** Strict indentation [fixes LNG-135] ([#714](https://github.com/fluencelabs/aqua/issues/714)) ([ae2a433](https://github.com/fluencelabs/aqua/commit/ae2a433185c363386bf54eaebace70b67b8d3e5d))
+* use new blueprint ([#708](https://github.com/fluencelabs/aqua/issues/708)) ([d393b71](https://github.com/fluencelabs/aqua/commit/d393b718916b8b81b2440558461f692802a554be))
+
 ## [0.10.6](https://github.com/fluencelabs/aqua/compare/aqua-v0.10.5...aqua-v0.10.6) (2023-05-03)
 
 
