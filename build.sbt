@@ -2,7 +2,7 @@ val dottyVersion = "3.3.0"
 
 scalaVersion := dottyVersion
 
-val aquaVersion = "0.10.6"
+val aquaVersion = "0.11.0"
 
 val catsV = "2.8.0"
 val catsParseV = "0.3.8"
