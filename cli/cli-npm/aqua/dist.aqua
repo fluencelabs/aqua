@@ -59,8 +59,7 @@ func deploy(serviceName: string, serviceConf: ServiceConf) -> DeployResult:
       on ON_PEER:
         hostRes <- Ipfs.get(cid)
         conf <- Dist.make_module_config(m.name, m.mem_pages_count, m.max_heap_size, m.logger_enabled, m.preopened_files, m.envs, m.mapped_dirs, m.mounted_binaries, m.logging_mask)
-        mod <- Dist.add_module_from_vault(hostRes.path, conf)
-        mod_hash <- Op.concat_strings("hash:", mod)
+        mod_hash <- Dist.add_module_from_vault(hostRes.path, conf)
         mod_hashes <<- [mod_hash, m.name]
 
   join mod_hashes[OpC.array_length(serviceConf.modules) - 1]
