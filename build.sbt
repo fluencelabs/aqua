@@ -143,16 +143,21 @@ lazy val `js-imports` = project
   .settings(commons: _*)
   .dependsOn(`js-exports`, transform.js)
 
-lazy val `aqua-api` = project
+lazy val `aqua-api` = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
   .in(file("api/aqua-api"))
-  .enablePlugins(ScalaJSPlugin)
   .settings(commons: _*)
+  .dependsOn(`aqua-run`, `backend-api`)
+
+lazy val `aqua-apiJS` = `aqua-api`.js
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true,
     Test / test                     := {}
   )
-  .dependsOn(`js-exports`, `aqua-run`.js, `backend-api`.js)
+  .enablePlugins(ScalaJSPlugin)
+  .dependsOn(`js-exports`)
 
 lazy val types = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
