@@ -12,14 +12,24 @@ object Meta {
   val metaUrl: String = js.native
 }
 
+// Require function from javascript
+trait Require extends js.Object {
+
+  // resolve path to module
+  def resolve(request: String): String
+}
+
 @js.native
 @JSImport("module", JSImport.Namespace)
 object Module extends js.Object {
 
   // make it possible to use `require` in ES module type
-  def createRequire(str: String): Require = js.native
+  def createRequire(filename: String): Require = js.native
 }
 
-trait Require extends js.Object {
-  def resolve(str: String): Any
+object Npm {
+  private def require = Module.createRequire(Meta.metaUrl)
+
+  // Resolve path to module
+  def resolveModule(path: String): String = require.resolve(path)
 }
