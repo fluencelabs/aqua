@@ -18,27 +18,26 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
       "nested_type",
       NonEmptyMap.of("field1" -> ScalarType.u32)
     )
-    val structType = StructType(
-      "struct_type",
-      NonEmptyMap.of("nestedOpt" -> OptionType(nestedType))
-    )
 
     val makeStruct =
       MakeStructRaw(NonEmptyMap.of("field1" -> LiteralRaw.number(3)), nestedType)
 
-    val value = VarRaw("l", ScalarType.string)
     val raw = CollectionRaw(NonEmptyList.of(makeStruct), OptionType(nestedType))
 
     val (v, tree) =
       RawValueInliner.valueToModel[InliningState](raw, false).run(InliningState()).value._2
 
-    println(tree)
+    val resultValue = VarModel("option-inline-0", CanonStreamType(nestedType))
+
+    v shouldBe resultValue
 
     tree.get.equalsOrShowDiff(
+      // create a stream
       RestrictionModel("option-inline", true).wrap(
         SeqModel.wrap(
           XorModel.wrap(
             SeqModel.wrap(
+              // create object
               CallServiceModel(
                 "json",
                 "obj",
@@ -47,6 +46,7 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
                 ) :: Nil,
                 VarModel("nested_type_obj", nestedType)
               ).leaf,
+              // push it to the stream
               PushToStreamModel(
                 VarModel("nested_type_obj", nestedType),
                 CallModel.Export("option-inline", StreamType(nestedType))
@@ -54,9 +54,10 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
             ),
             NullModel.leaf
           ),
+          // canonicalize the stream to use it after inlining
           CanonicalizeModel(
             VarModel("option-inline", StreamType(nestedType)),
-            CallModel.Export("option-inline-0", CanonStreamType(nestedType))
+            CallModel.Export(resultValue.name, resultValue.baseType)
           ).leaf
         )
       )
