@@ -66,7 +66,7 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
         case OptionType(_) =>
           RestrictionModel(streamName, isStream = true).wrap(
             SeqModel.wrap(
-              XorModel.wrap(Chain(SeqModel.wrap(vals.toList:_*), NullModel.leaf).toList: _*),
+              XorModel.wrap(SeqModel.wrap(vals.toList:_*), NullModel.leaf),
               CanonicalizeModel(stream, canon).leaf
             )
           )
