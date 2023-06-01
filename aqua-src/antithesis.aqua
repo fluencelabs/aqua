@@ -1,30 +1,9 @@
-aqua Main
+module Import3 declares *
 
-export someFunc
+export foo_bar
 
-service Console("run-console"):
-  print(str: ⊤)
+use "export.aqua"
 
-data Nested:
-    child: i64
-
-data Res:
-    nested: ?Nested
-
-func res() -> Res:
-    -- <- Res(
-    --     nested=?[Nested(
-    --                                child=3
-    --                            )]
-    -- )
-    <- Res(
-            nested=?[Nested(
-                                       child=3
-                                   )]
-        )
-
-func someFunc() -> Nested:
-    on INIT_PEER_ID:
-      r <- res()
-      Console.print(r)
-    <- r.nested!
+func foo_bar() -> string, string:
+  z <- FooBars.foo()
+  <- z, FooBars.DECLARE_CONST2
