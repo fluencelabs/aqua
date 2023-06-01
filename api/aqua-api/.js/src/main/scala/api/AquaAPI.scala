@@ -3,7 +3,8 @@ package api
 import api.types.{AquaConfig, AquaFunction, CompilationResult, Input}
 import aqua.ErrorRendering.showError
 import aqua.raw.value.ValueRaw
-import aqua.api.{APICompilation, AquaAPIConfig}
+import aqua.api.{APICompilation, AirType, AquaAPIConfig, JavaScriptType, TypeScriptType}
+import aqua.backend.air.AirBackend
 import aqua.backend.{AirFunction, Backend, Generated}
 import aqua.compiler.*
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
@@ -20,9 +21,11 @@ import aqua.semantics.{CompilerState, HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.backend.api.APIBackend
+import aqua.backend.js.JavaScriptBackend
+import aqua.backend.ts.TypeScriptBackend
 import aqua.definitions.FunctionDef
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
+import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -36,7 +39,7 @@ import scribe.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.scalajs.js.{|, undefined, Promise, UndefOr}
+import scala.scalajs.js.{Promise, UndefOr, undefined, |}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
@@ -49,6 +52,70 @@ import cats.Applicative
 
 @JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {
+
+  def compileAll(input: types.Input | types.Path, imports: List[String], config: AquaAPIConfig): IO[CompilationResult] = {
+    val backend: Backend = config.targetType match {
+        case AirType => APIBackend
+        case TypeScriptType => TypeScriptBackend()
+        case JavaScriptType => JavaScriptBackend()
+      }
+
+    extension (res: IO[ValidatedNec[String, List[Generated]]])
+      def toResult: IO[CompilationResult] = res.map(
+        _.map(generatedToCompilationResult).leftMap(generatedToCompilationErrors).merge
+      )
+
+    input match {
+      case i: types.Input =>
+        APICompilation
+          .compileString(
+            i.input,
+            imports,
+            config,
+            backend
+          )
+          .toResult
+      case p: types.Path =>
+        APICompilation
+          .compilePath(
+            p.path,
+            imports,
+            config,
+            backend
+          )
+          .toResult
+    }
+
+  }
+
+  def compileCall(call: types.Call, imports: List[String], config: AquaAPIConfig) = {
+    val path = call.input match {
+      case i: types.Input => i.input
+      case p: types.Path => p.path
+    }
+
+    extension (res: IO[ValidatedNec[String, (FunctionDef, String)]])
+        def callToResult: IO[CompilationResult] = res.map(
+          _.map { case (definitions, air) =>
+            CompilationResult.result(
+              js.Dictionary(),
+              js.Dictionary(),
+              Some(AquaFunction(FunctionDefJs(definitions), air)),
+              None
+            )
+          }.leftMap(generatedToCompilationErrors).merge
+        )
+
+    APICompilation
+      .compileCall(
+        call.functionCall,
+        path,
+        imports,
+        config,
+        vr => VarJson.checkDataGetServices(vr, Some(call.arguments)).map(_._1)
+      )
+      .callToResult
+  }
 
   @JSExport
   def compile(
@@ -63,46 +130,16 @@ object AquaAPI extends App with Logging {
     }).map { config =>
       val importsList = imports.toList
 
+
+
       input match {
         case i: types.Input =>
-          APICompilation
-            .compileString(
-              i.input,
-              importsList,
-              config
-            )
-            .flatMap(_.map(generatedToCompilationResult).leftMap(generatedToCompilationErrors).merge)
+          compileAll(i, importsList, config)
         case p: types.Path =>
-          APICompilation
-            .compilePath(
-              p.path,
-              importsList,
-              config
-            )
-            .flatMap(_.map(generatedToCompilationResult).leftMap(generatedToCompilationErrors).merge)
+          compileAll(p, importsList, config)
         case c: types.Call =>
-          val path = c.input match {
-            case i: types.Input => i.input
-            case p: types.Path => p.path
-          }
-          APICompilation
-            .compileCall(
-              c.functionCall,
-              path,
-              importsList,
-              config,
-              vr => VarJson.checkDataGetServices(vr, Some(c.arguments)).map(_._1)
-            )
-            .map {
-              case Valid((definitions, air)) =>
-                CompilationResult.result(
-                  js.Dictionary(),
-                  js.Dictionary(),
-                  Some(AquaFunction(FunctionDefJs(definitions), air)),
-                  None
-                )
-              case Invalid(err) => CompilationResult.errs(err.toChain.toList)
-            }
+          compileCall(c, importsList, config)
+
       }
     } match {
       case Valid(v) => v.unsafeToFuture().toJSPromise
@@ -111,23 +148,22 @@ object AquaAPI extends App with Logging {
 
   }
 
-  private def generatedToCompilationErrors(errors: NonEmptyChain[String]): IO[CompilationResult] = {
-    IO.pure(CompilationResult.errs(errors.toChain.toList))
+  private def generatedToCompilationErrors(errors: NonEmptyChain[String]): CompilationResult = {
+    CompilationResult.errs(errors.toChain.toList)
   }
 
-  private def generatedToCompilationResult(generated: List[Generated]): IO[CompilationResult] = {
+  private def generatedToCompilationResult(generated: List[Generated]): CompilationResult = {
     val serviceDefs = generated.flatMap(_.services).map(s => s.name -> ServiceDefJs(s))
     val functions = generated.flatMap(
       _.air.map(as => (as.name, AquaFunction(FunctionDefJs(as.funcDef), as.air)))
     )
 
-    IO.pure(
-      CompilationResult.result(
-        js.Dictionary.apply(serviceDefs: _*),
-        js.Dictionary.apply(functions: _*),
-        None,
-        None
-      )
+    CompilationResult.result(
+      js.Dictionary.apply(serviceDefs: _*),
+      js.Dictionary.apply(functions: _*),
+      None,
+      None
     )
+
   }
 }

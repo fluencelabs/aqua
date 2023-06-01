@@ -4,7 +4,7 @@ import aqua.api.{AirType, AquaAPIConfig, JavaScriptType, TypeScriptType}
 import aqua.js.{FunctionDefJs, ServiceDefJs}
 import aqua.model.transform.TransformConfig
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
+import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
@@ -17,6 +17,16 @@ case class AquaFunction(
   funcDef: FunctionDefJs,
   @JSExport
   script: String
+)
+
+@JSExportTopLevel("GeneratedSource")
+case class GeneratedSource(
+  @JSExport
+  val jsSource: js.UndefOr[String],
+  @JSExport
+  val tsSource: js.UndefOr[String],
+  @JSExport
+  val tsTypes: js.UndefOr[String]
 )
 
 @JSExportTopLevel("Input")
@@ -64,7 +74,7 @@ class CompilationResult(
   @JSExport
   val functionCall: js.UndefOr[AquaFunction],
   @JSExport
-  val source: js.UndefOr[String],
+  val generatedSource: js.UndefOr[GeneratedSource],
   @JSExport
   val errors: js.Array[String]
 )

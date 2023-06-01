@@ -4,7 +4,7 @@ import aqua.backend.ts.TypeScriptTypes
 import aqua.backend.*
 import aqua.res.AquaRes
 
-case class JavaScriptBackend(isOldFluenceJs: Boolean, client: String = Backend.client) extends Backend {
+case class JavaScriptBackend(isOldFluenceJs: Boolean = false, client: String = Backend.client) extends Backend {
 
   val ext = ".js"
   val tsExt = ".d.ts"

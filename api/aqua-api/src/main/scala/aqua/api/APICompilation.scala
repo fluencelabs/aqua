@@ -91,7 +91,8 @@ object APICompilation {
   def compilePath(
     pathStr: String,
     imports: List[String],
-    aquaConfig: AquaAPIConfig
+    aquaConfig: AquaAPIConfig,
+    backend: Backend
   ): IO[ValidatedNec[String, List[Generated]]] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val path = Path(pathStr)
@@ -99,14 +100,15 @@ object APICompilation {
     compileRaw(
       aquaConfig,
       sources,
-      APIBackend
+      backend
     )
   }
 
   def compileString(
     input: String,
     imports: List[String],
-    aquaConfig: AquaAPIConfig
+    aquaConfig: AquaAPIConfig,
+    backend: Backend
   ): IO[ValidatedNec[String, List[Generated]]] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val path = Path("")
@@ -120,7 +122,7 @@ object APICompilation {
     compileRaw(
       aquaConfig,
       strSources,
-      APIBackend
+      backend
     )
   }
 
