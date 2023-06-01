@@ -18,7 +18,9 @@ import cats.Id
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import cats.syntax.foldable.*
+import cats.data.Validated.{Invalid, Valid}
 import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.{Inside, Inspectors}
 import org.scalatest.matchers.should.Matchers
 import cats.~>
 
@@ -27,7 +29,7 @@ import scala.language.implicitConversions
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
-class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
+class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors with AquaSpec {
   import AquaSpec._
 
   private val parser = Parser.spanParser
@@ -116,16 +118,87 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   }
 
-  // TODO: unignore in LNG-135
-  "function with wrong indent" should "parse with error" ignore {
-    val script =
-      """func tryGen() -> bool:
-        |    on "deeper" via "deep":
-        |        v <- Local.gt()
+  "function with mixed blocks indent" should "parse without error" in {
+    val scriptFor =
+      """func try():
+        | v <- Local.call()
+        | for x <- v:
+        |   foo(x)
+        |   for y <- x:
+        |    bar(y)
+        | for z <- v:
+        |     baz(z)
+        |""".stripMargin
+
+    val scriptIf =
+      """func try(v: bool):
+        |  if v:
+        |    foo()
+        |  else:
+        |   if v:
+        |       bar()
+        |   else:
+        |     baz()
+        |""".stripMargin
+
+    val scriptOn =
+      """func try():
+        |  on "some" via "some":
+        |    foo()
+        |    on "some" via "some":
+        |     bar()
+        |  on "some" via "some":
+        |     bar()
+        |""".stripMargin
+
+    forAll(List(scriptFor, scriptIf, scriptOn)) { script =>
+      parser.parseAll(script).value.toEither.isRight shouldBe true
+    }
+  }
+
+  "function with wrong indent" should "parse with error" in {
+    val scriptSimple =
+      """func try():
+        |  v <- Local.call()
+        | x = v
+        |""".stripMargin
+
+    val scriptReturn =
+      """func try() -> bool:
+        |   v <- Local.call()
         |  <- v
         |""".stripMargin
 
-    parser.parseAll(script).value.toEither.isLeft shouldBe true
+    val scriptFor =
+      """func try():
+        | v <- call()
+        |  for x <- v:
+        |   foo(x)
+        |""".stripMargin
+
+    val scriptIf =
+      """func try(v: bool):
+        |   if v:
+        |    foo()
+        |  call()
+        |""".stripMargin
+
+    val scriptOn =
+      """func try():
+        |   call()
+        |  on "some" via "some":
+        |   foo()
+        |""".stripMargin
+
+    forAll(List(scriptSimple, scriptReturn, scriptFor, scriptIf, scriptOn)) { script =>
+      inside(parser.parseAll(script).value) { case Invalid(errors) =>
+        forAll(errors.toList) { error =>
+          inside(error) { case BlockIndentError(_, message) =>
+            message shouldEqual "Inconsistent indentation in the block"
+          }
+        }
+      }
+    }
   }
 
   "function with multiline definitions" should "parse without error" in {
@@ -179,7 +252,10 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
     qTree.d() shouldBe ArrowExpr(toArrowType(Nil, Some(scToBt(bool))))
     qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")))
-    qTree.d() shouldBe CallArrowExpr(List("v"), CallArrowToken(Some(toNamedType("Local")), "gt", Nil))
+    qTree.d() shouldBe CallArrowExpr(
+      List("v"),
+      CallArrowToken(Some(toNamedType("Local")), "gt", Nil)
+    )
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("v")))
     // genC function
     qTree.d() shouldBe FuncExpr(
@@ -188,7 +264,10 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 //      List("two": VarLambda[Id])
     )
     qTree.d() shouldBe ArrowExpr(toNamedArrow(("val" -> string) :: Nil, boolSc :: Nil))
-    qTree.d() shouldBe CallArrowExpr(List("one"), CallArrowToken(Some(toNamedType("Local")), "gt", List()))
+    qTree.d() shouldBe CallArrowExpr(
+      List("one"),
+      CallArrowToken(Some(toNamedType("Local")), "gt", List())
+    )
     qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
     qTree.d() shouldBe CallArrowExpr(List("two"), CallArrowToken(None, "tryGen", List()))
     qTree.d() shouldBe CallArrowExpr(
