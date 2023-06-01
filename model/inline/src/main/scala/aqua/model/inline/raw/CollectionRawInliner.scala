@@ -41,13 +41,22 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
       stream = VarModel(streamName, StreamType(raw.elementType))
       streamExp = CallModel.Export(stream.name, stream.`type`)
 
-      vals <- raw.values
+//      _ = println("raw: " + raw.values)
+
+      valsWithInlines <- raw.values
         .traverse(valueToModel(_))
         .map(_.toList)
         .map(Chain.fromSeq)
-        .map(_.flatMap { case (v, t) =>
-          Chain.fromOption(t) :+ PushToStreamModel(v, streamExp).leaf
-        })
+      
+      // push values to a stream, that is gathering collection
+      vals = valsWithInlines.flatMap { case (v, _) =>
+          Chain.one(PushToStreamModel(v, streamExp).leaf)
+        }
+
+      // all inlines will be added before values will be pushed to a stream
+      inlines = valsWithInlines.flatMap { case (_, t) =>
+          Chain.fromOption(t)
+        }
 
       canonName <-
         if (raw.boxType.isStream) State.pure(streamName)
@@ -61,13 +70,18 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
       raw.boxType match {
         case ArrayType(_) =>
           RestrictionModel(streamName, isStream = true).wrap(
-            SeqModel.wrap((vals :+ CanonicalizeModel(stream, canon).leaf).toList: _*)
+            SeqModel.wrap((inlines ++ vals :+ CanonicalizeModel(stream, canon).leaf).toList: _*)
           )
         case OptionType(_) =>
+//          println("vals: ")
+//          println(vals.toList.mkString("\n"))
+//          println("result: " + XorModel.wrap((vals :+ NullModel.leaf).toList: _*))
+//          println("result2: " + XorModel.wrap(SeqModel.wrap(vals.toList:_*), NullModel.leaf))
           RestrictionModel(streamName, isStream = true).wrap(
             SeqModel.wrap(
-              XorModel.wrap(SeqModel.wrap(vals.toList:_*), NullModel.leaf),
-              CanonicalizeModel(stream, canon).leaf
+               SeqModel.wrap(inlines.toList:_*),
+               XorModel.wrap((vals :+ NullModel.leaf).toList: _*),
+               CanonicalizeModel(stream, canon).leaf
             )
           )
         case _ => 

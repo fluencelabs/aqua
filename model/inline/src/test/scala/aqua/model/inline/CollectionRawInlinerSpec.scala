@@ -35,18 +35,18 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
       // create a stream
       RestrictionModel("option-inline", true).wrap(
         SeqModel.wrap(
+          // create an object
+          CallServiceModel(
+            "json",
+            "obj",
+            LiteralModel.fromRaw(LiteralRaw.quote("field1")) :: LiteralModel.fromRaw(
+              LiteralRaw.number(3)
+            ) :: Nil,
+            VarModel("nested_type_obj", nestedType)
+          ).leaf,
           XorModel.wrap(
             SeqModel.wrap(
-              // create object
-              CallServiceModel(
-                "json",
-                "obj",
-                LiteralModel.fromRaw(LiteralRaw.quote("field1")) :: LiteralModel.fromRaw(
-                  LiteralRaw.number(3)
-                ) :: Nil,
-                VarModel("nested_type_obj", nestedType)
-              ).leaf,
-              // push it to the stream
+              // push object to the stream
               PushToStreamModel(
                 VarModel("nested_type_obj", nestedType),
                 CallModel.Export("option-inline", StreamType(nestedType))
