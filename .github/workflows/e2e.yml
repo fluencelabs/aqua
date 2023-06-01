@@ -48,7 +48,7 @@ jobs:
 
   fluence-cli:
     needs: aqua
-    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
+    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@fix-autocommit-e2e
     with:
       aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
 
