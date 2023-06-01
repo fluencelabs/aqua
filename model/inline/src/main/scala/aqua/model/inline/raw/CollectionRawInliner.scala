@@ -41,19 +41,17 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
       stream = VarModel(streamName, StreamType(raw.elementType))
       streamExp = CallModel.Export(stream.name, stream.`type`)
 
-//      _ = println("raw: " + raw.values)
-
       valsWithInlines <- raw.values
         .traverse(valueToModel(_))
         .map(_.toList)
         .map(Chain.fromSeq)
-      
-      // push values to a stream, that is gathering collection
+
+      // push values to the stream, that is gathering the collection
       vals = valsWithInlines.flatMap { case (v, _) =>
           Chain.one(PushToStreamModel(v, streamExp).leaf)
         }
 
-      // all inlines will be added before values will be pushed to a stream
+      // all inlines will be added before pushing values to the stream
       inlines = valsWithInlines.flatMap { case (_, t) =>
           Chain.fromOption(t)
         }
@@ -73,10 +71,6 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
             SeqModel.wrap((inlines ++ vals :+ CanonicalizeModel(stream, canon).leaf).toList: _*)
           )
         case OptionType(_) =>
-//          println("vals: ")
-//          println(vals.toList.mkString("\n"))
-//          println("result: " + XorModel.wrap((vals :+ NullModel.leaf).toList: _*))
-//          println("result2: " + XorModel.wrap(SeqModel.wrap(vals.toList:_*), NullModel.leaf))
           RestrictionModel(streamName, isStream = true).wrap(
             SeqModel.wrap(
                SeqModel.wrap(inlines.toList:_*),
@@ -85,7 +79,7 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
             )
           )
         case _ => 
-          SeqModel.wrap(vals.toList: _*)
+          SeqModel.wrap((inlines ++ vals).toList: _*)
       }
     )
 }
