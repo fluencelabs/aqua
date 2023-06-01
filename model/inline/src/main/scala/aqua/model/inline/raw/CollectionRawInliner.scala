@@ -47,8 +47,8 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
         .map(Chain.fromSeq)
 
       // push values to the stream, that is gathering the collection
-      vals = valsWithInlines.flatMap { case (v, _) =>
-          Chain.one(PushToStreamModel(v, streamExp).leaf)
+      vals = valsWithInlines.map { case (v, _) =>
+          PushToStreamModel(v, streamExp).leaf
         }
 
       // all inlines will be added before pushing values to the stream
