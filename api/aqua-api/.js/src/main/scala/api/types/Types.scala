@@ -22,12 +22,19 @@ case class AquaFunction(
 @JSExportTopLevel("GeneratedSource")
 case class GeneratedSource(
   @JSExport
-  val jsSource: js.UndefOr[String],
+  val name: String,
   @JSExport
   val tsSource: js.UndefOr[String],
   @JSExport
+  val jsSource: js.UndefOr[String],
+  @JSExport
   val tsTypes: js.UndefOr[String]
 )
+
+object GeneratedSource {
+  def apply(name: String, tsSource: String) = new GeneratedSource(name, tsSource, null, null)
+  def apply(name: String, jsSource: String, tsTypes: String) = new GeneratedSource(name, null, jsSource, tsTypes)
+}
 
 @JSExportTopLevel("Input")
 class Input(
@@ -74,7 +81,7 @@ class CompilationResult(
   @JSExport
   val functionCall: js.UndefOr[AquaFunction],
   @JSExport
-  val generatedSource: js.UndefOr[GeneratedSource],
+  val generatedSource: js.Array[GeneratedSource],
   @JSExport
   val errors: js.Array[String]
 )
@@ -82,12 +89,12 @@ class CompilationResult(
 object CompilationResult {
 
   def result(
-    services: js.Dictionary[ServiceDefJs],
-    functions: js.Dictionary[AquaFunction],
-    call: Option[AquaFunction],
-    source: Option[String]
+    services: js.Dictionary[ServiceDefJs] = js.Dictionary(),
+    functions: js.Dictionary[AquaFunction] = js.Dictionary(),
+    call: Option[AquaFunction] = None,
+    source: js.Array[GeneratedSource] = js.Array()
   ): CompilationResult =
-    new CompilationResult(services, functions, call.orNull, source.orNull, js.Array())
+    new CompilationResult(services, functions, call.orNull, source, js.Array())
 
   def errs(
     errors: List[String]

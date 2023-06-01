@@ -25,7 +25,7 @@ import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.definitions.FunctionDef
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
+import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -39,7 +39,7 @@ import scribe.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.scalajs.js.{Promise, UndefOr, undefined, |}
+import scala.scalajs.js.{|, undefined, Promise, UndefOr}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
@@ -53,16 +53,29 @@ import cats.Applicative
 @JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {
 
-  def compileAll(input: types.Input | types.Path, imports: List[String], config: AquaAPIConfig): IO[CompilationResult] = {
+  def compileAll(
+    input: types.Input | types.Path,
+    imports: List[String],
+    config: AquaAPIConfig
+  ): IO[CompilationResult] = {
     val backend: Backend = config.targetType match {
-        case AirType => APIBackend
-        case TypeScriptType => TypeScriptBackend()
-        case JavaScriptType => JavaScriptBackend()
-      }
+      case AirType => APIBackend
+      case TypeScriptType => TypeScriptBackend()
+      case JavaScriptType => JavaScriptBackend()
+    }
 
-    extension (res: IO[ValidatedNec[String, List[Generated]]])
+    extension (res: IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]])
       def toResult: IO[CompilationResult] = res.map(
-        _.map(generatedToCompilationResult).leftMap(generatedToCompilationErrors).merge
+        _.map { compiled =>
+          config.targetType match {
+            case AirType => generatedToAirResult(compiled.toList.flatMap(_.compiled))
+            case TypeScriptType =>
+              generatedToAirResult(compiled.toList.flatMap(_.compiled))
+            case JavaScriptType =>
+              generatedToAirResult(compiled.toList.flatMap(_.compiled))
+
+          }
+        }.leftMap(generatedToCompilationErrors).merge
       )
 
     input match {
@@ -95,16 +108,11 @@ object AquaAPI extends App with Logging {
     }
 
     extension (res: IO[ValidatedNec[String, (FunctionDef, String)]])
-        def callToResult: IO[CompilationResult] = res.map(
-          _.map { case (definitions, air) =>
-            CompilationResult.result(
-              js.Dictionary(),
-              js.Dictionary(),
-              Some(AquaFunction(FunctionDefJs(definitions), air)),
-              None
-            )
-          }.leftMap(generatedToCompilationErrors).merge
-        )
+      def callToResult: IO[CompilationResult] = res.map(
+        _.map { case (definitions, air) =>
+          CompilationResult.result(call = Some(AquaFunction(FunctionDefJs(definitions), air)))
+        }.leftMap(generatedToCompilationErrors).merge
+      )
 
     APICompilation
       .compileCall(
@@ -130,8 +138,6 @@ object AquaAPI extends App with Logging {
     }).map { config =>
       val importsList = imports.toList
 
-
-
       input match {
         case i: types.Input =>
           compileAll(i, importsList, config)
@@ -152,7 +158,7 @@ object AquaAPI extends App with Logging {
     CompilationResult.errs(errors.toChain.toList)
   }
 
-  private def generatedToCompilationResult(generated: List[Generated]): CompilationResult = {
+  private def generatedToAirResult(generated: List[Generated]): CompilationResult = {
     val serviceDefs = generated.flatMap(_.services).map(s => s.name -> ServiceDefJs(s))
     val functions = generated.flatMap(
       _.air.map(as => (as.name, AquaFunction(FunctionDefJs(as.funcDef), as.air)))
@@ -161,8 +167,6 @@ object AquaAPI extends App with Logging {
     CompilationResult.result(
       js.Dictionary.apply(serviceDefs: _*),
       js.Dictionary.apply(functions: _*),
-      None,
-      None
     )
 
   }

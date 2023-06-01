@@ -24,7 +24,7 @@ import aqua.model.AquaContext
 import aqua.res.AquaRes
 import cats.Applicative
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.data.Validated.{invalidNec, invalid, validNec, Invalid, Valid}
+import cats.data.Validated.{Invalid, Valid, invalid, invalidNec, validNec}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -93,7 +93,7 @@ object APICompilation {
     imports: List[String],
     aquaConfig: AquaAPIConfig,
     backend: Backend
-  ): IO[ValidatedNec[String, List[Generated]]] = {
+  ): IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val path = Path(pathStr)
     val sources = new AquaFileSources[IO](path, imports.map(Path.apply))
@@ -109,7 +109,7 @@ object APICompilation {
     imports: List[String],
     aquaConfig: AquaAPIConfig,
     backend: Backend
-  ): IO[ValidatedNec[String, List[Generated]]] = {
+  ): IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]] = {
     implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
     val path = Path("")
 
@@ -130,7 +130,7 @@ object APICompilation {
     aquaConfig: AquaAPIConfig,
     sources: AquaSources[IO, AquaFileError, FileModuleId],
     backend: Backend
-  ): IO[ValidatedNec[String, List[Generated]]] = {
+  ): IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]] = {
 
     (
       LogLevels.levelFromString(aquaConfig.logLevel),
@@ -160,7 +160,7 @@ object APICompilation {
           config
         )
     } match {
-      case Valid(pr) => pr.map(_.map(_.toList.flatMap(_.compiled)).leftMap(_.map(_.show).distinct))
+      case Valid(pr) => pr.map(_.leftMap(_.map(_.show).distinct))
       case Invalid(errs) => IO.pure(invalid(NonEmptyChain.fromNonEmptyList(errs)))
     }
   }
