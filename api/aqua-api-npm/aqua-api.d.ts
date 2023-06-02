@@ -1,12 +1,13 @@
 import type {FunctionCallDef, ServiceDef} from "@fluencelabs/fluence/dist/internal/compilerSupport/v3impl/interface"
 
 export class AquaConfig {
-    constructor(logLevel: string, constants: string[], noXor: boolean, noRelay: boolean);
+    constructor(logLevel: string, constants: string[], noXor: boolean, noRelay: boolean, targetType: string);
 
     logLevel?: string
     constants?: string[]
     noXor?: boolean
     noRelay?: boolean
+    targetType?: string
 }
 
 export class AquaFunction {
@@ -14,11 +15,19 @@ export class AquaFunction {
     script: string
 }
 
+export class GeneratedSource {
+    name: string
+    tsSource?: string
+    jsSource?: string
+    tsTypes?: string
+}
+
 export class CompilationResult {
     services: Record<string, ServiceDef>
     functions: Record<string, AquaFunction>
     functionCall?: AquaFunction
     errors: string[]
+    generatedSources: GeneratedSource[]
 }
 
 export class Input {

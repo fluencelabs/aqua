@@ -63,7 +63,7 @@ jobs:
       - name: JS API build
         env:
           SNAPSHOT: ${{ steps.version.outputs.id }}
-        run: sbt aqua-api/fastOptJS
+        run: sbt aqua-apiJS/fastOptJS
 
       - name: Upload aqua-cli artifact
         uses: actions/upload-artifact@v3
@@ -75,7 +75,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: aqua-api
-          path: api/aqua-api/target/scala-*/aqua-api-fastopt.js
+          path: api/aqua-api/.js/target/scala-*/aqua-api-fastopt.js
 
       - name: Upload aqua-lsp artifact
         uses: actions/upload-artifact@v3

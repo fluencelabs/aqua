@@ -32,8 +32,8 @@ case class GeneratedSource(
 )
 
 object GeneratedSource {
-  def apply(name: String, tsSource: String) = new GeneratedSource(name, tsSource, null, null)
-  def apply(name: String, jsSource: String, tsTypes: String) = new GeneratedSource(name, null, jsSource, tsTypes)
+  def tsSource(name: String, tsSource: String) = new GeneratedSource(name, tsSource, null, null)
+  def jsSource(name: String, jsSource: String, tsTypes: String) = new GeneratedSource(name, null, jsSource, tsTypes)
 }
 
 @JSExportTopLevel("Input")
@@ -81,7 +81,7 @@ class CompilationResult(
   @JSExport
   val functionCall: js.UndefOr[AquaFunction],
   @JSExport
-  val generatedSource: js.Array[GeneratedSource],
+  val generatedSources: js.Array[GeneratedSource],
   @JSExport
   val errors: js.Array[String]
 )
@@ -92,9 +92,9 @@ object CompilationResult {
     services: js.Dictionary[ServiceDefJs] = js.Dictionary(),
     functions: js.Dictionary[AquaFunction] = js.Dictionary(),
     call: Option[AquaFunction] = None,
-    source: js.Array[GeneratedSource] = js.Array()
+    sources: js.Array[GeneratedSource] = js.Array()
   ): CompilationResult =
-    new CompilationResult(services, functions, call.orNull, source, js.Array())
+    new CompilationResult(services, functions, call.orNull, sources, js.Array())
 
   def errs(
     errors: List[String]

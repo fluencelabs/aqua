@@ -1,6 +1,6 @@
 package api
 
-import api.types.{AquaConfig, AquaFunction, CompilationResult, Input}
+import api.types.{AquaConfig, AquaFunction, CompilationResult, GeneratedSource, Input}
 import aqua.ErrorRendering.showError
 import aqua.raw.value.ValueRaw
 import aqua.api.{APICompilation, AirType, AquaAPIConfig, JavaScriptType, TypeScriptType}
@@ -25,7 +25,7 @@ import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.definitions.FunctionDef
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
+import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -39,7 +39,7 @@ import scribe.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.scalajs.js.{|, undefined, Promise, UndefOr}
+import scala.scalajs.js.{Promise, UndefOr, undefined, |}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
@@ -70,10 +70,18 @@ object AquaAPI extends App with Logging {
           config.targetType match {
             case AirType => generatedToAirResult(compiled.toList.flatMap(_.compiled))
             case TypeScriptType =>
-              generatedToAirResult(compiled.toList.flatMap(_.compiled))
-            case JavaScriptType =>
-              generatedToAirResult(compiled.toList.flatMap(_.compiled))
+              val sources = compiled.map { c =>
+                GeneratedSource.tsSource(c.sourceId.toString, c.compiled.head.content)
+              }.toList.toJSArray
+              CompilationResult.result(sources = sources)
 
+            case JavaScriptType =>
+              val sources = compiled.map { c =>
+                val tsTypes = c.compiled.find(_.suffix == JavaScriptBackend.dtsExt).map(_.content).getOrElse("")
+                val jsSource = c.compiled.find(_.suffix == JavaScriptBackend.ext).map(_.content).getOrElse("")
+                GeneratedSource.jsSource(c.sourceId.toString, jsSource, tsTypes)
+              }.toList.toJSArray
+              CompilationResult.result(sources = sources)
           }
         }.leftMap(generatedToCompilationErrors).merge
       )
