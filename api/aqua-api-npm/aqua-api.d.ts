@@ -1,6 +1,7 @@
 import type {FunctionCallDef, ServiceDef} from "@fluencelabs/fluence/dist/internal/compilerSupport/v3impl/interface"
 
 export class AquaConfig {
+    constructor(logLevel: string, constants: string[], noXor: boolean, noRelay: boolean);
     constructor(logLevel: string, constants: string[], noXor: boolean, noRelay: boolean, targetType: string);
 
     logLevel?: string
