@@ -53,6 +53,41 @@ import cats.Applicative
 @JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {
 
+  /**
+   * All-in-one function that support different inputs and backends
+   * @param input can be a path to aqua file, string with a code or a function call
+   * @param imports list of paths
+   * @param aquaConfigJS compiler config
+   * @return compiler results depends on input and config
+   */
+  @JSExport
+  def compile(
+    input: types.Input | types.Path | types.Call,
+    imports: js.Array[String],
+    aquaConfigJS: js.UndefOr[AquaConfig]
+  ): Promise[CompilationResult] = {
+    (aquaConfigJS.toOption.map(cjs => AquaConfig.fromJS(cjs)) match {
+      case Some(Valid(conf)) => validNec(conf)
+      case Some(inv @ Invalid(_)) => inv
+      case None => validNec(AquaAPIConfig())
+    }).map { config =>
+      val importsList = imports.toList
+
+      input match {
+        case i: types.Input =>
+          compileAll(i, importsList, config)
+        case p: types.Path =>
+          compileAll(p, importsList, config)
+        case c: types.Call =>
+          compileCall(c, importsList, config)
+
+      }
+    } match {
+      case Valid(v) => v.unsafeToFuture().toJSPromise
+      case Invalid(errs) => js.Promise.resolve(CompilationResult.errs(errs.toChain.toList))
+    }
+  }
+
   // Compile all non-call inputs
   private def compileAll(
     input: types.Input | types.Path,
@@ -70,10 +105,10 @@ object AquaAPI extends App with Logging {
         _.andThen { compiled =>
           config.targetType match {
             case AirType => validNec(generatedToAirResult(compiled))
-            case TypeScriptType => generatedToTsResult(compiled)
-            case JavaScriptType => generatedToJsResult(compiled)
+            case TypeScriptType => compiledToTsSourceResult(compiled)
+            case JavaScriptType => compiledToJsSourceResult(compiled)
           }
-        }.leftMap(generatedToCompilationErrors).merge
+        }.leftMap(errorsToResult).merge
       )
 
     input match {
@@ -109,7 +144,7 @@ object AquaAPI extends App with Logging {
       def callToResult: IO[CompilationResult] = res.map(
         _.map { case (definitions, air) =>
           CompilationResult.result(call = Some(AquaFunction(FunctionDefJs(definitions), air)))
-        }.leftMap(generatedToCompilationErrors).merge
+        }.leftMap(errorsToResult).merge
       )
 
     APICompilation
@@ -123,43 +158,7 @@ object AquaAPI extends App with Logging {
       .callToResult
   }
 
-  /**
-   * All-in-one function that support different inputs and backends
-   * @param input can be a path to aqua file, string with a code or a function call
-   * @param imports list of paths
-   * @param aquaConfigJS compiler config
-   * @return compiler results depends on input and config
-   */
-  @JSExport
-  def compile(
-    input: types.Input | types.Path | types.Call,
-    imports: js.Array[String],
-    aquaConfigJS: js.UndefOr[AquaConfig]
-  ): Promise[CompilationResult] = {
-    (aquaConfigJS.toOption.map(cjs => AquaConfig.fromJS(cjs)) match {
-      case Some(Valid(conf)) => validNec(conf)
-      case Some(inv @ Invalid(_)) => inv
-      case None => validNec(AquaAPIConfig())
-    }).map { config =>
-      val importsList = imports.toList
-
-      input match {
-        case i: types.Input =>
-          compileAll(i, importsList, config)
-        case p: types.Path =>
-          compileAll(p, importsList, config)
-        case c: types.Call =>
-          compileCall(c, importsList, config)
-
-      }
-    } match {
-      case Valid(v) => v.unsafeToFuture().toJSPromise
-      case Invalid(errs) => js.Promise.resolve(CompilationResult.errs(errs.toChain.toList))
-    }
-
-  }
-
-  private def generatedToCompilationErrors(errors: NonEmptyChain[String]): CompilationResult = {
+  private def errorsToResult(errors: NonEmptyChain[String]): CompilationResult = {
     CompilationResult.errs(errors.toChain.toList)
   }
 
@@ -181,7 +180,7 @@ object AquaAPI extends App with Logging {
       def toSourcesResult: ValidatedNec[String, CompilationResult] =
         res.sequence.map(_.toList.toJSArray).map(sources => CompilationResult.result(sources = sources))
 
-  private def generatedToTsResult(
+  private def compiledToTsSourceResult(
     compiled: Chain[AquaCompiled[FileModuleId]]
   ): ValidatedNec[String, CompilationResult] = {
     compiled.map { c =>
@@ -194,7 +193,7 @@ object AquaAPI extends App with Logging {
     }.toSourcesResult
   }
 
-  private def generatedToJsResult(
+  private def compiledToJsSourceResult(
     compiled: Chain[AquaCompiled[FileModuleId]]
   ): ValidatedNec[String, CompilationResult] = {
     compiled.map { c =>
