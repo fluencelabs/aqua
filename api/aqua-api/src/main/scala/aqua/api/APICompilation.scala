@@ -158,7 +158,7 @@ object APICompilation {
             override def generate(aqua: AquaRes): Seq[Generated] = backend.generate(aqua)
           ,
           config
-        )
+        ).map(_.leftMap(_.map(_.show).distinct))
     }.map(_.leftMap(NonEmptyChain.fromNonEmptyList).andThen(identity))
   }
 }
