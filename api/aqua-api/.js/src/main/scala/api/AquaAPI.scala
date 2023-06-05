@@ -66,11 +66,11 @@ object AquaAPI extends App with Logging {
     imports: js.Array[String],
     aquaConfigJS: js.UndefOr[AquaConfig]
   ): Promise[CompilationResult] = {
-    (aquaConfigJS.toOption.map(cjs => AquaConfig.fromJS(cjs)) match {
-      case Some(Valid(conf)) => validNec(conf)
-      case Some(inv @ Invalid(_)) => inv
-      case None => validNec(AquaAPIConfig())
-    }).map { config =>
+    aquaConfigJS.toOption
+      .map(cjs => AquaConfig.fromJS(cjs))
+      .getOrElse(
+        AquaAPIConfig().validNec
+      ).map { config =>
       val importsList = imports.toList
 
       input match {
