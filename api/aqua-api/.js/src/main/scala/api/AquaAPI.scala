@@ -74,10 +74,8 @@ object AquaAPI extends App with Logging {
       val importsList = imports.toList
 
       input match {
-        case i: types.Input =>
+        case i: (types.Input | types.Path) =>
           compileAll(i, importsList, config)
-        case p: types.Path =>
-          compileAll(p, importsList, config)
         case c: types.Call =>
           compileCall(c, importsList, config)
 
