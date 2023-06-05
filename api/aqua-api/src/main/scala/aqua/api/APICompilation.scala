@@ -135,7 +135,7 @@ object APICompilation {
     (
       LogLevels.levelFromString(aquaConfig.logLevel),
       Constants.parse(aquaConfig.constants)
-    ).mapN { (level, constants) =>
+    ).traverseN { (level, constants) =>
 
       LogFormatter.initLogger(Some(level))
 
@@ -159,9 +159,6 @@ object APICompilation {
           ,
           config
         )
-    } match {
-      case Valid(pr) => pr.map(_.leftMap(_.map(_.show).distinct))
-      case Invalid(errs) => IO.pure(invalid(NonEmptyChain.fromNonEmptyList(errs)))
-    }
+    }.map(_.leftMap(NonEmptyChain.fromNonEmptyList).andThen(identity))
   }
 }
