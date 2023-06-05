@@ -1,13 +1,11 @@
 package aqua.api
 import aqua.model.transform.TransformConfig
 
-sealed trait TargetType
-case object TypeScriptType extends TargetType
-case object JavaScriptType extends TargetType
-case object AirType extends TargetType
+enum TargetType:
+  case TypeScriptType, JavaScriptType, AirType
 
 case class AquaAPIConfig(
-  targetType: TargetType = AirType,
+  targetType: TargetType = TargetType.AirType,
   logLevel: String = "info",
   constants: List[String] = Nil,
   noXor: Boolean = false,

@@ -3,7 +3,8 @@ package api
 import api.types.{AquaConfig, AquaFunction, CompilationResult, GeneratedSource, Input}
 import aqua.ErrorRendering.showError
 import aqua.raw.value.ValueRaw
-import aqua.api.{APICompilation, AirType, AquaAPIConfig, JavaScriptType, TypeScriptType}
+import aqua.api.{APICompilation, AquaAPIConfig}
+import aqua.api.TargetType.*
 import aqua.backend.air.AirBackend
 import aqua.backend.{AirFunction, Backend, Generated}
 import aqua.compiler.*
@@ -69,7 +70,7 @@ object AquaAPI extends App with Logging {
     aquaConfigJS.toOption
       .map(cjs => AquaConfig.fromJS(cjs))
       .getOrElse(
-        AquaAPIConfig().validNec
+        validNec(AquaAPIConfig())
       ).map { config =>
       val importsList = imports.toList
 
