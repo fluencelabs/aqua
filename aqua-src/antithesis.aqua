@@ -1,9 +1,14 @@
-module Import3 declares *
+data Nested:
+  field: string
 
-export foo_bar
+data Dat:
+  nest: ?Nested
 
-use "export.aqua"
-
-func foo_bar() -> string, string:
-  z <- FooBars.foo()
-  <- z, FooBars.DECLARE_CONST2
+func a(datSome: ?Dat, datNone: ?Dat) -> Dat:
+  nested = ?[Nested(field = "s")]
+  nested2 = ?[Nested(field = "s")]
+  nested3 = Nested(field = "s")
+  Call.call()
+  par Call.call2()
+  t = Dat(nest = ?[nested!, nested2!, nested3])
+  <- t

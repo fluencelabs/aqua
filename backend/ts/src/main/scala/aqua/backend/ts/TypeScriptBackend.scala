@@ -6,12 +6,14 @@ import cats.data.NonEmptyChain
 
 case class TypeScriptBackend(isOldFluenceJs: Boolean = false, client: String = Backend.client) extends Backend {
 
-  val ext = ".ts"
-
   override def generate(res: AquaRes): Seq[Generated] =
     if (res.isEmpty) Nil
     else {
       val (airs, script) = OutputFile(res).generate(TypeScriptTypes(client), isJs = false, isOldFluenceJs)
-      Generated(ext, script, airs) :: Nil
+      Generated(TypeScriptBackend.ext, script, airs) :: Nil
     }
+}
+
+object TypeScriptBackend {
+  val ext = ".ts"
 }

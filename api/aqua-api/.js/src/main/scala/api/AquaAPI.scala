@@ -25,7 +25,7 @@ import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.definitions.FunctionDef
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
+import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -39,7 +39,7 @@ import scribe.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.scalajs.js.{Promise, UndefOr, undefined, |}
+import scala.scalajs.js.{|, undefined, Promise, UndefOr}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
@@ -53,7 +53,8 @@ import cats.Applicative
 @JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {
 
-  def compileAll(
+  // Compile all non-call inputs
+  private def compileAll(
     input: types.Input | types.Path,
     imports: List[String],
     config: AquaAPIConfig
@@ -66,22 +67,11 @@ object AquaAPI extends App with Logging {
 
     extension (res: IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]])
       def toResult: IO[CompilationResult] = res.map(
-        _.map { compiled =>
+        _.andThen { compiled =>
           config.targetType match {
-            case AirType => generatedToAirResult(compiled.toList.flatMap(_.compiled))
-            case TypeScriptType =>
-              val sources = compiled.map { c =>
-                GeneratedSource.tsSource(c.sourceId.toString, c.compiled.head.content)
-              }.toList.toJSArray
-              CompilationResult.result(sources = sources)
-
-            case JavaScriptType =>
-              val sources = compiled.map { c =>
-                val tsTypes = c.compiled.find(_.suffix == JavaScriptBackend.dtsExt).map(_.content).getOrElse("")
-                val jsSource = c.compiled.find(_.suffix == JavaScriptBackend.ext).map(_.content).getOrElse("")
-                GeneratedSource.jsSource(c.sourceId.toString, jsSource, tsTypes)
-              }.toList.toJSArray
-              CompilationResult.result(sources = sources)
+            case AirType => validNec(generatedToAirResult(compiled))
+            case TypeScriptType => generatedToTsResult(compiled)
+            case JavaScriptType => generatedToJsResult(compiled)
           }
         }.leftMap(generatedToCompilationErrors).merge
       )
@@ -109,7 +99,7 @@ object AquaAPI extends App with Logging {
 
   }
 
-  def compileCall(call: types.Call, imports: List[String], config: AquaAPIConfig) = {
+  private def compileCall(call: types.Call, imports: List[String], config: AquaAPIConfig) = {
     val path = call.input match {
       case i: types.Input => i.input
       case p: types.Path => p.path
@@ -133,6 +123,13 @@ object AquaAPI extends App with Logging {
       .callToResult
   }
 
+  /**
+   * All-in-one function that support different inputs and backends
+   * @param input can be a path to aqua file, string with a code or a function call
+   * @param imports list of paths
+   * @param aquaConfigJS compiler config
+   * @return compiler results depends on input and config
+   */
   @JSExport
   def compile(
     input: types.Input | types.Path | types.Call,
@@ -166,7 +163,60 @@ object AquaAPI extends App with Logging {
     CompilationResult.errs(errors.toChain.toList)
   }
 
-  private def generatedToAirResult(generated: List[Generated]): CompilationResult = {
+  private def findBySuffix(
+    compiled: Seq[Generated],
+    suffix: String,
+    errorMsg: String
+  ): ValidatedNec[String, String] = {
+    Validated
+      .fromOption(
+        compiled.find(_.suffix == suffix).map(_.content), {
+          logger.error(errorMsg)
+          NonEmptyChain.one(errorMsg)
+        }
+      )
+  }
+
+  extension (res: Chain[Validated[NonEmptyChain[String], GeneratedSource]])
+      def toSourcesResult: ValidatedNec[String, CompilationResult] =
+        res.sequence.map(_.toList.toJSArray).map(sources => CompilationResult.result(sources = sources))
+
+  private def generatedToTsResult(
+    compiled: Chain[AquaCompiled[FileModuleId]]
+  ): ValidatedNec[String, CompilationResult] = {
+    compiled.map { c =>
+      findBySuffix(
+        c.compiled,
+        TypeScriptBackend.ext,
+        "Unreachable. TypeScript backend must generate content."
+      )
+        .map(GeneratedSource.tsSource(c.sourceId.toString, _))
+    }.toSourcesResult
+  }
+
+  private def generatedToJsResult(
+    compiled: Chain[AquaCompiled[FileModuleId]]
+  ): ValidatedNec[String, CompilationResult] = {
+    compiled.map { c =>
+      findBySuffix(
+        c.compiled,
+        JavaScriptBackend.dtsExt,
+        "Unreachable. JavaScript backend must generate '.d.ts' content."
+      ).andThen { tsTypes =>
+        findBySuffix(
+          c.compiled,
+          JavaScriptBackend.ext,
+          "Unreachable. JavaScript backend must generate '.js' content."
+        ).map(jsSource => GeneratedSource.jsSource(c.sourceId.toString, jsSource, tsTypes))
+      }
+
+    }.toSourcesResult
+  }
+
+  private def generatedToAirResult(
+    compiled: Chain[AquaCompiled[FileModuleId]]
+  ): CompilationResult = {
+    val generated = compiled.toList.flatMap(_.compiled)
     val serviceDefs = generated.flatMap(_.services).map(s => s.name -> ServiceDefJs(s))
     val functions = generated.flatMap(
       _.air.map(as => (as.name, AquaFunction(FunctionDefJs(as.funcDef), as.air)))
@@ -174,7 +224,7 @@ object AquaAPI extends App with Logging {
 
     CompilationResult.result(
       js.Dictionary.apply(serviceDefs: _*),
-      js.Dictionary.apply(functions: _*),
+      js.Dictionary.apply(functions: _*)
     )
 
   }
