@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.0...aqua-v0.11.1) (2023-06-01)
+
+
+### Bug Fixes
+
+* **inline:** Nullable value in a nested struct [LNG-160] ([#724](https://github.com/fluencelabs/aqua/issues/724)) ([ddb758c](https://github.com/fluencelabs/aqua/commit/ddb758cee0b4a5e87a7648cac9d16b2bbc637a00))
+
 ## [0.11.0](https://github.com/fluencelabs/aqua/compare/aqua-v0.10.6...aqua-v0.11.0) (2023-05-29)
 
 
