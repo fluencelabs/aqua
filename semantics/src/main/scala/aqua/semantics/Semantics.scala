@@ -23,6 +23,8 @@ import cats.Reducible
 import cats.data.Validated.{Invalid, Valid}
 import cats.kernel.Monoid
 import cats.syntax.applicative.*
+import cats.syntax.option.*
+import cats.syntax.all.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -59,9 +61,7 @@ class RawSemantics[S[_]](implicit p: Picker[RawContext]) extends Semantics[S, Ra
       .map { case (state, ctx) =>
         NonEmptyChain
           .fromChain(state.errors)
-          .fold[ValidatedNec[SemanticError[S], RawContext]](
-            Valid(ctx)
-          )(Invalid(_))
+          .toInvalid(ctx)
       }
       // TODO: return as Eval
       .value

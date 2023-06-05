@@ -2,7 +2,13 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
-import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyGateRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner}
+import aqua.model.inline.raw.{
+  ApplyFunctorRawInliner,
+  ApplyGateRawInliner,
+  ApplyPropertiesRawInliner,
+  CallArrowRawInliner,
+  CollectionRawInliner
+}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, OptionType, StreamType}
@@ -86,10 +92,10 @@ object RawValueInliner extends Logging {
         case (vv, _) =>
           FlattenModel(vv, name).leaf
       }
-    }.map{ predo =>
+    }.map { predo =>
       inline.mergeMode match
         case SeqMode =>
-          SeqModel.wrap((inline.predo.toList ++ predo):_*) :: Nil
+          SeqModel.wrap((inline.predo.toList ++ predo): _*) :: Nil
         case ParMode => inline.predo.toList ::: predo
     }
   }

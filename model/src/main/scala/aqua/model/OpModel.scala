@@ -39,6 +39,10 @@ object OpModel extends TreeNodeCompanion[OpModel] {
   }
 }
 
+enum MetaModel extends OpModel {
+  case CallArrowModel(name: String)
+}
+
 sealed trait NoExecModel extends OpModel
 
 sealed trait ForceExecModel extends OpModel
@@ -95,9 +99,14 @@ case class MatchMismatchModel(left: ValueModel, right: ValueModel, shouldMatch: 
     left.usesVarNames ++ right.usesVarNames
 }
 
-case class ForModel(item: String, iterable: ValueModel, mode: Option[ForModel.Mode] = Some(ForModel.NullMode)) extends SeqGroupModel {
+case class ForModel(
+  item: String,
+  iterable: ValueModel,
+  mode: Option[ForModel.Mode] = Some(ForModel.NullMode)
+) extends SeqGroupModel {
 
-  override def toString: String = s"for $item <- $iterable${mode.map(m => " " + m.toString).getOrElse("")}"
+  override def toString: String =
+    s"for $item <- $iterable${mode.map(m => " " + m.toString).getOrElse("")}"
 
   override def restrictsVarNames: Set[String] = Set(item)
 
@@ -142,7 +151,13 @@ case class CallServiceModel(serviceId: ValueModel, funcName: String, call: CallM
 }
 
 object CallServiceModel {
-  def apply(serviceId: String, funcName: String, args: List[ValueModel], result: VarModel): CallServiceModel =
+
+  def apply(
+    serviceId: String,
+    funcName: String,
+    args: List[ValueModel],
+    result: VarModel
+  ): CallServiceModel =
     CallServiceModel(
       LiteralModel(s"\"$serviceId\"", ScalarType.string),
       funcName,

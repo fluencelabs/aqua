@@ -2,7 +2,7 @@ package aqua.semantics.expr.func
 
 import aqua.parser.expr.func.JoinExpr
 import aqua.raw.Raw
-import aqua.raw.ops.{FuncOp, JoinTag}
+import aqua.raw.ops.JoinTag
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra

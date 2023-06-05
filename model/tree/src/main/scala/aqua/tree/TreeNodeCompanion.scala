@@ -16,10 +16,10 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
   type Tree = Cofree[Chain, T]
 
   private def showOffset(what: Tree, offset: Int): String = {
-    val spaces = " " * offset
+    val spaces = "| " * offset
     spaces + what.head.show + what.tail.map {
       case ch if ch.nonEmpty =>
-        " :\n" + ch.toList.map(showOffset(_, offset + 1)).mkString("") + "\n"
+        " :\n" + ch.toList.map(showOffset(_, offset + 1)).mkString("")
       case ch => "\n"
     }.value
   }

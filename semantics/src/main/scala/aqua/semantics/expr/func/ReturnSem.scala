@@ -1,6 +1,6 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{FuncOp, ReturnTag}
+import aqua.raw.ops.ReturnTag
 import aqua.parser.expr.func.ReturnExpr
 import aqua.raw.Raw
 import aqua.semantics.Prog
