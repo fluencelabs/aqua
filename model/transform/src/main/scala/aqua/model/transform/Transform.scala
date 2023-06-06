@@ -87,7 +87,12 @@ object Transform extends Logging {
       callable = initCallable
     )
 
-    val tracing = Tracing(enabled = true)
+    val tracing = Tracing(
+      enabled = true,
+      serviceId = "tracingSrv",
+      serviceFuncName = "tracingEvent",
+      initCallable = initCallable
+    )
 
     val argsProvider: ArgsProvider = ArgsFromService(
       dataServiceId = conf.dataSrvId,

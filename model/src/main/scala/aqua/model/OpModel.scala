@@ -166,7 +166,7 @@ object CallServiceModel {
     result: VarModel
   ): CallServiceModel =
     CallServiceModel(
-      LiteralModel(s"\"$serviceId\"", ScalarType.string),
+      LiteralModel.liftString(serviceId),
       funcName,
       CallModel(
         args,
