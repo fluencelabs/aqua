@@ -25,7 +25,7 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
   }
 
   private def showDiffOffset(what: (Tree, Tree), offset: Int): String = {
-    val spaces = " " * offset
+    val spaces = "| " * offset
     val head =
       if (what._1.head == what._2.head) what._1.head.show
       else {

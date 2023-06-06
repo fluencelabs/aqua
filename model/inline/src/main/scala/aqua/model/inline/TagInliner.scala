@@ -14,6 +14,7 @@ import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
+import cats.syntax.show.*
 import scribe.{log, Logging}
 
 /**

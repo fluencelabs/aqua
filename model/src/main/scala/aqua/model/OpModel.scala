@@ -41,6 +41,13 @@ object OpModel extends TreeNodeCompanion[OpModel] {
 
 enum MetaModel extends OpModel {
   case CallArrowModel(name: String)
+
+  override def wrap(children: Tree*): Tree =
+    // NOTE: Consider leaving some meta info if call is completely erased?
+    children.filter(_.head != EmptyModel) match {
+      case Nil => EmptyModel.leaf
+      case filtered => super.wrap(filtered: _*)
+    }
 }
 
 sealed trait NoExecModel extends OpModel

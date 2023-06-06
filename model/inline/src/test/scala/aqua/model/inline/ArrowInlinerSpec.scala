@@ -113,14 +113,21 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, true).wrap(
-        SeqModel.wrap(
-          CanonicalizeModel(streamModel, CallModel.Export(canonModel.name, canonModel.`type`)).leaf,
-          CallServiceModel(
-            LiteralModel("\"test-service\"", LiteralType.string),
-            "some-call",
-            CallModel(canonModel :: Nil, Nil)
-          ).leaf
-        )
+        MetaModel
+          .CallArrowModel("cb")
+          .wrap(
+            SeqModel.wrap(
+              CanonicalizeModel(
+                streamModel,
+                CallModel.Export(canonModel.name, canonModel.`type`)
+              ).leaf,
+              CallServiceModel(
+                LiteralModel("\"test-service\"", LiteralType.string),
+                "some-call",
+                CallModel(canonModel :: Nil, Nil)
+              ).leaf
+            )
+          )
       )
     ) should be(true)
 
@@ -130,7 +137,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     func stream-callback(cb: string -> ()):
       records: *string
       cb(records!)
-  */
+   */
   ignore /*"arrow inliner"*/ should "pass stream with gate to callback properly" in {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
@@ -291,11 +298,15 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     model.equalsOrShowDiff(
       SeqModel.wrap(
-        CallServiceModel(
-          LiteralModel("\"test-service\"", LiteralType.string),
-          "get_records",
-          CallModel(Nil, CallModel.Export(recordsModel.name, recordsModel.`type`) :: Nil)
-        ).leaf,
+        MetaModel
+          .CallArrowModel(innerName)
+          .wrap(
+            CallServiceModel(
+              LiteralModel("\"test-service\"", LiteralType.string),
+              "get_records",
+              CallModel(Nil, CallModel.Export(recordsModel.name, recordsModel.`type`) :: Nil)
+            ).leaf
+          ),
         SeqModel.wrap(
           CanonicalizeModel(recordsModel, CallModel.Export(canonModel.name, canonType)).leaf,
           CallServiceModel(
@@ -322,6 +333,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
      OpHa.identity(v)
    */
   "arrow inliner" should "hold lambda" in {
+    val innerName = "inner"
 
     // lambda that will be assigned to another variable
     val objectVarLambda =
@@ -348,7 +360,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     // function where we assign object lambda to value and call service
     val inner =
       FuncArrow(
-        "inner",
+        innerName,
         SeqTag.wrap(
           AssignmentTag(
             objectVarLambda,
@@ -403,14 +415,18 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           "getObj",
           CallModel(Nil, CallModel.Export(objectVar.name, objectVar.`type`) :: Nil)
         ).leaf,
-        SeqModel.wrap(
-          FlattenModel(ValueModel.fromRaw(objectVarLambda), flattenObject.name).leaf,
-          CallServiceModel(
-            LiteralModel("\"callbackSrv\"", LiteralType.string),
-            "response",
-            CallModel(ValueModel.fromRaw(flattenObject) :: Nil, Nil)
-          ).leaf
-        )
+        MetaModel
+          .CallArrowModel(innerName)
+          .wrap(
+            SeqModel.wrap(
+              FlattenModel(ValueModel.fromRaw(objectVarLambda), flattenObject.name).leaf,
+              CallServiceModel(
+                LiteralModel("\"callbackSrv\"", LiteralType.string),
+                "response",
+                CallModel(ValueModel.fromRaw(flattenObject) :: Nil, Nil)
+              ).leaf
+            )
+          )
       )
     ) should be(true)
 
@@ -421,6 +437,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     join nodes[idx]
    */
   "arrow inliner" should "not rename value in index array lambda" in {
+    val innerName = "inner"
 
     // lambda that will be assigned to another variable
     val argArray = VarRaw(
@@ -453,7 +470,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     // function where we assign object lambda to value and call service
     val inner =
       FuncArrow(
-        "inner",
+        innerName,
         JoinTag(NonEmptyList.one(arrIdx)).leaf,
         ArrowType(
           ProductType.labelled(
