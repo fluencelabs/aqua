@@ -1,7 +1,7 @@
 package aqua.lsp
 
 import aqua.parser.Ast
-import aqua.parser.head.{ImportExpr, ImportFromExpr}
+import aqua.parser.head.{ImportExpr, ImportFromExpr, UseExpr, UseFromExpr}
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.locations.LocationsState
@@ -24,6 +24,8 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
       header match {
         case ImportExpr(fn) => l :+ fn
         case ImportFromExpr(_, fn) => l :+ fn
+        case UseExpr(fn, _) => l :+ fn
+        case UseFromExpr(_, fn, _) => l :+ fn
         case _ => l
       }
     }
