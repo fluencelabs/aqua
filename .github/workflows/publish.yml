@@ -40,7 +40,7 @@ jobs:
         run: sbt cliJS/fullLinkJS
 
       - name: JS API build
-        run: sbt aqua-api/fullLinkJS
+        run: sbt aqua-apiJS/fullLinkJS
 
       - name: JS LSP build
         run: sbt language-server-apiJS/fullLinkJS
@@ -55,7 +55,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: aqua-api
-          path: api/aqua-api/target/scala-*/aqua-api-opt/main.js
+          path: api/aqua-api/.js/target/scala-*/aqua-api-opt/main.js
 
       - name: Upload aqua-lsp artifact
         uses: actions/upload-artifact@v3
