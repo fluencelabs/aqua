@@ -16,11 +16,10 @@ import aqua.model.{
 import aqua.model.transform.pre.InitPeerCallable
 import aqua.model.ParModel
 import aqua.model.DetachModel
+import aqua.model.transform.TransformConfig.TracingConfig
 
 final case class Tracing(
-  enabled: Boolean,
-  serviceId: String,
-  serviceFuncName: String,
+  enabledConfig: Option[TracingConfig],
   initCallable: InitPeerCallable
 ) extends OpTransform {
   import Tracing.*
@@ -32,10 +31,13 @@ final case class Tracing(
         SeqModel.wrap(children.toList: _*)
       )
 
-  private def traceCall(arrowName: String, event: Event): OpModel.Tree =
+  private def traceCall(config: TracingConfig)(
+    arrowName: String,
+    event: Event
+  ): OpModel.Tree =
     CallServiceModel(
-      LiteralModel.liftString(serviceId),
-      serviceFuncName,
+      LiteralModel.liftString(config.serviceId),
+      config.serviceFuncName,
       CallModel(
         args = List(LiteralModel.liftString(arrowName), event.toArg),
         exportTo = Nil
@@ -47,18 +49,20 @@ final case class Tracing(
       val child = getChild(children)
 
       Eval.now(
-        if (!enabled) child
-        else
-          SeqModel.wrap(
-            ParModel.wrap(
-              initCallable.onInitPeer.wrap(
-                traceCall(arrowName, Event.Enter)
+        enabledConfig
+          .map(traceCall)
+          .fold(child)(call =>
+            SeqModel.wrap(
+              ParModel.wrap(
+                initCallable.onInitPeer.wrap(
+                  call(arrowName, Event.Enter)
+                ),
+                child
               ),
-              child
-            ),
-            DetachModel.wrap(
-              initCallable.onInitPeer.wrap(
-                traceCall(arrowName, Event.Exit)
+              DetachModel.wrap(
+                initCallable.onInitPeer.wrap(
+                  call(arrowName, Event.Exit)
+                )
               )
             )
           )

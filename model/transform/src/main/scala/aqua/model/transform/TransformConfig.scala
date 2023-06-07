@@ -16,6 +16,7 @@ case class TransformConfig(
   respFuncName: String = "response",
   relayVarName: Option[String] = Some("-relay-"),
   wrapWithXor: Boolean = true,
+  tracing: Option[TransformConfig.TracingConfig] = None,
   constants: List[ConstantRaw] = Nil
 ) {
 
@@ -28,4 +29,12 @@ case class TransformConfig(
 
   val constantsList: List[ConstantRaw] =
     ConstantRaw.defaultConstants(relayVarName) ::: constants
+}
+
+object TransformConfig {
+
+  final case class TracingConfig(
+    serviceId: String = "tracingSrv",
+    serviceFuncName: String = "tracingEvent"
+  )
 }

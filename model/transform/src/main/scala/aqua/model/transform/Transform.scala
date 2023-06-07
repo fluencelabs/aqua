@@ -88,9 +88,7 @@ object Transform extends Logging {
     )
 
     val tracing = Tracing(
-      enabled = true,
-      serviceId = "tracingSrv",
-      serviceFuncName = "tracingEvent",
+      enabledConfig = conf.tracing,
       initCallable = initCallable
     )
 
