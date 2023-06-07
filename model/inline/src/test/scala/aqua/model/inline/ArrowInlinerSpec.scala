@@ -9,6 +9,7 @@ import cats.syntax.show.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import aqua.raw.value.ValueRaw
 
 class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
@@ -318,6 +319,134 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       )
     ) should be(true)
 
+  }
+
+  "arrow inliner" should "leave meta after function inlining" in {
+    val innerName = "inner"
+    val innerRes = VarRaw("res", ScalarType.u16)
+
+    val serviceName = "test-service"
+    val serviceMethod = "get_number"
+
+    val serviceCall = (res: VarRaw) =>
+      CallArrowRawTag
+        .service(
+          LiteralRaw.quote(serviceName),
+          serviceMethod,
+          Call(Nil, Call.Export(res.name, ScalarType.u16) :: Nil)
+        )
+        .leaf
+
+    val innerBody = SeqTag.wrap(
+      serviceCall(innerRes),
+      ReturnTag(
+        NonEmptyList.one(
+          innerRes
+        )
+      ).leaf
+    )
+
+    val inner = FuncArrow(
+      funcName = innerName,
+      body = innerBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(innerRes),
+      capturedArrows = Map.empty,
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val outterRes1 = VarRaw("res1", ScalarType.u16)
+    val outterRes2 = VarRaw("res2", ScalarType.u16)
+    val outterRes3 = VarRaw("res3", ScalarType.u16)
+    val outterRetVal = VarRaw("retval", ScalarType.u16)
+
+    val innerCall = (res: VarRaw) =>
+      CallArrowRawTag
+        .func(
+          innerName,
+          Call(Nil, Call.Export(res.name, ScalarType.u16) :: Nil)
+        )
+        .leaf
+
+    val outerBody = SeqTag.wrap(
+      innerCall(outterRes1),
+      serviceCall(outterRes2),
+      innerCall(outterRes3),
+      AssignmentTag(
+        RawBuilder.add(
+          outterRes1,
+          RawBuilder.add(
+            outterRes2,
+            outterRes3
+          )
+        ),
+        outterRetVal.name
+      ).leaf,
+      ReturnTag(
+        NonEmptyList
+          .one(
+            outterRetVal
+          )
+      ).leaf
+    )
+
+    val outer = FuncArrow(
+      funcName = innerName,
+      body = outerBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(innerRes),
+      capturedArrows = Map(innerName -> inner),
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val model = ArrowInliner
+      .callArrow[InliningState](
+        outer,
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+
+    val serviceCallModel = (res: VarModel) =>
+      CallServiceModel(
+        LiteralModel.liftString(serviceName),
+        serviceMethod,
+        CallModel(Nil, CallModel.Export(res.name, res.`type`) :: Nil)
+      ).leaf
+
+    /* WARNING: This naming is unstable */
+    val res1 = VarModel("res", ScalarType.u16)
+    val res2 = VarModel("res2", ScalarType.u16)
+    val res3 = VarModel("res-0", ScalarType.u16)
+    val tempAdd = VarModel("add-0", ScalarType.u16)
+
+    val expected = SeqModel.wrap(
+      MetaModel
+        .CallArrowModel(innerName)
+        .wrap(
+          serviceCallModel(res1)
+        ),
+      serviceCallModel(res2),
+      MetaModel
+        .CallArrowModel(innerName)
+        .wrap(
+          serviceCallModel(res3)
+        ),
+      SeqModel.wrap(
+        ModelBuilder.add(res2, res3)(tempAdd).leaf,
+        ModelBuilder.add(res1, tempAdd)(VarModel("add", ScalarType.u16)).leaf
+      )
+    )
+
+    model.equalsOrShowDiff(expected) shouldEqual true
   }
 
   /*
