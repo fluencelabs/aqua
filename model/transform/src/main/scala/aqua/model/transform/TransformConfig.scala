@@ -37,4 +37,8 @@ object TransformConfig {
     serviceId: String = "tracingSrv",
     serviceFuncName: String = "tracingEvent"
   )
+
+  object TracingConfig {
+    lazy val default = TracingConfig()
+  }
 }

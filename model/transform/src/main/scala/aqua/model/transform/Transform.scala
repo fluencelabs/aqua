@@ -16,7 +16,9 @@ import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
+import cats.syntax.option.*
 import scribe.Logging
+import aqua.model.transform.TransformConfig.TracingConfig
 
 // API for transforming RawTag to Res
 object Transform extends Logging {
