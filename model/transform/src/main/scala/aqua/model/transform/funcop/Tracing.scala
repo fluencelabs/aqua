@@ -31,37 +31,28 @@ final case class Tracing(
         SeqModel.wrap(children.toList: _*)
       )
 
-  private def traceCall(config: TracingConfig)(
-    arrowName: String,
-    event: Event
-  ): OpModel.Tree =
-    CallServiceModel(
-      LiteralModel.liftString(config.serviceId),
-      config.serviceFuncName,
-      CallModel(
-        args = List(LiteralModel.liftString(arrowName), event.toArg),
-        exportTo = Nil
-      )
-    ).leaf
-
   override def folder: OpTransform.OpFolder = {
     case (MetaModel.CallArrowModel(arrowName), children) =>
       val child = getChild(children)
 
       Eval.now(
         enabledConfig
-          .map(traceCall)
-          .fold(child)(call =>
+          .map(traceCallModel(_, arrowName))
+          .fold(child)(traceCall =>
+            /* seq:
+                 detach: call tracing enter
+                 <call-arrow-code>
+                 detach: call tracing exit */
             SeqModel.wrap(
-              ParModel.wrap(
-                initCallable.onInitPeer.wrap(
-                  call(arrowName, Event.Enter)
-                ),
-                child
-              ),
               DetachModel.wrap(
                 initCallable.onInitPeer.wrap(
-                  call(arrowName, Event.Exit)
+                  traceCall(Event.Enter)
+                )
+              ),
+              child,
+              DetachModel.wrap(
+                initCallable.onInitPeer.wrap(
+                  traceCall(Event.Exit)
                 )
               )
             )
@@ -80,4 +71,16 @@ object Tracing {
       case Exit => "exit"
     })
   }
+
+  def traceCallModel(config: TracingConfig, arrowName: String)(
+    event: Event
+  ): OpModel.Tree =
+    CallServiceModel(
+      LiteralModel.liftString(config.serviceId),
+      config.serviceFuncName,
+      CallModel(
+        args = List(LiteralModel.liftString(arrowName), event.toArg),
+        exportTo = Nil
+      )
+    ).leaf
 }
