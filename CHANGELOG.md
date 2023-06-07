@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.2](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.1...aqua-v0.11.2) (2023-06-07)
+
+
+### Features
+
+* **aqua-api:** return JS and TS sources from API [LNG-164] ([#730](https://github.com/fluencelabs/aqua/issues/730)) ([0b66aa9](https://github.com/fluencelabs/aqua/commit/0b66aa96ece2ce3b1ed44ff1e183e0289b5af2d9))
+
+
+### Bug Fixes
+
+* **language-server:** Go-to definition for path in `use` expression [LNG-187] ([#733](https://github.com/fluencelabs/aqua/issues/733)) ([21cb393](https://github.com/fluencelabs/aqua/commit/21cb3937acadca8d245b540aac301b130969ac0b))
+
 ## [0.11.1](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.0...aqua-v0.11.1) (2023-06-01)
 
 
