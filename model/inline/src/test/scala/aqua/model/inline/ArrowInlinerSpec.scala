@@ -10,6 +10,7 @@ import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.raw.value.ValueRaw
+import aqua.raw.value.CallArrowRaw
 
 class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
@@ -321,6 +322,21 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   }
 
+  /**
+   * service Test("test-service"):
+   *   get_number() -> u16
+   *
+   * func inner() -> u16:
+   *   res <- Test.get_number()
+   *   <- res
+   *
+   * func outer() -> u16
+   *   res1 <- inner() -- Meta should be left here
+   *   res2 <- Test.get_number()
+   *   res3 <- inner() -- Meta should be left here
+   *   retval = res1 + res2 + res3
+   *   <- retval
+   */
   "arrow inliner" should "leave meta after function inlining" in {
     val innerName = "inner"
     val innerRes = VarRaw("res", ScalarType.u16)
@@ -395,13 +411,13 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     )
 
     val outer = FuncArrow(
-      funcName = innerName,
+      funcName = "outer",
       body = outerBody,
       arrowType = ArrowType(
         ProductType(Nil),
         ProductType(List(ScalarType.u16))
       ),
-      ret = List(innerRes),
+      ret = List(outterRetVal),
       capturedArrows = Map(innerName -> inner),
       capturedValues = Map.empty,
       capturedTopology = None
@@ -444,6 +460,121 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         ModelBuilder.add(res2, res3)(tempAdd).leaf,
         ModelBuilder.add(res1, tempAdd)(VarModel("add", ScalarType.u16)).leaf
       )
+    )
+
+    model.equalsOrShowDiff(expected) shouldEqual true
+  }
+
+  /**
+   * func inner() -> u16:
+   *        res = 42
+   *   <- res
+   *
+   * func outer() -> u16:
+   *   retval = inner() + inner() + 37
+   *   <- retval
+   */
+  "arrow inliner" should "omit meta if arrow was completely erased" in {
+    val innerName = "inner"
+    val innerRes = VarRaw("res", ScalarType.u16)
+    val innerRet = "42"
+
+    val innerBody = SeqTag.wrap(
+      AssignmentTag(
+        LiteralRaw(innerRet, ScalarType.u16),
+        innerRes.name
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(
+          innerRes
+        )
+      ).leaf
+    )
+
+    val inner = FuncArrow(
+      funcName = innerName,
+      body = innerBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(innerRes),
+      capturedArrows = Map.empty,
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val innerCall = CallArrowRaw(
+      ability = None,
+      name = innerName,
+      arguments = Nil,
+      baseType = ArrowType(
+        domain = NilType,
+        codomain = ProductType(List(ScalarType.u16))
+      ),
+      serviceId = None
+    )
+
+    val outerAdd = "37"
+    val outterRetVal = VarRaw("retval", ScalarType.u16)
+
+    val outerBody = SeqTag.wrap(
+      AssignmentTag(
+        RawBuilder.add(
+          innerCall,
+          RawBuilder.add(
+            innerCall,
+            LiteralRaw(outerAdd, ScalarType.u16)
+          )
+        ),
+        outterRetVal.name
+      ).leaf,
+      ReturnTag(
+        NonEmptyList
+          .one(
+            outterRetVal
+          )
+      ).leaf
+    )
+
+    val outer = FuncArrow(
+      funcName = "outer",
+      body = outerBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(outterRetVal),
+      capturedArrows = Map(innerName -> inner),
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val model = ArrowInliner
+      .callArrow[InliningState](
+        outer,
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+
+    /* WARNING: This naming is unstable */
+    val tempAdd0 = VarModel("add-0", ScalarType.u16)
+    val tempAdd = VarModel("add", ScalarType.u16)
+
+    val expected = SeqModel.wrap(
+      ModelBuilder
+        .add(
+          LiteralModel(innerRet, ScalarType.u16),
+          LiteralModel(outerAdd, ScalarType.u16)
+        )(tempAdd0)
+        .leaf,
+      ModelBuilder
+        .add(
+          LiteralModel(innerRet, ScalarType.u16),
+          tempAdd0
+        )(tempAdd)
+        .leaf
     )
 
     model.equalsOrShowDiff(expected) shouldEqual true
