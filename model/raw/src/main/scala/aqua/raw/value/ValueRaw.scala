@@ -172,7 +172,8 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
     copy(values = values.map(_.renameVars(map)))
 }
 
-case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: StructType) extends ValueRaw {
+case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: StructType)
+    extends ValueRaw {
 
   override def baseType: Type = structType
 

@@ -1,7 +1,7 @@
 package aqua.model.inline
 
 import aqua.raw.value.{CallArrowRaw, LiteralRaw, ValueRaw}
-import aqua.types.{ArrowType, ProductType}
+import aqua.types.{ArrowType, ProductType, ScalarType}
 
 object RawBuilder {
 
@@ -11,7 +11,7 @@ object RawBuilder {
       name = "add",
       arguments = List(l, r),
       baseType = ArrowType(
-        ProductType(List(l.`type`, r.`type`)),
+        ProductType(List(ScalarType.i64, ScalarType.i64)),
         ProductType(
           List(l.`type` `∪` r.`type`)
         )
