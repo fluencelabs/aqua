@@ -4,7 +4,7 @@ import aqua.api.AquaAPIConfig
 import aqua.api.TargetType.*
 import aqua.js.{FunctionDefJs, ServiceDefJs}
 import aqua.model.transform.TransformConfig
-import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
+import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 
 import scala.scalajs.js
@@ -45,6 +45,8 @@ class AquaConfig(
   @JSExport
   val noRelay: js.UndefOr[Boolean],
   @JSExport
+  val tracing: js.UndefOr[Boolean],
+  @JSExport
   val targetType: js.UndefOr[String]
 )
 
@@ -62,11 +64,12 @@ object AquaConfig {
       .getOrElse(validNec(AirType))
       .map { target =>
         AquaAPIConfig(
-          target,
-          cjs.logLevel.getOrElse("info"),
-          cjs.constants.map(_.toList).getOrElse(Nil),
-          cjs.noXor.getOrElse(false),
-          cjs.noRelay.getOrElse(false)
+          targetType = target,
+          logLevel = cjs.logLevel.getOrElse("info"),
+          constants = cjs.constants.map(_.toList).getOrElse(Nil),
+          noXor = cjs.noXor.getOrElse(false),
+          noRelay = cjs.noRelay.getOrElse(false),
+          tracing = cjs.tracing.getOrElse(false)
         )
       }
   }
