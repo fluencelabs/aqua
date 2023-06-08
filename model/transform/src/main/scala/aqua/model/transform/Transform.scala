@@ -117,10 +117,8 @@ object Transform extends Logging {
       // Pre transform and inline the function
       model <- funcToModelTree(func, preTransformer)
       // Post transform the function
-      _ = println(model.show)
       errorsModel = errorsCatcher.transform(model)
       tracingModel <- tracing(errorsModel)
-      // _ = println(tracingModel.show)
       // Resolve topology
       resolved <- Topology.resolve(tracingModel)
       // Clear the tree
