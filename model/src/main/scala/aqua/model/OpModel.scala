@@ -166,7 +166,7 @@ object CallServiceModel {
     result: VarModel
   ): CallServiceModel =
     CallServiceModel(
-      LiteralModel.liftString(serviceId),
+      LiteralModel.liftScalarString(serviceId),
       funcName,
       CallModel(
         args,
