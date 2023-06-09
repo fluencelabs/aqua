@@ -24,7 +24,6 @@ import cats.data.Validated.{Invalid, Valid}
 import cats.kernel.Monoid
 import cats.syntax.applicative.*
 import cats.syntax.option.*
-import cats.syntax.all.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*

@@ -592,7 +592,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = 37 + c(1) + c(2)
    *   <- retval
    */
-  "arrow inliner" should "leave meta after returned closue inlining" in {
+  "arrow inliner" should "leave meta after returned closure inlining" in {
     val innerName = "inner"
     val closureName = "closure"
 
