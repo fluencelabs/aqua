@@ -60,6 +60,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
           vars -> Inline(
             ListMap.empty,
             Chain.one(
+              // Leave meta information in tree after inlining
               MetaModel
                 .CallArrowModel(fn.funcName)
                 .wrap(

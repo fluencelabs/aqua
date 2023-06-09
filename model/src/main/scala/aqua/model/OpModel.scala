@@ -39,7 +39,16 @@ object OpModel extends TreeNodeCompanion[OpModel] {
   }
 }
 
+/**
+ * Meta information embedded in a tree
+ */
 enum MetaModel extends OpModel {
+
+  /**
+   * Wraps subtree that was produced after inlining arrow
+   *
+   * @param name Name of arrow inlined
+   */
   case CallArrowModel(name: String)
 
   override def wrap(children: Tree*): Tree =

@@ -4,7 +4,7 @@ import aqua.api.AquaAPIConfig
 import aqua.api.TargetType.*
 import aqua.js.{FunctionDefJs, ServiceDefJs}
 import aqua.model.transform.TransformConfig
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
+import cats.data.Validated.{invalidNec, validNec}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 
 import scala.scalajs.js

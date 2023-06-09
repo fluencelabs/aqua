@@ -9,10 +9,8 @@ import cats.syntax.show.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import aqua.raw.value.ValueRaw
-import aqua.raw.value.CallArrowRaw
-import aqua.raw.arrow.FuncRaw
-import aqua.raw.arrow.ArrowRaw
+import aqua.raw.value.{CallArrowRaw, ValueRaw}
+import aqua.raw.arrow.{ArrowRaw, FuncRaw}
 
 class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
@@ -37,7 +35,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     model.equalsOrShowDiff(
       CallServiceModel(
-        LiteralModel("\"dumb_srv_id\"", LiteralType.string),
+        LiteralModel.liftString("dumb_srv_id"),
         "dumb",
         CallModel(Nil, Nil)
       ).leaf
@@ -126,7 +124,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
                 CallModel.Export(canonModel.name, canonModel.`type`)
               ).leaf,
               CallServiceModel(
-                LiteralModel("\"test-service\"", LiteralType.string),
+                LiteralModel.liftString("test-service"),
                 "some-call",
                 CallModel(canonModel :: Nil, Nil)
               ).leaf
@@ -221,7 +219,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, true).wrap(
         CallServiceModel(
-          LiteralModel("\"test-service\"", LiteralType.string),
+          LiteralModel.liftString("test-service"),
           "some-call",
           CallModel(streamModel :: Nil, Nil)
         ).leaf
@@ -306,7 +304,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           .CallArrowModel(innerName)
           .wrap(
             CallServiceModel(
-              LiteralModel("\"test-service\"", LiteralType.string),
+              LiteralModel.liftString("test-service"),
               "get_records",
               CallModel(Nil, CallModel.Export(recordsModel.name, recordsModel.`type`) :: Nil)
             ).leaf
@@ -314,7 +312,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         SeqModel.wrap(
           CanonicalizeModel(recordsModel, CallModel.Export(canonModel.name, canonType)).leaf,
           CallServiceModel(
-            LiteralModel("\"callbackSrv\"", LiteralType.string),
+            LiteralModel.liftString("callbackSrv"),
             "response",
             CallModel(canonModel :: Nil, Nil)
           ).leaf
@@ -469,7 +467,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   /**
    * func inner() -> u16:
-   *        res = 42
+   *   res = 42
    *   <- res
    *
    * func outer() -> u16:
@@ -1051,7 +1049,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     model.equalsOrShowDiff(
       SeqModel.wrap(
         CallServiceModel(
-          LiteralModel("\"getSrv\"", LiteralType.string),
+          LiteralModel.liftString("getSrv"),
           "getObj",
           CallModel(Nil, CallModel.Export(objectVar.name, objectVar.`type`) :: Nil)
         ).leaf,
@@ -1061,7 +1059,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             SeqModel.wrap(
               FlattenModel(ValueModel.fromRaw(objectVarLambda), flattenObject.name).leaf,
               CallServiceModel(
-                LiteralModel("\"callbackSrv\"", LiteralType.string),
+                LiteralModel.liftString("callbackSrv"),
                 "response",
                 CallModel(ValueModel.fromRaw(flattenObject) :: Nil, Nil)
               ).leaf
@@ -1152,12 +1150,12 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     model.equalsOrShowDiff(
       SeqModel.wrap(
         CallServiceModel(
-          LiteralModel("\"getSrv\"", LiteralType.string),
+          LiteralModel.liftString("getSrv"),
           "getArr",
           CallModel(Nil, CallModel.Export(argArray.name, argArray.`type`) :: Nil)
         ).leaf,
         CallServiceModel(
-          LiteralModel("\"getSrv\"", LiteralType.string),
+          LiteralModel.liftString("getSrv"),
           "getIdx",
           CallModel(Nil, CallModel.Export(idxVar.name, idxVar.`type`) :: Nil)
         ).leaf

@@ -6,7 +6,15 @@ import cats.data.Chain
 import cats.free.Cofree
 import cats.Eval
 
+/**
+ * Base type for [[OpModel.Tree]] -> [[OpModel.Tree]] transformation
+ */
 trait OpTransform {
+
+  /**
+   * Transformation step
+   * (node, child results) => node result
+   */
   def folder: OpTransform.OpFolder
 
   def apply(tree: OpModel.Tree): Eval[OpModel.Tree] =
