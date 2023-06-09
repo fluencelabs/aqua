@@ -139,8 +139,8 @@ object APICompilation {
 
       LogFormatter.initLogger(Some(level))
 
-      val config = AquaCompilerConf(constants)
       val transformConfig = aquaConfig.getTransformConfig
+      val config = AquaCompilerConf(constants ++ transformConfig.constantsList)
 
       CompilerAPI
         .compile[IO, AquaFileError, FileModuleId, FileSpan.F](
