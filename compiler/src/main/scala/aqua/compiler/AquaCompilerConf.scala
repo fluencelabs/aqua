@@ -7,4 +7,4 @@ import aqua.raw.ConstantRaw
  *
  * @param constantsList List of known constants
  */
-case class AquaCompilerConf(constantsList: List[ConstantRaw] = Nil)
+case class AquaCompilerConf(constantsList: List[ConstantRaw])
