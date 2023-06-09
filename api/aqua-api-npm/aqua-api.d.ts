@@ -1,4 +1,4 @@
-import type {FunctionCallDef, ServiceDef} from "@fluencelabs/fluence/dist/internal/compilerSupport/v3impl/interface"
+import type { FunctionCallDef, ServiceDef } from "@fluencelabs/fluence/dist/internal/compilerSupport/v3impl/interface"
 
 export class AquaConfig {
     constructor(logLevel: string, constants: string[], noXor: boolean, noRelay: boolean);
@@ -8,6 +8,7 @@ export class AquaConfig {
     constants?: string[]
     noXor?: boolean
     noRelay?: boolean
+    tracing?: boolean
     targetType?: string
 }
 
@@ -45,8 +46,8 @@ export class Path {
 
 export class Call {
     constructor(functionCall: string,
-                arguments: any,
-                input: Input | Path);
+        arguments: any,
+        input: Input | Path);
 
     functionCall: string
     arguments: any
