@@ -8,7 +8,7 @@ object ModelBuilder {
     CallServiceModel(
       // Have to use direct constructor bc
       // need string with LiteralType.string here
-      LiteralModel.liftString("math"),
+      LiteralModel.quote("math"),
       "add",
       CallModel(
         args = List(l, r),

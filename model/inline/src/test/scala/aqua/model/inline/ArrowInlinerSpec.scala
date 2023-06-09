@@ -35,7 +35,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     model.equalsOrShowDiff(
       CallServiceModel(
-        LiteralModel.liftString("dumb_srv_id"),
+        LiteralModel.quote("dumb_srv_id"),
         "dumb",
         CallModel(Nil, Nil)
       ).leaf
@@ -124,7 +124,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
                 CallModel.Export(canonModel.name, canonModel.`type`)
               ).leaf,
               CallServiceModel(
-                LiteralModel.liftString("test-service"),
+                LiteralModel.quote("test-service"),
                 "some-call",
                 CallModel(canonModel :: Nil, Nil)
               ).leaf
@@ -219,7 +219,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, true).wrap(
         CallServiceModel(
-          LiteralModel.liftString("test-service"),
+          LiteralModel.quote("test-service"),
           "some-call",
           CallModel(streamModel :: Nil, Nil)
         ).leaf
@@ -304,7 +304,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           .CallArrowModel(innerName)
           .wrap(
             CallServiceModel(
-              LiteralModel.liftString("test-service"),
+              LiteralModel.quote("test-service"),
               "get_records",
               CallModel(Nil, CallModel.Export(recordsModel.name, recordsModel.`type`) :: Nil)
             ).leaf
@@ -312,7 +312,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         SeqModel.wrap(
           CanonicalizeModel(recordsModel, CallModel.Export(canonModel.name, canonType)).leaf,
           CallServiceModel(
-            LiteralModel.liftString("callbackSrv"),
+            LiteralModel.quote("callbackSrv"),
             "response",
             CallModel(canonModel :: Nil, Nil)
           ).leaf
@@ -433,7 +433,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     val serviceCallModel = (res: VarModel) =>
       CallServiceModel(
-        LiteralModel.liftString(serviceName),
+        LiteralModel.quote(serviceName),
         serviceMethod,
         CallModel(Nil, CallModel.Export(res.name, res.`type`) :: Nil)
       ).leaf
@@ -1049,7 +1049,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     model.equalsOrShowDiff(
       SeqModel.wrap(
         CallServiceModel(
-          LiteralModel.liftString("getSrv"),
+          LiteralModel.quote("getSrv"),
           "getObj",
           CallModel(Nil, CallModel.Export(objectVar.name, objectVar.`type`) :: Nil)
         ).leaf,
@@ -1059,7 +1059,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             SeqModel.wrap(
               FlattenModel(ValueModel.fromRaw(objectVarLambda), flattenObject.name).leaf,
               CallServiceModel(
-                LiteralModel.liftString("callbackSrv"),
+                LiteralModel.quote("callbackSrv"),
                 "response",
                 CallModel(ValueModel.fromRaw(flattenObject) :: Nil, Nil)
               ).leaf
@@ -1150,12 +1150,12 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     model.equalsOrShowDiff(
       SeqModel.wrap(
         CallServiceModel(
-          LiteralModel.liftString("getSrv"),
+          LiteralModel.quote("getSrv"),
           "getArr",
           CallModel(Nil, CallModel.Export(argArray.name, argArray.`type`) :: Nil)
         ).leaf,
         CallServiceModel(
-          LiteralModel.liftString("getSrv"),
+          LiteralModel.quote("getSrv"),
           "getIdx",
           CallModel(Nil, CallModel.Export(idxVar.name, idxVar.`type`) :: Nil)
         ).leaf

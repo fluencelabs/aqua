@@ -66,7 +66,7 @@ object Tracing {
   enum Event {
     case Enter, Exit
 
-    def toArg: ValueModel = LiteralModel.liftString(this match {
+    def toArg: ValueModel = LiteralModel.quote(this match {
       case Enter => "enter"
       case Exit => "exit"
     })
@@ -76,10 +76,10 @@ object Tracing {
     event: Event
   ): OpModel.Tree =
     CallServiceModel(
-      LiteralModel.liftString(config.serviceId),
+      LiteralModel.quote(config.serviceId),
       config.serviceFuncName,
       CallModel(
-        args = List(LiteralModel.liftString(arrowName), event.toArg),
+        args = List(LiteralModel.quote(arrowName), event.toArg),
         exportTo = Nil
       )
     ).leaf

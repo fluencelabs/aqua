@@ -48,7 +48,7 @@ case class LiteralModel(value: String, `type`: Type) extends ValueModel {
 object LiteralModel {
   def fromRaw(raw: LiteralRaw): LiteralModel = LiteralModel(raw.value, raw.baseType)
 
-  def liftString(str: String): LiteralModel = LiteralModel(s"\"$str\"", LiteralType.string)
+  def quote(str: String): LiteralModel = LiteralModel(s"\"$str\"", LiteralType.string)
 
   def liftScalarString(str: String): LiteralModel = LiteralModel(s"\"$str\"", ScalarType.string)
 }
