@@ -45,9 +45,9 @@ class AquaConfig(
   @JSExport
   val noRelay: js.UndefOr[Boolean],
   @JSExport
-  val tracing: js.UndefOr[Boolean],
+  val targetType: js.UndefOr[String],
   @JSExport
-  val targetType: js.UndefOr[String]
+  val tracing: js.UndefOr[Boolean]
 )
 
 object AquaConfig {
