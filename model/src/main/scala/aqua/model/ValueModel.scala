@@ -49,8 +49,6 @@ object LiteralModel {
   def fromRaw(raw: LiteralRaw): LiteralModel = LiteralModel(raw.value, raw.baseType)
 
   def quote(str: String): LiteralModel = LiteralModel(s"\"$str\"", LiteralType.string)
-
-  def liftScalarString(str: String): LiteralModel = LiteralModel(s"\"$str\"", ScalarType.string)
 }
 
 sealed trait PropertyModel {
