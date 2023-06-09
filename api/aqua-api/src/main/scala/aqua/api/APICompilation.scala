@@ -57,8 +57,7 @@ object APICompilation {
 
       new FuncCompiler[IO](
         Some(RelativePath(Path(pathStr))),
-        imports.map(Path.apply),
-        transformConfig
+        imports.map(Path.apply)
       ).compile().map { contextV =>
         contextV.andThen { context =>
           CliFunc

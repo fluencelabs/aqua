@@ -26,14 +26,13 @@ import scala.concurrent.duration.Duration
 
 class FuncCompiler[F[_]: Files: AquaIO: Async](
   input: Option[AquaPath],
-  imports: List[Path],
-  transformConfig: TransformConfig
+  imports: List[Path]
 ) extends Logging {
 
   private def compileToContext(
     path: Path,
     imports: List[Path],
-    config: AquaCompilerConf = AquaCompilerConf(transformConfig.constantsList)
+    config: AquaCompilerConf = AquaCompilerConf()
   ) = {
     val sources = new AquaFileSources[F](path, imports)
     CompilerAPI
