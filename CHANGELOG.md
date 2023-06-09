@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.3](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.2...aqua-v0.11.3) (2023-06-09)
+
+
+### Features
+
+* **devcontainer:** Add js-client to devcontainer ([#736](https://github.com/fluencelabs/aqua/issues/736)) ([62b1642](https://github.com/fluencelabs/aqua/commit/62b16426deabaaadf51ee9cc673da11983535492))
+
+
+### Bug Fixes
+
+* **aqua-api:** Add default constants to Aqua API [LNG-194] ([#738](https://github.com/fluencelabs/aqua/issues/738)) ([5f5fc49](https://github.com/fluencelabs/aqua/commit/5f5fc494b66f649b440fd332edf8adcd39beb8e8))
+
 ## [0.11.2](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.1...aqua-v0.11.2) (2023-06-07)
 
 
