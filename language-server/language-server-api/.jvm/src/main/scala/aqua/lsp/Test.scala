@@ -32,7 +32,16 @@ object Test extends IOApp.Simple {
           case Validated.Invalid(errs) =>
             errs.map(System.err.println): Unit
           case Validated.Valid(res) =>
-            res.map(println): Unit
+            res.foreach {
+              case (_, a) => a.foreach(_.values.toList.map {
+                context =>
+                  println("import tokens:")
+                  println(context.importTokens)
+                  println("locations:")
+                  println(context.locations)
+              })
+            }
+
         }
       _ <- IO.println("Compilation ends in: " + (System.currentTimeMillis() - start) + " ms")
     } yield ()

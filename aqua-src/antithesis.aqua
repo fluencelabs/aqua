@@ -1,9 +1,7 @@
-module Import3 declares *
+import "import1"
+import "import2"
 
-export foo_bar
-
-use "export.aqua"
-
-func foo_bar() -> string, string:
-  z <- FooBars.foo()
-  <- z, FooBars.DECLARE_CONST2
+func transitive() -> string, string:
+  result1 <- runFrom1()
+  result2 <- runFrom2()
+  <- result1, result2

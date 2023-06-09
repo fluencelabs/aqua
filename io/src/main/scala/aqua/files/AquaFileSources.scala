@@ -23,6 +23,8 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
 ) extends AquaSources[F, AquaFileError, FileModuleId] with Logging {
   private val filesIO = implicitly[AquaIO[F]]
 
+  private val importFromAbs = importFrom.map(_.absolute.normalize)
+
   override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =
     filesIO.listAqua(sourcesPath).flatMap {
       case Validated.Valid(files) =>
@@ -57,9 +59,15 @@ class AquaFileSources[F[_]: AquaIO: Monad: Files: Functor](
     val validatedPath = Validated.fromEither(Try(Path(imp)).toEither.leftMap(FileSystemError.apply))
     validatedPath match {
       case Validated.Valid(importP) =>
+        importFromAbs.sortBy { importPath =>
+
+        }
+        println(s"importP: $importP")
+        println(s"resolveImport from '$from' import '$imp'")
+        println(s"importFrom: $importFromAbs with ${from.file.parent}")
         // if there is no `.aqua` extension, than add it
         filesIO
-          .resolve(importP, importFrom.prependedAll(from.file.parent))
+          .resolve(importP, importFromAbs.prependedAll(from.file.parent))
           .bimap(NonEmptyChain.one, FileModuleId(_))
           .value
           .map(Validated.fromEither)

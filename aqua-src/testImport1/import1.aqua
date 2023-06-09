@@ -1,0 +1,8 @@
+import "inside/somelib"
+
+service A(""):
+  call(s: string) -> string
+
+func runFrom1() -> string:
+  res <- version()
+  <- A.call(res)

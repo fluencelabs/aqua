@@ -67,6 +67,13 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
               .mapValues(ctx(_))
               .collect { case (fn, Some(fc)) => fn -> fc }
               .toMap
+
+            println("======================")
+            println("imports: " + imports)
+            println("for: " + mod.imports)
+            println("from: " + mod.id)
+            println("======================")
+
             val header = mod.body.head
             // To manage imports, exports run HeaderHandler
             headerHandler

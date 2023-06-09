@@ -2,6 +2,7 @@ import {
     Aqua,
     Call,
     Path,
+    AquaConfig
 } from "@fluencelabs/aqua-api/aqua-api.js";
 
 const aquaPath = new Path("test.aqua")
@@ -9,8 +10,11 @@ const aquaPath = new Path("test.aqua")
 const args = {num: 42}
 const call = new Call("getNumber(num)", args, aquaPath)
 
+
+const inputPath = new Path("test.aqua")
+
 // compile call
-const compilationResult = await Aqua.compile(call, [])
+const compilationResult = await Aqua.compile(inputPath, [], new AquaConfig("info", [], false, false, "typescript"))
 
 
 /*
@@ -29,4 +33,5 @@ export class CompilationResult {
 
 // get function definition, that describes types of arguments and results of a function
 // and AIR script
-const {funcDef, script} = compilationResult.functionCall
+
+console.log(compilationResult.generatedSources)

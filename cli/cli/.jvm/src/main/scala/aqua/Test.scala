@@ -24,7 +24,12 @@ object Test extends IOApp.Simple {
       _ <- AquaPathCompiler
         .compileFilesTo[IO](
           Path("./aqua-src/antithesis.aqua"),
-          List(Path("./aqua")),
+          List(
+            Path("./aqua-src/testImport1"),
+            Path("./aqua-src/testImport2"),
+            Path("./aqua-src/testImport1/insideLib1"),
+            Path("./aqua-src/testImport2/insideLib2")
+          ),
           Option(Path("./target")),
           TypeScriptBackend(false, "IFluenceClient$$"),
           TransformConfig(wrapWithXor = false),

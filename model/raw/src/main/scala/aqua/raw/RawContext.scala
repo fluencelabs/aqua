@@ -92,7 +92,7 @@ case class RawContext(
       )
       .map(StructType(name, _))
 
-  override def toString: String = s"module: $module\ndeclares: $declares\nexports: $exports"
+  override def toString: String = s"module: $module, declares: $declares, exports: $exports"
 }
 
 object RawContext {

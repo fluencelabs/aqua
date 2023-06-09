@@ -1,0 +1,5 @@
+service Some(""):
+  callee(s: string) -> string
+
+func version() -> string:
+  <- Some.callee("11111111")
