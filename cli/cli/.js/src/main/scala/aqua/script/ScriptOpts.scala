@@ -130,7 +130,8 @@ object ScriptOpts extends Logging {
     val funcCompiler =
       new FuncCompiler[F](
         Option(RelativePath(input)),
-        imports
+        imports,
+        tConfig
       )
 
     val funcName = funcWithArgs.func.name

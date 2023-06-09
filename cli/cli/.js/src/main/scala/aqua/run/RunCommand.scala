@@ -110,7 +110,7 @@ object RunCommand extends Logging {
     plugins: List[String],
     transformConfig: TransformConfig
   ): F[ValidatedNec[String, Unit]] = {
-    val funcCompiler = new FuncCompiler[F](input, imports)
+    val funcCompiler = new FuncCompiler[F](input, imports, transformConfig)
 
     for {
       prelude <- Prelude.init[F](true)
