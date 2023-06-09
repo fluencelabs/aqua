@@ -6,13 +6,9 @@ object ModelBuilder {
 
   def add(l: ValueModel, r: ValueModel)(o: VarModel): CallServiceModel =
     CallServiceModel(
-      // Have to use direct constructor bc
-      // need string with LiteralType.string here
-      LiteralModel.quote("math"),
-      "add",
-      CallModel(
-        args = List(l, r),
-        exportTo = List(CallModel.Export(o.name, o.`type`))
-      )
+      serviceId = "math",
+      funcName = "add",
+      args = List(l, r),
+      result = o
     )
 }
