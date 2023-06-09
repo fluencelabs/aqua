@@ -1,14 +1,6 @@
 package aqua.compiler
 
-import aqua.model.{
-  CallModel,
-  ForModel,
-  FunctorModel,
-  IntoIndexModel,
-  LiteralModel,
-  ValueModel,
-  VarModel
-}
+import aqua.model.{CallModel, ForModel, FunctorModel, IntoIndexModel, LiteralModel, ValueModel, VarModel}
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
 import aqua.parser.ParserError
@@ -16,21 +8,9 @@ import aqua.parser.Ast
 import aqua.parser.Parser
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
+import aqua.raw.ConstantRaw
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.res.{
-  ApRes,
-  CallRes,
-  CallServiceRes,
-  CanonRes,
-  FoldRes,
-  MakeRes,
-  MatchMismatchRes,
-  NextRes,
-  ParRes,
-  RestrictionRes,
-  SeqRes,
-  XorRes
-}
+import aqua.res.{ApRes, CallRes, CallServiceRes, CanonRes, FoldRes, MakeRes, MatchMismatchRes, NextRes, ParRes, RestrictionRes, SeqRes, XorRes}
 import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -64,7 +44,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
       .compileToContext[Id, String, String, Span.S](
         aquaSource(src, imports),
         id => txt => Parser.parse(Parser.parserSchema)(txt),
-        AquaCompilerConf()
+        AquaCompilerConf(ConstantRaw.defaultConstants(None))
       )
 
   "aqua compiler" should "compile a simple snipped to the right context" in {

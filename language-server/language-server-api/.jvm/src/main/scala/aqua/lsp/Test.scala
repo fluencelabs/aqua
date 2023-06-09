@@ -5,6 +5,7 @@ import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.AquaFileError
 import aqua.lsp.LSPCompiler
 import aqua.parser.lift.FileSpan
+import aqua.raw.ConstantRaw
 import aqua.{AquaIO, SpanParser}
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
@@ -18,7 +19,7 @@ object Test extends IOApp.Simple {
   override def run: IO[Unit] = {
 
     val sources = new AquaFileSources[IO](Path("./aqua-src/antithesis.aqua"), List(Path("./aqua")))
-    val config = AquaCompilerConf()
+    val config = AquaCompilerConf(ConstantRaw.defaultConstants(None))
 
     for {
       start <- IO(System.currentTimeMillis())
