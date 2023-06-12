@@ -222,9 +222,11 @@ object TagInliner extends Logging {
           case v =>
             valueToModel(v, false)
         }).flatMap { case (model, prefix) =>
-          Exports[S]
-            .resolved(assignTo, model)
-            .as(None -> prefix)
+          for {
+            // NOTE: Name <assignTo> should not exist yet
+            _ <- Mangler[S].forbidName(assignTo)
+            _ <- Exports[S].resolved(assignTo, model)
+          } yield None -> prefix
         }
 
       case ClosureTag(arrow, detach) =>
