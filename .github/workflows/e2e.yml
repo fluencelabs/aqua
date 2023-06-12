@@ -46,12 +46,6 @@ jobs:
     with:
       aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
 
-  fluence-cli:
-    needs: aqua
-    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
-    with:
-      aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
-
   aqua-native:
     name: "aqua"
     strategy:
