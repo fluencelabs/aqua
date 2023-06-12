@@ -16,7 +16,9 @@ import aqua.types.ScalarType
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
+import cats.syntax.option.*
 import scribe.Logging
+import aqua.model.transform.TransformConfig.TracingConfig
 
 // API for transforming RawTag to Res
 object Transform extends Logging {
@@ -87,6 +89,11 @@ object Transform extends Logging {
       callable = initCallable
     )
 
+    val tracing = Tracing(
+      enabledConfig = conf.tracing,
+      initCallable = initCallable
+    )
+
     val argsProvider: ArgsProvider = ArgsFromService(
       dataServiceId = conf.dataSrvId,
       names = relayVar.toList ::: func.arrowType.domain.labelledData
@@ -110,9 +117,10 @@ object Transform extends Logging {
       // Pre transform and inline the function
       model <- funcToModelTree(func, preTransformer)
       // Post transform the function
-      postModel = errorsCatcher.transform(model)
+      errorsModel = errorsCatcher.transform(model)
+      tracingModel <- tracing(errorsModel)
       // Resolve topology
-      resolved <- Topology.resolve(postModel)
+      resolved <- Topology.resolve(tracingModel)
       // Clear the tree
       result = clear(resolved)
     } yield FuncRes(

@@ -144,6 +144,12 @@ object AppOpts {
       .map(_ => true)
       .withDefault(false)
 
+  val tracing: Opts[Boolean] =
+    Opts
+      .flag("trace", "Generate tace events calls")
+      .map(_ => true)
+      .withDefault(false)
+
   val isOldFluenceJs: Opts[Boolean] =
     Opts
       .flagOption[String](
@@ -172,7 +178,7 @@ object AppOpts {
     Opts
       .flag(
         "scheduled",
-        "Generate air code for script storage. Without error handling wrappers and hops on relay. Will ignore other options"
+        "Generate air code for script storage. Without error handling wrappers, hops on relay and tracing. Will ignore other options"
       )
       .map(_ => true)
       .withDefault(false)

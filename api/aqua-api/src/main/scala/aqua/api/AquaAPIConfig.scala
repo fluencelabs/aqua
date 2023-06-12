@@ -9,10 +9,17 @@ case class AquaAPIConfig(
   logLevel: String = "info",
   constants: List[String] = Nil,
   noXor: Boolean = false,
-  noRelay: Boolean = false
+  noRelay: Boolean = false,
+  tracing: Boolean = false
 ) {
 
-  def getTransformConfig: TransformConfig =
-    if (noRelay) TransformConfig(relayVarName = None, wrapWithXor = !noXor)
-    else TransformConfig(wrapWithXor = !noXor)
+  def getTransformConfig: TransformConfig = {
+    val config = TransformConfig(
+      wrapWithXor = !noXor,
+      tracing = Option.when(tracing)(TransformConfig.TracingConfig.default)
+    )
+
+    if (noRelay) config.copy(relayVarName = None)
+    else config
+  }
 }

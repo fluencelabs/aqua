@@ -133,13 +133,15 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
 
                       (
                         SeqTag.wrap(
-                          bodyAcc :: CanonicalizeTag(
+                          bodyAcc,
+                          CanonicalizeTag(
                             VarRaw(streamName, streamType),
                             Call.Export(canonReturnVar.name, canonReturnVar.`type`)
-                          ).leaf :: FlattenTag(
+                          ).leaf,
+                          FlattenTag(
                             canonReturnVar,
                             returnVar.name
-                          ).leaf :: Nil: _*
+                          ).leaf
                         ),
                         returnAcc :+ returnVar,
                         idx + 1
