@@ -1,7 +1,7 @@
 package aqua.model.inline.raw
 
 import aqua.model.inline.Inline.parDesugarPrefixOpt
-import aqua.model.{CallServiceModel, FuncArrow, SeqModel, ValueModel, VarModel}
+import aqua.model.{CallServiceModel, FuncArrow, MetaModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
 import aqua.model.inline.RawValueInliner.{callToModel, valueToModel}
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
@@ -48,7 +48,10 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     }
   }
 
-  private def resolveFuncArrow[S: Mangler: Exports: Arrows](fn: FuncArrow, call: Call) = {
+  private def resolveFuncArrow[S: Mangler: Exports: Arrows](
+    fn: FuncArrow,
+    call: Call
+  ): State[S, (List[ValueModel], Inline)] = {
     logger.trace(Console.YELLOW + s"Call arrow ${fn.funcName}" + Console.RESET)
     callToModel(call, false).flatMap { case (cm, p) =>
       ArrowInliner
@@ -56,13 +59,23 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
         .map { case (body, vars) =>
           vars -> Inline(
             ListMap.empty,
-            Chain.one(SeqModel.wrap(p.toList :+ body: _*))
+            Chain.one(
+              // Leave meta information in tree after inlining
+              MetaModel
+                .CallArrowModel(fn.funcName)
+                .wrap(
+                  SeqModel.wrap(p.toList :+ body: _*)
+                )
+            )
           )
         }
     }
   }
 
-  private def resolveArrow[S: Mangler: Exports: Arrows](funcName: String, call: Call) =
+  private def resolveArrow[S: Mangler: Exports: Arrows](
+    funcName: String,
+    call: Call
+  ): State[S, (List[ValueModel], Inline)] =
     Arrows[S].arrows.flatMap(arrows =>
       arrows.get(funcName) match {
         case Some(fn) =>

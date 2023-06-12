@@ -1,7 +1,7 @@
 package aqua.semantics.expr.func
 
 import aqua.raw.Raw
-import aqua.raw.ops.{ClosureTag, FuncOp}
+import aqua.raw.ops.ClosureTag
 import aqua.raw.arrow.{ArrowRaw, FuncRaw}
 import aqua.parser.expr.FuncExpr
 import aqua.parser.expr.func.ClosureExpr

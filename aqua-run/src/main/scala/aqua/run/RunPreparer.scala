@@ -7,7 +7,7 @@ import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.parser.lexer.CallArrowToken
 import aqua.parser.lift.Span
-import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, SeqTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, SeqTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
 import cats.data.Validated.{invalid, invalidNec, invalidNel, validNec, validNel}
@@ -101,9 +101,10 @@ class RunPreparer(
     val returnCodomain = ProductType(results.map(_.`type`))
 
     // arguments is only variables, without literals
-    val argumentsType = ProductType.labelled(func.args.zip(funcCallable.arrowType.domain.labelledData).collect {
-      case (VarRaw(name, _), (_, t)) => (name, t)
-    })
+    val argumentsType =
+      ProductType.labelled(func.args.zip(funcCallable.arrowType.domain.labelledData).collect {
+        case (VarRaw(name, _), (_, t)) => (name, t)
+      })
 
     FuncArrow(
       func.name + "Run",

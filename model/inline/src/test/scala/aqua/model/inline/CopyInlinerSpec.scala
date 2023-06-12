@@ -24,7 +24,13 @@ class CopyInlinerSpec extends AnyFlatSpec with Matchers {
     val length = FunctorRaw("length", ScalarType.u32)
     val lengthValue = VarRaw("l", arrType).withProperty(length)
 
-    val getField = CallArrowRaw(None, "get_field", Nil, ArrowType(NilType, UnlabeledConsType(ScalarType.string, NilType)), Option(LiteralRaw("\"serv\"", ScalarType.string)))
+    val getField = CallArrowRaw(
+      None,
+      "get_field",
+      Nil,
+      ArrowType(NilType, UnlabeledConsType(ScalarType.string, NilType)),
+      Option(LiteralRaw.quote("serv"))
+    )
 
     val copyRaw =
       IntoCopyRaw(structType, NonEmptyMap.of("field1" -> lengthValue, "field2" -> getField))
@@ -44,7 +50,7 @@ class CopyInlinerSpec extends AnyFlatSpec with Matchers {
         ParModel.wrap(
           SeqModel.wrap(
             FlattenModel(VarModel("l", arrType), "l_to_functor").leaf,
-            FlattenModel(VarModel("l_to_functor", arrType, Chain.one(lengthModel)), "l_length").leaf,
+            FlattenModel(VarModel("l_to_functor", arrType, Chain.one(lengthModel)), "l_length").leaf
           ),
           CallServiceModel(
             "serv",

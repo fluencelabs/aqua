@@ -169,7 +169,7 @@ object ScalarType {
 }
 
 case class LiteralType private (oneOf: Set[ScalarType], name: String) extends DataType {
-  override def toString: String = name
+  override def toString: String = s"$name:lt"
 }
 
 object LiteralType {

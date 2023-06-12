@@ -1,6 +1,6 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{Call, FuncOp, PushToStreamTag}
+import aqua.raw.ops.{Call, PushToStreamTag}
 import aqua.parser.expr.func.PushToStreamExpr
 import aqua.parser.lexer.Token
 import aqua.raw.Raw
