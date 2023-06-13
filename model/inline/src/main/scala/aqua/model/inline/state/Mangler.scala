@@ -19,6 +19,9 @@ trait Mangler[S] {
 
   def forbid(names: Set[String]): State[S, Unit]
 
+  def forbidName(name: String): State[S, Unit] =
+    forbid(Set(name))
+
   def transformS[R](f: R => S, g: (R, S) => R): Mangler[R] =
     new Mangler[R] {
 

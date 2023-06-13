@@ -75,38 +75,29 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
   private def resolveArrow[S: Mangler: Exports: Arrows](
     funcName: String,
     call: Call
-  ): State[S, (List[ValueModel], Inline)] =
-    Arrows[S].arrows.flatMap(arrows =>
-      arrows.get(funcName) match {
-        case Some(fn) =>
-          resolveFuncArrow(fn, call)
-        case None =>
-          Exports[S].exports.flatMap { exps =>
-            // if there is no arrow, check if it is stored in Exports as variable and try to resolve it
-            exps.get(funcName) match {
-              case Some(VarModel(name, ArrowType(_, _), _)) =>
-                Arrows[S].arrows.flatMap(arrows =>
-                  arrows.get(name) match {
-                    case Some(fn) =>
-                      resolveFuncArrow(fn, call)
-                    case _ =>
-                      logger.error(
-                        s"Inlining, cannot find arrow $funcName, available: ${arrows.keys
-                          .mkString(", ")}"
-                      )
-                      State.pure(Nil -> Inline.empty)
-                  }
-                )
-              case _ =>
-                logger.error(
-                  s"Inlining, cannot find arrow $funcName, available: ${arrows.keys
-                    .mkString(", ")}"
-                )
-                State.pure(Nil -> Inline.empty)
-            }
+  ): State[S, (List[ValueModel], Inline)] = for {
+    arrows <- Arrows[S].arrows
+    exports <- Exports[S].exports
+    arrow = arrows
+      .get(funcName)
+      .orElse(
+        // if there is no arrow, check if it is stored in Exports as variable and try to resolve it
+        exports
+          .get(funcName)
+          .collect { case VarModel(name, _: ArrowType, _) =>
+            name
           }
-      }
-    )
+          .flatMap(arrows.get)
+      )
+    result <- arrow.fold {
+      logger.error(
+        s"Inlining, cannot find arrow $funcName, available: ${arrows.keys
+          .mkString(", ")}"
+      )
+
+      State.pure(Nil -> Inline.empty)
+    }(resolveFuncArrow(_, call))
+  } yield result
 
   override def apply[S: Mangler: Exports: Arrows](
     raw: CallArrowRaw,
