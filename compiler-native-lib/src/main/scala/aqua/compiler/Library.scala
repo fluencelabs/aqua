@@ -10,6 +10,7 @@ import cats.effect.unsafe.implicits.global
 
 import aqua.api.{APICompilation, AquaAPIConfig}
 import aqua.backend.api.APIBackend
+import aqua.logging.LogFormatter
 
 // This is neede for @static to work in object
 class Library {}
@@ -25,6 +26,8 @@ object Library {
     errorsPointer: CCharPointerPointer
   ): Int = {
     val code = CTypeConversion.toJavaString(codePointer)
+
+    LogFormatter.initLogger(Some(scribe.Level.Info))
 
     val result = APICompilation
       .compileString(

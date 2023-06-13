@@ -214,18 +214,20 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
 
 lazy val `compiler-native-lib` = project
   .in(file("compiler-native-lib"))
-  .enablePlugins(GraalVMNativeImagePlugin)
+  .enablePlugins(NativeImagePlugin)
   .settings(commons: _*)
   .settings(
     Compile / mainClass := Some("aqua.compiler.Library"),
-    graalVMNativeImageOptions ++= Seq(
+    nativeImageVersion  := "22.1.0",
+    nativeImageOptions ++= Seq(
       "--verbose",
       "--no-fallback",
+      "--shared", // Produce shared library
+      "--initialize-at-run-time=aqua.logging.LogFormatter$"
       // Uncomment next lines to use llvm backend
       // and obtain bitcode files
       //   "-H:CompilerBackend=llvm",
       //   "-H:TempDirectory=temp", // Directory with bc files
-      "--shared" // Produce shared library
     )
   )
   .dependsOn(`aqua-api`.jvm)
