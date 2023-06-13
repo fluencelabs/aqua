@@ -71,17 +71,18 @@ object AquaAPI extends App with Logging {
       .map(cjs => AquaConfig.fromJS(cjs))
       .getOrElse(
         validNec(AquaAPIConfig())
-      ).map { config =>
-      val importsList = imports.toList
+      )
+      .map { config =>
+        val importsList = imports.toList
 
-      input match {
-        case i: (types.Input | types.Path) =>
-          compileAll(i, importsList, config)
-        case c: types.Call =>
-          compileCall(c, importsList, config)
+        input match {
+          case i: (types.Input | types.Path) =>
+            compileAll(i, importsList, config)
+          case c: types.Call =>
+            compileCall(c, importsList, config)
 
-      }
-    } match {
+        }
+      } match {
       case Valid(v) => v.unsafeToFuture().toJSPromise
       case Invalid(errs) => js.Promise.resolve(CompilationResult.errs(errs.toChain.toList))
     }
@@ -100,15 +101,15 @@ object AquaAPI extends App with Logging {
     }
 
     extension (res: IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]])
-      def toResult: IO[CompilationResult] = res.map(
-        _.andThen { compiled =>
+      def toResult: IO[CompilationResult] = res.map { compiledV =>
+        compiledV.map { compiled =>
           config.targetType match {
-            case AirType => validNec(generatedToAirResult(compiled))
+            case AirType => generatedToAirResult(compiled)
             case TypeScriptType => compiledToTsSourceResult(compiled)
             case JavaScriptType => compiledToJsSourceResult(compiled)
           }
         }.leftMap(errorsToResult).merge
-      )
+      }
 
     input match {
       case i: types.Input =>
@@ -161,55 +162,36 @@ object AquaAPI extends App with Logging {
     CompilationResult.errs(errors.toChain.toList)
   }
 
-  private def findBySuffix(
-    compiled: Seq[Generated],
-    suffix: String,
-    errorMsg: String
-  ): ValidatedNec[String, String] = {
-    Validated
-      .fromOption(
-        compiled.find(_.suffix == suffix).map(_.content), {
-          logger.error(errorMsg)
-          NonEmptyChain.one(errorMsg)
-        }
-      )
-  }
+  extension (res: List[GeneratedSource])
 
-  extension (res: Chain[Validated[NonEmptyChain[String], GeneratedSource]])
-      def toSourcesResult: ValidatedNec[String, CompilationResult] =
-        res.sequence.map(_.toList.toJSArray).map(sources => CompilationResult.result(sources = sources))
+    def toSourcesResult: CompilationResult =
+      CompilationResult.result(sources = res.toJSArray)
 
   private def compiledToTsSourceResult(
     compiled: Chain[AquaCompiled[FileModuleId]]
-  ): ValidatedNec[String, CompilationResult] = {
-    compiled.map { c =>
-      findBySuffix(
-        c.compiled,
-        TypeScriptBackend.ext,
-        "Unreachable. TypeScript backend must generate content."
+  ): CompilationResult =
+    compiled.toList
+      .flatMap(c =>
+        c.compiled
+          .find(_.suffix == TypeScriptBackend.ext)
+          .map(_.content)
+          .map(GeneratedSource.tsSource(c.sourceId.toString, _))
       )
-        .map(GeneratedSource.tsSource(c.sourceId.toString, _))
-    }.toSourcesResult
-  }
+      .toSourcesResult
 
   private def compiledToJsSourceResult(
     compiled: Chain[AquaCompiled[FileModuleId]]
-  ): ValidatedNec[String, CompilationResult] = {
-    compiled.map { c =>
-      findBySuffix(
-        c.compiled,
-        JavaScriptBackend.dtsExt,
-        "Unreachable. JavaScript backend must generate '.d.ts' content."
-      ).andThen { tsTypes =>
-        findBySuffix(
-          c.compiled,
-          JavaScriptBackend.ext,
-          "Unreachable. JavaScript backend must generate '.js' content."
-        ).map(jsSource => GeneratedSource.jsSource(c.sourceId.toString, jsSource, tsTypes))
-      }
-
+  ): CompilationResult =
+    compiled.toList.flatMap { c =>
+      for {
+        dtsContent <- c.compiled
+          .find(_.suffix == JavaScriptBackend.dtsExt)
+          .map(_.content)
+        jsContent <- c.compiled
+          .find(_.suffix == JavaScriptBackend.dtsExt)
+          .map(_.content)
+      } yield GeneratedSource.jsSource(c.sourceId.toString, jsContent, dtsContent)
     }.toSourcesResult
-  }
 
   private def generatedToAirResult(
     compiled: Chain[AquaCompiled[FileModuleId]]
