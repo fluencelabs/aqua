@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.11.4](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.3...aqua-v0.11.4) (2023-06-13)
+
+
+### Features
+
+* **tracing:** Introduce function calls tracing [fixes LNG-169] ([#732](https://github.com/fluencelabs/aqua/issues/732)) ([e9c0044](https://github.com/fluencelabs/aqua/commit/e9c004452e48a22dfff2ddd64f1d98797ac6db84))
+
+
+### Bug Fixes
+
+* **aqua-api:** Compilation to js/ts for file without exports [LNG-196]  ([#744](https://github.com/fluencelabs/aqua/issues/744)) ([8c2240d](https://github.com/fluencelabs/aqua/commit/8c2240d3b16e6f3f968d393aeb1136ffffc9464c))
+* **compiler:** Fix closure call compilation [fixes LNG-193] ([#741](https://github.com/fluencelabs/aqua/issues/741)) ([c5534a9](https://github.com/fluencelabs/aqua/commit/c5534a964c21d48bd944e9c62e144cbbbd58625f))
+
 ## [0.11.3](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.2...aqua-v0.11.3) (2023-06-09)
 
 
