@@ -581,6 +581,58 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * closureName = (x: u16) -> u16:
+   *   retval = x + add
+   *   <- retval
+   *
+   * @return (closure func, closure type, closure type labelled)
+   */
+  def addClosure(
+    closureName: String,
+    add: ValueRaw
+  ): (FuncRaw, ArrowType, ArrowType) = {
+    val closureArg = VarRaw(
+      "x",
+      ScalarType.u16
+    )
+    val closureRes = VarRaw(
+      "retval",
+      ScalarType.u16
+    )
+    val closureType = ArrowType(
+      domain = ProductType(List(closureArg.`type`)),
+      codomain = ProductType(List(ScalarType.u16))
+    )
+    val closureTypeLabelled = closureType.copy(
+      domain = ProductType.labelled(List(closureArg.name -> closureArg.`type`))
+    )
+
+    val closureBody = SeqTag.wrap(
+      AssignmentTag(
+        RawBuilder.add(
+          closureArg,
+          add
+        ),
+        closureRes.name
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(closureRes)
+      ).leaf
+    )
+
+    val closureFunc = FuncRaw(
+      name = closureName,
+      arrow = ArrowRaw(
+        `type` = closureTypeLabelled,
+        ret = List(closureRes),
+        body = closureBody
+      )
+    )
+
+    (closureFunc, closureType, closureTypeLabelled)
+  }
+
+  /**
    * func innerName(arg: u16) -> u16 -> u16:
    *   closureName = (x: u16) -> u16:
    *     retval = x + arg
@@ -599,56 +651,21 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     outterResultName: String,
     body: (ArrowType) => List[RawTag.Tree]
   ) = {
-    val closureArg = VarRaw(
-      "x",
-      ScalarType.u16
-    )
     val innerArg = VarRaw(
       "arg",
       ScalarType.u16
     )
 
-    val closureRes = VarRaw(
-      "retval",
-      ScalarType.u16
-    )
-    val closureType = ArrowType(
-      domain = ProductType(List(closureArg.`type`)),
-      codomain = ProductType(List(ScalarType.u16))
-    )
-    val closureTypeLablled = closureType.copy(
-      domain = ProductType.labelled(List(closureArg.name -> closureArg.`type`))
-    )
+    val (closureFunc, closureType, closureTypeLabelled) =
+      addClosure(closureName, innerArg)
 
     val innerRes = VarRaw(
       closureName,
-      closureTypeLablled
+      closureTypeLabelled
     )
     val innerType = ArrowType(
       domain = ProductType.labelled(List(innerArg.name -> innerArg.`type`)),
       codomain = ProductType(List(closureType))
-    )
-
-    val closureBody = SeqTag.wrap(
-      AssignmentTag(
-        RawBuilder.add(
-          closureArg,
-          innerArg
-        ),
-        closureRes.name
-      ).leaf,
-      ReturnTag(
-        NonEmptyList.one(closureRes)
-      ).leaf
-    )
-
-    val closureFunc = FuncRaw(
-      name = closureName,
-      arrow = ArrowRaw(
-        `type` = closureTypeLablled,
-        ret = List(closureRes),
-        body = closureBody
-      )
     )
 
     val innerBody = SeqTag.wrap(
@@ -1116,6 +1133,129 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
           )(tempAdd)
           .leaf
       )
+    )
+
+    model.equalsOrShowDiff(expected) shouldEqual true
+  }
+
+  /**
+   * func accept_closure(closure: u16 -> u16) -> u16:
+   *   resA <- closure(42)
+   *   <- resA
+   *
+   * func test() -> u16:
+   *   closure = (x: u16) -> u16:
+   *     resC = x + 37
+   *     <- resC
+   *   resT <- accept_closure(closure)
+   *   <- resT
+   */
+  "arrow inliner" should "correctly handle closure as argument [bug LNG-92]" in {
+    val acceptName = "accept_closure"
+    val closureName = "closure"
+    val testName = "test"
+    val acceptRes = VarRaw("resA", ScalarType.u16)
+    val testRes = VarRaw("resT", ScalarType.u16)
+
+    val (closureFunc, closureType, closureTypeLabelled) =
+      addClosure(closureName, LiteralRaw("37", LiteralType.number))
+
+    val acceptType = ArrowType(
+      domain = ProductType.labelled(List(closureName -> closureType)),
+      codomain = ProductType(ScalarType.u16 :: Nil)
+    )
+
+    val acceptBody = SeqTag.wrap(
+      CallArrowRawTag(
+        List(Call.Export(acceptRes.name, acceptRes.baseType)),
+        CallArrowRaw(
+          ability = None,
+          name = closureName,
+          arguments = List(LiteralRaw("42", LiteralType.number)),
+          baseType = closureType,
+          serviceId = None
+        )
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(acceptRes)
+      ).leaf
+    )
+
+    val acceptFunc = FuncArrow(
+      funcName = acceptName,
+      body = acceptBody,
+      arrowType = ArrowType(
+        ProductType.labelled(List(closureName -> closureType)),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(acceptRes),
+      capturedArrows = Map.empty,
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val testBody = SeqTag.wrap(
+      ClosureTag(
+        func = closureFunc,
+        detach = false
+      ).leaf,
+      CallArrowRawTag(
+        List(Call.Export(testRes.name, testRes.baseType)),
+        CallArrowRaw(
+          ability = None,
+          name = acceptName,
+          arguments = List(VarRaw(closureName, closureTypeLabelled)),
+          baseType = acceptFunc.arrowType,
+          serviceId = None
+        )
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(testRes)
+      ).leaf
+    )
+
+    val testFunc = FuncArrow(
+      funcName = testName,
+      body = testBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(testRes),
+      capturedArrows = Map(acceptName -> acceptFunc),
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val model = ArrowInliner
+      .callArrow[InliningState](
+        testFunc,
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+
+    /* WARNING: This naming is unstable */
+    val tempAdd = VarModel("add", ScalarType.u16)
+
+    val expected = SeqModel.wrap(
+      CaptureTopologyModel(closureName).leaf,
+      MetaModel
+        .CallArrowModel(acceptName)
+        .wrap(
+          MetaModel
+            .CallArrowModel(closureName)
+            .wrap(
+              ApplyTopologyModel(closureName).wrap(
+                ModelBuilder
+                  .add(
+                    LiteralModel("42", LiteralType.number),
+                    LiteralModel("37", LiteralType.number)
+                  )(tempAdd)
+                  .leaf
+              )
+            )
+        )
     )
 
     model.equalsOrShowDiff(expected) shouldEqual true
