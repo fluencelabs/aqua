@@ -50,35 +50,6 @@ object RawValueInliner extends Logging {
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)
-
-      case sr: ShadowRaw =>
-        // First, collect shadowed values
-        // TODO: might be already defined in scope!
-        sr.shadowValues.toList
-          // Unfold/substitute all shadowed value
-          .traverse { case (name, v) =>
-            unfold(v, propertiesAllowed).map { case (svm, si) =>
-              (name, svm, si)
-            }
-          }.flatMap { fas =>
-            val res = fas.map { case (n, v, _) =>
-              n -> v
-            }.toMap
-            // Mark shadowed values as exports, isolate them into a scope
-            Exports[S].exports
-              .flatMap(curr =>
-                Exports[S]
-                  .scope(
-                    Exports[S].resolved(res ++ curr.view.mapValues(_.resolveWith(res))) >>
-                      // Resolve the value in the prepared Exports scope
-                      unfold(sr.value, propertiesAllowed)
-                  )
-              )
-              .map { case (vm, inl) =>
-                // Collect inlines to prepend before the value
-                (vm, fas.map(_._3).foldLeft(inl)(_ |+| _))
-              }
-          }
     }
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
