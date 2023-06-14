@@ -1,6 +1,6 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{DeclareStreamTag, FuncOp}
+import aqua.raw.ops.DeclareStreamTag
 import aqua.parser.expr.func.DeclareStreamExpr
 import aqua.raw.Raw
 import aqua.raw.value.VarRaw

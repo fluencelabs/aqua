@@ -9,6 +9,8 @@ import cats.syntax.show.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import aqua.raw.value.{CallArrowRaw, ValueRaw}
+import aqua.raw.arrow.{ArrowRaw, FuncRaw}
 
 class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
@@ -33,7 +35,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     model.equalsOrShowDiff(
       CallServiceModel(
-        LiteralModel("\"dumb_srv_id\"", LiteralType.string),
+        LiteralModel.quote("dumb_srv_id"),
         "dumb",
         CallModel(Nil, Nil)
       ).leaf
@@ -113,14 +115,21 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, true).wrap(
-        SeqModel.wrap(
-          CanonicalizeModel(streamModel, CallModel.Export(canonModel.name, canonModel.`type`)).leaf,
-          CallServiceModel(
-            LiteralModel("\"test-service\"", LiteralType.string),
-            "some-call",
-            CallModel(canonModel :: Nil, Nil)
-          ).leaf
-        )
+        MetaModel
+          .CallArrowModel("cb")
+          .wrap(
+            SeqModel.wrap(
+              CanonicalizeModel(
+                streamModel,
+                CallModel.Export(canonModel.name, canonModel.`type`)
+              ).leaf,
+              CallServiceModel(
+                LiteralModel.quote("test-service"),
+                "some-call",
+                CallModel(canonModel :: Nil, Nil)
+              ).leaf
+            )
+          )
       )
     ) should be(true)
 
@@ -130,7 +139,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     func stream-callback(cb: string -> ()):
       records: *string
       cb(records!)
-  */
+   */
   ignore /*"arrow inliner"*/ should "pass stream with gate to callback properly" in {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
@@ -210,7 +219,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, true).wrap(
         CallServiceModel(
-          LiteralModel("\"test-service\"", LiteralType.string),
+          LiteralModel.quote("test-service"),
           "some-call",
           CallModel(streamModel :: Nil, Nil)
         ).leaf
@@ -291,15 +300,19 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
     model.equalsOrShowDiff(
       SeqModel.wrap(
-        CallServiceModel(
-          LiteralModel("\"test-service\"", LiteralType.string),
-          "get_records",
-          CallModel(Nil, CallModel.Export(recordsModel.name, recordsModel.`type`) :: Nil)
-        ).leaf,
+        MetaModel
+          .CallArrowModel(innerName)
+          .wrap(
+            CallServiceModel(
+              LiteralModel.quote("test-service"),
+              "get_records",
+              CallModel(Nil, CallModel.Export(recordsModel.name, recordsModel.`type`) :: Nil)
+            ).leaf
+          ),
         SeqModel.wrap(
           CanonicalizeModel(recordsModel, CallModel.Export(canonModel.name, canonType)).leaf,
           CallServiceModel(
-            LiteralModel("\"callbackSrv\"", LiteralType.string),
+            LiteralModel.quote("callbackSrv"),
             "response",
             CallModel(canonModel :: Nil, Nil)
           ).leaf
@@ -307,6 +320,945 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       )
     ) should be(true)
 
+  }
+
+  /**
+   * service Test("test-service"):
+   *   get_number() -> u16
+   *
+   * func inner() -> u16:
+   *   res <- Test.get_number()
+   *   <- res
+   *
+   * func outer() -> u16
+   *   res1 <- inner() -- Meta should be left here
+   *   res2 <- Test.get_number()
+   *   res3 <- inner() -- Meta should be left here
+   *   retval = res1 + res2 + res3
+   *   <- retval
+   */
+  "arrow inliner" should "leave meta after function inlining" in {
+    val innerName = "inner"
+    val innerRes = VarRaw("res", ScalarType.u16)
+
+    val serviceName = "test-service"
+    val serviceMethod = "get_number"
+
+    val serviceCall = (res: VarRaw) =>
+      CallArrowRawTag
+        .service(
+          LiteralRaw.quote(serviceName),
+          serviceMethod,
+          Call(Nil, Call.Export(res.name, ScalarType.u16) :: Nil)
+        )
+        .leaf
+
+    val innerBody = SeqTag.wrap(
+      serviceCall(innerRes),
+      ReturnTag(
+        NonEmptyList.one(
+          innerRes
+        )
+      ).leaf
+    )
+
+    val inner = FuncArrow(
+      funcName = innerName,
+      body = innerBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(innerRes),
+      capturedArrows = Map.empty,
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val outterRes1 = VarRaw("res1", ScalarType.u16)
+    val outterRes2 = VarRaw("res2", ScalarType.u16)
+    val outterRes3 = VarRaw("res3", ScalarType.u16)
+    val outterRetVal = VarRaw("retval", ScalarType.u16)
+
+    val innerCall = (res: VarRaw) =>
+      CallArrowRawTag
+        .func(
+          innerName,
+          Call(Nil, Call.Export(res.name, ScalarType.u16) :: Nil)
+        )
+        .leaf
+
+    val outerBody = SeqTag.wrap(
+      innerCall(outterRes1),
+      serviceCall(outterRes2),
+      innerCall(outterRes3),
+      AssignmentTag(
+        RawBuilder.add(
+          outterRes1,
+          RawBuilder.add(
+            outterRes2,
+            outterRes3
+          )
+        ),
+        outterRetVal.name
+      ).leaf,
+      ReturnTag(
+        NonEmptyList
+          .one(
+            outterRetVal
+          )
+      ).leaf
+    )
+
+    val outer = FuncArrow(
+      funcName = "outer",
+      body = outerBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(outterRetVal),
+      capturedArrows = Map(innerName -> inner),
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val model = ArrowInliner
+      .callArrow[InliningState](
+        outer,
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+
+    val serviceCallModel = (res: VarModel) =>
+      CallServiceModel(
+        LiteralModel.quote(serviceName),
+        serviceMethod,
+        CallModel(Nil, CallModel.Export(res.name, res.`type`) :: Nil)
+      ).leaf
+
+    /* WARNING: This naming is unstable */
+    val res1 = VarModel("res", ScalarType.u16)
+    val res2 = VarModel("res2", ScalarType.u16)
+    val res3 = VarModel("res-0", ScalarType.u16)
+    val tempAdd = VarModel("add-0", ScalarType.u16)
+
+    val expected = SeqModel.wrap(
+      MetaModel
+        .CallArrowModel(innerName)
+        .wrap(
+          serviceCallModel(res1)
+        ),
+      serviceCallModel(res2),
+      MetaModel
+        .CallArrowModel(innerName)
+        .wrap(
+          serviceCallModel(res3)
+        ),
+      SeqModel.wrap(
+        ModelBuilder.add(res2, res3)(tempAdd).leaf,
+        ModelBuilder.add(res1, tempAdd)(VarModel("add", ScalarType.u16)).leaf
+      )
+    )
+
+    model.equalsOrShowDiff(expected) shouldEqual true
+  }
+
+  /**
+   * func inner() -> u16:
+   *   res = 42
+   *   <- res
+   *
+   * func outer() -> u16:
+   *   retval = inner() + inner() + 37
+   *   <- retval
+   */
+  "arrow inliner" should "omit meta if arrow was completely erased" in {
+    val innerName = "inner"
+    val innerRes = VarRaw("res", ScalarType.u16)
+    val innerRet = "42"
+
+    val innerBody = SeqTag.wrap(
+      AssignmentTag(
+        LiteralRaw(innerRet, ScalarType.u16),
+        innerRes.name
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(
+          innerRes
+        )
+      ).leaf
+    )
+
+    val inner = FuncArrow(
+      funcName = innerName,
+      body = innerBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(innerRes),
+      capturedArrows = Map.empty,
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val innerCall = CallArrowRaw(
+      ability = None,
+      name = innerName,
+      arguments = Nil,
+      baseType = ArrowType(
+        domain = NilType,
+        codomain = ProductType(List(ScalarType.u16))
+      ),
+      serviceId = None
+    )
+
+    val outerAdd = "37"
+    val outterRetVal = VarRaw("retval", ScalarType.u16)
+
+    val outerBody = SeqTag.wrap(
+      AssignmentTag(
+        RawBuilder.add(
+          innerCall,
+          RawBuilder.add(
+            innerCall,
+            LiteralRaw(outerAdd, ScalarType.u16)
+          )
+        ),
+        outterRetVal.name
+      ).leaf,
+      ReturnTag(
+        NonEmptyList
+          .one(
+            outterRetVal
+          )
+      ).leaf
+    )
+
+    val outer = FuncArrow(
+      funcName = "outer",
+      body = outerBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(outterRetVal),
+      capturedArrows = Map(innerName -> inner),
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val model = ArrowInliner
+      .callArrow[InliningState](
+        outer,
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+
+    /* WARNING: This naming is unstable */
+    val tempAdd0 = VarModel("add-0", ScalarType.u16)
+    val tempAdd = VarModel("add", ScalarType.u16)
+
+    val expected = SeqModel.wrap(
+      ModelBuilder
+        .add(
+          LiteralModel(innerRet, ScalarType.u16),
+          LiteralModel(outerAdd, ScalarType.u16)
+        )(tempAdd0)
+        .leaf,
+      ModelBuilder
+        .add(
+          LiteralModel(innerRet, ScalarType.u16),
+          tempAdd0
+        )(tempAdd)
+        .leaf
+    )
+
+    model.equalsOrShowDiff(expected) shouldEqual true
+  }
+
+  /**
+   * closureName = (x: u16) -> u16:
+   *   retval = x + add
+   *   <- retval
+   *
+   * @return (closure func, closure type, closure type labelled)
+   */
+  def addClosure(
+    closureName: String,
+    add: ValueRaw
+  ): (FuncRaw, ArrowType, ArrowType) = {
+    val closureArg = VarRaw(
+      "x",
+      ScalarType.u16
+    )
+    val closureRes = VarRaw(
+      "retval",
+      ScalarType.u16
+    )
+    val closureType = ArrowType(
+      domain = ProductType(List(closureArg.`type`)),
+      codomain = ProductType(List(ScalarType.u16))
+    )
+    val closureTypeLabelled = closureType.copy(
+      domain = ProductType.labelled(List(closureArg.name -> closureArg.`type`))
+    )
+
+    val closureBody = SeqTag.wrap(
+      AssignmentTag(
+        RawBuilder.add(
+          closureArg,
+          add
+        ),
+        closureRes.name
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(closureRes)
+      ).leaf
+    )
+
+    val closureFunc = FuncRaw(
+      name = closureName,
+      arrow = ArrowRaw(
+        `type` = closureTypeLabelled,
+        ret = List(closureRes),
+        body = closureBody
+      )
+    )
+
+    (closureFunc, closureType, closureTypeLabelled)
+  }
+
+  /**
+   * func innerName(arg: u16) -> u16 -> u16:
+   *   closureName = (x: u16) -> u16:
+   *     retval = x + arg
+   *     <- retval
+   *   <- closureName
+   *
+   * func outer() -> u16:
+   *   outterClosureName <- inner(42)
+   *   <body(outterClosureName.type)>
+   *   <- outterResultName
+   */
+  def closureReturnModel(
+    innerName: String,
+    closureName: String,
+    outterClosureName: String,
+    outterResultName: String,
+    body: (ArrowType) => List[RawTag.Tree]
+  ) = {
+    val innerArg = VarRaw(
+      "arg",
+      ScalarType.u16
+    )
+
+    val (closureFunc, closureType, closureTypeLabelled) =
+      addClosure(closureName, innerArg)
+
+    val innerRes = VarRaw(
+      closureName,
+      closureTypeLabelled
+    )
+    val innerType = ArrowType(
+      domain = ProductType.labelled(List(innerArg.name -> innerArg.`type`)),
+      codomain = ProductType(List(closureType))
+    )
+
+    val innerBody = SeqTag.wrap(
+      ClosureTag(
+        func = closureFunc,
+        detach = false
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(innerRes)
+      ).leaf
+    )
+
+    val inner = FuncArrow(
+      funcName = innerName,
+      body = innerBody,
+      arrowType = innerType,
+      ret = List(innerRes),
+      capturedArrows = Map.empty,
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val outterClosure = VarRaw(
+      "c",
+      closureType
+    )
+    val outterRes = VarRaw(
+      "retval",
+      ScalarType.u16
+    )
+
+    val innerCall =
+      CallArrowRawTag(
+        List(Call.Export(outterClosure.name, outterClosure.`type`)),
+        CallArrowRaw(
+          ability = None,
+          name = innerName,
+          arguments = List(LiteralRaw("42", LiteralType.number)),
+          baseType = innerType,
+          serviceId = None
+        )
+      ).leaf
+
+    val outerBody = SeqTag.wrap(
+      innerCall +: body(closureType) :+ ReturnTag(
+        NonEmptyList
+          .one(
+            outterRes
+          )
+      ).leaf: _*
+    )
+
+    val outer = FuncArrow(
+      funcName = "outer",
+      body = outerBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(outterRes),
+      capturedArrows = Map(innerName -> inner),
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    ArrowInliner
+      .callArrow[InliningState](
+        outer,
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+  }
+
+  /**
+   * func inner(arg: u16) -> u16 -> u16:
+   *   closure = (x: u16) -> u16:
+   *     retval = x + arg
+   *     <- retval
+   *   <- closure
+   *
+   * func outer() -> u16:
+   *   c <- inner(42)
+   *   retval = 37 + c(1) + c(2)
+   *   <- retval
+   */
+  "arrow inliner" should "leave meta after returned closure inlining" in {
+    val innerName = "inner"
+    val closureName = "closure"
+    val outterClosureName = "c"
+    val outterResultName = "retval"
+
+    val closureCall = (closureType: ArrowType, i: String) =>
+      CallArrowRaw(
+        ability = None,
+        name = outterClosureName,
+        arguments = List(LiteralRaw(i, LiteralType.number)),
+        baseType = closureType,
+        serviceId = None
+      )
+
+    val body = (closureType: ArrowType) =>
+      List(
+        AssignmentTag(
+          RawBuilder.add(
+            RawBuilder.add(
+              LiteralRaw("37", LiteralType.number),
+              closureCall(closureType, "1")
+            ),
+            closureCall(closureType, "2")
+          ),
+          outterResultName
+        ).leaf
+      )
+
+    val model = closureReturnModel(
+      innerName = innerName,
+      closureName = closureName,
+      outterClosureName = outterClosureName,
+      outterResultName = outterResultName,
+      body = body
+    )
+
+    val closureCallModel = (x: String, o: VarModel) =>
+      MetaModel
+        .CallArrowModel(closureName)
+        .wrap(
+          ApplyTopologyModel(closureName)
+            .wrap(
+              ModelBuilder
+                .add(
+                  LiteralModel(x, LiteralType.number),
+                  LiteralModel("42", LiteralType.number)
+                )(o)
+                .leaf
+            )
+        )
+
+    /* WARNING: This naming is unstable */
+    val tempAdd0 = VarModel("add-0", ScalarType.u16)
+    val tempAdd1 = VarModel("add-1", ScalarType.u16)
+    val tempAdd2 = VarModel("add-2", ScalarType.u16)
+    val tempAdd = VarModel("add", ScalarType.u16)
+
+    val expected = SeqModel.wrap(
+      MetaModel
+        .CallArrowModel(innerName)
+        .wrap(
+          CaptureTopologyModel(closureName).leaf
+        ),
+      SeqModel.wrap(
+        ParModel.wrap(
+          SeqModel.wrap(
+            closureCallModel("1", tempAdd1),
+            ModelBuilder
+              .add(
+                LiteralModel("37", LiteralType.number),
+                tempAdd1
+              )(tempAdd0)
+              .leaf
+          ),
+          closureCallModel("2", tempAdd2)
+        ),
+        ModelBuilder
+          .add(
+            tempAdd0,
+            tempAdd2
+          )(tempAdd)
+          .leaf
+      )
+    )
+
+    model.equalsOrShowDiff(expected) shouldEqual true
+  }
+
+  /**
+   * func inner() -> () -> u16:
+   *   closure = func () -> u16:
+   *     <- 42
+   *   <- closure
+   *
+   * func outer() -> u16:
+   *   c <- inner()
+   *   retval = 37 + c() + c()
+   *   <- retval
+   */
+  "arrow inliner" should "omit meta if returned closure was completely erased" in {
+    val innerName = "inner"
+    val closureName = "closure"
+
+    val closureRes = LiteralRaw(
+      "42",
+      LiteralType.number
+    )
+    val closureType = ArrowType(
+      domain = NilType,
+      codomain = ProductType(List(ScalarType.u16))
+    )
+
+    val innerRes = VarRaw(
+      closureName,
+      closureType
+    )
+    val innerType = ArrowType(
+      domain = NilType,
+      codomain = ProductType(List(closureType))
+    )
+
+    val closureBody = SeqTag.wrap(
+      ReturnTag(
+        NonEmptyList.one(closureRes)
+      ).leaf
+    )
+
+    val closureFunc = FuncRaw(
+      name = closureName,
+      arrow = ArrowRaw(
+        `type` = closureType,
+        ret = List(closureRes),
+        body = closureBody
+      )
+    )
+
+    val innerBody = SeqTag.wrap(
+      ClosureTag(
+        func = closureFunc,
+        detach = true
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(innerRes)
+      ).leaf
+    )
+
+    val inner = FuncArrow(
+      funcName = innerName,
+      body = innerBody,
+      arrowType = innerType,
+      ret = List(innerRes),
+      capturedArrows = Map.empty,
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val outterClosure = VarRaw(
+      "c",
+      closureType
+    )
+    val outterRes = VarRaw(
+      "retval",
+      ScalarType.u16
+    )
+
+    val innerCall =
+      CallArrowRawTag(
+        List(Call.Export(outterClosure.name, outterClosure.`type`)),
+        CallArrowRaw(
+          ability = None,
+          name = innerName,
+          arguments = Nil,
+          baseType = innerType,
+          serviceId = None
+        )
+      ).leaf
+
+    val closureCall =
+      CallArrowRaw(
+        ability = None,
+        name = outterClosure.name,
+        arguments = Nil,
+        baseType = closureType,
+        serviceId = None
+      )
+
+    val outerBody = SeqTag.wrap(
+      innerCall,
+      AssignmentTag(
+        RawBuilder.add(
+          RawBuilder.add(
+            LiteralRaw("37", LiteralType.number),
+            closureCall
+          ),
+          closureCall
+        ),
+        outterRes.name
+      ).leaf,
+      ReturnTag(
+        NonEmptyList
+          .one(
+            outterRes
+          )
+      ).leaf
+    )
+
+    val outer = FuncArrow(
+      funcName = "outer",
+      body = outerBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(outterRes),
+      capturedArrows = Map(innerName -> inner),
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val model = ArrowInliner
+      .callArrow[InliningState](
+        outer,
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+
+    /* WARNING: This naming is unstable */
+    val tempAdd0 = VarModel("add-0", ScalarType.u16)
+    val tempAdd = VarModel("add", ScalarType.u16)
+
+    val number = (v: String) =>
+      LiteralModel(
+        v,
+        LiteralType.number
+      )
+
+    val expected = SeqModel.wrap(
+      ModelBuilder
+        .add(
+          number("37"),
+          number("42")
+        )(tempAdd0)
+        .leaf,
+      ModelBuilder
+        .add(
+          tempAdd0,
+          number("42")
+        )(tempAdd)
+        .leaf
+    )
+
+    model.equalsOrShowDiff(expected) shouldEqual true
+  }
+
+  /**
+   * func inner(arg: u16) -> u16 -> u16:
+   *   closure = (x: u16) -> u16:
+   *     retval = x + arg
+   *     <- retval
+   *   <- closure
+   *
+   * func outer() -> u16:
+   *   c <- inner(42)
+   *   b = c
+   *   a = b
+   *   retval = 37 + a(1) + b(2) + c{3}
+   *   <- retval
+   */
+  "arrow inliner" should "correctly inline renamed closure [bug LNG-193]" in {
+    val innerName = "inner"
+    val closureName = "closure"
+    val outterClosureName = "c"
+    val outterResultName = "retval"
+    val firstRename = "b"
+    val secondRename = "a"
+
+    val closureCall = (name: String, closureType: ArrowType, i: String) =>
+      CallArrowRaw(
+        ability = None,
+        name = name,
+        arguments = List(LiteralRaw(i, LiteralType.number)),
+        baseType = closureType,
+        serviceId = None
+      )
+
+    val body = (closureType: ArrowType) =>
+      List(
+        AssignmentTag(
+          VarRaw(outterClosureName, closureType),
+          firstRename
+        ).leaf,
+        AssignmentTag(
+          VarRaw(firstRename, closureType),
+          secondRename
+        ).leaf,
+        AssignmentTag(
+          RawBuilder
+            .add(
+              RawBuilder.add(
+                RawBuilder.add(
+                  LiteralRaw("37", LiteralType.number),
+                  closureCall(secondRename, closureType, "1")
+                ),
+                closureCall(firstRename, closureType, "2")
+              ),
+              closureCall(outterClosureName, closureType, "3")
+            ),
+          outterResultName
+        ).leaf
+      )
+
+    val model = closureReturnModel(
+      innerName = innerName,
+      closureName = closureName,
+      outterClosureName = outterClosureName,
+      outterResultName = outterResultName,
+      body = body
+    )
+
+    val closureCallModel = (x: String, o: VarModel) =>
+      MetaModel
+        .CallArrowModel(closureName)
+        .wrap(
+          ApplyTopologyModel(closureName)
+            .wrap(
+              ModelBuilder
+                .add(
+                  LiteralModel(x, LiteralType.number),
+                  LiteralModel("42", LiteralType.number)
+                )(o)
+                .leaf
+            )
+        )
+
+    /* WARNING: This naming is unstable */
+    val tempAdd0 = VarModel("add-0", ScalarType.u16)
+    val tempAdd1 = VarModel("add-1", ScalarType.u16)
+    val tempAdd2 = VarModel("add-2", ScalarType.u16)
+    val tempAdd3 = VarModel("add-3", ScalarType.u16)
+    val tempAdd4 = VarModel("add-4", ScalarType.u16)
+    val tempAdd = VarModel("add", ScalarType.u16)
+
+    val expected = SeqModel.wrap(
+      MetaModel
+        .CallArrowModel(innerName)
+        .wrap(
+          CaptureTopologyModel(closureName).leaf
+        ),
+      SeqModel.wrap(
+        ParModel.wrap(
+          SeqModel.wrap(
+            ParModel.wrap(
+              SeqModel.wrap(
+                closureCallModel("1", tempAdd2),
+                ModelBuilder
+                  .add(
+                    LiteralModel("37", LiteralType.number),
+                    tempAdd2
+                  )(tempAdd1)
+                  .leaf
+              ),
+              closureCallModel("2", tempAdd3)
+            ),
+            ModelBuilder
+              .add(
+                tempAdd1,
+                tempAdd3
+              )(tempAdd0)
+              .leaf
+          ),
+          closureCallModel("3", tempAdd4)
+        ),
+        ModelBuilder
+          .add(
+            tempAdd0,
+            tempAdd4
+          )(tempAdd)
+          .leaf
+      )
+    )
+
+    model.equalsOrShowDiff(expected) shouldEqual true
+  }
+
+  /**
+   * func accept_closure(closure: u16 -> u16) -> u16:
+   *   resA <- closure(42)
+   *   <- resA
+   *
+   * func test() -> u16:
+   *   closure = (x: u16) -> u16:
+   *     resC = x + 37
+   *     <- resC
+   *   resT <- accept_closure(closure)
+   *   <- resT
+   */
+  "arrow inliner" should "correctly handle closure as argument [bug LNG-92]" in {
+    val acceptName = "accept_closure"
+    val closureName = "closure"
+    val testName = "test"
+    val acceptRes = VarRaw("resA", ScalarType.u16)
+    val testRes = VarRaw("resT", ScalarType.u16)
+
+    val (closureFunc, closureType, closureTypeLabelled) =
+      addClosure(closureName, LiteralRaw("37", LiteralType.number))
+
+    val acceptType = ArrowType(
+      domain = ProductType.labelled(List(closureName -> closureType)),
+      codomain = ProductType(ScalarType.u16 :: Nil)
+    )
+
+    val acceptBody = SeqTag.wrap(
+      CallArrowRawTag(
+        List(Call.Export(acceptRes.name, acceptRes.baseType)),
+        CallArrowRaw(
+          ability = None,
+          name = closureName,
+          arguments = List(LiteralRaw("42", LiteralType.number)),
+          baseType = closureType,
+          serviceId = None
+        )
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(acceptRes)
+      ).leaf
+    )
+
+    val acceptFunc = FuncArrow(
+      funcName = acceptName,
+      body = acceptBody,
+      arrowType = ArrowType(
+        ProductType.labelled(List(closureName -> closureType)),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(acceptRes),
+      capturedArrows = Map.empty,
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val testBody = SeqTag.wrap(
+      ClosureTag(
+        func = closureFunc,
+        detach = false
+      ).leaf,
+      CallArrowRawTag(
+        List(Call.Export(testRes.name, testRes.baseType)),
+        CallArrowRaw(
+          ability = None,
+          name = acceptName,
+          arguments = List(VarRaw(closureName, closureTypeLabelled)),
+          baseType = acceptFunc.arrowType,
+          serviceId = None
+        )
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(testRes)
+      ).leaf
+    )
+
+    val testFunc = FuncArrow(
+      funcName = testName,
+      body = testBody,
+      arrowType = ArrowType(
+        ProductType(Nil),
+        ProductType(List(ScalarType.u16))
+      ),
+      ret = List(testRes),
+      capturedArrows = Map(acceptName -> acceptFunc),
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val model = ArrowInliner
+      .callArrow[InliningState](
+        testFunc,
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+
+    /* WARNING: This naming is unstable */
+    val tempAdd = VarModel("add", ScalarType.u16)
+
+    val expected = SeqModel.wrap(
+      CaptureTopologyModel(closureName).leaf,
+      MetaModel
+        .CallArrowModel(acceptName)
+        .wrap(
+          MetaModel
+            .CallArrowModel(closureName)
+            .wrap(
+              ApplyTopologyModel(closureName).wrap(
+                ModelBuilder
+                  .add(
+                    LiteralModel("42", LiteralType.number),
+                    LiteralModel("37", LiteralType.number)
+                  )(tempAdd)
+                  .leaf
+              )
+            )
+        )
+    )
+
+    model.equalsOrShowDiff(expected) shouldEqual true
   }
 
   /*
@@ -322,6 +1274,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
      OpHa.identity(v)
    */
   "arrow inliner" should "hold lambda" in {
+    val innerName = "inner"
 
     // lambda that will be assigned to another variable
     val objectVarLambda =
@@ -348,7 +1301,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     // function where we assign object lambda to value and call service
     val inner =
       FuncArrow(
-        "inner",
+        innerName,
         SeqTag.wrap(
           AssignmentTag(
             objectVarLambda,
@@ -399,18 +1352,22 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     model.equalsOrShowDiff(
       SeqModel.wrap(
         CallServiceModel(
-          LiteralModel("\"getSrv\"", LiteralType.string),
+          LiteralModel.quote("getSrv"),
           "getObj",
           CallModel(Nil, CallModel.Export(objectVar.name, objectVar.`type`) :: Nil)
         ).leaf,
-        SeqModel.wrap(
-          FlattenModel(ValueModel.fromRaw(objectVarLambda), flattenObject.name).leaf,
-          CallServiceModel(
-            LiteralModel("\"callbackSrv\"", LiteralType.string),
-            "response",
-            CallModel(ValueModel.fromRaw(flattenObject) :: Nil, Nil)
-          ).leaf
-        )
+        MetaModel
+          .CallArrowModel(innerName)
+          .wrap(
+            SeqModel.wrap(
+              FlattenModel(ValueModel.fromRaw(objectVarLambda), flattenObject.name).leaf,
+              CallServiceModel(
+                LiteralModel.quote("callbackSrv"),
+                "response",
+                CallModel(ValueModel.fromRaw(flattenObject) :: Nil, Nil)
+              ).leaf
+            )
+          )
       )
     ) should be(true)
 
@@ -421,6 +1378,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     join nodes[idx]
    */
   "arrow inliner" should "not rename value in index array lambda" in {
+    val innerName = "inner"
 
     // lambda that will be assigned to another variable
     val argArray = VarRaw(
@@ -453,7 +1411,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     // function where we assign object lambda to value and call service
     val inner =
       FuncArrow(
-        "inner",
+        innerName,
         JoinTag(NonEmptyList.one(arrIdx)).leaf,
         ArrowType(
           ProductType.labelled(
@@ -495,12 +1453,12 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     model.equalsOrShowDiff(
       SeqModel.wrap(
         CallServiceModel(
-          LiteralModel("\"getSrv\"", LiteralType.string),
+          LiteralModel.quote("getSrv"),
           "getArr",
           CallModel(Nil, CallModel.Export(argArray.name, argArray.`type`) :: Nil)
         ).leaf,
         CallServiceModel(
-          LiteralModel("\"getSrv\"", LiteralType.string),
+          LiteralModel.quote("getSrv"),
           "getIdx",
           CallModel(Nil, CallModel.Export(idxVar.name, idxVar.`type`) :: Nil)
         ).leaf

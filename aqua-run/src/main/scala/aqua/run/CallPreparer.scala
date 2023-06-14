@@ -7,7 +7,7 @@ import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{FuncArrow, ValueModel, VarModel}
 import aqua.parser.lexer.CallArrowToken
 import aqua.parser.lift.Span
-import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, SeqTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, SeqTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
 import cats.data.Validated.{invalid, invalidNec, invalidNel, validNec, validNel}
@@ -18,7 +18,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.partialOrder.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.{Id, ~>}
+import cats.{~>, Id}
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext

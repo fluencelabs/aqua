@@ -10,8 +10,11 @@ import aqua.raw.value.*
 import aqua.types.{ArrayType, ArrowType, BoxType, CanonStreamType, StreamType}
 import cats.syntax.traverse.*
 import cats.syntax.applicative.*
+import cats.syntax.functor.*
+import cats.syntax.option.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
+import cats.syntax.show.*
 import scribe.{log, Logging}
 
 /**
@@ -218,10 +221,12 @@ object TagInliner extends Logging {
             collectionToModel(c, Some(assignTo))
           case v =>
             valueToModel(v, false)
-        }).flatMap { cd =>
+        }).flatMap { case (model, prefix) =>
           for {
-            _ <- Exports[S].resolved(assignTo, cd._1)
-          } yield None -> cd._2
+            // NOTE: Name <assignTo> should not exist yet
+            _ <- Mangler[S].forbidName(assignTo)
+            _ <- Exports[S].resolved(assignTo, model)
+          } yield None -> prefix
         }
 
       case ClosureTag(arrow, detach) =>
