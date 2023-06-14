@@ -16,9 +16,6 @@ sealed trait ValueRaw {
   def map(f: ValueRaw => ValueRaw): ValueRaw
 
   def varNames: Set[String]
-
-  def shadow(name: String, v: ValueRaw): ValueRaw =
-    ShadowRaw(this, Map(name -> v))
 }
 
 object ValueRaw {
@@ -95,27 +92,6 @@ case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) ext
   override def varNames: Set[String] = Set(name) ++ idx.varNames
 }
 
-case class ShadowRaw(value: ValueRaw, shadowValues: Map[String, ValueRaw]) extends ValueRaw {
-  override def baseType: Type = value.baseType
-
-  override def renameVars(map: Map[String, String]): ValueRaw =
-    ShadowRaw(
-      value.renameVars(map),
-      shadowValues.map { case (k, v) =>
-        map.getOrElse(k, k) -> v.renameVars(map)
-      }
-    )
-
-  override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    ShadowRaw(f(value), shadowValues.view.mapValues(f).toMap)
-
-  override def varNames: Set[String] =
-    value.varNames ++ shadowValues.values.flatMap(_.varNames)
-
-  override def shadow(name: String, v: ValueRaw): ValueRaw =
-    copy(value, shadowValues + (name -> v))
-}
-
 case class VarRaw(name: String, baseType: Type) extends ValueRaw {
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
@@ -139,8 +115,6 @@ case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
   override def varNames: Set[String] = Set.empty
 
   override def renameVars(map: Map[String, String]): ValueRaw = this
-
-  override def shadow(name: String, v: ValueRaw): ValueRaw = this
 }
 
 object LiteralRaw {
