@@ -581,6 +581,58 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * closureName = (x: u16) -> u16:
+   *   retval = x + add
+   *   <- retval
+   *
+   * @return (closure func, closure type, closure type labelled)
+   */
+  def addClosure(
+    closureName: String,
+    add: ValueRaw
+  ): (FuncRaw, ArrowType, ArrowType) = {
+    val closureArg = VarRaw(
+      "x",
+      ScalarType.u16
+    )
+    val closureRes = VarRaw(
+      "retval",
+      ScalarType.u16
+    )
+    val closureType = ArrowType(
+      domain = ProductType(List(closureArg.`type`)),
+      codomain = ProductType(List(ScalarType.u16))
+    )
+    val closureTypeLabelled = closureType.copy(
+      domain = ProductType.labelled(List(closureArg.name -> closureArg.`type`))
+    )
+
+    val closureBody = SeqTag.wrap(
+      AssignmentTag(
+        RawBuilder.add(
+          closureArg,
+          add
+        ),
+        closureRes.name
+      ).leaf,
+      ReturnTag(
+        NonEmptyList.one(closureRes)
+      ).leaf
+    )
+
+    val closureFunc = FuncRaw(
+      name = closureName,
+      arrow = ArrowRaw(
+        `type` = closureTypeLabelled,
+        ret = List(closureRes),
+        body = closureBody
+      )
+    )
+
+    (closureFunc, closureType, closureTypeLabelled)
+  }
+
+  /**
    * func innerName(arg: u16) -> u16 -> u16:
    *   closureName = (x: u16) -> u16:
    *     retval = x + arg
@@ -599,56 +651,23 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     outterResultName: String,
     body: (ArrowType) => List[RawTag.Tree]
   ) = {
-    val closureArg = VarRaw(
-      "x",
-      ScalarType.u16
-    )
     val innerArg = VarRaw(
       "arg",
       ScalarType.u16
     )
 
-    val closureRes = VarRaw(
-      "retval",
-      ScalarType.u16
-    )
-    val closureType = ArrowType(
-      domain = ProductType(List(closureArg.`type`)),
-      codomain = ProductType(List(ScalarType.u16))
-    )
-    val closureTypeLablled = closureType.copy(
-      domain = ProductType.labelled(List(closureArg.name -> closureArg.`type`))
+    val (closureFunc, closureType, closureTypeLabelled) = addClosure(
+      closureName,
+      innerArg
     )
 
     val innerRes = VarRaw(
       closureName,
-      closureTypeLablled
+      closureTypeLabelled
     )
     val innerType = ArrowType(
       domain = ProductType.labelled(List(innerArg.name -> innerArg.`type`)),
       codomain = ProductType(List(closureType))
-    )
-
-    val closureBody = SeqTag.wrap(
-      AssignmentTag(
-        RawBuilder.add(
-          closureArg,
-          innerArg
-        ),
-        closureRes.name
-      ).leaf,
-      ReturnTag(
-        NonEmptyList.one(closureRes)
-      ).leaf
-    )
-
-    val closureFunc = FuncRaw(
-      name = closureName,
-      arrow = ArrowRaw(
-        `type` = closureTypeLablled,
-        ret = List(closureRes),
-        body = closureBody
-      )
     )
 
     val innerBody = SeqTag.wrap(
