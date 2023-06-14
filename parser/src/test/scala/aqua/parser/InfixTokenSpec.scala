@@ -50,9 +50,19 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
   private def gt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
     infixToken(left, right, Gt)
 
-  "primitive math expression" should "be parfvfsed" in {
+  private def gte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Gte)
+
+  private def lt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Lt)
+
+  private def lte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Lte)
+
+  "primitive math expression" should "be parsed" in {
 
     val vt = ValueToken.`value`.parseAll("3").right.get.mapK(spanToId)
+    val vt1 = ValueToken.`value`.parseAll("2 - 3").right.get.mapK(spanToId)
     val vt2 = ValueToken.`value`.parseAll("3 * 2 * 5").right.get.mapK(spanToId)
 
     val vt3 = ValueToken.`value`.parseAll("3 + 1 * 2 - 2").right.get.mapK(spanToId)
@@ -82,6 +92,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
       .mapK(spanToId)
 
     vt shouldBe literal(3)
+    vt1 shouldBe sub(literal(2), literal(3))
     vt2 shouldBe mul(mul(3, 2), 5)
     vt3 shouldBe sub(add(3, mul(1, 2)), 2)
     vt4 shouldBe add(add(add(add(add(add(5, 6), 10), 20), 1), 2), 4)
@@ -91,15 +102,6 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
     vt9 shouldBe gt(5, 4)
     vt10 shouldBe pow(2, pow(3, 4))
     vt11 shouldBe rem(2, 4)
-  }
-
-  "primitive math expression" should "be parsed" in {
-
-    val vt = ValueToken.`value`.parseAll("3 - 2").right.get.mapK(spanToId)
-
-    vt shouldBe
-      InfixToken[Id](literal(3), literal(2), Sub)
-
   }
 
   "primitive math expression with multiplication" should "be parsed" in {
@@ -244,7 +246,27 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "simple cmp math expression " should "be parsed" in {
     val vt = ValueToken.`value`.parseAll("1 > 3").right.get.mapK(spanToId)
-    vt shouldBe InfixToken(literal(1), literal(3), Gt)
+    val vt1 = ValueToken.`value`.parseAll("1 < 3").right.get.mapK(spanToId)
+    val vt2 = ValueToken.`value`.parseAll("1 >= 3").right.get.mapK(spanToId)
+    val vt3 = ValueToken.`value`.parseAll("1 <= 3").right.get.mapK(spanToId)
+
+    vt shouldBe gt(literal(1), literal(3))
+    vt1 shouldBe lt(literal(1), literal(3))
+    vt2 shouldBe gte(literal(1), literal(3))
+    vt3 shouldBe lte(literal(1), literal(3))
+  }
+
+  "complex cmp math expression " should "be parsed" in {
+    val test = (op: Op) => {
+      val vt =
+        ValueToken.`value`.parseAll(s"(1 + 2) ** 3 ${op.symbol} 4 - 5 * 6").right.get.mapK(spanToId)
+      val left = pow(add(literal(1), literal(2)), literal(3))
+      val right = sub(literal(4), mul(literal(5), literal(6)))
+      val exp = infixToken(left, right, op)
+      vt shouldBe exp
+    }
+
+    List(Gt, Lt, Gte, Lte).foreach(test)
   }
 
   "simple cmp math expression in brackets " should "be parsed" in {
