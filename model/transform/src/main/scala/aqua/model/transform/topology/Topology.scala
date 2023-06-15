@@ -14,6 +14,7 @@ import cats.syntax.traverse.*
 import cats.syntax.show.*
 import cats.syntax.apply.*
 import cats.syntax.option.*
+import cats.instances.map.*
 import scribe.Logging
 
 /**
@@ -47,17 +48,18 @@ case class Topology private (
   // Map of all previously-seen Captured Topologies -- see CaptureTopologyModel, ApplyTopologyModel
   val capturedTopologies: Eval[Map[String, Topology]] =
     cursor.moveLeft
-      .fold(Eval.now(Map.empty[String, Topology]))(_.topology.capturedTopologies)
+      .traverse(_.topology.capturedTopologies)
+      .map(_.getOrElse(Map.empty))
       .flatMap(tops =>
-        cursor.current.head match {
+        cursor.op match {
           case CaptureTopologyModel(name) =>
             logger.trace(s"Capturing topology `$name`")
             Eval.now(tops + (name -> this))
           case x =>
             logger.trace(s"Skip $x")
             cursor.toLastChild
-              .map(_.topology.capturedTopologies.map(_ ++ tops))
-              .getOrElse(Eval.now(tops))
+              .traverse(_.topology.capturedTopologies)
+              .map(_.getOrElse(Map.empty) ++ tops)
         }
       )
       .memoize
