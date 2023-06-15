@@ -15,6 +15,8 @@ import cats.syntax.show.*
 import cats.syntax.apply.*
 import cats.syntax.option.*
 import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
+import cats.syntax.applicative.*
 import cats.instances.map.*
 import scribe.Logging
 
@@ -88,34 +90,18 @@ case class Topology private (
     )
     .memoize
 
+  // Find path of first `ForceExecModel` (call, canon, join) in this subtree
   lazy val firstExecutesOn: Eval[Option[List[OnModel]]] =
     (cursor.op match {
-      case _: ForceExecModel => pathOn.map(Some(_))
-      case _ =>
-        children
-          .map(_.firstExecutesOn)
-          .scanLeft[Eval[Option[List[OnModel]]]](Eval.now(None)) { case (acc, el) =>
-            (acc, el).mapN(_ orElse _)
-          }
-          .collectFirst {
-            case e if e.value.isDefined => e
-          }
-          .getOrElse(Eval.now(None))
+      case _: ForceExecModel => pathOn.map(_.some)
+      case _ => children.collectFirstSomeM(_.firstExecutesOn)
     }).memoize
 
+  // Find path of last `ForceExecModel` (call, canon, join) in this subtree
   lazy val lastExecutesOn: Eval[Option[List[OnModel]]] =
     (cursor.op match {
-      case _: ForceExecModel => pathOn.map(Some(_))
-      case _ =>
-        children
-          .map(_.lastExecutesOn)
-          .scanRight[Eval[Option[List[OnModel]]]](Eval.now(None)) { case (acc, el) =>
-            (acc, el).mapN(_ orElse _)
-          }
-          .collectFirst {
-            case e if e.value.isDefined => e
-          }
-          .getOrElse(Eval.now(None))
+      case _: ForceExecModel => pathOn.map(_.some)
+      case _ => children.reverse.collectFirstSomeM(_.lastExecutesOn)
     }).memoize
 
   lazy val currentPeerId: Option[ValueModel] = pathOn.value.headOption.map(_.peerId)
