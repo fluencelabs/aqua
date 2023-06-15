@@ -1,0 +1,21 @@
+module FoldJoin
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+export getTwoResults
+
+service Op2("op"):
+    identity(s: u64)
+
+func getTwoResults(node: string) -> []u64:
+  on node:
+    nodes <- Kademlia.neighborhood(%init_peer_id%, nil, nil)
+    res: *u64
+    for n <- nodes par:
+      on n:
+        try:
+          res <- Peer.timestamp_sec()
+    Op2.identity(res!)
+    Op2.identity(res!1)
+    Op2.identity(res!2)
+  <- res

@@ -1,0 +1,12 @@
+-- imports3.aqua
+module Import3 declares *
+import Op as Noop from "@fluencelabs/aqua-lib/builtin.aqua"
+
+export foo_wrapper
+
+use "export3.aqua"
+
+func foo_wrapper() -> string:
+    Noop.noop()
+    z <- Export3.foo()
+    <- z

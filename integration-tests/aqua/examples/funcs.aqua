@@ -1,0 +1,39 @@
+module Funcs declares main, A, calc
+
+export main, A, calc, calc2, ifCalc
+
+service A("a"):
+  getJ(i: u32) -> u32
+
+func main(log: string, []u32 -> ()) -> u32:
+  closure = (i: []u32, j: u32) -> u32:
+      some <- A.getJ(i[j])
+      <- some
+  closure2 = func (i: []u32, j: u32) -> u32:
+      some <- A.getJ(i[j])
+      <- some
+  arr = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
+  idx1 <- A.getJ(arr[A.getJ(3) + 2])            -- 5
+  idx2 <- A.getJ(arr[A.getJ(3) + 3] + arr[A.getJ(1) - 1] - 3)     -- 3
+  <- A.getJ(arr[(idx1 + idx2) + closure(arr, 2) + closure2(arr, 3)])   -- should be 13
+
+
+func calc(log: string, []u32 -> ()) -> u32:
+  arr = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
+  num <- A.getJ((5-2)*3-3) -- 6
+  log("calc 2", [num])
+  <- arr[num]                       -- should be 6
+
+func calc2(log: string, []u32 -> ()) -> u32:
+  arr = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
+  num <- A.getJ((5-2) * 3 - 3 ** (A.getJ(5 + 5) - A.getJ(3 ** (3 - 1)))) -- 6
+  <- arr[num + num - A.getJ(num) - 3]                       -- should be 3
+
+func ifCalc() -> u64:
+  arr = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
+  res: *u64
+  if A.getJ(8 - 2) + A.getJ(4 % 2) > arr[5 - 3 + A.getJ(3)] - 2:
+    res <<- 1
+  else:
+    res <<- 2
+  <- res!0

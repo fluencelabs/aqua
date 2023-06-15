@@ -1,0 +1,15 @@
+module FooBars declares decl_foo, decl_bar, SuperFoo, DECLARE_CONST, DECLARE_CONST2
+export SuperFoo
+
+const DECLARE_CONST = "declare_const"
+const DECLARE_CONST2 = "declare_const2"
+
+service SuperFoo("super_foo"):
+    small_foo() -> string
+
+func decl_foo() -> string:
+    res1 <- SuperFoo.small_foo()
+    <- res1
+
+func decl_bar() -> string:
+    <- "declare all bar"

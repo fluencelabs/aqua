@@ -1,0 +1,36 @@
+import "println.aqua"
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+service OpR("op"):
+  identity(s: string) -> string
+
+func ifElseCall(condition: bool):
+    if condition:
+        Println.print("it is true")
+    else:
+        Println.print("it is false")
+
+func ifElseNumCall(condition: u32):
+    if condition == 1:
+        Println.print("it is 1")
+    else:
+        Println.print("it is not 1")
+
+func ifCorrectXorWrap(node: string) -> string:
+  service_id: *string
+  on node:
+    res <- OpR.identity("1234")
+    if res == "":
+      service_id <<- "0x"
+    else:
+      service_id <<- "1x"
+  <- service_id!
+
+func bugLNG69(other_node: PeerId) -> bool:
+  on other_node:
+    Op.noop()
+
+    if false:
+      Op.noop()
+
+  <- true

@@ -1,0 +1,31 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+export callReturnedArrow, callReturnedChainArrow
+
+func returnCall(arg: string) -> string -> string, string:
+  str <- Op.concat_strings(arg, " literal")
+  closure = (s: string) -> string, string:
+      <- s, Op.concat_strings(s, str)
+  <- closure
+
+func callReturnedArrow(argForFunc: string, argForClosure: string) -> string, string:
+  a = returnCall(argForFunc)
+  b, c <- a(argForClosure)
+  <- b, c
+
+func secondReturnCall(arg: string) -> (string -> string, string), (string -> string, string), (string -> string, string):
+  str <- Op.concat_strings(arg, " second literal")
+  closure = (s: string) -> string, string:
+      <- s, Op.concat_strings(s, str)
+  b = closure
+  a = returnCall(" from second")
+  <- b, closure, a
+
+func callReturnedChainArrow(argForFirst: string, argForSecond: string) -> string, string, string, string, string, string, string, string:
+  first = returnCall(argForFirst)
+  second, third, fourth <- secondReturnCall(argForSecond)
+  a, b <- first("first")
+  c, d <- second("second")
+  e, f <- third("third")
+  g, h <- fourth("fourth")
+  <- a, b, c, d, e, f, g, h

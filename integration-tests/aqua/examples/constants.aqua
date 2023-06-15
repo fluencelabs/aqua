@@ -1,0 +1,33 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+service Getter("test"):
+    createStr: u32 -> string
+
+service OpO("op"):
+    identity: string -> string
+
+service OpN("op"):
+    identity: i32 -> i32
+
+-- a question mark means that this constant could be rewritten before this definition
+const ANOTHER_CONST ?= "default-str"
+const UNIQUE_CONST ?= 5
+
+func callConstant() -> []string:
+    res: *string
+    res <- Getter.createStr(UNIQUE_CONST)
+    res <- OpO.identity(ANOTHER_CONST)
+    <- res
+
+func timestampAndTtl() -> u32, u64:
+  Op.noop()
+  <- PARTICLE_TTL, PARTICLE_TIMESTAMP
+
+const A = 2
+const B = -3
+
+func compareConstants():
+  if A == B:
+    OpN.identity(A)
+  else:
+    OpN.identity(B)

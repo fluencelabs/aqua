@@ -1,0 +1,21 @@
+service OptionString("opt_str"):
+  checkOption(str: ?string) -> string
+
+func emptyString() -> ?string:
+  valueEmpty: ?string
+  <- valueEmpty
+
+func checkEmpty() -> string:
+  empty <- emptyString()
+  res <- OptionString.checkOption(empty)
+  <- res
+
+func stringAsOption(str: string) -> ?string:
+  valueEmpty: ?string
+  valueEmpty <<- str
+  <- valueEmpty
+
+func checkNoneEmpty(str: string) -> string:
+  nonEmpty <- stringAsOption(str)
+  res <- OptionString.checkOption(nonEmpty)
+  <- res

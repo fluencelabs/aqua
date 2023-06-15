@@ -1,0 +1,24 @@
+import Op from "@fluencelabs/aqua-lib/builtin.aqua"
+
+service AquaDHT("test-dht"):
+  put_host_value(key: string, value: string, service_id: []string) -> string
+
+func putHostValue(key: string, value: string, service_id: ?string) -> string:
+    res <- AquaDHT.put_host_value(key, value, service_id)
+    <- res
+
+func create_client_util(service_id: string) -> string:
+    res <- putHostValue("client-util", service_id, nil)
+    <- res
+
+func wait(successful: *bool, n: i16):
+  join successful[n - 1]
+
+func bugLNG60(node: string) -> bool:
+  successful: *bool
+  nodes = [node]
+  for n <- nodes:
+    successful <<- true
+
+  wait(successful, 1)
+  <- true

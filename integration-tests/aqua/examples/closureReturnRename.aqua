@@ -1,0 +1,16 @@
+export lng193Bug
+
+func getClosure(arg: u16, peer: string) -> u16 -> u16:
+  on peer:
+    closure = (x: u16) -> u16:
+      <- arg + x
+  <- closure
+
+func lng193Bug(peer: string, closurePeer: string) -> u16:
+  on peer:
+    c = getClosure(42, closurePeer)
+    b = c
+    a = b
+    res1 = a(1) + a(2) -- Call two times for 
+    res2 = b(3) + b(4) -- bug to appear
+  <- res1 + res2

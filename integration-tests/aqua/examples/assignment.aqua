@@ -1,0 +1,13 @@
+data Prod:
+   value: string
+
+service OpHa("op"):
+    array(a: string, b: string) -> []string
+    identity(a: string) -> string
+
+func doSmth(arg: Prod) -> []string:
+    v = arg.value
+    a <- OpHa.identity(v)
+    b = "hello"
+    res <- OpHa.array(a, b)
+    <- res

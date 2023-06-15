@@ -1,0 +1,43 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+func arraySugar(n: u32, m: u32) -> []u32, []u32:
+  arr = [1,2,n]
+  str: *u32
+  for i <- [4,5,m]:
+    str <<- i
+  <- arr, str
+
+func streamSugar(n: u32, m: u32) -> []u32, []u32:
+  arr = *[1,2,n]
+  str: *u32
+  for i <- *[4,5,m]:
+    str <<- i
+  <- arr, str
+
+func optionSugar(numSome: ?u32, strSome: ?string, numNone: ?u32, strNone: ?string) -> []u32, []string, []string:
+  arr = ?[numNone!, numSome!]
+  str: *string
+  str2 = ?[strNone!, strNone!, strNone!, strNone!, strNone!]
+  for i <- ?[strSome!,strNone!, "random string"]:
+    str <<- i
+
+  for i <- ?[strNone!,strNone!]:
+    str <<- i
+  <- arr, str, str2
+
+service OpO("op"):
+    identity: string -> string
+
+service GetArr("getArr"):
+    getArr: -> []string
+
+func getNeighbours() -> []string:
+  nodes <- GetArr.getArr()
+  <- nodes
+
+func bugLNG59() -> string:
+  nodes <- getNeighbours()
+  n = nodes[1]
+  on n via [HOST_PEER_ID]:
+    res <- OpO.identity("some str")
+  <- res

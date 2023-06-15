@@ -1,0 +1,18 @@
+data NestedType:
+    val: string
+
+data NestedStruct:
+    one: NestedType
+
+service Test("service"):
+    test1() -> NestedStruct
+    test2(arg1: NestedType, arg2: string) -> NestedStruct
+
+func test3() -> NestedType:
+    res <- Test.test1()
+    <- res.one
+
+func test() -> NestedStruct:
+    struct <- test3()
+    res <- Test.test2(struct, struct.val)
+    <- res

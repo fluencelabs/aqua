@@ -1,0 +1,40 @@
+import "helloWorld.aqua"
+import "println.aqua"
+import "@fluencelabs/aqua-lib/builtin.aqua"
+import "func.aqua"
+
+service TestS("some-id"):
+    t: string -> string
+    multiline(  -- comments
+              a: string, -- comments
+              b: string, -- comments
+              c: bool -- comments
+              ) -> string -- comments
+
+-- just a lot of imports and calls
+func doStuff( -- comments
+             a: string, -- comments
+             b: string, -- comments
+             c: bool,
+             d: bool, e: []string, g: []string, str: string -- comments
+             ) -> []string: -- comments
+    stream: *string
+    stream <- TestS.t(str)
+    par Println.print(a)
+    par on a:
+        Peer.identify()
+    on a:
+        on b:
+            if c:
+                if d:
+                    for eEl <- e:
+                        for gEl <- g:
+                            stream <- TestS.t(gEl) -- comments
+                            stream <- TestS.t(eEl)
+                        stream <- TestS.t(eEl)
+    stream <- TestS.multiline( -- comments
+                              a, -- comments
+                              b, -- comments
+                              c -- comments
+                              ) -- comments
+    <- stream

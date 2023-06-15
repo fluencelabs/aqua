@@ -1,0 +1,53 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+service Testo("testo"):
+    getString: string -> string
+
+service LocalPrint("lp"):
+    print: string -> ()
+
+service Opop("op"):
+    identity(s: string) -> string
+
+
+func topologyTest(me: string, myRelay: string, friend: string, friendRelay: string) -> string:
+    on friend via friendRelay:
+        str2 <- Testo.getString("friends string via")
+    par LocalPrint.print("my string in par")
+    LocalPrint.print(str2)
+    <- "finish"
+
+func topologyBug205(node_id: string, n2: ?string) -> []string:
+  nodes: *PeerId
+  on node_id:
+    a <- Op.identity(n2)
+    nodes <<- a!
+  on node_id:
+      for n <- nodes par:
+        on n:
+          Peer.identify()
+  <- nodes
+
+service IOp("op"):
+  identity: string -> string
+
+func topologyBug394(peer: string, peer2: string, peer3: string) -> string:
+    -- execute computation on a Peer in the network
+    on peer:
+        comp <- IOp.identity(%init_peer_id%)
+
+    -- send the result to target browser in the background
+    co on peer2 via peer3:
+        res <- IOp.identity(%init_peer_id%)
+
+    -- send the result to the initiator
+    <- comp
+
+func topologyBug427(peers: []string) -> []string:
+    results: *string
+    for peer <- peers par:
+        on peer:
+            results <- Opop.identity("some string")
+
+    join results[1]
+    <- results

@@ -1,0 +1,12 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+func getPeerExternalAddresses(otherNodePeerId: string) -> []string:
+    on otherNodePeerId:
+        res <- Peer.identify()
+    <- res.external_addresses
+
+-- it is possible to use `via` to built complex routes
+func getDistantAddresses(target: string, viaNode: string) -> []string:
+    on target via viaNode:
+        res <- Peer.identify()
+    <- res.external_addresses

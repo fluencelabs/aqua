@@ -1,0 +1,14 @@
+data Record:
+    relay_id: []string
+    peer_id: string
+
+service Ser("ser"):
+    getRecord: -> Record
+
+func bugLng79(log: string -> ()) -> u32:
+    stream: *Record
+    stream <- Ser.getRecord()
+    someone = stream[0]
+    on someone.peer_id via someone.relay_id:
+        a = 1 + 1
+    <- a
