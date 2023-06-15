@@ -14,6 +14,7 @@ import cats.syntax.traverse.*
 import cats.syntax.show.*
 import cats.syntax.apply.*
 import cats.syntax.option.*
+import cats.syntax.flatMap.*
 import cats.instances.map.*
 import scribe.Logging
 
@@ -66,24 +67,26 @@ case class Topology private (
 
   // Current topology location – stack of OnModel's collected from parents branch
   // ApplyTopologyModel shifts topology to pathOn where this topology was Captured
-  val pathOn: Eval[List[OnModel]] =
-    Eval
-      .later(cursor.current.head match {
+  val pathOn: Eval[List[OnModel]] = Eval
+    .defer(
+      cursor.op match {
         case o: OnModel =>
-          parent.fold[Eval[List[OnModel]]](Eval.now(o :: Nil))(_.pathOn.map(o :: _))
+          parent.traverse(_.pathOn).map(pPath => o :: pPath.orEmpty)
         case ApplyTopologyModel(name) =>
           capturedTopologies.flatMap(
-            _.get(name).fold(
-              Eval.later {
-                logger.error(s"Captured topology `$name` not found")
-                List.empty[OnModel]
-              }
-            )(_.pathOn)
+            _.get(name)
+              .traverse(_.pathOn)
+              .flatTap(p =>
+                Eval.later(
+                  if (p.isEmpty) logger.error(s"Captured topology `$name` not found")
+                )
+              )
+              .map(_.orEmpty)
           )
-        case _ => parent.fold[Eval[List[OnModel]]](Eval.now(Nil))(_.pathOn)
-      })
-      .flatMap(identity)
-      .memoize
+        case _ => parent.traverse(_.pathOn).map(_.orEmpty)
+      }
+    )
+    .memoize
 
   lazy val firstExecutesOn: Eval[Option[List[OnModel]]] =
     (cursor.op match {
