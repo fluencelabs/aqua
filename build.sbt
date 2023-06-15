@@ -1,4 +1,4 @@
-val aquaVersion = "0.11.5"
+val aquaVersion = "0.11.6"
 
 val scalaV = "3.3.0"
 val catsV = "2.8.0"

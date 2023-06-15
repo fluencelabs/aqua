@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.6](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.5...aqua-v0.11.6) (2023-06-15)
+
+
+### Bug Fixes
+
+* **compiler:** Fix SO in Topology [fixes LNG-149] ([#752](https://github.com/fluencelabs/aqua/issues/752)) ([017eca7](https://github.com/fluencelabs/aqua/commit/017eca70563d82488d6072d0db508253d984e9b2))
+* generate JS in Aqua API properly ([#755](https://github.com/fluencelabs/aqua/issues/755)) ([889c507](https://github.com/fluencelabs/aqua/commit/889c50734b56327b39d3d78903d25450bad27fa7))
+
 ## [0.11.5](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.4...aqua-v0.11.5) (2023-06-14)
 
 
