@@ -188,7 +188,7 @@ object AquaAPI extends App with Logging {
           .find(_.suffix == JavaScriptBackend.dtsExt)
           .map(_.content)
         jsContent <- c.compiled
-          .find(_.suffix == JavaScriptBackend.dtsExt)
+          .find(_.suffix == JavaScriptBackend.ext)
           .map(_.content)
       } yield GeneratedSource.jsSource(c.sourceId.toString, jsContent, dtsContent)
     }.toSourcesResult

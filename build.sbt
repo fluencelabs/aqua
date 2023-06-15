@@ -1,9 +1,6 @@
-val dottyVersion = "3.3.0"
-
-scalaVersion := dottyVersion
-
 val aquaVersion = "0.11.5"
 
+val scalaV = "3.3.0"
 val catsV = "2.8.0"
 val catsParseV = "0.3.8"
 val monocleV = "3.1.0"
@@ -21,7 +18,7 @@ val commons = Seq(
     val aquaSnapshot = sys.env.getOrElse("SNAPSHOT", "")
     if (aquaSnapshot.isEmpty()) aquaVersion else aquaVersion + "-" + aquaSnapshot,
   },
-  scalaVersion := dottyVersion,
+  scalaVersion := scalaV,
   libraryDependencies ++= Seq(
     "com.outr"      %%% "scribe"    % scribeV,
     "org.scalatest" %%% "scalatest" % scalaTestV % Test
