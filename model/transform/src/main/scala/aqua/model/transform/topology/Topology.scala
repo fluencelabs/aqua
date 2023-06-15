@@ -106,35 +106,43 @@ case class Topology private (
 
   lazy val currentPeerId: Option[ValueModel] = pathOn.value.headOption.map(_.peerId)
 
-  // noExec nodes are meaningless topology-wise, so filter them out
+  // Get topology of previous sibling skipping `NoExec` nodes
   lazy val prevSibling: Option[Topology] = cursor.toPrevSibling.flatMap {
+    // noExec nodes are meaningless topology-wise, so filter them out
     case c if c.isNoExec => c.topology.prevSibling
-    case c => Some(c.topology)
+    case c => c.topology.some
   }
 
+  // Get topology of next sibling skipping `NoExec` nodes
   lazy val nextSibling: Option[Topology] = cursor.toNextSibling.flatMap {
+    // noExec nodes are meaningless topology-wise, so filter them out
     case c if c.isNoExec => c.topology.nextSibling
-    case c => Some(c.topology)
+    case c => c.topology.some
   }
 
+  // Get topology of first child skipping `NoExec` nodes
   lazy val firstChild: Option[Topology] = cursor.toFirstChild.flatMap {
+    // noExec nodes are meaningless topology-wise, so filter them out
     case c if c.isNoExec => c.topology.nextSibling
-    case c => Some(c.topology)
+    case c => c.topology.some
   }
 
+  // Get topology of last child skipping `NoExec` nodes
   lazy val lastChild: Option[Topology] = cursor.toLastChild.flatMap {
+    // noExec nodes are meaningless topology-wise, so filter them out
     case c if c.isNoExec => c.topology.prevSibling
-    case c => Some(c.topology)
+    case c => c.topology.some
   }
 
+  // Get children of current node skipping `NoExec` nodes
   lazy val children: LazyList[Topology] = cursor.children.filterNot(_.isNoExec).map(_.topology)
 
+  // Find topologies of all nodes satisfying predicate in this subtree
   def findInside(f: Topology => Boolean): LazyList[Topology] =
     children.flatMap(_.findInside(f)).prependedAll(Option.when(f(this))(this))
 
-  lazy val forModel: Option[ForModel] = Option(cursor.op).collect { case ft: ForModel =>
-    ft
-  }
+  lazy val forModel: Option[ForModel] =
+    Option(cursor.op).collect { case ft: ForModel => ft }
 
   lazy val isForModel: Boolean = forModel.isDefined
 
@@ -162,18 +170,21 @@ case class Topology private (
   lazy val pathAfter: Eval[Chain[ValueModel]] = after.pathAfter(this).memoize
 
   override def toString: String =
-    s"Topology(${cursor},\n\tbefore: ${before},\n\tbegins: $begins,\n\t  ends: $ends,\n\t after:$after)"
+    s"Topology(${cursor},\n\tbefore: ${before},\n\tbegins: $begins,\n\tends: $ends,\n\tafter: $after)"
 }
 
 object Topology extends Logging {
   type Res = ResolvedOp.Tree
 
-  def findRelayPathEnforcement(bef: List[OnModel], beg: List[OnModel]): Chain[ValueModel] =
+  def findRelayPathEnforcement(before: List[OnModel], begin: List[OnModel]): Chain[ValueModel] =
     Chain.fromOption(
-      beg.headOption
+      // Get target peer of `begin`
+      begin.headOption
         .map(_.peerId)
-        .filter(lastPeerId => beg.tail.headOption.exists(_.via.lastOption.contains(lastPeerId)))
-        .filter(lastPeerId => !bef.headOption.exists(_.peerId == lastPeerId))
+        // Check that it is last relay of previous `on`
+        .filter(lastPeerId => begin.tail.headOption.exists(_.via.lastOption.contains(lastPeerId)))
+        // Check that it is not target peer of `before`
+        .filterNot(lastPeerId => before.headOption.exists(_.peerId == lastPeerId))
     )
 
   def make(cursor: OpModelTreeCursor): Topology =
@@ -216,31 +227,25 @@ object Topology extends Logging {
     )
 
   def resolve(op: OpModel.Tree, debug: Boolean = false): Eval[Res] =
-    resolveOnMoves(op, debug).flatMap(resolved =>
-      Cofree
-        .cata[Chain, ResolvedOp, Res](resolved) {
-          case (SeqRes, children) =>
-            Eval.later {
-              children.uncons
-                .filter(_._2.isEmpty)
-                .map(_._1)
-                .getOrElse(
-                  Cofree(
-                    SeqRes,
-                    Eval.now(children.flatMap {
-                      case Cofree(SeqRes, ch) => ch.value
-                      case cf => Chain.one(cf)
-                    })
-                  )
-                )
+    resolveOnMoves(op, debug).flatMap(Cofree.cata(_) {
+      case (SeqRes, children) =>
+        Eval.later {
+          children.uncons.collect {
+            case (head, tail) if tail.isEmpty => head
+          } getOrElse SeqRes.wrap(
+            children.flatMap {
+              case Cofree(SeqRes, ch) => ch.value
+              case cf => Chain.one(cf)
             }
-          case (head, children) => Eval.later(Cofree(head, Eval.now(children)))
+          )
+
         }
-    )
+      case (head, children) => head.wrap(children).pure
+    })
 
   def wrap(cz: ChainZipper[Res]): Chain[Res] =
     Chain.one(
-      if (cz.prev.nonEmpty || cz.next.nonEmpty) Cofree(SeqRes, Eval.now(cz.chain))
+      if (cz.prev.nonEmpty || cz.next.nonEmpty) SeqRes.wrap(cz.chain)
       else cz.current
     )
 
@@ -324,7 +329,7 @@ object Topology extends Logging {
       case Some((el, `nil`)) => el
       case Some((el, tail)) =>
         logger.warn("Topology emitted many nodes, that's unusual")
-        SeqRes.wrap((el :: tail.toList): _*)
+        SeqRes.wrap(el :: tail.toList)
     }
   }
 
