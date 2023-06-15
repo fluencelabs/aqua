@@ -102,5 +102,5 @@ case class OpModelTreeCursor(
     }.getOrElse(Chain.empty).memoize
 
   override def toString: String =
-    s"[${tree.head.prev.length}]${op.show} /: ${moveUp.getOrElse("(|)")}"
+    s"[${tree.head.prev.length}] ${op.show} /: ${moveUp.getOrElse("(|)")}"
 }
