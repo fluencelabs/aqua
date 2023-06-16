@@ -259,66 +259,42 @@ object Topology extends Logging {
       i
     }
 
-    val resolvedCofree = cursor
-      .cata(wrap) { rc =>
-        logger.debug(s"<:> $rc")
-        val currI = nextI
-        val resolved =
-          MakeRes
-            .resolve(rc.topology.currentPeerId, currI)
-            .lift
-            .apply(rc.op)
+    val resolvedCofree = cursor.cata(wrap) { rc =>
+      logger.debug(s"<:> $rc")
+      val currI = nextI
+      val resolved =
+        MakeRes
+          .resolve(rc.topology.currentPeerId, currI)
+          .lift
+          .apply(rc.op)
 
-        logger.trace("Resolved: " + resolved)
+      logger.trace("Resolved: " + resolved)
 
-        if (debug) {
-          println(Console.BLUE + rc + Console.RESET)
-          println(currI + " : " + rc.topology)
-          println("Before: " + rc.topology.beforeOn.value)
-          println("Begin: " + rc.topology.beginsOn.value)
-          println(
-            (if (rc.topology.pathBefore.value.nonEmpty) Console.YELLOW
-             else "") + "PathBefore: " + Console.RESET + rc.topology.pathBefore.value
+      if (debug) printDebugInfo(rc, currI)
+
+      val chainZipperEv = resolved.traverse(cofree =>
+        (
+          rc.topology.pathBefore.map(through(_, s"before ${currI}")),
+          rc.topology.pathAfter.map(through(_, s"after ${currI}", reversed = true))
+        ).mapN { case (pathBefore, pathAfter) =>
+          val cz = ChainZipper(
+            pathBefore,
+            cofree,
+            pathAfter
           )
-
-          println("Parent: " + Console.CYAN + rc.topology.parent.getOrElse("-") + Console.RESET)
-
-          println("End  : " + rc.topology.endsOn.value)
-          println("After: " + rc.topology.afterOn.value)
-          println(
-            "Exit : " + (if (rc.topology.forceExit.value) Console.MAGENTA + "true" + Console.RESET
-                         else "false")
-          )
-          println(
-            (if (rc.topology.pathAfter.value.nonEmpty) Console.YELLOW
-             else "") + "PathAfter: " + Console.RESET + rc.topology.pathAfter.value
-          )
-          println(Console.YELLOW + "     -     -     -     -     -" + Console.RESET)
+          if (cz.next.nonEmpty || cz.prev.nonEmpty) {
+            logger.debug(s"Resolved   $rc -> $cofree")
+            if (cz.prev.nonEmpty)
+              logger.trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
+            if (cz.next.nonEmpty)
+              logger.trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
+          } else logger.debug(s"EMPTY    $rc -> $cofree")
+          cz
         }
+      )
 
-        val chainZipperEv = resolved.traverse(cofree =>
-          (
-            rc.topology.pathBefore.map(through(_, s"before ${currI}")),
-            rc.topology.pathAfter.map(through(_, s"after ${currI}", reversed = true))
-          ).mapN { case (pathBefore, pathAfter) =>
-            val cz = ChainZipper(
-              pathBefore,
-              cofree,
-              pathAfter
-            )
-            if (cz.next.nonEmpty || cz.prev.nonEmpty) {
-              logger.debug(s"Resolved   $rc -> $cofree")
-              if (cz.prev.nonEmpty)
-                logger.trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
-              if (cz.next.nonEmpty)
-                logger.trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
-            } else logger.debug(s"EMPTY    $rc -> $cofree")
-            cz
-          }
-        )
-
-        OptionT[Eval, ChainZipper[Res]](chainZipperEv)
-      }
+      OptionT[Eval, ChainZipper[Res]](chainZipperEv)
+    }
 
     logger.trace("Resolved Cofree: " + resolvedCofree.value.map(_.forceAll))
 
@@ -362,4 +338,29 @@ object Topology extends Logging {
           MakeRes.noop(v, log)
       }
     }
+
+  def printDebugInfo(rc: OpModelTreeCursor, i: Int): Unit = {
+    println(Console.BLUE + rc + Console.RESET)
+    println(i + " : " + rc.topology)
+    println("Before: " + rc.topology.beforeOn.value)
+    println("Begin: " + rc.topology.beginsOn.value)
+    println(
+      (if (rc.topology.pathBefore.value.nonEmpty) Console.YELLOW
+       else "") + "PathBefore: " + Console.RESET + rc.topology.pathBefore.value
+    )
+
+    println("Parent: " + Console.CYAN + rc.topology.parent.getOrElse("-") + Console.RESET)
+
+    println("End  : " + rc.topology.endsOn.value)
+    println("After: " + rc.topology.afterOn.value)
+    println(
+      "Exit : " + (if (rc.topology.forceExit.value) Console.MAGENTA + "true" + Console.RESET
+                   else "false")
+    )
+    println(
+      (if (rc.topology.pathAfter.value.nonEmpty) Console.YELLOW
+       else "") + "PathAfter: " + Console.RESET + rc.topology.pathAfter.value
+    )
+    println(Console.YELLOW + "     -     -     -     -     -" + Console.RESET)
+  }
 }
