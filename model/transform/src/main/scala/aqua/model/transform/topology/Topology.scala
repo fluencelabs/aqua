@@ -262,11 +262,10 @@ object Topology extends Logging {
     val resolvedCofree = cursor.cata(wrap) { rc =>
       logger.debug(s"<:> $rc")
       val currI = nextI
-      val resolved =
-        MakeRes
-          .resolve(rc.topology.currentPeerId, currI)
-          .lift
-          .apply(rc.op)
+      val resolved = MakeRes
+        .resolve(rc.topology.currentPeerId, currI)
+        .lift
+        .apply(rc.op)
 
       logger.trace("Resolved: " + resolved)
 
@@ -298,34 +297,24 @@ object Topology extends Logging {
   }
 
   // Walks through peer IDs, doing a noop function on each
-  // If same IDs are found in a row, does noop only once
-  // if there's a chain like a -> b -> c -> ... -> b -> g, remove everything between b and b
   def through(
     peerIds: Chain[ValueModel],
     log: String = null,
     reversed: Boolean = false
-  ): Chain[Res] =
-    peerIds.map { v =>
-      v.`type` match {
-        case _: BoxType =>
-          val itemName = "-via-peer-"
+  ): Chain[Res] = peerIds.map { v =>
+    v.`type` match {
+      case _: BoxType =>
+        val itemName = "-via-peer-"
+        val steps = Chain(
+          MakeRes.noop(VarModel(itemName, ScalarType.string, Chain.empty), log),
+          NextRes(itemName).leaf
+        )
 
-          FoldRes(itemName, v).wrap(
-            if (reversed)
-              SeqRes.wrap(
-                NextRes(itemName).leaf,
-                MakeRes.noop(VarModel(itemName, ScalarType.string, Chain.empty), log)
-              )
-            else
-              SeqRes.wrap(
-                MakeRes.noop(VarModel(itemName, ScalarType.string, Chain.empty), log),
-                NextRes(itemName).leaf
-              )
-          )
-        case _ =>
-          MakeRes.noop(v, log)
-      }
+        FoldRes(itemName, v).wrap(if (reversed) steps.reverse else steps)
+      case _ =>
+        MakeRes.noop(v, log)
     }
+  }
 
   def printDebugInfo(rc: OpModelTreeCursor, i: Int): Unit = {
     println(Console.BLUE + rc + Console.RESET)
