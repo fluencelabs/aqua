@@ -272,28 +272,16 @@ object Topology extends Logging {
 
       if (debug) printDebugInfo(rc, currI)
 
-      val chainZipperEv = resolved.traverse(cofree =>
+      val chainZipperEv = resolved.traverse(tree =>
         (
           rc.topology.pathBefore.map(through(_, s"before ${currI}")),
           rc.topology.pathAfter.map(through(_, s"after ${currI}", reversed = true))
         ).mapN { case (pathBefore, pathAfter) =>
-          val cz = ChainZipper(
-            pathBefore,
-            cofree,
-            pathAfter
-          )
-          if (cz.next.nonEmpty || cz.prev.nonEmpty) {
-            logger.debug(s"Resolved   $rc -> $cofree")
-            if (cz.prev.nonEmpty)
-              logger.trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
-            if (cz.next.nonEmpty)
-              logger.trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
-          } else logger.debug(s"EMPTY    $rc -> $cofree")
-          cz
-        }
+          ChainZipper(pathBefore, tree, pathAfter)
+        }.flatTap(logResolvedDebugInfo(rc, _, tree))
       )
 
-      OptionT[Eval, ChainZipper[Res]](chainZipperEv)
+      OptionT(chainZipperEv)
     }
 
     logger.trace("Resolved Cofree: " + resolvedCofree.value.map(_.forceAll))
@@ -363,4 +351,19 @@ object Topology extends Logging {
     )
     println(Console.YELLOW + "     -     -     -     -     -" + Console.RESET)
   }
+
+  def logResolvedDebugInfo(
+    rc: OpModelTreeCursor,
+    cz: ChainZipper[ResolvedOp.Tree],
+    tree: ResolvedOp.Tree
+  ): Eval[Unit] =
+    Eval.later {
+      if (cz.next.nonEmpty || cz.prev.nonEmpty) {
+        logger.debug(s"Resolved   $rc -> $tree")
+        if (cz.prev.nonEmpty)
+          logger.trace("From prev: " + cz.prev.map(_.head).toList.mkString(" -> "))
+        if (cz.next.nonEmpty)
+          logger.trace("To next:   " + cz.next.map(_.head).toList.mkString(" -> "))
+      } else logger.debug(s"EMPTY    $rc -> $tree")
+    }
 }
