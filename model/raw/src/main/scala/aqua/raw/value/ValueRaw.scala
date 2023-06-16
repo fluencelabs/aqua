@@ -179,7 +179,11 @@ case class CallArrowRaw(
 
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(
-      name = map.getOrElse(name, name),
+      name = map
+        .get(name)
+        // Rename only if it is **not** a service call, see [bug LNG-199]
+        .filterNot(_ => ability.isDefined)
+        .getOrElse(name),
       arguments = arguments.map(_.renameVars(map)),
       serviceId = serviceId.map(_.renameVars(map))
     )
