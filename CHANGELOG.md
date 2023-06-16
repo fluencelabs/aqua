@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.7](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.6...aqua-v0.11.7) (2023-06-16)
+
+
+### Bug Fixes
+
+* **compiler:** Fix incorrect service method renaming [fixes LNG-199] ([#757](https://github.com/fluencelabs/aqua/issues/757)) ([e22fff7](https://github.com/fluencelabs/aqua/commit/e22fff7c8ac3b30baacd4088d96386e73985fd54))
+
 ## [0.11.6](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.5...aqua-v0.11.6) (2023-06-15)
 
 
