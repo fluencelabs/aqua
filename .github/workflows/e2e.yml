@@ -48,7 +48,7 @@ jobs:
 
   fluence-cli:
     needs: aqua
-    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@FLU-343
+    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
     with:
       aqua-api-version: "${{ needs.aqua.outputs.aqua-api-version }}"
 
