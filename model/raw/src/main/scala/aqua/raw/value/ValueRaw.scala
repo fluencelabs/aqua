@@ -181,7 +181,7 @@ case class CallArrowRaw(
     copy(
       name = map
         .get(name)
-        // Rename only if it is **not** a service call, see [bug LNG-199]
+        // Rename only if it is **not** a service or ability call, see [bug LNG-199]
         .filterNot(_ => ability.isDefined)
         .getOrElse(name),
       arguments = arguments.map(_.renameVars(map)),
