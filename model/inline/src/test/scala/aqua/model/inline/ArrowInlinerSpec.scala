@@ -6,6 +6,7 @@ import aqua.raw.ops.*
 import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoFieldRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
 import cats.syntax.show.*
+import cats.syntax.option.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -1257,6 +1258,113 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             )
         )
     )
+
+    model.equalsOrShowDiff(expected) shouldEqual true
+  }
+
+  /**
+   * service Test("test-service"):
+   *   method(method: string) -> string
+   *
+   * func test(method: string) -> string:
+   *   res <- Test.method(method)
+   *   <- res
+   *
+   * func main():
+   *   method = "method"
+   *   test(method)
+   */
+  "arrow inliner" should "not rename service call [bug LNG-199]" in {
+    val testName = "test"
+    val argMethodName = "method"
+    val serviceName = "Test"
+    val serviceId = LiteralRaw("test-service", LiteralType.string)
+    val res = VarRaw("res", ScalarType.string)
+
+    val testType = ArrowType(
+      domain = ProductType.labelled(List(argMethodName -> ScalarType.string)),
+      codomain = ProductType(ScalarType.string :: Nil)
+    )
+
+    val testBody = SeqTag.wrap(
+      CallArrowRawTag
+        .service(
+          serviceId = serviceId,
+          fnName = argMethodName,
+          call = Call(
+            args = VarRaw(argMethodName, ScalarType.string) :: Nil,
+            exportTo = Call.Export(res.name, res.`type`) :: Nil
+          ),
+          name = serviceName,
+          arrowType = ArrowType(
+            domain = ProductType.labelled(List(argMethodName -> ScalarType.string)),
+            codomain = ProductType(ScalarType.string :: Nil)
+          )
+        )
+        .leaf,
+      ReturnTag(
+        NonEmptyList.one(res)
+      ).leaf
+    )
+
+    val testFunc = FuncArrow(
+      funcName = testName,
+      body = testBody,
+      arrowType = testType,
+      ret = Nil,
+      capturedArrows = Map.empty,
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val mainType = ArrowType(
+      domain = ProductType(Nil),
+      codomain = ProductType(Nil)
+    )
+
+    val mainBody = SeqTag.wrap(
+      AssignmentTag(
+        LiteralRaw.quote(argMethodName),
+        argMethodName
+      ).leaf,
+      CallArrowRawTag
+        .func(
+          fnName = testName,
+          call = Call(args = VarRaw(argMethodName, LiteralType.string) :: Nil, Nil)
+        )
+        .leaf
+    )
+
+    val mainFunc = FuncArrow(
+      funcName = "main",
+      body = mainBody,
+      arrowType = ArrowType(ProductType(Nil), ProductType(Nil)),
+      ret = Nil,
+      capturedArrows = Map(testName -> testFunc),
+      capturedValues = Map.empty,
+      capturedTopology = None
+    )
+
+    val model = ArrowInliner
+      .callArrow[InliningState](
+        mainFunc,
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+
+    val expected = MetaModel
+      .CallArrowModel(testName)
+      .wrap(
+        CallServiceModel(
+          serviceId = ValueModel.fromRaw(serviceId),
+          funcName = argMethodName,
+          call = CallModel(
+            args = LiteralModel.quote(argMethodName) :: Nil,
+            exportTo = CallModel.Export(res.name, res.`type`) :: Nil
+          )
+        ).leaf
+      )
 
     model.equalsOrShowDiff(expected) shouldEqual true
   }
