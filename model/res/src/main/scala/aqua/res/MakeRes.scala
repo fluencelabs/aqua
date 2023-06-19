@@ -22,14 +22,6 @@ object MakeRes {
       onPeer
     ).leaf
 
-  def canon(onPeer: ValueModel, operand: ValueModel, target: CallModel.Export): ResolvedOp.Tree =
-    CallServiceRes(
-      op,
-      "identity",
-      CallRes(operand :: Nil, Some(target)),
-      onPeer
-    ).leaf
-
   def join(onPeer: ValueModel, operands: NonEmptyList[ValueModel]): ResolvedOp.Tree =
     CallServiceRes(
       op,
