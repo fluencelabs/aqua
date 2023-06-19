@@ -83,8 +83,10 @@ jobs:
           node-version: "16"
           registry-url: "https://npm.fluence.dev"
           cache: "npm"
+          cache-dependency-path: "integration-tests/package-lock.json"
 
       - run: npm install
+        working-directory: integration-tests
 
       - name: Set js-client.node version
         if: inputs.js-client-snapshots != 'null'
@@ -92,6 +94,7 @@ jobs:
         with:
           package: "@fluencelabs/js-client.node"
           version: ${{ fromJson(inputs.js-client-snapshots)['js-client.node'] }}
+          working-directory: integration-tests
 
       - name: Set js-client.api version
         if: inputs.js-client-snapshots != 'null'
@@ -99,6 +102,7 @@ jobs:
         with:
           package: "@fluencelabs/js-client.api"
           version: ${{ fromJson(inputs.js-client-snapshots)['js-client.api'] }}
+          working-directory: integration-tests
 
       - name: Set aqua version
         if: inputs.aqua-version != 'null'
@@ -106,13 +110,17 @@ jobs:
         with:
           package: "@fluencelabs/aqua"
           version: ${{ inputs.aqua-version }}
+          working-directory: integration-tests
 
       - name: Remove compiled examples
         if: inputs.aqua-version != ''
-        run: rm -rf aqua-playground/src/compiled/examples/*
+        run: rm -rf integration-tests/src/compiled/examples/*
 
       - run: npm run compile-aqua -- -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
+        working-directory: integration-tests
+
       - run: npm run test
+        working-directory: integration-tests
 
       - name: Setup dasel
         if: always()
@@ -122,6 +130,7 @@ jobs:
 
       - name: Print versions to check summary
         if: always()
+        working-directory: integration-tests
         run: |
           cat <<SNAPSHOT >> $GITHUB_STEP_SUMMARY
           ## Used versions
