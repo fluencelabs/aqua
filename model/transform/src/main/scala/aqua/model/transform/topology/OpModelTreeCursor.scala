@@ -78,27 +78,14 @@ case class OpModelTreeCursor(
   def cata[A](wrap: ChainZipper[Cofree[Chain, A]] => Chain[Cofree[Chain, A]])(
     folder: OpModelTreeCursor => OptionT[Eval, ChainZipper[Cofree[Chain, A]]]
   ): Eval[Chain[Cofree[Chain, A]]] =
-    folder(this).map { case ChainZipper(prev, curr, next) =>
-      val tail = Eval.later {
-        Chain.fromSeq(
-          toFirstChild
-            .map(folderCursor =>
-              LazyList
-                .unfold(folderCursor) {
-                  _.toNextSibling.map(cursor => cursor -> cursor)
-                }
-                .prepended(folderCursor)
-            )
-            .getOrElse(LazyList.empty)
-        )
-      }
-        // TODO: this can be parallelized
-        .flatMap(_.traverse(_.cata(wrap)(folder)))
-        .map(_.flatMap(identity))
-        .flatMap(addition => curr.tail.map(_ ++ addition))
+    folder(this).map { case cz @ ChainZipper(_, curr, _) =>
+      val updatedTail = for {
+        childs <- Eval.later(Chain.fromSeq(children))
+        addition <- childs.flatTraverse(_.cata(wrap)(folder))
+        tail <- curr.tail
+      } yield tail ++ addition
 
-      val inner = curr.copy(tail = tail)
-      wrap(ChainZipper(prev, inner, next))
+      wrap(cz.copy(current = curr.copy(tail = updatedTail)))
     }.getOrElse(Chain.empty).memoize
 
   override def toString: String =
