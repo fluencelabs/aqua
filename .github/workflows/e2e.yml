@@ -34,7 +34,7 @@ jobs:
     uses: ./.github/workflows/snapshot.yml
     with:
       ref: ${{ github.ref }}
-      sbt-command: sbt cliJS/fastOptJS
+      sbt-command: cliJS/fastOptJS
       working-directory: cli/cli-npm
 
   api:
@@ -45,7 +45,7 @@ jobs:
     uses: ./.github/workflows/snapshot.yml
     with:
       ref: ${{ github.ref }}
-      sbt-command: sbt aqua-apiJS/fastOptJS
+      sbt-command: aqua-apiJS/fastOptJS
       working-directory: api/aqua-api-npm
 
   lsp:
@@ -56,7 +56,7 @@ jobs:
     uses: ./.github/workflows/snapshot.yml
     with:
       ref: ${{ github.ref }}
-      sbt-command: sbt language-server-apiJS/fastOptJS
+      sbt-command: language-server-apiJS/fastOptJS
       working-directory: language-server/language-server-npm
 
   tests:
