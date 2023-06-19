@@ -26,30 +26,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  aqua:
+  cli:
+    name: "aqua"
     if: >
       github.event_name == 'push' ||
       contains(github.event.pull_request.labels.*.name, 'e2e')
     uses: ./.github/workflows/snapshot.yml
     with:
       ref: ${{ github.ref }}
+      sbt-command: sbt cliJS/fastOptJS
+      working-directory: cli/cli-npm
+
+  api:
+    name: "aqua"
+    if: >
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.labels.*.name, 'e2e')
+    uses: ./.github/workflows/snapshot.yml
+    with:
+      ref: ${{ github.ref }}
+      sbt-command: sbt aqua-apiJS/fastOptJS
+      working-directory: api/aqua-api-npm
+
+  lsp:
+    name: "aqua"
+    if: >
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.labels.*.name, 'e2e')
+    uses: ./.github/workflows/snapshot.yml
+    with:
+      ref: ${{ github.ref }}
+      sbt-command: sbt language-server-apiJS/fastOptJS
+      working-directory: language-server/language-server-npm
 
   tests:
     name: "aqua"
-    needs: aqua
+    needs: cli
     uses: ./.github/workflows/tests.yml
     with:
       ref: ${{ github.ref }}
-      aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
+      aqua-version: "${{ needs.cli.outputs.version }}"
 
   registry:
-    needs: aqua
+    needs: cli
     uses: fluencelabs/registry/.github/workflows/tests.yml@main
     with:
-      aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
+      aqua-version: "${{ needs.cli.outputs.version }}"
 
   fluence-cli:
-    needs: aqua
+    needs: api
     uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
     with:
-      aqua-api-version: "${{ needs.aqua.outputs.aqua-api-version }}"
+      aqua-api-version: "${{ needs.api.outputs.version }}"

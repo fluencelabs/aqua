@@ -7,12 +7,12 @@
     "aqua-lsp-api.js",
     "aqua-lsp-api.d.ts"
   ],
-  "scripts": {
-    "move:scalajs": "cp ../language-server-api/.js/target/scala-3.2.2/language-server-api-opt/main.js ./aqua-lsp-api.js"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fluencelabs/aqua.git"
+  },
+  "scripts": {
+    "build": "exit 0"
   },
   "keywords": [
     "aqua",

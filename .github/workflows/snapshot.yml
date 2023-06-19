@@ -6,7 +6,9 @@ on:
       sbt-command:
         description: "sbt build command"
         type: string
-        default: "language-server-apiJS/fastOptJS"
+      working-directory:
+        description: "working directory of npm package"
+        type: string
       ref:
         description: "git ref to checkout to"
         type: string
@@ -45,4 +47,40 @@ jobs:
           SNAPSHOT: ${{ steps.version.outputs.id }}
         run: sbt ${{ inputs.sbt-command }}
 
-      - run: ls -alh language-server/language-server-npm/
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2.5.0
+        with:
+          url: https://vault.fluence.dev
+          path: jwt/github
+          role: ci
+          method: jwt
+          jwtGithubAudience: "https://github.com/fluencelabs"
+          jwtTtl: 300
+          exportToken: false
+          secrets: |
+            kv/npm-registry/basicauth/ci token | NODE_AUTH_TOKEN
+
+      - name: Setup node with self-hosted npm registry
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+          registry-url: "https://npm.fluence.dev"
+          cache-dependency-path: "${{ inputs.working-directory }}/package-lock.json"
+          cache: "npm"
+
+      - run: npm i
+        working-directory: ${{ inputs.working-directory }}
+
+      - run: npm run build
+        working-directory: ${{ inputs.working-directory }}
+
+      - name: Generate snapshot version
+        id: version
+        uses: fluencelabs/github-actions/generate-snapshot-id@main
+
+      - name: Publish snapshot
+        id: snapshot
+        uses: fluencelabs/github-actions/npm-publish-snapshot@main
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          id: ${{ steps.version.outputs.id }}

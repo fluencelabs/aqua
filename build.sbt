@@ -72,8 +72,8 @@ lazy val cli = crossProject(JSPlatform, JVMPlatform)
 
 lazy val cliJS = cli.js
   .settings(
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "cli/cli-npm" / "aqua.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "cli/cli-npm" / "aqua.js",
+    Compile / fastOptJS / artifactPath := baseDirectory.value / "../../cli-npm" / "aqua.js",
+    Compile / fullOptJS / artifactPath := baseDirectory.value / "../../cli-npm" / "aqua.js",
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true
   )
@@ -124,8 +124,8 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
 
 lazy val `language-server-apiJS` = `language-server-api`.js
   .settings(
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "language-server/language-server-npm" / "aqua-lsp-api.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "language-server/language-server-npm" / "aqua-lsp-api.js",
+    Compile / fastOptJS / artifactPath := baseDirectory.value / "../../language-server-npm" / "aqua-lsp-api.js",
+    Compile / fullOptJS / artifactPath := baseDirectory.value / "../../language-server-npm" / "aqua-lsp-api.js",
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true
   )
@@ -153,8 +153,8 @@ lazy val `aqua-api` = crossProject(JSPlatform, JVMPlatform)
 
 lazy val `aqua-apiJS` = `aqua-api`.js
   .settings(
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "api/aqua-api-npm" / "aqua-api.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "api/aqua-api-npm" / "aqua-api.js",
+    Compile / fastOptJS / artifactPath := baseDirectory.value / "../../aqua-api-npm" / "aqua-api.js",
+    Compile / fullOptJS / artifactPath := baseDirectory.value / "../../aqua-api-npm" / "aqua-api.js",
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true,
     Test / test                     := {}
