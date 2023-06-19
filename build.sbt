@@ -126,10 +126,12 @@ lazy val `language-server-apiJS` = `language-server-api`.js
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true,
+  )
+  .enablePlugins(ScalaJSPlugin).
+  settings(
     fastOptJS / artifactPath := baseDirectory.value / "language-server/language-server-npm" / "aqua-lsp-api.js",
     fullOptJS / artifactPath := baseDirectory.value / "language-server/language-server-npm" / "aqua-lsp-api.js"
   )
-  .enablePlugins(ScalaJSPlugin)
   .dependsOn(`js-exports`, `js-imports`)
 
 lazy val `js-exports` = project
