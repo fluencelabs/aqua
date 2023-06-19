@@ -34,6 +34,14 @@ jobs:
     with:
       ref: ${{ github.ref }}
 
+  tests:
+    name: "aqua"
+    needs: aqua
+    uses: ./.github/workflows/tests.yml
+    with:
+      ref: ${{ github.ref }}
+      aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
+
   registry:
     needs: aqua
     uses: fluencelabs/registry/.github/workflows/tests.yml@main

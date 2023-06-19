@@ -141,7 +141,7 @@ jobs:
           | marine-js      | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/marine-js).version') |
           | aqua           | $(npx aqua --version)                                                |
           | js-client.api  | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/js-client.api).version') |
-          | js-cluent.node | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/js-client.node).version') |
+          | js-client.node | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/js-client.node).version') |
           SNAPSHOT
 
       - name: Dump rust-peer logs
