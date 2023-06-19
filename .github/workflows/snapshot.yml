@@ -284,3 +284,20 @@ jobs:
         with:
           working-directory: language-server/language-server-npm
           id: ${{ steps.version.outputs.id }}
+
+  aqua-native:
+    name: "aqua"
+    strategy:
+      matrix:
+        runner:
+          - runs-on: ubuntu-latest
+            arch: amd64
+            os: linux
+            static: true
+    needs: compile
+    uses: ./.github/workflows/binary.yml
+    with:
+      runs-on: ${{ matrix.runner.runs-on }}
+      arch: ${{ matrix.runner.arch }}
+      os: ${{ matrix.runner.os }}
+      static: ${{ matrix.runner.static }}
