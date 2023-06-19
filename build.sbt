@@ -2,7 +2,7 @@ val aquaVersion = "0.11.7"
 
 val scalaV = "3.3.0"
 val catsV = "2.8.0"
-val catsParseV = "0.3.8"
+val catsParseV = "0.3.9"
 val monocleV = "3.1.0"
 val scalaTestV = "3.2.16"
 val fs2V = "3.7.0"
