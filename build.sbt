@@ -147,14 +147,14 @@ lazy val `js-imports` = project
 lazy val `aqua-api` = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
-  .in(file("api/aqua-api"))
+  .in(file("api/api"))
   .settings(commons: _*)
   .dependsOn(`aqua-run`, `backend-api`)
 
 lazy val `aqua-apiJS` = `aqua-api`.js
   .settings(
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "../../aqua-api-npm" / "aqua-api.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "../../aqua-api-npm" / "aqua-api.js",
+    Compile / fastOptJS / artifactPath := baseDirectory.value / "../../api-npm" / "aqua-api.js",
+    Compile / fullOptJS / artifactPath := baseDirectory.value / "../../api-npm" / "aqua-api.js",
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true,
     Test / test                     := {}

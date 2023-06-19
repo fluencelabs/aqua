@@ -10,6 +10,7 @@ project/target
 .DS_Store
 
 cli/cli-npm/aqua.js*
-language-server/language-server-npm/cli-npm/aqua-lsp-api.js*
-api/aqua-api-npm/aqua-api.js*
+language-server/language-server-npm/aqua-lsp-api.js*
+api/api-npm/aqua-api.js*
+
 **/node_modules
