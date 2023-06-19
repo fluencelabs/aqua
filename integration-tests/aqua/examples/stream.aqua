@@ -1,0 +1,69 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+import "println.aqua"
+
+service Stringer("stringer-id"):
+    returnString: string -> string
+
+func checkStreams(ch: []string) -> []string:
+    stream: *string
+    stream <- Stringer.returnString("first")
+    stream <- Stringer.returnString("second")
+    for b <- ch:
+        stream <- Stringer.returnString(b)
+    <- stream
+
+func getStream() -> *u32:
+    nums = *[1,2,3,4]
+    <- nums
+
+func returnStreamFromFunc() -> *u32:
+    nums <- getStream()
+    <- nums
+
+func stringNil() -> *string:
+    valueNil: *string
+    <- valueNil
+
+func returnNil() -> *string:
+    relayNil <- stringNil()
+    <- relayNil
+
+func returnNilLiteral() -> *string:
+    <- nil
+
+func returnNilLength() -> u32:
+    arr = nil
+    <- arr.length
+
+func stringNone() -> ?string:
+    valueNone: ?string
+    <- valueNone
+
+func returnNone() -> ?string:
+    relayNone <- stringNone()
+    <- relayNone
+
+func streamFunctor(arr: []string) -> string:
+   stream: *[]string
+   stream <<- ["123"]
+   a = stream[arr.length - 1][0]
+   <- a
+
+func streamAssignment(arr: []string) -> string:
+   stream: *[]u32
+   stream <<- [0]
+   a = stream[arr.length - 1][0]
+   b = arr[a]
+   <- b
+
+func streamIntFunctor(arr: []u32) -> string:
+   stream: *[]string
+   stream <<- ["123"]
+   a = stream[arr[0]][arr[0]]
+   <- a
+
+func streamJoin(arr: []string) -> string:
+   streamJ: *[]string
+   streamJ <<- ["111", "222"]
+   streamJ <<- ["333", "444"]
+   <- streamJ[arr.length][1]

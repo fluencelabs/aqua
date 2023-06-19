@@ -1,0 +1,34 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+service ParService("parservice-id"):
+    call: -> string
+
+-- here we go to another node and not waiting for execution there
+-- all `ParService.call()` will be executed instantly
+func parFunc( node: string, c: Info -> () ):
+    y <- ParService.call()
+    par on node:
+        t <- Peer.identify()
+        c(t)
+    par x <- ParService.call()
+
+func testTimeout(nodes: []string) -> string:
+  on HOST_PEER_ID:
+
+    results: *Info
+
+    for node <- nodes par:
+      on node:
+        results <- Peer.identify()
+
+  timeout: *string
+  join results[999]
+  par timeout <- Peer.timeout(400, "timeout")
+
+  status: *string
+  if timeout == nil:
+    status <<- "ok"
+  else:
+    status <<- timeout!
+
+  <- status!

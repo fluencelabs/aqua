@@ -1,0 +1,20 @@
+service Peer("peer"):
+    is_connected: string -> bool
+
+service Op("op"):
+    identity: -> ()
+
+data User:
+    peer_id: string
+    relay_id: string
+    name: string
+
+service Test("test"):
+    getUserList: -> []User
+    doSomething: -> bool
+
+func betterMessage(relay: string):
+    on relay:
+        isOnline <- Peer.is_connected(relay)
+    if isOnline:
+        Test.doSomething()

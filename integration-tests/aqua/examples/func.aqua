@@ -1,0 +1,6 @@
+service TestSrv("test-service-id"):
+    str: -> string
+
+func testFunc() -> string:
+    res <- TestSrv.str()
+    <- res

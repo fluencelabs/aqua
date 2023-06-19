@@ -1,0 +1,8 @@
+-- exports3.aqua
+module Export3 declares *
+
+import Op as Noop from "@fluencelabs/aqua-lib/builtin.aqua"
+
+func foo() -> string:
+    Noop.noop()
+    <- "I am MyFooBar foo"

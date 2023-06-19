@@ -1,0 +1,40 @@
+aqua StructCreation declares getObj, getObjRelay, getObjAssign
+
+export getObj, getObjRelay, getObjAssign
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+data InnerObj:
+    arr: []string
+    num: u32
+
+data SomeObj:
+    str: string
+    num: u64
+    inner: InnerObj
+
+service OpNum("op"):
+    identity(n: u32) -> u32
+
+service OpStr("op"):
+    identity(n: string) -> string
+
+service OpArr("op"):
+    identity(arr: []string) -> []string
+
+func getObj() -> SomeObj:
+    <- SomeObj(str = OpStr.identity("some str"), num = 5, inner = InnerObj(arr = ["a", "b", "c"], num = 6))
+
+func getObjRelay() -> SomeObj:
+    on HOST_PEER_ID:
+        obj = SomeObj(str = "diff str", num = 5, inner = InnerObj(arr = OpArr.identity(["a", "b", "c"]), num = 6))
+        Op.noop()
+    <- obj.copy(str = "some str")
+
+func getObjAssign() -> SomeObj, SomeObj, u32:
+    obj = SomeObj(str = "first str",
+                  num = OpNum.identity(5),
+                  inner = InnerObj(arr = ["d", "e", "f"], num = 7)
+                  )
+    copiedObj = obj.copy(str = "some str", inner = obj.inner.copy(arr = ["a", "b", "c"])).copy(num = 6)
+    <- obj, copiedObj, copiedObj.inner.copy(arr = ["g"]).arr.length

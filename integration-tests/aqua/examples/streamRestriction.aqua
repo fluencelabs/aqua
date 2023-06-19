@@ -1,0 +1,10 @@
+func streamFold(arr: []string) -> []string:
+  res: *string
+  for n <- arr:
+    res <<- n
+  <- res
+
+func streamRes(arr: []string) -> []string, []string:
+  res: *string
+  res2 <- streamFold(arr)
+  <- res, res2
