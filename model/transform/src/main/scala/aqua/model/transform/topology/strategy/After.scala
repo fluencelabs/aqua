@@ -41,24 +41,22 @@ trait After {
     }
 
   def pathAfterAndPingNext(current: Topology): Eval[Chain[ValueModel]] =
-    current.forceExit
-      .flatMap[Chain[ValueModel]] {
-        case false => Eval.now(Chain.empty[ValueModel])
-        case true =>
-          (current.endsOn, current.afterOn, current.lastExecutesOn).mapN {
-            case (e, a, _) if e == a => Chain.empty[ValueModel]
-            case (e, a, l) if l.contains(e) =>
-              // Pingback in case no relays involved
-              Chain.fromOption(a.headOption.map(_.peerId))
-            case (e, a, _) =>
-              // We wasn't at e, so need to get through the last peer in case it matches with the relay
-              Topology.findRelayPathEnforcement(a, e) ++ Chain.fromOption(
-                a.headOption.map(_.peerId)
-              )
-          }
-      }
-      .flatMap { appendix =>
-        // Ping the next (join) peer to enforce its data update
-        pathAfterVia(current).map(_ ++ appendix)
-      }
+    current.forceExit.flatMap {
+      case false => Eval.now(Chain.empty)
+      case true =>
+        (current.endsOn, current.afterOn, current.lastExecutesOn).mapN {
+          case (e, a, _) if e == a => Chain.empty
+          case (e, a, l) if l.contains(e) =>
+            // Pingback in case no relays involved
+            Chain.fromOption(a.headOption.map(_.peerId))
+          case (e, a, _) =>
+            // We wasn't at e, so need to get through the last peer in case it matches with the relay
+            Topology.findRelayPathEnforcement(a, e) ++ Chain.fromOption(
+              a.headOption.map(_.peerId)
+            )
+        }
+    }.flatMap { appendix =>
+      // Ping the next (join) peer to enforce its data update
+      pathAfterVia(current).map(_ ++ appendix)
+    }
 }
