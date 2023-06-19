@@ -6,15 +6,15 @@ import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.model.*
-import aqua.types.ScalarType
+import aqua.types.*
 
 // TODO docs
 object MakeRes {
   val op: ValueModel = LiteralModel.fromRaw(LiteralRaw.quote("op"))
 
   def hop(onPeer: ValueModel): ResolvedOp.Tree = {
-    val streamName = "-hop-stream-"
-    val canonName = "-hop-canon-"
+    val streamName = "hop-stream-drop"
+    val canonName = "hop-canon-drop"
     val elementType = ScalarType.u8
 
     RestrictionRes(streamName, isStream = true).wrap(
@@ -28,22 +28,27 @@ object MakeRes {
     )
   }
 
-  def join(onPeer: ValueModel, operands: NonEmptyList[ValueModel]): ResolvedOp.Tree =
-    CallServiceRes(
-      op,
-      "noop",
-      CallRes(operands.toList, None),
-      onPeer
-    ).leaf
+  def join(onPeer: ValueModel, operands: NonEmptyList[ValueModel]): ResolvedOp.Tree = {
+    val streamName = "join-stream"
+    val aps = operands.collect {
+      // Optimization: do not join literals
+      case vm: VarModel =>
+        ApRes(
+          operand = vm,
+          exportTo = CallModel.Export(
+            name = streamName,
+            // We put vars of possibly different types inside
+            `type` = StreamType(TopType)
+          )
+        ).leaf
+    }.toList
 
-  private val initPeerId = ValueModel.fromRaw(ValueRaw.InitPeerId)
-
-  private def orInit(currentPeerId: Option[ValueModel]): ValueModel =
-    currentPeerId.getOrElse(initPeerId)
-
-  private def isNillLiteral(vm: ValueModel): Boolean = vm match {
-    case LiteralModel(value, t) if value == ValueRaw.Nil.value && t == ValueRaw.Nil.`type` => true
-    case _ => false
+    if (aps.isEmpty) NullRes.leaf // TODO: Return NoAir here?
+    else
+      RestrictionRes(
+        streamName,
+        isStream = true
+      ).wrap(aps)
   }
 
   def resolve(
@@ -96,5 +101,15 @@ object MakeRes {
     case NullModel =>
       NullRes.leaf
 
+  }
+
+  private val initPeerId = ValueModel.fromRaw(ValueRaw.InitPeerId)
+
+  private def orInit(currentPeerId: Option[ValueModel]): ValueModel =
+    currentPeerId.getOrElse(initPeerId)
+
+  private def isNillLiteral(vm: ValueModel): Boolean = vm match {
+    case LiteralModel(value, t) if value == ValueRaw.Nil.value && t == ValueRaw.Nil.`type` => true
+    case _ => false
   }
 }
