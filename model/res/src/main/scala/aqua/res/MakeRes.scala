@@ -6,21 +6,27 @@ import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.model.*
+import aqua.types.ScalarType
 
 // TODO docs
 object MakeRes {
   val op: ValueModel = LiteralModel.fromRaw(LiteralRaw.quote("op"))
 
-  def noop(onPeer: ValueModel, log: String = null): ResolvedOp.Tree =
-    CallServiceRes(
-      op,
-      "noop",
-      CallRes(
-        Option(log).filter(_ == "").map(LiteralRaw.quote).map(LiteralModel.fromRaw).toList,
-        None
-      ),
-      onPeer
-    ).leaf
+  def hop(onPeer: ValueModel): ResolvedOp.Tree = {
+    val streamName = "-hop-stream-"
+    val canonName = "-hop-canon-"
+    val elementType = ScalarType.u8
+
+    RestrictionRes(streamName, isStream = true).wrap(
+      RestrictionRes(canonName, isStream = false).wrap(
+        CanonRes(
+          operand = VarModel(streamName, StreamType(elementType)),
+          peerId = onPeer,
+          exportTo = CallModel.Export(canonName, CanonStreamType(elementType))
+        ).leaf
+      )
+    )
+  }
 
   def join(onPeer: ValueModel, operands: NonEmptyList[ValueModel]): ResolvedOp.Tree =
     CallServiceRes(

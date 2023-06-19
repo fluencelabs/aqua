@@ -1,6 +1,14 @@
 package aqua.compiler
 
-import aqua.model.{CallModel, ForModel, FunctorModel, IntoIndexModel, LiteralModel, ValueModel, VarModel}
+import aqua.model.{
+  CallModel,
+  ForModel,
+  FunctorModel,
+  IntoIndexModel,
+  LiteralModel,
+  ValueModel,
+  VarModel
+}
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
 import aqua.parser.ParserError
@@ -10,7 +18,20 @@ import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.ConstantRaw
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.res.{ApRes, CallRes, CallServiceRes, CanonRes, FoldRes, MakeRes, MatchMismatchRes, NextRes, ParRes, RestrictionRes, SeqRes, XorRes}
+import aqua.res.{
+  ApRes,
+  CallRes,
+  CallServiceRes,
+  CanonRes,
+  FoldRes,
+  MakeRes,
+  MatchMismatchRes,
+  NextRes,
+  ParRes,
+  RestrictionRes,
+  SeqRes,
+  XorRes
+}
 import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamType, Type}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -83,8 +104,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
   }
 
-  def through(peer: ValueModel, log: String = null) =
-    MakeRes.noop(peer, log)
+  def through(peer: ValueModel) =
+    MakeRes.hop(peer)
 
   val relay = VarRaw("-relay-", ScalarType.string)
 
@@ -203,10 +224,10 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
             ),
             join(results, LiteralModel.fromRaw(LiteralRaw.number(2))),
             CanonRes(results, init, CallModel.Export(canonResult.name, canonResult.`type`)).leaf,
-          ApRes(
-            canonResult,
-            CallModel.Export(flatResult.name, flatResult.`type`)
-          ).leaf
+            ApRes(
+              canonResult,
+              CallModel.Export(flatResult.name, flatResult.`type`)
+            ).leaf
           )
         ),
         CallServiceRes(
