@@ -74,8 +74,8 @@ lazy val cliJS = cli.js
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true,
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "cli/cli-npm" / "aqua.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "cli/cli-npm" / "aqua.js"
+    Compile / fastOptJS / artifactPath := baseDirectory.value / "../cli/cli-npm" / "aqua.js",
+    Compile / fullOptJS / artifactPath := baseDirectory.value / "../cli/cli-npm" / "aqua.js"
   )
   .dependsOn(`js-exports`, `js-imports`)
 
@@ -126,8 +126,8 @@ lazy val `language-server-apiJS` = `language-server-api`.js
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true,
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "language-server/language-server-npm" / "aqua-lsp-api.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "language-server/language-server-npm" / "aqua-lsp-api.js"
+    Compile / fastOptJS / artifactPath := baseDirectory.value / "../language-server/language-server-npm" / "aqua-lsp-api.js",
+    Compile / fullOptJS / artifactPath := baseDirectory.value / "../language-server/language-server-npm" / "aqua-lsp-api.js"
   )
   .enablePlugins(ScalaJSPlugin)
   .dependsOn(`js-exports`, `js-imports`)
@@ -156,8 +156,8 @@ lazy val `aqua-apiJS` = `aqua-api`.js
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true,
     Test / test                     := {},
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "api/api-npm" / "aqua-api.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "api/api-npm" / "aqua-api.js"
+    Compile / fastOptJS / artifactPath := baseDirectory.value / "../api/api-npm" / "aqua-api.js",
+    Compile / fullOptJS / artifactPath := baseDirectory.value / "../api/api-npm" / "aqua-api.js"
   )
   .enablePlugins(ScalaJSPlugin)
   .dependsOn(`js-exports`)
