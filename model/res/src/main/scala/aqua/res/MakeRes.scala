@@ -28,29 +28,6 @@ object MakeRes {
     )
   }
 
-  def join(onPeer: ValueModel, operands: NonEmptyList[ValueModel]): ResolvedOp.Tree = {
-    val streamName = "join-stream"
-    val aps = operands.collect {
-      // Optimization: do not join literals
-      case vm: VarModel =>
-        ApRes(
-          operand = vm,
-          exportTo = CallModel.Export(
-            name = streamName,
-            // We put vars of possibly different types inside
-            `type` = StreamType(TopType)
-          )
-        ).leaf
-    }.toList
-
-    if (aps.isEmpty) NullRes.leaf // TODO: Return NoAir here?
-    else
-      RestrictionRes(
-        streamName,
-        isStream = true
-      ).wrap(aps)
-  }
-
   def resolve(
     currentPeerId: Option[ValueModel],
     i: Int
@@ -88,8 +65,6 @@ object MakeRes {
       ApRes(operand, CallModel.Export(assignTo, ArrayType(el))).leaf
     case FlattenModel(operand, assignTo) =>
       ApRes(operand, CallModel.Export(assignTo, operand.`type`)).leaf
-    case JoinModel(operands) =>
-      join(orInit(currentPeerId), operands)
     case CallServiceModel(serviceId, funcName, CallModel(args, exportTo)) =>
       CallServiceRes(
         serviceId,

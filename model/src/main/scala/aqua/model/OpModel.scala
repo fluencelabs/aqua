@@ -187,14 +187,6 @@ case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export)
   override def usesVarNames: Set[String] = operand.usesVarNames
 }
 
-case class JoinModel(operands: NonEmptyList[ValueModel]) extends ForceExecModel {
-
-  override def toString: String = s"join ${operands.toList.mkString(", ")}"
-
-  override lazy val usesVarNames: Set[String] =
-    operands.toList.flatMap(_.usesVarNames).toSet
-}
-
 case class CaptureTopologyModel(name: String) extends NoExecModel
 case class ApplyTopologyModel(name: String) extends SeqGroupModel
 
