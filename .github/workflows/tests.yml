@@ -15,10 +15,6 @@ on:
         description: "rust-peer image tag"
         type: string
         default: "fluencelabs/rust-peer:minimal"
-      aqua-version:
-        description: "@fluencejs/aqua version"
-        type: string
-        default: "null"
       js-client-snapshots:
         description: "js-client snapshots"
         type: string
@@ -30,7 +26,7 @@ env:
   FLUENCE_ENV: "${{ inputs.fluence-env }}"
 
 jobs:
-  aqua-playground:
+  aqua:
     name: "Run tests"
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -82,44 +78,33 @@ jobs:
         with:
           node-version: "16"
           registry-url: "https://npm.fluence.dev"
-          cache: "npm"
-          cache-dependency-path: "integration-tests/package-lock.json"
+          cache: "pnpm"
 
-      - run: npm install
+      - run: pnpm install
         working-directory: integration-tests
 
-      - name: Set js-client.node version
+      - name: Override dependencies
         if: inputs.js-client-snapshots != 'null'
-        uses: fluencelabs/github-actions/npm-set-dependency@main
+        uses: fluencelabs/github-actions/pnpm-set-dependency@main
         with:
+          dependencies: |
           package: "@fluencelabs/js-client.node"
           version: ${{ fromJson(inputs.js-client-snapshots)['js-client.node'] }}
-          working-directory: integration-tests
-
-      - name: Set js-client.api version
-        if: inputs.js-client-snapshots != 'null'
-        uses: fluencelabs/github-actions/npm-set-dependency@main
-        with:
           package: "@fluencelabs/js-client.api"
           version: ${{ fromJson(inputs.js-client-snapshots)['js-client.api'] }}
-          working-directory: integration-tests
-
-      - name: Set aqua version
-        if: inputs.aqua-version != 'null'
-        uses: fluencelabs/github-actions/npm-set-dependency@main
-        with:
-          package: "@fluencelabs/aqua"
-          version: ${{ inputs.aqua-version }}
-          working-directory: integration-tests
+            {
+              "@fluencelabs/js-client.node": "${{ fromJson(inputs.js-client-snapshots)['js-client.node'] }}",
+              "@fluencelabs/js-client.api": "${{ fromJson(inputs.js-client-snapshots)['js-client.api] }}"
+            }
 
       - name: Remove compiled examples
         if: inputs.aqua-version != ''
         run: rm -rf integration-tests/src/compiled/examples/*
 
-      - run: npm run compile-aqua -- -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
+      - run: pnpm run compile-aqua -- -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
         working-directory: integration-tests
 
-      - run: npm run test
+      - run: pnpm run test
         working-directory: integration-tests
 
       - name: Setup dasel
@@ -128,21 +113,21 @@ jobs:
         with:
           version: 1.27.3
 
-      - name: Print versions to check summary
-        if: always()
-        working-directory: integration-tests
-        run: |
-          cat <<SNAPSHOT >> $GITHUB_STEP_SUMMARY
-          ## Used versions
-          | name           | version                                                              |
-          | -------------- | -------------------------------------------------------------------- |
-          | nox            | $(docker run --rm --entrypoint=nox ${RUST_PEER_IMAGE} --version) |
-          | avm            | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/avm).version') |
-          | marine-js      | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/marine-js).version') |
-          | aqua           | $(npx aqua --version)                                                |
-          | js-client.api  | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/js-client.api).version') |
-          | js-client.node | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/js-client.node).version') |
-          SNAPSHOT
+      # - name: Print versions to check summary
+      #   if: always()
+      #   working-directory: integration-tests
+      #   run: |
+      #     cat <<SNAPSHOT >> $GITHUB_STEP_SUMMARY
+      #     ## Used versions
+      #     | name           | version                                                              |
+      #     | -------------- | -------------------------------------------------------------------- |
+      #     | nox            | $(docker run --rm --entrypoint=nox ${RUST_PEER_IMAGE} --version) |
+      #     | avm            | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/avm).version') |
+      #     | marine-js      | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/marine-js).version') |
+      #     | aqua           | $(npx aqua --version)                                                |
+      #     | js-client.api  | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/js-client.api).version') |
+      #     | js-client.node | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/js-client.node).version') |
+      #     SNAPSHOT
 
       - name: Dump rust-peer logs
         if: always()

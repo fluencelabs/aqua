@@ -1,0 +1,56 @@
+name: "e2e"
+
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - ".github/**"
+      - "!.github/workflows/e2e.yml"
+      - "!.github/workflows/snapshot.yml"
+    types:
+      - "labeled"
+      - "synchronize"
+      - "opened"
+      - "reopened"
+  push:
+    branches:
+      - "main"
+    paths-ignore:
+      - "**.md"
+      - ".github/**"
+      - "!.github/workflows/e2e.yml"
+      - "!.github/workflows/snapshot.yml"
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  aqua:
+    name: "aqua"
+    if: >
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.labels.*.name, 'e2e')
+    uses: ./.github/workflows/snapshot.yml
+    with:
+      ref: ${{ github.ref }}
+
+#   tests:
+#     name: "aqua"
+#     needs: cli
+#     uses: ./.github/workflows/tests.yml
+#     with:
+#       ref: ${{ github.ref }}
+#       aqua-version: "${{ needs.cli.outputs.version }}"
+
+#   registry:
+#     needs: cli
+#     uses: fluencelabs/registry/.github/workflows/tests.yml@main
+#     with:
+#       aqua-version: "${{ needs.cli.outputs.version }}"
+
+#   fluence-cli:
+#     needs: api
+#     uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
+#     with:
+#       aqua-api-version: "${{ needs.api.outputs.version }}"
