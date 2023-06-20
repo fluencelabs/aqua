@@ -73,6 +73,11 @@ jobs:
           compose-file: ".github/e2e/docker-compose.yml"
           down-flags: "--volumes"
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.2.4
+        with:
+          version: 8
+
       - name: Setup node with self-hosted registry
         uses: actions/setup-node@v3
         with:

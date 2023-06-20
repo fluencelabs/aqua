@@ -66,6 +66,11 @@ jobs:
           secrets: |
             kv/npm-registry/basicauth/ci token | NODE_AUTH_TOKEN
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.2.4
+        with:
+          version: 8
+
       - name: Setup node with self-hosted npm registry
         uses: actions/setup-node@v3
         with:
