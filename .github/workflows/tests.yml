@@ -90,12 +90,8 @@ jobs:
           dependencies: |
             {
               "@fluencelabs/js-client.node": "${{ fromJson(inputs.js-client-snapshots)['js-client.node'] }}",
-              "@fluencelabs/js-client.api": "${{ fromJson(inputs.js-client-snapshots)['js-client.api] }}"
+              "@fluencelabs/js-client.api": "${{ fromJson(inputs.js-client-snapshots)['js-client.api'] }}"
             }
-
-      - name: Remove compiled examples
-        if: inputs.aqua-version != ''
-        run: rm -rf integration-tests/src/compiled/examples/*
 
       - run: pnpm run compile-aqua -- -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
         working-directory: integration-tests
