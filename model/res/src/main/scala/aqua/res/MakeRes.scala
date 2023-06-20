@@ -14,16 +14,17 @@ object MakeRes {
 
   def hop(onPeer: ValueModel): ResolvedOp.Tree = {
     val streamName = "hop-stream-drop"
-    val elementType = ScalarType.u8
+    val elementType = BottomType
     val streamType = StreamType(elementType)
     val canonName = "hop-canon-drop"
+    val canonType = CanonStreamType(elementType)
 
     RestrictionRes(streamName, streamType).wrap(
-      RestrictionRes(canonName, streamType).wrap(
+      RestrictionRes(canonName, canonType).wrap(
         CanonRes(
           operand = VarModel(streamName, streamType),
           peerId = onPeer,
-          exportTo = CallModel.Export(canonName, CanonStreamType(elementType))
+          exportTo = CallModel.Export(canonName, canonType)
         ).leaf
       )
     )
