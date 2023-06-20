@@ -17,14 +17,16 @@
   },
   "scripts": {
     "run": "node index.js",
-    "build": "tsc"
+    "build": "tsc",
+    "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {
     "@fluencelabs/aqua-ipfs": "0.5.9",
     "@fluencelabs/aqua-lib": "0.6.0",
     "@fluencelabs/fluence": "0.28.0",
     "@fluencelabs/fluence-network-environment": "1.0.14",
-    "ipfs-http-client": "50.1.2"
+    "ipfs-http-client": "50.1.2",
+    "multiaddr": "^10.0.1"
   },
   "devDependencies": {
     "ts-node": "10.9.1",

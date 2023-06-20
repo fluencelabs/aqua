@@ -8,12 +8,12 @@
     "aqua-api.d.ts",
     "meta-utils.js"
   ],
-  "scripts": {
-    "build": "exit 0"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fluencelabs/aqua.git"
+  },
+  "scripts": {
+    "preinstall": "npx only-allow pnpm"
   },
   "keywords": [
     "aqua",

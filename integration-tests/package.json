@@ -15,7 +15,7 @@
         "src/"
     ],
     "scripts": {
-        "build": "tsc",
+        "build": "tsc & npm run compile-aqua",
         "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --detectOpenHandles",
         "examples": "jest",
         "pubsub": "node -r ts-node/register src/pubsub.ts",

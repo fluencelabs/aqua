@@ -12,7 +12,7 @@
     "url": "git+https://github.com/fluencelabs/aqua.git"
   },
   "scripts": {
-    "build": "exit 0"
+    "preinstall": "npx only-allow pnpm"
   },
   "keywords": [
     "aqua",

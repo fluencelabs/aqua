@@ -1,0 +1,5 @@
+packages:
+  - 'cli/cli-npm'
+  - 'api/api-npm'
+  - 'language-server/language-server-npm'
+  - 'integration-tests'
