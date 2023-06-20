@@ -10,13 +10,14 @@ object ResBuilder {
 
   def join(stream: VarModel, onIdx: ValueModel, peer: ValueModel) = {
     val testVM = VarModel(stream.name + "_test", stream.`type`)
+    val testStreamType = stream.`type`.asInstanceOf[StreamType] // Unsafe
     val iter = VarModel(stream.name + "_fold_var", ScalarType.string)
     val canon = VarModel(stream.name + "_iter_canon", CanonStreamType(ScalarType.string))
     val canonRes = VarModel(stream.name + "_result_canon", CanonStreamType(ScalarType.string))
     val arrayRes = VarModel(stream.name + "_gate", ArrayType(ScalarType.string))
     val idx = VarModel(stream.name + "_incr", ScalarType.u32)
 
-    RestrictionRes(testVM.name, true).wrap(
+    RestrictionRes(testVM.name, testStreamType).wrap(
       CallServiceRes(
         LiteralModel("\"math\"", ScalarType.string),
         "add",

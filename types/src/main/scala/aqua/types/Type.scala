@@ -26,6 +26,16 @@ sealed trait Type {
   def uniteBottom(other: Type): Type = UniteTypes.bottom.combine(this, other)
 
   def properties: Map[String, Type] = Map.empty
+
+  /**
+   * Use for printing purposes only
+   * Ideally should be in sync with [[AirGen.varNameToString]]
+   */
+  def airPrefix: String = this match {
+    case _: StreamType => "$"
+    case _: CanonStreamType => "#"
+    case _ => ""
+  }
 }
 
 // Product is a list of (optionally labelled) types

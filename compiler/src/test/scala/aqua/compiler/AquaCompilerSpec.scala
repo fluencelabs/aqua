@@ -167,7 +167,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
       SeqRes.wrap(
         getDataSrv("-relay-", ScalarType.string),
         getDataSrv(peers.name, peers.`type`),
-        RestrictionRes("results", true).wrap(
+        RestrictionRes(results.name, resultsType).wrap(
           SeqRes.wrap(
             ParRes.wrap(
               FoldRes(peer.name, peers, Some(ForModel.NeverMode)).wrap(
@@ -273,23 +273,24 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val Some(funcWrap) = aquaRes.funcs.find(_.funcName == "wrap")
     val Some(barfoo) = aquaRes.funcs.find(_.funcName == "barfoo")
 
-    val resVM = VarModel("res", StreamType(ScalarType.string))
+    val resStreamType = StreamType(ScalarType.string)
+    val resVM = VarModel("res", resStreamType)
     val resCanonVM = VarModel("-res-fix-0", CanonStreamType(ScalarType.string))
     val resFlatVM = VarModel("-res-flat-0", ArrayType(ScalarType.string))
 
     barfoo.body.equalsOrShowDiff(
       SeqRes.wrap(
-        RestrictionRes("res", true).wrap(
+        RestrictionRes(resVM.name, resStreamType).wrap(
           SeqRes.wrap(
             // res <- foo()
             ApRes(
               LiteralModel.fromRaw(LiteralRaw.quote("I am MyFooBar foo")),
-              CallModel.Export("res", StreamType(ScalarType.string))
+              CallModel.Export(resVM.name, resVM.`type`)
             ).leaf,
             // res <- bar()
             ApRes(
               LiteralModel.fromRaw(LiteralRaw.quote(" I am MyFooBar bar")),
-              CallModel.Export("res", StreamType(ScalarType.string))
+              CallModel.Export(resVM.name, resVM.`type`)
             ).leaf,
             // canonicalization
             CanonRes(

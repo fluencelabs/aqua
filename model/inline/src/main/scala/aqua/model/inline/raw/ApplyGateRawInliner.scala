@@ -61,7 +61,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
 
     val incrVar = VarModel(idxIncrName, ScalarType.u32)
 
-    RestrictionModel(varSTest.name, true).wrap(
+    RestrictionModel(varSTest.name, streamType).wrap(
       increment(idxModel, incrVar),
       ForModel(iter.name, VarModel(streamName, streamType), Some(ForModel.NeverMode)).wrap(
         PushToStreamModel(

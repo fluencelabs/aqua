@@ -3,7 +3,6 @@ package aqua.model.inline.raw
 import aqua.model.{
   CallModel,
   CallServiceModel,
-  CanonicalizeModel,
   FlattenModel,
   ForModel,
   FunctorModel,
@@ -15,7 +14,6 @@ import aqua.model.{
   OpModel,
   PropertyModel,
   PushToStreamModel,
-  RestrictionModel,
   SeqModel,
   ValueModel,
   VarModel,
@@ -153,7 +151,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     properties.map {
       case iir @ IntoIndexRaw(vr, t) =>
         unfold(vr, propertiesAllowed = false).flatMap {
-          case (vm@VarModel(_, _, _), inline) if vm.properties.nonEmpty =>
+          case (vm @ VarModel(_, _, _), inline) if vm.properties.nonEmpty =>
             removeProperties(vm).map { case (vf, inlf) =>
               PropertyRawWithModel(iir, Option(IntoIndexModel(vf.name, t))) -> Inline(
                 inline.flattenValues ++ inlf.flattenValues,

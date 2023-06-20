@@ -14,13 +14,14 @@ object MakeRes {
 
   def hop(onPeer: ValueModel): ResolvedOp.Tree = {
     val streamName = "hop-stream-drop"
-    val canonName = "hop-canon-drop"
     val elementType = ScalarType.u8
+    val streamType = StreamType(elementType)
+    val canonName = "hop-canon-drop"
 
-    RestrictionRes(streamName, isStream = true).wrap(
-      RestrictionRes(canonName, isStream = false).wrap(
+    RestrictionRes(streamName, streamType).wrap(
+      RestrictionRes(canonName, streamType).wrap(
         CanonRes(
-          operand = VarModel(streamName, StreamType(elementType)),
+          operand = VarModel(streamName, streamType),
           peerId = onPeer,
           exportTo = CallModel.Export(canonName, CanonStreamType(elementType))
         ).leaf
@@ -36,7 +37,7 @@ object MakeRes {
     case MatchMismatchModel(a, b, s) =>
       MatchMismatchRes(a, b, s).leaf
     case ForModel(item, iter, mode) if !isNillLiteral(iter) => FoldRes(item, iter, mode).leaf
-    case RestrictionModel(item, isStream) => RestrictionRes(item, isStream).leaf
+    case RestrictionModel(item, itemType) => RestrictionRes(item, itemType).leaf
     case DetachModel => ParRes.leaf
     case ParModel => ParRes.leaf
     case XorModel => XorRes.leaf

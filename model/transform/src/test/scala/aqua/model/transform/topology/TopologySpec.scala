@@ -900,7 +900,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   "topology resolver" should "handle empty for correctly [bug LNG-149]" in {
     val streamName = "array-inline"
     val iterName = "a-0"
-    val stream = VarModel(streamName, StreamType(LiteralType.number))
+    val streamType = StreamType(LiteralType.number)
+    val stream = VarModel(streamName, streamType)
     val array = VarModel(s"$streamName-0", ArrayType(LiteralType.number))
 
     val literal = (i: String) => LiteralModel(i, LiteralType.number)
@@ -913,7 +914,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val model = OnModel(initPeer, Chain.one(relay)).wrap(
       SeqModel.wrap(
-        RestrictionModel(streamName, true).wrap(
+        RestrictionModel(streamName, streamType).wrap(
           push("1"),
           push("2"),
           CanonicalizeModel(stream, CallModel.Export(array.name, array.`type`)).leaf
@@ -927,7 +928,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc = Topology.resolve(model).value
 
     val expected = SeqRes.wrap(
-      RestrictionRes(streamName, true).wrap(
+      RestrictionRes(streamName, streamType).wrap(
         ApRes(literal("1"), CallModel.Export(stream.name, stream.`type`)).leaf,
         ApRes(literal("2"), CallModel.Export(stream.name, stream.`type`)).leaf,
         CanonRes(

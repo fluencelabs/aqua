@@ -3,6 +3,7 @@ package aqua.res
 import aqua.model.{CallModel, ForModel, ValueModel, VarModel}
 import aqua.raw.ops.Call
 import aqua.tree.{TreeNode, TreeNodeCompanion}
+import aqua.types.DataType
 import cats.data.Chain
 import cats.free.Cofree
 import cats.Show
@@ -31,12 +32,13 @@ case class MatchMismatchRes(left: ValueModel, right: ValueModel, shouldMatch: Bo
   override def toString: String = s"(${if (shouldMatch) "match" else "mismatch"} $left $right)"
 }
 
-case class FoldRes(item: String, iterable: ValueModel, mode: Option[ForModel.Mode] = None) extends ResolvedOp {
+case class FoldRes(item: String, iterable: ValueModel, mode: Option[ForModel.Mode] = None)
+    extends ResolvedOp {
   override def toString: String = s"(fold $iterable $item ${mode.map(_.toString).getOrElse("")}"
 }
 
-case class RestrictionRes(item: String, isStream: Boolean) extends ResolvedOp {
-  override def toString: String = s"(new ${if (isStream) "$" else ""}$item "
+case class RestrictionRes(item: String, `type`: DataType) extends ResolvedOp {
+  override def toString: String = s"(new ${`type`.airPrefix}$item "
 }
 
 case class CallServiceRes(
@@ -52,7 +54,8 @@ case class ApRes(operand: ValueModel, exportTo: CallModel.Export) extends Resolv
   override def toString: String = s"(ap $operand $exportTo)"
 }
 
-case class CanonRes(operand: ValueModel, peerId: ValueModel, exportTo: CallModel.Export) extends ResolvedOp {
+case class CanonRes(operand: ValueModel, peerId: ValueModel, exportTo: CallModel.Export)
+    extends ResolvedOp {
   override def toString: String = s"(canon $peerId $operand $exportTo)"
 }
 

@@ -5,7 +5,7 @@ import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag.Tree
 import aqua.raw.value.{CallArrowRaw, ValueRaw, VarRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.{ArrowType, ProductType}
+import aqua.types.{ArrowType, DataType, ProductType}
 import cats.{Eval, Show}
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
@@ -121,7 +121,7 @@ case class NextTag(item: String) extends RawTag {
     copy(item = map.getOrElse(item, item))
 }
 
-case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag {
+case class RestrictionTag(name: String, `type`: DataType) extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(name)
 

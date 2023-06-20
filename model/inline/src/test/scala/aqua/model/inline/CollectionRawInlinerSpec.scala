@@ -33,7 +33,7 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
 
     tree.get.equalsOrShowDiff(
       // create a stream
-      RestrictionModel("option-inline", true).wrap(
+      RestrictionModel("option-inline", StreamType(nestedType)).wrap(
         SeqModel.wrap(
           // create an object
           CallServiceModel(

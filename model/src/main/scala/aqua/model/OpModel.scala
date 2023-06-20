@@ -7,7 +7,7 @@ import cats.Show
 import cats.Eval
 import cats.data.NonEmptyList
 import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.ScalarType
+import aqua.types.*
 
 import scala.annotation.tailrec
 
@@ -95,7 +95,9 @@ case class NextModel(item: String) extends OpModel {
 
 }
 
-case class RestrictionModel(name: String, isStream: Boolean) extends SeqGroupModel {
+// TODO: Refactor out `name` and `type` to
+// something like VarModel without properties
+case class RestrictionModel(name: String, `type`: DataType) extends SeqGroupModel {
   override def usesVarNames: Set[String] = Set.empty
 
   override def restrictsVarNames: Set[String] = Set(name)
