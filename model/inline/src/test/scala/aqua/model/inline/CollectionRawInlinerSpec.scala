@@ -7,6 +7,7 @@ import aqua.raw.ops.*
 import aqua.raw.value.{CollectionRaw, LiteralRaw, MakeStructRaw, VarRaw}
 import aqua.types.{CanonStreamType, OptionType, ScalarType, StreamType, StructType}
 import cats.data.{NonEmptyList, NonEmptyMap}
+import cats.syntax.show.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -25,15 +26,14 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
     val raw = CollectionRaw(NonEmptyList.of(makeStruct), OptionType(nestedType))
 
     val (v, tree) =
-      RawValueInliner.valueToModel[InliningState](raw, false).run(InliningState()).value._2
+      RawValueInliner.valueToModel[InliningState](raw, false).runA(InliningState()).value
 
     val resultValue = VarModel("option-inline-0", CanonStreamType(nestedType))
 
     v shouldBe resultValue
 
-    tree.get.equalsOrShowDiff(
-      // create a stream
-      RestrictionModel("option-inline", StreamType(nestedType)).wrap(
+    val expected =
+      RestrictionModel("option-inline", StreamType(nestedType)).wrap( // create a stream
         SeqModel.wrap(
           // create an object
           CallServiceModel(
@@ -61,8 +61,8 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
           ).leaf
         )
       )
-    ) shouldBe true
 
+    tree.get.equalsOrShowDiff(expected) shouldBe true
   }
 
 }
