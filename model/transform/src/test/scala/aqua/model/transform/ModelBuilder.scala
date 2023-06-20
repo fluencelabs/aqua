@@ -134,22 +134,21 @@ object ModelBuilder {
     MakeRes.hop(peer)
 
   /**
-   * @param streamEl [[ValueModel]] of `stream[idx]`
+   * @param stream stream [[VarModel]]
+   * @param idx id [[ValueModel]]
    * @return [[OpModel.Tree]] of join of `stream[idx]`
    */
-  def join(streamEl: ValueModel): OpModel.Tree =
-    streamEl match {
+  def join(stream: VarModel, idx: ValueModel): OpModel.Tree =
+    stream match {
       case VarModel(
             streamName,
             streamType: StreamType,
-            IntoIndexModel(idx, idxType) ==: Chain.`nil`
+            Chain.`nil`
           ) =>
         ApplyGateRawInliner.joinStreamOnIndexModel(
           streamName = streamName,
           streamType = streamType,
-          idxModel =
-            if (idx.forall(Character.isDigit)) LiteralModel(idx, idxType)
-            else VarModel(idx, idxType),
+          idxModel = idx,
           idxIncrName = streamName + "_incr",
           testName = streamName + "_test",
           iterName = streamName + "_fold_var",

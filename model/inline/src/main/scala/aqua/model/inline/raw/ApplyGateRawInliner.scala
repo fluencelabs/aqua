@@ -18,12 +18,12 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
    * (seq
    * (seq
    *  (seq
-   *   (call %init_peer_id% ("math" "add") [0 1] stream_incr)
+   *   (call <peer> ("math" "add") [0 1] stream_incr)
    *   (fold $stream s
    *    (seq
    *     (seq
    *      (ap s $stream_test)
-   *      (canon %init_peer_id% $stream_test  #stream_iter_canon)
+   *      (canon <peer> $stream_test  #stream_iter_canon)
    *     )
    *     (xor
    *      (match #stream_iter_canon.length stream_incr
@@ -35,7 +35,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
    *    (never)
    *   )
    *  )
-   *  (canon %init_peer_id% $stream_test  #stream_result_canon)
+   *  (canon <peer> $stream_test  #stream_result_canon)
    * )
    * (ap #stream_result_canon stream_gate)
    * )
@@ -119,7 +119,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
         resultName = uniqueResultName
       )
 
-      val tree = SeqModel.wrap((idxInline.predo.toList :+ gate): _*)
+      val tree = SeqModel.wrap(idxInline.predo.toList :+ gate)
 
       val treeInline =
         Inline(idxInline.flattenValues, predo = Chain.one(tree))

@@ -8,6 +8,7 @@ import aqua.raw.value.{IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.{LiteralType, ScalarType, StreamType}
 import cats.Eval
 import cats.data.{Chain, NonEmptyList}
+import cats.data.Chain.*
 import cats.free.Cofree
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -20,20 +21,27 @@ import aqua.raw.value.ValueRaw
 
 class TopologySpec extends AnyFlatSpec with Matchers {
 
-  import ModelBuilder._
+  import ModelBuilder.{join as joinModel, *}
+  import ResBuilder.join as joinRes
 
-  def joinModelRes(streamEl: ValueRaw | ValueModel): (OpModel.Tree, ResolvedOp.Tree) = {
-    val model = join(streamEl match {
+  def joinModelRes(streamEl: ValueRaw | ValueModel): (OpModel.Tree, ResolvedOp.Tree) =
+    streamEl match {
       case vm: ValueModel => vm
       case vr: ValueRaw => ValueModel.fromRaw(vr)
-    })
+    } match {
+      case stream @ VarModel(name, baseType, IntoIndexModel(idx, idxType) ==: Chain.`nil`) =>
+        val idxModel =
+          if (idx.forall(Character.isDigit)) LiteralModel(idx, idxType)
+          else VarModel(idx, idxType)
 
-    // Join should not contain any topology hops
-    // So assume that translation works correctly for it
-    val res = Topology.resolve(model)
+        val streamWithoutIdx = stream.copy(properties = Chain.`nil`)
 
-    (model, res.value)
-  }
+        (
+          joinModel(streamWithoutIdx, idxModel),
+          joinRes(streamWithoutIdx, idxModel, ValueModel.fromRaw(initPeer))
+        )
+      case _ => ???
+    }
 
   "topology resolver" should "do nothing on init peer" in {
 
