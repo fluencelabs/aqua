@@ -3,32 +3,31 @@ name: Publish snapshots
 on:
   workflow_call:
     inputs:
-      sbt-command:
-        description: "sbt build command"
-        type: string
-      working-directory:
-        description: "working directory of npm package"
-        type: string
       ref:
         description: "git ref to checkout to"
         type: string
         default: "main"
     outputs:
-      version:
-        description: "package version"
-        value: ${{ jobs.publish.outputs.version }}
+      aqua-snapshots:
+        description: "aqua-snapshots"
+        value: ${{ jobs.publish.outputs.snapshots }}
 
 env:
   FORCE_COLOR: true
+  CI: true
 
 jobs:
   publish:
-    name: "${{ inputs.sbt-command }}"
+    name: "Publish snapshots"
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
-    outputs:
-      version: "${{ steps.snapshot.outputs.version }}"
+    permissions:
+      contents: read
+      id-token: write
+
+    snapshots:
+      version: "${{ steps.snapshot.outputs.snapshots }}"
 
     steps:
       - name: Checkout repository
@@ -49,10 +48,10 @@ jobs:
         with:
           apps: sbt
 
-      - name: JS build
+      - name: scala-js build
         env:
           SNAPSHOT: ${{ steps.version.outputs.id }}
-        run: sbt ${{ inputs.sbt-command }}
+        run: sbt ";cliJS/fastOptJS;language-server-apiJS/fastOptJS;aqua-apiJS/fastOptJS"
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.5.0
@@ -72,18 +71,18 @@ jobs:
         with:
           node-version: "16"
           registry-url: "https://npm.fluence.dev"
-          cache-dependency-path: "*/*-npm/package-lock.json"
-          cache: "npm"
+          cache: "pnpm"
 
-      - run: npm i
-        working-directory: ${{ inputs.working-directory }}
+      - run: pnpm -r i
 
-      - run: npm run build
-        working-directory: ${{ inputs.working-directory }}
+      - name: Set package version
+        run: node ci.cjs bump-version ${{ steps.version.outputs.id }}
+
+      - run: pnpm -r build
 
       - name: Publish snapshot
         id: snapshot
-        uses: fluencelabs/github-actions/npm-publish-snapshot@main
+        uses: fluencelabs/github-actions/pnpm-publish-snapshot@main
         with:
-          working-directory: ${{ inputs.working-directory }}
           id: ${{ steps.version.outputs.id }}
+          set-version: false
