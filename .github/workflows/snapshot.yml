@@ -26,8 +26,8 @@ jobs:
       contents: read
       id-token: write
 
-    snapshots:
-      version: "${{ steps.snapshot.outputs.snapshots }}"
+    outputs:
+      snapshots: "${{ steps.snapshot.outputs.snapshots }}"
 
     steps:
       - name: Checkout repository

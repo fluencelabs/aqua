@@ -88,10 +88,6 @@ jobs:
         uses: fluencelabs/github-actions/pnpm-set-dependency@main
         with:
           dependencies: |
-          package: "@fluencelabs/js-client.node"
-          version: ${{ fromJson(inputs.js-client-snapshots)['js-client.node'] }}
-          package: "@fluencelabs/js-client.api"
-          version: ${{ fromJson(inputs.js-client-snapshots)['js-client.api'] }}
             {
               "@fluencelabs/js-client.node": "${{ fromJson(inputs.js-client-snapshots)['js-client.node'] }}",
               "@fluencelabs/js-client.api": "${{ fromJson(inputs.js-client-snapshots)['js-client.api] }}"
