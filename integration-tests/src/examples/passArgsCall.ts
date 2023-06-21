@@ -1,4 +1,3 @@
-import { Fluence } from '@fluencelabs/fluence';
 import {bugLNG60, create_client_util, registerAquaDHT} from '../compiled/examples/passArgs.js';
 
 export async function passArgsCall() {

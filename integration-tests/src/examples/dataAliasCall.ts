@@ -1,4 +1,3 @@
-import { FluencePeer } from '@fluencelabs/fluence';
 import { getAliasedData, registerNodeIdGetter } from '../compiled/examples/dataAlias.js';
 
 export async function dataAliasCall() {

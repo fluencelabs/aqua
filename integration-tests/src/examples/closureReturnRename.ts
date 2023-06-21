@@ -1,4 +1,3 @@
-import { Fluence } from '@fluencelabs/fluence';
 import {
     lng193Bug
 } from '../compiled/examples/closureReturnRename.js';
