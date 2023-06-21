@@ -8,15 +8,24 @@ import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.model.*
 import aqua.types.*
 
-// TODO docs
+/**
+ * Helpers for translating [[OpModel]] to [[ResolvedOp]]
+ */
 object MakeRes {
-  val op: ValueModel = LiteralModel.fromRaw(LiteralRaw.quote("op"))
 
+  /**
+   * Make topology hop to peer
+   *
+   * @param onPeer peer to make hop to
+   * @return [[ResolvedOp.Tree]] corresponsing to a hop
+   */
   def hop(onPeer: ValueModel): ResolvedOp.Tree = {
-    val streamName = "hop-stream-drop"
+    // Those names can't be produced from compilation
+    // so they are safe to use
+    val streamName = "-ephemeral-stream-"
+    val canonName = "-ephemeral-canon-"
     val elementType = BottomType
     val streamType = StreamType(elementType)
-    val canonName = "hop-canon-drop"
     val canonType = CanonStreamType(elementType)
 
     RestrictionRes(streamName, streamType).wrap(
