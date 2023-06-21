@@ -114,23 +114,12 @@ jobs:
         working-directory: cli/cli-npm
 
       - name: Compule aqua
-        run: pnpm run compile-aqua -- -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
+        # run: pnpm run compile-aqua -- -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
+        run: pnpm run compile-aqua
         working-directory: integration-tests
 
       - run: pnpm run test
         working-directory: integration-tests
-
-      - name: Print versions to check summary
-        if: always()
-        working-directory: integration-tests
-        run: |
-          cat <<SNAPSHOT >> $GITHUB_STEP_SUMMARY
-          ## Used versions
-          | name           | version                                                              |
-          | -------------- | -------------------------------------------------------------------- |
-          | nox            | $(docker run --rm --entrypoint=nox ${RUST_PEER_IMAGE} --version) |
-          | aqua           | $(pnpx aqua --version)                                                |
-          SNAPSHOT
 
       - name: Dump rust-peer logs
         if: always()
