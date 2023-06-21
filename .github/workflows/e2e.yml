@@ -37,13 +37,13 @@ jobs:
 
   fluence-cli-snapshot:
     name: "fluence-cli"
-    needs: api
+    needs: aqua
     uses: fluencelabs/fluence-cli/.github/workflows/snapshot.yml@FLU-345
     with:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
   fluence-cli:
-    needs: api
+    needs: aqua
     uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@FLU-345
     with:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
