@@ -9,7 +9,7 @@ on:
         default: "main"
     outputs:
       aqua-snapshots:
-        description: "aqua-snapshots"
+        description: "aqua snapshots"
         value: ${{ jobs.publish.outputs.snapshots }}
 
 env:
