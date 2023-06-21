@@ -73,6 +73,17 @@ jobs:
           compose-file: ".github/e2e/docker-compose.yml"
           down-flags: "--volumes"
 
+      - name: Cache Scala
+        uses: coursier/cache-action@v6
+
+      - name: Setup Scala
+        uses: coursier/setup-action@v1
+        with:
+          apps: sbt
+
+      - name: cli-js build
+        run: sbt "cliJS/fastOptJS"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2.2.4
         with:
@@ -98,33 +109,28 @@ jobs:
               "@fluencelabs/js-client.api": "${{ fromJson(inputs.js-client-snapshots)['js-client.api'] }}"
             }
 
-      - run: pnpm run compile-aqua -- -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
+      - name: Build cli
+        run: pnpm run build
+        working-directory: cli/cli-npm
+
+      - name: Compule aqua
+        run: pnpm run compile-aqua -- -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
         working-directory: integration-tests
 
       - run: pnpm run test
         working-directory: integration-tests
 
-      - name: Setup dasel
+      - name: Print versions to check summary
         if: always()
-        uses: allejo/setup-dasel@v1
-        with:
-          version: 1.27.3
-
-      # - name: Print versions to check summary
-      #   if: always()
-      #   working-directory: integration-tests
-      #   run: |
-      #     cat <<SNAPSHOT >> $GITHUB_STEP_SUMMARY
-      #     ## Used versions
-      #     | name           | version                                                              |
-      #     | -------------- | -------------------------------------------------------------------- |
-      #     | nox            | $(docker run --rm --entrypoint=nox ${RUST_PEER_IMAGE} --version) |
-      #     | avm            | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/avm).version') |
-      #     | marine-js      | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/marine-js).version') |
-      #     | aqua           | $(npx aqua --version)                                                |
-      #     | js-client.api  | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/js-client.api).version') |
-      #     | js-client.node | $(dasel -f package-lock.json -p json -m --plain 'packages.(?:-=node_modules/@fluencelabs/js-client.node).version') |
-      #     SNAPSHOT
+        working-directory: integration-tests
+        run: |
+          cat <<SNAPSHOT >> $GITHUB_STEP_SUMMARY
+          ## Used versions
+          | name           | version                                                              |
+          | -------------- | -------------------------------------------------------------------- |
+          | nox            | $(docker run --rm --entrypoint=nox ${RUST_PEER_IMAGE} --version) |
+          | aqua           | $(pnpx aqua --version)                                                |
+          SNAPSHOT
 
       - name: Dump rust-peer logs
         if: always()

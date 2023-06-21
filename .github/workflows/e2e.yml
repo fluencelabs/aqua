@@ -35,22 +35,24 @@ jobs:
     with:
       ref: ${{ github.ref }}
 
-#   tests:
-#     name: "aqua"
-#     needs: cli
-#     uses: ./.github/workflows/tests.yml
-#     with:
-#       ref: ${{ github.ref }}
-#       aqua-version: "${{ needs.cli.outputs.version }}"
+  fluence-cli-snapshot:
+    name: "fluence-cli"
+    needs: api
+    uses: fluencelabs/fluence-cli/.github/workflows/snapshot.yml@FLU-345
+    with:
+      aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
-#   registry:
-#     needs: cli
-#     uses: fluencelabs/registry/.github/workflows/tests.yml@main
-#     with:
-#       aqua-version: "${{ needs.cli.outputs.version }}"
+  fluence-cli:
+    needs: api
+    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@FLU-345
+    with:
+      aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
-#   fluence-cli:
-#     needs: api
-#     uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
-#     with:
-#       aqua-api-version: "${{ needs.api.outputs.version }}"
+  registry:
+    needs:
+      - aqua
+      - fluence-cli-snapshot
+    uses: fluencelabs/registry/.github/workflows/tests.yml@FLU-345
+    with:
+      aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
+      fluence-cli-version: "${{ needs.fluence-cli-snapshot.outputs.version }}"
