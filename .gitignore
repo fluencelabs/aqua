@@ -11,3 +11,5 @@ project/target
 
 npm/aqua.js
 **/node_modules
+
+**/.antlr
