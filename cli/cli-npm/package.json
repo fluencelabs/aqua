@@ -17,8 +17,7 @@
   },
   "scripts": {
     "run": "node index.js",
-    "build": "tsc",
-    "preinstall": "npx only-allow pnpm"
+    "build": "tsc"
   },
   "dependencies": {
     "@fluencelabs/aqua-ipfs": "0.5.9",
