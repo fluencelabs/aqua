@@ -22,7 +22,7 @@
     "pubsub": "node -r ts-node/register src/pubsub.ts",
     "exec": "npm run compile-aqua && npm run prettify-compiled && node -r ts-node/register src/index.ts",
     "run": "node -r ts-node/register src/index.ts",
-    "compile-aqua": "aqua -i ./aqua/ -o ./src/compiled",
+    "compile-aqua": "aqua -i ./aqua/ -o ./src/compiled -c \"UNIQUE_CONST = 1\" -c \"ANOTHER_CONST = \"ab\"",
     "compile-aqua:air": "aqua -i ./aqua/ -o ./compiled-air -a",
     "prettify-compiled": "prettier --write src/compiled",
     "aqua": "aqua",
