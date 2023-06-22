@@ -113,6 +113,8 @@ object Transform extends Logging {
       conf.respFuncName
     )
 
+    println(func.body.show)
+
     for {
       // Pre transform and inline the function
       model <- funcToModelTree(func, preTransformer)

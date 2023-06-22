@@ -265,7 +265,7 @@ case class CanonicalizeTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
   override def renameExports(map: Map[String, String]): RawTag =
     copy(exportTo = exportTo.mapName(n => map.getOrElse(n, n)))
 
-  override def toString: String = s"(can $operand $exportTo)"
+  override def toString: String = s"(canon $operand $exportTo)"
 }
 
 case class JoinTag(operands: NonEmptyList[ValueRaw]) extends RawTag {
@@ -274,4 +274,13 @@ case class JoinTag(operands: NonEmptyList[ValueRaw]) extends RawTag {
     JoinTag(operands.map(_.map(f)))
 
   override def toString: String = s"(join ${operands.toList.mkString(" ")})"
+}
+
+case class FailTag(error: ValueRaw) extends RawTag {
+
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
+    FailTag(f(error))
+
+  override def toString(): String =
+    s"(fail $error)"
 }
