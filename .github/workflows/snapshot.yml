@@ -19,7 +19,7 @@ env:
 jobs:
   publish:
     name: "Publish snapshots"
-    runs-on: ubuntu-latest
+    runs-on: builder
     timeout-minutes: 60
 
     permissions:

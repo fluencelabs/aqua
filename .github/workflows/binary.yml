@@ -63,3 +63,8 @@ jobs:
         with:
           name: aqua-${{ inputs.os }}-${{ inputs.arch }}
           path: cli/cli/.jvm/target/graalvm-native-image/cli
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: aqua-${{ inputs.os }}-${{ inputs.arch }}
+          path: cli/cli/.jvm/target/graalvm-native-image/cli

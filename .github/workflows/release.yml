@@ -61,17 +61,32 @@ jobs:
         run: |
           sed -i 's/aquaVersion =.*/aquaVersion = "${{ steps.version.outputs.version }}"/g' build.sbt
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.2.4
+        with:
+          version: 8
+
+      - name: Setup node with self-hosted npm registry
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+
       - name: Set cli version
-        run: npm version ${{ steps.version.outputs.version }}
+        run: pnpm version ${{ steps.version.outputs.version }}
         working-directory: cli/cli-npm
 
       - name: Set api version
-        run: npm version ${{ steps.version.outputs.version }}
-        working-directory: api/aqua-api-npm
+        run: pnpm version ${{ steps.version.outputs.version }}
+        working-directory: api/api-npm
 
       - name: Set lsp version
-        run: npm version ${{ steps.version.outputs.version }}
+        run: pnpm version ${{ steps.version.outputs.version }}
         working-directory: language-server/language-server-npm
+
+      - name: Regenerate lock
+        run: pnpm -r i
 
       - name: Commit version bump
         uses: stefanzweifel/git-auto-commit-action@v4
