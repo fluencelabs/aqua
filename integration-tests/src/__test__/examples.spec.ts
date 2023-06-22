@@ -178,7 +178,7 @@ describe('Testing examples', () => {
 
     it('constants.aqua', async () => {
         let constantCallResult = await constantsCall();
-        expect(constantCallResult).toEqual(['1', 'ab']);
+        expect(constantCallResult).toEqual(['5', 'default-str']);
     });
 
     it('PARTICLE_TTL and PARTICLE_TIMESTAMP', async () => {

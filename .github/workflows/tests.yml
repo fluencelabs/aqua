@@ -114,7 +114,6 @@ jobs:
         working-directory: cli/cli-npm
 
       - name: Compule aqua
-        # run: pnpm run compile-aqua -- -c "UNIQUE_CONST = 1" -c "ANOTHER_CONST = \"ab\""
         run: pnpm run compile-aqua
         working-directory: integration-tests
 
