@@ -6,7 +6,7 @@ on:
       ref:
         description: "git ref to checkout to"
         type: string
-        default: "master"
+        default: "main"
       fluence-env:
         description: "Fluence enviroment to run tests agains"
         type: string
