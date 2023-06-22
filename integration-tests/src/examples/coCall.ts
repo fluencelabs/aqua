@@ -1,4 +1,3 @@
-import { Fluence } from '@fluencelabs/fluence';
 import { parFunc } from '../compiled/examples/par.js';
 import { registerCoService } from '../compiled/examples/co.js';
 import {relay1} from "../__test__/examples.spec.js";

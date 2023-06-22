@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   aqua:
+    name: "aqua"
     if: >
       github.event_name == 'push' ||
       contains(github.event.pull_request.labels.*.name, 'e2e')
@@ -34,38 +35,24 @@ jobs:
     with:
       ref: ${{ github.ref }}
 
-  aqua-playground:
+  fluence-cli-snapshot:
+    name: "fluence-cli"
     needs: aqua
-    uses: fluencelabs/aqua-playground/.github/workflows/tests.yml@master
+    uses: fluencelabs/fluence-cli/.github/workflows/snapshot.yml@main
     with:
-      aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
-
-  registry:
-    needs: aqua
-    uses: fluencelabs/registry/.github/workflows/tests.yml@main
-    with:
-      aqua-version: "${{ needs.aqua.outputs.aqua-version }}"
+      aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
   fluence-cli:
     needs: aqua
     uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
     with:
-      aqua-api-version: "${{ needs.aqua.outputs.aqua-api-version }}"
+      aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
-  aqua-native:
-    name: "aqua"
-    strategy:
-      matrix:
-        runner:
-          - runs-on: ubuntu-latest
-            arch: amd64
-            os: linux
-            static: true
+  registry:
     needs:
       - aqua
-    uses: ./.github/workflows/binary.yml
+      - fluence-cli-snapshot
+    uses: fluencelabs/registry/.github/workflows/tests.yml@main
     with:
-      runs-on: ${{ matrix.runner.runs-on }}
-      arch: ${{ matrix.runner.arch }}
-      os: ${{ matrix.runner.os }}
-      static: ${{ matrix.runner.static }}
+      aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
+      fluence-cli-version: "${{ needs.fluence-cli-snapshot.outputs.version }}"

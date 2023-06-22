@@ -8,10 +8,6 @@
     "aqua-api.d.ts",
     "meta-utils.js"
   ],
-  "scripts": {
-    "move:scalajs": "cp ../aqua-api/.js/target/scala-3.3.0/aqua-api-opt/main.js ./aqua-api.js",
-    "move:fast": "cp ../aqua-api/.js/target/scala-3.3.0/aqua-api-fastopt/main.js ./aqua-api.js"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fluencelabs/aqua.git"

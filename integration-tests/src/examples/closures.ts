@@ -1,4 +1,3 @@
-import { Fluence } from '@fluencelabs/fluence';
 import {
     closureIn,
     closureOut,

@@ -1,4 +1,3 @@
-import { Fluence } from '@fluencelabs/fluence';
 import { doStuff, registerTestS } from '../compiled/examples/complex.js';
 
 export async function complexCall(selfPeerId: string, relayPeerId: string) {

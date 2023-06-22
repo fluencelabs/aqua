@@ -28,9 +28,9 @@ Comprehensive documentation and usage examples as well as a number of videos can
 ## Repository Structure
 
 - [**api**](./api) - Aqua API for JS
-    - [aqua-api](./api/aqua-api) - Scala sources
-    - [aqua-api-npm](./api/aqua-api-npm) - JS project
-    - [aqua-api-example](./api/aqua-api-example) - usage example
+    - [api](./api/api) - Scala sources
+    - [api-npm](./api/api-npm) - JS project
+    - [api-example](./api/api-example) - usage example
 - [**aqua-run**](./aqua-run) - Aqua API to run functions
 - [**backend**](./backend) - compilation backend interface
     - [backend/air](./backend/air) - generates AIR code from the middle-end model
