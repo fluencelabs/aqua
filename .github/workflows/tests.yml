@@ -14,7 +14,7 @@ on:
       nox-image:
         description: "nox image tag"
         type: string
-        default: "fluencelabs/nox:minimal"
+        default: "fluencelabs/nox:unstable_minimal"
       js-client-snapshots:
         description: "js-client snapshots"
         type: string
