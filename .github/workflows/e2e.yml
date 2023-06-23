@@ -40,19 +40,20 @@ jobs:
     needs: aqua
     uses: fluencelabs/flox/.github/workflows/snapshot.yml@FLU-353
     with:
+      ref: FLU-353
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
   flox:
     needs: aqua
     uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@FLU-353
     with:
+      ref: FLU-353
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
   registry:
     needs:
-      - aqua
       - flox-snapshot
     uses: fluencelabs/registry/.github/workflows/tests.yml@FLU-353
     with:
-      aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
+      ref: FLU-353
       flox-version: "${{ needs.flox-snapshot.outputs.version }}"
