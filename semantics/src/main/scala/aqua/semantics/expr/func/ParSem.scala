@@ -12,7 +12,7 @@ class ParSem[S[_]](val expr: ParExpr[S]) extends AnyVal {
   def program[Alg[_]: Monad]: Prog[Alg, Raw] =
     Prog.after[Alg, Raw] {
       case FuncOp(g) =>
-        ParTag.wrap(g).toFuncOp.pure[Alg]
+        ParTag.Par.wrap(g).toFuncOp.pure[Alg]
       case g => g.pure[Alg]
     }
 }

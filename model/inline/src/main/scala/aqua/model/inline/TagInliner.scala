@@ -135,19 +135,6 @@ object TagInliner extends Logging {
 
         } yield Some(OnModel(pid, viaD)) -> parDesugarPrefix(viaF.prependedAll(pif))
 
-      case MatchMismatchTag(left, right, shouldMatch) =>
-        for {
-          ld <- valueToModel(left)
-          rd <- valueToModel(right)
-          ldCanon <- canonicalizeIfStream(ld._1, ld._2)
-          rdCanon <- canonicalizeIfStream(rd._1, rd._2)
-        } yield Some(
-          MatchMismatchModel(ldCanon._1, rdCanon._1, shouldMatch)
-        ) -> parDesugarPrefixOpt(
-          ldCanon._2,
-          rdCanon._2
-        )
-
       case ForTag(item, iterable, mode) =>
         for {
           vp <- valueToModel(iterable)
@@ -252,8 +239,6 @@ object TagInliner extends Logging {
       case _: SeqGroupTag => pure(SeqModel)
       case ParTag.Detach => pure(DetachModel)
       case _: ParGroupTag => pure(ParModel)
-      case XorTag | XorTag.LeftBiased =>
-        pure(XorModel)
       case DeclareStreamTag(value) =>
         value match
           case VarRaw(name, _) =>

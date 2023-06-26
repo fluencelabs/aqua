@@ -8,17 +8,35 @@ import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import cats.parse.Parser
 import cats.{~>, Comonad}
+import cats.syntax.comonad.*
+import cats.syntax.functor.*
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
-case class ElseOtherwiseExpr[F[_]](point: Token[F]) extends Expr[F](ElseOtherwiseExpr, point) {
-  override def mapK[K[_]: Comonad](fk: F ~> K): ElseOtherwiseExpr[K] = copy(point.mapK(fk))
+case class ElseOtherwiseExpr[F[_]](kind: ElseOtherwiseExpr.Kind, point: Token[F])
+    extends Expr[F](ElseOtherwiseExpr, point) {
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): ElseOtherwiseExpr[K] =
+    copy(point = point.mapK(fk))
 }
 
 object ElseOtherwiseExpr extends Expr.AndIndented {
 
+  enum Kind {
+    case Else, Otherwise
+
+    def fold[A](ifElse: => A, ifOtherwise: => A): A = this match {
+      case Else => ifElse
+      case Otherwise => ifOtherwise
+    }
+  }
+
   override def validChildren: List[Expr.Lexem] = ForExpr.validChildren
 
   override val p: Parser[ElseOtherwiseExpr[Span.S]] =
-    (`else` | `otherwise`).lift.map(Token.lift[Span.S, Unit](_)).map(ElseOtherwiseExpr(_))
+    (`else`.as(Kind.Else) | `otherwise`.as(Kind.Otherwise)).lift
+      .fproduct(Token.lift)
+      .map { case (kind, point) =>
+        ElseOtherwiseExpr(kind.extract, point)
+      }
 }

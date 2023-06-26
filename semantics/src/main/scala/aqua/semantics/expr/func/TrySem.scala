@@ -1,6 +1,6 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{FuncOp, XorTag}
+import aqua.raw.ops.{FuncOp, TryTag}
 import aqua.parser.expr.func.TryExpr
 import aqua.raw.Raw
 import aqua.semantics.Prog
@@ -22,9 +22,9 @@ class TrySem[S[_]](val expr: TryExpr[S]) extends AnyVal {
     Prog
       .after[Alg, Raw] {
         case FuncOp(o) =>
-          XorTag.LeftBiased.wrap(o).toFuncOp.pure[Alg]
+          TryTag.wrap(o).toFuncOp.pure[Alg]
         case _ =>
-          Raw.error("Wrong body of the try expression").pure[Alg]
+          Raw.error("Wrong body of the `try` expression").pure[Alg]
       }
       .abilitiesScope(expr.token)
       .namesScope(expr.token)
