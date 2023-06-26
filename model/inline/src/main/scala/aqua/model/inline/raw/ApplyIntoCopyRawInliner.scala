@@ -4,7 +4,7 @@ import aqua.model.{CallModel, CallServiceModel, LiteralModel, OpModel, SeqModel,
 import aqua.model.inline.{Inline, SeqMode, TagInliner}
 import aqua.model.inline.MakeStructRawInliner.createObj
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.model.inline.state.{Arrows, Exports, Mangler, Scopes}
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{IntoCopyRaw, LiteralRaw}
 import aqua.types.ScalarType
 import cats.data.{Chain, NonEmptyMap, State}
@@ -37,7 +37,7 @@ object ApplyIntoCopyRawInliner extends Logging {
 
   }
 
-  def apply[S: Mangler: Exports: Arrows: Scopes](
+  def apply[S: Mangler: Exports: Arrows](
     value: VarModel,
     intoCopy: IntoCopyRaw
   ): State[S, (VarModel, Inline)] = {

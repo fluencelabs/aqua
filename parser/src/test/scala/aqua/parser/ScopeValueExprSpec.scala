@@ -18,11 +18,11 @@ class ScopeValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   private def parseAndCheckScope(str: String) = {
     val one = LiteralToken[Id]("1", LiteralType.number)
 
-    parseScope(
+    parseData(
       str
     ) should be(
-      ScopeValueToken(
-        CustomTypeToken[Id]("ScopeA"),
+      NamedValueToken(
+        NamedTypeToken[Id]("ScopeA"),
         NonEmptyMap.of(
           "v1" -> one,
           "f1" -> VarToken(Name[Id]("input"), IntoField[Id]("arrow") :: Nil)

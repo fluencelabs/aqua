@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.model.{CallModel, CallServiceModel, LiteralModel, OpModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.raw.RawInliner
 import cats.data.Chain
-import aqua.model.inline.state.{Arrows, Exports, Mangler, Scopes}
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{LiteralRaw, MakeStructRaw}
 import cats.data.{NonEmptyMap, State}
 import aqua.model.inline.Inline
@@ -37,7 +37,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     }
   }
 
-  override def apply[S: Mangler: Exports: Arrows: Scopes](
+  override def apply[S: Mangler: Exports: Arrows](
     raw: MakeStructRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {

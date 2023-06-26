@@ -3,19 +3,19 @@ package aqua.model.inline.raw
 import aqua.model.{CallModel, CanonicalizeModel, NullModel, PushToStreamModel, RestrictionModel, SeqModel, ValueModel, VarModel, XorModel}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.valueToModel
-import aqua.model.inline.state.{Arrows, Exports, Mangler, Scopes}
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.CollectionRaw
 import aqua.types.{ArrayType, CanonStreamType, OptionType, StreamType}
 import cats.data.{Chain, State}
 
 object CollectionRawInliner extends RawInliner[CollectionRaw] {
 
-  override def apply[S: Mangler: Exports: Arrows: Scopes](
+  override def apply[S: Mangler: Exports: Arrows](
     raw: CollectionRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = unfoldCollection(raw)
   
-  def unfoldCollection[S: Mangler: Exports: Arrows: Scopes](
+  def unfoldCollection[S: Mangler: Exports: Arrows](
     raw: CollectionRaw,
     assignToName: Option[String] = None
   ): State[S, (ValueModel, Inline)] =

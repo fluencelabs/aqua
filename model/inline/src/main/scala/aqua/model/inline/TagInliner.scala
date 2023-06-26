@@ -1,6 +1,6 @@
 package aqua.model.inline
 
-import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler, Scopes}
+import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.collectionToModel
 import aqua.model.inline.raw.{CallArrowRawInliner, CollectionRawInliner}
@@ -117,7 +117,7 @@ object TagInliner extends Logging {
    * @tparam S Current state
    * @return Model (if any), and prefix (if any)
    */
-  def tagToModel[S: Mangler: Arrows: Exports: Scopes](
+  def tagToModel[S: Mangler: Arrows: Exports](
     tag: RawTag,
     treeFunctionName: String
   ): State[S, (Option[OpModel], Option[OpModel.Tree])] =
@@ -282,7 +282,7 @@ object TagInliner extends Logging {
       case (None, prefix) => SeqModel.wrap(prefix.toList ++ tailTree.toList: _*)
     }
 
-  def handleTree[S: Exports: Mangler: Arrows: Scopes](
+  def handleTree[S: Exports: Mangler: Arrows](
     tree: RawTag.Tree,
     treeFunctionName: String
   ): State[S, OpModel.Tree] =

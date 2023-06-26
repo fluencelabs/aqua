@@ -11,10 +11,6 @@ case class CallModel(args: List[ValueModel], exportTo: List[CallModel.Export]) {
     m
   }.toSet
 
-  def scopeArgNames: Set[String] = args.collect { case VarModel(m, t: StructType, _) if t.isScope =>
-    m
-  }.toSet
-
   def usesVarNames: Set[String] = args.flatMap(_.usesVarNames).toSet
 }
 

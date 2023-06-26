@@ -4,7 +4,7 @@ import aqua.model.inline.Inline.parDesugarPrefixOpt
 import aqua.model.{CallServiceModel, FuncArrow, MetaModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
 import aqua.model.inline.RawValueInliner.{callToModel, valueToModel}
-import aqua.model.inline.state.{Arrows, Exports, Mangler, Scopes}
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.Call
 import aqua.types.ArrowType
 import aqua.raw.value.CallArrowRaw
@@ -15,7 +15,7 @@ import scala.collection.immutable.ListMap
 
 object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
 
-  private[inline] def unfoldArrow[S: Mangler: Exports: Arrows: Scopes](
+  private[inline] def unfoldArrow[S: Mangler: Exports: Arrows](
     value: CallArrowRaw,
     exportTo: List[Call.Export]
   ): State[S, (List[ValueModel], Inline)] = Exports[S].exports.flatMap { exports =>
@@ -99,7 +99,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     }(resolveFuncArrow(_, call))
   } yield result
 
-  override def apply[S: Mangler: Exports: Arrows: Scopes](
+  override def apply[S: Mangler: Exports: Arrows](
     raw: CallArrowRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] =

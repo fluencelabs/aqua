@@ -1,45 +1,12 @@
 package aqua.model.inline.raw
 
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  CanonicalizeModel,
-  FlattenModel,
-  ForModel,
-  FunctorModel,
-  IntoFieldModel,
-  IntoIndexModel,
-  LiteralModel,
-  MatchMismatchModel,
-  NextModel,
-  OpModel,
-  PropertyModel,
-  PushToStreamModel,
-  RestrictionModel,
-  SeqModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
+import aqua.model.{CallModel, CallServiceModel, CanonicalizeModel, FlattenModel, ForModel, FunctorModel, IntoFieldModel, IntoIndexModel, LiteralModel, MatchMismatchModel, NextModel, OpModel, PropertyModel, PushToStreamModel, RestrictionModel, SeqModel, ValueModel, VarModel, XorModel}
 import aqua.model.inline.Inline
 import aqua.model.inline.{ParMode, SeqMode}
 import aqua.model.inline.RawValueInliner.unfold
-import aqua.model.inline.state.{Arrows, Exports, Mangler, Scopes}
-import aqua.raw.value.{
-  ApplyGateRaw,
-  ApplyPropertyRaw,
-  CallArrowRaw,
-  FunctorRaw,
-  IntoArrowRaw,
-  IntoCopyRaw,
-  IntoFieldRaw,
-  IntoIndexRaw,
-  LiteralRaw,
-  PropertyRaw,
-  ValueRaw,
-  VarRaw
-}
-import aqua.types.{ArrayType, CanonStreamType, ScalarType, ScopeType, StreamType, Type}
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.raw.value.{ApplyGateRaw, ApplyPropertyRaw, CallArrowRaw, FunctorRaw, IntoArrowRaw, IntoCopyRaw, IntoFieldRaw, IntoIndexRaw, LiteralRaw, PropertyRaw, ValueRaw, VarRaw}
+import aqua.types.{ArrayType, ArrowType, BottomType, CanonStreamType, NilType, ScalarType, ScopeType, StreamType, Type}
 import cats.Eval
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.monoid.*
@@ -86,7 +53,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
-  private def unfoldScopeProperty[S: Mangler: Exports: Arrows: Scopes](
+  private def unfoldScopeProperty[S: Mangler: Exports: Arrows](
     varModel: VarModel,
     scopeType: ScopeType,
     p: PropertyRaw
@@ -96,24 +63,16 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         println("find arrow for: " + varModel)
         println("arrow name: " + arrowName)
         println("arrow type:" + t)
+        val arrowType = scopeType.fields.lookup(arrowName).collect {
+          case at@ArrowType(_, _) => at
+        }.getOrElse {
+          logger.error(s"Inlining, cannot find arrow $arrowName in ability $varModel")
+          ArrowType(NilType, NilType)
+        }
         for {
-          _ <- Scopes[S].scopes.map { sc =>
-            println("scopes: " + sc)
-          }
-          arrowOp <- Scopes[S].getArrow(varModel.name, arrowName)
-          _ <- Arrows[S].arrows.map { arrs =>
-            println(arrs.map(_._2.funcName))
-          }
-          arrow = arrowOp.get
           callArrow <- CallArrowRawInliner(
-            CallArrowRaw(None, arrow.funcName, arguments, arrow.arrowType, None)
+            CallArrowRaw(None, s"${varModel.name}.$arrowName", arguments, arrowType, None)
           )
-          // stream: *[]string
-          // a = stream[1].length
-          // Exports.get("scope.subScope.someVar")
-          // let v1 = Exports.get("subScope")
-          // let v2 = Exports.get("someVar")
-          // let vResult = v2
           result <- callArrow match {
             case (vm: VarModel, inl) =>
               State.pure((vm, inl))
@@ -131,14 +90,16 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         println("field name: " + fieldName)
         println("field type:" + t)
         for {
-          // TODO: we cannot have scope as argument in `Scopes` in exported functions
-          valueOp <- Scopes[S].getValue(varModel.name, fieldName)
-          value = valueOp.get
-          result <- value match {
-            case vm: VarModel =>
+          exports <- Exports[S].exports
+
+          result <- exports.get(s"${varModel.name}.$fieldName") match {
+            case Some(vm: VarModel) =>
               State.pure((vm, Inline.empty))
-            case lm: LiteralModel =>
+            case Some(lm: LiteralModel) =>
               flatLiteralWithProperties(lm, Inline.empty, Chain.empty)
+            case _ =>
+              logger.error(s"Inlining, cannot find field $fieldName in ability $varModel")
+              flatLiteralWithProperties(LiteralModel.quote(""), Inline.empty, Chain.empty)
           }
         } yield {
           result
@@ -146,7 +107,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
-  private[inline] def unfoldProperty[S: Mangler: Exports: Arrows: Scopes](
+  private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
     varModel: VarModel,
     p: PropertyRaw
   ): State[S, (VarModel, Inline)] =
@@ -208,7 +169,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
   private case class PropertyRawWithModel(raw: PropertyRaw, model: Option[PropertyModel])
 
   // Unfold properties that we can process in parallel
-  private def optimizeProperties[S: Mangler: Exports: Arrows: Scopes](
+  private def optimizeProperties[S: Mangler: Exports: Arrows](
     properties: Chain[PropertyRaw]
   ): State[S, (Chain[PropertyRawWithModel], Inline)] = {
     properties.map {
@@ -236,7 +197,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
-  private def unfoldProperties[S: Mangler: Exports: Arrows: Scopes](
+  private def unfoldProperties[S: Mangler: Exports: Arrows](
     prevInline: Inline,
     vm: VarModel,
     properties: Chain[PropertyRaw],
@@ -285,7 +246,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
-  private def unfoldRawWithProperties[S: Mangler: Exports: Arrows: Scopes](
+  private def unfoldRawWithProperties[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
     properties: Chain[PropertyRaw],
     propertiesAllowed: Boolean
@@ -337,7 +298,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
   }
 
-  override def apply[S: Mangler: Exports: Arrows: Scopes](
+  override def apply[S: Mangler: Exports: Arrows](
     apr: ApplyPropertyRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {

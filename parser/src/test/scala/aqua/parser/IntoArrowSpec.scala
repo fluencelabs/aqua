@@ -16,6 +16,13 @@ class IntoArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
     result should be(IntoArrow[Id](toName("arrow"), toStr("") :: Nil))
   }
 
+  "into arrow without arguments" should "be parsed" in {
+    val arrowStr = ".arrow()"
+
+    val result = parseIntoArrow(arrowStr)
+    result should be(IntoArrow[Id](toName("arrow"), Nil))
+  }
+
   "into arrow with value" should "be parsed" in {
     val arrowStr = "input.arrow(\"\")"
 

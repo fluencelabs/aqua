@@ -2,7 +2,7 @@ package aqua.model.inline.raw
 
 import aqua.model.*
 import aqua.model.inline.Inline
-import aqua.model.inline.state.{Arrows, Exports, Mangler, Scopes}
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{ApplyGateRaw, LiteralRaw, VarRaw}
 import cats.data.State
 import cats.data.Chain
@@ -13,7 +13,7 @@ import scribe.Logging
 
 object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
 
-  override def apply[S: Mangler: Exports: Arrows: Scopes](
+  override def apply[S: Mangler: Exports: Arrows](
     afr: ApplyGateRaw,
     propertyAllowed: Boolean
   ): State[S, (ValueModel, Inline)] =
