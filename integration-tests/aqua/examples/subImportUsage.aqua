@@ -1,0 +1,11 @@
+import "imports_exports/subImport.aqua"
+
+service ConcatSubs("concat_subs"):
+    get_some(s: SomeString, sr: SomeResult) -> SomeResult
+
+func subImportUsage(s: SomeString) -> SomeResult:
+    sr1 <- SubService.sub(s)
+    sr2 <- subImport()
+    result <- ConcatSubs.get_some(sr1.one, sr2)
+    <- result
+

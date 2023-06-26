@@ -1,0 +1,73 @@
+module Closure declares *
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+export LocalSrv, closureIn, closureOut, closureBig, closureOut2, lng58Bug
+
+service MyOp("op"):
+  identity(s: string) -> string
+
+service LocalSrv("local_srv"):
+  inside: -> ()
+
+func closureIn(peer1: string) -> string:
+  variable = "const"
+  co on peer1:
+    p1Id <- MyOp.identity("co on")
+  closure = (s: string) -> string:
+    if s == "in":
+        LocalSrv.inside()
+    p2Id <- MyOp.identity(s)
+    <- p2Id
+  p <- closure("in")
+  <- p
+
+func closureOut(peer2: string) -> Info:
+  on peer2:
+      closure = (s: string) -> Info:
+        if s == "in":
+            LocalSrv.inside()
+        p2Id <- Peer.identify()
+        <- p2Id
+  p2Id <- closure("on")
+  <- p2Id
+
+func closureOut2(peer2: string) -> Info:
+  closure = func (s: string) -> Info:
+    if s == "in":
+        LocalSrv.inside()
+    p2Id <- Peer.identify()
+    <- p2Id
+  on peer2:
+    p2Id <- closure("on")
+  <- p2Id
+
+
+func closureBig(peer1: string, peer2: string) -> string, string:
+  variable = "const"
+  co on peer1:
+    p1Id <- MyOp.identity("co on")
+  closure = func (s: string) -> string:
+    p2Id: *string
+    if s == "in":
+      p2 <- MyOp.identity(s)
+      p2Id <<- p2
+    else:
+      p2Info <- Peer.identify()
+      p2Id <<- p2Info.external_addresses!0
+    <- p2Id!
+  p <- closure("in")
+  on peer2:
+      p2Id <- closure("on")
+  <- p, p2Id
+
+func lng58Bug() -> string:
+  status: *string
+  waiting = ():
+      avava: *string
+      avava <<- "frerf"
+      status <<- "ok"
+  
+  waiting()
+
+  <- status!

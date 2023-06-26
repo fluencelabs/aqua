@@ -1,7 +1,7 @@
 package aqua.model
 
 import aqua.raw.arrow.FuncRaw
-import aqua.raw.ops.{CallArrowRawTag, FuncOp}
+import aqua.raw.ops.CallArrowRawTag
 import aqua.raw.value.ValueRaw
 import aqua.raw.value.CallArrowRaw
 import aqua.raw.{ConstantRaw, RawContext, RawPart, ServiceRaw, TypeRaw}

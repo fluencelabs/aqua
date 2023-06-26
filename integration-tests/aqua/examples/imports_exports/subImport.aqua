@@ -1,0 +1,13 @@
+
+alias SomeString : string
+
+data SomeResult:
+    one: SomeString
+    two: u32
+
+service SubService("sub_service"):
+    sub(s: SomeString) -> SomeResult
+
+func subImport() -> SomeResult:
+    res <- SubService.sub("some thing")
+    <- res

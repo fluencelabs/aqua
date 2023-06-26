@@ -31,13 +31,20 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
       stream = VarModel(streamName, StreamType(raw.elementType))
       streamExp = CallModel.Export(stream.name, stream.`type`)
 
-      vals <- raw.values
+      valsWithInlines <- raw.values
         .traverse(valueToModel(_))
         .map(_.toList)
         .map(Chain.fromSeq)
-        .map(_.flatMap { case (v, t) =>
-          Chain.fromOption(t) :+ PushToStreamModel(v, streamExp).leaf
-        })
+
+      // push values to the stream, that is gathering the collection
+      vals = valsWithInlines.map { case (v, _) =>
+          PushToStreamModel(v, streamExp).leaf
+        }
+
+      // all inlines will be added before pushing values to the stream
+      inlines = valsWithInlines.flatMap { case (_, t) =>
+          Chain.fromOption(t)
+        }
 
       canonName <-
         if (raw.boxType.isStream) State.pure(streamName)
@@ -51,17 +58,18 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
       raw.boxType match {
         case ArrayType(_) =>
           RestrictionModel(streamName, isStream = true).wrap(
-            SeqModel.wrap((vals :+ CanonicalizeModel(stream, canon).leaf).toList: _*)
+            SeqModel.wrap((inlines ++ vals :+ CanonicalizeModel(stream, canon).leaf).toList: _*)
           )
         case OptionType(_) =>
           RestrictionModel(streamName, isStream = true).wrap(
             SeqModel.wrap(
-              XorModel.wrap((vals :+ NullModel.leaf).toList: _*),
-              CanonicalizeModel(stream, canon).leaf
+               SeqModel.wrap(inlines.toList:_*),
+               XorModel.wrap((vals :+ NullModel.leaf).toList: _*),
+               CanonicalizeModel(stream, canon).leaf
             )
           )
         case _ => 
-          SeqModel.wrap(vals.toList: _*)
+          SeqModel.wrap((inlines ++ vals).toList: _*)
       }
     )
 }

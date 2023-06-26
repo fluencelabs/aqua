@@ -1,0 +1,13 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+service CoService("coservice-id"):
+    call: -> string
+
+-- here we go to another node and not waiting for execution there
+-- all `ParService.call()` will be executed instantly
+func coFunc( node: string, c: Info -> () ):
+    y <- CoService.call()
+    on node:
+        t <- Peer.identify()
+        co c(t)
+    x <- CoService.call()

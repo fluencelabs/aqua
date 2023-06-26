@@ -1,0 +1,22 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+service GetStr("multiret-test"):
+    retStr: string -> string
+
+service GetNum("multiret-num"):
+    retNum: -> u8
+
+const SOME_NUM = 5
+const SOME_STR = "some-str"
+
+func tupleFunc() -> string, u8:
+    str <- GetStr.retStr(SOME_STR)
+    n <- GetNum.retNum()
+    <- str, n
+
+func multiReturnFunc(somethingToReturn: []u8, smthOption: ?string) -> []string, u8, string, []u8, ?string, u8 :
+    res: *string
+    res <- GetStr.retStr(SOME_STR)
+    res <- GetStr.retStr("random-str")
+    res, tNum <- tupleFunc()
+    <- res, SOME_NUM, SOME_STR, somethingToReturn, smthOption, tNum

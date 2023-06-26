@@ -1,0 +1,25 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+service SomeS("test2"):
+    getStr: ?string -> ?string
+    getStr1: -> ?string
+    getStr2: string -> string
+    checkU32(u: ?u32)
+
+func checkU32AndU8(a: ?u8):
+    SomeS.checkU32(a)
+
+func useOptional(opt: ?string) -> string:
+    res <- SomeS.getStr(opt)
+    for i <- opt:
+        SomeS.getStr2(i)
+    <- res!
+
+func returnOptional() -> ?string:
+    res <- SomeS.getStr1()
+    <- res
+
+func returnNone() -> ?string:
+    result: *string
+    Op.noop()
+    <- result

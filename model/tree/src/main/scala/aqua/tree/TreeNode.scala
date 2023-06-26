@@ -10,7 +10,11 @@ trait TreeNode[T <: TreeNode[T]] {
 
   lazy val leaf: Tree = Cofree(self, Eval.now(Chain.empty))
 
-  def wrap(children: Tree*): Tree = Cofree(self, Eval.now(Chain.fromSeq(children)))
+  def wrap(children: Tree*): Tree = wrap(Chain.fromSeq(children))
+
+  def wrap(children: List[Tree]): Tree = wrap(Chain.fromSeq(children))
+
+  def wrap(children: Chain[Tree]): Tree = Cofree(self, Eval.now(children))
 
   protected def wrapNonEmpty(children: List[Tree], empty: Tree): Tree = children match {
     case Nil => empty

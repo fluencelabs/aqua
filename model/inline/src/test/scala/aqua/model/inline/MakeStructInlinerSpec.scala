@@ -29,7 +29,7 @@ class MakeStructInlinerSpec extends AnyFlatSpec with Matchers {
       "get_field",
       Nil,
       ArrowType(NilType, UnlabeledConsType(ScalarType.string, NilType)),
-      Option(LiteralRaw("\"serv\"", ScalarType.string))
+      Option(LiteralRaw.quote("serv"))
     )
 
     val makeStruct =

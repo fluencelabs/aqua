@@ -1,0 +1,46 @@
+export accumRes, bugLNG63, bugLNG63_2
+
+func toOpt(s: string) -> ?string:
+  str: *string
+  str <<- s
+  <- str
+
+func accumRes() -> *?string:
+  res_accum: *?string
+  a <- toOpt("a")
+  res_accum <<- a
+  res_accum <- toOpt("b")
+  res_accum <<- nil
+  <- res_accum
+
+func returnCanStream() -> string:
+    status: *string
+    status <<- "ok"
+    stat = status!
+    <- stat
+
+service Op1("op"):
+  array_length(array: []string) -> u32
+
+func bugLNG63() -> string:
+  res <- returnCanStream()
+  <- res
+
+func returnMultipleStreamResults() -> string, []string, []string, []string:
+    status: *string
+    status <<- "ok"
+    stat = status!
+    <- stat, status, [status!, stat], [status!, "no", status!]
+
+func bugLNG63_2() -> string, []string, []string:
+    res, res2, res3, res4 <- returnMultipleStreamResults()
+    <- res, res2, res4
+
+func bugLNG63_3() -> string, u32, []u32:
+   status: *string
+   status <<- "ok"
+   stat = status!
+   num: *u32
+   num <<- 2
+   res = [Op1.array_length(status), num!]
+   <- status!, Op1.array_length(status), [Op1.array_length(status), 3, num!]

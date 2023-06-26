@@ -1,0 +1,17 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+func viaArr(node_id: string, viaAr: []string) -> Info:
+    on node_id via viaAr:
+        p <- Peer.identify()
+    <- p
+
+
+func viaStream(node_id: string, viaStr: *string) -> Info:
+    on node_id via viaStr:
+        p <- Peer.identify()
+    <- p
+
+func viaOpt(relay: string, node_id: string, viaOpt: ?string) -> Info:
+    on node_id via viaOpt:
+        p <- Peer.identify()
+    <- p

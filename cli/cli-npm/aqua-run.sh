@@ -8,7 +8,9 @@ ADDR='/dns4/kras-04.fluence.dev/tcp/19001/wss/p2p/12D3KooWFEwNWcHqi9rtsmDhsYcDbR
 
 if [ -z "$IMPORT" ]
 then
-      npm run from:scalajs -- run -f "$FUNC" -i "$INPUT" --data-path "$DATAPATH" --addr "$ADDR"
+      npm run build
+      npm run -- run -f "$FUNC" -i "$INPUT" --data-path "$DATAPATH" --addr "$ADDR"
 else
-      npm run from:scalajs -- run -f "$FUNC" -i "$INPUT" --data-path "$DATAPATH" --addr "$ADDR" -m "$IMPORT"
+      npm run build
+      npm run run -- run -f "$FUNC" -i "$INPUT" --data-path "$DATAPATH" --addr "$ADDR" -m "$IMPORT"
 fi

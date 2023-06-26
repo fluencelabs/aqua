@@ -161,8 +161,10 @@ object InfixToken {
     case Lt extends Op("<")
     case Lte extends Op("<=")
 
+    def p: P[Unit] = P.string(symbol)
+
   private def opsParser(ops: List[Op]): P[(Span, Op)] =
-    P.oneOf(ops.map(op => P.string(op.symbol).lift.map(s => s.as(op))))
+    P.oneOf(ops.map(op => op.p.lift.map(s => s.as(op))))
 
   // Parse left-associative operations `basic (OP basic)*`.
   // We use this form to avoid left recursion.
@@ -222,7 +224,10 @@ object InfixToken {
   private val compare: P[ValueToken[Span.S]] =
     infixParserNone(
       add,
-      Op.Gt :: Op.Gte :: Op.Lt :: Op.Lte :: Nil
+      // Here order is important as
+      // `Op.Gt` is prefix of `Op.Gte`
+      // and `Op.Lt` is prefix of `Op.Lte`
+      Op.Gte :: Op.Lte :: Op.Gt :: Op.Lt :: Nil
     )
 
   /**

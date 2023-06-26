@@ -17,7 +17,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Functor, Id, Monad, ~>}
+import cats.{~>, Functor, Id, Monad}
 import com.monovore.decline
 import com.monovore.decline.effect.CommandIOApp
 import com.monovore.decline.effect.CommandIOApp.printHelp
@@ -95,6 +95,7 @@ object AquaCli extends IOApp with Logging {
       compileToJs,
       noRelay,
       noXorWrapper,
+      tracing,
       isOldFluenceJs,
       wrapWithOption(helpOpt),
       wrapWithOption(versionOpt),
@@ -112,6 +113,7 @@ object AquaCli extends IOApp with Logging {
             toJs,
             noRelayOp,
             noXorOp,
+            tracingOp,
             isOldFluenceJsOp,
             h,
             v,
@@ -124,6 +126,7 @@ object AquaCli extends IOApp with Logging {
         val toAir = toAirOp || isScheduled
         val noXor = noXorOp || isScheduled
         val noRelay = noRelayOp || isScheduled
+        val tracingEnabled = tracingOp && !isScheduled
 
         // if there is `--help` or `--version` flag - show help and version
         // otherwise continue program execution
@@ -133,7 +136,11 @@ object AquaCli extends IOApp with Logging {
             else if (toJs) JavaScriptTarget
             else TypescriptTarget
           val bc = {
-            val bc = TransformConfig(wrapWithXor = !noXor, constants = constants)
+            val bc = TransformConfig(
+              wrapWithXor = !noXor,
+              constants = constants,
+              tracing = Option.when(tracingEnabled)(TransformConfig.TracingConfig.default)
+            )
             bc.copy(relayVarName = bc.relayVarName.filterNot(_ => noRelay))
           }
           LogFormatter.initLogger(Some(logLevel.compiler))
@@ -205,8 +212,8 @@ object AquaCli extends IOApp with Logging {
                 ExitCode.Error
               }
             }
-            .getOrElse{
-              ConsoleEff[IO].print(h).map{_ =>
+            .getOrElse {
+              ConsoleEff[IO].print(h).map { _ =>
                 // hack to show last string in `help`
                 println()
                 ExitCode.Success

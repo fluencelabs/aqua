@@ -39,6 +39,26 @@ object OpModel extends TreeNodeCompanion[OpModel] {
   }
 }
 
+/**
+ * Meta information embedded in a tree
+ */
+enum MetaModel extends OpModel {
+
+  /**
+   * Wraps subtree that was produced after inlining arrow
+   *
+   * @param name Name of arrow inlined
+   */
+  case CallArrowModel(name: String)
+
+  override def wrap(children: Tree*): Tree =
+    // NOTE: Consider leaving some meta info if call is completely erased?
+    children.filter(_.head != EmptyModel) match {
+      case Nil => EmptyModel.leaf
+      case filtered => super.wrap(filtered: _*)
+    }
+}
+
 sealed trait NoExecModel extends OpModel
 
 sealed trait ForceExecModel extends OpModel
@@ -95,9 +115,14 @@ case class MatchMismatchModel(left: ValueModel, right: ValueModel, shouldMatch: 
     left.usesVarNames ++ right.usesVarNames
 }
 
-case class ForModel(item: String, iterable: ValueModel, mode: Option[ForModel.Mode] = Some(ForModel.NullMode)) extends SeqGroupModel {
+case class ForModel(
+  item: String,
+  iterable: ValueModel,
+  mode: Option[ForModel.Mode] = Some(ForModel.NullMode)
+) extends SeqGroupModel {
 
-  override def toString: String = s"for $item <- $iterable${mode.map(m => " " + m.toString).getOrElse("")}"
+  override def toString: String =
+    s"for $item <- $iterable${mode.map(m => " " + m.toString).getOrElse("")}"
 
   override def restrictsVarNames: Set[String] = Set(item)
 
@@ -142,9 +167,15 @@ case class CallServiceModel(serviceId: ValueModel, funcName: String, call: CallM
 }
 
 object CallServiceModel {
-  def apply(serviceId: String, funcName: String, args: List[ValueModel], result: VarModel): CallServiceModel =
+
+  def apply(
+    serviceId: String,
+    funcName: String,
+    args: List[ValueModel],
+    result: VarModel
+  ): CallServiceModel =
     CallServiceModel(
-      LiteralModel(s"\"$serviceId\"", ScalarType.string),
+      LiteralModel.quote(serviceId),
       funcName,
       CallModel(
         args,

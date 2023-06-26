@@ -12,6 +12,10 @@ import cats.free.Cofree
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.syntax.show.*
+import cats.syntax.option.*
+import aqua.types.ArrayType
+import aqua.raw.ConstantRaw.initPeerId
+import aqua.model.ForModel.NullMode
 
 class TopologySpec extends AnyFlatSpec with Matchers {
 
@@ -412,7 +416,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         through(relay),
         callRes(0, otherPeer),
         ParRes.wrap(
-          FoldRes("i", valueArray, Some(ForModel.NeverMode)).wrap(ParRes.wrap(callRes(2, otherPeer2), NextRes("i").leaf))
+          FoldRes("i", valueArray, Some(ForModel.NeverMode))
+            .wrap(ParRes.wrap(callRes(2, otherPeer2), NextRes("i").leaf))
         ),
         through(relay),
         callRes(3, initPeer)
@@ -878,5 +883,52 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       )
 
     proc.equalsOrShowDiff(expected) should be(true)
+  }
+
+  "topology resolver" should "handle empty for correctly [bug LNG-149]" in {
+    val streamName = "array-inline"
+    val iterName = "a-0"
+    val stream = VarModel(streamName, StreamType(LiteralType.number))
+    val array = VarModel(s"$streamName-0", ArrayType(LiteralType.number))
+
+    val literal = (i: String) => LiteralModel(i, LiteralType.number)
+
+    val push = (i: String) =>
+      PushToStreamModel(
+        literal(i),
+        CallModel.Export(stream.name, stream.`type`)
+      ).leaf
+
+    val model = OnModel(initPeer, Chain.one(relay)).wrap(
+      SeqModel.wrap(
+        RestrictionModel(streamName, true).wrap(
+          push("1"),
+          push("2"),
+          CanonicalizeModel(stream, CallModel.Export(array.name, array.`type`)).leaf
+        ),
+        ForModel(iterName, array).wrap(
+          NextModel(iterName).leaf
+        )
+      )
+    )
+
+    val proc = Topology.resolve(model).value
+
+    val expected = SeqRes.wrap(
+      RestrictionRes(streamName, true).wrap(
+        ApRes(literal("1"), CallModel.Export(stream.name, stream.`type`)).leaf,
+        ApRes(literal("2"), CallModel.Export(stream.name, stream.`type`)).leaf,
+        CanonRes(
+          stream,
+          LiteralModel.fromRaw(initPeer),
+          CallModel.Export(array.name, array.`type`)
+        ).leaf
+      ),
+      FoldRes(iterName, array, NullMode.some).wrap(
+        NextRes(iterName).leaf
+      )
+    )
+
+    proc.equalsOrShowDiff(expected) shouldEqual true
   }
 }

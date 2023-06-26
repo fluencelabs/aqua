@@ -21,6 +21,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  sbt-tests:
+    name: "aqua"
+    uses: ./.github/workflows/sbt-tests.yml
+    with:
+      ref: ${{ github.ref }}
+
   tests:
     name: "aqua"
     uses: ./.github/workflows/tests.yml

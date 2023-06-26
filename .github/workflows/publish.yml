@@ -18,9 +18,13 @@ env:
   FORCE_COLOR: true
 
 jobs:
-  compile:
+  publish:
     runs-on: builder
     timeout-minutes: 60
+
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -36,32 +40,9 @@ jobs:
         with:
           apps: sbt
 
-      - name: JS CLI build
-        run: sbt cliJS/fullLinkJS
+      - name: scala-js build
+        run: sbt ";cliJS/fullLinkJS;language-server-apiJS/fullLinkJS;aqua-apiJS/fullLinkJS"
 
-      - name: JS API build
-        run: sbt aqua-api/fullLinkJS
-
-      - name: JS LSP build
-        run: sbt language-server-apiJS/fullLinkJS
-
-      - name: Upload aqua-cli artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: aqua-cli
-          path: cli/cli/.js/target/scala-*/cli-opt/main.js
-
-      - name: Upload aqua-api artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: aqua-api
-          path: api/aqua-api/target/scala-*/aqua-api-opt/main.js
-
-      - name: Upload aqua-lsp artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: aqua-lsp
-          path: language-server/language-server-api/.js/target/scala-*/language-server-api-opt/main.js
 
   aqua-cli:
     name: "Publish aqua-cli"
@@ -71,22 +52,11 @@ jobs:
     needs:
       - compile
 
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           ref: ${{ inputs.tag }}
-
-      - name: Download aqua-cli artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: aqua-cli
-
-      - run: mv scala-*/*/main.js cli/cli-npm/aqua.js
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.5.0
@@ -101,129 +71,24 @@ jobs:
           secrets: |
             kv/npmjs/fluencebot token | NODE_AUTH_TOKEN
 
-      - name: Setup node
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.2.4
+        with:
+          version: 8
+
+      - name: Setup node with self-hosted npm registry
         uses: actions/setup-node@v3
         with:
           node-version: "16"
           registry-url: "https://registry.npmjs.org"
-          cache-dependency-path: "cli/cli-npm/package-lock.json"
-          cache: "npm"
+          cache: "pnpm"
 
-      - run: npm i
-        working-directory: cli/cli-npm
+      - run: pnpm -r i
 
-      - run: npm run build
-        working-directory: cli/cli-npm
+      - run: pnpm -r build
 
       - name: Publish to NPM registry
-        run: npm publish --access public --tag unstable
-        working-directory: cli/cli-npm
-
-  aqua-api:
-    name: "Publish aqua-api"
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-
-    needs:
-      - compile
-
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.tag }}
-
-      - name: Download aqua-api artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: aqua-api
-
-      - run: mv scala-*/*/main.js api/aqua-api-npm/aqua-api.js
-
-      - name: Import secrets
-        uses: hashicorp/vault-action@v2.5.0
-        with:
-          url: https://vault.fluence.dev
-          path: jwt/github
-          role: ci
-          method: jwt
-          jwtGithubAudience: "https://github.com/fluencelabs"
-          jwtTtl: 300
-          exportToken: false
-          secrets: |
-            kv/npmjs/fluencebot token | NODE_AUTH_TOKEN
-
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-          registry-url: "https://registry.npmjs.org"
-          cache-dependency-path: "api/aqua-api-npm/package-lock.json"
-          cache: "npm"
-
-      - run: npm i
-        working-directory: api/aqua-api-npm
-
-      - name: Publish to NPM registry
-        run: npm publish --access public --tag unstable
-        working-directory: api/aqua-api-npm
-
-  aqua-lsp:
-    name: "Publish aqua-lsp"
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-
-    needs:
-      - compile
-
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.tag }}
-
-      - name: Download aqua-lsp artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: aqua-lsp
-
-      - run: mv scala-*/*/main.js language-server/language-server-npm/aqua-lsp-api.js
-
-      - name: Import secrets
-        uses: hashicorp/vault-action@v2.5.0
-        with:
-          url: https://vault.fluence.dev
-          path: jwt/github
-          role: ci
-          method: jwt
-          jwtGithubAudience: "https://github.com/fluencelabs"
-          jwtTtl: 300
-          exportToken: false
-          secrets: |
-            kv/npmjs/fluencebot token | NODE_AUTH_TOKEN
-
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-          registry-url: "https://registry.npmjs.org"
-          cache-dependency-path: "language-server/language-server-npm/package-lock.json"
-          cache: "npm"
-
-      - run: npm i
-        working-directory: language-server/language-server-npm
-
-      - name: Publish to NPM registry
-        run: npm publish --access public --tag unstable
-        working-directory: language-server/language-server-npm
+        run: pnpm publish --access public --tag unstable
 
   aqua-native:
     name: "Publish aqua-native"
@@ -238,8 +103,7 @@ jobs:
             arch: amd64
             os: macos
             static: false
-    needs:
-      - compile
+
     uses: ./.github/workflows/binary.yml
     with:
       runs-on: ${{ matrix.runner.runs-on }}

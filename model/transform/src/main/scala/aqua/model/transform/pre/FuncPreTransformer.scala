@@ -2,7 +2,7 @@ package aqua.model.transform.pre
 
 import aqua.model.FuncArrow
 import aqua.model.ArgsCall
-import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, RawTag, SeqTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, RawTag, SeqTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 import cats.syntax.show.*

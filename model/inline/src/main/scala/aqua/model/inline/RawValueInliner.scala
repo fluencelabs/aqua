@@ -2,7 +2,13 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler, Scopes}
 import aqua.model.*
-import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyGateRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner, MakeScopeRawInliner}
+import aqua.model.inline.raw.{
+  ApplyFunctorRawInliner,
+  ApplyGateRawInliner,
+  ApplyPropertiesRawInliner,
+  CallArrowRawInliner,
+  CollectionRawInliner
+}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
@@ -47,35 +53,6 @@ object RawValueInliner extends Logging {
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)
-
-      case sr: ShadowRaw =>
-        // First, collect shadowed values
-        // TODO: might be already defined in scope!
-        sr.shadowValues.toList
-          // Unfold/substitute all shadowed value
-          .traverse { case (name, v) =>
-            unfold(v, propertiesAllowed).map { case (svm, si) =>
-              (name, svm, si)
-            }
-          }.flatMap { fas =>
-            val res = fas.map { case (n, v, _) =>
-              n -> v
-            }.toMap
-            // Mark shadowed values as exports, isolate them into a scope
-            Exports[S].exports
-              .flatMap(curr =>
-                Exports[S]
-                  .scope(
-                    Exports[S].resolved(res ++ curr.view.mapValues(_.resolveWith(res))) >>
-                      // Resolve the value in the prepared Exports scope
-                      unfold(sr.value, propertiesAllowed)
-                  )
-              )
-              .map { case (vm, inl) =>
-                // Collect inlines to prepend before the value
-                (vm, fas.map(_._3).foldLeft(inl)(_ |+| _))
-              }
-          }
     }
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows: Scopes](
@@ -89,10 +66,10 @@ object RawValueInliner extends Logging {
         case (vv, _) =>
           FlattenModel(vv, name).leaf
       }
-    }.map{ predo =>
+    }.map { predo =>
       inline.mergeMode match
         case SeqMode =>
-          SeqModel.wrap((inline.predo.toList ++ predo):_*) :: Nil
+          SeqModel.wrap((inline.predo.toList ++ predo): _*) :: Nil
         case ParMode => inline.predo.toList ::: predo
     }
   }

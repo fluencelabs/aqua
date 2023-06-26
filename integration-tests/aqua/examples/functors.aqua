@@ -1,0 +1,6 @@
+func lng119Bug() -> []u32:
+  nums = [1,2,3,4,5]
+  results: *u32
+  results <<- 1
+  join results[nums.length-5]
+  <- results

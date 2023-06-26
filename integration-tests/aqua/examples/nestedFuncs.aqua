@@ -1,0 +1,12 @@
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+service OpH("opa"):
+  identity(s: string) -> string
+
+func a(b: string) -> string:
+  c <- OpH.identity(b)
+  <- c
+
+func d(e: string) -> string:
+  f <- a(e)
+  <- f
