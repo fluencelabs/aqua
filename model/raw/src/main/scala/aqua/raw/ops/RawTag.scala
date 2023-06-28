@@ -65,8 +65,8 @@ case object SeqTag extends SeqGroupTag {
 }
 
 case object ParTag extends ParGroupTag {
-  case object Detach extends ParGroupTag
-  case object Par extends ParGroupTag
+  case object Detach extends GroupTag
+  case object Par extends GroupTag
 }
 
 case class IfTag(left: ValueRaw, right: ValueRaw, equal: Boolean) extends GroupTag
