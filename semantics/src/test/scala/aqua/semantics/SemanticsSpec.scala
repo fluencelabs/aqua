@@ -48,16 +48,14 @@ class SemanticsSpec extends AnyFlatSpec with Matchers {
       CallArrowRawTag.service(LiteralRaw.quote("srv1"), "fn1", emptyCall, "A", arrowType).leaf
 
     val expected =
-      SeqGroupTag.wrap(
-        ParTag.wrap(
-          OnTag(
-            LiteralRaw("\"other-peer\"", LiteralType.string),
-            Chain.empty
-          ).wrap(
-            serviceCall
-          ),
+      ParTag.wrap(
+        OnTag(
+          LiteralRaw("\"other-peer\"", LiteralType.string),
+          Chain.empty
+        ).wrap(
           serviceCall
-        )
+        ),
+        serviceCall
       )
 
     proc.equalsOrShowDiff(expected) should be(true)

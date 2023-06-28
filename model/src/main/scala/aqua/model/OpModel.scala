@@ -71,13 +71,8 @@ sealed trait ParGroupModel extends GroupOpModel
 
 case object SeqModel extends SeqGroupModel {
 
-  override def wrap(children: Tree*): Tree =
-    super.wrapNonEmpty(children.filterNot(_.head == EmptyModel).toList, EmptyModel.leaf)
-
-  // EmptyModel allowed – useful for tests
-  def wrapWithEmpty(children: Tree*): Tree =
-    super.wrapNonEmpty(children.toList, EmptyModel.leaf)
-
+  override def wrap(children: Chain[Tree]): Tree =
+    super.wrapNonEmpty(children.filterNot(_.head == EmptyModel), EmptyModel.leaf)
 }
 
 case object ParModel extends ParGroupModel

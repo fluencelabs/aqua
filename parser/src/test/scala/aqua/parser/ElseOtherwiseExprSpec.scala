@@ -13,11 +13,13 @@ class ElseOtherwiseExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._
 
   "else" should "be parsed" in {
-    parseElse("else") should be(
+    parseElseOtherwise("else") should be(
       ElseOtherwiseExpr[Id](ElseOtherwiseExpr.Kind.Else, Token.lift(()))
     )
+  }
 
-    parseElse("otherwise") should be(
+  "otherwise" should "be parsed" in {
+    parseElseOtherwise("otherwise") should be(
       ElseOtherwiseExpr[Id](ElseOtherwiseExpr.Kind.Otherwise, Token.lift(()))
     )
   }

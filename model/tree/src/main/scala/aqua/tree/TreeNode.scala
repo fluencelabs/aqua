@@ -1,6 +1,7 @@
 package aqua.tree
 
 import cats.data.Chain
+import cats.data.Chain.*
 import cats.free.Cofree
 import cats.Eval
 
@@ -16,10 +17,10 @@ trait TreeNode[T <: TreeNode[T]] {
 
   def wrap(children: Chain[Tree]): Tree = Cofree(self, Eval.now(children))
 
-  protected def wrapNonEmpty(children: List[Tree], empty: Tree): Tree = children match {
-    case Nil => empty
-    case x :: Nil => x
-    case _ => Cofree(self, Eval.now(Chain.fromSeq(children)))
+  protected def wrapNonEmpty(children: Chain[Tree], empty: Tree): Tree = children match {
+    case Chain.nil => empty
+    case x ==: Chain.nil => x
+    case _ => Cofree(self, Eval.now(children))
   }
 
 }

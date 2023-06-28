@@ -61,7 +61,7 @@ sealed trait ParGroupTag extends GroupTag
 case object SeqTag extends SeqGroupTag {
 
   override def wrap(children: Chain[Tree]): Tree =
-    super.wrapNonEmpty(children.filterNot(_.head == EmptyTag).toList, RawTag.empty)
+    super.wrapNonEmpty(children.filterNot(_.head == EmptyTag), RawTag.empty)
 }
 
 case object ParTag extends ParGroupTag {

@@ -35,7 +35,7 @@ object ElseOtherwiseExpr extends Expr.AndIndented {
 
   override val p: Parser[ElseOtherwiseExpr[Span.S]] =
     (`else`.as(Kind.Else) | `otherwise`.as(Kind.Otherwise)).lift
-      .fproduct(Token.lift)
+      .fproduct(span => Token.lift(span.as(())))
       .map { case (kind, point) =>
         ElseOtherwiseExpr(kind.extract, point)
       }
