@@ -17,7 +17,7 @@ import scribe.Logging
 
 object RawValueInliner extends Logging {
 
-  import Inline.*
+  import aqua.model.inline.Inline.*
 
   private[inline] def unfold[S: Mangler: Exports: Arrows](
     raw: ValueRaw,

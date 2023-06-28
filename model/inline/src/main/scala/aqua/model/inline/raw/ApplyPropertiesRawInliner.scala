@@ -98,7 +98,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             case Some(lm: LiteralModel) =>
               flatLiteralWithProperties(lm, Inline.empty, Chain.empty)
             case _ =>
-              logger.error(s"Inlining, cannot find field $fieldName in ability $varModel")
+              logger.error(s"Inlining, cannot find field $fieldName in ability $varModel. Available: $exports")
               flatLiteralWithProperties(LiteralModel.quote(""), Inline.empty, Chain.empty)
           }
         } yield {

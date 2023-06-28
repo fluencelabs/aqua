@@ -1,34 +1,42 @@
 service SomeService(""):
   getStr(s: string) -> string
-  different(s: string) -> string
 
 scope SomeScope:
-  var1: string
   someArrow(s: string) -> string
-  someUnit()
 
 func funcStr(s: string) -> string:
   strInFunc <- SomeService.getStr(s)
   <- strInFunc
 
-func diffFunc(s: string) -> string:
-  differentStr <- SomeService.different(s)
-  <- differentStr
+--
+-- func diffFunc(s: string) -> string:
+--   differentStr <- SomeService.different(s)
+--   <- differentStr
+--
+-- func unit():
+--   funcStr("")
 
-func unit():
-  funcStr("")
+-- func bbbbbbb()
+--
+-- func aaaaaa():
+--   closure = (a: string) -> string:
+--     <- SomeService.str()
 
-func handleScope() -> string, string, string:
-  newScope = SomeScope(var1 = "123", someArrow = funcStr, someUnit = unit)
-  updated = SomeScope(var1 = newScope.someArrow("wed"), someArrow = diffFunc, someUnit = newScope.someUnit)
-  updated2 = SomeScope(var1 = newScope.someArrow("wed"), someArrow = newScope.someArrow, someUnit = newScope.someUnit)
-  a = updated.var1
-  b = updated.someArrow("some_literal")
-  c = updated2.someArrow("second_call")
-  <- a, b, c
+-- func handleSecScope(sc: SomeScope) -> string:
+--   b = sc.someArrow("SECOND HANDLE")
+--   <- b
+--
+-- func handleScope() -> string:
+--   newScope = SomeScope(someArrow = funcStr)
+--   d <- handleSecScope(newScope)
+--   <- d
 
-func handleSecScope(sc: SomeScope, sc2: SomeScope, sc3: SomeScope) -> string, string, string:
-  a = sc.var1
-  b = sc2.someArrow("SECOND HANDLE")
-  c = sc3.someArrow("SECOND CALL IN SECONDE HANDLE")
-  <- a, b, c
+func handleSecScope(sc: string -> string) -> string:
+  b = sc("SECOND HANDLE")
+  <- b
+
+func handleScope() -> string:
+  newScope = (s: string) -> string:
+    <- "123"
+  d <- handleSecScope(newScope)
+  <- d
