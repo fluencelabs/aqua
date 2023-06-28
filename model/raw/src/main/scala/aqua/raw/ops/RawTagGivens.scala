@@ -1,7 +1,6 @@
 package aqua.raw.ops
 
-import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.types.{BoxType, StreamType}
+import aqua.raw.value.LiteralRaw
 import cats.free.Cofree
 import cats.data.Chain
 import cats.{Eval, Semigroup}

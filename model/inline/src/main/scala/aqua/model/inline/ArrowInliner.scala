@@ -7,7 +7,7 @@ import aqua.raw.ops.RawTag
 import aqua.types.{ArrowType, BoxType, StreamType}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import cats.Eval
-import cats.data.{Chain, IndexedStateT, State}
+import cats.data.{Chain, State}
 import scribe.Logging
 
 /**
@@ -23,10 +23,11 @@ object ArrowInliner extends Logging {
   ): State[S, OpModel.Tree] =
     callArrowRet(arrow, call).map(_._1)
 
+  // Get streams that was declared outside of a function
   private def getOutsideStreamNames[S: Exports]: State[S, Set[String]] =
     Exports[S].exports
       .map(exports =>
-        exports.collect { case e @ (n, VarModel(_, StreamType(_), _)) =>
+        exports.collect { case (n, VarModel(_, StreamType(_), _)) =>
           n
         }.toSet
       )
@@ -43,8 +44,8 @@ object ArrowInliner extends Logging {
       resolvedResult <- RawValueInliner.valueListToModel(results)
     } yield {
       // Fix the return values
-      val (ops, rets) = (exportTo zip resolvedResult)
-        .map[(List[OpModel.Tree], ValueModel)] {
+      (exportTo zip resolvedResult)
+        .map {
           case (
                 CallModel.Export(n, StreamType(_)),
                 (res @ VarModel(_, StreamType(_), _), resDesugar)
@@ -68,8 +69,6 @@ object ArrowInliner extends Logging {
         ) { case ((ops, rets), (fo, r)) =>
           (fo ::: ops, r :: rets)
         }
-
-      (ops, rets)
     }
 
   // Apply a callable function, get its fully resolved body & optional value, if any
@@ -104,11 +103,14 @@ object ArrowInliner extends Logging {
             callableFuncBody
           )
           (ops, rets) = opsAndRets
-        } yield SeqModel.wrap(ops.reverse: _*) -> rets.reverse
+        } yield SeqModel.wrap(ops.reverse) -> rets.reverse
       )
     }
 
-  private def resolvePurgeAndRenameArrows[S: Mangler: Arrows: Exports](
+  // Get all arrows that is arguments from outer Arrows.
+  // Purge and push captured arrows and arrows as arguments into state.
+  // Grab all arrows that must be renamed.
+  private def updateArrowsAndRenameArrowArgs[S: Mangler: Arrows: Exports](
     args: ArgsCall,
     func: FuncArrow
   ): State[S, Map[String, String]] = {
@@ -138,6 +140,28 @@ object ArrowInliner extends Logging {
     }
   }
 
+  private def updateExportsAndRenameDataArgs[S: Mangler: Arrows: Exports](
+    args: ArgsCall
+  ): State[S, Map[String, String]] = {
+    // DataType arguments
+    val argsToDataRaw = args.dataArgs
+    for {
+      // Find all duplicates in arguments
+      // we should not rename arguments that will be renamed by 'streamToRename'
+      argsToDataShouldRename <- Mangler[S].findNewNames(
+        argsToDataRaw.keySet
+      )
+
+      // Do not rename arguments if they just match external names
+      argsToData = argsToDataRaw.map { case (k, v) =>
+        argsToDataShouldRename.getOrElse(k, k) -> v
+      }
+
+      _ <- Exports[S].resolved(argsToData)
+    } yield argsToDataShouldRename
+  }
+
+  // Rename all exports-to-stream for streams that passed as arguments
   private def renameStreams(
     tree: RawTag.Tree,
     args: ArgsCall
@@ -183,39 +207,22 @@ object ArrowInliner extends Logging {
   ): State[S, (RawTag.Tree, List[ValueRaw])] =
     for {
       // Collect all arguments: what names are used inside the function, what values are received
-      argsFull <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
+      args <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
 
-      // DataType arguments
-      argsToDataRaw = argsFull.dataArgs
-
-      // Find all duplicates in arguments
-      // we should not rename arguments that will be renamed by 'streamToRename'
-      argsToDataShouldRename <- Mangler[S].findNewNames(
-        argsToDataRaw.keySet
-      )
-
-      // Do not rename arguments if they just match external names
-      argsToData = argsToDataRaw.map { case (k, v) =>
-        argsToDataShouldRename.getOrElse(k, k) -> v
-      }
-
-      _ <- Exports[S].resolved(argsToData)
-
-      renamedArrows <- resolvePurgeAndRenameArrows(argsFull, fn)
-
+      // Update states and rename tags
+      renamedArrows <- updateArrowsAndRenameArrowArgs(args, fn)
+      argsToDataShouldRename <- updateExportsAndRenameDataArgs(args)
       allShouldRename = argsToDataShouldRename ++ renamedArrows
-
       // Rename all renamed arguments in the body
       treeRenamed = fn.body.rename(allShouldRename)
-
-      treeStreamsRenamed = renameStreams(treeRenamed, argsFull)
+      treeStreamsRenamed = renameStreams(treeRenamed, args)
 
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
       treeDefines =
         treeStreamsRenamed.definesVarNames.value --
-          argsFull.streamArgs.keySet --
-          argsFull.streamArgs.values.map(_.name) --
+          args.streamArgs.keySet --
+          args.streamArgs.values.map(_.name) --
           call.exportTo.filter { exp =>
             exp.`type` match {
               case StreamType(_) => false
