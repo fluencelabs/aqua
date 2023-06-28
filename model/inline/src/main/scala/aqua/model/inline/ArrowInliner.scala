@@ -138,6 +138,33 @@ object ArrowInliner extends Logging {
     }
   }
 
+  private def renameStreams(
+    tree: RawTag.Tree,
+    args: ArgsCall
+  ): RawTag.Tree = {
+    // Stream arguments
+    val streamArgs = args.streamArgs
+
+    // collect arguments with stream type
+    // to exclude it from resolving and rename it with a higher-level stream that passed by argument
+    val streamsToRename = streamArgs.view.mapValues(_.name).toMap
+
+    if (streamsToRename.isEmpty) tree
+    else
+      tree
+        .map(_.mapValues(_.map {
+          // if an argument is a BoxType (Array or Option), but we pass a stream,
+          // change a type as stream to not miss `$` sign in air
+          // @see ArrowInlinerSpec `pass stream to callback properly` test
+          case v @ VarRaw(name, baseType: BoxType) if streamsToRename.contains(name) =>
+            v.copy(baseType = StreamType(baseType.element))
+          case v: VarRaw if streamsToRename.contains(v.name) =>
+            v.copy(baseType = StreamType(v.baseType))
+          case v => v
+        }))
+        .renameExports(streamsToRename)
+  }
+
   /**
    * Prepare the state context for this function call
    *
@@ -158,14 +185,8 @@ object ArrowInliner extends Logging {
       // Collect all arguments: what names are used inside the function, what values are received
       argsFull <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
 
-      streamArgs = argsFull.streamArgs
-
       // DataType arguments
-      argsToDataRaw = argsFull.nonStreamDataArgs ++ streamArgs
-
-      // collect arguments with stream type
-      // to exclude it from resolving and rename it with a higher-level stream that passed by argument
-      streamToRename = streamArgs.view.mapValues(_.name).toMap
+      argsToDataRaw = argsFull.dataArgs
 
       // Find all duplicates in arguments
       // we should not rename arguments that will be renamed by 'streamToRename'
@@ -185,25 +206,14 @@ object ArrowInliner extends Logging {
       allShouldRename = argsToDataShouldRename ++ renamedArrows
 
       // Rename all renamed arguments in the body
-      treeRenamed =
-        fn.body
-          .rename(allShouldRename)
-          .map(_.mapValues(_.map {
-            // if an argument is a BoxType (Array or Option), but we pass a stream,
-            // change a type as stream to not miss `$` sign in air
-            // @see ArrowInlinerSpec `pass stream to callback properly` test
-            case v @ VarRaw(name, baseType: BoxType) if streamToRename.contains(name) =>
-              v.copy(baseType = StreamType(baseType.element))
-            case v: VarRaw if streamToRename.contains(v.name) =>
-              v.copy(baseType = StreamType(v.baseType))
-            case v => v
-          }))
-          .renameExports(streamToRename)
+      treeRenamed = fn.body.rename(allShouldRename)
+
+      treeStreamsRenamed = renameStreams(treeRenamed, argsFull)
 
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
       treeDefines =
-        treeRenamed.definesVarNames.value --
+        treeStreamsRenamed.definesVarNames.value --
           argsFull.streamArgs.keySet --
           argsFull.streamArgs.values.map(_.name) --
           call.exportTo.filter { exp =>
@@ -218,7 +228,7 @@ object ArrowInliner extends Logging {
       _ <- Mangler[S].forbid(treeDefines ++ shouldRename.values.toSet)
 
       // If there was a collision, rename exports and usages with new names
-      tree = treeRenamed.rename(shouldRename)
+      tree = treeStreamsRenamed.rename(shouldRename)
 
       // Result could be renamed; take care about that
     } yield (tree, fn.ret.map(_.renameVars(shouldRename)))

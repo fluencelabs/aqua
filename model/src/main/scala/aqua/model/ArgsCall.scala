@@ -18,17 +18,10 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
   // and values (value models and types how they seen on the call site)
   lazy val zipped: List[((String, Type), ValueModel)] = args.toLabelledList() zip callWith
 
-  private lazy val dataArgs: Map[String, ValueModel] =
+  lazy val dataArgs: Map[String, ValueModel] =
     zipped.collect { case ((name, _: DataType), value) =>
       name -> value
     }.toMap
-
-  lazy val nonStreamDataArgs: Map[String, ValueModel] =
-    dataArgs.filter { 
-      case (_, VarModel(_, StreamType(_), _)) =>
-        false
-      case _ => true
-    }
 
   lazy val streamArgs: Map[String, VarModel] =
     dataArgs.collect { case (k, vr @ VarModel(n, StreamType(_), _)) =>
