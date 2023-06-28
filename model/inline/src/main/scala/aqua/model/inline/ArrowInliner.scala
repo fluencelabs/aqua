@@ -8,6 +8,7 @@ import aqua.types.{ArrowType, BoxType, StreamType}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import cats.Eval
 import cats.data.{Chain, State}
+import cats.syntax.bifunctor.*
 import scribe.Logging
 
 /**
@@ -44,31 +45,27 @@ object ArrowInliner extends Logging {
       resolvedResult <- RawValueInliner.valueListToModel(results)
     } yield {
       // Fix the return values
-      (exportTo zip resolvedResult)
-        .map {
-          case (
-                CallModel.Export(n, StreamType(_)),
-                (res @ VarModel(_, StreamType(_), _), resDesugar)
-              ) if !outsideStreamNames.contains(n) =>
-            resDesugar.toList -> res
-          case (CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
-            // pass nested function results to a stream
-            (resDesugar.toList :+ PushToStreamModel(
-              res,
-              CallModel.Export(exp, st)
-            ).leaf) -> VarModel(
-              exp,
-              st,
-              Chain.empty
-            )
-          case (_, (res, resDesugar)) =>
-            resDesugar.toList -> res
-        }
-        .foldLeft[(List[OpModel.Tree], List[ValueModel])](
-          (body :: Nil, Nil)
-        ) { case ((ops, rets), (fo, r)) =>
-          (fo ::: ops, r :: rets)
-        }
+      val (ops, rets) = (exportTo zip resolvedResult).map {
+        case (
+              CallModel.Export(n, StreamType(_)),
+              (res @ VarModel(_, StreamType(_), _), resDesugar)
+            ) if !outsideStreamNames.contains(n) =>
+          resDesugar.toList -> res
+        case (CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
+          // pass nested function results to a stream
+          (resDesugar.toList :+ PushToStreamModel(
+            res,
+            CallModel.Export(exp, st)
+          ).leaf) -> VarModel(
+            exp,
+            st,
+            Chain.empty
+          )
+        case (_, (res, resDesugar)) =>
+          resDesugar.toList -> res
+      }.unzip.leftMap(_.flatten)
+
+      (body :: ops, rets)
     }
 
   // Apply a callable function, get its fully resolved body & optional value, if any
@@ -103,7 +100,7 @@ object ArrowInliner extends Logging {
             callableFuncBody
           )
           (ops, rets) = opsAndRets
-        } yield SeqModel.wrap(ops.reverse) -> rets.reverse
+        } yield SeqModel.wrap(ops.reverse: _*) -> rets.reverse
       )
     }
 
