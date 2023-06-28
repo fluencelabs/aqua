@@ -7,7 +7,7 @@ import aqua.raw.ops.RawTag
 import aqua.types.{ArrowType, BoxType, StreamType}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import cats.Eval
-import cats.data.{Chain, State}
+import cats.data.{Chain, IndexedStateT, State}
 import scribe.Logging
 
 /**
@@ -97,11 +97,46 @@ object ArrowInliner extends Logging {
               .fold[OpModel](SeqModel)(ApplyTopologyModel.apply)
               .wrap(callableFuncBodyNoTopology)
 
-          opsAndRets <- pushStreamResults(outsideDeclaredStreams, call.exportTo, results, callableFuncBody)
+          opsAndRets <- pushStreamResults(
+            outsideDeclaredStreams,
+            call.exportTo,
+            results,
+            callableFuncBody
+          )
           (ops, rets) = opsAndRets
         } yield SeqModel.wrap(ops.reverse: _*) -> rets.reverse
       )
     }
+
+  private def resolvePurgeAndRenameArrows[S: Mangler: Arrows: Exports](
+    args: ArgsCall,
+    func: FuncArrow
+  ): State[S, Map[String, String]] = {
+    for {
+      // Arrow arguments: expected type is Arrow, given by-name
+      argsToArrowsRaw <- Arrows[S].argsArrows(args)
+      argsToArrowsShouldRename <- Mangler[S].findNewNames(
+        argsToArrowsRaw.keySet
+      )
+      argsToArrows = argsToArrowsRaw.map { case (k, v) =>
+        argsToArrowsShouldRename.getOrElse(k, k) -> v
+      }
+      returnedArrows = func.ret.collect { case VarRaw(name, ArrowType(_, _)) =>
+        name
+      }.toSet
+
+      returnedArrowsShouldRename <- Mangler[S].findNewNames(returnedArrows)
+      renamedCapturedArrows = func.capturedArrows.map { case (k, v) =>
+        returnedArrowsShouldRename.getOrElse(k, k) -> v
+      }
+
+      // Going to resolve arrows: collect them all. Names should never collide: it's semantically checked
+      _ <- Arrows[S].purge
+      _ <- Arrows[S].resolved(renamedCapturedArrows ++ argsToArrows)
+    } yield {
+      argsToArrowsShouldRename ++ returnedArrowsShouldRename
+    }
+  }
 
   /**
    * Prepare the state context for this function call
@@ -128,9 +163,6 @@ object ArrowInliner extends Logging {
       // DataType arguments
       argsToDataRaw = argsFull.nonStreamDataArgs ++ streamArgs
 
-      // Arrow arguments: expected type is Arrow, given by-name
-      argsToArrowsRaw <- Arrows[S].argsArrows(argsFull)
-
       // collect arguments with stream type
       // to exclude it from resolving and rename it with a higher-level stream that passed by argument
       streamToRename = streamArgs.view.mapValues(_.name).toMap
@@ -140,9 +172,6 @@ object ArrowInliner extends Logging {
       argsToDataShouldRename <- Mangler[S].findNewNames(
         argsToDataRaw.keySet
       )
-      argsToArrowsShouldRename <- Mangler[S].findNewNames(
-        argsToArrowsRaw.keySet
-      )
 
       // Do not rename arguments if they just match external names
       argsToData = argsToDataRaw.map { case (k, v) =>
@@ -151,28 +180,14 @@ object ArrowInliner extends Logging {
 
       _ <- Exports[S].resolved(argsToData)
 
-      argsToArrows = argsToArrowsRaw.map { case (k, v) => argsToArrowsShouldRename.getOrElse(k, k) -> v }
+      renamedArrows <- resolvePurgeAndRenameArrows(argsFull, fn)
 
-      returnedArrows = fn.ret.collect { case VarRaw(name, ArrowType(_, _)) =>
-        name
-      }.toSet
-
-      returnedArrowsShouldRename <- Mangler[S].findNewNames(returnedArrows)
-      renamedCapturedArrows = fn.capturedArrows.map { case (k, v) =>
-        returnedArrowsShouldRename.getOrElse(k, k) -> v
-      }
-
-      // Going to resolve arrows: collect them all. Names should never collide: it's semantically checked
-      _ <- Arrows[S].purge
-      _ <- Arrows[S].resolved(renamedCapturedArrows ++ argsToArrows)
-
-      argsShouldRename = argsToDataShouldRename ++ argsToArrowsShouldRename -- streamToRename.keySet
+      allShouldRename = argsToDataShouldRename ++ renamedArrows
 
       // Rename all renamed arguments in the body
       treeRenamed =
         fn.body
-          .rename(argsShouldRename)
-          .rename(returnedArrowsShouldRename)
+          .rename(allShouldRename)
           .map(_.mapValues(_.map {
             // if an argument is a BoxType (Array or Option), but we pass a stream,
             // change a type as stream to not miss `$` sign in air
@@ -199,14 +214,14 @@ object ArrowInliner extends Logging {
           }.map(_.name)
 
       // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
-      shouldRename <- Mangler[S].findNewNames(treeDefines).map(_ ++ argsShouldRename)
+      shouldRename <- Mangler[S].findNewNames(treeDefines).map(_ ++ allShouldRename)
       _ <- Mangler[S].forbid(treeDefines ++ shouldRename.values.toSet)
 
       // If there was a collision, rename exports and usages with new names
       tree = treeRenamed.rename(shouldRename)
 
       // Result could be renamed; take care about that
-    } yield (tree, fn.ret.map(_.renameVars(shouldRename ++ returnedArrowsShouldRename)))
+    } yield (tree, fn.ret.map(_.renameVars(shouldRename)))
 
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,
