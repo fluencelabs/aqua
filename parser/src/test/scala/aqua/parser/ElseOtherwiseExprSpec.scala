@@ -14,11 +14,11 @@ class ElseOtherwiseExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "else" should "be parsed" in {
     parseElse("else") should be(
-      ElseOtherwiseExpr[Id](Token.lift[Id, Unit](()))
+      ElseOtherwiseExpr[Id](ElseOtherwiseExpr.Kind.Else, Token.lift(()))
     )
 
     parseElse("otherwise") should be(
-      ElseOtherwiseExpr[Id](Token.lift[Id, Unit](()))
+      ElseOtherwiseExpr[Id](ElseOtherwiseExpr.Kind.Otherwise, Token.lift(()))
     )
   }
 }
