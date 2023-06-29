@@ -63,9 +63,13 @@ object ArrowInliner extends Logging {
           )
         case (_, (res, resDesugar)) =>
           resDesugar.toList -> res
-      }.unzip.leftMap(_.flatten)
+      }.foldLeft[(List[OpModel.Tree], List[ValueModel])](
+        (body :: Nil, Nil)
+      ) { case ((ops, rets), (fo, r)) =>
+        (fo ::: ops, r :: rets)
+      }
 
-      (ops :+ body, rets)
+      (ops, rets)
     }
 
   // Apply a callable function, get its fully resolved body & optional value, if any
