@@ -145,6 +145,8 @@ object RawSemantics extends Logging {
 
       case (TryTag.Otherwise, _) =>
         otherwiseWithoutPrev(prev.token).as(none)
+      case (TryTag, TryTag.Otherwise) =>
+        prev.append(next).some.pure
       case (_, TryTag.Otherwise) =>
         prev
           .wrapIn(TryTag)
