@@ -179,11 +179,21 @@ object TagInliner extends Logging {
           val toModel = (children: Chain[OpModel.Tree]) =>
             XorModel.wrap(
               children.uncons.map { case (ifBody, elseBody) =>
+                val elseBodyFiltered = elseBody.filterNot(
+                  _.head == EmptyModel
+                )
+                val elseBodyAugmented =
+                  if (elseBodyFiltered.isEmpty)
+                    Chain.one(
+                      NullModel.leaf
+                    )
+                  else elseBodyFiltered
+
                 MatchMismatchModel(
                   leftModel,
                   rightModel,
                   shouldMatch
-                ).wrap(ifBody) +: elseBody
+                ).wrap(ifBody) +: elseBodyAugmented
               }.getOrElse(children)
             )
 
