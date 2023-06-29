@@ -15,24 +15,24 @@ import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 case class ForExpr[F[_]](
   item: Name[F],
   iterable: ValueToken[F],
-  mode: Option[(F[ForExpr.Mode], ForExpr.Mode)]
+  mode: Option[ForExpr.Mode]
 ) extends Expr[F](ForExpr, item) {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): ForExpr[K] =
-    copy(item.mapK(fk), iterable.mapK(fk), mode.map { case (mF, m) => (fk(mF), m) })
+    copy(item.mapK(fk), iterable.mapK(fk))
 }
 
 object ForExpr extends Expr.AndIndented {
-  sealed trait Mode
-  case object TryMode extends Mode
-  case object ParMode extends Mode
+  enum Mode { case ParMode, TryMode }
 
   override def validChildren: List[Expr.Lexem] = ArrowExpr.funcChildren
 
+  private lazy val modeP: P[Mode] =
+    (` ` *> (`par`.as(Mode.ParMode) | `try`.as(Mode.TryMode)).lift).map(_.extract)
+
   override def p: P[ForExpr[Span.S]] =
-    ((`for` *> ` ` *> Name.p <* ` <- `) ~ ValueToken.`value` ~ (` ` *> (`par`
-      .as(ParMode: Mode)
-      .lift | `try`.as(TryMode: Mode).lift)).?).map { case ((item, iterable), mode) =>
-      ForExpr(item, iterable, mode.map(m => m -> m.extract))
+    ((`for` *> ` ` *> Name.p <* ` <- `) ~ ValueToken.`value` ~ modeP.?).map {
+      case ((item, iterable), mode) =>
+        ForExpr(item, iterable, mode)
     }
 }

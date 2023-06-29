@@ -8,13 +8,15 @@ import aqua.types.{ScalarType, StreamType}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.syntax.show.*
+import org.scalatest.Inside
+import aqua.model.inline.TagInliner.TagInlined
 
-class TagInlinerSpec extends AnyFlatSpec with Matchers {
+class TagInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
   "CanonicalizeTag" should "pass literals as is" in {
     val canonTo = "canon_to"
 
-    val model = TagInliner
+    val (state, inlined) = TagInliner
       .tagToModel[InliningState](
         CanonicalizeTag(ValueRaw.Nil, Call.Export(canonTo, StreamType(ScalarType.string))),
         ""
@@ -22,15 +24,20 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
       .run(InliningState())
       .value
 
-    model._1.resolvedExports(canonTo) shouldBe LiteralModel(ValueRaw.Nil.value, ValueRaw.Nil.baseType)
-    model._2._1 shouldBe None
-    model._2._2 shouldBe None
+    state.resolvedExports(canonTo) shouldBe LiteralModel(
+      ValueRaw.Nil.value,
+      ValueRaw.Nil.baseType
+    )
+
+    inside(inlined) { case TagInlined.Empty(prefix) =>
+      prefix shouldBe None
+    }
   }
 
   "FlattenTag" should "pass literals as is" in {
     val canonTo = "canon_to"
 
-    val model = TagInliner
+    val (state, inlined) = TagInliner
       .tagToModel[InliningState](
         FlattenTag(ValueRaw.Nil, canonTo),
         ""
@@ -38,11 +45,13 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers {
       .run(InliningState())
       .value
 
-    model._1.resolvedExports(canonTo) shouldBe LiteralModel(
+    state.resolvedExports(canonTo) shouldBe LiteralModel(
       ValueRaw.Nil.value,
       ValueRaw.Nil.baseType
     )
-    model._2._1 shouldBe None
-    model._2._2 shouldBe None
+    
+    inside(inlined) { case TagInlined.Empty(prefix) =>
+      prefix shouldBe None
+    }
   }
 }

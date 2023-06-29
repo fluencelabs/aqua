@@ -3,7 +3,8 @@ package aqua.semantics.rules.types
 import aqua.parser.lexer.*
 import aqua.raw.value.{FunctorRaw, IntoCopyRaw, IntoFieldRaw, IntoIndexRaw, PropertyRaw, ValueRaw}
 import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.{ReportError, StackInterpreter}
+import aqua.semantics.rules.StackInterpreter
+import aqua.semantics.rules.errors.ReportErrors
 import aqua.types.{
   ArrayType,
   ArrowType,
@@ -32,7 +33,7 @@ import scala.collection.immutable.SortedMap
 
 class TypesInterpreter[S[_], X](implicit
   lens: Lens[X, TypesState[S]],
-  error: ReportError[S, X],
+  error: ReportErrors[S, X],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends TypesAlgebra[S, State[X, *]] {
 
@@ -66,8 +67,8 @@ class TypesInterpreter[S[_], X](implicit
       case Valid(t) =>
         val (tt, tokens) = t
         val tokensLocs = tokens.map { case (t, n) =>
-            n.value -> t
-          }
+          n.value -> t
+        }
         locations.pointLocations(tokensLocs).map(_ => Some(tt))
       case Invalid(errs) =>
         errs
@@ -117,7 +118,7 @@ class TypesInterpreter[S[_], X](implicit
             s"Field `${op.value}` not found in type `$name`, available: ${fields.toNel.toList.map(_._1).mkString(", ")}"
           ).as(None)
         ) { t =>
-            locations.pointFieldLocation(name, op.value, op).as(Some(IntoFieldRaw(op.value, t)))
+          locations.pointFieldLocation(name, op.value, op).as(Some(IntoFieldRaw(op.value, t)))
         }
       case t =>
         t.properties
