@@ -205,6 +205,7 @@ object RawSemantics extends Logging {
       case IfTag.Else => elseWithoutIf(single.token).as(none)
       case TryTag.Catch => catchWithoutTry(single.token).as(none)
       case TryTag.Otherwise => otherwiseWithoutPrev(single.token).as(none)
+      case ParTag.Par => parWithoutPrev(single.token).as(none)
       case _ => single.some.pure
     }
 
