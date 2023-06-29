@@ -45,7 +45,7 @@ object ArrowInliner extends Logging {
       resolvedResult <- RawValueInliner.valueListToModel(results)
     } yield {
       // Fix the return values
-      val (ops, rets) = (exportTo zip resolvedResult).map {
+      (exportTo zip resolvedResult).map {
         case (
               CallModel.Export(n, StreamType(_)),
               (res @ VarModel(_, StreamType(_), _), resDesugar)
@@ -63,9 +63,11 @@ object ArrowInliner extends Logging {
           )
         case (_, (res, resDesugar)) =>
           resDesugar.toList -> res
-      }.unzip.leftMap(_.flatten)
-
-      (body :: ops, rets)
+      }.foldLeft[(List[OpModel.Tree], List[ValueModel])](
+        (body :: Nil, Nil)
+      ) { case ((ops, rets), (fo, r)) =>
+        (fo ::: ops, r :: rets)
+      }
     }
 
   // Apply a callable function, get its fully resolved body & optional value, if any
