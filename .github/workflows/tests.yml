@@ -113,7 +113,7 @@ jobs:
         run: pnpm run build
         working-directory: cli/cli-npm
 
-      - name: Compule aqua
+      - name: Compile aqua
         run: pnpm run compile-aqua
         working-directory: integration-tests
 
