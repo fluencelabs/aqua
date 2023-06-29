@@ -35,23 +35,47 @@ object TagInliner extends Logging {
 
   import Inline.parDesugarPrefix
 
+  /**
+   * Result of [[RawTag]] inlining
+   *
+   * @param prefix Previous instructions
+   */
   enum TagInlined(prefix: Option[OpModel.Tree]) {
 
+    /**
+     * Tag inlining emitted nothing
+     */
     case Empty(
       prefix: Option[OpModel.Tree] = None
     ) extends TagInlined(prefix)
 
+    /**
+     * Tag inlining emitted one parent model
+     *
+     * @param model Model which will wrap children
+     */
     case Single(
       model: OpModel,
       prefix: Option[OpModel.Tree] = None
     ) extends TagInlined(prefix)
 
+    /**
+     * Tag inling emitted complex transformation
+     *
+     * @param toModel Function from children results to result of this tag
+     */
     case Mapping(
       toModel: Chain[OpModel.Tree] => OpModel.Tree,
       prefix: Option[OpModel.Tree] = None
     ) extends TagInlined(prefix)
 
-    def construct(children: Chain[OpModel.Tree]): OpModel.Tree = {
+    /**
+     * Finalize inlining, construct a tree
+     *
+     * @param children Children results
+     * @return Result of inlining
+     */
+    def build(children: Chain[OpModel.Tree]): OpModel.Tree = {
       val inlined = this match {
         case Empty(_) => children
         case Single(model, _) =>
@@ -182,6 +206,12 @@ object TagInliner extends Logging {
                 val elseBodyFiltered = elseBody.filterNot(
                   _.head == EmptyModel
                 )
+
+                /**
+                 * Hack for xor with mismatch always have second branch
+                 * TODO: Fix this in topology
+                 * see https://linear.app/fluence/issue/LNG-69/if-inside-on-produces-invalid-topology
+                 */
                 val elseBodyAugmented =
                   if (elseBodyFiltered.isEmpty)
                     Chain.one(
@@ -351,7 +381,7 @@ object TagInliner extends Logging {
       headInlined <- f(cf.head)
       tail <- StateT.liftF(cf.tail)
       children <- tail.traverse(traverseS[S](_, f))
-    } yield headInlined.construct(children)
+    } yield headInlined.build(children)
 
   def handleTree[S: Exports: Mangler: Arrows](
     tree: RawTag.Tree,

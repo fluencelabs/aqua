@@ -75,6 +75,9 @@ class RawSemantics[S[_]](implicit p: Picker[RawContext]) extends Semantics[S, Ra
 
 object RawSemantics extends Logging {
 
+  /**
+   * [[RawTag.Tree]] with [[Token]] used for error reporting
+   */
   private final case class RawTagWithToken[S[_]](
     tree: RawTag.Tree,
     token: Token[S]
@@ -84,10 +87,15 @@ object RawSemantics extends Logging {
     private def modifyTree(f: RawTag.Tree => RawTag.Tree): RawTagWithToken[S] =
       copy(tree = f(tree))
 
+    /**
+     * Wrap tail of @param next in [[SeqTag]]
+     * and append it to current tree tail
+     */
     def append(next: RawTagWithToken[S]): RawTagWithToken[S] = modifyTree(tree =>
       tree.copy(
         tail = (
           tree.tail,
+          // SeqTag.wrap will return single node as is
           next.tree.tail.map(SeqTag.wrap)
         ).mapN(_ :+ _)
       )
@@ -118,6 +126,20 @@ object RawSemantics extends Logging {
   )(using E: ErrorsAlgebra[S, G]): G[Unit] =
     E.report(token, "Unexpected `par` without previous instruction" :: Nil)
 
+  /**
+   * Optionally combine two [[RawTag.Tree]] into one.
+   * Used to combine `if` and `else`,
+   * `try` and `catch` (`otherwise`);
+   * to create [[ParTag]] from `par`,
+   * [[TryTag]] from `otherwise`
+   *
+   * @param prev Previous tag
+   * @param next Next tag
+   * @param E Algebra for error reporting
+   * @return    [[Some]] with result of combination
+   *            [[None]] if tags should not be combined
+   *                        or error occuried
+   */
   private def rawTagCombine[S[_], G[_]: Monad](
     prev: RawTagWithToken[S],
     next: RawTagWithToken[S]
@@ -168,6 +190,14 @@ object RawSemantics extends Logging {
       case _ => none.pure
     }
 
+  /**
+   * Check if tag is valid to be single
+   *
+   * @param single tag
+   * @param E Algebra for error reporting
+   * @return   [[Some]] if tag is valid to be single
+   *           [[None]] otherwise
+   */
   private def rawTagSingleCheck[S[_], G[_]: Monad](
     single: RawTagWithToken[S]
   )(using E: ErrorsAlgebra[S, G]): G[Option[RawTagWithToken[S]]] =
@@ -178,6 +208,9 @@ object RawSemantics extends Logging {
       case _ => single.some.pure
     }
 
+  /**
+   * [[Raw]] with [[Token]] used for error reporting
+   */
   private final case class RawWithToken[S[_]](
     raw: Raw,
     token: Token[S]
@@ -191,11 +224,20 @@ object RawSemantics extends Logging {
 
   }
 
+  /**
+   * State for folding [[Raw]] results of children
+   *
+   * @param last Last seen [[Raw]] with [[Token]]
+   * @param acc All previous [[Raw]]
+   */
   private final case class InnersFoldState[S[_]](
     last: Option[RawWithToken[S]] = None,
     acc: Chain[Raw] = Chain.empty
   ) {
 
+    /**
+     * Process new incoming [[Raw]]
+     */
     def step[G[_]: Monad](
       next: RawWithToken[S]
     )(using ErrorsAlgebra[S, G]): G[InnersFoldState[S]] =
@@ -204,11 +246,13 @@ object RawSemantics extends Logging {
           .traverseN(rawTagCombine)
           .map(
             _.flatten.fold(
+              // No combination - just update last and acc
               copy(
                 last = next.some,
                 acc = prev.raw +: acc
               )
             )(combined =>
+              // Result of combination is the new last
               copy(
                 last = combined.toRaw.some
               )
@@ -216,10 +260,14 @@ object RawSemantics extends Logging {
           )
       )
 
+    /**
+     * Produce result of folding
+     */
     def result[G[_]: Monad](using
       ErrorsAlgebra[S, G]
     ): G[Option[Raw]] =
       if (acc.isEmpty)
+        // Hack to report error if single tag in block is incorrect
         last.flatTraverse(single =>
           single.toTag.fold(single.raw.some.pure)(singleTag =>
             for {

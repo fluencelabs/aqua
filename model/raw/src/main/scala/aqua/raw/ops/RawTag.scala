@@ -65,18 +65,44 @@ case object SeqTag extends SeqGroupTag {
 }
 
 case object ParTag extends ParGroupTag {
+
+  /**
+   * Used for `co` instruction
+   */
   case object Detach extends GroupTag
+
+  /**
+   * This tag should be eliminated in semantics
+   * and merged with [[ParTag]]
+   *
+   * Used for `par` instruction
+   */
   case object Par extends GroupTag
 }
 
 case class IfTag(left: ValueRaw, right: ValueRaw, equal: Boolean) extends GroupTag
 
 object IfTag {
+
+  /**
+   * This tag should be eliminated in semantics
+   * and merged with [[IfTag]]
+   */
   case object Else extends GroupTag
 }
 
 case object TryTag extends GroupTag {
+
+  /**
+   * This tag should be eliminated in semantics
+   * and merged with [[TryTag]]
+   */
   case object Catch extends GroupTag
+
+  /**
+   * This tag should be eliminated in semantics
+   * and merged with [[TryTag]]
+   */
   case object Otherwise extends GroupTag
 }
 
