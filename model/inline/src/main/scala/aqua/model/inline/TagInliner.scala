@@ -19,6 +19,7 @@ import cats.data.{Chain, State, StateT}
 import cats.syntax.show.*
 import scribe.{log, Logging}
 import aqua.model.inline.Inline.parDesugarPrefixOpt
+import aqua.model.inline.tag.IfTagInliner
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -200,32 +201,7 @@ object TagInliner extends Logging {
           valueToModel(rightRaw) >>= canonicalizeIfStream.tupled
         ).mapN { case ((leftModel, leftPrefix), (rightModel, rightPrefix)) =>
           val prefix = parDesugarPrefixOpt(leftPrefix, rightPrefix)
-          val toModel = (children: Chain[OpModel.Tree]) =>
-            XorModel.wrap(
-              children.uncons.map { case (ifBody, elseBody) =>
-                val elseBodyFiltered = elseBody.filterNot(
-                  _.head == EmptyModel
-                )
-
-                /**
-                 * Hack for xor with mismatch always have second branch
-                 * TODO: Fix this in topology
-                 * see https://linear.app/fluence/issue/LNG-69/if-inside-on-produces-invalid-topology
-                 */
-                val elseBodyAugmented =
-                  if (elseBodyFiltered.isEmpty)
-                    Chain.one(
-                      NullModel.leaf
-                    )
-                  else elseBodyFiltered
-
-                MatchMismatchModel(
-                  leftModel,
-                  rightModel,
-                  shouldMatch
-                ).wrap(ifBody) +: elseBodyAugmented
-              }.getOrElse(children)
-            )
+          val toModel = IfTagInliner(leftModel, rightModel, shouldMatch).inline
 
           TagInlined.Mapping(
             toModel = toModel,

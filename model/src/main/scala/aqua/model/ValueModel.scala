@@ -2,8 +2,10 @@ package aqua.model
 
 import aqua.raw.value.*
 import aqua.types.*
+
 import cats.Eq
 import cats.data.{Chain, NonEmptyMap}
+import cats.syntax.option.*
 import scribe.Logging
 
 sealed trait ValueModel {
@@ -17,6 +19,19 @@ sealed trait ValueModel {
 }
 
 object ValueModel {
+
+  def errorCode(error: VarModel): Option[VarModel] =
+    error.intoField("error_code")
+
+  val lastError = VarModel(
+    name = ValueRaw.LastError.name,
+    baseType = ValueRaw.LastError.baseType
+  )
+
+  val lastErrorType = ValueRaw.lastErrorType
+
+  // NOTE: It should be safe as %last_error% should have `error_code` field
+  val lastErrorCode = errorCode(lastError).get
 
   implicit object ValueModelEq extends Eq[ValueModel] {
     override def eqv(x: ValueModel, y: ValueModel): Boolean = x == y
@@ -46,9 +61,16 @@ case class LiteralModel(value: String, `type`: Type) extends ValueModel {
 }
 
 object LiteralModel {
+
+  // AquaVM will return empty string for
+  // %last_error%.$.error_code if there is no %last_error%
+  val emptyErrorCode = quote("")
+
   def fromRaw(raw: LiteralRaw): LiteralModel = LiteralModel(raw.value, raw.baseType)
 
   def quote(str: String): LiteralModel = LiteralModel(s"\"$str\"", LiteralType.string)
+
+  def number(n: Int): LiteralModel = LiteralModel(n.toString, LiteralType.number)
 }
 
 sealed trait PropertyModel {
@@ -116,6 +138,17 @@ case class VarModel(name: String, baseType: Type, properties: Chain[PropertyMode
 
   private def deriveFrom(vm: VarModel): VarModel =
     vm.copy(properties = vm.properties ++ properties)
+
+  def intoField(field: String): Option[VarModel] = `type` match {
+    case StructType(_, fields) =>
+      fields(field)
+        .map(fieldType =>
+          copy(
+            properties = properties :+ IntoFieldModel(field, fieldType)
+          )
+        )
+    case _ => none
+  }
 
   override def resolveWith(vals: Map[String, ValueModel]): ValueModel =
     vals.get(name) match {

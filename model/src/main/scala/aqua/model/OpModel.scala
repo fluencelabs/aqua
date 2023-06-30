@@ -146,6 +146,12 @@ case class FlattenModel(value: ValueModel, assignTo: String) extends OpModel {
   override def exportsVarNames: Set[String] = Set(assignTo)
 }
 
+case class FailModel(value: ValueModel) extends OpModel {
+  override def usesVarNames: Set[String] = value.usesVarNames
+
+  override def exportsVarNames: Set[String] = Set.empty
+}
+
 case class PushToStreamModel(value: ValueModel, exportTo: CallModel.Export) extends OpModel {
 
   override def usesVarNames: Set[String] = value.usesVarNames
