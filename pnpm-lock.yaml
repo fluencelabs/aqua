@@ -46,8 +46,8 @@ importers:
         specifier: 1.0.14
         version: 1.0.14
       '@fluencelabs/js-client.api':
-        specifier: 0.11.6
-        version: 0.11.6
+        specifier: 0.12.0
+        version: 0.12.0
       '@fluencelabs/js-client.node':
         specifier: 0.6.9
         version: 0.6.9(uint8arraylist@2.4.3)
@@ -639,11 +639,16 @@ packages:
     engines: {node: '>=10', pnpm: '>=3'}
     dev: false
 
-  /@fluencelabs/js-client.api@0.11.6:
-    resolution: {integrity: sha512-PdoCqTuyegj9HRkdGXTT8MzNe1fptiTSu0dHewo/nuiEs51pYOvShNod/CL6Adjh7Ak4OQe7nm/brEXBxXgRCg==}
+  /@fluencelabs/interfaces@0.8.0:
+    resolution: {integrity: sha512-sJCSANOp+HkrIUdGOUH+lUkuKDhfcufYq/uWLxYLO26hmS+YPLBrbaPnnLwCX+VK3S7r5wm5fkLQTKTSe/Vaog==}
+    engines: {node: '>=10', pnpm: '>=3'}
+    dev: false
+
+  /@fluencelabs/js-client.api@0.12.0:
+    resolution: {integrity: sha512-DfYkmhBV3wkYl84CZR/kw8yonW6DMOUOnNC1/plIo7b6edUHJLVFQd9a9WyIjGxgyOLKn5dlkh8cIfYJ75Hwgg==}
     engines: {node: '>=10', pnpm: '>=3'}
     dependencies:
-      '@fluencelabs/interfaces': 0.7.5
+      '@fluencelabs/interfaces': 0.8.0
     dev: false
 
   /@fluencelabs/js-client.node@0.6.9(uint8arraylist@2.4.3):
