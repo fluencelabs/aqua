@@ -16,11 +16,16 @@ import aqua.types.*
 case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
   // Both arguments (arg names and types how they seen from the function body)
   // and values (value models and types how they seen on the call site)
-  lazy val zipped: List[((String, Type), ValueModel)] = args.toLabelledList() zip callWith
+  private lazy val zipped: List[((String, Type), ValueModel)] = args.toLabelledList() zip callWith
 
   lazy val dataArgs: Map[String, ValueModel] =
     zipped.collect { case ((name, _: DataType), value) =>
       name -> value
+    }.toMap
+
+  lazy val abilityArgs: Map[String, (VarModel, ScopeType)] =
+    zipped.collect { case (k, vr@VarModel(_, t@ScopeType(_, _), _)) =>
+      k._1 -> (vr, t)
     }.toMap
 
   lazy val streamArgs: Map[String, VarModel] =

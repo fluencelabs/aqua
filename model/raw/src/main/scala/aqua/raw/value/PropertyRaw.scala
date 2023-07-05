@@ -25,7 +25,9 @@ case class IntoArrowRaw(name: String, arrowType: Type, arguments: List[ValueRaw]
   
   override def map(f: ValueRaw => ValueRaw): PropertyRaw = this
 
-  override def varNames: Set[String] = Set.empty
+  override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
+
+  override def renameVars(vals: Map[String, String]): PropertyRaw = copy(arguments = arguments.map(_.renameVars(vals)))
 }
 
 case class IntoCopyRaw(`type`: StructType, fields: NonEmptyMap[String, ValueRaw]) extends PropertyRaw {

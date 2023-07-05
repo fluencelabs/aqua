@@ -94,7 +94,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     result <- arrow.fold {
       logger.error(
         s"Inlining, cannot find arrow $funcName, available: ${arrows.keys
-          .mkString(", ")}"
+          .mkString(", ")} and vars: ${exports.keys.mkString(", ")}"
       )
 
       State.pure(Nil -> Inline.empty)

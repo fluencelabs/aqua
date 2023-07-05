@@ -86,19 +86,16 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         }
 
       case IntoFieldRaw(fieldName, t) =>
-        println("find field for: " + varModel)
-        println("field name: " + fieldName)
-        println("field type:" + t)
         for {
           exports <- Exports[S].exports
-
-          result <- exports.get(s"${varModel.name}.$fieldName") match {
+          fullName = s"${varModel.name}.$fieldName"
+          result <- exports.get(fullName) match {
             case Some(vm: VarModel) =>
               State.pure((vm, Inline.empty))
             case Some(lm: LiteralModel) =>
               flatLiteralWithProperties(lm, Inline.empty, Chain.empty)
             case _ =>
-              logger.error(s"Inlining, cannot find field $fieldName in ability $varModel. Available: $exports")
+              logger.error(s"Inlining, cannot find field $fullName in ability $varModel. Available: ${exports.keySet}")
               flatLiteralWithProperties(LiteralModel.quote(""), Inline.empty, Chain.empty)
           }
         } yield {

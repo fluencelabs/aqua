@@ -28,7 +28,8 @@ object MakeScopeRawInliner extends RawInliner[ScopeRaw] {
       valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _).desugar
       _ <- foldedFields.map(_._1).toNel.toList.traverse {
         case (n, vm) =>
-          Exports[S].resolved(s"$name.$n", vm)
+          val namef = s"$name.$n"
+          Exports[S].resolved(namef, vm)
       }
     } yield {
       (

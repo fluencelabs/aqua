@@ -1,8 +1,13 @@
+aqua Main
+
+export handleScope
+
 service SomeService(""):
   getStr(s: string) -> string
 
 scope SomeScope:
   someArrow(s: string) -> string
+  str: string
 
 func funcStr(s: string) -> string:
   strInFunc <- SomeService.getStr(s)
@@ -22,21 +27,12 @@ func funcStr(s: string) -> string:
 --   closure = (a: string) -> string:
 --     <- SomeService.str()
 
--- func handleSecScope(sc: SomeScope) -> string:
---   b = sc.someArrow("SECOND HANDLE")
---   <- b
---
--- func handleScope() -> string:
---   newScope = SomeScope(someArrow = funcStr)
---   d <- handleSecScope(newScope)
---   <- d
-
-func handleSecScope(sc: string -> string) -> string:
-  b = sc("SECOND HANDLE")
+func handleSecScope(sc: SomeScope) -> string:
+  b = sc.someArrow(sc.str)
   <- b
 
-func handleScope() -> string:
-  newScope = (s: string) -> string:
-    <- "123"
-  d <- handleSecScope(newScope)
+func handleScope(fff: string) -> string:
+  sc = SomeScope(someArrow = funcStr, str = fff)
+  a = "ferwf"
+  d <- handleSecScope(sc)
   <- d
