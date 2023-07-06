@@ -40,6 +40,9 @@ trait After {
         Eval.now(Chain.empty)
     }
 
+  // If exit is forced, make a path outside this node
+  // – from where it ends to where execution is expected to continue,
+  // explicitly pinging the next node (useful inside par branches)
   def pathAfterAndPingNext(current: Topology): Eval[Chain[ValueModel]] =
     current.forceExit.flatMap {
       case false => Eval.now(Chain.empty)
@@ -48,7 +51,12 @@ trait After {
           case (e, a, _) if e == a => Chain.empty
           case (e, a, l) if l.contains(e) =>
             // Pingback in case no relays involved
-            Chain.fromOption(a.headOption.map(_.peerId))
+            Chain.fromOption(
+              a.headOption
+                // Add nothing if last node is the same
+                .filterNot(e.headOption.contains)
+                .map(_.peerId)
+            )
           case (e, a, _) =>
             // We wasn't at e, so need to get through the last peer in case it matches with the relay
             Topology.findRelayPathEnforcement(a, e) ++ Chain.fromOption(

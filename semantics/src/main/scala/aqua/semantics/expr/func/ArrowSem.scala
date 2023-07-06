@@ -159,7 +159,8 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
 
             // wrap streams with restrictions
             val bodyWithRestrictions = localStreams.foldLeft(bodyModified) {
-              case (bm, (streamName, _)) => RestrictionTag(streamName, isStream = true).wrap(bm)
+              case (bm, (streamName, streamType)) =>
+                RestrictionTag(streamName, streamType).wrap(bm)
             }
 
             ArrowRaw(funcArrow, returnValuesModified.toList, bodyWithRestrictions)

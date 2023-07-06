@@ -17,10 +17,13 @@ trait TreeNode[T <: TreeNode[T]] {
 
   def wrap(children: Chain[Tree]): Tree = Cofree(self, Eval.now(children))
 
-  protected def wrapNonEmpty(children: Chain[Tree], empty: Tree): Tree = children match {
-    case Chain.nil => empty
-    case x ==: Chain.nil => x
-    case _ => Cofree(self, Eval.now(children))
-  }
+  protected def wrapNonEmpty(children: Chain[Tree], empty: Tree): Tree =
+    children match {
+      case Chain.nil => empty
+      case x ==: Chain.nil => x
+      // Do not use `wrap` here as children
+      // could redefine `wrap` through this method
+      case _ => Cofree(self, Eval.now(children))
+    }
 
 }

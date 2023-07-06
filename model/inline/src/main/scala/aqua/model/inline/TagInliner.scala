@@ -351,8 +351,8 @@ object TagInliner extends Logging {
           }
         } yield model.fold(TagInlined.Empty())(m => TagInlined.Single(model = m))
 
-      case RestrictionTag(name, isStream) =>
-        pure(RestrictionModel(name, isStream))
+      case RestrictionTag(name, typ) =>
+        pure(RestrictionModel(name, typ))
 
       case DeclareStreamTag(value) =>
         value match

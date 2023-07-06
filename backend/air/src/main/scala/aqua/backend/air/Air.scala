@@ -46,8 +46,6 @@ object DataView {
 
   case class Variable(name: String) extends DataView
 
-  case class Stream(name: String) extends DataView
-
   case class VarLens(name: String, lens: String, isField: Boolean = true) extends DataView {
     def append(sublens: String): VarLens = copy(lens = lens + sublens)
   }
@@ -57,7 +55,6 @@ object DataView {
     case InitPeerId ⇒ "%init_peer_id%"
     case LastError ⇒ "%last_error%"
     case Variable(name) ⇒ name
-    case Stream(name) ⇒ name
     case VarLens(name, lens, isField) ⇒
       if (isField) name + ".$" + lens
       else name + lens
@@ -90,7 +87,12 @@ object Air {
 
   case class Next(label: String) extends Air(Keyword.Next)
 
-  case class Fold(iterable: DataView, label: String, instruction: Air, lastNextInstruction: Option[Air]) extends Air(Keyword.Fold)
+  case class Fold(
+    iterable: DataView,
+    label: String,
+    instruction: Air,
+    lastNextInstruction: Option[Air]
+  ) extends Air(Keyword.Fold)
 
   case class Match(left: DataView, right: DataView, instruction: Air) extends Air(Keyword.Match)
 

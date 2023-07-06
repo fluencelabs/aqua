@@ -10,7 +10,7 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, BoxType}
+import aqua.types.{ArrayType, BoxType, StreamType}
 
 import cats.Monad
 import cats.data.Chain
@@ -42,11 +42,10 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
         },
         (stOpt: Option[ValueRaw], ops: Raw) =>
           N.streamsDefinedWithinScope()
-            .map(_.keySet)
             .map(streams =>
               (stOpt, ops) match {
                 case (Some(vm), FuncOp(op)) =>
-                  val innerTag = expr.mode.fold[RawTag](SeqTag) {
+                  val innerTag = expr.mode.fold(SeqTag) {
                     case ForExpr.Mode.ParMode => ParTag
                     case ForExpr.Mode.TryMode => TryTag
                   }
@@ -58,8 +57,8 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                       innerTag
                         .wrap(
                           // Restrict the streams created within this scope
-                          streams.toList.foldLeft(op) { case (b, streamName) =>
-                            RestrictionTag(streamName, isStream = true).wrap(b)
+                          streams.toList.foldLeft(op) { case (tree, (streamName, streamType)) =>
+                            RestrictionTag(streamName, streamType).wrap(tree)
                           },
                           NextTag(expr.item.value).leaf
                         )
