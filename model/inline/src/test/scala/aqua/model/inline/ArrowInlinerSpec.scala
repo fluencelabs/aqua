@@ -1660,4 +1660,88 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
   }
 
+  /*
+  service Get("get"):
+      get() -> string
+
+  func inner() -> string:
+      results <- DTGetter.get_dt()
+      <- results
+
+  func outer() -> []string:
+      results: *string
+      results <- use_name1()
+      <- results
+   */
+  "arrow inliner" should "generate result in right order" in {
+    val innerName = "inner"
+    val results = VarRaw("results", ScalarType.string)
+    val resultsOut = VarRaw("results", StreamType(ScalarType.string))
+
+    val inner = FuncArrow(
+      innerName,
+      SeqTag.wrap(
+        CallArrowRawTag
+          .service(
+            LiteralRaw.quote("Get"),
+            "get",
+            Call(Nil, Call.Export(results.name, results.baseType) :: Nil)
+          )
+          .leaf
+      ),
+      ArrowType(
+        ProductType(Nil),
+        ProductType(ScalarType.string :: Nil)
+      ),
+      results :: Nil,
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val captured = Map.apply((innerName, inner))
+
+    val outer = FuncArrow(
+      "outer",
+      SeqTag.wrap(
+        DeclareStreamTag(resultsOut).leaf,
+        CallArrowRawTag
+          .func(innerName, Call(Nil, Call.Export(resultsOut.name, resultsOut.baseType) :: Nil))
+          .leaf
+      ),
+      ArrowType(
+        ProductType(Nil),
+        ProductType(ArrayType(ScalarType.string) :: Nil)
+      ),
+      resultsOut :: Nil,
+      captured,
+      Map.empty,
+      None
+    )
+
+    val (state, model: OpModel.Tree) = ArrowInliner
+      .callArrow[InliningState](outer, CallModel(Nil, Nil))
+      .run(InliningState())
+      .value
+
+    val resultModel = VarModel("results-0", ScalarType.string)
+    model.equalsOrShowDiff(
+      MetaModel
+        .CallArrowModel(innerName)
+        .wrap(
+          SeqModel.wrap(
+            CallServiceModel(
+              LiteralModel.quote("Get"),
+              "get",
+              CallModel(Nil, CallModel.Export(resultModel.name, resultModel.`type`) :: Nil)
+            ).leaf,
+            PushToStreamModel(
+              resultModel,
+              CallModel.Export(resultsOut.name, resultsOut.baseType)
+            ).leaf
+          )
+        )
+    ) should be(true)
+  }
+
 }

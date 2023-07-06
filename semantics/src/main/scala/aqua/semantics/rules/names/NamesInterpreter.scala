@@ -3,7 +3,8 @@ package aqua.semantics.rules.names
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.{ReportError, StackInterpreter}
+import aqua.semantics.rules.StackInterpreter
+import aqua.semantics.rules.errors.ReportErrors
 import aqua.types.{ArrowType, StreamType, Type}
 import cats.data.{OptionT, State}
 import cats.syntax.flatMap.*
@@ -14,7 +15,7 @@ import monocle.macros.GenLens
 
 class NamesInterpreter[S[_], X](implicit
   lens: Lens[X, NamesState[S]],
-  error: ReportError[S, X],
+  error: ReportErrors[S, X],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends NamesAlgebra[S, State[X, *]] {
 

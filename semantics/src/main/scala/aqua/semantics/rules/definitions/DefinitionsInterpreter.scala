@@ -1,7 +1,8 @@
 package aqua.semantics.rules.definitions
 
 import aqua.parser.lexer.{Name, NamedTypeToken, Token}
-import aqua.semantics.rules.{ReportError, StackInterpreter}
+import aqua.semantics.rules.StackInterpreter
+import aqua.semantics.rules.errors.ReportErrors
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState}
 import aqua.semantics.rules.types.TypesState
@@ -18,7 +19,7 @@ import scala.collection.immutable.SortedMap
 
 class DefinitionsInterpreter[S[_], X](implicit
   lens: Lens[X, DefinitionsState[S]],
-  error: ReportError[S, X],
+  error: ReportErrors[S, X],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends DefinitionsAlgebra[S, State[X, *]] {
   type SX[A] = State[X, A]

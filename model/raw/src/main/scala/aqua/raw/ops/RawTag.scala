@@ -60,19 +60,51 @@ sealed trait ParGroupTag extends GroupTag
 
 case object SeqTag extends SeqGroupTag {
 
-  override def wrap(children: Tree*): Tree =
-    super.wrapNonEmpty(children.filterNot(_.head == EmptyTag).toList, RawTag.empty)
+  override def wrap(children: Chain[Tree]): Tree =
+    super.wrapNonEmpty(children.filterNot(_.head == EmptyTag), RawTag.empty)
 }
 
 case object ParTag extends ParGroupTag {
-  case object Detach extends ParGroupTag
+
+  /**
+   * Used for `co` instruction
+   */
+  case object Detach extends GroupTag
+
+  /**
+   * This tag should be eliminated in semantics
+   * and merged with [[ParTag]]
+   *
+   * Used for `par` instruction
+   */
+  case object Par extends GroupTag
 }
 
-case object XorTag extends GroupTag {
-  case object LeftBiased extends GroupTag
+case class IfTag(left: ValueRaw, right: ValueRaw, equal: Boolean) extends GroupTag
+
+object IfTag {
+
+  /**
+   * This tag should be eliminated in semantics
+   * and merged with [[IfTag]]
+   */
+  case object Else extends GroupTag
 }
 
-case class XorParTag(xor: RawTag.Tree, par: RawTag.Tree) extends RawTag
+case object TryTag extends GroupTag {
+
+  /**
+   * This tag should be eliminated in semantics
+   * and merged with [[TryTag]]
+   */
+  case object Catch extends GroupTag
+
+  /**
+   * This tag should be eliminated in semantics
+   * and merged with [[TryTag]]
+   */
+  case object Otherwise extends GroupTag
+}
 
 case class OnTag(peerId: ValueRaw, via: Chain[ValueRaw]) extends SeqGroupTag {
 
@@ -95,13 +127,6 @@ case class RestrictionTag(name: String, isStream: Boolean) extends SeqGroupTag {
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(name = map.getOrElse(name, name))
-}
-
-case class MatchMismatchTag(left: ValueRaw, right: ValueRaw, shouldMatch: Boolean)
-    extends SeqGroupTag {
-
-  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    MatchMismatchTag(left.map(f), right.map(f), shouldMatch)
 }
 
 case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = None)

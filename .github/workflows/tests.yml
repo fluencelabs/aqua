@@ -37,7 +37,7 @@ jobs:
 
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@v2.6.0
+        uses: hashicorp/vault-action@v2.7.0
         with:
           url: https://vault.fluence.dev
           path: jwt/github
@@ -113,7 +113,7 @@ jobs:
         run: pnpm run build
         working-directory: cli/cli-npm
 
-      - name: Compule aqua
+      - name: Compile aqua
         run: pnpm run compile-aqua
         working-directory: integration-tests
 

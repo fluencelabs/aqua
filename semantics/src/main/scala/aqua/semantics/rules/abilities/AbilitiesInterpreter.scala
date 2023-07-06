@@ -7,7 +7,8 @@ import aqua.raw.value.ValueRaw
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.definitions.DefinitionsAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.{ReportError, StackInterpreter, abilities}
+import aqua.semantics.rules.{abilities, StackInterpreter}
+import aqua.semantics.rules.errors.ReportErrors
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.syntax.functor.*
@@ -17,7 +18,7 @@ import monocle.macros.GenLens
 
 class AbilitiesInterpreter[S[_], X](implicit
   lens: Lens[X, AbilitiesState[S]],
-  error: ReportError[S, X],
+  error: ReportErrors[S, X],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends AbilitiesAlgebra[S, State[X, *]] {
 
@@ -46,11 +47,14 @@ class AbilitiesInterpreter[S[_], X](implicit
           s.copy(
             services = s.services
               .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
-            definitions =
-              s.definitions.updated(name.value, name)
+            definitions = s.definitions.updated(name.value, name)
           )
         ).flatMap { _ =>
-          locations.addTokenWithFields(name.value, name, arrows.toNel.toList.map(t => t._1 -> t._2._1))
+          locations.addTokenWithFields(
+            name.value,
+            name,
+            arrows.toNel.toList.map(t => t._1 -> t._2._1)
+          )
         }.as(true)
     }
 
