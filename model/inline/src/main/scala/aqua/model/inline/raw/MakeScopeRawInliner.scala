@@ -22,7 +22,7 @@ object MakeScopeRawInliner extends RawInliner[ScopeRaw] {
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     for {
-      name <- Mangler[S].findAndForbidName(raw.scopeType.name)
+      name <- Mangler[S].findAndForbidName(raw.scopeType.name + "_ab")
       foldedFields <- raw.fieldsAndArrows.nonEmptyTraverse(unfold(_))
       varModel = VarModel(name, raw.baseType)
       valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _).desugar

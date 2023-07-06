@@ -2,7 +2,7 @@ package aqua.model.inline
 
 import aqua.model
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.*
+import aqua.model.{SeqModel, *}
 import aqua.raw.ops.RawTag
 import aqua.types.{ArrowType, BoxType, DataType, ScopeType, StreamType, Type}
 import aqua.raw.value.{ValueRaw, VarRaw}
@@ -76,7 +76,7 @@ object ArrowInliner extends Logging {
   private def inline[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel
-  ): State[S, (OpModel.Tree, List[ValueModel])] =
+  ): State[S, (SeqModel.Tree, List[ValueModel], Map[String, ValueModel], Map[String, FuncArrow])] =
     Exports[S].exports.flatMap { oldExports =>
       getOutsideStreamNames.flatMap { outsideDeclaredStreams =>
         // Function's internal variables will not be available outside, hence the scope
@@ -105,7 +105,17 @@ object ArrowInliner extends Logging {
               callableFuncBody
             )
             (ops, rets) = opsAndRets
-          } yield SeqModel.wrap(ops.reverse: _*) -> rets.reverse
+            exports <- Exports[S].exports
+            arrows <- Arrows[S].arrows
+            returnedFromScopes = rets.collect { case VarModel(name, st @ ScopeType(_, _), _) =>
+              getAllVarsFromScope(name, None, st, exports, arrows)
+            }.fold((Map.empty, Map.empty)) { case (acc, (vars, arrs)) =>
+              (acc._1 ++ vars, acc._2 ++ arrs)
+            }
+          } yield {
+            val (vals, arrows) = returnedFromScopes
+            (SeqModel.wrap(ops.reverse: _*), rets.reverse, vals, arrows)
+          }
         )
       }
     }
@@ -116,12 +126,14 @@ object ArrowInliner extends Logging {
   private def updateArrowsAndRenameArrowArgs[S: Mangler: Arrows: Exports](
     argsToArrowsRaw: Map[String, FuncArrow],
     func: FuncArrow,
-    rename: Map[String, String]
+    outerRenames: Map[String, String]
   ): State[S, Map[String, String]] = {
     for {
-      argsToArrowsShouldRename <- Mangler[S].findNewNames(
-        argsToArrowsRaw.keySet
-      ).map(_ ++ rename)
+      argsToArrowsShouldRename <- Mangler[S]
+        .findNewNames(
+          argsToArrowsRaw.keySet
+        )
+        .map(_ ++ outerRenames)
       argsToArrows = argsToArrowsRaw.map { case (k, v) =>
         argsToArrowsShouldRename.getOrElse(k, k) -> v
       }
@@ -141,14 +153,17 @@ object ArrowInliner extends Logging {
   }
 
   private def updateExportsAndRenameDataArgs[S: Mangler: Arrows: Exports](
-    argsToDataRaw: Map[String, ValueModel], rename: Map[String, String],
+    argsToDataRaw: Map[String, ValueModel],
+    outerRenames: Map[String, String]
   ): State[S, Map[String, String]] = {
     for {
       // Find all duplicates in arguments
-      // we should not rename arguments that will be renamed by 'streamToRename'
-      argsToDataShouldRename <- Mangler[S].findNewNames(
-        argsToDataRaw.keySet
-      ).map(_ ++ rename)
+      // we should not outerRenames arguments that will be renamed by 'streamToRename'
+      argsToDataShouldRename <- Mangler[S]
+        .findNewNames(
+          argsToDataRaw.keySet
+        )
+        .map(_ ++ outerRenames)
 
       // Do not rename arguments if they just match external names
       argsToData = argsToDataRaw.map { case (k, v) =>
@@ -197,26 +212,25 @@ object ArrowInliner extends Logging {
         s"$name.$n" -> s"$newName.$n"
       }
       allNewNames = newFieldsName.add((name, newName)).toSortedMap
-//      allNewNames = Map.empty[String, String]
     } yield {
       val (allVars, allArrows) =
-        getAllVarsFromScope(vm.name, newName, t, oldExports, oldArrows, Map.empty, Map.empty)
+        getAllVarsFromScope(vm.name, Option(newName), t, oldExports, oldArrows)
       (allNewNames, allVars, allArrows)
     }
   }
 
   private def getAllVarsFromScope(
     topOldName: String,
-    topNewName: String,
+    topNewName: Option[String],
     st: ScopeType,
     oldExports: Map[String, ValueModel],
     oldArrows: Map[String, FuncArrow],
-    valArgs: Map[String, ValueModel],
-    arrowsArgs: Map[String, FuncArrow]
+    valAcc: Map[String, ValueModel] = Map.empty,
+    arrowsAcc: Map[String, FuncArrow] = Map.empty
   ): (Map[String, ValueModel], Map[String, FuncArrow]) = {
     st.fields.toSortedMap.toList.map { case (fName, value) =>
       val currentOldName = s"$topOldName.$fName"
-      val currentNewName = s"$topNewName.$fName"
+      val currentNewName = topNewName.map(_ + s".$fName")
       value match {
         case st @ ScopeType(_, _) =>
           getAllVarsFromScope(
@@ -225,85 +239,36 @@ object ArrowInliner extends Logging {
             st,
             oldExports,
             oldArrows,
-            valArgs,
-            arrowsArgs
+            valAcc,
+            arrowsAcc
           )
         case ArrowType(_, _) =>
-          println("finding arrow on currentOldName: " + currentOldName)
-          println("oldExports: " + oldExports.keySet)
-          println("newScope: " + oldExports.get("newScope"))
           oldExports
             .get(currentOldName)
             .flatMap {
               case vm @ VarModel(name, _, _) =>
-                println("try to find arrow for: " + name)
-                println("oldArrows: " + oldArrows.keySet)
                 oldArrows
                   .get(name)
-                  .map(fa => (valArgs.updated(currentNewName, vm), arrowsArgs.updated(name, fa)))
+                  .map(fa =>
+                    (
+                      valAcc.updated(currentNewName.getOrElse(currentOldName), vm),
+                      arrowsAcc.updated(name, fa)
+                    )
+                  )
               case _ => None
             }
-            .getOrElse((valArgs, arrowsArgs))
+            .getOrElse((valAcc, arrowsAcc))
 
         case _ =>
           oldExports
             .get(currentOldName)
-            .map(vm => (valArgs.updated(currentNewName, vm), arrowsArgs))
-            .getOrElse((valArgs, arrowsArgs))
+            .map(vm => (valAcc.updated(currentNewName.getOrElse(currentOldName), vm), arrowsAcc))
+            .getOrElse((valAcc, arrowsAcc))
       }
     }.reduce { case (l, r) =>
       (l._1 ++ r._1, r._2 ++ r._2)
     }
   }
-
-  /*
-
-  ability Abs:
-    a: string
-    f: string -> string
-
-  ab = Abs(a = someVar, f = someFunc)
-
-  Arrows:
-    someFunc -> funcArrow (body func)
-  Exports:
-    ab.a -> someVar
-    ab.f -> Var(someFunc, ArrowType)
-
-
-
-  -- current file
-
-  func someFunc(..):
-    ...
-
-  func callFunc():
-    ab = Abs(a = someVar, f = someFunc)
-    nestedFunc(ab)
-
-
-  -- diff file
-
-  func someFunc(..):
-    ...
-
-  func nestedFunc(ab: Abs):
-
-
-  if rename:
-    Arrows:
-      someFunc-0 -> funcArrow
-    Exports:
-      ab-0.a -> someVar-0
-      ab-0.f -> Var(someFunc-0, ArrowType)
-
-  `someFunc` will be renamed only if we have another `someFunc` in scope
-  `someVar` will be renamed only if we have another `someVar` in scope
-  `ab` will be renamed only if we have another `ab` in scope
-
-  gather all names for scopes
-  gather all values and arrows by this name and throw it to renamers
-   */
 
   /**
    * Prepare the state context for this function call
@@ -399,7 +364,9 @@ object ArrowInliner extends Logging {
   ): State[S, (OpModel.Tree, List[ValueModel])] =
     for {
       passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
-      arrowsFromAbilities <- call.abilityArgs.traverse(getAllArrowsFromAbility).map(_.fold(Map.empty)(_ ++ _))
+      arrowsFromAbilities <- call.abilityArgs
+        .traverse(getAllArrowsFromAbility)
+        .map(_.fold(Map.empty)(_ ++ _))
 
       av <- Arrows[S].scope(
         for {
@@ -408,12 +375,13 @@ object ArrowInliner extends Logging {
           // find and get resolved arrows if we return them from the function
           returnedArrows = av._2.collect { case VarModel(name, ArrowType(_, _), _) =>
             name
-          }
-          arrowsToSave <- Arrows[S].pickArrows(returnedArrows.toSet)
-        } yield av -> arrowsToSave
+          }.toSet
+
+          arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
+        } yield (av._1, av._2, arrowsToSave ++ av._4, av._3)
       )
-      ((appliedOp, values), arrowsToSave) = av
+      (appliedOp, values, arrowsToSave, valsToSave) = av
       _ <- Arrows[S].resolved(arrowsToSave)
-      _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(values).toMap)
+      _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(values).toMap ++ valsToSave)
     } yield appliedOp -> values
 }

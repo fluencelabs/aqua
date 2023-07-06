@@ -31,8 +31,11 @@ func handleSecScope(sc: SomeScope) -> string:
   b = sc.someArrow(sc.str)
   <- b
 
+func returnScope(s: string) -> SomeScope:
+  sc = SomeScope(someArrow = funcStr, str = s)
+  <- sc
+
 func handleScope(fff: string) -> string:
-  sc = SomeScope(someArrow = funcStr, str = fff)
-  a = "ferwf"
+  sc = returnScope(fff)
   d <- handleSecScope(sc)
   <- d
