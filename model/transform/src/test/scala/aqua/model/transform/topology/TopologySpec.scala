@@ -492,14 +492,16 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               SeqRes.wrap(
                 through(relay),
                 XorRes.wrap(
-                  callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                  SeqRes.wrap(
+                    callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                    through(relay),
+                    through(initPeer)
+                  ),
                   SeqRes.wrap(
                     through(relay),
                     callRes(4, initPeer)
                   )
-                ),
-                through(relay),
-                through(initPeer)
+                )
               ),
               NextRes("i").leaf
             )
@@ -560,15 +562,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
                 through(relay),
                 XorRes.wrap(
                   XorRes.wrap(
-                    callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`)))
+                    SeqRes.wrap(
+                      callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                      through(relay),
+                      through(initPeer)
+                    )
                   ),
-                  SeqRes.wrap(
-                    through(relay),
-                    callRes(4, initPeer)
-                  )
-                ),
-                through(relay),
-                through(initPeer)
+                  callRes(4, initPeer)
+                )
               ),
               NextRes("i").leaf
             )
@@ -877,14 +878,16 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               SeqRes.wrap(
                 through(relay),
                 XorRes.wrap(
-                  callRes(
-                    1,
-                    ValueModel.fromRaw(i),
-                    Some(CallModel.Export(used.name, used.`type`))
+                  SeqRes.wrap(
+                    callRes(
+                      1,
+                      ValueModel.fromRaw(i),
+                      Some(CallModel.Export(used.name, used.`type`))
+                    ),
+                    through(relay),
+                    through(initPeer)
                   )
-                ),
-                through(relay),
-                through(initPeer)
+                )
               ),
               NextRes("i").leaf
             )
