@@ -24,6 +24,8 @@ object Keyword {
 
   case object Ap extends Keyword("ap")
 
+  case object Fail extends Keyword("fail")
+
   case object Canon extends Keyword("canon")
 
   case object Seq extends Keyword("seq")
@@ -110,6 +112,8 @@ object Air {
 
   case class Ap(op: DataView, result: String) extends Air(Keyword.Ap)
 
+  case class Fail(op: DataView) extends Air(Keyword.Fail)
+
   case class Canon(op: DataView, peerId: DataView, result: String) extends Air(Keyword.Canon)
 
   case class Comment(comment: String, air: Air) extends Air(Keyword.NA)
@@ -143,6 +147,7 @@ object Air {
             case Air.Call(triplet, args, res) ⇒
               s" ${triplet.show} [${args.map(_.show).mkString(" ")}]${res.fold("")(" " + _)}"
             case Air.Ap(operand, result) ⇒ s" ${operand.show} $result"
+            case Air.Fail(operand) => s" ${operand.show}"
             case Air.Canon(operand, peerId, result) ⇒ s" ${peerId.show} ${operand.show}  $result"
             case Air.Comment(_, _) => ";; Should not be displayed"
           }) + ")\n"

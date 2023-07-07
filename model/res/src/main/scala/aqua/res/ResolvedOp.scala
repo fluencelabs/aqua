@@ -54,6 +54,10 @@ case class ApRes(operand: ValueModel, exportTo: CallModel.Export) extends Resolv
   override def toString: String = s"(ap $operand $exportTo)"
 }
 
+case class FailRes(operand: ValueModel) extends ResolvedOp {
+  override def toString: String = s"(fail $operand)"
+}
+
 case class CanonRes(operand: ValueModel, peerId: ValueModel, exportTo: CallModel.Export)
     extends ResolvedOp {
   override def toString: String = s"(canon $peerId $operand $exportTo)"
