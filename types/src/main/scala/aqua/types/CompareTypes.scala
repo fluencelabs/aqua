@@ -127,7 +127,7 @@ object CompareTypes {
         case (x: OptionType, y: StreamType) => apply(x.element, y.element)
         case (x: OptionType, y: ArrayType) => apply(x.element, y.element)
         case (x: StreamType, y: StreamType) => apply(x.element, y.element)
-        case (lnt: ScopeType, rnt: ScopeType) => compareNamed(lnt.fields, rnt.fields)
+        case (lnt: AbilityType, rnt: AbilityType) => compareNamed(lnt.fields, rnt.fields)
         case (lnt: StructType, rnt: StructType) => compareNamed(lnt.fields, rnt.fields)
 
         // Products

@@ -134,9 +134,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                         StructType(typeName.value, rf.map(_.`type`)),
                         Some(MakeStructRaw(rf, struct))
                       )
-                    case scope@ScopeType(_, _) =>
+                    case scope@AbilityType(_, _) =>
                       (
-                        ScopeType(typeName.value, rf.map(_.`type`)),
+                        AbilityType(typeName.value, rf.map(_.`type`)),
                         Some(ScopeRaw(rf, scope))
                       )
                   }

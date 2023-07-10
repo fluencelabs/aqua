@@ -161,7 +161,7 @@ case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: Stru
     copy(fields = fields.map(_.renameVars(map)))
 }
 
-case class ScopeRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], scopeType: ScopeType) extends ValueRaw {
+case class ScopeRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], scopeType: AbilityType) extends ValueRaw {
 
   override def baseType: Type = scopeType
 

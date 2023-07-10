@@ -22,7 +22,7 @@ import aqua.types.{
   OptionType,
   ProductType,
   ScalarType,
-  ScopeType,
+  AbilityType,
   StreamType,
   StructType,
   Type
@@ -148,7 +148,7 @@ class TypesInterpreter[S[_], X](implicit
     arguments: List[ValueRaw]
   ): State[X, Option[PropertyRaw]] = {
     rootT match {
-      case ScopeType(name, fieldsAndArrows) =>
+      case AbilityType(name, fieldsAndArrows) =>
         fieldsAndArrows(op.name.value).fold(
           report(
             op,

@@ -23,8 +23,8 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
       name -> value
     }.toMap
 
-  lazy val abilityArgs: Map[String, (VarModel, ScopeType)] =
-    zipped.collect { case (k, vr@VarModel(_, t@ScopeType(_, _), _)) =>
+  lazy val abilityArgs: Map[String, (VarModel, AbilityType)] =
+    zipped.collect { case (k, vr@VarModel(_, t@AbilityType(_, _), _)) =>
       k._1 -> (vr, t)
     }.toMap
 

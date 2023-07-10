@@ -49,7 +49,7 @@ object Token {
   val ` as ` : P[Unit] = `as`.surroundedBy(` `)
   val `alias`: P[Unit] = P.string("alias")
   val `service`: P[Unit] = P.string("service")
-  val `scope`: P[Unit] = P.string("scope")
+  val `ability`: P[Unit] = P.string("ability")
   val `func`: P[Unit] = P.string("func")
   val `on`: P[Unit] = P.string("on")
   val `via`: P[Unit] = P.string("via")

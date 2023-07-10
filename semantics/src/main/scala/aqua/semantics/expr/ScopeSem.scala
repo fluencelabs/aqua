@@ -10,7 +10,7 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.definitions.DefinitionsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrowType, ScopeType, Type}
+import aqua.types.{ArrowType, AbilityType, Type}
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -28,7 +28,7 @@ class ScopeSem[S[_]](val expr: ScopeExpr[S]) extends AnyVal {
     Prog.after(_ =>
       D.purgeDefs(expr.name).flatMap {
         case Some(fields) =>
-          val t = ScopeType(expr.name.value, fields)
+          val t = AbilityType(expr.name.value, fields)
           T.defineNamedType(expr.name, t).map {
             case true =>
               TypeRaw(

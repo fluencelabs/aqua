@@ -241,18 +241,18 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends D
 }
 
 // Scope is an unordered collection of labelled types and arrows
-case class ScopeType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
+case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
 
   lazy val arrows: List[(String, ArrowType)] = fields.toNel.collect {
     case (name, at@ArrowType(_, _)) => (name, at)
   }
 
-  lazy val abilities: List[(String, ScopeType)] = fields.toNel.collect {
-    case (name, at@ScopeType(_, _)) => (name, at)
+  lazy val abilities: List[(String, AbilityType)] = fields.toNel.collect {
+    case (name, at@AbilityType(_, _)) => (name, at)
   }
 
   lazy val variables: List[(String, Type)] = fields.toNel.filter {
-    case (_, ScopeType(_, _)) => false
+    case (_, AbilityType(_, _)) => false
     case (_, ArrowType(_, _)) => false
     case (_, _) => true
   }

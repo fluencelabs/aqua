@@ -21,5 +21,5 @@ object ScopeExpr extends Expr.AndIndented {
   override def validChildren: List[Expr.Lexem] = FieldTypeExpr :: ArrowTypeExpr :: Nil
 
   override val p: Parser[ScopeExpr[Span.S]] =
-    (`scope` *> ` ` *> NamedTypeToken.ct).map(ScopeExpr(_))
+    (`ability` *> ` ` *> NamedTypeToken.ct).map(ScopeExpr(_))
 }

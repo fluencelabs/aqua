@@ -1,6 +1,5 @@
 package aqua.backend.ts
 
-import aqua.backend.air.FuncAirGen
 import aqua.res.FuncRes
 import aqua.types.*
 import cats.syntax.show.*
@@ -37,7 +36,7 @@ object TypeScriptCommon {
     case st: StructType =>
       s"{ ${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ": " + kv._2 + ";").toList.mkString(" ")} }"
     // TODO: should we ignore this due to we cannot pass scope as arguments from JS?
-    case st: ScopeType =>
+    case st: AbilityType =>
         ""
     case st: ScalarType if ScalarType.number(st) => "number"
     case ScalarType.bool => "boolean"

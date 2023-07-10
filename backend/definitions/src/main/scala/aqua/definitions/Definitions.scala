@@ -106,7 +106,7 @@ object TypeDefinition {
       case t: BoxType => ArrayTypeDef(TypeDefinition(t.element))
       case StructType(name, fields) =>
         StructTypeDef(name, fields.toSortedMap.view.mapValues(TypeDefinition.apply).toMap)
-      case ScopeType(name, fieldAndArrows) =>
+      case AbilityType(name, fieldAndArrows) =>
         // TODO: change in union with JS side
         StructTypeDef(name, fieldAndArrows.toSortedMap.view.mapValues(TypeDefinition.apply).toMap)
       case t: ScalarType => ScalarTypeDef.fromScalar(t)

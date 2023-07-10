@@ -2,9 +2,9 @@ package aqua.model.inline
 
 import aqua.model
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.{SeqModel, *}
+import aqua.model.*
 import aqua.raw.ops.RawTag
-import aqua.types.{ArrowType, BoxType, DataType, ScopeType, StreamType, Type}
+import aqua.types.{AbilityType, ArrowType, BoxType, DataType, StreamType, Type}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import cats.Eval
 import cats.data.{Chain, IndexedStateT, State}
@@ -107,7 +107,7 @@ object ArrowInliner extends Logging {
             (ops, rets) = opsAndRets
             exports <- Exports[S].exports
             arrows <- Arrows[S].arrows
-            returnedFromScopes = rets.collect { case VarModel(name, st @ ScopeType(_, _), _) =>
+            returnedFromScopes = rets.collect { case VarModel(name, st @ AbilityType(_, _), _) =>
               getAllVarsFromScope(name, None, st, exports, arrows)
             }.fold((Map.empty, Map.empty)) { case (acc, (vars, arrs)) =>
               (acc._1 ++ vars, acc._2 ++ arrs)
@@ -202,7 +202,7 @@ object ArrowInliner extends Logging {
   private def renameAndResolveAbilities[S: Mangler: Arrows: Exports](
     name: String,
     vm: VarModel,
-    t: ScopeType,
+    t: AbilityType,
     oldExports: Map[String, ValueModel],
     oldArrows: Map[String, FuncArrow]
   ): State[S, (Map[String, String], Map[String, ValueModel], Map[String, FuncArrow])] = {
@@ -222,7 +222,7 @@ object ArrowInliner extends Logging {
   private def getAllVarsFromScope(
     topOldName: String,
     topNewName: Option[String],
-    st: ScopeType,
+    st: AbilityType,
     oldExports: Map[String, ValueModel],
     oldArrows: Map[String, FuncArrow],
     valAcc: Map[String, ValueModel] = Map.empty,
@@ -232,7 +232,7 @@ object ArrowInliner extends Logging {
       val currentOldName = s"$topOldName.$fName"
       val currentNewName = topNewName.map(_ + s".$fName")
       value match {
-        case st @ ScopeType(_, _) =>
+        case st @ AbilityType(_, _) =>
           getAllVarsFromScope(
             currentOldName,
             currentNewName,
@@ -340,7 +340,7 @@ object ArrowInliner extends Logging {
 
   private def getAllArrowsFromAbility[S: Exports: Arrows: Mangler](
     name: String,
-    sc: ScopeType
+    sc: AbilityType
   ): State[S, Map[String, FuncArrow]] = {
     for {
       exports <- Exports[S].exports

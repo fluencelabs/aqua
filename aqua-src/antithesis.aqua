@@ -5,11 +5,11 @@ export handleScope
 service SomeService(""):
   getStr(s: string) -> string
 
-scope SomeScope:
+ability SomeScope:
   someArrow(s: string) -> string
   str: string
 
-scope SecondScope:
+ability SecondScope:
   arrow(s: string) -> string
   num: u32
 

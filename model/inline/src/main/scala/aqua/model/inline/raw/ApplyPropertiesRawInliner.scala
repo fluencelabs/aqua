@@ -1,12 +1,53 @@
 package aqua.model.inline.raw
 
-import aqua.model.{CallModel, CallServiceModel,  FlattenModel, ForModel, FunctorModel, IntoFieldModel, IntoIndexModel, LiteralModel, MatchMismatchModel, NextModel, OpModel, PropertyModel, PushToStreamModel,  SeqModel, ValueModel, VarModel, XorModel}
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  FlattenModel,
+  ForModel,
+  FunctorModel,
+  IntoFieldModel,
+  IntoIndexModel,
+  LiteralModel,
+  MatchMismatchModel,
+  NextModel,
+  OpModel,
+  PropertyModel,
+  PushToStreamModel,
+  SeqModel,
+  ValueModel,
+  VarModel,
+  XorModel
+}
 import aqua.model.inline.Inline
 import aqua.model.inline.{ParMode, SeqMode}
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{ApplyGateRaw, ApplyPropertyRaw, CallArrowRaw, FunctorRaw, IntoArrowRaw, IntoCopyRaw, IntoFieldRaw, IntoIndexRaw, LiteralRaw, PropertyRaw, ValueRaw, VarRaw}
-import aqua.types.{ArrayType, ArrowType, BottomType, CanonStreamType, NilType, ScalarType, ScopeType, StreamType, Type}
+import aqua.raw.value.{
+  ApplyGateRaw,
+  ApplyPropertyRaw,
+  CallArrowRaw,
+  FunctorRaw,
+  IntoArrowRaw,
+  IntoCopyRaw,
+  IntoFieldRaw,
+  IntoIndexRaw,
+  LiteralRaw,
+  PropertyRaw,
+  ValueRaw,
+  VarRaw
+}
+import aqua.types.{
+  AbilityType,
+  ArrayType,
+  ArrowType,
+  BottomType,
+  CanonStreamType,
+  NilType,
+  ScalarType,
+  StreamType,
+  Type
+}
 import cats.Eval
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.monoid.*
@@ -55,17 +96,20 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
   private def unfoldScopeProperty[S: Mangler: Exports: Arrows](
     varModel: VarModel,
-    scopeType: ScopeType,
+    scopeType: AbilityType,
     p: PropertyRaw
   ): State[S, (VarModel, Inline)] = {
     p match {
       case IntoArrowRaw(arrowName, t, arguments) =>
-        val arrowType = scopeType.fields.lookup(arrowName).collect {
-          case at@ArrowType(_, _) => at
-        }.getOrElse {
-          logger.error(s"Inlining, cannot find arrow $arrowName in ability $varModel")
-          ArrowType(NilType, NilType)
-        }
+        val arrowType = scopeType.fields
+          .lookup(arrowName)
+          .collect { case at @ ArrowType(_, _) =>
+            at
+          }
+          .getOrElse {
+            logger.error(s"Inlining, cannot find arrow $arrowName in ability $varModel")
+            ArrowType(NilType, NilType)
+          }
         for {
           callArrow <- CallArrowRawInliner(
             CallArrowRaw(None, s"${varModel.name}.$arrowName", arguments, arrowType, None)
@@ -92,7 +136,9 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             case Some(lm: LiteralModel) =>
               flatLiteralWithProperties(lm, Inline.empty, Chain.empty)
             case _ =>
-              logger.error(s"Inlining, cannot find field $fullName in ability $varModel. Available: ${exports.keySet}")
+              logger.error(
+                s"Inlining, cannot find field $fullName in ability $varModel. Available: ${exports.keySet}"
+              )
               flatLiteralWithProperties(LiteralModel.quote(""), Inline.empty, Chain.empty)
           }
         } yield {
@@ -203,13 +249,16 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           State.pure((vm, prevInline.mergeWith(optimizationInline, SeqMode)))
         ) { case (state, property) =>
           state.flatMap {
-            case (vm@VarModel(name, st@ScopeType(_, _), _), leftInline) =>
-              unfoldScopeProperty(vm, st, property.raw).map {
-                case (vm, inl) => (vm, Inline(
-                  leftInline.flattenValues ++ inl.flattenValues,
-                  leftInline.predo ++ inl.predo,
-                  mergeMode = SeqMode
-                ))
+            case (vm @ VarModel(name, st @ AbilityType(_, _), _), leftInline) =>
+              unfoldScopeProperty(vm, st, property.raw).map { case (vm, inl) =>
+                (
+                  vm,
+                  Inline(
+                    leftInline.flattenValues ++ inl.flattenValues,
+                    leftInline.predo ++ inl.predo,
+                    mergeMode = SeqMode
+                  )
+                )
               }
             case (vm, leftInline) =>
               property match {
