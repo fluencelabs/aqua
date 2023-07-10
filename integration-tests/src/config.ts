@@ -86,14 +86,14 @@ export const localConfig = {
   externalAddressesRelay1: [
     "/ip4/10.50.10.10/tcp/7771",
     "/ip4/10.50.10.10/tcp/9991/ws",
-    "/dns4/fluence-1/tcp/7771",
-    "/dns4/fluence-1/tcp/9991/ws",
+    "/dns4/nox-1/tcp/7771",
+    "/dns4/nox-1/tcp/9991/ws",
   ],
   externalAddressesRelay2: [
     "/ip4/10.50.10.60/tcp/7776",
     "/ip4/10.50.10.60/tcp/9996/ws",
-    "/dns4/fluence-6/tcp/7776",
-    "/dns4/fluence-6/tcp/9996/ws",
+    "/dns4/nox-6/tcp/7776",
+    "/dns4/nox-6/tcp/9996/ws",
   ],
   tryCatchError:
     "Local service error, ret_code is 1, error message is '\"Service with id 'unex' not found (function getStr)\"'",
