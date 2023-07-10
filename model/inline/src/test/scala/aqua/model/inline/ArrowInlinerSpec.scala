@@ -88,7 +88,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       .callArrow[InliningState](
         FuncArrow(
           "stream-callback",
-          RestrictionTag(streamVar.name, true).wrap(
+          RestrictionTag(streamVar.name, streamType).wrap(
             SeqTag.wrap(
               DeclareStreamTag(streamVar).leaf,
               CallArrowRawTag.func("cb", Call(streamVar :: Nil, Nil)).leaf
@@ -115,7 +115,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ._2
 
     model.equalsOrShowDiff(
-      RestrictionModel(streamVar.name, true).wrap(
+      RestrictionModel(streamVar.name, streamType).wrap(
         MetaModel
           .CallArrowModel("cb")
           .wrap(
@@ -191,7 +191,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       .callArrow[InliningState](
         FuncArrow(
           "stream-callback",
-          RestrictionTag(streamVar.name, true).wrap(
+          RestrictionTag(streamVar.name, streamType).wrap(
             SeqTag.wrap(
               DeclareStreamTag(streamVar).leaf,
               CallArrowRawTag.func("cb", Call(streamVarLambda :: Nil, Nil)).leaf
@@ -218,7 +218,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ._2
 
     model.equalsOrShowDiff(
-      RestrictionModel(streamVar.name, true).wrap(
+      RestrictionModel(streamVar.name, streamType).wrap(
         CallServiceModel(
           LiteralModel.quote("test-service"),
           "some-call",

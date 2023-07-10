@@ -75,7 +75,16 @@ object ErrorRendering {
       val span = token.unit._1
       showForConsole("Cannot resolve import", span, "Cannot resolve import" :: Nil)
     case CycleError(modules) =>
-      s"Cycle loops detected in imports: ${modules.map(_.file.fileName)}"
+      val cycleFileNames = (
+        modules.toChain.toList :+ modules.head
+      ).map(_.file.fileName)
+      val message = cycleFileNames
+        .sliding(2)
+        .collect { case prev :: next :: Nil =>
+          s"$prev imports $next"
+        }
+        .mkString(", ")
+      s"Cycle loops detected in imports: $message"
     case CompileError(err) =>
       err match {
         case RulesViolated(token, messages) =>

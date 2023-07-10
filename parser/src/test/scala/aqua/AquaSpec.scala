@@ -2,7 +2,19 @@ package aqua
 
 import aqua.AquaSpec.spanToId
 import aqua.parser.expr.*
-import aqua.parser.expr.func.{AbilityIdExpr, ArrowExpr, AssignmentExpr, CallArrowExpr, ClosureExpr, ElseOtherwiseExpr, ForExpr, IfExpr, OnExpr, PushToStreamExpr, ReturnExpr}
+import aqua.parser.expr.func.{
+  AbilityIdExpr,
+  ArrowExpr,
+  AssignmentExpr,
+  CallArrowExpr,
+  ClosureExpr,
+  ElseOtherwiseExpr,
+  ForExpr,
+  IfExpr,
+  OnExpr,
+  PushToStreamExpr,
+  ReturnExpr
+}
 import aqua.parser.head.FromExpr.NameOrAbAs
 import aqua.parser.head.{FromExpr, UseFromExpr}
 import aqua.parser.lexer.*
@@ -10,7 +22,7 @@ import aqua.parser.lexer.Token.LiftToken
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.LiteralType.{bool, number, string}
 import aqua.types.{LiteralType, ScalarType}
-import cats.{Id, ~>}
+import cats.{~>, Id}
 import org.scalatest.EitherValues
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
@@ -134,7 +146,7 @@ trait AquaSpec extends EitherValues {
   def parseFor(str: String): ForExpr[Id] =
     ForExpr.p.parseAll(str).value.mapK(spanToId)
 
-  def parseElse(str: String): ElseOtherwiseExpr[Id] =
+  def parseElseOtherwise(str: String): ElseOtherwiseExpr[Id] =
     ElseOtherwiseExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseFieldType(str: String): FieldTypeExpr[Id] =

@@ -2,7 +2,7 @@ val aquaVersion = "0.11.7"
 
 val scalaV = "3.3.0"
 val catsV = "2.8.0"
-val catsParseV = "0.3.9"
+val catsParseV = "0.3.10"
 val monocleV = "3.1.0"
 val scalaTestV = "3.2.16"
 val fs2V = "3.7.0"
@@ -234,7 +234,7 @@ lazy val transform = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("model/transform"))
   .settings(commons)
-  .dependsOn(model, res, inline)
+  .dependsOn(model, res, inline, res % "test->test")
 
 lazy val semantics = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -253,7 +253,7 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("compiler"))
   .settings(commons)
-  .dependsOn(semantics, linker, backend, transform % Test)
+  .dependsOn(semantics, linker, backend, transform % Test, res % "test->test")
 
 lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

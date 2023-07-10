@@ -14,21 +14,24 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
     raw: CollectionRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = unfoldCollection(raw)
-  
+
   def unfoldCollection[S: Mangler: Exports: Arrows](
     raw: CollectionRaw,
     assignToName: Option[String] = None
   ): State[S, (ValueModel, Inline)] =
     for {
-      streamName <-
-        raw.boxType match {
-          case _: StreamType => assignToName.map(s => State.pure(s)).getOrElse(Mangler[S].findAndForbidName("stream-inline"))
-          case _: CanonStreamType => Mangler[S].findAndForbidName("canon_stream-inline")
-          case _: ArrayType => Mangler[S].findAndForbidName("array-inline")
-          case _: OptionType => Mangler[S].findAndForbidName("option-inline")
-        }
+      streamName <- raw.boxType match {
+        case _: StreamType =>
+          assignToName
+            .map(s => State.pure(s))
+            .getOrElse(Mangler[S].findAndForbidName("stream-inline"))
+        case _: CanonStreamType => Mangler[S].findAndForbidName("canon_stream-inline")
+        case _: ArrayType => Mangler[S].findAndForbidName("array-inline")
+        case _: OptionType => Mangler[S].findAndForbidName("option-inline")
+      }
 
-      stream = VarModel(streamName, StreamType(raw.elementType))
+      streamType = StreamType(raw.elementType)
+      stream = VarModel(streamName, streamType)
       streamExp = CallModel.Export(stream.name, stream.`type`)
 
       valsWithInlines <- raw.values
@@ -38,13 +41,13 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
 
       // push values to the stream, that is gathering the collection
       vals = valsWithInlines.map { case (v, _) =>
-          PushToStreamModel(v, streamExp).leaf
-        }
+        PushToStreamModel(v, streamExp).leaf
+      }
 
       // all inlines will be added before pushing values to the stream
       inlines = valsWithInlines.flatMap { case (_, t) =>
-          Chain.fromOption(t)
-        }
+        Chain.fromOption(t)
+      }
 
       canonName <-
         if (raw.boxType.isStream) State.pure(streamName)
@@ -57,19 +60,19 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
     } yield VarModel(canonName, canon.`type`) -> Inline.tree(
       raw.boxType match {
         case ArrayType(_) =>
-          RestrictionModel(streamName, isStream = true).wrap(
-            SeqModel.wrap((inlines ++ vals :+ CanonicalizeModel(stream, canon).leaf).toList: _*)
+          RestrictionModel(streamName, streamType).wrap(
+            SeqModel.wrap(inlines ++ vals :+ CanonicalizeModel(stream, canon).leaf)
           )
         case OptionType(_) =>
-          RestrictionModel(streamName, isStream = true).wrap(
+          RestrictionModel(streamName, streamType).wrap(
             SeqModel.wrap(
-               SeqModel.wrap(inlines.toList:_*),
-               XorModel.wrap((vals :+ NullModel.leaf).toList: _*),
-               CanonicalizeModel(stream, canon).leaf
+              SeqModel.wrap(inlines),
+              XorModel.wrap(vals :+ NullModel.leaf),
+              CanonicalizeModel(stream, canon).leaf
             )
           )
-        case _ => 
-          SeqModel.wrap((inlines ++ vals).toList: _*)
+        case _ =>
+          SeqModel.wrap(inlines ++ vals)
       }
     )
 }

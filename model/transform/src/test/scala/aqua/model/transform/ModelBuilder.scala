@@ -21,6 +21,11 @@ import aqua.res.{CallRes, CallServiceRes, MakeRes}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 
 import scala.language.implicitConversions
+import aqua.types.StreamType
+import aqua.model.IntoIndexModel
+import cats.data.Chain
+import cats.data.Chain.==:
+import aqua.model.inline.raw.ApplyGateRawInliner
 
 object ModelBuilder {
   implicit def rawToValue(raw: ValueRaw): ValueModel = ValueModel.fromRaw(raw)
@@ -125,6 +130,32 @@ object ModelBuilder {
     )
   }
 
-  def through(peer: ValueModel, log: String = null) =
-    MakeRes.noop(peer, log)
+  def through(peer: ValueModel) =
+    MakeRes.hop(peer)
+
+  /**
+   * @param stream stream [[VarModel]]
+   * @param idx id [[ValueModel]]
+   * @return [[OpModel.Tree]] of join of `stream[idx]`
+   */
+  def join(stream: VarModel, idx: ValueModel): OpModel.Tree =
+    stream match {
+      case VarModel(
+            streamName,
+            streamType: StreamType,
+            Chain.`nil`
+          ) =>
+        ApplyGateRawInliner.joinStreamOnIndexModel(
+          streamName = streamName,
+          streamType = streamType,
+          idxModel = idx,
+          idxIncrName = streamName + "_incr",
+          testName = streamName + "_test",
+          iterName = streamName + "_fold_var",
+          canonName = streamName + "_result_canon",
+          iterCanonName = streamName + "_iter_canon",
+          resultName = streamName + "_gate"
+        )
+      case _ => ???
+    }
 }

@@ -11,10 +11,10 @@ on:
         description: "Fluence enviroment to run tests agains"
         type: string
         default: "local"
-      rust-peer-image:
-        description: "rust-peer image tag"
+      nox-image:
+        description: "nox image tag"
         type: string
-        default: "fluencelabs/rust-peer:minimal"
+        default: "fluencelabs/nox:unstable_minimal"
       js-client-snapshots:
         description: "js-client snapshots"
         type: string
@@ -22,7 +22,7 @@ on:
 
 env:
   FORCE_COLOR: true
-  RUST_PEER_IMAGE: "${{ inputs.rust-peer-image }}"
+  NOX_IMAGE: "${{ inputs.nox-image }}"
   FLUENCE_ENV: "${{ inputs.fluence-env }}"
 
 jobs:
@@ -64,10 +64,10 @@ jobs:
           repository: fluencelabs/aqua
           ref: ${{ inputs.ref }}
 
-      - name: Pull rust-peer image
-        run: docker pull $RUST_PEER_IMAGE
+      - name: Pull nox image
+        run: docker pull $NOX_IMAGE
 
-      - name: Run rust-peer
+      - name: Run nox
         uses: isbang/compose-action@v1.4.1
         with:
           compose-file: ".github/e2e/docker-compose.yml"
@@ -120,6 +120,6 @@ jobs:
       - run: pnpm run test
         working-directory: integration-tests
 
-      - name: Dump rust-peer logs
+      - name: Dump nox logs
         if: always()
         uses: jwalton/gh-docker-logs@v2

@@ -7,7 +7,7 @@ import cats.Show
 import cats.Eval
 import cats.data.NonEmptyList
 import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.ScalarType
+import aqua.types.*
 
 import scala.annotation.tailrec
 
@@ -71,13 +71,8 @@ sealed trait ParGroupModel extends GroupOpModel
 
 case object SeqModel extends SeqGroupModel {
 
-  override def wrap(children: Tree*): Tree =
-    super.wrapNonEmpty(children.filterNot(_.head == EmptyModel).toList, EmptyModel.leaf)
-
-  // EmptyModel allowed – useful for tests
-  def wrapWithEmpty(children: Tree*): Tree =
-    super.wrapNonEmpty(children.toList, EmptyModel.leaf)
-
+  override def wrap(children: Chain[Tree]): Tree =
+    super.wrapNonEmpty(children.filterNot(_.head == EmptyModel), EmptyModel.leaf)
 }
 
 case object ParModel extends ParGroupModel
@@ -100,7 +95,9 @@ case class NextModel(item: String) extends OpModel {
 
 }
 
-case class RestrictionModel(name: String, isStream: Boolean) extends SeqGroupModel {
+// TODO: Refactor out `name` and `type` to
+// something like VarModel without properties
+case class RestrictionModel(name: String, `type`: DataType) extends SeqGroupModel {
   override def usesVarNames: Set[String] = Set.empty
 
   override def restrictsVarNames: Set[String] = Set(name)
@@ -190,14 +187,6 @@ case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export)
   override def exportsVarNames: Set[String] = Set(exportTo.name)
 
   override def usesVarNames: Set[String] = operand.usesVarNames
-}
-
-case class JoinModel(operands: NonEmptyList[ValueModel]) extends ForceExecModel {
-
-  override def toString: String = s"join ${operands.toList.mkString(", ")}"
-
-  override lazy val usesVarNames: Set[String] =
-    operands.toList.flatMap(_.usesVarNames).toSet
 }
 
 case class CaptureTopologyModel(name: String) extends NoExecModel

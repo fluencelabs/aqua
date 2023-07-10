@@ -1,6 +1,6 @@
 package aqua.model.inline.raw
 
-import aqua.model.{CallModel, CallServiceModel, CanonicalizeModel, FlattenModel, ForModel, FunctorModel, IntoFieldModel, IntoIndexModel, LiteralModel, MatchMismatchModel, NextModel, OpModel, PropertyModel, PushToStreamModel, RestrictionModel, SeqModel, ValueModel, VarModel, XorModel}
+import aqua.model.{CallModel, CallServiceModel,  FlattenModel, ForModel, FunctorModel, IntoFieldModel, IntoIndexModel, LiteralModel, MatchMismatchModel, NextModel, OpModel, PropertyModel, PushToStreamModel,  SeqModel, ValueModel, VarModel, XorModel}
 import aqua.model.inline.Inline
 import aqua.model.inline.{ParMode, SeqMode}
 import aqua.model.inline.RawValueInliner.unfold

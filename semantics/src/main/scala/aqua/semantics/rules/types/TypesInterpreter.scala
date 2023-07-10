@@ -11,7 +11,8 @@ import aqua.raw.value.{
   ValueRaw
 }
 import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.{ReportError, StackInterpreter}
+import aqua.semantics.rules.StackInterpreter
+import aqua.semantics.rules.errors.ReportErrors
 import aqua.types.{
   ArrayType,
   ArrowType,
@@ -42,7 +43,7 @@ import scala.collection.immutable.SortedMap
 
 class TypesInterpreter[S[_], X](implicit
   lens: Lens[X, TypesState[S]],
-  error: ReportError[S, X],
+  error: ReportErrors[S, X],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends TypesAlgebra[S, State[X, *]] {
 
@@ -156,7 +157,7 @@ class TypesInterpreter[S[_], X](implicit
           ).as(None)
         ) { t =>
           val resolvedType = t match {
-            // TODO: is it a correct way to resolve `IntoArrow` type? 
+            // TODO: is it a correct way to resolve `IntoArrow` type?
             case ArrowType(_, codomain) => codomain.uncons.map(_._1).getOrElse(t)
             case _ => t
           }

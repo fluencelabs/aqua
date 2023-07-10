@@ -4,10 +4,11 @@ import aqua.parser.lexer.Token
 import cats.data.State
 import monocle.Lens
 import cats.syntax.functor.*
+import aqua.semantics.rules.errors.ReportErrors
 
 case class StackInterpreter[S[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(implicit
   lens: Lens[X, St],
-  error: ReportError[S, X]
+  error: ReportErrors[S, X]
 ) {
   type SX[A] = State[X, A]
 

@@ -273,8 +273,8 @@ object Topology extends Logging {
 
       val chainZipperEv = resolved.traverse(tree =>
         (
-          rc.topology.pathBefore.map(through(_, s"before ${currI}")),
-          rc.topology.pathAfter.map(through(_, s"after ${currI}", reversed = true))
+          rc.topology.pathBefore.map(through(_)),
+          rc.topology.pathAfter.map(through(_, reversed = true))
         ).mapN { case (pathBefore, pathAfter) =>
           ChainZipper(pathBefore, tree, pathAfter)
         }.flatTap(logResolvedDebugInfo(rc, _, tree))
@@ -299,20 +299,19 @@ object Topology extends Logging {
   // Walks through peer IDs, doing a noop function on each
   def through(
     peerIds: Chain[ValueModel],
-    log: String = null,
     reversed: Boolean = false
   ): Chain[Res] = peerIds.map { v =>
     v.`type` match {
       case _: BoxType =>
         val itemName = "-via-peer-"
         val steps = Chain(
-          MakeRes.noop(VarModel(itemName, ScalarType.string, Chain.empty), log),
+          MakeRes.hop(VarModel(itemName, ScalarType.string, Chain.empty)),
           NextRes(itemName).leaf
         )
 
         FoldRes(itemName, v).wrap(if (reversed) steps.reverse else steps)
       case _ =>
-        MakeRes.noop(v, log)
+        MakeRes.hop(v)
     }
   }
 

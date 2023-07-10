@@ -8,6 +8,7 @@ import aqua.raw.value.{IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.{LiteralType, ScalarType, StreamType}
 import cats.Eval
 import cats.data.{Chain, NonEmptyList}
+import cats.data.Chain.*
 import cats.free.Cofree
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -16,10 +17,31 @@ import cats.syntax.option.*
 import aqua.types.ArrayType
 import aqua.raw.ConstantRaw.initPeerId
 import aqua.model.ForModel.NullMode
+import aqua.raw.value.ValueRaw
 
 class TopologySpec extends AnyFlatSpec with Matchers {
 
-  import ModelBuilder._
+  import ModelBuilder.{join as joinModel, *}
+  import ResBuilder.join as joinRes
+
+  def joinModelRes(streamEl: ValueRaw | ValueModel): (OpModel.Tree, ResolvedOp.Tree) =
+    streamEl match {
+      case vm: ValueModel => vm
+      case vr: ValueRaw => ValueModel.fromRaw(vr)
+    } match {
+      case stream @ VarModel(name, baseType, IntoIndexModel(idx, idxType) ==: Chain.`nil`) =>
+        val idxModel =
+          if (idx.forall(Character.isDigit)) LiteralModel(idx, idxType)
+          else VarModel(idx, idxType)
+
+        val streamWithoutIdx = stream.copy(properties = Chain.`nil`)
+
+        (
+          joinModel(streamWithoutIdx, idxModel),
+          joinRes(streamWithoutIdx, idxModel, ValueModel.fromRaw(initPeer))
+        )
+      case _ => ???
+    }
 
   "topology resolver" should "do nothing on init peer" in {
 
@@ -435,6 +457,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val stream = ValueModel.fromRaw(streamRaw)
     val streamEl = ValueModel.fromRaw(streamRawEl)
 
+    val (joinModel, joinRes) = joinModelRes(streamEl)
+
     val init =
       SeqModel.wrap(
         DeclareStreamModel(stream).leaf,
@@ -451,7 +475,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               )
             )
           ),
-          JoinModel(NonEmptyList.one(streamEl)).leaf,
+          joinModel,
           callModel(3, Nil, streamRaw :: Nil)
         )
       )
@@ -468,27 +492,25 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               SeqRes.wrap(
                 through(relay),
                 XorRes.wrap(
-                  callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                  SeqRes.wrap(
+                    callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                    through(relay),
+                    through(initPeer)
+                  ),
                   SeqRes.wrap(
                     through(relay),
                     callRes(4, initPeer)
                   )
-                ),
-                through(relay),
-                through(initPeer)
+                )
               ),
               NextRes("i").leaf
             )
           )
         ),
-        CallServiceRes(
-          LiteralModel(s"\"op\"", LiteralType.string),
-          s"noop",
-          CallRes(streamEl :: Nil, None),
-          initPeer
-        ).leaf,
+        joinRes,
         callRes(3, initPeer, None, stream :: Nil)
       )
+
     proc.equalsOrShowDiff(expected) should be(true)
   }
 
@@ -501,6 +523,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     )
     val stream = ValueModel.fromRaw(streamRaw)
     val streamEl = ValueModel.fromRaw(streamRawEl)
+
+    val (joinModel, joinRes) = joinModelRes(streamEl)
 
     val init =
       SeqModel.wrap(
@@ -520,7 +544,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               )
             )
           ),
-          JoinModel(NonEmptyList.one(streamEl)).leaf,
+          joinModel,
           callModel(3, Nil, streamRaw :: Nil)
         )
       )
@@ -538,26 +562,20 @@ class TopologySpec extends AnyFlatSpec with Matchers {
                 through(relay),
                 XorRes.wrap(
                   XorRes.wrap(
-                    callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`)))
+                    SeqRes.wrap(
+                      callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                      through(relay),
+                      through(initPeer)
+                    )
                   ),
-                  SeqRes.wrap(
-                    through(relay),
-                    callRes(4, initPeer)
-                  )
-                ),
-                through(relay),
-                through(initPeer)
+                  callRes(4, initPeer)
+                )
               ),
               NextRes("i").leaf
             )
           )
         ),
-        CallServiceRes(
-          LiteralModel(s"\"op\"", LiteralType.string),
-          s"noop",
-          CallRes(streamEl :: Nil, None),
-          initPeer
-        ).leaf,
+        joinRes,
         callRes(3, initPeer, None, stream :: Nil)
       )
 
@@ -784,6 +802,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val usedWithIdx =
       used.withProperty(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
 
+    val (joinModel, joinRes) = joinModelRes(usedWithIdx)
+
     val init =
       OnModel(initPeer, Chain.one(relay)).wrap(
         foldPar(
@@ -793,7 +813,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             callModel(1, CallModel.Export(used.name, used.`type`) :: Nil)
           )
         ),
-        JoinModel(NonEmptyList.one(usedWithIdx)).leaf,
+        joinModel,
         callModel(3, Nil, used :: Nil)
       )
 
@@ -818,12 +838,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             )
           )
         ),
-        CallServiceRes(
-          LiteralModel(s"\"op\"", LiteralType.string),
-          s"noop",
-          CallRes(usedWithIdx :: Nil, None),
-          initPeer
-        ).leaf,
+        joinRes,
         callRes(3, initPeer, None, ValueModel.fromRaw(used) :: Nil)
       )
 
@@ -835,6 +850,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val used = VarRaw("used", StreamType(ScalarType.string))
     val usedWithIdx =
       used.withProperty(IntoIndexRaw(LiteralRaw("1", ScalarType.u32), ScalarType.string))
+
+    val (joinModel, joinRes) = joinModelRes(usedWithIdx)
+
     val init =
       OnModel(initPeer, Chain.one(relay)).wrap(
         foldPar(
@@ -846,7 +864,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             )
           )
         ),
-        JoinModel(NonEmptyList.one(usedWithIdx)).leaf,
+        joinModel,
         callModel(3, Nil, used :: Nil)
       )
 
@@ -860,25 +878,22 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               SeqRes.wrap(
                 through(relay),
                 XorRes.wrap(
-                  callRes(
-                    1,
-                    ValueModel.fromRaw(i),
-                    Some(CallModel.Export(used.name, used.`type`))
+                  SeqRes.wrap(
+                    callRes(
+                      1,
+                      ValueModel.fromRaw(i),
+                      Some(CallModel.Export(used.name, used.`type`))
+                    ),
+                    through(relay),
+                    through(initPeer)
                   )
-                ),
-                through(relay),
-                through(initPeer)
+                )
               ),
               NextRes("i").leaf
             )
           )
         ),
-        CallServiceRes(
-          LiteralModel(s"\"op\"", LiteralType.string),
-          s"noop",
-          CallRes(usedWithIdx :: Nil, None),
-          initPeer
-        ).leaf,
+        joinRes,
         callRes(3, initPeer, None, ValueModel.fromRaw(used) :: Nil)
       )
 
@@ -888,7 +903,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   "topology resolver" should "handle empty for correctly [bug LNG-149]" in {
     val streamName = "array-inline"
     val iterName = "a-0"
-    val stream = VarModel(streamName, StreamType(LiteralType.number))
+    val streamType = StreamType(LiteralType.number)
+    val stream = VarModel(streamName, streamType)
     val array = VarModel(s"$streamName-0", ArrayType(LiteralType.number))
 
     val literal = (i: String) => LiteralModel(i, LiteralType.number)
@@ -901,7 +917,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val model = OnModel(initPeer, Chain.one(relay)).wrap(
       SeqModel.wrap(
-        RestrictionModel(streamName, true).wrap(
+        RestrictionModel(streamName, streamType).wrap(
           push("1"),
           push("2"),
           CanonicalizeModel(stream, CallModel.Export(array.name, array.`type`)).leaf
@@ -915,7 +931,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc = Topology.resolve(model).value
 
     val expected = SeqRes.wrap(
-      RestrictionRes(streamName, true).wrap(
+      RestrictionRes(streamName, streamType).wrap(
         ApRes(literal("1"), CallModel.Export(stream.name, stream.`type`)).leaf,
         ApRes(literal("2"), CallModel.Export(stream.name, stream.`type`)).leaf,
         CanonRes(
