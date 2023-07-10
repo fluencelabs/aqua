@@ -116,6 +116,8 @@ object ModelBuilder {
       )
       .leaf
 
+  val failLastError = res.FailRes(ValueModel.lastError).leaf
+
   def fold(item: String, iter: ValueRaw, mode: Option[ForModel.Mode], body: OpModel.Tree*) = {
     val ops = SeqModel.wrap(body: _*)
     ForModel(item, ValueModel.fromRaw(iter), mode).wrap(ops, NextModel(item).leaf)

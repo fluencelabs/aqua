@@ -9,6 +9,7 @@ import aqua.model.{
   ValueModel,
   VarModel
 }
+import aqua.model.transform.ModelBuilder
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
 import aqua.parser.ParserError
@@ -42,6 +43,7 @@ import cats.instances.string.*
 import cats.syntax.show.*
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers {
+  import ModelBuilder.*
 
   private def aquaSource(src: Map[String, String], imports: Map[String, String]) = {
     new AquaSources[Id, String, String] {
@@ -150,8 +152,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     ctxs.length should be(1)
     val ctx = ctxs.headOption.get
 
-    val aquaRes =
-      Transform.contextRes(ctx, TransformConfig(wrapWithXor = false))
+    val transformCfg = TransformConfig()
+    val aquaRes = Transform.contextRes(ctx, transformCfg)
 
     val Some(exec) = aquaRes.funcs.find(_.funcName == "exec")
 
@@ -167,47 +169,49 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
       SeqRes.wrap(
         getDataSrv("-relay-", ScalarType.string),
         getDataSrv(peers.name, peers.`type`),
-        RestrictionRes(results.name, resultsType).wrap(
-          SeqRes.wrap(
-            ParRes.wrap(
-              FoldRes(peer.name, peers, Some(ForModel.NeverMode)).wrap(
-                ParRes.wrap(
-                  // better if first relay will be outside `for`
-                  SeqRes.wrap(
-                    through(ValueModel.fromRaw(relay)),
-                    CallServiceRes(
-                      LiteralModel.fromRaw(LiteralRaw.quote("op")),
-                      "identity",
-                      CallRes(
-                        LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
-                        Some(CallModel.Export(results.name, results.`type`))
+        XorRes.wrap(
+          RestrictionRes(results.name, resultsType).wrap(
+            SeqRes.wrap(
+              ParRes.wrap(
+                FoldRes(peer.name, peers, Some(ForModel.NeverMode)).wrap(
+                  ParRes.wrap(
+                    XorRes.wrap(
+                      // better if first relay will be outside `for`
+                      SeqRes.wrap(
+                        through(ValueModel.fromRaw(relay)),
+                        CallServiceRes(
+                          LiteralModel.fromRaw(LiteralRaw.quote("op")),
+                          "identity",
+                          CallRes(
+                            LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
+                            Some(CallModel.Export(results.name, results.`type`))
+                          ),
+                          peer
+                        ).leaf,
+                        through(ValueModel.fromRaw(relay)),
+                        through(initPeer)
                       ),
-                      peer
-                    ).leaf,
-                    through(ValueModel.fromRaw(relay)),
-                    through(initPeer)
-                  ),
-                  NextRes(peer.name).leaf
+                      SeqRes.wrap(
+                        through(ValueModel.fromRaw(relay)),
+                        through(initPeer),
+                        failLastError
+                      )
+                    ),
+                    NextRes(peer.name).leaf
+                  )
                 )
-              )
-            ),
-            join(results, LiteralModel.fromRaw(LiteralRaw.number(2))),
-            CanonRes(results, init, CallModel.Export(canonResult.name, canonResult.`type`)).leaf,
-            ApRes(
-              canonResult,
-              CallModel.Export(flatResult.name, flatResult.`type`)
-            ).leaf
-          )
-        ),
-        CallServiceRes(
-          LiteralModel.fromRaw(LiteralRaw.quote("callbackSrv")),
-          "response",
-          CallRes(
-            flatResult :: Nil,
-            None
+              ),
+              join(results, LiteralModel.fromRaw(LiteralRaw.number(2))),
+              CanonRes(results, init, CallModel.Export(canonResult.name, canonResult.`type`)).leaf,
+              ApRes(
+                canonResult,
+                CallModel.Export(flatResult.name, flatResult.`type`)
+              ).leaf
+            )
           ),
-          initPeer
-        ).leaf
+          errorCall(transformCfg, 0, initPeer)
+        ),
+        respCall(transformCfg, flatResult, initPeer)
       )
 
     exec.body.equalsOrShowDiff(expected) shouldBe (true)
@@ -267,8 +271,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     ctxs.length should be(1)
     val ctx = ctxs.headOption.get
 
-    val aquaRes =
-      Transform.contextRes(ctx, TransformConfig(wrapWithXor = false, relayVarName = None))
+    val transformCfg = TransformConfig(relayVarName = None)
+    val aquaRes = Transform.contextRes(ctx, transformCfg)
 
     val Some(funcWrap) = aquaRes.funcs.find(_.funcName == "wrap")
     val Some(barfoo) = aquaRes.funcs.find(_.funcName == "barfoo")
@@ -278,8 +282,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val resCanonVM = VarModel("-res-fix-0", CanonStreamType(ScalarType.string))
     val resFlatVM = VarModel("-res-flat-0", ArrayType(ScalarType.string))
 
-    barfoo.body.equalsOrShowDiff(
-      SeqRes.wrap(
+    val expected = SeqRes.wrap(
+      XorRes.wrap(
         RestrictionRes(resVM.name, resStreamType).wrap(
           SeqRes.wrap(
             // res <- foo()
@@ -305,14 +309,12 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
             ).leaf
           )
         ),
-        CallServiceRes(
-          LiteralModel.fromRaw(LiteralRaw.quote("callbackSrv")),
-          "response",
-          CallRes(resFlatVM :: Nil, None),
-          LiteralModel.fromRaw(ValueRaw.InitPeerId)
-        ).leaf
-      )
-    ) should be(true)
+        errorCall(transformCfg, 0, initPeer)
+      ),
+      respCall(transformCfg, resFlatVM, initPeer)
+    )
+
+    barfoo.body.equalsOrShowDiff(expected) should be(true)
 
   }
 }
