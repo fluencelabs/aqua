@@ -32,6 +32,7 @@ object ArrowExpr extends Expr.AndIndented {
       Expr.defer(ParExpr) ::
       Expr.defer(CoExpr) ::
       Expr.defer(JoinExpr) ::
+      Expr.defer(FailExpr) ::
       DeclareStreamExpr ::
       Expr.defer(ClosureExpr) ::
       AssignmentExpr ::

@@ -65,6 +65,7 @@ object Token {
   val `par`: P[Unit] = P.string("par")
   val `co`: P[Unit] = P.string("co")
   val `join`: P[Unit] = P.string("join")
+  val `fail`: P[Unit] = P.string("fail")
   val `copy`: P[Unit] = P.string("copy")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
@@ -117,9 +118,11 @@ object Token {
   val `/s*` : P0[Unit] = ` \n+`.backtrack | ` *`.void
 
   val namedArg: P[(String, ValueToken[S])] =
-    P.defer(`name`.between(` *`, `/s*`) ~
-      `=`.between(` *`, `/s*`).void ~
-      ValueToken.`value`.between(` *`, `/s*`)).map { case ((name, _), vt) =>
+    P.defer(
+      `name`.between(` *`, `/s*`) ~
+        `=`.between(` *`, `/s*`).void ~
+        ValueToken.`value`.between(` *`, `/s*`)
+    ).map { case ((name, _), vt) =>
       (name, vt)
     }
 
