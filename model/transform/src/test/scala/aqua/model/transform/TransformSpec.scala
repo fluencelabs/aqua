@@ -6,11 +6,13 @@ import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, RawTag, SeqTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.res.{CallRes, CallServiceRes, MakeRes, SeqRes, XorRes}
+
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import cats.data.Chain
+import cats.syntax.show.*
 
 class TransformSpec extends AnyFlatSpec with Matchers {
 
@@ -71,6 +73,9 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         ),
         errorCall(bc, 3, initPeer)
       )
+
+    println(procFC.show)
+    println(expectedFC.show)
 
     procFC.equalsOrShowDiff(expectedFC) should be(true)
 

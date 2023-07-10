@@ -13,19 +13,18 @@ import aqua.model.{
   ValueModel,
   VarModel
 }
-import aqua.model.transform.funcop.ErrorsCatcher
 import aqua.raw.ops.Call
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.{model, res}
 import aqua.res.{CallRes, CallServiceRes, MakeRes}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
-
-import scala.language.implicitConversions
 import aqua.types.StreamType
 import aqua.model.IntoIndexModel
+import aqua.model.inline.raw.ApplyGateRawInliner
+
+import scala.language.implicitConversions
 import cats.data.Chain
 import cats.data.Chain.==:
-import aqua.model.inline.raw.ApplyGateRawInliner
 
 object ModelBuilder {
   implicit def rawToValue(raw: ValueRaw): ValueModel = ValueModel.fromRaw(raw)
@@ -84,10 +83,10 @@ object ModelBuilder {
   def errorCall(bc: TransformConfig, i: Int, on: ValueModel = initPeer) =
     res
       .CallServiceRes(
-        bc.errorHandlingCallback,
+        ValueModel.fromRaw(bc.errorHandlingSrvId),
         bc.errorFuncName,
         CallRes(
-          ErrorsCatcher.lastErrorArg :: LiteralModel(
+          ValueModel.lastError :: LiteralModel(
             i.toString,
             LiteralType.number
           ) :: Nil,

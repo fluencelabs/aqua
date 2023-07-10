@@ -17,6 +17,7 @@ import cats.syntax.option.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
 import cats.syntax.show.*
+import cats.syntax.bifunctor.*
 import scribe.{log, Logging}
 import aqua.model.inline.Inline.parDesugarPrefixOpt
 
@@ -186,11 +187,17 @@ object TagInliner extends Logging {
             flat(vm, tree, true)
           }
           (pid, pif) = peerIdDe
-          viaD = Chain.fromSeq(viaDeFlattened.map(_._1))
-          viaF = viaDeFlattened.flatMap(_._2)
-
-        } yield TagInlined.Single(
-          model = OnModel(pid, viaD),
+          (viaD, viaF) = viaDeFlattened.unzip
+            .bimap(Chain.fromSeq, _.flatten)
+          toModel = (children: Chain[OpModel.Tree]) =>
+            XorModel.wrap(
+              OnModel(pid, viaD).wrap(
+                children
+              ),
+              FailModel(ValueModel.lastError).leaf
+            )
+        } yield TagInlined.Mapping(
+          toModel = toModel,
           prefix = parDesugarPrefix(viaF.prependedAll(pif))
         )
 

@@ -19,6 +19,7 @@ import cats.free.Cofree
 import cats.syntax.option.*
 import scribe.Logging
 import aqua.model.transform.TransformConfig.TracingConfig
+import aqua.model.transform.pre.{CallbackErrorHandler, ErrorHandler}
 
 // API for transforming RawTag to Res
 object Transform extends Logging {
@@ -82,11 +83,30 @@ object Transform extends Logging {
       goThrough = Chain.fromOption(relayVar)
     )
 
-    val errorsCatcher = ErrorsCatcher(
-      enabled = conf.wrapWithXor,
-      serviceId = conf.errorHandlingCallback,
-      funcName = conf.errorFuncName,
-      callable = initCallable
+    val argsProvider: ArgsProvider = ArgsFromService(
+      dataServiceId = conf.dataSrvId
+    )
+
+    val resultsHandler: ResultsHandler = CallbackResultsHandler(
+      callbackSrvId = conf.callbackSrvId,
+      funcName = conf.respFuncName
+    )
+
+    val errorHandler: ErrorHandler = CallbackErrorHandler(
+      serviceId = conf.errorHandlingSrvId,
+      funcName = conf.errorFuncName
+    )
+
+    // Callback on the init peer id, either done via relay or not
+    val callback = initCallable.service(conf.callbackSrvId)
+
+    // preTransformer is applied before function is inlined
+    val preTransformer = FuncPreTransformer(
+      argsProvider,
+      resultsHandler,
+      errorHandler,
+      callback,
+      conf.relayVarName
     )
 
     val tracing = Tracing(
@@ -94,31 +114,13 @@ object Transform extends Logging {
       initCallable = initCallable
     )
 
-    val argsProvider: ArgsProvider = ArgsFromService(
-      dataServiceId = conf.dataSrvId,
-      names = relayVar.toList ::: func.arrowType.domain.labelledData
-    )
-
-    // Transform the body of the function: wrap it with initCallable, provide function arguments via service calls
-    val transform: RawTag.Tree => RawTag.Tree =
-      argsProvider.transform andThen initCallable.transform
-
-    // Callback on the init peer id, either done via relay or not
-    val callback = initCallable.service(conf.callbackSrvId)
-
-    // preTransformer is applied before function is inlined
-    val preTransformer = FuncPreTransformer(
-      transform,
-      callback,
-      conf.respFuncName
-    )
-
     for {
       // Pre transform and inline the function
       model <- funcToModelTree(func, preTransformer)
       // Post transform the function
-      errorsModel = errorsCatcher.transform(model)
-      tracingModel <- tracing(errorsModel)
+      initModel = initCallable.onInitPeer.wrap(model)
+      // errorsModel = errorsCatcher.transform(model)
+      tracingModel <- tracing(initModel)
       // Resolve topology
       resolved <- Topology.resolve(tracingModel)
       // Clear the tree
