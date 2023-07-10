@@ -10,16 +10,16 @@ import cats.~>
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
-case class ScopeExpr[F[_]](name: NamedTypeToken[F]) extends Expr[F](ScopeExpr, name) {
+case class AbilityExpr[F[_]](name: NamedTypeToken[F]) extends Expr[F](AbilityExpr, name) {
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): ScopeExpr[K] =
+  override def mapK[K[_]: Comonad](fk: F ~> K): AbilityExpr[K] =
     copy(name.mapK(fk))
 }
 
-object ScopeExpr extends Expr.AndIndented {
+object AbilityExpr extends Expr.AndIndented {
 
   override def validChildren: List[Expr.Lexem] = FieldTypeExpr :: ArrowTypeExpr :: Nil
 
-  override val p: Parser[ScopeExpr[Span.S]] =
-    (`ability` *> ` ` *> NamedTypeToken.ct).map(ScopeExpr(_))
+  override val p: Parser[AbilityExpr[Span.S]] =
+    (`ability` *> ` ` *> NamedTypeToken.ct).map(AbilityExpr(_))
 }

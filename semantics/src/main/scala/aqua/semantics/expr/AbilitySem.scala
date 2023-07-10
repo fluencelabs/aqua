@@ -1,6 +1,6 @@
 package aqua.semantics.expr
 
-import aqua.parser.expr.ScopeExpr
+import aqua.parser.expr.AbilityExpr
 import aqua.raw.{Raw, ScopeRaw, ServiceRaw, TypeRaw}
 import aqua.parser.lexer.{Name, NamedTypeToken}
 import aqua.raw.{Raw, ServiceRaw}
@@ -19,7 +19,7 @@ import cats.syntax.semigroupal.*
 import cats.Monad
 import cats.data.{NonEmptyList, NonEmptyMap}
 
-class ScopeSem[S[_]](val expr: ScopeExpr[S]) extends AnyVal {
+class AbilitySem[S[_]](val expr: AbilityExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
     T: TypesAlgebra[S, Alg],

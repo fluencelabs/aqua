@@ -137,7 +137,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                     case scope@AbilityType(_, _) =>
                       (
                         AbilityType(typeName.value, rf.map(_.`type`)),
-                        Some(ScopeRaw(rf, scope))
+                        Some(AbilityRaw(rf, scope))
                       )
                   }
 

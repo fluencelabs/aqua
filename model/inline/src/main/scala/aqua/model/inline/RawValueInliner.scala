@@ -2,7 +2,7 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
-import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyGateRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner, MakeScopeRawInliner}
+import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyGateRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner, MakeAbilityRawInliner}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
@@ -42,8 +42,8 @@ object RawValueInliner extends Logging {
       case dr: MakeStructRaw =>
         MakeStructRawInliner(dr, propertiesAllowed)
 
-      case sr: ScopeRaw =>
-        MakeScopeRawInliner(sr, propertiesAllowed)
+      case sr: AbilityRaw =>
+        MakeAbilityRawInliner(sr, propertiesAllowed)
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)

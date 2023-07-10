@@ -1,10 +1,18 @@
 package aqua.model.inline.raw
 
-import aqua.model.{CallModel, CallServiceModel, LiteralModel, OpModel, SeqModel, ValueModel, VarModel}
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  LiteralModel,
+  OpModel,
+  SeqModel,
+  ValueModel,
+  VarModel
+}
 import aqua.model.inline.raw.RawInliner
 import cats.data.Chain
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{LiteralRaw, ScopeRaw, MakeStructRaw}
+import aqua.raw.value.{AbilityRaw, LiteralRaw, MakeStructRaw}
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
@@ -15,21 +23,20 @@ import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.apply.*
 
-object MakeScopeRawInliner extends RawInliner[ScopeRaw] {
+object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
 
   override def apply[S: Mangler: Exports: Arrows](
-    raw: ScopeRaw,
+    raw: AbilityRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     for {
-      name <- Mangler[S].findAndForbidName(raw.scopeType.name + "_ab")
+      name <- Mangler[S].findAndForbidName(raw.abilityType.name + "_ab")
       foldedFields <- raw.fieldsAndArrows.nonEmptyTraverse(unfold(_))
       varModel = VarModel(name, raw.baseType)
       valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _).desugar
-      _ <- foldedFields.map(_._1).toNel.toList.traverse {
-        case (n, vm) =>
-          val namef = s"$name.$n"
-          Exports[S].resolved(namef, vm)
+      _ <- foldedFields.map(_._1).toNel.toList.traverse { case (n, vm) =>
+        val namef = s"$name.$n"
+        Exports[S].resolved(namef, vm)
       }
     } yield {
       (
