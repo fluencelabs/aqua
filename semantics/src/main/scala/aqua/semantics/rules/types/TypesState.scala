@@ -72,7 +72,7 @@ object TypesStateHelper {
       case ctt: NamedTypeToken[S] =>
         resolver(state, ctt)
       case btt: BasicTypeToken[S] => Some((btt.value, Nil))
-      case ArrowTypeToken(_, args, res) =>
+      case ArrowTypeToken(_, abs, args, res) =>
         val strictArgs =
           args.map(_._2).map(resolveTypeToken(_, state, resolver)).collect {
             case Some((dt: DataType, t)) =>

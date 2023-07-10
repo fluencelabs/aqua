@@ -27,7 +27,7 @@ func funcStr(s: string) -> string:
 --   closure = (a: string) -> string:
 --     <- SomeService.str()
 
-func handleSecScope(sc: SomeScope) -> string:
+func handleSecScope{SomeScope}(sc: SomeScope) -> string:
   b = sc.someArrow(sc.str)
   <- b
 
