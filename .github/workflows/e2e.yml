@@ -35,14 +35,14 @@ jobs:
     with:
       ref: ${{ github.ref }}
 
-  fluence-cli-snapshot:
-    name: "fluence-cli"
+  flox-snapshot:
+    name: "flox"
     needs: aqua
-    uses: fluencelabs/fluence-cli/.github/workflows/snapshot.yml@main
+    uses: fluencelabs/flox/.github/workflows/snapshot.yml@main
     with:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
-  fluence-cli:
+  flox:
     needs: aqua
     uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
     with:
@@ -50,9 +50,7 @@ jobs:
 
   registry:
     needs:
-      - aqua
-      - fluence-cli-snapshot
+      - flox-snapshot
     uses: fluencelabs/registry/.github/workflows/tests.yml@main
     with:
-      aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
-      fluence-cli-version: "${{ needs.fluence-cli-snapshot.outputs.version }}"
+      flox-version: "${{ needs.flox-snapshot.outputs.version }}"
