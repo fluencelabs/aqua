@@ -85,12 +85,19 @@ case class CallArrowToken[F[_]: Comonad](
 
 object CallArrowToken {
 
-  def callBraces(): P[(Name[S], List[ValueToken[S]])] = P
+  case class CallBraces(name: Name[S], abilities: List[ValueToken[S]], args: List[ValueToken[S]])
+
+  def abilities(): P[NonEmptyList[ValueToken[S]]] =
+    `{` *> comma(ValueToken.`value`.surroundedBy(`/s*`)) <* `}`
+
+  def callBraces(): P[CallBraces] = P
     .defer(
       Name.p
-        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
+        ~ abilities().? ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
           .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`)
-    )
+    ).map { case ((n, ab), args) =>
+      CallBraces(n, ab.map(_.toList).getOrElse(Nil), args)
+    }
     .withContext(
       "Missing braces '()' after the function call"
     )
@@ -100,8 +107,8 @@ object CallArrowToken {
       callBraces()
         .withContext(
           "Missing braces '()' after the function call"
-        )).map { case (ab, (fn, args)) =>
-      CallArrowToken(ab, fn, args)
+        )).map { case (ab, callBraces) =>
+      CallArrowToken(ab, callBraces.name, callBraces.abilities ++ callBraces.args)
     }
 }
 
@@ -206,8 +213,9 @@ object InfixToken {
         CollectionToken.collection
       ) ::
       P.defer(NamedValueToken.dataValue).backtrack ::
+      P.defer(abProperty).backtrack ::
       P.defer(CallArrowToken.callArrow).backtrack ::
-      P.defer(brackets(InfixToken.mathExpr)) ::
+      P.defer(brackets(InfixToken.mathExpr)).backtrack ::
       varProperty ::
       Nil
   )
@@ -318,6 +326,11 @@ object ValueToken {
 
   val varProperty: P[VarToken[Span.S]] =
     (Name.dotted ~ PropertyOp.ops.?).map { case (n, l) ⇒
+      VarToken(n, l.fold[List[PropertyOp[Span.S]]](Nil)(_.toList))
+    }
+
+  val abProperty: P[VarToken[Span.S]] =
+    (Name.cl ~ PropertyOp.ops.?).map { case (n, l) ⇒
       VarToken(n, l.fold[List[PropertyOp[Span.S]]](Nil)(_.toList))
     }
 

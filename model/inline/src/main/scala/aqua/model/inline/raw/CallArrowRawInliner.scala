@@ -85,8 +85,6 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
         exports
           .get(funcName)
           .collect { case VarModel(name, _: ArrowType, _) =>
-            println("OR ELSE FOR: " + funcName)
-            println("FOUND: " + name)
             name
           }
           .flatMap(arrows.get)

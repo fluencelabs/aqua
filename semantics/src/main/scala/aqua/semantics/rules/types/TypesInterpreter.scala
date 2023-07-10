@@ -127,7 +127,6 @@ class TypesInterpreter[S[_], X](implicit
               s"Field `${op.value}` not found in type `${nt.name}`, available: ${nt.fields.toNel.toList.map(_._1).mkString(", ")}"
             ).as(None)
           ) { t =>
-            println(s"type for ${op.value} is $t")
             locations.pointFieldLocation(nt.name, op.value, op).as(Some(IntoFieldRaw(op.value, t)))
           }
       case t =>
@@ -161,7 +160,6 @@ class TypesInterpreter[S[_], X](implicit
             case ArrowType(_, codomain) => codomain.uncons.map(_._1).getOrElse(t)
             case _ => t
           }
-          println(s"resolve arrow for ${op.name.value} with type: ${resolvedType}")
           locations
             .pointFieldLocation(name, op.name.value, op)
             .as(Some(IntoArrowRaw(op.name.value, resolvedType, arguments)))

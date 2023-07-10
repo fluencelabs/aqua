@@ -48,7 +48,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case op: IntoField[S] =>
         T.resolveField(rootType, op)
       case op: IntoArrow[S] =>
-        println("rootType: " + rootType)
         op.arguments
           .map(valueToRaw)
           .sequence
@@ -81,7 +80,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     v match {
       case l: LiteralToken[S] => Some(LiteralRaw(l.value, l.ts)).pure[Alg]
       case VarToken(name, ops) =>
-        println("var token name: " + name)
         N.read(name).flatMap {
           case Some(t) =>
             // Prepare property expression: take the last known type and the next op, add next op to accumulator
@@ -124,7 +122,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           case Some(resolvedType) =>
             for {
               fieldsRawOp: NonEmptyMap[String, Option[ValueRaw]] <- fields.traverse(valueToRaw)
-              _ = println("fieldsRawOp: " + fieldsRawOp)
               fieldsRaw: List[(String, ValueRaw)] = fieldsRawOp.toSortedMap.toList.collect {
                 case (n, Some(vr)) => n -> vr
               }
@@ -138,7 +135,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                         Some(MakeStructRaw(rf, struct))
                       )
                     case scope@ScopeType(_, _) =>
-                      println("scope raws: " + rf)
                       (
                         ScopeType(typeName.value, rf.map(_.`type`)),
                         Some(ScopeRaw(rf, scope))
@@ -148,8 +144,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                 )
                 .getOrElse(BottomType -> None)
               (typeFromFields, data) = typeFromFieldsWithData
-              _ = println("typeFromFields: " + typeFromFields)
-              _ = println("resolvedType: " + resolvedType)
               isTypesCompatible <- T.ensureTypeMatches(dvt, resolvedType, typeFromFields)
             } yield data.filter(_ => isTypesCompatible)
           case _ => None.pure[Alg]

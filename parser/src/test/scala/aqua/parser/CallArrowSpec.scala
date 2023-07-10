@@ -12,7 +12,7 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "func calls" should "parse func()" in {
     parseExpr("func()") should be(
-      CallArrowExpr[Id](Nil, CallArrowToken(None, toName("func"), List()))
+      CallArrowExpr[Id](Nil, CallArrowToken(None, toName("func"), Nil))
     )
     parseExpr("Ab.func(arg)") should be(
       CallArrowExpr[Id](

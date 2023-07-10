@@ -60,9 +60,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
   ): State[S, (VarModel, Inline)] = {
     p match {
       case IntoArrowRaw(arrowName, t, arguments) =>
-        println("find arrow for: " + varModel)
-        println("arrow name: " + arrowName)
-        println("arrow type:" + t)
         val arrowType = scopeType.fields.lookup(arrowName).collect {
           case at@ArrowType(_, _) => at
         }.getOrElse {

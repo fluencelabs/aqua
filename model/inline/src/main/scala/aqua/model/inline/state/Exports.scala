@@ -67,12 +67,10 @@ object Exports {
       exportName: String,
       value: ValueModel
     ): State[Map[String, ValueModel], Unit] = {
-      println(s"resolving: $exportName for $value")
       State.modify(_ + (exportName -> value))
     }
 
     override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] = {
-      println(s"resolving: $exports")
       State.modify(_ ++ exports)
     }
 

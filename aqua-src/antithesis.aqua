@@ -27,15 +27,15 @@ func funcStr(s: string) -> string:
 --   closure = (a: string) -> string:
 --     <- SomeService.str()
 
-func handleSecScope{SomeScope}(sc: SomeScope) -> string:
-  b = sc.someArrow(sc.str)
-  <- b
+func handleSecScope{SomeScope}() -> string:
+  a = SomeScope.someArrow(SomeScope.str)
+  <- a
 
 func returnScope(s: string) -> SomeScope:
-  sc = SomeScope(someArrow = funcStr, str = s)
-  <- sc
+  SomeAb = SomeScope(someArrow = funcStr, str = s)
+  <- SomeAb
 
 func handleScope(fff: string) -> string:
-  sc = returnScope(fff)
-  d <- handleSecScope(sc)
+  SomeAb = returnScope(fff)
+  d <- handleSecScope{SomeAb}()
   <- d

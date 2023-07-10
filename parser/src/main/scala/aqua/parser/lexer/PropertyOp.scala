@@ -58,7 +58,7 @@ object PropertyOp {
     (`.` *> `name`).lift.map(IntoField(_))
 
   val parseArrow: P[PropertyOp[Span.S]] =
-    (`.` *> CallArrowToken.callBraces()).lift.map(p => IntoArrow(p._2._1, p._2._2))
+    (`.` *> CallArrowToken.callBraces()).lift.map(p => IntoArrow(p._2._1, p._2._2 ++ p._2._3))
 
   val parseCopy: P[PropertyOp[Span.S]] =
     (`.` *> (`copy`.lift ~ namedArgs)).map { case (point, fields) =>
