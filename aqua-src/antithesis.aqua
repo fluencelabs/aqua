@@ -9,6 +9,10 @@ scope SomeScope:
   someArrow(s: string) -> string
   str: string
 
+scope SecondScope:
+  arrow(s: string) -> string
+  num: u32
+
 func funcStr(s: string) -> string:
   strInFunc <- SomeService.getStr(s)
   <- strInFunc
@@ -27,7 +31,7 @@ func funcStr(s: string) -> string:
 --   closure = (a: string) -> string:
 --     <- SomeService.str()
 
-func handleSecScope{SomeScope}() -> string:
+func handleSecScope { SomeScope ,  SecondScope}() -> string:
   a = SomeScope.someArrow(SomeScope.str)
   <- a
 
@@ -37,5 +41,6 @@ func returnScope(s: string) -> SomeScope:
 
 func handleScope(fff: string) -> string:
   SomeAb = returnScope(fff)
-  d <- handleSecScope{SomeAb}()
+  SecondAb = SecondScope(arrow = funcStr, num = 12)
+  d <- handleSecScope{  SomeAb , SecondAb  }()
   <- d

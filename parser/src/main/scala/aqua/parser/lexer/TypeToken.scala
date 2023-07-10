@@ -126,7 +126,7 @@ object ArrowTypeToken {
   ).map(_.toList)
 
   def abilities(): P0[List[(Option[Name[S]], NamedTypeToken[S])]] =
-    (`{` *> comma(`Class`.lift.map(s => Option(Name(s)) -> NamedTypeToken(s)))
+    (`{` *> comma(`Class`.surroundedBy(`/s*`).lift.map(s => Option(Name(s)) -> NamedTypeToken(s)))
       .map(_.toList) <* `}`).?.map(_.getOrElse(List.empty))
 
   def `arrowdef`(argTypeP: P[TypeToken[Span.S]]): P[ArrowTypeToken[Span.S]] =
