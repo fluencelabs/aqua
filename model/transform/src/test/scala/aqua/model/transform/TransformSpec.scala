@@ -64,7 +64,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
               through(otherRelay),
               through(relayV),
               through(initPeer),
-              failLastError
+              failLastErrorRes
             )
           ),
           errorCall(bc, 0, initPeer)
@@ -111,7 +111,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
               SeqRes.wrap(
                 through(relayV),
                 through(initPeer),
-                failLastError
+                failLastErrorRes
               )
             )
           ),
