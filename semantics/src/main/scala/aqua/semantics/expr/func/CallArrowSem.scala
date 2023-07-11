@@ -37,7 +37,6 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
   private def toModel[Alg[_]: Monad](implicit
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Alg[Option[FuncOp]] = for {
@@ -55,7 +54,6 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =

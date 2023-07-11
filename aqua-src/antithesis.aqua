@@ -2,7 +2,7 @@ aqua Main
 
 export handleScope
 
-service SomeService(""):
+service SomeService("wed"):
   getStr(s: string) -> string
 
 ability SomeScope:

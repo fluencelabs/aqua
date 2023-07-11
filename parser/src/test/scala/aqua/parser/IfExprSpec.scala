@@ -3,7 +3,7 @@ package aqua.parser
 import aqua.AquaSpec
 import aqua.parser.expr.func.IfExpr
 import aqua.parser.lexer.InfixToken.Op.{Add, Sub}
-import aqua.parser.lexer.{CallArrowToken, CollectionToken, EqOp, InfixToken}
+import aqua.parser.lexer.{CallArrowToken, CollectionToken, EqOp, InfixToken, IntoArrow, VarToken}
 import aqua.parser.lexer.CollectionToken.Mode.OptionMode
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
@@ -40,7 +40,7 @@ class IfExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     parseIf("if Op.identity(\"str\") == \"a\"") should be(
       IfExpr[Id](
-        CallArrowToken[Id](Some(toNamedType("Op")), toName("identity"), toStr("str") :: Nil),
+        VarToken[Id](toName("Op"), IntoArrow[Id](toName("identity"), toStr("str") :: Nil) :: Nil),
         EqOp[Id](true),
         toStr("a")
       )
@@ -48,9 +48,9 @@ class IfExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
     parseIf("if Op.identity(\"str\") != Op.identity(\"str\")") should be(
       IfExpr[Id](
-        CallArrowToken[Id](Some(toNamedType("Op")), toName("identity"), toStr("str") :: Nil),
+        VarToken[Id](toName("Op"), IntoArrow[Id](toName("identity"), toStr("str") :: Nil) :: Nil),
         EqOp[Id](false),
-        CallArrowToken[Id](Some(toNamedType("Op")), toName("identity"), toStr("str") :: Nil)
+        VarToken[Id](toName("Op"), IntoArrow[Id](toName("identity"), toStr("str") :: Nil) :: Nil)
       )
     )
 
@@ -59,7 +59,7 @@ class IfExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         InfixToken[Id](toNumber(2), toNumber(3), Sub),
         EqOp[Id](false),
         InfixToken[Id](
-          CallArrowToken[Id](Some(toNamedType("Op")), toName("identity"), toNumber(4) :: Nil),
+          VarToken[Id](toName("Op"), IntoArrow[Id](toName("identity"), toNumber(4) :: Nil) :: Nil),
           toNumber(5),
           Add
         )
