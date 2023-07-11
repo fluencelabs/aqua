@@ -240,15 +240,7 @@ object TagInliner extends Logging {
           )
         }
 
-      case TryTag =>
-        val toModel = (children: Chain[OpModel.Tree]) => {
-          children.headOption
-            .filterNot(_.head == EmptyModel)
-            .as(XorModel.wrap(children))
-            .getOrElse(EmptyModel.leaf)
-        }
-
-        TagInlined.Mapping(toModel).pure
+      case TryTag => pure(XorModel)
 
       case ForTag(item, iterable, mode) =>
         for {

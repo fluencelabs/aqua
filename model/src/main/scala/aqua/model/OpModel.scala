@@ -1,13 +1,15 @@
 package aqua.model
 
 import aqua.model.OpModel.Tree
+import aqua.tree.{TreeNode, TreeNodeCompanion}
+import aqua.types.*
+
 import cats.data.Chain
 import cats.free.Cofree
 import cats.Show
 import cats.Eval
 import cats.data.NonEmptyList
-import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.*
+import cats.syntax.functor.*
 
 import scala.annotation.tailrec
 
@@ -79,7 +81,15 @@ case object ParModel extends ParGroupModel
 
 case object DetachModel extends ParGroupModel
 
-case object XorModel extends GroupOpModel
+case object XorModel extends GroupOpModel {
+
+  // If left branch is empty, return empty
+  override def wrap(children: Chain[Tree]): Tree =
+    children.headOption
+      .filterNot(_.head == EmptyModel)
+      .as(super.wrap(children))
+      .getOrElse(EmptyModel.leaf)
+}
 
 case class OnModel(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupModel {
 
