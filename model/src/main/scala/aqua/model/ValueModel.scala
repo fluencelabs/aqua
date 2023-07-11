@@ -24,8 +24,8 @@ object ValueModel {
     error.intoField("error_code")
 
   val lastError = VarModel(
-    name = ValueRaw.LastError.name,
-    baseType = ValueRaw.LastError.baseType
+    name = ValueRaw.lastError.name,
+    baseType = ValueRaw.lastError.baseType
   )
 
   val lastErrorType = ValueRaw.lastErrorType

@@ -19,7 +19,7 @@ case class CallbackErrorHandler(
 
   override def handleLastError: RawTag.Tree = {
     val call = Call(
-      args = ValueRaw.LastError :: LiteralRaw.number(0) :: Nil,
+      args = ValueRaw.lastError :: LiteralRaw.number(0) :: Nil,
       exportTo = Nil
     )
 

@@ -117,9 +117,12 @@ object Transform extends Logging {
     for {
       // Pre transform and inline the function
       model <- funcToModelTree(func, preTransformer)
-      // Post transform the function
+      // Post transform the function.
+      // We should wrap `model` with `onInitPeer` here
+      // so that TagInliner would not wrap it with `xor`.
+      // Topology module needs this `on`
+      // as a starting point.
       initModel = initCallable.onInitPeer.wrap(model)
-      // errorsModel = errorsCatcher.transform(model)
       tracingModel <- tracing(initModel)
       // Resolve topology
       resolved <- Topology.resolve(tracingModel)

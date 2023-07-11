@@ -39,7 +39,7 @@ object ValueRaw {
     )
   )
 
-  val LastError: VarRaw = VarRaw(
+  val lastError: VarRaw = VarRaw(
     "%last_error%",
     lastErrorType
   )

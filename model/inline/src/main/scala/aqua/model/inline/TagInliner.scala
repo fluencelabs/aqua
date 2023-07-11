@@ -194,6 +194,8 @@ object TagInliner extends Logging {
               OnModel(pid, viaD).wrap(
                 children
               ),
+              // This will return to previous topology
+              // and propagate error up
               FailModel(ValueModel.lastError).leaf
             )
         } yield TagInlined.Mapping(
