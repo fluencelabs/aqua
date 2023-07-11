@@ -15,7 +15,6 @@ case class TransformConfig(
   errorFuncName: String = "error",
   respFuncName: String = "response",
   relayVarName: Option[String] = Some("-relay-"),
-  wrapWithXor: Boolean = true,
   tracing: Option[TransformConfig.TracingConfig] = None,
   constants: List[ConstantRaw] = Nil
 ) {
