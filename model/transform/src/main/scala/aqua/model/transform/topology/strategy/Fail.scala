@@ -13,37 +13,11 @@ import cats.syntax.traverse.*
 import cats.syntax.option.*
 import cats.syntax.applicative.*
 
-object Fail extends Before with Begins with After {
+object Fail extends Begins with After {
 
   // override just to be explicit
   override def forceExit(current: Topology): Eval[Boolean] =
     Eval.now(false) // There is no need to insert hops after `fail`
-
-  /**
-   * !!! WARNING !!!
-   * This is a hack and works only for
-   *
-   * ```
-   * xor
-   *   on ... via ...
-   *     <...>
-   *   fail %last_error%
-   * ```
-   *
-   * (Every [[OnTag]] is inlined to
-   * such snippet in [[TagInliner]])
-   */
-  override def beforeOn(current: Topology): Eval[List[OnModel]] =
-    current.parent
-      .map(_.cursor.op)
-      .collect { case XorModel =>
-        // Get left branch `beginsOn`
-        current.prevSibling.traverse(_.beginsOn)
-      }
-      .flatSequence
-      .flatMap(
-        _.fold(super.beforeOn(current))(_.pure)
-      )
 
   override def pathBefore(current: Topology): Eval[Chain[ValueModel]] =
     for {

@@ -566,7 +566,10 @@ class TopologySpec extends AnyFlatSpec with Matchers {
                     through(initPeer)
                   )
                 ),
-                callRes(4, initPeer)
+                SeqRes.wrap(
+                  through(relay),
+                  callRes(4, initPeer)
+                )
               )
             ),
             NextRes("i").leaf

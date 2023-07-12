@@ -190,11 +190,10 @@ object Topology extends Logging {
   // Return strategy for calculating `beforeOn` for
   // node pointed on by `cursor`
   private def decideBefore(cursor: OpModelTreeCursor): Before =
-    (cursor.parentOp, cursor.op) match {
-      case (_, _: FailModel) => Fail
-      case (Some(XorModel), _) => XorBranch
-      case (Some(_: SeqGroupModel), _) => SeqGroupBranch
-      case (None, _) => Root
+    cursor.parentOp match {
+      case Some(XorModel) => XorBranch
+      case Some(_: SeqGroupModel) => SeqGroupBranch
+      case None => Root
       case _ => Default
     }
 
