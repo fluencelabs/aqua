@@ -187,43 +187,58 @@ object Topology extends Logging {
         .filterNot(lastPeerId => before.headOption.exists(_.peerId == lastPeerId))
     )
 
+  // Return strategy for calculating `beforeOn` for
+  // node pointed on by `cursor`
+  private def decideBefore(cursor: OpModelTreeCursor): Before =
+    cursor.parentOp match {
+      case Some(XorModel) => XorBranch
+      case Some(_: SeqGroupModel) => SeqGroupBranch
+      case None => Root
+      case _ => Default
+    }
+
+  // Return strategy for calculating `beginsOn` for
+  // node pointed on by `cursor`
+  private def decideBegins(cursor: OpModelTreeCursor): Begins =
+    (cursor.parentOp, cursor.op) match {
+      case (_, _: FailModel) => Fail
+      case (Some(_: SeqGroupModel), _: NextModel) => SeqNext
+      case (_, _: ForModel) => For
+      // No begin optimization for detach
+      case (_, ParModel) => ParGroup
+      case _ => Default
+    }
+
+  // Return strategy for calculating `endsOn` for
+  // node pointed on by `cursor`
+  private def decideEnds(cursor: OpModelTreeCursor): Ends =
+    cursor.op match {
+      case _: SeqGroupModel => SeqGroup
+      case XorModel => XorGroup
+      case _: ParGroupModel => ParGroup
+      case _ if cursor.parentOp.isEmpty => Root
+      case _ => Default
+    }
+
+  // Return strategy for calculating `afterOn` for
+  // node pointed on by `cursor`
+  private def decideAfter(cursor: OpModelTreeCursor): After =
+    (cursor.parentOp, cursor.op) match {
+      case (_, _: FailModel) => Fail
+      case (Some(_: ParGroupModel), _) => ParGroupBranch
+      case (Some(XorModel), _) => XorBranch
+      case (Some(_: SeqGroupModel), _) => SeqGroupBranch
+      case (None, _) => Root
+      case _ => Default
+    }
+
   def make(cursor: OpModelTreeCursor): Topology =
     Topology(
-      cursor,
-      // Before
-      cursor.parentOp match {
-        case Some(XorModel) => XorBranch
-        case Some(_: SeqGroupModel) => SeqGroupBranch
-        case None => Root
-        case _ => Default
-      },
-      // Begin
-      (cursor.parentOp, cursor.op) match {
-        case (Some(_: SeqGroupModel), _: NextModel) =>
-          SeqNext
-        case (_, _: ForModel) =>
-          For
-        case (_, ParModel) => // No begin optimization for detach
-          ParGroup
-        case _ =>
-          Default
-      },
-      // End
-      cursor.op match {
-        case _: SeqGroupModel => SeqGroup
-        case XorModel => XorGroup
-        case _: ParGroupModel => ParGroup
-        case _ if cursor.parentOp.isEmpty => Root
-        case _ => Default
-      },
-      // After
-      cursor.parentOp match {
-        case Some(_: ParGroupModel) => ParGroupBranch
-        case Some(XorModel) => XorBranch
-        case Some(_: SeqGroupModel) => SeqGroupBranch
-        case None => Root
-        case _ => Default
-      }
+      cursor = cursor,
+      before = decideBefore(cursor),
+      begins = decideBegins(cursor),
+      ends = decideEnds(cursor),
+      after = decideAfter(cursor)
     )
 
   def resolve(op: OpModel.Tree, debug: Boolean = false): Eval[Res] =

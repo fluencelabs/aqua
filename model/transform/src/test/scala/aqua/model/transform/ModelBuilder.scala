@@ -1,31 +1,21 @@
 package aqua.model.transform
 
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  DetachModel,
-  ForModel,
-  LiteralModel,
-  NextModel,
-  OpModel,
-  ParModel,
-  SeqModel,
-  ValueModel,
-  VarModel
-}
-import aqua.model.transform.funcop.ErrorsCatcher
+import aqua.model.*
 import aqua.raw.ops.Call
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.{model, res}
 import aqua.res.{CallRes, CallServiceRes, MakeRes}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
-
-import scala.language.implicitConversions
 import aqua.types.StreamType
 import aqua.model.IntoIndexModel
+import aqua.model.inline.raw.ApplyGateRawInliner
+
+import scala.language.implicitConversions
 import cats.data.Chain
 import cats.data.Chain.==:
-import aqua.model.inline.raw.ApplyGateRawInliner
+import aqua.model.OnModel
+import aqua.model.FailModel
+import aqua.res.ResolvedOp
 
 object ModelBuilder {
   implicit def rawToValue(raw: ValueRaw): ValueModel = ValueModel.fromRaw(raw)
@@ -40,10 +30,13 @@ object ModelBuilder {
 
   val otherPeer = VarRaw("other-peer", ScalarType.string)
 
-  val otherPeerL = LiteralRaw("\"other-peer\"", LiteralType.string)
-  val otherRelay = LiteralRaw("other-relay", ScalarType.string)
-  val otherPeer2 = LiteralRaw("other-peer-2", ScalarType.string)
-  val otherRelay2 = LiteralRaw("other-relay-2", ScalarType.string)
+  def otherPeerN(n: Int) = LiteralRaw.quote(s"other-peer-$n")
+  def otherRelayN(n: Int) = LiteralRaw.quote(s"other-relay-$n")
+
+  val otherPeerL = LiteralRaw.quote("other-peer")
+  val otherRelay = LiteralRaw.quote("other-relay")
+  val otherPeer2 = otherPeerN(2)
+  val otherRelay2 = otherRelayN(2)
   val iRelay = VarRaw("i", ScalarType.string)
   val varNode = VarRaw("node-id", ScalarType.string)
   val viaList = VarRaw("other-relay-2", ArrayType(ScalarType.string))
@@ -84,10 +77,10 @@ object ModelBuilder {
   def errorCall(bc: TransformConfig, i: Int, on: ValueModel = initPeer) =
     res
       .CallServiceRes(
-        bc.errorHandlingCallback,
+        ValueModel.fromRaw(bc.errorHandlingSrvId),
         bc.errorFuncName,
         CallRes(
-          ErrorsCatcher.lastErrorArg :: LiteralModel(
+          ValueModel.lastError :: LiteralModel(
             i.toString,
             LiteralType.number
           ) :: Nil,
@@ -117,6 +110,22 @@ object ModelBuilder {
       )
       .leaf
 
+  val failLastErrorModel = FailModel(ValueModel.lastError).leaf
+
+  val failLastErrorRes = res.FailRes(ValueModel.lastError).leaf
+
+  def onRethrowModel(
+    peer: ValueModel,
+    via: ValueModel*
+  ): OpModel.Tree => OpModel.Tree =
+    child =>
+      XorModel.wrap(
+        OnModel(peer, Chain.fromSeq(via)).wrap(
+          child
+        ),
+        failLastErrorModel
+      )
+
   def fold(item: String, iter: ValueRaw, mode: Option[ForModel.Mode], body: OpModel.Tree*) = {
     val ops = SeqModel.wrap(body: _*)
     ForModel(item, ValueModel.fromRaw(iter), mode).wrap(ops, NextModel(item).leaf)
@@ -130,7 +139,7 @@ object ModelBuilder {
     )
   }
 
-  def through(peer: ValueModel) =
+  def through(peer: ValueModel): ResolvedOp.Tree =
     MakeRes.hop(peer)
 
   /**

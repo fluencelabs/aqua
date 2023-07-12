@@ -24,7 +24,7 @@ class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
       .around(
         N.beginScope(expr.name) >>
           L.beginScope() >>
-          N.define(expr.name, ValueRaw.LastError.baseType),
+          N.define(expr.name, ValueRaw.lastError.baseType),
         (_, g: Raw) =>
           N.endScope() >> L.endScope() as (
             g match {
@@ -32,7 +32,7 @@ class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
                 TryTag.Catch
                   .wrap(
                     SeqTag.wrap(
-                      AssignmentTag(ValueRaw.LastError, expr.name.value).leaf,
+                      AssignmentTag(ValueRaw.lastError, expr.name.value).leaf,
                       op
                     )
                   )

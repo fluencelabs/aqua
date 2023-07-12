@@ -118,6 +118,11 @@ object AirGen extends Logging {
           ApGen(valueToData(operand), exportToString(exportTo))
         )
 
+      case FailRes(operand) =>
+        Eval.later(
+          FailGen(valueToData(operand))
+        )
+
       case CanonRes(operand, peerId, exportTo) =>
         Eval.later(
           CanonGen(valueToData(operand), valueToData(peerId), exportToString(exportTo))
@@ -162,6 +167,12 @@ case class ApGen(operand: DataView, result: String) extends AirGen {
 
   override def generate: Air =
     Air.Ap(operand, result)
+}
+
+case class FailGen(operand: DataView) extends AirGen {
+
+  override def generate: Air =
+    Air.Fail(operand)
 }
 
 case class CanonGen(operand: DataView, peerId: DataView, result: String) extends AirGen {

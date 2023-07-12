@@ -17,15 +17,7 @@ import aqua.raw.ops.{Call, CallArrowRawTag}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.res.{AquaRes, FuncRes}
 import aqua.run.RunOpts.logger
-import aqua.run.{
-  CliFunc,
-  FuncCompiler,
-  GeneralOptions,
-  GeneralOpts,
-  RunCommand,
-  RunConfig,
-  RunOpts
-}
+import aqua.run.{CliFunc, FuncCompiler, GeneralOptions, GeneralOpts, RunCommand, RunConfig, RunOpts}
 import aqua.types.{ArrowType, LiteralType, NilType, ScalarType}
 import cats.data.*
 import cats.data.Validated.{invalid, invalidNec, valid, validNec, validNel}
@@ -126,7 +118,7 @@ object ScriptOpts extends Logging {
     imports: List[Path],
     funcWithArgs: FuncWithLiteralArgs
   ): F[ValidatedNec[String, String]] = {
-    val tConfig = TransformConfig(relayVarName = None, wrapWithXor = false)
+    val tConfig = TransformConfig(relayVarName = None)
     val funcCompiler =
       new FuncCompiler[F](
         Option(RelativePath(input)),

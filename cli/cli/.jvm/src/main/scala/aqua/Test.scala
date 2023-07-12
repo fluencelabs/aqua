@@ -27,7 +27,7 @@ object Test extends IOApp.Simple {
           List(Path("./aqua")),
           Option(Path("./target")),
           TypeScriptBackend(false, "IFluenceClient$$"),
-          TransformConfig(wrapWithXor = false),
+          TransformConfig(),
           false
         )
         .map {

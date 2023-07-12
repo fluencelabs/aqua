@@ -4,6 +4,7 @@ import {getObjAssignCall, getObjCall, getObjRelayCall} from "../examples/objectC
 import {callArrowCall, reproArgsBug426Call} from '../examples/callArrowCall.js';
 import {dataAliasCall} from '../examples/dataAliasCall.js';
 import {onCall} from '../examples/onCall.js';
+import {onPropagateCall, nestedOnPropagateCall, seqOnPropagateCall} from '../examples/onErrorPropagation.js';
 import {funcCall} from '../examples/funcCall.js';
 import {registerPrintln} from '../compiled/examples/println.js';
 import {helloWorldCall} from '../examples/helloWorldCall.js';
@@ -465,6 +466,27 @@ describe('Testing examples', () => {
     it('on.aqua', async () => {
         let onCallResult = await onCall(relayPeerId1);
         expect(onCallResult).toEqual(config.externalAddressesRelay1);
+    });
+
+    it('onErrorPropagate.aqua', async () => {
+        let call = onPropagateCall(peer2, relay2.peerId);
+        expect(call).rejects.toMatchObject({
+            message: expect.stringContaining("propagated error")
+        })
+    });
+
+    it('onErrorPropagate.aqua nested', async () => {
+        let call = nestedOnPropagateCall(peer2, relay2.peerId, config.relays[3].peerId, config.relays[4].peerId, config.relays[5].peerId);
+        expect(call).rejects.toMatchObject({
+            message: expect.stringContaining("propagated error")
+        })
+    });
+
+    it('onErrorPropagate.aqua sequential', async () => {
+        let call = seqOnPropagateCall(peer2, relay2.peerId, config.relays[3].peerId, config.relays[4].peerId);
+        expect(call).rejects.toMatchObject({
+            message: expect.stringContaining("propagated error")
+        })
     });
 
     it('complex.aqua', async () => {

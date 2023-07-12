@@ -22,7 +22,7 @@ import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.{Id, Monad, ~>}
+import cats.{~>, Id, Monad}
 import com.monovore.decline.{Command, Opts}
 import fs2.io.file.{Files, Path}
 import scribe.Logging
@@ -45,14 +45,15 @@ object RunOpts extends Logging {
   ): TransformConfig = {
     val tc = TransformConfig(
       constants =
-        onPeer.map(s => ConstantRaw(OnPeerConst, LiteralRaw.quote(s), false)).toList ++ constants,
-      wrapWithXor = !noXor
+        onPeer.map(s => ConstantRaw(OnPeerConst, LiteralRaw.quote(s), false)).toList ++ constants
     )
     tc.copy(relayVarName = tc.relayVarName.filterNot(_ => noRelay))
   }
 
-  def runOptsCompose[F[_]: Files: Concurrent]
-    : Opts[F[ValidatedNec[String, (Option[AquaPath], List[Path], FuncWithData, Option[NonEmptyList[JsonService]], List[String])]]] = {
+  def runOptsCompose[F[_]: Files: Concurrent]: Opts[F[ValidatedNec[
+    String,
+    (Option[AquaPath], List[Path], FuncWithData, Option[NonEmptyList[JsonService]], List[String])
+  ]]] = {
     (
       AppOpts.wrapWithOption(AppOpts.inputOpts[F]),
       AppOpts.importOpts[F],
@@ -72,8 +73,9 @@ object RunOpts extends Logging {
           .getOrElse(validNec[String, Option[NonEmptyList[JsonService]]](None).pure[F])
         pluginsPathsV <- pluginsOp.getOrElse(validNec[String, List[String]](Nil).pure[F])
       } yield {
-        (inputV, importV, funcWithArgsV, jsonServiceV, pluginsPathsV).mapN { case (i, im, f, j, p) =>
-          (i, im, f, j, p)
+        (inputV, importV, funcWithArgsV, jsonServiceV, pluginsPathsV).mapN {
+          case (i, im, f, j, p) =>
+            (i, im, f, j, p)
         }
       }
     }
