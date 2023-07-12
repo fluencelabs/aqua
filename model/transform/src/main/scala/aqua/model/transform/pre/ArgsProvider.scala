@@ -5,10 +5,11 @@ import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrayType, DataType, StreamType}
 import cats.data.Chain
 
-trait ArgsProvider extends PreTransform
+trait ArgsProvider {
+  def provideArgs(args: List[(String, DataType)]): List[RawTag.Tree]
+}
 
-case class ArgsFromService(dataServiceId: ValueRaw, names: List[(String, DataType)])
-    extends ArgsProvider {
+case class ArgsFromService(dataServiceId: ValueRaw) extends ArgsProvider {
 
   private def getStreamDataOp(name: String, t: StreamType): RawTag.Tree = {
     val iter = s"$name-iter"
@@ -44,9 +45,7 @@ case class ArgsFromService(dataServiceId: ValueRaw, names: List[(String, DataTyp
           .leaf
     }
 
-  def transform(op: RawTag.Tree): RawTag.Tree =
-    SeqTag.wrap(
-      names.map((getDataOp _).tupled) :+ op: _*
-    )
+  override def provideArgs(args: List[(String, DataType)]): List[RawTag.Tree] =
+    args.map(getDataOp.tupled)
 
 }

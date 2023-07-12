@@ -76,6 +76,8 @@ object MakeRes {
       ApRes(operand, CallModel.Export(assignTo, ArrayType(el))).leaf
     case FlattenModel(operand, assignTo) =>
       ApRes(operand, CallModel.Export(assignTo, operand.`type`)).leaf
+    case FailModel(value) =>
+      FailRes(value).leaf
     case CallServiceModel(serviceId, funcName, CallModel(args, exportTo)) =>
       CallServiceRes(
         serviceId,

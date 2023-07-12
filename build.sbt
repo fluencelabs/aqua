@@ -74,8 +74,8 @@ lazy val cliJS = cli.js
   .settings(
     Compile / fastOptJS / artifactPath := baseDirectory.value / "../../cli-npm" / "aqua.js",
     Compile / fullOptJS / artifactPath := baseDirectory.value / "../../cli-npm" / "aqua.js",
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
-    scalaJSUseMainModuleInitializer := true
+    scalaJSLinkerConfig                ~= (_.withModuleKind(ModuleKind.ESModule)),
+    scalaJSUseMainModuleInitializer    := true
   )
   .dependsOn(`js-exports`, `js-imports`)
 
@@ -155,9 +155,9 @@ lazy val `aqua-apiJS` = `aqua-api`.js
   .settings(
     Compile / fastOptJS / artifactPath := baseDirectory.value / "../../api-npm" / "aqua-api.js",
     Compile / fullOptJS / artifactPath := baseDirectory.value / "../../api-npm" / "aqua-api.js",
-    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
-    scalaJSUseMainModuleInitializer := true,
-    Test / test                     := {}
+    scalaJSLinkerConfig                ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSUseMainModuleInitializer    := true,
+    Test / test                        := {}
   )
   .enablePlugins(ScalaJSPlugin)
   .dependsOn(`js-exports`)
@@ -253,7 +253,7 @@ lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("compiler"))
   .settings(commons)
-  .dependsOn(semantics, linker, backend, transform % Test, res % "test->test")
+  .dependsOn(semantics, linker, backend, transform % "test->test", res % "test->test")
 
 lazy val backend = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

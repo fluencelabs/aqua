@@ -14,7 +14,7 @@ object XorBranch extends Before with After {
   override def toString: String = Console.RED + "<xor>/*" + Console.RESET
 
   override def beforeOn(current: Topology): Eval[List[OnModel]] =
-    current.prevSibling.map(_.endsOn) getOrElse super.beforeOn(current)
+    current.prevSibling.map(_.beginsOn) getOrElse super.beforeOn(current)
 
   // Find closest par exit up and return its branch current is in
   // Returns none if there is no par up

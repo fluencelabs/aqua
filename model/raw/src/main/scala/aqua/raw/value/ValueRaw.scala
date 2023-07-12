@@ -27,21 +27,22 @@ object ValueRaw {
 
   val Nil: LiteralRaw = LiteralRaw("[]", StreamType(BottomType))
 
-  val LastError: VarRaw = VarRaw(
-    "%last_error%",
-    StructType(
-      "LastError",
-      NonEmptyMap.of(
-        // These two fields are mandatory for all errors
-        "message" -> ScalarType.string,
-        "error_code" -> ScalarType.i64,
-        // These fields are specific to AquaVM's errors only
-        "instruction" -> ScalarType.string,
-        "peer_id" -> ScalarType.string
-      )
+  val lastErrorType = StructType(
+    "LastError",
+    NonEmptyMap.of(
+      // These two fields are mandatory for all errors
+      "message" -> ScalarType.string,
+      "error_code" -> ScalarType.i64,
+      // These fields are specific to AquaVM's errors only
+      "instruction" -> ScalarType.string,
+      "peer_id" -> ScalarType.string
     )
   )
 
+  val lastError: VarRaw = VarRaw(
+    "%last_error%",
+    lastErrorType
+  )
 }
 
 case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends ValueRaw {

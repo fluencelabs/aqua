@@ -94,7 +94,7 @@ object AquaCli extends IOApp with Logging {
       compileToAir,
       compileToJs,
       noRelay,
-      noXorWrapper,
+      noXorWrapper, // TODO: Remove
       tracing,
       isOldFluenceJs,
       wrapWithOption(helpOpt),
@@ -137,7 +137,6 @@ object AquaCli extends IOApp with Logging {
             else TypescriptTarget
           val bc = {
             val bc = TransformConfig(
-              wrapWithXor = !noXor,
               constants = constants,
               tracing = Option.when(tracingEnabled)(TransformConfig.TracingConfig.default)
             )

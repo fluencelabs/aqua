@@ -1,0 +1,39 @@
+service Test("test-service"):
+    fail(err: string)
+
+func onPropagate(peer: string, relay: string) -> u16:
+    res: *u16
+    on peer via relay:
+        res <<- 0 + 1
+        Test.fail("propagated error")
+    res <<- 0 + 2
+    
+    join res[3] -- Unreachable
+
+    <- res[3]
+
+func nestedOnPropagate(peer: string, relay: string, iPeer: string, iRelay: string, friend: string) -> u16:
+    res: *u16
+    on iPeer via iRelay:
+        res <<- 40 + 2
+        on friend:
+            res <<- 2 + 40
+            on peer via relay:
+                Test.fail("propagated error")
+            res <<- 30 + 7
+    
+    join res[3] -- Unreachable
+
+    <- res[3]
+
+func seqOnPropagate(peer: string, relay: string, iPeer: string, iRelay: string) -> u16:
+    res: *u16
+    on iPeer via iRelay:
+        res <<- 40 + 2
+    on peer via relay:
+        Test.fail("propagated error")
+        res <<- 30 + 7
+    
+    join res[2] -- Unreachable
+
+    <- res[2]
