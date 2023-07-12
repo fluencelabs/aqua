@@ -187,6 +187,8 @@ object Topology extends Logging {
         .filterNot(lastPeerId => before.headOption.exists(_.peerId == lastPeerId))
     )
 
+  // Return strategy for calculating `beforeOn` for
+  // node pointed on by `cursor`
   private def decideBefore(cursor: OpModelTreeCursor): Before =
     (cursor.parentOp, cursor.op) match {
       case (_, _: FailModel) => Fail
@@ -196,6 +198,8 @@ object Topology extends Logging {
       case _ => Default
     }
 
+  // Return strategy for calculating `beginsOn` for
+  // node pointed on by `cursor`
   private def decideBegins(cursor: OpModelTreeCursor): Begins =
     (cursor.parentOp, cursor.op) match {
       case (_, _: FailModel) => Fail
@@ -206,6 +210,8 @@ object Topology extends Logging {
       case _ => Default
     }
 
+  // Return strategy for calculating `endsOn` for
+  // node pointed on by `cursor`
   private def decideEnds(cursor: OpModelTreeCursor): Ends =
     cursor.op match {
       case _: SeqGroupModel => SeqGroup
@@ -215,6 +221,8 @@ object Topology extends Logging {
       case _ => Default
     }
 
+  // Return strategy for calculating `afterOn` for
+  // node pointed on by `cursor`
   private def decideAfter(cursor: OpModelTreeCursor): After =
     (cursor.parentOp, cursor.op) match {
       case (_, _: FailModel) => Fail
