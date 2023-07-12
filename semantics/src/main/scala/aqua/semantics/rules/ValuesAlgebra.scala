@@ -150,7 +150,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         }
 
       case ct @ CollectionToken(_, values) =>
-        values.traverse(valueToRaw).map(_.toList.flatten).map(NonEmptyList.fromList).map {
+        values.traverse(valueToRaw).map(_.flatten).map(NonEmptyList.fromList).map {
           case Some(raws) if raws.size == values.size =>
             val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
             // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
@@ -227,67 +227,69 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
 
     }
 
-  def callArrowToRaw(ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] = for {
-    raw <- ca.ability
-      .fold(
-        N.readArrow(ca.funcName)
-          .map(
-            _.map(bt =>
-              CallArrowRaw(
-                ability = None,
-                name = ca.funcName.value,
-                arguments = Nil,
-                baseType = bt,
-                serviceId = None
+  def callArrowToRaw(ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] = {
+    for {
+      raw <- ca.ability
+        .fold(
+          N.readArrow(ca.funcName)
+            .map(
+              _.map(bt =>
+                CallArrowRaw(
+                  ability = None,
+                  name = ca.funcName.value,
+                  arguments = Nil,
+                  baseType = bt,
+                  serviceId = None
+                )
               )
             )
-          )
-      )(ab =>
-        (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
-          case (Some(at), Right(sid)) =>
-            // Service call, actually
-            CallArrowRaw(
-              ability = Some(ab.value),
-              name = ca.funcName.value,
-              arguments = Nil,
-              baseType = at,
-              serviceId = Some(sid)
-            ).some
-          case (Some(at), Left(true)) =>
-            // Ability function call, actually
-            CallArrowRaw(
-              ability = Some(ab.value),
-              name = ca.funcName.value,
-              arguments = Nil,
-              baseType = at,
-              serviceId = None
-            ).some
-          case _ => none
-        }
+        )(ab =>
+          (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
+            case (Some(at), Right(sid)) =>
+              // Service call, actually
+              CallArrowRaw(
+                ability = Some(ab.value),
+                name = ca.funcName.value,
+                arguments = Nil,
+                baseType = at,
+                serviceId = Some(sid)
+              ).some
+            case (Some(at), Left(true)) =>
+              // Ability function call, actually
+              CallArrowRaw(
+                ability = Some(ab.value),
+                name = ca.funcName.value,
+                arguments = Nil,
+                baseType = at,
+                serviceId = None
+              ).some
+            case _ => none
+          }
+        )
+      result <- raw.flatTraverse(r =>
+        val arr = r.baseType
+        for {
+          argsCheck <- T.checkArgumentsNumber(ca.funcName, arr.domain.length, ca.args.length)
+          args <- Option
+            .when(argsCheck)(ca.args zip arr.domain.toList)
+            .traverse(
+              _.flatTraverse { case (tkn, tp) =>
+                for {
+                  maybeValueRaw <- valueToRaw(tkn)
+                  checked <- maybeValueRaw.flatTraverse(v =>
+                    T.ensureTypeMatches(tkn, tp, v.`type`)
+                      .map(Option.when(_)(v))
+                  )
+                } yield checked.toList
+              }
+            )
+          result = args
+            .filter(_.length == arr.domain.length)
+            .map(args => r.copy(arguments = args))
+        } yield result
       )
-    result <- raw.flatTraverse(r =>
-      val arr = r.baseType
-      for {
-        argsCheck <- T.checkArgumentsNumber(ca.funcName, arr.domain.length, ca.args.length)
-        args <- Option
-          .when(argsCheck)(ca.args zip arr.domain.toList)
-          .traverse(
-            _.flatTraverse { case (tkn, tp) =>
-              for {
-                maybeValueRaw <- valueToRaw(tkn)
-                checked <- maybeValueRaw.flatTraverse(v =>
-                  T.ensureTypeMatches(tkn, tp, v.`type`)
-                    .map(Option.when(_)(v))
-                )
-              } yield checked.toList
-            }
-          )
-        result = args
-          .filter(_.length == arr.domain.length)
-          .map(args => r.copy(arguments = args))
-      } yield result
-    )
-  } yield result
+    } yield result
+  }
 
   def checkArguments(token: Token[S], arr: ArrowType, args: List[ValueToken[S]]): Alg[Boolean] =
     // TODO: do we really need to check this?

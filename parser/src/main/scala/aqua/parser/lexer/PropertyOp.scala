@@ -79,7 +79,10 @@ object PropertyOp {
     }
 
   private val parseOp: P[PropertyOp[Span.S]] =
-    P.oneOf(parseCopy.backtrack :: parseArrow.backtrack :: parseField.backtrack :: parseIdx :: Nil)
+    P.oneOf(parseCopy.backtrack :: parseField.backtrack :: parseIdx :: Nil)
+
+  val opsWithArrows: P[NonEmptyList[PropertyOp[Span.S]]] =
+    P.oneOf(parseCopy.backtrack :: parseArrow.backtrack :: parseField.backtrack :: parseIdx :: Nil).rep
 
   val ops: P[NonEmptyList[PropertyOp[Span.S]]] =
     parseOp.rep

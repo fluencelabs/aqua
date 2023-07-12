@@ -1,5 +1,7 @@
 aqua Main
 
+use DECLARE_CONST from "declare.aqua" as Declare
+
 export handleScope
 
 service SomeService("wed"):
@@ -15,6 +17,7 @@ ability SecondScope:
 
 func funcStr(s: string) -> string:
   strInFunc <- SomeService.getStr(s)
+  SomeService.getStr(Declare.DECLARE_CONST)
   <- strInFunc
 
 --
