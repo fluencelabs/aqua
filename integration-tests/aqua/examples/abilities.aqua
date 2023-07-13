@@ -1,0 +1,36 @@
+aqua Main
+
+use DECLARE_CONST, decl_bar from "imports_exports/declare.aqua" as Declare
+
+export handleAb, SomeService
+
+service SomeService("wed"):
+  getStr(s: string) -> string
+
+ability SomeAb:
+  someArrow(s: string) -> string, string
+  str: string
+
+ability SecondAb:
+  arrow(s: string) -> string
+  num: u32
+
+func funcStr(s: string) -> string, string:
+  strInFunc <- SomeService.getStr(Declare.DECLARE_CONST)
+  <- strInFunc, s
+
+func handleSecAb {SomeAb, SecondAb}() -> string, string, string, u32:
+  SomeAb.someArrow("eferfrfrf")
+  b, c <- SomeAb.someArrow("efre")
+  d <- SecondAb.arrow(SomeAb.str)
+  <- b, c, d, SecondAb.num
+
+func returnAb(s: string) -> SomeAb:
+  SomeAb = SomeAb(someArrow = funcStr, str = s)
+  <- SomeAb
+
+func handleAb(fff: string) -> string, string, string, u32:
+  SomeAb = returnAb(fff)
+  SecondAb = SecondAb(arrow = funcStr, num = 12)
+  res1, res2, res3, res4 <- handleSecAb{SomeAb, SecondAb}()
+  <- res1, res2, res3, res4
