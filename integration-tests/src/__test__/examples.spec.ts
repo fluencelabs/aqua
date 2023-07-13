@@ -316,7 +316,7 @@ describe('Testing examples', () => {
 
     it('ability.aqua', async () => {
         let result = await abilityCall();
-        expect(result).toBe(['declare_const123', "efre", "declare_const123", 12]);
+        expect(result).toBe(['declare_const123', "efre123", "declare_const123", 12]);
     });
 
     it('functors.aqua LNG-119 bug', async () => {
