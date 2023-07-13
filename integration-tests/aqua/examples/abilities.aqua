@@ -17,7 +17,8 @@ ability SecondAb:
 
 func funcStr(s: string) -> string, string:
   strInFunc <- SomeService.getStr(Declare.DECLARE_CONST)
-  <- strInFunc, s
+  strInFunc2 <- SomeService.getStr(s)
+  <- strInFunc, strInFunc2
 
 func handleSecAb {SomeAb, SecondAb}() -> string, string, string, u32:
   SomeAb.someArrow("eferfrfrf")
