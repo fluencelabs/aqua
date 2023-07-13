@@ -43,7 +43,7 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
             )
           ),
           "f6" -> CallArrowToken(None, Name[Id]("funcCall"), List(one)),
-          "f7" -> VarToken(Name[Id]("Serv"), List(IntoArrow[Id](Name[Id]("call"), List(two))))
+          "f7" -> CallArrowToken(Option(NamedTypeToken[Id]("Serv")), Name[Id]("call"), List(two))
         )
       )
     )
