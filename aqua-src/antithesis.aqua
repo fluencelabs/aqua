@@ -1,24 +1,24 @@
 aqua Main
 
-use DECLARE_CONST from "declare.aqua" as Declare
+use DECLARE_CONST, decl_bar from "declare.aqua" as Declare
 
-export handleScope
+export handleAb
 
 service SomeService("wed"):
   getStr(s: string) -> string
 
-ability SomeScope:
-  someArrow(s: string) -> string
+ability SomeAb:
+  someArrow(s: string) -> string, string
   str: string
 
-ability SecondScope:
+ability SecondAb:
   arrow(s: string) -> string
   num: u32
 
-func funcStr(s: string) -> string:
-  strInFunc <- SomeService.getStr(s)
-  SomeService.getStr(Declare.DECLARE_CONST)
-  <- strInFunc
+func funcStr(s: string) -> string, string:
+  strInFunc <- SomeService.getStr(Declare.DECLARE_CONST)
+  -- SomeService.getStr(s)
+  <- strInFunc, s
 
 --
 -- func diffFunc(s: string) -> string:
@@ -34,16 +34,17 @@ func funcStr(s: string) -> string:
 --   closure = (a: string) -> string:
 --     <- SomeService.str()
 
-func handleSecScope { SomeScope ,  SecondScope}() -> string:
-  a = SomeScope.someArrow(SomeScope.str)
-  <- a
+func handleSecAb {SomeAb, SecondAb}() -> string, string:
+  SomeAb.someArrow("eferfrfrf")
+  b, c <- SomeAb.someArrow("efre")
+  <- b, c
 
-func returnScope(s: string) -> SomeScope:
-  SomeAb = SomeScope(someArrow = funcStr, str = s)
+func returnAb(s: string) -> SomeAb:
+  SomeAb = SomeAb(someArrow = funcStr, str = s)
   <- SomeAb
 
-func handleScope(fff: string) -> string:
-  SomeAb = returnScope(fff)
-  SecondAb = SecondScope(arrow = funcStr, num = 12)
-  d <- handleSecScope{  SomeAb , SecondAb  }()
-  <- d
+func handleAb(fff: string) -> string, string:
+  SomeAb = returnAb(fff)
+  SecondAb = SecondAb(arrow = funcStr, num = 12)
+  d, g <- handleSecAb{SomeAb, SecondAb}()
+  <- d, g

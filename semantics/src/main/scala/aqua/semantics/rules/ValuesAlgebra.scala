@@ -227,6 +227,12 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
 
     }
 
+  def callAbType(ab: String, abType: AbilityType, ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] =
+    abType.arrows.get(ca.funcName.value) match {
+      case Some(arrowType) => Option(CallArrowRaw(None, s"$ab.${ca.funcName.value}", Nil, arrowType, None)).pure[Alg]
+      case None => None.pure[Alg]
+    }
+
   def callArrowToRaw(ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] = {
     for {
       raw <- ca.ability
@@ -244,27 +250,33 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               )
             )
         )(ab =>
-          (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
-            case (Some(at), Right(sid)) =>
-              // Service call, actually
-              CallArrowRaw(
-                ability = Some(ab.value),
-                name = ca.funcName.value,
-                arguments = Nil,
-                baseType = at,
-                serviceId = Some(sid)
-              ).some
-            case (Some(at), Left(true)) =>
-              // Ability function call, actually
-              CallArrowRaw(
-                ability = Some(ab.value),
-                name = ca.funcName.value,
-                arguments = Nil,
-                baseType = at,
-                serviceId = None
-              ).some
-            case _ => none
+          T.getType(ab.value).flatMap {
+            case Some(abType: AbilityType) =>
+              callAbType(ab.value, abType, ca)
+            case _ =>
+              (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
+                case (Some(at), Right(sid)) =>
+                  // Service call, actually
+                  CallArrowRaw(
+                    ability = Some(ab.value),
+                    name = ca.funcName.value,
+                    arguments = Nil,
+                    baseType = at,
+                    serviceId = Some(sid)
+                  ).some
+                case (Some(at), Left(true)) =>
+                  // Ability function call, actually
+                  CallArrowRaw(
+                    ability = Some(ab.value),
+                    name = ca.funcName.value,
+                    arguments = Nil,
+                    baseType = at,
+                    serviceId = None
+                  ).some
+                case _ => none
+              }
           }
+
         )
       result <- raw.flatTraverse(r =>
         val arr = r.baseType

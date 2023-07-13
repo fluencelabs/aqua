@@ -1,14 +1,11 @@
 package aqua.parser.expr
 
 import aqua.parser.Expr
+import aqua.parser.lexer.NamedTypeToken
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{Ability, NamedTypeToken, Name, ValueToken}
-import aqua.parser.lift.LiftParser
-import cats.Comonad
-import cats.parse.Parser
-import cats.~>
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import cats.parse.Parser
+import cats.{Comonad, ~>}
 
 case class AbilityExpr[F[_]](name: NamedTypeToken[F]) extends Expr[F](AbilityExpr, name) {
 

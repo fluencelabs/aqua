@@ -206,15 +206,15 @@ object InfixToken {
     basic.between(`(`, `)`).backtrack
 
   // One element of math expression
-  private val atom: P[ValueToken[S]] = P.oneOf(
+  val atom: P[ValueToken[S]] = P.oneOf(
     literal.backtrack ::
       initPeerId.backtrack ::
       P.defer(
         CollectionToken.collection
       ) ::
       P.defer(NamedValueToken.dataValue).backtrack ::
-      P.defer(abProperty).backtrack ::
       P.defer(CallArrowToken.callArrow).backtrack ::
+      P.defer(abProperty).backtrack ::
       P.defer(brackets(InfixToken.mathExpr)).backtrack ::
       varProperty ::
       Nil

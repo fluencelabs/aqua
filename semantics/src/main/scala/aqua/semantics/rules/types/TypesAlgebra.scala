@@ -9,6 +9,8 @@ import cats.data.NonEmptyList
 trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveType(token: TypeToken[S]): Alg[Option[Type]]
+  
+  def getType(name: String): Alg[Option[Type]]
 
   def resolveArrowDef(arrowDef: ArrowTypeToken[S]): Alg[Option[ArrowType]]
 
