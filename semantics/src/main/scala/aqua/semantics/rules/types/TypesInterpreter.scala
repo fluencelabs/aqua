@@ -36,6 +36,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.{~>, Applicative}
+import cats.syntax.option.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -295,6 +296,21 @@ class TypesInterpreter[S[_], X](implicit
             .as(false)
       }
     }
+
+  override def ensureTypeOneOf[T <: Type](
+    token: Token[S],
+    expected: Set[T],
+    givenType: Type
+  ): State[X, Option[Type]] = expected
+    .find(_ acceptsValueOf givenType)
+    .fold(
+      reportError(
+        token,
+        "Types mismatch." ::
+          s"expected one of:   ${expected.mkString(", ")}" ::
+          s"given:             $givenType" :: Nil
+      ).as(none)
+    )(_.some.pure)
 
   override def expectNoExport(token: Token[S]): State[X, Unit] =
     report(

@@ -172,19 +172,21 @@ object ScalarType {
   val string = ScalarType("string")
 
   val float = Set(f32, f64)
-  val signed = float ++ Set(i8, i16, i32, i64)
+  val signed = Set(i8, i16, i32, i64)
   val unsigned = Set(u8, u16, u32, u64)
-  val number = signed ++ unsigned
+  val integer = signed ++ unsigned
+  val number = float ++ integer
   val all = number ++ Set(bool, string)
 }
 
 case class LiteralType private (oneOf: Set[ScalarType], name: String) extends DataType {
-  override def toString: String = s"$name:lt"
+  override def toString: String = s"$name literal"
 }
 
 object LiteralType {
   val float = LiteralType(ScalarType.float, "float")
   val signed = LiteralType(ScalarType.signed, "signed")
+  val unsigned = LiteralType(ScalarType.unsigned, "unsigned")
   val number = LiteralType(ScalarType.number, "number")
   val bool = LiteralType(Set(ScalarType.bool), "bool")
   val string = LiteralType(Set(ScalarType.string), "string")

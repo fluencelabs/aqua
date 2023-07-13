@@ -351,7 +351,7 @@ object ValueToken {
     (minus.?.with1 ~ Numbers.nonNegativeIntString).lift.map(fu =>
       fu.extract match {
         case (Some(_), n) ⇒ LiteralToken(fu.as(s"-$n"), LiteralType.signed)
-        case (None, n) ⇒ LiteralToken(fu.as(n), LiteralType.number)
+        case (None, n) ⇒ LiteralToken(fu.as(n), LiteralType.unsigned)
       }
     )
 

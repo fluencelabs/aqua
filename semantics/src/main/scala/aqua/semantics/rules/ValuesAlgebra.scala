@@ -129,18 +129,17 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               typeFromFieldsWithData = rawFields
                 .map(rf =>
                   resolvedType match {
-                    case struct@StructType(_, _) =>
+                    case struct @ StructType(_, _) =>
                       (
                         StructType(typeName.value, rf.map(_.`type`)),
                         Some(MakeStructRaw(rf, struct))
                       )
-                    case scope@AbilityType(_, _) =>
+                    case scope @ AbilityType(_, _) =>
                       (
                         AbilityType(typeName.value, rf.map(_.`type`)),
                         Some(AbilityRaw(rf, scope))
                       )
                   }
-
                 )
                 .getOrElse(BottomType -> None)
               (typeFromFields, data) = typeFromFieldsWithData
@@ -175,50 +174,59 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
       case it @ InfixToken(l, r, _) =>
-        (valueToRaw(l), valueToRaw(r)).mapN((ll, rr) => ll -> rr).flatMap {
+        (valueToRaw(l), valueToRaw(r)).flatMapN {
           case (Some(leftRaw), Some(rightRaw)) =>
-            // TODO handle literal types
-            val hasFloats = ScalarType.float
-              .exists(ft => leftRaw.`type`.acceptsValueOf(ft) || rightRaw.`type`.acceptsValueOf(ft))
+            val lType = leftRaw.`type`
+            val rType = rightRaw.`type`
+            lazy val uType = lType `∪` rType
+            val hasFloat = List(lType, rType).exists(
+              _ acceptsValueOf LiteralType.float
+            )
 
-            // https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
-            // Expected types of left and right operands, result type if known, service ID and function name
-            val (leftType, rightType, res, id, fn) = it.op match {
-              case Op.Add =>
-                (ScalarType.i64, ScalarType.i64, None, "math", "add")
-              case Op.Sub => (ScalarType.i64, ScalarType.i64, None, "math", "sub")
-              case Op.Mul if hasFloats =>
-                // TODO may it be i32?
-                (ScalarType.f64, ScalarType.f64, Some(ScalarType.i64), "math", "fmul")
-              case Op.Mul =>
-                (ScalarType.i64, ScalarType.i64, None, "math", "mul")
-              case Op.Div => (ScalarType.i64, ScalarType.i64, None, "math", "div")
-              case Op.Rem => (ScalarType.i64, ScalarType.i64, None, "math", "rem")
-              case Op.Pow => (ScalarType.i64, ScalarType.u32, None, "math", "pow")
-              case Op.Gt => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "gt")
-              case Op.Gte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "gte")
-              case Op.Lt => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lt")
-              case Op.Lte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lte")
+            // See https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
+            val (id, fn) = it.op match {
+              case Op.Add => ("math", "add")
+              case Op.Sub => ("math", "sub")
+              case Op.Mul if hasFloat => ("math", "fmul")
+              case Op.Mul => ("math", "mul")
+              case Op.Div => ("math", "div")
+              case Op.Rem => ("math", "rem")
+              case Op.Pow => ("math", "pow")
+              case Op.Gt => ("cmp", "gt")
+              case Op.Gte => ("cmp", "gte")
+              case Op.Lt => ("cmp", "lt")
+              case Op.Lte => ("cmp", "lte")
             }
+
+            // Expected type sets of left and right operands, result type
+            val (leftExp, rightExp, resType) = it.op match {
+              case Op.Add | Op.Sub | Op.Div | Op.Rem =>
+                (ScalarType.integer, ScalarType.integer, uType)
+              case Op.Pow =>
+                (ScalarType.integer, ScalarType.unsigned, uType)
+              case Op.Mul if hasFloat =>
+                (ScalarType.float, ScalarType.float, ScalarType.i64)
+              case Op.Mul =>
+                (ScalarType.integer, ScalarType.integer, uType)
+              case Op.Gt | Op.Lt | Op.Gte | Op.Lte =>
+                (ScalarType.integer, ScalarType.integer, ScalarType.bool)
+            }
+
             for {
-              ltm <- T.ensureTypeMatches(l, leftType, leftRaw.`type`)
-              rtm <- T.ensureTypeMatches(r, rightType, rightRaw.`type`)
-            } yield Option.when(ltm && rtm)(
+              leftChecked <- T.ensureTypeOneOf(l, leftExp, lType)
+              rightChecked <- T.ensureTypeOneOf(r, rightExp, rType)
+            } yield Option.when(
+              leftChecked.isDefined && rightChecked.isDefined
+            )(
               CallArrowRaw(
-                Some(id),
-                fn,
-                leftRaw :: rightRaw :: Nil,
-                ArrowType(
-                  ProductType(leftType :: rightType :: Nil),
-                  ProductType(
-                    res.getOrElse(
-                      // If result type is not known/enforced, then assume it's the widest type of operands
-                      // E.g. 1:i8 + 1:i8 -> i8, not i64
-                      leftRaw.`type` `∪` rightRaw.`type`
-                    ) :: Nil
-                  )
+                ability = Some(id),
+                name = fn,
+                arguments = leftRaw :: rightRaw :: Nil,
+                baseType = ArrowType(
+                  ProductType(lType :: rType :: Nil),
+                  ProductType(resType :: Nil)
                 ),
-                Some(LiteralRaw.quote(id))
+                serviceId = Some(LiteralRaw.quote(id))
               )
             )
 
@@ -228,9 +236,14 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     }
 
   // Generate CallArrowRaw for arrow in ability
-  def callAbType(ab: String, abType: AbilityType, ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] =
+  def callAbType(
+    ab: String,
+    abType: AbilityType,
+    ca: CallArrowToken[S]
+  ): Alg[Option[CallArrowRaw]] =
     abType.arrows.get(ca.funcName.value) match {
-      case Some(arrowType) => Option(CallArrowRaw(None, s"$ab.${ca.funcName.value}", Nil, arrowType, None)).pure[Alg]
+      case Some(arrowType) =>
+        Option(CallArrowRaw(None, s"$ab.${ca.funcName.value}", Nil, arrowType, None)).pure[Alg]
       case None => None.pure[Alg]
     }
 
@@ -279,7 +292,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                 case _ => none
               }
           }
-
         )
       result <- raw.flatTraverse(r =>
         val arr = r.baseType

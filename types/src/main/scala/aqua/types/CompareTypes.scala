@@ -106,46 +106,50 @@ object CompareTypes {
    *         -1 if left is a subtype of the right
    */
   def apply(l: Type, r: Type): Double =
-    if (l == r) 0.0
-    else
-      (l, r) match {
-        case (TopType, _) | (_, BottomType) => 1.0
-        case (BottomType, _) | (_, TopType) => -1.0
+    (l, r) match {
+      case _ if l == r => 0.0
 
-        // Literals and scalars
-        case (x: ScalarType, y: ScalarType) => scalarOrder.partialCompare(x, y)
-        case (LiteralType(xs, _), y: ScalarType) if xs == Set(y) => 0.0
-        case (LiteralType(xs, _), y: ScalarType) if xs(y) => -1.0
-        case (x: ScalarType, LiteralType(ys, _)) if ys == Set(x) => 0.0
-        case (x: ScalarType, LiteralType(ys, _)) if ys(x) => 1.0
+      case (TopType, _) | (_, BottomType) => 1.0
+      case (BottomType, _) | (_, TopType) =>
+        -1.0
 
-        // Collections
-        case (x: ArrayType, y: ArrayType) => apply(x.element, y.element)
-        case (x: ArrayType, y: StreamType) => apply(x.element, y.element)
-        case (x: ArrayType, y: OptionType) => apply(x.element, y.element)
-        case (x: OptionType, y: OptionType) => apply(x.element, y.element)
-        case (x: OptionType, y: StreamType) => apply(x.element, y.element)
-        case (x: OptionType, y: ArrayType) => apply(x.element, y.element)
-        case (x: StreamType, y: StreamType) => apply(x.element, y.element)
-        case (lnt: AbilityType, rnt: AbilityType) => compareNamed(lnt.fields, rnt.fields)
-        case (lnt: StructType, rnt: StructType) => compareNamed(lnt.fields, rnt.fields)
+      // Collections
+      case (x: ArrayType, y: ArrayType) => apply(x.element, y.element)
+      case (x: ArrayType, y: StreamType) => apply(x.element, y.element)
+      case (x: ArrayType, y: OptionType) => apply(x.element, y.element)
+      case (x: OptionType, y: OptionType) => apply(x.element, y.element)
+      case (x: OptionType, y: StreamType) => apply(x.element, y.element)
+      case (x: OptionType, y: ArrayType) => apply(x.element, y.element)
+      case (x: StreamType, y: StreamType) => apply(x.element, y.element)
+      case (lnt: AbilityType, rnt: AbilityType) => compareNamed(lnt.fields, rnt.fields)
+      case (lnt: StructType, rnt: StructType) => compareNamed(lnt.fields, rnt.fields)
 
-        // Products
-        case (l: ProductType, r: ProductType) => compareProducts(l, r)
+      // Literals and scalars
+      case (x: ScalarType, y: ScalarType) => scalarOrder.partialCompare(x, y)
+      case (LiteralType(xs, _), y: ScalarType) if xs == Set(y) => 0.0
+      case (LiteralType(xs, _), y: ScalarType) if xs(y) => -1.0
+      case (x: ScalarType, LiteralType(ys, _)) if ys == Set(x) => 0.0
+      case (x: ScalarType, LiteralType(ys, _)) if ys(x) => 1.0
+      case (LiteralType(xs, _), LiteralType(ys, _)) if xs == ys => 0.0
+      case (LiteralType(xs, _), LiteralType(ys, _)) if xs subsetOf ys => 1.0
+      case (LiteralType(xs, _), LiteralType(ys, _)) if ys subsetOf xs => -1.0
 
-        // Arrows
-        case (ArrowType(ldom, lcodom), ArrowType(rdom, rcodom)) =>
-          val cmpDom = apply(ldom, rdom)
-          val cmpCodom = apply(lcodom, rcodom)
+      // Products
+      case (l: ProductType, r: ProductType) => compareProducts(l, r)
 
-          if (cmpDom == 0 && cmpCodom == 0) 0
-          else if (cmpDom <= 0 && cmpCodom >= 0) 1.0
-          else if (cmpDom >= 0 && cmpCodom <= 0) -1.0
-          else NaN
+      // Arrows
+      case (ArrowType(ldom, lcodom), ArrowType(rdom, rcodom)) =>
+        val cmpDom = apply(ldom, rdom)
+        val cmpCodom = apply(lcodom, rcodom)
 
-        case _ =>
-          Double.NaN
-      }
+        if (cmpDom == 0 && cmpCodom == 0) 0
+        else if (cmpDom <= 0 && cmpCodom >= 0) 1.0
+        else if (cmpDom >= 0 && cmpCodom <= 0) -1.0
+        else NaN
+
+      case _ =>
+        Double.NaN
+    }
 
   implicit val partialOrder: PartialOrder[Type] =
     PartialOrder.from(CompareTypes.apply)
