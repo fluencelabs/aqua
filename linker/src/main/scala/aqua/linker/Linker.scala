@@ -40,12 +40,10 @@ object Linker extends Logging {
       case path :: otherPaths =>
         val pathDeps = deps.get(path.last).toList.flatten
         val cycles = pathDeps.flatMap(dep =>
-          NonEmptyChain
-            .fromChain(
-              // This is slow
-              path.toChain.dropWhile(_ != dep)
-            )
-            .toList
+          NonEmptyChain.fromChain(
+            // This is slow
+            path.toChain.dropWhile(_ != dep)
+          )
         )
         val newPaths = pathDeps
           .filterNot(visited.contains)
@@ -62,7 +60,7 @@ object Linker extends Logging {
       .flatMap(m =>
         findCycles(
           paths = NonEmptyChain.one(m.id) :: Nil,
-          visited = Set.empty,
+          visited = Set(m.id),
           result = List.empty
         )
       )
