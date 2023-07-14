@@ -240,7 +240,7 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends D
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
-// Scope is an unordered collection of labelled types and arrows
+// Ability is an unordered collection of labelled types and arrows
 case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
 
   lazy val arrows: Map[String, ArrowType] = fields.toNel.collect {

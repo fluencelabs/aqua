@@ -94,7 +94,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
-  private def unfoldScopeProperty[S: Mangler: Exports: Arrows](
+  private def unfoldAbilityProperty[S: Mangler: Exports: Arrows](
     varModel: VarModel,
     scopeType: AbilityType,
     p: PropertyRaw
@@ -250,7 +250,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         ) { case (state, property) =>
           state.flatMap {
             case (vm @ VarModel(name, st @ AbilityType(_, _), _), leftInline) =>
-              unfoldScopeProperty(vm, st, property.raw).map { case (vm, inl) =>
+              unfoldAbilityProperty(vm, st, property.raw).map { case (vm, inl) =>
                 (
                   vm,
                   Inline(

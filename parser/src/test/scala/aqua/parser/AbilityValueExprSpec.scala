@@ -12,17 +12,17 @@ import cats.data.{NonEmptyList, NonEmptyMap}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class ScopeValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
+class AbilityValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec.*
 
-  private def parseAndCheckScope(str: String) = {
+  private def parseAndCheckAbility(str: String) = {
     val one = LiteralToken[Id]("1", LiteralType.number)
 
     parseData(
       str
     ) should be(
       NamedValueToken(
-        NamedTypeToken[Id]("ScopeA"),
+        NamedTypeToken[Id]("AbilityA"),
         NonEmptyMap.of(
           "v1" -> one,
           "f1" -> VarToken(Name[Id]("input"), IntoField[Id]("arrow") :: Nil)
@@ -32,12 +32,12 @@ class ScopeValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   }
 
   "one line struct value" should "be parsed" in {
-    parseAndCheckScope("""ScopeA(v1 = 1, f1 = input.arrow)""")
+    parseAndCheckAbility("""AbilityA(v1 = 1, f1 = input.arrow)""")
   }
 
   "multiline line struct value" should "be parsed" in {
-    parseAndCheckScope(
-      """ScopeA(v1 = 1, f1 = input.arrow)""".stripMargin)
+    parseAndCheckAbility(
+      """AbilityA(v1 = 1, f1 = input.arrow)""".stripMargin)
   }
 
 }

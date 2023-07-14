@@ -125,6 +125,7 @@ object ArrowTypeToken {
     typeDef().backtrack
   ).map(_.toList)
 
+  // {SomeAb, SecondAb} for NamedTypeToken
   def abilities(): P0[List[(Option[Name[S]], NamedTypeToken[S])]] =
     (`{` *> comma(`Class`.surroundedBy(`/s*`).lift.map(s => Option(Name(s)) -> NamedTypeToken(s)))
       .map(_.toList) <* `}`).?.map(_.getOrElse(List.empty))

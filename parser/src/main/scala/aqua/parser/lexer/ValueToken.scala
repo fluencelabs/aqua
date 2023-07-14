@@ -87,6 +87,7 @@ object CallArrowToken {
 
   case class CallBraces(name: Name[S], abilities: List[ValueToken[S]], args: List[ValueToken[S]])
 
+  // {SomeAb, SecondAb} for ValueToken
   def abilities(): P[NonEmptyList[ValueToken[S]]] =
     `{` *> comma(ValueToken.`value`.surroundedBy(`/s*`)) <* `}`
 

@@ -105,15 +105,17 @@ object ArrowInliner extends Logging {
               callableFuncBody
             )
             (ops, rets) = opsAndRets
+
             exports <- Exports[S].exports
             arrows <- Arrows[S].arrows
-            returnedFromScopes = rets.collect { case VarModel(name, st @ AbilityType(_, _), _) =>
-              getAllVarsFromScope(name, None, st, exports, arrows)
+            // gather all arrows and variables from abilities
+            returnedFromAbilities = rets.collect { case VarModel(name, st @ AbilityType(_, _), _) =>
+              getVarsAndArrowsFromAbilities(name, None, st, exports, arrows)
             }.fold((Map.empty, Map.empty)) { case (acc, (vars, arrs)) =>
               (acc._1 ++ vars, acc._2 ++ arrs)
             }
           } yield {
-            val (vals, arrows) = returnedFromScopes
+            val (vals, arrows) = returnedFromAbilities
             (SeqModel.wrap(ops.reverse: _*), rets.reverse, vals, arrows)
           }
         )
@@ -214,12 +216,12 @@ object ArrowInliner extends Logging {
       allNewNames = newFieldsName.add((name, newName)).toSortedMap
     } yield {
       val (allVars, allArrows) =
-        getAllVarsFromScope(vm.name, Option(newName), t, oldExports, oldArrows)
+        getVarsAndArrowsFromAbilities(vm.name, Option(newName), t, oldExports, oldArrows)
       (allNewNames, allVars, allArrows)
     }
   }
 
-  private def getAllVarsFromScope(
+  private def getVarsAndArrowsFromAbilities(
     topOldName: String,
     topNewName: Option[String],
     st: AbilityType,
@@ -233,7 +235,7 @@ object ArrowInliner extends Logging {
       val currentNewName = topNewName.map(_ + s".$fName")
       value match {
         case st @ AbilityType(_, _) =>
-          getAllVarsFromScope(
+          getVarsAndArrowsFromAbilities(
             currentOldName,
             currentNewName,
             st,

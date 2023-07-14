@@ -66,13 +66,10 @@ object Exports {
     override def resolved(
       exportName: String,
       value: ValueModel
-    ): State[Map[String, ValueModel], Unit] = {
-      State.modify(_ + (exportName -> value))
-    }
+    ): State[Map[String, ValueModel], Unit] = State.modify(_ + (exportName -> value))
 
-    override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] = {
+    override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
       State.modify(_ ++ exports)
-    }
 
     override val exports: State[Map[String, ValueModel], Map[String, ValueModel]] =
       State.get

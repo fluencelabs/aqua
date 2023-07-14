@@ -174,7 +174,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
-      case it @ InfixToken(l, r, i) =>
+      case it @ InfixToken(l, r, _) =>
         (valueToRaw(l), valueToRaw(r)).mapN((ll, rr) => ll -> rr).flatMap {
           case (Some(leftRaw), Some(rightRaw)) =>
             // TODO handle literal types
@@ -227,6 +227,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
 
     }
 
+  // Generate CallArrowRaw for arrow in ability
   def callAbType(ab: String, abType: AbilityType, ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] =
     abType.arrows.get(ca.funcName.value) match {
       case Some(arrowType) => Option(CallArrowRaw(None, s"$ab.${ca.funcName.value}", Nil, arrowType, None)).pure[Alg]
@@ -250,6 +251,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               )
             )
         )(ab =>
+          // TODO: Hack. Check that we have registered ability type.
+          // If it exists - this is ability type in file, if not - imported ability
           T.getType(ab.value).flatMap {
             case Some(abType: AbilityType) =>
               callAbType(ab.value, abType, ca)
@@ -302,29 +305,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       )
     } yield result
   }
-
-  def checkArguments(token: Token[S], arr: ArrowType, args: List[ValueToken[S]]): Alg[Boolean] =
-    // TODO: do we really need to check this?
-    T.checkArgumentsNumber(token, arr.domain.length, args.length).flatMap {
-      case false => false.pure[Alg]
-      case true =>
-        args
-          .map[Alg[Option[(Token[S], Type)]]](tkn => resolveType(tkn).map(_.map(t => tkn -> t)))
-          .zip(arr.domain.toList)
-          .foldLeft(
-            true.pure[Alg]
-          ) { case (f, (ft, t)) =>
-            (
-              f,
-              ft.flatMap {
-                case None =>
-                  false.pure[Alg]
-                case Some((tkn, valType)) =>
-                  T.ensureTypeMatches(tkn, t, valType)
-              }
-            ).mapN(_ && _)
-          }
-    }
 
 }
 
