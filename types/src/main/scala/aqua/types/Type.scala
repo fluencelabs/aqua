@@ -186,7 +186,11 @@ case class LiteralType private (oneOf: Set[ScalarType], name: String) extends Da
 object LiteralType {
   val float = LiteralType(ScalarType.float, "float")
   val signed = LiteralType(ScalarType.signed, "signed")
-  val unsigned = LiteralType(ScalarType.unsigned, "unsigned")
+  /*
+   * Literals without sign could be either signed or unsigned
+   * so `ScalarType.integer` is used here
+   */
+  val unsigned = LiteralType(ScalarType.integer, "unsigned")
   val number = LiteralType(ScalarType.number, "number")
   val bool = LiteralType(Set(ScalarType.bool), "bool")
   val string = LiteralType(Set(ScalarType.string), "string")
@@ -236,7 +240,8 @@ sealed trait NamedType extends Type {
 }
 
 // Struct is an unordered collection of labelled types
-case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends DataType with NamedType {
+case class StructType(name: String, fields: NonEmptyMap[String, Type])
+    extends DataType with NamedType {
 
   override def toString: String =
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
@@ -246,11 +251,11 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends D
 case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
 
   lazy val arrows: Map[String, ArrowType] = fields.toNel.collect {
-    case (name, at@ArrowType(_, _)) => (name, at)
+    case (name, at @ ArrowType(_, _)) => (name, at)
   }.toMap
 
   lazy val abilities: List[(String, AbilityType)] = fields.toNel.collect {
-    case (name, at@AbilityType(_, _)) => (name, at)
+    case (name, at @ AbilityType(_, _)) => (name, at)
   }
 
   lazy val variables: List[(String, Type)] = fields.toNel.filter {

@@ -17,6 +17,7 @@ import cats.syntax.traverse.*
 import cats.syntax.option.*
 import cats.instances.list.*
 import cats.data.{NonEmptyList, NonEmptyMap}
+import scribe.Logging
 
 import scala.collection.immutable.SortedMap
 
@@ -24,7 +25,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   N: NamesAlgebra[S, Alg],
   T: TypesAlgebra[S, Alg],
   A: AbilitiesAlgebra[S, Alg]
-) {
+) extends Logging {
 
   def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
     ensureTypeMatches(v, LiteralType.string)
@@ -198,16 +199,32 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               case Op.Lte => ("cmp", "lte")
             }
 
+            /*
+             * If `uType == TopType`, it means that we don't
+             * have type big enough to hold the result of operation.
+             * e.g. We will use `i64` for result of `i32 * u64`
+             * TODO: Handle this more gracefully
+             *       (use warning system when it is implemented)
+             */
+            def uTypeBounded = if (uType == TopType) {
+              val bounded = ScalarType.i64
+              logger.warn(
+                s"Result type of ($lType ${it.op} $rType) is $TopType, " +
+                  s"using $bounded instead"
+              )
+              bounded
+            } else uType
+
             // Expected type sets of left and right operands, result type
             val (leftExp, rightExp, resType) = it.op match {
               case Op.Add | Op.Sub | Op.Div | Op.Rem =>
-                (ScalarType.integer, ScalarType.integer, uType)
+                (ScalarType.integer, ScalarType.integer, uTypeBounded)
               case Op.Pow =>
-                (ScalarType.integer, ScalarType.unsigned, uType)
+                (ScalarType.integer, ScalarType.unsigned, uTypeBounded)
               case Op.Mul if hasFloat =>
                 (ScalarType.float, ScalarType.float, ScalarType.i64)
               case Op.Mul =>
-                (ScalarType.integer, ScalarType.integer, uType)
+                (ScalarType.integer, ScalarType.integer, uTypeBounded)
               case Op.Gt | Op.Lt | Op.Gte | Op.Lte =>
                 (ScalarType.integer, ScalarType.integer, ScalarType.bool)
             }

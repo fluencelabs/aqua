@@ -110,8 +110,7 @@ object CompareTypes {
       case _ if l == r => 0.0
 
       case (TopType, _) | (_, BottomType) => 1.0
-      case (BottomType, _) | (_, TopType) =>
-        -1.0
+      case (BottomType, _) | (_, TopType) => -1.0
 
       // Collections
       case (x: ArrayType, y: ArrayType) => apply(x.element, y.element)
