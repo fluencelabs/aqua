@@ -9,6 +9,7 @@ import aqua.raw.value.{ValueRaw, VarRaw}
 import cats.Eval
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.traverse.*
+import cats.syntax.apply.*
 import scribe.Logging
 
 /**
@@ -72,13 +73,26 @@ object ArrowInliner extends Logging {
       (ops, rets)
     }
 
+  /**
+   * @param tree generated tree after inlining a function
+   * @param returnedValues function return values
+   * @param exportsToSave values that must be saved for future states
+   * @param arrowsToSave arrows that must be saved for future states
+   */
+  case class InlineResult(
+    tree: OpModel.Tree,
+    returnedValues: List[ValueModel],
+    exportsToSave: Map[String, ValueModel],
+    arrowsToSave: Map[String, FuncArrow]
+  )
+
   // Apply a callable function, get its fully resolved body & optional value, if any
   private def inline[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel
-  ): State[S, (SeqModel.Tree, List[ValueModel], Map[String, ValueModel], Map[String, FuncArrow])] =
-    Exports[S].exports.flatMap { oldExports =>
-      getOutsideStreamNames.flatMap { outsideDeclaredStreams =>
+  ): State[S, InlineResult] =
+    (Exports[S].exports, getOutsideStreamNames).flatMapN {
+      case (oldExports, outsideDeclaredStreams) =>
         // Function's internal variables will not be available outside, hence the scope
         Exports[S].scope(
           for {
@@ -114,12 +128,17 @@ object ArrowInliner extends Logging {
             }.fold((Map.empty, Map.empty)) { case (acc, (vars, arrs)) =>
               (acc._1 ++ vars, acc._2 ++ arrs)
             }
+
+            // find and get resolved arrows if we return them from the function
+            returnedArrows = rets.collect { case VarModel(name, ArrowType(_, _), _) =>
+              name
+            }.toSet
+            arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
           } yield {
-            val (vals, arrows) = returnedFromAbilities
-            (SeqModel.wrap(ops.reverse: _*), rets.reverse, vals, arrows)
+            val (valsFromAbilities, arrowsFromAbilities) = returnedFromAbilities
+            InlineResult(SeqModel.wrap(ops.reverse: _*), rets.reverse, valsFromAbilities, arrowsFromAbilities ++ arrowsToSave)
           }
         )
-      }
     }
 
   // Get all arrows that is arguments from outer Arrows.
@@ -370,20 +389,14 @@ object ArrowInliner extends Logging {
         .traverse(getAllArrowsFromAbility)
         .map(_.fold(Map.empty)(_ ++ _))
 
-      av <- Arrows[S].scope(
+      inlineResult <- Arrows[S].scope(
         for {
           _ <- Arrows[S].resolved(passArrows ++ arrowsFromAbilities)
-          av <- ArrowInliner.inline(arrow, call)
-          // find and get resolved arrows if we return them from the function
-          returnedArrows = av._2.collect { case VarModel(name, ArrowType(_, _), _) =>
-            name
-          }.toSet
-
-          arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
-        } yield (av._1, av._2, arrowsToSave ++ av._4, av._3)
+          inlineResult <- ArrowInliner.inline(arrow, call)
+        } yield inlineResult
       )
-      (appliedOp, values, arrowsToSave, valsToSave) = av
-      _ <- Arrows[S].resolved(arrowsToSave)
-      _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(values).toMap ++ valsToSave)
-    } yield appliedOp -> values
+
+      _ <- Arrows[S].resolved(inlineResult.arrowsToSave)
+      _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(inlineResult.returnedValues).toMap ++ inlineResult.exportsToSave)
+    } yield inlineResult.tree -> inlineResult.returnedValues
 }

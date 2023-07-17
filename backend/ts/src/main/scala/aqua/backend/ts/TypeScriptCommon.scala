@@ -35,16 +35,14 @@ object TypeScriptCommon {
       "[" + pt.toList.map(typeToTs).mkString(", ") + "]"
     case st: StructType =>
       s"{ ${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ": " + kv._2 + ";").toList.mkString(" ")} }"
-    // TODO: should we ignore this due to we cannot pass scope as arguments from JS?
     case st: AbilityType =>
-        ""
+      s"{ ${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ": " + kv._2 + ";").toList.mkString(" ")} }"
     case st: ScalarType if ScalarType.number(st) => "number"
     case ScalarType.bool => "boolean"
     case ScalarType.string => "string"
     case lt: LiteralType if lt.oneOf.exists(ScalarType.number) => "number"
     case lt: LiteralType if lt.oneOf(ScalarType.bool) => "boolean"
     case lt: LiteralType if lt.oneOf(ScalarType.string) => "string"
-    case _: DataType => "any"
     case at: ArrowType => fnDef(at)
   }
 
