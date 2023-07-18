@@ -43,7 +43,7 @@ object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
         varModel,
         Inline(
           valsInline.flattenValues,
-          Chain.one(SeqModel.wrap((valsInline.predo).toList: _*))
+          Chain.one(SeqModel.wrap(valsInline.predo))
         )
       )
     }
