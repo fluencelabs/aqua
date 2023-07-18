@@ -19,6 +19,14 @@ sealed trait PropertyOp[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K]
 }
 
+case class IntoArrow[F[_]: Comonad](name: Name[F], arguments: List[ValueToken[F]]) extends PropertyOp[F] {
+  override def as[T](v: T): F[T] = name.as(v)
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K] = copy(name.mapK(fk), arguments.map(_.mapK(fk)))
+
+  override def toString: String = s".$name(${arguments.map(_.toString).mkString(", ")})"
+}
+
 case class IntoField[F[_]: Comonad](name: F[String]) extends PropertyOp[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
@@ -49,6 +57,9 @@ object PropertyOp {
   private val parseField: P[PropertyOp[Span.S]] =
     (`.` *> `name`).lift.map(IntoField(_))
 
+  val parseArrow: P[PropertyOp[Span.S]] =
+    (`.` *> CallArrowToken.callBraces()).lift.map(p => IntoArrow(p._2._1, p._2._2 ++ p._2._3))
+
   val parseCopy: P[PropertyOp[Span.S]] =
     (`.` *> (`copy`.lift ~ namedArgs)).map { case (point, fields) =>
       IntoCopy(point, NonEmptyMap.of(fields.head, fields.tail: _*))
@@ -68,7 +79,7 @@ object PropertyOp {
     }
 
   private val parseOp: P[PropertyOp[Span.S]] =
-    P.oneOf(parseCopy.backtrack :: parseField.backtrack :: parseIdx :: Nil)
+    P.oneOf(parseCopy.backtrack :: parseArrow.backtrack :: parseField :: parseIdx :: Nil)
 
   val ops: P[NonEmptyList[PropertyOp[Span.S]]] =
     parseOp.rep

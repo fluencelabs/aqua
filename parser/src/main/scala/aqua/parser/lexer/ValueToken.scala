@@ -85,38 +85,54 @@ case class CallArrowToken[F[_]: Comonad](
 
 object CallArrowToken {
 
+  case class CallBraces(name: Name[S], abilities: List[ValueToken[S]], args: List[ValueToken[S]])
+
+  // {SomeAb, SecondAb} for ValueToken
+  def abilities(): P[NonEmptyList[ValueToken[S]]] =
+    `{` *> comma(ValueToken.`value`.surroundedBy(`/s*`)) <* `}`
+
+  def callBraces(): P[CallBraces] = P
+    .defer(
+      Name.p
+        ~ abilities().? ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
+          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`)
+    ).map { case ((n, ab), args) =>
+      CallBraces(n, ab.map(_.toList).getOrElse(Nil), args)
+    }
+    .withContext(
+      "Missing braces '()' after the function call"
+    )
+
   val callArrow: P[CallArrowToken[Span.S]] =
     ((NamedTypeToken.dotted <* `.`).?.with1 ~
-      (Name.p
-        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
-          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
+      callBraces()
         .withContext(
           "Missing braces '()' after the function call"
-        )).map { case (ab, (fn, args)) =>
-      CallArrowToken(ab, fn, args)
+        )).map { case (ab, callBraces) =>
+      CallArrowToken(ab, callBraces.name, callBraces.abilities ++ callBraces.args)
     }
 }
 
-case class StructValueToken[F[_]: Comonad](
+case class NamedValueToken[F[_]: Comonad](
   typeName: NamedTypeToken[F],
   fields: NonEmptyMap[String, ValueToken[F]]
 ) extends ValueToken[F] {
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): StructValueToken[K] =
+  override def mapK[K[_]: Comonad](fk: F ~> K): NamedValueToken[K] =
     copy(typeName.mapK(fk), fields.map(_.mapK(fk)))
 
   override def as[T](v: T): F[T] = typeName.as(v)
 }
 
-object StructValueToken {
+object NamedValueToken {
 
-  val dataValue: P[StructValueToken[Span.S]] =
+  val dataValue: P[NamedValueToken[Span.S]] =
     (`Class`.lift ~ namedArgs)
       .withContext(
         "Missing braces '()' after the struct type"
       )
       .map { case (dn, args) =>
-        StructValueToken(NamedTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
+        NamedValueToken(NamedTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
       }
 }
 
@@ -191,15 +207,16 @@ object InfixToken {
     basic.between(`(`, `)`).backtrack
 
   // One element of math expression
-  private val atom: P[ValueToken[S]] = P.oneOf(
+  val atom: P[ValueToken[S]] = P.oneOf(
     literal.backtrack ::
       initPeerId.backtrack ::
       P.defer(
         CollectionToken.collection
       ) ::
-      P.defer(StructValueToken.dataValue).backtrack ::
+      P.defer(NamedValueToken.dataValue).backtrack ::
       P.defer(CallArrowToken.callArrow).backtrack ::
-      P.defer(brackets(InfixToken.mathExpr)) ::
+      P.defer(abProperty).backtrack ::
+      P.defer(brackets(InfixToken.mathExpr)).backtrack ::
       varProperty ::
       Nil
   )
@@ -310,6 +327,11 @@ object ValueToken {
 
   val varProperty: P[VarToken[Span.S]] =
     (Name.dotted ~ PropertyOp.ops.?).map { case (n, l) ⇒
+      VarToken(n, l.fold[List[PropertyOp[Span.S]]](Nil)(_.toList))
+    }
+
+  val abProperty: P[VarToken[Span.S]] =
+    (Name.cl ~ PropertyOp.ops.?).map { case (n, l) ⇒
       VarToken(n, l.fold[List[PropertyOp[Span.S]]](Nil)(_.toList))
     }
 

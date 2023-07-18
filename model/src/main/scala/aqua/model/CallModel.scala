@@ -1,7 +1,7 @@
 package aqua.model
 
 import aqua.raw.ops.Call
-import aqua.types.{ArrowType, Type}
+import aqua.types.{ArrowType, AbilityType, Type}
 
 // TODO docs
 case class CallModel(args: List[ValueModel], exportTo: List[CallModel.Export]) {
@@ -10,6 +10,10 @@ case class CallModel(args: List[ValueModel], exportTo: List[CallModel.Export]) {
   def arrowArgNames: Set[String] = args.collect { case VarModel(m, _: ArrowType, _) =>
     m
   }.toSet
+
+  def abilityArgs: List[(String, AbilityType)] = args.collect { case VarModel(m, t: AbilityType, _) =>
+    (m, t)
+  }
 
   def usesVarNames: Set[String] = args.flatMap(_.usesVarNames).toSet
 }

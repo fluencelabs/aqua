@@ -1,13 +1,12 @@
 package aqua.model.inline
 
-import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.collectionToModel
-import aqua.model.inline.raw.{CallArrowRawInliner, CollectionRawInliner}
-import aqua.raw.arrow.FuncRaw
+import aqua.model.inline.raw.CallArrowRawInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{ArrayType, ArrowType, BoxType, CanonStreamType, StreamType}
+import aqua.types.{BoxType, CanonStreamType, StreamType}
 import cats.syntax.traverse.*
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
@@ -34,7 +33,7 @@ object TagInliner extends Logging {
 
   import RawValueInliner.{callToModel, valueListToModel, valueToModel}
 
-  import Inline.parDesugarPrefix
+  import aqua.model.inline.Inline.parDesugarPrefix
 
   /**
    * Result of [[RawTag]] inlining

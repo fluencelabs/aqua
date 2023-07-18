@@ -61,11 +61,12 @@ object Exports {
 
   object Simple extends Exports[Map[String, ValueModel]] {
 
+    // Exports[Map[NonEmptyList[String], ValueModel]]
+
     override def resolved(
       exportName: String,
       value: ValueModel
-    ): State[Map[String, ValueModel], Unit] =
-      State.modify(_ + (exportName -> value))
+    ): State[Map[String, ValueModel], Unit] = State.modify(_ + (exportName -> value))
 
     override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
       State.modify(_ ++ exports)

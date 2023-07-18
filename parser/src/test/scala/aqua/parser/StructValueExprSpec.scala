@@ -4,9 +4,8 @@ import aqua.AquaSpec
 import aqua.AquaSpec.{toNumber, toStr, toVar}
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.expr.func.AssignmentExpr
-import aqua.parser.lexer.Token
+import aqua.parser.lexer.{Ability, CallArrowToken, CollectionToken, IntoArrow, LiteralToken, Name, NamedTypeToken, NamedValueToken, Token, ValueToken, VarToken}
 import aqua.parser.lexer.CollectionToken.Mode.ArrayMode
-import aqua.parser.lexer.{Ability, CallArrowToken, CollectionToken, NamedTypeToken, LiteralToken, Name, StructValueToken, ValueToken, VarToken}
 import aqua.types.LiteralType
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
@@ -27,14 +26,14 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parseData(
       str
     ) should be(
-      StructValueToken(
+      NamedValueToken(
         NamedTypeToken[Id]("Obj"),
         NonEmptyMap.of(
           "f1" -> one,
           "f2" -> a,
           "f3" -> CollectionToken[Id](ArrayMode, List(one, two, three)),
           "f4" -> CollectionToken[Id](ArrayMode, List(b, c)),
-          "f5" -> StructValueToken(
+          "f5" -> NamedValueToken(
             NamedTypeToken[Id]("NestedObj"),
             NonEmptyMap.of(
               "i1" -> two,

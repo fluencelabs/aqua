@@ -1,8 +1,8 @@
 aqua Main
 
-use DECLARE_CONST, decl_bar from "declare.aqua" as Declare
+use DECLARE_CONST, decl_bar from "imports_exports/declare.aqua" as Declare
 
-export handleAb
+export handleAb, SomeService
 
 service SomeService("wed"):
   getStr(s: string) -> string
@@ -17,34 +17,21 @@ ability SecondAb:
 
 func funcStr(s: string) -> string, string:
   strInFunc <- SomeService.getStr(Declare.DECLARE_CONST)
-  -- SomeService.getStr(s)
-  <- strInFunc, s
+  strInFunc2 <- SomeService.getStr(s)
+  <- strInFunc, strInFunc2
 
---
--- func diffFunc(s: string) -> string:
---   differentStr <- SomeService.different(s)
---   <- differentStr
---
--- func unit():
---   funcStr("")
-
--- func bbbbbbb()
---
--- func aaaaaa():
---   closure = (a: string) -> string:
---     <- SomeService.str()
-
-func handleSecAb {SomeAb, SecondAb}() -> string, string:
+func handleSecAb {SomeAb, SecondAb}() -> string, string, string, u32:
   SomeAb.someArrow("eferfrfrf")
   b, c <- SomeAb.someArrow("efre")
-  <- b, c
+  d <- SecondAb.arrow(SomeAb.str)
+  <- b, c, d, SecondAb.num
 
 func returnAb(s: string) -> SomeAb:
   SomeAb = SomeAb(someArrow = funcStr, str = s)
   <- SomeAb
 
-func handleAb(fff: string) -> string, string:
+func handleAb(fff: string) -> string, string, string, u32:
   SomeAb = returnAb(fff)
   SecondAb = SecondAb(arrow = funcStr, num = 12)
-  d, g <- handleSecAb{SomeAb, SecondAb}()
-  <- d, g
+  res1, res2, res3, res4 <- handleSecAb{SomeAb, SecondAb}()
+  <- res1, res2, res3, res4

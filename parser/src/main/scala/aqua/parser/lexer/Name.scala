@@ -30,6 +30,9 @@ object Name {
   val p: P[Name[Span.S]] =
     `name`.lift.map(Name(_))
 
+  val cl: P[Name[Span.S]] =
+    `Class`.lift.map(Name(_))
+
   val upper: P[Name[Span.S]] =
     NAME.lift.map(Name(_))
 

@@ -266,13 +266,13 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     qTree.d() shouldBe ArrowExpr(toNamedArrow(("val" -> string) :: Nil, boolSc :: Nil))
     qTree.d() shouldBe CallArrowExpr(
       List("one"),
-      CallArrowToken(Some(toNamedType("Local")), "gt", List())
+      CallArrowToken(Some(toNamedType("Local")), "gt", Nil)
     )
     qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
-    qTree.d() shouldBe CallArrowExpr(List("two"), CallArrowToken(None, "tryGen", List()))
+    qTree.d() shouldBe CallArrowExpr(List("two"), CallArrowToken(None, "tryGen", Nil))
     qTree.d() shouldBe CallArrowExpr(
       List("three"),
-      CallArrowToken(Some(toNamedType("Local")), "gt", List())
+      CallArrowToken(Some(toNamedType("Local")), "gt", Nil)
     )
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("two")))
   }

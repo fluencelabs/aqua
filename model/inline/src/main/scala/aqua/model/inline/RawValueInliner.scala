@@ -2,16 +2,10 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
-import aqua.model.inline.raw.{
-  ApplyFunctorRawInliner,
-  ApplyGateRawInliner,
-  ApplyPropertiesRawInliner,
-  CallArrowRawInliner,
-  CollectionRawInliner
-}
+import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyGateRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner, MakeAbilityRawInliner}
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{ArrayType, OptionType, StreamType}
+import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
 import cats.syntax.traverse.*
 import cats.syntax.monoid.*
 import cats.syntax.functor.*
@@ -23,7 +17,7 @@ import scribe.Logging
 
 object RawValueInliner extends Logging {
 
-  import Inline.*
+  import aqua.model.inline.Inline.*
 
   private[inline] def unfold[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
@@ -47,6 +41,9 @@ object RawValueInliner extends Logging {
 
       case dr: MakeStructRaw =>
         MakeStructRawInliner(dr, propertiesAllowed)
+
+      case sr: AbilityRaw =>
+        MakeAbilityRawInliner(sr, propertiesAllowed)
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)

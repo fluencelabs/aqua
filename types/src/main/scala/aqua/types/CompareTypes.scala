@@ -54,7 +54,7 @@ object CompareTypes {
       case _ => Double.NaN
     }
 
-  private def compareStructs(
+  private def compareNamed(
     lfNEM: NonEmptyMap[String, Type],
     rfNEM: NonEmptyMap[String, Type]
   ): Double = {
@@ -127,8 +127,8 @@ object CompareTypes {
         case (x: OptionType, y: StreamType) => apply(x.element, y.element)
         case (x: OptionType, y: ArrayType) => apply(x.element, y.element)
         case (x: StreamType, y: StreamType) => apply(x.element, y.element)
-        case (StructType(_, lFields), StructType(_, rFields)) =>
-          compareStructs(lFields, rFields)
+        case (lnt: AbilityType, rnt: AbilityType) => compareNamed(lnt.fields, rnt.fields)
+        case (lnt: StructType, rnt: StructType) => compareNamed(lnt.fields, rnt.fields)
 
         // Products
         case (l: ProductType, r: ProductType) => compareProducts(l, r)

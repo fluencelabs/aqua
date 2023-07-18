@@ -144,6 +144,18 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
       )
     )
 
+    arrowWithNames("{SomeAb, SecondAb}(a: A) -> B") should be(
+      ArrowTypeToken[Id](
+        (),
+        (Some(Name[Id]("SomeAb")) -> NamedTypeToken[Id]("SomeAb")) :: (Some(Name[Id](
+          "SecondAb"
+        )) -> NamedTypeToken[Id]("SecondAb")) :: (
+          Some(Name[Id]("a")) -> NamedTypeToken[Id]("A")
+        ) :: Nil,
+        List(NamedTypeToken[Id]("B"))
+      )
+    )
+
     arrowdef("u32 -> Boo") should be(
       ArrowTypeToken[Id](
         (),

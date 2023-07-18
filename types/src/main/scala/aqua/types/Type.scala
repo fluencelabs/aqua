@@ -228,11 +228,37 @@ case class OptionType(element: Type) extends BoxType {
   override def withElement(t: Type): BoxType = copy(element = t)
 }
 
+sealed trait NamedType extends Type {
+  def name: String
+  def fields: NonEmptyMap[String, Type]
+}
+
 // Struct is an unordered collection of labelled types
-case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends DataType {
+case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends DataType with NamedType {
 
   override def toString: String =
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+}
+
+// Ability is an unordered collection of labelled types and arrows
+case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
+
+  lazy val arrows: Map[String, ArrowType] = fields.toNel.collect {
+    case (name, at@ArrowType(_, _)) => (name, at)
+  }.toMap
+
+  lazy val abilities: List[(String, AbilityType)] = fields.toNel.collect {
+    case (name, at@AbilityType(_, _)) => (name, at)
+  }
+
+  lazy val variables: List[(String, Type)] = fields.toNel.filter {
+    case (_, AbilityType(_, _)) => false
+    case (_, ArrowType(_, _)) => false
+    case (_, _) => true
+  }
+
+  override def toString: String =
+    s"scope $name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
 /**

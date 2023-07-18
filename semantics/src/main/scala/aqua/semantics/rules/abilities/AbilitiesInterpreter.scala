@@ -12,6 +12,7 @@ import aqua.semantics.rules.errors.ReportErrors
 import aqua.types.ArrowType
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import cats.syntax.functor.*
+import cats.syntax.traverse.*
 import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
@@ -43,19 +44,24 @@ class AbilitiesInterpreter[S[_], X](implicit
 
         }
       case None =>
-        modify(s =>
-          s.copy(
-            services = s.services
-              .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
-            definitions = s.definitions.updated(name.value, name)
-          )
-        ).flatMap { _ =>
-          locations.addTokenWithFields(
-            name.value,
-            name,
-            arrows.toNel.toList.map(t => t._1 -> t._2._1)
-          )
-        }.as(true)
+        arrows.toNel.map(_._2).collect {
+          case (n, arr) if arr.codomain.length > 1 =>
+            report(n, "Service functions cannot have multiple results")
+        }.sequence.flatMap{ _ =>
+          modify(s =>
+            s.copy(
+              services = s.services
+                .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
+              definitions = s.definitions.updated(name.value, name)
+            )
+          ).flatMap { _ =>
+            locations.addTokenWithFields(
+              name.value,
+              name,
+              arrows.toNel.toList.map(t => t._1 -> t._2._1)
+            )
+          }.as(true)
+        }
     }
 
   // adds location from token to its definition

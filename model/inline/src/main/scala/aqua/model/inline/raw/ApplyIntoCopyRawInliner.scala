@@ -1,14 +1,6 @@
 package aqua.model.inline.raw
 
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  LiteralModel,
-  OpModel,
-  SeqModel,
-  ValueModel,
-  VarModel
-}
+import aqua.model.{CallModel, CallServiceModel, LiteralModel, OpModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.{Inline, SeqMode, TagInliner}
 import aqua.model.inline.MakeStructRawInliner.createObj
 import aqua.model.inline.RawValueInliner.unfold

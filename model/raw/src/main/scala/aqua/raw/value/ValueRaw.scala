@@ -162,6 +162,20 @@ case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: Stru
     copy(fields = fields.map(_.renameVars(map)))
 }
 
+case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityType: AbilityType) extends ValueRaw {
+
+  override def baseType: Type = abilityType
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(fieldsAndArrows = fieldsAndArrows.map(f)))
+
+  override def varNames: Set[String] = {
+    fieldsAndArrows.toSortedMap.values.flatMap(_.varNames).toSet
+  }
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(fieldsAndArrows = fieldsAndArrows.map(_.renameVars(map)))
+}
+
 case class CallArrowRaw(
   // TODO: ability should hold a type, not name
   ability: Option[String],

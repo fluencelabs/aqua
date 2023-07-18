@@ -71,6 +71,7 @@ export const relay2 = config.relays[1]
 const relayPeerId2 = relay2.peerId
 
 import log from 'loglevel';
+import {abilityCall} from "../examples/abilityCall";
 // log.setDefaultLevel("debug")
 
 async function start() {
@@ -311,6 +312,11 @@ describe('Testing examples', () => {
                 val: 'hellohello',
             },
         });
+    });
+
+    it('ability.aqua', async () => {
+        let result = await abilityCall();
+        expect(result).toStrictEqual(['declare_const123', "efre123", "declare_const123", 12]);
     });
 
     it('functors.aqua LNG-119 bug', async () => {
