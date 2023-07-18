@@ -10,6 +10,8 @@ import cats.Eval
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.traverse.*
 import cats.syntax.apply.*
+import cats.syntax.bifunctor.*
+import cats.syntax.foldable.*
 import scribe.Logging
 
 /**
@@ -125,9 +127,7 @@ object ArrowInliner extends Logging {
             // gather all arrows and variables from abilities
             returnedFromAbilities = rets.collect { case VarModel(name, st @ AbilityType(_, _), _) =>
               getVarsAndArrowsFromAbilities(name, None, st, exports, arrows)
-            }.fold((Map.empty, Map.empty)) { case (acc, (vars, arrs)) =>
-              (acc._1 ++ vars, acc._2 ++ arrs)
-            }
+            }.foldMapA(_.bimap(_.toList, _.toList)).bimap(_.toMap, _.toMap)
 
             // find and get resolved arrows if we return them from the function
             returnedArrows = rets.collect { case VarModel(name, ArrowType(_, _), _) =>
@@ -136,25 +136,37 @@ object ArrowInliner extends Logging {
             arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
           } yield {
             val (valsFromAbilities, arrowsFromAbilities) = returnedFromAbilities
-            InlineResult(SeqModel.wrap(ops.reverse: _*), rets.reverse, valsFromAbilities, arrowsFromAbilities ++ arrowsToSave)
+            InlineResult(
+              SeqModel.wrap(ops.reverse: _*),
+              rets.reverse,
+              valsFromAbilities,
+              arrowsFromAbilities ++ arrowsToSave
+            )
           }
         )
     }
 
-  // Get all arrows that is arguments from outer Arrows.
-  // Purge and push captured arrows and arrows as arguments into state.
-  // Grab all arrows that must be renamed.
+  /**
+   * Get all arrows that is arguments from outer Arrows.
+   * Purge and push captured arrows and arrows as arguments into state.
+   * Grab all arrows that must be renamed.
+   *
+   * @param argsToArrowsRaw arguments with ArrowType
+   * @param func function where captured and returned may exist
+   * @param abilityArrows arrows from abilities that should be renamed
+   * @return all arrows that must be renamed in function body
+   */
   private def updateArrowsAndRenameArrowArgs[S: Mangler: Arrows: Exports](
     argsToArrowsRaw: Map[String, FuncArrow],
     func: FuncArrow,
-    outerRenames: Map[String, String]
+    abilityArrows: Map[String, String]
   ): State[S, Map[String, String]] = {
     for {
       argsToArrowsShouldRename <- Mangler[S]
         .findNewNames(
           argsToArrowsRaw.keySet
         )
-        .map(_ ++ outerRenames)
+        .map(_ ++ abilityArrows)
       argsToArrows = argsToArrowsRaw.map { case (k, v) =>
         argsToArrowsShouldRename.getOrElse(k, k) -> v
       }
@@ -173,18 +185,23 @@ object ArrowInliner extends Logging {
     }
   }
 
+  /**
+   * @param argsToDataRaw data arguments to rename
+   * @param abilityValues values from abilities to rename
+   * @return all values that must be renamed in function body
+   */
   private def updateExportsAndRenameDataArgs[S: Mangler: Arrows: Exports](
     argsToDataRaw: Map[String, ValueModel],
-    outerRenames: Map[String, String]
+    abilityValues: Map[String, String]
   ): State[S, Map[String, String]] = {
     for {
       // Find all duplicates in arguments
-      // we should not outerRenames arguments that will be renamed by 'streamToRename'
+      // we should not find new names for 'abilityValues' arguments that will be renamed by 'streamToRename'
       argsToDataShouldRename <- Mangler[S]
         .findNewNames(
           argsToDataRaw.keySet
         )
-        .map(_ ++ outerRenames)
+        .map(_ ++ abilityValues)
 
       // Do not rename arguments if they just match external names
       argsToData = argsToDataRaw.map { case (k, v) =>
@@ -220,13 +237,29 @@ object ArrowInliner extends Logging {
         .renameExports(streamsToRename)
   }
 
+  case class AbilityResolvingResult(
+    namesToRename: Map[String, String],
+    renamedExports: Map[String, ValueModel],
+    renamedArrows: Map[String, FuncArrow]
+  )
+
+  /**
+   * Generate new names for all ability fields and arrows if necessary.
+   * Gather all fields and arrows from Arrows and Exports states
+   * @param name ability name in state
+   * @param vm ability variable
+   * @param t ability type
+   * @param oldExports previous Exports
+   * @param oldArrows previous Arrows
+   * @return names to rename, Exports and Arrows with all ability fields and arrows
+   */
   private def renameAndResolveAbilities[S: Mangler: Arrows: Exports](
     name: String,
     vm: VarModel,
     t: AbilityType,
     oldExports: Map[String, ValueModel],
     oldArrows: Map[String, FuncArrow]
-  ): State[S, (Map[String, String], Map[String, ValueModel], Map[String, FuncArrow])] = {
+  ): State[S, AbilityResolvingResult] = {
     for {
       newName <- Mangler[S].findNewName(name)
       newFieldsName = t.fields.mapBoth { case (n, t) =>
@@ -236,28 +269,43 @@ object ArrowInliner extends Logging {
     } yield {
       val (allVars, allArrows) =
         getVarsAndArrowsFromAbilities(vm.name, Option(newName), t, oldExports, oldArrows)
-      (allNewNames, allVars, allArrows)
+      AbilityResolvingResult(allNewNames, allVars, allArrows)
     }
   }
 
+  /**
+   * Gather all arrows and variables from abilities recursively (because of possible nested abilities).
+   * Rename top names if needed in gathered fields and arrows.
+   * `top` name is a first name, i.e.: `topName.fieldName`.
+   * Only top name must be renamed to keep all field names unique.
+   * @param topOldName old name to find all fields in states
+   * @param topNewName new name to rename all fields in states
+   * @param abilityType type of current ability
+   * @param oldExports where to get values
+   * @param oldArrows where to get arrows
+   * @param valAcc accumulator for values
+   * @param arrowsAcc accumulator for arrows
+   * @return
+   */
   private def getVarsAndArrowsFromAbilities(
     topOldName: String,
     topNewName: Option[String],
-    st: AbilityType,
+    abilityType: AbilityType,
     oldExports: Map[String, ValueModel],
     oldArrows: Map[String, FuncArrow],
     valAcc: Map[String, ValueModel] = Map.empty,
     arrowsAcc: Map[String, FuncArrow] = Map.empty
   ): (Map[String, ValueModel], Map[String, FuncArrow]) = {
-    st.fields.toSortedMap.toList.map { case (fName, value) =>
+    abilityType.fields.toSortedMap.toList.map { case (fName, fValue) =>
       val currentOldName = s"$topOldName.$fName"
+      // for all nested fields, arrows and abilities only left side must be renamed
       val currentNewName = topNewName.map(_ + s".$fName")
-      value match {
-        case st @ AbilityType(_, _) =>
+      fValue match {
+        case nestedAbilityType @ AbilityType(_, _) =>
           getVarsAndArrowsFromAbilities(
             currentOldName,
             currentNewName,
-            st,
+            nestedAbilityType,
             oldExports,
             oldArrows,
             valAcc,
@@ -286,9 +334,7 @@ object ArrowInliner extends Logging {
             .map(vm => (valAcc.updated(currentNewName.getOrElse(currentOldName), vm), arrowsAcc))
             .getOrElse((valAcc, arrowsAcc))
       }
-    }.reduce { case (l, r) =>
-      (l._1 ++ r._1, r._2 ++ r._2)
-    }
+    }.foldMapA(_.bimap(_.toList, _.toList)).bimap(_.toMap, _.toMap)
   }
 
   /**
@@ -319,13 +365,13 @@ object ArrowInliner extends Logging {
 
       _ <- Arrows[S].purge
 
-      abs <- abArgs.toList.traverse { case (str, (vm, sct)) =>
+      abilityResolvingResult <- abArgs.toList.traverse { case (str, (vm, sct)) =>
         renameAndResolveAbilities(str, vm, sct, oldExports, previousArrowsState)
       }
 
-      absRenames = abs.map(_._1).fold(Map.empty)(_ ++ _)
-      absVars = abs.map(_._2).fold(Map.empty)(_ ++ _)
-      absArrows = abs.map(_._3).fold(Map.empty)(_ ++ _)
+      absRenames = abilityResolvingResult.map(_.namesToRename).fold(Map.empty)(_ ++ _)
+      absVars = abilityResolvingResult.map(_.renamedExports).fold(Map.empty)(_ ++ _)
+      absArrows = abilityResolvingResult.map(_.renamedArrows).fold(Map.empty)(_ ++ _)
 
       arrowArgs = args.arrowArgs(previousArrowsState)
       // Update states and rename tags
@@ -397,6 +443,11 @@ object ArrowInliner extends Logging {
       )
 
       _ <- Arrows[S].resolved(inlineResult.arrowsToSave)
-      _ <- Exports[S].resolved(call.exportTo.map(_.name).zip(inlineResult.returnedValues).toMap ++ inlineResult.exportsToSave)
+      _ <- Exports[S].resolved(
+        call.exportTo
+          .map(_.name)
+          .zip(inlineResult.returnedValues)
+          .toMap ++ inlineResult.exportsToSave
+      )
     } yield inlineResult.tree -> inlineResult.returnedValues
 }

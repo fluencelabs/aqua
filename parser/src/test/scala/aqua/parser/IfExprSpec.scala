@@ -3,7 +3,7 @@ package aqua.parser
 import aqua.AquaSpec
 import aqua.parser.expr.func.IfExpr
 import aqua.parser.lexer.InfixToken.Op.{Add, Sub}
-import aqua.parser.lexer.{CallArrowToken, CollectionToken, EqOp, InfixToken, IntoArrow, VarToken}
+import aqua.parser.lexer.{CallArrowToken, CollectionToken, EqOp, InfixToken}
 import aqua.parser.lexer.CollectionToken.Mode.OptionMode
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
