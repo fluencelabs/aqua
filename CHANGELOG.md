@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.11.8](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.7...aqua-v0.11.8) (2023-07-20)
+
+
+### Features
+
+* **compiler:** Abilities ([#731](https://github.com/fluencelabs/aqua/issues/731)) ([63a9f42](https://github.com/fluencelabs/aqua/commit/63a9f42e86d29b741fa31135b4111bc0f38f238f))
+* **compiler:** Find and display link cycles ([#787](https://github.com/fluencelabs/aqua/issues/787)) ([667a825](https://github.com/fluencelabs/aqua/commit/667a8255d994b334dfc87bd89a970855748752fe))
+* **compiler:** Make `on` propagate errors [fixes LNG-203] ([#788](https://github.com/fluencelabs/aqua/issues/788)) ([b8b0faf](https://github.com/fluencelabs/aqua/commit/b8b0fafda0d27607ffc693e52c0dae81d23ec503))
+* **compiler:** Make topology hop with non-FFI snippet [fixes LNG-125] ([#764](https://github.com/fluencelabs/aqua/issues/764)) ([c1fe24b](https://github.com/fluencelabs/aqua/commit/c1fe24b04d8a2f711ed7b316e7ae9a4f12732421))
+
+
+### Bug Fixes
+
+* **ci:** use unstable nox image ([#780](https://github.com/fluencelabs/aqua/issues/780)) ([22f380a](https://github.com/fluencelabs/aqua/commit/22f380a49162d8d79cccad266b17116d9f9c7795))
+* **compiler:** Fix search for one element cycles ([#797](https://github.com/fluencelabs/aqua/issues/797)) ([33ab33d](https://github.com/fluencelabs/aqua/commit/33ab33d4c8f34743202e5acbfb2e976ab3070299))
+* **deps:** update dependency @fluencelabs/fluence-network-environment to v1.1.2 ([#786](https://github.com/fluencelabs/aqua/issues/786)) ([ca52e25](https://github.com/fluencelabs/aqua/commit/ca52e2542cc031c748c6f8c8372aff717e9c709f))
+
 ## [0.11.7](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.6...aqua-v0.11.7) (2023-06-16)
 
 
