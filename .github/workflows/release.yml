@@ -87,7 +87,7 @@ jobs:
 
       - name: Set cli version in tests
         run: |
-          sed -i 's/"@fluencelabs\/aqua":.*/"@fluencelabs\/aqua": "${{ steps.version.outputs.version }}",/g' package.json
+          pnpm add @fluencelabs/aqua@${{ steps.version.outputs.version }} --save-workspace-protocol=false
         working-directory: integration-tests
 
       - name: Regenerate lock
