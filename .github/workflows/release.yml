@@ -85,6 +85,11 @@ jobs:
         run: pnpm version ${{ steps.version.outputs.version }}
         working-directory: language-server/language-server-npm
 
+      - name: Set cli version in tests
+        run: |
+          sed -i 's/"@fluencelabs\/aqua":.*/"@fluencelabs\/aqua": "${{ steps.version.outputs.version }}",/g' package.json
+        working-directory: integration-tests
+
       - name: Regenerate lock
         run: pnpm -r i
 
