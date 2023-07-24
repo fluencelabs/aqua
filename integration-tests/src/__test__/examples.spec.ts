@@ -54,7 +54,7 @@ import {
 } from '../examples/collectionSugarCall.js';
 import {funcsCall} from '../examples/funcsCall.js';
 import {nestedDataCall} from '../examples/nestedDataCall.js';
-import {mathTest1Call, mathTest2Call} from '../examples/mathCall.js';
+import {mathTest1Call, mathTest2Call, mathTestI16Call, mathTestI32Call, mathTestI64Call, mathTestU64Call} from '../examples/mathCall.js';
 import {lng58Bug} from '../compiled/examples/closures.js';
 import {config, isEphemeral} from '../config.js';
 import {bugLng79Call} from "../examples/canonCall.js";
@@ -273,6 +273,30 @@ describe('Testing examples', () => {
         let res = await mathTest2Call();
 
         expect(res).toEqual(3);
+    });
+
+    it('math.aqua test I16', async () => {
+        let res = await mathTestI16Call(relay1.peerId);
+
+        expect(res).toEqual([-32, -64, -8, -8]);
+    });
+
+    it('math.aqua test I32', async () => {
+        let res = await mathTestI32Call(relay1.peerId);
+
+        expect(res).toEqual([-16, -256, -8, 16]);
+    });
+
+    it('math.aqua test I64', async () => {
+        let res = await mathTestI64Call(relay1.peerId);
+
+        expect(res).toEqual([0, -512, 0, 72]);
+    });
+
+    it('math.aqua test U64', async () => {
+        let res = await mathTestU64Call(relay1.peerId);
+
+        expect(res).toEqual([96, 4096, 0, -56]);
     });
 
     it('multiReturn.aqua', async () => {
