@@ -103,7 +103,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
     val const = ctx.allValues.get("X")
     const.nonEmpty should be(true)
-    const.get should be(LiteralModel("5", LiteralType.number))
+    const.get should be(LiteralModel.number(5))
 
   }
 

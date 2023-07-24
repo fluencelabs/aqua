@@ -24,7 +24,7 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   import AquaSpec._
 
-  private def literal(n: Int): ValueToken[Id] = LiteralToken[Id](n.toString, LiteralType.number)
+  private def literal(n: Int): ValueToken[Id] = toNumber(n)
 
   private def infixToken(left: ValueToken[Id], right: ValueToken[Id], op: Op) =
     InfixToken[Id](left, right, op)

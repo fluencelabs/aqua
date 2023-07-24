@@ -34,7 +34,7 @@ case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
 
   def value: String = valueToken.extract
 
-  override def toString: String = s"$value"
+  override def toString: String = s"$value:$ts"
 }
 
 case class CollectionToken[F[_]: Comonad](

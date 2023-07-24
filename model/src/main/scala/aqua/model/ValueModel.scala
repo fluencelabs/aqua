@@ -70,7 +70,7 @@ object LiteralModel {
 
   def quote(str: String): LiteralModel = LiteralModel(s"\"$str\"", LiteralType.string)
 
-  def number(n: Int): LiteralModel = LiteralModel(n.toString, LiteralType.number)
+  def number(n: Int): LiteralModel = LiteralModel(n.toString, LiteralType.forInt(n))
 }
 
 sealed trait PropertyModel {

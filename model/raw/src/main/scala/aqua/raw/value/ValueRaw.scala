@@ -121,9 +121,9 @@ case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
 object LiteralRaw {
   def quote(value: String): LiteralRaw = LiteralRaw("\"" + value + "\"", LiteralType.string)
 
-  def number(value: Int): LiteralRaw = LiteralRaw(value.toString, LiteralType.number)
+  def number(value: Int): LiteralRaw = LiteralRaw(value.toString, LiteralType.forInt(value))
 
-  val Zero: LiteralRaw = LiteralRaw("0", LiteralType.number)
+  val Zero: LiteralRaw = number(0)
 
   val True: LiteralRaw = LiteralRaw("true", LiteralType.bool)
   val False: LiteralRaw = LiteralRaw("false", LiteralType.bool)
@@ -162,11 +162,14 @@ case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: Stru
     copy(fields = fields.map(_.renameVars(map)))
 }
 
-case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityType: AbilityType) extends ValueRaw {
+case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityType: AbilityType)
+    extends ValueRaw {
 
   override def baseType: Type = abilityType
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(fieldsAndArrows = fieldsAndArrows.map(f)))
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(
+    copy(fieldsAndArrows = fieldsAndArrows.map(f))
+  )
 
   override def varNames: Set[String] = {
     fieldsAndArrows.toSortedMap.values.flatMap(_.varNames).toSet
