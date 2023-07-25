@@ -309,26 +309,6 @@ object RawSemantics extends Logging {
   def transpile[S[_]](
     ast: Ast[S]
   )(implicit locations: LocationsAlgebra[S, Interpreter[S, *]]): Interpreter[S, Raw] = {
-    import monocle.syntax.all.*
-
-    implicit val re: ReportErrors[S, CompilerState[S]] = new ReportErrors[S, CompilerState[S]] {
-      override def apply(
-        st: CompilerState[S],
-        token: Token[S],
-        hints: List[String]
-      ): CompilerState[S] =
-        st.focus(_.errors).modify(_.append(RulesViolated(token, hints)))
-    }
-
-    implicit val ns: Lens[CompilerState[S], NamesState[S]] = GenLens[CompilerState[S]](_.names)
-
-    implicit val as: Lens[CompilerState[S], AbilitiesState[S]] =
-      GenLens[CompilerState[S]](_.abilities)
-
-    implicit val ts: Lens[CompilerState[S], TypesState[S]] = GenLens[CompilerState[S]](_.types)
-
-    implicit val ds: Lens[CompilerState[S], DefinitionsState[S]] =
-      GenLens[CompilerState[S]](_.definitions)
 
     implicit val typesInterpreter: TypesInterpreter[S, CompilerState[S]] =
       new TypesInterpreter[S, CompilerState[S]]

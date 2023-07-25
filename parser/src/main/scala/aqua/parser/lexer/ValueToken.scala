@@ -34,7 +34,7 @@ case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
 
   def value: String = valueToken.extract
 
-  override def toString: String = s"$value"
+  override def toString: String = s"$value:$ts"
 }
 
 case class CollectionToken[F[_]: Comonad](
@@ -96,7 +96,8 @@ object CallArrowToken {
       Name.p
         ~ abilities().? ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
           .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`)
-    ).map { case ((n, ab), args) =>
+    )
+    .map { case ((n, ab), args) =>
       CallBraces(n, ab.map(_.toList).getOrElse(Nil), args)
     }
     .withContext(
@@ -170,6 +171,11 @@ object InfixToken {
     case Lte extends Op("<=")
 
     def p: P[Unit] = P.string(symbol)
+
+  object Op {
+    val math: List[Op] = List(Pow, Mul, Div, Rem, Add, Sub)
+    val compare: List[Op] = List(Gt, Gte, Lt, Lte)
+  }
 
   private def opsParser(ops: List[Op]): P[(Span, Op)] =
     P.oneOf(ops.map(op => op.p.lift.map(s => s.as(op))))
@@ -351,7 +357,7 @@ object ValueToken {
     (minus.?.with1 ~ Numbers.nonNegativeIntString).lift.map(fu =>
       fu.extract match {
         case (Some(_), n) ⇒ LiteralToken(fu.as(s"-$n"), LiteralType.signed)
-        case (None, n) ⇒ LiteralToken(fu.as(n), LiteralType.number)
+        case (None, n) ⇒ LiteralToken(fu.as(n), LiteralType.unsigned)
       }
     )
 

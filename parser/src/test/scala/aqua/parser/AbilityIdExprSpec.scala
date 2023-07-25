@@ -21,7 +21,7 @@ class AbilityIdExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
 
     parseAbId("Ab 1") should be(
-      AbilityIdExpr[Id](toNamedType("Ab"), LiteralToken[Id]("1", LiteralType.number))
+      AbilityIdExpr[Id](toNamedType("Ab"), toNumber(1))
     )
 
     parseAbId("Ab a.id") should be(

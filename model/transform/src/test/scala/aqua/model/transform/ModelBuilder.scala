@@ -80,10 +80,7 @@ object ModelBuilder {
         ValueModel.fromRaw(bc.errorHandlingSrvId),
         bc.errorFuncName,
         CallRes(
-          ValueModel.lastError :: LiteralModel(
-            i.toString,
-            LiteralType.number
-          ) :: Nil,
+          ValueModel.lastError :: LiteralModel.number(i) :: Nil,
           None
         ),
         on
