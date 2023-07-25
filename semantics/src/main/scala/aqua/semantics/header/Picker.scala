@@ -1,11 +1,8 @@
 package aqua.semantics.header
 
 import aqua.raw.{RawContext, RawPart}
-import aqua.semantics.CompilerState
-import aqua.semantics.rules.abilities.AbilitiesState
-import aqua.semantics.rules.names.NamesState
-import aqua.semantics.rules.types.TypesState
-import cats.{Comonad, Semigroup}
+import aqua.types.{AbilityType, ArrowType}
+import cats.Semigroup
 import cats.syntax.semigroup.*
 
 // Able to pick info from different contexts
@@ -19,6 +16,7 @@ trait Picker[A] {
   def pickHeader(ctx: A): A
   def module(ctx: A): Option[String]
   def exports(ctx: A): Option[Map[String, Option[String]]]
+  def funcReturnAbilityOrArrow(name: String, ctx: A): Boolean
   def declares(ctx: A): Set[String]
   def setAbility(ctx: A, name: String, ctxAb: A): A
   def setModule(ctx: A, name: Option[String], declares: Set[String]): A
@@ -39,6 +37,7 @@ final class PickerOps[A: Picker](p: A) {
   def pickHeader: A = Picker[A].pickHeader(p)
   def module: Option[String] = Picker[A].module(p)
   def exports: Option[Map[String, Option[String]]] = Picker[A].exports(p)
+  def funcReturnAbilityOrArrow(name: String): Boolean = Picker[A].funcReturnAbilityOrArrow(name, p)
   def declares: Set[String] = Picker[A].declares(p)
   def setAbility(name: String, ctx: A): A = Picker[A].setAbility(p, name, ctx)
   def setInit(ctx: Option[A]): A = Picker[A].setInit(p, ctx)
@@ -56,6 +55,14 @@ final class PickerOps[A: Picker](p: A) {
 
 object Picker {
 
+  def typeContainsAbilityOrArrow(arrowType: ArrowType): Boolean = {
+    arrowType.codomain.toList.exists {
+      case _: AbilityType => true
+      case _: ArrowType => true
+      case _ => false
+    }
+  }
+
   implicit final def apply[A](implicit ev: Picker[A]): Picker[A] = ev
 
   implicit final def syntaxPicker[A: Picker](a: A): PickerOps[A] =
@@ -65,6 +72,8 @@ object Picker {
 
     override def blank: RawContext = RawContext.blank
     override def exports(ctx: RawContext): Option[Map[String, Option[String]]] = ctx.exports
+    override def funcReturnAbilityOrArrow(name: String, ctx: RawContext): Boolean =
+      ctx.funcs.get(name).map(_.arrow.`type`).exists(typeContainsAbilityOrArrow)
     override def funcNames(ctx: RawContext): List[String] = ctx.funcs.keys.toList
 
     override def addPart(ctx: RawContext, part: (RawContext, RawPart)): RawContext =

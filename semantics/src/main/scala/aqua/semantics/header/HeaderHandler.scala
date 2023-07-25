@@ -173,17 +173,25 @@ class HeaderHandler[S[_]: Comonad, C](implicit
                   )
                 )
                 .map { case (token, name, rename) =>
-                  (initCtx |+| ctx)
-                    .pick(name, rename, declared = false)
-                    .map(_ => Map(name -> rename))
-                    .map(validNec)
-                    .getOrElse(
-                      error(
-                        token,
-                        s"File has no $name declaration or import, cannot export, available funcs: ${(initCtx |+| ctx).funcNames
-                          .mkString(", ")}"
-                      )
+                  val sumCtx = initCtx |+| ctx
+
+                  if (sumCtx.funcReturnAbilityOrArrow(name))
+                    error(
+                      token,
+                      s"The function '$name' cannot be exported, because it returns arrow type or ability type"
                     )
+                  else
+                    sumCtx
+                      .pick(name, rename, declared = false)
+                      .map(_ => Map(name -> rename))
+                      .map(validNec)
+                      .getOrElse(
+                        error(
+                          token,
+                          s"File has no $name declaration or import, cannot export, available funcs: ${sumCtx.funcNames
+                            .mkString(", ")}"
+                        )
+                      )
                 }
                 .foldLeft[ResT[S, Map[String, Option[String]]]](
                   validNec(ctx.exports.getOrElse(Map.empty))

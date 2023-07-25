@@ -2,14 +2,13 @@ package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.Levenshtein
-import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.errors.ReportErrors
-import aqua.types.{ArrowType, StreamType, Type}
+import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.types.{AbilityType, ArrowType, StreamType, Type}
 import cats.data.{OptionT, State}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -142,7 +141,7 @@ class NamesInterpreter[S[_], X](implicit
           if (isRoot)
             modify(st =>
               st.copy(
-                rootArrows = st.rootArrows.updated(name.value, gen),
+                rootArrows = st.rootArrows.updated(name.value, arrowType),
                 definitions = st.definitions.updated(name.value, name)
               )
             )
@@ -150,7 +149,7 @@ class NamesInterpreter[S[_], X](implicit
           else
             report(name, "Cannot define a variable in the root scope")
               .as(false)
-        )(fr => fr.addArrow(name, gen) -> true)
+        )(fr => fr.addArrow(name, arrowType) -> true)
     }.flatTap(_ => locations.addToken(name.value, name))
 
   override def streamsDefinedWithinScope(): SX[Map[String, StreamType]] =
