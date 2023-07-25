@@ -195,13 +195,19 @@ object InfixToken {
     val Add = Math(MathOp.Add)
     val Sub = Math(MathOp.Sub)
 
+    val math = MathOp.values.map(Math(_)).toList
+
     val Gt = Cmp(CmpOp.Gt)
     val Gte = Cmp(CmpOp.Gte)
     val Lt = Cmp(CmpOp.Lt)
     val Lte = Cmp(CmpOp.Lte)
 
+    val cmp = CmpOp.values.map(Cmp(_)).toList
+
     val And = Bool(BoolOp.And)
     val Or = Bool(BoolOp.Or)
+
+    val bool = BoolOp.values.map(Bool(_)).toList
   }
 
   private def opsParser(ops: List[Op]): P[(Span, Op)] =
