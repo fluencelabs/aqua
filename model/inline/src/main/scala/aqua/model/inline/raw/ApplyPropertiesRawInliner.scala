@@ -183,7 +183,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           newVI <- ApplyFunctorRawInliner(flatten, f)
         } yield {
           newVI._1 -> Inline(
-            inline.flattenValues ++ newVI._2.flattenValues,
             inline.predo ++ newVI._2.predo,
             mergeMode = SeqMode
           )
@@ -198,7 +197,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           newVI <- ApplyIntoCopyRawInliner(varModel, ic)
         } yield {
           newVI._1 -> Inline(
-            inline.flattenValues ++ newVI._2.flattenValues,
             inline.predo ++ newVI._2.predo,
             mergeMode = SeqMode
           )
@@ -218,7 +216,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           case (vm @ VarModel(_, _, _), inline) if vm.properties.nonEmpty =>
             removeProperties(vm).map { case (vf, inlf) =>
               PropertyRawWithModel(iir, Option(IntoIndexModel(vf.name, t))) -> Inline(
-                inline.flattenValues ++ inlf.flattenValues,
                 inline.predo ++ inlf.predo,
                 mergeMode = SeqMode
               )
@@ -254,7 +251,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
                 (
                   vm,
                   Inline(
-                    leftInline.flattenValues ++ inl.flattenValues,
                     leftInline.predo ++ inl.predo,
                     mergeMode = SeqMode
                   )
@@ -269,7 +265,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
                     case (v, i) if !propertiesAllowed && v.properties.nonEmpty =>
                       removeProperties(v).map { case (vf, inlf) =>
                         vf -> Inline(
-                          leftInline.flattenValues ++ i.flattenValues ++ inlf.flattenValues,
                           leftInline.predo ++ i.predo ++ inlf.predo,
                           mergeMode = SeqMode
                         )
@@ -277,7 +272,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
                     case (v, i) =>
                       State.pure(
                         v -> Inline(
-                          leftInline.flattenValues ++ i.flattenValues,
                           leftInline.predo ++ i.predo,
                           mergeMode = SeqMode
                         )
@@ -304,7 +298,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
                 unfoldProperties(gateResInline, gateResVal, properties, propertiesAllowed).map {
                   case (v, i) =>
                     v -> Inline(
-                      inl.flattenValues ++ i.flattenValues,
                       inl.predo ++ i.predo,
                       mergeMode = SeqMode
                     )

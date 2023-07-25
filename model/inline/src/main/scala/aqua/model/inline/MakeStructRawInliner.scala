@@ -1,6 +1,14 @@
 package aqua.model.inline
 
-import aqua.model.{CallModel, CallServiceModel, LiteralModel, OpModel, SeqModel, ValueModel, VarModel}
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  LiteralModel,
+  OpModel,
+  SeqModel,
+  ValueModel,
+  VarModel
+}
 import aqua.model.inline.raw.RawInliner
 import cats.data.Chain
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
@@ -52,7 +60,6 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
       (
         varModel,
         Inline(
-          valsInline.flattenValues,
           Chain.one(SeqModel.wrap((valsInline.predo :+ objCreation).toList: _*))
         )
       )

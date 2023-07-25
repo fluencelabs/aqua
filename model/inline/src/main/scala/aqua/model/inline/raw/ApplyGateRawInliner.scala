@@ -121,8 +121,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
 
       val tree = SeqModel.wrap(idxInline.predo.toList :+ gate)
 
-      val treeInline =
-        Inline(idxInline.flattenValues, predo = Chain.one(tree))
+      val treeInline = Inline(predo = Chain.one(tree))
 
       (
         VarModel(uniqueResultName, ArrayType(afr.streamType.element)),

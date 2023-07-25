@@ -13,13 +13,10 @@ object SeqMode extends MergeMode
 object ParMode extends MergeMode
 
 /**
- * @param flattenValues values that need to be resolved before `predo`.
- *                      ListMap for keeping order of values (mostly for debugging purposes)
  * @param predo operations tree
- * @param mergeMode how `flattenValues` and `predo` must be merged
+ * @param mergeMode how `predo` must be merged
  */
 private[inline] case class Inline(
-  flattenValues: ListMap[String, ValueRaw] = ListMap.empty,
   predo: Chain[OpModel.Tree] = Chain.empty,
   mergeMode: MergeMode = ParMode
 ) {
@@ -40,17 +37,14 @@ private[inline] case class Inline(
             case ParMode => Chain.one(ParModel.wrap(l))
       }
 
-    Inline(
-      flattenValues,
-      desugaredPredo
-    )
+    Inline(desugaredPredo)
   }
 
   def mergeWith(inline: Inline, mode: MergeMode): Inline = {
     val left = desugar
     val right = inline.desugar
 
-    Inline(left.flattenValues ++ right.flattenValues, left.predo ++ right.predo, mode)
+    Inline(left.predo ++ right.predo, mode)
   }
 }
 
@@ -58,15 +52,13 @@ private[inline] case class Inline(
 private[inline] object Inline {
   val empty: Inline = Inline()
 
-  def preload(pairs: (String, ValueRaw)*): Inline = Inline(ListMap.from(pairs))
-
   def tree(tr: OpModel.Tree): Inline = Inline(predo = Chain.one(tr))
 
   given Monoid[Inline] with
     override val empty: Inline = Inline()
 
     override def combine(a: Inline, b: Inline): Inline =
-      Inline(a.flattenValues ++ b.flattenValues, a.predo ++ b.predo)
+      Inline(a.predo ++ b.predo)
 
   def parDesugarPrefix(ops: List[OpModel.Tree]): Option[OpModel.Tree] = ops match {
     case Nil => None
