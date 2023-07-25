@@ -22,6 +22,7 @@ import cats.syntax.monoid.*
 import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.apply.*
+import cats.syntax.foldable.*
 
 object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
 
@@ -33,10 +34,9 @@ object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
       name <- Mangler[S].findAndForbidName(raw.abilityType.name + "_ab")
       foldedFields <- raw.fieldsAndArrows.nonEmptyTraverse(unfold(_))
       varModel = VarModel(name, raw.baseType)
-      valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _).desugar
-      _ <- foldedFields.map(_._1).toNel.toList.traverse { case (n, vm) =>
-        val namef = s"$name.$n"
-        Exports[S].resolved(namef, vm)
+      valsInline = foldedFields.toList.foldMap { case (_, inline) => inline }.desugar
+      _ <- foldedFields.toNel.traverse { case (n, (vm, _)) =>
+        Exports[S].resolved(s"$name.$n", vm)
       }
     } yield {
       (

@@ -175,11 +175,30 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
       case it @ InfixToken(l, r, _) =>
-        it.op match {
-          case Op.Bool(bop) => ???
-          case op @ (Op.Math(_) | Op.Cmp(_)) =>
-            (valueToRaw(l), valueToRaw(r)).flatMapN {
-              case (Some(leftRaw), Some(rightRaw)) =>
+        (valueToRaw(l), valueToRaw(r)).flatMapN {
+          case (Some(leftRaw), Some(rightRaw)) =>
+            val lType = leftRaw.`type`
+            val rType = rightRaw.`type`
+            lazy val uType = lType `∪` rType
+
+            it.op match {
+              case Op.Bool(bop) =>
+                for {
+                  leftChecked <- T.ensureTypeMatches(l, ScalarType.bool, lType)
+                  rightChecked <- T.ensureTypeMatches(r, ScalarType.bool, rType)
+                } yield Option.when(
+                  leftChecked && rightChecked
+                )(
+                  ApplyBoolOpRaw(
+                    op = bop match {
+                      case BoolOp.And => ApplyBoolOpRaw.BoolOpRaw.And
+                      case BoolOp.Or => ApplyBoolOpRaw.BoolOpRaw.Or
+                    },
+                    left = leftRaw,
+                    right = rightRaw
+                  )
+                )
+              case op @ (Op.Math(_) | Op.Cmp(_)) =>
                 // Some type acrobatics to make
                 // compiler check exhaustive pattern matching
                 val iop = op match {
@@ -187,9 +206,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                   case Op.Cmp(op) => op
                 }
 
-                val lType = leftRaw.`type`
-                val rType = rightRaw.`type`
-                lazy val uType = lType `∪` rType
                 val hasFloat = List(lType, rType).exists(
                   _ acceptsValueOf LiteralType.float
                 )
@@ -257,8 +273,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                   )
                 )
 
-              case _ => None.pure[Alg]
             }
+          case _ => None.pure[Alg]
         }
     }
 

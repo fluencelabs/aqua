@@ -2,7 +2,14 @@ package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.*
-import aqua.model.inline.raw.{ApplyFunctorRawInliner, ApplyGateRawInliner, ApplyPropertiesRawInliner, CallArrowRawInliner, CollectionRawInliner, MakeAbilityRawInliner}
+import aqua.model.inline.raw.{
+  ApplyFunctorRawInliner,
+  ApplyGateRawInliner,
+  ApplyPropertiesRawInliner,
+  CallArrowRawInliner,
+  CollectionRawInliner,
+  MakeAbilityRawInliner
+}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
@@ -14,6 +21,7 @@ import cats.syntax.apply.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
 import scribe.Logging
+import aqua.model.inline.raw.ApplyBoolOpRawInliner
 
 object RawValueInliner extends Logging {
 
@@ -42,8 +50,11 @@ object RawValueInliner extends Logging {
       case dr: MakeStructRaw =>
         MakeStructRawInliner(dr, propertiesAllowed)
 
-      case sr: AbilityRaw =>
-        MakeAbilityRawInliner(sr, propertiesAllowed)
+      case ar: AbilityRaw =>
+        MakeAbilityRawInliner(ar, propertiesAllowed)
+
+      case abor: ApplyBoolOpRaw =>
+        ApplyBoolOpRawInliner(abor, propertiesAllowed)
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)

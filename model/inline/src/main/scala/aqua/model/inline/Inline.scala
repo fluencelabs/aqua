@@ -33,11 +33,11 @@ private[inline] case class Inline(
         case l =>
           mergeMode match
             case SeqMode =>
-              val wrapped = SeqModel.wrap(l: _*)
+              val wrapped = SeqModel.wrap(l)
               wrapped match
                 case EmptyModel.leaf => Chain.empty
                 case _ => Chain.one(wrapped)
-            case ParMode => Chain.one(ParModel.wrap(l: _*))
+            case ParMode => Chain.one(ParModel.wrap(l))
       }
 
     Inline(

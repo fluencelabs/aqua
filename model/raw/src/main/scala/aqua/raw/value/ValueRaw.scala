@@ -179,6 +179,32 @@ case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityTyp
     copy(fieldsAndArrows = fieldsAndArrows.map(_.renameVars(map)))
 }
 
+case class ApplyBoolOpRaw(
+  op: ApplyBoolOpRaw.BoolOpRaw,
+  left: ValueRaw,
+  right: ValueRaw
+) extends ValueRaw {
+
+  override def baseType: Type = ScalarType.bool
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(
+    copy(left = f(left), right = f(right))
+  )
+
+  override def varNames: Set[String] = left.varNames ++ right.varNames
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(left = left.renameVars(map), right = right.renameVars(map))
+}
+
+object ApplyBoolOpRaw {
+
+  enum BoolOpRaw {
+    case And
+    case Or
+  }
+}
+
 case class CallArrowRaw(
   // TODO: ability should hold a type, not name
   ability: Option[String],
