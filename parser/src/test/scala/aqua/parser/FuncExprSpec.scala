@@ -16,6 +16,7 @@ import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.ScalarType.*
 import cats.Id
 import cats.data.{Chain, NonEmptyList}
+import cats.data.Chain.*
 import cats.free.Cofree
 import cats.syntax.foldable.*
 import cats.data.Validated.{Invalid, Valid}
@@ -23,6 +24,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.{Inside, Inspectors}
 import org.scalatest.matchers.should.Matchers
 import cats.~>
+import cats.Eval
 
 import scala.collection.mutable
 import scala.language.implicitConversions
@@ -285,5 +287,28 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
         |    par LocalPrint.print("in par")""".stripMargin
 
     parser.parseAll(script).value.toEither.isRight shouldBe true
+  }
+
+  "function with if" should "be parsed correctly" in {
+    val script =
+      """func ifTest():
+        |    if (1 + 1) == 2:
+        |       Test.test("one")
+        |
+        |    if 2 < 3 != (1 > 2):
+        |       Test.test("two")
+        |""".stripMargin
+
+    inside(parser.parseAll(script).value) { case Valid(ast) =>
+      ast
+        .cata[Int]((expr, results) =>
+          // Count `if`s inside the tree
+          Eval.later(results.sumAll + (expr match {
+            case IfExpr(_, _, _) => 1
+            case _ => 0
+          }))
+        )
+        .value shouldBe 2
+    }
   }
 }
