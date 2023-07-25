@@ -32,7 +32,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
           Chain(
             SeqModel.wrap(
               sd._2.toList ++
-                cd._2.toList :+ CallServiceModel(sd._1, value.name, cd._1).leaf: _*
+                cd._2.toList :+ CallServiceModel(sd._1, value.name, cd._1).leaf
             )
           )
         )
