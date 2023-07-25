@@ -158,23 +158,50 @@ object InfixToken {
 
   import ValueToken._
 
+  enum BoolOp(val symbol: String):
+    case Or extends BoolOp("||")
+    case And extends BoolOp("&&")
+
+  enum MathOp(val symbol: String):
+    case Pow extends MathOp("**")
+    case Mul extends MathOp("*")
+    case Div extends MathOp("/")
+    case Rem extends MathOp("%")
+    case Add extends MathOp("+")
+    case Sub extends MathOp("-")
+
+  enum CmpOp(val symbol: String):
+    case Gt extends CmpOp(">")
+    case Gte extends CmpOp(">=")
+    case Lt extends CmpOp("<")
+    case Lte extends CmpOp("<=")
+
   enum Op(val symbol: String):
-    case Pow extends Op("**")
-    case Mul extends Op("*")
-    case Div extends Op("/")
-    case Rem extends Op("%")
-    case Add extends Op("+")
-    case Sub extends Op("-")
-    case Gt extends Op(">")
-    case Gte extends Op(">=")
-    case Lt extends Op("<")
-    case Lte extends Op("<=")
+    /**
+     * Scala3 does not support nested enums with fields
+     * so this type acrobatics is used to enable exhaustive matching check
+     */
+    case Math(mathOp: MathOp) extends Op(mathOp.symbol)
+    case Cmp(cmpOp: CmpOp) extends Op(cmpOp.symbol)
+    case Bool(boolOp: BoolOp) extends Op(boolOp.symbol)
 
     def p: P[Unit] = P.string(symbol)
 
   object Op {
-    val math: List[Op] = List(Pow, Mul, Div, Rem, Add, Sub)
-    val compare: List[Op] = List(Gt, Gte, Lt, Lte)
+    val Pow = Math(MathOp.Pow)
+    val Mul = Math(MathOp.Mul)
+    val Div = Math(MathOp.Div)
+    val Rem = Math(MathOp.Rem)
+    val Add = Math(MathOp.Add)
+    val Sub = Math(MathOp.Sub)
+
+    val Gt = Cmp(CmpOp.Gt)
+    val Gte = Cmp(CmpOp.Gte)
+    val Lt = Cmp(CmpOp.Lt)
+    val Lte = Cmp(CmpOp.Lte)
+
+    val And = Bool(BoolOp.And)
+    val Or = Bool(BoolOp.Or)
   }
 
   private def opsParser(ops: List[Op]): P[(Span, Op)] =
@@ -245,6 +272,12 @@ object InfixToken {
       Op.Gte :: Op.Lte :: Op.Gt :: Op.Lt :: Nil
     )
 
+  private val and: P[ValueToken[Span.S]] =
+    infixParserLeft(compare, Op.And :: Nil)
+
+  private val or: P[ValueToken[Span.S]] =
+    infixParserLeft(and, Op.Or :: Nil)
+
   /**
    * The math expression parser.
    *
@@ -291,9 +324,17 @@ object InfixToken {
    *
    * The grammar below expresses the operator precedence and associativity we expect from math expressions:
    *
-   * -- Comparison is the entry point because it has the lowest priority.
+   * -- Logical OR is the entry point because it has the lowest priority.
    * mathExpr
-   *   -> cmpExpr
+   *   -> orExpr
+   *
+   * -- Logical OR is left associative.
+   * orExpr
+   *   -> andExpr OR_OP andExpr
+   *
+   * -- Logical AND is left associative.
+   * andExpr
+   *   -> cmpExpr AND_OP cmpExpr
    *
    * -- Comparison isn't an associative operation so it's not a recursive definition.
    * cmpExpr
@@ -326,7 +367,7 @@ object InfixToken {
    *   | ...
    *   | ( mathExpr )
    */
-  val mathExpr: P[ValueToken[Span.S]] = compare
+  val mathExpr: P[ValueToken[Span.S]] = or
 }
 
 object ValueToken {

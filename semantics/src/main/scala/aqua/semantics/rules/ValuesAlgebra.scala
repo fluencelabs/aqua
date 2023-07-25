@@ -1,7 +1,7 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.*
-import aqua.parser.lexer.InfixToken.Op
+import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, MathOp, Op}
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
@@ -175,81 +175,91 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
       case it @ InfixToken(l, r, _) =>
-        (valueToRaw(l), valueToRaw(r)).flatMapN {
-          case (Some(leftRaw), Some(rightRaw)) =>
-            val lType = leftRaw.`type`
-            val rType = rightRaw.`type`
-            lazy val uType = lType `∪` rType
-            val hasFloat = List(lType, rType).exists(
-              _ acceptsValueOf LiteralType.float
-            )
+        it.op match {
+          case Op.Bool(bop) => ???
+          case op @ (Op.Math(_) | Op.Cmp(_)) =>
+            (valueToRaw(l), valueToRaw(r)).flatMapN {
+              case (Some(leftRaw), Some(rightRaw)) =>
+                // Some type acrobatics to make
+                // compiler check exhaustive pattern matching
+                val iop = op match {
+                  case Op.Math(op) => op
+                  case Op.Cmp(op) => op
+                }
 
-            // See https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
-            val (id, fn) = it.op match {
-              case Op.Add => ("math", "add")
-              case Op.Sub => ("math", "sub")
-              case Op.Mul if hasFloat => ("math", "fmul")
-              case Op.Mul => ("math", "mul")
-              case Op.Div => ("math", "div")
-              case Op.Rem => ("math", "rem")
-              case Op.Pow => ("math", "pow")
-              case Op.Gt => ("cmp", "gt")
-              case Op.Gte => ("cmp", "gte")
-              case Op.Lt => ("cmp", "lt")
-              case Op.Lte => ("cmp", "lte")
+                val lType = leftRaw.`type`
+                val rType = rightRaw.`type`
+                lazy val uType = lType `∪` rType
+                val hasFloat = List(lType, rType).exists(
+                  _ acceptsValueOf LiteralType.float
+                )
+
+                // See https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
+                val (id, fn) = iop match {
+                  case MathOp.Add => ("math", "add")
+                  case MathOp.Sub => ("math", "sub")
+                  case MathOp.Mul if hasFloat => ("math", "fmul")
+                  case MathOp.Mul => ("math", "mul")
+                  case MathOp.Div => ("math", "div")
+                  case MathOp.Rem => ("math", "rem")
+                  case MathOp.Pow => ("math", "pow")
+                  case CmpOp.Gt => ("cmp", "gt")
+                  case CmpOp.Gte => ("cmp", "gte")
+                  case CmpOp.Lt => ("cmp", "lt")
+                  case CmpOp.Lte => ("cmp", "lte")
+                }
+
+                /*
+                 * If `uType == TopType`, it means that we don't
+                 * have type big enough to hold the result of operation.
+                 * e.g. We will use `i64` for result of `i32 * u64`
+                 * TODO: Handle this more gracefully
+                 *       (use warning system when it is implemented)
+                 */
+                def uTypeBounded = if (uType == TopType) {
+                  val bounded = ScalarType.i64
+                  logger.warn(
+                    s"Result type of ($lType ${it.op} $rType) is $TopType, " +
+                      s"using $bounded instead"
+                  )
+                  bounded
+                } else uType
+
+                // Expected type sets of left and right operands, result type
+                val (leftExp, rightExp, resType) = iop match {
+                  case MathOp.Add | MathOp.Sub | MathOp.Div | MathOp.Rem =>
+                    (ScalarType.integer, ScalarType.integer, uTypeBounded)
+                  case MathOp.Pow =>
+                    (ScalarType.integer, ScalarType.unsigned, uTypeBounded)
+                  case MathOp.Mul if hasFloat =>
+                    (ScalarType.float, ScalarType.float, ScalarType.i64)
+                  case MathOp.Mul =>
+                    (ScalarType.integer, ScalarType.integer, uTypeBounded)
+                  case CmpOp.Gt | CmpOp.Lt | CmpOp.Gte | CmpOp.Lte =>
+                    (ScalarType.integer, ScalarType.integer, ScalarType.bool)
+                }
+
+                for {
+                  leftChecked <- T.ensureTypeOneOf(l, leftExp, lType)
+                  rightChecked <- T.ensureTypeOneOf(r, rightExp, rType)
+                } yield Option.when(
+                  leftChecked.isDefined && rightChecked.isDefined
+                )(
+                  CallArrowRaw(
+                    ability = Some(id),
+                    name = fn,
+                    arguments = leftRaw :: rightRaw :: Nil,
+                    baseType = ArrowType(
+                      ProductType(lType :: rType :: Nil),
+                      ProductType(resType :: Nil)
+                    ),
+                    serviceId = Some(LiteralRaw.quote(id))
+                  )
+                )
+
+              case _ => None.pure[Alg]
             }
-
-            /*
-             * If `uType == TopType`, it means that we don't
-             * have type big enough to hold the result of operation.
-             * e.g. We will use `i64` for result of `i32 * u64`
-             * TODO: Handle this more gracefully
-             *       (use warning system when it is implemented)
-             */
-            def uTypeBounded = if (uType == TopType) {
-              val bounded = ScalarType.i64
-              logger.warn(
-                s"Result type of ($lType ${it.op} $rType) is $TopType, " +
-                  s"using $bounded instead"
-              )
-              bounded
-            } else uType
-
-            // Expected type sets of left and right operands, result type
-            val (leftExp, rightExp, resType) = it.op match {
-              case Op.Add | Op.Sub | Op.Div | Op.Rem =>
-                (ScalarType.integer, ScalarType.integer, uTypeBounded)
-              case Op.Pow =>
-                (ScalarType.integer, ScalarType.unsigned, uTypeBounded)
-              case Op.Mul if hasFloat =>
-                (ScalarType.float, ScalarType.float, ScalarType.i64)
-              case Op.Mul =>
-                (ScalarType.integer, ScalarType.integer, uTypeBounded)
-              case Op.Gt | Op.Lt | Op.Gte | Op.Lte =>
-                (ScalarType.integer, ScalarType.integer, ScalarType.bool)
-            }
-
-            for {
-              leftChecked <- T.ensureTypeOneOf(l, leftExp, lType)
-              rightChecked <- T.ensureTypeOneOf(r, rightExp, rType)
-            } yield Option.when(
-              leftChecked.isDefined && rightChecked.isDefined
-            )(
-              CallArrowRaw(
-                ability = Some(id),
-                name = fn,
-                arguments = leftRaw :: rightRaw :: Nil,
-                baseType = ArrowType(
-                  ProductType(lType :: rType :: Nil),
-                  ProductType(resType :: Nil)
-                ),
-                serviceId = Some(LiteralRaw.quote(id))
-              )
-            )
-
-          case _ => None.pure[Alg]
         }
-
     }
 
   // Generate CallArrowRaw for arrow in ability
