@@ -63,19 +63,7 @@ object CompilerAPI extends Logging {
       )
       .rawContextMonoid
 
-    implicit val headerSemMonoid: Monoid[HeaderSem[S, RawContext]] =
-      new Monoid[HeaderSem[S, RawContext]] {
-        override def empty: HeaderSem[S, RawContext] = HeaderSem(rc.empty, (c, _) => validNec(c))
-
-        override def combine(
-          a: HeaderSem[S, RawContext],
-          b: HeaderSem[S, RawContext]
-        ): HeaderSem[S, RawContext] =
-          HeaderSem(
-            a.initCtx |+| b.initCtx,
-            (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
-          )
-      }
+    implicit val headerSemMonoid: Monoid[HeaderSem[S, RawContext]] = HeaderSem.headerSemMonoid[S]
 
     val semantics = new RawSemantics[S]()
 

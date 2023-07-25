@@ -128,7 +128,7 @@ class NamesInterpreter[S[_], X](implicit
         ).as(true)
     }.flatTap(_ => locations.addToken(name.value, name))
 
-  override def defineArrow(name: Name[S], gen: ArrowType, isRoot: Boolean): SX[Boolean] =
+  override def defineArrow(name: Name[S], arrowType: ArrowType, isRoot: Boolean): SX[Boolean] =
     readName(name.value).flatMap {
       case Some(_) =>
         getState.map(_.definitions.get(name.value).exists(_ == name)).flatMap {

@@ -1,9 +1,8 @@
 package aqua.logging
 
+import cats.data.Validated.{invalidNel, validNel}
+import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import scribe.Level
-import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
-import cats.data.{Validated, ValidatedNel}
-import cats.data.NonEmptyList
 
 case class LogLevels(
   compiler: Level = Level.Error,
