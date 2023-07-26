@@ -22,6 +22,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import scala.collection.immutable.SortedMap
+import aqua.raw.value.ApplyBoolOpRaw
+import aqua.raw.value.CallArrowRaw
 
 class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
 
@@ -127,9 +129,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   "raw value inliner" should "desugarize a single non-recursive raw value" in {
     // x[y]
     valueToModel[InliningState](`raw x[y]`)
-      .run(InliningState(noNames = Set("x", "y")))
-      .value
-      ._2 should be(
+      .runA(InliningState(noNames = Set("x", "y")))
+      .value shouldBe (
       VarModel(
         "x",
         ArrayType(ScalarType.string),
@@ -143,13 +144,12 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     import aqua.model.inline.state.Mangler.Simple
     // a.field1.field2
     valueToModel[InliningState](`raw res.c`)
-      .run(
+      .runA(
         InliningState(resolvedExports =
           Map("res" -> VarModel("a", aType, Chain.one(IntoFieldModel("b", bType))))
         )
       )
-      .value
-      ._2 should be(
+      .value shouldBe (
       VarModel(
         "a",
         aType,
@@ -158,14 +158,13 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  "raw value inliner" should "desugarize a single recursive raw value" in {
+  it should "desugarize a single recursive raw value" in {
     // x[ys!]
     val (resVal, resTree) = valueToModel[InliningState](
       `raw x[ys[0]]`
     )
-      .run(InliningState(noNames = Set("x", "ys")))
+      .runA(InliningState(noNames = Set("x", "ys")))
       .value
-      ._2
 
     resVal should be(
       VarModel(
@@ -189,10 +188,10 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
   }
 
-  "raw value inliner" should "desugarize properties with functors x[ys[ys.length]][2] and make proper flattener tags" in {
+  it should "desugarize properties with functors x[ys[ys.length]][2] and make proper flattener tags" in {
     val (resVal, resTree) = valueToModel[InliningState](
       `x[xs[ys.length]][xss[yss.length]]`
-    ).run(InliningState(noNames = Set("x", "ys", "xs", "yss", "xss"))).value._2
+    ).runA(InliningState(noNames = Set("x", "ys", "xs", "yss", "xss"))).value
 
     resVal should be(
       VarModel(
@@ -263,13 +262,12 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
   }
 
-  "raw value inliner" should "desugarize x[ys[0]][ys[1]] and make proper flattener tags" in {
+  it should "desugarize x[ys[0]][ys[1]] and make proper flattener tags" in {
     val (resVal, resTree) = valueToModel[InliningState](
       `raw x[ys[0]][ys[1]]`
     )
-      .run(InliningState(noNames = Set("x", "ys")))
+      .runA(InliningState(noNames = Set("x", "ys")))
       .value
-      ._2
 
     resVal should be(
       VarModel(
@@ -306,16 +304,15 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
   }
 
-  "raw value inliner" should "desugarize stream with gate" in {
+  it should "desugarize stream with gate" in {
     val streamWithProps =
       VarRaw("x", StreamType(ScalarType.string)).withProperty(
         IntoIndexRaw(ysVarRaw(1), ScalarType.string)
       )
 
     val (resVal, resTree) = valueToModel[InliningState](streamWithProps)
-      .run(InliningState(noNames = Set("x", "ys")))
+      .runA(InliningState(noNames = Set("x", "ys")))
       .value
-      ._2
 
     resVal should be(
       VarModel(
@@ -328,28 +325,23 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  "raw value inliner" should "desugarize stream with length" in {
+  it should "desugarize stream with length" in {
     val streamWithProps =
       VarRaw("x", StreamType(ScalarType.string)).withProperty(
         FunctorRaw("length", ScalarType.u32)
       )
 
     val (resVal, resTree) = valueToModel[InliningState](streamWithProps)
-      .run(InliningState(noNames = Set("x", "ys")))
+      .runA(InliningState(noNames = Set("x", "ys")))
       .value
-      ._2
-
-    //    println(resVal)
-    //    println(resTree)
   }
 
-  "raw value inliner" should "desugarize a recursive lambda value" in {
+  it should "desugarize a recursive lambda value" in {
     val (resVal, resTree) = valueToModel[InliningState](
       `raw x[zs[ys[0]]][ys[1]]`
     )
-      .run(InliningState(noNames = Set("x", "ys", "zs")))
+      .runA(InliningState(noNames = Set("x", "ys", "zs")))
       .value
-      ._2
 
     // This is x[zs-0][ys-0]
     // zs-0 should be zs[ys[0]], which should be already flattened
@@ -396,5 +388,4 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
       )
     ) should be(true)
   }
-
 }

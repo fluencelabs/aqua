@@ -1,0 +1,36 @@
+aqua Bool
+
+export main, Effector
+
+service Effector("effector"):
+    effect(name: string) -> bool
+
+func foo(x: i8) -> bool:
+    y = x + 1
+    <- y < 5
+
+func bar(x: i8) -> i8:
+    y = x - 1
+    <- y
+
+func main(peer: string) -> []bool:
+    res: *bool
+
+    on peer:
+        a = 1 + 2
+        b = 2 - 1
+        res <<- true || false && true
+        res <<- (true || false) && true
+        res <<- foo(3) && b > 0 || a > 4
+        res <<- bar(a) > 2 || true
+        res <<- foo(4) && bar(2) < 2
+
+    -- Effector is only registered on init_peer
+    res <<- true || Effector.effect("impossible")
+    res <<- false && Effector.effect("impossible")
+    res <<- foo(0) || Effector.effect("impossible")
+    res <<- foo(10) && Effector.effect("impossible")
+    res <<- Effector.effect("true") || true
+    res <<- Effector.effect("true") && false
+
+    <- res
