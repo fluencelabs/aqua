@@ -14,7 +14,7 @@ import aqua.semantics.rules.definitions.DefinitionsInterpreter
 import aqua.semantics.rules.types.TypesInterpreter
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.locations.DummyLocationsInterpreter
-import aqua.raw.value.LiteralRaw
+import aqua.raw.value.{ApplyBoolOpRaw, LiteralRaw}
 import aqua.raw.RawContext
 import aqua.types.{LiteralType, ScalarType, TopType, Type}
 import aqua.parser.lexer.{InfixToken, LiteralToken, Name, ValueToken, VarToken}
@@ -200,6 +200,92 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
 
       inside(res) { case Some(value) =>
         value.`type` shouldBe ScalarType.i64
+      }
+    }
+  }
+
+  it should "handle ||, && on bool values" in {
+    val types = List(LiteralType.bool, ScalarType.bool)
+
+    allPairs(types).foreach { case (lt, rt) =>
+      InfixToken.BoolOp.values.foreach { op =>
+        val left = lt match {
+          case lt: LiteralType =>
+            literal("true", lt)
+          case _ =>
+            variable("left")
+        }
+        val right = rt match {
+          case rt: LiteralType =>
+            literal("false", rt)
+          case _ =>
+            variable("right")
+        }
+
+        val alg = algebra()
+
+        val state = genState(
+          vars = (
+            List("left" -> lt).filter(_ => lt != LiteralType.bool) ++
+              List("right" -> rt).filter(_ => rt != LiteralType.bool)
+          ).toMap
+        )
+
+        val token = InfixToken[Id](left, right, InfixToken.Op.Bool(op))
+
+        val (st, res) = alg
+          .valueToRaw(token)
+          .run(state)
+          .value
+
+        inside(res) { case Some(ApplyBoolOpRaw(bop, _, _)) =>
+          bop shouldBe (op match {
+            case InfixToken.BoolOp.And => ApplyBoolOpRaw.BoolOpRaw.And
+            case InfixToken.BoolOp.Or => ApplyBoolOpRaw.BoolOpRaw.Or
+          })
+        }
+      }
+    }
+  }
+
+  it should "check type of logical operands" in {
+    val types = List(LiteralType.bool, ScalarType.bool).flatMap(t =>
+      List(t -> ScalarType.i8, ScalarType.i8 -> t)
+    )
+
+    types.foreach { case (lt, rt) =>
+      InfixToken.BoolOp.values.foreach { op =>
+        val left = lt match {
+          case lt: LiteralType =>
+            literal("true", lt)
+          case _ =>
+            variable("left")
+        }
+        val right = rt match {
+          case rt: LiteralType =>
+            literal("false", rt)
+          case _ =>
+            variable("right")
+        }
+
+        val alg = algebra()
+
+        val state = genState(
+          vars = (
+            List("left" -> lt).filter(_ => lt != LiteralType.bool) ++
+              List("right" -> rt).filter(_ => rt != LiteralType.bool)
+          ).toMap
+        )
+
+        val token = InfixToken[Id](left, right, InfixToken.Op.Bool(op))
+
+        val (st, res) = alg
+          .valueToRaw(token)
+          .run(state)
+          .value
+
+        res shouldBe None
+        st.errors.exists(_.isInstanceOf[RulesViolated[Id]]) shouldBe true
       }
     }
   }
