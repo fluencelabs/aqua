@@ -3,17 +3,19 @@ package aqua.parser
 import aqua.AquaSpec
 import aqua.parser.expr.func.IfExpr
 import aqua.parser.lexer.InfixToken.Op
-import aqua.parser.lexer.{EqOp, InfixToken, LiteralToken, ValueToken}
+import aqua.parser.lexer.*
 import aqua.parser.lexer.InfixToken.Op.*
 import aqua.parser.lift.Span
 import aqua.types.LiteralType
+
 import cats.syntax.comonad.*
 import cats.{~>, Comonad, Id}
+import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import cats.parse.{Numbers, Parser as P, Parser0 as P0}
+import org.scalatest.Inside
 
-class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
+class InfixTokenSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec {
 
   def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
 
@@ -24,7 +26,15 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   import AquaSpec._
 
+  private def variable(name: String): ValueToken[Id] =
+    VarToken(Name(name), Nil)
+
+  private def func(name: String, args: List[ValueToken[Id]]): ValueToken[Id] =
+    CallArrowToken(None, Name(name), args)
+
   private def literal(n: Int): ValueToken[Id] = toNumber(n)
+
+  private def literalBool(b: Boolean): ValueToken[Id] = toBool(b)
 
   private def infixToken(left: ValueToken[Id], right: ValueToken[Id], op: Op) =
     InfixToken[Id](left, right, op)
@@ -272,5 +282,141 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with AquaSpec {
   "simple cmp math expression in brackets " should "be parsed" in {
     val vt = ValueToken.`value`.parseAll("(1 > 3)").right.get.mapK(spanToId)
     vt shouldBe InfixToken(literal(1), literal(3), Gt)
+  }
+
+  "simple logical expression" should "be parsed" in {
+    val vtAnd = ValueToken.`value`.parseAll("true && false").map(_.mapK(spanToId))
+
+    inside(vtAnd) { case Right(vt) =>
+      vt shouldBe infixToken(literalBool(true), literalBool(false), And)
+    }
+
+    val vtOr = ValueToken.`value`.parseAll("false || true").map(_.mapK(spanToId))
+
+    inside(vtOr) { case Right(vt) =>
+      vt shouldBe infixToken(literalBool(false), literalBool(true), Or)
+    }
+
+    val vtAndOr = ValueToken.`value`.parseAll("false && true || false").map(_.mapK(spanToId))
+
+    inside(vtAndOr) { case Right(vt) =>
+      vt shouldBe infixToken(
+        infixToken(literalBool(false), literalBool(true), And),
+        literalBool(false),
+        Or
+      )
+    }
+
+    val vtOrAnd = ValueToken.`value`.parseAll("false || true && false").map(_.mapK(spanToId))
+
+    inside(vtOrAnd) { case Right(vt) =>
+      vt shouldBe infixToken(
+        literalBool(false),
+        infixToken(literalBool(true), literalBool(false), And),
+        Or
+      )
+    }
+  }
+
+  "logical expression with brackets" should "be parsed" in {
+    val vtAndOr = ValueToken.`value`.parseAll("false && (true || false)").map(_.mapK(spanToId))
+
+    inside(vtAndOr) { case Right(vt) =>
+      vt shouldBe infixToken(
+        literalBool(false),
+        infixToken(literalBool(true), literalBool(false), Or),
+        And
+      )
+    }
+
+    val vtOrAnd = ValueToken.`value`.parseAll("(false || true) && false").map(_.mapK(spanToId))
+
+    inside(vtOrAnd) { case Right(vt) =>
+      vt shouldBe infixToken(
+        infixToken(literalBool(false), literalBool(true), Or),
+        literalBool(false),
+        And
+      )
+    }
+  }
+
+  "logical expression with math expressions" should "be parsed" in {
+    val vt1 = ValueToken.`value`.parseAll("1 < 2 + 3 || 3 % 2 > 1").map(_.mapK(spanToId))
+
+    inside(vt1) { case Right(vt) =>
+      vt shouldBe infixToken(
+        infixToken(
+          literal(1),
+          infixToken(literal(2), literal(3), Add),
+          Lt
+        ),
+        infixToken(
+          infixToken(literal(3), literal(2), Rem),
+          literal(1),
+          Gt
+        ),
+        Or
+      )
+    }
+
+    val vt2 = ValueToken.`value`.parseAll("1 - 2 > 3 && 3 ** 2 <= 1").map(_.mapK(spanToId))
+
+    inside(vt2) { case Right(vt) =>
+      vt shouldBe infixToken(
+        infixToken(
+          infixToken(literal(1), literal(2), Sub),
+          literal(3),
+          Gt
+        ),
+        infixToken(
+          infixToken(literal(3), literal(2), Pow),
+          literal(1),
+          Lte
+        ),
+        And
+      )
+    }
+  }
+
+  "logical expression with function calls and variables" should "be parsed" in {
+    val vt1 = ValueToken.`value`.parseAll("foo() || a + 1 < 2 && b").map(_.mapK(spanToId))
+
+    inside(vt1) { case Right(vt) =>
+      vt shouldBe infixToken(
+        func("foo", Nil),
+        infixToken(
+          infixToken(
+            infixToken(
+              variable("a"),
+              literal(1),
+              Add
+            ),
+            literal(2),
+            Lt
+          ),
+          variable("b"),
+          And
+        ),
+        Or
+      )
+    }
+
+    val vt2 = ValueToken.`value`.parseAll("bar(a) < 2 && (b > 5 || c)").map(_.mapK(spanToId))
+
+    inside(vt2) { case Right(vt) =>
+      vt shouldBe infixToken(
+        infixToken(func("bar", List(variable("a"))), literal(2), Lt),
+        infixToken(
+          infixToken(
+            variable("b"),
+            literal(5),
+            Gt
+          ),
+          variable("c"),
+          Or
+        ),
+        And
+      )
+    }
   }
 }
