@@ -15,6 +15,7 @@ import cats.syntax.functor.*
 import cats.{~>, Comonad, Functor}
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.syntax.foldable.*
+import cats.arrow.FunctionK
 
 sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
@@ -210,7 +211,7 @@ object InfixToken {
   }
 
   private def opsParser(ops: List[Op]): P[(Span, Op)] =
-    P.oneOf(ops.map(op => op.p.lift.map(s => s.as(op))))
+    P.oneOf(ops.map(op => op.p.lift.map(_.as(op))))
 
   // Parse left-associative operations `basic (OP basic)*`.
   // We use this form to avoid left recursion.
@@ -242,7 +243,7 @@ object InfixToken {
     }
 
   private val pow: P[ValueToken[Span.S]] =
-    infixParserRight(ValueToken.atom, Op.Pow :: Nil)
+    infixParserRight(P.defer(ValueToken.atom), Op.Pow :: Nil)
 
   private val mult: P[ValueToken[Span.S]] =
     infixParserLeft(pow, Op.Mul :: Op.Div :: Op.Rem :: Nil)
@@ -354,7 +355,38 @@ object InfixToken {
    *   | ...
    *   | ( mathExpr )
    */
-  val mathExpr: P[ValueToken[Span.S]] = or
+  val value: P[ValueToken[Span.S]] = or
+}
+
+case class PrefixToken[F[_]: Comonad](
+  operand: ValueToken[F],
+  prefix: F[PrefixToken.Op]
+) extends ValueToken[F] {
+
+  override def as[T](v: T): F[T] = prefix.as(v)
+
+  override def mapK[K[_]: Comonad](fk: FunctionK[F, K]): ValueToken[K] =
+    copy(operand.mapK(fk), fk(prefix))
+}
+
+object PrefixToken {
+
+  enum Op(val symbol: String) {
+    case Not extends Op("!")
+
+    def p: P[Unit] = P.string(symbol)
+  }
+
+  private def parseOps(ops: List[Op]): P[S[Op]] =
+    P.oneOf(ops.map(op => op.p.lift.map(_.as(op))))
+
+  private def parsePrefix(basic: P[ValueToken[S]], ops: List[Op]) =
+    (parseOps(ops).surroundedBy(`/s*`) ~ basic).map { case (op, vt) =>
+      PrefixToken(vt, op)
+    }
+
+  val value: P[ValueToken[Span.S]] =
+    parsePrefix(P.defer(ValueToken.atom), Op.Not :: Nil)
 }
 
 object ValueToken {
@@ -414,13 +446,14 @@ object ValueToken {
       P.defer(NamedValueToken.dataValue).backtrack ::
       P.defer(CallArrowToken.callArrow).backtrack ::
       P.defer(abProperty).backtrack ::
-      P.defer(brackets(InfixToken.mathExpr)).backtrack ::
+      P.defer(PrefixToken.value).backtrack ::
+      P.defer(brackets(InfixToken.value)).backtrack ::
       varProperty ::
       Nil
   )
 
   // One of entry points for parsing the whole math expression
   val `value`: P[ValueToken[Span.S]] =
-    P.defer(InfixToken.mathExpr)
+    P.defer(InfixToken.value)
 
 }
