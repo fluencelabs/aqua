@@ -14,7 +14,7 @@ import aqua.semantics.rules.definitions.DefinitionsInterpreter
 import aqua.semantics.rules.types.TypesInterpreter
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.locations.DummyLocationsInterpreter
-import aqua.raw.value.{ApplyBoolOpRaw, LiteralRaw}
+import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw}
 import aqua.raw.RawContext
 import aqua.types.{LiteralType, ScalarType, TopType, Type}
 import aqua.parser.lexer.{InfixToken, LiteralToken, Name, ValueToken, VarToken}
@@ -238,10 +238,10 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
           .run(state)
           .value
 
-        inside(res) { case Some(ApplyBoolOpRaw(bop, _, _)) =>
+        inside(res) { case Some(ApplyBinaryOpRaw(bop, _, _)) =>
           bop shouldBe (op match {
-            case InfixToken.BoolOp.And => ApplyBoolOpRaw.BoolOpRaw.And
-            case InfixToken.BoolOp.Or => ApplyBoolOpRaw.BoolOpRaw.Or
+            case InfixToken.BoolOp.And => ApplyBinaryOpRaw.Op.And
+            case InfixToken.BoolOp.Or => ApplyBinaryOpRaw.Op.Or
           })
         }
       }

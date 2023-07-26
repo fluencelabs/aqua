@@ -22,7 +22,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import scala.collection.immutable.SortedMap
-import aqua.raw.value.ApplyBoolOpRaw
+import aqua.raw.value.ApplyBinaryOpRaw
 import aqua.raw.value.CallArrowRaw
 
 class RawValueInlinerSpec extends AnyFlatSpec with Matchers {

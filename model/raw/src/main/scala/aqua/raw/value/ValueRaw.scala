@@ -179,8 +179,8 @@ case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityTyp
     copy(fieldsAndArrows = fieldsAndArrows.map(_.renameVars(map)))
 }
 
-case class ApplyBoolOpRaw(
-  op: ApplyBoolOpRaw.BoolOpRaw,
+case class ApplyBinaryOpRaw(
+  op: ApplyBinaryOpRaw.Op,
   left: ValueRaw,
   right: ValueRaw
 ) extends ValueRaw {
@@ -197,9 +197,9 @@ case class ApplyBoolOpRaw(
     copy(left = left.renameVars(map), right = right.renameVars(map))
 }
 
-object ApplyBoolOpRaw {
+object ApplyBinaryOpRaw {
 
-  enum BoolOpRaw {
+  enum Op {
     case And
     case Or
   }

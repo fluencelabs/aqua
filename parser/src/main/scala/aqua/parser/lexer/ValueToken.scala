@@ -363,6 +363,7 @@ case class PrefixToken[F[_]: Comonad](
   prefix: F[PrefixToken.Op]
 ) extends ValueToken[F] {
 
+  def op: PrefixToken.Op = prefix.extract
   override def as[T](v: T): F[T] = prefix.as(v)
 
   override def mapK[K[_]: Comonad](fk: FunctionK[F, K]): ValueToken[K] =

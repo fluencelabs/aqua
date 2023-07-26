@@ -8,8 +8,8 @@ import cats.data.{NonEmptyList, NonEmptyMap, State}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
 import aqua.types.{ArrowType, ScalarType}
-import aqua.raw.value.ApplyBoolOpRaw
-import aqua.raw.value.ApplyBoolOpRaw.BoolOpRaw.*
+import aqua.raw.value.ApplyBinaryOpRaw
+import aqua.raw.value.ApplyBinaryOpRaw.Op.*
 
 import cats.data.Chain
 import cats.syntax.traverse.*
@@ -20,10 +20,10 @@ import cats.syntax.apply.*
 import cats.syntax.foldable.*
 import cats.syntax.applicative.*
 
-object ApplyBoolOpRawInliner extends RawInliner[ApplyBoolOpRaw] {
+object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
 
   override def apply[S: Mangler: Exports: Arrows](
-    raw: ApplyBoolOpRaw,
+    raw: ApplyBinaryOpRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = for {
     left <- unfold(raw.left)
@@ -56,7 +56,7 @@ object ApplyBoolOpRawInliner extends RawInliner[ApplyBoolOpRaw] {
     rmodel: ValueModel,
     linline: Inline,
     rinline: Inline,
-    op: ApplyBoolOpRaw.BoolOpRaw
+    op: ApplyBinaryOpRaw.Op
   ): State[S, (ValueModel, Inline)] = {
     val (name, compareWith) = op match {
       case And => ("and", true)

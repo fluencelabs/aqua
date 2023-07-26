@@ -174,6 +174,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
+      case pr @ PrefixToken(o, _) => ???
+
       case it @ InfixToken(l, r, _) =>
         (valueToRaw(l), valueToRaw(r)).flatMapN {
           case (Some(leftRaw), Some(rightRaw)) =>
@@ -189,10 +191,10 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                 } yield Option.when(
                   leftChecked && rightChecked
                 )(
-                  ApplyBoolOpRaw(
+                  ApplyBinaryOpRaw(
                     op = bop match {
-                      case BoolOp.And => ApplyBoolOpRaw.BoolOpRaw.And
-                      case BoolOp.Or => ApplyBoolOpRaw.BoolOpRaw.Or
+                      case BoolOp.And => ApplyBinaryOpRaw.Op.And
+                      case BoolOp.Or => ApplyBinaryOpRaw.Op.Or
                     },
                     left = leftRaw,
                     right = rightRaw
