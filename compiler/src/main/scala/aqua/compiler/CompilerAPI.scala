@@ -8,19 +8,19 @@ import aqua.parser.{Ast, ParserError}
 import aqua.raw.RawPart.Parts
 import aqua.raw.{RawContext, RawPart}
 import aqua.res.AquaRes
-import aqua.semantics.{CompilerState, RawSemantics, Semantics}
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
+import aqua.semantics.{CompilerState, RawSemantics, Semantics}
 import cats.data.*
-import cats.data.Validated.{invalid, validNec, Invalid, Valid}
+import cats.data.Validated.{Invalid, Valid, invalid, validNec}
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
-import cats.syntax.traverse.*
 import cats.syntax.semigroup.*
-import cats.syntax.foldable.*
-import cats.{~>, Comonad, Monad, Monoid, Order}
+import cats.syntax.traverse.*
+import cats.{Comonad, Monad, Monoid, Order, ~>}
 import scribe.Logging
 
 import scala.collection.MapView
@@ -62,20 +62,6 @@ object CompilerAPI extends Logging {
           .copy(parts = Chain.fromSeq(config.constantsList).map(const => RawContext.blank -> const))
       )
       .rawContextMonoid
-
-    implicit val headerSemMonoid: Monoid[HeaderSem[S, RawContext]] =
-      new Monoid[HeaderSem[S, RawContext]] {
-        override def empty: HeaderSem[S, RawContext] = HeaderSem(rc.empty, (c, _) => validNec(c))
-
-        override def combine(
-          a: HeaderSem[S, RawContext],
-          b: HeaderSem[S, RawContext]
-        ): HeaderSem[S, RawContext] =
-          HeaderSem(
-            a.initCtx |+| b.initCtx,
-            (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
-          )
-      }
 
     val semantics = new RawSemantics[S]()
 

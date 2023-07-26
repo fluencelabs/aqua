@@ -1,50 +1,11 @@
 aqua Main
 
-use DECLARE_CONST, decl_bar from "declare.aqua" as Declare
+export a
 
-export handleAb
+alias CL: string -> ()
 
-service SomeService("wed"):
-  getStr(s: string) -> string
+func a(cl: string -> ()) -> CL:
+  <- cl
 
-ability SomeAb:
-  someArrow(s: string) -> string, string
-  str: string
-
-ability SecondAb:
-  arrow(s: string) -> string
-  num: u32
-
-func funcStr(s: string) -> string, string:
-  strInFunc <- SomeService.getStr(Declare.DECLARE_CONST)
-  -- SomeService.getStr(s)
-  <- strInFunc, s
-
---
--- func diffFunc(s: string) -> string:
---   differentStr <- SomeService.different(s)
---   <- differentStr
---
--- func unit():
---   funcStr("")
-
--- func bbbbbbb()
---
--- func aaaaaa():
---   closure = (a: string) -> string:
---     <- SomeService.str()
-
-func handleSecAb {SomeAb, SecondAb}() -> string, string:
-  SomeAb.someArrow("eferfrfrf")
-  b, c <- SomeAb.someArrow("efre")
-  <- b, c
-
-func returnAb(s: string) -> SomeAb:
-  SomeAb = SomeAb(someArrow = funcStr, str = s)
-  <- SomeAb
-
-func handleAb(fff: string) -> string, string:
-  SomeAb = returnAb(fff)
-  SecondAb = SecondAb(arrow = funcStr, num = 12)
-  d, g <- handleSecAb{SomeAb, SecondAb}()
-  <- d, g
+func b(c: u32, d: u32) -> u32:
+  <- c + d
