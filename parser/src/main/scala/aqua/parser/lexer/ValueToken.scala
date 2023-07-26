@@ -3,17 +3,18 @@ package aqua.parser.lexer
 import aqua.parser.Expr
 import aqua.parser.head.FilenameExpr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.ValueToken.{initPeerId, literal}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.types.LiteralType
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
+
 import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{~>, Comonad, Functor}
 import cats.data.{NonEmptyList, NonEmptyMap}
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
+import cats.syntax.foldable.*
 
 sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
@@ -156,8 +157,6 @@ case class InfixToken[F[_]: Comonad](
 
 object InfixToken {
 
-  import ValueToken._
-
   enum BoolOp(val symbol: String):
     case Or extends BoolOp("||")
     case And extends BoolOp("&&")
@@ -242,26 +241,8 @@ object InfixToken {
         vt
     }
 
-  def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
-    basic.between(`(`, `)`).backtrack
-
-  // One element of math expression
-  val atom: P[ValueToken[S]] = P.oneOf(
-    literal.backtrack ::
-      initPeerId.backtrack ::
-      P.defer(
-        CollectionToken.collection
-      ) ::
-      P.defer(NamedValueToken.dataValue).backtrack ::
-      P.defer(CallArrowToken.callArrow).backtrack ::
-      P.defer(abProperty).backtrack ::
-      P.defer(brackets(InfixToken.mathExpr)).backtrack ::
-      varProperty ::
-      Nil
-  )
-
   private val pow: P[ValueToken[Span.S]] =
-    infixParserRight(atom, Op.Pow :: Nil)
+    infixParserRight(ValueToken.atom, Op.Pow :: Nil)
 
   private val mult: P[ValueToken[Span.S]] =
     infixParserLeft(pow, Op.Mul :: Op.Div :: Op.Rem :: Nil)
@@ -380,12 +361,12 @@ object ValueToken {
 
   val varProperty: P[VarToken[Span.S]] =
     (Name.dotted ~ PropertyOp.ops.?).map { case (n, l) ⇒
-      VarToken(n, l.fold[List[PropertyOp[Span.S]]](Nil)(_.toList))
+      VarToken(n, l.foldMap(_.toList))
     }
 
   val abProperty: P[VarToken[Span.S]] =
     (Name.cl ~ PropertyOp.ops.?).map { case (n, l) ⇒
-      VarToken(n, l.fold[List[PropertyOp[Span.S]]](Nil)(_.toList))
+      VarToken(n, l.foldMap(_.toList))
     }
 
   val bool: P[LiteralToken[Span.S]] =
@@ -421,6 +402,22 @@ object ValueToken {
 
   val literal: P[LiteralToken[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
+
+  private def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
+    basic.between(`(`, `)`).backtrack
+
+  // Basic element of math expression
+  val atom: P[ValueToken[S]] = P.oneOf(
+    literal.backtrack ::
+      initPeerId.backtrack ::
+      P.defer(CollectionToken.collection).backtrack ::
+      P.defer(NamedValueToken.dataValue).backtrack ::
+      P.defer(CallArrowToken.callArrow).backtrack ::
+      P.defer(abProperty).backtrack ::
+      P.defer(brackets(InfixToken.mathExpr)).backtrack ::
+      varProperty ::
+      Nil
+  )
 
   // One of entry points for parsing the whole math expression
   val `value`: P[ValueToken[Span.S]] =
