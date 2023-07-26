@@ -16,7 +16,7 @@ trait Picker[A] {
   def pickHeader(ctx: A): A
   def module(ctx: A): Option[String]
   def exports(ctx: A): Option[Map[String, Option[String]]]
-  def funcReturnAbilityOrArrow(name: String, ctx: A): Boolean
+  def funcReturnAbilityOrArrow(ctx: A, name: String): Boolean
   def declares(ctx: A): Set[String]
   def setAbility(ctx: A, name: String, ctxAb: A): A
   def setModule(ctx: A, name: Option[String], declares: Set[String]): A
@@ -37,7 +37,7 @@ final class PickerOps[A: Picker](p: A) {
   def pickHeader: A = Picker[A].pickHeader(p)
   def module: Option[String] = Picker[A].module(p)
   def exports: Option[Map[String, Option[String]]] = Picker[A].exports(p)
-  def funcReturnAbilityOrArrow(name: String): Boolean = Picker[A].funcReturnAbilityOrArrow(name, p)
+  def funcReturnAbilityOrArrow(name: String): Boolean = Picker[A].funcReturnAbilityOrArrow(p, name)
   def declares: Set[String] = Picker[A].declares(p)
   def setAbility(name: String, ctx: A): A = Picker[A].setAbility(p, name, ctx)
   def setInit(ctx: Option[A]): A = Picker[A].setInit(p, ctx)
@@ -55,7 +55,7 @@ final class PickerOps[A: Picker](p: A) {
 
 object Picker {
 
-  def typeContainsAbilityOrArrow(arrowType: ArrowType): Boolean = {
+  def returnsAbilityOrArrow(arrowType: ArrowType): Boolean = {
     arrowType.codomain.toList.exists {
       case _: AbilityType => true
       case _: ArrowType => true
@@ -72,8 +72,8 @@ object Picker {
 
     override def blank: RawContext = RawContext.blank
     override def exports(ctx: RawContext): Option[Map[String, Option[String]]] = ctx.exports
-    override def funcReturnAbilityOrArrow(name: String, ctx: RawContext): Boolean =
-      ctx.funcs.get(name).map(_.arrow.`type`).exists(typeContainsAbilityOrArrow)
+    override def funcReturnAbilityOrArrow(ctx: RawContext, name: String): Boolean =
+      ctx.funcs.get(name).map(_.arrow.`type`).exists(returnsAbilityOrArrow)
     override def funcNames(ctx: RawContext): List[String] = ctx.funcs.keys.toList
 
     override def addPart(ctx: RawContext, part: (RawContext, RawPart)): RawContext =

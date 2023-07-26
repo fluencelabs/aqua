@@ -57,7 +57,7 @@ object LspContext {
     override def blank: LspContext[S] = LspContext[S](Picker[RawContext].blank, Map.empty)
     override def exports(ctx: LspContext[S]): Option[Map[String, Option[String]]] = ops(ctx).exports
 
-    override def funcReturnAbilityOrArrow(name: String, ctx: LspContext[S]): Boolean =
+    override def funcReturnAbilityOrArrow(ctx: LspContext[S], name: String): Boolean =
       ops(ctx).funcReturnAbilityOrArrow(name)
     override def funcNames(ctx: LspContext[S]): List[String] = ops(ctx).funcNames
 
@@ -126,7 +126,7 @@ object LspContext {
 
     override def pickDeclared(
       ctx: LspContext[S]
-    )(implicit semi: Semigroup[LspContext[S]]): LspContext[S] =
+    )(using Semigroup[LspContext[S]]): LspContext[S] =
       ctx.copy(raw = ops(ctx).pickDeclared)
   }
 }

@@ -8,18 +8,17 @@ import aqua.raw.ops.RawTag
 import aqua.raw.value.VarRaw
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
 import aqua.types.{ArrowType, NilType, ProductType}
-import cats.data.{Chain, NonEmptyList}
+import cats.data.{Chain, NonEmptyList, Validated}
 import cats.free.Cofree
 import cats.{Eval, Id, Monoid}
+import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class HeaderSpec extends AnyFlatSpec with Matchers {
+class HeaderSpec extends AnyFlatSpec with Matchers with Inside {
 
   "header handler" should "generate an error on exported function that returns arrow or ability" in {
     implicit val rc: Monoid[RawContext] = RawContext.implicits(RawContext.blank).rawContextMonoid
-
-    implicit val headerSemMonoid: Monoid[HeaderSem[Id, RawContext]] = HeaderSem.headerSemMonoid
 
     val handler = new HeaderHandler[Id, RawContext]()
 
@@ -42,9 +41,10 @@ class HeaderSpec extends AnyFlatSpec with Matchers {
     )
 
     val result = handler.sem(Map.empty, ast).andThen(_.finCtx(initCtx))
-    result.isInvalid shouldBe true
-
-    val error = result.toEither.left.get.head
-    error shouldBe a [HeaderError[Id]]
+    
+    inside(result) {
+      case Validated.Invalid(errors) =>
+        errors.head shouldBe a [HeaderError[Id]]   
+    }
   }
 }

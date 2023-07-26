@@ -18,19 +18,18 @@ case class HeaderSem[S[_], C](
 
 object HeaderSem {
 
-  implicit def headerSemMonoid[S[_]: Comonad](implicit
+  given [S[_]: Comonad](using
     rc: Monoid[RawContext]
-  ): Monoid[HeaderSem[S, RawContext]] =
-    new Monoid[HeaderSem[S, RawContext]] {
-      override def empty: HeaderSem[S, RawContext] = HeaderSem(rc.empty, (c, _) => validNec(c))
+  ): Monoid[HeaderSem[S, RawContext]] with {
+    override def empty: HeaderSem[S, RawContext] = HeaderSem(rc.empty, (c, _) => validNec(c))
 
-      override def combine(
-        a: HeaderSem[S, RawContext],
-        b: HeaderSem[S, RawContext]
-      ): HeaderSem[S, RawContext] =
-        HeaderSem(
-          a.initCtx |+| b.initCtx,
-          (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
-        )
-    }
+    override def combine(
+      a: HeaderSem[S, RawContext],
+      b: HeaderSem[S, RawContext]
+    ): HeaderSem[S, RawContext] =
+      HeaderSem(
+        a.initCtx |+| b.initCtx,
+        (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
+      )
+  }
 }
