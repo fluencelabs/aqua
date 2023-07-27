@@ -3,17 +3,19 @@ package aqua.parser.lexer
 import aqua.parser.Expr
 import aqua.parser.head.FilenameExpr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.ValueToken.{initPeerId, literal}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.types.LiteralType
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
+
 import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{~>, Comonad, Functor}
 import cats.data.{NonEmptyList, NonEmptyMap}
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
+import cats.syntax.foldable.*
+import cats.arrow.FunctionK
 
 sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
@@ -156,29 +158,60 @@ case class InfixToken[F[_]: Comonad](
 
 object InfixToken {
 
-  import ValueToken._
+  enum BoolOp(val symbol: String):
+    case Or extends BoolOp("||")
+    case And extends BoolOp("&&")
+
+  enum MathOp(val symbol: String):
+    case Pow extends MathOp("**")
+    case Mul extends MathOp("*")
+    case Div extends MathOp("/")
+    case Rem extends MathOp("%")
+    case Add extends MathOp("+")
+    case Sub extends MathOp("-")
+
+  enum CmpOp(val symbol: String):
+    case Gt extends CmpOp(">")
+    case Gte extends CmpOp(">=")
+    case Lt extends CmpOp("<")
+    case Lte extends CmpOp("<=")
 
   enum Op(val symbol: String):
-    case Pow extends Op("**")
-    case Mul extends Op("*")
-    case Div extends Op("/")
-    case Rem extends Op("%")
-    case Add extends Op("+")
-    case Sub extends Op("-")
-    case Gt extends Op(">")
-    case Gte extends Op(">=")
-    case Lt extends Op("<")
-    case Lte extends Op("<=")
+    /**
+     * Scala3 does not support nested enums with fields
+     * so this type acrobatics is used to enable exhaustive matching check
+     */
+    case Math(mathOp: MathOp) extends Op(mathOp.symbol)
+    case Cmp(cmpOp: CmpOp) extends Op(cmpOp.symbol)
+    case Bool(boolOp: BoolOp) extends Op(boolOp.symbol)
 
     def p: P[Unit] = P.string(symbol)
 
   object Op {
-    val math: List[Op] = List(Pow, Mul, Div, Rem, Add, Sub)
-    val compare: List[Op] = List(Gt, Gte, Lt, Lte)
+    val Pow = Math(MathOp.Pow)
+    val Mul = Math(MathOp.Mul)
+    val Div = Math(MathOp.Div)
+    val Rem = Math(MathOp.Rem)
+    val Add = Math(MathOp.Add)
+    val Sub = Math(MathOp.Sub)
+
+    val math = MathOp.values.map(Math(_)).toList
+
+    val Gt = Cmp(CmpOp.Gt)
+    val Gte = Cmp(CmpOp.Gte)
+    val Lt = Cmp(CmpOp.Lt)
+    val Lte = Cmp(CmpOp.Lte)
+
+    val cmp = CmpOp.values.map(Cmp(_)).toList
+
+    val And = Bool(BoolOp.And)
+    val Or = Bool(BoolOp.Or)
+
+    val bool = BoolOp.values.map(Bool(_)).toList
   }
 
   private def opsParser(ops: List[Op]): P[(Span, Op)] =
-    P.oneOf(ops.map(op => op.p.lift.map(s => s.as(op))))
+    P.oneOf(ops.map(op => op.p.lift.map(_.as(op))))
 
   // Parse left-associative operations `basic (OP basic)*`.
   // We use this form to avoid left recursion.
@@ -209,26 +242,8 @@ object InfixToken {
         vt
     }
 
-  def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
-    basic.between(`(`, `)`).backtrack
-
-  // One element of math expression
-  val atom: P[ValueToken[S]] = P.oneOf(
-    literal.backtrack ::
-      initPeerId.backtrack ::
-      P.defer(
-        CollectionToken.collection
-      ) ::
-      P.defer(NamedValueToken.dataValue).backtrack ::
-      P.defer(CallArrowToken.callArrow).backtrack ::
-      P.defer(abProperty).backtrack ::
-      P.defer(brackets(InfixToken.mathExpr)).backtrack ::
-      varProperty ::
-      Nil
-  )
-
   private val pow: P[ValueToken[Span.S]] =
-    infixParserRight(atom, Op.Pow :: Nil)
+    infixParserRight(P.defer(ValueToken.atom), Op.Pow :: Nil)
 
   private val mult: P[ValueToken[Span.S]] =
     infixParserLeft(pow, Op.Mul :: Op.Div :: Op.Rem :: Nil)
@@ -244,6 +259,12 @@ object InfixToken {
       // and `Op.Lt` is prefix of `Op.Lte`
       Op.Gte :: Op.Lte :: Op.Gt :: Op.Lt :: Nil
     )
+
+  private val and: P[ValueToken[Span.S]] =
+    infixParserLeft(compare, Op.And :: Nil)
+
+  private val or: P[ValueToken[Span.S]] =
+    infixParserLeft(and, Op.Or :: Nil)
 
   /**
    * The math expression parser.
@@ -291,9 +312,17 @@ object InfixToken {
    *
    * The grammar below expresses the operator precedence and associativity we expect from math expressions:
    *
-   * -- Comparison is the entry point because it has the lowest priority.
+   * -- Logical OR is the entry point because it has the lowest priority.
    * mathExpr
-   *   -> cmpExpr
+   *   -> orExpr
+   *
+   * -- Logical OR is left associative.
+   * orExpr
+   *   -> andExpr OR_OP andExpr
+   *
+   * -- Logical AND is left associative.
+   * andExpr
+   *   -> cmpExpr AND_OP cmpExpr
    *
    * -- Comparison isn't an associative operation so it's not a recursive definition.
    * cmpExpr
@@ -326,19 +355,51 @@ object InfixToken {
    *   | ...
    *   | ( mathExpr )
    */
-  val mathExpr: P[ValueToken[Span.S]] = compare
+  val value: P[ValueToken[Span.S]] = or
+}
+
+case class PrefixToken[F[_]: Comonad](
+  operand: ValueToken[F],
+  prefix: F[PrefixToken.Op]
+) extends ValueToken[F] {
+
+  def op: PrefixToken.Op = prefix.extract
+  override def as[T](v: T): F[T] = prefix.as(v)
+
+  override def mapK[K[_]: Comonad](fk: FunctionK[F, K]): ValueToken[K] =
+    copy(operand.mapK(fk), fk(prefix))
+}
+
+object PrefixToken {
+
+  enum Op(val symbol: String) {
+    case Not extends Op("!")
+
+    def p: P[Unit] = P.string(symbol)
+  }
+
+  private def parseOps(ops: List[Op]): P[S[Op]] =
+    P.oneOf(ops.map(op => op.p.lift.map(_.as(op))))
+
+  private def parsePrefix(basic: P[ValueToken[S]], ops: List[Op]) =
+    (parseOps(ops).surroundedBy(`/s*`) ~ basic).map { case (op, vt) =>
+      PrefixToken(vt, op)
+    }
+
+  val value: P[ValueToken[Span.S]] =
+    parsePrefix(P.defer(ValueToken.atom), Op.Not :: Nil)
 }
 
 object ValueToken {
 
   val varProperty: P[VarToken[Span.S]] =
     (Name.dotted ~ PropertyOp.ops.?).map { case (n, l) ⇒
-      VarToken(n, l.fold[List[PropertyOp[Span.S]]](Nil)(_.toList))
+      VarToken(n, l.foldMap(_.toList))
     }
 
   val abProperty: P[VarToken[Span.S]] =
     (Name.cl ~ PropertyOp.ops.?).map { case (n, l) ⇒
-      VarToken(n, l.fold[List[PropertyOp[Span.S]]](Nil)(_.toList))
+      VarToken(n, l.foldMap(_.toList))
     }
 
   val bool: P[LiteralToken[Span.S]] =
@@ -375,8 +436,25 @@ object ValueToken {
   val literal: P[LiteralToken[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
+  private def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
+    basic.between(`(`, `)`).backtrack
+
+  // Basic element of math expression
+  val atom: P[ValueToken[S]] = P.oneOf(
+    literal.backtrack ::
+      initPeerId.backtrack ::
+      P.defer(CollectionToken.collection).backtrack ::
+      P.defer(NamedValueToken.dataValue).backtrack ::
+      P.defer(CallArrowToken.callArrow).backtrack ::
+      P.defer(abProperty).backtrack ::
+      P.defer(PrefixToken.value).backtrack ::
+      P.defer(brackets(InfixToken.value)).backtrack ::
+      varProperty ::
+      Nil
+  )
+
   // One of entry points for parsing the whole math expression
   val `value`: P[ValueToken[Span.S]] =
-    P.defer(InfixToken.mathExpr)
+    P.defer(InfixToken.value)
 
 }

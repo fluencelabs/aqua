@@ -32,7 +32,7 @@ class VarLambdaSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "var lambda in value" should "parse" in {
-    val opsP = (s: String) => InfixToken.atom.parseAll(s).value.mapK(spanToId)
+    val opsP = (s: String) => ValueToken.atom.parseAll(s).value.mapK(spanToId)
     opsP("some_val") should be(VarToken[Id](Name[Id]("some_val")))
     opsP("SomeClass.SOME_CONST") should be(VarToken[Id](Name[Id]("SomeClass.SOME_CONST")))
   }

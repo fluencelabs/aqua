@@ -179,6 +179,56 @@ case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityTyp
     copy(fieldsAndArrows = fieldsAndArrows.map(_.renameVars(map)))
 }
 
+case class ApplyBinaryOpRaw(
+  op: ApplyBinaryOpRaw.Op,
+  left: ValueRaw,
+  right: ValueRaw
+) extends ValueRaw {
+
+  // Only boolean operations are supported for now
+  override def baseType: Type = ScalarType.bool
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(left = f(left), right = f(right)))
+
+  override def varNames: Set[String] = left.varNames ++ right.varNames
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(left = left.renameVars(map), right = right.renameVars(map))
+}
+
+object ApplyBinaryOpRaw {
+
+  enum Op {
+    case And
+    case Or
+  }
+}
+
+case class ApplyUnaryOpRaw(
+  op: ApplyUnaryOpRaw.Op,
+  value: ValueRaw
+) extends ValueRaw {
+
+  // Only boolean operations are supported for now
+  override def baseType: Type = ScalarType.bool
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(value = f(value)))
+
+  override def varNames: Set[String] = value.varNames
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(value = value.renameVars(map))
+}
+
+object ApplyUnaryOpRaw {
+
+  enum Op {
+    case Not
+  }
+}
+
 case class CallArrowRaw(
   // TODO: ability should hold a type, not name
   ability: Option[String],

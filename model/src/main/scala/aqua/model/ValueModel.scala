@@ -62,6 +62,19 @@ case class LiteralModel(value: String, `type`: Type) extends ValueModel {
 
 object LiteralModel {
 
+  /**
+   * Used to match bool literals in pattern matching
+   */
+  object Bool {
+
+    def unapply(lm: LiteralModel): Option[Boolean] =
+      lm match {
+        case LiteralModel("true", ScalarType.bool | LiteralType.bool) => true.some
+        case LiteralModel("false", ScalarType.bool | LiteralType.bool) => false.some
+        case _ => none
+      }
+  }
+
   // AquaVM will return empty string for
   // %last_error%.$.error_code if there is no %last_error%
   val emptyErrorCode = quote("")
@@ -71,6 +84,8 @@ object LiteralModel {
   def quote(str: String): LiteralModel = LiteralModel(s"\"$str\"", LiteralType.string)
 
   def number(n: Int): LiteralModel = LiteralModel(n.toString, LiteralType.forInt(n))
+
+  def bool(b: Boolean): LiteralModel = LiteralModel(b.toString.toLowerCase, LiteralType.bool)
 }
 
 sealed trait PropertyModel {

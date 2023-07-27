@@ -1,19 +1,29 @@
 package aqua.model.inline
 
-import aqua.model.{CallModel, CallServiceModel, LiteralModel, OpModel, SeqModel, ValueModel, VarModel}
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  LiteralModel,
+  OpModel,
+  SeqModel,
+  ValueModel,
+  VarModel
+}
 import aqua.model.inline.raw.RawInliner
-import cats.data.Chain
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{LiteralRaw, MakeStructRaw}
-import cats.data.{NonEmptyMap, State}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
 import aqua.types.ScalarType
+
+import cats.data.Chain
+import cats.data.{NonEmptyMap, State}
 import cats.syntax.traverse.*
 import cats.syntax.monoid.*
 import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.apply.*
+import cats.syntax.foldable.*
 
 object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
 
@@ -45,15 +55,14 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
       name <- Mangler[S].findAndForbidName(raw.structType.name + "_obj")
       foldedFields <- raw.fields.nonEmptyTraverse(unfold(_))
       varModel = VarModel(name, raw.baseType)
-      valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _).desugar
-      fields = foldedFields.map(_._1)
+      valsInline = foldedFields.foldMap { case (_, inline) => inline }.desugar
+      fields = foldedFields.map { case (vm, _) => vm }
       objCreation <- createObj(fields, varModel)
     } yield {
       (
         varModel,
         Inline(
-          valsInline.flattenValues,
-          Chain.one(SeqModel.wrap((valsInline.predo :+ objCreation).toList: _*))
+          Chain.one(SeqModel.wrap(valsInline.predo :+ objCreation))
         )
       )
     }
