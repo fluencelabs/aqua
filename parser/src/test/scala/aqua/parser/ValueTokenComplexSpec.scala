@@ -2,9 +2,11 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.func.IfExpr
-import aqua.parser.lexer.InfixToken.Op
+import aqua.parser.lexer.InfixToken.Op as InfixOp
+import aqua.parser.lexer.PrefixToken.Op as PrefixOp
 import aqua.parser.lexer.*
 import aqua.parser.lexer.InfixToken.Op.*
+import aqua.parser.lexer.PrefixToken.Op.*
 import aqua.parser.lift.Span
 import aqua.types.LiteralType
 
@@ -15,7 +17,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.Inside
 
-class InfixTokenSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec {
+class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec {
 
   def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
 
@@ -36,7 +38,10 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec
 
   private def literalBool(b: Boolean): ValueToken[Id] = toBool(b)
 
-  private def infixToken(left: ValueToken[Id], right: ValueToken[Id], op: Op) =
+  private def prefixToken(value: ValueToken[Id], op: PrefixOp) =
+    PrefixToken[Id](value, op)
+
+  private def infixToken(left: ValueToken[Id], right: ValueToken[Id], op: InfixOp) =
     InfixToken[Id](left, right, op)
 
   private def mul(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
@@ -267,9 +272,14 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec
   }
 
   "complex cmp math expression " should "be parsed" in {
-    val test = (op: Op) => {
-      val vt =
-        ValueToken.`value`.parseAll(s"(1 + 2) ** 3 ${op.symbol} 4 - 5 * 6").right.get.mapK(spanToId)
+    val test = (op: InfixOp) => {
+      val vt = ValueToken.`value`
+        .parseAll(
+          s"(1 + 2) ** 3 ${op.symbol} 4 - 5 * 6"
+        )
+        .right
+        .get
+        .mapK(spanToId)
       val left = pow(add(literal(1), literal(2)), literal(3))
       val right = sub(literal(4), mul(literal(5), literal(6)))
       val exp = infixToken(left, right, op)
@@ -316,6 +326,20 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec
         Or
       )
     }
+
+    val vtOrNotAnd = ValueToken.`value`.parseAll("false || !true && false").map(_.mapK(spanToId))
+
+    inside(vtOrNotAnd) { case Right(vt) =>
+      vt shouldBe infixToken(
+        literalBool(false),
+        infixToken(
+          prefixToken(literalBool(true), Not),
+          literalBool(false),
+          And
+        ),
+        Or
+      )
+    }
   }
 
   "logical expression with brackets" should "be parsed" in {
@@ -334,6 +358,29 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec
     inside(vtOrAnd) { case Right(vt) =>
       vt shouldBe infixToken(
         infixToken(literalBool(false), literalBool(true), Or),
+        literalBool(false),
+        And
+      )
+    }
+
+    val vtNotAndOr = ValueToken.`value`.parseAll("!false && (true || false)").map(_.mapK(spanToId))
+
+    inside(vtNotAndOr) { case Right(vt) =>
+      vt shouldBe infixToken(
+        prefixToken(literalBool(false), Not),
+        infixToken(literalBool(true), literalBool(false), Or),
+        And
+      )
+    }
+
+    val vtNotOrAnd = ValueToken.`value`.parseAll("!(false || true) && false").map(_.mapK(spanToId))
+
+    inside(vtNotOrAnd) { case Right(vt) =>
+      vt shouldBe infixToken(
+        prefixToken(
+          infixToken(literalBool(false), literalBool(true), Or),
+          Not
+        ),
         literalBool(false),
         And
       )
@@ -367,6 +414,27 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec
           infixToken(literal(1), literal(2), Sub),
           literal(3),
           Gt
+        ),
+        infixToken(
+          infixToken(literal(3), literal(2), Pow),
+          literal(1),
+          Lte
+        ),
+        And
+      )
+    }
+
+    val vt3 = ValueToken.`value`.parseAll("!(1 - 2 > 3) && 3 ** 2 <= 1").map(_.mapK(spanToId))
+
+    inside(vt3) { case Right(vt) =>
+      vt shouldBe infixToken(
+        prefixToken(
+          infixToken(
+            infixToken(literal(1), literal(2), Sub),
+            literal(3),
+            Gt
+          ),
+          Not
         ),
         infixToken(
           infixToken(literal(3), literal(2), Pow),
@@ -418,5 +486,27 @@ class InfixTokenSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec
         And
       )
     }
+
+    val vt3 = ValueToken.`value`.parseAll("!baz(a) && (!(b > 4) || !c)").map(_.mapK(spanToId))
+
+    inside(vt3) { case Right(vt) =>
+      vt shouldBe infixToken(
+        prefixToken(func("baz", List(variable("a"))), Not),
+        infixToken(
+          prefixToken(
+            infixToken(
+              variable("b"),
+              literal(4),
+              Gt
+            ),
+            Not
+          ),
+          prefixToken(variable("c"), Not),
+          Or
+        ),
+        And
+      )
+    }
   }
+
 }
