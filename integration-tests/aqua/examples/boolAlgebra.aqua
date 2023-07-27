@@ -19,18 +19,22 @@ func main(peer: string) -> []bool:
     on peer:
         a = 1 + 2
         b = 2 - 1
-        res <<- true || false && true
-        res <<- (true || false) && true
-        res <<- foo(3) && b > 0 || a > 4
-        res <<- bar(a) > 2 || true
-        res <<- foo(4) && bar(2) < 2
+        res <<- true || false && true -- true
+        res <<- (true || false) && true -- true
+        res <<- foo(3) && b > 0 || a > 4 -- true
+        res <<- bar(a) > 2 || true -- true
+        res <<- foo(4) && bar(2) < 2 -- false
+        res <<- !foo(10) && !!true -- true
+        res <<- !(bar(2) < 1) || !!(a < 2) -- true
 
     -- Effector is only registered on init_peer
-    res <<- true || Effector.effect("impossible")
-    res <<- false && Effector.effect("impossible")
-    res <<- foo(0) || Effector.effect("impossible")
-    res <<- foo(10) && Effector.effect("impossible")
-    res <<- Effector.effect("true") || true
-    res <<- Effector.effect("true") && false
+    res <<- true || Effector.effect("impossible") -- true
+    res <<- !!false && Effector.effect("impossible") -- false
+    res <<- foo(0) || Effector.effect("impossible") -- true
+    res <<- foo(10) && Effector.effect("impossible") -- false
+    res <<- Effector.effect("true") || true -- true
+    res <<- Effector.effect("true") && false -- false
+    res <<- !foo(10) || Effector.effect("impossible") -- true
+    res <<- !(1 < 2) && !Effector.effect("impossible") -- false
 
     <- res

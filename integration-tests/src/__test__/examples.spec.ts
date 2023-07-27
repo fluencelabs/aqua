@@ -386,7 +386,23 @@ describe('Testing examples', () => {
 
     it('boolAlgebra.aqua', async () => {
         let boolAlgebraResult = await boolAlgebraCall(relayPeerId1);
-        expect(boolAlgebraResult).toEqual([true, true, true, true, false, true, false, true, false, true, false]);
+        expect(boolAlgebraResult).toEqual([
+            true,
+            true,
+            true,
+            true,
+            false,
+            true,
+            true,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+            true,
+            false,
+        ]);
     });
 
     it('join.aqua local', async () => {
