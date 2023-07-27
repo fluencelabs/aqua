@@ -17,7 +17,7 @@ import aqua.semantics.rules.locations.DummyLocationsInterpreter
 import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw}
 import aqua.raw.RawContext
 import aqua.types.{LiteralType, ScalarType, TopType, Type}
-import aqua.parser.lexer.{InfixToken, LiteralToken, Name, ValueToken, VarToken}
+import aqua.parser.lexer.{InfixToken, LiteralToken, Name, PrefixToken, ValueToken, VarToken}
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -27,6 +27,7 @@ import cats.data.State
 import cats.syntax.functor.*
 import cats.syntax.comonad.*
 import monocle.syntax.all.*
+import aqua.raw.value.ApplyUnaryOpRaw
 
 class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
 
@@ -248,7 +249,41 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
     }
   }
 
-  it should "check type of logical operands" in {
+  it should "handle ! on bool values" in {
+    val types = List(LiteralType.bool, ScalarType.bool)
+
+    types.foreach { t =>
+      PrefixToken.Op.values.foreach { op =>
+        val value = t match {
+          case lt: LiteralType =>
+            literal("true", lt)
+          case _ =>
+            variable("val")
+        }
+
+        val alg = algebra()
+
+        val state = genState(
+          vars = List("val" -> t).filter(_ => t != LiteralType.bool).toMap
+        )
+
+        val token = PrefixToken[Id](value, op)
+
+        val (st, res) = alg
+          .valueToRaw(token)
+          .run(state)
+          .value
+
+        inside(res) { case Some(ApplyUnaryOpRaw(uop, _)) =>
+          uop shouldBe (op match {
+            case PrefixToken.Op.Not => ApplyUnaryOpRaw.Op.Not
+          })
+        }
+      }
+    }
+  }
+
+  it should "check type of logical operands (binary)" in {
     val types = List(LiteralType.bool, ScalarType.bool).flatMap(t =>
       List(t -> ScalarType.i8, ScalarType.i8 -> t)
     )
@@ -278,6 +313,39 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
         )
 
         val token = InfixToken[Id](left, right, InfixToken.Op.Bool(op))
+
+        val (st, res) = alg
+          .valueToRaw(token)
+          .run(state)
+          .value
+
+        res shouldBe None
+        st.errors.exists(_.isInstanceOf[RulesViolated[Id]]) shouldBe true
+      }
+    }
+  }
+
+  it should "check type of logical operand (unary)" in {
+    val types = ScalarType.integer.toList :+ LiteralType.unsigned
+
+    types.foreach { t =>
+      PrefixToken.Op.values.foreach { op =>
+        val value = t match {
+          case lt: LiteralType =>
+            literal("42", lt)
+          case _ =>
+            variable("val")
+        }
+
+        val alg = algebra()
+
+        val state = genState(
+          vars = Map(
+            "value" -> t
+          ).filter(_ => t != LiteralType.unsigned)
+        )
+
+        val token = PrefixToken[Id](value, op)
 
         val (st, res) = alg
           .valueToRaw(token)
