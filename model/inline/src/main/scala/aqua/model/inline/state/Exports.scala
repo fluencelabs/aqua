@@ -3,6 +3,7 @@ package aqua.model.inline.state
 import aqua.model.ValueModel
 import aqua.raw.ops.Call
 import aqua.raw.value.ValueRaw
+import aqua.types.AbilityType
 import cats.data.State
 
 /**
@@ -23,11 +24,35 @@ trait Exports[S] extends Scoped[S] {
   def resolved(exportName: String, value: ValueModel): State[S, Unit]
 
   /**
+   * [[value]] is accessible as [[abilityExportName]].[[fieldName]]
+   *
+   * @param abilityExportName
+   * Ability Name
+   * @param fieldName
+   * Field Name
+   * @param value
+   * Value
+   */
+  def resolveAbilityField(abilityExportName: String, fieldName: String, value: ValueModel): State[S, Unit]
+
+  /**
    * Resolve the whole map of exports
    * @param exports
    *   name -> value
    */
   def resolved(exports: Map[String, ValueModel]): State[S, Unit]
+
+  /**
+   * Get all export keys
+   */
+  def getKeys: State[S, Set[String]]
+
+  /**
+   * Get ability field from export
+   * @param name variable ability name
+   * @param field ability field
+   */
+  def getAbilityField(name: String, field: String): State[S, Option[ValueModel]]
 
   /**
    * Get all the values available in the scope
@@ -44,6 +69,15 @@ trait Exports[S] extends Scoped[S] {
 
     override def resolved(exports: Map[String, ValueModel]): State[R, Unit] =
       self.resolved(exports).transformS(f, g)
+
+    override def resolveAbilityField(abilityExportName: String, fieldName: String, value: ValueModel): State[R, Unit] =
+      self.resolveAbilityField(abilityExportName, fieldName, value).transformS(f, g)
+
+    override def getKeys: State[R, Set[String]] =
+      self.getKeys.transformS(f, g)
+
+    override def getAbilityField(name: String, field: String): State[R, Option[ValueModel]] =
+      self.getAbilityField(name, field).transformS(f, g)
 
     override val exports: State[R, Map[String, ValueModel]] =
       self.exports.transformS(f, g)
@@ -70,6 +104,13 @@ object Exports {
 
     override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
       State.modify(_ ++ exports)
+
+    override def resolveAbilityField(abilityExportName: String, fieldName: String, value: ValueModel): State[Map[String, ValueModel], Unit] =
+      State.modify(_ + (AbilityType.fullName(abilityExportName, fieldName) -> value))
+
+    override def getKeys: State[Map[String, ValueModel], Set[String]] = State.get.map(_.keySet)
+    override def getAbilityField(name: String, field: String): State[Map[String, ValueModel], Option[ValueModel]] =
+      State.get.map(_.get(AbilityType.fullName(name, field)))
 
     override val exports: State[Map[String, ValueModel], Map[String, ValueModel]] =
       State.get

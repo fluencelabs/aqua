@@ -116,7 +116,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           }
         for {
           callArrow <- CallArrowRawInliner(
-            CallArrowRaw(None, s"${varModel.name}.$arrowName", arguments, arrowType, None)
+            CallArrowRaw(None, s"${AbilityType.fullName(varModel.name, arrowName)}", arguments, arrowType, None)
           )
           result <- callArrow match {
             case (vm: VarModel, inl) =>
@@ -132,18 +132,21 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
       case IntoFieldRaw(fieldName, t) =>
         for {
-          exports <- Exports[S].exports
-          fullName = s"${varModel.name}.$fieldName"
-          result <- exports.get(fullName) match {
+          exports <- Exports[S].getAbilityField(varModel.name, fieldName)
+          abilityField <- Exports[S].getAbilityField(varModel.name, fieldName)
+          result <- abilityField match {
             case Some(vm: VarModel) =>
               State.pure((vm, Inline.empty))
             case Some(lm: LiteralModel) =>
               flatLiteralWithProperties(lm, Inline.empty, Chain.empty)
             case _ =>
-              logger.error(
-                s"Inlining, cannot find field $fullName in ability $varModel. Available: ${exports.keySet}"
-              )
-              flatLiteralWithProperties(LiteralModel.quote(""), Inline.empty, Chain.empty)
+              Exports[S].getKeys. flatMap { keys =>
+                logger.error(
+                  s"Inlining, cannot find field ${AbilityType.fullName(varModel.name, fieldName)} in ability $varModel. Available: $keys"
+                )
+                flatLiteralWithProperties(LiteralModel.quote(""), Inline.empty, Chain.empty)
+              }
+
           }
         } yield {
           result
