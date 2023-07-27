@@ -1,11 +1,40 @@
-aqua Main
+aqua Abc
 
-export a
+export main
 
-alias CL: string -> ()
+data Struct:
+    int: i8
 
-func a(cl: string -> ()) -> CL:
-  <- cl
+ability Simple:
+    st: Struct
+    arrow(x: i8) -> bool
 
-func b(c: u32, d: u32) -> u32:
-  <- c + d
+ability Complex:
+    simple: Simple
+    field: string
+
+service A("erferf"):
+    call()
+
+func foo{Complex}() -> bool, bool:
+    closure = () -> bool:
+        <- Complex.simple.st.int >= 0
+    res <- closure()
+    <- Complex.simple.arrow(
+        Complex.simple.st.int
+    ), res
+
+func main() -> bool, bool:
+    closure = (x: i8) -> bool:
+        <- x > 0
+
+    MyComplex = Complex(
+        simple = Simple(
+            st = Struct(int = 0),
+            arrow = closure
+        ),
+        field = "complex"
+    )
+
+    res1, res2 <- foo{MyComplex}()
+    <- res1, res2

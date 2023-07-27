@@ -354,6 +354,11 @@ describe('Testing examples', () => {
         expect(result).toStrictEqual(['declare_const123', 'efre123', 'declare_const123', 12]);
     });
 
+    it('ability.aqua complex', async () => {
+            let result = await complexAbilityCall();
+            expect(result).toStrictEqual([false, true]);
+        });
+
     it('functors.aqua LNG-119 bug', async () => {
         let result = await bugLng119Call();
         expect(result).toEqual([1]);

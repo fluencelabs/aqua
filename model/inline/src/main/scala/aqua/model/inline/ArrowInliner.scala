@@ -91,7 +91,8 @@ object ArrowInliner extends Logging {
   // Apply a callable function, get its fully resolved body & optional value, if any
   private def inline[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
-    call: CallModel
+    call: CallModel,
+    oldArrows: Map[String, FuncArrow]
   ): State[S, InlineResult] =
     (Exports[S].exports, getOutsideStreamNames).flatMapN {
       case (oldExports, outsideDeclaredStreams) =>
@@ -99,7 +100,7 @@ object ArrowInliner extends Logging {
         Exports[S].scope(
           for {
             // Process renamings, prepare environment
-            tr <- prelude[S](fn, call, oldExports)
+            tr <- prelude[S](fn, call, oldExports, oldArrows)
             (tree, results) = tr
 
             // Register captured values as available exports
@@ -263,7 +264,7 @@ object ArrowInliner extends Logging {
     for {
       newName <- Mangler[S].findNewName(name)
       newFieldsName = t.fields.mapBoth { case (n, t) =>
-        s"$name.$n" -> s"$newName.$n"
+        AbilityType.fullName(name, n) -> AbilityType.fullName(newName, n)
       }
       allNewNames = newFieldsName.add((name, newName)).toSortedMap
     } yield {
@@ -297,9 +298,9 @@ object ArrowInliner extends Logging {
     arrowsAcc: Map[String, FuncArrow] = Map.empty
   ): (Map[String, ValueModel], Map[String, FuncArrow]) = {
     abilityType.fields.toSortedMap.toList.map { case (fName, fValue) =>
-      val currentOldName = s"$topOldName.$fName"
+      val currentOldName = AbilityType.fullName(topOldName, fName)
       // for all nested fields, arrows and abilities only left side must be renamed
-      val currentNewName = topNewName.map(_ + s".$fName")
+      val currentNewName = topNewName.map(AbilityType.fullName(_, fName))
       fValue match {
         case nestedAbilityType @ AbilityType(_, _) =>
           getVarsAndArrowsFromAbilities(
@@ -352,7 +353,8 @@ object ArrowInliner extends Logging {
   private def prelude[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel,
-    oldExports: Map[String, ValueModel]
+    oldExports: Map[String, ValueModel],
+    oldArrows: Map[String, FuncArrow]
   ): State[S, (RawTag.Tree, List[ValueRaw])] =
     for {
       // Collect all arguments: what names are used inside the function, what values are received
@@ -366,7 +368,7 @@ object ArrowInliner extends Logging {
       _ <- Arrows[S].purge
 
       abilityResolvingResult <- abArgs.toList.traverse { case (str, (vm, sct)) =>
-        renameAndResolveAbilities(str, vm, sct, oldExports, previousArrowsState)
+        renameAndResolveAbilities(str, vm, sct, oldExports, oldArrows)
       }
 
       absRenames = abilityResolvingResult.map(_.namesToRename).fold(Map.empty)(_ ++ _)
@@ -376,8 +378,14 @@ object ArrowInliner extends Logging {
       arrowArgs = args.arrowArgs(previousArrowsState)
       // Update states and rename tags
       renamedArrows <- updateArrowsAndRenameArrowArgs(arrowArgs ++ absArrows, fn, absRenames)
+
       argsToDataShouldRename <- updateExportsAndRenameDataArgs(args.dataArgs ++ absVars, absRenames)
-      allShouldRename = argsToDataShouldRename ++ renamedArrows ++ absRenames
+
+      // rename variables that store arrows
+      _ <- Exports[S].renameVariables(renamedArrows)
+
+      allShouldRename = argsToDataShouldRename ++ (renamedArrows -- absArrows.keySet) ++ absRenames
+
       // Rename all renamed arguments in the body
       treeRenamed = fn.body.rename(allShouldRename)
       treeStreamsRenamed = renameStreams(treeRenamed, args.streamArgs)
@@ -431,6 +439,7 @@ object ArrowInliner extends Logging {
   ): State[S, (OpModel.Tree, List[ValueModel])] =
     for {
       passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
+      arrowsState <- Arrows[S].arrows
       arrowsFromAbilities <- call.abilityArgs
         .traverse(getAllArrowsFromAbility)
         .map(_.fold(Map.empty)(_ ++ _))
@@ -438,7 +447,7 @@ object ArrowInliner extends Logging {
       inlineResult <- Arrows[S].scope(
         for {
           _ <- Arrows[S].resolved(passArrows ++ arrowsFromAbilities)
-          inlineResult <- ArrowInliner.inline(arrow, call)
+          inlineResult <- ArrowInliner.inline(arrow, call, arrowsState)
         } yield inlineResult
       )
 

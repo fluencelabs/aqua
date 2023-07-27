@@ -1,8 +1,6 @@
 package aqua.model.inline.state
 
-import aqua.model.ValueModel
-import aqua.raw.ops.Call
-import aqua.raw.value.ValueRaw
+import aqua.model.{ValueModel, VarModel}
 import aqua.types.AbilityType
 import cats.data.State
 
@@ -33,7 +31,21 @@ trait Exports[S] extends Scoped[S] {
    * @param value
    * Value
    */
-  def resolveAbilityField(abilityExportName: String, fieldName: String, value: ValueModel): State[S, Unit]
+  def resolveAbilityField(
+    abilityExportName: String,
+    fieldName: String,
+    value: ValueModel
+  ): State[S, Unit]
+
+  /**
+   * Rename ability prefix to new one
+   */
+  def renameAbilityPrefix(prefix: String, newPrefix: String): State[S, Unit]
+
+  /**
+   * Rename names in variables
+   */
+  def renameVariables(renames: Map[String, String]): State[S, Unit]
 
   /**
    * Resolve the whole map of exports
@@ -70,8 +82,18 @@ trait Exports[S] extends Scoped[S] {
     override def resolved(exports: Map[String, ValueModel]): State[R, Unit] =
       self.resolved(exports).transformS(f, g)
 
-    override def resolveAbilityField(abilityExportName: String, fieldName: String, value: ValueModel): State[R, Unit] =
+    override def resolveAbilityField(
+      abilityExportName: String,
+      fieldName: String,
+      value: ValueModel
+    ): State[R, Unit] =
       self.resolveAbilityField(abilityExportName, fieldName, value).transformS(f, g)
+
+    override def renameAbilityPrefix(prefix: String, newPrefix: String): State[R, Unit] =
+      self.renameAbilityPrefix(prefix, newPrefix).transformS(f, g)
+
+    override def renameVariables(renames: Map[String, String]): State[R, Unit] =
+      self.renameVariables(renames).transformS(f, g)
 
     override def getKeys: State[R, Set[String]] =
       self.getKeys.transformS(f, g)
@@ -95,8 +117,6 @@ object Exports {
 
   object Simple extends Exports[Map[String, ValueModel]] {
 
-    // Exports[Map[NonEmptyList[String], ValueModel]]
-
     override def resolved(
       exportName: String,
       value: ValueModel
@@ -105,11 +125,42 @@ object Exports {
     override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
       State.modify(_ ++ exports)
 
-    override def resolveAbilityField(abilityExportName: String, fieldName: String, value: ValueModel): State[Map[String, ValueModel], Unit] =
+    override def resolveAbilityField(
+      abilityExportName: String,
+      fieldName: String,
+      value: ValueModel
+    ): State[Map[String, ValueModel], Unit] =
       State.modify(_ + (AbilityType.fullName(abilityExportName, fieldName) -> value))
 
+    override def renameAbilityPrefix(
+      prefix: String,
+      newPrefix: String
+    ): State[Map[String, ValueModel], Unit] =
+      State.modify { state =>
+        state.map {
+          case (k, v) if k.startsWith(prefix) =>
+            k.replaceFirst(prefix, newPrefix) -> v
+          case (k, v) => k -> v
+        }
+      }
+
+    override def renameVariables(
+      renames: Map[String, String]
+    ): State[Map[String, ValueModel], Unit] =
+      State.modify {
+        _.map {
+          case (k, vm @ VarModel(name, _, _)) if renames.contains(name) =>
+            k -> vm.copy(name = renames.getOrElse(name, name))
+          case (k, v) => k -> v
+        }
+      }
+
     override def getKeys: State[Map[String, ValueModel], Set[String]] = State.get.map(_.keySet)
-    override def getAbilityField(name: String, field: String): State[Map[String, ValueModel], Option[ValueModel]] =
+
+    override def getAbilityField(
+      name: String,
+      field: String
+    ): State[Map[String, ValueModel], Option[ValueModel]] =
       State.get.map(_.get(AbilityType.fullName(name, field)))
 
     override val exports: State[Map[String, ValueModel], Map[String, ValueModel]] =

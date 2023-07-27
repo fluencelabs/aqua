@@ -1,62 +1,19 @@
 package aqua.model.inline.raw
 
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  FlattenModel,
-  ForModel,
-  FunctorModel,
-  IntoFieldModel,
-  IntoIndexModel,
-  LiteralModel,
-  MatchMismatchModel,
-  NextModel,
-  OpModel,
-  PropertyModel,
-  PushToStreamModel,
-  SeqModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
 import aqua.model.inline.Inline
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{
-  ApplyGateRaw,
-  ApplyPropertyRaw,
-  CallArrowRaw,
-  FunctorRaw,
-  IntoArrowRaw,
-  IntoCopyRaw,
-  IntoFieldRaw,
-  IntoIndexRaw,
-  LiteralRaw,
-  PropertyRaw,
-  ValueRaw,
-  VarRaw
-}
-import aqua.types.{
-  AbilityType,
-  ArrayType,
-  ArrowType,
-  BottomType,
-  CanonStreamType,
-  NilType,
-  ScalarType,
-  StreamType,
-  Type
-}
-
+import aqua.model.*
+import aqua.raw.value.*
+import aqua.types.*
 import cats.Eval
-import cats.syntax.bifunctor.*
 import cats.data.{Chain, IndexedStateT, State}
+import cats.instances.list.*
+import cats.syntax.bifunctor.*
+import cats.syntax.foldable.*
 import cats.syntax.monoid.*
 import cats.syntax.traverse.*
-import cats.syntax.foldable.*
-import cats.Id
-import cats.instances.list.*
 import scribe.Logging
 
 object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Logging {
@@ -100,12 +57,12 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
   private def unfoldAbilityProperty[S: Mangler: Exports: Arrows](
     varModel: VarModel,
-    scopeType: AbilityType,
+    abilityType: AbilityType,
     p: PropertyRaw
   ): State[S, (VarModel, Inline)] = {
     p match {
       case IntoArrowRaw(arrowName, t, arguments) =>
-        val arrowType = scopeType.fields
+        val arrowType = abilityType.fields
           .lookup(arrowName)
           .collect { case at @ ArrowType(_, _) =>
             at
@@ -129,10 +86,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         } yield {
           result
         }
-
+      case IntoFieldRaw(fieldName, at@AbilityType(abName, fields)) =>
+        State.pure((VarModel(AbilityType.fullName(varModel.name, fieldName), at), Inline.empty))
       case IntoFieldRaw(fieldName, t) =>
         for {
-          exports <- Exports[S].getAbilityField(varModel.name, fieldName)
           abilityField <- Exports[S].getAbilityField(varModel.name, fieldName)
           result <- abilityField match {
             case Some(vm: VarModel) =>
@@ -140,7 +97,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             case Some(lm: LiteralModel) =>
               flatLiteralWithProperties(lm, Inline.empty, Chain.empty)
             case _ =>
-              Exports[S].getKeys. flatMap { keys =>
+              Exports[S].getKeys.flatMap { keys =>
                 logger.error(
                   s"Inlining, cannot find field ${AbilityType.fullName(varModel.name, fieldName)} in ability $varModel. Available: $keys"
                 )
