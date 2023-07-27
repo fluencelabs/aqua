@@ -185,11 +185,11 @@ case class ApplyBinaryOpRaw(
   right: ValueRaw
 ) extends ValueRaw {
 
+  // Only boolean operations are supported for now
   override def baseType: Type = ScalarType.bool
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(
-    copy(left = f(left), right = f(right))
-  )
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(left = f(left), right = f(right)))
 
   override def varNames: Set[String] = left.varNames ++ right.varNames
 
@@ -202,6 +202,30 @@ object ApplyBinaryOpRaw {
   enum Op {
     case And
     case Or
+  }
+}
+
+case class ApplyUnaryOpRaw(
+  op: ApplyUnaryOpRaw.Op,
+  value: ValueRaw
+) extends ValueRaw {
+
+  // Only boolean operations are supported for now
+  override def baseType: Type = ScalarType.bool
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(value = f(value)))
+
+  override def varNames: Set[String] = value.varNames
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(value = value.renameVars(map))
+}
+
+object ApplyUnaryOpRaw {
+
+  enum Op {
+    case Not
   }
 }
 

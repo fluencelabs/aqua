@@ -1,12 +1,14 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.*
-import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, MathOp, Op}
+import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, MathOp, Op as InfOp}
+import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
+
 import cats.Monad
 import cats.data.Chain
 import cats.syntax.applicative.*
@@ -17,6 +19,7 @@ import cats.syntax.traverse.*
 import cats.syntax.option.*
 import cats.instances.list.*
 import cats.data.{NonEmptyList, NonEmptyMap}
+import cats.data.OptionT
 import scribe.Logging
 
 import scala.collection.immutable.SortedMap
@@ -174,7 +177,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
-      case pr @ PrefixToken(o, _) => ???
+      case pr @ PrefixToken(operand, _) =>
+        (for {
+          raw <- OptionT(
+            valueToRaw(operand)
+          )
+          typeCheck <- OptionT.liftF(
+            T.ensureTypeMatches(operand, ScalarType.bool, raw.`type`)
+          )
+          result <- OptionT.when(typeCheck)(
+            ApplyUnaryOpRaw(
+              op = pr.op match {
+                case PrefOp.Not => ApplyUnaryOpRaw.Op.Not
+              },
+              value = raw
+            )
+          )
+        } yield result).value
 
       case it @ InfixToken(l, r, _) =>
         (valueToRaw(l), valueToRaw(r)).flatMapN {
@@ -184,7 +203,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
             lazy val uType = lType `∪` rType
 
             it.op match {
-              case Op.Bool(bop) =>
+              case InfOp.Bool(bop) =>
                 for {
                   leftChecked <- T.ensureTypeMatches(l, ScalarType.bool, lType)
                   rightChecked <- T.ensureTypeMatches(r, ScalarType.bool, rType)
@@ -200,12 +219,12 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                     right = rightRaw
                   )
                 )
-              case op @ (Op.Math(_) | Op.Cmp(_)) =>
+              case op @ (InfOp.Math(_) | InfOp.Cmp(_)) =>
                 // Some type acrobatics to make
                 // compiler check exhaustive pattern matching
                 val iop = op match {
-                  case Op.Math(op) => op
-                  case Op.Cmp(op) => op
+                  case InfOp.Math(op) => op
+                  case InfOp.Cmp(op) => op
                 }
 
                 val hasFloat = List(lType, rType).exists(
