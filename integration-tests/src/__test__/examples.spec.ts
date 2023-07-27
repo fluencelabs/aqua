@@ -77,7 +77,7 @@ export const relay2 = config.relays[1];
 const relayPeerId2 = relay2.peerId;
 
 import log from 'loglevel';
-import { abilityCall } from '../examples/abilityCall';
+import { abilityCall, complexAbilityCall } from '../examples/abilityCall';
 // log.setDefaultLevel("debug")
 
 async function start() {
