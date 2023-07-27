@@ -20,7 +20,7 @@ import aqua.model.{
   XorModel
 }
 import aqua.model.inline.Inline
-import aqua.model.inline.{ParMode, SeqMode}
+import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{
@@ -48,10 +48,14 @@ import aqua.types.{
   StreamType,
   Type
 }
+
 import cats.Eval
+import cats.syntax.bifunctor.*
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.monoid.*
 import cats.syntax.traverse.*
+import cats.syntax.foldable.*
+import cats.Id
 import cats.instances.list.*
 import scribe.Logging
 
@@ -227,11 +231,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         }
 
       case p => State.pure(PropertyRawWithModel(p, None) -> Inline.empty)
-    }.sequence.map { (propsWithInline: Chain[(PropertyRawWithModel, Inline)]) =>
-      val fullInline = propsWithInline.map(_._2).foldLeft(Inline.empty)(_ |+| _)
-      val props = propsWithInline.map(_._1)
-      (props, fullInline)
-    }
+    }.sequence.map(_.toList.unzip.bimap(Chain.fromSeq, _.combineAll))
   }
 
   private def unfoldProperties[S: Mangler: Exports: Arrows](

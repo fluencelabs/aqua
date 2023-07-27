@@ -1,6 +1,7 @@
 package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
+import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.*
 import aqua.model.inline.raw.{
   ApplyBinaryOpRawInliner,

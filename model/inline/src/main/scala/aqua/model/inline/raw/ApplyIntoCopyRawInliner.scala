@@ -9,12 +9,14 @@ import aqua.model.{
   ValueModel,
   VarModel
 }
-import aqua.model.inline.{Inline, SeqMode, TagInliner}
+import aqua.model.inline.Inline.MergeMode.*
+import aqua.model.inline.{Inline, TagInliner}
 import aqua.model.inline.MakeStructRawInliner.createObj
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{IntoCopyRaw, LiteralRaw}
 import aqua.types.ScalarType
+
 import cats.data.{Chain, NonEmptyMap, State}
 import scribe.Logging
 import cats.syntax.traverse.*

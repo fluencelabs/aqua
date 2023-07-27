@@ -10,7 +10,8 @@ import aqua.model.{
   ValueModel,
   VarModel
 }
-import aqua.model.inline.{Inline, SeqMode}
+import aqua.model.inline.Inline.MergeMode.*
+import aqua.model.inline.Inline
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{FunctorRaw, ValueRaw}
 import cats.data.State
@@ -53,10 +54,12 @@ object ApplyFunctorRawInliner extends Logging {
           }
         } yield {
           val tree = Inline(
-            predo = Chain.one(SeqModel.wrap(
-              flat,
-              FlattenModel(apVar, resultName).leaf
-            )),
+            predo = Chain.one(
+              SeqModel.wrap(
+                flat,
+                FlattenModel(apVar, resultName).leaf
+              )
+            ),
             mergeMode = SeqMode
           )
 

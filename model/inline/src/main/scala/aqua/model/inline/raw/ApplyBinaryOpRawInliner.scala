@@ -59,25 +59,23 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     op: ApplyBinaryOpRaw.Op
   ): State[S, (ValueModel, Inline)] = {
     val (name, compareWith) = op match {
-      case And => ("and", true)
-      case Or => ("or", false)
+      case And => ("and", false)
+      case Or => ("or", true)
     }
 
-    /*
+    /**
      * (seq
      *   <left-inline>
      *   (xor
      *     (match <left-res> <compare-with>
-     *       (seq
-     *         <right-inline>
-     *         (ap <right-res> <res-name>)
-     *       )
+     *       (ap <left-res> <res-name>)
      *     )
-     *     (ap <left-res> <res-name>)
+     *     (seq
+     *       <right-inline>
+     *       (ap <right-res> <res-name>)
+     *     )
      *   )
      * )
-     *
-     * TODO: Handle errors in <right-inline>
      */
     val predo = (resName: String) =>
       SeqModel.wrap(
@@ -87,17 +85,17 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
             LiteralModel.bool(compareWith),
             shouldMatch = true
           ).wrap(
-            SeqModel.wrap(
-              rinline.predo :+ FlattenModel(
-                rmodel,
-                resName
-              ).leaf
-            )
+            FlattenModel(
+              lmodel,
+              resName
+            ).leaf
           ),
-          FlattenModel(
-            lmodel,
-            resName
-          ).leaf
+          SeqModel.wrap(
+            rinline.predo :+ FlattenModel(
+              rmodel,
+              resName
+            ).leaf
+          )
         )
       )
 
