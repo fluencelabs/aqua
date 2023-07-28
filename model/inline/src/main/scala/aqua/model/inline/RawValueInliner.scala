@@ -37,6 +37,7 @@ object RawValueInliner extends Logging {
   ): State[S, (ValueModel, Inline)] =
     raw match {
       case VarRaw(name, t) =>
+        println("UNFOLD STRAIGHT: " + name)
         Exports[S].exports.map(VarModel(name, t, Chain.empty).resolveWith).map(_ -> Inline.empty)
 
       case LiteralRaw(value, t) =>

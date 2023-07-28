@@ -329,19 +329,25 @@ object TagInliner extends Logging {
         }
 
       case AssignmentTag(value, assignTo) =>
-        (value match {
-          // if we assign collection to a stream, we must use it's name, because it is already created with 'new'
-          case c @ CollectionRaw(_, _: StreamType) =>
-            collectionToModel(c, Some(assignTo))
-          case v =>
-            valueToModel(v, false)
-        }).flatMap { case (model, prefix) =>
-          for {
-            // NOTE: Name <assignTo> should not exist yet
-            _ <- Mangler[S].forbidName(assignTo)
-            _ <- Exports[S].resolved(assignTo, model)
-          } yield TagInlined.Empty(prefix = prefix)
-        }
+        for {
+          // NOTE: Name <assignTo> should not exist yet
+          assignNew <- Mangler[S].findAndForbidName(assignTo)
+          _ = println("assign new: " + assignNew)
+          modelAndPrefix <- value match {
+            // if we assign collection to a stream, we must use it's name, because it is already created with 'new'
+            case c @ CollectionRaw(_, _: StreamType) =>
+              collectionToModel(c, Some(assignNew))
+            case v =>
+              println("value to model: " + v)
+              valueToModel(v, false).map { a =>
+                println("resolved: " + a)
+                a
+              }
+          }
+          (model, prefix) = modelAndPrefix
+          _ = println("MODEL: " + model)
+          _ <- Exports[S].resolved(assignNew, model)
+        } yield TagInlined.Empty(prefix = prefix)
 
       case ClosureTag(arrow, detach) =>
         if (detach) Arrows[S].resolved(arrow, None).as(TagInlined.Empty())

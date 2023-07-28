@@ -128,7 +128,8 @@ object Exports {
   def getLastHelper[T](name: String, state: Map[String, ValueModel], ex: VarModel => T): Option[T] = {
     state.get(name) match {
       case Some(vm@VarModel(n, _, _)) =>
-        getLastHelper(n, state, ex).orElse(Option(ex(vm)))
+        if (name == n) Option(ex(vm))
+        else getLastHelper(n, state, ex).orElse(Option(ex(vm)))
       case n =>
         None
     }
@@ -157,6 +158,8 @@ object Exports {
       value match {
         case vm@Ability(name, at, property) if property.isEmpty =>
           val pairs = getAbilityPairs(name, exportName, at)
+          println("resolve pairs for: " + exportName)
+          println("resolve pairs: " + pairs)
           state ++ pairs.toList.toMap
         case _ => state + (exportName -> value)
       }

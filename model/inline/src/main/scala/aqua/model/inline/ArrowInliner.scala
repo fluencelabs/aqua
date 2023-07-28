@@ -328,9 +328,13 @@ object ArrowInliner extends Logging {
             arrowsAcc
           )
         case ArrowType(_, _) =>
+          println(s"ARROW TYPE FOR $fName: " + topOldName + " and " + topNewName)
           Exports
             .getLastHelper(currentOldName, oldExports, identity)
             .flatMap { case vm @ VarModel(name, _, _) =>
+              println("FOUND VM: " + vm)
+              println("get arrow: " + oldArrows.get(name).map(_.funcName))
+              println("oldarrows:  " + oldArrows.keySet)
               oldArrows
                 .get(name)
                 .map(fa =>
@@ -386,6 +390,7 @@ object ArrowInliner extends Logging {
 
       absRenames = abilityResolvingResult.namesToRename
       absVars = abilityResolvingResult.renamedExports
+      _ = println("absVars: " + absVars)
       absArrows = abilityResolvingResult.renamedArrows
 
       arrowArgs = args.arrowArgs(previousArrowsState)
@@ -484,6 +489,8 @@ object ArrowInliner extends Logging {
           inlineResult <- ArrowInliner.inline(arrow, call, arrowsState)
         } yield inlineResult
       )
+
+      _ = println(s"exports to save from ${arrow.funcName}: " + inlineResult.exportsToSave)
 
       _ <- Arrows[S].resolved(inlineResult.arrowsToSave)
       _ <- Exports[S].resolved(

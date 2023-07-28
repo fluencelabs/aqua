@@ -13,6 +13,7 @@ import { bugNG69Call, ifCall, ifWrapCall } from '../examples/ifCall.js';
 import { parCall, testTimeoutCall } from '../examples/parCall.js';
 import { complexCall } from '../examples/complex.js';
 import { constantsCall, particleTtlAndTimestampCall } from '../examples/constantsCall.js';
+import { abilityCall, complexAbilityCall, checkAbCallsCall } from '../examples/abilityCall.js';
 import {
     nilLengthCall,
     nilLiteralCall,
@@ -77,7 +78,6 @@ export const relay2 = config.relays[1];
 const relayPeerId2 = relay2.peerId;
 
 import log from 'loglevel';
-import { abilityCall, complexAbilityCall, checkAbCallsCall } from '../examples/abilityCall';
 // log.setDefaultLevel("debug")
 
 async function start() {
