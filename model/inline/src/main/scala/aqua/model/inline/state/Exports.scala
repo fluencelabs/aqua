@@ -138,16 +138,18 @@ object Exports {
   object Simple extends Exports[Map[String, ValueModel]] {
 
     // Make links from one set of abilities to another (for ability assignment)
-    private def getAbilityPairs(oldName: String, newName: String, at: AbilityType): NonEmptyList[(String, VarModel)] = {
+    private def getAbilityPairs(oldName: String, newName: String, at: AbilityType, state: Map[String, ValueModel]): NonEmptyList[(String, VarModel)] = {
       at.fields.toNel.flatMap {
         case (n, at@AbilityType(_, _)) =>
           val newFullName = AbilityType.fullName(newName, n)
           val oldFullName = AbilityType.fullName(oldName, n)
-          getAbilityPairs(oldFullName, newFullName, at)
+          getAbilityPairs(oldFullName, newFullName, at, state)
         case (n, t) =>
           val newFullName = AbilityType.fullName(newName, n)
           val oldFullName = AbilityType.fullName(oldName, n)
-          NonEmptyList.of((newFullName, VarModel(oldFullName, t)))
+          // put link on last variable in chain
+          val lastVar = Exports.getLastHelper(oldFullName, state, identity)
+          NonEmptyList.of((newFullName, lastVar.getOrElse(VarModel(oldFullName, t))))
       }
     }
 
@@ -157,9 +159,7 @@ object Exports {
     ): State[Map[String, ValueModel], Unit] = State.modify { state =>
       value match {
         case vm@Ability(name, at, property) if property.isEmpty =>
-          val pairs = getAbilityPairs(name, exportName, at)
-          println("resolve pairs for: " + exportName)
-          println("resolve pairs: " + pairs)
+          val pairs = getAbilityPairs(name, exportName, at, state)
           state ++ pairs.toList.toMap
         case _ => state + (exportName -> value)
       }
