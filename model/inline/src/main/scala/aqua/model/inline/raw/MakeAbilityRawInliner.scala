@@ -6,6 +6,7 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.{SeqModel, ValueModel, VarModel}
 import aqua.raw.value.AbilityRaw
 import aqua.types.AbilityType
+import aqua.model.ValueModel.Ability
 import cats.Eval
 import cats.data.{Chain, IndexedStateT, NonEmptyMap, State}
 import cats.syntax.foldable.*
@@ -18,16 +19,9 @@ object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
   ): State[S, Unit] = {
     for {
       res <- fields.toNel.traverse {
-        case (n, (vm@VarModel(vName, at@AbilityType(_, _), properties), _)) =>
+        case (n, (Ability(abilityName, _, _), _)) =>
           val leftName = AbilityType.fullName(name, n)
-          for {
-            _ <- Exports[S].renameAbilityPrefix(vName, leftName)
-            some <- Exports[S].exports.map { exp =>
-              exp.get(name)
-            }
-            arrs <- Arrows[S].arrows
-            keys <- Exports[S].getKeys
-          } yield {}
+          Exports[S].renameAbilityPrefix(abilityName, leftName)
         case (n, (vm, _)) =>
           Exports[S].resolveAbilityField(name, n, vm)
       }

@@ -401,8 +401,8 @@ object ArrowInliner extends Logging {
 
       /*
        * Don't rename arrows from abilities in a body, because we link arrows by VarModel
-       * and it won't be called directly.
-       * It can be intersect with arrows that is defined inside body
+       * and they won't be called directly.
+       * They could intersect with arrows defined inside the body
        *
        *  ability Simple:
        *   arrow() -> bool
@@ -410,8 +410,7 @@ object ArrowInliner extends Logging {
        *  func foo{Simple}() -> bool, bool:
        *   closure = () -> bool:
        *       <- true
-       *   closure()
-       *   Simple.arrow()
+       *   <- closure(), Simple.arrow()
        *
        *  func main() -> bool, bool:
        *   closure = () -> bool:
@@ -419,7 +418,7 @@ object ArrowInliner extends Logging {
        *   MySimple = Simple(arrow = closure)
        *   -- here we will rename arrow in Arrows[S] to 'closure-0'
        *   -- and link to arrow as 'Simple.arrow' -> VarModel('closure-0')
-       *   -- and it will be work well if inside 'foo' will be closure with same 'closure' name
+       *   -- and it will work well with closure with the same name 'closure' inside 'foo'
        *   foo{MySimple}()
        */
       allShouldRename = argsToDataShouldRename ++ (renamedArrows -- absArrows.keySet) ++ absRenames
