@@ -1,6 +1,7 @@
 package aqua.model.inline.raw
 
 import aqua.model.*
+import aqua.model.ValueModel.Ability
 import aqua.model.inline.Inline
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.RawValueInliner.unfold
@@ -214,8 +215,8 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           State.pure((vm, prevInline.mergeWith(optimizationInline, SeqMode)))
         ) { case (state, property) =>
           state.flatMap {
-            case (vm @ VarModel(name, st @ AbilityType(_, _), _), leftInline) =>
-              unfoldAbilityProperty(vm, st, property.raw).map { case (vm, inl) =>
+            case (vm @ Ability(name, at, _), leftInline) =>
+              unfoldAbilityProperty(vm, at, property.raw).map { case (vm, inl) =>
                 (
                   vm,
                   Inline(
