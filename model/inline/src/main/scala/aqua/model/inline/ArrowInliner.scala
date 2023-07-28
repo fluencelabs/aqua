@@ -6,7 +6,7 @@ import aqua.model.*
 import aqua.raw.ops.RawTag
 import aqua.types.{AbilityType, ArrowType, BoxType, DataType, StreamType, Type}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import cats.Eval
+import cats.{Eval, Monoid}
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.traverse.*
 import cats.syntax.apply.*
@@ -244,6 +244,21 @@ object ArrowInliner extends Logging {
     renamedArrows: Map[String, FuncArrow]
   )
 
+  given Monoid[AbilityResolvingResult] with
+
+    override val empty: AbilityResolvingResult =
+      AbilityResolvingResult(Map.empty, Map.empty, Map.empty)
+
+    override def combine(
+      a: AbilityResolvingResult,
+      b: AbilityResolvingResult
+    ): AbilityResolvingResult =
+      a.copy(
+        a.namesToRename ++ b.namesToRename,
+        a.renamedExports ++ b.renamedExports,
+        a.renamedArrows ++ b.renamedArrows
+      )
+
   /**
    * Generate new names for all ability fields and arrows if necessary.
    * Gather all fields and arrows from Arrows and Exports states
@@ -369,11 +384,11 @@ object ArrowInliner extends Logging {
 
       abilityResolvingResult <- abArgs.toList.traverse { case (str, (vm, sct)) =>
         renameAndResolveAbilities(str, vm, sct, oldExports, oldArrows)
-      }
+      }.map(_.fold)
 
-      absRenames = abilityResolvingResult.map(_.namesToRename).fold(Map.empty)(_ ++ _)
-      absVars = abilityResolvingResult.map(_.renamedExports).fold(Map.empty)(_ ++ _)
-      absArrows = abilityResolvingResult.map(_.renamedArrows).fold(Map.empty)(_ ++ _)
+      absRenames = abilityResolvingResult.namesToRename
+      absVars = abilityResolvingResult.renamedExports
+      absArrows = abilityResolvingResult.renamedArrows
 
       arrowArgs = args.arrowArgs(previousArrowsState)
       // Update states and rename tags
@@ -423,8 +438,7 @@ object ArrowInliner extends Logging {
     } yield {
       sc.fields.toSortedMap.toList.flatMap {
         case (n, ArrowType(_, _)) =>
-          val fullName = s"$name.$n"
-          exports.get(fullName).flatMap {
+          exports.get(AbilityType.fullName(name, n)).flatMap {
             case VarModel(n, _, _) => arrows.get(n).map(n -> _)
             case _ => None
           }
