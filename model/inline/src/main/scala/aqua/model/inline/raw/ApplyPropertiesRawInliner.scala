@@ -1,15 +1,16 @@
 package aqua.model.inline.raw
 
+import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.*
 import aqua.raw.value.*
 import aqua.types.*
 import cats.Eval
 import cats.data.{Chain, IndexedStateT, State}
 import cats.instances.list.*
+import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
 import cats.syntax.monoid.*
@@ -73,7 +74,13 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           }
         for {
           callArrow <- CallArrowRawInliner(
-            CallArrowRaw(None, s"${AbilityType.fullName(varModel.name, arrowName)}", arguments, arrowType, None)
+            CallArrowRaw(
+              None,
+              AbilityType.fullName(varModel.name, arrowName),
+              arguments,
+              arrowType,
+              None
+            )
           )
           result <- callArrow match {
             case (vm: VarModel, inl) =>
@@ -86,8 +93,8 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         } yield {
           result
         }
-      case IntoFieldRaw(fieldName, at@AbilityType(abName, fields)) =>
-        State.pure((VarModel(AbilityType.fullName(varModel.name, fieldName), at), Inline.empty))
+      case IntoFieldRaw(fieldName, at @ AbilityType(abName, fields)) =>
+        (VarModel(AbilityType.fullName(varModel.name, fieldName), at), Inline.empty).pure
       case IntoFieldRaw(fieldName, t) =>
         for {
           abilityField <- Exports[S].getAbilityField(varModel.name, fieldName)
@@ -99,7 +106,8 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             case _ =>
               Exports[S].getKeys.flatMap { keys =>
                 logger.error(
-                  s"Inlining, cannot find field ${AbilityType.fullName(varModel.name, fieldName)} in ability $varModel. Available: $keys"
+                  s"Inlining, cannot find field ${AbilityType
+                    .fullName(varModel.name, fieldName)} in ability $varModel. Available: $keys"
                 )
                 flatLiteralWithProperties(LiteralModel.quote(""), Inline.empty, Chain.empty)
               }

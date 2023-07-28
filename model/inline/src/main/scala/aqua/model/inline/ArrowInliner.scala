@@ -253,7 +253,7 @@ object ArrowInliner extends Logging {
       a: AbilityResolvingResult,
       b: AbilityResolvingResult
     ): AbilityResolvingResult =
-      a.copy(
+      AbilityResolvingResult(
         a.namesToRename ++ b.namesToRename,
         a.renamedExports ++ b.renamedExports,
         a.renamedArrows ++ b.renamedArrows
@@ -384,7 +384,7 @@ object ArrowInliner extends Logging {
 
       abilityResolvingResult <- abArgs.toList.traverse { case (str, (vm, sct)) =>
         renameAndResolveAbilities(str, vm, sct, oldExports, oldArrows)
-      }.map(_.fold)
+      }.map(_.combineAll)
 
       absRenames = abilityResolvingResult.namesToRename
       absVars = abilityResolvingResult.renamedExports
@@ -399,6 +399,29 @@ object ArrowInliner extends Logging {
       // rename variables that store arrows
       _ <- Exports[S].renameVariables(renamedArrows)
 
+      /*
+       * Don't rename arrows from abilities in a body, because we link arrows by VarModel
+       * and it won't be called directly.
+       * It can be intersect with arrows that is defined inside body
+       *
+       *  ability Simple:
+       *   arrow() -> bool
+       *
+       *  func foo{Simple}() -> bool, bool:
+       *   closure = () -> bool:
+       *       <- true
+       *   closure()
+       *   Simple.arrow()
+       *
+       *  func main() -> bool, bool:
+       *   closure = () -> bool:
+       *       <- false
+       *   MySimple = Simple(arrow = closure)
+       *   -- here we will rename arrow in Arrows[S] to 'closure-0'
+       *   -- and link to arrow as 'Simple.arrow' -> VarModel('closure-0')
+       *   -- and it will be work well if inside 'foo' will be closure with same 'closure' name
+       *   foo{MySimple}()
+       */
       allShouldRename = argsToDataShouldRename ++ (renamedArrows -- absArrows.keySet) ++ absRenames
 
       // Rename all renamed arguments in the body
