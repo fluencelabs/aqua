@@ -3,38 +3,54 @@ aqua Abc
 export main
 
 data Struct:
-    int: i8
+     int: i8
 
 ability Simple:
-    st: Struct
-    arrow(x: i8) -> bool
+     st: Struct
+     arrow(x: i8) -> bool
 
 ability Complex:
-    simple: Simple
-    field: string
+     simple: Simple
+     field: string
 
 service A("erferf"):
-    call()
+     call()
 
-func foo{Complex}() -> bool, bool:
-    closure = () -> bool:
-        <- Complex.simple.st.int >= 0
-    res <- closure()
-    <- Complex.simple.arrow(
-        Complex.simple.st.int
-    ), res
+func foo{Complex, Simple}() -> bool, bool:
+     closure = () -> bool:
+         <- Simple.st.int >= 0
+     res <- closure()
+     <- Complex.simple.arrow(
+         Complex.simple.st.int
+     ), res
 
 func main() -> bool, bool:
+     closure = (x: i8) -> bool:
+         <- x > 0
+
+     MyComplex = Complex(
+         simple = Simple(
+             st = Struct(int = 0),
+             arrow = closure
+         ),
+         field = "complex"
+     )
+
+     res1, res2 <- foo{MyComplex, MyComplex.simple}()
+     <- res1, res2
+
+ability SSS:
+    arrow(x: i8) -> bool
+
+ability CCCC:
+    arrow(x: i8) -> bool
+    simple: SSS
+
+func main2() -> bool, bool:
     closure = (x: i8) -> bool:
         <- x > 0
 
-    MyComplex = Complex(
-        simple = Simple(
-            st = Struct(int = 0),
-            arrow = closure
-        ),
-        field = "complex"
-    )
+    MySSS = SSS(arrow = closure)
+    MyCCCC = CCCC(simple = MySSS, arrow = MySSS.arrow)
 
-    res1, res2 <- foo{MyComplex}()
-    <- res1, res2
+    <- MySSS.arrow(42), MyCCCC.arrow(52)

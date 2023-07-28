@@ -77,7 +77,7 @@ export const relay2 = config.relays[1];
 const relayPeerId2 = relay2.peerId;
 
 import log from 'loglevel';
-import { abilityCall, complexAbilityCall } from '../examples/abilityCall';
+import { abilityCall, complexAbilityCall, checkAbCallsCall } from '../examples/abilityCall';
 // log.setDefaultLevel("debug")
 
 async function start() {
@@ -355,9 +355,14 @@ describe('Testing examples', () => {
     });
 
     it('ability.aqua complex', async () => {
-            let result = await complexAbilityCall();
-            expect(result).toStrictEqual([false, true]);
-        });
+        let result = await complexAbilityCall();
+        expect(result).toStrictEqual([false, true]);
+    });
+
+    it('ability.aqua complex', async () => {
+        let result = await checkAbCallsCall();
+        expect(result).toStrictEqual([true, false]);
+    });
 
     it('functors.aqua LNG-119 bug', async () => {
         let result = await bugLng119Call();

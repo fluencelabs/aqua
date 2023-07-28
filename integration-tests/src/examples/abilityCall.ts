@@ -1,4 +1,4 @@
-import {handleAb, registerSomeService, bug214} from "../compiled/examples/abilities";
+import {handleAb, registerSomeService, bug214, checkAbCalls} from "../compiled/examples/abilities";
 
 export async function abilityCall(): Promise<[string, string, string, number]> {
     registerSomeService({
@@ -12,4 +12,8 @@ export async function abilityCall(): Promise<[string, string, string, number]> {
 
 export async function complexAbilityCall(): Promise<[boolean, boolean]> {
     return await bug214()
+}
+
+export async function checkAbCallsCall(): Promise<[boolean, boolean]> {
+    return await checkAbCalls()
 }

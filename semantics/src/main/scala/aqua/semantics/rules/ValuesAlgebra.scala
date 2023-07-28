@@ -300,6 +300,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     }
 
   // Generate CallArrowRaw for arrow in ability
+  // WARNING: arguments are resolved at the end of the function and added to CallArrowRaw
   def callAbType(
     ab: String,
     abType: AbilityType,
@@ -307,7 +308,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   ): Alg[Option[CallArrowRaw]] =
     abType.arrows.get(ca.funcName.value) match {
       case Some(arrowType) =>
-        Option(CallArrowRaw(None, s"$ab.${ca.funcName.value}", Nil, arrowType, None)).pure[Alg]
+        Option(CallArrowRaw(None, AbilityType.fullName(ab, ca.funcName.value), Nil, arrowType, None)).pure[Alg]
       case None => None.pure[Alg]
     }
 
@@ -328,32 +329,38 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               )
             )
         )(ab =>
-          // TODO: Hack. Check that we have registered ability type.
-          // If it exists - this is ability type in file, if not - imported ability
-          T.getType(ab.value).flatMap {
-            case Some(abType: AbilityType) =>
-              callAbType(ab.value, abType, ca)
+          // Check that we have variable as ability
+          N.read(ab.asName, false).flatMap {
+            case Some(at@AbilityType(_, _)) =>
+              callAbType(ab.value, at, ca)
             case _ =>
-              (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
-                case (Some(at), Right(sid)) =>
-                  // Service call, actually
-                  CallArrowRaw(
-                    ability = Some(ab.value),
-                    name = ca.funcName.value,
-                    arguments = Nil,
-                    baseType = at,
-                    serviceId = Some(sid)
-                  ).some
-                case (Some(at), Left(true)) =>
-                  // Ability function call, actually
-                  CallArrowRaw(
-                    ability = Some(ab.value),
-                    name = ca.funcName.value,
-                    arguments = Nil,
-                    baseType = at,
-                    serviceId = None
-                  ).some
-                case _ => none
+              // Check that we have registered ability type.
+              // If it exists - this is ability type in file, if not - imported ability
+              T.getType(ab.value).flatMap {
+                case Some(abType: AbilityType) =>
+                  callAbType(ab.value, abType, ca)
+                case t =>
+                  (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
+                    case (Some(at), Right(sid)) =>
+                      // Service call, actually
+                      CallArrowRaw(
+                        ability = Some(ab.value),
+                        name = ca.funcName.value,
+                        arguments = Nil,
+                        baseType = at,
+                        serviceId = Some(sid)
+                      ).some
+                    case (Some(at), Left(true)) =>
+                      // Ability function call, actually
+                      CallArrowRaw(
+                        ability = Some(ab.value),
+                        name = ca.funcName.value,
+                        arguments = Nil,
+                        baseType = at,
+                        serviceId = None
+                      ).some
+                    case _ => none
+                  }
               }
           }
         )

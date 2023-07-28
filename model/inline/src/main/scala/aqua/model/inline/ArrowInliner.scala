@@ -328,25 +328,23 @@ object ArrowInliner extends Logging {
             arrowsAcc
           )
         case ArrowType(_, _) =>
-          oldExports
-            .get(currentOldName)
-            .flatMap {
-              case vm @ VarModel(name, _, _) =>
-                oldArrows
-                  .get(name)
-                  .map(fa =>
-                    (
-                      valAcc.updated(currentNewName.getOrElse(currentOldName), vm),
-                      arrowsAcc.updated(name, fa)
-                    )
+          Exports
+            .getLastHelper(currentOldName, oldExports, identity)
+            .flatMap { case vm @ VarModel(name, _, _) =>
+              oldArrows
+                .get(name)
+                .map(fa =>
+                  (
+                    valAcc.updated(currentNewName.getOrElse(currentOldName), vm),
+                    arrowsAcc.updated(name, fa)
                   )
-              case _ => None
+                )
             }
             .getOrElse((valAcc, arrowsAcc))
 
         case _ =>
-          oldExports
-            .get(currentOldName)
+          Exports
+            .getLastHelper(currentOldName, oldExports, identity)
             .map(vm => (valAcc.updated(currentNewName.getOrElse(currentOldName), vm), arrowsAcc))
             .getOrElse((valAcc, arrowsAcc))
       }

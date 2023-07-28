@@ -1,8 +1,9 @@
 package aqua.model.inline.state
 
 import aqua.model.{ValueModel, VarModel}
+import aqua.model.ValueModel.Ability
 import aqua.types.AbilityType
-import cats.data.State
+import cats.data.{NonEmptyList, State}
 
 /**
  * Exports – trace values available in the scope
@@ -40,7 +41,12 @@ trait Exports[S] extends Scoped[S] {
   /**
    * Rename ability prefix to new one
    */
-  def renameAbilityPrefix(prefix: String, newPrefix: String): State[S, Unit]
+  def copyWithAbilityPrefix(prefix: String, newPrefix: String): State[S, Unit]
+
+  /**
+   * Get name of last linked VarModel
+   */
+  def getLast(name: String): State[S, Option[String]]
 
   /**
    * Rename names in variables
@@ -89,8 +95,11 @@ trait Exports[S] extends Scoped[S] {
     ): State[R, Unit] =
       self.resolveAbilityField(abilityExportName, fieldName, value).transformS(f, g)
 
-    override def renameAbilityPrefix(prefix: String, newPrefix: String): State[R, Unit] =
-      self.renameAbilityPrefix(prefix, newPrefix).transformS(f, g)
+    override def copyWithAbilityPrefix(prefix: String, newPrefix: String): State[R, Unit] =
+      self.copyWithAbilityPrefix(prefix, newPrefix).transformS(f, g)
+
+    override def getLast(name: String): State[R, Option[String]] =
+      self.getLast(name).transformS(f, g)
 
     override def renameVariables(renames: Map[String, String]): State[R, Unit] =
       self.renameVariables(renames).transformS(f, g)
@@ -115,12 +124,46 @@ trait Exports[S] extends Scoped[S] {
 object Exports {
   def apply[S](implicit exports: Exports[S]): Exports[S] = exports
 
+  // Get last linked VarModel
+  def getLastHelper[T](name: String, state: Map[String, ValueModel], ex: VarModel => T): Option[T] = {
+    state.get(name) match {
+      case Some(vm@VarModel(n, _, _)) =>
+        getLastHelper(n, state, ex).orElse(Option(ex(vm)))
+      case n =>
+        None
+    }
+  }
+
   object Simple extends Exports[Map[String, ValueModel]] {
+
+    // Make links from one set of abilities to another (for ability assignment)
+    private def getAbilityPairs(oldName: String, newName: String, at: AbilityType): NonEmptyList[(String, VarModel)] = {
+      at.fields.toNel.flatMap {
+        case (n, at@AbilityType(_, _)) =>
+          val newFullName = AbilityType.fullName(newName, n)
+          val oldFullName = AbilityType.fullName(oldName, n)
+          getAbilityPairs(oldFullName, newFullName, at)
+        case (n, t) =>
+          val newFullName = AbilityType.fullName(newName, n)
+          val oldFullName = AbilityType.fullName(oldName, n)
+          NonEmptyList.of((newFullName, VarModel(oldFullName, t)))
+      }
+    }
 
     override def resolved(
       exportName: String,
       value: ValueModel
-    ): State[Map[String, ValueModel], Unit] = State.modify(_ + (exportName -> value))
+    ): State[Map[String, ValueModel], Unit] = State.modify { state =>
+      value match {
+        case vm@Ability(name, at, property) if property.isEmpty =>
+          val pairs = getAbilityPairs(name, exportName, at)
+          state ++ pairs.toList.toMap
+        case _ => state + (exportName -> value)
+      }
+    }
+
+    override def getLast(name: String): State[Map[String, ValueModel], Option[String]] =
+      State.get.map(st => getLastHelper(name, st, _.name))
 
     override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
       State.modify(_ ++ exports)
@@ -132,15 +175,15 @@ object Exports {
     ): State[Map[String, ValueModel], Unit] =
       State.modify(_ + (AbilityType.fullName(abilityExportName, fieldName) -> value))
 
-    override def renameAbilityPrefix(
+    override def copyWithAbilityPrefix(
       prefix: String,
       newPrefix: String
     ): State[Map[String, ValueModel], Unit] =
       State.modify { state =>
-        state.map {
+        state.flatMap {
           case (k, v) if k.startsWith(prefix) =>
-            k.replaceFirst(prefix, newPrefix) -> v
-          case (k, v) => k -> v
+            List(k.replaceFirst(prefix, newPrefix) -> v, k -> v)
+          case (k, v) => List(k -> v)
         }
       }
 

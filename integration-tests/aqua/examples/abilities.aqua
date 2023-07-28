@@ -2,7 +2,7 @@ aqua Main
 
 use DECLARE_CONST, decl_bar from "imports_exports/declare.aqua" as Declare
 
-export handleAb, SomeService, bug214
+export handleAb, SomeService, bug214, checkAbCalls
 
 service SomeService("wed"):
   getStr(s: string) -> string
@@ -47,9 +47,9 @@ ability Complex:
     simple: Simple
     field: string
 
-func foo{Complex}() -> bool, bool:
+func foo{Complex, Simple}() -> bool, bool:
     closure = () -> bool:
-        <- Complex.simple.st.int >= 0
+        <- Simple.st.int >= 0
     res <- closure()
     <- Complex.simple.arrow(
         Complex.simple.st.int
@@ -67,5 +67,21 @@ func bug214() -> bool, bool:
         field = "complex"
     )
 
-    res1, res2 <- foo{MyComplex}()
+    res1, res2 <- foo{MyComplex, MyComplex.simple}()
     <- res1, res2
+
+ability SSS:
+    arrow(x: i8) -> bool
+
+ability CCCC:
+    arrow(x: i8) -> bool
+    simple: SSS
+
+func checkAbCalls() -> bool, bool:
+    closure = (x: i8) -> bool:
+        <- x > 20
+
+    MySSS = SSS(arrow = closure)
+    MyCCCC = CCCC(simple = MySSS, arrow = MySSS.arrow)
+
+    <- MySSS.arrow(42), MyCCCC.arrow(12)
