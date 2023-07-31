@@ -3,18 +3,18 @@ package aqua.semantics.header
 import aqua.parser.Ast
 import aqua.parser.head.*
 import aqua.parser.lexer.{Ability, Token}
-import aqua.raw.RawContext
 import aqua.semantics.header.Picker.*
 import aqua.semantics.{HeaderError, SemanticError}
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.data.*
+import cats.data.Validated.{invalidNec, validNec}
 import cats.free.Cofree
 import cats.instances.list.*
 import cats.instances.option.*
 import cats.kernel.Semigroup
 import cats.syntax.foldable.*
-import cats.syntax.monoid
+import cats.syntax.functor.*
 import cats.syntax.semigroup.*
+import cats.syntax.validated.*
 import cats.{Comonad, Eval, Monoid}
 
 class HeaderHandler[S[_]: Comonad, C](implicit
@@ -115,15 +115,15 @@ class HeaderHandler[S[_]: Comonad, C](implicit
                   ctx
                     .pick(n, None, ctx.module.nonEmpty)
                     // We just validate, nothing more
-                    .map(_ => validNec(1))
+                    .as(validNec(1))
                     .getOrElse(
                       error(
                         t,
-                        s"`${n}` is expected to be declared, but declaration is not found in the file"
+                        s"`$n` is expected to be declared, but declaration is not found in the file"
                       )
                     )
                 }.combineAll
-                  .map(_ =>
+                  .as(
                     // TODO: why module name and declares is lost? where is it lost?
                     ctx.setModule(name.value, declares = shouldDeclare)
                   )
@@ -173,17 +173,24 @@ class HeaderHandler[S[_]: Comonad, C](implicit
                   )
                 )
                 .map { case (token, name, rename) =>
-                  (initCtx |+| ctx)
-                    .pick(name, rename, declared = false)
-                    .map(_ => Map(name -> rename))
-                    .map(validNec)
-                    .getOrElse(
-                      error(
-                        token,
-                        s"File has no $name declaration or import, cannot export, available funcs: ${(initCtx |+| ctx).funcNames
-                          .mkString(", ")}"
-                      )
+                  val sumCtx = initCtx |+| ctx
+
+                  if (sumCtx.funcReturnAbilityOrArrow(name))
+                    error(
+                      token,
+                      s"The function '$name' cannot be exported, because it returns arrow type or ability type"
                     )
+                  else
+                    sumCtx
+                      .pick(name, rename, declared = false)
+                      .as(Map(name -> rename).validNec)
+                      .getOrElse(
+                        error(
+                          token,
+                          s"File has no $name declaration or import, cannot export, available funcs: ${sumCtx.funcNames
+                            .mkString(", ")}"
+                        )
+                      )
                 }
                 .foldLeft[ResT[S, Map[String, Option[String]]]](
                   validNec(ctx.exports.getOrElse(Map.empty))

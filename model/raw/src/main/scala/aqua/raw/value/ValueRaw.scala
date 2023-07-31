@@ -121,9 +121,9 @@ case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
 object LiteralRaw {
   def quote(value: String): LiteralRaw = LiteralRaw("\"" + value + "\"", LiteralType.string)
 
-  def number(value: Int): LiteralRaw = LiteralRaw(value.toString, LiteralType.number)
+  def number(value: Int): LiteralRaw = LiteralRaw(value.toString, LiteralType.forInt(value))
 
-  val Zero: LiteralRaw = LiteralRaw("0", LiteralType.number)
+  val Zero: LiteralRaw = number(0)
 
   val True: LiteralRaw = LiteralRaw("true", LiteralType.bool)
   val False: LiteralRaw = LiteralRaw("false", LiteralType.bool)
@@ -162,11 +162,14 @@ case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: Stru
     copy(fields = fields.map(_.renameVars(map)))
 }
 
-case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityType: AbilityType) extends ValueRaw {
+case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityType: AbilityType)
+    extends ValueRaw {
 
   override def baseType: Type = abilityType
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(fieldsAndArrows = fieldsAndArrows.map(f)))
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(
+    copy(fieldsAndArrows = fieldsAndArrows.map(f))
+  )
 
   override def varNames: Set[String] = {
     fieldsAndArrows.toSortedMap.values.flatMap(_.varNames).toSet
@@ -174,6 +177,56 @@ case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityTyp
 
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(fieldsAndArrows = fieldsAndArrows.map(_.renameVars(map)))
+}
+
+case class ApplyBinaryOpRaw(
+  op: ApplyBinaryOpRaw.Op,
+  left: ValueRaw,
+  right: ValueRaw
+) extends ValueRaw {
+
+  // Only boolean operations are supported for now
+  override def baseType: Type = ScalarType.bool
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(left = f(left), right = f(right)))
+
+  override def varNames: Set[String] = left.varNames ++ right.varNames
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(left = left.renameVars(map), right = right.renameVars(map))
+}
+
+object ApplyBinaryOpRaw {
+
+  enum Op {
+    case And
+    case Or
+  }
+}
+
+case class ApplyUnaryOpRaw(
+  op: ApplyUnaryOpRaw.Op,
+  value: ValueRaw
+) extends ValueRaw {
+
+  // Only boolean operations are supported for now
+  override def baseType: Type = ScalarType.bool
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(value = f(value)))
+
+  override def varNames: Set[String] = value.varNames
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(value = value.renameVars(map))
+}
+
+object ApplyUnaryOpRaw {
+
+  enum Op {
+    case Not
+  }
 }
 
 case class CallArrowRaw(

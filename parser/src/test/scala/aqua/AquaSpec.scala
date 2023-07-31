@@ -20,7 +20,7 @@ import aqua.parser.head.{FromExpr, UseFromExpr}
 import aqua.parser.lexer.*
 import aqua.parser.lexer.Token.LiftToken
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import aqua.types.LiteralType.{bool, number, string}
+import aqua.types.LiteralType.{bool, number, signed, string, unsigned}
 import aqua.types.{LiteralType, ScalarType}
 import cats.{~>, Id}
 import org.scalatest.EitherValues
@@ -60,7 +60,9 @@ object AquaSpec {
   implicit def toVarIndex(name: String, idx: Int): VarToken[Id] =
     VarToken[Id](toName(name), IntoIndex[Id](toNumber(idx).unit, Some(toNumber(idx))) :: Nil)
   implicit def toLiteral(name: String, t: LiteralType): LiteralToken[Id] = LiteralToken[Id](name, t)
-  implicit def toNumber(n: Int): LiteralToken[Id] = LiteralToken[Id](n.toString, number)
+
+  implicit def toNumber(n: Int): LiteralToken[Id] =
+    LiteralToken[Id](n.toString, LiteralType.forInt(n))
   implicit def toBool(n: Boolean): LiteralToken[Id] = LiteralToken[Id](n.toString, bool)
   implicit def toStr(n: String): LiteralToken[Id] = LiteralToken[Id]("\"" + n + "\"", string)
 

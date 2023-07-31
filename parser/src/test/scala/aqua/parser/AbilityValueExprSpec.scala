@@ -16,15 +16,13 @@ class AbilityValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec.*
 
   private def parseAndCheckAbility(str: String) = {
-    val one = LiteralToken[Id]("1", LiteralType.number)
-
     parseData(
       str
     ) should be(
       NamedValueToken(
         NamedTypeToken[Id]("AbilityA"),
         NonEmptyMap.of(
-          "v1" -> one,
+          "v1" -> toNumber(1),
           "f1" -> VarToken(Name[Id]("input"), IntoField[Id]("arrow") :: Nil)
         )
       )
@@ -36,8 +34,7 @@ class AbilityValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   }
 
   "multiline line struct value" should "be parsed" in {
-    parseAndCheckAbility(
-      """AbilityA(v1 = 1, f1 = input.arrow)""".stripMargin)
+    parseAndCheckAbility("""AbilityA(v1 = 1, f1 = input.arrow)""".stripMargin)
   }
 
 }

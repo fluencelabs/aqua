@@ -36,6 +36,12 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 
+  def ensureTypeOneOf[T <: Type](
+    token: Token[S],
+    expected: Set[T],
+    givenType: Type
+  ): Alg[Option[Type]]
+
   def expectNoExport(token: Token[S]): Alg[Unit]
 
   def checkArgumentsNumber(token: Token[S], expected: Int, givenNum: Int): Alg[Boolean]

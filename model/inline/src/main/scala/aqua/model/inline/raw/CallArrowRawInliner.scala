@@ -29,11 +29,10 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
           cd <- callToModel(call, true)
           sd <- valueToModel(serviceId)
         } yield cd._1.exportTo.map(_.asVar.resolveWith(exports)) -> Inline(
-          ListMap.empty,
           Chain(
             SeqModel.wrap(
               sd._2.toList ++
-                cd._2.toList :+ CallServiceModel(sd._1, value.name, cd._1).leaf: _*
+                cd._2.toList :+ CallServiceModel(sd._1, value.name, cd._1).leaf
             )
           )
         )
@@ -58,7 +57,6 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
         .callArrowRet(fn, cm)
         .map { case (body, vars) =>
           vars -> Inline(
-            ListMap.empty,
             Chain.one(
               // Leave meta information in tree after inlining
               MetaModel
@@ -78,16 +76,12 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
   ): State[S, (List[ValueModel], Inline)] = for {
     arrows <- Arrows[S].arrows
     exports <- Exports[S].exports
+    lastArrow <- Exports[S].getLast(funcName)
     arrow = arrows
       .get(funcName)
       .orElse(
         // if there is no arrow, check if it is stored in Exports as variable and try to resolve it
-        exports
-          .get(funcName)
-          .collect { case VarModel(name, _: ArrowType, _) =>
-            name
-          }
-          .flatMap(arrows.get)
+        lastArrow.flatMap(arrows.get)
       )
     result <- arrow.fold {
       logger.error(

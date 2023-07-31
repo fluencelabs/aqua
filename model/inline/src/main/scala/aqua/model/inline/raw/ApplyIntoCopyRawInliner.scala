@@ -1,12 +1,22 @@
 package aqua.model.inline.raw
 
-import aqua.model.{CallModel, CallServiceModel, LiteralModel, OpModel, SeqModel, ValueModel, VarModel}
-import aqua.model.inline.{Inline, SeqMode, TagInliner}
+import aqua.model.{
+  CallModel,
+  CallServiceModel,
+  LiteralModel,
+  OpModel,
+  SeqModel,
+  ValueModel,
+  VarModel
+}
+import aqua.model.inline.Inline.MergeMode.*
+import aqua.model.inline.{Inline, TagInliner}
 import aqua.model.inline.MakeStructRawInliner.createObj
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{IntoCopyRaw, LiteralRaw}
 import aqua.types.ScalarType
+
 import cats.data.{Chain, NonEmptyMap, State}
 import scribe.Logging
 import cats.syntax.traverse.*
@@ -14,6 +24,7 @@ import cats.syntax.monoid.*
 import cats.syntax.functor.*
 import cats.syntax.flatMap.*
 import cats.syntax.apply.*
+import cats.syntax.foldable.*
 
 object ApplyIntoCopyRawInliner extends Logging {
 
@@ -45,15 +56,14 @@ object ApplyIntoCopyRawInliner extends Logging {
       name <- Mangler[S].findAndForbidName(value.name + "_obj_copy")
       foldedFields <- intoCopy.fields.nonEmptyTraverse(unfold(_))
       varModel = VarModel(name, value.baseType)
-      valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _).desugar
+      valsInline = foldedFields.toList.foldMap { case (_, inline) => inline }.desugar
       fields = foldedFields.map(_._1)
       objCopy <- copyObj(value, fields, varModel)
     } yield {
       (
         varModel,
         Inline(
-          valsInline.flattenValues,
-          Chain.one(SeqModel.wrap((valsInline.predo :+ objCopy).toList: _*)),
+          Chain.one(SeqModel.wrap(valsInline.predo :+ objCopy)),
           SeqMode
         )
       )

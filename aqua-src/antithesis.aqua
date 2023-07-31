@@ -2,7 +2,7 @@ aqua Main
 
 use DECLARE_CONST, decl_bar from "declare.aqua" as Declare
 
-export handleAb
+export SomeService, handleAb, bug214, checkAbCalls
 
 service SomeService("wed"):
   getStr(s: string) -> string
@@ -17,34 +17,71 @@ ability SecondAb:
 
 func funcStr(s: string) -> string, string:
   strInFunc <- SomeService.getStr(Declare.DECLARE_CONST)
-  -- SomeService.getStr(s)
-  <- strInFunc, s
+  strInFunc2 <- SomeService.getStr(s)
+  <- strInFunc, strInFunc2
 
---
--- func diffFunc(s: string) -> string:
---   differentStr <- SomeService.different(s)
---   <- differentStr
---
--- func unit():
---   funcStr("")
-
--- func bbbbbbb()
---
--- func aaaaaa():
---   closure = (a: string) -> string:
---     <- SomeService.str()
-
-func handleSecAb {SomeAb, SecondAb}() -> string, string:
+func handleSecAb {SomeAb, SecondAb}() -> string, string, string, u32:
   SomeAb.someArrow("eferfrfrf")
   b, c <- SomeAb.someArrow("efre")
-  <- b, c
+  d <- SecondAb.arrow(SomeAb.str)
+  <- b, c, d, SecondAb.num
 
 func returnAb(s: string) -> SomeAb:
   SomeAb = SomeAb(someArrow = funcStr, str = s)
   <- SomeAb
 
-func handleAb(fff: string) -> string, string:
+func handleAb(fff: string) -> string, string, string, u32:
   SomeAb = returnAb(fff)
   SecondAb = SecondAb(arrow = funcStr, num = 12)
-  d, g <- handleSecAb{SomeAb, SecondAb}()
-  <- d, g
+  res1, res2, res3, res4 <- handleSecAb{SomeAb, SecondAb}()
+  <- res1, res2, res3, res4
+
+data Struct:
+    int: i8
+
+ability Simple:
+    st: Struct
+    arrow(x: i8) -> bool
+
+ability Complex:
+    simple: Simple
+    field: string
+
+func foo{Complex, Simple}() -> bool, bool:
+    closure = () -> bool:
+        <- Simple.st.int >= 0
+    res <- closure()
+    <- Complex.simple.arrow(
+        Complex.simple.st.int
+    ), res
+
+func bug214() -> bool, bool:
+    closure = (x: i8) -> bool:
+        <- x > 0
+
+    MyComplex = Complex(
+        simple = Simple(
+            st = Struct(int = 0),
+            arrow = closure
+        ),
+        field = "complex"
+    )
+
+    res1, res2 <- foo{MyComplex, MyComplex.simple}()
+    <- res1, res2
+
+ability SSS:
+    arrow(x: i8) -> bool
+
+ability CCCC:
+    arrow(x: i8) -> bool
+    simple: SSS
+
+func checkAbCalls() -> bool, bool:
+    closure = (x: i8) -> bool:
+        <- x > 20
+
+    MySSS = SSS(arrow = closure)
+    MyCCCC = CCCC(simple = MySSS, arrow = MySSS.arrow)
+
+    <- MySSS.arrow(42), MyCCCC.arrow(12)

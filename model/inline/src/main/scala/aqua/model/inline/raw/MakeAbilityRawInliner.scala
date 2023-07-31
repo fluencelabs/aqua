@@ -1,29 +1,32 @@
 package aqua.model.inline.raw
 
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  LiteralModel,
-  OpModel,
-  SeqModel,
-  ValueModel,
-  VarModel
-}
-import aqua.model.inline.raw.RawInliner
-import cats.data.Chain
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{AbilityRaw, LiteralRaw, MakeStructRaw}
-import cats.data.{NonEmptyList, NonEmptyMap, State}
 import aqua.model.inline.Inline
-import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
-import aqua.types.{ArrowType, ScalarType}
-import cats.syntax.traverse.*
-import cats.syntax.monoid.*
-import cats.syntax.functor.*
-import cats.syntax.flatMap.*
-import cats.syntax.apply.*
+import aqua.model.inline.RawValueInliner.unfold
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.{SeqModel, ValueModel, VarModel}
+import aqua.raw.value.AbilityRaw
+import aqua.types.AbilityType
+import aqua.model.ValueModel.Ability
+import cats.Eval
+import cats.data.{Chain, IndexedStateT, NonEmptyMap, State}
+import cats.syntax.foldable.*
 
 object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
+
+  private def updateFields[S: Mangler: Exports: Arrows](
+    name: String,
+    fields: NonEmptyMap[String, (ValueModel, Inline)]
+  ): State[S, Unit] = {
+    for {
+      res <- fields.toNel.traverse {
+        case (n, (Ability(abilityName, _, _), _)) =>
+          val leftName = AbilityType.fullName(name, n)
+          Exports[S].copyWithAbilityPrefix(abilityName, leftName)
+        case (n, (vm, _)) =>
+          Exports[S].resolveAbilityField(name, n, vm)
+      }
+    } yield ()
+  }
 
   override def apply[S: Mangler: Exports: Arrows](
     raw: AbilityRaw,
@@ -33,16 +36,12 @@ object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
       name <- Mangler[S].findAndForbidName(raw.abilityType.name + "_ab")
       foldedFields <- raw.fieldsAndArrows.nonEmptyTraverse(unfold(_))
       varModel = VarModel(name, raw.baseType)
-      valsInline = foldedFields.toSortedMap.values.map(_._2).fold(Inline.empty)(_ |+| _).desugar
-      _ <- foldedFields.map(_._1).toNel.toList.traverse { case (n, vm) =>
-        val namef = s"$name.$n"
-        Exports[S].resolved(namef, vm)
-      }
+      valsInline = foldedFields.toList.foldMap { case (_, inline) => inline }.desugar
+      _ <- updateFields(name, foldedFields)
     } yield {
       (
         varModel,
         Inline(
-          valsInline.flattenValues,
           Chain.one(SeqModel.wrap(valsInline.predo))
         )
       )

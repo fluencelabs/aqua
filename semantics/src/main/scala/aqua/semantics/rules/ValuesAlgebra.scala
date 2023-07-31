@@ -1,12 +1,14 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.*
-import aqua.parser.lexer.InfixToken.Op
+import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, MathOp, Op as InfOp}
+import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
+
 import cats.Monad
 import cats.data.Chain
 import cats.syntax.applicative.*
@@ -17,6 +19,8 @@ import cats.syntax.traverse.*
 import cats.syntax.option.*
 import cats.instances.list.*
 import cats.data.{NonEmptyList, NonEmptyMap}
+import cats.data.OptionT
+import scribe.Logging
 
 import scala.collection.immutable.SortedMap
 
@@ -24,7 +28,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   N: NamesAlgebra[S, Alg],
   T: TypesAlgebra[S, Alg],
   A: AbilitiesAlgebra[S, Alg]
-) {
+) extends Logging {
 
   def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
     ensureTypeMatches(v, LiteralType.string)
@@ -129,18 +133,17 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               typeFromFieldsWithData = rawFields
                 .map(rf =>
                   resolvedType match {
-                    case struct@StructType(_, _) =>
+                    case struct @ StructType(_, _) =>
                       (
                         StructType(typeName.value, rf.map(_.`type`)),
                         Some(MakeStructRaw(rf, struct))
                       )
-                    case scope@AbilityType(_, _) =>
+                    case scope @ AbilityType(_, _) =>
                       (
                         AbilityType(typeName.value, rf.map(_.`type`)),
                         Some(AbilityRaw(rf, scope))
                       )
                   }
-
                 )
                 .getOrElse(BottomType -> None)
               (typeFromFields, data) = typeFromFieldsWithData
@@ -174,63 +177,138 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
-      case it @ InfixToken(l, r, _) =>
-        (valueToRaw(l), valueToRaw(r)).mapN((ll, rr) => ll -> rr).flatMap {
-          case (Some(leftRaw), Some(rightRaw)) =>
-            // TODO handle literal types
-            val hasFloats = ScalarType.float
-              .exists(ft => leftRaw.`type`.acceptsValueOf(ft) || rightRaw.`type`.acceptsValueOf(ft))
-
-            // https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
-            // Expected types of left and right operands, result type if known, service ID and function name
-            val (leftType, rightType, res, id, fn) = it.op match {
-              case Op.Add =>
-                (ScalarType.i64, ScalarType.i64, None, "math", "add")
-              case Op.Sub => (ScalarType.i64, ScalarType.i64, None, "math", "sub")
-              case Op.Mul if hasFloats =>
-                // TODO may it be i32?
-                (ScalarType.f64, ScalarType.f64, Some(ScalarType.i64), "math", "fmul")
-              case Op.Mul =>
-                (ScalarType.i64, ScalarType.i64, None, "math", "mul")
-              case Op.Div => (ScalarType.i64, ScalarType.i64, None, "math", "div")
-              case Op.Rem => (ScalarType.i64, ScalarType.i64, None, "math", "rem")
-              case Op.Pow => (ScalarType.i64, ScalarType.u32, None, "math", "pow")
-              case Op.Gt => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "gt")
-              case Op.Gte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "gte")
-              case Op.Lt => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lt")
-              case Op.Lte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lte")
-            }
-            for {
-              ltm <- T.ensureTypeMatches(l, leftType, leftRaw.`type`)
-              rtm <- T.ensureTypeMatches(r, rightType, rightRaw.`type`)
-            } yield Option.when(ltm && rtm)(
-              CallArrowRaw(
-                Some(id),
-                fn,
-                leftRaw :: rightRaw :: Nil,
-                ArrowType(
-                  ProductType(leftType :: rightType :: Nil),
-                  ProductType(
-                    res.getOrElse(
-                      // If result type is not known/enforced, then assume it's the widest type of operands
-                      // E.g. 1:i8 + 1:i8 -> i8, not i64
-                      leftRaw.`type` `∪` rightRaw.`type`
-                    ) :: Nil
-                  )
-                ),
-                Some(LiteralRaw.quote(id))
-              )
+      case pr @ PrefixToken(operand, _) =>
+        (for {
+          raw <- OptionT(
+            valueToRaw(operand)
+          )
+          typeCheck <- OptionT.liftF(
+            T.ensureTypeMatches(operand, ScalarType.bool, raw.`type`)
+          )
+          result <- OptionT.when(typeCheck)(
+            ApplyUnaryOpRaw(
+              op = pr.op match {
+                case PrefOp.Not => ApplyUnaryOpRaw.Op.Not
+              },
+              value = raw
             )
+          )
+        } yield result).value
 
+      case it @ InfixToken(l, r, _) =>
+        (valueToRaw(l), valueToRaw(r)).flatMapN {
+          case (Some(leftRaw), Some(rightRaw)) =>
+            val lType = leftRaw.`type`
+            val rType = rightRaw.`type`
+            lazy val uType = lType `∪` rType
+
+            it.op match {
+              case InfOp.Bool(bop) =>
+                for {
+                  leftChecked <- T.ensureTypeMatches(l, ScalarType.bool, lType)
+                  rightChecked <- T.ensureTypeMatches(r, ScalarType.bool, rType)
+                } yield Option.when(
+                  leftChecked && rightChecked
+                )(
+                  ApplyBinaryOpRaw(
+                    op = bop match {
+                      case BoolOp.And => ApplyBinaryOpRaw.Op.And
+                      case BoolOp.Or => ApplyBinaryOpRaw.Op.Or
+                    },
+                    left = leftRaw,
+                    right = rightRaw
+                  )
+                )
+              case op @ (InfOp.Math(_) | InfOp.Cmp(_)) =>
+                // Some type acrobatics to make
+                // compiler check exhaustive pattern matching
+                val iop = op match {
+                  case InfOp.Math(op) => op
+                  case InfOp.Cmp(op) => op
+                }
+
+                val hasFloat = List(lType, rType).exists(
+                  _ acceptsValueOf LiteralType.float
+                )
+
+                // See https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
+                val (id, fn) = iop match {
+                  case MathOp.Add => ("math", "add")
+                  case MathOp.Sub => ("math", "sub")
+                  case MathOp.Mul if hasFloat => ("math", "fmul")
+                  case MathOp.Mul => ("math", "mul")
+                  case MathOp.Div => ("math", "div")
+                  case MathOp.Rem => ("math", "rem")
+                  case MathOp.Pow => ("math", "pow")
+                  case CmpOp.Gt => ("cmp", "gt")
+                  case CmpOp.Gte => ("cmp", "gte")
+                  case CmpOp.Lt => ("cmp", "lt")
+                  case CmpOp.Lte => ("cmp", "lte")
+                }
+
+                /*
+                 * If `uType == TopType`, it means that we don't
+                 * have type big enough to hold the result of operation.
+                 * e.g. We will use `i64` for result of `i32 * u64`
+                 * TODO: Handle this more gracefully
+                 *       (use warning system when it is implemented)
+                 */
+                def uTypeBounded = if (uType == TopType) {
+                  val bounded = ScalarType.i64
+                  logger.warn(
+                    s"Result type of ($lType ${it.op} $rType) is $TopType, " +
+                      s"using $bounded instead"
+                  )
+                  bounded
+                } else uType
+
+                // Expected type sets of left and right operands, result type
+                val (leftExp, rightExp, resType) = iop match {
+                  case MathOp.Add | MathOp.Sub | MathOp.Div | MathOp.Rem =>
+                    (ScalarType.integer, ScalarType.integer, uTypeBounded)
+                  case MathOp.Pow =>
+                    (ScalarType.integer, ScalarType.unsigned, uTypeBounded)
+                  case MathOp.Mul if hasFloat =>
+                    (ScalarType.float, ScalarType.float, ScalarType.i64)
+                  case MathOp.Mul =>
+                    (ScalarType.integer, ScalarType.integer, uTypeBounded)
+                  case CmpOp.Gt | CmpOp.Lt | CmpOp.Gte | CmpOp.Lte =>
+                    (ScalarType.integer, ScalarType.integer, ScalarType.bool)
+                }
+
+                for {
+                  leftChecked <- T.ensureTypeOneOf(l, leftExp, lType)
+                  rightChecked <- T.ensureTypeOneOf(r, rightExp, rType)
+                } yield Option.when(
+                  leftChecked.isDefined && rightChecked.isDefined
+                )(
+                  CallArrowRaw(
+                    ability = Some(id),
+                    name = fn,
+                    arguments = leftRaw :: rightRaw :: Nil,
+                    baseType = ArrowType(
+                      ProductType(lType :: rType :: Nil),
+                      ProductType(resType :: Nil)
+                    ),
+                    serviceId = Some(LiteralRaw.quote(id))
+                  )
+                )
+
+            }
           case _ => None.pure[Alg]
         }
-
     }
 
   // Generate CallArrowRaw for arrow in ability
-  def callAbType(ab: String, abType: AbilityType, ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] =
+  // WARNING: arguments are resolved at the end of the function and added to CallArrowRaw
+  def callAbType(
+    ab: String,
+    abType: AbilityType,
+    ca: CallArrowToken[S]
+  ): Alg[Option[CallArrowRaw]] =
     abType.arrows.get(ca.funcName.value) match {
-      case Some(arrowType) => Option(CallArrowRaw(None, s"$ab.${ca.funcName.value}", Nil, arrowType, None)).pure[Alg]
+      case Some(arrowType) =>
+        Option(CallArrowRaw(None, AbilityType.fullName(ab, ca.funcName.value), Nil, arrowType, None)).pure[Alg]
       case None => None.pure[Alg]
     }
 
@@ -251,35 +329,40 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
               )
             )
         )(ab =>
-          // TODO: Hack. Check that we have registered ability type.
-          // If it exists - this is ability type in file, if not - imported ability
-          T.getType(ab.value).flatMap {
-            case Some(abType: AbilityType) =>
-              callAbType(ab.value, abType, ca)
+          // Check that we have variable as ability
+          N.read(ab.asName, false).flatMap {
+            case Some(at@AbilityType(_, _)) =>
+              callAbType(ab.value, at, ca)
             case _ =>
-              (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
-                case (Some(at), Right(sid)) =>
-                  // Service call, actually
-                  CallArrowRaw(
-                    ability = Some(ab.value),
-                    name = ca.funcName.value,
-                    arguments = Nil,
-                    baseType = at,
-                    serviceId = Some(sid)
-                  ).some
-                case (Some(at), Left(true)) =>
-                  // Ability function call, actually
-                  CallArrowRaw(
-                    ability = Some(ab.value),
-                    name = ca.funcName.value,
-                    arguments = Nil,
-                    baseType = at,
-                    serviceId = None
-                  ).some
-                case _ => none
+              // Check that we have registered ability type.
+              // If it exists - this is ability type in file, if not - imported ability
+              T.getType(ab.value).flatMap {
+                case Some(abType: AbilityType) =>
+                  callAbType(ab.value, abType, ca)
+                case t =>
+                  (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
+                    case (Some(at), Right(sid)) =>
+                      // Service call, actually
+                      CallArrowRaw(
+                        ability = Some(ab.value),
+                        name = ca.funcName.value,
+                        arguments = Nil,
+                        baseType = at,
+                        serviceId = Some(sid)
+                      ).some
+                    case (Some(at), Left(true)) =>
+                      // Ability function call, actually
+                      CallArrowRaw(
+                        ability = Some(ab.value),
+                        name = ca.funcName.value,
+                        arguments = Nil,
+                        baseType = at,
+                        serviceId = None
+                      ).some
+                    case _ => none
+                  }
               }
           }
-
         )
       result <- raw.flatTraverse(r =>
         val arr = r.baseType
