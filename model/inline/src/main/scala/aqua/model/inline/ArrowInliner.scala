@@ -90,31 +90,27 @@ object ArrowInliner extends Logging {
 
   // Apply a callable function, get its fully resolved body & optional value, if any
   private def inline[S: Mangler: Arrows: Exports](
-    funcName: String,
-    tree: RawTag.Tree,
-    capturedValues: Map[String, ValueModel],
-    capturedTopology: Option[String],
+    fn: FuncArrow,
     call: CallModel,
-    outsideDeclaredStreams: Set[String],
-    results: List[ValueRaw]
+    outsideDeclaredStreams: Set[String]
   ): State[S, InlineResult] =
     for {
       // Register captured values as available exports
-      _ <- Exports[S].resolved(capturedValues)
-      _ <- Mangler[S].forbid(capturedValues.keySet)
+      _ <- Exports[S].resolved(fn.capturedValues)
+      _ <- Mangler[S].forbid(fn.capturedValues.keySet)
 
       // Now, substitute the arrows that were received as function arguments
       // Use the new op tree (args are replaced with values, names are unique & safe)
-      callableFuncBodyNoTopology <- TagInliner.handleTree(tree, funcName)
+      callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body, fn.funcName)
       callableFuncBody =
-        capturedTopology
+        fn.capturedTopology
           .fold[OpModel](SeqModel)(ApplyTopologyModel.apply)
           .wrap(callableFuncBodyNoTopology)
 
       opsAndRets <- pushStreamResults(
         outsideDeclaredStreams,
         call.exportTo,
-        results,
+        fn.ret,
         callableFuncBody
       )
       (ops, rets) = opsAndRets
@@ -259,16 +255,16 @@ object ArrowInliner extends Logging {
    * @param name ability name in state
    * @param vm ability variable
    * @param t ability type
-   * @param oldExports previous Exports
-   * @param oldArrows previous Arrows
+   * @param exports previous Exports
+   * @param arrows previous Arrows
    * @return names to rename, Exports and Arrows with all ability fields and arrows
    */
   private def renameAndResolveAbilities[S: Mangler: Arrows: Exports](
     name: String,
     vm: VarModel,
     t: AbilityType,
-    oldExports: Map[String, ValueModel],
-    oldArrows: Map[String, FuncArrow]
+    exports: Map[String, ValueModel],
+    arrows: Map[String, FuncArrow]
   ): State[S, AbilityResolvingResult] = {
     for {
       newName <- Mangler[S].findNewName(name)
@@ -278,7 +274,7 @@ object ArrowInliner extends Logging {
       allNewNames = newFieldsName.add((name, newName)).toSortedMap
     } yield {
       val (allVars, allArrows) =
-        getVarsAndArrowsFromAbilities(vm.name, Option(newName), t, oldExports, oldArrows)
+        getVarsAndArrowsFromAbilities(vm.name, Option(newName), t, exports, arrows)
       AbilityResolvingResult(allNewNames, allVars, allArrows)
     }
   }
@@ -291,8 +287,8 @@ object ArrowInliner extends Logging {
    * @param topOldName old name to find all fields in states
    * @param topNewName new name to rename all fields in states
    * @param abilityType type of current ability
-   * @param oldExports where to get values
-   * @param oldArrows where to get arrows
+   * @param exports where to get values
+   * @param arrows where to get arrows
    * @return
    */
   private def getVarsAndArrowsFromAbilities(
@@ -470,13 +466,9 @@ object ArrowInliner extends Logging {
             tr <- prelude[S](arrow, call, exports, passArrows ++ arrowsFromAbilities)
             (tree, results) = tr
             inlineResult <- ArrowInliner.inline(
-              arrow.funcName,
-              tree,
-              arrow.capturedValues,
-              arrow.capturedTopology,
+              arrow.copy(body = tree, ret = results),
               call,
-              streams,
-              results
+              streams
             )
           } yield inlineResult
         )
