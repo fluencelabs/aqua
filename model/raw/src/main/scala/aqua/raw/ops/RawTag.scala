@@ -80,7 +80,7 @@ case object ParTag extends ParGroupTag {
   case object Par extends GroupTag
 }
 
-case class IfTag(left: ValueRaw, right: ValueRaw, equal: Boolean) extends GroupTag
+case class IfTag(value: ValueRaw) extends GroupTag
 
 object IfTag {
 

@@ -4,9 +4,12 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.collectionToModel
 import aqua.model.inline.raw.CallArrowRawInliner
+import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{BoxType, CanonStreamType, StreamType}
+import aqua.model.inline.Inline.parDesugarPrefixOpt
+
 import cats.syntax.traverse.*
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
@@ -18,7 +21,6 @@ import cats.data.{Chain, State, StateT}
 import cats.syntax.show.*
 import cats.syntax.bifunctor.*
 import scribe.{log, Logging}
-import aqua.model.inline.Inline.parDesugarPrefixOpt
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -202,12 +204,36 @@ object TagInliner extends Logging {
           prefix = parDesugarPrefix(viaF.prependedAll(pif))
         )
 
-      case IfTag(leftRaw, rightRaw, shouldMatch) =>
-        (
-          valueToModel(leftRaw) >>= canonicalizeIfStream.tupled,
-          valueToModel(rightRaw) >>= canonicalizeIfStream.tupled
-        ).mapN { case ((leftModel, leftPrefix), (rightModel, rightPrefix)) =>
-          val prefix = parDesugarPrefixOpt(leftPrefix, rightPrefix)
+      case IfTag(valueRaw) =>
+        (valueRaw match {
+          case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right) =>
+            (
+              valueToModel(left),
+              valueToModel(right)
+            ).mapN { case ((lmodel, lprefix), (rmodel, rprefix)) =>
+              val prefix = parDesugarPrefixOpt(lprefix, rprefix)
+              val matchModel = MatchMismatchModel(
+                left = lmodel,
+                right = rmodel,
+                shouldMatch = op match {
+                  case BinOp.Eq => true
+                  case BinOp.Neq => false
+                }
+              )
+
+              (prefix, matchModel)
+            }
+          case _ =>
+            valueToModel(valueRaw).map { case (valueModel, prefix) =>
+              val matchModel = MatchMismatchModel(
+                left = valueModel,
+                right = LiteralModel.bool(true),
+                shouldMatch = true
+              )
+
+              (prefix, matchModel)
+            }
+        }).map { case (prefix, matchModel) =>
           val toModel = (children: Chain[OpModel.Tree]) =>
             XorModel.wrap(
               children.uncons.map { case (ifBody, elseBody) =>
@@ -227,11 +253,7 @@ object TagInliner extends Logging {
                     )
                   else elseBodyFiltered
 
-                MatchMismatchModel(
-                  leftModel,
-                  rightModel,
-                  shouldMatch
-                ).wrap(ifBody) +: elseBodyAugmented
+                matchModel.wrap(ifBody) +: elseBodyAugmented
               }.getOrElse(children)
             )
 

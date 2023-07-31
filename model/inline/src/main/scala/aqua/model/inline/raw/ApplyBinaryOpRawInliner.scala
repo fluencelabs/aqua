@@ -92,6 +92,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     val predo = (resName: String) =>
       SeqModel.wrap(
         linline.predo ++ rinline.predo :+ XorModel.wrap(
+          // TODO: Canonicalize values if they are streams
           MatchMismatchModel(lmodel, rmodel, shouldMatch).wrap(
             FlattenModel(
               LiteralModel.bool(true),

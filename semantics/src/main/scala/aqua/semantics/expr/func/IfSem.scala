@@ -17,6 +17,8 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.apply.*
+import cats.syntax.traverse.*
+import aqua.types.ScalarType
 
 class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
 
@@ -29,30 +31,26 @@ class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     Prog
       .around(
-        (V.valueToRaw(expr.left), V.valueToRaw(expr.right)).flatMapN {
-          case (Some(lt), Some(rt)) =>
-            T.ensureValuesComparable(
-              token = expr.token,
-              left = lt.`type`,
-              right = rt.`type`
-            ).map(Option.when(_)(lt -> rt))
-          case _ => None.pure
-        },
-        (values: Option[(ValueRaw, ValueRaw)], ops: Raw) =>
-          values
+        V.valueToRaw(expr.value)
+          .flatMap(
+            _.flatTraverse(raw =>
+              T.ensureTypeMatches(
+                token = expr.value,
+                expected = ScalarType.bool,
+                givenType = raw.`type`
+              ).map(Option.when(_)(raw))
+            )
+          ),
+        (value: Option[ValueRaw], ops: Raw) =>
+          value
             .fold(
               Raw.error("`if` expression errored in matching types")
-            ) { case (lt, rt) =>
+            )(raw =>
               ops match {
-                case FuncOp(op) =>
-                  IfTag(
-                    left = lt,
-                    right = rt,
-                    equal = expr.eqOp.value
-                  ).wrap(op).toFuncOp
+                case FuncOp(op) => IfTag(raw).wrap(op).toFuncOp
                 case _ => Raw.error("Wrong body of the `if` expression")
               }
-            }
+            )
             .pure
       )
       .abilitiesScope[S](expr.token)
