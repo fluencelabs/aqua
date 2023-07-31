@@ -90,60 +90,55 @@ object ArrowInliner extends Logging {
 
   // Apply a callable function, get its fully resolved body & optional value, if any
   private def inline[S: Mangler: Arrows: Exports](
-    fn: FuncArrow,
-    call: CallModel
+    funcName: String,
+    tree: RawTag.Tree,
+    capturedValues: Map[String, ValueModel],
+    capturedTopology: Option[String],
+    call: CallModel,
+    outsideDeclaredStreams: Set[String],
+    results: List[ValueRaw]
   ): State[S, InlineResult] =
-    (Exports[S].exports, getOutsideStreamNames).flatMapN {
-      case (oldExports, outsideDeclaredStreams) =>
-        // Function's internal variables will not be available outside, hence the scope
-        Exports[S].scope(
-          for {
-            // Process renamings, prepare environment
-            tr <- prelude[S](fn, call, oldExports)
-            (tree, results) = tr
+    for {
+      // Register captured values as available exports
+      _ <- Exports[S].resolved(capturedValues)
+      _ <- Mangler[S].forbid(capturedValues.keySet)
 
-            // Register captured values as available exports
-            _ <- Exports[S].resolved(fn.capturedValues)
-            _ <- Mangler[S].forbid(fn.capturedValues.keySet)
+      // Now, substitute the arrows that were received as function arguments
+      // Use the new op tree (args are replaced with values, names are unique & safe)
+      callableFuncBodyNoTopology <- TagInliner.handleTree(tree, funcName)
+      callableFuncBody =
+        capturedTopology
+          .fold[OpModel](SeqModel)(ApplyTopologyModel.apply)
+          .wrap(callableFuncBodyNoTopology)
 
-            // Now, substitute the arrows that were received as function arguments
-            // Use the new op tree (args are replaced with values, names are unique & safe)
-            callableFuncBodyNoTopology <- TagInliner.handleTree(tree, fn.funcName)
-            callableFuncBody =
-              fn.capturedTopology
-                .fold[OpModel](SeqModel)(ApplyTopologyModel.apply)
-                .wrap(callableFuncBodyNoTopology)
+      opsAndRets <- pushStreamResults(
+        outsideDeclaredStreams,
+        call.exportTo,
+        results,
+        callableFuncBody
+      )
+      (ops, rets) = opsAndRets
 
-            opsAndRets <- pushStreamResults(
-              outsideDeclaredStreams,
-              call.exportTo,
-              results,
-              callableFuncBody
-            )
-            (ops, rets) = opsAndRets
+      exports <- Exports[S].exports
+      arrows <- Arrows[S].arrows
+      // gather all arrows and variables from abilities
+      returnedFromAbilities = rets.collect { case VarModel(name, st @ AbilityType(_, _), _) =>
+        getVarsAndArrowsFromAbilities(name, None, st, exports, arrows)
+      }.foldMapA(_.bimap(_.toList, _.toList)).bimap(_.toMap, _.toMap)
 
-            exports <- Exports[S].exports
-            arrows <- Arrows[S].arrows
-            // gather all arrows and variables from abilities
-            returnedFromAbilities = rets.collect { case VarModel(name, st @ AbilityType(_, _), _) =>
-              getVarsAndArrowsFromAbilities(name, None, st, exports, arrows)
-            }.foldMapA(_.bimap(_.toList, _.toList)).bimap(_.toMap, _.toMap)
-
-            // find and get resolved arrows if we return them from the function
-            returnedArrows = rets.collect { case VarModel(name, ArrowType(_, _), _) =>
-              name
-            }.toSet
-            arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
-          } yield {
-            val (valsFromAbilities, arrowsFromAbilities) = returnedFromAbilities
-            InlineResult(
-              SeqModel.wrap(ops.reverse: _*),
-              rets.reverse,
-              valsFromAbilities,
-              arrowsFromAbilities ++ arrowsToSave
-            )
-          }
-        )
+      // find and get resolved arrows if we return them from the function
+      returnedArrows = rets.collect { case VarModel(name, ArrowType(_, _), _) =>
+        name
+      }.toSet
+      arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
+    } yield {
+      val (valsFromAbilities, arrowsFromAbilities) = returnedFromAbilities
+      InlineResult(
+        SeqModel.wrap(ops.reverse: _*),
+        rets.reverse,
+        valsFromAbilities,
+        arrowsFromAbilities ++ arrowsToSave
+      )
     }
 
   /**
@@ -304,8 +299,8 @@ object ArrowInliner extends Logging {
     topOldName: String,
     topNewName: Option[String],
     abilityType: AbilityType,
-    oldExports: Map[String, ValueModel],
-    oldArrows: Map[String, FuncArrow]
+    exports: Map[String, ValueModel],
+    arrows: Map[String, FuncArrow]
   ): (Map[String, ValueModel], Map[String, FuncArrow]) = {
     abilityType.fields.toSortedMap.toList.map { case (fName, fValue) =>
       val currentOldName = AbilityType.fullName(topOldName, fName)
@@ -317,14 +312,14 @@ object ArrowInliner extends Logging {
             currentOldName,
             currentNewName,
             nestedAbilityType,
-            oldExports,
-            oldArrows
+            exports,
+            arrows
           )
         case ArrowType(_, _) =>
           Exports
-            .getLastValue(currentOldName, oldExports)
+            .getLastValue(currentOldName, exports)
             .flatMap { case vm @ VarModel(name, _, _) =>
-              oldArrows
+              arrows
                 .get(name)
                 .map(fa =>
                   (
@@ -337,7 +332,7 @@ object ArrowInliner extends Logging {
 
         case _ =>
           Exports
-            .getLastValue(currentOldName, oldExports)
+            .getLastValue(currentOldName, exports)
             .map(vm => (Map(currentNewName.getOrElse(currentOldName) -> vm), Map.empty))
             .getOrElse((Map.empty, Map.empty))
       }
@@ -359,7 +354,8 @@ object ArrowInliner extends Logging {
   private def prelude[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel,
-    oldExports: Map[String, ValueModel]
+    oldExports: Map[String, ValueModel],
+    arrows: Map[String, FuncArrow]
   ): State[S, (RawTag.Tree, List[ValueRaw])] =
     for {
       // Collect all arguments: what names are used inside the function, what values are received
@@ -367,20 +363,15 @@ object ArrowInliner extends Logging {
 
       abArgs = args.abilityArgs
 
-      // Going to resolve arrows: collect them all. Names should never collide: it's semantically checked
-      previousArrowsState <- Arrows[S].arrows
-
-      _ <- Arrows[S].purge
-
       abilityResolvingResult <- abArgs.toList.traverse { case (str, (vm, sct)) =>
-        renameAndResolveAbilities(str, vm, sct, oldExports, previousArrowsState)
+        renameAndResolveAbilities(str, vm, sct, oldExports, arrows)
       }.map(_.combineAll)
 
       absRenames = abilityResolvingResult.namesToRename
       absVars = abilityResolvingResult.renamedExports
       absArrows = abilityResolvingResult.renamedArrows
 
-      arrowArgs = args.arrowArgs(previousArrowsState)
+      arrowArgs = args.arrowArgs(arrows)
       // Update states and rename tags
       renamedArrows <- updateArrowsAndRenameArrowArgs(arrowArgs ++ absArrows, fn, absRenames)
 
@@ -469,11 +460,26 @@ object ArrowInliner extends Logging {
         .traverse(getAllArrowsFromAbility)
         .map(_.fold(Map.empty)(_ ++ _))
 
-      inlineResult <- Arrows[S].scope(
-        for {
-          _ <- Arrows[S].resolved(passArrows ++ arrowsFromAbilities)
-          inlineResult <- ArrowInliner.inline(arrow, call)
-        } yield inlineResult
+      exports <- Exports[S].exports
+      streams <- getOutsideStreamNames
+
+      inlineResult <- Exports[S].scope(
+        Arrows[S].scope(
+          for {
+            // Process renamings, prepare environment
+            tr <- prelude[S](arrow, call, exports, passArrows ++ arrowsFromAbilities)
+            (tree, results) = tr
+            inlineResult <- ArrowInliner.inline(
+              arrow.funcName,
+              tree,
+              arrow.capturedValues,
+              arrow.capturedTopology,
+              call,
+              streams,
+              results
+            )
+          } yield inlineResult
+        )
       )
 
       _ <- Arrows[S].resolved(inlineResult.arrowsToSave)
