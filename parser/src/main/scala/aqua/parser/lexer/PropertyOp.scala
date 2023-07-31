@@ -14,15 +14,18 @@ import cats.~>
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import aqua.types.LiteralType
+import aqua.parser.lexer.CallArrowToken.CallBraces
 
 sealed trait PropertyOp[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K]
 }
 
-case class IntoArrow[F[_]: Comonad](name: Name[F], arguments: List[ValueToken[F]]) extends PropertyOp[F] {
+case class IntoArrow[F[_]: Comonad](name: Name[F], arguments: List[ValueToken[F]])
+    extends PropertyOp[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K] = copy(name.mapK(fk), arguments.map(_.mapK(fk)))
+  override def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K] =
+    copy(name.mapK(fk), arguments.map(_.mapK(fk)))
 
   override def toString: String = s".$name(${arguments.map(_.toString).mkString(", ")})"
 }
@@ -58,7 +61,9 @@ object PropertyOp {
     (`.` *> `name`).lift.map(IntoField(_))
 
   val parseArrow: P[PropertyOp[Span.S]] =
-    (`.` *> CallArrowToken.callBraces()).lift.map(p => IntoArrow(p._2._1, p._2._2 ++ p._2._3))
+    (`.` *> CallArrowToken.callBraces).map { case CallBraces(name, abilities, args) =>
+      IntoArrow(name, abilities ++ args)
+    }
 
   val parseCopy: P[PropertyOp[Span.S]] =
     (`.` *> (`copy`.lift ~ namedArgs)).map { case (point, fields) =>
@@ -67,7 +72,10 @@ object PropertyOp {
 
   private val parseIdx: P[PropertyOp[Span.S]] =
     (P.defer(
-      (ValueToken.`value`.surroundedBy(`/s*`).between(`[`.between(` *`, `/s*`), `/s*` *> `]`).lift | (exclamation *> ValueToken.num).lift)
+      (ValueToken.`value`
+        .surroundedBy(`/s*`)
+        .between(`[`.between(` *`, `/s*`), `/s*` *> `]`)
+        .lift | (exclamation *> ValueToken.num).lift)
         .map(v => IntoIndex(v.map(_.unit), Some(v._2)))
         .backtrack
     ) | exclamation.lift.map(e => IntoIndex(e, None))).flatMap { ii =>

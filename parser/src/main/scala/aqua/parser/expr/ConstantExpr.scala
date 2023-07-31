@@ -2,20 +2,15 @@ package aqua.parser.expr
 
 import aqua.parser.Expr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{
-  CallArrowToken,
-  CollectionToken,
-  InfixToken,
-  LiteralToken,
-  Name,
-  ValueToken
-}
+import aqua.parser.lexer.*
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser as P
 import cats.~>
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lexer.PrefixToken
+import aqua.parser.lexer.VarToken
 
 case class ConstantExpr[F[_]](
   name: Name[F],
@@ -35,20 +30,18 @@ object ConstantExpr extends Expr.Leaf {
   override val p: P[ConstantExpr[Span.S]] =
     (((constName ~ `?`.?).with1 <* `=` <* ` `) ~ ValueToken.`value`).flatMap {
       case ((name, mark), value) =>
+        lazy val fail = (what: String) =>
+          P.failWith(
+            s"'$name' is $what, but only strings, numbers or booleans can be used"
+          )
         value match {
-          case CollectionToken(point, _) =>
-            P.failWith(
-              s"'$name' is an array, but only strings, numbers or booleans can be used"
-            )
-          case CallArrowToken(_, _, _) =>
-            P.failWith(
-              s"'$name' is a function call, but only strings, numbers or booleans can be used"
-            )
-          case InfixToken(_, _, _) =>
-            P.failWith(
-              s"'$name' an expression, but only strings, numbers or booleans can be used"
-            )
-          case _ =>
+          case CollectionToken(point, _) => fail("a collection")
+          case CallArrowToken(_, _) => fail("a function call")
+          case InfixToken(_, _, _) | PrefixToken(_, _) => fail("an expression")
+          case VarToken(_) => fail("a variable")
+          case PropertyToken(_, _) => fail("a property")
+          case NamedValueToken(_, _) => fail("an ability or data")
+          case LiteralToken(valueToken, ts) =>
             P.pure(ConstantExpr(name, value, mark.nonEmpty))
         }
 

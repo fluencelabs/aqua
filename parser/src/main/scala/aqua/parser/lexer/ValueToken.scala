@@ -21,11 +21,31 @@ sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
 }
 
-case class VarToken[F[_]](name: Name[F], property: List[PropertyOp[F]] = Nil)
+case class PropertyToken[F[_]](value: ValueToken[F], properties: NonEmptyList[PropertyOp[F]])
     extends ValueToken[F] {
+  override def as[T](v: T): F[T] = value.as(v)
+
+  def mapK[K[_]: Comonad](fk: F ~> K): PropertyToken[K] =
+    copy(value.mapK(fk), properties.map(_.mapK(fk)))
+}
+
+object PropertyToken {
+
+  val property: P[PropertyToken[Span.S]] =
+    (ValueToken.atom ~ PropertyOp.ops).map { case (v, ops) =>
+      PropertyToken(v, ops)
+    }
+
+}
+
+case class VarToken[F[_]](name: Name[F]) extends ValueToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
-  def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk), property.map(_.mapK(fk)))
+  def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk))
+}
+
+object VarToken {
+  lazy val variable: P[VarToken[Span.S]] = Name.variable.map(VarToken(_))
 }
 
 case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
@@ -74,15 +94,14 @@ object CollectionToken {
 }
 
 case class CallArrowToken[F[_]: Comonad](
-  ability: Option[NamedTypeToken[F]],
-  funcName: Name[F],
+  name: Name[F],
   args: List[ValueToken[F]]
 ) extends ValueToken[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): CallArrowToken[K] =
-    copy(ability.map(_.mapK(fk)), funcName.mapK(fk), args.map(_.mapK(fk)))
+    copy(name.mapK(fk), args.map(_.mapK(fk)))
 
-  override def as[T](v: T): F[T] = funcName.as(v)
+  override def as[T](v: T): F[T] = name.as(v)
 }
 
 object CallArrowToken {
@@ -93,11 +112,14 @@ object CallArrowToken {
   def abilities(): P[NonEmptyList[ValueToken[S]]] =
     `{` *> comma(ValueToken.`value`.surroundedBy(`/s*`)) <* `}`
 
-  def callBraces(): P[CallBraces] = P
+  lazy val callBraces: P[CallBraces] = P
     .defer(
-      Name.p
-        ~ abilities().? ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
-          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`)
+      Name.p ~
+        abilities().? ~
+        comma0(ValueToken.`value`.surroundedBy(`/s*`)).between(
+          ` `.?.with1 *> `(` <* `/s*`,
+          `/s*` *> `)`
+        )
     )
     .map { case ((n, ab), args) =>
       CallBraces(n, ab.map(_.toList).getOrElse(Nil), args)
@@ -107,12 +129,8 @@ object CallArrowToken {
     )
 
   val callArrow: P[CallArrowToken[Span.S]] =
-    ((NamedTypeToken.dotted <* `.`).?.with1 ~
-      callBraces()
-        .withContext(
-          "Missing braces '()' after the function call"
-        )).map { case (ab, callBraces) =>
-      CallArrowToken(ab, callBraces.name, callBraces.abilities ++ callBraces.args)
+    callBraces.map { braces =>
+      CallArrowToken(braces.name, braces.abilities ++ braces.args)
     }
 }
 
@@ -392,16 +410,6 @@ object PrefixToken {
 
 object ValueToken {
 
-  val varProperty: P[VarToken[Span.S]] =
-    (Name.dotted ~ PropertyOp.ops.?).map { case (n, l) ⇒
-      VarToken(n, l.foldMap(_.toList))
-    }
-
-  val abProperty: P[VarToken[Span.S]] =
-    (Name.cl ~ PropertyOp.ops.?).map { case (n, l) ⇒
-      VarToken(n, l.foldMap(_.toList))
-    }
-
   val bool: P[LiteralToken[Span.S]] =
     P.oneOf(
       ("true" :: "false" :: Nil)
@@ -443,13 +451,13 @@ object ValueToken {
   val atom: P[ValueToken[S]] = P.oneOf(
     literal.backtrack ::
       initPeerId.backtrack ::
+      P.defer(PropertyToken.property).backtrack ::
+      P.defer(VarToken.variable).backtrack ::
       P.defer(CollectionToken.collection).backtrack ::
       P.defer(NamedValueToken.dataValue).backtrack ::
       P.defer(CallArrowToken.callArrow).backtrack ::
-      P.defer(abProperty).backtrack ::
       P.defer(PrefixToken.value).backtrack ::
       P.defer(brackets(InfixToken.value)).backtrack ::
-      varProperty ::
       Nil
   )
 

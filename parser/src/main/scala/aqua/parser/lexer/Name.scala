@@ -30,15 +30,11 @@ object Name {
   val p: P[Name[Span.S]] =
     `name`.lift.map(Name(_))
 
-  val cl: P[Name[Span.S]] =
-    `Class`.lift.map(Name(_))
+  val variable: P[Name[Span.S]] =
+    (name | Class).lift.map(Name(_))
 
   val upper: P[Name[Span.S]] =
     NAME.lift.map(Name(_))
-
-  val dotted: P[Name[Span.S]] =
-    ((`Class` ~ `.`).backtrack.rep0.?.with1 ~ P.oneOf(`name` :: NAME :: Nil)).string.lift
-      .map(Name(_))
 
   val nameAs: P[As[Span.S]] =
     asOpt(p)
