@@ -36,9 +36,9 @@ class AbilitySem[S[_]](val expr: AbilityExpr[S]) extends AnyVal {
                 t
               ): Raw
             case false =>
-              Raw.error("Scope types unresolved")
+              Raw.error("Ability types unresolved")
           }
-        case None => Raw.error("Scope types unresolved").pure[Alg]
+        case None => Raw.error("Ability types unresolved").pure[Alg]
       }
     )
   }

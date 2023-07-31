@@ -13,6 +13,7 @@ import { bugNG69Call, ifCall, ifWrapCall } from '../examples/ifCall.js';
 import { parCall, testTimeoutCall } from '../examples/parCall.js';
 import { complexCall } from '../examples/complex.js';
 import { constantsCall, particleTtlAndTimestampCall } from '../examples/constantsCall.js';
+import { abilityCall, complexAbilityCall, checkAbCallsCall } from '../examples/abilityCall.js';
 import {
     nilLengthCall,
     nilLiteralCall,
@@ -77,7 +78,6 @@ export const relay2 = config.relays[1];
 const relayPeerId2 = relay2.peerId;
 
 import log from 'loglevel';
-import { abilityCall } from '../examples/abilityCall';
 // log.setDefaultLevel("debug")
 
 async function start() {
@@ -352,6 +352,16 @@ describe('Testing examples', () => {
     it('ability.aqua', async () => {
         let result = await abilityCall();
         expect(result).toStrictEqual(['declare_const123', 'efre123', 'declare_const123', 12]);
+    });
+
+    it('ability.aqua complex', async () => {
+        let result = await complexAbilityCall();
+        expect(result).toStrictEqual([false, true]);
+    });
+
+    it('ability.aqua complex', async () => {
+        let result = await checkAbCallsCall();
+        expect(result).toStrictEqual([true, false]);
     });
 
     it('functors.aqua LNG-119 bug', async () => {

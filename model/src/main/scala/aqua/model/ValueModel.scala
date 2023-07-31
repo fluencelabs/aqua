@@ -51,6 +51,15 @@ object ValueModel {
     case _ => ???
   }
 
+  object Ability {
+
+    def unapply(vm: VarModel): Option[(String, AbilityType, Chain[PropertyModel])] =
+      vm match {
+        case VarModel(name, t@AbilityType(_, _), properties) =>
+          (name, t, properties).some
+        case _ => none
+      }
+  }
 }
 
 case class LiteralModel(value: String, `type`: Type) extends ValueModel {
