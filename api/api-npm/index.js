@@ -1,12 +1,7 @@
 // @ts-check
-const { AquaConfig, Aqua, Call, Input, Path } = require("./aqua-api.js");
+import { AquaConfig, Aqua, Call, Input, Path } from "./aqua-api.js";
 
-async function compile({
-  funcCall,
-  code,
-  filePath,
-  data = {},
-  imports = [],
+function getConfig({
   constants = [],
   logLevel = "info",
   noRelay = false,
@@ -14,7 +9,7 @@ async function compile({
   targetType = "air",
   tracing = false,
 }) {
-  const config = new AquaConfig(
+  return new AquaConfig(
     logLevel,
     constants,
     noXor,
@@ -26,22 +21,46 @@ async function compile({
     }[targetType],
     tracing,
   );
+}
 
-  if (typeof funcCall === "string" && filePath !== undefined) {
-    const result = await Aqua.compile(
-      new Call(funcCall, data, new Input(filePath)),
-      imports,
-      config,
-    );
+export function compileFromString({ code, ...commonArgs }) {
+  const config = getConfig(commonArgs);
+  const { imports = [] } = commonArgs;
+  return Aqua.compile(new Input(code), imports, config);
+}
 
-    return result;
-  }
-
-  if (typeof code === "string") {
-    return Aqua.compile(new Input(code), imports, config);
-  }
-
+export function compileFromPath({ filePath, ...commonArgs }) {
+  const config = getConfig(commonArgs);
+  const { imports = [] } = commonArgs;
   return Aqua.compile(new Path(filePath), imports, config);
 }
 
-module.exports = compile;
+export function compileAquaCallFromString({
+  code,
+  funcCall,
+  data,
+  ...commonArgs
+}) {
+  const config = getConfig(commonArgs);
+  const { imports = [] } = commonArgs;
+  return Aqua.compile(
+    new Call(funcCall, data, new Input(code)),
+    imports,
+    config,
+  );
+}
+
+export function compileAquaCallFromPath({
+  filePath,
+  funcCall,
+  data,
+  ...commonArgs
+}) {
+  const config = getConfig(commonArgs);
+  const { imports = [] } = commonArgs;
+  return Aqua.compile(
+    new Call(funcCall, data, new Input(filePath)),
+    imports,
+    config,
+  );
+}
