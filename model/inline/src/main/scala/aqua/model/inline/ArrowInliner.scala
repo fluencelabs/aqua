@@ -298,8 +298,6 @@ object ArrowInliner extends Logging {
    * @param abilityType type of current ability
    * @param oldExports where to get values
    * @param oldArrows where to get arrows
-   * @param valAcc accumulator for values
-   * @param arrowsAcc accumulator for arrows
    * @return
    */
   private def getVarsAndArrowsFromAbilities(
@@ -307,9 +305,7 @@ object ArrowInliner extends Logging {
     topNewName: Option[String],
     abilityType: AbilityType,
     oldExports: Map[String, ValueModel],
-    oldArrows: Map[String, FuncArrow],
-    valAcc: Map[String, ValueModel] = Map.empty,
-    arrowsAcc: Map[String, FuncArrow] = Map.empty
+    oldArrows: Map[String, FuncArrow]
   ): (Map[String, ValueModel], Map[String, FuncArrow]) = {
     abilityType.fields.toSortedMap.toList.map { case (fName, fValue) =>
       val currentOldName = AbilityType.fullName(topOldName, fName)
@@ -322,30 +318,28 @@ object ArrowInliner extends Logging {
             currentNewName,
             nestedAbilityType,
             oldExports,
-            oldArrows,
-            valAcc,
-            arrowsAcc
+            oldArrows
           )
         case ArrowType(_, _) =>
           Exports
-            .getLastValue(currentOldName, oldExports, identity)
+            .getLastValue(currentOldName, oldExports)
             .flatMap { case vm @ VarModel(name, _, _) =>
               oldArrows
                 .get(name)
                 .map(fa =>
                   (
-                    valAcc.updated(currentNewName.getOrElse(currentOldName), vm),
-                    arrowsAcc.updated(name, fa)
+                    Map(currentNewName.getOrElse(currentOldName) -> vm),
+                    Map(name -> fa)
                   )
                 )
             }
-            .getOrElse((valAcc, arrowsAcc))
+            .getOrElse((Map.empty, Map.empty))
 
         case _ =>
           Exports
-            .getLastValue(currentOldName, oldExports, identity)
-            .map(vm => (valAcc.updated(currentNewName.getOrElse(currentOldName), vm), arrowsAcc))
-            .getOrElse((valAcc, arrowsAcc))
+            .getLastValue(currentOldName, oldExports)
+            .map(vm => (Map(currentNewName.getOrElse(currentOldName) -> vm), Map.empty))
+            .getOrElse((Map.empty, Map.empty))
       }
     }.foldMapA(_.bimap(_.toList, _.toList)).bimap(_.toMap, _.toMap)
   }

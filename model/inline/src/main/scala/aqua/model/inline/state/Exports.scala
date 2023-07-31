@@ -125,11 +125,11 @@ object Exports {
   def apply[S](implicit exports: Exports[S]): Exports[S] = exports
 
   // Get last linked VarModel
-  def getLastValue[T](name: String, state: Map[String, ValueModel], ex: VarModel => T): Option[T] = {
+  def getLastValue(name: String, state: Map[String, ValueModel]): Option[VarModel] = {
     state.get(name) match {
       case Some(vm@VarModel(n, _, _)) =>
-        if (name == n) Option(ex(vm))
-        else getLastValue(n, state, ex).orElse(Option(ex(vm)))
+        if (name == n) Option(vm)
+        else getLastValue(n, state).orElse(Option(vm))
       case n =>
         None
     }
@@ -148,7 +148,7 @@ object Exports {
           val newFullName = AbilityType.fullName(newName, n)
           val oldFullName = AbilityType.fullName(oldName, n)
           // put link on last variable in chain
-          val lastVar = Exports.getLastValue(oldFullName, state, identity)
+          val lastVar = Exports.getLastValue(oldFullName, state)
           NonEmptyList.of((newFullName, lastVar.getOrElse(VarModel(oldFullName, t))))
       }
     }
@@ -166,7 +166,7 @@ object Exports {
     }
 
     override def getLast(name: String): State[Map[String, ValueModel], Option[String]] =
-      State.get.map(st => getLastValue(name, st, _.name))
+      State.get.map(st => getLastValue(name, st).map(_.name))
 
     override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
       State.modify(_ ++ exports)

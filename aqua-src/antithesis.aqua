@@ -2,7 +2,7 @@ aqua Main
 
 use DECLARE_CONST, decl_bar from "declare.aqua" as Declare
 
-export SomeService, handleAb
+export SomeService, handleAb, bug214, checkAbCalls
 
 service SomeService("wed"):
   getStr(s: string) -> string
