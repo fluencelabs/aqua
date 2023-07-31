@@ -91,8 +91,7 @@ object ArrowInliner extends Logging {
   // Apply a callable function, get its fully resolved body & optional value, if any
   private def inline[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
-    call: CallModel,
-    oldArrows: Map[String, FuncArrow]
+    call: CallModel
   ): State[S, InlineResult] =
     (Exports[S].exports, getOutsideStreamNames).flatMapN {
       case (oldExports, outsideDeclaredStreams) =>
@@ -100,7 +99,7 @@ object ArrowInliner extends Logging {
         Exports[S].scope(
           for {
             // Process renamings, prepare environment
-            tr <- prelude[S](fn, call, oldExports, oldArrows)
+            tr <- prelude[S](fn, call, oldExports)
             (tree, results) = tr
 
             // Register captured values as available exports
@@ -329,7 +328,7 @@ object ArrowInliner extends Logging {
           )
         case ArrowType(_, _) =>
           Exports
-            .getLastHelper(currentOldName, oldExports, identity)
+            .getLastValue(currentOldName, oldExports, identity)
             .flatMap { case vm @ VarModel(name, _, _) =>
               oldArrows
                 .get(name)
@@ -344,7 +343,7 @@ object ArrowInliner extends Logging {
 
         case _ =>
           Exports
-            .getLastHelper(currentOldName, oldExports, identity)
+            .getLastValue(currentOldName, oldExports, identity)
             .map(vm => (valAcc.updated(currentNewName.getOrElse(currentOldName), vm), arrowsAcc))
             .getOrElse((valAcc, arrowsAcc))
       }
@@ -366,8 +365,7 @@ object ArrowInliner extends Logging {
   private def prelude[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel,
-    oldExports: Map[String, ValueModel],
-    oldArrows: Map[String, FuncArrow]
+    oldExports: Map[String, ValueModel]
   ): State[S, (RawTag.Tree, List[ValueRaw])] =
     for {
       // Collect all arguments: what names are used inside the function, what values are received
@@ -381,7 +379,7 @@ object ArrowInliner extends Logging {
       _ <- Arrows[S].purge
 
       abilityResolvingResult <- abArgs.toList.traverse { case (str, (vm, sct)) =>
-        renameAndResolveAbilities(str, vm, sct, oldExports, oldArrows)
+        renameAndResolveAbilities(str, vm, sct, oldExports, previousArrowsState)
       }.map(_.combineAll)
 
       absRenames = abilityResolvingResult.namesToRename
@@ -473,7 +471,6 @@ object ArrowInliner extends Logging {
   ): State[S, (OpModel.Tree, List[ValueModel])] =
     for {
       passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
-      arrowsState <- Arrows[S].arrows
       arrowsFromAbilities <- call.abilityArgs
         .traverse(getAllArrowsFromAbility)
         .map(_.fold(Map.empty)(_ ++ _))
@@ -481,7 +478,7 @@ object ArrowInliner extends Logging {
       inlineResult <- Arrows[S].scope(
         for {
           _ <- Arrows[S].resolved(passArrows ++ arrowsFromAbilities)
-          inlineResult <- ArrowInliner.inline(arrow, call, arrowsState)
+          inlineResult <- ArrowInliner.inline(arrow, call)
         } yield inlineResult
       )
 
