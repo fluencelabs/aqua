@@ -10,12 +10,13 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.definitions.DefinitionsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrowType, AbilityType, Type}
+import aqua.types.{AbilityType, ArrowType, Type}
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.applicative.*
 import cats.syntax.semigroupal.*
+import cats.syntax.traverse.*
 import cats.Monad
 import cats.data.{NonEmptyList, NonEmptyMap}
 
@@ -26,20 +27,14 @@ class AbilitySem[S[_]](val expr: AbilityExpr[S]) extends AnyVal {
     D: DefinitionsAlgebra[S, Alg]
   ): Prog[Alg, Raw] = {
     Prog.after(_ =>
-      D.purgeDefs(expr.name).flatMap {
-        case Some(fields) =>
-          val t = AbilityType(expr.name.value, fields)
-          T.defineNamedType(expr.name, t).map {
-            case true =>
-              TypeRaw(
-                expr.name.value,
-                t
-              ): Raw
-            case false =>
-              Raw.error("Scope types unresolved")
-          }
-        case None => Raw.error("Scope types unresolved").pure[Alg]
-      }
+      for {
+        defs <- D.purgeDefs(expr.name)
+        abType = defs.map(fields => AbilityType(expr.name.value, fields))
+        result <- abType.flatTraverse(t =>
+          T.defineNamedType(expr.name, t)
+            .map(Option.when(_)(TypeRaw(expr.name.value, t)))
+        )
+      } yield result.getOrElse(Raw.error("Scope types unresolved"))
     )
   }
 }

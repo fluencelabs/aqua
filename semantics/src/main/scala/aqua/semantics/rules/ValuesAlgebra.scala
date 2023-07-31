@@ -16,6 +16,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
+import cats.syntax.foldable.*
 import cats.syntax.option.*
 import cats.instances.list.*
 import cats.data.{NonEmptyList, NonEmptyMap}
@@ -52,74 +53,56 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case op: IntoField[S] =>
         T.resolveField(rootType, op)
       case op: IntoArrow[S] =>
-        op.arguments
-          .map(valueToRaw)
-          .sequence
-          .map(_.sequence)
-          .flatMap {
-            case None => None.pure[Alg]
-            case Some(arguments) => T.resolveArrow(rootType, op, arguments)
-          }
-      case op: IntoCopy[S] =>
-        op.fields
-          .map(valueToRaw)
-          .sequence
-          .map(_.sequence)
-          .flatMap {
-            case None => None.pure[Alg]
-            case Some(values) => T.resolveCopy(rootType, op, values)
-          }
-      case op: IntoIndex[S] =>
-        op.idx
-          .fold[Alg[Option[ValueRaw]]](Option(LiteralRaw.Zero).pure[Alg])(
-            valueToRaw
+        for {
+          maybeArgs <- op.arguments.traverse(valueToRaw)
+          arrowProp <- maybeArgs.sequence.flatTraverse(
+            T.resolveArrow(rootType, op, _)
           )
-          .flatMap {
-            case None => None.pure[Alg]
-            case Some(values) => T.resolveIndex(rootType, op, values)
-          }
+        } yield arrowProp
+      case op: IntoCopy[S] =>
+        for {
+          maybeFields <- op.fields.traverse(valueToRaw)
+          copyProp <- maybeFields.sequence.flatTraverse(
+            T.resolveCopy(rootType, op, _)
+          )
+        } yield copyProp
+      case op: IntoIndex[S] =>
+        for {
+          maybeIdx <- op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw)
+          idxProp <- maybeIdx.flatTraverse(
+            T.resolveIndex(rootType, op, _)
+          )
+        } yield idxProp
     }
 
   def valueToRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
     v match {
-      case l: LiteralToken[S] => Some(LiteralRaw(l.value, l.ts)).pure[Alg]
-      case VarToken(name, ops) =>
+      case l @ LiteralToken(value, t) =>
+        LiteralRaw(l.value, t).some.pure[Alg]
+
+      case VarToken(name) =>
         N.read(name).flatMap {
           case Some(t) =>
-            // Prepare property expression: take the last known type and the next op, add next op to accumulator
-            ops
-              .foldLeft[Alg[(Option[Type], Chain[PropertyRaw])]](
-                (Some(t) -> Chain.empty).pure[Alg]
-              ) { case (acc, op) =>
-                acc.flatMap {
-                  // Some(rootType) means that the previous property op was resolved successfully
-                  case (Some(rootType), prop) =>
-                    // Resolve a single property
-                    resolveSingleProperty(rootType, op).map {
-                      // Property op resolved, add it to accumulator and update the last known type
-                      case Some(p) => (Some(p.`type`), prop :+ p)
-                      // Property op is not resolved, it's an error, stop iterations
-                      case None => (None, Chain.empty)
-                    }
-
-                  // We have already errored, do nothing
-                  case _ => (None, Chain.empty).pure[Alg]
-                }
-
-              }
-              .map {
-                // Some(_) means no errors occured
-                case (Some(_), property) if property.length == ops.length =>
-                  Some(property.foldLeft[ValueRaw](VarRaw(name.value, t)) { case (v, p) =>
-                    ApplyPropertyRaw(v, p)
-                  })
-
-                case _ => None
-              }
-
+            VarRaw(name.value, t).some.pure[Alg]
           case None =>
             None.pure[Alg]
         }
+
+      case PropertyToken(value, properties) =>
+        for {
+          valueRaw <- valueToRaw(value)
+          result <- valueRaw.flatTraverse(raw =>
+            properties.foldLeftM(raw.some) {
+              // Failed to resolve prop case
+              case (None, _) => none.pure
+              // Apply next prop case
+              case (Some(prev), op) =>
+                resolveSingleProperty(prev.`type`, op).map(
+                  _.map(prop => ApplyPropertyRaw(prev, prop))
+                )
+            }
+          )
+        } yield result
 
       case dvt @ NamedValueToken(typeName, fields) =>
         T.resolveType(typeName).flatMap {
@@ -153,26 +136,28 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         }
 
       case ct @ CollectionToken(_, values) =>
-        values.traverse(valueToRaw).map(_.flatten).map(NonEmptyList.fromList).map {
-          case Some(raws) if raws.size == values.size =>
-            val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
-            // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
-            // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
-            // make any decision about the structure of type, but can push anything inside
-            val elementNotBottom = if (element == BottomType) TopType else element
-            Some(
-              CollectionRaw(
-                raws,
-                ct.mode match {
-                  case CollectionToken.Mode.StreamMode => StreamType(elementNotBottom)
-                  case CollectionToken.Mode.ArrayMode => ArrayType(elementNotBottom)
-                  case CollectionToken.Mode.OptionMode => OptionType(elementNotBottom)
-                }
-              )
-            )
-          case _ if values.isEmpty => Some(ValueRaw.Nil)
-          case _ => None
-        }
+        for {
+          maybeValuesRaw <- values.traverse(valueToRaw).map(_.sequence)
+          raw = maybeValuesRaw.map(raws =>
+            NonEmptyList
+              .fromList(raws)
+              .fold(ValueRaw.Nil) { nonEmpty =>
+                val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
+                // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
+                // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
+                // make any decision about the structure of type, but can push anything inside
+                val elementNotBottom = if (element == BottomType) TopType else element
+                CollectionRaw(
+                  nonEmpty,
+                  ct.mode match {
+                    case CollectionToken.Mode.StreamMode => StreamType(elementNotBottom)
+                    case CollectionToken.Mode.ArrayMode => ArrayType(elementNotBottom)
+                    case CollectionToken.Mode.OptionMode => OptionType(elementNotBottom)
+                  }
+                )
+              }
+          )
+        } yield raw
 
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])
@@ -299,68 +284,22 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         }
     }
 
-  // Generate CallArrowRaw for arrow in ability
-  def callAbType(
-    ab: String,
-    abType: AbilityType,
-    ca: CallArrowToken[S]
-  ): Alg[Option[CallArrowRaw]] =
-    abType.arrows.get(ca.funcName.value) match {
-      case Some(arrowType) =>
-        Option(CallArrowRaw(None, s"$ab.${ca.funcName.value}", Nil, arrowType, None)).pure[Alg]
-      case None => None.pure[Alg]
-    }
-
   def callArrowToRaw(ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] = {
     for {
-      raw <- ca.ability
-        .fold(
-          N.readArrow(ca.funcName)
-            .map(
-              _.map(bt =>
-                CallArrowRaw(
-                  ability = None,
-                  name = ca.funcName.value,
-                  arguments = Nil,
-                  baseType = bt,
-                  serviceId = None
-                )
-              )
-            )
-        )(ab =>
-          // TODO: Hack. Check that we have registered ability type.
-          // If it exists - this is ability type in file, if not - imported ability
-          T.getType(ab.value).flatMap {
-            case Some(abType: AbilityType) =>
-              callAbType(ab.value, abType, ca)
-            case _ =>
-              (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
-                case (Some(at), Right(sid)) =>
-                  // Service call, actually
-                  CallArrowRaw(
-                    ability = Some(ab.value),
-                    name = ca.funcName.value,
-                    arguments = Nil,
-                    baseType = at,
-                    serviceId = Some(sid)
-                  ).some
-                case (Some(at), Left(true)) =>
-                  // Ability function call, actually
-                  CallArrowRaw(
-                    ability = Some(ab.value),
-                    name = ca.funcName.value,
-                    arguments = Nil,
-                    baseType = at,
-                    serviceId = None
-                  ).some
-                case _ => none
-              }
-          }
+      arrowType <- N.readArrow(ca.name)
+      raw = arrowType.map(t =>
+        CallArrowRaw(
+          ability = None,
+          name = ca.name.value,
+          arguments = Nil,
+          baseType = t,
+          serviceId = None
         )
+      )
       result <- raw.flatTraverse(r =>
         val arr = r.baseType
         for {
-          argsCheck <- T.checkArgumentsNumber(ca.funcName, arr.domain.length, ca.args.length)
+          argsCheck <- T.checkArgumentsNumber(ca.name, arr.domain.length, ca.args.length)
           args <- Option
             .when(argsCheck)(ca.args zip arr.domain.toList)
             .traverse(

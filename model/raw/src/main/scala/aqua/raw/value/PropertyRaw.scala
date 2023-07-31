@@ -19,31 +19,26 @@ case class IntoFieldRaw(name: String, `type`: Type) extends PropertyRaw {
   override def varNames: Set[String] = Set.empty
 }
 
-case class IntoArrowRaw(name: String, arrowType: Type, arguments: List[ValueRaw]) extends PropertyRaw {
+case class IntoArrowRaw(name: String, arrowType: Type, arguments: List[ValueRaw])
+    extends PropertyRaw {
 
   override def `type`: Type = arrowType
-  
+
   override def map(f: ValueRaw => ValueRaw): PropertyRaw = this
 
   override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
 
-  override def renameVars(vals: Map[String, String]): PropertyRaw = copy(arguments = arguments.map(_.renameVars(vals)))
+  override def renameVars(vals: Map[String, String]): PropertyRaw =
+    copy(arguments = arguments.map(_.renameVars(vals)))
 }
 
-case class IntoCopyRaw(`type`: StructType, fields: NonEmptyMap[String, ValueRaw]) extends PropertyRaw {
+case class IntoCopyRaw(`type`: StructType, fields: NonEmptyMap[String, ValueRaw])
+    extends PropertyRaw {
   override def map(f: ValueRaw => ValueRaw): IntoCopyRaw = copy(fields = fields.map(f))
 
   override def varNames: Set[String] = Set.empty
 
   override def renameVars(vals: Map[String, String]): IntoCopyRaw = this
-}
-
-case class MethodRaw(name: String, `type`: Type) extends PropertyRaw {
-  override def map(f: ValueRaw => ValueRaw): MethodRaw = this
-
-  override def renameVars(vals: Map[String, String]): MethodRaw = this
-
-  override def varNames: Set[String] = Set.empty
 }
 
 case class FunctorRaw(name: String, `type`: Type) extends PropertyRaw {
