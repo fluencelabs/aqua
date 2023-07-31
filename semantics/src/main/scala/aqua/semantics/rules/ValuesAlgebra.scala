@@ -1,7 +1,7 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.*
-import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, MathOp, Op as InfOp}
+import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
 import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -219,6 +219,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                     right = rightRaw
                   )
                 )
+              case InfOp.Eq(eop) =>
+                T.ensureValuesComparable(
+                  token = it,
+                  left = lType,
+                  right = rType
+                ).map(
+                  Option.when(_)(
+                    ApplyBinaryOpRaw(
+                      op = eop match {
+                        case EqOp.Eq => ApplyBinaryOpRaw.Op.Eq
+                        case EqOp.Neq => ApplyBinaryOpRaw.Op.Neq
+                      },
+                      left = leftRaw,
+                      right = rightRaw
+                    )
+                  )
+                )
               case op @ (InfOp.Math(_) | InfOp.Cmp(_)) =>
                 // Some type acrobatics to make
                 // compiler check exhaustive pattern matching
@@ -308,7 +325,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   ): Alg[Option[CallArrowRaw]] =
     abType.arrows.get(ca.funcName.value) match {
       case Some(arrowType) =>
-        Option(CallArrowRaw(None, AbilityType.fullName(ab, ca.funcName.value), Nil, arrowType, None)).pure[Alg]
+        Option(
+          CallArrowRaw(None, AbilityType.fullName(ab, ca.funcName.value), Nil, arrowType, None)
+        ).pure[Alg]
       case None => None.pure[Alg]
     }
 
@@ -331,7 +350,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         )(ab =>
           // Check that we have variable as ability
           N.read(ab.asName, false).flatMap {
-            case Some(at@AbilityType(_, _)) =>
+            case Some(at @ AbilityType(_, _)) =>
               callAbType(ab.value, at, ca)
             case _ =>
               // Check that we have registered ability type.

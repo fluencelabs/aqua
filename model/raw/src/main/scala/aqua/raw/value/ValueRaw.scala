@@ -202,6 +202,9 @@ object ApplyBinaryOpRaw {
   enum Op {
     case And
     case Or
+
+    case Eq
+    case Neq
   }
 }
 

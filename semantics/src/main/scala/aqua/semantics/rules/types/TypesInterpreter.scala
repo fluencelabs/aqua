@@ -14,6 +14,7 @@ import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.errors.ReportErrors
 import aqua.types.{
+  AbilityType,
   ArrayType,
   ArrowType,
   BoxType,
@@ -22,7 +23,6 @@ import aqua.types.{
   OptionType,
   ProductType,
   ScalarType,
-  AbilityType,
   StreamType,
   StructType,
   Type
@@ -64,7 +64,7 @@ class TypesInterpreter[S[_], X](implicit
 
   override def getType(name: String): State[X, Option[Type]] =
     getState.map(st => st.strict.get(name))
-    
+
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
     getState.map(st => TypesStateHelper.resolveTypeToken(token, st, resolver)).flatMap {
       case Some(t) =>
