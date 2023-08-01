@@ -44,6 +44,13 @@ object TypeScriptCommon {
     case lt: LiteralType if lt.oneOf(ScalarType.bool) => "boolean"
     case lt: LiteralType if lt.oneOf(ScalarType.string) => "string"
     case at: ArrowType => fnDef(at)
+    case TopType => "any"
+    case BottomType => "nothing"
+
+    // impossible. Made to avoid compilation warning
+    case t: CanonStreamType => "any"
+    case t: ScalarType => "any"
+    case t: LiteralType => "any"
   }
 
   // TODO: handle cases if there is already peer_ or config_ variable defined
