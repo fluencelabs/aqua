@@ -221,7 +221,7 @@ class TypesInterpreter[S[_], X](implicit
             if ScalarType.number(lst) && ScalarType.number(rst) =>
           true
         // Hack: u64 `U` LiteralType.signed = TopType,
-        // but they shoudl be comparable
+        // but they should be comparable
         case (lst: ScalarType, LiteralType.signed) if ScalarType.number(lst) =>
           true
         case (LiteralType.signed, rst: ScalarType) if ScalarType.number(rst) =>
