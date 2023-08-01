@@ -1,9 +1,9 @@
 //@ts-check
 
-import compile from '@fluencelabs/aqua-api'
+import { compileAquaCallFromPath } from '@fluencelabs/aqua-api'
 
 // compile call
-const compilationResult = await compile({
+const compilationResult = await compileAquaCallFromPath({
   filePath: 'test.aqua',
   data: { num: 3 },
   funcCall: 'getNumber(num)',
