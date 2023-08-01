@@ -16,8 +16,10 @@ import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.locations.DummyLocationsInterpreter
 import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw}
 import aqua.raw.RawContext
-import aqua.types.{LiteralType, ScalarType, TopType, Type}
+import aqua.types.*
 import aqua.parser.lexer.{InfixToken, LiteralToken, Name, PrefixToken, ValueToken, VarToken}
+import aqua.raw.value.ApplyUnaryOpRaw
+import aqua.parser.lexer.ValueToken.string
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -26,8 +28,9 @@ import cats.Id
 import cats.data.State
 import cats.syntax.functor.*
 import cats.syntax.comonad.*
+import cats.data.NonEmptyMap
 import monocle.syntax.all.*
-import aqua.raw.value.ApplyUnaryOpRaw
+import scala.collection.immutable.SortedMap
 
 class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
 
@@ -74,6 +77,25 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
           ) :: _
         )
       )
+
+  def valueOfType(t: Type)(
+    varName: String,
+    bool: String = "true",
+    unsigned: String = "42",
+    signed: String = "-42",
+    string: String = "string"
+  ): ValueToken[Id] = t match {
+    case t: LiteralType if t == LiteralType.bool =>
+      literal(bool, t)
+    case t: LiteralType if t == LiteralType.unsigned =>
+      literal(unsigned, t)
+    case t: LiteralType if t == LiteralType.signed =>
+      literal(signed, t)
+    case t: LiteralType if t == LiteralType.string =>
+      literal(f"\"$string\"", t)
+    case _ =>
+      variable(varName)
+  }
 
   "valueToRaw" should "handle +, -, /, *, % on number literals" in {
     val types = List(
@@ -249,6 +271,85 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
     }
   }
 
+  it should "handle ==, != on values" in {
+    val test = (lt: Type, rt: Type) => {
+      InfixToken.EqOp.values.foreach { op =>
+        val left = valueOfType(lt)(
+          varName = "left",
+          bool = "true",
+          unsigned = "42",
+          signed = "-42",
+          string = "\"foo\""
+        )
+        val right = valueOfType(rt)(
+          varName = "right",
+          bool = "false",
+          unsigned = "37",
+          signed = "-37",
+          string = "\"bar\""
+        )
+
+        val alg = algebra()
+
+        val state = genState(
+          vars = (
+            List("left" -> lt).filter(_ =>
+              lt match {
+                case _: LiteralType => false
+                case _ => true
+              }
+            ) ++ List("right" -> rt).filter(_ =>
+              rt match
+                case _: LiteralType => false
+                case _ => true
+            )
+          ).toMap
+        )
+
+        val token = InfixToken[Id](left, right, InfixToken.Op.Eq(op))
+
+        val (st, res) = alg
+          .valueToRaw(token)
+          .run(state)
+          .value
+
+        inside(res) { case Some(ApplyBinaryOpRaw(bop, _, _)) =>
+          bop shouldBe (op match {
+            case InfixToken.EqOp.Eq => ApplyBinaryOpRaw.Op.Eq
+            case InfixToken.EqOp.Neq => ApplyBinaryOpRaw.Op.Neq
+          })
+        }
+      }
+    }
+
+    val numbers = ScalarType.integer.toList ++ List(
+      LiteralType.signed,
+      LiteralType.unsigned
+    )
+
+    allPairs(numbers).foreach { case (lt, rt) =>
+      test(lt, rt)
+    }
+
+    val numberStreams = ScalarType.integer.toList.map(StreamType.apply)
+
+    allPairs(numberStreams).foreach { case (lt, rt) =>
+      test(lt, rt)
+    }
+
+    val structType = StructType(
+      "Struct",
+      NonEmptyMap(
+        "foo" -> ScalarType.i64,
+        SortedMap(
+          "bar" -> ScalarType.bool
+        )
+      )
+    )
+
+    test(structType, structType)
+  }
+
   it should "handle ! on bool values" in {
     val types = List(LiteralType.bool, ScalarType.bool)
 
@@ -313,6 +414,59 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
         )
 
         val token = InfixToken[Id](left, right, InfixToken.Op.Bool(op))
+
+        val (st, res) = alg
+          .valueToRaw(token)
+          .run(state)
+          .value
+
+        res shouldBe None
+        st.errors.exists(_.isInstanceOf[RulesViolated[Id]]) shouldBe true
+      }
+    }
+  }
+
+  it should "check type of (in)equality operands" in {
+    val structType = StructType("Struct", NonEmptyMap.one("field", ScalarType.i8))
+
+    val types =
+      List(
+        LiteralType.bool,
+        ScalarType.i32,
+        structType,
+        StreamType(ScalarType.i8),
+        StreamType(structType),
+        ArrowType(
+          domain = ProductType(ScalarType.i64 :: Nil),
+          codomain = ProductType(ScalarType.bool :: Nil)
+        )
+      )
+
+    allPairs(types).filterNot { case (lt, rt) => lt == rt }.foreach { case (lt, rt) =>
+      InfixToken.EqOp.values.foreach { op =>
+        val left = lt match {
+          case lt: LiteralType =>
+            literal("true", lt)
+          case _ =>
+            variable("left")
+        }
+        val right = rt match {
+          case rt: LiteralType =>
+            literal("false", rt)
+          case _ =>
+            variable("right")
+        }
+
+        val alg = algebra()
+
+        val state = genState(
+          vars = (
+            List("left" -> lt).filter(_ => lt != LiteralType.bool) ++
+              List("right" -> rt).filter(_ => rt != LiteralType.bool)
+          ).toMap
+        )
+
+        val token = InfixToken[Id](left, right, InfixToken.Op.Eq(op))
 
         val (st, res) = alg
           .valueToRaw(token)
