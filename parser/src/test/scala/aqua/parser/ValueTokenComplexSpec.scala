@@ -26,7 +26,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
     }
   }
 
-  import AquaSpec._
+  import AquaSpec.*
 
   private def variable(name: String): ValueToken[Id] =
     VarToken(Name(name), Nil)
@@ -37,42 +37,6 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
   private def literal(n: Int): ValueToken[Id] = toNumber(n)
 
   private def literalBool(b: Boolean): ValueToken[Id] = toBool(b)
-
-  private def prefixToken(value: ValueToken[Id], op: PrefixOp) =
-    PrefixToken[Id](value, op)
-
-  private def infixToken(left: ValueToken[Id], right: ValueToken[Id], op: InfixOp) =
-    InfixToken[Id](left, right, op)
-
-  private def mul(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Mul)
-
-  private def sub(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Sub)
-
-  private def div(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Div)
-
-  private def rem(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Rem)
-
-  private def add(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Add)
-
-  private def pow(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Pow)
-
-  private def gt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Gt)
-
-  private def gte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Gte)
-
-  private def lt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Lt)
-
-  private def lte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Lte)
 
   "primitive math expression" should "be parsed" in {
 
