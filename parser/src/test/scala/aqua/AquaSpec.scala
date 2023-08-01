@@ -198,6 +198,15 @@ trait AquaSpec extends EitherValues {
   def lte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
     infixToken(left, right, Lte)
 
+  def or(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Or)
+
+  def and(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, And)
+
+  def not(value: ValueToken[Id]): ValueToken[Id] =
+    prefixToken(value, Not)
+
   def equ(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
     infixToken(left, right, Equ)
 
