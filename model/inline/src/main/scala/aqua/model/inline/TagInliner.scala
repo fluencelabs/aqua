@@ -108,15 +108,21 @@ object TagInliner extends Logging {
 
   def canonicalizeIfStream[S: Mangler](
     vm: ValueModel,
-    ops: Option[OpModel.Tree]
+    ops: Option[OpModel.Tree] = None
   ): State[S, (ValueModel, Option[OpModel.Tree])] = {
     vm match {
       case VarModel(name, StreamType(el), l) =>
         val canonName = name + "_canon"
         Mangler[S].findAndForbidName(canonName).map { n =>
           val canon = VarModel(n, CanonStreamType(el), l)
-          val canonModel = CanonicalizeModel(vm, CallModel.Export(canon.name, canon.`type`)).leaf
-          canon -> combineOpsWithSeq(ops, Option(canonModel))
+          val canonModel = CanonicalizeModel(
+            operand = vm,
+            exportTo = CallModel.Export(
+              canon.name,
+              canon.`type`
+            )
+          ).leaf
+          canon -> combineOpsWithSeq(ops, canonModel.some)
         }
       case _ => State.pure(vm -> ops)
     }
@@ -159,7 +165,7 @@ object TagInliner extends Logging {
         val apOp = FlattenModel(canonV, apN).leaf
         (
           apV,
-          combineOpsWithSeq(op, Option(apOp))
+          combineOpsWithSeq(op, apOp.some)
         )
       }
     } else {
@@ -206,10 +212,11 @@ object TagInliner extends Logging {
 
       case IfTag(valueRaw) =>
         (valueRaw match {
+          // Optimize in case last operation is equality check
           case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right) =>
             (
-              valueToModel(left),
-              valueToModel(right)
+              valueToModel(left) >>= canonicalizeIfStream,
+              valueToModel(right) >>= canonicalizeIfStream
             ).mapN { case ((lmodel, lprefix), (rmodel, rprefix)) =>
               val prefix = parDesugarPrefixOpt(lprefix, rprefix)
               val matchModel = MatchMismatchModel(

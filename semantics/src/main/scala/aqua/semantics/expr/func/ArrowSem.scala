@@ -6,14 +6,7 @@ import aqua.parser.lexer.{Arg, DataTypeToken}
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
 import aqua.raw.ops.{SeqTag, *}
-import aqua.raw.value.{
-  ApplyGateRaw,
-  ApplyPropertyRaw,
-  CallArrowRaw,
-  CollectionRaw,
-  ValueRaw,
-  VarRaw
-}
+import aqua.raw.value.*
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -147,10 +140,12 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
                         idx + 1
                       )
                     // assign and change return value for all `Apply*Raw`
-                    case (v: ApplyGateRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
-                    case (v: ApplyPropertyRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
-                    case (v: CallArrowRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
-                    case (v: CollectionRaw, _) => assignRaw(v, idx, bodyAcc, returnAcc)
+                    case (
+                          v: (ApplyGateRaw | ApplyPropertyRaw | CallArrowRaw | CollectionRaw |
+                            ApplyBinaryOpRaw | ApplyUnaryOpRaw),
+                          _
+                        ) =>
+                      assignRaw(v, idx, bodyAcc, returnAcc)
 
                     case (v, _) => (bodyAcc, returnAcc :+ v, idx)
                   }

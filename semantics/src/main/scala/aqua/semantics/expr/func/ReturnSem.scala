@@ -21,8 +21,7 @@ class ReturnSem[S[_]](val expr: ReturnExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     expr.values
       .traverse(v => V.valueToRaw(v).map(_.map(v -> _)))
-      .map(_.toList.flatten)
-      .map(NonEmptyList.fromList)
+      .map(_.sequence)
       .flatMap {
         case Some(vals) =>
           T.checkArrowReturn(vals).map[Raw] {

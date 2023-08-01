@@ -2,6 +2,7 @@ package aqua.model.inline.raw
 
 import aqua.model.*
 import aqua.model.inline.raw.RawInliner
+import aqua.model.inline.TagInliner
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{AbilityRaw, LiteralRaw, MakeStructRaw}
 import cats.data.{NonEmptyList, NonEmptyMap, State}
@@ -30,14 +31,22 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     raw: ApplyBinaryOpRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = for {
-    left <- unfold(raw.left)
+    left <- unfold(raw.left, propertiesAllowed)
     (lmodel, linline) = left
-    right <- unfold(raw.right)
+    right <- unfold(raw.right, propertiesAllowed)
     (rmodel, rinline) = right
 
     result <- raw.op match {
       case op @ (And | Or) => inlineBoolOp(lmodel, rmodel, linline, rinline, op)
-      case op @ (Eq | Neq) => inlineEqOp(lmodel, rmodel, linline, rinline, op)
+      case op @ (Eq | Neq) =>
+        for {
+          // Canonicalize stream operands before comparison
+          leftStream <- TagInliner.canonicalizeIfStream(lmodel)
+          (lmodelStream, linlineStream) = leftStream.map(linline.append)
+          rightStream <- TagInliner.canonicalizeIfStream(rmodel)
+          (rmodelStream, rinlineStream) = rightStream.map(rinline.append)
+          result <- inlineEqOp(lmodelStream, rmodelStream, linlineStream, rinlineStream, op)
+        } yield result
     }
   } yield result
 
