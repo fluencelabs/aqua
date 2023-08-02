@@ -267,7 +267,11 @@ case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends 
   }
 
   override def toString: String =
-    s"scope $name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+    s"ability $name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+}
+
+object AbilityType {
+  def fullName(name: String, field: String) = s"$name.$field"
 }
 
 /**

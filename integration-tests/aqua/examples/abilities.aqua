@@ -2,7 +2,7 @@ aqua Main
 
 use DECLARE_CONST, decl_bar from "imports_exports/declare.aqua" as Declare
 
-export handleAb, SomeService
+export handleAb, SomeService, bug214, checkAbCalls
 
 service SomeService("wed"):
   getStr(s: string) -> string
@@ -35,3 +35,53 @@ func handleAb(fff: string) -> string, string, string, u32:
   SecondAb = SecondAb(arrow = funcStr, num = 12)
   res1, res2, res3, res4 <- handleSecAb{SomeAb, SecondAb}()
   <- res1, res2, res3, res4
+
+data Struct:
+    int: i8
+
+ability Simple:
+    st: Struct
+    arrow(x: i8) -> bool
+
+ability Complex:
+    simple: Simple
+    field: string
+
+func foo{Complex, Simple}() -> bool, bool:
+    closure = () -> bool:
+        <- Simple.st.int >= 0
+    res <- closure()
+    <- Complex.simple.arrow(
+        Complex.simple.st.int
+    ), res
+
+func bug214() -> bool, bool:
+    closure = (x: i8) -> bool:
+        <- x > 0
+
+    MyComplex = Complex(
+        simple = Simple(
+            st = Struct(int = 0),
+            arrow = closure
+        ),
+        field = "complex"
+    )
+
+    res1, res2 <- foo{MyComplex, MyComplex.simple}()
+    <- res1, res2
+
+ability SSS:
+    arrow(x: i8) -> bool
+
+ability CCCC:
+    arrow(x: i8) -> bool
+    simple: SSS
+
+func checkAbCalls() -> bool, bool:
+    closure = (x: i8) -> bool:
+        <- x > 20
+
+    MySSS = SSS(arrow = closure)
+    MyCCCC = CCCC(simple = MySSS, arrow = MySSS.arrow)
+
+    <- MySSS.arrow(42), MyCCCC.arrow(12)

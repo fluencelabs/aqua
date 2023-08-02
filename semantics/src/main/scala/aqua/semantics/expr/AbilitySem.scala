@@ -26,7 +26,7 @@ class AbilitySem[S[_]](val expr: AbilityExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     D: DefinitionsAlgebra[S, Alg]
   ): Prog[Alg, Raw] = {
-    Prog.after(_ =>
+    Prog.after_(
       for {
         defs <- D.purgeDefs(expr.name)
         abType = defs.map(fields => AbilityType(expr.name.value, fields))
@@ -34,7 +34,7 @@ class AbilitySem[S[_]](val expr: AbilityExpr[S]) extends AnyVal {
           T.defineNamedType(expr.name, t)
             .map(Option.when(_)(TypeRaw(expr.name.value, t)))
         )
-      } yield result.getOrElse(Raw.error("Scope types unresolved"))
+      } yield result.getOrElse(Raw.error("Ability types unresolved"))
     )
   }
 }

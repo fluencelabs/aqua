@@ -66,6 +66,7 @@ object OptionTypeToken {
 
 case class NamedTypeToken[F[_]: Comonad](name: F[String]) extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
+  def asName: Name[F] = Name[F](name)
 
   override def mapK[K[_]: Comonad](fk: F ~> K): NamedTypeToken[K] = copy(fk(name))
 

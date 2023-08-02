@@ -76,16 +76,12 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
   ): State[S, (List[ValueModel], Inline)] = for {
     arrows <- Arrows[S].arrows
     exports <- Exports[S].exports
+    lastArrow <- Exports[S].getLast(funcName)
     arrow = arrows
       .get(funcName)
       .orElse(
         // if there is no arrow, check if it is stored in Exports as variable and try to resolve it
-        exports
-          .get(funcName)
-          .collect { case VarModel(name, _: ArrowType, _) =>
-            name
-          }
-          .flatMap(arrows.get)
+        lastArrow.flatMap(arrows.get)
       )
     result <- arrow.fold {
       logger.error(
