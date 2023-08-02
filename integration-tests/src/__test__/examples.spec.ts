@@ -32,7 +32,7 @@ import { registerHandlers, returnNull, returnOptionalCall, useOptionalCall } fro
 import { viaArrCall, viaOptCall, viaOptNullCall, viaStreamCall } from '../examples/viaCall.js';
 import { nestedFuncsCall } from '../examples/nestedFuncsCall.js';
 import { assignmentCall } from '../examples/assignment.js';
-import { boolAlgebraCall, compareStreamsCall } from '../examples/boolAlgebra.js';
+import { boolAlgebraCall, compareStreamsCall, compareStructsCall } from '../examples/boolAlgebra.js';
 import { tryCatchCall } from '../examples/tryCatchCall.js';
 import { tryOtherwiseCall } from '../examples/tryOtherwiseCall.js';
 import { coCall } from '../examples/coCall.js';
@@ -422,6 +422,11 @@ describe('Testing examples', () => {
     it('boolAlgebra.aqua compareStreams', async () => {
         let result = await compareStreamsCall(relayPeerId1);
         expect(result).toEqual(true);
+    });
+
+    it('boolAlgebra.aqua compareStructs', async () => {
+        let result = await compareStructsCall(relayPeerId1, 'struct');
+        expect(result).toEqual(false);
     });
 
     it('join.aqua local', async () => {

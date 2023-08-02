@@ -1,6 +1,6 @@
 aqua Bool
 
-export main, compareStreams, Effector
+export main, compareStreams, compareStructs, Effector
 
 service Effector("effector"):
     effect(name: string) -> bool
@@ -22,6 +22,17 @@ func compareStreams(peer: string) -> bool:
         s2 <<- bar(43)
 
     <- s1 == s2
+
+data Struct:
+    field: i8
+    str: string
+
+func compareStructs(peer: string, str: string) -> bool:
+    on peer:
+        st1 = Struct(field = 42, str = str)
+        st2 = Struct(field = 24, str = str)
+
+    <- st1 == st2
 
 func main(peer: string) -> []bool:
     res: *bool
