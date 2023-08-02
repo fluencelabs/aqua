@@ -9,4 +9,4 @@ service S(""):
   bottom(b: ⊥) -> ⊥
 
 func topBottom(t: ⊤, b: ⊥) -> ⊤, ⊥:
-  <- top(t), bottom(b)
+  <- S.top(t), S.bottom(b)
