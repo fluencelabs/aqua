@@ -41,12 +41,14 @@ object TypeScriptCommon {
       case st: ScalarType if ScalarType.number(st) => "number"
       case ScalarType.bool => "boolean"
       case ScalarType.string => "string"
+      // unreachable
       case _ => "any"
     }
     case lt: LiteralType => lt match {
       case lt: LiteralType if lt.oneOf.exists(ScalarType.number) => "number"
       case lt: LiteralType if lt.oneOf(ScalarType.bool) => "boolean"
       case lt: LiteralType if lt.oneOf(ScalarType.string) => "string"
+      // unreachable
       case _ => "any"
     }
     case at: ArrowType => fnDef(at)
