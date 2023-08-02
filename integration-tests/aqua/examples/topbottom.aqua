@@ -1,0 +1,12 @@
+aqua TopBottom
+
+export S, topBottom
+
+-- this file should just compile
+
+service S(""):
+  top(t: ⊤) -> ⊤
+  bottom(b: ⊥) -> ⊥
+
+func topBottom(t: ⊤, b: ⊥) -> ⊤, ⊥:
+  <- top(t), bottom(b)

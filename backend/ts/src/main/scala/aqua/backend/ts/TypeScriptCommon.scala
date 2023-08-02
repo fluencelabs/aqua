@@ -37,20 +37,24 @@ object TypeScriptCommon {
       s"{ ${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ": " + kv._2 + ";").toList.mkString(" ")} }"
     case st: AbilityType =>
       s"{ ${st.fields.map(typeToTs).toNel.map(kv => kv._1 + ": " + kv._2 + ";").toList.mkString(" ")} }"
-    case st: ScalarType if ScalarType.number(st) => "number"
-    case ScalarType.bool => "boolean"
-    case ScalarType.string => "string"
-    case lt: LiteralType if lt.oneOf.exists(ScalarType.number) => "number"
-    case lt: LiteralType if lt.oneOf(ScalarType.bool) => "boolean"
-    case lt: LiteralType if lt.oneOf(ScalarType.string) => "string"
+    case st: ScalarType => st match {
+      case st: ScalarType if ScalarType.number(st) => "number"
+      case ScalarType.bool => "boolean"
+      case ScalarType.string => "string"
+      case _ => "any"
+    }
+    case lt: LiteralType => lt match {
+      case lt: LiteralType if lt.oneOf.exists(ScalarType.number) => "number"
+      case lt: LiteralType if lt.oneOf(ScalarType.bool) => "boolean"
+      case lt: LiteralType if lt.oneOf(ScalarType.string) => "string"
+      case _ => "any"
+    }
     case at: ArrowType => fnDef(at)
     case TopType => "any"
     case BottomType => "nothing"
 
     // impossible. Made to avoid compilation warning
     case t: CanonStreamType => "any"
-    case t: ScalarType => "any"
-    case t: LiteralType => "any"
   }
 
   // TODO: handle cases if there is already peer_ or config_ variable defined
