@@ -14,6 +14,7 @@ import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.errors.ReportErrors
 import aqua.types.{
+  AbilityType,
   ArrayType,
   ArrowType,
   BoxType,
@@ -22,7 +23,6 @@ import aqua.types.{
   OptionType,
   ProductType,
   ScalarType,
-  AbilityType,
   StreamType,
   StructType,
   Type
@@ -64,7 +64,7 @@ class TypesInterpreter[S[_], X](implicit
 
   override def getType(name: String): State[X, Option[Type]] =
     getState.map(st => st.strict.get(name))
-    
+
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
     getState.map(st => TypesStateHelper.resolveTypeToken(token, st, resolver)).flatMap {
       case Some(t) =>
@@ -239,12 +239,6 @@ class TypesInterpreter[S[_], X](implicit
         .as(false)
   }
 
-  private def extractToken(token: Token[S]) =
-    token match {
-      case VarToken(n, properties) => properties.lastOption.getOrElse(n)
-      case t => t
-    }
-
   override def ensureTypeMatches(
     token: Token[S],
     expected: Type,
@@ -266,11 +260,14 @@ class TypesInterpreter[S[_], X](implicit
             valueFields.toSortedMap.toList.traverse { (name, `type`) =>
               typeFields.lookup(name) match {
                 case Some(t) =>
-                  val nextToken = extractToken(token match {
+                  val nextToken = token match {
                     case NamedValueToken(_, fields) =>
                       fields.lookup(name).getOrElse(token)
-                    case t => t
-                  })
+                    // TODO: Is it needed?
+                    case PropertyToken(_, properties) =>
+                      properties.last
+                    case _ => token
+                  }
                   ensureTypeMatches(nextToken, `type`, t)
                 case None =>
                   report(
