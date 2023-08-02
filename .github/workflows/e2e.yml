@@ -44,7 +44,7 @@ jobs:
 
   flox:
     needs: aqua
-    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
+    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@fix-aqua-api-version
     with:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
