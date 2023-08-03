@@ -4,12 +4,11 @@ import aqua.model
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
 import aqua.raw.ops.RawTag
-import aqua.types.{AbilityType, ArrowType, BoxType, DataType, StreamType, Type}
+import aqua.types.{AbilityType, ArrowType, BoxType, StreamType}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import cats.{Eval, Monoid}
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.traverse.*
-import cats.syntax.apply.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
 import scribe.Logging
@@ -356,6 +355,7 @@ object ArrowInliner extends Logging {
     for {
       // Collect all arguments: what names are used inside the function, what values are received
       args <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
+      _ = println("args: " + args)
 
       abArgs = args.abilityArgs
 
@@ -457,6 +457,7 @@ object ArrowInliner extends Logging {
         .map(_.fold(Map.empty)(_ ++ _))
 
       exports <- Exports[S].exports
+      _ = println(s"exports for ${arrow.funcName}: " + exports)
       streams <- getOutsideStreamNames
 
       inlineResult <- Exports[S].scope(
