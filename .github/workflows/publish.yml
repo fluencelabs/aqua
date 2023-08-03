@@ -68,12 +68,11 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
 
-      - run: pnpm -r i
-
-      - run: pnpm -r build
+      - run: pnpm --filter='!integration-tests' -r i
+      - run: pnpm --filter='!integration-tests' -r build
 
       - name: Publish to NPM registry
-        run: pnpm publish --access public --tag unstable
+        run: pnpm --filter='!integration-tests' publish --access public --tag unstable
 
   aqua-native:
     name: "Publish aqua-native"
