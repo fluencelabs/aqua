@@ -355,7 +355,6 @@ object ArrowInliner extends Logging {
     for {
       // Collect all arguments: what names are used inside the function, what values are received
       args <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
-      _ = println("args: " + args)
 
       abArgs = args.abilityArgs
 
@@ -457,7 +456,6 @@ object ArrowInliner extends Logging {
         .map(_.fold(Map.empty)(_ ++ _))
 
       exports <- Exports[S].exports
-      _ = println(s"exports for ${arrow.funcName}: " + exports)
       streams <- getOutsideStreamNames
 
       inlineResult <- Exports[S].scope(
