@@ -106,7 +106,7 @@ jobs:
               "@fluencelabs/js-client.api": "${{ fromJson(inputs.js-client-snapshots)['js-client.api'] }}"
             }
 
-      - run: pnpm install
+      - run: pnpm install --no-frozen-lockfile
         working-directory: integration-tests
 
       - name: Build cli
