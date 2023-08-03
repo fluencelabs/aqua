@@ -96,9 +96,6 @@ jobs:
           registry-url: "https://npm.fluence.dev"
           cache: "pnpm"
 
-      - run: pnpm install
-        working-directory: integration-tests
-
       - name: Override dependencies
         if: inputs.js-client-snapshots != 'null'
         uses: fluencelabs/github-actions/pnpm-set-dependency@main
@@ -108,6 +105,9 @@ jobs:
               "@fluencelabs/js-client.node": "${{ fromJson(inputs.js-client-snapshots)['js-client.node'] }}",
               "@fluencelabs/js-client.api": "${{ fromJson(inputs.js-client-snapshots)['js-client.api'] }}"
             }
+
+      - run: pnpm install
+        working-directory: integration-tests
 
       - name: Build cli
         run: pnpm run build
