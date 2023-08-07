@@ -401,7 +401,10 @@ object ArrowInliner extends Logging {
 
       // Rename all renamed arguments in the body
       treeRenamed = fn.body.rename(allShouldRename)
-      treeStreamsRenamed = renameStreams(treeRenamed, args.streamArgs)
+      treeStreamsRenamed = renameStreams(
+        treeRenamed,
+        args.streamArgs.map { case (k, v) => argsToDataShouldRename.getOrElse(k, k) -> v }
+      )
 
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed
