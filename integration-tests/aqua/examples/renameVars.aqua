@@ -1,0 +1,25 @@
+aqua RenameVars
+
+export rename_s
+
+func append_func(s: *string):
+    s <<- "ok"
+
+func append(s: string, closure: *string -> ()) -> *string:
+  status: *string 
+
+  append_func(status)
+  closure(status)
+
+  <- status
+
+func rename_s() -> []string:
+  on HOST_PEER_ID:
+    append_closure = (s: *string):
+        s <<- "ok"
+    -- s inside append_func and append_closure
+    -- are not related to this s and should be
+    -- renamed to `status` and not `s-<n>`
+    s = "s"
+    res <- append(s, append_closure)
+  <- res

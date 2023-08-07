@@ -51,6 +51,7 @@ import { streamCallbackCall } from '../examples/streamCallback.js';
 import { streamResCall } from '../examples/streamRestrictionsCall.js';
 import { joinIdxCall, joinIdxLocalCall, joinIdxRelayCall } from '../examples/joinCall.js';
 import { recursiveStreamsCall } from '../examples/recursiveStreamsCall.js';
+import { renameVarsCall } from '../examples/renameVars.js';
 import { arraySugarCall, bugLNG59Call, optionSugarCall, streamSugarCall } from '../examples/collectionSugarCall.js';
 import { funcsCall } from '../examples/funcsCall.js';
 import { nestedDataCall } from '../examples/nestedDataCall.js';
@@ -508,6 +509,11 @@ describe('Testing examples', () => {
     //     expect(loopList).toEqual(['yes', 'yes', 'yes', 'yes', 'no']);
     //     expect(sucList.length).toEqual(5);
     // });
+
+    it('renameVars.aqua', async () => {
+        let renameVarsResult = await renameVarsCall();
+        expect(renameVarsResult).toEqual(['ok', 'ok']);
+    });
 
     it('callArrow.aqua', async () => {
         let callArrowResult = await callArrowCall(relayPeerId1);
