@@ -155,7 +155,7 @@ lazy val `aqua-apiJS` = `aqua-api`.js
   .settings(
     Compile / fastOptJS / artifactPath := baseDirectory.value / "../../api-npm" / "aqua-api.js",
     Compile / fullOptJS / artifactPath := baseDirectory.value / "../../api-npm" / "aqua-api.js",
-    scalaJSLinkerConfig                ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
+    scalaJSLinkerConfig                ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer    := true,
     Test / test                        := {}
   )
