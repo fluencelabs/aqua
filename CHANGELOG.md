@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.11.9](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.8...aqua-v0.11.9) (2023-08-09)
+
+
+### Features
+
+* **compiler:** Add boolean algebra [fixes LNG-211] ([#814](https://github.com/fluencelabs/aqua/issues/814)) ([a5b6102](https://github.com/fluencelabs/aqua/commit/a5b610242260538ff38d62dc21b97a694d0776e3))
+* **compiler:** Add equality ops [fixes LNG-217] ([#820](https://github.com/fluencelabs/aqua/issues/820)) ([a5e9354](https://github.com/fluencelabs/aqua/commit/a5e9354aebe9291e9fc0b1d29e74972bfaa254e2))
+* **compiler:** Restrict exporting functions that return arrow types or ability types [fixes LNG-209] ([#815](https://github.com/fluencelabs/aqua/issues/815)) ([fabf8d7](https://github.com/fluencelabs/aqua/commit/fabf8d7d61ec8d70bf8e17e581c3c7371c4e6d78))
+* wrap aqua api ([#807](https://github.com/fluencelabs/aqua/issues/807)) ([c7fca40](https://github.com/fluencelabs/aqua/commit/c7fca40f670a4b5a51ab4ce188f69f550d4bf6d6))
+
+
+### Bug Fixes
+
+* **compiler:** Fix `if` with brackets parsing ([#812](https://github.com/fluencelabs/aqua/issues/812)) ([4c3c32b](https://github.com/fluencelabs/aqua/commit/4c3c32b7c400e87f962dc9827892a9224765e2a4))
+* **compiler:** Fix math ops for `u64` [fixes LNG-204] ([#811](https://github.com/fluencelabs/aqua/issues/811)) ([50ba194](https://github.com/fluencelabs/aqua/commit/50ba194b8610b60bcaefee401cadacb369246f79))
+* **compiler:** Nested abilities [fixes LNG-214] ([#816](https://github.com/fluencelabs/aqua/issues/816)) ([4e3e70f](https://github.com/fluencelabs/aqua/commit/4e3e70f4fc855a16238c4f84bd4f6a1102890904))
+* **compiler:** Runtime error on compilation exported functions with top types [fixes LNG-218] ([#822](https://github.com/fluencelabs/aqua/issues/822)) ([ef4b014](https://github.com/fluencelabs/aqua/commit/ef4b0143ac7cd4e1a5997d6a0f1f690ab806a315))
+
 ## [0.11.8](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.7...aqua-v0.11.8) (2023-07-20)
 
 
