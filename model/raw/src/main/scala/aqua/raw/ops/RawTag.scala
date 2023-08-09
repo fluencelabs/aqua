@@ -1,12 +1,11 @@
 package aqua.raw.ops
 
-import aqua.raw.Raw
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag.Tree
-import aqua.raw.value.{CallArrowRaw, ValueRaw, VarRaw}
+import aqua.raw.value.{CallArrowRaw, ValueRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.{ArrowType, DataType, ProductType}
-import cats.{Eval, Show}
+import aqua.types.{ArrowType, DataType}
+import cats.Show
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 
@@ -21,7 +20,7 @@ sealed trait RawTag extends TreeNode[RawTag] {
   // All variable names introduced by this tag
   def definesVarNames: Set[String] = exportsVarNames ++ restrictsVarNames
 
-  def mapValues(f: ValueRaw => ValueRaw): RawTag = this
+  def mapValues(f: ValueRaw => ValueRaw): RawTag
 
   def renameExports(map: Map[String, String]): RawTag = this
 
@@ -38,7 +37,9 @@ object RawTag extends TreeNodeCompanion[RawTag] with RawTagGivens {
 
 sealed trait NoExecTag extends RawTag
 
-sealed trait GroupTag extends RawTag
+sealed trait GroupTag extends RawTag {
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
+}
 
 sealed trait SeqGroupTag extends GroupTag
 
@@ -80,7 +81,10 @@ case object ParTag extends ParGroupTag {
   case object Par extends GroupTag
 }
 
-case class IfTag(value: ValueRaw) extends GroupTag
+case class IfTag(value: ValueRaw) extends GroupTag {
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
+    IfTag(left.map(f), right.map(_.map(f)), equal)
+}
 
 object IfTag {
 
@@ -119,6 +123,8 @@ case class NextTag(item: String) extends RawTag {
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(item = map.getOrElse(item, item))
+
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 }
 
 case class RestrictionTag(name: String, `type`: DataType) extends SeqGroupTag {
@@ -243,7 +249,9 @@ case class ReturnTag(
     ReturnTag(values.map(_.map(f)))
 }
 
-object EmptyTag extends NoExecTag
+object EmptyTag extends NoExecTag {
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
+}
 
 case class AbilityIdTag(
   value: ValueRaw,
