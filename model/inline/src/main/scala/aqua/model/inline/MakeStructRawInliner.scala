@@ -32,8 +32,8 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     result: VarModel
   ): State[S, OpModel.Tree] = {
     fields.toSortedMap.toList.flatMap { case (name, value) =>
-      LiteralModel.fromRaw(LiteralRaw.quote(name)) :: value :: Nil
-    }.map(TagInliner.canonicalizeIfStream(_, None)).sequence.map { argsWithOps =>
+      LiteralModel.quote(name) :: value :: Nil
+    }.traverse(TagInliner.canonicalizeIfStream(_)).map { argsWithOps =>
       val (args, ops) = argsWithOps.unzip
       val createOp =
         CallServiceModel(
@@ -42,8 +42,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
           args,
           result
         ).leaf
-      SeqModel.wrap((ops.flatten :+ createOp): _*)
-
+      SeqModel.wrap(ops.flatten :+ createOp)
     }
   }
 

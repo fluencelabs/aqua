@@ -5,7 +5,7 @@ import aqua.parser.Ast
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
-import aqua.raw.value.{LiteralRaw, ValueRaw}
+import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw, ValueRaw}
 import aqua.types.*
 import aqua.raw.ops.*
 
@@ -66,6 +66,12 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       )
       .leaf
 
+  def equ(left: ValueRaw, right: ValueRaw): ApplyBinaryOpRaw =
+    ApplyBinaryOpRaw(ApplyBinaryOpRaw.Op.Eq, left, right)
+
+  def neq(left: ValueRaw, right: ValueRaw): ApplyBinaryOpRaw =
+    ApplyBinaryOpRaw(ApplyBinaryOpRaw.Op.Neq, left, right)
+
   // use it to fix https://github.com/fluencelabs/aqua/issues/90
   "semantics" should "create right model" in {
     val script =
@@ -109,7 +115,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideBody(script) { body =>
       val expected =
-        IfTag(LiteralRaw.number(1), LiteralRaw.number(2), true).wrap(
+        IfTag(equ(LiteralRaw.number(1), LiteralRaw.number(2))).wrap(
           testServiceCallStr("if"),
           testServiceCallStr("else")
         )
@@ -203,7 +209,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideBody(script) { body =>
       val expected =
-        IfTag(LiteralRaw.number(1), LiteralRaw.number(2), false).wrap(
+        IfTag(neq(LiteralRaw.number(1), LiteralRaw.number(2))).wrap(
           testServiceCallStr("if")
         )
 
@@ -283,7 +289,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideBody(script) { body =>
       val expected = TryTag.wrap(
-        IfTag(LiteralRaw.quote("a"), LiteralRaw.quote("b"), false).wrap(
+        IfTag(neq(LiteralRaw.quote("a"), LiteralRaw.quote("b"))).wrap(
           testServiceCallStr("if")
         ),
         testServiceCallStr("otherwise")
@@ -300,7 +306,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         |    if "a" != "b":
         |       Test.testCallStr("if")
         |""".stripMargin ->
-        IfTag(LiteralRaw.quote("a"), LiteralRaw.quote("b"), false).wrap(
+        IfTag(neq(LiteralRaw.quote("a"), LiteralRaw.quote("b"))).wrap(
           testServiceCallStr("if")
         ),
       """
@@ -430,7 +436,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         TryTag.wrap(
           ParTag.wrap(
             TryTag.wrap(
-              IfTag(LiteralRaw.quote("a"), LiteralRaw.quote("b"), false).wrap(
+              IfTag(neq(LiteralRaw.quote("a"), LiteralRaw.quote("b"))).wrap(
                 testServiceCallStr("if")
               ),
               testServiceCallStr("otherwise1")

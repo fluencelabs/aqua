@@ -4,12 +4,11 @@ import aqua.model
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
 import aqua.raw.ops.RawTag
-import aqua.types.{AbilityType, ArrowType, BoxType, DataType, StreamType, Type}
+import aqua.types.{AbilityType, ArrowType, BoxType, StreamType}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import cats.{Eval, Monoid}
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.traverse.*
-import cats.syntax.apply.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
 import scribe.Logging
@@ -402,7 +401,10 @@ object ArrowInliner extends Logging {
 
       // Rename all renamed arguments in the body
       treeRenamed = fn.body.rename(allShouldRename)
-      treeStreamsRenamed = renameStreams(treeRenamed, args.streamArgs)
+      treeStreamsRenamed = renameStreams(
+        treeRenamed,
+        args.streamArgs.map { case (k, v) => argsToDataShouldRename.getOrElse(k, k) -> v }
+      )
 
       // Function body on its own defines some values; collect their names
       // except stream arguments. They should be already renamed

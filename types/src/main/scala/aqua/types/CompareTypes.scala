@@ -126,9 +126,9 @@ object CompareTypes {
       // Literals and scalars
       case (x: ScalarType, y: ScalarType) => scalarOrder.partialCompare(x, y)
       case (LiteralType(xs, _), y: ScalarType) if xs == Set(y) => 0.0
-      case (LiteralType(xs, _), y: ScalarType) if xs(y) => -1.0
+      case (LiteralType(xs, _), y: ScalarType) if xs.exists(y acceptsValueOf _) => -1.0
       case (x: ScalarType, LiteralType(ys, _)) if ys == Set(x) => 0.0
-      case (x: ScalarType, LiteralType(ys, _)) if ys(x) => 1.0
+      case (x: ScalarType, LiteralType(ys, _)) if ys.exists(x acceptsValueOf _) => 1.0
       case (LiteralType(xs, _), LiteralType(ys, _)) if xs == ys => 0.0
       case (LiteralType(xs, _), LiteralType(ys, _)) if xs subsetOf ys => 1.0
       case (LiteralType(xs, _), LiteralType(ys, _)) if ys subsetOf xs => -1.0

@@ -32,7 +32,7 @@ import { registerHandlers, returnNull, returnOptionalCall, useOptionalCall } fro
 import { viaArrCall, viaOptCall, viaOptNullCall, viaStreamCall } from '../examples/viaCall.js';
 import { nestedFuncsCall } from '../examples/nestedFuncsCall.js';
 import { assignmentCall } from '../examples/assignment.js';
-import { boolAlgebraCall } from '../examples/boolAlgebra.js';
+import { boolAlgebraCall, compareStreamsCall, compareStructsCall } from '../examples/boolAlgebra.js';
 import { tryCatchCall } from '../examples/tryCatchCall.js';
 import { tryOtherwiseCall } from '../examples/tryOtherwiseCall.js';
 import { coCall } from '../examples/coCall.js';
@@ -51,6 +51,7 @@ import { streamCallbackCall } from '../examples/streamCallback.js';
 import { streamResCall } from '../examples/streamRestrictionsCall.js';
 import { joinIdxCall, joinIdxLocalCall, joinIdxRelayCall } from '../examples/joinCall.js';
 import { recursiveStreamsCall } from '../examples/recursiveStreamsCall.js';
+import { renameVarsCall } from '../examples/renameVars.js';
 import { arraySugarCall, bugLNG59Call, optionSugarCall, streamSugarCall } from '../examples/collectionSugarCall.js';
 import { funcsCall } from '../examples/funcsCall.js';
 import { nestedDataCall } from '../examples/nestedDataCall.js';
@@ -404,6 +405,10 @@ describe('Testing examples', () => {
             false,
             true,
             true,
+            false,
+            true,
+            true,
+            false,
             true,
             false,
             true,
@@ -413,6 +418,16 @@ describe('Testing examples', () => {
             true,
             false,
         ]);
+    });
+
+    it('boolAlgebra.aqua compareStreams', async () => {
+        let result = await compareStreamsCall(relayPeerId1);
+        expect(result).toEqual(true);
+    });
+
+    it('boolAlgebra.aqua compareStructs', async () => {
+        let result = await compareStructsCall(relayPeerId1, 'struct');
+        expect(result).toEqual(false);
     });
 
     it('join.aqua local', async () => {
@@ -508,6 +523,11 @@ describe('Testing examples', () => {
     //     expect(loopList).toEqual(['yes', 'yes', 'yes', 'yes', 'no']);
     //     expect(sucList.length).toEqual(5);
     // });
+
+    it('renameVars.aqua', async () => {
+        let renameVarsResult = await renameVarsCall();
+        expect(renameVarsResult).toEqual(['ok', 'ok']);
+    });
 
     it('callArrow.aqua', async () => {
         let callArrowResult = await callArrowCall(relayPeerId1);

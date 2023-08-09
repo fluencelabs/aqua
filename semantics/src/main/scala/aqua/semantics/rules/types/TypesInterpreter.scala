@@ -13,20 +13,7 @@ import aqua.raw.value.{
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.errors.ReportErrors
-import aqua.types.{
-  ArrayType,
-  ArrowType,
-  BoxType,
-  LiteralType,
-  NamedType,
-  OptionType,
-  ProductType,
-  ScalarType,
-  AbilityType,
-  StreamType,
-  StructType,
-  Type
-}
+import aqua.types.*
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, State}
 import cats.instances.list.*
@@ -64,7 +51,7 @@ class TypesInterpreter[S[_], X](implicit
 
   override def getType(name: String): State[X, Option[Type]] =
     getState.map(st => st.strict.get(name))
-    
+
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
     getState.map(st => TypesStateHelper.resolveTypeToken(token, st, resolver)).flatMap {
       case Some(t) =>
@@ -226,17 +213,35 @@ class TypesInterpreter[S[_], X](implicit
     left: Type,
     right: Type
   ): State[X, Boolean] = {
-    val isComparable = (left, right) match {
-      case (LiteralType(xs, _), LiteralType(ys, _)) =>
-        xs.intersect(ys).nonEmpty
-      case _ =>
-        left.acceptsValueOf(right)
-    }
+    // TODO: This needs more comprehensive logic
+    def isComparable(lt: Type, rt: Type): Boolean =
+      (lt, rt) match {
+        // All numbers are comparable
+        case (lst: ScalarType, rst: ScalarType)
+            if ScalarType.number(lst) && ScalarType.number(rst) =>
+          true
+        // Hack: u64 `U` LiteralType.signed = TopType,
+        // but they should be comparable
+        case (lst: ScalarType, LiteralType.signed) if ScalarType.number(lst) =>
+          true
+        case (LiteralType.signed, rst: ScalarType) if ScalarType.number(rst) =>
+          true
+        case (lbt: BoxType, rbt: BoxType) =>
+          isComparable(lbt.element, rbt.element)
+        // Prohibit comparing abilities
+        case (_: AbilityType, _: AbilityType) =>
+          false
+        // Prohibit comparing arrows
+        case (_: ArrowType, _: ArrowType) =>
+          false
+        case (LiteralType(xs, _), LiteralType(ys, _)) =>
+          xs.intersect(ys).nonEmpty
+        case _ =>
+          lt.uniteTop(rt) != TopType
+      }
 
-    if (isComparable) State.pure(true)
-    else
-      report(token, s"Cannot compare '$left' with '$right''")
-        .as(false)
+    if (isComparable(left, right)) State.pure(true)
+    else report(token, s"Cannot compare '$left' with '$right''").as(false)
   }
 
   private def extractToken(token: Token[S]) =

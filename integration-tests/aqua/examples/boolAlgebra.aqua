@@ -1,6 +1,6 @@
 aqua Bool
 
-export main, Effector
+export main, compareStreams, compareStructs, Effector
 
 service Effector("effector"):
     effect(name: string) -> bool
@@ -12,6 +12,27 @@ func foo(x: i8) -> bool:
 func bar(x: i8) -> i8:
     y = x - 1
     <- y
+
+func compareStreams(peer: string) -> bool:
+    s1: *i8
+    s2: *i8
+
+    on peer:
+        s1 <<- bar(43)
+        s2 <<- bar(43)
+
+    <- s1 == s2
+
+data Struct:
+    field: i8
+    str: string
+
+func compareStructs(peer: string, str: string) -> bool:
+    on peer:
+        st1 = Struct(field = 42, str = str)
+        st2 = Struct(field = 24, str = str)
+
+    <- st1 == st2
 
 func main(peer: string) -> []bool:
     res: *bool
@@ -26,6 +47,8 @@ func main(peer: string) -> []bool:
         res <<- foo(4) && bar(2) < 2 -- false
         res <<- !foo(10) && !!true -- true
         res <<- !(bar(2) < 1) || !!(a < 2) -- true
+        res <<- bar(42) == bar(40 + 2) && foo(10) -- false
+        res <<- bar(2) < 5 || bar(2) != 1 -- true
 
     -- Effector is only registered on init_peer
     res <<- true || Effector.effect("impossible") -- true
@@ -36,5 +59,7 @@ func main(peer: string) -> []bool:
     res <<- Effector.effect("true") && false -- false
     res <<- !foo(10) || Effector.effect("impossible") -- true
     res <<- !(1 < 2) && !Effector.effect("impossible") -- false
+    res <<- !(bar(5) == 5) || Effector.effect("impossible") -- true
+    res <<- bar(5) != 4 && Effector.effect("impossible") -- false
 
     <- res
