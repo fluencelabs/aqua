@@ -46,8 +46,8 @@ importers:
         specifier: 1.1.2
         version: 1.1.2
       '@fluencelabs/js-client.api':
-        specifier: 0.12.0
-        version: 0.12.0
+        specifier: 0.12.1
+        version: 0.12.1
       '@fluencelabs/js-client.node':
         specifier: 0.7.0
         version: 0.7.0(uint8arraylist@2.4.3)
@@ -644,11 +644,16 @@ packages:
     engines: {node: '>=10', pnpm: '>=3'}
     dev: false
 
-  /@fluencelabs/js-client.api@0.12.0:
-    resolution: {integrity: sha512-DfYkmhBV3wkYl84CZR/kw8yonW6DMOUOnNC1/plIo7b6edUHJLVFQd9a9WyIjGxgyOLKn5dlkh8cIfYJ75Hwgg==}
+  /@fluencelabs/interfaces@0.8.1:
+    resolution: {integrity: sha512-RVdaBX8HbMLbgLPMwYvPaQ+XPvelNOGgOpsQGoy4Chw2njuj142LwxeQsa4LBWqE24Z7ebUqcjhlCrfrf9Efqg==}
+    engines: {node: '>=10', pnpm: '>=3'}
+    dev: false
+
+  /@fluencelabs/js-client.api@0.12.1:
+    resolution: {integrity: sha512-VbpNQhWwslCLtonnopJP9Ct8qinKhgq/lhVogPsezzWnqugDNFQ7aoTh49f0JTJ+kah1yXsththRspCX7EeAyQ==}
     engines: {node: '>=10', pnpm: '>=3'}
     dependencies:
-      '@fluencelabs/interfaces': 0.8.0
+      '@fluencelabs/interfaces': 0.8.1
     dev: false
 
   /@fluencelabs/js-client.node@0.7.0(uint8arraylist@2.4.3):
@@ -2887,6 +2892,7 @@ packages:
   /esm@3.2.25:
     resolution: {integrity: sha512-U1suiZ2oDVWv4zPO56S0NcR5QriEahGtdN2OR6FiOG4WJvcjBVFB0qI4+eKoWFH483PKGuLuu6V8Z4T5g63UVA==}
     engines: {node: '>=6'}
+    requiresBuild: true
     optional: true
 
   /esprima@4.0.1:
