@@ -53,6 +53,7 @@ object CliFunc {
                   .map(l => CollectionRaw(l, ArrayType(l.head.baseType)))
                   .getOrElse(ValueRaw.Nil)
               )
+              .toValidatedNel
           case CallArrowToken(_, _) =>
             "Function calls as arguments are not supported.".invalidNel
           case _ =>

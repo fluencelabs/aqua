@@ -9,6 +9,7 @@ import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow}
 import aqua.parser.lift.FileSpan
 import aqua.run.CliFunc
+
 import cats.data.Validated.{invalidNec, validNec}
 import cats.data.{Chain, NonEmptyList, Validated, ValidatedNec}
 import cats.effect.IO
@@ -19,6 +20,7 @@ import cats.syntax.functor.*
 import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
+import cats.syntax.option.*
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -84,16 +86,9 @@ object FuncCompiler {
   def findFunction(
     contexts: Chain[AquaContext],
     func: CliFunc
-  ): ValidatedNec[String, FuncArrow] =
-    func.ability
-      .fold(
-        contexts
-          .collectFirstSome(_.allFuncs.get(func.name))
-      )(ab => contexts.collectFirstSome(_.abilities.get(ab).flatMap(_.allFuncs.get(func.name))))
-      .map(validNec)
-      .getOrElse(
-        Validated.invalidNec[String, FuncArrow](
-          s"There is no function '${func.ability.map(_ + ".").getOrElse("")}${func.name}' or it is not exported. Check the spelling or see https://fluence.dev/docs/aqua-book/language/header/#export"
-        )
-      )
+  ): ValidatedNec[String, FuncArrow] = contexts
+    .collectFirstSome(_.allFuncs.get(func.name))
+    .toValidNec(
+      s"There is no function '${func.name}' or it is not exported. Check the spelling or see https://fluence.dev/docs/aqua-book/language/header/#export"
+    )
 }
