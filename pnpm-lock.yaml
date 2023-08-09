@@ -15,7 +15,7 @@ importers:
   api/api-npm:
     devDependencies:
       '@fluencelabs/interfaces':
-        specifier: ^0.8.0
+        specifier: 0.8.1
         version: 0.8.1
       prettier:
         specifier: 3.0.0
