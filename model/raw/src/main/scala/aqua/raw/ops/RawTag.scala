@@ -81,9 +81,9 @@ case object ParTag extends ParGroupTag {
   case object Par extends GroupTag
 }
 
-case class IfTag(left: ValueRaw, right: ValueRaw, equal: Boolean) extends GroupTag {
+case class IfTag(value: ValueRaw) extends GroupTag {
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    IfTag(left.map(f), right.map(_.map(f)), equal)
+    IfTag(value.map(f))
 }
 
 object IfTag {

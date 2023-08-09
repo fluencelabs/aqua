@@ -33,7 +33,10 @@ class AquaParser[F[_], E, I, S[_]: Comonad](
     sources.sources.map(
       _.leftMap(_.map[Err](SourcesErr(_))).andThen(_.map { case (i, s) =>
         parser(i)(s)
-          .bimap(_.map[Err](ParserErr(_)), ast => Chain.one(i -> ast))
+          .bimap(
+            _.map[Err](ParserErr(_)),
+            ast => Chain.one(i -> ast)
+          )
       }.foldA)
     )
 
