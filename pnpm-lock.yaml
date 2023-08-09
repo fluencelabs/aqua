@@ -15,7 +15,7 @@ importers:
   api/api-npm:
     devDependencies:
       '@fluencelabs/interfaces':
-        specifier: ^0.8.0
+        specifier: 0.8.1
         version: 0.8.1
       prettier:
         specifier: 3.0.0
@@ -74,8 +74,8 @@ importers:
         specifier: 0.2.5
         version: 0.2.5
       '@fluencelabs/aqua-lib':
-        specifier: 0.7.2
-        version: 0.7.2
+        specifier: 0.7.3
+        version: 0.7.3
       '@types/jest':
         specifier: 29.5.2
         version: 29.5.2
@@ -530,8 +530,8 @@ packages:
     resolution: {integrity: sha512-ifjtCM93KO3LhzPkMxqmXhwLmrg/scjOiyTihEVg7ns5N+BVzaK1eWzdOdqGdl9ZVoah43pdlQUepEo7VdRmsw==}
     dev: false
 
-  /@fluencelabs/aqua-lib@0.7.2:
-    resolution: {integrity: sha512-P4ZYSnNeFPTgykHJr6Uzllqj36aeUxM0CNAXXnydL2ZFlWthGatOlzeZi1MnTvczxsHakhKDgx9oH3Ehh4auew==}
+  /@fluencelabs/aqua-lib@0.7.3:
+    resolution: {integrity: sha512-+JVbWmHeGB+X/BSqmk6/B0gwWJ4bEAxkepVTN8l0mVrJ5zRRmYaCKVplWy6Z3W012m3VVK3A1o3rm/fgfVrQkw==}
     dev: true
 
   /@fluencelabs/avm@0.35.3:
