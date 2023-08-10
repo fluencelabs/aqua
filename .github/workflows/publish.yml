@@ -41,7 +41,7 @@ jobs:
           apps: sbt
 
       - name: scala-js build
-        run: sbt ";cliJS/fullLinkJS;language-server-apiJS/fullLinkJS;aqua-apiJS/fullLinkJS"
+        run: sbt ";cliJS/fullOptJS;language-server-apiJS/fullOptJS;aqua-apiJS/fullOptJS"
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.7.3
