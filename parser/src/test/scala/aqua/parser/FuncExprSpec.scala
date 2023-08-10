@@ -7,7 +7,6 @@ import aqua.parser.lexer.{
   ArrowTypeToken,
   BasicTypeToken,
   CallArrowToken,
-  EqOp,
   LiteralToken,
   Token,
   VarToken
@@ -109,7 +108,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     val ifBody =
       checkHeadGetTail(
         arrowExpr.head,
-        IfExpr(toVarLambda("peer", List("id")), EqOp[Id](true), toVar("other")),
+        IfExpr(equ(toVarLambda("peer", List("id")), toVar("other"))),
         3
       ).toList
 
@@ -330,7 +329,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
         .cata[Int]((expr, results) =>
           // Count `if`s inside the tree
           Eval.later(results.sumAll + (expr match {
-            case IfExpr(_, _, _) => 1
+            case IfExpr(_) => 1
             case _ => 0
           }))
         )

@@ -2,19 +2,11 @@ package aqua
 
 import aqua.AquaSpec.spanToId
 import aqua.parser.expr.*
-import aqua.parser.expr.func.{
-  AbilityIdExpr,
-  ArrowExpr,
-  AssignmentExpr,
-  CallArrowExpr,
-  ClosureExpr,
-  ElseOtherwiseExpr,
-  ForExpr,
-  IfExpr,
-  OnExpr,
-  PushToStreamExpr,
-  ReturnExpr
-}
+import aqua.parser.expr.func.*
+import aqua.parser.lexer.InfixToken.Op as InfixOp
+import aqua.parser.lexer.PrefixToken.Op as PrefixOp
+import aqua.parser.lexer.InfixToken.Op.*
+import aqua.parser.lexer.PrefixToken.Op.*
 import aqua.parser.head.FromExpr.NameOrAbAs
 import aqua.parser.head.{FromExpr, UseFromExpr}
 import aqua.parser.lexer.*
@@ -178,6 +170,57 @@ trait AquaSpec extends EitherValues {
   def funcExpr(str: String): FuncExpr[Id] = FuncExpr.p.parseAll(str).value.mapK(spanToId)
   def closureExpr(str: String): ClosureExpr[Id] = ClosureExpr.p.parseAll(str).value.mapK(spanToId)
   def arrowExpr(str: String): ArrowExpr[Id] = ArrowExpr.p.parseAll(str).value.mapK(spanToId)
+
+  def prefixToken(value: ValueToken[Id], op: PrefixOp) =
+    PrefixToken[Id](value, op)
+
+  def infixToken(left: ValueToken[Id], right: ValueToken[Id], op: InfixOp) =
+    InfixToken[Id](left, right, op)
+
+  def mul(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Mul)
+
+  def sub(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Sub)
+
+  def div(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Div)
+
+  def rem(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Rem)
+
+  def add(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Add)
+
+  def pow(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Pow)
+
+  def gt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Gt)
+
+  def gte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Gte)
+
+  def lt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Lt)
+
+  def lte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Lte)
+
+  def or(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Or)
+
+  def and(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, And)
+
+  def not(value: ValueToken[Id]): ValueToken[Id] =
+    prefixToken(value, Not)
+
+  def equ(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Equ)
+
+  def neq(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Neq)
 
   val nat = new (Span.S ~> Id) {
 

@@ -4,7 +4,7 @@ import aqua.model.transform.ModelBuilder
 import aqua.model.{CallModel, OnModel, SeqModel}
 import aqua.model.transform.cursor.ChainZipper
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.raw.ops.{Call, FuncOp, OnTag, ReturnTag}
+import aqua.raw.ops.{Call, FuncOp, OnTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrayType, ScalarType}
 import cats.data.{Chain, NonEmptyList}

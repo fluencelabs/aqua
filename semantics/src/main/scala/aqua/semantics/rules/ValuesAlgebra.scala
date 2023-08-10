@@ -1,7 +1,7 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.*
-import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, MathOp, Op as InfOp}
+import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
 import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -202,6 +202,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                     },
                     left = leftRaw,
                     right = rightRaw
+                  )
+                )
+              case InfOp.Eq(eop) =>
+                T.ensureValuesComparable(
+                  token = it,
+                  left = lType,
+                  right = rType
+                ).map(
+                  Option.when(_)(
+                    ApplyBinaryOpRaw(
+                      op = eop match {
+                        case EqOp.Eq => ApplyBinaryOpRaw.Op.Eq
+                        case EqOp.Neq => ApplyBinaryOpRaw.Op.Neq
+                      },
+                      left = leftRaw,
+                      right = rightRaw
+                    )
                   )
                 )
               case op @ (InfOp.Math(_) | InfOp.Cmp(_)) =>

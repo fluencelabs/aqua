@@ -26,7 +26,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
     }
   }
 
-  import AquaSpec._
+  import AquaSpec.*
 
   private def variable(name: String): ValueToken[Id] =
     VarToken(Name(name))
@@ -38,43 +38,9 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
 
   private def literalBool(b: Boolean): ValueToken[Id] = toBool(b)
 
-  private def prefixToken(value: ValueToken[Id], op: PrefixOp) =
-    PrefixToken[Id](value, op)
+  private def literalString(s: String): ValueToken[Id] = toStr(s)
 
-  private def infixToken(left: ValueToken[Id], right: ValueToken[Id], op: InfixOp) =
-    InfixToken[Id](left, right, op)
-
-  private def mul(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Mul)
-
-  private def sub(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Sub)
-
-  private def div(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Div)
-
-  private def rem(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Rem)
-
-  private def add(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Add)
-
-  private def pow(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Pow)
-
-  private def gt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Gt)
-
-  private def gte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Gte)
-
-  private def lt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Lt)
-
-  private def lte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
-    infixToken(left, right, Lte)
-
-  "primitive math expression" should "be parsed" in {
+  "ValueToken" should "parse primitive math expression" in {
 
     val vt = ValueToken.`value`.parseAll("3").right.get.mapK(spanToId)
     val vt1 = ValueToken.`value`.parseAll("2 - 3").right.get.mapK(spanToId)
@@ -119,7 +85,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
     vt11 shouldBe rem(2, 4)
   }
 
-  "primitive math expression with multiplication" should "be parsed" in {
+  it should "parse primitive math expression with multiplication" in {
 
     val res = ValueToken.`value`.parseAll("(3 - 2) * 4").right.get.mapK(spanToId)
     val res2 = ValueToken.`value`.parseAll("3 - 2 * 4").right.get.mapK(spanToId)
@@ -176,7 +142,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
 
   }
 
-  "math expression" should "be parsed" in {
+  it should "parse math expression" in {
 
     val vt = ValueToken.`value`.parseAll("3 - 2 + 5").right.get.mapK(spanToId)
 
@@ -185,7 +151,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
 
   }
 
-  "complex math expression" should "be parsed" in {
+  it should "parse complex math expression" in {
 
     val res = ValueToken.`value`.parseAll("(3 - 2 + 5) + 5 + (4 - 7)").right.get.mapK(spanToId)
 
@@ -201,7 +167,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
       )
   }
 
-  "complex math expression with multiplication" should "be parsed" in {
+  it should "parse complex math expression with multiplication" in {
 
     val vt = ValueToken.`value`.parseAll("(3 - 2) * 2 + (4 - 7) * 3").right.get.mapK(spanToId)
 
@@ -221,7 +187,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
       )
   }
 
-  "simple math expression with exp" should "be parsed" in {
+  it should "parse simple math expression with exp" in {
     // Correct (1 ** (2 ** 3))
     val vt = ValueToken.`value`.parseAll("1**2**3").right.get.mapK(spanToId)
 
@@ -230,7 +196,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
 
   }
 
-  "complex math expression with exp" should "be parsed" in {
+  it should "parse complex math expression with exp" in {
     // Correct ((1 ** 2) + (((3 ** 4) * (5 ** (6 ** 7))) * 9))
     val vt = ValueToken.`value`.parseAll("1 ** 2 + 3**4* 5**6 ** 7*9").right.get.mapK(spanToId)
 
@@ -259,7 +225,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
 
   }
 
-  "simple cmp math expression " should "be parsed" in {
+  it should "parse simple cmp math expression" in {
     val vt = ValueToken.`value`.parseAll("1 > 3").right.get.mapK(spanToId)
     val vt1 = ValueToken.`value`.parseAll("1 < 3").right.get.mapK(spanToId)
     val vt2 = ValueToken.`value`.parseAll("1 >= 3").right.get.mapK(spanToId)
@@ -271,7 +237,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
     vt3 shouldBe lte(literal(1), literal(3))
   }
 
-  "complex cmp math expression " should "be parsed" in {
+  it should "parse complex cmp math expression" in {
     val test = (op: InfixOp) => {
       val vt = ValueToken.`value`
         .parseAll(
@@ -289,12 +255,12 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
     List(Gt, Lt, Gte, Lte).foreach(test)
   }
 
-  "simple cmp math expression in brackets " should "be parsed" in {
+  it should "parse simple cmp math expression in brackets" in {
     val vt = ValueToken.`value`.parseAll("(1 > 3)").right.get.mapK(spanToId)
     vt shouldBe InfixToken(literal(1), literal(3), Gt)
   }
 
-  "simple logical expression" should "be parsed" in {
+  it should "parse simple logical expression" in {
     val vtAnd = ValueToken.`value`.parseAll("true && false").map(_.mapK(spanToId))
 
     inside(vtAnd) { case Right(vt) =>
@@ -342,7 +308,21 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
     }
   }
 
-  "logical expression with brackets" should "be parsed" in {
+  it should "parse simple equality expression" in {
+    val ltEqLt = ValueToken.`value`.parseAll("\"abc\" == \"cba\"").map(_.mapK(spanToId))
+
+    inside(ltEqLt) { case Right(vt) =>
+      vt shouldBe equ(literalString("abc"), literalString("cba"))
+    }
+
+    val vtNeqLt = ValueToken.`value`.parseAll("a != \"cba\"").map(_.mapK(spanToId))
+
+    inside(vtNeqLt) { case Right(vt) =>
+      vt shouldBe neq(variable("a"), literalString("cba"))
+    }
+  }
+
+  it should "parse logical expression with brackets" in {
     val vtAndOr = ValueToken.`value`.parseAll("false && (true || false)").map(_.mapK(spanToId))
 
     inside(vtAndOr) { case Right(vt) =>
@@ -387,124 +367,191 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
     }
   }
 
-  "logical expression with math expressions" should "be parsed" in {
+  it should "parse logical expression with math expressions" in {
     val vt1 = ValueToken.`value`.parseAll("1 < 2 + 3 || 3 % 2 > 1").map(_.mapK(spanToId))
 
     inside(vt1) { case Right(vt) =>
-      vt shouldBe infixToken(
-        infixToken(
+      vt shouldBe or(
+        lt(
           literal(1),
-          infixToken(literal(2), literal(3), Add),
-          Lt
+          add(literal(2), literal(3))
         ),
-        infixToken(
-          infixToken(literal(3), literal(2), Rem),
-          literal(1),
-          Gt
-        ),
-        Or
+        gt(
+          rem(literal(3), literal(2)),
+          literal(1)
+        )
       )
     }
 
     val vt2 = ValueToken.`value`.parseAll("1 - 2 > 3 && 3 ** 2 <= 1").map(_.mapK(spanToId))
 
     inside(vt2) { case Right(vt) =>
-      vt shouldBe infixToken(
-        infixToken(
-          infixToken(literal(1), literal(2), Sub),
-          literal(3),
-          Gt
+      vt shouldBe and(
+        gt(
+          sub(literal(1), literal(2)),
+          literal(3)
         ),
-        infixToken(
-          infixToken(literal(3), literal(2), Pow),
-          literal(1),
-          Lte
-        ),
-        And
+        lte(
+          pow(literal(3), literal(2)),
+          literal(1)
+        )
       )
     }
 
     val vt3 = ValueToken.`value`.parseAll("!(1 - 2 > 3) && 3 ** 2 <= 1").map(_.mapK(spanToId))
 
     inside(vt3) { case Right(vt) =>
-      vt shouldBe infixToken(
-        prefixToken(
-          infixToken(
-            infixToken(literal(1), literal(2), Sub),
-            literal(3),
-            Gt
-          ),
-          Not
+      vt shouldBe and(
+        not(
+          gt(
+            sub(literal(1), literal(2)),
+            literal(3)
+          )
         ),
-        infixToken(
-          infixToken(literal(3), literal(2), Pow),
-          literal(1),
-          Lte
-        ),
-        And
+        lte(
+          pow(literal(3), literal(2)),
+          literal(1)
+        )
       )
     }
   }
 
-  "logical expression with function calls and variables" should "be parsed" in {
+  it should "parse logical expression with math and equality" in {
+    val vt1 = ValueToken.`value`.parseAll("1 == 2 + 3 || 3 % 2 != 1").map(_.mapK(spanToId))
+
+    inside(vt1) { case Right(vt) =>
+      vt shouldBe or(
+        equ(
+          literal(1),
+          add(literal(2), literal(3))
+        ),
+        neq(
+          rem(literal(3), literal(2)),
+          literal(1)
+        )
+      )
+    }
+
+    val vt2 = ValueToken.`value`.parseAll("1 - 2 != 3 && 3 ** 2 == 1").map(_.mapK(spanToId))
+
+    inside(vt2) { case Right(vt) =>
+      vt shouldBe and(
+        neq(
+          sub(literal(1), literal(2)),
+          literal(3)
+        ),
+        equ(
+          pow(literal(3), literal(2)),
+          literal(1)
+        )
+      )
+    }
+
+    val vt3 =
+      ValueToken.`value`.parseAll("!(true == 2 > 3) && false == 2 <= 1").map(_.mapK(spanToId))
+
+    inside(vt3) { case Right(vt) =>
+      vt shouldBe and(
+        not(
+          equ(
+            literalBool(true),
+            gt(literal(2), literal(3))
+          )
+        ),
+        equ(
+          literalBool(false),
+          lte(literal(2), literal(1))
+        )
+      )
+    }
+  }
+
+  it should "parse logical expression with function calls and variables" in {
     val vt1 = ValueToken.`value`.parseAll("foo() || a + 1 < 2 && b").map(_.mapK(spanToId))
 
     inside(vt1) { case Right(vt) =>
-      vt shouldBe infixToken(
+      vt shouldBe or(
         func("foo", Nil),
-        infixToken(
-          infixToken(
-            infixToken(
+        and(
+          lt(
+            add(
               variable("a"),
-              literal(1),
-              Add
+              literal(1)
             ),
-            literal(2),
-            Lt
+            literal(2)
           ),
-          variable("b"),
-          And
-        ),
-        Or
+          variable("b")
+        )
       )
     }
 
     val vt2 = ValueToken.`value`.parseAll("bar(a) < 2 && (b > 5 || c)").map(_.mapK(spanToId))
 
     inside(vt2) { case Right(vt) =>
-      vt shouldBe infixToken(
-        infixToken(func("bar", List(variable("a"))), literal(2), Lt),
-        infixToken(
-          infixToken(
+      vt shouldBe and(
+        lt(func("bar", List(variable("a"))), literal(2)),
+        or(
+          gt(
             variable("b"),
-            literal(5),
-            Gt
+            literal(5)
           ),
-          variable("c"),
-          Or
-        ),
-        And
+          variable("c")
+        )
       )
     }
 
     val vt3 = ValueToken.`value`.parseAll("!baz(a) && (!(b > 4) || !c)").map(_.mapK(spanToId))
 
     inside(vt3) { case Right(vt) =>
-      vt shouldBe infixToken(
-        prefixToken(func("baz", List(variable("a"))), Not),
-        infixToken(
-          prefixToken(
-            infixToken(
+      vt shouldBe and(
+        not(func("baz", List(variable("a")))),
+        or(
+          not(
+            gt(
               variable("b"),
-              literal(4),
-              Gt
-            ),
-            Not
+              literal(4)
+            )
           ),
-          prefixToken(variable("c"), Not),
-          Or
+          prefixToken(variable("c"), Not)
+        )
+      )
+    }
+
+    val vt4 = ValueToken.`value`.parseAll("a == foo(b) && !(baz(c) != d)").map(_.mapK(spanToId))
+
+    inside(vt4) { case Right(vt) =>
+      vt shouldBe and(
+        equ(
+          variable("a"),
+          func("foo", List(variable("b")))
         ),
-        And
+        not(
+          neq(
+            func("baz", List(variable("c"))),
+            variable("d")
+          )
+        )
+      )
+    }
+
+    val vt5 =
+      ValueToken.`value`.parseAll("!(a == foo(b)) || baz(c) == (d && e)").map(_.mapK(spanToId))
+
+    inside(vt5) { case Right(vt) =>
+      vt shouldBe or(
+        not(
+          equ(
+            variable("a"),
+            func("foo", List(variable("b")))
+          )
+        ),
+        equ(
+          func("baz", List(variable("c"))),
+          and(
+            variable("d"),
+            variable("e")
+          )
+        )
       )
     }
   }

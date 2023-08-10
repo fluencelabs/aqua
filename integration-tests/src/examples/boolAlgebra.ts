@@ -1,4 +1,4 @@
-import { main, registerEffector } from '../compiled/examples/boolAlgebra.js';
+import { main, compareStreams, compareStructs, registerEffector } from '../compiled/examples/boolAlgebra.js';
 
 export async function boolAlgebraCall(relay: string): Promise<boolean[]> {
     registerEffector({
@@ -9,4 +9,12 @@ export async function boolAlgebraCall(relay: string): Promise<boolean[]> {
     });
 
     return await main(relay);
+}
+
+export async function compareStreamsCall(relay: string): Promise<boolean> {
+    return await compareStreams(relay);
+}
+
+export async function compareStructsCall(relay: string, str: string): Promise<boolean> {
+    return await compareStructs(relay, str);
 }

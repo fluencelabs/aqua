@@ -194,6 +194,10 @@ object InfixToken {
     case Lt extends CmpOp("<")
     case Lte extends CmpOp("<=")
 
+  enum EqOp(val symbol: String):
+    case Eq extends EqOp("==")
+    case Neq extends EqOp("!=")
+
   enum Op(val symbol: String):
     /**
      * Scala3 does not support nested enums with fields
@@ -201,6 +205,7 @@ object InfixToken {
      */
     case Math(mathOp: MathOp) extends Op(mathOp.symbol)
     case Cmp(cmpOp: CmpOp) extends Op(cmpOp.symbol)
+    case Eq(eqOp: EqOp) extends Op(eqOp.symbol)
     case Bool(boolOp: BoolOp) extends Op(boolOp.symbol)
 
     def p: P[Unit] = P.string(symbol)
@@ -221,6 +226,11 @@ object InfixToken {
     val Lte = Cmp(CmpOp.Lte)
 
     val cmp = CmpOp.values.map(Cmp(_)).toList
+
+    val Equ = Eq(EqOp.Eq)
+    val Neq = Eq(EqOp.Neq)
+
+    val eq = EqOp.values.map(Eq(_)).toList
 
     val And = Bool(BoolOp.And)
     val Or = Bool(BoolOp.Or)
@@ -278,8 +288,11 @@ object InfixToken {
       Op.Gte :: Op.Lte :: Op.Gt :: Op.Lt :: Nil
     )
 
+  private val eq: P[ValueToken[Span.S]] =
+    infixParserLeft(compare, Op.Equ :: Op.Neq :: Nil)
+
   private val and: P[ValueToken[Span.S]] =
-    infixParserLeft(compare, Op.And :: Nil)
+    infixParserLeft(eq, Op.And :: Nil)
 
   private val or: P[ValueToken[Span.S]] =
     infixParserLeft(and, Op.Or :: Nil)
@@ -340,7 +353,11 @@ object InfixToken {
    *
    * -- Logical AND is left associative.
    * andExpr
-   *   -> cmpExpr AND_OP cmpExpr
+   *   -> eqExpr AND_OP eqExpr
+   *
+   * -- Equality is left associative.
+   * eqExpr
+   *  -> cmpExpr EQ_OP cmpExpr
    *
    * -- Comparison isn't an associative operation so it's not a recursive definition.
    * cmpExpr
