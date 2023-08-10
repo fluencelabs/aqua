@@ -27,9 +27,8 @@ object ArrowExpr extends Expr.AndIndented {
       // It is important for IfExpr to be before CallArrowExpr
       // because `if (1 + 1) == 2` is parsed as if `if(1 + 1)` is an arrow call
       IfExpr ::
-      CallArrowExpr ::
-      TryExpr ::
       ElseOtherwiseExpr ::
+      TryExpr ::
       CatchExpr ::
       Expr.defer(ParExpr) ::
       Expr.defer(CoExpr) ::
@@ -37,6 +36,7 @@ object ArrowExpr extends Expr.AndIndented {
       DeclareStreamExpr ::
       Expr.defer(ClosureExpr) ::
       AssignmentExpr ::
+      CallArrowExpr ::
       Nil
 
   override val validChildren: List[Expr.Lexem] =

@@ -30,6 +30,9 @@ import scala.collection.mutable
 import scala.language.implicitConversions
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.lexer.PropertyToken
+import aqua.parser.lexer.IntoArrow
+import aqua.parser.expr.func.AssignmentExpr
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors with AquaSpec {
   import AquaSpec._
@@ -111,11 +114,19 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
       ).toList
 
     ifBody.head.head.mapK(spanToId) should be(
-      CallArrowExpr(List(toName("x")), CallArrowToken(Some(toNamedType("Ab")), "func", Nil))
+      CallArrowExpr(
+        List(toName("x")),
+        PropertyToken[Id](
+          VarToken[Id](toName("Ab")),
+          NonEmptyList.one(
+            IntoArrow[Id](toName("func"), Nil)
+          )
+        )
+      )
     )
     ifBody(1).head.mapK(spanToId) should be(AbilityIdExpr(toNamedType("Peer"), toStr("some id")))
     ifBody(2).head.mapK(spanToId) should be(
-      CallArrowExpr(Nil, CallArrowToken(None, "call", List(toBool(true))))
+      CallArrowExpr(Nil, CallArrowToken("call", List(toBool(true))))
     )
 
   }
@@ -256,7 +267,12 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")))
     qTree.d() shouldBe CallArrowExpr(
       List("v"),
-      CallArrowToken(Some(toNamedType("Local")), "gt", Nil)
+      PropertyToken[Id](
+        VarToken[Id](toName("Local")),
+        NonEmptyList.one(
+          IntoArrow[Id](toName("gt"), Nil)
+        )
+      )
     )
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("v")))
     // genC function
@@ -268,13 +284,23 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     qTree.d() shouldBe ArrowExpr(toNamedArrow(("val" -> string) :: Nil, boolSc :: Nil))
     qTree.d() shouldBe CallArrowExpr(
       List("one"),
-      CallArrowToken(Some(toNamedType("Local")), "gt", Nil)
+      PropertyToken[Id](
+        VarToken[Id](toName("Local")),
+        NonEmptyList.one(
+          IntoArrow[Id](toName("gt"), Nil)
+        )
+      )
     )
     qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
-    qTree.d() shouldBe CallArrowExpr(List("two"), CallArrowToken(None, "tryGen", Nil))
+    qTree.d() shouldBe CallArrowExpr(List("two"), CallArrowToken("tryGen", Nil))
     qTree.d() shouldBe CallArrowExpr(
       List("three"),
-      CallArrowToken(Some(toNamedType("Local")), "gt", Nil)
+      PropertyToken[Id](
+        VarToken[Id](toName("Local")),
+        NonEmptyList.one(
+          IntoArrow[Id](toName("gt"), Nil)
+        )
+      )
     )
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("two")))
   }

@@ -28,6 +28,7 @@ import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import cats.~>
 import cats.syntax.bifunctor.*
+import cats.data.NonEmptyList
 
 import scala.collection.mutable
 import scala.language.implicitConversions
@@ -46,19 +47,27 @@ object AquaSpec {
   implicit def toName(str: String): Name[Id] = Name[Id](str)
   implicit def toNameOp(str: Option[String]): Option[Name[Id]] = str.map(s => toName(s))
 
-  implicit def toFields(fields: List[String]): List[IntoField[Id]] =
-    fields.map(f => IntoField[Id](f))
-
-  implicit def toVar(name: String): VarToken[Id] = VarToken[Id](toName(name), Nil)
+  implicit def toVar(name: String): VarToken[Id] = VarToken[Id](toName(name))
 
   implicit def toVarOp(name: Option[String]): Option[VarToken[Id]] =
-    name.map(s => VarToken[Id](toName(s), Nil))
+    name.map(toVar)
 
-  implicit def toVarLambda(name: String, fields: List[String]): VarToken[Id] =
-    VarToken[Id](toName(name), toFields(fields))
+  implicit def toVarLambda(name: String, fields: List[String]): ValueToken[Id] =
+    NonEmptyList
+      .fromList(fields)
+      .fold(toVar(name))(fs =>
+        PropertyToken(
+          toVar(name),
+          fs.map(IntoField[Id].apply)
+        )
+      )
 
-  implicit def toVarIndex(name: String, idx: Int): VarToken[Id] =
-    VarToken[Id](toName(name), IntoIndex[Id](toNumber(idx).unit, Some(toNumber(idx))) :: Nil)
+  implicit def toVarIndex(name: String, idx: Int): PropertyToken[Id] =
+    PropertyToken[Id](
+      VarToken[Id](toName(name)),
+      NonEmptyList.one(IntoIndex[Id](toNumber(idx).unit, Some(toNumber(idx))))
+    )
+
   implicit def toLiteral(name: String, t: LiteralType): LiteralToken[Id] = LiteralToken[Id](name, t)
 
   implicit def toNumber(n: Int): LiteralToken[Id] =
@@ -124,8 +133,8 @@ trait AquaSpec extends EitherValues {
   def parseAssign(str: String): AssignmentExpr[Id] =
     AssignmentExpr.p.parseAll(str).value.mapK(spanToId)
 
-  def parseVar(str: String): VarToken[Id] =
-    ValueToken.varProperty.parseAll(str).value.mapK(spanToId)
+  def parseVar(str: String): ValueToken[Id] =
+    ValueToken.value.parseAll(str).value.mapK(spanToId)
 
   def parseData(str: String): NamedValueToken[Id] =
     NamedValueToken.dataValue.parseAll(str).value.mapK(spanToId)

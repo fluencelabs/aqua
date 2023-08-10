@@ -31,9 +31,9 @@ case class PropertyToken[F[_]](value: ValueToken[F], properties: NonEmptyList[Pr
 
 object PropertyToken {
 
-  val property: P[PropertyToken[Span.S]] =
-    (ValueToken.atom ~ PropertyOp.ops).map { case (v, ops) =>
-      PropertyToken(v, ops)
+  val property: P[ValueToken[Span.S]] =
+    (ValueToken.basic ~ PropertyOp.ops.backtrack.?).map { case (v, ops) =>
+      ops.fold(v)(ops => PropertyToken(v, ops))
     }
 
 }
@@ -153,7 +153,7 @@ object NamedValueToken {
         "Missing braces '()' after the struct type"
       )
       .map { case (dn, args) =>
-        NamedValueToken(NamedTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
+        NamedValueToken(NamedTypeToken(dn), args.toNem)
       }
 }
 
@@ -447,19 +447,22 @@ object ValueToken {
   private def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
     basic.between(`(`, `)`).backtrack
 
-  // Basic element of math expression
-  val atom: P[ValueToken[S]] = P.oneOf(
+  // Basic element of value expression
+  // (without property access)
+  val basic = P.oneOf(
     literal.backtrack ::
       initPeerId.backtrack ::
-      P.defer(PropertyToken.property).backtrack ::
-      P.defer(VarToken.variable).backtrack ::
       P.defer(CollectionToken.collection).backtrack ::
       P.defer(NamedValueToken.dataValue).backtrack ::
       P.defer(CallArrowToken.callArrow).backtrack ::
+      P.defer(VarToken.variable).backtrack ::
       P.defer(PrefixToken.value).backtrack ::
-      P.defer(brackets(InfixToken.value)).backtrack ::
+      P.defer(brackets(value)).backtrack ::
       Nil
   )
+
+  // Atomic element of math expression
+  val atom: P[ValueToken[S]] = P.defer(PropertyToken.property)
 
   // One of entry points for parsing the whole math expression
   val `value`: P[ValueToken[Span.S]] =

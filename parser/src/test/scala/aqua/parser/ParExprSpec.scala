@@ -24,11 +24,9 @@ class ParExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
               CallArrowExpr(
                 List(AquaSpec.toName("x")),
                 CallArrowToken(
-                  None,
                   AquaSpec.toName("y"),
                   Nil
                 )
-
               ),
               Eval.now(Chain.empty)
             )

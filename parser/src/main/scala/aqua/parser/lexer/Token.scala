@@ -76,6 +76,9 @@ object Token {
   val `Class`: P[String] = (inAZ ~ whileAnum.backtrack.?).map { case (c, s) ⇒
     c.toString ++ s.getOrElse("")
   }
+
+  val anyName: P[String] = name | NAME | Class
+
   val `\n` : P[Unit] = P.string("\n\r") | P.char('\n') | P.string("\r\n")
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
 
@@ -119,17 +122,16 @@ object Token {
   val `/s*` : P0[Unit] = ` \n+`.backtrack | ` *`.void
 
   val namedArg: P[(String, ValueToken[S])] =
-    P.defer(`name`.between(` *`, `/s*`) ~
-      `=`.between(` *`, `/s*`).void ~
-      ValueToken.`value`.between(` *`, `/s*`)).map { case ((name, _), vt) =>
+    P.defer(
+      `name`.between(` *`, `/s*`) ~
+        `=`.between(` *`, `/s*`).void ~
+        ValueToken.`value`.between(` *`, `/s*`)
+    ).map { case ((name, _), vt) =>
       (name, vt)
     }
 
-  val namedArgs: P[NonEmptyList[(String, ValueToken[S])]] = P.defer(
-    ((` `.?.with1 *> P.char('(') <* `/s*`) ~ comma(
-      namedArg
-    ) <* (`/s*` *> P.char(')'))).map(_._2)
-  )
+  val namedArgs: P[NonEmptyList[(String, ValueToken[S])]] =
+    P.defer(` `.?.with1 ~ `(` ~ `/s*` *> comma(namedArg) <* `/s*` *> `)`)
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
     override def as[T](v: T): F[T] = Functor[F].as(point, v)
