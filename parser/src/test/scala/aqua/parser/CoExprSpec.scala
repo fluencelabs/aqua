@@ -15,25 +15,25 @@ import org.scalatest.Inside
 
 class CoExprSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec {
 
-  "co" should "be parsed" in {
-    def insideCo(str: String)(testFun: Ast.Tree[Id] => Any) =
-      inside(CoExpr.readLine.parseAll(str).map(_.map(_.mapK(spanToId)).forceAll)) {
-        case Right(tree) => testFun(tree)
-      }
+  def insideCo(str: String)(testFun: Ast.Tree[Id] => Any) =
+    inside(CoExpr.readLine.parseAll(str).map(_.map(_.mapK(spanToId)).forceAll)) {
+      case Right(tree) => testFun(tree)
+    }
 
-    def co(expr: Expr[Id]): Ast.Tree[Id] =
-      Cofree(
-        CoExpr(Token.lift(())),
-        Eval.now(
-          Chain(
-            Cofree(
-              expr,
-              Eval.now(Chain.empty)
-            )
+  def co(expr: Expr[Id]): Ast.Tree[Id] =
+    Cofree(
+      CoExpr(Token.lift(())),
+      Eval.now(
+        Chain(
+          Cofree(
+            expr,
+            Eval.now(Chain.empty)
           )
         )
       )
+    )
 
+  "co" should "be parsed" in {
     insideCo("co x <- y()")(
       _ should be(
         co(
