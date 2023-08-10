@@ -2,31 +2,91 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.AquaSpec.*
-import aqua.parser.expr.func.{CallArrowExpr, CoExpr}
+import aqua.parser.expr.func.{CallArrowExpr, CoExpr, ForExpr, JoinExpr, OnExpr}
 import aqua.parser.lexer.{CallArrowToken, Token}
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 
-import cats.data.Chain
+import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import cats.{Eval, Id}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.Inside
 
-class CoExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
+class CoExprSpec extends AnyFlatSpec with Matchers with Inside with AquaSpec {
 
   "co" should "be parsed" in {
-    CoExpr.readLine.parseAll("co x <- y()").value.map(_.mapK(spanToId)).forceAll should be(
-      Cofree[Chain, Expr[Id]](
-        CoExpr[Id](Token.lift[Id, Unit](())),
+    def insideCo(str: String)(testFun: Ast.Tree[Id] => Any) =
+      inside(CoExpr.readLine.parseAll(str).map(_.map(_.mapK(spanToId)).forceAll)) {
+        case Right(tree) => testFun(tree)
+      }
+
+    def co(expr: Expr[Id]): Ast.Tree[Id] =
+      Cofree(
+        CoExpr(Token.lift(())),
         Eval.now(
           Chain(
-            Cofree[Chain, Expr[Id]](
-              CallArrowExpr(
-                List(toName("x")),
-                CallArrowToken(toName("y"), Nil)
-              ),
+            Cofree(
+              expr,
               Eval.now(Chain.empty)
             )
+          )
+        )
+      )
+
+    insideCo("co x <- y()")(
+      _ should be(
+        co(
+          CallArrowExpr(
+            List(toName("x")),
+            CallArrowToken(toName("y"), Nil)
+          )
+        )
+      )
+    )
+
+    insideCo("co call()")(
+      _ should be(
+        co(
+          CallArrowExpr(
+            Nil,
+            CallArrowToken(toName("call"), Nil)
+          )
+        )
+      )
+    )
+
+    insideCo("co on call() via relay:")(
+      _ should be(
+        co(
+          OnExpr(
+            CallArrowToken(toName("call"), Nil),
+            toVar("relay") :: Nil
+          )
+        )
+      )
+    )
+
+    insideCo("co join call(), x")(
+      _ should be(
+        co(
+          JoinExpr(
+            NonEmptyList.of(
+              CallArrowToken(toName("call"), Nil),
+              toVar("x")
+            )
+          )
+        )
+      )
+    )
+
+    insideCo("co for w <- getWorkers():")(
+      _ should be(
+        co(
+          ForExpr(
+            toName("w"),
+            CallArrowToken(toName("getWorkers"), Nil),
+            None
           )
         )
       )

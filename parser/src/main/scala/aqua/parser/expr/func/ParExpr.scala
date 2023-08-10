@@ -20,7 +20,7 @@ case class ParExpr[F[_]](point: Token[F]) extends Expr[F](ParExpr, point) {
 object ParExpr extends Expr.Prefix() {
 
   override def continueWith: List[Expr.Lexem] =
-    CallArrowExpr :: OnExpr :: ForExpr :: JoinExpr :: Nil
+    OnExpr :: ForExpr :: JoinExpr :: CallArrowExpr :: Nil
 
   override val p: Parser[Expr[Span.S]] =
     `par`.lift.map(Token.lift[Span.S, Unit](_)).map(ParExpr(_))
