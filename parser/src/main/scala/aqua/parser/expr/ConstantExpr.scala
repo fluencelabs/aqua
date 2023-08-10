@@ -38,10 +38,9 @@ object ConstantExpr extends Expr.Leaf {
           case CollectionToken(point, _) => fail("a collection")
           case CallArrowToken(_, _) => fail("a function call")
           case InfixToken(_, _, _) | PrefixToken(_, _) => fail("an expression")
-          case VarToken(_) => fail("a variable")
           case PropertyToken(_, _) => fail("a property")
           case NamedValueToken(_, _) => fail("an ability or data")
-          case LiteralToken(valueToken, ts) =>
+          case LiteralToken(_, _) | VarToken(_) =>
             P.pure(ConstantExpr(name, value, mark.nonEmpty))
         }
 

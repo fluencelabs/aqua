@@ -1,7 +1,7 @@
 package aqua.semantics.expr.func
 
 import aqua.parser.expr.func.CallArrowExpr
-import aqua.parser.lexer.CallArrowToken
+import aqua.parser.lexer.{CallArrowToken, IntoArrow, IntoField, PropertyToken, VarToken}
 import aqua.raw.Raw
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp}
 import aqua.raw.value.CallArrowRaw
@@ -16,6 +16,7 @@ import cats.syntax.functor.*
 import cats.syntax.traverse.*
 import cats.syntax.option.*
 import cats.syntax.applicative.*
+import cats.syntax.comonad.*
 
 class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
@@ -34,15 +35,28 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
       }
     }
 
-  private def toModel[Alg[_]: Monad](implicit
+  private def toModel[Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Alg[Option[FuncOp]] = for {
     callArrowRaw <- callArrow match {
-      case cat @ CallArrowToken(_, _) => V.callArrowToRaw(cat)
-      // TODO: Support other cases
-      case _ => none.pure
+      case cat @ CallArrowToken(_, _) =>
+        V.callArrowToRaw(cat.name, cat.args)
+      case prop @ PropertyToken(VarToken(name), properties) =>
+        val ability = properties.init.traverse {
+          case f @ IntoField(_) => f.value.some
+          case _ => none
+        }.map(props => name.rename((name.value +: props).mkString(".")))
+
+        (properties.last, ability) match {
+          case (IntoArrow(funcName, args), Some(ability)) =>
+            V.callArrowToRaw(funcName, args, ability.some)
+          case _ => none.pure
+        }
+      case _ =>
+        // WARNING: Other cases are not supported yet
+        none.pure
     }
     maybeOp <- callArrowRaw.traverse(car =>
       variables

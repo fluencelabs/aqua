@@ -160,7 +160,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         } yield raw
 
       case ca: CallArrowToken[S] =>
-        callArrowToRaw(ca).map(_.widen[ValueRaw])
+        callArrowToRaw(ca.name, ca.args).map(_.widen[ValueRaw])
 
       case pr @ PrefixToken(operand, _) =>
         (for {
@@ -301,24 +301,74 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         }
     }
 
-  def callArrowToRaw(ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] = {
+  private def callArrowFromAbility(
+    ab: Name[S],
+    at: AbilityType,
+    funcName: Name[S]
+  ): Option[CallArrowRaw] = at.arrows
+    .get(funcName.value)
+    .map(arrowType =>
+      CallArrowRaw.ability(
+        ab.value,
+        funcName.value,
+        arrowType
+      )
+    )
+
+  def callArrowToRaw(
+    funcName: Name[S],
+    callArgs: List[ValueToken[S]],
+    ability: Option[Name[S]] = None
+  ): Alg[Option[CallArrowRaw]] =
     for {
-      arrowType <- N.readArrow(ca.name)
-      raw = arrowType.map(t =>
-        CallArrowRaw(
-          ability = None,
-          name = ca.name.value,
-          arguments = Nil,
-          baseType = t,
-          serviceId = None
-        )
+      raw <- ability.fold(
+        for {
+          myabeArrowType <- N.readArrow(funcName)
+        } yield myabeArrowType
+          .map(arrowType =>
+            CallArrowRaw.func(
+              funcName = funcName.value,
+              baseType = arrowType
+            )
+          )
+      )(ab =>
+        N.read(ab, mustBeDefined = false).flatMap {
+          case Some(at: AbilityType) =>
+            callArrowFromAbility(ab, at, funcName).pure
+          case _ =>
+            T.getType(ab.value).flatMap {
+              case Some(at: AbilityType) =>
+                callArrowFromAbility(ab, at, funcName).pure
+              case _ =>
+                (A.getArrow(ab.asTypeToken, funcName), A.getServiceId(ab.asTypeToken)).mapN {
+                  case (Some(at), Right(sid)) =>
+                    CallArrowRaw
+                      .service(
+                        abilityName = ab.value,
+                        serviceId = sid,
+                        funcName = funcName.value,
+                        baseType = at
+                      )
+                      .some
+                  case (Some(at), Left(true)) =>
+                    CallArrowRaw
+                      .ability(
+                        abilityName = ab.value,
+                        funcName = funcName.value,
+                        baseType = at
+                      )
+                      .some
+                  case _ => none
+                }
+            }
+        }
       )
       result <- raw.flatTraverse(r =>
         val arr = r.baseType
         for {
-          argsCheck <- T.checkArgumentsNumber(ca.name, arr.domain.length, ca.args.length)
+          argsCheck <- T.checkArgumentsNumber(funcName, arr.domain.length, callArgs.length)
           args <- Option
-            .when(argsCheck)(ca.args zip arr.domain.toList)
+            .when(argsCheck)(callArgs zip arr.domain.toList)
             .traverse(
               _.flatTraverse { case (tkn, tp) =>
                 for {
@@ -336,7 +386,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         } yield result
       )
     } yield result
-  }
 
 }
 
