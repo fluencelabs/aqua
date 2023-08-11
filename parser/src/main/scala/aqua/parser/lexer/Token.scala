@@ -28,7 +28,9 @@ object Token {
 
   private val inAZ = P.charIn(AZ)
   private val inaz = P.charIn(az)
-  private val whileAnum = P.charsWhile(anum_)
+  private val inaZ = P.charIn(az ++ AZ)
+  private val whileAnum_ = P.charsWhile(anum_)
+  private val whileUpperAnum_ = P.charsWhile(upperAnum_)
 
   val ` *` : P0[String] = P.charsWhile0(fSpaces)
   val ` ` : P[String] = P.charsWhile(fSpaces)
@@ -68,16 +70,12 @@ object Token {
   val `copy`: P[Unit] = P.string("copy")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
-  val `anum_*` : P[Unit] = whileAnum.void
+  val `anum_*` : P[Unit] = whileAnum_.void
 
-  val NAME: P[String] = (inAZ ~ P.charsWhile(upperAnum_).?).string
-  val `name`: P[String] = (inaz ~ whileAnum.?).string
-
-  val `Class`: P[String] = (inAZ ~ whileAnum.backtrack.?).map { case (c, s) ⇒
-    c.toString ++ s.getOrElse("")
-  }
-
-  val anyName: P[String] = name | NAME | Class
+  val NAME: P[String] = (inAZ ~ whileUpperAnum_.?).string
+  val `name`: P[String] = (inaz ~ whileAnum_.?).string
+  val `Class`: P[String] = (inAZ ~ whileAnum_.?).string
+  val anyName: P[String] = (inaZ ~ whileAnum_.?).string
 
   val `\n` : P[Unit] = P.string("\n\r") | P.char('\n') | P.string("\r\n")
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
