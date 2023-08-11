@@ -32,12 +32,25 @@ case class PropertyToken[F[_]: Comonad](
   def mapK[K[_]: Comonad](fk: F ~> K): PropertyToken[K] =
     copy(value.mapK(fk), properties.map(_.mapK(fk)))
 
+  private def isClass(name: String): Boolean =
+    name.headOption.exists(_.isUpper)
+
+  private def isField(name: String): Boolean =
+    name.headOption.exists(_.isLower)
+
+  private def isConst(name: String): Boolean =
+    name.forall(c => !c.isLetter || c.isUpper)
+
   def toCallArrow: Option[CallArrowToken[F]] = value match {
     case VarToken(name) =>
       val ability = properties.init.traverse {
         case f @ IntoField(_) => f.value.some
         case _ => none
-      }.map(props => name.rename((name.value +: props).mkString(".")))
+      }.map(
+        name.value +: _
+      ).filter(
+        _.forall(isClass)
+      ).map(props => name.rename(props.mkString(".")))
 
       (properties.last, ability) match {
         case (IntoArrow(funcName, args), Some(ability)) =>
@@ -47,6 +60,48 @@ case class PropertyToken[F[_]: Comonad](
             args
           ).some
         case _ => none
+      }
+    case _ => none
+  }
+
+  def adjustName: Option[ValueToken[F]] = value match {
+    case VarToken(name) =>
+      val isAbility = isClass(name.value) && properties.forall {
+        case f @ IntoField(_) => isField(f.value)
+        case _ => true
+      }
+
+      if (isAbility) none
+      else {
+        val props = name.value +: properties.toList.view.map {
+          case IntoField(name) => name.extract.some
+          case _ => none
+        }.takeWhile(_.isDefined).flatten.toList
+
+        val propsWithIndex = props.zipWithIndex
+
+        val classesTill = propsWithIndex.find { case (name, _) =>
+          !isClass(name)
+        }.collect { case (_, idx) =>
+          idx
+        }.getOrElse(props.length)
+
+        val lastSuitable = propsWithIndex
+          .take(classesTill)
+          .findLast { case (name, _) =>
+            isConst(name) || isField(name)
+          }
+          .collect { case (_, idx) => idx }
+
+        lastSuitable.map(last =>
+          val newProps = NonEmptyList.fromList(
+            properties.toList.drop(last + 1)
+          )
+          val newName = props.take(last + 1).mkString(".")
+          val varToken = VarToken(name.rename(newName))
+
+          newProps.fold(varToken)(props => PropertyToken(varToken, props))
+        )
       }
     case _ => none
   }

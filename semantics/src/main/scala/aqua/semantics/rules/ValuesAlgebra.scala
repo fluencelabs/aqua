@@ -89,22 +89,28 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         }
 
       case prop @ PropertyToken(value, properties) =>
-        prop.toCallArrow.fold(
-          for {
-            valueRaw <- valueToRaw(value)
-            result <- valueRaw.flatTraverse(raw =>
-              properties.foldLeftM(raw.some) {
-                // Failed to resolve prop case
-                case (None, _) => none.pure
-                // Apply next prop case
-                case (Some(prev), op) =>
-                  resolveSingleProperty(prev.`type`, op).map(
-                    _.map(prop => ApplyPropertyRaw(prev, prop))
-                  )
-              }
-            )
-          } yield result
-        )(valueToRaw)
+        (
+          prop.toCallArrow,
+          prop.adjustName
+        ) match {
+          case (Some(car), _) => valueToRaw(car)
+          case (_, Some(adjusted)) => valueToRaw(adjusted)
+          case _ =>
+            for {
+              valueRaw <- valueToRaw(value)
+              result <- valueRaw.flatTraverse(raw =>
+                properties.foldLeftM(raw.some) {
+                  // Failed to resolve prop case
+                  case (None, _) => none.pure
+                  // Apply next prop case
+                  case (Some(prev), op) =>
+                    resolveSingleProperty(prev.`type`, op).map(
+                      _.map(prop => ApplyPropertyRaw(prev, prop))
+                    )
+                }
+              )
+            } yield result
+        }
 
       case dvt @ NamedValueToken(typeName, fields) =>
         T.resolveType(typeName).flatMap {
