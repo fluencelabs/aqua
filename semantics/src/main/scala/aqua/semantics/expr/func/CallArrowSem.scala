@@ -41,19 +41,12 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     V: ValuesAlgebra[S, Alg]
   ): Alg[Option[FuncOp]] = for {
     callArrowRaw <- callArrow match {
-      case cat @ CallArrowToken(_, _) =>
-        V.callArrowToRaw(cat.name, cat.args)
-      case prop @ PropertyToken(VarToken(name), properties) =>
-        val ability = properties.init.traverse {
-          case f @ IntoField(_) => f.value.some
-          case _ => none
-        }.map(props => name.rename((name.value +: props).mkString(".")))
-
-        (properties.last, ability) match {
-          case (IntoArrow(funcName, args), Some(ability)) =>
-            V.callArrowToRaw(funcName, args, ability.some)
-          case _ => none.pure
-        }
+      case ca @ CallArrowToken(_, _, _) =>
+        V.callArrowToRaw(ca)
+      case prop @ PropertyToken(_, _) =>
+        prop.toCallArrow.flatTraverse(
+          V.callArrowToRaw
+        )
       case _ =>
         // WARNING: Other cases are not supported yet
         none.pure

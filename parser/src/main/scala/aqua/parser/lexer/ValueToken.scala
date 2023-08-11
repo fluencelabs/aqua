@@ -16,17 +16,40 @@ import cats.{~>, Comonad, Functor}
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.syntax.foldable.*
 import cats.arrow.FunctionK
+import cats.syntax.traverse.*
+import cats.syntax.option.*
 
 sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
 }
 
-case class PropertyToken[F[_]](value: ValueToken[F], properties: NonEmptyList[PropertyOp[F]])
-    extends ValueToken[F] {
+case class PropertyToken[F[_]: Comonad](
+  value: ValueToken[F],
+  properties: NonEmptyList[PropertyOp[F]]
+) extends ValueToken[F] {
   override def as[T](v: T): F[T] = value.as(v)
 
   def mapK[K[_]: Comonad](fk: F ~> K): PropertyToken[K] =
     copy(value.mapK(fk), properties.map(_.mapK(fk)))
+
+  def toCallArrow: Option[CallArrowToken[F]] = value match {
+    case VarToken(name) =>
+      val ability = properties.init.traverse {
+        case f @ IntoField(_) => f.value.some
+        case _ => none
+      }.map(props => name.rename((name.value +: props).mkString(".")))
+
+      (properties.last, ability) match {
+        case (IntoArrow(funcName, args), Some(ability)) =>
+          CallArrowToken(
+            ability.asTypeToken.some,
+            funcName,
+            args
+          ).some
+        case _ => none
+      }
+    case _ => none
+  }
 }
 
 object PropertyToken {
@@ -94,17 +117,21 @@ object CollectionToken {
 }
 
 case class CallArrowToken[F[_]: Comonad](
-  name: Name[F],
+  ability: Option[NamedTypeToken[F]],
+  funcName: Name[F],
   args: List[ValueToken[F]]
 ) extends ValueToken[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): CallArrowToken[K] =
-    copy(name.mapK(fk), args.map(_.mapK(fk)))
+    copy(ability.map(_.mapK(fk)), funcName.mapK(fk), args.map(_.mapK(fk)))
 
-  override def as[T](v: T): F[T] = name.as(v)
+  override def as[T](v: T): F[T] = funcName.as(v)
 }
 
 object CallArrowToken {
+
+  def apply[F[_]: Comonad](funcName: Name[F], args: List[ValueToken[F]]): CallArrowToken[F] =
+    CallArrowToken(None, funcName, args)
 
   case class CallBraces(name: Name[S], abilities: List[ValueToken[S]], args: List[ValueToken[S]])
 

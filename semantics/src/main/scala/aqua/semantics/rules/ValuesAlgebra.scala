@@ -88,21 +88,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
             None.pure[Alg]
         }
 
-      case PropertyToken(value, properties) =>
-        for {
-          valueRaw <- valueToRaw(value)
-          result <- valueRaw.flatTraverse(raw =>
-            properties.foldLeftM(raw.some) {
-              // Failed to resolve prop case
-              case (None, _) => none.pure
-              // Apply next prop case
-              case (Some(prev), op) =>
-                resolveSingleProperty(prev.`type`, op).map(
-                  _.map(prop => ApplyPropertyRaw(prev, prop))
-                )
-            }
-          )
-        } yield result
+      case prop @ PropertyToken(value, properties) =>
+        prop.toCallArrow.fold(
+          for {
+            valueRaw <- valueToRaw(value)
+            result <- valueRaw.flatTraverse(raw =>
+              properties.foldLeftM(raw.some) {
+                // Failed to resolve prop case
+                case (None, _) => none.pure
+                // Apply next prop case
+                case (Some(prev), op) =>
+                  resolveSingleProperty(prev.`type`, op).map(
+                    _.map(prop => ApplyPropertyRaw(prev, prop))
+                  )
+              }
+            )
+          } yield result
+        )(valueToRaw)
 
       case dvt @ NamedValueToken(typeName, fields) =>
         T.resolveType(typeName).flatMap {
@@ -160,7 +162,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         } yield raw
 
       case ca: CallArrowToken[S] =>
-        callArrowToRaw(ca.name, ca.args).map(_.widen[ValueRaw])
+        callArrowToRaw(ca).map(_.widen[ValueRaw])
 
       case pr @ PrefixToken(operand, _) =>
         (for {
@@ -316,37 +318,35 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
     )
 
   def callArrowToRaw(
-    funcName: Name[S],
-    callArgs: List[ValueToken[S]],
-    ability: Option[Name[S]] = None
+    callArrow: CallArrowToken[S]
   ): Alg[Option[CallArrowRaw]] =
     for {
-      raw <- ability.fold(
+      raw <- callArrow.ability.fold(
         for {
-          myabeArrowType <- N.readArrow(funcName)
+          myabeArrowType <- N.readArrow(callArrow.funcName)
         } yield myabeArrowType
           .map(arrowType =>
             CallArrowRaw.func(
-              funcName = funcName.value,
+              funcName = callArrow.funcName.value,
               baseType = arrowType
             )
           )
       )(ab =>
-        N.read(ab, mustBeDefined = false).flatMap {
+        N.read(ab.asName, mustBeDefined = false).flatMap {
           case Some(at: AbilityType) =>
-            callArrowFromAbility(ab, at, funcName).pure
+            callArrowFromAbility(ab.asName, at, callArrow.funcName).pure
           case _ =>
             T.getType(ab.value).flatMap {
               case Some(at: AbilityType) =>
-                callArrowFromAbility(ab, at, funcName).pure
+                callArrowFromAbility(ab.asName, at, callArrow.funcName).pure
               case _ =>
-                (A.getArrow(ab.asTypeToken, funcName), A.getServiceId(ab.asTypeToken)).mapN {
+                (A.getArrow(ab, callArrow.funcName), A.getServiceId(ab)).mapN {
                   case (Some(at), Right(sid)) =>
                     CallArrowRaw
                       .service(
                         abilityName = ab.value,
                         serviceId = sid,
-                        funcName = funcName.value,
+                        funcName = callArrow.funcName.value,
                         baseType = at
                       )
                       .some
@@ -354,7 +354,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                     CallArrowRaw
                       .ability(
                         abilityName = ab.value,
-                        funcName = funcName.value,
+                        funcName = callArrow.funcName.value,
                         baseType = at
                       )
                       .some
@@ -366,9 +366,13 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       result <- raw.flatTraverse(r =>
         val arr = r.baseType
         for {
-          argsCheck <- T.checkArgumentsNumber(funcName, arr.domain.length, callArgs.length)
+          argsCheck <- T.checkArgumentsNumber(
+            callArrow.funcName,
+            arr.domain.length,
+            callArrow.args.length
+          )
           args <- Option
-            .when(argsCheck)(callArgs zip arr.domain.toList)
+            .when(argsCheck)(callArrow.args zip arr.domain.toList)
             .traverse(
               _.flatTraverse { case (tkn, tp) =>
                 for {

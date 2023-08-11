@@ -36,7 +36,7 @@ object ConstantExpr extends Expr.Leaf {
           )
         value match {
           case CollectionToken(point, _) => fail("a collection")
-          case CallArrowToken(_, _) => fail("a function call")
+          case CallArrowToken(_, _, _) => fail("a function call")
           case InfixToken(_, _, _) | PrefixToken(_, _) => fail("an expression")
           case PropertyToken(_, _) => fail("a property")
           case NamedValueToken(_, _) => fail("an ability or data")

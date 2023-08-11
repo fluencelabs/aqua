@@ -54,11 +54,11 @@ object CliFunc {
                   .getOrElse(ValueRaw.Nil)
               )
               .toValidatedNel
-          case CallArrowToken(_, _) =>
+          case CallArrowToken(_, _, _) =>
             "Function calls as arguments are not supported.".invalidNel
           case _ =>
             "Unsupported argument.".invalidNel
-        }.map(args => CliFunc(expr.name.value, args))
+        }.map(args => CliFunc(expr.funcName.value, args))
       )
   }
 }
