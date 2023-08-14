@@ -41,7 +41,16 @@ case class PropertyToken[F[_]: Comonad](
   private def isConst(name: String): Boolean =
     name.forall(c => !c.isLetter || c.isUpper)
 
-  def toCallArrow: Option[CallArrowToken[F]] = value match {
+  /**
+   * This method tries to convert property token to
+   * call arrow token.
+   *
+   * Next properties pattern is transformed:
+   * (Class)+ arrow()
+   * ^^^^^^^
+   * this part is transformed to ability name.
+   */
+  private def toCallArrow: Option[CallArrowToken[F]] = value match {
     case VarToken(name) =>
       val ability = properties.init.traverse {
         case f @ IntoField(_) => f.value.some
@@ -64,8 +73,22 @@ case class PropertyToken[F[_]: Comonad](
     case _ => none
   }
 
-  def adjustName: Option[ValueToken[F]] = value match {
+  /**
+   * This method tries to convert property token to
+   * property token with dotted var name inside value token.
+   *
+   * Next properties pattern is untouched:
+   * Class (field)*
+   *
+   * Next properties pattern is transformed:
+   * (Class)* (CONST | field) ..props..
+   * ^^^^^^^^^^^^^^^^^^^^^^^^
+   * this part is transformed to dotted name.
+   */
+  private def toDottedName: Option[ValueToken[F]] = value match {
     case VarToken(name) =>
+      // Pattern `Class (field)*` is ability access
+      // and should not be transformed
       val isAbility = isClass(name.value) && properties.forall {
         case f @ IntoField(_) => isField(f.value)
         case _ => true
@@ -73,6 +96,7 @@ case class PropertyToken[F[_]: Comonad](
 
       if (isAbility) none
       else {
+        // Gather prefix of properties that are IntoField
         val props = name.value +: properties.toList.view.map {
           case IntoField(name) => name.extract.some
           case _ => none
@@ -80,12 +104,15 @@ case class PropertyToken[F[_]: Comonad](
 
         val propsWithIndex = props.zipWithIndex
 
+        // Find first property that is not Class
         val classesTill = propsWithIndex.find { case (name, _) =>
           !isClass(name)
         }.collect { case (_, idx) =>
           idx
         }.getOrElse(props.length)
 
+        // Find last property after classes
+        // that is CONST or field
         val lastSuitable = propsWithIndex
           .take(classesTill)
           .findLast { case (name, _) =>
@@ -105,6 +132,18 @@ case class PropertyToken[F[_]: Comonad](
       }
     case _ => none
   }
+
+  /**
+   * This is a hacky method to adjust parsing result
+   * to format that was used previously.
+   * This method tries to convert property token to
+   * call arrow token or property token with
+   * dotted var name inside value token.
+   *
+   * @return Some(token) if token was adjusted, None otherwise
+   */
+  def adjust: Option[ValueToken[F]] =
+    toCallArrow.orElse(toDottedName)
 }
 
 object PropertyToken {
