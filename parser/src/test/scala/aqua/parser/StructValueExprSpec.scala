@@ -13,6 +13,7 @@ import aqua.parser.lexer.{
   Name,
   NamedTypeToken,
   NamedValueToken,
+  PropertyToken,
   Token,
   ValueToken,
   VarToken
@@ -23,7 +24,6 @@ import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.data.{NonEmptyList, NonEmptyMap}
-import aqua.parser.lexer.PropertyToken
 
 class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec._

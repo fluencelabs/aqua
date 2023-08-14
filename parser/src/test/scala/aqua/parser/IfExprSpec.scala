@@ -9,6 +9,7 @@ import aqua.parser.lexer.{
   InfixToken,
   IntoArrow,
   PropertyToken,
+  ValueToken,
   VarToken
 }
 import aqua.parser.lexer.CollectionToken.Mode.OptionMode
@@ -17,7 +18,6 @@ import cats.Id
 import cats.data.NonEmptyList
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import aqua.parser.lexer.ValueToken
 
 class IfExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 

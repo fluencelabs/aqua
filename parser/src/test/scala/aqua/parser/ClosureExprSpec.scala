@@ -2,7 +2,7 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.{FuncExpr, RootExpr}
-import aqua.parser.expr.func.{ArrowExpr, CallArrowExpr, ClosureExpr, ReturnExpr}
+import aqua.parser.expr.func.{ArrowExpr, AssignmentExpr, CallArrowExpr, ClosureExpr, ReturnExpr}
 import aqua.parser.lexer.{
   Ability,
   CallArrowToken,
@@ -20,7 +20,6 @@ import cats.syntax.foldable.*
 import cats.data.NonEmptyList
 
 import scala.collection.mutable
-import aqua.parser.expr.func.AssignmentExpr
 
 class ClosureExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
