@@ -34,7 +34,7 @@ import aqua.parser.lexer.IntoArrow
 import aqua.parser.expr.func.AssignmentExpr
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors with AquaSpec {
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   private val parser = Parser.spanParser
 

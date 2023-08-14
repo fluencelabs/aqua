@@ -36,6 +36,9 @@ object ArrowExpr extends Expr.AndIndented {
       DeclareStreamExpr ::
       Expr.defer(ClosureExpr) ::
       AssignmentExpr ::
+      // It is important for CallArrowExpr to be last
+      // because it can parse prefixes of other expressions
+      // e.g. `if` could be parsed as variable name
       CallArrowExpr ::
       Nil
 

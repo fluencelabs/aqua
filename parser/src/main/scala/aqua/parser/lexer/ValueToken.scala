@@ -211,6 +211,9 @@ object CollectionToken {
 }
 
 case class CallArrowToken[F[_]: Comonad](
+  // NOTE: Call with ability is not parsed by CallArrowToken
+  // it is parsed by PropertyToken and then adjusted
+  // It is done for legacy support reasons
   ability: Option[NamedTypeToken[F]],
   funcName: Name[F],
   args: List[ValueToken[F]]

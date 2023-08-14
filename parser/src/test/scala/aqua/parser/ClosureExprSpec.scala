@@ -24,7 +24,7 @@ import aqua.parser.expr.func.AssignmentExpr
 
 class ClosureExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   val parser = Parser.spanParser
 

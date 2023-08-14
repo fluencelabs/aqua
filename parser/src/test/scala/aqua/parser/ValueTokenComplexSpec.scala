@@ -26,7 +26,7 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
     }
   }
 
-  import AquaSpec.*
+  import AquaSpec.{given, *}
 
   private def variable(name: String): ValueToken[Id] =
     VarToken(Name(name))
