@@ -47,6 +47,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                 case (Some(vm), FuncOp(op)) =>
                   val innerTag = expr.mode.fold(SeqTag) {
                     case ForExpr.Mode.ParMode => ParTag
+                    case ForExpr.Mode.ParSecMode => ParTag
                     case ForExpr.Mode.TryMode => TryTag
                   }
 
@@ -65,7 +66,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                     )
 
                   // Fix: continue execution after fold par immediately, without finding a path out from par branches
-                  if (innerTag == ParTag) ParTag.Detach.wrap(forTag).toFuncOp
+                  if (expr.mode.contains(ForExpr.Mode.ParMode)) ParTag.Detach.wrap(forTag).toFuncOp
                   else forTag.toFuncOp
                 case _ =>
                   Raw.error("Wrong body of the `for` expression")

@@ -1,19 +1,16 @@
 package aqua.semantics.rules.abilities
 
-import aqua.parser.lexer.{Ability, Name, NamedTypeToken, Token, ValueToken}
-import aqua.raw.ServiceRaw
-import aqua.raw.RawContext
+import aqua.parser.lexer.{Name, NamedTypeToken, Token, ValueToken}
 import aqua.raw.value.ValueRaw
+import aqua.raw.{RawContext, ServiceRaw}
 import aqua.semantics.Levenshtein
-import aqua.semantics.rules.definitions.DefinitionsAlgebra
-import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.{abilities, StackInterpreter}
 import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.semantics.rules.{StackInterpreter, abilities}
 import aqua.types.ArrowType
-import cats.data.{NonEmptyList, NonEmptyMap, State}
+import cats.data.{NonEmptyMap, State}
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.~>
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -29,7 +26,7 @@ class AbilitiesInterpreter[S[_], X](implicit
     GenLens[AbilitiesState[S]](_.stack)
   )
 
-  import stackInt.{getState, mapStackHead, mapStackHeadE, modify, report, setState}
+  import stackInt.{getState, mapStackHead, modify, report}
 
   override def defineService(
     name: NamedTypeToken[S],

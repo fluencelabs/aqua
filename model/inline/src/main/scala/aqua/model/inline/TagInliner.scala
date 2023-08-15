@@ -143,13 +143,9 @@ object TagInliner extends Logging {
             v.copy(properties = Chain.empty),
             CallModel.Export(canonV.name, canonV.baseType)
           ).leaf
-          flatResult <- flatCanonStream(canonV, Some(canonOp))
         } yield {
-          val (resV, resOp) = flatResult
-          (resV, combineOpsWithSeq(op, resOp))
+          (canonV, combineOpsWithSeq(op, Some(canonOp)))
         }
-      case v @ VarModel(_, CanonStreamType(_), _) =>
-        flatCanonStream(v, op)
       case _ => State.pure((vm, op))
     }
   }

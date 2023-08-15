@@ -65,6 +65,7 @@ object Token {
   val `try`: P[Unit] = P.string("try")
   val `catch`: P[Unit] = P.string("catch")
   val `par`: P[Unit] = P.string("par")
+  val `parsec`: P[Unit] = P.string("parsec")
   val `co`: P[Unit] = P.string("co")
   val `join`: P[Unit] = P.string("join")
   val `copy`: P[Unit] = P.string("copy")
