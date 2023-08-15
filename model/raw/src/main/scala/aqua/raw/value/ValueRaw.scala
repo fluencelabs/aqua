@@ -1,8 +1,10 @@
 package aqua.raw.value
 
 import aqua.types.*
+
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import cats.Eq
+import cats.syntax.option.*
 import scribe.Logging
 
 sealed trait ValueRaw {
@@ -262,4 +264,47 @@ case class CallArrowRaw(
   override def toString: String =
     s"(call ${ability.fold("")(a => s"|$a| ")} (${serviceId.fold("")(_.toString + " ")}$name) [${arguments
       .mkString(" ")}] :: $baseType)"
+}
+
+object CallArrowRaw {
+
+  def func(
+    funcName: String,
+    baseType: ArrowType,
+    arguments: List[ValueRaw] = Nil
+  ): CallArrowRaw = CallArrowRaw(
+    ability = None,
+    name = funcName,
+    arguments = arguments,
+    baseType = baseType,
+    serviceId = None
+  )
+
+  def ability(
+    abilityName: String,
+    funcName: String,
+    baseType: ArrowType,
+    arguments: List[ValueRaw] = Nil
+  ): CallArrowRaw = CallArrowRaw(
+    ability = None,
+    name = AbilityType.fullName(abilityName, funcName),
+    arguments = arguments,
+    baseType = baseType,
+    serviceId = None
+  )
+
+  def service(
+    abilityName: String,
+    serviceId: ValueRaw,
+    funcName: String,
+    baseType: ArrowType,
+    arguments: List[ValueRaw] = Nil
+  ): CallArrowRaw = CallArrowRaw(
+    ability = abilityName.some,
+    name = funcName,
+    arguments = arguments,
+    baseType = baseType,
+    serviceId = Some(serviceId)
+  )
+
 }

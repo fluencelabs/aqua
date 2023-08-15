@@ -9,7 +9,7 @@ import org.scalatest.matchers.should.Matchers
 
 class AliasExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   "alias" should "be parsed properly" in {
     parseAlias("alias SomeAlias : u32") should be(

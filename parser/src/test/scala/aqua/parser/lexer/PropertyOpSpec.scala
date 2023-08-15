@@ -10,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
 
 class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  import aqua.AquaSpec._
+  import aqua.AquaSpec.{given, *}
 
   "lambda ops" should "parse" in {
     val opsP = (s: String) => PropertyOp.ops.parseAll(s).value.map(_.mapK(spanToId))

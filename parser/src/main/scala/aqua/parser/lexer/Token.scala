@@ -28,7 +28,9 @@ object Token {
 
   private val inAZ = P.charIn(AZ)
   private val inaz = P.charIn(az)
-  private val whileAnum = P.charsWhile(anum_)
+  private val inaZ = P.charIn(az ++ AZ)
+  private val whileAnum_ = P.charsWhile(anum_)
+  private val whileUpperAnum_ = P.charsWhile(upperAnum_)
 
   val ` *` : P0[String] = P.charsWhile0(fSpaces)
   val ` ` : P[String] = P.charsWhile(fSpaces)
@@ -68,14 +70,13 @@ object Token {
   val `copy`: P[Unit] = P.string("copy")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
-  val `anum_*` : P[Unit] = whileAnum.void
+  val `anum_*` : P[Unit] = whileAnum_.void
 
-  val NAME: P[String] = (inAZ ~ P.charsWhile(upperAnum_).?).string
-  val `name`: P[String] = (inaz ~ whileAnum.?).string
+  val NAME: P[String] = (inAZ ~ whileUpperAnum_.?).string
+  val `name`: P[String] = (inaz ~ whileAnum_.?).string
+  val `Class`: P[String] = (inAZ ~ whileAnum_.?).string
+  val anyName: P[String] = (inaZ ~ whileAnum_.?).string
 
-  val `Class`: P[String] = (inAZ ~ whileAnum.backtrack.?).map { case (c, s) ⇒
-    c.toString ++ s.getOrElse("")
-  }
   val `\n` : P[Unit] = P.string("\n\r") | P.char('\n') | P.string("\r\n")
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
 
@@ -119,17 +120,16 @@ object Token {
   val `/s*` : P0[Unit] = ` \n+`.backtrack | ` *`.void
 
   val namedArg: P[(String, ValueToken[S])] =
-    P.defer(`name`.between(` *`, `/s*`) ~
-      `=`.between(` *`, `/s*`).void ~
-      ValueToken.`value`.between(` *`, `/s*`)).map { case ((name, _), vt) =>
+    P.defer(
+      `name`.between(` *`, `/s*`) ~
+        `=`.between(` *`, `/s*`).void ~
+        ValueToken.`value`.between(` *`, `/s*`)
+    ).map { case ((name, _), vt) =>
       (name, vt)
     }
 
-  val namedArgs: P[NonEmptyList[(String, ValueToken[S])]] = P.defer(
-    ((` `.?.with1 *> P.char('(') <* `/s*`) ~ comma(
-      namedArg
-    ) <* (`/s*` *> P.char(')'))).map(_._2)
-  )
+  val namedArgs: P[NonEmptyList[(String, ValueToken[S])]] =
+    P.defer(` `.?.with1 ~ `(` ~ `/s*` *> comma(namedArg) <* `/s*` *> `)`)
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
     override def as[T](v: T): F[T] = Functor[F].as(point, v)

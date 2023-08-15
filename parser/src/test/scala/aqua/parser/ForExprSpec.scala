@@ -7,7 +7,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class ForExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   "for expression" should "be parsed" in {
     parseFor("for some <- \"a\"") should be(

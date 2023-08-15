@@ -2,8 +2,16 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.{FuncExpr, RootExpr}
-import aqua.parser.expr.func.{ArrowExpr, CallArrowExpr, ClosureExpr, ReturnExpr}
-import aqua.parser.lexer.{Ability, CallArrowToken, NamedTypeToken, Token, VarToken}
+import aqua.parser.expr.func.{ArrowExpr, AssignmentExpr, CallArrowExpr, ClosureExpr, ReturnExpr}
+import aqua.parser.lexer.{
+  Ability,
+  CallArrowToken,
+  IntoArrow,
+  NamedTypeToken,
+  PropertyToken,
+  Token,
+  VarToken
+}
 import aqua.types.ScalarType.string
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -15,7 +23,7 @@ import scala.collection.mutable
 
 class ClosureExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   val parser = Parser.spanParser
 
@@ -53,16 +61,26 @@ class ClosureExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     qTree.d() shouldBe ArrowExpr(toNamedArrow(("s", scToBt(string)) :: Nil, scToBt(string) :: Nil))
     qTree.d() shouldBe CallArrowExpr(
       Nil,
-      CallArrowToken(Some(NamedTypeToken[Id]("LocalSrv")), toName("inside"), Nil)
+      PropertyToken[Id](
+        VarToken[Id](toName("LocalSrv")),
+        NonEmptyList.one(
+          IntoArrow[Id](toName("inside"), Nil)
+        )
+      )
     )
     qTree.d() shouldBe CallArrowExpr(
       toName("p2Id") :: Nil,
-      CallArrowToken(Some(NamedTypeToken[Id]("Peer")), toName("identify"), Nil)
+      PropertyToken[Id](
+        VarToken[Id](toName("Peer")),
+        NonEmptyList.one(
+          IntoArrow[Id](toName("identify"), Nil)
+        )
+      )
     )
     qTree.d() shouldBe ReturnExpr(NonEmptyList(VarToken[Id](toName("p2Id")), Nil))
     qTree.d() shouldBe CallArrowExpr(
       toName("v") :: Nil,
-      CallArrowToken(None, toName("closure"), toStr("input") :: Nil)
+      CallArrowToken(toName("closure"), toStr("input") :: Nil)
     )
     qTree.d() shouldBe ReturnExpr(NonEmptyList(VarToken[Id](toName("v")), Nil))
   }

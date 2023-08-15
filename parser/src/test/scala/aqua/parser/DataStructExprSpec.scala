@@ -9,7 +9,7 @@ import org.scalatest.matchers.should.Matchers
 
 class DataStructExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   "data struct" should "be parsed properly" in {
     parseDataStruct("data Smth") should be(

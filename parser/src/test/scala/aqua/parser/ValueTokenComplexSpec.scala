@@ -26,13 +26,13 @@ class ValueTokenComplexSpec extends AnyFlatSpec with Matchers with Inside with A
     }
   }
 
-  import AquaSpec.*
+  import AquaSpec.{given, *}
 
   private def variable(name: String): ValueToken[Id] =
-    VarToken(Name(name), Nil)
+    VarToken(Name(name))
 
   private def func(name: String, args: List[ValueToken[Id]]): ValueToken[Id] =
-    CallArrowToken(None, Name(name), args)
+    CallArrowToken(Name(name), args)
 
   private def literal(n: Int): ValueToken[Id] = toNumber(n)
 

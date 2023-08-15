@@ -57,8 +57,8 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
   def literal(value: String, `type`: LiteralType) =
     LiteralToken(Id(value), `type`)
 
-  def variable(name: String) =
-    VarToken(Name(Id(name)), Nil)
+  def variable(name: String): VarToken[Id] =
+    VarToken[Id](Name[Id](name))
 
   def allPairs[A](list: List[A]): List[(A, A)] = for {
     a <- list
