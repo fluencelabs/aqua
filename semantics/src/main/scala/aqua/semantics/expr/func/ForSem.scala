@@ -42,31 +42,32 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
 
           case _ => none.pure
         },
-        {
-          case (Some(vm), FuncOp(op)) =>
-            FuncOpSem.restrictStreamsInScope(op).map { restricted =>
-              val innerTag = expr.mode.fold(SeqTag) {
-                case ForExpr.Mode.ParMode => ParTag
-                case ForExpr.Mode.TryMode => TryTag
-              }
+        // Without type of ops specified
+        // scala compiler fails to compile this
+        (iterable, ops: Raw) =>
+          (iterable, ops) match {
+            case (Some(vm), FuncOp(op)) =>
+              FuncOpSem.restrictStreamsInScope(op).map { restricted =>
+                val innerTag = expr.mode.fold(SeqTag) {
+                  case ForExpr.Mode.ParMode => ParTag
+                  case ForExpr.Mode.TryMode => TryTag
+                }
 
-              val mode = expr.mode.collect { case ForExpr.Mode.ParMode => WaitMode }
+                val mode = expr.mode.collect { case ForExpr.Mode.ParMode => WaitMode }
 
-              val forTag = ForTag(expr.item.value, vm, mode).wrap(
-                innerTag
-                  .wrap(
+                val forTag = ForTag(expr.item.value, vm, mode).wrap(
+                  innerTag.wrap(
                     restricted,
                     NextTag(expr.item.value).leaf
                   )
-              )
+                )
 
-              // Fix: continue execution after fold par immediately, without finding a path out from par branches
-              if (innerTag == ParTag) ParTag.Detach.wrap(forTag).toFuncOp
-              else forTag.toFuncOp
-            }
-          case _ =>
-            Raw.error("Wrong body of the `for` expression").pure[F]
-        }
+                // Fix: continue execution after fold par immediately, without finding a path out from par branches
+                if (innerTag == ParTag) ParTag.Detach.wrap(forTag).toFuncOp
+                else forTag.toFuncOp
+              }
+            case _ => Raw.error("Wrong body of the `for` expression").pure[F]
+          }
       )
       .namesScope(expr.token)
       .abilitiesScope(expr.token)
