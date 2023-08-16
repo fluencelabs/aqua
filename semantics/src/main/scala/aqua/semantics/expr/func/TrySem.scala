@@ -9,6 +9,7 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
+
 import cats.syntax.applicative.*
 import cats.Monad
 

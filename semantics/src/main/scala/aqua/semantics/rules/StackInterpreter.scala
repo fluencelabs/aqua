@@ -27,6 +27,7 @@ case class StackInterpreter[S[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(impl
   def mapStackHead[A](ifStackEmpty: SX[A])(f: Fr => (Fr, A)): SX[A] =
     getState.map(stackLens.get).flatMap {
       case h :: tail =>
+        println(s"mapStackHead: $h, $tail")
         val (updated, result) = f(h)
         modify(stackLens.replace(updated :: tail)).as(result)
       case Nil =>
