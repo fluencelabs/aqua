@@ -124,6 +124,9 @@ trait AquaSpec extends EitherValues {
   def parseOn(str: String): OnExpr[Id] =
     OnExpr.p.parseAll(str).value.mapK(spanToId)
 
+  def parseParSec(str: String): ParSecExpr[Id] =
+    ParSecExpr.p.parseAll(str).value.mapK(spanToId)
+
   def parseReturn(str: String): ReturnExpr[Id] =
     ReturnExpr.p.parseAll(str).value.mapK(spanToId)
 

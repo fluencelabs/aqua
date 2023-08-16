@@ -14,9 +14,8 @@ func testParSec(peer1: string, peer2: string, peer3: string, relay1: string, rel
   peers = [pr1, pr2, pr3]
   stream: *u64
   stream2: *u64
-  for p <- peers par:
-    on p.peer via p.relay:
-      stream <- Peer.timestamp_ms()
+  parsec p <- peers on p.peer via p.relay:
+    stream <- Peer.timestamp_ms()
 
   for p <- peers par:
     on p.peer via p.relay:

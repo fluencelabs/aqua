@@ -2,6 +2,7 @@ package aqua.semantics.expr.func
 
 import aqua.raw.Raw
 import aqua.parser.expr.func.ForExpr
+import aqua.parser.lexer.{Name, ValueToken}
 import aqua.raw.value.ValueRaw
 import aqua.raw.ops.*
 import aqua.raw.ops.ForTag.WaitMode
@@ -10,8 +11,7 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, BoxType, StreamType}
-
+import aqua.types.{ArrayType, BoxType}
 import cats.Monad
 import cats.data.Chain
 import cats.syntax.applicative.*
@@ -29,17 +29,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
   ): Prog[F, Raw] =
     Prog
       .around(
-        V.valueToRaw(expr.iterable).flatMap[Option[ValueRaw]] {
-          case Some(vm) =>
-            vm.`type` match {
-              case t: BoxType =>
-                N.define(expr.item, t.element).as(Option(vm))
-              case dt =>
-                T.ensureTypeMatches(expr.iterable, ArrayType(dt), dt).as(Option.empty[ValueRaw])
-            }
-
-          case _ => None.pure[F]
-        },
+        ForSem.beforeFor(expr.item, expr.iterable),
         (stOpt: Option[ValueRaw], ops: Raw) =>
           N.streamsDefinedWithinScope()
             .map(streams =>
@@ -47,7 +37,6 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                 case (Some(vm), FuncOp(op)) =>
                   val innerTag = expr.mode.fold(SeqTag) {
                     case ForExpr.Mode.ParMode => ParTag
-                    case ForExpr.Mode.ParSecMode => ParTag
                     case ForExpr.Mode.TryMode => TryTag
                   }
 
@@ -66,7 +55,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                     )
 
                   // Fix: continue execution after fold par immediately, without finding a path out from par branches
-                  if (expr.mode.contains(ForExpr.Mode.ParMode)) ParTag.Detach.wrap(forTag).toFuncOp
+                  if (innerTag == ParTag) ParTag.Detach.wrap(forTag).toFuncOp
                   else forTag.toFuncOp
                 case _ =>
                   Raw.error("Wrong body of the `for` expression")
@@ -75,4 +64,25 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
       )
       .namesScope[S](expr.token)
       .abilitiesScope[S](expr.token)
+}
+
+object ForSem {
+
+  def beforeFor[S[_], F[_]: Monad](item: Name[S], iterable: ValueToken[S])(implicit
+    V: ValuesAlgebra[S, F],
+    N: NamesAlgebra[S, F],
+    T: TypesAlgebra[S, F]
+  ): F[Option[ValueRaw]] = {
+    V.valueToRaw(iterable).flatMap[Option[ValueRaw]] {
+      case Some(vm) =>
+        vm.`type` match {
+          case t: BoxType =>
+            N.define(item, t.element).as(Option(vm))
+          case dt =>
+            T.ensureTypeMatches(iterable, ArrayType(dt), dt).as(Option.empty[ValueRaw])
+        }
+
+      case _ => None.pure[F]
+    }
+  }
 }

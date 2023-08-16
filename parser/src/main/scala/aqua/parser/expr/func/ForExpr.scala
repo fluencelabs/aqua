@@ -23,12 +23,12 @@ case class ForExpr[F[_]](
 }
 
 object ForExpr extends Expr.AndIndented {
-  enum Mode { case ParMode, TryMode, ParSecMode }
+  enum Mode { case ParMode, TryMode }
 
   override def validChildren: List[Expr.Lexem] = ArrowExpr.funcChildren
 
   private lazy val modeP: P[Mode] =
-    (` ` *> (`parsec`.as(Mode.ParSecMode) | `par`.as(Mode.ParMode) | `try`.as(Mode.TryMode)).lift).map(_.extract)
+    (` ` *> (`par`.as(Mode.ParMode) | `try`.as(Mode.TryMode)).lift).map(_.extract)
 
   override def p: P[ForExpr[Span.S]] =
     ((`for` *> ` ` *> Name.p <* ` <- `) ~ ValueToken.`value` ~ modeP.?).map {

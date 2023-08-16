@@ -1,7 +1,12 @@
-service Srv("srv"):
-    call(x: i32) -> i32
+service Console("run-console"):
+    print(s: string)
 
-func main() -> i32:
-    arr = [1, 2, 3]
-    a <- Srv.call(0)
-    <- arr[Srv.call(1)]
+func main():
+    ss: *string
+    dd: *string
+    peerId = "peerId"
+    relay = "relay"
+    parsec s <- ss on peerId via relay:
+      Console.print(s)
+    for d <- dd par:
+      Console.print(d)
