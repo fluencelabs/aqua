@@ -13,6 +13,7 @@ import aqua.parser.lexer.{
   Name,
   NamedTypeToken,
   NamedValueToken,
+  PropertyToken,
   Token,
   ValueToken,
   VarToken
@@ -51,12 +52,15 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
             NonEmptyMap.of(
               "i1" -> two,
               "i2" -> b,
-              "i3" -> CallArrowToken(None, Name[Id]("funcCall"), List(three)),
-              "i4" -> VarToken[Id](Name[Id]("value"), Nil)
+              "i3" -> CallArrowToken(Name[Id]("funcCall"), List(three)),
+              "i4" -> VarToken[Id](Name[Id]("value"))
             )
           ),
-          "f6" -> CallArrowToken(None, Name[Id]("funcCall"), List(one)),
-          "f7" -> CallArrowToken(Option(NamedTypeToken[Id]("Serv")), Name[Id]("call"), List(two))
+          "f6" -> CallArrowToken(Name[Id]("funcCall"), List(one)),
+          "f7" -> PropertyToken[Id](
+            VarToken[Id](Name[Id]("Serv")),
+            NonEmptyList.one(IntoArrow[Id](Name[Id]("call"), List(two)))
+          )
         )
       )
     )

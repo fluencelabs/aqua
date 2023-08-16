@@ -20,7 +20,7 @@ case class AssignmentExpr[F[_]](
 object AssignmentExpr extends Expr.Leaf {
 
   override val p: P[AssignmentExpr[Span.S]] =
-    (((Name.cl | Name.p) <* ` = `).with1 ~ ValueToken.`value`).flatMap { case (variable, value) =>
+    ((Name.variable <* ` = `).with1 ~ ValueToken.`value`).flatMap { case (variable, value) =>
       value match {
         case CollectionToken(_, values) =>
           if (values.isEmpty)

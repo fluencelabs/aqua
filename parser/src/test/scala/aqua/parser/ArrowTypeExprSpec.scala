@@ -10,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
 
 class ArrowTypeExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   "arrow types" should "be parsed properly" in {
     parseArrow("onIn: string -> ()") should be(
@@ -31,7 +31,14 @@ class ArrowTypeExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parseArrow("onIn{SomeAb}(a: Custom, b: Custom2)") should be(
       ArrowTypeExpr[Id](
         "onIn",
-        toNamedArrow(List("SomeAb" -> toNamedType("SomeAb"), "a" -> toNamedType("Custom"), "b" -> toNamedType("Custom2")), Nil)
+        toNamedArrow(
+          List(
+            "SomeAb" -> toNamedType("SomeAb"),
+            "a" -> toNamedType("Custom"),
+            "b" -> toNamedType("Custom2")
+          ),
+          Nil
+        )
       )
     )
 

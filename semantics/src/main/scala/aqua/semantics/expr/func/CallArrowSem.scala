@@ -1,6 +1,7 @@
 package aqua.semantics.expr.func
 
 import aqua.parser.expr.func.CallArrowExpr
+import aqua.parser.lexer.{CallArrowToken, IntoArrow, IntoField, PropertyToken, VarToken}
 import aqua.raw.Raw
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp}
 import aqua.raw.value.CallArrowRaw
@@ -13,6 +14,9 @@ import cats.Monad
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
+import cats.syntax.option.*
+import cats.syntax.applicative.*
+import cats.syntax.comonad.*
 
 class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
@@ -31,12 +35,16 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
       }
     }
 
-  private def toModel[Alg[_]: Monad](implicit
+  private def toModel[Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Alg[Option[FuncOp]] = for {
-    callArrowRaw <- V.callArrowToRaw(callArrow)
+    callArrowRaw <- V.valueToRaw(callArrow).map {
+      // TODO: Refactor this to support other results
+      case Some(car: CallArrowRaw) => car.some
+      case _ => none
+    }
     maybeOp <- callArrowRaw.traverse(car =>
       variables
         .drop(car.baseType.codomain.length)

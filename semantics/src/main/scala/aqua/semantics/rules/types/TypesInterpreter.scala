@@ -244,12 +244,6 @@ class TypesInterpreter[S[_], X](implicit
     else report(token, s"Cannot compare '$left' with '$right''").as(false)
   }
 
-  private def extractToken(token: Token[S]) =
-    token match {
-      case VarToken(n, properties) => properties.lastOption.getOrElse(n)
-      case t => t
-    }
-
   override def ensureTypeMatches(
     token: Token[S],
     expected: Type,
@@ -271,11 +265,14 @@ class TypesInterpreter[S[_], X](implicit
             valueFields.toSortedMap.toList.traverse { (name, `type`) =>
               typeFields.lookup(name) match {
                 case Some(t) =>
-                  val nextToken = extractToken(token match {
+                  val nextToken = token match {
                     case NamedValueToken(_, fields) =>
                       fields.lookup(name).getOrElse(token)
-                    case t => t
-                  })
+                    // TODO: Is it needed?
+                    case PropertyToken(_, properties) =>
+                      properties.last
+                    case _ => token
+                  }
                   ensureTypeMatches(nextToken, `type`, t)
                 case None =>
                   report(

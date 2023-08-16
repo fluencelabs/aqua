@@ -16,14 +16,15 @@ class AbilityValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   import AquaSpec.*
 
   private def parseAndCheckAbility(str: String) = {
-    parseData(
-      str
-    ) should be(
+    parseData(str) should be(
       NamedValueToken(
         NamedTypeToken[Id]("AbilityA"),
         NonEmptyMap.of(
           "v1" -> toNumber(1),
-          "f1" -> VarToken(Name[Id]("input"), IntoField[Id]("arrow") :: Nil)
+          "f1" -> PropertyToken[Id](
+            VarToken(toName("input")),
+            NonEmptyList.one(IntoField("arrow"))
+          )
         )
       )
     )

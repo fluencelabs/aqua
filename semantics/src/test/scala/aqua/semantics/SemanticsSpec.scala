@@ -85,8 +85,15 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideBody(script) { body =>
       val arrowType = ArrowType(NilType, ConsType.cons(ScalarType.string, NilType))
-      val serviceCall =
-        CallArrowRawTag.service(LiteralRaw.quote("srv1"), "fn1", emptyCall, "A", arrowType).leaf
+      val serviceCall = CallArrowRawTag
+        .service(
+          serviceId = LiteralRaw.quote("srv1"),
+          fnName = "fn1",
+          call = emptyCall,
+          name = "A",
+          arrowType = arrowType
+        )
+        .leaf
 
       val expected =
         ParTag.wrap(

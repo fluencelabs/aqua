@@ -16,16 +16,153 @@ import cats.{~>, Comonad, Functor}
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.syntax.foldable.*
 import cats.arrow.FunctionK
+import cats.syntax.traverse.*
+import cats.syntax.option.*
 
 sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
 }
 
-case class VarToken[F[_]](name: Name[F], property: List[PropertyOp[F]] = Nil)
-    extends ValueToken[F] {
+case class PropertyToken[F[_]: Comonad](
+  value: ValueToken[F],
+  properties: NonEmptyList[PropertyOp[F]]
+) extends ValueToken[F] {
+  override def as[T](v: T): F[T] = value.as(v)
+
+  def mapK[K[_]: Comonad](fk: F ~> K): PropertyToken[K] =
+    copy(value.mapK(fk), properties.map(_.mapK(fk)))
+
+  private def isClass(name: String): Boolean =
+    name.headOption.exists(_.isUpper)
+
+  private def isField(name: String): Boolean =
+    name.headOption.exists(_.isLower)
+
+  private def isConst(name: String): Boolean =
+    name.forall(c => !c.isLetter || c.isUpper)
+
+  /**
+   * This method tries to convert property token to
+   * call arrow token.
+   *
+   * Next properties pattern is transformed:
+   * (Class)+ arrow()
+   * ^^^^^^^
+   * this part is transformed to ability name.
+   */
+  private def toCallArrow: Option[CallArrowToken[F]] = value match {
+    case VarToken(name) =>
+      val ability = properties.init.traverse {
+        case f @ IntoField(_) => f.value.some
+        case _ => none
+      }.map(
+        name.value +: _
+      ).filter(
+        _.forall(isClass)
+      ).map(props => name.rename(props.mkString(".")))
+
+      (properties.last, ability) match {
+        case (IntoArrow(funcName, args), Some(ability)) =>
+          CallArrowToken(
+            ability.asTypeToken.some,
+            funcName,
+            args
+          ).some
+        case _ => none
+      }
+    case _ => none
+  }
+
+  /**
+   * This method tries to convert property token to
+   * property token with dotted var name inside value token.
+   *
+   * Next properties pattern is untouched:
+   * Class (field)*
+   *
+   * Next properties pattern is transformed:
+   * (Class)* (CONST | field) ..props..
+   * ^^^^^^^^^^^^^^^^^^^^^^^^
+   * this part is transformed to dotted name.
+   */
+  private def toDottedName: Option[ValueToken[F]] = value match {
+    case VarToken(name) =>
+      // Pattern `Class (field)*` is ability access
+      // and should not be transformed
+      val isAbility = isClass(name.value) && properties.forall {
+        case f @ IntoField(_) => isField(f.value)
+        case _ => true
+      }
+
+      if (isAbility) none
+      else {
+        // Gather prefix of properties that are IntoField
+        val props = name.value +: properties.toList.view.map {
+          case IntoField(name) => name.extract.some
+          case _ => none
+        }.takeWhile(_.isDefined).flatten.toList
+
+        val propsWithIndex = props.zipWithIndex
+
+        // Find first property that is not Class
+        val classesTill = propsWithIndex.find { case (name, _) =>
+          !isClass(name)
+        }.collect { case (_, idx) =>
+          idx
+        }.getOrElse(props.length)
+
+        // Find last property after classes
+        // that is CONST or field
+        val lastSuitable = propsWithIndex
+          .take(classesTill)
+          .findLast { case (name, _) =>
+            isConst(name) || isField(name)
+          }
+          .collect { case (_, idx) => idx }
+
+        lastSuitable.map(last =>
+          val newProps = NonEmptyList.fromList(
+            properties.toList.drop(last + 1)
+          )
+          val newName = props.take(last + 1).mkString(".")
+          val varToken = VarToken(name.rename(newName))
+
+          newProps.fold(varToken)(props => PropertyToken(varToken, props))
+        )
+      }
+    case _ => none
+  }
+
+  /**
+   * This is a hacky method to adjust parsing result
+   * to format that was used previously.
+   * This method tries to convert property token to
+   * call arrow token or property token with
+   * dotted var name inside value token.
+   *
+   * @return Some(token) if token was adjusted, None otherwise
+   */
+  def adjust: Option[ValueToken[F]] =
+    toCallArrow.orElse(toDottedName)
+}
+
+object PropertyToken {
+
+  val property: P[ValueToken[Span.S]] =
+    (ValueToken.basic ~ PropertyOp.ops.backtrack.?).map { case (v, ops) =>
+      ops.fold(v)(ops => PropertyToken(v, ops))
+    }
+
+}
+
+case class VarToken[F[_]](name: Name[F]) extends ValueToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
-  def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk), property.map(_.mapK(fk)))
+  def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk))
+}
+
+object VarToken {
+  lazy val variable: P[VarToken[Span.S]] = Name.variable.map(VarToken(_))
 }
 
 case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
@@ -74,6 +211,9 @@ object CollectionToken {
 }
 
 case class CallArrowToken[F[_]: Comonad](
+  // NOTE: Call with ability is not parsed by CallArrowToken
+  // it is parsed by PropertyToken and then adjusted
+  // It is done for legacy support reasons
   ability: Option[NamedTypeToken[F]],
   funcName: Name[F],
   args: List[ValueToken[F]]
@@ -87,17 +227,23 @@ case class CallArrowToken[F[_]: Comonad](
 
 object CallArrowToken {
 
+  def apply[F[_]: Comonad](funcName: Name[F], args: List[ValueToken[F]]): CallArrowToken[F] =
+    CallArrowToken(None, funcName, args)
+
   case class CallBraces(name: Name[S], abilities: List[ValueToken[S]], args: List[ValueToken[S]])
 
   // {SomeAb, SecondAb} for ValueToken
   def abilities(): P[NonEmptyList[ValueToken[S]]] =
     `{` *> comma(ValueToken.`value`.surroundedBy(`/s*`)) <* `}`
 
-  def callBraces(): P[CallBraces] = P
+  lazy val callBraces: P[CallBraces] = P
     .defer(
-      Name.p
-        ~ abilities().? ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
-          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`)
+      Name.p ~
+        abilities().? ~
+        comma0(ValueToken.`value`.surroundedBy(`/s*`)).between(
+          ` `.?.with1 *> `(` <* `/s*`,
+          `/s*` *> `)`
+        )
     )
     .map { case ((n, ab), args) =>
       CallBraces(n, ab.map(_.toList).getOrElse(Nil), args)
@@ -107,12 +253,8 @@ object CallArrowToken {
     )
 
   val callArrow: P[CallArrowToken[Span.S]] =
-    ((NamedTypeToken.dotted <* `.`).?.with1 ~
-      callBraces()
-        .withContext(
-          "Missing braces '()' after the function call"
-        )).map { case (ab, callBraces) =>
-      CallArrowToken(ab, callBraces.name, callBraces.abilities ++ callBraces.args)
+    callBraces.map { braces =>
+      CallArrowToken(braces.name, braces.abilities ++ braces.args)
     }
 }
 
@@ -135,7 +277,7 @@ object NamedValueToken {
         "Missing braces '()' after the struct type"
       )
       .map { case (dn, args) =>
-        NamedValueToken(NamedTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
+        NamedValueToken(NamedTypeToken(dn), args.toNem)
       }
 }
 
@@ -409,16 +551,6 @@ object PrefixToken {
 
 object ValueToken {
 
-  val varProperty: P[VarToken[Span.S]] =
-    (Name.dotted ~ PropertyOp.ops.?).map { case (n, l) ⇒
-      VarToken(n, l.foldMap(_.toList))
-    }
-
-  val abProperty: P[VarToken[Span.S]] =
-    (Name.cl ~ PropertyOp.ops.?).map { case (n, l) ⇒
-      VarToken(n, l.foldMap(_.toList))
-    }
-
   val bool: P[LiteralToken[Span.S]] =
     P.oneOf(
       ("true" :: "false" :: Nil)
@@ -456,19 +588,22 @@ object ValueToken {
   private def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
     basic.between(`(`, `)`).backtrack
 
-  // Basic element of math expression
-  val atom: P[ValueToken[S]] = P.oneOf(
+  // Basic element of value expression
+  // (without property access)
+  val basic = P.oneOf(
     literal.backtrack ::
       initPeerId.backtrack ::
       P.defer(CollectionToken.collection).backtrack ::
       P.defer(NamedValueToken.dataValue).backtrack ::
       P.defer(CallArrowToken.callArrow).backtrack ::
-      P.defer(abProperty).backtrack ::
+      P.defer(VarToken.variable).backtrack ::
       P.defer(PrefixToken.value).backtrack ::
-      P.defer(brackets(InfixToken.value)).backtrack ::
-      varProperty ::
+      P.defer(brackets(value)).backtrack ::
       Nil
   )
+
+  // Atomic element of math expression
+  val atom: P[ValueToken[S]] = P.defer(PropertyToken.property)
 
   // One of entry points for parsing the whole math expression
   val `value`: P[ValueToken[Span.S]] =

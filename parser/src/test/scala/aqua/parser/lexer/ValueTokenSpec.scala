@@ -5,7 +5,9 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.LiteralType
+
 import cats.Id
+import cats.data.NonEmptyList
 
 class ValueTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 
@@ -13,13 +15,21 @@ class ValueTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "var getter" should "parse" in {
     ValueToken.`value`.parseAll("varname").value.mapK(spanToId) should be(
-      VarToken(Name[Id]("varname"), Nil)
+      VarToken(Name[Id]("varname"))
     )
+
     ValueToken.`value`.parseAll("varname.field").value.mapK(spanToId) should be(
-      VarToken(Name[Id]("varname"), IntoField[Id]("field") :: Nil)
+      PropertyToken[Id](
+        VarToken(Name[Id]("varname")),
+        NonEmptyList.one(IntoField[Id]("field"))
+      )
     )
+
     ValueToken.`value`.parseAll("varname.field.sub").value.mapK(spanToId) should be(
-      VarToken(Name[Id]("varname"), IntoField[Id]("field") :: IntoField[Id]("sub") :: Nil)
+      PropertyToken[Id](
+        VarToken(Name[Id]("varname")),
+        NonEmptyList.of(IntoField[Id]("field"), IntoField[Id]("sub"))
+      )
     )
   }
 
