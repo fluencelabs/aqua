@@ -38,13 +38,13 @@ jobs:
   flox-snapshot:
     name: "flox"
     needs: aqua
-    uses: fluencelabs/flox/.github/workflows/snapshot.yml@main
+    uses: fluencelabs/flox/.github/workflows/snapshot.yml@fix-e2e
     with:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
   flox:
     needs: aqua
-    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
+    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@fix-e2e
     with:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
