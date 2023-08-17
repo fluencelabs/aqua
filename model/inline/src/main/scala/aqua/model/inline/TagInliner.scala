@@ -180,7 +180,7 @@ object TagInliner extends Logging {
     treeFunctionName: String
   ): State[S, TagInlined] =
     tag match {
-      case OnTag(peerId, via) =>
+      case OnTag(peerId, via, strategy) =>
         for {
           peerIdDe <- valueToModel(peerId)
           viaDe <- valueListToModel(via.toList)
@@ -190,9 +190,12 @@ object TagInliner extends Logging {
           (pid, pif) = peerIdDe
           (viaD, viaF) = viaDeFlattened.unzip
             .bimap(Chain.fromSeq, _.flatten)
+          strat = strategy.map { case OnTag.ReturnStrategy.Relay =>
+            OnModel.ReturnStrategy.Relay
+          }
           toModel = (children: Chain[OpModel.Tree]) =>
             XorModel.wrap(
-              OnModel(pid, viaD).wrap(
+              OnModel(pid, viaD, strat).wrap(
                 children
               ),
               // This will return to previous topology

@@ -14,6 +14,7 @@ import aqua.types.{ArrayType, BoxType, StreamType}
 
 import cats.Monad
 import cats.data.Chain
+import cats.syntax.option.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -57,7 +58,11 @@ class ParSecSem[S[_]](val expr: ParSecExpr[S]) extends AnyVal {
       case (Some(peerId), Some(vm), FuncOp(op)) =>
         for {
           restricted <- FuncOpSem.restrictStreamsInScope(op)
-          onTag = OnTag(peerId, Chain.fromSeq(viaVM))
+          onTag = OnTag(
+            peerId = peerId,
+            via = Chain.fromSeq(viaVM),
+            strategy = OnTag.ReturnStrategy.Relay.some
+          )
           tag = ForTag(expr.item.value, vm).wrap(
             ParTag.wrap(
               onTag.wrap(restricted),

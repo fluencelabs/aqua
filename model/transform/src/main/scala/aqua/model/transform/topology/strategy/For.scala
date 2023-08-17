@@ -33,9 +33,9 @@ object For extends Begins {
                   if (found) acc.pure // Short circuit
                   else
                     (acc, on) match {
-                      case (_, OnModel(_, r)) if r.exists(_.usesVarNames.contains(model.item)) =>
+                      case (_, OnModel(_, r, _)) if r.exists(_.usesVarNames.contains(model.item)) =>
                         State.set(true).as(acc)
-                      case (OnModel(_, r @ (r0 ==: _)) :: _, OnModel(p, _))
+                      case (OnModel(_, r @ (r0 ==: _), _) :: _, OnModel(p, _, _))
                           if p.usesVarNames.contains(model.item) =>
                         // This is to take the outstanding relay and force moving there
                         State.set(true).as(OnModel(r0, r) :: acc)

@@ -111,13 +111,24 @@ case object TryTag extends GroupTag {
   case object Otherwise extends GroupTag
 }
 
-case class OnTag(peerId: ValueRaw, via: Chain[ValueRaw]) extends SeqGroupTag {
+case class OnTag(
+  peerId: ValueRaw,
+  via: Chain[ValueRaw],
+  strategy: Option[OnTag.ReturnStrategy] = None
+) extends SeqGroupTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    OnTag(peerId.map(f), via.map(_.map(f)))
+    OnTag(peerId.map(f), via.map(_.map(f)), strategy)
 
   override def toString: String =
     s"(on $peerId${if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""})"
+}
+
+object OnTag {
+
+  enum ReturnStrategy {
+    case Relay
+  }
 }
 
 case class NextTag(item: String) extends RawTag {

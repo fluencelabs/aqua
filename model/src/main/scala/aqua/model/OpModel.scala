@@ -91,13 +91,27 @@ case object XorModel extends GroupOpModel {
       .getOrElse(EmptyModel.leaf)
 }
 
-case class OnModel(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupModel {
+case class OnModel(
+  peerId: ValueModel,
+  via: Chain[ValueModel],
+  strategy: Option[OnModel.ReturnStrategy] = None
+) extends SeqGroupModel {
 
-  override def toString: String =
-    s"on $peerId${if (via.nonEmpty) s" via ${via.toList.mkString(", ")}" else ""}"
+  override def toString: String = {
+    val viaPart = if (via.nonEmpty) s"via ${via.toList.mkString(", ")}" else ""
+    val strategyPart = strategy.map(s => s" -> to ${s.toString.toLowerCase}").getOrElse("")
+    s"on $peerId $viaPart $strategyPart"
+  }
 
   override lazy val usesVarNames: Set[String] =
     peerId.usesVarNames ++ via.iterator.flatMap(_.usesVarNames)
+}
+
+object OnModel {
+
+  enum ReturnStrategy {
+    case Relay
+  }
 }
 
 case class NextModel(item: String) extends OpModel {
