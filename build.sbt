@@ -182,7 +182,7 @@ lazy val parser = crossProject(JVMPlatform, JSPlatform)
       "org.typelevel" %%% "cats-free"  % catsV
     )
   )
-  .dependsOn(types)
+  .dependsOn(types, helpers)
 
 lazy val linker = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -200,6 +200,7 @@ lazy val tree = crossProject(JVMPlatform, JSPlatform)
       "org.typelevel" %%% "cats-free" % catsV
     )
   )
+  .dependsOn(helpers)
 
 lazy val raw = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -212,7 +213,7 @@ lazy val model = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .settings(commons)
-  .dependsOn(types, tree, raw)
+  .dependsOn(types, tree, raw, helpers)
 
 lazy val res = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -227,7 +228,6 @@ lazy val inline = crossProject(JVMPlatform, JSPlatform)
   .in(file("model/inline"))
   .settings(commons)
   .dependsOn(raw, model)
-
 
 lazy val transform = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -303,6 +303,18 @@ lazy val constants = crossProject(JVMPlatform, JSPlatform)
     )
   )
   .dependsOn(parser, raw)
+
+lazy val helpers = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("utils/helpers"))
+  .settings(commons)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % catsV,
+      "org.typelevel" %%% "cats-free" % catsV
+    )
+  )
 
 lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

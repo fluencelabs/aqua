@@ -22,26 +22,26 @@ class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     Prog
       .around(
-        N.beginScope(expr.name) >>
-          L.beginScope() >>
-          N.define(expr.name, ValueRaw.lastError.baseType),
+        N.define(expr.name, ValueRaw.lastError.baseType),
         (_, g: Raw) =>
-          N.endScope() >> L.endScope() as (
-            g match {
-              case FuncOp(op) =>
-                TryTag.Catch
+          g match {
+            case FuncOp(op) =>
+              for {
+                restricted <- FuncOpSem.restrictStreamsInScope(op)
+                tag = TryTag.Catch
                   .wrap(
                     SeqTag.wrap(
                       AssignmentTag(ValueRaw.lastError, expr.name.value).leaf,
-                      op
+                      restricted
                     )
                   )
-                  .toFuncOp
-              case _ =>
-                Raw.error("Wrong body of the `catch` expression")
-            }
-          )
+              } yield tag.toFuncOp
+            case _ =>
+              Raw.error("Wrong body of the `catch` expression").pure
+          }
       )
       .abilitiesScope[S](expr.token)
+      .namesScope(expr.token)
+      .locationsScope()
 
 }

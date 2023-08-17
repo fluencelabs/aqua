@@ -14,6 +14,7 @@ import cats.data.Chain
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
+import cats.syntax.traverse.*
 import cats.syntax.functor.*
 import cats.{Monad, Traverse}
 
@@ -27,8 +28,8 @@ class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
     Prog.around(
       (
         V.ensureIsString(expr.peerId),
-        Traverse[List]
-          .traverse(expr.via)(v =>
+        expr.via
+          .traverse(v =>
             V.valueToRaw(v).flatTap {
               case Some(vm) =>
                 vm.`type` match {

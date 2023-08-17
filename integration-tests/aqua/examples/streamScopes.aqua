@@ -1,0 +1,83 @@
+aqua StreamExports
+
+export FailureSrv, streamIf, streamTry, streamFor, streamComplex
+
+service FailureSrv("failure"):
+    fail(msg: string)
+
+func streamIf() -> i8:
+    on HOST_PEER_ID:
+        if true:
+            stream: *i8
+            stream <<- 1
+        else:
+            stream: *i8
+            stream <<- 2
+        
+        if false:
+            stream: *i8
+            stream <<- 3
+        else:
+            stream: *i8
+            stream <<- 4
+
+        stream: *i8
+        stream <<- 5
+
+    <- stream!
+
+func streamTry() -> i8:
+    on HOST_PEER_ID:
+        try:
+            stream: *i8
+            stream <<- 1
+            FailureSrv.fail("try")
+        catch e:
+            stream: *i8
+            stream <<- 2
+            FailureSrv.fail("catch")
+        otherwise:
+            stream: *i8
+            stream <<- 3
+
+        stream: *i8
+        stream <<- 4
+
+    <- stream!
+
+func streamFor() -> i8:
+    on HOST_PEER_ID:
+        for i <- [1, 2, 3]:
+            stream: *i8
+            stream <<- i
+        
+        stream: *i8
+        stream <<- 4
+
+    <- stream!
+
+func streamComplex() -> i8:
+    on HOST_PEER_ID:
+        for i <- [1, 2, 3]:
+            try:
+                if i == 2:
+                    stream: *i8
+                    stream <<- i
+                    FailureSrv.fail("if")
+                else:
+                    stream: *i8
+                    stream <<- i
+                
+                stream: *i8
+                stream <<- i + 3
+            catch e:
+                stream: *i8
+                stream <<- i + 6
+            
+            stream: *i8
+            stream <<- i + 9
+
+        stream: *i8
+        stream <<- 13
+
+    <- stream!
