@@ -4,7 +4,7 @@ import aqua.raw.Raw
 import aqua.parser.expr.func.ParSecExpr
 import aqua.raw.value.ValueRaw
 import aqua.raw.ops.*
-import aqua.raw.ops.ForTag.WaitMode
+import aqua.raw.ops.ForTag
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra

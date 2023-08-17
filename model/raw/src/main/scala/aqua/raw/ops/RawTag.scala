@@ -82,6 +82,7 @@ case object ParTag extends ParGroupTag {
 }
 
 case class IfTag(value: ValueRaw) extends GroupTag {
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     IfTag(value.map(f))
 }
@@ -148,9 +149,11 @@ case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = 
 }
 
 object ForTag {
-  sealed trait Mode
-  case object WaitMode extends Mode
-  case object PassMode extends Mode
+
+  enum Mode {
+    case Wait
+    case Pass
+  }
 }
 
 case class CallArrowRawTag(

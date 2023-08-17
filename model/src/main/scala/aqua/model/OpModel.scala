@@ -125,7 +125,7 @@ case class MatchMismatchModel(left: ValueModel, right: ValueModel, shouldMatch: 
 case class ForModel(
   item: String,
   iterable: ValueModel,
-  mode: Option[ForModel.Mode] = Some(ForModel.NullMode)
+  mode: Option[ForModel.Mode] = Some(ForModel.Mode.Null)
 ) extends SeqGroupModel {
 
   override def toString: String =
@@ -138,9 +138,11 @@ case class ForModel(
 }
 
 object ForModel {
-  sealed trait Mode
-  case object NullMode extends Mode
-  case object NeverMode extends Mode
+
+  enum Mode {
+    case Null
+    case Never
+  }
 }
 
 // TODO how is it used? remove, if it's not

@@ -9,13 +9,14 @@ import aqua.types.{ArrayType, LiteralType, ScalarType}
 import aqua.types.StreamType
 import aqua.model.IntoIndexModel
 import aqua.model.inline.raw.ApplyGateRawInliner
+import aqua.model.OnModel
+import aqua.model.FailModel
+import aqua.res.ResolvedOp
 
 import scala.language.implicitConversions
 import cats.data.Chain
 import cats.data.Chain.==:
-import aqua.model.OnModel
-import aqua.model.FailModel
-import aqua.res.ResolvedOp
+import cats.syntax.option.*
 
 object ModelBuilder {
   implicit def rawToValue(raw: ValueRaw): ValueModel = ValueModel.fromRaw(raw)
@@ -131,7 +132,7 @@ object ModelBuilder {
   def foldPar(item: String, iter: ValueRaw, body: OpModel.Tree*) = {
     val ops = SeqModel.wrap(body: _*)
     DetachModel.wrap(
-      ForModel(item, ValueModel.fromRaw(iter), Some(ForModel.NeverMode))
+      ForModel(item, ValueModel.fromRaw(iter), ForModel.Mode.Never.some)
         .wrap(ParModel.wrap(ops, NextModel(item).leaf))
     )
   }

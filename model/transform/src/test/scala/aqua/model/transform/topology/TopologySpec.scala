@@ -6,6 +6,11 @@ import aqua.res.*
 import aqua.raw.ops.Call
 import aqua.raw.value.{IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.{LiteralType, ScalarType, StreamType}
+import aqua.types.ArrayType
+import aqua.raw.ConstantRaw.initPeerId
+import aqua.model.ForModel
+import aqua.raw.value.ValueRaw
+
 import cats.Eval
 import cats.data.{Chain, NonEmptyList}
 import cats.data.Chain.*
@@ -14,10 +19,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.syntax.show.*
 import cats.syntax.option.*
-import aqua.types.ArrayType
-import aqua.raw.ConstantRaw.initPeerId
-import aqua.model.ForModel.NullMode
-import aqua.raw.value.ValueRaw
 
 class TopologySpec extends AnyFlatSpec with Matchers {
 
@@ -439,7 +440,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         through(relay),
         callRes(0, otherPeer),
         ParRes.wrap(
-          FoldRes("i", valueArray, Some(ForModel.NeverMode))
+          FoldRes("i", valueArray, ForModel.Mode.Never.some)
             .wrap(ParRes.wrap(callRes(2, otherPeer2), NextRes("i").leaf))
         ),
         through(relay),
@@ -486,7 +487,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected = SeqRes.wrap(
       through(relay),
       ParRes.wrap(
-        FoldRes("i", valueArray, Some(ForModel.NeverMode)).wrap(
+        FoldRes("i", valueArray, ForModel.Mode.Never.some).wrap(
           ParRes.wrap(
             // better if first relay will be outside `for`
             SeqRes.wrap(
@@ -553,7 +554,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected = SeqRes.wrap(
       through(relay),
       ParRes.wrap(
-        FoldRes("i", valueArray, Some(ForModel.NeverMode)).wrap(
+        FoldRes("i", valueArray, ForModel.Mode.Never.some).wrap(
           ParRes.wrap(
             // better if first relay will be outside `for`
             SeqRes.wrap(
@@ -735,7 +736,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected = SeqRes.wrap(
       callRes(1, otherPeer),
       ParRes.wrap(
-        FoldRes("i", valueArray, Some(ForModel.NeverMode)).wrap(
+        FoldRes("i", valueArray, ForModel.Mode.Never.some).wrap(
           ParRes.wrap(
             SeqRes.wrap(
               // TODO: should be outside of fold
@@ -812,7 +813,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val expected = SeqRes.wrap(
       ParRes.wrap(
-        FoldRes("i", ValueModel.fromRaw(valueArray), Some(ForModel.NeverMode)).wrap(
+        FoldRes("i", ValueModel.fromRaw(valueArray), ForModel.Mode.Never.some).wrap(
           ParRes.wrap(
             SeqRes.wrap(
               through(relay),
@@ -861,7 +862,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val expected = SeqRes.wrap(
       ParRes.wrap(
-        FoldRes("i", ValueModel.fromRaw(valueArray), Some(ForModel.NeverMode)).wrap(
+        FoldRes("i", ValueModel.fromRaw(valueArray), ForModel.Mode.Never.some).wrap(
           ParRes.wrap(
             SeqRes.wrap(
               through(relay),
@@ -928,7 +929,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           CallModel.Export(array.name, array.`type`)
         ).leaf
       ),
-      FoldRes(iterName, array, NullMode.some).wrap(
+      FoldRes(iterName, array, ForModel.Mode.Null.some).wrap(
         NextRes(iterName).leaf
       )
     )

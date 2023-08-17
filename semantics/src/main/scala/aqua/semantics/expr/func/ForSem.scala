@@ -5,7 +5,7 @@ import aqua.parser.expr.func.ForExpr
 import aqua.parser.lexer.{Name, ValueToken}
 import aqua.raw.value.ValueRaw
 import aqua.raw.ops.*
-import aqua.raw.ops.ForTag.WaitMode
+import aqua.raw.ops.ForTag
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -24,7 +24,7 @@ import cats.syntax.option.*
 
 class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
 
-  def program[F[_]: Monad](implicit
+  def program[F[_]: Monad](using
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
     T: TypesAlgebra[S, F],
@@ -44,7 +44,7 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                   case ForExpr.Mode.TryMode => TryTag
                 }
 
-                val mode = expr.mode.collect { case ForExpr.Mode.ParMode => WaitMode }
+                val mode = expr.mode.collect { case ForExpr.Mode.ParMode => ForTag.Mode.Wait }
 
                 val forTag = ForTag(expr.item.value, vm, mode).wrap(
                   innerTag.wrap(
