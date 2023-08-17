@@ -63,19 +63,21 @@ object CompareTypes {
     val lfView = lf.view
     val rfView = rf.view
     if (lf == rf) 0.0
-    else if (
-      lf.keys.forall(rf.contains) && compareTypesList(
-        lfView.values.toList,
-        rfView.filterKeys(lfNEM.keys.contains).values.toList
-      ) == 1.0
-    ) 1.0
-    else if (
-      rf.keys.forall(lf.contains) && compareTypesList(
-        lfView.filterKeys(rfNEM.keys.contains).values.toList,
-        rfView.values.toList
-      ) == -1.0
-    ) -1.0
-    else NaN
+    else if (lf.keys.forall(rf.contains)) {
+      if (
+        compareTypesList(
+          lfView.values.toList,
+          rfView.filterKeys(lfNEM.keys.contains).values.toList
+        ) >= 0.0
+      ) 1.0
+      else if (
+        compareTypesList(
+          lfView.filterKeys(rfNEM.keys.contains).values.toList,
+          rfView.values.toList
+        ) == -1.0
+      ) -1.0
+      else NaN
+    } else NaN
   }
 
   private def compareProducts(l: ProductType, r: ProductType): Double = ((l, r): @unchecked) match {
