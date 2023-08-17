@@ -247,7 +247,7 @@ describe('Testing examples', () => {
 
     it('structuraltyping.aqua', async () => {
         let result = await structuralTypingCall();
-        expect(result).toEqual("");
+        expect(result).toEqual("some_stringsome_stringsome_stringab_string");
     });
 
     it('collectionSugar array', async () => {
