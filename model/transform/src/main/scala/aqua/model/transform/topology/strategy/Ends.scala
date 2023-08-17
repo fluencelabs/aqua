@@ -18,8 +18,9 @@ trait Ends {
   ): Eval[TopologyPath] =
     child(current).map(lc =>
       lc.forceExit.flatMap {
-        case ExitStrategy.Full => current.afterOn
         case ExitStrategy.Empty => lc.endsOn
+        case ExitStrategy.ToRelay => lc.pathOn.map(_.toRelay)
+        case ExitStrategy.Full => current.afterOn
       }
     ) getOrElse current.beginsOn
 

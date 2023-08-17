@@ -181,7 +181,7 @@ object Topology extends Logging {
 
   enum ExitStrategy {
     case Full
-    // case ToRelay
+    case ToRelay
     case Empty
   }
 
@@ -192,8 +192,8 @@ object Topology extends Logging {
 
       def combine(x: ExitStrategy, y: ExitStrategy): ExitStrategy =
         (x, y) match {
-          case (Full, _) => Full
-          case (_, Full) => Full
+          case (Full, _) | (_, Full) => Full
+          case (ToRelay, _) | (_, ToRelay) => ToRelay
           case _ => Empty
         }
     }

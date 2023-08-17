@@ -24,6 +24,7 @@ trait After {
   final def finallyOn(current: Topology): Eval[TopologyPath] =
     current.forceExit.flatMap {
       case ExitStrategy.Full => current.afterOn
+      case ExitStrategy.ToRelay => current.pathOn.map(_.toRelay)
       case ExitStrategy.Empty => current.endsOn
     }
 
@@ -37,6 +38,8 @@ trait After {
   private def pathAfterVia(current: Topology): Eval[Chain[ValueModel]] =
     current.forceExit.flatMap {
       case ExitStrategy.Empty => Eval.now(Chain.empty)
+      case ExitStrategy.ToRelay =>
+        (current.endsOn, current.pathOn.map(_.toRelay)).mapN(PathFinder.findPath)
       case ExitStrategy.Full =>
         (current.endsOn, current.afterOn).mapN(PathFinder.findPath)
     }
@@ -46,7 +49,7 @@ trait After {
   // explicitly pinging the next node (useful inside par branches)
   def pathAfterAndPingNext(current: Topology): Eval[Chain[ValueModel]] =
     current.forceExit.flatMap {
-      case ExitStrategy.Empty => Eval.now(Chain.empty)
+      case ExitStrategy.Empty | ExitStrategy.ToRelay => Eval.now(Chain.empty)
       case ExitStrategy.Full =>
         (current.endsOn, current.afterOn, current.lastExecutesOn).mapN {
           case (e, a, _) if e == a => Chain.empty

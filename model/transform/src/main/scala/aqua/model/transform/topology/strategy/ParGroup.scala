@@ -31,7 +31,8 @@ object ParGroup extends Begins with Ends {
     current.children
       .traverse(_.forceExit)
       .flatMap(_.combineAll match {
-        case ExitStrategy.Full => current.afterOn
         case ExitStrategy.Empty => super.endsOn(current)
+        case ExitStrategy.ToRelay => current.pathOn.map(_.toRelay)
+        case ExitStrategy.Full => current.afterOn
       })
 }

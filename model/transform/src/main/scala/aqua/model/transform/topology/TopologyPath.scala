@@ -5,6 +5,7 @@ import aqua.model.ValueModel
 
 import cats.kernel.Monoid
 import cats.Show
+import cats.data.Chain.==:
 
 final case class TopologyPath(
   path: List[OnModel]
@@ -26,6 +27,19 @@ final case class TopologyPath(
 
   def commonPrefix(other: TopologyPath): TopologyPath =
     TopologyPath(path.zip(other.path).takeWhile(_ == _).map(_._1))
+
+  def toRelay: TopologyPath = {
+    def toRelayTailRec(
+      currentPath: List[OnModel]
+    ): List[OnModel] = currentPath match {
+      case Nil => Nil
+      case (on @ OnModel(_, r ==: _, _)) :: tail =>
+        on.copy(peerId = r) :: tail
+      case _ :: tail => toRelayTailRec(tail)
+    }
+
+    TopologyPath(toRelayTailRec(path))
+  }
 }
 
 object TopologyPath {
