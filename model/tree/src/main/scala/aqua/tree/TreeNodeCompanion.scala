@@ -9,12 +9,15 @@ import cats.syntax.apply.*
 
 import scala.annotation.tailrec
 
+import aqua.helpers.Tree
+
 trait TreeNodeCompanion[T <: TreeNode[T]] {
 
   given showTreeLabel: Show[T]
 
   type Tree = Cofree[Chain, T]
 
+  // TODO: Use helpers.Tree istead of this function
   private def showOffset(what: Tree, offset: Int): String = {
     val spaces = "| " * offset
     spaces + what.head.show + what.tail.map {
@@ -98,8 +101,7 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
 
   given Show[Tree] with
 
-    override def show(t: Tree): String =
-      showOffset(t, 0)
+    override def show(t: Tree): String = Tree.show(t)
 
   given Show[(Tree, Tree)] with
 

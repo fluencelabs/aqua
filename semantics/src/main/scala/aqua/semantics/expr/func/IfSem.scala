@@ -41,17 +41,18 @@ class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
               ).map(Option.when(_)(raw))
             )
           ),
-        (value: Option[ValueRaw], ops: Raw) =>
-          value
-            .fold(
-              Raw.error("`if` expression errored in matching types")
-            )(raw =>
-              ops match {
-                case FuncOp(op) => IfTag(raw).wrap(op).toFuncOp
-                case _ => Raw.error("Wrong body of the `if` expression")
-              }
-            )
-            .pure
+        // Without type of ops specified
+        // scala compiler fails to compile this
+        (value, ops: Raw) =>
+          (value, ops) match {
+            case (Some(vr), FuncOp(op)) =>
+              for {
+                restricted <- FuncOpSem.restrictStreamsInScope(op)
+                tag = IfTag(vr).wrap(restricted)
+              } yield tag.toFuncOp
+            case (None, _) => Raw.error("`if` expression errored in matching types").pure
+            case _ => Raw.error("Wrong body of the `if` expression").pure
+          }
       )
       .abilitiesScope[S](expr.token)
       .namesScope[S](expr.token)

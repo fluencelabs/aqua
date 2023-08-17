@@ -14,6 +14,7 @@ import cats.data.Chain
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
+import cats.syntax.traverse.*
 import cats.syntax.functor.*
 import cats.{Monad, Traverse}
 
@@ -24,24 +25,26 @@ class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    Prog.around(
-      OnSem.beforeOn(expr.peerId, expr.via) <* A.beginScope(expr.peerId),
-      (viaVM: List[ValueRaw], ops: Raw) =>
-        A.endScope() >> (ops match {
-          case FuncOp(op) =>
-            V.valueToRaw(expr.peerId).map {
-              case Some(om) =>
-                OnTag(
-                  om,
-                  Chain.fromSeq(viaVM)
-                ).wrap(op).toFuncOp
-              case _ =>
-                Raw.error("OnSem: Impossible error")
-            }
+    Prog
+      .around(
+        OnSem.beforeOn(expr.peerId, expr.via),
+        (viaVM: List[ValueRaw], ops: Raw) =>
+          ops match {
+            case FuncOp(op) =>
+              V.valueToRaw(expr.peerId).map {
+                case Some(om) =>
+                  OnTag(
+                    om,
+                    Chain.fromSeq(viaVM)
+                  ).wrap(op).toFuncOp
+                case _ =>
+                  Raw.error("OnSem: Impossible error")
+              }
 
-          case m => Raw.error("On body is not an op, it's " + m).pure[Alg]
-        })
-    )
+            case m => Raw.error("On body is not an op, it's " + m).pure[Alg]
+          }
+      )
+      .abilitiesScope(expr.peerId)
 }
 
 object OnSem {
@@ -50,25 +53,20 @@ object OnSem {
     V: ValuesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
-  ): Alg[List[ValueRaw]] = {
-    (
-      V.ensureIsString(peerId),
-      Traverse[List]
-        .traverse(via)(v =>
-          V.valueToRaw(v).flatTap {
-            case Some(vm) =>
-              vm.`type` match {
-                case _: BoxType =>
-                  T.ensureTypeMatches(v, OptionType(ScalarType.string), vm.`type`)
-                case _ =>
-                  T.ensureTypeMatches(v, ScalarType.string, vm.`type`)
-              }
-            case None => false.pure[Alg]
-          }
-        )
-        .map(_.flatten)
-    ).mapN { case (_, viaVM) =>
-      viaVM
-    }
-  }
+  ): Alg[List[ValueRaw]] =
+    V.ensureIsString(peerId) *> via
+      .traverse(v =>
+        V.valueToRaw(v).flatTap {
+          case Some(vm) =>
+            vm.`type` match {
+              case _: BoxType =>
+                T.ensureTypeMatches(v, OptionType(ScalarType.string), vm.`type`)
+              case _ =>
+                T.ensureTypeMatches(v, ScalarType.string, vm.`type`)
+            }
+          case None => false.pure[Alg]
+        }
+      )
+      .map(_.flatten)
+
 }
