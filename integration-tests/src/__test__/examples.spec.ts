@@ -39,6 +39,7 @@ import { coCall } from '../examples/coCall.js';
 import { bugLNG60Call, passArgsCall } from '../examples/passArgsCall.js';
 import { streamArgsCall } from '../examples/streamArgsCall.js';
 import { streamResultsCall } from '../examples/streamResultsCall.js';
+import { streamIfCall, streamForCall, streamTryCall, streamComplexCall } from '../examples/streamScopes.js';
 import { pushToStreamCall } from '../examples/pushToStreamCall.js';
 import { literalCall } from '../examples/returnLiteralCall.js';
 import { multiReturnCall } from '../examples/multiReturnCall.js';
@@ -156,6 +157,30 @@ describe('Testing examples', () => {
         let streamResResult = await streamResCall();
 
         expect(streamResResult).toEqual([[], ['a', 'b', 'c']]);
+    });
+
+    it('streamScopes.aqua streamIf', async () => {
+        let streamIfResult = await streamIfCall();
+
+        expect(streamIfResult).toEqual(5);
+    });
+
+    it('streamScopes.aqua streamTry', async () => {
+        let streamTryResult = await streamTryCall();
+
+        expect(streamTryResult).toEqual(4);
+    });
+
+    it('streamScopes.aqua streamFor', async () => {
+        let streamTryResult = await streamForCall();
+
+        expect(streamTryResult).toEqual(4);
+    });
+
+    it('streamScopes.aqua streamComplex', async () => {
+        let streamTryResult = await streamComplexCall();
+
+        expect(streamTryResult).toEqual(13);
     });
 
     it('if.aqua', async () => {

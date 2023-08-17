@@ -5,7 +5,7 @@ import aqua.parser.Ast
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
-import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw, ValueRaw}
+import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
 import aqua.raw.ops.*
 
@@ -71,6 +71,24 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
   def neq(left: ValueRaw, right: ValueRaw): ApplyBinaryOpRaw =
     ApplyBinaryOpRaw(ApplyBinaryOpRaw.Op.Neq, left, right)
+
+  def declareStreamPush(
+    name: String,
+    value: String
+  ): RawTag.Tree = {
+    val streamType = StreamType(ScalarType.string)
+    val stream = VarRaw(name, streamType)
+
+    RestrictionTag(stream.name, streamType).wrap(
+      SeqTag.wrap(
+        DeclareStreamTag(stream).leaf,
+        PushToStreamTag(
+          LiteralRaw.quote(value),
+          Call.Export(name, streamType)
+        ).leaf
+      )
+    )
+  }
 
   // use it to fix https://github.com/fluencelabs/aqua/issues/90
   "semantics" should "create right model" in {
@@ -454,6 +472,55 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         ),
         testServiceCallStr("par2"),
         testServiceCallStr("par3")
+      )
+
+      body.equalsOrShowDiff(expected) should be(true)
+    }
+  }
+
+  it should "restrict streams inside `if`" in {
+    val script = """
+                   |func test():           
+                   |   if "a" != "b":
+                   |      stream: *string
+                   |      stream <<- "a"
+                   |   else:
+                   |      stream: *string
+                   |      stream <<- "b"
+                   |""".stripMargin
+
+    insideBody(script) { body =>
+      val expected = IfTag(neq(LiteralRaw.quote("a"), LiteralRaw.quote("b"))).wrap(
+        declareStreamPush("stream", "a"),
+        declareStreamPush("stream", "b")
+      )
+
+      body.equalsOrShowDiff(expected) should be(true)
+    }
+  }
+
+  it should "restrict streams inside `try`" in {
+    val script = """
+                   |func test():           
+                   |   try:
+                   |      stream: *string
+                   |      stream <<- "a"
+                   |   catch e:
+                   |      stream: *string
+                   |      stream <<- "b"
+                   |   otherwise:
+                   |      stream: *string
+                   |      stream <<- "c"
+                   |""".stripMargin
+
+    insideBody(script) { body =>
+      val expected = TryTag.wrap(
+        declareStreamPush("stream", "a"),
+        SeqTag.wrap(
+          AssignmentTag(ValueRaw.lastError, "e").leaf,
+          declareStreamPush("stream", "b")
+        ),
+        declareStreamPush("stream", "c")
       )
 
       body.equalsOrShowDiff(expected) should be(true)
