@@ -143,10 +143,8 @@ object TagInliner extends Logging {
             v.copy(properties = Chain.empty),
             CallModel.Export(canonV.name, canonV.baseType)
           ).leaf
-        } yield {
-          (canonV, combineOpsWithSeq(op, Some(canonOp)))
-        }
-      case _ => State.pure((vm, op))
+        } yield (canonV, combineOpsWithSeq(op, canonOp.some))
+      case _ => (vm, op).pure
     }
   }
 

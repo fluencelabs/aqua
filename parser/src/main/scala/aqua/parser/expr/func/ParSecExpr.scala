@@ -28,11 +28,12 @@ object ParSecExpr extends Expr.AndIndented {
   override def validChildren: List[Expr.Lexem] = ArrowExpr.funcChildren
 
   private lazy val parsecPart = (`parsec` *> ` ` *> Name.p <* ` <- `) ~ ValueToken.`value`
-  private lazy val onPart = `on` *> ` ` *> ValueToken.`value` ~ (` ` *> `via` *> ` ` *> ValueToken.`value`).rep0
+
+  private lazy val onPart =
+    `on` *> ` ` *> ValueToken.`value` ~ (` ` *> `via` *> ` ` *> ValueToken.`value`).rep0
 
   override def p: P[ParSecExpr[Span.S]] =
-    ((parsecPart <* ` `) ~ onPart).map {
-      case ((item, iterable), (peerId, via)) =>
-        ParSecExpr(item, iterable, peerId, via)
+    ((parsecPart <* ` `) ~ onPart).map { case ((item, iterable), (peerId, via)) =>
+      ParSecExpr(item, iterable, peerId, via)
     }
 }

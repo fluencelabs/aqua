@@ -70,17 +70,15 @@ object ForSem {
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
     T: TypesAlgebra[S, F]
-  ): F[Option[ValueRaw]] = {
-    V.valueToRaw(iterable).flatMap[Option[ValueRaw]] {
+  ): F[Option[ValueRaw]] =
+    V.valueToRaw(iterable).flatMap {
       case Some(vm) =>
         vm.`type` match {
           case t: BoxType =>
-            N.define(item, t.element).as(Option(vm))
+            N.define(item, t.element).as(vm.some)
           case dt =>
-            T.ensureTypeMatches(iterable, ArrayType(dt), dt).as(Option.empty[ValueRaw])
+            T.ensureTypeMatches(iterable, ArrayType(dt), dt).as(none)
         }
-
-      case _ => None.pure[F]
+      case _ => none.pure
     }
-  }
 }
