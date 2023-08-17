@@ -7,20 +7,21 @@ import aqua.model.{OnModel, ValueModel}
 import cats.Eval
 import cats.data.Chain
 import cats.syntax.apply.*
+import aqua.model.transform.topology.TopologyPath
 
 trait After {
   def forceExit(current: Topology): Eval[ExitStrategy] = Eval.now(ExitStrategy.Empty)
 
-  def afterOn(current: Topology): Eval[List[OnModel]] = current.pathOn
+  def afterOn(current: Topology): Eval[TopologyPath] = current.pathOn
 
-  protected def afterParent(current: Topology): Eval[List[OnModel]] =
+  protected def afterParent(current: Topology): Eval[TopologyPath] =
     current.parent.map(
       _.afterOn
     ) getOrElse current.pathOn
 
   // In case exit is performed and pathAfter is inserted, we're actually where
   // execution is expected to continue After this node is handled
-  final def finallyOn(current: Topology): Eval[List[OnModel]] =
+  final def finallyOn(current: Topology): Eval[TopologyPath] =
     current.forceExit.flatMap {
       case ExitStrategy.Full => current.afterOn
       case ExitStrategy.Empty => current.endsOn
@@ -52,15 +53,15 @@ trait After {
           case (e, a, l) if l.contains(e) =>
             // Pingback in case no relays involved
             Chain.fromOption(
-              a.headOption
+              a.current
                 // Add nothing if last node is the same
-                .filterNot(e.headOption.contains)
+                .filterNot(e.current.contains)
                 .map(_.peerId)
             )
           case (e, a, _) =>
             // We wasn't at e, so need to get through the last peer in case it matches with the relay
             Topology.findRelayPathEnforcement(a, e) ++ Chain.fromOption(
-              a.headOption.map(_.peerId)
+              a.peerId
             )
         }
     }.flatMap { appendix =>

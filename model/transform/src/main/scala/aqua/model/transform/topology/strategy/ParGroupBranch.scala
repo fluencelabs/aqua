@@ -1,6 +1,7 @@
 package aqua.model.transform.topology.strategy
 
 import aqua.model.transform.topology.Topology
+import aqua.model.transform.topology.TopologyPath
 import aqua.model.transform.topology.Topology.ExitStrategy
 import aqua.model.{OnModel, ValueModel}
 
@@ -17,11 +18,11 @@ object ParGroupBranch extends Ends with After {
       else ExitStrategy.Empty
     }
 
-  override def afterOn(current: Topology): Eval[List[OnModel]] =
+  override def afterOn(current: Topology): Eval[TopologyPath] =
     afterParent(current)
 
   override def pathAfter(current: Topology): Eval[Chain[ValueModel]] =
     pathAfterAndPingNext(current)
 
-  override def endsOn(current: Topology): Eval[List[OnModel]] = current.beforeOn
+  override def endsOn(current: Topology): Eval[TopologyPath] = current.beforeOn
 }

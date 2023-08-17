@@ -1,6 +1,6 @@
 package aqua.model.transform.topology.strategy
 
-import aqua.model.transform.topology.{PathFinder, Topology}
+import aqua.model.transform.topology.{PathFinder, Topology, TopologyPath}
 import aqua.model.{OnModel, ValueModel}
 
 import cats.Eval
@@ -12,7 +12,7 @@ import cats.instances.tuple.*
 
 trait Begins {
 
-  def beginsOn(current: Topology): Eval[List[OnModel]] = current.pathOn
+  def beginsOn(current: Topology): Eval[TopologyPath] = current.pathOn
 
   def pathBefore(current: Topology): Eval[Chain[ValueModel]] =
     (current.beforeOn, current.beginsOn).tupled

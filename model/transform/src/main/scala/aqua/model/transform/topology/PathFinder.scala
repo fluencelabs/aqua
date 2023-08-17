@@ -19,12 +19,12 @@ object PathFinder extends Logging {
    * @return
    *   Chain of peers to visit in between
    */
-  def findPath(fromOn: List[OnModel], toOn: List[OnModel]): Chain[ValueModel] =
+  def findPath(fromOn: TopologyPath, toOn: TopologyPath): Chain[ValueModel] =
     findPath(
-      Chain.fromSeq(fromOn).reverse,
-      Chain.fromSeq(toOn).reverse,
-      fromOn.headOption.map(_.peerId),
-      toOn.headOption.map(_.peerId)
+      Chain.fromSeq(fromOn.path.reverse),
+      Chain.fromSeq(toOn.path.reverse),
+      fromOn.peerId,
+      toOn.peerId
     )
 
   def findPath(

@@ -26,8 +26,6 @@ object Fail extends Begins with After {
       // Get last hop to final peer
       // if it is not in the path
       // TODO: Add option to enforce last hop to [[PathFinder]]
-      hop = begins.headOption
-        .map(_.peerId)
-        .filterNot(peer => path.lastOption.contains(peer) || path.isEmpty)
+      hop = begins.peerId.filterNot(peer => path.lastOption.contains(peer) || path.isEmpty)
     } yield path ++ Chain.fromOption(hop)
 }
