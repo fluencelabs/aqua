@@ -1,6 +1,7 @@
 package aqua.model.transform.topology.strategy
 
 import aqua.model.transform.topology.{PathFinder, Topology}
+import aqua.model.transform.topology.Topology.ExitStrategy
 import aqua.model.OnModel
 
 import cats.Eval
@@ -16,8 +17,8 @@ trait Ends {
   ): Eval[List[OnModel]] =
     child(current).map(lc =>
       lc.forceExit.flatMap {
-        case true => current.afterOn
-        case false => lc.endsOn
+        case ExitStrategy.Full => current.afterOn
+        case ExitStrategy.Empty => lc.endsOn
       }
     ) getOrElse current.beginsOn
 

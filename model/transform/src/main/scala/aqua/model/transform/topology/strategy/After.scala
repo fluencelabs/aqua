@@ -1,6 +1,7 @@
 package aqua.model.transform.topology.strategy
 
 import aqua.model.transform.topology.{PathFinder, Topology}
+import aqua.model.transform.topology.Topology.ExitStrategy
 import aqua.model.{OnModel, ValueModel}
 
 import cats.Eval
@@ -8,7 +9,7 @@ import cats.data.Chain
 import cats.syntax.apply.*
 
 trait After {
-  def forceExit(current: Topology): Eval[Boolean] = Eval.now(false)
+  def forceExit(current: Topology): Eval[ExitStrategy] = Eval.now(ExitStrategy.Empty)
 
   def afterOn(current: Topology): Eval[List[OnModel]] = current.pathOn
 
@@ -21,8 +22,8 @@ trait After {
   // execution is expected to continue After this node is handled
   final def finallyOn(current: Topology): Eval[List[OnModel]] =
     current.forceExit.flatMap {
-      case true => current.afterOn
-      case false => current.endsOn
+      case ExitStrategy.Full => current.afterOn
+      case ExitStrategy.Empty => current.endsOn
     }
 
   // If exit is forced, make a path outside this node
@@ -34,10 +35,9 @@ trait After {
   // – from where it ends to where execution is expected to continue
   private def pathAfterVia(current: Topology): Eval[Chain[ValueModel]] =
     current.forceExit.flatMap {
-      case true =>
+      case ExitStrategy.Empty => Eval.now(Chain.empty)
+      case ExitStrategy.Full =>
         (current.endsOn, current.afterOn).mapN(PathFinder.findPath)
-      case false =>
-        Eval.now(Chain.empty)
     }
 
   // If exit is forced, make a path outside this node
@@ -45,8 +45,8 @@ trait After {
   // explicitly pinging the next node (useful inside par branches)
   def pathAfterAndPingNext(current: Topology): Eval[Chain[ValueModel]] =
     current.forceExit.flatMap {
-      case false => Eval.now(Chain.empty)
-      case true =>
+      case ExitStrategy.Empty => Eval.now(Chain.empty)
+      case ExitStrategy.Full =>
         (current.endsOn, current.afterOn, current.lastExecutesOn).mapN {
           case (e, a, _) if e == a => Chain.empty
           case (e, a, l) if l.contains(e) =>

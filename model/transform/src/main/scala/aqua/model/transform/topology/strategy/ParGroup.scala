@@ -1,10 +1,15 @@
 package aqua.model.transform.topology.strategy
 
 import aqua.model.transform.topology.Topology
+import aqua.model.transform.topology.Topology.ExitStrategy
 import aqua.model.OnModel
 
 import cats.Eval
 import cats.syntax.apply.*
+import cats.syntax.reducible.*
+import cats.syntax.foldable.*
+import cats.syntax.traverse.*
+import cats.instances.lazyList.*
 
 object ParGroup extends Begins with Ends {
   override def toString: String = "<par>"
@@ -25,12 +30,9 @@ object ParGroup extends Begins with Ends {
   // Par block ends where all the branches end, if they have forced exit (not fire-and-forget)
   override def endsOn(current: Topology): Eval[List[OnModel]] =
     current.children
-      .map(_.forceExit)
-      .reduceLeftOption { case (a, b) =>
-        (a, b).mapN(_ || _)
-      }
-      .map(_.flatMap {
-        case true => current.afterOn
-        case false => super.endsOn(current)
-      }) getOrElse super.endsOn(current)
+      .traverse(_.forceExit)
+      .flatMap(_.combineAll match {
+        case ExitStrategy.Full => current.afterOn
+        case ExitStrategy.Empty => super.endsOn(current)
+      })
 }

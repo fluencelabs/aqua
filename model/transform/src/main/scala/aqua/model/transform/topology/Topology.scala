@@ -18,6 +18,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.applicative.*
 import cats.instances.map.*
+import cats.kernel.Monoid
 import scribe.Logging
 
 /**
@@ -160,7 +161,7 @@ case class Topology private (
 
   // Usually we don't care about exiting from where this tag ends into the outer scope
   // But for some cases, like par branches, its necessary, so the exit can be forced
-  lazy val forceExit: Eval[Boolean] = after.forceExit(this).memoize
+  lazy val forceExit: Eval[Topology.ExitStrategy] = after.forceExit(this).memoize
 
   // Where we finally are, after exit enforcement is applied
   lazy val finallyOn: Eval[List[OnModel]] = after.finallyOn(this).memoize
@@ -175,6 +176,26 @@ case class Topology private (
 
 object Topology extends Logging {
   type Res = ResolvedOp.Tree
+
+  enum ExitStrategy {
+    case Full
+    // case ToRelay
+    case Empty
+  }
+
+  object ExitStrategy {
+
+    given Monoid[ExitStrategy] with {
+      def empty: ExitStrategy = Empty
+
+      def combine(x: ExitStrategy, y: ExitStrategy): ExitStrategy =
+        (x, y) match {
+          case (Full, _) => Full
+          case (_, Full) => Full
+          case _ => Empty
+        }
+    }
+  }
 
   def findRelayPathEnforcement(before: List[OnModel], begin: List[OnModel]): Chain[ValueModel] =
     Chain.fromOption(
@@ -344,10 +365,7 @@ object Topology extends Logging {
 
     println("End  : " + rc.topology.endsOn.value)
     println("After: " + rc.topology.afterOn.value)
-    println(
-      "Exit : " + (if (rc.topology.forceExit.value) Console.MAGENTA + "true" + Console.RESET
-                   else "false")
-    )
+    println("Exit : " + Console.MAGENTA + rc.topology.forceExit.value + Console.RESET)
     println(
       (if (rc.topology.pathAfter.value.nonEmpty) Console.YELLOW
        else "") + "PathAfter: " + Console.RESET + rc.topology.pathAfter.value

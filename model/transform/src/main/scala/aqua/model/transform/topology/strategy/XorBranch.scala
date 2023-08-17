@@ -1,6 +1,7 @@
 package aqua.model.transform.topology.strategy
 
 import aqua.model.transform.topology.Topology
+import aqua.model.transform.topology.Topology.ExitStrategy
 import aqua.model.{OnModel, ParGroupModel, SeqGroupModel, ValueModel, XorModel}
 
 import cats.Eval
@@ -35,16 +36,19 @@ object XorBranch extends Before with After {
   private def closestParExit(current: Topology): Option[Topology] =
     closestParExitChild(current).flatMap(_.parent)
 
-  override def forceExit(current: Topology): Eval[Boolean] =
+  override def forceExit(current: Topology): Eval[ExitStrategy] =
     closestParExitChild(current).fold(
-      Eval.later(current.cursor.moveUp.exists(_.hasExecLater))
+      Eval.later {
+        if (current.cursor.moveUp.exists(_.hasExecLater)) ExitStrategy.Full
+        else ExitStrategy.Empty
+      }
     )(_.forceExit) // Force exit if par branch needs it
 
   override def afterOn(current: Topology): Eval[List[OnModel]] =
     current.forceExit.flatMap {
-      case true =>
+      case ExitStrategy.Empty => super.afterOn(current)
+      case ExitStrategy.Full =>
         closestParExit(current).fold(afterParent(current))(_.afterOn)
-      case false => super.afterOn(current)
     }
 
   // Parent of this branch's parent xor – fixes the case when this xor is in par

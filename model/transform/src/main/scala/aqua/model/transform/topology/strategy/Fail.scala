@@ -1,8 +1,8 @@
 package aqua.model.transform.topology.strategy
 
 import aqua.model.transform.topology.Topology
+import aqua.model.transform.topology.Topology.ExitStrategy
 import aqua.model.ValueModel
-
 import aqua.model.{OnModel, XorModel}
 
 import cats.data.Chain
@@ -16,8 +16,8 @@ import cats.syntax.applicative.*
 object Fail extends Begins with After {
 
   // override just to be explicit
-  override def forceExit(current: Topology): Eval[Boolean] =
-    Eval.now(false) // There is no need to insert hops after `fail`
+  override def forceExit(current: Topology): Eval[ExitStrategy] =
+    Eval.now(ExitStrategy.Empty) // There is no need to insert hops after `fail`
 
   override def pathBefore(current: Topology): Eval[Chain[ValueModel]] =
     for {
