@@ -316,12 +316,6 @@ object Topology extends Logging {
 
       if (debug) printDebugInfo(rc, currI)
 
-      rc.op match {
-        case OnModel(_, _, Some(OnModel.ReturnStrategy.Relay)) =>
-          printDebugInfo(rc, currI)
-        case _ =>
-      }
-
       val chainZipperEv = resolved.traverse(tree =>
         (
           rc.topology.pathBefore.map(through(_)),

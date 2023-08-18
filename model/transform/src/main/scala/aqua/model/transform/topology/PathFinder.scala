@@ -27,7 +27,18 @@ object PathFinder extends Logging {
       toOn.peerId
     )
 
-  def findPath(
+  def findPathEnforce(fromOn: TopologyPath, toOn: TopologyPath): Chain[ValueModel] = {
+    val path = findPath(
+      Chain.fromSeq(fromOn.path.reverse),
+      Chain.fromSeq(toOn.path.reverse),
+      fromOn.peerId,
+      toOn.peerId
+    )
+
+    toOn.peerId.fold(path)(p => path :+ p)
+  }
+
+  private def findPath(
     fromOn: Chain[OnModel],
     toOn: Chain[OnModel],
     fromPeer: Option[ValueModel],
@@ -57,6 +68,7 @@ object PathFinder extends Logging {
       s"FROM PEER '${fromPeer.map(_.toString).getOrElse("None")}' TO PEER '${toPeer.map(_.toString).getOrElse("None")}'"
     )
     logger.trace("                     Optimized: " + optimized)
+
     optimized
   }
 
@@ -72,7 +84,7 @@ object PathFinder extends Logging {
    * @return
    *   optimal path with no duplicates
    */
-  def optimizePath(
+  private def optimizePath(
     peerIds: Chain[ValueModel],
     fromPeer: Option[ValueModel],
     toPeer: Option[ValueModel]
@@ -101,7 +113,7 @@ object PathFinder extends Logging {
   }
 
   @tailrec
-  def skipCommonPrefix[T](chain1: Chain[T], chain2: Chain[T]): (Chain[T], Chain[T]) =
+  private def skipCommonPrefix[T](chain1: Chain[T], chain2: Chain[T]): (Chain[T], Chain[T]) =
     (chain1, chain2) match {
       case (c ==: ctail, p ==: ptail) if c == p => skipCommonPrefix(ctail, ptail)
       case _ => chain1 -> chain2

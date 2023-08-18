@@ -39,7 +39,7 @@ trait After {
     current.forceExit.flatMap {
       case ExitStrategy.Empty => Eval.now(Chain.empty)
       case ExitStrategy.ToRelay =>
-        (current.endsOn, current.relayOn).mapN(PathFinder.findPath)
+        (current.endsOn, current.relayOn).mapN(PathFinder.findPathEnforce)
       case ExitStrategy.Full =>
         (current.endsOn, current.afterOn).mapN(PathFinder.findPath)
     }
