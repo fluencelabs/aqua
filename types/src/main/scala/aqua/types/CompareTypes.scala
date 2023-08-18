@@ -70,11 +70,13 @@ object CompareTypes {
           rfView.filterKeys(lfNEM.keys.contains).values.toList
         ) >= 0.0
       ) 1.0
-      else if (
+      else NaN
+    } else if (rf.keys.forall(lf.contains)) {
+      if (
         compareTypesList(
           lfView.filterKeys(rfNEM.keys.contains).values.toList,
           rfView.values.toList
-        ) == -1.0
+        ) <= 0
       ) -1.0
       else NaN
     } else NaN

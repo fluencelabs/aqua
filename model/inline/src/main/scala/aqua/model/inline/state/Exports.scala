@@ -44,7 +44,7 @@ trait Exports[S] extends Scoped[S] {
   def copyWithAbilityPrefix(prefix: String, newPrefix: String): State[S, Unit]
 
   /**
-   * Get name of last linked VarModel. If the last element will be LiteralModel, return None
+   * Get name of last linked VarModel. If the last element is not VarModel, return None
    */
   def getLastVarName(name: String): State[S, Option[String]]
 
