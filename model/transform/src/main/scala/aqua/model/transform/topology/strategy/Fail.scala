@@ -13,11 +13,7 @@ import cats.syntax.traverse.*
 import cats.syntax.option.*
 import cats.syntax.applicative.*
 
-object Fail extends Begins with After {
-
-  // override just to be explicit
-  override def forceExit(current: Topology): Eval[ExitStrategy] =
-    Eval.now(ExitStrategy.Empty) // There is no need to insert hops after `fail`
+object Fail extends Begins {
 
   override def pathBefore(current: Topology): Eval[Chain[ValueModel]] =
     for {

@@ -163,7 +163,14 @@ case class Topology private (
 
   // Usually we don't care about exiting from where this tag ends into the outer scope
   // But for some cases, like par branches, its necessary, so the exit can be forced
-  lazy val forceExit: Eval[Topology.ExitStrategy] = after.forceExit(this).memoize
+  lazy val forceExit: Eval[Topology.ExitStrategy] =
+    cursor.op match {
+      case OnModel(_, _, Some(OnModel.ReturnStrategy.Relay)) =>
+        Eval.now(Topology.ExitStrategy.ToRelay)
+      case FailModel(_) =>
+        Eval.now(Topology.ExitStrategy.Empty)
+      case _ => after.forceExit(this)
+    }
 
   // Where we finally are, after exit enforcement is applied
   lazy val finallyOn: Eval[TopologyPath] = after.finallyOn(this).memoize
@@ -245,12 +252,11 @@ object Topology extends Logging {
   // Return strategy for calculating `afterOn` for
   // node pointed on by `cursor`
   private def decideAfter(cursor: OpModelTreeCursor): After =
-    (cursor.parentOp, cursor.op) match {
-      case (_, _: FailModel) => Fail
-      case (Some(_: ParGroupModel), _) => ParGroupBranch
-      case (Some(XorModel), _) => XorBranch
-      case (Some(_: SeqGroupModel), _) => SeqGroupBranch
-      case (None, _) => Root
+    cursor.parentOp match {
+      case Some(_: ParGroupModel) => ParGroupBranch
+      case Some(XorModel) => XorBranch
+      case Some(_: SeqGroupModel) => SeqGroupBranch
+      case None => Root
       case _ => Default
     }
 
