@@ -1,6 +1,6 @@
 aqua Aaa
 
-import "builtin.aqua"
+import "@fluencelabs/aqua-lib/builtin.aqua"
 
 export structuralTypingTest
 

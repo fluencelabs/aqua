@@ -80,6 +80,7 @@ export const relay2 = config.relays[1];
 const relayPeerId2 = relay2.peerId;
 
 import log from 'loglevel';
+import {structuralTypingCall} from "../examples/structuralTypingCall";
 // log.setDefaultLevel("debug")
 
 async function start() {
@@ -242,6 +243,11 @@ describe('Testing examples', () => {
     it('stream.aqua nil literal', async () => {
         let result = await nilLiteralCall();
         expect(result).toEqual([]);
+    });
+
+    it('structuraltyping.aqua', async () => {
+        let result = await structuralTypingCall();
+        expect(result).toEqual("some_stringsome_stringsome_stringab_string");
     });
 
     it('collectionSugar array', async () => {

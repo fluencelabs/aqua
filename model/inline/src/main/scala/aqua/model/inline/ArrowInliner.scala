@@ -1,16 +1,16 @@
 package aqua.model.inline
 
 import aqua.model
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.RawTag
-import aqua.types.{AbilityType, ArrowType, BoxType, StreamType}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import cats.{Eval, Monoid}
+import aqua.types.{AbilityType, ArrowType, BoxType, StreamType}
 import cats.data.{Chain, IndexedStateT, State}
-import cats.syntax.traverse.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
+import cats.syntax.traverse.*
+import cats.{Eval, Monoid}
 import scribe.Logging
 
 /**
@@ -267,7 +267,7 @@ object ArrowInliner extends Logging {
   ): State[S, AbilityResolvingResult] = {
     for {
       newName <- Mangler[S].findNewName(name)
-      newFieldsName = t.fields.mapBoth { case (n, t) =>
+      newFieldsName = t.fields.mapBoth { case (n, _) =>
         AbilityType.fullName(name, n) -> AbilityType.fullName(newName, n)
       }
       allNewNames = newFieldsName.add((name, newName)).toSortedMap
@@ -313,22 +313,28 @@ object ArrowInliner extends Logging {
         case ArrowType(_, _) =>
           Exports
             .getLastValue(currentOldName, exports)
-            .flatMap { case vm @ VarModel(name, _, _) =>
-              arrows
-                .get(name)
-                .map(fa =>
-                  (
-                    Map(currentNewName.getOrElse(currentOldName) -> vm),
-                    Map(name -> fa)
+            .flatMap {
+              case vm @ VarModel(name, _, _) =>
+                arrows
+                  .get(name)
+                  .map(fa =>
+                    (
+                      Map(currentNewName.getOrElse(currentOldName) -> vm),
+                      Map(name -> fa)
+                    )
                   )
-                )
+              case lm @ LiteralModel(_, _) =>
+                logger.error(s"Unexpected. Literal '$lm' cannot be an arrow")
+                None
             }
             .getOrElse((Map.empty, Map.empty))
 
         case _ =>
           Exports
             .getLastValue(currentOldName, exports)
-            .map(vm => (Map(currentNewName.getOrElse(currentOldName) -> vm), Map.empty))
+            .map { vm =>
+              (Map(currentNewName.getOrElse(currentOldName) -> vm), Map.empty)
+            }
             .getOrElse((Map.empty, Map.empty))
       }
     }.foldMapA(_.bimap(_.toList, _.toList)).bimap(_.toMap, _.toMap)
