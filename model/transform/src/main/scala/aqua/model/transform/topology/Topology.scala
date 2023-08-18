@@ -304,7 +304,7 @@ object Topology extends Logging {
       i
     }
 
-    val resolvedCofree = cursor.cata(wrap) { rc =>
+    val resolvedCofree = cursor.traverse(wrap) { rc =>
       logger.debug(s"<:> $rc")
       val currI = nextI
       val resolved = MakeRes

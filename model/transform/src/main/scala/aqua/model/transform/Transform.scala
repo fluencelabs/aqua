@@ -124,6 +124,7 @@ object Transform extends Logging {
       // as a starting point.
       initModel = initCallable.onInitPeer.wrap(model)
       tracingModel <- tracing(initModel)
+      _ = println(tracingModel.show)
       // Resolve topology
       resolved <- Topology.resolve(tracingModel)
       // Clear the tree
