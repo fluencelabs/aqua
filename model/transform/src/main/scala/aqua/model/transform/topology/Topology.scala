@@ -109,6 +109,8 @@ case class Topology private (
 
   lazy val currentPeerId: Option[ValueModel] = pathOn.value.peerId
 
+  lazy val relayOn: Eval[TopologyPath] = pathOn.map(_.toRelay)
+
   // Get topology of previous sibling skipping `NoExec` nodes
   lazy val prevSibling: Option[Topology] = cursor.toPrevSibling.flatMap {
     // noExec nodes are meaningless topology-wise, so filter them out
@@ -313,6 +315,12 @@ object Topology extends Logging {
       logger.trace("Resolved: " + resolved)
 
       if (debug) printDebugInfo(rc, currI)
+
+      rc.op match {
+        case OnModel(_, _, Some(OnModel.ReturnStrategy.Relay)) =>
+          printDebugInfo(rc, currI)
+        case _ =>
+      }
 
       val chainZipperEv = resolved.traverse(tree =>
         (

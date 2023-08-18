@@ -33,8 +33,8 @@ final case class TopologyPath(
       currentPath: List[OnModel]
     ): List[OnModel] = currentPath match {
       case Nil => Nil
-      case (on @ OnModel(_, r ==: _, _)) :: tail =>
-        on.copy(peerId = r) :: tail
+      case (on @ OnModel(_, r ==: other, _)) :: tail =>
+        on.copy(peerId = r, via = other) :: tail
       case _ :: tail => toRelayTailRec(tail)
     }
 

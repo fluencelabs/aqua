@@ -24,7 +24,7 @@ trait After {
   final def finallyOn(current: Topology): Eval[TopologyPath] =
     current.forceExit.flatMap {
       case ExitStrategy.Full => current.afterOn
-      case ExitStrategy.ToRelay => current.pathOn.map(_.toRelay)
+      case ExitStrategy.ToRelay => current.relayOn
       case ExitStrategy.Empty => current.endsOn
     }
 
@@ -39,7 +39,7 @@ trait After {
     current.forceExit.flatMap {
       case ExitStrategy.Empty => Eval.now(Chain.empty)
       case ExitStrategy.ToRelay =>
-        (current.endsOn, current.pathOn.map(_.toRelay)).mapN(PathFinder.findPath)
+        (current.endsOn, current.relayOn).mapN(PathFinder.findPath)
       case ExitStrategy.Full =>
         (current.endsOn, current.afterOn).mapN(PathFinder.findPath)
     }

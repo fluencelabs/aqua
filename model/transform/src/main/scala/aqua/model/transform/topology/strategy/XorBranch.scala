@@ -48,7 +48,7 @@ object XorBranch extends Before with After {
   override def afterOn(current: Topology): Eval[TopologyPath] =
     current.forceExit.flatMap {
       case ExitStrategy.Empty => super.afterOn(current)
-      case ExitStrategy.ToRelay => current.pathOn.map(_.toRelay)
+      case ExitStrategy.ToRelay => current.relayOn
       case ExitStrategy.Full =>
         closestParExit(current).fold(afterParent(current))(_.afterOn)
     }

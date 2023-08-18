@@ -98,9 +98,9 @@ case class OnModel(
 ) extends SeqGroupModel {
 
   override def toString: String = {
-    val viaPart = if (via.nonEmpty) s"via ${via.toList.mkString(", ")}" else ""
-    val strategyPart = strategy.map(s => s" -> to ${s.toString.toLowerCase}").getOrElse("")
-    s"on $peerId $viaPart $strategyPart"
+    val viaPart = if (via.nonEmpty) s" via ${via.toList.mkString(", ")}" else ""
+    val strategyPart = strategy.map(s => s" | to ${s.toString.toLowerCase}").getOrElse("")
+    s"on $peerId$viaPart$strategyPart"
   }
 
   override lazy val usesVarNames: Set[String] =
