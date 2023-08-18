@@ -13,10 +13,17 @@ object ParGroupBranch extends Ends with After {
   override def toString: String = "<par>/*"
 
   override def forceExit(current: Topology): Eval[ExitStrategy] =
-    Eval.later {
-      if (current.cursor.exportsUsedLater) ExitStrategy.Full
-      else ExitStrategy.Empty
-    }
+    current.cursor
+      .exportsUsedLaterFilter(
+        _.op match {
+          case OnModel(_, _, Some(OnModel.ReturnStrategy.Relay)) => false
+          case _ => true
+        }
+      )
+      .map(used =>
+        if (used) ExitStrategy.Full
+        else ExitStrategy.Empty
+      )
 
   override def afterOn(current: Topology): Eval[TopologyPath] =
     afterParent(current)

@@ -10,6 +10,7 @@ import cats.syntax.show.*
 import cats.syntax.foldable.*
 import cats.syntax.apply.*
 import cats.instances.lazyList.*
+import cats.syntax.applicative.*
 import cats.free.Cofree
 import scribe.Logging
 
@@ -79,6 +80,21 @@ case class OpModelTreeCursor(
       .map(_.current)
       .map(OpModel.usesVarNames)
       .combineAll
+
+  def exportsUsedLaterFilter(
+    filter: OpModelTreeCursor => Boolean
+  ): Eval[Boolean] = (
+    cata((cur, childs: Chain[Set[String]]) =>
+      Eval.later(
+        if (filter(cur))
+          childs.combineAll ++
+            cur.op.exportsVarNames --
+            cur.op.restrictsVarNames
+        else Set.empty
+      )
+    ),
+    namesUsedLater
+  ).mapN(_ intersect _).map(_.nonEmpty)
 
   def cata[A](f: (OpModelTreeCursor, Chain[A]) => Eval[A]): Eval[A] =
     for {
