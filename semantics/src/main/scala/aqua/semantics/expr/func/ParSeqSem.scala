@@ -70,8 +70,8 @@ class ParSeqSem[S[_]](val expr: ParSeqExpr[S]) extends AnyVal {
             )
           )
         } yield tag.toFuncOp
-      case (None, _, _) => Raw.error("ParSecSem: could not resolve `peerId`").pure
-      case (_, None, _) => Raw.error("ParSecSem: could not resolve `iterable`").pure
-      case (_, _, _) => Raw.error("ParSecSem: wrong body of `parsec` block").pure
+      case (None, _, _) => Raw.error("ParSeqSem: could not resolve `peerId`").pure
+      case (_, None, _) => Raw.error("ParSeqSem: could not resolve `iterable`").pure
+      case (_, _, _) => Raw.error("ParSeqSem: wrong body of `parseq` block").pure
     }
 }
