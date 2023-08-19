@@ -76,7 +76,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
   ): State[S, (List[ValueModel], Inline)] = for {
     arrows <- Arrows[S].arrows
     exports <- Exports[S].exports
-    lastArrow <- Exports[S].getLast(funcName)
+    lastArrow <- Exports[S].getLastVarName(funcName)
     arrow = arrows
       .get(funcName)
       .orElse(

@@ -1,6 +1,6 @@
 package aqua.model.inline.state
 
-import aqua.model.{ValueModel, VarModel}
+import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.model.ValueModel.Ability
 import aqua.types.AbilityType
 import cats.data.{NonEmptyList, State}
@@ -44,9 +44,9 @@ trait Exports[S] extends Scoped[S] {
   def copyWithAbilityPrefix(prefix: String, newPrefix: String): State[S, Unit]
 
   /**
-   * Get name of last linked VarModel
+   * Get name of last linked VarModel. If the last element is not VarModel, return None
    */
-  def getLast(name: String): State[S, Option[String]]
+  def getLastVarName(name: String): State[S, Option[String]]
 
   /**
    * Rename names in variables
@@ -98,8 +98,8 @@ trait Exports[S] extends Scoped[S] {
     override def copyWithAbilityPrefix(prefix: String, newPrefix: String): State[R, Unit] =
       self.copyWithAbilityPrefix(prefix, newPrefix).transformS(f, g)
 
-    override def getLast(name: String): State[R, Option[String]] =
-      self.getLast(name).transformS(f, g)
+    override def getLastVarName(name: String): State[R, Option[String]] =
+      self.getLastVarName(name).transformS(f, g)
 
     override def renameVariables(renames: Map[String, String]): State[R, Unit] =
       self.renameVariables(renames).transformS(f, g)
@@ -125,12 +125,14 @@ object Exports {
   def apply[S](implicit exports: Exports[S]): Exports[S] = exports
 
   // Get last linked VarModel
-  def getLastValue(name: String, state: Map[String, ValueModel]): Option[VarModel] = {
+  def getLastValue(name: String, state: Map[String, ValueModel]): Option[ValueModel] = {
     state.get(name) match {
       case Some(vm@VarModel(n, _, _)) =>
         if (name == n) Option(vm)
         else getLastValue(n, state).orElse(Option(vm))
-      case n =>
+      case lm@Some(LiteralModel(_, _)) =>
+        lm
+      case _ =>
         None
     }
   }
@@ -138,7 +140,7 @@ object Exports {
   object Simple extends Exports[Map[String, ValueModel]] {
 
     // Make links from one set of abilities to another (for ability assignment)
-    private def getAbilityPairs(oldName: String, newName: String, at: AbilityType, state: Map[String, ValueModel]): NonEmptyList[(String, VarModel)] = {
+    private def getAbilityPairs(oldName: String, newName: String, at: AbilityType, state: Map[String, ValueModel]): NonEmptyList[(String, ValueModel)] = {
       at.fields.toNel.flatMap {
         case (n, at@AbilityType(_, _)) =>
           val newFullName = AbilityType.fullName(newName, n)
@@ -158,15 +160,19 @@ object Exports {
       value: ValueModel
     ): State[Map[String, ValueModel], Unit] = State.modify { state =>
       value match {
-        case vm@Ability(name, at, property) if property.isEmpty =>
+        case Ability(name, at, property) if property.isEmpty =>
           val pairs = getAbilityPairs(name, exportName, at, state)
           state ++ pairs.toList.toMap
         case _ => state + (exportName -> value)
       }
     }
 
-    override def getLast(name: String): State[Map[String, ValueModel], Option[String]] =
-      State.get.map(st => getLastValue(name, st).map(_.name))
+    override def getLastVarName(name: String): State[Map[String, ValueModel], Option[String]] =
+      State.get.map(st => getLastValue(name, st).flatMap {
+        case VarModel(name, _, _) => Option(name)
+        case LiteralModel(_, _) =>
+          None
+      })
 
     override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
       State.modify(_ ++ exports)
