@@ -1,7 +1,7 @@
 package aqua.semantics.expr.func
 
 import aqua.raw.Raw
-import aqua.parser.expr.func.ParSecExpr
+import aqua.parser.expr.func.ParSeqExpr
 import aqua.raw.value.ValueRaw
 import aqua.raw.ops.*
 import aqua.raw.ops.ForTag
@@ -20,7 +20,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class ParSecSem[S[_]](val expr: ParSecExpr[S]) extends AnyVal {
+class ParSeqSem[S[_]](val expr: ParSeqExpr[S]) extends AnyVal {
 
   def program[F[_]: Monad](implicit
     V: ValuesAlgebra[S, F],

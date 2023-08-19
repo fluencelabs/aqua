@@ -30,7 +30,7 @@ object ArrowExpr extends Expr.AndIndented {
       ElseOtherwiseExpr ::
       TryExpr ::
       CatchExpr ::
-      Expr.defer(ParSecExpr) ::
+      Expr.defer(ParSeqExpr) ::
       Expr.defer(ParExpr) ::
       Expr.defer(CoExpr) ::
       Expr.defer(JoinExpr) ::
