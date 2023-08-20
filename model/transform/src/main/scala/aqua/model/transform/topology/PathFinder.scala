@@ -59,10 +59,15 @@ object PathFinder extends Logging {
     logger.trace("            TO | " + toFix)
 
     val fromTo = fromFix.reverse.flatMap(_.via.reverse) ++ toFix.flatMap(_.via)
+
+    // println("FROM TO: " + fromTo)
     logger.trace(s"FROM TO: $fromTo")
 
     val toOptimize = Chain.fromOption(fromPeer) ++ fromTo ++ Chain.fromOption(toPeer)
     val optimized = optimizePath(toOptimize, fromPeer, toPeer)
+
+    // println("TO OPTIMIZE: " + toOptimize)
+    // println("OPTIMIZED: " + optimized)
 
     logger.trace(
       s"FROM PEER '${fromPeer.map(_.toString).getOrElse("None")}' TO PEER '${toPeer.map(_.toString).getOrElse("None")}'"

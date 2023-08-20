@@ -889,6 +889,81 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrShowDiff(expected) should be(true)
   }
 
+  it should "return to relay for `on` with ReturnStrategy.Relay in `par`" in {
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      ParModel.wrap(
+        OnModel(
+          otherPeer,
+          Chain(otherRelay),
+          OnModel.ReturnStrategy.Relay.some
+        ).wrap(
+          callModel(0, CallModel.Export("var", ScalarType.string) :: Nil)
+        )
+      ),
+      callModel(1, Nil, VarRaw("var", ScalarType.string) :: Nil)
+    )
+
+    val proc = Topology.resolve(init).value
+
+    val expected = SeqRes.wrap(
+      through(relay),
+      through(otherRelay),
+      ParRes.wrap(
+        SeqRes.wrap(
+          callRes(0, otherPeer, Some(CallModel.Export("var", ScalarType.string))),
+          through(otherRelay)
+          // Note missing hops here
+        )
+      ),
+      callRes(1, initPeer, None, VarModel("var", ScalarType.string) :: Nil)
+    )
+
+    proc.equalsOrShowDiff(expected) should be(true)
+  }
+
+  it should "return to relay for `on` with ReturnStrategy.Relay in `par` in `xor`" in {
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      ParModel.wrap(
+        XorModel.wrap(
+          OnModel(
+            otherPeer,
+            Chain(otherRelay),
+            OnModel.ReturnStrategy.Relay.some
+          ).wrap(
+            callModel(0, CallModel.Export("var", ScalarType.string) :: Nil)
+          ),
+          failLastErrorModel
+        )
+      ),
+      callModel(1, Nil, VarRaw("var", ScalarType.string) :: Nil)
+    )
+
+    val proc = Topology.resolve(init).value
+
+    val expected = SeqRes.wrap(
+      ParRes.wrap(
+        XorRes.wrap(
+          SeqRes.wrap(
+            through(relay),
+            through(otherRelay),
+            callRes(0, otherPeer, Some(CallModel.Export("var", ScalarType.string))),
+            through(otherRelay)
+            // Note missing hops here
+          ),
+          SeqRes.wrap(
+            through(otherRelay),
+            through(relay),
+            through(initPeer),
+            failLastErrorRes
+          )
+        )
+      ),
+      callRes(1, initPeer, None, VarModel("var", ScalarType.string) :: Nil)
+    )
+
+    proc.equalsOrShowDiff(expected) should be(true)
+  }
+
   it should "handle empty for correctly [bug LNG-149]" in {
     val streamName = "array-inline"
     val iterName = "a-0"

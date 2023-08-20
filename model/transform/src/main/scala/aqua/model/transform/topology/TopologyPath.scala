@@ -5,7 +5,7 @@ import aqua.model.ValueModel
 
 import cats.kernel.Monoid
 import cats.Show
-import cats.data.Chain.==:
+import cats.data.Chain.:==
 
 final case class TopologyPath(
   path: List[OnModel]
@@ -33,7 +33,7 @@ final case class TopologyPath(
       currentPath: List[OnModel]
     ): List[OnModel] = currentPath match {
       case Nil => Nil
-      case (on @ OnModel(_, r ==: other, _)) :: tail =>
+      case (on @ OnModel(_, other :== r, _)) :: tail =>
         on.copy(peerId = r, via = other) :: tail
       case _ :: tail => toRelayTailRec(tail)
     }

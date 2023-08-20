@@ -316,6 +316,8 @@ object Topology extends Logging {
 
       if (debug) printDebugInfo(rc, currI)
 
+      //   printDebugInfo(rc, currI)
+
       val chainZipperEv = resolved.traverse(tree =>
         (
           rc.topology.pathBefore.map(through(_)),
@@ -374,6 +376,7 @@ object Topology extends Logging {
 
     println("End  : " + rc.topology.endsOn.value.show)
     println("After: " + rc.topology.afterOn.value.show)
+    println("Relay: " + rc.topology.relayOn.value.show)
     println("Exit : " + Console.MAGENTA + rc.topology.forceExit.value + Console.RESET)
     println(
       (if (rc.topology.pathAfter.value.nonEmpty) Console.YELLOW
