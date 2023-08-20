@@ -27,6 +27,15 @@ object PathFinder extends Logging {
       toOn.peerId
     )
 
+  /**
+   * Finds the path – chain of peers to visit to get from [[fromOn]] to [[toOn]]
+   * @param fromOn
+   *   Previous location
+   * @param toOn
+   *   Next location
+   * @return
+   *   Chain of peers to visit in between with enforced last transition
+   */
   def findPathEnforce(fromOn: TopologyPath, toOn: TopologyPath): Chain[ValueModel] = {
     val path = findPath(
       Chain.fromSeq(fromOn.path.reverse),
@@ -35,6 +44,7 @@ object PathFinder extends Logging {
       toOn.peerId
     )
 
+    // TODO: Is it always correct to do so?
     toOn.peerId.fold(path)(p => path :+ p)
   }
 
@@ -60,14 +70,10 @@ object PathFinder extends Logging {
 
     val fromTo = fromFix.reverse.flatMap(_.via.reverse) ++ toFix.flatMap(_.via)
 
-    // println("FROM TO: " + fromTo)
     logger.trace(s"FROM TO: $fromTo")
 
     val toOptimize = Chain.fromOption(fromPeer) ++ fromTo ++ Chain.fromOption(toPeer)
     val optimized = optimizePath(toOptimize, fromPeer, toPeer)
-
-    // println("TO OPTIMIZE: " + toOptimize)
-    // println("OPTIMIZED: " + optimized)
 
     logger.trace(
       s"FROM PEER '${fromPeer.map(_.toString).getOrElse("None")}' TO PEER '${toPeer.map(_.toString).getOrElse("None")}'"

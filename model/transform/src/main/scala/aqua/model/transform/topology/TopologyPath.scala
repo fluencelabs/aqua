@@ -12,15 +12,19 @@ final case class TopologyPath(
 ) extends AnyVal {
   def ::(on: OnModel): TopologyPath = TopologyPath(on :: path)
 
+  // First `on` in the path
   def current: Option[OnModel] = path.headOption
 
+  // Current peer id
   def peerId: Option[ValueModel] = current.map(_.peerId)
 
+  // Path with the first `on` removed
   def previous: Option[TopologyPath] = path match {
     case _ :: tail => Some(TopologyPath(tail))
     case Nil => None
   }
 
+  // Last relay in the current `on`
   def lastRelay: Option[ValueModel] = current.flatMap(_.via.lastOption)
 
   def reverse: TopologyPath = TopologyPath(path.reverse)
@@ -28,6 +32,7 @@ final case class TopologyPath(
   def commonPrefix(other: TopologyPath): TopologyPath =
     TopologyPath(path.zip(other.path).takeWhile(_ == _).map(_._1))
 
+  // Path of the first relay in the path
   def toRelay: TopologyPath = {
     def toRelayTailRec(
       currentPath: List[OnModel]

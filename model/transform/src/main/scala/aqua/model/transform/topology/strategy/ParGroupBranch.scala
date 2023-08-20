@@ -16,6 +16,13 @@ object ParGroupBranch extends Ends with After {
     current.cursor
       .exportsUsedLaterFilter(
         _.op match {
+          // This feels like a hack:
+          // We suppose that `on` with Relay strategy
+          // does not want to generate return transitions
+          // because of it's exports.
+          // This is used for `parseq` implementation.
+          // We could not use `forceExit` of childs here
+          // because it would cause infinite recursion.
           case OnModel(_, _, Some(OnModel.ReturnStrategy.Relay)) => false
           case _ => true
         }

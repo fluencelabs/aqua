@@ -109,6 +109,7 @@ case class Topology private (
 
   lazy val currentPeerId: Option[ValueModel] = pathOn.value.peerId
 
+  // Path of current relay
   lazy val relayOn: Eval[TopologyPath] = pathOn.map(_.toRelay)
 
   // Get topology of previous sibling skipping `NoExec` nodes
@@ -188,9 +189,13 @@ case class Topology private (
 object Topology extends Logging {
   type Res = ResolvedOp.Tree
 
+  // Strategy of generating exit transitions
   enum ExitStrategy {
+    // Force generation of full exit transitions
     case Full
+    // Generate exit to the current relay only
     case ToRelay
+    // Do force generation of exit transitions
     case Empty
   }
 
@@ -315,8 +320,6 @@ object Topology extends Logging {
       logger.trace("Resolved: " + resolved)
 
       if (debug) printDebugInfo(rc, currI)
-
-      //   printDebugInfo(rc, currI)
 
       val chainZipperEv = resolved.traverse(tree =>
         (

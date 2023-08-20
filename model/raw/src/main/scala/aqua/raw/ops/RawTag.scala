@@ -114,6 +114,8 @@ case object TryTag extends GroupTag {
 case class OnTag(
   peerId: ValueRaw,
   via: Chain[ValueRaw],
+  // Strategy of returning from this `on` block
+  // affects handling of this `on` in topology layer
   strategy: Option[OnTag.ReturnStrategy] = None
 ) extends SeqGroupTag {
 
@@ -129,7 +131,12 @@ case class OnTag(
 
 object OnTag {
 
+  // Return strategy of `on` block
+  // affects handling of `on` in topology layer
   enum ReturnStrategy {
+    // Leave peer to the first relay
+    // Do not make the whole back transition
+    // NOTE: used for `parseq`
     case Relay
   }
 }

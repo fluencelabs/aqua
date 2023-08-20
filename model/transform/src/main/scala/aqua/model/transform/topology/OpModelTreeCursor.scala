@@ -81,6 +81,8 @@ case class OpModelTreeCursor(
       .map(OpModel.usesVarNames)
       .combineAll
 
+  // Check that exports of this subtree are used later in the code
+  // Do not take into account subtrees for which the filter returns false
   def exportsUsedLaterFilter(
     filter: OpModelTreeCursor => Boolean
   ): Eval[Boolean] = (
@@ -88,6 +90,7 @@ case class OpModelTreeCursor(
       Eval.later(
         if (filter(cur))
           childs.combineAll ++
+            // TODO: Move to OpModel
             cur.op.exportsVarNames --
             cur.op.restrictsVarNames
         else Set.empty

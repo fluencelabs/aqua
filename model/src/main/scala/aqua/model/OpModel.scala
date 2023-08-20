@@ -22,6 +22,7 @@ sealed trait OpModel extends TreeNode[OpModel] {
   def usesVarNames: Set[String] = Set.empty
 
   // What var names are exported – can be used AFTER this tag is executed
+  // NOTE: Exported names could be restricted, see `restrictsVarNames`
   def exportsVarNames: Set[String] = Set.empty
 
 }
@@ -94,6 +95,8 @@ case object XorModel extends GroupOpModel {
 case class OnModel(
   peerId: ValueModel,
   via: Chain[ValueModel],
+  // Strategy of returning from this `on`
+  // affects handling this `on` in topology layer
   strategy: Option[OnModel.ReturnStrategy] = None
 ) extends SeqGroupModel {
 
@@ -109,7 +112,12 @@ case class OnModel(
 
 object OnModel {
 
+  // Strategy of returning from `on`
+  // affects handling `on` in topology layer
   enum ReturnStrategy {
+    // Leave peer to the first relay
+    // Do not make the whole back transition
+    // NOTE: used for `parseq`
     case Relay
   }
 }
