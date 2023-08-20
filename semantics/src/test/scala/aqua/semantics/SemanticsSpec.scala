@@ -16,7 +16,12 @@ import cats.~>
 import cats.data.Chain
 import cats.data.NonEmptyChain
 import cats.syntax.show.*
+import cats.syntax.traverse.*
+import cats.syntax.foldable.*
 import cats.data.Validated
+import cats.free.Cofree
+import cats.data.State
+import cats.Eval
 
 class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
@@ -44,6 +49,34 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         test(errors)
       }
     }
+
+  def matchSubtree(tree: RawTag.Tree)(
+    matcher: PartialFunction[(RawTag, RawTag.Tree), Any]
+  ): Unit = {
+    def evalMatch(t: RawTag.Tree): Eval[Option[Unit]] =
+      if (matcher.isDefinedAt((t.head, t)))
+        Eval.now(
+          Some(
+            matcher((t.head, t))
+          )
+        )
+      else
+        t.tail.flatMap(
+          _.collectFirstSomeM(evalMatch)
+        )
+
+    evalMatch(tree).value.getOrElse(fail(s"Did not match subtree"))
+  }
+
+  def matchChildren(tree: RawTag.Tree)(
+    matchers: PartialFunction[(RawTag, RawTag.Tree), Any]*
+  ): Unit = {
+    val children = tree.tail.value
+    children should have size matchers.length
+    children.toList.zip(matchers).foreach { case (child, matcher) =>
+      matcher.lift((child.head, child)).getOrElse(fail(s"Unexpected child $child"))
+    }
+  }
 
   val testServiceDef = """
                          |service Test("test"):
@@ -524,6 +557,33 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       )
 
       body.equalsOrShowDiff(expected) should be(true)
+    }
+  }
+
+  it should "generate right model for `parseq`" in {
+    val script =
+      testServiceDef + """
+                         |data Peer:
+                         |    peer: string
+                         |    relay: string
+                         |
+                         |func test():
+                         |   peers = [Peer(peer="a", relay="b"), Peer(peer="c", relay="d")]
+                         |   parseq p <- peers on p.peer via p.relay:
+                         |      Test.testCallStr(p.peer)
+                         |""".stripMargin
+
+    insideBody(script) { body =>
+      matchSubtree(body) { case (ForTag("p", _, None), forTag) =>
+        matchChildren(forTag) { case (ParTag, parTag) =>
+          matchChildren(parTag)(
+            { case (OnTag(_, _, strat), _) =>
+              strat shouldBe Some(OnTag.ReturnStrategy.Relay)
+            },
+            { case (NextTag("p"), _) => }
+          )
+        }
+      }
     }
   }
 }

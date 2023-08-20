@@ -120,8 +120,11 @@ case class OnTag(
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     OnTag(peerId.map(f), via.map(_.map(f)), strategy)
 
-  override def toString: String =
-    s"(on $peerId${if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""})"
+  override def toString: String = {
+    val viaPart = if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""
+    val strategyPart = strategy.fold("")(s => s" | $s")
+    s"(on $peerId$viaPart$strategyPart)"
+  }
 }
 
 object OnTag {
