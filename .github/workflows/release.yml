@@ -50,6 +50,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ fromJson(needs.release-please.outputs.pr).headBranchName }}
+          token: ${{ secrets.FLUENCEBOT_RELEASE_PLEASE_PAT }}
 
       - name: Get aqua version
         id: version
