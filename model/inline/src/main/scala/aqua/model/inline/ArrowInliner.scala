@@ -5,11 +5,13 @@ import aqua.model.*
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.RawTag
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{AbilityType, ArrowType, BoxType, StreamType}
+import aqua.types.{AbilityType, ArrowType, BoxType, StreamType, Type}
+
 import cats.data.{Chain, IndexedStateT, State}
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
 import cats.syntax.traverse.*
+import cats.syntax.option.*
 import cats.{Eval, Monoid}
 import scribe.Logging
 
@@ -117,24 +119,23 @@ object ArrowInliner extends Logging {
       exports <- Exports[S].exports
       arrows <- Arrows[S].arrows
       // gather all arrows and variables from abilities
-      returnedFromAbilities = rets.collect { case VarModel(name, st @ AbilityType(_, _), _) =>
-        getVarsAndArrowsFromAbilities(name, None, st, exports, arrows)
-      }.foldMapA(_.bimap(_.toList, _.toList)).bimap(_.toMap, _.toMap)
+      returnedAbilities = rets.collect { case VarModel(name, at: AbilityType, _) => name -> at }
+      varsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
+        getAbilityVars(name, None, at, exports)
+      }.toMap
+      arrowsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
+        getAbilityArrows(name, None, at, exports, arrows)
+      }.toMap
 
       // find and get resolved arrows if we return them from the function
-      returnedArrows = rets.collect { case VarModel(name, ArrowType(_, _), _) =>
-        name
-      }.toSet
+      returnedArrows = rets.collect { case VarModel(name, _: ArrowType, _) => name }.toSet
       arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
-    } yield {
-      val (valsFromAbilities, arrowsFromAbilities) = returnedFromAbilities
-      InlineResult(
-        SeqModel.wrap(ops.reverse: _*),
-        rets.reverse,
-        valsFromAbilities,
-        arrowsFromAbilities ++ arrowsToSave
-      )
-    }
+    } yield InlineResult(
+      SeqModel.wrap(ops.reverse),
+      rets.reverse,
+      varsFromAbilities,
+      arrowsFromAbilities ++ arrowsToSave
+    )
 
   /**
    * Get all arrows that is arguments from outer Arrows.
@@ -271,74 +272,81 @@ object ArrowInliner extends Logging {
         AbilityType.fullName(name, n) -> AbilityType.fullName(newName, n)
       }
       allNewNames = newFieldsName.add((name, newName)).toSortedMap
-    } yield {
-      val (allVars, allArrows) =
-        getVarsAndArrowsFromAbilities(vm.name, Option(newName), t, exports, arrows)
-      AbilityResolvingResult(allNewNames, allVars, allArrows)
+      allVars = getAbilityVars(vm.name, newName.some, t, exports)
+      allArrows = getAbilityArrows(vm.name, newName.some, t, exports, arrows)
+    } yield AbilityResolvingResult(allNewNames, allVars, allArrows)
+  }
+
+  private def getAbilityFields[T <: Type](
+    abilityName: String,
+    abilityNewName: Option[String],
+    abilityType: AbilityType,
+    exports: Map[String, ValueModel]
+  )(fields: AbilityType => Map[String, T]): Map[String, ValueModel] =
+    fields(abilityType).flatMap { case (fName, _) =>
+      val fullName = AbilityType.fullName(abilityName, fName)
+      val newFullName = AbilityType.fullName(abilityNewName.getOrElse(abilityName), fName)
+
+      println(s"getAbilityFields: $fullName -> $newFullName, ${Exports
+        .getLastValue(fullName, exports)}")
+
+      Exports
+        .getLastValue(fullName, exports)
+        .map(newFullName -> _)
+    }
+
+  private def getAbilityVars(
+    abilityName: String,
+    abilityNewName: Option[String],
+    abilityType: AbilityType,
+    exports: Map[String, ValueModel]
+  ): Map[String, ValueModel] = {
+    val get = getAbilityFields(
+      abilityName,
+      abilityNewName,
+      abilityType,
+      exports
+    )
+
+    get(_.variables) ++ get(_.arrows).flatMap {
+      case arrow @ (_, vm: VarModel) =>
+        arrow.some
+      case (_, m) =>
+        logger.error(s"Unexpected: '$m' cannot be an arrow")
+        None
     }
   }
 
-  /**
-   * Gather all arrows and variables from abilities recursively (because of possible nested abilities).
-   * Rename top names if needed in gathered fields and arrows.
-   * `top` name is a first name, i.e.: `topName.fieldName`.
-   * Only top name must be renamed to keep all field names unique.
-   * @param topOldName old name to find all fields in states
-   * @param topNewName new name to rename all fields in states
-   * @param abilityType type of current ability
-   * @param exports where to get values
-   * @param arrows where to get arrows
-   * @return
-   */
-  private def getVarsAndArrowsFromAbilities(
-    topOldName: String,
-    topNewName: Option[String],
+  private def getAbilityArrows(
+    abilityName: String,
+    abilityNewName: Option[String],
     abilityType: AbilityType,
     exports: Map[String, ValueModel],
     arrows: Map[String, FuncArrow]
-  ): (Map[String, ValueModel], Map[String, FuncArrow]) = {
-    abilityType.fields.toSortedMap.toList.map { case (fName, fValue) =>
-      val currentOldName = AbilityType.fullName(topOldName, fName)
-      // for all nested fields, arrows and abilities only left side must be renamed
-      val currentNewName = topNewName.map(AbilityType.fullName(_, fName))
-      fValue match {
-        case nestedAbilityType @ AbilityType(_, _) =>
-          getVarsAndArrowsFromAbilities(
-            currentOldName,
-            currentNewName,
-            nestedAbilityType,
-            exports,
-            arrows
-          )
-        case ArrowType(_, _) =>
-          Exports
-            .getLastValue(currentOldName, exports)
-            .flatMap {
-              case vm @ VarModel(name, _, _) =>
-                arrows
-                  .get(name)
-                  .map(fa =>
-                    (
-                      Map(currentNewName.getOrElse(currentOldName) -> vm),
-                      Map(name -> fa)
-                    )
-                  )
-              case lm @ LiteralModel(_, _) =>
-                logger.error(s"Unexpected. Literal '$lm' cannot be an arrow")
-                None
-            }
-            .getOrElse((Map.empty, Map.empty))
+  ): Map[String, FuncArrow] = {
+    val get = getAbilityFields(
+      abilityName,
+      abilityNewName,
+      abilityType,
+      exports
+    )
 
-        case _ =>
-          Exports
-            .getLastValue(currentOldName, exports)
-            .map { vm =>
-              (Map(currentNewName.getOrElse(currentOldName) -> vm), Map.empty)
-            }
-            .getOrElse((Map.empty, Map.empty))
-      }
-    }.foldMapA(_.bimap(_.toList, _.toList)).bimap(_.toMap, _.toMap)
+    get(_.arrows).flatMap {
+      case (_, VarModel(name, _, _)) =>
+        arrows.get(name).map(name -> _)
+      case (_, m) =>
+        logger.error(s"Unexpected: '$m' cannot be an arrow")
+        None
+    }
   }
+
+  private def getAbilityArrows[S: Arrows: Exports](
+    abilityName: String,
+    abilityType: AbilityType
+  ): State[S, Map[String, FuncArrow]] = for {
+    exports <- Exports[S].exports
+    arrows <- Arrows[S].arrows
+  } yield getAbilityArrows(abilityName, None, abilityType, exports, arrows)
 
   /**
    * Prepare the state context for this function call
@@ -435,25 +443,6 @@ object ArrowInliner extends Logging {
       // Result could be renamed; take care about that
     } yield (tree, fn.ret.map(_.renameVars(shouldRename)))
 
-  private def getAllArrowsFromAbility[S: Exports: Arrows: Mangler](
-    name: String,
-    sc: AbilityType
-  ): State[S, Map[String, FuncArrow]] = {
-    for {
-      exports <- Exports[S].exports
-      arrows <- Arrows[S].arrows
-    } yield {
-      sc.fields.toSortedMap.toList.flatMap {
-        case (n, ArrowType(_, _)) =>
-          exports.get(AbilityType.fullName(name, n)).flatMap {
-            case VarModel(n, _, _) => arrows.get(n).map(n -> _)
-            case _ => None
-          }
-        case _ => None
-      }.toMap
-    }
-  }
-
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,
     call: CallModel
@@ -461,8 +450,8 @@ object ArrowInliner extends Logging {
     for {
       passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
       arrowsFromAbilities <- call.abilityArgs
-        .traverse(getAllArrowsFromAbility)
-        .map(_.fold(Map.empty)(_ ++ _))
+        .traverse(getAbilityArrows.tupled)
+        .map(_.flatMap(_.toList).toMap)
 
       exports <- Exports[S].exports
       streams <- getOutsideStreamNames

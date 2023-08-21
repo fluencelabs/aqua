@@ -2,6 +2,10 @@ package aqua.types
 
 import cats.PartialOrder
 import cats.data.NonEmptyMap
+import cats.Eval
+import cats.syntax.traverse.*
+import cats.syntax.applicative.*
+import cats.syntax.option.*
 
 sealed trait Type {
 
@@ -252,18 +256,54 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
 // Ability is an unordered collection of labelled types and arrows
 case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
 
-  lazy val arrows: Map[String, ArrowType] = fields.toNel.collect {
-    case (name, at @ ArrowType(_, _)) => (name, at)
-  }.toMap
+  lazy val arrows: Map[String, ArrowType] = {
+    def getArrowsEval(path: Option[String], ability: AbilityType): Eval[List[(String, ArrowType)]] =
+      ability.fields.toNel.toList.flatTraverse {
+        case (abName, abType: AbilityType) =>
+          val newPath = path.fold(abName)(AbilityType.fullName(_, abName))
+          getArrowsEval(newPath.some, abType)
+        case (aName, aType: ArrowType) =>
+          val newPath = path.fold(aName)(AbilityType.fullName(_, aName))
+          List(newPath -> aType).pure
+        case _ => Nil.pure
+      }
 
-  lazy val abilities: List[(String, AbilityType)] = fields.toNel.collect {
-    case (name, at @ AbilityType(_, _)) => (name, at)
+    getArrowsEval(None, this).value.toMap
   }
 
-  lazy val variables: List[(String, Type)] = fields.toNel.filter {
-    case (_, AbilityType(_, _)) => false
-    case (_, ArrowType(_, _)) => false
-    case (_, _) => true
+  lazy val abilities: Map[String, AbilityType] = {
+    def getAbilitiesEval(
+      path: Option[String],
+      ability: AbilityType
+    ): Eval[List[(String, AbilityType)]] =
+      ability.fields.toNel.toList.flatTraverse {
+        case (abName, abType: AbilityType) =>
+          val fullName = path.fold(abName)(AbilityType.fullName(_, abName))
+          getAbilitiesEval(fullName.some, abType).map(
+            (fullName -> abType) :: _
+          )
+        case _ => Nil.pure
+      }
+
+    getAbilitiesEval(None, this).value.toMap
+  }
+
+  lazy val variables: Map[String, DataType] = {
+    def getVariablesEval(
+      path: Option[String],
+      ability: AbilityType
+    ): Eval[List[(String, DataType)]] =
+      ability.fields.toNel.toList.flatTraverse {
+        case (abName, abType: AbilityType) =>
+          val newPath = path.fold(abName)(AbilityType.fullName(_, abName))
+          getVariablesEval(newPath.some, abType)
+        case (dName, dType: DataType) =>
+          val newPath = path.fold(dName)(AbilityType.fullName(_, dName))
+          List(newPath -> dType).pure
+        case _ => Nil.pure
+      }
+
+    getVariablesEval(None, this).value.toMap
   }
 
   override def toString: String =
