@@ -143,14 +143,8 @@ object TagInliner extends Logging {
             v.copy(properties = Chain.empty),
             CallModel.Export(canonV.name, canonV.baseType)
           ).leaf
-          flatResult <- flatCanonStream(canonV, Some(canonOp))
-        } yield {
-          val (resV, resOp) = flatResult
-          (resV, combineOpsWithSeq(op, resOp))
-        }
-      case v @ VarModel(_, CanonStreamType(_), _) =>
-        flatCanonStream(v, op)
-      case _ => State.pure((vm, op))
+        } yield (canonV, combineOpsWithSeq(op, canonOp.some))
+      case _ => (vm, op).pure
     }
   }
 
@@ -186,7 +180,7 @@ object TagInliner extends Logging {
     treeFunctionName: String
   ): State[S, TagInlined] =
     tag match {
-      case OnTag(peerId, via) =>
+      case OnTag(peerId, via, strategy) =>
         for {
           peerIdDe <- valueToModel(peerId)
           viaDe <- valueListToModel(via.toList)
@@ -196,9 +190,12 @@ object TagInliner extends Logging {
           (pid, pif) = peerIdDe
           (viaD, viaF) = viaDeFlattened.unzip
             .bimap(Chain.fromSeq, _.flatten)
+          strat = strategy.map { case OnTag.ReturnStrategy.Relay =>
+            OnModel.ReturnStrategy.Relay
+          }
           toModel = (children: Chain[OpModel.Tree]) =>
             XorModel.wrap(
-              OnModel(pid, viaD).wrap(
+              OnModel(pid, viaD, strat).wrap(
                 children
               ),
               // This will return to previous topology
@@ -289,8 +286,8 @@ object TagInliner extends Logging {
           }
           _ <- Exports[S].resolved(item, VarModel(n, elementType))
           m = mode.map {
-            case ForTag.WaitMode => ForModel.NeverMode
-            case ForTag.PassMode => ForModel.NullMode
+            case ForTag.Mode.Wait => ForModel.Mode.Never
+            case ForTag.Mode.Pass => ForModel.Mode.Null
           }
         } yield TagInlined.Single(
           model = ForModel(n, v, m),

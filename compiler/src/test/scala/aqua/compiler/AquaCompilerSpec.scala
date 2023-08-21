@@ -19,28 +19,17 @@ import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.ConstantRaw
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.res.{
-  ApRes,
-  CallRes,
-  CallServiceRes,
-  CanonRes,
-  FoldRes,
-  MakeRes,
-  MatchMismatchRes,
-  NextRes,
-  ParRes,
-  RestrictionRes,
-  SeqRes,
-  XorRes
-}
+import aqua.res.*
 import aqua.res.ResBuilder
 import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamType, Type}
+
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import cats.Id
 import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
 import cats.instances.string.*
 import cats.syntax.show.*
+import cats.syntax.option.*
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers {
   import ModelBuilder.*
@@ -173,7 +162,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
           RestrictionRes(results.name, resultsType).wrap(
             SeqRes.wrap(
               ParRes.wrap(
-                FoldRes(peer.name, peers, Some(ForModel.NeverMode)).wrap(
+                FoldRes(peer.name, peers, ForModel.Mode.Never.some).wrap(
                   ParRes.wrap(
                     XorRes.wrap(
                       // better if first relay will be outside `for`

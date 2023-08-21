@@ -82,6 +82,7 @@ case object ParTag extends ParGroupTag {
 }
 
 case class IfTag(value: ValueRaw) extends GroupTag {
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     IfTag(value.map(f))
 }
@@ -110,13 +111,34 @@ case object TryTag extends GroupTag {
   case object Otherwise extends GroupTag
 }
 
-case class OnTag(peerId: ValueRaw, via: Chain[ValueRaw]) extends SeqGroupTag {
+case class OnTag(
+  peerId: ValueRaw,
+  via: Chain[ValueRaw],
+  // Strategy of returning from this `on` block
+  // affects handling of this `on` in topology layer
+  strategy: Option[OnTag.ReturnStrategy] = None
+) extends SeqGroupTag {
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    OnTag(peerId.map(f), via.map(_.map(f)))
+    OnTag(peerId.map(f), via.map(_.map(f)), strategy)
 
-  override def toString: String =
-    s"(on $peerId${if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""})"
+  override def toString: String = {
+    val viaPart = if (via.nonEmpty) " via " + via.toList.mkString(" via ") else ""
+    val strategyPart = strategy.fold("")(s => s" | $s")
+    s"(on $peerId$viaPart$strategyPart)"
+  }
+}
+
+object OnTag {
+
+  // Return strategy of `on` block
+  // affects handling of `on` in topology layer
+  enum ReturnStrategy {
+    // Leave peer to the first relay
+    // Do not make the whole back transition
+    // NOTE: used for `parseq`
+    case Relay
+  }
 }
 
 case class NextTag(item: String) extends RawTag {
@@ -148,9 +170,11 @@ case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = 
 }
 
 object ForTag {
-  sealed trait Mode
-  case object WaitMode extends Mode
-  case object PassMode extends Mode
+
+  enum Mode {
+    case Wait
+    case Pass
+  }
 }
 
 case class CallArrowRawTag(

@@ -1,11 +1,13 @@
 package aqua.model.transform.topology
 
+import aqua.model.transform.topology.TopologyPath
 import aqua.model.transform.cursor.ChainZipper
 import aqua.model.transform.topology.strategy.*
 import aqua.model.*
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.res.{ApRes, CanonRes, FoldRes, MakeRes, NextRes, ResolvedOp, SeqRes}
 import aqua.types.{ArrayType, BoxType, CanonStreamType, ScalarType, StreamType}
+
 import cats.Eval
 import cats.data.Chain.{==:, nil}
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
@@ -18,6 +20,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.foldable.*
 import cats.syntax.applicative.*
 import cats.instances.map.*
+import cats.kernel.Monoid
 import scribe.Logging
 
 /**
@@ -69,7 +72,7 @@ case class Topology private (
 
   // Current topology location – stack of OnModel's collected from parents branch
   // ApplyTopologyModel shifts topology to pathOn where this topology was Captured
-  val pathOn: Eval[List[OnModel]] = Eval
+  val pathOn: Eval[TopologyPath] = Eval
     .defer(
       cursor.op match {
         case o: OnModel =>
@@ -91,20 +94,23 @@ case class Topology private (
     .memoize
 
   // Find path of first `ForceExecModel` (call, canon, join) in this subtree
-  lazy val firstExecutesOn: Eval[Option[List[OnModel]]] =
+  lazy val firstExecutesOn: Eval[Option[TopologyPath]] =
     (cursor.op match {
       case _: ForceExecModel => pathOn.map(_.some)
       case _ => children.collectFirstSomeM(_.firstExecutesOn)
     }).memoize
 
   // Find path of last `ForceExecModel` (call, canon, join) in this subtree
-  lazy val lastExecutesOn: Eval[Option[List[OnModel]]] =
+  lazy val lastExecutesOn: Eval[Option[TopologyPath]] =
     (cursor.op match {
       case _: ForceExecModel => pathOn.map(_.some)
       case _ => children.reverse.collectFirstSomeM(_.lastExecutesOn)
     }).memoize
 
-  lazy val currentPeerId: Option[ValueModel] = pathOn.value.headOption.map(_.peerId)
+  lazy val currentPeerId: Option[ValueModel] = pathOn.value.peerId
+
+  // Path of current relay
+  lazy val relayOn: Eval[TopologyPath] = pathOn.map(_.toRelay)
 
   // Get topology of previous sibling skipping `NoExec` nodes
   lazy val prevSibling: Option[Topology] = cursor.toPrevSibling.flatMap {
@@ -147,23 +153,30 @@ case class Topology private (
   lazy val isForModel: Boolean = forModel.isDefined
 
   // Before the left boundary of this element, what was the scope
-  lazy val beforeOn: Eval[List[OnModel]] = before.beforeOn(this).memoize
+  lazy val beforeOn: Eval[TopologyPath] = before.beforeOn(this).memoize
 
   // Inside the left boundary of this element, what should be the scope
-  lazy val beginsOn: Eval[List[OnModel]] = begins.beginsOn(this).memoize
+  lazy val beginsOn: Eval[TopologyPath] = begins.beginsOn(this).memoize
 
   // After this element is done, what is the scope
-  lazy val endsOn: Eval[List[OnModel]] = ends.endsOn(this).memoize
+  lazy val endsOn: Eval[TopologyPath] = ends.endsOn(this).memoize
 
   // After this element is done, where should it move to prepare for the next one
-  lazy val afterOn: Eval[List[OnModel]] = after.afterOn(this).memoize
+  lazy val afterOn: Eval[TopologyPath] = after.afterOn(this).memoize
 
   // Usually we don't care about exiting from where this tag ends into the outer scope
   // But for some cases, like par branches, its necessary, so the exit can be forced
-  lazy val forceExit: Eval[Boolean] = after.forceExit(this).memoize
+  lazy val forceExit: Eval[Topology.ExitStrategy] =
+    cursor.op match {
+      case OnModel(_, _, Some(OnModel.ReturnStrategy.Relay)) =>
+        Eval.now(Topology.ExitStrategy.ToRelay)
+      case FailModel(_) =>
+        Eval.now(Topology.ExitStrategy.Empty)
+      case _ => after.forceExit(this)
+    }
 
   // Where we finally are, after exit enforcement is applied
-  lazy val finallyOn: Eval[List[OnModel]] = after.finallyOn(this).memoize
+  lazy val finallyOn: Eval[TopologyPath] = after.finallyOn(this).memoize
 
   lazy val pathBefore: Eval[Chain[ValueModel]] = begins.pathBefore(this).memoize
 
@@ -176,15 +189,38 @@ case class Topology private (
 object Topology extends Logging {
   type Res = ResolvedOp.Tree
 
-  def findRelayPathEnforcement(before: List[OnModel], begin: List[OnModel]): Chain[ValueModel] =
+  // Strategy of generating exit transitions
+  enum ExitStrategy {
+    // Force generation of full exit transitions
+    case Full
+    // Generate exit to the current relay only
+    case ToRelay
+    // Do force generation of exit transitions
+    case Empty
+  }
+
+  object ExitStrategy {
+
+    given Monoid[ExitStrategy] with {
+      def empty: ExitStrategy = Empty
+
+      def combine(x: ExitStrategy, y: ExitStrategy): ExitStrategy =
+        (x, y) match {
+          case (Full, _) | (_, Full) => Full
+          case (ToRelay, _) | (_, ToRelay) => ToRelay
+          case _ => Empty
+        }
+    }
+  }
+
+  def findRelayPathEnforcement(before: TopologyPath, begin: TopologyPath): Chain[ValueModel] =
     Chain.fromOption(
       // Get target peer of `begin`
-      begin.headOption
-        .map(_.peerId)
+      begin.peerId
         // Check that it is last relay of previous `on`
-        .filter(lastPeerId => begin.tail.headOption.exists(_.via.lastOption.contains(lastPeerId)))
+        .filter(lastPeerId => begin.previous.flatMap(_.lastRelay).contains(lastPeerId))
         // Check that it is not target peer of `before`
-        .filterNot(lastPeerId => before.headOption.exists(_.peerId == lastPeerId))
+        .filterNot(lastPeerId => before.current.exists(_.peerId == lastPeerId))
     )
 
   // Return strategy for calculating `beforeOn` for
@@ -223,12 +259,11 @@ object Topology extends Logging {
   // Return strategy for calculating `afterOn` for
   // node pointed on by `cursor`
   private def decideAfter(cursor: OpModelTreeCursor): After =
-    (cursor.parentOp, cursor.op) match {
-      case (_, _: FailModel) => Fail
-      case (Some(_: ParGroupModel), _) => ParGroupBranch
-      case (Some(XorModel), _) => XorBranch
-      case (Some(_: SeqGroupModel), _) => SeqGroupBranch
-      case (None, _) => Root
+    cursor.parentOp match {
+      case Some(_: ParGroupModel) => ParGroupBranch
+      case Some(XorModel) => XorBranch
+      case Some(_: SeqGroupModel) => SeqGroupBranch
+      case None => Root
       case _ => Default
     }
 
@@ -274,7 +309,7 @@ object Topology extends Logging {
       i
     }
 
-    val resolvedCofree = cursor.cata(wrap) { rc =>
+    val resolvedCofree = cursor.traverse(wrap) { rc =>
       logger.debug(s"<:> $rc")
       val currI = nextI
       val resolved = MakeRes
@@ -333,8 +368,8 @@ object Topology extends Logging {
   def printDebugInfo(rc: OpModelTreeCursor, i: Int): Unit = {
     println(Console.BLUE + rc + Console.RESET)
     println(i + " : " + rc.topology)
-    println("Before: " + rc.topology.beforeOn.value)
-    println("Begin: " + rc.topology.beginsOn.value)
+    println("Before: " + rc.topology.beforeOn.value.show)
+    println("Begin: " + rc.topology.beginsOn.value.show)
     println(
       (if (rc.topology.pathBefore.value.nonEmpty) Console.YELLOW
        else "") + "PathBefore: " + Console.RESET + rc.topology.pathBefore.value
@@ -342,12 +377,10 @@ object Topology extends Logging {
 
     println("Parent: " + Console.CYAN + rc.topology.parent.getOrElse("-") + Console.RESET)
 
-    println("End  : " + rc.topology.endsOn.value)
-    println("After: " + rc.topology.afterOn.value)
-    println(
-      "Exit : " + (if (rc.topology.forceExit.value) Console.MAGENTA + "true" + Console.RESET
-                   else "false")
-    )
+    println("End  : " + rc.topology.endsOn.value.show)
+    println("After: " + rc.topology.afterOn.value.show)
+    println("Relay: " + rc.topology.relayOn.value.show)
+    println("Exit : " + Console.MAGENTA + rc.topology.forceExit.value + Console.RESET)
     println(
       (if (rc.topology.pathAfter.value.nonEmpty) Console.YELLOW
        else "") + "PathAfter: " + Console.RESET + rc.topology.pathAfter.value

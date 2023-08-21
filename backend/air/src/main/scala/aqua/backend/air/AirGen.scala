@@ -96,8 +96,8 @@ object AirGen extends Logging {
 
       case FoldRes(item, iterable, mode) =>
         val m = mode.map {
-          case ForModel.NullMode => NullGen
-          case ForModel.NeverMode => NeverGen
+          case ForModel.Mode.Null => NullGen
+          case ForModel.Mode.Never => NeverGen
         }
         Eval later ForGen(valueToData(iterable), item, opsToSingle(ops), m)
       case RestrictionRes(item, itemType) =>

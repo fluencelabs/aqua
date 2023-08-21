@@ -1,6 +1,8 @@
 package aqua.model.transform.topology.strategy
 
 import aqua.model.transform.topology.Topology
+import aqua.model.transform.topology.TopologyPath
+import aqua.model.transform.topology.Topology.ExitStrategy
 import aqua.model.{OnModel, ParGroupModel, SeqGroupModel, ValueModel, XorModel}
 
 import cats.Eval
@@ -13,7 +15,7 @@ import cats.syntax.option.*
 object XorBranch extends Before with After {
   override def toString: String = Console.RED + "<xor>/*" + Console.RESET
 
-  override def beforeOn(current: Topology): Eval[List[OnModel]] =
+  override def beforeOn(current: Topology): Eval[TopologyPath] =
     current.prevSibling.map(_.beginsOn) getOrElse super.beforeOn(current)
 
   // Find closest par exit up and return its branch current is in
@@ -35,16 +37,20 @@ object XorBranch extends Before with After {
   private def closestParExit(current: Topology): Option[Topology] =
     closestParExitChild(current).flatMap(_.parent)
 
-  override def forceExit(current: Topology): Eval[Boolean] =
+  override def forceExit(current: Topology): Eval[ExitStrategy] =
     closestParExitChild(current).fold(
-      Eval.later(current.cursor.moveUp.exists(_.hasExecLater))
+      Eval.later {
+        if (current.cursor.moveUp.exists(_.hasExecLater)) ExitStrategy.Full
+        else ExitStrategy.Empty
+      }
     )(_.forceExit) // Force exit if par branch needs it
 
-  override def afterOn(current: Topology): Eval[List[OnModel]] =
+  override def afterOn(current: Topology): Eval[TopologyPath] =
     current.forceExit.flatMap {
-      case true =>
+      case ExitStrategy.Empty => super.afterOn(current)
+      case ExitStrategy.ToRelay => current.relayOn
+      case ExitStrategy.Full =>
         closestParExit(current).fold(afterParent(current))(_.afterOn)
-      case false => super.afterOn(current)
     }
 
   // Parent of this branch's parent xor – fixes the case when this xor is in par
