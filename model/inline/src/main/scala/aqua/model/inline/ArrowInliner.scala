@@ -287,9 +287,6 @@ object ArrowInliner extends Logging {
       val fullName = AbilityType.fullName(abilityName, fName)
       val newFullName = AbilityType.fullName(abilityNewName.getOrElse(abilityName), fName)
 
-      println(s"getAbilityFields: $fullName -> $newFullName, ${Exports
-        .getLastValue(fullName, exports)}")
-
       Exports
         .getLastValue(fullName, exports)
         .map(newFullName -> _)
