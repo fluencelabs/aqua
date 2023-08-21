@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.11.10](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.9...aqua-v0.11.10) (2023-08-21)
+
+
+### Features
+
+* **compiler:** Structural typing for data and abilities [fixes LNG-215] ([#843](https://github.com/fluencelabs/aqua/issues/843)) ([019611a](https://github.com/fluencelabs/aqua/commit/019611a89c31618985303d4984ed581eadad11f5))
+* parseq implementation (fixes LNG-223) ([#840](https://github.com/fluencelabs/aqua/issues/840)) ([8060695](https://github.com/fluencelabs/aqua/commit/8060695dbb0a2f34febf739eb20db8b8781b3682))
+
+
+### Bug Fixes
+
+* **compiler:** Generate stream restriction for scoped exprs [fixes LNG-222] ([#841](https://github.com/fluencelabs/aqua/issues/841)) ([eb4cdb0](https://github.com/fluencelabs/aqua/commit/eb4cdb0dd12987e64881bab6ff19f935e905672e))
+* **compiler:** Refactor values [fixes LNG-57] ([#821](https://github.com/fluencelabs/aqua/issues/821)) ([f562bd4](https://github.com/fluencelabs/aqua/commit/f562bd40b6df5bbfce5635c10710d91f21e3af88))
+* Fix release build command ([#834](https://github.com/fluencelabs/aqua/issues/834)) ([6146f8e](https://github.com/fluencelabs/aqua/commit/6146f8e40a59c9fecd9f40b76e6ec6398b05ca05))
+
 ## [0.11.9](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.8...aqua-v0.11.9) (2023-08-09)
 
 
