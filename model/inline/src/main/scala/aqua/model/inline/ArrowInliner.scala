@@ -277,6 +277,16 @@ object ArrowInliner extends Logging {
     } yield AbilityResolvingResult(allNewNames, allVars, allArrows)
   }
 
+  /**
+   * Get ability fields (vars or arrows) from exports
+   *
+   * @param abilityName ability current name in state
+   * @param abilityNewName ability new name (for renaming)
+   * @param abilityType ability type
+   * @param exports exports state to resolve fields
+   * @param fields fields selector
+   * @return resolved ability fields (renamed if necessary)
+   */
   private def getAbilityFields[T <: Type](
     abilityName: String,
     abilityNewName: Option[String],
@@ -292,6 +302,15 @@ object ArrowInliner extends Logging {
         .map(newFullName -> _)
     }
 
+  /**
+   * Get ability vars and arrows as vars from exports
+   *
+   * @param abilityName ability current name in state
+   * @param abilityNewName ability new name (for renaming)
+   * @param abilityType ability type
+   * @param exports exports state to resolve fields
+   * @return resolved ability vars and arrows as vars (renamed if necessary)
+   */
   private def getAbilityVars(
     abilityName: String,
     abilityNewName: Option[String],
@@ -314,6 +333,16 @@ object ArrowInliner extends Logging {
     }
   }
 
+  /**
+   * Get ability arrows from arrows
+   *
+   * @param abilityName ability current name in state
+   * @param abilityNewName ability new name (for renaming)
+   * @param abilityType ability type
+   * @param exports exports state to resolve fields
+   * @param arrows arrows state to resolve arrows
+   * @return resolved ability arrows (renamed if necessary)
+   */
   private def getAbilityArrows(
     abilityName: String,
     abilityNewName: Option[String],
