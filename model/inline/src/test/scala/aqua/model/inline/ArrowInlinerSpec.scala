@@ -3,7 +3,7 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
-import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoFieldRaw, IntoIndexRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.*
 import aqua.types.*
 import cats.syntax.show.*
 import cats.syntax.option.*
@@ -49,7 +49,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       records: *string
       cb(records)
    */
-  "arrow inliner" should "pass stream to callback properly" in {
+  it should "pass stream to callback properly" in {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamModel = VarModel("records", StreamType(ScalarType.string))
@@ -141,7 +141,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       records: *string
       cb(records!)
    */
-  ignore /*"arrow inliner"*/ should "pass stream with gate to callback properly" in {
+  ignore /*it*/ should "pass stream with gate to callback properly" in {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamVarLambda =
@@ -242,7 +242,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         append_records(records)
         <- records
    */
-  "arrow inliner" should "work with streams as arguments" in {
+  it should "work with streams as arguments" in {
 
     val returnType = ArrayType(ArrayType(ScalarType.string))
     val streamType = StreamType(ArrayType(ScalarType.string))
@@ -338,7 +338,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = res1 + res2 + res3
    *   <- retval
    */
-  "arrow inliner" should "leave meta after function inlining" in {
+  it should "leave meta after function inlining" in {
     val innerName = "inner"
     val innerRes = VarRaw("res", ScalarType.u16)
 
@@ -475,7 +475,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = inner() + inner() + 37
    *   <- retval
    */
-  "arrow inliner" should "omit meta if arrow was completely erased" in {
+  it should "omit meta if arrow was completely erased" in {
     val innerName = "inner"
     val innerRes = VarRaw("res", ScalarType.u16)
     val innerRet = "42"
@@ -753,7 +753,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = 37 + c(1) + c(2)
    *   <- retval
    */
-  "arrow inliner" should "leave meta after returned closure inlining" in {
+  it should "leave meta after returned closure inlining" in {
     val innerName = "inner"
     val closureName = "closure"
     val outterClosureName = "c"
@@ -853,7 +853,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = 37 + c() + c()
    *   <- retval
    */
-  "arrow inliner" should "omit meta if returned closure was completely erased" in {
+  it should "omit meta if returned closure was completely erased" in {
     val innerName = "inner"
     val closureName = "closure"
 
@@ -1023,7 +1023,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = 37 + a(1) + b(2) + c{3}
    *   <- retval
    */
-  "arrow inliner" should "correctly inline renamed closure [bug LNG-193]" in {
+  it should "correctly inline renamed closure [bug LNG-193]" in {
     val innerName = "inner"
     val closureName = "closure"
     val outterClosureName = "c"
@@ -1151,7 +1151,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   resT <- accept_closure(closure)
    *   <- resT
    */
-  "arrow inliner" should "correctly handle closure as argument [bug LNG-92]" in {
+  it should "correctly handle closure as argument [bug LNG-92]" in {
     val acceptName = "accept_closure"
     val closureName = "closure"
     val testName = "test"
@@ -1274,7 +1274,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   method = "method"
    *   test(method)
    */
-  "arrow inliner" should "not rename service call [bug LNG-199]" in {
+  it should "not rename service call [bug LNG-199]" in {
     val testName = "test"
     val argMethodName = "method"
     val serviceName = "Test"
@@ -1381,7 +1381,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
      v = arg.value
      OpHa.identity(v)
    */
-  "arrow inliner" should "hold lambda" in {
+  it should "hold lambda" in {
     val innerName = "inner"
 
     // lambda that will be assigned to another variable
@@ -1485,7 +1485,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   func joinIdxLocal(idx: i16, nodes: []string):
     join nodes[idx]
    */
-  "arrow inliner" should "not rename value in index array lambda" in {
+  it should "not rename value in index array lambda" in {
     val innerName = "inner"
 
     // lambda that will be assigned to another variable
@@ -1575,7 +1575,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   }
 
-  "arrow inliner" should "rename value in arrow with same name as in for" in {
+  it should "rename value in arrow with same name as in for" in {
     val argVar = VarRaw("arg", ScalarType.u32)
     val iVar = VarRaw("i", ScalarType.string)
     val iVar0 = VarRaw("i-0", ScalarType.string)
@@ -1665,7 +1665,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       get() -> string
 
   func inner() -> string:
-      results <- DTGetter.get_dt()
+      results <- Get.get()
       <- results
 
   func outer() -> []string:
@@ -1673,7 +1673,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       results <- use_name1()
       <- results
    */
-  "arrow inliner" should "generate result in right order" in {
+  it should "generate result in right order" in {
     val innerName = "inner"
     val results = VarRaw("results", ScalarType.string)
     val resultsOut = VarRaw("results", StreamType(ScalarType.string))
@@ -1744,4 +1744,210 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
   }
 
+  /**
+   * ability Inner:
+   *     arrow(x: i8) -> bool
+   *     field: i8
+   *
+   * ability Outer:
+   *     inner: Inner
+   *
+   * func accept{Outer}() -> bool:
+   *     res = Outer.inner.arrow(Outer.inner.field)
+   *     <- res
+   *
+   * func main() -> bool:
+   *     closure = (x: i8) -> bool:
+   *         res = x > 0
+   *         <- res
+   *     inner = Inner(arrow = closure, field = 42)
+   *     outer = Outer(inner = inner)
+   *     res <- accept{outer}()
+   *     <- res
+   */
+  it should "handle nested abilities" in {
+    val arrowType = ArrowType(
+      ProductType(ScalarType.i8 :: Nil),
+      ProductType(ScalarType.bool :: Nil)
+    )
+    val closureType = arrowType.copy(
+      domain = ProductType.labelled(
+        "x" -> ScalarType.i8 :: Nil
+      )
+    )
+    val resVar = VarRaw("res", ScalarType.bool)
+    val innerType = AbilityType(
+      "Inner",
+      NonEmptyMap.of(
+        "arrow" -> arrowType,
+        "field" -> ScalarType.i8
+      )
+    )
+    val outerType = AbilityType(
+      "Outer",
+      NonEmptyMap.of(
+        "inner" -> innerType
+      )
+    )
+
+    val acceptBody = SeqTag.wrap(
+      AssignmentTag(
+        ApplyPropertyRaw.fromChain(
+          VarRaw("Outer", outerType),
+          Chain(
+            IntoFieldRaw("inner", innerType),
+            IntoArrowRaw(
+              "arrow",
+              arrowType,
+              List(
+                ApplyPropertyRaw.fromChain(
+                  VarRaw("Outer", outerType),
+                  Chain(
+                    IntoFieldRaw("inner", innerType),
+                    IntoFieldRaw("field", ScalarType.i8)
+                  )
+                )
+              )
+            )
+          )
+        ),
+        resVar.name
+      ).leaf,
+      ReturnTag(NonEmptyList.one(resVar)).leaf
+    )
+
+    val accept = FuncArrow(
+      "accept",
+      acceptBody,
+      ArrowType(
+        ProductType.labelled("Outer" -> outerType :: Nil),
+        ProductType(ScalarType.bool :: Nil)
+      ),
+      resVar :: Nil,
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val closureBody = SeqTag.wrap(
+      AssignmentTag(
+        CallArrowRaw.service(
+          "cmp",
+          LiteralRaw.quote("cmp"),
+          "gt",
+          ArrowType(
+            ProductType(ScalarType.i64 :: ScalarType.i64 :: Nil),
+            ProductType(ScalarType.bool :: Nil)
+          ),
+          List(
+            VarRaw("x", ScalarType.i8),
+            LiteralRaw.number(0)
+          )
+        ),
+        "res"
+      ).leaf,
+      ReturnTag(NonEmptyList.one(resVar)).leaf
+    )
+
+    val mainBody = SeqTag.wrap(
+      ClosureTag(
+        FuncRaw(
+          name = "closure",
+          arrow = ArrowRaw(
+            `type` = closureType,
+            ret = resVar :: Nil,
+            body = closureBody
+          )
+        ),
+        detach = true
+      ).leaf,
+      AssignmentTag(
+        AbilityRaw(
+          NonEmptyMap.of(
+            "arrow" -> VarRaw("closure", closureType),
+            "field" -> LiteralRaw.number(42)
+          ),
+          innerType
+        ),
+        "inner"
+      ).leaf,
+      AssignmentTag(
+        AbilityRaw(
+          NonEmptyMap.of(
+            "inner" -> VarRaw("inner", innerType)
+          ),
+          outerType
+        ),
+        "outer"
+      ).leaf,
+      CallArrowRawTag
+        .func(
+          "accept",
+          Call(
+            VarRaw("outer", outerType) :: Nil,
+            Call.Export(resVar.name, resVar.`type`) :: Nil
+          )
+        )
+        .leaf,
+      ReturnTag(NonEmptyList.one(resVar)).leaf
+    )
+
+    val main = FuncArrow(
+      "main",
+      mainBody,
+      ArrowType(
+        ProductType(Nil),
+        ProductType(ScalarType.bool :: Nil)
+      ),
+      resVar :: Nil,
+      Map("accept" -> accept),
+      Map.empty,
+      None
+    )
+
+    val model = ArrowInliner
+      .callArrow[InliningState](
+        FuncArrow(
+          "wrapper",
+          CallArrowRawTag
+            .func(
+              "main",
+              Call(Nil, Nil)
+            )
+            .leaf,
+          ArrowType(
+            ProductType(Nil),
+            ProductType(Nil)
+          ),
+          Nil,
+          Map("main" -> main),
+          Map.empty,
+          None
+        ),
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+
+    val body = SeqModel.wrap(
+      SeqModel.wrap(
+        FlattenModel(LiteralModel.number(42), "literal_ap").leaf,
+        FlattenModel(VarModel("literal_ap", LiteralType.unsigned), "literal_props").leaf
+      ),
+      CallServiceModel(
+        LiteralModel.quote("cmp"),
+        "gt",
+        CallModel(
+          VarModel("literal_props", LiteralType.unsigned) :: LiteralModel.number(0) :: Nil,
+          CallModel.Export("gt", ScalarType.bool) :: Nil
+        )
+      ).leaf
+    )
+
+    val expected = List("main", "accept", "closure").foldRight(body) { case (name, body) =>
+      MetaModel.CallArrowModel(name).wrap(body)
+    }
+
+    model.equalsOrShowDiff(expected) shouldEqual true
+  }
 }
