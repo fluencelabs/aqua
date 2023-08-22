@@ -114,9 +114,6 @@ object Transform extends Logging {
       initCallable = initCallable
     )
 
-    func.capturedArrows.foreach { case (name, f) => println(f.body.show) }
-    println(func.body.show)
-
     for {
       // Pre transform and inline the function
       model <- funcToModelTree(func, preTransformer)
