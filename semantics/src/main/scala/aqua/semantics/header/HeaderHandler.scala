@@ -5,12 +5,14 @@ import aqua.parser.head.*
 import aqua.parser.lexer.{Ability, Name, Token}
 import aqua.semantics.header.Picker.*
 import aqua.semantics.{HeaderError, SemanticError}
+
 import cats.data.*
 import cats.data.Validated.{invalidNec, validNec}
 import cats.free.Cofree
 import cats.instances.list.*
 import cats.instances.option.*
 import cats.kernel.Semigroup
+import cats.syntax.option.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.semigroup.*
@@ -35,8 +37,10 @@ class HeaderHandler[S[_]: Comonad, C](using
     Eval.later(parent |+| children.combineAll)
 
   // Error generator with token pointer
-  private def error[T](token: Token[S], msg: String): ValidatedNec[SemanticError[S], T] =
-    invalidNec(HeaderError(token, msg))
+  private def error[T](
+    token: Token[S],
+    msg: String
+  ): SemanticError[S] = HeaderError(token, msg)
 
   def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C] = {
     // Resolve a filename from given imports or fail
@@ -44,9 +48,9 @@ class HeaderHandler[S[_]: Comonad, C](using
       imports
         .get(f.fileValue)
         .map(_.pickDeclared)
-        .fold(
+        .toValidNec(
           error(f.token, "Cannot resolve the import")
-        )(validNec)
+        )
 
     // Get part of the declared context (for import/use ... from ... expressions)
     def getFrom(f: FromExpr[S], ctx: C): ResAC[S] =
@@ -59,8 +63,7 @@ class HeaderHandler[S[_]: Comonad, C](using
             case ((token, name), rename) =>
               ctx
                 .pick(name, rename, ctx.module.nonEmpty)
-                .map(validNec)
-                .getOrElse(
+                .toValidNec(
                   error(
                     token,
                     s"Imported file `declares ${ctx.declares.mkString(", ")}`, no $name declared. Try adding `declares $name` to that file."
@@ -75,12 +78,13 @@ class HeaderHandler[S[_]: Comonad, C](using
       rename
         .map(_.value)
         .orElse(ctx.module)
-        .fold[ResAC[S]](
+        .map(modName => picker.blank.setAbility(modName, ctx))
+        .toValidNec(
           error(
             tkn,
             s"Used module has no `module` header. Please add `module` header or use ... as ModuleName, or switch to import"
           )
-        )(modName => validNec(picker.blank.setAbility(modName, ctx)))
+        )
 
     // Handler for every header expression, will be combined later
     val onExpr: PartialFunction[HeaderExpr[S], Res[S, C]] = {
@@ -103,17 +107,16 @@ class HeaderHandler[S[_]: Comonad, C](using
               } else
                 (
                   declareNames.map(n => n.value -> n) ::: declareCustom.map(a => a.value -> a)
-                ).map[ValidatedNec[SemanticError[S], Int]] { case (n, t) =>
+                ).map { case (n, t) =>
                   ctx
                     .pick(n, None, ctx.module.nonEmpty)
-                    // We just validate, nothing more
-                    .as(validNec(1))
-                    .getOrElse(
+                    .toValidNec(
                       error(
                         t,
                         s"`$n` is expected to be declared, but declaration is not found in the file"
                       )
                     )
+                    .void
                 }.combineAll
                   .as(
                     // TODO: why module name and declares is lost? where is it lost?
@@ -159,24 +162,26 @@ class HeaderHandler[S[_]: Comonad, C](using
             (ctx, initCtx) =>
               pubs
                 .map(
-                  _.fold[(Token[S], String, Option[String])](
-                    nrn => (nrn._1, nrn._1.value, nrn._2.map(_.value)),
-                    nrn => (nrn._1, nrn._1.value, nrn._2.map(_.value))
-                  )
+                  _.bimap(
+                    _.bimap(n => (n, n.value), _.map(_.value)),
+                    _.bimap(n => (n, n.value), _.map(_.value))
+                  ).merge
                 )
-                .map { case (token, name, rename) =>
+                .map { case ((token, name), rename) =>
                   val sumCtx = initCtx |+| ctx
 
                   if (sumCtx.funcReturnAbilityOrArrow(name))
-                    error(
-                      token,
-                      s"The function '$name' cannot be exported, because it returns arrow type or ability type"
+                    invalidNec(
+                      error(
+                        token,
+                        s"The function '$name' cannot be exported, because it returns arrow type or ability type"
+                      )
                     )
                   else
                     sumCtx
                       .pick(name, rename, declared = false)
-                      .as(Map(name -> rename).validNec)
-                      .getOrElse(
+                      .as(Map(name -> rename))
+                      .toValidNec(
                         error(
                           token,
                           s"File has no $name declaration or import, cannot export, available funcs: ${sumCtx.funcNames
@@ -184,10 +189,9 @@ class HeaderHandler[S[_]: Comonad, C](using
                         )
                       )
                 }
-                .foldLeft[ResT[S, Map[String, Option[String]]]](
-                  validNec(ctx.exports.getOrElse(Map.empty))
-                )(_ |+| _)
-                .map(expCtx => ctx.setExports(expCtx))
+                .prepend(validNec(ctx.exports.getOrElse(Map.empty)))
+                .combineAll
+                .map(ctx.setExports)
           )
         )
 
@@ -206,7 +210,7 @@ class HeaderHandler[S[_]: Comonad, C](using
 
     Cofree
       .cata[Chain, HeaderExpr[S], Res[S, C]](header) { case (expr, children) =>
-        onExpr.lift.apply(expr).fold(Eval.later(children.combineAll))(combineAnd(children)(_))
+        onExpr.lift.apply(expr).fold(Eval.later(children.combineAll))(combineAnd(children))
       }
       .value
   }
