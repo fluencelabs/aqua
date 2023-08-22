@@ -2,7 +2,7 @@ package aqua.semantics.header
 
 import aqua.parser.Ast
 import aqua.parser.head.*
-import aqua.parser.lexer.{Ability, Token}
+import aqua.parser.lexer.{Ability, Name, Token}
 import aqua.semantics.header.Picker.*
 import aqua.semantics.{HeaderError, SemanticError}
 import cats.data.*
@@ -15,9 +15,10 @@ import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.semigroup.*
 import cats.syntax.validated.*
+import cats.syntax.bifunctor.*
 import cats.{Comonad, Eval, Monoid}
 
-class HeaderHandler[S[_]: Comonad, C](implicit
+class HeaderHandler[S[_]: Comonad, C](using
   acm: Monoid[C],
   headMonoid: Monoid[HeaderSem[S, C]],
   picker: Picker[C]
@@ -43,40 +44,31 @@ class HeaderHandler[S[_]: Comonad, C](implicit
       imports
         .get(f.fileValue)
         .map(_.pickDeclared)
-        .fold[ResAC[S]](
+        .fold(
           error(f.token, "Cannot resolve the import")
         )(validNec)
 
     // Get part of the declared context (for import/use ... from ... expressions)
     def getFrom(f: FromExpr[S], ctx: C): ResAC[S] =
-      f.imports
-        .map[ResAC[S]](
-          _.fold[ResAC[S]](
-            { case (n, rn) =>
+      ctx.pickHeader.validNec |+| f.imports
+        .map(
+          _.bimap(
+            _.bimap(n => (n, n.value), _.map(_.value)),
+            _.bimap(n => (n, n.value), _.map(_.value))
+          ).merge match {
+            case ((token, name), rename) =>
               ctx
-                .pick(n.value, rn.map(_.value), ctx.module.nonEmpty)
+                .pick(name, rename, ctx.module.nonEmpty)
                 .map(validNec)
                 .getOrElse(
                   error(
-                    n,
-                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no ${n.value} declared. Try adding `declares ${n.value}` to that file."
+                    token,
+                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no $name declared. Try adding `declares $name` to that file."
                   )
                 )
-            },
-            { case (n, rn) =>
-              ctx
-                .pick(n.value, rn.map(_.value), ctx.module.nonEmpty)
-                .map(validNec)
-                .getOrElse(
-                  error(
-                    n,
-                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no ${n.value} declared. Try adding `declares ${n.value}` to that file."
-                  )
-                )
-            }
-          )
+          }
         )
-        .foldLeft[ResAC[S]](validNec(ctx.pickHeader))(_ |+| _)
+        .combineAll
 
     // Convert an imported context into a module (ability)
     def toModule(ctx: C, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S] =
