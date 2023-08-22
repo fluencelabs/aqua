@@ -256,6 +256,11 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
 // Ability is an unordered collection of labelled types and arrows
 case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
 
+  /**
+   * Get all arrows defined in this ability and its sub-abilities.
+   * Paths to arrows are returned **without** ability name
+   * to allow renaming on call site.
+   */
   lazy val arrows: Map[String, ArrowType] = {
     def getArrowsEval(path: Option[String], ability: AbilityType): Eval[List[(String, ArrowType)]] =
       ability.fields.toNel.toList.flatTraverse {
@@ -271,6 +276,11 @@ case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends 
     getArrowsEval(None, this).value.toMap
   }
 
+  /**
+   * Get all abilities defined in this ability and its sub-abilities.
+   * Paths to abilities are returned **without** ability name
+   * to allow renaming on call site.
+   */
   lazy val abilities: Map[String, AbilityType] = {
     def getAbilitiesEval(
       path: Option[String],
@@ -288,6 +298,11 @@ case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends 
     getAbilitiesEval(None, this).value.toMap
   }
 
+  /**
+   * Get all variables defined in this ability and its sub-abilities.
+   * Paths to variables are returned **without** ability name
+   * to allow renaming on call site.
+   */
   lazy val variables: Map[String, DataType] = {
     def getVariablesEval(
       path: Option[String],
