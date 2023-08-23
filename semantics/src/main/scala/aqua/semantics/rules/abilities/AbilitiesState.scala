@@ -2,7 +2,7 @@ package aqua.semantics.rules.abilities
 
 import aqua.raw.{RawContext, ServiceRaw}
 import aqua.raw.value.ValueRaw
-import aqua.parser.lexer.{Ability, NamedTypeToken, Name, Token, ValueToken}
+import aqua.parser.lexer.{Name, NamedTypeToken, Token, ValueToken}
 import aqua.types.ArrowType
 import cats.Monoid
 import cats.data.NonEmptyList
@@ -13,8 +13,7 @@ case class AbilitiesState[S[_]](
   abilities: Map[String, RawContext] = Map.empty,
   rootServiceIds: Map[String, (ValueToken[S], ValueRaw)] =
     Map.empty[String, (ValueToken[S], ValueRaw)],
-  definitions: Map[String, NamedTypeToken[S]] =
-    Map.empty[String, NamedTypeToken[S]]
+  definitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]]
 ) {
 
   def purgeArrows: Option[(NonEmptyList[(Name[S], ArrowType)], AbilitiesState[S])] =

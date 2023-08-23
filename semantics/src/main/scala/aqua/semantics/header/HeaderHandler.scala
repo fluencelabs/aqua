@@ -195,8 +195,8 @@ class HeaderHandler[S[_]: Comonad, C](using
                     .toValidNec(
                       error(
                         token,
-                        s"File has no $name declaration or import, cannot export, available functions: ${sumCtx.funcNames
-                          .mkString(", ")}"
+                        s"File has no $name declaration or import, " +
+                          s"cannot export, available functions: ${sumCtx.funcNames.mkString(", ")}"
                       )
                     ) <* exportFuncChecks(sumCtx, token, name)
                 }
