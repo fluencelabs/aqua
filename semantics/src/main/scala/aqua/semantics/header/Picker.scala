@@ -16,7 +16,7 @@ trait Picker[A] {
   def pickDeclared(ctx: A)(implicit semi: Semigroup[A]): A
   def pickHeader(ctx: A): A
   def module(ctx: A): Option[String]
-  def exports(ctx: A): Option[Map[String, Option[String]]]
+  def exports(ctx: A): Map[String, Option[String]]
   def isAbility(ctx: A, name: String): Boolean
   def funcReturnAbilityOrArrow(ctx: A, name: String): Boolean
   def funcAcceptAbility(ctx: A, name: String): Boolean
@@ -42,7 +42,7 @@ object Picker {
     def pickDeclared(implicit semi: Semigroup[A]): A = Picker[A].pickDeclared(p)
     def pickHeader: A = Picker[A].pickHeader(p)
     def module: Option[String] = Picker[A].module(p)
-    def exports: Option[Map[String, Option[String]]] = Picker[A].exports(p)
+    def exports: Map[String, Option[String]] = Picker[A].exports(p)
 
     def isAbility(name: String): Boolean = Picker[A].isAbility(p, name)
 
@@ -88,7 +88,7 @@ object Picker {
   given Picker[RawContext] with {
 
     override def blank: RawContext = RawContext.blank
-    override def exports(ctx: RawContext): Option[Map[String, Option[String]]] = ctx.exports
+    override def exports(ctx: RawContext): Map[String, Option[String]] = ctx.exports
 
     override def isAbility(ctx: RawContext, name: String): Boolean =
       ctx.types.get(name).exists(isAbilityType)
@@ -125,7 +125,7 @@ object Picker {
       ctx.copy(module = name, declares = declares)
 
     override def setExports(ctx: RawContext, exports: Map[String, Option[String]]): RawContext =
-      ctx.copy(exports = Some(exports))
+      ctx.copy(exports = exports)
 
     override def pick(
       ctx: RawContext,

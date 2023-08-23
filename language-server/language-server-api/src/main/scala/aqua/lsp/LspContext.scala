@@ -55,7 +55,7 @@ object LspContext {
     import aqua.semantics.header.Picker.*
 
     override def blank: LspContext[S] = LspContext[S](Picker[RawContext].blank, Map.empty)
-    override def exports(ctx: LspContext[S]): Option[Map[String, Option[String]]] = ctx.raw.exports
+    override def exports(ctx: LspContext[S]): Map[String, Option[String]] = ctx.raw.exports
 
     override def isAbility(ctx: LspContext[S], name: String): Boolean =
       ctx.raw.isAbility(name)

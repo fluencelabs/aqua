@@ -207,7 +207,7 @@ class HeaderHandler[S[_]: Comonad, C](using
                     )(_ => !sumCtx.isAbility(name))
                     .toValidatedNec <* exportFuncChecks(sumCtx, token, name)
                 }
-                .prepend(validNec(ctx.exports.getOrElse(Map.empty)))
+                .prepend(validNec(ctx.exports))
                 .combineAll
                 .map(ctx.setExports)
           )
@@ -227,12 +227,16 @@ class HeaderHandler[S[_]: Comonad, C](using
                 )
                 .combine(
                   ctx.definedAbilityNames.toList.traverse_(name =>
+                    // TODO: Provide better token for this error
                     error(token, s"Can not export '$name' as it is an ability ").invalidNec
                   )
                 )
-                // Here exports are empty, but 'module' is not defined
-                // and thus everything from 'parts' will be exported
-                .as(ctx.setExports(Map.empty))
+                .as(
+                  // Export everything
+                  ctx.setExports(
+                    ctx.all.map(_ -> None).toMap
+                  )
+                )
             }
           )
         )

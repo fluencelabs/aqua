@@ -34,7 +34,7 @@ case class RawContext(
   init: Option[RawContext] = None,
   module: Option[String] = None,
   declares: Set[String] = Set.empty,
-  exports: Option[Map[String, Option[String]]] = None,
+  exports: Map[String, Option[String]] = Map.empty,
   parts: Chain[(RawContext, RawPart)] = Chain.empty,
   abilities: Map[String, RawContext] = Map.empty
 ) {
@@ -104,11 +104,9 @@ case class RawContext(
   override def toString: String =
     s"""|module: ${module.getOrElse("unnamed")}
         |declares: ${declares.mkString(", ")}
-        |exports: ${exports
-      .map(_.map { case (name, rename) =>
-        rename.fold(name)(name + " as " + _)
-      }.mkString(", "))
-      .orEmpty}
+        |exports: ${exports.map { case (name, rename) =>
+      rename.fold(name)(name + " as " + _)
+    }.mkString(", ")}
         |parts: ${parts.map { case (_, part) => part.name }.toList.mkString(", ")}
         |abilities: ${abilities.keys.mkString(", ")}""".stripMargin
 }
@@ -122,7 +120,7 @@ object RawContext {
         x.init.flatMap(xi => y.init.map(xi |+| _)) orElse x.init orElse y.init,
         x.module orElse y.module,
         x.declares ++ y.declares,
-        x.exports.flatMap(xe => y.exports.map(xe ++ _)) orElse x.exports orElse y.exports,
+        x.exports ++ y.exports,
         x.parts ++ y.parts,
         x.abilities ++ y.abilities
       )
