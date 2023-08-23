@@ -29,11 +29,9 @@ class AbilitySem[S[_]](val expr: AbilityExpr[S]) extends AnyVal {
     Prog.after_(
       for {
         defs <- D.purgeDefs(expr.name)
-        abType = defs.map(fields => AbilityType(expr.name.value, fields))
-        result <- abType.flatTraverse(t =>
-          T.defineNamedType(expr.name, t)
-            .map(Option.when(_)(TypeRaw(expr.name.value, t)))
-        )
+        fields = defs.view.mapValues(d => d.name -> d.`type`).toMap
+        abilityType <- T.defineAbilityType(expr.name, fields)
+        result = abilityType.map(st => TypeRaw(expr.name.value, st))
       } yield result.getOrElse(Raw.error("Ability types unresolved"))
     )
   }

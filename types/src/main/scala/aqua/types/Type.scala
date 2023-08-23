@@ -246,6 +246,7 @@ sealed trait NamedType extends Type {
 }
 
 // Struct is an unordered collection of labelled types
+// TODO: Make fields type `DataType`
 case class StructType(name: String, fields: NonEmptyMap[String, Type])
     extends DataType with NamedType {
 

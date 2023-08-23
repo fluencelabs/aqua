@@ -43,7 +43,7 @@ case class StreamTypeToken[S[_]: Comonad](override val unit: S[Unit], data: Data
 object StreamTypeToken {
 
   val `streamtypedef`: P[StreamTypeToken[Span.S]] =
-    ((`*`.lift <* P.not(`*`).withContext("Nested streams '**type' is prohibited"))
+    ((`*`.lift <* P.not(`*`).withContext("Nested streams '**type' are prohibited"))
       ~ DataTypeToken.`withoutstreamdatatypedef`)
       .map(ud => StreamTypeToken(ud._1, ud._2))
 
