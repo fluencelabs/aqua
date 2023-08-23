@@ -177,16 +177,22 @@ class HeaderHandler[S[_]: Comonad, C](using
                     .toValid(
                       error(
                         token,
-                        s"File has no $name declaration or import, cannot export, available funcs: ${sumCtx.funcNames
+                        s"File has no $name declaration or import, cannot export, available functions: ${sumCtx.funcNames
                           .mkString(", ")}"
                       )
                     )
                     .ensure(
                       error(
                         token,
-                        s"The function '$name' cannot be exported, because it returns arrow type or ability type"
+                        s"The function '$name' cannot be exported, because it returns an arrow or an ability"
                       )
                     )(_ => !sumCtx.funcReturnAbilityOrArrow(name))
+                    .ensure(
+                      error(
+                        token,
+                        s"The function '$name' cannot be exported, because it accepts an ability"
+                      )
+                    )(_ => !sumCtx.funcAcceptAbility(name))
                     .toValidatedNec
                 }
                 .prepend(validNec(ctx.exports.getOrElse(Map.empty)))
