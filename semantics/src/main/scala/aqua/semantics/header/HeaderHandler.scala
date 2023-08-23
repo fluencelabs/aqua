@@ -7,7 +7,7 @@ import aqua.semantics.header.Picker.*
 import aqua.semantics.{HeaderError, SemanticError}
 
 import cats.data.*
-import cats.data.Validated.{invalidNec, validNec}
+import cats.data.Validated.*
 import cats.free.Cofree
 import cats.instances.list.*
 import cats.instances.option.*
@@ -18,6 +18,7 @@ import cats.syntax.functor.*
 import cats.syntax.semigroup.*
 import cats.syntax.validated.*
 import cats.syntax.bifunctor.*
+import cats.syntax.apply.*
 import cats.{Comonad, Eval, Monoid}
 
 class HeaderHandler[S[_]: Comonad, C](using
@@ -41,6 +42,23 @@ class HeaderHandler[S[_]: Comonad, C](using
     token: Token[S],
     msg: String
   ): SemanticError[S] = HeaderError(token, msg)
+
+  private def exportFuncChecks(ctx: C, token: Token[S], name: String): ResT[S, Unit] =
+    Validated.condNec(
+      !ctx.funcReturnAbilityOrArrow(name),
+      (),
+      error(
+        token,
+        s"The function '$name' cannot be exported, because it returns an arrow or an ability"
+      )
+    ) combine Validated.condNec(
+      !ctx.funcAcceptAbility(name),
+      (),
+      error(
+        token,
+        s"The function '$name' cannot be exported, because it accepts an ability"
+      )
+    )
 
   def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C] = {
     // Resolve a filename from given imports or fail
@@ -174,26 +192,13 @@ class HeaderHandler[S[_]: Comonad, C](using
                   sumCtx
                     .pick(name, rename, declared = false)
                     .as(Map(name -> rename))
-                    .toValid(
+                    .toValidNec(
                       error(
                         token,
                         s"File has no $name declaration or import, cannot export, available functions: ${sumCtx.funcNames
                           .mkString(", ")}"
                       )
-                    )
-                    .ensure(
-                      error(
-                        token,
-                        s"The function '$name' cannot be exported, because it returns an arrow or an ability"
-                      )
-                    )(_ => !sumCtx.funcReturnAbilityOrArrow(name))
-                    .ensure(
-                      error(
-                        token,
-                        s"The function '$name' cannot be exported, because it accepts an ability"
-                      )
-                    )(_ => !sumCtx.funcAcceptAbility(name))
-                    .toValidatedNec
+                    ) <* exportFuncChecks(sumCtx, token, name)
                 }
                 .prepend(validNec(ctx.exports.getOrElse(Map.empty)))
                 .combineAll
@@ -206,7 +211,15 @@ class HeaderHandler[S[_]: Comonad, C](using
         validNec(
           HeaderSem[S, C](
             acm.empty,
-            (ctx, _) => validNec(ctx.setExports(Map.empty))
+            (ctx, initCtx) => {
+              val sumCtx = initCtx |+| ctx
+              ctx.funcNames
+                .traverse_(name =>
+                  // TODO: Provide better token for this error
+                  exportFuncChecks(sumCtx, token, name)
+                )
+                .as(sumCtx.setExports(Map.empty))
+            }
           )
         )
 
