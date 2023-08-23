@@ -1,3 +1,5 @@
+aqua ReturnArrow
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 export callReturnedArrow, callReturnedChainArrow

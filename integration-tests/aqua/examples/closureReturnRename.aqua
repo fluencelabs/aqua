@@ -1,3 +1,5 @@
+aqua ClosureReturnRename
+
 export lng193Bug
 
 func getClosure(arg: u16, peer: string) -> u16 -> u16:
