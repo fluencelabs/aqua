@@ -102,8 +102,7 @@ jobs:
         with:
           dependencies: |
             {
-              "@fluencelabs/js-client.node": "${{ fromJson(inputs.js-client-snapshots)['js-client.node'] }}",
-              "@fluencelabs/js-client.api": "${{ fromJson(inputs.js-client-snapshots)['js-client.api'] }}"
+              "@fluencelabs/js-client": "${{ fromJson(inputs.js-client-snapshots)['js-client'] }}"
             }
 
       - run: pnpm install --no-frozen-lockfile

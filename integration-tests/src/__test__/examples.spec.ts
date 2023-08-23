@@ -1,5 +1,4 @@
-import { Fluence, IFluenceClient, createClient } from '@fluencelabs/js-client.api';
-import '@fluencelabs/js-client.node';
+import { Fluence, IFluenceClient, createClient } from '@fluencelabs/js-client';
 import { getObjAssignCall, getObjCall, getObjRelayCall } from '../examples/objectCall.js';
 import { callArrowCall, reproArgsBug426Call } from '../examples/callArrowCall.js';
 import { dataAliasCall } from '../examples/dataAliasCall.js';
