@@ -1,15 +1,18 @@
 package aqua.raw
 
+import aqua.raw.arrow.FuncRaw
+import aqua.raw.value.ValueRaw
+import aqua.types.{StructType, Type}
+
 import cats.Monoid
 import cats.Semigroup
 import cats.data.Chain
 import cats.data.NonEmptyMap
-import aqua.raw.arrow.FuncRaw
-import aqua.raw.value.ValueRaw
-import aqua.types.{StructType, Type}
 import cats.syntax.monoid.*
+import cats.syntax.option.*
 
 import scala.collection.immutable.SortedMap
+import aqua.types.AbilityType
 
 /**
  * RawContext is essentially a model of the source code – the first one we get to from the AST.
@@ -46,6 +49,13 @@ case class RawContext(
   private def collectPartsMap[T](f: PartialFunction[RawPart, T]): Map[String, T] =
     parts.collect { case (_, p) if f.isDefinedAt(p) => p.name -> f(p) }.toList.toMap
 
+  private def all[T](what: RawContext => Map[String, T], prefix: String = ""): Map[String, T] =
+    abilities
+      .foldLeft(what(this)) { case (ts, (k, v)) =>
+        ts ++ v.all(what, k + ".")
+      }
+      .map(prefixFirst(prefix, _))
+
   lazy val services: Map[String, ServiceRaw] = collectPartsMap { case srv: ServiceRaw => srv }
 
   lazy val allServices: Map[String, ServiceRaw] =
@@ -72,14 +82,13 @@ case class RawContext(
       c.value
     }
 
-  private def all[T](what: RawContext => Map[String, T], prefix: String = ""): Map[String, T] =
-    abilities
-      .foldLeft(what(this)) { case (ts, (k, v)) =>
-        ts ++ v.all(what, k + ".")
-      }
-      .map(prefixFirst(prefix, _))
-
   lazy val allValues: Map[String, ValueRaw] = all(_.values)
+
+  lazy val definedAbilities: Map[String, AbilityType] =
+    collectPartsMap { case TypeRaw(_, at: AbilityType) => at }
+
+  lazy val allDefinedAbilities: Map[String, AbilityType] =
+    all(_.definedAbilities)
 
   def `type`(name: String): Option[StructType] =
     NonEmptyMap
@@ -92,7 +101,16 @@ case class RawContext(
       )
       .map(StructType(name, _))
 
-  override def toString: String = s"module: $module\ndeclares: $declares\nexports: $exports"
+  override def toString: String =
+    s"""|module: ${module.getOrElse("unnamed")}
+        |declares: ${declares.mkString(", ")}
+        |exports: ${exports
+      .map(_.map { case (name, rename) =>
+        rename.fold(name)(name + " as " + _)
+      }.mkString(", "))
+      .orEmpty}
+        |parts: ${parts.map { case (_, part) => part.name }.toList.mkString(", ")}
+        |abilities: ${abilities.keys.mkString(", ")}""".stripMargin
 }
 
 object RawContext {

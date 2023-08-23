@@ -220,12 +220,19 @@ class HeaderHandler[S[_]: Comonad, C](using
             acm.empty,
             (ctx, initCtx) => {
               val sumCtx = initCtx |+| ctx
-              ctx.funcNames
+              ctx.funcNames.toList
                 .traverse_(name =>
                   // TODO: Provide better token for this error
                   exportFuncChecks(sumCtx, token, name)
                 )
-                .as(sumCtx.setExports(Map.empty))
+                .combine(
+                  ctx.definedAbilityNames.toList.traverse_(name =>
+                    error(token, s"Can not export '$name' as it is an ability ").invalidNec
+                  )
+                )
+                // Here exports are empty, but 'module' is not defined
+                // and thus everything from 'parts' will be exported
+                .as(ctx.setExports(Map.empty))
             }
           )
         )

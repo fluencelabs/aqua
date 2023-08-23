@@ -66,7 +66,10 @@ object LspContext {
     override def funcAcceptAbility(ctx: LspContext[S], name: String): Boolean =
       ctx.raw.funcAcceptAbility(name)
 
-    override def funcNames(ctx: LspContext[S]): List[String] = ctx.raw.funcNames
+    override def funcNames(ctx: LspContext[S]): Set[String] = ctx.raw.funcNames
+
+    override def definedAbilityNames(ctx: LspContext[S]): Set[String] =
+      ctx.raw.definedAbilityNames
 
     override def addPart(ctx: LspContext[S], part: (LspContext[S], RawPart)): LspContext[S] =
       ctx.copy(raw = ctx.raw.addPart(part._1.raw -> part._2))

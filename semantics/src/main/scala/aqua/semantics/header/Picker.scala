@@ -9,7 +9,8 @@ import cats.syntax.semigroup.*
 trait Picker[A] {
 
   def all(ctx: A): Set[String]
-  def funcNames(ctx: A): List[String]
+  def funcNames(ctx: A): Set[String]
+  def definedAbilityNames(ctx: A): Set[String]
   def blank: A
   def pick(ctx: A, name: String, rename: Option[String], declared: Boolean): Option[A]
   def pickDeclared(ctx: A)(implicit semi: Semigroup[A]): A
@@ -33,7 +34,8 @@ object Picker {
 
     def blank: A = Picker[A].blank
     def all: Set[String] = Picker[A].all(p)
-    def funcNames: List[String] = Picker[A].funcNames(p)
+    def funcNames: Set[String] = Picker[A].funcNames(p)
+    def definedAbilityNames: Set[String] = Picker[A].definedAbilityNames(p)
 
     def pick(name: String, rename: Option[String], declared: Boolean): Option[A] =
       Picker[A].pick(p, name, rename, declared)
@@ -97,7 +99,9 @@ object Picker {
     override def funcAcceptAbility(ctx: RawContext, name: String): Boolean =
       ctx.funcs.get(name).map(_.arrow.`type`).exists(acceptsAbility)
 
-    override def funcNames(ctx: RawContext): List[String] = ctx.funcs.keys.toList
+    override def funcNames(ctx: RawContext): Set[String] = ctx.funcs.keySet
+
+    override def definedAbilityNames(ctx: RawContext): Set[String] = ctx.definedAbilities.keySet
 
     override def addPart(ctx: RawContext, part: (RawContext, RawPart)): RawContext =
       ctx.copy(parts = ctx.parts :+ part)
