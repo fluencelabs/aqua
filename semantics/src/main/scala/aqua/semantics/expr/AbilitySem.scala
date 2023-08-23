@@ -1,7 +1,7 @@
 package aqua.semantics.expr
 
 import aqua.parser.expr.AbilityExpr
-import aqua.raw.{Raw, ScopeRaw, ServiceRaw, TypeRaw}
+import aqua.raw.{Raw, ServiceRaw, TypeRaw}
 import aqua.parser.lexer.{Name, NamedTypeToken}
 import aqua.raw.{Raw, ServiceRaw}
 import aqua.semantics.Prog
