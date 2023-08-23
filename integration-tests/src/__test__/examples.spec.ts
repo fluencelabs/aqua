@@ -87,13 +87,13 @@ async function start() {
     Fluence.onConnectionStateChange((s) => {
         console.log(s);
     });
-    await Fluence.connect(relay1);
+    await Fluence.connect(relay1, {});
     const cl = await Fluence.getClient();
     peer1 = cl;
     selfPeerId = cl.getPeerId();
     console.log('CONNECTED');
 
-    peer2 = await createClient(relay2);
+    peer2 = await createClient(relay2, {});
     console.log('CONNECTING TO SECOND:');
     peer2.onConnectionStateChange((s) => {
         console.log(s);
