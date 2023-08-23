@@ -57,6 +57,9 @@ object LspContext {
     override def blank: LspContext[S] = LspContext[S](Picker[RawContext].blank, Map.empty)
     override def exports(ctx: LspContext[S]): Option[Map[String, Option[String]]] = ctx.raw.exports
 
+    override def isAbility(ctx: LspContext[S], name: String): Boolean =
+      ctx.raw.isAbility(name)
+
     override def funcReturnAbilityOrArrow(ctx: LspContext[S], name: String): Boolean =
       ctx.raw.funcReturnAbilityOrArrow(name)
 

@@ -1,7 +1,7 @@
 package aqua.semantics.header
 
 import aqua.raw.{RawContext, RawPart}
-import aqua.types.{AbilityType, ArrowType}
+import aqua.types.{AbilityType, ArrowType, Type}
 import cats.Semigroup
 import cats.syntax.semigroup.*
 
@@ -16,6 +16,7 @@ trait Picker[A] {
   def pickHeader(ctx: A): A
   def module(ctx: A): Option[String]
   def exports(ctx: A): Option[Map[String, Option[String]]]
+  def isAbility(ctx: A, name: String): Boolean
   def funcReturnAbilityOrArrow(ctx: A, name: String): Boolean
   def funcAcceptAbility(ctx: A, name: String): Boolean
   def declares(ctx: A): Set[String]
@@ -40,6 +41,8 @@ object Picker {
     def pickHeader: A = Picker[A].pickHeader(p)
     def module: Option[String] = Picker[A].module(p)
     def exports: Option[Map[String, Option[String]]] = Picker[A].exports(p)
+
+    def isAbility(name: String): Boolean = Picker[A].isAbility(p, name)
 
     def funcReturnAbilityOrArrow(name: String): Boolean =
       Picker[A].funcReturnAbilityOrArrow(p, name)
@@ -72,12 +75,21 @@ object Picker {
       case _ => false
     }
 
+  private def isAbilityType(`type`: Type): Boolean =
+    `type` match {
+      case _: AbilityType => true
+      case _ => false
+    }
+
   final def apply[A](using ev: Picker[A]): Picker[A] = ev
 
   given Picker[RawContext] with {
 
     override def blank: RawContext = RawContext.blank
     override def exports(ctx: RawContext): Option[Map[String, Option[String]]] = ctx.exports
+
+    override def isAbility(ctx: RawContext, name: String): Boolean =
+      ctx.types.get(name).exists(isAbilityType)
 
     override def funcReturnAbilityOrArrow(ctx: RawContext, name: String): Boolean =
       ctx.funcs.get(name).map(_.arrow.`type`).exists(returnsAbilityOrArrow)

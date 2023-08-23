@@ -192,13 +192,20 @@ class HeaderHandler[S[_]: Comonad, C](using
                   sumCtx
                     .pick(name, rename, declared = false)
                     .as(Map(name -> rename))
-                    .toValidNec(
+                    .toValid(
                       error(
                         token,
                         s"File has no $name declaration or import, " +
                           s"cannot export, available functions: ${sumCtx.funcNames.mkString(", ")}"
                       )
-                    ) <* exportFuncChecks(sumCtx, token, name)
+                    )
+                    .ensure(
+                      error(
+                        token,
+                        s"Can not export '$name' as it is an ability"
+                      )
+                    )(_ => !sumCtx.isAbility(name))
+                    .toValidatedNec <* exportFuncChecks(sumCtx, token, name)
                 }
                 .prepend(validNec(ctx.exports.getOrElse(Map.empty)))
                 .combineAll
