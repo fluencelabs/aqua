@@ -138,7 +138,16 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
       case ct @ CollectionToken(_, values) =>
         for {
           maybeValuesRaw <- values.traverse(valueToRaw).map(_.sequence)
-          raw = maybeValuesRaw.map(raws =>
+          valuesRawChecked <- maybeValuesRaw.flatTraverse(raws =>
+            raws
+              .zip(values)
+              .traverse { case (raw, token) =>
+                T.ensureTypeIsCollectible(token, raw.`type`)
+                  .map(Option.when(_)(raw))
+              }
+              .map(_.sequence)
+          )
+          raw = valuesRawChecked.map(raws =>
             NonEmptyList
               .fromList(raws)
               .fold(ValueRaw.Nil) { nonEmpty =>

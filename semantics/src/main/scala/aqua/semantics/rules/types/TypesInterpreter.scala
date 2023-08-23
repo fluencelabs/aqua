@@ -299,6 +299,16 @@ class TypesInterpreter[S[_], X](implicit
       }
     }
 
+  override def ensureTypeIsCollectible(token: Token[S], givenType: Type): State[X, Boolean] =
+    givenType match {
+      case _: DataType => true.pure
+      case _ =>
+        report(
+          token,
+          s"Value of type '$givenType' could not be put into a collection"
+        ).as(false)
+    }
+
   override def ensureTypeOneOf[T <: Type](
     token: Token[S],
     expected: Set[T],

@@ -9,7 +9,7 @@ import cats.data.NonEmptyList
 trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveType(token: TypeToken[S]): Alg[Option[Type]]
-  
+
   def getType(name: String): Alg[Option[Type]]
 
   def resolveArrowDef(arrowDef: ArrowTypeToken[S]): Alg[Option[ArrowType]]
@@ -30,11 +30,17 @@ trait TypesAlgebra[S[_], Alg[_]] {
   ): Alg[Option[PropertyRaw]]
   def resolveField(rootT: Type, op: IntoField[S]): Alg[Option[PropertyRaw]]
 
-  def resolveArrow(rootT: Type, op: IntoArrow[S], arguments: List[ValueRaw]): Alg[Option[PropertyRaw]]
+  def resolveArrow(
+    rootT: Type,
+    op: IntoArrow[S],
+    arguments: List[ValueRaw]
+  ): Alg[Option[PropertyRaw]]
 
   def ensureValuesComparable(token: Token[S], left: Type, right: Type): Alg[Boolean]
 
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
+
+  def ensureTypeIsCollectible(token: Token[S], givenType: Type): Alg[Boolean]
 
   def ensureTypeOneOf[T <: Type](
     token: Token[S],
