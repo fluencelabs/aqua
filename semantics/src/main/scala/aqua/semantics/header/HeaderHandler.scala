@@ -106,7 +106,7 @@ class HeaderHandler[S[_]: Comonad, C](using
                 )
               } else
                 (
-                  declareNames.map(n => n.value -> n) ::: declareCustom.map(a => a.value -> a)
+                  declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
                 ).map { case (n, t) =>
                   ctx
                     .pick(n, None, ctx.module.nonEmpty)
@@ -128,6 +128,7 @@ class HeaderHandler[S[_]: Comonad, C](using
       case f @ ImportExpr(_) =>
         // Import everything from a file
         resolve(f).map(fc => HeaderSem[S, C](fc, (c, _) => validNec(c)))
+
       case f @ ImportFromExpr(_, _) =>
         // Import, map declarations
         resolve(f)
@@ -160,6 +161,8 @@ class HeaderHandler[S[_]: Comonad, C](using
             // Nothing there
             picker.blank,
             (ctx, initCtx) =>
+              val sumCtx = initCtx |+| ctx
+
               pubs
                 .map(
                   _.bimap(
@@ -168,26 +171,23 @@ class HeaderHandler[S[_]: Comonad, C](using
                   ).merge
                 )
                 .map { case ((token, name), rename) =>
-                  val sumCtx = initCtx |+| ctx
-
-                  if (sumCtx.funcReturnAbilityOrArrow(name))
-                    invalidNec(
+                  sumCtx
+                    .pick(name, rename, declared = false)
+                    .as(Map(name -> rename))
+                    .toValid(
+                      error(
+                        token,
+                        s"File has no $name declaration or import, cannot export, available funcs: ${sumCtx.funcNames
+                          .mkString(", ")}"
+                      )
+                    )
+                    .ensure(
                       error(
                         token,
                         s"The function '$name' cannot be exported, because it returns arrow type or ability type"
                       )
-                    )
-                  else
-                    sumCtx
-                      .pick(name, rename, declared = false)
-                      .as(Map(name -> rename))
-                      .toValidNec(
-                        error(
-                          token,
-                          s"File has no $name declaration or import, cannot export, available funcs: ${sumCtx.funcNames
-                            .mkString(", ")}"
-                        )
-                      )
+                    )(_ => !sumCtx.funcReturnAbilityOrArrow(name))
+                    .toValidatedNec
                 }
                 .prepend(validNec(ctx.exports.getOrElse(Map.empty)))
                 .combineAll
