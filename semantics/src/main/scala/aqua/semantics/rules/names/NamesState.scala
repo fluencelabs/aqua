@@ -9,7 +9,8 @@ import cats.syntax.functor.*
 case class NamesState[S[_]](
   stack: List[NamesState.Frame[S]] = Nil,
   rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
-  constants: Map[String, Type] = Map.empty[String, Type],
+  // can be constants or services as abilities
+  rootValues: Map[String, Type] = Map.empty[String, Type],
   definitions: Map[String, Name[S]] = Map.empty[String, Name[S]]
 ) {
 
@@ -18,7 +19,7 @@ case class NamesState[S[_]](
       .from(stack)
       .flatMap(s => s.names.keys ++ s.arrows.keys)
       .appendedAll(rootArrows.keys)
-      .appendedAll(constants.keys)
+      .appendedAll(rootValues.keys)
 
   def allArrows: LazyList[String] =
     LazyList.from(stack).flatMap(_.arrows.keys).appendedAll(rootArrows.keys)
@@ -53,7 +54,7 @@ object NamesState {
         stack = Nil,
         rootArrows = x.rootArrows ++ y.rootArrows,
         definitions = x.definitions ++ y.definitions,
-        constants = x.constants ++ y.constants
+        rootValues = x.rootValues ++ y.rootValues
       )
   }
 
@@ -62,6 +63,6 @@ object NamesState {
       rootArrows = context.allFuncs.map { case (s, fc) =>
         (s, fc.arrow.`type`)
       },
-      constants = context.allValues.map { case (s, vm) => (s, vm.`type`) }
+      rootValues = context.allValues.map { case (s, vm) => (s, vm.`type`) }
     )
 }

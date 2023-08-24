@@ -41,7 +41,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
     val initState = rawState.copy(
       names = rawState.names.copy(
         rootArrows = rawState.names.rootArrows ++ init.rootArrows,
-        constants = rawState.names.constants ++ init.constants
+        rootValues = rawState.names.rootValues ++ init.constants
       ),
       abilities = rawState.abilities.copy(
         definitions = rawState.abilities.definitions ++ init.abDefinitions
@@ -74,7 +74,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
               LspContext(
                 raw = ctx,
                 rootArrows = state.names.rootArrows,
-                constants = state.names.constants,
+                constants = state.names.rootValues,
                 abDefinitions = state.abilities.definitions,
                 locations = state.locations.allLocations,
                 importTokens = importTokens,

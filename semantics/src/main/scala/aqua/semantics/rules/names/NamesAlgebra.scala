@@ -8,9 +8,6 @@ trait NamesAlgebra[S[_], Alg[_]] {
 
   def read(name: Name[S], mustBeDefined: Boolean = true): Alg[Option[Type]]
 
-  // TODO can be implemented via read?
-  def constantDefined(name: Name[S]): Alg[Option[Type]]
-
   def readArrow(name: Name[S]): Alg[Option[ArrowType]]
 
   def define(name: Name[S], `type`: Type): Alg[Boolean]
@@ -19,7 +16,7 @@ trait NamesAlgebra[S[_], Alg[_]] {
 
   def getDerivedFrom(fromNames: List[Set[String]]): Alg[List[Set[String]]]
 
-  def defineConstant(name: Name[S], `type`: Type): Alg[Boolean]
+  def defineRootValue(name: Name[S], `type`: Type): Alg[Boolean]
 
   def defineArrow(name: Name[S], gen: ArrowType, isRoot: Boolean): Alg[Boolean]
 

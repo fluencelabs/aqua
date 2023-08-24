@@ -28,36 +28,30 @@ class NamesInterpreter[S[_], X](implicit
 
   private def readName(name: String): SX[Option[Type]] =
     getState.map { st =>
-      st.constants.get(name) orElse st.stack.collectFirst {
+       st.stack.collectFirst {
         case frame if frame.names.contains(name) => frame.names(name)
         case frame if frame.arrows.contains(name) => frame.arrows(name)
-      } orElse st.rootArrows.get(name)
+      } orElse st.rootArrows.get(name) orElse st.rootValues.get(name)
     }
 
   override def read(name: Name[S], mustBeDefined: Boolean = true): SX[Option[Type]] =
-    OptionT(constantDefined(name))
-      .orElseF(readName(name.value))
-      .value
-      .flatTap {
-        case None if mustBeDefined =>
-          getState.flatMap(st =>
-            report(
-              name,
-              Levenshtein
-                .genMessage(
-                  s"Name '${name.value}' isn't found in scope",
-                  name.value,
-                  st.allNames.toList
-                )
-            )
+    readName(name.value).flatTap {
+      case None if mustBeDefined =>
+        getState.flatMap(st =>
+          report(
+            name,
+            Levenshtein
+              .genMessage(
+                s"Name '${name.value}' isn't found in scope",
+                name.value,
+                st.allNames.toList
+              )
           )
-        case Some(_) =>
-          locations.pointLocation(name.value, name)
-        case _ => State.pure(())
-      }
-
-  override def constantDefined(name: Name[S]): SX[Option[Type]] =
-    getState.map(_.constants.get(name.value))
+        )
+      case Some(_) =>
+        locations.pointLocation(name.value, name)
+      case _ => State.pure(())
+    }
 
   def readArrow(name: Name[S]): SX[Option[ArrowType]] =
     readArrowHelper(name.value).flatMap {
@@ -116,14 +110,14 @@ class NamesInterpreter[S[_], X](implicit
       fr -> fromNames.map(ns => fr.derivedFrom.view.filterKeys(ns).values.foldLeft(ns)(_ ++ _))
     )
 
-  override def defineConstant(name: Name[S], `type`: Type): SX[Boolean] =
+  override def defineRootValue(name: Name[S], `type`: Type): SX[Boolean] =
     readName(name.value).flatMap {
       case Some(_) =>
         report(name, "This name was already defined in the scope").as(false)
       case None =>
         modify(st =>
           st.copy(
-            constants = st.constants.updated(name.value, `type`)
+            rootValues = st.rootValues.updated(name.value, `type`)
           )
         ).as(true)
     }.flatTap(_ => locations.addToken(name.value, name))

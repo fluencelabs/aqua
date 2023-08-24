@@ -1,6 +1,5 @@
 package aqua.model
 
-import aqua.raw.Raw
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag
 import aqua.raw.value.ValueRaw

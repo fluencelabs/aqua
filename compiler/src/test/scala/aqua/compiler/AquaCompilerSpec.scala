@@ -81,6 +81,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
       Map.empty
     )
 
+    println(res)
+
     res.isValid should be(true)
     val Validated.Valid(ctxs) = res
 

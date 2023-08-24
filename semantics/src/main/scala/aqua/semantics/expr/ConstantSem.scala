@@ -19,10 +19,10 @@ class ConstantSem[S[_]](val expr: ConstantExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg]
   ): Prog[Alg, Raw] = {
     for {
-      defined <- N.constantDefined(expr.name)
+      defined <- N.read(expr.name, false)
       v <- V.valueToRaw(expr.value)
       model <- (defined, v.map(v => v -> v.`type`), expr.skipIfAlreadyDefined) match {
-        case (Some(definedType), Some((vm, actualType)), true) =>
+        case (Some(definedType), Some((_, actualType)), true) =>
           T.ensureTypeMatches(expr.value, definedType, actualType).map {
             case true =>
               Raw.empty(s"Constant with name ${expr.name} was already defined, skipping")
@@ -34,7 +34,7 @@ class ConstantSem[S[_]](val expr: ConstantExpr[S]) extends AnyVal {
         case (_, None, _) =>
           Raw.error(s"There is no such variable ${expr.value}").pure[Alg]
         case (_, Some(t), _) =>
-          N.defineConstant(expr.name, t._2) as (ConstantRaw(
+          N.defineRootValue(expr.name, t._2) as (ConstantRaw(
             expr.name.value,
             t._1,
             expr.skipIfAlreadyDefined
