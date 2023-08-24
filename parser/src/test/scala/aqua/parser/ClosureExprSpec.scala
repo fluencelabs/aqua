@@ -3,15 +3,7 @@ package aqua.parser
 import aqua.AquaSpec
 import aqua.parser.expr.{FuncExpr, RootExpr}
 import aqua.parser.expr.func.{ArrowExpr, AssignmentExpr, CallArrowExpr, ClosureExpr, ReturnExpr}
-import aqua.parser.lexer.{
-  Ability,
-  CallArrowToken,
-  IntoArrow,
-  NamedTypeToken,
-  PropertyToken,
-  Token,
-  VarToken
-}
+import aqua.parser.lexer.{CallArrowToken, IntoArrow, NamedTypeToken, PropertyToken, Token, VarToken}
 import aqua.types.ScalarType.string
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

@@ -17,7 +17,15 @@ import aqua.semantics.rules.locations.DummyLocationsInterpreter
 import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw}
 import aqua.raw.RawContext
 import aqua.types.*
-import aqua.parser.lexer.{InfixToken, LiteralToken, Name, PrefixToken, ValueToken, VarToken}
+import aqua.parser.lexer.{
+  CollectionToken,
+  InfixToken,
+  LiteralToken,
+  Name,
+  PrefixToken,
+  ValueToken,
+  VarToken
+}
 import aqua.raw.value.ApplyUnaryOpRaw
 import aqua.parser.lexer.ValueToken.string
 
@@ -59,6 +67,15 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
 
   def variable(name: String): VarToken[Id] =
     VarToken[Id](Name[Id](name))
+
+  def option(value: ValueToken[Id]): CollectionToken[Id] =
+    CollectionToken[Id](CollectionToken.Mode.OptionMode, List(value))
+
+  def array(values: ValueToken[Id]*): CollectionToken[Id] =
+    CollectionToken[Id](CollectionToken.Mode.ArrayMode, values.toList)
+
+  def stream(values: ValueToken[Id]*): CollectionToken[Id] =
+    CollectionToken[Id](CollectionToken.Mode.StreamMode, values.toList)
 
   def allPairs[A](list: List[A]): List[(A, A)] = for {
     a <- list
@@ -509,6 +526,42 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
         res shouldBe None
         st.errors.exists(_.isInstanceOf[RulesViolated[Id]]) shouldBe true
       }
+    }
+  }
+
+  it should "forbid collections with abilities or arrows" in {
+    val ability = variable("ab")
+    val abilityType = AbilityType("Ab", NonEmptyMap.of("field" -> ScalarType.i8))
+    val arrow = variable("arr")
+    val arrowType = ArrowType(
+      ProductType(ScalarType.i8 :: Nil),
+      ProductType(ScalarType.i8 :: Nil)
+    )
+
+    val alg = algebra()
+
+    val state = genState(
+      vars = Map(
+        ability.name.value -> abilityType,
+        arrow.name.value -> arrowType
+      )
+    )
+
+    List(
+      option(ability),
+      array(ability),
+      stream(ability),
+      option(arrow),
+      array(arrow),
+      stream(arrow)
+    ).foreach { coll =>
+      val (st, res) = alg
+        .valueToRaw(coll)
+        .run(state)
+        .value
+
+      res shouldBe None
+      atLeast(1, st.errors.toList) shouldBe a[RulesViolated[Id]]
     }
   }
 }

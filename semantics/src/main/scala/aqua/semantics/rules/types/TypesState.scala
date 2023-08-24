@@ -1,37 +1,14 @@
 package aqua.semantics.rules.types
 
 import aqua.raw.value.{FunctorRaw, IntoIndexRaw, LiteralRaw, PropertyRaw, ValueRaw}
-import aqua.parser.lexer.{
-  ArrayTypeToken,
-  ArrowTypeToken,
-  BasicTypeToken,
-  NamedTypeToken,
-  IntoField,
-  IntoIndex,
-  Name,
-  OptionTypeToken,
-  PropertyOp,
-  StreamTypeToken,
-  Token,
-  TopBottomToken,
-  TypeToken
-}
-import aqua.types.{
-  ArrayType,
-  ArrowType,
-  BottomType,
-  DataType,
-  OptionType,
-  ProductType,
-  StreamType,
-  StructType,
-  TopType,
-  Type
-}
+import aqua.parser.lexer.*
+import aqua.types.*
+import aqua.raw.RawContext
+
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
-import aqua.raw.RawContext
+import cats.syntax.option.*
 
 case class TypesState[S[_]](
   fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],
@@ -56,7 +33,7 @@ object TypesStateHelper {
   ): Option[(Type, List[(Token[S], NamedTypeToken[S])])] =
     tt match {
       case TopBottomToken(_, isTop) =>
-        Option((if (isTop) TopType else BottomType, Nil))
+        (if (isTop) TopType else BottomType, Nil).some
       case ArrayTypeToken(_, dtt) =>
         resolveTypeToken(dtt, state, resolver).collect { case (it: DataType, t) =>
           (ArrayType(it), t)
@@ -71,7 +48,7 @@ object TypesStateHelper {
         }
       case ctt: NamedTypeToken[S] =>
         resolver(state, ctt)
-      case btt: BasicTypeToken[S] => Some((btt.value, Nil))
+      case btt: BasicTypeToken[S] => (btt.value, Nil).some
       case ArrowTypeToken(_, args, res) =>
         val strictArgs =
           args.map(_._2).map(resolveTypeToken(_, state, resolver)).collect {

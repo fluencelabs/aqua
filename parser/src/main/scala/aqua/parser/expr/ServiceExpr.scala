@@ -2,7 +2,7 @@ package aqua.parser.expr
 
 import aqua.parser.Expr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{Ability, NamedTypeToken, ValueToken}
+import aqua.parser.lexer.{NamedTypeToken, ValueToken}
 import aqua.parser.lift.LiftParser
 import cats.Comonad
 import cats.parse.Parser

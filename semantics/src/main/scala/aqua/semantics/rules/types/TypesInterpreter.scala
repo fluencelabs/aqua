@@ -54,13 +54,12 @@ class TypesInterpreter[S[_], X](implicit
 
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
     getState.map(st => TypesStateHelper.resolveTypeToken(token, st, resolver)).flatMap {
-      case Some(t) =>
-        val (tt, tokens) = t
-        val tokensLocs = tokens.map { case (t, n) =>
-          n.value -> t
-        }
-        locations.pointLocations(tokensLocs).map(_ => Some(tt))
-      case None => report(token, s"Unresolved type").as(None)
+      case Some((typ, tokens)) =>
+        val tokensLocs = tokens.map { case (t, n) => n.value -> t }
+        locations.pointLocations(tokensLocs).as(typ.some)
+      case None =>
+        // TODO: Give more specific error message
+        report(token, s"Unresolved type").as(None)
     }
 
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
@@ -78,21 +77,61 @@ class TypesInterpreter[S[_], X](implicit
           }
     }
 
-  override def defineNamedType(
+  override def defineAbilityType(
     name: NamedTypeToken[S],
-    `type`: Type
-  ): State[X, Boolean] =
+    fields: Map[String, (Name[S], Type)]
+  ): State[X, Option[AbilityType]] =
     getState.map(_.definitions.get(name.value)).flatMap {
-      case Some(n) if n == name => State.pure(true)
-      case Some(_) =>
-        report(name, s"Type `${name.value}` was already defined").as(false)
+      case Some(_) => report(name, s"Ability `${name.value}` was already defined").as(none)
       case None =>
-        modify { st =>
-          st.copy(
-            strict = st.strict.updated(name.value, `type`),
-            definitions = st.definitions.updated(name.value, name)
+        val types = fields.view.mapValues { case (_, t) => t }.toMap
+        NonEmptyMap
+          .fromMap(SortedMap.from(types))
+          .fold(report(name, s"Ability `${name.value}` has no fields").as(none))(nonEmptyFields =>
+            val `type` = AbilityType(name.value, nonEmptyFields)
+            modify { st =>
+              st.copy(
+                strict = st.strict.updated(name.value, `type`),
+                definitions = st.definitions.updated(name.value, name)
+              )
+            }.as(`type`.some)
           )
-        }.as(true)
+    }
+
+  override def defineStructType(
+    name: NamedTypeToken[S],
+    fields: Map[String, (Name[S], Type)]
+  ): State[X, Option[StructType]] =
+    getState.map(_.definitions.get(name.value)).flatMap {
+      case Some(_) => report(name, s"Data `${name.value}` was already defined").as(none)
+      case None =>
+        fields.toList.traverse {
+          case (field, (fieldName, t: DataType)) =>
+            t match {
+              case _: StreamType => report(fieldName, s"Field '$field' has stream type").as(none)
+              case _ => (field -> t).some.pure[ST]
+            }
+          case (field, (fieldName, t)) =>
+            report(
+              fieldName,
+              s"Field '$field' has unacceptable for struct field type '$t'"
+            ).as(none)
+        }.map(_.sequence.map(_.toMap))
+          .flatMap(
+            _.map(SortedMap.from)
+              .flatMap(NonEmptyMap.fromMap)
+              .fold(
+                report(name, s"Struct `${name.value}` has no fields").as(none)
+              )(nonEmptyFields =>
+                val `type` = StructType(name.value, nonEmptyFields)
+                modify { st =>
+                  st.copy(
+                    strict = st.strict.updated(name.value, `type`),
+                    definitions = st.definitions.updated(name.value, name)
+                  )
+                }.as(`type`.some)
+              )
+          )
     }
 
   override def defineAlias(name: NamedTypeToken[S], target: Type): State[X, Boolean] =
@@ -297,6 +336,16 @@ class TypesInterpreter[S[_], X](implicit
           )
             .as(false)
       }
+    }
+
+  override def ensureTypeIsCollectible(token: Token[S], givenType: Type): State[X, Boolean] =
+    givenType match {
+      case _: DataType => true.pure
+      case _ =>
+        report(
+          token,
+          s"Value of type '$givenType' could not be put into a collection"
+        ).as(false)
     }
 
   override def ensureTypeOneOf[T <: Type](

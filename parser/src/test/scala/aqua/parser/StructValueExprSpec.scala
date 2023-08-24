@@ -5,7 +5,6 @@ import aqua.AquaSpec.{toNumber, toStr, toVar}
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.expr.func.AssignmentExpr
 import aqua.parser.lexer.{
-  Ability,
   CallArrowToken,
   CollectionToken,
   IntoArrow,

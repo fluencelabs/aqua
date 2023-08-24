@@ -118,11 +118,7 @@ object AquaContext extends Logging {
     logger.trace("raw: " + rawContext)
     logger.trace("ctx: " + ctx)
 
-    rawContext.module
-      .fold(
-        // if `module` header is not defined, then export everything defined in rawContext
-        rawContext.parts.map(_._2).map(_.name).map(_ -> Option.empty[String]).toList.toMap
-      )(_ => rawContext.exports.getOrElse(Map.empty))
+    rawContext.exports
       .foldLeft(
         // Module name is what persists
         blank.copy(

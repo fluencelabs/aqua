@@ -3,7 +3,7 @@ package aqua.parser.expr.func
 import aqua.parser.Expr
 import aqua.parser.expr.func.CallArrowExpr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{Ability, CallArrowToken, Name, ValueToken, VarToken}
+import aqua.parser.lexer.{CallArrowToken, Name, ValueToken, VarToken}
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import cats.data.NonEmptyList
