@@ -586,4 +586,29 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       }
     }
   }
+
+  it should "forbid abilities or streams in struct fields" in {
+    val scriptAbility =
+      """
+        |ability Ab:
+        |    a: string
+        |
+        |data St:
+        |    a: Ab
+        |""".stripMargin
+
+    val scriptStream =
+      """
+        |data St:
+        |    s: *i8
+        |""".stripMargin
+
+    insideSemErrors(scriptAbility) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+
+    insideSemErrors(scriptStream) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+  }
 }
