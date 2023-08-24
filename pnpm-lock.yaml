@@ -55,8 +55,8 @@ importers:
         specifier: 1.1.2
         version: 1.1.2
       '@fluencelabs/js-client':
-        specifier: 0.0.4
-        version: 0.0.4
+        specifier: 0.0.10
+        version: 0.0.10
       deep-equal:
         specifier: 2.2.1
         version: 2.2.1
@@ -431,10 +431,6 @@ packages:
   /@bcoe/v8-coverage@0.2.3:
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
 
-  /@chainsafe/is-ip@2.0.1:
-    resolution: {integrity: sha512-nqSJ8u2a1Rv9FYbyI8qpDhTYujaKEyLknNrTejLYoSWmdeg+2WB7R6BZqPZYfrJzDxVi3rl6ZQuoaEvpKRZWgQ==}
-    dev: false
-
   /@chainsafe/is-ip@2.0.2:
     resolution: {integrity: sha512-ndGqEMG1W5WkGagaqOZHpPU172AGdxr+LD15sv3WIUvT5oCFUrG1Y0CW/v2Egwj4JXEvSibaIIIqImsm98y1nA==}
     dev: false
@@ -487,7 +483,7 @@ packages:
   /@chainsafe/netmask@2.0.0:
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
     dependencies:
-      '@chainsafe/is-ip': 2.0.1
+      '@chainsafe/is-ip': 2.0.2
     dev: false
 
   /@cspotcode/source-map-support@0.8.1:
@@ -604,8 +600,8 @@ packages:
     resolution: {integrity: sha512-RVdaBX8HbMLbgLPMwYvPaQ+XPvelNOGgOpsQGoy4Chw2njuj142LwxeQsa4LBWqE24Z7ebUqcjhlCrfrf9Efqg==}
     engines: {node: '>=10', pnpm: '>=3'}
 
-  /@fluencelabs/js-client@0.0.4:
-    resolution: {integrity: sha512-9i825WF5+ET01VhZB3dqHBmWAoxeFvjh3zCCpiwD6vc5MT8xcwwQn64iqGtScf1MJtACYwU838ZTDAEQHWkg8Q==}
+  /@fluencelabs/js-client@0.0.10:
+    resolution: {integrity: sha512-/CxACoD/S70MNNPig+EdO0MlLdvaNEHMX7BL1sud1MoJL/auYUQZTxen5EVj/QRHs8dr17CT8LWLh4ylYvnofA==}
     engines: {node: '>=10', pnpm: '>=3'}
     dependencies:
       '@chainsafe/libp2p-noise': 13.0.0
@@ -1364,7 +1360,7 @@ packages:
   /@multiformats/multiaddr-matcher@1.0.1:
     resolution: {integrity: sha512-ZzqwTH8tP5Py/k8eNKprO0i6tuwgrbp7KWz+ttxvzkPl43BlU9Yd5joq+M5grCt158rpAc2uhPobzfXgPxW5XQ==}
     dependencies:
-      '@chainsafe/is-ip': 2.0.1
+      '@chainsafe/is-ip': 2.0.2
       '@multiformats/multiaddr': 12.1.7
       multiformats: 12.0.1
     transitivePeerDependencies:
@@ -1384,11 +1380,11 @@ packages:
     resolution: {integrity: sha512-Inrmp986nHe92pgYyOWNVnB8QDmYe5EhR/7TStc46O4YEm87pbc1i4DWiTlEJ6tOpL8V6IBH5ol8BZsIaN+Tww==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      '@chainsafe/is-ip': 2.0.1
+      '@chainsafe/is-ip': 2.0.2
       dns-over-http-resolver: 2.1.1
       err-code: 3.0.1
       multiformats: 11.0.2
-      uint8arrays: 4.0.3
+      uint8arrays: 4.0.6
       varint: 6.0.0
     transitivePeerDependencies:
       - supports-color
@@ -1398,13 +1394,13 @@ packages:
     resolution: {integrity: sha512-MZRj+uUrtF2WqgByrsPolrdyPDSFstw7Fe0ewabWgWl27fcOmfDOSrEt2aUVkSzapXbyCG7JQh0QvimmTF4aMA==}
     engines: {node: '>=18.0.0', npm: '>=8.6.0'}
     dependencies:
-      '@chainsafe/is-ip': 2.0.1
+      '@chainsafe/is-ip': 2.0.2
       '@chainsafe/netmask': 2.0.0
       '@libp2p/interface': 0.1.2
       dns-over-http-resolver: 2.1.1
       multiformats: 12.0.1
       uint8-varint: 2.0.1
-      uint8arrays: 4.0.3
+      uint8arrays: 4.0.6
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -2419,7 +2415,7 @@ packages:
       it-map: 3.0.4
       it-merge: 3.0.1
       it-pipe: 3.0.1
-      it-pushable: 3.1.3
+      it-pushable: 3.2.1
       it-sort: 3.0.3
       it-take: 3.0.3
       uint8arrays: 4.0.6
@@ -3677,7 +3673,7 @@ packages:
     resolution: {integrity: sha512-V6Lt9A9usox9iduOX+edU1Vo94E6v9Lt9dOvg3ubFaw1qf5NCxXLi93Ao4fyCHWDYd8Y+DUhadwNtWVyn7qqLg==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      it-pushable: 3.1.3
+      it-pushable: 3.2.1
       it-reader: 6.0.4
       it-stream-types: 2.0.1
       p-defer: 4.0.0
@@ -3714,7 +3710,7 @@ packages:
       it-stream-types: 1.0.5
       uint8-varint: 1.0.6
       uint8arraylist: 2.4.3
-      uint8arrays: 4.0.3
+      uint8arrays: 4.0.6
     dev: false
 
   /it-length-prefixed@9.0.1:
@@ -3753,14 +3749,14 @@ packages:
     resolution: {integrity: sha512-ItoBy3dPlNKnhjHR8e7nfabfZzH4Jy2OMPvayYH3XHy4YNqSVKmWTIxhz7KX4UMBsLChlIJZ+5j6csJgrYGQtw==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      it-pushable: 3.1.3
+      it-pushable: 3.2.1
     dev: false
 
   /it-merge@3.0.1:
     resolution: {integrity: sha512-I6hjU1ABO+k3xY1H6JtCSDXvUME88pxIXSgKeT4WI5rPYbQzpr98ldacVuG95WbjaJxKl6Qot6lUdxduLBQPHA==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
-      it-pushable: 3.1.3
+      it-pushable: 3.2.1
     dev: false
 
   /it-pair@1.0.0:
@@ -3808,7 +3804,7 @@ packages:
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
       it-merge: 2.0.1
-      it-pushable: 3.1.3
+      it-pushable: 3.2.1
       it-stream-types: 1.0.5
     dev: false
 
@@ -3817,7 +3813,7 @@ packages:
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
       it-merge: 3.0.1
-      it-pushable: 3.1.3
+      it-pushable: 3.2.1
       it-stream-types: 2.0.1
     dev: false
 
@@ -3834,11 +3830,6 @@ packages:
     resolution: {integrity: sha512-vVPu0CGRsTI8eCfhMknA7KIBqqGFolbRx+1mbQ6XuZ7YCz995Qj7L4XUviwClFunisDq96FdxzF5FnAbw15afg==}
     dependencies:
       fast-fifo: 1.2.0
-    dev: false
-
-  /it-pushable@3.1.3:
-    resolution: {integrity: sha512-f50iQ85HISS6DaWCyrqf9QJ6G/kQtKIMf9xZkgZgyOvxEQDfn8OfYcLXXquCqgoLboxQtAW1ZFZyFIAsLHDtJw==}
-    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dev: false
 
   /it-pushable@3.2.1:
@@ -3934,7 +3925,7 @@ packages:
       event-iterator: 2.0.0
       iso-url: 1.2.1
       it-stream-types: 2.0.1
-      uint8arrays: 4.0.3
+      uint8arrays: 4.0.6
       ws: 8.13.0
     transitivePeerDependencies:
       - bufferutil
@@ -5949,7 +5940,7 @@ packages:
     resolution: {integrity: sha512-HkMBs4nMtrP+cvcw0bDi2BAZIGgiKI4Zq8Oc+dMqNBpHS8iGL4+WO/pRtc8Bwnv9rjnV0QwMDwEBymFtqv7Kww==}
     engines: {node: '>=14.16'}
     dependencies:
-      '@chainsafe/is-ip': 2.0.1
+      '@chainsafe/is-ip': 2.0.2
       ip-regex: 5.0.0
       ipaddr.js: 2.1.0
       netmask: 2.0.2
@@ -6678,7 +6669,7 @@ packages:
       byte-access: 1.0.1
       longbits: 1.1.0
       uint8arraylist: 2.4.3
-      uint8arrays: 4.0.3
+      uint8arrays: 4.0.6
     dev: false
 
   /uint8-varint@2.0.1:
