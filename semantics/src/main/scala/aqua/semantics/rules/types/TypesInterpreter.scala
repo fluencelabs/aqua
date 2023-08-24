@@ -54,13 +54,12 @@ class TypesInterpreter[S[_], X](implicit
 
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
     getState.map(st => TypesStateHelper.resolveTypeToken(token, st, resolver)).flatMap {
-      case Some(t) =>
-        val (tt, tokens) = t
-        val tokensLocs = tokens.map { case (t, n) =>
-          n.value -> t
-        }
-        locations.pointLocations(tokensLocs).map(_ => Some(tt))
-      case None => report(token, s"Unresolved type").as(None)
+      case Some((typ, tokens)) =>
+        val tokensLocs = tokens.map { case (t, n) => n.value -> t }
+        locations.pointLocations(tokensLocs).as(typ.some)
+      case None =>
+        // TODO: Give more specific error message
+        report(token, s"Unresolved type").as(None)
     }
 
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
