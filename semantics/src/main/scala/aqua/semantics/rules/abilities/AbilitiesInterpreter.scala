@@ -6,11 +6,13 @@ import aqua.raw.{RawContext, ServiceRaw}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.errors.ReportErrors
 import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.{StackInterpreter, abilities}
+import aqua.semantics.rules.{abilities, StackInterpreter}
 import aqua.types.ArrowType
+
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
+import cats.syntax.applicative.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -26,7 +28,7 @@ class AbilitiesInterpreter[S[_], X](implicit
     GenLens[AbilitiesState[S]](_.stack)
   )
 
-  import stackInt.{getState, mapStackHead, modify, report}
+  import stackInt.{getState, mapStackHead, mapStackHeadM, modify, report}
 
   override def defineService(
     name: NamedTypeToken[S],
@@ -41,24 +43,28 @@ class AbilitiesInterpreter[S[_], X](implicit
 
         }
       case None =>
-        arrows.toNel.map(_._2).collect {
-          case (n, arr) if arr.codomain.length > 1 =>
-            report(n, "Service functions cannot have multiple results")
-        }.sequence.flatMap{ _ =>
-          modify(s =>
-            s.copy(
-              services = s.services
-                .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
-              definitions = s.definitions.updated(name.value, name)
-            )
-          ).flatMap { _ =>
-            locations.addTokenWithFields(
-              name.value,
-              name,
-              arrows.toNel.toList.map(t => t._1 -> t._2._1)
-            )
-          }.as(true)
-        }
+        arrows.toNel
+          .map(_._2)
+          .collect {
+            case (n, arr) if arr.codomain.length > 1 =>
+              report(n, "Service functions cannot have multiple results")
+          }
+          .sequence
+          .flatMap { _ =>
+            modify(s =>
+              s.copy(
+                services = s.services
+                  .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
+                definitions = s.definitions.updated(name.value, name)
+              )
+            ).flatMap { _ =>
+              locations.addTokenWithFields(
+                name.value,
+                name,
+                arrows.toNel.toList.map(t => t._1 -> t._2._1)
+              )
+            }.as(true)
+          }
     }
 
   // adds location from token to its definition
@@ -107,11 +113,10 @@ class AbilitiesInterpreter[S[_], X](implicit
   override def setServiceId(name: NamedTypeToken[S], id: ValueToken[S], vm: ValueRaw): SX[Boolean] =
     getService(name.value).flatMap {
       case Some(_) =>
-        mapStackHead(
+        mapStackHeadM(
           modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(name.value, id -> vm)))
             .as(true)
-        )(h => h.copy(serviceIds = h.serviceIds.updated(name.value, id -> vm)) -> true)
-
+        )(h => (h.copy(serviceIds = h.serviceIds.updated(name.value, id -> vm)) -> true).pure)
       case None =>
         report(name, "Service with this name is not registered, can't set its ID").as(false)
     }
