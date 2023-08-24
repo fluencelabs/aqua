@@ -340,6 +340,11 @@ class TypesInterpreter[S[_], X](implicit
 
   override def ensureTypeIsCollectible(token: Token[S], givenType: Type): State[X, Boolean] =
     givenType match {
+      case _: StreamType =>
+        report(
+          token,
+          s"Stream '$givenType' could not be put into a collection"
+        ).as(false)
       case _: DataType => true.pure
       case _ =>
         report(

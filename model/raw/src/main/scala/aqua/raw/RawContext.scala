@@ -2,7 +2,7 @@ package aqua.raw
 
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.ValueRaw
-import aqua.types.{StructType, Type}
+import aqua.types.{StructType, Type, AbilityType}
 
 import cats.Monoid
 import cats.Semigroup
@@ -12,7 +12,6 @@ import cats.syntax.monoid.*
 import cats.syntax.option.*
 
 import scala.collection.immutable.SortedMap
-import aqua.types.AbilityType
 
 /**
  * RawContext is essentially a model of the source code – the first one we get to from the AST.

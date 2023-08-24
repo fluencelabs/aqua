@@ -17,7 +17,15 @@ import aqua.semantics.rules.locations.DummyLocationsInterpreter
 import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw}
 import aqua.raw.RawContext
 import aqua.types.*
-import aqua.parser.lexer.{InfixToken, LiteralToken, Name, PrefixToken, ValueToken, VarToken}
+import aqua.parser.lexer.{
+  CollectionToken,
+  InfixToken,
+  LiteralToken,
+  Name,
+  PrefixToken,
+  ValueToken,
+  VarToken
+}
 import aqua.raw.value.ApplyUnaryOpRaw
 import aqua.parser.lexer.ValueToken.string
 
@@ -31,7 +39,6 @@ import cats.syntax.comonad.*
 import cats.data.NonEmptyMap
 import monocle.syntax.all.*
 import scala.collection.immutable.SortedMap
-import aqua.parser.lexer.CollectionToken
 
 class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
 
