@@ -98,7 +98,6 @@ async function start() {
     peer2.onConnectionStateChange((s) => {
         console.log(s);
     });
-    await peer2.connect();
     console.log('CONNECTED');
 }
 
