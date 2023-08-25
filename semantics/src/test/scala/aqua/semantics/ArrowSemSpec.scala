@@ -28,7 +28,7 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   "sem" should "create empty model" in {
     val model = getModel(program("(a: string, b: u32) -> u8"))
-    model shouldBe (Raw.Empty("empty"))
+    model shouldBe (Raw.Empty("Invalid arrow body"))
   }
 
   "sem" should "create error model" ignore {
