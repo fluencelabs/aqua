@@ -227,8 +227,12 @@ object CallArrowRawTag {
 }
 
 case class DeclareStreamTag(
+  // TODO: Why is it ValueRaw and
+  // not just (stream name, stream type)?
   value: ValueRaw
 ) extends RawTag {
+
+  override def exportsVarNames: Set[String] = value.varNames
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     DeclareStreamTag(value.map(f))
@@ -238,6 +242,8 @@ case class AssignmentTag(
   value: ValueRaw,
   assignTo: String
 ) extends NoExecTag {
+
+  override def exportsVarNames: Set[String] = Set(assignTo)
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(assignTo = map.getOrElse(assignTo, assignTo))
@@ -250,6 +256,8 @@ case class ClosureTag(
   func: FuncRaw,
   detach: Boolean
 ) extends NoExecTag {
+
+  override def exportsVarNames: Set[String] = Set(func.name)
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(func = func.copy(name = map.getOrElse(func.name, func.name)))
