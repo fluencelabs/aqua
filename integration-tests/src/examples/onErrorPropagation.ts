@@ -1,4 +1,4 @@
-import {IFluenceClient} from '@fluencelabs/js-client.api';
+import {IFluenceClient} from '@fluencelabs/js-client';
 import {registerTest, onPropagate, nestedOnPropagate, seqOnPropagate} from "../compiled/examples/onErrorPropagation.js"
 
 export async function onPropagateCall(peer2: IFluenceClient, relay2: string): Promise<number> {    
