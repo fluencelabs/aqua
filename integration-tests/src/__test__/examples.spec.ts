@@ -1,5 +1,4 @@
-import { Fluence, IFluenceClient, createClient } from '@fluencelabs/js-client.api';
-import '@fluencelabs/js-client.node';
+import { Fluence, IFluenceClient, createClient } from '@fluencelabs/js-client';
 import { getObjAssignCall, getObjCall, getObjRelayCall } from '../examples/objectCall.js';
 import { callArrowCall, reproArgsBug426Call } from '../examples/callArrowCall.js';
 import { dataAliasCall } from '../examples/dataAliasCall.js';
@@ -88,18 +87,17 @@ async function start() {
     Fluence.onConnectionStateChange((s) => {
         console.log(s);
     });
-    await Fluence.connect(relay1);
+    await Fluence.connect(relay1, {});
     const cl = await Fluence.getClient();
     peer1 = cl;
     selfPeerId = cl.getPeerId();
     console.log('CONNECTED');
 
-    peer2 = await createClient(relay2);
+    peer2 = await createClient(relay2, {});
     console.log('CONNECTING TO SECOND:');
     peer2.onConnectionStateChange((s) => {
         console.log(s);
     });
-    await peer2.connect();
     console.log('CONNECTED');
 }
 

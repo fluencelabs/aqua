@@ -1,4 +1,4 @@
-import { IFluenceClient } from '@fluencelabs/js-client.api';
+import { IFluenceClient } from '@fluencelabs/js-client';
 import {
     topologyTest,
     registerTesto,
