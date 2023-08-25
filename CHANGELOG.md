@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.12.0](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.11...aqua-v0.12.0) (2023-08-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **js-client:** Move to new js-client interface ([#855](https://github.com/fluencelabs/aqua/issues/855))
+
+### Features
+
+* **compiler:** Restrict abilities usage [fixes LNG-208] ([#854](https://github.com/fluencelabs/aqua/issues/854)) ([2a0b207](https://github.com/fluencelabs/aqua/commit/2a0b20763396fea0ada5e14c01372dd3923b424b))
+* **js-client:** Move to new js-client interface ([#855](https://github.com/fluencelabs/aqua/issues/855)) ([0f9ede0](https://github.com/fluencelabs/aqua/commit/0f9ede09fb849915b20f87fddb95ee2514421a19))
+
+
+### Bug Fixes
+
+* **compiler:** Fix nested abilities [fixes LNG-220] ([#852](https://github.com/fluencelabs/aqua/issues/852)) ([bf0b51f](https://github.com/fluencelabs/aqua/commit/bf0b51fa5bca3be96cab028eaec48aa5805b1f73))
+
 ## [0.11.11](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.10...aqua-v0.11.11) (2023-08-21)
 
 
