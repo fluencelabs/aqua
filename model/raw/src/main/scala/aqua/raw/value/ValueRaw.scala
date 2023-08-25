@@ -45,6 +45,9 @@ object ValueRaw {
     "%last_error%",
     lastErrorType
   )
+
+  type ApplyRaw = ApplyGateRaw | ApplyPropertyRaw | CallArrowRaw | CollectionRaw |
+    ApplyBinaryOpRaw | ApplyUnaryOpRaw
 }
 
 case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends ValueRaw {
