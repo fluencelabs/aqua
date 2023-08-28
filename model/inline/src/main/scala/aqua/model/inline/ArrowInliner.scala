@@ -282,23 +282,14 @@ object ArrowInliner extends Logging {
     // Collect all arguments: what names are used inside the function, what values are received
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
 
-    forbiden <- Mangler[S].getForbiddenNames
-
     dataArgs = args.dataArgs
     streamArgs = args.streamArgs
     arrowArgs = args.arrowArgs
     abArgs = args.abilityArgs
 
-    // func call(arg: string, i: i8) ...
-    // call(var, 42)
-    (dataRenames, dataResolves) = dataArgs.toList.partitionBifold {
-      case (name, vm: VarModel) => Left(name -> vm.name)
-      case (name, vm) => Right(name -> vm)
-    }.bimap(_.toMap, _.toMap)
-
-    dataResolveRenames <- Mangler[S].findAndForbidNames(dataResolves.keySet)
-    dataResolveRenamed = dataResolves.map { case (name, vm) =>
-      dataResolveRenames.getOrElse(name, name) -> vm
+    dataRenames <- Mangler[S].findAndForbidNames(dataArgs.keySet)
+    dataRenamed = dataArgs.map { case (name, vm) =>
+      dataRenames.getOrElse(name, name) -> vm
     }
 
     streamRenames = streamArgs.toList.map { case (name, vm) =>
@@ -312,8 +303,9 @@ object ArrowInliner extends Logging {
     abRenames = abArgs.toList.foldMap { case (name, (vm, at)) =>
       at.arrows.keys
         .map(arrowPath =>
-          AbilityType.fullName(name, arrowPath) ->
-            AbilityType.fullName(vm.name, arrowPath)
+          val fullName = AbilityType.fullName(name, arrowPath)
+          val newFullName = AbilityType.fullName(vm.name, arrowPath)
+          fullName -> newFullName
         )
         .toMap
         .updated(name, vm.name)
@@ -334,7 +326,6 @@ object ArrowInliner extends Logging {
 
     renaming = (
       dataRenames ++
-        dataResolveRenames ++
         streamRenames ++
         arrowRenames ++
         abRenames ++
@@ -344,7 +335,7 @@ object ArrowInliner extends Logging {
     )
 
     arrowsResolved = arrows ++ capturedArrowsRenamed
-    exportsResolved = oldExports ++ dataResolveRenamed ++ capturedValuesRenamed
+    exportsResolved = oldExports ++ dataRenamed ++ capturedValuesRenamed
 
     tree = fn.body.rename(renaming)
     ret = fn.ret.map(_.renameVars(renaming))

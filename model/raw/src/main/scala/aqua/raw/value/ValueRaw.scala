@@ -91,7 +91,8 @@ case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) ext
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(name = map.getOrElse(name, name), idx = idx.renameVars(map))
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = this
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(idx = f(idx)))
 
   override def toString: String = s"gate $name.$idx"
 
@@ -172,9 +173,8 @@ case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityTyp
 
   override def baseType: Type = abilityType
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(
-    copy(fieldsAndArrows = fieldsAndArrows.map(f))
-  )
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(fieldsAndArrows = fieldsAndArrows.map(f)))
 
   override def varNames: Set[String] = {
     fieldsAndArrows.toSortedMap.values.flatMap(_.varNames).toSet

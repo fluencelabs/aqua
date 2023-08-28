@@ -306,16 +306,18 @@ object TagInliner extends Logging {
         valueToModel(operand).flatMap {
           // pass literals as is
           case (l @ LiteralModel(_, _), p) =>
-            for {
-              _ <- Exports[S].resolved(exportTo.name, l)
-            } yield TagInlined.Empty(prefix = p)
+            Exports[S]
+              .resolved(exportTo.name, l)
+              .as(TagInlined.Empty(prefix = p))
           case (v, p) =>
-            TagInlined
-              .Single(
-                model = CanonicalizeModel(v, CallModel.callExport(exportTo)),
-                prefix = p
+            Exports[S]
+              .resolved(exportTo.name, v)
+              .as(
+                TagInlined.Single(
+                  model = CanonicalizeModel(v, CallModel.callExport(exportTo)),
+                  prefix = p
+                )
               )
-              .pure
         }
 
       case FlattenTag(operand, assignTo) =>

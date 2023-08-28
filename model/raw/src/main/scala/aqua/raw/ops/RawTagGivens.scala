@@ -1,6 +1,7 @@
 package aqua.raw.ops
 
-import aqua.raw.value.LiteralRaw
+import aqua.raw.value.{LiteralRaw, ValueRaw}
+
 import cats.free.Cofree
 import cats.data.Chain
 import cats.{Eval, Semigroup}
@@ -30,6 +31,9 @@ trait RawTagGivens {
     def rename(vals: Map[String, String]): RawTag.Tree =
       if (vals.isEmpty) tree
       else tree.map(_.mapValues(_.renameVars(vals)).renameExports(vals))
+
+    def mapValues(f: ValueRaw => ValueRaw): RawTag.Tree =
+      tree.map(_.mapValues(f))
 
     def renameExports(vals: Map[String, String]): RawTag.Tree =
       if (vals.isEmpty) tree
