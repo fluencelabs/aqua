@@ -282,22 +282,12 @@ object ArrowInliner extends Logging {
     // Collect all arguments: what names are used inside the function, what values are received
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
 
-    // _ = println(s"\n\nPrelude: ${fn.funcName}")
-    // _ = println(s"Captured arrows: ${fn.capturedArrows.keySet}")
-    // _ = println(s"Domain: ${fn.arrowType.domain}")
-    // _ = println(s"Body: ${fn.body.show}`")
-    // _ = println(s"Arrows: ${arrows.keySet}")
-    // _ = println(s"Exports: $oldExports")
+    forbiden <- Mangler[S].getForbiddenNames
 
     dataArgs = args.dataArgs
     streamArgs = args.streamArgs
     arrowArgs = args.arrowArgs
     abArgs = args.abilityArgs
-
-    // _ = println(s"Data args: ${dataArgs.keySet}")
-    // _ = println(s"Ab args: ${abArgs.keySet}")
-    // _ = println(s"Arrow args: ${arrowArgs.keySet}")
-    // _ = println(s"Stream args: ${streamArgs.keySet}")
 
     (dataRenames, dataResolves) = dataArgs.toList.partitionBifold {
       case (name, vm: VarModel) => Left(name -> vm.name)
@@ -308,6 +298,10 @@ object ArrowInliner extends Logging {
     dataResolveRenamed = dataResolves.map { case (name, vm) =>
       dataResolveRenames.getOrElse(name, name) -> vm
     }
+
+    streamRenames = streamArgs.toList.map { case (name, vm) =>
+      name -> vm.name
+    }.toMap
 
     arrowRenames = arrowArgs.toList.map { case (name, vm) =>
       name -> vm.name
@@ -333,23 +327,36 @@ object ArrowInliner extends Logging {
       capturedArrowsRenames.getOrElse(name, name) -> vm
     }
 
-    // _ = println(s"Ab renames: $abRenames")
-    // _ = println(s"Arrow renames: $arrowRenames")
-
     defineNames <- StateT.liftF(fn.body.definesVarNames)
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
-    // _ = println(s"Define names: $defineNames")
-    // _ = println(s"Define renames: $defineRenames")
 
     renaming = (
       dataRenames ++
         dataResolveRenames ++
+        streamRenames ++
         arrowRenames ++
         abRenames ++
         capturedValuesRenames ++
         capturedArrowsRenames ++
         defineRenames
     )
+
+    // _ = println(s"\n\nPrelude: ${fn.funcName}")
+    // _ = println(s"Forbiden: $forbiden")
+    // _ = println(s"Captured arrows: ${fn.capturedArrows.keySet}")
+    // _ = println(s"Domain: ${fn.arrowType.domain}")
+    // _ = println(s"Body: ${fn.body.show}`")
+    // _ = println(s"Arrows: ${arrows.keySet}")
+    // _ = println(s"Exports: $oldExports")
+    // _ = println(s"Data args: ${dataArgs.keySet}")
+    // _ = println(s"Ab args: ${abArgs.keySet}")
+    // _ = println(s"Arrow args: ${arrowArgs.keySet}")
+    // _ = println(s"Stream args: ${streamArgs.keySet}")
+    // _ = println(s"Ab renames: $abRenames")
+    // _ = println(s"Arrow renames: $arrowRenames")
+    // _ = println(s"Define names: $defineNames")
+    // _ = println(s"Define renames: $defineRenames")
+    // _ = println(s"Renaming: $renaming")
 
     tree = fn.body.rename(renaming)
     ret = fn.ret.map(_.renameVars(renaming))

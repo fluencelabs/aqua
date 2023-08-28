@@ -20,7 +20,7 @@ trait Mangler[S] {
   def findAndForbidNames(introduce: Set[String]): State[S, Map[String, String]] =
     for {
       n <- findNewNames(introduce)
-      _ <- forbid(n.values.toSet)
+      _ <- forbid(introduce ++ n.values.toSet)
     } yield n
 
   def forbid(names: Set[String]): State[S, Unit]
