@@ -103,7 +103,7 @@ case class VarRaw(name: String, baseType: Type) extends ValueRaw {
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
 
   override def renameVars(map: Map[String, String]): ValueRaw =
-    copy(map.getOrElse(name, name))
+    copy(name = map.getOrElse(name, name))
 
   override def toString: String = s"var{$name: " + baseType + s"}"
 
@@ -249,7 +249,12 @@ case class CallArrowRaw(
   override def `type`: Type = baseType.codomain.uncons.map(_._1).getOrElse(baseType)
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(copy(arguments = arguments.map(f)))
+    f(
+      copy(
+        arguments = arguments.map(f),
+        serviceId = serviceId.map(f)
+      )
+    )
 
   override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
 
@@ -259,9 +264,7 @@ case class CallArrowRaw(
         .get(name)
         // Rename only if it is **not** a service or ability call, see [bug LNG-199]
         .filterNot(_ => ability.isDefined)
-        .getOrElse(name),
-      arguments = arguments.map(_.renameVars(map)),
-      serviceId = serviceId.map(_.renameVars(map))
+        .getOrElse(name)
     )
 
   override def toString: String =

@@ -289,6 +289,8 @@ object ArrowInliner extends Logging {
     arrowArgs = args.arrowArgs
     abArgs = args.abilityArgs
 
+    // func call(arg: string, i: i8) ...
+    // call(var, 42)
     (dataRenames, dataResolves) = dataArgs.toList.partitionBifold {
       case (name, vm: VarModel) => Left(name -> vm.name)
       case (name, vm) => Right(name -> vm)
@@ -341,14 +343,20 @@ object ArrowInliner extends Logging {
         defineRenames
     )
 
+    arrowsResolved = arrows ++ capturedArrowsRenamed
+    exportsResolved = oldExports ++ dataResolveRenamed ++ capturedValuesRenamed
+
+    tree = fn.body.rename(renaming)
+    ret = fn.ret.map(_.renameVars(renaming))
+
     // _ = println(s"\n\nPrelude: ${fn.funcName}")
     // _ = println(s"Forbiden: $forbiden")
     // _ = println(s"Captured arrows: ${fn.capturedArrows.keySet}")
     // _ = println(s"Domain: ${fn.arrowType.domain}")
     // _ = println(s"Body: ${fn.body.show}`")
-    // _ = println(s"Arrows: ${arrows.keySet}")
-    // _ = println(s"Exports: $oldExports")
-    // _ = println(s"Data args: ${dataArgs.keySet}")
+    // _ = println(s"Arrows: $arrowsResolved")
+    // _ = println(s"Exports: $exportsResolved")
+    // _ = println(s"Data args: ${dataArgs}")
     // _ = println(s"Ab args: ${abArgs.keySet}")
     // _ = println(s"Arrow args: ${arrowArgs.keySet}")
     // _ = println(s"Stream args: ${streamArgs.keySet}")
@@ -357,12 +365,10 @@ object ArrowInliner extends Logging {
     // _ = println(s"Define names: $defineNames")
     // _ = println(s"Define renames: $defineRenames")
     // _ = println(s"Renaming: $renaming")
+    // _ = println(s"Tree: \n${tree.show}")
 
-    tree = fn.body.rename(renaming)
-    ret = fn.ret.map(_.renameVars(renaming))
-
-    _ <- Arrows[S].resolved(arrows ++ capturedArrowsRenamed)
-    _ <- Exports[S].resolved(oldExports ++ dataResolveRenamed ++ capturedValuesRenamed)
+    _ <- Arrows[S].resolved(arrowsResolved)
+    _ <- Exports[S].resolved(exportsResolved)
   } yield fn.copy(body = tree, ret = ret)
 
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](

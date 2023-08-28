@@ -27,15 +27,20 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
         logger.trace(Console.BLUE + s"call service id $serviceId" + Console.RESET)
         for {
           cd <- callToModel(call, true)
+          (callModel, callInline) = cd
           sd <- valueToModel(serviceId)
-        } yield cd._1.exportTo.map(_.asVar.resolveWith(exports)) -> Inline(
-          Chain(
-            SeqModel.wrap(
-              sd._2.toList ++
-                cd._2.toList :+ CallServiceModel(sd._1, value.name, cd._1).leaf
+          (serviceIdValue, serviceIdInline) = sd
+          values = callModel.exportTo.map(e => e.name -> e.asVar.resolveWith(exports)).toMap
+          inline = Inline(
+            Chain(
+              SeqModel.wrap(
+                serviceIdInline.toList ++ callInline.toList :+
+                  CallServiceModel(serviceIdValue, value.name, callModel).leaf
+              )
             )
           )
-        )
+          _ <- Exports[S].resolved(values)
+        } yield values.values.toList -> inline
       case None =>
         /**
          * Here the back hop happens from [[TagInliner]] to [[ArrowInliner.callArrow]]
