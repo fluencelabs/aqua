@@ -66,7 +66,7 @@ trait Arrows[S] extends Scoped[S] {
    * @return
    */
   def argsArrows(args: ArgsCall): State[S, Map[String, FuncArrow]] =
-    arrows.map(args.arrowArgs)
+    arrows.map(args.arrowArgsMap)
 
   /**
    * Changes the [[S]] type to [[R]]

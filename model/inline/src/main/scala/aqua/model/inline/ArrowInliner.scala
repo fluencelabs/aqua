@@ -7,11 +7,14 @@ import aqua.raw.ops.RawTag
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{AbilityType, ArrowType, BoxType, StreamType, Type}
 
+import cats.data.StateT
 import cats.data.{Chain, IndexedStateT, State}
+import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
 import cats.syntax.traverse.*
 import cats.syntax.option.*
+import cats.syntax.show.*
 import cats.{Eval, Monoid}
 import scribe.Logging
 
@@ -94,114 +97,47 @@ object ArrowInliner extends Logging {
     fn: FuncArrow,
     call: CallModel,
     outsideDeclaredStreams: Set[String]
-  ): State[S, InlineResult] =
-    for {
-      // Register captured values as available exports
-      _ <- Exports[S].resolved(fn.capturedValues)
-      _ <- Mangler[S].forbid(fn.capturedValues.keySet)
+  ): State[S, InlineResult] = for {
+    // Register captured values as available exports
+    _ <- Exports[S].resolved(fn.capturedValues)
+    _ <- Mangler[S].forbid(fn.capturedValues.keySet)
 
-      // Now, substitute the arrows that were received as function arguments
-      // Use the new op tree (args are replaced with values, names are unique & safe)
-      callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body, fn.funcName)
-      callableFuncBody =
-        fn.capturedTopology
-          .fold[OpModel](SeqModel)(ApplyTopologyModel.apply)
-          .wrap(callableFuncBodyNoTopology)
+    // Now, substitute the arrows that were received as function arguments
+    // Use the new op tree (args are replaced with values, names are unique & safe)
+    callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body, fn.funcName)
+    callableFuncBody =
+      fn.capturedTopology
+        .fold(SeqModel)(ApplyTopologyModel.apply)
+        .wrap(callableFuncBodyNoTopology)
 
-      opsAndRets <- pushStreamResults(
-        outsideDeclaredStreams,
-        call.exportTo,
-        fn.ret,
-        callableFuncBody
-      )
-      (ops, rets) = opsAndRets
-
-      exports <- Exports[S].exports
-      arrows <- Arrows[S].arrows
-      // gather all arrows and variables from abilities
-      returnedAbilities = rets.collect { case VarModel(name, at: AbilityType, _) => name -> at }
-      varsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
-        getAbilityVars(name, None, at, exports)
-      }.toMap
-      arrowsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
-        getAbilityArrows(name, None, at, exports, arrows)
-      }.toMap
-
-      // find and get resolved arrows if we return them from the function
-      returnedArrows = rets.collect { case VarModel(name, _: ArrowType, _) => name }.toSet
-      arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
-    } yield InlineResult(
-      SeqModel.wrap(ops.reverse),
-      rets.reverse,
-      varsFromAbilities,
-      arrowsFromAbilities ++ arrowsToSave
+    opsAndRets <- pushStreamResults(
+      outsideDeclaredStreams,
+      call.exportTo,
+      fn.ret,
+      callableFuncBody
     )
+    (ops, rets) = opsAndRets
 
-  /**
-   * Get all arrows that is arguments from outer Arrows.
-   * Purge and push captured arrows and arrows as arguments into state.
-   * Grab all arrows that must be renamed.
-   *
-   * @param argsToArrowsRaw arguments with ArrowType
-   * @param func function where captured and returned may exist
-   * @param abilityArrows arrows from abilities that should be renamed
-   * @return all arrows that must be renamed in function body
-   */
-  private def updateArrowsAndRenameArrowArgs[S: Mangler: Arrows: Exports](
-    argsToArrowsRaw: Map[String, FuncArrow],
-    func: FuncArrow,
-    abilityArrows: Map[String, String]
-  ): State[S, Map[String, String]] = {
-    for {
-      argsToArrowsShouldRename <- Mangler[S]
-        .findNewNames(
-          argsToArrowsRaw.keySet
-        )
-        .map(_ ++ abilityArrows)
-      argsToArrows = argsToArrowsRaw.map { case (k, v) =>
-        argsToArrowsShouldRename.getOrElse(k, k) -> v
-      }
-      returnedArrows = func.ret.collect { case VarRaw(name, ArrowType(_, _)) =>
-        name
-      }.toSet
+    exports <- Exports[S].exports
+    arrows <- Arrows[S].arrows
+    // gather all arrows and variables from abilities
+    returnedAbilities = rets.collect { case VarModel(name, at: AbilityType, _) => name -> at }
+    varsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
+      getAbilityVars(name, None, at, exports)
+    }.toMap
+    arrowsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
+      getAbilityArrows(name, None, at, exports, arrows)
+    }.toMap
 
-      returnedArrowsShouldRename <- Mangler[S].findNewNames(returnedArrows)
-      renamedCapturedArrows = func.capturedArrows.map { case (k, v) =>
-        returnedArrowsShouldRename.getOrElse(k, k) -> v
-      }
-
-      _ <- Arrows[S].resolved(renamedCapturedArrows ++ argsToArrows)
-    } yield {
-      argsToArrowsShouldRename ++ returnedArrowsShouldRename
-    }
-  }
-
-  /**
-   * @param argsToDataRaw data arguments to rename
-   * @param abilityValues values from abilities to rename
-   * @return all values that must be renamed in function body
-   */
-  private def updateExportsAndRenameDataArgs[S: Mangler: Arrows: Exports](
-    argsToDataRaw: Map[String, ValueModel],
-    abilityValues: Map[String, String]
-  ): State[S, Map[String, String]] = {
-    for {
-      // Find all duplicates in arguments
-      // we should not find new names for 'abilityValues' arguments that will be renamed by 'streamToRename'
-      argsToDataShouldRename <- Mangler[S]
-        .findNewNames(
-          argsToDataRaw.keySet
-        )
-        .map(_ ++ abilityValues)
-
-      // Do not rename arguments if they just match external names
-      argsToData = argsToDataRaw.map { case (k, v) =>
-        argsToDataShouldRename.getOrElse(k, k) -> v
-      }
-
-      _ <- Exports[S].resolved(argsToData)
-    } yield argsToDataShouldRename
-  }
+    // find and get resolved arrows if we return them from the function
+    returnedArrows = rets.collect { case VarModel(name, _: ArrowType, _) => name }.toSet
+    arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
+  } yield InlineResult(
+    SeqModel.wrap(ops.reverse),
+    rets.reverse,
+    varsFromAbilities,
+    arrowsFromAbilities ++ arrowsToSave
+  )
 
   // Rename all exports-to-stream for streams that passed as arguments
   private def renameStreams(
@@ -226,55 +162,6 @@ object ArrowInliner extends Logging {
           case v => v
         }))
         .renameExports(streamsToRename)
-  }
-
-  case class AbilityResolvingResult(
-    namesToRename: Map[String, String],
-    renamedExports: Map[String, ValueModel],
-    renamedArrows: Map[String, FuncArrow]
-  )
-
-  given Monoid[AbilityResolvingResult] with
-
-    override val empty: AbilityResolvingResult =
-      AbilityResolvingResult(Map.empty, Map.empty, Map.empty)
-
-    override def combine(
-      a: AbilityResolvingResult,
-      b: AbilityResolvingResult
-    ): AbilityResolvingResult =
-      AbilityResolvingResult(
-        a.namesToRename ++ b.namesToRename,
-        a.renamedExports ++ b.renamedExports,
-        a.renamedArrows ++ b.renamedArrows
-      )
-
-  /**
-   * Generate new names for all ability fields and arrows if necessary.
-   * Gather all fields and arrows from Arrows and Exports states
-   * @param name ability name in state
-   * @param vm ability variable
-   * @param t ability type
-   * @param exports previous Exports
-   * @param arrows previous Arrows
-   * @return names to rename, Exports and Arrows with all ability fields and arrows
-   */
-  private def renameAndResolveAbilities[S: Mangler: Arrows: Exports](
-    name: String,
-    vm: VarModel,
-    t: AbilityType,
-    exports: Map[String, ValueModel],
-    arrows: Map[String, FuncArrow]
-  ): State[S, AbilityResolvingResult] = {
-    for {
-      newName <- Mangler[S].findNewName(name)
-      newFieldsName = t.fields.mapBoth { case (n, _) =>
-        AbilityType.fullName(name, n) -> AbilityType.fullName(newName, n)
-      }
-      allNewNames = newFieldsName.add((name, newName)).toSortedMap
-      allVars = getAbilityVars(vm.name, newName.some, t, exports)
-      allArrows = getAbilityArrows(vm.name, newName.some, t, exports, arrows)
-    } yield AbilityResolvingResult(allNewNames, allVars, allArrows)
   }
 
   /**
@@ -391,118 +278,114 @@ object ArrowInliner extends Logging {
     call: CallModel,
     oldExports: Map[String, ValueModel],
     arrows: Map[String, FuncArrow]
-  ): State[S, (RawTag.Tree, List[ValueRaw])] =
-    for {
-      // Collect all arguments: what names are used inside the function, what values are received
-      args <- State.pure(ArgsCall(fn.arrowType.domain, call.args))
+  ): State[S, FuncArrow] = for {
+    // Collect all arguments: what names are used inside the function, what values are received
+    args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
 
-      abArgs = args.abilityArgs
+    // _ = println(s"\n\nPrelude: ${fn.funcName}")
+    // _ = println(s"Captured arrows: ${fn.capturedArrows.keySet}")
+    // _ = println(s"Domain: ${fn.arrowType.domain}")
+    // _ = println(s"Body: ${fn.body.show}`")
+    // _ = println(s"Arrows: ${arrows.keySet}")
+    // _ = println(s"Exports: $oldExports")
 
-      abilityResolvingResult <- abArgs.toList.traverse { case (str, (vm, sct)) =>
-        renameAndResolveAbilities(str, vm, sct, oldExports, arrows)
-      }.map(_.combineAll)
+    dataArgs = args.dataArgs
+    streamArgs = args.streamArgs
+    arrowArgs = args.arrowArgs
+    abArgs = args.abilityArgs
 
-      absRenames = abilityResolvingResult.namesToRename
-      absVars = abilityResolvingResult.renamedExports
-      absArrows = abilityResolvingResult.renamedArrows
+    // _ = println(s"Data args: ${dataArgs.keySet}")
+    // _ = println(s"Ab args: ${abArgs.keySet}")
+    // _ = println(s"Arrow args: ${arrowArgs.keySet}")
+    // _ = println(s"Stream args: ${streamArgs.keySet}")
 
-      arrowArgs = args.arrowArgs(arrows)
-      // Update states and rename tags
-      renamedArrows <- updateArrowsAndRenameArrowArgs(arrowArgs ++ absArrows, fn, absRenames)
+    (dataRenames, dataResolves) = dataArgs.toList.partitionBifold {
+      case (name, vm: VarModel) => Left(name -> vm.name)
+      case (name, vm) => Right(name -> vm)
+    }.bimap(_.toMap, _.toMap)
 
-      argsToDataShouldRename <- updateExportsAndRenameDataArgs(args.dataArgs ++ absVars, absRenames)
+    dataResolveRenames <- Mangler[S].findAndForbidNames(dataResolves.keySet)
+    dataResolveRenamed = dataResolves.map { case (name, vm) =>
+      dataResolveRenames.getOrElse(name, name) -> vm
+    }
 
-      // rename variables that store arrows
-      _ <- Exports[S].renameVariables(renamedArrows)
+    arrowRenames = arrowArgs.toList.map { case (name, vm) =>
+      name -> vm.name
+    }.toMap
 
-      /*
-       * Don't rename arrows from abilities in a body, because we link arrows by VarModel
-       * and they won't be called directly.
-       * They could intersect with arrows defined inside the body
-       *
-       *  ability Simple:
-       *   arrow() -> bool
-       *
-       *  func foo{Simple}() -> bool, bool:
-       *   closure = () -> bool:
-       *       <- true
-       *   <- closure(), Simple.arrow()
-       *
-       *  func main() -> bool, bool:
-       *   closure = () -> bool:
-       *       <- false
-       *   MySimple = Simple(arrow = closure)
-       *   -- here we will rename arrow in Arrows[S] to 'closure-0'
-       *   -- and link to arrow as 'Simple.arrow' -> VarModel('closure-0')
-       *   -- and it will work well with closure with the same name 'closure' inside 'foo'
-       *   foo{MySimple}()
-       */
-      allShouldRename = argsToDataShouldRename ++ (renamedArrows -- absArrows.keySet) ++ absRenames
+    abRenames = abArgs.toList.foldMap { case (name, (vm, at)) =>
+      at.arrows.keys
+        .map(arrowPath =>
+          AbilityType.fullName(name, arrowPath) ->
+            AbilityType.fullName(vm.name, arrowPath)
+        )
+        .toMap
+        .updated(name, vm.name)
+    }
 
-      // Rename all renamed arguments in the body
-      treeRenamed = fn.body.rename(allShouldRename)
-      treeStreamsRenamed = renameStreams(
-        treeRenamed,
-        args.streamArgs.map { case (k, v) => argsToDataShouldRename.getOrElse(k, k) -> v }
-      )
+    capturedValuesRenames <- Mangler[S].findAndForbidNames(fn.capturedValues.keySet)
+    capturedValuesRenamed = fn.capturedValues.map { case (name, vm) =>
+      capturedValuesRenames.getOrElse(name, name) -> vm
+    }
 
-      // Function body on its own defines some values; collect their names
-      // except stream arguments. They should be already renamed
-      treeDefines =
-        treeStreamsRenamed.definesVarNames.value --
-          args.streamArgs.keySet --
-          args.streamArgs.values.map(_.name) --
-          call.exportTo.filter { exp =>
-            exp.`type` match {
-              case StreamType(_) => false
-              case _ => true
-            }
-          }.map(_.name)
+    capturedArrowsRenames <- Mangler[S].findAndForbidNames(fn.capturedArrows.keySet)
+    capturedArrowsRenamed = fn.capturedArrows.map { case (name, vm) =>
+      capturedArrowsRenames.getOrElse(name, name) -> vm
+    }
 
-      // We have some names in scope (forbiddenNames), can't introduce them again; so find new names
-      shouldRename <- Mangler[S].findNewNames(treeDefines).map(_ ++ allShouldRename)
-      _ <- Mangler[S].forbid(treeDefines ++ shouldRename.values.toSet)
+    // _ = println(s"Ab renames: $abRenames")
+    // _ = println(s"Arrow renames: $arrowRenames")
 
-      // If there was a collision, rename exports and usages with new names
-      tree = treeStreamsRenamed.rename(shouldRename)
+    defineNames <- StateT.liftF(fn.body.definesVarNames)
+    defineRenames <- Mangler[S].findAndForbidNames(defineNames)
+    // _ = println(s"Define names: $defineNames")
+    // _ = println(s"Define renames: $defineRenames")
 
-      // Result could be renamed; take care about that
-    } yield (tree, fn.ret.map(_.renameVars(shouldRename)))
+    renaming = (
+      dataRenames ++
+        dataResolveRenames ++
+        arrowRenames ++
+        abRenames ++
+        capturedValuesRenames ++
+        capturedArrowsRenames ++
+        defineRenames
+    )
+
+    tree = fn.body.rename(renaming)
+    ret = fn.ret.map(_.renameVars(renaming))
+
+    _ <- Arrows[S].resolved(arrows ++ capturedArrowsRenamed)
+    _ <- Exports[S].resolved(oldExports ++ dataResolveRenamed ++ capturedValuesRenamed)
+  } yield fn.copy(body = tree, ret = ret)
 
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,
     call: CallModel
-  ): State[S, (OpModel.Tree, List[ValueModel])] =
-    for {
-      passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
-      arrowsFromAbilities <- call.abilityArgs
-        .traverse(getAbilityArrows.tupled)
-        .map(_.flatMap(_.toList).toMap)
+  ): State[S, (OpModel.Tree, List[ValueModel])] = for {
+    passArrows <- Arrows[S].pickArrows(call.arrowArgNames)
+    arrowsFromAbilities <- call.abilityArgs
+      .traverse(getAbilityArrows.tupled)
+      .map(_.flatMap(_.toList).toMap)
 
-      exports <- Exports[S].exports
-      streams <- getOutsideStreamNames
+    exports <- Exports[S].exports
+    streams <- getOutsideStreamNames
 
-      inlineResult <- Exports[S].scope(
-        Arrows[S].scope(
-          for {
-            // Process renamings, prepare environment
-            tr <- prelude[S](arrow, call, exports, passArrows ++ arrowsFromAbilities)
-            (tree, results) = tr
-            inlineResult <- ArrowInliner.inline(
-              arrow.copy(body = tree, ret = results),
-              call,
-              streams
-            )
-          } yield inlineResult
-        )
+    inlineResult <- Exports[S].scope(
+      Arrows[S].scope(
+        for {
+          // Process renamings, prepare environment
+          fn <- prelude[S](arrow, call, exports, passArrows ++ arrowsFromAbilities)
+          inlineResult <- ArrowInliner.inline(fn, call, streams)
+        } yield inlineResult
       )
+    )
 
-      _ <- Arrows[S].resolved(inlineResult.arrowsToSave)
-      _ <- Exports[S].resolved(
-        call.exportTo
-          .map(_.name)
-          .zip(inlineResult.returnedValues)
-          .toMap ++ inlineResult.exportsToSave
-      )
-    } yield inlineResult.tree -> inlineResult.returnedValues
+    _ <- Arrows[S].resolved(inlineResult.arrowsToSave)
+    _ <- Exports[S].resolved(
+      call.exportTo
+        .map(_.name)
+        .zip(inlineResult.returnedValues)
+        .toMap ++ inlineResult.exportsToSave
+    )
+  } yield inlineResult.tree -> inlineResult.returnedValues
 }

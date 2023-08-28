@@ -24,20 +24,27 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
     }.toMap
 
   lazy val abilityArgs: Map[String, (VarModel, AbilityType)] =
-    zipped.collect { case (k, vr@VarModel(_, t@AbilityType(_, _), _)) =>
-      k._1 -> (vr, t)
+    zipped.collect { case ((k, _), vr @ VarModel(_, t @ AbilityType(_, _), _)) =>
+      k -> (vr, t)
     }.toMap
 
   lazy val streamArgs: Map[String, VarModel] =
-    dataArgs.collect { case (k, vr @ VarModel(n, StreamType(_), _)) =>
-      (k, vr)
+    dataArgs.collect { case (k, vr @ VarModel(_, StreamType(_), _)) =>
+      k -> vr
     }
 
-  def arrowArgs[T](arrowsInScope: Map[String, T]): Map[String, T] =
-    zipped.collect {
-      case ((name, _: ArrowType), VarModel(value, _, _)) if arrowsInScope.contains(value) =>
-        name -> arrowsInScope(value)
+  lazy val arrowArgs: Map[String, VarModel] =
+    zipped.collect { case ((name, _: ArrowType), vm: VarModel) =>
+      name -> vm
     }.toMap
+
+  def arrowArgsMap[T](arrows: Map[String, T]): Map[String, T] =
+    arrowArgs.view
+      .mapValues(_.name)
+      .flatMap { case (name, argName) =>
+        arrows.get(argName).map(name -> _)
+      }
+      .toMap
 }
 
 object ArgsCall {

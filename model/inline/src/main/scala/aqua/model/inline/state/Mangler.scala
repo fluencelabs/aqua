@@ -17,6 +17,12 @@ trait Mangler[S] {
       _ <- forbid(Set(n))
     } yield n
 
+  def findAndForbidNames(introduce: Set[String]): State[S, Map[String, String]] =
+    for {
+      n <- findNewNames(introduce)
+      _ <- forbid(n.values.toSet)
+    } yield n
+
   def forbid(names: Set[String]): State[S, Unit]
 
   def forbidName(name: String): State[S, Unit] =

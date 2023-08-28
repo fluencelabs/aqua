@@ -79,7 +79,7 @@ export const relay2 = config.relays[1];
 const relayPeerId2 = relay2.peerId;
 
 import log from 'loglevel';
-import {structuralTypingCall} from "../examples/structuralTypingCall";
+import { structuralTypingCall } from '../examples/structuralTypingCall';
 // log.setDefaultLevel("debug")
 
 async function start() {
@@ -245,7 +245,7 @@ describe('Testing examples', () => {
 
     it('structuraltyping.aqua', async () => {
         let result = await structuralTypingCall();
-        expect(result).toEqual("some_stringsome_stringsome_stringab_string");
+        expect(result).toEqual('some_stringsome_stringsome_stringab_string');
     });
 
     it('collectionSugar array', async () => {
@@ -389,7 +389,7 @@ describe('Testing examples', () => {
         expect(result).toStrictEqual([false, true]);
     });
 
-    it('ability.aqua complex', async () => {
+    it('ability.aqua ability calls', async () => {
         let result = await checkAbCallsCall();
         expect(result).toStrictEqual([true, false]);
     });

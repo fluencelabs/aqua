@@ -3,7 +3,7 @@ package aqua.model
 import aqua.raw.Raw
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag
-import aqua.raw.value.ValueRaw
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrowType, Type}
 
 case class FuncArrow(
@@ -17,7 +17,11 @@ case class FuncArrow(
 ) {
 
   lazy val args: List[(String, Type)] = arrowType.domain.toLabelledList()
-  lazy val argNames: List[String] = args.map(_._1)
+
+  lazy val argNames: List[String] = args.map { case (name, _) => name }
+
+  lazy val returnedArrows: Set[String] =
+    ret.collect { case VarRaw(name, _: ArrowType) => name }.toSet
 
 }
 
