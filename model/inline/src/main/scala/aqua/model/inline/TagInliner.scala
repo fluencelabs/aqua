@@ -311,7 +311,10 @@ object TagInliner extends Logging {
               .as(TagInlined.Empty(prefix = p))
           case (v, p) =>
             Exports[S]
-              .resolved(exportTo.name, v)
+              .resolved(
+                exportTo.name,
+                VarModel(exportTo.name, exportTo.`type`)
+              )
               .as(
                 TagInlined.Single(
                   model = CanonicalizeModel(v, CallModel.callExport(exportTo)),

@@ -98,12 +98,6 @@ object ArrowInliner extends Logging {
     call: CallModel,
     outsideDeclaredStreams: Set[String]
   ): State[S, InlineResult] = for {
-    // Register captured values as available exports
-    _ <- Exports[S].resolved(fn.capturedValues)
-    _ <- Mangler[S].forbid(fn.capturedValues.keySet)
-
-    // Now, substitute the arrows that were received as function arguments
-    // Use the new op tree (args are replaced with values, names are unique & safe)
     callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body, fn.funcName)
     callableFuncBody =
       fn.capturedTopology
@@ -341,10 +335,9 @@ object ArrowInliner extends Logging {
     ret = fn.ret.map(_.renameVars(renaming))
 
     // _ = println(s"\n\nPrelude: ${fn.funcName}")
-    // _ = println(s"Forbiden: $forbiden")
     // _ = println(s"Captured arrows: ${fn.capturedArrows.keySet}")
     // _ = println(s"Domain: ${fn.arrowType.domain}")
-    // _ = println(s"Body: ${fn.body.show}`")
+    // _ = println(s"Body: \n${fn.body.show}`")
     // _ = println(s"Arrows: $arrowsResolved")
     // _ = println(s"Exports: $exportsResolved")
     // _ = println(s"Data args: ${dataArgs}")
@@ -357,6 +350,7 @@ object ArrowInliner extends Logging {
     // _ = println(s"Define renames: $defineRenames")
     // _ = println(s"Renaming: $renaming")
     // _ = println(s"Tree: \n${tree.show}")
+    // _ = println(s"Ret: \n${ret}")
 
     _ <- Arrows[S].resolved(arrowsResolved)
     _ <- Exports[S].resolved(exportsResolved)
