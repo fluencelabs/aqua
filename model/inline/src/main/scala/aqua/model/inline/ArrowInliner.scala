@@ -44,40 +44,26 @@ object ArrowInliner extends Logging {
   private def pushStreamResults[S: Mangler: Exports: Arrows](
     outsideStreamNames: Set[String],
     exportTo: List[CallModel.Export],
-    results: List[ValueRaw],
-    body: OpModel.Tree
+    results: List[ValueRaw]
   ): State[S, (List[OpModel.Tree], List[ValueModel])] =
-    for {
-      // Fix return values with exports collected in the body
-      resolvedResult <- RawValueInliner.valueListToModel(results)
-    } yield {
-      // Fix the return values
-      val (ops, rets) = (exportTo zip resolvedResult).map {
-        case (
-              CallModel.Export(n, StreamType(_)),
-              (res @ VarModel(_, StreamType(_), _), resDesugar)
-            ) if !outsideStreamNames.contains(n) =>
-          resDesugar.toList -> res
-        case (CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
-          // pass nested function results to a stream
-          (resDesugar.toList :+ PushToStreamModel(
-            res,
-            CallModel.Export(exp, st)
-          ).leaf) -> VarModel(
-            exp,
-            st,
-            Chain.empty
-          )
-        case (_, (res, resDesugar)) =>
-          resDesugar.toList -> res
-      }.foldLeft[(List[OpModel.Tree], List[ValueModel])](
-        (body :: Nil, Nil)
-      ) { case ((ops, rets), (fo, r)) =>
-        (fo ::: ops, r :: rets)
-      }
-
-      (ops, rets)
-    }
+    // Fix return values with exports collected in the body
+    RawValueInliner
+      .valueListToModel(results)
+      .map(resolvedResults =>
+        // Fix the return values
+        (exportTo zip resolvedResults).map {
+          case (
+                CallModel.Export(n, StreamType(_)),
+                (res @ VarModel(_, StreamType(_), _), resDesugar)
+              ) if !outsideStreamNames.contains(n) =>
+            resDesugar.toList -> res
+          case (cexp @ CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
+            // pass nested function results to a stream
+            (resDesugar.toList :+ PushToStreamModel(res, cexp).leaf) -> cexp.asVar
+          case (_, (res, resDesugar)) =>
+            resDesugar.toList -> res
+        }.unzip.leftMap(_.flatten)
+      )
 
   /**
    * @param tree generated tree after inlining a function
@@ -105,10 +91,9 @@ object ArrowInliner extends Logging {
         .wrap(callableFuncBodyNoTopology)
 
     opsAndRets <- pushStreamResults(
-      outsideDeclaredStreams,
-      call.exportTo,
-      fn.ret,
-      callableFuncBody
+      outsideStreamNames = outsideDeclaredStreams,
+      exportTo = call.exportTo,
+      results = fn.ret
     )
     (ops, rets) = opsAndRets
 
@@ -126,9 +111,11 @@ object ArrowInliner extends Logging {
     // find and get resolved arrows if we return them from the function
     returnedArrows = rets.collect { case VarModel(name, _: ArrowType, _) => name }.toSet
     arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
+
+    body = SeqModel.wrap(callableFuncBody :: ops)
   } yield InlineResult(
-    SeqModel.wrap(ops.reverse),
-    rets.reverse,
+    body,
+    rets,
     varsFromAbilities,
     arrowsFromAbilities ++ arrowsToSave
   )
@@ -316,7 +303,7 @@ object ArrowInliner extends Logging {
       Arrows[S].scope(
         for {
           // Process renamings, prepare environment
-          fn <- prelude(arrow, call, exports, passArrows ++ arrowsFromAbilities)
+          fn <- ArrowInliner.prelude(arrow, call, exports, passArrows ++ arrowsFromAbilities)
           inlineResult <- ArrowInliner.inline(fn, call, streams)
         } yield inlineResult
       )
