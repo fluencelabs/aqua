@@ -5,6 +5,8 @@ import aqua.raw.ops.Call
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 
+import cats.syntax.foldable.*
+
 /**
  * Wraps argument definitions of a function, along with values provided when this function is called
  *
@@ -34,15 +36,33 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
       name -> (vr, t)
     }.toMap
 
+  lazy val abilityArgsRenames: Map[String, String] =
+    abilityArgs.toList.foldMap { case (name, (vm, at)) =>
+      at.arrows.keys
+        .map(arrowPath =>
+          val fullName = AbilityType.fullName(name, arrowPath)
+          val newFullName = AbilityType.fullName(vm.name, arrowPath)
+          fullName -> newFullName
+        )
+        .toMap
+        .updated(name, vm.name)
+    }
+
   lazy val streamArgs: Map[String, VarModel] =
     zipped.collect { case ((name, _), vr @ VarModel(_, StreamType(_), _)) =>
       name -> vr
     }.toMap
 
+  lazy val streamArgsRenames: Map[String, String] =
+    streamArgs.view.mapValues(_.name).toMap
+
   lazy val arrowArgs: Map[String, VarModel] =
     zipped.collect { case ((name, _: ArrowType), vm: VarModel) =>
       name -> vm
     }.toMap
+
+  lazy val arrowArgsRenames: Map[String, String] =
+    arrowArgs.view.mapValues(_.name).toMap
 
   def arrowArgsMap[T](arrows: Map[String, T]): Map[String, T] =
     arrowArgs.view

@@ -267,31 +267,12 @@ object ArrowInliner extends Logging {
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
 
     argNames = args.argNames
-    dataArgs = args.dataArgs
-    streamArgs = args.streamArgs
-    arrowArgs = args.arrowArgs
-    abArgs = args.abilityArgs
 
-    data <- findNewNames(dataArgs)
+    data <- findNewNames(args.dataArgs)
 
-    streamRenames = streamArgs.toList.map { case (name, vm) =>
-      name -> vm.name
-    }.toMap
-
-    arrowRenames = arrowArgs.toList.map { case (name, vm) =>
-      name -> vm.name
-    }.toMap
-
-    abRenames = abArgs.toList.foldMap { case (name, (vm, at)) =>
-      at.arrows.keys
-        .map(arrowPath =>
-          val fullName = AbilityType.fullName(name, arrowPath)
-          val newFullName = AbilityType.fullName(vm.name, arrowPath)
-          fullName -> newFullName
-        )
-        .toMap
-        .updated(name, vm.name)
-    }
+    streamRenames = args.streamArgsRenames
+    arrowRenames = args.arrowArgsRenames
+    abRenames = args.abilityArgsRenames
 
     capturedValues <- findNewNames(fn.capturedValues)
     capturedArrows <- findNewNames(fn.capturedArrows)
