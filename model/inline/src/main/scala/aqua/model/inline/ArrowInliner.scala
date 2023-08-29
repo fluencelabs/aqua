@@ -230,6 +230,21 @@ object ArrowInliner extends Logging {
     arrows <- Arrows[S].arrows
   } yield getAbilityArrows(abilityName, None, abilityType, exports, arrows)
 
+  final case class Renamed[T](
+    renames: Map[String, String],
+    renamed: Map[String, T]
+  )
+
+  private def findNewNames[S: Mangler, T](values: Map[String, T]): State[S, Renamed[T]] =
+    Mangler[S].findAndForbidNames(values.keySet).map { renames =>
+      Renamed(
+        renames,
+        values.map { case (name, value) =>
+          renames.getOrElse(name, name) -> value
+        }
+      )
+    }
+
   /**
    * Prepare the state context for this function call
    *
@@ -257,10 +272,7 @@ object ArrowInliner extends Logging {
     arrowArgs = args.arrowArgs
     abArgs = args.abilityArgs
 
-    dataRenames <- Mangler[S].findAndForbidNames(dataArgs.keySet)
-    dataRenamed = dataArgs.map { case (name, vm) =>
-      dataRenames.getOrElse(name, name) -> vm
-    }
+    data <- findNewNames(dataArgs)
 
     streamRenames = streamArgs.toList.map { case (name, vm) =>
       name -> vm.name
@@ -281,55 +293,27 @@ object ArrowInliner extends Logging {
         .updated(name, vm.name)
     }
 
-    capturedValuesRenames <- Mangler[S].findAndForbidNames(fn.capturedValues.keySet)
-    capturedValuesRenamed = fn.capturedValues.map { case (name, vm) =>
-      capturedValuesRenames.getOrElse(name, name) -> vm
-    }
-
-    capturedArrowsRenames <- Mangler[S].findAndForbidNames(fn.capturedArrows.keySet)
-    capturedArrowsRenamed = fn.capturedArrows.map { case (name, vm) =>
-      capturedArrowsRenames.getOrElse(name, name) -> vm
-    }
+    capturedValues <- findNewNames(fn.capturedValues)
+    capturedArrows <- findNewNames(fn.capturedArrows)
 
     defineNames <- StateT.liftF(fn.body.definesVarNames.map(_ -- argNames))
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
 
     renaming = (
-      dataRenames ++
+      data.renames ++
         streamRenames ++
         arrowRenames ++
         abRenames ++
-        capturedValuesRenames ++
-        capturedArrowsRenames ++
+        capturedValues.renames ++
+        capturedArrows.renames ++
         defineRenames
     )
 
-    arrowsResolved = arrows ++ capturedArrowsRenamed
-    exportsResolved = oldExports ++ dataRenamed ++ capturedValuesRenamed
+    arrowsResolved = arrows ++ capturedArrows.renamed
+    exportsResolved = oldExports ++ data.renamed ++ capturedValues.renamed
 
     tree = fn.body.rename(renaming)
     ret = fn.ret.map(_.renameVars(renaming))
-
-    // _ = println(s"\n\nPrelude: ${fn.funcName}")
-    // _ = println(s"Arg names: $argNames")
-    // _ = println(s"Captured arrows: ${fn.capturedArrows.keySet}")
-    // _ = println(s"Domain: ${fn.arrowType.domain}")
-    // _ = println(s"Body: \n${fn.body.show}`")
-    // _ = println(s"Arrows: $arrowsResolved")
-    // _ = println(s"Exports: $exportsResolved")
-    // _ = println(s"Data args: ${dataArgs}")
-    // _ = println(s"Ab args: ${abArgs.keySet}")
-    // _ = println(s"Arrow args: ${arrowArgs.keySet}")
-    // _ = println(s"Stream args: ${streamArgs.keySet}")
-    // _ = println(s"Data renames: $dataRenames")
-    // _ = println(s"Arrow renames: $arrowRenames")
-    // _ = println(s"Stream renames: $streamRenames")
-    // _ = println(s"Ab renames: $abRenames")
-    // _ = println(s"Define names: $defineNames")
-    // _ = println(s"Define renames: $defineRenames")
-    // _ = println(s"Renaming: $renaming")
-    // _ = println(s"Tree: \n${tree.show}")
-    // _ = println(s"Ret: \n${ret}")
 
     _ <- Arrows[S].resolved(arrowsResolved)
     _ <- Exports[S].resolved(exportsResolved)
@@ -357,13 +341,13 @@ object ArrowInliner extends Logging {
       )
     )
 
+    exportTo = call.exportTo.map(_.name)
     _ <- Arrows[S].resolved(inlineResult.arrowsToSave)
     _ <- Exports[S].resolved(
-      call.exportTo
-        .map(_.name)
+      exportTo
         .zip(inlineResult.returnedValues)
         .toMap ++ inlineResult.exportsToSave
     )
-    _ <- Mangler[S].forbid(call.exportTo.map(_.name).toSet)
+    _ <- Mangler[S].forbid(exportTo.toSet)
   } yield inlineResult.tree -> inlineResult.returnedValues
 }
