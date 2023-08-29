@@ -104,15 +104,20 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             ProductType(Nil)
           ),
           Nil,
-          Map("cb" -> cbArrow),
+          Map.empty,
           Map.empty,
           None
         ),
         CallModel(cbVal :: Nil, Nil)
       )
-      .run(InliningState())
+      .runA(
+        InliningState(
+          resolvedArrows = Map(
+            cbVal.name -> cbArrow
+          )
+        )
+      )
       .value
-      ._2
 
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, streamType).wrap(

@@ -29,7 +29,7 @@ object ArrowInliner extends Logging {
     arrow: FuncArrow,
     call: CallModel
   ): State[S, OpModel.Tree] =
-    callArrowRet(arrow, call).map(_._1)
+    callArrowRet(arrow, call).map { case (tree, _) => tree }
 
   // Get streams that was declared outside of a function
   private def getOutsideStreamNames[S: Exports]: State[S, Set[String]] =
@@ -132,31 +132,6 @@ object ArrowInliner extends Logging {
     varsFromAbilities,
     arrowsFromAbilities ++ arrowsToSave
   )
-
-  // Rename all exports-to-stream for streams that passed as arguments
-  private def renameStreams(
-    tree: RawTag.Tree,
-    streamArgs: Map[String, VarModel]
-  ): RawTag.Tree = {
-    // collect arguments with stream type
-    // to exclude it from resolving and rename it with a higher-level stream that passed by argument
-    val streamsToRename = streamArgs.view.mapValues(_.name).toMap
-
-    if (streamsToRename.isEmpty) tree
-    else
-      tree
-        .map(_.mapValues(_.map {
-          // if an argument is a BoxType (Array or Option), but we pass a stream,
-          // change a type as stream to not miss `$` sign in air
-          // @see ArrowInlinerSpec `pass stream to callback properly` test
-          case v @ VarRaw(name, baseType: BoxType) if streamsToRename.contains(name) =>
-            v.copy(baseType = StreamType(baseType.element))
-          case v: VarRaw if streamsToRename.contains(v.name) =>
-            v.copy(baseType = StreamType(v.baseType))
-          case v => v
-        }))
-        .renameExports(streamsToRename)
-  }
 
   /**
    * Get ability fields (vars or arrows) from exports
@@ -317,7 +292,7 @@ object ArrowInliner extends Logging {
     }
 
     defineNames <- StateT.liftF(fn.body.definesVarNames.map(_ -- argNames))
-    defineRenames <- Mangler[S].findAndForbidNames(defineNames)
+    defineRenames <- Mangler[S].findNewNames(defineNames)
 
     renaming = (
       dataRenames ++
@@ -376,7 +351,7 @@ object ArrowInliner extends Logging {
       Arrows[S].scope(
         for {
           // Process renamings, prepare environment
-          fn <- prelude[S](arrow, call, exports, passArrows ++ arrowsFromAbilities)
+          fn <- prelude(arrow, call, exports, passArrows ++ arrowsFromAbilities)
           inlineResult <- ArrowInliner.inline(fn, call, streams)
         } yield inlineResult
       )
@@ -389,5 +364,6 @@ object ArrowInliner extends Logging {
         .zip(inlineResult.returnedValues)
         .toMap ++ inlineResult.exportsToSave
     )
+    _ <- Mangler[S].forbid(call.exportTo.map(_.name).toSet)
   } yield inlineResult.tree -> inlineResult.returnedValues
 }

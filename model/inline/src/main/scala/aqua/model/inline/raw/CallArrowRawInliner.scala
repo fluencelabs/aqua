@@ -8,6 +8,7 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.Call
 import aqua.types.ArrowType
 import aqua.raw.value.CallArrowRaw
+
 import cats.data.{Chain, State}
 import scribe.Logging
 
@@ -66,9 +67,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
               // Leave meta information in tree after inlining
               MetaModel
                 .CallArrowModel(fn.funcName)
-                .wrap(
-                  SeqModel.wrap(p.toList :+ body: _*)
-                )
+                .wrap(SeqModel.wrap(p.toList :+ body))
             )
           )
         }
