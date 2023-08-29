@@ -361,8 +361,6 @@ object TagInliner extends Logging {
 
       case AssignmentTag(value, assignTo) =>
         for {
-          // NOTE: Name <assignTo> should not exist yet
-          _ <- Mangler[S].forbidName(assignTo)
           modelAndPrefix <- value match {
             // if we assign collection to a stream, we must use it's name, because it is already created with 'new'
             case c @ CollectionRaw(_, _: StreamType) =>
@@ -377,10 +375,9 @@ object TagInliner extends Logging {
       case ClosureTag(arrow, detach) =>
         if (detach) Arrows[S].resolved(arrow, None).as(TagInlined.Empty())
         else
-          for {
-            t <- Mangler[S].findAndForbidName(arrow.name)
-            _ <- Arrows[S].resolved(arrow, Some(t))
-          } yield TagInlined.Single(model = CaptureTopologyModel(t))
+          Arrows[S]
+            .resolved(arrow, arrow.name.some)
+            .as(TagInlined.Single(model = CaptureTopologyModel(arrow.name)))
 
       case NextTag(item) =>
         for {
@@ -399,7 +396,6 @@ object TagInliner extends Logging {
             for {
               cd <- valueToModel(value)
               (vm, prefix) = cd
-              _ <- Mangler[S].forbidName(name)
               _ <- Exports[S].resolved(name, vm)
             } yield TagInlined.Empty(prefix = prefix)
           case _ => none

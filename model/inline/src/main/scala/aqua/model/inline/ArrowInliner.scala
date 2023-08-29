@@ -292,7 +292,7 @@ object ArrowInliner extends Logging {
     }
 
     defineNames <- StateT.liftF(fn.body.definesVarNames.map(_ -- argNames))
-    defineRenames <- Mangler[S].findNewNames(defineNames)
+    defineRenames <- Mangler[S].findAndForbidNames(defineNames)
 
     renaming = (
       dataRenames ++
