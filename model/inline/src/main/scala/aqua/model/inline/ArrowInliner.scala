@@ -339,6 +339,7 @@ object ArrowInliner extends Logging {
 
     // _ = println(s"\n\nPrelude: ${fn.funcName}")
     // _ = println(s"Forbidden: $forbidden")
+    // _ = println(s"Arg names: $argNames")
     // _ = println(s"Captured arrows: ${fn.capturedArrows.keySet}")
     // _ = println(s"Domain: ${fn.arrowType.domain}")
     // _ = println(s"Body: \n${fn.body.show}`")

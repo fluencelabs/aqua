@@ -59,13 +59,17 @@ case class FuncPreTransformer(
       case t => t
     }).toLabelledList(returnVar)
 
+    val args = func.arrowType.domain.labelledData.map { case (name, typ) =>
+      s"-$name-arg-" -> typ
+    }
+
     val funcCall = Call(
-      func.arrowType.domain.toLabelledList().map(ad => VarRaw(ad._1, ad._2)),
+      args.map { case (name, typ) => VarRaw(name, typ) },
       returnType.map { case (l, t) => Call.Export(l, t) }
     )
 
     val provideArgs = argsProvider.provideArgs(
-      relayVar.toList ::: func.arrowType.domain.labelledData
+      relayVar.toList ::: args
     )
 
     val handleResults = resultsHandler.handleResults(
