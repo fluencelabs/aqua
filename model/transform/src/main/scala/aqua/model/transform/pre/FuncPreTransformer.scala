@@ -22,7 +22,7 @@ case class FuncPreTransformer(
 
   private val returnVar: String = "-return-"
 
-  private val relayVar = relayVarName.map(_ -> ScalarType.string)
+  private val relayArg = relayVarName.map(name => ArgsProvider.Arg(name, name, ScalarType.string))
 
   /**
    * Convert an arrow-type argument to init user's callback
@@ -60,16 +60,16 @@ case class FuncPreTransformer(
     }).toLabelledList(returnVar)
 
     val args = func.arrowType.domain.labelledData.map { case (name, typ) =>
-      s"-$name-arg-" -> typ
+      ArgsProvider.Arg(name, s"-$name-arg-", typ)
     }
 
     val funcCall = Call(
-      args.map { case (name, typ) => VarRaw(name, typ) },
+      args.map(arg => VarRaw(arg.varName, arg.t)),
       returnType.map { case (l, t) => Call.Export(l, t) }
     )
 
     val provideArgs = argsProvider.provideArgs(
-      relayVar.toList ::: args
+      relayArg.toList ::: args
     )
 
     val handleResults = resultsHandler.handleResults(

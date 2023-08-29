@@ -263,6 +263,7 @@ case class CallArrowRaw(
         .get(name)
         // Rename only if it is **not** a service or ability call, see [bug LNG-199]
         .filterNot(_ => ability.isDefined)
+        .filterNot(_ => serviceId.isDefined)
         .getOrElse(name)
     )
 
