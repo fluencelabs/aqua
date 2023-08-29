@@ -278,6 +278,7 @@ object ArrowInliner extends Logging {
 
     // forbidden <- Mangler[S].getForbiddenNames
 
+    argNames = args.argNames
     dataArgs = args.dataArgs
     streamArgs = args.streamArgs
     arrowArgs = args.arrowArgs
@@ -317,7 +318,7 @@ object ArrowInliner extends Logging {
       capturedArrowsRenames.getOrElse(name, name) -> vm
     }
 
-    defineNames <- StateT.liftF(fn.body.definesVarNames)
+    defineNames <- StateT.liftF(fn.body.definesVarNames.map(_ -- argNames))
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
 
     renaming = (
@@ -347,8 +348,10 @@ object ArrowInliner extends Logging {
     // _ = println(s"Ab args: ${abArgs.keySet}")
     // _ = println(s"Arrow args: ${arrowArgs.keySet}")
     // _ = println(s"Stream args: ${streamArgs.keySet}")
-    // _ = println(s"Ab renames: $abRenames")
+    // _ = println(s"Data renames: $dataRenames")
     // _ = println(s"Arrow renames: $arrowRenames")
+    // _ = println(s"Stream renames: $streamRenames")
+    // _ = println(s"Ab renames: $abRenames")
     // _ = println(s"Define names: $defineNames")
     // _ = println(s"Define renames: $defineRenames")
     // _ = println(s"Renaming: $renaming")
