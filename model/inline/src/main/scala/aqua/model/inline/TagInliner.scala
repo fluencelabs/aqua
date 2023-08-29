@@ -398,8 +398,10 @@ object TagInliner extends Logging {
           case VarRaw(name, _) =>
             for {
               cd <- valueToModel(value)
-              _ <- Exports[S].resolved(name, cd._1)
-            } yield TagInlined.Empty(prefix = cd._2)
+              (vm, prefix) = cd
+              _ <- Mangler[S].forbidName(name)
+              _ <- Exports[S].resolved(name, vm)
+            } yield TagInlined.Empty(prefix = prefix)
           case _ => none
 
       case _: SeqGroupTag => pure(SeqModel)

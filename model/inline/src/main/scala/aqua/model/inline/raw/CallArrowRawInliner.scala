@@ -41,6 +41,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
             )
           )
           _ <- Exports[S].resolved(values)
+          _ <- Mangler[S].forbid(values.keySet)
         } yield values.values.toList -> inline
       case None =>
         /**
