@@ -58,9 +58,8 @@ case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends Valu
   override def renameVars(map: Map[String, String]): ValueRaw =
     ApplyPropertyRaw(value.renameVars(map), property.renameVars(map))
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(
-    ApplyPropertyRaw(f(value), property.map(f))
-  )
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(ApplyPropertyRaw(f(value), property.map(_.map(f))))
 
   override def toString: String = s"$value.$property"
 

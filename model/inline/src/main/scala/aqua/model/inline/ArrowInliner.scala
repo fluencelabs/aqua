@@ -276,6 +276,8 @@ object ArrowInliner extends Logging {
     // Collect all arguments: what names are used inside the function, what values are received
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
 
+    // forbidden <- Mangler[S].getForbiddenNames
+
     dataArgs = args.dataArgs
     streamArgs = args.streamArgs
     arrowArgs = args.arrowArgs
@@ -335,6 +337,7 @@ object ArrowInliner extends Logging {
     ret = fn.ret.map(_.renameVars(renaming))
 
     // _ = println(s"\n\nPrelude: ${fn.funcName}")
+    // _ = println(s"Forbidden: $forbidden")
     // _ = println(s"Captured arrows: ${fn.capturedArrows.keySet}")
     // _ = println(s"Domain: ${fn.arrowType.domain}")
     // _ = println(s"Body: \n${fn.body.show}`")
