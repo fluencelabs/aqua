@@ -295,11 +295,21 @@ object TagInliner extends Logging {
         )
 
       case PushToStreamTag(operand, exportTo) =>
-        valueToModel(operand).map { case (v, p) =>
-          TagInlined.Single(
-            model = PushToStreamModel(v, CallModel.callExport(exportTo)),
-            prefix = p
-          )
+        (
+          valueToModel(operand),
+          valueToModel(exportTo.toRaw)
+        ).mapN {
+          case ((v, p), (VarModel(name, st, Chain.nil), None)) =>
+            TagInlined.Single(
+              model = PushToStreamModel(v, CallModel.Export(name, st)),
+              prefix = p
+            )
+          case (_, (vm, prefix)) =>
+            logger.error(
+              s"Unexpected: stream (${exportTo}) resolved " +
+                s"to ($vm) with prefix ($prefix)"
+            )
+            TagInlined.Empty()
         }
 
       case CanonicalizeTag(operand, exportTo) =>

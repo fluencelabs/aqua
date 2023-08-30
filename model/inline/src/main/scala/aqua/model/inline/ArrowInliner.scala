@@ -85,7 +85,7 @@ object ArrowInliner extends Logging {
     outsideDeclaredStreams: Set[String]
   ): State[S, InlineResult] = for {
     callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body, fn.funcName)
-    callableFuncBody =
+        callableFuncBody =
       fn.capturedTopology
         .fold(SeqModel)(ApplyTopologyModel.apply)
         .wrap(callableFuncBodyNoTopology)
@@ -256,6 +256,7 @@ object ArrowInliner extends Logging {
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
 
     argNames = args.argNames
+    capturedNames = fn.capturedValues.keySet ++ fn.capturedArrows.keySet
 
     /**
      * Substitute all arguments inside function body.
@@ -283,7 +284,11 @@ object ArrowInliner extends Logging {
      * **another function inside this one** we would know what names
      * are prohibited because they are used inside **this function**.
      */
-    defineNames <- StateT.liftF(fn.body.definesVarNames.map(_ -- argNames))
+    defineNames <- StateT.liftF(
+      fn.body.definesVarNames.map(
+        _ -- argNames -- capturedNames
+      )
+    )
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
 
     renaming = (
