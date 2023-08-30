@@ -31,6 +31,9 @@ case class StackInterpreter[S[_], X, St, Fr](
   def mapStackHead[A](ifStackEmpty: A)(f: Fr => (Fr, A)): SX[A] =
     mapStackHeadM(ifStackEmpty.pure)(f.andThen(_.pure))
 
+  def mapStackHead_(f: Fr => Fr): SX[Unit] =
+    mapStackHead(())(f.andThen(_ -> ()))
+
   def mapStackHeadM[A](ifStackEmpty: SX[A])(f: Fr => SX[(Fr, A)]): SX[A] =
     getState.map(stackLens.get).flatMap {
       case head :: tail =>

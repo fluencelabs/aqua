@@ -59,6 +59,11 @@ case class FuncPreTransformer(
       case t => t
     }).toLabelledList(returnVar)
 
+    /**
+     * Arguments list (argument name, variable name, argument type).
+     * We need to give other names to arguments because they can
+     * collide with the name of the function itself.
+     */
     val args = func.arrowType.domain.toLabelledList().map { case (name, typ) =>
       (name, s"-$name-arg-", typ)
     }

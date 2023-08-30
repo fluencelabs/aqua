@@ -13,8 +13,11 @@ trait ArgsProvider {
 object ArgsProvider {
 
   final case class Arg(
+    // Actual name of the argument
     name: String,
+    // Variable name to store the value of the argument
     varName: String,
+    // Type of the argument
     t: DataType
   )
 }

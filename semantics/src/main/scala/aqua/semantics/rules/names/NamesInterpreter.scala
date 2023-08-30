@@ -25,7 +25,7 @@ class NamesInterpreter[S[_], X](implicit
     GenLens[NamesState[S]](_.stack)
   )
 
-  import stackInt.{getState, mapStackHead, mapStackHeadM, modify, report}
+  import stackInt.{getState, mapStackHead, mapStackHeadM, mapStackHead_, modify, report}
 
   type SX[A] = State[X, A]
 
@@ -107,10 +107,9 @@ class NamesInterpreter[S[_], X](implicit
     }
 
   override def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): State[X, Boolean] =
-    define(name, `type`).flatMap {
-      case true => mapStackHead(true)(_.derived(name, derivedFrom) -> true)
-      case false => false.pure
-    } <* locations.addToken(name.value, name)
+    define(name, `type`).flatTap(defined =>
+      mapStackHead_(_.derived(name, derivedFrom)).whenA(defined)
+    ) <* locations.addToken(name.value, name)
 
   override def getDerivedFrom(fromNames: List[Set[String]]): State[X, List[Set[String]]] =
     mapStackHead(Nil)(frame =>

@@ -222,6 +222,12 @@ object ArrowInliner extends Logging {
     renamed: Map[String, T]
   )
 
+  /**
+   * Rename values and forbid new names
+   *
+   * @param values Mapping name -> value
+   * @return Renamed values and renames
+   */
   private def findNewNames[S: Mangler, T](values: Map[String, T]): State[S, Renamed[T]] =
     Mangler[S].findAndForbidNames(values.keySet).map { renames =>
       Renamed(
@@ -233,37 +239,50 @@ object ArrowInliner extends Logging {
     }
 
   /**
-   * Prepare the state context for this function call
+   * Prepare the function and the context for inlining
    *
-   * @param fn
-   * Function that will be called
-   * @param call
-   * Call object
-   * @tparam S
-   * State
-   * @return
-   * Tree with substituted values, list of return values prior to function calling/inlining
+   * @param fn Function that will be called
+   * @param call Call object
+   * @param exports Exports state before calling/inlining
+   * @param arrows Arrows that are available for callee
+   * @return Prepared function
    */
   private def prelude[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel,
-    oldExports: Map[String, ValueModel],
+    exports: Map[String, ValueModel],
     arrows: Map[String, FuncArrow]
   ): State[S, FuncArrow] = for {
-    // Collect all arguments: what names are used inside the function, what values are received
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
 
     argNames = args.argNames
 
+    /**
+     * Substitute all arguments inside function body.
+     * Data arguments could be passed as variables or values (expressions),
+     * so we need to resolve them in `Exports`.
+     * Streams, arrows, abilities are passed as variables only,
+     * so we just rename them in the function body to match
+     * the names in the current context.
+     */
     data <- findNewNames(args.dataArgs)
-
     streamRenames = args.streamArgsRenames
     arrowRenames = args.arrowArgsRenames
     abRenames = args.abilityArgsRenames
 
+    /**
+     * Find new names for captured values and arrows
+     * to avoid collisions, then resolve them in context.
+     */
     capturedValues <- findNewNames(fn.capturedValues)
     capturedArrows <- findNewNames(fn.capturedArrows)
 
+    /**
+     * Function defines variables inside its body.
+     * We rename and forbid all those names so that when we inline
+     * **another function inside this one** we would know what names
+     * are prohibited because they are used inside **this function**.
+     */
     defineNames <- StateT.liftF(fn.body.definesVarNames.map(_ -- argNames))
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
 
@@ -278,7 +297,7 @@ object ArrowInliner extends Logging {
     )
 
     arrowsResolved = arrows ++ capturedArrows.renamed
-    exportsResolved = oldExports ++ data.renamed ++ capturedValues.renamed
+    exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
     tree = fn.body.rename(renaming)
     ret = fn.ret.map(_.renameVars(renaming))

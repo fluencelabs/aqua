@@ -11,6 +11,7 @@ import aqua.types.ArrowType
 
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.functor.*
+import cats.syntax.foldable.*
 import cats.syntax.traverse.*
 import cats.syntax.applicative.*
 import monocle.Lens
@@ -37,34 +38,34 @@ class AbilitiesInterpreter[S[_], X](implicit
   ): SX[Boolean] =
     getService(name.value).flatMap {
       case Some(_) =>
-        getState.map(_.definitions.get(name.value).exists(_ == name)).flatMap {
-          case true => State.pure(false)
-          case false => report(name, "Service with this name was already defined").as(false)
-
-        }
+        getState
+          .map(_.definitions.get(name.value).exists(_ == name))
+          .flatMap(exists =>
+            report(
+              name,
+              "Service with this name was already defined"
+            ).whenA(!exists)
+          )
+          .as(false)
       case None =>
-        arrows.toNel
-          .map(_._2)
-          .collect {
-            case (n, arr) if arr.codomain.length > 1 =>
-              report(n, "Service functions cannot have multiple results")
+        for {
+          _ <- arrows.toNel.traverse_ { case (_, (n, arr)) =>
+            report(n, "Service functions cannot have multiple results")
+              .whenA(arr.codomain.length > 1)
           }
-          .sequence
-          .flatMap { _ =>
-            modify(s =>
-              s.copy(
-                services = s.services
-                  .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
-                definitions = s.definitions.updated(name.value, name)
-              )
-            ).flatMap { _ =>
-              locations.addTokenWithFields(
-                name.value,
-                name,
-                arrows.toNel.toList.map(t => t._1 -> t._2._1)
-              )
-            }.as(true)
-          }
+          _ <- modify(s =>
+            s.copy(
+              services = s.services
+                .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
+              definitions = s.definitions.updated(name.value, name)
+            )
+          )
+          _ <- locations.addTokenWithFields(
+            name.value,
+            name,
+            arrows.toNel.toList.map(t => t._1 -> t._2._1)
+          )
+        } yield true
     }
 
   // adds location from token to its definition
