@@ -85,7 +85,7 @@ object ArrowInliner extends Logging {
     outsideDeclaredStreams: Set[String]
   ): State[S, InlineResult] = for {
     callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body, fn.funcName)
-        callableFuncBody =
+    callableFuncBody =
       fn.capturedTopology
         .fold(SeqModel)(ApplyTopologyModel.apply)
         .wrap(callableFuncBodyNoTopology)

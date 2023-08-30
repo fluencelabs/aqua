@@ -20,10 +20,8 @@ trait Arrows[S] extends Scoped[S] {
   /**
    * Arrow is resolved – save it to the state [[S]]
    *
-   * @param arrow
-   *   resolved arrow
-   * @param e
-   *   contextual Exports that an arrow captures
+   * @param arrow resolved arrow
+   * @param topology captured topology
    */
   final def resolved(
     arrow: FuncRaw,

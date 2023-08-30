@@ -7,7 +7,7 @@ import aqua.model.inline.raw.CallArrowRawInliner
 import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{BoxType, CanonStreamType, StreamType}
+import aqua.types.{BoxType, CanonStreamType, DataType, StreamType}
 import aqua.model.inline.Inline.parDesugarPrefixOpt
 
 import cats.syntax.traverse.*
@@ -297,6 +297,9 @@ object TagInliner extends Logging {
       case PushToStreamTag(operand, exportTo) =>
         (
           valueToModel(operand),
+          // We need to resolve stream because it could
+          // be actually pointing to another var.
+          // TODO: Looks like a hack, refator resolving
           valueToModel(exportTo.toRaw)
         ).mapN {
           case ((v, p), (VarModel(name, st, Chain.nil), None)) =>
