@@ -159,44 +159,44 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
         getDataSrv("-relay-", "-relay-", ScalarType.string),
         getDataSrv("peers", peers.name, peers.`type`),
         XorRes.wrap(
-          // RestrictionRes(results.name, resultsType).wrap(
-          SeqRes.wrap(
-            ParRes.wrap(
-              FoldRes(peer.name, peers, ForModel.Mode.Never.some).wrap(
-                ParRes.wrap(
-                  XorRes.wrap(
-                    // better if first relay will be outside `for`
-                    SeqRes.wrap(
-                      through(ValueModel.fromRaw(relay)),
-                      CallServiceRes(
-                        LiteralModel.fromRaw(LiteralRaw.quote("op")),
-                        "identity",
-                        CallRes(
-                          LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
-                          Some(CallModel.Export(results.name, results.`type`))
-                        ),
-                        peer
-                      ).leaf,
-                      through(ValueModel.fromRaw(relay)),
-                      through(initPeer)
+          RestrictionRes(results.name, resultsType).wrap(
+            SeqRes.wrap(
+              ParRes.wrap(
+                FoldRes(peer.name, peers, ForModel.Mode.Never.some).wrap(
+                  ParRes.wrap(
+                    XorRes.wrap(
+                      // better if first relay will be outside `for`
+                      SeqRes.wrap(
+                        through(ValueModel.fromRaw(relay)),
+                        CallServiceRes(
+                          LiteralModel.fromRaw(LiteralRaw.quote("op")),
+                          "identity",
+                          CallRes(
+                            LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
+                            Some(CallModel.Export(results.name, results.`type`))
+                          ),
+                          peer
+                        ).leaf,
+                        through(ValueModel.fromRaw(relay)),
+                        through(initPeer)
+                      ),
+                      SeqRes.wrap(
+                        through(ValueModel.fromRaw(relay)),
+                        through(initPeer),
+                        failLastErrorRes
+                      )
                     ),
-                    SeqRes.wrap(
-                      through(ValueModel.fromRaw(relay)),
-                      through(initPeer),
-                      failLastErrorRes
-                    )
-                  ),
-                  NextRes(peer.name).leaf
+                    NextRes(peer.name).leaf
+                  )
                 )
-              )
-            ),
-            join(results, LiteralModel.fromRaw(LiteralRaw.number(2))),
-            CanonRes(results, init, CallModel.Export(canonResult.name, canonResult.`type`)).leaf,
-            ApRes(
-              canonResult,
-              CallModel.Export(flatResult.name, flatResult.`type`)
-            ).leaf
-            // )
+              ),
+              join(results, LiteralModel.fromRaw(LiteralRaw.number(2))),
+              CanonRes(results, init, CallModel.Export(canonResult.name, canonResult.`type`)).leaf,
+              ApRes(
+                canonResult,
+                CallModel.Export(flatResult.name, flatResult.`type`)
+              ).leaf
+            )
           ),
           errorCall(transformCfg, 0, initPeer)
         ),
@@ -273,30 +273,30 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
     val expected = SeqRes.wrap(
       XorRes.wrap(
-        // RestrictionRes(resVM.name, resStreamType).wrap(
-        SeqRes.wrap(
-          // res <- foo()
-          ApRes(
-            LiteralModel.fromRaw(LiteralRaw.quote("I am MyFooBar foo")),
-            CallModel.Export(resVM.name, resVM.`type`)
-          ).leaf,
-          // res <- bar()
-          ApRes(
-            LiteralModel.fromRaw(LiteralRaw.quote(" I am MyFooBar bar")),
-            CallModel.Export(resVM.name, resVM.`type`)
-          ).leaf,
-          // canonicalization
-          CanonRes(
-            resVM,
-            LiteralModel.fromRaw(ValueRaw.InitPeerId),
-            CallModel.Export(resCanonVM.name, resCanonVM.`type`)
-          ).leaf,
-          // flattening
-          ApRes(
-            VarModel(resCanonVM.name, resCanonVM.`type`),
-            CallModel.Export(resFlatVM.name, resFlatVM.`type`)
-          ).leaf
-          // )
+        RestrictionRes(resVM.name, resStreamType).wrap(
+          SeqRes.wrap(
+            // res <- foo()
+            ApRes(
+              LiteralModel.fromRaw(LiteralRaw.quote("I am MyFooBar foo")),
+              CallModel.Export(resVM.name, resVM.`type`)
+            ).leaf,
+            // res <- bar()
+            ApRes(
+              LiteralModel.fromRaw(LiteralRaw.quote(" I am MyFooBar bar")),
+              CallModel.Export(resVM.name, resVM.`type`)
+            ).leaf,
+            // canonicalization
+            CanonRes(
+              resVM,
+              LiteralModel.fromRaw(ValueRaw.InitPeerId),
+              CallModel.Export(resCanonVM.name, resCanonVM.`type`)
+            ).leaf,
+            // flattening
+            ApRes(
+              VarModel(resCanonVM.name, resCanonVM.`type`),
+              CallModel.Export(resFlatVM.name, resFlatVM.`type`)
+            ).leaf
+          )
         ),
         errorCall(transformCfg, 0, initPeer)
       ),
