@@ -1,0 +1,29 @@
+aqua StreamCapture
+
+export testStreamCapture
+
+func captureStream() -> (string -> []string):
+    stream: *string
+
+    stream <<- "one"
+
+    capture = (s: string) -> []string:
+        stream <<- s
+        <- stream
+    
+    capture("two")
+
+    <- capture
+
+func useCapture(capture: string -> []string):
+    capture("three")
+
+func rereturnCapture() -> (string -> []string):
+    capture <- captureStream()
+    useCapture(capture)
+    capture("four")
+    <- capture
+
+func testStreamCapture() -> []string:
+    capture <- rereturnCapture()
+    <- capture("five")

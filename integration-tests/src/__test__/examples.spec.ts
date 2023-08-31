@@ -38,6 +38,9 @@ import { coCall } from '../examples/coCall.js';
 import { bugLNG60Call, passArgsCall } from '../examples/passArgsCall.js';
 import { streamArgsCall } from '../examples/streamArgsCall.js';
 import { streamResultsCall } from '../examples/streamResultsCall.js';
+import { structuralTypingCall } from '../examples/structuralTypingCall';
+import { streamReturnCall } from '../examples/streamReturn.js';
+import { streamCaptureCall } from '../examples/streamCapture.js';
 import { streamIfCall, streamForCall, streamTryCall, streamComplexCall } from '../examples/streamScopes.js';
 import { pushToStreamCall } from '../examples/pushToStreamCall.js';
 import { literalCall } from '../examples/returnLiteralCall.js';
@@ -79,7 +82,7 @@ export const relay2 = config.relays[1];
 const relayPeerId2 = relay2.peerId;
 
 import log from 'loglevel';
-import { structuralTypingCall } from '../examples/structuralTypingCall';
+
 // log.setDefaultLevel("debug")
 
 async function start() {
@@ -417,6 +420,16 @@ describe('Testing examples', () => {
     it('streamResults.aqua', async () => {
         let streamResultsResult = await streamResultsCall();
         expect(streamResultsResult).toEqual(['new_name', 'new_name', 'new_name']);
+    });
+
+    it('streamReturn.aqua', async () => {
+        let streamReturnResult = await streamReturnCall();
+        expect(streamReturnResult).toEqual(['one', 'two', 'three', 'four']);
+    });
+
+    it('streamCapture.aqua', async () => {
+        let streamCaptureResult = await streamCaptureCall();
+        expect(streamCaptureResult).toEqual(['one', 'two', 'three', 'four', 'five']);
     });
 
     it('assignment.aqua', async () => {
