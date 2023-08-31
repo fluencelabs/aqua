@@ -481,6 +481,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         (name, assingTo)
     }.toList
 
+    // WARNING: This test does not take
+    //          stream restriction into account
     inside(streamName) { case Some(streamName) =>
       inside(canonFlatNames) { case (canonName1, flatName1) :: (canonName2, flatName2) :: Nil =>
         def canon(canonName: String, flatName: String) = {

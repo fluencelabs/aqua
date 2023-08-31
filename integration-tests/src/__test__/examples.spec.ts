@@ -40,7 +40,7 @@ import { streamArgsCall } from '../examples/streamArgsCall.js';
 import { streamResultsCall } from '../examples/streamResultsCall.js';
 import { structuralTypingCall } from '../examples/structuralTypingCall';
 import { streamReturnCall } from '../examples/streamReturn.js';
-import { streamCaptureCall } from '../examples/streamCapture.js';
+import { streamCaptureSimpleCall, streamCaptureReturnCall } from '../examples/streamCapture.js';
 import { streamIfCall, streamForCall, streamTryCall, streamComplexCall } from '../examples/streamScopes.js';
 import { pushToStreamCall } from '../examples/pushToStreamCall.js';
 import { literalCall } from '../examples/returnLiteralCall.js';
@@ -427,9 +427,14 @@ describe('Testing examples', () => {
         expect(streamReturnResult).toEqual(['one', 'two', 'three', 'four']);
     });
 
-    // TODO: UNSKIP
-    it.skip('streamCapture.aqua', async () => {
-        let streamCaptureResult = await streamCaptureCall();
+    it('streamCapture.aqua simple', async () => {
+        let streamCaptureResult = await streamCaptureSimpleCall();
+        expect(streamCaptureResult).toEqual(['one', 'two', 'three']);
+    });
+
+    // TODO: Unskip this after LNG-226 is fixed
+    it.skip('streamCapture.aqua return', async () => {
+        let streamCaptureResult = await streamCaptureReturnCall();
         expect(streamCaptureResult).toEqual(['one', 'two', 'three', 'four', 'five']);
     });
 

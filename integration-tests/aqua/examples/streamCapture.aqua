@@ -1,6 +1,26 @@
 aqua StreamCapture
 
-export testStreamCapture
+export testStreamCaptureSimple, testStreamCaptureReturn
+
+-- SIMPLE
+
+func useCaptureSimple(push: string -> ()):
+    push("two")
+
+func testStreamCaptureSimple() -> []string:
+    stream: *string
+
+    stream <<- "one"
+
+    push = (s: string):
+        stream <<- s
+
+    useCaptureSimple(push)
+    push("three")
+    
+    <- stream
+
+-- RETURN
 
 func captureStream() -> (string -> []string):
     stream: *string
@@ -15,16 +35,16 @@ func captureStream() -> (string -> []string):
 
     <- capture
 
-func useCapture(capture: string -> []string):
+func useCaptureReturn(capture: string -> []string):
     capture("three")
 
 func rereturnCapture() -> (string -> []string):
     capture <- captureStream()
-    useCapture(capture)
+    useCaptureReturn(capture)
     capture("four")
     <- capture
 
-func testStreamCapture() -> []string:
+func testStreamCaptureReturn() -> []string:
     on HOST_PEER_ID:
         capture <- rereturnCapture()
     <- capture("five")
