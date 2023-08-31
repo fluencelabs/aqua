@@ -61,4 +61,9 @@ trait RawTagGivens {
           }
         )
         .map { case (_, uses) => uses }
+
+    private def collect[A](pf: PartialFunction[RawTag, A]): Eval[Chain[A]] =
+      Cofree.cata(tree)((tag, acc: Chain[Chain[A]]) =>
+        Eval.later(Chain.fromOption(pf.lift(tag)) ++ acc.flatten)
+      )
 }
