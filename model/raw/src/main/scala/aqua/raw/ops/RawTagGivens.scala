@@ -7,6 +7,8 @@ import cats.data.Chain
 import cats.{Eval, Semigroup}
 import cats.syntax.apply.*
 import cats.syntax.semigroup.*
+import cats.syntax.foldable.*
+import cats.syntax.all.*
 
 trait RawTagGivens {
 
@@ -43,4 +45,21 @@ trait RawTagGivens {
       Cofree.cata(tree) { case (tag, acc) =>
         Eval.later(acc.foldLeft(tag.definesVarNames)(_ ++ _))
       }
+
+    /**
+     * Get all variable names used by this tree
+     * but not exported in it (free variables).
+     */
+    def usesVarNames: Eval[Set[String]] =
+      Cofree
+        .cata(tree)((tag, childs: Chain[(Set[String], Set[String])]) =>
+          Eval.later {
+            val (childExports, childUses) = childs.combineAll
+            val exports = tag.exportsVarNames ++ childExports -- tag.restrictsVarNames
+            val uses = tag.usesVarNames ++ childUses -- exports
+            println(s"Tag: $tag, exports: $exports, uses: $uses")
+            (exports, uses)
+          }
+        )
+        .map { case (_, uses) => uses }
 }
