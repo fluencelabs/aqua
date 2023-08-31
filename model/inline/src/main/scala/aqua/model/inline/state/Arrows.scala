@@ -33,9 +33,12 @@ trait Arrows[S] extends Scoped[S] {
       exps <- Exports[S].exports
       arrs <- arrows
       //   _ = println(s"Resolved arrow: ${arrow.name}")
-      //   _ = println(s"Uses vars: ${arrow.arrow.body.usesVarNames.value}")
-      //   _ = println(s"Body: ${arrow.arrow.body.show}")
-      funcArrow = FuncArrow.fromRaw(arrow, arrs, exps, topology)
+      //   _ = println(s"Captured var names: ${arrow.capturedVars}")
+      captuedVars = exps.filterKeys(arrow.capturedVars).toMap
+      capturedArrows = arrs.filterKeys(arrow.capturedVars).toMap
+      //   _ = println(s"Captured vars: ${captuedVars}")
+      //   _ = println(s"Captured arrows: ${capturedArrows}")
+      funcArrow = FuncArrow.fromRaw(arrow, capturedArrows, captuedVars, topology)
       _ <- save(arrow.name, funcArrow)
     } yield ()
 

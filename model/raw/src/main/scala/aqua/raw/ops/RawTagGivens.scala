@@ -57,7 +57,6 @@ trait RawTagGivens {
             val (childExports, childUses) = childs.combineAll
             val exports = tag.exportsVarNames ++ childExports -- tag.restrictsVarNames
             val uses = tag.usesVarNames ++ childUses -- exports
-            println(s"Tag: $tag, exports: $exports, uses: $uses")
             (exports, uses)
           }
         )
