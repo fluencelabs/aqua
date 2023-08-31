@@ -427,8 +427,7 @@ describe('Testing examples', () => {
         expect(streamReturnResult).toEqual(['one', 'two', 'three', 'four']);
     });
 
-    // TODO: UNSKIP
-    it.skip('streamCapture.aqua', async () => {
+    it('streamCapture.aqua', async () => {
         let streamCaptureResult = await streamCaptureCall();
         expect(streamCaptureResult).toEqual(['one', 'two', 'three', 'four', 'five']);
     });
