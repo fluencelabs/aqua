@@ -37,7 +37,10 @@ object RawValueInliner extends Logging {
   ): State[S, (ValueModel, Inline)] =
     raw match {
       case VarRaw(name, t) =>
-        Exports[S].exports.map(VarModel(name, t, Chain.empty).resolveWith).map(_ -> Inline.empty)
+        for {
+          exports <- Exports[S].exports
+          model = VarModel(name, t, Chain.empty).resolveWith(exports)
+        } yield model -> Inline.empty
 
       case LiteralRaw(value, t) =>
         State.pure(LiteralModel(value, t) -> Inline.empty)

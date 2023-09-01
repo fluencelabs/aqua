@@ -3,7 +3,7 @@ package aqua.semantics.expr.func
 import aqua.raw.Raw
 import aqua.types.ArrowType
 import aqua.raw.value.CallArrowRaw
-import aqua.raw.ops.{AssignmentTag, ClosureTag}
+import aqua.raw.ops.AssignmentTag
 import aqua.parser.expr.func.AssignmentExpr
 import aqua.raw.arrow.FuncRaw
 import aqua.semantics.Prog

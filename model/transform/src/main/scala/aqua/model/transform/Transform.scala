@@ -1,8 +1,5 @@
 package aqua.model.transform
 
-import cats.syntax.show.*
-import cats.syntax.traverse.*
-import cats.instances.list.*
 import aqua.model.inline.ArrowInliner
 import aqua.model.inline.state.InliningState
 import aqua.model.transform.funcop.*
@@ -13,13 +10,17 @@ import aqua.raw.ops.RawTag
 import aqua.raw.value.VarRaw
 import aqua.res.*
 import aqua.types.ScalarType
+import aqua.model.transform.TransformConfig.TracingConfig
+import aqua.model.transform.pre.{CallbackErrorHandler, ErrorHandler}
+
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 import cats.syntax.option.*
+import cats.syntax.show.*
+import cats.syntax.traverse.*
+import cats.instances.list.*
 import scribe.Logging
-import aqua.model.transform.TransformConfig.TracingConfig
-import aqua.model.transform.pre.{CallbackErrorHandler, ErrorHandler}
 
 // API for transforming RawTag to Res
 object Transform extends Logging {

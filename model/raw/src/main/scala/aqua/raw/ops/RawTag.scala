@@ -5,8 +5,10 @@ import aqua.raw.ops.RawTag.Tree
 import aqua.raw.value.{CallArrowRaw, ValueRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import aqua.types.{ArrowType, DataType}
+
 import cats.Show
 import cats.data.{Chain, NonEmptyList}
+import cats.syntax.foldable.*
 import cats.free.Cofree
 
 sealed trait RawTag extends TreeNode[RawTag] {
@@ -19,6 +21,9 @@ sealed trait RawTag extends TreeNode[RawTag] {
 
   // All variable names introduced by this tag
   def definesVarNames: Set[String] = exportsVarNames ++ restrictsVarNames
+
+  // Variable names used by this tag (not introduced by it)
+  def usesVarNames: Set[String] = Set.empty
 
   def mapValues(f: ValueRaw => ValueRaw): RawTag
 
@@ -83,6 +88,8 @@ case object ParTag extends ParGroupTag {
 
 case class IfTag(value: ValueRaw) extends GroupTag {
 
+  override def usesVarNames: Set[String] = value.varNames
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     IfTag(value.map(f))
 }
@@ -119,6 +126,8 @@ case class OnTag(
   strategy: Option[OnTag.ReturnStrategy] = None
 ) extends SeqGroupTag {
 
+  override def usesVarNames: Set[String] = peerId.varNames ++ via.foldMap(_.varNames)
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     OnTag(peerId.map(f), via.map(_.map(f)), strategy)
 
@@ -146,6 +155,8 @@ case class NextTag(item: String) extends RawTag {
   override def renameExports(map: Map[String, String]): RawTag =
     copy(item = map.getOrElse(item, item))
 
+  override def usesVarNames: Set[String] = Set(item)
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 }
 
@@ -161,6 +172,8 @@ case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = 
     extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(item)
+
+  override def usesVarNames: Set[String] = iterable.varNames
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     ForTag(item, iterable.map(f), mode)
@@ -183,6 +196,8 @@ case class CallArrowRawTag(
 ) extends RawTag {
 
   override def exportsVarNames: Set[String] = exportTo.map(_.name).toSet
+
+  override def usesVarNames: Set[String] = value.varNames
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     CallArrowRawTag(exportTo, value.map(f))
@@ -227,8 +242,12 @@ object CallArrowRawTag {
 }
 
 case class DeclareStreamTag(
+  // TODO: Why is it ValueRaw and
+  // not just (stream name, stream type)?
   value: ValueRaw
 ) extends RawTag {
+
+  override def exportsVarNames: Set[String] = value.varNames
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     DeclareStreamTag(value.map(f))
@@ -238,6 +257,10 @@ case class AssignmentTag(
   value: ValueRaw,
   assignTo: String
 ) extends NoExecTag {
+
+  override def exportsVarNames: Set[String] = Set(assignTo)
+
+  override def usesVarNames: Set[String] = value.varNames
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(assignTo = map.getOrElse(assignTo, assignTo))
@@ -250,6 +273,11 @@ case class ClosureTag(
   func: FuncRaw,
   detach: Boolean
 ) extends NoExecTag {
+
+  override def exportsVarNames: Set[String] = Set(func.name)
+
+  // FIXME: Is it correct?
+  override def usesVarNames: Set[String] = Set.empty
 
   override def renameExports(map: Map[String, String]): RawTag =
     copy(func = func.copy(name = map.getOrElse(func.name, func.name)))
@@ -269,6 +297,8 @@ case class ReturnTag(
   values: NonEmptyList[ValueRaw]
 ) extends NoExecTag {
 
+  override def usesVarNames: Set[String] = values.foldMap(_.varNames)
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     ReturnTag(values.map(_.map(f)))
 }
@@ -282,13 +312,23 @@ case class AbilityIdTag(
   service: String
 ) extends NoExecTag {
 
+  override def usesVarNames: Set[String] = value.varNames
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     AbilityIdTag(value.map(f), service)
 }
 
 case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends RawTag {
 
-  override def exportsVarNames: Set[String] = Set(exportTo.name)
+  /**
+   * NOTE: Pushing to a stream will create it, but we suppose
+   * that `DeclareStreamTag` exports stream and this tag does not
+   * to distinguish cases when stream is captured from outside.
+   * This is why `exportTo` is not in `exportsVarNames`.
+   */
+  override def exportsVarNames: Set[String] = Set.empty
+
+  override def usesVarNames: Set[String] = operand.varNames + exportTo.name
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     PushToStreamTag(operand.map(f), exportTo)
@@ -303,6 +343,8 @@ case class FlattenTag(operand: ValueRaw, assignTo: String) extends RawTag {
 
   override def exportsVarNames: Set[String] = Set(assignTo)
 
+  override def usesVarNames: Set[String] = operand.varNames
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     FlattenTag(operand.map(f), assignTo)
 
@@ -316,6 +358,8 @@ case class CanonicalizeTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
 
   override def exportsVarNames: Set[String] = Set(exportTo.name)
 
+  override def usesVarNames: Set[String] = operand.varNames
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     CanonicalizeTag(operand.map(f), exportTo)
 
@@ -326,6 +370,8 @@ case class CanonicalizeTag(operand: ValueRaw, exportTo: Call.Export) extends Raw
 }
 
 case class JoinTag(operands: NonEmptyList[ValueRaw]) extends RawTag {
+
+  override def usesVarNames: Set[String] = operands.foldMap(_.varNames)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     JoinTag(operands.map(_.map(f)))

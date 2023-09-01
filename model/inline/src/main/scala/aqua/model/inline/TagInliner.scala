@@ -7,7 +7,7 @@ import aqua.model.inline.raw.CallArrowRawInliner
 import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{BoxType, CanonStreamType, StreamType}
+import aqua.types.{BoxType, CanonStreamType, DataType, StreamType}
 import aqua.model.inline.Inline.parDesugarPrefixOpt
 
 import cats.syntax.traverse.*
@@ -295,27 +295,45 @@ object TagInliner extends Logging {
         )
 
       case PushToStreamTag(operand, exportTo) =>
-        valueToModel(operand).map { case (v, p) =>
-          TagInlined.Single(
-            model = PushToStreamModel(v, CallModel.callExport(exportTo)),
-            prefix = p
-          )
+        (
+          valueToModel(operand),
+          // We need to resolve stream because it could
+          // be actually pointing to another var.
+          // TODO: Looks like a hack, refator resolving
+          valueToModel(exportTo.toRaw)
+        ).mapN {
+          case ((v, p), (VarModel(name, st, Chain.nil), None)) =>
+            TagInlined.Single(
+              model = PushToStreamModel(v, CallModel.Export(name, st)),
+              prefix = p
+            )
+          case (_, (vm, prefix)) =>
+            logger.error(
+              s"Unexpected: stream (${exportTo}) resolved " +
+                s"to ($vm) with prefix ($prefix)"
+            )
+            TagInlined.Empty()
         }
 
       case CanonicalizeTag(operand, exportTo) =>
         valueToModel(operand).flatMap {
           // pass literals as is
           case (l @ LiteralModel(_, _), p) =>
-            for {
-              _ <- Exports[S].resolved(exportTo.name, l)
-            } yield TagInlined.Empty(prefix = p)
+            Exports[S]
+              .resolved(exportTo.name, l)
+              .as(TagInlined.Empty(prefix = p))
           case (v, p) =>
-            TagInlined
-              .Single(
-                model = CanonicalizeModel(v, CallModel.callExport(exportTo)),
-                prefix = p
+            Exports[S]
+              .resolved(
+                exportTo.name,
+                VarModel(exportTo.name, exportTo.`type`)
               )
-              .pure
+              .as(
+                TagInlined.Single(
+                  model = CanonicalizeModel(v, CallModel.callExport(exportTo)),
+                  prefix = p
+                )
+              )
         }
 
       case FlattenTag(operand, assignTo) =>
@@ -356,8 +374,6 @@ object TagInliner extends Logging {
 
       case AssignmentTag(value, assignTo) =>
         for {
-          // NOTE: Name <assignTo> should not exist yet
-          _ <- Mangler[S].forbidName(assignTo)
           modelAndPrefix <- value match {
             // if we assign collection to a stream, we must use it's name, because it is already created with 'new'
             case c @ CollectionRaw(_, _: StreamType) =>
@@ -372,10 +388,9 @@ object TagInliner extends Logging {
       case ClosureTag(arrow, detach) =>
         if (detach) Arrows[S].resolved(arrow, None).as(TagInlined.Empty())
         else
-          for {
-            t <- Mangler[S].findAndForbidName(arrow.name)
-            _ <- Arrows[S].resolved(arrow, Some(t))
-          } yield TagInlined.Single(model = CaptureTopologyModel(t))
+          Arrows[S]
+            .resolved(arrow, arrow.name.some)
+            .as(TagInlined.Single(model = CaptureTopologyModel(arrow.name)))
 
       case NextTag(item) =>
         for {
@@ -393,8 +408,9 @@ object TagInliner extends Logging {
           case VarRaw(name, _) =>
             for {
               cd <- valueToModel(value)
-              _ <- Exports[S].resolved(name, cd._1)
-            } yield TagInlined.Empty(prefix = cd._2)
+              (vm, prefix) = cd
+              _ <- Exports[S].resolved(name, vm)
+            } yield TagInlined.Empty(prefix = prefix)
           case _ => none
 
       case _: SeqGroupTag => pure(SeqModel)

@@ -14,10 +14,14 @@ import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, ArrowType, CanonStreamType, ProductType, StreamType, Type}
+
+import cats.Eval
 import cats.data.{Chain, NonEmptyList}
 import cats.free.{Cofree, Free}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
+import cats.syntax.foldable.*
+import cats.syntax.bifunctor.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
@@ -32,137 +36,93 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     N: NamesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
     L: LocationsAlgebra[S, Alg]
-  ): Alg[ArrowType] =
-    // Begin scope -- for mangling
-    A.beginScope(arrowTypeExpr) *> L.beginScope() *> N.beginScope(arrowTypeExpr) *> T
-      .beginArrowScope(
-        arrowTypeExpr
-      )
-      .flatMap((arrowType: ArrowType) =>
-        // Create local variables
-        expr.arrowTypeExpr.args
-          .flatMap(_._1)
-          .zip(
-            arrowType.domain.toList
-          )
-          .traverse {
-            case (argName, t: ArrowType) =>
-              N.defineArrow(argName, t, isRoot = false)
-            case (argName, t) =>
-              N.define(argName, t)
-          }
-          .as(arrowType)
-      )
+  ): Alg[ArrowType] = for {
+    arrowType <- T.beginArrowScope(arrowTypeExpr)
+    // Create local variables
+    _ <- expr.arrowTypeExpr.args.flatMap { case (name, _) => name }
+      .zip(arrowType.domain.toList)
+      .traverse {
+        case (argName, t: ArrowType) =>
+          N.defineArrow(argName, t, isRoot = false)
+        case (argName, t) =>
+          N.define(argName, t)
+      }
+  } yield arrowType
 
-  private def assignRaw(
-    v: ValueRaw,
-    idx: Int,
-    body: RawTag.Tree,
-    returnAcc: Chain[ValueRaw]
-  ): (SeqTag.Tree, Chain[ValueRaw], Int) = {
-    val assignedReturnVar = VarRaw(s"-return-fix-$idx", v.`type`)
-    (
-      SeqTag.wrap(
-        body :: AssignmentTag(
-          v,
-          assignedReturnVar.name
-        ).leaf :: Nil: _*
-      ),
-      returnAcc :+ assignedReturnVar,
-      idx + 1
-    )
-  }
-
-  def after[Alg[_]: Monad](funcArrow: ArrowType, bodyGen: Raw)(implicit
+  def after[Alg[_]: Monad](
+    funcArrow: ArrowType,
+    bodyGen: Raw
+  )(using
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
     L: LocationsAlgebra[S, Alg]
-  ): Alg[Raw] =
-    A.endScope() *> (
-      N.streamsDefinedWithinScope(),
-      T.endArrowScope(expr.arrowTypeExpr)
-        .flatMap(retValues => N.getDerivedFrom(retValues.map(_.varNames)).map(retValues -> _))
-    ).mapN {
-      case (
-            streamsInScope: Map[String, StreamType],
-            (retValues: List[ValueRaw], retValuesDerivedFrom: List[Set[String]])
-          ) =>
-        bodyGen match {
-          case FuncOp(bodyModel) =>
-            // TODO: wrap with local on...via...
+  ): Alg[Raw] = for {
+    streamsInScope <- N.streamsDefinedWithinScope()
+    retValues <- T.endArrowScope(expr.arrowTypeExpr)
+    retValuesDerivedFrom <- N.getDerivedFrom(retValues.map(_.varNames))
+    res = bodyGen match {
+      case FuncOp(bodyModel) =>
+        // TODO: wrap with local on...via...
 
-            // These streams are returned as streams
-            val retStreams: Map[String, Option[Type]] =
-              (retValues zip funcArrow.codomain.toList).collect {
-                case (VarRaw(n, StreamType(_)), StreamType(_)) => n -> None
-                case (VarRaw(n, StreamType(_)), t) => n -> Some(t)
-              }.toMap
+        val retsAndArgs = retValues zip funcArrow.codomain.toList
 
-            val streamsThatReturnAsStreams = retStreams.collect { case (n, None) =>
-              n
-            }.toSet
+        val argNames = funcArrow.domain.labelledData.map { case (name, _) => name }
+        val streamsThatReturnAsStreams = retsAndArgs.collect {
+          case (VarRaw(n, StreamType(_)), StreamType(_)) => n
+        }.toSet
 
-            val streamArguments = funcArrow.domain.labelledData.map(_._1)
+        // Remove arguments, and values returned as streams
+        val localStreams = streamsInScope -- argNames -- streamsThatReturnAsStreams
 
-            // Remove stream arguments, and values returned as streams
-            val localStreams = streamsInScope -- streamArguments -- streamsThatReturnAsStreams
+        // process stream that returns as not streams and all Apply*Raw
+        val (bodyRets, retVals) = retsAndArgs.mapWithIndex {
+          case ((v @ VarRaw(_, StreamType(_)), StreamType(_)), _) =>
+            (Chain.empty, v)
+          // canonicalize and change return value
+          case ((VarRaw(streamName, streamType @ StreamType(streamElement)), _), idx) =>
+            val canonReturnVar = VarRaw(s"-$streamName-fix-$idx", CanonStreamType(streamElement))
+            val returnVar = VarRaw(s"-$streamName-flat-$idx", ArrayType(streamElement))
+            val body = Chain(
+              CanonicalizeTag(
+                VarRaw(streamName, streamType),
+                Call.Export(canonReturnVar.name, canonReturnVar.`type`)
+              ).leaf,
+              FlattenTag(
+                canonReturnVar,
+                returnVar.name
+              ).leaf
+            )
 
-            // process stream that returns as not streams and all Apply*Raw
-            val (bodyModified, returnValuesModified, _) = (retValues zip funcArrow.codomain.toList)
-              .foldLeft[(RawTag.Tree, Chain[ValueRaw], Int)]((bodyModel, Chain.empty, 0)) {
-                case ((bodyAcc, returnAcc, idx), rets) =>
-                  rets match {
-                    // do nothing
-                    case (v @ VarRaw(_, StreamType(_)), StreamType(_)) =>
-                      (bodyAcc, returnAcc :+ v, idx)
-                    // canonicalize and change return value
-                    case (VarRaw(streamName, streamType @ StreamType(streamElement)), _) =>
-                      val canonReturnVar =
-                        VarRaw(s"-$streamName-fix-$idx", CanonStreamType(streamElement))
+            (body, returnVar)
+          // assign and change return value for all `Apply*Raw`
+          case ((v: ValueRaw.ApplyRaw, _), idx) =>
+            val assignedReturnVar = VarRaw(s"-return-fix-$idx", v.`type`)
+            val body = Chain.one(
+              AssignmentTag(
+                v,
+                assignedReturnVar.name
+              ).leaf
+            )
 
-                      val returnVar =
-                        VarRaw(s"-$streamName-flat-$idx", ArrayType(streamElement))
+            (body, assignedReturnVar)
+          case ((v, _), _) => (Chain.empty, v)
+        }.unzip.leftMap(_.combineAll)
 
-                      (
-                        SeqTag.wrap(
-                          bodyAcc,
-                          CanonicalizeTag(
-                            VarRaw(streamName, streamType),
-                            Call.Export(canonReturnVar.name, canonReturnVar.`type`)
-                          ).leaf,
-                          FlattenTag(
-                            canonReturnVar,
-                            returnVar.name
-                          ).leaf
-                        ),
-                        returnAcc :+ returnVar,
-                        idx + 1
-                      )
-                    // assign and change return value for all `Apply*Raw`
-                    case (
-                          v: (ApplyGateRaw | ApplyPropertyRaw | CallArrowRaw | CollectionRaw |
-                            ApplyBinaryOpRaw | ApplyUnaryOpRaw),
-                          _
-                        ) =>
-                      assignRaw(v, idx, bodyAcc, returnAcc)
+        val bodyModified = SeqTag.wrap(
+          bodyModel +: bodyRets
+        )
 
-                    case (v, _) => (bodyAcc, returnAcc :+ v, idx)
-                  }
-
-              }
-
-            // wrap streams with restrictions
-            val bodyWithRestrictions = localStreams.foldLeft(bodyModified) {
-              case (bm, (streamName, streamType)) =>
-                RestrictionTag(streamName, streamType).wrap(bm)
-            }
-
-            ArrowRaw(funcArrow, returnValuesModified.toList, bodyWithRestrictions)
-          case bodyModel =>
-            bodyModel
+        // wrap streams with restrictions
+        val bodyWithRestrictions = localStreams.foldLeft(bodyModified) {
+          case (bm, (streamName, streamType)) =>
+            RestrictionTag(streamName, streamType).wrap(bm)
         }
-    } <* N.endScope() <* L.endScope()
+
+        ArrowRaw(funcArrow, retVals, bodyWithRestrictions)
+      case _ => Raw.error("Invalid arrow body")
+    }
+  } yield res
 
   def program[Alg[_]: Monad](implicit
     T: TypesAlgebra[S, Alg],
@@ -170,9 +130,13 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     A: AbilitiesAlgebra[S, Alg],
     L: LocationsAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    Prog.around(
-      before[Alg],
-      after[Alg]
-    )
+    Prog
+      .around(
+        before[Alg],
+        after[Alg]
+      )
+      .abilitiesScope(expr.arrowTypeExpr)
+      .namesScope(expr.arrowTypeExpr)
+      .locationsScope()
 
 }

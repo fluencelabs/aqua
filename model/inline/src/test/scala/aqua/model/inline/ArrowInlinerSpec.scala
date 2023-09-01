@@ -5,15 +5,57 @@ import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.*
-import cats.syntax.show.*
-import cats.syntax.option.*
-import cats.data.{Chain, NonEmptyList, NonEmptyMap}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import aqua.raw.value.{CallArrowRaw, ValueRaw}
 import aqua.raw.arrow.{ArrowRaw, FuncRaw}
 
-class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
+import cats.Eval
+import cats.syntax.show.*
+import cats.syntax.option.*
+import cats.syntax.flatMap.*
+import cats.free.Cofree
+import cats.data.{Chain, NonEmptyList, NonEmptyMap}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.Inside
+
+class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
+
+  extension (tree: OpModel.Tree) {
+
+    def collect[A](pf: PartialFunction[OpModel, A]): Chain[A] =
+      Cofree
+        .cata(tree)((op, children: Chain[Chain[A]]) =>
+          Eval.later(
+            Chain.fromOption(pf.lift(op)) ++ children.flatten
+          )
+        )
+        .value
+  }
+
+  def callFuncModel(func: FuncArrow): OpModel.Tree =
+    ArrowInliner
+      .callArrow[InliningState](
+        FuncArrow(
+          "wrapper",
+          CallArrowRawTag
+            .func(
+              func.funcName,
+              Call(Nil, Nil)
+            )
+            .leaf,
+          ArrowType(
+            ProductType(Nil),
+            ProductType(Nil)
+          ),
+          Nil,
+          Map(func.funcName -> func),
+          Map.empty,
+          None
+        ),
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
 
   "arrow inliner" should "convert simple arrow" in {
 
@@ -104,15 +146,20 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             ProductType(Nil)
           ),
           Nil,
-          Map("cb" -> cbArrow),
+          Map.empty,
           Map.empty,
           None
         ),
         CallModel(cbVal :: Nil, Nil)
       )
-      .run(InliningState())
+      .runA(
+        InliningState(
+          resolvedArrows = Map(
+            cbVal.name -> cbArrow
+          )
+        )
+      )
       .value
-      ._2
 
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, streamType).wrap(
@@ -134,6 +181,343 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       )
     ) should be(true)
 
+  }
+
+  /**
+   * func returnStream() -> *string:
+   *    stream: *string
+   *    stream <<- "one"
+   *    <- stream
+   *
+   * func rereturnStream() -> *string:
+   *    stream <- returnStream()
+   *    stream <<- "two"
+   *    <- stream
+   *
+   * func testReturnStream() -> []string:
+   *    stream <- rereturnStream()
+   *    stream <<- "three"
+   *    <- stream
+   */
+  it should "handle returned stream" in {
+    val streamType = StreamType(ScalarType.string)
+    val streamVar = VarRaw("stream", streamType)
+    val canonStreamVar = VarRaw(
+      s"-${streamVar.name}-canon-0",
+      CanonStreamType(ScalarType.string)
+    )
+    val flatStreamVar = VarRaw(
+      s"-${streamVar.name}-flat-0",
+      ArrayType(ScalarType.string)
+    )
+    val returnStreamArrowType = ArrowType(
+      ProductType(Nil),
+      ProductType(streamType :: Nil)
+    )
+
+    val returnStream = FuncArrow(
+      "returnStream",
+      SeqTag.wrap(
+        DeclareStreamTag(streamVar).leaf,
+        PushToStreamTag(
+          LiteralRaw.quote("one"),
+          Call.Export(streamVar.name, streamVar.`type`)
+        ).leaf,
+        ReturnTag(
+          NonEmptyList.one(streamVar)
+        ).leaf
+      ),
+      returnStreamArrowType,
+      List(streamVar),
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val rereturnStream = FuncArrow(
+      "rereturnStream",
+      SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            returnStream.funcName,
+            Call(Nil, Call.Export(streamVar.name, streamType) :: Nil)
+          )
+          .leaf,
+        PushToStreamTag(
+          LiteralRaw.quote("two"),
+          Call.Export(streamVar.name, streamVar.`type`)
+        ).leaf,
+        ReturnTag(
+          NonEmptyList.one(streamVar)
+        ).leaf
+      ),
+      returnStreamArrowType,
+      List(streamVar),
+      Map(returnStream.funcName -> returnStream),
+      Map.empty,
+      None
+    )
+
+    val testReturnStream = FuncArrow(
+      "testReturnStream",
+      RestrictionTag(streamVar.name, streamType).wrap(
+        SeqTag.wrap(
+          CallArrowRawTag
+            .func(
+              rereturnStream.funcName,
+              Call(Nil, Call.Export(streamVar.name, streamType) :: Nil)
+            )
+            .leaf,
+          PushToStreamTag(
+            LiteralRaw.quote("three"),
+            Call.Export(streamVar.name, streamVar.`type`)
+          ).leaf,
+          CanonicalizeTag(
+            streamVar,
+            Call.Export(canonStreamVar.name, canonStreamVar.`type`)
+          ).leaf,
+          FlattenTag(
+            canonStreamVar,
+            flatStreamVar.name
+          ).leaf,
+          ReturnTag(
+            NonEmptyList.one(flatStreamVar)
+          ).leaf
+        )
+      ),
+      ArrowType(
+        ProductType(Nil),
+        ProductType(ArrayType(ScalarType.string) :: Nil)
+      ),
+      List(flatStreamVar),
+      Map(rereturnStream.funcName -> rereturnStream),
+      Map.empty,
+      None
+    )
+
+    val model = callFuncModel(testReturnStream)
+
+    val result = model.collect {
+      case p: PushToStreamModel => p
+      case c: CanonicalizeModel => c
+      case f: FlattenModel => f
+    }
+
+    val streamName = result.collectFirst { case PushToStreamModel(value, exportTo) =>
+      exportTo.name
+    }
+
+    val canonFlatNames = result.collect {
+      case FlattenModel(VarModel(name, _, Chain.nil), assingTo) =>
+        (name, assingTo)
+    }.headOption
+
+    inside(streamName) { case Some(streamName) =>
+      inside(canonFlatNames) { case Some((canonName, flatName)) =>
+        val canonExport = CallModel.Export(
+          canonName,
+          CanonStreamType(ScalarType.string)
+        )
+
+        val expected = Chain("one", "two", "three").map(s =>
+          PushToStreamModel(
+            LiteralModel.quote(s),
+            CallModel.Export(streamName, streamType)
+          )
+        ) ++ Chain(
+          CanonicalizeModel(
+            VarModel(streamName, streamType),
+            canonExport
+          ),
+          FlattenModel(
+            canonExport.asVar,
+            flatName
+          )
+        )
+
+        result shouldEqual expected
+      }
+    }
+  }
+
+  /**
+   * func return() -> (-> []string):
+   *    result: *string
+   *
+   *    result <<- "one"
+   *
+   *    closure = () -> []string:
+   *        result <<- "two-three"
+   *        <- result
+   *
+   *    closure()
+   *
+   *    <- closure
+   *
+   * func testReturn() -> []string:
+   *    closure <- return()
+   *    res <- closure()
+   *    <- res
+   */
+  it should "handle stream captured in closure" in {
+    val streamType = StreamType(ScalarType.string)
+    val streamVar = VarRaw("status", streamType)
+    val resType = ArrayType(ScalarType.string)
+    val resVar = VarRaw("res", resType)
+    val canonStreamVar = VarRaw(
+      s"-${streamVar.name}-canon-0",
+      CanonStreamType(ScalarType.string)
+    )
+    val flatStreamVar = VarRaw(
+      s"-${streamVar.name}-flat-0",
+      ArrayType(ScalarType.string)
+    )
+    val closureType = ArrowType(
+      ProductType(Nil),
+      ProductType(resType :: Nil)
+    )
+    val closureVar = VarRaw("closure", closureType)
+
+    val closureFunc = FuncRaw(
+      "closure",
+      ArrowRaw(
+        ArrowType(
+          ProductType(Nil),
+          ProductType(ArrayType(ScalarType.string) :: Nil)
+        ),
+        List(flatStreamVar),
+        SeqTag.wrap(
+          PushToStreamTag(
+            LiteralRaw.quote("two-three"),
+            Call.Export(streamVar.name, streamVar.`type`)
+          ).leaf,
+          CanonicalizeTag(
+            streamVar,
+            Call.Export(canonStreamVar.name, canonStreamVar.`type`)
+          ).leaf,
+          FlattenTag(
+            canonStreamVar,
+            flatStreamVar.name
+          ).leaf
+        )
+      )
+    )
+
+    val returnFunc = FuncArrow(
+      "return",
+      SeqTag.wrap(
+        DeclareStreamTag(streamVar).leaf,
+        PushToStreamTag(
+          LiteralRaw.quote("one"),
+          Call.Export(streamVar.name, streamVar.`type`)
+        ).leaf,
+        ClosureTag(
+          closureFunc,
+          detach = false
+        ).leaf,
+        CallArrowRawTag
+          .func(
+            closureVar.name,
+            Call(Nil, Nil)
+          )
+          .leaf,
+        ReturnTag(
+          NonEmptyList.one(closureVar)
+        ).leaf
+      ),
+      ArrowType(
+        ProductType(Nil),
+        ProductType(closureType :: Nil)
+      ),
+      List(closureVar),
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val testFunc = FuncArrow(
+      "test",
+      SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            returnFunc.funcName,
+            Call(Nil, Call.Export(closureVar.name, closureType) :: Nil)
+          )
+          .leaf,
+        CallArrowRawTag
+          .func(
+            closureVar.name,
+            Call(Nil, Call.Export(resVar.name, ArrayType(ScalarType.string)) :: Nil)
+          )
+          .leaf,
+        ReturnTag(
+          NonEmptyList.one(resVar)
+        ).leaf
+      ),
+      ArrowType(
+        ProductType(Nil),
+        ProductType(ArrayType(ScalarType.string) :: Nil)
+      ),
+      List(resVar),
+      Map(returnFunc.funcName -> returnFunc),
+      Map.empty,
+      None
+    )
+
+    val model = callFuncModel(testFunc)
+
+    val result = model.collect {
+      case p: PushToStreamModel => p
+      case c: CanonicalizeModel => c
+      case f: FlattenModel => f
+    }
+
+    val streamName = model.collect { case PushToStreamModel(value, CallModel.Export(name, _)) =>
+      name
+    }.headOption
+
+    val canonFlatNames = model.collect {
+      case FlattenModel(VarModel(name, _, Chain.nil), assingTo) =>
+        (name, assingTo)
+    }.toList
+
+    // WARNING: This test does not take
+    //          stream restriction into account
+    inside(streamName) { case Some(streamName) =>
+      inside(canonFlatNames) { case (canonName1, flatName1) :: (canonName2, flatName2) :: Nil =>
+        def canon(canonName: String, flatName: String) = {
+          val canonExport = CallModel.Export(
+            canonName,
+            CanonStreamType(ScalarType.string)
+          )
+
+          Chain(
+            CanonicalizeModel(
+              VarModel(streamName, streamType),
+              canonExport
+            ),
+            FlattenModel(
+              canonExport.asVar,
+              flatName
+            )
+          )
+        }
+
+        val expected = Chain("one", "two-three").map(s =>
+          PushToStreamModel(
+            LiteralModel.quote(s),
+            CallModel.Export(streamName, streamType)
+          )
+        ) ++ canon(canonName1, flatName1) ++ Chain.one(
+          PushToStreamModel(
+            LiteralModel.quote("two-three"),
+            CallModel.Export(streamName, streamType)
+          )
+        ) ++ canon(canonName2, flatName2)
+
+        result shouldEqual expected
+      }
+    }
   }
 
   /*

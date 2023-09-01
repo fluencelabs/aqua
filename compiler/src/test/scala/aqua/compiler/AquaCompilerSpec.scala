@@ -101,11 +101,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
   val relay = VarRaw("-relay-", ScalarType.string)
 
-  def getDataSrv(name: String, t: Type) = {
+  def getDataSrv(name: String, varName: String, t: Type) = {
     CallServiceRes(
       LiteralModel.fromRaw(LiteralRaw.quote("getDataSrv")),
       name,
-      CallRes(Nil, Some(CallModel.Export(name, t))),
+      CallRes(Nil, Some(CallModel.Export(varName, t))),
       LiteralModel.fromRaw(ValueRaw.InitPeerId)
     ).leaf
   }
@@ -146,7 +146,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
     val Some(exec) = aquaRes.funcs.find(_.funcName == "exec")
 
-    val peers = VarModel("peers", ArrayType(ScalarType.string))
+    val peers = VarModel("-peers-arg-", ArrayType(ScalarType.string))
     val peer = VarModel("peer-0", ScalarType.string)
     val resultsType = StreamType(ScalarType.string)
     val results = VarModel("results", resultsType)
@@ -156,8 +156,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
     val expected =
       SeqRes.wrap(
-        getDataSrv("-relay-", ScalarType.string),
-        getDataSrv(peers.name, peers.`type`),
+        getDataSrv("-relay-", "-relay-", ScalarType.string),
+        getDataSrv("peers", peers.name, peers.`type`),
         XorRes.wrap(
           RestrictionRes(results.name, resultsType).wrap(
             SeqRes.wrap(

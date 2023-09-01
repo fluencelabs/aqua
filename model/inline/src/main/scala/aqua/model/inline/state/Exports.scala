@@ -127,10 +127,10 @@ object Exports {
   // Get last linked VarModel
   def getLastValue(name: String, state: Map[String, ValueModel]): Option[ValueModel] = {
     state.get(name) match {
-      case Some(vm@VarModel(n, _, _)) =>
+      case Some(vm @ VarModel(n, _, _)) =>
         if (name == n) Option(vm)
         else getLastValue(n, state).orElse(Option(vm))
-      case lm@Some(LiteralModel(_, _)) =>
+      case lm @ Some(LiteralModel(_, _)) =>
         lm
       case _ =>
         None
@@ -140,9 +140,14 @@ object Exports {
   object Simple extends Exports[Map[String, ValueModel]] {
 
     // Make links from one set of abilities to another (for ability assignment)
-    private def getAbilityPairs(oldName: String, newName: String, at: AbilityType, state: Map[String, ValueModel]): NonEmptyList[(String, ValueModel)] = {
+    private def getAbilityPairs(
+      oldName: String,
+      newName: String,
+      at: AbilityType,
+      state: Map[String, ValueModel]
+    ): NonEmptyList[(String, ValueModel)] = {
       at.fields.toNel.flatMap {
-        case (n, at@AbilityType(_, _)) =>
+        case (n, at @ AbilityType(_, _)) =>
           val newFullName = AbilityType.fullName(newName, n)
           val oldFullName = AbilityType.fullName(oldName, n)
           getAbilityPairs(oldFullName, newFullName, at, state)
@@ -168,11 +173,7 @@ object Exports {
     }
 
     override def getLastVarName(name: String): State[Map[String, ValueModel], Option[String]] =
-      State.get.map(st => getLastValue(name, st).flatMap {
-        case VarModel(name, _, _) => Option(name)
-        case LiteralModel(_, _) =>
-          None
-      })
+      State.get.map(st => getLastValue(name, st).collect { case VarModel(name, _, _) => name })
 
     override def resolved(exports: Map[String, ValueModel]): State[Map[String, ValueModel], Unit] =
       State.modify(_ ++ exports)

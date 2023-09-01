@@ -22,7 +22,7 @@ case class FuncPreTransformer(
 
   private val returnVar: String = "-return-"
 
-  private val relayVar = relayVarName.map(_ -> ScalarType.string)
+  private val relayArg = relayVarName.map(name => ArgsProvider.Arg(name, name, ScalarType.string))
 
   /**
    * Convert an arrow-type argument to init user's callback
@@ -59,13 +59,30 @@ case class FuncPreTransformer(
       case t => t
     }).toLabelledList(returnVar)
 
+    /**
+     * Arguments list (argument name, variable name, argument type).
+     * We need to give other names to arguments because they can
+     * collide with the name of the function itself.
+     */
+    val args = func.arrowType.domain.toLabelledList().map { case (name, typ) =>
+      (name, s"-$name-arg-", typ)
+    }
+
+    val dataArgs = args.collect { case (name, varName, t: DataType) =>
+      ArgsProvider.Arg(name, varName, t)
+    }
+
+    val arrowArgs = args.collect { case (name, argName, arrowType: ArrowType) =>
+      argName -> arrowToCallback(name, arrowType)
+    }.toMap
+
     val funcCall = Call(
-      func.arrowType.domain.toLabelledList().map(ad => VarRaw(ad._1, ad._2)),
+      args.map { case (_, varName, t) => VarRaw(varName, t) },
       returnType.map { case (l, t) => Call.Export(l, t) }
     )
 
     val provideArgs = argsProvider.provideArgs(
-      relayVar.toList ::: func.arrowType.domain.labelledData
+      relayArg.toList ::: dataArgs
     )
 
     val handleResults = resultsHandler.handleResults(
@@ -90,12 +107,7 @@ case class FuncPreTransformer(
       body,
       ArrowType(ConsType.cons(func.funcName, func.arrowType, NilType), NilType),
       Nil,
-      func.arrowType.domain
-        .toLabelledList()
-        .collect { case (argName, arrowType: ArrowType) =>
-          argName -> arrowToCallback(argName, arrowType)
-        }
-        .toMap,
+      arrowArgs,
       Map.empty,
       None
     )

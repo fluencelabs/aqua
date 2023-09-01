@@ -5,6 +5,8 @@ import aqua.raw.ops.Call
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
 
+import cats.syntax.foldable.*
+
 /**
  * Wraps argument definitions of a function, along with values provided when this function is called
  *
@@ -18,26 +20,91 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
   // and values (value models and types how they seen on the call site)
   private lazy val zipped: List[((String, Type), ValueModel)] = args.toLabelledList() zip callWith
 
+  /**
+   * Names of arguments as they defined in the function definition
+   */
+  lazy val argNames: Set[String] = args
+    .toLabelledList()
+    .map { case (name, _) => name }
+    .toSet
+
+  /**
+   * Data arguments (except streams) as mapping
+   * Name of argument -> value passed in the call
+   */
   lazy val dataArgs: Map[String, ValueModel] =
-    zipped.collect { case ((name, _: DataType), value) =>
-      name -> value
+    zipped.collect {
+      case ((name, _: DataType), value) if !streamArgs.contains(name) =>
+        name -> value
     }.toMap
 
+  /**
+   * Ability arguments as mapping
+   * Name of argument -> (variable passed in the call, ability type)
+   */
   lazy val abilityArgs: Map[String, (VarModel, AbilityType)] =
-    zipped.collect { case (k, vr@VarModel(_, t@AbilityType(_, _), _)) =>
-      k._1 -> (vr, t)
+    zipped.collect { case ((name, _), vr @ VarModel(_, t @ AbilityType(_, _), _)) =>
+      name -> (vr, t)
     }.toMap
 
-  lazy val streamArgs: Map[String, VarModel] =
-    dataArgs.collect { case (k, vr @ VarModel(n, StreamType(_), _)) =>
-      (k, vr)
+  /**
+   * All renamings from ability arguments as mapping
+   * Name inside function body -> name in the call context
+   */
+  lazy val abilityArgsRenames: Map[String, String] =
+    abilityArgs.toList.foldMap { case (name, (vm, at)) =>
+      at.arrows.keys
+        .map(arrowPath =>
+          val fullName = AbilityType.fullName(name, arrowPath)
+          val newFullName = AbilityType.fullName(vm.name, arrowPath)
+          fullName -> newFullName
+        )
+        .toMap
+        .updated(name, vm.name)
     }
 
-  def arrowArgs[T](arrowsInScope: Map[String, T]): Map[String, T] =
-    zipped.collect {
-      case ((name, _: ArrowType), VarModel(value, _, _)) if arrowsInScope.contains(value) =>
-        name -> arrowsInScope(value)
+  /**
+   * Stream arguments as mapping
+   * Name of argument -> variable passed in the call
+   * NOTE:  Argument is stream if it is passed as stream
+   *        on the call site. Type of argument in the function
+   *        definition does not matter.
+   */
+  lazy val streamArgs: Map[String, VarModel] =
+    zipped.collect { case ((name, _), vr @ VarModel(_, StreamType(_), _)) =>
+      name -> vr
     }.toMap
+
+  /**
+   * All renamings from stream arguments as mapping
+   * Name inside function body -> name in the call context
+   */
+  lazy val streamArgsRenames: Map[String, String] =
+    streamArgs.view.mapValues(_.name).toMap
+
+  /**
+   * Arrow arguments as mapping
+   * Name of argument -> variable passed in the call
+   */
+  lazy val arrowArgs: Map[String, VarModel] =
+    zipped.collect { case ((name, _: ArrowType), vm: VarModel) =>
+      name -> vm
+    }.toMap
+
+  /**
+   * All renamings from arrow arguments as mapping
+   * Name inside function body -> name in the call context
+   */
+  lazy val arrowArgsRenames: Map[String, String] =
+    arrowArgs.view.mapValues(_.name).toMap
+
+  def arrowArgsMap[T](arrows: Map[String, T]): Map[String, T] =
+    arrowArgs.view
+      .mapValues(_.name)
+      .flatMap { case (name, argName) =>
+        arrows.get(argName).map(name -> _)
+      }
+      .toMap
 }
 
 object ArgsCall {

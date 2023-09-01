@@ -6,9 +6,12 @@ import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.errors.ReportErrors
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.types.{AbilityType, ArrowType, StreamType, Type}
+
 import cats.data.{OptionT, State}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.applicative.*
+import cats.syntax.all.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -22,7 +25,7 @@ class NamesInterpreter[S[_], X](implicit
     GenLens[NamesState[S]](_.stack)
   )
 
-  import stackInt.{getState, mapStackHead, modify, report}
+  import stackInt.{getState, mapStackHead, mapStackHeadM, mapStackHead_, modify, report}
 
   type SX[A] = State[X, A]
 
@@ -98,22 +101,21 @@ class NamesInterpreter[S[_], X](implicit
           case false => report(name, "This name was already defined in the scope").as(false)
         }
       case None =>
-        mapStackHead(
-          report(name, "Cannot define a variable in the root scope")
-            .as(false)
-        )(fr => fr.addName(name, `type`) -> true).flatTap(_ => locations.addToken(name.value, name))
+        mapStackHeadM(report(name, "Cannot define a variable in the root scope").as(false))(fr =>
+          (fr.addName(name, `type`) -> true).pure
+        ) <* locations.addToken(name.value, name)
     }
 
   override def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): State[X, Boolean] =
-    define(name, `type`).flatMap {
-      case true =>
-        mapStackHead(State.pure(true))(_.derived(name, derivedFrom) -> true)
-      case false => State.pure(false)
-    }.flatTap(_ => locations.addToken(name.value, name))
+    define(name, `type`).flatTap(defined =>
+      mapStackHead_(_.derived(name, derivedFrom)).whenA(defined)
+    ) <* locations.addToken(name.value, name)
 
   override def getDerivedFrom(fromNames: List[Set[String]]): State[X, List[Set[String]]] =
-    mapStackHead(State.pure(Nil))(fr =>
-      fr -> fromNames.map(ns => fr.derivedFrom.view.filterKeys(ns).values.foldLeft(ns)(_ ++ _))
+    mapStackHead(Nil)(frame =>
+      frame -> fromNames.map(ns =>
+        frame.derivedFrom.view.filterKeys(ns).values.toList.combineAll ++ ns
+      )
     )
 
   override def defineConstant(name: Name[S], `type`: Type): SX[Boolean] =
@@ -137,7 +139,7 @@ class NamesInterpreter[S[_], X](implicit
         }
 
       case None =>
-        mapStackHead(
+        mapStackHeadM(
           if (isRoot)
             modify(st =>
               st.copy(
@@ -149,14 +151,14 @@ class NamesInterpreter[S[_], X](implicit
           else
             report(name, "Cannot define a variable in the root scope")
               .as(false)
-        )(fr => fr.addArrow(name, arrowType) -> true)
+        )(fr => (fr.addArrow(name, arrowType) -> true).pure)
     }.flatTap(_ => locations.addToken(name.value, name))
 
   override def streamsDefinedWithinScope(): SX[Map[String, StreamType]] =
-    stackInt.mapStackHead(State.pure(Map.empty[String, StreamType])) { frame =>
+    mapStackHead(Map.empty) { frame =>
       frame -> frame.names.collect { case (n, st @ StreamType(_)) =>
         n -> st
-      }
+      }.toMap
     }
 
   override def beginScope(token: Token[S]): SX[Unit] =
