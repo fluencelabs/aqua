@@ -10,7 +10,6 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 
 import cats.data.EitherT
-import cats.syntax.all.*
 import cats.syntax.either.*
 import cats.syntax.option.*
 import cats.syntax.apply.*
