@@ -40,8 +40,13 @@ object AbilitiesState {
     services: Map[String, Frame.ServiceState] = Map()
   ) {
 
-    def addService(name: String, id: ValueRaw): Frame[S] =
-      copy(services = services.updated(name, Frame.ServiceState(id)))
+    def setServiceId(name: String, id: ValueRaw, rename: String): Frame[S] =
+      copy(services =
+        services.updated(
+          name,
+          Frame.ServiceState(id, rename)
+        )
+      )
 
     def getServiceId(name: String): Option[ValueRaw] =
       services.get(name).map(_.id)
@@ -50,7 +55,8 @@ object AbilitiesState {
   object Frame {
 
     final case class ServiceState(
-      id: ValueRaw
+      id: ValueRaw,
+      rename: String
     )
   }
 

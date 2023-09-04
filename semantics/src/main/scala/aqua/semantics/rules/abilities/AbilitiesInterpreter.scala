@@ -5,6 +5,7 @@ import aqua.raw.value.ValueRaw
 import aqua.raw.{RawContext, ServiceRaw}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{abilities, StackInterpreter}
 import aqua.types.ArrowType
@@ -20,6 +21,7 @@ import monocle.macros.GenLens
 class AbilitiesInterpreter[S[_], X](using
   lens: Lens[X, AbilitiesState[S]],
   error: ReportErrors[S, X],
+  mangler: ManglerAlgebra[State[X, *]],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends AbilitiesAlgebra[S, State[X, *]] {
 
@@ -119,7 +121,11 @@ class AbilitiesInterpreter[S[_], X](using
         mapStackHeadM(
           modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(name.value, id)))
             .as(true)
-        )(h => (h.addService(name.value, id) -> true).pure)
+        )(h =>
+          mangler
+            .rename(name.value)
+            .map(newName => h.setServiceId(name.value, id, newName) -> true)
+        )
       case None =>
         report(name, "Service with this name is not registered, can't set its ID").as(false)
     }
