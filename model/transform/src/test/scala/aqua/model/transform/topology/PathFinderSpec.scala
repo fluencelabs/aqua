@@ -17,7 +17,7 @@ class PathFinderSpec extends AnyFlatSpec with Matchers {
   val relayOn = OnModel(relay, Chain.empty)
   val initPeerRelayOn = OnModel(initPeer, Chain.one(relay))
 
-  it should "find path from relay -> (init, relay) to (init, relay)" in {
+  it should "find path from (op, or) -> r -> (i, r) to r -> (i, r)" in {
 
     val otherPeer = VarModel("other-peer", ScalarType.string)
     val otherRelay = VarModel("other-relay", ScalarType.string)
