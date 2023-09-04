@@ -35,7 +35,7 @@ class AbilityIdSem[S[_]](val expr: AbilityIdExpr[S]) extends AnyVal {
         Raw.error("Can not resolve service ID")
       )
       _ <- EitherT.liftF(
-        A.setServiceId(expr.ability, expr.id, id)
+        A.setServiceId(expr.ability, id)
       )
     } yield AbilityIdTag(
       id,

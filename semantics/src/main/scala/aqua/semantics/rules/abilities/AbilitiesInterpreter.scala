@@ -17,7 +17,7 @@ import cats.syntax.applicative.*
 import monocle.Lens
 import monocle.macros.GenLens
 
-class AbilitiesInterpreter[S[_], X](implicit
+class AbilitiesInterpreter[S[_], X](using
   lens: Lens[X, AbilitiesState[S]],
   error: ReportErrors[S, X],
   locations: LocationsAlgebra[S, State[X, *]]
@@ -25,7 +25,7 @@ class AbilitiesInterpreter[S[_], X](implicit
 
   type SX[A] = State[X, A]
 
-  val stackInt = new StackInterpreter[S, X, AbilitiesState[S], AbilitiesState.Frame[S]](
+  private val stackInt = new StackInterpreter[S, X, AbilitiesState[S], AbilitiesState.Frame[S]](
     GenLens[AbilitiesState[S]](_.stack)
   )
 
@@ -111,13 +111,13 @@ class AbilitiesInterpreter[S[_], X](implicit
         }
     }
 
-  override def setServiceId(name: NamedTypeToken[S], id: ValueToken[S], vm: ValueRaw): SX[Boolean] =
+  override def setServiceId(name: NamedTypeToken[S], id: ValueRaw): SX[Boolean] =
     getService(name.value).flatMap {
       case Some(_) =>
         mapStackHeadM(
-          modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(name.value, id -> vm)))
+          modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(name.value, id)))
             .as(true)
-        )(h => (h.copy(serviceIds = h.serviceIds.updated(name.value, id -> vm)) -> true).pure)
+        )(h => (h.copy(serviceIds = h.serviceIds.updated(name.value, id)) -> true).pure)
       case None =>
         report(name, "Service with this name is not registered, can't set its ID").as(false)
     }
@@ -126,13 +126,9 @@ class AbilitiesInterpreter[S[_], X](implicit
     getService(name.value).flatMap {
       case Some(_) =>
         getState.flatMap(st =>
-          st.stack
-            .flatMap(_.serviceIds.get(name.value).map(_._2))
-            .headOption orElse st.rootServiceIds
-            .get(
-              name.value
-            )
-            .map(_._2) orElse st.services.get(name.value).flatMap(_.defaultId) match {
+          st.stack.collectFirstSome(_.serviceIds.get(name.value)) orElse
+            st.rootServiceIds.get(name.value) orElse
+            st.services.get(name.value).flatMap(_.defaultId) match {
             case None =>
               report(
                 name,

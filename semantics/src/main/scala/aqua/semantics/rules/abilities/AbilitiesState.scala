@@ -11,9 +11,8 @@ case class AbilitiesState[S[_]](
   stack: List[AbilitiesState.Frame[S]] = Nil,
   services: Map[String, ServiceRaw] = Map.empty,
   abilities: Map[String, RawContext] = Map.empty,
-  rootServiceIds: Map[String, (ValueToken[S], ValueRaw)] =
-    Map.empty[String, (ValueToken[S], ValueRaw)],
-  definitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]]
+  rootServiceIds: Map[String, ValueRaw] = Map(),
+  definitions: Map[String, NamedTypeToken[S]] = Map()
 ) {
 
   def purgeArrows: Option[(NonEmptyList[(Name[S], ArrowType)], AbilitiesState[S])] =
@@ -30,24 +29,22 @@ object AbilitiesState {
 
   case class Frame[S[_]](
     token: Token[S],
-    arrows: Map[String, (Name[S], ArrowType)] = Map.empty[String, (Name[S], ArrowType)],
-    serviceIds: Map[String, (ValueToken[S], ValueRaw)] =
-      Map.empty[String, (ValueToken[S], ValueRaw)]
+    arrows: Map[String, (Name[S], ArrowType)] = Map(),
+    serviceIds: Map[String, ValueRaw] = Map()
   )
 
-  implicit def abilitiesStateMonoid[S[_]]: Monoid[AbilitiesState[S]] =
-    new Monoid[AbilitiesState[S]] {
-      override def empty: AbilitiesState[S] = AbilitiesState()
+  given [S[_]]: Monoid[AbilitiesState[S]] with {
+    override def empty: AbilitiesState[S] = AbilitiesState()
 
-      override def combine(x: AbilitiesState[S], y: AbilitiesState[S]): AbilitiesState[S] =
-        AbilitiesState(
-          Nil,
-          x.services ++ y.services,
-          x.abilities ++ y.abilities,
-          x.rootServiceIds ++ y.rootServiceIds,
-          x.definitions ++ y.definitions
-        )
-    }
+    override def combine(x: AbilitiesState[S], y: AbilitiesState[S]): AbilitiesState[S] =
+      AbilitiesState(
+        Nil,
+        x.services ++ y.services,
+        x.abilities ++ y.abilities,
+        x.rootServiceIds ++ y.rootServiceIds,
+        x.definitions ++ y.definitions
+      )
+  }
 
   def init[S[_]](context: RawContext): AbilitiesState[S] =
     AbilitiesState(

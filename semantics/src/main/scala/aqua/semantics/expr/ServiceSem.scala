@@ -44,14 +44,12 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
           V.valueToRaw(id) <* V.ensureIsString(id),
           Raw.error("Failed to resolve default service id")
         )
-        .map(value => id -> value)
     )
-    defaultIdValue = defaultId.map { case (_, value) => value }
     _ <- EitherT(
       A.defineService(
         expr.name,
         arrowsByName,
-        defaultIdValue
+        defaultId
       ).map(defined =>
         Raw
           .error("Service not created due to validation errors")
@@ -60,14 +58,12 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
       )
     )
     _ <- EitherT.liftF(
-      defaultId.traverse_ { case (token, id) =>
-        A.setServiceId(expr.name, token, id)
-      }
+      defaultId.traverse_(id => A.setServiceId(expr.name, id))
     )
   } yield ServiceRaw(
     expr.name.value,
     arrowsByName.map { case (_, t) => t },
-    defaultIdValue
+    defaultId
   )
 
   def program[Alg[_]: Monad](using
