@@ -4,7 +4,9 @@ import aqua.raw.{RawContext, ServiceRaw}
 import aqua.raw.value.ValueRaw
 import aqua.parser.lexer.{Name, NamedTypeToken, Token, ValueToken}
 import aqua.types.ArrowType
+
 import cats.Monoid
+import cats.syntax.foldable.*
 import cats.data.NonEmptyList
 
 case class AbilitiesState[S[_]](
@@ -23,6 +25,11 @@ case class AbilitiesState[S[_]](
           .map(_ -> copy[S](sc.copy(arrows = Map.empty) :: tail))
       case _ => None
     }
+
+  def getServiceId(name: String): Option[ValueRaw] =
+    stack.collectFirstSome(_.getServiceId(name)) orElse
+      rootServiceIds.get(name) orElse
+      services.get(name).flatMap(_.defaultId)
 }
 
 object AbilitiesState {
@@ -30,8 +37,22 @@ object AbilitiesState {
   case class Frame[S[_]](
     token: Token[S],
     arrows: Map[String, (Name[S], ArrowType)] = Map(),
-    serviceIds: Map[String, ValueRaw] = Map()
-  )
+    services: Map[String, Frame.ServiceState] = Map()
+  ) {
+
+    def addService(name: String, id: ValueRaw): Frame[S] =
+      copy(services = services.updated(name, Frame.ServiceState(id)))
+
+    def getServiceId(name: String): Option[ValueRaw] =
+      services.get(name).map(_.id)
+  }
+
+  object Frame {
+
+    final case class ServiceState(
+      id: ValueRaw
+    )
+  }
 
   given [S[_]]: Monoid[AbilitiesState[S]] with {
     override def empty: AbilitiesState[S] = AbilitiesState()

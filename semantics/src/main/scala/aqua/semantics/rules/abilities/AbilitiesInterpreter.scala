@@ -55,8 +55,10 @@ class AbilitiesInterpreter[S[_], X](using
           }
           _ <- modify(s =>
             s.copy(
-              services = s.services
-                .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
+              services = s.services.updated(
+                name.value,
+                ServiceRaw(name.value, arrows.map(_._2), defaultId)
+              ),
               definitions = s.definitions.updated(name.value, name)
             )
           )
@@ -117,7 +119,7 @@ class AbilitiesInterpreter[S[_], X](using
         mapStackHeadM(
           modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(name.value, id)))
             .as(true)
-        )(h => (h.copy(serviceIds = h.serviceIds.updated(name.value, id)) -> true).pure)
+        )(h => (h.addService(name.value, id) -> true).pure)
       case None =>
         report(name, "Service with this name is not registered, can't set its ID").as(false)
     }
@@ -126,16 +128,12 @@ class AbilitiesInterpreter[S[_], X](using
     getService(name.value).flatMap {
       case Some(_) =>
         getState.flatMap(st =>
-          st.stack.collectFirstSome(_.serviceIds.get(name.value)) orElse
-            st.rootServiceIds.get(name.value) orElse
-            st.services.get(name.value).flatMap(_.defaultId) match {
+          st.getServiceId(name.value) match {
             case None =>
               report(
                 name,
                 s"Service ID unresolved, use `${name.value} id` expression to set it"
-              )
-                .as(Left[Boolean, ValueRaw](false))
-
+              ).as(Left[Boolean, ValueRaw](false))
             case Some(v) => State.pure(Right(v))
           }
         )
