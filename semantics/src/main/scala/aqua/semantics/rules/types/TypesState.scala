@@ -14,98 +14,128 @@ import cats.syntax.validated.*
 import cats.syntax.apply.*
 import cats.syntax.bifunctor.*
 import cats.syntax.functor.*
+import cats.syntax.apply.*
 
 case class TypesState[S[_]](
-  fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],
-  strict: Map[String, Type] = Map.empty[String, Type],
-  definitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
+  fields: Map[String, (Name[S], Type)] = Map(),
+  strict: Map[String, Type] = Map.empty,
+  definitions: Map[String, NamedTypeToken[S]] = Map(),
   stack: List[TypesState.Frame[S]] = Nil
 ) {
   def isDefined(t: String): Boolean = strict.contains(t)
+
+  def defineType(name: NamedTypeToken[S], `type`: Type): TypesState[S] =
+    copy(
+      strict = strict.updated(name.value, `type`),
+      definitions = definitions.updated(name.value, name)
+    )
+
+  def getType(name: String): Option[Type] =
+    strict.get(name)
+
+  def getTypeDefinition(name: String): Option[NamedTypeToken[S]] =
+    definitions.get(name)
 }
 
 object TypesStateHelper {
 
+  final case class TypeResolution[S[_], +T](
+    `type`: T,
+    definitions: List[(Token[S], NamedTypeToken[S])]
+  )
+
+  final case class TypeResolutionError[S[_]](
+    token: Token[S],
+    hint: String
+  )
+
   // TODO: an ugly return type, refactoring
   // Returns type and a token with its definition
-  def resolveTypeToken[S[_]](
-    tt: TypeToken[S],
-    state: TypesState[S],
-    resolver: (
-      TypesState[S],
-      NamedTypeToken[S]
-    ) => Option[(Type, List[(Token[S], NamedTypeToken[S])])]
-  ): Option[(Type, List[(Token[S], NamedTypeToken[S])])] =
+  def resolveTypeToken[S[_]](tt: TypeToken[S])(
+    state: TypesState[S]
+  ): Option[TypeResolution[S, Type]] =
     tt match {
       case TopBottomToken(_, isTop) =>
-        (if (isTop) TopType else BottomType, Nil).some
+        val `type` = if (isTop) TopType else BottomType
+
+        TypeResolution(`type`, Nil).some
       case ArrayTypeToken(_, dtt) =>
-        resolveTypeToken(dtt, state, resolver).collect { case (it: DataType, t) =>
-          (ArrayType(it), t)
+        resolveTypeToken(dtt)(state).collect { case TypeResolution(it: DataType, t) =>
+          TypeResolution(ArrayType(it), t)
         }
       case StreamTypeToken(_, dtt) =>
-        resolveTypeToken(dtt, state, resolver).collect { case (it: DataType, t) =>
-          (StreamType(it), t)
+        resolveTypeToken(dtt)(state).collect { case TypeResolution(it: DataType, t) =>
+          TypeResolution(StreamType(it), t)
         }
       case OptionTypeToken(_, dtt) =>
-        resolveTypeToken(dtt, state, resolver).collect { case (it: DataType, t) =>
-          (OptionType(it), t)
+        resolveTypeToken(dtt)(state).collect { case TypeResolution(it: DataType, t) =>
+          TypeResolution(OptionType(it), t)
         }
-      case ctt: NamedTypeToken[S] =>
-        resolver(state, ctt)
-      case btt: BasicTypeToken[S] => (btt.value, Nil).some
-      case ArrowTypeToken(_, args, res) =>
-        val strictArgs =
-          args.map(_._2).map(resolveTypeToken(_, state, resolver)).collect {
-            case Some((dt: DataType, t)) =>
-              (dt, t)
-          }
-        val strictRes =
-          res.map(resolveTypeToken(_, state, resolver)).collect { case Some((dt: DataType, t)) =>
-            (dt, t)
-          }
-        Option.when(strictRes.length == res.length && strictArgs.length == args.length) {
-          val (sArgs, argTokens) = strictArgs.unzip
-          val (sRes, resTokens) = strictRes.unzip
-          (ArrowType(ProductType(sArgs), ProductType(sRes)), argTokens.flatten ++ resTokens.flatten)
-        }
+      case ntt: NamedTypeToken[S] =>
+        val defs = state
+          .getTypeDefinition(ntt.value)
+          .toList
+          .map(ntt -> _)
+
+        state
+          .getType(ntt.value)
+          .map(typ => TypeResolution(typ, defs))
+      case btt: BasicTypeToken[S] =>
+        TypeResolution(btt.value, Nil).some
+      case att: ArrowTypeToken[S] =>
+        resolveArrowDef(att)(state).toOption
     }
 
-  def resolveArrowDef[S[_]](
-    arrowTypeToken: ArrowTypeToken[S],
-    state: TypesState[S],
-    resolver: (
-      TypesState[S],
-      NamedTypeToken[S]
-    ) => Option[(Type, List[(Token[S], NamedTypeToken[S])])]
-  ): ValidatedNec[(Token[S], String), (ArrowType, List[(Token[S], NamedTypeToken[S])])] = {
+  def resolveArrowDef[S[_]](arrowTypeToken: ArrowTypeToken[S])(
+    state: TypesState[S]
+  ): ValidatedNec[TypeResolutionError[S], TypeResolution[S, ArrowType]] = {
     val res = arrowTypeToken.res.traverse(typeToken =>
-      resolveTypeToken(typeToken, state, resolver)
-        .toValidNec(typeToken -> "Can not resolve the result type")
+      resolveTypeToken(typeToken)(state)
+        .toValidNec(
+          TypeResolutionError(
+            typeToken,
+            "Can not resolve the result type"
+          )
+        )
     )
     val args = arrowTypeToken.args.traverse { case (argName, typeToken) =>
-      resolveTypeToken(typeToken, state, resolver)
-        .toValidNec(typeToken -> "Can not resolve the argument type")
+      resolveTypeToken(typeToken)(state)
+        .toValidNec(
+          TypeResolutionError(
+            typeToken,
+            "Can not resolve the argument type"
+          )
+        )
         .map(argName.map(_.value) -> _)
     }
 
     (args, res).mapN { (args, res) =>
       val (argsLabeledTypes, argsTokens) =
-        args.map { case lbl -> (typ, tkn) =>
+        args.map { case lbl -> TypeResolution(typ, tkn) =>
           (lbl, typ) -> tkn
         }.unzip.map(_.flatten)
       val (resTypes, resTokens) =
-        res.unzip.map(_.flatten)
+        res.map { case TypeResolution(typ, tkn) =>
+          typ -> tkn
+        }.unzip.map(_.flatten)
 
-      ArrowType(
+      val typ = ArrowType(
         ProductType.maybeLabelled(argsLabeledTypes),
         ProductType(resTypes)
-      ) -> (argsTokens ++ resTokens)
+      )
+      val defs = (argsTokens ++ resTokens)
+
+      TypeResolution(typ, defs)
     }
   }
 }
 
 object TypesState {
+
+  final case class TypeDefinition[S[_]](
+    token: NamedTypeToken[S],
+    `type`: Type
+  )
 
   case class Frame[S[_]](
     token: ArrowTypeToken[S],

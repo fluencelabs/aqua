@@ -13,6 +13,7 @@ import aqua.raw.value.{
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.types.TypesStateHelper.{TypeResolution, TypeResolutionError}
 import aqua.types.*
 
 import cats.data.Validated.{Invalid, Valid}
@@ -44,18 +45,12 @@ class TypesInterpreter[S[_], X](implicit
 
   type ST[A] = State[X, A]
 
-  val resolver: (TypesState[S], NamedTypeToken[S]) => Option[
-    (Type, List[(Token[S], NamedTypeToken[S])])
-  ] = { (state, ctt) =>
-    state.strict.get(ctt.value).map(t => (t, state.definitions.get(ctt.value).toList.map(ctt -> _)))
-  }
-
   override def getType(name: String): State[X, Option[Type]] =
     getState.map(st => st.strict.get(name))
 
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
-    getState.map(st => TypesStateHelper.resolveTypeToken(token, st, resolver)).flatMap {
-      case Some((typ, tokens)) =>
+    getState.map(TypesStateHelper.resolveTypeToken(token)).flatMap {
+      case Some(TypeResolution(typ, tokens)) =>
         val tokensLocs = tokens.map { case (t, n) => n.value -> t }
         locations.pointLocations(tokensLocs).as(typ.some)
       case None =>
@@ -64,14 +59,12 @@ class TypesInterpreter[S[_], X](implicit
     }
 
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
-    getState.map(st => TypesStateHelper.resolveArrowDef(arrowDef, st, resolver)).flatMap {
-      case Valid((tt, tokens)) =>
-        val tokensLocs = tokens.map { case (t, n) =>
-          n.value -> t
-        }
+    getState.map(TypesStateHelper.resolveArrowDef(arrowDef)).flatMap {
+      case Valid(TypeResolution(tt, tokens)) =>
+        val tokensLocs = tokens.map { case (t, n) => n.value -> t }
         locations.pointLocations(tokensLocs).as(tt.some)
       case Invalid(errs) =>
-        errs.traverse_ { case (token, hint) =>
+        errs.traverse_ { case TypeResolutionError(token, hint) =>
           report(token, hint)
         }.as(none)
     }
@@ -86,12 +79,8 @@ class TypesInterpreter[S[_], X](implicit
         .fromMap(SortedMap.from(types))
         .fold(report(name, s"Ability `${name.value}` has no fields").as(none))(nonEmptyFields =>
           val `type` = AbilityType(name.value, nonEmptyFields)
-          modify { st =>
-            st.copy(
-              strict = st.strict.updated(name.value, `type`),
-              definitions = st.definitions.updated(name.value, name)
-            )
-          }.as(`type`.some)
+
+          modify(_.defineType(name, `type`)).as(`type`.some)
         )
     }
 
@@ -122,12 +111,8 @@ class TypesInterpreter[S[_], X](implicit
           )(_.some.pure)
       ).semiflatMap(nonEmptyArrows =>
         val `type` = ServiceType(name.value, nonEmptyArrows)
-        modify { st =>
-          st.copy(
-            strict = st.strict.updated(name.value, `type`),
-            definitions = st.definitions.updated(name.value, name)
-          )
-        }.as(`type`)
+
+        modify(_.defineType(name, `type`)).as(`type`)
       ).value
     )
 
@@ -155,12 +140,8 @@ class TypesInterpreter[S[_], X](implicit
               report(name, s"Struct `${name.value}` has no fields").as(none)
             )(nonEmptyFields =>
               val `type` = StructType(name.value, nonEmptyFields)
-              modify { st =>
-                st.copy(
-                  strict = st.strict.updated(name.value, `type`),
-                  definitions = st.definitions.updated(name.value, name)
-                )
-              }.as(`type`.some)
+
+              modify(_.defineType(name, `type`)).as(`type`.some)
             )
         )
     )
@@ -170,12 +151,9 @@ class TypesInterpreter[S[_], X](implicit
       case Some(n) if n == name => State.pure(false)
       case Some(_) => report(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
-        modify(st =>
-          st.copy(
-            strict = st.strict.updated(name.value, target),
-            definitions = st.definitions.updated(name.value, name)
-          )
-        ).flatMap(_ => locations.addToken(name.value, name)).as(true)
+        modify(_.defineType(name, target))
+          .productL(locations.addToken(name.value, name))
+          .as(true)
     }
 
   override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[PropertyRaw]] = {
