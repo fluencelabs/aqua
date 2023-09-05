@@ -170,7 +170,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
     accepts(four, one) should be(false)
   }
 
-  "labeled types" should "create correc labels" in {
+  "labeled types" should "create correct labels" in {
     val cons = LabeledConsType(
       "arg1",
       ArrowType(
