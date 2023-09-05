@@ -1,7 +1,7 @@
 package aqua.parser.expr.func
 
 import aqua.parser.Expr
-import aqua.parser.expr.func.AbilityIdExpr
+import aqua.parser.expr.func.ServiceIdExpr
 import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.{NamedTypeToken, ValueToken}
 import aqua.parser.lift.LiftParser
@@ -10,19 +10,19 @@ import cats.{~>, Comonad}
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
-case class AbilityIdExpr[F[_]](ability: NamedTypeToken[F], id: ValueToken[F])
-    extends Expr[F](AbilityIdExpr, ability) {
+case class ServiceIdExpr[F[_]](service: NamedTypeToken[F], id: ValueToken[F])
+    extends Expr[F](ServiceIdExpr, service) {
 
-  def mapK[K[_]: Comonad](fk: F ~> K): AbilityIdExpr[K] =
-    copy(ability.copy(fk(ability.name)), id.mapK(fk))
+  def mapK[K[_]: Comonad](fk: F ~> K): ServiceIdExpr[K] =
+    copy(service.copy(fk(service.name)), id.mapK(fk))
 
 }
 
-object AbilityIdExpr extends Expr.Leaf {
+object ServiceIdExpr extends Expr.Leaf {
 
-  override val p: P[AbilityIdExpr[Span.S]] =
+  override val p: P[ServiceIdExpr[Span.S]] =
     ((NamedTypeToken.dotted <* ` `) ~ ValueToken.`value`).map { case (ability, id) =>
-      AbilityIdExpr(ability, id)
+      ServiceIdExpr(ability, id)
     }
 
 }

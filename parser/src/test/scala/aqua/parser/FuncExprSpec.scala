@@ -2,17 +2,13 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.*
-import aqua.parser.expr.func.{AbilityIdExpr, ArrowExpr, CallArrowExpr, IfExpr, OnExpr, ReturnExpr}
-import aqua.parser.lexer.{
-  ArrowTypeToken,
-  BasicTypeToken,
-  CallArrowToken,
-  LiteralToken,
-  Token,
-  VarToken
-}
+import aqua.parser.expr.func.*
+import aqua.parser.lexer.*
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import aqua.types.ScalarType.*
+
 import cats.Id
 import cats.data.{Chain, NonEmptyList}
 import cats.data.Chain.*
@@ -27,11 +23,6 @@ import cats.Eval
 
 import scala.collection.mutable
 import scala.language.implicitConversions
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
-import aqua.parser.lexer.PropertyToken
-import aqua.parser.lexer.IntoArrow
-import aqua.parser.expr.func.AssignmentExpr
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors with AquaSpec {
   import AquaSpec.{given, *}
@@ -123,7 +114,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
         )
       )
     )
-    ifBody(1).head.mapK(spanToId) should be(AbilityIdExpr(toNamedType("Peer"), toStr("some id")))
+    ifBody(1).head.mapK(spanToId) should be(ServiceIdExpr(toNamedType("Peer"), toStr("some id")))
     ifBody(2).head.mapK(spanToId) should be(
       CallArrowExpr(Nil, CallArrowToken("call", List(toBool(true))))
     )

@@ -2,7 +2,7 @@ package aqua.semantics.expr.func
 
 import aqua.raw.Raw
 import aqua.raw.ops.ServiceIdTag
-import aqua.parser.expr.func.AbilityIdExpr
+import aqua.parser.expr.func.ServiceIdExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -14,7 +14,7 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class AbilityIdSem[S[_]](val expr: AbilityIdExpr[S]) extends AnyVal {
+class ServiceIdSem[S[_]](val expr: ServiceIdExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
     A: AbilitiesAlgebra[S, Alg],
@@ -35,7 +35,7 @@ class AbilityIdSem[S[_]](val expr: AbilityIdExpr[S]) extends AnyVal {
         Raw.error("Can not resolve service ID")
       )
       name <- EitherT.fromOptionF(
-        A.setServiceId(expr.ability, id),
+        A.setServiceId(expr.service, id),
         Raw.error("Can not set service ID")
       )
     } yield ServiceIdTag(id, name).funcOpLeaf

@@ -29,6 +29,7 @@ class AssignmentSem[S[_]](val expr: AssignmentExpr[S]) extends AnyVal {
               expr.variable.value
             ).funcOpLeaf: Raw)
           case _ =>
+            println(s"Assignment Sem to ${expr.variable} of type ${vm.`type`}")
             N.derive(expr.variable, vm.`type`, vm.varNames) as (AssignmentTag(
               vm,
               expr.variable.value
