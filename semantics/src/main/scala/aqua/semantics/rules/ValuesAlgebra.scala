@@ -10,6 +10,7 @@ import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
 
 import cats.Monad
+import cats.data.OptionT
 import cats.data.Chain
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
@@ -105,35 +106,30 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         )(valueToRaw)
 
       case dvt @ NamedValueToken(typeName, fields) =>
-        T.resolveType(typeName).flatMap {
-          case Some(resolvedType) =>
-            for {
-              fieldsRawOp: NonEmptyMap[String, Option[ValueRaw]] <- fields.traverse(valueToRaw)
-              fieldsRaw: List[(String, ValueRaw)] = fieldsRawOp.toSortedMap.toList.collect {
-                case (n, Some(vr)) => n -> vr
-              }
-              rawFields = NonEmptyMap.fromMap(SortedMap.from(fieldsRaw))
-              typeFromFieldsWithData = rawFields
-                .map(rf =>
-                  resolvedType match {
-                    case struct @ StructType(_, _) =>
-                      (
-                        StructType(typeName.value, rf.map(_.`type`)),
-                        Some(MakeStructRaw(rf, struct))
-                      )
-                    case scope @ AbilityType(_, _) =>
-                      (
-                        AbilityType(typeName.value, rf.map(_.`type`)),
-                        Some(AbilityRaw(rf, scope))
-                      )
-                  }
-                )
-                .getOrElse(BottomType -> None)
-              (typeFromFields, data) = typeFromFieldsWithData
-              isTypesCompatible <- T.ensureTypeMatches(dvt, resolvedType, typeFromFields)
-            } yield data.filter(_ => isTypesCompatible)
-          case _ => None.pure[Alg]
-        }
+        (for {
+          resolvedType <- OptionT(T.resolveType(typeName))
+          fieldsGiven <- fields.traverse(value => OptionT(valueToRaw(value)))
+          fieldsGivenTypes = fieldsGiven.map(_.`type`)
+          generated <- OptionT.fromOption(
+            resolvedType match {
+              case struct: StructType =>
+                (
+                  struct.copy(fields = fieldsGivenTypes),
+                  MakeStructRaw(fieldsGiven, struct)
+                ).some
+              case ability: AbilityType =>
+                (
+                  ability.copy(fields = fieldsGivenTypes),
+                  AbilityRaw(fieldsGiven, ability)
+                ).some
+              case _ => none
+            }
+          )
+          (genType, genData) = generated
+          data <- OptionT.whenM(
+            T.ensureTypeMatches(dvt, resolvedType, genType)
+          )(genData.pure)
+        } yield data).value
 
       case ct @ CollectionToken(_, values) =>
         for {
