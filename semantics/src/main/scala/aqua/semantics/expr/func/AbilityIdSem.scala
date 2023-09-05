@@ -1,7 +1,7 @@
 package aqua.semantics.expr.func
 
 import aqua.raw.Raw
-import aqua.raw.ops.AbilityIdTag
+import aqua.raw.ops.ServiceIdTag
 import aqua.parser.expr.func.AbilityIdExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
@@ -34,12 +34,10 @@ class AbilityIdSem[S[_]](val expr: AbilityIdExpr[S]) extends AnyVal {
         V.valueToRaw(expr.id),
         Raw.error("Can not resolve service ID")
       )
-      _ <- EitherT.liftF(
-        A.setServiceId(expr.ability, id)
+      name <- EitherT.fromOptionF(
+        A.setServiceId(expr.ability, id),
+        Raw.error("Can not set service ID")
       )
-    } yield AbilityIdTag(
-      id,
-      expr.ability.value
-    ).funcOpLeaf
+    } yield ServiceIdTag(id, name).funcOpLeaf
   ).value.map(_.merge)
 }

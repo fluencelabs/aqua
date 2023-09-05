@@ -16,7 +16,7 @@ trait AbilitiesAlgebra[S[_], Alg[_]] {
 
   def getArrow(name: NamedTypeToken[S], arrow: Name[S]): Alg[Option[ArrowType]]
 
-  def setServiceId(name: NamedTypeToken[S], id: ValueRaw): Alg[Boolean]
+  def setServiceId(name: NamedTypeToken[S], id: ValueRaw): Alg[Option[String]]
 
   def getServiceId(name: NamedTypeToken[S]): Alg[Either[Boolean, ValueRaw]]
 

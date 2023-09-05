@@ -307,15 +307,15 @@ object EmptyTag extends NoExecTag {
   override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 }
 
-case class AbilityIdTag(
+case class ServiceIdTag(
   value: ValueRaw,
-  service: String
+  name: String
 ) extends NoExecTag {
 
   override def usesVarNames: Set[String] = value.varNames
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    AbilityIdTag(value.map(f), service)
+    ServiceIdTag(value.map(f), name)
 }
 
 case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends RawTag {

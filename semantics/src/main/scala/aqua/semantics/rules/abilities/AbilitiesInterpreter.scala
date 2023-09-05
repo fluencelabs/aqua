@@ -15,6 +15,7 @@ import cats.syntax.functor.*
 import cats.syntax.foldable.*
 import cats.syntax.traverse.*
 import cats.syntax.applicative.*
+import cats.syntax.option.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -115,19 +116,19 @@ class AbilitiesInterpreter[S[_], X](using
         }
     }
 
-  override def setServiceId(name: NamedTypeToken[S], id: ValueRaw): SX[Boolean] =
+  override def setServiceId(name: NamedTypeToken[S], id: ValueRaw): SX[Option[String]] =
     getService(name.value).flatMap {
       case Some(_) =>
         mapStackHeadM(
           modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(name.value, id)))
-            .as(true)
+            .as(name.value)
         )(h =>
           mangler
             .rename(name.value)
-            .map(newName => h.setServiceId(name.value, id, newName) -> true)
-        )
+            .map(newName => h.setServiceId(name.value, id, newName) -> newName)
+        ).map(_.some)
       case None =>
-        report(name, "Service with this name is not registered, can't set its ID").as(false)
+        report(name, "Service with this name is not registered, can't set its ID").as(none)
     }
 
   override def getServiceId(name: NamedTypeToken[S]): SX[Either[Boolean, ValueRaw]] =

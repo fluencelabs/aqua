@@ -413,6 +413,10 @@ object TagInliner extends Logging {
             } yield TagInlined.Empty(prefix = prefix)
           case _ => none
 
+      case ServiceIdTag(id, name) =>
+        // println(s"Service ($name) id ($id)")
+        none
+
       case _: SeqGroupTag => pure(SeqModel)
       case ParTag.Detach => pure(DetachModel)
       case _: ParGroupTag => pure(ParModel)
