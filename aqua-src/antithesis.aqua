@@ -1,12 +1,20 @@
-service Console("run-console"):
-    print(s: string)
+service Hello:
+  say_hello()
 
-func main():
-    ss: *string
-    dd: *string
-    peerId = "peerId"
-    relay = "relay"
-    parsec s <- ss on peerId via relay:
-      Console.print(s)
-    for d <- dd par:
-      Console.print(d)
+func foo():
+  on HOST_PEER_ID:
+    Hello "hello"
+
+    -- This closure will execute on HOST_PEER_ID
+    closure = ():
+      Hello.say_hello()
+
+    fn = func ():
+      Hello.say_hello()
+
+  -- Will go to HOST_PEER_ID, where Hello service is resolved, and call say_hello
+  closure()
+
+  -- Will be called on current peer, probably INIT_PEER_ID, and may fail
+  -- in case Hello service is not defined or has another ID
+  fn()
