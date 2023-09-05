@@ -254,6 +254,12 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
+case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) extends NamedType {
+
+  override def toString: String =
+    s"service $name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+}
+
 // Ability is an unordered collection of labelled types and arrows
 case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
 

@@ -131,7 +131,7 @@ object TypesState {
     retVals: Option[List[ValueRaw]]
   )
 
-  implicit def typesStateMonoid[S[_]]: Monoid[TypesState[S]] = new Monoid[TypesState[S]] {
+  given [S[_]]: Monoid[TypesState[S]] with {
     override def empty: TypesState[S] = TypesState()
 
     override def combine(x: TypesState[S], y: TypesState[S]): TypesState[S] =

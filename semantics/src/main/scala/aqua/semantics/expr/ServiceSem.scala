@@ -30,6 +30,8 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
     D: DefinitionsAlgebra[S, Alg]
   ): EitherT[Alg, Raw, ServiceRaw] = for {
     arrows <- EitherT.fromOptionF(
+      // TODO:  Move to purgeDefs here, allow not only arrows
+      //        from parsing, throw errors here
       D.purgeArrows(expr.name),
       Raw.error("Service has no arrows")
     )
@@ -56,6 +58,10 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
           .asLeft
           .whenA(!defined)
       )
+    )
+    serviceType <- EitherT.fromOptionF(
+      T.defineServiceType(expr.name, arrowsByName.toSortedMap.toMap),
+      Raw.error("Failed to resolve service type")
     )
     _ <- EitherT.liftF(
       defaultId.traverse_(id => A.setServiceId(expr.name, id))
