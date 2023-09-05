@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/fluencelabs/aqua#readme",
   "devDependencies": {
-    "@fluencelabs/interfaces": "0.8.1",
+    "@fluencelabs/interfaces": "0.8.2",
     "prettier": "3.0.0"
   }
 }

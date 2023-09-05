@@ -15,8 +15,8 @@ importers:
   api/api-npm:
     devDependencies:
       '@fluencelabs/interfaces':
-        specifier: 0.8.1
-        version: 0.8.1
+        specifier: 0.8.2
+        version: 0.8.2
       prettier:
         specifier: 3.0.0
         version: 3.0.0
@@ -55,8 +55,8 @@ importers:
         specifier: 1.1.2
         version: 1.1.2
       '@fluencelabs/js-client':
-        specifier: 0.1.0
-        version: 0.1.0
+        specifier: 0.1.1
+        version: 0.1.1
       deep-equal:
         specifier: 2.2.1
         version: 2.2.1
@@ -596,18 +596,12 @@ packages:
     engines: {node: '>=10', pnpm: '>=3'}
     dev: false
 
-  /@fluencelabs/interfaces@0.8.1:
-    resolution: {integrity: sha512-RVdaBX8HbMLbgLPMwYvPaQ+XPvelNOGgOpsQGoy4Chw2njuj142LwxeQsa4LBWqE24Z7ebUqcjhlCrfrf9Efqg==}
-    engines: {node: '>=10', pnpm: '>=3'}
-    dev: true
-
   /@fluencelabs/interfaces@0.8.2:
     resolution: {integrity: sha512-WJ7o51jaBSzUsYENxCEJpv91KiodH1nQ6uKdAn5chWsOQzDu57d3pa6IW1Lu/wh4jtefnNen+jF1esENQCc0BA==}
     engines: {node: '>=10', pnpm: '>=3'}
-    dev: false
 
-  /@fluencelabs/js-client@0.1.0:
-    resolution: {integrity: sha512-ASZBuIGhpOrdTQwx4kBCGouyqM9mkRT6RvEt8NbeRXUeyEbWAd/XjYN2hz9B816Bs7YaZyWKojLsaPFBNb5Asw==}
+  /@fluencelabs/js-client@0.1.1:
+    resolution: {integrity: sha512-dePsNvavOCSyn5RWpKpSSS2XfMhVBt4Qlg3/kpccVnG/D80EULZzpOYvMz/JMkjYfDPoR3F1QBDr6OawqE7k7Q==}
     engines: {node: '>=10', pnpm: '>=8'}
     dependencies:
       '@chainsafe/libp2p-noise': 13.0.0
