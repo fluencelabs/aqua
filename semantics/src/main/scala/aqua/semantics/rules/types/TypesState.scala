@@ -9,6 +9,11 @@ import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, ValidatedNec}
 import cats.kernel.Monoid
 import cats.syntax.option.*
+import cats.syntax.traverse.*
+import cats.syntax.validated.*
+import cats.syntax.apply.*
+import cats.syntax.bifunctor.*
+import cats.syntax.functor.*
 
 case class TypesState[S[_]](
   fields: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)],
@@ -74,52 +79,29 @@ object TypesStateHelper {
       NamedTypeToken[S]
     ) => Option[(Type, List[(Token[S], NamedTypeToken[S])])]
   ): ValidatedNec[(Token[S], String), (ArrowType, List[(Token[S], NamedTypeToken[S])])] = {
-    val resType = arrowTypeToken.res.map(resolveTypeToken(_, state, resolver))
+    val res = arrowTypeToken.res.traverse(typeToken =>
+      resolveTypeToken(typeToken, state, resolver)
+        .toValidNec(typeToken -> "Can not resolve the result type")
+    )
+    val args = arrowTypeToken.args.traverse { case (argName, typeToken) =>
+      resolveTypeToken(typeToken, state, resolver)
+        .toValidNec(typeToken -> "Can not resolve the argument type")
+        .map(argName.map(_.value) -> _)
+    }
 
-    NonEmptyChain
-      .fromChain(Chain.fromSeq(arrowTypeToken.res.zip(resType).collect { case (dt, None) =>
-        dt -> "Cannot resolve the result type"
-      }))
-      .fold[ValidatedNec[(Token[S], String), (ArrowType, List[(Token[S], NamedTypeToken[S])])]] {
-        val (errs, argTypes) = arrowTypeToken.args.map { (argName, tt) =>
-          resolveTypeToken(tt, state, resolver)
-            .toRight(tt -> s"Type unresolved")
-            .map(argName.map(_.value) -> _)
-        }
-          .foldLeft[
-            (
-              Chain[(Token[S], String)],
-              Chain[(Option[String], (Type, List[(Token[S], NamedTypeToken[S])]))]
-            )
-          ](
-            (
-              Chain.empty,
-              Chain.empty[(Option[String], (Type, List[(Token[S], NamedTypeToken[S])]))]
-            )
-          ) {
-            case ((errs, argTypes), Right(at)) => (errs, argTypes.append(at))
-            case ((errs, argTypes), Left(e)) => (errs.append(e), argTypes)
-          }
+    (args, res).mapN { (args, res) =>
+      val (argsLabeledTypes, argsTokens) =
+        args.map { case lbl -> (typ, tkn) =>
+          (lbl, typ) -> tkn
+        }.unzip.map(_.flatten)
+      val (resTypes, resTokens) =
+        res.unzip.map(_.flatten)
 
-        NonEmptyChain
-          .fromChain(errs)
-          .fold[ValidatedNec[
-            (Token[S], String),
-            (ArrowType, List[(Token[S], NamedTypeToken[S])])
-          ]](
-            Valid {
-              val (labels, types) = argTypes.toList.unzip
-              val (resTypes, resTokens) = resType.flatten.unzip
-              (
-                ArrowType(
-                  ProductType.maybeLabelled(labels.zip(types.map(_._1))),
-                  ProductType(resTypes)
-                ),
-                types.flatMap(_._2) ++ resTokens.flatten
-              )
-            }
-          )(Invalid(_))
-      }(Invalid(_))
+      ArrowType(
+        ProductType.maybeLabelled(argsLabeledTypes),
+        ProductType(resTypes)
+      ) -> (argsTokens ++ resTokens)
+    }
   }
 }
 

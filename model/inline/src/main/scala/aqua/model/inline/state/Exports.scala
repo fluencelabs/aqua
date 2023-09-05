@@ -122,7 +122,7 @@ trait Exports[S] extends Scoped[S] {
 }
 
 object Exports {
-  def apply[S](implicit exports: Exports[S]): Exports[S] = exports
+  def apply[S](using exports: Exports[S]): Exports[S] = exports
 
   // Get last linked VarModel
   def getLastValue(name: String, state: Map[String, ValueModel]): Option[ValueModel] = {

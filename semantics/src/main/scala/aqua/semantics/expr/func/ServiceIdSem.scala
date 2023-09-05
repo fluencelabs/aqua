@@ -16,7 +16,7 @@ import cats.syntax.functor.*
 
 class ServiceIdSem[S[_]](val expr: ServiceIdExpr[S]) extends AnyVal {
 
-  def program[Alg[_]: Monad](implicit
+  def program[Alg[_]: Monad](using
     A: AbilitiesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] = (

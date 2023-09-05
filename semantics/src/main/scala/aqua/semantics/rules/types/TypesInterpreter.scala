@@ -22,6 +22,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
+import cats.syntax.foldable.*
 import cats.{~>, Applicative}
 import cats.syntax.option.*
 import monocle.Lens
@@ -64,17 +65,15 @@ class TypesInterpreter[S[_], X](implicit
 
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
     getState.map(st => TypesStateHelper.resolveArrowDef(arrowDef, st, resolver)).flatMap {
-      case Valid(t) =>
-        val (tt, tokens) = t
+      case Valid((tt, tokens)) =>
         val tokensLocs = tokens.map { case (t, n) =>
           n.value -> t
         }
-        locations.pointLocations(tokensLocs).map(_ => Some(tt))
+        locations.pointLocations(tokensLocs).as(tt.some)
       case Invalid(errs) =>
-        errs
-          .foldLeft[ST[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
-            report(tkn, hint) >> n
-          }
+        errs.traverse_ { case (token, hint) =>
+          report(token, hint)
+        }.as(none)
     }
 
   override def defineAbilityType(
