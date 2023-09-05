@@ -10,7 +10,11 @@ trait NamesAlgebra[S[_], Alg[_]] {
 
   def readArrow(name: Name[S]): Alg[Option[ArrowType]]
 
-  def define(name: Name[S], `type`: Type): Alg[Boolean]
+  /**
+   *
+   * @param canOverride internal flag that is used for overriding services by serviceId
+   */
+  def define(name: Name[S], `type`: Type, canOverride: Boolean = false): Alg[Boolean]
 
   def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): Alg[Boolean]
 

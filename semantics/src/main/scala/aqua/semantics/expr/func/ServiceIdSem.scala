@@ -1,8 +1,8 @@
 package aqua.semantics.expr.func
 
+import aqua.parser.expr.func.ServiceIdExpr
 import aqua.raw.Raw
-import aqua.raw.ops.AbilityIdTag
-import aqua.parser.expr.func.AbilityIdExpr
+import aqua.raw.ops.EmptyTag
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
@@ -11,7 +11,7 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 
-class AbilityIdSem[S[_]](val expr: AbilityIdExpr[S]) extends AnyVal {
+class ServiceIdSem[S[_]](val expr: ServiceIdExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
     A: AbilitiesAlgebra[S, Alg],
@@ -21,10 +21,7 @@ class AbilityIdSem[S[_]](val expr: AbilityIdExpr[S]) extends AnyVal {
       expr.id
     ) >>= {
       case Some(id) =>
-        A.setServiceId(expr.ability, expr.id, id) as (AbilityIdTag(
-          id,
-          expr.ability.value
-        ).funcOpLeaf: Raw)
+        A.setServiceId(expr.ability, expr.id, id) as (EmptyTag.funcOpLeaf: Raw)
       case _ => Raw.error("Cannot resolve ability ID").pure[Alg]
     }
 }

@@ -10,3 +10,8 @@ case class ArrowRaw(
   ret: List[ValueRaw],
   body: RawTag.Tree
 ) extends Raw
+
+// func -internal-():
+       // AssignemntTag(res1, CallArrowRaw("serviceId"))
+//     res1 <- CallArrowRaw("serviceId")
+//     <- res1

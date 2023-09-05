@@ -28,7 +28,7 @@ class NamesInterpreter[S[_], X](implicit
 
   private def readName(name: String): SX[Option[Type]] =
     getState.map { st =>
-       st.stack.collectFirst {
+      st.stack.collectFirst {
         case frame if frame.names.contains(name) => frame.names(name)
         case frame if frame.arrows.contains(name) => frame.arrows(name)
       } orElse st.rootArrows.get(name) orElse st.rootValues.get(name)
@@ -84,17 +84,19 @@ class NamesInterpreter[S[_], X](implicit
         .headOption orElse st.rootArrows.get(name)
     }
 
-  override def define(name: Name[S], `type`: Type): SX[Boolean] =
+  override def define(name: Name[S], `type`: Type, canOverride: Boolean = false): SX[Boolean] =
     readName(name.value).flatMap {
-      case Some(_) =>
+      case Some(_) if !canOverride =>
         getState.map(_.definitions.get(name.value).exists(_ == name)).flatMap {
           case true => State.pure(false)
           case false => report(name, "This name was already defined in the scope").as(false)
         }
-      case None =>
+      case _ =>
         mapStackHead(
-          report(name, "Cannot define a variable in the root scope")
-            .as(false)
+          getState.map { st =>
+            st.rootValues.updated(name.value, `type`)
+            true
+          }
         )(fr => fr.addName(name, `type`) -> true).flatTap(_ => locations.addToken(name.value, name))
     }
 

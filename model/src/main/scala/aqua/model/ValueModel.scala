@@ -48,7 +48,9 @@ object ValueModel {
       VarModel(name, t)
     case LiteralRaw(value, t) =>
       LiteralModel(value, t)
-    case _ => ???
+    case p =>
+      println("catch: " + p)
+      ???
   }
 
   object Ability {

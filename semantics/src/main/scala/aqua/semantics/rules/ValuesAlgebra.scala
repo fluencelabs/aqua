@@ -4,11 +4,13 @@ import aqua.parser.lexer.*
 import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
 import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
+import aqua.raw.ServiceRaw
+import aqua.raw.arrow.{ArrowRaw, FuncRaw}
+import aqua.raw.ops.{AssignmentTag, CallArrowRawTag}
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
-
 import cats.Monad
 import cats.data.Chain
 import cats.syntax.applicative.*
@@ -48,6 +50,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
   def resolveType(v: ValueToken[S]): Alg[Option[Type]] =
     valueToRaw(v).map(_.map(_.`type`))
 
+  //
+
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
@@ -81,11 +85,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         LiteralRaw(l.value, t).some.pure[Alg]
 
       case VarToken(name) =>
-        N.read(name).flatMap {
+        N.read(name, false).flatMap {
           case Some(t) =>
             VarRaw(name.value, t).some.pure[Alg]
           case None =>
-            None.pure[Alg]
+            A.getServiceByName(name).flatMap {
+              case Some(ServiceRaw(sName, arrows, Some(did))) =>
+                val t = AbilityType(sName, arrows)
+
+                N.define(name, t).map(_ => VarRaw(name.value, t).some)
+              case _ =>
+                // to report an error
+                N.read(name).flatMap {
+                  case Some(t) => VarRaw(name.value, t).some.pure[Alg]
+                  case None => None.pure[Alg]
+                }
+            }
+
         }
 
       case prop @ PropertyToken(value, properties) =>
@@ -121,10 +137,10 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                         StructType(typeName.value, rf.map(_.`type`)),
                         Some(MakeStructRaw(rf, struct))
                       )
-                    case scope @ AbilityType(_, _) =>
+                    case ability @ AbilityType(_, _) =>
                       (
                         AbilityType(typeName.value, rf.map(_.`type`)),
-                        Some(AbilityRaw(rf, scope))
+                        Some(AbilityRaw(rf, ability))
                       )
                   }
                 )
@@ -339,7 +355,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
                 callArrowFromAbility(ab.asName, at, callArrow.funcName).pure
               case _ =>
                 (A.getArrow(ab, callArrow.funcName), A.getServiceId(ab)).mapN {
-                  case (Some(at), Right(sid)) =>
+                  case (Some(at), Right(sid, name)) =>
                     CallArrowRaw
                       .service(
                         abilityName = ab.value,

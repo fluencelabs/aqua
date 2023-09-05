@@ -277,15 +277,6 @@ object EmptyTag extends NoExecTag {
   override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 }
 
-case class AbilityIdTag(
-  value: ValueRaw,
-  service: String
-) extends NoExecTag {
-
-  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    AbilityIdTag(value.map(f), service)
-}
-
 case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends RawTag {
 
   override def exportsVarNames: Set[String] = Set(exportTo.name)

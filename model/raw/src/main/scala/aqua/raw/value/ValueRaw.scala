@@ -95,6 +95,17 @@ case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) ext
   override def varNames: Set[String] = Set(name) ++ idx.varNames
 }
 
+case class ServiceFuncRaw(name: String, baseType: ArrowType) extends ValueRaw {
+  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(map.getOrElse(name, name))
+
+  override def toString: String = s"var{$name: " + baseType + s"}"
+
+  override def varNames: Set[String] = Set(name)
+}
+
 case class VarRaw(name: String, baseType: Type) extends ValueRaw {
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
@@ -164,8 +175,10 @@ case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: Stru
     copy(fields = fields.map(_.renameVars(map)))
 }
 
-case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityType: AbilityType)
-    extends ValueRaw {
+case class AbilityRaw(
+  fieldsAndArrows: NonEmptyMap[String, ValueRaw],
+  abilityType: AbilityType
+) extends ValueRaw {
 
   override def baseType: Type = abilityType
 
@@ -232,6 +245,27 @@ object ApplyUnaryOpRaw {
   enum Op {
     case Not
   }
+}
+
+case class ServiceCallDefinitionRaw(
+  name: String,
+  baseType: ArrowType,
+  serviceId: ValueRaw
+) extends ValueRaw {
+  override def `type`: Type = baseType.codomain.uncons.map(_._1).getOrElse(baseType)
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    this
+
+  override def varNames: Set[String] = Set.empty
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(
+      serviceId = serviceId.renameVars(map)
+    )
+
+  override def toString: String =
+    s"(service calldef ($serviceId $name) $baseType)"
 }
 
 case class CallArrowRaw(

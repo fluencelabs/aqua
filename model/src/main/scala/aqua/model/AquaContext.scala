@@ -2,10 +2,9 @@ package aqua.model
 
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.CallArrowRawTag
-import aqua.raw.value.ValueRaw
-import aqua.raw.value.CallArrowRaw
+import aqua.raw.value.{AbilityRaw, CallArrowRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.raw.{ConstantRaw, RawContext, RawPart, ServiceRaw, TypeRaw}
-import aqua.types.{StructType, Type}
+import aqua.types.{AbilityType, StructType, Type}
 import cats.Monoid
 import cats.data.NonEmptyMap
 import cats.data.Chain
@@ -140,7 +139,7 @@ object AquaContext extends Logging {
       .get(rawContext)
       .fold {
         logger.trace(s"Compiling ${rawContext.module}, cache has ${cache.size} entries")
-
+        println("raw parts: " + rawContext.parts)
         val (newCtx, newCache) = rawContext.parts
           .foldLeft[(AquaContext, Cache)] {
             // Laziness unefficiency happens here
@@ -165,11 +164,23 @@ object AquaContext extends Logging {
               // Actually this should have no effect, as constants are resolved by semantics
               val (pctx, pcache) = fromRawContext(partContext, ctxCache)
               logger.trace("Got " + c.name + " from raw")
+              val values = c.value match {
+                // it could be only for services with default service ids
+//                case AbilityRaw(fieldsAndArrows, abilityType, Some(LiteralRaw(v, _))) =>
+//                  fieldsAndArrows.flatMap {
+//                    case VarRaw(n, t) =>
+//                      Some(CallArrowRaw(None, AbilityType.fullName(abilityType.name, n), ))
+//                    case _ => None
+//                  }
+                case _ =>
+                  if (c.allowOverrides && pctx.values.contains(c.name)) Map.empty
+                  else Map(c.name -> ValueModel.fromRaw(c.value).resolveWith(pctx.allValues))
+              }
+
               val add =
                 blank
                   .copy(values =
-                    if (c.allowOverrides && pctx.values.contains(c.name)) Map.empty
-                    else Map(c.name -> ValueModel.fromRaw(c.value).resolveWith(pctx.allValues))
+                    values
                   )
 
               (ctx |+| add, pcache)

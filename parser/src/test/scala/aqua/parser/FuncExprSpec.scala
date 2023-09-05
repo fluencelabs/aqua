@@ -2,7 +2,7 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.*
-import aqua.parser.expr.func.{AbilityIdExpr, ArrowExpr, CallArrowExpr, IfExpr, OnExpr, ReturnExpr}
+import aqua.parser.expr.func.{ServiceIdExpr, ArrowExpr, CallArrowExpr, IfExpr, OnExpr, ReturnExpr}
 import aqua.parser.lexer.{
   ArrowTypeToken,
   BasicTypeToken,
@@ -123,7 +123,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
         )
       )
     )
-    ifBody(1).head.mapK(spanToId) should be(AbilityIdExpr(toNamedType("Peer"), toStr("some id")))
+    ifBody(1).head.mapK(spanToId) should be(ServiceIdExpr(toNamedType("Peer"), toStr("some id")))
     ifBody(2).head.mapK(spanToId) should be(
       CallArrowExpr(Nil, CallArrowToken("call", List(toBool(true))))
     )

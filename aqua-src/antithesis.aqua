@@ -2,11 +2,23 @@ service Console("run-console"):
     print(s: string)
 
 func main():
-    ss: *string
-    dd: *string
-    peerId = "peerId"
-    relay = "relay"
-    parsec s <- ss on peerId via relay:
-      Console.print(s)
-    for d <- dd par:
-      Console.print(d)
+    -- NewConsole = Console.??id??("new id")
+    -- NewConsole.print("")
+
+    Console "new id"
+    NewAb = Ab(print = Console.print)
+
+
+    Console.print("sfre")
+
+    for i <- incr:
+      Console "inside for id"
+      Console.print("sfre")
+
+
+    Console "new id"
+    Console.print("sfre")
+
+    Console "inside for id"
+    -- Console -> ConsoleNew
+    Console.print("sfre")

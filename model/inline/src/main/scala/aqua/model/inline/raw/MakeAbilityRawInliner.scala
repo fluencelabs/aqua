@@ -18,7 +18,7 @@ object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
     fields: NonEmptyMap[String, (ValueModel, Inline)]
   ): State[S, Unit] = {
     for {
-      res <- fields.toNel.traverse {
+      _ <- fields.toNel.traverse {
         case (n, (Ability(abilityName, _, _), _)) =>
           val leftName = AbilityType.fullName(name, n)
           Exports[S].copyWithAbilityPrefix(abilityName, leftName)

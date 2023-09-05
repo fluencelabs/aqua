@@ -6,7 +6,7 @@ import aqua.raw.{RawContext, ServiceRaw}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.errors.ReportErrors
 import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.{StackInterpreter, abilities}
+import aqua.semantics.rules.{abilities, StackInterpreter}
 import aqua.types.ArrowType
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.functor.*
@@ -41,24 +41,28 @@ class AbilitiesInterpreter[S[_], X](implicit
 
         }
       case None =>
-        arrows.toNel.map(_._2).collect {
-          case (n, arr) if arr.codomain.length > 1 =>
-            report(n, "Service functions cannot have multiple results")
-        }.sequence.flatMap{ _ =>
-          modify(s =>
-            s.copy(
-              services = s.services
-                .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
-              definitions = s.definitions.updated(name.value, name)
-            )
-          ).flatMap { _ =>
-            locations.addTokenWithFields(
-              name.value,
-              name,
-              arrows.toNel.toList.map(t => t._1 -> t._2._1)
-            )
-          }.as(true)
-        }
+        arrows.toNel
+          .map(_._2)
+          .collect {
+            case (n, arr) if arr.codomain.length > 1 =>
+              report(n, "Service functions cannot have multiple results")
+          }
+          .sequence
+          .flatMap { _ =>
+            modify(s =>
+              s.copy(
+                services = s.services
+                  .updated(name.value, ServiceRaw(name.value, arrows.map(_._2), defaultId)),
+                definitions = s.definitions.updated(name.value, name)
+              )
+            ).flatMap { _ =>
+              locations.addTokenWithFields(
+                name.value,
+                name,
+                arrows.toNel.toList.map(t => t._1 -> t._2._1)
+              )
+            }.as(true)
+          }
     }
 
   // adds location from token to its definition
@@ -116,6 +120,22 @@ class AbilitiesInterpreter[S[_], X](implicit
         report(name, "Service with this name is not registered, can't set its ID").as(false)
     }
 
+  def getServiceIdByName(name: String): SX[Option[ValueRaw]] =
+    getService(name).flatMap {
+      case Some(_) =>
+        getState.map(st =>
+          st.stack
+            .flatMap(_.serviceIds.get(name).map(_._2))
+            .headOption orElse st.rootServiceIds
+            .get(
+              name
+            )
+            .map(_._2) orElse st.services.get(name).flatMap(_.defaultId)
+        )
+      case None =>
+        State.pure(None)
+    }
+
   override def getServiceId(name: NamedTypeToken[S]): SX[Either[Boolean, ValueRaw]] =
     getService(name.value).flatMap {
       case Some(_) =>
@@ -146,6 +166,9 @@ class AbilitiesInterpreter[S[_], X](implicit
             )
         }
     }
+
+  def getServiceByName(name: Name[S]): SX[Option[ServiceRaw]] =
+    getService(name.value)
 
   override def beginScope(token: Token[S]): SX[Unit] =
     stackInt.beginScope(AbilitiesState.Frame[S](token))
