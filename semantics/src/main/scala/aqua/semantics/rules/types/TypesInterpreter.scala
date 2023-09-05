@@ -17,7 +17,6 @@ import aqua.types.*
 
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, OptionT, State}
-import cats.instances.list.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -105,10 +104,10 @@ class TypesInterpreter[S[_], X](implicit
       fields.toList.traverse {
         case (field, (fieldName, t: ArrowType)) =>
           OptionT
-            .whenF(t.codomain.length > 1)(
+            .when(t.codomain.length <= 1)(field -> t)
+            .flatTapNone(
               report(fieldName, "Service functions cannot have multiple results")
             )
-            .as(field -> t)
         case (field, (fieldName, t)) =>
           OptionT(
             report(

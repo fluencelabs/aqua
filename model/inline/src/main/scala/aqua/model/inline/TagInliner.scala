@@ -382,7 +382,6 @@ object TagInliner extends Logging {
               valueToModel(v, false)
           }
           (model, prefix) = modelAndPrefix
-          _ = println(s"Assignment to $assignTo of $model")
           _ <- Exports[S].resolved(assignTo, model)
         } yield TagInlined.Empty(prefix = prefix)
 
