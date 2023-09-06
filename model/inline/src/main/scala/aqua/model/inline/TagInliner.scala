@@ -413,9 +413,70 @@ object TagInliner extends Logging {
             } yield TagInlined.Empty(prefix = prefix)
           case _ => none
 
-      case ServiceIdTag(id, name) =>
-        // println(s"Service ($name) id ($id)")
-        none
+      case ServiceIdTag(id, serviceType, name) =>
+        for {
+          idm <- valueToModel(id)
+          (idModel, idPrefix) = idm
+
+          idVarName <- Mangler[S].findAndForbidName(s"$name-id")
+          _ <- Exports[S].resolved(idVarName, idModel)
+          idVar = VarRaw(idVarName, id.`type`)
+
+          // TODO: Move FuncArrow creation somewhere else
+          methods <- serviceType.fields.toSortedMap.toList.traverse {
+            case (methodName, methodType) =>
+              for {
+                arrowName <- Mangler[S].findAndForbidName(s"$name-$methodName")
+                ret <- methodType.res
+                  .traverse(retType =>
+                    Mangler[S]
+                      .findAndForbidName(s"$arrowName-ret")
+                      .map(retName => VarRaw(retName, retType))
+                  )
+                  .map(_.toList)
+                body = CallArrowRawTag.service(
+                  idVar,
+                  methodName,
+                  Call(
+                    methodType.domain.toLabelledList().map(VarRaw(_, _)),
+                    ret.map(r => Call.Export(r.name, r.`type`))
+                  ),
+                  serviceType.name,
+                  methodType
+                )
+                fn = FuncArrow(
+                  funcName = arrowName,
+                  body = body.leaf,
+                  arrowType = methodType,
+                  ret = ret,
+                  capturedArrows = Map.empty,
+                  capturedValues = Map(
+                    idVarName -> idModel
+                  ),
+                  capturedTopology = None
+                )
+              } yield methodName -> fn
+          }
+
+          _ <- Arrows[S].resolved(
+            methods.map { case (_, fn) =>
+              fn.funcName -> fn
+            }.toMap
+          )
+
+          _ <- methods.traverse { case (methodName, fn) =>
+            Exports[S].resolveAbilityField(
+              name,
+              methodName,
+              VarModel(fn.funcName, fn.arrowType)
+            )
+          }
+
+          _ <- Exports[S].resolved(
+            name,
+            VarModel(name, serviceType)
+          )
+        } yield TagInlined.Empty(prefix = idPrefix)
 
       case _: SeqGroupTag => pure(SeqModel)
       case ParTag.Detach => pure(DetachModel)

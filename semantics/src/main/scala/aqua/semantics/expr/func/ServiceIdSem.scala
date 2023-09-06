@@ -6,6 +6,7 @@ import aqua.parser.expr.func.ServiceIdExpr
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
 
 import cats.Monad
 import cats.data.EitherT
@@ -18,7 +19,8 @@ class ServiceIdSem[S[_]](val expr: ServiceIdExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](using
     A: AbilitiesAlgebra[S, Alg],
-    V: ValuesAlgebra[S, Alg]
+    V: ValuesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg]
   ): Prog[Alg, Raw] = (
     for {
       _ <- EitherT(
@@ -34,10 +36,14 @@ class ServiceIdSem[S[_]](val expr: ServiceIdExpr[S]) extends AnyVal {
         V.valueToRaw(expr.id),
         Raw.error("Can not resolve service ID")
       )
+      serviceType <- EitherT.fromOptionF(
+        T.resolveServiceType(expr.service),
+        Raw.error("Can not resolve service type")
+      )
       name <- EitherT.fromOptionF(
         A.setServiceId(expr.service, id),
         Raw.error("Can not set service ID")
       )
-    } yield ServiceIdTag(id, name).funcOpLeaf
+    } yield ServiceIdTag(id, serviceType, name).funcOpLeaf
   ).value.map(_.merge)
 }

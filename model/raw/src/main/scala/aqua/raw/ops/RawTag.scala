@@ -4,7 +4,7 @@ import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag.Tree
 import aqua.raw.value.{CallArrowRaw, ValueRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.{ArrowType, DataType}
+import aqua.types.{ArrowType, DataType, ServiceType}
 
 import cats.Show
 import cats.data.{Chain, NonEmptyList}
@@ -309,13 +309,14 @@ object EmptyTag extends NoExecTag {
 
 case class ServiceIdTag(
   value: ValueRaw,
+  serviceType: ServiceType,
   name: String
 ) extends NoExecTag {
 
   override def usesVarNames: Set[String] = value.varNames
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    ServiceIdTag(value.map(f), name)
+    ServiceIdTag(value.map(f), serviceType, name)
 }
 
 case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends RawTag {

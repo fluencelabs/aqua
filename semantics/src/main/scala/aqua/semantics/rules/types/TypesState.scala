@@ -49,8 +49,6 @@ object TypesStateHelper {
     hint: String
   )
 
-  // TODO: an ugly return type, refactoring
-  // Returns type and a token with its definition
   def resolveTypeToken[S[_]](tt: TypeToken[S])(
     state: TypesState[S]
   ): Option[TypeResolution[S, Type]] =
