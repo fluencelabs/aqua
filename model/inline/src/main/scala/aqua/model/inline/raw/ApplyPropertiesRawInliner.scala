@@ -59,65 +59,59 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
   private def unfoldAbilityProperty[S: Mangler: Exports: Arrows](
     varModel: VarModel,
-    abilityType: AbilityType,
+    abilityType: NamedType,
     p: PropertyRaw
-  ): State[S, (VarModel, Inline)] = {
-    p match {
-      case IntoArrowRaw(arrowName, t, arguments) =>
-        val arrowType = abilityType.fields
-          .lookup(arrowName)
-          .collect { case at @ ArrowType(_, _) =>
-            at
-          }
-          .getOrElse {
-            logger.error(s"Inlining, cannot find arrow $arrowName in ability $varModel")
-            ArrowType(NilType, NilType)
-          }
-        for {
-          callArrow <- CallArrowRawInliner(
-            CallArrowRaw(
-              None,
-              AbilityType.fullName(varModel.name, arrowName),
-              arguments,
-              arrowType,
-              None
-            )
+  ): State[S, (VarModel, Inline)] = p match {
+    case IntoArrowRaw(arrowName, t, arguments) =>
+      val arrowType = abilityType.fields
+        .lookup(arrowName)
+        .collect { case at @ ArrowType(_, _) =>
+          at
+        }
+        .getOrElse {
+          logger.error(s"Inlining, cannot find arrow $arrowName in $varModel")
+          ArrowType(NilType, NilType)
+        }
+      for {
+        callArrow <- CallArrowRawInliner(
+          CallArrowRaw(
+            None,
+            AbilityType.fullName(varModel.name, arrowName),
+            arguments,
+            arrowType,
+            None
           )
-          result <- callArrow match {
-            case (vm: VarModel, inl) =>
-              State.pure((vm, inl))
-            case (lm: LiteralModel, inl) =>
-              flatLiteralWithProperties(lm, inl, Chain.empty).flatMap { case (vm, inline) =>
-                Exports[S].resolved(vm.name, vm).map(_ => (vm, inline))
-              }
-          }
-        } yield {
-          result
+        )
+        result <- callArrow match {
+          case (vm: VarModel, inl) =>
+            State.pure((vm, inl))
+          case (lm: LiteralModel, inl) =>
+            flatLiteralWithProperties(lm, inl, Chain.empty).flatMap { case (vm, inline) =>
+              Exports[S].resolved(vm.name, vm).map(_ => (vm, inline))
+            }
         }
-      case IntoFieldRaw(fieldName, at @ AbilityType(abName, fields)) =>
-        (VarModel(AbilityType.fullName(varModel.name, fieldName), at), Inline.empty).pure
-      case IntoFieldRaw(fieldName, t) =>
-        for {
-          abilityField <- Exports[S].getAbilityField(varModel.name, fieldName)
-          result <- abilityField match {
-            case Some(vm: VarModel) =>
-              State.pure((vm, Inline.empty))
-            case Some(lm: LiteralModel) =>
-              flatLiteralWithProperties(lm, Inline.empty, Chain.empty)
-            case _ =>
-              Exports[S].getKeys.flatMap { keys =>
-                logger.error(
-                  s"Inlining, cannot find field ${AbilityType
-                    .fullName(varModel.name, fieldName)} in ability $varModel. Available: $keys"
-                )
-                flatLiteralWithProperties(LiteralModel.quote(""), Inline.empty, Chain.empty)
-              }
+      } yield result
+    case IntoFieldRaw(fieldName, at @ AbilityType(abName, fields)) =>
+      (VarModel(AbilityType.fullName(varModel.name, fieldName), at), Inline.empty).pure
+    case IntoFieldRaw(fieldName, t) =>
+      for {
+        abilityField <- Exports[S].getAbilityField(varModel.name, fieldName)
+        result <- abilityField match {
+          case Some(vm: VarModel) =>
+            State.pure((vm, Inline.empty))
+          case Some(lm: LiteralModel) =>
+            flatLiteralWithProperties(lm, Inline.empty, Chain.empty)
+          case _ =>
+            Exports[S].getKeys.flatMap { keys =>
+              logger.error(
+                s"Inlining, cannot find field ${AbilityType
+                  .fullName(varModel.name, fieldName)} in ability $varModel. Available: $keys"
+              )
+              flatLiteralWithProperties(LiteralModel.quote(""), Inline.empty, Chain.empty)
+            }
 
-          }
-        } yield {
-          result
         }
-    }
+      } yield result
   }
 
   private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
@@ -284,9 +278,9 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
       case (_, _) =>
         unfold(raw).flatMap {
           case (vm: VarModel, prevInline) =>
-            unfoldProperties(prevInline, vm, properties, propertiesAllowed).map { case (v, i) =>
-              v -> i
-            }
+            unfoldProperties(prevInline, vm, properties, propertiesAllowed)
+              // To coerce types
+              .map(identity)
           case (l: LiteralModel, inline) =>
             flatLiteralWithProperties(
               l,

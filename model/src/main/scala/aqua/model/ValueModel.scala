@@ -53,9 +53,9 @@ object ValueModel {
 
   object Ability {
 
-    def unapply(vm: VarModel): Option[(String, AbilityType, Chain[PropertyModel])] =
+    def unapply(vm: VarModel): Option[(String, NamedType, Chain[PropertyModel])] =
       vm match {
-        case VarModel(name, t@AbilityType(_, _), properties) =>
+        case VarModel(name, t: (AbilityType | ServiceType), properties) =>
           (name, t, properties).some
         case _ => none
       }

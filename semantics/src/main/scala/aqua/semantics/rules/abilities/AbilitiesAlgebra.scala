@@ -20,6 +20,8 @@ trait AbilitiesAlgebra[S[_], Alg[_]] {
 
   def getServiceId(name: NamedTypeToken[S]): Alg[Either[Boolean, ValueRaw]]
 
+  def getServiceRename(name: NamedTypeToken[S]): Alg[Option[String]]
+
   def beginScope(token: Token[S]): Alg[Unit]
 
   def endScope(): Alg[Unit]

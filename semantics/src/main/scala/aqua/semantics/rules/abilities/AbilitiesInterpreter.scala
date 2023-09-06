@@ -12,6 +12,7 @@ import aqua.types.ArrowType
 
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.functor.*
+import cats.syntax.apply.*
 import cats.syntax.foldable.*
 import cats.syntax.traverse.*
 import cats.syntax.applicative.*
@@ -120,8 +121,7 @@ class AbilitiesInterpreter[S[_], X](using
     getService(name.value).flatMap {
       case Some(_) =>
         mapStackHeadM(
-          modify(st => st.copy(rootServiceIds = st.rootServiceIds.updated(name.value, id)))
-            .as(name.value)
+          modify(_.setRootServiceId(name.value, id)).as(name.value)
         )(h =>
           mangler
             .rename(name.value)
@@ -152,6 +152,16 @@ class AbilitiesInterpreter[S[_], X](using
               Left[Boolean, ValueRaw](false)
             )
         }
+    }
+
+  override def getServiceRename(name: NamedTypeToken[S]): State[X, Option[String]] =
+    (
+      getService(name.value),
+      getState.map(_.getServiceRename(name.value))
+    ).flatMapN {
+      case (Some(_), Some(rename)) => rename.some.pure
+      case (None, _) => report(name, "Service with this name is undefined").as(none)
+      case (_, None) => report(name, "Service ID is undefined").as(none)
     }
 
   override def beginScope(token: Token[S]): SX[Unit] =

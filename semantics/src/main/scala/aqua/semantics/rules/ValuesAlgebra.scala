@@ -82,11 +82,20 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         LiteralRaw(l.value, t).some.pure[Alg]
 
       case VarToken(name) =>
-        N.read(name).flatMap {
+        N.read(name, mustBeDefined = false).flatMap {
           case Some(t) =>
-            VarRaw(name.value, t).some.pure[Alg]
+            VarRaw(name.value, t).some.pure
           case None =>
-            None.pure[Alg]
+            (for {
+              t <- OptionT(
+                T.getType(name.value)
+              ).collect { case st: ServiceType => st }
+                // A hack to report name error, better to refactor
+                .flatTapNone(N.read(name))
+              rename <- OptionT(
+                A.getServiceRename(name.asTypeToken)
+              )
+            } yield VarRaw(rename, t)).value
         }
 
       case prop @ PropertyToken(value, properties) =>
@@ -308,7 +317,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
 
   private def callArrowFromAbility(
     ab: Name[S],
-    at: AbilityType,
+    at: NamedType,
     funcName: Name[S]
   ): Option[CallArrowRaw] = at.arrows
     .get(funcName.value)
@@ -336,8 +345,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
           )
       )(ab =>
         N.read(ab.asName, mustBeDefined = false).flatMap {
-          case Some(at: AbilityType) =>
-            callArrowFromAbility(ab.asName, at, callArrow.funcName).pure
+          case Some(nt: (AbilityType | ServiceType)) =>
+            callArrowFromAbility(ab.asName, nt, callArrow.funcName).pure
           case _ =>
             T.getType(ab.value).flatMap {
               case Some(at: AbilityType) =>

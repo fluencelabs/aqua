@@ -2,7 +2,8 @@ package aqua.model.inline.state
 
 import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.model.ValueModel.Ability
-import aqua.types.AbilityType
+import aqua.types.{AbilityType, NamedType}
+
 import cats.data.{NonEmptyList, State}
 
 /**
@@ -143,7 +144,7 @@ object Exports {
     private def getAbilityPairs(
       oldName: String,
       newName: String,
-      at: AbilityType,
+      at: NamedType,
       state: Map[String, ValueModel]
     ): NonEmptyList[(String, ValueModel)] = {
       at.fields.toNel.flatMap {

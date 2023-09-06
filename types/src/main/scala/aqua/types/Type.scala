@@ -243,6 +243,74 @@ case class OptionType(element: Type) extends BoxType {
 sealed trait NamedType extends Type {
   def name: String
   def fields: NonEmptyMap[String, Type]
+
+  /**
+   * Get all arrows defined in this type and its sub-abilities.
+   * Paths to arrows are returned **without** type name
+   * to allow renaming on call site.
+   */
+  lazy val arrows: Map[String, ArrowType] = {
+    def getArrowsEval(path: Option[String], nt: NamedType): Eval[List[(String, ArrowType)]] =
+      nt.fields.toNel.toList.flatTraverse {
+        // sub-arrows could be in abilities or services
+        case (innerName, innerType: (ServiceType | AbilityType)) =>
+          val newPath = path.fold(innerName)(AbilityType.fullName(_, innerName))
+          getArrowsEval(newPath.some, innerType)
+        case (aName, aType: ArrowType) =>
+          val newPath = path.fold(aName)(AbilityType.fullName(_, aName))
+          List(newPath -> aType).pure
+        case _ => Nil.pure
+      }
+
+    getArrowsEval(None, this).value.toMap
+  }
+
+  /**
+   * Get all abilities defined in this type and its sub-abilities.
+   * Paths to abilities are returned **without** type name
+   * to allow renaming on call site.
+   */
+  lazy val abilities: Map[String, AbilityType] = {
+    def getAbilitiesEval(
+      path: Option[String],
+      nt: NamedType
+    ): Eval[List[(String, AbilityType)]] =
+      nt.fields.toNel.toList.flatTraverse {
+        // sub-abilities could be only in abilities
+        case (abName, abType: AbilityType) =>
+          val fullName = path.fold(abName)(AbilityType.fullName(_, abName))
+          getAbilitiesEval(fullName.some, abType).map(
+            (fullName -> abType) :: _
+          )
+        case _ => Nil.pure
+      }
+
+    getAbilitiesEval(None, this).value.toMap
+  }
+
+  /**
+   * Get all variables defined in this type and its sub-abilities.
+   * Paths to variables are returned **without** type name
+   * to allow renaming on call site.
+   */
+  lazy val variables: Map[String, DataType] = {
+    def getVariablesEval(
+      path: Option[String],
+      nt: NamedType
+    ): Eval[List[(String, DataType)]] =
+      nt.fields.toNel.toList.flatTraverse {
+        // sub-variables could be only in abilities
+        case (abName, abType: AbilityType) =>
+          val newPath = path.fold(abName)(AbilityType.fullName(_, abName))
+          getVariablesEval(newPath.some, abType)
+        case (dName, dType: DataType) =>
+          val newPath = path.fold(dName)(AbilityType.fullName(_, dName))
+          List(newPath -> dType).pure
+        case _ => Nil.pure
+      }
+
+    getVariablesEval(None, this).value.toMap
+  }
 }
 
 // Struct is an unordered collection of labelled types
@@ -262,71 +330,6 @@ case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) ext
 
 // Ability is an unordered collection of labelled types and arrows
 case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
-
-  /**
-   * Get all arrows defined in this ability and its sub-abilities.
-   * Paths to arrows are returned **without** ability name
-   * to allow renaming on call site.
-   */
-  lazy val arrows: Map[String, ArrowType] = {
-    def getArrowsEval(path: Option[String], ability: AbilityType): Eval[List[(String, ArrowType)]] =
-      ability.fields.toNel.toList.flatTraverse {
-        case (abName, abType: AbilityType) =>
-          val newPath = path.fold(abName)(AbilityType.fullName(_, abName))
-          getArrowsEval(newPath.some, abType)
-        case (aName, aType: ArrowType) =>
-          val newPath = path.fold(aName)(AbilityType.fullName(_, aName))
-          List(newPath -> aType).pure
-        case _ => Nil.pure
-      }
-
-    getArrowsEval(None, this).value.toMap
-  }
-
-  /**
-   * Get all abilities defined in this ability and its sub-abilities.
-   * Paths to abilities are returned **without** ability name
-   * to allow renaming on call site.
-   */
-  lazy val abilities: Map[String, AbilityType] = {
-    def getAbilitiesEval(
-      path: Option[String],
-      ability: AbilityType
-    ): Eval[List[(String, AbilityType)]] =
-      ability.fields.toNel.toList.flatTraverse {
-        case (abName, abType: AbilityType) =>
-          val fullName = path.fold(abName)(AbilityType.fullName(_, abName))
-          getAbilitiesEval(fullName.some, abType).map(
-            (fullName -> abType) :: _
-          )
-        case _ => Nil.pure
-      }
-
-    getAbilitiesEval(None, this).value.toMap
-  }
-
-  /**
-   * Get all variables defined in this ability and its sub-abilities.
-   * Paths to variables are returned **without** ability name
-   * to allow renaming on call site.
-   */
-  lazy val variables: Map[String, DataType] = {
-    def getVariablesEval(
-      path: Option[String],
-      ability: AbilityType
-    ): Eval[List[(String, DataType)]] =
-      ability.fields.toNel.toList.flatTraverse {
-        case (abName, abType: AbilityType) =>
-          val newPath = path.fold(abName)(AbilityType.fullName(_, abName))
-          getVariablesEval(newPath.some, abType)
-        case (dName, dType: DataType) =>
-          val newPath = path.fold(dName)(AbilityType.fullName(_, dName))
-          List(newPath -> dType).pure
-        case _ => Nil.pure
-      }
-
-    getVariablesEval(None, this).value.toMap
-  }
 
   override def toString: String =
     s"ability $name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
