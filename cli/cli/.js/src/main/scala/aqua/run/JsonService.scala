@@ -10,6 +10,7 @@ import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToke
 import aqua.parser.lift.Span
 import aqua.raw.value.{CollectionRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
+
 import cats.data.*
 import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.effect.Concurrent
@@ -19,7 +20,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
-import cats.{Id, Semigroup, ~>}
+import cats.{~>, Id, Semigroup}
 import com.monovore.decline.Opts
 import fs2.io.file.{Files, Path}
 
@@ -52,7 +53,8 @@ object JsonService {
         l.map { case (jsonService: JsonService, sm: ServiceModel) =>
           val aquaFunctions: ValidatedNec[String, NonEmptyList[AquaFunction]] =
             jsonService.functions.map { jf =>
-              sm.arrows(jf.name)
+              sm.`type`.arrows
+                .get(jf.name)
                 .map { case arr: ArrowType =>
                   if (arr.domain.isEmpty)
                     TypeValidator
