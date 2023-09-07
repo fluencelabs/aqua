@@ -116,7 +116,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
               serviceType <- OptionT(
                 T.getType(name)
               ).collect { case st: ServiceType => st }
-              _ = println(s"Service type: $serviceType")
               defaultId <- OptionT(
                 A.getDefaultServiceIdIfUnresolvedInPrevScope(name)
               )
