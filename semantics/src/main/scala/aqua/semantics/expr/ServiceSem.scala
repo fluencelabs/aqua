@@ -39,18 +39,22 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
       name.value -> (name, arrow)
     }.toNem
     defaultId <- expr.id.traverse(id =>
-      EitherT
-        .fromOptionF(
-          // TODO:  Here value is resolved two times
-          //        Make it better
-          V.valueToRaw(id) <* V.ensureIsString(id),
-          Raw.error("Failed to resolve default service id")
-        )
+      EitherT.fromOptionF(
+        // TODO:  Here value is resolved two times
+        //        Make it better
+        V.valueToRaw(id) <* V.ensureIsString(id),
+        Raw.error("Failed to resolve default service id")
+      )
+    )
+    serviceType <- EitherT.fromOptionF(
+      T.defineServiceType(expr.name, arrowsByName.toSortedMap.toMap),
+      Raw.error("Failed to resolve service type")
     )
     _ <- EitherT(
       A.defineService(
         expr.name,
-        arrowsByName,
+        arrows.map { case (name, _) => name.value -> name }.toNem,
+        serviceType,
         defaultId
       ).map(defined =>
         Raw
@@ -59,16 +63,12 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
           .whenA(!defined)
       )
     )
-    serviceType <- EitherT.fromOptionF(
-      T.defineServiceType(expr.name, arrowsByName.toSortedMap.toMap),
-      Raw.error("Failed to resolve service type")
-    )
     _ <- EitherT.liftF(
       defaultId.traverse_(id => A.setServiceId(expr.name, id))
     )
   } yield ServiceRaw(
     expr.name.value,
-    arrowsByName.map { case (_, t) => t },
+    serviceType,
     defaultId
   )
 

@@ -6,14 +6,18 @@ import aqua.raw.value.ValueRaw
 import aqua.raw.value.CallArrowRaw
 import aqua.raw.{ConstantRaw, RawContext, RawPart, ServiceRaw, TypeRaw}
 import aqua.types.{StructType, Type}
+
 import cats.Monoid
 import cats.data.NonEmptyMap
 import cats.data.Chain
 import cats.kernel.Semigroup
 import cats.syntax.functor.*
+import cats.syntax.foldable.*
+import cats.syntax.traverse.*
+import cats.syntax.bifunctor.*
 import cats.syntax.monoid.*
+import cats.syntax.option.*
 import scribe.Logging
-
 import scala.collection.immutable.SortedMap
 
 case class AquaContext(
@@ -26,16 +30,15 @@ case class AquaContext(
   services: Map[String, ServiceModel]
 ) {
 
-  private def prefixFirst[T](prefix: String, pair: (String, T)): (String, T) =
-    (prefix + pair._1, pair._2)
-
   // TODO: it's a duplicate
-  private def all[T](what: AquaContext => Map[String, T], prefix: String = ""): Map[String, T] =
-    abilities
-      .foldLeft(what(this)) { case (ts, (k, v)) =>
-        ts ++ v.all(what, k + ".")
-      }
-      .map(prefixFirst(prefix, _))
+  private def all[T](
+    what: AquaContext => Map[String, T],
+    prefix: String = ""
+  ): Map[String, T] = (
+    what(this) ++ abilities.toList.foldMap { case (k, v) =>
+      v.all(what, k + ".").toList
+    }
+  ).map(_.leftMap(prefix + _)).toMap
 
   lazy val allValues: Map[String, ValueModel] =
     all(_.values)
@@ -48,9 +51,14 @@ case class AquaContext(
     newName: String,
     ctx: Map[String, T],
     add: (AquaContext, Map[String, T]) => AquaContext
-  ): AquaContext = {
-    ctx.get(name).fold(AquaContext.blank)(t => add(AquaContext.blank, Map(newName -> t)))
-  }
+  ): AquaContext = ctx
+    .get(name)
+    .fold(AquaContext.blank)(t =>
+      add(
+        AquaContext.blank,
+        Map(newName -> t)
+      )
+    )
 
   def pick(name: String, maybeRename: Option[String]): AquaContext = {
     val newName = maybeRename.getOrElse(name)
@@ -68,7 +76,7 @@ object AquaContext extends Logging {
     lazy val size: Long = data.size
 
     def get(ctx: RawContext): Option[AquaContext] =
-      data.find(_._1 eq ctx).map(_._2)
+      data.collectFirst { case (rawCtx, aquaCtx) if rawCtx eq ctx => aquaCtx }
 
     def updated(ctx: RawContext, aCtx: AquaContext): Cache = copy(data :+ (ctx -> aCtx))
   }
@@ -91,11 +99,10 @@ object AquaContext extends Logging {
         x.services ++ y.services
       )
 
-  //
   def fromService(sm: ServiceRaw, serviceId: ValueRaw): AquaContext =
     blank.copy(
       module = Some(sm.name),
-      funcs = sm.arrows.toSortedMap.map { case (fnName, arrowType) =>
+      funcs = sm.`type`.arrows.map { case (fnName, arrowType) =>
         val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
         fnName ->
           FuncArrow(
@@ -192,13 +199,16 @@ object AquaContext extends Logging {
               logger.trace("Adding service " + m.name)
               val (pctx, pcache) = fromRawContext(partContext, ctxCache)
               logger.trace("Got " + m.name + " from raw")
-              val id = m.defaultId.map(ValueModel.fromRaw).map(_.resolveWith(pctx.allValues))
-              val srv = ServiceModel(m.name, m.arrows, id)
+              val id = m.defaultId
+                .map(ValueModel.fromRaw)
+                .map(_.resolveWith(pctx.allValues))
+              val srv = ServiceModel(m.name, m.`type`, id)
               val add =
                 blank
                   .copy(
-                    abilities =
-                      m.defaultId.fold(Map.empty)(id => Map(m.name -> fromService(m, id))),
+                    abilities = m.defaultId
+                      .map(id => Map(m.name -> fromService(m, id)))
+                      .orEmpty,
                     services = Map(m.name -> srv)
                   )
 

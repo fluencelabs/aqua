@@ -2,7 +2,8 @@ package aqua.semantics.rules.abilities
 
 import aqua.parser.lexer.{Name, NamedTypeToken, Token, ValueToken}
 import aqua.raw.value.ValueRaw
-import aqua.types.ArrowType
+import aqua.types.{ArrowType, ServiceType}
+
 import cats.InjectK
 import cats.data.{NonEmptyList, NonEmptyMap}
 
@@ -10,7 +11,8 @@ trait AbilitiesAlgebra[S[_], Alg[_]] {
 
   def defineService(
     name: NamedTypeToken[S],
-    arrows: NonEmptyMap[String, (Name[S], ArrowType)],
+    arrowDefs: NonEmptyMap[String, Name[S]],
+    serviceType: ServiceType,
     defaultId: Option[ValueRaw]
   ): Alg[Boolean]
 

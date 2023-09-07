@@ -8,7 +8,7 @@ import aqua.semantics.rules.errors.ReportErrors
 import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{abilities, StackInterpreter}
-import aqua.types.ArrowType
+import aqua.types.{ArrowType, ServiceType}
 
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.functor.*
@@ -37,7 +37,8 @@ class AbilitiesInterpreter[S[_], X](using
 
   override def defineService(
     name: NamedTypeToken[S],
-    arrows: NonEmptyMap[String, (Name[S], ArrowType)],
+    arrowDefs: NonEmptyMap[String, Name[S]],
+    serviceType: ServiceType,
     defaultId: Option[ValueRaw]
   ): SX[Boolean] =
     getService(name.value).flatMap {
@@ -53,15 +54,11 @@ class AbilitiesInterpreter[S[_], X](using
           .as(false)
       case None =>
         for {
-          _ <- arrows.toNel.traverse_ { case (_, (n, arr)) =>
-            report(n, "Service functions cannot have multiple results")
-              .whenA(arr.codomain.length > 1)
-          }
           _ <- modify(s =>
             s.copy(
               services = s.services.updated(
                 name.value,
-                ServiceRaw(name.value, arrows.map(_._2), defaultId)
+                ServiceRaw(name.value, serviceType, defaultId)
               ),
               definitions = s.definitions.updated(name.value, name)
             )
@@ -69,7 +66,7 @@ class AbilitiesInterpreter[S[_], X](using
           _ <- locations.addTokenWithFields(
             name.value,
             name,
-            arrows.toNel.toList.map(t => t._1 -> t._2._1)
+            arrowDefs.toNel.toList
           )
         } yield true
     }
@@ -80,19 +77,20 @@ class AbilitiesInterpreter[S[_], X](using
   }
 
   override def getArrow(name: NamedTypeToken[S], arrow: Name[S]): SX[Option[ArrowType]] =
-    getService(name.value).map(_.map(_.arrows)).flatMap {
+    getService(name.value).map(_.map(_.`type`.arrows)).flatMap {
       case Some(arrows) =>
-        arrows(arrow.value)
+        arrows
+          .get(arrow.value)
           .fold(
             report(
               arrow,
               Levenshtein.genMessage(
                 s"Service is found, but arrow '${arrow.value}' isn't found in scope",
                 arrow.value,
-                arrows.value.keys.toNonEmptyList.toList
+                arrows.keys.toList
               )
-            ).as(Option.empty[ArrowType])
-          )(a => addServiceArrowLocation(name, arrow).as(Some(a)))
+            ).as(none)
+          )(a => addServiceArrowLocation(name, arrow).as(a.some))
       case None =>
         getAbility(name.value).flatMap {
           case Some(abCtx) =>
