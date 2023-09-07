@@ -39,6 +39,7 @@ import { bugLNG60Call, passArgsCall } from '../examples/passArgsCall.js';
 import { streamArgsCall } from '../examples/streamArgsCall.js';
 import { streamResultsCall } from '../examples/streamResultsCall.js';
 import { structuralTypingCall } from '../examples/structuralTypingCall';
+import { servicesAsAbilitiesCall, serviceIds } from '../examples/servicesAsAbilities.js';
 import { streamReturnCall } from '../examples/streamReturn.js';
 import { streamCaptureSimpleCall, streamCaptureReturnCall } from '../examples/streamCapture.js';
 import { streamIfCall, streamForCall, streamTryCall, streamComplexCall } from '../examples/streamScopes.js';
@@ -249,6 +250,12 @@ describe('Testing examples', () => {
     it('structuraltyping.aqua', async () => {
         let result = await structuralTypingCall();
         expect(result).toEqual('some_stringsome_stringsome_stringab_string');
+    });
+
+    it('servicesAsAbilities.aqua', async () => {
+        const msgs = ['call', 'capture call', 'accept closure call', 'accept ability call'];
+        let result = await servicesAsAbilitiesCall();
+        expect(result).toEqual(serviceIds.flatMap((s) => msgs.map((m) => `${s}: ${m}`)));
     });
 
     it('collectionSugar array', async () => {
