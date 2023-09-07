@@ -20,7 +20,7 @@ sealed trait RawTag extends TreeNode[RawTag] {
   def restrictsVarNames: Set[String] = Set.empty
 
   // All variable names introduced by this tag
-  def definesVarNames: Set[String] = exportsVarNames ++ restrictsVarNames
+  final def definesVarNames: Set[String] = exportsVarNames ++ restrictsVarNames
 
   // Variable names used by this tag (not introduced by it)
   def usesVarNames: Set[String] = Set.empty
@@ -314,6 +314,8 @@ case class ServiceIdTag(
 ) extends NoExecTag {
 
   override def usesVarNames: Set[String] = value.varNames
+
+  override def exportsVarNames: Set[String] = Set(name)
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     ServiceIdTag(value.map(f), serviceType, name)

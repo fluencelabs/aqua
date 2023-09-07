@@ -63,9 +63,6 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
           .whenA(!defined)
       )
     )
-    _ <- EitherT.liftF(
-      defaultId.traverse_(id => A.setServiceId(expr.name, id))
-    )
   } yield ServiceRaw(
     expr.name.value,
     serviceType,

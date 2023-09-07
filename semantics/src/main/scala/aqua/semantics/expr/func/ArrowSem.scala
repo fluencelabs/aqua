@@ -13,11 +13,13 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, ArrowType, CanonStreamType, ProductType, StreamType, Type}
+import aqua.types.*
 
 import cats.Eval
 import cats.data.{Chain, NonEmptyList}
 import cats.free.{Cofree, Free}
+import cats.data.OptionT
+import cats.syntax.show.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.foldable.*
@@ -61,10 +63,9 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     streamsInScope <- N.streamsDefinedWithinScope()
     retValues <- T.endArrowScope(expr.arrowTypeExpr)
     retValuesDerivedFrom <- N.getDerivedFrom(retValues.map(_.varNames))
-    res = bodyGen match {
+    res <- bodyGen match {
       case FuncOp(bodyModel) =>
         // TODO: wrap with local on...via...
-
         val retsAndArgs = retValues zip funcArrow.codomain.toList
 
         val argNames = funcArrow.domain.labelledData.map { case (name, _) => name }
@@ -109,18 +110,34 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           case ((v, _), _) => (Chain.empty, v)
         }.unzip.leftMap(_.combineAll)
 
-        val bodyModified = SeqTag.wrap(
-          bodyModel +: bodyRets
-        )
+        bodyModel.usesVarNames.value.toList
+          .traverse(name =>
+            (for {
+              serviceType <- OptionT(
+                T.getType(name)
+              ).collect { case st: ServiceType => st }
+              _ = println(s"Service type: $serviceType")
+              defaultId <- OptionT(
+                A.getDefaultServiceIdIfUnresolvedInPrevScope(name)
+              )
+            } yield ServiceIdTag(defaultId, serviceType, name).leaf).value
+          )
+          .map(_.collect { case Some(tag) => tag })
+          .map(Chain.fromSeq)
+          .map { services =>
+            val bodyModified = SeqTag.wrap(
+              services ++ (bodyModel +: bodyRets)
+            )
 
-        // wrap streams with restrictions
-        val bodyWithRestrictions = localStreams.foldLeft(bodyModified) {
-          case (bm, (streamName, streamType)) =>
-            RestrictionTag(streamName, streamType).wrap(bm)
-        }
+            // wrap streams with restrictions
+            val bodyWithRestrictions = localStreams.foldLeft(bodyModified) {
+              case (bm, (streamName, streamType)) =>
+                RestrictionTag(streamName, streamType).wrap(bm)
+            }
 
-        ArrowRaw(funcArrow, retVals, bodyWithRestrictions)
-      case _ => Raw.error("Invalid arrow body")
+            ArrowRaw(funcArrow, retVals, bodyWithRestrictions)
+          }
+      case _ => Raw.error("Invalid arrow body").pure
     }
   } yield res
 

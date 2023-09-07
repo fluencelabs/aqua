@@ -162,6 +162,14 @@ class AbilitiesInterpreter[S[_], X](using
       case (_, None) => report(name, "Service ID is undefined").as(none)
     }
 
+  override def getDefaultServiceIdIfUnresolvedInPrevScope(
+    name: String
+  ): State[X, Option[ValueRaw]] =
+    getState.map(st =>
+      st.getDefaultServiceId(name)
+        .filterNot(_ => st.isIdResolvedInPrevScope(name))
+    )
+
   override def beginScope(token: Token[S]): SX[Unit] =
     stackInt.beginScope(AbilitiesState.Frame[S](token))
 

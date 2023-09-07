@@ -22,6 +22,9 @@ case class AbilitiesState[S[_]](
   def setRootServiceId(name: String, id: ValueRaw): AbilitiesState[S] =
     copy(rootServiceIds = rootServiceIds.updated(name, id))
 
+  def getDefaultServiceId(name: String): Option[ValueRaw] =
+    services.get(name).flatMap(_.defaultId)
+
   def purgeArrows: Option[(NonEmptyList[(Name[S], ArrowType)], AbilitiesState[S])] =
     stack match {
       case sc :: tail =>
@@ -30,6 +33,9 @@ case class AbilitiesState[S[_]](
           .map(_ -> copy[S](sc.copy(arrows = Map.empty) :: tail))
       case _ => None
     }
+
+  def isIdResolvedInPrevScope(name: String): Boolean =
+    stack.tail.exists(_.isIdResolved(name))
 
   def getServiceId(name: String): Option[ValueRaw] =
     stack.collectFirstSome(_.getServiceId(name)) orElse
@@ -60,6 +66,9 @@ object AbilitiesState {
           Frame.ServiceState(id, rename)
         )
       )
+
+    def isIdResolved(name: String): Boolean =
+      services.get(name).isDefined
 
     def getServiceId(name: String): Option[ValueRaw] =
       services.get(name).map(_.id)

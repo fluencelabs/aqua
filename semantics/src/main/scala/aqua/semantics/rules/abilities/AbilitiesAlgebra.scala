@@ -24,6 +24,8 @@ trait AbilitiesAlgebra[S[_], Alg[_]] {
 
   def getServiceRename(name: NamedTypeToken[S]): Alg[Option[String]]
 
+  def getDefaultServiceIdIfUnresolvedInPrevScope(name: String): Alg[Option[ValueRaw]]
+
   def beginScope(token: Token[S]): Alg[Unit]
 
   def endScope(): Alg[Unit]
