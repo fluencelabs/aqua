@@ -51,6 +51,16 @@ object ValueModel {
     case _ => ???
   }
 
+  object Arrow {
+
+    def unapply(vm: VarModel): Option[(String, ArrowType)] =
+      vm match {
+        case VarModel(name, t: ArrowType, _) =>
+          (name, t).some
+        case _ => none
+      }
+  }
+
   object Ability {
 
     def unapply(vm: VarModel): Option[(String, NamedType, Chain[PropertyModel])] =
