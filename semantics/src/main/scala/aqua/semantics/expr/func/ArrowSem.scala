@@ -68,13 +68,13 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
         // TODO: wrap with local on...via...
         val retsAndArgs = retValues zip funcArrow.codomain.toList
 
-        val argNames = funcArrow.domain.labelledData.map { case (name, _) => name }
+        val dataArgsNames = funcArrow.domain.labelledData.map { case (name, _) => name }
         val streamsThatReturnAsStreams = retsAndArgs.collect {
           case (VarRaw(n, StreamType(_)), StreamType(_)) => n
         }.toSet
 
         // Remove arguments, and values returned as streams
-        val localStreams = streamsInScope -- argNames -- streamsThatReturnAsStreams
+        val localStreams = streamsInScope -- dataArgsNames -- streamsThatReturnAsStreams
 
         // process stream that returns as not streams and all Apply*Raw
         val (bodyRets, retVals) = retsAndArgs.mapWithIndex {
@@ -110,7 +110,10 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           case ((v, _), _) => (Chain.empty, v)
         }.unzip.leftMap(_.combineAll)
 
-        bodyModel.usesVarNames.value.toList
+        val argNames = funcArrow.domain.toLabelledList().map { case (name, _) => name }
+        val capturedVars = bodyModel.usesVarNames.value -- argNames
+
+        capturedVars.toList
           .traverse(name =>
             (for {
               serviceType <- OptionT(
