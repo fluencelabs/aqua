@@ -418,40 +418,23 @@ object TagInliner extends Logging {
           idm <- valueToModel(id)
           (idModel, idPrefix) = idm
 
-          idVar = VarRaw("id", id.`type`)
-
-          // TODO: Move FuncArrow creation somewhere else
           methods <- serviceType.fields.toSortedMap.toList.traverse {
             case (methodName, methodType) =>
               for {
                 arrowName <- Mangler[S].findAndForbidName(s"$name-$methodName")
-                ret <- methodType.res
-                  .traverse(retType =>
-                    Mangler[S]
-                      .findAndForbidName(s"$arrowName-ret")
-                      .map(retName => VarRaw(retName, retType))
-                  )
-                  .map(_.toList)
-                body = CallArrowRawTag.service(
-                  idVar,
-                  methodName,
-                  Call(
-                    methodType.domain.toLabelledList().map(VarRaw(_, _)),
-                    ret.map(r => Call.Export(r.name, r.`type`))
-                  ),
-                  serviceType.name,
-                  methodType
+                ret <- methodType.res.traverse(retType =>
+                  Mangler[S]
+                    .findAndForbidName(s"$arrowName-ret")
+                    .map(retName => VarRaw(retName, retType))
                 )
-                fn = FuncArrow(
-                  funcName = arrowName,
-                  body = body.leaf,
-                  arrowType = methodType,
-                  ret = ret,
-                  capturedArrows = Map.empty,
-                  capturedValues = Map(
-                    idVar.name -> idModel
-                  ),
-                  capturedTopology = None
+                fn = FuncArrow.fromServiceMethod(
+                  arrowName,
+                  serviceType,
+                  methodName,
+                  methodType,
+                  VarRaw("id", id.`type`),
+                  idModel,
+                  ret
                 )
               } yield methodName -> fn
           }

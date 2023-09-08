@@ -2,9 +2,9 @@ package aqua.model
 
 import aqua.raw.Raw
 import aqua.raw.arrow.FuncRaw
-import aqua.raw.ops.RawTag
+import aqua.raw.ops.{Call, CallArrowRawTag, RawTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{ArrowType, Type}
+import aqua.types.{ArrowType, ServiceType, Type}
 
 case class FuncArrow(
   funcName: String,
@@ -42,4 +42,48 @@ object FuncArrow {
       constants,
       topology
     )
+
+  /**
+   * Create function - wrapper around a service method
+   *
+   * @param funcName name of the function
+   * @param serviceType type of the service
+   * @param methodName name of the service method to wrap
+   * @param methodType type of the service method to wrap
+   * @param id variable that holds the service id
+   * @param idValue resolved value of the service id
+   * @param ret variable for return value
+   */
+  def fromServiceMethod(
+    funcName: String,
+    serviceType: ServiceType,
+    methodName: String,
+    methodType: ArrowType,
+    id: VarRaw,
+    idValue: ValueModel,
+    ret: Option[VarRaw]
+  ): FuncArrow = {
+    val body = CallArrowRawTag.service(
+      id,
+      methodName,
+      Call(
+        methodType.domain.toLabelledList().map(VarRaw.apply),
+        ret.map(r => Call.Export(r.name, r.`type`)).toList
+      ),
+      serviceType.name,
+      methodType
+    )
+
+    FuncArrow(
+      funcName = funcName,
+      body = body.leaf,
+      arrowType = methodType,
+      ret = ret.toList,
+      capturedArrows = Map.empty,
+      capturedValues = Map(
+        id.name -> idValue
+      ),
+      capturedTopology = None
+    )
+  }
 }
