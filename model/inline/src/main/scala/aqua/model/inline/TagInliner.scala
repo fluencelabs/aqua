@@ -418,33 +418,29 @@ object TagInliner extends Logging {
           idm <- valueToModel(id)
           (idModel, idPrefix) = idm
 
+          // Make `FuncArrow` wrappers for service methods
           methods <- serviceType.fields.toSortedMap.toList.traverse {
             case (methodName, methodType) =>
               for {
                 arrowName <- Mangler[S].findAndForbidName(s"$name-$methodName")
-                ret <- methodType.res.traverse(retType =>
-                  Mangler[S]
-                    .findAndForbidName(s"$arrowName-ret")
-                    .map(retName => VarRaw(retName, retType))
-                )
                 fn = FuncArrow.fromServiceMethod(
                   arrowName,
-                  serviceType,
+                  serviceType.name,
                   methodName,
                   methodType,
-                  VarRaw("id", id.`type`),
-                  idModel,
-                  ret
+                  idModel
                 )
               } yield methodName -> fn
           }
 
+          // Resolve wrappers in arrows
           _ <- Arrows[S].resolved(
             methods.map { case (_, fn) =>
               fn.funcName -> fn
             }.toMap
           )
 
+          // Resolve wrappers in exports
           _ <- methods.traverse { case (methodName, fn) =>
             Exports[S].resolveAbilityField(
               name,
@@ -453,6 +449,7 @@ object TagInliner extends Logging {
             )
           }
 
+          // Resolve service in exports
           _ <- Exports[S].resolved(
             name,
             VarModel(name, serviceType)

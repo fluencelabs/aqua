@@ -47,30 +47,31 @@ object FuncArrow {
    * Create function - wrapper around a service method
    *
    * @param funcName name of the function
-   * @param serviceType type of the service
+   * @param serviceName name of the service
    * @param methodName name of the service method to wrap
    * @param methodType type of the service method to wrap
-   * @param id variable that holds the service id
    * @param idValue resolved value of the service id
-   * @param ret variable for return value
+   * @return `FuncArrow` wrapper for the service method
    */
   def fromServiceMethod(
     funcName: String,
-    serviceType: ServiceType,
+    serviceName: String,
     methodName: String,
     methodType: ArrowType,
-    id: VarRaw,
-    idValue: ValueModel,
-    ret: Option[VarRaw]
+    idValue: ValueModel
   ): FuncArrow = {
+    val id = VarRaw("id", idValue.`type`)
+    val retVar = methodType.res.map(t => VarRaw("ret", t))
+
+    val call = Call(
+      methodType.domain.toLabelledList().map(VarRaw.apply),
+      retVar.map(r => Call.Export(r.name, r.`type`)).toList
+    )
     val body = CallArrowRawTag.service(
       id,
       methodName,
-      Call(
-        methodType.domain.toLabelledList().map(VarRaw.apply),
-        ret.map(r => Call.Export(r.name, r.`type`)).toList
-      ),
-      serviceType.name,
+      call,
+      serviceName,
       methodType
     )
 
@@ -78,7 +79,7 @@ object FuncArrow {
       funcName = funcName,
       body = body.leaf,
       arrowType = methodType,
-      ret = ret.toList,
+      ret = retVar.toList,
       capturedArrows = Map.empty,
       capturedValues = Map(
         id.name -> idValue
