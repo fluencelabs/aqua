@@ -418,9 +418,7 @@ object TagInliner extends Logging {
           idm <- valueToModel(id)
           (idModel, idPrefix) = idm
 
-          idVarName <- Mangler[S].findAndForbidName(s"$name-id")
-          _ <- Exports[S].resolved(idVarName, idModel)
-          idVar = VarRaw(idVarName, id.`type`)
+          idVar = VarRaw("id", id.`type`)
 
           // TODO: Move FuncArrow creation somewhere else
           methods <- serviceType.fields.toSortedMap.toList.traverse {
@@ -451,7 +449,7 @@ object TagInliner extends Logging {
                   ret = ret,
                   capturedArrows = Map.empty,
                   capturedValues = Map(
-                    idVarName -> idModel
+                    idVar.name -> idModel
                   ),
                   capturedTopology = None
                 )
