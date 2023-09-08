@@ -611,4 +611,43 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
     }
   }
+
+  it should "forbid not arrow calls after <-" in {
+    def scriptPush(prefix: String, what: String) =
+      s"""
+         |func main() -> []string:
+         |  stream: *string
+         |${prefix.split("\n").map("  " + _).mkString("\n")}
+         |  stream <- $what
+         |  <- stream
+         |""".stripMargin
+
+    val scriptLiteral = scriptPush("", "\"a\"")
+
+    insideSemErrors(scriptLiteral) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+
+    val scriptVar = scriptPush(
+      """
+        |variable = "value"
+        |""".stripMargin,
+      "variable"
+    )
+
+    insideSemErrors(scriptVar) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+
+    val scriptArrayElement = scriptPush(
+      """
+        |arr = ["a", "b", "c"]
+        |""".stripMargin,
+      "arr[0]"
+    )
+
+    insideSemErrors(scriptArrayElement) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+  }
 }
