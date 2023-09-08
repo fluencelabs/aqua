@@ -48,12 +48,13 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
     )
     serviceType <- EitherT.fromOptionF(
       T.defineServiceType(expr.name, arrowsByName.toSortedMap.toMap),
-      Raw.error("Failed to resolve service type")
+      Raw.error("Failed to define service type")
     )
+    arrowsDefs = arrows.map { case (name, _) => name.value -> name }.toNem
     _ <- EitherT(
       A.defineService(
         expr.name,
-        arrows.map { case (name, _) => name.value -> name }.toNem,
+        arrowsDefs,
         serviceType,
         defaultId
       ).map(defined =>
