@@ -40,9 +40,7 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
     }.toNem
     defaultId <- expr.id.traverse(id =>
       EitherT.fromOptionF(
-        // TODO:  Here value is resolved two times
-        //        Make it better
-        V.valueToRaw(id) <* V.ensureIsString(id),
+        V.valueToStringRaw(id),
         Raw.error("Failed to resolve default service id")
       )
     )

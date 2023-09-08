@@ -34,23 +34,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   A: AbilitiesAlgebra[S, Alg]
 ) extends Logging {
 
-  def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
-    ensureTypeMatches(v, LiteralType.string)
-
-  def ensureTypeMatches(v: ValueToken[S], expected: Type): Alg[Boolean] =
-    resolveType(v).flatMap {
-      case Some(vt) =>
-        T.ensureTypeMatches(
-          v,
-          expected,
-          vt
-        )
-      case None => false.pure[Alg]
-    }
-
-  def resolveType(v: ValueToken[S]): Alg[Option[Type]] =
-    valueToRaw(v).map(_.map(_.`type`))
-
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
@@ -325,6 +308,21 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         case raw => E.report(v, s"Expected arrow call, got $raw").as(none)
       }
     )
+
+  def valueToTypedRaw(v: ValueToken[S], expectedType: Type): Alg[Option[ValueRaw]] =
+    OptionT(valueToRaw(v))
+      .flatMap(raw =>
+        OptionT.whenM(
+          T.ensureTypeMatches(v, expectedType, raw.`type`)
+        )(raw.pure)
+      )
+      .value
+
+  def valueToStringRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
+    valueToTypedRaw(v, LiteralType.string)
+
+  def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
+    valueToStringRaw(v).map(_.isDefined)
 
   private def callArrowFromAbility(
     ab: Name[S],

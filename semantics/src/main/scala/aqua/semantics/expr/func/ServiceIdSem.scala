@@ -25,17 +25,8 @@ class ServiceIdSem[S[_]](val expr: ServiceIdExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg]
   ): Prog[Alg, Raw] = (
     for {
-      _ <- EitherT(
-        V.ensureIsString(expr.id)
-          .map(isString =>
-            Raw
-              .error("Service ID was not a string")
-              .asLeft
-              .whenA(!isString)
-          )
-      )
       id <- EitherT.fromOptionF(
-        V.valueToRaw(expr.id),
+        V.valueToStringRaw(expr.id),
         Raw.error("Can not resolve service ID")
       )
       serviceType <- EitherT.fromOptionF(
