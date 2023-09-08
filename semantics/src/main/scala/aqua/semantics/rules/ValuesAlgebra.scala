@@ -7,6 +7,7 @@ import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
+import aqua.semantics.rules.errors.ErrorsAlgebra
 import aqua.types.*
 
 import cats.Monad
@@ -26,9 +27,10 @@ import scribe.Logging
 
 import scala.collection.immutable.SortedMap
 
-class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
+class ValuesAlgebra[S[_], Alg[_]: Monad](using
   N: NamesAlgebra[S, Alg],
   T: TypesAlgebra[S, Alg],
+  E: ErrorsAlgebra[S, Alg],
   A: AbilitiesAlgebra[S, Alg]
 ) extends Logging {
 
@@ -315,6 +317,15 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
         }
     }
 
+  def valueToCallArrowRaw(v: ValueToken[S]): Alg[Option[CallArrowRaw]] =
+    valueToRaw(v).flatMap(
+      _.flatTraverse {
+        case ca: CallArrowRaw => ca.some.pure[Alg]
+        // TODO: better error message (`raw` formatting)
+        case raw => E.report(v, s"Expected arrow call, got $raw").as(none)
+      }
+    )
+
   private def callArrowFromAbility(
     ab: Name[S],
     at: NamedType,
@@ -407,10 +418,11 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
 
 object ValuesAlgebra {
 
-  implicit def deriveValuesAlgebra[S[_], Alg[_]: Monad](implicit
+  given [S[_], Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg]
+    A: AbilitiesAlgebra[S, Alg],
+    E: ErrorsAlgebra[S, Alg]
   ): ValuesAlgebra[S, Alg] =
     new ValuesAlgebra[S, Alg]
 }

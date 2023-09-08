@@ -40,11 +40,8 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Alg[Option[FuncOp]] = for {
-    callArrowRaw <- V.valueToRaw(callArrow).map {
-      // TODO: Refactor this to support other results
-      case Some(car: CallArrowRaw) => car.some
-      case _ => none
-    }
+    // TODO: Accept other expressions
+    callArrowRaw <- V.valueToCallArrowRaw(expr.callArrow)
     maybeOp <- callArrowRaw.traverse(car =>
       variables
         .drop(car.baseType.codomain.length)
