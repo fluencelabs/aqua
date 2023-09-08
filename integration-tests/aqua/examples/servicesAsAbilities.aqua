@@ -61,7 +61,7 @@ func test() -> []string:
     for i <- ["iter-id-1", "iter-id-2"]:
         TestService i
         RenamedI = TestService
-        result <- RenamedI.concatId("simple call")
+        result <- RenamedI.concatId("call")
         captureI = RenamedI.concatId
         result <- captureI("capture call")
         result <- acceptClosure(RenamedI.concatId, "accept closure call")
