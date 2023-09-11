@@ -21,29 +21,41 @@ sealed trait ValueRaw {
 }
 
 object ValueRaw {
-
-  // TODO: move to LiteralRaw
   val InitPeerId: LiteralRaw = LiteralRaw("%init_peer_id%", ScalarType.string)
   val ParticleTtl: LiteralRaw = LiteralRaw("%ttl%", ScalarType.u32)
   val ParticleTimestamp: LiteralRaw = LiteralRaw("%timestamp%", ScalarType.u64)
 
   val Nil: LiteralRaw = LiteralRaw("[]", StreamType(BottomType))
 
-  val lastErrorType = StructType(
-    "LastError",
+  /**
+   * Type of error value
+   */
+  val errorType = StructType(
+    "Error",
     NonEmptyMap.of(
-      // These two fields are mandatory for all errors
+      /**
+       * `message` and `error_code` are always present
+       * For no-error state `message = ""` and `error_code = 0`
+       */
       "message" -> ScalarType.string,
       "error_code" -> ScalarType.i64,
-      // These fields are specific to AquaVM's errors only
+      /**
+       * Instruction that caused error
+       * For no-error state accessing this leads to error
+       */
       "instruction" -> ScalarType.string,
+      /**
+       * Peer id that caused error
+       * Only set for `call` and `canon` instructions
+       * For no-error state accessing this leads to error
+       */
       "peer_id" -> ScalarType.string
     )
   )
 
-  val lastError: VarRaw = VarRaw(
-    "%last_error%",
-    lastErrorType
+  val error: VarRaw = VarRaw(
+    ":error:",
+    errorType
   )
 
   type ApplyRaw = ApplyGateRaw | ApplyPropertyRaw | CallArrowRaw | CollectionRaw |

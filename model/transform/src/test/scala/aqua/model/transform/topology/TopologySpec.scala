@@ -932,7 +932,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           ).wrap(
             callModel(0, CallModel.Export("var", ScalarType.string) :: Nil)
           ),
-          failLastErrorModel
+          failErrorModel
         )
       ),
       callModel(1, Nil, VarRaw("var", ScalarType.string) :: Nil)
@@ -954,7 +954,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             through(otherRelay),
             through(relay),
             through(initPeer),
-            failLastErrorRes
+            failErrorRes
           )
         )
       ),
@@ -1036,7 +1036,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           through(otherRelay),
           through(relay),
           through(initPeer),
-          failLastErrorRes
+          failErrorRes
         )
       )
     )
@@ -1081,7 +1081,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               through(otherRelay2),
               through(otherRelay),
               through(otherPeerL),
-              failLastErrorRes
+              failErrorRes
             )
           )
         ),
@@ -1089,7 +1089,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           through(otherRelay),
           through(relay),
           through(initPeer),
-          failLastErrorRes
+          failErrorRes
         )
       )
     )
@@ -1141,14 +1141,14 @@ class TopologySpec extends AnyFlatSpec with Matchers {
                 SeqRes.wrap(
                   through(otherRelay2),
                   through(otherPeerN(3)),
-                  failLastErrorRes
+                  failErrorRes
                 )
               )
             ),
             SeqRes.wrap(
               through(otherRelay),
               through(otherPeerL),
-              failLastErrorRes
+              failErrorRes
             )
           )
         ),
@@ -1156,7 +1156,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           through(otherRelay),
           through(relay),
           through(initPeer),
-          failLastErrorRes
+          failErrorRes
         )
       )
     )
@@ -1193,7 +1193,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           through(otherRelay),
           through(relay),
           through(initPeer),
-          failLastErrorRes
+          failErrorRes
         )
       ),
       XorRes.wrap(
@@ -1206,7 +1206,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           through(otherRelay2),
           through(relay),
           through(initPeer),
-          failLastErrorRes
+          failErrorRes
         )
       )
     )
@@ -1246,7 +1246,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           through(otherRelay),
           through(relay),
           through(initPeer),
-          failLastErrorRes
+          failErrorRes
         )
       ),
       XorRes.wrap(
@@ -1258,7 +1258,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         SeqRes.wrap(
           through(relay),
           through(initPeer),
-          failLastErrorRes
+          failErrorRes
         )
       ),
       XorRes.wrap(
@@ -1271,7 +1271,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           through(otherRelay2),
           through(relay),
           through(initPeer),
-          failLastErrorRes
+          failErrorRes
         )
       )
     )

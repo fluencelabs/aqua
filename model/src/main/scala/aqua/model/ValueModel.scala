@@ -23,15 +23,11 @@ object ValueModel {
   def errorCode(error: VarModel): Option[VarModel] =
     error.intoField("error_code")
 
-  val lastError = VarModel(
-    name = ValueRaw.lastError.name,
-    baseType = ValueRaw.lastError.baseType
-  )
+  val error = VarModel.fromVarRaw(ValueRaw.error)
+  val errorType = ValueRaw.errorType
 
-  val lastErrorType = ValueRaw.lastErrorType
-
-  // NOTE: It should be safe as %last_error% should have `error_code` field
-  val lastErrorCode = errorCode(lastError).get
+  // NOTE: It should be safe as `:error:` should have `error_code` field
+  val lastErrorCode = errorCode(error).get
 
   implicit object ValueModelEq extends Eq[ValueModel] {
     override def eqv(x: ValueModel, y: ValueModel): Boolean = x == y
@@ -55,7 +51,7 @@ object ValueModel {
 
     def unapply(vm: VarModel): Option[(String, AbilityType, Chain[PropertyModel])] =
       vm match {
-        case VarModel(name, t@AbilityType(_, _), properties) =>
+        case VarModel(name, t @ AbilityType(_, _), properties) =>
           (name, t, properties).some
         case _ => none
       }
@@ -223,4 +219,8 @@ case class VarModel(name: String, baseType: Type, properties: Chain[PropertyMode
       case None =>
         this // Should not happen
     }
+}
+
+object VarModel {
+  def fromVarRaw(raw: VarRaw): VarModel = VarModel(raw.name, raw.baseType)
 }

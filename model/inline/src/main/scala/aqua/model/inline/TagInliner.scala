@@ -200,7 +200,7 @@ object TagInliner extends Logging {
               ),
               // This will return to previous topology
               // and propagate error up
-              FailModel(ValueModel.lastError).leaf
+              FailModel(ValueModel.error).leaf
             )
         } yield TagInlined.Mapping(
           toModel = toModel,

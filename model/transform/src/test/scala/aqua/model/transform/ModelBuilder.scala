@@ -81,7 +81,7 @@ object ModelBuilder {
         ValueModel.fromRaw(bc.errorHandlingSrvId),
         bc.errorFuncName,
         CallRes(
-          ValueModel.lastError :: LiteralModel.number(i) :: Nil,
+          ValueModel.error :: LiteralModel.number(i) :: Nil,
           None
         ),
         on
@@ -108,9 +108,9 @@ object ModelBuilder {
       )
       .leaf
 
-  val failLastErrorModel = FailModel(ValueModel.lastError).leaf
+  val failErrorModel = FailModel(ValueModel.error).leaf
 
-  val failLastErrorRes = res.FailRes(ValueModel.lastError).leaf
+  val failErrorRes = res.FailRes(ValueModel.error).leaf
 
   def onRethrowModel(
     peer: ValueModel,
@@ -121,7 +121,7 @@ object ModelBuilder {
         OnModel(peer, Chain.fromSeq(via)).wrap(
           child
         ),
-        failLastErrorModel
+        failErrorModel
       )
 
   def fold(item: String, iter: ValueRaw, mode: Option[ForModel.Mode], body: OpModel.Tree*) = {
