@@ -1,6 +1,6 @@
 {
   "name": "@fluencelabs/aqua",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Aqua compiler",
   "type": "module",
   "files": [
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@fluencelabs/aqua-ipfs": "0.5.9",
-    "@fluencelabs/aqua-lib": "0.6.0",
+    "@fluencelabs/aqua-lib": "0.7.3",
     "@fluencelabs/fluence": "0.28.0",
     "@fluencelabs/fluence-network-environment": "1.1.2",
     "ipfs-http-client": "50.1.2",

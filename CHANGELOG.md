@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.12.1](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.0...aqua-v0.12.1) (2023-09-11)
+
+
+### Bug Fixes
+
+* **compiler:** Error on not arrow call after `&lt;-` ([#876](https://github.com/fluencelabs/aqua/issues/876)) ([69a808e](https://github.com/fluencelabs/aqua/commit/69a808e24307b5fe312a6dfdc6041c310c33d96d))
+* **compiler:** Fix closure stream capture [fixes LNG-58] ([#857](https://github.com/fluencelabs/aqua/issues/857)) ([443e65e](https://github.com/fluencelabs/aqua/commit/443e65e3d8bca4774f5bdb6db5e526c5f2201c89))
+* **deps:** update dependency @fluencelabs/aqua-lib to v0.7.3 ([#882](https://github.com/fluencelabs/aqua/issues/882)) ([3419607](https://github.com/fluencelabs/aqua/commit/3419607e8ccd3d280d5d168d6ffb9cb9380d32a8))
+* **deps:** update dependency @fluencelabs/js-client to v0.1.1 ([#865](https://github.com/fluencelabs/aqua/issues/865)) ([1f23545](https://github.com/fluencelabs/aqua/commit/1f23545b49db2e3bb387ef9d961cac53bb75d127))
+* **deps:** update dependency @fluencelabs/js-client to v0.1.3 ([#875](https://github.com/fluencelabs/aqua/issues/875)) ([df111ad](https://github.com/fluencelabs/aqua/commit/df111adf21c1abe5fbbed7264734927a3f048ffc))
+
 ## [0.12.0](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.11...aqua-v0.12.0) (2023-08-25)
 
 
