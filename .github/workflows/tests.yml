@@ -59,7 +59,7 @@ jobs:
           password: ${{ env.DOCKER_PASSWORD }}
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: fluencelabs/aqua
           ref: ${{ inputs.ref }}
