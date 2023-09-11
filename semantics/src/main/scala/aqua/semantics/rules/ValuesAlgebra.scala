@@ -358,8 +358,16 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
             callArrowFromAbility(ab.asName, nt, callArrow.funcName).pure
           case _ =>
             T.getType(ab.value).flatMap {
-              case Some(at: AbilityType) =>
-                callArrowFromAbility(ab.asName, at, callArrow.funcName).pure
+              case Some(st: ServiceType) =>
+                OptionT(A.getServiceRename(ab))
+                  .subflatMap(rename =>
+                    callArrowFromAbility(
+                      ab.asName.rename(rename),
+                      st,
+                      callArrow.funcName
+                    )
+                  )
+                  .value
               case _ =>
                 (A.getArrow(ab, callArrow.funcName), A.getServiceId(ab)).mapN {
                   case (Some(at), Right(sid)) =>
