@@ -151,7 +151,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
             LiteralModel("\"math\"", ScalarType.string),
             "add",
             CallModel(
-              incrVar :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
+              v :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
               CallModel.Export(incrVar.name, incrVar.`type`) :: Nil
             )
           ).leaf
