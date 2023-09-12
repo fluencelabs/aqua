@@ -1,28 +1,22 @@
-import "@fluencelabs/aqua-api"
-import {compileFromPath} from "@fluencelabs/aqua-api";
-import { promises as fs } from 'fs';
-import * as Path from "path";
+import { compileFromPath } from "@fluencelabs/aqua-api";
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve, parse, format, dirname } from "path";
 
-async function main() {
-    const inputPath = Path.resolve("./aqua")
-    const result = await compileFromPath({
-        filePath: "aqua",
-        imports: ["node_modules"],
-        targetType: "ts"
-    })
+const inputPath = resolve("./aqua");
 
-    const outputPath = Path.resolve("./src/compiled")
-    await fs.mkdir(outputPath, {recursive: true})
+const result = await compileFromPath({
+  filePath: "aqua",
+  imports: ["node_modules"],
+  targetType: "ts",
+});
 
-    for (const src of result.generatedSources) {
+const outputPath = resolve("./src/compiled");
+await mkdir(outputPath, { recursive: true });
 
-        const outFilePath = Path.resolve(src.name).replace(inputPath, outputPath)
-        const outputTsPath = Path.format({ ...Path.parse(outFilePath), base: '', ext: '.ts' })
-        console.log(outputTsPath)
-        await fs.mkdir(Path.dirname(outputTsPath), {recursive: true})
-
-        await fs.writeFile(outputTsPath, src.tsSource);
-    }
+for (const src of result.generatedSources) {
+  const outFilePath = resolve(src.name).replace(inputPath, outputPath);
+  const outputTsPath = format({ ...parse(outFilePath), base: "", ext: ".ts" });
+  console.log(outputTsPath);
+  await mkdir(dirname(outputTsPath), { recursive: true });
+  await writeFile(outputTsPath, src.tsSource);
 }
-
-main()
