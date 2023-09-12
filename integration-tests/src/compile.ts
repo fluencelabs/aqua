@@ -16,7 +16,7 @@ await mkdir(outputPath, { recursive: true });
 for (const src of result.generatedSources) {
   const outFilePath = resolve(src.name).replace(inputPath, outputPath);
   const outputTsPath = format({ ...parse(outFilePath), base: "", ext: ".ts" });
-  console.log(outputTsPath);
+
   await mkdir(dirname(outputTsPath), { recursive: true });
   await writeFile(outputTsPath, src.tsSource);
 }
