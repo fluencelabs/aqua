@@ -1,17 +1,18 @@
 package aqua.model.inline.raw
 
-import aqua.model.*
+import aqua.model.{EmptyModel, *}
 import aqua.model.inline.Inline
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{ApplyGateRaw, LiteralRaw, VarRaw}
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
-
 import cats.data.State
 import cats.data.Chain
 import cats.syntax.monoid.*
 import cats.syntax.option.*
 import scribe.Logging
+
+import scala.util.Try
 
 object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
 
@@ -61,10 +62,10 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
     val resultCanon =
       VarModel(canonName, CanonStreamType(streamType.element))
 
-    val incrVar = VarModel(idxIncrName, ScalarType.u32)
+    val (incrVar, incrOp) = increment(idxModel, idxIncrName)
 
     RestrictionModel(varSTest.name, streamType).wrap(
-      increment(idxModel, incrVar),
+      incrOp,
       ForModel(iter.name, VarModel(streamName, streamType), ForModel.Mode.Never.some).wrap(
         PushToStreamModel(
           iter,
@@ -132,13 +133,30 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
 
     }
 
-  private def increment(v: ValueModel, result: VarModel) =
-    CallServiceModel(
-      LiteralModel("\"math\"", ScalarType.string),
-      "add",
-      CallModel(
-        v :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
-        CallModel.Export(result.name, result.`type`) :: Nil
-      )
-    ).leaf
+  private def increment(v: ValueModel, name: String): (ValueModel, OpModel.Tree) = {
+    val incrVar = VarModel(name, ScalarType.u32)
+    val incrValue = v match {
+      case LiteralModel(value, _) =>
+        Try(value.toInt + 1).toOption.map(LiteralModel.number).getOrElse(incrVar)
+      case _ =>
+        incrVar
+    }
+    incrValue match {
+      case _: LiteralModel =>
+        (incrValue, EmptyModel.leaf)
+      case _ =>
+        (
+          incrVar,
+          CallServiceModel(
+            LiteralModel("\"math\"", ScalarType.string),
+            "add",
+            CallModel(
+              incrVar :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
+              CallModel.Export(incrVar.name, incrVar.`type`) :: Nil
+            )
+          ).leaf
+        )
+    }
+
+  }
 }

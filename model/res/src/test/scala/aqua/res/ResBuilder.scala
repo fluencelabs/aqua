@@ -9,7 +9,7 @@ import cats.syntax.option.*
 
 object ResBuilder {
 
-  def join(stream: VarModel, onIdx: ValueModel, peer: ValueModel) = {
+  def join(stream: VarModel, onIdxV: ValueModel, peer: ValueModel) = {
     val testVM = VarModel(stream.name + "_test", stream.`type`)
     val testStreamType = stream.`type`.asInstanceOf[StreamType] // Unsafe
     val iter = VarModel(stream.name + "_fold_var", ScalarType.string)
@@ -18,30 +18,37 @@ object ResBuilder {
     val arrayRes = VarModel(stream.name + "_gate", ArrayType(ScalarType.string))
     val idx = VarModel(stream.name + "_incr", ScalarType.u32)
 
+    val (onIdx, idxTree) = onIdxV match {
+      case LiteralModel(v, t) =>
+        (Some(LiteralModel.number(v.toInt + 1)), Nil)
+      case _ =>
+        (None, CallServiceRes(
+          LiteralModel("\"math\"", ScalarType.string),
+          "add",
+          CallRes(
+            onIdxV :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
+            Some(CallModel.Export(idx.name, idx.`type`))
+          ),
+          peer
+        ).leaf :: Nil)
+    }
+
     RestrictionRes(testVM.name, testStreamType).wrap(
-      CallServiceRes(
-        LiteralModel("\"math\"", ScalarType.string),
-        "add",
-        CallRes(
-          onIdx :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
-          Some(CallModel.Export(idx.name, idx.`type`))
-        ),
-        peer
-      ).leaf,
+      idxTree :::
       FoldRes(iter.name, stream, ForModel.Mode.Never.some).wrap(
         ApRes(iter, CallModel.Export(testVM.name, testVM.`type`)).leaf,
         CanonRes(testVM, peer, CallModel.Export(canon.name, canon.`type`)).leaf,
         XorRes.wrap(
           MatchMismatchRes(
             canon.copy(properties = Chain.one(FunctorModel("length", ScalarType.u32))),
-            idx,
+            onIdx.getOrElse(idx),
             true
           ).leaf,
           NextRes(iter.name).leaf
         )
-      ),
-      CanonRes(testVM, peer, CallModel.Export(canonRes.name, canonRes.`type`)).leaf,
-      ApRes(canonRes, CallModel.Export(arrayRes.name, arrayRes.`type`)).leaf
+      ) ::
+      CanonRes(testVM, peer, CallModel.Export(canonRes.name, canonRes.`type`)).leaf ::
+      ApRes(canonRes, CallModel.Export(arrayRes.name, arrayRes.`type`)).leaf :: Nil
     )
   }
 

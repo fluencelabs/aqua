@@ -1,26 +1,24 @@
 package aqua.model.inline
 
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
+import aqua.model.inline.Inline.{parDesugarPrefixOpt, seqDesugarPrefix}
 import aqua.model.inline.RawValueInliner.collectionToModel
 import aqua.model.inline.raw.CallArrowRawInliner
-import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{BoxType, CanonStreamType, DataType, StreamType}
-import aqua.model.inline.Inline.parDesugarPrefixOpt
-
-import cats.syntax.traverse.*
+import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
+import aqua.types.{BoxType, CanonStreamType, StreamType}
+import cats.data.{Chain, State, StateT}
+import cats.instances.list.*
 import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
 import cats.syntax.apply.*
+import cats.syntax.bifunctor.*
+import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
-import cats.instances.list.*
-import cats.data.{Chain, State, StateT}
-import cats.syntax.show.*
-import cats.syntax.bifunctor.*
-import scribe.{log, Logging}
+import cats.syntax.traverse.*
+import scribe.Logging
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -33,8 +31,7 @@ import scribe.{log, Logging}
  */
 object TagInliner extends Logging {
 
-  import RawValueInliner.{callToModel, valueListToModel, valueToModel}
-
+  import RawValueInliner.{valueListToModel, valueToModel}
   import aqua.model.inline.Inline.parDesugarPrefix
 
   /**
@@ -204,7 +201,7 @@ object TagInliner extends Logging {
             )
         } yield TagInlined.Mapping(
           toModel = toModel,
-          prefix = parDesugarPrefix(viaF.prependedAll(pif))
+          prefix = seqDesugarPrefix(viaF.prependedAll(pif))
         )
 
       case IfTag(valueRaw) =>

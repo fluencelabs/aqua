@@ -80,6 +80,13 @@ private[inline] object Inline {
       case _ => ParModel.wrap(ops).some
     }
 
+  def seqDesugarPrefix(ops: List[OpModel.Tree]): Option[OpModel.Tree] =
+    ops match {
+      case Nil => none
+      case x :: Nil => x.some
+      case _ => SeqModel.wrap(ops).some
+    }
+
   def parDesugarPrefixOpt(ops: Option[OpModel.Tree]*): Option[OpModel.Tree] =
     parDesugarPrefix(ops.toList.flatten)
 }

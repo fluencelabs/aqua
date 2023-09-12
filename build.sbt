@@ -38,56 +38,6 @@ val commons = Seq(
 
 commons
 
-lazy val cli = crossProject(JSPlatform, JVMPlatform)
-  .withoutSuffixFor(JVMPlatform)
-  .crossType(CrossType.Pure)
-  .in(file("cli/cli"))
-  .enablePlugins(GraalVMNativeImagePlugin)
-  .settings(commons)
-  .settings(
-    Compile / mainClass := Some("aqua.AquaCli"),
-    graalVMNativeImageOptions ++= Seq(
-      "--no-fallback",
-      "--diagnostics-mode",
-      "--initialize-at-build-time",
-      "--initialize-at-run-time=scala.util.Random$",
-      "-H:-DeleteLocalSymbols",
-      "-H:+PreserveFramePointer",
-      "-H:+ReportExceptionStackTraces",
-      "-H:+DashboardHeap",
-      "-H:+DashboardCode",
-      "-H:+DashboardPointsTo",
-      "-H:+DashboardAll"
-    ) ++ sys.env
-      .get("COMPILE_STATIC")
-      .filter(_.trim.toLowerCase() == "true")
-      .map(_ => Seq("--static"))
-      .getOrElse(Seq.empty),
-    libraryDependencies ++= Seq(
-      "com.monovore" %%% "decline"        % declineV,
-      "com.monovore" %%% "decline-effect" % declineV
-    )
-  )
-  .dependsOn(compiler, `backend-air`, `backend-ts`, io, definitions, logging, constants, `aqua-run`)
-
-lazy val cliJS = cli.js
-  .settings(
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "../../cli-npm" / "aqua.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "../../cli-npm" / "aqua.js",
-    scalaJSLinkerConfig                ~= (_.withModuleKind(ModuleKind.ESModule)),
-    scalaJSUseMainModuleInitializer    := true
-  )
-  .dependsOn(`js-exports`, `js-imports`)
-
-lazy val cliJVM = cli.jvm
-  .settings(
-    Compile / run / mainClass  := Some("aqua.AquaCli"),
-    assembly / mainClass       := Some("aqua.AquaCli"),
-    assembly / assemblyJarName := "aqua-" + version.value + ".jar",
-    libraryDependencies ++= Seq(
-    )
-  )
-
 lazy val `aqua-run` = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
@@ -149,7 +99,7 @@ lazy val `aqua-api` = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("api/api"))
   .settings(commons)
-  .dependsOn(`aqua-run`, `backend-api`)
+  .dependsOn(`aqua-run`, `backend-api`, io)
 
 lazy val `aqua-apiJS` = `aqua-api`.js
   .settings(
