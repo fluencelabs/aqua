@@ -36,7 +36,6 @@ function validateArgs() {
 }
 
 const PATHS_TO_PACKAGES = [
-    "./cli/cli-npm",
     "./api/api-npm",
     "./language-server/language-server-npm",
     "./integration-tests"
