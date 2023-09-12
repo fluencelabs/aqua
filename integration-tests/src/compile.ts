@@ -25,6 +25,7 @@ await Promise.all(
       base: "",
       ext: ".ts",
     });
+
     await mkdir(dirname(outputTsPath), { recursive: true });
     await writeFile(outputTsPath, src.tsSource);
   }),
