@@ -64,9 +64,9 @@ importers:
         specifier: 1.8.1
         version: 1.8.1
     devDependencies:
-      '@fluencelabs/aqua':
+      '@fluencelabs/aqua-api':
         specifier: 0.12.1
-        version: link:../cli/cli-npm
+        version: link:../api/api-npm
       '@fluencelabs/aqua-dht':
         specifier: 0.2.5
         version: 0.2.5

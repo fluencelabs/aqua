@@ -18,5 +18,8 @@
     "dist",
     "bundle"
   ],
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "ts-node": {
+    "esm": true
+  }
 }
