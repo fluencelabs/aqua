@@ -9,6 +9,7 @@ import aqua.types.{AbilityType, ArrowType, BoxType, NamedType, StreamType, Type}
 
 import cats.data.StateT
 import cats.data.{Chain, IndexedStateT, State}
+import cats.syntax.functor.*
 import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
@@ -275,8 +276,16 @@ object ArrowInliner extends Logging {
      * Find new names for captured values and arrows
      * to avoid collisions, then resolve them in context.
      */
-    // capturedValues <- findNewNames(fn.capturedValues)
-    // capturedArrows <- findNewNames(fn.capturedArrows)
+    capturedValues <- findNewNames(fn.capturedValues)
+    capturedArrowValues = fn.capturedArrows.flatMap { case (arrowName, arrow) =>
+      capturedValues.renames
+        .get(arrowName)
+        .orElse(fn.capturedValues.get(arrowName).as(arrowName))
+        .map(_ -> arrow)
+    }
+    capturedArrows <- findNewNames(fn.capturedArrows.filterNot { case (arrowName, _) =>
+      capturedArrowValues.contains(arrowName)
+    })
 
     /**
      * Function defines variables inside its body.
@@ -296,13 +305,13 @@ object ArrowInliner extends Logging {
         streamRenames ++
         arrowRenames ++
         abRenames ++
-        // capturedValues.renames ++
-        // capturedArrows.renames ++
+        capturedValues.renames ++
+        capturedArrows.renames ++
         defineRenames
     )
 
-    arrowsResolved = arrows ++ fn.capturedArrows
-    exportsResolved = exports ++ data.renamed ++ fn.capturedValues
+    arrowsResolved = arrows ++ capturedArrowValues ++ capturedArrows.renamed
+    exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
     tree = fn.body.rename(renaming)
     ret = fn.ret.map(_.renameVars(renaming))
