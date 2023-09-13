@@ -4,6 +4,7 @@ import aqua.api.TargetType.TypeScriptType
 import aqua.backend.ts.TypeScriptBackend
 import aqua.compiler.AquaCompiled
 import aqua.files.FileModuleId
+
 import cats.data.Chain
 import cats.data.Validated.{Invalid, Valid}
 import cats.effect.{IO, IOApp}
@@ -30,7 +31,7 @@ object Test extends IOApp.Simple {
             .through(Files[IO].writeAll(targetPath))
             .attempt
             .compile
-            .last.map(_ => println(s"File: ${targetPath.absolute.normalize}"))
+            .last.flatMap(_ => IO.delay(println(s"File: ${targetPath.absolute.normalize}")))
         case Invalid(e) =>
           IO.delay(println(e))
 
