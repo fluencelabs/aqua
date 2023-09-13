@@ -63,7 +63,7 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     streamsInScope <- N.streamsDefinedWithinScope()
     retValues <- T.endArrowScope(expr.arrowTypeExpr)
     retValuesDerivedFrom <- N.getDerivedFrom(retValues.map(_.varNames))
-    res <- bodyGen match {
+    res = bodyGen match {
       case FuncOp(bodyModel) =>
         // TODO: wrap with local on...via...
         val retsAndArgs = retValues zip funcArrow.codomain.toList
@@ -110,41 +110,20 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           case ((v, _), _) => (Chain.empty, v)
         }.unzip.leftMap(_.combineAll)
 
-        // Gather all names captured by the arrow
         val argNames = funcArrow.domain.toLabelledList().map { case (name, _) => name }
-        val capturedVars = bodyModel.usesVarNames.value -- argNames
 
-        // Test if captured name is actually a service
-        // it means that it is used with default id.
-        // In this case prepend resolution with
-        // default id to the arrow body.
-        capturedVars.toList
-          .traverse(name =>
-            (for {
-              serviceType <- OptionT(
-                T.getType(name)
-              ).collect { case st: ServiceType => st }
-              defaultId <- OptionT(
-                A.getDefaultServiceIdIfUnresolvedInPrevScope(name)
-              )
-            } yield ServiceIdTag(defaultId, serviceType, name).leaf).value
-          )
-          .map(_.collect { case Some(tag) => tag })
-          .map(Chain.fromSeq)
-          .map { services =>
-            val bodyModified = SeqTag.wrap(
-              services ++ (bodyModel +: bodyRets)
-            )
+        val bodyModified = SeqTag.wrap(
+          bodyModel +: bodyRets
+        )
 
-            // wrap streams with restrictions
-            val bodyWithRestrictions = localStreams.foldLeft(bodyModified) {
-              case (bm, (streamName, streamType)) =>
-                RestrictionTag(streamName, streamType).wrap(bm)
-            }
+        // wrap streams with restrictions
+        val bodyWithRestrictions = localStreams.foldLeft(bodyModified) {
+          case (bm, (streamName, streamType)) =>
+            RestrictionTag(streamName, streamType).wrap(bm)
+        }
 
-            ArrowRaw(funcArrow, retVals, bodyWithRestrictions)
-          }
-      case _ => Raw.error("Invalid arrow body").pure
+        ArrowRaw(funcArrow, retVals, bodyWithRestrictions)
+      case _ => Raw.error("Invalid arrow body")
     }
   } yield res
 
