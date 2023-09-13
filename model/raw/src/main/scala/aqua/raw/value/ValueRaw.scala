@@ -255,7 +255,9 @@ case class CallArrowRaw(
       )
     )
 
-  override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
+  override def varNames: Set[String] = name.some
+    .filterNot(_ => ability.isDefined || serviceId.isDefined)
+    .toSet ++ arguments.flatMap(_.varNames).toSet
 
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(
