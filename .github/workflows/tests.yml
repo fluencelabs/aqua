@@ -59,7 +59,7 @@ jobs:
           password: ${{ env.DOCKER_PASSWORD }}
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: fluencelabs/aqua
           ref: ${{ inputs.ref }}
@@ -81,8 +81,8 @@ jobs:
         with:
           apps: sbt
 
-      - name: cli-js build
-        run: sbt "cliJS/fastOptJS"
+      - name: aqua-api build
+        run: sbt "aqua-apiJS/fastOptJS"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2.4.0
@@ -107,10 +107,6 @@ jobs:
 
       - run: pnpm install --no-frozen-lockfile
         working-directory: integration-tests
-
-      - name: Build cli
-        run: pnpm run build
-        working-directory: cli/cli-npm
 
       - name: Compile aqua
         run: pnpm run compile-aqua

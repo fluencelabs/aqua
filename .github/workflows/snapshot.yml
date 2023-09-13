@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: fluencelabs/aqua
           ref: ${{ inputs.ref }}
@@ -51,7 +51,7 @@ jobs:
       - name: scala-js build
         env:
           SNAPSHOT: ${{ steps.version.outputs.id }}
-        run: sbt ";cliJS/fastOptJS;language-server-apiJS/fastOptJS;aqua-apiJS/fastOptJS"
+        run: sbt ";language-server-apiJS/fastOptJS;aqua-apiJS/fastOptJS"
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.7.3
