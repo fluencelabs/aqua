@@ -250,8 +250,8 @@ case class CallArrowRaw(
   override def map(f: ValueRaw => ValueRaw): ValueRaw =
     f(
       copy(
-        arguments = arguments.map(f),
-        serviceId = serviceId.map(f)
+        arguments = arguments.map(_.map(f)),
+        serviceId = serviceId.map(_.map(f))
       )
     )
 
