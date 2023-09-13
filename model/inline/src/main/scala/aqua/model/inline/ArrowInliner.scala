@@ -275,8 +275,8 @@ object ArrowInliner extends Logging {
      * Find new names for captured values and arrows
      * to avoid collisions, then resolve them in context.
      */
-    capturedValues <- findNewNames(fn.capturedValues)
-    capturedArrows <- findNewNames(fn.capturedArrows)
+    // capturedValues <- findNewNames(fn.capturedValues)
+    // capturedArrows <- findNewNames(fn.capturedArrows)
 
     /**
      * Function defines variables inside its body.
@@ -296,13 +296,13 @@ object ArrowInliner extends Logging {
         streamRenames ++
         arrowRenames ++
         abRenames ++
-        capturedValues.renames ++
-        capturedArrows.renames ++
+        // capturedValues.renames ++
+        // capturedArrows.renames ++
         defineRenames
     )
 
-    arrowsResolved = arrows ++ capturedArrows.renamed
-    exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
+    arrowsResolved = arrows ++ fn.capturedArrows
+    exportsResolved = exports ++ data.renamed ++ fn.capturedValues
 
     tree = fn.body.rename(renaming)
     ret = fn.ret.map(_.renameVars(renaming))
@@ -322,12 +322,13 @@ object ArrowInliner extends Logging {
 
     exports <- Exports[S].exports
     streams <- getOutsideStreamNames
+    arrows = passArrows ++ arrowsFromAbilities
 
     inlineResult <- Exports[S].scope(
       Arrows[S].scope(
         for {
           // Process renamings, prepare environment
-          fn <- ArrowInliner.prelude(arrow, call, exports, passArrows ++ arrowsFromAbilities)
+          fn <- ArrowInliner.prelude(arrow, call, exports, arrows)
           inlineResult <- ArrowInliner.inline(fn, call, streams)
         } yield inlineResult
       )

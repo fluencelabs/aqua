@@ -5,7 +5,7 @@ import aqua.raw.ops.CallArrowRawTag
 import aqua.raw.value.ValueRaw
 import aqua.raw.value.CallArrowRaw
 import aqua.raw.{ConstantRaw, RawContext, RawPart, ServiceRaw, TypeRaw}
-import aqua.types.{StructType, Type}
+import aqua.types.{AbilityType, StructType, Type}
 
 import cats.Monoid
 import cats.data.NonEmptyMap
@@ -41,10 +41,41 @@ case class AquaContext(
   ).map(_.leftMap(prefix + _)).toMap
 
   lazy val allValues: Map[String, ValueModel] =
-    all(_.values)
+    all(_.values) ++ services.flatMap { case (srvName, srv) =>
+      srv.defaultId.toList.flatMap(_ =>
+        srv.`type`.arrows.map { case (arrowName, arrowType) =>
+          val fullName = AbilityType.fullName(srvName, arrowName)
+
+          fullName -> VarModel(
+            fullName,
+            arrowType
+          )
+        }.updated(
+          srvName,
+          VarModel(
+            srvName,
+            srv.`type`
+          )
+        )
+      )
+    }
 
   lazy val allFuncs: Map[String, FuncArrow] =
-    all(_.funcs)
+    all(_.funcs) ++ services.flatMap { case (srvName, srv) =>
+      srv.defaultId.toList.flatMap(id =>
+        srv.`type`.arrows.map { case (arrowName, arrowType) =>
+          val fullName = AbilityType.fullName(srvName, arrowName)
+
+          fullName -> FuncArrow.fromServiceMethod(
+            fullName,
+            srvName,
+            arrowName,
+            arrowType,
+            id
+          )
+        }
+      )
+    }
 
   private def pickOne[T](
     name: String,
