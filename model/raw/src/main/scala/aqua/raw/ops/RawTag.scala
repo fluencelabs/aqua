@@ -208,6 +208,22 @@ case class CallArrowRawTag(
 
 object CallArrowRawTag {
 
+  def ability(
+    abilityName: String,
+    funcName: String,
+    call: Call,
+    arrowType: ArrowType
+  ): CallArrowRawTag =
+    CallArrowRawTag(
+      call.exportTo,
+      CallArrowRaw.ability(
+        abilityName,
+        funcName,
+        arrowType,
+        call.args
+      )
+    )
+
   def service(
     serviceId: ValueRaw,
     fnName: String,

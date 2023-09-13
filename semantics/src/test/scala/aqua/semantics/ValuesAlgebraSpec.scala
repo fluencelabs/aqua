@@ -11,7 +11,7 @@ import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw}
 import aqua.raw.RawContext
 import aqua.types.*
 import aqua.parser.lexer.*
-import aqua.raw.value.ApplyUnaryOpRaw
+import aqua.raw.value.*
 import aqua.parser.lexer.ValueToken.string
 
 import org.scalatest.flatspec.AnyFlatSpec
