@@ -89,6 +89,9 @@ object AbilitiesState {
   def init[S[_]](context: RawContext): AbilitiesState[S] =
     AbilitiesState(
       services = context.allServices.keySet,
+      rootServiceIds = context.allServices.flatMap { case (name, service) =>
+        service.defaultId.map(name -> _)
+      },
       abilities = context.abilities // TODO is it the right way to collect abilities? Why?
     )
 }
