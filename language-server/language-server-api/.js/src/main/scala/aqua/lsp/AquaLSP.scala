@@ -203,7 +203,7 @@ object AquaLSP extends App with Logging {
 
       val result = fileRes match {
         case Valid(lsp) =>
-          val errors = lsp.errors.map(CompileError[FileModuleId, AquaFileError, FileSpan.F]).flatMap(errorToInfo)
+          val errors = lsp.errors.map(CompileError.apply).flatMap(errorToInfo)
           errors match
             case Nil =>
               logger.debug("No errors on compilation.")

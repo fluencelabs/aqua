@@ -67,6 +67,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
     RawSemantics
       .interpret(ast, initState, init.raw)
       .map { case (state, ctx) =>
+        // TODO: better to change return type in `process` method
         Valid(
           LspContext(
             raw = ctx,
