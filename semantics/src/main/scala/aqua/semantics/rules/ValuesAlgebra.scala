@@ -283,15 +283,15 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                 } yield Option.when(
                   leftChecked.isDefined && rightChecked.isDefined
                 )(
-                  CallArrowRaw(
-                    ability = Some(id),
-                    name = fn,
-                    arguments = leftRaw :: rightRaw :: Nil,
+                  CallArrowRaw.service(
+                    abilityName = id,
+                    serviceId = LiteralRaw.quote(id),
+                    funcName = fn,
                     baseType = ArrowType(
                       ProductType(lType :: rType :: Nil),
                       ProductType(resType :: Nil)
                     ),
-                    serviceId = Some(LiteralRaw.quote(id))
+                    arguments = leftRaw :: rightRaw :: Nil
                   )
                 )
 

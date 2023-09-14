@@ -247,12 +247,10 @@ object CallArrowRawTag {
   def func(fnName: String, call: Call): CallArrowRawTag =
     CallArrowRawTag(
       call.exportTo,
-      CallArrowRaw(
-        None,
-        fnName,
-        call.args,
-        call.arrowType,
-        None
+      CallArrowRaw.func(
+        funcName = fnName,
+        baseType = call.arrowType,
+        arguments = call.args
       )
     )
 }

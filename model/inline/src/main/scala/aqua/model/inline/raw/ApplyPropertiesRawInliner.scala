@@ -74,12 +74,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         }
       for {
         callArrow <- CallArrowRawInliner(
-          CallArrowRaw(
-            None,
-            AbilityType.fullName(varModel.name, arrowName),
-            arguments,
-            arrowType,
-            None
+          CallArrowRaw.func(
+            funcName = AbilityType.fullName(varModel.name, arrowName),
+            baseType = arrowType,
+            arguments = arguments
           )
         )
         result <- callArrow match {
