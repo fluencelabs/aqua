@@ -38,7 +38,6 @@ class AbilitiesInterpreter[S[_], X](using
   override def defineService(
     name: NamedTypeToken[S],
     arrowDefs: NonEmptyMap[String, Name[S]],
-    serviceType: ServiceType,
     defaultId: Option[ValueRaw]
   ): SX[Boolean] =
     serviceExists(name.value).flatMap {
@@ -54,13 +53,8 @@ class AbilitiesInterpreter[S[_], X](using
           .as(false)
       case false =>
         for {
-          _ <- modify(s =>
-            s.copy(
-              services = s.services + name.value,
-              definitions = s.definitions.updated(name.value, name),
-              rootServiceIds = s.rootServiceIds ++ defaultId.map(name.value -> _)
-            )
-          )
+          _ <- modify(_.defineService(name, defaultId))
+          // TODO: Is it used?
           _ <- locations.addTokenWithFields(
             name.value,
             name,
@@ -97,18 +91,18 @@ class AbilitiesInterpreter[S[_], X](using
         report(name, "Ability with this name is undefined").as(none)
     }
 
-  override def setServiceId(name: NamedTypeToken[S], id: ValueRaw): SX[Option[String]] =
+  override def renameService(name: NamedTypeToken[S]): SX[Option[String]] =
     serviceExists(name.value).flatMap {
       case true =>
         mapStackHeadM(
-          modify(_.setRootServiceId(name.value, id)).as(name.value)
+          name.value.pure
         )(h =>
           mangler
             .rename(name.value)
             .map(newName => h.setServiceRename(name.value, newName) -> newName)
         ).map(_.some)
       case false =>
-        report(name, "Service with this name is not registered, can't set its ID").as(none)
+        report(name, "Service with this name is not registered").as(none)
     }
 
   override def getServiceRename(name: NamedTypeToken[S]): State[X, Option[String]] =

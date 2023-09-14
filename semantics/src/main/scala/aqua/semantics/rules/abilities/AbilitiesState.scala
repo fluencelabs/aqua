@@ -19,8 +19,12 @@ case class AbilitiesState[S[_]](
   definitions: Map[String, NamedTypeToken[S]] = Map()
 ) {
 
-  def setRootServiceId(name: String, id: ValueRaw): AbilitiesState[S] =
-    copy(rootServiceIds = rootServiceIds.updated(name, id))
+  def defineService(name: NamedTypeToken[S], defaultId: Option[ValueRaw]): AbilitiesState[S] =
+    copy(
+      services = services + name.value,
+      definitions = definitions.updated(name.value, name),
+      rootServiceIds = rootServiceIds ++ defaultId.map(name.value -> _)
+    )
 
   def getServiceRename(name: String): Option[String] =
     stack.collectFirstSome(_.getServiceRename(name)) orElse

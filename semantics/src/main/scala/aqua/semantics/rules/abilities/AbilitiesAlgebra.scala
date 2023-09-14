@@ -12,13 +12,12 @@ trait AbilitiesAlgebra[S[_], Alg[_]] {
   def defineService(
     name: NamedTypeToken[S],
     arrowDefs: NonEmptyMap[String, Name[S]],
-    serviceType: ServiceType,
     defaultId: Option[ValueRaw]
   ): Alg[Boolean]
 
   def getArrow(name: NamedTypeToken[S], arrow: Name[S]): Alg[Option[ArrowType]]
 
-  def setServiceId(name: NamedTypeToken[S], id: ValueRaw): Alg[Option[String]]
+  def renameService(name: NamedTypeToken[S]): Alg[Option[String]]
 
   def getServiceRename(name: NamedTypeToken[S]): Alg[Option[String]]
 

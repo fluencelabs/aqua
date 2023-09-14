@@ -53,7 +53,6 @@ class ServiceSem[S[_]](val expr: ServiceExpr[S]) extends AnyVal {
       A.defineService(
         expr.name,
         arrowsDefs,
-        serviceType,
         defaultId
       ).map(defined =>
         Raw
