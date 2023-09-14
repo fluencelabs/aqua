@@ -20,8 +20,6 @@ trait AbilitiesAlgebra[S[_], Alg[_]] {
 
   def setServiceId(name: NamedTypeToken[S], id: ValueRaw): Alg[Option[String]]
 
-  def getServiceId(name: NamedTypeToken[S]): Alg[Either[Boolean, ValueRaw]]
-
   def getServiceRename(name: NamedTypeToken[S]): Alg[Option[String]]
 
   def getDefaultServiceIdIfUnresolvedInPrevScope(name: String): Alg[Option[ValueRaw]]

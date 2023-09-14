@@ -369,17 +369,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                   )
                   .value
               case _ =>
-                (A.getArrow(ab, callArrow.funcName), A.getServiceId(ab)).mapN {
-                  case (Some(at), Right(sid)) =>
-                    CallArrowRaw
-                      .service(
-                        abilityName = ab.value,
-                        serviceId = sid,
-                        funcName = callArrow.funcName.value,
-                        baseType = at
-                      )
-                      .some
-                  case (Some(at), Left(true)) =>
+                A.getArrow(ab, callArrow.funcName).map {
+                  case Some(at) =>
                     CallArrowRaw
                       .ability(
                         abilityName = ab.value,
