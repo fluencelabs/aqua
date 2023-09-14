@@ -67,21 +67,18 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
     RawSemantics
       .interpret(ast, initState, init.raw)
       .map { case (state, ctx) =>
-        NonEmptyChain
-          .fromChain(state.errors)
-          .fold[ValidatedNec[SemanticError[S], LspContext[S]]] {
-            Valid(
-              LspContext(
-                raw = ctx,
-                rootArrows = state.names.rootArrows,
-                constants = state.names.constants,
-                abDefinitions = state.abilities.definitions,
-                locations = state.locations.allLocations,
-                importTokens = importTokens,
-                tokens = state.locations.tokens
-              )
-            )
-          }(Invalid(_))
+        Valid(
+          LspContext(
+            raw = ctx,
+            rootArrows = state.names.rootArrows,
+            constants = state.names.constants,
+            abDefinitions = state.abilities.definitions,
+            locations = state.locations.allLocations,
+            importTokens = importTokens,
+            tokens = state.locations.tokens,
+            errors = state.errors.toList
+          )
+        )
       }
       // TODO: return as Eval
       .value
