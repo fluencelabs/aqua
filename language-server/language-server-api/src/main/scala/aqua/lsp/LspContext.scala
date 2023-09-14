@@ -1,13 +1,13 @@
 package aqua.lsp
 
-import aqua.parser.lexer.{Ability, LiteralToken, Name, NamedTypeToken, Token}
+import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
+import aqua.raw.RawContext.semiRC
 import aqua.raw.{RawContext, RawPart}
-import aqua.types.{ArrowType, Type}
-import RawContext.semiRC
+import aqua.semantics.SemanticError
 import aqua.semantics.header.Picker
-
-import cats.{Monoid, Semigroup}
+import aqua.types.{ArrowType, Type}
 import cats.syntax.monoid.*
+import cats.{Monoid, Semigroup}
 
 // Context with info that necessary for language server
 case class LspContext[S[_]](
@@ -17,7 +17,8 @@ case class LspContext[S[_]](
   constants: Map[String, Type] = Map.empty[String, Type],
   tokens: Map[String, Token[S]] = Map.empty[String, Token[S]],
   locations: List[(Token[S], Token[S])] = Nil,
-  importTokens: List[LiteralToken[S]] = Nil
+  importTokens: List[LiteralToken[S]] = Nil,
+  errors: List[SemanticError[S]] = Nil
 )
 
 object LspContext {
