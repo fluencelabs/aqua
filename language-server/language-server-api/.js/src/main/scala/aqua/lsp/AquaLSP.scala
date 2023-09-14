@@ -203,9 +203,15 @@ object AquaLSP extends App with Logging {
 
       val result = fileRes match {
         case Valid(lsp) =>
-          logger.debug("No errors on compilation.")
+          val errors = lsp.errors.map(CompileError.apply).flatMap(errorToInfo)
+          errors match
+            case Nil =>
+              logger.debug("No errors on compilation.")
+            case errs =>
+              logger.debug("Errors: " + errs.mkString("\n"))
+
           CompilationResult(
-            List.empty.toJSArray,
+            errors.toJSArray,
             locationsToJs(lsp.locations),
             importsToTokenImport(lsp.importTokens)
           )
