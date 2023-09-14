@@ -22,15 +22,6 @@ case class AbilitiesState[S[_]](
   def setRootServiceId(name: String, id: ValueRaw): AbilitiesState[S] =
     copy(rootServiceIds = rootServiceIds.updated(name, id))
 
-  def purgeArrows: Option[(NonEmptyList[(Name[S], ArrowType)], AbilitiesState[S])] =
-    stack match {
-      case sc :: tail =>
-        NonEmptyList
-          .fromList(sc.arrows.values.toList)
-          .map(_ -> copy[S](sc.copy(arrows = Map.empty) :: tail))
-      case _ => None
-    }
-
   def getServiceRename(name: String): Option[String] =
     stack.collectFirstSome(_.getServiceRename(name)) orElse
       // Suppose that services without id
@@ -43,23 +34,16 @@ object AbilitiesState {
 
   case class Frame[S[_]](
     token: Token[S],
-    arrows: Map[String, (Name[S], ArrowType)] = Map(),
     services: Map[String, Frame.ServiceState] = Map()
   ) {
 
-    def setServiceId(name: String, id: ValueRaw, rename: String): Frame[S] =
+    def setServiceRename(name: String, rename: String): Frame[S] =
       copy(services =
         services.updated(
           name,
-          Frame.ServiceState(id, rename)
+          Frame.ServiceState(rename)
         )
       )
-
-    def isIdResolved(name: String): Boolean =
-      services.get(name).isDefined
-
-    def getServiceId(name: String): Option[ValueRaw] =
-      services.get(name).map(_.id)
 
     def getServiceRename(name: String): Option[String] =
       services.get(name).map(_.rename)
@@ -68,7 +52,6 @@ object AbilitiesState {
   object Frame {
 
     final case class ServiceState(
-      id: ValueRaw,
       rename: String
     )
   }

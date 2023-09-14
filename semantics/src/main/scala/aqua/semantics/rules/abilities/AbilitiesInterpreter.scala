@@ -105,7 +105,7 @@ class AbilitiesInterpreter[S[_], X](using
         )(h =>
           mangler
             .rename(name.value)
-            .map(newName => h.setServiceId(name.value, id, newName) -> newName)
+            .map(newName => h.setServiceRename(name.value, newName) -> newName)
         ).map(_.some)
       case false =>
         report(name, "Service with this name is not registered, can't set its ID").as(none)
