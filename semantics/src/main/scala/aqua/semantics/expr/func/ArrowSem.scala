@@ -110,8 +110,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
           case ((v, _), _) => (Chain.empty, v)
         }.unzip.leftMap(_.combineAll)
 
-        val argNames = funcArrow.domain.toLabelledList().map { case (name, _) => name }
-
         val bodyModified = SeqTag.wrap(
           bodyModel +: bodyRets
         )

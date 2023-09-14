@@ -277,12 +277,19 @@ object ArrowInliner extends Logging {
      * to avoid collisions, then resolve them in context.
      */
     capturedValues <- findNewNames(fn.capturedValues)
+    /**
+     * If arrow correspond to a value,
+     * rename in accordingly to the value
+     */
     capturedArrowValues = fn.capturedArrows.flatMap { case (arrowName, arrow) =>
       capturedValues.renames
         .get(arrowName)
         .orElse(fn.capturedValues.get(arrowName).as(arrowName))
         .map(_ -> arrow)
     }
+    /**
+     * Rename arrows that are not values
+     */
     capturedArrows <- findNewNames(fn.capturedArrows.filterNot { case (arrowName, _) =>
       capturedArrowValues.contains(arrowName)
     })

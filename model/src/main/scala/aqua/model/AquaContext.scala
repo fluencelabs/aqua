@@ -41,41 +41,51 @@ case class AquaContext(
   ).map(_.leftMap(prefix + _)).toMap
 
   lazy val allValues: Map[String, ValueModel] =
-    all(_.values) ++ services.flatMap { case (srvName, srv) =>
-      srv.defaultId.toList.flatMap(_ =>
-        srv.`type`.arrows.map { case (arrowName, arrowType) =>
-          val fullName = AbilityType.fullName(srvName, arrowName)
+    all(_.values) ++
+      /**
+       * Add values from services that have default ID
+       * So that they will be available in functions.
+       */
+      services.flatMap { case (srvName, srv) =>
+        srv.defaultId.toList.flatMap(_ =>
+          srv.`type`.arrows.map { case (arrowName, arrowType) =>
+            val fullName = AbilityType.fullName(srvName, arrowName)
 
-          fullName -> VarModel(
-            fullName,
-            arrowType
-          )
-        }.updated(
-          srvName,
-          VarModel(
+            fullName -> VarModel(
+              fullName,
+              arrowType
+            )
+          }.updated(
             srvName,
-            srv.`type`
+            VarModel(
+              srvName,
+              srv.`type`
+            )
           )
         )
-      )
-    }
+      }
 
   lazy val allFuncs: Map[String, FuncArrow] =
-    all(_.funcs) ++ services.flatMap { case (srvName, srv) =>
-      srv.defaultId.toList.flatMap(id =>
-        srv.`type`.arrows.map { case (arrowName, arrowType) =>
-          val fullName = AbilityType.fullName(srvName, arrowName)
+    all(_.funcs) ++
+      /**
+       * Add functions from services that have default ID
+       * So that they will be available in functions.
+       */
+      services.flatMap { case (srvName, srv) =>
+        srv.defaultId.toList.flatMap(id =>
+          srv.`type`.arrows.map { case (arrowName, arrowType) =>
+            val fullName = AbilityType.fullName(srvName, arrowName)
 
-          fullName -> FuncArrow.fromServiceMethod(
-            fullName,
-            srvName,
-            arrowName,
-            arrowType,
-            id
-          )
-        }
-      )
-    }
+            fullName -> FuncArrow.fromServiceMethod(
+              fullName,
+              srvName,
+              arrowName,
+              arrowType,
+              id
+            )
+          }
+        )
+      }
 
   private def pickOne[T](
     name: String,

@@ -323,6 +323,15 @@ object EmptyTag extends NoExecTag {
   override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 }
 
+/**
+ * Tag for `Service "id"` expression.
+ * For each such expression new ability
+ * is created with unique name (@p name).
+ *
+ * @param value value of service ID
+ * @param serviceType type of service
+ * @param name **rename** of service
+ */
 case class ServiceIdTag(
   value: ValueRaw,
   serviceType: ServiceType,
