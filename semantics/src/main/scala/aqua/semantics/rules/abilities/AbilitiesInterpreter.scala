@@ -41,8 +41,8 @@ class AbilitiesInterpreter[S[_], X](using
     serviceType: ServiceType,
     defaultId: Option[ValueRaw]
   ): SX[Boolean] =
-    getService(name.value).flatMap {
-      case Some(_) =>
+    serviceExists(name.value).flatMap {
+      case true =>
         getState
           .map(_.definitions.get(name.value).exists(_ == name))
           .flatMap(exists =>
@@ -52,15 +52,13 @@ class AbilitiesInterpreter[S[_], X](using
             ).whenA(!exists)
           )
           .as(false)
-      case None =>
+      case false =>
         for {
           _ <- modify(s =>
             s.copy(
-              services = s.services.updated(
-                name.value,
-                ServiceRaw(name.value, serviceType, defaultId)
-              ),
-              definitions = s.definitions.updated(name.value, name)
+              services = s.services + name.value,
+              definitions = s.definitions.updated(name.value, name),
+              rootServiceIds = s.rootServiceIds ++ defaultId.map(name.value -> _)
             )
           )
           _ <- locations.addTokenWithFields(
@@ -100,8 +98,8 @@ class AbilitiesInterpreter[S[_], X](using
     }
 
   override def setServiceId(name: NamedTypeToken[S], id: ValueRaw): SX[Option[String]] =
-    getService(name.value).flatMap {
-      case Some(_) =>
+    serviceExists(name.value).flatMap {
+      case true =>
         mapStackHeadM(
           modify(_.setRootServiceId(name.value, id)).as(name.value)
         )(h =>
@@ -109,35 +107,27 @@ class AbilitiesInterpreter[S[_], X](using
             .rename(name.value)
             .map(newName => h.setServiceId(name.value, id, newName) -> newName)
         ).map(_.some)
-      case None =>
+      case false =>
         report(name, "Service with this name is not registered, can't set its ID").as(none)
     }
 
   override def getServiceRename(name: NamedTypeToken[S]): State[X, Option[String]] =
     (
-      getService(name.value),
+      serviceExists(name.value),
       getState.map(_.getServiceRename(name.value))
     ).flatMapN {
-      case (Some(_), Some(rename)) => rename.some.pure
-      case (None, _) => report(name, "Service with this name is undefined").as(none)
+      case (true, Some(rename)) => rename.some.pure
+      case (false, _) => report(name, "Service with this name is undefined").as(none)
       case (_, None) => report(name, "Service ID is undefined").as(none)
     }
-
-  override def getDefaultServiceIdIfUnresolvedInPrevScope(
-    name: String
-  ): State[X, Option[ValueRaw]] =
-    getState.map(st =>
-      st.getDefaultServiceId(name)
-        .filterNot(_ => st.isIdResolvedInPrevScope(name))
-    )
 
   override def beginScope(token: Token[S]): SX[Unit] =
     stackInt.beginScope(AbilitiesState.Frame[S](token))
 
   override def endScope(): SX[Unit] = stackInt.endScope
 
-  private def getService(name: String): SX[Option[ServiceRaw]] =
-    getState.map(_.services.get(name))
+  private def serviceExists(name: String): SX[Boolean] =
+    getState.map(_.services(name))
 
   private def getAbility(name: String): SX[Option[RawContext]] =
     getState.map(_.abilities.get(name))

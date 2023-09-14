@@ -13,7 +13,7 @@ import aqua.parser.lexer.Token.name
 
 case class AbilitiesState[S[_]](
   stack: List[AbilitiesState.Frame[S]] = Nil,
-  services: Map[String, ServiceRaw] = Map.empty,
+  services: Set[String] = Set.empty,
   abilities: Map[String, RawContext] = Map.empty,
   rootServiceIds: Map[String, ValueRaw] = Map(),
   definitions: Map[String, NamedTypeToken[S]] = Map()
@@ -21,9 +21,6 @@ case class AbilitiesState[S[_]](
 
   def setRootServiceId(name: String, id: ValueRaw): AbilitiesState[S] =
     copy(rootServiceIds = rootServiceIds.updated(name, id))
-
-  def getDefaultServiceId(name: String): Option[ValueRaw] =
-    services.get(name).flatMap(_.defaultId)
 
   def purgeArrows: Option[(NonEmptyList[(Name[S], ArrowType)], AbilitiesState[S])] =
     stack match {
@@ -34,20 +31,11 @@ case class AbilitiesState[S[_]](
       case _ => None
     }
 
-  def isIdResolvedInPrevScope(name: String): Boolean =
-    stack.tail.exists(_.isIdResolved(name))
-
-  def getServiceId(name: String): Option[ValueRaw] =
-    stack.collectFirstSome(_.getServiceId(name)) orElse
-      rootServiceIds.get(name) orElse
-      services.get(name).flatMap(_.defaultId)
-
   def getServiceRename(name: String): Option[String] =
     stack.collectFirstSome(_.getServiceRename(name)) orElse
       // Suppose that services without id
       // resolved in scope are not renamed
-      rootServiceIds.get(name).as(name) orElse
-      services.get(name).flatMap(_.defaultId).as(name)
+      rootServiceIds.get(name).as(name)
 
 }
 
@@ -100,7 +88,7 @@ object AbilitiesState {
 
   def init[S[_]](context: RawContext): AbilitiesState[S] =
     AbilitiesState(
-      services = context.allServices,
+      services = context.allServices.keySet,
       abilities = context.abilities // TODO is it the right way to collect abilities? Why?
     )
 }
