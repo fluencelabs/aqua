@@ -1,6 +1,6 @@
 aqua Test
 
-export test, TestService
+export test, testCapture, TestService
 
 service TestService("default-id"):
     getId() -> string
@@ -83,3 +83,13 @@ func test() -> []string:
     result <- acceptAbility{TestService}("accept ability call")
 
     <- result
+
+func callCapture{MatchingAbility}() -> string, string:
+    TestService "resolved-id-in-capture"
+    res1 <- TestService.concatId("in capture")
+    res2 <- MatchingAbility.concatId("in capture")
+    <- res1, res2
+
+func testCapture() -> string, string:
+    res1, res2 <- callCapture{TestService}()
+    <- res1, res2

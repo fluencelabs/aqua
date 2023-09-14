@@ -317,6 +317,11 @@ object ArrowInliner extends Logging {
         defineRenames
     )
 
+    /**
+     * TODO: Optimize resolve.
+     * It seems that resolving whole `exports`
+     * and `arrows` is not necessary.
+     */
     arrowsResolved = arrows ++ capturedArrowValues ++ capturedArrows.renamed
     exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
