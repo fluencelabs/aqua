@@ -1,6 +1,6 @@
 package aqua.model.inline
 
-import aqua.model.{CallModel, CallServiceModel, FlattenModel, InsertKeyValueModel, LiteralModel, OpModel, SeqModel, ValueModel, VarModel}
+import aqua.model.{CallModel, CallServiceModel, CanonicalizeModel, FlattenModel, InsertKeyValueModel, LiteralModel, OpModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.raw.RawInliner
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{LiteralRaw, MakeStructRaw}
@@ -30,7 +30,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
         InsertKeyValueModel(LiteralModel.quote(k), v._1, mapName, resultType).leaf
       }.toList
 
-      val toResult = FlattenModel(VarModel(mapName, TopType), resultName).leaf
+      val toResult = CanonicalizeModel(VarModel(mapName, TopType), CallModel.Export(resultName, resultType)).leaf
 
       SeqModel.wrap(ops ++ models :+ toResult)
     }
