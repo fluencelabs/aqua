@@ -7,7 +7,7 @@
   "files": [
     "index.js",
     "index.d.ts",
-    "api-js/main.js",
+    "api-dist-js/main.js",
     "meta-utils.js"
   ],
   "prettier": {},

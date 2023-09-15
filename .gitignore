@@ -9,9 +9,8 @@ project/target
 
 .DS_Store
 
-cli/cli-npm/aqua.j*
 language-server/language-server-npm/aqua-lsp-api.j*
-api/api-npm/api-js
+api/api-npm/api-dist-js
 
 integration-tests/src/compiled/*
 

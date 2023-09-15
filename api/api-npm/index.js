@@ -1,4 +1,4 @@
-import { AquaConfig, Aqua, Call, Input, Path } from "./api-js/main.js";
+import { AquaConfig, Aqua, Call, Input, Path } from "./api-dist-js/main.js";
 
 function getConfig({
   constants = [],

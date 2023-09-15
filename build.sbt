@@ -103,8 +103,8 @@ lazy val `aqua-api` = crossProject(JSPlatform, JVMPlatform)
 
 lazy val `aqua-apiJS` = `aqua-api`.js
   .settings(
-    Compile / fastLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "../../api-npm/api-js",
-    Compile / fullLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "../../api-npm/api-js",
+    Compile / fastLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "../../api-npm/api-dist-js",
+    Compile / fullLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "../../api-npm/api-dist-js",
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
     scalaJSUseMainModuleInitializer := true,
     Test / test                     := {}
