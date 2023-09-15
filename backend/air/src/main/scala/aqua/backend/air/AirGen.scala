@@ -113,6 +113,10 @@ object AirGen extends Logging {
           )
         )
 
+      case ApStreamMapRes(key, value, exportTo) =>
+        Eval.later(
+          ApStreamMapGen(DataView.StringScalar(key), valueToData(value), exportToString(exportTo))
+        )
       case ApRes(operand, exportTo) =>
         Eval.later(
           ApGen(valueToData(operand), exportToString(exportTo))
@@ -161,6 +165,12 @@ case class CommentGen(comment: String, op: AirGen) extends AirGen {
 
   override def generate: Air =
     Air.Comment(comment, op.generate)
+}
+
+case class ApStreamMapGen(key: DataView, operand: DataView, result: String) extends AirGen {
+
+  override def generate: Air =
+    Air.Ap(operand, result)
 }
 
 case class ApGen(operand: DataView, result: String) extends AirGen {

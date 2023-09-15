@@ -213,6 +213,11 @@ sealed trait BoxType extends DataType {
     Map("length" -> ScalarType.u32)
 }
 
+case class StreamMapType(element: StructType) extends DataType {
+
+  override def toString: String = "%" + element
+}
+
 case class CanonStreamType(element: Type) extends BoxType {
 
   override def isStream: Boolean = false

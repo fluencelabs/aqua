@@ -72,6 +72,8 @@ object MakeRes {
         orInit(currentPeerId),
         exportTo
       ).leaf
+    case InsertKeyValueModel(key, value, assignTo, assignToType) =>
+      ApStreamMapRes(key, value, CallModel.Export(assignTo, assignToType)).leaf
     case FlattenModel(operand @ VarModel(_, CanonStreamType(el), _), assignTo) =>
       ApRes(operand, CallModel.Export(assignTo, ArrayType(el))).leaf
     case FlattenModel(operand, assignTo) =>

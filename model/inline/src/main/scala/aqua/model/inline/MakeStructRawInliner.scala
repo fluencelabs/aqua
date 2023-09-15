@@ -1,21 +1,12 @@
 package aqua.model.inline
 
-import aqua.model.{
-  CallModel,
-  CallServiceModel,
-  LiteralModel,
-  OpModel,
-  SeqModel,
-  ValueModel,
-  VarModel
-}
+import aqua.model.{CallModel, CallServiceModel, FlattenModel, InsertKeyValueModel, LiteralModel, OpModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.raw.RawInliner
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{LiteralRaw, MakeStructRaw}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
-import aqua.types.ScalarType
-
+import aqua.types.{ScalarType, StructType, TopType}
 import cats.data.Chain
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.traverse.*
@@ -29,20 +20,19 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
 
   private def createObj[S: Mangler](
     fields: NonEmptyMap[String, ValueModel],
-    result: VarModel
+    resultName: String,
+    resultType: StructType
   ): State[S, OpModel.Tree] = {
-    fields.toSortedMap.toList.flatMap { case (name, value) =>
-      LiteralModel.quote(name) :: value :: Nil
-    }.traverse(TagInliner.canonicalizeIfStream(_)).map { argsWithOps =>
-      val (args, ops) = argsWithOps.unzip
-      val createOp =
-        CallServiceModel(
-          "json",
-          "obj",
-          args,
-          result
-        ).leaf
-      SeqModel.wrap(ops.flatten :+ createOp)
+    fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { kv =>
+      val mapName = "%" + resultName + "_map"
+      val ops = kv.toNel.toList.flatMap(_._2._2)
+      val models = kv.toNel.map { case (k, v) =>
+        InsertKeyValueModel(k, v._1, mapName, resultType).leaf
+      }.toList
+
+      val toResult = FlattenModel(VarModel(mapName, TopType), resultName).leaf
+
+      SeqModel.wrap(ops ++ models :+ toResult)
     }
   }
 
@@ -56,7 +46,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
       varModel = VarModel(name, raw.baseType)
       valsInline = foldedFields.foldMap { case (_, inline) => inline }.desugar
       fields = foldedFields.map { case (vm, _) => vm }
-      objCreation <- createObj(fields, varModel)
+      objCreation <- createObj(fields, name, raw.structType)
     } yield {
       (
         varModel,
