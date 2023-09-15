@@ -4,10 +4,21 @@ import sbt.Keys.*
 import org.scalajs.linker.interface.Report
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.*
 
+/**
+ * Utility to add bundling js functionality to a project.
+ */
 object BundleJS {
+  // Bundle full js (result of fullLinkJS)
   val fullBundleJS = taskKey[Unit]("Full bundle JS")
+  // Bundle fast js (result of fastLinkJS)
   val fastBundleJS = taskKey[Unit]("Fast bundle JS")
 
+  /**
+   * Add full/fast bundle JS tasks to a project.
+   *
+   * @param outputFilePath **relative to baseDirectory** path to output file
+   * @return Seq of settings with tasks
+   */
   def addBundleJS(
     outputFilePath: String
   ) = Seq(
