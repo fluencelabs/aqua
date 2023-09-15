@@ -20,7 +20,7 @@ object BundleJS {
    * @return Seq of settings with tasks
    */
   def addBundleJS(
-    outputFilePath: String
+    outputFilePath: String // TODO: Accept `File`
   ) = Seq(
     fullBundleJS := Def.taskDyn {
       bundleJS(fullLinkJS, outputFilePath)
