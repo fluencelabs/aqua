@@ -74,6 +74,7 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
 
 lazy val `language-server-apiJS` = `language-server-api`.js
   .settings(
+    // TODO: move to fast/fullLinkJS here
     Compile / fastOptJS / artifactPath := baseDirectory.value / "../../language-server-npm" / "aqua-lsp-api.js",
     Compile / fullOptJS / artifactPath := baseDirectory.value / "../../language-server-npm" / "aqua-lsp-api.js",
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
@@ -103,11 +104,11 @@ lazy val `aqua-api` = crossProject(JSPlatform, JVMPlatform)
 
 lazy val `aqua-apiJS` = `aqua-api`.js
   .settings(
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "../../api-npm" / "aqua-api.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "../../api-npm" / "aqua-api.js",
-    scalaJSLinkerConfig                ~= (_.withModuleKind(ModuleKind.ESModule)),
-    scalaJSUseMainModuleInitializer    := true,
-    Test / test                        := {}
+    Compile / fastLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "../../api-npm/api-dist-js",
+    Compile / fullLinkJS / scalaJSLinkerOutputDirectory := baseDirectory.value / "../../api-npm/api-dist-js",
+    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
+    scalaJSUseMainModuleInitializer := true,
+    Test / test                     := {}
   )
   .enablePlugins(ScalaJSPlugin)
   .dependsOn(`js-exports`)

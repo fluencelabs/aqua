@@ -7,8 +7,7 @@
   "files": [
     "index.js",
     "index.d.ts",
-    "aqua-api.js",
-    "aqua-api.d.ts",
+    "api-dist-js/main.js",
     "meta-utils.js"
   ],
   "prettier": {},
