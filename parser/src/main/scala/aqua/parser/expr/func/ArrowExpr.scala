@@ -20,7 +20,7 @@ case class ArrowExpr[F[_]](arrowTypeExpr: ArrowTypeToken[F])
 object ArrowExpr extends Expr.AndIndented {
 
   val funcChildren: List[Expr.Lexem] =
-    AbilityIdExpr ::
+    ServiceIdExpr ::
       PushToStreamExpr ::
       ForExpr ::
       Expr.defer(OnExpr) ::

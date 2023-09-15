@@ -13,11 +13,13 @@ import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, ArrowType, CanonStreamType, ProductType, StreamType, Type}
+import aqua.types.*
 
 import cats.Eval
 import cats.data.{Chain, NonEmptyList}
 import cats.free.{Cofree, Free}
+import cats.data.OptionT
+import cats.syntax.show.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.foldable.*
@@ -64,16 +66,15 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     res = bodyGen match {
       case FuncOp(bodyModel) =>
         // TODO: wrap with local on...via...
-
         val retsAndArgs = retValues zip funcArrow.codomain.toList
 
-        val argNames = funcArrow.domain.labelledData.map { case (name, _) => name }
+        val dataArgsNames = funcArrow.domain.labelledData.map { case (name, _) => name }
         val streamsThatReturnAsStreams = retsAndArgs.collect {
           case (VarRaw(n, StreamType(_)), StreamType(_)) => n
         }.toSet
 
         // Remove arguments, and values returned as streams
-        val localStreams = streamsInScope -- argNames -- streamsThatReturnAsStreams
+        val localStreams = streamsInScope -- dataArgsNames -- streamsThatReturnAsStreams
 
         // process stream that returns as not streams and all Apply*Raw
         val (bodyRets, retVals) = retsAndArgs.mapWithIndex {

@@ -11,7 +11,7 @@ object ServiceRes {
   def fromModel(sm: ServiceModel): ServiceRes =
     ServiceRes(
       name = sm.name,
-      members = sm.arrows.toNel.toList,
+      members = sm.`type`.arrows.toList,
       defaultId = sm.defaultId.collect {
         case LiteralModel(value, t) if ScalarType.string.acceptsValueOf(t) =>
           value

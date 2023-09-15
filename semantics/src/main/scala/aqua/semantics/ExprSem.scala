@@ -27,7 +27,7 @@ object ExprSem {
     L: LocationsAlgebra[S, G]
   ): Prog[G, Raw] =
     expr match {
-      case expr: AbilityIdExpr[S] => new AbilityIdSem(expr).program[G]
+      case expr: ServiceIdExpr[S] => new ServiceIdSem(expr).program[G]
       case expr: AssignmentExpr[S] => new AssignmentSem(expr).program[G]
       case expr: PushToStreamExpr[S] => new PushToStreamSem(expr).program[G]
       case expr: AliasExpr[S] => new AliasSem(expr).program[G]

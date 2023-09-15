@@ -153,6 +153,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val canonResult = VarModel("-" + results.name + "-fix-0", CanonStreamType(resultsType.element))
     val flatResult = VarModel("-results-flat-0", ArrayType(ScalarType.string))
     val initPeer = LiteralModel.fromRaw(ValueRaw.InitPeerId)
+    val retVar = VarModel("ret", ScalarType.string)
 
     val expected =
       SeqRes.wrap(
@@ -173,10 +174,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
                           "identity",
                           CallRes(
                             LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
-                            Some(CallModel.Export(results.name, results.`type`))
+                            Some(CallModel.Export(retVar.name, retVar.`type`))
                           ),
                           peer
                         ).leaf,
+                        ApRes(retVar, CallModel.Export(results.name, results.`type`)).leaf,
                         through(ValueModel.fromRaw(relay)),
                         through(initPeer)
                       ),

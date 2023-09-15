@@ -11,6 +11,7 @@ import aqua.semantics.rules.errors.ErrorsAlgebra
 import aqua.types.*
 
 import cats.Monad
+import cats.data.OptionT
 import cats.data.Chain
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
@@ -32,23 +33,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   E: ErrorsAlgebra[S, Alg],
   A: AbilitiesAlgebra[S, Alg]
 ) extends Logging {
-
-  def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
-    ensureTypeMatches(v, LiteralType.string)
-
-  def ensureTypeMatches(v: ValueToken[S], expected: Type): Alg[Boolean] =
-    resolveType(v).flatMap {
-      case Some(vt) =>
-        T.ensureTypeMatches(
-          v,
-          expected,
-          vt
-        )
-      case None => false.pure[Alg]
-    }
-
-  def resolveType(v: ValueToken[S]): Alg[Option[Type]] =
-    valueToRaw(v).map(_.map(_.`type`))
 
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
@@ -83,11 +67,20 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         LiteralRaw(l.value, t).some.pure[Alg]
 
       case VarToken(name) =>
-        N.read(name).flatMap {
+        N.read(name, mustBeDefined = false).flatMap {
           case Some(t) =>
-            VarRaw(name.value, t).some.pure[Alg]
+            VarRaw(name.value, t).some.pure
           case None =>
-            None.pure[Alg]
+            (for {
+              t <- OptionT(
+                T.getType(name.value)
+              ).collect { case st: ServiceType => st }
+                // A hack to report name error, better to refactor
+                .flatTapNone(N.read(name))
+              rename <- OptionT(
+                A.getServiceRename(name.asTypeToken)
+              )
+            } yield VarRaw(rename, t)).value
         }
 
       case prop @ PropertyToken(value, properties) =>
@@ -107,35 +100,30 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         )(valueToRaw)
 
       case dvt @ NamedValueToken(typeName, fields) =>
-        T.resolveType(typeName).flatMap {
-          case Some(resolvedType) =>
-            for {
-              fieldsRawOp: NonEmptyMap[String, Option[ValueRaw]] <- fields.traverse(valueToRaw)
-              fieldsRaw: List[(String, ValueRaw)] = fieldsRawOp.toSortedMap.toList.collect {
-                case (n, Some(vr)) => n -> vr
-              }
-              rawFields = NonEmptyMap.fromMap(SortedMap.from(fieldsRaw))
-              typeFromFieldsWithData = rawFields
-                .map(rf =>
-                  resolvedType match {
-                    case struct @ StructType(_, _) =>
-                      (
-                        StructType(typeName.value, rf.map(_.`type`)),
-                        Some(MakeStructRaw(rf, struct))
-                      )
-                    case scope @ AbilityType(_, _) =>
-                      (
-                        AbilityType(typeName.value, rf.map(_.`type`)),
-                        Some(AbilityRaw(rf, scope))
-                      )
-                  }
-                )
-                .getOrElse(BottomType -> None)
-              (typeFromFields, data) = typeFromFieldsWithData
-              isTypesCompatible <- T.ensureTypeMatches(dvt, resolvedType, typeFromFields)
-            } yield data.filter(_ => isTypesCompatible)
-          case _ => None.pure[Alg]
-        }
+        (for {
+          resolvedType <- OptionT(T.resolveType(typeName))
+          fieldsGiven <- fields.traverse(value => OptionT(valueToRaw(value)))
+          fieldsGivenTypes = fieldsGiven.map(_.`type`)
+          generated <- OptionT.fromOption(
+            resolvedType match {
+              case struct: StructType =>
+                (
+                  struct.copy(fields = fieldsGivenTypes),
+                  MakeStructRaw(fieldsGiven, struct)
+                ).some
+              case ability: AbilityType =>
+                (
+                  ability.copy(fields = fieldsGivenTypes),
+                  AbilityRaw(fieldsGiven, ability)
+                ).some
+              case _ => none
+            }
+          )
+          (genType, genData) = generated
+          data <- OptionT.whenM(
+            T.ensureTypeMatches(dvt, resolvedType, genType)
+          )(genData.pure)
+        } yield data).value
 
       case ct @ CollectionToken(_, values) =>
         for {
@@ -295,15 +283,15 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                 } yield Option.when(
                   leftChecked.isDefined && rightChecked.isDefined
                 )(
-                  CallArrowRaw(
-                    ability = Some(id),
-                    name = fn,
-                    arguments = leftRaw :: rightRaw :: Nil,
+                  CallArrowRaw.service(
+                    abilityName = id,
+                    serviceId = LiteralRaw.quote(id),
+                    funcName = fn,
                     baseType = ArrowType(
                       ProductType(lType :: rType :: Nil),
                       ProductType(resType :: Nil)
                     ),
-                    serviceId = Some(LiteralRaw.quote(id))
+                    arguments = leftRaw :: rightRaw :: Nil
                   )
                 )
 
@@ -321,9 +309,24 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       }
     )
 
+  def valueToTypedRaw(v: ValueToken[S], expectedType: Type): Alg[Option[ValueRaw]] =
+    OptionT(valueToRaw(v))
+      .flatMap(raw =>
+        OptionT.whenM(
+          T.ensureTypeMatches(v, expectedType, raw.`type`)
+        )(raw.pure)
+      )
+      .value
+
+  def valueToStringRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
+    valueToTypedRaw(v, LiteralType.string)
+
+  def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
+    valueToStringRaw(v).map(_.isDefined)
+
   private def callArrowFromAbility(
     ab: Name[S],
-    at: AbilityType,
+    at: NamedType,
     funcName: Name[S]
   ): Option[CallArrowRaw] = at.arrows
     .get(funcName.value)
@@ -351,24 +354,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           )
       )(ab =>
         N.read(ab.asName, mustBeDefined = false).flatMap {
-          case Some(at: AbilityType) =>
-            callArrowFromAbility(ab.asName, at, callArrow.funcName).pure
+          case Some(nt: (AbilityType | ServiceType)) =>
+            callArrowFromAbility(ab.asName, nt, callArrow.funcName).pure
           case _ =>
             T.getType(ab.value).flatMap {
-              case Some(at: AbilityType) =>
-                callArrowFromAbility(ab.asName, at, callArrow.funcName).pure
+              case Some(st: ServiceType) =>
+                OptionT(A.getServiceRename(ab))
+                  .subflatMap(rename =>
+                    callArrowFromAbility(
+                      ab.asName.rename(rename),
+                      st,
+                      callArrow.funcName
+                    )
+                  )
+                  .value
               case _ =>
-                (A.getArrow(ab, callArrow.funcName), A.getServiceId(ab)).mapN {
-                  case (Some(at), Right(sid)) =>
-                    CallArrowRaw
-                      .service(
-                        abilityName = ab.value,
-                        serviceId = sid,
-                        funcName = callArrow.funcName.value,
-                        baseType = at
-                      )
-                      .some
-                  case (Some(at), Left(true)) =>
+                A.getArrow(ab, callArrow.funcName).map {
+                  case Some(at) =>
                     CallArrowRaw
                       .ability(
                         abilityName = ab.value,

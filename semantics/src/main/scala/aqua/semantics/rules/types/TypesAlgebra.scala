@@ -2,7 +2,7 @@ package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
 import aqua.raw.value.{PropertyRaw, ValueRaw}
-import aqua.types.{AbilityType, ArrowType, NamedType, StructType, Type}
+import aqua.types.*
 
 import cats.data.NonEmptyMap
 import cats.data.NonEmptyList
@@ -15,10 +15,17 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveArrowDef(arrowDef: ArrowTypeToken[S]): Alg[Option[ArrowType]]
 
+  def resolveServiceType(name: NamedTypeToken[S]): Alg[Option[ServiceType]]
+
   def defineAbilityType(
     name: NamedTypeToken[S],
     fields: Map[String, (Name[S], Type)]
   ): Alg[Option[AbilityType]]
+
+  def defineServiceType(
+    name: NamedTypeToken[S],
+    fields: Map[String, (Name[S], Type)]
+  ): Alg[Option[ServiceType]]
 
   def defineStructType(
     name: NamedTypeToken[S],

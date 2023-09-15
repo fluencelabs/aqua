@@ -5,10 +5,11 @@ import aqua.model.*
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.RawTag
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{AbilityType, ArrowType, BoxType, StreamType, Type}
+import aqua.types.{AbilityType, ArrowType, BoxType, NamedType, StreamType, Type}
 
 import cats.data.StateT
 import cats.data.{Chain, IndexedStateT, State}
+import cats.syntax.functor.*
 import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
@@ -123,22 +124,22 @@ object ArrowInliner extends Logging {
   /**
    * Get ability fields (vars or arrows) from exports
    *
-   * @param abilityName ability current name in state
-   * @param abilityNewName ability new name (for renaming)
-   * @param abilityType ability type
+   * @param name ability current name in state
+   * @param newName ability new name (for renaming)
+   * @param type ability type
    * @param exports exports state to resolve fields
    * @param fields fields selector
    * @return resolved ability fields (renamed if necessary)
    */
   private def getAbilityFields[T <: Type](
-    abilityName: String,
-    abilityNewName: Option[String],
-    abilityType: AbilityType,
+    name: String,
+    newName: Option[String],
+    `type`: NamedType,
     exports: Map[String, ValueModel]
-  )(fields: AbilityType => Map[String, T]): Map[String, ValueModel] =
-    fields(abilityType).flatMap { case (fName, _) =>
-      val fullName = AbilityType.fullName(abilityName, fName)
-      val newFullName = AbilityType.fullName(abilityNewName.getOrElse(abilityName), fName)
+  )(fields: NamedType => Map[String, T]): Map[String, ValueModel] =
+    fields(`type`).flatMap { case (fName, _) =>
+      val fullName = AbilityType.fullName(name, fName)
+      val newFullName = AbilityType.fullName(newName.getOrElse(name), fName)
 
       Exports
         .getLastValue(fullName, exports)
@@ -179,24 +180,24 @@ object ArrowInliner extends Logging {
   /**
    * Get ability arrows from arrows
    *
-   * @param abilityName ability current name in state
-   * @param abilityNewName ability new name (for renaming)
-   * @param abilityType ability type
+   * @param name ability current name in state
+   * @param newName ability new name (for renaming)
+   * @param type ability type
    * @param exports exports state to resolve fields
    * @param arrows arrows state to resolve arrows
    * @return resolved ability arrows (renamed if necessary)
    */
   private def getAbilityArrows(
-    abilityName: String,
-    abilityNewName: Option[String],
-    abilityType: AbilityType,
+    name: String,
+    newName: Option[String],
+    `type`: NamedType,
     exports: Map[String, ValueModel],
     arrows: Map[String, FuncArrow]
   ): Map[String, FuncArrow] = {
     val get = getAbilityFields(
-      abilityName,
-      abilityNewName,
-      abilityType,
+      name,
+      newName,
+      `type`,
       exports
     )
 
@@ -210,12 +211,12 @@ object ArrowInliner extends Logging {
   }
 
   private def getAbilityArrows[S: Arrows: Exports](
-    abilityName: String,
-    abilityType: AbilityType
+    name: String,
+    `type`: NamedType
   ): State[S, Map[String, FuncArrow]] = for {
     exports <- Exports[S].exports
     arrows <- Arrows[S].arrows
-  } yield getAbilityArrows(abilityName, None, abilityType, exports, arrows)
+  } yield getAbilityArrows(name, None, `type`, exports, arrows)
 
   final case class Renamed[T](
     renames: Map[String, String],
@@ -276,7 +277,22 @@ object ArrowInliner extends Logging {
      * to avoid collisions, then resolve them in context.
      */
     capturedValues <- findNewNames(fn.capturedValues)
-    capturedArrows <- findNewNames(fn.capturedArrows)
+    /**
+     * If arrow correspond to a value,
+     * rename in accordingly to the value
+     */
+    capturedArrowValues = fn.capturedArrows.flatMap { case (arrowName, arrow) =>
+      capturedValues.renames
+        .get(arrowName)
+        .orElse(fn.capturedValues.get(arrowName).as(arrowName))
+        .map(_ -> arrow)
+    }
+    /**
+     * Rename arrows that are not values
+     */
+    capturedArrows <- findNewNames(fn.capturedArrows.filterNot { case (arrowName, _) =>
+      capturedArrowValues.contains(arrowName)
+    })
 
     /**
      * Function defines variables inside its body.
@@ -301,7 +317,12 @@ object ArrowInliner extends Logging {
         defineRenames
     )
 
-    arrowsResolved = arrows ++ capturedArrows.renamed
+    /**
+     * TODO: Optimize resolve.
+     * It seems that resolving whole `exports`
+     * and `arrows` is not necessary.
+     */
+    arrowsResolved = arrows ++ capturedArrowValues ++ capturedArrows.renamed
     exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
     tree = fn.body.rename(renaming)
@@ -322,12 +343,13 @@ object ArrowInliner extends Logging {
 
     exports <- Exports[S].exports
     streams <- getOutsideStreamNames
+    arrows = passArrows ++ arrowsFromAbilities
 
     inlineResult <- Exports[S].scope(
       Arrows[S].scope(
         for {
           // Process renamings, prepare environment
-          fn <- ArrowInliner.prelude(arrow, call, exports, passArrows ++ arrowsFromAbilities)
+          fn <- ArrowInliner.prelude(arrow, call, exports, arrows)
           inlineResult <- ArrowInliner.inline(fn, call, streams)
         } yield inlineResult
       )

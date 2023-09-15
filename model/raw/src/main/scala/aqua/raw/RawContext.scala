@@ -2,7 +2,7 @@ package aqua.raw
 
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.value.ValueRaw
-import aqua.types.{StructType, Type, AbilityType}
+import aqua.types.{AbilityType, StructType, Type}
 
 import cats.Monoid
 import cats.Semigroup
@@ -61,8 +61,9 @@ case class RawContext(
     all(_.services)
 
   lazy val types: Map[String, Type] =
-    collectPartsMap { case t: TypeRaw =>
-      t.`type`
+    collectPartsMap {
+      case t: TypeRaw => t.`type`
+      case s: ServiceRaw => s.`type`
     }
 
   lazy val allTypes: Map[String, Type] =

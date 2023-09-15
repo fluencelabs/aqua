@@ -29,7 +29,7 @@ import org.scalatest.matchers.should.Matchers
 
 class ClosureSemSpec extends AnyFlatSpec with Matchers {
 
-  import Utils.*
+  import Utils.{given, *}
 
   val program: Prog[State[CompilerState[cats.Id], *], Raw] = {
     import CompilerState.*

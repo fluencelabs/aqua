@@ -1,32 +1,17 @@
 package aqua.semantics
 
 import aqua.semantics.rules.ValuesAlgebra
-import aqua.semantics.rules.names.NamesState
-import aqua.semantics.rules.abilities.AbilitiesState
-import aqua.semantics.rules.types.TypesState
-import aqua.semantics.rules.types.TypesAlgebra
-import aqua.semantics.rules.abilities.AbilitiesInterpreter
-import aqua.semantics.rules.names.NamesAlgebra
-import aqua.semantics.rules.definitions.DefinitionsAlgebra
-import aqua.semantics.rules.abilities.AbilitiesAlgebra
-import aqua.semantics.rules.names.NamesInterpreter
-import aqua.semantics.rules.definitions.DefinitionsInterpreter
-import aqua.semantics.rules.types.TypesInterpreter
-import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.locations.DummyLocationsInterpreter
+import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
+import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
+import aqua.semantics.rules.definitions.{DefinitionsAlgebra, DefinitionsInterpreter}
+import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
+import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra}
+import aqua.semantics.rules.mangler.{ManglerAlgebra, ManglerInterpreter}
 import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw}
 import aqua.raw.RawContext
 import aqua.types.*
-import aqua.parser.lexer.{
-  CollectionToken,
-  InfixToken,
-  LiteralToken,
-  Name,
-  PrefixToken,
-  ValueToken,
-  VarToken
-}
-import aqua.raw.value.ApplyUnaryOpRaw
+import aqua.parser.lexer.*
+import aqua.raw.value.*
 import aqua.parser.lexer.ValueToken.string
 
 import org.scalatest.flatspec.AnyFlatSpec
@@ -50,6 +35,8 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
     given LocationsAlgebra[Id, Interpreter] =
       new DummyLocationsInterpreter[Id, CompilerState[Id]]
 
+    given ManglerAlgebra[Interpreter] =
+      new ManglerInterpreter[CompilerState[Id]]
     given TypesAlgebra[Id, Interpreter] =
       new TypesInterpreter[Id, CompilerState[Id]]
     given AbilitiesAlgebra[Id, Interpreter] =

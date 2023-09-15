@@ -8,15 +8,11 @@ import aqua.raw.{Raw, RawContext, RawPart}
 import aqua.semantics.header.Picker
 import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
-import aqua.semantics.rules.definitions.{
-  DefinitionsAlgebra,
-  DefinitionsInterpreter,
-  DefinitionsState
-}
-import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra, LocationsState}
-import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
-import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
-import aqua.semantics.rules.ValuesAlgebra
+import aqua.semantics.rules.definitions.{DefinitionsAlgebra, DefinitionsInterpreter}
+import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra}
+import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter}
+import aqua.semantics.rules.mangler.{ManglerAlgebra, ManglerInterpreter}
+import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter}
 import aqua.semantics.rules.errors.ReportErrors
 import aqua.semantics.rules.errors.ErrorsAlgebra
 import aqua.raw.ops.*
@@ -306,17 +302,19 @@ object RawSemantics extends Logging {
 
   type Interpreter[S[_], A] = State[CompilerState[S], A]
 
-  def transpile[S[_]](
-    ast: Ast[S]
-  )(implicit locations: LocationsAlgebra[S, Interpreter[S, *]]): Interpreter[S, Raw] = {
+  def transpile[S[_]](ast: Ast[S])(using
+    LocationsAlgebra[S, Interpreter[S, *]]
+  ): Interpreter[S, Raw] = {
 
-    implicit val typesInterpreter: TypesInterpreter[S, CompilerState[S]] =
+    given TypesAlgebra[S, Interpreter[S, *]] =
       new TypesInterpreter[S, CompilerState[S]]
-    implicit val abilitiesInterpreter: AbilitiesInterpreter[S, CompilerState[S]] =
+    given ManglerAlgebra[Interpreter[S, *]] =
+      new ManglerInterpreter[CompilerState[S]]
+    given AbilitiesAlgebra[S, Interpreter[S, *]] =
       new AbilitiesInterpreter[S, CompilerState[S]]
-    implicit val namesInterpreter: NamesInterpreter[S, CompilerState[S]] =
+    given NamesAlgebra[S, Interpreter[S, *]] =
       new NamesInterpreter[S, CompilerState[S]]
-    implicit val definitionsInterpreter: DefinitionsInterpreter[S, CompilerState[S]] =
+    given DefinitionsAlgebra[S, Interpreter[S, *]] =
       new DefinitionsInterpreter[S, CompilerState[S]]
 
     ast

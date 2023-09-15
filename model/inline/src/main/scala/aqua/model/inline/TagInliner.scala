@@ -413,6 +413,49 @@ object TagInliner extends Logging {
             } yield TagInlined.Empty(prefix = prefix)
           case _ => none
 
+      case ServiceIdTag(id, serviceType, name) =>
+        for {
+          idm <- valueToModel(id)
+          (idModel, idPrefix) = idm
+
+          // Make `FuncArrow` wrappers for service methods
+          methods <- serviceType.fields.toSortedMap.toList.traverse {
+            case (methodName, methodType) =>
+              for {
+                arrowName <- Mangler[S].findAndForbidName(s"$name-$methodName")
+                fn = FuncArrow.fromServiceMethod(
+                  arrowName,
+                  serviceType.name,
+                  methodName,
+                  methodType,
+                  idModel
+                )
+              } yield methodName -> fn
+          }
+
+          // Resolve wrappers in arrows
+          _ <- Arrows[S].resolved(
+            methods.map { case (_, fn) =>
+              fn.funcName -> fn
+            }.toMap
+          )
+
+          // Resolve wrappers in exports
+          _ <- methods.traverse { case (methodName, fn) =>
+            Exports[S].resolveAbilityField(
+              name,
+              methodName,
+              VarModel(fn.funcName, fn.arrowType)
+            )
+          }
+
+          // Resolve service in exports
+          _ <- Exports[S].resolved(
+            name,
+            VarModel(name, serviceType)
+          )
+        } yield TagInlined.Empty(prefix = idPrefix)
+
       case _: SeqGroupTag => pure(SeqModel)
       case ParTag.Detach => pure(DetachModel)
       case _: ParGroupTag => pure(ParModel)

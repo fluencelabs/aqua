@@ -6,45 +6,35 @@ import aqua.parser.lift.Span
 import aqua.raw.{Raw, RawContext}
 import aqua.semantics.expr.func.ClosureSem
 import aqua.semantics.rules.errors.ReportErrors
-import aqua.semantics.rules.abilities.{AbilitiesInterpreter, AbilitiesState}
-import aqua.semantics.rules.locations.DummyLocationsInterpreter
-import aqua.semantics.rules.names.{NamesInterpreter, NamesState}
-import aqua.semantics.rules.types.{TypesInterpreter, TypesState}
+import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
+import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra}
+import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
+import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
 import aqua.types.*
+
 import cats.data.State
 import cats.{~>, Id}
 import monocle.Lens
 import monocle.macros.GenLens
 import monocle.syntax.all.*
+import aqua.semantics.rules.mangler.ManglerAlgebra
+import aqua.semantics.rules.mangler.ManglerInterpreter
 
 object Utils {
 
-  implicit val re: ReportErrors[Id, CompilerState[Id]] = new ReportErrors[Id, CompilerState[Id]] {
+  given ManglerAlgebra[State[CompilerState[Id], *]] =
+    new ManglerInterpreter[CompilerState[Id]]
 
-    override def apply(
-      st: CompilerState[Id],
-      token: Token[Id],
-      hints: List[String]
-    ): CompilerState[Id] =
-      st.focus(_.errors).modify(_.append(RulesViolated(token, hints)))
-  }
-
-  implicit val locationsInterpreter: DummyLocationsInterpreter[Id, CompilerState[Id]] =
+  given LocationsAlgebra[Id, State[CompilerState[Id], *]] =
     new DummyLocationsInterpreter[Id, CompilerState[Id]]()
 
-  implicit val ns: Lens[CompilerState[Id], NamesState[Id]] = GenLens[CompilerState[Id]](_.names)
-
-  implicit val as: Lens[CompilerState[Id], AbilitiesState[Id]] =
-    GenLens[CompilerState[Id]](_.abilities)
-  implicit val ts: Lens[CompilerState[Id], TypesState[Id]] = GenLens[CompilerState[Id]](_.types)
-
-  implicit val alg: NamesInterpreter[Id, CompilerState[Id]] =
+  given NamesAlgebra[Id, State[CompilerState[Id], *]] =
     new NamesInterpreter[Id, CompilerState[Id]]
 
-  implicit val typesInterpreter: TypesInterpreter[Id, CompilerState[Id]] =
+  given TypesAlgebra[Id, State[CompilerState[Id], *]] =
     new TypesInterpreter[Id, CompilerState[Id]]
 
-  implicit val abilitiesInterpreter: AbilitiesInterpreter[Id, CompilerState[Id]] =
+  given AbilitiesAlgebra[Id, State[CompilerState[Id], *]] =
     new AbilitiesInterpreter[Id, CompilerState[Id]]
 
   def spanToId: Span.S ~> Id = new (Span.S ~> Id) {

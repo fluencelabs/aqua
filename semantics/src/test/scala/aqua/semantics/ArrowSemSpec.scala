@@ -15,7 +15,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
-  import Utils.*
+
+  import Utils.{given, *}
 
   def program(arrowStr: String): Prog[State[CompilerState[cats.Id], *], Raw] = {
     import CompilerState.*

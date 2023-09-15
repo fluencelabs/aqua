@@ -4,7 +4,7 @@ import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag.Tree
 import aqua.raw.value.{CallArrowRaw, ValueRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.{ArrowType, DataType}
+import aqua.types.{ArrowType, DataType, ServiceType}
 
 import cats.Show
 import cats.data.{Chain, NonEmptyList}
@@ -20,7 +20,7 @@ sealed trait RawTag extends TreeNode[RawTag] {
   def restrictsVarNames: Set[String] = Set.empty
 
   // All variable names introduced by this tag
-  def definesVarNames: Set[String] = exportsVarNames ++ restrictsVarNames
+  final def definesVarNames: Set[String] = exportsVarNames ++ restrictsVarNames
 
   // Variable names used by this tag (not introduced by it)
   def usesVarNames: Set[String] = Set.empty
@@ -208,6 +208,22 @@ case class CallArrowRawTag(
 
 object CallArrowRawTag {
 
+  def ability(
+    abilityName: String,
+    funcName: String,
+    call: Call,
+    arrowType: ArrowType
+  ): CallArrowRawTag =
+    CallArrowRawTag(
+      call.exportTo,
+      CallArrowRaw.ability(
+        abilityName,
+        funcName,
+        arrowType,
+        call.args
+      )
+    )
+
   def service(
     serviceId: ValueRaw,
     fnName: String,
@@ -231,12 +247,10 @@ object CallArrowRawTag {
   def func(fnName: String, call: Call): CallArrowRawTag =
     CallArrowRawTag(
       call.exportTo,
-      CallArrowRaw(
-        None,
-        fnName,
-        call.args,
-        call.arrowType,
-        None
+      CallArrowRaw.func(
+        funcName = fnName,
+        baseType = call.arrowType,
+        arguments = call.args
       )
     )
 }
@@ -307,15 +321,27 @@ object EmptyTag extends NoExecTag {
   override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 }
 
-case class AbilityIdTag(
+/**
+ * Tag for `Service "id"` expression.
+ * For each such expression new ability
+ * is created with unique name (@p name).
+ *
+ * @param value value of service ID
+ * @param serviceType type of service
+ * @param name **rename** of service
+ */
+case class ServiceIdTag(
   value: ValueRaw,
-  service: String
+  serviceType: ServiceType,
+  name: String
 ) extends NoExecTag {
 
   override def usesVarNames: Set[String] = value.varNames
 
+  override def exportsVarNames: Set[String] = Set(name)
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
-    AbilityIdTag(value.map(f), service)
+    ServiceIdTag(value.map(f), serviceType, name)
 }
 
 case class PushToStreamTag(operand: ValueRaw, exportTo: Call.Export) extends RawTag {
