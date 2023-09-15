@@ -27,7 +27,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
       val mapName = "%" + resultName + "_map"
       val ops = kv.toNel.toList.flatMap(_._2._2)
       val models = kv.toNel.map { case (k, v) =>
-        InsertKeyValueModel(k, v._1, mapName, resultType).leaf
+        InsertKeyValueModel(LiteralModel.quote(k), v._1, mapName, resultType).leaf
       }.toList
 
       val toResult = FlattenModel(VarModel(mapName, TopType), resultName).leaf

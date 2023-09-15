@@ -174,7 +174,7 @@ case class DeclareStreamModel(value: ValueModel) extends NoExecModel {
   override def usesVarNames: Set[String] = value.usesVarNames
 }
 
-case class InsertKeyValueModel(key: String, value: ValueModel, assignTo: String, assignToType: StructType) extends OpModel {
+case class InsertKeyValueModel(key: LiteralModel, value: ValueModel, assignTo: String, assignToType: StructType) extends OpModel {
   override def usesVarNames: Set[String] = value.usesVarNames
 
   override def exportsVarNames: Set[String] = Set(assignTo)

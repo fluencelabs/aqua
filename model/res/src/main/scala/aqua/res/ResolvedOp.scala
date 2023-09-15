@@ -1,6 +1,6 @@
 package aqua.res
 
-import aqua.model.{CallModel, ForModel, ValueModel, VarModel}
+import aqua.model.{CallModel, ForModel, LiteralModel, ValueModel, VarModel}
 import aqua.raw.ops.Call
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import aqua.types.DataType
@@ -50,7 +50,7 @@ case class CallServiceRes(
   override def toString: String = s"(call $peerId ($serviceId $funcName) $call)"
 }
 
-case class ApStreamMapRes(key: String, value: ValueModel, exportTo: CallModel.Export) extends ResolvedOp {
+case class ApStreamMapRes(key: LiteralModel, value: ValueModel, exportTo: CallModel.Export) extends ResolvedOp {
   override def toString: String = s"(ap ($key $value) $exportTo)"
 }
 
