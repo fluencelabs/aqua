@@ -24,13 +24,13 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     resultType: StructType
   ): State[S, OpModel.Tree] = {
     fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { kv =>
-      val mapName = resultName + "_map"
+      val mapVar = VarModel(resultName + "_map", StreamMapType.fromStruct(resultType))
       val ops = kv.toNel.toList.flatMap(_._2._2)
       val models = kv.toNel.map { case (k, v) =>
-        InsertKeyValueModel(LiteralModel.quote(k), v._1, mapName, StreamMapType.fromStruct(resultType)).leaf
+        InsertKeyValueModel(LiteralModel.quote(k), v._1, mapVar.name, mapVar.`type`).leaf
       }.toList
 
-      val toResult = CanonicalizeModel(VarModel(mapName, TopType), CallModel.Export(resultName, resultType)).leaf
+      val toResult = CanonicalizeModel(mapVar, CallModel.Export(resultName, resultType)).leaf
 
       SeqModel.wrap(ops ++ models :+ toResult)
     }
