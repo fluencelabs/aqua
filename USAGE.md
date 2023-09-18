@@ -20,7 +20,7 @@ If you want to build Aqua compiler API from the source code, you need [Scala](ht
 
 Javascript build is the default for Aqua compiler API.
 
-Run `sbt "aqua-apiJS/fullLinkJS"`. It will generate JS package in `api/api-npm` directory.
+Run `sbt "aqua-apiJS/fullBundleJS"`. It will generate JS package in `api/api-npm` directory.
 
 
 ### Build to JVM library
