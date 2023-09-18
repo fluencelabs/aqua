@@ -213,11 +213,6 @@ sealed trait BoxType extends DataType {
     Map("length" -> ScalarType.u32)
 }
 
-case class StreamMapType(element: StructType) extends DataType {
-
-  override def toString: String = "%" + element
-}
-
 case class CanonStreamType(element: Type) extends BoxType {
 
   override def isStream: Boolean = false
@@ -325,6 +320,17 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
 
   override def toString: String =
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+}
+
+case class StreamMapType(name: String, fields: NonEmptyMap[String, Type])
+  extends DataType with NamedType {
+
+  override def toString: String =
+    s"%$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+}
+
+object StreamMapType {
+  def fromStruct(st: StructType): StreamMapType = StreamMapType(st.name, st.fields)
 }
 
 case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) extends NamedType {

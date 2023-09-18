@@ -6,7 +6,7 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{LiteralRaw, MakeStructRaw}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
-import aqua.types.{ScalarType, StructType, TopType}
+import aqua.types.{ScalarType, StreamMapType, StructType, TopType}
 import cats.data.Chain
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.traverse.*
@@ -24,10 +24,10 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     resultType: StructType
   ): State[S, OpModel.Tree] = {
     fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { kv =>
-      val mapName = "%" + resultName + "_map"
+      val mapName = resultName + "_map"
       val ops = kv.toNel.toList.flatMap(_._2._2)
       val models = kv.toNel.map { case (k, v) =>
-        InsertKeyValueModel(LiteralModel.quote(k), v._1, mapName, resultType).leaf
+        InsertKeyValueModel(LiteralModel.quote(k), v._1, mapName, StreamMapType.fromStruct(resultType)).leaf
       }.toList
 
       val toResult = CanonicalizeModel(VarModel(mapName, TopType), CallModel.Export(resultName, resultType)).leaf

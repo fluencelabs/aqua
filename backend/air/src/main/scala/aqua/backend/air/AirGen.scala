@@ -3,7 +3,7 @@ package aqua.backend.air
 import aqua.model.*
 import aqua.raw.ops.Call
 import aqua.res.*
-import aqua.types.{ArrayType, CanonStreamType, StreamType, Type}
+import aqua.types.{ArrayType, CanonStreamType, StreamMapType, StreamType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -30,6 +30,7 @@ object AirGen extends Logging {
     (`type` match {
       case _: StreamType => "$" + name
       case _: CanonStreamType => "#" + name
+      case _: StreamMapType => "%" + name
       case _ => name
     }).replace('.', '_')
 
@@ -56,6 +57,7 @@ object AirGen extends Logging {
   def exportToString(exportTo: CallModel.Export): String = (exportTo match {
     case CallModel.Export(name, _: StreamType) => "$" + name
     case CallModel.Export(name, _: CanonStreamType) => "#" + name
+    case CallModel.Export(name, _: StreamMapType) => "%" + name
     case CallModel.Export(name, _) => name
   }).replace('.', '_')
 
