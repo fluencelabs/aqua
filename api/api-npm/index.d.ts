@@ -1,18 +1,18 @@
 import { ServiceDef, FunctionCallDef } from "@fluencelabs/interfaces";
 
-class AquaFunction {
+export class AquaFunction {
   funcDef: FunctionCallDef;
   script: string;
 }
 
-class GeneratedSource {
+export class GeneratedSource {
   name: string;
   tsSource?: string;
   jsSource?: string;
   tsTypes?: string;
 }
 
-class CompilationResult {
+export class CompilationResult {
   services: Record<string, ServiceDef>;
   functions: Record<string, AquaFunction>;
   functionCall?: AquaFunction;
@@ -43,9 +43,11 @@ type CodeString = {
   code: string;
 };
 
+export type CompileFromStringArgs = CommonArgs & CodeString;
+
 /** Compile aqua code from a string */
 export declare function compileFromString(
-  args: CommonArgs & CodeString,
+  args: CompileFromStringArgs,
 ): Promise<Omit<CompilationResult, "funcCall">>;
 
 type FilePath = {
@@ -53,9 +55,11 @@ type FilePath = {
   filePath: string;
 };
 
+export type CompileFromPathArgs = CommonArgs & FilePath;
+
 /** Compile aqua code from a file */
 export declare function compileFromPath(
-  args: CommonArgs & FilePath,
+  args: CompileFromPathArgs,
 ): Promise<Omit<CompilationResult, "funcCall">>;
 
 type FuncCall = {
@@ -65,14 +69,18 @@ type FuncCall = {
   data?: Record<string, unknown> | undefined;
 };
 
+export type CompileFuncCallFromStringArgs = CommonArgs & CodeString & FuncCall;
+
 /** Compile aqua function call from a string */
 export declare function compileAquaCallFromString(
-  args: CommonArgs & CodeString & FuncCall,
+  args: CompileFuncCallFromStringArgs,
 ): Promise<Required<CompilationResult>>;
+
+export type CompileFuncCallFromPathArgs = CommonArgs & FilePath & FuncCall;
 
 /** Compile aqua function call from a file */
 export declare function compileAquaCallFromPath(
-  args: CommonArgs & FilePath & FuncCall,
+  args: CompileFuncCallFromPathArgs,
 ): Promise<Required<CompilationResult>>;
 
 export {};
