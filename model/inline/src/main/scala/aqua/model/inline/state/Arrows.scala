@@ -100,12 +100,15 @@ trait Arrows[S] extends Scoped[S] {
 
 object Arrows {
 
+  /**
+   * Retrieve all arrows that correspond to values
+   */
   def arrowsByValues(
     arrows: Map[String, FuncArrow],
-    vars: Map[String, ValueModel]
+    values: Map[String, ValueModel]
   ): Map[String, FuncArrow] = {
     val arrowKeys = arrows.keySet ++ arrows.values.map(_.funcName)
-    val varsKeys = vars.keySet ++ vars.values.collect { case ValueModel.Arrow(name, _) =>
+    val varsKeys = values.keySet ++ values.values.collect { case ValueModel.Arrow(name, _) =>
       name
     }
     val keys = arrowKeys.intersect(varsKeys)
