@@ -1,4 +1,3 @@
-// @ts-check
 import { AquaConfig, Aqua, Call, Input, Path } from "./aqua-api.js";
 
 function getConfig({
