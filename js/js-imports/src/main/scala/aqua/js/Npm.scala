@@ -7,6 +7,7 @@ object Meta {
 
   // get `import`.meta.url info from javascript
   // it is needed for `createRequire` function
+  // TODO: Investigate if it is really needed
   @js.native
   @JSImport("./meta-utils.js", "metaUrl")
   val metaUrl: String = js.native

@@ -51,7 +51,7 @@ jobs:
       - name: scala-js build
         env:
           SNAPSHOT: ${{ steps.version.outputs.id }}
-        run: sbt ";language-server-apiJS/fastOptJS;aqua-apiJS/fastOptJS"
+        run: sbt ";language-server-apiJS/fastBundleJS;aqua-apiJS/fastBundleJS"
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.7.3
