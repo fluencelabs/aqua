@@ -12,7 +12,7 @@ export class GeneratedSource {
   tsTypes?: string;
 }
 
-export class CompilationResult {
+class CompilationResult {
   services: Record<string, ServiceDef>;
   functions: Record<string, AquaFunction>;
   functionCall?: AquaFunction;
@@ -44,11 +44,12 @@ type CodeString = {
 };
 
 export type CompileFromStringArgs = CommonArgs & CodeString;
+export type CompileFromStringReturnType = Omit<CompilationResult, "funcCall">;
 
 /** Compile aqua code from a string */
 export declare function compileFromString(
   args: CompileFromStringArgs,
-): Promise<Omit<CompilationResult, "funcCall">>;
+): Promise<CompileFromStringReturnType>;
 
 type FilePath = {
   /** Path to the aqua file to be compiled */
@@ -56,11 +57,12 @@ type FilePath = {
 };
 
 export type CompileFromPathArgs = CommonArgs & FilePath;
+export type CompileFromPathReturnType = Omit<CompilationResult, "funcCall">;
 
 /** Compile aqua code from a file */
 export declare function compileFromPath(
   args: CompileFromPathArgs,
-): Promise<Omit<CompilationResult, "funcCall">>;
+): Promise<CompileFromPathReturnType>;
 
 type FuncCall = {
   /** Function call you want to compile. Example: someFunc("someArg") */
@@ -70,17 +72,19 @@ type FuncCall = {
 };
 
 export type CompileFuncCallFromStringArgs = CommonArgs & CodeString & FuncCall;
+export type CompileFuncCallFromStringReturnType = Required<CompilationResult>;
 
 /** Compile aqua function call from a string */
 export declare function compileAquaCallFromString(
   args: CompileFuncCallFromStringArgs,
-): Promise<Required<CompilationResult>>;
+): Promise<CompileFuncCallFromStringReturnType>;
 
 export type CompileFuncCallFromPathArgs = CommonArgs & FilePath & FuncCall;
+export type CompileFuncCallFromPathReturnType = Required<CompilationResult>;
 
 /** Compile aqua function call from a file */
 export declare function compileAquaCallFromPath(
   args: CompileFuncCallFromPathArgs,
-): Promise<Required<CompilationResult>>;
+): Promise<CompileFuncCallFromPathReturnType>;
 
 export {};
