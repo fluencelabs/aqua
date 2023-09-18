@@ -74,9 +74,10 @@ sealed trait ProductType extends Type {
   }
 
   lazy val labelledData: List[(String, DataType)] = this match {
-    case LabeledConsType(label, t: DataType, pt) => (label -> t) :: pt.labelledData
-    case LabeledConsType(label, t: ArrowType, pt) => pt.labelledData
-    case UnlabeledConsType(_, pt) => pt.labelledData
+    case LabeledConsType(label, t: DataType, pt) =>
+      (label -> t) :: pt.labelledData
+    case ConsType(_, pt) =>
+      pt.labelledData
     case _ => Nil
   }
 }
