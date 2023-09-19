@@ -1,5 +1,6 @@
 package aqua.model.inline
 
+import aqua.errors.Errors.internalError
 import aqua.model
 import aqua.model.*
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
@@ -172,8 +173,7 @@ object ArrowInliner extends Logging {
       case arrow @ (_, vm: VarModel) =>
         arrow.some
       case (_, m) =>
-        logger.error(s"Unexpected: '$m' cannot be an arrow")
-        None
+        internalError(s"($m) cannot be an arrow")
     }
   }
 
@@ -205,8 +205,7 @@ object ArrowInliner extends Logging {
       case (_, VarModel(name, _, _)) =>
         arrows.get(name).map(name -> _)
       case (_, m) =>
-        logger.error(s"Unexpected: '$m' cannot be an arrow")
-        None
+        internalError(s"($m) cannot be an arrow")
     }
   }
 

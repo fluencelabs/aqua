@@ -1,16 +1,15 @@
 package aqua.errors
 
-import scala.compiletime.sourcePosition
+import sourcecode.{Enclosing, FileName, Line}
 
 object Errors {
 
   def internalError(
     msg: String
-  )(using source: sourcePosition): Nothing = {
+  )(using file: FileName, line: Line, enclosing: Enclosing): Nothing = {
     throw new RuntimeException(
       s"Internal aqua compiler error:" +
-        s" $msg at ${source.fileName}:${source.lineNumber}" +
-        s" in ${source.enclosingMethod}.\n" +
+        s" $msg at ${file.value}:${line.value} in ${enclosing.value}.\n" +
         s"Please report this issue to https://github.com/fluencelabs/aqua."
     )
   }

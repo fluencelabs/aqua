@@ -7,6 +7,7 @@ val catsV = "2.10.0"
 val catsParseV = "0.3.10"
 val monocleV = "3.1.0"
 val scalaTestV = "3.2.17"
+val sourcecodeV = "0.3.0"
 val fs2V = "3.9.2"
 val catsEffectV = "3.6-1f95fd7"
 val declineV = "2.3.0"
@@ -163,7 +164,7 @@ lazy val model = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .settings(commons)
-  .dependsOn(types, tree, raw, helpers)
+  .dependsOn(types, tree, raw, helpers, errors)
 
 lazy val res = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -196,7 +197,7 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
       "dev.optics" %%% "monocle-macro" % monocleV
     )
   )
-  .dependsOn(raw, parser)
+  .dependsOn(raw, parser, errors)
 
 lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -271,6 +272,11 @@ lazy val errors = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("utils/errors"))
   .settings(commons)
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "sourcecode" % sourcecodeV
+    )
+  )
 
 lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

@@ -1,5 +1,6 @@
 package aqua.model.inline
 
+import aqua.errors.Errors.internalError
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.collectionToModel
@@ -277,12 +278,10 @@ object TagInliner extends Logging {
           n <- Mangler[S].findAndForbidName(item)
           elementType = iterable.`type` match {
             case b: BoxType => b.element
-            // TODO: it is unexpected, should we handle this?
             case _ =>
-              logger.error(
-                s"Unexpected behaviour: non-box type variable '$iterable' in 'for' expression."
+              internalError(
+                s"non-box type variable '$iterable' in 'for' expression."
               )
-              iterable.`type`
           }
           _ <- Exports[S].resolved(item, VarModel(n, elementType))
           m = mode.map {
@@ -308,11 +307,10 @@ object TagInliner extends Logging {
               prefix = p
             )
           case (_, (vm, prefix)) =>
-            logger.error(
-              s"Unexpected: stream (${exportTo}) resolved " +
+            internalError(
+              s"stream (${exportTo}) resolved " +
                 s"to ($vm) with prefix ($prefix)"
             )
-            TagInlined.Empty()
         }
 
       case CanonicalizeTag(operand, exportTo) =>
