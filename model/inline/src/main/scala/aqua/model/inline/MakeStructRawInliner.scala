@@ -1,20 +1,14 @@
 package aqua.model.inline
 
-import aqua.model.{CallModel, CallServiceModel, CanonicalizeModel, FlattenModel, InsertKeyValueModel, LiteralModel, OpModel, SeqModel, ValueModel, VarModel}
+import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.raw.RawInliner
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{LiteralRaw, MakeStructRaw}
-import aqua.model.inline.Inline
-import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
-import aqua.types.{ScalarType, StreamMapType, StructType, TopType}
-import cats.data.Chain
-import cats.data.{NonEmptyMap, State}
-import cats.syntax.traverse.*
-import cats.syntax.monoid.*
-import cats.syntax.functor.*
-import cats.syntax.flatMap.*
-import cats.syntax.apply.*
+import aqua.model.*
+import aqua.raw.value.MakeStructRaw
+import aqua.types.{StreamMapType, StructType}
+import cats.data.{Chain, NonEmptyMap, State}
 import cats.syntax.foldable.*
+import cats.syntax.functor.*
 
 object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
 
@@ -23,11 +17,11 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     resultName: String,
     resultType: StructType
   ): State[S, OpModel.Tree] = {
-    fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { kv =>
+    fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { fieldsTraversed =>
       val mapType = StreamMapType.fromStruct(resultType)
       val mapVar = VarModel(resultName + "_map", mapType)
-      val ops = kv.toNel.toList.flatMap(_._2._2)
-      val models = kv.toNel.map { case (k, v) =>
+      val ops = fieldsTraversed.toNel.toList.flatMap(_._2._2)
+      val models = fieldsTraversed.toNel.map { case (k, v) =>
         InsertKeyValueModel(LiteralModel.quote(k), v._1, mapVar.name, mapType).leaf
       }.toList
 
