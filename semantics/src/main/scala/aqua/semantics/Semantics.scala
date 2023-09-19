@@ -1,5 +1,6 @@
 package aqua.semantics
 
+import aqua.errors.Errors.internalError
 import aqua.parser.head.{HeadExpr, HeaderExpr, ImportExpr, ImportFromExpr}
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.{Ast, Expr}
@@ -361,12 +362,9 @@ object RawSemantics extends Logging {
             ) { case (ctx, p) =>
               ctx.copy(parts = ctx.parts :+ (ctx -> p))
             }
-
-        case (state: CompilerState[S], m) =>
-          logger.error("Got unexpected " + m)
-          state.copy(errors = state.errors :+ WrongAST(ast)) -> RawContext.blank.copy(
-            init = Some(init.copy(module = init.module.map(_ + "|init")))
-              .filter(_ != RawContext.blank)
+        case (_, m) =>
+          internalError(
+            s"Unexpected Raw ($m)"
           )
       }
 }

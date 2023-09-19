@@ -1,5 +1,6 @@
 package aqua.model.inline.raw
 
+import aqua.errors.Errors.internalError
 import aqua.model.inline.Inline.parDesugarPrefixOpt
 import aqua.model.{CallServiceModel, FuncArrow, MetaModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
@@ -9,6 +10,7 @@ import aqua.raw.ops.Call
 import aqua.types.ArrowType
 import aqua.raw.value.CallArrowRaw
 
+import cats.syntax.traverse.*
 import cats.data.{Chain, State}
 import scribe.Logging
 
@@ -88,14 +90,15 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
         // if there is no arrow, check if it is stored in Exports as variable and try to resolve it
         lastArrow.flatMap(arrows.get)
       )
-    result <- arrow.fold {
-      logger.error(
-        s"Inlining, cannot find arrow $funcName, available: ${arrows.keys
-          .mkString(", ")} and vars: ${exports.keys.mkString(", ")}"
-      )
-
-      State.pure(Nil -> Inline.empty)
-    }(resolveFuncArrow(_, call))
+    result <- arrow
+      .traverse(resolveFuncArrow(_, call))
+      .map(_.getOrElse {
+        val arrs = arrows.keys.mkString(", ")
+        val vars = exports.keys.mkString(", ")
+        internalError(
+          s"Inlining, cannot find arrow ($funcName), available: ($arrs) and vars: ($vars)"
+        )
+      })
   } yield result
 
   override def apply[S: Mangler: Exports: Arrows](
