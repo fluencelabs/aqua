@@ -44,6 +44,9 @@ class MakeStructInlinerSpec extends AnyFlatSpec with Matchers {
 
     val lengthModel = FunctorModel("length", ScalarType.u32)
 
+    val streamMapName = "struct_type_obj_map"
+    val streamMapType = StreamMapType.fromStruct(structType)
+
     tree.get.equalsOrShowDiff(
       SeqModel.wrap(
         ParModel.wrap(
@@ -58,16 +61,11 @@ class MakeStructInlinerSpec extends AnyFlatSpec with Matchers {
             VarModel("get_field", ScalarType.string)
           ).leaf
         ),
-        CallServiceModel(
-          "json",
-          "obj",
-          LiteralModel.fromRaw(
-            LiteralRaw.quote("field1")
-          ) :: VarModel("l_length", ScalarType.u32) :: LiteralModel.fromRaw(
-            LiteralRaw.quote("field2")
-          ) :: VarModel("get_field", ScalarType.string) :: Nil,
-          result
-        ).leaf
+        SeqModel.wrap(
+          InsertKeyValueModel(LiteralModel.quote("field1"), VarModel("l_length", ScalarType.u32), streamMapName, streamMapType).leaf,
+          InsertKeyValueModel(LiteralModel.quote("field2"), VarModel("get_field", ScalarType.string), streamMapName, streamMapType).leaf,
+          CanonicalizeModel(VarModel(streamMapName, streamMapType), CallModel.Export(result.name, result.`type`)).leaf
+        )
       )
     ) shouldBe true
 
