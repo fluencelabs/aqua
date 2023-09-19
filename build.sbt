@@ -266,6 +266,12 @@ lazy val helpers = crossProject(JVMPlatform, JSPlatform)
     )
   )
 
+lazy val errors = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("utils/errors"))
+  .settings(commons)
+
 lazy val `backend-air` = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
