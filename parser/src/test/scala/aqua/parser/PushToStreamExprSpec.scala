@@ -7,7 +7,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class PushToStreamExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   "assign" should "be parsed" in {
     parsePush("a <<- \"b\"") should be(

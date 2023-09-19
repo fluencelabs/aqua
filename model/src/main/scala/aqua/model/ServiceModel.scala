@@ -1,10 +1,9 @@
 package aqua.model
 
-import aqua.types.ArrowType
-import cats.data.NonEmptyMap
+import aqua.types.ServiceType
 
 case class ServiceModel(
   name: String,
-  arrows: NonEmptyMap[String, ArrowType],
+  `type`: ServiceType,
   defaultId: Option[ValueModel]
 )

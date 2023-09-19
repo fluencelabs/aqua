@@ -2,8 +2,10 @@ package aqua.model
 
 import aqua.raw.value.*
 import aqua.types.*
+
 import cats.Eq
 import cats.data.{Chain, NonEmptyMap}
+import cats.syntax.option.*
 import scribe.Logging
 
 sealed trait ValueModel {
@@ -17,6 +19,19 @@ sealed trait ValueModel {
 }
 
 object ValueModel {
+
+  def errorCode(error: VarModel): Option[VarModel] =
+    error.intoField("error_code")
+
+  val lastError = VarModel(
+    name = ValueRaw.lastError.name,
+    baseType = ValueRaw.lastError.baseType
+  )
+
+  val lastErrorType = ValueRaw.lastErrorType
+
+  // NOTE: It should be safe as %last_error% should have `error_code` field
+  val lastErrorCode = errorCode(lastError).get
 
   implicit object ValueModelEq extends Eq[ValueModel] {
     override def eqv(x: ValueModel, y: ValueModel): Boolean = x == y
@@ -36,6 +51,25 @@ object ValueModel {
     case _ => ???
   }
 
+  object Arrow {
+
+    def unapply(vm: VarModel): Option[(String, ArrowType)] =
+      vm match {
+        case VarModel(name, t: ArrowType, _) =>
+          (name, t).some
+        case _ => none
+      }
+  }
+
+  object Ability {
+
+    def unapply(vm: VarModel): Option[(String, NamedType, Chain[PropertyModel])] =
+      vm match {
+        case VarModel(name, t: (AbilityType | ServiceType), properties) =>
+          (name, t, properties).some
+        case _ => none
+      }
+  }
 }
 
 case class LiteralModel(value: String, `type`: Type) extends ValueModel {
@@ -46,9 +80,31 @@ case class LiteralModel(value: String, `type`: Type) extends ValueModel {
 }
 
 object LiteralModel {
+
+  /**
+   * Used to match bool literals in pattern matching
+   */
+  object Bool {
+
+    def unapply(lm: LiteralModel): Option[Boolean] =
+      lm match {
+        case LiteralModel("true", ScalarType.bool | LiteralType.bool) => true.some
+        case LiteralModel("false", ScalarType.bool | LiteralType.bool) => false.some
+        case _ => none
+      }
+  }
+
+  // AquaVM will return empty string for
+  // %last_error%.$.error_code if there is no %last_error%
+  val emptyErrorCode = quote("")
+
   def fromRaw(raw: LiteralRaw): LiteralModel = LiteralModel(raw.value, raw.baseType)
 
   def quote(str: String): LiteralModel = LiteralModel(s"\"$str\"", LiteralType.string)
+
+  def number(n: Int): LiteralModel = LiteralModel(n.toString, LiteralType.forInt(n))
+
+  def bool(b: Boolean): LiteralModel = LiteralModel(b.toString.toLowerCase, LiteralType.bool)
 }
 
 sealed trait PropertyModel {
@@ -116,6 +172,17 @@ case class VarModel(name: String, baseType: Type, properties: Chain[PropertyMode
 
   private def deriveFrom(vm: VarModel): VarModel =
     vm.copy(properties = vm.properties ++ properties)
+
+  def intoField(field: String): Option[VarModel] = `type` match {
+    case StructType(_, fields) =>
+      fields(field)
+        .map(fieldType =>
+          copy(
+            properties = properties :+ IntoFieldModel(field, fieldType)
+          )
+        )
+    case _ => none
+  }
 
   override def resolveWith(vals: Map[String, ValueModel]): ValueModel =
     vals.get(name) match {

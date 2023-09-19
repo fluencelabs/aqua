@@ -1,5 +1,83 @@
 # Changelog
 
+## [0.12.1](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.0...aqua-v0.12.1) (2023-09-11)
+
+
+### Bug Fixes
+
+* **compiler:** Error on not arrow call after `&lt;-` ([#876](https://github.com/fluencelabs/aqua/issues/876)) ([69a808e](https://github.com/fluencelabs/aqua/commit/69a808e24307b5fe312a6dfdc6041c310c33d96d))
+* **compiler:** Fix closure stream capture [fixes LNG-58] ([#857](https://github.com/fluencelabs/aqua/issues/857)) ([443e65e](https://github.com/fluencelabs/aqua/commit/443e65e3d8bca4774f5bdb6db5e526c5f2201c89))
+* **deps:** update dependency @fluencelabs/aqua-lib to v0.7.3 ([#882](https://github.com/fluencelabs/aqua/issues/882)) ([3419607](https://github.com/fluencelabs/aqua/commit/3419607e8ccd3d280d5d168d6ffb9cb9380d32a8))
+* **deps:** update dependency @fluencelabs/js-client to v0.1.1 ([#865](https://github.com/fluencelabs/aqua/issues/865)) ([1f23545](https://github.com/fluencelabs/aqua/commit/1f23545b49db2e3bb387ef9d961cac53bb75d127))
+* **deps:** update dependency @fluencelabs/js-client to v0.1.3 ([#875](https://github.com/fluencelabs/aqua/issues/875)) ([df111ad](https://github.com/fluencelabs/aqua/commit/df111adf21c1abe5fbbed7264734927a3f048ffc))
+
+## [0.12.0](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.11...aqua-v0.12.0) (2023-08-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **js-client:** Move to new js-client interface ([#855](https://github.com/fluencelabs/aqua/issues/855))
+
+### Features
+
+* **compiler:** Restrict abilities usage [fixes LNG-208] ([#854](https://github.com/fluencelabs/aqua/issues/854)) ([2a0b207](https://github.com/fluencelabs/aqua/commit/2a0b20763396fea0ada5e14c01372dd3923b424b))
+* **js-client:** Move to new js-client interface ([#855](https://github.com/fluencelabs/aqua/issues/855)) ([0f9ede0](https://github.com/fluencelabs/aqua/commit/0f9ede09fb849915b20f87fddb95ee2514421a19))
+
+
+### Bug Fixes
+
+* **compiler:** Fix nested abilities [fixes LNG-220] ([#852](https://github.com/fluencelabs/aqua/issues/852)) ([bf0b51f](https://github.com/fluencelabs/aqua/commit/bf0b51fa5bca3be96cab028eaec48aa5805b1f73))
+
+## [0.11.11](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.10...aqua-v0.11.11) (2023-08-21)
+
+
+### Features
+
+* **compiler:** Structural typing for data and abilities [fixes LNG-215] ([#843](https://github.com/fluencelabs/aqua/issues/843)) ([019611a](https://github.com/fluencelabs/aqua/commit/019611a89c31618985303d4984ed581eadad11f5))
+* parseq implementation (fixes LNG-223) ([#840](https://github.com/fluencelabs/aqua/issues/840)) ([8060695](https://github.com/fluencelabs/aqua/commit/8060695dbb0a2f34febf739eb20db8b8781b3682))
+
+
+### Bug Fixes
+
+* **compiler:** Generate stream restriction for scoped exprs [fixes LNG-222] ([#841](https://github.com/fluencelabs/aqua/issues/841)) ([eb4cdb0](https://github.com/fluencelabs/aqua/commit/eb4cdb0dd12987e64881bab6ff19f935e905672e))
+* **compiler:** Refactor values [fixes LNG-57] ([#821](https://github.com/fluencelabs/aqua/issues/821)) ([f562bd4](https://github.com/fluencelabs/aqua/commit/f562bd40b6df5bbfce5635c10710d91f21e3af88))
+* Fix release build command ([#834](https://github.com/fluencelabs/aqua/issues/834)) ([6146f8e](https://github.com/fluencelabs/aqua/commit/6146f8e40a59c9fecd9f40b76e6ec6398b05ca05))
+
+## [0.11.9](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.8...aqua-v0.11.9) (2023-08-09)
+
+
+### Features
+
+* **compiler:** Add boolean algebra [fixes LNG-211] ([#814](https://github.com/fluencelabs/aqua/issues/814)) ([a5b6102](https://github.com/fluencelabs/aqua/commit/a5b610242260538ff38d62dc21b97a694d0776e3))
+* **compiler:** Add equality ops [fixes LNG-217] ([#820](https://github.com/fluencelabs/aqua/issues/820)) ([a5e9354](https://github.com/fluencelabs/aqua/commit/a5e9354aebe9291e9fc0b1d29e74972bfaa254e2))
+* **compiler:** Restrict exporting functions that return arrow types or ability types [fixes LNG-209] ([#815](https://github.com/fluencelabs/aqua/issues/815)) ([fabf8d7](https://github.com/fluencelabs/aqua/commit/fabf8d7d61ec8d70bf8e17e581c3c7371c4e6d78))
+* wrap aqua api ([#807](https://github.com/fluencelabs/aqua/issues/807)) ([c7fca40](https://github.com/fluencelabs/aqua/commit/c7fca40f670a4b5a51ab4ce188f69f550d4bf6d6))
+
+
+### Bug Fixes
+
+* **compiler:** Fix `if` with brackets parsing ([#812](https://github.com/fluencelabs/aqua/issues/812)) ([4c3c32b](https://github.com/fluencelabs/aqua/commit/4c3c32b7c400e87f962dc9827892a9224765e2a4))
+* **compiler:** Fix math ops for `u64` [fixes LNG-204] ([#811](https://github.com/fluencelabs/aqua/issues/811)) ([50ba194](https://github.com/fluencelabs/aqua/commit/50ba194b8610b60bcaefee401cadacb369246f79))
+* **compiler:** Nested abilities [fixes LNG-214] ([#816](https://github.com/fluencelabs/aqua/issues/816)) ([4e3e70f](https://github.com/fluencelabs/aqua/commit/4e3e70f4fc855a16238c4f84bd4f6a1102890904))
+* **compiler:** Runtime error on compilation exported functions with top types [fixes LNG-218] ([#822](https://github.com/fluencelabs/aqua/issues/822)) ([ef4b014](https://github.com/fluencelabs/aqua/commit/ef4b0143ac7cd4e1a5997d6a0f1f690ab806a315))
+
+## [0.11.8](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.7...aqua-v0.11.8) (2023-07-20)
+
+
+### Features
+
+* **compiler:** Abilities ([#731](https://github.com/fluencelabs/aqua/issues/731)) ([63a9f42](https://github.com/fluencelabs/aqua/commit/63a9f42e86d29b741fa31135b4111bc0f38f238f))
+* **compiler:** Find and display link cycles ([#787](https://github.com/fluencelabs/aqua/issues/787)) ([667a825](https://github.com/fluencelabs/aqua/commit/667a8255d994b334dfc87bd89a970855748752fe))
+* **compiler:** Make `on` propagate errors [fixes LNG-203] ([#788](https://github.com/fluencelabs/aqua/issues/788)) ([b8b0faf](https://github.com/fluencelabs/aqua/commit/b8b0fafda0d27607ffc693e52c0dae81d23ec503))
+* **compiler:** Make topology hop with non-FFI snippet [fixes LNG-125] ([#764](https://github.com/fluencelabs/aqua/issues/764)) ([c1fe24b](https://github.com/fluencelabs/aqua/commit/c1fe24b04d8a2f711ed7b316e7ae9a4f12732421))
+
+
+### Bug Fixes
+
+* **ci:** use unstable nox image ([#780](https://github.com/fluencelabs/aqua/issues/780)) ([22f380a](https://github.com/fluencelabs/aqua/commit/22f380a49162d8d79cccad266b17116d9f9c7795))
+* **compiler:** Fix search for one element cycles ([#797](https://github.com/fluencelabs/aqua/issues/797)) ([33ab33d](https://github.com/fluencelabs/aqua/commit/33ab33d4c8f34743202e5acbfb2e976ab3070299))
+* **deps:** update dependency @fluencelabs/fluence-network-environment to v1.1.2 ([#786](https://github.com/fluencelabs/aqua/issues/786)) ([ca52e25](https://github.com/fluencelabs/aqua/commit/ca52e2542cc031c748c6f8c8372aff717e9c709f))
+
 ## [0.11.7](https://github.com/fluencelabs/aqua/compare/aqua-v0.11.6...aqua-v0.11.7) (2023-06-16)
 
 

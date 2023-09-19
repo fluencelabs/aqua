@@ -9,7 +9,12 @@ project/target
 
 .DS_Store
 
-npm/aqua.js
+language-server/language-server-npm/aqua-lsp-api.js
+api/api-npm/aqua-api.js
+
+integration-tests/src/compiled/*
+
+**/dist
 **/node_modules
 
 **/.antlr

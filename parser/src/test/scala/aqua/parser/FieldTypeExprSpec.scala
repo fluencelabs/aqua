@@ -8,7 +8,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class FieldTypeExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   "else" should "be parsed" in {
     parseFieldType("some: bool") should be(

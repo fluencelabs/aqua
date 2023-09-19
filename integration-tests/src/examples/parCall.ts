@@ -1,4 +1,3 @@
-import { Fluence } from '@fluencelabs/fluence';
 import {parFunc, registerParService, testTimeout} from '../compiled/examples/par.js';
 import {config} from "../config.js";
 

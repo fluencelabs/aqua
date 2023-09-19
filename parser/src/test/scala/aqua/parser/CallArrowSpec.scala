@@ -2,7 +2,9 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.func.CallArrowExpr
-import aqua.parser.lexer.{CallArrowToken, Name, VarToken}
+import aqua.parser.lexer.{CallArrowToken, IntoArrow, Name, PropertyToken, VarToken}
+
+import cats.data.NonEmptyList
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -12,19 +14,25 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
 
   "func calls" should "parse func()" in {
     parseExpr("func()") should be(
-      CallArrowExpr[Id](Nil, CallArrowToken(None, toName("func"), List()))
+      CallArrowExpr[Id](Nil, CallArrowToken(toName("func"), Nil))
     )
+
     parseExpr("Ab.func(arg)") should be(
       CallArrowExpr[Id](
         Nil,
-        CallArrowToken(Some(toNamedType("Ab")), Name[Id]("func"), List(VarToken[Id](toName("arg"))))
+        PropertyToken[Id](
+          VarToken[Id](toName("Ab")),
+          NonEmptyList.one(
+            IntoArrow(toName("func"), toVar("arg") :: Nil)
+          )
+        )
       )
     )
 
     parseExpr("func(arg.doSomething)") should be(
       CallArrowExpr[Id](
         Nil,
-        CallArrowToken(None, Name[Id]("func"), List(toVarLambda("arg", List("doSomething"))))
+        CallArrowToken(Name[Id]("func"), List(toVarLambda("arg", List("doSomething"))))
       )
     )
 
@@ -32,7 +40,6 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
       CallArrowExpr[Id](
         Nil,
         CallArrowToken(
-          None,
           Name[Id]("func"),
           List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse")))
         )
@@ -43,7 +50,6 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
       CallArrowExpr[Id](
         Nil,
         CallArrowToken(
-          None,
           Name[Id]("func"),
           List(toVarLambda("arg", List("doSomething", "and", "doSomethingElse")))
         )
@@ -53,12 +59,16 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parseExpr("Ab.func(arg.doSomething.and.doSomethingElse, arg2.someFunc)") should be(
       CallArrowExpr[Id](
         Nil,
-        CallArrowToken(
-          Some(toNamedType("Ab")),
-          Name[Id]("func"),
-          List(
-            toVarLambda("arg", List("doSomething", "and", "doSomethingElse")),
-            toVarLambda("arg2", List("someFunc"))
+        PropertyToken[Id](
+          VarToken[Id](toName("Ab")),
+          NonEmptyList.one(
+            IntoArrow(
+              toName("func"),
+              List(
+                toVarLambda("arg", List("doSomething", "and", "doSomethingElse")),
+                toVarLambda("arg2", List("someFunc"))
+              )
+            )
           )
         )
       )
@@ -68,7 +78,6 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
       CallArrowExpr[Id](
         List(toName("x")),
         CallArrowToken(
-          None,
           Name[Id]("func"),
           List(
             toVarLambda("arg", List("doSomething"))
@@ -81,7 +90,6 @@ class CallArrowSpec extends AnyFlatSpec with Matchers with AquaSpec {
       CallArrowExpr[Id](
         toName("x") :: toName("y") :: toName("z") :: Nil,
         CallArrowToken(
-          None,
           Name[Id]("func"),
           List(
             toVarLambda("arg", List("doSomething"))

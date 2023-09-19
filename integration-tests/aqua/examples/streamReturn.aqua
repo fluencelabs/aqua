@@ -1,0 +1,24 @@
+aqua StreamReturn
+
+export testReturnStream
+
+func returnStream() -> *string:
+    stream: *string
+    stream <<- "one"
+    <- stream
+
+func useStream(stream: *string) -> *string:
+    stream <<- "two"
+    <- stream
+
+func rereturnStream() -> *string:
+    stream <- returnStream()
+    useStream(stream)
+    stream <<- "three"
+    <- stream
+
+func testReturnStream() -> []string:
+    on HOST_PEER_ID:
+        stream <- rereturnStream()
+        stream <<- "four"
+    <- stream

@@ -10,8 +10,9 @@ import aqua.raw.{RawContext, RawPart}
 import aqua.res.AquaRes
 import aqua.semantics.{CompilerState, Semantics}
 import aqua.semantics.header.{HeaderHandler, HeaderSem, Picker}
+
 import cats.data.*
-import cats.data.Validated.{Invalid, Valid, validNec}
+import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.parse.Parser0
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
@@ -19,7 +20,7 @@ import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import cats.syntax.traverse.*
 import cats.syntax.semigroup.*
-import cats.{Comonad, Functor, Monad, Monoid, Order, ~>}
+import cats.{~>, Comonad, Functor, Monad, Monoid, Order}
 import scribe.Logging
 
 class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
@@ -39,7 +40,7 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
       Err,
       ValidatedCtxT
     ],
-    cycleError: List[AquaModule[I, Err, ValidatedCtxT]] => Err
+    cycleError: Linker.DepCycle[AquaModule[I, Err, ValidatedCtxT]] => Err
   ): ValidatedNec[Err, Map[I, ValidatedCtx]] = {
     logger.trace("linking modules...")
 

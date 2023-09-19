@@ -1,17 +1,22 @@
 package aqua.model.inline
 
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
+import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.*
 import aqua.model.inline.raw.{
+  ApplyBinaryOpRawInliner,
   ApplyFunctorRawInliner,
   ApplyGateRawInliner,
   ApplyPropertiesRawInliner,
+  ApplyUnaryOpRawInliner,
   CallArrowRawInliner,
-  CollectionRawInliner
+  CollectionRawInliner,
+  MakeAbilityRawInliner
 }
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{ArrayType, OptionType, StreamType}
+import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
+
 import cats.syntax.traverse.*
 import cats.syntax.monoid.*
 import cats.syntax.functor.*
@@ -19,11 +24,12 @@ import cats.syntax.flatMap.*
 import cats.syntax.apply.*
 import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
+import cats.syntax.applicative.*
 import scribe.Logging
 
 object RawValueInliner extends Logging {
 
-  import Inline.*
+  import aqua.model.inline.Inline.*
 
   private[inline] def unfold[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
@@ -31,7 +37,10 @@ object RawValueInliner extends Logging {
   ): State[S, (ValueModel, Inline)] =
     raw match {
       case VarRaw(name, t) =>
-        Exports[S].exports.map(VarModel(name, t, Chain.empty).resolveWith).map(_ -> Inline.empty)
+        for {
+          exports <- Exports[S].exports
+          model = VarModel(name, t, Chain.empty).resolveWith(exports)
+        } yield model -> Inline.empty
 
       case LiteralRaw(value, t) =>
         State.pure(LiteralModel(value, t) -> Inline.empty)
@@ -48,28 +57,26 @@ object RawValueInliner extends Logging {
       case dr: MakeStructRaw =>
         MakeStructRawInliner(dr, propertiesAllowed)
 
+      case ar: AbilityRaw =>
+        MakeAbilityRawInliner(ar, propertiesAllowed)
+
+      case auor: ApplyUnaryOpRaw =>
+        ApplyUnaryOpRawInliner(auor, propertiesAllowed)
+
+      case abbor: ApplyBinaryOpRaw =>
+        ApplyBinaryOpRawInliner(abbor, propertiesAllowed)
+
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)
     }
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
     inline: Inline
-  ): State[S, List[OpModel.Tree]] = {
-    inline.flattenValues.toList.traverse { case (name, v) =>
-      valueToModel(v).map {
-        case (vv, Some(op)) =>
-          SeqModel.wrap(op, FlattenModel(vv, name).leaf)
-
-        case (vv, _) =>
-          FlattenModel(vv, name).leaf
-      }
-    }.map { predo =>
-      inline.mergeMode match
-        case SeqMode =>
-          SeqModel.wrap((inline.predo.toList ++ predo): _*) :: Nil
-        case ParMode => inline.predo.toList ::: predo
-    }
-  }
+  ): State[S, List[OpModel.Tree]] =
+    (inline.mergeMode match {
+      case SeqMode => SeqModel.wrap(inline.predo) :: Nil
+      case ParMode => inline.predo.toList
+    }).pure
 
   private[inline] def toModel[S: Mangler: Exports: Arrows](
     unfoldF: State[S, (ValueModel, Inline)]

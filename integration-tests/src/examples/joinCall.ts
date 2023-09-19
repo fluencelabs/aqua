@@ -1,4 +1,3 @@
-import {Fluence} from '@fluencelabs/fluence';
 import {joinIdx, joinIdxLocal, joinIdxRelay} from "../compiled/examples/join.js";
 import { config } from '../config.js';
 

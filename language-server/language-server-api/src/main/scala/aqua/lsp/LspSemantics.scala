@@ -3,9 +3,9 @@ package aqua.lsp
 import aqua.parser.Ast
 import aqua.parser.head.{ImportExpr, ImportFromExpr, UseExpr, UseFromExpr}
 import aqua.parser.lexer.{LiteralToken, Token}
-import aqua.semantics.rules.ReportError
+import aqua.semantics.rules.errors.ReportErrors
 import aqua.semantics.rules.locations.LocationsState
-import aqua.semantics.{CompilerState, RulesViolated, SemanticError, Semantics}
+import aqua.semantics.{CompilerState, RawSemantics, RulesViolated, SemanticError, Semantics}
 import cats.data.Validated.{Invalid, Valid}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
@@ -57,31 +57,29 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
       GenLens[CompilerState[S]](_.locations)
 
     import monocle.syntax.all.*
-    implicit val re: ReportError[S, CompilerState[S]] =
+    implicit val re: ReportErrors[S, CompilerState[S]] =
       (st: CompilerState[S], token: Token[S], hints: List[String]) =>
         st.focus(_.errors).modify(_.append(RulesViolated(token, hints)))
 
     implicit val locationsInterpreter: LocationsInterpreter[S, CompilerState[S]] =
       new LocationsInterpreter[S, CompilerState[S]]()
 
-    Semantics
+    RawSemantics
       .interpret(ast, initState, init.raw)
       .map { case (state, ctx) =>
-        NonEmptyChain
-          .fromChain(state.errors)
-          .fold[ValidatedNec[SemanticError[S], LspContext[S]]] {
-            Valid(
-              LspContext(
-                raw = ctx,
-                rootArrows = state.names.rootArrows,
-                constants = state.names.constants,
-                abDefinitions = state.abilities.definitions,
-                locations = state.locations.allLocations,
-                importTokens = importTokens,
-                tokens = state.locations.tokens
-              )
-            )
-          }(Invalid(_))
+        // TODO: better to change return type in `process` method
+        Valid(
+          LspContext(
+            raw = ctx,
+            rootArrows = state.names.rootArrows,
+            constants = state.names.constants,
+            abDefinitions = state.abilities.definitions,
+            locations = state.locations.allLocations,
+            importTokens = importTokens,
+            tokens = state.locations.tokens,
+            errors = state.errors.toList
+          )
+        )
       }
       // TODO: return as Eval
       .value

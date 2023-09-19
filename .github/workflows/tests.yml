@@ -7,18 +7,71 @@ on:
         description: "git ref to checkout to"
         type: string
         default: "main"
+      fluence-env:
+        description: "Fluence enviroment to run tests agains"
+        type: string
+        default: "local"
+      nox-image:
+        description: "nox image tag"
+        type: string
+        default: "fluencelabs/nox:unstable_minimal"
+      js-client-snapshots:
+        description: "js-client snapshots"
+        type: string
+        default: "null"
+
+env:
+  FORCE_COLOR: true
+  NOX_IMAGE: "${{ inputs.nox-image }}"
+  FLUENCE_ENV: "${{ inputs.fluence-env }}"
 
 jobs:
-  tests:
-    name: "Run sbt tests"
+  aqua:
+    name: "Run tests"
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2.7.3
+        with:
+          url: https://vault.fluence.dev
+          path: jwt/github
+          role: ci
+          method: jwt
+          jwtGithubAudience: "https://github.com/fluencelabs"
+          jwtTtl: 300
+          secrets: |
+            kv/docker-registry/basicauth/ci username | DOCKER_USERNAME ;
+            kv/docker-registry/basicauth/ci password | DOCKER_PASSWORD ;
+            kv/npm-registry/basicauth/ci token | NODE_AUTH_TOKEN;
+            kv/slack/node-alerts webhook | INCOMING_WEBHOOK_URL
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          registry: docker.fluence.dev
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           repository: fluencelabs/aqua
           ref: ${{ inputs.ref }}
+
+      - name: Pull nox image
+        run: docker pull $NOX_IMAGE
+
+      - name: Run nox
+        uses: isbang/compose-action@v1.5.0
+        with:
+          compose-file: ".github/e2e/docker-compose.yml"
+          down-flags: "--volumes"
 
       - name: Cache Scala
         uses: coursier/cache-action@v6
@@ -28,5 +81,40 @@ jobs:
         with:
           apps: sbt
 
-      - name: Run tests
-        run: sbt test
+      - name: aqua-api build
+        run: sbt "aqua-apiJS/fastBundleJS"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.4.0
+        with:
+          version: 8
+
+      - name: Setup node with self-hosted registry
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          registry-url: "https://npm.fluence.dev"
+          cache: "pnpm"
+
+      - name: Override dependencies
+        if: inputs.js-client-snapshots != 'null'
+        uses: fluencelabs/github-actions/pnpm-set-dependency@main
+        with:
+          dependencies: |
+            {
+              "@fluencelabs/js-client": "${{ fromJson(inputs.js-client-snapshots)['js-client'] }}"
+            }
+
+      - run: pnpm install --no-frozen-lockfile
+        working-directory: integration-tests
+
+      - name: Compile aqua
+        run: pnpm run compile-aqua
+        working-directory: integration-tests
+
+      - run: pnpm run test
+        working-directory: integration-tests
+
+      - name: Dump nox logs
+        if: always()
+        uses: jwalton/gh-docker-logs@v2

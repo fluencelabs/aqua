@@ -1,30 +1,31 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{FunctorRaw, IntoCopyRaw, IntoFieldRaw, IntoIndexRaw, PropertyRaw, ValueRaw}
-import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.{ReportError, StackInterpreter}
-import aqua.types.{
-  ArrayType,
-  ArrowType,
-  BoxType,
-  LiteralType,
-  OptionType,
-  ProductType,
-  ScalarType,
-  StreamType,
-  StructType,
-  Type
+import aqua.raw.value.{
+  FunctorRaw,
+  IntoArrowRaw,
+  IntoCopyRaw,
+  IntoFieldRaw,
+  IntoIndexRaw,
+  PropertyRaw,
+  ValueRaw
 }
+import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.semantics.rules.StackInterpreter
+import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.types.TypesStateHelper.{TypeResolution, TypeResolutionError}
+import aqua.types.*
+
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, NonEmptyList, NonEmptyMap, State}
-import cats.instances.list.*
+import cats.data.{Chain, NonEmptyList, NonEmptyMap, OptionT, State}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
+import cats.syntax.foldable.*
 import cats.{~>, Applicative}
+import cats.syntax.option.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -32,7 +33,7 @@ import scala.collection.immutable.SortedMap
 
 class TypesInterpreter[S[_], X](implicit
   lens: Lens[X, TypesState[S]],
-  error: ReportError[S, X],
+  error: ReportErrors[S, X],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends TypesAlgebra[S, State[X, *]] {
 
@@ -44,90 +45,183 @@ class TypesInterpreter[S[_], X](implicit
 
   type ST[A] = State[X, A]
 
-  val resolver: (TypesState[S], NamedTypeToken[S]) => Option[
-    (Type, List[(Token[S], NamedTypeToken[S])])
-  ] = { (state, ctt) =>
-    state.strict.get(ctt.value).map(t => (t, state.definitions.get(ctt.value).toList.map(ctt -> _)))
-  }
+  override def getType(name: String): State[X, Option[Type]] =
+    getState.map(st => st.strict.get(name))
 
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
-    getState.map(st => TypesStateHelper.resolveTypeToken(token, st, resolver)).flatMap {
-      case Some(t) =>
-        val (tt, tokens) = t
-        val tokensLocs = tokens.map { case (t, n) =>
-          n.value -> t
-        }
-        locations.pointLocations(tokensLocs).map(_ => Some(tt))
-      case None => report(token, s"Unresolved type").as(None)
+    getState.map(TypesStateHelper.resolveTypeToken(token)).flatMap {
+      case Some(TypeResolution(typ, tokens)) =>
+        val tokensLocs = tokens.map { case (t, n) => n.value -> t }
+        locations.pointLocations(tokensLocs).as(typ.some)
+      case None =>
+        // TODO: Give more specific error message
+        report(token, s"Unresolved type").as(None)
     }
 
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
-    getState.map(st => TypesStateHelper.resolveArrowDef(arrowDef, st, resolver)).flatMap {
-      case Valid(t) =>
-        val (tt, tokens) = t
-        val tokensLocs = tokens.map { case (t, n) =>
-            n.value -> t
-          }
-        locations.pointLocations(tokensLocs).map(_ => Some(tt))
+    getState.map(TypesStateHelper.resolveArrowDef(arrowDef)).flatMap {
+      case Valid(TypeResolution(tt, tokens)) =>
+        val tokensLocs = tokens.map { case (t, n) => n.value -> t }
+        locations.pointLocations(tokensLocs).as(tt.some)
       case Invalid(errs) =>
-        errs
-          .foldLeft[ST[Option[ArrowType]]](State.pure(None)) { case (n, (tkn, hint)) =>
-            report(tkn, hint) >> n
-          }
+        errs.traverse_ { case TypeResolutionError(token, hint) =>
+          report(token, hint)
+        }.as(none)
     }
 
-  override def defineDataType(
-    name: NamedTypeToken[S],
-    fields: NonEmptyMap[String, Type]
-  ): State[X, Option[StructType]] =
-    getState.map(_.definitions.get(name.value)).flatMap {
-      case Some(n) if n == name => State.pure(None)
-      case Some(_) =>
-        report(name, s"Type `${name.value}` was already defined").as(None)
+  override def resolveServiceType(name: NamedTypeToken[S]): State[X, Option[ServiceType]] =
+    resolveType(name).flatMap {
+      case Some(serviceType: ServiceType) =>
+        serviceType.some.pure
+      case Some(t) =>
+        report(name, s"Type `$t` is not a service").as(none)
       case None =>
-        val structType = StructType(name.value, fields)
-        modify { st =>
-          st.copy(
-            strict = st.strict.updated(name.value, structType),
-            definitions = st.definitions.updated(name.value, name)
-          )
-        }
-          .as(Option(structType))
+        report(name, s"Type `${name.value}` is not defined").as(none)
     }
+
+  override def defineAbilityType(
+    name: NamedTypeToken[S],
+    fields: Map[String, (Name[S], Type)]
+  ): State[X, Option[AbilityType]] =
+    ensureNameNotDefined(name.value, name, ifDefined = none) {
+      val types = fields.view.mapValues { case (_, t) => t }.toMap
+      NonEmptyMap
+        .fromMap(SortedMap.from(types))
+        .fold(report(name, s"Ability `${name.value}` has no fields").as(none))(nonEmptyFields =>
+          val `type` = AbilityType(name.value, nonEmptyFields)
+
+          modify(_.defineType(name, `type`)).as(`type`.some)
+        )
+    }
+
+  override def defineServiceType(
+    name: NamedTypeToken[S],
+    fields: Map[String, (Name[S], Type)]
+  ): State[X, Option[ServiceType]] =
+    ensureNameNotDefined(name.value, name, ifDefined = none)(
+      fields.toList.traverse {
+        case (field, (fieldName, t: ArrowType)) =>
+          OptionT
+            .when(t.codomain.length <= 1)(field -> t)
+            .flatTapNone(
+              report(fieldName, "Service functions cannot have multiple results")
+            )
+        case (field, (fieldName, t)) =>
+          OptionT(
+            report(
+              fieldName,
+              s"Field '$field' has unacceptable for service field type '$t'"
+            ).as(none)
+          )
+      }.flatMapF(arrows =>
+        NonEmptyMap
+          .fromMap(SortedMap.from(arrows))
+          .fold(
+            report(name, s"Service `${name.value}` has no fields").as(none)
+          )(_.some.pure)
+      ).semiflatMap(nonEmptyArrows =>
+        val `type` = ServiceType(name.value, nonEmptyArrows)
+
+        modify(_.defineType(name, `type`)).as(`type`)
+      ).value
+    )
+
+  override def defineStructType(
+    name: NamedTypeToken[S],
+    fields: Map[String, (Name[S], Type)]
+  ): State[X, Option[StructType]] =
+    ensureNameNotDefined(name.value, name, ifDefined = none)(
+      fields.toList.traverse {
+        case (field, (fieldName, t: DataType)) =>
+          t match {
+            case _: StreamType => report(fieldName, s"Field '$field' has stream type").as(none)
+            case _ => (field -> t).some.pure[ST]
+          }
+        case (field, (fieldName, t)) =>
+          report(
+            fieldName,
+            s"Field '$field' has unacceptable for struct field type '$t'"
+          ).as(none)
+      }.map(_.sequence.map(_.toMap))
+        .flatMap(
+          _.map(SortedMap.from)
+            .flatMap(NonEmptyMap.fromMap)
+            .fold(
+              report(name, s"Struct `${name.value}` has no fields").as(none)
+            )(nonEmptyFields =>
+              val `type` = StructType(name.value, nonEmptyFields)
+
+              modify(_.defineType(name, `type`)).as(`type`.some)
+            )
+        )
+    )
 
   override def defineAlias(name: NamedTypeToken[S], target: Type): State[X, Boolean] =
     getState.map(_.definitions.get(name.value)).flatMap {
       case Some(n) if n == name => State.pure(false)
       case Some(_) => report(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
-        modify(st =>
-          st.copy(
-            strict = st.strict.updated(name.value, target),
-            definitions = st.definitions.updated(name.value, name)
-          )
-        ).flatMap(_ => locations.addToken(name.value, name)).as(true)
+        modify(_.defineType(name, target))
+          .productL(locations.addToken(name.value, name))
+          .as(true)
     }
 
   override def resolveField(rootT: Type, op: IntoField[S]): State[X, Option[PropertyRaw]] = {
     rootT match {
-      case StructType(name, fields) =>
-        fields(op.value).fold(
-          report(
-            op,
-            s"Field `${op.value}` not found in type `$name`, available: ${fields.toNel.toList.map(_._1).mkString(", ")}"
-          ).as(None)
-        ) { t =>
-            locations.pointFieldLocation(name, op.value, op).as(Some(IntoFieldRaw(op.value, t)))
-        }
+      case nt: NamedType =>
+        nt.fields(op.value)
+          .fold(
+            report(
+              op,
+              s"Field `${op.value}` not found in type `${nt.name}`, available: ${nt.fields.toNel.toList.map(_._1).mkString(", ")}"
+            ).as(None)
+          ) { t =>
+            locations.pointFieldLocation(nt.name, op.value, op).as(Some(IntoFieldRaw(op.value, t)))
+          }
       case t =>
         t.properties
           .get(op.value)
           .fold(
             report(
               op,
-              s"Expected Struct type to resolve a field '${op.value}' or a type with this property. Got: $rootT"
+              s"Expected data type to resolve a field '${op.value}' or a type with this property. Got: $rootT"
             ).as(None)
           )(t => State.pure(Some(FunctorRaw(op.value, t))))
+
+    }
+  }
+
+  override def resolveArrow(
+    rootT: Type,
+    op: IntoArrow[S],
+    arguments: List[ValueRaw]
+  ): State[X, Option[PropertyRaw]] = {
+    rootT match {
+      case AbilityType(name, fieldsAndArrows) =>
+        fieldsAndArrows(op.name.value).fold(
+          report(
+            op,
+            s"Arrow `${op.name.value}` not found in type `$name`, available: ${fieldsAndArrows.toNel.toList.map(_._1).mkString(", ")}"
+          ).as(None)
+        ) { t =>
+          val resolvedType = t match {
+            // TODO: is it a correct way to resolve `IntoArrow` type?
+            case ArrowType(_, codomain) => codomain.uncons.map(_._1).getOrElse(t)
+            case _ => t
+          }
+          locations
+            .pointFieldLocation(name, op.name.value, op)
+            .as(Some(IntoArrowRaw(op.name.value, resolvedType, arguments)))
+        }
+      case t =>
+        t.properties
+          .get(op.name.value)
+          .fold(
+            report(
+              op,
+              s"Expected scope type to resolve an arrow '${op.name.value}' or a type with this property. Got: $rootT"
+            ).as(None)
+          )(t => State.pure(Some(FunctorRaw(op.name.value, t))))
 
     }
   }
@@ -177,24 +271,36 @@ class TypesInterpreter[S[_], X](implicit
     left: Type,
     right: Type
   ): State[X, Boolean] = {
-    val isComparable = (left, right) match {
-      case (LiteralType(xs, _), LiteralType(ys, _)) =>
-        xs.intersect(ys).nonEmpty
-      case _ =>
-        left.acceptsValueOf(right)
-    }
+    // TODO: This needs more comprehensive logic
+    def isComparable(lt: Type, rt: Type): Boolean =
+      (lt, rt) match {
+        // All numbers are comparable
+        case (lst: ScalarType, rst: ScalarType)
+            if ScalarType.number(lst) && ScalarType.number(rst) =>
+          true
+        // Hack: u64 `U` LiteralType.signed = TopType,
+        // but they should be comparable
+        case (lst: ScalarType, LiteralType.signed) if ScalarType.number(lst) =>
+          true
+        case (LiteralType.signed, rst: ScalarType) if ScalarType.number(rst) =>
+          true
+        case (lbt: BoxType, rbt: BoxType) =>
+          isComparable(lbt.element, rbt.element)
+        // Prohibit comparing abilities
+        case (_: AbilityType, _: AbilityType) =>
+          false
+        // Prohibit comparing arrows
+        case (_: ArrowType, _: ArrowType) =>
+          false
+        case (LiteralType(xs, _), LiteralType(ys, _)) =>
+          xs.intersect(ys).nonEmpty
+        case _ =>
+          lt.uniteTop(rt) != TopType
+      }
 
-    if (isComparable) State.pure(true)
-    else
-      report(token, s"Cannot compare '$left' with '$right''")
-        .as(false)
+    if (isComparable(left, right)) State.pure(true)
+    else report(token, s"Cannot compare '$left' with '$right''").as(false)
   }
-
-  private def extractToken(token: Token[S]) =
-    token match {
-      case VarToken(n, properties) => properties.lastOption.getOrElse(n)
-      case t => t
-    }
 
   override def ensureTypeMatches(
     token: Token[S],
@@ -204,7 +310,9 @@ class TypesInterpreter[S[_], X](implicit
     if (expected.acceptsValueOf(givenType)) State.pure(true)
     else {
       (expected, givenType) match {
-        case (StructType(n, valueFields), StructType(_, typeFields)) =>
+        case (valueNamedType: NamedType, typeNamedType: NamedType) =>
+          val valueFields = valueNamedType.fields
+          val typeFields = typeNamedType.fields
           // value can have more fields
           if (valueFields.length < typeFields.length) {
             report(
@@ -215,11 +323,14 @@ class TypesInterpreter[S[_], X](implicit
             valueFields.toSortedMap.toList.traverse { (name, `type`) =>
               typeFields.lookup(name) match {
                 case Some(t) =>
-                  val nextToken = extractToken(token match {
-                    case StructValueToken(_, fields) =>
+                  val nextToken = token match {
+                    case NamedValueToken(_, fields) =>
                       fields.lookup(name).getOrElse(token)
-                    case t => t
-                  })
+                    // TODO: Is it needed?
+                    case PropertyToken(_, properties) =>
+                      properties.last
+                    case _ => token
+                  }
                   ensureTypeMatches(nextToken, `type`, t)
                 case None =>
                   report(
@@ -245,6 +356,31 @@ class TypesInterpreter[S[_], X](implicit
             .as(false)
       }
     }
+
+  override def ensureTypeIsCollectible(token: Token[S], givenType: Type): State[X, Boolean] =
+    givenType match {
+      case _: DataType => true.pure
+      case _ =>
+        report(
+          token,
+          s"Value of type '$givenType' could not be put into a collection"
+        ).as(false)
+    }
+
+  override def ensureTypeOneOf[T <: Type](
+    token: Token[S],
+    expected: Set[T],
+    givenType: Type
+  ): State[X, Option[Type]] = expected
+    .find(_ acceptsValueOf givenType)
+    .fold(
+      reportError(
+        token,
+        "Types mismatch." ::
+          s"expected one of:   ${expected.mkString(", ")}" ::
+          s"given:             $givenType" :: Nil
+      ).as(none)
+    )(_.some.pure)
 
   override def expectNoExport(token: Token[S]): State[X, Unit] =
     report(
@@ -297,80 +433,72 @@ class TypesInterpreter[S[_], X](implicit
   override def checkArrowReturn(
     values: NonEmptyList[(ValueToken[S], ValueRaw)]
   ): State[X, Boolean] =
-    mapStackHeadE[Boolean](
+    mapStackHeadM[Boolean](
       report(values.head._1, "Fatal: checkArrowReturn has no matching beginArrowScope").as(false)
-    )((frame: TypesState.Frame[S]) =>
+    )(frame =>
       if (frame.retVals.nonEmpty)
-        Left(
-          (
-            values.head._1,
-            "Return expression was already used in scope; you can use only one Return in an arrow declaration, use conditional return pattern if you need to return based on condition",
-            false
-          )
-        )
+        report(
+          values.head._1,
+          "Return expression was already used in scope; you can use only one Return in an arrow declaration, use conditional return pattern if you need to return based on condition"
+        ).as(frame -> false)
       else if (frame.token.res.isEmpty)
-        Left(
-          (
-            values.head._1,
-            "No return type declared for this arrow, please remove `<- ...` expression or add `-> ...` return type(s) declaration to the arrow",
-            false
-          )
-        )
+        report(
+          values.head._1,
+          "No return type declared for this arrow, please remove `<- ...` expression or add `-> ...` return type(s) declaration to the arrow"
+        ).as(frame -> false)
       else if (frame.token.res.length > values.length)
-        Left(
-          (
-            values.last._1,
-            s"Expected ${frame.token.res.length - values.length} more values to be returned, see return type declaration",
-            false
-          )
-        )
+        report(
+          values.last._1,
+          s"Expected ${frame.token.res.length - values.length} more values to be returned, see return type declaration"
+        ).as(frame -> false)
       else if (frame.token.res.length < values.length)
-        Left(
-          (
-            values.toList.drop(frame.token.res.length).headOption.getOrElse(values.last)._1,
-            s"Too many values are returned from this arrow, this one is unexpected. Defined return type:  ${frame.arrowType.codomain}",
-            false
-          )
-        )
-      else {
+        report(
+          values.toList.drop(frame.token.res.length).headOption.getOrElse(values.last)._1,
+          s"Too many values are returned from this arrow, this one is unexpected. Defined return type:  ${frame.arrowType.codomain}"
+        ).as(frame -> false)
+      else
         frame.arrowType.codomain.toList
-          .lazyZip(values.toList)
-          .foldLeft[Either[(Token[S], String, Boolean), List[ValueRaw]]](Right(Nil)) {
-            case (acc, (returnType, (_, returnValue))) =>
-              acc.flatMap { a =>
-                if (!returnType.acceptsValueOf(returnValue.`type`))
-                  Left(
-                    (
-                      values.toList
-                        .drop(frame.token.res.length)
-                        .headOption
-                        .getOrElse(values.last)
-                        ._1,
-                      s"Wrong value type, expected: $returnType, given: ${returnValue.`type`}",
-                      false
-                    )
-                  )
-                else Right(a :+ returnValue)
-              }
+          .zip(values.toList)
+          .traverse { case (returnType, (token, returnValue)) =>
+            if (!returnType.acceptsValueOf(returnValue.`type`))
+              report(
+                token,
+                s"Wrong value type, expected: $returnType, given: ${returnValue.`type`}"
+              ).as(none)
+            else returnValue.some.pure[SX]
           }
-          .map(res => frame.copy(retVals = Some(res)) -> true)
-      }
+          .map(_.sequence)
+          .map(res => frame.copy(retVals = res) -> res.isDefined)
     )
 
   override def endArrowScope(token: Token[S]): State[X, List[ValueRaw]] =
-    mapStackHeadE[List[ValueRaw]](
+    mapStackHeadM(
       report(token, "Fatal: endArrowScope has no matching beginArrowScope").as(Nil)
     )(frame =>
-      if (frame.token.res.isEmpty) {
-        Right(frame -> Nil)
-      } else if (frame.retVals.isEmpty) {
-        Left(
-          (
-            frame.token.res.headOption.getOrElse(frame.token),
-            "Return type is defined for the arrow, but nothing returned. Use `<- value, ...` as the last expression inside function body.",
-            Nil
-          )
-        )
-      } else Right(frame -> frame.retVals.getOrElse(Nil))
+      if (frame.token.res.isEmpty) (frame -> Nil).pure
+      else if (frame.retVals.isEmpty)
+        report(
+          frame.token.res.headOption.getOrElse(frame.token),
+          "Return type is defined for the arrow, but nothing returned. Use `<- value, ...` as the last expression inside function body."
+        ).as(frame -> Nil)
+      else (frame -> frame.retVals.getOrElse(Nil)).pure
     ) <* stack.endScope
+
+  private def ensureNameNotDefined[A](
+    name: String,
+    token: Token[S],
+    ifDefined: => A
+  )(
+    ifNotDefined: => State[X, A]
+  ): State[X, A] = getState
+    .map(_.definitions.get(name))
+    .flatMap {
+      case Some(_) =>
+        // TODO: Point to both locations here
+        report(
+          token,
+          s"Name `${name}` was already defined here"
+        ).as(ifDefined)
+      case None => ifNotDefined
+    }
 }

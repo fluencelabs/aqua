@@ -1,8 +1,10 @@
 package aqua.raw.value
 
 import aqua.types.*
+
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import cats.Eq
+import cats.syntax.option.*
 import scribe.Logging
 
 sealed trait ValueRaw {
@@ -27,21 +29,25 @@ object ValueRaw {
 
   val Nil: LiteralRaw = LiteralRaw("[]", StreamType(BottomType))
 
-  val LastError: VarRaw = VarRaw(
-    "%last_error%",
-    StructType(
-      "LastError",
-      NonEmptyMap.of(
-        // These two fields are mandatory for all errors
-        "message" -> ScalarType.string,
-        "error_code" -> ScalarType.i64,
-        // These fields are specific to AquaVM's errors only
-        "instruction" -> ScalarType.string,
-        "peer_id" -> ScalarType.string
-      )
+  val lastErrorType = StructType(
+    "LastError",
+    NonEmptyMap.of(
+      // These two fields are mandatory for all errors
+      "message" -> ScalarType.string,
+      "error_code" -> ScalarType.i64,
+      // These fields are specific to AquaVM's errors only
+      "instruction" -> ScalarType.string,
+      "peer_id" -> ScalarType.string
     )
   )
 
+  val lastError: VarRaw = VarRaw(
+    "%last_error%",
+    lastErrorType
+  )
+
+  type ApplyRaw = ApplyGateRaw | ApplyPropertyRaw | CallArrowRaw | CollectionRaw |
+    ApplyBinaryOpRaw | ApplyUnaryOpRaw
 }
 
 case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends ValueRaw {
@@ -52,9 +58,8 @@ case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends Valu
   override def renameVars(map: Map[String, String]): ValueRaw =
     ApplyPropertyRaw(value.renameVars(map), property.renameVars(map))
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(
-    ApplyPropertyRaw(f(value), property.map(f))
-  )
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(ApplyPropertyRaw(f(value), property.map(_.map(f))))
 
   override def toString: String = s"$value.$property"
 
@@ -85,7 +90,8 @@ case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) ext
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(name = map.getOrElse(name, name), idx = idx.renameVars(map))
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = this
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(idx = f(idx)))
 
   override def toString: String = s"gate $name.$idx"
 
@@ -97,7 +103,7 @@ case class VarRaw(name: String, baseType: Type) extends ValueRaw {
   override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
 
   override def renameVars(map: Map[String, String]): ValueRaw =
-    copy(map.getOrElse(name, name))
+    copy(name = map.getOrElse(name, name))
 
   override def toString: String = s"var{$name: " + baseType + s"}"
 
@@ -120,9 +126,9 @@ case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
 object LiteralRaw {
   def quote(value: String): LiteralRaw = LiteralRaw("\"" + value + "\"", LiteralType.string)
 
-  def number(value: Int): LiteralRaw = LiteralRaw(value.toString, LiteralType.number)
+  def number(value: Int): LiteralRaw = LiteralRaw(value.toString, LiteralType.forInt(value))
 
-  val Zero: LiteralRaw = LiteralRaw("0", LiteralType.number)
+  val Zero: LiteralRaw = number(0)
 
   val True: LiteralRaw = LiteralRaw("true", LiteralType.bool)
   val False: LiteralRaw = LiteralRaw("false", LiteralType.bool)
@@ -161,6 +167,75 @@ case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: Stru
     copy(fields = fields.map(_.renameVars(map)))
 }
 
+case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityType: AbilityType)
+    extends ValueRaw {
+
+  override def baseType: Type = abilityType
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(fieldsAndArrows = fieldsAndArrows.map(f)))
+
+  override def varNames: Set[String] = {
+    fieldsAndArrows.toSortedMap.values.flatMap(_.varNames).toSet
+  }
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(fieldsAndArrows = fieldsAndArrows.map(_.renameVars(map)))
+}
+
+case class ApplyBinaryOpRaw(
+  op: ApplyBinaryOpRaw.Op,
+  left: ValueRaw,
+  right: ValueRaw
+) extends ValueRaw {
+
+  // Only boolean operations are supported for now
+  override def baseType: Type = ScalarType.bool
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(left = f(left), right = f(right)))
+
+  override def varNames: Set[String] = left.varNames ++ right.varNames
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(left = left.renameVars(map), right = right.renameVars(map))
+}
+
+object ApplyBinaryOpRaw {
+
+  enum Op {
+    case And
+    case Or
+
+    case Eq
+    case Neq
+  }
+}
+
+case class ApplyUnaryOpRaw(
+  op: ApplyUnaryOpRaw.Op,
+  value: ValueRaw
+) extends ValueRaw {
+
+  // Only boolean operations are supported for now
+  override def baseType: Type = ScalarType.bool
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(copy(value = f(value)))
+
+  override def varNames: Set[String] = value.varNames
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(value = value.renameVars(map))
+}
+
+object ApplyUnaryOpRaw {
+
+  enum Op {
+    case Not
+  }
+}
+
 case class CallArrowRaw(
   // TODO: ability should hold a type, not name
   ability: Option[String],
@@ -173,9 +248,16 @@ case class CallArrowRaw(
   override def `type`: Type = baseType.codomain.uncons.map(_._1).getOrElse(baseType)
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(copy(arguments = arguments.map(f)))
+    f(
+      copy(
+        arguments = arguments.map(_.map(f)),
+        serviceId = serviceId.map(_.map(f))
+      )
+    )
 
-  override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
+  override def varNames: Set[String] = name.some
+    .filterNot(_ => ability.isDefined || serviceId.isDefined)
+    .toSet ++ arguments.flatMap(_.varNames).toSet
 
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(
@@ -183,12 +265,54 @@ case class CallArrowRaw(
         .get(name)
         // Rename only if it is **not** a service or ability call, see [bug LNG-199]
         .filterNot(_ => ability.isDefined)
-        .getOrElse(name),
-      arguments = arguments.map(_.renameVars(map)),
-      serviceId = serviceId.map(_.renameVars(map))
+        .filterNot(_ => serviceId.isDefined)
+        .getOrElse(name)
     )
 
   override def toString: String =
     s"(call ${ability.fold("")(a => s"|$a| ")} (${serviceId.fold("")(_.toString + " ")}$name) [${arguments
       .mkString(" ")}] :: $baseType)"
+}
+
+object CallArrowRaw {
+
+  def func(
+    funcName: String,
+    baseType: ArrowType,
+    arguments: List[ValueRaw] = Nil
+  ): CallArrowRaw = CallArrowRaw(
+    ability = None,
+    name = funcName,
+    arguments = arguments,
+    baseType = baseType,
+    serviceId = None
+  )
+
+  def ability(
+    abilityName: String,
+    funcName: String,
+    baseType: ArrowType,
+    arguments: List[ValueRaw] = Nil
+  ): CallArrowRaw = CallArrowRaw(
+    ability = None,
+    name = AbilityType.fullName(abilityName, funcName),
+    arguments = arguments,
+    baseType = baseType,
+    serviceId = None
+  )
+
+  def service(
+    abilityName: String,
+    serviceId: ValueRaw,
+    funcName: String,
+    baseType: ArrowType,
+    arguments: List[ValueRaw] = Nil
+  ): CallArrowRaw = CallArrowRaw(
+    ability = abilityName.some,
+    name = funcName,
+    arguments = arguments,
+    baseType = baseType,
+    serviceId = Some(serviceId)
+  )
+
 }

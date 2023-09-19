@@ -21,13 +21,13 @@ object Header {
     val callParams =
       if (isJs) ""
       else
-        "import type { IFluenceClient as IFluenceClient$$, CallParams as CallParams$$ } from '@fluencelabs/js-client.api';"
+        "import type { IFluenceClient as IFluenceClient$$, CallParams as CallParams$$ } from '@fluencelabs/js-client';"
 
     s"""$callParams
        |import {
        |    v5_callFunction as callFunction$$$$,
        |    v5_registerService as registerService$$$$,
-       |} from '@fluencelabs/js-client.api';
+       |} from '@fluencelabs/js-client';
     """.stripMargin
   }
 

@@ -2,18 +2,21 @@ package aqua.semantics.expr.func
 
 import aqua.raw.ops.{FuncOp, OnTag}
 import aqua.parser.expr.func.OnExpr
+import aqua.parser.lexer.ValueToken
 import aqua.raw.Raw
 import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
-import aqua.semantics.rules.topology.TopologyAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{BoxType, OptionType, ScalarType}
+
 import cats.data.Chain
+import cats.data.OptionT
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
+import cats.syntax.traverse.*
 import cats.syntax.functor.*
 import cats.{Monad, Traverse}
 
@@ -24,41 +27,49 @@ class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
-    Prog.around(
-      (
-        V.ensureIsString(expr.peerId),
-        Traverse[List]
-          .traverse(expr.via)(v =>
-            V.valueToRaw(v).flatTap {
-              case Some(vm) =>
-                vm.`type` match {
-                  case _: BoxType =>
-                    T.ensureTypeMatches(v, OptionType(ScalarType.string), vm.`type`)
-                  case _ =>
-                    T.ensureTypeMatches(v, ScalarType.string, vm.`type`)
-                }
-              case None => false.pure[Alg]
-            }
-          )
-          .map(_.flatten)
-      ).mapN { case (_, viaVM) =>
-        viaVM
-      }
-        <* A.beginScope(expr.peerId),
-      (viaVM: List[ValueRaw], ops: Raw) =>
-        A.endScope() >> (ops match {
-          case FuncOp(op) =>
-            V.valueToRaw(expr.peerId).map {
-              case Some(om) =>
-                OnTag(
-                  om,
-                  Chain.fromSeq(viaVM)
-                ).wrap(op).toFuncOp
-              case _ =>
-                Raw.error("OnSem: Impossible error")
-            }
+    Prog
+      .around(
+        OnSem.beforeOn(expr.peerId, expr.via),
+        (viaVM: List[ValueRaw], ops: Raw) =>
+          ops match {
+            case FuncOp(op) =>
+              V.valueToRaw(expr.peerId).map {
+                case Some(om) =>
+                  OnTag(
+                    om,
+                    Chain.fromSeq(viaVM)
+                  ).wrap(op).toFuncOp
+                case _ =>
+                  Raw.error("OnSem: Impossible error")
+              }
 
-          case m => Raw.error("On body is not an op, it's " + m).pure[Alg]
-        })
-    )
+            case m => Raw.error("On body is not an op, it's " + m).pure[Alg]
+          }
+      )
+      .abilitiesScope(expr.peerId)
+}
+
+object OnSem {
+
+  def beforeOn[S[_], Alg[_]: Monad](
+    peerId: ValueToken[S],
+    via: List[ValueToken[S]]
+  )(using
+    V: ValuesAlgebra[S, Alg],
+    T: TypesAlgebra[S, Alg],
+    A: AbilitiesAlgebra[S, Alg]
+  ): Alg[List[ValueRaw]] =
+    // TODO: Remove ensureIsString, use valueToStringRaw
+    V.ensureIsString(peerId) *> via
+      .traverse(v =>
+        OptionT(V.valueToRaw(v)).filterF { vm =>
+          val expectedType = vm.`type` match {
+            case _: BoxType => OptionType(ScalarType.string)
+            case _ => ScalarType.string
+          }
+
+          T.ensureTypeMatches(v, expectedType, vm.`type`)
+        }
+      )
+      .getOrElse(List.empty)
 }

@@ -1,3 +1,6 @@
+aqua Math
+
+export test1, test2, testI16, testI32, testI64, testU64
 
 func test1() -> u64:
   res = 1 + 2 - 3 * 5 - 2 * 3 / 2 + 5
@@ -5,4 +8,72 @@ func test1() -> u64:
 
 func test2() -> u64:
   res = 2 ** 2 ** (2 * 2 - 2) + 2 - 3 * 5 - 2 * 3 / 2 + 5 + (4 % 2 - 2)
+  <- res
+
+func getI8() -> i8:
+  <- -8
+
+func getI16() -> i16:
+  <- -16
+
+func getI32() -> i32:
+  <- -32
+
+func getI64() -> i64:
+  <- -64
+
+func getU8() -> u8:
+  <- 8
+
+func getU16() -> u16:
+  <- 16
+
+func getU32() -> u32:
+  <- 32
+
+func getU64() -> u64:
+  <- 64
+
+func testI16(peer: string) -> []i16:
+  res: *i16
+
+  on peer:
+    res <<- getI16() + getI16()
+    res <<- getI8() * getU8()
+    res <<- getI8() % getI16()
+    res <<- getI16() - getI8()
+
+  <- res
+
+func testI32(peer: string) -> []i32:
+  res: *i32
+
+  on peer:
+    res <<- getI32() + getU16()
+    res <<- getI16() * getU16()
+    res <<- getI8() % getU16()
+    res <<- getI16() - getI32()
+
+  <- res
+
+func testI64(peer: string) -> []i64:
+  res: *i64
+
+  on peer:
+    res <<- getI32() + getU32()
+    res <<- getI16() * getU32()
+    res <<- getI64() % getI64()
+    res <<- getU8() - getI64()
+
+  <- res
+
+func testU64(peer: string) -> []u64:
+  res: *u64
+
+  on peer:
+    res <<- getU32() + getU64()
+    res <<- getU64() * getU64()
+    res <<- getU64() % getU16()
+    res <<- getU8() - getU64()
+
   <- res

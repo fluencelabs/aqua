@@ -1,9 +1,12 @@
-module Import3 declares *
+service Console("run-console"):
+    print(s: string)
 
-export foo_bar
-
-use "export.aqua"
-
-func foo_bar() -> string, string:
-  z <- FooBars.foo()
-  <- z, FooBars.DECLARE_CONST2
+func main():
+    ss: *string
+    dd: *string
+    peerId = "peerId"
+    relay = "relay"
+    parsec s <- ss on peerId via relay:
+      Console.print(s)
+    for d <- dd par:
+      Console.print(d)

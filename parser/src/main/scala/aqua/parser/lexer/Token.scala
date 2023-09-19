@@ -28,7 +28,9 @@ object Token {
 
   private val inAZ = P.charIn(AZ)
   private val inaz = P.charIn(az)
-  private val whileAnum = P.charsWhile(anum_)
+  private val inaZ = P.charIn(az ++ AZ)
+  private val whileAnum_ = P.charsWhile(anum_)
+  private val whileUpperAnum_ = P.charsWhile(upperAnum_)
 
   val ` *` : P0[String] = P.charsWhile0(fSpaces)
   val ` ` : P[String] = P.charsWhile(fSpaces)
@@ -49,7 +51,7 @@ object Token {
   val ` as ` : P[Unit] = `as`.surroundedBy(` `)
   val `alias`: P[Unit] = P.string("alias")
   val `service`: P[Unit] = P.string("service")
-  val `scope`: P[Unit] = P.string("scope")
+  val `ability`: P[Unit] = P.string("ability")
   val `func`: P[Unit] = P.string("func")
   val `on`: P[Unit] = P.string("on")
   val `via`: P[Unit] = P.string("via")
@@ -63,19 +65,19 @@ object Token {
   val `try`: P[Unit] = P.string("try")
   val `catch`: P[Unit] = P.string("catch")
   val `par`: P[Unit] = P.string("par")
+  val `parseq`: P[Unit] = P.string("parseq")
   val `co`: P[Unit] = P.string("co")
   val `join`: P[Unit] = P.string("join")
   val `copy`: P[Unit] = P.string("copy")
   val `:` : P[Unit] = P.char(':')
   val ` : ` : P[Unit] = P.char(':').surroundedBy(` `.?)
-  val `anum_*` : P[Unit] = whileAnum.void
+  val `anum_*` : P[Unit] = whileAnum_.void
 
-  val NAME: P[String] = (inAZ ~ P.charsWhile(upperAnum_).?).string
-  val `name`: P[String] = (inaz ~ whileAnum.?).string
+  val NAME: P[String] = (inAZ ~ whileUpperAnum_.?).string
+  val `name`: P[String] = (inaz ~ whileAnum_.?).string
+  val `Class`: P[String] = (inAZ ~ whileAnum_.?).string
+  val anyName: P[String] = (inaZ ~ whileAnum_.?).string
 
-  val `Class`: P[String] = (inAZ ~ whileAnum.backtrack.?).map { case (c, s) ⇒
-    c.toString ++ s.getOrElse("")
-  }
   val `\n` : P[Unit] = P.string("\n\r") | P.char('\n') | P.string("\r\n")
   val `--` : P[Unit] = ` `.?.with1 *> P.string("--") <* ` `.?
 
@@ -97,6 +99,8 @@ object Token {
   val `∅` : P[Unit] = P.char('∅')
   val `(` : P[Unit] = P.char('(') <* ` `.?
   val `)` : P[Unit] = ` `.?.with1 *> P.char(')')
+  val `{` : P[Unit] = P.char('{') <* ` `.?
+  val `}` : P[Unit] = ` `.?.with1 *> P.char('}')
   val `()` : P[Unit] = P.string("()")
   val ` -> ` : P[Unit] = P.string("->").surroundedBy(` `.?)
   val ` <- ` : P[Unit] = P.string("<-").surroundedBy(` `.?)
@@ -117,17 +121,16 @@ object Token {
   val `/s*` : P0[Unit] = ` \n+`.backtrack | ` *`.void
 
   val namedArg: P[(String, ValueToken[S])] =
-    P.defer(`name`.between(` *`, `/s*`) ~
-      `=`.between(` *`, `/s*`).void ~
-      ValueToken.`value`.between(` *`, `/s*`)).map { case ((name, _), vt) =>
+    P.defer(
+      `name`.between(` *`, `/s*`) ~
+        `=`.between(` *`, `/s*`).void ~
+        ValueToken.`value`.between(` *`, `/s*`)
+    ).map { case ((name, _), vt) =>
       (name, vt)
     }
 
-  val namedArgs: P[NonEmptyList[(String, ValueToken[S])]] = P.defer(
-    ((` `.?.with1 *> P.char('(') <* `/s*`) ~ comma(
-      namedArg
-    ) <* (`/s*` *> P.char(')'))).map(_._2)
-  )
+  val namedArgs: P[NonEmptyList[(String, ValueToken[S])]] =
+    P.defer(` `.?.with1 ~ `(` ~ `/s*` *> comma(namedArg) <* `/s*` *> `)`)
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
     override def as[T](v: T): F[T] = Functor[F].as(point, v)

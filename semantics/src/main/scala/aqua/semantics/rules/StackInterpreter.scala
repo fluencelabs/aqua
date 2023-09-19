@@ -1,13 +1,18 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.Token
-import cats.data.State
-import monocle.Lens
-import cats.syntax.functor.*
+import aqua.semantics.rules.errors.ReportErrors
 
-case class StackInterpreter[S[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(implicit
+import cats.data.State
+import cats.syntax.functor.*
+import cats.syntax.applicative.*
+import monocle.Lens
+
+case class StackInterpreter[S[_], X, St, Fr](
+  stackLens: Lens[St, List[Fr]]
+)(using
   lens: Lens[X, St],
-  error: ReportError[S, X]
+  error: ReportErrors[S, X]
 ) {
   type SX[A] = State[X, A]
 
@@ -23,28 +28,19 @@ case class StackInterpreter[S[_], X, St, Fr](stackLens: Lens[St, List[Fr]])(impl
   def modify(f: St => St): SX[Unit] =
     State.modify(lens.modify(f))
 
-  def mapStackHead[A](ifStackEmpty: SX[A])(f: Fr => (Fr, A)): SX[A] =
-    getState.map(stackLens.get).flatMap {
-      case h :: tail =>
-        val (updated, result) = f(h)
-        modify(stackLens.replace(updated :: tail)).as(result)
-      case Nil =>
-        ifStackEmpty
-    }
+  def mapStackHead[A](ifStackEmpty: A)(f: Fr => (Fr, A)): SX[A] =
+    mapStackHeadM(ifStackEmpty.pure)(f.andThen(_.pure))
 
-  def mapStackHeadE[A](
-    ifStackEmpty: SX[A]
-  )(f: Fr => Either[(Token[S], String, A), (Fr, A)]): SX[A] =
+  def mapStackHead_(f: Fr => Fr): SX[Unit] =
+    mapStackHead(())(f.andThen(_ -> ()))
+
+  def mapStackHeadM[A](ifStackEmpty: SX[A])(f: Fr => SX[(Fr, A)]): SX[A] =
     getState.map(stackLens.get).flatMap {
-      case h :: tail =>
-        f(h) match {
-          case Right((updated, result)) =>
-            modify(stackLens.replace(updated :: tail)).as(result)
-          case Left((tkn, hint, result)) =>
-            report(tkn, hint).as(result)
+      case head :: tail =>
+        f(head).flatMap { case (updated, result) =>
+          modify(stackLens.replace(updated :: tail)).as(result)
         }
-      case Nil =>
-        ifStackEmpty
+      case Nil => ifStackEmpty
     }
 
   def endScope: SX[Unit] =

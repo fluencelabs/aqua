@@ -1,13 +1,15 @@
 package aqua.model
 
 import aqua.model.OpModel.Tree
+import aqua.tree.{TreeNode, TreeNodeCompanion}
+import aqua.types.*
+
 import cats.data.Chain
 import cats.free.Cofree
 import cats.Show
 import cats.Eval
 import cats.data.NonEmptyList
-import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.ScalarType
+import cats.syntax.functor.*
 
 import scala.annotation.tailrec
 
@@ -20,6 +22,7 @@ sealed trait OpModel extends TreeNode[OpModel] {
   def usesVarNames: Set[String] = Set.empty
 
   // What var names are exported – can be used AFTER this tag is executed
+  // NOTE: Exported names could be restricted, see `restrictsVarNames`
   def exportsVarNames: Set[String] = Set.empty
 
 }
@@ -71,28 +74,52 @@ sealed trait ParGroupModel extends GroupOpModel
 
 case object SeqModel extends SeqGroupModel {
 
-  override def wrap(children: Tree*): Tree =
-    super.wrapNonEmpty(children.filterNot(_.head == EmptyModel).toList, EmptyModel.leaf)
-
-  // EmptyModel allowed – useful for tests
-  def wrapWithEmpty(children: Tree*): Tree =
-    super.wrapNonEmpty(children.toList, EmptyModel.leaf)
-
+  override def wrap(children: Chain[Tree]): Tree =
+    super.wrapNonEmpty(children.filterNot(_.head == EmptyModel), EmptyModel.leaf)
 }
 
 case object ParModel extends ParGroupModel
 
 case object DetachModel extends ParGroupModel
 
-case object XorModel extends GroupOpModel
+case object XorModel extends GroupOpModel {
 
-case class OnModel(peerId: ValueModel, via: Chain[ValueModel]) extends SeqGroupModel {
+  // If left branch is empty, return empty
+  override def wrap(children: Chain[Tree]): Tree =
+    children.headOption
+      .filterNot(_.head == EmptyModel)
+      .as(super.wrap(children))
+      .getOrElse(EmptyModel.leaf)
+}
 
-  override def toString: String =
-    s"on $peerId${if (via.nonEmpty) s" via ${via.toList.mkString(", ")}" else ""}"
+case class OnModel(
+  peerId: ValueModel,
+  via: Chain[ValueModel],
+  // Strategy of returning from this `on`
+  // affects handling this `on` in topology layer
+  strategy: Option[OnModel.ReturnStrategy] = None
+) extends SeqGroupModel {
+
+  override def toString: String = {
+    val viaPart = if (via.nonEmpty) s" via ${via.toList.mkString(", ")}" else ""
+    val strategyPart = strategy.map(s => s" | to ${s.toString.toLowerCase}").getOrElse("")
+    s"on $peerId$viaPart$strategyPart"
+  }
 
   override lazy val usesVarNames: Set[String] =
     peerId.usesVarNames ++ via.iterator.flatMap(_.usesVarNames)
+}
+
+object OnModel {
+
+  // Strategy of returning from `on`
+  // affects handling `on` in topology layer
+  enum ReturnStrategy {
+    // Leave peer to the first relay
+    // Do not make the whole back transition
+    // NOTE: used for `parseq`
+    case Relay
+  }
 }
 
 case class NextModel(item: String) extends OpModel {
@@ -100,7 +127,9 @@ case class NextModel(item: String) extends OpModel {
 
 }
 
-case class RestrictionModel(name: String, isStream: Boolean) extends SeqGroupModel {
+// TODO: Refactor out `name` and `type` to
+// something like VarModel without properties
+case class RestrictionModel(name: String, `type`: DataType) extends SeqGroupModel {
   override def usesVarNames: Set[String] = Set.empty
 
   override def restrictsVarNames: Set[String] = Set(name)
@@ -118,7 +147,7 @@ case class MatchMismatchModel(left: ValueModel, right: ValueModel, shouldMatch: 
 case class ForModel(
   item: String,
   iterable: ValueModel,
-  mode: Option[ForModel.Mode] = Some(ForModel.NullMode)
+  mode: Option[ForModel.Mode] = Some(ForModel.Mode.Null)
 ) extends SeqGroupModel {
 
   override def toString: String =
@@ -131,9 +160,11 @@ case class ForModel(
 }
 
 object ForModel {
-  sealed trait Mode
-  case object NullMode extends Mode
-  case object NeverMode extends Mode
+
+  enum Mode {
+    case Null
+    case Never
+  }
 }
 
 // TODO how is it used? remove, if it's not
@@ -147,6 +178,12 @@ case class FlattenModel(value: ValueModel, assignTo: String) extends OpModel {
   override def usesVarNames: Set[String] = value.usesVarNames
 
   override def exportsVarNames: Set[String] = Set(assignTo)
+}
+
+case class FailModel(value: ValueModel) extends OpModel {
+  override def usesVarNames: Set[String] = value.usesVarNames
+
+  override def exportsVarNames: Set[String] = Set.empty
 }
 
 case class PushToStreamModel(value: ValueModel, exportTo: CallModel.Export) extends OpModel {
@@ -190,14 +227,6 @@ case class CanonicalizeModel(operand: ValueModel, exportTo: CallModel.Export)
   override def exportsVarNames: Set[String] = Set(exportTo.name)
 
   override def usesVarNames: Set[String] = operand.usesVarNames
-}
-
-case class JoinModel(operands: NonEmptyList[ValueModel]) extends ForceExecModel {
-
-  override def toString: String = s"join ${operands.toList.mkString(", ")}"
-
-  override lazy val usesVarNames: Set[String] =
-    operands.toList.flatMap(_.usesVarNames).toSet
 }
 
 case class CaptureTopologyModel(name: String) extends NoExecModel

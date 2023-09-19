@@ -6,46 +6,37 @@ import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.model.*
+import aqua.types.*
 
-// TODO docs
+/**
+ * Helpers for translating [[OpModel]] to [[ResolvedOp]]
+ */
 object MakeRes {
-  val op: ValueModel = LiteralModel.fromRaw(LiteralRaw.quote("op"))
 
-  def noop(onPeer: ValueModel, log: String = null): ResolvedOp.Tree =
-    CallServiceRes(
-      op,
-      "noop",
-      CallRes(
-        Option(log).filter(_ == "").map(LiteralRaw.quote).map(LiteralModel.fromRaw).toList,
-        None
-      ),
-      onPeer
-    ).leaf
+  /**
+   * Make topology hop to peer
+   *
+   * @param onPeer peer to make hop to
+   * @return [[ResolvedOp.Tree]] corresponsing to a hop
+   */
+  def hop(onPeer: ValueModel): ResolvedOp.Tree = {
+    // Those names can't be produced from compilation
+    // so they are safe to use
+    val streamName = "-ephemeral-stream-"
+    val canonName = "-ephemeral-canon-"
+    val elementType = BottomType
+    val streamType = StreamType(elementType)
+    val canonType = CanonStreamType(elementType)
 
-  def canon(onPeer: ValueModel, operand: ValueModel, target: CallModel.Export): ResolvedOp.Tree =
-    CallServiceRes(
-      op,
-      "identity",
-      CallRes(operand :: Nil, Some(target)),
-      onPeer
-    ).leaf
-
-  def join(onPeer: ValueModel, operands: NonEmptyList[ValueModel]): ResolvedOp.Tree =
-    CallServiceRes(
-      op,
-      "noop",
-      CallRes(operands.toList, None),
-      onPeer
-    ).leaf
-
-  private val initPeerId = ValueModel.fromRaw(ValueRaw.InitPeerId)
-
-  private def orInit(currentPeerId: Option[ValueModel]): ValueModel =
-    currentPeerId.getOrElse(initPeerId)
-
-  private def isNillLiteral(vm: ValueModel): Boolean = vm match {
-    case LiteralModel(value, t) if value == ValueRaw.Nil.value && t == ValueRaw.Nil.`type` => true
-    case _ => false
+    RestrictionRes(streamName, streamType).wrap(
+      RestrictionRes(canonName, canonType).wrap(
+        CanonRes(
+          operand = VarModel(streamName, streamType),
+          peerId = onPeer,
+          exportTo = CallModel.Export(canonName, canonType)
+        ).leaf
+      )
+    )
   }
 
   def resolve(
@@ -56,7 +47,7 @@ object MakeRes {
     case MatchMismatchModel(a, b, s) =>
       MatchMismatchRes(a, b, s).leaf
     case ForModel(item, iter, mode) if !isNillLiteral(iter) => FoldRes(item, iter, mode).leaf
-    case RestrictionModel(item, isStream) => RestrictionRes(item, isStream).leaf
+    case RestrictionModel(item, itemType) => RestrictionRes(item, itemType).leaf
     case DetachModel => ParRes.leaf
     case ParModel => ParRes.leaf
     case XorModel => XorRes.leaf
@@ -85,8 +76,8 @@ object MakeRes {
       ApRes(operand, CallModel.Export(assignTo, ArrayType(el))).leaf
     case FlattenModel(operand, assignTo) =>
       ApRes(operand, CallModel.Export(assignTo, operand.`type`)).leaf
-    case JoinModel(operands) =>
-      join(orInit(currentPeerId), operands)
+    case FailModel(value) =>
+      FailRes(value).leaf
     case CallServiceModel(serviceId, funcName, CallModel(args, exportTo)) =>
       CallServiceRes(
         serviceId,
@@ -98,5 +89,15 @@ object MakeRes {
     case NullModel =>
       NullRes.leaf
 
+  }
+
+  private val initPeerId = ValueModel.fromRaw(ValueRaw.InitPeerId)
+
+  private def orInit(currentPeerId: Option[ValueModel]): ValueModel =
+    currentPeerId.getOrElse(initPeerId)
+
+  private def isNillLiteral(vm: ValueModel): Boolean = vm match {
+    case LiteralModel(value, t) if value == ValueRaw.Nil.value && t == ValueRaw.Nil.`type` => true
+    case _ => false
   }
 }

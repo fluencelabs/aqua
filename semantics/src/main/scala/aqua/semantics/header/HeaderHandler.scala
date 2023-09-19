@@ -2,22 +2,26 @@ package aqua.semantics.header
 
 import aqua.parser.Ast
 import aqua.parser.head.*
-import aqua.parser.lexer.{Ability, Token}
-import aqua.raw.RawContext
+import aqua.parser.lexer.{Ability, Name, Token}
 import aqua.semantics.header.Picker.*
 import aqua.semantics.{HeaderError, SemanticError}
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
+
 import cats.data.*
+import cats.data.Validated.*
 import cats.free.Cofree
 import cats.instances.list.*
 import cats.instances.option.*
 import cats.kernel.Semigroup
+import cats.syntax.option.*
 import cats.syntax.foldable.*
-import cats.syntax.monoid
+import cats.syntax.functor.*
 import cats.syntax.semigroup.*
+import cats.syntax.validated.*
+import cats.syntax.bifunctor.*
+import cats.syntax.apply.*
 import cats.{Comonad, Eval, Monoid}
 
-class HeaderHandler[S[_]: Comonad, C](implicit
+class HeaderHandler[S[_]: Comonad, C](using
   acm: Monoid[C],
   headMonoid: Monoid[HeaderSem[S, C]],
   picker: Picker[C]
@@ -34,8 +38,27 @@ class HeaderHandler[S[_]: Comonad, C](implicit
     Eval.later(parent |+| children.combineAll)
 
   // Error generator with token pointer
-  private def error[T](token: Token[S], msg: String): ValidatedNec[SemanticError[S], T] =
-    invalidNec(HeaderError(token, msg))
+  private def error[T](
+    token: Token[S],
+    msg: String
+  ): SemanticError[S] = HeaderError(token, msg)
+
+  private def exportFuncChecks(ctx: C, token: Token[S], name: String): ResT[S, Unit] =
+    Validated.condNec(
+      !ctx.funcReturnAbilityOrArrow(name),
+      (),
+      error(
+        token,
+        s"The function '$name' cannot be exported, because it returns an arrow or an ability"
+      )
+    ) combine Validated.condNec(
+      !ctx.funcAcceptAbility(name),
+      (),
+      error(
+        token,
+        s"The function '$name' cannot be exported, because it accepts an ability"
+      )
+    )
 
   def sem(imports: Map[String, C], header: Ast.Head[S]): Res[S, C] = {
     // Resolve a filename from given imports or fail
@@ -43,52 +66,43 @@ class HeaderHandler[S[_]: Comonad, C](implicit
       imports
         .get(f.fileValue)
         .map(_.pickDeclared)
-        .fold[ResAC[S]](
+        .toValidNec(
           error(f.token, "Cannot resolve the import")
-        )(validNec)
+        )
 
     // Get part of the declared context (for import/use ... from ... expressions)
     def getFrom(f: FromExpr[S], ctx: C): ResAC[S] =
-      f.imports
-        .map[ResAC[S]](
-          _.fold[ResAC[S]](
-            { case (n, rn) =>
+      ctx.pickHeader.validNec |+| f.imports
+        .map(
+          _.bimap(
+            _.bimap(n => (n, n.value), _.map(_.value)),
+            _.bimap(n => (n, n.value), _.map(_.value))
+          ).merge match {
+            case ((token, name), rename) =>
               ctx
-                .pick(n.value, rn.map(_.value), ctx.module.nonEmpty)
-                .map(validNec)
-                .getOrElse(
+                .pick(name, rename, ctx.module.nonEmpty)
+                .toValidNec(
                   error(
-                    n,
-                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no ${n.value} declared. Try adding `declares ${n.value}` to that file."
+                    token,
+                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no $name declared. Try adding `declares $name` to that file."
                   )
                 )
-            },
-            { case (n, rn) =>
-              ctx
-                .pick(n.value, rn.map(_.value), ctx.module.nonEmpty)
-                .map(validNec)
-                .getOrElse(
-                  error(
-                    n,
-                    s"Imported file `declares ${ctx.declares.mkString(", ")}`, no ${n.value} declared. Try adding `declares ${n.value}` to that file."
-                  )
-                )
-            }
-          )
+          }
         )
-        .foldLeft[ResAC[S]](validNec(ctx.pickHeader))(_ |+| _)
+        .combineAll
 
     // Convert an imported context into a module (ability)
     def toModule(ctx: C, tkn: Token[S], rename: Option[Ability[S]]): ResAC[S] =
       rename
         .map(_.value)
         .orElse(ctx.module)
-        .fold[ResAC[S]](
+        .map(modName => picker.blank.setAbility(modName, ctx))
+        .toValidNec(
           error(
             tkn,
             s"Used module has no `module` header. Please add `module` header or use ... as ModuleName, or switch to import"
           )
-        )(modName => validNec(picker.blank.setAbility(modName, ctx)))
+        )
 
     // Handler for every header expression, will be combined later
     val onExpr: PartialFunction[HeaderExpr[S], Res[S, C]] = {
@@ -110,20 +124,19 @@ class HeaderHandler[S[_]: Comonad, C](implicit
                 )
               } else
                 (
-                  declareNames.map(n => n.value -> n) ::: declareCustom.map(a => a.value -> a)
-                ).map[ValidatedNec[SemanticError[S], Int]] { case (n, t) =>
+                  declareNames.fproductLeft(_.value) ::: declareCustom.fproductLeft(_.value)
+                ).map { case (n, t) =>
                   ctx
                     .pick(n, None, ctx.module.nonEmpty)
-                    // We just validate, nothing more
-                    .map(_ => validNec(1))
-                    .getOrElse(
+                    .toValidNec(
                       error(
                         t,
-                        s"`${n}` is expected to be declared, but declaration is not found in the file"
+                        s"`$n` is expected to be declared, but declaration is not found in the file"
                       )
                     )
+                    .void
                 }.combineAll
-                  .map(_ =>
+                  .as(
                     // TODO: why module name and declares is lost? where is it lost?
                     ctx.setModule(name.value, declares = shouldDeclare)
                   )
@@ -133,6 +146,7 @@ class HeaderHandler[S[_]: Comonad, C](implicit
       case f @ ImportExpr(_) =>
         // Import everything from a file
         resolve(f).map(fc => HeaderSem[S, C](fc, (c, _) => validNec(c)))
+
       case f @ ImportFromExpr(_, _) =>
         // Import, map declarations
         resolve(f)
@@ -165,30 +179,37 @@ class HeaderHandler[S[_]: Comonad, C](implicit
             // Nothing there
             picker.blank,
             (ctx, initCtx) =>
+              val sumCtx = initCtx |+| ctx
+
               pubs
                 .map(
-                  _.fold[(Token[S], String, Option[String])](
-                    nrn => (nrn._1, nrn._1.value, nrn._2.map(_.value)),
-                    nrn => (nrn._1, nrn._1.value, nrn._2.map(_.value))
-                  )
+                  _.bimap(
+                    _.bimap(n => (n, n.value), _.map(_.value)),
+                    _.bimap(n => (n, n.value), _.map(_.value))
+                  ).merge
                 )
-                .map { case (token, name, rename) =>
-                  (initCtx |+| ctx)
+                .map { case ((token, name), rename) =>
+                  sumCtx
                     .pick(name, rename, declared = false)
-                    .map(_ => Map(name -> rename))
-                    .map(validNec)
-                    .getOrElse(
+                    .as(Map(name -> rename))
+                    .toValid(
                       error(
                         token,
-                        s"File has no $name declaration or import, cannot export, available funcs: ${(initCtx |+| ctx).funcNames
-                          .mkString(", ")}"
+                        s"File has no $name declaration or import, " +
+                          s"cannot export, available functions: ${sumCtx.funcNames.mkString(", ")}"
                       )
                     )
+                    .ensure(
+                      error(
+                        token,
+                        s"Can not export '$name' as it is an ability"
+                      )
+                    )(_ => !sumCtx.isAbility(name))
+                    .toValidatedNec <* exportFuncChecks(sumCtx, token, name)
                 }
-                .foldLeft[ResT[S, Map[String, Option[String]]]](
-                  validNec(ctx.exports.getOrElse(Map.empty))
-                )(_ |+| _)
-                .map(expCtx => ctx.setExports(expCtx))
+                .prepend(validNec(ctx.exports))
+                .combineAll
+                .map(ctx.setExports)
           )
         )
 
@@ -197,7 +218,26 @@ class HeaderHandler[S[_]: Comonad, C](implicit
         validNec(
           HeaderSem[S, C](
             acm.empty,
-            (ctx, _) => validNec(ctx.setExports(Map.empty))
+            (ctx, initCtx) => {
+              val sumCtx = initCtx |+| ctx
+              ctx.funcNames.toList
+                .traverse_(name =>
+                  // TODO: Provide better token for this error
+                  exportFuncChecks(sumCtx, token, name)
+                )
+                .combine(
+                  ctx.definedAbilityNames.toList.traverse_(name =>
+                    // TODO: Provide better token for this error
+                    error(token, s"Can not export '$name' as it is an ability ").invalidNec
+                  )
+                )
+                .as(
+                  // Export everything
+                  ctx.setExports(
+                    ctx.all.map(_ -> None).toMap
+                  )
+                )
+            }
           )
         )
 
@@ -207,7 +247,7 @@ class HeaderHandler[S[_]: Comonad, C](implicit
 
     Cofree
       .cata[Chain, HeaderExpr[S], Res[S, C]](header) { case (expr, children) =>
-        onExpr.lift.apply(expr).fold(Eval.later(children.combineAll))(combineAnd(children)(_))
+        onExpr.lift.apply(expr).fold(Eval.later(children.combineAll))(combineAnd(children))
       }
       .value
   }

@@ -3,7 +3,7 @@ package aqua.backend.air
 import aqua.model.*
 import aqua.raw.ops.Call
 import aqua.res.*
-import aqua.types.{ArrayType, CanonStreamType, StreamType}
+import aqua.types.{ArrayType, CanonStreamType, StreamType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -26,14 +26,17 @@ object AirGen extends Logging {
       s".[$idx]${propertyToString(tail)}"
   }
 
+  def varNameToString(name: String, `type`: Type): String =
+    (`type` match {
+      case _: StreamType => "$" + name
+      case _: CanonStreamType => "#" + name
+      case _ => name
+    }).replace('.', '_')
+
   def valueToData(vm: ValueModel): DataView = vm match {
     case LiteralModel(value, _) => DataView.StringScalar(value)
     case VarModel(name, t, property) =>
-      val n = (t match {
-        case _: StreamType => "$" + name
-        case _: CanonStreamType => "#" + name
-        case _ => name
-      }).replace('.', '_')
+      val n = varNameToString(name, t)
       if (property.isEmpty) DataView.Variable(n)
       else {
         val functors = property.find {
@@ -93,12 +96,12 @@ object AirGen extends Logging {
 
       case FoldRes(item, iterable, mode) =>
         val m = mode.map {
-          case ForModel.NullMode => NullGen
-          case ForModel.NeverMode => NeverGen
+          case ForModel.Mode.Null => NullGen
+          case ForModel.Mode.Never => NeverGen
         }
         Eval later ForGen(valueToData(iterable), item, opsToSingle(ops), m)
-      case RestrictionRes(item, isStream) =>
-        Eval later NewGen(item, isStream, opsToSingle(ops))
+      case RestrictionRes(item, itemType) =>
+        Eval later NewGen(varNameToString(item, itemType), opsToSingle(ops))
       case CallServiceRes(serviceId, funcName, CallRes(args, exportTo), peerId) =>
         Eval.later(
           ServiceCallGen(
@@ -113,6 +116,11 @@ object AirGen extends Logging {
       case ApRes(operand, exportTo) =>
         Eval.later(
           ApGen(valueToData(operand), exportToString(exportTo))
+        )
+
+      case FailRes(operand) =>
+        Eval.later(
+          FailGen(valueToData(operand))
         )
 
       case CanonRes(operand, peerId, exportTo) =>
@@ -161,6 +169,12 @@ case class ApGen(operand: DataView, result: String) extends AirGen {
     Air.Ap(operand, result)
 }
 
+case class FailGen(operand: DataView) extends AirGen {
+
+  override def generate: Air =
+    Air.Fail(operand)
+}
+
 case class CanonGen(operand: DataView, peerId: DataView, result: String) extends AirGen {
 
   override def generate: Air =
@@ -179,14 +193,17 @@ case class MatchMismatchGen(
     else Air.Mismatch(left, right, body.generate)
 }
 
-case class ForGen(iterable: DataView, item: String, body: AirGen, mode: Option[AirGen]) extends AirGen {
+case class ForGen(iterable: DataView, item: String, body: AirGen, mode: Option[AirGen])
+    extends AirGen {
   override def generate: Air = Air.Fold(iterable, item, body.generate, mode.map(_.generate))
 }
 
-case class NewGen(item: String, isStream: Boolean, body: AirGen) extends AirGen {
+case class NewGen(name: String, body: AirGen) extends AirGen {
 
-  override def generate: Air =
-    Air.New(if (isStream) DataView.Stream("$" + item) else DataView.Variable(item), body.generate)
+  override def generate: Air = Air.New(
+    DataView.Variable(name),
+    body.generate
+  )
 }
 
 case class NextGen(item: String) extends AirGen {

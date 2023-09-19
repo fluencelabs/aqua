@@ -24,6 +24,8 @@ object Keyword {
 
   case object Ap extends Keyword("ap")
 
+  case object Fail extends Keyword("fail")
+
   case object Canon extends Keyword("canon")
 
   case object Seq extends Keyword("seq")
@@ -46,8 +48,6 @@ object DataView {
 
   case class Variable(name: String) extends DataView
 
-  case class Stream(name: String) extends DataView
-
   case class VarLens(name: String, lens: String, isField: Boolean = true) extends DataView {
     def append(sublens: String): VarLens = copy(lens = lens + sublens)
   }
@@ -57,7 +57,6 @@ object DataView {
     case InitPeerId ⇒ "%init_peer_id%"
     case LastError ⇒ "%last_error%"
     case Variable(name) ⇒ name
-    case Stream(name) ⇒ name
     case VarLens(name, lens, isField) ⇒
       if (isField) name + ".$" + lens
       else name + lens
@@ -90,7 +89,12 @@ object Air {
 
   case class Next(label: String) extends Air(Keyword.Next)
 
-  case class Fold(iterable: DataView, label: String, instruction: Air, lastNextInstruction: Option[Air]) extends Air(Keyword.Fold)
+  case class Fold(
+    iterable: DataView,
+    label: String,
+    instruction: Air,
+    lastNextInstruction: Option[Air]
+  ) extends Air(Keyword.Fold)
 
   case class Match(left: DataView, right: DataView, instruction: Air) extends Air(Keyword.Match)
 
@@ -107,6 +111,8 @@ object Air {
       extends Air(Keyword.Call)
 
   case class Ap(op: DataView, result: String) extends Air(Keyword.Ap)
+
+  case class Fail(op: DataView) extends Air(Keyword.Fail)
 
   case class Canon(op: DataView, peerId: DataView, result: String) extends Air(Keyword.Canon)
 
@@ -141,6 +147,7 @@ object Air {
             case Air.Call(triplet, args, res) ⇒
               s" ${triplet.show} [${args.map(_.show).mkString(" ")}]${res.fold("")(" " + _)}"
             case Air.Ap(operand, result) ⇒ s" ${operand.show} $result"
+            case Air.Fail(operand) => s" ${operand.show}"
             case Air.Canon(operand, peerId, result) ⇒ s" ${peerId.show} ${operand.show}  $result"
             case Air.Comment(_, _) => ";; Should not be displayed"
           }) + ")\n"

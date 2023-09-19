@@ -15,17 +15,14 @@ case class TransformConfig(
   errorFuncName: String = "error",
   respFuncName: String = "response",
   relayVarName: Option[String] = Some("-relay-"),
-  wrapWithXor: Boolean = true,
   tracing: Option[TransformConfig.TracingConfig] = None,
   constants: List[ConstantRaw] = Nil
 ) {
 
-  import LiteralRaw.quote
-
-  val errorId: ValueRaw = quote(errorFuncName)
-  val errorHandlingCallback: ValueModel = LiteralModel fromRaw quote(errorHandlingService)
-  val callbackSrvId: ValueRaw = quote(callbackService)
-  val dataSrvId: ValueRaw = quote(getDataService)
+  val errorId: ValueRaw = LiteralRaw.quote(errorFuncName)
+  val errorHandlingSrvId: ValueRaw = LiteralRaw.quote(errorHandlingService)
+  val callbackSrvId: ValueRaw = LiteralRaw.quote(callbackService)
+  val dataSrvId: ValueRaw = LiteralRaw.quote(getDataService)
 
   val constantsList: List[ConstantRaw] =
     ConstantRaw.defaultConstants(relayVarName) ::: constants

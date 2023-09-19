@@ -2,10 +2,12 @@ package aqua.model.inline.state
 
 import aqua.model.{ArgsCall, FuncArrow}
 import aqua.raw.arrow.FuncRaw
+
 import cats.data.State
 import cats.instances.list.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
+import cats.syntax.show.*
 
 /**
  * State algebra for resolved arrows
@@ -20,16 +22,19 @@ trait Arrows[S] extends Scoped[S] {
   /**
    * Arrow is resolved – save it to the state [[S]]
    *
-   * @param arrow
-   *   resolved arrow
-   * @param e
-   *   contextual Exports that an arrow captures
+   * @param arrow resolved arrow
+   * @param topology captured topology
    */
-  final def resolved(arrow: FuncRaw, topology: Option[String])(implicit e: Exports[S]): State[S, Unit] =
+  final def resolved(
+    arrow: FuncRaw,
+    topology: Option[String]
+  )(using Exports[S]): State[S, Unit] =
     for {
-      exps <- e.exports
+      exps <- Exports[S].exports
       arrs <- arrows
-      funcArrow = FuncArrow.fromRaw(arrow, arrs, exps, topology)
+      captuedVars = exps.filterKeys(arrow.capturedVars).toMap
+      capturedArrows = arrs.filterKeys(arrow.capturedVars).toMap
+      funcArrow = FuncArrow.fromRaw(arrow, capturedArrows, captuedVars, topology)
       _ <- save(arrow.name, funcArrow)
     } yield ()
 
@@ -63,7 +68,7 @@ trait Arrows[S] extends Scoped[S] {
    * @return
    */
   def argsArrows(args: ArgsCall): State[S, Map[String, FuncArrow]] =
-    arrows.map(args.arrowArgs)
+    arrows.map(args.arrowArgsMap)
 
   /**
    * Changes the [[S]] type to [[R]]

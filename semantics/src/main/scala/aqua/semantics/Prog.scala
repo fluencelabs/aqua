@@ -30,7 +30,7 @@ sealed abstract class Prog[Alg[_]: Monad, A] extends (Alg[A] => Alg[A]) {
         (_: Unit, m: A) => Ab.endScope() as m
       )
     )
-    
+
   def namesScope[S[_]](token: Token[S])(implicit N: NamesAlgebra[S, Alg]): Prog[Alg, A] =
     wrap(
       RunAround(
@@ -69,6 +69,9 @@ object Prog {
 
   def after[Alg[_]: Monad, A](prog: A => Alg[A]): Prog[Alg, A] =
     RunAround(Monad[Alg].unit, (_: Unit, a: A) => prog(a))
+
+  def after_[Alg[_]: Monad, A](prog: => Alg[A]): Prog[Alg, A] =
+    after(_ => prog)
 
   def around[Alg[_]: Monad, R, A](before: Alg[R], after: (R, A) => Alg[A]): Prog[Alg, A] =
     RunAround(before, after)

@@ -3,27 +3,166 @@ package aqua.parser.lexer
 import aqua.parser.Expr
 import aqua.parser.head.FilenameExpr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.ValueToken.{initPeerId, literal}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.types.LiteralType
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
+
 import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{~>, Comonad, Functor}
 import cats.data.{NonEmptyList, NonEmptyMap}
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
+import cats.syntax.foldable.*
+import cats.arrow.FunctionK
+import cats.syntax.traverse.*
+import cats.syntax.option.*
 
 sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
 }
 
-case class VarToken[F[_]](name: Name[F], property: List[PropertyOp[F]] = Nil)
-    extends ValueToken[F] {
+case class PropertyToken[F[_]: Comonad](
+  value: ValueToken[F],
+  properties: NonEmptyList[PropertyOp[F]]
+) extends ValueToken[F] {
+  override def as[T](v: T): F[T] = value.as(v)
+
+  def mapK[K[_]: Comonad](fk: F ~> K): PropertyToken[K] =
+    copy(value.mapK(fk), properties.map(_.mapK(fk)))
+
+  private def isClass(name: String): Boolean =
+    name.headOption.exists(_.isUpper)
+
+  private def isField(name: String): Boolean =
+    name.headOption.exists(_.isLower)
+
+  private def isConst(name: String): Boolean =
+    name.forall(c => !c.isLetter || c.isUpper)
+
+  /**
+   * This method tries to convert property token to
+   * call arrow token.
+   *
+   * Next properties pattern is transformed:
+   * (Class)+ arrow()
+   * ^^^^^^^
+   * this part is transformed to ability name.
+   */
+  private def toCallArrow: Option[CallArrowToken[F]] = value match {
+    case VarToken(name) =>
+      val ability = properties.init.traverse {
+        case f @ IntoField(_) => f.value.some
+        case _ => none
+      }.map(
+        name.value +: _
+      ).filter(
+        _.forall(isClass)
+      ).map(props => name.rename(props.mkString(".")))
+
+      (properties.last, ability) match {
+        case (IntoArrow(funcName, args), Some(ability)) =>
+          CallArrowToken(
+            ability.asTypeToken.some,
+            funcName,
+            args
+          ).some
+        case _ => none
+      }
+    case _ => none
+  }
+
+  /**
+   * This method tries to convert property token to
+   * property token with dotted var name inside value token.
+   *
+   * Next properties pattern is untouched:
+   * Class (field)*
+   *
+   * Next properties pattern is transformed:
+   * (Class)* (CONST | field) ..props..
+   * ^^^^^^^^^^^^^^^^^^^^^^^^
+   * this part is transformed to dotted name.
+   */
+  private def toDottedName: Option[ValueToken[F]] = value match {
+    case VarToken(name) =>
+      // Pattern `Class (field)*` is ability access
+      // and should not be transformed
+      val isAbility = isClass(name.value) && properties.forall {
+        case f @ IntoField(_) => isField(f.value)
+        case _ => true
+      }
+
+      if (isAbility) none
+      else {
+        // Gather prefix of properties that are IntoField
+        val props = name.value +: properties.toList.view.map {
+          case IntoField(name) => name.extract.some
+          case _ => none
+        }.takeWhile(_.isDefined).flatten.toList
+
+        val propsWithIndex = props.zipWithIndex
+
+        // Find first property that is not Class
+        val classesTill = propsWithIndex.find { case (name, _) =>
+          !isClass(name)
+        }.collect { case (_, idx) =>
+          idx
+        }.getOrElse(props.length)
+
+        // Find last property after classes
+        // that is CONST or field
+        val lastSuitable = propsWithIndex
+          .take(classesTill)
+          .findLast { case (name, _) =>
+            isConst(name) || isField(name)
+          }
+          .collect { case (_, idx) => idx }
+
+        lastSuitable.map(last =>
+          val newProps = NonEmptyList.fromList(
+            properties.toList.drop(last + 1)
+          )
+          val newName = props.take(last + 1).mkString(".")
+          val varToken = VarToken(name.rename(newName))
+
+          newProps.fold(varToken)(props => PropertyToken(varToken, props))
+        )
+      }
+    case _ => none
+  }
+
+  /**
+   * This is a hacky method to adjust parsing result
+   * to format that was used previously.
+   * This method tries to convert property token to
+   * call arrow token or property token with
+   * dotted var name inside value token.
+   *
+   * @return Some(token) if token was adjusted, None otherwise
+   */
+  def adjust: Option[ValueToken[F]] =
+    toCallArrow.orElse(toDottedName)
+}
+
+object PropertyToken {
+
+  val property: P[ValueToken[Span.S]] =
+    (ValueToken.basic ~ PropertyOp.ops.backtrack.?).map { case (v, ops) =>
+      ops.fold(v)(ops => PropertyToken(v, ops))
+    }
+
+}
+
+case class VarToken[F[_]](name: Name[F]) extends ValueToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
 
-  def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk), property.map(_.mapK(fk)))
+  def mapK[K[_]: Comonad](fk: F ~> K): VarToken[K] = copy(name.mapK(fk))
+}
+
+object VarToken {
+  lazy val variable: P[VarToken[Span.S]] = Name.variable.map(VarToken(_))
 }
 
 case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
@@ -34,7 +173,7 @@ case class LiteralToken[F[_]: Comonad](valueToken: F[String], ts: LiteralType)
 
   def value: String = valueToken.extract
 
-  override def toString: String = s"$value"
+  override def toString: String = s"$value:$ts"
 }
 
 case class CollectionToken[F[_]: Comonad](
@@ -72,6 +211,9 @@ object CollectionToken {
 }
 
 case class CallArrowToken[F[_]: Comonad](
+  // NOTE: Call with ability is not parsed by CallArrowToken
+  // it is parsed by PropertyToken and then adjusted
+  // It is done for legacy support reasons
   ability: Option[NamedTypeToken[F]],
   funcName: Name[F],
   args: List[ValueToken[F]]
@@ -85,38 +227,57 @@ case class CallArrowToken[F[_]: Comonad](
 
 object CallArrowToken {
 
+  def apply[F[_]: Comonad](funcName: Name[F], args: List[ValueToken[F]]): CallArrowToken[F] =
+    CallArrowToken(None, funcName, args)
+
+  case class CallBraces(name: Name[S], abilities: List[ValueToken[S]], args: List[ValueToken[S]])
+
+  // {SomeAb, SecondAb} for ValueToken
+  def abilities(): P[NonEmptyList[ValueToken[S]]] =
+    `{` *> comma(ValueToken.`value`.surroundedBy(`/s*`)) <* `}`
+
+  lazy val callBraces: P[CallBraces] = P
+    .defer(
+      Name.p ~
+        abilities().? ~
+        comma0(ValueToken.`value`.surroundedBy(`/s*`)).between(
+          ` `.?.with1 *> `(` <* `/s*`,
+          `/s*` *> `)`
+        )
+    )
+    .map { case ((n, ab), args) =>
+      CallBraces(n, ab.map(_.toList).getOrElse(Nil), args)
+    }
+    .withContext(
+      "Missing braces '()' after the function call"
+    )
+
   val callArrow: P[CallArrowToken[Span.S]] =
-    ((NamedTypeToken.dotted <* `.`).?.with1 ~
-      (Name.p
-        ~ comma0(ValueToken.`value`.surroundedBy(`/s*`))
-          .between(` `.?.with1 *> `(` <* `/s*`, `/s*` *> `)`))
-        .withContext(
-          "Missing braces '()' after the function call"
-        )).map { case (ab, (fn, args)) =>
-      CallArrowToken(ab, fn, args)
+    callBraces.map { braces =>
+      CallArrowToken(braces.name, braces.abilities ++ braces.args)
     }
 }
 
-case class StructValueToken[F[_]: Comonad](
+case class NamedValueToken[F[_]: Comonad](
   typeName: NamedTypeToken[F],
   fields: NonEmptyMap[String, ValueToken[F]]
 ) extends ValueToken[F] {
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): StructValueToken[K] =
+  override def mapK[K[_]: Comonad](fk: F ~> K): NamedValueToken[K] =
     copy(typeName.mapK(fk), fields.map(_.mapK(fk)))
 
   override def as[T](v: T): F[T] = typeName.as(v)
 }
 
-object StructValueToken {
+object NamedValueToken {
 
-  val dataValue: P[StructValueToken[Span.S]] =
+  val dataValue: P[NamedValueToken[Span.S]] =
     (`Class`.lift ~ namedArgs)
       .withContext(
         "Missing braces '()' after the struct type"
       )
       .map { case (dn, args) =>
-        StructValueToken(NamedTypeToken(dn), NonEmptyMap.of(args.head, args.tail: _*))
+        NamedValueToken(NamedTypeToken(dn), args.toNem)
       }
 }
 
@@ -139,24 +300,70 @@ case class InfixToken[F[_]: Comonad](
 
 object InfixToken {
 
-  import ValueToken._
+  enum BoolOp(val symbol: String):
+    case Or extends BoolOp("||")
+    case And extends BoolOp("&&")
+
+  enum MathOp(val symbol: String):
+    case Pow extends MathOp("**")
+    case Mul extends MathOp("*")
+    case Div extends MathOp("/")
+    case Rem extends MathOp("%")
+    case Add extends MathOp("+")
+    case Sub extends MathOp("-")
+
+  enum CmpOp(val symbol: String):
+    case Gt extends CmpOp(">")
+    case Gte extends CmpOp(">=")
+    case Lt extends CmpOp("<")
+    case Lte extends CmpOp("<=")
+
+  enum EqOp(val symbol: String):
+    case Eq extends EqOp("==")
+    case Neq extends EqOp("!=")
 
   enum Op(val symbol: String):
-    case Pow extends Op("**")
-    case Mul extends Op("*")
-    case Div extends Op("/")
-    case Rem extends Op("%")
-    case Add extends Op("+")
-    case Sub extends Op("-")
-    case Gt extends Op(">")
-    case Gte extends Op(">=")
-    case Lt extends Op("<")
-    case Lte extends Op("<=")
+    /**
+     * Scala3 does not support nested enums with fields
+     * so this type acrobatics is used to enable exhaustive matching check
+     */
+    case Math(mathOp: MathOp) extends Op(mathOp.symbol)
+    case Cmp(cmpOp: CmpOp) extends Op(cmpOp.symbol)
+    case Eq(eqOp: EqOp) extends Op(eqOp.symbol)
+    case Bool(boolOp: BoolOp) extends Op(boolOp.symbol)
 
     def p: P[Unit] = P.string(symbol)
 
+  object Op {
+    val Pow = Math(MathOp.Pow)
+    val Mul = Math(MathOp.Mul)
+    val Div = Math(MathOp.Div)
+    val Rem = Math(MathOp.Rem)
+    val Add = Math(MathOp.Add)
+    val Sub = Math(MathOp.Sub)
+
+    val math = MathOp.values.map(Math(_)).toList
+
+    val Gt = Cmp(CmpOp.Gt)
+    val Gte = Cmp(CmpOp.Gte)
+    val Lt = Cmp(CmpOp.Lt)
+    val Lte = Cmp(CmpOp.Lte)
+
+    val cmp = CmpOp.values.map(Cmp(_)).toList
+
+    val Equ = Eq(EqOp.Eq)
+    val Neq = Eq(EqOp.Neq)
+
+    val eq = EqOp.values.map(Eq(_)).toList
+
+    val And = Bool(BoolOp.And)
+    val Or = Bool(BoolOp.Or)
+
+    val bool = BoolOp.values.map(Bool(_)).toList
+  }
+
   private def opsParser(ops: List[Op]): P[(Span, Op)] =
-    P.oneOf(ops.map(op => op.p.lift.map(s => s.as(op))))
+    P.oneOf(ops.map(op => op.p.lift.map(_.as(op))))
 
   // Parse left-associative operations `basic (OP basic)*`.
   // We use this form to avoid left recursion.
@@ -187,25 +394,8 @@ object InfixToken {
         vt
     }
 
-  def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
-    basic.between(`(`, `)`).backtrack
-
-  // One element of math expression
-  private val atom: P[ValueToken[S]] = P.oneOf(
-    literal.backtrack ::
-      initPeerId.backtrack ::
-      P.defer(
-        CollectionToken.collection
-      ) ::
-      P.defer(StructValueToken.dataValue).backtrack ::
-      P.defer(CallArrowToken.callArrow).backtrack ::
-      P.defer(brackets(InfixToken.mathExpr)) ::
-      varProperty ::
-      Nil
-  )
-
   private val pow: P[ValueToken[Span.S]] =
-    infixParserRight(atom, Op.Pow :: Nil)
+    infixParserRight(P.defer(ValueToken.atom), Op.Pow :: Nil)
 
   private val mult: P[ValueToken[Span.S]] =
     infixParserLeft(pow, Op.Mul :: Op.Div :: Op.Rem :: Nil)
@@ -221,6 +411,15 @@ object InfixToken {
       // and `Op.Lt` is prefix of `Op.Lte`
       Op.Gte :: Op.Lte :: Op.Gt :: Op.Lt :: Nil
     )
+
+  private val eq: P[ValueToken[Span.S]] =
+    infixParserLeft(compare, Op.Equ :: Op.Neq :: Nil)
+
+  private val and: P[ValueToken[Span.S]] =
+    infixParserLeft(eq, Op.And :: Nil)
+
+  private val or: P[ValueToken[Span.S]] =
+    infixParserLeft(and, Op.Or :: Nil)
 
   /**
    * The math expression parser.
@@ -268,9 +467,21 @@ object InfixToken {
    *
    * The grammar below expresses the operator precedence and associativity we expect from math expressions:
    *
-   * -- Comparison is the entry point because it has the lowest priority.
+   * -- Logical OR is the entry point because it has the lowest priority.
    * mathExpr
-   *   -> cmpExpr
+   *   -> orExpr
+   *
+   * -- Logical OR is left associative.
+   * orExpr
+   *   -> andExpr OR_OP andExpr
+   *
+   * -- Logical AND is left associative.
+   * andExpr
+   *   -> eqExpr AND_OP eqExpr
+   *
+   * -- Equality is left associative.
+   * eqExpr
+   *  -> cmpExpr EQ_OP cmpExpr
    *
    * -- Comparison isn't an associative operation so it's not a recursive definition.
    * cmpExpr
@@ -303,15 +514,42 @@ object InfixToken {
    *   | ...
    *   | ( mathExpr )
    */
-  val mathExpr: P[ValueToken[Span.S]] = compare
+  val value: P[ValueToken[Span.S]] = or
+}
+
+case class PrefixToken[F[_]: Comonad](
+  operand: ValueToken[F],
+  prefix: F[PrefixToken.Op]
+) extends ValueToken[F] {
+
+  def op: PrefixToken.Op = prefix.extract
+  override def as[T](v: T): F[T] = prefix.as(v)
+
+  override def mapK[K[_]: Comonad](fk: FunctionK[F, K]): ValueToken[K] =
+    copy(operand.mapK(fk), fk(prefix))
+}
+
+object PrefixToken {
+
+  enum Op(val symbol: String) {
+    case Not extends Op("!")
+
+    def p: P[Unit] = P.string(symbol)
+  }
+
+  private def parseOps(ops: List[Op]): P[S[Op]] =
+    P.oneOf(ops.map(op => op.p.lift.map(_.as(op))))
+
+  private def parsePrefix(basic: P[ValueToken[S]], ops: List[Op]) =
+    (parseOps(ops).surroundedBy(`/s*`) ~ basic).map { case (op, vt) =>
+      PrefixToken(vt, op)
+    }
+
+  val value: P[ValueToken[Span.S]] =
+    parsePrefix(P.defer(ValueToken.atom), Op.Not :: Nil)
 }
 
 object ValueToken {
-
-  val varProperty: P[VarToken[Span.S]] =
-    (Name.dotted ~ PropertyOp.ops.?).map { case (n, l) ⇒
-      VarToken(n, l.fold[List[PropertyOp[Span.S]]](Nil)(_.toList))
-    }
 
   val bool: P[LiteralToken[Span.S]] =
     P.oneOf(
@@ -329,7 +567,7 @@ object ValueToken {
     (minus.?.with1 ~ Numbers.nonNegativeIntString).lift.map(fu =>
       fu.extract match {
         case (Some(_), n) ⇒ LiteralToken(fu.as(s"-$n"), LiteralType.signed)
-        case (None, n) ⇒ LiteralToken(fu.as(n), LiteralType.number)
+        case (None, n) ⇒ LiteralToken(fu.as(n), LiteralType.unsigned)
       }
     )
 
@@ -347,8 +585,28 @@ object ValueToken {
   val literal: P[LiteralToken[Span.S]] =
     P.oneOf(bool.backtrack :: float.backtrack :: num.backtrack :: string :: Nil)
 
+  private def brackets(basic: P[ValueToken[Span.S]]): P[ValueToken[Span.S]] =
+    basic.between(`(`, `)`).backtrack
+
+  // Basic element of value expression
+  // (without property access)
+  val basic = P.oneOf(
+    literal.backtrack ::
+      initPeerId.backtrack ::
+      P.defer(CollectionToken.collection).backtrack ::
+      P.defer(NamedValueToken.dataValue).backtrack ::
+      P.defer(CallArrowToken.callArrow).backtrack ::
+      P.defer(VarToken.variable).backtrack ::
+      P.defer(PrefixToken.value).backtrack ::
+      P.defer(brackets(value)).backtrack ::
+      Nil
+  )
+
+  // Atomic element of math expression
+  val atom: P[ValueToken[S]] = P.defer(PropertyToken.property)
+
   // One of entry points for parsing the whole math expression
   val `value`: P[ValueToken[Span.S]] =
-    P.defer(InfixToken.mathExpr)
+    P.defer(InfixToken.value)
 
 }

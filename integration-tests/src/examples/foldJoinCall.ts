@@ -1,4 +1,3 @@
-import { Fluence } from '@fluencelabs/fluence';
 import { getTwoResults } from '../compiled/examples/foldJoin.js';
 
 export async function foldJoinCall(relayPeerId: string): Promise<number[]> {

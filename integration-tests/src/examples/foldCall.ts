@@ -1,4 +1,3 @@
-import { Fluence } from '@fluencelabs/fluence';
 import {forBug499, iterateAndPrint, iterateAndPrintParallel} from '../compiled/examples/fold.js';
 
 export async function foldCall(relayPeerId: string) {

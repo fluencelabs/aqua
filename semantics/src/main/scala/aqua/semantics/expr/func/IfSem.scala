@@ -1,6 +1,6 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{FuncOp, MatchMismatchTag, XorTag}
+import aqua.raw.ops.{FuncOp, IfTag}
 import aqua.parser.expr.func.IfExpr
 import aqua.raw.value.ValueRaw
 import aqua.raw.Raw
@@ -11,10 +11,14 @@ import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.Type
+
 import cats.Monad
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.apply.*
+import cats.syntax.traverse.*
+import aqua.types.ScalarType
 
 class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
 
@@ -27,35 +31,27 @@ class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     Prog
       .around(
-        V.valueToRaw(expr.left).flatMap {
-          case Some(lt) =>
-            V.valueToRaw(expr.right).flatMap {
-              case Some(rt) =>
-                T.ensureValuesComparable(expr.right, lt.`type`, rt.`type`)
-                  .map(m => Some(lt -> rt).filter(_ => m))
-              case None =>
-                None.pure[Alg]
-            }
-          case None =>
-            V.resolveType(expr.right).as[Option[(ValueRaw, ValueRaw)]](None)
-        },
-        (r: Option[(ValueRaw, ValueRaw)], ops: Raw) =>
-          r.fold(Raw.error("If expression errored in matching types").pure[Alg]) { case (lt, rt) =>
-            ops match {
-              case FuncOp(op) =>
-                XorTag.LeftBiased
-                  .wrap(
-                    MatchMismatchTag(
-                      lt,
-                      rt,
-                      expr.eqOp.value
-                    ).wrap(op)
-                  )
-                  .toFuncOp
-                  .pure[Alg]
-
-              case _ => Raw.error("Wrong body of the if expression").pure[Alg]
-            }
+        V.valueToRaw(expr.value)
+          .flatMap(
+            _.flatTraverse(raw =>
+              T.ensureTypeMatches(
+                token = expr.value,
+                expected = ScalarType.bool,
+                givenType = raw.`type`
+              ).map(Option.when(_)(raw))
+            )
+          ),
+        // Without type of ops specified
+        // scala compiler fails to compile this
+        (value, ops: Raw) =>
+          (value, ops) match {
+            case (Some(vr), FuncOp(op)) =>
+              for {
+                restricted <- FuncOpSem.restrictStreamsInScope(op)
+                tag = IfTag(vr).wrap(restricted)
+              } yield tag.toFuncOp
+            case (None, _) => Raw.error("`if` expression errored in matching types").pure
+            case _ => Raw.error("Wrong body of the `if` expression").pure
           }
       )
       .abilitiesScope[S](expr.token)

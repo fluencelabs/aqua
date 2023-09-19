@@ -2,20 +2,25 @@ package aqua
 
 import aqua.AquaSpec.spanToId
 import aqua.parser.expr.*
-import aqua.parser.expr.func.{AbilityIdExpr, ArrowExpr, AssignmentExpr, CallArrowExpr, ClosureExpr, ElseOtherwiseExpr, ForExpr, IfExpr, OnExpr, PushToStreamExpr, ReturnExpr}
+import aqua.parser.expr.func.*
+import aqua.parser.lexer.InfixToken.Op as InfixOp
+import aqua.parser.lexer.PrefixToken.Op as PrefixOp
+import aqua.parser.lexer.InfixToken.Op.*
+import aqua.parser.lexer.PrefixToken.Op.*
 import aqua.parser.head.FromExpr.NameOrAbAs
 import aqua.parser.head.{FromExpr, UseFromExpr}
 import aqua.parser.lexer.*
 import aqua.parser.lexer.Token.LiftToken
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import aqua.types.LiteralType.{bool, number, string}
+import aqua.types.LiteralType.{bool, number, signed, string, unsigned}
 import aqua.types.{LiteralType, ScalarType}
-import cats.{Id, ~>}
+import cats.{~>, Id}
 import org.scalatest.EitherValues
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import cats.~>
 import cats.syntax.bifunctor.*
+import cats.data.NonEmptyList
 
 import scala.collection.mutable
 import scala.language.implicitConversions
@@ -29,33 +34,43 @@ object AquaSpec {
     }
   }
 
-  implicit def toAb(str: String): Ability[Id] = Ability[Id](str)
+  def toName(str: String): Name[Id] = Name[Id](str)
 
-  implicit def toName(str: String): Name[Id] = Name[Id](str)
-  implicit def toNameOp(str: Option[String]): Option[Name[Id]] = str.map(s => toName(s))
+  def toNameOp(str: Option[String]): Option[Name[Id]] = str.map(s => toName(s))
 
-  implicit def toFields(fields: List[String]): List[IntoField[Id]] =
-    fields.map(f => IntoField[Id](f))
+  def toAb(str: String): Ability[Id] = Ability[Id](str)
 
-  implicit def toVar(name: String): VarToken[Id] = VarToken[Id](toName(name), Nil)
+  def toVar(name: String): VarToken[Id] = VarToken[Id](toName(name))
 
-  implicit def toVarOp(name: Option[String]): Option[VarToken[Id]] =
-    name.map(s => VarToken[Id](toName(s), Nil))
+  def toVarOp(name: Option[String]): Option[VarToken[Id]] =
+    name.map(toVar)
 
-  implicit def toVarLambda(name: String, fields: List[String]): VarToken[Id] =
-    VarToken[Id](toName(name), toFields(fields))
+  def toVarLambda(name: String, fields: List[String]): ValueToken[Id] =
+    NonEmptyList
+      .fromList(fields)
+      .fold(toVar(name))(fs =>
+        PropertyToken(
+          toVar(name),
+          fs.map(IntoField[Id].apply)
+        )
+      )
 
-  implicit def toVarIndex(name: String, idx: Int): VarToken[Id] =
-    VarToken[Id](toName(name), IntoIndex[Id](toNumber(idx).unit, Some(toNumber(idx))) :: Nil)
-  implicit def toLiteral(name: String, t: LiteralType): LiteralToken[Id] = LiteralToken[Id](name, t)
-  implicit def toNumber(n: Int): LiteralToken[Id] = LiteralToken[Id](n.toString, number)
-  implicit def toBool(n: Boolean): LiteralToken[Id] = LiteralToken[Id](n.toString, bool)
-  implicit def toStr(n: String): LiteralToken[Id] = LiteralToken[Id]("\"" + n + "\"", string)
+  def toVarIndex(name: String, idx: Int): PropertyToken[Id] =
+    PropertyToken[Id](
+      VarToken[Id](toName(name)),
+      NonEmptyList.one(IntoIndex[Id](toNumber(idx).unit, Some(toNumber(idx))))
+    )
 
-  implicit def toNamedType(str: String): NamedTypeToken[Id] = NamedTypeToken[Id](str)
+  def toLiteral(name: String, t: LiteralType): LiteralToken[Id] = LiteralToken[Id](name, t)
+
+  def toNumber(n: Int): LiteralToken[Id] = LiteralToken[Id](n.toString, LiteralType.forInt(n))
+  def toBool(n: Boolean): LiteralToken[Id] = LiteralToken[Id](n.toString, bool)
+  def toStr(n: String): LiteralToken[Id] = LiteralToken[Id]("\"" + n + "\"", string)
+
+  def toNamedType(str: String): NamedTypeToken[Id] = NamedTypeToken[Id](str)
   def toArrayType(str: String): ArrayTypeToken[Id] = ArrayTypeToken[Id]((), str)
 
-  implicit def toArrowType(
+  def toArrowType(
     args: List[DataTypeToken[Id]],
     res: Option[DataTypeToken[Id]]
   ): ArrowTypeToken[Id] =
@@ -67,18 +82,23 @@ object AquaSpec {
   ): ArrowTypeToken[Id] =
     ArrowTypeToken[Id]((), args.map(ab => Some(Name[Id](ab._1)) -> ab._2), res)
 
-  implicit def toNamedArg(str: String, customType: String): Arg[Id] =
+  def toNamedArg(str: String, customType: String): Arg[Id] =
     Arg[Id](str, toNamedType(customType))
 
-  implicit def toArg(str: String, typeToken: TypeToken[Id]): Arg[Id] = Arg[Id](str, typeToken)
+  def toArg(str: String, typeToken: TypeToken[Id]): Arg[Id] = Arg[Id](str, typeToken)
 
-  implicit def toArgSc(str: String, scalarType: ScalarType): Arg[Id] =
+  def toArgSc(str: String, scalarType: ScalarType): Arg[Id] =
     Arg[Id](str, scToBt(scalarType))
 
-  implicit def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
+  def scToBt(sc: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](sc)
 
   val boolSc: BasicTypeToken[Id] = BasicTypeToken[Id](ScalarType.bool)
   val stringSc: BasicTypeToken[Id] = BasicTypeToken[Id](ScalarType.string)
+
+  given Conversion[String, Name[Id]] = toName
+  given Conversion[String, NamedTypeToken[Id]] = toNamedType
+  given Conversion[Int, LiteralToken[Id]] = toNumber
+  given Conversion[ScalarType, BasicTypeToken[Id]] = scToBt
 }
 
 trait AquaSpec extends EitherValues {
@@ -98,11 +118,14 @@ trait AquaSpec extends EitherValues {
   def parseUse(str: String): UseFromExpr[Id] =
     UseFromExpr.p.parseAll(str).value.mapK(spanToId)
 
-  def parseAbId(str: String): AbilityIdExpr[Id] =
-    AbilityIdExpr.p.parseAll(str).value.mapK(spanToId)
+  def parseServiceId(str: String): ServiceIdExpr[Id] =
+    ServiceIdExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseOn(str: String): OnExpr[Id] =
     OnExpr.p.parseAll(str).value.mapK(spanToId)
+
+  def parseParSeq(str: String): ParSeqExpr[Id] =
+    ParSeqExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseReturn(str: String): ReturnExpr[Id] =
     ReturnExpr.p.parseAll(str).value.mapK(spanToId)
@@ -110,8 +133,14 @@ trait AquaSpec extends EitherValues {
   def parseAssign(str: String): AssignmentExpr[Id] =
     AssignmentExpr.p.parseAll(str).value.mapK(spanToId)
 
-  def parseData(str: String): StructValueToken[Id] =
-    StructValueToken.dataValue.parseAll(str).value.mapK(spanToId)
+  def parseVar(str: String): ValueToken[Id] =
+    ValueToken.value.parseAll(str).value.mapK(spanToId)
+
+  def parseData(str: String): NamedValueToken[Id] =
+    NamedValueToken.dataValue.parseAll(str).value.mapK(spanToId)
+
+  def parseIntoArrow(str: String): PropertyOp[Id] =
+    PropertyOp.parseArrow.parseAll(str).value.mapK(spanToId)
 
   def parsePush(str: String): PushToStreamExpr[Id] =
     PushToStreamExpr.p.parseAll(str).value.mapK(spanToId)
@@ -128,7 +157,7 @@ trait AquaSpec extends EitherValues {
   def parseFor(str: String): ForExpr[Id] =
     ForExpr.p.parseAll(str).value.mapK(spanToId)
 
-  def parseElse(str: String): ElseOtherwiseExpr[Id] =
+  def parseElseOtherwise(str: String): ElseOtherwiseExpr[Id] =
     ElseOtherwiseExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseFieldType(str: String): FieldTypeExpr[Id] =
@@ -149,6 +178,57 @@ trait AquaSpec extends EitherValues {
   def funcExpr(str: String): FuncExpr[Id] = FuncExpr.p.parseAll(str).value.mapK(spanToId)
   def closureExpr(str: String): ClosureExpr[Id] = ClosureExpr.p.parseAll(str).value.mapK(spanToId)
   def arrowExpr(str: String): ArrowExpr[Id] = ArrowExpr.p.parseAll(str).value.mapK(spanToId)
+
+  def prefixToken(value: ValueToken[Id], op: PrefixOp) =
+    PrefixToken[Id](value, op)
+
+  def infixToken(left: ValueToken[Id], right: ValueToken[Id], op: InfixOp) =
+    InfixToken[Id](left, right, op)
+
+  def mul(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Mul)
+
+  def sub(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Sub)
+
+  def div(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Div)
+
+  def rem(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Rem)
+
+  def add(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Add)
+
+  def pow(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Pow)
+
+  def gt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Gt)
+
+  def gte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Gte)
+
+  def lt(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Lt)
+
+  def lte(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Lte)
+
+  def or(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Or)
+
+  def and(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, And)
+
+  def not(value: ValueToken[Id]): ValueToken[Id] =
+    prefixToken(value, Not)
+
+  def equ(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Equ)
+
+  def neq(left: ValueToken[Id], right: ValueToken[Id]): ValueToken[Id] =
+    infixToken(left, right, Neq)
 
   val nat = new (Span.S ~> Id) {
 

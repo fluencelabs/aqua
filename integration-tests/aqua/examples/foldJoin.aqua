@@ -15,7 +15,5 @@ func getTwoResults(node: string) -> []u64:
       on n:
         try:
           res <- Peer.timestamp_sec()
-    Op2.identity(res!)
-    Op2.identity(res!1)
-    Op2.identity(res!2)
+    join res!2
   <- res

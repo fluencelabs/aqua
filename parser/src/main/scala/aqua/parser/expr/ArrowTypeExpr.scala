@@ -20,12 +20,7 @@ object ArrowTypeExpr extends Expr.Leaf {
   override val p: Parser[ArrowTypeExpr[Span.S]] =
     (Name.p ~ ((` : ` *> ArrowTypeToken.`arrowdef`(
       DataTypeToken.`datatypedef`
-    )) | ArrowTypeToken.`arrowWithNames`(DataTypeToken.`datatypedef`))).flatMap { case (name, t) =>
-      // services cannot return multiple results
-      if (t.res.length > 1) {
-        Parser.failWith("Service functions cannot have multiple results")
-      } else {
-        Parser.pure(ArrowTypeExpr(name, t))
-      }
+    )) | ArrowTypeToken.`arrowWithNames`(DataTypeToken.`datatypedef`))).map { case (name, t) =>
+      ArrowTypeExpr(name, t)
     }
 }

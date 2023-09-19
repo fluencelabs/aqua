@@ -3,76 +3,82 @@ package aqua.model.inline
 import aqua.model.{EmptyModel, OpModel, ParModel, SeqModel}
 import aqua.raw.ops.RawTag
 import aqua.raw.value.ValueRaw
+import aqua.model.inline.Inline.MergeMode
+import aqua.model.inline.Inline.MergeMode.*
+
 import cats.Monoid
 import cats.data.Chain
+import cats.data.Chain.*
+import cats.syntax.option.*
 
 import scala.collection.immutable.ListMap
 
-sealed trait MergeMode
-object SeqMode extends MergeMode
-object ParMode extends MergeMode
-
 /**
- * @param flattenValues values that need to be resolved before `predo`.
- *                      ListMap for keeping order of values (mostly for debugging purposes)
+ * Inlining result
+ *
  * @param predo operations tree
- * @param mergeMode how `flattenValues` and `predo` must be merged
+ * @param mergeMode how `predo` must be merged
  */
 private[inline] case class Inline(
-  flattenValues: ListMap[String, ValueRaw] = ListMap.empty,
   predo: Chain[OpModel.Tree] = Chain.empty,
   mergeMode: MergeMode = ParMode
 ) {
 
-  def desugar: Inline = {
-    val desugaredPredo =
-      predo.toList match {
-        case Nil => Chain.empty
-        case x :: Nil =>
-          Chain.one(x)
-        case l =>
-          mergeMode match
-            case SeqMode =>
-              val wrapped = SeqModel.wrap(l: _*)
-              wrapped match
-                case EmptyModel.leaf => Chain.empty
-                case _ => Chain.one(wrapped)
-            case ParMode => Chain.one(ParModel.wrap(l: _*))
-      }
+  def append(tree: Option[OpModel.Tree]): Inline =
+    tree match {
+      case None => this
+      case Some(tree) => copy(predo = predo :+ tree)
+    }
 
-    Inline(
-      flattenValues,
-      desugaredPredo
-    )
+  def desugar: Inline = {
+    val desugaredPredo = predo match {
+      case Chain.nil | _ ==: Chain.nil => predo
+      case chain =>
+        mergeMode match
+          case SeqMode =>
+            val wrapped = SeqModel.wrap(chain)
+            wrapped match
+              case EmptyModel.leaf => Chain.empty
+              case _ => Chain.one(wrapped)
+          case ParMode => Chain.one(ParModel.wrap(chain))
+    }
+
+    Inline(desugaredPredo)
   }
 
   def mergeWith(inline: Inline, mode: MergeMode): Inline = {
     val left = desugar
     val right = inline.desugar
 
-    Inline(left.flattenValues ++ right.flattenValues, left.predo ++ right.predo, mode)
+    Inline(left.predo ++ right.predo, mode)
   }
 }
 
 // TODO may not be needed there
 private[inline] object Inline {
-  val empty: Inline = Inline()
 
-  def preload(pairs: (String, ValueRaw)*): Inline = Inline(ListMap.from(pairs))
+  enum MergeMode {
+    case SeqMode
+    case ParMode
+  }
+
+  val empty: Inline = Inline()
 
   def tree(tr: OpModel.Tree): Inline = Inline(predo = Chain.one(tr))
 
   given Monoid[Inline] with
-    override val empty: Inline = Inline()
+    override val empty: Inline = Inline.empty
 
     override def combine(a: Inline, b: Inline): Inline =
-      Inline(a.flattenValues ++ b.flattenValues, a.predo ++ b.predo)
+      // TODO: Is it ok to ignore merge mode?
+      Inline(a.predo ++ b.predo)
 
-  def parDesugarPrefix(ops: List[OpModel.Tree]): Option[OpModel.Tree] = ops match {
-    case Nil => None
-    case x :: Nil => Option(x)
-    case _ => Option(ParModel.wrap(ops: _*))
-  }
+  def parDesugarPrefix(ops: List[OpModel.Tree]): Option[OpModel.Tree] =
+    ops match {
+      case Nil => none
+      case x :: Nil => x.some
+      case _ => ParModel.wrap(ops).some
+    }
 
   def parDesugarPrefixOpt(ops: Option[OpModel.Tree]*): Option[OpModel.Tree] =
     parDesugarPrefix(ops.toList.flatten)

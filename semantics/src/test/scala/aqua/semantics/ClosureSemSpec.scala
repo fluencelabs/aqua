@@ -6,7 +6,6 @@ import aqua.raw.arrow.ArrowRaw
 import aqua.raw.Raw
 import aqua.raw.ops.{EmptyTag, FuncOp, RawTag}
 import aqua.semantics.expr.func.ClosureSem
-import aqua.semantics.rules.ReportError
 import aqua.semantics.rules.names.{NamesInterpreter, NamesState}
 import aqua.types.{ArrowType, ProductType}
 import cats.data.*
@@ -30,7 +29,7 @@ import org.scalatest.matchers.should.Matchers
 
 class ClosureSemSpec extends AnyFlatSpec with Matchers {
 
-  import Utils.*
+  import Utils.{given, *}
 
   val program: Prog[State[CompilerState[cats.Id], *], Raw] = {
     import CompilerState.*

@@ -14,9 +14,20 @@ import cats.~>
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import aqua.types.LiteralType
+import aqua.parser.lexer.CallArrowToken.CallBraces
 
 sealed trait PropertyOp[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K]
+}
+
+case class IntoArrow[F[_]: Comonad](name: Name[F], arguments: List[ValueToken[F]])
+    extends PropertyOp[F] {
+  override def as[T](v: T): F[T] = name.as(v)
+
+  override def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K] =
+    copy(name.mapK(fk), arguments.map(_.mapK(fk)))
+
+  override def toString: String = s".$name(${arguments.map(_.toString).mkString(", ")})"
 }
 
 case class IntoField[F[_]: Comonad](name: F[String]) extends PropertyOp[F] {
@@ -47,7 +58,12 @@ case class IntoCopy[F[_]: Comonad](point: F[Unit], fields: NonEmptyMap[String, V
 object PropertyOp {
 
   private val parseField: P[PropertyOp[Span.S]] =
-    (`.` *> `name`).lift.map(IntoField(_))
+    (`.` *> anyName).lift.map(IntoField(_))
+
+  val parseArrow: P[PropertyOp[Span.S]] =
+    (`.` *> CallArrowToken.callBraces).map { case CallBraces(name, abilities, args) =>
+      IntoArrow(name, abilities ++ args)
+    }
 
   val parseCopy: P[PropertyOp[Span.S]] =
     (`.` *> (`copy`.lift ~ namedArgs)).map { case (point, fields) =>
@@ -56,7 +72,10 @@ object PropertyOp {
 
   private val parseIdx: P[PropertyOp[Span.S]] =
     (P.defer(
-      (ValueToken.`value`.surroundedBy(`/s*`).between(`[`.between(` *`, `/s*`), `/s*` *> `]`).lift | (exclamation *> ValueToken.num).lift)
+      (ValueToken.`value`
+        .surroundedBy(`/s*`)
+        .between(`[`.between(` *`, `/s*`), `/s*` *> `]`)
+        .lift | (exclamation *> ValueToken.num).lift)
         .map(v => IntoIndex(v.map(_.unit), Some(v._2)))
         .backtrack
     ) | exclamation.lift.map(e => IntoIndex(e, None))).flatMap { ii =>
@@ -68,7 +87,7 @@ object PropertyOp {
     }
 
   private val parseOp: P[PropertyOp[Span.S]] =
-    P.oneOf(parseCopy.backtrack :: parseField.backtrack :: parseIdx :: Nil)
+    P.oneOf(parseCopy.backtrack :: parseArrow.backtrack :: parseField :: parseIdx :: Nil)
 
   val ops: P[NonEmptyList[PropertyOp[Span.S]]] =
     parseOp.rep

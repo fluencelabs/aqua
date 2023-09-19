@@ -9,12 +9,15 @@ import cats.syntax.apply.*
 
 import scala.annotation.tailrec
 
+import aqua.helpers.Tree
+
 trait TreeNodeCompanion[T <: TreeNode[T]] {
 
   given showTreeLabel: Show[T]
 
   type Tree = Cofree[Chain, T]
 
+  // TODO: Use helpers.Tree istead of this function
   private def showOffset(what: Tree, offset: Int): String = {
     val spaces = "| " * offset
     spaces + what.head.show + what.tail.map {
@@ -24,35 +27,34 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
     }.value
   }
 
-  private def showDiffOffset(what: (Tree, Tree), offset: Int): String = {
+  private def showDiffOffset(left: Tree, right: Tree, offset: Int): String = {
     val spaces = "| " * offset
+    val leftShow = left.head.show
+    val rightShow = right.head.show
     val head =
-      if (what._1.head == what._2.head) what._1.head.show
+      if (leftShow == rightShow) leftShow
       else {
-        val lft = what._1.head.show
-        val rgt = what._2.head.show
-        val commonPrefixLen = lft.zip(rgt).takeWhile(_ == _).length
-        val commonSuffixLen = rgt.reverse.zip(lft.reverse).takeWhile(_ == _).length
-        val commonPrefix = lft.take(commonPrefixLen)
-        val commonSuffix = rgt.takeRight(commonSuffixLen)
-        val lSuffix = lft.length - commonSuffixLen
-        val lftDiff =
-          if (commonPrefixLen - lSuffix < lft.length) lft.substring(commonPrefixLen, lSuffix)
-          else ""
-        val rSuffix = rgt.length - commonSuffixLen
-        val rgtDiff =
-          if (commonPrefixLen + rSuffix < rgt.length) rgt.substring(commonPrefixLen, rSuffix)
-          else ""
+        val commonPrefix = (l: String, r: String) =>
+          l.lazyZip(r).takeWhile(_ == _).map(_._1).mkString
+
+        val prefix = commonPrefix(leftShow, rightShow)
+        val suffix = commonPrefix(leftShow.reverse, rightShow.reverse).reverse
+
+        val diff = (s: String) => s.drop(prefix.length).dropRight(suffix.length)
+
+        val lftDiff = diff(leftShow)
+        val rgtDiff = diff(rightShow)
+
         if (rgtDiff.isEmpty) {
-          commonPrefix + Console.YELLOW + lftDiff + Console.RESET + commonSuffix
+          prefix + Console.YELLOW + lftDiff + Console.RESET + suffix
         } else {
-          commonPrefix +
-            Console.YELLOW + lftDiff + Console.RED + " != " + Console.CYAN + rgtDiff + Console.RESET + commonSuffix
+          prefix + Console.YELLOW + lftDiff + Console.RED +
+            " != " + Console.CYAN + rgtDiff + Console.RESET + suffix
         }
 
       }
 
-    spaces + head + (what._1.tail, what._2.tail).mapN {
+    spaces + head + (left.tail, right.tail).mapN {
       case (c1, c2) if c1.isEmpty && c2.isEmpty => "\n"
       case (c1, c2) =>
         @tailrec
@@ -62,7 +64,7 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
           case (Nil, y :: tail) =>
             nxt(tail, Nil, acc :+ (Console.CYAN + showOffset(y, offset + 1) + Console.RESET))
           case (x :: xt, y :: yt) if x.head == y.head =>
-            nxt(xt, yt, acc :+ showDiffOffset(x -> y, offset + 1))
+            nxt(xt, yt, acc :+ showDiffOffset(x, y, offset + 1))
           case (x :: xt, yt) if yt.exists(_.head == x.head) =>
             val yh = yt.takeWhile(_.head != x.head)
             nxt(
@@ -82,7 +84,7 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
               )
             )
           case (x :: xt, y :: yt) =>
-            nxt(xt, yt, acc :+ showDiffOffset(x -> y, offset + 1))
+            nxt(xt, yt, acc :+ showDiffOffset(x, y, offset + 1))
           case (Nil, Nil) => acc.toList
         }
 
@@ -99,13 +101,12 @@ trait TreeNodeCompanion[T <: TreeNode[T]] {
 
   given Show[Tree] with
 
-    override def show(t: Tree): String =
-      showOffset(t, 0)
+    override def show(t: Tree): String = Tree.show(t)
 
   given Show[(Tree, Tree)] with
 
     override def show(tt: (Tree, Tree)): String =
-      showDiffOffset(tt, 0)
+      showDiffOffset(tt._1, tt._2, 0)
 
   extension (t: Tree)
 

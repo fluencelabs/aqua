@@ -1,22 +1,22 @@
 package aqua.semantics.expr.func
 
 import aqua.parser.expr.func.CallArrowExpr
+import aqua.parser.lexer.{CallArrowToken, IntoArrow, IntoField, PropertyToken, VarToken}
 import aqua.raw.Raw
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp}
-import aqua.raw.value.ValueRaw
+import aqua.raw.value.CallArrowRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
-import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrowType, StreamType, Type}
-import cats.syntax.applicative.*
-import cats.syntax.apply.*
+import aqua.types.{StreamType, Type}
+import cats.Monad
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Monad, Traverse}
-import aqua.raw.value.CallArrowRaw
+import cats.syntax.option.*
+import cats.syntax.applicative.*
+import cats.syntax.comonad.*
 
 class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
@@ -35,13 +35,13 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
       }
     }
 
-  private def toModel[Alg[_]: Monad](implicit
+  private def toModel[Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Alg[Option[FuncOp]] = for {
-    callArrowRaw <- V.callArrowToRaw(callArrow)
+    // TODO: Accept other expressions
+    callArrowRaw <- V.valueToCallArrowRaw(expr.callArrow)
     maybeOp <- callArrowRaw.traverse(car =>
       variables
         .drop(car.baseType.codomain.length)
@@ -55,7 +55,6 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
   def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =

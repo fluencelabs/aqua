@@ -1,4 +1,3 @@
-import { Fluence } from '@fluencelabs/fluence';
 import {passFunctionAsArg, reproArgsBug426} from '../compiled/examples/callArrow.js';
 
 export async function callArrowCall(relayPeerId: string): Promise<string> {
@@ -13,7 +12,6 @@ export async function callArrowCall(relayPeerId: string): Promise<string> {
 }
 
 export async function reproArgsBug426Call(): Promise<string> {
-    const relayPeerId = Fluence.getPeer().getStatus().relayPeerId;
     return new Promise<string>((resolve, reject) => {
         reproArgsBug426((a: string) => {
             resolve(a);
