@@ -1,5 +1,8 @@
 package aqua.logging
 
+import cats.syntax.option.*
+import cats.syntax.either.*
+import cats.syntax.foldable.*
 import cats.data.Validated.{invalidNel, validNel}
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import scribe.Level
@@ -12,20 +15,15 @@ case class LogLevels(
 
 object LogLevels {
 
-  val logHelpMessage = "Format: '<level> OR <segment>=<level>[,]', where <level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'. <segment> can be 'compiler', 'fluencejs' or 'aquavm'"
+  val logHelpMessage =
+    "Format: '<level> OR <segment>=<level>[,]', where <level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'. <segment> can be 'compiler', 'fluencejs' or 'aquavm'"
 
   def apply(level: Level): LogLevels = LogLevels(level, level, level)
 
-  def levelFromString(s: String): ValidatedNel[String, Level] = {
+  def levelFromString(s: String): ValidatedNel[String, Level] =
     LogLevel.stringToLogLevel
-      .get(s.toLowerCase)
-      .map(validNel)
-      .getOrElse(
-        invalidNel(
-          s"Invalid log-level '$s'. $logHelpMessage"
-        )
-      )
-  }
+      .get(s.toLowerCase.trim())
+      .toValidNel(s"Invalid log-level '$s'. $logHelpMessage")
 
   lazy val error =
     s"Invalid log-level format. $logHelpMessage"
@@ -36,7 +34,7 @@ object LogLevels {
     logLevels: LogLevels
   ): Validated[NonEmptyList[String], LogLevels] = {
     levelFromString(level).andThen { level =>
-      name match {
+      name.trim().toLowerCase() match {
         case "compiler" =>
           validNel(logLevels.copy(compiler = level))
         case "fluencejs" =>
@@ -44,7 +42,7 @@ object LogLevels {
         case "aquavm" =>
           validNel(logLevels.copy(aquavm = level))
         case s =>
-          invalidNel[String, LogLevels](
+          invalidNel(
             s"Unknown component '$s' in log-level. Please use one of these: 'aquavm', 'compiler' and 'fluencejs'"
           )
       }
@@ -53,26 +51,15 @@ object LogLevels {
 
   // Format: '<log-level>' or 'compiler=<log-level>,fluencejs=<log-level>,aquavm=<log-level>',
   // where <log-level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'
-  def fromString(s: String): ValidatedNel[String, LogLevels] = {
-    s.split(",").toList match {
-      case l :: Nil =>
-        l.split("=").toList match {
-          case n :: ll :: Nil => fromStrings(n, ll, LogLevels())
-          case ll :: Nil => levelFromString(ll).map(apply)
-          case _ => invalidNel(error)
+  def fromString(s: String): ValidatedNel[String, LogLevels] =
+    s.split(",")
+      .toList
+      .foldLeftM(LogLevels()) { case (levels, level) =>
+        level.split("=").toList match {
+          case n :: l :: Nil => fromStrings(n, l, levels).toEither
+          case l :: Nil => levelFromString(l).map(apply).toEither
+          case _ => invalidNel(error).toEither
         }
-
-      case arr =>
-        arr.foldLeft(validNel[String, LogLevels](LogLevels())) { case (logLevelV, ss) =>
-          logLevelV.andThen { logLevels =>
-            ss.split("=").toList match {
-              case n :: ll :: Nil => fromStrings(n, ll, logLevels)
-              case n :: Nil => levelFromString(n).map(apply)
-              case _ => invalidNel[String, LogLevels](error)
-            }
-          }
-        }
-
-    }
-  }
+      }
+      .toValidated
 }
