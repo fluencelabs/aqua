@@ -4,6 +4,10 @@ import sourcecode.{Enclosing, FileName, Line}
 
 object Errors {
 
+  /**
+   * Internal error that should never happen.
+   * Use in case of broken invariants.
+   */
   def internalError(
     msg: String
   )(using file: FileName, line: Line, enclosing: Enclosing): Nothing = {
