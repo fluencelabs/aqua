@@ -100,6 +100,7 @@ import { declareCall } from "../examples/declareCall.js";
 import { genOptions, genOptionsEmptyString } from "../examples/optionsCall.js";
 import { lng193BugCall } from "../examples/closureReturnRename.js";
 import { closuresCall } from "../examples/closures.js";
+import { closureArrowCaptureCall } from "../examples/closureArrowCapture.js";
 import {
   bugLNG63_2Call,
   bugLNG63_3Call,
@@ -841,6 +842,11 @@ describe("Testing examples", () => {
     let res2 = ["in", config.externalAddressesRelay2[0]];
     expect(closuresResult).toEqual(["in", res1, res1, res2]);
   }, 20000);
+
+  it("closureArrowCapture.aqua", async () => {
+    let result = await closureArrowCaptureCall("input");
+    expect(result).toEqual("call: ".repeat(4) + "input");
+  });
 
   it("tryOtherwise.aqua", async () => {
     let tryOtherwiseResult = await tryOtherwiseCall(relayPeerId1);
