@@ -27,8 +27,8 @@ importers:
         specifier: 1.1.2
         version: 1.1.2
       '@fluencelabs/js-client':
-        specifier: 0.1.4
-        version: 0.1.4
+        specifier: 0.1.6
+        version: 0.1.6
       deep-equal:
         specifier: 2.2.1
         version: 2.2.1
@@ -513,8 +513,8 @@ packages:
     resolution: {integrity: sha512-WJ7o51jaBSzUsYENxCEJpv91KiodH1nQ6uKdAn5chWsOQzDu57d3pa6IW1Lu/wh4jtefnNen+jF1esENQCc0BA==}
     engines: {node: '>=10', pnpm: '>=3'}
 
-  /@fluencelabs/js-client@0.1.4:
-    resolution: {integrity: sha512-lvW/SejEUR+g3EM411s/wEbqE3QCp621w3KCFG+AbUuXCXWp51O6Euh/MOKzH3NBGqxSF+LuepzaDaIEZVrgRA==}
+  /@fluencelabs/js-client@0.1.6:
+    resolution: {integrity: sha512-6lCj664hMIHxD9ph6CMb2aj3717qVf6XW7kx9+V6c17cgkLel9zcdhZUoVvGz+y5A/ZWxtrU7jcl7AcZ+z13TA==}
     engines: {node: '>=10', pnpm: '>=8'}
     dependencies:
       '@chainsafe/libp2p-noise': 13.0.0
