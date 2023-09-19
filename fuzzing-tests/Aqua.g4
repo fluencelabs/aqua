@@ -39,13 +39,62 @@ ifStat: IF SP+ ID COLON block;
 
 typedId: ID SP* COLON SP* type;
 
-type: 'u16';
+basicType:
+	'⊥'
+	| '⊤'
+	| 'u8'
+	| 'u16'
+	| 'u32'
+	| 'u64'
+	| 'i8'
+	| 'i16'
+	| 'i32'
+	| 'i64'
+	| 'f32'
+	| 'f64'
+	| 'bool'
+	| 'string';
 
+namedType: ID;
+
+dataType:
+	basicType
+	| namedType
+	| ARRAY SP* dataType
+	| OPTION SP* dataType
+	| STREAM SP* dataType;
+
+arrowTypeAbilities_aux:
+	LBRACE SP* namedType SP* (COMMA SP* namedType)* SP* RBRACE;
+
+// Only data types are allowed as arguments for arrow type
+arrowTypeArgs_aux: (dataType SP* (COMMA SP* dataType)*)?;
+
+arrowTypeRet_aux:
+	typeParen_aux SP* (COMMA SP* typeParen_aux)*
+	| LPAREN RPAREN; // for no return
+
+arrowType:
+	arrowTypeAbilities_aux SP* arrowTypeArgs_aux SP* RARROW SP* arrowTypeRet_aux;
+
+type: dataType | arrowType;
+
+typeParen_aux: LPAREN SP* type SP* RPAREN | type;
+
+ARRAY: '[]';
+OPTION: '?';
+STREAM: '*';
+
+IF: 'if';
+FUNC: 'func';
+
+RARROW: '->';
 LPAREN: '(';
 RPAREN: ')';
+LBRACE: '{';
+RBRACE: '}';
 COLON: ':';
 COMMA: ',';
 SP: ' ';
-IF: 'if';
-FUNC: 'func';
+
 ID: [a-zA-Z][a-zA-Z_]+;
