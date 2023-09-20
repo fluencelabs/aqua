@@ -1,6 +1,7 @@
 package aqua.lsp
 
 import aqua.compiler.*
+import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.*
 import aqua.parser.lexer.{LiteralToken, Token}
@@ -10,7 +11,7 @@ import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.raw.ConstantRaw
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
-import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
+import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.data.{NonEmptyChain, Validated}
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
@@ -22,7 +23,7 @@ import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
-import scala.scalajs.js.{UndefOr, undefined}
+import scala.scalajs.js.{undefined, UndefOr}
 
 @JSExportAll
 case class CompilationResult(
@@ -77,7 +78,7 @@ object AquaLSP extends App with Logging {
 
   def errorToInfo(error: AquaError[FileModuleId, AquaFileError, FileSpan.F]): List[ErrorInfo] = {
     error match {
-      case ParserErr(err) =>
+      case AquaParserError(err) =>
         err match {
           case BlockIndentError(indent, message) =>
             ErrorInfo(indent._1, message) :: Nil
@@ -98,11 +99,11 @@ object AquaLSP extends App with Logging {
               .map(_._2)
               .reverse
         }
-      case SourcesErr(err) =>
+      case SourcesError(err) =>
         ErrorInfo.applyOp(0, 0, err.showForConsole, None) :: Nil
-      case ResolveImportsErr(_, token, err) =>
+      case ResolveImportsError(_, token, err) =>
         ErrorInfo(token.unit._1, err.showForConsole) :: Nil
-      case ImportErr(token) =>
+      case ImportError(token) =>
         ErrorInfo(token.unit._1, "Cannot resolve import") :: Nil
       case CycleError(modules) =>
         ErrorInfo.applyOp(
@@ -156,7 +157,7 @@ object AquaLSP extends App with Logging {
           _.getOrElse(
             pathId,
             invalidNec(
-              SourcesErr(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
+              SourcesError(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
             )
           )
         )
@@ -165,7 +166,7 @@ object AquaLSP extends App with Logging {
             .map(l => validNec(l))
             .getOrElse(
               invalidNec(
-                SourcesErr(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
+                SourcesError(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
               )
             )
         )
@@ -176,21 +177,20 @@ object AquaLSP extends App with Logging {
         locations: List[(Token[FileSpan.F], Token[FileSpan.F])]
       ): js.Array[TokenLink] = {
         locations.flatMap { case (from, to) =>
-          
-              val fromOp = TokenLocation.fromSpan(from.unit._1)
-              val toOp = TokenLocation.fromSpan(to.unit._1)
+          val fromOp = TokenLocation.fromSpan(from.unit._1)
+          val toOp = TokenLocation.fromSpan(to.unit._1)
 
-              val link = for {
-                from <- fromOp
-                to <- toOp
-              } yield {
-                TokenLink(from, to)
-              }
+          val link = for {
+            from <- fromOp
+            to <- toOp
+          } yield {
+            TokenLink(from, to)
+          }
 
-              if (link.isEmpty)
-                logger.warn(s"Incorrect coordinates for token '${from.unit._1.name}'")
+          if (link.isEmpty)
+            logger.warn(s"Incorrect coordinates for token '${from.unit._1.name}'")
 
-              link.toList
+          link.toList
         }.toJSArray
       }
 

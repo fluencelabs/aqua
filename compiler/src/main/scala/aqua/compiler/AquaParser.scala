@@ -1,9 +1,11 @@
 package aqua.compiler
 
+import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
 import aqua.linker.{AquaModule, Modules}
 import aqua.parser.head.{FilenameExpr, ImportExpr}
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.{Ast, ParserError}
+
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.parse.Parser0
 import cats.syntax.applicative.*
@@ -31,10 +33,10 @@ class AquaParser[F[_], E, I, S[_]: Comonad](
   // Parse all the source files
   def parseSources: F[ValidatedNec[Err, Chain[(I, Body)]]] =
     sources.sources.map(
-      _.leftMap(_.map[Err](SourcesErr(_))).andThen(_.map { case (i, s) =>
+      _.leftMap(_.map(SourcesError.apply)).andThen(_.map { case (i, s) =>
         parser(i)(s)
           .bimap(
-            _.map[Err](ParserErr(_)),
+            _.map(AquaParserError.apply),
             ast => Chain.one(i -> ast)
           )
       }.foldA)
@@ -50,9 +52,8 @@ class AquaParser[F[_], E, I, S[_]: Comonad](
             .resolveImport(id, fe.fileValue)
         )(
           _.bimap(
-            _.map[Err](ResolveImportsErr(id, fe.filename, _)),
-            importId =>
-              Chain.one[(I, (String, Err))](importId -> (fe.fileValue, ImportErr(fe.filename)))
+            _.map(ResolveImportsError(id, fe.filename, _) : Err),
+            importId => Chain.one(importId -> (fe.fileValue, ImportError(fe.filename): Err))
           )
         )
       }
@@ -88,8 +89,8 @@ class AquaParser[F[_], E, I, S[_]: Comonad](
   def loadModule(imp: I): F[ValidatedNec[Err, AquaModule[I, Err, Body]]] =
     sources
       .load(imp)
-      .map(_.leftMap(_.map[Err](SourcesErr(_))).andThen { src =>
-        parser(imp)(src).leftMap(_.map[Err](ParserErr(_)))
+      .map(_.leftMap(_.map(SourcesError.apply)).andThen { src =>
+        parser(imp)(src).leftMap(_.map[Err](AquaParserError.apply))
       })
       .flatMap {
         case Validated.Valid(ast) =>

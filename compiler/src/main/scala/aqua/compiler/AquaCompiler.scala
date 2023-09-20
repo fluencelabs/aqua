@@ -1,5 +1,6 @@
 package aqua.compiler
 
+import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
 import aqua.backend.Backend
 import aqua.linker.{AquaModule, Linker, Modules}
 import aqua.model.AquaContext
@@ -90,7 +91,7 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
                   .map { rc => NonEmptyMap.one(mod.id, rc) }
               }
               // The whole chain returns a semantics error finally
-              .leftMap(_.map[Err](CompileError(_)))
+              .leftMap(_.map[Err](CompileError.apply))
           }
       )
       .map(

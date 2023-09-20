@@ -45,7 +45,8 @@ object APICompilation {
     aquaConfig: AquaAPIConfig,
     fillWithTypes: List[ValueRaw] => ValidatedNec[String, List[ValueRaw]]
   ): IO[ValidatedNec[String, (FunctionDef, String)]] = {
-    implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    given AquaIO[IO] = new AquaFilesIO[IO]
+
     (
       LogLevels.levelFromString(aquaConfig.logLevel),
       Constants.parse(aquaConfig.constants)
@@ -80,7 +81,6 @@ object APICompilation {
               }
             }
         }.leftMap(_.map(_.show).distinct)
-
       }
     } match {
       case Valid(pr) => pr
