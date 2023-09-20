@@ -283,7 +283,7 @@ object RawSemantics extends Logging {
           .pure
   }
 
-  private def folder[S[_], G[_]: Monad](implicit
+  private def folder[S[_], G[_]: Monad](using
     A: AbilitiesAlgebra[S, G],
     N: NamesAlgebra[S, G],
     T: TypesAlgebra[S, G],
@@ -327,7 +327,7 @@ object RawSemantics extends Logging {
       .map(_.raw)
   }
 
-  private def astToState[S[_]](ast: Ast[S])(implicit
+  private def astToState[S[_]](ast: Ast[S])(using
     locations: LocationsAlgebra[S, Interpreter[S, *]]
   ): Interpreter[S, Raw] =
     transpile[S](ast)
@@ -365,6 +365,7 @@ object RawSemantics extends Logging {
             ) { case (ctx, p) =>
               ctx.copy(parts = ctx.parts :+ (ctx -> p))
             }
+
         case (_, m) =>
           internalError(
             s"Unexpected Raw ($m)"

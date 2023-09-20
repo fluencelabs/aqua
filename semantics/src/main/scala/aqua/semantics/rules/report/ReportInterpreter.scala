@@ -15,4 +15,11 @@ class ReportInterpreter[S[_], X](using
         _.reportError(token, hints)
       )
     )
+
+  override def warning(token: Token[S], hints: List[String]): State[X, Unit] =
+    State.modify(
+      lens.modify(
+        _.reportWarning(token, hints)
+      )
+    )
 }

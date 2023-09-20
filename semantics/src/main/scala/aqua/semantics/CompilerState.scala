@@ -27,7 +27,9 @@ case class CompilerState[S[_]](
   definitions: DefinitionsState[S] = DefinitionsState[S](),
   locations: LocationsState[S] = LocationsState[S]()
 ) {
+
   lazy val errors: Chain[SemanticError[S]] = report.errors
+  lazy val warnings: Chain[SemanticWarning[S]] = report.warnings
 }
 
 object CompilerState {

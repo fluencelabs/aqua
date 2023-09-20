@@ -94,7 +94,8 @@ object APICompilation {
     aquaConfig: AquaAPIConfig,
     backend: Backend
   ): IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]] = {
-    implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    given AquaIO[IO] = new AquaFilesIO[IO]
+
     val path = Path(pathStr)
     val sources = new AquaFileSources[IO](path, imports.map(Path.apply))
     compileRaw(
@@ -110,7 +111,8 @@ object APICompilation {
     aquaConfig: AquaAPIConfig,
     backend: Backend
   ): IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]] = {
-    implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    given AquaIO[IO] = new AquaFilesIO[IO]
+
     val path = Path("")
 
     val strSources: AquaFileSources[IO] =
