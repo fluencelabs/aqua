@@ -52,7 +52,7 @@ class AquaParser[F[_], E, I, S[_]: Comonad](
             .resolveImport(id, fe.fileValue)
         )(
           _.bimap(
-            _.map(ResolveImportsError(id, fe.filename, _) : Err),
+            _.map(ResolveImportsError(id, fe.filename, _): Err),
             importId => Chain.one(importId -> (fe.fileValue, ImportError(fe.filename): Err))
           )
         )

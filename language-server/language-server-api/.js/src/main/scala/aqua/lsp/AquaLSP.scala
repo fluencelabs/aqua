@@ -134,7 +134,7 @@ object AquaLSP extends App with Logging {
   ): scalajs.js.Promise[CompilationResult] = {
     logger.debug(s"Compiling '$pathStr' with imports: $imports")
 
-    implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    given AquaIO[IO] = new AquaFilesIO[IO]
 
     val path = Path(pathStr)
     val pathId = FileModuleId(path)

@@ -6,12 +6,12 @@ import aqua.semantics
 
 import cats.data.NonEmptyChain
 
-enum AquaError[I, E, S[_]] {
+enum AquaError[+I, +E, S[_]] {
   case SourcesError(err: E)
   case ParserError(err: parser.ParserError[S])
 
   case ResolveImportsError(fromFile: I, token: Token[S], err: E)
-  case ImportError(token: Token[S]) extends AquaError[I, E, S]
+  case ImportError(token: Token[S])
   case CycleError(modules: NonEmptyChain[I])
 
   case CompileError(err: semantics.SemanticError[S])
