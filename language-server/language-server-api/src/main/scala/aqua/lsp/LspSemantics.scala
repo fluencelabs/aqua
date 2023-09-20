@@ -3,7 +3,6 @@ package aqua.lsp
 import aqua.parser.Ast
 import aqua.parser.head.{ImportExpr, ImportFromExpr, UseExpr, UseFromExpr}
 import aqua.parser.lexer.{LiteralToken, Token}
-import aqua.semantics.rules.report.ReportErrors
 import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.{CompilerState, RawSemantics, RulesViolated, SemanticError, Semantics}
 import cats.data.Validated.{Invalid, Valid}
@@ -53,15 +52,10 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
     val importTokens = getImportTokens(ast)
 
-    implicit val ls: Lens[CompilerState[S], LocationsState[S]] =
+    given Lens[CompilerState[S], LocationsState[S]] =
       GenLens[CompilerState[S]](_.locations)
 
-    import monocle.syntax.all.*
-    implicit val re: ReportErrors[S, CompilerState[S]] =
-      (st: CompilerState[S], token: Token[S], hints: List[String]) =>
-        st.focus(_.errors).modify(_.append(RulesViolated(token, hints)))
-
-    implicit val locationsInterpreter: LocationsInterpreter[S, CompilerState[S]] =
+    given LocationsInterpreter[S, CompilerState[S]] =
       new LocationsInterpreter[S, CompilerState[S]]()
 
     RawSemantics

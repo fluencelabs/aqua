@@ -2,7 +2,6 @@ package aqua.lsp
 
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.report.ReportErrors
 import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState}
 
 import cats.data.State
@@ -10,9 +9,8 @@ import monocle.Lens
 import monocle.macros.GenLens
 import scribe.Logging
 
-class LocationsInterpreter[S[_], X](implicit
-  lens: Lens[X, LocationsState[S]],
-  error: ReportErrors[S, X]
+class LocationsInterpreter[S[_], X](using
+  lens: Lens[X, LocationsState[S]]
 ) extends LocationsAlgebra[S, State[X, *]] with Logging {
 
   type SX[A] = State[X, A]
@@ -21,7 +19,7 @@ class LocationsInterpreter[S[_], X](implicit
     GenLens[LocationsState[S]](_.stack)
   )
 
-  import stack.{getState, mapStackHead, modify, report}
+  import stack.*
 
   override def addToken(name: String, token: Token[S]): State[X, Unit] = modify { st =>
     st.copy(tokens = st.tokens.updated(name, token))

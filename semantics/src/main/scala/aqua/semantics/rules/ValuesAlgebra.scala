@@ -30,8 +30,8 @@ import scala.collection.immutable.SortedMap
 class ValuesAlgebra[S[_], Alg[_]: Monad](using
   N: NamesAlgebra[S, Alg],
   T: TypesAlgebra[S, Alg],
-  E: ReportAlgebra[S, Alg],
-  A: AbilitiesAlgebra[S, Alg]
+  A: AbilitiesAlgebra[S, Alg],
+  report: ReportAlgebra[S, Alg]
 ) extends Logging {
 
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
@@ -305,7 +305,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       _.flatTraverse {
         case ca: CallArrowRaw => ca.some.pure[Alg]
         // TODO: better error message (`raw` formatting)
-        case raw => E.report(v, s"Expected arrow call, got $raw").as(none)
+        case raw => report.error(v, s"Expected arrow call, got $raw").as(none)
       }
     )
 

@@ -2,7 +2,7 @@ package aqua.semantics.rules.definitions
 
 import aqua.parser.lexer.{Name, NamedTypeToken, Token}
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.report.ReportErrors
+import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState}
 import aqua.semantics.rules.types.TypesState
@@ -21,7 +21,7 @@ import scala.collection.immutable.SortedMap
 
 class DefinitionsInterpreter[S[_], X](implicit
   lens: Lens[X, DefinitionsState[S]],
-  error: ReportErrors[S, X],
+  report: ReportAlgebra[S, State[X, *]],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends DefinitionsAlgebra[S, State[X, *]] {
   type SX[A] = State[X, A]
@@ -30,9 +30,6 @@ class DefinitionsInterpreter[S[_], X](implicit
 
   private def modify(f: DefinitionsState[S] => DefinitionsState[S]): SX[Unit] =
     State.modify(lens.modify(f))
-
-  def report(t: Token[S], hint: String): SX[Unit] =
-    State.modify(error(_, t, hint :: Nil))
 
   def define(name: Name[S], `type`: Type, defName: String): SX[Boolean] =
     getState.map(_.definitions.get(name.value)).flatMap {
@@ -47,7 +44,8 @@ class DefinitionsInterpreter[S[_], X](implicit
         )
           .as(true)
       case Some(_) =>
-        report(name, s"Cannot define $defName `${name.value}`, it was already defined above")
+        report
+          .error(name, s"Cannot define $defName `${name.value}`, it was already defined above")
           .as(false)
     }
 
@@ -82,7 +80,8 @@ class DefinitionsInterpreter[S[_], X](implicit
             st.copy(definitions = Map.empty)
           }.as(arrs.some)
         case None =>
-          report(token, "Cannot purge arrows, no arrows provided")
+          report
+            .error(token, "Cannot purge arrows, no arrows provided")
             .as(none)
       }
     }

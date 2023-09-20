@@ -3,7 +3,7 @@ package aqua.semantics.rules.names
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.report.ReportErrors
+import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.types.{AbilityType, ArrowType, StreamType, Type}
 
@@ -15,9 +15,9 @@ import cats.syntax.all.*
 import monocle.Lens
 import monocle.macros.GenLens
 
-class NamesInterpreter[S[_], X](implicit
+class NamesInterpreter[S[_], X](using
   lens: Lens[X, NamesState[S]],
-  error: ReportErrors[S, X],
+  report: ReportAlgebra[S, State[X, *]],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends NamesAlgebra[S, State[X, *]] {
 
@@ -25,7 +25,7 @@ class NamesInterpreter[S[_], X](implicit
     GenLens[NamesState[S]](_.stack)
   )
 
-  import stackInt.{getState, mapStackHead, mapStackHeadM, mapStackHead_, modify, report}
+  import stackInt.*
 
   type SX[A] = State[X, A]
 
@@ -44,7 +44,7 @@ class NamesInterpreter[S[_], X](implicit
       .flatTap {
         case None if mustBeDefined =>
           getState.flatMap(st =>
-            report(
+            report.error(
               name,
               Levenshtein
                 .genMessage(
@@ -73,14 +73,15 @@ class NamesInterpreter[S[_], X](implicit
             locations.pointLocation(name.value, name).map(_ => Option(at))
           case _ =>
             getState.flatMap(st =>
-              report(
-                name,
-                Levenshtein.genMessage(
-                  s"Name '${name.value}' not found in scope",
-                  name.value,
-                  st.allNames.toList
+              report
+                .error(
+                  name,
+                  Levenshtein.genMessage(
+                    s"Name '${name.value}' not found in scope",
+                    name.value,
+                    st.allNames.toList
+                  )
                 )
-              )
                 .as(Option.empty[ArrowType])
             )
         }
@@ -98,11 +99,11 @@ class NamesInterpreter[S[_], X](implicit
       case Some(_) =>
         getState.map(_.definitions.get(name.value).exists(_ == name)).flatMap {
           case true => State.pure(false)
-          case false => report(name, "This name was already defined in the scope").as(false)
+          case false => report.error(name, "This name was already defined in the scope").as(false)
         }
       case None =>
-        mapStackHeadM(report(name, "Cannot define a variable in the root scope").as(false))(fr =>
-          (fr.addName(name, `type`) -> true).pure
+        mapStackHeadM(report.error(name, "Cannot define a variable in the root scope").as(false))(
+          fr => (fr.addName(name, `type`) -> true).pure
         ) <* locations.addToken(name.value, name)
     }
 
@@ -121,7 +122,7 @@ class NamesInterpreter[S[_], X](implicit
   override def defineConstant(name: Name[S], `type`: Type): SX[Boolean] =
     readName(name.value).flatMap {
       case Some(_) =>
-        report(name, "This name was already defined in the scope").as(false)
+        report.error(name, "This name was already defined in the scope").as(false)
       case None =>
         modify(st =>
           st.copy(
@@ -135,7 +136,7 @@ class NamesInterpreter[S[_], X](implicit
       case Some(_) =>
         getState.map(_.definitions.get(name.value).exists(_ == name)).flatMap {
           case true => State.pure(false)
-          case false => report(name, "This arrow was already defined in the scope").as(false)
+          case false => report.error(name, "This arrow was already defined in the scope").as(false)
         }
 
       case None =>
@@ -149,7 +150,8 @@ class NamesInterpreter[S[_], X](implicit
             )
               .as(true)
           else
-            report(name, "Cannot define a variable in the root scope")
+            report
+              .error(name, "Cannot define a variable in the root scope")
               .as(false)
         )(fr => (fr.addArrow(name, arrowType) -> true).pure)
     }.flatTap(_ => locations.addToken(name.value, name))

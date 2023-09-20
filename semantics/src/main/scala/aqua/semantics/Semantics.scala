@@ -14,8 +14,7 @@ import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgeb
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter}
 import aqua.semantics.rules.mangler.{ManglerAlgebra, ManglerInterpreter}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter}
-import aqua.semantics.rules.report.ReportErrors
-import aqua.semantics.rules.report.ReportAlgebra
+import aqua.semantics.rules.report.{ReportAlgebra, ReportInterpreter}
 import aqua.raw.ops.*
 
 import cats.arrow.FunctionK
@@ -55,7 +54,7 @@ class RawSemantics[S[_]](implicit p: Picker[RawContext]) extends Semantics[S, Ra
     init: RawContext
   ): ValidatedNec[SemanticError[S], RawContext] = {
 
-    implicit val locationsInterpreter: DummyLocationsInterpreter[S, CompilerState[S]] =
+    given LocationsAlgebra[S, State[CompilerState[S], *]] =
       new DummyLocationsInterpreter[S, CompilerState[S]]()
 
     RawSemantics
@@ -105,23 +104,23 @@ object RawSemantics extends Logging {
 
   private def elseWithoutIf[S[_], G[_]](
     token: Token[S]
-  )(using E: ReportAlgebra[S, G]): G[Unit] =
-    E.report(token, "Unexpected `else` without `if`" :: Nil)
+  )(using report: ReportAlgebra[S, G]): G[Unit] =
+    report.error(token, "Unexpected `else` without `if`" :: Nil)
 
   private def catchWithoutTry[S[_], G[_]](
     token: Token[S]
-  )(using E: ReportAlgebra[S, G]): G[Unit] =
-    E.report(token, "Unexpected `catch` without `try`" :: Nil)
+  )(using report: ReportAlgebra[S, G]): G[Unit] =
+    report.error(token, "Unexpected `catch` without `try`" :: Nil)
 
   private def otherwiseWithoutPrev[S[_], G[_]](
     token: Token[S]
-  )(using E: ReportAlgebra[S, G]): G[Unit] =
-    E.report(token, "Unexpected `otherwise` without previous instruction" :: Nil)
+  )(using report: ReportAlgebra[S, G]): G[Unit] =
+    report.error(token, "Unexpected `otherwise` without previous instruction" :: Nil)
 
   private def parWithoutPrev[S[_], G[_]](
     token: Token[S]
-  )(using E: ReportAlgebra[S, G]): G[Unit] =
-    E.report(token, "Unexpected `par` without previous instruction" :: Nil)
+  )(using report: ReportAlgebra[S, G]): G[Unit] =
+    report.error(token, "Unexpected `par` without previous instruction" :: Nil)
 
   /**
    * Optionally combine two [[RawTag.Tree]] into one.
@@ -307,6 +306,8 @@ object RawSemantics extends Logging {
     LocationsAlgebra[S, Interpreter[S, *]]
   ): Interpreter[S, Raw] = {
 
+    given ReportAlgebra[S, Interpreter[S, *]] =
+      new ReportInterpreter[S, CompilerState[S]]
     given TypesAlgebra[S, Interpreter[S, *]] =
       new TypesInterpreter[S, CompilerState[S]]
     given ManglerAlgebra[Interpreter[S, *]] =
@@ -334,8 +335,8 @@ object RawSemantics extends Logging {
     ast: Ast[S],
     initState: CompilerState[S],
     init: RawContext
-  )(implicit
-    locations: LocationsAlgebra[S, Interpreter[S, *]]
+  )(using
+    LocationsAlgebra[S, Interpreter[S, *]]
   ): Eval[(CompilerState[S], RawContext)] =
     astToState[S](ast)
       .run(initState)

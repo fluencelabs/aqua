@@ -9,7 +9,7 @@ import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
 import aqua.semantics.rules.mangler.ManglerState
-import aqua.semantics.rules.report.ReportErrors
+import aqua.semantics.rules.report.ReportState
 
 import cats.Semigroup
 import cats.data.{Chain, State}
@@ -19,14 +19,16 @@ import monocle.Lens
 import monocle.macros.GenLens
 
 case class CompilerState[S[_]](
-  errors: Chain[SemanticError[S]] = Chain.empty[SemanticError[S]],
+  report: ReportState[S] = ReportState[S](),
   mangler: ManglerState = ManglerState(),
   names: NamesState[S] = NamesState[S](),
   abilities: AbilitiesState[S] = AbilitiesState[S](),
   types: TypesState[S] = TypesState[S](),
   definitions: DefinitionsState[S] = DefinitionsState[S](),
   locations: LocationsState[S] = LocationsState[S]()
-)
+) {
+  lazy val errors: Chain[SemanticError[S]] = report.errors
+}
 
 object CompilerState {
   type St[S[_]] = State[CompilerState[S], Raw]
@@ -37,6 +39,9 @@ object CompilerState {
       abilities = AbilitiesState.init[F](ctx),
       types = TypesState.init[F](ctx)
     )
+
+  given [S[_]]: Lens[CompilerState[S], ReportState[S]] =
+    GenLens[CompilerState[S]](_.report)
 
   given [S[_]]: Lens[CompilerState[S], NamesState[S]] =
     GenLens[CompilerState[S]](_.names)
@@ -53,18 +58,6 @@ object CompilerState {
   given [S[_]]: Lens[CompilerState[S], DefinitionsState[S]] =
     GenLens[CompilerState[S]](_.definitions)
 
-  given [S[_]]: ReportErrors[S, CompilerState[S]] =
-    new ReportErrors[S, CompilerState[S]] {
-      import monocle.syntax.all.*
-
-      override def apply(
-        st: CompilerState[S],
-        token: Token[S],
-        hints: List[String]
-      ): CompilerState[S] =
-        st.focus(_.errors).modify(_.append(RulesViolated(token, hints)))
-    }
-
   given [S[_]]: Monoid[St[S]] with {
     override def empty: St[S] = State.pure(Raw.Empty("compiler state monoid empty"))
 
@@ -73,7 +66,7 @@ object CompilerState {
       b <- y.get
       _ <- State.set(
         CompilerState[S](
-          a.errors ++ b.errors,
+          a.report |+| b.report,
           a.mangler |+| b.mangler,
           a.names |+| b.names,
           a.abilities |+| b.abilities,
