@@ -29,6 +29,7 @@ async function compile(...args) {
   } catch (error) {
     if (
       typeof error === "object" &&
+      error !== null &&
       "message" in error &&
       typeof error.message === "string"
     ) {
