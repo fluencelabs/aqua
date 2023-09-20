@@ -2,8 +2,9 @@ package aqua.lsp
 
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.report.ReportErrors
 import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState}
+
 import cats.data.State
 import monocle.Lens
 import monocle.macros.GenLens

@@ -7,7 +7,7 @@ import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.semantics.rules.errors.ErrorsAlgebra
+import aqua.semantics.rules.report.ReportAlgebra
 import aqua.types.*
 
 import cats.Monad
@@ -30,7 +30,7 @@ import scala.collection.immutable.SortedMap
 class ValuesAlgebra[S[_], Alg[_]: Monad](using
   N: NamesAlgebra[S, Alg],
   T: TypesAlgebra[S, Alg],
-  E: ErrorsAlgebra[S, Alg],
+  E: ReportAlgebra[S, Alg],
   A: AbilitiesAlgebra[S, Alg]
 ) extends Logging {
 
@@ -419,7 +419,7 @@ object ValuesAlgebra {
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
-    E: ErrorsAlgebra[S, Alg]
+    E: ReportAlgebra[S, Alg]
   ): ValuesAlgebra[S, Alg] =
     new ValuesAlgebra[S, Alg]
 }

@@ -12,7 +12,7 @@ import aqua.raw.value.{
 }
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.report.ReportErrors
 import aqua.semantics.rules.types.TypesStateHelper.{TypeResolution, TypeResolutionError}
 import aqua.types.*
 

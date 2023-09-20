@@ -4,7 +4,7 @@ import aqua.parser.lexer.{Name, NamedTypeToken, Token, ValueToken}
 import aqua.raw.value.ValueRaw
 import aqua.raw.{RawContext, ServiceRaw}
 import aqua.semantics.Levenshtein
-import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.report.ReportErrors
 import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{abilities, StackInterpreter}

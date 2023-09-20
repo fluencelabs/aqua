@@ -2,7 +2,7 @@ package aqua.semantics.rules.definitions
 
 import aqua.parser.lexer.{Name, NamedTypeToken, Token}
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.report.ReportErrors
 import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState}
 import aqua.semantics.rules.types.TypesState

@@ -3,7 +3,7 @@ package aqua.lsp
 import aqua.parser.Ast
 import aqua.parser.head.{ImportExpr, ImportFromExpr, UseExpr, UseFromExpr}
 import aqua.parser.lexer.{LiteralToken, Token}
-import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.report.ReportErrors
 import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.{CompilerState, RawSemantics, RulesViolated, SemanticError, Semantics}
 import cats.data.Validated.{Invalid, Valid}

@@ -14,8 +14,8 @@ import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgeb
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter}
 import aqua.semantics.rules.mangler.{ManglerAlgebra, ManglerInterpreter}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter}
-import aqua.semantics.rules.errors.ReportErrors
-import aqua.semantics.rules.errors.ErrorsAlgebra
+import aqua.semantics.rules.report.ReportErrors
+import aqua.semantics.rules.report.ReportAlgebra
 import aqua.raw.ops.*
 
 import cats.arrow.FunctionK
@@ -105,22 +105,22 @@ object RawSemantics extends Logging {
 
   private def elseWithoutIf[S[_], G[_]](
     token: Token[S]
-  )(using E: ErrorsAlgebra[S, G]): G[Unit] =
+  )(using E: ReportAlgebra[S, G]): G[Unit] =
     E.report(token, "Unexpected `else` without `if`" :: Nil)
 
   private def catchWithoutTry[S[_], G[_]](
     token: Token[S]
-  )(using E: ErrorsAlgebra[S, G]): G[Unit] =
+  )(using E: ReportAlgebra[S, G]): G[Unit] =
     E.report(token, "Unexpected `catch` without `try`" :: Nil)
 
   private def otherwiseWithoutPrev[S[_], G[_]](
     token: Token[S]
-  )(using E: ErrorsAlgebra[S, G]): G[Unit] =
+  )(using E: ReportAlgebra[S, G]): G[Unit] =
     E.report(token, "Unexpected `otherwise` without previous instruction" :: Nil)
 
   private def parWithoutPrev[S[_], G[_]](
     token: Token[S]
-  )(using E: ErrorsAlgebra[S, G]): G[Unit] =
+  )(using E: ReportAlgebra[S, G]): G[Unit] =
     E.report(token, "Unexpected `par` without previous instruction" :: Nil)
 
   /**
@@ -140,7 +140,7 @@ object RawSemantics extends Logging {
   private def rawTagCombine[S[_], G[_]: Monad](
     prev: RawTagWithToken[S],
     next: RawTagWithToken[S]
-  )(using E: ErrorsAlgebra[S, G]): G[Option[RawTagWithToken[S]]] =
+  )(using E: ReportAlgebra[S, G]): G[Option[RawTagWithToken[S]]] =
     (prev.tag, next.tag) match {
       case (_: IfTag, IfTag.Else) =>
         prev.append(next).some.pure
@@ -197,7 +197,7 @@ object RawSemantics extends Logging {
    */
   private def rawTagSingleCheck[S[_], G[_]: Monad](
     single: RawTagWithToken[S]
-  )(using E: ErrorsAlgebra[S, G]): G[Option[RawTagWithToken[S]]] =
+  )(using E: ReportAlgebra[S, G]): G[Option[RawTagWithToken[S]]] =
     single.tag match {
       case IfTag.Else => elseWithoutIf(single.token).as(none)
       case TryTag.Catch => catchWithoutTry(single.token).as(none)
@@ -238,7 +238,7 @@ object RawSemantics extends Logging {
      */
     def step[G[_]: Monad](
       next: RawWithToken[S]
-    )(using ErrorsAlgebra[S, G]): G[InnersFoldState[S]] =
+    )(using ReportAlgebra[S, G]): G[InnersFoldState[S]] =
       last.fold(copy(last = next.some).pure)(prev =>
         (prev.toTag, next.toTag)
           .traverseN(rawTagCombine)
@@ -262,7 +262,7 @@ object RawSemantics extends Logging {
      * Produce result of folding
      */
     def result[G[_]: Monad](using
-      ErrorsAlgebra[S, G]
+      ReportAlgebra[S, G]
     ): G[Option[Raw]] =
       if (acc.isEmpty)
         // Hack to report error if single tag in block is incorrect
@@ -288,7 +288,7 @@ object RawSemantics extends Logging {
     T: TypesAlgebra[S, G],
     D: DefinitionsAlgebra[S, G],
     L: LocationsAlgebra[S, G],
-    E: ErrorsAlgebra[S, G]
+    E: ReportAlgebra[S, G]
   ): (Expr[S], Chain[G[RawWithToken[S]]]) => Eval[G[RawWithToken[S]]] = (expr, inners) =>
     Eval later ExprSem
       .getProg[S, G](expr)

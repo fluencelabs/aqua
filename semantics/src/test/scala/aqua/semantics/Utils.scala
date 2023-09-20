@@ -5,7 +5,7 @@ import aqua.parser.lexer.{Name, Token}
 import aqua.parser.lift.Span
 import aqua.raw.{Raw, RawContext}
 import aqua.semantics.expr.func.ClosureSem
-import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.report.ReportErrors
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra}
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}

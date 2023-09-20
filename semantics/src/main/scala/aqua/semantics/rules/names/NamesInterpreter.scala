@@ -3,7 +3,7 @@ package aqua.semantics.rules.names
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.report.ReportErrors
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.types.{AbilityType, ArrowType, StreamType, Type}
 

@@ -9,7 +9,7 @@ import aqua.semantics.rules.locations.LocationsState
 import aqua.semantics.rules.names.NamesState
 import aqua.semantics.rules.types.TypesState
 import aqua.semantics.rules.mangler.ManglerState
-import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.report.ReportErrors
 
 import cats.Semigroup
 import cats.data.{Chain, State}

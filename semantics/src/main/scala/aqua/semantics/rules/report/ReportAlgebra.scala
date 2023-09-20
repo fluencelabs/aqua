@@ -1,8 +1,8 @@
-package aqua.semantics.rules.errors
+package aqua.semantics.rules.report
 
 import aqua.parser.lexer.Token
 
-trait ErrorsAlgebra[S[_], Alg[_]] {
+trait ReportAlgebra[S[_], Alg[_]] {
   def report(token: Token[S], hints: List[String]): Alg[Unit]
 
   def report(token: Token[S], hint: String): Alg[Unit] =
