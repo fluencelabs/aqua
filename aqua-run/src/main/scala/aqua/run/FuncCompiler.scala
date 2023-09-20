@@ -1,6 +1,6 @@
 package aqua.run
 
-import aqua.ErrorRendering.showError
+import aqua.ErrorRendering.given
 import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompilerAPI}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.{AquaIO, SpanParser}

@@ -1,7 +1,7 @@
 package api
 
 import api.types.{AquaConfig, AquaFunction, CompilationResult, GeneratedSource, Input}
-import aqua.ErrorRendering.showError
+import aqua.ErrorRendering.given
 import aqua.raw.value.ValueRaw
 import aqua.api.{APICompilation, AquaAPIConfig}
 import aqua.api.TargetType.*
@@ -18,13 +18,19 @@ import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.{CompilerState, HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.backend.api.APIBackend
 import aqua.backend.js.JavaScriptBackend
 import aqua.backend.ts.TypeScriptBackend
 import aqua.definitions.FunctionDef
+import aqua.js.{FunctionDefJs, ServiceDefJs, VarJson}
+import aqua.model.AquaContext
+import aqua.raw.ops.CallArrowRawTag
+import aqua.raw.value.{LiteralRaw, VarRaw}
+import aqua.res.AquaRes
+
+import cats.Applicative
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.syntax.applicative.*
@@ -44,12 +50,6 @@ import scala.scalajs.js.{|, undefined, Promise, UndefOr}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
-import aqua.js.{FunctionDefJs, ServiceDefJs, VarJson}
-import aqua.model.AquaContext
-import aqua.raw.ops.CallArrowRawTag
-import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.res.AquaRes
-import cats.Applicative
 
 @JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {

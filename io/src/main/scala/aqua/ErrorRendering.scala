@@ -29,7 +29,7 @@ object ErrorRendering {
         )
       ) + Console.RESET + "\n"
 
-  implicit val showError: Show[AquaError[FileModuleId, AquaFileError, FileSpan.F]] = Show.show {
+  given Show[AquaError[FileModuleId, AquaFileError, FileSpan.F]] = Show.show {
     case ParserErr(err) =>
       err match {
         case BlockIndentError(indent, message) =>

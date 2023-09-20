@@ -4,7 +4,8 @@ import aqua.parser.Ast
 import aqua.parser.head.{ImportExpr, ImportFromExpr, UseExpr, UseFromExpr}
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.semantics.rules.locations.LocationsState
-import aqua.semantics.{CompilerState, RawSemantics, RulesViolated, SemanticError, Semantics}
+import aqua.semantics.{CompilerState, RawSemantics, SemanticError, Semantics}
+
 import cats.data.Validated.{Invalid, Valid}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*

@@ -47,7 +47,9 @@ trait Semantics[S[_], C] {
   ): ValidatedNec[SemanticError[S], C]
 }
 
-class RawSemantics[S[_]](implicit p: Picker[RawContext]) extends Semantics[S, RawContext] {
+class RawSemantics[S[_]](using
+  Picker[RawContext]
+) extends Semantics[S, RawContext] {
 
   def process(
     ast: Ast[S],

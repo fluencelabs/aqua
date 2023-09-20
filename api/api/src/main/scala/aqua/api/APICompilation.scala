@@ -1,6 +1,6 @@
 package aqua.api
 
-import aqua.ErrorRendering.showError
+import aqua.ErrorRendering.given
 import aqua.raw.value.ValueRaw
 import aqua.api.AquaAPIConfig
 import aqua.backend.{AirFunction, Backend, Generated}
@@ -15,16 +15,16 @@ import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.{CompilerState, HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.backend.api.APIBackend
 import aqua.definitions.FunctionDef
 import aqua.model.AquaContext
 import aqua.res.AquaRes
+
 import cats.Applicative
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.data.Validated.{Invalid, Valid, invalid, invalidNec, validNec}
+import cats.data.Validated.{invalid, invalidNec, validNec, Invalid, Valid}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -158,7 +158,8 @@ object APICompilation {
             override def generate(aqua: AquaRes): Seq[Generated] = backend.generate(aqua)
           ,
           config
-        ).map(_.leftMap(_.map(_.show).distinct))
+        )
+        .map(_.leftMap(_.map(_.show).distinct))
     }.map(_.leftMap(NonEmptyChain.fromNonEmptyList).andThen(identity))
   }
 }
