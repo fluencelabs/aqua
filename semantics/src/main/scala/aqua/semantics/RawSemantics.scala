@@ -16,7 +16,7 @@ import aqua.parser.{Ast, Expr}
 import aqua.parser.lexer.{LiteralToken, Token}
 
 import cats.{Eval, Monad}
-import cats.data.{Chain, NonEmptyChain, State, StateT, ValidatedNec}
+import cats.data.{Chain, EitherT, NonEmptyChain, State, StateT, ValidatedNec, Writer}
 import cats.syntax.applicative.*
 import cats.syntax.option.*
 import cats.syntax.apply.*
@@ -30,12 +30,12 @@ import scribe.Logging
 
 class RawSemantics[S[_]](using
   Picker[RawContext]
-) extends Semantics[S, RawContext] {
+) extends Semantics[S, SemanticWarning[S], SemanticError[S], RawContext] {
 
-  def process(
+  override def process(
     ast: Ast[S],
     init: RawContext
-  ): ValidatedNec[SemanticError[S], RawContext] = {
+  ): ProcessResult = {
 
     given LocationsAlgebra[S, State[CompilerState[S], *]] =
       new DummyLocationsInterpreter[S, CompilerState[S]]()
@@ -43,9 +43,15 @@ class RawSemantics[S[_]](using
     RawSemantics
       .interpret(ast, CompilerState.init(init), init)
       .map { case (state, ctx) =>
-        NonEmptyChain
-          .fromChain(state.errors)
-          .toInvalid(ctx)
+        EitherT(
+          Writer
+            .tell(state.warnings)
+            .as(
+              NonEmptyChain
+                .fromChain(state.errors)
+                .toLeft(ctx)
+            )
+        )
       }
       // TODO: return as Eval
       .value
