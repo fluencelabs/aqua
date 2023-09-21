@@ -44,7 +44,7 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
       ValidatedCtxT
     ],
     cycleError: Linker.DepCycle[AquaModule[I, Err, ValidatedCtxT]] => Err
-  ): ValidatedNec[Err, Map[I, ValidatedCtx]] = {
+  ): EitherNec[Err, Map[I, ValidatedCtx]] = {
     logger.trace("linking modules...")
 
     Linker
@@ -54,6 +54,7 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
         // By default, provide an empty context for this module's id
         i => validNec(NonEmptyMap.one(i, Monoid.empty[C]))
       )
+      .toEither
   }
 
   def compileRaw(
@@ -99,9 +100,13 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
           }
         }
       )
-      .map(
-        _.andThen { modules => linkModules(modules, cycle => CycleError[I, E, S](cycle.map(_.id))) }
+      .subflatMap(modules =>
+        linkModules(
+          modules,
+          cycle => CycleError[I, E, S](cycle.map(_.id))
+        )
       )
+      .toValidated
   }
 
 }
