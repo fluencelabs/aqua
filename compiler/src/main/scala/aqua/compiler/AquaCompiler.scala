@@ -24,6 +24,7 @@ import cats.syntax.traverse.*
 import cats.syntax.semigroup.*
 import cats.syntax.either.*
 import cats.{~>, Comonad, Functor, Monad, Monoid, Order}
+import cats.arrow.FunctionK
 import scribe.Logging
 
 class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
@@ -32,19 +33,47 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
 ) extends Logging {
 
   type Err = AquaError[I, E, S]
+  type Warn = AquaWarning[S]
   type Ctx = NonEmptyMap[I, C]
 
-  type ValidatedCtx = ValidatedNec[Err, Ctx]
-  type ValidatedCtxT = ValidatedCtx => ValidatedCtx
+  type CompileWarnings =
+    [A] =>> Writer[Chain[Warn], A]
+
+  type CompileResult =
+    [A] =>> EitherT[CompileWarnings, NonEmptyChain[Err], A]
+
+  private val warningsK: semantics.ProcessWarnings ~> CompileWarnings =
+    new FunctionK[semantics.ProcessWarnings, CompileWarnings] {
+
+      override def apply[A](
+        fa: semantics.ProcessWarnings[A]
+      ): CompileWarnings[A] =
+        fa.mapWritten(_.map(AquaWarning.CompileWarning.apply))
+    }
+
+  extension (res: semantics.ProcessResult) {
+
+    def toCompileResult: CompileResult[C] =
+      res
+        .leftMap(_.map(CompileError.apply))
+        .mapK(warningsK)
+  }
+
+  extension [A](res: ValidatedNec[SemanticError[S], A]) {
+
+    def toCompileResult: CompileResult[A] =
+      res.toEither
+        .leftMap(_.map(CompileError.apply))
+        .toEitherT[CompileWarnings]
+  }
+
+  type CompiledCtx = CompileResult[Ctx]
+  type CompiledCtxT = CompiledCtx => CompiledCtx
 
   private def linkModules(
-    modules: Modules[
-      I,
-      Err,
-      ValidatedCtxT
-    ],
-    cycleError: Linker.DepCycle[AquaModule[I, Err, ValidatedCtxT]] => Err
-  ): EitherNec[Err, Map[I, ValidatedCtx]] = {
+    modules: Modules[I, Err, CompiledCtxT],
+    cycleError: Linker.DepCycle[AquaModule[I, Err, CompiledCtxT]] => Err
+  ): EitherNec[Err, Map[I, CompiledCtx]] = {
     logger.trace("linking modules...")
 
     Linker
@@ -52,7 +81,7 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
         modules,
         cycleError,
         // By default, provide an empty context for this module's id
-        i => validNec(NonEmptyMap.one(i, Monoid.empty[C]))
+        i => NonEmptyMap.one(i, Monoid.empty[C]).asRight.toEitherT
       )
       .toEither
   }
@@ -60,45 +89,35 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
   def compileRaw(
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]]
-  ): F[Validated[NonEmptyChain[Err], Map[I, ValidatedCtx]]] = {
+  ): F[ValidatedNec[Err, Map[I, ValidatedNec[Err, Ctx]]]] = {
 
     logger.trace("starting resolving sources...")
     new AquaParser[F, E, I, S](sources, parser)
-      .resolve[ValidatedCtx](mod =>
-        context => {
-          // Context with prepared imports
-          context.andThen { ctx =>
-            val imports = mod.imports.flatMap { case (fn, id) =>
+      .resolve[CompiledCtx](mod =>
+        context =>
+          for {
+            // Context with prepared imports
+            ctx <- context
+            imports = mod.imports.flatMap { case (fn, id) =>
               ctx.apply(id).map(fn -> _)
             }
-            val header = mod.body.head
-
-            val process = for {
-              // To manage imports, exports run HeaderHandler
-              headerSem <- headerHandler
-                .sem(imports, header)
-                .toEither
-                .toEitherT[semantics.ProcessWarnings]
-              // Analyze the body, with prepared initial context
-              _ = logger.trace("semantic processing...")
-              processed <- semantics
-                .process(
-                  mod.body,
-                  headerSem.initCtx
-                )
-              // Handle exports, declares - finalize the resulting context
-              rc <- headerSem
-                .finCtx(processed)
-                .toEither
-                .toEitherT[semantics.ProcessWarnings]
-            } yield NonEmptyMap.one(mod.id, rc)
-
-            process
-              .leftMap(_.map(CompileError.apply))
-              .toValidated
-              .value
-          }
-        }
+            header = mod.body.head
+            headerSem <- headerHandler
+              .sem(imports, header)
+              .toCompileResult
+            // Analyze the body, with prepared initial context
+            _ = logger.trace("semantic processing...")
+            processed <- semantics
+              .process(
+                mod.body,
+                headerSem.initCtx
+              )
+              .toCompileResult
+            // Handle exports, declares - finalize the resulting context
+            rc <- headerSem
+              .finCtx(processed)
+              .toCompileResult
+          } yield NonEmptyMap.one(mod.id, rc)
       )
       .subflatMap(modules =>
         linkModules(
@@ -106,6 +125,7 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
           cycle => CycleError[I, E, S](cycle.map(_.id))
         )
       )
+      .map(_.mapValues(_.toValidated.value).toMap)
       .toValidated
   }
 
