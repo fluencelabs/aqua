@@ -5,18 +5,21 @@ import aqua.semantics.SemanticError
 
 import cats.data.{Chain, EitherNec, EitherT, NonEmptyChain, ValidatedNec, Writer}
 
-trait Semantics[S[_], W, E, C] {
+trait Semantics[S[_], C] {
 
-  final type ProcessResult = Semantics.ProcessResult[W, E, C]
+  final type ProcessWarnings = [A] =>> Writer[
+    Chain[SemanticWarning[S]],
+    A
+  ]
+
+  final type ProcessResult = EitherT[
+    ProcessWarnings,
+    NonEmptyChain[SemanticError[S]],
+    C
+  ]
 
   def process(
     ast: Ast[S],
     init: C
   ): ProcessResult
-}
-
-object Semantics {
-
-  type ProcessResult[W, E, C] =
-    EitherT[Writer[Chain[W], *], NonEmptyChain[E], C]
 }

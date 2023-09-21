@@ -4,7 +4,7 @@ import aqua.parser.Ast
 import aqua.parser.head.{ImportExpr, ImportFromExpr, UseExpr, UseFromExpr}
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.semantics.rules.locations.LocationsState
-import aqua.semantics.{CompilerState, RawSemantics, SemanticError, Semantics}
+import aqua.semantics.{CompilerState, RawSemantics, SemanticError, SemanticWarning, Semantics}
 
 import cats.data.Validated.{Invalid, Valid}
 import cats.syntax.applicative.*
@@ -12,6 +12,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.foldable.*
+import cats.syntax.either.*
 import cats.syntax.reducible.*
 import cats.data.{NonEmptyChain, ValidatedNec}
 import monocle.Lens
@@ -34,7 +35,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
   def process(
     ast: Ast[S],
     init: LspContext[S]
-  ): ValidatedNec[SemanticError[S], LspContext[S]] = {
+  ): ProcessResult = {
 
     val rawState = CompilerState.init[S](init.raw)
 
@@ -62,19 +63,16 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
     RawSemantics
       .interpret(ast, initState, init.raw)
       .map { case (state, ctx) =>
-        // TODO: better to change return type in `process` method
-        Valid(
-          LspContext(
-            raw = ctx,
-            rootArrows = state.names.rootArrows,
-            constants = state.names.constants,
-            abDefinitions = state.abilities.definitions,
-            locations = state.locations.allLocations,
-            importTokens = importTokens,
-            tokens = state.locations.tokens,
-            errors = state.errors.toList
-          )
-        )
+        LspContext(
+          raw = ctx,
+          rootArrows = state.names.rootArrows,
+          constants = state.names.constants,
+          abDefinitions = state.abilities.definitions,
+          locations = state.locations.allLocations,
+          importTokens = importTokens,
+          tokens = state.locations.tokens,
+          errors = state.errors.toList
+        ).asRight.toEitherT[ProcessWarnings]
       }
       // TODO: return as Eval
       .value

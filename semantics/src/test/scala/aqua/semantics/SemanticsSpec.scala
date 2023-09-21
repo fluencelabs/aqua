@@ -35,7 +35,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
   def insideBody(script: String)(test: RawTag.Tree => Any): Unit =
     inside(parser(script)) { case Validated.Valid(ast) =>
       val init = RawContext.blank
-      inside(semantics.process(ast, init)) { case Validated.Valid(ctx) =>
+      inside(semantics.process(ast, init).value.value) { case Right(ctx) =>
         inside(ctx.funcs.headOption) { case Some((_, func)) =>
           test(func.arrow.body)
         }
@@ -45,7 +45,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
   def insideSemErrors(script: String)(test: NonEmptyChain[SemanticError[Span.S]] => Any): Unit =
     inside(parser(script)) { case Validated.Valid(ast) =>
       val init = RawContext.blank
-      inside(semantics.process(ast, init)) { case Validated.Invalid(errors) =>
+      inside(semantics.process(ast, init).value.value) { case Left(errors) =>
         test(errors)
       }
     }
