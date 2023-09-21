@@ -11,13 +11,14 @@ import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.raw.ConstantRaw
 import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
 import aqua.{AquaIO, SpanParser}
+
 import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.data.{NonEmptyChain, Validated}
 import cats.effect.IO
+import cats.syntax.option.*
 import cats.effect.unsafe.implicits.global
 import fs2.io.file.{Files, Path}
 import scribe.Logging
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.scalajs.js
@@ -142,34 +143,17 @@ object AquaLSP extends App with Logging {
     val config = AquaCompilerConf(ConstantRaw.defaultConstants(None))
 
     val proc = for {
-
-      res <- LSPCompiler
-        .compileToLsp[IO, AquaFileError, FileModuleId, FileSpan.F](
-          sources,
-          SpanParser.parser,
-          config
-        )
+      res <- LSPCompiler.compileToLsp[IO, AquaFileError, FileModuleId, FileSpan.F](
+        sources,
+        SpanParser.parser,
+        config
+      )
     } yield {
-      val fileRes: Validated[NonEmptyChain[
-        AquaError[FileModuleId, AquaFileError, FileSpan.F]
-      ], LspContext[FileSpan.F]] = res
-        .andThen(
-          _.getOrElse(
-            pathId,
-            invalidNec(
-              SourcesError(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
-            )
-          )
+      val fileRes = res.andThen(
+        _.get(pathId).toValidNec(
+          SourcesError(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
         )
-        .andThen(
-          _.get(pathId)
-            .map(l => validNec(l))
-            .getOrElse(
-              invalidNec(
-                SourcesError(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
-              )
-            )
-        )
+      )
 
       logger.debug("Compilation done.")
 

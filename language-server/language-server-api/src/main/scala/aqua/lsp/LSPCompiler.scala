@@ -4,6 +4,7 @@ import aqua.compiler.{AquaCompiler, AquaCompilerConf, AquaError, AquaSources}
 import aqua.parser.{Ast, ParserError}
 import aqua.raw.RawContext
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
+
 import cats.data.Validated.validNec
 import cats.syntax.semigroup.*
 import cats.syntax.applicative.*
@@ -11,6 +12,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import cats.syntax.traverse.*
+import cats.syntax.either.*
 import cats.{Comonad, Monad, Monoid, Order}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 
@@ -55,21 +57,11 @@ object LSPCompiler {
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
     config: AquaCompilerConf
-  ): F[Validated[NonEmptyChain[AquaError[I, E, S]], Map[I, Validated[NonEmptyChain[
-    AquaError[I, E, S]
-  ], Map[I, LspContext[S]]]]]] = {
+  ): F[ValidatedNec[AquaError[I, E, S], Map[I, LspContext[S]]]] = {
 
     val compiler = getLspAquaCompiler[F, E, I, S](config)
     compiler
       .compileRaw(sources, parser)
-      .map { v =>
-        v.map { innerMap =>
-          innerMap.view.mapValues { vCtx =>
-            vCtx.map {
-              _.toSortedMap.toMap
-            }
-          }.toMap
-        }
-      }
+      .map(_.value.value.toValidated)
   }
 }

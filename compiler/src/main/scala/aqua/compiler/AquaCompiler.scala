@@ -73,25 +73,33 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
   private def linkModules(
     modules: Modules[I, Err, CompiledCtxT],
     cycleError: Linker.DepCycle[AquaModule[I, Err, CompiledCtxT]] => Err
-  ): EitherNec[Err, Map[I, CompiledCtx]] = {
+  ): CompileResult[Map[I, C]] = {
     logger.trace("linking modules...")
 
-    Linker
-      .link(
-        modules,
-        cycleError,
-        // By default, provide an empty context for this module's id
-        i => NonEmptyMap.one(i, Monoid.empty[C]).asRight.toEitherT
+    for {
+      linked <- Linker
+        .link(
+          modules,
+          cycleError,
+          // By default, provide an empty context for this module's id
+          i => NonEmptyMap.one(i, Monoid.empty[C]).asRight.toEitherT
+        )
+        .toEither
+        .toEitherT[CompileWarnings]
+      res <- EitherT(
+        linked.toList.traverse { case (id, ctx) =>
+          ctx.map(_.apply(id).map(id -> _).get).toValidated
+        }.map(_.sequence.toEither)
       )
-      .toEither
+    } yield res.toMap
   }
 
   def compileRaw(
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]]
-  ): F[ValidatedNec[Err, Map[I, ValidatedNec[Err, Ctx]]]] = {
-
+  ): F[CompileResult[Map[I, C]]] = {
     logger.trace("starting resolving sources...")
+
     new AquaParser[F, E, I, S](sources, parser)
       .resolve[CompiledCtx](mod =>
         context =>
@@ -119,14 +127,15 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
               .toCompileResult
           } yield NonEmptyMap.one(mod.id, rc)
       )
-      .subflatMap(modules =>
-        linkModules(
-          modules,
-          cycle => CycleError[I, E, S](cycle.map(_.id))
+      .value
+      .map(
+        _.toEitherT[CompileWarnings].flatMap(modules =>
+          linkModules(
+            modules,
+            cycle => CycleError[I, E, S](cycle.map(_.id))
+          )
         )
       )
-      .map(_.mapValues(_.toValidated.value).toMap)
-      .toValidated
   }
 
 }

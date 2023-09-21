@@ -22,6 +22,7 @@ import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
+import cats.syntax.either.*
 import cats.{~>, Comonad, Monad, Monoid, Order}
 import scribe.Logging
 
@@ -30,18 +31,13 @@ import scala.collection.MapView
 object CompilerAPI extends Logging {
 
   private def toAquaProcessed[I: Order, E, S[_]: Comonad](
-    filesWithContext: Map[
-      I,
-      ValidatedNec[AquaError[I, E, S], NonEmptyMap[I, RawContext]]
-    ]
-  ): ValidatedNec[AquaError[I, E, S], Chain[AquaProcessed[I]]] = {
+    filesWithContext: Map[I, RawContext]
+  ): Chain[AquaProcessed[I]] = {
     logger.trace("linking finished")
 
-    filesWithContext.values.toList
-      // Gather all RawContext in List inside ValidatedNec
-      .flatTraverse(_.map(_.toNel.toList))
+    filesWithContext.toList
       // Process all contexts maintaining Cache
-      .traverse(_.traverse { case (i, rawContext) =>
+      .traverse { case (i, rawContext) =>
         for {
           cache <- State.get[AquaContext.Cache]
           _ = logger.trace(s"Going to prepare exports for $i...")
@@ -49,9 +45,10 @@ object CompilerAPI extends Logging {
           _ = logger.trace(s"AquaProcessed prepared for $i")
           _ <- State.set(expCache)
         } yield AquaProcessed(i, exp)
-      }.runA(AquaContext.Cache()))
+      }
+      .runA(AquaContext.Cache())
       // Convert result List to Chain
-      .map(_.map(Chain.fromSeq))
+      .map(Chain.fromSeq)
       .value
   }
 
@@ -82,7 +79,7 @@ object CompilerAPI extends Logging {
 
     for {
       compiledRaw <- compiler.compileRaw(sources, parser)
-      compiledV = compiledRaw.andThen(toAquaProcessed)
+      compiledV = compiledRaw.value.value.toValidated.map(toAquaProcessed)
       _ <- airValidator.init()
       result <- compiledV.traverse { compiled =>
         compiled.traverse { ap =>
@@ -136,16 +133,15 @@ object CompilerAPI extends Logging {
   ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaContext]]] = {
 
     val compiler = getAquaCompiler[F, E, I, S](config)
-    compiler
-      .compileRaw(sources, parser)
-      .map(_.andThen { filesWithContext =>
-        toAquaProcessed(filesWithContext)
-      })
-      .map(_.map { compiled =>
-        compiled.map { ap =>
+    val compiledRaw = compiler.compileRaw(sources, parser)
+
+    compiledRaw.map(
+      _.value.value.toValidated
+        .map(toAquaProcessed)
+        .map(_.map { ap =>
           logger.trace("generating output...")
           ap.context
-        }
-      })
+        })
+    )
   }
 }
