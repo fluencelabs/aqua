@@ -22,30 +22,42 @@ function getConfig({
   );
 }
 
-export function compileFromString({ code, ...commonArgs }) {
-  const config = getConfig(commonArgs);
-  const { imports = [] } = commonArgs;
-  return Aqua.compile(new Input(code), imports, config);
+async function compile(...args) {
+  try {
+    const res = await Aqua.compile(...args);
+    return res;
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof error.message === "string"
+    ) {
+      throw new Error(error.message);
+    }
+    throw error;
+  }
 }
 
-export function compileFromPath({ filePath, ...commonArgs }) {
-  const config = getConfig(commonArgs);
-  const { imports = [] } = commonArgs;
-  return Aqua.compile(new Path(filePath), imports, config);
+export function compileFromString({ code, imports = [], ...commonArgs }) {
+  return compile(new Input(code), imports, getConfig(commonArgs));
+}
+
+export function compileFromPath({ filePath, imports = [], ...commonArgs }) {
+  return compile(new Path(filePath), imports, getConfig(commonArgs));
 }
 
 export function compileAquaCallFromString({
   code,
   funcCall,
   data,
+  imports = [],
   ...commonArgs
 }) {
-  const config = getConfig(commonArgs);
-  const { imports = [] } = commonArgs;
-  return Aqua.compile(
+  return compile(
     new Call(funcCall, data, new Input(code)),
     imports,
-    config,
+    getConfig(commonArgs),
   );
 }
 
@@ -53,13 +65,12 @@ export function compileAquaCallFromPath({
   filePath,
   funcCall,
   data,
+  imports = [],
   ...commonArgs
 }) {
-  const config = getConfig(commonArgs);
-  const { imports = [] } = commonArgs;
-  return Aqua.compile(
+  return compile(
     new Call(funcCall, data, new Input(filePath)),
     imports,
-    config,
+    getConfig(commonArgs),
   );
 }
