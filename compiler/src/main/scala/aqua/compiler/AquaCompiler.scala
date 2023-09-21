@@ -33,27 +33,23 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
 ) extends Logging {
 
   type Err = AquaError[I, E, S]
-  type Warn = AquaWarning[S]
   type Ctx = NonEmptyMap[I, C]
 
-  type CompileWarnings =
-    [A] =>> Writer[Chain[Warn], A]
+  type CompileWarns = [A] =>> CompileWarnings[S][A]
+  type CompileRes = [A] =>> CompileResult[I, E, S][A]
 
-  type CompileResult =
-    [A] =>> EitherT[CompileWarnings, NonEmptyChain[Err], A]
-
-  private val warningsK: semantics.ProcessWarnings ~> CompileWarnings =
-    new FunctionK[semantics.ProcessWarnings, CompileWarnings] {
+  private val warningsK: semantics.ProcessWarnings ~> CompileWarns =
+    new FunctionK[semantics.ProcessWarnings, CompileWarns] {
 
       override def apply[A](
         fa: semantics.ProcessWarnings[A]
-      ): CompileWarnings[A] =
+      ): CompileWarns[A] =
         fa.mapWritten(_.map(AquaWarning.CompileWarning.apply))
     }
 
   extension (res: semantics.ProcessResult) {
 
-    def toCompileResult: CompileResult[C] =
+    def toCompileRes: CompileRes[C] =
       res
         .leftMap(_.map(CompileError.apply))
         .mapK(warningsK)
@@ -61,19 +57,19 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
 
   extension [A](res: ValidatedNec[SemanticError[S], A]) {
 
-    def toCompileResult: CompileResult[A] =
+    def toCompileRes: CompileRes[A] =
       res.toEither
         .leftMap(_.map(CompileError.apply))
-        .toEitherT[CompileWarnings]
+        .toEitherT[CompileWarns]
   }
 
-  type CompiledCtx = CompileResult[Ctx]
+  type CompiledCtx = CompileRes[Ctx]
   type CompiledCtxT = CompiledCtx => CompiledCtx
 
   private def linkModules(
     modules: Modules[I, Err, CompiledCtxT],
     cycleError: Linker.DepCycle[AquaModule[I, Err, CompiledCtxT]] => Err
-  ): CompileResult[Map[I, C]] = {
+  ): CompileRes[Map[I, C]] = {
     logger.trace("linking modules...")
 
     for {
@@ -85,7 +81,7 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
           i => NonEmptyMap.one(i, Monoid.empty[C]).asRight.toEitherT
         )
         .toEither
-        .toEitherT[CompileWarnings]
+        .toEitherT[CompileWarns]
       res <- EitherT(
         linked.toList.traverse { case (id, ctx) =>
           ctx.map(_.apply(id).map(id -> _).get).toValidated
@@ -97,7 +93,7 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
   def compileRaw(
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]]
-  ): F[CompileResult[Map[I, C]]] = {
+  ): F[CompileRes[Map[I, C]]] = {
     logger.trace("starting resolving sources...")
 
     new AquaParser[F, E, I, S](sources, parser)
@@ -112,7 +108,7 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
             header = mod.body.head
             headerSem <- headerHandler
               .sem(imports, header)
-              .toCompileResult
+              .toCompileRes
             // Analyze the body, with prepared initial context
             _ = logger.trace("semantic processing...")
             processed <- semantics
@@ -120,16 +116,16 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
                 mod.body,
                 headerSem.initCtx
               )
-              .toCompileResult
+              .toCompileRes
             // Handle exports, declares - finalize the resulting context
             rc <- headerSem
               .finCtx(processed)
-              .toCompileResult
+              .toCompileRes
           } yield NonEmptyMap.one(mod.id, rc)
       )
       .value
       .map(
-        _.toEitherT[CompileWarnings].flatMap(modules =>
+        _.toEitherT[CompileWarns].flatMap(modules =>
           linkModules(
             modules,
             cycle => CycleError[I, E, S](cycle.map(_.id))
