@@ -1,7 +1,7 @@
 package aqua.run
 
 import aqua.ErrorRendering.given
-import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompilerAPI}
+import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompileResult, CompilerAPI}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.{AquaIO, SpanParser}
 import aqua.io.{AquaFileError, AquaPath, PackagePath, Prelude}
@@ -21,6 +21,8 @@ import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
 import cats.syntax.option.*
+import cats.syntax.either.*
+import cats.syntax.validated.*
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -44,7 +46,13 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
         SpanParser.parser,
         config
       )
-      .map(_.leftMap(_.map(_.show)))
+      .map(
+        _.value.value
+          .leftMap(
+            _.map(_.show)
+          )
+          .toValidated
+      )
   }
 
   private def compileBuiltins() = {
@@ -65,14 +73,14 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       // compile builtins and add it to context
       builtinsV <-
         if (withBuiltins) compileBuiltins()
-        else validNec[String, Chain[AquaContext]](Chain.empty).pure[F]
-      compileResult <- input.map { ap =>
+        else Chain.empty.validNec.pure
+      compileResult <- input.traverse { ap =>
         // compile only context to wrap and call function later
         Clock[F].timed(
           ap.getPath().flatMap(p => compileToContext(p, preludeImports ++ imports))
         )
-      }.getOrElse((Duration.Zero, validNec[String, Chain[AquaContext]](Chain.empty)).pure[F])
-      (compileTime, contextV) = compileResult
+      }
+      (compileTime, contextV) = compileResult.orEmpty
     } yield {
       logger.debug(s"Compile time: ${compileTime.toMillis}ms")
       // add builtins to the end of context

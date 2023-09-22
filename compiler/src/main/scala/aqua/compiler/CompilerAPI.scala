@@ -74,70 +74,49 @@ object CompilerAPI extends Logging {
     airValidator: AirValidator[F],
     backend: Backend.Transform,
     config: AquaCompilerConf
-  ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaCompiled[I]]]] = {
+  ): F[CompileResult[I, E, S][Chain[AquaCompiled[I]]]] = {
     val compiler = getAquaCompiler[F, E, I, S](config)
 
     for {
       compiledRaw <- compiler.compileRaw(sources, parser)
-      compiledV = compiledRaw.value.value.toValidated.map(toAquaProcessed)
+      compiledV = compiledRaw.map(toAquaProcessed)
       _ <- airValidator.init()
-      result <- compiledV.traverse { compiled =>
+      result <- compiledV.flatTraverse { compiled =>
         compiled.traverse { ap =>
           logger.trace("generating output...")
           val res = backend.transform(ap.context)
-          val compiled = backend.generate(res)
+          val generated = backend.generate(res)
+          val air = generated.toList.flatMap(_.air)
+          val compiled = AquaCompiled(
+            sourceId = ap.id,
+            compiled = generated,
+            funcsCount = res.funcs.length.toInt,
+            servicesCount = res.services.length.toInt
+          )
+
           airValidator
-            .validate(
-              compiled.toList.flatMap(_.air)
-            )
+            .validate(air)
             .map(
               _.leftMap(errs => AirValidationError(errs): AquaError[I, E, S])
-                .as(
-                  AquaCompiled(ap.id, compiled, res.funcs.length.toInt, res.services.length.toInt)
-                )
+                .as(compiled)
                 .toValidatedNec
             )
-        }.map(_.sequence)
-      }.map(_.andThen(identity)) // There is no flatTraverse for Validated
+        }.map(_.sequence.toEither.toEitherT)
+      }
     } yield result
   }
-
-  def compileTo[F[_]: Monad, E, I: Order, S[_]: Comonad, T](
-    sources: AquaSources[F, E, I],
-    parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
-    airValidator: AirValidator[F],
-    backend: Backend.Transform,
-    config: AquaCompilerConf,
-    write: AquaCompiled[I] => F[Seq[Validated[E, T]]]
-  ): F[ValidatedNec[AquaError[I, E, S], Chain[T]]] =
-    compile[F, E, I, S](sources, parser, airValidator, backend, config)
-      .flatMap(
-        _.traverse(compiled =>
-          compiled.toList.flatTraverse { ac =>
-            write(ac).map(
-              _.toList.map(
-                _.bimap(
-                  e => OutputError(ac, e): AquaError[I, E, S],
-                  Chain.one
-                ).toValidatedNec
-              )
-            )
-          }.map(_.foldA)
-        ).map(_.andThen(identity)) // There is no flatTraverse for Validated
-      )
 
   def compileToContext[F[_]: Monad, E, I: Order, S[_]: Comonad](
     sources: AquaSources[F, E, I],
     parser: I => String => ValidatedNec[ParserError[S], Ast[S]],
     config: AquaCompilerConf
-  ): F[ValidatedNec[AquaError[I, E, S], Chain[AquaContext]]] = {
+  ): F[CompileResult[I, E, S][Chain[AquaContext]]] = {
 
     val compiler = getAquaCompiler[F, E, I, S](config)
     val compiledRaw = compiler.compileRaw(sources, parser)
 
     compiledRaw.map(
-      _.value.value.toValidated
-        .map(toAquaProcessed)
+      _.map(toAquaProcessed)
         .map(_.map { ap =>
           logger.trace("generating output...")
           ap.context

@@ -32,7 +32,7 @@ object LogLevels {
     name: String,
     level: String,
     logLevels: LogLevels
-  ): Validated[NonEmptyList[String], LogLevels] = {
+  ): ValidatedNel[String, LogLevels] = {
     levelFromString(level).andThen { level =>
       name.trim().toLowerCase() match {
         case "compiler" =>

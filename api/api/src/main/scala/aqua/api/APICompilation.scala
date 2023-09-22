@@ -33,6 +33,7 @@ import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.syntax.show.*
 import cats.syntax.traverse.*
+import cats.syntax.either.*
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -98,6 +99,7 @@ object APICompilation {
 
     val path = Path(pathStr)
     val sources = new AquaFileSources[IO](path, imports.map(Path.apply))
+
     compileRaw(
       aquaConfig,
       sources,
@@ -121,6 +123,7 @@ object APICompilation {
           IO.pure(Valid(Chain.one((FileModuleId(path), input))))
         }
       }
+
     compileRaw(
       aquaConfig,
       strSources,
@@ -153,15 +156,15 @@ object APICompilation {
             override def validate(airs: List[AirFunction]): IO[ValidatedNec[String, Unit]] =
               Applicative[IO].pure(validNec(()))
           },
-          new Backend.Transform:
+          new Backend.Transform {
             override def transform(ex: AquaContext): AquaRes =
               Transform.contextRes(ex, transformConfig)
 
             override def generate(aqua: AquaRes): Seq[Generated] = backend.generate(aqua)
-          ,
+          },
           config
         )
-        .map(_.leftMap(_.map(_.show).distinct))
+        .map(_.leftMap(_.map(_.show).distinct).value.value.toValidated)
     }.map(_.leftMap(NonEmptyChain.fromNonEmptyList).andThen(identity))
   }
 }
