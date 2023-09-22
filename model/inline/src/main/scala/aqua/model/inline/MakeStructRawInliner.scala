@@ -6,6 +6,7 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
 import aqua.raw.value.MakeStructRaw
 import aqua.types.{StreamMapType, StructType}
+
 import cats.data.{Chain, NonEmptyMap, State}
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
