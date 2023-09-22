@@ -140,7 +140,7 @@ object AquaAPI extends App with Logging {
     call: types.Call,
     imports: List[String],
     config: AquaAPIConfig
-  ) = {
+  ): IO[CompilationResult] = {
     val path = call.input match {
       case i: types.Input => i.input
       case p: types.Path => p.path

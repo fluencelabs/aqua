@@ -38,31 +38,6 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
   type CompileWarns = [A] =>> CompileWarnings[S][A]
   type CompileRes = [A] =>> CompileResult[I, E, S][A]
 
-  private val warningsK: semantics.ProcessWarnings ~> CompileWarns =
-    new FunctionK[semantics.ProcessWarnings, CompileWarns] {
-
-      override def apply[A](
-        fa: semantics.ProcessWarnings[A]
-      ): CompileWarns[A] =
-        fa.mapWritten(_.map(AquaWarning.CompileWarning.apply))
-    }
-
-  extension (res: semantics.ProcessResult) {
-
-    def toCompileRes: CompileRes[C] =
-      res
-        .leftMap(_.map(CompileError.apply))
-        .mapK(warningsK)
-  }
-
-  extension [A](res: ValidatedNec[SemanticError[S], A]) {
-
-    def toCompileRes: CompileRes[A] =
-      res.toEither
-        .leftMap(_.map(CompileError.apply))
-        .toEitherT[CompileWarns]
-  }
-
   type CompiledCtx = CompileRes[Ctx]
   type CompiledCtxT = CompiledCtx => CompiledCtx
 
@@ -72,14 +47,12 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
   ): CompileRes[Map[I, C]] = {
     logger.trace("linking modules...")
 
+    // By default, provide an empty context for this module's id
+    val empty: I => CompiledCtx = i => NonEmptyMap.one(i, Monoid[C].empty).pure[CompileRes]
+
     for {
       linked <- Linker
-        .link(
-          modules,
-          cycleError,
-          // By default, provide an empty context for this module's id
-          i => NonEmptyMap.one(i, Monoid.empty[C]).asRight.toEitherT
-        )
+        .link(modules, cycleError, empty)
         .toEither
         .toEitherT[CompileWarns]
       res <- EitherT(
@@ -124,14 +97,40 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
           } yield NonEmptyMap.one(mod.id, rc)
       )
       .value
-      .map(
-        _.toEitherT[CompileWarns].flatMap(modules =>
-          linkModules(
+      .map(resolved =>
+        for {
+          modules <- resolved.toEitherT[CompileWarns]
+          linked <- linkModules(
             modules,
-            cycle => CycleError[I, E, S](cycle.map(_.id))
+            cycle => CycleError(cycle.map(_.id))
           )
-        )
+        } yield linked
       )
+  }
+
+  private val warningsK: semantics.ProcessWarnings ~> CompileWarns =
+    new FunctionK[semantics.ProcessWarnings, CompileWarns] {
+
+      override def apply[A](
+        fa: semantics.ProcessWarnings[A]
+      ): CompileWarns[A] =
+        fa.mapWritten(_.map(AquaWarning.CompileWarning.apply))
+    }
+
+  extension (res: semantics.ProcessResult) {
+
+    def toCompileRes: CompileRes[C] =
+      res
+        .leftMap(_.map(CompileError.apply))
+        .mapK(warningsK)
+  }
+
+  extension [A](res: ValidatedNec[SemanticError[S], A]) {
+
+    def toCompileRes: CompileRes[A] =
+      res.toEither
+        .leftMap(_.map(CompileError.apply))
+        .toEitherT[CompileWarns]
   }
 
 }

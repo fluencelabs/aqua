@@ -7,6 +7,7 @@ import aqua.lsp.LSPCompiler
 import aqua.parser.lift.FileSpan
 import aqua.raw.ConstantRaw
 import aqua.{AquaIO, SpanParser}
+
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
 import fs2.io.file.Path

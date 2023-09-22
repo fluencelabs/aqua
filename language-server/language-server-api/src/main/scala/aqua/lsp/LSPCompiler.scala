@@ -21,36 +21,39 @@ object LSPCompiler {
   private def getLspAquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad](
     config: AquaCompilerConf
   ): AquaCompiler[F, E, I, S, LspContext[S]] = {
-    implicit val rc: Monoid[LspContext[S]] = LspContext
+    given Monoid[LspContext[S]] = LspContext
       .implicits(
-        LspContext
-          .blank[S]
-          .copy(raw =
-            RawContext.blank.copy(parts =
-              Chain.fromSeq(config.constantsList).map(const => RawContext.blank -> const)
-            )
+        LspContext.blank.copy(raw =
+          RawContext.blank.copy(
+            parts = Chain
+              .fromSeq(config.constantsList)
+              .map(const => RawContext.blank -> const)
           )
+        )
       )
       .lspContextMonoid
 
-    implicit val headerSemMonoid: Monoid[HeaderSem[S, LspContext[S]]] =
-      new Monoid[HeaderSem[S, LspContext[S]]] {
-        override def empty: HeaderSem[S, LspContext[S]] = HeaderSem(rc.empty, (c, _) => validNec(c))
+    given Monoid[HeaderSem[S, LspContext[S]]] with {
+      override def empty: HeaderSem[S, LspContext[S]] =
+        HeaderSem(Monoid[LspContext[S]].empty, (c, _) => validNec(c))
 
-        override def combine(
-          a: HeaderSem[S, LspContext[S]],
-          b: HeaderSem[S, LspContext[S]]
-        ): HeaderSem[S, LspContext[S]] = {
-          HeaderSem(
-            a.initCtx |+| b.initCtx,
-            (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
-          )
-        }
+      override def combine(
+        a: HeaderSem[S, LspContext[S]],
+        b: HeaderSem[S, LspContext[S]]
+      ): HeaderSem[S, LspContext[S]] = {
+        HeaderSem(
+          a.initCtx |+| b.initCtx,
+          (c, i) => a.finInitCtx(c, i).andThen(b.finInitCtx(_, i))
+        )
       }
+    }
 
     val semantics = new LspSemantics[S]()
 
-    new AquaCompiler[F, E, I, S, LspContext[S]](new HeaderHandler[S, LspContext[S]](), semantics)
+    new AquaCompiler[F, E, I, S, LspContext[S]](
+      new HeaderHandler(),
+      semantics
+    )
   }
 
   def compileToLsp[F[_]: Monad, E, I: Order, S[_]: Comonad](

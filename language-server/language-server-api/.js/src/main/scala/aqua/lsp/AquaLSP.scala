@@ -167,9 +167,7 @@ object AquaLSP extends App with Logging {
           val link = for {
             from <- fromOp
             to <- toOp
-          } yield {
-            TokenLink(from, to)
-          }
+          } yield TokenLink(from, to)
 
           if (link.isEmpty)
             logger.warn(s"Incorrect coordinates for token '${from.unit._1.name}'")

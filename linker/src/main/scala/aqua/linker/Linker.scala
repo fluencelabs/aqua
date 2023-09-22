@@ -132,7 +132,10 @@ object Linker extends Logging {
     else {
       val result = iter(modules.loaded.values.toList, Map.empty, cycleError)
 
-      result.map(_.collect { case (i, f) if modules.exports(i) => i -> f(empty(i)) })
+      result.map(_.collect {
+        case (i, f) if modules.exports(i) =>
+          i -> f(empty(i))
+      })
     }
 
 }

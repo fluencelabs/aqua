@@ -2,6 +2,7 @@ package api.types
 
 import aqua.js.{FunctionDefJs, ServiceDefJs}
 import aqua.model.transform.TransformConfig
+
 import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 
@@ -9,7 +10,6 @@ import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import scala.scalajs.js.|
-import aqua.parser.lexer.Token.func
 
 @JSExportTopLevel("AquaFunction")
 case class AquaFunction(
@@ -32,7 +32,9 @@ case class GeneratedSource(
 )
 
 object GeneratedSource {
-  def tsSource(name: String, tsSource: String) = new GeneratedSource(name, tsSource, null, null)
+
+  def tsSource(name: String, tsSource: String) =
+    new GeneratedSource(name, tsSource, null, null)
 
   def jsSource(name: String, jsSource: String, tsTypes: String) =
     new GeneratedSource(name, null, jsSource, tsTypes)
