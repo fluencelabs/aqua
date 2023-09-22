@@ -21,9 +21,11 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { fieldsTraversed =>
       val mapType = StreamMapType.fromStruct(resultType)
       val mapVar = VarModel(resultName + "_map", mapType)
-      val ops = fieldsTraversed.toNel.toList.flatMap(_._2._2)
-      val models = fieldsTraversed.toNel.map { case (k, v) =>
-        InsertKeyValueModel(LiteralModel.quote(k), v._1, mapVar.name, mapType).leaf
+      val (values, ops) = fieldsTraversed.toNel.map { case (name, (model, ops)) =>
+        (name -> model, ops)
+      }.unzip.bimap(_.toList, _.toList.flatten)
+      val models = values.map { case (k, v) =>
+        InsertKeyValueModel(LiteralModel.quote(k), v, mapVar.name, mapType).leaf
       }.toList
 
       val toResult = CanonicalizeModel(mapVar, CallModel.Export(resultName, resultType)).leaf
