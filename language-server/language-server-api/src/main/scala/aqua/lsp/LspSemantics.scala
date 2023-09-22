@@ -20,18 +20,19 @@ import monocle.macros.GenLens
 
 class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
-  def getImportTokens(ast: Ast[S]): List[LiteralToken[S]] = {
-    ast.head.foldLeft[List[LiteralToken[S]]](Nil) { case (l, header) =>
-      header match {
-        case ImportExpr(fn) => l :+ fn
-        case ImportFromExpr(_, fn) => l :+ fn
-        case UseExpr(fn, _) => l :+ fn
-        case UseFromExpr(_, fn, _) => l :+ fn
-        case _ => l
-      }
-    }
-  }
+  private def getImportTokens(ast: Ast[S]): List[LiteralToken[S]] =
+    ast.collectHead {
+      case ImportExpr(fn) => fn
+      case ImportFromExpr(_, fn) => fn
+      case UseExpr(fn, _) => fn
+      case UseFromExpr(_, fn, _) => fn
+    }.value.toList
 
+  /**
+   * Process the AST and return the semantics result.
+   * NOTE: LspSemantics never return errors or warnings,
+   * they are collected in LspContext.
+   */
   def process(
     ast: Ast[S],
     init: LspContext[S]
@@ -71,8 +72,9 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
           locations = state.locations.allLocations,
           importTokens = importTokens,
           tokens = state.locations.tokens,
-          errors = state.errors.toList
-        ).asRight.toEitherT[ProcessWarnings]
+          errors = state.errors.toList,
+          warnings = state.warnings.toList
+        ).pure[Result]
       }
       // TODO: return as Eval
       .value

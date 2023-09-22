@@ -65,6 +65,8 @@ object LSPCompiler {
     val compiler = getLspAquaCompiler[F, E, I, S](config)
     compiler
       .compileRaw(sources, parser)
+      // NOTE: Ignore warnings here as
+      // they are collected inside context
       .map(_.value.value.toValidated)
   }
 }

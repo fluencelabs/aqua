@@ -7,16 +7,18 @@ import cats.data.{Chain, EitherNec, EitherT, NonEmptyChain, ValidatedNec, Writer
 
 trait Semantics[S[_], C] {
 
-  final type ProcessWarnings = [A] =>> Writer[
+  final type Warnings = [A] =>> Writer[
     Chain[SemanticWarning[S]],
     A
   ]
 
-  final type ProcessResult = EitherT[
-    ProcessWarnings,
+  final type Result = [A] =>> EitherT[
+    Warnings,
     NonEmptyChain[SemanticError[S]],
-    C
+    A
   ]
+
+  final type ProcessResult = Result[C]
 
   def process(
     ast: Ast[S],

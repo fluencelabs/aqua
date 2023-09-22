@@ -113,11 +113,11 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
       )
   }
 
-  private val warningsK: semantics.ProcessWarnings ~> CompileWarns =
-    new FunctionK[semantics.ProcessWarnings, CompileWarns] {
+  private val warningsK: semantics.Warnings ~> CompileWarns =
+    new FunctionK[semantics.Warnings, CompileWarns] {
 
       override def apply[A](
-        fa: semantics.ProcessWarnings[A]
+        fa: semantics.Warnings[A]
       ): CompileWarns[A] =
         fa.mapWritten(_.map(AquaWarning.CompileWarning.apply))
     }
