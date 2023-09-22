@@ -55,10 +55,7 @@ object AirGen extends Logging {
   }
 
   def exportToString(exportTo: CallModel.Export): String = (exportTo match {
-    case CallModel.Export(name, _: StreamType) => "$" + name
-    case CallModel.Export(name, _: CanonStreamType) => "#" + name
-    case CallModel.Export(name, _: StreamMapType) => "%" + name
-    case CallModel.Export(name, _) => name
+    case CallModel.Export(name, t) => varNameToString(name, t)
   }).replace('.', '_')
 
   private def folder(op: ResolvedOp, ops: Chain[AirGen]): Eval[AirGen] =

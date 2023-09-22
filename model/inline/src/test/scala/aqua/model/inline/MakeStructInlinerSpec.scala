@@ -45,7 +45,7 @@ class MakeStructInlinerSpec extends AnyFlatSpec with Matchers {
     val lengthModel = FunctorModel("length", ScalarType.u32)
 
     val streamMapName = "struct_type_obj_map"
-    val streamMapType = StreamMapType.fromStruct(structType)
+    val streamMapType = StreamMapType.top()
 
     tree.get.equalsOrShowDiff(
       SeqModel.wrap(

@@ -46,7 +46,7 @@ class CopyInlinerSpec extends AnyFlatSpec with Matchers {
     val lengthModel = FunctorModel("length", ScalarType.u32)
 
     val streamMapName = "some_struct_obj_copy_map"
-    val streamMapType = StreamMapType.fromStruct(structType)
+    val streamMapType = StreamMapType.top()
 
     tree.get.equalsOrShowDiff(
       SeqModel.wrap(

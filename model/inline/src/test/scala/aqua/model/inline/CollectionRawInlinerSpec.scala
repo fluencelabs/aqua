@@ -32,7 +32,7 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
 
     v shouldBe resultValue
 
-    val streamMapType = StreamMapType.fromStruct(nestedType)
+    val streamMapType = StreamMapType.top()
     val streamMapVar = VarModel("nested_type_obj_map", streamMapType)
 
     val expected =

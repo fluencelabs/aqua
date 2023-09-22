@@ -9,29 +9,46 @@ import aqua.types.{StreamMapType, StructType}
 
 import cats.data.{Chain, NonEmptyMap, State}
 import cats.syntax.foldable.*
+import cats.syntax.bifunctor.*
 import cats.syntax.functor.*
 
 object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
+
+  // return unfolding ops and generated insertions
+  def genInsertion[S: Mangler](
+    mapName: String,
+    mapType: StreamMapType,
+    resultName: String,
+    resultType: StructType,
+    fields: NonEmptyMap[String, ValueModel]
+  ): State[S, (List[OpModel.Tree], List[OpModel.Tree])] = {
+    fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { fieldsTraversed =>
+      val (values, ops) = fieldsTraversed.toNel.map { case (name, (model, ops)) =>
+        (name -> model, ops)
+      }.unzip.bimap(_.toList, _.toList.flatten)
+
+      val models = values.map { case (k, v) =>
+        InsertKeyValueModel(LiteralModel.quote(k), v, mapName, mapType).leaf
+      }
+
+      val toResult =
+        CanonicalizeModel(VarModel(mapName, mapType), CallModel.Export(resultName, resultType)).leaf
+
+      (ops, models :+ toResult)
+    }
+  }
 
   private def createObj[S: Mangler](
     fields: NonEmptyMap[String, ValueModel],
     resultName: String,
     resultType: StructType
   ): State[S, OpModel.Tree] = {
-    fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { fieldsTraversed =>
-      val mapType = StreamMapType.fromStruct(resultType)
-      val mapVar = VarModel(resultName + "_map", mapType)
-      val (values, ops) = fieldsTraversed.toNel.map { case (name, (model, ops)) =>
-        (name -> model, ops)
-      }.unzip.bimap(_.toList, _.toList.flatten)
-      val models = values.map { case (k, v) =>
-        InsertKeyValueModel(LiteralModel.quote(k), v, mapVar.name, mapType).leaf
-      }.toList
+    val mapType = StreamMapType.top()
+    val mapName = resultName + "_map"
 
-      val toResult = CanonicalizeModel(mapVar, CallModel.Export(resultName, resultType)).leaf
-
-      SeqModel.wrap(ops ++ models :+ toResult)
-    }
+    genInsertion(mapName, mapType, resultName, resultType, fields).map(r =>
+      SeqModel.wrap(r._1 ++ r._2)
+    )
   }
 
   override def apply[S: Mangler: Exports: Arrows](

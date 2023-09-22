@@ -50,7 +50,7 @@ case class CallServiceRes(
   override def toString: String = s"(call $peerId ($serviceId $funcName) $call)"
 }
 
-case class ApStreamMapRes(key: LiteralModel, value: ValueModel, exportTo: CallModel.Export) extends ResolvedOp {
+case class ApStreamMapRes(key: ValueModel, value: ValueModel, exportTo: CallModel.Export) extends ResolvedOp {
   override def toString: String = s"(ap ($key $value) $exportTo)"
 }
 

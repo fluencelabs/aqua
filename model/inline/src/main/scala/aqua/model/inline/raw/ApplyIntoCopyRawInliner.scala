@@ -1,10 +1,11 @@
 package aqua.model.inline.raw
 
+import aqua.errors.Errors.internalError
+import aqua.model.*
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.inline.{Inline, TagInliner}
-import aqua.model.*
+import aqua.model.inline.{Inline, MakeStructRawInliner}
 import aqua.raw.value.IntoCopyRaw
 import aqua.types.{StreamMapType, StructType}
 import cats.data.{Chain, NonEmptyMap, State}
@@ -20,30 +21,27 @@ object ApplyIntoCopyRawInliner extends Logging {
     resultType: StructType,
     fields: NonEmptyMap[String, ValueModel]
   ): State[S, OpModel.Tree] = {
-    val mapType = StreamMapType.fromStruct(resultType)
-    val mapVar = VarModel(resultName + "_map", mapType)
+    val mapType = StreamMapType.top()
+    val mapName = resultName + "_map"
 
     val nonCopiedValues = resultType.fields.toNel.filterNot { case (k, _) =>
       fields.contains(k)
-    }.map { case (k, t) =>
-      InsertKeyValueModel(
-        LiteralModel.quote(k),
-        oldValue.copy(properties = Chain.one(IntoFieldModel(k, t))),
-        mapVar.name,
-        mapType
-      ).leaf
-    }
-    fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { fieldsTraversed =>
-      val ops = fieldsTraversed.toNel.toList.flatMap(_._2._2)
-      val models = fieldsTraversed.toNel.map { case (k, v) =>
-        InsertKeyValueModel(LiteralModel.quote(k), v._1, mapVar.name, mapType).leaf
-      }.toList
-
-      val toResult = CanonicalizeModel(mapVar, CallModel.Export(resultName, resultType)).leaf
-
-      SeqModel.wrap(ops ++ nonCopiedValues ++ models :+ toResult)
+    }.flatMap { case (k, _) =>
+      oldValue
+        .intoField(k)
+        .map(vm =>
+          InsertKeyValueModel(
+            LiteralModel.quote(k),
+            vm,
+            mapName,
+            mapType
+          ).leaf
+        )
     }
 
+    MakeStructRawInliner
+      .genInsertion(mapName, mapType, resultName, resultType, fields)
+      .map(r => SeqModel.wrap(r._1 ++ nonCopiedValues ++ r._2))
   }
 
   def apply[S: Mangler: Exports: Arrows](
@@ -69,8 +67,7 @@ object ApplyIntoCopyRawInliner extends Logging {
           )
         }
       case _ =>
-        logger.error("Unreachable. Cannot copy a value that is not a data type")
-        State.pure((value, Inline.empty))
+        internalError("Unreachable. Cannot copy a value that is not a data type")
     }
 
   }
