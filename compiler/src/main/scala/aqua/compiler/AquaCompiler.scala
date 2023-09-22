@@ -94,6 +94,11 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
             rc <- headerSem
               .finCtx(processed)
               .toCompileRes
+            /**
+             * Here we build a map of contexts while processing modules.
+             * Should not linker provide this info inside this process?
+             * Building this map complicates things a lot.
+             */
           } yield NonEmptyMap.one(mod.id, rc)
       )
       .value
