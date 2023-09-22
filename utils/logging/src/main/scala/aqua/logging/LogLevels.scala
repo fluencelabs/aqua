@@ -3,8 +3,9 @@ package aqua.logging
 import cats.syntax.option.*
 import cats.syntax.either.*
 import cats.syntax.foldable.*
-import cats.data.Validated.{invalidNel, validNel}
-import cats.data.{NonEmptyList, Validated, ValidatedNel}
+import cats.syntax.validated.*
+import cats.data.Validated.*
+import cats.data.{NonEmptyList, Validated, ValidatedNec}
 import scribe.Level
 
 case class LogLevels(
@@ -20,10 +21,10 @@ object LogLevels {
 
   def apply(level: Level): LogLevels = LogLevels(level, level, level)
 
-  def levelFromString(s: String): ValidatedNel[String, Level] =
+  def levelFromString(s: String): ValidatedNec[String, Level] =
     LogLevel.stringToLogLevel
       .get(s.toLowerCase.trim())
-      .toValidNel(s"Invalid log-level '$s'. $logHelpMessage")
+      .toValidNec(s"Invalid log-level '$s'. $logHelpMessage")
 
   lazy val error =
     s"Invalid log-level format. $logHelpMessage"
@@ -32,17 +33,17 @@ object LogLevels {
     name: String,
     level: String,
     logLevels: LogLevels
-  ): ValidatedNel[String, LogLevels] = {
+  ): ValidatedNec[String, LogLevels] = {
     levelFromString(level).andThen { level =>
       name.trim().toLowerCase() match {
         case "compiler" =>
-          validNel(logLevels.copy(compiler = level))
+          logLevels.copy(compiler = level).validNec
         case "fluencejs" =>
-          validNel(logLevels.copy(fluencejs = level))
+          logLevels.copy(fluencejs = level).validNec
         case "aquavm" =>
-          validNel(logLevels.copy(aquavm = level))
+          logLevels.copy(aquavm = level).validNec
         case s =>
-          invalidNel(
+          invalidNec(
             s"Unknown component '$s' in log-level. Please use one of these: 'aquavm', 'compiler' and 'fluencejs'"
           )
       }
@@ -51,14 +52,14 @@ object LogLevels {
 
   // Format: '<log-level>' or 'compiler=<log-level>,fluencejs=<log-level>,aquavm=<log-level>',
   // where <log-level> is one of these strings: 'all', 'trace', 'debug', 'info', 'warn', 'error', 'off'
-  def fromString(s: String): ValidatedNel[String, LogLevels] =
+  def fromString(s: String): ValidatedNec[String, LogLevels] =
     s.split(",")
       .toList
       .foldLeftM(LogLevels()) { case (levels, level) =>
         level.split("=").toList match {
           case n :: l :: Nil => fromStrings(n, l, levels).toEither
           case l :: Nil => levelFromString(l).map(apply).toEither
-          case _ => invalidNel(error).toEither
+          case _ => error.invalidNec.toEither
         }
       }
       .toValidated

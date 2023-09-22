@@ -13,7 +13,7 @@ import aqua.logging.{LogFormatter, LogLevels}
 import aqua.constants.Constants
 import aqua.io.*
 import aqua.raw.ops.Call
-import aqua.run.{CallInfo, CallPreparer, CliFunc, FuncCompiler, RunPreparer}
+import aqua.run.{CliFunc, FuncCompiler}
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
@@ -69,11 +69,9 @@ object AquaAPI extends App with Logging {
     aquaConfigJS: js.UndefOr[AquaConfig]
   ): Promise[CompilationResult] = {
     aquaConfigJS.toOption
-      .map(cjs => AquaConfig.fromJS(cjs))
-      .getOrElse(
-        validNec(AquaAPIConfig())
-      )
-      .map { config =>
+      .map(AquaConfig.fromJS)
+      .getOrElse(validNec(AquaAPIConfig()))
+      .traverse { config =>
         val importsList = imports.toList
 
         input match {
@@ -83,10 +81,10 @@ object AquaAPI extends App with Logging {
             compileCall(c, importsList, config)
 
         }
-      } match {
-      case Valid(v) => v.unsafeToFuture().toJSPromise
-      case Invalid(errs) => js.Promise.resolve(CompilationResult.errs(errs.toChain.toList))
-    }
+      }
+      .map(_.leftMap(errs => CompilationResult.errs(errs.toChain.toList)).merge)
+      .unsafeToFuture()
+      .toJSPromise
   }
 
   // Compile all non-call inputs
@@ -137,7 +135,12 @@ object AquaAPI extends App with Logging {
 
   }
 
-  private def compileCall(call: types.Call, imports: List[String], config: AquaAPIConfig) = {
+  // Compile a function call
+  private def compileCall(
+    call: types.Call,
+    imports: List[String],
+    config: AquaAPIConfig
+  ) = {
     val path = call.input match {
       case i: types.Input => i.input
       case p: types.Path => p.path
@@ -169,44 +172,41 @@ object AquaAPI extends App with Logging {
   private def errorsToResult(
     errors: NonEmptyChain[String],
     warnings: Chain[String]
-  ): CompilationResult =
-    CompilationResult.errs(
-      errors.toChain.toList,
-      warnings.toList
-    )
+  ): CompilationResult = CompilationResult.errs(
+    errors.toChain.toList,
+    warnings.toList
+  )
 
   private def compiledToTsSourceResult(
     compiled: Chain[AquaCompiled[FileModuleId]],
     warnings: Chain[String]
-  ): CompilationResult =
-    CompilationResult.result(
-      sources = compiled.toList
-        .flatMap(c =>
-          c.compiled
-            .find(_.suffix == TypeScriptBackend.ext)
-            .map(_.content)
-            .map(GeneratedSource.tsSource(c.sourceId.toString, _))
-        ),
-      warnings = warnings.toList
-    )
+  ): CompilationResult = CompilationResult.result(
+    sources = compiled.toList
+      .flatMap(c =>
+        c.compiled
+          .find(_.suffix == TypeScriptBackend.ext)
+          .map(_.content)
+          .map(GeneratedSource.tsSource(c.sourceId.toString, _))
+      ),
+    warnings = warnings.toList
+  )
 
   private def compiledToJsSourceResult(
     compiled: Chain[AquaCompiled[FileModuleId]],
     warnings: Chain[String]
-  ): CompilationResult =
-    CompilationResult.result(
-      sources = compiled.toList.flatMap { c =>
-        for {
-          dtsContent <- c.compiled
-            .find(_.suffix == JavaScriptBackend.dtsExt)
-            .map(_.content)
-          jsContent <- c.compiled
-            .find(_.suffix == JavaScriptBackend.ext)
-            .map(_.content)
-        } yield GeneratedSource.jsSource(c.sourceId.toString, jsContent, dtsContent)
-      },
-      warnings = warnings.toList
-    )
+  ): CompilationResult = CompilationResult.result(
+    sources = compiled.toList.flatMap { c =>
+      for {
+        dtsContent <- c.compiled
+          .find(_.suffix == JavaScriptBackend.dtsExt)
+          .map(_.content)
+        jsContent <- c.compiled
+          .find(_.suffix == JavaScriptBackend.ext)
+          .map(_.content)
+      } yield GeneratedSource.jsSource(c.sourceId.toString, jsContent, dtsContent)
+    },
+    warnings = warnings.toList
+  )
 
   private def generatedToAirResult(
     compiled: Chain[AquaCompiled[FileModuleId]],
