@@ -1,5 +1,6 @@
 package aqua.model.inline.raw
 
+import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.ValueModel.Ability
 import aqua.model.inline.Inline
@@ -8,6 +9,7 @@ import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.*
 import aqua.types.*
+
 import cats.Eval
 import cats.data.{Chain, IndexedStateT, State}
 import cats.instances.list.*
@@ -69,8 +71,9 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           at
         }
         .getOrElse {
-          logger.error(s"Inlining, cannot find arrow $arrowName in $varModel")
-          ArrowType(NilType, NilType)
+          internalError(
+            s"Inlining, cannot find arrow ($arrowName) in ($varModel)"
+          )
         }
       for {
         callArrow <- CallArrowRawInliner(
@@ -101,11 +104,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             flatLiteralWithProperties(lm, Inline.empty, Chain.empty)
           case _ =>
             Exports[S].getKeys.flatMap { keys =>
-              logger.error(
-                s"Inlining, cannot find field ${AbilityType
-                  .fullName(varModel.name, fieldName)} in ability $varModel. Available: $keys"
+              val field = AbilityType.fullName(varModel.name, fieldName)
+              internalError(
+                s"Inlining, cannot find field ($field) in ability $varModel. Available: $keys"
               )
-              flatLiteralWithProperties(LiteralModel.quote(""), Inline.empty, Chain.empty)
             }
 
         }
@@ -265,12 +267,14 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
                 }
               case (v, i) =>
                 // what if pass nil as stream argument?
-                logger.error("Unreachable. Unfolded stream cannot be a literal")
-                State.pure(v -> i)
+                internalError(
+                  s"Unfolded stream ($gateRaw) cannot be a literal"
+                )
             }
           case l =>
-            logger.error("Unreachable. Unfolded stream cannot be a literal")
-            State.pure(l)
+            internalError(
+              s"Unfolded stream ($vr) cannot be a literal"
+            )
         }
 
       case (_, _) =>
