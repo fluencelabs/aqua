@@ -18,12 +18,12 @@ object FileSpan {
   case class Focus(name: String, locationMap: Eval[LocationMap], ctx: Int, spanFocus: Span.Focus) {
 
     def toConsoleStr(
-      errorType: String,
+      typ: String,
       msgs: List[String],
       onLeft: String,
       onRight: String = Console.RESET
     ): String =
-      onLeft + "---- " + errorType + ": " + s"$name:${spanFocus.line._1 + 1}:${spanFocus.column + 1}" + onRight +
+      onLeft + "---- " + typ + ": " + s"$name:${spanFocus.line._1 + 1}:${spanFocus.column + 1}" + onRight +
         spanFocus.toConsoleStr(
           msgs,
           onLeft,

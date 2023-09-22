@@ -6,21 +6,21 @@ import aqua.files.FileModuleId
 import aqua.io.AquaFileError
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
+import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
 
 import cats.parse.LocationMap
 import cats.parse.Parser.Expectation
 import cats.parse.Parser.Expectation.*
 import cats.{Eval, Show}
 
-object ErrorRendering {
+object Rendering {
 
-  def showForConsole(errorType: String, span: FileSpan, messages: List[String]): String =
+  def showForConsole(typ: String, span: FileSpan, messages: List[String]): String =
     span
       .focus(3)
       .map(
         _.toConsoleStr(
-          errorType,
+          typ,
           messages,
           Console.RED
         )
@@ -30,6 +30,16 @@ object ErrorRendering {
           ", "
         )
       ) + Console.RESET + "\n"
+
+  given Show[AquaWarning[FileSpan.F]] = Show.show { case AquaWarning.CompileWarning(warning) =>
+    warning match {
+      case SemanticWarning(token, hints) =>
+        token.unit._1
+          .focus(0)
+          .map(_.toConsoleStr("Warning", hints, Console.YELLOW))
+          .getOrElse("(Dup warning, but offset is beyond the script)")
+    }
+  }
 
   given Show[AquaError[FileModuleId, AquaFileError, FileSpan.F]] = Show.show {
     case AquaParserError(err) =>

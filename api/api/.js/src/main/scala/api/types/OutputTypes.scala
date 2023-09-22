@@ -2,13 +2,14 @@ package api.types
 
 import aqua.js.{FunctionDefJs, ServiceDefJs}
 import aqua.model.transform.TransformConfig
-import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
+import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import scala.scalajs.js.|
+import aqua.parser.lexer.Token.func
 
 @JSExportTopLevel("AquaFunction")
 case class AquaFunction(
@@ -32,7 +33,9 @@ case class GeneratedSource(
 
 object GeneratedSource {
   def tsSource(name: String, tsSource: String) = new GeneratedSource(name, tsSource, null, null)
-  def jsSource(name: String, jsSource: String, tsTypes: String) = new GeneratedSource(name, null, jsSource, tsTypes)
+
+  def jsSource(name: String, jsSource: String, tsTypes: String) =
+    new GeneratedSource(name, null, jsSource, tsTypes)
 }
 
 @JSExportTopLevel("CompilationResult")
@@ -46,21 +49,39 @@ class CompilationResult(
   @JSExport
   val generatedSources: js.Array[GeneratedSource],
   @JSExport
-  val errors: js.Array[String]
+  val errors: js.Array[String],
+  @JSExport
+  val warnings: js.Array[String]
 )
 
 object CompilationResult {
 
   def result(
-    services: js.Dictionary[ServiceDefJs] = js.Dictionary(),
-    functions: js.Dictionary[AquaFunction] = js.Dictionary(),
+    services: Map[String, ServiceDefJs] = Map.empty,
+    functions: Map[String, AquaFunction] = Map.empty,
     call: Option[AquaFunction] = None,
-    sources: js.Array[GeneratedSource] = js.Array()
+    sources: List[GeneratedSource] = List.empty,
+    warnings: List[String] = List.empty
   ): CompilationResult =
-    new CompilationResult(services, functions, call.orNull, sources, js.Array())
+    new CompilationResult(
+      services.toJSDictionary,
+      functions.toJSDictionary,
+      call.orNull,
+      sources.toJSArray,
+      js.Array(),
+      warnings.toJSArray
+    )
 
   def errs(
-    errors: List[String]
+    errors: List[String] = List.empty,
+    warnings: List[String] = List.empty
   ): CompilationResult =
-    CompilationResult(js.Dictionary(), js.Dictionary(), null, null, errors.toJSArray)
+    new CompilationResult(
+      js.Dictionary.empty,
+      js.Dictionary.empty,
+      null,
+      null,
+      errors.toJSArray,
+      warnings.toJSArray
+    )
 }

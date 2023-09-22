@@ -1,7 +1,8 @@
 package aqua.api
 
-import aqua.ErrorRendering.given
+import aqua.Rendering.given
 import aqua.raw.value.ValueRaw
+import aqua.raw.ConstantRaw
 import aqua.api.AquaAPIConfig
 import aqua.backend.{AirFunction, Backend, Generated}
 import aqua.compiler.*
@@ -23,7 +24,8 @@ import aqua.model.AquaContext
 import aqua.res.AquaRes
 
 import cats.Applicative
-import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
+import cats.~>
+import cats.data.{Chain, EitherT, NonEmptyChain, Validated, ValidatedNec, Writer, ValidatedNel, NonEmptyList}
 import cats.data.Validated.{invalid, invalidNec, validNec, Invalid, Valid}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
@@ -35,9 +37,28 @@ import cats.syntax.show.*
 import cats.syntax.traverse.*
 import cats.syntax.either.*
 import fs2.io.file.{Files, Path}
-import scribe.Logging
+import scribe.{Logging, Level}
 
 object APICompilation {
+
+  extension [A, C <: NonEmptyChain[String] | NonEmptyList[String]](v: Validated[C, A]) {
+    def toResult: APIResult[A] = 
+      v.toEither.leftMap{
+        case v: NonEmptyChain[String] => v
+        case v: NonEmptyList[String] => 
+          NonEmptyChain.fromNonEmptyList(v)
+      }.toEitherT
+  }
+
+  extension [A](v: CompileResult[FileModuleId, AquaFileError, FileSpan.F][A]) {
+    def toResult: APIResult[A] = 
+      v.leftMap(_.map(_.show)).mapK(
+        new (CompileWarnings[FileSpan.F] ~> APIWarnings) {
+          override def apply[A](w: CompileWarnings[FileSpan.F][A]): APIWarnings[A] =
+            w.mapWritten(_.map(_.show))
+        }
+      )
+  }
 
   def compileCall(
     functionStr: String,
@@ -45,13 +66,14 @@ object APICompilation {
     imports: List[String],
     aquaConfig: AquaAPIConfig,
     fillWithTypes: List[ValueRaw] => ValidatedNec[String, List[ValueRaw]]
-  ): IO[ValidatedNec[String, (FunctionDef, String)]] = {
+  ): IO[APIResult[(FunctionDef, String)]] = {
     given AquaIO[IO] = new AquaFilesIO[IO]
 
     (
       LogLevels.levelFromString(aquaConfig.logLevel),
       Constants.parse(aquaConfig.constants)
-    ).mapN { (level, constants) =>
+    ).tupled.toResult.flatTraverse { 
+      case (level, constants) =>
 
       val transformConfig = aquaConfig.getTransformConfig.copy(constants = constants)
 
@@ -62,30 +84,24 @@ object APICompilation {
         imports.map(Path.apply),
         transformConfig
       ).compile().map { contextV =>
-        contextV.andThen { context =>
-          CliFunc
+        for {
+          context <- contextV.toResult
+          cliFunc <- CliFunc
             .fromString(functionStr)
-            .leftMap(errs => NonEmptyChain.fromNonEmptyList(errs))
-            .andThen { cliFunc =>
-              FuncCompiler.findFunction(context, cliFunc).andThen { arrow =>
-                fillWithTypes(cliFunc.args).andThen { argsWithTypes =>
-                  val func = cliFunc.copy(args = argsWithTypes)
-                  val preparer = new RunPreparer(
+            .toResult
+          arrow <- FuncCompiler
+            .findFunction(context, cliFunc)
+            .toResult
+          argsWithTypes <- fillWithTypes(cliFunc.args).toResult
+          func = cliFunc.copy(args = argsWithTypes)
+          preparer = new RunPreparer(
                     func,
                     arrow,
                     transformConfig
                   )
-                  preparer.prepare().map { ci =>
-                    (ci.definitions, ci.air)
-                  }
-                }
-              }
-            }
-        }.leftMap(_.map(_.show).distinct)
+          ci <- preparer.prepare().toResult
+        } yield ci.definitions -> ci.air
       }
-    } match {
-      case Valid(pr) => pr
-      case Invalid(errs) => IO.pure(Invalid(NonEmptyChain.fromNonEmptyList(errs)))
     }
   }
 
@@ -94,7 +110,7 @@ object APICompilation {
     imports: List[String],
     aquaConfig: AquaAPIConfig,
     backend: Backend
-  ): IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]] = {
+  ): IO[APIResult[Chain[AquaCompiled[FileModuleId]]]] = {
     given AquaIO[IO] = new AquaFilesIO[IO]
 
     val path = Path(pathStr)
@@ -112,7 +128,7 @@ object APICompilation {
     imports: List[String],
     aquaConfig: AquaAPIConfig,
     backend: Backend
-  ): IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]] = {
+  ): IO[APIResult[Chain[AquaCompiled[FileModuleId]]]] = {
     given AquaIO[IO] = new AquaFilesIO[IO]
 
     val path = Path("")
@@ -135,14 +151,13 @@ object APICompilation {
     aquaConfig: AquaAPIConfig,
     sources: AquaSources[IO, AquaFileError, FileModuleId],
     backend: Backend
-  ): IO[ValidatedNec[String, Chain[AquaCompiled[FileModuleId]]]] = {
-
+  ): IO[APIResult[Chain[AquaCompiled[FileModuleId]]]] = 
     (
       LogLevels.levelFromString(aquaConfig.logLevel),
       Constants.parse(aquaConfig.constants)
-    ).traverseN { (level, constants) =>
-
-      LogFormatter.initLogger(Some(level))
+    ).tupled.toResult.flatTraverse {
+      case (level, constants) => 
+        LogFormatter.initLogger(Some(level))
 
       val transformConfig = aquaConfig.getTransformConfig
       val config = AquaCompilerConf(constants ++ transformConfig.constantsList)
@@ -163,8 +178,6 @@ object APICompilation {
             override def generate(aqua: AquaRes): Seq[Generated] = backend.generate(aqua)
           },
           config
-        )
-        .map(_.leftMap(_.map(_.show).distinct).value.value.toValidated)
-    }.map(_.leftMap(NonEmptyChain.fromNonEmptyList).andThen(identity))
-  }
+        ).map(_.toResult)
+    }
 }
