@@ -670,8 +670,6 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
                     |  <- a
                     |""".stripMargin
 
-    println(script)
-
     insideResult(script) { case (warnings, Right(_)) =>
       warnings.exists(_.hints.exists(_.contains("used"))) should be(true)
     }
