@@ -1,7 +1,7 @@
 package aqua.parser.head
 
 import aqua.AquaSpec
-import aqua.parser.expr.func.AbilityIdExpr
+import aqua.parser.expr.func.ServiceIdExpr
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.LiftParser.Implicits.*
 import aqua.types.LiteralType
@@ -23,8 +23,7 @@ class ImportFromSpec extends AnyFlatSpec with Matchers with AquaSpec {
       )
     )
 
-    HeadExpr
-      .ast
+    HeadExpr.ast
       .parseAll(s"""import MyModule, func as fn from "file.aqua"
                    |""".stripMargin)
       .value
@@ -32,7 +31,8 @@ class ImportFromSpec extends AnyFlatSpec with Matchers with AquaSpec {
       .value
       .headOption
       .get
-      .head.mapK(spanToId) should be(
+      .head
+      .mapK(spanToId) should be(
       ImportFromExpr(
         NonEmptyList.fromListUnsafe(
           Right(toAb("MyModule") -> None) :: Left(toName("func") -> Some(toName("fn"))) :: Nil

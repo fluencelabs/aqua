@@ -2334,4 +2334,212 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
     model.equalsOrShowDiff(expected) shouldEqual true
   }
+
+  it should "handle captured arrows" in {
+    val sArg = VarRaw("s", ScalarType.string)
+    val ret = VarRaw("ret", ScalarType.string)
+    val captureType = ArrowType(
+      ProductType.labelled(sArg.name -> sArg.`type` :: Nil),
+      ProductType(ScalarType.string :: Nil)
+    )
+    val captureTypeUnlabelled = captureType.copy(
+      domain = ProductType(sArg.`type` :: Nil)
+    )
+    val captureVar = VarRaw("capture", captureTypeUnlabelled)
+    val returnCaptureName = "returnCapture"
+
+    /**
+     * func returnCapture() -> string -> string:
+     *   <captureGen>
+     *   capture = (s: string) -> string:
+     *     ret <- <captureName>(s)
+     *     <- ret
+     *   <- capture
+     *
+     * func main(s: string) -> string:
+     *   capture <- returnCapture()
+     *   ret <- capture(s)
+     *   <- ret
+     *
+     * -- inlining:
+     * main("test")
+     */
+    def test(
+      capturedGen: List[RawTag.Tree],
+      capturedName: String
+    ) = {
+      val mainBody = SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            "returnCapture",
+            Call(Nil, Call.Export(captureVar.name, captureType) :: Nil)
+          )
+          .leaf,
+        CallArrowRawTag
+          .func(
+            captureVar.name,
+            Call(sArg :: Nil, Call.Export(ret.name, ret.`type`) :: Nil)
+          )
+          .leaf,
+        ReturnTag(NonEmptyList.one(ret)).leaf
+      )
+
+      val captureBody = SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            capturedName,
+            Call(sArg :: Nil, Call.Export(ret.name, ret.`type`) :: Nil)
+          )
+          .leaf,
+        ReturnTag(NonEmptyList.one(ret)).leaf
+      )
+
+      val returnCaptureBody = SeqTag.wrap(
+        capturedGen ++ (ClosureTag(
+          FuncRaw(
+            captureVar.name,
+            ArrowRaw(
+              captureType,
+              ret :: Nil,
+              captureBody
+            )
+          ),
+          false
+        ).leaf :: ReturnTag(
+          NonEmptyList.one(captureVar)
+        ).leaf :: Nil)
+      )
+
+      val returnCapture = FuncArrow(
+        returnCaptureName,
+        returnCaptureBody,
+        ArrowType(
+          ProductType(Nil),
+          ProductType(captureTypeUnlabelled :: Nil)
+        ),
+        captureVar :: Nil,
+        Map.empty,
+        Map.empty,
+        None
+      )
+
+      val main = FuncArrow(
+        "main",
+        mainBody,
+        captureType,
+        ret :: Nil,
+        Map(returnCaptureName -> returnCapture),
+        Map.empty,
+        None
+      )
+
+      val model = ArrowInliner
+        .callArrow[InliningState](
+          FuncArrow(
+            "wrapper",
+            CallArrowRawTag
+              .func(
+                "main",
+                Call(LiteralRaw.quote("test") :: Nil, Nil)
+              )
+              .leaf,
+            ArrowType(
+              ProductType(Nil),
+              ProductType(Nil)
+            ),
+            Nil,
+            Map("main" -> main),
+            Map.empty,
+            None
+          ),
+          CallModel(Nil, Nil)
+        )
+        .runA(InliningState())
+        .value
+
+      // TODO: Don't know for what to test here
+      // inliner will just log an error in case of failure
+      model.head should not equal EmptyModel
+    }
+
+    /**
+     * closure = (s: string) -> string:
+     *    ret <- s
+     *    <-ret
+     * closure1 = closure
+     * closure2 = closure1
+     * closure3 = closure2
+     *
+     * -- captureName = closure3
+     */
+    val closureRename = List(
+      ClosureTag(
+        FuncRaw(
+          "closure",
+          ArrowRaw(
+            captureType,
+            ret :: Nil,
+            ReturnTag(NonEmptyList.one(ret)).leaf
+          )
+        ),
+        false
+      ).leaf,
+      AssignmentTag(
+        VarRaw("closure", captureType),
+        "closure1"
+      ).leaf,
+      AssignmentTag(
+        VarRaw("closure1", captureType),
+        "closure2"
+      ).leaf,
+      AssignmentTag(
+        VarRaw("closure2", captureType),
+        "closure3"
+      ).leaf
+    )
+
+    test(closureRename, "closure3")
+
+    /**
+     * closure = (s: string) -> string:
+     *    ret <- s
+     *    <-ret
+     * Ab = TestAbility(
+     *   arrow = closure
+     * )
+     *
+     * -- captureName = Ab.arrow
+     */
+    val makeAbility = List(
+      ClosureTag(
+        FuncRaw(
+          "closure",
+          ArrowRaw(
+            captureType,
+            ret :: Nil,
+            ReturnTag(NonEmptyList.one(ret)).leaf
+          )
+        ),
+        false
+      ).leaf,
+      AssignmentTag(
+        AbilityRaw(
+          fieldsAndArrows = NonEmptyMap.one(
+            "arrow",
+            VarRaw("closure", captureType)
+          ),
+          AbilityType(
+            "TestAbility",
+            NonEmptyMap.one(
+              "arrow",
+              captureType
+            )
+          )
+        ),
+        "Ab"
+      ).leaf
+    )
+
+    test(makeAbility, "Ab.arrow")
+  }
 }

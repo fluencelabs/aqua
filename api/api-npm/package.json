@@ -8,7 +8,6 @@
     "index.js",
     "index.d.ts",
     "aqua-api.js",
-    "aqua-api.d.ts",
     "meta-utils.js"
   ],
   "prettier": {},

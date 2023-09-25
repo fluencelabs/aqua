@@ -1,4 +1,0 @@
-import "imports/import.aqua"
-
-func indexCall():
-    Println.print("it is true")

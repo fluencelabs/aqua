@@ -1,5 +1,6 @@
 package aqua.model.transform.topology
 
+import aqua.errors.Errors.internalError
 import aqua.model.transform.topology.TopologyPath
 import aqua.model.transform.cursor.ChainZipper
 import aqua.model.transform.topology.strategy.*
@@ -81,12 +82,11 @@ case class Topology private (
           capturedTopologies.flatMap(
             _.get(name)
               .traverse(_.pathOn)
-              .flatTap(p =>
-                Eval.later(
-                  if (p.isEmpty) logger.error(s"Captured topology `$name` not found")
+              .map(_.getOrElse {
+                internalError(
+                  s"Captured topology ($name) not found"
                 )
-              )
-              .map(_.orEmpty)
+              })
           )
         case _ => parent.traverse(_.pathOn).map(_.orEmpty)
       }
@@ -337,8 +337,9 @@ object Topology extends Logging {
 
     resolvedCofree.map(NonEmptyChain.fromChain(_).map(_.uncons)).map {
       case None =>
-        logger.error("Topology emitted nothing")
-        SeqRes.leaf
+        internalError(
+          s"Topology emitted nothing on (${op.show})"
+        )
       case Some((el, `nil`)) => el
       case Some((el, tail)) =>
         logger.warn("Topology emitted many nodes, that's unusual")

@@ -10,6 +10,7 @@ import aqua.raw.{RawContext, RawPart}
 import aqua.res.AquaRes
 import aqua.semantics.{CompilerState, Semantics}
 import aqua.semantics.header.{HeaderHandler, HeaderSem, Picker}
+
 import cats.data.*
 import cats.data.Validated.{validNec, Invalid, Valid}
 import cats.parse.Parser0

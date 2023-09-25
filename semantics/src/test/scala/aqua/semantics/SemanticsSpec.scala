@@ -87,11 +87,10 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
   def testServiceCallStr(str: String) =
     CallArrowRawTag
-      .service(
-        serviceId = LiteralRaw.quote("test"),
-        fnName = "testCallStr",
+      .ability(
+        abilityName = "Test",
+        funcName = "testCallStr",
         call = Call(LiteralRaw.quote(str) :: Nil, Nil),
-        name = "Test",
         arrowType = ArrowType(
           ProductType.labelled(("s" -> ScalarType.string) :: Nil),
           ProductType(ScalarType.string :: Nil)
@@ -137,11 +136,10 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
     insideBody(script) { body =>
       val arrowType = ArrowType(NilType, ConsType.cons(ScalarType.string, NilType))
       val serviceCall = CallArrowRawTag
-        .service(
-          serviceId = LiteralRaw.quote("srv1"),
-          fnName = "fn1",
+        .ability(
+          abilityName = "A",
+          funcName = "fn1",
           call = emptyCall,
-          name = "A",
           arrowType = arrowType
         )
         .leaf

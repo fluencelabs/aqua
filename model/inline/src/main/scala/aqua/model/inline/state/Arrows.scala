@@ -2,6 +2,7 @@ package aqua.model.inline.state
 
 import aqua.model.{ArgsCall, FuncArrow}
 import aqua.raw.arrow.FuncRaw
+import aqua.model.ValueModel
 
 import cats.data.State
 import cats.instances.list.*
@@ -32,13 +33,10 @@ trait Arrows[S] extends Scoped[S] {
     for {
       exps <- Exports[S].exports
       arrs <- arrows
-      //   _ = println(s"Resolved arrow: ${arrow.name}")
-      //   _ = println(s"Captured var names: ${arrow.capturedVars}")
-      captuedVars = exps.filterKeys(arrow.capturedVars).toMap
-      capturedArrows = arrs.filterKeys(arrow.capturedVars).toMap
-      //   _ = println(s"Captured vars: ${captuedVars}")
-      //   _ = println(s"Captured arrows: ${capturedArrows}")
-      funcArrow = FuncArrow.fromRaw(arrow, capturedArrows, captuedVars, topology)
+      capturedVars = exps.filterKeys(arrow.capturedVars).toMap
+      capturedArrows = arrs.filterKeys(arrow.capturedVars).toMap ++
+        Arrows.arrowsByValues(arrs, capturedVars)
+      funcArrow = FuncArrow.fromRaw(arrow, capturedArrows, capturedVars, topology)
       _ <- save(arrow.name, funcArrow)
     } yield ()
 
@@ -101,6 +99,25 @@ trait Arrows[S] extends Scoped[S] {
 }
 
 object Arrows {
+
+  /**
+   * Retrieve all arrows that correspond to values
+   */
+  def arrowsByValues(
+    arrows: Map[String, FuncArrow],
+    values: Map[String, ValueModel]
+  ): Map[String, FuncArrow] = {
+    val arrowKeys = arrows.keySet ++ arrows.values.map(_.funcName)
+    val varsKeys = values.keySet ++ values.values.collect { case ValueModel.Arrow(name, _) =>
+      name
+    }
+    val keys = arrowKeys.intersect(varsKeys)
+
+    arrows.filter { case (arrowName, arrow) =>
+      keys.contains(arrowName) || keys.contains(arrow.funcName)
+    }
+  }
+
   def apply[S](implicit arrows: Arrows[S]): Arrows[S] = arrows
 
   // Default implementation with the most straightforward state – just a Map

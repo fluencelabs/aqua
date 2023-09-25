@@ -74,10 +74,6 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
 
-      - name: Set cli version
-        run: pnpm version ${{ steps.version.outputs.version }}
-        working-directory: cli/cli-npm
-
       - name: Set api version
         run: pnpm version ${{ steps.version.outputs.version }}
         working-directory: api/api-npm
@@ -86,9 +82,9 @@ jobs:
         run: pnpm version ${{ steps.version.outputs.version }}
         working-directory: language-server/language-server-npm
 
-      - name: Set cli version in tests
+      - name: Set aqua version in tests
         run: |
-          pnpm add @fluencelabs/aqua@${{ steps.version.outputs.version }} --save-workspace-protocol=false
+          pnpm add @fluencelabs/aqua-api@${{ steps.version.outputs.version }} --save-workspace-protocol=false
         working-directory: integration-tests
 
       - name: Regenerate lock

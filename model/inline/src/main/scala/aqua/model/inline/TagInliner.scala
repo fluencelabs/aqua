@@ -1,5 +1,6 @@
 package aqua.model.inline
 
+import aqua.errors.Errors.internalError
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.collectionToModel
@@ -277,12 +278,10 @@ object TagInliner extends Logging {
           n <- Mangler[S].findAndForbidName(item)
           elementType = iterable.`type` match {
             case b: BoxType => b.element
-            // TODO: it is unexpected, should we handle this?
             case _ =>
-              logger.error(
-                s"Unexpected behaviour: non-box type variable '$iterable' in 'for' expression."
+              internalError(
+                s"non-box type variable '$iterable' in 'for' expression."
               )
-              iterable.`type`
           }
           _ <- Exports[S].resolved(item, VarModel(n, elementType))
           m = mode.map {
@@ -308,11 +307,10 @@ object TagInliner extends Logging {
               prefix = p
             )
           case (_, (vm, prefix)) =>
-            logger.error(
-              s"Unexpected: stream (${exportTo}) resolved " +
+            internalError(
+              s"stream (${exportTo}) resolved " +
                 s"to ($vm) with prefix ($prefix)"
             )
-            TagInlined.Empty()
         }
 
       case CanonicalizeTag(operand, exportTo) =>
@@ -412,6 +410,49 @@ object TagInliner extends Logging {
               _ <- Exports[S].resolved(name, vm)
             } yield TagInlined.Empty(prefix = prefix)
           case _ => none
+
+      case ServiceIdTag(id, serviceType, name) =>
+        for {
+          idm <- valueToModel(id)
+          (idModel, idPrefix) = idm
+
+          // Make `FuncArrow` wrappers for service methods
+          methods <- serviceType.fields.toSortedMap.toList.traverse {
+            case (methodName, methodType) =>
+              for {
+                arrowName <- Mangler[S].findAndForbidName(s"$name-$methodName")
+                fn = FuncArrow.fromServiceMethod(
+                  arrowName,
+                  serviceType.name,
+                  methodName,
+                  methodType,
+                  idModel
+                )
+              } yield methodName -> fn
+          }
+
+          // Resolve wrappers in arrows
+          _ <- Arrows[S].resolved(
+            methods.map { case (_, fn) =>
+              fn.funcName -> fn
+            }.toMap
+          )
+
+          // Resolve wrappers in exports
+          _ <- methods.traverse { case (methodName, fn) =>
+            Exports[S].resolveAbilityField(
+              name,
+              methodName,
+              VarModel(fn.funcName, fn.arrowType)
+            )
+          }
+
+          // Resolve service in exports
+          _ <- Exports[S].resolved(
+            name,
+            VarModel(name, serviceType)
+          )
+        } yield TagInlined.Empty(prefix = idPrefix)
 
       case _: SeqGroupTag => pure(SeqModel)
       case ParTag.Detach => pure(DetachModel)

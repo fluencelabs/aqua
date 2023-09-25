@@ -41,7 +41,7 @@ jobs:
           apps: sbt
 
       - name: scala-js build
-        run: sbt ";cliJS/fullOptJS;language-server-apiJS/fullOptJS;aqua-apiJS/fullOptJS"
+        run: sbt ";language-server-apiJS/fullBundleJS;aqua-apiJS/fullBundleJS"
 
       - name: Import secrets
         uses: hashicorp/vault-action@v2.7.3
@@ -73,24 +73,3 @@ jobs:
 
       - name: Publish to NPM registry
         run: pnpm --filter='!integration-tests' publish --access public --tag unstable
-
-  aqua-native:
-    name: "Publish aqua-native"
-    strategy:
-      matrix:
-        runner:
-          - runs-on: ubuntu-latest
-            arch: amd64
-            os: linux
-            static: true
-          - runs-on: macos-latest
-            arch: amd64
-            os: macos
-            static: false
-
-    uses: ./.github/workflows/binary.yml
-    with:
-      runs-on: ${{ matrix.runner.runs-on }}
-      arch: ${{ matrix.runner.arch }}
-      os: ${{ matrix.runner.os }}
-      static: ${{ matrix.runner.static }}

@@ -1,5 +1,6 @@
 package aqua.model
 
+import aqua.errors.Errors.internalError
 import aqua.raw.value.*
 import aqua.types.*
 
@@ -47,11 +48,21 @@ object ValueModel {
     case _ => ???
   }
 
+  object Arrow {
+
+    def unapply(vm: ValueModel): Option[(String, ArrowType)] =
+      vm match {
+        case VarModel(name, t: ArrowType, _) =>
+          (name, t).some
+        case _ => none
+      }
+  }
+
   object Ability {
 
-    def unapply(vm: VarModel): Option[(String, AbilityType, Chain[PropertyModel])] =
+    def unapply(vm: VarModel): Option[(String, NamedType, Chain[PropertyModel])] =
       vm match {
-        case VarModel(name, t @ AbilityType(_, _), properties) =>
+        case VarModel(name, t: (AbilityType | ServiceType), properties) =>
           (name, t, properties).some
         case _ => none
       }
@@ -199,11 +210,12 @@ case class VarModel(name: String, baseType: Type, properties: Chain[PropertyMode
                   case nvm: VarModel =>
                     deriveFrom(vv.deriveFrom(nvm))
                   case valueModel =>
-                    if (properties.nonEmpty)
-                      logger.error(
-                        s"Var $name derived from literal $valueModel, but property is lost: $properties"
+                    if (properties.isEmpty) valueModel
+                    else
+                      internalError(
+                        s"Var ($name) derived from literal ($valueModel), " +
+                          s"but properties ($properties) are lost"
                       )
-                    valueModel
                 }
             }
           case _ =>
@@ -211,11 +223,13 @@ case class VarModel(name: String, baseType: Type, properties: Chain[PropertyMode
         }
 
       case Some(vv) =>
-        if (properties.nonEmpty)
-          logger.error(
-            s"Var $name derived from literal $vv, but property is lost: $properties"
+        if (properties.isEmpty) vv
+        else
+          internalError(
+            s"Var ($name) derived from literal ($vv), " +
+              s"but properties ($properties) are lost: "
           )
-        vv
+
       case None =>
         this // Should not happen
     }

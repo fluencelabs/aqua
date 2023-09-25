@@ -1,3 +1,5 @@
+import BundleJS.*
+
 val aquaVersion = "0.12.1"
 
 val scalaV = "3.3.1"
@@ -5,7 +7,8 @@ val catsV = "2.10.0"
 val catsParseV = "0.3.10"
 val monocleV = "3.1.0"
 val scalaTestV = "3.2.17"
-val fs2V = "3.9.1"
+val sourcecodeV = "0.3.0"
+val fs2V = "3.9.2"
 val catsEffectV = "3.6-1f95fd7"
 val declineV = "2.3.0"
 val circeVersion = "0.14.2"
@@ -37,56 +40,6 @@ val commons = Seq(
 )
 
 commons
-
-lazy val cli = crossProject(JSPlatform, JVMPlatform)
-  .withoutSuffixFor(JVMPlatform)
-  .crossType(CrossType.Pure)
-  .in(file("cli/cli"))
-  .enablePlugins(GraalVMNativeImagePlugin)
-  .settings(commons)
-  .settings(
-    Compile / mainClass := Some("aqua.AquaCli"),
-    graalVMNativeImageOptions ++= Seq(
-      "--no-fallback",
-      "--diagnostics-mode",
-      "--initialize-at-build-time",
-      "--initialize-at-run-time=scala.util.Random$",
-      "-H:-DeleteLocalSymbols",
-      "-H:+PreserveFramePointer",
-      "-H:+ReportExceptionStackTraces",
-      "-H:+DashboardHeap",
-      "-H:+DashboardCode",
-      "-H:+DashboardPointsTo",
-      "-H:+DashboardAll"
-    ) ++ sys.env
-      .get("COMPILE_STATIC")
-      .filter(_.trim.toLowerCase() == "true")
-      .map(_ => Seq("--static"))
-      .getOrElse(Seq.empty),
-    libraryDependencies ++= Seq(
-      "com.monovore" %%% "decline"        % declineV,
-      "com.monovore" %%% "decline-effect" % declineV
-    )
-  )
-  .dependsOn(compiler, `backend-air`, `backend-ts`, io, definitions, logging, constants, `aqua-run`)
-
-lazy val cliJS = cli.js
-  .settings(
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "../../cli-npm" / "aqua.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "../../cli-npm" / "aqua.js",
-    scalaJSLinkerConfig                ~= (_.withModuleKind(ModuleKind.ESModule)),
-    scalaJSUseMainModuleInitializer    := true
-  )
-  .dependsOn(`js-exports`, `js-imports`)
-
-lazy val cliJVM = cli.jvm
-  .settings(
-    Compile / run / mainClass  := Some("aqua.AquaCli"),
-    assembly / mainClass       := Some("aqua.AquaCli"),
-    assembly / assemblyJarName := "aqua-" + version.value + ".jar",
-    libraryDependencies ++= Seq(
-    )
-  )
 
 lazy val `aqua-run` = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -124,11 +77,10 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
 
 lazy val `language-server-apiJS` = `language-server-api`.js
   .settings(
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "../../language-server-npm" / "aqua-lsp-api.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "../../language-server-npm" / "aqua-lsp-api.js",
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
     scalaJSUseMainModuleInitializer := true
   )
+  .settings(addBundleJS("../../language-server-npm/aqua-lsp-api.js"))
   .enablePlugins(ScalaJSPlugin)
   .dependsOn(`js-exports`, `js-imports`)
 
@@ -153,12 +105,11 @@ lazy val `aqua-api` = crossProject(JSPlatform, JVMPlatform)
 
 lazy val `aqua-apiJS` = `aqua-api`.js
   .settings(
-    Compile / fastOptJS / artifactPath := baseDirectory.value / "../../api-npm" / "aqua-api.js",
-    Compile / fullOptJS / artifactPath := baseDirectory.value / "../../api-npm" / "aqua-api.js",
-    scalaJSLinkerConfig                ~= (_.withModuleKind(ModuleKind.ESModule)),
-    scalaJSUseMainModuleInitializer    := true,
-    Test / test                        := {}
+    scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.ESModule)),
+    scalaJSUseMainModuleInitializer := true,
+    Test / test                     := {}
   )
+  .settings(addBundleJS("../../api-npm/aqua-api.js"))
   .enablePlugins(ScalaJSPlugin)
   .dependsOn(`js-exports`)
 
@@ -213,7 +164,7 @@ lazy val model = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
   .crossType(CrossType.Pure)
   .settings(commons)
-  .dependsOn(types, tree, raw, helpers)
+  .dependsOn(types, tree, raw, helpers, errors)
 
 lazy val res = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -246,7 +197,7 @@ lazy val semantics = crossProject(JVMPlatform, JSPlatform)
       "dev.optics" %%% "monocle-macro" % monocleV
     )
   )
-  .dependsOn(raw, parser)
+  .dependsOn(raw, parser, errors)
 
 lazy val compiler = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)
@@ -313,6 +264,17 @@ lazy val helpers = crossProject(JVMPlatform, JSPlatform)
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-core" % catsV,
       "org.typelevel" %%% "cats-free" % catsV
+    )
+  )
+
+lazy val errors = crossProject(JVMPlatform, JSPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("utils/errors"))
+  .settings(commons)
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "sourcecode" % sourcecodeV
     )
   )
 

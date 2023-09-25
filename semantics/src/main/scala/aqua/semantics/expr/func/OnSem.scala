@@ -10,7 +10,9 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{BoxType, OptionType, ScalarType}
+
 import cats.data.Chain
+import cats.data.OptionT
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -49,24 +51,25 @@ class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
 
 object OnSem {
 
-  def beforeOn[S[_], Alg[_]: Monad](peerId: ValueToken[S], via: List[ValueToken[S]])(implicit
+  def beforeOn[S[_], Alg[_]: Monad](
+    peerId: ValueToken[S],
+    via: List[ValueToken[S]]
+  )(using
     V: ValuesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg]
   ): Alg[List[ValueRaw]] =
+    // TODO: Remove ensureIsString, use valueToStringRaw
     V.ensureIsString(peerId) *> via
       .traverse(v =>
-        V.valueToRaw(v).flatTap {
-          case Some(vm) =>
-            vm.`type` match {
-              case _: BoxType =>
-                T.ensureTypeMatches(v, OptionType(ScalarType.string), vm.`type`)
-              case _ =>
-                T.ensureTypeMatches(v, ScalarType.string, vm.`type`)
-            }
-          case None => false.pure[Alg]
+        OptionT(V.valueToRaw(v)).filterF { vm =>
+          val expectedType = vm.`type` match {
+            case _: BoxType => OptionType(ScalarType.string)
+            case _ => ScalarType.string
+          }
+
+          T.ensureTypeMatches(v, expectedType, vm.`type`)
         }
       )
-      .map(_.flatten)
-
+      .getOrElse(List.empty)
 }

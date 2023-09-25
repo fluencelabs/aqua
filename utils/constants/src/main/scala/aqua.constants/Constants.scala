@@ -1,12 +1,13 @@
 package aqua.constants
 
-import scala.util.Left
 import aqua.parser.expr.ConstantExpr
 import aqua.raw.ConstantRaw
 import aqua.raw.value.LiteralRaw
+
 import cats.data.{NonEmptyList, Validated, ValidatedNel}
 
 object Constants {
+
   def parse(strs: List[String]): ValidatedNel[String, List[ConstantRaw]] = {
     val parsed = strs.map(s => ConstantExpr.onlyLiteral.parseAll(s))
 

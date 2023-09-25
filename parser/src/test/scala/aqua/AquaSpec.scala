@@ -118,8 +118,8 @@ trait AquaSpec extends EitherValues {
   def parseUse(str: String): UseFromExpr[Id] =
     UseFromExpr.p.parseAll(str).value.mapK(spanToId)
 
-  def parseAbId(str: String): AbilityIdExpr[Id] =
-    AbilityIdExpr.p.parseAll(str).value.mapK(spanToId)
+  def parseServiceId(str: String): ServiceIdExpr[Id] =
+    ServiceIdExpr.p.parseAll(str).value.mapK(spanToId)
 
   def parseOn(str: String): OnExpr[Id] =
     OnExpr.p.parseAll(str).value.mapK(spanToId)

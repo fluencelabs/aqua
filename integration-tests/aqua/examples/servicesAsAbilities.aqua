@@ -1,0 +1,95 @@
+aqua Test
+
+export test, testCapture, TestService
+
+service TestService("default-id"):
+    getId() -> string
+    concatId(s: string) -> string
+
+ability MatchingAbility:
+    getId() -> string
+    concatId(s: string) -> string
+
+func acceptClosure(closure: string -> string, arg: string) -> string:
+    <- closure(arg)
+
+func acceptAbility{MatchingAbility}(arg: string) -> string:
+    <- MatchingAbility.concatId(arg)
+
+func test() -> []string:
+    result: *string
+
+    -- Test service
+    result <- TestService.concatId("call")
+    capture = TestService.concatId
+    result <- capture("capture call")
+    result <- acceptClosure(TestService.concatId, "accept closure call")
+    result <- acceptAbility{TestService}("accept ability call")
+    
+    -- Test renamed service
+    Renamed = TestService
+    result <- Renamed.concatId("call")
+    captureRenamed = Renamed.concatId
+    result <- captureRenamed("capture call")
+    result <- acceptClosure(Renamed.concatId, "accept closure call")
+    result <- acceptAbility{Renamed}("accept ability call")
+
+    -- Test resolved service
+    TestService "resolved-id-1"
+    result <- TestService.concatId("call")
+    captureResolved = TestService.concatId
+    result <- captureResolved("capture call")
+    result <- acceptClosure(TestService.concatId, "accept closure call")
+    result <- acceptAbility{TestService}("accept ability call")
+
+    -- Test renamed resolved service
+    Renamed1 = TestService
+    result <- Renamed1.concatId("call")
+    captureRenamed1 = Renamed1.concatId
+    result <- captureRenamed1("capture call")
+    result <- acceptClosure(Renamed1.concatId, "accept closure call")
+    result <- acceptAbility{Renamed1}("accept ability call")
+
+    -- Test renamed service again (should save id)
+    result <- Renamed.concatId("call")
+    captureRenamedAgain = Renamed.concatId
+    result <- captureRenamedAgain("capture call")
+    result <- acceptClosure(Renamed.concatId, "accept closure call")
+    result <- acceptAbility{Renamed}("accept ability call")
+
+    -- Test resolved in scope service
+    for i <- ["iter-id-1", "iter-id-2"]:
+        TestService i
+        RenamedI = TestService
+        result <- RenamedI.concatId("call")
+        captureI = RenamedI.concatId
+        result <- captureI("capture call")
+        result <- acceptClosure(RenamedI.concatId, "accept closure call")
+        result <- acceptAbility{RenamedI}("accept ability call")
+
+    -- Test resolved service again (should save id)
+    result <- TestService.concatId("call")
+    captureAgain = TestService.concatId
+    result <- captureAgain("capture call")
+    result <- acceptClosure(TestService.concatId, "accept closure call")
+    result <- acceptAbility{TestService}("accept ability call")
+
+    -- Test re resolved service in same scope
+    TestService "resolved-id-2"
+    result <- TestService.concatId("call")
+    captureReResolved = TestService.concatId
+    result <- captureReResolved("capture call")
+    result <- acceptClosure(TestService.concatId, "accept closure call")
+    result <- acceptAbility{TestService}("accept ability call")
+
+    <- result
+
+func callCapture{MatchingAbility}() -> string, string:
+    TestService "resolved-id-in-capture"
+    res1 <- TestService.concatId("in capture")
+    res2 <- MatchingAbility.concatId("in capture")
+    <- res1, res2
+
+func testCapture() -> string, string:
+    res1, res2 <- callCapture{TestService}()
+    <- res1, res2
