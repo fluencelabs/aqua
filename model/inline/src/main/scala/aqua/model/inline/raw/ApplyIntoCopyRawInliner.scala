@@ -40,7 +40,7 @@ object ApplyIntoCopyRawInliner extends Logging {
     }
 
     MakeStructRawInliner
-      .genInsertion(mapName, mapType, resultName, resultType, fields)
+      .constructThroughMap(mapName, mapType, CallModel.Export(resultName, resultType), fields)
       .map(r => SeqModel.wrap(r._1 ++ nonCopiedValues ++ r._2))
   }
 

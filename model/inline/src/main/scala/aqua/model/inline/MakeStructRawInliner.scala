@@ -14,12 +14,18 @@ import cats.syntax.functor.*
 
 object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
 
-  // return unfolding ops and generated insertions
-  def genInsertion[S: Mangler](
+  /**
+   * Creates structure using stream map.
+   * @param mapName stream map name
+   * @param mapType stream map name
+   * @param result variable with structure
+   * @param fields fields to insert
+   * @return value with assembled structure
+   */
+  def constructThroughMap[S: Mangler](
     mapName: String,
     mapType: StreamMapType,
-    resultName: String,
-    resultType: StructType,
+    result: CallModel.Export,
     fields: NonEmptyMap[String, ValueModel]
   ): State[S, (List[OpModel.Tree], List[OpModel.Tree])] = {
     fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { fieldsTraversed =>
@@ -32,7 +38,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
       }
 
       val toResult =
-        CanonicalizeModel(VarModel(mapName, mapType), CallModel.Export(resultName, resultType)).leaf
+        CanonicalizeModel(VarModel(mapName, mapType), result).leaf
 
       (ops, models :+ toResult)
     }
@@ -46,7 +52,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     val mapType = StreamMapType.top()
     val mapName = resultName + "_map"
 
-    genInsertion(mapName, mapType, resultName, resultType, fields).map(r =>
+    constructThroughMap(mapName, mapType, CallModel.Export(resultName, resultType), fields).map(r =>
       SeqModel.wrap(r._1 ++ r._2)
     )
   }
