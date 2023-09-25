@@ -423,8 +423,15 @@ class TypesInterpreter[S[_], X](using
     _ <- report
       .warning(
         token,
-        s"Arrow returns ${arrowType.codomain.length} values, " +
-          s"but only ${results.length} are used"
+        s"Arrow returns ${arrowType.codomain.length match {
+          case 0 => "no values"
+          case 1 => "a value"
+          case i => s"$i values"
+        }} values, but ${results.length match {
+          case 0 => "none are"
+          case 1 => "only one is"
+          case i => s"only $i are"
+        }} used"
       )
       .whenA(arrowType.codomain.length > results.length)
   } yield ()

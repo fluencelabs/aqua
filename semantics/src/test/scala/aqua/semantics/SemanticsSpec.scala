@@ -13,8 +13,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.Inside
 import cats.~>
-import cats.data.Chain
-import cats.data.NonEmptyChain
+import cats.data.{Chain, EitherNec, NonEmptyChain}
 import cats.syntax.show.*
 import cats.syntax.traverse.*
 import cats.syntax.foldable.*
@@ -32,13 +31,23 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
   val semantics = new RawSemantics[Span.S]()
 
+  def insideResult(script: String)(
+    test: PartialFunction[
+      (
+        Chain[SemanticWarning[Span.S]],
+        EitherNec[SemanticError[Span.S], RawContext]
+      ),
+      Any
+    ]
+  ): Unit = inside(parser(script)) { case Validated.Valid(ast) =>
+    val init = RawContext.blank
+    inside(semantics.process(ast, init).value.run)(test)
+  }
+
   def insideBody(script: String)(test: RawTag.Tree => Any): Unit =
-    inside(parser(script)) { case Validated.Valid(ast) =>
-      val init = RawContext.blank
-      inside(semantics.process(ast, init).value.value) { case Right(ctx) =>
-        inside(ctx.funcs.headOption) { case Some((_, func)) =>
-          test(func.arrow.body)
-        }
+    insideResult(script) { case (_, Right(ctx)) =>
+      inside(ctx.funcs.headOption) { case Some((_, func)) =>
+        test(func.arrow.body)
       }
     }
 
@@ -646,6 +655,25 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideSemErrors(scriptArrayElement) { errors =>
       atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+  }
+
+  it should "produce warning on unused call results" in {
+    val script = """|func test() -> string, string:
+                    |  stream: *string
+                    |  stream <<- "a"
+                    |  stream <<- "b"
+                    |  <- stream[0], stream[1]
+                    |
+                    |func main() -> string:
+                    |  a <- test()
+                    |  <- a
+                    |""".stripMargin
+
+    println(script)
+
+    insideResult(script) { case (warnings, Right(_)) =>
+      warnings.exists(_.hints.exists(_.contains("used"))) should be(true)
     }
   }
 }
