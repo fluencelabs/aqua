@@ -12,11 +12,12 @@ export class GeneratedSource {
   tsTypes?: string;
 }
 
-class CompilationResult {
+export class CompilationResult {
   services: Record<string, ServiceDef>;
   functions: Record<string, AquaFunction>;
   functionCall?: AquaFunction;
   errors: string[];
+  warnings: string[];
   generatedSources: GeneratedSource[];
 }
 
