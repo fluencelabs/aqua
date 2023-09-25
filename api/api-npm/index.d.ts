@@ -1,18 +1,18 @@
 import { ServiceDef, FunctionCallDef } from "@fluencelabs/interfaces";
 
-export class AquaFunction {
+export declare class AquaFunction {
   funcDef: FunctionCallDef;
   script: string;
 }
 
-export class GeneratedSource {
+export declare class GeneratedSource {
   name: string;
   tsSource?: string;
   jsSource?: string;
   tsTypes?: string;
 }
 
-export class CompilationResult {
+export declare class CompilationResult {
   services: Record<string, ServiceDef>;
   functions: Record<string, AquaFunction>;
   functionCall?: AquaFunction;
