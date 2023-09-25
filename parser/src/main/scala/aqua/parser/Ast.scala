@@ -7,6 +7,7 @@ import aqua.parser.lift.LiftParser.*
 import aqua.helpers.Tree
 
 import cats.data.{Chain, Validated, ValidatedNec}
+import cats.syntax.flatMap.*
 import cats.free.Cofree
 import cats.{Comonad, Eval}
 import cats.~>
@@ -19,6 +20,14 @@ case class Ast[S[_]](head: Ast.Head[S], tree: Ast.Tree[S]) {
 
   def cataHead[T](folder: (HeaderExpr[S], Chain[T]) => Eval[T]): Eval[T] =
     Cofree.cata[Chain, HeaderExpr[S], T](head)(folder)
+
+  def collectHead[T](pf: PartialFunction[HeaderExpr[S], T]): Eval[Chain[T]] =
+    cataHead((e, acc: Chain[Chain[T]]) =>
+      Eval.later {
+        val flatAcc = acc.flatten
+        if (pf.isDefinedAt(e)) flatAcc :+ pf(e) else flatAcc
+      }
+    )
 }
 
 object Ast {

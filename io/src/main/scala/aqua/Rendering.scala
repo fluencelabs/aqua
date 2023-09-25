@@ -1,24 +1,26 @@
 package aqua
 
+import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
 import aqua.compiler.*
 import aqua.files.FileModuleId
 import aqua.io.AquaFileError
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
+import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
+
 import cats.parse.LocationMap
 import cats.parse.Parser.Expectation
 import cats.parse.Parser.Expectation.*
 import cats.{Eval, Show}
 
-object ErrorRendering {
+object Rendering {
 
-  def showForConsole(errorType: String, span: FileSpan, messages: List[String]): String =
+  def showForConsole(messageType: String, span: FileSpan, messages: List[String]): String =
     span
       .focus(3)
       .map(
         _.toConsoleStr(
-          errorType,
+          messageType,
           messages,
           Console.RED
         )
@@ -29,8 +31,18 @@ object ErrorRendering {
         )
       ) + Console.RESET + "\n"
 
-  implicit val showError: Show[AquaError[FileModuleId, AquaFileError, FileSpan.F]] = Show.show {
-    case ParserErr(err) =>
+  given Show[AquaWarning[FileSpan.F]] = Show.show { case AquaWarning.CompileWarning(warning) =>
+    warning match {
+      case SemanticWarning(token, hints) =>
+        token.unit._1
+          .focus(0)
+          .map(_.toConsoleStr("Warning", hints, Console.YELLOW))
+          .getOrElse("(Dup warning, but offset is beyond the script)")
+    }
+  }
+
+  given Show[AquaError[FileModuleId, AquaFileError, FileSpan.F]] = Show.show {
+    case AquaParserError(err) =>
       err match {
         case BlockIndentError(indent, message) =>
           showForConsole("Syntax error", indent._1, message :: Nil)
@@ -63,15 +75,15 @@ object ErrorRendering {
             .reverse
             .mkString("\n")
       }
-    case SourcesErr(err) =>
+    case SourcesError(err) =>
       Console.RED + err.showForConsole + Console.RESET
     case AirValidationError(errors) =>
       Console.RED + errors.toChain.toList.mkString("\n") + Console.RESET
-    case ResolveImportsErr(_, token, err) =>
+    case ResolveImportsError(_, token, err) =>
       val span = token.unit._1
       showForConsole("Cannot resolve imports", span, err.showForConsole :: Nil)
 
-    case ImportErr(token) =>
+    case ImportError(token) =>
       val span = token.unit._1
       showForConsole("Cannot resolve import", span, "Cannot resolve import" :: Nil)
     case CycleError(modules) =>

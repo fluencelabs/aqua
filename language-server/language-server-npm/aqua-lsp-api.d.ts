@@ -23,8 +23,16 @@ export interface ErrorInfo {
     location: string | null
 }
 
+export interface WarningInfo {
+    start: number,
+    end: number,
+    message: string,
+    location: string | null
+}
+
 export interface CompilationResult {
     errors: ErrorInfo[],
+    warnings: WarningInfo[],
     locations: TokenLink[],
     importLocations: TokenImport[]
 }

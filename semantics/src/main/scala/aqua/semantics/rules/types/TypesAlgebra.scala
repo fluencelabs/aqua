@@ -61,7 +61,11 @@ trait TypesAlgebra[S[_], Alg[_]] {
     givenType: Type
   ): Alg[Option[Type]]
 
-  def expectNoExport(token: Token[S]): Alg[Unit]
+  def checkArrowCallResults(
+    token: Token[S],
+    arrowType: ArrowType,
+    results: List[Name[S]]
+  ): Alg[Unit]
 
   def checkArgumentsNumber(token: Token[S], expected: Int, givenNum: Int): Alg[Boolean]
 

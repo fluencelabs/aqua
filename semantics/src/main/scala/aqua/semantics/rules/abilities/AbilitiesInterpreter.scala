@@ -4,7 +4,7 @@ import aqua.parser.lexer.{Name, NamedTypeToken, Token, ValueToken}
 import aqua.raw.value.ValueRaw
 import aqua.raw.{RawContext, ServiceRaw}
 import aqua.semantics.Levenshtein
-import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.{abilities, StackInterpreter}
@@ -22,7 +22,7 @@ import monocle.macros.GenLens
 
 class AbilitiesInterpreter[S[_], X](using
   lens: Lens[X, AbilitiesState[S]],
-  error: ReportErrors[S, X],
+  report: ReportAlgebra[S, State[X, *]],
   mangler: ManglerAlgebra[State[X, *]],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends AbilitiesAlgebra[S, State[X, *]] {
@@ -33,7 +33,7 @@ class AbilitiesInterpreter[S[_], X](using
     GenLens[AbilitiesState[S]](_.stack)
   )
 
-  import stackInt.{getState, mapStackHead, mapStackHeadM, modify, report}
+  import stackInt.*
 
   override def defineService(
     name: NamedTypeToken[S],
@@ -45,10 +45,12 @@ class AbilitiesInterpreter[S[_], X](using
         getState
           .map(_.definitions.get(name.value).exists(_ == name))
           .flatMap(exists =>
-            report(
-              name,
-              "Service with this name was already defined"
-            ).whenA(!exists)
+            report
+              .error(
+                name,
+                "Service with this name was already defined"
+              )
+              .whenA(!exists)
           )
           .as(false)
       case false =>
@@ -74,21 +76,23 @@ class AbilitiesInterpreter[S[_], X](using
         abCtx.funcs
           .get(arrow.value)
           .fold(
-            report(
-              arrow,
-              Levenshtein.genMessage(
-                s"Ability is found, but arrow '${arrow.value}' isn't found in scope",
-                arrow.value,
-                abCtx.funcs.keys.toList
+            report
+              .error(
+                arrow,
+                Levenshtein.genMessage(
+                  s"Ability is found, but arrow '${arrow.value}' isn't found in scope",
+                  arrow.value,
+                  abCtx.funcs.keys.toList
+                )
               )
-            ).as(none)
+              .as(none)
           ) { fn =>
             // TODO: add name and arrow separately
             // TODO: find tokens somewhere
             addServiceArrowLocation(name, arrow).as(fn.arrow.`type`.some)
           }
       case None =>
-        report(name, "Ability with this name is undefined").as(none)
+        report.error(name, "Ability with this name is undefined").as(none)
     }
 
   override def renameService(name: NamedTypeToken[S]): SX[Option[String]] =
@@ -102,7 +106,7 @@ class AbilitiesInterpreter[S[_], X](using
             .map(newName => h.setServiceRename(name.value, newName) -> newName)
         ).map(_.some)
       case false =>
-        report(name, "Service with this name is not registered").as(none)
+        report.error(name, "Service with this name is not registered").as(none)
     }
 
   override def getServiceRename(name: NamedTypeToken[S]): State[X, Option[String]] =
@@ -111,8 +115,8 @@ class AbilitiesInterpreter[S[_], X](using
       getState.map(_.getServiceRename(name.value))
     ).flatMapN {
       case (true, Some(rename)) => rename.some.pure
-      case (false, _) => report(name, "Service with this name is undefined").as(none)
-      case (_, None) => report(name, "Service ID is undefined").as(none)
+      case (false, _) => report.error(name, "Service with this name is undefined").as(none)
+      case (_, None) => report.error(name, "Service ID is undefined").as(none)
     }
 
   override def beginScope(token: Token[S]): SX[Unit] =
