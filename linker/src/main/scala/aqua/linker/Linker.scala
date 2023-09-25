@@ -105,7 +105,7 @@ object Linker extends Logging {
             val importKeys = m.dependsOn.keySet
             logger.debug(s"${m.id} dependsOn $importKeys")
             val deps: T => T =
-              importKeys.map(acc).foldLeft[T => T](identity) { case (fAcc, f) =>
+              importKeys.map(acc).foldLeft(identity[T]) { case (fAcc, f) =>
                 logger.debug("COMBINING ONE TIME ")
                 t => {
                   logger.debug(s"call combine $t")
@@ -132,7 +132,10 @@ object Linker extends Logging {
     else {
       val result = iter(modules.loaded.values.toList, Map.empty, cycleError)
 
-      result.map(_.collect { case (i, f) if modules.exports(i) => i -> f(empty(i)) })
+      result.map(_.collect {
+        case (i, f) if modules.exports(i) =>
+          i -> f(empty(i))
+      })
     }
 
 }

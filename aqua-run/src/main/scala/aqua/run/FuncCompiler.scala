@@ -1,7 +1,7 @@
 package aqua.run
 
-import aqua.ErrorRendering.showError
-import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompilerAPI}
+import aqua.Rendering.given
+import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompileResult, CompilerAPI}
 import aqua.files.{AquaFileSources, FileModuleId}
 import aqua.{AquaIO, SpanParser}
 import aqua.io.{AquaFileError, AquaPath, PackagePath, Prelude}
@@ -21,6 +21,9 @@ import cats.syntax.monad.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
 import cats.syntax.option.*
+import cats.syntax.either.*
+import cats.syntax.validated.*
+import cats.syntax.apply.*
 import fs2.io.file.{Files, Path}
 import scribe.Logging
 
@@ -32,51 +35,48 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
   transformConfig: TransformConfig
 ) extends Logging {
 
+  type Result = [A] =>> CompileResult[FileModuleId, AquaFileError, FileSpan.F][A]
+
   private def compileToContext(
     path: Path,
     imports: List[Path],
     config: AquaCompilerConf = AquaCompilerConf(transformConfig.constantsList)
-  ) = {
+  ): F[Result[Chain[AquaContext]]] = {
     val sources = new AquaFileSources[F](path, imports)
-    CompilerAPI
-      .compileToContext[F, AquaFileError, FileModuleId, FileSpan.F](
-        sources,
-        SpanParser.parser,
-        config
-      )
-      .map(_.leftMap(_.map(_.show)))
+    CompilerAPI.compileToContext[F, AquaFileError, FileModuleId, FileSpan.F](
+      sources,
+      SpanParser.parser,
+      config
+    )
   }
 
-  private def compileBuiltins() = {
+  private def compileBuiltins(): F[Result[Chain[AquaContext]]] =
     for {
       path <- PackagePath.builtin.getPath()
       context <- compileToContext(path, Nil)
-    } yield {
-      context
-    }
-  }
+    } yield context
 
   // Compile and get only one function
   def compile(
     preludeImports: List[Path] = Nil,
     withBuiltins: Boolean = false
-  ): F[ValidatedNec[String, Chain[AquaContext]]] = {
+  ): F[Result[Chain[AquaContext]]] = {
     for {
       // compile builtins and add it to context
       builtinsV <-
         if (withBuiltins) compileBuiltins()
-        else validNec[String, Chain[AquaContext]](Chain.empty).pure[F]
-      compileResult <- input.map { ap =>
+        else Chain.empty.pure[Result].pure[F]
+      compileResult <- input.traverse { ap =>
         // compile only context to wrap and call function later
         Clock[F].timed(
           ap.getPath().flatMap(p => compileToContext(p, preludeImports ++ imports))
         )
-      }.getOrElse((Duration.Zero, validNec[String, Chain[AquaContext]](Chain.empty)).pure[F])
-      (compileTime, contextV) = compileResult
+      }
+      (compileTime, contextV) = compileResult.orEmpty
     } yield {
       logger.debug(s"Compile time: ${compileTime.toMillis}ms")
       // add builtins to the end of context
-      contextV.andThen(c => builtinsV.map(bc => c ++ bc))
+      (contextV, builtinsV).mapN(_ ++ _)
     }
   }
 }

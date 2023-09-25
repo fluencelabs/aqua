@@ -7,6 +7,7 @@ import aqua.lsp.LSPCompiler
 import aqua.parser.lift.FileSpan
 import aqua.raw.ConstantRaw
 import aqua.{AquaIO, SpanParser}
+
 import cats.data.Validated
 import cats.effect.{IO, IOApp, Sync}
 import fs2.io.file.Path
@@ -31,9 +32,9 @@ object Test extends IOApp.Simple {
         )
         .map {
           case Validated.Invalid(errs) =>
-            errs.map(System.err.println): Unit
+            errs.toChain.toList.foreach(System.err.println)
           case Validated.Valid(res) =>
-            res.map(println): Unit
+            res.foreach(println)
         }
       _ <- IO.println("Compilation ends in: " + (System.currentTimeMillis() - start) + " ms")
     } yield ()

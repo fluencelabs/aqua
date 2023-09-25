@@ -12,7 +12,7 @@ import aqua.raw.value.{
 }
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.errors.ReportErrors
+import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypesStateHelper.{TypeResolution, TypeResolutionError}
 import aqua.types.*
 
@@ -31,9 +31,9 @@ import monocle.macros.GenLens
 
 import scala.collection.immutable.SortedMap
 
-class TypesInterpreter[S[_], X](implicit
+class TypesInterpreter[S[_], X](using
   lens: Lens[X, TypesState[S]],
-  error: ReportErrors[S, X],
+  report: ReportAlgebra[S, State[X, *]],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends TypesAlgebra[S, State[X, *]] {
 
@@ -55,7 +55,7 @@ class TypesInterpreter[S[_], X](implicit
         locations.pointLocations(tokensLocs).as(typ.some)
       case None =>
         // TODO: Give more specific error message
-        report(token, s"Unresolved type").as(None)
+        report.error(token, s"Unresolved type").as(None)
     }
 
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
@@ -65,7 +65,7 @@ class TypesInterpreter[S[_], X](implicit
         locations.pointLocations(tokensLocs).as(tt.some)
       case Invalid(errs) =>
         errs.traverse_ { case TypeResolutionError(token, hint) =>
-          report(token, hint)
+          report.error(token, hint)
         }.as(none)
     }
 
@@ -74,9 +74,9 @@ class TypesInterpreter[S[_], X](implicit
       case Some(serviceType: ServiceType) =>
         serviceType.some.pure
       case Some(t) =>
-        report(name, s"Type `$t` is not a service").as(none)
+        report.error(name, s"Type `$t` is not a service").as(none)
       case None =>
-        report(name, s"Type `${name.value}` is not defined").as(none)
+        report.error(name, s"Type `${name.value}` is not defined").as(none)
     }
 
   override def defineAbilityType(
@@ -87,10 +87,11 @@ class TypesInterpreter[S[_], X](implicit
       val types = fields.view.mapValues { case (_, t) => t }.toMap
       NonEmptyMap
         .fromMap(SortedMap.from(types))
-        .fold(report(name, s"Ability `${name.value}` has no fields").as(none))(nonEmptyFields =>
-          val `type` = AbilityType(name.value, nonEmptyFields)
+        .fold(report.error(name, s"Ability `${name.value}` has no fields").as(none))(
+          nonEmptyFields =>
+            val `type` = AbilityType(name.value, nonEmptyFields)
 
-          modify(_.defineType(name, `type`)).as(`type`.some)
+            modify(_.defineType(name, `type`)).as(`type`.some)
         )
     }
 
@@ -104,20 +105,22 @@ class TypesInterpreter[S[_], X](implicit
           OptionT
             .when(t.codomain.length <= 1)(field -> t)
             .flatTapNone(
-              report(fieldName, "Service functions cannot have multiple results")
+              report.error(fieldName, "Service functions cannot have multiple results")
             )
         case (field, (fieldName, t)) =>
           OptionT(
-            report(
-              fieldName,
-              s"Field '$field' has unacceptable for service field type '$t'"
-            ).as(none)
+            report
+              .error(
+                fieldName,
+                s"Field '$field' has unacceptable for service field type '$t'"
+              )
+              .as(none)
           )
       }.flatMapF(arrows =>
         NonEmptyMap
           .fromMap(SortedMap.from(arrows))
           .fold(
-            report(name, s"Service `${name.value}` has no fields").as(none)
+            report.error(name, s"Service `${name.value}` has no fields").as(none)
           )(_.some.pure)
       ).semiflatMap(nonEmptyArrows =>
         val `type` = ServiceType(name.value, nonEmptyArrows)
@@ -134,20 +137,23 @@ class TypesInterpreter[S[_], X](implicit
       fields.toList.traverse {
         case (field, (fieldName, t: DataType)) =>
           t match {
-            case _: StreamType => report(fieldName, s"Field '$field' has stream type").as(none)
+            case _: StreamType =>
+              report.error(fieldName, s"Field '$field' has stream type").as(none)
             case _ => (field -> t).some.pure[ST]
           }
         case (field, (fieldName, t)) =>
-          report(
-            fieldName,
-            s"Field '$field' has unacceptable for struct field type '$t'"
-          ).as(none)
+          report
+            .error(
+              fieldName,
+              s"Field '$field' has unacceptable for struct field type '$t'"
+            )
+            .as(none)
       }.map(_.sequence.map(_.toMap))
         .flatMap(
           _.map(SortedMap.from)
             .flatMap(NonEmptyMap.fromMap)
             .fold(
-              report(name, s"Struct `${name.value}` has no fields").as(none)
+              report.error(name, s"Struct `${name.value}` has no fields").as(none)
             )(nonEmptyFields =>
               val `type` = StructType(name.value, nonEmptyFields)
 
@@ -159,7 +165,7 @@ class TypesInterpreter[S[_], X](implicit
   override def defineAlias(name: NamedTypeToken[S], target: Type): State[X, Boolean] =
     getState.map(_.definitions.get(name.value)).flatMap {
       case Some(n) if n == name => State.pure(false)
-      case Some(_) => report(name, s"Type `${name.value}` was already defined").as(false)
+      case Some(_) => report.error(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
         modify(_.defineType(name, target))
           .productL(locations.addToken(name.value, name))
@@ -171,10 +177,12 @@ class TypesInterpreter[S[_], X](implicit
       case nt: NamedType =>
         nt.fields(op.value)
           .fold(
-            report(
-              op,
-              s"Field `${op.value}` not found in type `${nt.name}`, available: ${nt.fields.toNel.toList.map(_._1).mkString(", ")}"
-            ).as(None)
+            report
+              .error(
+                op,
+                s"Field `${op.value}` not found in type `${nt.name}`, available: ${nt.fields.toNel.toList.map(_._1).mkString(", ")}"
+              )
+              .as(None)
           ) { t =>
             locations.pointFieldLocation(nt.name, op.value, op).as(Some(IntoFieldRaw(op.value, t)))
           }
@@ -182,10 +190,12 @@ class TypesInterpreter[S[_], X](implicit
         t.properties
           .get(op.value)
           .fold(
-            report(
-              op,
-              s"Expected data type to resolve a field '${op.value}' or a type with this property. Got: $rootT"
-            ).as(None)
+            report
+              .error(
+                op,
+                s"Expected data type to resolve a field '${op.value}' or a type with this property. Got: $rootT"
+              )
+              .as(None)
           )(t => State.pure(Some(FunctorRaw(op.value, t))))
 
     }
@@ -199,10 +209,12 @@ class TypesInterpreter[S[_], X](implicit
     rootT match {
       case AbilityType(name, fieldsAndArrows) =>
         fieldsAndArrows(op.name.value).fold(
-          report(
-            op,
-            s"Arrow `${op.name.value}` not found in type `$name`, available: ${fieldsAndArrows.toNel.toList.map(_._1).mkString(", ")}"
-          ).as(None)
+          report
+            .error(
+              op,
+              s"Arrow `${op.name.value}` not found in type `$name`, available: ${fieldsAndArrows.toNel.toList.map(_._1).mkString(", ")}"
+            )
+            .as(None)
         ) { t =>
           val resolvedType = t match {
             // TODO: is it a correct way to resolve `IntoArrow` type?
@@ -217,10 +229,12 @@ class TypesInterpreter[S[_], X](implicit
         t.properties
           .get(op.name.value)
           .fold(
-            report(
-              op,
-              s"Expected scope type to resolve an arrow '${op.name.value}' or a type with this property. Got: $rootT"
-            ).as(None)
+            report
+              .error(
+                op,
+                s"Expected scope type to resolve an arrow '${op.name.value}' or a type with this property. Got: $rootT"
+              )
+              .as(None)
           )(t => State.pure(Some(FunctorRaw(op.name.value, t))))
 
     }
@@ -238,12 +252,12 @@ class TypesInterpreter[S[_], X](implicit
           st.fields.lookup(fieldName) match {
             case Some(t) =>
               ensureTypeMatches(op.fields.lookup(fieldName).getOrElse(op), t, value.`type`)
-            case None => report(op, s"No field with name '$fieldName' in $rootT").as(false)
+            case None => report.error(op, s"No field with name '$fieldName' in $rootT").as(false)
           }
         }.map(res => if (res.forall(identity)) Some(IntoCopyRaw(st, fields)) else None)
 
       case _ =>
-        report(op, s"Expected $rootT to be a data type").as(None)
+        report.error(op, s"Expected $rootT to be a data type").as(None)
     }
 
   // TODO actually it's stateless, exists there just for reporting needs
@@ -253,17 +267,17 @@ class TypesInterpreter[S[_], X](implicit
     idx: ValueRaw
   ): State[X, Option[PropertyRaw]] =
     if (!ScalarType.i64.acceptsValueOf(idx.`type`))
-      report(op, s"Expected numeric index, got $idx").as(None)
+      report.error(op, s"Expected numeric index, got $idx").as(None)
     else
       rootT match {
         case ot: OptionType =>
           op.idx.fold(
             State.pure(Some(IntoIndexRaw(idx, ot.element)))
-          )(v => report(v, s"Options might have only one element, use ! to get it").as(None))
+          )(v => report.error(v, s"Options might have only one element, use ! to get it").as(None))
         case rt: BoxType =>
           State.pure(Some(IntoIndexRaw(idx, rt.element)))
         case _ =>
-          report(op, s"Expected $rootT to be a collection type").as(None)
+          report.error(op, s"Expected $rootT to be a collection type").as(None)
       }
 
   override def ensureValuesComparable(
@@ -299,7 +313,7 @@ class TypesInterpreter[S[_], X](implicit
       }
 
     if (isComparable(left, right)) State.pure(true)
-    else report(token, s"Cannot compare '$left' with '$right''").as(false)
+    else report.error(token, s"Cannot compare '$left' with '$right''").as(false)
   }
 
   override def ensureTypeMatches(
@@ -315,10 +329,12 @@ class TypesInterpreter[S[_], X](implicit
           val typeFields = typeNamedType.fields
           // value can have more fields
           if (valueFields.length < typeFields.length) {
-            report(
-              token,
-              s"Number of fields doesn't match the data type, expected: $expected, given: $givenType"
-            ).as(false)
+            report
+              .error(
+                token,
+                s"Number of fields doesn't match the data type, expected: $expected, given: $givenType"
+              )
+              .as(false)
           } else {
             valueFields.toSortedMap.toList.traverse { (name, `type`) =>
               typeFields.lookup(name) match {
@@ -333,10 +349,12 @@ class TypesInterpreter[S[_], X](implicit
                   }
                   ensureTypeMatches(nextToken, `type`, t)
                 case None =>
-                  report(
-                    token,
-                    s"Wrong value type, expected: $expected, given: $givenType"
-                  ).as(false)
+                  report
+                    .error(
+                      token,
+                      s"Wrong value type, expected: $expected, given: $givenType"
+                    )
+                    .as(false)
               }
             }.map(_.forall(identity))
           }
@@ -349,10 +367,11 @@ class TypesInterpreter[S[_], X](implicit
                 "You can extract value with `!`, but be aware it may trigger join behaviour." ::
                 Nil
             else Nil
-          reportError(
-            token,
-            "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
-          )
+          report
+            .error(
+              token,
+              "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
+            )
             .as(false)
       }
     }
@@ -361,10 +380,12 @@ class TypesInterpreter[S[_], X](implicit
     givenType match {
       case _: DataType => true.pure
       case _ =>
-        report(
-          token,
-          s"Value of type '$givenType' could not be put into a collection"
-        ).as(false)
+        report
+          .error(
+            token,
+            s"Value of type '$givenType' could not be put into a collection"
+          )
+          .as(false)
     }
 
   override def ensureTypeOneOf[T <: Type](
@@ -374,19 +395,46 @@ class TypesInterpreter[S[_], X](implicit
   ): State[X, Option[Type]] = expected
     .find(_ acceptsValueOf givenType)
     .fold(
-      reportError(
-        token,
-        "Types mismatch." ::
-          s"expected one of:   ${expected.mkString(", ")}" ::
-          s"given:             $givenType" :: Nil
-      ).as(none)
+      report
+        .error(
+          token,
+          "Types mismatch." ::
+            s"expected one of:   ${expected.mkString(", ")}" ::
+            s"given:             $givenType" :: Nil
+        )
+        .as(none)
     )(_.some.pure)
 
-  override def expectNoExport(token: Token[S]): State[X, Unit] =
-    report(
-      token,
-      "Types mismatch. Cannot assign to a variable the result of a call that returns nothing"
-    ).as(())
+  override def checkArrowCallResults(
+    token: Token[S],
+    arrowType: ArrowType,
+    results: List[Name[S]]
+  ): State[X, Unit] = for {
+    _ <- results
+      .drop(arrowType.codomain.length)
+      .traverse_(result =>
+        report
+          .error(
+            result,
+            "Types mismatch. Cannot assign to a variable " +
+              "the result of a call that returns nothing"
+          )
+      )
+    _ <- report
+      .warning(
+        token,
+        s"Arrow returns ${arrowType.codomain.length match {
+          case 0 => "no values"
+          case 1 => "a value"
+          case i => s"$i values"
+        }} values, but ${results.length match {
+          case 0 => "none are"
+          case 1 => "only one is"
+          case i => s"only $i are"
+        }} used"
+      )
+      .whenA(arrowType.codomain.length > results.length)
+  } yield ()
 
   override def checkArgumentsNumber(
     token: Token[S],
@@ -395,10 +443,12 @@ class TypesInterpreter[S[_], X](implicit
   ): State[X, Boolean] =
     if (expected == givenNum) State.pure(true)
     else
-      report(
-        token,
-        s"Number of arguments doesn't match the function type, expected: ${expected}, given: $givenNum"
-      ).as(false)
+      report
+        .error(
+          token,
+          s"Number of arguments doesn't match the function type, expected: ${expected}, given: $givenNum"
+        )
+        .as(false)
 
   override def beginArrowScope(token: ArrowTypeToken[S]): State[X, ArrowType] =
     Applicative[ST]
@@ -434,37 +484,49 @@ class TypesInterpreter[S[_], X](implicit
     values: NonEmptyList[(ValueToken[S], ValueRaw)]
   ): State[X, Boolean] =
     mapStackHeadM[Boolean](
-      report(values.head._1, "Fatal: checkArrowReturn has no matching beginArrowScope").as(false)
+      report
+        .error(values.head._1, "Fatal: checkArrowReturn has no matching beginArrowScope")
+        .as(false)
     )(frame =>
       if (frame.retVals.nonEmpty)
-        report(
-          values.head._1,
-          "Return expression was already used in scope; you can use only one Return in an arrow declaration, use conditional return pattern if you need to return based on condition"
-        ).as(frame -> false)
+        report
+          .error(
+            values.head._1,
+            "Return expression was already used in scope; you can use only one Return in an arrow declaration, use conditional return pattern if you need to return based on condition"
+          )
+          .as(frame -> false)
       else if (frame.token.res.isEmpty)
-        report(
-          values.head._1,
-          "No return type declared for this arrow, please remove `<- ...` expression or add `-> ...` return type(s) declaration to the arrow"
-        ).as(frame -> false)
+        report
+          .error(
+            values.head._1,
+            "No return type declared for this arrow, please remove `<- ...` expression or add `-> ...` return type(s) declaration to the arrow"
+          )
+          .as(frame -> false)
       else if (frame.token.res.length > values.length)
-        report(
-          values.last._1,
-          s"Expected ${frame.token.res.length - values.length} more values to be returned, see return type declaration"
-        ).as(frame -> false)
+        report
+          .error(
+            values.last._1,
+            s"Expected ${frame.token.res.length - values.length} more values to be returned, see return type declaration"
+          )
+          .as(frame -> false)
       else if (frame.token.res.length < values.length)
-        report(
-          values.toList.drop(frame.token.res.length).headOption.getOrElse(values.last)._1,
-          s"Too many values are returned from this arrow, this one is unexpected. Defined return type:  ${frame.arrowType.codomain}"
-        ).as(frame -> false)
+        report
+          .error(
+            values.toList.drop(frame.token.res.length).headOption.getOrElse(values.last)._1,
+            s"Too many values are returned from this arrow, this one is unexpected. Defined return type:  ${frame.arrowType.codomain}"
+          )
+          .as(frame -> false)
       else
         frame.arrowType.codomain.toList
           .zip(values.toList)
           .traverse { case (returnType, (token, returnValue)) =>
             if (!returnType.acceptsValueOf(returnValue.`type`))
-              report(
-                token,
-                s"Wrong value type, expected: $returnType, given: ${returnValue.`type`}"
-              ).as(none)
+              report
+                .error(
+                  token,
+                  s"Wrong value type, expected: $returnType, given: ${returnValue.`type`}"
+                )
+                .as(none)
             else returnValue.some.pure[SX]
           }
           .map(_.sequence)
@@ -473,14 +535,16 @@ class TypesInterpreter[S[_], X](implicit
 
   override def endArrowScope(token: Token[S]): State[X, List[ValueRaw]] =
     mapStackHeadM(
-      report(token, "Fatal: endArrowScope has no matching beginArrowScope").as(Nil)
+      report.error(token, "Fatal: endArrowScope has no matching beginArrowScope").as(Nil)
     )(frame =>
       if (frame.token.res.isEmpty) (frame -> Nil).pure
       else if (frame.retVals.isEmpty)
-        report(
-          frame.token.res.headOption.getOrElse(frame.token),
-          "Return type is defined for the arrow, but nothing returned. Use `<- value, ...` as the last expression inside function body."
-        ).as(frame -> Nil)
+        report
+          .error(
+            frame.token.res.headOption.getOrElse(frame.token),
+            "Return type is defined for the arrow, but nothing returned. Use `<- value, ...` as the last expression inside function body."
+          )
+          .as(frame -> Nil)
       else (frame -> frame.retVals.getOrElse(Nil)).pure
     ) <* stack.endScope
 
@@ -495,10 +559,12 @@ class TypesInterpreter[S[_], X](implicit
     .flatMap {
       case Some(_) =>
         // TODO: Point to both locations here
-        report(
-          token,
-          s"Name `${name}` was already defined here"
-        ).as(ifDefined)
+        report
+          .error(
+            token,
+            s"Name `${name}` was already defined here"
+          )
+          .as(ifDefined)
       case None => ifNotDefined
     }
 }

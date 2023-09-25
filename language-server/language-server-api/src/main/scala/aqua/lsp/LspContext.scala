@@ -1,11 +1,11 @@
 package aqua.lsp
 
 import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
-import aqua.raw.RawContext.semiRC
 import aqua.raw.{RawContext, RawPart}
-import aqua.semantics.SemanticError
+import aqua.semantics.{SemanticError, SemanticWarning}
 import aqua.semantics.header.Picker
 import aqua.types.{ArrowType, Type}
+
 import cats.syntax.monoid.*
 import cats.{Monoid, Semigroup}
 
@@ -18,14 +18,15 @@ case class LspContext[S[_]](
   tokens: Map[String, Token[S]] = Map.empty[String, Token[S]],
   locations: List[(Token[S], Token[S])] = Nil,
   importTokens: List[LiteralToken[S]] = Nil,
-  errors: List[SemanticError[S]] = Nil
+  errors: List[SemanticError[S]] = Nil,
+  warnings: List[SemanticWarning[S]] = Nil
 )
 
 object LspContext {
 
   def blank[S[_]]: LspContext[S] = LspContext[S](raw = RawContext())
 
-  implicit def semiLsp[S[_]]: Semigroup[LspContext[S]] =
+  given [S[_]]: Semigroup[LspContext[S]] =
     (x: LspContext[S], y: LspContext[S]) =>
       LspContext[S](
         raw = x.raw |+| y.raw,
@@ -33,20 +34,22 @@ object LspContext {
         rootArrows = x.rootArrows ++ y.rootArrows,
         constants = x.constants ++ y.constants,
         locations = x.locations ++ y.locations,
-        tokens = x.tokens ++ y.tokens
+        tokens = x.tokens ++ y.tokens,
+        errors = x.errors ++ y.errors,
+        warnings = x.warnings ++ y.warnings
       )
 
   trait Implicits[S[_]] {
-    implicit val lspContextMonoid: Monoid[LspContext[S]]
+    val lspContextMonoid: Monoid[LspContext[S]]
   }
 
   def implicits[S[_]](init: LspContext[S]): Implicits[S] = new Implicits[S] {
 
-    override implicit val lspContextMonoid: Monoid[LspContext[S]] = new Monoid[LspContext[S]] {
+    override val lspContextMonoid: Monoid[LspContext[S]] = new Monoid[LspContext[S]] {
       override def empty: LspContext[S] = init
 
       override def combine(x: LspContext[S], y: LspContext[S]): LspContext[S] = {
-        semiLsp[S].combine(x, y)
+        Semigroup[LspContext[S]].combine(x, y)
       }
     }
 

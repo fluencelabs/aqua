@@ -30,6 +30,7 @@ import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
 import cats.instances.string.*
 import cats.syntax.show.*
 import cats.syntax.option.*
+import cats.syntax.either.*
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers {
   import ModelBuilder.*
@@ -59,8 +60,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
         id => txt => Parser.parse(Parser.parserSchema)(txt),
         AquaCompilerConf(ConstantRaw.defaultConstants(None))
       )
+      .value
+      .value
+      .toValidated
 
-  "aqua compiler" should "compile a simple snipped to the right context" in {
+  "aqua compiler" should "compile a simple snippet to the right context" in {
 
     val res = compileToContext(
       Map(
@@ -93,7 +97,6 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val const = ctx.allValues.get("X")
     const.nonEmpty should be(true)
     const.get should be(LiteralModel.number(5))
-
   }
 
   def through(peer: ValueModel) =
