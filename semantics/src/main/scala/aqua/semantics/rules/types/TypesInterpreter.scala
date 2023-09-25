@@ -405,13 +405,29 @@ class TypesInterpreter[S[_], X](using
         .as(none)
     )(_.some.pure)
 
-  override def expectNoExport(token: Token[S]): State[X, Unit] =
-    report
-      .error(
-        token,
-        "Types mismatch. Cannot assign to a variable the result of a call that returns nothing"
+  override def checkArrowCallResults(
+    token: Token[S],
+    arrowType: ArrowType,
+    results: List[Name[S]]
+  ): State[X, Unit] = for {
+    _ <- results
+      .drop(arrowType.codomain.length)
+      .traverse_(result =>
+        report
+          .error(
+            result,
+            "Types mismatch. Cannot assign to a variable " +
+              "the result of a call that returns nothing"
+          )
       )
-      .as(())
+    _ <- report
+      .warning(
+        token,
+        s"Arrow returns ${arrowType.codomain.length} values, " +
+          s"but only ${results.length} are used"
+      )
+      .whenA(arrowType.codomain.length > results.length)
+  } yield ()
 
   override def checkArgumentsNumber(
     token: Token[S],
