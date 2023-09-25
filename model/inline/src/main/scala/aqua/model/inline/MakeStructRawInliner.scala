@@ -17,7 +17,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
   /**
    * Creates structure using stream map.
    * @param mapName stream map name
-   * @param mapType stream map name
+   * @param mapType stream map type
    * @param result variable with structure
    * @param fields fields to insert
    * @return value with assembled structure
