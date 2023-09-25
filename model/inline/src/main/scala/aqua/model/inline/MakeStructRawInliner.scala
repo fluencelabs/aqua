@@ -20,7 +20,8 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
    * @param mapType stream map type
    * @param result variable with structure
    * @param fields fields to insert
-   * @return value with assembled structure
+   * @return tree with traversed fields and tree with structure creation.
+   *         They are split to combine it later with other trees in a more natural way.
    */
   def constructThroughMap[S: Mangler](
     mapName: String,
