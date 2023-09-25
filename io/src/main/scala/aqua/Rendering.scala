@@ -15,12 +15,12 @@ import cats.{Eval, Show}
 
 object Rendering {
 
-  def showForConsole(typ: String, span: FileSpan, messages: List[String]): String =
+  def showForConsole(messageType: String, span: FileSpan, messages: List[String]): String =
     span
       .focus(3)
       .map(
         _.toConsoleStr(
-          typ,
+          messageType,
           messages,
           Console.RED
         )

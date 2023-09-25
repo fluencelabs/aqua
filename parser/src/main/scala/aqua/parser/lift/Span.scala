@@ -1,86 +1,127 @@
 package aqua.parser.lift
 
 import cats.data.NonEmptyList
-import cats.parse.{LocationMap, Parser0, Parser as P}
+import cats.parse.{LocationMap, Parser as P, Parser0}
 import cats.{Comonad, Eval}
 
 import scala.language.implicitConversions
 
 case class Span(startIndex: Int, endIndex: Int) {
 
-  def focus(locationMap: Eval[LocationMap], ctx: Int): Option[Span.Focus] = {
-    val map = locationMap.value
-    map.toLineCol(startIndex).flatMap { case (line, column) =>
-      map
-        .getLine(line)
-        .map { l =>
-          val pre =
-            (Math.max(0, line - ctx) until line).map(i => map.getLine(i).map(i -> _)).toList.flatten
-          val linePos = {
-            val (l1, l2) = l.splitAt(column)
-            val (lc, l3) = l2.splitAt(endIndex - startIndex)
-            (line, l1, lc, l3)
-          }
-          val post =
-            ((line + 1) to (line + ctx)).map(i => map.getLine(i).map(i -> _)).toList.flatten
-          Span.Focus(
-            pre,
-            linePos,
-            post,
-            column
-          )
-        }
-    }
-  }
+  /**
+   * Focus on the line pointed by the span
+   *
+   * @param locationMap Locations Map
+   * @param ctx how many lines to capture before and after the line
+   * @return Span.Focus
+   */
+  def focus(locationMap: LocationMap, ctx: Int): Option[Span.Focus] =
+    for {
+      lineCol <- locationMap.toLineCol(startIndex)
+      (lineNum, columnNum) = lineCol
+      line <- locationMap.getLine(lineNum)
+      focused = Span.focus(line, columnNum, endIndex - startIndex)
+      pre = Span.getLines(locationMap, lineNum - ctx, lineNum)
+      post = Span.getLines(locationMap, lineNum + 1, lineNum + ctx + 1)
+    } yield Span.Focus(
+      pre,
+      focused.numbered(lineNum),
+      post,
+      columnNum
+    )
 }
 
 object Span {
 
+  private def getLines(
+    locationMap: LocationMap,
+    from: Int,
+    to: Int
+  ): List[NumberedLine[String]] =
+    (from until to)
+      .map(i =>
+        locationMap
+          .getLine(i)
+          .map(NumberedLine(i, _))
+      )
+      .toList
+      .flatten
+
+  private def focus(
+    str: String,
+    idx: Int,
+    len: Int
+  ): FocusedLine = FocusedLine(
+    str.substring(0, idx),
+    str.substring(idx, idx + len),
+    str.substring(idx + len)
+  )
+
+  final case class NumberedLine[T](
+    number: Int,
+    line: T
+  )
+
+  final case class FocusedLine(
+    pre: String,
+    focus: String,
+    post: String
+  ) {
+
+    def numbered(n: Int): NumberedLine[FocusedLine] =
+      NumberedLine(n, this)
+  }
+
   case class Focus(
-    pre: List[(Int, String)],
-    line: (Int, String, String, String),
-    post: List[(Int, String)],
+    pre: List[NumberedLine[String]],
+    focus: NumberedLine[FocusedLine],
+    post: List[NumberedLine[String]],
     column: Int
   ) {
 
-    private lazy val lastN = post.lastOption.map(_._1).getOrElse(line._1) + 1
+    private lazy val lastN = post.lastOption.map(_.number).getOrElse(focus.number) + 1
     private lazy val lastNSize = lastN.toString.length
 
-    private def formatLine(l: (Int, String), onLeft: String, onRight: String) =
-      formatLN(l._1, onLeft, onRight) + l._2
+    private def formatLine(l: NumberedLine[String], onLeft: String, onRight: String) =
+      formatLN(l.number, onLeft, onRight) + l.line
 
     private def formatLN(ln: Int, onLeft: String, onRight: String) = {
       val s = (ln + 1).toString
       onLeft + s + (" " * (lastNSize - s.length)) + onRight + " "
     }
 
+    /**
+     * Format the focus for console output
+     *
+     * @param msgs Messages to display
+     * @param onLeft Control sequence to put on the left
+     * @param onRight Control sequence to put on the right
+     */
     def toConsoleStr(
       msgs: List[String],
       onLeft: String,
       onRight: String = Console.RESET
     ): String = {
-      val line3Length = line._3.length
-      val line3Mult = if (line3Length == 0) 1 else line3Length
-      val message = msgs.map(m => (" " * (line._2.length + lastNSize + 1)) + m).mkString("\n")
+      val focusLength = focus.line.focus.length
+      val focusMult = if (focusLength == 0) 1 else focusLength
+      val message = msgs
+        .map(m => (" " * (focus.line.focus.length + lastNSize + 1)) + m)
+        .mkString("\n")
 
       pre.map(formatLine(_, onLeft, onRight)).mkString("\n") +
         "\n" +
-        formatLN(line._1, onLeft, onRight) +
-        line._2 +
-        onLeft +
-        line._3 +
-        onRight +
-        line._4 +
+        formatLN(focus.number, onLeft, onRight) +
+        focus.line.pre +
+        onLeft + focus.line.focus + onRight +
+        focus.line.post +
         "\n" +
-        (" " * (line._2.length + lastNSize + 1)) +
+        (" " * (focus.line.pre.length + lastNSize + 1)) +
         onLeft +
-        ("^" * line3Mult) +
-        ("=" * line._4.length) +
+        ("^" * focusMult) +
+        ("=" * focus.line.post.length) +
         onRight +
         "\n" +
-        onLeft +
-        message +
-        onRight +
+        onLeft + message + onRight +
         "\n" +
         post.map(formatLine(_, onLeft, onRight)).mkString("\n")
     }
@@ -103,7 +144,6 @@ object Span {
   implicit class P0ToSpan[T](p: Parser0[T]) {
     def lift0: Parser0[Span.S[T]] = Span.spanLiftParser.lift0(p)
   }
-
 
   implicit object spanLiftParser extends LiftParser[S] {
 
