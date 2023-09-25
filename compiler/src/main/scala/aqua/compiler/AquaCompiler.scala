@@ -57,7 +57,15 @@ class AquaCompiler[F[_]: Monad, E, I: Order, S[_]: Comonad, C: Monoid: Picker](
         .toEitherT[CompileWarns]
       res <- EitherT(
         linked.toList.traverse { case (id, ctx) =>
-          ctx.map(_.apply(id).map(id -> _).get).toValidated
+          ctx
+            .map(
+              /**
+               * NOTE: This should be safe
+               * as result for id should contain itself
+               */
+              _.apply(id).map(id -> _).get
+            )
+            .toValidated
         }.map(_.sequence.toEither)
       )
     } yield res.toMap
