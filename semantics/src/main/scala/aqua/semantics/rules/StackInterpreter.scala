@@ -1,7 +1,6 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.Token
-import aqua.semantics.rules.errors.ReportErrors
 
 import cats.data.State
 import cats.syntax.functor.*
@@ -10,20 +9,11 @@ import monocle.Lens
 
 case class StackInterpreter[S[_], X, St, Fr](
   stackLens: Lens[St, List[Fr]]
-)(using
-  lens: Lens[X, St],
-  error: ReportErrors[S, X]
-) {
+)(using lens: Lens[X, St]) {
   type SX[A] = State[X, A]
 
   def getState: SX[St] = State.get.map(lens.get)
   def setState(st: St): SX[Unit] = State.modify(s => lens.replace(st)(s))
-
-  def reportError(t: Token[S], hints: List[String]): SX[Unit] =
-    State.modify(error(_, t, hints))
-
-  def report(t: Token[S], hint: String): SX[Unit] =
-    State.modify(error(_, t, hint :: Nil))
 
   def modify(f: St => St): SX[Unit] =
     State.modify(lens.modify(f))

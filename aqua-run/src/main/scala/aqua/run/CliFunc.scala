@@ -5,8 +5,8 @@ import aqua.parser.lift.Span
 import aqua.raw.value.{CollectionRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.{ArrayType, BottomType}
 
-import cats.data.{NonEmptyList, Validated, ValidatedNel}
-import cats.data.Validated.{invalid, invalidNel, validNel}
+import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec}
+import cats.data.Validated.{invalid, invalidNec, validNec}
 import cats.{~>, Id}
 import cats.syntax.traverse.*
 import cats.syntax.validated.*
@@ -18,25 +18,27 @@ case class CliFunc(name: String, args: List[ValueRaw] = Nil)
 
 object CliFunc {
 
-  def spanToId: Span.S ~> Id = new (Span.S ~> Id) {
+  private val spanToId: Span.S ~> Id = new (Span.S ~> Id) {
 
     override def apply[A](span: Span.S[A]): Id[A] = span.extract
   }
 
-  def fromString(func: String): ValidatedNel[String, CliFunc] = {
+  def fromString(func: String): ValidatedNec[String, CliFunc] = {
     CallArrowToken.callArrow
       .parseAll(func.trim)
-      .toValidated
-      .leftMap(
-        _.expected.map(_.context.mkString("\n"))
+      .leftMap(error =>
+        NonEmptyChain
+          .fromNonEmptyList(error.expected)
+          .map(_.context.mkString("\n"))
       )
+      .toValidated
       .map(_.mapK(spanToId))
       .andThen(expr =>
         expr.args.traverse {
           case LiteralToken(value, ts) =>
-            LiteralRaw(value, ts).valid
+            LiteralRaw(value, ts).validNec
           case VarToken(name) =>
-            VarRaw(name.value, BottomType).valid
+            VarRaw(name.value, BottomType).validNec
           case CollectionToken(_, values) =>
             values.traverse {
               case LiteralToken(value, ts) =>
@@ -53,11 +55,11 @@ object CliFunc {
                   .map(l => CollectionRaw(l, ArrayType(l.head.baseType)))
                   .getOrElse(ValueRaw.Nil)
               )
-              .toValidatedNel
+              .toValidatedNec
           case CallArrowToken(_, _, _) =>
-            "Function calls as arguments are not supported.".invalidNel
+            "Function calls as arguments are not supported.".invalidNec
           case _ =>
-            "Unsupported argument.".invalidNel
+            "Unsupported argument.".invalidNec
         }.map(args => CliFunc(expr.funcName.value, args))
       )
   }

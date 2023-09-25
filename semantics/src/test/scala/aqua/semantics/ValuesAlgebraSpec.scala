@@ -7,6 +7,7 @@ import aqua.semantics.rules.definitions.{DefinitionsAlgebra, DefinitionsInterpre
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
 import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra}
 import aqua.semantics.rules.mangler.{ManglerAlgebra, ManglerInterpreter}
+import aqua.semantics.rules.report.{ReportAlgebra, ReportInterpreter}
 import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw}
 import aqua.raw.RawContext
 import aqua.types.*
@@ -32,9 +33,10 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
   def algebra() = {
     type Interpreter[A] = State[TestState, A]
 
+    given ReportAlgebra[Id, Interpreter] =
+      new ReportInterpreter[Id, CompilerState[Id]]
     given LocationsAlgebra[Id, Interpreter] =
       new DummyLocationsInterpreter[Id, CompilerState[Id]]
-
     given ManglerAlgebra[Interpreter] =
       new ManglerInterpreter[CompilerState[Id]]
     given TypesAlgebra[Id, Interpreter] =

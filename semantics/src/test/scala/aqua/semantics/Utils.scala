@@ -5,11 +5,12 @@ import aqua.parser.lexer.{Name, Token}
 import aqua.parser.lift.Span
 import aqua.raw.{Raw, RawContext}
 import aqua.semantics.expr.func.ClosureSem
-import aqua.semantics.rules.errors.ReportErrors
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra}
 import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
+import aqua.semantics.rules.mangler.{ManglerAlgebra, ManglerInterpreter}
+import aqua.semantics.rules.report.{ReportAlgebra, ReportInterpreter}
 import aqua.types.*
 
 import cats.data.State
@@ -17,10 +18,11 @@ import cats.{~>, Id}
 import monocle.Lens
 import monocle.macros.GenLens
 import monocle.syntax.all.*
-import aqua.semantics.rules.mangler.ManglerAlgebra
-import aqua.semantics.rules.mangler.ManglerInterpreter
 
 object Utils {
+
+  given ReportAlgebra[Id, State[CompilerState[Id], *]] =
+    new ReportInterpreter[Id, CompilerState[Id]]
 
   given ManglerAlgebra[State[CompilerState[Id], *]] =
     new ManglerInterpreter[CompilerState[Id]]

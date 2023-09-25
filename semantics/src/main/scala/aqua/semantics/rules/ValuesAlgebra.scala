@@ -7,7 +7,7 @@ import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.semantics.rules.errors.ErrorsAlgebra
+import aqua.semantics.rules.report.ReportAlgebra
 import aqua.types.*
 
 import cats.Monad
@@ -30,8 +30,8 @@ import scala.collection.immutable.SortedMap
 class ValuesAlgebra[S[_], Alg[_]: Monad](using
   N: NamesAlgebra[S, Alg],
   T: TypesAlgebra[S, Alg],
-  E: ErrorsAlgebra[S, Alg],
-  A: AbilitiesAlgebra[S, Alg]
+  A: AbilitiesAlgebra[S, Alg],
+  report: ReportAlgebra[S, Alg]
 ) extends Logging {
 
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
@@ -305,7 +305,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       _.flatTraverse {
         case ca: CallArrowRaw => ca.some.pure[Alg]
         // TODO: better error message (`raw` formatting)
-        case raw => E.report(v, s"Expected arrow call, got $raw").as(none)
+        case raw => report.error(v, s"Expected arrow call, got $raw").as(none)
       }
     )
 
@@ -419,7 +419,7 @@ object ValuesAlgebra {
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
-    E: ErrorsAlgebra[S, Alg]
+    E: ReportAlgebra[S, Alg]
   ): ValuesAlgebra[S, Alg] =
     new ValuesAlgebra[S, Alg]
 }

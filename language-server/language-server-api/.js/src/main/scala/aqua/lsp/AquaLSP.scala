@@ -1,6 +1,8 @@
 package aqua.lsp
 
 import aqua.compiler.*
+import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
+import aqua.compiler.AquaWarning.*
 import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.*
 import aqua.parser.lexer.{LiteralToken, Token}
@@ -8,27 +10,29 @@ import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.raw.ConstantRaw
-import aqua.semantics.{HeaderError, RulesViolated, WrongAST}
+import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
 import aqua.{AquaIO, SpanParser}
-import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
+
+import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
 import cats.data.{NonEmptyChain, Validated}
 import cats.effect.IO
+import cats.syntax.option.*
 import cats.effect.unsafe.implicits.global
 import fs2.io.file.{Files, Path}
 import scribe.Logging
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
-import scala.scalajs.js.{UndefOr, undefined}
+import scala.scalajs.js.{undefined, UndefOr}
 
 @JSExportAll
 case class CompilationResult(
   errors: js.Array[ErrorInfo],
-  locations: js.Array[TokenLink],
-  importLocations: js.Array[TokenImport]
+  warnings: js.Array[WarningInfo] = js.Array(),
+  locations: js.Array[TokenLink] = js.Array(),
+  importLocations: js.Array[TokenImport] = js.Array()
 )
 
 @JSExportAll
@@ -72,58 +76,79 @@ object ErrorInfo {
   }
 }
 
+@JSExportAll
+case class WarningInfo(start: Int, end: Int, message: String, location: UndefOr[String])
+
+object WarningInfo {
+
+  def apply(fileSpan: FileSpan, message: String): WarningInfo = {
+    val start = fileSpan.span.startIndex
+    val end = fileSpan.span.endIndex
+    WarningInfo(start, end, message, fileSpan.name)
+  }
+}
+
 @JSExportTopLevel("AquaLSP")
 object AquaLSP extends App with Logging {
 
-  def errorToInfo(error: AquaError[FileModuleId, AquaFileError, FileSpan.F]): List[ErrorInfo] = {
-    error match {
-      case ParserErr(err) =>
-        err match {
-          case BlockIndentError(indent, message) =>
-            ErrorInfo(indent._1, message) :: Nil
-          case ArrowReturnError(point, message) =>
-            ErrorInfo(point._1, message) :: Nil
-          case LexerError((span, e)) =>
-            e.expected.toList
-              .groupBy(_.offset)
-              .map { case (offset, exps) =>
-                val localSpan = Span(offset, offset + 1)
-                val fSpan = FileSpan(span.name, span.locationMap, localSpan)
-                val errorMessages = exps.flatMap(exp => ParserError.expectationToString(exp))
-                val msg = s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t)
-                (offset, ErrorInfo(fSpan, msg.mkString("\n")))
-              }
-              .toList
-              .sortBy(_._1)
-              .map(_._2)
-              .reverse
-        }
-      case SourcesErr(err) =>
-        ErrorInfo.applyOp(0, 0, err.showForConsole, None) :: Nil
-      case ResolveImportsErr(_, token, err) =>
-        ErrorInfo(token.unit._1, err.showForConsole) :: Nil
-      case ImportErr(token) =>
-        ErrorInfo(token.unit._1, "Cannot resolve import") :: Nil
-      case CycleError(modules) =>
-        ErrorInfo.applyOp(
-          0,
-          0,
-          s"Cycle loops detected in imports: ${modules.map(_.file.fileName)}",
-          None
-        ) :: Nil
-      case CompileError(err) =>
-        err match {
-          case RulesViolated(token, messages) =>
-            ErrorInfo(token.unit._1, messages.mkString("\n")) :: Nil
-          case HeaderError(token, message) =>
-            ErrorInfo(token.unit._1, message) :: Nil
-          case WrongAST(ast) =>
-            ErrorInfo.applyOp(0, 0, "Semantic error: wrong AST", None) :: Nil
+  private def errorToInfo(
+    error: AquaError[FileModuleId, AquaFileError, FileSpan.F]
+  ): List[ErrorInfo] = error match {
+    case AquaParserError(err) =>
+      err match {
+        case BlockIndentError(indent, message) =>
+          ErrorInfo(indent._1, message) :: Nil
+        case ArrowReturnError(point, message) =>
+          ErrorInfo(point._1, message) :: Nil
+        case LexerError((span, e)) =>
+          e.expected.toList
+            .groupBy(_.offset)
+            .map { case (offset, exps) =>
+              val localSpan = Span(offset, offset + 1)
+              val fSpan = FileSpan(span.name, span.locationMap, localSpan)
+              val errorMessages = exps.flatMap(exp => ParserError.expectationToString(exp))
+              val msg = s"${errorMessages.head}" :: errorMessages.tail.map(t => "OR " + t)
+              (offset, ErrorInfo(fSpan, msg.mkString("\n")))
+            }
+            .toList
+            .sortBy(_._1)
+            .map(_._2)
+            .reverse
+      }
+    case SourcesError(err) =>
+      ErrorInfo.applyOp(0, 0, err.showForConsole, None) :: Nil
+    case ResolveImportsError(_, token, err) =>
+      ErrorInfo(token.unit._1, err.showForConsole) :: Nil
+    case ImportError(token) =>
+      ErrorInfo(token.unit._1, "Cannot resolve import") :: Nil
+    case CycleError(modules) =>
+      ErrorInfo.applyOp(
+        0,
+        0,
+        s"Cycle loops detected in imports: ${modules.map(_.file.fileName)}",
+        None
+      ) :: Nil
+    case CompileError(err) =>
+      err match {
+        case RulesViolated(token, messages) =>
+          ErrorInfo(token.unit._1, messages.mkString("\n")) :: Nil
+        case HeaderError(token, message) =>
+          ErrorInfo(token.unit._1, message) :: Nil
+        case WrongAST(ast) =>
+          ErrorInfo.applyOp(0, 0, "Semantic error: wrong AST", None) :: Nil
 
-        }
-      case OutputError(_, err) =>
-        ErrorInfo.applyOp(0, 0, err.showForConsole, None) :: Nil
-    }
+      }
+    case OutputError(_, err) =>
+      ErrorInfo.applyOp(0, 0, err.showForConsole, None) :: Nil
+    case AirValidationError(errors) =>
+      errors.toChain.toList.map(ErrorInfo.applyOp(0, 0, _, None))
+  }
+
+  private def warningToInfo(
+    warning: AquaWarning[FileSpan.F]
+  ): List[WarningInfo] = warning match {
+    case CompileWarning(SemanticWarning(token, messages)) =>
+      WarningInfo(token.unit._1, messages.mkString("\n")) :: Nil
   }
 
   @JSExport
@@ -133,7 +158,7 @@ object AquaLSP extends App with Logging {
   ): scalajs.js.Promise[CompilationResult] = {
     logger.debug(s"Compiling '$pathStr' with imports: $imports")
 
-    implicit val aio: AquaIO[IO] = new AquaFilesIO[IO]
+    given AquaIO[IO] = new AquaFilesIO[IO]
 
     val path = Path(pathStr)
     val pathId = FileModuleId(path)
@@ -141,34 +166,17 @@ object AquaLSP extends App with Logging {
     val config = AquaCompilerConf(ConstantRaw.defaultConstants(None))
 
     val proc = for {
-
-      res <- LSPCompiler
-        .compileToLsp[IO, AquaFileError, FileModuleId, FileSpan.F](
-          sources,
-          SpanParser.parser,
-          config
-        )
+      res <- LSPCompiler.compileToLsp[IO, AquaFileError, FileModuleId, FileSpan.F](
+        sources,
+        SpanParser.parser,
+        config
+      )
     } yield {
-      val fileRes: Validated[NonEmptyChain[
-        AquaError[FileModuleId, AquaFileError, FileSpan.F]
-      ], LspContext[FileSpan.F]] = res
-        .andThen(
-          _.getOrElse(
-            pathId,
-            invalidNec(
-              SourcesErr(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
-            )
-          )
+      val fileRes = res.andThen(
+        _.get(pathId).toValidNec(
+          SourcesError(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
         )
-        .andThen(
-          _.get(pathId)
-            .map(l => validNec(l))
-            .getOrElse(
-              invalidNec(
-                SourcesErr(Unresolvable(s"Unexpected. No file $pathStr in compiler results"))
-              )
-            )
-        )
+      )
 
       logger.debug("Compilation done.")
 
@@ -176,21 +184,18 @@ object AquaLSP extends App with Logging {
         locations: List[(Token[FileSpan.F], Token[FileSpan.F])]
       ): js.Array[TokenLink] = {
         locations.flatMap { case (from, to) =>
-          
-              val fromOp = TokenLocation.fromSpan(from.unit._1)
-              val toOp = TokenLocation.fromSpan(to.unit._1)
+          val fromOp = TokenLocation.fromSpan(from.unit._1)
+          val toOp = TokenLocation.fromSpan(to.unit._1)
 
-              val link = for {
-                from <- fromOp
-                to <- toOp
-              } yield {
-                TokenLink(from, to)
-              }
+          val link = for {
+            from <- fromOp
+            to <- toOp
+          } yield TokenLink(from, to)
 
-              if (link.isEmpty)
-                logger.warn(s"Incorrect coordinates for token '${from.unit._1.name}'")
+          if (link.isEmpty)
+            logger.warn(s"Incorrect coordinates for token '${from.unit._1.name}'")
 
-              link.toList
+          link.toList
         }.toJSArray
       }
 
@@ -204,6 +209,7 @@ object AquaLSP extends App with Logging {
       val result = fileRes match {
         case Valid(lsp) =>
           val errors = lsp.errors.map(CompileError.apply).flatMap(errorToInfo)
+          val warnings = lsp.warnings.map(CompileWarning.apply).flatMap(warningToInfo)
           errors match
             case Nil =>
               logger.debug("No errors on compilation.")
@@ -212,13 +218,14 @@ object AquaLSP extends App with Logging {
 
           CompilationResult(
             errors.toJSArray,
+            warnings.toJSArray,
             locationsToJs(lsp.locations),
             importsToTokenImport(lsp.importTokens)
           )
-        case Invalid(e: NonEmptyChain[AquaError[FileModuleId, AquaFileError, FileSpan.F]]) =>
-          val errors = e.toNonEmptyList.toList.flatMap(errorToInfo)
+        case Invalid(e) =>
+          val errors = e.toChain.toList.flatMap(errorToInfo)
           logger.debug("Errors: " + errors.mkString("\n"))
-          CompilationResult(errors.toJSArray, List.empty.toJSArray, List.empty.toJSArray)
+          CompilationResult(errors.toJSArray)
       }
       result
     }
