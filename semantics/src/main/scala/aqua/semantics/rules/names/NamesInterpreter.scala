@@ -103,11 +103,7 @@ class NamesInterpreter[S[_], X](using
         }
       case None =>
         mapStackHeadM(report.error(name, "Cannot define a variable in the root scope").as(false))(
-          fr =>
-            report
-              .warning(name, "Variable name is too short.")
-              .whenA(name.value.length < 3)
-              .as(fr.addName(name, `type`) -> true)
+          fr => (fr.addName(name, `type`) -> true).pure
         ) <* locations.addToken(name.value, name)
     }
 
