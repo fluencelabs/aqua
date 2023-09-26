@@ -61,7 +61,7 @@ class MakeStructInlinerSpec extends AnyFlatSpec with Matchers {
             VarModel("get_field", ScalarType.string)
           ).leaf
         ),
-        SeqModel.wrap(
+        RestrictionModel(streamMapName, streamMapType).wrap(
           InsertKeyValueModel(LiteralModel.quote("field1"), VarModel("l_length", ScalarType.u32), streamMapName, streamMapType).leaf,
           InsertKeyValueModel(LiteralModel.quote("field2"), VarModel("get_field", ScalarType.string), streamMapName, streamMapType).leaf,
           CanonicalizeModel(VarModel(streamMapName, streamMapType), CallModel.Export(result.name, result.`type`)).leaf

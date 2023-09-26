@@ -39,7 +39,7 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
       RestrictionModel("option-inline", StreamType(nestedType)).wrap( // create a stream
         SeqModel.wrap(
           // create an object
-          SeqModel.wrap(
+          RestrictionModel(streamMapVar.name, streamMapType).wrap(
             InsertKeyValueModel(LiteralModel.quote("field1"), LiteralModel.number(3), streamMapVar.name, streamMapType).leaf,
             CanonicalizeModel(streamMapVar, CallModel.Export("nested_type_obj", nestedType)).leaf
           ),
