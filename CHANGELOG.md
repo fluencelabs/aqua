@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.12.2](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.1...aqua-v0.12.2) (2023-09-25)
+
+
+### Features
+
+* **aqua-api:** Use scala.js link instead of opt ([#891](https://github.com/fluencelabs/aqua/issues/891)) ([3f916c7](https://github.com/fluencelabs/aqua/commit/3f916c78ab3aa6e50d47929bf28b846bf5537868))
+* **build:** Implement custom bundle task ([#894](https://github.com/fluencelabs/aqua/issues/894)) ([67d8151](https://github.com/fluencelabs/aqua/commit/67d8151d9432971b5375794bb15394eeea94132e))
+* **compiler:** Add warnings subsystem [fixes LNG117] ([#906](https://github.com/fluencelabs/aqua/issues/906)) ([27a781d](https://github.com/fluencelabs/aqua/commit/27a781dd3f161728c111e5fe834389da69f82d8f))
+* **compiler:** Fail on internal error [fixes LNG-229] ([#905](https://github.com/fluencelabs/aqua/issues/905)) ([8741c91](https://github.com/fluencelabs/aqua/commit/8741c910bed18420cf69fd3bf0496b01148e4cf5))
+* **compiler:** Services as abilities [fixes LNG-206] ([#873](https://github.com/fluencelabs/aqua/issues/873)) ([6be2a3d](https://github.com/fluencelabs/aqua/commit/6be2a3d5da83c426761819908c0a3c3fd8dc4bf0))
+* export types from aqua-api ([#904](https://github.com/fluencelabs/aqua/issues/904)) ([594f465](https://github.com/fluencelabs/aqua/commit/594f46529d7476f8f2345e9deaa43938d7d52a47))
+* **language-server:** Pass errors to lsp context [fixes LNG-243] ([#888](https://github.com/fluencelabs/aqua/issues/888)) ([f8b5017](https://github.com/fluencelabs/aqua/commit/f8b5017918a1ec076ccc1593cca70e9e71276b36))
+* rethrow errors to capture stacktrace ([#907](https://github.com/fluencelabs/aqua/issues/907)) ([66638af](https://github.com/fluencelabs/aqua/commit/66638afa2d6ad6ca2fba1492c94b2c80fd397e39))
+
+
+### Bug Fixes
+
+* **compiler:** Do not restrict stream args when ability is present [fixes LNG-233] ([#902](https://github.com/fluencelabs/aqua/issues/902)) ([54ddcc8](https://github.com/fluencelabs/aqua/commit/54ddcc8b6271b1aed4b427dcc74360a0cb212eb4))
+* **compiler:** Fix arrows capture in closures [fixes LNG-242] ([#903](https://github.com/fluencelabs/aqua/issues/903)) ([ed9e708](https://github.com/fluencelabs/aqua/commit/ed9e708939d9a689b51ebd0e2ab89a8c92a07b05))
+* **deps:** update dependency @fluencelabs/js-client to v0.1.4 ([#887](https://github.com/fluencelabs/aqua/issues/887)) ([d6f879e](https://github.com/fluencelabs/aqua/commit/d6f879ef7ab7e1a8dfadc12b573cf1e51e06d9c9))
+* **deps:** update dependency @fluencelabs/js-client to v0.1.6 ([#890](https://github.com/fluencelabs/aqua/issues/890)) ([fb75bc2](https://github.com/fluencelabs/aqua/commit/fb75bc267e9b2cb0c7dbeac389b73ee33b273a11))
+* **deps:** update dependency @fluencelabs/js-client to v0.1.7 ([#908](https://github.com/fluencelabs/aqua/issues/908)) ([1c708c8](https://github.com/fluencelabs/aqua/commit/1c708c8bb03a9c7c749b814d412097498c833b36))
+
 ## [0.12.1](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.0...aqua-v0.12.1) (2023-09-11)
 
 
