@@ -1,0 +1,21 @@
+aqua ErrorClear
+
+export errorClearTest, FailService
+
+service FailService("fail-srv"):
+    call(s: string) -> string
+
+func errorClearTest(node: string) -> i64:
+    stream: *string
+    code: ?i64
+
+    on node:
+        try:
+            stream <- FailService.call("fail")
+        otherwise:
+            stream <- FailService.call("handle")
+        
+        code <<- LAST_ERROR.error_code
+    
+    <- code!
+

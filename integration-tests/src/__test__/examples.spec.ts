@@ -15,6 +15,7 @@ import {
   nestedOnPropagateCall,
   seqOnPropagateCall,
 } from "../examples/onErrorPropagation.js";
+import { errorClearCall } from "../examples/errorClear.js";
 import { funcCall } from "../examples/funcCall.js";
 import { registerPrintln } from "../compiled/examples/println.js";
 import { helloWorldCall } from "../examples/helloWorldCall.js";
@@ -742,6 +743,11 @@ describe("Testing examples", () => {
     expect(call).rejects.toMatchObject({
       message: expect.stringContaining("propagated error"),
     });
+  });
+
+  it("errorClear.aqua", async () => {
+    let errorClearResult = await errorClearCall(relayPeerId2);
+    expect(errorClearResult).toEqual(0);
   });
 
   it("complex.aqua", async () => {
