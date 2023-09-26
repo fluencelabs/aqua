@@ -22,7 +22,7 @@ class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     Prog
       .around(
-        N.define(expr.name, ValueRaw.lastError.baseType),
+        N.define(expr.name, ValueRaw.errorType),
         (_, g: Raw) =>
           g match {
             case FuncOp(op) =>
@@ -31,7 +31,7 @@ class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
                 tag = TryTag.Catch
                   .wrap(
                     SeqTag.wrap(
-                      AssignmentTag(ValueRaw.lastError, expr.name.value).leaf,
+                      AssignmentTag(ValueRaw.error, expr.name.value).leaf,
                       restricted
                     )
                   )

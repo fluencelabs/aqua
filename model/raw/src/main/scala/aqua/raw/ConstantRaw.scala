@@ -42,7 +42,7 @@ object ConstantRaw {
   val lastError: ConstantRaw =
     ConstantRaw(
       "LAST_ERROR",
-      ValueRaw.lastError,
+      ValueRaw.error,
       false
     )
 

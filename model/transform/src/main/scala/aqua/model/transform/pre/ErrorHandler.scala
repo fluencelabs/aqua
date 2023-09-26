@@ -9,7 +9,7 @@ import cats.data.Chain
 import cats.free.Cofree
 
 trait ErrorHandler {
-  def handleLastError: RawTag.Tree
+  def handleError: RawTag.Tree
 }
 
 case class CallbackErrorHandler(
@@ -17,9 +17,9 @@ case class CallbackErrorHandler(
   funcName: String
 ) extends ErrorHandler {
 
-  override def handleLastError: RawTag.Tree = {
+  override def handleError: RawTag.Tree = {
     val call = Call(
-      args = ValueRaw.lastError :: LiteralRaw.number(0) :: Nil,
+      args = ValueRaw.error :: LiteralRaw.number(0) :: Nil,
       exportTo = Nil
     )
 
