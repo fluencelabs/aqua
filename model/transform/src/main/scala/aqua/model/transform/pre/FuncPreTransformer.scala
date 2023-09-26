@@ -89,7 +89,7 @@ case class FuncPreTransformer(
       returnType
     )
 
-    val handleError = errorHandler.handleLastError
+    val handleError = errorHandler.handleError
 
     val call = CallArrowRawTag.func(func.funcName, funcCall).leaf
 

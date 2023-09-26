@@ -188,7 +188,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
                       SeqRes.wrap(
                         through(ValueModel.fromRaw(relay)),
                         through(initPeer),
-                        failLastErrorRes
+                        failErrorRes
                       )
                     ),
                     NextRes(peer.name).leaf

@@ -204,7 +204,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         TryTag.wrap(
           testServiceCallStr("try"),
           SeqTag.wrap(
-            AssignmentTag(ValueRaw.lastError, "e").leaf,
+            AssignmentTag(ValueRaw.error, "e").leaf,
             testServiceCallStr("catch")
           )
         )
@@ -230,11 +230,11 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         TryTag.wrap(
           testServiceCallStr("try"),
           SeqTag.wrap(
-            AssignmentTag(ValueRaw.lastError, "e").leaf,
+            AssignmentTag(ValueRaw.error, "e").leaf,
             testServiceCallStr("catch1")
           ),
           SeqTag.wrap(
-            AssignmentTag(ValueRaw.lastError, "e").leaf,
+            AssignmentTag(ValueRaw.error, "e").leaf,
             testServiceCallStr("catch2")
           )
         )
@@ -557,7 +557,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       val expected = TryTag.wrap(
         declareStreamPush("stream", "a"),
         SeqTag.wrap(
-          AssignmentTag(ValueRaw.lastError, "e").leaf,
+          AssignmentTag(ValueRaw.error, "e").leaf,
           declareStreamPush("stream", "b")
         ),
         declareStreamPush("stream", "c")
