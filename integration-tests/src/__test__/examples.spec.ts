@@ -746,7 +746,7 @@ describe("Testing examples", () => {
   });
 
   it("errorClear.aqua", async () => {
-    let errorClearResult = await errorClearCall(relayPeerId2);
+    let errorClearResult = await errorClearCall(peer2);
     expect(errorClearResult).toEqual(0);
   });
 
