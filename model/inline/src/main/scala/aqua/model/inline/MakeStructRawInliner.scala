@@ -41,7 +41,9 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
       val toResult =
         CanonicalizeModel(VarModel(mapName, mapType), result).leaf
 
-      (ops, models :+ toResult)
+      val wrapped = RestrictionModel(mapName, mapType).wrap(models :+ toResult) :: Nil
+
+      (ops, wrapped)
     }
   }
 
