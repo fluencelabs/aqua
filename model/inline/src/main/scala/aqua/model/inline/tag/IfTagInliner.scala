@@ -61,6 +61,22 @@ final case class IfTagInliner(
           if (shouldMatch) LiteralModel.matchValuesNotEqualErrorCode
           else LiteralModel.mismatchValuesEqualErrorCode
 
+        /**
+         * (xor
+         *   ([mis]match left right
+         *     <ifBody>
+         *   )
+         *   (seq
+         *     (ap :error: -if-error-)
+         *     (xor
+         *       (match :error:.$.error_code [MIS]MATCH_FAILED_ERROR_CODE
+         *          <falseCase>
+         *       )
+         *       <errorCase>
+         *     )
+         *   )
+         * )
+         */
         def runIf(
           falseCase: Chain[OpModel.Tree],
           errorCase: OpModel.Tree
@@ -101,6 +117,18 @@ final case class IfTagInliner(
           )(
             runIf(
               falseCase = elseBody,
+              /**
+               * (seq
+               *   (ap :error: -else-error-)
+               *   (xor
+               *     (mismatch :error:.$.error_code [MIS]MATCH_FAILED_ERROR_CODE
+               *       (ap -else-error- -if-else-error-)
+               *     )
+               *     (ap -if-error- -if-else-error)
+               *   )
+               *   (fail -if-else-error)
+               * )
+               */
               errorCase = SeqModel.wrap(
                 saveError(elseErrorName).leaf,
                 XorModel.wrap(
@@ -110,12 +138,12 @@ final case class IfTagInliner(
                     shouldMatch = true
                   ).wrap(
                     renameError(
-                      elseErrorName,
+                      ifErrorName,
                       ifElseErrorName
                     ).leaf
                   ),
                   renameError(
-                    ifErrorName,
+                    elseErrorName,
                     ifElseErrorName
                   ).leaf
                 ),
