@@ -91,9 +91,12 @@ object LiteralModel {
       }
   }
 
-  // AquaVM will return empty string for
-  // %last_error%.$.error_code if there is no %last_error%
-  val emptyErrorCode = quote("")
+  // AquaVM will return 0 for
+  // :error:.$.error_code if there is no :error:
+  val emptyErrorCode = number(0)
+
+  val matchValuesNotEqualErrorCode = number(10001)
+  val mismatchValuesEqualErrorCode = number(10002)
 
   def fromRaw(raw: LiteralRaw): LiteralModel = LiteralModel(raw.value, raw.baseType)
 

@@ -1,38 +1,128 @@
 package aqua.model.inline.tag
 
+import aqua.raw.value.{ApplyBinaryOpRaw, ValueRaw}
+import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
 import aqua.model.ValueModel
 import aqua.model.*
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.RawValueInliner.valueToModel
+import aqua.model.inline.TagInliner.canonicalizeIfStream
+import aqua.model.inline.Inline.parDesugarPrefixOpt
 
 import cats.data.Chain
+import cats.syntax.flatMap.*
+import cats.syntax.apply.*
 
 final case class IfTagInliner(
-  left: ValueModel,
-  right: ValueModel,
-  shouldMatch: Boolean
+  valueRaw: ValueRaw
 ) {
   import IfTagInliner.*
 
-  def inline(children: Chain[OpModel.Tree]): OpModel.Tree =
+  def inlined[S: Mangler: Exports: Arrows] =
+    (valueRaw match {
+      // Optimize in case last operation is equality check
+      case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right) =>
+        (
+          valueToModel(left) >>= canonicalizeIfStream,
+          valueToModel(right) >>= canonicalizeIfStream
+        ).mapN { case ((lmodel, lprefix), (rmodel, rprefix)) =>
+          val prefix = parDesugarPrefixOpt(lprefix, rprefix)
+          val shouldMatch = op match {
+            case BinOp.Eq => true
+            case BinOp.Neq => false
+          }
+
+          (prefix, lmodel, rmodel, shouldMatch)
+        }
+      case _ =>
+        valueToModel(valueRaw).map { case (valueModel, prefix) =>
+          val compareModel = LiteralModel.bool(true)
+          val shouldMatch = true
+
+          (prefix, valueModel, compareModel, shouldMatch)
+        }
+    }).map { case (prefix, leftValue, rightValue, shouldMatch) =>
+      IfTagInlined(
+        prefix,
+        toModel(leftValue, rightValue, shouldMatch)
+      )
+    }
+
+  private def toModel(
+    leftValue: ValueModel,
+    rightValue: ValueModel,
+    shouldMatch: Boolean
+  )(children: Chain[OpModel.Tree]): OpModel.Tree =
     children
       .filterNot(_.head == EmptyModel)
       .uncons
       .map { case (ifBody, elseBody) =>
-        val elseOrNull =
-          if (elseBody.isEmpty)
-            Chain.one(NullModel.leaf)
-          else elseBody
+        val matchFailedErrorCode =
+          if (shouldMatch) LiteralModel.matchValuesNotEqualErrorCode
+          else LiteralModel.mismatchValuesEqualErrorCode
 
-        XorModel.wrap(
-          MatchMismatchModel(left, right, shouldMatch).wrap(
-            ifBody
-          ),
+        def runIf(
+          falseCase: Chain[OpModel.Tree],
+          errorCase: OpModel.Tree
+        ): OpModel.Tree =
           XorModel.wrap(
-            noError.wrap(
-              elseOrNull
-            ),
-            rethrow.leaf
+            MatchMismatchModel(
+              leftValue,
+              rightValue,
+              shouldMatch
+            ).wrap(ifBody),
+            SeqModel.wrap(
+              saveError(ifErrorName).leaf,
+              XorModel.wrap(
+                MatchMismatchModel(
+                  ValueModel.lastErrorCode,
+                  matchFailedErrorCode,
+                  shouldMatch = true
+                ).wrap(falseCase),
+                errorCase
+              )
+            )
           )
-        )
+
+        if (elseBody.isEmpty)
+          restrictErrors(
+            ifErrorName
+          )(
+            runIf(
+              falseCase = Chain.one(NullModel.leaf),
+              errorCase = failWithError(ifErrorName).leaf
+            )
+          )
+        else
+          restrictErrors(
+            ifErrorName,
+            elseErrorName,
+            ifElseErrorName
+          )(
+            runIf(
+              falseCase = elseBody,
+              errorCase = SeqModel.wrap(
+                saveError(elseErrorName).leaf,
+                XorModel.wrap(
+                  MatchMismatchModel(
+                    ValueModel.lastErrorCode,
+                    LiteralModel.matchValuesNotEqualErrorCode,
+                    shouldMatch = true
+                  ).wrap(
+                    renameError(
+                      elseErrorName,
+                      ifElseErrorName
+                    ).leaf
+                  ),
+                  renameError(
+                    ifErrorName,
+                    ifElseErrorName
+                  ).leaf
+                ),
+                failWithError(ifElseErrorName).leaf
+              )
+            )
+          )
       }
       .getOrElse(EmptyModel.leaf)
 
@@ -40,15 +130,40 @@ final case class IfTagInliner(
 
 object IfTagInliner {
 
-  val noError: MatchMismatchModel =
-    MatchMismatchModel(
-      left = ValueModel.lastErrorCode,
-      right = LiteralModel.emptyErrorCode,
-      shouldMatch = true
+  final case class IfTagInlined(
+    prefix: Option[OpModel.Tree],
+    toModel: Chain[OpModel.Tree] => OpModel.Tree
+  )
+
+  private def restrictErrors(
+    name: String*
+  )(tree: OpModel.Tree): OpModel.Tree =
+    name.foldLeft(tree) { case (tree, name) =>
+      RestrictionModel(
+        name,
+        ValueModel.errorType
+      ).wrap(tree)
+    }
+
+  private def saveError(name: String): FlattenModel =
+    FlattenModel(
+      ValueModel.error,
+      name
     )
 
-  val rethrow: FailModel =
-    FailModel(
-      value = ValueModel.lastError
+  private def renameError(from: String, to: String): FlattenModel =
+    FlattenModel(
+      VarModel(from, ValueModel.errorType),
+      to
     )
+
+  private def failWithError(name: String): FailModel =
+    FailModel(
+      VarModel(name, ValueModel.errorType)
+    )
+
+  private val ifErrorName = "-if-error-"
+  private val elseErrorName = "-else-error-"
+  private val ifElseErrorName = "-if-else-error-"
+
 }

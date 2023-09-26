@@ -209,19 +209,13 @@ object TagInliner extends Logging {
           prefix = parDesugarPrefix(viaF.prependedAll(pif))
         )
 
-      case IfTag(leftRaw, rightRaw, shouldMatch) =>
-        (
-          valueToModel(leftRaw) >>= canonicalizeIfStream.tupled,
-          valueToModel(rightRaw) >>= canonicalizeIfStream.tupled
-        ).mapN { case ((leftModel, leftPrefix), (rightModel, rightPrefix)) =>
-          val prefix = parDesugarPrefixOpt(leftPrefix, rightPrefix)
-          val toModel = IfTagInliner(leftModel, rightModel, shouldMatch).inline
-
+      case IfTag(valueRaw) =>
+        IfTagInliner(valueRaw).inlined.map(inlined =>
           TagInlined.Mapping(
-            toModel = toModel,
-            prefix = prefix
+            toModel = inlined.toModel,
+            prefix = inlined.prefix
           )
-        }
+        )
 
       case TryTag => pure(XorModel)
 
