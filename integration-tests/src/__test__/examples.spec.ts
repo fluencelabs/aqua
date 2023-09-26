@@ -747,7 +747,7 @@ describe("Testing examples", () => {
 
   it("errorClear.aqua", async () => {
     let errorClearResult = await errorClearCall(peer2);
-    expect(errorClearResult).toEqual(0);
+    expect(errorClearResult).toEqual(["handle", 0]);
   });
 
   it("complex.aqua", async () => {
