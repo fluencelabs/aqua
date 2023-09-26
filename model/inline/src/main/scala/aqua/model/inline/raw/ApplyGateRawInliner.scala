@@ -4,11 +4,13 @@ import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{ApplyGateRaw, LiteralRaw, VarRaw}
-import cats.data.State
-import cats.data.Chain
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
+
+import cats.data.State
+import cats.data.Chain
 import cats.syntax.monoid.*
+import cats.syntax.option.*
 import scribe.Logging
 
 object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
@@ -63,7 +65,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
 
     RestrictionModel(varSTest.name, streamType).wrap(
       increment(idxModel, incrVar),
-      ForModel(iter.name, VarModel(streamName, streamType), Some(ForModel.NeverMode)).wrap(
+      ForModel(iter.name, VarModel(streamName, streamType), ForModel.Mode.Never.some).wrap(
         PushToStreamModel(
           iter,
           CallModel.Export(varSTest.name, varSTest.`type`)
@@ -121,8 +123,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
 
       val tree = SeqModel.wrap(idxInline.predo.toList :+ gate)
 
-      val treeInline =
-        Inline(idxInline.flattenValues, predo = Chain.one(tree))
+      val treeInline = Inline(predo = Chain.one(tree))
 
       (
         VarModel(uniqueResultName, ArrayType(afr.streamType.element)),

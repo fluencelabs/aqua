@@ -1,11 +1,16 @@
 package aqua.model.transform.topology
 
 import aqua.model.*
+import aqua.model.transform.cursor.*
+
 import cats.Eval
 import cats.data.{Chain, NonEmptyList, OptionT}
-import aqua.model.transform.cursor.*
 import cats.syntax.traverse.*
 import cats.syntax.show.*
+import cats.syntax.foldable.*
+import cats.syntax.apply.*
+import cats.instances.lazyList.*
+import cats.syntax.applicative.*
 import cats.free.Cofree
 import scribe.Logging
 
@@ -65,23 +70,48 @@ case class OpModelTreeCursor(
     !allToRight.forall(_.isNoExec)
 
   // Whether variables exported from this branch are used later in the code or not
-  def exportsUsedLater: Boolean =
-    OpModel.exportsVarNames(current).map(ns => ns.nonEmpty && checkNamesUsedLater(ns)).value
+  def exportsUsedLater: Boolean = (
+    namesUsedLater,
+    OpModel.exportsVarNames(current)
+  ).mapN(_ intersect _).value.nonEmpty
 
-  // TODO write a test
-  def checkNamesUsedLater(names: Set[String]): Boolean =
+  def namesUsedLater: Eval[Set[String]] =
     allToRight
       .map(_.current)
       .map(OpModel.usesVarNames)
-      .exists(_.value.intersect(names).nonEmpty)
+      .combineAll
 
-  def cata[A](wrap: ChainZipper[Cofree[Chain, A]] => Chain[Cofree[Chain, A]])(
+  // Check that exports of this subtree are used later in the code
+  // Do not take into account subtrees for which the filter returns false
+  def exportsUsedLaterFilter(
+    filter: OpModelTreeCursor => Boolean
+  ): Eval[Boolean] = (
+    cata((cur, childs: Chain[Set[String]]) =>
+      Eval.later(
+        if (filter(cur))
+          childs.combineAll ++
+            // TODO: Move to OpModel
+            cur.op.exportsVarNames --
+            cur.op.restrictsVarNames
+        else Set.empty
+      )
+    ),
+    namesUsedLater
+  ).mapN(_ intersect _).map(_.nonEmpty)
+
+  def cata[A](f: (OpModelTreeCursor, Chain[A]) => Eval[A]): Eval[A] =
+    for {
+      childs <- Chain.fromSeq(children).traverse(_.cata(f))
+      res <- f(this, childs)
+    } yield res
+
+  def traverse[A](wrap: ChainZipper[Cofree[Chain, A]] => Chain[Cofree[Chain, A]])(
     folder: OpModelTreeCursor => OptionT[Eval, ChainZipper[Cofree[Chain, A]]]
   ): Eval[Chain[Cofree[Chain, A]]] =
     folder(this).map { case cz @ ChainZipper(_, curr, _) =>
       val updatedTail = for {
         childs <- Eval.later(Chain.fromSeq(children))
-        addition <- childs.flatTraverse(_.cata(wrap)(folder))
+        addition <- childs.flatTraverse(_.traverse(wrap)(folder))
         tail <- curr.tail
       } yield tail ++ addition
 

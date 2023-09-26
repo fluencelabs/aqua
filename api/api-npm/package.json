@@ -1,13 +1,16 @@
 {
   "name": "@fluencelabs/aqua-api",
-  "version": "0.11.7",
+  "version": "0.12.2",
   "description": "Aqua API",
-  "type": "commonjs",
+  "type": "module",
+  "main": "index.js",
   "files": [
+    "index.js",
+    "index.d.ts",
     "aqua-api.js",
-    "aqua-api.d.ts",
     "meta-utils.js"
   ],
+  "prettier": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fluencelabs/aqua.git"
@@ -23,6 +26,7 @@
   },
   "homepage": "https://github.com/fluencelabs/aqua#readme",
   "devDependencies": {
-    "@fluencelabs/fluence": "0.28.0"
+    "@fluencelabs/interfaces": "0.8.2",
+    "prettier": "3.0.0"
   }
 }

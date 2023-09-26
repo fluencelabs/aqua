@@ -20,21 +20,27 @@ case class ArrowExpr[F[_]](arrowTypeExpr: ArrowTypeToken[F])
 object ArrowExpr extends Expr.AndIndented {
 
   val funcChildren: List[Expr.Lexem] =
-    AbilityIdExpr ::
+    ServiceIdExpr ::
       PushToStreamExpr ::
       ForExpr ::
       Expr.defer(OnExpr) ::
-      CallArrowExpr ::
+      // It is important for IfExpr to be before CallArrowExpr
+      // because `if (1 + 1) == 2` is parsed as if `if(1 + 1)` is an arrow call
       IfExpr ::
-      TryExpr ::
       ElseOtherwiseExpr ::
+      TryExpr ::
       CatchExpr ::
+      Expr.defer(ParSeqExpr) ::
       Expr.defer(ParExpr) ::
       Expr.defer(CoExpr) ::
       Expr.defer(JoinExpr) ::
       DeclareStreamExpr ::
       Expr.defer(ClosureExpr) ::
       AssignmentExpr ::
+      // It is important for CallArrowExpr to be last
+      // because it can parse prefixes of other expressions
+      // e.g. `if` could be parsed as variable name
+      CallArrowExpr ::
       Nil
 
   override val validChildren: List[Expr.Lexem] =

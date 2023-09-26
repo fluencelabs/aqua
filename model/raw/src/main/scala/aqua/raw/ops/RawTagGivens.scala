@@ -1,11 +1,14 @@
 package aqua.raw.ops
 
-import aqua.raw.value.LiteralRaw
+import aqua.raw.value.{LiteralRaw, ValueRaw}
+
 import cats.free.Cofree
 import cats.data.Chain
 import cats.{Eval, Semigroup}
 import cats.syntax.apply.*
 import cats.syntax.semigroup.*
+import cats.syntax.foldable.*
+import cats.syntax.all.*
 
 trait RawTagGivens {
 
@@ -31,6 +34,9 @@ trait RawTagGivens {
       if (vals.isEmpty) tree
       else tree.map(_.mapValues(_.renameVars(vals)).renameExports(vals))
 
+    def mapValues(f: ValueRaw => ValueRaw): RawTag.Tree =
+      tree.map(_.mapValues(f))
+
     def renameExports(vals: Map[String, String]): RawTag.Tree =
       if (vals.isEmpty) tree
       else tree.map(_.renameExports(vals))
@@ -39,4 +45,25 @@ trait RawTagGivens {
       Cofree.cata(tree) { case (tag, acc) =>
         Eval.later(acc.foldLeft(tag.definesVarNames)(_ ++ _))
       }
+
+    /**
+     * Get all variable names used by this tree
+     * but not exported in it (free variables).
+     */
+    def usesVarNames: Eval[Set[String]] =
+      Cofree
+        .cata(tree)((tag, childs: Chain[(Set[String], Set[String])]) =>
+          Eval.later {
+            val (childExports, childUses) = childs.combineAll
+            val exports = tag.exportsVarNames ++ childExports -- tag.restrictsVarNames
+            val uses = tag.usesVarNames ++ childUses -- exports
+            (exports, uses)
+          }
+        )
+        .map { case (_, uses) => uses }
+
+    private def collect[A](pf: PartialFunction[RawTag, A]): Eval[Chain[A]] =
+      Cofree.cata(tree)((tag, acc: Chain[Chain[A]]) =>
+        Eval.later(Chain.fromOption(pf.lift(tag)) ++ acc.flatten)
+      )
 }

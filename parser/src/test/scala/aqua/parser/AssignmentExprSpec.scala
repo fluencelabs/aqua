@@ -8,7 +8,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class AssignmentExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   "assign" should "be parsed" in {
     parseAssign("a = \"b\"") should be(

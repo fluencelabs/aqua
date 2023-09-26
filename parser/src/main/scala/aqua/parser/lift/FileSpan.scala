@@ -9,8 +9,14 @@ import scala.language.implicitConversions
 // TODO: move FileSpan to another package?
 case class FileSpan(name: String, locationMap: Eval[LocationMap], span: Span) {
 
+  /**
+   * Focus on the line pointed by the span
+   *
+   * @param ctx How many lines to capture before and after the line
+   * @return FileSpan.Focus
+   */
   def focus(ctx: Int): Option[FileSpan.Focus] =
-    span.focus(locationMap, ctx).map(FileSpan.Focus(name, locationMap, ctx, _))
+    span.focus(locationMap.value, ctx).map(FileSpan.Focus(name, locationMap, ctx, _))
 }
 
 object FileSpan {
@@ -18,12 +24,12 @@ object FileSpan {
   case class Focus(name: String, locationMap: Eval[LocationMap], ctx: Int, spanFocus: Span.Focus) {
 
     def toConsoleStr(
-      errorType: String,
+      messageType: String,
       msgs: List[String],
       onLeft: String,
       onRight: String = Console.RESET
     ): String =
-      onLeft + "---- " + errorType + ": " + s"$name:${spanFocus.line._1 + 1}:${spanFocus.column + 1}" + onRight +
+      onLeft + "---- " + messageType + ": " + s"$name:${spanFocus.focus.number + 1}:${spanFocus.column + 1}" + onRight +
         spanFocus.toConsoleStr(
           msgs,
           onLeft,

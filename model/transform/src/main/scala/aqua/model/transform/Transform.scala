@@ -1,8 +1,5 @@
 package aqua.model.transform
 
-import cats.syntax.show.*
-import cats.syntax.traverse.*
-import cats.instances.list.*
 import aqua.model.inline.ArrowInliner
 import aqua.model.inline.state.InliningState
 import aqua.model.transform.funcop.*
@@ -13,12 +10,17 @@ import aqua.raw.ops.RawTag
 import aqua.raw.value.VarRaw
 import aqua.res.*
 import aqua.types.ScalarType
+import aqua.model.transform.TransformConfig.TracingConfig
+import aqua.model.transform.pre.{CallbackErrorHandler, ErrorHandler}
+
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
 import cats.syntax.option.*
+import cats.syntax.show.*
+import cats.syntax.traverse.*
+import cats.instances.list.*
 import scribe.Logging
-import aqua.model.transform.TransformConfig.TracingConfig
 
 // API for transforming RawTag to Res
 object Transform extends Logging {
@@ -82,11 +84,30 @@ object Transform extends Logging {
       goThrough = Chain.fromOption(relayVar)
     )
 
-    val errorsCatcher = ErrorsCatcher(
-      enabled = conf.wrapWithXor,
-      serviceId = conf.errorHandlingCallback,
-      funcName = conf.errorFuncName,
-      callable = initCallable
+    val argsProvider: ArgsProvider = ArgsFromService(
+      dataServiceId = conf.dataSrvId
+    )
+
+    val resultsHandler: ResultsHandler = CallbackResultsHandler(
+      callbackSrvId = conf.callbackSrvId,
+      funcName = conf.respFuncName
+    )
+
+    val errorHandler: ErrorHandler = CallbackErrorHandler(
+      serviceId = conf.errorHandlingSrvId,
+      funcName = conf.errorFuncName
+    )
+
+    // Callback on the init peer id, either done via relay or not
+    val callback = initCallable.service(conf.callbackSrvId)
+
+    // preTransformer is applied before function is inlined
+    val preTransformer = FuncPreTransformer(
+      argsProvider,
+      resultsHandler,
+      errorHandler,
+      callback,
+      conf.relayVarName
     )
 
     val tracing = Tracing(
@@ -94,31 +115,16 @@ object Transform extends Logging {
       initCallable = initCallable
     )
 
-    val argsProvider: ArgsProvider = ArgsFromService(
-      dataServiceId = conf.dataSrvId,
-      names = relayVar.toList ::: func.arrowType.domain.labelledData
-    )
-
-    // Transform the body of the function: wrap it with initCallable, provide function arguments via service calls
-    val transform: RawTag.Tree => RawTag.Tree =
-      argsProvider.transform andThen initCallable.transform
-
-    // Callback on the init peer id, either done via relay or not
-    val callback = initCallable.service(conf.callbackSrvId)
-
-    // preTransformer is applied before function is inlined
-    val preTransformer = FuncPreTransformer(
-      transform,
-      callback,
-      conf.respFuncName
-    )
-
     for {
       // Pre transform and inline the function
       model <- funcToModelTree(func, preTransformer)
-      // Post transform the function
-      errorsModel = errorsCatcher.transform(model)
-      tracingModel <- tracing(errorsModel)
+      // Post transform the function.
+      // We should wrap `model` with `onInitPeer` here
+      // so that TagInliner would not wrap it with `xor`.
+      // Topology module needs this `on`
+      // as a starting point.
+      initModel = initCallable.onInitPeer.wrap(model)
+      tracingModel <- tracing(initModel)
       // Resolve topology
       resolved <- Topology.resolve(tracingModel)
       // Clear the tree

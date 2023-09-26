@@ -1,0 +1,35 @@
+aqua Aaa
+
+import "@fluencelabs/aqua-lib/builtin.aqua"
+
+export structuralTypingTest
+
+data WideData:
+  s: string
+  n: u32
+
+data ExactData:
+  s: string
+
+ability ExactAbility:
+  s: string
+  arr(s: string, s2: string, s3: string, s4: string) -> string
+  exact: ExactData
+
+ability WideAbility:
+  s: string
+  arr(s: string, s2: string, s3: string, s4: string) -> string
+  g: string
+  exact: WideData
+
+func ss(s1: string, s2: string, s3: string, s4: string) -> string:
+  <- Op.concat_strings(Op.concat_strings(Op.concat_strings(s1, s2), s3), s4)
+
+func main{ExactAbility}(someData: ExactData, secondData: ExactData) -> string:
+    <- ExactAbility.arr(someData.s, ExactAbility.exact.s, secondData.s, ExactAbility.s)
+
+func structuralTypingTest() -> string:
+  wd = WideData(s = "some_string", n = 32)
+
+  WAbility = WideAbility(s = "ab_string", g = "", arr = ss, exact = wd)
+  <- main{WAbility}(wd, WAbility.exact)

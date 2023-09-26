@@ -1,23 +1,16 @@
 # Aqua
 
 [![release](https://github.com/fluencelabs/aqua/actions/workflows/release.yml/badge.svg)](https://github.com/fluencelabs/aqua/actions/workflows/release.yml)
-[![npm](https://img.shields.io/npm/v/@fluencelabs/aqua)](https://www.npmjs.com/package/@fluencelabs/aqua)
+[![npm](https://img.shields.io/npm/v/@fluencelabs/aqua-api)](https://www.npmjs.com/package/@fluencelabs/aqua-api)
 
 [Aqua](https://fluence.dev/docs/aqua-book/introduction) is an open-source language for distributed workflow coordination in p2p networks. Aqua programs are executed on many peers, sequentially or in parallel, forming a single-use coordination network. Applications are turned into hostless workflows over distributed function calls, which enables various levels of decentralization: from handling by a limited set of servers to complete peer-to-peer architecture by connecting user devices directly. Aqua is the core of the [Fluence](https://fluence.network/) protocol and a framework for internet or private cloud applications.
 
 
-## Installation and Usage
+## Usage
 
-The easiest way to use Aqua is to download the latest build from npm: [@fluencelabs/aqua](https://www.npmjs.com/package/@fluencelabs/aqua).
+The easiest way to use Aqua is through [Fluence CLI](https://github.com/fluencelabs/cli) with [aqua command](https://github.com/fluencelabs/cli/blob/main/docs/commands/README.md#fluence-aqua).
 
-```bash
-npm i -g @fluencelabs/aqua
-aqua --input src/aqua --output src/generated
-```
-
-Input directory should contain files with `.aqua` scripts.
-
-Other ways of installing Aqua can be found in [INSTALL.md](./INSTALL.md).
+Other ways of using Aqua are described in [USAGE.md](./USAGE.md).
 
 
 ## Documentation
@@ -35,9 +28,6 @@ Comprehensive documentation and usage examples as well as a number of videos can
 - [**backend**](./backend) - compilation backend interface
     - [backend/air](./backend/air) - generates AIR code from the middle-end model
     - [backend/ts](./backend/ts) - generates AIR code and TypeScript wrappers for use with [Fluence JS]( https://github.com/fluencelabs/fluence-js) SDK
-- [**cli**](./cli) - CLI interface
-  - [cli](./cli/cli) - Scala sources
-  - [cli-npm](./cli/cli-npm) - JS project
 - [**compiler**](./compiler) - compiler as a pure function made from _linker_, _semantics_ and _backend_
 - [**model**](./model) - middle-end, internal representation of the code, optimizations and transformations
     - [transform](./model/transform) - optimizations and transformations, converting model to the result, ready to be rendered

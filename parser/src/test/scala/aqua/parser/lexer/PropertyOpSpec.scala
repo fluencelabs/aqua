@@ -10,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
 
 class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
 
-  import aqua.AquaSpec._
+  import aqua.AquaSpec.{given, *}
 
   "lambda ops" should "parse" in {
     val opsP = (s: String) => PropertyOp.ops.parseAll(s).value.map(_.mapK(spanToId))
@@ -27,12 +27,15 @@ class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
     val idx2 = PropertyOp.ops.parseAll("[   1   ]").value.map(_.mapK(spanToId)).head
     idx2 shouldBe IntoIndex[Id]((), Option(toNumber(1)))
 
-    val idx3 = PropertyOp.ops.parseAll(
-      """[ -- comment1
-        | -- comment2
-        |   1 -- comment3
-        |   -- comment4
-        |]""".stripMargin).value.map(_.mapK(spanToId)).head
+    val idx3 = PropertyOp.ops
+      .parseAll("""[ -- comment1
+                  | -- comment2
+                  |   1 -- comment3
+                  |   -- comment4
+                  |]""".stripMargin)
+      .value
+      .map(_.mapK(spanToId))
+      .head
     idx3 shouldBe IntoIndex[Id]((), Option(toNumber(1)))
 
     PropertyOp.ops.parseAll("[-1]").isLeft shouldBe true
@@ -48,7 +51,7 @@ class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
           (),
           NonEmptyMap.of(
             "a" -> LiteralToken("\"str\"", LiteralType.string),
-            "b" -> LiteralToken("12", LiteralType.number)
+            "b" -> toNumber(12)
           )
         )
       )
@@ -60,13 +63,13 @@ class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
           (),
           NonEmptyMap.of(
             "a" -> LiteralToken("\"str\"", LiteralType.string),
-            "b" -> LiteralToken("12", LiteralType.number)
+            "b" -> toNumber(12)
           )
         ),
         IntoCopy[Id](
           (),
           NonEmptyMap.of(
-            "c" -> LiteralToken("54", LiteralType.number),
+            "c" -> toNumber(54),
             "d" -> VarToken("someVar")
           )
         )

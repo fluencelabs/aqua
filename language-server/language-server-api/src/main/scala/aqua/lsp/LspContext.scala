@@ -1,12 +1,13 @@
 package aqua.lsp
 
-import aqua.parser.lexer.{Ability, LiteralToken, Name, NamedTypeToken, Token}
+import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
+import aqua.semantics.{SemanticError, SemanticWarning}
+import aqua.semantics.header.Picker
 import aqua.types.{ArrowType, Type}
-import cats.{Monoid, Semigroup}
+
 import cats.syntax.monoid.*
-import RawContext.semiRC
-import aqua.semantics.header.{Picker, PickerOps}
+import cats.{Monoid, Semigroup}
 
 // Context with info that necessary for language server
 case class LspContext[S[_]](
@@ -16,14 +17,16 @@ case class LspContext[S[_]](
   constants: Map[String, Type] = Map.empty[String, Type],
   tokens: Map[String, Token[S]] = Map.empty[String, Token[S]],
   locations: List[(Token[S], Token[S])] = Nil,
-  importTokens: List[LiteralToken[S]] = Nil
+  importTokens: List[LiteralToken[S]] = Nil,
+  errors: List[SemanticError[S]] = Nil,
+  warnings: List[SemanticWarning[S]] = Nil
 )
 
 object LspContext {
 
   def blank[S[_]]: LspContext[S] = LspContext[S](raw = RawContext())
 
-  implicit def semiLsp[S[_]]: Semigroup[LspContext[S]] =
+  given [S[_]]: Semigroup[LspContext[S]] =
     (x: LspContext[S], y: LspContext[S]) =>
       LspContext[S](
         raw = x.raw |+| y.raw,
@@ -31,48 +34,62 @@ object LspContext {
         rootArrows = x.rootArrows ++ y.rootArrows,
         constants = x.constants ++ y.constants,
         locations = x.locations ++ y.locations,
-        tokens = x.tokens ++ y.tokens
+        tokens = x.tokens ++ y.tokens,
+        errors = x.errors ++ y.errors,
+        warnings = x.warnings ++ y.warnings
       )
 
   trait Implicits[S[_]] {
-    implicit val lspContextMonoid: Monoid[LspContext[S]]
+    val lspContextMonoid: Monoid[LspContext[S]]
   }
 
   def implicits[S[_]](init: LspContext[S]): Implicits[S] = new Implicits[S] {
 
-    override implicit val lspContextMonoid: Monoid[LspContext[S]] = new Monoid[LspContext[S]] {
+    override val lspContextMonoid: Monoid[LspContext[S]] = new Monoid[LspContext[S]] {
       override def empty: LspContext[S] = init
 
       override def combine(x: LspContext[S], y: LspContext[S]): LspContext[S] = {
-        semiLsp[S].combine(x, y)
+        Semigroup[LspContext[S]].combine(x, y)
       }
     }
 
   }
 
   given [S[_]]: Picker[LspContext[S]] with {
-
-    private def ops[S[_]](ctx: LspContext[S]) = PickerOps[RawContext](ctx.raw)
+    import aqua.semantics.header.Picker.*
 
     override def blank: LspContext[S] = LspContext[S](Picker[RawContext].blank, Map.empty)
-    override def exports(ctx: LspContext[S]): Option[Map[String, Option[String]]] = ops(ctx).exports
-    override def funcNames(ctx: LspContext[S]): List[String] = ops(ctx).funcNames
+    override def exports(ctx: LspContext[S]): Map[String, Option[String]] = ctx.raw.exports
+
+    override def isAbility(ctx: LspContext[S], name: String): Boolean =
+      ctx.raw.isAbility(name)
+
+    override def funcReturnAbilityOrArrow(ctx: LspContext[S], name: String): Boolean =
+      ctx.raw.funcReturnAbilityOrArrow(name)
+
+    override def funcAcceptAbility(ctx: LspContext[S], name: String): Boolean =
+      ctx.raw.funcAcceptAbility(name)
+
+    override def funcNames(ctx: LspContext[S]): Set[String] = ctx.raw.funcNames
+
+    override def definedAbilityNames(ctx: LspContext[S]): Set[String] =
+      ctx.raw.definedAbilityNames
 
     override def addPart(ctx: LspContext[S], part: (LspContext[S], RawPart)): LspContext[S] =
-      ctx.copy(raw = ops(ctx).addPart(part._1.raw -> part._2))
+      ctx.copy(raw = ctx.raw.addPart(part._1.raw -> part._2))
 
     override def setInit(ctx: LspContext[S], ctxInit: Option[LspContext[S]]): LspContext[S] =
-      ctx.copy(raw = ops(ctx).setInit(ctxInit.map(_.raw)))
+      ctx.copy(raw = ctx.raw.setInit(ctxInit.map(_.raw)))
 
     override def all(ctx: LspContext[S]): Set[String] =
-      ops(ctx).all
-    override def module(ctx: LspContext[S]): Option[String] = ops(ctx).module
-    override def declares(ctx: LspContext[S]): Set[String] = ops(ctx).declares
+      ctx.raw.all
+    override def module(ctx: LspContext[S]): Option[String] = ctx.raw.module
+    override def declares(ctx: LspContext[S]): Set[String] = ctx.raw.declares
 
     override def setAbility(ctx: LspContext[S], name: String, ctxAb: LspContext[S]): LspContext[S] =
       val prefix = name + "."
       ctx.copy(
-        raw = ops(ctx).setAbility(name, ctxAb.raw),
+        raw = ctx.raw.setAbility(name, ctxAb.raw),
         tokens = ctx.tokens ++ ctxAb.tokens.map(kv => (prefix + kv._1) -> kv._2)
       )
 
@@ -81,13 +98,13 @@ object LspContext {
       name: Option[String],
       declares: Set[String]
     ): LspContext[S] =
-      ctx.copy(raw = ops(ctx).setOptModule(name, declares))
+      ctx.copy(raw = ctx.raw.setOptModule(name, declares))
 
     override def setExports(
       ctx: LspContext[S],
       exports: Map[String, Option[String]]
     ): LspContext[S] =
-      ctx.copy(raw = ops(ctx).setExports(exports))
+      ctx.copy(raw = ctx.raw.setExports(exports))
 
     override def pick(
       ctx: LspContext[S],
@@ -104,8 +121,7 @@ object LspContext {
         }
       }.getOrElse(ctx.tokens)
 
-
-      ops(ctx)
+      ctx.raw
         .pick(name, rename, declared)
         .map(rc =>
           ctx.copy(
@@ -120,10 +136,11 @@ object LspContext {
           )
         )
 
-    override def pickHeader(ctx: LspContext[S]): LspContext[S] = ctx.copy(raw = ops(ctx).pickHeader)
+    override def pickHeader(ctx: LspContext[S]): LspContext[S] = ctx.copy(raw = ctx.raw.pickHeader)
 
     override def pickDeclared(
       ctx: LspContext[S]
-    )(implicit semi: Semigroup[LspContext[S]]): LspContext[S] = ctx.copy(raw = ops(ctx).pickDeclared)
+    )(using Semigroup[LspContext[S]]): LspContext[S] =
+      ctx.copy(raw = ctx.raw.pickDeclared)
   }
 }

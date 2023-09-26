@@ -2,20 +2,22 @@ package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.Levenshtein
-import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.errors.ReportErrors
-import aqua.types.{ArrowType, StreamType, Type}
+import aqua.semantics.rules.report.ReportAlgebra
+import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.types.{AbilityType, ArrowType, StreamType, Type}
+
 import cats.data.{OptionT, State}
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.~>
+import cats.syntax.applicative.*
+import cats.syntax.all.*
 import monocle.Lens
 import monocle.macros.GenLens
 
-class NamesInterpreter[S[_], X](implicit
+class NamesInterpreter[S[_], X](using
   lens: Lens[X, NamesState[S]],
-  error: ReportErrors[S, X],
+  report: ReportAlgebra[S, State[X, *]],
   locations: LocationsAlgebra[S, State[X, *]]
 ) extends NamesAlgebra[S, State[X, *]] {
 
@@ -23,7 +25,7 @@ class NamesInterpreter[S[_], X](implicit
     GenLens[NamesState[S]](_.stack)
   )
 
-  import stackInt.{getState, mapStackHead, modify, report}
+  import stackInt.*
 
   type SX[A] = State[X, A]
 
@@ -42,7 +44,7 @@ class NamesInterpreter[S[_], X](implicit
       .flatTap {
         case None if mustBeDefined =>
           getState.flatMap(st =>
-            report(
+            report.error(
               name,
               Levenshtein
                 .genMessage(
@@ -71,14 +73,15 @@ class NamesInterpreter[S[_], X](implicit
             locations.pointLocation(name.value, name).map(_ => Option(at))
           case _ =>
             getState.flatMap(st =>
-              report(
-                name,
-                Levenshtein.genMessage(
-                  s"Name '${name.value}' not found in scope",
-                  name.value,
-                  st.allNames.toList
+              report
+                .error(
+                  name,
+                  Levenshtein.genMessage(
+                    s"Name '${name.value}' not found in scope",
+                    name.value,
+                    st.allNames.toList
+                  )
                 )
-              )
                 .as(Option.empty[ArrowType])
             )
         }
@@ -96,31 +99,30 @@ class NamesInterpreter[S[_], X](implicit
       case Some(_) =>
         getState.map(_.definitions.get(name.value).exists(_ == name)).flatMap {
           case true => State.pure(false)
-          case false => report(name, "This name was already defined in the scope").as(false)
+          case false => report.error(name, "This name was already defined in the scope").as(false)
         }
       case None =>
-        mapStackHead(
-          report(name, "Cannot define a variable in the root scope")
-            .as(false)
-        )(fr => fr.addName(name, `type`) -> true).flatTap(_ => locations.addToken(name.value, name))
+        mapStackHeadM(report.error(name, "Cannot define a variable in the root scope").as(false))(
+          fr => (fr.addName(name, `type`) -> true).pure
+        ) <* locations.addToken(name.value, name)
     }
 
   override def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): State[X, Boolean] =
-    define(name, `type`).flatMap {
-      case true =>
-        mapStackHead(State.pure(true))(_.derived(name, derivedFrom) -> true)
-      case false => State.pure(false)
-    }.flatTap(_ => locations.addToken(name.value, name))
+    define(name, `type`).flatTap(defined =>
+      mapStackHead_(_.derived(name, derivedFrom)).whenA(defined)
+    ) <* locations.addToken(name.value, name)
 
   override def getDerivedFrom(fromNames: List[Set[String]]): State[X, List[Set[String]]] =
-    mapStackHead(State.pure(Nil))(fr =>
-      fr -> fromNames.map(ns => fr.derivedFrom.view.filterKeys(ns).values.foldLeft(ns)(_ ++ _))
+    mapStackHead(Nil)(frame =>
+      frame -> fromNames.map(ns =>
+        frame.derivedFrom.view.filterKeys(ns).values.toList.combineAll ++ ns
+      )
     )
 
   override def defineConstant(name: Name[S], `type`: Type): SX[Boolean] =
     readName(name.value).flatMap {
       case Some(_) =>
-        report(name, "This name was already defined in the scope").as(false)
+        report.error(name, "This name was already defined in the scope").as(false)
       case None =>
         modify(st =>
           st.copy(
@@ -129,35 +131,36 @@ class NamesInterpreter[S[_], X](implicit
         ).as(true)
     }.flatTap(_ => locations.addToken(name.value, name))
 
-  override def defineArrow(name: Name[S], gen: ArrowType, isRoot: Boolean): SX[Boolean] =
+  override def defineArrow(name: Name[S], arrowType: ArrowType, isRoot: Boolean): SX[Boolean] =
     readName(name.value).flatMap {
       case Some(_) =>
         getState.map(_.definitions.get(name.value).exists(_ == name)).flatMap {
           case true => State.pure(false)
-          case false => report(name, "This arrow was already defined in the scope").as(false)
+          case false => report.error(name, "This arrow was already defined in the scope").as(false)
         }
 
       case None =>
-        mapStackHead(
+        mapStackHeadM(
           if (isRoot)
             modify(st =>
               st.copy(
-                rootArrows = st.rootArrows.updated(name.value, gen),
+                rootArrows = st.rootArrows.updated(name.value, arrowType),
                 definitions = st.definitions.updated(name.value, name)
               )
             )
               .as(true)
           else
-            report(name, "Cannot define a variable in the root scope")
+            report
+              .error(name, "Cannot define a variable in the root scope")
               .as(false)
-        )(fr => fr.addArrow(name, gen) -> true)
+        )(fr => (fr.addArrow(name, arrowType) -> true).pure)
     }.flatTap(_ => locations.addToken(name.value, name))
 
   override def streamsDefinedWithinScope(): SX[Map[String, StreamType]] =
-    stackInt.mapStackHead(State.pure(Map.empty[String, StreamType])) { frame =>
+    mapStackHead(Map.empty) { frame =>
       frame -> frame.names.collect { case (n, st @ StreamType(_)) =>
         n -> st
-      }
+      }.toMap
     }
 
   override def beginScope(token: Token[S]): SX[Unit] =

@@ -1,7 +1,7 @@
 package aqua.parser.head
 
 import aqua.AquaSpec
-import aqua.parser.expr.func.AbilityIdExpr
+import aqua.parser.expr.func.ServiceIdExpr
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.types.LiteralType
 import cats.Id
@@ -22,12 +22,12 @@ class ModuleSpec extends AnyFlatSpec with Matchers with AquaSpec {
       )
     )
 
-    HeadExpr
-      .ast
+    HeadExpr.ast
       .parseAll(s"""module MyModule declares *
                    |""".stripMargin)
       .value
-      .head.mapK(spanToId) should be(
+      .head
+      .mapK(spanToId) should be(
       ModuleExpr(
         toAb("MyModule"),
         Some(Token.lift[Id, Unit](())),

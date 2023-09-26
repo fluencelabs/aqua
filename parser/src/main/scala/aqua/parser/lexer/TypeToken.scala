@@ -5,12 +5,13 @@ import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.types.ScalarType
 import cats.Comonad
-import cats.parse.{Accumulator0, Parser as P}
+import cats.parse.{Accumulator0, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.~>
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
+import cats.data.NonEmptyList
 
 sealed trait TypeToken[S[_]] extends Token[S] {
   def mapK[K[_]: Comonad](fk: S ~> K): TypeToken[K]
@@ -42,7 +43,7 @@ case class StreamTypeToken[S[_]: Comonad](override val unit: S[Unit], data: Data
 object StreamTypeToken {
 
   val `streamtypedef`: P[StreamTypeToken[Span.S]] =
-    ((`*`.lift <* P.not(`*`).withContext("Nested streams '**type' is prohibited"))
+    ((`*`.lift <* P.not(`*`).withContext("Nested streams '**type' are prohibited"))
       ~ DataTypeToken.`withoutstreamdatatypedef`)
       .map(ud => StreamTypeToken(ud._1, ud._2))
 
@@ -65,6 +66,7 @@ object OptionTypeToken {
 
 case class NamedTypeToken[F[_]: Comonad](name: F[String]) extends DataTypeToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
+  def asName: Name[F] = Name[F](name)
 
   override def mapK[K[_]: Comonad](fk: F ~> K): NamedTypeToken[K] = copy(fk(name))
 
@@ -117,26 +119,37 @@ case class ArrowTypeToken[S[_]: Comonad](
 
 object ArrowTypeToken {
 
-  def typeDef(): P[TypeToken[S]] = P.defer(TypeToken.`typedef`.between(`(`, `)`).backtrack | TypeToken.`typedef`)
+  def typeDef(): P[TypeToken[S]] =
+    P.defer(TypeToken.`typedef`.between(`(`, `)`).backtrack | TypeToken.`typedef`)
 
   def returnDef(): P[List[TypeToken[S]]] = comma(
     typeDef().backtrack
   ).map(_.toList)
 
+  // {SomeAb, SecondAb} for NamedTypeToken
+  def abilities(): P0[List[(Option[Name[S]], NamedTypeToken[S])]] =
+    (`{` *> comma(`Class`.surroundedBy(`/s*`).lift.map(s => Option(Name(s)) -> NamedTypeToken(s)))
+      .map(_.toList) <* `}`).?.map(_.getOrElse(List.empty))
+
   def `arrowdef`(argTypeP: P[TypeToken[Span.S]]): P[ArrowTypeToken[Span.S]] =
-    (comma0(argTypeP).with1 ~ ` -> `.lift ~
+    ((abilities() ~ comma0(argTypeP)).with1 ~ ` -> `.lift ~
       (returnDef().backtrack
-        | `()`.as(Nil))).map { case ((args, point), res) ⇒
-      ArrowTypeToken(point, args.map(Option.empty[Name[Span.S]] -> _), res)
+        | `()`.as(Nil))).map { case (((abs, argsList), point), res) ⇒
+      val args = argsList.map(Option.empty[Name[Span.S]] -> _)
+      ArrowTypeToken(
+        point,
+        abs ++ args,
+        res
+      )
     }
 
   def `arrowWithNames`(argTypeP: P[TypeToken[Span.S]]): P[ArrowTypeToken[Span.S]] =
-    (((` `.?.with1 *> `(`.lift <* `/s*`) ~ comma0(
+    (((` `.?.with1 *> abilities().with1 ~ `(`.lift <* `/s*`) ~ comma0(
       (Name.p.map(Option(_)) ~ (` : ` *> (argTypeP | argTypeP.between(`(`, `)`))))
         .surroundedBy(`/s*`)
     ) <* (`/s*` *> `)` <* ` `.?)) ~
-      (` -> ` *> returnDef()).?).map { case ((point, args), res) =>
-      ArrowTypeToken(point, args, res.toList.flatMap(_.toList))
+      (` -> ` *> returnDef()).?).map { case (((abilities, point), args), res) =>
+      ArrowTypeToken(point, abilities ++ args, res.toList.flatMap(_.toList))
     }
 }
 
@@ -172,7 +185,7 @@ object TypeToken {
   val `typedef`: P[TypeToken[Span.S]] =
     P.oneOf(
       ArrowTypeToken
-        .`arrowdef`((DataTypeToken.`datatypedef`))
+        .`arrowdef`(DataTypeToken.`datatypedef`)
         .backtrack :: DataTypeToken.`datatypedef` :: Nil
     )
 

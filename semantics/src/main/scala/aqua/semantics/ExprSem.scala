@@ -27,7 +27,7 @@ object ExprSem {
     L: LocationsAlgebra[S, G]
   ): Prog[G, Raw] =
     expr match {
-      case expr: AbilityIdExpr[S] => new AbilityIdSem(expr).program[G]
+      case expr: ServiceIdExpr[S] => new ServiceIdSem(expr).program[G]
       case expr: AssignmentExpr[S] => new AssignmentSem(expr).program[G]
       case expr: PushToStreamExpr[S] => new PushToStreamSem(expr).program[G]
       case expr: AliasExpr[S] => new AliasSem(expr).program[G]
@@ -47,11 +47,12 @@ object ExprSem {
       case expr: CatchExpr[S] => new CatchSem(expr).program[G]
       case expr: ElseOtherwiseExpr[S] => new ElseOtherwiseSem(expr).program[G]
       case expr: ParExpr[S] => new ParSem(expr).program[G]
+      case expr: ParSeqExpr[S] => new ParSeqSem(expr).program[G]
       case expr: CoExpr[S] => new CoSem(expr).program[G]
       case expr: JoinExpr[S] => new JoinSem(expr).program[G]
       case expr: ReturnExpr[S] => new ReturnSem(expr).program[G]
       case expr: ServiceExpr[S] => new ServiceSem(expr).program[G]
-      case expr: ScopeExpr[S] => new ScopeSem(expr).program[G]
+      case expr: AbilityExpr[S] => new AbilitySem(expr).program[G]
       case expr: RootExpr[S] => new RootSem(expr).program[G]
     }
 

@@ -3,17 +3,59 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
-import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoFieldRaw, IntoIndexRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.*
 import aqua.types.*
-import cats.syntax.show.*
-import cats.syntax.option.*
-import cats.data.{Chain, NonEmptyList, NonEmptyMap}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import aqua.raw.value.{CallArrowRaw, ValueRaw}
 import aqua.raw.arrow.{ArrowRaw, FuncRaw}
 
-class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
+import cats.Eval
+import cats.syntax.show.*
+import cats.syntax.option.*
+import cats.syntax.flatMap.*
+import cats.free.Cofree
+import cats.data.{Chain, NonEmptyList, NonEmptyMap}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.Inside
+
+class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
+
+  extension (tree: OpModel.Tree) {
+
+    def collect[A](pf: PartialFunction[OpModel, A]): Chain[A] =
+      Cofree
+        .cata(tree)((op, children: Chain[Chain[A]]) =>
+          Eval.later(
+            Chain.fromOption(pf.lift(op)) ++ children.flatten
+          )
+        )
+        .value
+  }
+
+  def callFuncModel(func: FuncArrow): OpModel.Tree =
+    ArrowInliner
+      .callArrow[InliningState](
+        FuncArrow(
+          "wrapper",
+          CallArrowRawTag
+            .func(
+              func.funcName,
+              Call(Nil, Nil)
+            )
+            .leaf,
+          ArrowType(
+            ProductType(Nil),
+            ProductType(Nil)
+          ),
+          Nil,
+          Map(func.funcName -> func),
+          Map.empty,
+          None
+        ),
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
 
   "arrow inliner" should "convert simple arrow" in {
 
@@ -49,7 +91,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       records: *string
       cb(records)
    */
-  "arrow inliner" should "pass stream to callback properly" in {
+  it should "pass stream to callback properly" in {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamModel = VarModel("records", StreamType(ScalarType.string))
@@ -104,15 +146,20 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
             ProductType(Nil)
           ),
           Nil,
-          Map("cb" -> cbArrow),
+          Map.empty,
           Map.empty,
           None
         ),
         CallModel(cbVal :: Nil, Nil)
       )
-      .run(InliningState())
+      .runA(
+        InliningState(
+          resolvedArrows = Map(
+            cbVal.name -> cbArrow
+          )
+        )
+      )
       .value
-      ._2
 
     model.equalsOrShowDiff(
       RestrictionModel(streamVar.name, streamType).wrap(
@@ -136,12 +183,349 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   }
 
+  /**
+   * func returnStream() -> *string:
+   *    stream: *string
+   *    stream <<- "one"
+   *    <- stream
+   *
+   * func rereturnStream() -> *string:
+   *    stream <- returnStream()
+   *    stream <<- "two"
+   *    <- stream
+   *
+   * func testReturnStream() -> []string:
+   *    stream <- rereturnStream()
+   *    stream <<- "three"
+   *    <- stream
+   */
+  it should "handle returned stream" in {
+    val streamType = StreamType(ScalarType.string)
+    val streamVar = VarRaw("stream", streamType)
+    val canonStreamVar = VarRaw(
+      s"-${streamVar.name}-canon-0",
+      CanonStreamType(ScalarType.string)
+    )
+    val flatStreamVar = VarRaw(
+      s"-${streamVar.name}-flat-0",
+      ArrayType(ScalarType.string)
+    )
+    val returnStreamArrowType = ArrowType(
+      ProductType(Nil),
+      ProductType(streamType :: Nil)
+    )
+
+    val returnStream = FuncArrow(
+      "returnStream",
+      SeqTag.wrap(
+        DeclareStreamTag(streamVar).leaf,
+        PushToStreamTag(
+          LiteralRaw.quote("one"),
+          Call.Export(streamVar.name, streamVar.`type`)
+        ).leaf,
+        ReturnTag(
+          NonEmptyList.one(streamVar)
+        ).leaf
+      ),
+      returnStreamArrowType,
+      List(streamVar),
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val rereturnStream = FuncArrow(
+      "rereturnStream",
+      SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            returnStream.funcName,
+            Call(Nil, Call.Export(streamVar.name, streamType) :: Nil)
+          )
+          .leaf,
+        PushToStreamTag(
+          LiteralRaw.quote("two"),
+          Call.Export(streamVar.name, streamVar.`type`)
+        ).leaf,
+        ReturnTag(
+          NonEmptyList.one(streamVar)
+        ).leaf
+      ),
+      returnStreamArrowType,
+      List(streamVar),
+      Map(returnStream.funcName -> returnStream),
+      Map.empty,
+      None
+    )
+
+    val testReturnStream = FuncArrow(
+      "testReturnStream",
+      RestrictionTag(streamVar.name, streamType).wrap(
+        SeqTag.wrap(
+          CallArrowRawTag
+            .func(
+              rereturnStream.funcName,
+              Call(Nil, Call.Export(streamVar.name, streamType) :: Nil)
+            )
+            .leaf,
+          PushToStreamTag(
+            LiteralRaw.quote("three"),
+            Call.Export(streamVar.name, streamVar.`type`)
+          ).leaf,
+          CanonicalizeTag(
+            streamVar,
+            Call.Export(canonStreamVar.name, canonStreamVar.`type`)
+          ).leaf,
+          FlattenTag(
+            canonStreamVar,
+            flatStreamVar.name
+          ).leaf,
+          ReturnTag(
+            NonEmptyList.one(flatStreamVar)
+          ).leaf
+        )
+      ),
+      ArrowType(
+        ProductType(Nil),
+        ProductType(ArrayType(ScalarType.string) :: Nil)
+      ),
+      List(flatStreamVar),
+      Map(rereturnStream.funcName -> rereturnStream),
+      Map.empty,
+      None
+    )
+
+    val model = callFuncModel(testReturnStream)
+
+    val result = model.collect {
+      case p: PushToStreamModel => p
+      case c: CanonicalizeModel => c
+      case f: FlattenModel => f
+    }
+
+    val streamName = result.collectFirst { case PushToStreamModel(value, exportTo) =>
+      exportTo.name
+    }
+
+    val canonFlatNames = result.collect {
+      case FlattenModel(VarModel(name, _, Chain.nil), assingTo) =>
+        (name, assingTo)
+    }.headOption
+
+    inside(streamName) { case Some(streamName) =>
+      inside(canonFlatNames) { case Some((canonName, flatName)) =>
+        val canonExport = CallModel.Export(
+          canonName,
+          CanonStreamType(ScalarType.string)
+        )
+
+        val expected = Chain("one", "two", "three").map(s =>
+          PushToStreamModel(
+            LiteralModel.quote(s),
+            CallModel.Export(streamName, streamType)
+          )
+        ) ++ Chain(
+          CanonicalizeModel(
+            VarModel(streamName, streamType),
+            canonExport
+          ),
+          FlattenModel(
+            canonExport.asVar,
+            flatName
+          )
+        )
+
+        result shouldEqual expected
+      }
+    }
+  }
+
+  /**
+   * func return() -> (-> []string):
+   *    result: *string
+   *
+   *    result <<- "one"
+   *
+   *    closure = () -> []string:
+   *        result <<- "two-three"
+   *        <- result
+   *
+   *    closure()
+   *
+   *    <- closure
+   *
+   * func testReturn() -> []string:
+   *    closure <- return()
+   *    res <- closure()
+   *    <- res
+   */
+  it should "handle stream captured in closure" in {
+    val streamType = StreamType(ScalarType.string)
+    val streamVar = VarRaw("status", streamType)
+    val resType = ArrayType(ScalarType.string)
+    val resVar = VarRaw("res", resType)
+    val canonStreamVar = VarRaw(
+      s"-${streamVar.name}-canon-0",
+      CanonStreamType(ScalarType.string)
+    )
+    val flatStreamVar = VarRaw(
+      s"-${streamVar.name}-flat-0",
+      ArrayType(ScalarType.string)
+    )
+    val closureType = ArrowType(
+      ProductType(Nil),
+      ProductType(resType :: Nil)
+    )
+    val closureVar = VarRaw("closure", closureType)
+
+    val closureFunc = FuncRaw(
+      "closure",
+      ArrowRaw(
+        ArrowType(
+          ProductType(Nil),
+          ProductType(ArrayType(ScalarType.string) :: Nil)
+        ),
+        List(flatStreamVar),
+        SeqTag.wrap(
+          PushToStreamTag(
+            LiteralRaw.quote("two-three"),
+            Call.Export(streamVar.name, streamVar.`type`)
+          ).leaf,
+          CanonicalizeTag(
+            streamVar,
+            Call.Export(canonStreamVar.name, canonStreamVar.`type`)
+          ).leaf,
+          FlattenTag(
+            canonStreamVar,
+            flatStreamVar.name
+          ).leaf
+        )
+      )
+    )
+
+    val returnFunc = FuncArrow(
+      "return",
+      SeqTag.wrap(
+        DeclareStreamTag(streamVar).leaf,
+        PushToStreamTag(
+          LiteralRaw.quote("one"),
+          Call.Export(streamVar.name, streamVar.`type`)
+        ).leaf,
+        ClosureTag(
+          closureFunc,
+          detach = false
+        ).leaf,
+        CallArrowRawTag
+          .func(
+            closureVar.name,
+            Call(Nil, Nil)
+          )
+          .leaf,
+        ReturnTag(
+          NonEmptyList.one(closureVar)
+        ).leaf
+      ),
+      ArrowType(
+        ProductType(Nil),
+        ProductType(closureType :: Nil)
+      ),
+      List(closureVar),
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val testFunc = FuncArrow(
+      "test",
+      SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            returnFunc.funcName,
+            Call(Nil, Call.Export(closureVar.name, closureType) :: Nil)
+          )
+          .leaf,
+        CallArrowRawTag
+          .func(
+            closureVar.name,
+            Call(Nil, Call.Export(resVar.name, ArrayType(ScalarType.string)) :: Nil)
+          )
+          .leaf,
+        ReturnTag(
+          NonEmptyList.one(resVar)
+        ).leaf
+      ),
+      ArrowType(
+        ProductType(Nil),
+        ProductType(ArrayType(ScalarType.string) :: Nil)
+      ),
+      List(resVar),
+      Map(returnFunc.funcName -> returnFunc),
+      Map.empty,
+      None
+    )
+
+    val model = callFuncModel(testFunc)
+
+    val result = model.collect {
+      case p: PushToStreamModel => p
+      case c: CanonicalizeModel => c
+      case f: FlattenModel => f
+    }
+
+    val streamName = model.collect { case PushToStreamModel(value, CallModel.Export(name, _)) =>
+      name
+    }.headOption
+
+    val canonFlatNames = model.collect {
+      case FlattenModel(VarModel(name, _, Chain.nil), assingTo) =>
+        (name, assingTo)
+    }.toList
+
+    // WARNING: This test does not take
+    //          stream restriction into account
+    inside(streamName) { case Some(streamName) =>
+      inside(canonFlatNames) { case (canonName1, flatName1) :: (canonName2, flatName2) :: Nil =>
+        def canon(canonName: String, flatName: String) = {
+          val canonExport = CallModel.Export(
+            canonName,
+            CanonStreamType(ScalarType.string)
+          )
+
+          Chain(
+            CanonicalizeModel(
+              VarModel(streamName, streamType),
+              canonExport
+            ),
+            FlattenModel(
+              canonExport.asVar,
+              flatName
+            )
+          )
+        }
+
+        val expected = Chain("one", "two-three").map(s =>
+          PushToStreamModel(
+            LiteralModel.quote(s),
+            CallModel.Export(streamName, streamType)
+          )
+        ) ++ canon(canonName1, flatName1) ++ Chain.one(
+          PushToStreamModel(
+            LiteralModel.quote("two-three"),
+            CallModel.Export(streamName, streamType)
+          )
+        ) ++ canon(canonName2, flatName2)
+
+        result shouldEqual expected
+      }
+    }
+  }
+
   /*
     func stream-callback(cb: string -> ()):
       records: *string
       cb(records!)
    */
-  ignore /*"arrow inliner"*/ should "pass stream with gate to callback properly" in {
+  ignore /*it*/ should "pass stream with gate to callback properly" in {
     val streamType = StreamType(ScalarType.string)
     val streamVar = VarRaw("records", streamType)
     val streamVarLambda =
@@ -242,7 +626,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
         append_records(records)
         <- records
    */
-  "arrow inliner" should "work with streams as arguments" in {
+  it should "work with streams as arguments" in {
 
     val returnType = ArrayType(ArrayType(ScalarType.string))
     val streamType = StreamType(ArrayType(ScalarType.string))
@@ -338,7 +722,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = res1 + res2 + res3
    *   <- retval
    */
-  "arrow inliner" should "leave meta after function inlining" in {
+  it should "leave meta after function inlining" in {
     val innerName = "inner"
     val innerRes = VarRaw("res", ScalarType.u16)
 
@@ -475,7 +859,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = inner() + inner() + 37
    *   <- retval
    */
-  "arrow inliner" should "omit meta if arrow was completely erased" in {
+  it should "omit meta if arrow was completely erased" in {
     val innerName = "inner"
     val innerRes = VarRaw("res", ScalarType.u16)
     val innerRet = "42"
@@ -753,7 +1137,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = 37 + c(1) + c(2)
    *   <- retval
    */
-  "arrow inliner" should "leave meta after returned closure inlining" in {
+  it should "leave meta after returned closure inlining" in {
     val innerName = "inner"
     val closureName = "closure"
     val outterClosureName = "c"
@@ -853,7 +1237,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = 37 + c() + c()
    *   <- retval
    */
-  "arrow inliner" should "omit meta if returned closure was completely erased" in {
+  it should "omit meta if returned closure was completely erased" in {
     val innerName = "inner"
     val closureName = "closure"
 
@@ -1023,7 +1407,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   retval = 37 + a(1) + b(2) + c{3}
    *   <- retval
    */
-  "arrow inliner" should "correctly inline renamed closure [bug LNG-193]" in {
+  it should "correctly inline renamed closure [bug LNG-193]" in {
     val innerName = "inner"
     val closureName = "closure"
     val outterClosureName = "c"
@@ -1151,7 +1535,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   resT <- accept_closure(closure)
    *   <- resT
    */
-  "arrow inliner" should "correctly handle closure as argument [bug LNG-92]" in {
+  it should "correctly handle closure as argument [bug LNG-92]" in {
     val acceptName = "accept_closure"
     val closureName = "closure"
     val testName = "test"
@@ -1274,7 +1658,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
    *   method = "method"
    *   test(method)
    */
-  "arrow inliner" should "not rename service call [bug LNG-199]" in {
+  it should "not rename service call [bug LNG-199]" in {
     val testName = "test"
     val argMethodName = "method"
     val serviceName = "Test"
@@ -1381,7 +1765,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
      v = arg.value
      OpHa.identity(v)
    */
-  "arrow inliner" should "hold lambda" in {
+  it should "hold lambda" in {
     val innerName = "inner"
 
     // lambda that will be assigned to another variable
@@ -1485,7 +1869,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
   func joinIdxLocal(idx: i16, nodes: []string):
     join nodes[idx]
    */
-  "arrow inliner" should "not rename value in index array lambda" in {
+  it should "not rename value in index array lambda" in {
     val innerName = "inner"
 
     // lambda that will be assigned to another variable
@@ -1575,7 +1959,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
 
   }
 
-  "arrow inliner" should "rename value in arrow with same name as in for" in {
+  it should "rename value in arrow with same name as in for" in {
     val argVar = VarRaw("arg", ScalarType.u32)
     val iVar = VarRaw("i", ScalarType.string)
     val iVar0 = VarRaw("i-0", ScalarType.string)
@@ -1623,7 +2007,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     )
 
     val foldOp =
-      ForTag(iVar.name, array, Some(ForTag.WaitMode)).wrap(inFold, NextTag(iVar.name).leaf)
+      ForTag(iVar.name, array, ForTag.Mode.Wait.some).wrap(inFold, NextTag(iVar.name).leaf)
 
     val model: OpModel.Tree = ArrowInliner
       .callArrow[InliningState](
@@ -1649,7 +2033,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       ._2
 
     model.equalsOrShowDiff(
-      ForModel(iVar0.name, ValueModel.fromRaw(array), Some(ForModel.NeverMode)).wrap(
+      ForModel(iVar0.name, ValueModel.fromRaw(array), ForModel.Mode.Never.some).wrap(
         CallServiceModel(
           LiteralModel.fromRaw(serviceId),
           fnName,
@@ -1665,7 +2049,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       get() -> string
 
   func inner() -> string:
-      results <- DTGetter.get_dt()
+      results <- Get.get()
       <- results
 
   func outer() -> []string:
@@ -1673,7 +2057,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
       results <- use_name1()
       <- results
    */
-  "arrow inliner" should "generate result in right order" in {
+  it should "generate result in right order" in {
     val innerName = "inner"
     val results = VarRaw("results", ScalarType.string)
     val resultsOut = VarRaw("results", StreamType(ScalarType.string))
@@ -1744,4 +2128,418 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers {
     ) should be(true)
   }
 
+  /**
+   * ability Inner:
+   *     arrow(x: i8) -> bool
+   *     field: i8
+   *
+   * ability Outer:
+   *     inner: Inner
+   *
+   * func accept{Outer}() -> bool:
+   *     res = Outer.inner.arrow(Outer.inner.field)
+   *     <- res
+   *
+   * func main() -> bool:
+   *     closure = (x: i8) -> bool:
+   *         res = x > 0
+   *         <- res
+   *     inner = Inner(arrow = closure, field = 42)
+   *     outer = Outer(inner = inner)
+   *     res <- accept{outer}()
+   *     <- res
+   */
+  it should "handle nested abilities" in {
+    val arrowType = ArrowType(
+      ProductType(ScalarType.i8 :: Nil),
+      ProductType(ScalarType.bool :: Nil)
+    )
+    val closureType = arrowType.copy(
+      domain = ProductType.labelled(
+        "x" -> ScalarType.i8 :: Nil
+      )
+    )
+    val resVar = VarRaw("res", ScalarType.bool)
+    val innerType = AbilityType(
+      "Inner",
+      NonEmptyMap.of(
+        "arrow" -> arrowType,
+        "field" -> ScalarType.i8
+      )
+    )
+    val outerType = AbilityType(
+      "Outer",
+      NonEmptyMap.of(
+        "inner" -> innerType
+      )
+    )
+
+    val acceptBody = SeqTag.wrap(
+      AssignmentTag(
+        ApplyPropertyRaw.fromChain(
+          VarRaw("Outer", outerType),
+          Chain(
+            IntoFieldRaw("inner", innerType),
+            IntoArrowRaw(
+              "arrow",
+              arrowType,
+              List(
+                ApplyPropertyRaw.fromChain(
+                  VarRaw("Outer", outerType),
+                  Chain(
+                    IntoFieldRaw("inner", innerType),
+                    IntoFieldRaw("field", ScalarType.i8)
+                  )
+                )
+              )
+            )
+          )
+        ),
+        resVar.name
+      ).leaf,
+      ReturnTag(NonEmptyList.one(resVar)).leaf
+    )
+
+    val accept = FuncArrow(
+      "accept",
+      acceptBody,
+      ArrowType(
+        ProductType.labelled("Outer" -> outerType :: Nil),
+        ProductType(ScalarType.bool :: Nil)
+      ),
+      resVar :: Nil,
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val closureBody = SeqTag.wrap(
+      AssignmentTag(
+        CallArrowRaw.service(
+          "cmp",
+          LiteralRaw.quote("cmp"),
+          "gt",
+          ArrowType(
+            ProductType(ScalarType.i64 :: ScalarType.i64 :: Nil),
+            ProductType(ScalarType.bool :: Nil)
+          ),
+          List(
+            VarRaw("x", ScalarType.i8),
+            LiteralRaw.number(0)
+          )
+        ),
+        "res"
+      ).leaf,
+      ReturnTag(NonEmptyList.one(resVar)).leaf
+    )
+
+    val mainBody = SeqTag.wrap(
+      ClosureTag(
+        FuncRaw(
+          name = "closure",
+          arrow = ArrowRaw(
+            `type` = closureType,
+            ret = resVar :: Nil,
+            body = closureBody
+          )
+        ),
+        detach = true
+      ).leaf,
+      AssignmentTag(
+        AbilityRaw(
+          NonEmptyMap.of(
+            "arrow" -> VarRaw("closure", closureType),
+            "field" -> LiteralRaw.number(42)
+          ),
+          innerType
+        ),
+        "inner"
+      ).leaf,
+      AssignmentTag(
+        AbilityRaw(
+          NonEmptyMap.of(
+            "inner" -> VarRaw("inner", innerType)
+          ),
+          outerType
+        ),
+        "outer"
+      ).leaf,
+      CallArrowRawTag
+        .func(
+          "accept",
+          Call(
+            VarRaw("outer", outerType) :: Nil,
+            Call.Export(resVar.name, resVar.`type`) :: Nil
+          )
+        )
+        .leaf,
+      ReturnTag(NonEmptyList.one(resVar)).leaf
+    )
+
+    val main = FuncArrow(
+      "main",
+      mainBody,
+      ArrowType(
+        ProductType(Nil),
+        ProductType(ScalarType.bool :: Nil)
+      ),
+      resVar :: Nil,
+      Map("accept" -> accept),
+      Map.empty,
+      None
+    )
+
+    val model = ArrowInliner
+      .callArrow[InliningState](
+        FuncArrow(
+          "wrapper",
+          CallArrowRawTag
+            .func(
+              "main",
+              Call(Nil, Nil)
+            )
+            .leaf,
+          ArrowType(
+            ProductType(Nil),
+            ProductType(Nil)
+          ),
+          Nil,
+          Map("main" -> main),
+          Map.empty,
+          None
+        ),
+        CallModel(Nil, Nil)
+      )
+      .runA(InliningState())
+      .value
+
+    val body = SeqModel.wrap(
+      SeqModel.wrap(
+        FlattenModel(LiteralModel.number(42), "literal_ap").leaf,
+        FlattenModel(VarModel("literal_ap", LiteralType.unsigned), "literal_props").leaf
+      ),
+      CallServiceModel(
+        LiteralModel.quote("cmp"),
+        "gt",
+        CallModel(
+          VarModel("literal_props", LiteralType.unsigned) :: LiteralModel.number(0) :: Nil,
+          CallModel.Export("gt", ScalarType.bool) :: Nil
+        )
+      ).leaf
+    )
+
+    val expected = List("main", "accept", "closure").foldRight(body) { case (name, body) =>
+      MetaModel.CallArrowModel(name).wrap(body)
+    }
+
+    model.equalsOrShowDiff(expected) shouldEqual true
+  }
+
+  it should "handle captured arrows" in {
+    val sArg = VarRaw("s", ScalarType.string)
+    val ret = VarRaw("ret", ScalarType.string)
+    val captureType = ArrowType(
+      ProductType.labelled(sArg.name -> sArg.`type` :: Nil),
+      ProductType(ScalarType.string :: Nil)
+    )
+    val captureTypeUnlabelled = captureType.copy(
+      domain = ProductType(sArg.`type` :: Nil)
+    )
+    val captureVar = VarRaw("capture", captureTypeUnlabelled)
+    val returnCaptureName = "returnCapture"
+
+    /**
+     * func returnCapture() -> string -> string:
+     *   <captureGen>
+     *   capture = (s: string) -> string:
+     *     ret <- <captureName>(s)
+     *     <- ret
+     *   <- capture
+     *
+     * func main(s: string) -> string:
+     *   capture <- returnCapture()
+     *   ret <- capture(s)
+     *   <- ret
+     *
+     * -- inlining:
+     * main("test")
+     */
+    def test(
+      capturedGen: List[RawTag.Tree],
+      capturedName: String
+    ) = {
+      val mainBody = SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            "returnCapture",
+            Call(Nil, Call.Export(captureVar.name, captureType) :: Nil)
+          )
+          .leaf,
+        CallArrowRawTag
+          .func(
+            captureVar.name,
+            Call(sArg :: Nil, Call.Export(ret.name, ret.`type`) :: Nil)
+          )
+          .leaf,
+        ReturnTag(NonEmptyList.one(ret)).leaf
+      )
+
+      val captureBody = SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            capturedName,
+            Call(sArg :: Nil, Call.Export(ret.name, ret.`type`) :: Nil)
+          )
+          .leaf,
+        ReturnTag(NonEmptyList.one(ret)).leaf
+      )
+
+      val returnCaptureBody = SeqTag.wrap(
+        capturedGen ++ (ClosureTag(
+          FuncRaw(
+            captureVar.name,
+            ArrowRaw(
+              captureType,
+              ret :: Nil,
+              captureBody
+            )
+          ),
+          false
+        ).leaf :: ReturnTag(
+          NonEmptyList.one(captureVar)
+        ).leaf :: Nil)
+      )
+
+      val returnCapture = FuncArrow(
+        returnCaptureName,
+        returnCaptureBody,
+        ArrowType(
+          ProductType(Nil),
+          ProductType(captureTypeUnlabelled :: Nil)
+        ),
+        captureVar :: Nil,
+        Map.empty,
+        Map.empty,
+        None
+      )
+
+      val main = FuncArrow(
+        "main",
+        mainBody,
+        captureType,
+        ret :: Nil,
+        Map(returnCaptureName -> returnCapture),
+        Map.empty,
+        None
+      )
+
+      val model = ArrowInliner
+        .callArrow[InliningState](
+          FuncArrow(
+            "wrapper",
+            CallArrowRawTag
+              .func(
+                "main",
+                Call(LiteralRaw.quote("test") :: Nil, Nil)
+              )
+              .leaf,
+            ArrowType(
+              ProductType(Nil),
+              ProductType(Nil)
+            ),
+            Nil,
+            Map("main" -> main),
+            Map.empty,
+            None
+          ),
+          CallModel(Nil, Nil)
+        )
+        .runA(InliningState())
+        .value
+
+      // TODO: Don't know for what to test here
+      // inliner will just log an error in case of failure
+      model.head should not equal EmptyModel
+    }
+
+    /**
+     * closure = (s: string) -> string:
+     *    ret <- s
+     *    <-ret
+     * closure1 = closure
+     * closure2 = closure1
+     * closure3 = closure2
+     *
+     * -- captureName = closure3
+     */
+    val closureRename = List(
+      ClosureTag(
+        FuncRaw(
+          "closure",
+          ArrowRaw(
+            captureType,
+            ret :: Nil,
+            ReturnTag(NonEmptyList.one(ret)).leaf
+          )
+        ),
+        false
+      ).leaf,
+      AssignmentTag(
+        VarRaw("closure", captureType),
+        "closure1"
+      ).leaf,
+      AssignmentTag(
+        VarRaw("closure1", captureType),
+        "closure2"
+      ).leaf,
+      AssignmentTag(
+        VarRaw("closure2", captureType),
+        "closure3"
+      ).leaf
+    )
+
+    test(closureRename, "closure3")
+
+    /**
+     * closure = (s: string) -> string:
+     *    ret <- s
+     *    <-ret
+     * Ab = TestAbility(
+     *   arrow = closure
+     * )
+     *
+     * -- captureName = Ab.arrow
+     */
+    val makeAbility = List(
+      ClosureTag(
+        FuncRaw(
+          "closure",
+          ArrowRaw(
+            captureType,
+            ret :: Nil,
+            ReturnTag(NonEmptyList.one(ret)).leaf
+          )
+        ),
+        false
+      ).leaf,
+      AssignmentTag(
+        AbilityRaw(
+          fieldsAndArrows = NonEmptyMap.one(
+            "arrow",
+            VarRaw("closure", captureType)
+          ),
+          AbilityType(
+            "TestAbility",
+            NonEmptyMap.one(
+              "arrow",
+              captureType
+            )
+          )
+        ),
+        "Ab"
+      ).leaf
+    )
+
+    test(makeAbility, "Ab.arrow")
+  }
 }

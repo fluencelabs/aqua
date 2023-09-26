@@ -2,20 +2,16 @@ package aqua.parser
 
 import aqua.AquaSpec
 import aqua.parser.expr.*
-import aqua.parser.expr.func.{AbilityIdExpr, ArrowExpr, CallArrowExpr, IfExpr, OnExpr, ReturnExpr}
-import aqua.parser.lexer.{
-  ArrowTypeToken,
-  BasicTypeToken,
-  CallArrowToken,
-  EqOp,
-  LiteralToken,
-  Token,
-  VarToken
-}
+import aqua.parser.expr.func.*
+import aqua.parser.lexer.*
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import aqua.types.ScalarType.*
+
 import cats.Id
 import cats.data.{Chain, NonEmptyList}
+import cats.data.Chain.*
 import cats.free.Cofree
 import cats.syntax.foldable.*
 import cats.data.Validated.{Invalid, Valid}
@@ -23,14 +19,13 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.{Inside, Inspectors}
 import org.scalatest.matchers.should.Matchers
 import cats.~>
+import cats.Eval
 
 import scala.collection.mutable
 import scala.language.implicitConversions
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors with AquaSpec {
-  import AquaSpec._
+  import AquaSpec.{given, *}
 
   private val parser = Parser.spanParser
 
@@ -104,16 +99,24 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     val ifBody =
       checkHeadGetTail(
         arrowExpr.head,
-        IfExpr(toVarLambda("peer", List("id")), EqOp[Id](true), toVar("other")),
+        IfExpr(equ(toVarLambda("peer", List("id")), toVar("other"))),
         3
       ).toList
 
     ifBody.head.head.mapK(spanToId) should be(
-      CallArrowExpr(List(toName("x")), CallArrowToken(Some(toNamedType("Ab")), "func", Nil))
+      CallArrowExpr(
+        List(toName("x")),
+        PropertyToken[Id](
+          VarToken[Id](toName("Ab")),
+          NonEmptyList.one(
+            IntoArrow[Id](toName("func"), Nil)
+          )
+        )
+      )
     )
-    ifBody(1).head.mapK(spanToId) should be(AbilityIdExpr(toNamedType("Peer"), toStr("some id")))
+    ifBody(1).head.mapK(spanToId) should be(ServiceIdExpr(toNamedType("Peer"), toStr("some id")))
     ifBody(2).head.mapK(spanToId) should be(
-      CallArrowExpr(Nil, CallArrowToken(None, "call", List(toBool(true))))
+      CallArrowExpr(Nil, CallArrowToken("call", List(toBool(true))))
     )
 
   }
@@ -254,7 +257,12 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     qTree.d() shouldBe OnExpr(toStr("deeper"), List(toStr("deep")))
     qTree.d() shouldBe CallArrowExpr(
       List("v"),
-      CallArrowToken(Some(toNamedType("Local")), "gt", Nil)
+      PropertyToken[Id](
+        VarToken[Id](toName("Local")),
+        NonEmptyList.one(
+          IntoArrow[Id](toName("gt"), Nil)
+        )
+      )
     )
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("v")))
     // genC function
@@ -266,13 +274,23 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     qTree.d() shouldBe ArrowExpr(toNamedArrow(("val" -> string) :: Nil, boolSc :: Nil))
     qTree.d() shouldBe CallArrowExpr(
       List("one"),
-      CallArrowToken(Some(toNamedType("Local")), "gt", List())
+      PropertyToken[Id](
+        VarToken[Id](toName("Local")),
+        NonEmptyList.one(
+          IntoArrow[Id](toName("gt"), Nil)
+        )
+      )
     )
     qTree.d() shouldBe OnExpr(toStr("smth"), List(toStr("else")))
-    qTree.d() shouldBe CallArrowExpr(List("two"), CallArrowToken(None, "tryGen", List()))
+    qTree.d() shouldBe CallArrowExpr(List("two"), CallArrowToken("tryGen", Nil))
     qTree.d() shouldBe CallArrowExpr(
       List("three"),
-      CallArrowToken(Some(toNamedType("Local")), "gt", List())
+      PropertyToken[Id](
+        VarToken[Id](toName("Local")),
+        NonEmptyList.one(
+          IntoArrow[Id](toName("gt"), Nil)
+        )
+      )
     )
     qTree.d() shouldBe ReturnExpr(NonEmptyList.one(toVar("two")))
   }
@@ -285,5 +303,28 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
         |    par LocalPrint.print("in par")""".stripMargin
 
     parser.parseAll(script).value.toEither.isRight shouldBe true
+  }
+
+  "function with if" should "be parsed correctly" in {
+    val script =
+      """func ifTest():
+        |    if (1 + 1) == 2:
+        |       Test.test("one")
+        |
+        |    if 2 < 3 != (1 > 2):
+        |       Test.test("two")
+        |""".stripMargin
+
+    inside(parser.parseAll(script).value) { case Valid(ast) =>
+      ast
+        .cata[Int]((expr, results) =>
+          // Count `if`s inside the tree
+          Eval.later(results.sumAll + (expr match {
+            case IfExpr(_) => 1
+            case _ => 0
+          }))
+        )
+        .value shouldBe 2
+    }
   }
 }

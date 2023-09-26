@@ -3,15 +3,16 @@ package aqua.lsp
 import aqua.parser.Ast
 import aqua.parser.head.{ImportExpr, ImportFromExpr, UseExpr, UseFromExpr}
 import aqua.parser.lexer.{LiteralToken, Token}
-import aqua.semantics.rules.errors.ReportErrors
 import aqua.semantics.rules.locations.LocationsState
-import aqua.semantics.{CompilerState, RawSemantics, RulesViolated, SemanticError, Semantics}
+import aqua.semantics.{CompilerState, RawSemantics, SemanticError, SemanticWarning, Semantics}
+
 import cats.data.Validated.{Invalid, Valid}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.foldable.*
+import cats.syntax.either.*
 import cats.syntax.reducible.*
 import cats.data.{NonEmptyChain, ValidatedNec}
 import monocle.Lens
@@ -19,22 +20,23 @@ import monocle.macros.GenLens
 
 class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
-  def getImportTokens(ast: Ast[S]): List[LiteralToken[S]] = {
-    ast.head.foldLeft[List[LiteralToken[S]]](Nil) { case (l, header) =>
-      header match {
-        case ImportExpr(fn) => l :+ fn
-        case ImportFromExpr(_, fn) => l :+ fn
-        case UseExpr(fn, _) => l :+ fn
-        case UseFromExpr(_, fn, _) => l :+ fn
-        case _ => l
-      }
-    }
-  }
+  private def getImportTokens(ast: Ast[S]): List[LiteralToken[S]] =
+    ast.collectHead {
+      case ImportExpr(fn) => fn
+      case ImportFromExpr(_, fn) => fn
+      case UseExpr(fn, _) => fn
+      case UseFromExpr(_, fn, _) => fn
+    }.value.toList
 
+  /**
+   * Process the AST and return the semantics result.
+   * NOTE: LspSemantics never return errors or warnings,
+   * they are collected in LspContext.
+   */
   def process(
     ast: Ast[S],
     init: LspContext[S]
-  ): ValidatedNec[SemanticError[S], LspContext[S]] = {
+  ): ProcessResult = {
 
     val rawState = CompilerState.init[S](init.raw)
 
@@ -53,35 +55,26 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
 
     val importTokens = getImportTokens(ast)
 
-    implicit val ls: Lens[CompilerState[S], LocationsState[S]] =
+    given Lens[CompilerState[S], LocationsState[S]] =
       GenLens[CompilerState[S]](_.locations)
 
-    import monocle.syntax.all.*
-    implicit val re: ReportErrors[S, CompilerState[S]] =
-      (st: CompilerState[S], token: Token[S], hints: List[String]) =>
-        st.focus(_.errors).modify(_.append(RulesViolated(token, hints)))
-
-    implicit val locationsInterpreter: LocationsInterpreter[S, CompilerState[S]] =
+    given LocationsInterpreter[S, CompilerState[S]] =
       new LocationsInterpreter[S, CompilerState[S]]()
 
     RawSemantics
       .interpret(ast, initState, init.raw)
       .map { case (state, ctx) =>
-        NonEmptyChain
-          .fromChain(state.errors)
-          .fold[ValidatedNec[SemanticError[S], LspContext[S]]] {
-            Valid(
-              LspContext(
-                raw = ctx,
-                rootArrows = state.names.rootArrows,
-                constants = state.names.constants,
-                abDefinitions = state.abilities.definitions,
-                locations = state.locations.allLocations,
-                importTokens = importTokens,
-                tokens = state.locations.tokens
-              )
-            )
-          }(Invalid(_))
+        LspContext(
+          raw = ctx,
+          rootArrows = state.names.rootArrows,
+          constants = state.names.constants,
+          abDefinitions = state.abilities.definitions,
+          locations = state.locations.allLocations,
+          importTokens = importTokens,
+          tokens = state.locations.tokens,
+          errors = state.errors.toList,
+          warnings = state.warnings.toList
+        ).pure[Result]
       }
       // TODO: return as Eval
       .value

@@ -6,11 +6,13 @@ import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, RawTag, SeqTag}
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.res.{CallRes, CallServiceRes, MakeRes, SeqRes, XorRes}
+
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import cats.data.Chain
+import cats.syntax.show.*
 
 class TransformSpec extends AnyFlatSpec with Matchers {
 
@@ -47,13 +49,13 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val procFC = fc.value.body
 
     val expectedFC =
-      XorRes.wrap(
-        SeqRes.wrap(
-          dataCall(bc, "-relay-", initPeer),
-          through(relayV),
-          through(otherRelay),
+      SeqRes.wrap(
+        dataCall(bc, "-relay-", initPeer),
+        XorRes.wrap(
           XorRes.wrap(
             SeqRes.wrap(
+              through(relayV),
+              through(otherRelay),
               callRes(1, otherPeer),
               through(otherRelay),
               through(relayV)
@@ -61,15 +63,13 @@ class TransformSpec extends AnyFlatSpec with Matchers {
             SeqRes.wrap(
               through(otherRelay),
               through(relayV),
-              errorCall(bc, 1, initPeer)
+              through(initPeer),
+              failErrorRes
             )
           ),
-          XorRes.wrap(
-            respCall(bc, ret, initPeer),
-            errorCall(bc, 2, initPeer)
-          )
+          errorCall(bc, 0, initPeer)
         ),
-        errorCall(bc, 3, initPeer)
+        respCall(bc, ret, initPeer)
       )
 
     procFC.equalsOrShowDiff(expectedFC) should be(true)
@@ -90,7 +90,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
       None
     )
 
-    val bc = TransformConfig(wrapWithXor = false)
+    val bc = TransformConfig()
 
     val fc = Transform.funcRes(func, bc)
 
@@ -99,10 +99,24 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val expectedFC =
       SeqRes.wrap(
         dataCall(bc, "-relay-", initPeer),
-        callRes(0, initPeer),
-        through(relayV),
-        callRes(1, otherPeer),
-        through(relayV),
+        XorRes.wrap(
+          SeqRes.wrap(
+            callRes(0, initPeer),
+            XorRes.wrap(
+              SeqRes.wrap(
+                through(relayV),
+                callRes(1, otherPeer),
+                through(relayV)
+              ),
+              SeqRes.wrap(
+                through(relayV),
+                through(initPeer),
+                failErrorRes
+              )
+            )
+          ),
+          errorCall(bc, 0, initPeer)
+        ),
         respCall(bc, ret, initPeer)
       )
 
@@ -124,13 +138,7 @@ class TransformSpec extends AnyFlatSpec with Matchers {
     val f1: FuncArrow =
       FuncArrow(
         "f1",
-        CallArrowRawTag
-          .service(
-            LiteralRaw.quote("srv1"),
-            "foo",
-            Call(Nil, Call.Export("v", ScalarType.string) :: Nil)
-          )
-          .leaf,
+        callOp(1).leaf,
         stringArrow,
         VarRaw("v", ScalarType.string) :: Nil,
         Map.empty,
@@ -151,22 +159,20 @@ class TransformSpec extends AnyFlatSpec with Matchers {
         None
       )
 
-    val bc = TransformConfig(wrapWithXor = false)
+    val bc = TransformConfig()
 
-    val res = Transform.funcRes(f2, bc).value.body
+    val procFC = Transform.funcRes(f2, bc).value.body
 
-    res.equalsOrShowDiff(
-      SeqRes.wrap(
-        dataCall(bc, "-relay-", initPeer),
-        CallServiceRes(
-          LiteralRaw.quote("srv1"),
-          "foo",
-          CallRes(Nil, Some(CallModel.Export("v", ScalarType.string))),
-          initPeer
-        ).leaf,
-        respCall(bc, VarRaw("v", ScalarType.string), initPeer)
-      )
-    ) should be(true)
+    val expectedFC = SeqRes.wrap(
+      dataCall(bc, "-relay-", initPeer),
+      XorRes.wrap(
+        callRes(1, initPeer),
+        errorCall(bc, 0, initPeer)
+      ),
+      respCall(bc, VarRaw("v", ScalarType.string), initPeer)
+    )
+
+    procFC.equalsOrShowDiff(expectedFC) should be(true)
   }
 
 }

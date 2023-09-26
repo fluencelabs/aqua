@@ -1,5 +1,6 @@
 package aqua.model
 
+import aqua.errors.Errors.internalError
 import aqua.raw.value.*
 import aqua.types.*
 
@@ -23,15 +24,11 @@ object ValueModel {
   def errorCode(error: VarModel): Option[VarModel] =
     error.intoField("error_code")
 
-  val lastError = VarModel(
-    name = ValueRaw.LastError.name,
-    baseType = ValueRaw.LastError.baseType
-  )
+  val error = VarModel.fromVarRaw(ValueRaw.error)
+  val errorType = ValueRaw.errorType
 
-  val lastErrorType = ValueRaw.lastErrorType
-
-  // NOTE: It should be safe as %last_error% should have `error_code` field
-  val lastErrorCode = errorCode(lastError).get
+  // NOTE: It should be safe as `:error:` should have `error_code` field
+  val lastErrorCode = errorCode(error).get
 
   implicit object ValueModelEq extends Eq[ValueModel] {
     override def eqv(x: ValueModel, y: ValueModel): Boolean = x == y
@@ -51,6 +48,25 @@ object ValueModel {
     case _ => ???
   }
 
+  object Arrow {
+
+    def unapply(vm: ValueModel): Option[(String, ArrowType)] =
+      vm match {
+        case VarModel(name, t: ArrowType, _) =>
+          (name, t).some
+        case _ => none
+      }
+  }
+
+  object Ability {
+
+    def unapply(vm: VarModel): Option[(String, NamedType, Chain[PropertyModel])] =
+      vm match {
+        case VarModel(name, t: (AbilityType | ServiceType), properties) =>
+          (name, t, properties).some
+        case _ => none
+      }
+  }
 }
 
 case class LiteralModel(value: String, `type`: Type) extends ValueModel {
@@ -62,6 +78,19 @@ case class LiteralModel(value: String, `type`: Type) extends ValueModel {
 
 object LiteralModel {
 
+  /**
+   * Used to match bool literals in pattern matching
+   */
+  object Bool {
+
+    def unapply(lm: LiteralModel): Option[Boolean] =
+      lm match {
+        case LiteralModel("true", ScalarType.bool | LiteralType.bool) => true.some
+        case LiteralModel("false", ScalarType.bool | LiteralType.bool) => false.some
+        case _ => none
+      }
+  }
+
   // AquaVM will return empty string for
   // %last_error%.$.error_code if there is no %last_error%
   val emptyErrorCode = quote("")
@@ -70,7 +99,9 @@ object LiteralModel {
 
   def quote(str: String): LiteralModel = LiteralModel(s"\"$str\"", LiteralType.string)
 
-  def number(n: Int): LiteralModel = LiteralModel(n.toString, LiteralType.number)
+  def number(n: Int): LiteralModel = LiteralModel(n.toString, LiteralType.forInt(n))
+
+  def bool(b: Boolean): LiteralModel = LiteralModel(b.toString.toLowerCase, LiteralType.bool)
 }
 
 sealed trait PropertyModel {
@@ -179,11 +210,12 @@ case class VarModel(name: String, baseType: Type, properties: Chain[PropertyMode
                   case nvm: VarModel =>
                     deriveFrom(vv.deriveFrom(nvm))
                   case valueModel =>
-                    if (properties.nonEmpty)
-                      logger.error(
-                        s"Var $name derived from literal $valueModel, but property is lost: $properties"
+                    if (properties.isEmpty) valueModel
+                    else
+                      internalError(
+                        s"Var ($name) derived from literal ($valueModel), " +
+                          s"but properties ($properties) are lost"
                       )
-                    valueModel
                 }
             }
           case _ =>
@@ -191,12 +223,18 @@ case class VarModel(name: String, baseType: Type, properties: Chain[PropertyMode
         }
 
       case Some(vv) =>
-        if (properties.nonEmpty)
-          logger.error(
-            s"Var $name derived from literal $vv, but property is lost: $properties"
+        if (properties.isEmpty) vv
+        else
+          internalError(
+            s"Var ($name) derived from literal ($vv), " +
+              s"but properties ($properties) are lost: "
           )
-        vv
+
       case None =>
         this // Should not happen
     }
+}
+
+object VarModel {
+  def fromVarRaw(raw: VarRaw): VarModel = VarModel(raw.name, raw.baseType)
 }

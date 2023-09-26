@@ -1,28 +1,23 @@
 package aqua.constants
 
-import scala.util.Left
 import aqua.parser.expr.ConstantExpr
 import aqua.raw.ConstantRaw
 import aqua.raw.value.LiteralRaw
-import cats.data.{NonEmptyList, Validated, ValidatedNel}
+
+import cats.data.{NonEmptyList, Validated, ValidatedNec}
+import cats.syntax.traverse.*
+import cats.syntax.either.*
 
 object Constants {
-  def parse(strs: List[String]): ValidatedNel[String, List[ConstantRaw]] = {
-    val parsed = strs.map(s => ConstantExpr.onlyLiteral.parseAll(s))
 
-    val errors = parsed.zip(strs).collect { case (Left(_), str) =>
-      str
-    }
-
-    NonEmptyList
-      .fromList(errors)
-      .fold(
-        Validated.validNel[String, List[ConstantRaw]](parsed.collect { case Right(v) =>
-          ConstantRaw(v._1.value, LiteralRaw(v._2.value, v._2.ts), false)
-        })
-      ) { errors =>
-        val errorMsgs = errors.map(str => s"Invalid constant definition '$str'.")
-        Validated.invalid(errorMsgs)
-      }
-  }
+  def parse(strs: List[String]): ValidatedNec[String, List[ConstantRaw]] =
+    strs.traverse(s =>
+      ConstantExpr.onlyLiteral
+        .parseAll(s)
+        .leftMap(_ => s"Invalid constant definition '$s'.")
+        .toValidatedNec
+        .map { case (name, literal) =>
+          ConstantRaw(name.value, LiteralRaw(literal.value, literal.ts), false)
+        }
+    )
 }

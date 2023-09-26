@@ -30,8 +30,6 @@ case class UniteTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]:
 
   override def combine(a: Type, b: Type): Type =
     (a, b) match {
-      case _ if CompareTypes(a, b) == 0.0 => a
-
       case (ap: ProductType, bp: ProductType) =>
         combineProducts(ap, bp)
 
@@ -75,8 +73,7 @@ case class UniteTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]:
           case 1.0 => a
           case -1.0 => b
           case 0.0 => a
-          case _ =>
-            TopType
+          case _ => TopType
         }
 
     }

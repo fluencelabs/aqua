@@ -40,12 +40,10 @@ object Linker extends Logging {
       case path :: otherPaths =>
         val pathDeps = deps.get(path.last).toList.flatten
         val cycles = pathDeps.flatMap(dep =>
-          NonEmptyChain
-            .fromChain(
-              // This is slow
-              path.toChain.dropWhile(_ != dep)
-            )
-            .toList
+          NonEmptyChain.fromChain(
+            // This is slow
+            path.toChain.dropWhile(_ != dep)
+          )
         )
         val newPaths = pathDeps
           .filterNot(visited.contains)
@@ -62,7 +60,7 @@ object Linker extends Logging {
       .flatMap(m =>
         findCycles(
           paths = NonEmptyChain.one(m.id) :: Nil,
-          visited = Set.empty,
+          visited = Set(m.id),
           result = List.empty
         )
       )
@@ -107,7 +105,7 @@ object Linker extends Logging {
             val importKeys = m.dependsOn.keySet
             logger.debug(s"${m.id} dependsOn $importKeys")
             val deps: T => T =
-              importKeys.map(acc).foldLeft[T => T](identity) { case (fAcc, f) =>
+              importKeys.map(acc).foldLeft(identity[T]) { case (fAcc, f) =>
                 logger.debug("COMBINING ONE TIME ")
                 t => {
                   logger.debug(s"call combine $t")
@@ -134,7 +132,10 @@ object Linker extends Logging {
     else {
       val result = iter(modules.loaded.values.toList, Map.empty, cycleError)
 
-      result.map(_.collect { case (i, f) if modules.exports(i) => i -> f(empty(i)) })
+      result.map(_.collect {
+        case (i, f) if modules.exports(i) =>
+          i -> f(empty(i))
+      })
     }
 
 }

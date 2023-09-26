@@ -1,16 +1,6 @@
 package aqua.model.inline.raw
 
-import aqua.model.{
-  CallModel,
-  CanonicalizeModel,
-  NullModel,
-  PushToStreamModel,
-  RestrictionModel,
-  SeqModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
+import aqua.model.{CallModel, CanonicalizeModel, NullModel, PushToStreamModel, RestrictionModel, SeqModel, ValueModel, VarModel, XorModel}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.state.{Arrows, Exports, Mangler}

@@ -5,7 +5,7 @@ import aqua.parser.Ast
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
-import aqua.raw.value.{LiteralRaw, ValueRaw}
+import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
 import aqua.raw.ops.*
 
@@ -13,10 +13,14 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.Inside
 import cats.~>
-import cats.data.Chain
-import cats.data.NonEmptyChain
+import cats.data.{Chain, EitherNec, NonEmptyChain}
 import cats.syntax.show.*
+import cats.syntax.traverse.*
+import cats.syntax.foldable.*
 import cats.data.Validated
+import cats.free.Cofree
+import cats.data.State
+import cats.Eval
 
 class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
@@ -27,23 +31,61 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
   val semantics = new RawSemantics[Span.S]()
 
+  def insideResult(script: String)(
+    test: PartialFunction[
+      (
+        Chain[SemanticWarning[Span.S]],
+        EitherNec[SemanticError[Span.S], RawContext]
+      ),
+      Any
+    ]
+  ): Unit = inside(parser(script)) { case Validated.Valid(ast) =>
+    val init = RawContext.blank
+    inside(semantics.process(ast, init).value.run)(test)
+  }
+
   def insideBody(script: String)(test: RawTag.Tree => Any): Unit =
-    inside(parser(script)) { case Validated.Valid(ast) =>
-      val init = RawContext.blank
-      inside(semantics.process(ast, init)) { case Validated.Valid(ctx) =>
-        inside(ctx.funcs.headOption) { case Some((_, func)) =>
-          test(func.arrow.body)
-        }
+    insideResult(script) { case (_, Right(ctx)) =>
+      inside(ctx.funcs.headOption) { case Some((_, func)) =>
+        test(func.arrow.body)
       }
     }
 
   def insideSemErrors(script: String)(test: NonEmptyChain[SemanticError[Span.S]] => Any): Unit =
     inside(parser(script)) { case Validated.Valid(ast) =>
       val init = RawContext.blank
-      inside(semantics.process(ast, init)) { case Validated.Invalid(errors) =>
+      inside(semantics.process(ast, init).value.value) { case Left(errors) =>
         test(errors)
       }
     }
+
+  def matchSubtree(tree: RawTag.Tree)(
+    matcher: PartialFunction[(RawTag, RawTag.Tree), Any]
+  ): Unit = {
+    def evalMatch(t: RawTag.Tree): Eval[Option[Unit]] =
+      if (matcher.isDefinedAt((t.head, t)))
+        Eval.now(
+          Some(
+            matcher((t.head, t))
+          )
+        )
+      else
+        t.tail.flatMap(
+          _.collectFirstSomeM(evalMatch)
+        )
+
+    evalMatch(tree).value.getOrElse(fail(s"Did not match subtree"))
+  }
+
+  def matchChildren(tree: RawTag.Tree)(
+    matchers: PartialFunction[(RawTag, RawTag.Tree), Any]*
+  ): Unit = {
+    val children = tree.tail.value
+    children should have size matchers.length
+    children.toList.zip(matchers).foreach { case (child, matcher) =>
+      matcher.lift((child.head, child)).getOrElse(fail(s"Unexpected child $child"))
+    }
+  }
 
   val testServiceDef = """
                          |service Test("test"):
@@ -54,17 +96,40 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
   def testServiceCallStr(str: String) =
     CallArrowRawTag
-      .service(
-        serviceId = LiteralRaw.quote("test"),
-        fnName = "testCallStr",
+      .ability(
+        abilityName = "Test",
+        funcName = "testCallStr",
         call = Call(LiteralRaw.quote(str) :: Nil, Nil),
-        name = "Test",
         arrowType = ArrowType(
           ProductType.labelled(("s" -> ScalarType.string) :: Nil),
           ProductType(ScalarType.string :: Nil)
         )
       )
       .leaf
+
+  def equ(left: ValueRaw, right: ValueRaw): ApplyBinaryOpRaw =
+    ApplyBinaryOpRaw(ApplyBinaryOpRaw.Op.Eq, left, right)
+
+  def neq(left: ValueRaw, right: ValueRaw): ApplyBinaryOpRaw =
+    ApplyBinaryOpRaw(ApplyBinaryOpRaw.Op.Neq, left, right)
+
+  def declareStreamPush(
+    name: String,
+    value: String
+  ): RawTag.Tree = {
+    val streamType = StreamType(ScalarType.string)
+    val stream = VarRaw(name, streamType)
+
+    RestrictionTag(stream.name, streamType).wrap(
+      SeqTag.wrap(
+        DeclareStreamTag(stream).leaf,
+        PushToStreamTag(
+          LiteralRaw.quote(value),
+          Call.Export(name, streamType)
+        ).leaf
+      )
+    )
+  }
 
   // use it to fix https://github.com/fluencelabs/aqua/issues/90
   "semantics" should "create right model" in {
@@ -79,8 +144,14 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideBody(script) { body =>
       val arrowType = ArrowType(NilType, ConsType.cons(ScalarType.string, NilType))
-      val serviceCall =
-        CallArrowRawTag.service(LiteralRaw.quote("srv1"), "fn1", emptyCall, "A", arrowType).leaf
+      val serviceCall = CallArrowRawTag
+        .ability(
+          abilityName = "A",
+          funcName = "fn1",
+          call = emptyCall,
+          arrowType = arrowType
+        )
+        .leaf
 
       val expected =
         ParTag.wrap(
@@ -109,7 +180,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideBody(script) { body =>
       val expected =
-        IfTag(LiteralRaw.number(1), LiteralRaw.number(2), true).wrap(
+        IfTag(equ(LiteralRaw.number(1), LiteralRaw.number(2))).wrap(
           testServiceCallStr("if"),
           testServiceCallStr("else")
         )
@@ -133,7 +204,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         TryTag.wrap(
           testServiceCallStr("try"),
           SeqTag.wrap(
-            AssignmentTag(ValueRaw.LastError, "e").leaf,
+            AssignmentTag(ValueRaw.error, "e").leaf,
             testServiceCallStr("catch")
           )
         )
@@ -159,11 +230,11 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         TryTag.wrap(
           testServiceCallStr("try"),
           SeqTag.wrap(
-            AssignmentTag(ValueRaw.LastError, "e").leaf,
+            AssignmentTag(ValueRaw.error, "e").leaf,
             testServiceCallStr("catch1")
           ),
           SeqTag.wrap(
-            AssignmentTag(ValueRaw.LastError, "e").leaf,
+            AssignmentTag(ValueRaw.error, "e").leaf,
             testServiceCallStr("catch2")
           )
         )
@@ -203,7 +274,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideBody(script) { body =>
       val expected =
-        IfTag(LiteralRaw.number(1), LiteralRaw.number(2), false).wrap(
+        IfTag(neq(LiteralRaw.number(1), LiteralRaw.number(2))).wrap(
           testServiceCallStr("if")
         )
 
@@ -283,7 +354,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideBody(script) { body =>
       val expected = TryTag.wrap(
-        IfTag(LiteralRaw.quote("a"), LiteralRaw.quote("b"), false).wrap(
+        IfTag(neq(LiteralRaw.quote("a"), LiteralRaw.quote("b"))).wrap(
           testServiceCallStr("if")
         ),
         testServiceCallStr("otherwise")
@@ -300,7 +371,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         |    if "a" != "b":
         |       Test.testCallStr("if")
         |""".stripMargin ->
-        IfTag(LiteralRaw.quote("a"), LiteralRaw.quote("b"), false).wrap(
+        IfTag(neq(LiteralRaw.quote("a"), LiteralRaw.quote("b"))).wrap(
           testServiceCallStr("if")
         ),
       """
@@ -430,7 +501,7 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         TryTag.wrap(
           ParTag.wrap(
             TryTag.wrap(
-              IfTag(LiteralRaw.quote("a"), LiteralRaw.quote("b"), false).wrap(
+              IfTag(neq(LiteralRaw.quote("a"), LiteralRaw.quote("b"))).wrap(
                 testServiceCallStr("if")
               ),
               testServiceCallStr("otherwise1")
@@ -444,6 +515,163 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       )
 
       body.equalsOrShowDiff(expected) should be(true)
+    }
+  }
+
+  it should "restrict streams inside `if`" in {
+    val script = """
+                   |func test():           
+                   |   if "a" != "b":
+                   |      stream: *string
+                   |      stream <<- "a"
+                   |   else:
+                   |      stream: *string
+                   |      stream <<- "b"
+                   |""".stripMargin
+
+    insideBody(script) { body =>
+      val expected = IfTag(neq(LiteralRaw.quote("a"), LiteralRaw.quote("b"))).wrap(
+        declareStreamPush("stream", "a"),
+        declareStreamPush("stream", "b")
+      )
+
+      body.equalsOrShowDiff(expected) should be(true)
+    }
+  }
+
+  it should "restrict streams inside `try`" in {
+    val script = """
+                   |func test():           
+                   |   try:
+                   |      stream: *string
+                   |      stream <<- "a"
+                   |   catch e:
+                   |      stream: *string
+                   |      stream <<- "b"
+                   |   otherwise:
+                   |      stream: *string
+                   |      stream <<- "c"
+                   |""".stripMargin
+
+    insideBody(script) { body =>
+      val expected = TryTag.wrap(
+        declareStreamPush("stream", "a"),
+        SeqTag.wrap(
+          AssignmentTag(ValueRaw.error, "e").leaf,
+          declareStreamPush("stream", "b")
+        ),
+        declareStreamPush("stream", "c")
+      )
+
+      body.equalsOrShowDiff(expected) should be(true)
+    }
+  }
+
+  it should "generate right model for `parseq`" in {
+    val script =
+      testServiceDef + """
+                         |data Peer:
+                         |    peer: string
+                         |    relay: string
+                         |
+                         |func test():
+                         |   peers = [Peer(peer="a", relay="b"), Peer(peer="c", relay="d")]
+                         |   parseq p <- peers on p.peer via p.relay:
+                         |      Test.testCallStr(p.peer)
+                         |""".stripMargin
+
+    insideBody(script) { body =>
+      matchSubtree(body) { case (ForTag("p", _, None), forTag) =>
+        matchChildren(forTag) { case (ParTag, parTag) =>
+          matchChildren(parTag)(
+            { case (OnTag(_, _, strat), _) =>
+              strat shouldBe Some(OnTag.ReturnStrategy.Relay)
+            },
+            { case (NextTag("p"), _) => }
+          )
+        }
+      }
+    }
+  }
+
+  it should "forbid abilities or streams in struct fields" in {
+    val scriptAbility =
+      """
+        |ability Ab:
+        |    a: string
+        |
+        |data St:
+        |    a: Ab
+        |""".stripMargin
+
+    val scriptStream =
+      """
+        |data St:
+        |    s: *i8
+        |""".stripMargin
+
+    insideSemErrors(scriptAbility) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+
+    insideSemErrors(scriptStream) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+  }
+
+  it should "forbid not arrow calls after <-" in {
+    def scriptPush(prefix: String, what: String) =
+      s"""
+         |func main() -> []string:
+         |  stream: *string
+         |${prefix.split("\n").map("  " + _).mkString("\n")}
+         |  stream <- $what
+         |  <- stream
+         |""".stripMargin
+
+    val scriptLiteral = scriptPush("", "\"a\"")
+
+    insideSemErrors(scriptLiteral) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+
+    val scriptVar = scriptPush(
+      """
+        |variable = "value"
+        |""".stripMargin,
+      "variable"
+    )
+
+    insideSemErrors(scriptVar) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+
+    val scriptArrayElement = scriptPush(
+      """
+        |arr = ["a", "b", "c"]
+        |""".stripMargin,
+      "arr[0]"
+    )
+
+    insideSemErrors(scriptArrayElement) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+  }
+
+  it should "produce warning on unused call results" in {
+    val script = """|func test() -> string, string:
+                    |  stream: *string
+                    |  stream <<- "a"
+                    |  stream <<- "b"
+                    |  <- stream[0], stream[1]
+                    |
+                    |func main() -> string:
+                    |  a <- test()
+                    |  <- a
+                    |""".stripMargin
+
+    insideResult(script) { case (warnings, Right(_)) =>
+      warnings.exists(_.hints.exists(_.contains("used"))) should be(true)
     }
   }
 }

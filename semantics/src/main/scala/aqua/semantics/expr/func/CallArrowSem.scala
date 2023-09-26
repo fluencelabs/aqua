@@ -1,28 +1,30 @@
 package aqua.semantics.expr.func
 
 import aqua.parser.expr.func.CallArrowExpr
+import aqua.parser.lexer.{CallArrowToken, IntoArrow, IntoField, PropertyToken, VarToken}
 import aqua.raw.Raw
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp}
-import aqua.raw.value.ValueRaw
+import aqua.raw.value.CallArrowRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
-import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrowType, StreamType, Type}
-import cats.syntax.applicative.*
-import cats.syntax.apply.*
+import aqua.types.{StreamType, Type}
+
+import cats.Monad
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Monad, Traverse}
-import aqua.raw.value.CallArrowRaw
+import cats.syntax.option.*
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.comonad.*
 
 class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
   import expr.*
 
-  private def getExports[Alg[_]: Monad](callArrow: CallArrowRaw)(implicit
+  private def getExports[Alg[_]: Monad](callArrow: CallArrowRaw)(using
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg]
   ): Alg[List[Call.Export]] =
@@ -35,27 +37,21 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
       }
     }
 
-  private def toModel[Alg[_]: Monad](implicit
+  private def toModel[Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Alg[Option[FuncOp]] = for {
-    callArrowRaw <- V.callArrowToRaw(callArrow)
-    maybeOp <- callArrowRaw.traverse(car =>
-      variables
-        .drop(car.baseType.codomain.length)
-        .headOption
-        .fold(getExports(car))(
-          T.expectNoExport(_).as(Nil)
-        )
-        .map(maybeExports => CallArrowRawTag(maybeExports, car).funcOpLeaf)
+    // TODO: Accept other expressions
+    callArrowRaw <- V.valueToCallArrowRaw(expr.callArrow)
+    tag <- callArrowRaw.traverse(car =>
+      getExports(car).map(CallArrowRawTag(_, car)) <*
+        T.checkArrowCallResults(callArrow, car.baseType, variables)
     )
-  } yield maybeOp
+  } yield tag.map(_.funcOpLeaf)
 
   def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =

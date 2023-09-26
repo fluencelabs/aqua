@@ -17,6 +17,8 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.apply.*
+import cats.syntax.traverse.*
+import aqua.types.ScalarType
 
 class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
 
@@ -29,31 +31,28 @@ class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     Prog
       .around(
-        (V.valueToRaw(expr.left), V.valueToRaw(expr.right)).flatMapN {
-          case (Some(lt), Some(rt)) =>
-            T.ensureValuesComparable(
-              token = expr.token,
-              left = lt.`type`,
-              right = rt.`type`
-            ).map(Option.when(_)(lt -> rt))
-          case _ => None.pure
-        },
-        (values: Option[(ValueRaw, ValueRaw)], ops: Raw) =>
-          values
-            .fold(
-              Raw.error("`if` expression errored in matching types")
-            ) { case (lt, rt) =>
-              ops match {
-                case FuncOp(op) =>
-                  IfTag(
-                    left = lt,
-                    right = rt,
-                    equal = expr.eqOp.value
-                  ).wrap(op).toFuncOp
-                case _ => Raw.error("Wrong body of the `if` expression")
-              }
-            }
-            .pure
+        V.valueToRaw(expr.value)
+          .flatMap(
+            _.flatTraverse(raw =>
+              T.ensureTypeMatches(
+                token = expr.value,
+                expected = ScalarType.bool,
+                givenType = raw.`type`
+              ).map(Option.when(_)(raw))
+            )
+          ),
+        // Without type of ops specified
+        // scala compiler fails to compile this
+        (value, ops: Raw) =>
+          (value, ops) match {
+            case (Some(vr), FuncOp(op)) =>
+              for {
+                restricted <- FuncOpSem.restrictStreamsInScope(op)
+                tag = IfTag(vr).wrap(restricted)
+              } yield tag.toFuncOp
+            case (None, _) => Raw.error("`if` expression errored in matching types").pure
+            case _ => Raw.error("Wrong body of the `if` expression").pure
+          }
       )
       .abilitiesScope[S](expr.token)
       .namesScope[S](expr.token)

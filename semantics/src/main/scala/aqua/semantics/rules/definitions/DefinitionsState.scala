@@ -3,6 +3,16 @@ package aqua.semantics.rules.definitions
 import aqua.parser.lexer.{Name, Token}
 import aqua.types.Type
 
+import DefinitionsState.Def
+
 case class DefinitionsState[S[_]](
-  definitions: Map[String, (Name[S], Type)] = Map.empty[String, (Name[S], Type)]
+  definitions: Map[String, Def[S]] = Map.empty[String, Def[S]]
 )
+
+object DefinitionsState {
+
+  final case class Def[S[_]](
+    name: Name[S],
+    `type`: Type
+  )
+}

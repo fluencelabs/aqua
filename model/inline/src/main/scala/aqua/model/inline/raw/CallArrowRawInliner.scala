@@ -1,5 +1,6 @@
 package aqua.model.inline.raw
 
+import aqua.errors.Errors.internalError
 import aqua.model.inline.Inline.parDesugarPrefixOpt
 import aqua.model.{CallServiceModel, FuncArrow, MetaModel, SeqModel, ValueModel, VarModel}
 import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
@@ -8,6 +9,8 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.Call
 import aqua.types.ArrowType
 import aqua.raw.value.CallArrowRaw
+
+import cats.syntax.traverse.*
 import cats.data.{Chain, State}
 import scribe.Logging
 
@@ -27,16 +30,21 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
         logger.trace(Console.BLUE + s"call service id $serviceId" + Console.RESET)
         for {
           cd <- callToModel(call, true)
+          (callModel, callInline) = cd
           sd <- valueToModel(serviceId)
-        } yield cd._1.exportTo.map(_.asVar.resolveWith(exports)) -> Inline(
-          ListMap.empty,
-          Chain(
-            SeqModel.wrap(
-              sd._2.toList ++
-                cd._2.toList :+ CallServiceModel(sd._1, value.name, cd._1).leaf: _*
+          (serviceIdValue, serviceIdInline) = sd
+          values = callModel.exportTo.map(e => e.name -> e.asVar.resolveWith(exports)).toMap
+          inline = Inline(
+            Chain(
+              SeqModel.wrap(
+                serviceIdInline.toList ++ callInline.toList :+
+                  CallServiceModel(serviceIdValue, value.name, callModel).leaf
+              )
             )
           )
-        )
+          _ <- Exports[S].resolved(values)
+          _ <- Mangler[S].forbid(values.keySet)
+        } yield values.values.toList -> inline
       case None =>
         /**
          * Here the back hop happens from [[TagInliner]] to [[ArrowInliner.callArrow]]
@@ -58,14 +66,11 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
         .callArrowRet(fn, cm)
         .map { case (body, vars) =>
           vars -> Inline(
-            ListMap.empty,
             Chain.one(
               // Leave meta information in tree after inlining
               MetaModel
                 .CallArrowModel(fn.funcName)
-                .wrap(
-                  SeqModel.wrap(p.toList :+ body: _*)
-                )
+                .wrap(SeqModel.wrap(p.toList :+ body))
             )
           )
         }
@@ -78,25 +83,22 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
   ): State[S, (List[ValueModel], Inline)] = for {
     arrows <- Arrows[S].arrows
     exports <- Exports[S].exports
+    lastArrow <- Exports[S].getLastVarName(funcName)
     arrow = arrows
       .get(funcName)
       .orElse(
         // if there is no arrow, check if it is stored in Exports as variable and try to resolve it
-        exports
-          .get(funcName)
-          .collect { case VarModel(name, _: ArrowType, _) =>
-            name
-          }
-          .flatMap(arrows.get)
+        lastArrow.flatMap(arrows.get)
       )
-    result <- arrow.fold {
-      logger.error(
-        s"Inlining, cannot find arrow $funcName, available: ${arrows.keys
-          .mkString(", ")}"
-      )
-
-      State.pure(Nil -> Inline.empty)
-    }(resolveFuncArrow(_, call))
+    result <- arrow
+      .traverse(resolveFuncArrow(_, call))
+      .map(_.getOrElse {
+        val arrs = arrows.keys.mkString(", ")
+        val vars = exports.keys.mkString(", ")
+        internalError(
+          s"Inlining, cannot find arrow ($funcName), available: ($arrs) and vars: ($vars)"
+        )
+      })
   } yield result
 
   override def apply[S: Mangler: Exports: Arrows](

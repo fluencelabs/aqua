@@ -11,7 +11,7 @@ import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F])
-  extends Expr[F](FieldTypeExpr, name) {
+    extends Expr[F](FieldTypeExpr, name) {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): FieldTypeExpr[K] =
     copy(name.mapK(fk), `type`.mapK(fk))
@@ -20,11 +20,7 @@ case class FieldTypeExpr[F[_]](name: Name[F], `type`: DataTypeToken[F])
 object FieldTypeExpr extends Expr.Leaf {
 
   override val p: Parser[FieldTypeExpr[Span.S]] =
-    ((Name.p <* ` : `) ~ (Parser
-      .not(StreamTypeToken.`streamtypedef`)
-      .withContext(
-        "Data fields cannot be of stream type (stream is designated by '*')."
-      ) *> DataTypeToken.`datatypedef`)).map { case (name, t) =>
+    ((Name.p <* ` : `) ~ DataTypeToken.`datatypedef`).map { case (name, t) =>
       FieldTypeExpr(name, t)
     }
 }

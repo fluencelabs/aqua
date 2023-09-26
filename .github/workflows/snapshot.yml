@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: fluencelabs/aqua
           ref: ${{ inputs.ref }}
@@ -51,10 +51,10 @@ jobs:
       - name: scala-js build
         env:
           SNAPSHOT: ${{ steps.version.outputs.id }}
-        run: sbt ";cliJS/fastOptJS;language-server-apiJS/fastOptJS;aqua-apiJS/fastOptJS"
+        run: sbt ";language-server-apiJS/fastBundleJS;aqua-apiJS/fastBundleJS"
 
       - name: Import secrets
-        uses: hashicorp/vault-action@v2.7.0
+        uses: hashicorp/vault-action@v2.7.3
         with:
           url: https://vault.fluence.dev
           path: jwt/github
@@ -67,14 +67,14 @@ jobs:
             kv/npm-registry/basicauth/ci token | NODE_AUTH_TOKEN
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2.2.4
+        uses: pnpm/action-setup@v2.4.0
         with:
           version: 8
 
       - name: Setup node with self-hosted npm registry
         uses: actions/setup-node@v3
         with:
-          node-version: "16"
+          node-version: "18"
           registry-url: "https://npm.fluence.dev"
           cache: "pnpm"
 

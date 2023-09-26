@@ -5,6 +5,7 @@ import aqua.types.*
 import aqua.raw.value.*
 
 import cats.data.Chain
+import cats.syntax.option.*
 
 object ResBuilder {
 
@@ -27,7 +28,7 @@ object ResBuilder {
         ),
         peer
       ).leaf,
-      FoldRes(iter.name, stream, Some(ForModel.NeverMode)).wrap(
+      FoldRes(iter.name, stream, ForModel.Mode.Never.some).wrap(
         ApRes(iter, CallModel.Export(testVM.name, testVM.`type`)).leaf,
         CanonRes(testVM, peer, CallModel.Export(canon.name, canon.`type`)).leaf,
         XorRes.wrap(

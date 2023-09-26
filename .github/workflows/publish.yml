@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag }}
 
@@ -41,25 +41,10 @@ jobs:
           apps: sbt
 
       - name: scala-js build
-        run: sbt ";cliJS/fullLinkJS;language-server-apiJS/fullLinkJS;aqua-apiJS/fullLinkJS"
-
-
-  aqua-cli:
-    name: "Publish aqua-cli"
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-
-    needs:
-      - compile
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.tag }}
+        run: sbt ";language-server-apiJS/fullBundleJS;aqua-apiJS/fullBundleJS"
 
       - name: Import secrets
-        uses: hashicorp/vault-action@v2.7.0
+        uses: hashicorp/vault-action@v2.7.3
         with:
           url: https://vault.fluence.dev
           path: jwt/github
@@ -72,41 +57,19 @@ jobs:
             kv/npmjs/fluencebot token | NODE_AUTH_TOKEN
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2.2.4
+        uses: pnpm/action-setup@v2.4.0
         with:
           version: 8
 
       - name: Setup node with self-hosted npm registry
         uses: actions/setup-node@v3
         with:
-          node-version: "16"
+          node-version: "18"
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
 
-      - run: pnpm -r i
-
-      - run: pnpm -r build
+      - run: pnpm --filter='!integration-tests' -r i
+      - run: pnpm --filter='!integration-tests' -r build
 
       - name: Publish to NPM registry
-        run: pnpm publish --access public --tag unstable
-
-  aqua-native:
-    name: "Publish aqua-native"
-    strategy:
-      matrix:
-        runner:
-          - runs-on: ubuntu-latest
-            arch: amd64
-            os: linux
-            static: true
-          - runs-on: macos-latest
-            arch: amd64
-            os: macos
-            static: false
-
-    uses: ./.github/workflows/binary.yml
-    with:
-      runs-on: ${{ matrix.runner.runs-on }}
-      arch: ${{ matrix.runner.arch }}
-      os: ${{ matrix.runner.os }}
-      static: ${{ matrix.runner.static }}
+        run: pnpm --filter='!integration-tests' publish --access public --tag unstable

@@ -2,57 +2,83 @@ package aqua.semantics.rules.abilities
 
 import aqua.raw.{RawContext, ServiceRaw}
 import aqua.raw.value.ValueRaw
-import aqua.parser.lexer.{Ability, NamedTypeToken, Name, Token, ValueToken}
+import aqua.parser.lexer.{Name, NamedTypeToken, Token, ValueToken}
 import aqua.types.ArrowType
+
 import cats.Monoid
+import cats.syntax.foldable.*
+import cats.syntax.functor.*
 import cats.data.NonEmptyList
+import aqua.parser.lexer.Token.name
 
 case class AbilitiesState[S[_]](
   stack: List[AbilitiesState.Frame[S]] = Nil,
-  services: Map[String, ServiceRaw] = Map.empty,
+  services: Set[String] = Set.empty,
   abilities: Map[String, RawContext] = Map.empty,
-  rootServiceIds: Map[String, (ValueToken[S], ValueRaw)] =
-    Map.empty[String, (ValueToken[S], ValueRaw)],
-  definitions: Map[String, NamedTypeToken[S]] =
-    Map.empty[String, NamedTypeToken[S]]
+  rootServiceIds: Map[String, ValueRaw] = Map(),
+  definitions: Map[String, NamedTypeToken[S]] = Map()
 ) {
 
-  def purgeArrows: Option[(NonEmptyList[(Name[S], ArrowType)], AbilitiesState[S])] =
-    stack match {
-      case sc :: tail =>
-        NonEmptyList
-          .fromList(sc.arrows.values.toList)
-          .map(_ -> copy[S](sc.copy(arrows = Map.empty) :: tail))
-      case _ => None
-    }
+  def defineService(name: NamedTypeToken[S], defaultId: Option[ValueRaw]): AbilitiesState[S] =
+    copy(
+      services = services + name.value,
+      definitions = definitions.updated(name.value, name),
+      rootServiceIds = rootServiceIds ++ defaultId.map(name.value -> _)
+    )
+
+  def getServiceRename(name: String): Option[String] =
+    stack.collectFirstSome(_.getServiceRename(name)) orElse
+      // Suppose that services without id
+      // resolved in scope are not renamed
+      rootServiceIds.get(name).as(name)
+
 }
 
 object AbilitiesState {
 
   case class Frame[S[_]](
     token: Token[S],
-    arrows: Map[String, (Name[S], ArrowType)] = Map.empty[String, (Name[S], ArrowType)],
-    serviceIds: Map[String, (ValueToken[S], ValueRaw)] =
-      Map.empty[String, (ValueToken[S], ValueRaw)]
-  )
+    services: Map[String, Frame.ServiceState] = Map()
+  ) {
 
-  implicit def abilitiesStateMonoid[S[_]]: Monoid[AbilitiesState[S]] =
-    new Monoid[AbilitiesState[S]] {
-      override def empty: AbilitiesState[S] = AbilitiesState()
-
-      override def combine(x: AbilitiesState[S], y: AbilitiesState[S]): AbilitiesState[S] =
-        AbilitiesState(
-          Nil,
-          x.services ++ y.services,
-          x.abilities ++ y.abilities,
-          x.rootServiceIds ++ y.rootServiceIds,
-          x.definitions ++ y.definitions
+    def setServiceRename(name: String, rename: String): Frame[S] =
+      copy(services =
+        services.updated(
+          name,
+          Frame.ServiceState(rename)
         )
-    }
+      )
+
+    def getServiceRename(name: String): Option[String] =
+      services.get(name).map(_.rename)
+  }
+
+  object Frame {
+
+    final case class ServiceState(
+      rename: String
+    )
+  }
+
+  given [S[_]]: Monoid[AbilitiesState[S]] with {
+    override def empty: AbilitiesState[S] = AbilitiesState()
+
+    override def combine(x: AbilitiesState[S], y: AbilitiesState[S]): AbilitiesState[S] =
+      AbilitiesState(
+        Nil,
+        x.services ++ y.services,
+        x.abilities ++ y.abilities,
+        x.rootServiceIds ++ y.rootServiceIds,
+        x.definitions ++ y.definitions
+      )
+  }
 
   def init[S[_]](context: RawContext): AbilitiesState[S] =
     AbilitiesState(
-      services = context.allServices,
+      services = context.allServices.keySet,
+      rootServiceIds = context.allServices.flatMap { case (name, service) =>
+        service.defaultId.map(name -> _)
+      },
       abilities = context.abilities // TODO is it the right way to collect abilities? Why?
     )
 }

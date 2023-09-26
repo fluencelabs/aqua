@@ -2,6 +2,10 @@ package aqua.types
 
 import cats.PartialOrder
 import cats.data.NonEmptyMap
+import cats.Eval
+import cats.syntax.traverse.*
+import cats.syntax.applicative.*
+import cats.syntax.option.*
 
 sealed trait Type {
 
@@ -70,9 +74,10 @@ sealed trait ProductType extends Type {
   }
 
   lazy val labelledData: List[(String, DataType)] = this match {
-    case LabeledConsType(label, t: DataType, pt) => (label -> t) :: pt.labelledData
-    case LabeledConsType(label, t: ArrowType, pt) => pt.labelledData
-    case UnlabeledConsType(_, pt) => pt.labelledData
+    case LabeledConsType(label, t: DataType, pt) =>
+      (label -> t) :: pt.labelledData
+    case ConsType(_, pt) =>
+      pt.labelledData
     case _ => Nil
   }
 }
@@ -172,22 +177,30 @@ object ScalarType {
   val string = ScalarType("string")
 
   val float = Set(f32, f64)
-  val signed = float ++ Set(i8, i16, i32, i64)
+  val signed = Set(i8, i16, i32, i64)
   val unsigned = Set(u8, u16, u32, u64)
-  val number = signed ++ unsigned
+  val integer = signed ++ unsigned
+  val number = float ++ integer
   val all = number ++ Set(bool, string)
 }
 
 case class LiteralType private (oneOf: Set[ScalarType], name: String) extends DataType {
-  override def toString: String = s"$name:lt"
+  override def toString: String = s"$name literal"
 }
 
 object LiteralType {
   val float = LiteralType(ScalarType.float, "float")
   val signed = LiteralType(ScalarType.signed, "signed")
+  /*
+   * Literals without sign could be either signed or unsigned
+   * so `ScalarType.integer` is used here
+   */
+  val unsigned = LiteralType(ScalarType.integer, "unsigned")
   val number = LiteralType(ScalarType.number, "number")
   val bool = LiteralType(Set(ScalarType.bool), "bool")
   val string = LiteralType(Set(ScalarType.string), "string")
+
+  def forInt(n: Int): LiteralType = if (n < 0) signed else unsigned
 }
 
 sealed trait BoxType extends DataType {
@@ -228,11 +241,103 @@ case class OptionType(element: Type) extends BoxType {
   override def withElement(t: Type): BoxType = copy(element = t)
 }
 
+sealed trait NamedType extends Type {
+  def name: String
+  def fields: NonEmptyMap[String, Type]
+
+  /**
+   * Get all arrows defined in this type and its sub-abilities.
+   * Paths to arrows are returned **without** type name
+   * to allow renaming on call site.
+   */
+  lazy val arrows: Map[String, ArrowType] = {
+    def getArrowsEval(path: Option[String], nt: NamedType): Eval[List[(String, ArrowType)]] =
+      nt.fields.toNel.toList.flatTraverse {
+        // sub-arrows could be in abilities or services
+        case (innerName, innerType: (ServiceType | AbilityType)) =>
+          val newPath = path.fold(innerName)(AbilityType.fullName(_, innerName))
+          getArrowsEval(newPath.some, innerType)
+        case (aName, aType: ArrowType) =>
+          val newPath = path.fold(aName)(AbilityType.fullName(_, aName))
+          List(newPath -> aType).pure
+        case _ => Nil.pure
+      }
+
+    getArrowsEval(None, this).value.toMap
+  }
+
+  /**
+   * Get all abilities defined in this type and its sub-abilities.
+   * Paths to abilities are returned **without** type name
+   * to allow renaming on call site.
+   */
+  lazy val abilities: Map[String, AbilityType] = {
+    def getAbilitiesEval(
+      path: Option[String],
+      nt: NamedType
+    ): Eval[List[(String, AbilityType)]] =
+      nt.fields.toNel.toList.flatTraverse {
+        // sub-abilities could be only in abilities
+        case (abName, abType: AbilityType) =>
+          val fullName = path.fold(abName)(AbilityType.fullName(_, abName))
+          getAbilitiesEval(fullName.some, abType).map(
+            (fullName -> abType) :: _
+          )
+        case _ => Nil.pure
+      }
+
+    getAbilitiesEval(None, this).value.toMap
+  }
+
+  /**
+   * Get all variables defined in this type and its sub-abilities.
+   * Paths to variables are returned **without** type name
+   * to allow renaming on call site.
+   */
+  lazy val variables: Map[String, DataType] = {
+    def getVariablesEval(
+      path: Option[String],
+      nt: NamedType
+    ): Eval[List[(String, DataType)]] =
+      nt.fields.toNel.toList.flatTraverse {
+        // sub-variables could be only in abilities
+        case (abName, abType: AbilityType) =>
+          val newPath = path.fold(abName)(AbilityType.fullName(_, abName))
+          getVariablesEval(newPath.some, abType)
+        case (dName, dType: DataType) =>
+          val newPath = path.fold(dName)(AbilityType.fullName(_, dName))
+          List(newPath -> dType).pure
+        case _ => Nil.pure
+      }
+
+    getVariablesEval(None, this).value.toMap
+  }
+}
+
 // Struct is an unordered collection of labelled types
-case class StructType(name: String, fields: NonEmptyMap[String, Type]) extends DataType {
+// TODO: Make fields type `DataType`
+case class StructType(name: String, fields: NonEmptyMap[String, Type])
+    extends DataType with NamedType {
 
   override def toString: String =
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+}
+
+case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) extends NamedType {
+
+  override def toString: String =
+    s"service $name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+}
+
+// Ability is an unordered collection of labelled types and arrows
+case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
+
+  override def toString: String =
+    s"ability $name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+}
+
+object AbilityType {
+  def fullName(name: String, field: String) = s"$name.$field"
 }
 
 /**

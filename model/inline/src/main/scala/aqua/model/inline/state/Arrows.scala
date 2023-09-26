@@ -2,10 +2,13 @@ package aqua.model.inline.state
 
 import aqua.model.{ArgsCall, FuncArrow}
 import aqua.raw.arrow.FuncRaw
+import aqua.model.ValueModel
+
 import cats.data.State
 import cats.instances.list.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
+import cats.syntax.show.*
 
 /**
  * State algebra for resolved arrows
@@ -20,16 +23,20 @@ trait Arrows[S] extends Scoped[S] {
   /**
    * Arrow is resolved – save it to the state [[S]]
    *
-   * @param arrow
-   *   resolved arrow
-   * @param e
-   *   contextual Exports that an arrow captures
+   * @param arrow resolved arrow
+   * @param topology captured topology
    */
-  final def resolved(arrow: FuncRaw, topology: Option[String])(implicit e: Exports[S]): State[S, Unit] =
+  final def resolved(
+    arrow: FuncRaw,
+    topology: Option[String]
+  )(using Exports[S]): State[S, Unit] =
     for {
-      exps <- e.exports
+      exps <- Exports[S].exports
       arrs <- arrows
-      funcArrow = FuncArrow.fromRaw(arrow, arrs, exps, topology)
+      capturedVars = exps.filterKeys(arrow.capturedVars).toMap
+      capturedArrows = arrs.filterKeys(arrow.capturedVars).toMap ++
+        Arrows.arrowsByValues(arrs, capturedVars)
+      funcArrow = FuncArrow.fromRaw(arrow, capturedArrows, capturedVars, topology)
       _ <- save(arrow.name, funcArrow)
     } yield ()
 
@@ -63,7 +70,7 @@ trait Arrows[S] extends Scoped[S] {
    * @return
    */
   def argsArrows(args: ArgsCall): State[S, Map[String, FuncArrow]] =
-    arrows.map(args.arrowArgs)
+    arrows.map(args.arrowArgsMap)
 
   /**
    * Changes the [[S]] type to [[R]]
@@ -92,6 +99,25 @@ trait Arrows[S] extends Scoped[S] {
 }
 
 object Arrows {
+
+  /**
+   * Retrieve all arrows that correspond to values
+   */
+  def arrowsByValues(
+    arrows: Map[String, FuncArrow],
+    values: Map[String, ValueModel]
+  ): Map[String, FuncArrow] = {
+    val arrowKeys = arrows.keySet ++ arrows.values.map(_.funcName)
+    val varsKeys = values.keySet ++ values.values.collect { case ValueModel.Arrow(name, _) =>
+      name
+    }
+    val keys = arrowKeys.intersect(varsKeys)
+
+    arrows.filter { case (arrowName, arrow) =>
+      keys.contains(arrowName) || keys.contains(arrow.funcName)
+    }
+  }
+
   def apply[S](implicit arrows: Arrows[S]): Arrows[S] = arrows
 
   // Default implementation with the most straightforward state – just a Map

@@ -2,36 +2,27 @@ package aqua.model.transform.pre
 
 import aqua.model.FuncArrow
 import aqua.model.ArgsCall
-import aqua.raw.ops.{Call, CallArrowRawTag, RawTag, SeqTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, RawTag, SeqTag, TryTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
+
 import cats.syntax.show.*
+import cats.syntax.option.*
 
 // TODO: doc
 case class FuncPreTransformer(
-  transform: RawTag.Tree => RawTag.Tree,
+  argsProvider: ArgsProvider,
+  resultsHandler: ResultsHandler,
+  errorHandler: ErrorHandler,
   callback: (String, Call) => RawTag.Tree,
-  respFuncName: String,
+  relayVarName: Option[String],
   wrapCallableName: String = "funcAround",
   arrowCallbackPrefix: String = "init_peer_callable_"
 ) {
 
   private val returnVar: String = "-return-"
 
-  /**
-   * Wraps return values of a function to a call on itin peer's side
-   *
-   * @param retModel List of returned values
-   * @return AST that consumes return values, passing them to the client
-   */
-  private def returnCallback(retModel: List[ValueRaw]): RawTag.Tree =
-    callback(
-      respFuncName,
-      Call(
-        retModel,
-        Nil
-      )
-    )
+  private val relayArg = relayVarName.map(name => ArgsProvider.Arg(name, name, ScalarType.string))
 
   /**
    * Convert an arrow-type argument to init user's callback
@@ -68,31 +59,55 @@ case class FuncPreTransformer(
       case t => t
     }).toLabelledList(returnVar)
 
-    val retModel = returnType.map { case (l, t) => VarRaw(l, t) }
+    /**
+     * Arguments list (argument name, variable name, argument type).
+     * We need to give other names to arguments because they can
+     * collide with the name of the function itself.
+     */
+    val args = func.arrowType.domain.toLabelledList().map { case (name, typ) =>
+      (name, s"-$name-arg-", typ)
+    }
+
+    val dataArgs = args.collect { case (name, varName, t: DataType) =>
+      ArgsProvider.Arg(name, varName, t)
+    }
+
+    val arrowArgs = args.collect { case (name, argName, arrowType: ArrowType) =>
+      argName -> arrowToCallback(name, arrowType)
+    }.toMap
 
     val funcCall = Call(
-      func.arrowType.domain.toLabelledList().map(ad => VarRaw(ad._1, ad._2)),
+      args.map { case (_, varName, t) => VarRaw(varName, t) },
       returnType.map { case (l, t) => Call.Export(l, t) }
+    )
+
+    val provideArgs = argsProvider.provideArgs(
+      relayArg.toList ::: dataArgs
+    )
+
+    val handleResults = resultsHandler.handleResults(
+      returnType
+    )
+
+    val handleError = errorHandler.handleError
+
+    val call = CallArrowRawTag.func(func.funcName, funcCall).leaf
+
+    val body = SeqTag.wrap(
+      provideArgs ++ List(
+        TryTag.wrap(
+          call,
+          handleError
+        )
+      ) ++ handleResults
     )
 
     FuncArrow(
       wrapCallableName,
-      transform(
-        SeqTag.wrap(
-          CallArrowRawTag.func(func.funcName, funcCall).leaf ::
-            returnType.headOption
-              .map(_ => returnCallback(retModel))
-              .toList: _*
-        )
-      ),
+      body,
       ArrowType(ConsType.cons(func.funcName, func.arrowType, NilType), NilType),
       Nil,
-      func.arrowType.domain
-        .toLabelledList()
-        .collect { case (argName, arrowType: ArrowType) =>
-          argName -> arrowToCallback(argName, arrowType)
-        }
-        .toMap,
+      arrowArgs,
       Map.empty,
       None
     )

@@ -8,14 +8,13 @@ case class AquaAPIConfig(
   targetType: TargetType = TargetType.AirType,
   logLevel: String = "info",
   constants: List[String] = Nil,
-  noXor: Boolean = false,
+  noXor: Boolean = false, // TODO: Remove
   noRelay: Boolean = false,
   tracing: Boolean = false
 ) {
 
   def getTransformConfig: TransformConfig = {
     val config = TransformConfig(
-      wrapWithXor = !noXor,
       tracing = Option.when(tracing)(TransformConfig.TracingConfig.default)
     )
 

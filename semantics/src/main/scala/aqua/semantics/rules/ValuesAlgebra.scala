@@ -1,308 +1,425 @@
 package aqua.semantics.rules
 
 import aqua.parser.lexer.*
-import aqua.parser.lexer.InfixToken.Op
+import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
+import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
+import aqua.semantics.rules.report.ReportAlgebra
 import aqua.types.*
+
 import cats.Monad
+import cats.data.OptionT
 import cats.data.Chain
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
+import cats.syntax.foldable.*
 import cats.syntax.option.*
 import cats.instances.list.*
 import cats.data.{NonEmptyList, NonEmptyMap}
+import cats.data.OptionT
+import scribe.Logging
 
 import scala.collection.immutable.SortedMap
 
-class ValuesAlgebra[S[_], Alg[_]: Monad](implicit
+class ValuesAlgebra[S[_], Alg[_]: Monad](using
   N: NamesAlgebra[S, Alg],
   T: TypesAlgebra[S, Alg],
-  A: AbilitiesAlgebra[S, Alg]
-) {
-
-  def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
-    ensureTypeMatches(v, LiteralType.string)
-
-  def ensureTypeMatches(v: ValueToken[S], expected: Type): Alg[Boolean] =
-    resolveType(v).flatMap {
-      case Some(vt) =>
-        T.ensureTypeMatches(
-          v,
-          expected,
-          vt
-        )
-      case None => false.pure[Alg]
-    }
-
-  def resolveType(v: ValueToken[S]): Alg[Option[Type]] =
-    valueToRaw(v).map(_.map(_.`type`))
+  A: AbilitiesAlgebra[S, Alg],
+  report: ReportAlgebra[S, Alg]
+) extends Logging {
 
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
         T.resolveField(rootType, op)
-      case op: IntoCopy[S] =>
-        op.fields
-          .map(valueToRaw)
-          .sequence
-          .map(_.sequence)
-          .flatMap {
-            case None => None.pure[Alg]
-            case Some(values) => T.resolveCopy(rootType, op, values)
-          }
-      case op: IntoIndex[S] =>
-        op.idx
-          .fold[Alg[Option[ValueRaw]]](Option(LiteralRaw.Zero).pure[Alg])(
-            valueToRaw
+      case op: IntoArrow[S] =>
+        for {
+          maybeArgs <- op.arguments.traverse(valueToRaw)
+          arrowProp <- maybeArgs.sequence.flatTraverse(
+            T.resolveArrow(rootType, op, _)
           )
-          .flatMap {
-            case None => None.pure[Alg]
-            case Some(values) => T.resolveIndex(rootType, op, values)
-          }
+        } yield arrowProp
+      case op: IntoCopy[S] =>
+        for {
+          maybeFields <- op.fields.traverse(valueToRaw)
+          copyProp <- maybeFields.sequence.flatTraverse(
+            T.resolveCopy(rootType, op, _)
+          )
+        } yield copyProp
+      case op: IntoIndex[S] =>
+        for {
+          maybeIdx <- op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw)
+          idxProp <- maybeIdx.flatTraverse(
+            T.resolveIndex(rootType, op, _)
+          )
+        } yield idxProp
     }
 
   def valueToRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
     v match {
-      case l: LiteralToken[S] => Some(LiteralRaw(l.value, l.ts)).pure[Alg]
-      case VarToken(name, ops) =>
-        N.read(name).flatMap {
+      case l @ LiteralToken(value, t) =>
+        LiteralRaw(l.value, t).some.pure[Alg]
+
+      case VarToken(name) =>
+        N.read(name, mustBeDefined = false).flatMap {
           case Some(t) =>
-            // Prepare property expression: take the last known type and the next op, add next op to accumulator
-            ops
-              .foldLeft[Alg[(Option[Type], Chain[PropertyRaw])]](
-                (Some(t) -> Chain.empty).pure[Alg]
-              ) { case (acc, op) =>
-                acc.flatMap {
-                  // Some(tt) means that the previous property op was resolved successfully
-                  case (Some(tt), prop) =>
-                    // Resolve a single property
-                    resolveSingleProperty(tt, op).map {
-                      // Property op resolved, add it to accumulator and update the last known type
-                      case Some(p) => (Some(p.`type`), prop :+ p)
-                      // Property op is not resolved, it's an error, stop iterations
-                      case None => (None, Chain.empty)
-                    }
-
-                  // We have already errored, do nothing
-                  case _ => (None, Chain.empty).pure[Alg]
-                }
-
-              }
-              .map {
-                // Some(_) means no errors occured
-                case (Some(_), property) if property.length == ops.length =>
-                  Some(property.foldLeft[ValueRaw](VarRaw(name.value, t)) { case (v, p) =>
-                    ApplyPropertyRaw(v, p)
-                  })
-
-                case _ => None
-              }
-
+            VarRaw(name.value, t).some.pure
           case None =>
-            None.pure[Alg]
+            (for {
+              t <- OptionT(
+                T.getType(name.value)
+              ).collect { case st: ServiceType => st }
+                // A hack to report name error, better to refactor
+                .flatTapNone(N.read(name))
+              rename <- OptionT(
+                A.getServiceRename(name.asTypeToken)
+              )
+            } yield VarRaw(rename, t)).value
         }
 
-      case dvt @ StructValueToken(typeName, fields) =>
-        T.resolveType(typeName).flatMap {
-          case Some(struct @ StructType(_, _)) =>
-            for {
-              fieldsRawOp: NonEmptyMap[String, Option[ValueRaw]] <- fields.traverse(valueToRaw)
-              fieldsRaw: List[(String, ValueRaw)] = fieldsRawOp.toSortedMap.toList.collect {
-                case (n, Some(vr)) => n -> vr
-              }
-              rawFields = NonEmptyMap.fromMap(SortedMap.from(fieldsRaw))
-              typeFromFieldsWithData = rawFields
-                .map(rf =>
-                  (
-                    StructType(typeName.value, rf.map(_.`type`)),
-                    Some(MakeStructRaw(rf, struct))
-                  )
-                )
-                .getOrElse(BottomType -> None)
-              (typeFromFields, data) = typeFromFieldsWithData
-              isTypesCompatible <- T.ensureTypeMatches(dvt, struct, typeFromFields)
-            } yield data.filter(_ => isTypesCompatible)
-          case _ =>
-            None.pure[Alg]
-        }
+      case prop @ PropertyToken(value, properties) =>
+        prop.adjust.fold(
+          for {
+            valueRaw <- valueToRaw(value)
+            result <- valueRaw.flatTraverse(raw =>
+              properties
+                .foldLeftM(raw) { case (prev, op) =>
+                  OptionT(
+                    resolveSingleProperty(prev.`type`, op)
+                  ).map(prop => ApplyPropertyRaw(prev, prop))
+                }
+                .value
+            )
+          } yield result
+        )(valueToRaw)
+
+      case dvt @ NamedValueToken(typeName, fields) =>
+        (for {
+          resolvedType <- OptionT(T.resolveType(typeName))
+          fieldsGiven <- fields.traverse(value => OptionT(valueToRaw(value)))
+          fieldsGivenTypes = fieldsGiven.map(_.`type`)
+          generated <- OptionT.fromOption(
+            resolvedType match {
+              case struct: StructType =>
+                (
+                  struct.copy(fields = fieldsGivenTypes),
+                  MakeStructRaw(fieldsGiven, struct)
+                ).some
+              case ability: AbilityType =>
+                (
+                  ability.copy(fields = fieldsGivenTypes),
+                  AbilityRaw(fieldsGiven, ability)
+                ).some
+              case _ => none
+            }
+          )
+          (genType, genData) = generated
+          data <- OptionT.whenM(
+            T.ensureTypeMatches(dvt, resolvedType, genType)
+          )(genData.pure)
+        } yield data).value
 
       case ct @ CollectionToken(_, values) =>
-        values.traverse(valueToRaw).map(_.toList.flatten).map(NonEmptyList.fromList).map {
-          case Some(raws) if raws.size == values.size =>
-            val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
-            // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
-            // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
-            // make any decision about the structure of type, but can push anything inside
-            val elementNotBottom = if (element == BottomType) TopType else element
-            Some(
-              CollectionRaw(
-                raws,
-                ct.mode match {
-                  case CollectionToken.Mode.StreamMode => StreamType(elementNotBottom)
-                  case CollectionToken.Mode.ArrayMode => ArrayType(elementNotBottom)
-                  case CollectionToken.Mode.OptionMode => OptionType(elementNotBottom)
-                }
-              )
-            )
-          case _ if values.isEmpty => Some(ValueRaw.Nil)
-          case _ => None
-        }
+        for {
+          maybeValuesRaw <- values.traverse(valueToRaw).map(_.sequence)
+          valuesRawChecked <- maybeValuesRaw.flatTraverse(raws =>
+            raws
+              .zip(values)
+              .traverse { case (raw, token) =>
+                T.ensureTypeIsCollectible(token, raw.`type`)
+                  .map(Option.when(_)(raw))
+              }
+              .map(_.sequence)
+          )
+          raw = valuesRawChecked.map(raws =>
+            NonEmptyList
+              .fromList(raws)
+              .fold(ValueRaw.Nil) { nonEmpty =>
+                val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
+                // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
+                // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
+                // make any decision about the structure of type, but can push anything inside
+                val elementNotBottom = if (element == BottomType) TopType else element
+                CollectionRaw(
+                  nonEmpty,
+                  ct.mode match {
+                    case CollectionToken.Mode.StreamMode => StreamType(elementNotBottom)
+                    case CollectionToken.Mode.ArrayMode => ArrayType(elementNotBottom)
+                    case CollectionToken.Mode.OptionMode => OptionType(elementNotBottom)
+                  }
+                )
+              }
+          )
+        } yield raw
 
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])
 
-      case it @ InfixToken(l, r, i) =>
-        (valueToRaw(l), valueToRaw(r)).mapN((ll, rr) => ll -> rr).flatMap {
-          case (Some(leftRaw), Some(rightRaw)) =>
-            // TODO handle literal types
-            val hasFloats = ScalarType.float
-              .exists(ft => leftRaw.`type`.acceptsValueOf(ft) || rightRaw.`type`.acceptsValueOf(ft))
-
-            // https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
-            // Expected types of left and right operands, result type if known, service ID and function name
-            val (leftType, rightType, res, id, fn) = it.op match {
-              case Op.Add =>
-                (ScalarType.i64, ScalarType.i64, None, "math", "add")
-              case Op.Sub => (ScalarType.i64, ScalarType.i64, None, "math", "sub")
-              case Op.Mul if hasFloats =>
-                // TODO may it be i32?
-                (ScalarType.f64, ScalarType.f64, Some(ScalarType.i64), "math", "fmul")
-              case Op.Mul =>
-                (ScalarType.i64, ScalarType.i64, None, "math", "mul")
-              case Op.Div => (ScalarType.i64, ScalarType.i64, None, "math", "div")
-              case Op.Rem => (ScalarType.i64, ScalarType.i64, None, "math", "rem")
-              case Op.Pow => (ScalarType.i64, ScalarType.u32, None, "math", "pow")
-              case Op.Gt => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "gt")
-              case Op.Gte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "gte")
-              case Op.Lt => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lt")
-              case Op.Lte => (ScalarType.i64, ScalarType.i64, Some(ScalarType.bool), "cmp", "lte")
-            }
-            for {
-              ltm <- T.ensureTypeMatches(l, leftType, leftRaw.`type`)
-              rtm <- T.ensureTypeMatches(r, rightType, rightRaw.`type`)
-            } yield Option.when(ltm && rtm)(
-              CallArrowRaw(
-                Some(id),
-                fn,
-                leftRaw :: rightRaw :: Nil,
-                ArrowType(
-                  ProductType(leftType :: rightType :: Nil),
-                  ProductType(
-                    res.getOrElse(
-                      // If result type is not known/enforced, then assume it's the widest type of operands
-                      // E.g. 1:i8 + 1:i8 -> i8, not i64
-                      leftRaw.`type` `∪` rightRaw.`type`
-                    ) :: Nil
-                  )
-                ),
-                Some(LiteralRaw.quote(id))
-              )
+      case pr @ PrefixToken(operand, _) =>
+        (for {
+          raw <- OptionT(
+            valueToRaw(operand)
+          )
+          typeCheck <- OptionT.liftF(
+            T.ensureTypeMatches(operand, ScalarType.bool, raw.`type`)
+          )
+          result <- OptionT.when(typeCheck)(
+            ApplyUnaryOpRaw(
+              op = pr.op match {
+                case PrefOp.Not => ApplyUnaryOpRaw.Op.Not
+              },
+              value = raw
             )
+          )
+        } yield result).value
 
+      case it @ InfixToken(l, r, _) =>
+        (valueToRaw(l), valueToRaw(r)).flatMapN {
+          case (Some(leftRaw), Some(rightRaw)) =>
+            val lType = leftRaw.`type`
+            val rType = rightRaw.`type`
+            lazy val uType = lType `∪` rType
+
+            it.op match {
+              case InfOp.Bool(bop) =>
+                for {
+                  leftChecked <- T.ensureTypeMatches(l, ScalarType.bool, lType)
+                  rightChecked <- T.ensureTypeMatches(r, ScalarType.bool, rType)
+                } yield Option.when(
+                  leftChecked && rightChecked
+                )(
+                  ApplyBinaryOpRaw(
+                    op = bop match {
+                      case BoolOp.And => ApplyBinaryOpRaw.Op.And
+                      case BoolOp.Or => ApplyBinaryOpRaw.Op.Or
+                    },
+                    left = leftRaw,
+                    right = rightRaw
+                  )
+                )
+              case InfOp.Eq(eop) =>
+                T.ensureValuesComparable(
+                  token = it,
+                  left = lType,
+                  right = rType
+                ).map(
+                  Option.when(_)(
+                    ApplyBinaryOpRaw(
+                      op = eop match {
+                        case EqOp.Eq => ApplyBinaryOpRaw.Op.Eq
+                        case EqOp.Neq => ApplyBinaryOpRaw.Op.Neq
+                      },
+                      left = leftRaw,
+                      right = rightRaw
+                    )
+                  )
+                )
+              case op @ (InfOp.Math(_) | InfOp.Cmp(_)) =>
+                // Some type acrobatics to make
+                // compiler check exhaustive pattern matching
+                val iop = op match {
+                  case InfOp.Math(op) => op
+                  case InfOp.Cmp(op) => op
+                }
+
+                val hasFloat = List(lType, rType).exists(
+                  _ acceptsValueOf LiteralType.float
+                )
+
+                // See https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
+                val (id, fn) = iop match {
+                  case MathOp.Add => ("math", "add")
+                  case MathOp.Sub => ("math", "sub")
+                  case MathOp.Mul if hasFloat => ("math", "fmul")
+                  case MathOp.Mul => ("math", "mul")
+                  case MathOp.Div => ("math", "div")
+                  case MathOp.Rem => ("math", "rem")
+                  case MathOp.Pow => ("math", "pow")
+                  case CmpOp.Gt => ("cmp", "gt")
+                  case CmpOp.Gte => ("cmp", "gte")
+                  case CmpOp.Lt => ("cmp", "lt")
+                  case CmpOp.Lte => ("cmp", "lte")
+                }
+
+                /*
+                 * If `uType == TopType`, it means that we don't
+                 * have type big enough to hold the result of operation.
+                 * e.g. We will use `i64` for result of `i32 * u64`
+                 * TODO: Handle this more gracefully
+                 *       (use warning system when it is implemented)
+                 */
+                def uTypeBounded = if (uType == TopType) {
+                  val bounded = ScalarType.i64
+                  logger.warn(
+                    s"Result type of ($lType ${it.op} $rType) is $TopType, " +
+                      s"using $bounded instead"
+                  )
+                  bounded
+                } else uType
+
+                // Expected type sets of left and right operands, result type
+                val (leftExp, rightExp, resType) = iop match {
+                  case MathOp.Add | MathOp.Sub | MathOp.Div | MathOp.Rem =>
+                    (ScalarType.integer, ScalarType.integer, uTypeBounded)
+                  case MathOp.Pow =>
+                    (ScalarType.integer, ScalarType.unsigned, uTypeBounded)
+                  case MathOp.Mul if hasFloat =>
+                    (ScalarType.float, ScalarType.float, ScalarType.i64)
+                  case MathOp.Mul =>
+                    (ScalarType.integer, ScalarType.integer, uTypeBounded)
+                  case CmpOp.Gt | CmpOp.Lt | CmpOp.Gte | CmpOp.Lte =>
+                    (ScalarType.integer, ScalarType.integer, ScalarType.bool)
+                }
+
+                for {
+                  leftChecked <- T.ensureTypeOneOf(l, leftExp, lType)
+                  rightChecked <- T.ensureTypeOneOf(r, rightExp, rType)
+                } yield Option.when(
+                  leftChecked.isDefined && rightChecked.isDefined
+                )(
+                  CallArrowRaw.service(
+                    abilityName = id,
+                    serviceId = LiteralRaw.quote(id),
+                    funcName = fn,
+                    baseType = ArrowType(
+                      ProductType(lType :: rType :: Nil),
+                      ProductType(resType :: Nil)
+                    ),
+                    arguments = leftRaw :: rightRaw :: Nil
+                  )
+                )
+
+            }
           case _ => None.pure[Alg]
         }
-
     }
 
-  def callArrowToRaw(ca: CallArrowToken[S]): Alg[Option[CallArrowRaw]] = for {
-    raw <- ca.ability
-      .fold(
-        N.readArrow(ca.funcName)
-          .map(
-            _.map(bt =>
-              CallArrowRaw(
-                ability = None,
-                name = ca.funcName.value,
-                arguments = Nil,
-                baseType = bt,
-                serviceId = None
-              )
+  def valueToCallArrowRaw(v: ValueToken[S]): Alg[Option[CallArrowRaw]] =
+    valueToRaw(v).flatMap(
+      _.flatTraverse {
+        case ca: CallArrowRaw => ca.some.pure[Alg]
+        // TODO: better error message (`raw` formatting)
+        case raw => report.error(v, s"Expected arrow call, got $raw").as(none)
+      }
+    )
+
+  def valueToTypedRaw(v: ValueToken[S], expectedType: Type): Alg[Option[ValueRaw]] =
+    OptionT(valueToRaw(v))
+      .flatMap(raw =>
+        OptionT.whenM(
+          T.ensureTypeMatches(v, expectedType, raw.`type`)
+        )(raw.pure)
+      )
+      .value
+
+  def valueToStringRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
+    valueToTypedRaw(v, LiteralType.string)
+
+  def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
+    valueToStringRaw(v).map(_.isDefined)
+
+  private def callArrowFromAbility(
+    ab: Name[S],
+    at: NamedType,
+    funcName: Name[S]
+  ): Option[CallArrowRaw] = at.arrows
+    .get(funcName.value)
+    .map(arrowType =>
+      CallArrowRaw.ability(
+        ab.value,
+        funcName.value,
+        arrowType
+      )
+    )
+
+  private def callArrowToRaw(
+    callArrow: CallArrowToken[S]
+  ): Alg[Option[CallArrowRaw]] =
+    for {
+      raw <- callArrow.ability.fold(
+        for {
+          myabeArrowType <- N.readArrow(callArrow.funcName)
+        } yield myabeArrowType
+          .map(arrowType =>
+            CallArrowRaw.func(
+              funcName = callArrow.funcName.value,
+              baseType = arrowType
             )
           )
       )(ab =>
-        (A.getArrow(ab, ca.funcName), A.getServiceId(ab)).mapN {
-          case (Some(at), Right(sid)) =>
-            // Service call, actually
-            CallArrowRaw(
-              ability = Some(ab.value),
-              name = ca.funcName.value,
-              arguments = Nil,
-              baseType = at,
-              serviceId = Some(sid)
-            ).some
-          case (Some(at), Left(true)) =>
-            // Ability function call, actually
-            CallArrowRaw(
-              ability = Some(ab.value),
-              name = ca.funcName.value,
-              arguments = Nil,
-              baseType = at,
-              serviceId = None
-            ).some
-          case _ => none
+        N.read(ab.asName, mustBeDefined = false).flatMap {
+          case Some(nt: (AbilityType | ServiceType)) =>
+            callArrowFromAbility(ab.asName, nt, callArrow.funcName).pure
+          case _ =>
+            T.getType(ab.value).flatMap {
+              case Some(st: ServiceType) =>
+                OptionT(A.getServiceRename(ab))
+                  .subflatMap(rename =>
+                    callArrowFromAbility(
+                      ab.asName.rename(rename),
+                      st,
+                      callArrow.funcName
+                    )
+                  )
+                  .value
+              case _ =>
+                A.getArrow(ab, callArrow.funcName).map {
+                  case Some(at) =>
+                    CallArrowRaw
+                      .ability(
+                        abilityName = ab.value,
+                        funcName = callArrow.funcName.value,
+                        baseType = at
+                      )
+                      .some
+                  case _ => none
+                }
+            }
         }
       )
-    result <- raw.flatTraverse(r =>
-      val arr = r.baseType
-      for {
-        argsCheck <- T.checkArgumentsNumber(ca.funcName, arr.domain.length, ca.args.length)
-        args <- Option
-          .when(argsCheck)(ca.args zip arr.domain.toList)
-          .traverse(
-            _.flatTraverse { case (tkn, tp) =>
-              for {
-                maybeValueRaw <- valueToRaw(tkn)
-                checked <- maybeValueRaw.flatTraverse(v =>
-                  T.ensureTypeMatches(tkn, tp, v.`type`)
-                    .map(Option.when(_)(v))
-                )
-              } yield checked.toList
-            }
+      result <- raw.flatTraverse(r =>
+        val arr = r.baseType
+        for {
+          argsCheck <- T.checkArgumentsNumber(
+            callArrow.funcName,
+            arr.domain.length,
+            callArrow.args.length
           )
-        result = args
-          .filter(_.length == arr.domain.length)
-          .map(args => r.copy(arguments = args))
-      } yield result
-    )
-  } yield result
-
-  def checkArguments(token: Token[S], arr: ArrowType, args: List[ValueToken[S]]): Alg[Boolean] =
-    // TODO: do we really need to check this?
-    T.checkArgumentsNumber(token, arr.domain.length, args.length).flatMap {
-      case false => false.pure[Alg]
-      case true =>
-        args
-          .map[Alg[Option[(Token[S], Type)]]](tkn => resolveType(tkn).map(_.map(t => tkn -> t)))
-          .zip(arr.domain.toList)
-          .foldLeft(
-            true.pure[Alg]
-          ) { case (f, (ft, t)) =>
-            (
-              f,
-              ft.flatMap {
-                case None =>
-                  false.pure[Alg]
-                case Some((tkn, valType)) =>
-                  T.ensureTypeMatches(tkn, t, valType)
+          args <- Option
+            .when(argsCheck)(callArrow.args zip arr.domain.toList)
+            .traverse(
+              _.flatTraverse { case (tkn, tp) =>
+                for {
+                  maybeValueRaw <- valueToRaw(tkn)
+                  checked <- maybeValueRaw.flatTraverse(v =>
+                    T.ensureTypeMatches(tkn, tp, v.`type`)
+                      .map(Option.when(_)(v))
+                  )
+                } yield checked.toList
               }
-            ).mapN(_ && _)
-          }
-    }
+            )
+          result = args
+            .filter(_.length == arr.domain.length)
+            .map(args => r.copy(arguments = args))
+        } yield result
+      )
+    } yield result
 
 }
 
 object ValuesAlgebra {
 
-  implicit def deriveValuesAlgebra[S[_], Alg[_]: Monad](implicit
+  given [S[_], Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg]
+    A: AbilitiesAlgebra[S, Alg],
+    E: ReportAlgebra[S, Alg]
   ): ValuesAlgebra[S, Alg] =
     new ValuesAlgebra[S, Alg]
 }

@@ -11,4 +11,14 @@ case class FuncRaw(
   override def rename(s: String): RawPart = copy(name = s)
 
   override def rawPartType: Type = arrow.`type`
+
+  def capturedVars: Set[String] = {
+    val freeBodyVars = arrow.body.usesVarNames.value
+    val argsNames = arrow.`type`.domain
+      .toLabelledList()
+      .map { case (name, _) => name }
+      .toSet
+
+    freeBodyVars -- argsNames
+  }
 }

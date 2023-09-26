@@ -22,7 +22,7 @@ object RootExpr extends Expr.Companion {
   import Span.*
 
   def validChildren: List[Expr.Lexem] =
-    ServiceExpr :: AliasExpr :: DataStructExpr :: ConstantExpr :: FuncExpr :: Nil
+    ServiceExpr :: AliasExpr :: DataStructExpr :: AbilityExpr :: ConstantExpr :: FuncExpr :: Nil
 
   private def gatherResults[F[_]: LiftParser: Comonad](results: NonEmptyList[ValidatedNec[ParserError[F], Tree[F]]]): (Chain[ParserError[F]], Chain[Tree[F]]) = {
     results.foldLeft[(Chain[ParserError[F]], Chain[Tree[F]])](Chain.empty -> Chain.empty) {

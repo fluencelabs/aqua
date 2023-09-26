@@ -4,18 +4,24 @@ import aqua.parser.expr.func.ArrowExpr
 import aqua.parser.lexer.{BasicTypeToken, Name}
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
-import aqua.raw.ops.{FuncOp, RawTag, ReturnTag, SeqTag}
+import aqua.raw.ops.*
 import aqua.raw.value.LiteralRaw
 import aqua.semantics.expr.func.ArrowSem
+import aqua.semantics.rules.types.TypesState
 import aqua.types.*
+import aqua.types.ScalarType.*
+
 import cats.Id
-import cats.data.{NonEmptyList, State}
+import cats.syntax.applicative.*
+import cats.data.{NonEmptyList, NonEmptyMap, State}
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.Inside
 
-class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
-  import Utils.*
+class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues with Inside {
+
+  import Utils.{given, *}
 
   def program(arrowStr: String): Prog[State[CompilerState[cats.Id], *], Raw] = {
     import CompilerState.*
@@ -26,21 +32,19 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
     sem.program[State[CompilerState[Id], *]]
   }
 
-  "sem" should "create empty model" in {
+  "ArrowSem" should "create empty model" in {
     val model = getModel(program("(a: string, b: u32) -> u8"))
-    model shouldBe (Raw.Empty("empty"))
+    model shouldBe (Raw.Empty("Invalid arrow body"))
   }
 
-  "sem" should "create error model" ignore {
+  it should "create error model" ignore {
     val model = getModel(RawTag.empty.toFuncOp)(program("(a: string, b: u32) -> u8"))
     model shouldBe Raw.Empty(
       "Return type is defined for the arrow, but nothing returned. Use `<- value, ...` as the last expression inside function body."
     )
   }
 
-  import aqua.types.ScalarType.*
-
-  "arrow without return type" should "create right model" ignore {
+  it should "create right model for arrow without return type" ignore {
     val model = getModel(RawTag.empty.toFuncOp)(program("(a: string, b: u32)"))
     model shouldBe ArrowRaw(
       ArrowType(labelled("a", string, labelled("b", u32)), NilType),
@@ -49,7 +53,7 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
     )
   }
 
-  "arrow with return type and correct state" should "create correct model" ignore {
+  it should "create correct model for arrow with return type and correct state" ignore {
     val returnValue = LiteralRaw("123", string)
     val returnTag = FuncOp(ReturnTag(NonEmptyList.one(returnValue)).wrap(RawTag.empty))
     val model = getModel(returnTag)(program("(a: string, b: u32) -> string"))
@@ -59,7 +63,7 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
     model shouldBe resultModel
   }
 
-  "arrow with return type and seq inside" should "create correct model" ignore {
+  it should "create correct model for arrow with return type and seq inside" ignore {
     val returnValue = LiteralRaw("123", string)
     val seq = FuncOp(SeqTag.wrap(RawTag.empty, ReturnTag(NonEmptyList.one(returnValue)).leaf))
     val model = getModel(seq)(program("(a: string, b: u32) -> string"))
@@ -69,7 +73,7 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
     model shouldBe resultModel
   }
 
-  "different types in return type and return value" should "create error model" ignore {
+  it should "create error model for different types in return type and return value" ignore {
     val returnValue = LiteralRaw("123", string)
     val seq = FuncOp(
       SeqTag.wrap(
@@ -85,4 +89,74 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues {
     )
 
   }
+
+  it should "not restrict stream arguments" in {
+    val body =
+      PushToStreamTag(
+        LiteralRaw.quote("a"),
+        Call.Export("s", StreamType(ScalarType.string))
+      ).leaf
+
+    def test(
+      abilityArgs: List[String],
+      args: List[String],
+      initState: CompilerState[Id]
+    ) = {
+      val abilityPart =
+        if (abilityArgs.isEmpty) ""
+        else abilityArgs.mkString("{", ",", "}")
+      val argsPart = args.appended("s: *string").mkString("(", ",", ")")
+      val expr = abilityPart + argsPart
+
+      val (state, raw) = program(expr).apply(body.toFuncOp.pure).run(initState).value
+
+      state.errors shouldBe empty
+      inside(raw) { case ArrowRaw(_, Nil, bodyRes) =>
+        bodyRes shouldBe body
+      }
+    }
+
+    val structType = StructType(
+      "TestStruct",
+      NonEmptyMap.one(
+        "field",
+        ScalarType.string
+      )
+    )
+
+    val abilityType = AbilityType(
+      "TestAbility",
+      NonEmptyMap.one(
+        "field",
+        ScalarType.string
+      )
+    )
+
+    val state: CompilerState[Id] = CompilerState(
+      types = TypesState(
+        strict = Map(
+          "FirstAbility" -> abilityType,
+          "SecondAbility" -> abilityType,
+          "DataStruct" -> structType
+        )
+      )
+    )
+
+    val abilityArgs = List(
+      "FirstAbility",
+      "SecondAbility"
+    )
+
+    val args = List(
+      "a: string",
+      "callback: u32 -> string",
+      "data: DataStruct"
+    )
+
+    for {
+      abilityArgs <- abilityArgs.toSet.subsets()
+      args <- args.toSet.subsets()
+    } test(abilityArgs.toList, args.toList, state)
+  }
+
 }
