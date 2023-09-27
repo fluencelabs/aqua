@@ -9,7 +9,22 @@ import aqua.types.*
 import cats.syntax.show.*
 import cats.syntax.option.*
 
-// TODO: doc
+/**
+ * Pre-transformer for top functions:
+ * - Get arguments
+ * - Get relay
+ * - Generate callbacks for function arguments
+ * - Handle result
+ * - Handle error
+ *
+ * @param argsProvider - provides arguments
+ * @param resultsHandler - handles results
+ * @param errorHandler - handles errors
+ * @param callback - generates callback for function argument
+ * @param relayVarName - name of the relay variable
+ * @param wrapCallableName - name of the generated wrapper function
+ * @param arrowCallbackPrefix - prefix for generated callbacks names
+ */
 case class FuncPreTransformer(
   argsProvider: ArgsProvider,
   resultsHandler: ResultsHandler,
@@ -50,7 +65,7 @@ case class FuncPreTransformer(
    * removes function return
    *
    * @param func Function to transform
-   * @return
+   * @return Transformed function
    */
   def preTransform(func: FuncArrow): FuncArrow = {
     val returnType = ProductType(func.ret.map(_.`type`).map {
@@ -93,13 +108,13 @@ case class FuncPreTransformer(
 
     val call = CallArrowRawTag.func(func.funcName, funcCall).leaf
 
-    val body = SeqTag.wrap(
-      provideArgs ++ List(
-        TryTag.wrap(
-          call,
-          handleError
-        )
-      ) ++ handleResults
+    val body = TryTag.wrap(
+      SeqTag.wrap(
+        provideArgs
+          .appended(call)
+          .appendedAll(handleResults)
+      ),
+      handleError
     )
 
     FuncArrow(

@@ -159,10 +159,10 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val retVar = VarModel("ret", ScalarType.string)
 
     val expected =
-      SeqRes.wrap(
-        getDataSrv("-relay-", "-relay-", ScalarType.string),
-        getDataSrv("peers", peers.name, peers.`type`),
-        XorRes.wrap(
+      XorRes.wrap(
+        SeqRes.wrap(
+          getDataSrv("-relay-", "-relay-", ScalarType.string),
+          getDataSrv("peers", peers.name, peers.`type`),
           RestrictionRes(results.name, resultsType).wrap(
             SeqRes.wrap(
               ParRes.wrap(
@@ -203,9 +203,9 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
               ).leaf
             )
           ),
-          errorCall(transformCfg, 0, initPeer)
+          respCall(transformCfg, flatResult, initPeer)
         ),
-        respCall(transformCfg, flatResult, initPeer)
+        errorCall(transformCfg, 0, initPeer)
       )
 
     exec.body.equalsOrShowDiff(expected) shouldBe (true)
@@ -276,8 +276,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val resCanonVM = VarModel("-res-fix-0", CanonStreamType(ScalarType.string))
     val resFlatVM = VarModel("-res-flat-0", ArrayType(ScalarType.string))
 
-    val expected = SeqRes.wrap(
-      XorRes.wrap(
+    val expected = XorRes.wrap(
+      SeqRes.wrap(
         RestrictionRes(resVM.name, resStreamType).wrap(
           SeqRes.wrap(
             // res <- foo()
@@ -303,9 +303,9 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
             ).leaf
           )
         ),
-        errorCall(transformCfg, 0, initPeer)
+        respCall(transformCfg, resFlatVM, initPeer)
       ),
-      respCall(transformCfg, resFlatVM, initPeer)
+      errorCall(transformCfg, 0, initPeer)
     )
 
     barfoo.body.equalsOrShowDiff(expected) should be(true)
