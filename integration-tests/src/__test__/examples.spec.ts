@@ -753,10 +753,11 @@ describe("Testing examples", () => {
 
   it("handleResultError.aqua", async () => {
     let call = handleResultErrorCall();
+
+    // js-client return string for interpretation error
+    // so matching with object guarantees that error was handled
     expect(call).rejects.toMatchObject({
-      message: expect
-        .stringContaining("lambda")
-        .and(expect.not.stringContaining("interpretation failed")),
+      message: expect.stringContaining("lambda"),
       error_code: expect.any(Number),
     });
   });
