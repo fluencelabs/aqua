@@ -1,0 +1,17 @@
+aqua HandleResultError
+
+export handleResultError
+
+-- t = true, f = false
+func handleResultError(t: bool, f: bool) -> string:
+    opt: ?[]string
+
+    if t == f: -- false
+        opt <<- ["unreachable"]
+    else:
+        opt <<- nil
+
+    result = opt!
+
+    -- should fail
+    <- result[0]
