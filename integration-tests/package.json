@@ -25,6 +25,7 @@
     "compile-aqua": "ts-node ./src/compile.ts",
     "compile-aqua:air": "aqua -i ./aqua/ -o ./compiled-air -a",
     "prettify-compiled": "prettier --write src/compiled",
+    "prettify": "prettier --write src",
     "aqua": "aqua",
     "do": "aqua dist deploy --addr /dns4/kras-04.fluence.dev/tcp/19001/wss/p2p/12D3KooWFEwNWcHqi9rtsmDhsYcDbRUCDXH84RC4FW6UfsFWaoHi --config-path deploy.json --service tsOracle"
   },
@@ -33,6 +34,7 @@
     "@fluencelabs/aqua-api": "0.12.2",
     "@fluencelabs/aqua-dht": "0.2.5",
     "@fluencelabs/aqua-lib": "0.7.3",
+    "prettier": "3.0.3",
     "@types/jest": "29.5.2",
     "@types/node": "18.11.18",
     "jest": "29.5.0",

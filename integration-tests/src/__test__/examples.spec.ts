@@ -3,7 +3,7 @@ import {
   getObjAssignCall,
   getObjCall,
   getObjRelayCall,
-  getObjForCall
+  getObjForCall,
 } from "../examples/objectCall.js";
 import {
   callArrowCall,
@@ -360,9 +360,59 @@ describe("Testing examples", () => {
   });
 
   it("object creation in 'for' instruction getObjFor", async () => {
-      let result = await getObjForCall();
-      expect(result).toEqual([]);
-    });
+    const result = await getObjForCall();
+    const res = [
+      {
+        str: "first copied",
+        num: 1,
+        inner: {
+          arr: ["copy"],
+          num: 11,
+        },
+      },
+      {
+        str: "second copied",
+        num: 2,
+        inner: {
+          arr: ["copy"],
+          num: 22,
+        },
+      },
+      {
+        str: "third copied",
+        num: 3,
+        inner: {
+          arr: ["copy"],
+          num: 33,
+        },
+      },
+      {
+        str: "for",
+        num: 1,
+        inner: {
+          arr: [],
+          num: 1,
+        },
+      },
+      {
+        str: "for",
+        num: 2,
+        inner: {
+          arr: [],
+          num: 2,
+        },
+      },
+      {
+        str: "for",
+        num: 3,
+        inner: {
+          arr: [],
+          num: 3,
+        },
+      },
+    ];
+    expect(result).toEqual(res);
+  });
 
   it("object creation getObjAssign", async () => {
     let result = await getObjAssignCall();
