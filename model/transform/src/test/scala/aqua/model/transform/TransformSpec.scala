@@ -48,29 +48,28 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val procFC = fc.value.body
 
-    val expectedFC =
+    val expectedFC = XorRes.wrap(
       SeqRes.wrap(
         dataCall(bc, "-relay-", initPeer),
         XorRes.wrap(
-          XorRes.wrap(
-            SeqRes.wrap(
-              through(relayV),
-              through(otherRelay),
-              callRes(1, otherPeer),
-              through(otherRelay),
-              through(relayV)
-            ),
-            SeqRes.wrap(
-              through(otherRelay),
-              through(relayV),
-              through(initPeer),
-              failErrorRes
-            )
+          SeqRes.wrap(
+            through(relayV),
+            through(otherRelay),
+            callRes(1, otherPeer),
+            through(otherRelay),
+            through(relayV)
           ),
-          errorCall(bc, 0, initPeer)
+          SeqRes.wrap(
+            through(otherRelay),
+            through(relayV),
+            through(initPeer),
+            failErrorRes
+          )
         ),
         respCall(bc, ret, initPeer)
-      )
+      ),
+      errorCall(bc, 0, initPeer)
+    )
 
     procFC.equalsOrShowDiff(expectedFC) should be(true)
 
@@ -80,9 +79,21 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val ret = LiteralRaw.quote("return this")
 
+    /**
+     * func ret() -> string:
+     *   srv0.fn0()
+     *   on "other-peer":
+     *     srv1.fn1()
+     *   <- "return this"
+     */
     val func: FuncArrow = FuncArrow(
       "ret",
-      SeqTag.wrap(callOp(0).leaf, OnTag(otherPeer, Chain.empty).wrap(callOp(1).leaf)),
+      SeqTag.wrap(
+        callOp(0).leaf,
+        OnTag(otherPeer, Chain.empty).wrap(
+          callOp(1).leaf
+        )
+      ),
       stringArrow,
       ret :: Nil,
       Map.empty,
@@ -96,29 +107,26 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val procFC = fc.value.body
 
-    val expectedFC =
+    val expectedFC = XorRes.wrap(
       SeqRes.wrap(
         dataCall(bc, "-relay-", initPeer),
+        callRes(0, initPeer),
         XorRes.wrap(
           SeqRes.wrap(
-            callRes(0, initPeer),
-            XorRes.wrap(
-              SeqRes.wrap(
-                through(relayV),
-                callRes(1, otherPeer),
-                through(relayV)
-              ),
-              SeqRes.wrap(
-                through(relayV),
-                through(initPeer),
-                failErrorRes
-              )
-            )
+            through(relayV),
+            callRes(1, otherPeer),
+            through(relayV)
           ),
-          errorCall(bc, 0, initPeer)
+          SeqRes.wrap(
+            through(relayV),
+            through(initPeer),
+            failErrorRes
+          )
         ),
         respCall(bc, ret, initPeer)
-      )
+      ),
+      errorCall(bc, 0, initPeer)
+    )
 
     procFC.equalsOrShowDiff(expectedFC) should be(true)
 
@@ -126,13 +134,13 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
   "transform.forClient" should "link funcs correctly" in {
     /*
-    func one() -> u64:
-      variable <- Demo.get42()
-      <- variable
+    func f1() -> string:
+      v <- srv1.fn1()
+      <- v
 
-    func two() -> u64:
-      variable <- one()
-      <- variable
+    func f2() -> string:
+      v <- f1()
+      <- v
      */
 
     val f1: FuncArrow =
@@ -163,13 +171,13 @@ class TransformSpec extends AnyFlatSpec with Matchers {
 
     val procFC = Transform.funcRes(f2, bc).value.body
 
-    val expectedFC = SeqRes.wrap(
-      dataCall(bc, "-relay-", initPeer),
-      XorRes.wrap(
+    val expectedFC = XorRes.wrap(
+      SeqRes.wrap(
+        dataCall(bc, "-relay-", initPeer),
         callRes(1, initPeer),
-        errorCall(bc, 0, initPeer)
+        respCall(bc, VarRaw("v", ScalarType.string), initPeer)
       ),
-      respCall(bc, VarRaw("v", ScalarType.string), initPeer)
+      errorCall(bc, 0, initPeer)
     )
 
     procFC.equalsOrShowDiff(expectedFC) should be(true)
