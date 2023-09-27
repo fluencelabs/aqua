@@ -5,7 +5,7 @@ import aqua.model.inline.raw.{ApplyIntoCopyRawInliner, CollectionRawInliner}
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
 import aqua.raw.value.{CollectionRaw, LiteralRaw, MakeStructRaw, VarRaw}
-import aqua.types.{CanonStreamType, OptionType, ScalarType, StreamType, StructType}
+import aqua.types.{CanonStreamType, OptionType, ScalarType, StreamMapType, StreamType, StructType}
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.syntax.show.*
 import org.scalatest.flatspec.AnyFlatSpec
@@ -32,18 +32,17 @@ class CollectionRawInlinerSpec extends AnyFlatSpec with Matchers {
 
     v shouldBe resultValue
 
+    val streamMapType = StreamMapType.top()
+    val streamMapVar = VarModel("nested_type_obj_map", streamMapType)
+
     val expected =
       RestrictionModel("option-inline", StreamType(nestedType)).wrap( // create a stream
         SeqModel.wrap(
           // create an object
-          CallServiceModel(
-            "json",
-            "obj",
-            LiteralModel.fromRaw(LiteralRaw.quote("field1")) :: LiteralModel.fromRaw(
-              LiteralRaw.number(3)
-            ) :: Nil,
-            VarModel("nested_type_obj", nestedType)
-          ).leaf,
+          RestrictionModel(streamMapVar.name, streamMapType).wrap(
+            InsertKeyValueModel(LiteralModel.quote("field1"), LiteralModel.number(3), streamMapVar.name, streamMapType).leaf,
+            CanonicalizeModel(streamMapVar, CallModel.Export("nested_type_obj", nestedType)).leaf
+          ),
           XorModel.wrap(
             SeqModel.wrap(
               // push object to the stream

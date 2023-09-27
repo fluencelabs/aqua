@@ -1,12 +1,26 @@
-service Console("run-console"):
-    print(s: string)
+aqua M
 
-func main():
-    ss: *string
-    dd: *string
-    peerId = "peerId"
-    relay = "relay"
-    parsec s <- ss on peerId via relay:
-      Console.print(s)
-    for d <- dd par:
-      Console.print(d)
+export getObj
+
+service OpNum("op"):
+    identity(n: u32) -> u32
+
+service OpStr("op"):
+    identity(n: string) -> string
+
+service OpArr("op"):
+    identity(arr: []string) -> []string
+
+data InnerObj:
+    arr: []string
+    num: u32
+
+data SomeObj:
+    str: string
+    num: u64
+    inner: InnerObj
+
+func getObj() -> SomeObj:
+    b = SomeObj(str = OpStr.identity("some str"), num = 5, inner = InnerObj(arr = ["a", "b", "c"], num = 6))
+    c = b.copy(str = "new str", inner = b.inner.copy(num = 3))
+    <- c

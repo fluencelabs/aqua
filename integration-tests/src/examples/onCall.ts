@@ -1,5 +1,5 @@
-import { getPeerExternalAddresses } from '../compiled/examples/on.js';
+import { getPeerExternalAddresses } from "../compiled/examples/on.js";
 
 export async function onCall(relayPeerId: string): Promise<string[]> {
-    return await getPeerExternalAddresses(relayPeerId);
+  return await getPeerExternalAddresses(relayPeerId);
 }

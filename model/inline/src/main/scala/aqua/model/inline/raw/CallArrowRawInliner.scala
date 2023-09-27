@@ -1,20 +1,15 @@
 package aqua.model.inline.raw
 
 import aqua.errors.Errors.internalError
-import aqua.model.inline.Inline.parDesugarPrefixOpt
-import aqua.model.{CallServiceModel, FuncArrow, MetaModel, SeqModel, ValueModel, VarModel}
-import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
+import aqua.model.*
 import aqua.model.inline.RawValueInliner.{callToModel, valueToModel}
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
 import aqua.raw.ops.Call
-import aqua.types.ArrowType
 import aqua.raw.value.CallArrowRaw
-
-import cats.syntax.traverse.*
 import cats.data.{Chain, State}
+import cats.syntax.traverse.*
 import scribe.Logging
-
-import scala.collection.immutable.ListMap
 
 object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
 

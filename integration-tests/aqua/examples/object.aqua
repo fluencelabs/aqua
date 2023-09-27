@@ -1,6 +1,6 @@
 aqua StructCreation declares getObj, getObjRelay, getObjAssign
 
-export getObj, getObjRelay, getObjAssign
+export getObj, getObjRelay, getObjAssign, getObjFor
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
@@ -38,3 +38,25 @@ func getObjAssign() -> SomeObj, SomeObj, u32:
                   )
     copiedObj = obj.copy(str = "some str", inner = obj.inner.copy(arr = ["a", "b", "c"])).copy(num = 6)
     <- obj, copiedObj, copiedObj.inner.copy(arr = ["g"]).arr.length
+
+func getObjFor() -> []SomeObj:
+    all: *SomeObj
+
+    arr = [
+           SomeObj(str = "first", num = OpNum.identity(1), inner = InnerObj(arr = ["1", "1", "1"], num = 11)),
+           SomeObj(str = "second", num = OpNum.identity(2), inner = InnerObj(arr = ["2", "2", "2"], num = 22)),
+           SomeObj(str = "third", num = OpNum.identity(3), inner = InnerObj(arr = ["3", "3", "3"], num = 33))
+          ]
+
+    for obj <- arr:
+      copied = obj.copy(str = Op.concat_strings(obj.str, " copied"), inner = obj.inner.copy(arr = ["copy"]))
+      all <<- copied
+
+    arri = [1, 2, 3]
+    for i <- arri:
+      obj = SomeObj(str = "for", num = OpNum.identity(i), inner = InnerObj(arr = [], num = i))
+      all <<- obj
+
+    <- all
+
+

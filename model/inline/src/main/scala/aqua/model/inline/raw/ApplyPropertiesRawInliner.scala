@@ -161,10 +161,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             if (varModel.properties.nonEmpty) removeProperties(varModel)
             else State.pure(varModel, Inline.empty)
           (flatten, inline) = flattenVI
-          newVI <- ApplyIntoCopyRawInliner(varModel, ic)
+          newVI <- ApplyIntoCopyRawInliner(flatten, ic)
         } yield {
           newVI._1 -> Inline(
-            inline.predo ++ newVI._2.predo,
+            Chain.one(SeqModel.wrap(inline.predo ++ newVI._2.predo)),
             mergeMode = SeqMode
           )
         }

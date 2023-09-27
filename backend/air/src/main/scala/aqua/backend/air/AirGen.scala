@@ -3,7 +3,7 @@ package aqua.backend.air
 import aqua.model.*
 import aqua.raw.ops.Call
 import aqua.res.*
-import aqua.types.{ArrayType, CanonStreamType, StreamType, Type}
+import aqua.types.{ArrayType, CanonStreamType, StreamMapType, StreamType, Type}
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
@@ -30,6 +30,7 @@ object AirGen extends Logging {
     (`type` match {
       case _: StreamType => "$" + name
       case _: CanonStreamType => "#" + name
+      case _: StreamMapType => "%" + name
       case _ => name
     }).replace('.', '_')
 
@@ -54,10 +55,8 @@ object AirGen extends Logging {
   }
 
   def exportToString(exportTo: CallModel.Export): String = (exportTo match {
-    case CallModel.Export(name, _: StreamType) => "$" + name
-    case CallModel.Export(name, _: CanonStreamType) => "#" + name
-    case CallModel.Export(name, _) => name
-  }).replace('.', '_')
+    case CallModel.Export(name, t) => varNameToString(name, t)
+  })
 
   private def folder(op: ResolvedOp, ops: Chain[AirGen]): Eval[AirGen] =
     op match {
@@ -113,6 +112,10 @@ object AirGen extends Logging {
           )
         )
 
+      case ApStreamMapRes(key, value, exportTo) =>
+        Eval.later(
+          ApStreamMapGen(valueToData(key), valueToData(value), exportToString(exportTo))
+        )
       case ApRes(operand, exportTo) =>
         Eval.later(
           ApGen(valueToData(operand), exportToString(exportTo))
@@ -161,6 +164,12 @@ case class CommentGen(comment: String, op: AirGen) extends AirGen {
 
   override def generate: Air =
     Air.Comment(comment, op.generate)
+}
+
+case class ApStreamMapGen(key: DataView, operand: DataView, result: String) extends AirGen {
+
+  override def generate: Air =
+    Air.ApStreamMap(key, operand, result)
 }
 
 case class ApGen(operand: DataView, result: String) extends AirGen {

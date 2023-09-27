@@ -56,7 +56,9 @@ object TypeScriptCommon {
     case BottomType => "nothing"
 
     // impossible. Made to avoid compilation warning
-    case t: CanonStreamType => "any"
+    case _: CanonStreamType => "any"
+    case _: StreamMapType => "any"
+    case _: ServiceType => "any"
   }
 
   // TODO: handle cases if there is already peer_ or config_ variable defined

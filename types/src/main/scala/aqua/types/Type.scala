@@ -323,6 +323,16 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
+case class StreamMapType(element: Type)
+  extends DataType {
+
+  override def toString: String = s"%$element"
+}
+
+object StreamMapType {
+  def top(): StreamMapType = StreamMapType(TopType)
+}
+
 case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) extends NamedType {
 
   override def toString: String =

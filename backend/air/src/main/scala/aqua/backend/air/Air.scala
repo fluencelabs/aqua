@@ -110,6 +110,8 @@ object Air {
   case class Call(triplet: Triplet, args: List[DataView], result: Option[String])
       extends Air(Keyword.Call)
 
+  case class ApStreamMap(key: DataView, op: DataView, result: String) extends Air(Keyword.Ap)
+
   case class Ap(op: DataView, result: String) extends Air(Keyword.Ap)
 
   case class Fail(op: DataView) extends Air(Keyword.Fail)
@@ -147,6 +149,7 @@ object Air {
             case Air.Call(triplet, args, res) ⇒
               s" ${triplet.show} [${args.map(_.show).mkString(" ")}]${res.fold("")(" " + _)}"
             case Air.Ap(operand, result) ⇒ s" ${operand.show} $result"
+            case Air.ApStreamMap(key, operand, result) ⇒ s" (${key.show} ${operand.show}) $result"
             case Air.Fail(operand) => s" ${operand.show}"
             case Air.Canon(operand, peerId, result) ⇒ s" ${peerId.show} ${operand.show}  $result"
             case Air.Comment(_, _) => ";; Should not be displayed"

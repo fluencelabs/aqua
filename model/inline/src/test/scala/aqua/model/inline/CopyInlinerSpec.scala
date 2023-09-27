@@ -16,7 +16,7 @@ class CopyInlinerSpec extends AnyFlatSpec with Matchers {
   "copy inliner" should "unfold values in parallel" in {
 
     val structType = StructType(
-      "struct_type",
+      "some_struct",
       NonEmptyMap.of("field1" -> ScalarType.u32, "field2" -> ScalarType.string)
     )
 
@@ -45,6 +45,9 @@ class CopyInlinerSpec extends AnyFlatSpec with Matchers {
 
     val lengthModel = FunctorModel("length", ScalarType.u32)
 
+    val streamMapName = "some_struct_obj_copy_map"
+    val streamMapType = StreamMapType.top()
+
     tree.get.equalsOrShowDiff(
       SeqModel.wrap(
         ParModel.wrap(
@@ -59,16 +62,11 @@ class CopyInlinerSpec extends AnyFlatSpec with Matchers {
             VarModel("get_field", ScalarType.string)
           ).leaf
         ),
-        CallServiceModel(
-          "json",
-          "puts",
-          VarModel(varName, structType) :: LiteralModel.fromRaw(
-            LiteralRaw.quote("field1")
-          ) :: VarModel("l_length", ScalarType.u32) :: LiteralModel.fromRaw(
-            LiteralRaw.quote("field2")
-          ) :: VarModel("get_field", ScalarType.string) :: Nil,
-          result
-        ).leaf
+        RestrictionModel(streamMapName, streamMapType).wrap(
+          InsertKeyValueModel(LiteralModel.quote("field1"), VarModel("l_length", ScalarType.u32), streamMapName,  streamMapType).leaf,
+          InsertKeyValueModel(LiteralModel.quote("field2"), VarModel("get_field", ScalarType.string), streamMapName,  streamMapType).leaf,
+          CanonicalizeModel(VarModel(streamMapName, streamMapType), CallModel.Export(result.name, result.`type`)).leaf
+        )
       )
     ) shouldBe true
 

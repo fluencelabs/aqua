@@ -1,9 +1,12 @@
-import { testStreamCaptureSimple, testStreamCaptureReturn } from '../compiled/examples/streamCapture.js';
+import {
+  testStreamCaptureSimple,
+  testStreamCaptureReturn,
+} from "../compiled/examples/streamCapture.js";
 
 export async function streamCaptureSimpleCall() {
-    return await testStreamCaptureSimple();
+  return await testStreamCaptureSimple();
 }
 
 export async function streamCaptureReturnCall() {
-    return await testStreamCaptureReturn();
+  return await testStreamCaptureReturn();
 }

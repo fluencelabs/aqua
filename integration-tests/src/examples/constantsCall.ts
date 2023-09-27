@@ -1,16 +1,21 @@
-import {callConstant, registerGetter, timestampAndTtl} from '../compiled/examples/constants.js';
+import {
+  callConstant,
+  registerGetter,
+  timestampAndTtl,
+} from "../compiled/examples/constants.js";
 
 export async function constantsCall(): Promise<string[]> {
-    registerGetter({
-        createStr: (arg0) => {
-            return '' + arg0;
-        },
-    });
+  registerGetter({
+    createStr: (arg0) => {
+      return "" + arg0;
+    },
+  });
 
-    return await callConstant();
+  return await callConstant();
 }
 
-export async function particleTtlAndTimestampCall(ttl: number): Promise<[number, number]> {
-
-    return await timestampAndTtl({ttl: ttl});
+export async function particleTtlAndTimestampCall(
+  ttl: number,
+): Promise<[number, number]> {
+  return await timestampAndTtl({ ttl: ttl });
 }

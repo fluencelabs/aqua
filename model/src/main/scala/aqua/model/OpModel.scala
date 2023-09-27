@@ -174,6 +174,13 @@ case class DeclareStreamModel(value: ValueModel) extends NoExecModel {
   override def usesVarNames: Set[String] = value.usesVarNames
 }
 
+// key must be only string or number
+case class InsertKeyValueModel(key: ValueModel, value: ValueModel, assignTo: String, assignToType: StreamMapType) extends OpModel {
+  override def usesVarNames: Set[String] = value.usesVarNames
+
+  override def exportsVarNames: Set[String] = Set(assignTo)
+}
+
 case class FlattenModel(value: ValueModel, assignTo: String) extends OpModel {
   override def usesVarNames: Set[String] = value.usesVarNames
 
