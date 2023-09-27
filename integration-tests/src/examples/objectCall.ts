@@ -1,17 +1,22 @@
-import {getObj, getObjAssign, getObjRelay, getObjFor} from "../compiled/examples/object.js";
+import {
+  getObj,
+  getObjAssign,
+  getObjRelay,
+  getObjFor,
+} from "../compiled/examples/object.js";
 
 export async function getObjCall() {
-    return await getObj();
+  return await getObj();
 }
 
 export async function getObjRelayCall() {
-    return await getObjRelay();
+  return await getObjRelay();
 }
 
 export async function getObjAssignCall() {
-    return await getObjAssign();
+  return await getObjAssign();
 }
 
 export async function getObjForCall() {
-    return await getObjFor();
+  return await getObjFor();
 }

@@ -1,11 +1,11 @@
-import { get_results, registerOpA } from '../compiled/examples/pushToStream.js';
+import { get_results, registerOpA } from "../compiled/examples/pushToStream.js";
 
 export async function pushToStreamCall() {
-    registerOpA({
-        get_str: () => {
-            return 'get_string';
-        },
-    });
+  registerOpA({
+    get_str: () => {
+      return "get_string";
+    },
+  });
 
-    return await get_results();
+  return await get_results();
 }

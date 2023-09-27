@@ -1,5 +1,5 @@
-import { streamRes } from '../compiled/examples/streamRestriction.js';
+import { streamRes } from "../compiled/examples/streamRestriction.js";
 
 export async function streamResCall(): Promise<any> {
-    return await streamRes(["a", "b", "c"]);
+  return await streamRes(["a", "b", "c"]);
 }
