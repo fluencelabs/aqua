@@ -49,7 +49,7 @@ func getObjFor() -> []SomeObj:
           ]
 
     for obj <- arr:
-      copied = obj.copy(str = Op.concat_strings(obj.str, " copied"), inner = obj.inner.copy(arr = ["copy"])
+      copied = obj.copy(str = Op.concat_strings(obj.str, " copied"), inner = obj.inner.copy(arr = ["copy"]))
       all <<- copied
 
     arri = [1, 2, 3]
