@@ -1,0 +1,39 @@
+aqua IfPropagateErrors
+
+export ifPropagateErrors, TestService
+
+service TestService("test-srv"):
+    call(s: string) -> string
+
+func ifPropagateErrors() -> []string:
+    stream: *string
+
+    a <- TestService.call("a")
+    b <- TestService.call("b")
+
+    try:
+        if a == b || a == "a": -- true
+            stream <- TestService.call("fail")
+        else:
+            stream <- TestService.call("else1")
+    otherwise:
+        stream <- TestService.call("otherwise1")
+
+    try:
+        if a != b: -- true
+            stream <- TestService.call("fail")
+    otherwise:
+        stream <- TestService.call("otherwise2")
+
+    try:
+        if b == "b": --true
+            if a == "a": -- true
+                stream <- TestService.call("fail")
+            else:
+                stream <- TestService.call("else3")
+        else:
+            stream <- TestService.call("else4")
+    otherwise:
+        stream <- TestService.call("otherwise3")
+
+    <- stream
