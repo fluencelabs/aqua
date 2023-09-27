@@ -16,6 +16,7 @@ import {
   seqOnPropagateCall,
 } from "../examples/onErrorPropagation.js";
 import { errorClearCall } from "../examples/errorClear.js";
+import { handleResultErrorCall } from "../examples/handleResultError.js";
 import { funcCall } from "../examples/funcCall.js";
 import { registerPrintln } from "../compiled/examples/println.js";
 import { helloWorldCall } from "../examples/helloWorldCall.js";
@@ -748,6 +749,16 @@ describe("Testing examples", () => {
   it("errorClear.aqua", async () => {
     let errorClearResult = await errorClearCall(peer2);
     expect(errorClearResult).toEqual(["handle", 0]);
+  });
+
+  it("handleResultError.aqua", async () => {
+    let call = handleResultErrorCall();
+    expect(call).rejects.toMatchObject({
+      message: expect
+        .stringContaining("lambda")
+        .and(expect.not.stringContaining("interpretation failed")),
+      error_code: expect.any(Number),
+    });
   });
 
   it("complex.aqua", async () => {
