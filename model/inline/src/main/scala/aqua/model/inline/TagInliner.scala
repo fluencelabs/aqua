@@ -10,6 +10,7 @@ import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{BoxType, CanonStreamType, DataType, StreamType}
 import aqua.model.inline.Inline.parDesugarPrefixOpt
+import aqua.model.inline.tag.IfTagInliner
 
 import cats.syntax.traverse.*
 import cats.syntax.applicative.*
@@ -209,64 +210,12 @@ object TagInliner extends Logging {
         )
 
       case IfTag(valueRaw) =>
-        (valueRaw match {
-          // Optimize in case last operation is equality check
-          case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right) =>
-            (
-              valueToModel(left) >>= canonicalizeIfStream,
-              valueToModel(right) >>= canonicalizeIfStream
-            ).mapN { case ((lmodel, lprefix), (rmodel, rprefix)) =>
-              val prefix = parDesugarPrefixOpt(lprefix, rprefix)
-              val matchModel = MatchMismatchModel(
-                left = lmodel,
-                right = rmodel,
-                shouldMatch = op match {
-                  case BinOp.Eq => true
-                  case BinOp.Neq => false
-                }
-              )
-
-              (prefix, matchModel)
-            }
-          case _ =>
-            valueToModel(valueRaw).map { case (valueModel, prefix) =>
-              val matchModel = MatchMismatchModel(
-                left = valueModel,
-                right = LiteralModel.bool(true),
-                shouldMatch = true
-              )
-
-              (prefix, matchModel)
-            }
-        }).map { case (prefix, matchModel) =>
-          val toModel = (children: Chain[OpModel.Tree]) =>
-            XorModel.wrap(
-              children.uncons.map { case (ifBody, elseBody) =>
-                val elseBodyFiltered = elseBody.filterNot(
-                  _.head == EmptyModel
-                )
-
-                /**
-                 * Hack for xor with mismatch always have second branch
-                 * TODO: Fix this in topology
-                 * see https://linear.app/fluence/issue/LNG-69/if-inside-on-produces-invalid-topology
-                 */
-                val elseBodyAugmented =
-                  if (elseBodyFiltered.isEmpty)
-                    Chain.one(
-                      NullModel.leaf
-                    )
-                  else elseBodyFiltered
-
-                matchModel.wrap(ifBody) +: elseBodyAugmented
-              }.getOrElse(children)
-            )
-
+        IfTagInliner(valueRaw).inlined.map(inlined =>
           TagInlined.Mapping(
-            toModel = toModel,
-            prefix = prefix
+            toModel = inlined.toModel,
+            prefix = inlined.prefix
           )
-        }
+        )
 
       case TryTag => pure(XorModel)
 

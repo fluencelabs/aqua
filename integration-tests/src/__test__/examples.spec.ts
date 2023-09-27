@@ -21,6 +21,7 @@ import { registerPrintln } from "../compiled/examples/println.js";
 import { helloWorldCall } from "../examples/helloWorldCall.js";
 import { foldBug499Call, foldCall } from "../examples/foldCall.js";
 import { bugNG69Call, ifCall, ifWrapCall } from "../examples/ifCall.js";
+import { ifPropagateErrorsCall } from "../examples/ifPropagateErrors.js";
 import { parCall, testTimeoutCall } from "../examples/parCall.js";
 import { complexCall } from "../examples/complex.js";
 import {
@@ -267,6 +268,11 @@ describe("Testing examples", () => {
   it("if.aqua bug LNG-69", async () => {
     let res = await bugNG69Call(relay2.peerId);
     expect(res).toBe(true);
+  });
+
+  it("ifPropagateErrors.aqua", async () => {
+    let res = await ifPropagateErrorsCall();
+    expect(res).toEqual([1, 2, 3].map((i) => "otherwise" + i));
   });
 
   it("helloWorld.aqua", async () => {

@@ -22,7 +22,7 @@ import aqua.types.ScalarType
 
 class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
 
-  def program[Alg[_]: Monad](implicit
+  def program[Alg[_]: Monad](using
     V: ValuesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
