@@ -272,7 +272,7 @@ describe("Testing examples", () => {
 
   it("ifPropagateErrors.aqua", async () => {
     let res = await ifPropagateErrorsCall();
-    expect(res).toBe([1, 2, 3].map((i) => "otherwise" + i));
+    expect(res).toEqual([1, 2, 3].map((i) => "otherwise" + i));
   });
 
   it("helloWorld.aqua", async () => {
