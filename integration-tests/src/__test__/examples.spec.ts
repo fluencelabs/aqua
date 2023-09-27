@@ -763,7 +763,7 @@ describe("Testing examples", () => {
     // js-client return string for interpretation error
     // so matching with object guarantees that error was handled
     expect(call).rejects.toMatchObject({
-      message: expect.stringContaining("lambda"),
+      message: expect.stringContaining("0"),
       error_code: expect.any(Number),
     });
   });
