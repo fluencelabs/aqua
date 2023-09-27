@@ -40,8 +40,7 @@ object ApplyIntoCopyRawInliner extends Logging {
     }
 
     MakeStructRawInliner
-      .constructThroughMap(mapName, mapType, CallModel.Export(resultName, resultType), fields)
-      .map(r => SeqModel.wrap(r._1 ++ nonCopiedValues ++ r._2))
+      .constructThroughMap(mapName, mapType, CallModel.Export(resultName, resultType), fields, nonCopiedValues)
   }
 
   def apply[S: Mangler: Exports: Arrows](

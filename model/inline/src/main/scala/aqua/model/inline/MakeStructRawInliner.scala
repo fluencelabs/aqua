@@ -20,6 +20,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
    * @param mapType stream map type
    * @param result variable with structure
    * @param fields fields to insert
+   * @param prefix operations that must be inside stream map restriction
    * @return tree with traversed fields and tree with structure creation.
    *         They are split to combine it later with other trees in a more natural way.
    */
@@ -27,8 +28,9 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     mapName: String,
     mapType: StreamMapType,
     result: CallModel.Export,
-    fields: NonEmptyMap[String, ValueModel]
-  ): State[S, (List[OpModel.Tree], List[OpModel.Tree])] = {
+    fields: NonEmptyMap[String, ValueModel],
+    prefix: List[OpModel.Tree] = Nil
+  ): State[S, OpModel.Tree] = {
     fields.nonEmptyTraverse(TagInliner.canonicalizeIfStream(_)).map { fieldsTraversed =>
       val (values, ops) = fieldsTraversed.toNel.map { case (name, (model, ops)) =>
         (name -> model, ops)
@@ -41,9 +43,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
       val toResult =
         CanonicalizeModel(VarModel(mapName, mapType), result).leaf
 
-      val wrapped = RestrictionModel(mapName, mapType).wrap(models :+ toResult) :: Nil
-
-      (ops, wrapped)
+      RestrictionModel(mapName, mapType).wrap(ops ++ prefix ++ models :+ toResult)
     }
   }
 
@@ -55,9 +55,7 @@ object MakeStructRawInliner extends RawInliner[MakeStructRaw] {
     val mapType = StreamMapType.top()
     val mapName = resultName + "_map"
 
-    constructThroughMap(mapName, mapType, CallModel.Export(resultName, resultType), fields).map(r =>
-      SeqModel.wrap(r._1 ++ r._2)
-    )
+    constructThroughMap(mapName, mapType, CallModel.Export(resultName, resultType), fields)
   }
 
   override def apply[S: Mangler: Exports: Arrows](
