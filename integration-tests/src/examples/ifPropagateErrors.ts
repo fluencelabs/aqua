@@ -6,7 +6,7 @@ import {
 export async function ifPropagateErrorsCall() {
   registerTestService({
     call: (s) => {
-      if (s.startsWith("fail")) return Promise.reject(s);
+      if (s == "fail") return Promise.reject(s);
       else return Promise.resolve(s);
     },
   });

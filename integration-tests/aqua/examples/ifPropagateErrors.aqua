@@ -13,7 +13,7 @@ func ifPropagateErrors() -> []string:
 
     try:
         if a == b || a == "a": -- true
-            stream <- TestService.call("fail1")
+            stream <- TestService.call("fail")
         else:
             stream <- TestService.call("else1")
     otherwise:
@@ -21,14 +21,14 @@ func ifPropagateErrors() -> []string:
 
     try:
         if a != b: -- true
-            stream <- TestService.call("fail2")
+            stream <- TestService.call("fail")
     otherwise:
         stream <- TestService.call("otherwise2")
 
     try:
         if b == "b": --true
             if a == "a": -- true
-                stream <- TestService.call("fail3")
+                stream <- TestService.call("fail")
             else:
                 stream <- TestService.call("else3")
         else:
