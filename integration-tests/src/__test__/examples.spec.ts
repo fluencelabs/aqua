@@ -3,6 +3,7 @@ import {
   getObjAssignCall,
   getObjCall,
   getObjRelayCall,
+  getObjForCall
 } from "../examples/objectCall.js";
 import {
   callArrowCall,
@@ -356,6 +357,11 @@ describe("Testing examples", () => {
       },
     });
   });
+
+  it("object creation in 'for' instruction getObjFor", async () => {
+      let result = await getObjForCall();
+      expect(result).toEqual([]);
+    });
 
   it("object creation getObjAssign", async () => {
     let result = await getObjAssignCall();
