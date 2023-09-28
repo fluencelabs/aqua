@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.12.3](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.2...aqua-v0.12.3) (2023-09-28)
+
+
+### Features
+
+* **compiler:** Make `if` propagate errors [fixes LNG-202] ([#779](https://github.com/fluencelabs/aqua/issues/779)) ([ca6cae9](https://github.com/fluencelabs/aqua/commit/ca6cae96ad27f07fe2e6c05ee1caa16153c0c991))
+* **compiler:** Replace `%last_error%` with `:error:` [fixes LNG-239] ([#883](https://github.com/fluencelabs/aqua/issues/883)) ([a80033b](https://github.com/fluencelabs/aqua/commit/a80033b81cb7f58f9bfe8665205b864c5438306e))
+* Create structs with stream maps [fixes LNG-244] ([#893](https://github.com/fluencelabs/aqua/issues/893)) ([878990a](https://github.com/fluencelabs/aqua/commit/878990a8370718b64bd26663d7813a972e7cdd49))
+* **lsp-api:** Add `infoType` ([#915](https://github.com/fluencelabs/aqua/issues/915)) ([1e636cc](https://github.com/fluencelabs/aqua/commit/1e636cc076f5ba4b0487e60fe312ff873d5c19ae))
+* **tests:** Add integration test for result error handling ([#914](https://github.com/fluencelabs/aqua/issues/914)) ([b2ca1d3](https://github.com/fluencelabs/aqua/commit/b2ca1d35bf1f6420cea673e092a9f357c6e3a742))
+
+
+### Bug Fixes
+
+* **compiler:** Handle errors from result handling [fixes LNG-247] ([#913](https://github.com/fluencelabs/aqua/issues/913)) ([f158074](https://github.com/fluencelabs/aqua/commit/f158074c4ecb7d02236786a809c7c387bbb65d3b))
+
 ## [0.12.2](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.1...aqua-v0.12.2) (2023-09-25)
 
 
