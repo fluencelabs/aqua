@@ -427,7 +427,7 @@ class TypesInterpreter[S[_], X](using
           case 0 => "no values"
           case 1 => "a value"
           case i => s"$i values"
-        }} values, but ${results.length match {
+        }}, but ${results.length match {
           case 0 => "none are"
           case 1 => "only one is"
           case i => s"only $i are"
