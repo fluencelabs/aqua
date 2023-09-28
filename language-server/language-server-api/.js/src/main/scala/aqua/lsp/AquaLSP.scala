@@ -61,7 +61,15 @@ object TokenLocation {
 }
 
 @JSExportAll
-case class ErrorInfo(start: Int, end: Int, message: String, location: UndefOr[String])
+case class ErrorInfo(
+  start: Int,
+  end: Int,
+  message: String,
+  location: UndefOr[String]
+) {
+  // Used to distinguish from WarningInfo in TS
+  val infoType: String = "error"
+}
 
 object ErrorInfo {
 
@@ -77,7 +85,15 @@ object ErrorInfo {
 }
 
 @JSExportAll
-case class WarningInfo(start: Int, end: Int, message: String, location: UndefOr[String])
+case class WarningInfo(
+  start: Int,
+  end: Int,
+  message: String,
+  location: UndefOr[String]
+) {
+  // Used to distinguish from ErrorInfo in TS
+  val infoType: String = "warning"
+}
 
 object WarningInfo {
 

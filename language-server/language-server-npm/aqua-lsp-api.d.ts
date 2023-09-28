@@ -17,6 +17,7 @@ export interface TokenImport {
 }
 
 export interface ErrorInfo {
+    infoType: "error",
     start: number,
     end: number,
     message: string,
@@ -24,6 +25,7 @@ export interface ErrorInfo {
 }
 
 export interface WarningInfo {
+    infoType: "warning",
     start: number,
     end: number,
     message: string,
