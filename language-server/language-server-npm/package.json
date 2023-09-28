@@ -1,6 +1,6 @@
 {
   "name": "@fluencelabs/aqua-language-server-api",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Aqua Language Server API",
   "type": "commonjs",
   "files": [
