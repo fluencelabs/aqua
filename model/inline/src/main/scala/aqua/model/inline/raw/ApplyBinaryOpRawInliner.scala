@@ -244,14 +244,16 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     }
 
     val predo = (resName: String) =>
-      CallServiceModel(
-        serviceId = LiteralModel.quote("cmp"),
-        funcName = fn,
-        call = CallModel(
-          args = lmodel :: rmodel :: Nil,
-          exportTo = CallModel.Export(resName, resType) :: Nil
-        )
-      ).leaf
+      SeqModel.wrap(
+        linline.predo ++ rinline.predo :+ CallServiceModel(
+          serviceId = LiteralModel.quote("cmp"),
+          funcName = fn,
+          call = CallModel(
+            args = lmodel :: rmodel :: Nil,
+            exportTo = CallModel.Export(resName, resType) :: Nil
+          )
+        ).leaf
+      )
 
     result(fn, resType, predo)
   }
@@ -275,14 +277,16 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     }
 
     val predo = (resName: String) =>
-      CallServiceModel(
-        serviceId = LiteralModel.quote("math"),
-        funcName = fn,
-        call = CallModel(
-          args = lmodel :: rmodel :: Nil,
-          exportTo = CallModel.Export(resName, resType) :: Nil
-        )
-      ).leaf
+      SeqModel.wrap(
+        linline.predo ++ rinline.predo :+ CallServiceModel(
+          serviceId = LiteralModel.quote("math"),
+          funcName = fn,
+          call = CallModel(
+            args = lmodel :: rmodel :: Nil,
+            exportTo = CallModel.Export(resName, resType) :: Nil
+          )
+        ).leaf
+      )
 
     result(fn, resType, predo)
   }
