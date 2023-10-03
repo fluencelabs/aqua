@@ -267,7 +267,7 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
           .run(state)
           .value
 
-        inside(res) { case Some(ApplyBinaryOpRaw(bop, _, _)) =>
+        inside(res) { case Some(ApplyBinaryOpRaw(bop, _, _, ScalarType.bool)) =>
           bop shouldBe (op match {
             case InfixToken.BoolOp.And => ApplyBinaryOpRaw.Op.And
             case InfixToken.BoolOp.Or => ApplyBinaryOpRaw.Op.Or
@@ -319,7 +319,7 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
           .run(state)
           .value
 
-        inside(res) { case Some(ApplyBinaryOpRaw(bop, _, _)) =>
+        inside(res) { case Some(ApplyBinaryOpRaw(bop, _, _, ScalarType.bool)) =>
           bop shouldBe (op match {
             case InfixToken.EqOp.Eq => ApplyBinaryOpRaw.Op.Eq
             case InfixToken.EqOp.Neq => ApplyBinaryOpRaw.Op.Neq

@@ -8,8 +8,9 @@ import aqua.raw.value.{AbilityRaw, LiteralRaw, MakeStructRaw}
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.{unfold, valueToModel}
-import aqua.types.{ArrowType, ScalarType}
+import aqua.types.{ArrowType, ScalarType, Type}
 import aqua.raw.value.ApplyBinaryOpRaw
+import aqua.raw.value.ApplyBinaryOpRaw.Op
 import aqua.raw.value.ApplyBinaryOpRaw.Op.*
 import aqua.model.inline.Inline.MergeMode
 
@@ -24,9 +25,6 @@ import cats.syntax.applicative.*
 
 object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
 
-  private type BoolOp = And.type | Or.type
-  private type EqOp = Eq.type | Neq.type
-
   override def apply[S: Mangler: Exports: Arrows](
     raw: ApplyBinaryOpRaw,
     propertiesAllowed: Boolean
@@ -37,16 +35,49 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     (rmodel, rinline) = right
 
     result <- raw.op match {
-      case op @ (And | Or) => inlineBoolOp(lmodel, rmodel, linline, rinline, op)
-      case op @ (Eq | Neq) =>
+      case op: Op.Bool =>
+        inlineBoolOp(
+          lmodel,
+          rmodel,
+          linline,
+          rinline,
+          op,
+          raw.baseType
+        )
+      case op: Op.Eq =>
         for {
           // Canonicalize stream operands before comparison
           leftStream <- TagInliner.canonicalizeIfStream(lmodel)
           (lmodelStream, linlineStream) = leftStream.map(linline.append)
           rightStream <- TagInliner.canonicalizeIfStream(rmodel)
           (rmodelStream, rinlineStream) = rightStream.map(rinline.append)
-          result <- inlineEqOp(lmodelStream, rmodelStream, linlineStream, rinlineStream, op)
+          result <- inlineEqOp(
+            lmodelStream,
+            rmodelStream,
+            linlineStream,
+            rinlineStream,
+            op,
+            raw.baseType
+          )
         } yield result
+      case op: Op.Cmp =>
+        inlineCmpOp(
+          lmodel,
+          rmodel,
+          linline,
+          rinline,
+          op,
+          raw.baseType
+        )
+      case op: Op.Math =>
+        inlineMathOp(
+          lmodel,
+          rmodel,
+          linline,
+          rinline,
+          op,
+          raw.baseType
+        )
     }
   } yield result
 
@@ -55,7 +86,8 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     rmodel: ValueModel,
     linline: Inline,
     rinline: Inline,
-    op: EqOp
+    op: Op.Eq,
+    resType: Type
   ): State[S, (ValueModel, Inline)] = (lmodel, rmodel) match {
     // Optimize in case compared values are literals
     // Semantics should check that types are comparable
@@ -69,7 +101,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
         },
         linline.mergeWith(rinline, MergeMode.ParMode)
       ).pure[State[S, *]]
-    case _ => fullInlineEqOp(lmodel, rmodel, linline, rinline, op)
+    case _ => fullInlineEqOp(lmodel, rmodel, linline, rinline, op, resType)
   }
 
   private def fullInlineEqOp[S: Mangler: Exports: Arrows](
@@ -77,7 +109,8 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     rmodel: ValueModel,
     linline: Inline,
     rinline: Inline,
-    op: EqOp
+    op: Op.Eq,
+    resType: Type
   ): State[S, (ValueModel, Inline)] = {
     val (name, shouldMatch) = op match {
       case Eq => ("eq", true)
@@ -114,7 +147,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
         )
       )
 
-    result(name, predo)
+    result(name, resType, predo)
   }
 
   private def inlineBoolOp[S: Mangler: Exports: Arrows](
@@ -122,7 +155,8 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     rmodel: ValueModel,
     linline: Inline,
     rinline: Inline,
-    op: BoolOp
+    op: Op.Bool,
+    resType: Type
   ): State[S, (ValueModel, Inline)] = (lmodel, rmodel) match {
     // Optimize in case of left value is known at compile time
     case (LiteralModel.Bool(lvalue), _) =>
@@ -139,7 +173,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
         case _ => (lmodel, linline)
       }).pure[State[S, *]]
     // Produce unoptimized inline
-    case _ => fullInlineBoolOp(lmodel, rmodel, linline, rinline, op)
+    case _ => fullInlineBoolOp(lmodel, rmodel, linline, rinline, op, resType)
   }
 
   private def fullInlineBoolOp[S: Mangler: Exports: Arrows](
@@ -147,7 +181,8 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     rmodel: ValueModel,
     linline: Inline,
     rinline: Inline,
-    op: BoolOp
+    op: Op.Bool,
+    resType: Type
   ): State[S, (ValueModel, Inline)] = {
     val (name, compareWith) = op match {
       case And => ("and", false)
@@ -190,18 +225,78 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
         )
       )
 
-    result(name, predo)
+    result(name, resType, predo)
+  }
+
+  private def inlineCmpOp[S: Mangler: Exports: Arrows](
+    lmodel: ValueModel,
+    rmodel: ValueModel,
+    linline: Inline,
+    rinline: Inline,
+    op: Op.Cmp,
+    resType: Type
+  ): State[S, (ValueModel, Inline)] = {
+    val fn = op match {
+      case Lt => "lt"
+      case Lte => "lte"
+      case Gt => "gt"
+      case Gte => "gte"
+    }
+
+    val predo = (resName: String) =>
+      CallServiceModel(
+        serviceId = LiteralModel.quote("cmp"),
+        funcName = fn,
+        call = CallModel(
+          args = lmodel :: rmodel :: Nil,
+          exportTo = CallModel.Export(resName, resType) :: Nil
+        )
+      ).leaf
+
+    result(fn, resType, predo)
+  }
+
+  private def inlineMathOp[S: Mangler: Exports: Arrows](
+    lmodel: ValueModel,
+    rmodel: ValueModel,
+    linline: Inline,
+    rinline: Inline,
+    op: Op.Math,
+    resType: Type
+  ): State[S, (ValueModel, Inline)] = {
+    val fn = op match {
+      case Add => "add"
+      case Sub => "sub"
+      case Mul => "mul"
+      case FMul => "fmul"
+      case Div => "div"
+      case Rem => "rem"
+      case Pow => "pow"
+    }
+
+    val predo = (resName: String) =>
+      CallServiceModel(
+        serviceId = LiteralModel.quote("math"),
+        funcName = fn,
+        call = CallModel(
+          args = lmodel :: rmodel :: Nil,
+          exportTo = CallModel.Export(resName, resType) :: Nil
+        )
+      ).leaf
+
+    result(fn, resType, predo)
   }
 
   private def result[S: Mangler](
     name: String,
+    resType: Type,
     predo: String => OpModel.Tree
   ): State[S, (ValueModel, Inline)] =
     Mangler[S]
       .findAndForbidName(name)
       .map(resName =>
         (
-          VarModel(resName, ScalarType.bool),
+          VarModel(resName, resType),
           Inline(Chain.one(predo(resName)))
         )
       )

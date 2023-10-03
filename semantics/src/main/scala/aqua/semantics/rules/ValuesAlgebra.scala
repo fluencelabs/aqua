@@ -184,7 +184,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           case (Some(leftRaw), Some(rightRaw)) =>
             val lType = leftRaw.`type`
             val rType = rightRaw.`type`
-            lazy val uType = lType `∪` rType
 
             it.op match {
               case InfOp.Bool(bop) =>
@@ -200,7 +199,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                       case BoolOp.Or => ApplyBinaryOpRaw.Op.Or
                     },
                     left = leftRaw,
-                    right = rightRaw
+                    right = rightRaw,
+                    resultType = ScalarType.bool
                   )
                 )
               case InfOp.Eq(eop) =>
@@ -216,7 +216,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                         case EqOp.Neq => ApplyBinaryOpRaw.Op.Neq
                       },
                       left = leftRaw,
-                      right = rightRaw
+                      right = rightRaw,
+                      resultType = ScalarType.bool
                     )
                   )
                 )
@@ -228,70 +229,69 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                   case InfOp.Cmp(op) => op
                 }
 
-                val hasFloat = List(lType, rType).exists(
+                lazy val hasFloat = List(lType, rType).exists(
                   _ acceptsValueOf LiteralType.float
                 )
 
-                // See https://github.com/fluencelabs/aqua-lib/blob/main/math.aqua
-                val (id, fn) = iop match {
-                  case MathOp.Add => ("math", "add")
-                  case MathOp.Sub => ("math", "sub")
-                  case MathOp.Mul if hasFloat => ("math", "fmul")
-                  case MathOp.Mul => ("math", "mul")
-                  case MathOp.Div => ("math", "div")
-                  case MathOp.Rem => ("math", "rem")
-                  case MathOp.Pow => ("math", "pow")
-                  case CmpOp.Gt => ("cmp", "gt")
-                  case CmpOp.Gte => ("cmp", "gte")
-                  case CmpOp.Lt => ("cmp", "lt")
-                  case CmpOp.Lte => ("cmp", "lte")
+                val bop = iop match {
+                  case MathOp.Add => ApplyBinaryOpRaw.Op.Add
+                  case MathOp.Sub => ApplyBinaryOpRaw.Op.Sub
+                  case MathOp.Mul if hasFloat => ApplyBinaryOpRaw.Op.FMul
+                  case MathOp.Mul => ApplyBinaryOpRaw.Op.Mul
+                  case MathOp.Div => ApplyBinaryOpRaw.Op.Div
+                  case MathOp.Rem => ApplyBinaryOpRaw.Op.Rem
+                  case MathOp.Pow => ApplyBinaryOpRaw.Op.Pow
+                  case CmpOp.Gt => ApplyBinaryOpRaw.Op.Gt
+                  case CmpOp.Gte => ApplyBinaryOpRaw.Op.Gte
+                  case CmpOp.Lt => ApplyBinaryOpRaw.Op.Lt
+                  case CmpOp.Lte => ApplyBinaryOpRaw.Op.Lte
                 }
 
-                /*
-                 * If `uType == TopType`, it means that we don't
-                 * have type big enough to hold the result of operation.
-                 * e.g. We will use `i64` for result of `i32 * u64`
-                 * TODO: Handle this more gracefully
-                 *       (use warning system when it is implemented)
-                 */
-                def uTypeBounded = if (uType == TopType) {
-                  val bounded = ScalarType.i64
-                  logger.warn(
-                    s"Result type of ($lType ${it.op} $rType) is $TopType, " +
-                      s"using $bounded instead"
-                  )
-                  bounded
-                } else uType
+                lazy val numbersTypeBounded: Alg[Type] = {
+                  /*
+                   * If `uType == TopType`, it means that we don't
+                   * have type big enough to hold the result of operation.
+                   * e.g. We will use `i64` for result of `i32 * u64`
+                   */
+                  val uType = lType `∪` rType
+                  if (uType == TopType) {
+                    val bounded = ScalarType.i64
+                    report
+                      .warning(
+                        it,
+                        s"Result type of ($lType ${it.op} $rType) is $TopType, " +
+                          s"using $bounded instead"
+                      )
+                      .as(bounded)
+                  } else uType.pure
+                }
 
                 // Expected type sets of left and right operands, result type
-                val (leftExp, rightExp, resType) = iop match {
+                val (leftExp, rightExp, resTypeM) = iop match {
                   case MathOp.Add | MathOp.Sub | MathOp.Div | MathOp.Rem =>
-                    (ScalarType.integer, ScalarType.integer, uTypeBounded)
+                    (ScalarType.integer, ScalarType.integer, numbersTypeBounded)
                   case MathOp.Pow =>
-                    (ScalarType.integer, ScalarType.unsigned, uTypeBounded)
+                    (ScalarType.integer, ScalarType.unsigned, numbersTypeBounded)
                   case MathOp.Mul if hasFloat =>
-                    (ScalarType.float, ScalarType.float, ScalarType.i64)
+                    (ScalarType.float, ScalarType.float, ScalarType.i64.pure)
                   case MathOp.Mul =>
-                    (ScalarType.integer, ScalarType.integer, uTypeBounded)
+                    (ScalarType.integer, ScalarType.integer, numbersTypeBounded)
                   case CmpOp.Gt | CmpOp.Lt | CmpOp.Gte | CmpOp.Lte =>
-                    (ScalarType.integer, ScalarType.integer, ScalarType.bool)
+                    (ScalarType.integer, ScalarType.integer, ScalarType.bool.pure)
                 }
 
                 for {
                   leftChecked <- T.ensureTypeOneOf(l, leftExp, lType)
                   rightChecked <- T.ensureTypeOneOf(r, rightExp, rType)
+                  resType <- resTypeM
                 } yield Option.when(
                   leftChecked.isDefined && rightChecked.isDefined
                 )(
-                  CallArrowRaw.service(
-                    abilityName = id,
-                    serviceId = LiteralRaw.quote(id),
-                    funcName = fn,
-                    baseType = ArrowType(
-                      ProductType(lType :: rType :: Nil),
-                      ProductType(resType :: Nil)
-                    ),
-                    arguments = leftRaw :: rightRaw :: Nil
+                  ApplyBinaryOpRaw(
+                    op = bop,
+                    left = leftRaw,
+                    right = rightRaw,
+                    resultType = resType
                   )
                 )
 

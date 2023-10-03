@@ -198,11 +198,11 @@ case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityTyp
 case class ApplyBinaryOpRaw(
   op: ApplyBinaryOpRaw.Op,
   left: ValueRaw,
-  right: ValueRaw
+  right: ValueRaw,
+  resultType: Type
 ) extends ValueRaw {
 
-  // Only boolean operations are supported for now
-  override def baseType: Type = ScalarType.bool
+  override val baseType: Type = resultType
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw =
     f(copy(left = f(left), right = f(right)))
@@ -216,11 +216,21 @@ case class ApplyBinaryOpRaw(
 object ApplyBinaryOpRaw {
 
   enum Op {
-    case And
-    case Or
+    case And, Or
+    case Eq, Neq
+    case Lt, Lte, Gt, Gte
+    case Add, Sub, Mul, FMul, Div, Pow, Rem
+  }
 
-    case Eq
-    case Neq
+  object Op {
+
+    type Bool = And.type | Or.type
+
+    type Eq = Eq.type | Neq.type
+
+    type Cmp = Lt.type | Lte.type | Gt.type | Gte.type
+
+    type Math = Add.type | Sub.type | Mul.type | FMul.type | Div.type | Pow.type | Rem.type
   }
 }
 
