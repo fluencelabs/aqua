@@ -205,7 +205,7 @@ object LiteralType {
   val bool = LiteralType(Set(ScalarType.bool), "bool")
   val string = LiteralType(Set(ScalarType.string), "string")
 
-  def forInt(n: Int): LiteralType = if (n < 0) signed else unsigned
+  def forInt(n: Long): LiteralType = if (n < 0) signed else unsigned
 }
 
 sealed trait BoxType extends DataType {

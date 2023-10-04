@@ -1,5 +1,6 @@
 package aqua.model.inline.raw
 
+import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.raw.RawInliner
 import aqua.model.inline.TagInliner
@@ -235,27 +236,40 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     rinline: Inline,
     op: Op.Cmp,
     resType: Type
-  ): State[S, (ValueModel, Inline)] = {
-    val fn = op match {
-      case Lt => "lt"
-      case Lte => "lte"
-      case Gt => "gt"
-      case Gte => "gte"
-    }
+  ): State[S, (ValueModel, Inline)] = (lmodel, rmodel) match {
+    case (LiteralModel.Integer(lv), LiteralModel.Integer(rv)) =>
+      val res = op match {
+        case Lt => lv < rv
+        case Lte => lv <= rv
+        case Gt => lv > rv
+        case Gte => lv >= rv
+      }
 
-    val predo = (resName: String) =>
-      SeqModel.wrap(
-        linline.predo ++ rinline.predo :+ CallServiceModel(
-          serviceId = LiteralModel.quote("cmp"),
-          funcName = fn,
-          call = CallModel(
-            args = lmodel :: rmodel :: Nil,
-            exportTo = CallModel.Export(resName, resType) :: Nil
-          )
-        ).leaf
-      )
+      (
+        LiteralModel.bool(res),
+        Inline(linline.predo ++ rinline.predo)
+      ).pure
+    case _ =>
+      val fn = op match {
+        case Lt => "lt"
+        case Lte => "lte"
+        case Gt => "gt"
+        case Gte => "gte"
+      }
 
-    result(fn, resType, predo)
+      val predo = (resName: String) =>
+        SeqModel.wrap(
+          linline.predo ++ rinline.predo :+ CallServiceModel(
+            serviceId = LiteralModel.quote("cmp"),
+            funcName = fn,
+            call = CallModel(
+              args = lmodel :: rmodel :: Nil,
+              exportTo = CallModel.Export(resName, resType) :: Nil
+            )
+          ).leaf
+        )
+
+      result(fn, resType, predo)
   }
 
   private def inlineMathOp[S: Mangler: Exports: Arrows](
@@ -265,30 +279,46 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     rinline: Inline,
     op: Op.Math,
     resType: Type
-  ): State[S, (ValueModel, Inline)] = {
-    val fn = op match {
-      case Add => "add"
-      case Sub => "sub"
-      case Mul => "mul"
-      case FMul => "fmul"
-      case Div => "div"
-      case Rem => "rem"
-      case Pow => "pow"
-    }
+  ): State[S, (ValueModel, Inline)] = (lmodel, rmodel) match {
+    case (LiteralModel.Integer(lv), LiteralModel.Integer(rv)) =>
+      val res = op match {
+        case Add => lv + rv
+        case Sub => lv - rv
+        case Mul => lv * rv
+        case Div => lv / rv
+        case Rem => lv % rv
+        case Pow if rv >= 0 => intPow(lv, rv)
+        case _ => internalError(s"Unsupported operation $op for $lv and $rv")
+      }
 
-    val predo = (resName: String) =>
-      SeqModel.wrap(
-        linline.predo ++ rinline.predo :+ CallServiceModel(
-          serviceId = LiteralModel.quote("math"),
-          funcName = fn,
-          call = CallModel(
-            args = lmodel :: rmodel :: Nil,
-            exportTo = CallModel.Export(resName, resType) :: Nil
-          )
-        ).leaf
-      )
+      (
+        LiteralModel.number(res),
+        Inline(linline.predo ++ rinline.predo)
+      ).pure
+    case _ =>
+      val fn = op match {
+        case Add => "add"
+        case Sub => "sub"
+        case Mul => "mul"
+        case FMul => "fmul"
+        case Div => "div"
+        case Rem => "rem"
+        case Pow => "pow"
+      }
 
-    result(fn, resType, predo)
+      val predo = (resName: String) =>
+        SeqModel.wrap(
+          linline.predo ++ rinline.predo :+ CallServiceModel(
+            serviceId = LiteralModel.quote("math"),
+            funcName = fn,
+            call = CallModel(
+              args = lmodel :: rmodel :: Nil,
+              exportTo = CallModel.Export(resName, resType) :: Nil
+            )
+          ).leaf
+        )
+
+      result(fn, resType, predo)
   }
 
   private def result[S: Mangler](
@@ -304,4 +334,19 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
           Inline(Chain.one(predo(resName)))
         )
       )
+
+  /**
+   * Integer power
+   *
+   * @param base
+   * @param exp >= 0
+   * @return base ** exp
+   */
+  private def intPow(base: Long, exp: Long): Long = {
+    def intPowTailRec(base: Long, exp: Long, acc: Long): Long =
+      if (exp <= 0) acc
+      else intPowTailRec(base * base, exp / 2, if (exp % 2 == 0) acc else acc * base)
+
+    intPowTailRec(base, exp, 1)
+  }
 }
