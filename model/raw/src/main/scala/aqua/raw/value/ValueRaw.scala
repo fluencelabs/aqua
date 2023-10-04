@@ -314,6 +314,16 @@ object CallArrowRaw {
 
 }
 
+/**
+ * WARNING: This class is internal and is used to generate code.
+ * Calls to services in aqua code are represented as [[CallArrowRaw]]
+ * and resolved through ability resolution.
+ *
+ * @param serviceId service id
+ * @param fnName service method name
+ * @param baseType type of the service method
+ * @param arguments call arguments
+ */
 case class CallServiceRaw(
   serviceId: ValueRaw,
   fnName: String,
