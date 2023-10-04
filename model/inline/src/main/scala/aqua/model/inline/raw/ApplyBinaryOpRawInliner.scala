@@ -280,14 +280,17 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     op: Op.Math,
     resType: Type
   ): State[S, (ValueModel, Inline)] = (lmodel, rmodel) match {
-    case (LiteralModel.Integer(lv), LiteralModel.Integer(rv)) =>
+    case (
+          LiteralModel.Integer(lv),
+          LiteralModel.Integer(rv)
+        ) if !mathExceptionalCase(lv, rv, op) =>
       val res = op match {
         case Add => lv + rv
         case Sub => lv - rv
         case Mul => lv * rv
         case Div => lv / rv
         case Rem => lv % rv
-        case Pow if rv >= 0 => intPow(lv, rv)
+        case Pow => intPow(lv, rv)
         case _ => internalError(s"Unsupported operation $op for $lv and $rv")
       }
 
@@ -334,6 +337,16 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
           Inline(Chain.one(predo(resName)))
         )
       )
+
+  private def mathExceptionalCase(
+    left: Long,
+    right: Long,
+    op: Op.Math
+  ): Boolean = op match {
+    case Op.Div | Op.Rem => right == 0
+    case Op.Pow => right < 0
+    case _ => false
+  }
 
   /**
    * Integer power
