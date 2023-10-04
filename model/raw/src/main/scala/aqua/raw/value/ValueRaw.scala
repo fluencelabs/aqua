@@ -15,7 +15,16 @@ sealed trait ValueRaw {
 
   def renameVars(map: Map[String, String]): ValueRaw
 
-  def map(f: ValueRaw => ValueRaw): ValueRaw
+  /**
+   * Apply function to all values in the tree
+   */
+  final def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(mapValues(_.map(f)))
+
+  /**
+   * Apply function to values in this value
+   */
+  def mapValues(f: ValueRaw => ValueRaw): ValueRaw
 
   def varNames: Set[String]
 }
@@ -70,8 +79,8 @@ case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends Valu
   override def renameVars(map: Map[String, String]): ValueRaw =
     ApplyPropertyRaw(value.renameVars(map), property.renameVars(map))
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(ApplyPropertyRaw(f(value), property.map(_.map(f))))
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw =
+    ApplyPropertyRaw(f(value), property.map(f))
 
   override def toString: String = s"$value.$property"
 
@@ -102,8 +111,8 @@ case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) ext
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(name = map.getOrElse(name, name), idx = idx.renameVars(map))
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(copy(idx = f(idx)))
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw =
+    copy(idx = f(idx))
 
   override def toString: String = s"gate $name.$idx"
 
@@ -112,7 +121,7 @@ case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) ext
 
 case class VarRaw(name: String, baseType: Type) extends ValueRaw {
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = this
 
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(name = map.getOrElse(name, name))
@@ -126,7 +135,7 @@ case class VarRaw(name: String, baseType: Type) extends ValueRaw {
 }
 
 case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(this)
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = this
 
   override def toString: String = s"{$value: ${baseType}}"
 
@@ -144,6 +153,19 @@ object LiteralRaw {
 
   val True: LiteralRaw = LiteralRaw("true", LiteralType.bool)
   val False: LiteralRaw = LiteralRaw("false", LiteralType.bool)
+
+  object Integer {
+
+    /*
+     * Used to match integer literals in pattern matching
+     */
+    def unapply(value: ValueRaw): Option[Long] =
+      value match {
+        case LiteralRaw(value, t) if ScalarType.integer.exists(_.acceptsValueOf(t)) =>
+          value.toLongOption
+        case _ => none
+      }
+  }
 }
 
 case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) extends ValueRaw {
@@ -152,10 +174,10 @@ case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) exten
 
   override lazy val baseType: Type = boxType
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = {
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = {
     val vals = values.map(f)
     val el = vals.map(_.`type`).reduceLeft(_ `∩` _)
-    f(copy(vals, boxType.withElement(el)))
+    copy(vals, boxType.withElement(el))
   }
 
   override def varNames: Set[String] = values.toList.flatMap(_.varNames).toSet
@@ -169,7 +191,8 @@ case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: Stru
 
   override def baseType: Type = structType
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw = f(copy(fields = fields.map(f)))
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw =
+    copy(fields = fields.map(f))
 
   override def varNames: Set[String] = {
     fields.toSortedMap.values.flatMap(_.varNames).toSet
@@ -184,8 +207,8 @@ case class AbilityRaw(fieldsAndArrows: NonEmptyMap[String, ValueRaw], abilityTyp
 
   override def baseType: Type = abilityType
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(copy(fieldsAndArrows = fieldsAndArrows.map(f)))
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw =
+    copy(fieldsAndArrows = fieldsAndArrows.map(f))
 
   override def varNames: Set[String] = {
     fieldsAndArrows.toSortedMap.values.flatMap(_.varNames).toSet
@@ -199,13 +222,13 @@ case class ApplyBinaryOpRaw(
   op: ApplyBinaryOpRaw.Op,
   left: ValueRaw,
   right: ValueRaw,
-  resultType: Type
+  resultType: ScalarType
 ) extends ValueRaw {
 
   override val baseType: Type = resultType
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(copy(left = f(left), right = f(right)))
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw =
+    copy(left = f(left), right = f(right))
 
   override def varNames: Set[String] = left.varNames ++ right.varNames
 
@@ -232,6 +255,19 @@ object ApplyBinaryOpRaw {
 
     type Math = Add.type | Sub.type | Mul.type | FMul.type | Div.type | Pow.type | Rem.type
   }
+
+  object Add {
+
+    def apply(left: ValueRaw, right: ValueRaw, resultType: ScalarType): ValueRaw =
+      ApplyBinaryOpRaw(Op.Add, left, right, resultType)
+
+    def unapply(value: ValueRaw): Option[(ValueRaw, ValueRaw, ScalarType)] =
+      value match {
+        case ApplyBinaryOpRaw(Op.Add, left, right, resultType) =>
+          (left, right, resultType).some
+        case _ => none
+      }
+  }
 }
 
 case class ApplyUnaryOpRaw(
@@ -242,8 +278,8 @@ case class ApplyUnaryOpRaw(
   // Only boolean operations are supported for now
   override def baseType: Type = ScalarType.bool
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(copy(value = f(value)))
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw =
+    copy(value = f(value))
 
   override def varNames: Set[String] = value.varNames
 
@@ -267,8 +303,8 @@ case class CallArrowRaw(
 ) extends ValueRaw {
   override def `type`: Type = baseType.codomain.headOption.getOrElse(baseType)
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(copy(arguments = arguments.map(_.map(f))))
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw =
+    copy(arguments = arguments.map(f))
 
   override def varNames: Set[String] = name.some
     .filterNot(_ => ability.isDefined)
@@ -332,12 +368,10 @@ case class CallServiceRaw(
 ) extends ValueRaw {
   override def `type`: Type = baseType.codomain.headOption.getOrElse(baseType)
 
-  override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(
-      copy(
-        serviceId = serviceId.map(f),
-        arguments = arguments.map(_.map(f))
-      )
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw =
+    copy(
+      serviceId = f(serviceId),
+      arguments = arguments.map(f)
     )
 
   override def varNames: Set[String] =

@@ -247,23 +247,25 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                   case CmpOp.Lte => ApplyBinaryOpRaw.Op.Lte
                 }
 
-                lazy val numbersTypeBounded: Alg[Type] = {
+                lazy val numbersTypeBounded: Alg[ScalarType] = {
                   /*
                    * If `uType == TopType`, it means that we don't
                    * have type big enough to hold the result of operation.
                    * e.g. We will use `i64` for result of `i32 * u64`
                    */
                   val uType = lType `∪` rType
-                  if (uType == TopType) {
-                    val bounded = ScalarType.i64
-                    report
-                      .warning(
-                        it,
-                        s"Result type of ($lType ${it.op} $rType) is $TopType, " +
-                          s"using $bounded instead"
-                      )
-                      .as(bounded)
-                  } else uType.pure
+                  uType match {
+                    case st: ScalarType => st.pure
+                    case t =>
+                      val bounded = ScalarType.i64
+                      report
+                        .warning(
+                          it,
+                          s"Result type of ($lType ${it.op} $rType) is $TopType, " +
+                            s"using $bounded instead"
+                        )
+                        .as(bounded)
+                  }
                 }
 
                 // Expected type sets of left and right operands, result type
