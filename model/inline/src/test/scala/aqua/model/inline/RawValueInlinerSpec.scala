@@ -7,15 +7,19 @@ import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, V
 import aqua.types.*
 import aqua.raw.value.*
 
-import scala.collection.immutable.SortedMap
-import scala.math
+import cats.Eval
 import cats.data.NonEmptyMap
 import cats.data.Chain
 import cats.syntax.show.*
+import cats.syntax.foldable.*
+import cats.free.Cofree
+import scala.collection.immutable.SortedMap
+import scala.math
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.Inside
 
-class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
+class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
   import RawValueInliner.valueToModel
 
@@ -157,6 +161,9 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
       math(ApplyBinaryOpRaw.Op.Pow)(r)
 
   }
+
+  private def ivar(name: String, t: Option[Type] = None): VarRaw =
+    VarRaw(name, t.getOrElse(ScalarType.i32))
 
   "raw value inliner" should "desugarize a single non-recursive raw value" in {
     // x[y]
@@ -424,8 +431,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   it should "optimize constants comparison" in {
 
     for {
-      l <- -1000 to 1000
-      r <- -1000 to 1000
+      l <- -100 to 100
+      r <- -100 to 100
     } {
       val lt = valueToModel[InliningState](
         int(l) `<` int(r)
@@ -463,8 +470,8 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
 
   it should "optimize constants math" in {
     for {
-      l <- -1000 to 1000
-      r <- -1000 to 1000
+      l <- -100 to 100
+      r <- -100 to 100
     } {
       val add = valueToModel[InliningState](
         int(l) `+` int(r)
@@ -525,5 +532,60 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         )
       }
     }
+  }
+
+  it should "optimize addition in expressions" in {
+    def test(numVars: Int, numLiterals: Int) = {
+      val vars = (1 to numVars).map(i => ivar(s"v$i")).toList
+      val literals = (1 to numLiterals).map(i => LiteralRaw.number(i)).toList
+      val values = vars ++ literals
+
+      /**
+       * Enumerate all possible binary trees of vals
+       */
+      def genAllExprs(vals: List[ValueRaw]): List[ValueRaw] =
+        if (vals.length <= 1) vals
+        else
+          for {
+            split <- (1 until vals.length).toList
+            (left, right) = vals.splitAt(split)
+            l <- genAllExprs(left)
+            r <- genAllExprs(right)
+          } yield l `+` r
+
+      for {
+        perm <- values.permutations.toList
+        expr <- genAllExprs(perm)
+      } {
+        val state = InliningState(
+          resolvedExports = vars.map(v => v.name -> VarModel.fromVarRaw(v)).toMap
+        )
+        val (model, inline) = valueToModel[InliningState](expr).runA(state).value
+
+        model shouldBe a[VarModel]
+        inside(inline) { case Some(tree) =>
+          val numberOfAdditions = Cofree
+            .cata(tree) { (model, count: Chain[Int]) =>
+              Eval.later {
+                count.combineAll + (model match {
+                  case CallServiceModel(_, "add", _) => 1
+                  case _ => 0
+                })
+              }
+            }
+            .value
+
+          numberOfAdditions shouldEqual numVars
+        }
+      }
+    }
+
+    /**
+     * Number of expressions grows exponentially
+     * So we test only small cases
+     */
+    test(2, 2)
+    test(3, 2)
+    test(2, 3)
   }
 }

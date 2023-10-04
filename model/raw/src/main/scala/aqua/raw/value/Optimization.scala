@@ -10,6 +10,12 @@ import cats.syntax.semigroup.*
 
 object Optimization {
 
+  /**
+   * Optimize raw value.
+   *
+   * A lot more optimizations could be done,
+   * it is here just as a proof of concept.
+   */
   def optimize(value: ValueRaw): Eval[ValueRaw] =
     Addition.optimize(value)
 
