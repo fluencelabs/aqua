@@ -53,6 +53,11 @@ sealed trait ProductType extends Type {
     case _ => None
   }
 
+  def headOption: Option[Type] = this match {
+    case ConsType(t, _) => Some(t)
+    case _ => None
+  }
+
   lazy val toList: List[Type] = this match {
     case ConsType(t, pt) => t :: pt.toList
     case _ => Nil
@@ -323,8 +328,7 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
-case class StreamMapType(element: Type)
-  extends DataType {
+case class StreamMapType(element: Type) extends DataType {
 
   override def toString: String = s"%$element"
 }

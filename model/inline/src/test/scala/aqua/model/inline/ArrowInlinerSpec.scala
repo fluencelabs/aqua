@@ -889,15 +889,12 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       capturedTopology = None
     )
 
-    val innerCall = CallArrowRaw(
-      ability = None,
-      name = innerName,
-      arguments = Nil,
+    val innerCall = CallArrowRaw.func(
+      funcName = innerName,
       baseType = ArrowType(
         domain = NilType,
         codomain = ProductType(List(ScalarType.u16))
-      ),
-      serviceId = None
+      )
     )
 
     val outerAdd = "37"
@@ -1085,12 +1082,10 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val innerCall =
       CallArrowRawTag(
         List(Call.Export(outterClosure.name, outterClosure.`type`)),
-        CallArrowRaw(
-          ability = None,
-          name = innerName,
-          arguments = List(LiteralRaw("42", LiteralType.number)),
+        CallArrowRaw.func(
+          funcName = innerName,
           baseType = innerType,
-          serviceId = None
+          arguments = List(LiteralRaw("42", LiteralType.number))
         )
       ).leaf
 
@@ -1144,12 +1139,10 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val outterResultName = "retval"
 
     val closureCall = (closureType: ArrowType, i: String) =>
-      CallArrowRaw(
-        ability = None,
-        name = outterClosureName,
-        arguments = List(LiteralRaw(i, LiteralType.number)),
+      CallArrowRaw.func(
+        funcName = outterClosureName,
         baseType = closureType,
-        serviceId = None
+        arguments = List(LiteralRaw(i, LiteralType.number))
       )
 
     val body = (closureType: ArrowType) =>
@@ -1306,22 +1299,18 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val innerCall =
       CallArrowRawTag(
         List(Call.Export(outterClosure.name, outterClosure.`type`)),
-        CallArrowRaw(
-          ability = None,
-          name = innerName,
-          arguments = Nil,
+        CallArrowRaw.func(
+          funcName = innerName,
           baseType = innerType,
-          serviceId = None
+          arguments = Nil
         )
       ).leaf
 
     val closureCall =
-      CallArrowRaw(
-        ability = None,
-        name = outterClosure.name,
-        arguments = Nil,
+      CallArrowRaw.func(
+        funcName = outterClosure.name,
         baseType = closureType,
-        serviceId = None
+        arguments = Nil
       )
 
     val outerBody = SeqTag.wrap(
@@ -1416,12 +1405,10 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val secondRename = "a"
 
     val closureCall = (name: String, closureType: ArrowType, i: String) =>
-      CallArrowRaw(
-        ability = None,
-        name = name,
+      CallArrowRaw.func(
+        funcName = name,
         arguments = List(LiteralRaw(i, LiteralType.number)),
-        baseType = closureType,
-        serviceId = None
+        baseType = closureType
       )
 
     val body = (closureType: ArrowType) =>
@@ -1553,12 +1540,10 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val acceptBody = SeqTag.wrap(
       CallArrowRawTag(
         List(Call.Export(acceptRes.name, acceptRes.baseType)),
-        CallArrowRaw(
-          ability = None,
-          name = closureName,
-          arguments = List(LiteralRaw("42", LiteralType.number)),
+        CallArrowRaw.func(
+          funcName = closureName,
           baseType = closureType,
-          serviceId = None
+          arguments = List(LiteralRaw("42", LiteralType.number))
         )
       ).leaf,
       ReturnTag(
@@ -1586,12 +1571,10 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       ).leaf,
       CallArrowRawTag(
         List(Call.Export(testRes.name, testRes.baseType)),
-        CallArrowRaw(
-          ability = None,
-          name = acceptName,
-          arguments = List(VarRaw(closureName, closureTypeLabelled)),
+        CallArrowRaw.func(
+          funcName = acceptName,
           baseType = acceptFunc.arrowType,
-          serviceId = None
+          arguments = List(VarRaw(closureName, closureTypeLabelled))
         )
       ).leaf,
       ReturnTag(
@@ -1673,17 +1656,16 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val testBody = SeqTag.wrap(
       CallArrowRawTag
         .service(
-          serviceId = serviceId,
-          fnName = argMethodName,
+          srvId = serviceId,
+          funcName = argMethodName,
           call = Call(
             args = VarRaw(argMethodName, ScalarType.string) :: Nil,
             exportTo = Call.Export(res.name, res.`type`) :: Nil
           ),
-          name = serviceName,
           arrowType = ArrowType(
             domain = ProductType.labelled(List(argMethodName -> ScalarType.string)),
             codomain = ProductType(ScalarType.string :: Nil)
-          )
+          ).some
         )
         .leaf,
       ReturnTag(
@@ -2215,8 +2197,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
     val closureBody = SeqTag.wrap(
       AssignmentTag(
-        CallArrowRaw.service(
-          "cmp",
+        CallServiceRaw(
           LiteralRaw.quote("cmp"),
           "gt",
           ArrowType(

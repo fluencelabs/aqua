@@ -144,18 +144,13 @@ object AquaContext extends Logging {
     blank.copy(
       module = Some(sm.name),
       funcs = sm.`type`.arrows.map { case (fnName, arrowType) =>
-        val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
-        fnName ->
-          FuncArrow(
-            fnName,
-            // TODO: capture ability resolution, get ID from the call context
-            CallArrowRawTag.service(serviceId, fnName, call, sm.name).leaf,
-            arrowType,
-            ret.map(_.toRaw),
-            Map.empty,
-            Map.empty,
-            None
-          )
+        fnName -> FuncArrow.fromServiceMethod(
+          fnName,
+          sm.name,
+          fnName,
+          arrowType,
+          serviceId
+        )
       }
     )
 

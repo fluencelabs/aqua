@@ -50,7 +50,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     )
   } yield tag.map(_.funcOpLeaf)
 
-  def program[Alg[_]: Monad](implicit
+  def program[Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]

@@ -6,6 +6,7 @@ import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.*
+
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import cats.syntax.show.*
 import org.scalatest.flatspec.AnyFlatSpec
@@ -24,12 +25,11 @@ class MakeStructInlinerSpec extends AnyFlatSpec with Matchers {
     val length = FunctorRaw("length", ScalarType.u32)
     val lengthValue = VarRaw("l", arrType).withProperty(length)
 
-    val getField = CallArrowRaw(
-      None,
+    val getField = CallServiceRaw(
+      LiteralRaw.quote("serv"),
       "get_field",
-      Nil,
       ArrowType(NilType, UnlabeledConsType(ScalarType.string, NilType)),
-      Option(LiteralRaw.quote("serv"))
+      Nil
     )
 
     val makeStruct =
@@ -62,9 +62,22 @@ class MakeStructInlinerSpec extends AnyFlatSpec with Matchers {
           ).leaf
         ),
         RestrictionModel(streamMapName, streamMapType).wrap(
-          InsertKeyValueModel(LiteralModel.quote("field1"), VarModel("l_length", ScalarType.u32), streamMapName, streamMapType).leaf,
-          InsertKeyValueModel(LiteralModel.quote("field2"), VarModel("get_field", ScalarType.string), streamMapName, streamMapType).leaf,
-          CanonicalizeModel(VarModel(streamMapName, streamMapType), CallModel.Export(result.name, result.`type`)).leaf
+          InsertKeyValueModel(
+            LiteralModel.quote("field1"),
+            VarModel("l_length", ScalarType.u32),
+            streamMapName,
+            streamMapType
+          ).leaf,
+          InsertKeyValueModel(
+            LiteralModel.quote("field2"),
+            VarModel("get_field", ScalarType.string),
+            streamMapName,
+            streamMapType
+          ).leaf,
+          CanonicalizeModel(
+            VarModel(streamMapName, streamMapType),
+            CallModel.Export(result.name, result.`type`)
+          ).leaf
         )
       )
     ) shouldBe true

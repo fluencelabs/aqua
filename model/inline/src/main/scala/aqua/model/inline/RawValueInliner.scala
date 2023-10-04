@@ -3,16 +3,7 @@ package aqua.model.inline
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.*
-import aqua.model.inline.raw.{
-  ApplyBinaryOpRawInliner,
-  ApplyFunctorRawInliner,
-  ApplyGateRawInliner,
-  ApplyPropertiesRawInliner,
-  ApplyUnaryOpRawInliner,
-  CallArrowRawInliner,
-  CollectionRawInliner,
-  MakeAbilityRawInliner
-}
+import aqua.model.inline.raw.*
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
@@ -68,6 +59,10 @@ object RawValueInliner extends Logging {
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)
+
+      case cs: CallServiceRaw =>
+        CallServiceRawInliner(cs, propertiesAllowed)
+
     }
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](

@@ -263,37 +263,28 @@ case class CallArrowRaw(
   ability: Option[String],
   name: String,
   arguments: List[ValueRaw],
-  baseType: ArrowType,
-  // TODO: there should be no serviceId there
-  serviceId: Option[ValueRaw]
+  baseType: ArrowType
 ) extends ValueRaw {
-  override def `type`: Type = baseType.codomain.uncons.map(_._1).getOrElse(baseType)
+  override def `type`: Type = baseType.codomain.headOption.getOrElse(baseType)
 
   override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(
-      copy(
-        arguments = arguments.map(_.map(f)),
-        serviceId = serviceId.map(_.map(f))
-      )
-    )
+    f(copy(arguments = arguments.map(_.map(f))))
 
   override def varNames: Set[String] = name.some
-    .filterNot(_ => ability.isDefined || serviceId.isDefined)
+    .filterNot(_ => ability.isDefined)
     .toSet ++ arguments.flatMap(_.varNames).toSet
 
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(
       name = map
         .get(name)
-        // Rename only if it is **not** a service or ability call, see [bug LNG-199]
+        // Rename only if it is **not** an ability call, see [bug LNG-199]
         .filterNot(_ => ability.isDefined)
-        .filterNot(_ => serviceId.isDefined)
         .getOrElse(name)
     )
 
   override def toString: String =
-    s"(call ${ability.fold("")(a => s"|$a| ")} (${serviceId.fold("")(_.toString + " ")}$name) [${arguments
-      .mkString(" ")}] :: $baseType)"
+    s"${ability.fold("")(a => s"$a.")}$name(${arguments.mkString(",")}) :: $baseType)"
 }
 
 object CallArrowRaw {
@@ -306,8 +297,7 @@ object CallArrowRaw {
     ability = None,
     name = funcName,
     arguments = arguments,
-    baseType = baseType,
-    serviceId = None
+    baseType = baseType
   )
 
   def ability(
@@ -319,22 +309,38 @@ object CallArrowRaw {
     ability = None,
     name = AbilityType.fullName(abilityName, funcName),
     arguments = arguments,
-    baseType = baseType,
-    serviceId = None
+    baseType = baseType
   )
 
-  def service(
-    abilityName: String,
-    serviceId: ValueRaw,
-    funcName: String,
-    baseType: ArrowType,
-    arguments: List[ValueRaw] = Nil
-  ): CallArrowRaw = CallArrowRaw(
-    ability = abilityName.some,
-    name = funcName,
-    arguments = arguments,
-    baseType = baseType,
-    serviceId = Some(serviceId)
-  )
+}
 
+case class CallServiceRaw(
+  serviceId: ValueRaw,
+  fnName: String,
+  baseType: ArrowType,
+  arguments: List[ValueRaw]
+) extends ValueRaw {
+  override def `type`: Type = baseType.codomain.headOption.getOrElse(baseType)
+
+  override def map(f: ValueRaw => ValueRaw): ValueRaw =
+    f(
+      copy(
+        serviceId = serviceId.map(f),
+        arguments = arguments.map(_.map(f))
+      )
+    )
+
+  override def varNames: Set[String] =
+    arguments
+      .flatMap(_.varNames)
+      .toSet ++ serviceId.varNames
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(
+      serviceId = serviceId.renameVars(map),
+      arguments = arguments.map(_.renameVars(map))
+    )
+
+  override def toString: String =
+    s"call (${serviceId}) $fnName(${arguments.mkString(",")}) :: $baseType)"
 }
