@@ -27,7 +27,8 @@ case class IntoArrowRaw(name: String, arrowType: Type, arguments: List[ValueRaw]
 
   override def `type`: Type = arrowType
 
-  override def map(f: ValueRaw => ValueRaw): PropertyRaw = arguments.map(f)
+  override def map(f: ValueRaw => ValueRaw): PropertyRaw =
+    copy(arguments = arguments.map(f))
 
   override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
 

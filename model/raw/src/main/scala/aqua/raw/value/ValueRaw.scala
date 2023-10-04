@@ -222,7 +222,8 @@ case class ApplyBinaryOpRaw(
   op: ApplyBinaryOpRaw.Op,
   left: ValueRaw,
   right: ValueRaw,
-  resultType: ScalarType
+  // TODO: Refactor type, get rid of `LiteralType`
+  resultType: ScalarType | LiteralType
 ) extends ValueRaw {
 
   override val baseType: Type = resultType
@@ -258,10 +259,10 @@ object ApplyBinaryOpRaw {
 
   object Add {
 
-    def apply(left: ValueRaw, right: ValueRaw, resultType: ScalarType): ValueRaw =
+    def apply(left: ValueRaw, right: ValueRaw, resultType: ScalarType | LiteralType): ValueRaw =
       ApplyBinaryOpRaw(Op.Add, left, right, resultType)
 
-    def unapply(value: ValueRaw): Option[(ValueRaw, ValueRaw, ScalarType)] =
+    def unapply(value: ValueRaw): Option[(ValueRaw, ValueRaw, ScalarType | LiteralType)] =
       value match {
         case ApplyBinaryOpRaw(Op.Add, left, right, resultType) =>
           (left, right, resultType).some

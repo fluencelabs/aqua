@@ -247,7 +247,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                   case CmpOp.Lte => ApplyBinaryOpRaw.Op.Lte
                 }
 
-                lazy val numbersTypeBounded: Alg[ScalarType] = {
+                lazy val numbersTypeBounded: Alg[ScalarType | LiteralType] = {
                   /*
                    * If `uType == TopType`, it means that we don't
                    * have type big enough to hold the result of operation.
@@ -255,7 +255,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                    */
                   val uType = lType `∪` rType
                   uType match {
-                    case st: ScalarType => st.pure
+                    case t: (ScalarType | LiteralType) => t.pure
                     case t =>
                       val bounded = ScalarType.i64
                       report
