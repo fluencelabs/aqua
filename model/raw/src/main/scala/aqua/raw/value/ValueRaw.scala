@@ -147,7 +147,7 @@ case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
 object LiteralRaw {
   def quote(value: String): LiteralRaw = LiteralRaw("\"" + value + "\"", LiteralType.string)
 
-  def number(value: Int): LiteralRaw = LiteralRaw(value.toString, LiteralType.forInt(value))
+  def number(value: Long): LiteralRaw = LiteralRaw(value.toString, LiteralType.forInt(value))
 
   val Zero: LiteralRaw = number(0)
 
@@ -259,13 +259,18 @@ object ApplyBinaryOpRaw {
 
   object Add {
 
-    def apply(left: ValueRaw, right: ValueRaw, resultType: ScalarType | LiteralType): ValueRaw =
-      ApplyBinaryOpRaw(Op.Add, left, right, resultType)
+    def apply(left: ValueRaw, right: ValueRaw): ValueRaw =
+      ApplyBinaryOpRaw(
+        Op.Add,
+        left,
+        right,
+        ScalarType.resolveMathOpType(left.`type`, right.`type`).`type`
+      )
 
-    def unapply(value: ValueRaw): Option[(ValueRaw, ValueRaw, ScalarType | LiteralType)] =
+    def unapply(value: ValueRaw): Option[(ValueRaw, ValueRaw)] =
       value match {
-        case ApplyBinaryOpRaw(Op.Add, left, right, resultType) =>
-          (left, right, resultType).some
+        case ApplyBinaryOpRaw(Op.Add, left, right, _) =>
+          (left, right).some
         case _ => none
       }
   }

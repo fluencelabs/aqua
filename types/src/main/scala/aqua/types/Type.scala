@@ -187,6 +187,30 @@ object ScalarType {
   val integer = signed ++ unsigned
   val number = float ++ integer
   val all = number ++ Set(bool, string)
+
+  final case class MathOpType(
+    `type`: ScalarType | LiteralType,
+    overflow: Boolean
+  )
+
+  /**
+   * Resolve type of math operation
+   * on two given types.
+   *
+   * WARNING: General `Type` is accepted
+   * but only integer `ScalarType` and `LiteralType`
+   * are actually expected.
+   */
+  def resolveMathOpType(
+    lType: Type,
+    rType: Type
+  ): MathOpType = {
+    val uType = lType `∪` rType
+    uType match {
+      case t: (ScalarType | LiteralType) => MathOpType(t, false)
+      case _ => MathOpType(ScalarType.i64, true)
+    }
+  }
 }
 
 case class LiteralType private (oneOf: Set[ScalarType], name: String) extends DataType {

@@ -248,24 +248,15 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                 }
 
                 lazy val numbersTypeBounded: Alg[ScalarType | LiteralType] = {
-                  /*
-                   * If `uType == TopType`, it means that we don't
-                   * have type big enough to hold the result of operation.
-                   * e.g. We will use `i64` for result of `i32 * u64`
-                   */
-                  val uType = lType `∪` rType
-                  uType match {
-                    case t: (ScalarType | LiteralType) => t.pure
-                    case t =>
-                      val bounded = ScalarType.i64
-                      report
-                        .warning(
-                          it,
-                          s"Result type of ($lType ${it.op} $rType) is $TopType, " +
-                            s"using $bounded instead"
-                        )
-                        .as(bounded)
-                  }
+                  val resType = ScalarType.resolveMathOpType(lType, rType)
+                  report
+                    .warning(
+                      it,
+                      s"Result type of ($lType ${it.op} $rType) is unknown, " +
+                        s"using ${resType.`type`} instead"
+                    )
+                    .whenA(resType.overflow)
+                    .as(resType.`type`)
                 }
 
                 // Expected type sets of left and right operands, result type

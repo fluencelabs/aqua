@@ -8,6 +8,7 @@ import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
 
+import cats.Eval
 import cats.syntax.traverse.*
 import cats.syntax.monoid.*
 import cats.syntax.functor.*
@@ -99,10 +100,12 @@ object RawValueInliner extends Logging {
   def valueToModel[S: Mangler: Exports: Arrows](
     value: ValueRaw,
     propertiesAllowed: Boolean = true
-  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
-    logger.trace("RAW " + value)
-    toModel(unfold(value, propertiesAllowed))
-  }
+  ): State[S, (ValueModel, Option[OpModel.Tree])] = for {
+    _ <- StateT.liftF(Eval.later(logger.trace("RAW " + value)))
+    optimized <- StateT.liftF(Optimization.optimize(value))
+    _ <- StateT.liftF(Eval.later(logger.trace("OPTIMIZED " + optimized)))
+    model <- toModel(unfold(optimized, propertiesAllowed))
+  } yield model
 
   def valueListToModel[S: Mangler: Exports: Arrows](
     values: List[ValueRaw]
