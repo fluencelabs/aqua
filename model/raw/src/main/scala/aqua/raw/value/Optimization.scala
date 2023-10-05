@@ -58,8 +58,9 @@ object Optimization {
             ) =>
           (
             gatherLiteralsInAddition(left),
-            Eval.now(Ior.left(i))
-          ).mapN(_ sub _)
+            Eval.now(Ior.left(-i))
+            // NOTE: Use add as sign is stored inside Long
+          ).mapN(_ add _)
         case LiteralRaw.Integer(i) =>
           Ior.left(i).pure
         case _ =>
@@ -112,9 +113,6 @@ object Optimization {
 
       def add(r: Ior[Long, ValueRaw]): Ior[Long, ValueRaw] =
         combineWith(l, r)(_ + _, ApplyBinaryOpRaw.Add(_, _))
-
-      def sub(r: Ior[Long, ValueRaw]): Ior[Long, ValueRaw] =
-        combineWith(l, r)(_ - _, ApplyBinaryOpRaw.Sub(_, _))
     }
   }
 

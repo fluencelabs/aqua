@@ -26,8 +26,10 @@ object RawValueInliner extends Logging {
   private[inline] def unfold[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
     propertiesAllowed: Boolean = true
-  ): State[S, (ValueModel, Inline)] =
-    raw match {
+  ): State[S, (ValueModel, Inline)] = for {
+    optimized <- StateT.liftF(Eval.later(Optimization.optimize(raw)))
+    _ <- StateT.liftF(Eval.later(logger.trace("OPTIMIZIED " + optimized)))
+    result <- raw match {
       case VarRaw(name, t) =>
         for {
           exports <- Exports[S].exports
@@ -65,6 +67,7 @@ object RawValueInliner extends Logging {
         CallServiceRawInliner(cs, propertiesAllowed)
 
     }
+  } yield result
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
     inline: Inline
@@ -102,9 +105,7 @@ object RawValueInliner extends Logging {
     propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Option[OpModel.Tree])] = for {
     _ <- StateT.liftF(Eval.later(logger.trace("RAW " + value)))
-    optimized <- StateT.liftF(Optimization.optimize(value))
-    _ <- StateT.liftF(Eval.later(logger.trace("OPTIMIZED " + optimized)))
-    model <- toModel(unfold(optimized, propertiesAllowed))
+    model <- toModel(unfold(value, propertiesAllowed))
   } yield model
 
   def valueListToModel[S: Mangler: Exports: Arrows](
