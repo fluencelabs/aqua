@@ -116,7 +116,11 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
   private val init = LiteralModel.fromRaw(ValueRaw.InitPeerId)
 
   private def join(vm: VarModel, idx: ValueModel) =
-    ResBuilder.join(vm, idx, init)
+    idx match {
+      case LiteralModel.Integer(i, t) =>
+        ResBuilder.join(vm, LiteralModel((i + 1).toString, t), init)
+      case _ => ???
+    }
 
   "aqua compiler" should "create right topology" in {
 
@@ -195,7 +199,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
                   )
                 )
               ),
-              join(results, LiteralModel.fromRaw(LiteralRaw.number(2))),
+              join(results, LiteralModel.number(2)),
               CanonRes(results, init, CallModel.Export(canonResult.name, canonResult.`type`)).leaf,
               ApRes(
                 canonResult,

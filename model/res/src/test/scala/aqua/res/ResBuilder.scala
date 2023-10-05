@@ -9,6 +9,9 @@ import cats.syntax.option.*
 
 object ResBuilder {
 
+  /**
+   * Model of waiting `onIdx` elements of `stream`
+   */
   def join(stream: VarModel, onIdx: ValueModel, peer: ValueModel) = {
     val testVM = VarModel(stream.name + "_test", stream.`type`)
     val testStreamType = stream.`type`.asInstanceOf[StreamType] // Unsafe
@@ -16,25 +19,15 @@ object ResBuilder {
     val canon = VarModel(stream.name + "_iter_canon", CanonStreamType(ScalarType.string))
     val canonRes = VarModel(stream.name + "_result_canon", CanonStreamType(ScalarType.string))
     val arrayRes = VarModel(stream.name + "_gate", ArrayType(ScalarType.string))
-    val idx = VarModel(stream.name + "_incr", ScalarType.u32)
 
     RestrictionRes(testVM.name, testStreamType).wrap(
-      CallServiceRes(
-        LiteralModel("\"math\"", ScalarType.string),
-        "add",
-        CallRes(
-          onIdx :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
-          Some(CallModel.Export(idx.name, idx.`type`))
-        ),
-        peer
-      ).leaf,
       FoldRes(iter.name, stream, ForModel.Mode.Never.some).wrap(
         ApRes(iter, CallModel.Export(testVM.name, testVM.`type`)).leaf,
         CanonRes(testVM, peer, CallModel.Export(canon.name, canon.`type`)).leaf,
         XorRes.wrap(
           MatchMismatchRes(
             canon.copy(properties = Chain.one(FunctorModel("length", ScalarType.u32))),
-            idx,
+            onIdx,
             true
           ).leaf,
           NextRes(iter.name).leaf

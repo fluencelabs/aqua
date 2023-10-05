@@ -25,15 +25,20 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   import ModelBuilder.{join as joinModel, *}
   import ResBuilder.join as joinRes
 
+  /**
+   * Join model for `stream[idx]`
+   * WARNING: `idx` should be constant!
+   */
   def joinModelRes(streamEl: ValueRaw | ValueModel): (OpModel.Tree, ResolvedOp.Tree) =
     streamEl match {
       case vm: ValueModel => vm
       case vr: ValueRaw => ValueModel.fromRaw(vr)
     } match {
       case stream @ VarModel(name, baseType, IntoIndexModel(idx, idxType) ==: Chain.`nil`) =>
-        val idxModel =
-          if (idx.forall(Character.isDigit)) LiteralModel(idx, idxType)
-          else VarModel(idx, idxType)
+        /**
+         * Note: compiler optimizes increment
+         */
+        val idxModel = LiteralModel((idx.toLong + 1).toString, idxType)
 
         val streamWithoutIdx = stream.copy(properties = Chain.`nil`)
 
