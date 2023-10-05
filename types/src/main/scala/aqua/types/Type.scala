@@ -211,6 +211,21 @@ object ScalarType {
       case _ => MathOpType(ScalarType.i64, true)
     }
   }
+
+  /**
+   * Check if given type is signed.
+   *
+   * NOTE: Only integer types are expected.
+   * But it is impossible to enforce it.
+   */
+  def isSignedInteger(t: ScalarType | LiteralType): Boolean =
+    t match {
+      case st: ScalarType => signed.contains(st)
+      /**
+       * WARNING: LiteralType.unsigned is signed integer!
+       */
+      case lt: LiteralType => lt.oneOf.exists(signed.contains)
+    }
 }
 
 case class LiteralType private (oneOf: Set[ScalarType], name: String) extends DataType {

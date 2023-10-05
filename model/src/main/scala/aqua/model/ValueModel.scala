@@ -7,6 +7,7 @@ import aqua.types.*
 import cats.Eq
 import cats.data.{Chain, NonEmptyMap}
 import cats.syntax.option.*
+import cats.syntax.apply.*
 import scribe.Logging
 
 sealed trait ValueModel {
@@ -96,10 +97,13 @@ object LiteralModel {
    */
   object Integer {
 
-    def unapply(lm: LiteralModel): Option[Long] =
+    def unapply(lm: LiteralModel): Option[(Long, ScalarType | LiteralType)] =
       lm match {
         case LiteralModel(value, t) if ScalarType.integer.exists(_.acceptsValueOf(t)) =>
-          value.toLongOption
+          (
+            value.toLongOption,
+            t.some.collect { case t: (ScalarType | LiteralType) => t }
+          ).tupled
         case _ => none
       }
   }

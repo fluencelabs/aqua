@@ -23,6 +23,7 @@ import cats.syntax.flatMap.*
 import cats.syntax.apply.*
 import cats.syntax.foldable.*
 import cats.syntax.applicative.*
+import aqua.types.LiteralType
 
 object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
 
@@ -237,7 +238,10 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     op: Op.Cmp,
     resType: Type
   ): State[S, (ValueModel, Inline)] = (lmodel, rmodel) match {
-    case (LiteralModel.Integer(lv), LiteralModel.Integer(rv)) =>
+    case (
+          LiteralModel.Integer(lv, _),
+          LiteralModel.Integer(rv, _)
+        ) =>
       val res = op match {
         case Lt => lv < rv
         case Lte => lv <= rv
@@ -281,9 +285,9 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     resType: Type
   ): State[S, (ValueModel, Inline)] = (lmodel, rmodel) match {
     case (
-          LiteralModel.Integer(lv),
-          LiteralModel.Integer(rv)
-        ) if !canOptimizeMath(lv, rv, op) =>
+          LiteralModel.Integer(lv, lt),
+          LiteralModel.Integer(rv, rt)
+        ) if canOptimizeMath(lv, lt, rv, rt, op) =>
       val res = op match {
         case Add => lv + rv
         case Sub => lv - rv
@@ -338,16 +342,33 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
         )
       )
 
+  /**
+   * Check if we can optimize math operation
+   * in compile time.
+   *
+   * @param left left operand
+   * @param leftType type of left operand
+   * @param right right operand
+   * @param rightType type of right operand
+   * @param op operation
+   * @return true if we can optimize this operation
+   */
   private def canOptimizeMath(
     left: Long,
+    leftType: ScalarType | LiteralType,
     right: Long,
+    rightType: ScalarType | LiteralType,
     op: Op.Math
   ): Boolean = op match {
-    // Division by zero
-    case Op.Div | Op.Rem => right == 0
-    // Negative power
-    case Op.Pow => right < 0
-    case _ => false
+    // Leave division by zero for runtime
+    case Op.Div | Op.Rem => right != 0
+    // Leave negative power for runtime
+    case Op.Pow => right >= 0
+    case Op.Sub =>
+      // Leave subtraction overflow for runtime
+      ScalarType.isSignedInteger(leftType) ||
+      ScalarType.isSignedInteger(rightType)
+    case _ => true
   }
 
   /**
