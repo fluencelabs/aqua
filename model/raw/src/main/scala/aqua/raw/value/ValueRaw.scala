@@ -277,6 +277,24 @@ object ApplyBinaryOpRaw {
         case _ => none
       }
   }
+
+  object Sub {
+
+    def apply(left: ValueRaw, right: ValueRaw): ValueRaw =
+      ApplyBinaryOpRaw(
+        Op.Sub,
+        left,
+        right,
+        ScalarType.resolveMathOpType(left.`type`, right.`type`).`type`
+      )
+
+    def unapply(value: ValueRaw): Option[(ValueRaw, ValueRaw)] =
+      value match {
+        case ApplyBinaryOpRaw(Op.Sub, left, right, _) =>
+          (left, right).some
+        case _ => none
+      }
+  }
 }
 
 case class ApplyUnaryOpRaw(

@@ -1202,8 +1202,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         ),
         ModelBuilder
           .add(
-            LiteralModel.number(37),
-            tempAdd
+            tempAdd,
+            LiteralModel.number(37)
           )(tempAdd0)
           .leaf
       )
@@ -1414,15 +1414,15 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       body = body
     )
 
-    val closureCallModel = (x: String, o: VarModel) =>
+    val closureCallModel = (x: Long, o: VarModel) =>
       MetaModel
         .CallArrowModel(closureName)
         .wrap(
           ApplyTopologyModel(closureName)
             .wrap(
               srvCallModel(
-                LiteralModel(x, LiteralType.unsigned),
-                LiteralModel("42", LiteralType.unsigned),
+                LiteralModel.number(x),
+                LiteralModel.number(42),
                 result = o
               ).leaf
             )
@@ -1445,14 +1445,14 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       SeqModel.wrap(
         SeqModel.wrap(
           SeqModel.wrap(
-            closureCallModel("1", retval0),
-            closureCallModel("2", retval1),
+            closureCallModel(1, retval0),
+            closureCallModel(2, retval1),
             ModelBuilder.add(retval0, retval1)(tempAdd).leaf
           ),
-          closureCallModel("3", retval2),
+          closureCallModel(3, retval2),
           ModelBuilder.add(tempAdd, retval2)(tempAdd0).leaf
         ),
-        ModelBuilder.add(LiteralModel.number(37), tempAdd0)(tempAdd1).leaf
+        ModelBuilder.add(tempAdd0, LiteralModel.number(37))(tempAdd1).leaf
       )
     )
 
