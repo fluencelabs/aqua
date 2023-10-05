@@ -33,19 +33,19 @@ object Optimization {
     }
 
     def optimize(value: ValueRaw): Eval[ValueRaw] =
-      gatherConstantsInAddition(value).map { res =>
+      gatherLiteralsInAddition(value).map { res =>
         // TODO: Type of literal is not preserved
         res.leftMap(LiteralRaw.number).merge
       }
 
-    private def gatherConstantsInAddition(
+    private def gatherLiteralsInAddition(
       value: ValueRaw
     ): Eval[Ior[Long, ValueRaw]] =
       value match {
         case ApplyBinaryOpRaw.Add(left, right) =>
           (
-            gatherConstantsInAddition(left),
-            gatherConstantsInAddition(right)
+            gatherLiteralsInAddition(left),
+            gatherLiteralsInAddition(right)
           ).mapN(_ combine _)
         case LiteralRaw.Integer(i) =>
           Ior.left(i).pure

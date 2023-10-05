@@ -283,7 +283,7 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
     case (
           LiteralModel.Integer(lv),
           LiteralModel.Integer(rv)
-        ) if !mathExceptionalCase(lv, rv, op) =>
+        ) if !canOptimizeMath(lv, rv, op) =>
       val res = op match {
         case Add => lv + rv
         case Sub => lv - rv
@@ -338,18 +338,20 @@ object ApplyBinaryOpRawInliner extends RawInliner[ApplyBinaryOpRaw] {
         )
       )
 
-  private def mathExceptionalCase(
+  private def canOptimizeMath(
     left: Long,
     right: Long,
     op: Op.Math
   ): Boolean = op match {
+    // Division by zero
     case Op.Div | Op.Rem => right == 0
+    // Negative power
     case Op.Pow => right < 0
     case _ => false
   }
 
   /**
-   * Integer power
+   * Integer power (binary exponentiation)
    *
    * @param base
    * @param exp >= 0
