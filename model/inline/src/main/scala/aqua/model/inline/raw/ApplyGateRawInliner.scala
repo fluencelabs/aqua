@@ -96,7 +96,6 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
       uniqueCanonName <- Mangler[S].findAndForbidName(afr.name + "_result_canon")
       uniqueResultName <- Mangler[S].findAndForbidName(afr.name + "_gate")
       uniqueTestName <- Mangler[S].findAndForbidName(afr.name + "_test")
-      uniqueIdxIncr <- Mangler[S].findAndForbidName(afr.name + "_incr")
       uniqueIterCanon <- Mangler[S].findAndForbidName(afr.name + "_iter_canon")
       uniqueIter <- Mangler[S].findAndForbidName(afr.name + "_fold_var")
       /**

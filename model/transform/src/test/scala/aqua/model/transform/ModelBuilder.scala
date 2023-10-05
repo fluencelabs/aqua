@@ -143,7 +143,7 @@ object ModelBuilder {
   /**
    * @param stream stream [[VarModel]]
    * @param idx id [[ValueModel]]
-   * @return [[OpModel.Tree]] of join of `stream[idx]`
+   * @return [[OpModel.Tree]] of join of idx elements of stream
    */
   def join(stream: VarModel, idx: ValueModel): OpModel.Tree =
     stream match {
@@ -156,7 +156,6 @@ object ModelBuilder {
           streamName = streamName,
           streamType = streamType,
           idxModel = idx,
-          idxIncrName = streamName + "_incr",
           testName = streamName + "_test",
           iterName = streamName + "_fold_var",
           canonName = streamName + "_result_canon",

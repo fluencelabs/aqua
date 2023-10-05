@@ -27,9 +27,9 @@ object RawValueInliner extends Logging {
     raw: ValueRaw,
     propertiesAllowed: Boolean = true
   ): State[S, (ValueModel, Inline)] = for {
-    optimized <- StateT.liftF(Eval.later(Optimization.optimize(raw)))
+    optimized <- StateT.liftF(Optimization.optimize(raw))
     _ <- StateT.liftF(Eval.later(logger.trace("OPTIMIZIED " + optimized)))
-    result <- raw match {
+    result <- optimized match {
       case VarRaw(name, t) =>
         for {
           exports <- Exports[S].exports
