@@ -34,6 +34,7 @@ object Optimization {
 
     def optimize(value: ValueRaw): Eval[ValueRaw] =
       gatherConstantsInAddition(value).map { res =>
+        // TODO: Type of literal is not preserved
         res.leftMap(LiteralRaw.number).merge
       }
 

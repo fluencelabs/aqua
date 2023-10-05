@@ -235,6 +235,9 @@ case class ApplyBinaryOpRaw(
 
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(left = left.renameVars(map), right = right.renameVars(map))
+
+  override def toString(): String =
+    s"(${left} ${op} ${right}) :: ${resultType}"
 }
 
 object ApplyBinaryOpRaw {
