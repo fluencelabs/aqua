@@ -3,7 +3,7 @@ package aqua.model.inline.raw
 import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{ApplyGateRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.{ApplyBinaryOpRaw, ApplyGateRaw, LiteralRaw, ValueRaw, VarRaw}
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
 
@@ -19,23 +19,20 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
    * To wait for the element of a stream by the given index, the following model is generated:
    * (seq
    * (seq
-   *  (seq
-   *   (call <peer> ("math" "add") [0 1] stream_incr)
-   *   (fold $stream s
+   *  (fold $stream s
+   *   (seq
    *    (seq
-   *     (seq
-   *      (ap s $stream_test)
-   *      (canon <peer> $stream_test  #stream_iter_canon)
-   *     )
-   *     (xor
-   *      (match #stream_iter_canon.length stream_incr
-   *       (null)
-   *      )
-   *      (next s)
-   *     )
+   *     (ap s $stream_test)
+   *     (canon <peer> $stream_test  #stream_iter_canon)
    *    )
-   *    (never)
+   *    (xor
+   *     (match #stream_iter_canon.length idx
+   *      (null)
+   *     )
+   *     (next s)
+   *    )
    *   )
+   *   (never)
    *  )
    *  (canon <peer> $stream_test  #stream_result_canon)
    * )
@@ -46,7 +43,6 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
     streamName: String,
     streamType: StreamType,
     idxModel: ValueModel,
-    idxIncrName: String,
     testName: String,
     iterName: String,
     canonName: String,
@@ -61,10 +57,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
     val resultCanon =
       VarModel(canonName, CanonStreamType(streamType.element))
 
-    val incrVar = VarModel(idxIncrName, ScalarType.u32)
-
     RestrictionModel(varSTest.name, streamType).wrap(
-      increment(idxModel, incrVar),
       ForModel(iter.name, VarModel(streamName, streamType), ForModel.Mode.Never.some).wrap(
         PushToStreamModel(
           iter,
@@ -78,7 +71,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
           MatchMismatchModel(
             iterCanon
               .copy(properties = Chain.one(FunctorModel("length", ScalarType.`u32`))),
-            incrVar,
+            idxModel,
             true
           ).leaf,
           NextModel(iter.name).leaf
@@ -106,14 +99,17 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
       uniqueIdxIncr <- Mangler[S].findAndForbidName(afr.name + "_incr")
       uniqueIterCanon <- Mangler[S].findAndForbidName(afr.name + "_iter_canon")
       uniqueIter <- Mangler[S].findAndForbidName(afr.name + "_fold_var")
-      idxFolded <- unfold(afr.idx)
-      (idxModel, idxInline) = idxFolded
+      /**
+       * NOTE: Incrementing at `ValueRaw` level here
+       * to apply possible optimizations to the increment value
+       */
+      idx <- unfold(increment(afr.idx))
+      (idxModel, idxInline) = idx
     } yield {
       val gate = joinStreamOnIndexModel(
         streamName = afr.name,
         streamType = afr.streamType,
         idxModel = idxModel,
-        idxIncrName = uniqueIdxIncr,
         testName = uniqueTestName,
         iterName = uniqueIter,
         canonName = uniqueCanonName,
@@ -132,13 +128,6 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
 
     }
 
-  private def increment(v: ValueModel, result: VarModel) =
-    CallServiceModel(
-      LiteralModel("\"math\"", ScalarType.string),
-      "add",
-      CallModel(
-        v :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
-        CallModel.Export(result.name, result.`type`) :: Nil
-      )
-    ).leaf
+  private def increment(v: ValueRaw): ValueRaw =
+    ApplyBinaryOpRaw.Add(v, LiteralRaw.number(1))
 }
