@@ -25,22 +25,45 @@ class TopologySpec extends AnyFlatSpec with Matchers {
   import ModelBuilder.{join as joinModel, *}
   import ResBuilder.join as joinRes
 
-  def joinModelRes(streamEl: ValueRaw | ValueModel): (OpModel.Tree, ResolvedOp.Tree) =
+  def joinModelRes(
+    streamEl: ValueRaw | ValueModel
+  ): (Chain[OpModel.Tree], Chain[ResolvedOp.Tree]) =
     streamEl match {
       case vm: ValueModel => vm
       case vr: ValueRaw => ValueModel.fromRaw(vr)
     } match {
       case stream @ VarModel(name, baseType, IntoIndexModel(idx, idxType) ==: Chain.`nil`) =>
         val idxModel =
-          if (idx.forall(Character.isDigit)) LiteralModel(idx, idxType)
-          else VarModel(idx, idxType)
+          if (idx.forall(Character.isDigit)) LiteralModel(idx, ScalarType.u32)
+          else VarModel(idx, ScalarType.u32)
 
         val streamWithoutIdx = stream.copy(properties = Chain.`nil`)
 
-        (
-          joinModel(streamWithoutIdx, idxModel),
-          joinRes(streamWithoutIdx, idxModel, ValueModel.fromRaw(initPeer))
+        val sizeModel = VarModel(s"${name}_size", ScalarType.u32)
+        val sizeTree = ModelBuilder.add(
+          idxModel,
+          LiteralModel.number(1),
+          sizeModel
         )
+
+        val model = Chain(
+          sizeTree,
+          joinModel(streamWithoutIdx, sizeModel)
+        )
+
+        val sizeTreeResolved = ResBuilder.add(
+          idxModel,
+          LiteralModel.number(1),
+          sizeModel,
+          ValueModel.fromRaw(initPeer)
+        )
+
+        val resolved = Chain(
+          sizeTreeResolved,
+          joinRes(streamWithoutIdx, sizeModel, ValueModel.fromRaw(initPeer))
+        )
+
+        (model, resolved)
       case _ => ???
     }
 
@@ -462,54 +485,58 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val (joinModel, joinRes) = joinModelRes(streamEl)
 
+    val foldModel = foldPar(
+      "i",
+      valueArray,
+      OnModel(iRelay, Chain.empty).wrap(
+        XorModel.wrap(
+          callModel(2, CallModel.Export(streamRaw.name, streamRaw.`type`) :: Nil),
+          OnModel(initPeer, Chain.one(relay)).wrap(
+            callModel(4, Nil, Nil)
+          )
+        )
+      )
+    )
     val init = SeqModel.wrap(
       DeclareStreamModel(stream).leaf,
       OnModel(initPeer, Chain.one(relay)).wrap(
-        foldPar(
-          "i",
-          valueArray,
-          OnModel(iRelay, Chain.empty).wrap(
-            XorModel.wrap(
-              callModel(2, CallModel.Export(streamRaw.name, streamRaw.`type`) :: Nil),
-              OnModel(initPeer, Chain.one(relay)).wrap(
-                callModel(4, Nil, Nil)
-              )
-            )
-          )
-        ),
-        joinModel,
-        callModel(3, Nil, streamRaw :: Nil)
+        foldModel +:
+          joinModel :+
+          callModel(3, Nil, streamRaw :: Nil)
       )
     )
 
     val proc = Topology.resolve(init).value
 
-    val expected = SeqRes.wrap(
-      through(relay),
-      ParRes.wrap(
-        FoldRes("i", valueArray, ForModel.Mode.Never.some).wrap(
-          ParRes.wrap(
-            // better if first relay will be outside `for`
-            SeqRes.wrap(
-              through(relay),
-              XorRes.wrap(
-                SeqRes.wrap(
-                  callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
-                  through(relay),
-                  through(initPeer)
-                ),
-                SeqRes.wrap(
-                  through(relay),
-                  callRes(4, initPeer)
-                )
+    val foldRes = ParRes.wrap(
+      FoldRes("i", valueArray, ForModel.Mode.Never.some).wrap(
+        ParRes.wrap(
+          // better if first relay will be outside `for`
+          SeqRes.wrap(
+            through(relay),
+            XorRes.wrap(
+              SeqRes.wrap(
+                callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                through(relay),
+                through(initPeer)
+              ),
+              SeqRes.wrap(
+                through(relay),
+                callRes(4, initPeer)
               )
-            ),
-            NextRes("i").leaf
-          )
+            )
+          ),
+          NextRes("i").leaf
         )
-      ),
-      joinRes,
-      callRes(3, initPeer, None, stream :: Nil)
+      )
+    )
+    val expected = SeqRes.wrap(
+      Chain(
+        through(relay),
+        foldRes
+      ) ++
+        joinRes :+
+        callRes(3, initPeer, None, stream :: Nil)
     )
 
     proc.equalsOrShowDiff(expected) should be(true)
@@ -543,42 +570,45 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               )
             )
           )
-        ),
-        joinModel,
-        callModel(3, Nil, streamRaw :: Nil)
+        ) +:
+          joinModel :+
+          callModel(3, Nil, streamRaw :: Nil)
       )
     )
 
     val proc = Topology.resolve(init).value
 
-    val expected = SeqRes.wrap(
-      through(relay),
-      ParRes.wrap(
-        FoldRes("i", valueArray, ForModel.Mode.Never.some).wrap(
-          ParRes.wrap(
-            // better if first relay will be outside `for`
-            SeqRes.wrap(
-              through(relay),
+    val fold = ParRes.wrap(
+      FoldRes("i", valueArray, ForModel.Mode.Never.some).wrap(
+        ParRes.wrap(
+          // better if first relay will be outside `for`
+          SeqRes.wrap(
+            through(relay),
+            XorRes.wrap(
               XorRes.wrap(
-                XorRes.wrap(
-                  SeqRes.wrap(
-                    callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
-                    through(relay),
-                    through(initPeer)
-                  )
-                ),
                 SeqRes.wrap(
+                  callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
                   through(relay),
-                  callRes(4, initPeer)
+                  through(initPeer)
                 )
+              ),
+              SeqRes.wrap(
+                through(relay),
+                callRes(4, initPeer)
               )
-            ),
-            NextRes("i").leaf
-          )
+            )
+          ),
+          NextRes("i").leaf
         )
-      ),
-      joinRes,
-      callRes(3, initPeer, None, stream :: Nil)
+      )
+    )
+    val expected = SeqRes.wrap(
+      Chain(
+        through(relay),
+        fold
+      ) ++
+        joinRes :+
+        callRes(3, initPeer, None, stream :: Nil)
     )
 
     // println(Console.MAGENTA + init.show + Console.RESET)
@@ -804,9 +834,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         OnModel(i, Chain.empty).wrap(
           callModel(1, CallModel.Export(used.name, used.`type`) :: Nil)
         )
-      ),
-      joinModel,
-      callModel(3, Nil, used :: Nil)
+      ) +:
+        joinModel :+
+        callModel(3, Nil, used :: Nil)
     )
 
     val proc = Topology.resolve(init).value
@@ -828,9 +858,9 @@ class TopologySpec extends AnyFlatSpec with Matchers {
             NextRes("i").leaf
           )
         )
-      ),
-      joinRes,
-      callRes(3, initPeer, None, ValueModel.fromRaw(used) :: Nil)
+      ) +:
+        joinRes :+
+        callRes(3, initPeer, None, ValueModel.fromRaw(used) :: Nil)
     )
 
     proc.equalsOrShowDiff(expected) should be(true)
@@ -844,46 +874,48 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val (joinModel, joinRes) = joinModelRes(usedWithIdx)
 
-    val init = OnModel(initPeer, Chain.one(relay)).wrap(
-      foldPar(
-        "i",
-        valueArray,
-        OnModel(i, Chain.empty).wrap(
-          XorModel.wrap(
-            callModel(1, CallModel.Export(used.name, used.`type`) :: Nil)
-          )
+    val foldModel = foldPar(
+      "i",
+      valueArray,
+      OnModel(i, Chain.empty).wrap(
+        XorModel.wrap(
+          callModel(1, CallModel.Export(used.name, used.`type`) :: Nil)
         )
-      ),
-      joinModel,
-      callModel(3, Nil, used :: Nil)
+      )
+    )
+    val init = OnModel(initPeer, Chain.one(relay)).wrap(
+      foldModel +:
+        joinModel :+
+        callModel(3, Nil, used :: Nil)
     )
 
     val proc = Topology.resolve(init).value
 
-    val expected = SeqRes.wrap(
-      ParRes.wrap(
-        FoldRes("i", ValueModel.fromRaw(valueArray), ForModel.Mode.Never.some).wrap(
-          ParRes.wrap(
-            SeqRes.wrap(
-              through(relay),
-              XorRes.wrap(
-                SeqRes.wrap(
-                  callRes(
-                    1,
-                    ValueModel.fromRaw(i),
-                    Some(CallModel.Export(used.name, used.`type`))
-                  ),
-                  through(relay),
-                  through(initPeer)
-                )
+    val foldRes = ParRes.wrap(
+      FoldRes("i", ValueModel.fromRaw(valueArray), ForModel.Mode.Never.some).wrap(
+        ParRes.wrap(
+          SeqRes.wrap(
+            through(relay),
+            XorRes.wrap(
+              SeqRes.wrap(
+                callRes(
+                  1,
+                  ValueModel.fromRaw(i),
+                  Some(CallModel.Export(used.name, used.`type`))
+                ),
+                through(relay),
+                through(initPeer)
               )
-            ),
-            NextRes("i").leaf
-          )
+            )
+          ),
+          NextRes("i").leaf
         )
-      ),
-      joinRes,
-      callRes(3, initPeer, None, ValueModel.fromRaw(used) :: Nil)
+      )
+    )
+    val expected = SeqRes.wrap(
+      foldRes +:
+        joinRes :+
+        callRes(3, initPeer, None, ValueModel.fromRaw(used) :: Nil)
     )
 
     proc.equalsOrShowDiff(expected) should be(true)

@@ -58,8 +58,8 @@ object ValueRaw {
     errorType
   )
 
-  type ApplyRaw = ApplyGateRaw | ApplyPropertyRaw | CallArrowRaw | CollectionRaw |
-    ApplyBinaryOpRaw | ApplyUnaryOpRaw
+  type ApplyRaw = ApplyPropertyRaw | CallArrowRaw | CollectionRaw | ApplyBinaryOpRaw |
+    ApplyUnaryOpRaw
 }
 
 case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends ValueRaw {
@@ -92,22 +92,6 @@ object ApplyPropertyRaw {
     properties.foldLeft(value) { case (v, l) =>
       ApplyPropertyRaw(v, l)
     }
-}
-
-case class ApplyGateRaw(name: String, streamType: StreamType, idx: ValueRaw) extends ValueRaw {
-  override def baseType: Type = streamType
-
-  override def `type`: Type = idx.`type`
-
-  override def renameVars(map: Map[String, String]): ValueRaw =
-    copy(name = map.getOrElse(name, name), idx = idx.renameVars(map))
-
-  override def map(f: ValueRaw => ValueRaw): ValueRaw =
-    f(copy(idx = f(idx)))
-
-  override def toString: String = s"gate $name.$idx"
-
-  override def varNames: Set[String] = Set(name) ++ idx.varNames
 }
 
 case class VarRaw(name: String, baseType: Type) extends ValueRaw {
