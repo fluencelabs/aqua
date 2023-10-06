@@ -218,7 +218,8 @@ lazy val `compiler-native-lib` = project
   .settings(commons: _*)
   .settings(
     Compile / mainClass := Some("aqua.compiler.Library"),
-    nativeImageVersion  := "22.1.0",
+    nativeImageJvm := "graalvm-java20",
+    nativeImageVersion:="20.0.2",
     nativeImageOptions ++= Seq(
       "--verbose",
       "--no-fallback",
