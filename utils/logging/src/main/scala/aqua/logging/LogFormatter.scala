@@ -16,4 +16,10 @@ object LogFormatter {
       .withHandler(formatter = formatter, minimumLevel = level)
       .replace()
   }
+
+  def initEmptyLogger(): Logger =
+    scribe.Logger.root
+      .clearHandlers()
+      .clearModifiers()
+      .replace()
 }

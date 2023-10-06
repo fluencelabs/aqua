@@ -27,7 +27,7 @@ object Library {
   ): Int = {
     val code = CTypeConversion.toJavaString(codePointer)
 
-    LogFormatter.initLogger(Some(scribe.Level.Info))
+    LogFormatter.initEmptyLogger()
 
     val result = APICompilation
       .compileString(
