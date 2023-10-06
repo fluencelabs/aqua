@@ -22,25 +22,25 @@ object StreamGateInliner extends Logging {
    * To wait for size elements of a stream,
    * the following model is generated:
    * (seq
-   * (seq
-   *  (fold $stream s
-   *   (seq
+   *  (seq
+   *   (fold $stream s
    *    (seq
-   *     (ap s $stream_test)
-   *     (canon <peer> $stream_test  #stream_iter_canon)
-   *    )
-   *    (xor
-   *     (match #stream_iter_canon.length size
-   *      (null)
+   *     (seq
+   *      (ap s $stream_test)
+   *      (canon <peer> $stream_test  #stream_iter_canon)
    *     )
-   *     (next s)
+   *     (xor
+   *      (match #stream_iter_canon.length size
+   *       (null)
+   *      )
+   *      (next s)
+   *     )
    *    )
+   *    (never)
    *   )
-   *   (never)
+   *   (canon <peer> $stream_test  #stream_result_canon)
    *  )
-   *  (canon <peer> $stream_test  #stream_result_canon)
-   * )
-   * (ap #stream_result_canon stream_gate)
+   *  (ap #stream_result_canon stream_gate)
    * )
    */
   def joinStreamOnIndexModel(

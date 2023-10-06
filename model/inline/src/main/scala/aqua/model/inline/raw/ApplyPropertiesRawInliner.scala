@@ -248,12 +248,72 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
+  /**
+   * Unfold `stream[idx]`
+   */
+  private def unfoldStreamGate[S: Mangler: Exports: Arrows](
+    streamName: String,
+    streamType: StreamType,
+    idx: ValueRaw
+  ): State[S, (VarModel, Inline)] = for {
+    /**
+     * Inline idx
+     */
+    idxInlined <- unfold(idx)
+    (idxVM, idxInline) = idxInlined
+    /**
+     * Inline size which is `idx + 1`
+     * TODO: Refactor to apply optimizations
+     */
+    sizeName <- Mangler[S].findAndForbidName(s"${streamName}_size")
+    sizeVar = VarModel(sizeName, idxVM.`type`)
+    sizeInline = CallServiceModel(
+      "math",
+      funcName = "add",
+      args = List(idxVM, LiteralModel.number(1)),
+      result = sizeVar
+    ).leaf
+    gateInlined <- StreamGateInliner(streamName, streamType, sizeVar)
+    (gateVM, gateInline) = gateInlined
+    /**
+     * Remove properties from idx
+     * as we need to use it in index
+     * TODO: Do not generate it
+     *       if it is not needed,
+     *       e.g. in `join`
+     */
+    idxFlattened <- idxVM match {
+      case vr: VarModel => removeProperties(vr)
+      case _ => (idxVM, Inline.empty).pure[State[S, *]]
+    }
+    (idxFlat, idxFlatInline) = idxFlattened
+    /**
+     * Construct stream[idx]
+     */
+    gate = gateVM.withProperty(
+      IntoIndexModel
+        .fromValueModel(idxFlat, streamType.element)
+        .getOrElse(
+          internalError(s"Unexpected: could not convert ($idxFlat) to IntoIndexModel")
+        )
+    )
+  } yield gate -> Inline(
+    idxInline.predo
+      .append(sizeInline) ++
+      gateInline.predo ++
+      idxFlatInline.predo,
+    mergeMode = SeqMode
+  )
+
   private def unfoldRawWithProperties[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
     properties: Chain[PropertyRaw],
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     ((raw, properties.uncons) match {
+      /**
+       * To inline
+       */
       case (
             vr @ VarRaw(_, st @ StreamType(_)),
             Some(IntoIndexRaw(idx, _), otherProperties)
@@ -261,39 +321,11 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         unfold(vr).flatMap {
           case (VarModel(nameVM, _, _), inl) =>
             for {
-              idxInlined <- unfold(idx)
-              (idxVM, idxInline) = idxInlined
-              sizeName <- Mangler[S].findAndForbidName(s"${nameVM}_size")
-              sizeVar = VarModel(sizeName, idxVM.`type`)
-              sizeInline = CallServiceModel(
-                "math",
-                funcName = "add",
-                args = List(idxVM, LiteralModel.number(1)),
-                result = sizeVar
-              ).leaf
-              gateInlined <- StreamGateInliner(nameVM, st, sizeVar)
+              gateInlined <- unfoldStreamGate(nameVM, st, idx)
               (gateVM, gateInline) = gateInlined
-              idxFlattened <- idxVM match {
-                case vr: VarModel => removeProperties(vr)
-                case _ => (idxVM, Inline.empty).pure[State[S, *]]
-              }
-              (idxFlat, idxFlatInline) = idxFlattened
-              gate = gateVM.withProperty(
-                IntoIndexModel
-                  .fromValueModel(idxFlat, st.element)
-                  .getOrElse(
-                    internalError(s"Unexpected: could not convert ($idxFlat) to IntoIndexModel")
-                  )
-              )
               propsInlined <- unfoldProperties(
-                Inline(
-                  idxInline.predo
-                    .append(sizeInline) ++
-                    gateInline.predo ++
-                    idxFlatInline.predo,
-                  mergeMode = SeqMode
-                ),
-                gate,
+                gateInline,
+                gateVM,
                 otherProperties,
                 propertiesAllowed
               )
