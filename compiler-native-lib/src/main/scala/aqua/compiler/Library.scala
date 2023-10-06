@@ -38,7 +38,7 @@ object Library {
       )
       .unsafeRunSync()
 
-    result.fold(
+    result.value.value.fold(
       errors =>
         errors.toChain.toList.zipWithIndex.foreach { case (error, i) =>
           errorsPointer.write(i, CTypeConversion.toCString(error).get())
