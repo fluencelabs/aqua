@@ -1,14 +1,6 @@
 package aqua.compiler
 
-import aqua.model.{
-  CallModel,
-  ForModel,
-  FunctorModel,
-  IntoIndexModel,
-  LiteralModel,
-  ValueModel,
-  VarModel
-}
+import aqua.model.{CallModel, ForModel, FunctorModel, LiteralModel, ValueModel, VarModel}
 import aqua.model.transform.ModelBuilder
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform

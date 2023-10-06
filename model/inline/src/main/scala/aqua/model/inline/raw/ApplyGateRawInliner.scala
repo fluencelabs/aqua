@@ -1,5 +1,6 @@
 package aqua.model.inline.raw
 
+import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
@@ -11,6 +12,7 @@ import cats.data.State
 import cats.data.Chain
 import cats.syntax.monoid.*
 import cats.syntax.option.*
+import cats.syntax.applicative.*
 import scribe.Logging
 
 object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
@@ -108,6 +110,11 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
       uniqueIter <- Mangler[S].findAndForbidName(afr.name + "_fold_var")
       idxFolded <- unfold(afr.idx)
       (idxModel, idxInline) = idxFolded
+      idxFlattened <- idxModel match {
+        case vr: VarModel => ApplyPropertiesRawInliner.removeProperties(vr)
+        case _ => (idxModel, Inline.empty).pure[State[S, *]]
+      }
+      (idxFlatModel, idxFlatInline) = idxFlattened
     } yield {
       val gate = joinStreamOnIndexModel(
         streamName = afr.name,
@@ -121,15 +128,23 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
         resultName = uniqueResultName
       )
 
-      val tree = SeqModel.wrap(idxInline.predo.toList :+ gate)
-
-      val treeInline = Inline(predo = Chain.one(tree))
-
-      (
-        VarModel(uniqueResultName, ArrayType(afr.streamType.element)),
-        treeInline
+      val tree = SeqModel.wrap(
+        idxInline.predo.toList ++
+          idxFlatInline.predo.toList :+
+          gate
       )
+      val treeInline = Inline(predo = Chain.one(tree))
+      val idx = IntoIndexModel
+        .fromValueModel(idxFlatModel, afr.streamType.element)
+        .getOrElse(
+          internalError(s"Unexpected: cant convert ($idxFlatModel) to IntoIndexModel")
+        )
+      val value = VarModel(
+        uniqueResultName,
+        ArrayType(afr.streamType.element)
+      ).withProperty(idx)
 
+      (value, treeInline)
     }
 
   private def increment(v: ValueModel, result: VarModel) =
