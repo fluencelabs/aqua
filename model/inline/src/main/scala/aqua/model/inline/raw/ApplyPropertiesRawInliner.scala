@@ -287,7 +287,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
               )
               propsInlined <- unfoldProperties(
                 Inline(
-                  (idxInline.predo :+ sizeInline) ++ gateInline.predo,
+                  idxInline.predo
+                    .append(sizeInline) ++
+                    gateInline.predo ++
+                    idxFlatInline.predo,
                   mergeMode = SeqMode
                 ),
                 gate,
