@@ -211,6 +211,7 @@ lazy val `compiler-native-lib` = project
   .enablePlugins(NativeImagePlugin)
   .settings(commons: _*)
   .settings(
+    name := "libaqua",
     Compile / mainClass := Some("aqua.compiler.Library"),
     nativeImageJvm := "graalvm-java20",
     nativeImageVersion:="20.0.2",
@@ -218,7 +219,7 @@ lazy val `compiler-native-lib` = project
       "--verbose",
       "--no-fallback",
       "--shared", // Produce shared library
-      "--initialize-at-run-time=aqua.logging.LogFormatter$"
+      "--initialize-at-run-time=aqua.logging.LogFormatter$",
       // Uncomment next lines to use llvm backend
       // and obtain bitcode files
       //   "-H:CompilerBackend=llvm",
