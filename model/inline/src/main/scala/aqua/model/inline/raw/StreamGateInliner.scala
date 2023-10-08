@@ -1,9 +1,10 @@
 package aqua.model.inline.raw
 
+import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{ApplyGateRaw, LiteralRaw, VarRaw}
+import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
 
@@ -11,16 +12,17 @@ import cats.data.State
 import cats.data.Chain
 import cats.syntax.monoid.*
 import cats.syntax.option.*
+import cats.syntax.applicative.*
 import scribe.Logging
+import cats.instances.stream
 
-object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
+object StreamGateInliner extends Logging {
 
   /**
-   * To wait for the element of a stream by the given index, the following model is generated:
-   * (seq
+   * To wait for size elements of a stream,
+   * the following model is generated:
    * (seq
    *  (seq
-   *   (call <peer> ("math" "add") [0 1] stream_incr)
    *   (fold $stream s
    *    (seq
    *     (seq
@@ -28,7 +30,7 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
    *      (canon <peer> $stream_test  #stream_iter_canon)
    *     )
    *     (xor
-   *      (match #stream_iter_canon.length stream_incr
+   *      (match #stream_iter_canon.length size
    *       (null)
    *      )
    *      (next s)
@@ -36,17 +38,15 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
    *    )
    *    (never)
    *   )
+   *   (canon <peer> $stream_test  #stream_result_canon)
    *  )
-   *  (canon <peer> $stream_test  #stream_result_canon)
-   * )
-   * (ap #stream_result_canon stream_gate)
+   *  (ap #stream_result_canon stream_gate)
    * )
    */
   def joinStreamOnIndexModel(
     streamName: String,
     streamType: StreamType,
-    idxModel: ValueModel,
-    idxIncrName: String,
+    sizeModel: ValueModel,
     testName: String,
     iterName: String,
     canonName: String,
@@ -55,16 +55,10 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
   ): OpModel.Tree = {
     val varSTest = VarModel(testName, streamType)
     val iter = VarModel(iterName, streamType.element)
-
     val iterCanon = VarModel(iterCanonName, CanonStreamType(streamType.element))
-
-    val resultCanon =
-      VarModel(canonName, CanonStreamType(streamType.element))
-
-    val incrVar = VarModel(idxIncrName, ScalarType.u32)
+    val resultCanon = VarModel(canonName, CanonStreamType(streamType.element))
 
     RestrictionModel(varSTest.name, streamType).wrap(
-      increment(idxModel, incrVar),
       ForModel(iter.name, VarModel(streamName, streamType), ForModel.Mode.Never.some).wrap(
         PushToStreamModel(
           iter,
@@ -77,8 +71,10 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
         XorModel.wrap(
           MatchMismatchModel(
             iterCanon
-              .copy(properties = Chain.one(FunctorModel("length", ScalarType.`u32`))),
-            incrVar,
+              .withProperty(
+                FunctorModel("length", ScalarType.`u32`)
+              ),
+            sizeModel,
             true
           ).leaf,
           NextModel(iter.name).leaf
@@ -95,25 +91,23 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
     )
   }
 
-  override def apply[S: Mangler: Exports: Arrows](
-    afr: ApplyGateRaw,
-    propertyAllowed: Boolean
-  ): State[S, (ValueModel, Inline)] =
+  def apply[S: Mangler: Exports: Arrows](
+    streamName: String,
+    streamType: StreamType,
+    sizeModel: ValueModel
+  ): State[S, (VarModel, Inline)] =
     for {
-      uniqueCanonName <- Mangler[S].findAndForbidName(afr.name + "_result_canon")
-      uniqueResultName <- Mangler[S].findAndForbidName(afr.name + "_gate")
-      uniqueTestName <- Mangler[S].findAndForbidName(afr.name + "_test")
-      uniqueIdxIncr <- Mangler[S].findAndForbidName(afr.name + "_incr")
-      uniqueIterCanon <- Mangler[S].findAndForbidName(afr.name + "_iter_canon")
-      uniqueIter <- Mangler[S].findAndForbidName(afr.name + "_fold_var")
-      idxFolded <- unfold(afr.idx)
-      (idxModel, idxInline) = idxFolded
+      uniqueCanonName <- Mangler[S].findAndForbidName(streamName + "_result_canon")
+      uniqueResultName <- Mangler[S].findAndForbidName(streamName + "_gate")
+      uniqueTestName <- Mangler[S].findAndForbidName(streamName + "_test")
+      uniqueIdxIncr <- Mangler[S].findAndForbidName(streamName + "_incr")
+      uniqueIterCanon <- Mangler[S].findAndForbidName(streamName + "_iter_canon")
+      uniqueIter <- Mangler[S].findAndForbidName(streamName + "_fold_var")
     } yield {
       val gate = joinStreamOnIndexModel(
-        streamName = afr.name,
-        streamType = afr.streamType,
-        idxModel = idxModel,
-        idxIncrName = uniqueIdxIncr,
+        streamName = streamName,
+        streamType = streamType,
+        sizeModel = sizeModel,
         testName = uniqueTestName,
         iterName = uniqueIter,
         canonName = uniqueCanonName,
@@ -121,24 +115,12 @@ object ApplyGateRawInliner extends RawInliner[ApplyGateRaw] with Logging {
         resultName = uniqueResultName
       )
 
-      val tree = SeqModel.wrap(idxInline.predo.toList :+ gate)
-
-      val treeInline = Inline(predo = Chain.one(tree))
-
-      (
-        VarModel(uniqueResultName, ArrayType(afr.streamType.element)),
-        treeInline
+      val inline = Inline(predo = Chain.one(gate))
+      val value = VarModel(
+        uniqueResultName,
+        ArrayType(streamType.element)
       )
 
+      (value, inline)
     }
-
-  private def increment(v: ValueModel, result: VarModel) =
-    CallServiceModel(
-      LiteralModel("\"math\"", ScalarType.string),
-      "add",
-      CallModel(
-        v :: LiteralModel.fromRaw(LiteralRaw.number(1)) :: Nil,
-        CallModel.Export(result.name, result.`type`) :: Nil
-      )
-    ).leaf
 }

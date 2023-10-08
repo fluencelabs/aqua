@@ -1,14 +1,6 @@
 package aqua.compiler
 
-import aqua.model.{
-  CallModel,
-  ForModel,
-  FunctorModel,
-  IntoIndexModel,
-  LiteralModel,
-  ValueModel,
-  VarModel
-}
+import aqua.model.{CallModel, ForModel, FunctorModel, LiteralModel, ValueModel, VarModel}
 import aqua.model.transform.ModelBuilder
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
@@ -115,8 +107,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
 
   private val init = LiteralModel.fromRaw(ValueRaw.InitPeerId)
 
-  private def join(vm: VarModel, idx: ValueModel) =
-    ResBuilder.join(vm, idx, init)
+  private def join(vm: VarModel, size: ValueModel) =
+    ResBuilder.join(vm, size, init)
 
   "aqua compiler" should "create right topology" in {
 
@@ -156,6 +148,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
     val canonResult = VarModel("-" + results.name + "-fix-0", CanonStreamType(resultsType.element))
     val flatResult = VarModel("-results-flat-0", ArrayType(ScalarType.string))
     val initPeer = LiteralModel.fromRaw(ValueRaw.InitPeerId)
+    val sizeVar = VarModel("results_size", LiteralType.unsigned)
     val retVar = VarModel("ret", ScalarType.string)
 
     val expected =
@@ -195,7 +188,13 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers {
                   )
                 )
               ),
-              join(results, LiteralModel.fromRaw(LiteralRaw.number(2))),
+              ResBuilder.add(
+                LiteralModel.number(2),
+                LiteralModel.number(1),
+                sizeVar,
+                initPeer
+              ),
+              join(results, sizeVar),
               CanonRes(results, init, CallModel.Export(canonResult.name, canonResult.`type`)).leaf,
               ApRes(
                 canonResult,

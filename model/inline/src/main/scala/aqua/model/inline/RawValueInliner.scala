@@ -6,12 +6,12 @@ import aqua.model.*
 import aqua.model.inline.raw.{
   ApplyBinaryOpRawInliner,
   ApplyFunctorRawInliner,
-  ApplyGateRawInliner,
   ApplyPropertiesRawInliner,
   ApplyUnaryOpRawInliner,
   CallArrowRawInliner,
   CollectionRawInliner,
-  MakeAbilityRawInliner
+  MakeAbilityRawInliner,
+  StreamGateInliner
 }
 import aqua.raw.ops.*
 import aqua.raw.value.*
@@ -47,9 +47,6 @@ object RawValueInliner extends Logging {
 
       case alr: ApplyPropertyRaw =>
         ApplyPropertiesRawInliner(alr, propertiesAllowed)
-
-      case agr: ApplyGateRaw =>
-        ApplyGateRawInliner(agr, propertiesAllowed)
 
       case cr: CollectionRaw =>
         CollectionRawInliner(cr, propertiesAllowed)
