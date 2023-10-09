@@ -1,33 +1,47 @@
 package aqua.model.inline
 
-import aqua.model.inline.raw.ApplyPropertiesRawInliner
-import aqua.model.{
-  EmptyModel,
-  FlattenModel,
-  FunctorModel,
-  IntoFieldModel,
-  IntoIndexModel,
-  ParModel,
-  SeqModel,
-  ValueModel,
-  VarModel
-}
+import aqua.model.inline.raw.{ApplyPropertiesRawInliner, StreamGateInliner}
+import aqua.model.*
 import aqua.model.inline.state.InliningState
 import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
 import aqua.types.*
+import aqua.raw.value.*
+
+import cats.Eval
 import cats.data.NonEmptyMap
 import cats.data.Chain
 import cats.syntax.show.*
+import cats.syntax.foldable.*
+import cats.free.Cofree
+import scala.collection.immutable.SortedMap
+import scala.math
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.Inside
 
-import scala.collection.immutable.SortedMap
-import aqua.raw.value.ApplyBinaryOpRaw
-import aqua.raw.value.CallArrowRaw
-
-class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
+class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
   import RawValueInliner.valueToModel
+
+  def join(stream: VarModel, size: ValueModel) =
+    stream match {
+      case VarModel(
+            streamName,
+            streamType: StreamType,
+            Chain.`nil`
+          ) =>
+        StreamGateInliner.joinStreamOnIndexModel(
+          streamName = streamName,
+          streamType = streamType,
+          sizeModel = size,
+          testName = streamName + "_test",
+          iterName = streamName + "_fold_var",
+          canonName = streamName + "_result_canon",
+          iterCanonName = streamName + "_iter_canon",
+          resultName = streamName + "_gate"
+        )
+      case _ => ???
+    }
 
   private def numVarWithLength(name: String) =
     VarRaw(name, ArrayType(ScalarType.u32)).withProperty(
@@ -125,6 +139,51 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
       ),
       IntoIndexRaw(ysVarRaw(1), ScalarType.string)
     )
+
+  def int(i: Int): LiteralRaw = LiteralRaw.number(i)
+
+  extension (l: ValueRaw) {
+
+    def cmp(op: ApplyBinaryOpRaw.Op.Cmp)(r: ValueRaw): ApplyBinaryOpRaw =
+      ApplyBinaryOpRaw(op, l, r, ScalarType.bool)
+
+    def math(op: ApplyBinaryOpRaw.Op.Math)(r: ValueRaw): ApplyBinaryOpRaw =
+      ApplyBinaryOpRaw(op, l, r, ScalarType.i64) // result type is not important here
+
+    def `<`(r: ValueRaw): ApplyBinaryOpRaw =
+      cmp(ApplyBinaryOpRaw.Op.Lt)(r)
+
+    def `<=`(r: ValueRaw): ApplyBinaryOpRaw =
+      cmp(ApplyBinaryOpRaw.Op.Lte)(r)
+
+    def `>`(r: ValueRaw): ApplyBinaryOpRaw =
+      cmp(ApplyBinaryOpRaw.Op.Gt)(r)
+
+    def `>=`(r: ValueRaw): ApplyBinaryOpRaw =
+      cmp(ApplyBinaryOpRaw.Op.Gte)(r)
+
+    def `+`(r: ValueRaw): ApplyBinaryOpRaw =
+      math(ApplyBinaryOpRaw.Op.Add)(r)
+
+    def `-`(r: ValueRaw): ApplyBinaryOpRaw =
+      math(ApplyBinaryOpRaw.Op.Sub)(r)
+
+    def `*`(r: ValueRaw): ApplyBinaryOpRaw =
+      math(ApplyBinaryOpRaw.Op.Mul)(r)
+
+    def `/`(r: ValueRaw): ApplyBinaryOpRaw =
+      math(ApplyBinaryOpRaw.Op.Div)(r)
+
+    def `%`(r: ValueRaw): ApplyBinaryOpRaw =
+      math(ApplyBinaryOpRaw.Op.Rem)(r)
+
+    def `**`(r: ValueRaw): ApplyBinaryOpRaw =
+      math(ApplyBinaryOpRaw.Op.Pow)(r)
+
+  }
+
+  private def ivar(name: String, t: Option[Type] = None): VarRaw =
+    VarRaw(name, t.getOrElse(ScalarType.i32))
 
   "raw value inliner" should "desugarize a single non-recursive raw value" in {
     // x[y]
@@ -305,24 +364,53 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "desugarize stream with gate" in {
-    val streamWithProps =
-      VarRaw("x", StreamType(ScalarType.string)).withProperty(
-        IntoIndexRaw(ysVarRaw(1), ScalarType.string)
-      )
+    val stream = VarRaw("x", StreamType(ScalarType.string))
+    val streamModel = VarModel.fromVarRaw(stream)
+    val idxRaw = ysVarRaw(1)
+    val streamWithProps = stream.withProperty(
+      IntoIndexRaw(idxRaw, ScalarType.string)
+    )
 
-    val (resVal, resTree) = valueToModel[InliningState](streamWithProps)
-      .runA(InliningState(noNames = Set("x", "ys")))
-      .value
+    val initState = InliningState(noNames = Set("x", "ys"))
+
+    // Here retrieve how size is inlined
+    val (afterSizeState, (sizeModel, sizeTree)) =
+      valueToModel[InliningState](idxRaw.increment).run(initState).value
+
+    val (resVal, resTree) =
+      valueToModel[InliningState](streamWithProps).runA(initState).value
+
+    val idxModel = VarModel("x_idx", ScalarType.i8)
+
+    val decrement = CallServiceModel(
+      "math",
+      "sub",
+      List(
+        sizeModel,
+        LiteralModel.number(1)
+      ),
+      idxModel
+    ).leaf
+
+    val expected = SeqModel.wrap(
+      sizeTree.toList :+
+        join(streamModel, sizeModel) :+
+        decrement
+    )
 
     resVal should be(
       VarModel(
         "x_gate",
         ArrayType(ScalarType.string),
         Chain(
-          IntoIndexModel("ys_flat", ScalarType.string)
+          IntoIndexModel(idxModel.name, ScalarType.string)
         )
       )
     )
+
+    inside(resTree) { case Some(tree) =>
+      tree.equalsOrShowDiff(expected) should be(true)
+    }
   }
 
   it should "desugarize stream with length" in {
@@ -387,5 +475,166 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers {
         ).leaf
       )
     ) should be(true)
+  }
+
+  it should "optimize constants comparison" in {
+
+    for {
+      l <- -100 to 100
+      r <- -100 to 100
+    } {
+      val lt = valueToModel[InliningState](
+        int(l) `<` int(r)
+      ).runA(InliningState()).value
+
+      lt shouldBe (
+        LiteralModel.bool(l < r) -> None
+      )
+
+      val lte = valueToModel[InliningState](
+        int(l) `<=` int(r)
+      ).runA(InliningState()).value
+
+      lte shouldBe (
+        LiteralModel.bool(l <= r) -> None
+      )
+
+      val gt = valueToModel[InliningState](
+        int(l) `>` int(r)
+      ).runA(InliningState()).value
+
+      gt shouldBe (
+        LiteralModel.bool(l > r) -> None
+      )
+
+      val gte = valueToModel[InliningState](
+        int(l) `>=` int(r)
+      ).runA(InliningState()).value
+
+      gte shouldBe (
+        LiteralModel.bool(l >= r) -> None
+      )
+    }
+  }
+
+  it should "optimize constants math" in {
+    for {
+      l <- -100 to 100
+      r <- -100 to 100
+    } {
+      val add = valueToModel[InliningState](
+        int(l) `+` int(r)
+      ).runA(InliningState()).value
+
+      add shouldBe (
+        LiteralModel.number(l + r) -> None
+      )
+
+      val sub = valueToModel[InliningState](
+        int(l) `-` int(r)
+      ).runA(InliningState()).value
+
+      sub shouldBe (
+        LiteralModel.number(l - r) -> None
+      )
+
+      val mul = valueToModel[InliningState](
+        int(l) `*` int(r)
+      ).runA(InliningState()).value
+
+      mul shouldBe (
+        LiteralModel.number(l * r) -> None
+      )
+
+      val div = valueToModel[InliningState](
+        int(l) `/` int(r)
+      ).runA(InliningState()).value
+
+      val rem = valueToModel[InliningState](
+        int(l) `%` int(r)
+      ).runA(InliningState()).value
+
+      if (r != 0)
+        div shouldBe (
+          LiteralModel.number(l / r) -> None
+        )
+        rem shouldBe (
+          LiteralModel.number(l % r) -> None
+        )
+      else {
+        val (dmodel, dtree) = div
+        dmodel shouldBe a[VarModel]
+        dtree.nonEmpty shouldBe (true)
+
+        val (rmodel, rtree) = rem
+        rmodel shouldBe a[VarModel]
+        rtree.nonEmpty shouldBe (true)
+      }
+
+      if (r >= 0 && r <= 5) {
+        val pow = valueToModel[InliningState](
+          int(l) `**` int(r)
+        ).runA(InliningState()).value
+
+        pow shouldBe (
+          LiteralModel.number(scala.math.pow(l, r).toLong) -> None
+        )
+      }
+    }
+  }
+
+  it should "optimize addition in expressions" in {
+    def test(numVars: Int, numLiterals: Int) = {
+      val vars = (1 to numVars).map(i => ivar(s"v$i")).toList
+      val literals = (1 to numLiterals).map(i => LiteralRaw.number(i)).toList
+      val values = vars ++ literals
+
+      /**
+       * Enumerate all possible binary trees of vals
+       */
+      def genAllExprs(vals: List[ValueRaw]): List[ValueRaw] =
+        if (vals.length <= 1) vals
+        else
+          for {
+            split <- (1 until vals.length).toList
+            (left, right) = vals.splitAt(split)
+            l <- genAllExprs(left)
+            r <- genAllExprs(right)
+          } yield l `+` r
+
+      for {
+        perm <- values.permutations.toList
+        expr <- genAllExprs(perm)
+      } {
+        val state = InliningState(
+          resolvedExports = vars.map(v => v.name -> VarModel.fromVarRaw(v)).toMap
+        )
+        val (model, inline) = valueToModel[InliningState](expr).runA(state).value
+
+        model shouldBe a[VarModel]
+        inside(inline) { case Some(tree) =>
+          val numberOfAdditions = Cofree
+            .cata(tree) { (model, count: Chain[Int]) =>
+              Eval.later {
+                count.combineAll + (model match {
+                  case CallServiceModel(_, "add", _) => 1
+                  case _ => 0
+                })
+              }
+            }
+            .value
+
+          numberOfAdditions shouldEqual numVars
+        }
+      }
+    }
+
+    /**
+     * Number of expressions grows exponentially
+     * So we test only small cases
+     */
+    test(2, 2)
+    test(3, 2)
+    test(2, 3)
   }
 }

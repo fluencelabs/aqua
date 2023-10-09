@@ -4,7 +4,6 @@ import aqua.errors.Errors.internalError
 import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.types.{ArrayType, CanonStreamType, ScalarType, StreamType}
 
@@ -25,16 +24,14 @@ object StreamGateInliner extends Logging {
    *  (seq
    *   (fold $stream s
    *    (seq
-   *     (seq
-   *      (ap s $stream_test)
-   *      (canon <peer> $stream_test  #stream_iter_canon)
+   *     (ap s $stream_test)
+   *     (canon <peer> $stream_test  #stream_iter_canon)
+   *    )
+   *    (xor
+   *     (match #stream_iter_canon.length size
+   *      (null)
    *     )
-   *     (xor
-   *      (match #stream_iter_canon.length size
-   *       (null)
-   *      )
-   *      (next s)
-   *     )
+   *     (next s)
    *    )
    *    (never)
    *   )
@@ -100,7 +97,6 @@ object StreamGateInliner extends Logging {
       uniqueCanonName <- Mangler[S].findAndForbidName(streamName + "_result_canon")
       uniqueResultName <- Mangler[S].findAndForbidName(streamName + "_gate")
       uniqueTestName <- Mangler[S].findAndForbidName(streamName + "_test")
-      uniqueIdxIncr <- Mangler[S].findAndForbidName(streamName + "_incr")
       uniqueIterCanon <- Mangler[S].findAndForbidName(streamName + "_iter_canon")
       uniqueIter <- Mangler[S].findAndForbidName(streamName + "_fold_var")
     } yield {

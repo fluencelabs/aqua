@@ -257,51 +257,59 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     idx: ValueRaw
   ): State[S, (VarModel, Inline)] = for {
     /**
-     * Inline idx
+     * Inline size, which is `idx + 1`
+     * Increment on ValueRaw level to
+     * apply possible optimizations
      */
-    idxInlined <- unfold(idx)
+    sizeInlined <- unfold(idx.increment)
+    (sizeVM, sizeInline) = sizeInlined
+    /**
+     * Inline idx which is `size - 1`
+     * TODO: Do not generate it if
+     * it is not needed, e.g. in `join`
+     */
+    idxInlined <- sizeVM match {
+      /**
+       * Micro optimization: if idx is a literal
+       * do not generate inline.
+       */
+      case LiteralModel.Integer(i, t) =>
+        (LiteralModel((i - 1).toString, t), Inline.empty).pure[State[S, *]]
+      case _ =>
+        Mangler[S].findAndForbidName(s"${streamName}_idx").map { idxName =>
+          val idxVar = VarModel(idxName, sizeVM.`type`)
+          val idxInline = Inline.tree(
+            CallServiceModel(
+              "math",
+              funcName = "sub",
+              args = List(sizeVM, LiteralModel.number(1)),
+              result = idxVar
+            ).leaf
+          )
+
+          (idxVar, idxInline)
+        }
+    }
     (idxVM, idxInline) = idxInlined
     /**
-     * Inline size which is `idx + 1`
-     * TODO: Refactor to apply optimizations
+     * Inline join of `size` elements of stream
      */
-    sizeName <- Mangler[S].findAndForbidName(s"${streamName}_size")
-    sizeVar = VarModel(sizeName, idxVM.`type`)
-    sizeInline = CallServiceModel(
-      "math",
-      funcName = "add",
-      args = List(idxVM, LiteralModel.number(1)),
-      result = sizeVar
-    ).leaf
-    gateInlined <- StreamGateInliner(streamName, streamType, sizeVar)
+    gateInlined <- StreamGateInliner(streamName, streamType, sizeVM)
     (gateVM, gateInline) = gateInlined
-    /**
-     * Remove properties from idx
-     * as we need to use it in index
-     * TODO: Do not generate it
-     *       if it is not needed,
-     *       e.g. in `join`
-     */
-    idxFlattened <- idxVM match {
-      case vr: VarModel => removeProperties(vr)
-      case _ => (idxVM, Inline.empty).pure[State[S, *]]
-    }
-    (idxFlat, idxFlatInline) = idxFlattened
     /**
      * Construct stream[idx]
      */
     gate = gateVM.withProperty(
       IntoIndexModel
-        .fromValueModel(idxFlat, streamType.element)
+        .fromValueModel(idxVM, streamType.element)
         .getOrElse(
-          internalError(s"Unexpected: could not convert ($idxFlat) to IntoIndexModel")
+          internalError(s"Unexpected: could not convert ($idxVM) to IntoIndexModel")
         )
     )
   } yield gate -> Inline(
-    idxInline.predo
-      .append(sizeInline) ++
+    sizeInline.predo ++
       gateInline.predo ++
-      idxFlatInline.predo,
+      idxInline.predo,
     mergeMode = SeqMode
   )
 

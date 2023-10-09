@@ -7,48 +7,28 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
 import aqua.raw.ops.Call
 import aqua.raw.value.CallArrowRaw
+
 import cats.data.{Chain, State}
 import cats.syntax.traverse.*
 import scribe.Logging
 
 object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
 
-  private[inline] def unfoldArrow[S: Mangler: Exports: Arrows](
+  private[inline] def unfold[S: Mangler: Exports: Arrows](
     value: CallArrowRaw,
     exportTo: List[Call.Export]
   ): State[S, (List[ValueModel], Inline)] = Exports[S].exports.flatMap { exports =>
     logger.trace(s"${exportTo.mkString(" ")} $value")
 
     val call = Call(value.arguments, exportTo)
-    value.serviceId match {
-      case Some(serviceId) =>
-        logger.trace(Console.BLUE + s"call service id $serviceId" + Console.RESET)
-        for {
-          cd <- callToModel(call, true)
-          (callModel, callInline) = cd
-          sd <- valueToModel(serviceId)
-          (serviceIdValue, serviceIdInline) = sd
-          values = callModel.exportTo.map(e => e.name -> e.asVar.resolveWith(exports)).toMap
-          inline = Inline(
-            Chain(
-              SeqModel.wrap(
-                serviceIdInline.toList ++ callInline.toList :+
-                  CallServiceModel(serviceIdValue, value.name, callModel).leaf
-              )
-            )
-          )
-          _ <- Exports[S].resolved(values)
-          _ <- Mangler[S].forbid(values.keySet)
-        } yield values.values.toList -> inline
-      case None =>
-        /**
-         * Here the back hop happens from [[TagInliner]] to [[ArrowInliner.callArrow]]
-         */
-        val funcName = value.ability.fold(value.name)(_ + "." + value.name)
-        logger.trace(s"            $funcName")
 
-        resolveArrow(funcName, call)
-    }
+    /**
+     * Here the back hop happens from [[TagInliner]] to [[ArrowInliner.callArrow]]
+     */
+    val funcName = value.ability.fold(value.name)(_ + "." + value.name)
+    logger.trace(s"            $funcName")
+
+    resolveArrow(funcName, call)
   }
 
   private def resolveFuncArrow[S: Mangler: Exports: Arrows](
@@ -103,7 +83,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     Mangler[S]
       .findAndForbidName(raw.name)
       .flatMap(n =>
-        unfoldArrow(raw, Call.Export(n, raw.`type`) :: Nil).map {
+        unfold(raw, Call.Export(n, raw.`type`) :: Nil).map {
           case (Nil, inline) => (VarModel(n, raw.`type`), inline)
           case (h :: _, inline) => (h, inline)
         }

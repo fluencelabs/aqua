@@ -108,10 +108,10 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       .leaf
 
   def equ(left: ValueRaw, right: ValueRaw): ApplyBinaryOpRaw =
-    ApplyBinaryOpRaw(ApplyBinaryOpRaw.Op.Eq, left, right)
+    ApplyBinaryOpRaw(ApplyBinaryOpRaw.Op.Eq, left, right, ScalarType.bool)
 
   def neq(left: ValueRaw, right: ValueRaw): ApplyBinaryOpRaw =
-    ApplyBinaryOpRaw(ApplyBinaryOpRaw.Op.Neq, left, right)
+    ApplyBinaryOpRaw(ApplyBinaryOpRaw.Op.Neq, left, right, ScalarType.bool)
 
   def declareStreamPush(
     name: String,

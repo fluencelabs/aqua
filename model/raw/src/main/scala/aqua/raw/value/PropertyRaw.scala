@@ -6,6 +6,9 @@ import cats.data.NonEmptyMap
 sealed trait PropertyRaw {
   def `type`: Type
 
+  /**
+   * Apply function to values in this property
+   */
   def map(f: ValueRaw => ValueRaw): PropertyRaw
 
   def renameVars(vals: Map[String, String]): PropertyRaw = this
@@ -24,7 +27,8 @@ case class IntoArrowRaw(name: String, arrowType: Type, arguments: List[ValueRaw]
 
   override def `type`: Type = arrowType
 
-  override def map(f: ValueRaw => ValueRaw): PropertyRaw = this
+  override def map(f: ValueRaw => ValueRaw): PropertyRaw =
+    copy(arguments = arguments.map(f))
 
   override def varNames: Set[String] = arguments.flatMap(_.varNames).toSet
 
