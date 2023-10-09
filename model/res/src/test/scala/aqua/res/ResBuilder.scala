@@ -9,10 +9,7 @@ import cats.syntax.option.*
 
 object ResBuilder {
 
-  /**
-   * Model of waiting `onIdx` elements of `stream`
-   */
-  def join(stream: VarModel, onIdx: ValueModel, peer: ValueModel) = {
+  def join(stream: VarModel, sizeModel: ValueModel, peer: ValueModel) = {
     val testVM = VarModel(stream.name + "_test", stream.`type`)
     val testStreamType = stream.`type`.asInstanceOf[StreamType] // Unsafe
     val iter = VarModel(stream.name + "_fold_var", ScalarType.string)
@@ -27,7 +24,7 @@ object ResBuilder {
         XorRes.wrap(
           MatchMismatchRes(
             canon.copy(properties = Chain.one(FunctorModel("length", ScalarType.u32))),
-            onIdx,
+            sizeModel,
             true
           ).leaf,
           NextRes(iter.name).leaf
@@ -37,5 +34,21 @@ object ResBuilder {
       ApRes(canonRes, CallModel.Export(arrayRes.name, arrayRes.`type`)).leaf
     )
   }
+
+  def add(
+    a: ValueModel,
+    b: ValueModel,
+    res: VarModel,
+    peer: ValueModel
+  ): ResolvedOp.Tree =
+    CallServiceRes(
+      LiteralModel.quote("math"),
+      "add",
+      CallRes(
+        a :: b :: Nil,
+        Some(CallModel.Export(res.name, res.`type`))
+      ),
+      peer
+    ).leaf
 
 }

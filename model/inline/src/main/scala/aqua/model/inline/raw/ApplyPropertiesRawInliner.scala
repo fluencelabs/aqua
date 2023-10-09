@@ -18,6 +18,7 @@ import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
 import cats.syntax.monoid.*
 import cats.syntax.traverse.*
+import cats.syntax.option.*
 import scribe.Logging
 
 object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Logging {
@@ -45,17 +46,6 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         )
       )
       VarModel(resultName, properties.lastOption.map(_.`type`).getOrElse(cleanedType)) -> tree
-    }
-  }
-
-  private def removeProperties[S: Mangler](
-    varModel: VarModel
-  ): State[S, (VarModel, Inline)] = {
-    for {
-      nn <- Mangler[S].findAndForbidName(varModel.name + "_flat")
-    } yield {
-      val flatten = VarModel(nn, varModel.`type`)
-      flatten -> Inline.tree(FlattenModel(varModel, flatten.name).leaf)
     }
   }
 
@@ -143,9 +133,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
       case f @ FunctorRaw(_, _) =>
         for {
-          flattenVI <-
-            if (varModel.properties.nonEmpty) removeProperties(varModel)
-            else State.pure(varModel, Inline.empty)
+          flattenVI <- removeProperties(varModel)
           (flatten, inline) = flattenVI
           newVI <- ApplyFunctorRawInliner(flatten, f)
         } yield {
@@ -157,9 +145,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
       case ic @ IntoCopyRaw(_, _) =>
         for {
-          flattenVI <-
-            if (varModel.properties.nonEmpty) removeProperties(varModel)
-            else State.pure(varModel, Inline.empty)
+          flattenVI <- removeProperties(varModel)
           (flatten, inline) = flattenVI
           newVI <- ApplyIntoCopyRawInliner(flatten, ic)
         } yield {
@@ -182,15 +168,31 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
         unfold(vr, propertiesAllowed = false).flatMap {
           case (vm @ VarModel(_, _, _), inline) if vm.properties.nonEmpty =>
             removeProperties(vm).map { case (vf, inlf) =>
-              PropertyRawWithModel(iir, Option(IntoIndexModel(vf.name, t))) -> Inline(
+              PropertyRawWithModel(
+                iir,
+                IntoIndexModel
+                  .fromValueModel(vf, t)
+                  .getOrElse(
+                    internalError(s"Unexpected: could not convert ($vf) to IntoIndexModel")
+                  )
+                  .some
+              ) -> Inline(
                 inline.predo ++ inlf.predo,
                 mergeMode = SeqMode
               )
             }
-          case (VarModel(name, _, _), inline) =>
-            State.pure(PropertyRawWithModel(iir, Option(IntoIndexModel(name, t))) -> inline)
-          case (LiteralModel(literal, _), inline) =>
-            State.pure(PropertyRawWithModel(iir, Option(IntoIndexModel(literal, t))) -> inline)
+          case (vm, inline) =>
+            (
+              PropertyRawWithModel(
+                iir,
+                IntoIndexModel
+                  .fromValueModel(vm, t)
+                  .getOrElse(
+                    internalError(s"Unexpected: could not convert ($vm) to IntoIndexModel")
+                  )
+                  .some
+              ) -> inline
+            ).pure
         }
 
       case p => State.pure(PropertyRawWithModel(p, None) -> Inline.empty)
@@ -246,31 +248,88 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     }
   }
 
+  /**
+   * Unfold `stream[idx]`
+   */
+  private def unfoldStreamGate[S: Mangler: Exports: Arrows](
+    streamName: String,
+    streamType: StreamType,
+    idx: ValueRaw
+  ): State[S, (VarModel, Inline)] = for {
+    /**
+     * Inline idx
+     */
+    idxInlined <- unfold(idx)
+    (idxVM, idxInline) = idxInlined
+    /**
+     * Inline size which is `idx + 1`
+     * TODO: Refactor to apply optimizations
+     */
+    sizeName <- Mangler[S].findAndForbidName(s"${streamName}_size")
+    sizeVar = VarModel(sizeName, idxVM.`type`)
+    sizeInline = CallServiceModel(
+      "math",
+      funcName = "add",
+      args = List(idxVM, LiteralModel.number(1)),
+      result = sizeVar
+    ).leaf
+    gateInlined <- StreamGateInliner(streamName, streamType, sizeVar)
+    (gateVM, gateInline) = gateInlined
+    /**
+     * Remove properties from idx
+     * as we need to use it in index
+     * TODO: Do not generate it
+     *       if it is not needed,
+     *       e.g. in `join`
+     */
+    idxFlattened <- idxVM match {
+      case vr: VarModel => removeProperties(vr)
+      case _ => (idxVM, Inline.empty).pure[State[S, *]]
+    }
+    (idxFlat, idxFlatInline) = idxFlattened
+    /**
+     * Construct stream[idx]
+     */
+    gate = gateVM.withProperty(
+      IntoIndexModel
+        .fromValueModel(idxFlat, streamType.element)
+        .getOrElse(
+          internalError(s"Unexpected: could not convert ($idxFlat) to IntoIndexModel")
+        )
+    )
+  } yield gate -> Inline(
+    idxInline.predo
+      .append(sizeInline) ++
+      gateInline.predo ++
+      idxFlatInline.predo,
+    mergeMode = SeqMode
+  )
+
   private def unfoldRawWithProperties[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
     properties: Chain[PropertyRaw],
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
-    ((raw, properties.headOption) match {
-      case (vr @ VarRaw(_, st @ StreamType(_)), Some(IntoIndexRaw(idx, _))) =>
+    ((raw, properties.uncons) match {
+      /**
+       * To inline
+       */
+      case (
+            vr @ VarRaw(_, st @ StreamType(_)),
+            Some(IntoIndexRaw(idx, _), otherProperties)
+          ) =>
         unfold(vr).flatMap {
           case (VarModel(nameVM, _, _), inl) =>
-            val gateRaw = ApplyGateRaw(nameVM, st, idx)
-            unfold(gateRaw).flatMap {
-              case (gateResVal: VarModel, gateResInline) =>
-                unfoldProperties(gateResInline, gateResVal, properties, propertiesAllowed).map {
-                  case (v, i) =>
-                    v -> Inline(
-                      inl.predo ++ i.predo,
-                      mergeMode = SeqMode
-                    )
-                }
-              case (v, i) =>
-                // what if pass nil as stream argument?
-                internalError(
-                  s"Unfolded stream ($gateRaw) cannot be a literal"
-                )
-            }
+            for {
+              gateInlined <- unfoldStreamGate(nameVM, st, idx)
+              (gateVM, gateInline) = gateInlined
+              propsInlined <- unfoldProperties(
+                gateInline,
+                gateVM,
+                otherProperties,
+                propertiesAllowed
+              )
+            } yield propsInlined
           case l =>
             internalError(
               s"Unfolded stream ($vr) cannot be a literal"
@@ -298,6 +357,19 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     })
 
   }
+
+  /**
+   * Remove properties from the var and return a new var without them
+   */
+  private def removeProperties[S: Mangler](
+    varModel: VarModel
+  ): State[S, (VarModel, Inline)] =
+    if (varModel.properties.isEmpty) (varModel, Inline.empty).pure
+    else
+      for {
+        nn <- Mangler[S].findAndForbidName(varModel.name + "_flat")
+        flatten = VarModel(nn, varModel.`type`)
+      } yield flatten -> Inline.tree(FlattenModel(varModel, flatten.name).leaf)
 
   override def apply[S: Mangler: Exports: Arrows](
     apr: ApplyPropertyRaw,

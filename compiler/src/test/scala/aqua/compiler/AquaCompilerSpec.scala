@@ -1,14 +1,6 @@
 package aqua.compiler
 
-import aqua.model.{
-  CallModel,
-  ForModel,
-  FunctorModel,
-  IntoIndexModel,
-  LiteralModel,
-  ValueModel,
-  VarModel
-}
+import aqua.model.{CallModel, ForModel, FunctorModel, LiteralModel, ValueModel, VarModel}
 import aqua.model.transform.ModelBuilder
 import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
@@ -136,18 +128,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
   private val init = LiteralModel.fromRaw(ValueRaw.InitPeerId)
 
-  /**
-   * Res of waiting on stream
-   * WARNING:  If idx is a literal int, it is incremented by 1
-   *           otherwise it is used as is
-   */
-  private def join(vm: VarModel, idx: ValueModel) =
-    idx match {
-      case LiteralModel.Integer(i, t) =>
-        ResBuilder.join(vm, LiteralModel((i + 1).toString, t), init)
-      case _ =>
-        ResBuilder.join(vm, idx, init)
-    }
+  private def join(vm: VarModel, size: ValueModel) =
+    ResBuilder.join(vm, size, init)
 
   it should "create right topology" in {
     val src = Map(

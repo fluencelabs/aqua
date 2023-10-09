@@ -174,6 +174,15 @@ case class IntoIndexModel(idx: String, `type`: Type) extends PropertyModel {
   )
 }
 
+object IntoIndexModel {
+
+  def fromValueModel(vm: ValueModel, `type`: Type): Option[IntoIndexModel] = vm match {
+    case VarModel(name, _, Chain.nil) => IntoIndexModel(name, `type`).some
+    case LiteralModel(value, _) => IntoIndexModel(value, `type`).some
+    case _ => none
+  }
+}
+
 case class VarModel(name: String, baseType: Type, properties: Chain[PropertyModel] = Chain.empty)
     extends ValueModel with Logging {
 
@@ -190,14 +199,13 @@ case class VarModel(name: String, baseType: Type, properties: Chain[PropertyMode
   private def deriveFrom(vm: VarModel): VarModel =
     vm.copy(properties = vm.properties ++ properties)
 
+  def withProperty(p: PropertyModel): VarModel =
+    copy(properties = properties :+ p)
+
   def intoField(field: String): Option[VarModel] = `type` match {
     case StructType(_, fields) =>
       fields(field)
-        .map(fieldType =>
-          copy(
-            properties = properties :+ IntoFieldModel(field, fieldType)
-          )
-        )
+        .map(fieldType => withProperty(IntoFieldModel(field, fieldType)))
     case _ => none
   }
 

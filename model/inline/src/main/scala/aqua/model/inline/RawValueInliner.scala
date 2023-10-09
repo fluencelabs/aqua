@@ -42,9 +42,6 @@ object RawValueInliner extends Logging {
       case alr: ApplyPropertyRaw =>
         ApplyPropertiesRawInliner(alr, propertiesAllowed)
 
-      case agr: ApplyGateRaw =>
-        ApplyGateRawInliner(agr, propertiesAllowed)
-
       case cr: CollectionRaw =>
         CollectionRawInliner(cr, propertiesAllowed)
 

@@ -8,7 +8,7 @@ import aqua.res.{CallRes, CallServiceRes, MakeRes}
 import aqua.types.{ArrayType, LiteralType, ScalarType}
 import aqua.types.StreamType
 import aqua.model.IntoIndexModel
-import aqua.model.inline.raw.ApplyGateRawInliner
+import aqua.model.inline.raw.StreamGateInliner
 import aqua.model.OnModel
 import aqua.model.FailModel
 import aqua.res.ResolvedOp
@@ -142,20 +142,20 @@ object ModelBuilder {
 
   /**
    * @param stream stream [[VarModel]]
-   * @param idx id [[ValueModel]]
-   * @return [[OpModel.Tree]] of join of idx elements of stream
+   * @param size size [[ValueModel]]
+   * @return [[OpModel.Tree]] of join of size elements of stream
    */
-  def join(stream: VarModel, idx: ValueModel): OpModel.Tree =
+  def join(stream: VarModel, size: ValueModel): OpModel.Tree =
     stream match {
       case VarModel(
             streamName,
             streamType: StreamType,
             Chain.`nil`
           ) =>
-        ApplyGateRawInliner.joinStreamOnIndexModel(
+        StreamGateInliner.joinStreamOnIndexModel(
           streamName = streamName,
           streamType = streamType,
-          idxModel = idx,
+          sizeModel = size,
           testName = streamName + "_test",
           iterName = streamName + "_fold_var",
           canonName = streamName + "_result_canon",
@@ -164,4 +164,12 @@ object ModelBuilder {
         )
       case _ => ???
     }
+
+  def add(a: ValueModel, b: ValueModel, res: VarModel): OpModel.Tree =
+    CallServiceModel(
+      "math",
+      "add",
+      args = List(a, b),
+      result = res
+    ).leaf
 }
