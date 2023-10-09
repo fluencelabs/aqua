@@ -154,6 +154,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       val peer = VarModel("peer-0", ScalarType.string)
       val resultsType = StreamType(ScalarType.string)
       val results = VarModel("results", resultsType)
+      val sizeVar = VarModel("results_size", LiteralType.unsigned) // TODO: Make it u32
       val canonResult =
         VarModel("-" + results.name + "-fix-0", CanonStreamType(resultsType.element))
       val flatResult = VarModel("-results-flat-0", ArrayType(ScalarType.string))
@@ -197,7 +198,13 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
                     )
                   )
                 ),
-                join(results, LiteralModel.number(2)),
+                ResBuilder.add(
+                  LiteralModel.number(2),
+                  LiteralModel.number(1),
+                  sizeVar,
+                  initPeer
+                ),
+                join(results, sizeVar),
                 CanonRes(
                   results,
                   init,
