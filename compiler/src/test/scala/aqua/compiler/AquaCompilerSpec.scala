@@ -26,6 +26,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.Inside
 import aqua.model.AquaContext
 import aqua.model.FlattenModel
+import aqua.model.CallServiceModel
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
   import ModelBuilder.*
@@ -154,7 +155,6 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       val peer = VarModel("peer-0", ScalarType.string)
       val resultsType = StreamType(ScalarType.string)
       val results = VarModel("results", resultsType)
-      val sizeVar = VarModel("results_size", LiteralType.unsigned) // TODO: Make it u32
       val canonResult =
         VarModel("-" + results.name + "-fix-0", CanonStreamType(resultsType.element))
       val flatResult = VarModel("-results-flat-0", ArrayType(ScalarType.string))
@@ -198,13 +198,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
                     )
                   )
                 ),
-                ResBuilder.add(
-                  LiteralModel.number(2),
-                  LiteralModel.number(1),
-                  sizeVar,
-                  initPeer
-                ),
-                join(results, sizeVar),
+                join(results, LiteralModel.number(3)), // Compiler optimized addition
                 CanonRes(
                   results,
                   init,
@@ -330,27 +324,44 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
     )
 
     val transformCfg = TransformConfig()
+    val streamName = "stream"
+    val streamType = StreamType(ScalarType.string)
+    val argName = "-i-arg-"
+    val argType = ScalarType.i32
+    val arg = VarModel(argName, argType)
+
+    /**
+     * NOTE: Compiler generates this unused decrement bc
+     * it doesn't know that we are inlining just join
+     * and do not need to access the element.
+     */
+    val decrement = CallServiceRes(
+      LiteralModel.quote("math"),
+      "sub",
+      CallRes(
+        List(arg, LiteralModel.number(1)),
+        Some(CallModel.Export("stream_idx", argType))
+      ),
+      LiteralModel.fromRaw(ValueRaw.InitPeerId)
+    ).leaf
+
+    val expected = XorRes.wrap(
+      SeqRes.wrap(
+        getDataSrv("-relay-", "-relay-", ScalarType.string),
+        getDataSrv("i", argName, argType),
+        RestrictionRes(streamName, streamType).wrap(
+          SeqRes.wrap(
+            ApRes(LiteralModel.quote("a"), CallModel.Export(streamName, streamType)).leaf,
+            ApRes(LiteralModel.quote("b"), CallModel.Export(streamName, streamType)).leaf,
+            join(VarModel(streamName, streamType), arg),
+            decrement
+          )
+        )
+      ),
+      errorCall(transformCfg, 0, initPeer)
+    )
 
     insideRes(src, transformCfg = transformCfg)("main") { case main :: _ =>
-      val streamName = "stream"
-      val streamType = StreamType(ScalarType.string)
-      val argName = "-i-arg-"
-      val argType = ScalarType.i32
-      val expected = XorRes.wrap(
-        SeqRes.wrap(
-          getDataSrv("-relay-", "-relay-", ScalarType.string),
-          getDataSrv("i", argName, argType),
-          RestrictionRes(streamName, streamType).wrap(
-            SeqRes.wrap(
-              ApRes(LiteralModel.quote("a"), CallModel.Export(streamName, streamType)).leaf,
-              ApRes(LiteralModel.quote("b"), CallModel.Export(streamName, streamType)).leaf,
-              join(VarModel(streamName, streamType), VarModel(argName, argType))
-            )
-          )
-        ),
-        errorCall(transformCfg, 0, initPeer)
-      )
-
       main.body.equalsOrShowDiff(expected) should be(true)
     }
   }

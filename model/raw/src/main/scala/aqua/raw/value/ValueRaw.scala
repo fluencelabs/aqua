@@ -69,6 +69,12 @@ object ValueRaw {
 
   type ApplyRaw = ApplyPropertyRaw | CallArrowRaw | CollectionRaw | ApplyBinaryOpRaw |
     ApplyUnaryOpRaw
+
+  extension (v: ValueRaw) {
+    def add(a: ValueRaw): ValueRaw = ApplyBinaryOpRaw.Add(v, a)
+
+    def increment: ValueRaw = ApplyBinaryOpRaw.Add(v, LiteralRaw.number(1))
+  }
 }
 
 case class ApplyPropertyRaw(value: ValueRaw, property: PropertyRaw) extends ValueRaw {

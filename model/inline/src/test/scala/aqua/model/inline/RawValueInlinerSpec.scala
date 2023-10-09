@@ -1,6 +1,6 @@
 package aqua.model.inline
 
-import aqua.model.inline.raw.ApplyPropertiesRawInliner
+import aqua.model.inline.raw.{ApplyPropertiesRawInliner, StreamGateInliner}
 import aqua.model.*
 import aqua.model.inline.state.InliningState
 import aqua.raw.value.{ApplyPropertyRaw, FunctorRaw, IntoIndexRaw, LiteralRaw, VarRaw}
@@ -22,6 +22,26 @@ import org.scalatest.Inside
 class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
   import RawValueInliner.valueToModel
+
+  def join(stream: VarModel, size: ValueModel) =
+    stream match {
+      case VarModel(
+            streamName,
+            streamType: StreamType,
+            Chain.`nil`
+          ) =>
+        StreamGateInliner.joinStreamOnIndexModel(
+          streamName = streamName,
+          streamType = streamType,
+          sizeModel = size,
+          testName = streamName + "_test",
+          iterName = streamName + "_fold_var",
+          canonName = streamName + "_result_canon",
+          iterCanonName = streamName + "_iter_canon",
+          resultName = streamName + "_gate"
+        )
+      case _ => ???
+    }
 
   private def numVarWithLength(name: String) =
     VarRaw(name, ArrayType(ScalarType.u32)).withProperty(
@@ -344,24 +364,53 @@ class RawValueInlinerSpec extends AnyFlatSpec with Matchers with Inside {
   }
 
   it should "desugarize stream with gate" in {
-    val streamWithProps =
-      VarRaw("x", StreamType(ScalarType.string)).withProperty(
-        IntoIndexRaw(ysVarRaw(1), ScalarType.string)
-      )
+    val stream = VarRaw("x", StreamType(ScalarType.string))
+    val streamModel = VarModel.fromVarRaw(stream)
+    val idxRaw = ysVarRaw(1)
+    val streamWithProps = stream.withProperty(
+      IntoIndexRaw(idxRaw, ScalarType.string)
+    )
 
-    val (resVal, resTree) = valueToModel[InliningState](streamWithProps)
-      .runA(InliningState(noNames = Set("x", "ys")))
-      .value
+    val initState = InliningState(noNames = Set("x", "ys"))
+
+    // Here retrieve how size is inlined
+    val (afterSizeState, (sizeModel, sizeTree)) =
+      valueToModel[InliningState](idxRaw.increment).run(initState).value
+
+    val (resVal, resTree) =
+      valueToModel[InliningState](streamWithProps).runA(initState).value
+
+    val idxModel = VarModel("x_idx", ScalarType.i8)
+
+    val decrement = CallServiceModel(
+      "math",
+      "sub",
+      List(
+        sizeModel,
+        LiteralModel.number(1)
+      ),
+      idxModel
+    ).leaf
+
+    val expected = SeqModel.wrap(
+      sizeTree.toList :+
+        join(streamModel, sizeModel) :+
+        decrement
+    )
 
     resVal should be(
       VarModel(
         "x_gate",
         ArrayType(ScalarType.string),
         Chain(
-          IntoIndexModel("ys_flat", ScalarType.string)
+          IntoIndexModel(idxModel.name, ScalarType.string)
         )
       )
     )
+
+    inside(resTree) { case Some(tree) =>
+      tree.equalsOrShowDiff(expected) should be(true)
+    }
   }
 
   it should "desugarize stream with length" in {
