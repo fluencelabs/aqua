@@ -57,10 +57,13 @@ final case class Tracing(
                   )
                 ),
                 SeqModel.wrap(
-                  DetachModel.wrap(
-                    initCallable.onInitPeer.wrap(
-                      traceCall(Event.ErrorExit)
-                    )
+                  /**
+                   * NOTE: Here we don't wrap trace call
+                   * with detach because Aqua VM ignores
+                   * it if it is detached.
+                   */
+                  initCallable.onInitPeer.wrap(
+                    traceCall(Event.ErrorExit)
                   ),
                   FailModel(ValueModel.error).leaf
                 )
