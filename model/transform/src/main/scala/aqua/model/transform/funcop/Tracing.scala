@@ -38,7 +38,7 @@ final case class Tracing(
                      <call-arrow-code>
                      detach: call tracing exit
                    seq:
-                     detach: call tracing error exit
+                     call tracing error exit
                      rethrow error
              */
             SeqModel.wrap(
