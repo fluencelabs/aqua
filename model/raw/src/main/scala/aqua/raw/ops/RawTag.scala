@@ -2,7 +2,7 @@ package aqua.raw.ops
 
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag.Tree
-import aqua.raw.value.{CallArrowRaw, ValueRaw}
+import aqua.raw.value.{CallArrowRaw, CallServiceRaw, ValueRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import aqua.types.{ArrowType, DataType, ServiceType}
 
@@ -224,26 +224,6 @@ object CallArrowRawTag {
       )
     )
 
-  def service(
-    serviceId: ValueRaw,
-    fnName: String,
-    call: Call,
-    name: String = null,
-    arrowType: ArrowType = null
-  ): CallArrowRawTag =
-    CallArrowRawTag(
-      call.exportTo,
-      CallArrowRaw(
-        Option(name),
-        fnName,
-        call.args,
-        Option(arrowType).getOrElse(
-          call.arrowType
-        ),
-        Some(serviceId)
-      )
-    )
-
   def func(fnName: String, call: Call): CallArrowRawTag =
     CallArrowRawTag(
       call.exportTo,
@@ -251,6 +231,22 @@ object CallArrowRawTag {
         funcName = fnName,
         baseType = call.arrowType,
         arguments = call.args
+      )
+    )
+
+  def service(
+    srvId: ValueRaw,
+    funcName: String,
+    call: Call,
+    arrowType: Option[ArrowType] = None
+  ): CallArrowRawTag =
+    CallArrowRawTag(
+      call.exportTo,
+      CallServiceRaw(
+        srvId,
+        funcName,
+        arrowType.getOrElse(call.arrowType),
+        call.args
       )
     )
 }

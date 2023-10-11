@@ -4,7 +4,7 @@ import aqua.errors.Errors.internalError
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.collectionToModel
-import aqua.model.inline.raw.CallArrowRawInliner
+import aqua.model.inline.raw.{CallArrowRawInliner, CallServiceRawInliner}
 import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
 import aqua.raw.ops.*
 import aqua.raw.value.*
@@ -308,8 +308,13 @@ object TagInliner extends Logging {
             TagInlined.Empty(prefix = parDesugarPrefix(nel.toList.flatMap(_._2)))
           })
 
-      case CallArrowRawTag(exportTo, value: CallArrowRaw) =>
-        CallArrowRawInliner.unfoldArrow(value, exportTo).flatMap { case (_, inline) =>
+      case CallArrowRawTag(exportTo, value: (CallArrowRaw | CallServiceRaw)) =>
+        (value match {
+          case ca: CallArrowRaw =>
+            CallArrowRawInliner.unfold(ca, exportTo)
+          case cs: CallServiceRaw =>
+            CallServiceRawInliner.unfold(cs, exportTo)
+        }).flatMap { case (_, inline) =>
           RawValueInliner
             .inlineToTree(inline)
             .map(tree =>

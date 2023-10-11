@@ -7,6 +7,7 @@ import aqua.types.*
 import cats.Eq
 import cats.data.{Chain, NonEmptyMap}
 import cats.syntax.option.*
+import cats.syntax.apply.*
 import scribe.Logging
 
 sealed trait ValueModel {
@@ -96,6 +97,22 @@ object LiteralModel {
       }
   }
 
+  /*
+   * Used to match integer literals in pattern matching
+   */
+  object Integer {
+
+    def unapply(lm: LiteralModel): Option[(Long, ScalarType | LiteralType)] =
+      lm match {
+        case LiteralModel(value, t) if ScalarType.integer.exists(_.acceptsValueOf(t)) =>
+          (
+            value.toLongOption,
+            t.some.collect { case t: (ScalarType | LiteralType) => t }
+          ).tupled
+        case _ => none
+      }
+  }
+
   // AquaVM will return 0 for
   // :error:.$.error_code if there is no :error:
   val emptyErrorCode = number(0)
@@ -107,7 +124,7 @@ object LiteralModel {
 
   def quote(str: String): LiteralModel = LiteralModel(s"\"$str\"", LiteralType.string)
 
-  def number(n: Int): LiteralModel = LiteralModel(n.toString, LiteralType.forInt(n))
+  def number(n: Long): LiteralModel = LiteralModel(n.toString, LiteralType.forInt(n))
 
   def bool(b: Boolean): LiteralModel = LiteralModel(b.toString.toLowerCase, LiteralType.bool)
 }
@@ -162,6 +179,15 @@ case class IntoIndexModel(idx: String, `type`: Type) extends PropertyModel {
   )
 }
 
+object IntoIndexModel {
+
+  def fromValueModel(vm: ValueModel, `type`: Type): Option[IntoIndexModel] = vm match {
+    case VarModel(name, _, Chain.nil) => IntoIndexModel(name, `type`).some
+    case LiteralModel(value, _) => IntoIndexModel(value, `type`).some
+    case _ => none
+  }
+}
+
 case class VarModel(name: String, baseType: Type, properties: Chain[PropertyModel] = Chain.empty)
     extends ValueModel with Logging {
 
@@ -178,14 +204,13 @@ case class VarModel(name: String, baseType: Type, properties: Chain[PropertyMode
   private def deriveFrom(vm: VarModel): VarModel =
     vm.copy(properties = vm.properties ++ properties)
 
+  def withProperty(p: PropertyModel): VarModel =
+    copy(properties = properties :+ p)
+
   def intoField(field: String): Option[VarModel] = `type` match {
     case StructType(_, fields) =>
       fields(field)
-        .map(fieldType =>
-          copy(
-            properties = properties :+ IntoFieldModel(field, fieldType)
-          )
-        )
+        .map(fieldType => withProperty(IntoFieldModel(field, fieldType)))
     case _ => none
   }
 

@@ -3,20 +3,12 @@ package aqua.model.inline
 import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.*
-import aqua.model.inline.raw.{
-  ApplyBinaryOpRawInliner,
-  ApplyFunctorRawInliner,
-  ApplyGateRawInliner,
-  ApplyPropertiesRawInliner,
-  ApplyUnaryOpRawInliner,
-  CallArrowRawInliner,
-  CollectionRawInliner,
-  MakeAbilityRawInliner
-}
+import aqua.model.inline.raw.*
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
 
+import cats.Eval
 import cats.syntax.traverse.*
 import cats.syntax.monoid.*
 import cats.syntax.functor.*
@@ -34,8 +26,10 @@ object RawValueInliner extends Logging {
   private[inline] def unfold[S: Mangler: Exports: Arrows](
     raw: ValueRaw,
     propertiesAllowed: Boolean = true
-  ): State[S, (ValueModel, Inline)] =
-    raw match {
+  ): State[S, (ValueModel, Inline)] = for {
+    optimized <- StateT.liftF(Optimization.optimize(raw))
+    _ <- StateT.liftF(Eval.later(logger.trace("OPTIMIZIED " + optimized)))
+    result <- optimized match {
       case VarRaw(name, t) =>
         for {
           exports <- Exports[S].exports
@@ -47,9 +41,6 @@ object RawValueInliner extends Logging {
 
       case alr: ApplyPropertyRaw =>
         ApplyPropertiesRawInliner(alr, propertiesAllowed)
-
-      case agr: ApplyGateRaw =>
-        ApplyGateRawInliner(agr, propertiesAllowed)
 
       case cr: CollectionRaw =>
         CollectionRawInliner(cr, propertiesAllowed)
@@ -68,7 +59,12 @@ object RawValueInliner extends Logging {
 
       case cr: CallArrowRaw =>
         CallArrowRawInliner(cr, propertiesAllowed)
+
+      case cs: CallServiceRaw =>
+        CallServiceRawInliner(cs, propertiesAllowed)
+
     }
+  } yield result
 
   private[inline] def inlineToTree[S: Mangler: Exports: Arrows](
     inline: Inline
@@ -104,10 +100,10 @@ object RawValueInliner extends Logging {
   def valueToModel[S: Mangler: Exports: Arrows](
     value: ValueRaw,
     propertiesAllowed: Boolean = true
-  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
-    logger.trace("RAW " + value)
-    toModel(unfold(value, propertiesAllowed))
-  }
+  ): State[S, (ValueModel, Option[OpModel.Tree])] = for {
+    _ <- StateT.liftF(Eval.later(logger.trace("RAW " + value)))
+    model <- toModel(unfold(value, propertiesAllowed))
+  } yield model
 
   def valueListToModel[S: Mangler: Exports: Arrows](
     values: List[ValueRaw]

@@ -53,6 +53,11 @@ sealed trait ProductType extends Type {
     case _ => None
   }
 
+  def headOption: Option[Type] = this match {
+    case ConsType(t, _) => Some(t)
+    case _ => None
+  }
+
   lazy val toList: List[Type] = this match {
     case ConsType(t, pt) => t :: pt.toList
     case _ => Nil
@@ -182,6 +187,45 @@ object ScalarType {
   val integer = signed ++ unsigned
   val number = float ++ integer
   val all = number ++ Set(bool, string)
+
+  final case class MathOpType(
+    `type`: ScalarType | LiteralType,
+    overflow: Boolean
+  )
+
+  /**
+   * Resolve type of math operation
+   * on two given types.
+   *
+   * WARNING: General `Type` is accepted
+   * but only integer `ScalarType` and `LiteralType`
+   * are actually expected.
+   */
+  def resolveMathOpType(
+    lType: Type,
+    rType: Type
+  ): MathOpType = {
+    val uType = lType `∪` rType
+    uType match {
+      case t: (ScalarType | LiteralType) => MathOpType(t, false)
+      case _ => MathOpType(ScalarType.i64, true)
+    }
+  }
+
+  /**
+   * Check if given type is signed.
+   *
+   * NOTE: Only integer types are expected.
+   * But it is impossible to enforce it.
+   */
+  def isSignedInteger(t: ScalarType | LiteralType): Boolean =
+    t match {
+      case st: ScalarType => signed.contains(st)
+      /**
+       * WARNING: LiteralType.unsigned is signed integer!
+       */
+      case lt: LiteralType => lt.oneOf.exists(signed.contains)
+    }
 }
 
 case class LiteralType private (oneOf: Set[ScalarType], name: String) extends DataType {
@@ -200,7 +244,7 @@ object LiteralType {
   val bool = LiteralType(Set(ScalarType.bool), "bool")
   val string = LiteralType(Set(ScalarType.string), "string")
 
-  def forInt(n: Int): LiteralType = if (n < 0) signed else unsigned
+  def forInt(n: Long): LiteralType = if (n < 0) signed else unsigned
 }
 
 sealed trait BoxType extends DataType {
@@ -323,8 +367,7 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
     s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
-case class StreamMapType(element: Type)
-  extends DataType {
+case class StreamMapType(element: Type) extends DataType {
 
   override def toString: String = s"%$element"
 }
