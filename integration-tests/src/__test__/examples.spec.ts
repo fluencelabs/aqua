@@ -51,6 +51,7 @@ import {
   topologyBug205Call,
   topologyBug394Call,
   topologyBug427Call,
+  topologyBug257Call,
   topologyCall,
 } from "../examples/topologyCall.js";
 import { foldJoinCall } from "../examples/foldJoinCall.js";
@@ -894,6 +895,11 @@ describe("Testing examples", () => {
     );
 
     expect(topologyResult).toEqual(selfPeerId);
+  });
+
+  it("topology.aqua bug 257", async () => {
+    let result = await topologyBug257Call(peer2);
+    expect(result).toEqual(["host", "friend", "init"]);
   });
 
   it("foldJoin.aqua", async () => {
