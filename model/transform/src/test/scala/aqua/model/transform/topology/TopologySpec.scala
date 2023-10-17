@@ -1196,57 +1196,103 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     proc.equalsOrShowDiff(expected) shouldEqual true
   }
 
-  it should "handle error rethrow for sequential `on`" in {
-    val model = OnModel(initPeer, Chain.one(relay)).wrap(
-      SeqModel.wrap(
-        callModel(1),
-        onRethrowModel(otherPeerL, otherRelay)(
-          callModel(2)
-        ),
-        onRethrowModel(otherPeer2, otherRelay2)(
-          callModel(3)
+  it should "handle sequential `on`" in {
+    def test(
+      peer1: ValueRaw,
+      relay1: ValueRaw,
+      peer2: ValueRaw,
+      relay2: ValueRaw
+    ) = {
+
+      val model = OnModel(initPeer, Chain.one(relay)).wrap(
+        SeqModel.wrap(
+          callModel(1),
+          onRethrowModel(peer1, relay1)(
+            callModel(2)
+          ),
+          onRethrowModel(peer2, relay2)(
+            callModel(3)
+          )
         )
       )
-    )
 
-    val proc = Topology.resolve(model).value
+      val proc = Topology.resolve(model).value
 
-    val expected = SeqRes.wrap(
-      callRes(1, initPeer),
-      XorRes.wrap(
-        SeqRes.wrap(
-          through(relay),
-          through(otherRelay),
-          callRes(2, otherPeerL),
-          through(otherRelay),
-          through(relay)
-        ),
-        SeqRes.wrap(
-          through(otherRelay),
-          through(relay),
-          through(initPeer),
-          failErrorRes
-        )
-      ),
-      XorRes.wrap(
-        SeqRes.wrap(
-          through(relay),
-          through(otherRelay2),
-          callRes(3, otherPeer2)
-        ),
-        SeqRes.wrap(
-          through(otherRelay2),
-          through(relay),
-          through(initPeer),
-          failErrorRes
-        )
+      val firstOnRes =
+        // If the first `on` is `on INIT_PEER_ID via HOST_PEER_ID`
+        if (peer1 == initPeer && relay1 == relay)
+          XorRes.wrap(
+            SeqRes.wrap(
+              callRes(2, peer1),
+              through(relay1)
+            ),
+            failErrorRes
+          )
+        else
+          XorRes.wrap(
+            SeqRes.wrap(
+              through(relay),
+              through(relay1),
+              callRes(2, peer1),
+              through(relay1),
+              through(relay)
+            ),
+            SeqRes.wrap(
+              through(relay1),
+              through(relay),
+              through(initPeer),
+              failErrorRes
+            )
+          )
+
+      val secondOnRes =
+        // If the second `on` is `on INIT_PEER_ID via HOST_PEER_ID`
+        if (peer2 == initPeer && relay2 == relay)
+          XorRes.wrap(
+            callRes(3, peer2),
+            failErrorRes
+          )
+        else
+          XorRes.wrap(
+            SeqRes.wrap(
+              through(relay),
+              through(relay2),
+              callRes(3, peer2)
+            ),
+            SeqRes.wrap(
+              through(relay2),
+              through(relay),
+              through(initPeer),
+              failErrorRes
+            )
+          )
+
+      val expected = SeqRes.wrap(
+        callRes(1, initPeer),
+        firstOnRes,
+        secondOnRes
       )
+
+      proc.equalsOrShowDiff(expected) shouldEqual true
+    }
+
+    val peerRelays = List(
+      (initPeer, relay),
+      (otherPeerN(0), otherRelayN(0)),
+      (otherPeerN(1), otherRelayN(1))
     )
 
-    proc.equalsOrShowDiff(expected) shouldEqual true
+    for {
+      first <- peerRelays
+      second <- peerRelays
+      // Skip identical `on`s
+      if first != second
+      (p1, r1) = first
+      (p2, r2) = second
+    } test(p1, r1, p2, r2)
   }
 
-  it should "handle error rethrow for sequential `on` without `via`" in {
+  it should "handle sequential `on` without `via`" in {
     val model = OnModel(initPeer, Chain.one(relay)).wrap(
       SeqModel.wrap(
         callModel(1),
