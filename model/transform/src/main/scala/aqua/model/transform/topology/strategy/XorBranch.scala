@@ -10,6 +10,7 @@ import cats.data.Chain
 import cats.syntax.functor.*
 import cats.instances.lazyList.*
 import cats.syntax.option.*
+import cats.syntax.apply.*
 
 // Parent == Xor
 object XorBranch extends Before with After {

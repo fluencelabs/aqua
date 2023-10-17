@@ -41,7 +41,12 @@ trait After {
       case ExitStrategy.ToRelay =>
         (current.endsOn, current.relayOn).mapN(PathFinder.findPathEnforce)
       case ExitStrategy.Full =>
-        (current.endsOn, current.afterOn).mapN(PathFinder.findPath)
+        (current.endsOn, current.afterOn, current.nextExecutesOn).mapN {
+          case (ends, after, next) if next.forall(_ == after) =>
+            PathFinder.findPath(ends, after)
+          case (ends, after, _) =>
+            PathFinder.findPathEnforce(ends, after.toRelay)
+        }
     }
 
   // If exit is forced, make a path outside this node

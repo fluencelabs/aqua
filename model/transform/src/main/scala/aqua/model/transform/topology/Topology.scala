@@ -11,6 +11,7 @@ import aqua.types.{ArrayType, BoxType, CanonStreamType, ScalarType, StreamType}
 
 import cats.Eval
 import cats.data.Chain.{==:, nil}
+import cats.data.OptionT
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
 import cats.free.Cofree
 import cats.syntax.traverse.*
@@ -93,19 +94,35 @@ case class Topology private (
     )
     .memoize
 
-  // Find path of first `ForceExecModel` (call, canon, join) in this subtree
+  // Find path of first `ForceExecModel` (call, canon) in this subtree
   lazy val firstExecutesOn: Eval[Option[TopologyPath]] =
     (cursor.op match {
       case _: ForceExecModel => pathOn.map(_.some)
       case _ => children.collectFirstSomeM(_.firstExecutesOn)
     }).memoize
 
-  // Find path of last `ForceExecModel` (call, canon, join) in this subtree
+  // Find path of last `ForceExecModel` (call, canon) in this subtree
   lazy val lastExecutesOn: Eval[Option[TopologyPath]] =
     (cursor.op match {
       case _: ForceExecModel => pathOn.map(_.some)
       case _ => children.reverse.collectFirstSomeM(_.lastExecutesOn)
     }).memoize
+
+  // Find path of first `ForceExecModel` (call, canon) to right of this subtree
+  lazy val nextExecutesOn: Eval[Option[TopologyPath]] =
+    parent
+      .flatTraverse(p =>
+        p.cursor.op match {
+          case _: SeqGroupModel =>
+            OptionT(
+              cursor.nextSiblings.collectFirstSomeM(
+                _.topology.firstExecutesOn
+              )
+            ).orElseF(p.nextExecutesOn).value
+          case _ =>
+            p.nextExecutesOn
+        }
+      )
 
   lazy val currentPeerId: Option[ValueModel] = pathOn.value.peerId
 
@@ -321,6 +338,16 @@ object Topology extends Logging {
 
       if (debug) printDebugInfo(rc, currI)
 
+      // rc.op match {
+      //   case OnModel(_, _, _) =>
+      //     printDebugInfo(rc, currI)
+      //   // case CallServiceModel(_, "fix", _) =>
+      //   //   printDebugInfo(rc, currI)
+      //   case XorModel =>
+      //     printDebugInfo(rc, currI)
+      //   case _ =>
+      // }
+
       val chainZipperEv = resolved.traverse(tree =>
         (
           rc.topology.pathBefore.map(through(_)),
@@ -386,6 +413,7 @@ object Topology extends Logging {
       (if (rc.topology.pathAfter.value.nonEmpty) Console.YELLOW
        else "") + "PathAfter: " + Console.RESET + rc.topology.pathAfter.value
     )
+    println("Next Executes On: " + rc.topology.nextExecutesOn.value.show)
     println(Console.YELLOW + "     -     -     -     -     -" + Console.RESET)
   }
 
