@@ -1,3 +1,7 @@
+aqua Topology
+
+export Testo, LocalPrint, topologyTest, topologyBug205, topologyBug394, topologyBug427, topologyBug257
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
 service Testo("testo"):
@@ -51,3 +55,22 @@ func topologyBug427(peers: []string) -> []string:
 
     join results[1]
     <- results
+
+service StrOp("op"):
+    identity(str: string) -> string
+
+func idOnPeer(friend: string, friendRelay: string, str: string) -> string:
+    on friend via friendRelay:
+        result <- StrOp.identity(str)
+
+    <- result
+
+func topologyBug257(friend: string, friendRelay: string) -> []string:
+    result: *string
+
+    on HOST_PEER_ID:
+        result <- StrOp.identity("host")
+        result <- idOnPeer(friend, friendRelay, "friend")
+        result <- idOnPeer(INIT_PEER_ID, HOST_PEER_ID, "init")
+    
+    <- result

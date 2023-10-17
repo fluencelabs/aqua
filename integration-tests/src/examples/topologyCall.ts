@@ -6,6 +6,7 @@ import {
   topologyBug205,
   topologyBug394,
   topologyBug427,
+  topologyBug257,
 } from "../compiled/examples/topology.js";
 
 export async function topologyBug394Call(
@@ -65,4 +66,10 @@ export async function topologyCall(
       ttl: 10000,
     },
   );
+}
+
+export async function topologyBug257Call(
+  peer2: IFluenceClient,
+): Promise<string[]> {
+  return await topologyBug257(peer2.getPeerId(), peer2.getRelayPeerId());
 }
