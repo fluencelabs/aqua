@@ -25,11 +25,16 @@ object ValueModel {
   def errorCode(error: VarModel): Option[VarModel] =
     error.intoField("error_code")
 
+  def errorMessage(error: VarModel): Option[VarModel] =
+    error.intoField("message")
+
   val error = VarModel.fromVarRaw(ValueRaw.error)
   val errorType = ValueRaw.errorType
 
   // NOTE: It should be safe as `:error:` should have `error_code` field
   val lastErrorCode = errorCode(error).get
+  // NOTE: It should be safe as `:error:` should have `message` field
+  val lastErrorMessage = errorMessage(error).get
 
   implicit object ValueModelEq extends Eq[ValueModel] {
     override def eqv(x: ValueModel, y: ValueModel): Boolean = x == y
