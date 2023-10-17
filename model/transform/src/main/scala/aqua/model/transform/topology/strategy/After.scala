@@ -42,8 +42,15 @@ trait After {
         (current.endsOn, current.relayOn).mapN(PathFinder.findPathEnforce)
       case ExitStrategy.Full =>
         (current.endsOn, current.afterOn, current.nextExecutesOn).mapN {
+          // This is an important optimization:
+          // If next execution forcing node is at the same path as
+          // `afterOn` of this node, then leave the last
+          // hop for it to handle
           case (ends, after, next) if next.forall(_ == after) =>
             PathFinder.findPath(ends, after)
+          // Otherwise, force return to relay.
+          // Returning to `after` would generate unnecessary hops,
+          // but is it always correct to return to relay here?
           case (ends, after, _) =>
             PathFinder.findPathEnforce(ends, after.toRelay)
         }

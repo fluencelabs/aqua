@@ -338,16 +338,6 @@ object Topology extends Logging {
 
       if (debug) printDebugInfo(rc, currI)
 
-      // rc.op match {
-      //   case OnModel(_, _, _) =>
-      //     printDebugInfo(rc, currI)
-      //   // case CallServiceModel(_, "fix", _) =>
-      //   //   printDebugInfo(rc, currI)
-      //   case XorModel =>
-      //     printDebugInfo(rc, currI)
-      //   case _ =>
-      // }
-
       val chainZipperEv = resolved.traverse(tree =>
         (
           rc.topology.pathBefore.map(through(_)),
