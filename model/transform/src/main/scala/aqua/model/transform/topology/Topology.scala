@@ -403,7 +403,6 @@ object Topology extends Logging {
       (if (rc.topology.pathAfter.value.nonEmpty) Console.YELLOW
        else "") + "PathAfter: " + Console.RESET + rc.topology.pathAfter.value
     )
-    println("Next Executes On: " + rc.topology.nextExecutesOn.value.show)
     println(Console.YELLOW + "     -     -     -     -     -" + Console.RESET)
   }
 
