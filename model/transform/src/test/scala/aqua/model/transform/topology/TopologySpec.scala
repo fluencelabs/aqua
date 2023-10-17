@@ -1235,7 +1235,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
               through(relay1),
               callRes(2, peer1),
               through(relay1),
-              through(relay)
+              through(relay) // TODO: LNG-259
             ),
             SeqRes.wrap(
               through(relay1),
@@ -1255,7 +1255,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         else
           XorRes.wrap(
             SeqRes.wrap(
-              through(relay),
+              through(relay), // TODO: LNG-259
               through(relay2),
               callRes(3, peer2)
             ),
