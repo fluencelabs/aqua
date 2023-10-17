@@ -58,6 +58,9 @@ abstract class ChainCursor[C <: ChainCursor[C, T], T](make: NonEmptyList[ChainZi
 
   def toPrevSibling: Option[C] = tree.head.moveLeft.map(p => make(tree.copy(p)))
 
+  def nextSiblings: LazyList[C] =
+    LazyList.unfold(this)(_.toNextSibling.map(c => c -> c))
+
   def allToLeft: LazyList[C] =
     LazyList.unfold(this)(_.moveLeft.map(c => c -> c))
 
