@@ -8,6 +8,7 @@
 [Provide additional details about the implementation that may be helpful to reviewers.]
 
 ## Checklist
+- [ ] Corresponding issue has been created and linked in PR title.
 - [ ] Proposed changes are covered by tests.
 - [ ] Documentation has been updated to reflect the changes (if applicable).
 - [ ] I have self-reviewed my code and ensured its quality.
