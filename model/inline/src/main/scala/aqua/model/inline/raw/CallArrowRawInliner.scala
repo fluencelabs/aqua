@@ -31,7 +31,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
 
     value.abValue.map { v =>
       // inline var to get the left side of the ability call's name
-      RawValueInliner.unfold(v, false).flatMap {
+      RawValueInliner.unfold(v).flatMap {
         case (VarModel(name, _, _), _) =>
           resolveArrow(AbilityType.fullName(name, funcName), call)
         case l =>
