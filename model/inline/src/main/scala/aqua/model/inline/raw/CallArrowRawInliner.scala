@@ -17,7 +17,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
   private[inline] def unfold[S: Mangler: Exports: Arrows](
     value: CallArrowRaw,
     exportTo: List[Call.Export]
-  ): State[S, (List[ValueModel], Inline)] = Exports[S].exports.flatMap { exports =>
+  ): State[S, (List[ValueModel], Inline)] = {
     logger.trace(s"${exportTo.mkString(" ")} $value")
 
     val call = Call(value.arguments, exportTo)

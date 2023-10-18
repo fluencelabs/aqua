@@ -54,7 +54,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     abilityType: NamedType,
     p: PropertyRaw
   ): State[S, (VarModel, Inline)] = p match {
-    case IntoArrowRaw(arrowName, t, arguments) =>
+    case IntoArrowRaw(arrowName, _, arguments) =>
       val arrowType = abilityType.fields
         .lookup(arrowName)
         .collect { case at @ ArrowType(_, _) =>
@@ -82,9 +82,9 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             }
         }
       } yield result
-    case IntoFieldRaw(fieldName, at @ AbilityType(abName, fields)) =>
+    case IntoFieldRaw(fieldName, at @ AbilityType(_, _)) =>
       (VarModel(AbilityType.fullName(varModel.name, fieldName), at), Inline.empty).pure
-    case IntoFieldRaw(fieldName, t) =>
+    case IntoFieldRaw(fieldName, _) =>
       for {
         abilityField <- Exports[S].getAbilityField(varModel.name, fieldName)
         result <- abilityField match {
@@ -102,6 +102,18 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
 
         }
       } yield result
+    case icr: IntoCopyRaw =>
+      internalError(
+        s"Inlining, cannot use 'copy' ($icr) in ability ($varModel)"
+      )
+    case fr: FunctorRaw =>
+      internalError(
+        s"Inlining, cannot use functor ($fr) in ability ($varModel)"
+      )
+    case iir: IntoIndexRaw =>
+      internalError(
+        s"Inlining, cannot use index ($iir) in ability ($varModel)"
+      )
   }
 
   private[inline] def unfoldProperty[S: Mangler: Exports: Arrows](
@@ -154,6 +166,10 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             mergeMode = SeqMode
           )
         }
+      case iar: IntoArrowRaw =>
+        internalError(
+          s"Inlining, cannot use arrow ($iar) in non-ability type ($varModel)"
+        )
     }
 
   // Helper for `optimizeProperties`
@@ -211,7 +227,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           State.pure((vm, prevInline.mergeWith(optimizationInline, SeqMode)))
         ) { case (state, property) =>
           state.flatMap {
-            case (vm @ Ability(name, at, _), leftInline) =>
+            case (vm @ Ability(_, at, _), leftInline) =>
               unfoldAbilityProperty(vm, at, property.raw).map { case (vm, inl) =>
                 (
                   vm,
@@ -317,8 +333,8 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
     raw: ValueRaw,
     properties: Chain[PropertyRaw],
     propertiesAllowed: Boolean
-  ): State[S, (ValueModel, Inline)] = {
-    ((raw, properties.uncons) match {
+  ): State[S, (ValueModel, Inline)] =
+    (raw, properties.uncons) match {
       /**
        * To inline
        */
@@ -338,7 +354,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
                 propertiesAllowed
               )
             } yield propsInlined
-          case l =>
+          case _ =>
             internalError(
               s"Unfolded stream ($vr) cannot be a literal"
             )
@@ -362,9 +378,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
               }
             }
         }
-    })
-
-  }
+    }
 
   /**
    * Remove properties from the var and return a new var without them

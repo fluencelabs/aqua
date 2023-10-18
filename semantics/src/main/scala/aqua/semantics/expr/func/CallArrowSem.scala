@@ -9,8 +9,7 @@ import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{StreamType, Type}
-
+import aqua.types.{ProductType, StreamType, Type}
 import cats.Monad
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
@@ -24,11 +23,11 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 
   import expr.*
 
-  private def getExports[Alg[_]: Monad](callArrow: CallArrowRaw)(using
+  private def getExports[Alg[_]: Monad](codomain: ProductType)(using
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg]
   ): Alg[List[Call.Export]] =
-    (variables zip callArrow.baseType.codomain.toList).traverse { case (v, t) =>
+    (variables zip codomain.toList).traverse { case (v, t) =>
       N.read(v, mustBeDefined = false).flatMap {
         case Some(stream @ StreamType(st)) =>
           T.ensureTypeMatches(v, st, t).as(Call.Export(v.value, stream))
@@ -45,7 +44,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     // TODO: Accept other expressions
     callArrowRaw <- V.valueToCallArrowRaw(expr.callArrow)
     tag <- callArrowRaw.traverse(car =>
-      getExports(car).map(CallArrowRawTag(_, car)) <*
+      getExports(car.baseType.codomain).map(CallArrowRawTag(_, car)) <*
         T.checkArrowCallResults(callArrow, car.baseType, variables)
     )
   } yield tag.map(_.funcOpLeaf)
