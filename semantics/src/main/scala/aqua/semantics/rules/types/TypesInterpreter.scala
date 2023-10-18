@@ -221,11 +221,10 @@ class TypesInterpreter[S[_], X](using
               .pointFieldLocation(name, op.name.value, op)
               .as(Some(IntoArrowRaw(op.name.value, at, arguments)))
           case _ =>
-            // Unexpected
             report
               .error(
                 op,
-                s"`${op.name.value}` must be an arrow."
+                s"Unexpected. `${op.name.value}` must be an arrow."
               )
               .as(None)
         }
