@@ -550,7 +550,7 @@ describe("Testing examples", () => {
 
   it("ability.aqua ability calls", async () => {
     let result = await checkAbCallsCall();
-    expect(result).toStrictEqual([true, false]);
+    expect(result).toStrictEqual([true, false, true]);
   });
 
   it("functors.aqua LNG-119 bug", async () => {

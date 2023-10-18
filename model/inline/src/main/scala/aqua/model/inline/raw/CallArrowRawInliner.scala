@@ -2,12 +2,12 @@ package aqua.model.inline.raw
 
 import aqua.errors.Errors.internalError
 import aqua.model.*
-import aqua.model.inline.RawValueInliner.{callToModel, valueToModel}
+import aqua.model.inline.RawValueInliner.callToModel
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
+import aqua.model.inline.{ArrowInliner, Inline, RawValueInliner}
 import aqua.raw.ops.Call
 import aqua.raw.value.CallArrowRaw
-
+import aqua.types.AbilityType
 import cats.data.{Chain, State}
 import cats.syntax.traverse.*
 import scribe.Logging
@@ -28,7 +28,16 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     val funcName = value.ability.fold(value.name)(_ + "." + value.name)
     logger.trace(s"            $funcName")
 
-    resolveArrow(funcName, call)
+    value.abValue.map { v =>
+      // inline var to get the left side of the ability call's name
+      RawValueInliner.unfold(v, false).flatMap {
+        case (VarModel(name, _, _), _) =>
+          resolveArrow(AbilityType.fullName(name, funcName), call)
+        case l =>
+          internalError(s"Ability cannot be a literal ($l)")
+      }
+    }.getOrElse(resolveArrow(funcName, call))
+
   }
 
   private def resolveFuncArrow[S: Mangler: Exports: Arrows](

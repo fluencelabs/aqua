@@ -77,11 +77,13 @@ ability CCCC:
     arrow(x: i8) -> bool
     simple: SSS
 
-func checkAbCalls() -> bool, bool:
+func checkAbCalls() -> bool, bool, bool:
     closure = (x: i8) -> bool:
         <- x > 20
 
     MySSS = SSS(arrow = closure)
     MyCCCC = CCCC(simple = MySSS, arrow = MySSS.arrow)
+    res1 <- MySSS.arrow(42)
+    res2 = MyCCCC.arrow(12)
 
-    <- MySSS.arrow(42), MyCCCC.arrow(12)
+    <- res1, res2, MySSS.arrow(50)

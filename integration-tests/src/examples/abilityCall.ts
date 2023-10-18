@@ -19,6 +19,6 @@ export async function complexAbilityCall(): Promise<[boolean, boolean]> {
   return await bug214();
 }
 
-export async function checkAbCallsCall(): Promise<[boolean, boolean]> {
+export async function checkAbCallsCall(): Promise<[boolean, boolean, boolean]> {
   return await checkAbCalls();
 }

@@ -316,7 +316,9 @@ case class CallArrowRaw(
   ability: Option[String],
   name: String,
   arguments: List[ValueRaw],
-  baseType: ArrowType
+  baseType: ArrowType,
+  // left part of an ability (what calls arrow)
+  abValue: Option[ValueRaw] = None
 ) extends ValueRaw {
   override def `type`: Type = baseType.codomain.headOption.getOrElse(baseType)
 
