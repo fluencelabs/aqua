@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.12.4](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.3...aqua-v0.12.4) (2023-10-23)
+
+
+### Features
+
+* **compiler:** Handle error function exit in tracing mode [LNG-250] ([#921](https://github.com/fluencelabs/aqua/issues/921)) ([03d23eb](https://github.com/fluencelabs/aqua/commit/03d23eb577d72a3cf592254259aeb9b52b33b616))
+* **compiler:** Optimize math in compile time [LNG-245] ([#922](https://github.com/fluencelabs/aqua/issues/922)) ([5f6c47f](https://github.com/fluencelabs/aqua/commit/5f6c47ffea5ab6e32df918a33414482129b00fd7))
+* **dev:** Add PR template ([#934](https://github.com/fluencelabs/aqua/issues/934)) ([679d43f](https://github.com/fluencelabs/aqua/commit/679d43f7eb079071ca2a4174f3b8cf5e83d4e16d))
+
+
+### Bug Fixes
+
+* **compiler:** Fix gate inlining [LNG-253] ([#924](https://github.com/fluencelabs/aqua/issues/924)) ([b298eeb](https://github.com/fluencelabs/aqua/commit/b298eebf5ea1b4c091603ebf0cacde0957191632))
+* **compiler:** Fix topology for adjacent `on`s [LNG-257] ([#929](https://github.com/fluencelabs/aqua/issues/929)) ([ba15d9e](https://github.com/fluencelabs/aqua/commit/ba15d9e06afc38f79c95e00d48efbf8937cd251d))
+* **compiler:** fix typo ([#916](https://github.com/fluencelabs/aqua/issues/916)) ([feb7a16](https://github.com/fluencelabs/aqua/commit/feb7a167a2007d2c1d75dac6554f36d2cf5f86a5))
+* **compiler:** Passed function is not handled correctly [LNG-260] ([#940](https://github.com/fluencelabs/aqua/issues/940)) ([c83d69e](https://github.com/fluencelabs/aqua/commit/c83d69e6895d3784f02c743b89f65606c6302f4b))
+* **compiler:** Return ability arrow [LNG-258] ([#935](https://github.com/fluencelabs/aqua/issues/935)) ([fab46ee](https://github.com/fluencelabs/aqua/commit/fab46ee130d4e6b3edd33d0fab4c0f2d27ce5ad0))
+* **deps:** update dependency @fluencelabs/js-client to v0.2.1 ([#930](https://github.com/fluencelabs/aqua/issues/930)) ([14f3d92](https://github.com/fluencelabs/aqua/commit/14f3d92ef4cd3fed12cbff0164706b2cbbfdcccd))
+* **deps:** update dependency @fluencelabs/js-client to v0.3.0 ([#936](https://github.com/fluencelabs/aqua/issues/936)) ([441c012](https://github.com/fluencelabs/aqua/commit/441c012e01e6e0eff1e1e950b86241982658e80a))
+
 ## [0.12.3](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.2...aqua-v0.12.3) (2023-09-28)
 
 
