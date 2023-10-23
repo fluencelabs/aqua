@@ -293,7 +293,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         }
     }
 
-  def valueToCallArrowRaw(v: ValueToken[S]): Alg[Option[(ValueRaw, ArrowType)]] =
+  def valueToCall(v: ValueToken[S]): Alg[Option[(ValueRaw, ArrowType)]] =
     valueToRaw(v).flatMap(
       _.flatTraverse {
         case ca: CallArrowRaw => (ca, ca.baseType).some.pure[Alg]

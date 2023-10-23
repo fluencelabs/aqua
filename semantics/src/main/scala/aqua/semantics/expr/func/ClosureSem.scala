@@ -29,7 +29,7 @@ class ClosureSem[S[_]](val expr: ClosureExpr[S]) extends AnyVal {
           isRoot = false
         ) as ClosureTag(FuncRaw(expr.name.value, arrow), expr.detach.isDefined).funcOpLeaf
 
-      case m =>
+      case _ =>
         Raw.error("Closure must continue with an arrow definition").pure[Alg]
     }
 

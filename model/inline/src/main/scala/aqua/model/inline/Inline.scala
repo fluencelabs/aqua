@@ -30,6 +30,12 @@ private[inline] case class Inline(
       case Some(tree) => copy(predo = predo :+ tree)
     }
 
+  def prepend(tree: Option[OpModel.Tree]): Inline =
+    tree match {
+      case None => this
+      case Some(tree) => copy(predo = tree +: predo)
+    }
+
   def desugar: Inline = {
     val desugaredPredo = predo match {
       case Chain.nil | _ ==: Chain.nil => predo

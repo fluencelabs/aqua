@@ -328,7 +328,7 @@ object TagInliner extends Logging {
             CallArrowRawInliner.unfold(CallArrowRaw.ability(n, name, at, args), exportTo).flatMap {
               case (_, inline) =>
                 RawValueInliner
-                  .inlineToTree(inline.copy(predo = Chain.fromOption(prevInline) ++ inline.predo))
+                  .inlineToTree(inline.prepend(prevInline))
                   .map(tree =>
                     TagInlined.Empty(
                       prefix = SeqModel.wrap(tree).some

@@ -42,7 +42,7 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
     V: ValuesAlgebra[S, Alg]
   ): Alg[Option[FuncOp]] = for {
     // TODO: Accept other expressions
-    callArrowRaw <- V.valueToCallArrowRaw(expr.callArrow)
+    callArrowRaw <- V.valueToCall(expr.callArrow)
     tag <- callArrowRaw.traverse { case (raw, at) =>
       getExports(at.codomain).map(CallArrowRawTag(_, raw)) <*
         T.checkArrowCallResults(callArrow, at, variables)
