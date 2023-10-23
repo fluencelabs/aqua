@@ -8,6 +8,7 @@ import aqua.parser.expr.func.ClosureExpr
 import aqua.parser.lexer.Arg
 import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
+
 import cats.Applicative
 import cats.data.Chain
 import cats.syntax.functor.*
@@ -16,7 +17,7 @@ import cats.Monad
 
 class ClosureSem[S[_]](val expr: ClosureExpr[S]) extends AnyVal {
 
-  def program[Alg[_]: Monad](implicit
+  def program[Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg]
   ): Prog[Alg, Raw] =
     Prog.after {

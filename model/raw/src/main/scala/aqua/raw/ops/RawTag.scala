@@ -296,7 +296,7 @@ case class ClosureTag(
     copy(
       func.copy(arrow =
         func.arrow.copy(
-          ret = func.arrow.ret.map(_.map(f)),
+          ret = func.arrow.ret.map(_.mapValues(f)),
           body = func.arrow.body.map(_.mapValues(f))
         )
       )
