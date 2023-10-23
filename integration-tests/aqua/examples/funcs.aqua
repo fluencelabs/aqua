@@ -1,6 +1,6 @@
 module Funcs declares main, A, calc
 
-export main, A, calc, calc2, ifCalc
+export main, A, calc, calc2, ifCalc, bugLNG260
 
 service A("a"):
   getJ(i: u32) -> u32
@@ -37,3 +37,25 @@ func ifCalc() -> u64:
   else:
     res <<- 2
   <- res!0
+
+func cmp(a: i32, b: i32, pred: i8 -> bool) -> bool:
+  result: ?bool
+
+  if a < b:
+    result <- pred(-1)
+  else:
+    if a == b:
+      result <- pred(0)
+    else:
+      result <- pred(1)
+  
+  <- result!
+
+func gt(a: i32, b: i32) -> bool:
+  pred = (ord: i8) -> bool:
+        <- ord > 0
+
+  <- cmp(a, b, pred)
+
+func bugLNG260(a: i32, b: i32) -> bool:
+  <- gt(a, b)

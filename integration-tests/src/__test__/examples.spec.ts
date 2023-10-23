@@ -127,7 +127,7 @@ import {
   optionSugarCall,
   streamSugarCall,
 } from "../examples/collectionSugarCall.js";
-import { funcsCall } from "../examples/funcsCall.js";
+import { funcsCall, bugLNG260Call } from "../examples/funcsCall.js";
 import { nestedDataCall } from "../examples/nestedDataCall.js";
 import {
   mathTest1Call,
@@ -726,6 +726,15 @@ describe("Testing examples", () => {
     let result = await funcsCall();
     expect(result).toEqual([13, 6, 3, 1]);
   }, 7000);
+
+  it("funcs.aqua bugLNG260", async () => {
+    let result1 = await bugLNG260Call(1, 2);
+    expect(result1).toEqual(false);
+    let result2 = await bugLNG260Call(4, 3);
+    expect(result2).toEqual(true);
+    let result3 = await bugLNG260Call(5, 5);
+    expect(result3).toEqual(false);
+  });
 
   // it('closures.aqua LNG-58 bug', async () => {
   //     let res = await lng58Bug()
