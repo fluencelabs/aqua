@@ -7,7 +7,6 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.inline.{ArrowInliner, Inline, RawValueInliner}
 import aqua.raw.ops.Call
 import aqua.raw.value.CallArrowRaw
-import aqua.types.AbilityType
 
 import cats.data.{Chain, State}
 import cats.syntax.traverse.*

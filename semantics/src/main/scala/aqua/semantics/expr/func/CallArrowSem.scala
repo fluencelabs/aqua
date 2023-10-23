@@ -43,10 +43,10 @@ class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
   ): Alg[Option[FuncOp]] = for {
     // TODO: Accept other expressions
     callArrowRaw <- V.valueToCallArrowRaw(expr.callArrow)
-    tag <- callArrowRaw.traverse(car =>
-      getExports(car.baseType.codomain).map(CallArrowRawTag(_, car)) <*
-        T.checkArrowCallResults(callArrow, car.baseType, variables)
-    )
+    tag <- callArrowRaw.traverse { case (raw, at) =>
+      getExports(at.codomain).map(CallArrowRawTag(_, raw)) <*
+        T.checkArrowCallResults(callArrow, at, variables)
+    }
   } yield tag.map(_.funcOpLeaf)
 
   def program[Alg[_]: Monad](using

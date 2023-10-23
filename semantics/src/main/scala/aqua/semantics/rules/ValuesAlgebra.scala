@@ -63,7 +63,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
 
   def valueToRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
     v match {
-      case l @ LiteralToken(value, t) =>
+      case l @ LiteralToken(_, t) =>
         LiteralRaw(l.value, t).some.pure[Alg]
 
       case VarToken(name) =>
@@ -293,12 +293,11 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         }
     }
 
-  def valueToCallArrowRaw(v: ValueToken[S]): Alg[Option[CallArrowRaw]] =
+  def valueToCallArrowRaw(v: ValueToken[S]): Alg[Option[(ValueRaw, ArrowType)]] =
     valueToRaw(v).flatMap(
       _.flatTraverse {
-        case ca: CallArrowRaw => ca.some.pure[Alg]
-        case ApplyPropertyRaw(value, IntoArrowRaw(name, arrowType, arguments)) =>
-          CallArrowRaw(None, name, arguments, arrowType).some.pure[Alg]
+        case ca: CallArrowRaw => (ca, ca.baseType).some.pure[Alg]
+        case apr@ApplyPropertyRaw(_, IntoArrowRaw(_, arrowType, _)) => (apr, arrowType).some.pure[Alg]
         // TODO: better error message (`raw` formatting)
         case raw => report.error(v, s"Expected arrow call, got $raw").as(none)
       }
