@@ -298,9 +298,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       _.flatTraverse {
         case ca: CallArrowRaw => ca.some.pure[Alg]
         case ApplyPropertyRaw(value, IntoArrowRaw(name, arrowType, arguments)) =>
-          // IntoArrow can be only last in a properties chain
-          // Store left part of the value and properties into CallArrowRaw to inline it later
-          CallArrowRaw(None, name, arguments, arrowType, Some(value)).some.pure[Alg]
+          CallArrowRaw(None, name, arguments, arrowType).some.pure[Alg]
         // TODO: better error message (`raw` formatting)
         case raw => report.error(v, s"Expected arrow call, got $raw").as(none)
       }

@@ -29,16 +29,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     val funcName = value.ability.fold(value.name)(_ + "." + value.name)
     logger.trace(s"            $funcName")
 
-    value.abValue.map { v =>
-      // inline var to get the left side of the ability call's name
-      RawValueInliner.unfold(v).flatMap {
-        case (VarModel(name, _, _), _) =>
-          resolveArrow(AbilityType.fullName(name, funcName), call)
-        case l =>
-          internalError(s"Ability cannot be a literal ($l)")
-      }
-    }.getOrElse(resolveArrow(funcName, call))
-
+    resolveArrow(funcName, call)
   }
 
   private def resolveFuncArrow[S: Mangler: Exports: Arrows](

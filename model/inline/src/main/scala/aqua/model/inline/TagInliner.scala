@@ -324,6 +324,25 @@ object TagInliner extends Logging {
             )
         }
 
+      case CallArrowRawTag(
+            exportTo,
+            // the name of VarModel was already converted to abilities full name
+            ApplyPropertyRaw(VarModel(n, _, _), IntoArrowRaw(name, at, args))
+          ) =>
+        CallArrowRawInliner.unfold(CallArrowRaw.ability(n, name, at, args), exportTo).flatMap {
+          case (_, inline) =>
+            RawValueInliner
+              .inlineToTree(inline)
+              .map(tree =>
+                TagInlined.Empty(
+                  prefix = SeqModel.wrap(tree).some
+                )
+              )
+        }
+
+      case CallArrowRawTag(_, value) =>
+        internalError(s"Cannot inline 'CallArrowRawTag' with value '$value'")
+
       case AssignmentTag(value, assignTo) =>
         for {
           modelAndPrefix <- value match {
