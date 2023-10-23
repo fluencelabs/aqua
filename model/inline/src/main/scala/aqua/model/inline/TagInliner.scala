@@ -9,6 +9,7 @@ import aqua.model.inline.tag.IfTagInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{BoxType, CanonStreamType, StreamType}
+
 import cats.data.{Chain, State, StateT}
 import cats.instances.list.*
 import cats.syntax.applicative.*
