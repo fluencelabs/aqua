@@ -2,9 +2,9 @@ package aqua.model.inline.raw
 
 import aqua.errors.Errors.internalError
 import aqua.model.*
-import aqua.model.inline.RawValueInliner.{callToModel, valueToModel}
+import aqua.model.inline.RawValueInliner.callToModel
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.inline.{ArrowInliner, Inline, TagInliner}
+import aqua.model.inline.{ArrowInliner, Inline, RawValueInliner}
 import aqua.raw.ops.Call
 import aqua.raw.value.CallArrowRaw
 
@@ -17,7 +17,7 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
   private[inline] def unfold[S: Mangler: Exports: Arrows](
     value: CallArrowRaw,
     exportTo: List[Call.Export]
-  ): State[S, (List[ValueModel], Inline)] = Exports[S].exports.flatMap { exports =>
+  ): State[S, (List[ValueModel], Inline)] = {
     logger.trace(s"${exportTo.mkString(" ")} $value")
 
     val call = Call(value.arguments, exportTo)

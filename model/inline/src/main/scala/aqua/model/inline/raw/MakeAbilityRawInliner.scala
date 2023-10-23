@@ -10,23 +10,21 @@ import aqua.model.ValueModel.Ability
 import cats.Eval
 import cats.data.{Chain, IndexedStateT, NonEmptyMap, State}
 import cats.syntax.foldable.*
+import cats.syntax.functor.*
 
 object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
 
   private def updateFields[S: Mangler: Exports: Arrows](
     name: String,
     fields: NonEmptyMap[String, (ValueModel, Inline)]
-  ): State[S, Unit] = {
-    for {
-      res <- fields.toNel.traverse {
-        case (n, (Ability(abilityName, _, _), _)) =>
-          val leftName = AbilityType.fullName(name, n)
-          Exports[S].copyWithAbilityPrefix(abilityName, leftName)
-        case (n, (vm, _)) =>
-          Exports[S].resolveAbilityField(name, n, vm)
-      }
-    } yield ()
-  }
+  ): State[S, Unit] =
+    fields.toNel.traverse {
+      case (n, (Ability(abilityName, _, _), _)) =>
+        val leftName = AbilityType.fullName(name, n)
+        Exports[S].copyWithAbilityPrefix(abilityName, leftName)
+      case (n, (vm, _)) =>
+        Exports[S].resolveAbilityField(name, n, vm)
+    }.as(())
 
   override def apply[S: Mangler: Exports: Arrows](
     raw: AbilityRaw,

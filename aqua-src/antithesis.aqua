@@ -1,26 +1,34 @@
-aqua M
+aqua A
 
-export getObj
+export test
 
-service OpNum("op"):
-    identity(n: u32) -> u32
+ability InnerAb:
+    arrow() -> i8, i8
 
-service OpStr("op"):
-    identity(n: string) -> string
+ability TestAb:
+    inner: InnerAb
 
-service OpArr("op"):
-    identity(arr: []string) -> []string
+-- func create(a: i8, b: i8) -> TestAb:
+--     arrow = () -> i8, i8:
+--         <- a, b
+--     <- TestAb(inner = InnerAb(arrow = arrow))
+--
+-- func test() -> i8, i8, i8, i8, i8, i8:
+--     Ab <- create(1, 2)
+--     ab <- create(3, 4)
+--     AB <- create(5, 6)
+--     res1, res2 <- ab.inner.arrow()
+--     res3, res4 <- Ab.inner.arrow()
+--     res5, res6 <- AB.inner.arrow()
+--     <- res1, res2, res3, res4, res5, res6
 
-data InnerObj:
-    arr: []string
-    num: u32
+func create(a: i8, b: i8) -> i8 -> i8, i8:
+    arrow = (c: i8) -> i8, i8:
+        <- a, b
+    <- arrow
 
-data SomeObj:
-    str: string
-    num: u64
-    inner: InnerObj
-
-func getObj() -> SomeObj:
-    b = SomeObj(str = OpStr.identity("some str"), num = 5, inner = InnerObj(arr = ["a", "b", "c"], num = 6))
-    c = b.copy(str = "new str", inner = b.inner.copy(num = 3))
-    <- c
+func test() -> i8, i8, i8, i8, i8, i8:
+    Ab <- create(1, 2)
+    ab <- create(3, 4)
+    AB <- create(5, 6)
+    <- res1, res2, res3, res4, res5, res6

@@ -215,15 +215,18 @@ class TypesInterpreter[S[_], X](using
               s"Arrow `${op.name.value}` not found in type `$name`, available: ${fieldsAndArrows.toNel.toList.map(_._1).mkString(", ")}"
             )
             .as(None)
-        ) { t =>
-          val resolvedType = t match {
-            // TODO: is it a correct way to resolve `IntoArrow` type?
-            case ArrowType(_, codomain) => codomain.uncons.map(_._1).getOrElse(t)
-            case _ => t
-          }
-          locations
-            .pointFieldLocation(name, op.name.value, op)
-            .as(Some(IntoArrowRaw(op.name.value, resolvedType, arguments)))
+        ) {
+          case at@ArrowType(_, _) =>
+            locations
+              .pointFieldLocation(name, op.name.value, op)
+              .as(Some(IntoArrowRaw(op.name.value, at, arguments)))
+          case _ =>
+            report
+              .error(
+                op,
+                s"Unexpected. `${op.name.value}` must be an arrow."
+              )
+              .as(None)
         }
       case t =>
         t.properties

@@ -5,7 +5,6 @@ import aqua.types.*
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import cats.Eq
 import cats.syntax.option.*
-import scribe.Logging
 
 sealed trait ValueRaw {
 

@@ -1,28 +1,24 @@
 package aqua.model.inline
 
 import aqua.errors.Errors.internalError
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.collectionToModel
 import aqua.model.inline.raw.{CallArrowRawInliner, CallServiceRawInliner}
-import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.tag.IfTagInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{BoxType, CanonStreamType, DataType, StreamType}
-import aqua.model.inline.Inline.parDesugarPrefixOpt
-import aqua.model.inline.tag.IfTagInliner
+import aqua.types.{BoxType, CanonStreamType, StreamType}
 
-import cats.syntax.traverse.*
+import cats.data.{Chain, State, StateT}
+import cats.instances.list.*
 import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
 import cats.syntax.apply.*
+import cats.syntax.bifunctor.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
-import cats.instances.list.*
-import cats.data.{Chain, State, StateT}
-import cats.syntax.show.*
-import cats.syntax.bifunctor.*
-import scribe.{log, Logging}
+import cats.syntax.traverse.*
+import scribe.Logging
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -35,8 +31,7 @@ import scribe.{log, Logging}
  */
 object TagInliner extends Logging {
 
-  import RawValueInliner.{callToModel, valueListToModel, valueToModel}
-
+  import RawValueInliner.{valueListToModel, valueToModel}
   import aqua.model.inline.Inline.parDesugarPrefix
 
   /**
@@ -178,8 +173,7 @@ object TagInliner extends Logging {
    * @return Model (if any), and prefix (if any)
    */
   def tagToModel[S: Mangler: Arrows: Exports](
-    tag: RawTag,
-    treeFunctionName: String
+    tag: RawTag
   ): State[S, TagInlined] =
     tag match {
       case OnTag(peerId, via, strategy) =>
@@ -324,6 +318,30 @@ object TagInliner extends Logging {
             )
         }
 
+      case CallArrowRawTag(
+            exportTo,
+            ApplyPropertyRaw(vr, IntoArrowRaw(name, at, args))
+          ) =>
+        RawValueInliner.valueToModel(vr).flatMap {
+          // the name of VarModel was already converted to abilities full name
+          case (VarModel(n, _, _), prevInline) =>
+            CallArrowRawInliner.unfold(CallArrowRaw.ability(n, name, at, args), exportTo).flatMap {
+              case (_, inline) =>
+                RawValueInliner
+                  .inlineToTree(inline.prepend(prevInline))
+                  .map(tree =>
+                    TagInlined.Empty(
+                      prefix = SeqModel.wrap(tree).some
+                    )
+                  )
+            }
+          case _ =>
+            internalError(s"Unexpected. 'IntoArrowRaw' can be only used on variables")
+
+        }
+      case CallArrowRawTag(_, value) =>
+        internalError(s"Cannot inline 'CallArrowRawTag' with value '$value'")
+
       case AssignmentTag(value, assignTo) =>
         for {
           modelAndPrefix <- value match {
@@ -429,8 +447,7 @@ object TagInliner extends Logging {
     } yield headInlined.build(children)
 
   def handleTree[S: Exports: Mangler: Arrows](
-    tree: RawTag.Tree,
-    treeFunctionName: String
+    tree: RawTag.Tree
   ): State[S, OpModel.Tree] =
-    traverseS(tree, tagToModel(_, treeFunctionName))
+    traverseS(tree, tagToModel(_))
 }

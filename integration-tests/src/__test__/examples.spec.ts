@@ -33,7 +33,7 @@ import {
 import {
   abilityCall,
   complexAbilityCall,
-  checkAbCallsCall,
+  checkAbCallsCall, bugLNG258Call1, bugLNG258Call2, bugLNG258Call3,
 } from "../examples/abilityCall.js";
 import {
   nilLengthCall,
@@ -550,7 +550,18 @@ describe("Testing examples", () => {
 
   it("ability.aqua ability calls", async () => {
     let result = await checkAbCallsCall();
-    expect(result).toStrictEqual([true, false]);
+    expect(result).toStrictEqual([true, false, true]);
+  });
+
+  it("ability.aqua bug LNG-258", async () => {
+    let result1 = await bugLNG258Call1();
+    expect(result1).toStrictEqual([1, 2]);
+
+    let result2 = await bugLNG258Call2();
+    expect(result2).toStrictEqual([3, 4]);
+
+    let result3 = await bugLNG258Call3();
+    expect(result3).toStrictEqual([5, 6]);
   });
 
   it("functors.aqua LNG-119 bug", async () => {
