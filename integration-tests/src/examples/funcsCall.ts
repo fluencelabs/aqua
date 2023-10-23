@@ -4,6 +4,7 @@ import {
   calc,
   calc2,
   ifCalc,
+  bugLNG260,
 } from "../compiled/examples/funcs.js";
 
 export async function funcsCall() {
@@ -28,4 +29,8 @@ export async function funcsCall() {
   let res4 = await ifCalc();
 
   return [res1, res2, res3, res4];
+}
+
+export async function bugLNG260Call(a: number, b: number) {
+  return await bugLNG260(a, b);
 }
