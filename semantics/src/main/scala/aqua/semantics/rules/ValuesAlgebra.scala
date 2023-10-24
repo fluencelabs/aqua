@@ -46,12 +46,10 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           )
         } yield arrowProp
       case op: IntoCopy[S] =>
-        for {
-          maybeFields <- op.fields.traverse(valueToRaw)
-          copyProp <- maybeFields.sequence.flatTraverse(
-            T.resolveCopy(rootType, op, _)
-          )
-        } yield copyProp
+        (for {
+          fields <- op.args.traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg -> _))
+          prop <- OptionT(T.resolveCopy(op, rootType, fields))
+        } yield prop).value
       case op: IntoIndex[S] =>
         for {
           maybeIdx <- op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw)
@@ -102,7 +100,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {
           resolvedType <- OptionT(T.resolveType(typeName))
-          fieldsGiven <- fields.traverse(value => OptionT(valueToRaw(value)))
+          fieldsGiven <- fields
+            .traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg.argName.value -> _))
+            .map(_.toNem) // TODO: Check for duplicates
           fieldsGivenTypes = fieldsGiven.map(_.`type`)
           generated <- OptionT.fromOption(
             resolvedType match {
@@ -297,7 +297,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
     valueToRaw(v).flatMap(
       _.flatTraverse {
         case ca: CallArrowRaw => (ca, ca.baseType).some.pure[Alg]
-        case apr@ApplyPropertyRaw(_, IntoArrowRaw(_, arrowType, _)) => (apr, arrowType).some.pure[Alg]
+        case apr @ ApplyPropertyRaw(_, IntoArrowRaw(_, arrowType, _)) =>
+          (apr, arrowType).some.pure[Alg]
         // TODO: better error message (`raw` formatting)
         case raw => report.error(v, s"Expected arrow call, got $raw").as(none)
       }

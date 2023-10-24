@@ -15,6 +15,16 @@ enum NamedArg[F[_]] extends Token[F] {
   // for just `name` (short for `name = name`)
   case Short(variable: VarToken[F])
 
+  lazy val argName: Name[F] = this match {
+    case Full(name, _) => name
+    case Short(variable) => variable.name
+  }
+
+  lazy val argValue: ValueToken[F] = this match {
+    case Full(_, value) => value
+    case Short(variable) => variable
+  }
+
   override def as[T](v: T): F[T] = this match {
     case Full(name, value) => name.as(v)
     case Short(variable) => variable.as(v)
