@@ -21,7 +21,6 @@ import cats.data.Validated
 import cats.free.Cofree
 import cats.data.State
 import cats.Eval
-import org.scalactic.anyvals.NonEmptyList
 
 class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
