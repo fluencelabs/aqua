@@ -21,6 +21,9 @@ import cats.data.Validated
 import cats.free.Cofree
 import cats.data.State
 import cats.Eval
+import org.scalactic.anyvals.NonEmptyList
+import aqua.raw.value.MakeStructRaw
+import aqua.raw.value.AbilityRaw
 
 class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
@@ -672,6 +675,116 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideResult(script) { case (warnings, Right(_)) =>
       warnings.exists(_.hints.exists(_.contains("used"))) should be(true)
+    }
+  }
+
+  it should "handle struct creation" in {
+    // def arrow(name: String) =
+    //   s"""|  $name = (x: i8) -> bool:
+    //       |    <- x > 0
+    //       |""".stripMargin
+    // val arrowCases = List(
+    //   arrow("arrow") -> "arrow = arrow",
+    //   arrow("arrow") -> "arrow",
+    //   arrow("closure") -> "arrow = closure"
+    // )
+
+    val fieldCases = List(
+      "field = 42" -> "field = field",
+      "field = 42" -> "field",
+      "integer = 42" -> "field = integer",
+      "" -> "field = 42"
+    )
+
+    val strCases = List(
+      "str = \"str\"" -> "str = str",
+      "str = \"str\"" -> "str",
+      "string = \"str\"" -> "str = string",
+      "" -> "str = \"str\""
+    )
+
+    for {
+      fieldCase <- fieldCases
+      (fieldDef, fieldArg) = fieldCase
+      strCase <- strCases
+      (strDef, strArg) = strCase
+    } {
+      val defs = List(fieldDef, strDef).filter(_.nonEmpty).mkString("\n  ")
+      val args = List(fieldArg, strArg).filter(_.nonEmpty).mkString(", ")
+      val script = s"""|data Struct:
+                       |  field: i8
+                       |  str: string
+                       |
+                       |func main() -> Struct:
+                       |  $defs
+                       |  <- Struct($args)
+                       |""".stripMargin
+
+      insideBody(script) { body =>
+        matchSubtree(body) { case (ReturnTag(vals), _) =>
+          inside(vals.head) { case MakeStructRaw(fields, _) =>
+            fields.contains("field") should be(true)
+            fields.contains("str") should be(true)
+          }
+        }
+      }
+    }
+  }
+
+  it should "handle ability creation" in {
+    def arrow(name: String) =
+      s"""|$name = (x: i8) -> bool:
+          |    <- x > 0
+          |""".stripMargin
+    val arrowCases = List(
+      arrow("arrow") -> "arrow = arrow",
+      arrow("arrow") -> "arrow",
+      arrow("closure") -> "arrow = closure"
+    )
+
+    val fieldCases = List(
+      "field = 42" -> "field = field",
+      "field = 42" -> "field",
+      "integer = 42" -> "field = integer",
+      "" -> "field = 42"
+    )
+
+    val strCases = List(
+      "str = \"str\"" -> "str = str",
+      "str = \"str\"" -> "str",
+      "string = \"str\"" -> "str = string",
+      "" -> "str = \"str\""
+    )
+
+    for {
+      arrowCase <- arrowCases
+      (arrowDef, arrowArg) = arrowCase
+      fieldCase <- fieldCases
+      (fieldDef, fieldArg) = fieldCase
+      strCase <- strCases
+      (strDef, strArg) = strCase
+    } {
+      val defs = List(arrowDef, fieldDef, strDef).filter(_.nonEmpty).mkString("\n  ")
+      val args = List(arrowArg, fieldArg, strArg).filter(_.nonEmpty).mkString(", ")
+      val script = s"""|ability Ab:
+                       |  field: i8
+                       |  str: string
+                       |  arrow(x: i8) -> bool
+                       |
+                       |func main() -> Ab:
+                       |  $defs
+                       |  <- Ab($args)
+                       |""".stripMargin
+
+      insideBody(script) { body =>
+        matchSubtree(body) { case (ReturnTag(vals), _) =>
+          inside(vals.head) { case AbilityRaw(fields, _) =>
+            fields.contains("arrow") should be(true)
+            fields.contains("field") should be(true)
+            fields.contains("str") should be(true)
+          }
+        }
+      }
     }
   }
 }
