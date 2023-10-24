@@ -60,7 +60,7 @@ object ArrowInliner extends Logging {
               ) if !outsideStreamNames.contains(n) =>
             resDesugar.toList -> res
           case (
-                cexp @ CallModel.Export(exp, st @ StreamType(_)),
+                cexp @ CallModel.Export(_, StreamType(_)),
                 (res, resDesugar)
               ) =>
             // pass nested function results to a stream
@@ -340,7 +340,7 @@ object ArrowInliner extends Logging {
 
     _ <- Arrows[S].resolved(arrowsResolved)
     _ <- Exports[S].resolved(exportsResolved)
-  } yield fn.copy(body = tree, ret = ret)
+  } yield fn.copy(body = tree, ret = ret, capturedValues = capturedValues.renamed)
 
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,

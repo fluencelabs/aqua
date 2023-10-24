@@ -2,33 +2,12 @@ aqua A
 
 export test
 
-ability InnerAb:
-    arrow() -> i8, i8
+func create(a: i8) -> -> i8:
+    closureArrow = () -> i8:
+        <- a
+    <- closureArrow
 
-ability TestAb:
-    inner: InnerAb
-
--- func create(a: i8, b: i8) -> TestAb:
---     arrow = () -> i8, i8:
---         <- a, b
---     <- TestAb(inner = InnerAb(arrow = arrow))
---
--- func test() -> i8, i8, i8, i8, i8, i8:
---     Ab <- create(1, 2)
---     ab <- create(3, 4)
---     AB <- create(5, 6)
---     res1, res2 <- ab.inner.arrow()
---     res3, res4 <- Ab.inner.arrow()
---     res5, res6 <- AB.inner.arrow()
---     <- res1, res2, res3, res4, res5, res6
-
-func create(a: i8, b: i8) -> i8 -> i8, i8:
-    arrow = (c: i8) -> i8, i8:
-        <- a, b
-    <- arrow
-
-func test() -> i8, i8, i8, i8, i8, i8:
-    Ab <- create(1, 2)
-    ab <- create(3, 4)
-    AB <- create(5, 6)
-    <- res1, res2, res3, res4, res5, res6
+func test() -> i8, i8:
+    arr1 <- create(1)
+    arr2 <- create(2)
+    <- arr1(), arr2()
