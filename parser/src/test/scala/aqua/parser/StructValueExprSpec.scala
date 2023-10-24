@@ -4,21 +4,10 @@ import aqua.AquaSpec
 import aqua.AquaSpec.{toNumber, toStr, toVar}
 import aqua.parser.expr.ConstantExpr
 import aqua.parser.expr.func.AssignmentExpr
-import aqua.parser.lexer.{
-  CallArrowToken,
-  CollectionToken,
-  IntoArrow,
-  LiteralToken,
-  Name,
-  NamedTypeToken,
-  NamedValueToken,
-  PropertyToken,
-  Token,
-  ValueToken,
-  VarToken
-}
+import aqua.parser.lexer.*
 import aqua.parser.lexer.CollectionToken.Mode.ArrayMode
 import aqua.types.LiteralType
+
 import cats.Id
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -32,33 +21,39 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     val one = toNumber(1)
     val two = toNumber(2)
     val three = toNumber(3)
-    val a = LiteralToken[Id]("\"a\"", LiteralType.string)
-    val b = LiteralToken[Id]("\"b\"", LiteralType.string)
-    val c = LiteralToken[Id]("\"c\"", LiteralType.string)
+    val a = toStr("a")
+    val b = toStr("b")
+    val c = toStr("c")
 
     parseData(
       str
     ) should be(
       NamedValueToken(
         NamedTypeToken[Id]("Obj"),
-        NonEmptyMap.of(
-          "f1" -> one,
-          "f2" -> a,
-          "f3" -> CollectionToken[Id](ArrayMode, List(one, two, three)),
-          "f4" -> CollectionToken[Id](ArrayMode, List(b, c)),
-          "f5" -> NamedValueToken(
-            NamedTypeToken[Id]("NestedObj"),
-            NonEmptyMap.of(
-              "i1" -> two,
-              "i2" -> b,
-              "i3" -> CallArrowToken(Name[Id]("funcCall"), List(three)),
-              "i4" -> VarToken[Id](Name[Id]("value"))
+        NonEmptyList.of(
+          NamedArg.Full(toName("f1"), one),
+          NamedArg.Full(toName("f2"), a),
+          NamedArg.Full(toName("f3"), CollectionToken[Id](ArrayMode, List(one, two, three))),
+          NamedArg.Full(toName("f4"), CollectionToken[Id](ArrayMode, List(b, c))),
+          NamedArg.Full(
+            toName("f5"),
+            NamedValueToken(
+              NamedTypeToken[Id]("NestedObj"),
+              NonEmptyList.of(
+                NamedArg.Full(toName("i1"), two),
+                NamedArg.Full(toName("i2"), b),
+                NamedArg.Full(toName("i3"), CallArrowToken(toName("funcCall"), List(three))),
+                NamedArg.Full(toName("i4"), VarToken(toName("value")))
+              )
             )
           ),
-          "f6" -> CallArrowToken(Name[Id]("funcCall"), List(one)),
-          "f7" -> PropertyToken[Id](
-            VarToken[Id](Name[Id]("Serv")),
-            NonEmptyList.one(IntoArrow[Id](Name[Id]("call"), List(two)))
+          NamedArg.Full(toName("f6"), CallArrowToken(Name[Id]("funcCall"), List(one))),
+          NamedArg.Full(
+            toName("f7"),
+            PropertyToken[Id](
+              VarToken[Id](Name[Id]("Serv")),
+              NonEmptyList.one(IntoArrow[Id](Name[Id]("call"), List(two)))
+            )
           )
         )
       )
@@ -66,18 +61,18 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
   }
 
   "one named arg" should "be parsed" in {
-    val result = aqua.parser.lexer.Token.namedArg
+    val result = NamedArg.namedArg
       .parseAll("""  a
                   | =
                   |  3""".stripMargin)
-      .map(v => (v._1, v._2.mapK(spanToId)))
+      .map(_.mapK(spanToId))
       .value
 
-    result should be(("a", toNumber(3)))
+    result should be(NamedArg.Full(toName("a"), toNumber(3)))
   }
 
   "named args" should "be parsed" in {
-    val result = Token.namedArgs
+    val result = NamedArg.namedArgs
       .parseAll("""(
                   |a = "str",
                   |b = 3,
@@ -86,12 +81,13 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
                   |    5
                   |)""".stripMargin)
       .value
-      .map { case (str, vt) => (str, vt.mapK(spanToId)) }
+      .map(_.mapK(spanToId))
 
     result should be(
-      NonEmptyList[(String, ValueToken[Id])](
-        ("a", toStr("str")),
-        ("b", toNumber(3)) :: ("c", toNumber(5)) :: Nil
+      NonEmptyList.of(
+        NamedArg.Full(toName("a"), toStr("str")),
+        NamedArg.Full(toName("b"), toNumber(3)),
+        NamedArg.Full(toName("c"), toNumber(5))
       )
     )
   }

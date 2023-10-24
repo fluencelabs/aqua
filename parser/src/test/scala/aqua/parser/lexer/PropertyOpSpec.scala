@@ -49,9 +49,9 @@ class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
       NonEmptyList.of(
         IntoCopy[Id](
           (),
-          NonEmptyMap.of(
-            "a" -> LiteralToken("\"str\"", LiteralType.string),
-            "b" -> toNumber(12)
+          NonEmptyList.of(
+            NamedArg.Full(toName("a"), toStr("str")),
+            NamedArg.Full(toName("b"), toNumber(12))
           )
         )
       )
@@ -61,16 +61,16 @@ class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
       NonEmptyList.of(
         IntoCopy[Id](
           (),
-          NonEmptyMap.of(
-            "a" -> LiteralToken("\"str\"", LiteralType.string),
-            "b" -> toNumber(12)
+          NonEmptyList.of(
+            NamedArg.Full(toName("a"), toStr("str")),
+            NamedArg.Full(toName("b"), toNumber(12))
           )
         ),
         IntoCopy[Id](
           (),
-          NonEmptyMap.of(
-            "c" -> toNumber(54),
-            "d" -> VarToken("someVar")
+          NonEmptyList.of(
+            NamedArg.Full(toName("c"), toNumber(54)),
+            NamedArg.Full(toName("d"), toVar("someVar"))
           )
         )
       )

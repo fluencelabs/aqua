@@ -51,7 +51,7 @@ object NamedArg {
       VarToken.variable.between(` *`, `/s*`)
     ).map(NamedArg.Short.apply)
 
-  private val namedArg: P[NamedArg[S]] =
+  val namedArg: P[NamedArg[S]] =
     namedArgFull.backtrack | namedArgShort
 
   val namedArgs: P[NonEmptyList[NamedArg[S]]] =
