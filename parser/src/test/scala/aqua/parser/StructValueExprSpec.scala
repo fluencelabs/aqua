@@ -60,7 +60,7 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     )
   }
 
-  "one named arg" should "be parsed" in {
+  "named args" should "parse one full named arg" in {
     val result = NamedArg.namedArg
       .parseAll("""  a
                   | =
@@ -71,7 +71,16 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     result should be(NamedArg.Full(toName("a"), toNumber(3)))
   }
 
-  "named args" should "be parsed" in {
+  it should "parse one short named arg" in {
+    val result = NamedArg.namedArg
+      .parseAll("  b ")
+      .map(_.mapK(spanToId))
+      .value
+
+    result should be(NamedArg.Short(toVar("b")))
+  }
+
+  it should "parse a few full named args" in {
     val result = NamedArg.namedArgs
       .parseAll("""(
                   |a = "str",
@@ -89,6 +98,50 @@ class StructValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
         NamedArg.Full(toName("b"), toNumber(3)),
         NamedArg.Full(toName("c"), toNumber(5))
       )
+    )
+  }
+
+  it should "parse a few short named args" in {
+    val result = NamedArg.namedArgs
+      .parseAll("""(
+                  |a,
+                  | b ,
+                  |c
+                  |
+                  |)""".stripMargin)
+      .value
+      .map(_.mapK(spanToId))
+
+    result should be(
+      NonEmptyList.of(
+        NamedArg.Short(toVar("a")),
+        NamedArg.Short(toVar("b")),
+        NamedArg.Short(toVar("c"))
+      )
+    )
+  }
+
+  it should "parse mixed named args" in {
+    val args = List(
+      "meaning = 42" -> NamedArg.Full(toName("meaning"), toNumber(42)),
+      "variable" -> NamedArg.Short(toVar("variable")),
+      "col = [1,2,3]" -> NamedArg.Full(
+        toName("col"),
+        CollectionToken[Id](ArrayMode, List(toNumber(1), toNumber(2), toNumber(3)))
+      ),
+      "arrow" -> NamedArg.Short(toVar("arrow"))
+    )
+
+    args.permutations.foreach(perm =>
+      val str = perm.map(_._1).mkString("(", ", ", ")")
+      val expected = NonEmptyList.fromListUnsafe(perm.map(_._2))
+
+      val result = NamedArg.namedArgs
+        .parseAll(str)
+        .value
+        .map(_.mapK(spanToId))
+
+      result should be(expected)
     )
   }
 

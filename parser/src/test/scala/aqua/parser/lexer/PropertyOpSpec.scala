@@ -42,10 +42,10 @@ class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
     PropertyOp.ops.parseAll("!-1").isLeft shouldBe true
   }
 
-  "copy ops" should "parse" in {
-    val opsP = (s: String) => PropertyOp.ops.parseAll(s).value.map(_.mapK(spanToId))
+  def copyOpsP(s: String) = PropertyOp.ops.parseAll(s).value.map(_.mapK(spanToId))
 
-    opsP(".copy(a = \"str\", b = 12)") should be(
+  "copy ops" should "parse one copy" in {
+    copyOpsP(".copy(a = \"str\", b = 12)") should be(
       NonEmptyList.of(
         IntoCopy[Id](
           (),
@@ -56,8 +56,10 @@ class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
         )
       )
     )
+  }
 
-    opsP(".copy(a = \"str\", b = 12).copy(c = 54, d = someVar)") should be(
+  it should "parse sequential copy" in {
+    copyOpsP(".copy(a = \"str\", b = 12).copy(c = 54, d = someVar)") should be(
       NonEmptyList.of(
         IntoCopy[Id](
           (),
@@ -75,6 +77,24 @@ class PropertyOpSpec extends AnyFlatSpec with Matchers with EitherValues {
         )
       )
     )
+  }
+
+  it should "parse mixed args in copy" in {
+    val args = List(
+      "a = \"str\"" -> NamedArg.Full(toName("a"), toStr("str")),
+      "b = 12" -> NamedArg.Full(toName("b"), toNumber(12)),
+      "c" -> NamedArg.Short(toVar("c")),
+      "d" -> NamedArg.Short(toVar("d"))
+    )
+
+    args.toSet.subsets().filter(_.nonEmpty).flatMap(_.toList.permutations).foreach { args =>
+      val str = args.map(_._1).mkString(".copy(", ", ", ")")
+      val expected = NonEmptyList.of(
+        IntoCopy[Id]((), NonEmptyList.fromListUnsafe(args.map(_._2)))
+      )
+
+      copyOpsP(str) should be(expected)
+    }
   }
 
 }
