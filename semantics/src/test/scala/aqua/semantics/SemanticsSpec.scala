@@ -5,7 +5,7 @@ import aqua.parser.Ast
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
-import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw, ValueRaw, VarRaw}
+import aqua.raw.value.*
 import aqua.types.*
 import aqua.raw.ops.*
 
@@ -22,8 +22,6 @@ import cats.free.Cofree
 import cats.data.State
 import cats.Eval
 import org.scalactic.anyvals.NonEmptyList
-import aqua.raw.value.MakeStructRaw
-import aqua.raw.value.AbilityRaw
 
 class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
