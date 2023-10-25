@@ -5,7 +5,7 @@ import aqua.parser.Ast
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
-import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw, ValueRaw, VarRaw}
+import aqua.raw.value.*
 import aqua.types.*
 import aqua.raw.ops.*
 
@@ -673,5 +673,127 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
     insideResult(script) { case (warnings, Right(_)) =>
       warnings.exists(_.hints.exists(_.contains("used"))) should be(true)
     }
+  }
+
+  {
+    val fieldCases = List(
+      "field = 42" -> "field = field",
+      "field = 42" -> "field",
+      "integer = 42" -> "field = integer",
+      "" -> "field = 42"
+    )
+
+    val strCases = List(
+      "str = \"str\"" -> "str = str",
+      "str = \"str\"" -> "str",
+      "string = \"str\"" -> "str = string",
+      "" -> "str = \"str\""
+    )
+
+    it should "handle struct creation" in {
+      for {
+        fieldCase <- fieldCases
+        (fieldDef, fieldArg) = fieldCase
+        strCase <- strCases
+        (strDef, strArg) = strCase
+      } {
+        val defs = List(fieldDef, strDef).filter(_.nonEmpty).mkString("\n  ")
+        val args = List(fieldArg, strArg).filter(_.nonEmpty).mkString(", ")
+        val script = s"""|data Struct:
+                         |  field: i8
+                         |  str: string
+                         |
+                         |func main() -> Struct:
+                         |  $defs
+                         |  <- Struct($args)
+                         |""".stripMargin
+
+        insideBody(script) { body =>
+          matchSubtree(body) { case (ReturnTag(vals), _) =>
+            inside(vals.head) { case MakeStructRaw(fields, _) =>
+              fields.contains("field") should be(true)
+              fields.contains("str") should be(true)
+            }
+          }
+        }
+      }
+    }
+
+    it should "handle ability creation" in {
+      def arrow(name: String) =
+        s"""|$name = (x: i8) -> bool:
+            |    <- x > 0
+            |""".stripMargin
+      val arrowCases = List(
+        arrow("arrow") -> "arrow = arrow",
+        arrow("arrow") -> "arrow",
+        arrow("closure") -> "arrow = closure"
+      )
+
+      for {
+        arrowCase <- arrowCases
+        (arrowDef, arrowArg) = arrowCase
+        fieldCase <- fieldCases
+        (fieldDef, fieldArg) = fieldCase
+        strCase <- strCases
+        (strDef, strArg) = strCase
+      } {
+        val defs = List(arrowDef, fieldDef, strDef).filter(_.nonEmpty).mkString("\n  ")
+        val args = List(arrowArg, fieldArg, strArg).filter(_.nonEmpty).mkString(", ")
+        val script = s"""|ability Ab:
+                         |  field: i8
+                         |  str: string
+                         |  arrow(x: i8) -> bool
+                         |
+                         |func main() -> Ab:
+                         |  $defs
+                         |  <- Ab($args)
+                         |""".stripMargin
+
+        insideBody(script) { body =>
+          matchSubtree(body) { case (ReturnTag(vals), _) =>
+            inside(vals.head) { case AbilityRaw(fields, _) =>
+              fields.contains("arrow") should be(true)
+              fields.contains("field") should be(true)
+              fields.contains("str") should be(true)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  it should "forbid duplicate fields in data or ability creation" in {
+    List("data", "ability").foreach { form =>
+
+      val script = s"""|$form StructOrAb:
+                       |  field: i8
+                       |
+                       |func main() -> StructOrAb:
+                       |  field = 24
+                       |  <- StructOrAb(field = 42, field)
+                       |""".stripMargin
+
+      insideSemErrors(script) { errors =>
+        atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+      }
+    }
+  }
+
+  it should "forbid duplicate fields in data copy" in {
+
+    val script = """|data Struct:
+                    |  field: i8
+                    |
+                    |func main() -> Struct:
+                    |  st = Struct(field = 24)
+                    |  field = 37
+                    |  <- st.copy(field = 42, field)
+                    |""".stripMargin
+
+    insideSemErrors(script) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+
   }
 }

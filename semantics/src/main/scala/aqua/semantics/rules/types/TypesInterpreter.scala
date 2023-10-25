@@ -216,7 +216,7 @@ class TypesInterpreter[S[_], X](using
             )
             .as(None)
         ) {
-          case at@ArrowType(_, _) =>
+          case at @ ArrowType(_, _) =>
             locations
               .pointFieldLocation(name, op.name.value, op)
               .as(Some(IntoArrowRaw(op.name.value, at, arguments)))
@@ -245,22 +245,33 @@ class TypesInterpreter[S[_], X](using
 
   // TODO actually it's stateless, exists there just for reporting needs
   override def resolveCopy(
+    token: IntoCopy[S],
     rootT: Type,
-    op: IntoCopy[S],
-    fields: NonEmptyMap[String, ValueRaw]
+    args: NonEmptyList[(NamedArg[S], ValueRaw)]
   ): State[X, Option[PropertyRaw]] =
     rootT match {
       case st: StructType =>
-        fields.toSortedMap.toList.traverse { case (fieldName, value) =>
+        args.forallM { case (arg, value) =>
+          val fieldName = arg.argName.value
           st.fields.lookup(fieldName) match {
             case Some(t) =>
-              ensureTypeMatches(op.fields.lookup(fieldName).getOrElse(op), t, value.`type`)
-            case None => report.error(op, s"No field with name '$fieldName' in $rootT").as(false)
+              ensureTypeMatches(arg.argValue, t, value.`type`)
+            case None =>
+              report.error(arg.argName, s"No field with name '$fieldName' in $rootT").as(false)
           }
-        }.map(res => if (res.forall(identity)) Some(IntoCopyRaw(st, fields)) else None)
+        }.map(
+          Option.when(_)(
+            IntoCopyRaw(
+              st,
+              args.map { case (arg, value) =>
+                arg.argName.value -> value
+              }.toNem
+            )
+          )
+        )
 
       case _ =>
-        report.error(op, s"Expected $rootT to be a data type").as(None)
+        report.error(token, s"Expected $rootT to be a data type").as(None)
     }
 
   // TODO actually it's stateless, exists there just for reporting needs
@@ -339,12 +350,12 @@ class TypesInterpreter[S[_], X](using
               )
               .as(false)
           } else {
-            valueFields.toSortedMap.toList.traverse { (name, `type`) =>
+            valueFields.toSortedMap.toList.forallM { (name, `type`) =>
               typeFields.lookup(name) match {
                 case Some(t) =>
                   val nextToken = token match {
                     case NamedValueToken(_, fields) =>
-                      fields.lookup(name).getOrElse(token)
+                      fields.find(_.argName.value == name).getOrElse(token)
                     // TODO: Is it needed?
                     case PropertyToken(_, properties) =>
                       properties.last
@@ -359,7 +370,7 @@ class TypesInterpreter[S[_], X](using
                     )
                     .as(false)
               }
-            }.map(_.forall(identity))
+            }
           }
         case _ =>
           val notes =
