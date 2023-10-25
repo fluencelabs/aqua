@@ -114,13 +114,13 @@ func bugLNG258_3() -> i8, i8:
     res1, res2 <- aB.inner.arrow()
     <- res1, res2
 
-ability TestAb:
+ability TestAbWithClosure:
     arrow: -> i8
 
-func create(a: i8) -> TestAb:
+func create(a: i8) -> TestAbWithClosure:
     closureArrow = () -> i8:
         <- a
-    ab = TestAb(arrow = closureArrow)
+    ab = TestAbWithClosure(arrow = closureArrow)
     <- ab
 
 func multipleAbilityWithClosure() -> i8, i8:
