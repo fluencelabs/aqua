@@ -10,6 +10,7 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.definitions.DefinitionsAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import cats.Monad
@@ -24,7 +25,8 @@ object ExprSem {
     T: TypesAlgebra[S, G],
     V: ValuesAlgebra[S, G],
     D: DefinitionsAlgebra[S, G],
-    L: LocationsAlgebra[S, G]
+    L: LocationsAlgebra[S, G],
+    M: ManglerAlgebra[G]
   ): Prog[G, Raw] =
     expr match {
       case expr: ServiceIdExpr[S] => new ServiceIdSem(expr).program[G]
