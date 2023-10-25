@@ -34,6 +34,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   report: ReportAlgebra[S, Alg]
 ) extends Logging {
 
+  private def reportNamedArgsDuplicates(
+    args: NonEmptyList[NamedArg[S]]
+  ): Alg[Unit] = args
+    .groupBy(_.argName.value)
+    .filter { case (_, group) =>
+      group.size > 1
+    }
+    .toList
+    .traverse_ { case (name, group) =>
+      group.traverse_ { arg =>
+        report.error(
+          arg.argName,
+          s"Duplicate argument `$name`"
+        )
+      }
+    }
+
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
       case op: IntoField[S] =>
@@ -47,6 +64,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         } yield arrowProp
       case op: IntoCopy[S] =>
         (for {
+          _ <- OptionT.liftF(
+            reportNamedArgsDuplicates(op.args)
+          )
           fields <- op.args.traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg -> _))
           prop <- OptionT(T.resolveCopy(op, rootType, fields))
         } yield prop).value
@@ -100,9 +120,13 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {
           resolvedType <- OptionT(T.resolveType(typeName))
+          // Report duplicate fields
+          _ <- OptionT.liftF(
+            reportNamedArgsDuplicates(fields)
+          )
           fieldsGiven <- fields
             .traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg.argName.value -> _))
-            .map(_.toNem) // TODO: Check for duplicates
+            .map(_.toNem) // Take only last value for a field
           fieldsGivenTypes = fieldsGiven.map(_.`type`)
           generated <- OptionT.fromOption(
             resolvedType match {
