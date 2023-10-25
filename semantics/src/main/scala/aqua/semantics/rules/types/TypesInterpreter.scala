@@ -251,7 +251,6 @@ class TypesInterpreter[S[_], X](using
   ): State[X, Option[PropertyRaw]] =
     rootT match {
       case st: StructType =>
-        // TODO: Check for duplicate fields
         args.forallM { case (arg, value) =>
           val fieldName = arg.argName.value
           st.fields.lookup(fieldName) match {
