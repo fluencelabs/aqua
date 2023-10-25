@@ -762,4 +762,38 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       }
     }
   }
+
+  it should "forbid duplicate fields in data or ability creation" in {
+    List("data", "ability").foreach { form =>
+
+      val script = s"""|$form StructOrAb:
+                       |  field: i8
+                       |
+                       |func main() -> StructOrAb:
+                       |  field = 24
+                       |  <- StructOrAb(field = 42, field)
+                       |""".stripMargin
+
+      insideSemErrors(script) { errors =>
+        atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+      }
+    }
+  }
+
+  it should "forbid duplicate fields in data copy" in {
+
+    val script = """|data Struct:
+                    |  field: i8
+                    |
+                    |func main() -> Struct:
+                    |  st = Struct(field = 24)
+                    |  field = 37
+                    |  <- st.copy(field = 42, field)
+                    |""".stripMargin
+
+    insideSemErrors(script) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+
+  }
 }
