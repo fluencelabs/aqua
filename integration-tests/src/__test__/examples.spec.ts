@@ -104,7 +104,7 @@ import { multiReturnCall } from "../examples/multiReturnCall.js";
 import { declareCall } from "../examples/declareCall.js";
 import { genOptions, genOptionsEmptyString } from "../examples/optionsCall.js";
 import { lng193BugCall } from "../examples/closureReturnRename.js";
-import { closuresCall } from "../examples/closures.js";
+import {closuresCall, multipleClosuresLNG262BugCall} from "../examples/closures.js";
 import { closureArrowCaptureCall } from "../examples/closureArrowCapture.js";
 import {
   bugLNG63_2Call,
@@ -948,6 +948,11 @@ describe("Testing examples", () => {
     let res2 = ["in", config.externalAddressesRelay2[0]];
     expect(closuresResult).toEqual(["in", res1, res1, res2]);
   }, 20000);
+
+  it("closures.aqua bug LNG-262", async () => {
+    let result = await multipleClosuresLNG262BugCall();
+    expect(result).toEqual([1, 2]);
+  });
 
   it("closureArrowCapture.aqua", async () => {
     let result = await closureArrowCaptureCall("input");

@@ -2,15 +2,15 @@ aqua A
 
 export bugLNG260
 
--- func create(a: i8) -> -> i8:
---     closureArrow = () -> i8:
---         <- a
---     <- closureArrow
---
--- func test() -> i8, i8:
---     arr1 <- create(1)
---     arr2 <- create(2)
---     <- arr1(), arr2()
+func create(a: i8) -> -> i8:
+    closureArrow = () -> i8:
+        <- a
+    <- closureArrow
+
+func test() -> i8, i8:
+    arr1 <- create(1)
+    arr2 <- create(2)
+    <- arr1(), arr2()
 
 func cmp(a: i32, b: i32, pred: i8 -> bool) -> bool:
   result: ?bool
