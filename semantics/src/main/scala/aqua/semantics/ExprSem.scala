@@ -13,6 +13,7 @@ import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
+
 import cats.Monad
 
 object ExprSem {
