@@ -2,7 +2,7 @@ aqua Main
 
 use DECLARE_CONST, decl_bar from "imports_exports/declare.aqua" as Declare
 
-export handleAb, SomeService, bug214, checkAbCalls, bugLNG258_1, bugLNG258_2, bugLNG258_3
+export handleAb, SomeService, bug214, checkAbCalls, bugLNG258_1, bugLNG258_2, bugLNG258_3, multipleAbilityWithClosure
 
 service SomeService("wed"):
   getStr(s: string) -> string
@@ -113,5 +113,19 @@ func bugLNG258_3() -> i8, i8:
     aB <- create(5, 6)
     res1, res2 <- aB.inner.arrow()
     <- res1, res2
+
+ability TestAb:
+    arrow: -> i8
+
+func create(a: i8) -> TestAb:
+    closureArrow = () -> i8:
+        <- a
+    ab = TestAb(arrow = closureArrow)
+    <- ab
+
+func multipleAbilityWithClosure() -> i8, i8:
+    ab <- create(1)
+    ab2 <- create(2)
+    <- ab.arrow(), ab2.arrow()
 
 
