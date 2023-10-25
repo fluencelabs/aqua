@@ -340,7 +340,7 @@ object ArrowInliner extends Logging {
 
     _ <- Arrows[S].resolved(arrowsResolved)
     _ <- Exports[S].resolved(exportsResolved)
-  } yield fn.copy(body = tree, ret = ret, capturedValues = capturedValues.renamed)
+  } yield fn.copy(body = tree, ret = ret)
 
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,
