@@ -12,6 +12,7 @@ import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
+
 import cats.Monad
 import cats.data.Chain
 import cats.free.Cofree
