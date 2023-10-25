@@ -1,6 +1,7 @@
 package aqua.parser.lexer
 
 import aqua.parser.lift.Span.S
+
 import cats.data.NonEmptyList
 import cats.parse.{Accumulator0, Parser as P, Parser0 as P0}
 import cats.{~>, Comonad, Functor}
@@ -119,18 +120,6 @@ object Token {
   val `<=` : P[Unit] = P.string("<=")
   val `<-` : P[Unit] = P.string("<-")
   val `/s*` : P0[Unit] = ` \n+`.backtrack | ` *`.void
-
-  val namedArg: P[(String, ValueToken[S])] =
-    P.defer(
-      `name`.between(` *`, `/s*`) ~
-        `=`.between(` *`, `/s*`).void ~
-        ValueToken.`value`.between(` *`, `/s*`)
-    ).map { case ((name, _), vt) =>
-      (name, vt)
-    }
-
-  val namedArgs: P[NonEmptyList[(String, ValueToken[S])]] =
-    P.defer(` `.?.with1 ~ `(` ~ `/s*` *> comma(namedArg) <* `/s*` *> `)`)
 
   case class LiftToken[F[_]: Functor, A](point: F[A]) extends Token[F] {
     override def as[T](v: T): F[T] = Functor[F].as(point, v)
