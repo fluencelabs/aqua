@@ -58,6 +58,12 @@ class TypesInterpreter[S[_], X](using
         report.error(token, s"Unresolved type").as(None)
     }
 
+  def resolveNamedType(token: TypeToken[S]): State[X, Option[Type]] =
+    resolveType(token).flatMap(a => a.flatTraverse {
+      case t: (AbilityType | StructType) => Option(t).pure
+      case _ => report.error(token, "Type must be an ability or a data").as(None)
+    })
+
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
     getState.map(TypesStateHelper.resolveArrowDef(arrowDef)).flatMap {
       case Valid(TypeResolution(tt, tokens)) =>
@@ -333,12 +339,10 @@ class TypesInterpreter[S[_], X](using
   override def ensureTypeMatches(
     token: Token[S],
     expected: Type,
-    givenType: Type,
-    alias: Option[String] = None
+    givenType: Type
   ): State[X, Boolean] =
     if (expected.acceptsValueOf(givenType)) State.pure(true)
     else {
-      val expectedStr = alias.map(a => s"$a, that is an alias of '$expected'").getOrElse(expected.toString)
       (expected, givenType) match {
         case (valueNamedType: NamedType, typeNamedType: NamedType) =>
           val valueFields = valueNamedType.fields
@@ -348,7 +352,7 @@ class TypesInterpreter[S[_], X](using
             report
               .error(
                 token,
-                s"Number of fields doesn't match the data type, expected: $expectedStr, given: $givenType"
+                s"Number of fields doesn't match the data type, expected: $expected, given: $givenType"
               )
               .as(false)
           } else {
@@ -368,7 +372,7 @@ class TypesInterpreter[S[_], X](using
                   report
                     .error(
                       token,
-                      s"Wrong value type, expected: $expectedStr, given: $givenType"
+                      s"Wrong value type, expected: $expected, given: $givenType"
                     )
                     .as(false)
               }
@@ -386,7 +390,7 @@ class TypesInterpreter[S[_], X](using
           report
             .error(
               token,
-              "Types mismatch." :: s"expected:   $expectedStr" :: s"given:      $givenType" :: Nil ++ notes
+              "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
             )
             .as(false)
       }

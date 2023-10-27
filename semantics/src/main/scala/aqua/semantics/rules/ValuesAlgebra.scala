@@ -113,7 +113,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
 
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {
-          resolvedType <- OptionT(T.resolveType(typeName))
+          resolvedType <- OptionT(T.resolveNamedType(typeName))
           // Report duplicate fields
           _ <- OptionT.liftF(
             reportNamedArgsDuplicates(fields)
@@ -122,28 +122,25 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
             .traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg.argName.value -> _))
             .map(_.toNem) // Take only last value for a field
           fieldsGivenTypes = fieldsGiven.map(_.`type`)
-          data <- resolvedType match {
-            case struct: StructType =>
-              OptionT.whenM(
-                T.ensureTypeMatches(dvt, resolvedType, struct.copy(fields = fieldsGivenTypes))
-              )(MakeStructRaw(fieldsGiven, struct).pure)
-            case ability: AbilityType =>
-              OptionT.whenM(
-                T.ensureTypeMatches(dvt, resolvedType, ability.copy(fields = fieldsGivenTypes))
-              )(AbilityRaw(fieldsGiven, ability).pure)
-            case t =>
-              // we can only get here when we trying to compare structural types with aliased primitives
-              OptionT(
-                T.ensureTypeMatches(
-                  dvt,
-                  t,
-                  // generated type
-                  StructType(typeName.value, fieldsGivenTypes),
-                  // alias name
-                  Some(typeName.value)
-                ).map { _ => None }
-              )
-          }
+          generated <- OptionT.fromOption(
+            resolvedType match {
+              case struct: StructType =>
+                (
+                  struct.copy(fields = fieldsGivenTypes),
+                  MakeStructRaw(fieldsGiven, struct)
+                ).some
+              case ability: AbilityType =>
+                (
+                  ability.copy(fields = fieldsGivenTypes),
+                  AbilityRaw(fieldsGiven, ability)
+                ).some
+              case _ => none
+            }
+          )
+          (genType, genData) = generated
+          data <- OptionT.whenM(
+            T.ensureTypeMatches(dvt, resolvedType, genType)
+          )(genData.pure)
         } yield data).value
 
       case ct @ CollectionToken(_, values) =>
