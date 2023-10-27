@@ -618,9 +618,6 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       None
     )
 
-    println("testFunc: ")
-    println(testFunc.body.show)
-
     val model = ArrowInliner
       .callArrow[InliningState](testFunc, CallModel(Nil, Nil))
       .runA(InliningState())
