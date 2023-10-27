@@ -134,7 +134,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                   ability.copy(fields = fieldsGivenTypes),
                   AbilityRaw(fieldsGiven, ability)
                 ).some
-              case _ => none
             }
           )
           (genType, genData) = generated

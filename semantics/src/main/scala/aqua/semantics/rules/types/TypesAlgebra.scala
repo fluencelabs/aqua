@@ -11,7 +11,7 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveType(token: TypeToken[S]): Alg[Option[Type]]
   
-  def resolveNamedType(token: TypeToken[S]): Alg[Option[Type]]
+  def resolveNamedType(token: TypeToken[S]): Alg[Option[AbilityType | StructType]]
 
   def getType(name: String): Alg[Option[Type]]
 
