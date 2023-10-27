@@ -52,7 +52,7 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def ensureValuesComparable(token: Token[S], left: Type, right: Type): Alg[Boolean]
 
-  def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
+  def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type, alias: Option[String] = None): Alg[Boolean]
 
   def ensureTypeIsCollectible(token: Token[S], givenType: Type): Alg[Boolean]
 

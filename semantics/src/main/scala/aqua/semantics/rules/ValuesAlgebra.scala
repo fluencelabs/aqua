@@ -6,26 +6,20 @@ import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
-import aqua.semantics.rules.types.TypesAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
-
 import cats.Monad
-import cats.data.OptionT
-import cats.data.Chain
+import cats.data.{NonEmptyList, OptionT}
+import cats.instances.list.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.traverse.*
 import cats.syntax.foldable.*
+import cats.syntax.functor.*
 import cats.syntax.option.*
-import cats.instances.list.*
-import cats.data.{NonEmptyList, NonEmptyMap}
-import cats.data.OptionT
+import cats.syntax.traverse.*
 import scribe.Logging
-
-import scala.collection.immutable.SortedMap
 
 class ValuesAlgebra[S[_], Alg[_]: Monad](using
   N: NamesAlgebra[S, Alg],
@@ -128,25 +122,29 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
             .traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg.argName.value -> _))
             .map(_.toNem) // Take only last value for a field
           fieldsGivenTypes = fieldsGiven.map(_.`type`)
-          generated <- OptionT.fromOption(
-            resolvedType match {
-              case struct: StructType =>
-                (
-                  struct.copy(fields = fieldsGivenTypes),
-                  MakeStructRaw(fieldsGiven, struct)
-                ).some
-              case ability: AbilityType =>
-                (
-                  ability.copy(fields = fieldsGivenTypes),
-                  AbilityRaw(fieldsGiven, ability)
-                ).some
-              case _ => none
-            }
-          )
-          (genType, genData) = generated
-          data <- OptionT.whenM(
-            T.ensureTypeMatches(dvt, resolvedType, genType)
-          )(genData.pure)
+          data <- resolvedType match {
+            case struct: StructType =>
+              val t = struct.copy(fields = fieldsGivenTypes)
+              OptionT.whenM(
+                T.ensureTypeMatches(dvt, resolvedType, t)
+              )(MakeStructRaw(fieldsGiven, struct).pure)
+            case ability: AbilityType =>
+              OptionT.whenM(
+                T.ensureTypeMatches(dvt, resolvedType, ability.copy(fields = fieldsGivenTypes))
+              )(AbilityRaw(fieldsGiven, ability).pure)
+            case t =>
+              // we can only get here when we trying to compare structural types with aliased primitives
+              OptionT(
+                T.ensureTypeMatches(
+                  dvt,
+                  t,
+                  // generated type
+                  StructType(typeName.value, fieldsGivenTypes),
+                  // alias name
+                  Some(typeName.value)
+                ).map { _ => None }
+              )
+          }
         } yield data).value
 
       case ct @ CollectionToken(_, values) =>

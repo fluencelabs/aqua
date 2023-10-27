@@ -333,10 +333,12 @@ class TypesInterpreter[S[_], X](using
   override def ensureTypeMatches(
     token: Token[S],
     expected: Type,
-    givenType: Type
+    givenType: Type,
+    alias: Option[String] = None
   ): State[X, Boolean] =
     if (expected.acceptsValueOf(givenType)) State.pure(true)
     else {
+      val expectedStr = alias.map(a => s"$a, that is an alias of '$expected'").getOrElse(expected.toString)
       (expected, givenType) match {
         case (valueNamedType: NamedType, typeNamedType: NamedType) =>
           val valueFields = valueNamedType.fields
@@ -346,7 +348,7 @@ class TypesInterpreter[S[_], X](using
             report
               .error(
                 token,
-                s"Number of fields doesn't match the data type, expected: $expected, given: $givenType"
+                s"Number of fields doesn't match the data type, expected: $expectedStr, given: $givenType"
               )
               .as(false)
           } else {
@@ -366,7 +368,7 @@ class TypesInterpreter[S[_], X](using
                   report
                     .error(
                       token,
-                      s"Wrong value type, expected: $expected, given: $givenType"
+                      s"Wrong value type, expected: $expectedStr, given: $givenType"
                     )
                     .as(false)
               }
@@ -384,7 +386,7 @@ class TypesInterpreter[S[_], X](using
           report
             .error(
               token,
-              "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
+              "Types mismatch." :: s"expected:   $expectedStr" :: s"given:      $givenType" :: Nil ++ notes
             )
             .as(false)
       }
