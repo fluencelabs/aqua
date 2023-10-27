@@ -227,12 +227,12 @@ object TagInliner extends Logging {
               )
           }
           _ <- Exports[S].resolved(item, VarModel(n, elementType))
-          m = mode.map {
-            case ForTag.Mode.Wait => ForModel.Mode.Never
-            case ForTag.Mode.Pass => ForModel.Mode.Null
+          modeModel = mode match {
+            case ForTag.Mode.Blocking => ForModel.Mode.Never
+            case ForTag.Mode.NonBlocking => ForModel.Mode.Null
           }
         } yield TagInlined.Single(
-          model = ForModel(n, v, m),
+          model = ForModel(n, v, modeModel),
           prefix = p
         )
 

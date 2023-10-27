@@ -46,7 +46,13 @@ object MakeRes {
     case SeqModel | _: OnModel | _: ApplyTopologyModel => SeqRes.leaf
     case MatchMismatchModel(a, b, s) =>
       MatchMismatchRes(a, b, s).leaf
-    case ForModel(item, iter, mode) if !isNillLiteral(iter) => FoldRes(item, iter, mode).leaf
+    case ForModel(item, iter, mode) if !isNillLiteral(iter) =>
+      val modeRes = mode match {
+        case ForModel.Mode.Null => FoldRes.Mode.Null
+        case ForModel.Mode.Never => FoldRes.Mode.Never
+      }
+
+      FoldRes(item, iter, modeRes).leaf
     case RestrictionModel(item, itemType) => RestrictionRes(item, itemType).leaf
     case DetachModel => ParRes.leaf
     case ParModel => ParRes.leaf
