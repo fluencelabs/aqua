@@ -1,13 +1,13 @@
 package aqua.model.inline
 
 import aqua.model.*
+import aqua.model.MetaModel.CallArrowModel
 import aqua.model.inline.state.InliningState
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.*
 import aqua.raw.value.{CallArrowRaw, ValueRaw}
 import aqua.raw.arrow.{ArrowRaw, FuncRaw}
-
 import cats.Eval
 import cats.syntax.show.*
 import cats.syntax.option.*
@@ -518,6 +518,137 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         result shouldEqual expected
       }
     }
+  }
+
+  /**
+   * func return(a: i8) -> -> i8:
+   *    closure = () -> i8:
+   *        <- a
+   *    <- closure
+   *
+   * func test() -> i8, i8:
+   *    closure <- return(1)
+   *    closure2 <- return(2)
+   *    <- closure(), closure2()
+   */
+  it should "correct renaming on multiple closures from same function" in {
+    val resType = ScalarType.i8
+    val resVar = VarRaw("a", resType)
+
+    val closureType = ArrowType(
+      ProductType(Nil),
+      ProductType(resType :: Nil)
+    )
+
+    val innerClosure = VarRaw("closureArrow", closureType)
+    val closureFunc = FuncRaw(
+      innerClosure.name,
+      ArrowRaw(
+        closureType,
+        List(resVar),
+        ReturnTag(NonEmptyList.one(resVar)).leaf
+      )
+    )
+
+    val returnFunc = FuncArrow(
+      "return",
+      SeqTag.wrap(
+        ClosureTag(
+          closureFunc,
+          detach = false
+        ).leaf,
+        ReturnTag(
+          NonEmptyList.one(innerClosure)
+        ).leaf
+      ),
+      ArrowType(
+        ProductType.labelled((resVar.name, ScalarType.i8) :: Nil),
+        ProductType(closureType :: Nil)
+      ),
+      List(innerClosure),
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val closureVar = VarRaw("closure", closureType)
+    val closureVar2 = VarRaw("closure2", closureType)
+
+    val res1 = VarRaw("res1", ScalarType.i8)
+    val res2 = VarRaw("res2", ScalarType.i8)
+
+    val testFunc = FuncArrow(
+      "test",
+      SeqTag.wrap(
+        CallArrowRawTag
+          .func(
+            returnFunc.funcName,
+            Call(LiteralRaw.number(1) :: Nil, Call.Export(closureVar.name, closureType) :: Nil)
+          )
+          .leaf,
+        CallArrowRawTag
+          .func(
+            returnFunc.funcName,
+            Call(LiteralRaw.number(2) :: Nil, Call.Export(closureVar2.name, closureType) :: Nil)
+          )
+          .leaf,
+        CallArrowRawTag
+          .func(
+            closureVar.name,
+            Call(Nil, Call.Export(res1.name, res1.baseType) :: Nil)
+          )
+          .leaf,
+        CallArrowRawTag
+          .func(
+            closureVar2.name,
+            Call(Nil, Call.Export(res2.name, res2.baseType) :: Nil)
+          )
+          .leaf,
+        CallArrowRawTag
+          .service(LiteralRaw.quote("Srv"), "callSrv", Call(res1 :: res2 :: Nil, Nil))
+          .leaf
+      ),
+      ArrowType(
+        ProductType(Nil),
+        ProductType(Nil)
+      ),
+      Nil,
+      Map(returnFunc.funcName -> returnFunc),
+      Map.empty,
+      None
+    )
+
+    println("testFunc: ")
+    println(testFunc.body.show)
+
+    val model = ArrowInliner
+      .callArrow[InliningState](testFunc, CallModel(Nil, Nil))
+      .runA(InliningState())
+      .value
+
+    model.tailForced
+
+    model.equalsOrShowDiff(
+      SeqModel.wrap(
+        CallArrowModel("return").wrap(
+          CaptureTopologyModel("closureArrow").leaf
+        ),
+        CallArrowModel("return").wrap(
+          CaptureTopologyModel("closureArrow-0").leaf
+        ),
+        CallArrowModel("closureArrow").wrap(
+          ApplyTopologyModel("closureArrow").wrap(EmptyModel.leaf)
+        ),
+        CallArrowModel("closureArrow-0").wrap(
+          ApplyTopologyModel("closureArrow-0").wrap(EmptyModel.leaf)
+        ),
+        CallServiceModel(
+          LiteralModel.quote("Srv"),
+          "callSrv",
+          CallModel(LiteralModel.number(1) :: LiteralModel.number(2) :: Nil, Nil)
+        ).leaf
+      )
+    ) should be(true)
   }
 
   /*
@@ -1652,7 +1783,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val mainFunc = FuncArrow(
       funcName = "main",
       body = mainBody,
-      arrowType = ArrowType(ProductType(Nil), ProductType(Nil)),
+      arrowType = mainType,
       ret = Nil,
       capturedArrows = Map(testName -> testFunc),
       capturedValues = Map.empty,

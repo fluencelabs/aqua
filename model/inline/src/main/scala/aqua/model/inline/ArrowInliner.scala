@@ -60,7 +60,7 @@ object ArrowInliner extends Logging {
               ) if !outsideStreamNames.contains(n) =>
             resDesugar.toList -> res
           case (
-                cexp @ CallModel.Export(exp, st @ StreamType(_)),
+                cexp @ CallModel.Export(_, StreamType(_)),
                 (res, resDesugar)
               ) =>
             // pass nested function results to a stream

@@ -2,7 +2,7 @@ module Closure declares *
 
 import "@fluencelabs/aqua-lib/builtin.aqua"
 
-export LocalSrv, closureIn, closureOut, closureBig, closureOut2, lng58Bug
+export LocalSrv, closureIn, closureOut, closureBig, closureOut2, lng58Bug, multipleClosuresBugLNG262
 
 service MyOp("op"):
   identity(s: string) -> string
@@ -71,3 +71,13 @@ func lng58Bug() -> string:
   waiting()
 
   <- status!
+
+func create(a: i8) -> -> i8:
+    closureArrow = () -> i8:
+        <- a
+    <- closureArrow
+
+func multipleClosuresBugLNG262() -> i8, i8:
+    arr1 <- create(1)
+    arr2 <- create(2)
+    <- arr1(), arr2()
