@@ -124,9 +124,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           fieldsGivenTypes = fieldsGiven.map(_.`type`)
           data <- resolvedType match {
             case struct: StructType =>
-              val t = struct.copy(fields = fieldsGivenTypes)
               OptionT.whenM(
-                T.ensureTypeMatches(dvt, resolvedType, t)
+                T.ensureTypeMatches(dvt, resolvedType, struct.copy(fields = fieldsGivenTypes))
               )(MakeStructRaw(fieldsGiven, struct).pure)
             case ability: AbilityType =>
               OptionT.whenM(
