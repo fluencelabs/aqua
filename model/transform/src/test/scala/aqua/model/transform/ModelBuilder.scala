@@ -132,7 +132,8 @@ object ModelBuilder {
   def foldPar(item: String, iter: ValueRaw, body: OpModel.Tree*) = {
     val ops = SeqModel.wrap(body: _*)
     DetachModel.wrap(
-      ForModel(item, ValueModel.fromRaw(iter), ForModel.Mode.Never)
+      ForModel
+        .neverMode(item, ValueModel.fromRaw(iter))
         .wrap(ParModel.wrap(ops, NextModel(item).leaf))
     )
   }

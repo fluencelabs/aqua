@@ -165,6 +165,12 @@ object ForModel {
     case Null
     case Never
   }
+
+  def neverMode(item: String, iterable: ValueModel): ForModel =
+    ForModel(item, iterable, Mode.Never)
+
+  def nullMode(item: String, iterable: ValueModel): ForModel =
+    ForModel(item, iterable, Mode.Null)
 }
 
 // TODO how is it used? remove, if it's not
