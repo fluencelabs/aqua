@@ -7,6 +7,7 @@ import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
+
 import cats.Monad
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
