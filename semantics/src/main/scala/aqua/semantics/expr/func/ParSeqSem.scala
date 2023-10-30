@@ -22,7 +22,7 @@ import cats.syntax.functor.*
 
 class ParSeqSem[S[_]](val expr: ParSeqExpr[S]) extends AnyVal {
 
-  def program[F[_]: Monad](implicit
+  def program[F[_]: Monad](using
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
     T: TypesAlgebra[S, F],
@@ -63,12 +63,18 @@ class ParSeqSem[S[_]](val expr: ParSeqExpr[S]) extends AnyVal {
             via = Chain.fromSeq(viaVM),
             strategy = OnTag.ReturnStrategy.Relay.some
           )
-          tag = ForTag(expr.item.value, vm).wrap(
-            ParTag.wrap(
-              onTag.wrap(restricted),
-              NextTag(expr.item.value).leaf
+          /**
+           * `parseq` => blocking (`never` as `last` in `fold`)
+           * So that peer initiating `parseq` would not continue execution past it
+           */
+          tag = ForTag
+            .blocking(expr.item.value, vm)
+            .wrap(
+              ParTag.wrap(
+                onTag.wrap(restricted),
+                NextTag(expr.item.value).leaf
+              )
             )
-          )
         } yield tag.toFuncOp
       case (None, _, _) => Raw.error("ParSeqSem: could not resolve `peerId`").pure
       case (_, None, _) => Raw.error("ParSeqSem: could not resolve `iterable`").pure

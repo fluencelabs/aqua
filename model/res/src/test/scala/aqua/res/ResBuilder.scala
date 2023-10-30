@@ -18,7 +18,7 @@ object ResBuilder {
     val arrayRes = VarModel(stream.name + "_gate", ArrayType(ScalarType.string))
 
     RestrictionRes(testVM.name, testStreamType).wrap(
-      FoldRes(iter.name, stream, ForModel.Mode.Never.some).wrap(
+      FoldRes(iter.name, stream, FoldRes.Mode.Never).wrap(
         ApRes(iter, CallModel.Export(testVM.name, testVM.`type`)).leaf,
         CanonRes(testVM, peer, CallModel.Export(canon.name, canon.`type`)).leaf,
         XorRes.wrap(

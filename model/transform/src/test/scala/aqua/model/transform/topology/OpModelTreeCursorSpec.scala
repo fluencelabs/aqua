@@ -1,7 +1,7 @@
 package aqua.model.transform.topology
 
 import aqua.model.transform.ModelBuilder
-import aqua.model.{CallModel, OnModel, SeqModel}
+import aqua.model.{CallModel, ForModel, OnModel, SeqModel}
 import aqua.model.transform.cursor.ChainZipper
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.raw.ops.{Call, FuncOp, OnTag}
@@ -137,7 +137,7 @@ class OpModelTreeCursorSpec extends AnyFlatSpec with Matchers {
                 fold(
                   "item",
                   VarRaw("iterable", ArrayType(ScalarType.string)),
-                  None,
+                  ForModel.Mode.Null,
                   OnModel(
                     VarRaw("-in-fold-", ScalarType.string),
                     Chain.one(VarRaw("-fold-relay-", ScalarType.string))

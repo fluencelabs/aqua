@@ -21,6 +21,7 @@ import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
+import aqua.parser.expr.func.ForExpr.Mode
 
 class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
 
@@ -44,7 +45,14 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
                   case ForExpr.Mode.TryMode => TryTag
                 }
 
-                val mode = expr.mode.collect { case ForExpr.Mode.ParMode => ForTag.Mode.Wait }
+                /**
+                 * `for ... par` => blocking (`never` as `last` in `fold`)
+                 * `for` and `for ... try` => non blocking (`null` as `last` in `fold`)
+                 */
+                val mode = expr.mode.fold(ForTag.Mode.NonBlocking) {
+                  case ForExpr.Mode.ParMode => ForTag.Mode.Blocking
+                  case Mode.TryMode => ForTag.Mode.NonBlocking
+                }
 
                 val forTag = ForTag(expr.item.value, vm, mode).wrap(
                   innerTag.wrap(

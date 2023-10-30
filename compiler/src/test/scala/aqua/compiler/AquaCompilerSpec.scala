@@ -169,34 +169,36 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
             RestrictionRes(results.name, resultsType).wrap(
               SeqRes.wrap(
                 ParRes.wrap(
-                  FoldRes(peer.name, peers, ForModel.Mode.Never.some).wrap(
-                    ParRes.wrap(
-                      XorRes.wrap(
-                        // better if first relay will be outside `for`
-                        SeqRes.wrap(
-                          through(ValueModel.fromRaw(relay)),
-                          CallServiceRes(
-                            LiteralModel.fromRaw(LiteralRaw.quote("op")),
-                            "identity",
-                            CallRes(
-                              LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
-                              Some(CallModel.Export(retVar.name, retVar.`type`))
-                            ),
-                            peer
-                          ).leaf,
-                          ApRes(retVar, CallModel.Export(results.name, results.`type`)).leaf,
-                          through(ValueModel.fromRaw(relay)),
-                          through(initPeer)
+                  FoldRes
+                    .lastNever(peer.name, peers)
+                    .wrap(
+                      ParRes.wrap(
+                        XorRes.wrap(
+                          // better if first relay will be outside `for`
+                          SeqRes.wrap(
+                            through(ValueModel.fromRaw(relay)),
+                            CallServiceRes(
+                              LiteralModel.fromRaw(LiteralRaw.quote("op")),
+                              "identity",
+                              CallRes(
+                                LiteralModel.fromRaw(LiteralRaw.quote("hahahahah")) :: Nil,
+                                Some(CallModel.Export(retVar.name, retVar.`type`))
+                              ),
+                              peer
+                            ).leaf,
+                            ApRes(retVar, CallModel.Export(results.name, results.`type`)).leaf,
+                            through(ValueModel.fromRaw(relay)),
+                            through(initPeer)
+                          ),
+                          SeqRes.wrap(
+                            through(ValueModel.fromRaw(relay)),
+                            through(initPeer),
+                            failErrorRes
+                          )
                         ),
-                        SeqRes.wrap(
-                          through(ValueModel.fromRaw(relay)),
-                          through(initPeer),
-                          failErrorRes
-                        )
-                      ),
-                      NextRes(peer.name).leaf
+                        NextRes(peer.name).leaf
+                      )
                     )
-                  )
                 ),
                 join(results, LiteralModel.number(3)), // Compiler optimized addition
                 CanonRes(
