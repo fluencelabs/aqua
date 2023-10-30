@@ -1,29 +1,24 @@
 package aqua.semantics
 
+import aqua.parser.lexer.*
+import aqua.raw.RawContext
+import aqua.raw.value.*
 import aqua.semantics.rules.ValuesAlgebra
-import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
-import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
+import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter}
 import aqua.semantics.rules.definitions.{DefinitionsAlgebra, DefinitionsInterpreter}
-import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
 import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra}
 import aqua.semantics.rules.mangler.{ManglerAlgebra, ManglerInterpreter}
+import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.report.{ReportAlgebra, ReportInterpreter}
-import aqua.raw.value.{ApplyBinaryOpRaw, LiteralRaw}
-import aqua.raw.RawContext
+import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter}
 import aqua.types.*
-import aqua.parser.lexer.*
-import aqua.raw.value.*
-import aqua.parser.lexer.ValueToken.string
-
+import cats.Id
+import cats.data.{NonEmptyList, NonEmptyMap, State}
+import monocle.syntax.all.*
+import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
-import cats.Id
-import cats.data.State
-import cats.syntax.functor.*
-import cats.syntax.comonad.*
-import cats.data.NonEmptyMap
-import monocle.syntax.all.*
+
 import scala.collection.immutable.SortedMap
 
 class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
@@ -516,6 +511,30 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
         st.errors.exists(_.isInstanceOf[RulesViolated[Id]]) shouldBe true
       }
     }
+  }
+
+  it should "throw an error when comparing a struct type with a primitive alias" in {
+    val state = genState(
+      vars = Map("SomeName" -> LiteralType.string)
+    )
+
+    val token = NamedValueToken[Id](
+      NamedTypeToken[Id]("SomeName"),
+      NonEmptyList.of(
+        NamedArg.Full(Name("f1"), LiteralToken[Id]("1", LiteralType.number)),
+        NamedArg.Full(Name("f2"), LiteralToken[Id]("2", LiteralType.number))
+      )
+    )
+
+    val alg = algebra()
+
+    val (st, res) = alg
+      .valueToRaw(token)
+      .run(state)
+      .value
+
+    res shouldBe None
+    st.errors.exists(_.isInstanceOf[RulesViolated[Id]]) shouldBe true
   }
 
   it should "forbid collections with abilities or arrows" in {

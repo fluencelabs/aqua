@@ -6,26 +6,20 @@ import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
-import aqua.semantics.rules.types.TypesAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
-
 import cats.Monad
-import cats.data.OptionT
-import cats.data.Chain
+import cats.data.{NonEmptyList, OptionT}
+import cats.instances.list.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.traverse.*
 import cats.syntax.foldable.*
+import cats.syntax.functor.*
 import cats.syntax.option.*
-import cats.instances.list.*
-import cats.data.{NonEmptyList, NonEmptyMap}
-import cats.data.OptionT
+import cats.syntax.traverse.*
 import scribe.Logging
-
-import scala.collection.immutable.SortedMap
 
 class ValuesAlgebra[S[_], Alg[_]: Monad](using
   N: NamesAlgebra[S, Alg],
@@ -119,7 +113,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
 
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {
-          resolvedType <- OptionT(T.resolveType(typeName))
+          resolvedType <- OptionT(T.resolveNamedType(typeName))
           // Report duplicate fields
           _ <- OptionT.liftF(
             reportNamedArgsDuplicates(fields)
@@ -140,7 +134,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                   ability.copy(fields = fieldsGivenTypes),
                   AbilityRaw(fieldsGiven, ability)
                 ).some
-              case _ => none
             }
           )
           (genType, genData) = generated

@@ -58,6 +58,12 @@ class TypesInterpreter[S[_], X](using
         report.error(token, s"Unresolved type").as(None)
     }
 
+  def resolveNamedType(token: TypeToken[S]): State[X, Option[AbilityType | StructType]] =
+    resolveType(token).flatMap(_.flatTraverse {
+      case t: (AbilityType | StructType) => Option(t).pure
+      case _ => report.error(token, "Type must be an ability or a data").as(None)
+    })
+
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
     getState.map(TypesStateHelper.resolveArrowDef(arrowDef)).flatMap {
       case Valid(TypeResolution(tt, tokens)) =>
