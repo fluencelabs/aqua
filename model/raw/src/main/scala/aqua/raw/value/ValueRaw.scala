@@ -34,7 +34,6 @@ object ValueRaw {
   val ParticleTimestamp: LiteralRaw = LiteralRaw("%timestamp%", ScalarType.u64)
 
   val Nil: LiteralRaw = LiteralRaw("[]", StreamType(BottomType))
-  val VarNil: VarRaw = VarRaw("nil", StreamType(BottomType))
 
   /**
    * Type of error value

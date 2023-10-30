@@ -78,6 +78,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       case l @ LiteralToken(_, t) =>
         LiteralRaw(l.value, t).some.pure[Alg]
 
+      case VarToken(name) if name.value == ValueRaw.Nil.value =>
+        ValueRaw.Nil.some.pure[Alg]
+
       case VarToken(name) =>
         N.read(name, mustBeDefined = false).flatMap {
           case Some(t) =>

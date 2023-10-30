@@ -15,7 +15,7 @@ import org.scalatest.matchers.should.Matchers
 
 class AssignmentSemSpec extends AnyFlatSpec with Matchers with Inside {
 
-  import Utils.{*, given}
+  import Utils.{given, *}
 
   val program: Prog[State[CompilerState[cats.Id], *], Raw] = {
     val expr = ClosureExpr(Name[Id]("closure"), None)

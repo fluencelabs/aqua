@@ -134,7 +134,7 @@ class NamesInterpreter[S[_], X](using
 
   override def assign(name: Name[S], value: ValueRaw): SX[Boolean] =
     value match {
-      case ValueRaw.Nil | ValueRaw.VarNil =>
+      case ValueRaw.Nil =>
         report
           .error(
             name,
