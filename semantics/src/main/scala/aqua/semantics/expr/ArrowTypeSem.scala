@@ -5,6 +5,7 @@ import aqua.raw.{Raw, TypeRaw}
 import aqua.semantics.Prog
 import aqua.semantics.rules.definitions.DefinitionsAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
+
 import cats.Monad
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
