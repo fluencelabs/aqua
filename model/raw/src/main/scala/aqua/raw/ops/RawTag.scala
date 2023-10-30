@@ -168,8 +168,7 @@ case class RestrictionTag(name: String, `type`: DataType) extends SeqGroupTag {
     copy(name = map.getOrElse(name, name))
 }
 
-case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = None)
-    extends SeqGroupTag {
+case class ForTag(item: String, iterable: ValueRaw, mode: ForTag.Mode) extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(item)
 
@@ -185,9 +184,15 @@ case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = 
 object ForTag {
 
   enum Mode {
-    case Wait
-    case Pass
+    case Blocking
+    case NonBlocking
   }
+
+  def blocking(item: String, iterable: ValueRaw): ForTag =
+    ForTag(item, iterable, Mode.Blocking)
+
+  def nonBlocking(item: String, iterable: ValueRaw): ForTag =
+    ForTag(item, iterable, Mode.NonBlocking)
 }
 
 case class CallArrowRawTag(

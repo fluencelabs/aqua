@@ -32,9 +32,18 @@ case class MatchMismatchRes(left: ValueModel, right: ValueModel, shouldMatch: Bo
   override def toString: String = s"(${if (shouldMatch) "match" else "mismatch"} $left $right)"
 }
 
-case class FoldRes(item: String, iterable: ValueModel, mode: Option[ForModel.Mode] = None)
-    extends ResolvedOp {
-  override def toString: String = s"(fold $iterable $item ${mode.map(_.toString).getOrElse("")}"
+case class FoldRes(item: String, iterable: ValueModel, mode: FoldRes.Mode) extends ResolvedOp {
+  override def toString: String = s"(fold $iterable $item ${mode.toString.toLowerCase()}"
+}
+
+object FoldRes {
+  enum Mode { case Null, Never }
+
+  def lastNull(item: String, iterable: ValueModel): FoldRes =
+    FoldRes(item, iterable, Mode.Null)
+
+  def lastNever(item: String, iterable: ValueModel): FoldRes =
+    FoldRes(item, iterable, Mode.Never)
 }
 
 case class RestrictionRes(item: String, `type`: DataType) extends ResolvedOp {
@@ -50,7 +59,8 @@ case class CallServiceRes(
   override def toString: String = s"(call $peerId ($serviceId $funcName) $call)"
 }
 
-case class ApStreamMapRes(key: ValueModel, value: ValueModel, exportTo: CallModel.Export) extends ResolvedOp {
+case class ApStreamMapRes(key: ValueModel, value: ValueModel, exportTo: CallModel.Export)
+    extends ResolvedOp {
   override def toString: String = s"(ap ($key $value) $exportTo)"
 }
 

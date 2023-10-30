@@ -463,7 +463,8 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         through(relay),
         callRes(0, otherPeer),
         ParRes.wrap(
-          FoldRes("i", valueArray, ForModel.Mode.Never.some)
+          FoldRes
+            .lastNever("i", valueArray)
             .wrap(ParRes.wrap(callRes(2, otherPeer2), NextRes("i").leaf))
         ),
         through(relay),
@@ -509,26 +510,28 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc = Topology.resolve(init).value
 
     val foldRes = ParRes.wrap(
-      FoldRes("i", valueArray, ForModel.Mode.Never.some).wrap(
-        ParRes.wrap(
-          // better if first relay will be outside `for`
-          SeqRes.wrap(
-            through(relay),
-            XorRes.wrap(
-              SeqRes.wrap(
-                callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
-                through(relay),
-                through(initPeer)
-              ),
-              SeqRes.wrap(
-                through(relay),
-                callRes(4, initPeer)
+      FoldRes
+        .lastNever("i", valueArray)
+        .wrap(
+          ParRes.wrap(
+            // better if first relay will be outside `for`
+            SeqRes.wrap(
+              through(relay),
+              XorRes.wrap(
+                SeqRes.wrap(
+                  callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                  through(relay),
+                  through(initPeer)
+                ),
+                SeqRes.wrap(
+                  through(relay),
+                  callRes(4, initPeer)
+                )
               )
-            )
-          ),
-          NextRes("i").leaf
+            ),
+            NextRes("i").leaf
+          )
         )
-      )
     )
     val expected = SeqRes.wrap(
       Chain(
@@ -579,28 +582,30 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc = Topology.resolve(init).value
 
     val fold = ParRes.wrap(
-      FoldRes("i", valueArray, ForModel.Mode.Never.some).wrap(
-        ParRes.wrap(
-          // better if first relay will be outside `for`
-          SeqRes.wrap(
-            through(relay),
-            XorRes.wrap(
+      FoldRes
+        .lastNever("i", valueArray)
+        .wrap(
+          ParRes.wrap(
+            // better if first relay will be outside `for`
+            SeqRes.wrap(
+              through(relay),
               XorRes.wrap(
+                XorRes.wrap(
+                  SeqRes.wrap(
+                    callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
+                    through(relay),
+                    through(initPeer)
+                  )
+                ),
                 SeqRes.wrap(
-                  callRes(2, iRelay, Some(CallModel.Export(streamRaw.name, streamRaw.`type`))),
                   through(relay),
-                  through(initPeer)
+                  callRes(4, initPeer)
                 )
-              ),
-              SeqRes.wrap(
-                through(relay),
-                callRes(4, initPeer)
               )
-            )
-          ),
-          NextRes("i").leaf
+            ),
+            NextRes("i").leaf
+          )
         )
-      )
     )
     val expected = SeqRes.wrap(
       Chain(
@@ -626,7 +631,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         fold(
           "i",
           valueArray,
-          None,
+          ForModel.Mode.Null,
           OnModel(otherPeer2, Chain.one(otherRelay2)).wrap(
             callModel(2)
           )
@@ -643,10 +648,12 @@ class TopologySpec extends AnyFlatSpec with Matchers {
         through(relay),
         callRes(1, otherPeer),
         through(otherRelay2),
-        FoldRes("i", valueArray).wrap(
-          callRes(2, otherPeer2),
-          NextRes("i").leaf
-        ),
+        FoldRes
+          .lastNull("i", valueArray)
+          .wrap(
+            callRes(2, otherPeer2),
+            NextRes("i").leaf
+          ),
         through(otherRelay2),
         through(relay),
         callRes(3, initPeer)
@@ -662,7 +669,7 @@ class TopologySpec extends AnyFlatSpec with Matchers {
       fold(
         "i",
         valueArray,
-        None,
+        ForModel.Mode.Null,
         OnModel(i, Chain.one(otherRelay)).wrap(
           callModel(1)
         )
@@ -674,16 +681,18 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected =
       SeqRes.wrap(
         through(relay),
-        FoldRes("i", valueArray).wrap(
-          SeqRes.wrap(
-            through(otherRelay),
-            callRes(1, i)
-          ),
-          SeqRes.wrap(
-            through(otherRelay),
-            NextRes("i").leaf
+        FoldRes
+          .lastNull("i", valueArray)
+          .wrap(
+            SeqRes.wrap(
+              through(otherRelay),
+              callRes(1, i)
+            ),
+            SeqRes.wrap(
+              through(otherRelay),
+              NextRes("i").leaf
+            )
           )
-        )
       )
 
     proc.equalsOrShowDiff(expected) should be(true)
@@ -766,22 +775,24 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val expected = SeqRes.wrap(
       callRes(1, otherPeer),
       ParRes.wrap(
-        FoldRes("i", valueArray, ForModel.Mode.Never.some).wrap(
-          ParRes.wrap(
-            SeqRes.wrap(
-              // TODO: should be outside of fold
-              through(relayV),
-              callRes(
-                2,
-                LiteralRaw("i", ScalarType.string),
-                Some(CallModel.Export("used", StreamType(ScalarType.string)))
+        FoldRes
+          .lastNever("i", valueArray)
+          .wrap(
+            ParRes.wrap(
+              SeqRes.wrap(
+                // TODO: should be outside of fold
+                through(relayV),
+                callRes(
+                  2,
+                  LiteralRaw("i", ScalarType.string),
+                  Some(CallModel.Export("used", StreamType(ScalarType.string)))
+                ),
+                // after call `i` topology should send to `otherPeer2` if it's not fire-and-forget – to trigger execution
+                through(otherPeer2)
               ),
-              // after call `i` topology should send to `otherPeer2` if it's not fire-and-forget – to trigger execution
-              through(otherPeer2)
-            ),
-            NextRes("i").leaf
+              NextRes("i").leaf
+            )
           )
-        )
       ),
       callRes(3, otherPeer2, None, VarModel("used", StreamType(ScalarType.string)) :: Nil)
     )
@@ -843,21 +854,23 @@ class TopologySpec extends AnyFlatSpec with Matchers {
 
     val expected = SeqRes.wrap(
       ParRes.wrap(
-        FoldRes("i", ValueModel.fromRaw(valueArray), ForModel.Mode.Never.some).wrap(
-          ParRes.wrap(
-            SeqRes.wrap(
-              through(relay),
-              callRes(
-                1,
-                ValueModel.fromRaw(i),
-                Some(CallModel.Export(used.name, used.`type`))
+        FoldRes
+          .lastNever("i", ValueModel.fromRaw(valueArray))
+          .wrap(
+            ParRes.wrap(
+              SeqRes.wrap(
+                through(relay),
+                callRes(
+                  1,
+                  ValueModel.fromRaw(i),
+                  Some(CallModel.Export(used.name, used.`type`))
+                ),
+                through(relay),
+                through(initPeer)
               ),
-              through(relay),
-              through(initPeer)
-            ),
-            NextRes("i").leaf
+              NextRes("i").leaf
+            )
           )
-        )
       ) +:
         joinRes :+
         callRes(3, initPeer, None, ValueModel.fromRaw(used) :: Nil)
@@ -892,25 +905,27 @@ class TopologySpec extends AnyFlatSpec with Matchers {
     val proc = Topology.resolve(init).value
 
     val foldRes = ParRes.wrap(
-      FoldRes("i", ValueModel.fromRaw(valueArray), ForModel.Mode.Never.some).wrap(
-        ParRes.wrap(
-          SeqRes.wrap(
-            through(relay),
-            XorRes.wrap(
-              SeqRes.wrap(
-                callRes(
-                  1,
-                  ValueModel.fromRaw(i),
-                  Some(CallModel.Export(used.name, used.`type`))
-                ),
-                through(relay),
-                through(initPeer)
+      FoldRes
+        .lastNever("i", ValueModel.fromRaw(valueArray))
+        .wrap(
+          ParRes.wrap(
+            SeqRes.wrap(
+              through(relay),
+              XorRes.wrap(
+                SeqRes.wrap(
+                  callRes(
+                    1,
+                    ValueModel.fromRaw(i),
+                    Some(CallModel.Export(used.name, used.`type`))
+                  ),
+                  through(relay),
+                  through(initPeer)
+                )
               )
-            )
-          ),
-          NextRes("i").leaf
+            ),
+            NextRes("i").leaf
+          )
         )
-      )
     )
     val expected = SeqRes.wrap(
       foldRes +:
@@ -1036,9 +1051,11 @@ class TopologySpec extends AnyFlatSpec with Matchers {
           CallModel.Export(array.name, array.`type`)
         ).leaf
       ),
-      FoldRes(iterName, array, ForModel.Mode.Null.some).wrap(
-        NextRes(iterName).leaf
-      )
+      FoldRes
+        .lastNull(iterName, array)
+        .wrap(
+          NextRes(iterName).leaf
+        )
     )
 
     proc.equalsOrShowDiff(expected) shouldEqual true

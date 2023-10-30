@@ -94,9 +94,9 @@ object AirGen extends Logging {
         )
 
       case FoldRes(item, iterable, mode) =>
-        val m = mode.map {
-          case ForModel.Mode.Null => NullGen
-          case ForModel.Mode.Never => NeverGen
+        val m = mode match {
+          case FoldRes.Mode.Null => NullGen
+          case FoldRes.Mode.Never => NeverGen
         }
         Eval later ForGen(valueToData(iterable), item, opsToSingle(ops), m)
       case RestrictionRes(item, itemType) =>
@@ -202,9 +202,8 @@ case class MatchMismatchGen(
     else Air.Mismatch(left, right, body.generate)
 }
 
-case class ForGen(iterable: DataView, item: String, body: AirGen, mode: Option[AirGen])
-    extends AirGen {
-  override def generate: Air = Air.Fold(iterable, item, body.generate, mode.map(_.generate))
+case class ForGen(iterable: DataView, item: String, body: AirGen, mode: AirGen) extends AirGen {
+  override def generate: Air = Air.Fold(iterable, item, body.generate, mode.generate)
 }
 
 case class NewGen(name: String, body: AirGen) extends AirGen {

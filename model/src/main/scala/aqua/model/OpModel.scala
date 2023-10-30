@@ -147,11 +147,11 @@ case class MatchMismatchModel(left: ValueModel, right: ValueModel, shouldMatch: 
 case class ForModel(
   item: String,
   iterable: ValueModel,
-  mode: Option[ForModel.Mode] = Some(ForModel.Mode.Null)
+  mode: ForModel.Mode = ForModel.Mode.Null
 ) extends SeqGroupModel {
 
   override def toString: String =
-    s"for $item <- $iterable${mode.map(m => " " + m.toString).getOrElse("")}"
+    s"for $item <- $iterable${mode.toString}"
 
   override def restrictsVarNames: Set[String] = Set(item)
 
@@ -165,6 +165,12 @@ object ForModel {
     case Null
     case Never
   }
+
+  def neverMode(item: String, iterable: ValueModel): ForModel =
+    ForModel(item, iterable, Mode.Never)
+
+  def nullMode(item: String, iterable: ValueModel): ForModel =
+    ForModel(item, iterable, Mode.Null)
 }
 
 // TODO how is it used? remove, if it's not
@@ -175,7 +181,12 @@ case class DeclareStreamModel(value: ValueModel) extends NoExecModel {
 }
 
 // key must be only string or number
-case class InsertKeyValueModel(key: ValueModel, value: ValueModel, assignTo: String, assignToType: StreamMapType) extends OpModel {
+case class InsertKeyValueModel(
+  key: ValueModel,
+  value: ValueModel,
+  assignTo: String,
+  assignToType: StreamMapType
+) extends OpModel {
   override def usesVarNames: Set[String] = value.usesVarNames
 
   override def exportsVarNames: Set[String] = Set(assignTo)

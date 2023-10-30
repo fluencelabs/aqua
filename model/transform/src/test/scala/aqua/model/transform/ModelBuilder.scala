@@ -124,7 +124,7 @@ object ModelBuilder {
         failErrorModel
       )
 
-  def fold(item: String, iter: ValueRaw, mode: Option[ForModel.Mode], body: OpModel.Tree*) = {
+  def fold(item: String, iter: ValueRaw, mode: ForModel.Mode, body: OpModel.Tree*) = {
     val ops = SeqModel.wrap(body: _*)
     ForModel(item, ValueModel.fromRaw(iter), mode).wrap(ops, NextModel(item).leaf)
   }
@@ -132,7 +132,8 @@ object ModelBuilder {
   def foldPar(item: String, iter: ValueRaw, body: OpModel.Tree*) = {
     val ops = SeqModel.wrap(body: _*)
     DetachModel.wrap(
-      ForModel(item, ValueModel.fromRaw(iter), ForModel.Mode.Never.some)
+      ForModel
+        .neverMode(item, ValueModel.fromRaw(iter))
         .wrap(ParModel.wrap(ops, NextModel(item).leaf))
     )
   }

@@ -56,7 +56,7 @@ object StreamGateInliner extends Logging {
     val resultCanon = VarModel(canonName, CanonStreamType(streamType.element))
 
     RestrictionModel(varSTest.name, streamType).wrap(
-      ForModel(iter.name, VarModel(streamName, streamType), ForModel.Mode.Never.some).wrap(
+      ForModel(iter.name, VarModel(streamName, streamType), ForModel.Mode.Never).wrap(
         PushToStreamModel(
           iter,
           CallModel.Export(varSTest.name, varSTest.`type`)

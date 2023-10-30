@@ -2064,8 +2064,12 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         .leaf
     )
 
-    val foldOp =
-      ForTag(iVar.name, array, ForTag.Mode.Wait.some).wrap(inFold, NextTag(iVar.name).leaf)
+    val foldOp = ForTag
+      .blocking(iVar.name, array)
+      .wrap(
+        inFold,
+        NextTag(iVar.name).leaf
+      )
 
     val model: OpModel.Tree = ArrowInliner
       .callArrow[InliningState](
@@ -2091,14 +2095,16 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       ._2
 
     model.equalsOrShowDiff(
-      ForModel(iVar0.name, ValueModel.fromRaw(array), ForModel.Mode.Never.some).wrap(
-        CallServiceModel(
-          LiteralModel.fromRaw(serviceId),
-          fnName,
-          CallModel(LiteralModel.number(1) :: Nil, Nil)
-        ).leaf,
-        NextModel(iVar0.name).leaf
-      )
+      ForModel
+        .neverMode(iVar0.name, ValueModel.fromRaw(array))
+        .wrap(
+          CallServiceModel(
+            LiteralModel.fromRaw(serviceId),
+            fnName,
+            CallModel(LiteralModel.number(1) :: Nil, Nil)
+          ).leaf,
+          NextModel(iVar0.name).leaf
+        )
     ) should be(true)
   }
 
