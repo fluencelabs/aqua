@@ -1,7 +1,7 @@
 package aqua.semantics
 
 import aqua.parser.expr.func.ArrowExpr
-import aqua.parser.lexer.{BasicTypeToken, Name}
+import aqua.parser.lexer.BasicTypeToken
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
 import aqua.raw.ops.*
@@ -12,20 +12,17 @@ import aqua.types.*
 import aqua.types.ScalarType.*
 
 import cats.Id
-import cats.syntax.applicative.*
 import cats.data.{NonEmptyList, NonEmptyMap, State}
-import org.scalatest.EitherValues
+import cats.syntax.applicative.*
+import org.scalatest.{EitherValues, Inside}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
 
 class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues with Inside {
 
-  import Utils.{given, *}
+  import Utils.{*, given}
 
   def program(arrowStr: String): Prog[State[CompilerState[cats.Id], *], Raw] = {
-    import CompilerState.*
-
     val expr = ArrowExpr.p.parseAll(arrowStr).value.mapK(spanToId)
     val sem = new ArrowSem[Id](expr)
 

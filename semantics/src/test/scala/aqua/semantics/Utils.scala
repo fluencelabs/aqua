@@ -1,23 +1,17 @@
 package aqua.semantics
 
-import aqua.parser.expr.func.ClosureExpr
-import aqua.parser.lexer.{Name, Token}
 import aqua.parser.lift.Span
 import aqua.raw.{Raw, RawContext}
-import aqua.semantics.expr.func.ClosureSem
-import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
+import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter}
 import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra}
-import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
-import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter, TypesState}
 import aqua.semantics.rules.mangler.{ManglerAlgebra, ManglerInterpreter}
+import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter}
 import aqua.semantics.rules.report.{ReportAlgebra, ReportInterpreter}
+import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter}
 import aqua.types.*
 
 import cats.data.State
-import cats.{~>, Id}
-import monocle.Lens
-import monocle.macros.GenLens
-import monocle.syntax.all.*
+import cats.{Id, ~>}
 
 object Utils {
 
@@ -48,6 +42,10 @@ object Utils {
 
   def getModel(prog: Prog[State[CompilerState[cats.Id], *], Raw]): Raw = {
     prog.apply(emptyS).run(blankCS).value._2
+  }
+
+  def getState(prog: Prog[State[CompilerState[cats.Id], *], Raw]): CompilerState[Id] = {
+    prog.apply(emptyS).run(blankCS).value._1
   }
 
   def getState(

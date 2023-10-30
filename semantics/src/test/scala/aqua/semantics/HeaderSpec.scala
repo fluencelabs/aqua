@@ -5,14 +5,13 @@ import aqua.parser.lexer.{Ability, Name}
 import aqua.raw.RawContext
 import aqua.raw.arrow.{ArrowRaw, FuncRaw}
 import aqua.raw.ops.RawTag
-import aqua.raw.value.VarRaw
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
-import aqua.types.{AbilityType, ArrowType, NilType, ProductType, ScalarType}
+import aqua.types.*
 
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, Validated}
 import cats.free.Cofree
-import cats.{Eval, Id, Monoid}
 import cats.syntax.applicative.*
+import cats.{Eval, Id, Monoid}
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

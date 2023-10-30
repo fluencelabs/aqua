@@ -12,6 +12,7 @@ import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.report.{ReportAlgebra, ReportInterpreter}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter}
 import aqua.types.*
+
 import cats.Id
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import monocle.syntax.all.*

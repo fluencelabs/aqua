@@ -1,26 +1,19 @@
 package aqua.semantics
 
-import aqua.raw.RawContext
-import aqua.parser.Ast
-import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
-import aqua.parser.Parser
+import aqua.parser.{Ast, Parser}
 import aqua.parser.lift.{LiftParser, Span}
+import aqua.raw.RawContext
+import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.*
-import aqua.raw.ops.*
 
+import cats.Eval
+import cats.data.{Chain, EitherNec, NonEmptyChain, Validated}
+import cats.free.Cofree
+import cats.syntax.foldable.*
+import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
-import cats.~>
-import cats.data.{Chain, EitherNec, NonEmptyChain}
-import cats.syntax.show.*
-import cats.syntax.traverse.*
-import cats.syntax.foldable.*
-import cats.data.Validated
-import cats.free.Cofree
-import cats.data.State
-import cats.Eval
 
 class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
