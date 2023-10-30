@@ -1,8 +1,8 @@
 package aqua.semantics.rules.names
 
-import aqua.parser.lexer.{LiteralToken, Name, Token, ValueToken}
+import aqua.parser.lexer.{Name, Token}
+import aqua.raw.value.ValueRaw
 import aqua.types.{ArrowType, StreamType, Type}
-import cats.InjectK
 
 trait NamesAlgebra[S[_], Alg[_]] {
 
@@ -21,6 +21,8 @@ trait NamesAlgebra[S[_], Alg[_]] {
 
   def defineConstant(name: Name[S], `type`: Type): Alg[Boolean]
 
+  def assign(name: Name[S], value: ValueRaw): Alg[Boolean]
+  
   def defineArrow(name: Name[S], gen: ArrowType, isRoot: Boolean): Alg[Boolean]
 
   def streamsDefinedWithinScope(): Alg[Map[String, StreamType]]

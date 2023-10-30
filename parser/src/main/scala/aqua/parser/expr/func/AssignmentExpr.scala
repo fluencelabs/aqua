@@ -20,16 +20,7 @@ case class AssignmentExpr[F[_]](
 object AssignmentExpr extends Expr.Leaf {
 
   override val p: P[AssignmentExpr[Span.S]] =
-    ((Name.variable <* ` = `).with1 ~ ValueToken.`value`).flatMap { case (variable, value) =>
-      value match {
-        case CollectionToken(_, values) =>
-          if (values.isEmpty)
-            P.failWith(
-              "Assigning empty array to a variable is prohibited. You can create an array with values (like '[a, b, c]') or use '[]' in place."
-            )
-          else P.pure(AssignmentExpr(variable, value))
-        case _ =>
-          P.pure(AssignmentExpr(variable, value))
-      }
+    ((Name.variable <* ` = `).with1 ~ ValueToken.`value`).map { case (variable, value) =>
+      AssignmentExpr(variable, value)
     }
 }

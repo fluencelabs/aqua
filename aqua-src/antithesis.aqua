@@ -1,6 +1,3 @@
-alias Troll: u32
-
-func test() -> i8:
-  MyAbility = Troll(f = "sf")
-
-  <- 42
+func z() -> string:
+    arr = nil
+    <- arr!

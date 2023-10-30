@@ -1,6 +1,7 @@
 package aqua.semantics.rules.names
 
 import aqua.parser.lexer.{Name, Token}
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.report.ReportAlgebra
@@ -130,6 +131,26 @@ class NamesInterpreter[S[_], X](using
           )
         ).as(true)
     }.flatTap(_ => locations.addToken(name.value, name))
+
+  override def assign(name: Name[S], value: ValueRaw): SX[Boolean] =
+    value match {
+      case ValueRaw.Nil | ValueRaw.VarNil =>
+        report
+          .error(
+            name,
+            "Assigning empty array or 'nil' to a variable is prohibited. " +
+              "You can create an array with values (like '[a, b, c]') or use '[]' in place."
+          )
+          .as(false)
+      case _ =>
+        value.`type` match {
+          case at@ArrowType(_, _) =>
+            defineArrow(name, at, false)
+          case _ =>
+            derive(name, value.`type`, value.varNames)
+        }
+
+    }
 
   override def defineArrow(name: Name[S], arrowType: ArrowType, isRoot: Boolean): SX[Boolean] =
     readName(name.value).flatMap {

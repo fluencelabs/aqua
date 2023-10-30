@@ -42,12 +42,12 @@ object ParserError {
       case WithContext(str, exp: WithContext) => expectationToString(exp, List(str))
       case WithContext(str, exp) => s"$str (${expectationToString(exp)})" +: acc
       case FailWith(_, message) => message +: acc
-      case InRange(offset, lower, upper) =>
+      case InRange(_, lower, upper) =>
         if (lower == upper)
           s"Expected symbol '${betterSymbol(lower)}'" +: acc
         else
           s"Expected symbols from '${betterSymbol(lower)}' to '${betterSymbol(upper)}'" +: acc
-      case OneOfStr(offset, strs) =>
+      case OneOfStr(_, strs) =>
         s"Expected one of these strings: ${strs.map(s => s"'$s'").mkString(", ")}" +: acc
       case e => ("Expected: " + e.toString) +: acc
     }

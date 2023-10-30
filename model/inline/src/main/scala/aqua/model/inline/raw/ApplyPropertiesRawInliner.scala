@@ -343,7 +343,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             Some(IntoIndexRaw(idx, _), otherProperties)
           ) =>
         unfold(vr).flatMap {
-          case (VarModel(nameVM, _, _), inl) =>
+          case (VarModel(nameVM, _, _), _) =>
             for {
               gateInlined <- unfoldStreamGate(nameVM, st, idx)
               (gateVM, gateInline) = gateInlined
