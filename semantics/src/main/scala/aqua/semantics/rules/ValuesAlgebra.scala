@@ -96,18 +96,20 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         }
 
       case prop @ PropertyToken(value, properties) =>
-        for {
-          valueRaw <- valueToRaw(value)
-          result <- valueRaw.flatTraverse(raw =>
-            properties
-              .foldLeftM(raw) { case (prev, op) =>
-                OptionT(
-                  resolveSingleProperty(prev.`type`, op)
-                ).map(prop => ApplyPropertyRaw(prev, prop))
-              }
-              .value
-          )
-        } yield result
+        prop.adjust.fold(
+          for {
+            valueRaw <- valueToRaw(value)
+            result <- valueRaw.flatTraverse(raw =>
+              properties
+                .foldLeftM(raw) { case (prev, op) =>
+                  OptionT(
+                    resolveSingleProperty(prev.`type`, op)
+                  ).map(prop => ApplyPropertyRaw(prev, prop))
+                }
+                .value
+            )
+          } yield result
+        )(valueToRaw)
 
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {
@@ -309,14 +311,15 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
     }
 
   def valueToCall(v: ValueToken[S]): Alg[Option[(ValueRaw, ArrowType)]] =
-    valueToRaw(v).flatMap(_.flatTraverse {
-      case ca: CallArrowRaw =>
-        (ca, ca.baseType).some.pure[Alg]
-      case apr @ ApplyPropertyRaw(_, IntoArrowRaw(_, arrowType, _)) =>
-        (apr, arrowType).some.pure[Alg]
-      // TODO: better error message (`raw` formatting)
-      case raw => report.error(v, s"Expected arrow call, got $raw").as(none)
-    })
+    valueToRaw(v).flatMap(
+      _.flatTraverse {
+        case ca: CallArrowRaw => (ca, ca.baseType).some.pure[Alg]
+        case apr @ ApplyPropertyRaw(_, IntoArrowRaw(_, arrowType, _)) =>
+          (apr, arrowType).some.pure[Alg]
+        // TODO: better error message (`raw` formatting)
+        case raw => report.error(v, s"Expected arrow call, got $raw").as(none)
+      }
+    )
 
   def valueToTypedRaw(v: ValueToken[S], expectedType: Type): Alg[Option[ValueRaw]] =
     OptionT(valueToRaw(v))
