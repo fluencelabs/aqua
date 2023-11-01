@@ -241,7 +241,7 @@ class TypesInterpreter[S[_], X](using
             report
               .error(
                 op,
-                s"Expected scope type to resolve an arrow '${op.name.value}' or a type with this property. Got: $rootT"
+                s"Expected type to resolve an arrow '${op.name.value}' or a type with this property. Got: $rootT"
               )
               .as(None)
           )(t => State.pure(Some(FunctorRaw(op.name.value, t))))
