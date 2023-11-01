@@ -286,7 +286,12 @@ case class OptionType(element: Type) extends BoxType {
 }
 
 sealed trait NamedType extends Type {
+
+  def specifier: String
   def name: String
+
+  final def fullName: String = s"$specifier $name"
+
   def fields: NonEmptyMap[String, Type]
 
   /**
@@ -363,8 +368,10 @@ sealed trait NamedType extends Type {
 case class StructType(name: String, fields: NonEmptyMap[String, Type])
     extends DataType with NamedType {
 
+  override val specifier: String = "struct"
+
   override def toString: String =
-    s"$name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+    s"$fullName{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
 case class StreamMapType(element: Type) extends DataType {
@@ -378,15 +385,19 @@ object StreamMapType {
 
 case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) extends NamedType {
 
+  override val specifier: String = "service"
+
   override def toString: String =
-    s"service $name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+    s"$fullName{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
 // Ability is an unordered collection of labelled types and arrows
 case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
 
+  override val specifier: String = "ability"
+
   override def toString: String =
-    s"ability $name{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
+    s"$fullName{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
 object AbilityType {

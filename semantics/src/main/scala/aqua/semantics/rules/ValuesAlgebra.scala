@@ -342,15 +342,26 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
     ab: Name[S],
     at: NamedType,
     funcName: Name[S]
-  ): Option[CallArrowRaw] = at.arrows
-    .get(funcName.value)
-    .map(arrowType =>
-      CallArrowRaw.ability(
-        ab.value,
-        funcName.value,
-        arrowType
+  ): OptionT[Alg, CallArrowRaw] =
+    OptionT
+      .fromOption(
+        at.arrows.get(funcName.value)
       )
-    )
+      .map(arrowType =>
+        CallArrowRaw.ability(
+          ab.value,
+          funcName.value,
+          arrowType
+        )
+      )
+      .flatTapNone(
+        report.error(
+          funcName,
+          s"Function `${funcName.value}` is not defined " +
+            s"in `${ab.value}` of type `${at.fullName}`, " +
+            s"available functions: ${at.arrows.keys.mkString(", ")}"
+        )
+      )
 
   private def callArrowFromFunc(
     funcName: Name[S]
@@ -368,30 +379,21 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
     ab: NamedTypeToken[S],
     funcName: Name[S]
   ): OptionT[Alg, CallArrowRaw] = {
-    lazy val fromAbility = for {
-      nt <- OptionT(
-        N.read(ab.asName, mustBeDefined = false)
-      ).collect { case nt: (AbilityType | ServiceType) => nt }
-      ca <- OptionT.fromOption(
-        abilityArrow(ab.asName, nt, funcName)
-      )
-    } yield ca
+    lazy val nameTypeFromAbility = OptionT(
+      N.read(ab.asName, mustBeDefined = false)
+    ).collect { case nt: (AbilityType | ServiceType) => ab.asName -> nt }
 
-    lazy val fromService = for {
+    lazy val nameTypeFromService = for {
       st <- OptionT(
         T.getType(ab.value)
       ).collect { case st: ServiceType => st }
       rename <- OptionT(
         A.getServiceRename(ab)
       )
-      ca <- OptionT.fromOption(
-        abilityArrow(
-          ab.asName.rename(rename),
-          st,
-          funcName
-        )
-      )
-    } yield ca
+      renamed = ab.asName.rename(rename)
+    } yield renamed -> st
+
+    lazy val nameType = nameTypeFromAbility orElse nameTypeFromService.widen
 
     lazy val fromArrow = OptionT(
       A.getArrow(ab, funcName)
@@ -404,7 +406,16 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         )
     )
 
-    fromAbility.orElse(fromService).orElse(fromArrow)
+    /**
+     * If we have a name and a type, get function from ability.
+     * Otherwise, get function from arrow.
+     *
+     * It is done like so to not report irrelevant errors.
+     */
+    nameType.flatTransformT {
+      case Some((name, nt)) => abilityArrow(name, nt, funcName)
+      case _ => fromArrow
+    }
   }
 
   private def callArrowToRaw(
