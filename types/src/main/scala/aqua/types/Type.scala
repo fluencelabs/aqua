@@ -368,7 +368,7 @@ sealed trait NamedType extends Type {
 case class StructType(name: String, fields: NonEmptyMap[String, Type])
     extends DataType with NamedType {
 
-  override val specifier: String = "struct"
+  override val specifier: String = "data"
 
   override def toString: String =
     s"$fullName{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
