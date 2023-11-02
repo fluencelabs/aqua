@@ -1,6 +1,6 @@
 package aqua
 
-import aqua.Rendering.given_Show_AquaError
+import aqua.Rendering.given
 import aqua.compiler.AquaError
 import aqua.files.FileModuleId
 import aqua.io.AquaFileError
