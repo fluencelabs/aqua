@@ -56,7 +56,7 @@ object Span {
     FocusedLine(
       str.slice(0, idx),
       str.slice(idx, end),
-      str.slice(0, end)
+      str.slice(end, str.length)
     )
 
   final case class NumberedLine[T](
