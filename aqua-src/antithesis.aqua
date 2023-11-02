@@ -7,8 +7,6 @@ func returnNil() -> *string:
   <- someStr
 
 func newFunc() -> []string:
-  -- new stream
-    stream <- returnNil() -- stream -> someStr: *str
+    stream <- returnNil()
     stream <<- "asd"
     <- stream
-  -- end
