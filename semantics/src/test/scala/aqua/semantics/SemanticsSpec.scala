@@ -796,4 +796,47 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
     }
 
   }
+
+  it should "report an error on unknown service methods" in {
+    val script = """
+                   |service Test("test"):
+                   |  call(i: i32) -> i32
+                   |
+                   |func test():
+                   |  Test.unknown("test")
+                   |""".stripMargin
+
+    insideSemErrors(script) { errors =>
+      errors.toChain.toList.exists {
+        case RulesViolated(_, messages) =>
+          messages.exists(_.contains("not defined")) &&
+          messages.exists(_.contains("unknown"))
+        case _ => false
+      }
+    }
+  }
+
+  it should "report an error on unknown ability arrows" in {
+    val script = """
+                   |ability Test:
+                   |  call(i: i32) -> i32
+                   |
+                   |func test():
+                   |  call = (i: i32) -> i32:
+                   |    <- i
+                   |
+                   |  t = Test(call)
+                   |    
+                   |  t.unknown("test")
+                   |""".stripMargin
+
+    insideSemErrors(script) { errors =>
+      errors.toChain.toList.exists {
+        case RulesViolated(_, messages) =>
+          messages.exists(_.contains("not defined")) &&
+          messages.exists(_.contains("unknown"))
+        case _ => false
+      }
+    }
+  }
 }
