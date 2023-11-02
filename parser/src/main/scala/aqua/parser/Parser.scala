@@ -5,6 +5,7 @@ import aqua.parser.head.HeadExpr
 import aqua.parser.lift.LiftParser.LiftErrorOps
 import aqua.parser.lift.Span.S
 import aqua.parser.lift.{LiftParser, Span}
+
 import cats.data.{Validated, ValidatedNec}
 import cats.parse.{Parser as P, Parser0 as P0}
 import cats.{Comonad, ~>}
