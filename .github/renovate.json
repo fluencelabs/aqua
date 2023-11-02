@@ -4,6 +4,7 @@
     "config:base",
     ":semanticCommitTypeAll(chore)"
   ],
+  "respectLatest": false,
   "ignorePaths": ["api/aqua-api-example/**"],
   "enabledManagers": ["sbt", "npm", "github-actions"],
   "rangeStrategy": "pin",
