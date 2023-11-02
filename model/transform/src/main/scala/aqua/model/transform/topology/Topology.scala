@@ -377,7 +377,11 @@ object Topology extends Logging {
           NextRes(itemName).leaf
         )
 
-        FoldRes(itemName, v).wrap(if (reversed) steps.reverse else steps)
+        FoldRes
+          .lastNull(itemName, v)
+          .wrap(
+            if (reversed) steps.reverse else steps
+          )
       case _ =>
         MakeRes.hop(v)
     }

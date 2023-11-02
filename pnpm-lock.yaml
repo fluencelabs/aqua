@@ -27,8 +27,8 @@ importers:
         specifier: 1.1.2
         version: 1.1.2
       '@fluencelabs/js-client':
-        specifier: 0.3.0
-        version: 0.3.0
+        specifier: 0.4.2
+        version: 0.4.2
       deep-equal:
         specifier: 2.2.1
         version: 2.2.1
@@ -508,8 +508,8 @@ packages:
     resolution: {integrity: sha512-/RvIwaLGmNuzkoFTRXOp66BTiVVkmljiY1Do3f/wRnYWZO8jdjQ/bmO+v1rhGZ7+DYzTL1YT54Vxt5/ralnPvA==}
     dev: true
 
-  /@fluencelabs/avm@0.52.0:
-    resolution: {integrity: sha512-T+/Hv/ZPfwWZAC4tH6wEDIRmtN6cTBebqbCaHfaq2PDLSMG0BgssdFF2BAaEXrvOvJbI5Bu/9bQhHv4ga7bYlA==}
+  /@fluencelabs/avm@0.54.0:
+    resolution: {integrity: sha512-5GgROVly/vC7gasltr6/3TIY8vfV6b+SPfWUAGWnyXdbWt4jJANLO2YtXdaUsdNk9PiwOep7TMjLnypljdyMjQ==}
     dev: false
 
   /@fluencelabs/fluence-network-environment@1.1.2:
@@ -520,15 +520,28 @@ packages:
     resolution: {integrity: sha512-WJ7o51jaBSzUsYENxCEJpv91KiodH1nQ6uKdAn5chWsOQzDu57d3pa6IW1Lu/wh4jtefnNen+jF1esENQCc0BA==}
     engines: {node: '>=10', pnpm: '>=3'}
 
-  /@fluencelabs/js-client@0.3.0:
-    resolution: {integrity: sha512-mRlEeoDEAsHK4GK3vIlNBkXgfJ01maQ4WVefob4QNEqpshipf6XQpU6R8dpUsjyhx53nus3ui6BSUV6gi5jg8A==}
+  /@fluencelabs/js-client-isomorphic@0.2.1:
+    resolution: {integrity: sha512-o9uhjV2db7YvGHv38qXYecJmMlwnkiHqMX7dBAA8Z+89/J4lepvQydP9zU+qJHRGPcBjH4yPtnV4oEBXZbdhMg==}
+    dependencies:
+      '@fluencelabs/avm': 0.54.0
+      '@fluencelabs/marine-js': 0.7.2
+      '@fluencelabs/marine-worker': 0.4.1
+      '@fluencelabs/threads': 2.0.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@fluencelabs/js-client@0.4.2:
+    resolution: {integrity: sha512-Sho12XpyGcWAxOK0jUeO2Mh0ur2xJWTL7rCVAIT+QR7KlghlrFP1jdw4OrDCRlEJR4bhdPtI1PPkDo3Gk+axGQ==}
     engines: {node: '>=10', pnpm: '>=8'}
     dependencies:
       '@chainsafe/libp2p-noise': 13.0.0
       '@chainsafe/libp2p-yamux': 5.0.0
-      '@fluencelabs/avm': 0.52.0
+      '@fluencelabs/avm': 0.54.0
       '@fluencelabs/interfaces': 0.8.2
-      '@fluencelabs/marine-worker': 0.4.0
+      '@fluencelabs/js-client-isomorphic': 0.2.1
+      '@fluencelabs/marine-worker': 0.4.1
+      '@fluencelabs/threads': 2.0.0
       '@libp2p/crypto': 2.0.3
       '@libp2p/interface': 0.1.2
       '@libp2p/peer-id': 3.0.2
@@ -547,7 +560,6 @@ packages:
       libp2p: 0.46.6
       multiformats: 11.0.1
       rxjs: 7.5.5
-      threads: github.com/fluencelabs/threads.js/b00a5342380b0278d3ae56dcfb170effb3cad7cd
       ts-pattern: 3.3.3
       uint8arrays: 4.0.3
       uuid: 8.3.2
@@ -566,12 +578,25 @@ packages:
       default-import: 1.1.5
     dev: false
 
-  /@fluencelabs/marine-worker@0.4.0:
-    resolution: {integrity: sha512-nWri+j8Ey4UXoB32NPKsmVYzUKj6mwD7vh/5MjzCxrnVthnWnFdnkETF2BnZwjZWc701xeVhF3L5ZSjiQzKywQ==}
+  /@fluencelabs/marine-worker@0.4.1:
+    resolution: {integrity: sha512-BnCOaAnzi3koFFHGy3955uYllI3TmQN++eI/0s5mou4pMZdF2H6qc40mXzgQb8dADpuE9cqRwQ2/0Ecwn5B3dg==}
     dependencies:
       '@fluencelabs/marine-js': 0.7.2
+      '@fluencelabs/threads': 2.0.0
       observable-fns: 0.6.1
-      threads: github.com/fluencelabs/threads.js/b00a5342380b0278d3ae56dcfb170effb3cad7cd
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@fluencelabs/threads@2.0.0:
+    resolution: {integrity: sha512-dgYpZg55OcEmop1U3G2bFKEJXg2avjXWYfWsdPlkSbHOHguaRifvr5bgwIYTg1wxoPGcn0jegcjKKwrY0qrV+g==}
+    dependencies:
+      callsites: 3.1.0
+      debug: 4.3.4
+      is-observable: 2.1.0
+      observable-fns: 0.6.1
+    optionalDependencies:
+      tiny-worker: 2.3.0
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -4140,21 +4165,4 @@ packages:
 
   /zod@3.22.4:
     resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
-    dev: false
-
-  github.com/fluencelabs/threads.js/b00a5342380b0278d3ae56dcfb170effb3cad7cd:
-    resolution: {tarball: https://codeload.github.com/fluencelabs/threads.js/tar.gz/b00a5342380b0278d3ae56dcfb170effb3cad7cd}
-    name: threads
-    version: 1.7.0
-    prepare: true
-    requiresBuild: true
-    dependencies:
-      callsites: 3.1.0
-      debug: 4.3.4
-      is-observable: 2.1.0
-      observable-fns: 0.6.1
-    optionalDependencies:
-      tiny-worker: 2.3.0
-    transitivePeerDependencies:
-      - supports-color
     dev: false

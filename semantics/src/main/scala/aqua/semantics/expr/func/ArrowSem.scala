@@ -1,33 +1,27 @@
 package aqua.semantics.expr.func
 
-import aqua.parser.expr.FuncExpr
 import aqua.parser.expr.func.ArrowExpr
-import aqua.parser.lexer.{Arg, DataTypeToken}
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
-import aqua.raw.ops.{SeqTag, *}
+import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.semantics.Prog
-import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
 
-import cats.Eval
-import cats.data.{Chain, NonEmptyList}
-import cats.free.{Cofree, Free}
-import cats.data.OptionT
-import cats.syntax.show.*
+import cats.Monad
+import cats.data.Chain
+import cats.free.Cofree
 import cats.syntax.applicative.*
-import cats.syntax.apply.*
-import cats.syntax.foldable.*
 import cats.syntax.bifunctor.*
 import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.{Applicative, Monad}
 
 class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
 
@@ -35,9 +29,7 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
 
   def before[Alg[_]: Monad](implicit
     T: TypesAlgebra[S, Alg],
-    N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg],
-    L: LocationsAlgebra[S, Alg]
+    N: NamesAlgebra[S, Alg]
   ): Alg[ArrowType] = for {
     arrowType <- T.beginArrowScope(arrowTypeExpr)
     // Create local variables
@@ -57,13 +49,11 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
   )(using
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
-    A: AbilitiesAlgebra[S, Alg],
-    L: LocationsAlgebra[S, Alg]
+    M: ManglerAlgebra[Alg]
   ): Alg[Raw] = for {
     streamsInScope <- N.streamsDefinedWithinScope()
     retValues <- T.endArrowScope(expr.arrowTypeExpr)
-    retValuesDerivedFrom <- N.getDerivedFrom(retValues.map(_.varNames))
-    res = bodyGen match {
+    res <- bodyGen match {
       case FuncOp(bodyModel) =>
         // TODO: wrap with local on...via...
         val retsAndArgs = retValues zip funcArrow.codomain.toList
@@ -77,51 +67,63 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
         val localStreams = streamsInScope -- dataArgsNames -- streamsThatReturnAsStreams
 
         // process stream that returns as not streams and all Apply*Raw
-        val (bodyRets, retVals) = retsAndArgs.mapWithIndex {
-          case ((v @ VarRaw(_, StreamType(_)), StreamType(_)), _) =>
-            (Chain.empty, v)
+        retsAndArgs.traverse {
+          case (v @ VarRaw(_, StreamType(_)), StreamType(_)) =>
+            (Chain.empty, v).pure[Alg]
           // canonicalize and change return value
-          case ((VarRaw(streamName, streamType @ StreamType(streamElement)), _), idx) =>
-            val canonReturnVar = VarRaw(s"-$streamName-fix-$idx", CanonStreamType(streamElement))
-            val returnVar = VarRaw(s"-$streamName-flat-$idx", ArrayType(streamElement))
-            val body = Chain(
-              CanonicalizeTag(
-                VarRaw(streamName, streamType),
-                Call.Export(canonReturnVar.name, canonReturnVar.`type`)
-              ).leaf,
-              FlattenTag(
-                canonReturnVar,
-                returnVar.name
-              ).leaf
-            )
+          case (VarRaw(streamName, streamType @ StreamType(streamElement)), _) =>
+            for {
+              canonName <- M.rename(s"-$streamName-fix")
+              returnVarName <- M.rename(s"-$streamName-flat")
+            } yield {
+              val canonReturnVar = VarRaw(canonName, CanonStreamType(streamElement))
+              val returnVar = VarRaw(returnVarName, ArrayType(streamElement))
+              val body = Chain(
+                CanonicalizeTag(
+                  VarRaw(streamName, streamType),
+                  Call.Export(canonReturnVar.name, canonReturnVar.`type`)
+                ).leaf,
+                FlattenTag(
+                  canonReturnVar,
+                  returnVar.name
+                ).leaf
+              )
 
-            (body, returnVar)
+              (body, returnVar)
+            }
+
           // assign and change return value for all `Apply*Raw`
-          case ((v: ValueRaw.ApplyRaw, _), idx) =>
-            val assignedReturnVar = VarRaw(s"-return-fix-$idx", v.`type`)
-            val body = Chain.one(
-              AssignmentTag(
-                v,
-                assignedReturnVar.name
-              ).leaf
-            )
+          case (v: ValueRaw.ApplyRaw, _) =>
+            for {
+              assignedReturnName <- M.rename(s"-return-fix")
+            } yield {
+              val assignedReturnVar = VarRaw(assignedReturnName, v.`type`)
 
-            (body, assignedReturnVar)
-          case ((v, _), _) => (Chain.empty, v)
-        }.unzip.leftMap(_.combineAll)
+              val body = Chain.one(
+                AssignmentTag(
+                  v,
+                  assignedReturnVar.name
+                ).leaf
+              )
 
-        val bodyModified = SeqTag.wrap(
-          bodyModel +: bodyRets
-        )
+              (body, assignedReturnVar)
+            }
 
-        // wrap streams with restrictions
-        val bodyWithRestrictions = localStreams.foldLeft(bodyModified) {
-          case (bm, (streamName, streamType)) =>
-            RestrictionTag(streamName, streamType).wrap(bm)
+          case (v, _) => (Chain.empty, v).pure[Alg]
+        }.map(_.unzip.leftMap(_.combineAll)).map { case (bodyRets, retVals) =>
+          val bodyModified = SeqTag.wrap(
+            bodyModel +: bodyRets
+          )
+
+          // wrap streams with restrictions
+          val bodyWithRestrictions =
+            localStreams.foldLeft(bodyModified) { case (bm, (streamName, streamType)) =>
+              RestrictionTag(streamName, streamType).wrap(bm)
+            }
+          ArrowRaw(funcArrow, retVals, bodyWithRestrictions)
         }
 
-        ArrowRaw(funcArrow, retVals, bodyWithRestrictions)
-      case _ => Raw.error("Invalid arrow body")
+      case _ => Raw.error("Invalid arrow body").pure[Alg]
     }
   } yield res
 
@@ -129,7 +131,8 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
-    L: LocationsAlgebra[S, Alg]
+    L: LocationsAlgebra[S, Alg],
+    M: ManglerAlgebra[Alg]
   ): Prog[Alg, Raw] =
     Prog
       .around(

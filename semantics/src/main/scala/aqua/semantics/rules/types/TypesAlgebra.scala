@@ -10,6 +10,8 @@ import cats.data.NonEmptyList
 trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveType(token: TypeToken[S]): Alg[Option[Type]]
+  
+  def resolveNamedType(token: TypeToken[S]): Alg[Option[AbilityType | StructType]]
 
   def getType(name: String): Alg[Option[Type]]
 
@@ -37,10 +39,11 @@ trait TypesAlgebra[S[_], Alg[_]] {
   def resolveIndex(rootT: Type, op: IntoIndex[S], idx: ValueRaw): Alg[Option[PropertyRaw]]
 
   def resolveCopy(
+    token: IntoCopy[S],
     rootT: Type,
-    op: IntoCopy[S],
-    fields: NonEmptyMap[String, ValueRaw]
+    fields: NonEmptyList[(NamedArg[S], ValueRaw)]
   ): Alg[Option[PropertyRaw]]
+
   def resolveField(rootT: Type, op: IntoField[S]): Alg[Option[PropertyRaw]]
 
   def resolveArrow(

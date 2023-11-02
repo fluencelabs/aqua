@@ -93,7 +93,7 @@ object Air {
     iterable: DataView,
     label: String,
     instruction: Air,
-    lastNextInstruction: Option[Air]
+    lastNextInstruction: Air
   ) extends Air(Keyword.Fold)
 
   case class Match(left: DataView, right: DataView, instruction: Air) extends Air(Keyword.Match)
@@ -137,7 +137,7 @@ object Air {
             case Air.Next(label) ⇒ s" $label"
             case Air.New(item, inst) ⇒ s" ${item.show}\n${showNext(inst)}$space"
             case Air.Fold(iter, label, inst, lastInst) ⇒
-              val l = lastInst.map(a => show(depth + 1, a)).getOrElse("")
+              val l = show(depth + 1, lastInst)
               s" ${iter.show} $label\n${showNext(inst)}$l$space"
             case Air.Match(left, right, inst) ⇒
               s" ${left.show} ${right.show}\n${showNext(inst)}$space"

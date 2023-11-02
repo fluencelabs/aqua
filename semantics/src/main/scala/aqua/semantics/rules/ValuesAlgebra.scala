@@ -6,26 +6,22 @@ import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
-import aqua.semantics.rules.types.TypesAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
+import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
+import aqua.helpers.syntax.optiont.*
 
 import cats.Monad
-import cats.data.OptionT
-import cats.data.Chain
+import cats.data.{NonEmptyList, OptionT}
+import cats.instances.list.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.traverse.*
 import cats.syntax.foldable.*
+import cats.syntax.functor.*
 import cats.syntax.option.*
-import cats.instances.list.*
-import cats.data.{NonEmptyList, NonEmptyMap}
-import cats.data.OptionT
+import cats.syntax.traverse.*
 import scribe.Logging
-
-import scala.collection.immutable.SortedMap
 
 class ValuesAlgebra[S[_], Alg[_]: Monad](using
   N: NamesAlgebra[S, Alg],
@@ -33,6 +29,23 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   A: AbilitiesAlgebra[S, Alg],
   report: ReportAlgebra[S, Alg]
 ) extends Logging {
+
+  private def reportNamedArgsDuplicates(
+    args: NonEmptyList[NamedArg[S]]
+  ): Alg[Unit] = args
+    .groupBy(_.argName.value)
+    .filter { case (_, group) =>
+      group.size > 1
+    }
+    .toList
+    .traverse_ { case (name, group) =>
+      group.traverse_ { arg =>
+        report.error(
+          arg.argName,
+          s"Duplicate argument `$name`"
+        )
+      }
+    }
 
   private def resolveSingleProperty(rootType: Type, op: PropertyOp[S]): Alg[Option[PropertyRaw]] =
     op match {
@@ -46,12 +59,13 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           )
         } yield arrowProp
       case op: IntoCopy[S] =>
-        for {
-          maybeFields <- op.fields.traverse(valueToRaw)
-          copyProp <- maybeFields.sequence.flatTraverse(
-            T.resolveCopy(rootType, op, _)
+        (for {
+          _ <- OptionT.liftF(
+            reportNamedArgsDuplicates(op.args)
           )
-        } yield copyProp
+          fields <- op.args.traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg -> _))
+          prop <- OptionT(T.resolveCopy(op, rootType, fields))
+        } yield prop).value
       case op: IntoIndex[S] =>
         for {
           maybeIdx <- op.idx.fold(LiteralRaw.Zero.some.pure)(valueToRaw)
@@ -101,8 +115,14 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
 
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {
-          resolvedType <- OptionT(T.resolveType(typeName))
-          fieldsGiven <- fields.traverse(value => OptionT(valueToRaw(value)))
+          resolvedType <- OptionT(T.resolveNamedType(typeName))
+          // Report duplicate fields
+          _ <- OptionT.liftF(
+            reportNamedArgsDuplicates(fields)
+          )
+          fieldsGiven <- fields
+            .traverse(arg => OptionT(valueToRaw(arg.argValue)).map(arg.argName.value -> _))
+            .map(_.toNem) // Take only last value for a field
           fieldsGivenTypes = fieldsGiven.map(_.`type`)
           generated <- OptionT.fromOption(
             resolvedType match {
@@ -116,7 +136,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                   ability.copy(fields = fieldsGivenTypes),
                   AbilityRaw(fieldsGiven, ability)
                 ).some
-              case _ => none
             }
           )
           (genType, genData) = generated
@@ -297,7 +316,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
     valueToRaw(v).flatMap(
       _.flatTraverse {
         case ca: CallArrowRaw => (ca, ca.baseType).some.pure[Alg]
-        case apr@ApplyPropertyRaw(_, IntoArrowRaw(_, arrowType, _)) => (apr, arrowType).some.pure[Alg]
+        case apr @ ApplyPropertyRaw(_, IntoArrowRaw(_, arrowType, _)) =>
+          (apr, arrowType).some.pure[Alg]
         // TODO: better error message (`raw` formatting)
         case raw => report.error(v, s"Expected arrow call, got $raw").as(none)
       }
@@ -318,92 +338,113 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   def ensureIsString(v: ValueToken[S]): Alg[Boolean] =
     valueToStringRaw(v).map(_.isDefined)
 
-  private def callArrowFromAbility(
+  private def abilityArrow(
     ab: Name[S],
     at: NamedType,
     funcName: Name[S]
-  ): Option[CallArrowRaw] = at.arrows
-    .get(funcName.value)
-    .map(arrowType =>
-      CallArrowRaw.ability(
-        ab.value,
-        funcName.value,
-        arrowType
+  ): OptionT[Alg, CallArrowRaw] =
+    OptionT
+      .fromOption(
+        at.arrows.get(funcName.value)
+      )
+      .map(arrowType =>
+        CallArrowRaw.ability(
+          ab.value,
+          funcName.value,
+          arrowType
+        )
+      )
+      .flatTapNone(
+        report.error(
+          funcName,
+          s"Function `${funcName.value}` is not defined " +
+            s"in `${ab.value}` of type `${at.fullName}`, " +
+            s"available functions: ${at.arrows.keys.mkString(", ")}"
+        )
+      )
+
+  private def callArrowFromFunc(
+    funcName: Name[S]
+  ): OptionT[Alg, CallArrowRaw] =
+    OptionT(
+      N.readArrow(funcName)
+    ).map(arrowType =>
+      CallArrowRaw.func(
+        funcName = funcName.value,
+        baseType = arrowType
       )
     )
+
+  private def callArrowFromAbility(
+    ab: NamedTypeToken[S],
+    funcName: Name[S]
+  ): OptionT[Alg, CallArrowRaw] = {
+    lazy val nameTypeFromAbility = OptionT(
+      N.read(ab.asName, mustBeDefined = false)
+    ).collect { case nt: (AbilityType | ServiceType) => ab.asName -> nt }
+
+    lazy val nameTypeFromService = for {
+      st <- OptionT(
+        T.getType(ab.value)
+      ).collect { case st: ServiceType => st }
+      rename <- OptionT(
+        A.getServiceRename(ab)
+      )
+      renamed = ab.asName.rename(rename)
+    } yield renamed -> st
+
+    lazy val nameType = nameTypeFromAbility orElse nameTypeFromService.widen
+
+    lazy val fromArrow = OptionT(
+      A.getArrow(ab, funcName)
+    ).map(at =>
+      CallArrowRaw
+        .ability(
+          abilityName = ab.value,
+          funcName = funcName.value,
+          baseType = at
+        )
+    )
+
+    /**
+     * If we have a name and a type, get function from ability.
+     * Otherwise, get function from arrow.
+     *
+     * It is done like so to not report irrelevant errors.
+     */
+    nameType.flatTransformT {
+      case Some((name, nt)) => abilityArrow(name, nt, funcName)
+      case _ => fromArrow
+    }
+  }
 
   private def callArrowToRaw(
     callArrow: CallArrowToken[S]
   ): Alg[Option[CallArrowRaw]] =
-    for {
-      raw <- callArrow.ability.fold(
-        for {
-          myabeArrowType <- N.readArrow(callArrow.funcName)
-        } yield myabeArrowType
-          .map(arrowType =>
-            CallArrowRaw.func(
-              funcName = callArrow.funcName.value,
-              baseType = arrowType
+    (for {
+      raw <- callArrow.ability
+        .fold(callArrowFromFunc(callArrow.funcName))(ab =>
+          callArrowFromAbility(ab, callArrow.funcName)
+        )
+      domain = raw.baseType.domain
+      _ <- OptionT.withFilterF(
+        T.checkArgumentsNumber(
+          callArrow.funcName,
+          domain.length,
+          callArrow.args.length
+        )
+      )
+      args <- callArrow.args
+        .zip(domain.toList)
+        .traverse { case (tkn, tp) =>
+          for {
+            valueRaw <- OptionT(valueToRaw(tkn))
+            _ <- OptionT.withFilterF(
+              T.ensureTypeMatches(tkn, tp, valueRaw.`type`)
             )
-          )
-      )(ab =>
-        N.read(ab.asName, mustBeDefined = false).flatMap {
-          case Some(nt: (AbilityType | ServiceType)) =>
-            callArrowFromAbility(ab.asName, nt, callArrow.funcName).pure
-          case _ =>
-            T.getType(ab.value).flatMap {
-              case Some(st: ServiceType) =>
-                OptionT(A.getServiceRename(ab))
-                  .subflatMap(rename =>
-                    callArrowFromAbility(
-                      ab.asName.rename(rename),
-                      st,
-                      callArrow.funcName
-                    )
-                  )
-                  .value
-              case _ =>
-                A.getArrow(ab, callArrow.funcName).map {
-                  case Some(at) =>
-                    CallArrowRaw
-                      .ability(
-                        abilityName = ab.value,
-                        funcName = callArrow.funcName.value,
-                        baseType = at
-                      )
-                      .some
-                  case _ => none
-                }
-            }
+          } yield valueRaw
         }
-      )
-      result <- raw.flatTraverse(r =>
-        val arr = r.baseType
-        for {
-          argsCheck <- T.checkArgumentsNumber(
-            callArrow.funcName,
-            arr.domain.length,
-            callArrow.args.length
-          )
-          args <- Option
-            .when(argsCheck)(callArrow.args zip arr.domain.toList)
-            .traverse(
-              _.flatTraverse { case (tkn, tp) =>
-                for {
-                  maybeValueRaw <- valueToRaw(tkn)
-                  checked <- maybeValueRaw.flatTraverse(v =>
-                    T.ensureTypeMatches(tkn, tp, v.`type`)
-                      .map(Option.when(_)(v))
-                  )
-                } yield checked.toList
-              }
-            )
-          result = args
-            .filter(_.length == arr.domain.length)
-            .map(args => r.copy(arguments = args))
-        } yield result
-      )
-    } yield result
+    } yield raw.copy(arguments = args)).value
 
 }
 

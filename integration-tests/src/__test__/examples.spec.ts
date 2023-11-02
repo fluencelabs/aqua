@@ -33,7 +33,7 @@ import {
 import {
   abilityCall,
   complexAbilityCall,
-  checkAbCallsCall, bugLNG258Call1, bugLNG258Call2, bugLNG258Call3,
+  checkAbCallsCall, bugLNG258Call1, bugLNG258Call2, bugLNG258Call3, multipleAbilityWithClosureCall,
 } from "../examples/abilityCall.js";
 import {
   nilLengthCall,
@@ -104,7 +104,7 @@ import { multiReturnCall } from "../examples/multiReturnCall.js";
 import { declareCall } from "../examples/declareCall.js";
 import { genOptions, genOptionsEmptyString } from "../examples/optionsCall.js";
 import { lng193BugCall } from "../examples/closureReturnRename.js";
-import { closuresCall } from "../examples/closures.js";
+import {closuresCall, multipleClosuresLNG262BugCall} from "../examples/closures.js";
 import { closureArrowCaptureCall } from "../examples/closureArrowCapture.js";
 import {
   bugLNG63_2Call,
@@ -533,7 +533,7 @@ describe("Testing examples", () => {
     });
   });
 
-  it("ability.aqua", async () => {
+  it("abilities.aqua", async () => {
     let result = await abilityCall();
     expect(result).toStrictEqual([
       "declare_const123",
@@ -543,17 +543,17 @@ describe("Testing examples", () => {
     ]);
   });
 
-  it("ability.aqua complex", async () => {
+  it("abilities.aqua complex", async () => {
     let result = await complexAbilityCall();
     expect(result).toStrictEqual([false, true]);
   });
 
-  it("ability.aqua ability calls", async () => {
+  it("abilities.aqua ability calls", async () => {
     let result = await checkAbCallsCall();
     expect(result).toStrictEqual([true, false, true]);
   });
 
-  it("ability.aqua bug LNG-258", async () => {
+  it("abilities.aqua bug LNG-258", async () => {
     let result1 = await bugLNG258Call1();
     expect(result1).toStrictEqual([1, 2]);
 
@@ -562,6 +562,11 @@ describe("Testing examples", () => {
 
     let result3 = await bugLNG258Call3();
     expect(result3).toStrictEqual([5, 6]);
+  });
+
+  it("abilities.aqua multiple abilities with closures", async () => {
+    let result1 = await multipleAbilityWithClosureCall();
+    expect(result1).toStrictEqual([1, 2]);
   });
 
   it("functors.aqua LNG-119 bug", async () => {
@@ -948,6 +953,11 @@ describe("Testing examples", () => {
     let res2 = ["in", config.externalAddressesRelay2[0]];
     expect(closuresResult).toEqual(["in", res1, res1, res2]);
   }, 20000);
+
+  it("closures.aqua bug LNG-262", async () => {
+    let result = await multipleClosuresLNG262BugCall();
+    expect(result).toEqual([1, 2]);
+  });
 
   it("closureArrowCapture.aqua", async () => {
     let result = await closureArrowCaptureCall("input");

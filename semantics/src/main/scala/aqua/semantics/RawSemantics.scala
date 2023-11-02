@@ -276,7 +276,8 @@ object RawSemantics extends Logging {
     T: TypesAlgebra[S, G],
     D: DefinitionsAlgebra[S, G],
     L: LocationsAlgebra[S, G],
-    E: ReportAlgebra[S, G]
+    E: ReportAlgebra[S, G],
+    M: ManglerAlgebra[G]
   ): (Expr[S], Chain[G[RawWithToken[S]]]) => Eval[G[RawWithToken[S]]] = (expr, inners) =>
     Eval later ExprSem
       .getProg[S, G](expr)

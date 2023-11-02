@@ -168,8 +168,7 @@ case class RestrictionTag(name: String, `type`: DataType) extends SeqGroupTag {
     copy(name = map.getOrElse(name, name))
 }
 
-case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = None)
-    extends SeqGroupTag {
+case class ForTag(item: String, iterable: ValueRaw, mode: ForTag.Mode) extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(item)
 
@@ -185,9 +184,15 @@ case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = 
 object ForTag {
 
   enum Mode {
-    case Wait
-    case Pass
+    case Blocking
+    case NonBlocking
   }
+
+  def blocking(item: String, iterable: ValueRaw): ForTag =
+    ForTag(item, iterable, Mode.Blocking)
+
+  def nonBlocking(item: String, iterable: ValueRaw): ForTag =
+    ForTag(item, iterable, Mode.NonBlocking)
 }
 
 case class CallArrowRawTag(
@@ -290,13 +295,17 @@ case class ClosureTag(
   override def usesVarNames: Set[String] = Set.empty
 
   override def renameExports(map: Map[String, String]): RawTag =
-    copy(func = func.copy(name = map.getOrElse(func.name, func.name)))
+    copy(func =
+      func.copy(
+        name = map.getOrElse(func.name, func.name)
+      )
+    )
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     copy(
       func.copy(arrow =
         func.arrow.copy(
-          ret = func.arrow.ret.map(_.mapValues(f)),
+          ret = func.arrow.ret.map(_.map(f)),
           body = func.arrow.body.map(_.mapValues(f))
         )
       )
