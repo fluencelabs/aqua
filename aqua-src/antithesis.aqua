@@ -1,12 +1,2 @@
-aqua A
-
-export newFunc
-
-func returnNil() -> *string:
-  someStr: *string
-  <- someStr
-
-func newFunc() -> []string:
-    stream <- returnNil()
-    stream <<- "asd"
-    <- stream
+func arr(strs: []string) -> []string
+  <- strs

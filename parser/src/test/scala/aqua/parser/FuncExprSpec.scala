@@ -4,28 +4,24 @@ import aqua.AquaSpec
 import aqua.parser.expr.*
 import aqua.parser.expr.func.*
 import aqua.parser.lexer.*
-import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import aqua.types.ScalarType.*
 
-import cats.Id
-import cats.data.{Chain, NonEmptyList}
+import cats.{Eval, Id}
 import cats.data.Chain.*
+import cats.data.Validated.{Invalid, Valid}
+import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import cats.syntax.foldable.*
-import cats.data.Validated.{Invalid, Valid}
 import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.{Inside, Inspectors}
 import org.scalatest.matchers.should.Matchers
-import cats.~>
-import cats.Eval
+import org.scalatest.{Inside, Inspectors}
 
 import scala.collection.mutable
 import scala.language.implicitConversions
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors with AquaSpec {
-  import AquaSpec.{given, *}
+  import AquaSpec.{*, given}
 
   private val parser = Parser.spanParser
 
