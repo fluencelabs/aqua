@@ -11,6 +11,7 @@ import cats.Eval
 import cats.data.NonEmptyList
 import cats.parse.Parser.Expectation.InRange
 import cats.parse.{LocationMap, Parser}
+import cats.syntax.show.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Inside, Inspectors}
