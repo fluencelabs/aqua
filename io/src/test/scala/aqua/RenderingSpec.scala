@@ -26,13 +26,9 @@ class RenderingSpec extends AnyFlatSpec with Matchers with Inside with Inspector
     val fileSpan = FileSpan("file", Eval.now(LocationMap(script)), Span(8, 9))
 
 
-    // `.show` don't work for some reason
-    val showResult = given_Show_AquaError.show(
-      AquaError.ParserError[FileModuleId, AquaFileError, FileSpan.F](
-        LexerError[FileSpan.F]((fileSpan, error))
-      )
-    )
+    val result: AquaError[FileModuleId, AquaFileError, FileSpan.F] =
+      AquaError.ParserError(LexerError((fileSpan, error)))
 
-    showResult should include("Syntax error: file:1:37")
+    result.show should include("Syntax error: file:1:37")
   }
 }
