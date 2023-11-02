@@ -186,7 +186,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
   /**
    * func returnNil() -> *string:
    *   someStr: *string
-   * <- someStr
+   *   <- someStr
    *
    * func newFunc() -> []string:
    *   stream <- returnNil()
