@@ -1,8 +1,7 @@
 package aqua.parser.lift
 
-import cats.data.NonEmptyList
-import cats.parse.{LocationMap, Parser as P, Parser0}
-import cats.{Comonad, Eval}
+import cats.Comonad
+import cats.parse.{LocationMap, Parser0, Parser as P}
 
 import scala.language.implicitConversions
 
@@ -51,11 +50,14 @@ object Span {
     str: String,
     idx: Int,
     len: Int
-  ): FocusedLine = FocusedLine(
-    str.substring(0, idx),
-    str.substring(idx, idx + len),
-    str.substring(idx + len)
-  )
+  ): FocusedLine = {
+    val end = idx + len
+    FocusedLine(
+      str.slice(0, idx),
+      str.slice(idx, end),
+      str.slice(end, str.length)
+    )
+  }
 
   final case class NumberedLine[T](
     number: Int,
