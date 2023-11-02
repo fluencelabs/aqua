@@ -53,7 +53,6 @@ object Span {
     len: Int
   ): FocusedLine =
     val end = idx + len
-    // if we want to point to the place after a string, pad this string with spaces
     FocusedLine(
       str.slice(0, idx),
       str.slice(idx, end),
