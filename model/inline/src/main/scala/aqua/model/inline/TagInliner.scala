@@ -39,7 +39,7 @@ object TagInliner extends Logging {
    *
    * @param prefix Previous instructions
    */
-  enum TagInlined[F](prefix: Option[OpModel.Tree]) {
+  enum TagInlined[T](prefix: Option[OpModel.Tree]) {
 
     /**
      * Tag inlining emitted nothing
@@ -68,7 +68,7 @@ object TagInliner extends Logging {
       prefix: Option[OpModel.Tree] = None
     ) extends TagInlined[S](prefix)
 
-    case After[S](process: () => State[S, TagInlined[S]], prefix: Option[OpModel.Tree] = None)
+    case After[S](process: State[S, OpModel.Tree], prefix: Option[OpModel.Tree] = None)
         extends TagInlined[S](prefix)
 
     /**
@@ -77,8 +77,8 @@ object TagInliner extends Logging {
      * @param children Children results
      * @return Result of inlining
      */
-    def build(children: Chain[OpModel.Tree]): State[F, OpModel.Tree] = {
-      def toSeqModel(tree: Chain[OpModel.Tree]): State[F, OpModel.Tree] =
+    def build(children: Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
+      def toSeqModel(tree: Chain[OpModel.Tree]): State[T, OpModel.Tree] =
         State.pure(SeqModel.wrap(Chain.fromOption(prefix) ++ tree))
       this match {
         case Empty(_) =>
@@ -88,7 +88,9 @@ object TagInliner extends Logging {
         case Mapping(toModel, _) =>
           toSeqModel(Chain.one(toModel(children)))
         case After(pr, _) =>
-          pr().flatMap(inl => inl.build(children))
+          pr.flatMap(inl =>
+            toSeqModel(Chain.one(inl.copy(head = inl.head, tail = inl.tail.map(_ ++ children))))
+          )
       }
 
     }
@@ -380,14 +382,14 @@ object TagInliner extends Logging {
       case RestrictionTag(name, typ) =>
         // restriction can be generated before inlining and not renamed,
         // rename it after inlined children with new exports
-        State.pure(TagInlined.After(() => {
+        State.pure(TagInlined.After(
           for {
             exps <- Exports[S].exports
             model = exps.get(name).collect { case VarModel(n, _, _) =>
-              TagInlined.Single[S](RestrictionModel(n, typ))
+              RestrictionModel(n, typ).leaf
             }
-          } yield model.getOrElse(TagInlined.Single(RestrictionModel(name, typ)))
-        }))
+          } yield model.getOrElse(RestrictionModel(name, typ).leaf)
+        ))
 
       case DeclareStreamTag(value) =>
         value match
