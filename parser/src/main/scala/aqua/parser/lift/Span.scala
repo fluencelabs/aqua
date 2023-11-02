@@ -51,11 +51,17 @@ object Span {
     str: String,
     idx: Int,
     len: Int
-  ): FocusedLine = FocusedLine(
-    str.substring(0, idx),
-    str.substring(idx, idx + len),
-    str.substring(idx + len)
-  )
+  ): FocusedLine =
+    val end = idx + len
+    // if we want to point to the place after a string, pad this string with spaces
+    val padded =
+      if (str.length < idx + len) str.padTo(end, ' ')
+      else str
+    FocusedLine(
+      padded.substring(0, idx),
+      padded.substring(idx, end),
+      padded.substring(end)
+    )
 
   final case class NumberedLine[T](
     number: Int,

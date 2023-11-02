@@ -1,21 +1,16 @@
 package aqua.parser
 
-import aqua.parser.Ast.Tree
-import aqua.parser.{Ast, LexerError, ParserError}
 import aqua.parser.expr.RootExpr
 import aqua.parser.head.HeadExpr
-import aqua.parser.lexer.Token
 import aqua.parser.lift.LiftParser.LiftErrorOps
-import aqua.parser.lift.{FileSpan, LiftParser, Span}
+import aqua.parser.lift.Span.S
+import aqua.parser.lift.{LiftParser, Span}
 import cats.data.{Validated, ValidatedNec}
-import cats.parse.{LocationMap, Parser as P, Parser0 as P0}
-import cats.{~>, Comonad, Eval, Id}
+import cats.parse.{Parser as P, Parser0 as P0}
+import cats.{Comonad, ~>}
 
 object Parser extends scribe.Logging {
-
-  import Span.spanLiftParser
-  lazy val spanParser = parserSchema
-  import LiftParser.Implicits.idLiftParser
+  lazy val spanParser: P0[ValidatedNec[ParserError[S], Ast[S]]] = parserSchema
 
   def parserSchema: P0[ValidatedNec[ParserError[Span.S], Ast[Span.S]]] = {
     logger.trace("creating schema...")
