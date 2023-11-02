@@ -68,8 +68,16 @@ object TagInliner extends Logging {
       prefix: Option[OpModel.Tree] = None
     ) extends TagInlined[S](prefix)
 
-    case After[S](process: State[S, OpModel.Tree], prefix: Option[OpModel.Tree] = None)
-        extends TagInlined[S](prefix)
+    /**
+     * Tag inlining emitted computation
+     * that should be executed after children
+     *
+     * @param model computation producing model
+     */
+    case After[S](
+      model: State[S, OpModel],
+      prefix: Option[OpModel.Tree] = None
+    ) extends TagInlined[S](prefix)
 
     /**
      * Finalize inlining, construct a tree
@@ -78,19 +86,24 @@ object TagInliner extends Logging {
      * @return Result of inlining
      */
     def build(children: Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
-      def toSeqModel(tree: Chain[OpModel.Tree]): State[T, OpModel.Tree] =
-        State.pure(SeqModel.wrap(Chain.fromOption(prefix) ++ tree))
+      def toSeqModel(tree: OpModel.Tree | Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
+        val treeChain = tree match {
+          case c: Chain[OpModel.Tree] => c
+          case t: OpModel.Tree => Chain.one(t)
+        }
+
+        State.pure(SeqModel.wrap(Chain.fromOption(prefix) ++ treeChain))
+      }
+
       this match {
         case Empty(_) =>
           toSeqModel(children)
         case Single(model, _) =>
-          toSeqModel(Chain.one(model.wrap(children)))
+          toSeqModel(model.wrap(children))
         case Mapping(toModel, _) =>
-          toSeqModel(Chain.one(toModel(children)))
-        case After(pr, _) =>
-          pr.flatMap(inl =>
-            toSeqModel(Chain.one(inl.copy(head = inl.head, tail = inl.tail.map(_ ++ children))))
-          )
+          toSeqModel(toModel(children))
+        case After(model, _) =>
+          model.flatMap(m => toSeqModel(m.wrap(children)))
       }
 
     }
@@ -380,16 +393,17 @@ object TagInliner extends Logging {
         } yield model.fold(TagInlined.Empty())(m => TagInlined.Single(model = m))
 
       case RestrictionTag(name, typ) =>
-        // restriction can be generated before inlining and not renamed,
-        // rename it after inlined children with new exports
-        State.pure(TagInlined.After(
-          for {
-            exps <- Exports[S].exports
-            model = exps.get(name).collect { case VarModel(n, _, _) =>
-              RestrictionModel(n, typ).leaf
-            }
-          } yield model.getOrElse(RestrictionModel(name, typ).leaf)
-        ))
+        // Rename restriction after children are inlined with new exports
+        TagInlined
+          .After(
+            for {
+              exps <- Exports[S].exports
+              model = exps.get(name).collect { case VarModel(n, _, _) =>
+                RestrictionModel(n, typ)
+              }
+            } yield model.getOrElse(RestrictionModel(name, typ))
+          )
+          .pure
 
       case DeclareStreamTag(value) =>
         value match
