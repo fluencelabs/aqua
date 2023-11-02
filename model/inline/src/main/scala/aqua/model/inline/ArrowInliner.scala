@@ -317,7 +317,7 @@ object ArrowInliner extends Logging {
     )
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
 
-    renaming = (
+    renaming =
       data.renames ++
         streamRenames ++
         arrowRenames ++
@@ -325,7 +325,6 @@ object ArrowInliner extends Logging {
         capturedValues.renames ++
         capturedArrows.renames ++
         defineRenames
-    )
 
     /**
      * TODO: Optimize resolve.

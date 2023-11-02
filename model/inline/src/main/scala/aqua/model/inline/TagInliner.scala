@@ -68,13 +68,15 @@ object TagInliner extends Logging {
       prefix: Option[OpModel.Tree] = None
     ) extends TagInlined(prefix)
 
+//    case After(process: () => State[S, TagInlined[S]], prefix: Option[OpModel.Tree] = None) extends TagInlined(prefix)
+
     /**
      * Finalize inlining, construct a tree
      *
      * @param children Children results
      * @return Result of inlining
      */
-    def build(children: Chain[OpModel.Tree]): OpModel.Tree = {
+    def build[S](children: Chain[OpModel.Tree]): State[S, OpModel.Tree] = {
       val inlined = this match {
         case Empty(_) => children
         case Single(model, _) =>
@@ -83,7 +85,7 @@ object TagInliner extends Logging {
           Chain.one(toModel(children))
       }
 
-      SeqModel.wrap(Chain.fromOption(prefix) ++ inlined)
+      State.pure(SeqModel.wrap(Chain.fromOption(prefix) ++ inlined))
     }
   }
 
@@ -371,6 +373,16 @@ object TagInliner extends Logging {
         } yield model.fold(TagInlined.Empty())(m => TagInlined.Single(model = m))
 
       case RestrictionTag(name, typ) =>
+        // for {
+        //   exps <- Exports[S].exports
+        //   _ = println(s"exps for restriction tag $name: " + exps)
+        // } yield TagInlined.Single(model = RestrictionModel(name, typ))
+        // ...after(
+        //    for {
+        //        //   exps <- Exports[S].exports
+        //        //   _ = println(s"exps for restriction tag $name: " + exps)
+        //        // } yield TagInlined.Single(model = RestrictionModel(name, typ))
+        // )
         pure(RestrictionModel(name, typ))
 
       case DeclareStreamTag(value) =>
@@ -444,7 +456,8 @@ object TagInliner extends Logging {
       headInlined <- f(cf.head)
       tail <- StateT.liftF(cf.tail)
       children <- tail.traverse(traverseS[S](_, f))
-    } yield headInlined.build(children)
+      inlined <- headInlined.build(children)
+    } yield inlined
 
   def handleTree[S: Exports: Mangler: Arrows](
     tree: RawTag.Tree

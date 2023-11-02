@@ -1,6 +1,14 @@
-alias Troll: u32
+aqua A
 
-func test() -> i8:
-  MyAbility = Troll(f = "sf")
+export newFunc
 
-  <- 42
+func returnNil() -> *string:
+  someStr: *string
+  <- someStr
+
+func newFunc() -> []string:
+  -- new stream
+    stream <- returnNil() -- stream -> someStr: *str
+    stream <<- "asd"
+    <- stream
+  -- end
