@@ -184,6 +184,96 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
   }
 
   /**
+   * func returnNil() -> *string:
+   *   someStr: *string
+   *   <- someStr
+   *
+   * func newFunc() -> []string:
+   *   stream <- returnNil()
+   *   stream <<- "asd"
+   * <- stream
+   */
+  it should "rename restricted stream correctly" in {
+    val streamType = StreamType(ScalarType.string)
+    val someStr = VarRaw("someStr", streamType)
+
+    val returnStreamArrowType = ArrowType(
+      ProductType(Nil),
+      ProductType(streamType :: Nil)
+    )
+
+    val returnNil = FuncArrow(
+      "returnNil",
+      SeqTag.wrap(
+        DeclareStreamTag(someStr).leaf,
+        ReturnTag(
+          NonEmptyList.one(someStr)
+        ).leaf
+      ),
+      returnStreamArrowType,
+      List(someStr),
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val streamVar = VarRaw("stream", streamType)
+    val canonStreamVar = VarRaw(
+      s"-${streamVar.name}-canon-0",
+      CanonStreamType(ScalarType.string)
+    )
+    val flatStreamVar = VarRaw(
+      s"-${streamVar.name}-flat-0",
+      ArrayType(ScalarType.string)
+    )
+
+    val newFunc = FuncArrow(
+      "newFunc",
+      RestrictionTag(streamVar.name, streamType).wrap(
+        SeqTag.wrap(
+          CallArrowRawTag
+            .func(
+              returnNil.funcName,
+              Call(Nil, Call.Export(streamVar.name, streamType) :: Nil)
+            )
+            .leaf,
+          PushToStreamTag(
+            LiteralRaw.quote("asd"),
+            Call.Export(streamVar.name, streamVar.`type`)
+          ).leaf,
+          CanonicalizeTag(
+            streamVar,
+            Call.Export(canonStreamVar.name, canonStreamVar.`type`)
+          ).leaf,
+          FlattenTag(
+            canonStreamVar,
+            flatStreamVar.name
+          ).leaf,
+          ReturnTag(
+            NonEmptyList.one(flatStreamVar)
+          ).leaf
+        )
+      ),
+      ArrowType(
+        ProductType(Nil),
+        ProductType(ArrayType(ScalarType.string) :: Nil)
+      ),
+      List(flatStreamVar),
+      Map(returnNil.funcName -> returnNil),
+      Map.empty,
+      None
+    )
+
+    val model = callFuncModel(newFunc)
+
+    val restrictionName = model.collect {
+      case RestrictionModel(name, _) => name
+    }.headOption
+
+    restrictionName shouldBe Some(someStr.name)
+  }
+
+  /**
    * func returnStream() -> *string:
    *    stream: *string
    *    stream <<- "one"

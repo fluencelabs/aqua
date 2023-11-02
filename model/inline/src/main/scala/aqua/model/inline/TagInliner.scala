@@ -39,34 +39,45 @@ object TagInliner extends Logging {
    *
    * @param prefix Previous instructions
    */
-  enum TagInlined(prefix: Option[OpModel.Tree]) {
+  enum TagInlined[T](prefix: Option[OpModel.Tree]) {
 
     /**
      * Tag inlining emitted nothing
      */
-    case Empty(
+    case Empty[S](
       prefix: Option[OpModel.Tree] = None
-    ) extends TagInlined(prefix)
+    ) extends TagInlined[S](prefix)
 
     /**
      * Tag inlining emitted one parent model
      *
      * @param model Model which will wrap children
      */
-    case Single(
+    case Single[S](
       model: OpModel,
       prefix: Option[OpModel.Tree] = None
-    ) extends TagInlined(prefix)
+    ) extends TagInlined[S](prefix)
 
     /**
      * Tag inling emitted complex transformation
      *
      * @param toModel Function from children results to result of this tag
      */
-    case Mapping(
+    case Mapping[S](
       toModel: Chain[OpModel.Tree] => OpModel.Tree,
       prefix: Option[OpModel.Tree] = None
-    ) extends TagInlined(prefix)
+    ) extends TagInlined[S](prefix)
+
+    /**
+     * Tag inlining emitted computation
+     * that should be executed after children
+     *
+     * @param model computation producing model
+     */
+    case After[S](
+      model: State[S, OpModel],
+      prefix: Option[OpModel.Tree] = None
+    ) extends TagInlined[S](prefix)
 
     /**
      * Finalize inlining, construct a tree
@@ -74,23 +85,34 @@ object TagInliner extends Logging {
      * @param children Children results
      * @return Result of inlining
      */
-    def build(children: Chain[OpModel.Tree]): OpModel.Tree = {
-      val inlined = this match {
-        case Empty(_) => children
-        case Single(model, _) =>
-          Chain.one(model.wrap(children))
-        case Mapping(toModel, _) =>
-          Chain.one(toModel(children))
+    def build(children: Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
+      def toSeqModel(tree: OpModel.Tree | Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
+        val treeChain = tree match {
+          case c: Chain[OpModel.Tree] => c
+          case t: OpModel.Tree => Chain.one(t)
+        }
+
+        State.pure(SeqModel.wrap(Chain.fromOption(prefix) ++ treeChain))
       }
 
-      SeqModel.wrap(Chain.fromOption(prefix) ++ inlined)
+      this match {
+        case Empty(_) =>
+          toSeqModel(children)
+        case Single(model, _) =>
+          toSeqModel(model.wrap(children))
+        case Mapping(toModel, _) =>
+          toSeqModel(toModel(children))
+        case After(model, _) =>
+          model.flatMap(m => toSeqModel(m.wrap(children)))
+      }
+
     }
   }
 
-  private def pure[S](op: OpModel): State[S, TagInlined] =
+  private def pure[S](op: OpModel): State[S, TagInlined[S]] =
     TagInlined.Single(model = op).pure
 
-  private def none[S]: State[S, TagInlined] =
+  private def none[S]: State[S, TagInlined[S]] =
     TagInlined.Empty().pure
 
   private def combineOpsWithSeq(l: Option[OpModel.Tree], r: Option[OpModel.Tree]) =
@@ -174,7 +196,7 @@ object TagInliner extends Logging {
    */
   def tagToModel[S: Mangler: Arrows: Exports](
     tag: RawTag
-  ): State[S, TagInlined] =
+  ): State[S, TagInlined[S]] =
     tag match {
       case OnTag(peerId, via, strategy) =>
         for {
@@ -371,7 +393,17 @@ object TagInliner extends Logging {
         } yield model.fold(TagInlined.Empty())(m => TagInlined.Single(model = m))
 
       case RestrictionTag(name, typ) =>
-        pure(RestrictionModel(name, typ))
+        // Rename restriction after children are inlined with new exports
+        TagInlined
+          .After(
+            for {
+              exps <- Exports[S].exports
+              model = exps.get(name).collect { case VarModel(n, _, _) =>
+                RestrictionModel(n, typ)
+              }
+            } yield model.getOrElse(RestrictionModel(name, typ))
+          )
+          .pure
 
       case DeclareStreamTag(value) =>
         value match
@@ -438,13 +470,14 @@ object TagInliner extends Logging {
 
   private def traverseS[S](
     cf: RawTag.Tree,
-    f: RawTag => State[S, TagInlined]
+    f: RawTag => State[S, TagInlined[S]]
   ): State[S, OpModel.Tree] =
     for {
       headInlined <- f(cf.head)
       tail <- StateT.liftF(cf.tail)
       children <- tail.traverse(traverseS[S](_, f))
-    } yield headInlined.build(children)
+      inlined <- headInlined.build(children)
+    } yield inlined
 
   def handleTree[S: Exports: Mangler: Arrows](
     tree: RawTag.Tree
