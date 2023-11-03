@@ -3,15 +3,16 @@ package aqua.parser.lexer
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
 import aqua.types.ScalarType
+
 import cats.Comonad
+import cats.data.NonEmptyList
 import cats.parse.{Accumulator0, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.~>
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
-import cats.data.NonEmptyList
 
 sealed trait TypeToken[S[_]] extends Token[S] {
   def mapK[K[_]: Comonad](fk: S ~> K): TypeToken[K]
@@ -34,6 +35,12 @@ case class ArrayTypeToken[S[_]: Comonad](override val unit: S[Unit], data: DataT
   override def mapK[K[_]: Comonad](fk: S ~> K): ArrayTypeToken[K] = copy(fk(unit), data.mapK(fk))
 }
 
+object ArrayTypeToken {
+
+  val `arraytypedef`: P[ArrayTypeToken[Span.S]] =
+    (`[]`.lift ~ DataTypeToken.`datatypedef`).map(ud => ArrayTypeToken(ud._1, ud._2))
+}
+
 case class StreamTypeToken[S[_]: Comonad](override val unit: S[Unit], data: DataTypeToken[S])
     extends DataTypeToken[S] {
   override def as[T](v: T): S[T] = unit.as(v)
@@ -43,9 +50,7 @@ case class StreamTypeToken[S[_]: Comonad](override val unit: S[Unit], data: Data
 object StreamTypeToken {
 
   val `streamtypedef`: P[StreamTypeToken[Span.S]] =
-    ((`*`.lift <* P.not(`*`).withContext("Nested streams '**type' are prohibited"))
-      ~ DataTypeToken.`withoutstreamdatatypedef`)
-      .map(ud => StreamTypeToken(ud._1, ud._2))
+    (`*`.lift ~ DataTypeToken.`datatypedef`).map(ud => StreamTypeToken(ud._1, ud._2))
 
 }
 
@@ -60,7 +65,7 @@ case class OptionTypeToken[F[_]: Comonad](override val unit: F[Unit], data: Data
 object OptionTypeToken {
 
   val `optiontypedef`: P[OptionTypeToken[Span.S]] =
-    (`?`.lift ~ DataTypeToken.`withoutstreamdatatypedef`).map(ud => OptionTypeToken(ud._1, ud._2))
+    (`?`.lift ~ DataTypeToken.`datatypedef`).map(ud => OptionTypeToken(ud._1, ud._2))
 
 }
 
@@ -155,27 +160,18 @@ object ArrowTypeToken {
 
 object DataTypeToken {
 
-  val `arraytypedef`: P[ArrayTypeToken[Span.S]] =
-    (`[]`.lift ~ `withoutstreamdatatypedef`).map(ud => ArrayTypeToken(ud._1, ud._2))
-
   val `topbottomdef`: P[TopBottomToken[Span.S]] =
     `⊥`.lift.map(TopBottomToken(_, isTop = false)) |
       `⊤`.lift.map(TopBottomToken(_, isTop = true))
 
-  def `withoutstreamdatatypedef`: P[DataTypeToken[Span.S]] =
-    P.oneOf(
-      P.defer(`topbottomdef`) :: P.defer(`arraytypedef`) :: P.defer(
-        OptionTypeToken.`optiontypedef`
-      ) :: BasicTypeToken.`basictypedef` :: NamedTypeToken.dotted :: Nil
-    )
-
   def `datatypedef`: P[DataTypeToken[Span.S]] =
     P.oneOf(
-      P.defer(`topbottomdef`) :: P.defer(`arraytypedef`) :: P.defer(
-        StreamTypeToken.`streamtypedef`
-      ) :: P.defer(
-        OptionTypeToken.`optiontypedef`
-      ) :: BasicTypeToken.`basictypedef` :: NamedTypeToken.dotted :: Nil
+      P.defer(`topbottomdef`) ::
+        P.defer(ArrayTypeToken.`arraytypedef`) ::
+        P.defer(StreamTypeToken.`streamtypedef`) ::
+        P.defer(OptionTypeToken.`optiontypedef`) ::
+        BasicTypeToken.`basictypedef` ::
+        NamedTypeToken.dotted :: Nil
     )
 
 }
@@ -184,9 +180,8 @@ object TypeToken {
 
   val `typedef`: P[TypeToken[Span.S]] =
     P.oneOf(
-      ArrowTypeToken
-        .`arrowdef`(DataTypeToken.`datatypedef`)
-        .backtrack :: DataTypeToken.`datatypedef` :: Nil
+      ArrowTypeToken.`arrowdef`(DataTypeToken.`datatypedef`).backtrack ::
+        DataTypeToken.`datatypedef` :: Nil
     )
 
 }
