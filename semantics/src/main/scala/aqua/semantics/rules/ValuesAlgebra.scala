@@ -1,5 +1,6 @@
 package aqua.semantics.rules
 
+import aqua.helpers.syntax.optiont.*
 import aqua.parser.lexer.*
 import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
 import aqua.parser.lexer.PrefixToken.Op as PrefOp
@@ -9,7 +10,6 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
-import aqua.helpers.syntax.optiont.*
 
 import cats.Monad
 import cats.data.{NonEmptyList, OptionT}
@@ -164,7 +164,12 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                 // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
                 // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
                 // make any decision about the structure of type, but can push anything inside
-                val elementNotBottom = if (element == BottomType) TopType else element
+                val elementNotBottom = element match {
+                  case BottomType => TopType
+                  case d: DataType => d
+                  // TODO: Actually should not happen? Replace with internalError?
+                  case _ => TopType
+                }
                 CollectionRaw(
                   nonEmpty,
                   ct.mode match {

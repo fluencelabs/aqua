@@ -1,12 +1,12 @@
 package aqua.definitions
 
+import aqua.definitions.*
 import aqua.res.FuncRes
 import aqua.types.*
-import aqua.definitions.*
+
 import io.circe.*
 import io.circe.parser.*
 import io.circe.syntax.*
-
 import scala.annotation.tailrec
 
 // Represents the Aqua types
@@ -68,11 +68,12 @@ object TypeDefinition {
       )
   }
 
-  implicit val encodeServiceDefType: Encoder[ServiceDef] = { case ServiceDef(sId, functions, name) =>
-    Json.obj(
-      ("defaultServiceId", sId.asJson),
-      ("functions", encodeProdDefType(functions))
-    )
+  implicit val encodeServiceDefType: Encoder[ServiceDef] = {
+    case ServiceDef(sId, functions, name) =>
+      Json.obj(
+        ("defaultServiceId", sId.asJson),
+        ("functions", encodeProdDefType(functions))
+      )
   }
 
   implicit val encodeNamesConfig: Encoder[NamesConfig] = { case n: NamesConfig =>
@@ -103,7 +104,7 @@ object TypeDefinition {
     t match {
       case OptionType(t) =>
         OptionTypeDef(TypeDefinition(t))
-      case t: BoxType => ArrayTypeDef(TypeDefinition(t.element))
+      case t: CollectionType => ArrayTypeDef(TypeDefinition(t.element))
       case StructType(name, fields) =>
         StructTypeDef(name, fields.toSortedMap.view.mapValues(TypeDefinition.apply).toMap)
       case AbilityType(name, fieldAndArrows) =>
@@ -198,7 +199,11 @@ case class NamesConfig(
 )
 
 // Describes service
-case class ServiceDef(defaultServiceId: Option[String], functions: LabeledProductTypeDef, name: String)
+case class ServiceDef(
+  defaultServiceId: Option[String],
+  functions: LabeledProductTypeDef,
+  name: String
+)
 
 // Describes top-level function
 case class FunctionDef(

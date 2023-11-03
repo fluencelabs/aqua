@@ -2,8 +2,8 @@ package aqua.raw.value
 
 import aqua.types.*
 
-import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import cats.Eq
+import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import cats.syntax.option.*
 
 sealed trait ValueRaw {
@@ -157,16 +157,19 @@ object LiteralRaw {
   }
 }
 
-case class CollectionRaw(values: NonEmptyList[ValueRaw], boxType: BoxType) extends ValueRaw {
+case class CollectionRaw(values: NonEmptyList[ValueRaw], CollectionType: CollectionType)
+    extends ValueRaw {
 
-  lazy val elementType: Type = boxType.element
+  lazy val elementType: DataType = CollectionType.element
 
-  override lazy val baseType: Type = boxType
+  override lazy val baseType: Type = CollectionType
 
   override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = {
     val vals = values.map(f)
     val el = vals.map(_.`type`).reduceLeft(_ `∩` _)
-    copy(vals, boxType.withElement(el))
+    // TODO: Handle possible errors?
+    val data = el.asInstanceOf[DataType]
+    copy(vals, CollectionType.withElement(data))
   }
 
   override def varNames: Set[String] = values.toList.flatMap(_.varNames).toSet

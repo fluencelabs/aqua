@@ -1,23 +1,23 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{FuncOp, OnTag}
 import aqua.parser.expr.func.OnExpr
 import aqua.parser.lexer.ValueToken
 import aqua.raw.Raw
+import aqua.raw.ops.{FuncOp, OnTag}
 import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{BoxType, OptionType, ScalarType}
+import aqua.types.{CollectionType, OptionType, ScalarType}
 
 import cats.data.Chain
 import cats.data.OptionT
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.traverse.*
 import cats.syntax.functor.*
+import cats.syntax.traverse.*
 import cats.{Monad, Traverse}
 
 class OnSem[S[_]](val expr: OnExpr[S]) extends AnyVal {
@@ -64,7 +64,7 @@ object OnSem {
       .traverse(v =>
         OptionT(V.valueToRaw(v)).filterF { vm =>
           val expectedType = vm.`type` match {
-            case _: BoxType => OptionType(ScalarType.string)
+            case _: CollectionType => OptionType(ScalarType.string)
             case _ => ScalarType.string
           }
 

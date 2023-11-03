@@ -2,11 +2,40 @@ package aqua.js
 
 import aqua.*
 import aqua.backend.*
-import aqua.definitions.{ArrayTypeDef, ArrowTypeDef, BottomTypeDef, FunctionDef, LabeledProductTypeDef, NamesConfig, NilTypeDef, OptionTypeDef, ScalarTypeDef, ServiceDef, StructTypeDef, TopTypeDef, TypeDefinition, UnlabeledProductTypeDef}
+import aqua.definitions.{
+  ArrayTypeDef,
+  ArrowTypeDef,
+  BottomTypeDef,
+  FunctionDef,
+  LabeledProductTypeDef,
+  NamesConfig,
+  NilTypeDef,
+  OptionTypeDef,
+  ScalarTypeDef,
+  ServiceDef,
+  StructTypeDef,
+  TopTypeDef,
+  TypeDefinition,
+  UnlabeledProductTypeDef
+}
 import aqua.res.FuncRes
-import aqua.types.{ArrowType, BottomType, BoxType, LabeledConsType, LiteralType, NilType, OptionType, ProductType, ScalarType, StructType, TopType, Type, UnlabeledConsType}
-import io.circe.{Encoder, Json}
+import aqua.types.{
+  ArrowType,
+  BottomType,
+  CollectionType,
+  LabeledConsType,
+  LiteralType,
+  NilType,
+  OptionType,
+  ProductType,
+  ScalarType,
+  StructType,
+  TopType,
+  Type,
+  UnlabeledConsType
+}
 
+import io.circe.{Encoder, Json}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.{JSExportAll, JSImport}

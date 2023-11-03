@@ -94,6 +94,7 @@ case class BasicTypeToken[F[_]: Comonad](scalarType: F[ScalarType]) extends Data
 
   override def mapK[K[_]: Comonad](fk: F ~> K): BasicTypeToken[K] =
     copy(fk(scalarType))
+
   def value: ScalarType = scalarType.extract
 }
 

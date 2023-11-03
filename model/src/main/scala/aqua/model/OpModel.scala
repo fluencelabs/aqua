@@ -4,13 +4,12 @@ import aqua.model.OpModel.Tree
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import aqua.types.*
 
-import cats.data.Chain
-import cats.free.Cofree
-import cats.Show
 import cats.Eval
+import cats.Show
+import cats.data.Chain
 import cats.data.NonEmptyList
+import cats.free.Cofree
 import cats.syntax.functor.*
-
 import scala.annotation.tailrec
 
 sealed trait OpModel extends TreeNode[OpModel] {
@@ -129,7 +128,7 @@ case class NextModel(item: String) extends OpModel {
 
 // TODO: Refactor out `name` and `type` to
 // something like VarModel without properties
-case class RestrictionModel(name: String, `type`: DataType) extends SeqGroupModel {
+case class RestrictionModel(name: String, `type`: Type) extends SeqGroupModel {
   override def usesVarNames: Set[String] = Set.empty
 
   override def restrictsVarNames: Set[String] = Set(name)

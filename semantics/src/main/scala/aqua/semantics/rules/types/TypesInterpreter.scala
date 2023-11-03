@@ -10,8 +10,8 @@ import aqua.raw.value.{
   PropertyRaw,
   ValueRaw
 }
-import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.StackInterpreter
+import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypesStateHelper.{TypeResolution, TypeResolutionError}
 import aqua.types.*
@@ -21,14 +21,13 @@ import cats.data.{Chain, NonEmptyList, NonEmptyMap, OptionT, State}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.traverse.*
 import cats.syntax.foldable.*
-import cats.{~>, Applicative}
+import cats.syntax.functor.*
 import cats.syntax.option.*
+import cats.syntax.traverse.*
+import cats.{Applicative, ~>}
 import monocle.Lens
 import monocle.macros.GenLens
-
 import scala.collection.immutable.SortedMap
 
 class TypesInterpreter[S[_], X](using
@@ -294,7 +293,7 @@ class TypesInterpreter[S[_], X](using
           op.idx.fold(
             State.pure(Some(IntoIndexRaw(idx, ot.element)))
           )(v => report.error(v, s"Options might have only one element, use ! to get it").as(None))
-        case rt: BoxType =>
+        case rt: CollectionType =>
           State.pure(Some(IntoIndexRaw(idx, rt.element)))
         case _ =>
           report.error(op, s"Expected $rootT to be a collection type").as(None)
@@ -318,7 +317,7 @@ class TypesInterpreter[S[_], X](using
           true
         case (LiteralType.signed, rst: ScalarType) if ScalarType.number(rst) =>
           true
-        case (lbt: BoxType, rbt: BoxType) =>
+        case (lbt: CollectionType, rbt: CollectionType) =>
           isComparable(lbt.element, rbt.element)
         // Prohibit comparing abilities
         case (_: AbilityType, _: AbilityType) =>
@@ -329,7 +328,7 @@ class TypesInterpreter[S[_], X](using
         case (LiteralType(xs, _), LiteralType(ys, _)) =>
           xs.intersect(ys).nonEmpty
         case _ =>
-          lt.uniteTop(rt) != TopType
+          lt `∪` rt != TopType
       }
 
     if (isComparable(left, right)) State.pure(true)
@@ -379,18 +378,23 @@ class TypesInterpreter[S[_], X](using
             }
           }
         case _ =>
-          val notes =
-            if (expected.acceptsValueOf(OptionType(givenType)))
+          val notes = (expected, givenType) match {
+            case (_, dt: DataType) if expected.acceptsValueOf(OptionType(dt)) =>
               "note: Try converting value to optional" :: Nil
-            else if (givenType.acceptsValueOf(OptionType(expected)))
+            case (dt: DataType, _) if givenType.acceptsValueOf(OptionType(dt)) =>
               "note: You're providing an optional value where normal value is expected." ::
                 "You can extract value with `!`, but be aware it may trigger join behaviour." ::
                 Nil
-            else Nil
+            case _ => Nil
+          }
+
           report
             .error(
               token,
-              "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
+              "Types mismatch." +:
+                s"expected:   $expected" +:
+                s"given:      $givenType" +:
+                notes
             )
             .as(false)
       }
