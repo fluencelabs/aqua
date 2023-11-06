@@ -138,7 +138,8 @@ class TypesInterpreter[S[_], X](using
         case (field, (fieldName, t: DataType)) =>
           t match {
             case _: StreamType =>
-              report.error(fieldName, s"Field '$field' has stream type. This is forbidden for data structures.").as(none)
+              // TODO: move these checks into TypesChecker?
+              report.error(fieldName, s"Field '$field' has stream type. This is forbidden for data structures").as(none)
             case _ =>
               TypesChecker.checkType(fieldName, t) >> (field -> t).some.pure[ST]
           }

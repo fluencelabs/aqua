@@ -5,9 +5,12 @@ import aqua.semantics.rules.report.ReportAlgebra
 import aqua.types.{BoxType, StreamType, Type}
 import cats.data.State
 
+import scala.annotation.tailrec
+
 object TypesChecker {
 
   // check if this type can exist in aqua code
+  @tailrec
   def checkType[S[_], X](name: Token[S], `type`: Type)(using report: ReportAlgebra[S, State[X, *]]): State[X, Unit] = {
     `type` match {
       case StreamType(StreamType(_)) =>
@@ -21,7 +24,7 @@ object TypesChecker {
           case _ =>
             State.pure(())
         }
-      case t =>
+      case _ =>
         State.pure(())
     }
   }

@@ -50,6 +50,10 @@ object Utils {
     prog.apply(emptyS).run(blankCS).value._2
   }
 
+  def getState(prog: Prog[State[CompilerState[cats.Id], *], Raw]): CompilerState[Id] = {
+    prog.apply(emptyS).run(blankCS).value._1
+  }
+
   def getState(
     startState: Raw
   )(prog: Prog[State[CompilerState[cats.Id], *], Raw]): CompilerState[Id] = {
