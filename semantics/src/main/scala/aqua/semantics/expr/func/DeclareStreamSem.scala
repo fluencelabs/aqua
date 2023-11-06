@@ -1,15 +1,15 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.DeclareStreamTag
 import aqua.parser.expr.func.DeclareStreamExpr
 import aqua.raw.Raw
+import aqua.raw.ops.DeclareStreamTag
 import aqua.raw.value.VarRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ArrayType, OptionType, StreamType}
+
 import cats.Monad
-import cats.data.Chain
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*

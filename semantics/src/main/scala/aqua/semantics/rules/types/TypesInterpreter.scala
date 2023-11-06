@@ -1,34 +1,25 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{
-  FunctorRaw,
-  IntoArrowRaw,
-  IntoCopyRaw,
-  IntoFieldRaw,
-  IntoIndexRaw,
-  PropertyRaw,
-  ValueRaw
-}
-import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.raw.value.*
 import aqua.semantics.rules.StackInterpreter
+import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypesStateHelper.{TypeResolution, TypeResolutionError}
 import aqua.types.*
 
+import cats.Applicative
+import cats.data.*
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, NonEmptyList, NonEmptyMap, OptionT, State}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.traverse.*
 import cats.syntax.foldable.*
-import cats.{~>, Applicative}
+import cats.syntax.functor.*
 import cats.syntax.option.*
+import cats.syntax.traverse.*
 import monocle.Lens
 import monocle.macros.GenLens
-
 import scala.collection.immutable.SortedMap
 
 class TypesInterpreter[S[_], X](using
@@ -44,6 +35,9 @@ class TypesInterpreter[S[_], X](using
   import stack.*
 
   type ST[A] = State[X, A]
+
+  private def defineType(name: NamedTypeToken[S], `type`: Type): State[X, Unit] =
+    TypesChecker.checkType(name, `type`) >> modify(_.defineType(name, `type`))
 
   override def getType(name: String): State[X, Option[Type]] =
     getState.map(st => st.strict.get(name))
@@ -97,7 +91,7 @@ class TypesInterpreter[S[_], X](using
           nonEmptyFields =>
             val `type` = AbilityType(name.value, nonEmptyFields)
 
-            modify(_.defineType(name, `type`)).as(`type`.some)
+            defineType(name, `type`).as(`type`.some)
         )
     }
 
@@ -131,7 +125,7 @@ class TypesInterpreter[S[_], X](using
       ).semiflatMap(nonEmptyArrows =>
         val `type` = ServiceType(name.value, nonEmptyArrows)
 
-        modify(_.defineType(name, `type`)).as(`type`)
+        defineType(name, `type`).as(`type`)
       ).value
     )
 
@@ -144,8 +138,9 @@ class TypesInterpreter[S[_], X](using
         case (field, (fieldName, t: DataType)) =>
           t match {
             case _: StreamType =>
-              report.error(fieldName, s"Field '$field' has stream type").as(none)
-            case _ => (field -> t).some.pure[ST]
+              report.error(fieldName, s"Field '$field' has stream type. This is forbidden for data structures.").as(none)
+            case _ =>
+              TypesChecker.checkType(fieldName, t) >> (field -> t).some.pure[ST]
           }
         case (field, (fieldName, t)) =>
           report
@@ -163,7 +158,7 @@ class TypesInterpreter[S[_], X](using
             )(nonEmptyFields =>
               val `type` = StructType(name.value, nonEmptyFields)
 
-              modify(_.defineType(name, `type`)).as(`type`.some)
+              defineType(name, `type`).as(`type`.some)
             )
         )
     )
@@ -173,7 +168,7 @@ class TypesInterpreter[S[_], X](using
       case Some(n) if n == name => State.pure(false)
       case Some(_) => report.error(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
-        modify(_.defineType(name, target))
+        defineType(name, target)
           .productL(locations.addToken(name.value, name))
           .as(true)
     }

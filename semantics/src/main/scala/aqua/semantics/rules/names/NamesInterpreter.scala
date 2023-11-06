@@ -5,13 +5,11 @@ import aqua.semantics.Levenshtein
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
+import aqua.semantics.rules.types.TypesChecker
 import aqua.types.{ArrowType, StreamType, Type}
 
 import cats.data.{OptionT, State}
 import cats.syntax.all.*
-import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -102,9 +100,9 @@ class NamesInterpreter[S[_], X](using
           case false => report.error(name, "This name was already defined in the scope").as(false)
         }
       case None =>
-        mapStackHeadM(report.error(name, "Cannot define a variable in the root scope").as(false))(
-          fr => (fr.addName(name, `type`) -> true).pure
-        ) <* locations.addToken(name.value, name)
+        TypesChecker.checkType(name, `type`) >> mapStackHeadM(
+          report.error(name, "Cannot define a variable in the root scope").as(false)
+        )(fr => (fr.addName(name, `type`) -> true).pure) <* locations.addToken(name.value, name)
     }
 
   override def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): State[X, Boolean] =

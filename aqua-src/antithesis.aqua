@@ -1,2 +1,7 @@
-func arr(strs: []string) -> []string
-  <- strs
+data A:
+  b: []*string
+
+func test():
+  inner: *string
+  arr = [inner]
+  a = A(b = arr)
