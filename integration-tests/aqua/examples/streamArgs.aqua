@@ -23,3 +23,14 @@ func lng280Bug() -> []string:
     stream <<- "valueTop"
     <- stream
 
+func lng280BugWithFor() -> []string:
+    results: *string
+    arr = [1,2,3]
+
+    for a <- arr:
+      stream <- returnStream()
+      results <<- arr[0]
+      results <<- arr[1]
+
+    <- results
+

@@ -1,8 +1,13 @@
+service A("a"):
+  use(arr: []string)
+
 func use_stream(stream: *string) -> *string:
   stream <<- "value"
   <- stream
 
-func test() -> []string:
-  -- r <- use_stream(*["ddd"])
-  r <- use_stream(*[])
-  <- r
+func test():
+  arr = [1,2,3,4,5]
+  for a <- arr:
+    r <- use_stream(*[])
+    A.use(r)
+
