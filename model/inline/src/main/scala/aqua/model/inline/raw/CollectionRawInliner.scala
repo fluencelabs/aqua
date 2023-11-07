@@ -1,11 +1,22 @@
 package aqua.model.inline.raw
 
-import aqua.model.{CallModel, CanonicalizeModel, NullModel, PushToStreamModel, RestrictionModel, SeqModel, ValueModel, VarModel, XorModel}
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.{
+  CallModel,
+  CanonicalizeModel,
+  NullModel,
+  PushToStreamModel,
+  RestrictionModel,
+  SeqModel,
+  ValueModel,
+  VarModel,
+  XorModel
+}
 import aqua.raw.value.CollectionRaw
 import aqua.types.{ArrayType, CanonStreamType, OptionType, StreamType}
+
 import cats.data.{Chain, State}
 
 object CollectionRawInliner extends RawInliner[CollectionRaw] {

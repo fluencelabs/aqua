@@ -8,3 +8,18 @@ func retrieve_records(peer: string) -> [][]string:
     records: *[]string
     append_records(peer, records)
     <- records
+
+func useStream(stream: *string) -> *string:
+    stream <<- "valueUseStream"
+    <- stream
+
+func returnStream() -> *string:
+    r <- use_stream(*[])
+    r <<- "valueReturnStream"
+    <- r
+
+func lng280Bug() -> []string:
+    stream <- returnStream()
+    stream <<- "valueTop"
+    <- stream
+
