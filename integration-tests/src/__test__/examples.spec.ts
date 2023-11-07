@@ -82,7 +82,10 @@ import { tryCatchCall } from "../examples/tryCatchCall.js";
 import { tryOtherwiseCall } from "../examples/tryOtherwiseCall.js";
 import { coCall } from "../examples/coCall.js";
 import { bugLNG60Call, passArgsCall } from "../examples/passArgsCall.js";
-import { streamArgsCall } from "../examples/streamArgsCall.js";
+import {
+  streamArgsCall,
+  modifyStreamCall,
+} from "../examples/streamArgsCall.js";
 import { streamResultsCall } from "../examples/streamResultsCall.js";
 import { structuralTypingCall } from "../examples/structuralTypingCall";
 import {
@@ -594,6 +597,18 @@ describe("Testing examples", () => {
   it("streamArgs.aqua", async () => {
     let streamArgsResult = await streamArgsCall();
     expect(streamArgsResult).toEqual([["peer_id", "peer_id"]]);
+  });
+
+  it("streamArgs.aqua modify stream", async () => {
+    let streamArgsResult = await modifyStreamCall([
+      "passed value 1",
+      "passed value 2",
+    ]);
+    expect(streamArgsResult).toEqual([
+      "passed value 1",
+      "passed value 2",
+      "appended value",
+    ]);
   });
 
   it("streamResults.aqua", async () => {

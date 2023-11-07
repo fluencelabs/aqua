@@ -1,6 +1,6 @@
 aqua StreamArgs
 
-export retrieve_records, TestService
+export retrieve_records, modify_stream, TestService
 
 service TestService("test-service"):
     get_records(key: string) -> []string
@@ -12,3 +12,7 @@ func retrieve_records(peer: string) -> [][]string:
     records: *[]string
     append_records(peer, records)
     <- records
+
+func modify_stream(stream: *string) -> []string:
+  stream <<- "appended value"
+  <- stream
