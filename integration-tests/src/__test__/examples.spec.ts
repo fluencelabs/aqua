@@ -596,7 +596,14 @@ describe("Testing examples", () => {
 
   it("streamArgs.aqua LNG-280 with for", async () => {
     let result = await lng280BugWithForCall();
-    expect(result).toEqual(["valueUseStream", "valueReturnStream", "valueTop"]);
+    expect(result).toEqual([
+        "valueUseStream",
+        "valueReturnStream",
+        "valueUseStream",
+        "valueReturnStream",
+        "valueUseStream",
+        "valueReturnStream"
+    ]);
   });
 
   it("streamResults.aqua", async () => {

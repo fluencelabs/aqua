@@ -161,7 +161,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           empty <- ct.mode match {
             // empty stream is not a Nil, it is an unique variable, that will be used as a stream
             case CollectionToken.Mode.StreamMode =>
-              M.rename("stream-inline").map(n => VarRaw(n, StreamType(BottomType)))
+              M.rename("stream-anon").map(n => VarRaw(n, StreamType(BottomType)))
             case _ => ValueRaw.Nil.pure
           }
           raw = valuesRawChecked.map(raws =>

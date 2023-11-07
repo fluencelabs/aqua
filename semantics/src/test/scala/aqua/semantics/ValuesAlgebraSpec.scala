@@ -564,7 +564,7 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
     val alg = algebra()
     val (_, result) = alg.valueToRaw(emptyStream).run(genState()).value
 
-    result shouldBe Some(VarRaw("stream-inline-0", StreamType(BottomType)))
+    result shouldBe Some(VarRaw("stream-anon-0", StreamType(BottomType)))
   }
 
   it should "forbid collections with abilities or arrows" in {
