@@ -21,27 +21,12 @@ class DeclareStreamSem[S[_]](val expr: DeclareStreamExpr[S]) {
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg]
   ): Prog[Alg, Raw] = Prog.leaf(
-    T.resolveType(expr.`type`)
-      .flatMap {
-        case Some(t: StreamType) =>
-          N.define(expr.name, t).map(b => Option.when(b)(t))
-        case Some(t: OptionType) =>
-          val streamType = StreamType(t.element)
-          N.define(expr.name, streamType).map(b => Option.when(b)(streamType))
-        case Some(at @ ArrayType(t)) =>
-          val streamType = StreamType(t)
-          T.ensureTypeMatches(expr.`type`, streamType, at).map(b => Option.when(b)(streamType))
-        case Some(t: DataType) =>
-          val streamType = StreamType(t)
-          T.ensureTypeMatches(expr.`type`, streamType, t).map(b => Option.when(b)(streamType))
-        case _ => ??? // FIXME
-      }
-      .map {
-        case Some(streamType) =>
-          val valueModel = VarRaw(expr.name.value, streamType)
-          DeclareStreamTag(valueModel).funcOpLeaf: Raw
-        case None => Raw.error(s"Name `${expr.name.value}` not defined")
-      }
+    T.resolveStreamType(expr.`type`).map {
+      case Some(streamType) =>
+        val valueModel = VarRaw(expr.name.value, streamType)
+        DeclareStreamTag(valueModel).funcOpLeaf: Raw
+      case None => Raw.error(s"Name `${expr.name.value}` not defined")
+    }
   )
 
 }

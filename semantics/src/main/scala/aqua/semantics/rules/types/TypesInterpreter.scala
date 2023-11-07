@@ -1,19 +1,11 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{
-  FunctorRaw,
-  IntoArrowRaw,
-  IntoCopyRaw,
-  IntoFieldRaw,
-  IntoIndexRaw,
-  PropertyRaw,
-  ValueRaw
-}
+import aqua.raw.value.*
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
-import aqua.semantics.rules.types.TypesStateHelper.{TypeResolution, TypeResolutionError}
+import aqua.semantics.rules.types.TypeResolution.TypeResolutionError
 import aqua.types.*
 
 import cats.data.Validated.{Invalid, Valid}
@@ -48,14 +40,21 @@ class TypesInterpreter[S[_], X](using
     getState.map(st => st.strict.get(name))
 
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
-    getState.map(TypesStateHelper.resolveTypeToken(token)).flatMap {
-      case Some(TypeResolution(typ, tokens)) =>
+    getState.map(TypeResolution.resolveTypeToken(token)).flatMap {
+      case Valid(TypeResolution(typ, tokens)) =>
         val tokensLocs = tokens.map { case (t, n) => n.value -> t }
         locations.pointLocations(tokensLocs).as(typ.some)
-      case None =>
-        // TODO: Give more specific error message
-        report.error(token, s"Unresolved type").as(None)
+      case Invalid(errors) =>
+        errors.traverse_ { case TypeResolutionError(token, hint) =>
+          report.error(token, hint)
+        }.as(none)
     }
+
+  override def resolveStreamType(token: TypeToken[S]): State[X, Option[StreamType]] =
+    OptionT(resolveType(token)).flatMapF {
+      case st: StreamType => st.some.pure[ST]
+      case t => report.error(token, s"Expected stream type, got $t").as(none)
+    }.value
 
   def resolveNamedType(token: TypeToken[S]): State[X, Option[AbilityType | StructType]] =
     resolveType(token).flatMap(_.flatTraverse {
@@ -64,7 +63,7 @@ class TypesInterpreter[S[_], X](using
     })
 
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
-    getState.map(TypesStateHelper.resolveArrowDef(arrowDef)).flatMap {
+    getState.map(TypeResolution.resolveArrowDef(arrowDef)).flatMap {
       case Valid(TypeResolution(tt, tokens)) =>
         val tokensLocs = tokens.map { case (t, n) => n.value -> t }
         locations.pointLocations(tokensLocs).as(tt.some)
@@ -141,11 +140,7 @@ class TypesInterpreter[S[_], X](using
     ensureNameNotDefined(name.value, name, ifDefined = none)(
       fields.toList.traverse {
         case (field, (fieldName, t: DataType)) =>
-          t match {
-            case _: StreamType =>
-              report.error(fieldName, s"Field '$field' has stream type").as(none)
-            case _ => (field -> t).some.pure[ST]
-          }
+          (field -> t).some.pure[ST]
         case (field, (fieldName, t)) =>
           report
             .error(
