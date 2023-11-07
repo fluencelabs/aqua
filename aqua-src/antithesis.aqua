@@ -1,2 +1,8 @@
-func arr(strs: []string) -> []string
-  <- strs
+func use_stream(stream: *string) -> *string:
+  stream <<- "value"
+  <- stream
+
+func test() -> []string:
+  -- r <- use_stream(*["ddd"])
+  r <- use_stream(*[])
+  <- r

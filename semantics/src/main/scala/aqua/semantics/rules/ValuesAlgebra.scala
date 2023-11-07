@@ -1,15 +1,16 @@
 package aqua.semantics.rules
 
+import aqua.helpers.syntax.optiont.*
 import aqua.parser.lexer.*
 import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
 import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
-import aqua.helpers.syntax.optiont.*
 
 import cats.Monad
 import cats.data.{NonEmptyList, OptionT}
@@ -27,6 +28,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   N: NamesAlgebra[S, Alg],
   T: TypesAlgebra[S, Alg],
   A: AbilitiesAlgebra[S, Alg],
+  M: ManglerAlgebra[Alg],
   report: ReportAlgebra[S, Alg]
 ) extends Logging {
 
@@ -156,10 +158,16 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
               }
               .map(_.sequence)
           )
+          empty <- ct.mode match {
+            // empty stream is not a Nil, it is an unique variable, that will be used as a stream
+            case CollectionToken.Mode.StreamMode =>
+              M.rename("stream-inline").map(n => VarRaw(n, StreamType(BottomType)))
+            case _ => ValueRaw.Nil.pure
+          }
           raw = valuesRawChecked.map(raws =>
             NonEmptyList
               .fromList(raws)
-              .fold(ValueRaw.Nil) { nonEmpty =>
+              .fold(empty) { nonEmpty =>
                 val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
                 // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
                 // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
@@ -323,7 +331,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       }
     )
 
-  def valueToTypedRaw(v: ValueToken[S], expectedType: Type): Alg[Option[ValueRaw]] =
+  private def valueToTypedRaw(v: ValueToken[S], expectedType: Type): Alg[Option[ValueRaw]] =
     OptionT(valueToRaw(v))
       .flatMap(raw =>
         OptionT.whenM(
@@ -454,6 +462,7 @@ object ValuesAlgebra {
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
+    M: ManglerAlgebra[Alg],
     E: ReportAlgebra[S, Alg]
   ): ValuesAlgebra[S, Alg] =
     new ValuesAlgebra[S, Alg]

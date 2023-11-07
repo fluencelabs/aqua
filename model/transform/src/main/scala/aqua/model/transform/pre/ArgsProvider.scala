@@ -46,7 +46,7 @@ case class ArgsFromService(dataServiceId: ValueRaw) extends ArgsProvider {
     )
   }
 
-  def getDataOp(arg: ArgsProvider.Arg): RawTag.Tree =
+  private def getDataOp(arg: ArgsProvider.Arg): RawTag.Tree =
     arg.t match {
       case st: StreamType =>
         getStreamDataOp(arg.name, arg.varName, st)
