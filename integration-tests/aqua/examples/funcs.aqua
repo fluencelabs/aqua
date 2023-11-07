@@ -39,7 +39,7 @@ func ifCalc() -> u64:
   <- res!0
 
 func cmp(a: i32, b: i32, pred: i8 -> bool) -> bool:
-  result: ?bool
+  result: *bool
 
   if a < b:
     result <- pred(-1)

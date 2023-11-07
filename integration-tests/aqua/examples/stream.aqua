@@ -36,7 +36,7 @@ func returnNilLength() -> u32:
     <- arr.length
 
 func stringNone() -> ?string:
-    valueNone: ?string
+    valueNone: *string
     <- valueNone
 
 func returnNone() -> ?string:
