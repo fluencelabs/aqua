@@ -12,12 +12,12 @@ import aqua.types.*
 import aqua.types.ScalarType.*
 
 import cats.Id
-import cats.syntax.applicative.*
 import cats.data.{NonEmptyList, NonEmptyMap, State}
+import cats.syntax.applicative.*
 import org.scalatest.EitherValues
+import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
 
 class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues with Inside {
 
@@ -112,7 +112,7 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues with Insi
 
       state.errors shouldBe empty
       inside(raw) { case ArrowRaw(_, Nil, bodyRes) =>
-        bodyRes shouldBe body
+        bodyRes.equalsOrShowDiff(body) shouldBe true
       }
     }
 

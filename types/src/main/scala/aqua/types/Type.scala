@@ -75,8 +75,7 @@ sealed trait ProductType extends Type {
    */
   def toLabelledList(prefix: String = "arg", index: Int = 0): List[(String, Type)] = this match {
     case LabeledConsType(label, t, pt) => (label -> t) :: pt.toLabelledList(prefix, index + 1)
-    case UnlabeledConsType(t, pt) =>
-      (s"$prefix$index" -> t) :: pt.toLabelledList(prefix, index + 1)
+    case UnlabeledConsType(t, pt) => (s"$prefix$index" -> t) :: pt.toLabelledList(prefix, index + 1)
     case _ => Nil
   }
 
@@ -87,6 +86,15 @@ sealed trait ProductType extends Type {
       pt.labelledData
     case _ => Nil
   }
+
+  lazy val labelledStreams: List[(String, StreamType)] = this match {
+    case LabeledConsType(label, t: StreamType, pt) =>
+      (label -> t) :: pt.labelledStreams
+    case ConsType(_, pt) =>
+      pt.labelledStreams
+    case _ => Nil
+  }
+
 }
 
 object ProductType {
