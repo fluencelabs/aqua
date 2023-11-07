@@ -29,8 +29,8 @@ func lng280BugWithFor() -> []string:
 
     for a <- arr:
       stream <- returnStream()
-      results <<- arr[0]
-      results <<- arr[1]
+      results <<- stream[0]
+      results <<- stream[1]
 
     <- results
 
