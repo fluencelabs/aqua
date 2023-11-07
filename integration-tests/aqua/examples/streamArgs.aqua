@@ -14,7 +14,7 @@ func useStream(stream: *string) -> *string:
     <- stream
 
 func returnStream() -> *string:
-    r <- use_stream(*[])
+    r <- useStream(*[])
     r <<- "valueReturnStream"
     <- r
 
