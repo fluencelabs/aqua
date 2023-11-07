@@ -157,19 +157,21 @@ object LiteralRaw {
   }
 }
 
-case class CollectionRaw(values: NonEmptyList[ValueRaw], CollectionType: CollectionType)
-    extends ValueRaw {
+case class CollectionRaw(
+  values: NonEmptyList[ValueRaw],
+  colType: CollectionType
+) extends ValueRaw {
 
-  lazy val elementType: DataType = CollectionType.element
+  lazy val elementType: DataType = colType.element
 
-  override lazy val baseType: Type = CollectionType
+  override lazy val baseType: Type = colType
 
   override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = {
     val vals = values.map(f)
     val el = vals.map(_.`type`).reduceLeft(_ `∩` _)
     // TODO: Handle possible errors?
     val data = el.asInstanceOf[DataType]
-    copy(vals, CollectionType.withElement(data))
+    copy(vals, colType.withElement(data))
   }
 
   override def varNames: Set[String] = values.toList.flatMap(_.varNames).toSet

@@ -1,20 +1,11 @@
 package aqua.model.inline.raw
 
+import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.{
-  CallModel,
-  CanonicalizeModel,
-  NullModel,
-  PushToStreamModel,
-  RestrictionModel,
-  SeqModel,
-  ValueModel,
-  VarModel,
-  XorModel
-}
 import aqua.raw.value.CollectionRaw
+import aqua.types.StreamMapType
 import aqua.types.{ArrayType, CanonStreamType, OptionType, StreamType}
 
 import cats.data.{Chain, State}
@@ -31,11 +22,15 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
     assignToName: Option[String] = None
   ): State[S, (ValueModel, Inline)] =
     for {
-      streamName <- raw.CollectionType match {
+      streamName <- raw.colType match {
         case _: StreamType =>
-          assignToName
-            .map(s => State.pure(s))
-            .getOrElse(Mangler[S].findAndForbidName("stream-inline"))
+          assignToName.fold(
+            Mangler[S].findAndForbidName("stream-inline")
+          )(State.pure)
+        case _: StreamMapType =>
+          assignToName.fold(
+            Mangler[S].findAndForbidName("stream_map-inline")
+          )(State.pure)
         case _: CanonStreamType => Mangler[S].findAndForbidName("canon_stream-inline")
         case _: ArrayType => Mangler[S].findAndForbidName("array-inline")
         case _: OptionType => Mangler[S].findAndForbidName("option-inline")
@@ -61,15 +56,15 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
       }
 
       canonName <-
-        if (raw.CollectionType.isStream) State.pure(streamName)
+        if (raw.colType.isStream) State.pure(streamName)
         else Mangler[S].findAndForbidName(streamName)
-      canonType = raw.CollectionType match {
-        case StreamType(_) => raw.CollectionType
-        case _ => CanonStreamType(raw.CollectionType.element)
+      canonType = raw.colType match {
+        case StreamType(_) => raw.colType
+        case _ => CanonStreamType(raw.colType.element)
       }
       canon = CallModel.Export(canonName, canonType)
     } yield VarModel(canonName, canon.`type`) -> Inline.tree(
-      raw.CollectionType match {
+      raw.colType match {
         case ArrayType(_) =>
           RestrictionModel(streamName, streamType).wrap(
             SeqModel.wrap(inlines ++ vals :+ CanonicalizeModel(stream, canon).leaf)
