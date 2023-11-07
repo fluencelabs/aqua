@@ -1,6 +1,6 @@
 aqua StreamArgs
 
-export retrieve_records
+export retrieve_records, TestService
 
 service TestService("test-service"):
     get_records(key: string) -> []string
