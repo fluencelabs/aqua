@@ -104,7 +104,6 @@ class NamesInterpreter[S[_], X](using
           report.internalError(s"Unexpected error. Cannot define $name in the root scope").as(false)
         )(fr => (fr.addInternalName(name, `type`) -> true).pure)
     }
-    report.internalError(s"Unexpected error. Name $name was already defined").as(false)
   }
 
   override def define(name: Name[S], `type`: Type): SX[Boolean] =
