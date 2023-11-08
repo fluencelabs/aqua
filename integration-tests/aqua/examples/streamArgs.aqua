@@ -35,7 +35,7 @@ func lng280BugWithFor() -> []string:
     <- results
 
 service StreamService("test-service"):
-    store(strings: []u32)
+    store(numbers: []u32, n: u32)
 
 func callService(stream: *u32, n: u32):
     StreamService.store(stream, a)
