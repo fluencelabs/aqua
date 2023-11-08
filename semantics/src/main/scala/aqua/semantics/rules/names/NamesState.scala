@@ -3,6 +3,7 @@ package aqua.semantics.rules.names
 import aqua.parser.lexer.{Name, Token}
 import aqua.raw.RawContext
 import aqua.types.{ArrowType, Type}
+
 import cats.kernel.Monoid
 import cats.syntax.functor.*
 
@@ -36,10 +37,8 @@ object NamesState {
     def addName(n: Name[S], t: Type): NamesState.Frame[S] =
       copy[S](names = names.updated(n.value, t))
 
-    def addInternalName(n: String, t: Type): NamesState.Frame[S] = {
-      println("add internal: " + n)
+    def addInternalName(n: String, t: Type): NamesState.Frame[S] =
       copy[S](names = names.updated(n, t))
-    }
 
     def derived(n: Name[S], from: Set[String]): NamesState.Frame[S] =
       copy[S](derivedFrom =

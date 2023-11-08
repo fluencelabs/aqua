@@ -29,7 +29,8 @@ export async function lng280BugWithForAnonStreamCall(): Promise<number[][]> {
   let storage: number[][] = []
   registerStreamService({
     store: (numbers, n) => {
-      storage.push(numbers.push(n))
+      numbers.push(n)
+      storage.push(numbers)
     },
   });
   await lng280BugWithForAnonStream()
