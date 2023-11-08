@@ -16,7 +16,7 @@ import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
 
 import cats.Monad
-import cats.data.Chain
+import cats.data.{Chain, OptionT}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -81,16 +81,11 @@ object ForSem {
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
     T: TypesAlgebra[S, F]
-  ): F[Option[ValueRaw]] =
-    V.valueToRaw(iterable).flatMap {
-      case Some(vm) =>
-        vm.`type` match {
-          case t: CollectionType =>
-            N.define(item, t.element).as(vm.some)
-          case dt: DataType =>
-            T.ensureTypeMatches(iterable, ArrayType(dt), dt).as(none)
-          case _ => ??? // FIXME
-        }
-      case _ => none.pure
-    }
+  ): F[Option[ValueRaw]] = (for {
+    value <- V.valueToIterable(iterable)
+    (raw, typ) = value
+    _ <- OptionT.liftF(
+      N.define(item, typ.element)
+    )
+  } yield raw).value
 }

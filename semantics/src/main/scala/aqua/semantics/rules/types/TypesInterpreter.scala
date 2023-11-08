@@ -407,6 +407,22 @@ class TypesInterpreter[S[_], X](using
           .as(false)
     }
 
+  override def typeToIterable(
+    token: Token[S],
+    givenType: Type
+  ): OptionT[State[X, *], CollectionType] =
+    givenType match {
+      case ct: CollectionType => OptionT.pure(ct)
+      case _ =>
+        OptionT.liftF(
+          report
+            .error(
+              token,
+              s"Value of type '$givenType' could not be iterated over"
+            )
+        ) *> OptionT.none
+    }
+
   override def ensureTypeOneOf[T <: Type](
     token: Token[S],
     expected: Set[T],

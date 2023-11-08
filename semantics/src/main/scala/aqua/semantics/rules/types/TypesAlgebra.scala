@@ -6,6 +6,7 @@ import aqua.types.*
 
 import cats.data.NonEmptyList
 import cats.data.NonEmptyMap
+import cats.data.OptionT
 
 trait TypesAlgebra[S[_], Alg[_]] {
 
@@ -59,6 +60,8 @@ trait TypesAlgebra[S[_], Alg[_]] {
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 
   def ensureTypeIsCollectible(token: Token[S], givenType: Type): Alg[Boolean]
+
+  def typeToIterable(token: Token[S], givenType: Type): OptionT[Alg, CollectionType]
 
   def ensureTypeOneOf[T <: Type](
     token: Token[S],

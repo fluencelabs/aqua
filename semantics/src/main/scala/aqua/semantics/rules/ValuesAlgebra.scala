@@ -2,6 +2,7 @@ package aqua.semantics.rules
 
 import aqua.helpers.syntax.optiont.*
 import aqua.parser.lexer.*
+import aqua.parser.lexer.InfixToken.value
 import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
 import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
@@ -328,14 +329,19 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       }
     )
 
+  def valueToIterable(v: ValueToken[S]): OptionT[Alg, (ValueRaw, CollectionType)] =
+    for {
+      raw <- OptionT(valueToRaw(v))
+      typ <- T.typeToIterable(v, raw.`type`)
+    } yield raw -> typ
+
   def valueToTypedRaw(v: ValueToken[S], expectedType: Type): Alg[Option[ValueRaw]] =
-    OptionT(valueToRaw(v))
-      .flatMap(raw =>
-        OptionT.whenM(
-          T.ensureTypeMatches(v, expectedType, raw.`type`)
-        )(raw.pure)
+    (for {
+      raw <- OptionT(valueToRaw(v))
+      _ <- OptionT.withFilterF(
+        T.ensureTypeMatches(v, expectedType, raw.`type`)
       )
-      .value
+    } yield raw).value
 
   def valueToStringRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
     valueToTypedRaw(v, LiteralType.string)
