@@ -390,9 +390,9 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
     s"$fullName{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
-sealed trait GeneralStreamType extends Type with CollectionType
+sealed trait MutableStreamType extends Type with CollectionType
 
-case class StreamMapType(override val element: DataType) extends GeneralStreamType {
+case class StreamMapType(override val element: DataType) extends MutableStreamType {
 
   override val isStream: Boolean = true
 
@@ -405,7 +405,7 @@ object StreamMapType {
   def top(): StreamMapType = StreamMapType(TopType)
 }
 
-case class StreamType(override val element: DataType) extends GeneralStreamType {
+case class StreamType(override val element: DataType) extends MutableStreamType {
 
   override val isStream: Boolean = true
 
