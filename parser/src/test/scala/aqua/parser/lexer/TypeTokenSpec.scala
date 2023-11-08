@@ -83,10 +83,14 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   it should "parse arrow def" in {
     def arrowdef(str: String) =
-      ArrowTypeToken.`arrowdef`(DataTypeToken.`datatypedef`).parseAll(str).value.mapK(spanToId)
+      ArrowTypeToken
+        .`arrowdef`(CompositeTypeToken.`compositetypedef`)
+        .parseAll(str)
+        .value
+        .mapK(spanToId)
 
     def arrowWithNames(str: String) = ArrowTypeToken
-      .`arrowWithNames`(DataTypeToken.`datatypedef`)
+      .`arrowWithNames`(CompositeTypeToken.`compositetypedef`)
       .parseAll(str)
       .value
       .mapK(spanToId)
@@ -205,19 +209,19 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
   }
 
   "data type token" should "parse nested types" in {
-    def typedef(str: String): DataTypeToken[Id] =
-      DataTypeToken.`datatypedef`.parseAll(str).value.mapK(spanToId)
+    def typedef(str: String): CompositeTypeToken[Id] =
+      CompositeTypeToken.`compositetypedef`.parseAll(str).value.mapK(spanToId)
 
-    val baseTypes: List[(String, DataTypeToken[Id])] = List(
+    val baseTypes: List[(String, CompositeTypeToken[Id])] = List(
       "u32" -> stToBt(ScalarType.u32),
       "string" -> stToBt(ScalarType.string),
       "Named" -> NamedTypeToken[Id]("Named")
     )
 
-    val modifiers: List[(String, DataTypeToken[Id] => DataTypeToken[Id])] = List(
-      "[]" -> ((t: DataTypeToken[Id]) => ArrayTypeToken[Id]((), t)),
-      "?" -> ((t: DataTypeToken[Id]) => OptionTypeToken[Id]((), t)),
-      "*" -> ((t: DataTypeToken[Id]) => StreamTypeToken[Id]((), t))
+    val modifiers: List[(String, CompositeTypeToken[Id] => CompositeTypeToken[Id])] = List(
+      "[]" -> ((t: CompositeTypeToken[Id]) => ArrayTypeToken[Id]((), t)),
+      "?" -> ((t: CompositeTypeToken[Id]) => OptionTypeToken[Id]((), t)),
+      "*" -> ((t: CompositeTypeToken[Id]) => StreamTypeToken[Id]((), t))
     )
 
     LazyList

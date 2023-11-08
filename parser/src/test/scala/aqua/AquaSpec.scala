@@ -3,25 +3,25 @@ package aqua
 import aqua.AquaSpec.spanToId
 import aqua.parser.expr.*
 import aqua.parser.expr.func.*
-import aqua.parser.lexer.InfixToken.Op as InfixOp
-import aqua.parser.lexer.PrefixToken.Op as PrefixOp
-import aqua.parser.lexer.InfixToken.Op.*
-import aqua.parser.lexer.PrefixToken.Op.*
 import aqua.parser.head.FromExpr.NameOrAbAs
 import aqua.parser.head.{FromExpr, UseFromExpr}
 import aqua.parser.lexer.*
+import aqua.parser.lexer.InfixToken.Op.*
+import aqua.parser.lexer.InfixToken.Op as InfixOp
+import aqua.parser.lexer.PrefixToken.Op.*
+import aqua.parser.lexer.PrefixToken.Op as PrefixOp
 import aqua.parser.lexer.Token.LiftToken
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
-import aqua.types.LiteralType.{bool, number, signed, string, unsigned}
-import aqua.types.{LiteralType, ScalarType}
-import cats.{~>, Id}
-import org.scalatest.EitherValues
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
-import cats.~>
-import cats.syntax.bifunctor.*
-import cats.data.NonEmptyList
+import aqua.types.LiteralType.{bool, number, signed, string, unsigned}
+import aqua.types.{LiteralType, ScalarType}
 
+import cats.data.NonEmptyList
+import cats.syntax.bifunctor.*
+import cats.{Id, ~>}
+import cats.~>
+import org.scalatest.EitherValues
 import scala.collection.mutable
 import scala.language.implicitConversions
 
@@ -71,14 +71,14 @@ object AquaSpec {
   def toArrayType(str: String): ArrayTypeToken[Id] = ArrayTypeToken[Id]((), str)
 
   def toArrowType(
-    args: List[DataTypeToken[Id]],
-    res: Option[DataTypeToken[Id]]
+    args: List[CompositeTypeToken[Id]],
+    res: Option[CompositeTypeToken[Id]]
   ): ArrowTypeToken[Id] =
     ArrowTypeToken[Id]((), args.map(None -> _), res.toList)
 
   def toNamedArrow(
     args: List[(String, TypeToken[Id])],
-    res: List[DataTypeToken[Id]]
+    res: List[CompositeTypeToken[Id]]
   ): ArrowTypeToken[Id] =
     ArrowTypeToken[Id]((), args.map(ab => Some(Name[Id](ab._1)) -> ab._2), res)
 
