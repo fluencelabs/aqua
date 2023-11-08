@@ -34,3 +34,13 @@ func lng280BugWithFor() -> []string:
 
     <- results
 
+service StreamService("test-service"):
+    store(strings: []u32)
+
+func callService(stream: *u32, n: u32) -> *u32:
+    TestService.store(stream, a)
+
+func lng280BugWithForAnonStream():
+  arr = [1,2,3,4,5]
+  for a <- arr:
+    useStream(*[], a)

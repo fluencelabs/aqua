@@ -1,8 +1,10 @@
 import {
   retrieve_records,
   registerTestService,
+  registerStreamService,
   lng280Bug,
-  lng280BugWithFor
+  lng280BugWithFor,
+  lng280BugWithForAnonStream,
 } from "../compiled/examples/streamArgs.js";
 
 export async function streamArgsCall() {
@@ -21,4 +23,16 @@ export async function lng280BugCall(): Promise<string[]> {
 
 export async function lng280BugWithForCall(): Promise<string[]> {
   return lng280BugWithFor()
+}
+
+export async function lng280BugWithForAnonStreamCall(): Promise<number[][]> {
+  let storage: number[][] = []
+  registerStreamService({
+    store: (numbers, n) => {
+      storage.push(numbers.push(n))
+    },
+  });
+  await lng280BugWithForAnonStream()
+
+  return storage
 }

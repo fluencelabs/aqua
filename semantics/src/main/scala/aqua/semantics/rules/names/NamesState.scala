@@ -36,6 +36,11 @@ object NamesState {
     def addName(n: Name[S], t: Type): NamesState.Frame[S] =
       copy[S](names = names.updated(n.value, t))
 
+    def addInternalName(n: String, t: Type): NamesState.Frame[S] = {
+      println("add internal: " + n)
+      copy[S](names = names.updated(n, t))
+    }
+
     def derived(n: Name[S], from: Set[String]): NamesState.Frame[S] =
       copy[S](derivedFrom =
         derivedFrom + (n.value -> from.flatMap(f => derivedFrom.get(f).fold(Set(f))(_ + f)))

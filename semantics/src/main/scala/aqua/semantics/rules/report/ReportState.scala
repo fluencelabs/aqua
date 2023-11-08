@@ -11,6 +11,9 @@ final case class ReportState[S[_]](
   warnings: Chain[SemanticWarning[S]] = Chain.empty[SemanticWarning[S]]
 ) {
 
+  def reportInternalError(hints: List[String]): ReportState[S] =
+    copy(errors = errors.append(aqua.semantics.InternalError(hints)))
+  
   def reportError(token: Token[S], hints: List[String]): ReportState[S] =
     copy(errors = errors.append(RulesViolated(token, hints)))
 

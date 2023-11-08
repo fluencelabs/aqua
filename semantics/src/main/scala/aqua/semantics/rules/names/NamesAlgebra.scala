@@ -14,6 +14,8 @@ trait NamesAlgebra[S[_], Alg[_]] {
   def readArrow(name: Name[S]): Alg[Option[ArrowType]]
 
   def define(name: Name[S], `type`: Type): Alg[Boolean]
+  
+  def defineInternal(name: String, `type`: Type): Alg[Boolean]
 
   def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): Alg[Boolean]
 
