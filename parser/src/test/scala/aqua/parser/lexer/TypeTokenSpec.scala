@@ -2,40 +2,52 @@ package aqua.parser.lexer
 
 import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.types.ScalarType
-import aqua.types.ScalarType.u32
+
 import cats.Id
 import cats.parse.Parser
+import cats.syntax.option.*
 import org.scalatest.EitherValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-
-import scala.language.implicitConversions
 
 class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   import aqua.AquaSpec._
 
-  implicit def strToBt(st: ScalarType): BasicTypeToken[Id] = BasicTypeToken[Id](st)
+  def stToBt(st: ScalarType): BasicTypeToken[Id] = BasicTypeToken(st)
 
-  "Basic type" should "parse" in {
-    BasicTypeToken.`basictypedef`.parseAll("u32").value.mapK(spanToId) should be(strToBt(u32))
-    BasicTypeToken.`basictypedef`.parseAll("()").isLeft should be(true)
+  "basic type token" should "parse scalar types" in {
+    ScalarType.all.foreach(st =>
+      BasicTypeToken.`basictypedef`
+        .parseAll(st.name)
+        .value
+        .mapK(spanToId) should be(stToBt(st))
+    )
   }
 
-  "Return type" should "parse" in {
+  it should "not parse empty brackets" in {
+    BasicTypeToken.`basictypedef`
+      .parseAll("()")
+      .isLeft should be(true)
+  }
+
+  "arrow type token" should "parse type def" in {
 
     def typedef(str: String) =
       ArrowTypeToken.typeDef().parseAll(str).value.mapK(spanToId)
 
-    def returndef(str: String) =
-      ArrowTypeToken.returnDef().parseAll(str).value.map(_.mapK(spanToId))
-
     typedef("(A -> ())") should be(
       ArrowTypeToken[Id]((), List((None, NamedTypeToken[Id]("A"))), Nil)
     )
+
     typedef("(A -> B)") should be(
       ArrowTypeToken[Id]((), List((None, NamedTypeToken[Id]("A"))), List(NamedTypeToken[Id]("B")))
     )
+  }
+
+  it should "parse return def" in {
+    def returndef(str: String) =
+      ArrowTypeToken.returnDef().parseAll(str).value.map(_.mapK(spanToId))
 
     returndef("(A -> B), (C -> D)") should be(
       List(
@@ -69,9 +81,10 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     )
   }
 
-  "Arrow type" should "parse" in {
+  it should "parse arrow def" in {
     def arrowdef(str: String) =
       ArrowTypeToken.`arrowdef`(DataTypeToken.`datatypedef`).parseAll(str).value.mapK(spanToId)
+
     def arrowWithNames(str: String) = ArrowTypeToken
       .`arrowWithNames`(DataTypeToken.`datatypedef`)
       .parseAll(str)
@@ -81,6 +94,7 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     arrowdef("-> B") should be(
       ArrowTypeToken[Id]((), Nil, List(NamedTypeToken[Id]("B")))
     )
+
     arrowdef("A -> B") should be(
       ArrowTypeToken[Id](
         (),
@@ -147,9 +161,11 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     arrowWithNames("{SomeAb, SecondAb}(a: A) -> B") should be(
       ArrowTypeToken[Id](
         (),
-        (Some(Name[Id]("SomeAb")) -> NamedTypeToken[Id]("SomeAb")) :: (Some(Name[Id](
-          "SecondAb"
-        )) -> NamedTypeToken[Id]("SecondAb")) :: (
+        (Some(Name[Id]("SomeAb")) -> NamedTypeToken[Id]("SomeAb")) :: (Some(
+          Name[Id](
+            "SecondAb"
+          )
+        ) -> NamedTypeToken[Id]("SecondAb")) :: (
           Some(Name[Id]("a")) -> NamedTypeToken[Id]("A")
         ) :: Nil,
         List(NamedTypeToken[Id]("B"))
@@ -159,25 +175,28 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     arrowdef("u32 -> Boo") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> strToBt(u32)) :: Nil,
+        (None -> stToBt(ScalarType.u32)) :: Nil,
         List(NamedTypeToken[Id]("Boo"))
       )
     )
+
     TypeToken.`typedef`.parseAll("u32 -> ()").value.mapK(spanToId) should be(
-      ArrowTypeToken[Id]((), (None -> strToBt(u32)) :: Nil, Nil)
+      ArrowTypeToken[Id]((), (None -> stToBt(ScalarType.u32)) :: Nil, Nil)
     )
+
     arrowdef("A, u32 -> B") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> NamedTypeToken[Id]("A")) :: (None -> strToBt(u32)) :: Nil,
+        (None -> NamedTypeToken[Id]("A")) :: (None -> stToBt(ScalarType.u32)) :: Nil,
         List(NamedTypeToken[Id]("B"))
       )
     )
+
     arrowdef("[]Absolutely, u32 -> B, C") should be(
       ArrowTypeToken[Id](
         (),
         (Option.empty[Name[Id]] -> ArrayTypeToken[Id]((), NamedTypeToken[Id]("Absolutely"))) ::
-          (Option.empty[Name[Id]] -> strToBt(u32)) :: Nil,
+          (Option.empty[Name[Id]] -> stToBt(ScalarType.u32)) :: Nil,
         NamedTypeToken[Id]("B") ::
           NamedTypeToken[Id]("C") :: Nil
       )
@@ -185,18 +204,46 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   }
 
-  "Array type" should "parse" in {
-    def typedef(str: String) = TypeToken.`typedef`.parseAll(str).value.mapK(spanToId)
+  "data type token" should "parse nested types" in {
+    def typedef(str: String): DataTypeToken[Id] =
+      DataTypeToken.`datatypedef`.parseAll(str).value.mapK(spanToId)
 
-    typedef("[]Something") should be(
-      ArrayTypeToken[Id]((), NamedTypeToken[Id]("Something"))
+    val baseTypes: List[(String, DataTypeToken[Id])] = List(
+      "u32" -> stToBt(ScalarType.u32),
+      "string" -> stToBt(ScalarType.string),
+      "Named" -> NamedTypeToken[Id]("Named")
     )
-    typedef("[]u32") should be(
-      ArrayTypeToken[Id]((), strToBt(u32))
+
+    val modifiers: List[(String, DataTypeToken[Id] => DataTypeToken[Id])] = List(
+      "[]" -> ((t: DataTypeToken[Id]) => ArrayTypeToken[Id]((), t)),
+      "?" -> ((t: DataTypeToken[Id]) => OptionTypeToken[Id]((), t)),
+      "*" -> ((t: DataTypeToken[Id]) => StreamTypeToken[Id]((), t))
     )
-    typedef("[][]u32") should be(
-      ArrayTypeToken[Id]((), ArrayTypeToken[Id]((), strToBt(u32)))
-    )
+
+    LazyList
+      // Generate all cartesian products of modifiers
+      .unfold(modifiers)(prod =>
+        (
+          prod,
+          for {
+            m <- modifiers
+            (sm, mt) = m
+            p <- prod
+            (sp, pt) = p
+          } yield (sm + sp, mt.compose(pt))
+        ).some
+      )
+      .take(6)
+      .foreach { mods =>
+        for {
+          base <- baseTypes
+          (bs, bt) = base
+          mod <- mods
+          (ms, mt) = mod
+          // Apply modifiers to base type
+          (st, t) = (ms + bs, mt(bt))
+        } typedef(st) should be(t)
+      }
   }
 
 }

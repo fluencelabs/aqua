@@ -104,7 +104,7 @@ object BasicTypeToken {
     P.oneOf(
       ScalarType.all.map(n ⇒ P.string(n.name).as(n)).toList
     ).lift
-      .map(BasicTypeToken(_))
+      .map(BasicTypeToken.apply)
 }
 
 case class ArrowTypeToken[S[_]: Comonad](
