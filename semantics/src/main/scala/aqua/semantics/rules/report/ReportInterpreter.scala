@@ -19,7 +19,7 @@ class ReportInterpreter[S[_], X](using
   def internalError(hint: String): State[X, Unit] =
     State.modify(
       lens.modify(
-        _.reportInternalError(hint :: Nil)
+        _.reportInternalError(hint)
       )
     )
 

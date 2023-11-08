@@ -106,6 +106,8 @@ object Rendering {
             .focus(0)
             .map(_.toConsoleStr("Header error", message :: Nil, Console.CYAN))
             .getOrElse("(Dup error, but offset is beyond the script)")
+        case aqua.semantics.InternalError(message) =>
+          s"${Console.RED}$message${Console.RESET}"
         case WrongAST(ast) =>
           "Semantic error: wrong AST"
 
