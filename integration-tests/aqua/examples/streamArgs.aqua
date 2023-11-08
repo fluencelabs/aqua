@@ -38,9 +38,9 @@ service StreamService("test-service"):
     store(numbers: []u32, n: u32)
 
 func callService(stream: *u32, n: u32):
-    StreamService.store(stream, a)
+    StreamService.store(stream, n)
 
 func lng280BugWithForAnonStream():
   arr = [1,2,3,4,5]
   for a <- arr:
-    useStream(*[], a)
+    callService(*[], a)
