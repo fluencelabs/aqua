@@ -39,14 +39,14 @@ class TypeResolutionSpec extends AnyFlatSpec with Matchers with Inside {
     TypeResolution.resolveTypeToken(token)(TypesState(strict = types))
 
   val validCollectionModifiers: LazyList[
-    List[(Endo[CompositeTypeToken[Id]], DataType => Type)]
+    List[(Endo[BasicTypeToken[Id]], DataType => Type)]
   ] = {
-    val baseModifiers: List[(Endo[CompositeTypeToken[Id]], Endo[DataType])] = List(
+    val baseModifiers: List[(Endo[BasicTypeToken[Id]], Endo[DataType])] = List(
       (ArrayTypeToken[Id]((), _)) -> (ArrayType.apply),
       (OptionTypeToken[Id]((), _)) -> (OptionType.apply)
     )
 
-    val streamModifier = (dt: CompositeTypeToken[Id]) => StreamTypeToken[Id]((), dt)
+    val streamModifier = (dt: BasicTypeToken[Id]) => StreamTypeToken[Id]((), dt)
 
     val dataModifiers = LazyList.unfold(baseModifiers) { mods =>
       (
@@ -155,7 +155,7 @@ class TypeResolutionSpec extends AnyFlatSpec with Matchers with Inside {
 
     for {
       left <- modifiers
-      right <- identity[CompositeTypeToken[Id]] +: modifiers
+      right <- identity[BasicTypeToken[Id]] +: modifiers
       base <- baseTypes
       t = left(StreamTypeToken[Id]((), right(base)))
     } inside(

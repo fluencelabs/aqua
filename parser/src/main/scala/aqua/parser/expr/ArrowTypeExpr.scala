@@ -2,7 +2,7 @@ package aqua.parser.expr
 
 import aqua.parser.Expr
 import aqua.parser.lexer.Token.*
-import aqua.parser.lexer.{ArrowTypeToken, CompositeTypeToken, Name}
+import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, Name}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
@@ -20,8 +20,8 @@ object ArrowTypeExpr extends Expr.Leaf {
 
   override val p: Parser[ArrowTypeExpr[Span.S]] =
     (Name.p ~ ((` : ` *> ArrowTypeToken.`arrowdef`(
-      CompositeTypeToken.`compositetypedef`
-    )) | ArrowTypeToken.`arrowWithNames`(CompositeTypeToken.`compositetypedef`))).map {
+      BasicTypeToken.`compositetypedef`
+    )) | ArrowTypeToken.`arrowWithNames`(BasicTypeToken.`compositetypedef`))).map {
       case (name, t) =>
         ArrowTypeExpr(name, t)
     }

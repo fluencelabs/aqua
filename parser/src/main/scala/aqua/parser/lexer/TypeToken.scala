@@ -18,19 +18,19 @@ sealed trait TypeToken[S[_]] extends Token[S] {
   def mapK[K[_]: Comonad](fk: S ~> K): TypeToken[K]
 }
 
-sealed trait CompositeTypeToken[S[_]] extends TypeToken[S] {
-  override def mapK[K[_]: Comonad](fk: S ~> K): CompositeTypeToken[K]
+sealed trait BasicTypeToken[S[_]] extends TypeToken[S] {
+  override def mapK[K[_]: Comonad](fk: S ~> K): BasicTypeToken[K]
 }
 
 case class TopBottomToken[S[_]: Comonad](override val unit: S[Unit], isTop: Boolean)
-    extends CompositeTypeToken[S] {
+    extends BasicTypeToken[S] {
   override def as[T](v: T): S[T] = unit.as(v)
   def isBottom: Boolean = !isTop
   override def mapK[K[_]: Comonad](fk: S ~> K): TopBottomToken[K] = copy(fk(unit), isTop)
 }
 
-case class ArrayTypeToken[S[_]: Comonad](override val unit: S[Unit], data: CompositeTypeToken[S])
-    extends CompositeTypeToken[S] {
+case class ArrayTypeToken[S[_]: Comonad](override val unit: S[Unit], data: BasicTypeToken[S])
+    extends BasicTypeToken[S] {
   override def as[T](v: T): S[T] = unit.as(v)
   override def mapK[K[_]: Comonad](fk: S ~> K): ArrayTypeToken[K] = copy(fk(unit), data.mapK(fk))
 }
@@ -38,11 +38,11 @@ case class ArrayTypeToken[S[_]: Comonad](override val unit: S[Unit], data: Compo
 object ArrayTypeToken {
 
   val `arraytypedef`: P[ArrayTypeToken[Span.S]] =
-    (`[]`.lift ~ CompositeTypeToken.`compositetypedef`).map(ud => ArrayTypeToken(ud._1, ud._2))
+    (`[]`.lift ~ BasicTypeToken.`compositetypedef`).map(ud => ArrayTypeToken(ud._1, ud._2))
 }
 
-case class StreamTypeToken[S[_]: Comonad](override val unit: S[Unit], data: CompositeTypeToken[S])
-    extends CompositeTypeToken[S] {
+case class StreamTypeToken[S[_]: Comonad](override val unit: S[Unit], data: BasicTypeToken[S])
+    extends BasicTypeToken[S] {
   override def as[T](v: T): S[T] = unit.as(v)
   override def mapK[K[_]: Comonad](fk: S ~> K): StreamTypeToken[K] = copy(fk(unit), data.mapK(fk))
 }
@@ -50,12 +50,12 @@ case class StreamTypeToken[S[_]: Comonad](override val unit: S[Unit], data: Comp
 object StreamTypeToken {
 
   val `streamtypedef`: P[StreamTypeToken[Span.S]] =
-    (`*`.lift ~ CompositeTypeToken.`compositetypedef`).map(ud => StreamTypeToken(ud._1, ud._2))
+    (`*`.lift ~ BasicTypeToken.`compositetypedef`).map(ud => StreamTypeToken(ud._1, ud._2))
 
 }
 
-case class OptionTypeToken[F[_]: Comonad](override val unit: F[Unit], data: CompositeTypeToken[F])
-    extends CompositeTypeToken[F] {
+case class OptionTypeToken[F[_]: Comonad](override val unit: F[Unit], data: BasicTypeToken[F])
+    extends BasicTypeToken[F] {
   override def as[T](v: T): F[T] = unit.as(v)
 
   override def mapK[K[_]: Comonad](fk: F ~> K): OptionTypeToken[K] =
@@ -65,11 +65,11 @@ case class OptionTypeToken[F[_]: Comonad](override val unit: F[Unit], data: Comp
 object OptionTypeToken {
 
   val `optiontypedef`: P[OptionTypeToken[Span.S]] =
-    (`?`.lift ~ CompositeTypeToken.`compositetypedef`).map(ud => OptionTypeToken(ud._1, ud._2))
+    (`?`.lift ~ BasicTypeToken.`compositetypedef`).map(ud => OptionTypeToken(ud._1, ud._2))
 
 }
 
-case class NamedTypeToken[F[_]: Comonad](name: F[String]) extends CompositeTypeToken[F] {
+case class NamedTypeToken[F[_]: Comonad](name: F[String]) extends BasicTypeToken[F] {
   override def as[T](v: T): F[T] = name.as(v)
   def asName: Name[F] = Name[F](name)
 
@@ -89,7 +89,7 @@ object NamedTypeToken {
     `Class`.repSep(`.`).string.lift.map(NamedTypeToken(_))
 }
 
-case class ScalarTypeToken[F[_]: Comonad](scalarType: F[ScalarType]) extends CompositeTypeToken[F] {
+case class ScalarTypeToken[F[_]: Comonad](scalarType: F[ScalarType]) extends BasicTypeToken[F] {
   override def as[T](v: T): F[T] = scalarType.as(v)
 
   override def mapK[K[_]: Comonad](fk: F ~> K): ScalarTypeToken[K] =
@@ -159,13 +159,13 @@ object ArrowTypeToken {
     }
 }
 
-object CompositeTypeToken {
+object BasicTypeToken {
 
   val `topbottomdef`: P[TopBottomToken[Span.S]] =
     `⊥`.lift.map(TopBottomToken(_, isTop = false)) |
       `⊤`.lift.map(TopBottomToken(_, isTop = true))
 
-  def `compositetypedef`: P[CompositeTypeToken[Span.S]] =
+  def `compositetypedef`: P[BasicTypeToken[Span.S]] =
     P.oneOf(
       P.defer(`topbottomdef`) ::
         P.defer(ArrayTypeToken.`arraytypedef`) ::
@@ -181,8 +181,8 @@ object TypeToken {
 
   val `typedef`: P[TypeToken[Span.S]] =
     P.oneOf(
-      ArrowTypeToken.`arrowdef`(CompositeTypeToken.`compositetypedef`).backtrack ::
-        CompositeTypeToken.`compositetypedef` :: Nil
+      ArrowTypeToken.`arrowdef`(BasicTypeToken.`compositetypedef`).backtrack ::
+        BasicTypeToken.`compositetypedef` :: Nil
     )
 
 }

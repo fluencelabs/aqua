@@ -71,14 +71,14 @@ object AquaSpec {
   def toArrayType(str: String): ArrayTypeToken[Id] = ArrayTypeToken[Id]((), str)
 
   def toArrowType(
-    args: List[CompositeTypeToken[Id]],
-    res: Option[CompositeTypeToken[Id]]
+    args: List[BasicTypeToken[Id]],
+    res: Option[BasicTypeToken[Id]]
   ): ArrowTypeToken[Id] =
     ArrowTypeToken[Id]((), args.map(None -> _), res.toList)
 
   def toNamedArrow(
     args: List[(String, TypeToken[Id])],
-    res: List[CompositeTypeToken[Id]]
+    res: List[BasicTypeToken[Id]]
   ): ArrowTypeToken[Id] =
     ArrowTypeToken[Id]((), args.map(ab => Some(Name[Id](ab._1)) -> ab._2), res)
 

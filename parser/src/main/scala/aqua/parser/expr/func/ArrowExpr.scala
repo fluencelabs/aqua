@@ -1,6 +1,6 @@
 package aqua.parser.expr.func
 
-import aqua.parser.lexer.{ArrowTypeToken, CompositeTypeToken, TypeToken, ValueToken}
+import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, TypeToken, ValueToken}
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
