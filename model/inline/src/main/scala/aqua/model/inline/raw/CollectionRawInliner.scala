@@ -22,7 +22,7 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
     assignToName: Option[String] = None
   ): State[S, (ValueModel, Inline)] =
     for {
-      streamName <- raw.colType match {
+      streamName <- raw.collectionType match {
         case _: StreamType =>
           assignToName.fold(
             Mangler[S].findAndForbidName("stream-inline")
@@ -56,15 +56,15 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
       }
 
       canonName <-
-        if (raw.colType.isStream) State.pure(streamName)
+        if (raw.collectionType.isStream) State.pure(streamName)
         else Mangler[S].findAndForbidName(streamName)
-      canonType = raw.colType match {
-        case StreamType(_) => raw.colType
-        case _ => CanonStreamType(raw.colType.element)
+      canonType = raw.collectionType match {
+        case StreamType(_) => raw.collectionType
+        case _ => CanonStreamType(raw.collectionType.element)
       }
       canon = CallModel.Export(canonName, canonType)
     } yield VarModel(canonName, canon.`type`) -> Inline.tree(
-      raw.colType match {
+      raw.collectionType match {
         case ArrayType(_) =>
           RestrictionModel(streamName, streamType).wrap(
             SeqModel.wrap(inlines ++ vals :+ CanonicalizeModel(stream, canon).leaf)
