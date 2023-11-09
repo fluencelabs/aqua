@@ -29,10 +29,10 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
     T.typeToStream(streamToken, stream),
     T.typeToCollectible(elementToken, element)
   ).merged.semiflatMap { case (st, et) =>
-    T.ensureTypeMatches(elementToken, st, et)
+    T.ensureTypeMatches(elementToken, st.element, et)
   }.getOrElse(false)
 
-  def program[Alg[_]: Monad](implicit
+  def program[Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]
