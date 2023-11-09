@@ -29,6 +29,21 @@ object TypeResolution {
     TypeResolution[S, A]
   ]
 
+  private def resolveCollection[S[_]](
+    tt: TypeToken[S],
+    collectionName: String,
+    collectionType: DataType => Type
+  )(state: TypesState[S]): Res[S, Type] =
+    resolveTypeToken(tt)(state).andThen {
+      case TypeResolution(it: DataType, t) =>
+        TypeResolution(collectionType(it), t).validNec
+      case TypeResolution(it, _) =>
+        TypeResolutionError(
+          tt,
+          s"$collectionName could not contain values of type $it"
+        ).invalidNec
+    }
+
   def resolveTypeToken[S[_]](
     tt: TypeToken[S]
   )(state: TypesState[S]): Res[S, Type] =
@@ -38,35 +53,11 @@ object TypeResolution {
 
         TypeResolution(`type`, Nil).validNec
       case ArrayTypeToken(_, dtt) =>
-        resolveTypeToken(dtt)(state).andThen {
-          case TypeResolution(it: DataType, t) =>
-            TypeResolution(ArrayType(it), t).validNec
-          case TypeResolution(it, _) =>
-            TypeResolutionError(
-              dtt,
-              s"Array could not contain values of type $it"
-            ).invalidNec
-        }
+        resolveCollection(dtt, "Array", ArrayType.apply)(state)
       case StreamTypeToken(_, dtt) =>
-        resolveTypeToken(dtt)(state).andThen {
-          case TypeResolution(it: DataType, t) =>
-            TypeResolution(StreamType(it), t).validNec
-          case TypeResolution(it, _) =>
-            TypeResolutionError(
-              dtt,
-              s"Stream could not contain values of type $it"
-            ).invalidNec
-        }
+        resolveCollection(dtt, "Stream", StreamType.apply)(state)
       case OptionTypeToken(_, dtt) =>
-        resolveTypeToken(dtt)(state).andThen {
-          case TypeResolution(it: DataType, t) =>
-            TypeResolution(OptionType(it), t).validNec
-          case TypeResolution(it, _) =>
-            TypeResolutionError(
-              dtt,
-              s"Option could not contain values of type $it"
-            ).invalidNec
-        }
+        resolveCollection(dtt, "Option", OptionType.apply)(state)
       case ntt: NamedTypeToken[S] =>
         val defs = state
           .getTypeDefinition(ntt.value)
