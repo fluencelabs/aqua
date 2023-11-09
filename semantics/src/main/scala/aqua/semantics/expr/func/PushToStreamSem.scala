@@ -13,6 +13,7 @@ import aqua.types.*
 import aqua.types.TopType
 
 import cats.Monad
+import cats.data.OptionT
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -27,7 +28,11 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
     element: Type
   )(using T: TypesAlgebra[S, Alg]): Alg[Boolean] = (
     T.typeToStream(streamToken, stream),
-    T.typeToCollectible(elementToken, element)
+    // TODO: Fix in LNG-279, it is special case for nil
+    element match {
+      case StreamType(BottomType) => OptionT.pure(element)
+      case _ => T.typeToCollectible(elementToken, element).widen[Type]
+    }
   ).merged.semiflatMap { case (st, et) =>
     T.ensureTypeMatches(elementToken, st.element, et)
   }.getOrElse(false)
