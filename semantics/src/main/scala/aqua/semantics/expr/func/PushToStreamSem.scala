@@ -1,5 +1,6 @@
 package aqua.semantics.expr.func
 
+import aqua.helpers.syntax.optiont.*
 import aqua.parser.expr.func.PushToStreamExpr
 import aqua.parser.lexer.Token
 import aqua.raw.Raw
@@ -24,23 +25,12 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
     elementToken: Token[S],
     stream: Type,
     element: Type
-  )(using T: TypesAlgebra[S, Alg]): Alg[Boolean] =
-    stream match {
-      case StreamType(st) =>
-        T.ensureTypeMatches(elementToken, st, element)
-      case _ =>
-        T.ensureTypeMatches(
-          streamToken,
-          StreamType(element match {
-            case StreamType(e) => ArrayType(e)
-            case dt: DataType => dt
-            // TODO: Report that element type could not
-            // be pushed to a stream separately
-            case _ => TopType
-          }),
-          stream
-        )
-    }
+  )(using T: TypesAlgebra[S, Alg]): Alg[Boolean] = (
+    T.typeToStream(streamToken, stream),
+    T.typeToCollectible(elementToken, element)
+  ).merged.semiflatMap { case (st, et) =>
+    T.ensureTypeMatches(elementToken, st, et)
+  }.getOrElse(false)
 
   def program[Alg[_]: Monad](implicit
     N: NamesAlgebra[S, Alg],

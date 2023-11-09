@@ -152,10 +152,9 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
             raws
               .zip(values)
               .traverse { case (raw, token) =>
-                T.ensureTypeIsCollectible(token, raw.`type`)
-                  .map(Option.when(_)(raw))
+                T.typeToCollectible(token, raw.`type`).as(raw)
               }
-              .map(_.sequence)
+              .value
           )
           raw = valuesRawChecked.map(raws =>
             NonEmptyList

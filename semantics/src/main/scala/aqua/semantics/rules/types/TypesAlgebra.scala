@@ -59,7 +59,9 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 
-  def ensureTypeIsCollectible(token: Token[S], givenType: Type): Alg[Boolean]
+  def typeToCollectible(token: Token[S], givenType: Type): OptionT[Alg, DataType]
+
+  def typeToStream(token: Token[S], givenType: Type): OptionT[Alg, StreamType]
 
   def typeToIterable(token: Token[S], givenType: Type): OptionT[Alg, CollectionType]
 

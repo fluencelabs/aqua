@@ -21,6 +21,7 @@ import cats.{Applicative, ~>}
 import monocle.Lens
 import monocle.macros.GenLens
 import scala.collection.immutable.SortedMap
+import scala.reflect.TypeTest
 
 class TypesInterpreter[S[_], X](using
   lens: Lens[X, TypesState[S]],
@@ -395,33 +396,48 @@ class TypesInterpreter[S[_], X](using
       }
     }
 
-  override def ensureTypeIsCollectible(token: Token[S], givenType: Type): State[X, Boolean] =
+  private def typeTo[T <: Type](
+    token: Token[S],
+    givenType: Type,
+    error: String
+  )(using tt: TypeTest[Type, T]): OptionT[State[X, *], T] =
     givenType match {
-      case _: DataType => true.pure
+      case t: T => OptionT.pure(t)
       case _ =>
-        report
-          .error(
-            token,
-            s"Value of type '$givenType' could not be put into a collection"
-          )
-          .as(false)
+        OptionT.liftF(
+          report.error(token, error)
+        ) *> OptionT.none
     }
+
+  override def typeToCollectible(
+    token: Token[S],
+    givenType: Type
+  ): OptionT[State[X, *], DataType] =
+    typeTo[DataType](
+      token,
+      givenType,
+      s"Value of type '$givenType' could not be put into a collection"
+    )
+
+  override def typeToStream(
+    token: Token[S],
+    givenType: Type
+  ): OptionT[State[X, *], StreamType] =
+    typeTo[StreamType](
+      token,
+      givenType,
+      s"Expected stream value, got value of type '$givenType'"
+    )
 
   override def typeToIterable(
     token: Token[S],
     givenType: Type
   ): OptionT[State[X, *], CollectionType] =
-    givenType match {
-      case ct: CollectionType => OptionT.pure(ct)
-      case _ =>
-        OptionT.liftF(
-          report
-            .error(
-              token,
-              s"Value of type '$givenType' could not be iterated over"
-            )
-        ) *> OptionT.none
-    }
+    typeTo[CollectionType](
+      token,
+      givenType,
+      s"Value of type '$givenType' could not be iterated over"
+    )
 
   override def ensureTypeOneOf[T <: Type](
     token: Token[S],
