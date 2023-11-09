@@ -73,8 +73,8 @@ object TypeResolution {
               s"Type ${ntt.value} is not defined"
             )
           )
-      case btt: BasicTypeToken[S] =>
-        TypeResolution(btt.value, Nil).validNec
+      case stt: ScalarTypeToken[S] =>
+        TypeResolution(stt.value, Nil).validNec
       case att: ArrowTypeToken[S] =>
         resolveArrowDef(att)(state)
     }

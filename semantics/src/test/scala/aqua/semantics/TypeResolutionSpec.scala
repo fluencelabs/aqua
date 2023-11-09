@@ -28,7 +28,7 @@ class TypeResolutionSpec extends AnyFlatSpec with Matchers with Inside {
       (algebraA.combine(x._1, y._1), algebraB.combine(x._2, y._2))
   }
 
-  def btt(st: ScalarType): BasicTypeToken[Id] = BasicTypeToken(st)
+  def stt(st: ScalarType): ScalarTypeToken[Id] = ScalarTypeToken(st)
 
   def ntt(name: String): NamedTypeToken[Id] = NamedTypeToken(name)
 
@@ -69,8 +69,8 @@ class TypeResolutionSpec extends AnyFlatSpec with Matchers with Inside {
 
   "TypeResolution resolveTypeToken" should "resolve basic types" in {
     val baseTypes = List(
-      btt(ScalarType.u32) -> ScalarType.u32,
-      btt(ScalarType.string) -> ScalarType.string,
+      stt(ScalarType.u32) -> ScalarType.u32,
+      stt(ScalarType.string) -> ScalarType.string,
       ntt("Struct") -> structType
     )
 
@@ -85,8 +85,8 @@ class TypeResolutionSpec extends AnyFlatSpec with Matchers with Inside {
 
   it should "resolve nested types" in {
     val baseTypes = List(
-      btt(ScalarType.u32) -> ScalarType.u32,
-      btt(ScalarType.string) -> ScalarType.string,
+      stt(ScalarType.u32) -> ScalarType.u32,
+      stt(ScalarType.string) -> ScalarType.string,
       ntt("Struct") -> structType
     )
 
@@ -142,8 +142,8 @@ class TypeResolutionSpec extends AnyFlatSpec with Matchers with Inside {
 
   it should "forbid streams inside any collection" in {
     val baseTypes = List(
-      btt(ScalarType.u32),
-      btt(ScalarType.string),
+      stt(ScalarType.u32),
+      stt(ScalarType.string),
       ntt("Struct")
     )
 

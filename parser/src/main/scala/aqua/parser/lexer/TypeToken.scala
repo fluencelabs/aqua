@@ -89,22 +89,22 @@ object NamedTypeToken {
     `Class`.repSep(`.`).string.lift.map(NamedTypeToken(_))
 }
 
-case class BasicTypeToken[F[_]: Comonad](scalarType: F[ScalarType]) extends CompositeTypeToken[F] {
+case class ScalarTypeToken[F[_]: Comonad](scalarType: F[ScalarType]) extends CompositeTypeToken[F] {
   override def as[T](v: T): F[T] = scalarType.as(v)
 
-  override def mapK[K[_]: Comonad](fk: F ~> K): BasicTypeToken[K] =
+  override def mapK[K[_]: Comonad](fk: F ~> K): ScalarTypeToken[K] =
     copy(fk(scalarType))
 
   def value: ScalarType = scalarType.extract
 }
 
-object BasicTypeToken {
+object ScalarTypeToken {
 
-  val `basictypedef`: P[BasicTypeToken[Span.S]] =
+  val scalartypedef: P[ScalarTypeToken[Span.S]] =
     P.oneOf(
       ScalarType.all.map(n ⇒ P.string(n.name).as(n)).toList
     ).lift
-      .map(BasicTypeToken.apply)
+      .map(ScalarTypeToken.apply)
 }
 
 case class ArrowTypeToken[S[_]: Comonad](
@@ -171,7 +171,7 @@ object CompositeTypeToken {
         P.defer(ArrayTypeToken.`arraytypedef`) ::
         P.defer(StreamTypeToken.`streamtypedef`) ::
         P.defer(OptionTypeToken.`optiontypedef`) ::
-        BasicTypeToken.`basictypedef` ::
+        ScalarTypeToken.`scalartypedef` ::
         NamedTypeToken.dotted :: Nil
     )
 

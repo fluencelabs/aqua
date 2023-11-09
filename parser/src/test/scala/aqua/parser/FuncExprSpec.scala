@@ -7,21 +7,20 @@ import aqua.parser.lexer.*
 import aqua.parser.lift.Span
 import aqua.types.ScalarType.*
 
-import cats.{Eval, Id}
 import cats.data.Chain.*
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import cats.syntax.foldable.*
+import cats.{Eval, Id}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Inside, Inspectors}
-
 import scala.collection.mutable
 import scala.language.implicitConversions
 
 class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors with AquaSpec {
-  import AquaSpec.{*, given}
+  import AquaSpec.{given, *}
 
   private val parser = Parser.spanParser
 
@@ -31,7 +30,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     )
 
     val arrowToken =
-      ArrowTypeToken[Id]((), List(None -> BasicTypeToken[Id](u8)), List(BasicTypeToken[Id](bool)))
+      ArrowTypeToken[Id]((), List(None -> ScalarTypeToken[Id](u8)), List(ScalarTypeToken[Id](bool)))
     arrowExpr("(peer: PeerId, other: u8 -> bool)") should be(
       ArrowExpr[Id](
         toNamedArrow(("peer" -> toNamedType("PeerId")) :: ("other" -> arrowToken) :: Nil, Nil)
@@ -41,8 +40,8 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     val arrowToken2 =
       ArrowTypeToken[Id](
         (),
-        List(None -> BasicTypeToken[Id](u32), None -> BasicTypeToken[Id](u64)),
-        List(BasicTypeToken[Id](bool))
+        List(None -> ScalarTypeToken[Id](u32), None -> ScalarTypeToken[Id](u64)),
+        List(ScalarTypeToken[Id](bool))
       )
     arrowExpr("(peer: PeerId, other: u32, u64 -> bool)") should be(
       ArrowExpr[Id](
@@ -50,12 +49,12 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
       )
     )
 
-    val arrowToken3 = ArrowTypeToken[Id]((), List(None -> BasicTypeToken[Id](u32)), Nil)
+    val arrowToken3 = ArrowTypeToken[Id]((), List(None -> ScalarTypeToken[Id](u32)), Nil)
     arrowExpr("(peer: PeerId, ret: u32 -> ()) -> string, u32") should be(
       ArrowExpr[Id](
         toNamedArrow(
           ("peer" -> toNamedType("PeerId")) :: ("ret" -> arrowToken3) :: Nil,
-          BasicTypeToken[Id](string) :: BasicTypeToken[Id](u32) :: Nil
+          ScalarTypeToken[Id](string) :: ScalarTypeToken[Id](u32) :: Nil
         )
       )
     )

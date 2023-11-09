@@ -14,19 +14,19 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
 
   import aqua.AquaSpec._
 
-  def stToBt(st: ScalarType): BasicTypeToken[Id] = BasicTypeToken(st)
+  def stToStt(st: ScalarType): ScalarTypeToken[Id] = ScalarTypeToken(st)
 
   "basic type token" should "parse scalar types" in {
     ScalarType.all.foreach(st =>
-      BasicTypeToken.`basictypedef`
+      ScalarTypeToken.`scalartypedef`
         .parseAll(st.name)
         .value
-        .mapK(spanToId) should be(stToBt(st))
+        .mapK(spanToId) should be(stToStt(st))
     )
   }
 
   it should "not parse empty brackets" in {
-    BasicTypeToken.`basictypedef`
+    ScalarTypeToken.`scalartypedef`
       .parseAll("()")
       .isLeft should be(true)
   }
@@ -179,19 +179,19 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
     arrowdef("u32 -> Boo") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> stToBt(ScalarType.u32)) :: Nil,
+        (None -> stToStt(ScalarType.u32)) :: Nil,
         List(NamedTypeToken[Id]("Boo"))
       )
     )
 
     TypeToken.`typedef`.parseAll("u32 -> ()").value.mapK(spanToId) should be(
-      ArrowTypeToken[Id]((), (None -> stToBt(ScalarType.u32)) :: Nil, Nil)
+      ArrowTypeToken[Id]((), (None -> stToStt(ScalarType.u32)) :: Nil, Nil)
     )
 
     arrowdef("A, u32 -> B") should be(
       ArrowTypeToken[Id](
         (),
-        (None -> NamedTypeToken[Id]("A")) :: (None -> stToBt(ScalarType.u32)) :: Nil,
+        (None -> NamedTypeToken[Id]("A")) :: (None -> stToStt(ScalarType.u32)) :: Nil,
         List(NamedTypeToken[Id]("B"))
       )
     )
@@ -200,7 +200,7 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
       ArrowTypeToken[Id](
         (),
         (Option.empty[Name[Id]] -> ArrayTypeToken[Id]((), NamedTypeToken[Id]("Absolutely"))) ::
-          (Option.empty[Name[Id]] -> stToBt(ScalarType.u32)) :: Nil,
+          (Option.empty[Name[Id]] -> stToStt(ScalarType.u32)) :: Nil,
         NamedTypeToken[Id]("B") ::
           NamedTypeToken[Id]("C") :: Nil
       )
@@ -213,8 +213,8 @@ class TypeTokenSpec extends AnyFlatSpec with Matchers with EitherValues {
       CompositeTypeToken.`compositetypedef`.parseAll(str).value.mapK(spanToId)
 
     val baseTypes: List[(String, CompositeTypeToken[Id])] = List(
-      "u32" -> stToBt(ScalarType.u32),
-      "string" -> stToBt(ScalarType.string),
+      "u32" -> stToStt(ScalarType.u32),
+      "string" -> stToStt(ScalarType.string),
       "Named" -> NamedTypeToken[Id]("Named")
     )
 
