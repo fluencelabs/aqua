@@ -35,7 +35,7 @@ object ValueRaw {
   val ParticleTtl: LiteralRaw = LiteralRaw("%ttl%", ScalarType.u32)
   val ParticleTimestamp: LiteralRaw = LiteralRaw("%timestamp%", ScalarType.u64)
 
-  val Nil: LiteralRaw = LiteralRaw("[]", StreamType(BottomType))
+  val Nil: LiteralRaw = LiteralRaw("[]", OptionType(BottomType))
 
   /**
    * Type of error value
