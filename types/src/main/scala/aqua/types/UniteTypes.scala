@@ -1,5 +1,7 @@
 package aqua.types
 
+import aqua.errors.Errors.internalError
+
 import cats.Monoid
 import cats.data.NonEmptyMap
 import scala.annotation.tailrec
@@ -30,8 +32,7 @@ case class UniteTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]:
   def combineDataTypes(a: DataType, b: DataType): DataType =
     (a `∪` b) match {
       case d: DataType => d
-      // TODO: This should never happen actually? Replace with internalError?
-      case _ => TopType
+      case t => internalError(s"$a ∪ $b yields non-data type $t")
     }
 
   override def combine(a: Type, b: Type): Type =
