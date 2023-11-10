@@ -3,6 +3,7 @@ package aqua.semantics.rules.types
 import aqua.parser.lexer.*
 import aqua.raw.value.{PropertyRaw, ValueRaw}
 import aqua.types.*
+import aqua.types.Type.*
 
 import cats.data.NonEmptyList
 import cats.data.NonEmptyMap
@@ -59,10 +60,7 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 
-  /**
-   * NOTE: `StreamType` is collectible with canonicalization
-   */
-  def typeToCollectible(token: Token[S], givenType: Type): OptionT[Alg, DataType | StreamType]
+  def typeToCollectible(token: Token[S], givenType: Type): OptionT[Alg, CollectibleType]
 
   def typeToStream(token: Token[S], givenType: Type): OptionT[Alg, StreamType]
 

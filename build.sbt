@@ -122,6 +122,7 @@ lazy val types = crossProject(JVMPlatform, JSPlatform)
       "org.typelevel" %%% "cats-core" % catsV
     )
   )
+  .dependsOn(errors)
 
 lazy val parser = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

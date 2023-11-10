@@ -1,7 +1,11 @@
 package aqua.types
 
+import aqua.errors.Errors.internalError
+import aqua.types.Type.*
+
 import cats.Eval
 import cats.PartialOrder
+import cats.data.NonEmptyList
 import cats.data.NonEmptyMap
 import cats.syntax.applicative.*
 import cats.syntax.option.*
@@ -15,7 +19,7 @@ sealed trait Type {
 
   def isInhabited: Boolean = true
 
-  infix def `∩`(other: Type): Type = intersectBottom(other)
+  infix def `∩`[T <: Type](other: T): Type = intersectBottom(other)
 
   private final def intersectTop(other: Type): Type =
     IntersectTypes.top.combine(this, other)
@@ -23,7 +27,7 @@ sealed trait Type {
   private final def intersectBottom(other: Type): Type =
     IntersectTypes.bottom.combine(this, other)
 
-  infix def `∪`(other: Type): Type = uniteTop(other)
+  infix def `∪`[T <: Type](other: T): Type = uniteTop(other)
 
   private final def uniteTop(other: Type): Type =
     UniteTypes.top.combine(this, other)
@@ -268,6 +272,31 @@ sealed trait CollectionType extends Type {
     Map("length" -> ScalarType.u32)
 }
 
+object CollectionType {
+
+  def elementTypeOf(types: List[CollectibleType]): DataType =
+    NonEmptyList
+      .fromList(types)
+      .fold(BottomType)(
+        _.map {
+          case StreamType(el) => ArrayType(el)
+          case dt: DataType => dt
+        }.reduce[Type](_ `∩` _) match {
+          // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
+          // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
+          // make any decision about the structure of type, but can push anything inside
+          case BottomType => TopType
+          case dt: DataType => dt
+          case t =>
+            internalError(
+              s"Expected data type from " +
+                s"intersection of ${types.mkString(", ")}; " +
+                s"got $t"
+            )
+        }
+      )
+}
+
 case class CanonStreamType(
   override val element: DataType
 ) extends DataType with CollectionType {
@@ -456,6 +485,11 @@ case class ArrowType(domain: ProductType, codomain: ProductType) extends Type {
 }
 
 object Type {
+
+  /**
+   * `StreamType` is collectible with canonicalization
+   */
+  type CollectibleType = DataType | StreamType
 
   given PartialOrder[Type] =
     CompareTypes.partialOrder

@@ -1,6 +1,8 @@
 package aqua.raw.value
 
+import aqua.errors.Errors.internalError
 import aqua.types.*
+import aqua.types.Type.*
 
 import cats.Eq
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
@@ -168,10 +170,16 @@ case class CollectionRaw(
 
   override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = {
     val vals = values.map(f)
-    val el = vals.map(_.`type`).reduceLeft(_ `∩` _)
-    // TODO: Handle possible errors?
-    val data = el.asInstanceOf[DataType]
-    copy(vals, collectionType.withElement(data))
+    val types = vals.map(_.`type` match {
+      case ct: CollectibleType => ct
+      case t => internalError(s"Non-collection type in collection: ${t}")
+    })
+    val element = CollectionType.elementTypeOf(types.toList)
+
+    copy(
+      values = vals,
+      collectionType = collectionType.withElement(element)
+    )
   }
 
   override def varNames: Set[String] = values.toList.flatMap(_.varNames).toSet

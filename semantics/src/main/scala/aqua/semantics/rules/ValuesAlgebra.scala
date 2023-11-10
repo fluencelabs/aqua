@@ -1,5 +1,6 @@
 package aqua.semantics.rules
 
+import aqua.errors.Errors.internalError
 import aqua.helpers.syntax.optiont.*
 import aqua.parser.lexer.*
 import aqua.parser.lexer.InfixToken.value
@@ -152,7 +153,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
             raws
               .zip(values)
               .traverse { case (raw, token) =>
-                T.typeToCollectible(token, raw.`type`).as(raw)
+                T.typeToCollectible(token, raw.`type`).map(raw -> _)
               }
               .value
           )
@@ -160,22 +161,14 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
             NonEmptyList
               .fromList(raws)
               .fold(ValueRaw.Nil) { nonEmpty =>
-                val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
-                // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
-                // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
-                // make any decision about the structure of type, but can push anything inside
-                val elementNotBottom = element match {
-                  case BottomType => TopType
-                  case d: DataType => d
-                  // TODO: Actually should not happen? Replace with internalError?
-                  case _ => TopType
-                }
+                val (values, types) = nonEmpty.unzip
+                val element = CollectionType.elementTypeOf(types.toList)
                 CollectionRaw(
-                  nonEmpty,
+                  values,
                   ct.mode match {
-                    case CollectionToken.Mode.StreamMode => StreamType(elementNotBottom)
-                    case CollectionToken.Mode.ArrayMode => ArrayType(elementNotBottom)
-                    case CollectionToken.Mode.OptionMode => OptionType(elementNotBottom)
+                    case CollectionToken.Mode.StreamMode => StreamType(element)
+                    case CollectionToken.Mode.ArrayMode => ArrayType(element)
+                    case CollectionToken.Mode.OptionMode => OptionType(element)
                   }
                 )
               }

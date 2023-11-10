@@ -7,6 +7,7 @@ import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypeResolution.TypeResolutionError
 import aqua.types.*
+import aqua.types.Type.*
 
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, OptionT, State}
@@ -412,8 +413,8 @@ class TypesInterpreter[S[_], X](using
   override def typeToCollectible(
     token: Token[S],
     givenType: Type
-  ): OptionT[State[X, *], DataType | StreamType] =
-    typeTo[DataType | StreamType](
+  ): OptionT[State[X, *], CollectibleType] =
+    typeTo[CollectibleType](
       token,
       givenType,
       s"Value of type '$givenType' could not be put into a collection"
