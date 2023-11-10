@@ -1,26 +1,27 @@
 package aqua.semantics
 
-import aqua.raw.RawContext
 import aqua.parser.Ast
-import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
 import aqua.parser.Parser
 import aqua.parser.lift.{LiftParser, Span}
+import aqua.raw.ConstantRaw
+import aqua.raw.RawContext
+import aqua.raw.ops.*
+import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, ParTag, RawTag, SeqGroupTag, SeqTag}
 import aqua.raw.value.*
 import aqua.types.*
-import aqua.raw.ops.*
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
-import cats.~>
+import cats.Eval
+import cats.data.State
+import cats.data.Validated
 import cats.data.{Chain, EitherNec, NonEmptyChain}
+import cats.free.Cofree
+import cats.syntax.foldable.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.syntax.foldable.*
-import cats.data.Validated
-import cats.free.Cofree
-import cats.data.State
-import cats.Eval
+import cats.~>
+import org.scalatest.Inside
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
@@ -40,7 +41,11 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
       Any
     ]
   ): Unit = inside(parser(script)) { case Validated.Valid(ast) =>
-    val init = RawContext.blank
+    val init = RawContext.blank.copy(
+      parts = Chain
+        .fromSeq(ConstantRaw.defaultConstants())
+        .map(const => RawContext.blank -> const)
+    )
     inside(semantics.process(ast, init).value.run)(test)
   }
 
@@ -838,5 +843,53 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
         case _ => false
       }
     }
+  }
+
+  it should "allow pushing `nil` to stream" in {
+    def test(quantifier: String) = {
+      val script = s"""
+                      |func test() -> []${quantifier}string:
+                      |  stream: *${quantifier}string
+                      |  stream <<- nil
+                      |  <- stream
+                      |""".stripMargin
+
+      insideBody(script) { body =>
+        matchSubtree(body) { case (PushToStreamTag(VarRaw(name, _), _), _) =>
+          name shouldEqual "nil"
+        }
+      }
+    }
+
+    test("?")
+    test("[]")
+  }
+
+  it should "allow putting stream into collection" in {
+    def test(t: String, p: String) = {
+      val script = s"""
+                      |service Srv("test-srv"):
+                      |  consume(value: ${t}[]string)
+                      |
+                      |func test():
+                      |  stream: *string
+                      |  Srv.consume(${p}[stream])
+                      |""".stripMargin
+
+      insideBody(script) { body =>
+        println(body.show)
+        matchSubtree(body) { case (CallArrowRawTag(_, ca: CallArrowRaw), _) =>
+          inside(ca.arguments) { case (c: CollectionRaw) :: Nil =>
+            c.values.exists {
+              case VarRaw(name, _) => name == "stream"
+              case _ => false
+            } should be(true)
+          }
+        }
+      }
+    }
+
+    test("[]", "")
+    test("?", "?")
   }
 }
