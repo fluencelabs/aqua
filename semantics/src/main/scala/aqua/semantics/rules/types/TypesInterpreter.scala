@@ -412,8 +412,8 @@ class TypesInterpreter[S[_], X](using
   override def typeToCollectible(
     token: Token[S],
     givenType: Type
-  ): OptionT[State[X, *], DataType] =
-    typeTo[DataType](
+  ): OptionT[State[X, *], DataType | StreamType] =
+    typeTo[DataType | StreamType](
       token,
       givenType,
       s"Value of type '$givenType' could not be put into a collection"
