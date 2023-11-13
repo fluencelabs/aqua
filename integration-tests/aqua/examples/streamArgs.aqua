@@ -1,6 +1,6 @@
 aqua StreamArgs
 
-export retrieve_records, modify_stream, TestService
+export retrieve_records, modify_stream, TestService, lng280Bug, lng280BugWithFor, lng280BugWithForAnonStream, StreamService
 
 service TestService("test-service"):
     get_records(key: string) -> []string
