@@ -1,5 +1,14 @@
+aqua Stream
+
 import "@fluencelabs/aqua-lib/builtin.aqua"
 import "println.aqua"
+
+export Stringer
+export checkStreams, returnStreamFromFunc
+export stringEmpty, returnEmptyLiteral
+export returnNilLength, stringNone
+export streamFunctor, streamAssignment
+export streamIntFunctor, streamJoin
 
 service Stringer("stringer-id"):
     returnString: string -> string
@@ -20,16 +29,18 @@ func returnStreamFromFunc() -> *u32:
     nums <- getStream()
     <- nums
 
-func stringNil() -> *string:
+func stringEmpty() -> *string:
     valueNil: *string
     <- valueNil
 
-func returnNil() -> *string:
-    relayNil <- stringNil()
+func returnEmpty() -> *string:
+    relayNil <- stringEmpty()
     <- relayNil
 
-func returnNilLiteral() -> *string:
-    <- nil
+func returnEmptyLiteral() -> *string:
+    empty: *string
+    -- TODO: return *[] here after LNG-280
+    <- empty
 
 func returnNilLength() -> u32:
     arr = nil

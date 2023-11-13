@@ -1,14 +1,14 @@
 import {
-  checkStreams,
   registerStringer,
+  checkStreams,
   returnNilLength,
-  returnNilLiteral,
+  returnEmptyLiteral,
   returnStreamFromFunc,
   streamAssignment,
   streamFunctor,
   streamIntFunctor,
   streamJoin,
-  stringNil,
+  stringEmpty,
   stringNone,
 } from "../compiled/examples/stream.js";
 
@@ -23,7 +23,7 @@ export async function streamCall() {
 }
 
 export async function returnNilCall() {
-  return stringNil();
+  return stringEmpty();
 }
 
 export async function returnNoneCall() {
@@ -47,7 +47,7 @@ export async function streamAssignmentCall() {
 }
 
 export async function nilLiteralCall() {
-  return await returnNilLiteral();
+  return await returnEmptyLiteral();
 }
 
 export async function nilLengthCall() {
