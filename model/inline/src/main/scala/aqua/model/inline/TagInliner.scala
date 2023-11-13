@@ -369,7 +369,7 @@ object TagInliner extends Logging {
         for {
           modelAndPrefix <- value match {
             // if we assign collection to a stream, we must use it's name, because it is already created with 'new'
-            case c @ CollectionRaw(_, _: StreamType) =>
+            case c @ CollectionRaw(_, _: StreamType, _) =>
               collectionToModel(c, Some(assignTo))
             case v =>
               valueToModel(v, false)

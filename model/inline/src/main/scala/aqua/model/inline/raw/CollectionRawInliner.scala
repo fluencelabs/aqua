@@ -16,7 +16,7 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
   override def apply[S: Mangler: Exports: Arrows](
     raw: CollectionRaw,
     propertiesAllowed: Boolean
-  ): State[S, (ValueModel, Inline)] = unfoldCollection(raw)
+  ): State[S, (ValueModel, Inline)] = unfoldCollection(raw, raw.assignTo)
 
   def unfoldCollection[S: Mangler: Exports: Arrows](
     raw: CollectionRaw,

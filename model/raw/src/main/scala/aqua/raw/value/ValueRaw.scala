@@ -161,7 +161,8 @@ object LiteralRaw {
 
 case class CollectionRaw(
   values: NonEmptyList[ValueRaw],
-  collectionType: CollectionType
+  collectionType: CollectionType,
+  assignTo: Option[String] = None
 ) extends ValueRaw {
 
   lazy val elementType: DataType = collectionType.element

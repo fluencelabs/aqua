@@ -159,21 +159,21 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
               }
               .value
           )
-          empty <- ct.mode match {
+          emptyName <- ct.mode match {
             // empty stream is not a Nil, it is an unique variable, that will be used as a stream
             case CollectionToken.Mode.StreamMode =>
               for {
                 streamName <- M.rename("stream-anon")
                 value = VarRaw(streamName, StreamType(BottomType))
                 _ <- N.defineInternal(value.name, value.`type`)
-              } yield value
+              } yield (value, Some(value.name))
 
-            case _ => ValueRaw.Nil.pure
+            case _ => (ValueRaw.Nil, None).pure
           }
           raw = valuesRawChecked.map(raws =>
             NonEmptyList
               .fromList(raws)
-              .fold(empty) { nonEmpty =>
+              .fold(emptyName._1) { nonEmpty =>
                 val (values, types) = nonEmpty.unzip
                 val element = CollectionType.elementTypeOf(types.toList)
                 CollectionRaw(
@@ -182,7 +182,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                     case CollectionToken.Mode.StreamMode => StreamType(element)
                     case CollectionToken.Mode.ArrayMode => ArrayType(element)
                     case CollectionToken.Mode.OptionMode => OptionType(element)
-                  }
+                  },
+                  emptyName._2
                 )
               }
           )
