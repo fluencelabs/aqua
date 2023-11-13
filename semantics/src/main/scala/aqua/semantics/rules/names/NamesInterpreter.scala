@@ -3,10 +3,9 @@ package aqua.semantics.rules.names
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.semantics.rules.locations.{LocationsAlgebra, TokenInfo}
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.types.{ArrowType, StreamType, Type}
-
 import cats.data.{OptionT, State}
 import cats.syntax.all.*
 import cats.syntax.applicative.*
@@ -104,13 +103,13 @@ class NamesInterpreter[S[_], X](using
       case None =>
         mapStackHeadM(report.error(name, "Cannot define a variable in the root scope").as(false))(
           fr => (fr.addName(name, `type`) -> true).pure
-        ) <* locations.addToken(name.value, name)
+        ) <* locations.addToken(name.value, TokenInfo(name, `type`))
     }
 
   override def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): State[X, Boolean] =
     define(name, `type`).flatTap(defined =>
       mapStackHead_(_.derived(name, derivedFrom)).whenA(defined)
-    ) <* locations.addToken(name.value, name)
+    ) <* locations.addToken(name.value, TokenInfo(name, `type`))
 
   override def getDerivedFrom(fromNames: List[Set[String]]): State[X, List[Set[String]]] =
     mapStackHead(Nil)(frame =>
@@ -129,7 +128,7 @@ class NamesInterpreter[S[_], X](using
             constants = st.constants.updated(name.value, `type`)
           )
         ).as(true)
-    }.flatTap(_ => locations.addToken(name.value, name))
+    }.flatTap(_ => locations.addToken(name.value, TokenInfo(name, `type`)))
 
   override def defineArrow(name: Name[S], arrowType: ArrowType, isRoot: Boolean): SX[Boolean] =
     readName(name.value).flatMap {
@@ -154,7 +153,7 @@ class NamesInterpreter[S[_], X](using
               .error(name, "Cannot define a variable in the root scope")
               .as(false)
         )(fr => (fr.addArrow(name, arrowType) -> true).pure)
-    }.flatTap(_ => locations.addToken(name.value, name))
+    }.flatTap(_ => locations.addToken(name.value, TokenInfo[S](name, arrowType)))
 
   override def streamsDefinedWithinScope(): SX[Map[String, StreamType]] =
     mapStackHead(Map.empty) { frame =>

@@ -4,8 +4,8 @@ import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.semantics.{SemanticError, SemanticWarning}
 import aqua.semantics.header.Picker
+import aqua.semantics.rules.locations.TokenInfo
 import aqua.types.{ArrowType, Type}
-
 import cats.syntax.monoid.*
 import cats.{Monoid, Semigroup}
 
@@ -15,7 +15,7 @@ case class LspContext[S[_]](
   abDefinitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
   rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
   constants: Map[String, Type] = Map.empty[String, Type],
-  tokens: Map[String, Token[S]] = Map.empty[String, Token[S]],
+  tokens: Map[String, TokenInfo[S]] = Map.empty[String, TokenInfo[S]],
   locations: List[(Token[S], Token[S])] = Nil,
   importTokens: List[LiteralToken[S]] = Nil,
   errors: List[SemanticError[S]] = Nil,

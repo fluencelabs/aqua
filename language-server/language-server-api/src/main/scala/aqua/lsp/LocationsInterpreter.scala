@@ -2,7 +2,8 @@ package aqua.lsp
 
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState}
+import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState, TokenInfo}
+import aqua.types.{BottomType, Type}
 
 import cats.data.State
 import monocle.Lens
@@ -21,8 +22,9 @@ class LocationsInterpreter[S[_], X](using
 
   import stack.*
 
-  override def addToken(name: String, token: Token[S]): State[X, Unit] = modify { st =>
-    st.copy(tokens = st.tokens.updated(name, token))
+  override def addToken(name: String, tokenInfo: TokenInfo[S]): State[X, Unit] = modify {
+    st =>
+      st.copy(tokens = st.tokens.updated(name, tokenInfo))
   }
 
   private def combineFieldName(name: String, field: String): String = name + "." + field
@@ -33,7 +35,9 @@ class LocationsInterpreter[S[_], X](using
     fields: List[(String, Token[S])]
   ): State[X, Unit] = modify { st =>
     st.copy(tokens =
-      st.tokens ++ ((name, token) +: fields.map(kv => (combineFieldName(name, kv._1), kv._2))).toMap
+      st.tokens ++ ((name, TokenInfo(token, BottomType)) +: fields.map(kv =>
+        (combineFieldName(name, kv._1), TokenInfo(kv._2, BottomType))
+      )).toMap
     )
   }
 
@@ -55,8 +59,8 @@ class LocationsInterpreter[S[_], X](using
   override def pointLocation(name: String, token: Token[S]): State[X, Unit] = {
     modify { st =>
       val newLoc: Option[Token[S]] = st.stack.collectFirst {
-        case frame if frame.tokens.contains(name) => frame.tokens(name)
-      } orElse st.tokens.get(name)
+        case frame if frame.tokens.contains(name) => frame.tokens(name).token
+      } orElse st.tokens.get(name).map(_.token)
       st.copy(locations = st.locations ++ newLoc.map(token -> _).toList)
     }
   }
@@ -66,8 +70,8 @@ class LocationsInterpreter[S[_], X](using
 
       val newLocs = locations.flatMap { case (name, token) =>
         (st.stack.collectFirst {
-          case frame if frame.tokens.contains(name) => frame.tokens(name)
-        } orElse st.tokens.get(name)).map(token -> _)
+          case frame if frame.tokens.contains(name) => frame.tokens(name).token
+        } orElse st.tokens.get(name).map(_.token)).map(token -> _)
       }
 
       st.copy(locations = st.locations ++ newLocs)

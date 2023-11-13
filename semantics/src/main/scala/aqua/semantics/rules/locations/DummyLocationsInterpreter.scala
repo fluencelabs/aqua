@@ -9,7 +9,7 @@ import cats.data.{NonEmptyList, NonEmptyMap, State}
 
 class DummyLocationsInterpreter[S[_], X] extends LocationsAlgebra[S, State[X, *]] {
 
-  def addToken(name: String, token: Token[S]): State[X, Unit] = State.pure(())
+  def addToken(name: String, tokenInfo: TokenInfo[S]): State[X, Unit] = State.pure(())
 
   def addTokenWithFields(
     name: String,
