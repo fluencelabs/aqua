@@ -2,7 +2,7 @@ service OptionString("opt_str"):
   checkOption(str: ?string) -> string
 
 func emptyString() -> ?string:
-  valueEmpty: ?string
+  valueEmpty: *string
   <- valueEmpty
 
 func checkEmpty() -> string:
@@ -11,7 +11,7 @@ func checkEmpty() -> string:
   <- res
 
 func stringAsOption(str: string) -> ?string:
-  valueEmpty: ?string
+  valueEmpty: *string
   valueEmpty <<- str
   <- valueEmpty
 

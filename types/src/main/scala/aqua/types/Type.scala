@@ -1,33 +1,39 @@
 package aqua.types
 
-import cats.PartialOrder
-import cats.data.NonEmptyMap
+import aqua.errors.Errors.internalError
+import aqua.types.Type.*
+
 import cats.Eval
-import cats.syntax.traverse.*
+import cats.PartialOrder
+import cats.data.NonEmptyList
+import cats.data.NonEmptyMap
 import cats.syntax.applicative.*
 import cats.syntax.option.*
+import cats.syntax.partialOrder.*
+import cats.syntax.traverse.*
 
 sealed trait Type {
 
-  def acceptsValueOf(incoming: Type): Boolean = {
-    import Type.typesPartialOrder
-    import cats.syntax.partialOrder._
+  def acceptsValueOf(incoming: Type): Boolean =
     this >= incoming
-  }
 
   def isInhabited: Boolean = true
 
-  infix def `∩`(other: Type): Type = intersectBottom(other)
+  infix def `∩`[T <: Type](other: T): Type = intersectBottom(other)
 
-  def intersectTop(other: Type): Type = IntersectTypes.top.combine(this, other)
+  private final def intersectTop(other: Type): Type =
+    IntersectTypes.top.combine(this, other)
 
-  def intersectBottom(other: Type): Type = IntersectTypes.bottom.combine(this, other)
+  private final def intersectBottom(other: Type): Type =
+    IntersectTypes.bottom.combine(this, other)
 
-  infix def `∪`(other: Type): Type = uniteTop(other)
+  infix def `∪`[T <: Type](other: T): Type = uniteTop(other)
 
-  def uniteTop(other: Type): Type = UniteTypes.top.combine(this, other)
+  private final def uniteTop(other: Type): Type =
+    UniteTypes.top.combine(this, other)
 
-  def uniteBottom(other: Type): Type = UniteTypes.bottom.combine(this, other)
+  private final def uniteBottom(other: Type): Type =
+    UniteTypes.bottom.combine(this, other)
 
   def properties: Map[String, Type] = Map.empty
 
@@ -73,8 +79,7 @@ sealed trait ProductType extends Type {
    */
   def toLabelledList(prefix: String = "arg", index: Int = 0): List[(String, Type)] = this match {
     case LabeledConsType(label, t, pt) => (label -> t) :: pt.toLabelledList(prefix, index + 1)
-    case UnlabeledConsType(t, pt) =>
-      (s"$prefix$index" -> t) :: pt.toLabelledList(prefix, index + 1)
+    case UnlabeledConsType(t, pt) => (s"$prefix$index" -> t) :: pt.toLabelledList(prefix, index + 1)
     case _ => Nil
   }
 
@@ -85,6 +90,15 @@ sealed trait ProductType extends Type {
       pt.labelledData
     case _ => Nil
   }
+
+  lazy val labelledStreams: List[(String, StreamType)] = this match {
+    case LabeledConsType(label, t: StreamType, pt) =>
+      (label -> t) :: pt.labelledStreams
+    case ConsType(_, pt) =>
+      pt.labelledStreams
+    case _ => Nil
+  }
+
 }
 
 object ProductType {
@@ -247,42 +261,73 @@ object LiteralType {
   def forInt(n: Long): LiteralType = if (n < 0) signed else unsigned
 }
 
-sealed trait BoxType extends DataType {
+sealed trait CollectionType extends Type {
   def isStream: Boolean
 
-  def element: Type
+  def element: DataType
 
-  def withElement(t: Type): BoxType
+  def withElement(t: DataType): CollectionType
 
   override def properties: Map[String, Type] =
     Map("length" -> ScalarType.u32)
 }
 
-case class CanonStreamType(element: Type) extends BoxType {
+object CollectionType {
 
-  override def isStream: Boolean = false
+  def elementTypeOf(types: List[CollectibleType]): DataType =
+    NonEmptyList
+      .fromList(types)
+      .fold(BottomType)(
+        _.map {
+          case StreamType(el) => ArrayType(el)
+          case dt: DataType => dt
+        }.reduce[Type](_ `∩` _) match {
+          // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
+          // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
+          // make any decision about the structure of type, but can push anything inside
+          case BottomType => TopType
+          case dt: DataType => dt
+          case t =>
+            internalError(
+              s"Expected data type from " +
+                s"intersection of ${types.mkString(", ")}; " +
+                s"got $t"
+            )
+        }
+      )
+}
+
+case class CanonStreamType(
+  override val element: DataType
+) extends DataType with CollectionType {
+
+  override val isStream: Boolean = false
 
   override def toString: String = "#" + element
 
-  override def withElement(t: Type): BoxType = copy(element = t)
+  override def withElement(t: DataType): CollectionType = copy(element = t)
 }
 
-case class ArrayType(element: Type) extends BoxType {
+case class ArrayType(
+  override val element: DataType
+) extends DataType with CollectionType {
 
-  override def isStream: Boolean = false
+  override val isStream: Boolean = false
 
   override def toString: String = "[]" + element
 
-  override def withElement(t: Type): BoxType = copy(element = t)
+  override def withElement(t: DataType): CollectionType = copy(element = t)
 }
 
-case class OptionType(element: Type) extends BoxType {
+case class OptionType(
+  override val element: DataType
+) extends DataType with CollectionType {
 
-  override def isStream: Boolean = false
+  override val isStream: Boolean = false
 
   override def toString: String = "?" + element
 
-  override def withElement(t: Type): BoxType = copy(element = t)
+  override def withElement(t: DataType): CollectionType = copy(element = t)
 }
 
 sealed trait NamedType extends Type {
@@ -374,13 +419,28 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
     s"$fullName{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
 }
 
-case class StreamMapType(element: Type) extends DataType {
+sealed trait MutableStreamType extends Type with CollectionType
+
+case class StreamMapType(override val element: DataType) extends MutableStreamType {
+
+  override val isStream: Boolean = true
+
+  override def withElement(t: DataType): CollectionType = copy(element = t)
 
   override def toString: String = s"%$element"
 }
 
 object StreamMapType {
   def top(): StreamMapType = StreamMapType(TopType)
+}
+
+case class StreamType(override val element: DataType) extends MutableStreamType {
+
+  override val isStream: Boolean = true
+
+  override def toString: String = s"*$element"
+
+  override def withElement(t: DataType): CollectionType = copy(element = t)
 }
 
 case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) extends NamedType {
@@ -424,17 +484,13 @@ case class ArrowType(domain: ProductType, codomain: ProductType) extends Type {
     s"$domain -> $codomain"
 }
 
-case class StreamType(element: Type) extends BoxType {
-
-  override def isStream: Boolean = true
-
-  override def toString: String = s"*$element"
-
-  override def withElement(t: Type): BoxType = copy(element = t)
-}
-
 object Type {
 
-  implicit lazy val typesPartialOrder: PartialOrder[Type] =
+  /**
+   * `StreamType` is collectible with canonicalization
+   */
+  type CollectibleType = DataType | StreamType
+
+  given PartialOrder[Type] =
     CompareTypes.partialOrder
 }

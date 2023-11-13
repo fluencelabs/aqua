@@ -27,8 +27,8 @@ importers:
         specifier: 1.1.2
         version: 1.1.2
       '@fluencelabs/js-client':
-        specifier: 0.4.2
-        version: 0.4.2
+        specifier: 0.4.3
+        version: 0.4.3
       deep-equal:
         specifier: 2.2.1
         version: 2.2.1
@@ -520,27 +520,27 @@ packages:
     resolution: {integrity: sha512-WJ7o51jaBSzUsYENxCEJpv91KiodH1nQ6uKdAn5chWsOQzDu57d3pa6IW1Lu/wh4jtefnNen+jF1esENQCc0BA==}
     engines: {node: '>=10', pnpm: '>=3'}
 
-  /@fluencelabs/js-client-isomorphic@0.2.1:
-    resolution: {integrity: sha512-o9uhjV2db7YvGHv38qXYecJmMlwnkiHqMX7dBAA8Z+89/J4lepvQydP9zU+qJHRGPcBjH4yPtnV4oEBXZbdhMg==}
+  /@fluencelabs/js-client-isomorphic@0.2.2:
+    resolution: {integrity: sha512-sFXVqOnS+FmHfXXAamZiKq0qnCJTl5T48+cieUtdX1dWYixk1mEXyW2olRwmzEun0L6P7U5MQ+qA/aj+t7CEJQ==}
     dependencies:
       '@fluencelabs/avm': 0.54.0
       '@fluencelabs/marine-js': 0.7.2
-      '@fluencelabs/marine-worker': 0.4.1
+      '@fluencelabs/marine-worker': 0.4.2
       '@fluencelabs/threads': 2.0.0
     transitivePeerDependencies:
       - supports-color
     dev: false
 
-  /@fluencelabs/js-client@0.4.2:
-    resolution: {integrity: sha512-Sho12XpyGcWAxOK0jUeO2Mh0ur2xJWTL7rCVAIT+QR7KlghlrFP1jdw4OrDCRlEJR4bhdPtI1PPkDo3Gk+axGQ==}
+  /@fluencelabs/js-client@0.4.3:
+    resolution: {integrity: sha512-eb+dH7X2uHaDYolvm7pZtRsG2jFJck+e2dzvRwk0f2x6BvMH4cB8oxByoGuU7RvEh88mFfuy8L31RKKr+rhCDA==}
     engines: {node: '>=10', pnpm: '>=8'}
     dependencies:
       '@chainsafe/libp2p-noise': 13.0.0
       '@chainsafe/libp2p-yamux': 5.0.0
       '@fluencelabs/avm': 0.54.0
       '@fluencelabs/interfaces': 0.8.2
-      '@fluencelabs/js-client-isomorphic': 0.2.1
-      '@fluencelabs/marine-worker': 0.4.1
+      '@fluencelabs/js-client-isomorphic': 0.2.2
+      '@fluencelabs/marine-worker': 0.4.2
       '@fluencelabs/threads': 2.0.0
       '@libp2p/crypto': 2.0.3
       '@libp2p/interface': 0.1.2
@@ -578,8 +578,8 @@ packages:
       default-import: 1.1.5
     dev: false
 
-  /@fluencelabs/marine-worker@0.4.1:
-    resolution: {integrity: sha512-BnCOaAnzi3koFFHGy3955uYllI3TmQN++eI/0s5mou4pMZdF2H6qc40mXzgQb8dADpuE9cqRwQ2/0Ecwn5B3dg==}
+  /@fluencelabs/marine-worker@0.4.2:
+    resolution: {integrity: sha512-z0RizqN77nJhRsk+XEnbDjAf8OVLSmKt6+PDPQOF5SJlXekzE7bB8cScInGyEQ8KCGxKjMM7OaQiQzQREkslEA==}
     dependencies:
       '@fluencelabs/marine-js': 0.7.2
       '@fluencelabs/threads': 2.0.0

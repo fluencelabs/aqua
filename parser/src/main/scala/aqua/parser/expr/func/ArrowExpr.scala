@@ -1,13 +1,14 @@
 package aqua.parser.expr.func
 
-import aqua.parser.{ArrowReturnError, Ast, Expr, ParserError}
-import aqua.parser.lexer.{ArrowTypeToken, DataTypeToken, TypeToken, ValueToken}
+import aqua.parser.lexer.{ArrowTypeToken, BasicTypeToken, TypeToken, ValueToken}
 import aqua.parser.lift.LiftParser
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.parser.{ArrowReturnError, Ast, Expr, ParserError}
+
 import cats.Comonad
 import cats.parse.Parser
 import cats.~>
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 
 case class ArrowExpr[F[_]](arrowTypeExpr: ArrowTypeToken[F])
     extends Expr[F](ArrowExpr, arrowTypeExpr) {

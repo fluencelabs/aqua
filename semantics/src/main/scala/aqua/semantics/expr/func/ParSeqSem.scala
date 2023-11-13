@@ -1,24 +1,24 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.Raw
 import aqua.parser.expr.func.ParSeqExpr
-import aqua.raw.value.ValueRaw
+import aqua.raw.Raw
 import aqua.raw.ops.*
 import aqua.raw.ops.ForTag
+import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, BoxType, StreamType}
+import aqua.types.{ArrayType, CollectionType, StreamType}
 
 import cats.Monad
 import cats.data.Chain
-import cats.syntax.option.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.syntax.option.*
 
 class ParSeqSem[S[_]](val expr: ParSeqExpr[S]) extends AnyVal {
 

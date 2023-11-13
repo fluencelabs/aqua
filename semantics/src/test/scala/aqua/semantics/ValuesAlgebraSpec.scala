@@ -12,13 +12,13 @@ import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter, NamesState}
 import aqua.semantics.rules.report.{ReportAlgebra, ReportInterpreter}
 import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter}
 import aqua.types.*
+
 import cats.Id
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import monocle.syntax.all.*
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-
 import scala.collection.immutable.SortedMap
 
 class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
@@ -140,7 +140,7 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
       val vl = variable("left")
       val vr = variable("right")
 
-      val ut = lt.uniteTop(rt)
+      val ut = lt `∪` rt
 
       val state = genState(
         vars = Map(

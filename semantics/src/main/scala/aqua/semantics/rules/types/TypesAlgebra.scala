@@ -3,14 +3,18 @@ package aqua.semantics.rules.types
 import aqua.parser.lexer.*
 import aqua.raw.value.{PropertyRaw, ValueRaw}
 import aqua.types.*
+import aqua.types.Type.*
 
-import cats.data.NonEmptyMap
 import cats.data.NonEmptyList
+import cats.data.NonEmptyMap
+import cats.data.OptionT
 
 trait TypesAlgebra[S[_], Alg[_]] {
 
   def resolveType(token: TypeToken[S]): Alg[Option[Type]]
-  
+
+  def resolveStreamType(token: TypeToken[S]): Alg[Option[StreamType]]
+
   def resolveNamedType(token: TypeToken[S]): Alg[Option[AbilityType | StructType]]
 
   def getType(name: String): Alg[Option[Type]]
@@ -56,7 +60,11 @@ trait TypesAlgebra[S[_], Alg[_]] {
 
   def ensureTypeMatches(token: Token[S], expected: Type, givenType: Type): Alg[Boolean]
 
-  def ensureTypeIsCollectible(token: Token[S], givenType: Type): Alg[Boolean]
+  def typeToCollectible(token: Token[S], givenType: Type): OptionT[Alg, CollectibleType]
+
+  def typeToStream(token: Token[S], givenType: Type): OptionT[Alg, StreamType]
+
+  def typeToIterable(token: Token[S], givenType: Type): OptionT[Alg, CollectionType]
 
   def ensureTypeOneOf[T <: Type](
     token: Token[S],

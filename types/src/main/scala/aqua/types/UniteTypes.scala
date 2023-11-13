@@ -1,8 +1,9 @@
 package aqua.types
 
+import aqua.errors.Errors.internalError
+
 import cats.Monoid
 import cats.data.NonEmptyMap
-
 import scala.annotation.tailrec
 
 /**
@@ -28,6 +29,12 @@ case class UniteTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]:
     step(a.toList, b.toList, Nil)
   }
 
+  def combineDataTypes(a: DataType, b: DataType): DataType =
+    (a `∪` b) match {
+      case d: DataType => d
+      case t => internalError(s"$a ∪ $b yields non-data type $t")
+    }
+
   override def combine(a: Type, b: Type): Type =
     (a, b) match {
       case (ap: ProductType, bp: ProductType) =>
@@ -52,18 +59,19 @@ case class UniteTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]:
         )
 
       case (ac: OptionType, bc: ArrayType) =>
-        ArrayType(ac.element `∪` bc.element)
-
+        ArrayType(combineDataTypes(ac.element, bc.element))
       case (ac: ArrayType, bc: OptionType) =>
-        ArrayType(ac.element `∪` bc.element)
+        ArrayType(combineDataTypes(ac.element, bc.element))
 
       case (ac: ArrayType, bc: ArrayType) =>
-        ArrayType(ac.element `∪` bc.element)
+        ArrayType(combineDataTypes(ac.element, bc.element))
       case (ac: OptionType, bc: OptionType) =>
-        OptionType(ac.element `∪` bc.element)
+        OptionType(combineDataTypes(ac.element, bc.element))
 
       case (ac: StreamType, bc: StreamType) =>
-        StreamType(ac.element `∩` bc.element)
+        StreamType(combineDataTypes(ac.element, bc.element))
+      case (ac: StreamMapType, bc: StreamMapType) =>
+        StreamMapType(combineDataTypes(ac.element, bc.element))
 
       case (a: ScalarType, b: ScalarType) =>
         scalarsCombine(a, b)

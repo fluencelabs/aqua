@@ -1,5 +1,6 @@
 import {
   retrieve_records,
+  modify_stream,
   registerTestService,
   registerStreamService,
   lng280Bug,
@@ -15,6 +16,10 @@ export async function streamArgsCall() {
   });
 
   return await retrieve_records("peer_id");
+}
+
+export async function modifyStreamCall(arg: string[]) {
+  return await modify_stream(arg);
 }
 
 export async function lng280BugCall(): Promise<string[]> {

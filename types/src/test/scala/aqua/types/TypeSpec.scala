@@ -1,6 +1,5 @@
 package aqua.types
 
-import aqua.types.Type.typesPartialOrder
 import cats.data.NonEmptyMap
 import cats.kernel.PartialOrder
 import cats.syntax.partialOrder._
@@ -15,7 +14,7 @@ class TypeSpec extends AnyFlatSpec with Matchers {
 
   def `?`(t: DataType): DataType = OptionType(t)
 
-  def `*`(t: DataType): DataType = StreamType(t)
+  def `*`(t: DataType): StreamType = StreamType(t)
 
   def accepts(recv: Type, incoming: Type) =
     recv >= incoming
@@ -76,7 +75,8 @@ class TypeSpec extends AnyFlatSpec with Matchers {
 
   "structs of scalars with literals" should "be variant" in {
     val one: Type = StructType("one", NonEmptyMap.of("field" -> u64))
-    val two: Type = StructType("two", NonEmptyMap.of("field" -> LiteralType.number, "other" -> string))
+    val two: Type =
+      StructType("two", NonEmptyMap.of("field" -> LiteralType.number, "other" -> string))
 
     accepts(one, two) should be(true)
     accepts(two, one) should be(false)

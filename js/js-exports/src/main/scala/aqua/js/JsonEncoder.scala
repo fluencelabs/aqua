@@ -1,6 +1,7 @@
 package aqua.js
 
 import aqua.types.*
+
 import cats.data.Validated.{invalid, invalidNec, invalidNel, valid, validNec, validNel}
 import cats.data.{NonEmptyMap, Validated, ValidatedNec}
 import cats.syntax.applicative.*
@@ -9,7 +10,6 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.semigroup.*
 import cats.syntax.traverse.*
-
 import scala.collection.immutable.SortedMap
 import scala.scalajs.js
 
@@ -17,18 +17,18 @@ object JsonEncoder {
 
   /* Get widest possible type from JSON arrays. For example:
   JSON: {
-          field1: [
-                  {
-                    a: "a",
-                    b: [1,2,3],
-                    c: 4
-                  },
-                  {
-                    c: 3
-                  }
-                  ]
-        }
-  There type in array must be { a: ?string, b: []number, c: number
+    field1: [
+      {
+        a: "a",
+        b: [1,2,3],
+        c: 4
+      },
+      {
+        c: 3
+      }
+    ]
+  }
+  Type in array must be { a: ?string, b: []number, c: number }
    */
   private def compareAndGetWidestType(
     name: String,
@@ -43,8 +43,8 @@ object JsonEncoder {
           case (la @ ArrayType(_), BottomType) => validNec(la)
           case (lo @ OptionType(lel), rtt) if lel == rtt => validNec(lo)
           case (ltt, ro @ OptionType(rel)) if ltt == rel => validNec(ro)
-          case (BottomType, rb) => validNec(OptionType(rb))
-          case (lb, BottomType) => validNec(OptionType(lb))
+          case (BottomType, rb: DataType) => validNec(OptionType(rb))
+          case (lb: DataType, BottomType) => validNec(OptionType(lb))
           case (lst: StructType, rst: StructType) =>
             val lFieldsSM: SortedMap[String, Type] = lst.fields.toSortedMap
             val rFieldsSM: SortedMap[String, Type] = rst.fields.toSortedMap
@@ -100,7 +100,10 @@ object JsonEncoder {
               .reduce[ValidatedNec[String, Type]] { case (l, t) =>
                 compareAndGetWidestType(name, l, t)
               }
-              .map(t => ArrayType(t))
+              .andThen {
+                case dt: DataType => validNec(ArrayType(dt))
+                case t => invalidNec(s"Unexpected type $t")
+              }
           }
         }
       case a if t == "object" && !js.isUndefined(arg) && arg != null =>

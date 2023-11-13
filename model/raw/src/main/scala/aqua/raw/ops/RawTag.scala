@@ -4,12 +4,12 @@ import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag.Tree
 import aqua.raw.value.{CallArrowRaw, CallServiceRaw, ValueRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.{ArrowType, DataType, ServiceType}
+import aqua.types.*
 
 import cats.Show
 import cats.data.{Chain, NonEmptyList}
-import cats.syntax.foldable.*
 import cats.free.Cofree
+import cats.syntax.foldable.*
 
 sealed trait RawTag extends TreeNode[RawTag] {
 
@@ -160,7 +160,7 @@ case class NextTag(item: String) extends RawTag {
   override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 }
 
-case class RestrictionTag(name: String, `type`: DataType) extends SeqGroupTag {
+case class RestrictionTag(name: String, `type`: Type) extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(name)
 
