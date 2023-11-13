@@ -1,5 +1,7 @@
 package aqua.types
 
+import aqua.errors.Errors.internalError
+
 import cats.Monoid
 import cats.data.NonEmptyMap
 
@@ -18,6 +20,12 @@ case class IntersectTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]
     ProductType(
       ap.toList.zip(bp.toList).map(combine)
     )
+
+  private def combineDataTypes(a: DataType, b: DataType): DataType =
+    (a `∩` b) match {
+      case d: DataType => d
+      case t => internalError(s"$a ∩ $b yields non-data type $t")
+    }
 
   override def combine(a: Type, b: Type): Type =
     (a, b) match {
@@ -39,18 +47,20 @@ case class IntersectTypes(scalarsCombine: ScalarsCombine.T) extends Monoid[Type]
           combineProducts(aa.codomain, bb.codomain)
         )
 
-      case (ac: OptionType, bc: BoxType) =>
-        OptionType(ac.element `∩` bc.element)
+      case (ac: OptionType, bc: CollectionType) =>
+        OptionType(combineDataTypes(ac.element, bc.element))
+      case (ac: CollectionType, bc: OptionType) =>
+        OptionType(combineDataTypes(ac.element, bc.element))
 
-      case (ac: BoxType, bc: OptionType) =>
-        OptionType(ac.element `∩` bc.element)
+      case (ac: ArrayType, bc: CollectionType) =>
+        ArrayType(combineDataTypes(ac.element, bc.element))
+      case (ac: CollectionType, bc: ArrayType) =>
+        ArrayType(combineDataTypes(ac.element, bc.element))
 
-      case (ac: ArrayType, bc: BoxType) =>
-        ArrayType(ac.element `∩` bc.element)
-      case (ac: BoxType, bc: ArrayType) =>
-        ArrayType(ac.element `∩` bc.element)
       case (ac: StreamType, bc: StreamType) =>
-        StreamType(ac.element `∩` bc.element)
+        StreamType(combineDataTypes(ac.element, bc.element))
+      case (ac: StreamMapType, bc: StreamMapType) =>
+        StreamMapType(combineDataTypes(ac.element, bc.element))
 
       case (a: ScalarType, b: ScalarType) =>
         scalarsCombine(a, b)

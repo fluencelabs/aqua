@@ -1,8 +1,10 @@
 package aqua.helpers.syntax
 
-import cats.{Functor, Monad}
 import cats.data.OptionT
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
 import cats.syntax.functor.*
+import cats.{Functor, Monad}
 
 object optiont {
 
@@ -27,5 +29,21 @@ object optiont {
       f: Option[A] => OptionT[F, B]
     )(using F: Monad[F]): OptionT[F, B] =
       o.flatTransform(f.andThen(_.value))
+  }
+
+  extension [F[_]: Monad, A, B](
+    t: Tuple2[OptionT[F, A], OptionT[F, B]]
+  ) {
+
+    /**
+     * Merges `OptionT`s into `OptionT` of a tuple,
+     * **executing both effects**.
+     */
+    def merged: OptionT[F, (A, B)] = OptionT(
+      for {
+        a <- t._1.value
+        b <- t._2.value
+      } yield (a, b).tupled
+    )
   }
 }

@@ -1,27 +1,27 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.Raw
 import aqua.parser.expr.func.ForExpr
+import aqua.parser.expr.func.ForExpr.Mode
 import aqua.parser.lexer.{Name, ValueToken}
-import aqua.raw.value.ValueRaw
+import aqua.raw.Raw
 import aqua.raw.ops.*
 import aqua.raw.ops.ForTag
+import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
+import aqua.semantics.expr.func.FuncOpSem
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, BoxType, StreamType}
-import aqua.semantics.expr.func.FuncOpSem
+import aqua.types.*
 
 import cats.Monad
-import cats.data.Chain
+import cats.data.{Chain, OptionT}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
-import aqua.parser.expr.func.ForExpr.Mode
 
 class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
 
@@ -74,19 +74,18 @@ class ForSem[S[_]](val expr: ForExpr[S]) extends AnyVal {
 
 object ForSem {
 
-  def beforeFor[S[_], F[_]: Monad](item: Name[S], iterable: ValueToken[S])(implicit
+  def beforeFor[S[_], F[_]: Monad](
+    item: Name[S],
+    iterable: ValueToken[S]
+  )(using
     V: ValuesAlgebra[S, F],
     N: NamesAlgebra[S, F],
     T: TypesAlgebra[S, F]
-  ): F[Option[ValueRaw]] =
-    V.valueToRaw(iterable).flatMap {
-      case Some(vm) =>
-        vm.`type` match {
-          case t: BoxType =>
-            N.define(item, t.element).as(vm.some)
-          case dt =>
-            T.ensureTypeMatches(iterable, ArrayType(dt), dt).as(none)
-        }
-      case _ => none.pure
-    }
+  ): F[Option[ValueRaw]] = (for {
+    value <- V.valueToIterable(iterable)
+    (raw, typ) = value
+    _ <- OptionT.liftF(
+      N.define(item, typ.element)
+    )
+  } yield raw).value
 }

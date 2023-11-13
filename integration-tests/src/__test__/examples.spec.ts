@@ -33,7 +33,11 @@ import {
 import {
   abilityCall,
   complexAbilityCall,
-  checkAbCallsCall, bugLNG258Call1, bugLNG258Call2, bugLNG258Call3, multipleAbilityWithClosureCall,
+  checkAbCallsCall,
+  bugLNG258Call1,
+  bugLNG258Call2,
+  bugLNG258Call3,
+  multipleAbilityWithClosureCall,
 } from "../examples/abilityCall.js";
 import {
   nilLengthCall,
@@ -78,7 +82,10 @@ import { tryCatchCall } from "../examples/tryCatchCall.js";
 import { tryOtherwiseCall } from "../examples/tryOtherwiseCall.js";
 import { coCall } from "../examples/coCall.js";
 import { bugLNG60Call, passArgsCall } from "../examples/passArgsCall.js";
-import { streamArgsCall } from "../examples/streamArgsCall.js";
+import {
+  streamArgsCall,
+  modifyStreamCall,
+} from "../examples/streamArgsCall.js";
 import { streamResultsCall } from "../examples/streamResultsCall.js";
 import { structuralTypingCall } from "../examples/structuralTypingCall";
 import {
@@ -104,7 +111,10 @@ import { multiReturnCall } from "../examples/multiReturnCall.js";
 import { declareCall } from "../examples/declareCall.js";
 import { genOptions, genOptionsEmptyString } from "../examples/optionsCall.js";
 import { lng193BugCall } from "../examples/closureReturnRename.js";
-import {closuresCall, multipleClosuresLNG262BugCall} from "../examples/closures.js";
+import {
+  closuresCall,
+  multipleClosuresLNG262BugCall,
+} from "../examples/closures.js";
 import { closureArrowCaptureCall } from "../examples/closureArrowCapture.js";
 import {
   bugLNG63_2Call,
@@ -589,6 +599,18 @@ describe("Testing examples", () => {
     expect(streamArgsResult).toEqual([["peer_id", "peer_id"]]);
   });
 
+  it("streamArgs.aqua modify stream", async () => {
+    let streamArgsResult = await modifyStreamCall([
+      "passed value 1",
+      "passed value 2",
+    ]);
+    expect(streamArgsResult).toEqual([
+      "passed value 1",
+      "passed value 2",
+      "appended value",
+    ]);
+  });
+
   it("streamResults.aqua", async () => {
     let streamResultsResult = await streamResultsCall();
     expect(streamResultsResult).toEqual(["new_name", "new_name", "new_name"]);
@@ -934,9 +956,10 @@ describe("Testing examples", () => {
 
   it("via.aqua", async () => {
     let res1 = await viaArrCall();
-    let res2 = await viaOptCall(relayPeerId1);
-    let res3 = await viaOptNullCall(relayPeerId1);
-    let res4 = await viaStreamCall(relayPeerId1);
+    let res2 = await viaOptCall();
+    let res3 = await viaOptNullCall();
+    let res4 = await viaStreamCall();
+    expect(res1).not.toHaveLength(0);
     expect(res1).toEqual(res2);
     expect(res2).toEqual(res3);
     expect(res3).toEqual(res4);

@@ -1,35 +1,28 @@
 package aqua.semantics.rules.types
 
 import aqua.parser.lexer.*
-import aqua.raw.value.{
-  FunctorRaw,
-  IntoArrowRaw,
-  IntoCopyRaw,
-  IntoFieldRaw,
-  IntoIndexRaw,
-  PropertyRaw,
-  ValueRaw
-}
-import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.raw.value.*
 import aqua.semantics.rules.StackInterpreter
+import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
-import aqua.semantics.rules.types.TypesStateHelper.{TypeResolution, TypeResolutionError}
+import aqua.semantics.rules.types.TypeResolution.TypeResolutionError
 import aqua.types.*
+import aqua.types.Type.*
 
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{Chain, NonEmptyList, NonEmptyMap, OptionT, State}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.traverse.*
 import cats.syntax.foldable.*
-import cats.{~>, Applicative}
+import cats.syntax.functor.*
 import cats.syntax.option.*
+import cats.syntax.traverse.*
+import cats.{Applicative, ~>}
 import monocle.Lens
 import monocle.macros.GenLens
-
 import scala.collection.immutable.SortedMap
+import scala.reflect.TypeTest
 
 class TypesInterpreter[S[_], X](using
   lens: Lens[X, TypesState[S]],
@@ -49,14 +42,21 @@ class TypesInterpreter[S[_], X](using
     getState.map(st => st.strict.get(name))
 
   override def resolveType(token: TypeToken[S]): State[X, Option[Type]] =
-    getState.map(TypesStateHelper.resolveTypeToken(token)).flatMap {
-      case Some(TypeResolution(typ, tokens)) =>
+    getState.map(TypeResolution.resolveTypeToken(token)).flatMap {
+      case Valid(TypeResolution(typ, tokens)) =>
         val tokensLocs = tokens.map { case (t, n) => n.value -> t }
         locations.pointLocations(tokensLocs).as(typ.some)
-      case None =>
-        // TODO: Give more specific error message
-        report.error(token, s"Unresolved type").as(None)
+      case Invalid(errors) =>
+        errors.traverse_ { case TypeResolutionError(token, hint) =>
+          report.error(token, hint)
+        }.as(none)
     }
+
+  override def resolveStreamType(token: TypeToken[S]): State[X, Option[StreamType]] =
+    OptionT(resolveType(token)).flatMapF {
+      case st: StreamType => st.some.pure[ST]
+      case t => report.error(token, s"Expected stream type, got $t").as(none)
+    }.value
 
   def resolveNamedType(token: TypeToken[S]): State[X, Option[AbilityType | StructType]] =
     resolveType(token).flatMap(_.flatTraverse {
@@ -65,7 +65,7 @@ class TypesInterpreter[S[_], X](using
     })
 
   override def resolveArrowDef(arrowDef: ArrowTypeToken[S]): State[X, Option[ArrowType]] =
-    getState.map(TypesStateHelper.resolveArrowDef(arrowDef)).flatMap {
+    getState.map(TypeResolution.resolveArrowDef(arrowDef)).flatMap {
       case Valid(TypeResolution(tt, tokens)) =>
         val tokensLocs = tokens.map { case (t, n) => n.value -> t }
         locations.pointLocations(tokensLocs).as(tt.some)
@@ -142,11 +142,7 @@ class TypesInterpreter[S[_], X](using
     ensureNameNotDefined(name.value, name, ifDefined = none)(
       fields.toList.traverse {
         case (field, (fieldName, t: DataType)) =>
-          t match {
-            case _: StreamType =>
-              report.error(fieldName, s"Field '$field' has stream type").as(none)
-            case _ => (field -> t).some.pure[ST]
-          }
+          (field -> t).some.pure[ST]
         case (field, (fieldName, t)) =>
           report
             .error(
@@ -294,7 +290,7 @@ class TypesInterpreter[S[_], X](using
           op.idx.fold(
             State.pure(Some(IntoIndexRaw(idx, ot.element)))
           )(v => report.error(v, s"Options might have only one element, use ! to get it").as(None))
-        case rt: BoxType =>
+        case rt: CollectionType =>
           State.pure(Some(IntoIndexRaw(idx, rt.element)))
         case _ =>
           report.error(op, s"Expected $rootT to be a collection type").as(None)
@@ -318,7 +314,7 @@ class TypesInterpreter[S[_], X](using
           true
         case (LiteralType.signed, rst: ScalarType) if ScalarType.number(rst) =>
           true
-        case (lbt: BoxType, rbt: BoxType) =>
+        case (lbt: CollectionType, rbt: CollectionType) =>
           isComparable(lbt.element, rbt.element)
         // Prohibit comparing abilities
         case (_: AbilityType, _: AbilityType) =>
@@ -329,7 +325,7 @@ class TypesInterpreter[S[_], X](using
         case (LiteralType(xs, _), LiteralType(ys, _)) =>
           xs.intersect(ys).nonEmpty
         case _ =>
-          lt.uniteTop(rt) != TopType
+          lt `∪` rt != TopType
       }
 
     if (isComparable(left, right)) State.pure(true)
@@ -379,34 +375,70 @@ class TypesInterpreter[S[_], X](using
             }
           }
         case _ =>
-          val notes =
-            if (expected.acceptsValueOf(OptionType(givenType)))
+          val notes = (expected, givenType) match {
+            case (_, dt: DataType) if expected.acceptsValueOf(OptionType(dt)) =>
               "note: Try converting value to optional" :: Nil
-            else if (givenType.acceptsValueOf(OptionType(expected)))
+            case (dt: DataType, _) if givenType.acceptsValueOf(OptionType(dt)) =>
               "note: You're providing an optional value where normal value is expected." ::
                 "You can extract value with `!`, but be aware it may trigger join behaviour." ::
                 Nil
-            else Nil
+            case _ => Nil
+          }
+
           report
             .error(
               token,
-              "Types mismatch." :: s"expected:   $expected" :: s"given:      $givenType" :: Nil ++ notes
+              "Types mismatch." +:
+                s"expected:   $expected" +:
+                s"given:      $givenType" +:
+                notes
             )
             .as(false)
       }
     }
 
-  override def ensureTypeIsCollectible(token: Token[S], givenType: Type): State[X, Boolean] =
+  private def typeTo[T <: Type](
+    token: Token[S],
+    givenType: Type,
+    error: String
+  )(using tt: TypeTest[Type, T]): OptionT[State[X, *], T] =
     givenType match {
-      case _: DataType => true.pure
+      case t: T => OptionT.pure(t)
       case _ =>
-        report
-          .error(
-            token,
-            s"Value of type '$givenType' could not be put into a collection"
-          )
-          .as(false)
+        OptionT.liftF(
+          report.error(token, error)
+        ) *> OptionT.none
     }
+
+  override def typeToCollectible(
+    token: Token[S],
+    givenType: Type
+  ): OptionT[State[X, *], CollectibleType] =
+    typeTo[CollectibleType](
+      token,
+      givenType,
+      s"Value of type '$givenType' could not be put into a collection"
+    )
+
+  override def typeToStream(
+    token: Token[S],
+    givenType: Type
+  ): OptionT[State[X, *], StreamType] =
+    typeTo[StreamType](
+      token,
+      givenType,
+      s"Expected stream value, got value of type '$givenType'"
+    )
+
+  override def typeToIterable(
+    token: Token[S],
+    givenType: Type
+  ): OptionT[State[X, *], CollectionType] =
+    typeTo[CollectionType](
+      token,
+      givenType,
+      s"Value of type '$givenType' could not be iterated over"
+    )
 
   override def ensureTypeOneOf[T <: Type](
     token: Token[S],

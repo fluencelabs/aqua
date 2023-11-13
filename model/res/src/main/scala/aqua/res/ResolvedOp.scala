@@ -3,10 +3,11 @@ package aqua.res
 import aqua.model.{CallModel, ForModel, LiteralModel, ValueModel, VarModel}
 import aqua.raw.ops.Call
 import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.DataType
+import aqua.types.*
+
+import cats.Show
 import cats.data.Chain
 import cats.free.Cofree
-import cats.Show
 
 // TODO docs to all traits and objects
 sealed trait ResolvedOp extends TreeNode[ResolvedOp]
@@ -46,7 +47,7 @@ object FoldRes {
     FoldRes(item, iterable, Mode.Never)
 }
 
-case class RestrictionRes(item: String, `type`: DataType) extends ResolvedOp {
+case class RestrictionRes(item: String, `type`: Type) extends ResolvedOp {
   override def toString: String = s"(new ${`type`.airPrefix}$item "
 }
 

@@ -1,6 +1,9 @@
 package aqua.semantics.rules
 
+import aqua.errors.Errors.internalError
+import aqua.helpers.syntax.optiont.*
 import aqua.parser.lexer.*
+import aqua.parser.lexer.InfixToken.value
 import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
 import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
@@ -9,7 +12,6 @@ import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.*
-import aqua.helpers.syntax.optiont.*
 
 import cats.Monad
 import cats.data.{NonEmptyList, OptionT}
@@ -151,26 +153,22 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
             raws
               .zip(values)
               .traverse { case (raw, token) =>
-                T.ensureTypeIsCollectible(token, raw.`type`)
-                  .map(Option.when(_)(raw))
+                T.typeToCollectible(token, raw.`type`).map(raw -> _)
               }
-              .map(_.sequence)
+              .value
           )
           raw = valuesRawChecked.map(raws =>
             NonEmptyList
               .fromList(raws)
               .fold(ValueRaw.Nil) { nonEmpty =>
-                val element = raws.map(_.`type`).reduceLeft(_ `∩` _)
-                // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
-                // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
-                // make any decision about the structure of type, but can push anything inside
-                val elementNotBottom = if (element == BottomType) TopType else element
+                val (values, types) = nonEmpty.unzip
+                val element = CollectionType.elementTypeOf(types.toList)
                 CollectionRaw(
-                  nonEmpty,
+                  values,
                   ct.mode match {
-                    case CollectionToken.Mode.StreamMode => StreamType(elementNotBottom)
-                    case CollectionToken.Mode.ArrayMode => ArrayType(elementNotBottom)
-                    case CollectionToken.Mode.OptionMode => OptionType(elementNotBottom)
+                    case CollectionToken.Mode.StreamMode => StreamType(element)
+                    case CollectionToken.Mode.ArrayMode => ArrayType(element)
+                    case CollectionToken.Mode.OptionMode => OptionType(element)
                   }
                 )
               }
@@ -323,14 +321,19 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
       }
     )
 
+  def valueToIterable(v: ValueToken[S]): OptionT[Alg, (ValueRaw, CollectionType)] =
+    for {
+      raw <- OptionT(valueToRaw(v))
+      typ <- T.typeToIterable(v, raw.`type`)
+    } yield raw -> typ
+
   def valueToTypedRaw(v: ValueToken[S], expectedType: Type): Alg[Option[ValueRaw]] =
-    OptionT(valueToRaw(v))
-      .flatMap(raw =>
-        OptionT.whenM(
-          T.ensureTypeMatches(v, expectedType, raw.`type`)
-        )(raw.pure)
+    (for {
+      raw <- OptionT(valueToRaw(v))
+      _ <- OptionT.withFilterF(
+        T.ensureTypeMatches(v, expectedType, raw.`type`)
       )
-      .value
+    } yield raw).value
 
   def valueToStringRaw(v: ValueToken[S]): Alg[Option[ValueRaw]] =
     valueToTypedRaw(v, LiteralType.string)

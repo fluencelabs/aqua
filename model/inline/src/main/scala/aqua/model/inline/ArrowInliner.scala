@@ -6,17 +6,17 @@ import aqua.model.*
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.RawTag
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{AbilityType, ArrowType, BoxType, NamedType, StreamType, Type}
+import aqua.types.{AbilityType, ArrowType, CollectionType, NamedType, StreamType, Type}
 
 import cats.data.StateT
 import cats.data.{Chain, IndexedStateT, State}
-import cats.syntax.functor.*
 import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
-import cats.syntax.traverse.*
+import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.show.*
+import cats.syntax.traverse.*
 import cats.{Eval, Monoid}
 import scribe.Logging
 

@@ -1,5 +1,9 @@
 package aqua.model.inline.raw
 
+import aqua.model.inline.Inline
+import aqua.model.inline.Inline.MergeMode.*
+import aqua.model.inline.RawValueInliner.unfold
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.{
   CallModel,
   CanonicalizeModel,
@@ -10,14 +14,11 @@ import aqua.model.{
   ValueModel,
   VarModel
 }
-import aqua.model.inline.Inline.MergeMode.*
-import aqua.model.inline.Inline
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.value.{FunctorRaw, ValueRaw}
-import cats.data.State
+import aqua.types.{ArrayType, CanonStreamType, CollectionType, StreamType}
+
 import cats.data.Chain
-import aqua.model.inline.RawValueInliner.unfold
-import aqua.types.{ArrayType, BoxType, CanonStreamType, StreamType}
+import cats.data.State
 import cats.syntax.monoid.*
 import scribe.Logging
 

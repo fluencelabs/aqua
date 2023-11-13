@@ -81,7 +81,7 @@ case class FuncPreTransformer(
       (name, s"-$name-arg-", typ)
     }
 
-    val dataArgs = args.collect { case (name, varName, t: DataType) =>
+    val nonArrowArgs = args.collect { case (name, varName, t: (DataType | StreamType)) =>
       ArgsProvider.Arg(name, varName, t)
     }
 
@@ -95,7 +95,7 @@ case class FuncPreTransformer(
     )
 
     val provideArgs = argsProvider.provideArgs(
-      relayArg.toList ::: dataArgs
+      relayArg.toList ::: nonArrowArgs
     )
 
     val handleResults = resultsHandler.handleResults(

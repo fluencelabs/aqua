@@ -8,7 +8,7 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.inline.tag.IfTagInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{BoxType, CanonStreamType, StreamType}
+import aqua.types.{CanonStreamType, CollectionType, StreamType}
 
 import cats.data.{Chain, State, StateT}
 import cats.instances.list.*
@@ -31,8 +31,9 @@ import scribe.Logging
  */
 object TagInliner extends Logging {
 
-  import RawValueInliner.{valueListToModel, valueToModel}
   import aqua.model.inline.Inline.parDesugarPrefix
+
+  import RawValueInliner.{valueListToModel, valueToModel}
 
   /**
    * Result of [[RawTag]] inlining
@@ -242,7 +243,7 @@ object TagInliner extends Logging {
           (v, p) = flattened
           n <- Mangler[S].findAndForbidName(item)
           elementType = iterable.`type` match {
-            case b: BoxType => b.element
+            case b: CollectionType => b.element
             case _ =>
               internalError(
                 s"non-box type variable '$iterable' in 'for' expression."
