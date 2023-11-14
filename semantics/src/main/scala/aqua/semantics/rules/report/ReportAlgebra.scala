@@ -8,9 +8,6 @@ trait ReportAlgebra[S[_], Alg[_]] {
   def error(token: Token[S], hint: String): Alg[Unit] =
     error(token, hint :: Nil)
     
-  def internalError(hint: String): Alg[Unit]
-    
-
   def warning(token: Token[S], hints: List[String]): Alg[Unit]
 
   def warning(token: Token[S], hint: String): Alg[Unit] =
