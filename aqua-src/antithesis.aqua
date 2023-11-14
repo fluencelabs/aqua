@@ -1,6 +1,14 @@
 aqua StreamArgs
 
-export lng280BugWithForAnonStream
+export returnStreamFromFunc
+
+func getStream() -> *u32:
+    nums = *[1,2,3,4]
+    <- nums
+
+func returnStreamFromFunc() -> *u32:
+    nums <- getStream()
+    <- nums
 
 service StreamService("test-service"):
     store(numbers: []u32, n: u32)

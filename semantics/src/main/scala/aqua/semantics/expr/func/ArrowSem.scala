@@ -53,18 +53,22 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
   ): Alg[Raw] = for {
     streamsInScope <- N.streamsDefinedWithinScope()
     retValues <- T.endArrowScope(expr.arrowTypeExpr)
+    // TODO: wrap with local on...via...
+    retsAndArgs = retValues zip funcArrow.codomain.toList
+    streamsThatReturnAsStreams = retsAndArgs.collect {
+      case (vr @ VarRaw(_, StreamType(_)), StreamType(_)) => vr
+    }
+    // streams that return as streams and derived to another variable
+    derivedStreamRetValues <- N
+      .getDerivedFrom(streamsThatReturnAsStreams.map(_.varNames))
+      .map(_.flatten.toSet)
     res <- bodyGen match {
       case FuncOp(bodyModel) =>
-        // TODO: wrap with local on...via...
-        val retsAndArgs = retValues zip funcArrow.codomain.toList
-
         val streamArgNames = funcArrow.domain.labelledStreams.map { case (name, _) => name }
-        val streamsThatReturnAsStreams = retsAndArgs.collect {
-          case (VarRaw(n, StreamType(_)), StreamType(_)) => n
-        }.toSet
 
         // Remove arguments, and values returned as streams
-        val localStreams = streamsInScope -- streamArgNames -- streamsThatReturnAsStreams
+        val localStreams = streamsInScope -- streamArgNames --
+          streamsThatReturnAsStreams.map(_.name).toSet -- derivedStreamRetValues
 
         // process stream that returns as not streams and all Apply*Raw
         retsAndArgs.traverse {
