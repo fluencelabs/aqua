@@ -591,8 +591,6 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
       .run(genState())
       .value
 
-    println(st.errors)
-
     inside(res) { case Some(value) =>
       value.`type` shouldBe OptionType(BottomType)
     }
