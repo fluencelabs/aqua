@@ -38,9 +38,7 @@ func returnEmpty() -> *string:
     <- relayNil
 
 func returnEmptyLiteral() -> *string:
-    empty: *string
-    -- TODO: return *[] here after LNG-280
-    <- empty
+    <- *[]
 
 func returnNilLength() -> u32:
     arr = nil
