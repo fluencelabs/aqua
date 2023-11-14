@@ -182,7 +182,6 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
               for {
                 streamName <- M.rename("stream-anon")
                 value = VarRaw(streamName, StreamType(BottomType))
-//                _ <- N.defineInternal(value.name, value.`type`)
                 raw = valuesRawChecked.map(raws =>
                   val (values, types) = raws.unzip
                   val element = CollectionType.elementTypeOf(types)

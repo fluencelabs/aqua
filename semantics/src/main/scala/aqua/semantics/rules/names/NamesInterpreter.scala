@@ -94,18 +94,6 @@ class NamesInterpreter[S[_], X](using
         .headOption orElse st.rootArrows.get(name)
     }
 
-  def defineInternal(name: String, `type`: Type): SX[Boolean] = {
-    // is is for internal names definition, all errors is unexpected
-    readName(name).flatMap {
-      case Some(_) =>
-        report.internalError(s"Unexpected error. Name $name was already defined").as(false)
-      case None =>
-        mapStackHeadM(
-          report.internalError(s"Unexpected error. Cannot define $name in the root scope").as(false)
-        )(fr => (fr.addInternalName(name, `type`) -> true).pure)
-    }
-  }
-
   override def define(name: Name[S], `type`: Type): SX[Boolean] =
     readName(name.value).flatMap {
       case Some(_) =>
