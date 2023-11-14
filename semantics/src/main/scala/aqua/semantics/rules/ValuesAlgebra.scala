@@ -181,14 +181,14 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
             case CollectionToken.Mode.StreamMode =>
               for {
                 streamName <- M.rename("stream-anon")
-                value = VarRaw(streamName, StreamType(BottomType))
+                streamType = StreamType(BottomType)
                 raw = valuesRawChecked.map(raws =>
                   val (values, types) = raws.unzip
                   val element = CollectionType.elementTypeOf(types)
                   StreamRaw(
                     values,
-                    StreamType(element),
-                    value
+                    streamName,
+                    streamType
                   )
                 )
               } yield raw

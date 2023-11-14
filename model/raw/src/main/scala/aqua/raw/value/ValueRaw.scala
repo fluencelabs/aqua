@@ -159,7 +159,7 @@ object LiteralRaw {
   }
 }
 
-case class StreamRaw(values: List[ValueRaw], streamType: StreamType, streamVar: VarRaw) extends ValueRaw {
+case class StreamRaw(values: List[ValueRaw], streamName: String, streamType: StreamType) extends ValueRaw {
   lazy val elementType: DataType = streamType.element
 
   override lazy val baseType: Type = streamType
@@ -175,10 +175,10 @@ case class StreamRaw(values: List[ValueRaw], streamType: StreamType, streamVar: 
     )
   }
 
-  override def varNames: Set[String] = (values :+ streamVar).toList.flatMap(_.varNames).toSet
+  override def varNames: Set[String] = (values.flatMap(_.varNames) :+ streamName).toSet
 
   override def renameVars(map: Map[String, String]): ValueRaw =
-    copy(values = values.map(_.renameVars(map)), streamVar = streamVar.renameVars(map))
+    copy(values = values.map(_.renameVars(map)), streamName = map.getOrElse(streamName, streamName))
 }
 
 case class CollectionRaw(

@@ -3,9 +3,8 @@ package aqua.model.inline.raw
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.{CallModel, PushToStreamModel, SeqModel, ValueModel}
+import aqua.model.{CallModel, PushToStreamModel, SeqModel, ValueModel, VarModel}
 import aqua.raw.value.StreamRaw
-
 import cats.data.{Chain, State}
 import cats.syntax.traverse.*
 
@@ -15,10 +14,9 @@ object StreamRawInliner extends RawInliner[StreamRaw] {
     raw: StreamRaw,
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
-    val streamExp = CallModel.Export(raw.streamVar.name, raw.streamVar.`type`)
+    val streamExp = CallModel.Export(raw.streamName, raw.streamType)
+    val streamVal = VarModel(raw.streamName, raw.streamType)
     for {
-      streamValRes <- valueToModel(raw.streamVar)
-      (streamVal, streamInline) = streamValRes
       valsWithInlines <- raw.values
         .traverse(valueToModel(_))
         .map(_.toList)
@@ -33,8 +31,7 @@ object StreamRawInliner extends RawInliner[StreamRaw] {
       inlines = valsWithInlines.flatMap { case (_, t) =>
         Chain.fromOption(t)
       }
-      _ <- Exports[S].resolved(raw.streamVar.name, streamVal)
-      _ = println("streamVal: " + streamVal)
+      _ <- Exports[S].resolved(raw.streamName, streamVal)
     } yield streamVal -> Inline.tree(
       SeqModel.wrap(Chain.fromOption(streamInline) ++ inlines ++ vals)
     )
