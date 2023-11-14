@@ -1,7 +1,6 @@
 aqua StreamArgs
 
-export retrieve_records, modify_stream,
-export TestService, StreamService
+export retrieve_records, modify_stream, TestService, StreamService
 export lng280Bug, lng280BugWithFor, lng280BugWithForAnonStream
 
 service TestService("test-service"):
