@@ -190,6 +190,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                     StreamType(element)
                   )
                 )
+                // this is just to create restriction on stream, type doesn't matter
+                _ <- N.defineInternal(streamName, StreamType(BottomType))
               } yield raw
           }
         } yield {
