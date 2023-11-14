@@ -6,6 +6,7 @@ import {
   lng280Bug,
   lng280BugWithFor,
   lng280BugWithForAnonStream,
+  returnDerivedStream
 } from "../compiled/examples/streamArgs.js";
 
 export async function streamArgsCall() {
@@ -41,4 +42,8 @@ export async function lng280BugWithForAnonStreamCall(): Promise<number[][]> {
   await lng280BugWithForAnonStream()
 
   return storage
+}
+
+export async function returnDerivedStreamCall(): Promise<number[]> {
+  return returnDerivedStream()
 }

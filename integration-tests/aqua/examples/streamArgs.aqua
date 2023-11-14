@@ -54,3 +54,12 @@ func lng280BugWithForAnonStream():
   arr = [1,2,3,4,5]
   for a <- arr:
     callService(*[], a)
+
+func getStream(str: *u32) -> *u32:
+    nums = str
+    nums <<- 1
+    <- nums
+
+func returnDerivedStream() -> *u32:
+    nums <- getStream(*[])
+    <- nums

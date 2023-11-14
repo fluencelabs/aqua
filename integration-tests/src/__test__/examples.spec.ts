@@ -88,6 +88,7 @@ import {
   lng280BugWithForCall,
   streamArgsCall,
   modifyStreamCall,
+  returnDerivedStreamCall
 } from "../examples/streamArgsCall.js";
 import { streamResultsCall } from "../examples/streamResultsCall.js";
 import { structuralTypingCall } from "../examples/structuralTypingCall";
@@ -635,6 +636,11 @@ describe("Testing examples", () => {
     let result = await lng280BugWithForAnonStreamCall();
     expect(result).toEqual([[1, 1], [1, 2], [1, 3], [1, 4], [1, 5]]);
   });
+
+  it("streamArgs.aqua return derived stream", async () => {
+      let result = await returnDerivedStreamCall();
+      expect(result).toEqual([1]);
+    });
 
   it("streamResults.aqua", async () => {
     let streamResultsResult = await streamResultsCall();
