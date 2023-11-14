@@ -16,6 +16,7 @@ import cats.data.Validated
 import cats.data.{Chain, EitherNec, NonEmptyChain}
 import cats.free.Cofree
 import cats.syntax.foldable.*
+import cats.syntax.option.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
 import cats.~>
@@ -49,11 +50,13 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
     inside(semantics.process(ast, init).value.run)(test)
   }
 
-  def insideBody(script: String)(test: RawTag.Tree => Any): Unit =
+  def insideBody(script: String, func: Option[String] = None)(test: RawTag.Tree => Any): Unit =
     insideResult(script) { case (_, Right(ctx)) =>
-      inside(ctx.funcs.headOption) { case Some((_, func)) =>
-        test(func.arrow.body)
-      }
+      inside(
+        func.fold(
+          ctx.funcs.headOption.map { case (_, raw) => raw }
+        )(ctx.funcs.get)
+      ) { case Some(func) => test(func.arrow.body) }
     }
 
   def insideSemErrors(script: String)(test: NonEmptyChain[SemanticError[Span.S]] => Any): Unit =
@@ -877,7 +880,6 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
                       |""".stripMargin
 
       insideBody(script) { body =>
-        println(body.show)
         matchSubtree(body) { case (CallArrowRawTag(_, ca: CallArrowRaw), _) =>
           inside(ca.arguments) { case (c: CollectionRaw) :: Nil =>
             c.values.exists {
@@ -891,5 +893,63 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     test("[]", "")
     test("?", "?")
+  }
+
+  it should "allow `nil` in place of an array or an option" in {
+    def test(p: String) = {
+      val script = s"""
+                      |func length(col: ${p}string) -> u32:
+                      |  <- col.length
+                      |
+                      |func return() -> ${p}string:
+                      |  <- nil
+                      |
+                      |func test() -> u32:
+                      |  l <- length(nil)
+                      |  n <- return()
+                      |  <- l + n.length
+                      |""".stripMargin
+
+      insideBody(script, "test".some) { body =>
+        matchSubtree(body) {
+          case (CallArrowRawTag(_, ca: CallArrowRaw), _) if ca.name == "length" =>
+            ca.arguments.length shouldEqual 1
+        }
+        matchSubtree(body) {
+          case (CallArrowRawTag(_, ca: CallArrowRaw), _) if ca.name == "return" =>
+            ca.arguments.length shouldEqual 0
+        }
+      }
+    }
+
+    test("[]")
+    test("?")
+  }
+
+  it should "forbid `nil` in place of a stream" in {
+    val scriptAccept = s"""
+                          |func length(col: *string) -> u32:
+                          |  <- col.length
+                          |
+                          |func test() -> u32:
+                          |  <- length(nil)
+                          |""".stripMargin
+
+    val scriptReturn = s"""
+                          |func return() -> *string:
+                          |  <- nil
+                          |
+                          |func test() -> u32:
+                          |  n <- return()
+                          |  <- n.length
+                          |""".stripMargin
+
+    insideSemErrors(scriptAccept) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
+
+    insideSemErrors(scriptReturn) { errors =>
+      atLeast(1, errors.toChain.toList) shouldBe a[RulesViolated[Span.S]]
+    }
   }
 }
