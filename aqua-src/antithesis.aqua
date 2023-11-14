@@ -11,4 +11,4 @@ func callService(stream: *u32, n: u32):
 func lng280BugWithForAnonStream():
   arr = [1,2,3,4,5]
   for a <- arr:
-    callService(*[1,2,3], a)
+    callService(*[], a)

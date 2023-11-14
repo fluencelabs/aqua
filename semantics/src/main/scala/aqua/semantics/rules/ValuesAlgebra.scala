@@ -161,38 +161,36 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           )
           raw <- ct.mode match {
             case m @ (CollectionToken.Mode.OptionMode | CollectionToken.Mode.ArrayMode) =>
-              valuesRawChecked.map(raws =>
-                NonEmptyList
-                  .fromList(raws)
-                  .fold(ValueRaw.Nil) { nonEmpty =>
-                    val (values, types) = nonEmpty.unzip
-                    val element = CollectionType.elementTypeOf(types.toList)
-                    CollectionRaw(
-                      values,
-                      m match {
-                        case CollectionToken.Mode.ArrayMode => ArrayType(element)
-                        case CollectionToken.Mode.OptionMode => OptionType(element)
-                      }
-                    )
-                  }
-              ).pure
+              valuesRawChecked
+                .map(raws =>
+                  NonEmptyList
+                    .fromList(raws)
+                    .fold(ValueRaw.Nil) { nonEmpty =>
+                      val (values, types) = nonEmpty.unzip
+                      val element = CollectionType.elementTypeOf(types.toList)
+                      CollectionRaw(
+                        values,
+                        m match {
+                          case CollectionToken.Mode.ArrayMode => ArrayType(element)
+                          case CollectionToken.Mode.OptionMode => OptionType(element)
+                        }
+                      )
+                    }
+                )
+                .pure
             case CollectionToken.Mode.StreamMode =>
               for {
                 streamName <- M.rename("stream-anon")
                 value = VarRaw(streamName, StreamType(BottomType))
-                _ <- N.defineInternal(value.name, value.`type`)
+//                _ <- N.defineInternal(value.name, value.`type`)
                 raw = valuesRawChecked.map(raws =>
-                  NonEmptyList
-                    .fromList(raws)
-                    .fold(value) { nonEmpty =>
-                      val (values, types) = nonEmpty.unzip
-                      val element = CollectionType.elementTypeOf(types.toList)
-                      StreamRaw(
-                        values,
-                        StreamType(element),
-                        value
-                      )
-                    }
+                  val (values, types) = raws.unzip
+                  val element = CollectionType.elementTypeOf(types)
+                  StreamRaw(
+                    values,
+                    StreamType(element),
+                    value
+                  )
                 )
               } yield raw
           }

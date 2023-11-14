@@ -7,6 +7,7 @@ import aqua.model.{CallModel, PushToStreamModel, SeqModel, ValueModel}
 import aqua.raw.value.StreamRaw
 
 import cats.data.{Chain, State}
+import cats.syntax.traverse.*
 
 object StreamRawInliner extends RawInliner[StreamRaw] {
 
