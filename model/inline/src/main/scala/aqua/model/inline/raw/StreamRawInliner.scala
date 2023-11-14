@@ -1,10 +1,11 @@
 package aqua.model.inline.raw
 
+import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.{CallModel, PushToStreamModel, SeqModel, ValueModel, VarModel}
 import aqua.raw.value.StreamRaw
+
 import cats.data.{Chain, State}
 import cats.syntax.traverse.*
 
