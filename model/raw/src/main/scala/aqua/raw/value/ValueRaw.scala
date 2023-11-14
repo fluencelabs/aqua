@@ -68,7 +68,7 @@ object ValueRaw {
     errorType
   )
 
-  type ApplyRaw = ApplyPropertyRaw | CallArrowRaw | CollectionRaw | ApplyBinaryOpRaw |
+  type ApplyRaw = ApplyPropertyRaw | CallArrowRaw | CollectionRaw | StreamRaw | ApplyBinaryOpRaw |
     ApplyUnaryOpRaw
 
   extension (v: ValueRaw) {
@@ -114,7 +114,7 @@ case class VarRaw(name: String, baseType: Type) extends ValueRaw {
 
   override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = this
 
-  override def renameVars(map: Map[String, String]): ValueRaw =
+  override def renameVars(map: Map[String, String]): VarRaw =
     copy(name = map.getOrElse(name, name))
 
   override def toString: String = s"var{$name: " + baseType + s"}"
@@ -159,10 +159,29 @@ object LiteralRaw {
   }
 }
 
+case class StreamRaw(values: NonEmptyList[ValueRaw], streamType: StreamType, streamVar: VarRaw) extends ValueRaw {
+  lazy val elementType: DataType = streamType.element
+
+  override lazy val baseType: Type = streamType
+
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = {
+    val (vals, element) = CollectionRaw.mapCollection(f, values)
+
+    copy(
+      values = vals,
+      streamType = streamType.withElement(element)
+    )
+  }
+
+  override def varNames: Set[String] = (values :+ streamVar).toList.flatMap(_.varNames).toSet
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(values = values.map(_.renameVars(map)), streamVar = streamVar.renameVars(map))
+}
+
 case class CollectionRaw(
   values: NonEmptyList[ValueRaw],
-  collectionType: CollectionType,
-  assignTo: Option[String] = None
+  collectionType: ImmutableCollectionType
 ) extends ValueRaw {
 
   lazy val elementType: DataType = collectionType.element
@@ -170,12 +189,7 @@ case class CollectionRaw(
   override lazy val baseType: Type = collectionType
 
   override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = {
-    val vals = values.map(f)
-    val types = vals.map(_.`type` match {
-      case ct: CollectibleType => ct
-      case t => internalError(s"Non-collection type in collection: ${t}")
-    })
-    val element = CollectionType.elementTypeOf(types.toList)
+    val (vals, element) = CollectionRaw.mapCollection(f, values)
 
     copy(
       values = vals,
@@ -187,6 +201,19 @@ case class CollectionRaw(
 
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(values = values.map(_.renameVars(map)))
+}
+
+object CollectionRaw {
+  def mapCollection(f: ValueRaw => ValueRaw, values: NonEmptyList[ValueRaw]): (NonEmptyList[ValueRaw], DataType) = {
+    val vals = values.map(f)
+    val types = vals.map(_.`type` match {
+      case ct: CollectibleType => ct
+      case t => internalError(s"Non-collection type in collection: ${t}")
+    })
+    val element = CollectionType.elementTypeOf(types.toList)
+
+    (vals, element)
+  }
 }
 
 case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: StructType)

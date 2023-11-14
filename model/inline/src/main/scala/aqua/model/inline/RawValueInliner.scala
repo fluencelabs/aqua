@@ -45,6 +45,9 @@ object RawValueInliner extends Logging {
       case cr: CollectionRaw =>
         CollectionRawInliner(cr, propertiesAllowed)
 
+      case sr: StreamRaw =>
+        StreamRawInliner(sr, propertiesAllowed)
+
       case dr: MakeStructRaw =>
         MakeStructRawInliner(dr, propertiesAllowed)
 
@@ -88,14 +91,6 @@ object RawValueInliner extends Logging {
       _ = logger.trace("desugarized ops: " + ops)
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops.filterNot(_ == EmptyModel.leaf))
-
-  def collectionToModel[S: Mangler: Exports: Arrows](
-    value: CollectionRaw,
-    assignTo: Option[String]
-  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
-    logger.trace("RAW COLLECTION " + value)
-    toModel(CollectionRawInliner.unfoldCollection(value, assignTo))
-  }
 
   def valueToModel[S: Mangler: Exports: Arrows](
     value: ValueRaw,

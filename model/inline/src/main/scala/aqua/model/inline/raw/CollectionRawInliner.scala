@@ -16,22 +16,9 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
   override def apply[S: Mangler: Exports: Arrows](
     raw: CollectionRaw,
     propertiesAllowed: Boolean
-  ): State[S, (ValueModel, Inline)] = unfoldCollection(raw, raw.assignTo)
-
-  def unfoldCollection[S: Mangler: Exports: Arrows](
-    raw: CollectionRaw,
-    assignToName: Option[String] = None
-  ): State[S, (ValueModel, Inline)] =
+  ): State[S, (ValueModel, Inline)] = 
     for {
       streamName <- raw.collectionType match {
-        case _: StreamType =>
-          assignToName.fold(
-            Mangler[S].findAndForbidName("stream-inline")
-          )(State.pure)
-        case _: StreamMapType =>
-          assignToName.fold(
-            Mangler[S].findAndForbidName("stream_map-inline")
-          )(State.pure)
         case _: CanonStreamType => Mangler[S].findAndForbidName("canon_stream-inline")
         case _: ArrayType => Mangler[S].findAndForbidName("array-inline")
         case _: OptionType => Mangler[S].findAndForbidName("option-inline")
@@ -59,10 +46,7 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
       canonName <-
         if (raw.collectionType.isStream) State.pure(streamName)
         else Mangler[S].findAndForbidName(streamName)
-      canonType = raw.collectionType match {
-        case StreamType(_) => raw.collectionType
-        case _ => CanonStreamType(raw.collectionType.element)
-      }
+      canonType = CanonStreamType(raw.collectionType.element)
       canon = CallModel.Export(canonName, canonType)
     } yield VarModel(canonName, canon.`type`) -> Inline.tree(
       raw.collectionType match {

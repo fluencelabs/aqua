@@ -297,37 +297,64 @@ object CollectionType {
       )
 }
 
+sealed trait ImmutableCollectionType extends Type with CollectionType {
+  def withElement(t: DataType): ImmutableCollectionType
+}
+sealed trait MutableStreamType extends Type with CollectionType
+
 case class CanonStreamType(
   override val element: DataType
-) extends DataType with CollectionType {
+) extends DataType with ImmutableCollectionType {
 
   override val isStream: Boolean = false
 
   override def toString: String = "#" + element
 
-  override def withElement(t: DataType): CollectionType = copy(element = t)
+  override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
 }
 
 case class ArrayType(
   override val element: DataType
-) extends DataType with CollectionType {
+) extends DataType with ImmutableCollectionType {
 
   override val isStream: Boolean = false
 
   override def toString: String = "[]" + element
 
-  override def withElement(t: DataType): CollectionType = copy(element = t)
+  override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
 }
 
 case class OptionType(
   override val element: DataType
-) extends DataType with CollectionType {
+) extends DataType with ImmutableCollectionType {
 
   override val isStream: Boolean = false
 
   override def toString: String = "?" + element
 
-  override def withElement(t: DataType): CollectionType = copy(element = t)
+  override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
+}
+
+case class StreamMapType(override val element: DataType) extends MutableStreamType {
+
+  override val isStream: Boolean = true
+
+  override def withElement(t: DataType): MutableStreamType = copy(element = t)
+
+  override def toString: String = s"%$element"
+}
+
+object StreamMapType {
+  def top(): StreamMapType = StreamMapType(TopType)
+}
+
+case class StreamType(override val element: DataType) extends MutableStreamType {
+
+  override val isStream: Boolean = true
+
+  override def toString: String = s"*$element"
+
+  override def withElement(t: DataType): StreamType = copy(element = t)
 }
 
 sealed trait NamedType extends Type {
@@ -417,30 +444,6 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
 
   override def toString: String =
     s"$fullName{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
-}
-
-sealed trait MutableStreamType extends Type with CollectionType
-
-case class StreamMapType(override val element: DataType) extends MutableStreamType {
-
-  override val isStream: Boolean = true
-
-  override def withElement(t: DataType): CollectionType = copy(element = t)
-
-  override def toString: String = s"%$element"
-}
-
-object StreamMapType {
-  def top(): StreamMapType = StreamMapType(TopType)
-}
-
-case class StreamType(override val element: DataType) extends MutableStreamType {
-
-  override val isStream: Boolean = true
-
-  override def toString: String = s"*$element"
-
-  override def withElement(t: DataType): CollectionType = copy(element = t)
 }
 
 case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) extends NamedType {

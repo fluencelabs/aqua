@@ -159,35 +159,46 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
               }
               .value
           )
-          emptyName <- ct.mode match {
-            // empty stream is not a Nil, it is an unique variable, that will be used as a stream
+          raw <- ct.mode match {
+            case m @ (CollectionToken.Mode.OptionMode | CollectionToken.Mode.ArrayMode) =>
+              valuesRawChecked.map(raws =>
+                NonEmptyList
+                  .fromList(raws)
+                  .fold(ValueRaw.Nil) { nonEmpty =>
+                    val (values, types) = nonEmpty.unzip
+                    val element = CollectionType.elementTypeOf(types.toList)
+                    CollectionRaw(
+                      values,
+                      m match {
+                        case CollectionToken.Mode.ArrayMode => ArrayType(element)
+                        case CollectionToken.Mode.OptionMode => OptionType(element)
+                      }
+                    )
+                  }
+              ).pure
             case CollectionToken.Mode.StreamMode =>
               for {
                 streamName <- M.rename("stream-anon")
                 value = VarRaw(streamName, StreamType(BottomType))
                 _ <- N.defineInternal(value.name, value.`type`)
-              } yield (value, Some(value.name))
-
-            case _ => (ValueRaw.Nil, None).pure
-          }
-          raw = valuesRawChecked.map(raws =>
-            NonEmptyList
-              .fromList(raws)
-              .fold(emptyName._1) { nonEmpty =>
-                val (values, types) = nonEmpty.unzip
-                val element = CollectionType.elementTypeOf(types.toList)
-                CollectionRaw(
-                  values,
-                  ct.mode match {
-                    case CollectionToken.Mode.StreamMode => StreamType(element)
-                    case CollectionToken.Mode.ArrayMode => ArrayType(element)
-                    case CollectionToken.Mode.OptionMode => OptionType(element)
-                  },
-                  emptyName._2
+                raw = valuesRawChecked.map(raws =>
+                  NonEmptyList
+                    .fromList(raws)
+                    .fold(value) { nonEmpty =>
+                      val (values, types) = nonEmpty.unzip
+                      val element = CollectionType.elementTypeOf(types.toList)
+                      StreamRaw(
+                        values,
+                        StreamType(element),
+                        value
+                      )
+                    }
                 )
-              }
-          )
-        } yield raw
+              } yield raw
+          }
+        } yield {
+          raw
+        }
 
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])

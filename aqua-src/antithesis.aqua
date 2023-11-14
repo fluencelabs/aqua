@@ -1,11 +1,14 @@
-service A("a"):
-  use(arr: []string)
+aqua StreamArgs
 
-func use_stream(stream: *string):
-  stream <<- "value"
-  A.use(stream)
+export lng280BugWithForAnonStream, StreamService
 
-func test():
+service StreamService("test-service"):
+    store(numbers: []u32, n: u32)
+
+func callService(stream: *u32, n: u32):
+    StreamService.store(stream, n)
+
+func lng280BugWithForAnonStream():
   arr = [1,2,3,4,5]
   for a <- arr:
-    use_stream(*[])
+    callService(*[1,2,3], a)

@@ -2,7 +2,6 @@ package aqua.model.inline
 
 import aqua.errors.Errors.internalError
 import aqua.model.*
-import aqua.model.inline.RawValueInliner.collectionToModel
 import aqua.model.inline.raw.{CallArrowRawInliner, CallServiceRawInliner}
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.inline.tag.IfTagInliner
@@ -367,13 +366,7 @@ object TagInliner extends Logging {
 
       case AssignmentTag(value, assignTo) =>
         for {
-          modelAndPrefix <- value match {
-            // if we assign collection to a stream, we must use it's name, because it is already created with 'new'
-            case c @ CollectionRaw(_, _: StreamType, _) =>
-              collectionToModel(c, Some(assignTo))
-            case v =>
-              valueToModel(v, false)
-          }
+          modelAndPrefix <- valueToModel(value, false)
           (model, prefix) = modelAndPrefix
           _ <- Exports[S].resolved(assignTo, model)
         } yield TagInlined.Empty(prefix = prefix)
