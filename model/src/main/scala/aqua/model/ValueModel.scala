@@ -6,8 +6,8 @@ import aqua.types.*
 
 import cats.Eq
 import cats.data.{Chain, NonEmptyMap}
-import cats.syntax.option.*
 import cats.syntax.apply.*
+import cats.syntax.option.*
 import scribe.Logging
 
 sealed trait ValueModel {
@@ -75,7 +75,7 @@ object ValueModel {
   }
 }
 
-case class LiteralModel(value: String, `type`: Type) extends ValueModel {
+case class LiteralModel(value: String, `type`: DataType) extends ValueModel {
 
   override def toString: String = s"{$value: ${`type`}}"
 
