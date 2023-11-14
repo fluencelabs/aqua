@@ -173,6 +173,8 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                 )
               }
           )
+          _ = println(ct.mode)
+          _ = println(raw)
         } yield raw
 
       case ca: CallArrowToken[S] =>

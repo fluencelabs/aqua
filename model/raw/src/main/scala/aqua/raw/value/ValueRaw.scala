@@ -125,7 +125,7 @@ case class VarRaw(name: String, baseType: Type) extends ValueRaw {
   override def varNames: Set[String] = Set(name)
 }
 
-case class LiteralRaw(value: String, baseType: Type) extends ValueRaw {
+case class LiteralRaw(value: String, baseType: DataType) extends ValueRaw {
   override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = this
 
   override def toString: String = s"{$value: ${baseType}}"
