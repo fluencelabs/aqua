@@ -194,9 +194,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
                 _ <- N.defineInternal(streamName, StreamType(BottomType))
               } yield raw
           }
-        } yield {
-          raw
-        }
+        } yield raw
 
       case ca: CallArrowToken[S] =>
         callArrowToRaw(ca).map(_.widen[ValueRaw])

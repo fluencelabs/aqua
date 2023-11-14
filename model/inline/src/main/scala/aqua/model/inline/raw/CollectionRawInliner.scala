@@ -4,7 +4,6 @@ import aqua.model.*
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.valueToModel
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
-import aqua.model.*
 import aqua.raw.value.CollectionRaw
 import aqua.types.StreamMapType
 import aqua.types.{ArrayType, CanonStreamType, OptionType, StreamType}
@@ -16,12 +15,13 @@ object CollectionRawInliner extends RawInliner[CollectionRaw] {
   override def apply[S: Mangler: Exports: Arrows](
     raw: CollectionRaw,
     propertiesAllowed: Boolean
-  ): State[S, (ValueModel, Inline)] = 
+  ): State[S, (ValueModel, Inline)] =
     for {
       streamName <- raw.collectionType match {
-        case _: CanonStreamType => Mangler[S].findAndForbidName("canon_stream-inline")
         case _: ArrayType => Mangler[S].findAndForbidName("array-inline")
         case _: OptionType => Mangler[S].findAndForbidName("option-inline")
+        // CanonStreamType is here just to avoid compilation warning. Right now it is unreachable
+        case _: CanonStreamType => Mangler[S].findAndForbidName("canon_stream-inline")
       }
 
       streamType = StreamType(raw.elementType)

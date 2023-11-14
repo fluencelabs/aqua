@@ -20,7 +20,6 @@ object StreamRawInliner extends RawInliner[StreamRaw] {
     for {
       valsWithInlines <- raw.values
         .traverse(valueToModel(_))
-        .map(_.toList)
         .map(Chain.fromSeq)
 
       // push values to the stream, that is gathering the collection
@@ -32,6 +31,7 @@ object StreamRawInliner extends RawInliner[StreamRaw] {
       inlines = valsWithInlines.flatMap { case (_, t) =>
         Chain.fromOption(t)
       }
+
       _ <- Exports[S].resolved(raw.streamName, streamVal)
     } yield streamVal -> Inline.tree(
       SeqModel.wrap(inlines ++ vals)
