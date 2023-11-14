@@ -1,6 +1,7 @@
 package aqua.semantics
 
 import aqua.parser.lexer.*
+import aqua.raw.ConstantRaw
 import aqua.raw.RawContext
 import aqua.raw.value.*
 import aqua.semantics.rules.ValuesAlgebra
@@ -14,7 +15,7 @@ import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter}
 import aqua.types.*
 
 import cats.Id
-import cats.data.{NonEmptyList, NonEmptyMap, State}
+import cats.data.{Chain, NonEmptyList, NonEmptyMap, State}
 import monocle.syntax.all.*
 import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
@@ -69,9 +70,15 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
     b <- list
   } yield (a, b)
 
-  def genState(vars: Map[String, Type] = Map.empty) =
+  def genState(vars: Map[String, Type] = Map.empty) = {
+    val init = RawContext.blank.copy(
+      parts = Chain
+        .fromSeq(ConstantRaw.defaultConstants())
+        .map(const => RawContext.blank -> const)
+    )
+
     CompilerState
-      .init[Id](RawContext.blank)
+      .init[Id](init)
       .focus(_.names)
       .modify(
         _.focus(_.stack).modify(
@@ -81,6 +88,7 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
           ) :: _
         )
       )
+  }
 
   def valueOfType(t: Type)(
     varName: String,
@@ -601,6 +609,21 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
 
       res shouldBe None
       atLeast(1, st.errors.toList) shouldBe a[RulesViolated[Id]]
+    }
+  }
+
+  it should "consider `nil` of type `?⊥`" in {
+    val nil = variable("nil")
+
+    val alg = algebra()
+
+    val (st, res) = alg
+      .valueToRaw(nil)
+      .run(genState())
+      .value
+
+    inside(res) { case Some(value) =>
+      value.`type` shouldBe OptionType(BottomType)
     }
   }
 }

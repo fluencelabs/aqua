@@ -17,8 +17,8 @@ import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
 import cats.syntax.monoid.*
-import cats.syntax.traverse.*
 import cats.syntax.option.*
+import cats.syntax.traverse.*
 import scribe.Logging
 
 object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Logging {
@@ -33,19 +33,15 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
       apName <- Mangler[S].findAndForbidName("literal_ap")
       resultName <- Mangler[S].findAndForbidName(s"literal_props")
     } yield {
-      val cleanedType = literal.`type` match {
-        // literals cannot be streams, use it as an array to use properties
-        case StreamType(el) => ArrayType(el)
-        case tt => tt
-      }
-      val apVar = VarModel(apName, cleanedType, properties)
+      val typ = literal.`type`
+      val apVar = VarModel(apName, typ, properties)
       val tree = inl |+| Inline.tree(
         SeqModel.wrap(
-          FlattenModel(literal.copy(`type` = cleanedType), apVar.name).leaf,
+          FlattenModel(literal.copy(`type` = typ), apVar.name).leaf,
           FlattenModel(apVar, resultName).leaf
         )
       )
-      VarModel(resultName, properties.lastOption.map(_.`type`).getOrElse(cleanedType)) -> tree
+      VarModel(resultName, properties.lastOption.map(_.`type`).getOrElse(typ)) -> tree
     }
   }
 
