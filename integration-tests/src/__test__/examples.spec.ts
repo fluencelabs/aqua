@@ -633,7 +633,7 @@ describe("Testing examples", () => {
 
   it("streamArgs.aqua LNG-280 with for and anonymous stream", async () => {
     let result = await lng280BugWithForAnonStreamCall();
-    expect(result).toEqual([[1], [2], [3], [4], [5]]);
+    expect(result).toEqual([[1, 1], [1, 2], [1, 3], [1, 4], [1, 5]]);
   });
 
   it("streamResults.aqua", async () => {

@@ -48,6 +48,7 @@ service StreamService("test-service"):
     store(numbers: []u32, n: u32)
 
 func callService(stream: *u32, n: u32):
+    stream <<- 1
     StreamService.store(stream, n)
 
 func lng280BugWithForAnonStream():
