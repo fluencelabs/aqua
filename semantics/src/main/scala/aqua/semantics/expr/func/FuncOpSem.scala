@@ -1,6 +1,5 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.Raw
 import aqua.raw.ops.{RawTag, RestrictionTag}
 import aqua.semantics.rules.names.NamesAlgebra
 

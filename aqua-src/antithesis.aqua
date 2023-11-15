@@ -1,23 +1,12 @@
 aqua StreamArgs
 
-export returnStreamFromFunc
+export returnDerivedStream
 
-func getStream() -> *u32:
-    nums = *[1,2,3,4]
+func getStream(str: *u32) -> *u32:
+    nums = str
+    nums <<- 1
     <- nums
 
-func returnStreamFromFunc() -> *u32:
-    nums <- getStream()
-    <- nums
-
-service StreamService("test-service"):
-    store(numbers: []u32, n: u32)
-
-func callService(stream: *u32, n: u32):
-    stream <<- 1
-    StreamService.store(stream, n)
-
-func lng280BugWithForAnonStream():
-  arr = [1,2,3,4,5]
-  for a <- arr:
-    callService(*[], a)
+func returnDerivedStream() -> []u32:
+    streams <- getStream(*[1,2,3])
+    <- streams

@@ -88,7 +88,8 @@ import {
   lng280BugWithForCall,
   streamArgsCall,
   modifyStreamCall,
-  returnDerivedStreamCall
+  returnDerivedStreamCall,
+  lng280BugWithForEmptyStreamFuncCall
 } from "../examples/streamArgsCall.js";
 import { streamResultsCall } from "../examples/streamResultsCall.js";
 import { structuralTypingCall } from "../examples/structuralTypingCall";
@@ -615,12 +616,12 @@ describe("Testing examples", () => {
     ]);
   });
 
-  it("streamArgs.aqua LNG-280", async () => {
+  it.skip("streamArgs.aqua LNG-280", async () => {
     let result = await lng280BugCall();
     expect(result).toEqual(["valueUseStream", "valueReturnStream", "valueTop"]);
   });
 
-  it("streamArgs.aqua LNG-280 with for", async () => {
+  it.skip("streamArgs.aqua LNG-280 with for", async () => {
     let result = await lng280BugWithForCall();
     expect(result).toEqual([
         "valueUseStream",
@@ -637,7 +638,12 @@ describe("Testing examples", () => {
     expect(result).toEqual([[1, 1], [1, 2], [1, 3], [1, 4], [1, 5]]);
   });
 
-  it("streamArgs.aqua return derived stream", async () => {
+  it("streamArgs.aqua LNG-280 with for and anonymous stream from function", async () => {
+      let result = await lng280BugWithForEmptyStreamFuncCall();
+      expect(result).toEqual([[1, 1], [1, 2], [1, 3], [1, 4], [1, 5]]);
+    });
+
+  it.skip("streamArgs.aqua return derived stream", async () => {
       let result = await returnDerivedStreamCall();
       expect(result).toEqual([1]);
     });

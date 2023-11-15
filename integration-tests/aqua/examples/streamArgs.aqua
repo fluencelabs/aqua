@@ -52,9 +52,17 @@ func callService(stream: *u32, n: u32):
     StreamService.store(stream, n)
 
 func lng280BugWithForAnonStream():
-  arr = [1,2,3,4,5]
-  for a <- arr:
-    callService(*[], a)
+    arr = [1,2,3,4,5]
+    for a <- arr:
+      callService(*[], a)
+
+func returnEmptyStream():
+    <- *[]
+
+func lng280BugWithForEmptyStreamFunc():
+    arr = [1,2,3,4,5]
+    for a <- arr:
+      callService(returnEmptyStream(), a)
 
 func getStream(str: *u32) -> *u32:
     nums = str
