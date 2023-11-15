@@ -443,7 +443,16 @@ case class StreamType(override val element: DataType) extends MutableStreamType 
   override def withElement(t: DataType): CollectionType = copy(element = t)
 }
 
-case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) extends NamedType {
+/**
+ * This type unites types that work as abilities,
+ * namely `ServiceType` and `AbilityType`
+ */
+sealed trait GeneralAbilityType extends NamedType
+
+case class ServiceType(
+  name: String,
+  fields: NonEmptyMap[String, ArrowType]
+) extends GeneralAbilityType {
 
   override val specifier: String = "service"
 
@@ -452,7 +461,10 @@ case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) ext
 }
 
 // Ability is an unordered collection of labelled types and arrows
-case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
+case class AbilityType(
+  name: String,
+  fields: NonEmptyMap[String, Type]
+) extends GeneralAbilityType {
 
   override val specifier: String = "ability"
 

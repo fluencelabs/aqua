@@ -6,7 +6,7 @@ import aqua.model.*
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.RawTag
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{AbilityType, ArrowType, CollectionType, NamedType, StreamType, Type}
+import aqua.types.*
 
 import cats.data.StateT
 import cats.data.{Chain, IndexedStateT, State}
@@ -105,7 +105,9 @@ object ArrowInliner extends Logging {
     exports <- Exports[S].exports
     arrows <- Arrows[S].arrows
     // gather all arrows and variables from abilities
-    returnedAbilities = rets.collect { case VarModel(name, at: AbilityType, _) => name -> at }
+    returnedAbilities = rets.collect { case VarModel(name, at: GeneralAbilityType, _) =>
+      name -> at
+    }
     varsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
       getAbilityVars(name, None, at, exports)
     }.toMap
@@ -138,9 +140,9 @@ object ArrowInliner extends Logging {
   private def getAbilityFields[T <: Type](
     name: String,
     newName: Option[String],
-    `type`: NamedType,
+    `type`: GeneralAbilityType,
     exports: Map[String, ValueModel]
-  )(fields: NamedType => Map[String, T]): Map[String, ValueModel] =
+  )(fields: GeneralAbilityType => Map[String, T]): Map[String, ValueModel] =
     fields(`type`).flatMap { case (fName, _) =>
       val fullName = AbilityType.fullName(name, fName)
       val newFullName = AbilityType.fullName(newName.getOrElse(name), fName)
@@ -162,7 +164,7 @@ object ArrowInliner extends Logging {
   private def getAbilityVars(
     abilityName: String,
     abilityNewName: Option[String],
-    abilityType: AbilityType,
+    abilityType: GeneralAbilityType,
     exports: Map[String, ValueModel]
   ): Map[String, ValueModel] = {
     val get = getAbilityFields(
@@ -193,7 +195,7 @@ object ArrowInliner extends Logging {
   private def getAbilityArrows(
     name: String,
     newName: Option[String],
-    `type`: NamedType,
+    `type`: GeneralAbilityType,
     exports: Map[String, ValueModel],
     arrows: Map[String, FuncArrow]
   ): Map[String, FuncArrow] = {
@@ -214,7 +216,7 @@ object ArrowInliner extends Logging {
 
   private def getAbilityArrows[S: Arrows: Exports](
     name: String,
-    `type`: NamedType
+    `type`: GeneralAbilityType
   ): State[S, Map[String, FuncArrow]] = for {
     exports <- Exports[S].exports
     arrows <- Arrows[S].arrows

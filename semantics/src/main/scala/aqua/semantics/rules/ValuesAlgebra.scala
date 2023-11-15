@@ -384,7 +384,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   ): OptionT[Alg, CallArrowRaw] = {
     lazy val nameTypeFromAbility = OptionT(
       N.read(ab.asName, mustBeDefined = false)
-    ).collect { case nt: (AbilityType | ServiceType) => ab.asName -> nt }
+    ).collect { case nt: GeneralAbilityType => ab.asName -> nt }
 
     lazy val nameTypeFromService = for {
       st <- OptionT(
