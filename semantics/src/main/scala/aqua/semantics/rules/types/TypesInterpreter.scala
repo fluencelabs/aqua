@@ -348,7 +348,8 @@ class TypesInterpreter[S[_], X](using
             report
               .error(
                 token,
-                s"Number of fields doesn't match the data type, expected: $expected, given: $givenType"
+                "Number of fields doesn't match, " +
+                  s"expected: $expected, given: $givenType"
               )
               .as(false)
           } else {
@@ -544,34 +545,42 @@ class TypesInterpreter[S[_], X](using
         report
           .error(
             values.head._1,
-            "Return expression was already used in scope; you can use only one Return in an arrow declaration, use conditional return pattern if you need to return based on condition"
+            "Return expression was already used in scope; " +
+              "you can use only one Return in an arrow declaration, " +
+              "use conditional return pattern if you need to return based on condition"
           )
           .as(frame -> false)
       else if (frame.token.res.isEmpty)
         report
           .error(
             values.head._1,
-            "No return type declared for this arrow, please remove `<- ...` expression or add `-> ...` return type(s) declaration to the arrow"
+            "No return type declared for this arrow, " +
+              "please remove `<- ...` expression " +
+              "or add `-> ...` return type(s) declaration to the arrow"
           )
           .as(frame -> false)
       else if (frame.token.res.length > values.length)
         report
           .error(
             values.last._1,
-            s"Expected ${frame.token.res.length - values.length} more values to be returned, see return type declaration"
+            s"Expected ${frame.token.res.length - values.length} more " +
+              s"values to be returned, see return type declaration"
           )
           .as(frame -> false)
       else if (frame.token.res.length < values.length)
         report
           .error(
             values.toList.drop(frame.token.res.length).headOption.getOrElse(values.last)._1,
-            s"Too many values are returned from this arrow, this one is unexpected. Defined return type:  ${frame.arrowType.codomain}"
+            s"Too many values are returned from this arrow, " +
+              s"this is unexpected. Defined return type:  ${frame.arrowType.codomain}"
           )
           .as(frame -> false)
       else
         frame.arrowType.codomain.toList
           .zip(values.toList)
           .traverse { case (returnType, (token, returnValue)) =>
+            println(s"returnType: $returnType, returnValue: $returnValue")
+            println(s"acceptsValueOf: ${returnType.acceptsValueOf(returnValue.`type`)}")
             if (!returnType.acceptsValueOf(returnValue.`type`))
               report
                 .error(
