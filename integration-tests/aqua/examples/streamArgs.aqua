@@ -56,7 +56,7 @@ func lng280BugWithForAnonStream():
     for a <- arr:
       callService(*[], a)
 
-func returnEmptyStream():
+func returnEmptyStream() -> *u32:
     <- *[]
 
 func lng280BugWithForEmptyStreamFunc():
