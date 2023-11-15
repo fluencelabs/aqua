@@ -579,8 +579,6 @@ class TypesInterpreter[S[_], X](using
         frame.arrowType.codomain.toList
           .zip(values.toList)
           .traverse { case (returnType, (token, returnValue)) =>
-            println(s"returnType: $returnType, returnValue: $returnValue")
-            println(s"acceptsValueOf: ${returnType.acceptsValueOf(returnValue.`type`)}")
             if (!returnType.acceptsValueOf(returnValue.`type`))
               report
                 .error(

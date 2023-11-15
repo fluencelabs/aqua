@@ -17,7 +17,7 @@ import cats.syntax.traverse.*
 
 class ReturnSem[S[_]](val expr: ReturnExpr[S]) extends AnyVal {
 
-  def program[Alg[_]: Monad](implicit
+  def program[Alg[_]: Monad](using
     V: ValuesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg]
   ): Prog[Alg, Raw] = (
