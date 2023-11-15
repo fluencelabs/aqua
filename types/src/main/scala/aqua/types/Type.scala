@@ -348,7 +348,7 @@ sealed trait NamedType extends Type {
     def getArrowsEval(path: Option[String], nt: NamedType): Eval[List[(String, ArrowType)]] =
       nt.fields.toNel.toList.flatTraverse {
         // sub-arrows could be in abilities or services
-        case (innerName, innerType: (ServiceType | AbilityType)) =>
+        case (innerName, innerType: GeneralAbilityType) =>
           val newPath = path.fold(innerName)(AbilityType.fullName(_, innerName))
           getArrowsEval(newPath.some, innerType)
         case (aName, aType: ArrowType) =>
