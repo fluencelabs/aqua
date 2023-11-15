@@ -7,6 +7,7 @@ val catsV = "2.10.0"
 val catsParseV = "0.3.10"
 val monocleV = "3.1.0"
 val scalaTestV = "3.2.17"
+val scalaTestScalaCheckV = "3.2.17.0"
 val sourcecodeV = "0.3.0"
 val fs2V = "3.9.3"
 val catsEffectV = "3.6-1f95fd7"
@@ -23,8 +24,9 @@ val commons = Seq(
   },
   scalaVersion := scalaV,
   libraryDependencies ++= Seq(
-    "com.outr"      %%% "scribe"    % scribeV,
-    "org.scalatest" %%% "scalatest" % scalaTestV % Test
+    "com.outr"          %%% "scribe"          % scribeV,
+    "org.scalatest"     %%% "scalatest"       % scalaTestV           % Test,
+    "org.scalatestplus" %%% "scalacheck-1-17" % scalaTestScalaCheckV % Test
   ),
   scalacOptions ++= {
     Seq(
