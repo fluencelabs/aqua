@@ -1,12 +1,15 @@
 package aqua.compiler
 
-import aqua.model.{CallModel, ForModel, FunctorModel, LiteralModel, ValueModel, VarModel}
+import aqua.model.AquaContext
+import aqua.model.CallServiceModel
+import aqua.model.FlattenModel
 import aqua.model.transform.ModelBuilder
-import aqua.model.transform.TransformConfig
 import aqua.model.transform.Transform
-import aqua.parser.ParserError
+import aqua.model.transform.TransformConfig
+import aqua.model.{CallModel, ForModel, FunctorModel, LiteralModel, ValueModel, VarModel}
 import aqua.parser.Ast
 import aqua.parser.Parser
+import aqua.parser.ParserError
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.ConstantRaw
@@ -18,15 +21,12 @@ import aqua.types.{ArrayType, CanonStreamType, LiteralType, ScalarType, StreamTy
 import cats.Id
 import cats.data.{Chain, NonEmptyChain, NonEmptyMap, Validated, ValidatedNec}
 import cats.instances.string.*
-import cats.syntax.show.*
-import cats.syntax.option.*
 import cats.syntax.either.*
+import cats.syntax.option.*
+import cats.syntax.show.*
+import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
-import aqua.model.AquaContext
-import aqua.model.FlattenModel
-import aqua.model.CallServiceModel
 
 class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
   import ModelBuilder.*
@@ -358,7 +358,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
             join(VarModel(streamName, streamType), arg),
             decrement
           )
-        )
+        ),
+        emptyRespCall(transformCfg, initPeer)
       ),
       errorCall(transformCfg, 0, initPeer)
     )
