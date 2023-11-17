@@ -209,27 +209,32 @@ class TypesInterpreter[S[_], X](using
     arguments: List[ValueRaw]
   ): State[X, Option[PropertyRaw]] = {
     rootT match {
-      case AbilityType(name, fieldsAndArrows) =>
-        fieldsAndArrows(op.name.value).fold(
-          report
-            .error(
-              op,
-              s"Arrow `${op.name.value}` not found in type `$name`, available: ${fieldsAndArrows.toNel.toList.map(_._1).mkString(", ")}"
-            )
-            .as(None)
-        ) {
-          case at @ ArrowType(_, _) =>
-            locations
-              .pointFieldLocation(name, op.name.value, op)
-              .as(Some(IntoArrowRaw(op.name.value, at, arguments)))
-          case _ =>
+      case ab: GeneralAbilityType =>
+        val name = ab.name
+        val fields = ab.fields
+        lazy val fieldNames = fields.toNel.toList.map(_._1).mkString(", ")
+        fields(op.name.value)
+          .fold(
             report
               .error(
                 op,
-                s"Unexpected. `${op.name.value}` must be an arrow."
+                s"Arrow `${op.name.value}` not found in type `$name`, " +
+                  s"available: $fieldNames"
               )
               .as(None)
-        }
+          ) {
+            case at @ ArrowType(_, _) =>
+              locations
+                .pointFieldLocation(name, op.name.value, op)
+                .as(Some(IntoArrowRaw(op.name.value, at, arguments)))
+            case _ =>
+              report
+                .error(
+                  op,
+                  s"Unexpected. `${op.name.value}` must be an arrow."
+                )
+                .as(None)
+          }
       case t =>
         t.properties
           .get(op.name.value)

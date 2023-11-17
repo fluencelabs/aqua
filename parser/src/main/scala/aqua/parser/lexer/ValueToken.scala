@@ -2,23 +2,23 @@ package aqua.parser.lexer
 
 import aqua.parser.Expr
 import aqua.parser.head.FilenameExpr
-import aqua.parser.lexer.Token.*
 import aqua.parser.lexer.NamedArg.namedArgs
+import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
-import aqua.types.LiteralType
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.{P0ToSpan, PToSpan, S}
+import aqua.types.LiteralType
 
+import cats.arrow.FunctionK
+import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
-import cats.syntax.functor.*
-import cats.{~>, Comonad, Functor}
-import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.syntax.foldable.*
-import cats.arrow.FunctionK
-import cats.syntax.traverse.*
+import cats.syntax.functor.*
 import cats.syntax.option.*
+import cats.syntax.traverse.*
+import cats.{Comonad, Functor, ~>}
 
 sealed trait ValueToken[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): ValueToken[K]
@@ -41,38 +41,6 @@ case class PropertyToken[F[_]: Comonad](
 
   private def isConst(name: String): Boolean =
     name.forall(c => !c.isLetter || c.isUpper)
-
-  /**
-   * This method tries to convert property token to
-   * call arrow token.
-   *
-   * Next properties pattern is transformed:
-   * (Class)+ arrow()
-   * ^^^^^^^
-   * this part is transformed to ability name.
-   */
-  private def toCallArrow: Option[CallArrowToken[F]] = value match {
-    case VarToken(name) =>
-      val ability = properties.init.traverse {
-        case f @ IntoField(_) => f.value.some
-        case _ => none
-      }.map(
-        name.value +: _
-      ).filter(
-        _.forall(isClass)
-      ).map(props => name.rename(props.mkString(".")))
-
-      (properties.last, ability) match {
-        case (IntoArrow(funcName, args), Some(ability)) =>
-          CallArrowToken(
-            ability.asTypeToken.some,
-            funcName,
-            args
-          ).some
-        case _ => none
-      }
-    case _ => none
-  }
 
   /**
    * This method tries to convert property token to
@@ -144,7 +112,7 @@ case class PropertyToken[F[_]: Comonad](
    * @return Some(token) if token was adjusted, None otherwise
    */
   def adjust: Option[ValueToken[F]] =
-    toCallArrow.orElse(toDottedName)
+    toDottedName
 }
 
 object PropertyToken {
