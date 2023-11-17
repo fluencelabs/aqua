@@ -358,7 +358,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
             join(VarModel(streamName, streamType), arg),
             decrement
           )
-        )
+        ),
+        emptyRespCall(transformCfg, initPeer)
       ),
       errorCall(transformCfg, 0, initPeer)
     )

@@ -1,22 +1,22 @@
 package aqua.model.transform
 
 import aqua.model.*
+import aqua.model.FailModel
+import aqua.model.IntoIndexModel
+import aqua.model.OnModel
+import aqua.model.inline.raw.StreamGateInliner
 import aqua.raw.ops.Call
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.{model, res}
-import aqua.res.{CallRes, CallServiceRes, MakeRes}
-import aqua.types.{ArrayType, LiteralType, ScalarType}
-import aqua.types.StreamType
-import aqua.model.IntoIndexModel
-import aqua.model.inline.raw.StreamGateInliner
-import aqua.model.OnModel
-import aqua.model.FailModel
 import aqua.res.ResolvedOp
+import aqua.res.{CallRes, CallServiceRes, MakeRes}
+import aqua.types.StreamType
+import aqua.types.{ArrayType, LiteralType, ScalarType}
+import aqua.{model, res}
 
-import scala.language.implicitConversions
 import cats.data.Chain
 import cats.data.Chain.==:
 import cats.syntax.option.*
+import scala.language.implicitConversions
 
 object ModelBuilder {
   implicit def rawToValue(raw: ValueRaw): ValueModel = ValueModel.fromRaw(raw)
@@ -88,15 +88,24 @@ object ModelBuilder {
       )
       .leaf
 
-  def respCall(bc: TransformConfig, value: ValueModel, on: ValueModel = initPeer) =
-    res
-      .CallServiceRes(
-        ValueModel.fromRaw(bc.callbackSrvId),
-        bc.respFuncName,
-        CallRes(value :: Nil, None),
-        on
-      )
-      .leaf
+  def respCallImpl(
+    config: TransformConfig,
+    arguments: List[ValueModel],
+    on: ValueModel = initPeer
+  ) = res
+    .CallServiceRes(
+      ValueModel.fromRaw(config.callbackSrvId),
+      config.respFuncName,
+      CallRes(arguments, None),
+      on
+    )
+    .leaf
+
+  def respCall(config: TransformConfig, value: ValueModel, on: ValueModel = initPeer) =
+    respCallImpl(config, value :: Nil, on)
+
+  def emptyRespCall(config: TransformConfig, on: ValueModel = initPeer) =
+    respCallImpl(config, Nil)
 
   def dataCall(bc: TransformConfig, name: String, on: ValueModel = initPeer) =
     res

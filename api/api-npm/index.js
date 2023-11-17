@@ -7,6 +7,7 @@ function getConfig({
   noXor = false,
   targetType = "air",
   tracing = false,
+  noEmptyResponse = false,
 }) {
   return new AquaConfig(
     logLevel,
@@ -19,6 +20,7 @@ function getConfig({
       air: "air",
     }[targetType],
     tracing,
+    noEmptyResponse,
   );
 }
 
