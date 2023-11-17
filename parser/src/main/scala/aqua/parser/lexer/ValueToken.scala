@@ -103,6 +103,38 @@ case class PropertyToken[F[_]: Comonad](
   }
 
   /**
+   * This method tries to convert property token to
+   * call arrow token.
+   *
+   * Next properties pattern is transformed:
+   * (Class)+ arrow()
+   * ^^^^^^^
+   * this part is transformed to ability name.
+   */
+  private def toCallArrow: Option[CallArrowToken[F]] = value match {
+    case VarToken(name) =>
+      val ability = properties.init.traverse {
+        case f @ IntoField(_) => f.value.some
+        case _ => none
+      }.map(
+        name.value +: _
+      ).filter(
+        _.forall(isClass)
+      ).map(props => name.rename(props.mkString(".")))
+
+      (properties.last, ability) match {
+        case (IntoArrow(funcName, args), Some(ability)) =>
+          CallArrowToken(
+            ability.asTypeToken.some,
+            funcName,
+            args
+          ).some
+        case _ => none
+      }
+    case _ => none
+  }
+
+  /**
    * This is a hacky method to adjust parsing result
    * to format that was used previously.
    * This method tries to convert property token to
@@ -112,7 +144,13 @@ case class PropertyToken[F[_]: Comonad](
    * @return Some(token) if token was adjusted, None otherwise
    */
   def adjust: Option[ValueToken[F]] =
-    toDottedName
+    toCallArrow.orElse(toDottedName)
+
+  lazy val leadingName: Option[NamedTypeToken[F]] =
+    value match {
+      case VarToken(name) => name.asTypeToken.some
+      case _ => none
+    }
 }
 
 object PropertyToken {

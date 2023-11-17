@@ -100,20 +100,27 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         }
 
       case prop @ PropertyToken(value, properties) =>
-        prop.adjust.fold(
-          for {
-            valueRaw <- valueToRaw(value)
-            result <- valueRaw.flatTraverse(raw =>
-              properties
-                .foldLeftM(raw) { case (prev, op) =>
-                  OptionT(
-                    resolveSingleProperty(prev.`type`, op)
-                  ).map(prop => ApplyPropertyRaw(prev, prop))
-                }
-                .value
+        lazy val default = for {
+          valueRaw <- valueToRaw(value)
+          result <- valueRaw.flatTraverse(raw =>
+            properties
+              .foldLeftM(raw) { case (prev, op) =>
+                OptionT(
+                  resolveSingleProperty(prev.`type`, op)
+                ).map(prop => ApplyPropertyRaw(prev, prop))
+              }
+              .value
+          )
+        } yield result
+
+        prop.leadingName.fold(default)(name =>
+          A.isDefinedAbility(name)
+            .flatMap(isDefined =>
+              prop.adjust
+                .filter(_ => isDefined)
+                .fold(default)(valueToRaw)
             )
-          } yield result
-        )(valueToRaw)
+        )
 
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {

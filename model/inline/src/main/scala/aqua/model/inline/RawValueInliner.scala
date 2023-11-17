@@ -1,22 +1,22 @@
 package aqua.model.inline
 
-import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
-import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.*
+import aqua.model.inline.Inline.MergeMode.*
 import aqua.model.inline.raw.*
+import aqua.model.inline.state.{Arrows, Counter, Exports, Mangler}
 import aqua.raw.ops.*
 import aqua.raw.value.*
 import aqua.types.{ArrayType, LiteralType, OptionType, StreamType}
 
 import cats.Eval
-import cats.syntax.traverse.*
-import cats.syntax.monoid.*
-import cats.syntax.functor.*
-import cats.syntax.flatMap.*
-import cats.syntax.apply.*
-import cats.instances.list.*
 import cats.data.{Chain, State, StateT}
+import cats.instances.list.*
 import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.monoid.*
+import cats.syntax.traverse.*
 import scribe.Logging
 
 object RawValueInliner extends Logging {
