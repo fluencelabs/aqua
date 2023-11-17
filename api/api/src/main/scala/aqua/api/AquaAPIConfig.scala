@@ -10,12 +10,14 @@ case class AquaAPIConfig(
   constants: List[String] = Nil,
   noXor: Boolean = false, // TODO: Remove
   noRelay: Boolean = false,
-  tracing: Boolean = false
+  tracing: Boolean = false,
+  noEmptyResponse: Boolean = false
 ) {
 
   def getTransformConfig: TransformConfig = {
     val config = TransformConfig(
-      tracing = Option.when(tracing)(TransformConfig.TracingConfig.default)
+      tracing = Option.when(tracing)(TransformConfig.TracingConfig.default),
+      noEmptyResponse = noEmptyResponse
     )
 
     if (noRelay) config.copy(relayVarName = None)
