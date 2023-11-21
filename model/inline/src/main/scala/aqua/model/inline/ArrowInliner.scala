@@ -291,9 +291,6 @@ object ArrowInliner extends Logging {
     val otherArrows = fn.capturedArrows -- abilitiesArrows.keySet
 
     for {
-      otherValuesRenamed <- findNewNames(otherValues)
-      otherArrowsRenamed <- findNewNames(otherArrows)
-
       // Calculate renaming based on abilities
       valuesRenamed <- abilitiesValues.toList.traverse { case (name, (at, values)) =>
         Mangler[S]
@@ -320,8 +317,20 @@ object ArrowInliner extends Logging {
         abilitiesArrows.renamed(valuesRenamed.renames)
       )
 
-      values = otherValuesRenamed |+| valuesRenamed
-      arrows = otherArrowsRenamed |+| arrowsRenamed
+      otherValuesRenamed <- findNewNames(otherValues)
+      otherArrowsValues = Arrows.arrowsByValues(
+        otherArrows,
+        otherValues
+      )
+      otherArrowsValuesRenamed = Renamed(
+        otherValuesRenamed.renames.filterKeys(otherArrowsValues.keySet).toMap,
+        otherArrowsValues.renamed(otherValuesRenamed.renames)
+      )
+
+      otherArrowsRenamed <- findNewNames(otherArrows)
+
+      values = valuesRenamed |+| otherValuesRenamed
+      arrows = arrowsRenamed |+| otherArrowsValuesRenamed |+| otherArrowsRenamed
     } yield values -> arrows
   }
 
