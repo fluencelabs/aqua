@@ -414,8 +414,6 @@ object ArrowInliner extends Logging {
           // Process renamings, prepare environment
           fn <- ArrowInliner.prelude(arrow, call, exports, arrows)
           inlineResult <- ArrowInliner.inline(fn, call, streams)
-          _ = println(s"Inline result: $inlineResult")
-          _ = println(s"exports to save: ${inlineResult.exportsToSave}")
         } yield inlineResult
       )
     )
