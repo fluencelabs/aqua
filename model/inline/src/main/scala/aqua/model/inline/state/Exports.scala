@@ -142,7 +142,6 @@ object Exports {
     val related = for {
       variable <- names
       exp <- state.get(variable).toList
-      _ = println(s"var: $variable, exp: $exp")
       at <- exp.`type` match {
         case at: GeneralAbilityType => at :: Nil
         case _ => Nil
