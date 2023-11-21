@@ -10,11 +10,13 @@ import aqua.types.*
 
 import cats.data.StateT
 import cats.data.{Chain, IndexedStateT, State}
+import cats.kernel.Semigroup
 import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
+import cats.syntax.semigroup.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
 import cats.{Eval, Monoid}
@@ -227,6 +229,16 @@ object ArrowInliner extends Logging {
     renamed: Map[String, T]
   )
 
+  given [T]: Monoid[Renamed[T]] with {
+    override def empty: Renamed[T] = Renamed(Map.empty, Map.empty)
+
+    override def combine(x: Renamed[T], y: Renamed[T]): Renamed[T] =
+      Renamed(
+        x.renames ++ y.renames,
+        x.renamed ++ y.renamed
+      )
+  }
+
   // TODO: Make this extension private somehow?
   extension [T](vals: Map[String, T]) {
 
@@ -251,6 +263,64 @@ object ArrowInliner extends Logging {
         values.renamed(renames)
       )
     }
+
+  def renamedCaptured[S: Mangler](
+    fn: FuncArrow,
+    exports: Map[String, ValueModel],
+    arrows: Map[String, FuncArrow]
+  ): State[S, (Renamed[ValueModel], Renamed[FuncArrow])] = {
+    // Gather abilities related values
+    val abilitiesValues = fn.capturedValues.collect {
+      // Gather only top level abilities
+      case (name, vm @ ValueModel.Ability(_, at, Chain.nil)) =>
+        name -> (at, Exports.gatherFrom(
+          List(name),
+          fn.capturedValues
+        ))
+    }
+    val abilitiesValuesKeys = abilitiesValues.flatMap { case (_, (_, values)) =>
+      values.keySet
+    }
+
+    // Gather abilities related arrows
+    val abilitiesArrows = abilitiesValues.toList.foldMap { case (_, (_, values)) =>
+      Arrows.arrowsByValues(fn.capturedArrows, values).toList
+    }.toMap
+
+    val otherValues = fn.capturedValues -- abilitiesValuesKeys
+    val otherArrows = fn.capturedArrows -- abilitiesArrows.keySet
+
+    for {
+      otherValuesRenamed <- findNewNames(otherValues)
+      otherArrowsRenamed <- findNewNames(otherArrows)
+
+      // Calculate renaming based on abilities
+      valuesRenamed <- abilitiesValues.toList.traverse { case (name, (at, values)) =>
+        Mangler[S]
+          .findAndForbidName(name)
+          .map(rename =>
+            AbilityType
+              .renames(at)(name, rename)
+              .updated(name, rename)
+          )
+          .map(renames =>
+            val valuesRenamed = values.renamed(renames).map {
+              case (name, vm: VarModel) => name -> vm.copy(name = name)
+              case v => v
+            }
+            Renamed(renames, valuesRenamed)
+          )
+      }.map(_.combineAll)
+
+      arrowsRenamed = Renamed(
+        valuesRenamed.renames.filterKeys(abilitiesArrows.keySet).toMap,
+        abilitiesArrows.renamed(valuesRenamed.renames)
+      )
+
+      values = otherValuesRenamed |+| valuesRenamed
+      arrows = otherArrowsRenamed |+| arrowsRenamed
+    } yield values -> arrows
+  }
 
   /**
    * Prepare the function and the context for inlining
@@ -285,26 +355,8 @@ object ArrowInliner extends Logging {
     arrowRenames = args.arrowArgsRenames
     abRenames = args.abilityArgsRenames
 
-    /**
-     * Find new names for captured values and arrows
-     * to avoid collisions, then resolve them in context.
-     */
-    capturedValues <- findNewNames(fn.capturedValues)
-    /**
-     * If arrow correspond to a value,
-     * rename in accordingly to the value
-     */
-    capturedArrowValues = Arrows.arrowsByValues(
-      fn.capturedArrows,
-      fn.capturedValues
-    )
-    capturedArrowValuesRenamed = capturedArrowValues.renamed(
-      capturedValues.renames
-    )
-    /**
-     * Rename arrows that are not values
-     */
-    capturedArrows <- findNewNames(fn.capturedArrows -- capturedArrowValues.keySet)
+    captured <- renamedCaptured(fn, exports, arrows)
+    (capturedValues, capturedArrows) = captured
 
     /**
      * Function defines variables inside its body.
@@ -333,7 +385,7 @@ object ArrowInliner extends Logging {
      * It seems that resolving whole `exports`
      * and `arrows` is not necessary.
      */
-    arrowsResolved = arrows ++ capturedArrowValuesRenamed ++ capturedArrows.renamed
+    arrowsResolved = arrows ++ capturedArrows.renamed
     exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
     tree = fn.body.rename(renaming)

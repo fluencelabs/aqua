@@ -1,14 +1,16 @@
 package aqua.model.inline.state
 
+import aqua.model.ValueModel
 import aqua.model.{ArgsCall, FuncArrow}
 import aqua.raw.arrow.FuncRaw
-import aqua.model.ValueModel
+import aqua.types.*
 
 import cats.data.State
 import cats.instances.list.*
 import cats.syntax.functor.*
-import cats.syntax.traverse.*
+import cats.syntax.option.*
 import cats.syntax.show.*
+import cats.syntax.traverse.*
 
 /**
  * State algebra for resolved arrows
@@ -31,9 +33,9 @@ trait Arrows[S] extends Scoped[S] {
     topology: Option[String]
   )(using Exports[S]): State[S, Unit] =
     for {
-      exps <- Exports[S].exports
       arrs <- arrows
-      capturedVars = exps.filterKeys(arrow.capturedVars).toMap
+      exps <- Exports[S].exports
+      capturedVars <- Exports[S].gather(arrow.capturedVars.toSeq)
       capturedArrows = arrs.filterKeys(arrow.capturedVars).toMap ++
         Arrows.arrowsByValues(arrs, capturedVars)
       funcArrow = FuncArrow.fromRaw(arrow, capturedArrows, capturedVars, topology)

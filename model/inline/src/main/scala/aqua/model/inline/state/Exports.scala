@@ -1,8 +1,8 @@
 package aqua.model.inline.state
 
-import aqua.model.{LiteralModel, ValueModel, VarModel}
 import aqua.model.ValueModel.Ability
-import aqua.types.{AbilityType, NamedType}
+import aqua.model.{LiteralModel, ValueModel, VarModel}
+import aqua.types.{AbilityType, GeneralAbilityType, NamedType}
 
 import cats.data.{NonEmptyList, State}
 
@@ -78,6 +78,9 @@ trait Exports[S] extends Scoped[S] {
    */
   val exports: State[S, Map[String, ValueModel]]
 
+  final def gather(names: Seq[String]): State[S, Map[String, ValueModel]] =
+    exports.map(Exports.gatherFrom(names, _))
+
   /**
    * Change [[S]] to [[R]]
    */
@@ -124,6 +127,32 @@ trait Exports[S] extends Scoped[S] {
 
 object Exports {
   def apply[S](using exports: Exports[S]): Exports[S] = exports
+
+  /**
+   * Gather all the values that are related to the given names
+   * (ability fields)
+   *
+   * @param names names of variables
+   * @param state exports state
+   */
+  def gatherFrom(
+    names: Seq[String],
+    state: Map[String, ValueModel]
+  ): Map[String, ValueModel] = {
+    val related = for {
+      variable <- names
+      exp <- state.get(variable).toList
+      _ = println(s"var: $variable, exp: $exp")
+      at <- exp.`type` match {
+        case at: GeneralAbilityType => at :: Nil
+        case _ => Nil
+      }
+      field <- at.allFields.toNel.toList
+      (fieldName, _) = field
+    } yield AbilityType.fullName(variable, fieldName)
+
+    state.filterKeys(names.toSet ++ related).toMap
+  }
 
   // Get last linked VarModel
   def getLastValue(name: String, state: Map[String, ValueModel]): Option[ValueModel] = {
