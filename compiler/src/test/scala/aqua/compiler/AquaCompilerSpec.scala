@@ -418,7 +418,8 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
         SeqRes.wrap(
           getDataSrv("-relay-", "-relay-", ScalarType.string),
           srvCall("resolved-id"),
-          srvCall("default-id")
+          srvCall("default-id"),
+          emptyRespCall(transformCfg, initPeer)
         ),
         errorCall(transformCfg, 0, initPeer)
       )
