@@ -107,7 +107,7 @@ object ArrowInliner extends Logging {
     exports <- Exports[S].exports
     arrows <- Arrows[S].arrows
     // gather all arrows and variables from abilities
-    returnedAbilities = rets.collect { case VarModel(name, at: GeneralAbilityType, _) =>
+    returnedAbilities = rets.collect { case ValueModel.Ability(name, at, _) =>
       name -> at
     }
     varsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
@@ -149,6 +149,8 @@ object ArrowInliner extends Logging {
       val fullName = AbilityType.fullName(name, fName)
       val newFullName = AbilityType.fullName(newName.getOrElse(name), fName)
 
+      println(s"getAbilityFields: $fullName, $newFullName")
+
       Exports
         .getLastValue(fullName, exports)
         .map(newFullName -> _)
@@ -177,7 +179,7 @@ object ArrowInliner extends Logging {
     )
 
     get(_.variables) ++ get(_.arrows).flatMap {
-      case arrow @ (_, vm: VarModel) =>
+      case arrow @ (_, vm @ ValueModel.Arrow(_, _)) =>
         arrow.some
       case (_, m) =>
         internalError(s"($m) cannot be an arrow")
@@ -209,7 +211,7 @@ object ArrowInliner extends Logging {
     )
 
     get(_.arrows).flatMap {
-      case (_, VarModel(name, _, _)) =>
+      case (_, ValueModel.Arrow(name, _)) =>
         arrows.get(name).map(name -> _)
       case (_, m) =>
         internalError(s"($m) cannot be an arrow")
@@ -414,6 +416,8 @@ object ArrowInliner extends Logging {
           // Process renamings, prepare environment
           fn <- ArrowInliner.prelude(arrow, call, exports, arrows)
           inlineResult <- ArrowInliner.inline(fn, call, streams)
+          _ = println(s"Inline result: $inlineResult")
+          _ = println(s"exports to save: ${inlineResult.exportsToSave}")
         } yield inlineResult
       )
     )

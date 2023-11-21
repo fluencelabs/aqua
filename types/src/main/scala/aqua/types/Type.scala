@@ -349,13 +349,16 @@ sealed trait NamedType extends Type {
    */
   final def allFields: NonEmptyMap[String, Type] = {
     def allEval(path: Option[String], nt: NamedType): Eval[List[(String, Type)]] = {
+      val qualified = (name: String) => path.fold(name)(AbilityType.fullName(_, name))
       val fieldsList = nt.fields.toNel.toList
+      val currentFields = fieldsList.map { case (name, t) =>
+        qualified(name) -> t
+      }
       fieldsList.flatTraverse {
         case (name, t: NamedType) =>
-          val newPath = path.fold(name)(AbilityType.fullName(_, name))
-          allEval(newPath.some, t)
+          allEval(qualified(name).some, t)
         case _ => Eval.now(Nil)
-      }.map(fieldsList ++ _)
+      }.map(currentFields ++ _)
     }
 
     allEval(none, this)
