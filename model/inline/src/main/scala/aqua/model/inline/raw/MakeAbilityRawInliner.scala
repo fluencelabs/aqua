@@ -1,12 +1,13 @@
 package aqua.model.inline.raw
 
+import aqua.model.ValueModel.Ability
 import aqua.model.inline.Inline
 import aqua.model.inline.RawValueInliner.unfold
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.{SeqModel, ValueModel, VarModel}
 import aqua.raw.value.AbilityRaw
 import aqua.types.AbilityType
-import aqua.model.ValueModel.Ability
+
 import cats.Eval
 import cats.data.{Chain, IndexedStateT, NonEmptyMap, State}
 import cats.syntax.foldable.*
@@ -31,7 +32,7 @@ object MakeAbilityRawInliner extends RawInliner[AbilityRaw] {
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     for {
-      name <- Mangler[S].findAndForbidName(raw.abilityType.name + "_ab")
+      name <- Mangler[S].findAndForbidName(raw.abilityType.name + "_anon")
       foldedFields <- raw.fieldsAndArrows.nonEmptyTraverse(unfold(_))
       varModel = VarModel(name, raw.baseType)
       valsInline = foldedFields.toList.foldMap { case (_, inline) => inline }.desugar
