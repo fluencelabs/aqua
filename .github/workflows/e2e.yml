@@ -49,6 +49,7 @@ jobs:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
       ref: use-js-client-0.5.0
 
+
   registry:
     needs:
       - fcli-snapshot
