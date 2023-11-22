@@ -76,8 +76,6 @@ object FuncArrow {
       retVar.map(r => Call.Export(r.name, r.`type`)).toList
     )
 
-    println("call in callArrow: " + call)
-
     val body = CallArrowRawTag.service(
       srvId = id,
       funcName = methodName,

@@ -36,9 +36,6 @@ object CallArrowRawInliner extends RawInliner[CallArrowRaw] with Logging {
     call: Call
   ): State[S, (List[ValueModel], Inline)] = {
     logger.trace(Console.YELLOW + s"Call arrow ${fn.funcName}" + Console.RESET)
-    println("fn: " + fn.funcName)
-    println("fn args: " + fn.args)
-    println("call with false: " + call)
     callToModel(call, false).flatMap { case (cm, p) =>
       ArrowInliner
         .callArrowRet(fn, cm)

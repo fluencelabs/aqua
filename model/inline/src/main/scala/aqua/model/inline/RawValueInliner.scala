@@ -112,13 +112,12 @@ object RawValueInliner extends Logging {
   def callToModel[S: Mangler: Exports: Arrows](
     call: Call,
     flatStreamArguments: Boolean
-  ): State[S, (CallModel, Option[OpModel.Tree])] =
+  ): State[S, (CallModel, Option[OpModel.Tree])] = {
     valueListToModel(call.args).flatMap { args =>
-      println("call in callToModel: " + call)
-      println("args: " + args)
-      println("flatStream: " + flatStreamArguments)
       if (flatStreamArguments)
-        args.map(arg => TagInliner.flat(arg._1, arg._2, true)).sequence
+        args.map{ arg =>
+          TagInliner.flat(arg._1, arg._2, true)
+        }.sequence
       else
         State.pure(args)
     }.map { list =>
@@ -130,4 +129,5 @@ object RawValueInliner extends Logging {
         parDesugarPrefix(list.flatMap(_._2))
       )
     }
+  }
 }

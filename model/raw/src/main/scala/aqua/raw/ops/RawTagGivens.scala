@@ -30,9 +30,11 @@ trait RawTagGivens {
 
     def toFuncOp: FuncOp = FuncOp(tree)
 
-    def rename(vals: Map[String, String]): RawTag.Tree =
+    def rename(vals: Map[String, String]): RawTag.Tree = {
+      
       if (vals.isEmpty) tree
       else tree.map(_.mapValues(_.renameVars(vals)).renameExports(vals))
+    }
 
     def mapValues(f: ValueRaw => ValueRaw): RawTag.Tree =
       tree.map(_.mapValues(f))

@@ -244,9 +244,8 @@ object CallArrowRawTag {
     funcName: String,
     call: Call,
     arrowType: Option[ArrowType] = None
-  ): CallArrowRawTag = {
-
-    val a = CallArrowRawTag(
+  ): CallArrowRawTag =
+    CallArrowRawTag(
       call.exportTo,
       CallServiceRaw(
         srvId,
@@ -255,9 +254,7 @@ object CallArrowRawTag {
         call.args
       )
     )
-    println("create callarrow service raw: " + a)
-    a
-  }
+
 }
 
 case class DeclareStreamTag(

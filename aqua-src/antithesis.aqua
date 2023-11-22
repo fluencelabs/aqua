@@ -27,5 +27,4 @@ func callService(stream: *u32, n: u32):
 func lng280BugWithForEmptyStreamFunc():
     arr = [1,2,3,4,5]
     for a <- arr:
-      str <- returnEmptyStream()
-      callService(str, a)
+      callService(returnEmptyStream(), a)
