@@ -317,9 +317,25 @@ object ArrowInliner extends Logging {
               .updated(name, rename)
           )
           .map(renames =>
+            // This code is HACKERY!!!
             val valuesRenamed = values.renamed(renames).map {
+              /**
+               * `VarModel` is sometimes used to point to an arrow.
+               * So if it is renamed, we should rename the `VarModel` too.
+               * Otherwise renamed value will be resolved
+               * to previous name when trying to resolve the arrow.
+               * But this should be done only if the name in model
+               * is the same as the name of the export,
+               * because export could point to another arrow.
+               */
               case (name, ValueModel.Arrow(vm, _)) if renames.contains(vm.name) =>
                 name -> vm.copy(name = name)
+              /**
+               * `VarModel` is used to point to an ability.
+               * So if it is renamed, we should rename the `VarModel` too.
+               * Otherwise renamed value will be resolved
+               * to previous name when trying to resolve the ability.
+               */
               case (name, ValueModel.Ability(vm, _)) =>
                 name -> vm.copy(name = name)
               case v => v
@@ -328,11 +344,13 @@ object ArrowInliner extends Logging {
           )
       }.map(_.combineAll)
 
+      // Rename arrows according to values
       arrowsRenamed = Renamed(
         valuesRenamed.renames.filterKeys(abilitiesArrows.keySet).toMap,
         abilitiesArrows.renamed(valuesRenamed.renames)
       )
 
+      // Rename values and arrows unrelated to abilities
       otherValuesRenamed <- findNewNames(otherValues)
       otherArrowsValues = Arrows.arrowsByValues(
         otherArrows,
@@ -343,7 +361,7 @@ object ArrowInliner extends Logging {
         otherArrowsValues.renamed(otherValuesRenamed.renames)
       )
 
-      otherArrowsRenamed <- findNewNames(otherArrows)
+      otherArrowsRenamed <- findNewNames(otherArrows -- otherArrowsValues.keySet)
 
       values = valuesRenamed |+| otherValuesRenamed
       arrows = arrowsRenamed |+| otherArrowsValuesRenamed |+| otherArrowsRenamed
