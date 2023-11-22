@@ -264,6 +264,14 @@ object ArrowInliner extends Logging {
       )
     }
 
+  /**
+   * Correctly rename captured values and arrows of a function
+   *
+   * @param fn Function
+   * @param exports Exports state before calling/inlining
+   * @param arrows Arrows state before calling/inlining
+   * @return Renamed values and arrows
+   */
   def renamedCaptured[S: Mangler](
     fn: FuncArrow,
     exports: Map[String, ValueModel],
@@ -273,11 +281,16 @@ object ArrowInliner extends Logging {
     val abilitiesValues = fn.capturedValues.collect {
       // Gather only top level abilities
       case (name, vm @ ValueModel.Ability(_, at, Chain.nil)) =>
-        name -> (at, Exports.gatherFrom(
-          List(name),
-          fn.capturedValues
-        ))
+        name -> (
+          at,
+          // Gather all values related to `name`
+          Exports.gatherFrom(
+            name :: Nil,
+            fn.capturedValues
+          )
+        )
     }
+    // Gather all abilities related names
     val abilitiesValuesKeys = abilitiesValues.flatMap { case (_, (_, values)) =>
       values.keySet
     }
@@ -287,6 +300,7 @@ object ArrowInliner extends Logging {
       Arrows.arrowsByValues(fn.capturedArrows, values).toList
     }.toMap
 
+    // Gather all other values and arrows that are not related to abilities
     val otherValues = fn.capturedValues -- abilitiesValuesKeys
     val otherArrows = fn.capturedArrows -- abilitiesArrows.keySet
 
@@ -296,8 +310,10 @@ object ArrowInliner extends Logging {
         Mangler[S]
           .findAndForbidName(name)
           .map(rename =>
+            // Get renaming map for this ability
             AbilityType
               .renames(at)(name, rename)
+              // Add ability rename too
               .updated(name, rename)
           )
           .map(renames =>
