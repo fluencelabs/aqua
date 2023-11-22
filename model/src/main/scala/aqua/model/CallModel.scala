@@ -9,11 +9,11 @@ case class CallModel(args: List[ValueModel], exportTo: List[CallModel.Export]) {
   override def toString: String = s"[${args.mkString(" ")}] ${exportTo.mkString(" ")}"
 
   def arrowArgNames: Set[String] = args.collect { case Arrow(m, _) =>
-    m
+    m.name
   }.toSet
 
   def abilityArgs: List[(String, GeneralAbilityType)] =
-    args.collect { case Ability(m, t, _) => m -> t }
+    args.collect { case Ability(m, t) => m.name -> t }
 
   def usesVarNames: Set[String] = args.flatMap(_.usesVarNames).toSet
 }

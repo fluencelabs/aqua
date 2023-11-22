@@ -110,8 +110,8 @@ object Arrows {
     values: Map[String, ValueModel]
   ): Map[String, FuncArrow] = {
     val arrowKeys = arrows.keySet ++ arrows.values.map(_.funcName)
-    val varsKeys = values.keySet ++ values.values.collect { case ValueModel.Arrow(name, _) =>
-      name
+    val varsKeys = values.keySet ++ values.values.collect { case ValueModel.Arrow(vm, _) =>
+      vm.name
     }
     val keys = arrowKeys.intersect(varsKeys)
 

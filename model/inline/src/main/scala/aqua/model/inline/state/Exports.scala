@@ -194,8 +194,8 @@ object Exports {
       value: ValueModel
     ): State[Map[String, ValueModel], Unit] = State.modify { state =>
       value match {
-        case Ability(name, at, properties) if properties.isEmpty =>
-          val pairs = getAbilityPairs(name, exportName, at, state)
+        case Ability(vm, at) if vm.properties.isEmpty =>
+          val pairs = getAbilityPairs(vm.name, exportName, at, state)
           state ++ pairs.toList.toMap + (exportName -> value)
         case _ => state + (exportName -> value)
       }

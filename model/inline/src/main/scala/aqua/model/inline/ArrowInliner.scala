@@ -107,8 +107,8 @@ object ArrowInliner extends Logging {
     exports <- Exports[S].exports
     arrows <- Arrows[S].arrows
     // gather all arrows and variables from abilities
-    returnedAbilities = rets.collect { case ValueModel.Ability(name, at, _) =>
-      name -> at
+    returnedAbilities = rets.collect { case ValueModel.Ability(vm, at) =>
+      vm.name -> at
     }
     varsFromAbilities = returnedAbilities.flatMap { case (name, at) =>
       getAbilityVars(name, None, at, exports)
@@ -209,8 +209,8 @@ object ArrowInliner extends Logging {
     )
 
     get(_.arrows).flatMap {
-      case (_, ValueModel.Arrow(name, _)) =>
-        arrows.get(name).map(name -> _)
+      case (_, ValueModel.Arrow(vm, _)) =>
+        arrows.get(vm.name).map(vm.name -> _)
       case (_, m) =>
         internalError(s"($m) cannot be an arrow")
     }
@@ -280,7 +280,7 @@ object ArrowInliner extends Logging {
     // Gather abilities related values
     val abilitiesValues = fn.capturedValues.collect {
       // Gather only top level abilities
-      case (name, vm @ ValueModel.Ability(_, at, Chain.nil)) =>
+      case (name, ValueModel.Ability(vm, at)) if vm.properties.isEmpty =>
         name -> (
           at,
           // Gather all values related to `name`
@@ -320,7 +320,7 @@ object ArrowInliner extends Logging {
             val valuesRenamed = values.renamed(renames).map {
               case (name, vm: VarModel) if renames.contains(vm.name) =>
                 name -> vm.copy(name = name)
-              case (name, vm @ ValueModel.Ability(_, _, _)) =>
+              case (name, ValueModel.Ability(vm, _)) =>
                 name -> vm.copy(name = name)
               case v => v
             }
