@@ -318,7 +318,7 @@ object ArrowInliner extends Logging {
           )
           .map(renames =>
             val valuesRenamed = values.renamed(renames).map {
-              case (name, vm: VarModel) if renames.contains(vm.name) =>
+              case (name, ValueModel.Arrow(vm, _)) if renames.contains(vm.name) =>
                 name -> vm.copy(name = name)
               case (name, ValueModel.Ability(vm, _)) =>
                 name -> vm.copy(name = name)
