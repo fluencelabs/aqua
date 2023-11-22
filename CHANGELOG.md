@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.13.0](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.4...aqua-v0.13.0) (2023-11-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **compiler:** Make `nil` option bottom [LNG-279] ([#968](https://github.com/fluencelabs/aqua/issues/968))
+* **compiler:** Prohibit mutating options [LNG-277] ([#960](https://github.com/fluencelabs/aqua/issues/960))
+
+### Features
+
+* **api:** Use `js.UndefOr` for `defaultServiceId` ([#980](https://github.com/fluencelabs/aqua/issues/980)) ([1e525fa](https://github.com/fluencelabs/aqua/commit/1e525fad35585c5401914200e8e15c50304d8688))
+* **compiler:** Allow omitting field name in struct creation [LNG-261] ([#943](https://github.com/fluencelabs/aqua/issues/943)) ([fcdb5b0](https://github.com/fluencelabs/aqua/commit/fcdb5b0fefeffc004a50bd66a6a768b36ed9d71d))
+* **compiler:** Always generate `last` argument of `fold` [LNG-265] ([#947](https://github.com/fluencelabs/aqua/issues/947)) ([78ee753](https://github.com/fluencelabs/aqua/commit/78ee753c7b3e956faf5c92f4992e51c1af4ac76a))
+* **compiler:** Generate empty calls to `responseHandlerSrv` [LNG-286] ([#979](https://github.com/fluencelabs/aqua/issues/979)) ([cee4448](https://github.com/fluencelabs/aqua/commit/cee444862a7cf2bea3f84e921b03328fd83fa108))
+* **compiler:** Make `nil` option bottom [LNG-279] ([#968](https://github.com/fluencelabs/aqua/issues/968)) ([11c8970](https://github.com/fluencelabs/aqua/commit/11c8970fd889a3acb07c0c65013d153194106e62))
+* **compiler:** Prohibit mutating options [LNG-277] ([#960](https://github.com/fluencelabs/aqua/issues/960)) ([68425ed](https://github.com/fluencelabs/aqua/commit/68425ed42a7440aefac82011bbac418ef13bd636))
+
+
+### Bug Fixes
+
+* **compiler:** Code generate wrong stream name in AIR [LNG-276] ([#958](https://github.com/fluencelabs/aqua/issues/958)) ([a1576ef](https://github.com/fluencelabs/aqua/commit/a1576efad9d6a3d5fb20c01182b0d0a948c50ec4))
+* **compiler:** Incorrect focus on error [LNG-274] ([#959](https://github.com/fluencelabs/aqua/issues/959)) ([6e6b567](https://github.com/fluencelabs/aqua/commit/6e6b567f8eac007b0e50fc6e2eb4e4918663016e))
+* **compiler:** Multiple closures in one function [LNG-262] ([#941](https://github.com/fluencelabs/aqua/issues/941)) ([45ca7bb](https://github.com/fluencelabs/aqua/commit/45ca7bbf3ed234b25d0f010c2bd5878f9bce9155))
+* **compiler:** Throw an error when comparing an alias and a named type with the same name [LNG-231] ([#946](https://github.com/fluencelabs/aqua/issues/946)) ([38f7728](https://github.com/fluencelabs/aqua/commit/38f77285f57410848a5f6f3333ca6a99fb5017f5))
+* **compiler:** Unknown service method call is ignored [LNG-273] ([#957](https://github.com/fluencelabs/aqua/issues/957)) ([5a3c5e6](https://github.com/fluencelabs/aqua/commit/5a3c5e6666f53ac222e297e69971e3d84499759f))
+* **deps:** update dependency @fluencelabs/js-client to v0.4.1 ([#945](https://github.com/fluencelabs/aqua/issues/945)) ([634b1c1](https://github.com/fluencelabs/aqua/commit/634b1c17b629b6f899bfe5ff17a9bdc81673acba))
+* **deps:** update dependency @fluencelabs/js-client to v0.4.2 ([#956](https://github.com/fluencelabs/aqua/issues/956)) ([077dc8f](https://github.com/fluencelabs/aqua/commit/077dc8ff131cb1c4cc6300b078232c1be93c39cd))
+* **deps:** update dependency @fluencelabs/js-client to v0.4.3 ([#966](https://github.com/fluencelabs/aqua/issues/966)) ([313502e](https://github.com/fluencelabs/aqua/commit/313502ecae4f0568af63158e6f518bc8e398953d))
+
 ## [0.12.4](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.3...aqua-v0.12.4) (2023-10-23)
 
 
