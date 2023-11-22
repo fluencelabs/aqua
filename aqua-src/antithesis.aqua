@@ -1,12 +1,31 @@
 aqua StreamArgs
 
-export returnDerivedStream
+export lng280BugWithForEmptyStreamFunc
 
-func getStream(str: *u32) -> *u32:
-    nums = str
-    nums <<- 1
-    <- nums
+-- func getStream(str: *u32) -> *u32:
+--     nums = str
+--     nums <<- 1
+--     <- nums
+--
+-- func returnDerivedStream() -> []u32:
+--     streams <- getStream(*[1,2,3])
+--     <- streams
 
-func returnDerivedStream() -> []u32:
-    streams <- getStream(*[1,2,3])
-    <- streams
+func returnEmptyStream() -> *u32:
+    -- (restriction stream_anon
+    --  (null)
+    -- )
+    <- *[]
+
+service StreamService("test-service"):
+    store(numbers: []u32, n: u32)
+
+func callService(stream: *u32, n: u32):
+    stream <<- 1
+    StreamService.store(stream, n)
+
+func lng280BugWithForEmptyStreamFunc():
+    arr = [1,2,3,4,5]
+    for a <- arr:
+      str <- returnEmptyStream()
+      callService(str, a)

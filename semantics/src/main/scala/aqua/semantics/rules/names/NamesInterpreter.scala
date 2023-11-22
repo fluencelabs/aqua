@@ -37,6 +37,8 @@ class NamesInterpreter[S[_], X](using
       } orElse st.rootArrows.get(name)
     }
 
+  override def getAllNames(): SX[List[String]] = getState.map(_.allNames.toList)
+
   override def read(name: Name[S], mustBeDefined: Boolean = true): SX[Option[Type]] =
     OptionT(constantDefined(name))
       .orElseF(readName(name.value))

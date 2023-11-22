@@ -69,6 +69,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
             arguments = arguments
           )
         )
+        _ = println("create car: " + callArrow)
         result <- callArrow match {
           case (vm: VarModel, inl) =>
             State.pure((vm, inl))

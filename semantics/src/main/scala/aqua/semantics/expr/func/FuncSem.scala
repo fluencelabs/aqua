@@ -19,6 +19,7 @@ class FuncSem[S[_]](val expr: FuncExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     Prog.after {
       case arrow: ArrowRaw =>
+        println("func: " + expr.name.value)
         N.defineArrow(expr.name, arrow.`type`, isRoot = true) as FuncRaw(expr.name.value, arrow)
 
       case m =>

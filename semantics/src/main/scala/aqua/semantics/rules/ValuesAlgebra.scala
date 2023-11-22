@@ -450,6 +450,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         .fold(callArrowFromFunc(callArrow.funcName))(ab =>
           callArrowFromAbility(ab, callArrow.funcName)
         )
+      _ = println("arrow from func: " + raw)
       domain = raw.baseType.domain
       _ <- OptionT.withFilterF(
         T.checkArgumentsNumber(

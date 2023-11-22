@@ -53,22 +53,36 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
   ): Alg[Raw] = for {
     streamsInScope <- N.streamsDefinedWithinScope()
     retValues <- T.endArrowScope(expr.arrowTypeExpr)
+    allNames <- N.getAllNames()
     // TODO: wrap with local on...via...
     retsAndArgs = retValues zip funcArrow.codomain.toList
     streamsThatReturnAsStreams = retsAndArgs.collect {
-      case (vr @ VarRaw(_, StreamType(_)), StreamType(_)) => vr
+      case (vr @ VarRaw(name, StreamType(_)), StreamType(_)) => (vr, name)
+      case (vr @ StreamRaw(_, name, _), StreamType(_)) => (vr, name)
     }
     // streams that return as streams and derived to another variable
     derivedStreamRetValues <- N
-      .getDerivedFrom(streamsThatReturnAsStreams.map(_.varNames))
+      .getDerivedFrom(streamsThatReturnAsStreams.map(_._1.varNames))
       .map(_.flatten.toSet)
+
     res <- bodyGen match {
       case FuncOp(bodyModel) =>
         val streamArgNames = funcArrow.domain.labelledStreams.map { case (name, _) => name }
 
+        println("all names: " + allNames)
+        println("streams in scope: " + streamsInScope)
+        println("streams arg names: " + streamArgNames)
+        println("derived stream ret: " + derivedStreamRetValues)
+        println("streamsThatReturnAsStreams: " + streamsThatReturnAsStreams)
+
+
+        println("ret: " + retValues)
+
         // Remove arguments, and values returned as streams
         val localStreams = streamsInScope -- streamArgNames --
-          streamsThatReturnAsStreams.map(_.name).toSet -- derivedStreamRetValues
+          streamsThatReturnAsStreams.map(_._2).toSet -- derivedStreamRetValues
+
+        println("local streams: " + localStreams)
 
         // process stream that returns as not streams and all Apply*Raw
         retsAndArgs.traverse {

@@ -21,6 +21,9 @@ object CallServiceRawInliner extends RawInliner[CallServiceRaw] with Logging {
     logger.trace(s"${exportTo.mkString(" ")} $value")
     logger.trace(Console.BLUE + s"call service id ${value.serviceId}" + Console.RESET)
 
+
+    println("CallServiceRawInliner value arguments: " + value.arguments)
+    println("CallServiceRawInliner exportTo: " + exportTo)
     val call = Call(value.arguments, exportTo)
 
     for {
@@ -48,10 +51,11 @@ object CallServiceRawInliner extends RawInliner[CallServiceRaw] with Logging {
   ): State[S, (ValueModel, Inline)] =
     Mangler[S]
       .findAndForbidName(raw.fnName)
-      .flatMap(n =>
+      .flatMap { n =>
+        println("call service raw2: " + raw)
         unfold(raw, Call.Export(n, raw.`type`) :: Nil).map {
           case (Nil, inline) => (VarModel(n, raw.`type`), inline)
           case (h :: _, inline) => (h, inline)
         }
-      )
+      }
 }
