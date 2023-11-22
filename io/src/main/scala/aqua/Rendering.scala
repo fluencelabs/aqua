@@ -1,17 +1,14 @@
 package aqua
 
-import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
 import aqua.compiler.*
+import aqua.compiler.AquaError.{ParserError as AquaParserError, *}
 import aqua.files.FileModuleId
 import aqua.io.AquaFileError
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
 
-import cats.parse.LocationMap
-import cats.parse.Parser.Expectation
-import cats.parse.Parser.Expectation.*
-import cats.{Eval, Show}
+import cats.Show
 
 object Rendering {
 

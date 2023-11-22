@@ -3,8 +3,11 @@ package aqua.backend
 import aqua.backend.air.FuncAirGen
 import aqua.backend.ts.TypeScriptCommon.fixupArgName
 import aqua.backend.ts.{TSFuncTypes, TypeScriptCommon}
+import aqua.definitions.*
+import aqua.definitions.TypeDefinition.given
 import aqua.res.FuncRes
 import aqua.types.*
+
 import cats.syntax.show.*
 import io.circe.*
 import io.circe.parser.*
@@ -20,8 +23,6 @@ case class OutputFunc(func: FuncRes, types: Types) {
   val funcTypes = types.funcType(func)
 
   import funcTypes.*
-  import aqua.definitions.TypeDefinition.*
-  import aqua.definitions.*
 
   def generate: (AirFunction, String) = {
     val tsAir = FuncAirGen(func).generate

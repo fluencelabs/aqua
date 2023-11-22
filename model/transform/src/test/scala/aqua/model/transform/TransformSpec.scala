@@ -4,15 +4,15 @@ import aqua.model.transform.ModelBuilder
 import aqua.model.transform.{Transform, TransformConfig}
 import aqua.model.{CallModel, FuncArrow, LiteralModel, VarModel}
 import aqua.raw.ops.{Call, CallArrowRawTag, FuncOp, OnTag, RawTag, SeqTag}
-import aqua.raw.value.{LiteralRaw, VarRaw}
-import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
+import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.res.{CallRes, CallServiceRes, MakeRes, SeqRes, XorRes}
+import aqua.types.{ArrowType, NilType, ProductType, ScalarType}
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import cats.data.Chain
 import cats.syntax.show.*
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 class TransformSpec extends AnyFlatSpec with Matchers {
 

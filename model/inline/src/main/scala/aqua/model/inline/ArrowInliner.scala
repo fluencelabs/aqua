@@ -6,17 +6,17 @@ import aqua.model.*
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.RawTag
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{AbilityType, ArrowType, BoxType, NamedType, StreamType, Type}
+import aqua.types.{AbilityType, ArrowType, CollectionType, NamedType, StreamType, Type}
 
 import cats.data.StateT
 import cats.data.{Chain, IndexedStateT, State}
-import cats.syntax.functor.*
 import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
-import cats.syntax.traverse.*
+import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.show.*
+import cats.syntax.traverse.*
 import cats.{Eval, Monoid}
 import scribe.Logging
 
@@ -59,7 +59,10 @@ object ArrowInliner extends Logging {
                 (res @ VarModel(_, StreamType(_), _), resDesugar)
               ) if !outsideStreamNames.contains(n) =>
             resDesugar.toList -> res
-          case (cexp @ CallModel.Export(exp, st @ StreamType(_)), (res, resDesugar)) =>
+          case (
+                cexp @ CallModel.Export(_, StreamType(_)),
+                (res, resDesugar)
+              ) =>
             // pass nested function results to a stream
             (resDesugar.toList :+ PushToStreamModel(res, cexp).leaf) -> cexp.asVar
           case (_, (res, resDesugar)) =>
@@ -86,7 +89,7 @@ object ArrowInliner extends Logging {
     call: CallModel,
     outsideDeclaredStreams: Set[String]
   ): State[S, InlineResult] = for {
-    callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body, fn.funcName)
+    callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body)
     callableFuncBody =
       fn.capturedTopology
         .fold(SeqModel)(ApplyTopologyModel.apply)
@@ -314,7 +317,7 @@ object ArrowInliner extends Logging {
     )
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
 
-    renaming = (
+    renaming =
       data.renames ++
         streamRenames ++
         arrowRenames ++
@@ -322,7 +325,6 @@ object ArrowInliner extends Logging {
         capturedValues.renames ++
         capturedArrows.renames ++
         defineRenames
-    )
 
     /**
      * TODO: Optimize resolve.

@@ -2,14 +2,14 @@ package aqua.raw.ops
 
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.RawTag.Tree
-import aqua.raw.value.{CallArrowRaw, ValueRaw}
+import aqua.raw.value.{CallArrowRaw, CallServiceRaw, ValueRaw}
 import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.{ArrowType, DataType, ServiceType}
+import aqua.types.*
 
 import cats.Show
 import cats.data.{Chain, NonEmptyList}
-import cats.syntax.foldable.*
 import cats.free.Cofree
+import cats.syntax.foldable.*
 
 sealed trait RawTag extends TreeNode[RawTag] {
 
@@ -160,7 +160,7 @@ case class NextTag(item: String) extends RawTag {
   override def mapValues(f: ValueRaw => ValueRaw): RawTag = this
 }
 
-case class RestrictionTag(name: String, `type`: DataType) extends SeqGroupTag {
+case class RestrictionTag(name: String, `type`: Type) extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(name)
 
@@ -168,8 +168,7 @@ case class RestrictionTag(name: String, `type`: DataType) extends SeqGroupTag {
     copy(name = map.getOrElse(name, name))
 }
 
-case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = None)
-    extends SeqGroupTag {
+case class ForTag(item: String, iterable: ValueRaw, mode: ForTag.Mode) extends SeqGroupTag {
 
   override def restrictsVarNames: Set[String] = Set(item)
 
@@ -185,9 +184,15 @@ case class ForTag(item: String, iterable: ValueRaw, mode: Option[ForTag.Mode] = 
 object ForTag {
 
   enum Mode {
-    case Wait
-    case Pass
+    case Blocking
+    case NonBlocking
   }
+
+  def blocking(item: String, iterable: ValueRaw): ForTag =
+    ForTag(item, iterable, Mode.Blocking)
+
+  def nonBlocking(item: String, iterable: ValueRaw): ForTag =
+    ForTag(item, iterable, Mode.NonBlocking)
 }
 
 case class CallArrowRawTag(
@@ -224,26 +229,6 @@ object CallArrowRawTag {
       )
     )
 
-  def service(
-    serviceId: ValueRaw,
-    fnName: String,
-    call: Call,
-    name: String = null,
-    arrowType: ArrowType = null
-  ): CallArrowRawTag =
-    CallArrowRawTag(
-      call.exportTo,
-      CallArrowRaw(
-        Option(name),
-        fnName,
-        call.args,
-        Option(arrowType).getOrElse(
-          call.arrowType
-        ),
-        Some(serviceId)
-      )
-    )
-
   def func(fnName: String, call: Call): CallArrowRawTag =
     CallArrowRawTag(
       call.exportTo,
@@ -251,6 +236,22 @@ object CallArrowRawTag {
         funcName = fnName,
         baseType = call.arrowType,
         arguments = call.args
+      )
+    )
+
+  def service(
+    srvId: ValueRaw,
+    funcName: String,
+    call: Call,
+    arrowType: Option[ArrowType] = None
+  ): CallArrowRawTag =
+    CallArrowRawTag(
+      call.exportTo,
+      CallServiceRaw(
+        srvId,
+        funcName,
+        arrowType.getOrElse(call.arrowType),
+        call.args
       )
     )
 }
@@ -294,7 +295,11 @@ case class ClosureTag(
   override def usesVarNames: Set[String] = Set.empty
 
   override def renameExports(map: Map[String, String]): RawTag =
-    copy(func = func.copy(name = map.getOrElse(func.name, func.name)))
+    copy(func =
+      func.copy(
+        name = map.getOrElse(func.name, func.name)
+      )
+    )
 
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     copy(

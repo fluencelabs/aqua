@@ -1,7 +1,7 @@
 package aqua.semantics
 
 import aqua.parser.expr.func.ArrowExpr
-import aqua.parser.lexer.{BasicTypeToken, Name}
+import aqua.parser.lexer.{Name, ScalarTypeToken}
 import aqua.raw.Raw
 import aqua.raw.arrow.ArrowRaw
 import aqua.raw.ops.*
@@ -12,12 +12,12 @@ import aqua.types.*
 import aqua.types.ScalarType.*
 
 import cats.Id
-import cats.syntax.applicative.*
 import cats.data.{NonEmptyList, NonEmptyMap, State}
+import cats.syntax.applicative.*
 import org.scalatest.EitherValues
+import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
 
 class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues with Inside {
 
@@ -84,7 +84,7 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues with Insi
     val state = getState(seq)(program("(a: string, b: u32) -> u32"))
 
     state.errors.headOption.get shouldBe RulesViolated[Id](
-      BasicTypeToken[Id](u32),
+      ScalarTypeToken[Id](u32),
       "Types mismatch, expected: u32, given: string" :: Nil
     )
 
@@ -112,7 +112,7 @@ class ArrowSemSpec extends AnyFlatSpec with Matchers with EitherValues with Insi
 
       state.errors shouldBe empty
       inside(raw) { case ArrowRaw(_, Nil, bodyRes) =>
-        bodyRes shouldBe body
+        bodyRes.equalsOrShowDiff(body) shouldBe true
       }
     }
 

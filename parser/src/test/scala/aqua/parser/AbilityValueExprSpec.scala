@@ -19,11 +19,14 @@ class AbilityValueExprSpec extends AnyFlatSpec with Matchers with AquaSpec {
     parseData(str) should be(
       NamedValueToken(
         NamedTypeToken[Id]("AbilityA"),
-        NonEmptyMap.of(
-          "v1" -> toNumber(1),
-          "f1" -> PropertyToken[Id](
-            VarToken(toName("input")),
-            NonEmptyList.one(IntoField("arrow"))
+        NonEmptyList.of(
+          NamedArg.Full(toName("v1"), toNumber(1)),
+          NamedArg.Full(
+            toName("f1"),
+            PropertyToken(
+              VarToken(toName("input")),
+              NonEmptyList.one(IntoField("arrow"))
+            )
           )
         )
       )

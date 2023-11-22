@@ -18,8 +18,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
     val (state, inlined) = TagInliner
       .tagToModel[InliningState](
-        CanonicalizeTag(ValueRaw.Nil, Call.Export(canonTo, StreamType(ScalarType.string))),
-        ""
+        CanonicalizeTag(ValueRaw.Nil, Call.Export(canonTo, StreamType(ScalarType.string)))
       )
       .run(InliningState())
       .value
@@ -39,8 +38,7 @@ class TagInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
     val (state, inlined) = TagInliner
       .tagToModel[InliningState](
-        FlattenTag(ValueRaw.Nil, canonTo),
-        ""
+        FlattenTag(ValueRaw.Nil, canonTo)
       )
       .run(InliningState())
       .value

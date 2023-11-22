@@ -45,7 +45,9 @@ object PathFinder extends Logging {
     )
 
     // TODO: Is it always correct to do so?
-    toOn.peerId.fold(path)(p => path :+ p)
+    toOn.peerId
+      .filterNot(path.lastOption.contains)
+      .fold(path)(path :+ _)
   }
 
   private def findPath(

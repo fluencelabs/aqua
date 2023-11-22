@@ -21,7 +21,7 @@ final case class IfTagInliner(
   def inlined[S: Mangler: Exports: Arrows] =
     (valueRaw match {
       // Optimize in case last operation is equality check
-      case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right) =>
+      case ApplyBinaryOpRaw(op @ (BinOp.Eq | BinOp.Neq), left, right, _) =>
         (
           valueToModel(left) >>= canonicalizeIfStream,
           valueToModel(right) >>= canonicalizeIfStream

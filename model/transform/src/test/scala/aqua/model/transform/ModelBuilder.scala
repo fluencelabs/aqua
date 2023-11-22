@@ -1,22 +1,22 @@
 package aqua.model.transform
 
 import aqua.model.*
+import aqua.model.FailModel
+import aqua.model.IntoIndexModel
+import aqua.model.OnModel
+import aqua.model.inline.raw.StreamGateInliner
 import aqua.raw.ops.Call
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
-import aqua.{model, res}
-import aqua.res.{CallRes, CallServiceRes, MakeRes}
-import aqua.types.{ArrayType, LiteralType, ScalarType}
-import aqua.types.StreamType
-import aqua.model.IntoIndexModel
-import aqua.model.inline.raw.ApplyGateRawInliner
-import aqua.model.OnModel
-import aqua.model.FailModel
 import aqua.res.ResolvedOp
+import aqua.res.{CallRes, CallServiceRes, MakeRes}
+import aqua.types.StreamType
+import aqua.types.{ArrayType, LiteralType, ScalarType}
+import aqua.{model, res}
 
-import scala.language.implicitConversions
 import cats.data.Chain
 import cats.data.Chain.==:
 import cats.syntax.option.*
+import scala.language.implicitConversions
 
 object ModelBuilder {
   implicit def rawToValue(raw: ValueRaw): ValueModel = ValueModel.fromRaw(raw)
@@ -88,15 +88,24 @@ object ModelBuilder {
       )
       .leaf
 
-  def respCall(bc: TransformConfig, value: ValueModel, on: ValueModel = initPeer) =
-    res
-      .CallServiceRes(
-        ValueModel.fromRaw(bc.callbackSrvId),
-        bc.respFuncName,
-        CallRes(value :: Nil, None),
-        on
-      )
-      .leaf
+  def respCallImpl(
+    config: TransformConfig,
+    arguments: List[ValueModel],
+    on: ValueModel = initPeer
+  ) = res
+    .CallServiceRes(
+      ValueModel.fromRaw(config.callbackSrvId),
+      config.respFuncName,
+      CallRes(arguments, None),
+      on
+    )
+    .leaf
+
+  def respCall(config: TransformConfig, value: ValueModel, on: ValueModel = initPeer) =
+    respCallImpl(config, value :: Nil, on)
+
+  def emptyRespCall(config: TransformConfig, on: ValueModel = initPeer) =
+    respCallImpl(config, Nil)
 
   def dataCall(bc: TransformConfig, name: String, on: ValueModel = initPeer) =
     res
@@ -124,7 +133,7 @@ object ModelBuilder {
         failErrorModel
       )
 
-  def fold(item: String, iter: ValueRaw, mode: Option[ForModel.Mode], body: OpModel.Tree*) = {
+  def fold(item: String, iter: ValueRaw, mode: ForModel.Mode, body: OpModel.Tree*) = {
     val ops = SeqModel.wrap(body: _*)
     ForModel(item, ValueModel.fromRaw(iter), mode).wrap(ops, NextModel(item).leaf)
   }
@@ -132,7 +141,8 @@ object ModelBuilder {
   def foldPar(item: String, iter: ValueRaw, body: OpModel.Tree*) = {
     val ops = SeqModel.wrap(body: _*)
     DetachModel.wrap(
-      ForModel(item, ValueModel.fromRaw(iter), ForModel.Mode.Never.some)
+      ForModel
+        .neverMode(item, ValueModel.fromRaw(iter))
         .wrap(ParModel.wrap(ops, NextModel(item).leaf))
     )
   }
@@ -142,21 +152,20 @@ object ModelBuilder {
 
   /**
    * @param stream stream [[VarModel]]
-   * @param idx id [[ValueModel]]
-   * @return [[OpModel.Tree]] of join of `stream[idx]`
+   * @param size size [[ValueModel]]
+   * @return [[OpModel.Tree]] of join of size elements of stream
    */
-  def join(stream: VarModel, idx: ValueModel): OpModel.Tree =
+  def join(stream: VarModel, size: ValueModel): OpModel.Tree =
     stream match {
       case VarModel(
             streamName,
             streamType: StreamType,
             Chain.`nil`
           ) =>
-        ApplyGateRawInliner.joinStreamOnIndexModel(
+        StreamGateInliner.joinStreamOnIndexModel(
           streamName = streamName,
           streamType = streamType,
-          idxModel = idx,
-          idxIncrName = streamName + "_incr",
+          sizeModel = size,
           testName = streamName + "_test",
           iterName = streamName + "_fold_var",
           canonName = streamName + "_result_canon",
@@ -165,4 +174,12 @@ object ModelBuilder {
         )
       case _ => ???
     }
+
+  def add(a: ValueModel, b: ValueModel, res: VarModel): OpModel.Tree =
+    CallServiceModel(
+      "math",
+      "add",
+      args = List(a, b),
+      result = res
+    ).leaf
 }

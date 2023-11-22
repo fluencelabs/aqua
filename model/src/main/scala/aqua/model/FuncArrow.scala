@@ -2,9 +2,11 @@ package aqua.model
 
 import aqua.raw.Raw
 import aqua.raw.arrow.FuncRaw
-import aqua.raw.ops.{Call, CallArrowRawTag, RawTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, EmptyTag, RawTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.{ArrowType, ServiceType, Type}
+
+import cats.syntax.option.*
 
 case class FuncArrow(
   funcName: String,
@@ -58,21 +60,28 @@ object FuncArrow {
     serviceName: String,
     methodName: String,
     methodType: ArrowType,
-    idValue: ValueModel
+    idValue: ValueModel | ValueRaw
   ): FuncArrow = {
-    val id = VarRaw("id", idValue.`type`)
+    val (id, capturedValues) = idValue match {
+      case i: ValueModel =>
+        (
+          VarRaw("id", i.`type`),
+          Map("id" -> i)
+        )
+      case i: ValueRaw => (i, Map.empty[String, ValueModel])
+    }
     val retVar = methodType.res.map(t => VarRaw("ret", t))
 
     val call = Call(
       methodType.domain.toLabelledList().map(VarRaw.apply),
       retVar.map(r => Call.Export(r.name, r.`type`)).toList
     )
+
     val body = CallArrowRawTag.service(
-      serviceId = id,
-      fnName = methodName,
+      srvId = id,
+      funcName = methodName,
       call = call,
-      name = serviceName,
-      arrowType = methodType
+      arrowType = methodType.some
     )
 
     FuncArrow(
@@ -81,9 +90,7 @@ object FuncArrow {
       arrowType = methodType,
       ret = retVar.toList,
       capturedArrows = Map.empty,
-      capturedValues = Map(
-        id.name -> idValue
-      ),
+      capturedValues = capturedValues,
       capturedTopology = None
     )
   }

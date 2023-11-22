@@ -55,7 +55,7 @@ object ConstantRaw {
       false
     )
 
-  def defaultConstants(relayVarName: Option[String]): List[ConstantRaw] =
+  def defaultConstants(relayVarName: Option[String] = None): List[ConstantRaw] =
     hostPeerId(
       relayVarName
     ) :: initPeerId :: particleTtl :: particleTimestamp :: nil :: lastError :: Nil

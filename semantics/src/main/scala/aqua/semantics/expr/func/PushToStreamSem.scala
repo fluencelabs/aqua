@@ -1,15 +1,19 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.ops.{Call, PushToStreamTag}
+import aqua.helpers.syntax.optiont.*
 import aqua.parser.expr.func.PushToStreamExpr
 import aqua.parser.lexer.Token
 import aqua.raw.Raw
+import aqua.raw.ops.{Call, PushToStreamTag}
 import aqua.semantics.Prog
 import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.{ArrayType, StreamType, Type}
+import aqua.types.*
+import aqua.types.TopType
+
 import cats.Monad
+import cats.data.OptionT
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -22,24 +26,14 @@ class PushToStreamSem[S[_]](val expr: PushToStreamExpr[S]) extends AnyVal {
     elementToken: Token[S],
     stream: Type,
     element: Type
-  )(implicit
-    T: TypesAlgebra[S, Alg]
-  ): Alg[Boolean] =
-    stream match {
-      case StreamType(st) =>
-        T.ensureTypeMatches(elementToken, st, element)
-      case _ =>
-        T.ensureTypeMatches(
-          streamToken,
-          StreamType(element match {
-            case StreamType(e) => ArrayType(e)
-            case _ => element
-          }),
-          stream
-        )
-    }
+  )(using T: TypesAlgebra[S, Alg]): Alg[Boolean] = (
+    T.typeToStream(streamToken, stream),
+    T.typeToCollectible(elementToken, element)
+  ).merged.semiflatMap { case (st, et) =>
+    T.ensureTypeMatches(elementToken, st.element, et)
+  }.getOrElse(false)
 
-  def program[Alg[_]: Monad](implicit
+  def program[Alg[_]: Monad](using
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     V: ValuesAlgebra[S, Alg]

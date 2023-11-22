@@ -27,7 +27,7 @@ case class CallArrowExpr[F[_]](
 object CallArrowExpr extends Expr.Leaf {
 
   override val p: P[CallArrowExpr[Span.S]] = {
-    val variables: P0[Option[NonEmptyList[Name[Span.S]]]] = (comma(Name.p) <* ` <- `).backtrack.?
+    val variables: P0[Option[NonEmptyList[Name[Span.S]]]] = (comma(Name.variable) <* ` <- `).backtrack.?
 
     // TODO:    Restrict to function call only
     //          or allow any expression?

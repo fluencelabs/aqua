@@ -1,25 +1,25 @@
 package aqua.model.transform
 
+import aqua.model.*
 import aqua.model.inline.ArrowInliner
 import aqua.model.inline.state.InliningState
+import aqua.model.transform.TransformConfig.TracingConfig
 import aqua.model.transform.funcop.*
 import aqua.model.transform.pre.*
+import aqua.model.transform.pre.{CallbackErrorHandler, ErrorHandler}
 import aqua.model.transform.topology.Topology
-import aqua.model.*
 import aqua.raw.ops.RawTag
 import aqua.raw.value.VarRaw
 import aqua.res.*
 import aqua.types.ScalarType
-import aqua.model.transform.TransformConfig.TracingConfig
-import aqua.model.transform.pre.{CallbackErrorHandler, ErrorHandler}
 
 import cats.Eval
 import cats.data.Chain
 import cats.free.Cofree
+import cats.instances.list.*
 import cats.syntax.option.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.instances.list.*
 import scribe.Logging
 
 // API for transforming RawTag to Res
@@ -90,7 +90,8 @@ object Transform extends Logging {
 
     val resultsHandler: ResultsHandler = CallbackResultsHandler(
       callbackSrvId = conf.callbackSrvId,
-      funcName = conf.respFuncName
+      funcName = conf.respFuncName,
+      noEmptyResponse = conf.noEmptyResponse
     )
 
     val errorHandler: ErrorHandler = CallbackErrorHandler(

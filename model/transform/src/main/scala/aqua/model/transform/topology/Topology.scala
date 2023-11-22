@@ -1,27 +1,28 @@
 package aqua.model.transform.topology
 
 import aqua.errors.Errors.internalError
-import aqua.model.transform.topology.TopologyPath
-import aqua.model.transform.cursor.ChainZipper
-import aqua.model.transform.topology.strategy.*
 import aqua.model.*
+import aqua.model.transform.cursor.ChainZipper
+import aqua.model.transform.topology.TopologyPath
+import aqua.model.transform.topology.strategy.*
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 import aqua.res.{ApRes, CanonRes, FoldRes, MakeRes, NextRes, ResolvedOp, SeqRes}
-import aqua.types.{ArrayType, BoxType, CanonStreamType, ScalarType, StreamType}
+import aqua.types.{ArrayType, CanonStreamType, CollectionType, ScalarType, StreamType}
 
 import cats.Eval
 import cats.data.Chain.{==:, nil}
+import cats.data.OptionT
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, OptionT}
 import cats.free.Cofree
-import cats.syntax.traverse.*
-import cats.syntax.show.*
-import cats.syntax.apply.*
-import cats.syntax.option.*
-import cats.syntax.flatMap.*
-import cats.syntax.foldable.*
-import cats.syntax.applicative.*
 import cats.instances.map.*
 import cats.kernel.Monoid
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
+import cats.syntax.option.*
+import cats.syntax.show.*
+import cats.syntax.traverse.*
 import scribe.Logging
 
 /**
@@ -93,19 +94,35 @@ case class Topology private (
     )
     .memoize
 
-  // Find path of first `ForceExecModel` (call, canon, join) in this subtree
+  // Find path of first `ForceExecModel` (call, canon) in this subtree
   lazy val firstExecutesOn: Eval[Option[TopologyPath]] =
     (cursor.op match {
       case _: ForceExecModel => pathOn.map(_.some)
       case _ => children.collectFirstSomeM(_.firstExecutesOn)
     }).memoize
 
-  // Find path of last `ForceExecModel` (call, canon, join) in this subtree
+  // Find path of last `ForceExecModel` (call, canon) in this subtree
   lazy val lastExecutesOn: Eval[Option[TopologyPath]] =
     (cursor.op match {
       case _: ForceExecModel => pathOn.map(_.some)
       case _ => children.reverse.collectFirstSomeM(_.lastExecutesOn)
     }).memoize
+
+  // Find path of first `ForceExecModel` (call, canon) to right of this subtree
+  lazy val nextExecutesOn: Eval[Option[TopologyPath]] =
+    parent
+      .flatTraverse(p =>
+        p.cursor.op match {
+          case _: SeqGroupModel =>
+            OptionT(
+              cursor.nextSiblings.collectFirstSomeM(
+                _.topology.firstExecutesOn
+              )
+            ).orElseF(p.nextExecutesOn).value
+          case _ =>
+            p.nextExecutesOn
+        }
+      )
 
   lazy val currentPeerId: Option[ValueModel] = pathOn.value.peerId
 
@@ -353,14 +370,18 @@ object Topology extends Logging {
     reversed: Boolean = false
   ): Chain[Res] = peerIds.map { v =>
     v.`type` match {
-      case _: BoxType =>
+      case _: CollectionType =>
         val itemName = "-via-peer-"
         val steps = Chain(
           MakeRes.hop(VarModel(itemName, ScalarType.string, Chain.empty)),
           NextRes(itemName).leaf
         )
 
-        FoldRes(itemName, v).wrap(if (reversed) steps.reverse else steps)
+        FoldRes
+          .lastNull(itemName, v)
+          .wrap(
+            if (reversed) steps.reverse else steps
+          )
       case _ =>
         MakeRes.hop(v)
     }

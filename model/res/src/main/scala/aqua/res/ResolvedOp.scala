@@ -3,10 +3,11 @@ package aqua.res
 import aqua.model.{CallModel, ForModel, LiteralModel, ValueModel, VarModel}
 import aqua.raw.ops.Call
 import aqua.tree.{TreeNode, TreeNodeCompanion}
-import aqua.types.DataType
+import aqua.types.*
+
+import cats.Show
 import cats.data.Chain
 import cats.free.Cofree
-import cats.Show
 
 // TODO docs to all traits and objects
 sealed trait ResolvedOp extends TreeNode[ResolvedOp]
@@ -32,12 +33,21 @@ case class MatchMismatchRes(left: ValueModel, right: ValueModel, shouldMatch: Bo
   override def toString: String = s"(${if (shouldMatch) "match" else "mismatch"} $left $right)"
 }
 
-case class FoldRes(item: String, iterable: ValueModel, mode: Option[ForModel.Mode] = None)
-    extends ResolvedOp {
-  override def toString: String = s"(fold $iterable $item ${mode.map(_.toString).getOrElse("")}"
+case class FoldRes(item: String, iterable: ValueModel, mode: FoldRes.Mode) extends ResolvedOp {
+  override def toString: String = s"(fold $iterable $item ${mode.toString.toLowerCase()}"
 }
 
-case class RestrictionRes(item: String, `type`: DataType) extends ResolvedOp {
+object FoldRes {
+  enum Mode { case Null, Never }
+
+  def lastNull(item: String, iterable: ValueModel): FoldRes =
+    FoldRes(item, iterable, Mode.Null)
+
+  def lastNever(item: String, iterable: ValueModel): FoldRes =
+    FoldRes(item, iterable, Mode.Never)
+}
+
+case class RestrictionRes(item: String, `type`: Type) extends ResolvedOp {
   override def toString: String = s"(new ${`type`.airPrefix}$item "
 }
 
@@ -50,7 +60,8 @@ case class CallServiceRes(
   override def toString: String = s"(call $peerId ($serviceId $funcName) $call)"
 }
 
-case class ApStreamMapRes(key: ValueModel, value: ValueModel, exportTo: CallModel.Export) extends ResolvedOp {
+case class ApStreamMapRes(key: ValueModel, value: ValueModel, exportTo: CallModel.Export)
+    extends ResolvedOp {
   override def toString: String = s"(ap ($key $value) $exportTo)"
 }
 

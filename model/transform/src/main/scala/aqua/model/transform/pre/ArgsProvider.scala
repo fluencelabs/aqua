@@ -18,7 +18,7 @@ object ArgsProvider {
     // Variable name to store the value of the argument
     varName: String,
     // Type of the argument
-    t: DataType
+    t: DataType | StreamType
   )
 }
 
@@ -35,27 +35,32 @@ case class ArgsFromService(dataServiceId: ValueRaw) extends ArgsProvider {
           Call(Nil, Call.Export(iter, ArrayType(t.element)) :: Nil)
         )
         .leaf,
-      ForTag(item, VarRaw(iter, ArrayType(t.element))).wrap(
-        SeqTag.wrap(
-          PushToStreamTag(VarRaw(item, t.element), Call.Export(varName, t)).leaf,
-          NextTag(item).leaf
+      ForTag
+        .nonBlocking(item, VarRaw(iter, ArrayType(t.element)))
+        .wrap(
+          SeqTag.wrap(
+            PushToStreamTag(VarRaw(item, t.element), Call.Export(varName, t)).leaf,
+            NextTag(item).leaf
+          )
         )
-      )
     )
   }
+
+  private def getDataOp(name: String, varName: String, t: DataType): RawTag.Tree =
+    CallArrowRawTag
+      .service(
+        dataServiceId,
+        name,
+        Call(Nil, Call.Export(varName, t) :: Nil)
+      )
+      .leaf
 
   def getDataOp(arg: ArgsProvider.Arg): RawTag.Tree =
     arg.t match {
       case st: StreamType =>
         getStreamDataOp(arg.name, arg.varName, st)
-      case _ =>
-        CallArrowRawTag
-          .service(
-            dataServiceId,
-            arg.name,
-            Call(Nil, Call.Export(arg.varName, arg.t) :: Nil)
-          )
-          .leaf
+      case dt: DataType =>
+        getDataOp(arg.name, arg.varName, dt)
     }
 
   override def provideArgs(args: List[ArgsProvider.Arg]): List[RawTag.Tree] =

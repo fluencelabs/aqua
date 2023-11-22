@@ -1,28 +1,24 @@
 package aqua.model.inline
 
 import aqua.errors.Errors.internalError
-import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.model.*
 import aqua.model.inline.RawValueInliner.collectionToModel
-import aqua.model.inline.raw.CallArrowRawInliner
-import aqua.raw.value.ApplyBinaryOpRaw.Op as BinOp
+import aqua.model.inline.raw.{CallArrowRawInliner, CallServiceRawInliner}
+import aqua.model.inline.state.{Arrows, Exports, Mangler}
+import aqua.model.inline.tag.IfTagInliner
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.{BoxType, CanonStreamType, DataType, StreamType}
-import aqua.model.inline.Inline.parDesugarPrefixOpt
-import aqua.model.inline.tag.IfTagInliner
+import aqua.types.{CanonStreamType, CollectionType, StreamType}
 
-import cats.syntax.traverse.*
+import cats.data.{Chain, State, StateT}
+import cats.instances.list.*
 import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
 import cats.syntax.apply.*
+import cats.syntax.bifunctor.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
-import cats.instances.list.*
-import cats.data.{Chain, State, StateT}
-import cats.syntax.show.*
-import cats.syntax.bifunctor.*
-import scribe.{log, Logging}
+import cats.syntax.traverse.*
+import scribe.Logging
 
 /**
  * [[TagInliner]] prepares a [[RawTag]] for futher processing by converting [[ValueRaw]]s into [[ValueModel]]s.
@@ -35,43 +31,54 @@ import scribe.{log, Logging}
  */
 object TagInliner extends Logging {
 
-  import RawValueInliner.{callToModel, valueListToModel, valueToModel}
-
   import aqua.model.inline.Inline.parDesugarPrefix
+
+  import RawValueInliner.{valueListToModel, valueToModel}
 
   /**
    * Result of [[RawTag]] inlining
    *
    * @param prefix Previous instructions
    */
-  enum TagInlined(prefix: Option[OpModel.Tree]) {
+  enum TagInlined[T](prefix: Option[OpModel.Tree]) {
 
     /**
      * Tag inlining emitted nothing
      */
-    case Empty(
+    case Empty[S](
       prefix: Option[OpModel.Tree] = None
-    ) extends TagInlined(prefix)
+    ) extends TagInlined[S](prefix)
 
     /**
      * Tag inlining emitted one parent model
      *
      * @param model Model which will wrap children
      */
-    case Single(
+    case Single[S](
       model: OpModel,
       prefix: Option[OpModel.Tree] = None
-    ) extends TagInlined(prefix)
+    ) extends TagInlined[S](prefix)
 
     /**
      * Tag inling emitted complex transformation
      *
      * @param toModel Function from children results to result of this tag
      */
-    case Mapping(
+    case Mapping[S](
       toModel: Chain[OpModel.Tree] => OpModel.Tree,
       prefix: Option[OpModel.Tree] = None
-    ) extends TagInlined(prefix)
+    ) extends TagInlined[S](prefix)
+
+    /**
+     * Tag inlining emitted computation
+     * that should be executed after children
+     *
+     * @param model computation producing model
+     */
+    case After[S](
+      model: State[S, OpModel],
+      prefix: Option[OpModel.Tree] = None
+    ) extends TagInlined[S](prefix)
 
     /**
      * Finalize inlining, construct a tree
@@ -79,23 +86,34 @@ object TagInliner extends Logging {
      * @param children Children results
      * @return Result of inlining
      */
-    def build(children: Chain[OpModel.Tree]): OpModel.Tree = {
-      val inlined = this match {
-        case Empty(_) => children
-        case Single(model, _) =>
-          Chain.one(model.wrap(children))
-        case Mapping(toModel, _) =>
-          Chain.one(toModel(children))
+    def build(children: Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
+      def toSeqModel(tree: OpModel.Tree | Chain[OpModel.Tree]): State[T, OpModel.Tree] = {
+        val treeChain = tree match {
+          case c: Chain[OpModel.Tree] => c
+          case t: OpModel.Tree => Chain.one(t)
+        }
+
+        State.pure(SeqModel.wrap(Chain.fromOption(prefix) ++ treeChain))
       }
 
-      SeqModel.wrap(Chain.fromOption(prefix) ++ inlined)
+      this match {
+        case Empty(_) =>
+          toSeqModel(children)
+        case Single(model, _) =>
+          toSeqModel(model.wrap(children))
+        case Mapping(toModel, _) =>
+          toSeqModel(toModel(children))
+        case After(model, _) =>
+          model.flatMap(m => toSeqModel(m.wrap(children)))
+      }
+
     }
   }
 
-  private def pure[S](op: OpModel): State[S, TagInlined] =
+  private def pure[S](op: OpModel): State[S, TagInlined[S]] =
     TagInlined.Single(model = op).pure
 
-  private def none[S]: State[S, TagInlined] =
+  private def none[S]: State[S, TagInlined[S]] =
     TagInlined.Empty().pure
 
   private def combineOpsWithSeq(l: Option[OpModel.Tree], r: Option[OpModel.Tree]) =
@@ -178,9 +196,8 @@ object TagInliner extends Logging {
    * @return Model (if any), and prefix (if any)
    */
   def tagToModel[S: Mangler: Arrows: Exports](
-    tag: RawTag,
-    treeFunctionName: String
-  ): State[S, TagInlined] =
+    tag: RawTag
+  ): State[S, TagInlined[S]] =
     tag match {
       case OnTag(peerId, via, strategy) =>
         for {
@@ -226,19 +243,19 @@ object TagInliner extends Logging {
           (v, p) = flattened
           n <- Mangler[S].findAndForbidName(item)
           elementType = iterable.`type` match {
-            case b: BoxType => b.element
+            case b: CollectionType => b.element
             case _ =>
               internalError(
                 s"non-box type variable '$iterable' in 'for' expression."
               )
           }
           _ <- Exports[S].resolved(item, VarModel(n, elementType))
-          m = mode.map {
-            case ForTag.Mode.Wait => ForModel.Mode.Never
-            case ForTag.Mode.Pass => ForModel.Mode.Null
+          modeModel = mode match {
+            case ForTag.Mode.Blocking => ForModel.Mode.Never
+            case ForTag.Mode.NonBlocking => ForModel.Mode.Null
           }
         } yield TagInlined.Single(
-          model = ForModel(n, v, m),
+          model = ForModel(n, v, modeModel),
           prefix = p
         )
 
@@ -308,8 +325,13 @@ object TagInliner extends Logging {
             TagInlined.Empty(prefix = parDesugarPrefix(nel.toList.flatMap(_._2)))
           })
 
-      case CallArrowRawTag(exportTo, value: CallArrowRaw) =>
-        CallArrowRawInliner.unfoldArrow(value, exportTo).flatMap { case (_, inline) =>
+      case CallArrowRawTag(exportTo, value: (CallArrowRaw | CallServiceRaw)) =>
+        (value match {
+          case ca: CallArrowRaw =>
+            CallArrowRawInliner.unfold(ca, exportTo)
+          case cs: CallServiceRaw =>
+            CallServiceRawInliner.unfold(cs, exportTo)
+        }).flatMap { case (_, inline) =>
           RawValueInliner
             .inlineToTree(inline)
             .map(tree =>
@@ -318,6 +340,30 @@ object TagInliner extends Logging {
               )
             )
         }
+
+      case CallArrowRawTag(
+            exportTo,
+            ApplyPropertyRaw(vr, IntoArrowRaw(name, at, args))
+          ) =>
+        RawValueInliner.valueToModel(vr).flatMap {
+          // the name of VarModel was already converted to abilities full name
+          case (VarModel(n, _, _), prevInline) =>
+            CallArrowRawInliner.unfold(CallArrowRaw.ability(n, name, at, args), exportTo).flatMap {
+              case (_, inline) =>
+                RawValueInliner
+                  .inlineToTree(inline.prepend(prevInline))
+                  .map(tree =>
+                    TagInlined.Empty(
+                      prefix = SeqModel.wrap(tree).some
+                    )
+                  )
+            }
+          case _ =>
+            internalError(s"Unexpected. 'IntoArrowRaw' can be only used on variables")
+
+        }
+      case CallArrowRawTag(_, value) =>
+        internalError(s"Cannot inline 'CallArrowRawTag' with value '$value'")
 
       case AssignmentTag(value, assignTo) =>
         for {
@@ -348,7 +394,17 @@ object TagInliner extends Logging {
         } yield model.fold(TagInlined.Empty())(m => TagInlined.Single(model = m))
 
       case RestrictionTag(name, typ) =>
-        pure(RestrictionModel(name, typ))
+        // Rename restriction after children are inlined with new exports
+        TagInlined
+          .After(
+            for {
+              exps <- Exports[S].exports
+              model = exps.get(name).collect { case VarModel(n, _, _) =>
+                RestrictionModel(n, typ)
+              }
+            } yield model.getOrElse(RestrictionModel(name, typ))
+          )
+          .pure
 
       case DeclareStreamTag(value) =>
         value match
@@ -415,17 +471,17 @@ object TagInliner extends Logging {
 
   private def traverseS[S](
     cf: RawTag.Tree,
-    f: RawTag => State[S, TagInlined]
+    f: RawTag => State[S, TagInlined[S]]
   ): State[S, OpModel.Tree] =
     for {
       headInlined <- f(cf.head)
       tail <- StateT.liftF(cf.tail)
       children <- tail.traverse(traverseS[S](_, f))
-    } yield headInlined.build(children)
+      inlined <- headInlined.build(children)
+    } yield inlined
 
   def handleTree[S: Exports: Mangler: Arrows](
-    tree: RawTag.Tree,
-    treeFunctionName: String
+    tree: RawTag.Tree
   ): State[S, OpModel.Tree] =
-    traverseS(tree, tagToModel(_, treeFunctionName))
+    traverseS(tree, tagToModel(_))
 }

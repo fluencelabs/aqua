@@ -1,12 +1,10 @@
 package aqua.model.transform.pre
 
-import aqua.model.FuncArrow
-import aqua.model.ArgsCall
-import aqua.raw.ops.{Call, CallArrowRawTag, RawTag, SeqTag, TryTag}
-import aqua.raw.value.{ValueRaw, VarRaw}
+import aqua.model.{ArgsCall, FuncArrow}
+import aqua.raw.ops.*
+import aqua.raw.value.VarRaw
 import aqua.types.*
 
-import cats.syntax.show.*
 import cats.syntax.option.*
 
 /**
@@ -47,7 +45,7 @@ case class FuncPreTransformer(
    * @return FuncArrow that can be called and delegates the call to a client-registered callback
    */
   private def arrowToCallback(name: String, arrowType: ArrowType): FuncArrow = {
-    val (args, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
+    val (_, call, ret) = ArgsCall.arrowToArgsCallRet(arrowType)
     FuncArrow(
       arrowCallbackPrefix + name,
       callback(name, call),
@@ -83,7 +81,7 @@ case class FuncPreTransformer(
       (name, s"-$name-arg-", typ)
     }
 
-    val dataArgs = args.collect { case (name, varName, t: DataType) =>
+    val nonArrowArgs = args.collect { case (name, varName, t: (DataType | StreamType)) =>
       ArgsProvider.Arg(name, varName, t)
     }
 
@@ -97,7 +95,7 @@ case class FuncPreTransformer(
     )
 
     val provideArgs = argsProvider.provideArgs(
-      relayArg.toList ::: dataArgs
+      relayArg.toList ::: nonArrowArgs
     )
 
     val handleResults = resultsHandler.handleResults(

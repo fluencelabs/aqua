@@ -34,6 +34,10 @@ import {
   abilityCall,
   complexAbilityCall,
   checkAbCallsCall,
+  bugLNG258Call1,
+  bugLNG258Call2,
+  bugLNG258Call3,
+  multipleAbilityWithClosureCall,
 } from "../examples/abilityCall.js";
 import {
   nilLengthCall,
@@ -51,6 +55,7 @@ import {
   topologyBug205Call,
   topologyBug394Call,
   topologyBug427Call,
+  topologyBug257Call,
   topologyCall,
 } from "../examples/topologyCall.js";
 import { foldJoinCall } from "../examples/foldJoinCall.js";
@@ -77,7 +82,10 @@ import { tryCatchCall } from "../examples/tryCatchCall.js";
 import { tryOtherwiseCall } from "../examples/tryOtherwiseCall.js";
 import { coCall } from "../examples/coCall.js";
 import { bugLNG60Call, passArgsCall } from "../examples/passArgsCall.js";
-import { streamArgsCall } from "../examples/streamArgsCall.js";
+import {
+  streamArgsCall,
+  modifyStreamCall,
+} from "../examples/streamArgsCall.js";
 import { streamResultsCall } from "../examples/streamResultsCall.js";
 import { structuralTypingCall } from "../examples/structuralTypingCall";
 import {
@@ -103,7 +111,10 @@ import { multiReturnCall } from "../examples/multiReturnCall.js";
 import { declareCall } from "../examples/declareCall.js";
 import { genOptions, genOptionsEmptyString } from "../examples/optionsCall.js";
 import { lng193BugCall } from "../examples/closureReturnRename.js";
-import { closuresCall } from "../examples/closures.js";
+import {
+  closuresCall,
+  multipleClosuresLNG262BugCall,
+} from "../examples/closures.js";
 import { closureArrowCaptureCall } from "../examples/closureArrowCapture.js";
 import {
   bugLNG63_2Call,
@@ -126,7 +137,7 @@ import {
   optionSugarCall,
   streamSugarCall,
 } from "../examples/collectionSugarCall.js";
-import { funcsCall } from "../examples/funcsCall.js";
+import { funcsCall, bugLNG260Call } from "../examples/funcsCall.js";
 import { nestedDataCall } from "../examples/nestedDataCall.js";
 import {
   mathTest1Call,
@@ -532,7 +543,7 @@ describe("Testing examples", () => {
     });
   });
 
-  it("ability.aqua", async () => {
+  it("abilities.aqua", async () => {
     let result = await abilityCall();
     expect(result).toStrictEqual([
       "declare_const123",
@@ -542,14 +553,30 @@ describe("Testing examples", () => {
     ]);
   });
 
-  it("ability.aqua complex", async () => {
+  it("abilities.aqua complex", async () => {
     let result = await complexAbilityCall();
     expect(result).toStrictEqual([false, true]);
   });
 
-  it("ability.aqua ability calls", async () => {
+  it("abilities.aqua ability calls", async () => {
     let result = await checkAbCallsCall();
-    expect(result).toStrictEqual([true, false]);
+    expect(result).toStrictEqual([true, false, true]);
+  });
+
+  it("abilities.aqua bug LNG-258", async () => {
+    let result1 = await bugLNG258Call1();
+    expect(result1).toStrictEqual([1, 2]);
+
+    let result2 = await bugLNG258Call2();
+    expect(result2).toStrictEqual([3, 4]);
+
+    let result3 = await bugLNG258Call3();
+    expect(result3).toStrictEqual([5, 6]);
+  });
+
+  it("abilities.aqua multiple abilities with closures", async () => {
+    let result1 = await multipleAbilityWithClosureCall();
+    expect(result1).toStrictEqual([1, 2]);
   });
 
   it("functors.aqua LNG-119 bug", async () => {
@@ -570,6 +597,18 @@ describe("Testing examples", () => {
   it("streamArgs.aqua", async () => {
     let streamArgsResult = await streamArgsCall();
     expect(streamArgsResult).toEqual([["peer_id", "peer_id"]]);
+  });
+
+  it("streamArgs.aqua modify stream", async () => {
+    let streamArgsResult = await modifyStreamCall([
+      "passed value 1",
+      "passed value 2",
+    ]);
+    expect(streamArgsResult).toEqual([
+      "passed value 1",
+      "passed value 2",
+      "appended value",
+    ]);
   });
 
   it("streamResults.aqua", async () => {
@@ -725,6 +764,15 @@ describe("Testing examples", () => {
     let result = await funcsCall();
     expect(result).toEqual([13, 6, 3, 1]);
   }, 7000);
+
+  it("funcs.aqua bugLNG260", async () => {
+    let result1 = await bugLNG260Call(1, 2);
+    expect(result1).toEqual(false);
+    let result2 = await bugLNG260Call(4, 3);
+    expect(result2).toEqual(true);
+    let result3 = await bugLNG260Call(5, 5);
+    expect(result3).toEqual(false);
+  });
 
   // it('closures.aqua LNG-58 bug', async () => {
   //     let res = await lng58Bug()
@@ -896,6 +944,11 @@ describe("Testing examples", () => {
     expect(topologyResult).toEqual(selfPeerId);
   });
 
+  it("topology.aqua bug 257", async () => {
+    let result = await topologyBug257Call(peer2);
+    expect(result).toEqual(["host", "friend", "init"]);
+  });
+
   it("foldJoin.aqua", async () => {
     let foldJoinResult = await foldJoinCall(relayPeerId1);
     expect(foldJoinResult.length).toBeGreaterThanOrEqual(3);
@@ -903,9 +956,10 @@ describe("Testing examples", () => {
 
   it("via.aqua", async () => {
     let res1 = await viaArrCall();
-    let res2 = await viaOptCall(relayPeerId1);
-    let res3 = await viaOptNullCall(relayPeerId1);
-    let res4 = await viaStreamCall(relayPeerId1);
+    let res2 = await viaOptCall();
+    let res3 = await viaOptNullCall();
+    let res4 = await viaStreamCall();
+    expect(res1).not.toHaveLength(0);
     expect(res1).toEqual(res2);
     expect(res2).toEqual(res3);
     expect(res3).toEqual(res4);
@@ -922,6 +976,11 @@ describe("Testing examples", () => {
     let res2 = ["in", config.externalAddressesRelay2[0]];
     expect(closuresResult).toEqual(["in", res1, res1, res2]);
   }, 20000);
+
+  it("closures.aqua bug LNG-262", async () => {
+    let result = await multipleClosuresLNG262BugCall();
+    expect(result).toEqual([1, 2]);
+  });
 
   it("closureArrowCapture.aqua", async () => {
     let result = await closureArrowCaptureCall("input");

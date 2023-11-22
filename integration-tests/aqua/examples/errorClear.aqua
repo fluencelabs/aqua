@@ -7,7 +7,7 @@ service FailService("fail-srv"):
 
 func errorClearTest(node: string, relay: string) -> string, i64:
     stream: *string
-    code: ?i64
+    code: *i64
 
     on node via relay:
         try:

@@ -3,16 +3,16 @@ package aqua.run
 import aqua.parser.lexer.{CallArrowToken, CollectionToken, LiteralToken, VarToken}
 import aqua.parser.lift.Span
 import aqua.raw.value.{CollectionRaw, LiteralRaw, ValueRaw, VarRaw}
-import aqua.types.{ArrayType, BottomType}
+import aqua.types.*
 
-import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec}
 import cats.data.Validated.{invalid, invalidNec, validNec}
-import cats.{~>, Id}
+import cats.data.{NonEmptyChain, NonEmptyList, Validated, ValidatedNec}
+import cats.syntax.comonad.*
+import cats.syntax.either.*
+import cats.syntax.option.*
 import cats.syntax.traverse.*
 import cats.syntax.validated.*
-import cats.syntax.either.*
-import cats.syntax.comonad.*
-import cats.syntax.option.*
+import cats.{Id, ~>}
 
 case class CliFunc(name: String, args: List[ValueRaw] = Nil)
 
@@ -52,7 +52,15 @@ object CliFunc {
               .map(
                 NonEmptyList
                   .fromList(_)
-                  .map(l => CollectionRaw(l, ArrayType(l.head.baseType)))
+                  .map(l =>
+                    CollectionRaw(
+                      l,
+                      ArrayType(
+                        // FIXME: Type of Literal should always be a DataType
+                        l.head.baseType.asInstanceOf[DataType]
+                      )
+                    )
+                  )
                   .getOrElse(ValueRaw.Nil)
               )
               .toValidatedNec

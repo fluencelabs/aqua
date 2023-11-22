@@ -4,23 +4,18 @@ import aqua.AquaSpec
 import aqua.parser.expr.*
 import aqua.parser.expr.func.*
 import aqua.parser.lexer.*
-import aqua.parser.lift.LiftParser.Implicits.idLiftParser
 import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
 import aqua.types.ScalarType.*
 
-import cats.Id
-import cats.data.{Chain, NonEmptyList}
 import cats.data.Chain.*
+import cats.data.Validated.{Invalid, Valid}
+import cats.data.{Chain, NonEmptyList}
 import cats.free.Cofree
 import cats.syntax.foldable.*
-import cats.data.Validated.{Invalid, Valid}
+import cats.{Eval, Id}
 import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.{Inside, Inspectors}
 import org.scalatest.matchers.should.Matchers
-import cats.~>
-import cats.Eval
-
+import org.scalatest.{Inside, Inspectors}
 import scala.collection.mutable
 import scala.language.implicitConversions
 
@@ -35,7 +30,7 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     )
 
     val arrowToken =
-      ArrowTypeToken[Id]((), List(None -> BasicTypeToken[Id](u8)), List(BasicTypeToken[Id](bool)))
+      ArrowTypeToken[Id]((), List(None -> ScalarTypeToken[Id](u8)), List(ScalarTypeToken[Id](bool)))
     arrowExpr("(peer: PeerId, other: u8 -> bool)") should be(
       ArrowExpr[Id](
         toNamedArrow(("peer" -> toNamedType("PeerId")) :: ("other" -> arrowToken) :: Nil, Nil)
@@ -45,8 +40,8 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
     val arrowToken2 =
       ArrowTypeToken[Id](
         (),
-        List(None -> BasicTypeToken[Id](u32), None -> BasicTypeToken[Id](u64)),
-        List(BasicTypeToken[Id](bool))
+        List(None -> ScalarTypeToken[Id](u32), None -> ScalarTypeToken[Id](u64)),
+        List(ScalarTypeToken[Id](bool))
       )
     arrowExpr("(peer: PeerId, other: u32, u64 -> bool)") should be(
       ArrowExpr[Id](
@@ -54,12 +49,12 @@ class FuncExprSpec extends AnyFlatSpec with Matchers with Inside with Inspectors
       )
     )
 
-    val arrowToken3 = ArrowTypeToken[Id]((), List(None -> BasicTypeToken[Id](u32)), Nil)
+    val arrowToken3 = ArrowTypeToken[Id]((), List(None -> ScalarTypeToken[Id](u32)), Nil)
     arrowExpr("(peer: PeerId, ret: u32 -> ()) -> string, u32") should be(
       ArrowExpr[Id](
         toNamedArrow(
           ("peer" -> toNamedType("PeerId")) :: ("ret" -> arrowToken3) :: Nil,
-          BasicTypeToken[Id](string) :: BasicTypeToken[Id](u32) :: Nil
+          ScalarTypeToken[Id](string) :: ScalarTypeToken[Id](u32) :: Nil
         )
       )
     )

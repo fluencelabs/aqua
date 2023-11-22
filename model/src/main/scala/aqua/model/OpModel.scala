@@ -4,13 +4,12 @@ import aqua.model.OpModel.Tree
 import aqua.tree.{TreeNode, TreeNodeCompanion}
 import aqua.types.*
 
-import cats.data.Chain
-import cats.free.Cofree
-import cats.Show
 import cats.Eval
+import cats.Show
+import cats.data.Chain
 import cats.data.NonEmptyList
+import cats.free.Cofree
 import cats.syntax.functor.*
-
 import scala.annotation.tailrec
 
 sealed trait OpModel extends TreeNode[OpModel] {
@@ -129,7 +128,7 @@ case class NextModel(item: String) extends OpModel {
 
 // TODO: Refactor out `name` and `type` to
 // something like VarModel without properties
-case class RestrictionModel(name: String, `type`: DataType) extends SeqGroupModel {
+case class RestrictionModel(name: String, `type`: Type) extends SeqGroupModel {
   override def usesVarNames: Set[String] = Set.empty
 
   override def restrictsVarNames: Set[String] = Set(name)
@@ -147,11 +146,11 @@ case class MatchMismatchModel(left: ValueModel, right: ValueModel, shouldMatch: 
 case class ForModel(
   item: String,
   iterable: ValueModel,
-  mode: Option[ForModel.Mode] = Some(ForModel.Mode.Null)
+  mode: ForModel.Mode = ForModel.Mode.Null
 ) extends SeqGroupModel {
 
   override def toString: String =
-    s"for $item <- $iterable${mode.map(m => " " + m.toString).getOrElse("")}"
+    s"for $item <- $iterable${mode.toString}"
 
   override def restrictsVarNames: Set[String] = Set(item)
 
@@ -165,6 +164,12 @@ object ForModel {
     case Null
     case Never
   }
+
+  def neverMode(item: String, iterable: ValueModel): ForModel =
+    ForModel(item, iterable, Mode.Never)
+
+  def nullMode(item: String, iterable: ValueModel): ForModel =
+    ForModel(item, iterable, Mode.Null)
 }
 
 // TODO how is it used? remove, if it's not
@@ -175,7 +180,12 @@ case class DeclareStreamModel(value: ValueModel) extends NoExecModel {
 }
 
 // key must be only string or number
-case class InsertKeyValueModel(key: ValueModel, value: ValueModel, assignTo: String, assignToType: StreamMapType) extends OpModel {
+case class InsertKeyValueModel(
+  key: ValueModel,
+  value: ValueModel,
+  assignTo: String,
+  assignToType: StreamMapType
+) extends OpModel {
   override def usesVarNames: Set[String] = value.usesVarNames
 
   override def exportsVarNames: Set[String] = Set(assignTo)

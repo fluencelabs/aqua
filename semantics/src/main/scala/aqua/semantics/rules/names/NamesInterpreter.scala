@@ -3,15 +3,15 @@ package aqua.semantics.rules.names
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.types.{AbilityType, ArrowType, StreamType, Type}
+import aqua.semantics.rules.report.ReportAlgebra
+import aqua.types.{ArrowType, StreamType, Type}
 
 import cats.data.{OptionT, State}
+import cats.syntax.all.*
+import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.applicative.*
-import cats.syntax.all.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -160,7 +160,7 @@ class NamesInterpreter[S[_], X](using
     mapStackHead(Map.empty) { frame =>
       frame -> frame.names.collect { case (n, st @ StreamType(_)) =>
         n -> st
-      }.toMap
+      }
     }
 
   override def beginScope(token: Token[S]): SX[Unit] =

@@ -3,18 +3,19 @@ package aqua.parser.lexer
 import aqua.parser.lexer.Token.*
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
+import aqua.parser.lift.Span
+import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
+import aqua.types.LiteralType
+import aqua.parser.lexer.CallArrowToken.CallBraces
+import aqua.parser.lexer.NamedArg.namedArgs
+
+import cats.~>
 import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.parse.{Numbers, Parser as P, Parser0 as P0}
 import cats.syntax.comonad.*
 import cats.syntax.functor.*
 import cats.{Comonad, Functor}
-
 import scala.language.postfixOps
-import cats.~>
-import aqua.parser.lift.Span
-import aqua.parser.lift.Span.{P0ToSpan, PToSpan}
-import aqua.types.LiteralType
-import aqua.parser.lexer.CallArrowToken.CallBraces
 
 sealed trait PropertyOp[F[_]] extends Token[F] {
   def mapK[K[_]: Comonad](fk: F ~> K): PropertyOp[K]
@@ -47,12 +48,14 @@ case class IntoIndex[F[_]: Comonad](point: F[Unit], idx: Option[ValueToken[F]])
   override def mapK[K[_]: Comonad](fk: F ~> K): IntoIndex[K] = copy(fk(point), idx.map(_.mapK(fk)))
 }
 
-case class IntoCopy[F[_]: Comonad](point: F[Unit], fields: NonEmptyMap[String, ValueToken[F]])
-    extends PropertyOp[F] {
+case class IntoCopy[F[_]: Comonad](
+  point: F[Unit],
+  args: NonEmptyList[NamedArg[F]]
+) extends PropertyOp[F] {
   override def as[T](v: T): F[T] = point.as(v)
 
   override def mapK[K[_]: Comonad](fk: F ~> K): IntoCopy[K] =
-    copy(fk(point), fields.map(_.mapK(fk)))
+    copy(fk(point), args.map(_.mapK(fk)))
 }
 
 object PropertyOp {
@@ -66,9 +69,7 @@ object PropertyOp {
     }
 
   val parseCopy: P[PropertyOp[Span.S]] =
-    (`.` *> (`copy`.lift ~ namedArgs)).map { case (point, fields) =>
-      IntoCopy(point, NonEmptyMap.of(fields.head, fields.tail: _*))
-    }
+    (`.` *> (`copy`.lift ~ namedArgs)).map(IntoCopy.apply)
 
   private val parseIdx: P[PropertyOp[Span.S]] =
     (P.defer(

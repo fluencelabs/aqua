@@ -4,9 +4,9 @@ import aqua.api.AquaAPIConfig
 import aqua.api.TargetType.*
 import aqua.js.{FunctionDefJs, ServiceDefJs}
 import aqua.model.transform.TransformConfig
+
 import cats.data.Validated.{invalidNec, validNec}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
@@ -47,7 +47,9 @@ class AquaConfig(
   @JSExport
   val targetType: js.UndefOr[String],
   @JSExport
-  val tracing: js.UndefOr[Boolean]
+  val tracing: js.UndefOr[Boolean],
+  @JSExport
+  val noEmptyResponse: js.UndefOr[Boolean]
 )
 
 object AquaConfig {
@@ -69,7 +71,8 @@ object AquaConfig {
           constants = cjs.constants.map(_.toList).getOrElse(Nil),
           noXor = cjs.noXor.getOrElse(false),
           noRelay = cjs.noRelay.getOrElse(false),
-          tracing = cjs.tracing.getOrElse(false)
+          tracing = cjs.tracing.getOrElse(false),
+          noEmptyResponse = cjs.noEmptyResponse.getOrElse(false)
         )
       }
   }

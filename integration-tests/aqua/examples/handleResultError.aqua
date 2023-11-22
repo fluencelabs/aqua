@@ -4,7 +4,7 @@ export handleResultError
 
 -- t = true, f = false
 func handleResultError(t: bool, f: bool) -> string:
-    opt: ?[]string
+    opt: *[]string
 
     if t == f: -- false
         opt <<- ["unreachable"]

@@ -3,6 +3,7 @@ package aqua.parser.lexer
 import aqua.parser.Expr
 import aqua.parser.head.FilenameExpr
 import aqua.parser.lexer.Token.*
+import aqua.parser.lexer.NamedArg.namedArgs
 import aqua.parser.lift.LiftParser
 import aqua.parser.lift.LiftParser.*
 import aqua.types.LiteralType
@@ -260,7 +261,7 @@ object CallArrowToken {
 
 case class NamedValueToken[F[_]: Comonad](
   typeName: NamedTypeToken[F],
-  fields: NonEmptyMap[String, ValueToken[F]]
+  fields: NonEmptyList[NamedArg[F]]
 ) extends ValueToken[F] {
 
   override def mapK[K[_]: Comonad](fk: F ~> K): NamedValueToken[K] =
@@ -277,7 +278,7 @@ object NamedValueToken {
         "Missing braces '()' after the struct type"
       )
       .map { case (dn, args) =>
-        NamedValueToken(NamedTypeToken(dn), args.toNem)
+        NamedValueToken(NamedTypeToken(dn), args)
       }
 }
 

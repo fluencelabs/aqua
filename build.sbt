@@ -1,6 +1,6 @@
 import BundleJS.*
 
-val aquaVersion = "0.12.3"
+val aquaVersion = "0.12.4"
 
 val scalaV = "3.3.1"
 val catsV = "2.10.0"
@@ -8,7 +8,7 @@ val catsParseV = "0.3.10"
 val monocleV = "3.1.0"
 val scalaTestV = "3.2.17"
 val sourcecodeV = "0.3.0"
-val fs2V = "3.9.2"
+val fs2V = "3.9.3"
 val catsEffectV = "3.6-1f95fd7"
 val declineV = "2.3.0"
 val circeVersion = "0.14.2"
@@ -122,6 +122,7 @@ lazy val types = crossProject(JVMPlatform, JSPlatform)
       "org.typelevel" %%% "cats-core" % catsV
     )
   )
+  .dependsOn(errors)
 
 lazy val parser = crossProject(JVMPlatform, JSPlatform)
   .withoutSuffixFor(JVMPlatform)

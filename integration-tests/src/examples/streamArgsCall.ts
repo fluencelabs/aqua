@@ -1,5 +1,6 @@
 import {
   retrieve_records,
+  modify_stream,
   registerTestService,
 } from "../compiled/examples/streamArgs.js";
 
@@ -11,4 +12,8 @@ export async function streamArgsCall() {
   });
 
   return await retrieve_records("peer_id");
+}
+
+export async function modifyStreamCall(arg: string[]) {
+  return await modify_stream(arg);
 }

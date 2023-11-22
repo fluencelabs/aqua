@@ -29,6 +29,9 @@ case class OpModelTreeCursor(
   override lazy val toNextSibling: Option[OpModelTreeCursor] =
     super.toNextSibling.map(_.copy(cachedParent = cachedParent))
 
+  override lazy val nextSiblings: LazyList[OpModelTreeCursor] =
+    super.nextSiblings.map(_.copy(cachedParent = cachedParent))
+
   override def moveDown(focusOn: ChainZipper[OpModel.Tree]): OpModelTreeCursor =
     super.moveDown(focusOn).copy(cachedParent = Some(this))
 

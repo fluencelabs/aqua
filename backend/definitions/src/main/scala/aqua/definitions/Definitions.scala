@@ -1,12 +1,12 @@
 package aqua.definitions
 
+import aqua.definitions.*
 import aqua.res.FuncRes
 import aqua.types.*
-import aqua.definitions.*
+
 import io.circe.*
 import io.circe.parser.*
 import io.circe.syntax.*
-
 import scala.annotation.tailrec
 
 // Represents the Aqua types
@@ -16,7 +16,7 @@ sealed trait TypeDefinition {
 
 object TypeDefinition {
 
-  implicit val encodeProdDefType: Encoder[ProductTypeDef] = {
+  given Encoder[ProductTypeDef] = {
     case d @ LabeledProductTypeDef(fields) =>
       Json.obj(
         ("tag", Json.fromString(d.tag)),
@@ -33,7 +33,7 @@ object TypeDefinition {
       )
   }
 
-  implicit val encodeDefType: Encoder[TypeDefinition] = {
+  given Encoder[TypeDefinition] = {
     case d @ ScalarTypeDef(name) =>
       Json.obj(
         ("tag", Json.fromString(d.tag)),
@@ -68,14 +68,14 @@ object TypeDefinition {
       )
   }
 
-  implicit val encodeServiceDefType: Encoder[ServiceDef] = { case ServiceDef(sId, functions, name) =>
+  given Encoder[ServiceDef] = { case ServiceDef(sId, functions, name) =>
     Json.obj(
       ("defaultServiceId", sId.asJson),
-      ("functions", encodeProdDefType(functions))
+      ("functions", (functions: ProductTypeDef).asJson)
     )
   }
 
-  implicit val encodeNamesConfig: Encoder[NamesConfig] = { case n: NamesConfig =>
+  given Encoder[NamesConfig] = { case n: NamesConfig =>
     import n.*
     Json.obj(
       ("relay", Json.fromString(relay)),
@@ -88,13 +88,12 @@ object TypeDefinition {
     )
   }
 
-  implicit val encodeFunctionDefType: Encoder[FunctionDef] = {
-    case FunctionDef(fName, arrow, names) =>
-      Json.obj(
-        ("functionName", Json.fromString(fName)),
-        ("arrow", encodeDefType(arrow)),
-        ("names", names.asJson)
-      )
+  given Encoder[FunctionDef] = { case FunctionDef(fName, arrow, names) =>
+    Json.obj(
+      ("functionName", Json.fromString(fName)),
+      ("arrow", (arrow: TypeDefinition).asJson),
+      ("names", names.asJson)
+    )
   }
 
   def apply(t: Option[Type]): TypeDefinition = t.map(apply).getOrElse(NilTypeDef)
@@ -103,7 +102,7 @@ object TypeDefinition {
     t match {
       case OptionType(t) =>
         OptionTypeDef(TypeDefinition(t))
-      case t: BoxType => ArrayTypeDef(TypeDefinition(t.element))
+      case t: CollectionType => ArrayTypeDef(TypeDefinition(t.element))
       case StructType(name, fields) =>
         StructTypeDef(name, fields.toSortedMap.view.mapValues(TypeDefinition.apply).toMap)
       case AbilityType(name, fieldAndArrows) =>
@@ -198,7 +197,11 @@ case class NamesConfig(
 )
 
 // Describes service
-case class ServiceDef(defaultServiceId: Option[String], functions: LabeledProductTypeDef, name: String)
+case class ServiceDef(
+  defaultServiceId: Option[String],
+  functions: LabeledProductTypeDef,
+  name: String
+)
 
 // Describes top-level function
 case class FunctionDef(

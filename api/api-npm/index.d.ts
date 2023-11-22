@@ -37,6 +37,8 @@ type CommonArgs = {
   targetType?: "ts" | "js" | "air" | undefined;
   /** Compile aqua in tracing mode (for debugging purposes). Default: false */
   tracing?: boolean | undefined;
+  /** Do not generate response call if there are no returned values */
+  noEmptyResponse?: boolean | undefined;
 };
 
 type CodeString = {

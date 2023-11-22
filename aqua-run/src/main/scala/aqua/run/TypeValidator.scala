@@ -2,6 +2,7 @@ package aqua.run
 
 import aqua.raw.value.{LiteralRaw, ValueRaw, VarRaw}
 import aqua.types.*
+
 import cats.data.Validated.{invalidNec, validNec}
 import cats.data.{Validated, ValidatedNec}
 import cats.effect.kernel.Async
@@ -10,13 +11,10 @@ import cats.syntax.flatMap.*
 import cats.syntax.partialOrder.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
 
 object TypeValidator {
-
-  import aqua.types.Type.typesPartialOrder
 
   /**
    * Compare and validate type from Aqua file and type generated from JSON.
@@ -69,7 +67,7 @@ object TypeValidator {
           case (l: OptionType, r) =>
             // if we have ?[][]string and [][][]string it must throw an error
             validateTypes(name, l.element, Some(r), Some((l, r)))
-          case (l: BoxType, r: BoxType) =>
+          case (l: CollectionType, r: CollectionType) =>
             validateTypes(name, l.element, Some(r.element), fullOptionType.orElse(Some(l, r)))
 
           case (l, r) =>
