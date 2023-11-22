@@ -113,6 +113,12 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
           )
         } yield result
 
+        /**
+         * This is a HACKERY!!!
+         * Imports have very different mechanism of resolving,
+         * so here we try to differentiate them and adjust property
+         * token accordingly.
+         */
         prop.leadingName.fold(default)(name =>
           A.isDefinedAbility(name)
             .flatMap(isDefined =>

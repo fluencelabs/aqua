@@ -34,7 +34,6 @@ trait Arrows[S] extends Scoped[S] {
   )(using Exports[S]): State[S, Unit] =
     for {
       arrs <- arrows
-      exps <- Exports[S].exports
       capturedVars <- Exports[S].gather(arrow.capturedVars.toSeq)
       capturedArrows = arrs.filterKeys(arrow.capturedVars).toMap ++
         Arrows.arrowsByValues(arrs, capturedVars)

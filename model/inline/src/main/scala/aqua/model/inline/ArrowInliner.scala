@@ -283,7 +283,12 @@ object ArrowInliner extends Logging {
       case (name, ValueModel.Ability(vm, at)) if vm.properties.isEmpty =>
         name -> (
           at,
-          // Gather all values related to `name`
+          /**
+           * Gather all values related to `name`
+           * NOTE: It is important that `capturedValues` are
+           * populated by all values related to ability `name`
+           * on creation of `FuncArrow`.
+           */
           Exports.gatherFrom(
             name :: Nil,
             fn.capturedValues
