@@ -403,7 +403,7 @@ sealed trait NamedType extends Type {
    * to allow renaming on call site.
    */
   lazy val arrows: Map[String, ArrowType] =
-    allFields.toSortedMap.toMap.collect { case (name, at: ArrowType) =>
+    allFields.toSortedMap.collect { case (name, at: ArrowType) =>
       name -> at
     }
 
@@ -413,7 +413,7 @@ sealed trait NamedType extends Type {
    * to allow renaming on call site.
    */
   lazy val abilities: Map[String, AbilityType] =
-    allFields.toSortedMap.toMap.collect { case (name, at: AbilityType) =>
+    allFields.toSortedMap.collect { case (name, at: AbilityType) =>
       name -> at
     }
 
@@ -423,7 +423,7 @@ sealed trait NamedType extends Type {
    * to allow renaming on call site.
    */
   lazy val variables: Map[String, DataType] =
-    allFields.toSortedMap.toMap.collect { case (name, at: DataType) =>
+    allFields.toSortedMap.collect { case (name, at: DataType) =>
       name -> at
     }
 }
@@ -437,31 +437,6 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
 
   override def toString: String =
     s"$fullName{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
-}
-
-case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) extends NamedType {
-sealed trait MutableStreamType extends Type with CollectionType
-
-case class StreamMapType(override val element: DataType) extends MutableStreamType {
-
-  override val isStream: Boolean = true
-
-  override def withElement(t: DataType): CollectionType = copy(element = t)
-
-  override def toString: String = s"%$element"
-}
-
-object StreamMapType {
-  def top(): StreamMapType = StreamMapType(TopType)
-}
-
-case class StreamType(override val element: DataType) extends MutableStreamType {
-
-  override val isStream: Boolean = true
-
-  override def toString: String = s"*$element"
-
-  override def withElement(t: DataType): CollectionType = copy(element = t)
 }
 
 /**
