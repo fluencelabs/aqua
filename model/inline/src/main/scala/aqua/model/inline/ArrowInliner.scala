@@ -264,7 +264,6 @@ object ArrowInliner extends Logging {
         .map(_.mapValues(_.map {
           // if an argument is a BoxType (Array or Option), but we pass a stream,
           // change a type as stream to not miss `$` sign in air
-          // @see ArrowInlinerSpec `pass stream to callback properly` test
           case v @ VarRaw(name, baseType: CollectionType) if streamsToRename.contains(name) =>
             v.copy(baseType = StreamType(baseType.element))
           case v: VarRaw if streamsToRename.contains(v.name) =>

@@ -183,6 +183,86 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
   }
 
+  /*
+    func use(str: string[]):
+      Srv.useArr(str)
+
+    func call():
+      str = *[]
+      use(str)
+   */
+  it should "pass stream to function with array argument properly" in {
+    val streamType = StreamType(ScalarType.string)
+    val streamVar = VarRaw("str", streamType)
+    val streamModel = VarModel("str", StreamType(ScalarType.string))
+    val canonName = streamVar.name + "_canon"
+    val canonModel = VarModel(canonName, CanonStreamType(ScalarType.string))
+
+    val useArg = VarRaw("str", ArrayType(ScalarType.string))
+
+    val useArrow = FuncArrow(
+      "use",
+      CallArrowRawTag
+        .service(
+          LiteralRaw.quote("srv"),
+          "useArr",
+          Call(useArg :: Nil, Nil)
+        )
+        .leaf,
+      ArrowType(
+        ProductType.labelled(
+          (
+            useArg.name,
+            useArg.`type`
+          ) :: Nil
+        ),
+        ProductType(Nil)
+      ),
+      Nil,
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val model: OpModel.Tree = ArrowInliner
+      .callArrow[InliningState](
+        FuncArrow(
+          "call",
+          SeqTag.wrap(
+              DeclareStreamTag(streamVar).leaf,
+              CallArrowRawTag.func(useArrow.funcName, Call(streamVar :: Nil, Nil)).leaf
+          ),
+          ArrowType(
+            ProductType(Nil),
+            ProductType(Nil)
+          ),
+          Nil,
+          Map(useArrow.funcName -> useArrow),
+          Map.empty,
+          None
+        ),
+        CallModel(Nil, Nil)
+      )
+      .runA(
+        InliningState(
+          resolvedArrows = Map(
+            useArrow.funcName -> useArrow
+          )
+        )
+      )
+      .value
+
+    model.equalsOrShowDiff(
+      CallArrowModel(useArrow.funcName).wrap(
+        SeqModel.wrap(
+          CanonicalizeModel(streamModel, CallModel.Export(canonModel.name, canonModel.`type`)).leaf,
+          CallServiceModel(LiteralModel.quote("srv"), "useArr", CallModel(canonModel :: Nil, Nil)).leaf
+        )
+      )
+    ) should be(true)
+
+  }
+
   /**
    * func returnNil() -> *string:
    *   someStr: *string
