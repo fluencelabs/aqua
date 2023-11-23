@@ -1,56 +1,54 @@
 package api
 
-import api.types.{AquaConfig, AquaFunction, CompilationResult, GeneratedSource, Input}
 import aqua.Rendering.given
-import aqua.raw.value.ValueRaw
-import aqua.api.{APICompilation, APIResult, AquaAPIConfig}
+import aqua.SpanParser
 import aqua.api.TargetType.*
+import aqua.api.{APICompilation, APIResult, AquaAPIConfig}
 import aqua.backend.air.AirBackend
+import aqua.backend.api.APIBackend
+import aqua.backend.js.JavaScriptBackend
+import aqua.backend.ts.TypeScriptBackend
 import aqua.backend.{AirFunction, Backend, Generated}
 import aqua.compiler.*
-import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
-import aqua.logging.{LogFormatter, LogLevels}
 import aqua.constants.Constants
+import aqua.definitions.FunctionDef
+import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.*
-import aqua.raw.ops.Call
-import aqua.run.{CliFunc, FuncCompiler}
+import aqua.js.{FunctionDefJs, ServiceDefJs, VarJson}
+import aqua.logging.{LogFormatter, LogLevels}
+import aqua.model.AquaContext
+import aqua.model.transform.{Transform, TransformConfig}
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.{AquaIO, SpanParser}
-import aqua.model.transform.{Transform, TransformConfig}
-import aqua.backend.api.APIBackend
-import aqua.backend.js.JavaScriptBackend
-import aqua.backend.ts.TypeScriptBackend
-import aqua.definitions.FunctionDef
-import aqua.js.{FunctionDefJs, ServiceDefJs, VarJson}
-import aqua.model.AquaContext
+import aqua.raw.ops.Call
 import aqua.raw.ops.CallArrowRawTag
+import aqua.raw.value.ValueRaw
 import aqua.raw.value.{LiteralRaw, VarRaw}
 import aqua.res.AquaRes
 
+import api.types.{AquaConfig, AquaFunction, CompilationResult, GeneratedSource, Input}
 import cats.Applicative
+import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
 import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
-import cats.syntax.applicative.*
-import cats.syntax.apply.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.either.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.syntax.either.*
 import fs2.io.file.{Files, Path}
-import scribe.Logging
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.scalajs.js.{|, undefined, Promise, UndefOr}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
+import scala.scalajs.js.{Promise, UndefOr, undefined, |}
+import scribe.Logging
 
 @JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {
@@ -58,27 +56,27 @@ object AquaAPI extends App with Logging {
   /**
    * All-in-one function that support different inputs and backends
    * @param input can be a path to aqua file, string with a code or a function call
-   * @param imports list of paths
+   * @param imports dictionary (path prefix -> list of imports for this prefix)
    * @param aquaConfigJS compiler config
-   * @return compiler results depends on input and config
+   * @return compiler results depending on input and config
    */
   @JSExport
   def compile(
     input: types.Input | types.Path | types.Call,
-    imports: js.Array[String],
+    imports: js.Dictionary[js.Array[String]],
     aquaConfigJS: js.UndefOr[AquaConfig]
   ): Promise[CompilationResult] = {
     aquaConfigJS.toOption
       .map(AquaConfig.fromJS)
       .getOrElse(validNec(AquaAPIConfig()))
       .traverse { config =>
-        val importsList = imports.toList
+        val importsMap = imports.mapValues(_.toList).toMap
 
         input match {
           case i: (types.Input | types.Path) =>
-            compileAll(i, importsList, config)
+            compileAll(i, importsMap, config)
           case c: types.Call =>
-            compileCall(c, importsList, config)
+            compileCall(c, importsMap, config)
 
         }
       }
@@ -90,7 +88,7 @@ object AquaAPI extends App with Logging {
   // Compile all non-call inputs
   private def compileAll(
     input: types.Input | types.Path,
-    imports: List[String],
+    imports: Map[String, List[String]],
     config: AquaAPIConfig
   ): IO[CompilationResult] = {
     val backend: Backend = config.targetType match {
@@ -138,7 +136,7 @@ object AquaAPI extends App with Logging {
   // Compile a function call
   private def compileCall(
     call: types.Call,
-    imports: List[String],
+    imports: Map[String, List[String]],
     config: AquaAPIConfig
   ): IO[CompilationResult] = {
     val path = call.input match {

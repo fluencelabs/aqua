@@ -1,8 +1,8 @@
 package aqua
 
 import aqua.io.AquaFileError
-import cats.data.{Chain, EitherT, ValidatedNec}
 
+import cats.data.{Chain, EitherT, ValidatedNec}
 import fs2.io.file.Path
 
 trait AquaIO[F[_]] {
@@ -19,5 +19,5 @@ trait AquaIO[F[_]] {
 }
 
 object AquaIO {
-  def apply[F[_]](implicit aio: AquaIO[F]): AquaIO[F] = aio
+  def apply[F[_]](using aio: AquaIO[F]): AquaIO[F] = aio
 }

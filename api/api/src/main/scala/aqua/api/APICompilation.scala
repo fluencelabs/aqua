@@ -1,63 +1,64 @@
 package aqua.api
 
 import aqua.Rendering.given
-import aqua.raw.value.ValueRaw
-import aqua.raw.ConstantRaw
 import aqua.api.AquaAPIConfig
+import aqua.backend.api.APIBackend
 import aqua.backend.{AirFunction, Backend, Generated}
 import aqua.compiler.*
-import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
-import aqua.logging.{LogFormatter, LogLevels}
 import aqua.constants.Constants
+import aqua.definitions.FunctionDef
+import aqua.files.{AquaFileSources, AquaFilesIO, AquaStringSources, FileModuleId}
 import aqua.io.*
-import aqua.raw.ops.Call
-import aqua.run.{CliFunc, FuncCompiler, RunPreparer}
+import aqua.logging.{LogFormatter, LogLevels}
+import aqua.model.AquaContext
+import aqua.model.transform.{Transform, TransformConfig}
+import aqua.parser.expr.AbilityExpr.p
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.{AquaIO, SpanParser}
-import aqua.model.transform.{Transform, TransformConfig}
-import aqua.backend.api.APIBackend
-import aqua.definitions.FunctionDef
-import aqua.model.AquaContext
+import aqua.raw.ConstantRaw
+import aqua.raw.ops.Call
+import aqua.raw.value.ValueRaw
 import aqua.res.AquaRes
+import aqua.run.{CliFunc, FuncCompiler, RunPreparer}
+import aqua.{AquaIO, SpanParser}
 
 import cats.Applicative
-import cats.~>
-import cats.data.{
-  Chain,
-  EitherT,
-  NonEmptyChain,
-  NonEmptyList,
-  Validated,
-  ValidatedNec,
-  ValidatedNel,
-  Writer
-}
-import cats.data.Validated.{invalid, invalidNec, validNec, Invalid, Valid}
-import cats.syntax.applicative.*
-import cats.syntax.apply.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
+import cats.data.*
+import cats.data.Validated.*
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.either.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.syntax.either.*
+import cats.~>
 import fs2.io.file.{Files, Path}
 import scribe.{Level, Logging}
 
 object APICompilation {
 
+  /**
+   * Map from path prefix to list of imports for this prefix
+   */
+  type Imports = Map[String, List[String]]
+
   def compileCall(
     functionStr: String,
     pathStr: String,
-    imports: List[String],
+    imports: Imports,
     aquaConfig: AquaAPIConfig,
     fillWithTypes: List[ValueRaw] => ValidatedNec[String, List[ValueRaw]]
   ): IO[APIResult[(FunctionDef, String)]] = {
     given AquaIO[IO] = new AquaFilesIO[IO]
+
+    val importPaths = imports.map { case (prefix, paths) =>
+      Path.apply(prefix) -> paths.map(Path.apply)
+    }
 
     (
       LogLevels.levelFromString(aquaConfig.logLevel),
@@ -69,7 +70,7 @@ object APICompilation {
 
       new FuncCompiler[IO](
         Some(RelativePath(Path(pathStr))),
-        imports.map(Path.apply),
+        importPaths,
         transformConfig
       ).compile().map { contextV =>
         for {
@@ -95,14 +96,18 @@ object APICompilation {
 
   def compilePath(
     pathStr: String,
-    imports: List[String],
+    imports: Imports,
     aquaConfig: AquaAPIConfig,
     backend: Backend
   ): IO[APIResult[Chain[AquaCompiled[FileModuleId]]]] = {
     given AquaIO[IO] = new AquaFilesIO[IO]
 
+    val importPaths = imports.map { case (prefix, paths) =>
+      Path.apply(prefix) -> paths.map(Path.apply)
+    }
+
     val path = Path(pathStr)
-    val sources = new AquaFileSources[IO](path, imports.map(Path.apply))
+    val sources = new AquaFileSources[IO](path, importPaths)
 
     compileRaw(
       aquaConfig,
@@ -113,7 +118,7 @@ object APICompilation {
 
   def compileString(
     input: String,
-    imports: List[String],
+    imports: Imports,
     aquaConfig: AquaAPIConfig,
     backend: Backend
   ): IO[APIResult[Chain[AquaCompiled[FileModuleId]]]] = {
@@ -121,12 +126,13 @@ object APICompilation {
 
     val path = Path("")
 
-    val strSources: AquaFileSources[IO] =
-      new AquaFileSources[IO](path, imports.map(Path.apply)) {
-        override def sources: IO[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] = {
-          IO.pure(Valid(Chain.one((FileModuleId(path), input))))
+    val strSources: AquaStringSources[IO] =
+      new AquaStringSources(
+        Map(FileModuleId(path) -> input),
+        imports.map { case (prefix, paths) =>
+          Path(prefix) -> paths.map(Path.apply)
         }
-      }
+      )
 
     compileRaw(
       aquaConfig,

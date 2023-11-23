@@ -19,7 +19,10 @@ object Test extends IOApp.Simple {
 
   override def run: IO[Unit] = {
 
-    val sources = new AquaFileSources[IO](Path("./aqua-src/antithesis.aqua"), List(Path("./aqua")))
+    val sources = new AquaFileSources[IO](
+      Path("./aqua-src/antithesis.aqua"),
+      Map(Path("/") -> List(Path("./aqua")))
+    )
     val config = AquaCompilerConf(ConstantRaw.defaultConstants(None))
 
     for {

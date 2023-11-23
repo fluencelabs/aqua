@@ -13,19 +13,19 @@ import aqua.raw.ConstantRaw
 import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
 import aqua.{AquaIO, SpanParser}
 
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
+import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
 import cats.data.{NonEmptyChain, Validated}
 import cats.effect.IO
-import cats.syntax.option.*
 import cats.effect.unsafe.implicits.global
+import cats.syntax.option.*
 import fs2.io.file.{Files, Path}
-import scribe.Logging
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
-import scala.scalajs.js.{undefined, UndefOr}
+import scala.scalajs.js.{UndefOr, undefined}
+import scribe.Logging
 
 @JSExportAll
 case class CompilationResult(
@@ -170,15 +170,20 @@ object AquaLSP extends App with Logging {
   @JSExport
   def compile(
     pathStr: String,
-    imports: scalajs.js.Array[String]
-  ): scalajs.js.Promise[CompilationResult] = {
+    imports: js.Dictionary[js.Array[String]]
+  ): js.Promise[CompilationResult] = {
     logger.debug(s"Compiling '$pathStr' with imports: $imports")
 
     given AquaIO[IO] = new AquaFilesIO[IO]
 
     val path = Path(pathStr)
     val pathId = FileModuleId(path)
-    val sources = new AquaFileSources[IO](path, imports.toList.map(Path.apply))
+    val sources = new AquaFileSources[IO](
+      path,
+      imports.toMap.map { case (prefix, paths) =>
+        Path(prefix) -> paths.toList.map(Path.apply)
+      }
+    )
     val config = AquaCompilerConf(ConstantRaw.defaultConstants(None))
 
     val proc = for {

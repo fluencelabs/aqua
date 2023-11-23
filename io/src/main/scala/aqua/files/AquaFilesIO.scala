@@ -2,6 +2,7 @@ package aqua.files
 
 import aqua.AquaIO
 import aqua.io.*
+
 import cats.data.*
 import cats.data.Validated.{Invalid, Valid}
 import cats.effect.kernel.Concurrent
@@ -10,12 +11,11 @@ import cats.syntax.applicativeError.*
 import cats.syntax.apply.*
 import cats.syntax.either.*
 import cats.syntax.flatMap.*
+import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.traverse.*
-import cats.syntax.foldable.*
 import fs2.io.file.{Files, Path}
 import fs2.text
-
 import scala.util.Try
 
 class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
@@ -72,8 +72,7 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
     imports: List[Path]
   ): EitherT[F, AquaFileError, Path] =
     findFirstF(
-      imports
-        .map(_.resolve(src)),
+      imports.map(_.resolve(src)),
       EitherT.leftT(FileNotFound(src, imports))
     )
 

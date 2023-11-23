@@ -60,7 +60,7 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
       "co.fs2"        %%% "fs2-io"      % fs2V
     )
   )
-  .dependsOn(compiler, parser)
+  .dependsOn(compiler, parser, helpers)
 
 lazy val ioJS = io.js.dependsOn(`js-imports`)
 
