@@ -272,7 +272,7 @@ object ArrowInliner extends Logging {
    * @param arrows Arrows state before calling/inlining
    * @return Renamed values and arrows
    */
-  def renamedCaptured[S: Mangler](
+  def renameCaptured[S: Mangler](
     fn: FuncArrow,
     exports: Map[String, ValueModel],
     arrows: Map[String, FuncArrow]
@@ -406,7 +406,7 @@ object ArrowInliner extends Logging {
     arrowRenames = args.arrowArgsRenames
     abRenames = args.abilityArgsRenames
 
-    captured <- renamedCaptured(fn, exports, arrows)
+    captured <- renameCaptured(fn, exports, arrows)
     (capturedValues, capturedArrows) = captured
 
     /**
