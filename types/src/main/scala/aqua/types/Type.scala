@@ -277,24 +277,24 @@ sealed trait CollectionType extends Type {
 
 object CollectionType {
 
-  def elementTypeOf[F[_]: Foldable: Functor](types: F[CollectibleType]): DataType = {
-    types.map {
-      case StreamType(el) => ArrayType(el)
-      case dt: DataType => dt
-    }.foldLeft[Type](BottomType)(_ `∩` _) match {
-      // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
-      // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
-      // make any decision about the structure of type, but can push anything inside
-      case BottomType => TopType
-      case dt: DataType => dt
-      case t =>
-        internalError(
-          s"Expected data type from " +
-            s"intersection of ${types.foldLeft("") { case (l, r) => l + ", " + r }}; " +
-            s"got $t"
-        )
-    }
-  }
+  def elementTypeOf[F[_]: Foldable: Functor](types: F[CollectibleType]): DataType =
+    types
+      .map[Type] {
+        case StreamType(el) => ArrayType(el)
+        case dt: DataType => dt
+      }.reduceLeftOption(_ `∩` _).getOrElse(BottomType) match {
+        // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
+        // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
+        // make any decision about the structure of type, but can push anything inside
+        case BottomType => TopType
+        case dt: DataType => dt
+        case t =>
+          internalError(
+            s"Expected data type from " +
+              s"intersection of ${types.foldLeft("") { case (l, r) => l + ", " + r }}; " +
+              s"got $t"
+          )
+      }
 
 }
 
