@@ -68,4 +68,5 @@ object NamesState {
       },
       constants = context.allValues.map { case (s, vm) => (s, vm.`type`) }
     )
+
 }

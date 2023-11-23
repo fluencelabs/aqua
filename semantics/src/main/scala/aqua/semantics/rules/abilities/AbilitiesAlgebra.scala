@@ -15,6 +15,8 @@ trait AbilitiesAlgebra[S[_], Alg[_]] {
     defaultId: Option[ValueRaw]
   ): Alg[Boolean]
 
+  def isDefinedAbility(name: NamedTypeToken[S]): Alg[Boolean]
+
   def getArrow(name: NamedTypeToken[S], arrow: Name[S]): Alg[Option[ArrowType]]
 
   def renameService(name: NamedTypeToken[S]): Alg[Option[String]]

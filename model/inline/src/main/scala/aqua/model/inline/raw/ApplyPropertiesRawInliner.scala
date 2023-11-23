@@ -223,7 +223,7 @@ object ApplyPropertiesRawInliner extends RawInliner[ApplyPropertyRaw] with Loggi
           State.pure((vm, prevInline.mergeWith(optimizationInline, SeqMode)))
         ) { case (state, property) =>
           state.flatMap {
-            case (vm @ Ability(_, at, _), leftInline) =>
+            case (vm @ Ability(_, at), leftInline) =>
               unfoldAbilityProperty(vm, at, property.raw).map { case (vm, inl) =>
                 (
                   vm,

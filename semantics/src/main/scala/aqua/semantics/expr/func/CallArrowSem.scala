@@ -10,14 +10,15 @@ import aqua.semantics.rules.ValuesAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
 import aqua.types.{ProductType, StreamType, Type}
+
 import cats.Monad
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
-import cats.syntax.traverse.*
-import cats.syntax.option.*
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.comonad.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.option.*
+import cats.syntax.traverse.*
 
 class CallArrowSem[S[_]](val expr: CallArrowExpr[S]) extends AnyVal {
 

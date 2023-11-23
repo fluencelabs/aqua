@@ -12,13 +12,13 @@ import cats.free.Cofree
 import cats.instances.list.*
 import cats.instances.option.*
 import cats.kernel.Semigroup
-import cats.syntax.option.*
+import cats.syntax.apply.*
+import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
+import cats.syntax.option.*
 import cats.syntax.semigroup.*
 import cats.syntax.validated.*
-import cats.syntax.bifunctor.*
-import cats.syntax.apply.*
 import cats.{Comonad, Eval, Monoid}
 
 class HeaderHandler[S[_]: Comonad, C](using

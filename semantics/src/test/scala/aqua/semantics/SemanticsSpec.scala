@@ -13,7 +13,7 @@ import aqua.types.*
 import cats.Eval
 import cats.data.State
 import cats.data.Validated
-import cats.data.{Chain, EitherNec, NonEmptyChain}
+import cats.data.{Chain, EitherNec, NonEmptyChain, NonEmptyMap}
 import cats.free.Cofree
 import cats.syntax.foldable.*
 import cats.syntax.option.*
@@ -102,18 +102,29 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
                          |
   """.stripMargin
 
-  def testServiceCallStr(str: String) =
-    CallArrowRawTag
-      .ability(
-        abilityName = "Test",
-        funcName = "testCallStr",
-        call = Call(LiteralRaw.quote(str) :: Nil, Nil),
-        arrowType = ArrowType(
-          ProductType.labelled(("s" -> ScalarType.string) :: Nil),
-          ProductType(ScalarType.string :: Nil)
-        )
+  def testServiceCallStr(str: String) = {
+    val arrowType = ArrowType(
+      ProductType.labelled(("s" -> ScalarType.string) :: Nil),
+      ProductType(ScalarType.string :: Nil)
+    )
+
+    CallArrowRawTag(
+      Nil,
+      ApplyPropertyRaw(
+        VarRaw(
+          "Test",
+          ServiceType(
+            "Test",
+            NonEmptyMap.of(
+              "testCallStr" -> arrowType,
+              "testCall" -> ArrowType(NilType, NilType)
+            )
+          )
+        ),
+        IntoArrowRaw("testCallStr", arrowType, LiteralRaw.quote(str) :: Nil)
       )
-      .leaf
+    ).leaf
+  }
 
   def equ(left: ValueRaw, right: ValueRaw): ApplyBinaryOpRaw =
     ApplyBinaryOpRaw(ApplyBinaryOpRaw.Op.Eq, left, right, ScalarType.bool)
@@ -152,14 +163,21 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
 
     insideBody(script) { body =>
       val arrowType = ArrowType(NilType, ConsType.cons(ScalarType.string, NilType))
-      val serviceCall = CallArrowRawTag
-        .ability(
-          abilityName = "A",
-          funcName = "fn1",
-          call = emptyCall,
-          arrowType = arrowType
+      val serviceCall = CallArrowRawTag(
+        Nil,
+        ApplyPropertyRaw(
+          VarRaw(
+            "A",
+            ServiceType(
+              "A",
+              NonEmptyMap.of(
+                "fn1" -> arrowType
+              )
+            )
+          ),
+          IntoArrowRaw("fn1", arrowType, Nil)
         )
-        .leaf
+      ).leaf
 
       val expected =
         ParTag.wrap(
@@ -880,13 +898,14 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
                       |""".stripMargin
 
       insideBody(script) { body =>
-        matchSubtree(body) { case (CallArrowRawTag(_, ca: CallArrowRaw), _) =>
-          inside(ca.arguments) { case (c: CollectionRaw) :: Nil =>
-            c.values.exists {
-              case VarRaw(name, _) => name == "stream"
-              case _ => false
-            } should be(true)
-          }
+        matchSubtree(body) {
+          case (CallArrowRawTag(_, ApplyPropertyRaw(_, IntoArrowRaw("consume", _, args))), _) =>
+            inside(args) { case (c: CollectionRaw) :: Nil =>
+              c.values.exists {
+                case VarRaw(name, _) => name == "stream"
+                case _ => false
+              } should be(true)
+            }
         }
       }
     }

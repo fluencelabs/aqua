@@ -1,6 +1,7 @@
 package aqua.types
 
 import aqua.errors.Errors.internalError
+import aqua.types.*
 import aqua.types.Type.*
 
 import cats.data.NonEmptyList
@@ -12,6 +13,7 @@ import cats.syntax.option.*
 import cats.syntax.partialOrder.*
 import cats.syntax.traverse.*
 import cats.{Eval, Foldable, Functor, PartialOrder, Traverse}
+import scala.collection.immutable.SortedMap
 
 sealed trait Type {
 
@@ -366,72 +368,64 @@ sealed trait NamedType extends Type {
   def fields: NonEmptyMap[String, Type]
 
   /**
+   * Get all fields defined in this type and its fields of named type.
+   * Paths to fields are returned **without** type name
+   * to allow renaming on call site.
+   */
+  final def allFields: NonEmptyMap[String, Type] = {
+    def allEval(path: Option[String], nt: NamedType): Eval[List[(String, Type)]] = {
+      val qualified = (name: String) => path.fold(name)(AbilityType.fullName(_, name))
+      val fieldsList = nt.fields.toNel.toList
+      val currentFields = fieldsList.map { case (name, t) =>
+        qualified(name) -> t
+      }
+      fieldsList.flatTraverse {
+        case (name, t: NamedType) =>
+          allEval(qualified(name).some, t)
+        case _ => Eval.now(Nil)
+      }.map(currentFields ++ _)
+    }
+
+    allEval(none, this)
+      .map(l =>
+        /**
+         * As fields are `NonEmptyMap`, this
+         * operation should be safe
+         */
+        NonEmptyMap.fromMapUnsafe(SortedMap.from(l))
+      )
+      .value
+  }
+
+  /**
    * Get all arrows defined in this type and its sub-abilities.
    * Paths to arrows are returned **without** type name
    * to allow renaming on call site.
    */
-  lazy val arrows: Map[String, ArrowType] = {
-    def getArrowsEval(path: Option[String], nt: NamedType): Eval[List[(String, ArrowType)]] =
-      nt.fields.toNel.toList.flatTraverse {
-        // sub-arrows could be in abilities or services
-        case (innerName, innerType: (ServiceType | AbilityType)) =>
-          val newPath = path.fold(innerName)(AbilityType.fullName(_, innerName))
-          getArrowsEval(newPath.some, innerType)
-        case (aName, aType: ArrowType) =>
-          val newPath = path.fold(aName)(AbilityType.fullName(_, aName))
-          List(newPath -> aType).pure
-        case _ => Nil.pure
-      }
-
-    getArrowsEval(None, this).value.toMap
-  }
+  lazy val arrows: Map[String, ArrowType] =
+    allFields.toSortedMap.toMap.collect { case (name, at: ArrowType) =>
+      name -> at
+    }
 
   /**
    * Get all abilities defined in this type and its sub-abilities.
    * Paths to abilities are returned **without** type name
    * to allow renaming on call site.
    */
-  lazy val abilities: Map[String, AbilityType] = {
-    def getAbilitiesEval(
-      path: Option[String],
-      nt: NamedType
-    ): Eval[List[(String, AbilityType)]] =
-      nt.fields.toNel.toList.flatTraverse {
-        // sub-abilities could be only in abilities
-        case (abName, abType: AbilityType) =>
-          val fullName = path.fold(abName)(AbilityType.fullName(_, abName))
-          getAbilitiesEval(fullName.some, abType).map(
-            (fullName -> abType) :: _
-          )
-        case _ => Nil.pure
-      }
-
-    getAbilitiesEval(None, this).value.toMap
-  }
+  lazy val abilities: Map[String, AbilityType] =
+    allFields.toSortedMap.toMap.collect { case (name, at: AbilityType) =>
+      name -> at
+    }
 
   /**
    * Get all variables defined in this type and its sub-abilities.
    * Paths to variables are returned **without** type name
    * to allow renaming on call site.
    */
-  lazy val variables: Map[String, DataType] = {
-    def getVariablesEval(
-      path: Option[String],
-      nt: NamedType
-    ): Eval[List[(String, DataType)]] =
-      nt.fields.toNel.toList.flatTraverse {
-        // sub-variables could be only in abilities
-        case (abName, abType: AbilityType) =>
-          val newPath = path.fold(abName)(AbilityType.fullName(_, abName))
-          getVariablesEval(newPath.some, abType)
-        case (dName, dType: DataType) =>
-          val newPath = path.fold(dName)(AbilityType.fullName(_, dName))
-          List(newPath -> dType).pure
-        case _ => Nil.pure
-      }
-
-    getVariablesEval(None, this).value.toMap
-  }
+  lazy val variables: Map[String, DataType] =
+    allFields.toSortedMap.toMap.collect { case (name, at: DataType) =>
+      name -> at
+    }
 }
 
 // Struct is an unordered collection of labelled types
@@ -446,6 +440,40 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
 }
 
 case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) extends NamedType {
+sealed trait MutableStreamType extends Type with CollectionType
+
+case class StreamMapType(override val element: DataType) extends MutableStreamType {
+
+  override val isStream: Boolean = true
+
+  override def withElement(t: DataType): CollectionType = copy(element = t)
+
+  override def toString: String = s"%$element"
+}
+
+object StreamMapType {
+  def top(): StreamMapType = StreamMapType(TopType)
+}
+
+case class StreamType(override val element: DataType) extends MutableStreamType {
+
+  override val isStream: Boolean = true
+
+  override def toString: String = s"*$element"
+
+  override def withElement(t: DataType): CollectionType = copy(element = t)
+}
+
+/**
+ * This type unites types that work as abilities,
+ * namely `ServiceType` and `AbilityType`
+ */
+sealed trait GeneralAbilityType extends NamedType
+
+case class ServiceType(
+  name: String,
+  fields: NonEmptyMap[String, ArrowType]
+) extends GeneralAbilityType {
 
   override val specifier: String = "service"
 
@@ -454,7 +482,10 @@ case class ServiceType(name: String, fields: NonEmptyMap[String, ArrowType]) ext
 }
 
 // Ability is an unordered collection of labelled types and arrows
-case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends NamedType {
+case class AbilityType(
+  name: String,
+  fields: NonEmptyMap[String, Type]
+) extends GeneralAbilityType {
 
   override val specifier: String = "ability"
 
@@ -464,6 +495,19 @@ case class AbilityType(name: String, fields: NonEmptyMap[String, Type]) extends 
 
 object AbilityType {
   def fullName(name: String, field: String) = s"$name.$field"
+
+  def renames(at: NamedType)(
+    name: String,
+    newName: String
+  ): Map[String, String] =
+    at.allFields.keys.toList
+      .map(path =>
+        val fullName = AbilityType.fullName(name, path)
+        val newFullName = AbilityType.fullName(newName, path)
+        fullName -> newFullName
+      )
+      .toMap
+      .updated(name, newName)
 }
 
 /**

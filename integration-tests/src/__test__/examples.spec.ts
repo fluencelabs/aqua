@@ -38,6 +38,7 @@ import {
   bugLNG258Call2,
   bugLNG258Call3,
   multipleAbilityWithClosureCall,
+  returnSrvAsAbilityCall,
 } from "../examples/abilityCall.js";
 import {
   nilLengthCall,
@@ -582,6 +583,11 @@ describe("Testing examples", () => {
   it("abilities.aqua multiple abilities with closures", async () => {
     let result1 = await multipleAbilityWithClosureCall();
     expect(result1).toStrictEqual([1, 2]);
+  });
+
+  it("abilities.aqua return service as ability", async () => {
+    let result = await returnSrvAsAbilityCall();
+    expect(result).toStrictEqual(["default-id", "resolved-id"]);
   });
 
   it("functors.aqua LNG-119 bug", async () => {

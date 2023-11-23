@@ -3,20 +3,21 @@ package aqua.model.inline
 import aqua.model.*
 import aqua.model.MetaModel.CallArrowModel
 import aqua.model.inline.state.InliningState
+import aqua.raw.arrow.{ArrowRaw, FuncRaw}
 import aqua.raw.ops.*
 import aqua.raw.value.*
-import aqua.types.*
 import aqua.raw.value.{CallArrowRaw, ValueRaw}
-import aqua.raw.arrow.{ArrowRaw, FuncRaw}
+import aqua.types.*
+
 import cats.Eval
-import cats.syntax.show.*
-import cats.syntax.option.*
-import cats.syntax.flatMap.*
-import cats.free.Cofree
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
+import cats.free.Cofree
+import cats.syntax.flatMap.*
+import cats.syntax.option.*
+import cats.syntax.show.*
+import org.scalatest.Inside
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.Inside
 
 class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
@@ -346,8 +347,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
     val model = callFuncModel(newFunc)
 
-    val restrictionName = model.collect {
-      case RestrictionModel(name, _) => name
+    val restrictionName = model.collect { case RestrictionModel(name, _) =>
+      name
     }.headOption
 
     restrictionName shouldBe Some(someStr.name)
@@ -2690,8 +2691,6 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         .runA(InliningState())
         .value
 
-      // TODO: Don't know for what to test here
-      // inliner will just log an error in case of failure
       model.head should not equal EmptyModel
     }
 

@@ -2,23 +2,23 @@ package aqua.model
 
 import aqua.raw.arrow.FuncRaw
 import aqua.raw.ops.CallArrowRawTag
-import aqua.raw.value.ValueRaw
 import aqua.raw.value.CallArrowRaw
+import aqua.raw.value.ValueRaw
 import aqua.raw.{ConstantRaw, RawContext, RawPart, ServiceRaw, TypeRaw}
 import aqua.types.{AbilityType, StructType, Type}
 
 import cats.Monoid
-import cats.data.NonEmptyMap
 import cats.data.Chain
+import cats.data.NonEmptyMap
 import cats.kernel.Semigroup
-import cats.syntax.functor.*
-import cats.syntax.foldable.*
-import cats.syntax.traverse.*
 import cats.syntax.bifunctor.*
+import cats.syntax.foldable.*
+import cats.syntax.functor.*
 import cats.syntax.monoid.*
 import cats.syntax.option.*
-import scribe.Logging
+import cats.syntax.traverse.*
 import scala.collection.immutable.SortedMap
+import scribe.Logging
 
 case class AquaContext(
   module: Option[String],

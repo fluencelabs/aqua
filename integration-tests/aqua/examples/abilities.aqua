@@ -2,7 +2,7 @@ aqua Main
 
 use DECLARE_CONST, decl_bar from "imports_exports/declare.aqua" as Declare
 
-export handleAb, SomeService, bug214, checkAbCalls, bugLNG258_1, bugLNG258_2, bugLNG258_3, multipleAbilityWithClosure
+export handleAb, SomeService, bug214, checkAbCalls, bugLNG258_1, bugLNG258_2, bugLNG258_3, multipleAbilityWithClosure, MySrv, returnSrvAsAbility
 
 service SomeService("wed"):
   getStr(s: string) -> string
@@ -127,5 +127,29 @@ func multipleAbilityWithClosure() -> i8, i8:
     ab <- createAb(1)
     ab2 <- createAb(2)
     <- ab.arrow(), ab2.arrow()
+
+ability MyAb:
+    call() -> string
+
+service MySrv("default-id"):
+    call() -> string
+
+func mySrvDefault() -> MyAb:
+    <- MySrv
+
+func mySrvResolved() -> MyAb:
+    MySrv "resolved-id"
+    <- MySrv
+
+func useMyAb{MyAb}() -> string:
+    <- MyAb.call()
+
+func returnSrvAsAbility() -> []string:
+    result: *string
+    MySrvDefault <- mySrvDefault()
+    MySrvResolved <- mySrvResolved()
+    result <- useMyAb{MySrvDefault}()
+    result <- useMyAb{MySrvResolved}()
+    <- result
 
 
