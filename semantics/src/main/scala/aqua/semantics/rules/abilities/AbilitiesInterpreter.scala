@@ -4,19 +4,19 @@ import aqua.parser.lexer.{Name, NamedTypeToken, Token, ValueToken}
 import aqua.raw.value.ValueRaw
 import aqua.raw.{RawContext, ServiceRaw}
 import aqua.semantics.Levenshtein
-import aqua.semantics.rules.report.ReportAlgebra
-import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.locations.LocationsAlgebra
-import aqua.semantics.rules.{abilities, StackInterpreter}
+import aqua.semantics.rules.mangler.ManglerAlgebra
+import aqua.semantics.rules.report.ReportAlgebra
+import aqua.semantics.rules.{StackInterpreter, abilities}
 import aqua.types.{ArrowType, ServiceType}
 
 import cats.data.{NonEmptyMap, State}
-import cats.syntax.functor.*
+import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.foldable.*
-import cats.syntax.traverse.*
-import cats.syntax.applicative.*
+import cats.syntax.functor.*
 import cats.syntax.option.*
+import cats.syntax.traverse.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -68,6 +68,9 @@ class AbilitiesInterpreter[S[_], X](using
   private def addServiceArrowLocation(name: NamedTypeToken[S], arrow: Name[S]): SX[Unit] = {
     locations.pointTokenWithFieldLocation(name.value, name, arrow.value, arrow)
   }
+
+  override def isDefinedAbility(name: NamedTypeToken[S]): State[X, Boolean] =
+    getState.map(_.abilities.contains(name.value))
 
   override def getArrow(name: NamedTypeToken[S], arrow: Name[S]): SX[Option[ArrowType]] =
     getAbility(name.value).flatMap {

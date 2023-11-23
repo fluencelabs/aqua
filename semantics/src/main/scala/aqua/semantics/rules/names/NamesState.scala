@@ -3,6 +3,7 @@ package aqua.semantics.rules.names
 import aqua.parser.lexer.{Name, Token}
 import aqua.raw.RawContext
 import aqua.types.{ArrowType, Type}
+
 import cats.kernel.Monoid
 import cats.syntax.functor.*
 
@@ -64,4 +65,5 @@ object NamesState {
       },
       constants = context.allValues.map { case (s, vm) => (s, vm.`type`) }
     )
+
 }

@@ -56,20 +56,20 @@ object ValueModel {
 
   object Arrow {
 
-    def unapply(vm: ValueModel): Option[(String, ArrowType)] =
+    def unapply(vm: ValueModel): Option[(VarModel, ArrowType)] =
       vm match {
-        case VarModel(name, t: ArrowType, _) =>
-          (name, t).some
+        case vm @ VarModel(_, t: ArrowType, _) =>
+          (vm, t).some
         case _ => none
       }
   }
 
   object Ability {
 
-    def unapply(vm: VarModel): Option[(String, NamedType, Chain[PropertyModel])] =
+    def unapply(vm: VarModel): Option[(VarModel, GeneralAbilityType)] =
       vm match {
-        case VarModel(name, t: (AbilityType | ServiceType), properties) =>
-          (name, t, properties).some
+        case vm @ VarModel(_, t: GeneralAbilityType, _) =>
+          (vm, t).some
         case _ => none
       }
   }

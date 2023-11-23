@@ -1,31 +1,31 @@
 package aqua.semantics
 
 import aqua.errors.Errors.internalError
+import aqua.parser.lexer.{LiteralToken, Token}
+import aqua.parser.{Ast, Expr}
 import aqua.raw.ops.*
+import aqua.raw.{Raw, RawContext, RawPart}
+import aqua.semantics.header.Picker
+import aqua.semantics.header.Picker.*
 import aqua.semantics.rules.abilities.{AbilitiesAlgebra, AbilitiesInterpreter, AbilitiesState}
 import aqua.semantics.rules.definitions.{DefinitionsAlgebra, DefinitionsInterpreter}
 import aqua.semantics.rules.locations.{DummyLocationsInterpreter, LocationsAlgebra}
-import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter}
 import aqua.semantics.rules.mangler.{ManglerAlgebra, ManglerInterpreter}
-import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter}
+import aqua.semantics.rules.names.{NamesAlgebra, NamesInterpreter}
 import aqua.semantics.rules.report.{ReportAlgebra, ReportInterpreter}
-import aqua.semantics.header.Picker
-import aqua.semantics.header.Picker.*
-import aqua.raw.{Raw, RawContext, RawPart}
-import aqua.parser.{Ast, Expr}
-import aqua.parser.lexer.{LiteralToken, Token}
+import aqua.semantics.rules.types.{TypesAlgebra, TypesInterpreter}
 
-import cats.{Eval, Monad}
 import cats.data.{Chain, EitherT, NonEmptyChain, State, StateT, ValidatedNec, Writer}
 import cats.syntax.applicative.*
-import cats.syntax.option.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
-import cats.syntax.functor.*
 import cats.syntax.foldable.*
+import cats.syntax.functor.*
+import cats.syntax.option.*
 import cats.syntax.reducible.*
-import cats.syntax.traverse.*
 import cats.syntax.semigroup.*
+import cats.syntax.traverse.*
+import cats.{Eval, Monad}
 import scribe.Logging
 
 class RawSemantics[S[_]](using

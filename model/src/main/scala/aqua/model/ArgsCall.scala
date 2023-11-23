@@ -1,7 +1,7 @@
 package aqua.model
 
-import aqua.model.{ValueModel, VarModel}
 import aqua.model.ValueModel.Ability
+import aqua.model.{ValueModel, VarModel}
 import aqua.raw.ops.Call
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
@@ -44,7 +44,7 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
    * Name of argument -> (variable passed in the call, type)
    */
   lazy val abilityArgs: Map[String, (VarModel, NamedType)] =
-    zipped.collect { case ((name, _), vr @ Ability(_, t, _)) =>
+    zipped.collect { case ((name, _), Ability(vr, t)) =>
       name -> (vr, t)
     }.toMap
 
@@ -54,14 +54,7 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
    */
   lazy val abilityArgsRenames: Map[String, String] =
     abilityArgs.toList.foldMap { case (name, (vm, at)) =>
-      at.arrows.keys
-        .map(arrowPath =>
-          val fullName = AbilityType.fullName(name, arrowPath)
-          val newFullName = AbilityType.fullName(vm.name, arrowPath)
-          fullName -> newFullName
-        )
-        .toMap
-        .updated(name, vm.name)
+      AbilityType.renames(at)(name, vm.name)
     }
 
   /**
