@@ -62,7 +62,9 @@ func returnEmptyStream() -> *u32:
 func lng280BugWithForEmptyStreamFunc():
     arr = [1,2,3,4,5]
     for a <- arr:
-      callService(returnEmptyStream(), a)
+      str = returnEmptyStream()
+      -- passing the function directly won't work, see LNG-290
+      callService(str, a)
 
 func getStream(str: *u32) -> *u32:
     nums = str

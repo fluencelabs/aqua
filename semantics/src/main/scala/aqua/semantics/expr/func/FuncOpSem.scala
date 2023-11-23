@@ -11,7 +11,6 @@ object FuncOpSem {
   def restrictStreamsInScope[S[_], Alg[_]: Functor: FlatMap](
     tree: RawTag.Tree
   )(using N: NamesAlgebra[S, Alg]): Alg[RawTag.Tree] = for {
-    allNames <- N.getAllNames()
     d <- N
       .streamsDefinedWithinScope()
       .map { streams =>

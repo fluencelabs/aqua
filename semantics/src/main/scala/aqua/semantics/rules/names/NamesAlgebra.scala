@@ -8,8 +8,6 @@ trait NamesAlgebra[S[_], Alg[_]] {
 
   def read(name: Name[S], mustBeDefined: Boolean = true): Alg[Option[Type]]
   
-  def getAllNames(): Alg[List[String]]
-
   // TODO can be implemented via read?
   def constantDefined(name: Name[S]): Alg[Option[Type]]
 

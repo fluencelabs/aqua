@@ -53,7 +53,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
   ): Alg[Raw] = for {
     streamsInScope <- N.streamsDefinedWithinScope()
     retValues <- T.endArrowScope(expr.arrowTypeExpr)
-    allNames <- N.getAllNames()
     // TODO: wrap with local on...via...
     retsAndArgs = retValues zip funcArrow.codomain.toList
     streamsThatReturnAsStreams = retsAndArgs.collect {

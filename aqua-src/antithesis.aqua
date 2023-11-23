@@ -11,18 +11,15 @@ export lng280BugWithForEmptyStreamFunc
 --     streams <- getStream(*[1,2,3])
 --     <- streams
 
-func returnEmptyStream() -> *u32:
-    -- (restriction stream_anon
-    --  (null)
-    -- )
-    <- *[]
-
 service StreamService("test-service"):
     store(numbers: []u32, n: u32)
 
 func callService(stream: *u32, n: u32):
     stream <<- 1
     StreamService.store(stream, n)
+
+func returnEmptyStream() -> *u32:
+    <- *[]
 
 func lng280BugWithForEmptyStreamFunc():
     arr = [1,2,3,4,5]
