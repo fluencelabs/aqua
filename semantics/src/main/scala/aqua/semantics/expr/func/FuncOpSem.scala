@@ -8,16 +8,14 @@ import cats.syntax.flatMap.*
 
 object FuncOpSem {
 
-  def restrictStreamsInScope[S[_], Alg[_]: Functor: FlatMap](
+  def restrictStreamsInScope[S[_], Alg[_]: Monad](
     tree: RawTag.Tree
-  )(using N: NamesAlgebra[S, Alg]): Alg[RawTag.Tree] = for {
-    d <- N
-      .streamsDefinedWithinScope()
-      .map { streams =>
-        streams.toList
-          .foldLeft(tree) { case (tree, (streamName, streamType)) =>
-            RestrictionTag(streamName, streamType).wrap(tree)
-          }
-      }
-  } yield d
+  )(using N: NamesAlgebra[S, Alg]): Alg[RawTag.Tree] = N
+    .streamsDefinedWithinScope()
+    .map(streams =>
+      streams.toList
+        .foldLeft(tree) { case (tree, (streamName, streamType)) =>
+          RestrictionTag(streamName, streamType).wrap(tree)
+        }
+    )
 }

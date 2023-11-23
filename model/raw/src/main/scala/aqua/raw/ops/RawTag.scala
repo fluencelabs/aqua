@@ -254,7 +254,6 @@ object CallArrowRawTag {
         call.args
       )
     )
-
 }
 
 case class DeclareStreamTag(

@@ -3,14 +3,15 @@ package aqua.types
 import aqua.errors.Errors.internalError
 import aqua.types.Type.*
 
-import cats.Eval
-import cats.PartialOrder
 import cats.data.NonEmptyList
 import cats.data.NonEmptyMap
 import cats.syntax.applicative.*
+import cats.syntax.foldable.*
+import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.partialOrder.*
 import cats.syntax.traverse.*
+import cats.{Eval, Foldable, Functor, PartialOrder, Traverse}
 
 sealed trait Type {
 
@@ -274,37 +275,35 @@ sealed trait CollectionType extends Type {
 
 object CollectionType {
 
-  def elementTypeOf(types: List[CollectibleType]): DataType =
-    NonEmptyList
-      .fromList(types)
-      .fold(BottomType)(
-        _.map {
-          case StreamType(el) => ArrayType(el)
-          case dt: DataType => dt
-        }.reduce[Type](_ `∩` _) match {
-          // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
-          // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
-          // make any decision about the structure of type, but can push anything inside
-          case BottomType => TopType
-          case dt: DataType => dt
-          case t =>
-            internalError(
-              s"Expected data type from " +
-                s"intersection of ${types.mkString(", ")}; " +
-                s"got $t"
-            )
-        }
-      )
+  def elementTypeOf[F[_]: Foldable: Functor](types: F[CollectibleType]): DataType = {
+    types.map {
+      case StreamType(el) => ArrayType(el)
+      case dt: DataType => dt
+    }.foldLeft[Type](BottomType)(_ `∩` _) match {
+      // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
+      // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
+      // make any decision about the structure of type, but can push anything inside
+      case BottomType => TopType
+      case dt: DataType => dt
+      case t =>
+        internalError(
+          s"Expected data type from " +
+            s"intersection of ${types.foldLeft("") { case (l, r) => l + ", " + r }}; " +
+            s"got $t"
+        )
+    }
+  }
+
 }
 
-sealed trait ImmutableCollectionType extends Type with CollectionType {
+sealed trait ImmutableCollectionType extends CollectionType with DataType {
   def withElement(t: DataType): ImmutableCollectionType
 }
-sealed trait MutableStreamType extends Type with CollectionType
+sealed trait MutableStreamType extends CollectionType
 
 case class CanonStreamType(
   override val element: DataType
-) extends DataType with ImmutableCollectionType {
+) extends ImmutableCollectionType {
 
   override val isStream: Boolean = false
 
@@ -315,7 +314,7 @@ case class CanonStreamType(
 
 case class ArrayType(
   override val element: DataType
-) extends DataType with ImmutableCollectionType {
+) extends ImmutableCollectionType {
 
   override val isStream: Boolean = false
 
@@ -326,7 +325,7 @@ case class ArrayType(
 
 case class OptionType(
   override val element: DataType
-) extends DataType with ImmutableCollectionType {
+) extends ImmutableCollectionType {
 
   override val isStream: Boolean = false
 

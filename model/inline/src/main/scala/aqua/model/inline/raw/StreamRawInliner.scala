@@ -11,16 +11,6 @@ import cats.syntax.traverse.*
 
 object StreamRawInliner extends RawInliner[StreamRaw] {
 
-  // arrow(*[])
-  
-  // stream_anon: *T
-  // arrow(stream_anon)
-
-  // arrow(stream_anon)
-
-
-  // stream_anon = kakoy-to stream
-
   override def apply[S: Mangler: Exports: Arrows](
     raw: StreamRaw,
     propertiesAllowed: Boolean

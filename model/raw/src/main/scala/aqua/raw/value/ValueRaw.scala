@@ -3,7 +3,7 @@ package aqua.raw.value
 import aqua.errors.Errors.internalError
 import aqua.types.*
 import aqua.types.Type.*
-import cats.{Eq, Functor}
+import cats.{Eq, Functor, Traverse}
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import cats.syntax.option.*
 import cats.syntax.functor.*
@@ -159,15 +159,15 @@ object LiteralRaw {
   }
 }
 
+// StreamRaw must have stream name, because stream cannot be `nil`,
+// so, we must know name of a stream to handle it in any cases
 case class StreamRaw(values: List[ValueRaw], streamName: String, streamType: StreamType) extends ValueRaw {
   lazy val elementType: DataType = streamType.element
 
   override lazy val baseType: Type = streamType
 
   override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = {
-    val (vals, types) = CollectionRaw.mapCollection(f, values)
-
-    val element = CollectionType.elementTypeOf(types)
+    val (vals, element) = CollectionRaw.mapCollection(f, values)
 
     copy(
       values = vals,
@@ -191,9 +191,7 @@ case class CollectionRaw(
   override lazy val baseType: Type = collectionType
 
   override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = {
-    val (vals, types) = CollectionRaw.mapCollection(f, values)
-
-    val element = CollectionType.elementTypeOf(types.toList)
+    val (vals, element) = CollectionRaw.mapCollection(f, values)
 
     copy(
       values = vals,
@@ -208,14 +206,16 @@ case class CollectionRaw(
 }
 
 object CollectionRaw {
-  def mapCollection[F[_]: Functor](f: ValueRaw => ValueRaw, values: F[ValueRaw]): (F[ValueRaw], F[CollectibleType]) = {
+  def mapCollection[F[_]: Functor: Traverse](f: ValueRaw => ValueRaw, values: F[ValueRaw]): (F[ValueRaw], DataType) = {
     val vals = values.map(f)
     val types = vals.map(_.`type` match {
       case ct: CollectibleType => ct
       case t => internalError(s"Non-collection type in collection: ${t}")
     })
 
-    (vals, types)
+    val element = CollectionType.elementTypeOf(types)
+
+    (vals, element)
   }
 }
 
