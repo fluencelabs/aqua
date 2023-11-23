@@ -6,7 +6,9 @@ import {
   bugLNG258_1,
   bugLNG258_2,
   bugLNG258_3,
-  multipleAbilityWithClosure
+  multipleAbilityWithClosure,
+  registerMySrv,
+  returnSrvAsAbility,
 } from "../compiled/examples/abilities";
 
 export async function abilityCall(): Promise<[string, string, string, number]> {
@@ -39,6 +41,23 @@ export async function bugLNG258Call3(): Promise<[number, number]> {
   return await bugLNG258_3();
 }
 
-export async function multipleAbilityWithClosureCall(): Promise<[number, number]> {
-  return await multipleAbilityWithClosure()
+export async function multipleAbilityWithClosureCall(): Promise<
+  [number, number]
+> {
+  return await multipleAbilityWithClosure();
+}
+
+export async function returnSrvAsAbilityCall(): Promise<string[]> {
+  const srv = (id: string) => {
+    return {
+      call: () => {
+        return id;
+      },
+    };
+  };
+
+  registerMySrv("default-id", srv("default-id"));
+  registerMySrv("resolved-id", srv("resolved-id"));
+
+  return await returnSrvAsAbility();
 }
