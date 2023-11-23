@@ -282,7 +282,8 @@ object CollectionType {
       .map[Type] {
         case StreamType(el) => ArrayType(el)
         case dt: DataType => dt
-      }.reduceLeftOption(_ `∩` _).getOrElse(BottomType) match {
+      }.reduceLeftOption(_ `∩` _)
+      .map {
         // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
         // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
         // make any decision about the structure of type, but can push anything inside
@@ -295,6 +296,7 @@ object CollectionType {
               s"got $t"
           )
       }
+      .getOrElse(BottomType)
 
 }
 

@@ -1,7 +1,10 @@
 aqua StreamArgs
 
-export getStream
+export getStream, returnEmptyLiteral
 
 func getStream() -> *u32:
     nums = *[1,2,3,4]
     <- nums
+
+func returnEmptyLiteral() -> *string:
+    <- *[]
