@@ -120,7 +120,7 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
 
   def getDataSrv(name: String, varName: String, t: Type) = {
     CallServiceRes(
-      LiteralModel.fromRaw(LiteralRaw.quote("getDataSrv")),
+      LiteralModel.quote("getDataSrv"),
       name,
       CallRes(Nil, Some(CallModel.Export(varName, t))),
       LiteralModel.fromRaw(ValueRaw.InitPeerId)
@@ -364,7 +364,66 @@ class AquaCompilerSpec extends AnyFlatSpec with Matchers with Inside {
       errorCall(transformCfg, 0, initPeer)
     )
 
-    insideRes(src, transformCfg = transformCfg)("main") { case main :: _ =>
+    insideRes(src, transformCfg = transformCfg)("main") { case main :: Nil =>
+      main.body.equalsOrShowDiff(expected) should be(true)
+    }
+  }
+
+  it should "allow returning and passing services as abilities" in {
+    val src = Map(
+      "main.aqua" -> """
+                       |aqua Test
+                       |
+                       |export test
+                       |
+                       |ability Ab:
+                       |    log(log: string)
+                       |
+                       |service Srv("default-id"):
+                       |    log(log: string)
+                       |
+                       |func useAb{Ab}():
+                       |  Ab.log("test")
+                       |
+                       |func genDefault() -> Ab:
+                       |    <- Srv
+                       |
+                       |func genResolved() -> Ab:
+                       |    Srv "resolved-id"
+                       |    <- Srv
+                       |
+                       |func test():
+                       |  resolved <- genResolved()
+                       |  useAb{resolved}()
+                       |  default <- genDefault()
+                       |  useAb{default}()
+                       |""".stripMargin
+    )
+
+    val transformCfg = TransformConfig()
+
+    insideRes(src, transformCfg = transformCfg)("test") { case main :: Nil =>
+      def srvCall(id: String) =
+        CallServiceRes(
+          serviceId = LiteralModel.quote(id),
+          funcName = "log",
+          call = CallRes(
+            List(LiteralModel.quote("test")),
+            None
+          ),
+          initPeer
+        ).leaf
+
+      val expected = XorRes.wrap(
+        SeqRes.wrap(
+          getDataSrv("-relay-", "-relay-", ScalarType.string),
+          srvCall("resolved-id"),
+          srvCall("default-id"),
+          emptyRespCall(transformCfg, initPeer)
+        ),
+        errorCall(transformCfg, 0, initPeer)
+      )
+
       main.body.equalsOrShowDiff(expected) should be(true)
     }
   }

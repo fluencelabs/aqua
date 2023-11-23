@@ -345,6 +345,9 @@ case class ServiceIdTag(
 
   override def exportsVarNames: Set[String] = Set(name)
 
+  override def renameExports(map: Map[String, String]): RawTag =
+    copy(name = map.getOrElse(name, name))
+
   override def mapValues(f: ValueRaw => ValueRaw): RawTag =
     ServiceIdTag(value.map(f), serviceType, name)
 }

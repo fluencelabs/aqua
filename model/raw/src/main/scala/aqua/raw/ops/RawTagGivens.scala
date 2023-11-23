@@ -2,13 +2,13 @@ package aqua.raw.ops
 
 import aqua.raw.value.{LiteralRaw, ValueRaw}
 
-import cats.free.Cofree
 import cats.data.Chain
-import cats.{Eval, Semigroup}
-import cats.syntax.apply.*
-import cats.syntax.semigroup.*
-import cats.syntax.foldable.*
+import cats.free.Cofree
 import cats.syntax.all.*
+import cats.syntax.apply.*
+import cats.syntax.foldable.*
+import cats.syntax.semigroup.*
+import cats.{Eval, Semigroup}
 
 trait RawTagGivens {
 

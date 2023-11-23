@@ -100,20 +100,33 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
         }
 
       case prop @ PropertyToken(value, properties) =>
-        prop.adjust.fold(
-          for {
-            valueRaw <- valueToRaw(value)
-            result <- valueRaw.flatTraverse(raw =>
-              properties
-                .foldLeftM(raw) { case (prev, op) =>
-                  OptionT(
-                    resolveSingleProperty(prev.`type`, op)
-                  ).map(prop => ApplyPropertyRaw(prev, prop))
-                }
-                .value
+        lazy val default = for {
+          valueRaw <- valueToRaw(value)
+          result <- valueRaw.flatTraverse(raw =>
+            properties
+              .foldLeftM(raw) { case (prev, op) =>
+                OptionT(
+                  resolveSingleProperty(prev.`type`, op)
+                ).map(prop => ApplyPropertyRaw(prev, prop))
+              }
+              .value
+          )
+        } yield result
+
+        /**
+         * This is a HACKERY!!!
+         * Imports have very different mechanism of resolving,
+         * so here we try to differentiate them and adjust property
+         * token accordingly.
+         */
+        prop.leadingName.fold(default)(name =>
+          A.isDefinedAbility(name)
+            .flatMap(isDefined =>
+              prop.adjust
+                .filter(_ => isDefined)
+                .fold(default)(valueToRaw)
             )
-          } yield result
-        )(valueToRaw)
+        )
 
       case dvt @ NamedValueToken(typeName, fields) =>
         (for {
@@ -384,7 +397,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   ): OptionT[Alg, CallArrowRaw] = {
     lazy val nameTypeFromAbility = OptionT(
       N.read(ab.asName, mustBeDefined = false)
-    ).collect { case nt: (AbilityType | ServiceType) => ab.asName -> nt }
+    ).collect { case nt: GeneralAbilityType => ab.asName -> nt }
 
     lazy val nameTypeFromService = for {
       st <- OptionT(
