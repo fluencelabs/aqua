@@ -1,10 +1,16 @@
-aqua StreamArgs
+aqua Test
 
-export getStream, returnEmptyLiteral
+export test
 
-func getStream() -> *u32:
-    nums = *[1,2,3,4]
-    <- nums
+service Srv("srv"):
+    c(n: i32)
 
-func returnEmptyLiteral() -> *string:
-    <- *[]
+func useArr(arr: []i32) -> i32:
+    b = arr[0]
+    <- b
+
+func test() -> i32:
+    stream: *i32
+    stream <<- 42
+    res <- useArr(stream)
+    <- res

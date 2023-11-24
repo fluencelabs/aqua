@@ -1,9 +1,8 @@
 package aqua.model
 
 import aqua.model.ValueModel.Ability
-import aqua.model.{ValueModel, VarModel}
 import aqua.raw.ops.Call
-import aqua.raw.value.{ValueRaw, VarRaw}
+import aqua.raw.value.VarRaw
 import aqua.types.*
 
 import cats.syntax.foldable.*
@@ -35,7 +34,7 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
    */
   lazy val dataArgs: Map[String, ValueModel] =
     zipped.collect {
-      case ((name, _: DataType), value) if !streamArgs.contains(name) =>
+      case ((name, _: DataType), value) if !streamToImmutableArgs.contains(name) =>
         name -> value
     }.toMap
 
@@ -58,23 +57,21 @@ case class ArgsCall(args: ProductType, callWith: List[ValueModel]) {
     }
 
   /**
-   * Stream arguments as mapping
+   * Stream arguments that will be used as immutable collections
    * Name of argument -> variable passed in the call
-   * NOTE:  Argument is stream if it is passed as stream
-   *        on the call site. Type of argument in the function
-   *        definition does not matter.
    */
-  lazy val streamArgs: Map[String, VarModel] =
-    zipped.collect { case ((name, _), vr @ VarModel(_, StreamType(_), _)) =>
-      name -> vr
+  lazy val streamToImmutableArgs: Map[String, VarModel] =
+    zipped.collect {
+      case ((name, _: ImmutableCollectionType), vr @ VarModel(_, StreamType(_), _)) =>
+        name -> vr
     }.toMap
 
   /**
    * All renamings from stream arguments as mapping
    * Name inside function body -> name in the call context
    */
-  lazy val streamArgsRenames: Map[String, String] =
-    streamArgs.view.mapValues(_.name).toMap
+  lazy val streamToImmutableArgsRenames: Map[String, String] =
+    streamToImmutableArgs.view.mapValues(_.name).toMap
 
   /**
    * Arrow arguments as mapping

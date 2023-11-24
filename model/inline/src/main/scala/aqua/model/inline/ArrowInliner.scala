@@ -5,19 +5,16 @@ import aqua.model
 import aqua.model.*
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.RawTag
-import aqua.raw.value.{ValueRaw, VarRaw}
+import aqua.raw.value.ValueRaw
 import aqua.types.*
 
-import cats.data.StateT
-import cats.data.{Chain, IndexedStateT, State}
+import cats.data.{Chain, IndexedStateT, State, StateT}
 import cats.kernel.Semigroup
 import cats.syntax.applicative.*
 import cats.syntax.bifunctor.*
 import cats.syntax.foldable.*
-import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.semigroup.*
-import cats.syntax.show.*
 import cats.syntax.traverse.*
 import cats.{Eval, Monoid}
 import scribe.Logging
@@ -89,7 +86,8 @@ object ArrowInliner extends Logging {
   private def inline[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel,
-    outsideDeclaredStreams: Set[String]
+    outsideDeclaredStreams: Set[String],
+    canons: OpModel.Tree
   ): State[S, InlineResult] = for {
     callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body)
     callableFuncBody =
@@ -121,7 +119,7 @@ object ArrowInliner extends Logging {
     returnedArrows = rets.collect { case VarModel(name, _: ArrowType, _) => name }.toSet
     arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
 
-    body = SeqModel.wrap(callableFuncBody :: ops)
+    body = SeqModel.wrap(canons :: (callableFuncBody :: ops))
   } yield InlineResult(
     body,
     rets,
@@ -264,31 +262,6 @@ object ArrowInliner extends Logging {
       )
     }
 
-  // Rename all exports-to-stream for streams that passed as arguments
-  private def renameStreams(
-    tree: RawTag.Tree,
-    streamArgs: Map[String, VarModel]
-  ): RawTag.Tree = {
-    // collect arguments with stream type
-    // to exclude it from resolving and rename it with a higher-level stream that passed by argument
-    val streamsToRename = streamArgs.view.mapValues(_.name).toMap
-
-    if (streamsToRename.isEmpty) tree
-    else
-      tree
-        .map(_.mapValues(_.map {
-          // if an argument is a BoxType (Array or Option), but we pass a stream,
-          // change a type as stream to not miss `$` sign in air
-          case v @ VarRaw(name, baseType: CollectionType) if streamsToRename.contains(name) =>
-            v.copy(baseType = StreamType(baseType.element))
-          case v: VarRaw if streamsToRename.contains(v.name) =>
-            // FIXME: this is not possible, there must be error on semantic level
-            v.copy(baseType = StreamType(v.baseType.asInstanceOf[DataType]))
-          case v => v
-        }))
-        .renameExports(streamsToRename)
-  }
-
   /**
    * Correctly rename captured values and arrows of a function
    *
@@ -412,7 +385,7 @@ object ArrowInliner extends Logging {
     call: CallModel,
     exports: Map[String, ValueModel],
     arrows: Map[String, FuncArrow]
-  ): State[S, FuncArrow] = for {
+  ): State[S, (FuncArrow, OpModel.Tree)] = for {
     args <- ArgsCall(fn.arrowType.domain, call.args).pure[State[S, *]]
 
     argNames = args.argNames
@@ -427,7 +400,6 @@ object ArrowInliner extends Logging {
      * the names in the current context.
      */
     data <- findNewNames(args.dataArgs)
-    streamRenames = args.streamArgsRenames
     arrowRenames = args.arrowArgsRenames
     abRenames = args.abilityArgsRenames
 
@@ -447,14 +419,36 @@ object ArrowInliner extends Logging {
     )
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
 
+    streamToImmutableArgs = args.streamToImmutableArgs
+    newStreamsCanon <- streamToImmutableArgs.values.toList.collect {
+      case vm @ VarModel(name, st: StreamType, _) =>
+        (vm, name, st)
+    }.traverse { case (vm, name, StreamType(t)) =>
+      val canonName = name + "_canon"
+      for {
+        n <- Mangler[S].findAndForbidName(canonName)
+        canonVM = VarModel(n, CanonStreamType(t))
+      } yield {
+        (
+          name,
+          canonVM.name,
+          CanonicalizeModel(vm, CallModel.Export(canonVM.name, canonVM.`type`)).leaf
+        )
+      }
+    }
+    canons = newStreamsCanon.map(_._3)
+    streamRenames = args.streamToImmutableArgsRenames
+    streamsToImmutableRenames = newStreamsCanon.map(kv => kv._1 -> kv._2).toMap
+    renamedStreams = streamRenames.renamed(streamsToImmutableRenames)
+
     renaming =
       data.renames ++
-        streamRenames ++
         arrowRenames ++
         abRenames ++
         capturedValues.renames ++
         capturedArrows.renames ++
-        defineRenames
+        defineRenames ++
+        renamedStreams
 
     /**
      * TODO: Optimize resolve.
@@ -464,15 +458,15 @@ object ArrowInliner extends Logging {
     arrowsResolved = arrows ++ capturedArrows.renamed
     exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
-    streamArgs = args.streamArgs.renamed(renaming)
+    tree =
+      SeqModel.wrap()
+      fn.body.rename(renaming)
 
-    tree = fn.body.rename(renaming)
-    treeWithStreams = renameStreams(tree, streamArgs)
     ret = fn.ret.map(_.renameVars(renaming))
 
     _ <- Arrows[S].resolved(arrowsResolved)
     _ <- Exports[S].resolved(exportsResolved)
-  } yield fn.copy(body = treeWithStreams, ret = ret)
+  } yield (fn.copy(body = tree, ret = ret), SeqModel.wrap(canons))
 
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,
@@ -491,8 +485,8 @@ object ArrowInliner extends Logging {
       Arrows[S].scope(
         for {
           // Process renamings, prepare environment
-          fn <- ArrowInliner.prelude(arrow, call, exports, arrows)
-          inlineResult <- ArrowInliner.inline(fn, call, streams)
+          fnCanon <- ArrowInliner.prelude(arrow, call, exports, arrows)
+          inlineResult <- ArrowInliner.inline(fnCanon._1, call, streams, fnCanon._2)
         } yield inlineResult
       )
     )
