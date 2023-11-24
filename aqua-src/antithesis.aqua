@@ -1,53 +1,25 @@
-module Restrict
+aqua RenameVars
 
-export withLoop, buildOptUsage, checkKeepReturn, checkKeepArg, retrieve_records
+export rename_s
 
+func append_func(s: *string):
+    s <<- "ok"
 
-func withLoop(xs: []string):
-  for x <- xs:
-    s: *string
-    s <<- x
+func append(s: string, closure: *string -> ()) -> *string:
+  status: *string 
 
-func buildOpt() -> ?string:
-  s: *string
-  s <<- "none"
-  <- s
+  append_func(status)
+  closure(status)
 
-func buildOptUsage():
-  a <- buildOpt()
-  b <- buildOpt()
-  for x <- b:
-    z <- buildOpt()
+  <- status
 
-func keepReturn() -> *string:
-  s: *string
-  s <<- "should be not restricted"
-  <- s
-
-func checkKeepReturn() -> []string:
-  s <- keepReturn()
-  s <<- "and more"
-  <- s
-
-func keepArg(arg: *string) -> []string:
-  arg <<- "push more"
-  <- arg
-
-func checkKeepArg() -> []string, []string:
-  a: *string
-  keepArg(a)
-  y <- keepArg(a)
-  a <<- "more"
-  <- a, y
-  
--- failing Aqua code:
-service TestService("test-service"):
-    get_records(key: string) -> []string
-
-func append_records(peer: string, srum: *[]string):
-  srum <- TestService.get_records(peer)
-
-func retrieve_records(peer: string) -> [][]string:
-    records: *[]string
-    append_records(peer, records)
-    <- records
+func rename_s() -> []string:
+  on HOST_PEER_ID:
+    append_closure = (s: *string):
+        s <<- "ok"
+    -- s inside append_func and append_closure
+    -- are not related to this s and should be
+    -- renamed to `status` and not `s-<n>`
+    s = "s"
+    res <- append(s, append_closure)
+  <- res

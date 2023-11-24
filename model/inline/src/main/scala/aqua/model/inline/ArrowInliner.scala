@@ -438,9 +438,9 @@ object ArrowInliner extends Logging {
       }
     }
     canons = newStreamsCanon.map(_._3)
-    streamRenames = args.streamToImmutableArgsRenames
+    streamImRenames = args.streamToImmutableArgsRenames
     streamsToImmutableRenames = newStreamsCanon.map(kv => kv._1 -> kv._2).toMap
-    renamedStreams = streamRenames.renamed(streamsToImmutableRenames)
+    renamedStreams = streamImRenames.renamed(streamsToImmutableRenames)
 
     renaming =
       data.renames ++
@@ -449,7 +449,8 @@ object ArrowInliner extends Logging {
         capturedValues.renames ++
         capturedArrows.renames ++
         defineRenames ++
-        renamedStreams
+        renamedStreams ++
+        streamRenames
 
     /**
      * TODO: Optimize resolve.
@@ -459,9 +460,7 @@ object ArrowInliner extends Logging {
     arrowsResolved = arrows ++ capturedArrows.renamed
     exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
-    tree =
-      SeqModel.wrap()
-      fn.body.rename(renaming)
+    tree = fn.body.rename(renaming)
 
     ret = fn.ret.map(_.renameVars(renaming))
 
