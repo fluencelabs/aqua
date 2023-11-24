@@ -5,9 +5,8 @@ import aqua.model
 import aqua.model.*
 import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.RawTag
-import aqua.raw.value.ValueRaw
+import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
-
 import cats.data.{Chain, IndexedStateT, State, StateT}
 import cats.kernel.Semigroup
 import cats.syntax.applicative.*
@@ -371,6 +370,28 @@ object ArrowInliner extends Logging {
     } yield values -> arrows
   }
 
+  //
+  private def collectionsToCanons(
+    tree: RawTag.Tree,
+    streamArgs: Map[String, VarModel]
+  ): RawTag.Tree = {
+    // collect arguments with stream type
+    // to exclude it from resolving and rename it with a higher-level stream that passed by argument
+    val streamsToRename = streamArgs.view.mapValues(_.name).toMap
+
+    if (streamsToRename.isEmpty) tree
+    else
+      tree
+        .map(_.mapValues(_.map {
+          // if an argument is a BoxType (Array or Option), but we pass a stream,
+          // change a type as stream to not miss `$` sign in air
+          case v @ VarRaw(name, baseType: CollectionType) if streamsToRename.contains(name) =>
+            v.copy(baseType = CanonStreamType(baseType.element))
+          case v => v
+        }))
+        .renameExports(streamsToRename)
+  }
+
   /**
    * Prepare the function and the context for inlining
    *
@@ -440,7 +461,11 @@ object ArrowInliner extends Logging {
     canons = newStreamsCanon.map(_._3)
     streamImRenames = args.streamToImmutableArgsRenames
     streamsToImmutableRenames = newStreamsCanon.map(kv => kv._1 -> kv._2).toMap
-    renamedStreams = streamImRenames.map(kv => kv._1 -> streamsToImmutableRenames.getOrElse(kv._2, kv._2))
+    renamedStreams = streamImRenames.map(kv =>
+      kv._1 -> streamsToImmutableRenames.getOrElse(kv._2, kv._2)
+    )
+
+    streamToCanonArgs = args.streamToImmutableArgs.renamed(renamedStreams)
 
     renaming =
       data.renames ++
@@ -468,12 +493,13 @@ object ArrowInliner extends Logging {
     exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
     tree = fn.body.rename(renaming)
+    treeWithCanons = collectionsToCanons(tree, streamToCanonArgs)
 
     ret = fn.ret.map(_.renameVars(renaming))
 
     _ <- Arrows[S].resolved(arrowsResolved)
     _ <- Exports[S].resolved(exportsResolved)
-  } yield (fn.copy(body = tree, ret = ret), SeqModel.wrap(canons))
+  } yield (fn.copy(body = treeWithCanons, ret = ret), SeqModel.wrap(canons))
 
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,
