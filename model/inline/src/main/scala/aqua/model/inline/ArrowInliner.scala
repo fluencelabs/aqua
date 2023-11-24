@@ -7,6 +7,7 @@ import aqua.model.inline.state.{Arrows, Exports, Mangler}
 import aqua.raw.ops.RawTag
 import aqua.raw.value.{ValueRaw, VarRaw}
 import aqua.types.*
+
 import cats.data.{Chain, IndexedStateT, State, StateT}
 import cats.kernel.Semigroup
 import cats.syntax.applicative.*
@@ -392,6 +393,34 @@ object ArrowInliner extends Logging {
         .renameExports(streamsToRename)
   }
 
+  // Canonicalize streams that passed to function as immutable collection variables
+  private def canonStreamVariables[S: Mangler](
+    args: ArgsCall
+  ): State[S, (List[CanonicalizeModel#Tree], Map[String, String])] = {
+    val streamToImmutableArgs = args.streamToImmutableArgs
+    for {
+      newStreamsCanon <- streamToImmutableArgs.values.toList.collect {
+        case vm @ VarModel(name, st: StreamType, _) =>
+          (vm, name, st)
+      }.traverse { case (vm, name, StreamType(t)) =>
+        Mangler[S].findAndForbidName(name + "_canon").map { n =>
+          val canonVM = VarModel(n, CanonStreamType(t))
+          (
+            name,
+            canonVM.name,
+            CanonicalizeModel(vm, CallModel.Export(canonVM.name, canonVM.`type`)).leaf
+          )
+        }
+      }
+      canons = newStreamsCanon.map(_._3)
+      streamsToImmutableRenames = args.streamToImmutableArgsRenames
+      streamsToImmutableA = newStreamsCanon.map(kv => kv._1 -> kv._2).toMap
+      renamedCanonStreams = streamsToImmutableRenames.map(kv =>
+        kv._1 -> streamsToImmutableA.getOrElse(kv._2, kv._2)
+      )
+    } yield (canons, renamedCanonStreams)
+  }
+
   /**
    * Prepare the function and the context for inlining
    *
@@ -440,32 +469,8 @@ object ArrowInliner extends Logging {
       )
     )
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
-
-    streamToImmutableArgs = args.streamToImmutableArgs
-    newStreamsCanon <- streamToImmutableArgs.values.toList.collect {
-      case vm @ VarModel(name, st: StreamType, _) =>
-        (vm, name, st)
-    }.traverse { case (vm, name, StreamType(t)) =>
-      val canonName = name + "_canon"
-      for {
-        n <- Mangler[S].findAndForbidName(canonName)
-        canonVM = VarModel(n, CanonStreamType(t))
-      } yield {
-        (
-          name,
-          canonVM.name,
-          CanonicalizeModel(vm, CallModel.Export(canonVM.name, canonVM.`type`)).leaf
-        )
-      }
-    }
-    canons = newStreamsCanon.map(_._3)
-    streamImRenames = args.streamToImmutableArgsRenames
-    streamsToImmutableRenames = newStreamsCanon.map(kv => kv._1 -> kv._2).toMap
-    renamedStreams = streamImRenames.map(kv =>
-      kv._1 -> streamsToImmutableRenames.getOrElse(kv._2, kv._2)
-    )
-
-    streamToCanonArgs = args.streamToImmutableArgs.renamed(renamedStreams)
+    canonStreamsWithNames <- canonStreamVariables(args)
+    (canons, renamedCanonStreams) = canonStreamsWithNames
 
     renaming =
       data.renames ++
@@ -474,15 +479,8 @@ object ArrowInliner extends Logging {
         capturedValues.renames ++
         capturedArrows.renames ++
         defineRenames ++
-        renamedStreams ++
+        renamedCanonStreams ++
         streamRenames
-
-//    _ = println("fn name: " + fn.funcName)
-//    _ = println(renaming)
-//    _ = println("stream to immutable args: " + streamToImmutableArgs)
-//    _ = println("streamToImmutableRenames: " + streamsToImmutableRenames)
-//    _ = println("streamImRenames: " + streamImRenames)
-//    _ = println("renamed streams: " + renamedStreams)
 
     /**
      * TODO: Optimize resolve.
@@ -493,6 +491,8 @@ object ArrowInliner extends Logging {
     exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
     tree = fn.body.rename(renaming)
+
+    streamToCanonArgs = args.streamToImmutableArgs.renamed(renamedCanonStreams)
     treeWithCanons = collectionsToCanons(tree, streamToCanonArgs)
 
     ret = fn.ret.map(_.renameVars(renaming))
