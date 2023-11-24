@@ -464,7 +464,7 @@ object ArrowInliner extends Logging {
     arrowsResolved = arrows ++ capturedArrows.renamed
     exportsResolved = exports ++ data.renamed ++ capturedValues.renamed
 
-    streamArgs = args.streamArgs.map { case (k, v) => renaming.getOrElse(k, k) -> v }
+    streamArgs = args.streamArgs.renamed(renaming)
 
     tree = fn.body.rename(renaming)
     treeWithStreams = renameStreams(tree, streamArgs)
