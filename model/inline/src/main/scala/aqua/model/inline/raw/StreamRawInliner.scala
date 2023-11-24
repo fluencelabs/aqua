@@ -16,7 +16,7 @@ object StreamRawInliner extends RawInliner[StreamRaw] {
     propertiesAllowed: Boolean
   ): State[S, (ValueModel, Inline)] = {
     val streamExp = CallModel.Export(raw.streamName, raw.streamType)
-    val streamVal = VarModel(raw.streamName, raw.streamType)
+    val streamVal = streamExp.asVar
     for {
       valsWithInlines <- raw.values
         .traverse(valueToModel(_))
