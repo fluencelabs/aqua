@@ -273,7 +273,7 @@ object TagInliner extends Logging {
             )
           case (_, (vm, prefix)) =>
             internalError(
-              s"stream (${exportTo}) resolved " +
+              s"stream ($exportTo) resolved " +
                 s"to ($vm) with prefix ($prefix)"
             )
         }

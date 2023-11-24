@@ -400,6 +400,7 @@ object ArrowInliner extends Logging {
      * the names in the current context.
      */
     data <- findNewNames(args.dataArgs)
+    streamRenames = args.streamArgsRenames
     arrowRenames = args.arrowArgsRenames
     abRenames = args.abilityArgsRenames
 
