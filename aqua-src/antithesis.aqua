@@ -1,25 +1,20 @@
-aqua RenameVars
+aqua StreamArgs
 
-export rename_s
+export lng280BugWithForEmptyStreamFunc
 
-func append_func(s: *string):
-    s <<- "ok"
+service StreamService("test-service"):
+    store(numbers: []u32, n: u32)
 
-func append(s: string, closure: *string -> ()) -> *string:
-  status: *string 
+func callService(stream: *u32, n: u32):
+    stream <<- 1
+    StreamService.store(stream, n)
 
-  append_func(status)
-  closure(status)
+func returnEmptyStream() -> *u32:
+    <- *[]
 
-  <- status
-
-func rename_s() -> []string:
-  on HOST_PEER_ID:
-    append_closure = (s: *string):
-        s <<- "ok"
-    -- s inside append_func and append_closure
-    -- are not related to this s and should be
-    -- renamed to `status` and not `s-<n>`
-    s = "s"
-    res <- append(s, append_closure)
-  <- res
+func lng280BugWithForEmptyStreamFunc():
+    arr = [1,2,3,4,5]
+    for a <- arr:
+      str <- returnEmptyStream()
+      -- passing the function directly won't work, see LNG-290
+      callService(str, a)

@@ -440,7 +440,7 @@ object ArrowInliner extends Logging {
     canons = newStreamsCanon.map(_._3)
     streamImRenames = args.streamToImmutableArgsRenames
     streamsToImmutableRenames = newStreamsCanon.map(kv => kv._1 -> kv._2).toMap
-    renamedStreams = streamImRenames.renamed(streamsToImmutableRenames)
+    renamedStreams = streamImRenames.map(kv => kv._1 -> streamsToImmutableRenames.getOrElse(kv._2, kv._2))
 
     renaming =
       data.renames ++
@@ -451,6 +451,13 @@ object ArrowInliner extends Logging {
         defineRenames ++
         renamedStreams ++
         streamRenames
+
+//    _ = println("fn name: " + fn.funcName)
+//    _ = println(renaming)
+//    _ = println("stream to immutable args: " + streamToImmutableArgs)
+//    _ = println("streamToImmutableRenames: " + streamsToImmutableRenames)
+//    _ = println("streamImRenames: " + streamImRenames)
+//    _ = println("renamed streams: " + renamedStreams)
 
     /**
      * TODO: Optimize resolve.
