@@ -68,7 +68,7 @@ jobs:
           version: 8
 
       - name: Setup node with self-hosted npm registry
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
           registry-url: "https://registry.npmjs.org"
@@ -91,7 +91,7 @@ jobs:
         run: pnpm -r i
 
       - name: Commit version bump
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: Bump aqua version to ${{ steps.version.outputs.version }}"
           branch: ${{ fromJson(needs.release-please.outputs.pr).headBranchName }}
