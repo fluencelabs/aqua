@@ -101,9 +101,6 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     val canonName = streamVar.name + "_canon"
     val canonModel = VarModel(canonName, CanonStreamType(ScalarType.string))
 
-    val apName = streamName + "_ap"
-    val apModel = VarModel(apName, ArrayType(ScalarType.string))
-
     val cbType = ArrowType(ProductType(ArrayType(ScalarType.string) :: Nil), ProductType(Nil))
     val cbVal = VarModel("cb-pass", cbType)
 
@@ -174,20 +171,14 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
           .CallArrowModel("cb")
           .wrap(
             SeqModel.wrap(
-              SeqModel.wrap(
-                CanonicalizeModel(
-                  streamModel,
-                  CallModel.Export(canonModel.name, canonModel.`type`)
-                ).leaf,
-                FlattenModel(
-                  canonModel,
-                  apModel.name
-                ).leaf
-              ),
+              CanonicalizeModel(
+                streamModel,
+                CallModel.Export(canonModel.name, canonModel.`type`)
+              ).leaf,
               CallServiceModel(
                 LiteralModel.quote("test-service"),
                 "some-call",
-                CallModel(apModel :: Nil, Nil)
+                CallModel(canonModel :: Nil, Nil)
               ).leaf
             )
           )
@@ -212,9 +203,6 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
 
     val canonName = streamName + "_canon"
     val canonModel = VarModel(canonName, CanonStreamType(ScalarType.string))
-
-    val apName = streamName + "_ap"
-    val apModel = VarModel(apName, ArrayType(ScalarType.string))
 
     val useArg = VarRaw("str", ArrayType(ScalarType.string))
 
@@ -273,14 +261,11 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     model.equalsOrShowDiff(
       CallArrowModel(useArrow.funcName).wrap(
         SeqModel.wrap(
-          SeqModel.wrap(
-            CanonicalizeModel(streamModel, CallModel.Export(canonModel.name, canonModel.`type`)).leaf,
-            FlattenModel(canonModel, apName).leaf
-          ),
+          CanonicalizeModel(streamModel, CallModel.Export(canonModel.name, canonModel.`type`)).leaf,
           CallServiceModel(
             LiteralModel.quote("srv"),
             "useArr",
-            CallModel(apModel :: Nil, Nil)
+            CallModel(canonModel :: Nil, Nil)
           ).leaf
         )
       )
