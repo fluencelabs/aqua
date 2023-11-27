@@ -93,7 +93,7 @@ import {
   lng280BugWithForEmptyStreamFuncCall
 } from "../examples/streamArgsCall.js";
 import { streamResultsCall } from "../examples/streamResultsCall.js";
-import { structuralTypingCall } from "../examples/structuralTypingCall";
+import { structuralTypingCall } from "../examples/structuralTypingCall.js";
 import {
   servicesAsAbilitiesCall,
   expectedServiceResults,

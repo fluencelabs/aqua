@@ -9,7 +9,7 @@ import {
   multipleAbilityWithClosure,
   registerMySrv,
   returnSrvAsAbility,
-} from "../compiled/examples/abilities";
+} from "../compiled/examples/abilities.js";
 
 export async function abilityCall(): Promise<[string, string, string, number]> {
   registerSomeService({
