@@ -3,7 +3,7 @@ package aqua.run
 import aqua.Rendering.given
 import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompileResult, CompilerAPI}
 import aqua.files.{AquaFileSources, FileModuleId}
-import aqua.io.{AquaFileError, AquaPath, PackagePath, Prelude}
+import aqua.io.{AquaFileError, AquaPath, PackagePath}
 import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow}
 import aqua.parser.lift.FileSpan
