@@ -44,7 +44,7 @@ jobs:
 
   fcli:
     needs: aqua
-    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
+    uses: fluencelabs/cli/.github/workflows/tests.yml@main
     with:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
 
