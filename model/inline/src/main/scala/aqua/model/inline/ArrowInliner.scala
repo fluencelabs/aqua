@@ -412,8 +412,9 @@ object ArrowInliner extends Logging {
           }
       }
       canons = newStreamsCanon.map(_._3)
+      newNamesMap = newStreamsCanon.map(v => v._1 -> v._2).toMap
 
-    } yield (canons, streamsToImmutableRenames ++ newStreamsCanon.map(v => v._1 -> v._2).toMap)
+    } yield (canons, streamsToImmutableRenames.map(k => k._1 -> newNamesMap.getOrElse(k._2, k._2)))
   }
 
   /**
