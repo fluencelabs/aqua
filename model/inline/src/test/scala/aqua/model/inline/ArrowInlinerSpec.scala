@@ -275,7 +275,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         SeqModel.wrap(
           SeqModel.wrap(
             CanonicalizeModel(streamModel, CallModel.Export(canonModel.name, canonModel.`type`)).leaf,
-            FlattenModel(streamModel, apName).leaf
+            FlattenModel(canonModel, apName).leaf
           ),
           CallServiceModel(
             LiteralModel.quote("srv"),
