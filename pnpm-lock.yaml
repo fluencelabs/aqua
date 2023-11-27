@@ -15,8 +15,8 @@ importers:
   api/api-npm:
     devDependencies:
       '@fluencelabs/interfaces':
-        specifier: 0.8.2
-        version: 0.8.2
+        specifier: 0.9.0
+        version: 0.9.0
       prettier:
         specifier: 3.0.0
         version: 3.0.0
@@ -519,6 +519,12 @@ packages:
   /@fluencelabs/interfaces@0.8.2:
     resolution: {integrity: sha512-WJ7o51jaBSzUsYENxCEJpv91KiodH1nQ6uKdAn5chWsOQzDu57d3pa6IW1Lu/wh4jtefnNen+jF1esENQCc0BA==}
     engines: {node: '>=10', pnpm: '>=3'}
+    dev: false
+
+  /@fluencelabs/interfaces@0.9.0:
+    resolution: {integrity: sha512-k3VGi1ziX1SC0/DtKNDr2sWAlQ1MspuQOd2TZ5ex1SlwhRAPTSOoKWHpujSto5RKCQ3wiyQiNBVgkTRVd17gfg==}
+    engines: {node: '>=10', pnpm: '>=3'}
+    dev: true
 
   /@fluencelabs/js-client-isomorphic@0.2.2:
     resolution: {integrity: sha512-sFXVqOnS+FmHfXXAamZiKq0qnCJTl5T48+cieUtdX1dWYixk1mEXyW2olRwmzEun0L6P7U5MQ+qA/aj+t7CEJQ==}
