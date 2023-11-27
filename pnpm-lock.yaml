@@ -27,8 +27,8 @@ importers:
         specifier: 1.1.2
         version: 1.1.2
       '@fluencelabs/js-client':
-        specifier: 0.4.3
-        version: 0.4.3
+        specifier: 0.5.3
+        version: 0.5.3
       deep-equal:
         specifier: 2.2.1
         version: 2.2.1
@@ -516,37 +516,31 @@ packages:
     resolution: {integrity: sha512-1Bp2gBy3oMEILMynFpOIFK/q2Pj792xpnb3AJs5QcTQAaHz9V2nrEI8OOPwBAFTmjmLBirXBqQQX63O+ePH7yg==}
     dev: false
 
-  /@fluencelabs/interfaces@0.8.2:
-    resolution: {integrity: sha512-WJ7o51jaBSzUsYENxCEJpv91KiodH1nQ6uKdAn5chWsOQzDu57d3pa6IW1Lu/wh4jtefnNen+jF1esENQCc0BA==}
-    engines: {node: '>=10', pnpm: '>=3'}
-    dev: false
-
   /@fluencelabs/interfaces@0.9.0:
     resolution: {integrity: sha512-k3VGi1ziX1SC0/DtKNDr2sWAlQ1MspuQOd2TZ5ex1SlwhRAPTSOoKWHpujSto5RKCQ3wiyQiNBVgkTRVd17gfg==}
     engines: {node: '>=10', pnpm: '>=3'}
-    dev: true
 
-  /@fluencelabs/js-client-isomorphic@0.2.2:
-    resolution: {integrity: sha512-sFXVqOnS+FmHfXXAamZiKq0qnCJTl5T48+cieUtdX1dWYixk1mEXyW2olRwmzEun0L6P7U5MQ+qA/aj+t7CEJQ==}
+  /@fluencelabs/js-client-isomorphic@0.3.0:
+    resolution: {integrity: sha512-gCRaa3VTTYesGPahOrVk/oagkp376rHiww+NShWJH1qOvAUblZA+1dkv4pWUA2K4LH1jgsL3kN3bsSfIdw+E6w==}
     dependencies:
       '@fluencelabs/avm': 0.54.0
-      '@fluencelabs/marine-js': 0.7.2
-      '@fluencelabs/marine-worker': 0.4.2
+      '@fluencelabs/marine-js': 0.8.0
+      '@fluencelabs/marine-worker': 0.5.0
       '@fluencelabs/threads': 2.0.0
     transitivePeerDependencies:
       - supports-color
     dev: false
 
-  /@fluencelabs/js-client@0.4.3:
-    resolution: {integrity: sha512-eb+dH7X2uHaDYolvm7pZtRsG2jFJck+e2dzvRwk0f2x6BvMH4cB8oxByoGuU7RvEh88mFfuy8L31RKKr+rhCDA==}
+  /@fluencelabs/js-client@0.5.3:
+    resolution: {integrity: sha512-C6kzuJ3gsOB6LRc134gHI1BolpbR2IoeqeRKUVZn2IX97eKmzkhRODXS3cLWpaCxMiPC+3F+hWOf8YMkEOCUog==}
     engines: {node: '>=10', pnpm: '>=8'}
     dependencies:
       '@chainsafe/libp2p-noise': 13.0.0
       '@chainsafe/libp2p-yamux': 5.0.0
       '@fluencelabs/avm': 0.54.0
-      '@fluencelabs/interfaces': 0.8.2
-      '@fluencelabs/js-client-isomorphic': 0.2.2
-      '@fluencelabs/marine-worker': 0.4.2
+      '@fluencelabs/interfaces': 0.9.0
+      '@fluencelabs/js-client-isomorphic': 0.3.0
+      '@fluencelabs/marine-worker': 0.5.0
       '@fluencelabs/threads': 2.0.0
       '@libp2p/crypto': 2.0.3
       '@libp2p/interface': 0.1.2
@@ -554,8 +548,6 @@ packages:
       '@libp2p/peer-id-factory': 3.0.3
       '@libp2p/websockets': 7.0.4
       '@multiformats/multiaddr': 11.3.0
-      assert: 2.1.0
-      async: 3.2.4
       bs58: 5.0.0
       buffer: 6.0.3
       debug: 4.3.4
@@ -566,7 +558,6 @@ packages:
       libp2p: 0.46.6
       multiformats: 11.0.1
       rxjs: 7.5.5
-      ts-pattern: 3.3.3
       uint8arrays: 4.0.3
       uuid: 8.3.2
       zod: 3.22.4
@@ -576,18 +567,18 @@ packages:
       - utf-8-validate
     dev: false
 
-  /@fluencelabs/marine-js@0.7.2:
-    resolution: {integrity: sha512-etjbXDgzyZkK82UZvtuIU3bfy5f52siDUy1m+T5Y5r70k82xYdZZ8vgWVgB6ivi2f3aDyQjgNTfzWQjKFpAReQ==}
+  /@fluencelabs/marine-js@0.8.0:
+    resolution: {integrity: sha512-exxp0T0Dk69dxnbpAiVc/qp66s8Jq/P71TRB9aeQZLZy3EQtVAMCBJvwQY8LzVVlYEyVjmqQkFG/N0rAeYU1vg==}
     dependencies:
       '@wasmer/wasi': 0.12.0
       '@wasmer/wasmfs': 0.12.0
       default-import: 1.1.5
     dev: false
 
-  /@fluencelabs/marine-worker@0.4.2:
-    resolution: {integrity: sha512-z0RizqN77nJhRsk+XEnbDjAf8OVLSmKt6+PDPQOF5SJlXekzE7bB8cScInGyEQ8KCGxKjMM7OaQiQzQREkslEA==}
+  /@fluencelabs/marine-worker@0.5.0:
+    resolution: {integrity: sha512-lkDSNp9H45q1XgptAxNFRps/tG4MRMwZVq63l5fzl2dJ5y1IMHqSTTp0LeOZGk47nPbT4Zq2/7oCZShuC9+0FQ==}
     dependencies:
-      '@fluencelabs/marine-js': 0.7.2
+      '@fluencelabs/marine-js': 0.8.0
       '@fluencelabs/threads': 2.0.0
       observable-fns: 0.6.1
     transitivePeerDependencies:
@@ -1423,20 +1414,6 @@ packages:
       is-array-buffer: 3.0.2
     dev: false
 
-  /assert@2.1.0:
-    resolution: {integrity: sha512-eLHpSK/Y4nhMJ07gDaAzoX/XAKS8PSaojml3M0DM4JpV1LAi5JOJ/p6H/XWrl8L+DzVEvVCW1z3vWAaB9oTsQw==}
-    dependencies:
-      call-bind: 1.0.2
-      is-nan: 1.3.2
-      object-is: 1.1.5
-      object.assign: 4.1.4
-      util: 0.12.5
-    dev: false
-
-  /async@3.2.4:
-    resolution: {integrity: sha512-iAB+JbDEGXhyIUavoDl9WP/Jj106Kz9DEn1DPgYw5ruDn0e3Wgi3sKFm55sASdGBNOQB8F59d9qQ7deqrHA8wQ==}
-    dev: false
-
   /available-typed-arrays@1.0.5:
     resolution: {integrity: sha512-DMD0KiN46eipeziST1LPP/STfDU0sufISXmjSgvVsoU2tqxctQeASejWcfNtxYKqETM1UxQ8sp2OrSBWpHY6sw==}
     engines: {node: '>= 0.4'}
@@ -2265,27 +2242,12 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
-  /is-generator-function@1.0.10:
-    resolution: {integrity: sha512-jsEjy9l3yiXEQ+PsXdmBwEPcOxaXWLspKdplFUVI9vq1iZgIekeC0L167qeu86czQaxed3q/Uzuw0swL0irL8A==}
-    engines: {node: '>= 0.4'}
-    dependencies:
-      has-tostringtag: 1.0.0
-    dev: false
-
   /is-loopback-addr@2.0.1:
     resolution: {integrity: sha512-SEsepLbdWFb13B6U0tt6dYcUM0iK/U7XOC43N70Z4Qb88WpNtp+ospyNI9ddpqncs7Z7brAEsVBTQpaqSNntIw==}
     dev: false
 
   /is-map@2.0.2:
     resolution: {integrity: sha512-cOZFQQozTha1f4MxLFzlgKYPTyj26picdZTx82hbc/Xf4K/tZOOXSCkMvU4pKioRXGDLJRn0GM7Upe7kR721yg==}
-    dev: false
-
-  /is-nan@1.3.2:
-    resolution: {integrity: sha512-E+zBKpQ2t6MEo1VsonYmluk9NxGrbzpeeLC2xIViuO2EjU2xsXsBPwTr3Ykv9l08UYEVEdWeRZNouaZqF6RN0w==}
-    engines: {node: '>= 0.4'}
-    dependencies:
-      call-bind: 1.0.2
-      define-properties: 1.2.0
     dev: false
 
   /is-number-object@1.0.7:
@@ -3900,10 +3862,6 @@ packages:
       yn: 3.1.1
     dev: true
 
-  /ts-pattern@3.3.3:
-    resolution: {integrity: sha512-Z5EFi6g6wyX3uDFHqxF5W5c5h663oZg9O6aOiAT7fqNu0HPSfCxtHzrQ7SblTy738Mrg2Ezorky8H5aUOm8Pvg==}
-    dev: false
-
   /tslib@2.5.3:
     resolution: {integrity: sha512-mSxlJJwl3BMEQCUNnxXBU9jP4JBktcEGhURcPR6VQVlnP0FdDEsIaz0C35dXNGLyRfrATNofF0F5p2KPxQgB+w==}
     dev: false
@@ -3985,16 +3943,6 @@ packages:
 
   /util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
-    dev: false
-
-  /util@0.12.5:
-    resolution: {integrity: sha512-kZf/K6hEIrWHI6XqOFUiiMa+79wE/D8Q+NCNAWclkyg3b4d2k7s0QGepNjiABc+aR3N1PAyHL7p6UcLY6LmrnA==}
-    dependencies:
-      inherits: 2.0.4
-      is-arguments: 1.1.1
-      is-generator-function: 1.0.10
-      is-typed-array: 1.1.10
-      which-typed-array: 1.1.9
     dev: false
 
   /uuid@8.3.2:
