@@ -44,10 +44,9 @@ jobs:
 
   fcli:
     needs: aqua
-    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@use-js-client-0.5.0
+    uses: fluencelabs/fluence-cli/.github/workflows/tests.yml@main
     with:
       aqua-snapshots: "${{ needs.aqua.outputs.aqua-snapshots }}"
-      ref: use-js-client-0.5.0
 
   registry:
     needs:
