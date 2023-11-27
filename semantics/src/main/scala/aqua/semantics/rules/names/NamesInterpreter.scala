@@ -102,9 +102,7 @@ class NamesInterpreter[S[_], X](using
         internalError(s"Unexpected error. Name $name was already defined")
       case None =>
         mapStackHeadM(
-          State.inspect { _ =>
-            internalError(s"Unexpected error. Cannot define $name in the root scope")
-          }
+          internalError(s"Unexpected error. Cannot define $name in the root scope")
         )(fr => (fr.addInternalName(name, `type`) -> true).pure)
     }
   }

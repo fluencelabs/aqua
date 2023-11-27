@@ -86,8 +86,7 @@ object ArrowInliner extends Logging {
   private def inline[S: Mangler: Arrows: Exports](
     fn: FuncArrow,
     call: CallModel,
-    outsideDeclaredStreams: Set[String],
-    canons: OpModel.Tree
+    outsideDeclaredStreams: Set[String]
   ): State[S, InlineResult] = for {
     callableFuncBodyNoTopology <- TagInliner.handleTree(fn.body)
     callableFuncBody =
@@ -119,7 +118,7 @@ object ArrowInliner extends Logging {
     returnedArrows = rets.collect { case VarModel(name, _: ArrowType, _) => name }.toSet
     arrowsToSave <- Arrows[S].pickArrows(returnedArrows)
 
-    body = SeqModel.wrap(canons :: (callableFuncBody :: ops))
+    body = SeqModel.wrap(callableFuncBody :: ops)
   } yield InlineResult(
     body,
     rets,
@@ -375,6 +374,7 @@ object ArrowInliner extends Logging {
   private def canonStreamVariables[S: Mangler](
     args: ArgsCall
   ): State[S, (List[OpModel.Tree], Map[String, String])] = {
+    val streamsToImmutableRenames = args.streamToImmutableArgsRenames
     for {
       newStreamsCanon <- args.streamToImmutableArgsWithTypes.values.toList.traverse {
         case (vm, StreamType(t)) =>
@@ -394,12 +394,8 @@ object ArrowInliner extends Logging {
           }
       }
       canons = newStreamsCanon.map(_._3)
-      streamsToImmutableRenames = args.streamToImmutableArgsRenames
-      streamsToImmutableA = newStreamsCanon.map(kv => kv._1 -> kv._2).toMap
-      renamedCanonStreams = streamsToImmutableRenames.map(kv =>
-        kv._1 -> streamsToImmutableA.getOrElse(kv._2, kv._2)
-      )
-    } yield (canons, renamedCanonStreams)
+
+    } yield (canons, streamsToImmutableRenames ++ newStreamsCanon.map(v => v._1 -> v._2).toMap)
   }
 
   /**
@@ -497,8 +493,8 @@ object ArrowInliner extends Logging {
         for {
           // Process renamings, prepare environment
           fnCanon <- ArrowInliner.prelude(arrow, call, exports, arrows)
-          inlineResult <- ArrowInliner.inline(fnCanon._1, call, streams, fnCanon._2)
-        } yield inlineResult
+          inlineResult <- ArrowInliner.inline(fnCanon._1, call, streams)
+        } yield inlineResult.copy(tree = SeqModel.wrap(fnCanon._2, inlineResult.tree))
       )
     )
 
