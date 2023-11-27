@@ -149,8 +149,6 @@ object AquaLSP extends App with Logging {
           ErrorInfo(token.unit._1, messages.mkString("\n")) :: Nil
         case HeaderError(token, message) =>
           ErrorInfo(token.unit._1, message) :: Nil
-        case InternalError(message) =>
-          ErrorInfo.applyOp(0, 0, message, None) :: Nil
         case WrongAST(ast) =>
           ErrorInfo.applyOp(0, 0, "Semantic error: wrong AST", None) :: Nil
 

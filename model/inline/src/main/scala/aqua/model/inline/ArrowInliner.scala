@@ -371,46 +371,27 @@ object ArrowInliner extends Logging {
     } yield values -> arrows
   }
 
-  //
-  private def collectionsToCanons(
-    tree: RawTag.Tree,
-    streamArgs: Map[String, VarModel]
-  ): RawTag.Tree = {
-    // collect arguments with stream type
-    // to exclude it from resolving and rename it with a higher-level stream that passed by argument
-    val streamsToRename = streamArgs.view.mapValues(_.name).toMap
-
-    if (streamsToRename.isEmpty) tree
-    else
-      tree
-        .map(_.mapValues(_.map {
-          // if an argument is a BoxType (Array or Option), but we pass a stream,
-          // change a type as stream to not miss `$` sign in air
-          case v @ VarRaw(name, baseType: CollectionType) if streamsToRename.contains(name) =>
-            v.copy(baseType = CanonStreamType(baseType.element))
-          case v => v
-        }))
-        .renameExports(streamsToRename)
-  }
-
   // Canonicalize streams that passed to function as immutable collection variables
   private def canonStreamVariables[S: Mangler](
     args: ArgsCall
-  ): State[S, (List[CanonicalizeModel#Tree], Map[String, String])] = {
-    val streamToImmutableArgs = args.streamToImmutableArgs
+  ): State[S, (List[OpModel.Tree], Map[String, String])] = {
     for {
-      newStreamsCanon <- streamToImmutableArgs.values.toList.collect {
-        case vm @ VarModel(name, st: StreamType, _) =>
-          (vm, name, st)
-      }.traverse { case (vm, name, StreamType(t)) =>
-        Mangler[S].findAndForbidName(name + "_canon").map { n =>
-          val canonVM = VarModel(n, CanonStreamType(t))
-          (
-            name,
-            canonVM.name,
-            CanonicalizeModel(vm, CallModel.Export(canonVM.name, canonVM.`type`)).leaf
-          )
-        }
+      newStreamsCanon <- args.streamToImmutableArgsWithTypes.values.toList.traverse {
+        case (vm, StreamType(t)) =>
+          for {
+            canonName <- Mangler[S].findAndForbidName(vm.name + "_canon")
+            apName <- Mangler[S].findAndForbidName(vm.name + "_ap")
+          } yield {
+            val canonVM = VarModel(canonName, CanonStreamType(t))
+            (
+              vm.name,
+              apName,
+              SeqModel.wrap(
+                CanonicalizeModel(vm, CallModel.Export(canonVM.name, canonVM.`type`)).leaf,
+                FlattenModel(canonVM, apName).leaf
+              )
+            )
+          }
       }
       canons = newStreamsCanon.map(_._3)
       streamsToImmutableRenames = args.streamToImmutableArgsRenames
@@ -492,14 +473,11 @@ object ArrowInliner extends Logging {
 
     tree = fn.body.rename(renaming)
 
-    streamToCanonArgs = args.streamToImmutableArgs.renamed(renamedCanonStreams)
-    treeWithCanons = collectionsToCanons(tree, streamToCanonArgs)
-
     ret = fn.ret.map(_.renameVars(renaming))
 
     _ <- Arrows[S].resolved(arrowsResolved)
     _ <- Exports[S].resolved(exportsResolved)
-  } yield (fn.copy(body = treeWithCanons, ret = ret), SeqModel.wrap(canons))
+  } yield (fn.copy(body = tree, ret = ret), SeqModel.wrap(canons))
 
   private[inline] def callArrowRet[S: Exports: Arrows: Mangler](
     arrow: FuncArrow,

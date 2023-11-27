@@ -94,10 +94,16 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
    */
   it should "pass stream to callback properly" in {
     val streamType = StreamType(ScalarType.string)
-    val streamVar = VarRaw("records", streamType)
-    val streamModel = VarModel("records", StreamType(ScalarType.string))
+    val streamName = "records"
+    val streamVar = VarRaw(streamName, streamType)
+    val streamModel = VarModel(streamName, StreamType(ScalarType.string))
+
     val canonName = streamVar.name + "_canon"
     val canonModel = VarModel(canonName, CanonStreamType(ScalarType.string))
+
+    val apName = streamName + "_ap"
+    val apModel = VarModel(apName, ArrayType(ScalarType.string))
+
     val cbType = ArrowType(ProductType(ArrayType(ScalarType.string) :: Nil), ProductType(Nil))
     val cbVal = VarModel("cb-pass", cbType)
 
@@ -168,14 +174,20 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
           .CallArrowModel("cb")
           .wrap(
             SeqModel.wrap(
-              CanonicalizeModel(
-                streamModel,
-                CallModel.Export(canonModel.name, canonModel.`type`)
-              ).leaf,
+              SeqModel.wrap(
+                CanonicalizeModel(
+                  streamModel,
+                  CallModel.Export(canonModel.name, canonModel.`type`)
+                ).leaf,
+                FlattenModel(
+                  canonModel,
+                  apModel.name
+                ).leaf
+              ),
               CallServiceModel(
                 LiteralModel.quote("test-service"),
                 "some-call",
-                CallModel(canonModel :: Nil, Nil)
+                CallModel(apModel :: Nil, Nil)
               ).leaf
             )
           )
@@ -185,7 +197,7 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
   }
 
   /*
-    func use(str: string[]):
+    func use(str: []string):
       Srv.useArr(str)
 
     func call():
@@ -193,11 +205,16 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
       use(str)
    */
   it should "pass stream to function with array argument properly" in {
+    val streamName = "str"
     val streamType = StreamType(ScalarType.string)
-    val streamVar = VarRaw("str", streamType)
-    val streamModel = VarModel("str", StreamType(ScalarType.string))
-    val canonName = streamVar.name + "_canon"
+    val streamVar = VarRaw(streamName, streamType)
+    val streamModel = VarModel(streamName, streamType)
+
+    val canonName = streamName + "_canon"
     val canonModel = VarModel(canonName, CanonStreamType(ScalarType.string))
+
+    val apName = streamName + "_ap"
+    val apModel = VarModel(apName, ArrayType(ScalarType.string))
 
     val useArg = VarRaw("str", ArrayType(ScalarType.string))
 
@@ -230,8 +247,8 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
         FuncArrow(
           "call",
           SeqTag.wrap(
-              DeclareStreamTag(streamVar).leaf,
-              CallArrowRawTag.func(useArrow.funcName, Call(streamVar :: Nil, Nil)).leaf
+            DeclareStreamTag(streamVar).leaf,
+            CallArrowRawTag.func(useArrow.funcName, Call(streamVar :: Nil, Nil)).leaf
           ),
           ArrowType(
             ProductType(Nil),
@@ -256,8 +273,15 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
     model.equalsOrShowDiff(
       CallArrowModel(useArrow.funcName).wrap(
         SeqModel.wrap(
-          CanonicalizeModel(streamModel, CallModel.Export(canonModel.name, canonModel.`type`)).leaf,
-          CallServiceModel(LiteralModel.quote("srv"), "useArr", CallModel(canonModel :: Nil, Nil)).leaf
+          SeqModel.wrap(
+            CanonicalizeModel(streamModel, CallModel.Export(canonModel.name, canonModel.`type`)).leaf,
+            FlattenModel(streamModel, apName).leaf
+          ),
+          CallServiceModel(
+            LiteralModel.quote("srv"),
+            "useArr",
+            CallModel(apModel :: Nil, Nil)
+          ).leaf
         )
       )
     ) should be(true)

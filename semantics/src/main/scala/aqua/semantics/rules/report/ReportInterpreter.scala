@@ -16,13 +16,6 @@ class ReportInterpreter[S[_], X](using
       )
     )
 
-  def internalError(hint: String): State[X, Unit] =
-    State.modify(
-      lens.modify(
-        _.reportInternalError(hint)
-      )
-    )
-
   override def warning(token: Token[S], hints: List[String]): State[X, Unit] =
     State.modify(
       lens.modify(

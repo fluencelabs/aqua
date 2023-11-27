@@ -1,5 +1,6 @@
 package aqua.semantics.rules.names
 
+import aqua.errors.Errors.internalError
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.StackInterpreter
@@ -95,13 +96,15 @@ class NamesInterpreter[S[_], X](using
     }
 
   def defineInternal(name: String, `type`: Type): SX[Boolean] = {
-    // is is for internal names definition, all errors is unexpected
+    // is is for internal names definition, all errors are unexpected
     readName(name).flatMap {
       case Some(_) =>
-        report.internalError(s"Unexpected error. Name $name was already defined").as(false)
+        internalError(s"Unexpected error. Name $name was already defined")
       case None =>
         mapStackHeadM(
-          report.internalError(s"Unexpected error. Cannot define $name in the root scope").as(false)
+          State.inspect { _ =>
+            internalError(s"Unexpected error. Cannot define $name in the root scope")
+          }
         )(fr => (fr.addInternalName(name, `type`) -> true).pure)
     }
   }

@@ -54,14 +54,14 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     streamsInScope <- N.streamsDefinedWithinScope()
     retValues <- T.endArrowScope(expr.arrowTypeExpr)
     // TODO: wrap with local on...via...
-    retsAndArgs = retValues zip funcArrow.codomain.toList
-    streamsThatReturnAsStreams = retsAndArgs.collect {
+    retsAndCodomain = retValues zip funcArrow.codomain.toList
+    (streamThatReturnAsStreamVars, streamThatReturnAsStreamNames) = retsAndCodomain.collect {
       case (vr @ VarRaw(name, StreamType(_)), StreamType(_)) => (vr, name)
       case (vr @ StreamRaw(_, name, _), StreamType(_)) => (vr, name)
-    }
+    }.unzip
     // streams that return as streams and derived to another variable
     derivedStreamRetValues <- N
-      .getDerivedFrom(streamsThatReturnAsStreams.map(_._1.varNames))
+      .getDerivedFrom(streamThatReturnAsStreamVars.map(_.varNames))
       .map(_.flatten.toSet)
 
     res <- bodyGen match {
@@ -70,10 +70,10 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
 
         // Remove arguments, and values returned as streams
         val localStreams = streamsInScope -- streamArgNames --
-          streamsThatReturnAsStreams.map(_._2).toSet -- derivedStreamRetValues
+          streamThatReturnAsStreamNames.toSet -- derivedStreamRetValues
 
         // process stream that returns as not streams and all Apply*Raw
-        retsAndArgs.traverse {
+        retsAndCodomain.traverse {
           case (v @ VarRaw(_, StreamType(_)), StreamType(_)) =>
             (Chain.empty, v).pure[Alg]
           // canonicalize and change return value

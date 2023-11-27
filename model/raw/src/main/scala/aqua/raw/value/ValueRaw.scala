@@ -206,7 +206,7 @@ case class CollectionRaw(
 }
 
 object CollectionRaw {
-  def mapCollection[F[_]: Functor: Traverse](f: ValueRaw => ValueRaw, values: F[ValueRaw]): (F[ValueRaw], DataType) = {
+  def mapCollection[F[_]: Traverse](f: ValueRaw => ValueRaw, values: F[ValueRaw]): (F[ValueRaw], DataType) = {
     val vals = values.map(f)
     val types = vals.map(_.`type` match {
       case ct: CollectibleType => ct
