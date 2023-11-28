@@ -94,10 +94,13 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
    */
   it should "pass stream to callback properly" in {
     val streamType = StreamType(ScalarType.string)
-    val streamVar = VarRaw("records", streamType)
-    val streamModel = VarModel("records", StreamType(ScalarType.string))
+    val streamName = "records"
+    val streamVar = VarRaw(streamName, streamType)
+    val streamModel = VarModel(streamName, StreamType(ScalarType.string))
+
     val canonName = streamVar.name + "_canon"
     val canonModel = VarModel(canonName, CanonStreamType(ScalarType.string))
+
     val cbType = ArrowType(ProductType(ArrayType(ScalarType.string) :: Nil), ProductType(Nil))
     val cbVal = VarModel("cb-pass", cbType)
 
@@ -179,6 +182,92 @@ class ArrowInlinerSpec extends AnyFlatSpec with Matchers with Inside {
               ).leaf
             )
           )
+      )
+    ) should be(true)
+
+  }
+
+  /*
+    func use(str: []string):
+      Srv.useArr(str)
+
+    func call():
+      str = *[]
+      use(str)
+   */
+  it should "pass stream to function with array argument properly" in {
+    val streamName = "str"
+    val streamType = StreamType(ScalarType.string)
+    val streamVar = VarRaw(streamName, streamType)
+    val streamModel = VarModel(streamName, streamType)
+
+    val canonName = streamName + "_canon"
+    val canonModel = VarModel(canonName, CanonStreamType(ScalarType.string))
+
+    val useArg = VarRaw("str", ArrayType(ScalarType.string))
+
+    val useArrow = FuncArrow(
+      "use",
+      CallArrowRawTag
+        .service(
+          LiteralRaw.quote("srv"),
+          "useArr",
+          Call(useArg :: Nil, Nil)
+        )
+        .leaf,
+      ArrowType(
+        ProductType.labelled(
+          (
+            useArg.name,
+            useArg.`type`
+          ) :: Nil
+        ),
+        ProductType(Nil)
+      ),
+      Nil,
+      Map.empty,
+      Map.empty,
+      None
+    )
+
+    val model: OpModel.Tree = ArrowInliner
+      .callArrow[InliningState](
+        FuncArrow(
+          "call",
+          SeqTag.wrap(
+            DeclareStreamTag(streamVar).leaf,
+            CallArrowRawTag.func(useArrow.funcName, Call(streamVar :: Nil, Nil)).leaf
+          ),
+          ArrowType(
+            ProductType(Nil),
+            ProductType(Nil)
+          ),
+          Nil,
+          Map(useArrow.funcName -> useArrow),
+          Map.empty,
+          None
+        ),
+        CallModel(Nil, Nil)
+      )
+      .runA(
+        InliningState(
+          resolvedArrows = Map(
+            useArrow.funcName -> useArrow
+          )
+        )
+      )
+      .value
+
+    model.equalsOrShowDiff(
+      CallArrowModel(useArrow.funcName).wrap(
+        SeqModel.wrap(
+          CanonicalizeModel(streamModel, CallModel.Export(canonModel.name, canonModel.`type`)).leaf,
+          CallServiceModel(
+            LiteralModel.quote("srv"),
+            "useArr",
+            CallModel(canonModel :: Nil, Nil)
+          ).leaf
+        )
       )
     ) should be(true)
 

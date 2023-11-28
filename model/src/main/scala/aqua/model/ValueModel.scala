@@ -73,6 +73,16 @@ object ValueModel {
         case _ => none
       }
   }
+
+  object Stream {
+
+    def unapply(vm: VarModel): Option[(VarModel, StreamType)] =
+      vm match {
+        case vm@VarModel(_, t: StreamType, _) =>
+          (vm, t).some
+        case _ => none
+      }
+  }
 }
 
 case class LiteralModel(value: String, `type`: DataType) extends ValueModel {

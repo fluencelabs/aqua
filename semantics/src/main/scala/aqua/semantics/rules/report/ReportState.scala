@@ -1,7 +1,7 @@
 package aqua.semantics.rules.report
 
-import aqua.semantics.{RulesViolated, SemanticError, SemanticWarning}
 import aqua.parser.lexer.Token
+import aqua.semantics.{RulesViolated, SemanticError, SemanticWarning}
 
 import cats.data.Chain
 import cats.kernel.Monoid

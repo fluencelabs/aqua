@@ -1,6 +1,8 @@
 aqua StreamArgs
 
-export retrieve_records, modify_stream, TestService
+export retrieve_records, modify_stream, TestService, StreamService
+export lng280Bug, lng280BugWithFor, lng280BugWithForAnonStream
+export returnDerivedStream, lng280BugWithForEmptyStreamFunc
 
 service TestService("test-service"):
     get_records(key: string) -> []string
@@ -16,3 +18,59 @@ func retrieve_records(peer: string) -> [][]string:
 func modify_stream(stream: *string) -> []string:
   stream <<- "appended value"
   <- stream
+
+func useStream(stream: *string) -> *string:
+    stream <<- "valueUseStream"
+    <- stream
+
+func returnStream() -> *string:
+    r <- useStream(*[])
+    r <<- "valueReturnStream"
+    <- r
+
+func lng280Bug() -> []string:
+    stream <- returnStream()
+    stream <<- "valueTop"
+    <- stream
+
+func lng280BugWithFor() -> []string:
+    results: *string
+    arr = [1,2,3]
+
+    for a <- arr:
+      stream <- returnStream()
+      for s <- stream:
+        results <<- s
+
+    <- results
+
+service StreamService("test-service"):
+    store(numbers: []u32, n: u32)
+
+func callService(stream: *u32, n: u32):
+    stream <<- 1
+    StreamService.store(stream, n)
+
+func lng280BugWithForAnonStream():
+    arr = [1,2,3,4,5]
+    for a <- arr:
+      callService(*[], a)
+
+func returnEmptyStream() -> *u32:
+    <- *[]
+
+func lng280BugWithForEmptyStreamFunc():
+    arr = [1,2,3,4,5]
+    for a <- arr:
+      str <- returnEmptyStream()
+      -- passing the function directly won't work, see LNG-290
+      callService(str, a)
+
+func getStream(str: *u32) -> *u32:
+    nums = str
+    nums <<- 1
+    <- nums
+
+func returnDerivedStream() -> *u32:
+    nums <- getStream(*[])
+    <- nums

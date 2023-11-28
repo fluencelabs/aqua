@@ -84,8 +84,13 @@ import { tryOtherwiseCall } from "../examples/tryOtherwiseCall.js";
 import { coCall } from "../examples/coCall.js";
 import { bugLNG60Call, passArgsCall } from "../examples/passArgsCall.js";
 import {
+  lng280BugCall,
+  lng280BugWithForAnonStreamCall,
+  lng280BugWithForCall,
   streamArgsCall,
   modifyStreamCall,
+  returnDerivedStreamCall,
+  lng280BugWithForEmptyStreamFuncCall
 } from "../examples/streamArgsCall.js";
 import { streamResultsCall } from "../examples/streamResultsCall.js";
 import { structuralTypingCall } from "../examples/structuralTypingCall.js";
@@ -616,6 +621,38 @@ describe("Testing examples", () => {
       "appended value",
     ]);
   });
+
+  it.skip("streamArgs.aqua LNG-280", async () => {
+    let result = await lng280BugCall();
+    expect(result).toEqual(["valueUseStream", "valueReturnStream", "valueTop"]);
+  });
+
+  it.skip("streamArgs.aqua LNG-280 with for", async () => {
+    let result = await lng280BugWithForCall();
+    expect(result).toEqual([
+        "valueUseStream",
+        "valueReturnStream",
+        "valueUseStream",
+        "valueReturnStream",
+        "valueUseStream",
+        "valueReturnStream"
+    ]);
+  });
+
+  it("streamArgs.aqua LNG-280 with for and anonymous stream", async () => {
+    let result = await lng280BugWithForAnonStreamCall();
+    expect(result).toEqual([[1, 1], [1, 2], [1, 3], [1, 4], [1, 5]]);
+  });
+
+  it("streamArgs.aqua LNG-280 with for and anonymous stream from function", async () => {
+      let result = await lng280BugWithForEmptyStreamFuncCall();
+      expect(result).toEqual([[1, 1], [1, 2], [1, 3], [1, 4], [1, 5]]);
+    });
+
+  it.skip("streamArgs.aqua return derived stream", async () => {
+      let result = await returnDerivedStreamCall();
+      expect(result).toEqual([1]);
+    });
 
   it("streamResults.aqua", async () => {
     let streamResultsResult = await streamResultsCall();

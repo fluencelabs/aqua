@@ -1,6 +1,5 @@
 package aqua.raw.arrow
 
-import aqua.raw.value.ValueRaw
 import aqua.raw.RawPart
 import aqua.types.Type
 

@@ -10,17 +10,16 @@ import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.raw.ConstantRaw
-import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
+import aqua.semantics.*
 import aqua.{AquaIO, SpanParser}
 
-import cats.data.Validated.{Invalid, Valid, invalidNec, validNec}
+import cats.data.Validated.{Invalid, Valid}
 import cats.data.{NonEmptyChain, Validated}
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.syntax.option.*
 import fs2.io.file.{Files, Path}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*

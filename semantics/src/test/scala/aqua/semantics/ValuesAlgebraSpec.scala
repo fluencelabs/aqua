@@ -56,6 +56,9 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
   def option(value: ValueToken[Id]): CollectionToken[Id] =
     CollectionToken[Id](CollectionToken.Mode.OptionMode, List(value))
 
+  def emptyOption(): CollectionToken[Id] =
+    CollectionToken[Id](CollectionToken.Mode.OptionMode, Nil)
+
   def array(values: ValueToken[Id]*): CollectionToken[Id] =
     CollectionToken[Id](CollectionToken.Mode.ArrayMode, values.toList)
 
@@ -543,6 +546,34 @@ class ValuesAlgebraSpec extends AnyFlatSpec with Matchers with Inside {
 
     res shouldBe None
     st.errors.exists(_.isInstanceOf[RulesViolated[Id]]) shouldBe true
+  }
+
+  it should "convert empty option token to Nil" in {
+    val emptyOpt = emptyOption()
+
+    val alg = algebra()
+    val (_, result) = alg.valueToRaw(emptyOpt).run(genState()).value
+
+    result shouldBe Some(ValueRaw.Nil)
+  }
+
+  it should "convert empty array token to Nil" in {
+    val emptyArray = array()
+
+    val alg = algebra()
+    val (_, result) = alg.valueToRaw(emptyArray).run(genState()).value
+
+    result shouldBe Some(ValueRaw.Nil)
+  }
+
+  it should "convert empty stream token to unique variable" in {
+    val emptyStream = stream()
+
+    val alg = algebra()
+    val (_, result) = alg.valueToRaw(emptyStream).run(genState()).value
+
+    val t = StreamType(BottomType)
+    result shouldBe Some(StreamRaw(Nil, "stream-anon-0", t))
   }
 
   it should "forbid collections with abilities or arrows" in {
