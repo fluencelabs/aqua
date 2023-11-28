@@ -395,27 +395,15 @@ object ArrowInliner extends Logging {
   // Change the type of collection arguments if they pass as streams
   private def canonStreamVariables[S: Mangler](
     args: ArgsCall
-  ): State[S, (List[OpModel.Tree], Map[String, String])] = {
-    val streamsToImmutableRenames = args.streamToImmutableArgsRenames
-    for {
-      newStreamsCanon <- args.streamToImmutableArgsWithTypes.values.toList.traverse {
-        case (vm, StreamType(t)) =>
-          for {
-            canonName <- Mangler[S].findAndForbidName(vm.name + "_canon")
-          } yield {
-            val canonVM = VarModel(canonName, CanonStreamType(t))
-            (
-              vm.name,
-              canonName,
-              CanonicalizeModel(vm, CallModel.Export(canonVM.name, canonVM.`type`)).leaf
-            )
-          }
+  ): State[S, (Map[String, String], List[OpModel.Tree])] =
+    args.streamToImmutableArgsWithTypes.toList.traverse { case (argName, (vm, StreamType(t))) =>
+      Mangler[S].findAndForbidName(vm.name + "_canon").map { canonName =>
+        (
+          (argName, canonName),
+          CanonicalizeModel(vm, CallModel.Export(canonName, CanonStreamType(t))).leaf
+        )
       }
-      canons = newStreamsCanon.map(_._3)
-      newNamesMap = newStreamsCanon.map(v => v._1 -> v._2).toMap
-
-    } yield (canons, streamsToImmutableRenames.map(k => k._1 -> newNamesMap.getOrElse(k._2, k._2)))
-  }
+    }.map(_.unzip.leftMap(_.toMap))
 
   /**
    * Prepare the function and the context for inlining
@@ -466,7 +454,7 @@ object ArrowInliner extends Logging {
     )
     defineRenames <- Mangler[S].findAndForbidNames(defineNames)
     canonStreamsWithNames <- canonStreamVariables(args)
-    (canons, renamedCanonStreams) = canonStreamsWithNames
+    (renamedCanonStreams, canons) = canonStreamsWithNames
 
     renaming =
       data.renames ++
