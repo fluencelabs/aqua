@@ -10,22 +10,21 @@ import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.raw.ConstantRaw
-import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
+import aqua.semantics.*
 import aqua.{AquaIO, SpanParser}
 
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
-import cats.data.{NonEmptyChain, Validated}
+import cats.data.Validated
+import cats.data.Validated.{Invalid, Valid}
 import cats.effect.IO
-import cats.syntax.option.*
 import cats.effect.unsafe.implicits.global
+import cats.syntax.option.*
 import fs2.io.file.{Files, Path}
-import scribe.Logging
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
-import scala.scalajs.js.{undefined, UndefOr}
+import scala.scalajs.js.{UndefOr, undefined}
+import scribe.Logging
 
 @JSExportAll
 case class CompilationResult(

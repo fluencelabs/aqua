@@ -1,2 +1,20 @@
-func arr(strs: []string) -> []string
-  <- strs
+aqua StreamArgs
+
+export lng280BugWithForEmptyStreamFunc
+
+service StreamService("test-service"):
+    store(numbers: []u32, n: u32)
+
+func callService(stream: *u32, n: u32):
+    stream <<- 1
+    StreamService.store(stream, n)
+
+func returnEmptyStream() -> *u32:
+    <- *[]
+
+func lng280BugWithForEmptyStreamFunc():
+    arr = [1,2,3,4,5]
+    for a <- arr:
+      str <- returnEmptyStream()
+      -- passing the function directly won't work, see LNG-290
+      callService(str, a)

@@ -45,6 +45,9 @@ object RawValueInliner extends Logging {
       case cr: CollectionRaw =>
         CollectionRawInliner(cr, propertiesAllowed)
 
+      case sr: StreamRaw =>
+        StreamRawInliner(sr, propertiesAllowed)
+
       case dr: MakeStructRaw =>
         MakeStructRawInliner(dr, propertiesAllowed)
 
@@ -89,14 +92,6 @@ object RawValueInliner extends Logging {
       _ = logger.trace("map was: " + map)
     } yield vm -> parDesugarPrefix(ops.filterNot(_ == EmptyModel.leaf))
 
-  def collectionToModel[S: Mangler: Exports: Arrows](
-    value: CollectionRaw,
-    assignTo: Option[String]
-  ): State[S, (ValueModel, Option[OpModel.Tree])] = {
-    logger.trace("RAW COLLECTION " + value)
-    toModel(CollectionRawInliner.unfoldCollection(value, assignTo))
-  }
-
   def valueToModel[S: Mangler: Exports: Arrows](
     value: ValueRaw,
     propertiesAllowed: Boolean = true
@@ -117,10 +112,12 @@ object RawValueInliner extends Logging {
   def callToModel[S: Mangler: Exports: Arrows](
     call: Call,
     flatStreamArguments: Boolean
-  ): State[S, (CallModel, Option[OpModel.Tree])] =
+  ): State[S, (CallModel, Option[OpModel.Tree])] = {
     valueListToModel(call.args).flatMap { args =>
       if (flatStreamArguments)
-        args.map(arg => TagInliner.flat(arg._1, arg._2, true)).sequence
+        args.map{ arg =>
+          TagInliner.flat(arg._1, arg._2, true)
+        }.sequence
       else
         State.pure(args)
     }.map { list =>
@@ -132,4 +129,5 @@ object RawValueInliner extends Logging {
         parDesugarPrefix(list.flatMap(_._2))
       )
     }
+  }
 }
