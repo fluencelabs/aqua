@@ -1,2 +1,2 @@
-func arr(strs: []string) -> []string
+func arr(strs: []string) -> []string:
   <- strs

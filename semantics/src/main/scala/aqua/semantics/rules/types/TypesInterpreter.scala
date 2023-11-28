@@ -3,14 +3,14 @@ package aqua.semantics.rules.types
 import aqua.parser.lexer.*
 import aqua.raw.value.*
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.semantics.rules.locations.{LocationsAlgebra, TokenInfo}
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypeResolution.TypeResolutionError
 import aqua.types.*
 import aqua.types.Type.*
 
+import cats.data.*
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, NonEmptyList, NonEmptyMap, OptionT, State}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -170,7 +170,7 @@ class TypesInterpreter[S[_], X](using
       case Some(_) => report.error(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
         modify(_.defineType(name, target))
-          .productL(locations.addToken(name.value, name))
+          .productL(locations.addToken(name.value, TokenInfo(name.asName, target)))
           .as(true)
     }
 

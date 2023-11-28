@@ -2,6 +2,8 @@ package aqua.semantics.rules.locations
 import aqua.parser.lexer.Token
 import aqua.types.Type
 
+case class TokenInfo[S[_]](token: Token[S], `type`: Type)
+
 trait LocationsAlgebra[S[_], Alg[_]] {
   def addToken(name: String, tokenInfo: TokenInfo[S]): Alg[Unit]
   def addTokenWithFields(name: String, token: Token[S], fields: List[(String, Token[S])]): Alg[Unit]
