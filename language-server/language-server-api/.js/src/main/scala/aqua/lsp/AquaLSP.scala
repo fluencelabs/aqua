@@ -10,30 +10,35 @@ import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
 import aqua.raw.ConstantRaw
+import aqua.semantics.rules.locations.TokenInfo
 import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
+import aqua.types.{LiteralType, ScalarType}
 import aqua.{AquaIO, SpanParser}
 
-import cats.data.Validated.{invalidNec, validNec, Invalid, Valid}
-import cats.data.{NonEmptyChain, Validated}
+import cats.data.Validated
+import cats.data.Validated.{Invalid, Valid}
 import cats.effect.IO
-import cats.syntax.option.*
 import cats.effect.unsafe.implicits.global
+import cats.syntax.option.*
 import fs2.io.file.{Files, Path}
-import scribe.Logging
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters.*
 import scala.scalajs.js.annotation.*
-import scala.scalajs.js.{undefined, UndefOr}
+import scala.scalajs.js.{UndefOr, undefined}
+import scribe.Logging
 
 @JSExportAll
 case class CompilationResult(
   errors: js.Array[ErrorInfo],
   warnings: js.Array[WarningInfo] = js.Array(),
   locations: js.Array[TokenLink] = js.Array(),
-  importLocations: js.Array[TokenImport] = js.Array()
+  importLocations: js.Array[TokenImport] = js.Array(),
+  tokens: js.Array[TokenInfoJs] = js.Array()
 )
+
+@JSExportAll
+case class TokenInfoJs(location: TokenLocation, `type`: String)
 
 @JSExportAll
 case class TokenLocation(name: String, startLine: Int, startCol: Int, endLine: Int, endCol: Int)
@@ -196,6 +201,25 @@ object AquaLSP extends App with Logging {
 
       logger.debug("Compilation done.")
 
+      def tokensToJs(tokens: List[TokenInfo[FileSpan.F]]): js.Array[TokenInfoJs] = {
+        tokens.flatMap { ti =>
+          TokenLocation.fromSpan(ti.token.unit._1).map { tl =>
+            val typeName = ti.`type` match {
+              case LiteralType(oneOf, _) if oneOf == ScalarType.integer =>
+                "u32"
+              case LiteralType(oneOf, _) if oneOf == ScalarType.float =>
+                "f32"
+              case LiteralType(oneOf, _) if oneOf == ScalarType.string =>
+                "string"
+              case LiteralType(oneOf, _) if oneOf == ScalarType.bool =>
+                "bool"
+              case t => t.toString
+            }
+            TokenInfoJs(tl, typeName)
+          }
+        }.toJSArray
+      }
+
       def locationsToJs(
         locations: List[(Token[FileSpan.F], Token[FileSpan.F])]
       ): js.Array[TokenLink] = {
@@ -236,7 +260,8 @@ object AquaLSP extends App with Logging {
             errors.toJSArray,
             warnings.toJSArray,
             locationsToJs(lsp.locations),
-            importsToTokenImport(lsp.importTokens)
+            importsToTokenImport(lsp.importTokens),
+            tokensToJs(lsp.tokens.values.toList)
           )
         case Invalid(e) =>
           val errors = e.toChain.toList.flatMap(errorToInfo)

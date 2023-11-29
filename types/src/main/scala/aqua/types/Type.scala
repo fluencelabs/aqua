@@ -4,15 +4,12 @@ import aqua.errors.Errors.internalError
 import aqua.types.*
 import aqua.types.Type.*
 
-import cats.Eval
-import cats.PartialOrder
-import cats.data.NonEmptyList
-import cats.data.NonEmptyMap
-import cats.syntax.applicative.*
+import cats.data.{NonEmptyList, NonEmptyMap}
 import cats.syntax.foldable.*
 import cats.syntax.option.*
 import cats.syntax.partialOrder.*
 import cats.syntax.traverse.*
+import cats.{Eval, PartialOrder}
 import scala.collection.immutable.SortedMap
 
 sealed trait Type {
