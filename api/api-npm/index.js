@@ -25,6 +25,8 @@ function getConfig({
 }
 
 function normalizeImports(imports) {
+  console.log("imports passed:", imports);
+
   if (Array.isArray(imports)) {
     return {
       "/": imports,
