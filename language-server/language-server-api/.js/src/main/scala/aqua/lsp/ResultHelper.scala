@@ -81,18 +81,17 @@ object ResultHelper extends Logging {
       errors.toChain.toList.map(ErrorInfo.applyOp(0, 0, _, None))
   }
 
-  private def tokensToJs(tokens: List[TokenInfo[FileSpan.F]]): js.Array[TokenInfoJs] = {
+  private def tokensToJs(tokens: List[TokenInfo[FileSpan.F]]): js.Array[TokenInfoJs] =
     tokens.flatMap { ti =>
       TokenLocation.fromSpan(ti.token.unit._1).map { tl =>
         val typeName = ti.`type`.show
         TokenInfoJs(tl, typeName)
       }
     }.toJSArray
-  }
 
   private def locationsToJs(
     locations: List[(Token[FileSpan.F], Token[FileSpan.F])]
-  ): js.Array[TokenLink] = {
+  ): js.Array[TokenLink] =
     locations.flatMap { case (from, to) =>
       val fromOp = TokenLocation.fromSpan(from.unit._1)
       val toOp = TokenLocation.fromSpan(to.unit._1)
@@ -107,7 +106,6 @@ object ResultHelper extends Logging {
 
       link.toList
     }.toJSArray
-  }
 
   private def importsToTokenImport(imports: List[LiteralToken[FileSpan.F]]): js.Array[TokenImport] =
     imports.flatMap { lt =>

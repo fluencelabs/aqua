@@ -22,7 +22,7 @@ import scala.scalajs.js.annotation.*
 import scribe.Logging
 
 @JSExportTopLevel("AquaLSP")
-object AquaLSP extends App with Logging {
+object AquaLSP extends Logging {
 
   import ResultHelper.*
 
@@ -55,7 +55,7 @@ object AquaLSP extends App with Logging {
 
       logger.debug("Compilation done.")
 
-      val result = fileRes match {
+      fileRes match {
         case Valid(lsp) =>
           lspToCompilationResult(lsp)
         case Invalid(e) =>
@@ -63,7 +63,6 @@ object AquaLSP extends App with Logging {
           logger.debug("Errors: " + errors.mkString("\n"))
           CompilationResult(errors.toJSArray)
       }
-      result
     }
 
     proc.unsafeToFuture().toJSPromise

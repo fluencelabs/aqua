@@ -36,9 +36,7 @@ object TokenLocation {
     for {
       startLC <- start
       endLC <- end
-    } yield {
-      TokenLocation(span.name, startLC._1, startLC._2, endLC._1, endLC._2)
-    }
+    } yield TokenLocation(span.name, startLC._1, startLC._2, endLC._1, endLC._2)
 
   }
 }
