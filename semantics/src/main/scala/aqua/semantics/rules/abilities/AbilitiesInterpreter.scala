@@ -56,11 +56,6 @@ class AbilitiesInterpreter[S[_], X](using
       case false =>
         for {
           _ <- modify(_.defineService(name, defaultId))
-          _ <- locations.addTokenWithFields(
-            name.value,
-            name,
-            arrowDefs.toNel.toList
-          )
         } yield true
     }
 

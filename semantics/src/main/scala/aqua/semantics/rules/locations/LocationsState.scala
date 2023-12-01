@@ -5,7 +5,7 @@ import aqua.semantics.rules.types.TypesState
 import cats.kernel.Monoid
 
 case class LocationsState[S[_]](
-  tokens: Map[String, TokenInfo[S]] = Map.empty[String, TokenInfo[S]],
+  tokens: List[(String, TokenInfo[S])] = Nil,
   locations: List[(Token[S], Token[S])] = Nil,
   stack: List[LocationsState[S]] = Nil
 ) {

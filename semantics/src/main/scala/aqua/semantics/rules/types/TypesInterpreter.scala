@@ -97,7 +97,8 @@ class TypesInterpreter[S[_], X](using
           nonEmptyFields =>
             val `type` = AbilityType(name.value, nonEmptyFields)
 
-            modify(_.defineType(name, `type`)).as(`type`.some)
+            locateNamedType(name, `type`, fields) >> modify(_.defineType(name, `type`))
+              .as(`type`.some)
         )
     }
 
@@ -131,8 +132,19 @@ class TypesInterpreter[S[_], X](using
       ).semiflatMap(nonEmptyArrows =>
         val `type` = ServiceType(name.value, nonEmptyArrows)
 
-        modify(_.defineType(name, `type`)).as(`type`)
+        locateNamedType(name, `type`, fields) >> modify(_.defineType(name, `type`)).as(`type`)
       ).value
+    )
+
+  private def locateNamedType(
+    name: NamedTypeToken[S],
+    t: NamedType,
+    fields: Map[String, (Name[S], Type)]
+  ) =
+    locations.addTokenWithFields(
+      name.value,
+      TokenInfo[S](name, t),
+      fields.view.mapValues(TokenInfo[S].apply).toList
     )
 
   override def defineStructType(
@@ -159,7 +171,8 @@ class TypesInterpreter[S[_], X](using
             )(nonEmptyFields =>
               val `type` = StructType(name.value, nonEmptyFields)
 
-              modify(_.defineType(name, `type`)).as(`type`.some)
+              locateNamedType(name, `type`, fields) >> modify(_.defineType(name, `type`))
+                .as(`type`.some)
             )
         )
     )

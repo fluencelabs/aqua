@@ -3,9 +3,10 @@ package aqua.semantics.rules.locations
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.types.TypesState
+
+import cats.data.{NonEmptyList, NonEmptyMap, State}
 import monocle.Lens
 import monocle.macros.GenLens
-import cats.data.{NonEmptyList, NonEmptyMap, State}
 
 class DummyLocationsInterpreter[S[_], X] extends LocationsAlgebra[S, State[X, *]] {
 
@@ -13,11 +14,12 @@ class DummyLocationsInterpreter[S[_], X] extends LocationsAlgebra[S, State[X, *]
 
   def addTokenWithFields(
     name: String,
-    token: Token[S],
-    fields: List[(String, Token[S])]
+    token: TokenInfo[S],
+    fields: List[(String, TokenInfo[S])]
   ): State[X, Unit] = State.pure(())
 
-  def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): State[X, Unit] = State.pure(())
+  def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): State[X, Unit] =
+    State.pure(())
 
   def pointTokenWithFieldLocation(
     typeName: String,

@@ -15,7 +15,7 @@ case class LspContext[S[_]](
   abDefinitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
   rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
   constants: Map[String, Type] = Map.empty[String, Type],
-  tokens: Map[String, TokenInfo[S]] = Map.empty[String, TokenInfo[S]],
+  tokens: List[(String, TokenInfo[S])] = Nil,
   locations: List[(Token[S], Token[S])] = Nil,
   importTokens: List[LiteralToken[S]] = Nil,
   errors: List[SemanticError[S]] = Nil,

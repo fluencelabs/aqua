@@ -1,2 +1,9 @@
 func arr(strs: []string) -> []string:
-  <- strs
+  n = "str"
+  arr = [n]
+  <- arr
+
+func ppp() -> []u32:
+  n = 123
+  arr = [123]
+  <- arr

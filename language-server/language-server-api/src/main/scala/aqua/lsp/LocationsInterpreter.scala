@@ -3,7 +3,6 @@ package aqua.lsp
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState, TokenInfo}
-import aqua.types.{BottomType, Type}
 
 import cats.data.State
 import monocle.Lens
@@ -22,23 +21,22 @@ class LocationsInterpreter[S[_], X](using
 
   import stack.*
 
-  override def addToken(name: String, tokenInfo: TokenInfo[S]): State[X, Unit] = modify {
-    st =>
-      st.copy(tokens = st.tokens.updated(name, tokenInfo))
+  override def addToken(name: String, tokenInfo: TokenInfo[S]): State[X, Unit] = modify { st =>
+    st.copy(tokens = (name, tokenInfo) +: st.tokens)
   }
 
   private def combineFieldName(name: String, field: String): String = name + "." + field
 
   override def addTokenWithFields(
     name: String,
-    token: Token[S],
-    fields: List[(String, Token[S])]
-  ): State[X, Unit] = modify { st =>
-    st.copy(tokens =
-      st.tokens ++ ((name, TokenInfo(token, BottomType)) +: fields.map(kv =>
-        (combineFieldName(name, kv._1), TokenInfo(kv._2, BottomType))
-      )).toMap
-    )
+    token: TokenInfo[S],
+    fields: List[(String, TokenInfo[S])]
+  ): State[X, Unit] = {
+    val allTokens =
+      ((name, token) +: fields.map(kv => (combineFieldName(name, kv._1), kv._2))).toMap
+    modify { st =>
+      st.copy(tokens = st.tokens ++ allTokens)
+    }
   }
 
   def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): State[X, Unit] =
@@ -56,27 +54,29 @@ class LocationsInterpreter[S[_], X](using
     } yield {}
   }
 
+  private def findTokenByName(
+    st: LocationsState[S],
+    name: String,
+    token: Token[S]
+  ): Option[(Token[S], Token[S])] =
+    (st.stack.view.flatMap(_.tokens).collectFirst {
+      case (s, t) if s == name => t
+    } orElse st.tokens.find(_._1 == name).map(_._2)).map(token -> _.token)
+
   override def pointLocation(name: String, token: Token[S]): State[X, Unit] = {
     modify { st =>
-      val newLoc: Option[Token[S]] = st.stack.collectFirst {
-        case frame if frame.tokens.contains(name) => frame.tokens(name).token
-      } orElse st.tokens.get(name).map(_.token)
-      st.copy(locations = st.locations ++ newLoc.map(token -> _).toList)
+      val newLoc = findTokenByName(st, name, token)
+      st.copy(locations = st.locations ++ newLoc.toList)
     }
   }
 
-  def pointLocations(locations: List[(String, Token[S])]): State[X, Unit] = {
+  def pointLocations(locations: List[(String, Token[S])]): State[X, Unit] =
     modify { st =>
-
       val newLocs = locations.flatMap { case (name, token) =>
-        (st.stack.collectFirst {
-          case frame if frame.tokens.contains(name) => frame.tokens(name).token
-        } orElse st.tokens.get(name).map(_.token)).map(token -> _)
+        findTokenByName(st, name, token)
       }
-
       st.copy(locations = st.locations ++ newLocs)
     }
-  }
 
   private def modify(f: LocationsState[S] => LocationsState[S]): SX[Unit] =
     State.modify(lens.modify(f))

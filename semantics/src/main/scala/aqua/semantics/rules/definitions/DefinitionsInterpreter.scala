@@ -4,10 +4,9 @@ import aqua.parser.lexer.{Name, NamedTypeToken, Token}
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.abilities.AbilitiesState
-import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState}
+import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState, TokenInfo}
 import aqua.semantics.rules.types.TypesState
 import aqua.types.{ArrowType, Type}
-
 import cats.data.{NonEmptyList, NonEmptyMap, State}
 import monocle.Lens
 import monocle.macros.GenLens
@@ -59,12 +58,7 @@ class DefinitionsInterpreter[S[_], X](implicit
     token: NamedTypeToken[S]
   ): SX[Map[String, DefinitionsState.Def[S]]] =
     getState.map(_.definitions).flatMap { defs =>
-      val names = defs.view.mapValues(_.name)
-
       for {
-        _ <- locations
-          .addTokenWithFields(token.value, token, names.toList)
-          .whenA(defs.nonEmpty)
         _ <- modify(_.copy(definitions = Map.empty))
       } yield defs
     }
