@@ -4,12 +4,15 @@ import aqua.errors.Errors.internalError
 import aqua.types.*
 import aqua.types.Type.*
 
-import cats.data.{NonEmptyList, NonEmptyMap}
+import cats.data.NonEmptyList
+import cats.data.NonEmptyMap
+import cats.syntax.applicative.*
 import cats.syntax.foldable.*
+import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.partialOrder.*
 import cats.syntax.traverse.*
-import cats.{Eval, PartialOrder}
+import cats.{Eval, Foldable, Functor, PartialOrder, Traverse}
 import scala.collection.immutable.SortedMap
 
 sealed trait Type {
@@ -274,60 +277,87 @@ sealed trait CollectionType extends Type {
 
 object CollectionType {
 
-  def elementTypeOf(types: List[CollectibleType]): DataType =
-    NonEmptyList
-      .fromList(types)
-      .fold(BottomType)(
-        _.map {
-          case StreamType(el) => ArrayType(el)
-          case dt: DataType => dt
-        }.reduce[Type](_ `∩` _) match {
-          // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
-          // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
-          // make any decision about the structure of type, but can push anything inside
-          case BottomType => TopType
-          case dt: DataType => dt
-          case t =>
-            internalError(
-              s"Expected data type from " +
-                s"intersection of ${types.mkString(", ")}; " +
-                s"got $t"
-            )
-        }
-      )
+  def elementTypeOf[F[_]: Foldable: Functor](types: F[CollectibleType]): DataType =
+    types
+      .map[Type] {
+        case StreamType(el) => ArrayType(el)
+        case dt: DataType => dt
+      }.reduceLeftOption(_ `∩` _)
+      .map {
+        // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
+        // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
+        // make any decision about the structure of type, but can push anything inside
+        case BottomType => TopType
+        case dt: DataType => dt
+        case t =>
+          internalError(
+            s"Expected data type from " +
+              s"intersection of ${types.foldLeft("") { case (l, r) => l + ", " + r }}; " +
+              s"got $t"
+          )
+      }
+      .getOrElse(BottomType)
+
 }
+
+sealed trait ImmutableCollectionType extends CollectionType with DataType {
+  def withElement(t: DataType): ImmutableCollectionType
+}
+sealed trait MutableStreamType extends CollectionType
 
 case class CanonStreamType(
   override val element: DataType
-) extends DataType with CollectionType {
+) extends ImmutableCollectionType {
 
   override val isStream: Boolean = false
 
   override def toString: String = "#" + element
 
-  override def withElement(t: DataType): CollectionType = copy(element = t)
+  override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
 }
 
 case class ArrayType(
   override val element: DataType
-) extends DataType with CollectionType {
+) extends ImmutableCollectionType {
 
   override val isStream: Boolean = false
 
   override def toString: String = "[]" + element
 
-  override def withElement(t: DataType): CollectionType = copy(element = t)
+  override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
 }
 
 case class OptionType(
   override val element: DataType
-) extends DataType with CollectionType {
+) extends ImmutableCollectionType {
 
   override val isStream: Boolean = false
 
   override def toString: String = "?" + element
 
-  override def withElement(t: DataType): CollectionType = copy(element = t)
+  override def withElement(t: DataType): ImmutableCollectionType = copy(element = t)
+}
+
+case class StreamMapType(override val element: DataType) extends MutableStreamType {
+
+  override val isStream: Boolean = true
+
+  override def withElement(t: DataType): MutableStreamType = copy(element = t)
+
+  override def toString: String = s"%$element"
+}
+
+object StreamMapType {
+  def top(): StreamMapType = StreamMapType(TopType)
+}
+
+case class StreamType(override val element: DataType) extends MutableStreamType {
+
+  override val isStream: Boolean = true
+
+  override def toString: String = s"*$element"
+
+  override def withElement(t: DataType): StreamType = copy(element = t)
 }
 
 sealed trait NamedType extends Type {
@@ -375,7 +405,7 @@ sealed trait NamedType extends Type {
    * to allow renaming on call site.
    */
   lazy val arrows: Map[String, ArrowType] =
-    allFields.toSortedMap.toMap.collect { case (name, at: ArrowType) =>
+    allFields.toSortedMap.collect { case (name, at: ArrowType) =>
       name -> at
     }
 
@@ -385,7 +415,7 @@ sealed trait NamedType extends Type {
    * to allow renaming on call site.
    */
   lazy val abilities: Map[String, AbilityType] =
-    allFields.toSortedMap.toMap.collect { case (name, at: AbilityType) =>
+    allFields.toSortedMap.collect { case (name, at: AbilityType) =>
       name -> at
     }
 
@@ -395,7 +425,7 @@ sealed trait NamedType extends Type {
    * to allow renaming on call site.
    */
   lazy val variables: Map[String, DataType] =
-    allFields.toSortedMap.toMap.collect { case (name, at: DataType) =>
+    allFields.toSortedMap.collect { case (name, at: DataType) =>
       name -> at
     }
 }
@@ -409,30 +439,6 @@ case class StructType(name: String, fields: NonEmptyMap[String, Type])
 
   override def toString: String =
     s"$fullName{${fields.map(_.toString).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")}}"
-}
-
-sealed trait MutableStreamType extends Type with CollectionType
-
-case class StreamMapType(override val element: DataType) extends MutableStreamType {
-
-  override val isStream: Boolean = true
-
-  override def withElement(t: DataType): CollectionType = copy(element = t)
-
-  override def toString: String = s"%$element"
-}
-
-object StreamMapType {
-  def top(): StreamMapType = StreamMapType(TopType)
-}
-
-case class StreamType(override val element: DataType) extends MutableStreamType {
-
-  override val isStream: Boolean = true
-
-  override def toString: String = s"*$element"
-
-  override def withElement(t: DataType): CollectionType = copy(element = t)
 }
 
 /**

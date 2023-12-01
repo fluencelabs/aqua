@@ -8,6 +8,7 @@ import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
 import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*
 import aqua.semantics.rules.abilities.AbilitiesAlgebra
+import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
@@ -29,6 +30,7 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
   N: NamesAlgebra[S, Alg],
   T: TypesAlgebra[S, Alg],
   A: AbilitiesAlgebra[S, Alg],
+  M: ManglerAlgebra[Alg],
   report: ReportAlgebra[S, Alg]
 ) extends Logging {
 
@@ -170,22 +172,44 @@ class ValuesAlgebra[S[_], Alg[_]: Monad](using
               }
               .value
           )
-          raw = valuesRawChecked.map(raws =>
-            NonEmptyList
-              .fromList(raws)
-              .fold(ValueRaw.Nil) { nonEmpty =>
-                val (values, types) = nonEmpty.unzip
-                val element = CollectionType.elementTypeOf(types.toList)
-                CollectionRaw(
-                  values,
-                  ct.mode match {
-                    case CollectionToken.Mode.StreamMode => StreamType(element)
-                    case CollectionToken.Mode.ArrayMode => ArrayType(element)
-                    case CollectionToken.Mode.OptionMode => OptionType(element)
-                  }
+          raw <- ct.mode match {
+            case m @ (CollectionToken.Mode.OptionMode | CollectionToken.Mode.ArrayMode) =>
+              valuesRawChecked
+                .map(raws =>
+                  NonEmptyList
+                    .fromList(raws)
+                    .fold(ValueRaw.Nil) { nonEmpty =>
+                      val (values, types) = nonEmpty.unzip
+                      val element = CollectionType.elementTypeOf(types.toList)
+                      CollectionRaw(
+                        values,
+                        m match {
+                          case CollectionToken.Mode.ArrayMode => ArrayType(element)
+                          case CollectionToken.Mode.OptionMode => OptionType(element)
+                        }
+                      )
+                    }
                 )
-              }
-          )
+                .pure
+            case CollectionToken.Mode.StreamMode =>
+              for {
+                streamName <- M.rename("stream-anon")
+                raw = valuesRawChecked.map(raws =>
+                  val (values, types) = raws.unzip
+                  val element = CollectionType.elementTypeOf(types)
+                  StreamRaw(
+                    values,
+                    streamName,
+                    StreamType(element)
+                  )
+                )
+                // BottomType for empty stream
+                _ <- N.defineInternal(
+                  streamName,
+                  raw.map(_.streamType).getOrElse(StreamType(BottomType))
+                )
+              } yield raw
+          }
         } yield raw
 
       case ca: CallArrowToken[S] =>
@@ -470,6 +494,7 @@ object ValuesAlgebra {
     N: NamesAlgebra[S, Alg],
     T: TypesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
+    M: ManglerAlgebra[Alg],
     E: ReportAlgebra[S, Alg]
   ): ValuesAlgebra[S, Alg] =
     new ValuesAlgebra[S, Alg]

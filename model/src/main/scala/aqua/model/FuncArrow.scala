@@ -1,10 +1,9 @@
 package aqua.model
 
-import aqua.raw.Raw
 import aqua.raw.arrow.FuncRaw
-import aqua.raw.ops.{Call, CallArrowRawTag, EmptyTag, RawTag}
+import aqua.raw.ops.{Call, CallArrowRawTag, RawTag}
 import aqua.raw.value.{ValueRaw, VarRaw}
-import aqua.types.{ArrowType, ServiceType, Type}
+import aqua.types.{ArrowType, Type}
 
 import cats.syntax.option.*
 

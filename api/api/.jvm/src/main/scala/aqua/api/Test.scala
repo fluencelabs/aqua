@@ -9,7 +9,7 @@ import cats.data.Chain
 import cats.data.Validated.{Invalid, Valid}
 import cats.effect.{IO, IOApp}
 import fs2.io.file.{Files, Path}
-import fs2.{text, Stream}
+import fs2.{Stream, text}
 
 object Test extends IOApp.Simple {
 

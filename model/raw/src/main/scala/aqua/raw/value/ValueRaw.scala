@@ -3,10 +3,10 @@ package aqua.raw.value
 import aqua.errors.Errors.internalError
 import aqua.types.*
 import aqua.types.Type.*
-
-import cats.Eq
+import cats.{Eq, Functor, Traverse}
 import cats.data.{Chain, NonEmptyList, NonEmptyMap}
 import cats.syntax.option.*
+import cats.syntax.functor.*
 
 sealed trait ValueRaw {
 
@@ -68,7 +68,7 @@ object ValueRaw {
     errorType
   )
 
-  type ApplyRaw = ApplyPropertyRaw | CallArrowRaw | CollectionRaw | ApplyBinaryOpRaw |
+  type ApplyRaw = ApplyPropertyRaw | CallArrowRaw | CollectionRaw | StreamRaw | ApplyBinaryOpRaw |
     ApplyUnaryOpRaw
 
   extension (v: ValueRaw) {
@@ -114,7 +114,7 @@ case class VarRaw(name: String, baseType: Type) extends ValueRaw {
 
   override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = this
 
-  override def renameVars(map: Map[String, String]): ValueRaw =
+  override def renameVars(map: Map[String, String]): VarRaw =
     copy(name = map.getOrElse(name, name))
 
   override def toString: String = s"var{$name: " + baseType + s"}"
@@ -159,9 +159,31 @@ object LiteralRaw {
   }
 }
 
+// StreamRaw must have stream name, because stream cannot be `nil`,
+// so, we must know name of a stream to handle it in any cases
+case class StreamRaw(values: List[ValueRaw], streamName: String, streamType: StreamType) extends ValueRaw {
+  lazy val elementType: DataType = streamType.element
+
+  override lazy val baseType: Type = streamType
+
+  override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = {
+    val (vals, element) = CollectionRaw.mapCollection(f, values)
+
+    copy(
+      values = vals,
+      streamType = streamType.withElement(element)
+    )
+  }
+
+  override def varNames: Set[String] = (values.flatMap(_.varNames) :+ streamName).toSet
+
+  override def renameVars(map: Map[String, String]): ValueRaw =
+    copy(values = values.map(_.renameVars(map)), streamName = map.getOrElse(streamName, streamName))
+}
+
 case class CollectionRaw(
   values: NonEmptyList[ValueRaw],
-  collectionType: CollectionType
+  collectionType: ImmutableCollectionType
 ) extends ValueRaw {
 
   lazy val elementType: DataType = collectionType.element
@@ -169,12 +191,7 @@ case class CollectionRaw(
   override lazy val baseType: Type = collectionType
 
   override def mapValues(f: ValueRaw => ValueRaw): ValueRaw = {
-    val vals = values.map(f)
-    val types = vals.map(_.`type` match {
-      case ct: CollectibleType => ct
-      case t => internalError(s"Non-collection type in collection: ${t}")
-    })
-    val element = CollectionType.elementTypeOf(types.toList)
+    val (vals, element) = CollectionRaw.mapCollection(f, values)
 
     copy(
       values = vals,
@@ -186,6 +203,20 @@ case class CollectionRaw(
 
   override def renameVars(map: Map[String, String]): ValueRaw =
     copy(values = values.map(_.renameVars(map)))
+}
+
+object CollectionRaw {
+  def mapCollection[F[_]: Traverse](f: ValueRaw => ValueRaw, values: F[ValueRaw]): (F[ValueRaw], DataType) = {
+    val vals = values.map(f)
+    val types = vals.map(_.`type` match {
+      case ct: CollectibleType => ct
+      case t => internalError(s"Non-collection type in collection: ${t}")
+    })
+
+    val element = CollectionType.elementTypeOf(types)
+
+    (vals, element)
+  }
 }
 
 case class MakeStructRaw(fields: NonEmptyMap[String, ValueRaw], structType: StructType)

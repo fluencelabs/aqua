@@ -1,11 +1,10 @@
 package aqua.semantics.expr.func
 
-import aqua.raw.Raw
 import aqua.raw.ops.{RawTag, RestrictionTag}
 import aqua.semantics.rules.names.NamesAlgebra
-
-import cats.Monad
+import cats.{FlatMap, Functor, Monad}
 import cats.syntax.functor.*
+import cats.syntax.flatMap.*
 
 object FuncOpSem {
 
