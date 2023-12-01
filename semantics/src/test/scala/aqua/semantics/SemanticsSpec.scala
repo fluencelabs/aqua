@@ -898,14 +898,13 @@ class SemanticsSpec extends AnyFlatSpec with Matchers with Inside {
                       |""".stripMargin
 
       insideBody(script) { body =>
-        matchSubtree(body) {
-          case (CallArrowRawTag(_, ApplyPropertyRaw(_, IntoArrowRaw("consume", _, args))), _) =>
-            inside(args) { case (c: CollectionRaw) :: Nil =>
-              c.values.exists {
-                case VarRaw(name, _) => name == "stream"
-                case _ => false
-              } should be(true)
-            }
+        matchSubtree(body) { case (CallArrowRawTag(_, ca: CallArrowRaw), _) =>
+          inside(ca.arguments) { case (c: CollectionRaw) :: Nil =>
+            c.values.exists {
+              case VarRaw(name, _) => name == "stream"
+              case _ => false
+            } should be(true)
+          }
         }
       }
     }
