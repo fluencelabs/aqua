@@ -4,7 +4,7 @@ import aqua.parser.lexer.{Name, NamedTypeToken, Token}
 import aqua.semantics.rules.StackInterpreter
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.abilities.AbilitiesState
-import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState, TokenInfo}
+import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState, ExprInfo}
 import aqua.semantics.rules.types.TypesState
 import aqua.types.{ArrowType, Type}
 import cats.data.{NonEmptyList, NonEmptyMap, State}

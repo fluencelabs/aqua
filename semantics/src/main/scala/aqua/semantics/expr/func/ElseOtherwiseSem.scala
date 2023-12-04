@@ -39,5 +39,4 @@ class ElseOtherwiseSem[S[_]](val expr: ElseOtherwiseExpr[S]) extends AnyVal {
       )
       .abilitiesScope(expr.token)
       .namesScope(expr.token)
-      .locationsScope()
 }

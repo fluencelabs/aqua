@@ -9,7 +9,7 @@ import aqua.lsp.AquaLSP.logger
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.rules.locations.TokenInfo
+import aqua.semantics.rules.locations.ExprInfo
 import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
 
 import cats.syntax.show.*
@@ -19,7 +19,7 @@ import scribe.Logging
 
 object ResultHelper extends Logging {
 
-  import TypeShow.given
+  import aqua.types.Type.given
 
   def warningToInfo(
     warning: AquaWarning[FileSpan.F]
@@ -81,11 +81,11 @@ object ResultHelper extends Logging {
       errors.toChain.toList.map(ErrorInfo.applyOp(0, 0, _, None))
   }
 
-  private def tokensToJs(tokens: List[TokenInfo[FileSpan.F]]): js.Array[TokenInfoJs] =
+  private def tokensToJs(tokens: List[ExprInfo[FileSpan.F]]): js.Array[ExprInfoJs] =
     tokens.flatMap { ti =>
       TokenLocation.fromSpan(ti.token.unit._1).map { tl =>
         val typeName = ti.`type`.show
-        TokenInfoJs(tl, typeName)
+        ExprInfoJs(tl, typeName)
       }
     }.toJSArray
 

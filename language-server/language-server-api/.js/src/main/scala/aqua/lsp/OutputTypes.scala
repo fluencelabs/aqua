@@ -12,11 +12,11 @@ case class CompilationResult(
   warnings: js.Array[WarningInfo] = js.Array(),
   locations: js.Array[TokenLink] = js.Array(),
   importLocations: js.Array[TokenImport] = js.Array(),
-  tokens: js.Array[TokenInfoJs] = js.Array()
+  tokens: js.Array[ExprInfoJs] = js.Array()
 )
 
 @JSExportAll
-case class TokenInfoJs(location: TokenLocation, `type`: String)
+case class ExprInfoJs(location: TokenLocation, `type`: String)
 
 @JSExportAll
 case class TokenLocation(name: String, startLine: Int, startCol: Int, endLine: Int, endCol: Int)
