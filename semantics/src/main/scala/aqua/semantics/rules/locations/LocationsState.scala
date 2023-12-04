@@ -12,6 +12,13 @@ case class LocationsState[S[_]](
 
   lazy val allLocations: List[(Token[S], Token[S])] = locations
 
+  // TODO: optimize distinction
+  def addTokens(newTokens: List[(String, ExprInfo[S])]): LocationsState[S] =
+    copy(tokens = (newTokens ++ tokens).distinct)
+
+  def addToken(newToken: (String, ExprInfo[S])): LocationsState[S] =
+    copy(tokens = (newToken +: tokens).distinct)
+
   def findTokenByName(
     name: String,
     token: Token[S]

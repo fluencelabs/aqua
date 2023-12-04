@@ -14,7 +14,7 @@ class LocationsInterpreter[S[_], X](using
   type SX[A] = State[X, A]
 
   override def addToken(name: String, tokenInfo: ExprInfo[S]): State[X, Unit] = modify { st =>
-    st.copy(tokens = (name, tokenInfo) +: st.tokens)
+    st.addToken(name, tokenInfo)
   }
 
   private def combineFieldName(name: String, field: String): String = name + "." + field
@@ -25,11 +25,11 @@ class LocationsInterpreter[S[_], X](using
     fields: List[(String, ExprInfo[S])]
   ): State[X, Unit] = {
     val allTokens =
-      ((name, token) +: fields.map { case (fieldName, info) =>
+      (name, token) +: fields.map { case (fieldName, info) =>
         combineFieldName(name, fieldName) -> info
-      }).toMap
+      }
     modify { st =>
-      st.copy(tokens = st.tokens ++ allTokens)
+      st.addTokens(allTokens)
     }
   }
 
