@@ -1,50 +1,42 @@
 package aqua.api
 
 import aqua.Rendering.given
-import aqua.raw.value.ValueRaw
-import aqua.raw.ConstantRaw
 import aqua.api.AquaAPIConfig
+import aqua.backend.api.APIBackend
 import aqua.backend.{AirFunction, Backend, Generated}
 import aqua.compiler.*
-import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
-import aqua.logging.{LogFormatter, LogLevels}
 import aqua.constants.Constants
+import aqua.definitions.FunctionDef
+import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
 import aqua.io.*
-import aqua.raw.ops.Call
-import aqua.run.{CliFunc, FuncCompiler, RunPreparer}
+import aqua.logging.{LogFormatter, LogLevels}
+import aqua.model.AquaContext
+import aqua.model.transform.{Transform, TransformConfig}
 import aqua.parser.lexer.{LiteralToken, Token}
 import aqua.parser.lift.FileSpan.F
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.{AquaIO, SpanParser}
-import aqua.model.transform.{Transform, TransformConfig}
-import aqua.backend.api.APIBackend
-import aqua.definitions.FunctionDef
-import aqua.model.AquaContext
+import aqua.raw.ConstantRaw
+import aqua.raw.ops.Call
+import aqua.raw.value.ValueRaw
 import aqua.res.AquaRes
+import aqua.run.{CliFunc, FuncCompiler, RunPreparer}
+import aqua.{AquaIO, SpanParser}
 
 import cats.Applicative
-import cats.~>
-import cats.data.{
-  Chain,
-  EitherT,
-  NonEmptyChain,
-  NonEmptyList,
-  Validated,
-  ValidatedNec,
-  ValidatedNel,
-  Writer
-}
-import cats.data.Validated.{invalid, invalidNec, validNec, Invalid, Valid}
-import cats.syntax.applicative.*
-import cats.syntax.apply.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
+import cats.data.*
+import cats.data.Validated.*
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
+import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.either.*
+import cats.syntax.flatMap.*
+import cats.syntax.functor.*
+import cats.syntax.option.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.syntax.either.*
+import cats.~>
 import fs2.io.file.{Files, Path}
 import scribe.{Level, Logging}
 
@@ -68,7 +60,7 @@ object APICompilation {
       LogFormatter.initLogger(Some(level))
 
       new FuncCompiler[IO](
-        Some(RelativePath(Path(pathStr))),
+        Path(pathStr).some,
         imports.map(Path.apply),
         transformConfig
       ).compile().map { contextV =>

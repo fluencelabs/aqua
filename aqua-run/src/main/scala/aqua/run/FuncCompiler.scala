@@ -3,34 +3,33 @@ package aqua.run
 import aqua.Rendering.given
 import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompileResult, CompilerAPI}
 import aqua.files.{AquaFileSources, FileModuleId}
-import aqua.{AquaIO, SpanParser}
-import aqua.io.{AquaFileError, AquaPath, PackagePath, Prelude}
+import aqua.io.{AquaFileError, PackagePath, Prelude}
 import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow}
 import aqua.parser.lift.FileSpan
 import aqua.run.CliFunc
+import aqua.{AquaIO, SpanParser}
 
 import cats.data.Validated.{invalidNec, validNec}
 import cats.data.{Chain, NonEmptyList, Validated, ValidatedNec}
 import cats.effect.IO
 import cats.effect.kernel.{Async, Clock}
 import cats.syntax.applicative.*
+import cats.syntax.apply.*
+import cats.syntax.either.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.monad.*
+import cats.syntax.option.*
 import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.syntax.option.*
-import cats.syntax.either.*
 import cats.syntax.validated.*
-import cats.syntax.apply.*
 import fs2.io.file.{Files, Path}
+import scala.concurrent.duration.Duration
 import scribe.Logging
 
-import scala.concurrent.duration.Duration
-
 class FuncCompiler[F[_]: Files: AquaIO: Async](
-  input: Option[AquaPath],
+  input: Option[Path],
   imports: List[Path],
   transformConfig: TransformConfig
 ) extends Logging {
@@ -66,10 +65,10 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       builtinsV <-
         if (withBuiltins) compileBuiltins()
         else Chain.empty.pure[Result].pure[F]
-      compileResult <- input.traverse { ap =>
+      compileResult <- input.traverse { ip =>
         // compile only context to wrap and call function later
         Clock[F].timed(
-          ap.getPath().flatMap(p => compileToContext(p, preludeImports ++ imports))
+          compileToContext(ip, preludeImports ++ imports)
         )
       }
       (compileTime, contextV) = compileResult.orEmpty
