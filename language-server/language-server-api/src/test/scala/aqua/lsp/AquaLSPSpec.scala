@@ -5,6 +5,7 @@ import aqua.parser.Parser
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.ConstantRaw
+import aqua.semantics.rules.locations.VariableInfo
 import aqua.types.*
 
 import cats.Id
@@ -24,7 +25,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       useStart: Int,
       useEnd: Int
     ): Boolean =
-      c.locations.exists { case (useT, defT) =>
+      c.allLocations.exists { case (useT, defT) =>
         val defSpan = defT.unit._1
         val useSpan = useT.unit._1
         defSpan.startIndex == defStart && defSpan.endIndex == defEnd && useSpan.startIndex == useStart && useSpan.endIndex == useEnd
@@ -36,9 +37,9 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       end: Int,
       `type`: Type
     ): Boolean = {
-      val res = c.tokens.exists { case (name, expr) =>
-        val span = expr.token.unit._1
-        name == checkName && span.startIndex == start && span.endIndex == end && expr.`type` == `type`
+      val res = c.variables.exists { case VariableInfo(definition, _) =>
+        val span = definition.token.unit._1
+        definition.name == checkName && span.startIndex == start && span.endIndex == end && definition.`type` == `type`
       }
 
       /*println(tokens.filter(v => v._1 == checkName && v._2.`type` == `type`).map {
@@ -134,7 +135,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       )
     )
 
-    println(res.locations.map { case (l, r) =>
+    println(res.allLocations.map { case (l, r) =>
       val lSpan = l.unit._1
       val rSpan = r.unit._1
       s"($l($lSpan):$r($rSpan))"

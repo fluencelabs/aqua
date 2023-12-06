@@ -2,26 +2,24 @@ package aqua.semantics.rules.definitions
 
 import aqua.parser.lexer.{Name, NamedTypeToken, Token}
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.abilities.AbilitiesState
-import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState, ExprInfo}
+import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypesState
 import aqua.types.{ArrowType, Type}
+
 import cats.data.{NonEmptyList, NonEmptyMap, State}
-import monocle.Lens
-import monocle.macros.GenLens
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
-
+import monocle.Lens
+import monocle.macros.GenLens
 import scala.collection.immutable.SortedMap
 
 class DefinitionsInterpreter[S[_], X](implicit
   lens: Lens[X, DefinitionsState[S]],
-  report: ReportAlgebra[S, State[X, *]],
-  locations: LocationsAlgebra[S, State[X, *]]
+  report: ReportAlgebra[S, State[X, *]]
 ) extends DefinitionsAlgebra[S, State[X, *]] {
   type SX[A] = State[X, A]
 

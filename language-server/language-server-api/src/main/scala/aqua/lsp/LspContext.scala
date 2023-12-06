@@ -3,7 +3,7 @@ package aqua.lsp
 import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.semantics.header.Picker
-import aqua.semantics.rules.locations.ExprInfo
+import aqua.semantics.rules.locations.VariableInfo
 import aqua.semantics.{SemanticError, SemanticWarning}
 import aqua.types.{ArrowType, Type}
 
@@ -16,12 +16,13 @@ case class LspContext[S[_]](
   abDefinitions: Map[String, NamedTypeToken[S]] = Map.empty[String, NamedTypeToken[S]],
   rootArrows: Map[String, ArrowType] = Map.empty[String, ArrowType],
   constants: Map[String, Type] = Map.empty[String, Type],
-  tokens: List[(String, ExprInfo[S])] = Nil,
-  locations: List[(Token[S], Token[S])] = Nil,
+  variables: List[VariableInfo[S]] = Nil,
   importTokens: List[LiteralToken[S]] = Nil,
   errors: List[SemanticError[S]] = Nil,
   warnings: List[SemanticWarning[S]] = Nil
-)
+) {
+  lazy val allLocations: List[(Token[S], Token[S])] = variables.flatMap(_.allLocations)
+}
 
 object LspContext {
 
@@ -34,9 +35,8 @@ object LspContext {
         abDefinitions = x.abDefinitions ++ y.abDefinitions,
         rootArrows = x.rootArrows ++ y.rootArrows,
         constants = x.constants ++ y.constants,
-        locations = x.locations ++ y.locations,
         importTokens = x.importTokens ++ y.importTokens,
-        tokens = x.tokens ++ y.tokens,
+        variables = x.variables ++ y.variables,
         errors = x.errors ++ y.errors,
         warnings = x.warnings ++ y.warnings
       )
@@ -92,7 +92,9 @@ object LspContext {
       val prefix = name + "."
       ctx.copy(
         raw = ctx.raw.setAbility(name, ctxAb.raw),
-        tokens = ctx.tokens ++ ctxAb.tokens.map(kv => (prefix + kv._1) -> kv._2)
+        variables = ctx.variables ++ ctxAb.variables.map(v =>
+          v.copy(definition = v.definition.copy(name = prefix + v.definition.name))
+        )
       )
 
     override def setModule(
@@ -115,13 +117,16 @@ object LspContext {
       declared: Boolean
     ): Option[LspContext[S]] =
       // rename tokens from one context with prefix addition
-      val newTokens = rename.map { renameStr =>
-        ctx.tokens.map {
-          case (tokenName, token) if tokenName.startsWith(name) =>
-            tokenName.replaceFirst(name, renameStr) -> token
+      val newVariables = rename.map { renameStr =>
+        ctx.variables.map {
+          case v if v.definition.name.startsWith(name) =>
+            v.copy(definition =
+              v.definition.copy(name = v.definition.name.replaceFirst(v.definition.name, renameStr))
+            )
+
           case kv => kv
         }
-      }.getOrElse(ctx.tokens)
+      }.getOrElse(ctx.variables)
 
       ctx.raw
         .pick(name, rename, declared)
@@ -134,7 +139,7 @@ object LspContext {
               ctx.rootArrows.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
             constants =
               ctx.constants.get(name).fold(Map.empty)(t => Map(rename.getOrElse(name) -> t)),
-            tokens = newTokens
+            variables = newVariables
           )
         )
 

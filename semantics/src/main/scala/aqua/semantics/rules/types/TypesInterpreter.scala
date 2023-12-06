@@ -3,7 +3,7 @@ package aqua.semantics.rules.types
 import aqua.parser.lexer.*
 import aqua.raw.value.*
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.locations.{ExprInfo, LocationsAlgebra}
+import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra}
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypeResolution.TypeResolutionError
 import aqua.types.*
@@ -141,10 +141,9 @@ class TypesInterpreter[S[_], X](using
     t: NamedType,
     fields: Map[String, (Name[S], Type)]
   ) =
-    locations.addTokenWithFields(
-      name.value,
-      ExprInfo[S](name, t),
-      fields.view.mapValues(ExprInfo[S].apply).toList
+    locations.addDefinitionWithFields(
+      DefinitionInfo[S](name.value, name, t),
+      fields.map { case (n, (t, ty)) => DefinitionInfo[S](n, t, ty) }.toList
     )
 
   override def defineStructType(
@@ -183,7 +182,7 @@ class TypesInterpreter[S[_], X](using
       case Some(_) => report.error(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
         modify(_.defineType(name, target))
-          .productL(locations.addToken(name.value, ExprInfo(name.asName, target)))
+          .productL(locations.addDefinition(DefinitionInfo(name.value, name.asName, target)))
           .as(true)
     }
 

@@ -1,7 +1,7 @@
 package aqua.lsp
 
 import aqua.parser.lexer.Token
-import aqua.semantics.rules.locations.{ExprInfo, LocationsAlgebra, LocationsState}
+import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra, LocationsState}
 
 import cats.data.State
 import monocle.Lens
@@ -13,23 +13,22 @@ class LocationsInterpreter[S[_], X](using
 
   type SX[A] = State[X, A]
 
-  override def addToken(name: String, tokenInfo: ExprInfo[S]): State[X, Unit] = modify { st =>
-    st.addToken(name, tokenInfo)
+  override def addDefinition(definition: DefinitionInfo[S]): State[X, Unit] = modify { st =>
+    st.addDefinition(definition)
   }
 
   private def combineFieldName(name: String, field: String): String = name + "." + field
 
-  override def addTokenWithFields(
-    name: String,
-    token: ExprInfo[S],
-    fields: List[(String, ExprInfo[S])]
+  override def addDefinitionWithFields(
+    definition: DefinitionInfo[S],
+    fields: List[DefinitionInfo[S]]
   ): State[X, Unit] = {
     val allTokens =
-      (name, token) +: fields.map { case (fieldName, info) =>
-        combineFieldName(name, fieldName) -> info
+      definition +: fields.map { fieldDef =>
+        fieldDef.copy(name = combineFieldName(definition.name, fieldDef.name))
       }
     modify { st =>
-      st.addTokens(allTokens)
+      st.addDefinitions(allTokens)
     }
   }
 
@@ -50,17 +49,13 @@ class LocationsInterpreter[S[_], X](using
 
   override def pointLocation(name: String, token: Token[S]): State[X, Unit] = {
     modify { st =>
-      val newLoc = st.findTokenByName(name, token)
-      st.copy(locations = st.locations ++ newLoc.toList)
+      st.addLocation(name, token)
     }
   }
 
   def pointLocations(locations: List[(String, Token[S])]): State[X, Unit] =
     modify { st =>
-      val newLocs = locations.flatMap { case (name, token) =>
-        st.findTokenByName(name, token)
-      }
-      st.copy(locations = st.locations ++ newLocs)
+      st.addLocations(locations)
     }
 
   private def modify(f: LocationsState[S] => LocationsState[S]): SX[Unit] =

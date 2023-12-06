@@ -2,11 +2,14 @@ package aqua.semantics.rules.locations
 import aqua.parser.lexer.Token
 import aqua.types.Type
 
-case class ExprInfo[S[_]](token: Token[S], `type`: Type)
+case class DefinitionInfo[S[_]](name: String, token: Token[S], `type`: Type)
+case class VariableInfo[S[_]](definition: DefinitionInfo[S], occurrences: List[Token[S]] = Nil) {
+  def allLocations: List[(Token[S], Token[S])] = occurrences.map(_ -> definition.token)
+}
 
 trait LocationsAlgebra[S[_], Alg[_]] {
-  def addToken(name: String, tokenInfo: ExprInfo[S]): Alg[Unit]
-  def addTokenWithFields(name: String, token: ExprInfo[S], fields: List[(String, ExprInfo[S])]): Alg[Unit]
+  def addDefinition(definition: DefinitionInfo[S]): Alg[Unit]
+  def addDefinitionWithFields(definition: DefinitionInfo[S], fields: List[DefinitionInfo[S]]): Alg[Unit]
 
   def pointTokenWithFieldLocation(typeName: String, typeToken: Token[S], fieldName: String, token: Token[S]): Alg[Unit]
   def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): Alg[Unit]

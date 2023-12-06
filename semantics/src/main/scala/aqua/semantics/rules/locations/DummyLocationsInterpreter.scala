@@ -10,12 +10,11 @@ import monocle.macros.GenLens
 
 class DummyLocationsInterpreter[S[_], X] extends LocationsAlgebra[S, State[X, *]] {
 
-  def addToken(name: String, tokenInfo: ExprInfo[S]): State[X, Unit] = State.pure(())
+  def addDefinition(definition: DefinitionInfo[S]): State[X, Unit] = State.pure(())
 
-  def addTokenWithFields(
-    name: String,
-    token: ExprInfo[S],
-    fields: List[(String, ExprInfo[S])]
+  def addDefinitionWithFields(
+    definition: DefinitionInfo[S],
+    fields: List[DefinitionInfo[S]]
   ): State[X, Unit] = State.pure(())
 
   def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): State[X, Unit] =
