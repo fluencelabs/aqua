@@ -7,6 +7,8 @@
   "files": [
     "index.js",
     "index.d.ts",
+    "imports.d.ts",
+    "imports.js",
     "aqua-api.js",
     "meta-utils.js"
   ],
@@ -25,6 +27,10 @@
     "url": "https://github.com/fluencelabs/aqua/issues"
   },
   "homepage": "https://github.com/fluencelabs/aqua#readme",
+  "optionalDependencies": {
+    "@npmcli/arborist": "7.2.1",
+    "treeverse": "3.0.0"
+  },
   "devDependencies": {
     "@fluencelabs/interfaces": "0.9.0",
     "prettier": "3.0.0"

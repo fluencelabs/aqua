@@ -21,6 +21,8 @@ export declare class CompilationResult {
   generatedSources: GeneratedSource[];
 }
 
+export type Imports = Record<string, string[]> | string[];
+
 /** Common arguments for all compile functions */
 type CommonArgs = {
   /** Paths to directories, which you want to import .aqua files from. Example: ["./path/to/dir"] */
