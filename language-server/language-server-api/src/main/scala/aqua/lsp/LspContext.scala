@@ -3,10 +3,9 @@ package aqua.lsp
 import aqua.parser.lexer.{LiteralToken, NamedTypeToken, Token}
 import aqua.raw.{RawContext, RawPart}
 import aqua.semantics.header.Picker
-import aqua.semantics.rules.locations.VariableInfo
+import aqua.semantics.rules.locations.{TokenLocation, VariableInfo}
 import aqua.semantics.{SemanticError, SemanticWarning}
-import aqua.types.{ArrowType, Type}
-
+import aqua.types.{AbilityType, ArrowType, Type}
 import cats.syntax.monoid.*
 import cats.{Monoid, Semigroup}
 
@@ -21,7 +20,7 @@ case class LspContext[S[_]](
   errors: List[SemanticError[S]] = Nil,
   warnings: List[SemanticWarning[S]] = Nil
 ) {
-  lazy val allLocations: List[(Token[S], Token[S])] = variables.flatMap(_.allLocations)
+  lazy val allLocations: List[TokenLocation[S]] = variables.flatMap(_.allLocations)
 }
 
 object LspContext {
@@ -89,11 +88,12 @@ object LspContext {
     override def declares(ctx: LspContext[S]): Set[String] = ctx.raw.declares
 
     override def setAbility(ctx: LspContext[S], name: String, ctxAb: LspContext[S]): LspContext[S] =
-      val prefix = name + "."
       ctx.copy(
         raw = ctx.raw.setAbility(name, ctxAb.raw),
         variables = ctx.variables ++ ctxAb.variables.map(v =>
-          v.copy(definition = v.definition.copy(name = prefix + v.definition.name))
+          v.copy(definition =
+            v.definition.copy(name = AbilityType.fullName(name, v.definition.name))
+          )
         )
       )
 

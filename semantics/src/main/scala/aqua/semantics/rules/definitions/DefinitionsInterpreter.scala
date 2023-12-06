@@ -1,21 +1,13 @@
 package aqua.semantics.rules.definitions
 
 import aqua.parser.lexer.{Name, NamedTypeToken, Token}
-import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.abilities.AbilitiesState
 import aqua.semantics.rules.report.ReportAlgebra
-import aqua.semantics.rules.types.TypesState
 import aqua.types.{ArrowType, Type}
 
-import cats.data.{NonEmptyList, NonEmptyMap, State}
-import cats.syntax.applicative.*
-import cats.syntax.apply.*
-import cats.syntax.flatMap.*
+import cats.data.{NonEmptyList, State}
 import cats.syntax.functor.*
 import cats.syntax.option.*
 import monocle.Lens
-import monocle.macros.GenLens
-import scala.collection.immutable.SortedMap
 
 class DefinitionsInterpreter[S[_], X](implicit
   lens: Lens[X, DefinitionsState[S]],
@@ -52,9 +44,7 @@ class DefinitionsInterpreter[S[_], X](implicit
   override def defineArrow(arrow: Name[S], `type`: ArrowType): SX[Boolean] =
     define(arrow, `type`, "arrow")
 
-  override def purgeDefs(
-    token: NamedTypeToken[S]
-  ): SX[Map[String, DefinitionsState.Def[S]]] =
+  override def purgeDefs(): SX[Map[String, DefinitionsState.Def[S]]] =
     getState.map(_.definitions).flatMap { defs =>
       for {
         _ <- modify(_.copy(definitions = Map.empty))

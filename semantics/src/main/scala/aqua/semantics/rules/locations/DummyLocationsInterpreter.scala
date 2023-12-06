@@ -1,12 +1,7 @@
 package aqua.semantics.rules.locations
 
 import aqua.parser.lexer.Token
-import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.types.TypesState
-
-import cats.data.{NonEmptyList, NonEmptyMap, State}
-import monocle.Lens
-import monocle.macros.GenLens
+import cats.data.State
 
 class DummyLocationsInterpreter[S[_], X] extends LocationsAlgebra[S, State[X, *]] {
 

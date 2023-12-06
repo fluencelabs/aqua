@@ -6,10 +6,10 @@ import aqua.compiler.{AquaError, AquaWarning}
 import aqua.files.FileModuleId
 import aqua.io.AquaFileError
 import aqua.lsp.AquaLSP.logger
-import aqua.parser.lexer.{LiteralToken, Token}
+import aqua.parser.lexer.LiteralToken
 import aqua.parser.lift.{FileSpan, Span}
 import aqua.parser.{ArrowReturnError, BlockIndentError, LexerError, ParserError}
-import aqua.semantics.rules.locations.DefinitionInfo
+import aqua.semantics.rules.locations.{DefinitionInfo, TokenLocation as TokenLoc}
 import aqua.semantics.{HeaderError, RulesViolated, SemanticWarning, WrongAST}
 
 import cats.syntax.show.*
@@ -90,9 +90,9 @@ object ResultHelper extends Logging {
     }.toJSArray
 
   private def locationsToJs(
-    locations: List[(Token[FileSpan.F], Token[FileSpan.F])]
+    locations: List[TokenLoc[FileSpan.F]]
   ): js.Array[TokenLink] =
-    locations.flatMap { case (from, to) =>
+    locations.flatMap { case TokenLoc(from, to) =>
       val fromOp = TokenLocation.fromSpan(from.unit._1)
       val toOp = TokenLocation.fromSpan(to.unit._1)
 
@@ -117,6 +117,7 @@ object ResultHelper extends Logging {
   def lspToCompilationResult(lsp: LspContext[FileSpan.F]): CompilationResult = {
     val errors = lsp.errors.map(CompileError.apply).flatMap(errorToInfo)
     val warnings = lsp.warnings.map(CompileWarning.apply).flatMap(warningToInfo)
+
     errors match
       case Nil =>
         logger.debug("No errors on compilation.")

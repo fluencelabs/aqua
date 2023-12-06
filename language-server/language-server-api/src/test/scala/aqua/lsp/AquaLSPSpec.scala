@@ -5,9 +5,8 @@ import aqua.parser.Parser
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.ConstantRaw
-import aqua.semantics.rules.locations.VariableInfo
+import aqua.semantics.rules.locations.{TokenLocation, VariableInfo}
 import aqua.types.*
-
 import cats.Id
 import cats.data.*
 import cats.instances.string.*
@@ -25,7 +24,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       useStart: Int,
       useEnd: Int
     ): Boolean =
-      c.allLocations.exists { case (useT, defT) =>
+      c.allLocations.exists { case TokenLocation(useT, defT) =>
         val defSpan = defT.unit._1
         val useSpan = useT.unit._1
         defSpan.startIndex == defStart && defSpan.endIndex == defEnd && useSpan.startIndex == useStart && useSpan.endIndex == useEnd
@@ -135,7 +134,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       )
     )
 
-    println(res.allLocations.map { case (l, r) =>
+    println(res.allLocations.map { case TokenLocation(l, r) =>
       val lSpan = l.unit._1
       val rSpan = r.unit._1
       s"($l($lSpan):$r($rSpan))"

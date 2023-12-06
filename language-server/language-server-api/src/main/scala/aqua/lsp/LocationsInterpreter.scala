@@ -2,7 +2,7 @@ package aqua.lsp
 
 import aqua.parser.lexer.Token
 import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra, LocationsState}
-
+import aqua.types.AbilityType
 import cats.data.State
 import monocle.Lens
 import scribe.Logging
@@ -17,15 +17,13 @@ class LocationsInterpreter[S[_], X](using
     st.addDefinition(definition)
   }
 
-  private def combineFieldName(name: String, field: String): String = name + "." + field
-
   override def addDefinitionWithFields(
     definition: DefinitionInfo[S],
     fields: List[DefinitionInfo[S]]
   ): State[X, Unit] = {
     val allTokens =
       definition +: fields.map { fieldDef =>
-        fieldDef.copy(name = combineFieldName(definition.name, fieldDef.name))
+        fieldDef.copy(name = AbilityType.fullName(definition.name, fieldDef.name))
       }
     modify { st =>
       st.addDefinitions(allTokens)
@@ -33,7 +31,7 @@ class LocationsInterpreter[S[_], X](using
   }
 
   def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): State[X, Unit] =
-    pointLocation(combineFieldName(typeName, fieldName), token)
+    pointLocation(AbilityType.fullName(typeName, fieldName), token)
 
   def pointTokenWithFieldLocation(
     typeName: String,
@@ -43,7 +41,7 @@ class LocationsInterpreter[S[_], X](using
   ): State[X, Unit] = {
     for {
       _ <- pointLocation(typeName, typeToken)
-      _ <- pointLocation(combineFieldName(typeName, fieldName), token)
+      _ <- pointLocation(AbilityType.fullName(typeName, fieldName), token)
     } yield {}
   }
 

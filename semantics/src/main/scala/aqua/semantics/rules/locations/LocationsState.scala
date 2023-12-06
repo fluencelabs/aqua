@@ -1,10 +1,7 @@
 package aqua.semantics.rules.locations
 
 import aqua.parser.lexer.Token
-import aqua.semantics.rules.types.TypesState
-
 import cats.kernel.Monoid
-import scala.annotation.{tailrec, unused}
 import scribe.Logging
 
 case class LocationsState[S[_]](
@@ -26,7 +23,7 @@ case class LocationsState[S[_]](
     case Nil =>
       logger.error(s"Unexpected. Cannot add occurrence for $name")
       Nil
-    case head :: tail  =>
+    case head :: tail =>
       if (head.definition.name == name)
         head.copy(occurrences = token +: head.occurrences) :: tail
       else
