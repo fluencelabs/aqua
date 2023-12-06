@@ -27,12 +27,21 @@
     "url": "https://github.com/fluencelabs/aqua/issues"
   },
   "homepage": "https://github.com/fluencelabs/aqua#readme",
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --detectOpenHandles"
+  },
   "optionalDependencies": {
     "@npmcli/arborist": "7.2.1",
     "treeverse": "3.0.0"
   },
   "devDependencies": {
     "@fluencelabs/interfaces": "0.9.0",
-    "prettier": "3.0.0"
+    "@types/jest": "29.5.2",
+    "@types/node": "^20.10.3",
+    "prettier": "3.0.0",
+    "jest": "29.5.0",
+    "ts-jest": "29.1.0",
+    "ts-node": "10.9.1",
+    "typescript": "5.1.3"
   }
 }

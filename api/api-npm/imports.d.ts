@@ -1,6 +1,6 @@
 import Arborist from "@npmcli/arborist";
 
-import type { Imports } from "./index.d.ts";
+export declare type Imports = Record<string, string[]>;
 
 /**
  * Gather imports for aqua compiler from

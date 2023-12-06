@@ -1,0 +1,12 @@
+aqua Main
+
+export versionBC, versionAC
+
+use "A.aqua"
+use "B.aqua"
+
+func versionAC() -> string:
+    <- A.versionC()
+
+func versionBC() -> string:
+    <- B.versionC()

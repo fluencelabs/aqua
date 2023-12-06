@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["es2015", "dom"],
+    "declaration": true,
+    "outDir": "dist",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "esModuleInterop": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "skipLibCheck": true
+  },
+  "exclude": ["node_modules", "dist", "bundle"],
+  "include": ["__test__/**/*"],
+  "ts-node": {
+    "esm": true
+  }
+}
