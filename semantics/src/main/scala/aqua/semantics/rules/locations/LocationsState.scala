@@ -8,9 +8,8 @@ case class LocationsState[S[_]](
   variables: List[VariableInfo[S]] = Nil
 ) extends Logging {
 
-  def addDefinitions(newDefinitions: List[DefinitionInfo[S]]): LocationsState[S] = {
+  def addDefinitions(newDefinitions: List[DefinitionInfo[S]]): LocationsState[S] =
     copy(variables = newDefinitions.map(d => VariableInfo(d)) ++ variables)
-  }
 
   def addDefinition(newDef: DefinitionInfo[S]): LocationsState[S] =
     copy(variables = VariableInfo(newDef) +: variables)
@@ -39,11 +38,10 @@ case class LocationsState[S[_]](
 
   def addLocations(
     locations: List[(String, Token[S])]
-  ): LocationsState[S] = {
+  ): LocationsState[S] =
     locations.foldLeft(this) { case (st, (name, token)) =>
       st.copy(variables = addOccurrenceToFirst(variables, name, token))
     }
-  }
 }
 
 object LocationsState {

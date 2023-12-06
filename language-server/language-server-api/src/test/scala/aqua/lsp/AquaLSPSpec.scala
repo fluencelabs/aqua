@@ -134,11 +134,11 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       )
     )
 
-    println(res.allLocations.map { case TokenLocation(l, r) =>
+    /*println(res.allLocations.map { case TokenLocation(l, r) =>
       val lSpan = l.unit._1
       val rSpan = r.unit._1
       s"($l($lSpan):$r($rSpan))"
-    })
+    })*/
 
     // inside `foo_wrapper` func
     res.checkTokenLoc("z", 120, 121, ScalarType.string) shouldBe true
