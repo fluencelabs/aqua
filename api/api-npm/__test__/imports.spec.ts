@@ -1,6 +1,10 @@
 import { gatherImportsFromNpm } from "../imports.js";
 
 describe("imports", () => {
+  /**
+   * NOTE: This test expects that `npm i` is run
+   * inside `./__test__/data/transitive-deps/project` folder
+   */
   it("should resolve transitive dependencies", async () => {
     const imports = await gatherImportsFromNpm(
       "./__test__/data/transitive-deps/project",
