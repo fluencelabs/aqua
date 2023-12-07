@@ -4,14 +4,12 @@ import aqua.errors.Errors.internalError
 import aqua.parser.lexer.{Name, Token}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.locations.{LocationsAlgebra, DefinitionInfo}
+import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra}
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.types.{ArrowType, StreamType, Type}
+
 import cats.data.{OptionT, State}
 import cats.syntax.all.*
-import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
 import monocle.Lens
 import monocle.macros.GenLens
 
@@ -122,7 +120,7 @@ class NamesInterpreter[S[_], X](using
   override def derive(name: Name[S], `type`: Type, derivedFrom: Set[String]): State[X, Boolean] =
     define(name, `type`).flatTap(defined =>
       mapStackHead_(_.derived(name, derivedFrom)).whenA(defined)
-    ) <* locations.addDefinition(DefinitionInfo(name.value, name, `type`))
+    )
 
   override def getDerivedFrom(fromNames: List[Set[String]]): State[X, List[Set[String]]] =
     mapStackHead(Nil)(frame =>
@@ -165,8 +163,10 @@ class NamesInterpreter[S[_], X](using
             report
               .error(name, "Cannot define a variable in the root scope")
               .as(false)
-        )(fr => (fr.addArrow(name, arrowType) -> true).pure)
-    }.flatTap(_ => locations.addDefinition(DefinitionInfo[S](name.value, name, arrowType)))
+        )(fr => (fr.addArrow(name, arrowType) -> true).pure).flatTap(_ =>
+          locations.addDefinition(DefinitionInfo[S](name.value, name, arrowType))
+        )
+    }
 
   override def streamsDefinedWithinScope(): SX[Map[String, StreamType]] =
     mapStackHead(Map.empty) { frame =>
