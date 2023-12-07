@@ -63,7 +63,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     ): Boolean = {
 
       getByPosition(code, checkName, position).exists { case (start, end) =>
-        val res = c.allVariablesMerged.exists { case VariableInfo(definition, _) =>
+        val res = c.variables.exists { case VariableInfo(definition, _) =>
           val span = definition.token.unit._1
           definition.name == fullName.getOrElse(
             checkName
@@ -72,7 +72,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
 
         if (printFiltered)
           println(
-            c.allVariablesMerged
+            c.variables
               .map(_.definition)
               .filter(v => v.name == fullName.getOrElse(checkName) && v.`type` == `type`)
               .map { case DefinitionInfo(name, token, t) =>

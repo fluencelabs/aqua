@@ -21,13 +21,6 @@ case class LspContext[S[_]](
   warnings: List[SemanticWarning[S]] = Nil
 ) {
   lazy val allLocations: List[TokenLocation[S]] = variables.flatMap(_.allLocations)
-  // there can be duplicates of variables with the same token
-  lazy val allVariablesMerged: List[VariableInfo[S]] = variables.foldLeft(Map.empty[Token[S], VariableInfo[S]]) {
-    case (acc, vi) =>
-      acc.updated(vi.definition.token, acc.get(vi.definition.token).map { v =>
-        v.copy(occurrences = v.occurrences ++ vi.occurrences)
-      }.getOrElse(vi))
-  }.toList.map(_._2)
 }
 
 object LspContext {
