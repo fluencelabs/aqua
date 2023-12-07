@@ -78,12 +78,12 @@ jobs:
           registry-url: "https://npm.fluence.dev"
           cache: "pnpm"
 
-      - run: pnpm -r i
+      - run: pnpm --filter='!integration-tests' -r i
 
       - name: Set package version
         run: node ci.cjs bump-version ${{ steps.version.outputs.id }}
 
-      - run: pnpm -r build
+      - run: pnpm --filter='!integration-tests' -r build
 
       - name: Publish snapshot
         id: snapshot

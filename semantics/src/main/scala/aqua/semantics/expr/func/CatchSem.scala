@@ -42,6 +42,4 @@ class CatchSem[S[_]](val expr: CatchExpr[S]) extends AnyVal {
       )
       .abilitiesScope[S](expr.token)
       .namesScope(expr.token)
-      .locationsScope()
-
 }

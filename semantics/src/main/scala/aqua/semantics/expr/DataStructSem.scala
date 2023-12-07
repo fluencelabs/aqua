@@ -22,7 +22,7 @@ class DataStructSem[S[_]](val expr: DataStructExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] =
     Prog.after((_: Raw) =>
       for {
-        defs <- D.purgeDefs(expr.name)
+        defs <- D.purgeDefs()
         fields = defs.view.mapValues(d => d.name -> d.`type`).toMap
         structType <- T.defineStructType(expr.name, fields)
         result = structType.map(st => TypeRaw(expr.name.value, st))

@@ -8,14 +8,9 @@ import aqua.raw.value.VarRaw
 import aqua.semantics.Prog
 import aqua.semantics.rules.names.NamesAlgebra
 import aqua.semantics.rules.types.TypesAlgebra
-import aqua.types.*
 
 import cats.Monad
-import cats.data.Chain
 import cats.data.OptionT
-import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
-import cats.syntax.functor.*
 
 class DeclareStreamSem[S[_]](val expr: DeclareStreamExpr[S]) {
 

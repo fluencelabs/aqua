@@ -1,33 +1,23 @@
 package aqua.run
 
-import aqua.Rendering.given
-import aqua.compiler.{AquaCompiler, AquaCompilerConf, CompileResult, CompilerAPI}
+import aqua.compiler.{AquaCompilerConf, CompileResult, CompilerAPI}
 import aqua.files.{AquaFileSources, FileModuleId}
-import aqua.{AquaIO, SpanParser}
-import aqua.io.{AquaFileError, AquaPath, PackagePath, Prelude}
+import aqua.io.{AquaFileError, AquaPath, PackagePath}
 import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow}
 import aqua.parser.lift.FileSpan
-import aqua.run.CliFunc
+import aqua.{AquaIO, SpanParser}
 
-import cats.data.Validated.{invalidNec, validNec}
-import cats.data.{Chain, NonEmptyList, Validated, ValidatedNec}
-import cats.effect.IO
+import cats.data.{Chain, ValidatedNec}
 import cats.effect.kernel.{Async, Clock}
 import cats.syntax.applicative.*
+import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.monad.*
-import cats.syntax.show.*
-import cats.syntax.traverse.*
 import cats.syntax.option.*
-import cats.syntax.either.*
-import cats.syntax.validated.*
-import cats.syntax.apply.*
+import cats.syntax.traverse.*
 import fs2.io.file.{Files, Path}
 import scribe.Logging
-
-import scala.concurrent.duration.Duration
 
 class FuncCompiler[F[_]: Files: AquaIO: Async](
   input: Option[AquaPath],

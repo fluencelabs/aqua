@@ -1,26 +1,55 @@
 package aqua.semantics.rules.locations
 
+import aqua.helpers.syntax.list.*
 import aqua.parser.lexer.Token
-import aqua.semantics.rules.types.TypesState
+
 import cats.kernel.Monoid
+import scribe.Logging
 
 case class LocationsState[S[_]](
-  tokens: Map[String, Token[S]] = Map.empty[String, Token[S]],
-  locations: List[(Token[S], Token[S])] = Nil,
-  stack: List[LocationsState[S]] = Nil
-) {
+  variables: List[VariableInfo[S]] = Nil
+) extends Logging {
 
-  lazy val allLocations: List[(Token[S], Token[S])] = locations
+  def addDefinitions(newDefinitions: List[DefinitionInfo[S]]): LocationsState[S] =
+    copy(variables = newDefinitions.map(d => VariableInfo(d)) ++ variables)
+
+  def addDefinition(newDef: DefinitionInfo[S]): LocationsState[S] =
+    copy(variables = VariableInfo(newDef) +: variables)
+
+  private def addOccurrenceToFirst(
+    vars: List[VariableInfo[S]],
+    name: String,
+    token: Token[S]
+  ): List[VariableInfo[S]] = {
+    if (!vars.exists(_.definition.name == name))
+      logger.error(s"Unexpected. Cannot add occurrence for $name")
+
+    vars.updateFirst(_.definition.name == name, v => v.copy(occurrences = token +: v.occurrences))
+  }
+
+  def addLocation(
+    name: String,
+    token: Token[S]
+  ): LocationsState[S] =
+    copy(variables = addOccurrenceToFirst(variables, name, token))
+
+  def addLocations(
+    locations: List[(String, Token[S])]
+  ): LocationsState[S] =
+    locations.foldLeft(this) { case (st, (name, token)) =>
+      st.addLocation(name, token)
+    }
 }
 
 object LocationsState {
 
-  implicit def locationsStateMonoid[S[_]]: Monoid[LocationsState[S]] = new Monoid[LocationsState[S]] {
-    override def empty: LocationsState[S] = LocationsState()
+  implicit def locationsStateMonoid[S[_]]: Monoid[LocationsState[S]] =
+    new Monoid[LocationsState[S]] {
+      override def empty: LocationsState[S] = LocationsState()
 
-    override def combine(x: LocationsState[S], y: LocationsState[S]): LocationsState[S] =
-      LocationsState(
-        tokens = x.tokens ++ y.tokens
-      )
-  }
+      override def combine(x: LocationsState[S], y: LocationsState[S]): LocationsState[S] =
+        LocationsState(
+          variables = x.variables ++ y.variables
+        )
+    }
 }

@@ -4,15 +4,15 @@ import aqua.errors.Errors.internalError
 import aqua.types.*
 import aqua.types.Type.*
 
-import cats.data.NonEmptyList
 import cats.data.NonEmptyMap
 import cats.syntax.applicative.*
 import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
 import cats.syntax.partialOrder.*
+import cats.syntax.show.*
 import cats.syntax.traverse.*
-import cats.{Eval, Foldable, Functor, PartialOrder, Traverse}
+import cats.{Eval, Foldable, Functor, PartialOrder, Show, Traverse}
 import scala.collection.immutable.SortedMap
 
 sealed trait Type {
@@ -282,7 +282,8 @@ object CollectionType {
       .map[Type] {
         case StreamType(el) => ArrayType(el)
         case dt: DataType => dt
-      }.reduceLeftOption(_ `∩` _)
+      }
+      .reduceLeftOption(_ `∩` _)
       .map {
         // In case we mix values of uncomparable types, intersection returns bottom, meaning "uninhabited type".
         // But we want to get to TopType instead: this would mean that intersection is empty, and you cannot
@@ -516,4 +517,48 @@ object Type {
 
   given PartialOrder[Type] =
     CompareTypes.partialOrder
+
+  given Show[DataType] = {
+    case LiteralType.signed =>
+      "i32"
+    case LiteralType.unsigned =>
+      "u32"
+    case LiteralType.number =>
+      "u32"
+    case LiteralType.float =>
+      "f32"
+    case LiteralType.string =>
+      "string"
+    case LiteralType.bool =>
+      "bool"
+    case t =>
+      t.toString
+  }
+
+  // pretty print for Type
+  given Show[Type] = {
+    case ArrayType(el) =>
+      s"[]${el.show}"
+    case OptionType(el) =>
+      s"?${el.show}"
+    case StreamType(el) =>
+      s"*${el.show}"
+    case ArrowType(domain, codomain) =>
+      val domainStr = domain match {
+        case _: LabeledConsType =>
+          domain.toLabelledList().map { case (s, t) => s"$s: ${t.show}" }.mkString("(", ", ", ")")
+        case _ => domain.toList.mkString("(", ", ", ")")
+      }
+      val codomainStr = codomain.toList match {
+        case Nil => ""
+        case l => " -> " + l.mkString(", ")
+      }
+      domainStr + codomainStr
+    case nt: NamedType =>
+      s"${nt.fullName}(${nt.fields.map(_.show).toNel.toList.map(kv => kv._1 + ": " + kv._2).mkString(", ")})"
+    case t: DataType =>
+      t.show
+    case t =>
+      t.toString
+  }
 }

@@ -56,5 +56,4 @@ class IfSem[S[_]](val expr: IfExpr[S]) extends AnyVal {
       )
       .abilitiesScope[S](expr.token)
       .namesScope[S](expr.token)
-      .locationsScope()
 }

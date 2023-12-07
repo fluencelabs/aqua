@@ -17,6 +17,15 @@ case class FileSpan(name: String, locationMap: Eval[LocationMap], span: Span) {
    */
   def focus(ctx: Int): Option[FileSpan.Focus] =
     span.focus(locationMap.value, ctx).map(FileSpan.Focus(name, locationMap, ctx, _))
+
+  override def hashCode(): Int = (name, span).hashCode()
+  
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case FileSpan(n, _, s) => n == name && s == span
+      case _ => false
+    }
+  }
 }
 
 object FileSpan {

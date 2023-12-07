@@ -22,7 +22,7 @@
     "pubsub": "node -r ts-node/register src/pubsub.ts",
     "exec": "npm run compile-aqua && npm run prettify-compiled && node -r ts-node/register src/index.ts",
     "run": "node -r ts-node/register src/index.ts",
-    "compile-aqua": "ts-node ./src/compile.ts",
+    "compile-aqua": "node --loader ts-node/esm ./src/compile.ts",
     "compile-aqua:air": "aqua -i ./aqua/ -o ./compiled-air -a",
     "prettify-compiled": "prettier --write src/compiled",
     "prettify": "prettier --write src",

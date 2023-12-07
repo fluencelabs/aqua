@@ -28,7 +28,7 @@ class AbilitySem[S[_]](val expr: AbilityExpr[S]) extends AnyVal {
   ): Prog[Alg, Raw] = {
     Prog.after_(
       for {
-        defs <- D.purgeDefs(expr.name)
+        defs <- D.purgeDefs()
         fields = defs.view.mapValues(d => d.name -> d.`type`).toMap
         abilityType <- T.defineAbilityType(expr.name, fields)
         result = abilityType.map(st => TypeRaw(expr.name.value, st))

@@ -1,9 +1,7 @@
 package aqua.semantics.rules
 
-import aqua.errors.Errors.internalError
 import aqua.helpers.syntax.optiont.*
 import aqua.parser.lexer.*
-import aqua.parser.lexer.InfixToken.value
 import aqua.parser.lexer.InfixToken.{BoolOp, CmpOp, EqOp, MathOp, Op as InfOp}
 import aqua.parser.lexer.PrefixToken.Op as PrefOp
 import aqua.raw.value.*

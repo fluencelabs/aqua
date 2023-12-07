@@ -1,10 +1,10 @@
 package aqua.parser
 
+import aqua.helpers.tree.Tree
 import aqua.parser.expr.*
 import aqua.parser.head.{HeadExpr, HeaderExpr}
 import aqua.parser.lift.{LiftParser, Span}
 import aqua.parser.lift.LiftParser.*
-import aqua.helpers.Tree
 
 import cats.data.{Chain, Validated, ValidatedNec}
 import cats.syntax.flatMap.*

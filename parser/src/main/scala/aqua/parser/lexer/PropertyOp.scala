@@ -61,7 +61,7 @@ case class IntoCopy[F[_]: Comonad](
 object PropertyOp {
 
   private val parseField: P[PropertyOp[Span.S]] =
-    (`.` *> anyName).lift.map(IntoField(_))
+    `.` *> anyName.lift.map(IntoField(_))
 
   val parseArrow: P[PropertyOp[Span.S]] =
     (`.` *> CallArrowToken.callBraces).map { case CallBraces(name, abilities, args) =>

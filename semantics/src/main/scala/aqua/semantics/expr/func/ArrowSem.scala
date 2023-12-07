@@ -137,7 +137,6 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
     T: TypesAlgebra[S, Alg],
     N: NamesAlgebra[S, Alg],
     A: AbilitiesAlgebra[S, Alg],
-    L: LocationsAlgebra[S, Alg],
     M: ManglerAlgebra[Alg]
   ): Prog[Alg, Raw] =
     Prog
@@ -147,6 +146,4 @@ class ArrowSem[S[_]](val expr: ArrowExpr[S]) extends AnyVal {
       )
       .abilitiesScope(expr.arrowTypeExpr)
       .namesScope(expr.arrowTypeExpr)
-      .locationsScope()
-
 }

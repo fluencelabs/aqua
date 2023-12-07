@@ -37,5 +37,4 @@ class TrySem[S[_]](val expr: TryExpr[S]) extends AnyVal {
       )
       .abilitiesScope(expr.token)
       .namesScope(expr.token)
-      .locationsScope()
 }

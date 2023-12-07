@@ -6,6 +6,11 @@ export interface TokenLocation {
     endCol: number
 }
 
+export interface TokenInfo {
+    location: TokenLocation,
+    type: string
+}
+
 export interface TokenLink {
     current: TokenLocation,
     definition: TokenLocation
@@ -36,7 +41,8 @@ export interface CompilationResult {
     errors: ErrorInfo[],
     warnings: WarningInfo[],
     locations: TokenLink[],
-    importLocations: TokenImport[]
+    importLocations: TokenImport[],
+    tokens: TokenInfo[]
 }
 
 export class Compiler {
