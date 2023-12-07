@@ -52,5 +52,3 @@ jobs:
     needs:
       - fcli-snapshot
     uses: fluencelabs/registry/.github/workflows/tests.yml@main
-    with:
-      fcli-version: "${{ needs.fcli-snapshot.outputs.version }}"
