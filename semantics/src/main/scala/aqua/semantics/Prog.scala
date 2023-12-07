@@ -38,14 +38,6 @@ sealed abstract class Prog[Alg[_]: Monad, A] extends (Alg[A] => Alg[A]) {
         (_: Unit, m: A) => N.endScope() as m
       )
     )
-
-  def locationsScope[S[_]]()(implicit L: LocationsAlgebra[S, Alg]): Prog[Alg, A] =
-    wrap(
-      RunAround(
-        L.beginScope(),
-        (_: Unit, m: A) => L.endScope() as m
-      )
-    )
 }
 
 case class RunAfter[Alg[_]: Monad, A](prog: Alg[A]) extends Prog[Alg, A] {

@@ -3,14 +3,14 @@ package aqua.semantics.rules.types
 import aqua.parser.lexer.*
 import aqua.raw.value.*
 import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.locations.LocationsAlgebra
+import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra}
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.types.TypeResolution.TypeResolutionError
 import aqua.types.*
 import aqua.types.Type.*
 
+import cats.data.*
 import cats.data.Validated.{Invalid, Valid}
-import cats.data.{Chain, NonEmptyList, NonEmptyMap, OptionT, State}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
@@ -97,7 +97,8 @@ class TypesInterpreter[S[_], X](using
           nonEmptyFields =>
             val `type` = AbilityType(name.value, nonEmptyFields)
 
-            modify(_.defineType(name, `type`)).as(`type`.some)
+            locateNamedType(name, `type`, fields) >> modify(_.defineType(name, `type`))
+              .as(`type`.some)
         )
     }
 
@@ -131,8 +132,18 @@ class TypesInterpreter[S[_], X](using
       ).semiflatMap(nonEmptyArrows =>
         val `type` = ServiceType(name.value, nonEmptyArrows)
 
-        modify(_.defineType(name, `type`)).as(`type`)
+        locateNamedType(name, `type`, fields) >> modify(_.defineType(name, `type`)).as(`type`)
       ).value
+    )
+
+  private def locateNamedType(
+    name: NamedTypeToken[S],
+    t: NamedType,
+    fields: Map[String, (Name[S], Type)]
+  ) =
+    locations.addDefinitionWithFields(
+      DefinitionInfo[S](name.value, name, t),
+      fields.map { case (n, (t, ty)) => DefinitionInfo[S](n, t, ty) }.toList
     )
 
   override def defineStructType(
@@ -159,7 +170,8 @@ class TypesInterpreter[S[_], X](using
             )(nonEmptyFields =>
               val `type` = StructType(name.value, nonEmptyFields)
 
-              modify(_.defineType(name, `type`)).as(`type`.some)
+              locateNamedType(name, `type`, fields) >> modify(_.defineType(name, `type`))
+                .as(`type`.some)
             )
         )
     )
@@ -170,7 +182,7 @@ class TypesInterpreter[S[_], X](using
       case Some(_) => report.error(name, s"Type `${name.value}` was already defined").as(false)
       case None =>
         modify(_.defineType(name, target))
-          .productL(locations.addToken(name.value, name))
+          .productL(locations.addDefinition(DefinitionInfo(name.value, name.asName, target)))
           .as(true)
     }
 

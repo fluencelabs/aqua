@@ -1,12 +1,10 @@
 package aqua.lsp
 
 import aqua.parser.lexer.Token
-import aqua.semantics.rules.StackInterpreter
-import aqua.semantics.rules.locations.{LocationsAlgebra, LocationsState}
-
+import aqua.semantics.rules.locations.{DefinitionInfo, LocationsAlgebra, LocationsState}
+import aqua.types.AbilityType
 import cats.data.State
 import monocle.Lens
-import monocle.macros.GenLens
 import scribe.Logging
 
 class LocationsInterpreter[S[_], X](using
@@ -15,30 +13,25 @@ class LocationsInterpreter[S[_], X](using
 
   type SX[A] = State[X, A]
 
-  val stack = new StackInterpreter[S, X, LocationsState[S], LocationsState[S]](
-    GenLens[LocationsState[S]](_.stack)
-  )
-
-  import stack.*
-
-  override def addToken(name: String, token: Token[S]): State[X, Unit] = modify { st =>
-    st.copy(tokens = st.tokens.updated(name, token))
+  override def addDefinition(definition: DefinitionInfo[S]): State[X, Unit] = modify { st =>
+    st.addDefinition(definition)
   }
 
-  private def combineFieldName(name: String, field: String): String = name + "." + field
-
-  override def addTokenWithFields(
-    name: String,
-    token: Token[S],
-    fields: List[(String, Token[S])]
-  ): State[X, Unit] = modify { st =>
-    st.copy(tokens =
-      st.tokens ++ ((name, token) +: fields.map(kv => (combineFieldName(name, kv._1), kv._2))).toMap
-    )
+  override def addDefinitionWithFields(
+    definition: DefinitionInfo[S],
+    fields: List[DefinitionInfo[S]]
+  ): State[X, Unit] = {
+    val allTokens =
+      definition +: fields.map { fieldDef =>
+        fieldDef.copy(name = AbilityType.fullName(definition.name, fieldDef.name))
+      }
+    modify { st =>
+      st.addDefinitions(allTokens)
+    }
   }
 
   def pointFieldLocation(typeName: String, fieldName: String, token: Token[S]): State[X, Unit] =
-    pointLocation(combineFieldName(typeName, fieldName), token)
+    pointLocation(AbilityType.fullName(typeName, fieldName), token)
 
   def pointTokenWithFieldLocation(
     typeName: String,
@@ -48,37 +41,21 @@ class LocationsInterpreter[S[_], X](using
   ): State[X, Unit] = {
     for {
       _ <- pointLocation(typeName, typeToken)
-      _ <- pointLocation(combineFieldName(typeName, fieldName), token)
+      _ <- pointLocation(AbilityType.fullName(typeName, fieldName), token)
     } yield {}
   }
 
   override def pointLocation(name: String, token: Token[S]): State[X, Unit] = {
     modify { st =>
-      val newLoc: Option[Token[S]] = st.stack.collectFirst {
-        case frame if frame.tokens.contains(name) => frame.tokens(name)
-      } orElse st.tokens.get(name)
-      st.copy(locations = st.locations ++ newLoc.map(token -> _).toList)
+      st.addLocation(name, token)
     }
   }
 
-  def pointLocations(locations: List[(String, Token[S])]): State[X, Unit] = {
+  def pointLocations(locations: List[(String, Token[S])]): State[X, Unit] =
     modify { st =>
-
-      val newLocs = locations.flatMap { case (name, token) =>
-        (st.stack.collectFirst {
-          case frame if frame.tokens.contains(name) => frame.tokens(name)
-        } orElse st.tokens.get(name)).map(token -> _)
-      }
-
-      st.copy(locations = st.locations ++ newLocs)
+      st.addLocations(locations)
     }
-  }
 
   private def modify(f: LocationsState[S] => LocationsState[S]): SX[Unit] =
     State.modify(lens.modify(f))
-
-  override def beginScope(): SX[Unit] =
-    stack.beginScope(LocationsState[S]())
-
-  override def endScope(): SX[Unit] = stack.endScope
 }

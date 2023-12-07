@@ -1,6 +1,6 @@
 import BundleJS.*
 
-val aquaVersion = "0.13.0"
+val aquaVersion = "0.13.1"
 
 val scalaV = "3.3.1"
 val catsV = "2.10.0"
@@ -83,7 +83,7 @@ lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
 lazy val `language-server-apiJS` = `language-server-api`.js
   .settings(
     scalaJSLinkerConfig             ~= (_.withModuleKind(ModuleKind.CommonJSModule)),
-    scalaJSUseMainModuleInitializer := true
+    scalaJSUseMainModuleInitializer := false
   )
   .settings(addBundleJS("../../language-server-npm/aqua-lsp-api.js"))
   .enablePlugins(ScalaJSPlugin)

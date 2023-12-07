@@ -6,15 +6,12 @@ import aqua.raw.RawContext
 import aqua.semantics.header.{HeaderHandler, HeaderSem}
 
 import cats.data.Validated.validNec
-import cats.syntax.semigroup.*
-import cats.syntax.applicative.*
-import cats.syntax.flatMap.*
+import cats.data.{Chain, Validated, ValidatedNec}
+import cats.syntax.either.*
 import cats.syntax.functor.*
 import cats.syntax.monoid.*
-import cats.syntax.traverse.*
-import cats.syntax.either.*
+import cats.syntax.semigroup.*
 import cats.{Comonad, Monad, Monoid, Order}
-import cats.data.{Chain, NonEmptyChain, Validated, ValidatedNec}
 
 object LSPCompiler {
 

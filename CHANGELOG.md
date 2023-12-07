@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.13.1](https://github.com/fluencelabs/aqua/compare/aqua-v0.13.0...aqua-v0.13.1) (2023-12-07)
+
+
+### Features
+
+* **language-server:** Pass token types to LSP [LNG-285] ([#999](https://github.com/fluencelabs/aqua/issues/999)) ([74d02e1](https://github.com/fluencelabs/aqua/commit/74d02e1f63766ffc0f849f3d6e262030bc0deab8))
+
+
+### Bug Fixes
+
+* **compiler:** Allow returning resolved service as ability [LNG-266] ([#977](https://github.com/fluencelabs/aqua/issues/977)) ([2d4b2ae](https://github.com/fluencelabs/aqua/commit/2d4b2aece471f1879fd7e84d23b2a2ad593dac69))
+* **compiler:** Use correct empty stream as argument [LNG-280, LNG-292] ([#967](https://github.com/fluencelabs/aqua/issues/967)) ([4cecab1](https://github.com/fluencelabs/aqua/commit/4cecab1a260103b57e7b0f8f1ddcc402ce189fac))
+* **deps:** update dependency @fluencelabs/js-client to v0.5.3 ([#978](https://github.com/fluencelabs/aqua/issues/978)) ([9d0fb2b](https://github.com/fluencelabs/aqua/commit/9d0fb2b84124912bdcb4bc38aae6b6c1cd5d59f7))
+* **e2e:** Use `main` branch for `fcli` ([#987](https://github.com/fluencelabs/aqua/issues/987)) ([b24fcf6](https://github.com/fluencelabs/aqua/commit/b24fcf686f326c2702edf6a7dfbc45ad1df9562d))
+* **tests:** Fix imports in integration tests ([#998](https://github.com/fluencelabs/aqua/issues/998)) ([e65836e](https://github.com/fluencelabs/aqua/commit/e65836e3c869009786b7f7722879752d2176e04e))
+
 ## [0.13.0](https://github.com/fluencelabs/aqua/compare/aqua-v0.12.4...aqua-v0.13.0) (2023-11-22)
 
 

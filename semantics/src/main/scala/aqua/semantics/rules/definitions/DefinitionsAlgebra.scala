@@ -9,7 +9,7 @@ import cats.data.{NonEmptyList, NonEmptyMap}
 trait DefinitionsAlgebra[S[_], Alg[_]] {
   def defineDef(name: Name[S], `type`: Type): Alg[Boolean]
 
-  def purgeDefs(token: NamedTypeToken[S]): Alg[Map[String, DefinitionsState.Def[S]]]
+  def purgeDefs(): Alg[Map[String, DefinitionsState.Def[S]]]
 
   def defineArrow(arrow: Name[S], `type`: ArrowType): Alg[Boolean]
 

@@ -49,7 +49,7 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
         definitions = rawState.abilities.definitions ++ init.abDefinitions
       ),
       locations = rawState.locations.copy(
-        tokens = rawState.locations.tokens ++ init.tokens
+        variables = rawState.locations.variables ++ init.variables
       )
     )
 
@@ -69,9 +69,8 @@ class LspSemantics[S[_]] extends Semantics[S, LspContext[S]] {
           rootArrows = state.names.rootArrows,
           constants = state.names.constants,
           abDefinitions = state.abilities.definitions,
-          locations = state.locations.allLocations,
           importTokens = importTokens,
-          tokens = state.locations.tokens,
+          variables = state.locations.variables,
           errors = state.errors.toList,
           warnings = state.warnings.toList
         ).pure[Result]

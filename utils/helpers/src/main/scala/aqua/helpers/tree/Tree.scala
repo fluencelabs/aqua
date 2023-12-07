@@ -1,13 +1,9 @@
-package aqua.helpers
+package aqua.helpers.tree
 
-import cats.data.Chain
 import cats.free.Cofree
-import cats.Traverse
-import cats.Show
-import cats.Eval
-import cats.syntax.show.*
-import cats.syntax.traverse.*
 import cats.syntax.foldable.*
+import cats.syntax.show.*
+import cats.{Eval, Show, Traverse}
 
 object Tree {
 

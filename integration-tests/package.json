@@ -22,7 +22,7 @@
     "pubsub": "node -r ts-node/register src/pubsub.ts",
     "exec": "npm run compile-aqua && npm run prettify-compiled && node -r ts-node/register src/index.ts",
     "run": "node -r ts-node/register src/index.ts",
-    "compile-aqua": "ts-node ./src/compile.ts",
+    "compile-aqua": "node --loader ts-node/esm ./src/compile.ts",
     "compile-aqua:air": "aqua -i ./aqua/ -o ./compiled-air -a",
     "prettify-compiled": "prettier --write src/compiled",
     "prettify": "prettier --write src",
@@ -31,7 +31,7 @@
   },
   "prettier": {},
   "devDependencies": {
-    "@fluencelabs/aqua-api": "0.13.0",
+    "@fluencelabs/aqua-api": "0.13.1",
     "@fluencelabs/aqua-dht": "0.2.5",
     "@fluencelabs/aqua-lib": "0.8.1",
     "@types/jest": "29.5.2",
