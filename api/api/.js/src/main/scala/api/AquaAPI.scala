@@ -72,8 +72,6 @@ object AquaAPI extends App with Logging {
       .traverse { config =>
         val importsMap = imports.mapValues(_.toList).toMap
 
-        println(s"Imports Map: $importsMap")
-
         input match {
           case i: (types.Input | types.Path) =>
             compileAll(i, importsMap, config)

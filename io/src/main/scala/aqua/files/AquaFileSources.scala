@@ -41,8 +41,6 @@ trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileErro
 
   private def gatherImportsFor(id: FileModuleId): List[Path] = {
     val idNorm = id.file.normalize.absolute
-    println(s"Gathering imports for ${id}, normalzied to ${idNorm}")
-    println(s"Imports: ${imports}")
     val matchedImports = imports.toList.map { case (prefix, paths) =>
       prefix.normalize.absolute -> paths
     }.filter { case (prefix, _) =>
@@ -51,16 +49,10 @@ trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileErro
       prefix.toString.length
     }.reverse.flatMap { case (_, paths) => paths }
 
-    println(s"Matched imports: $matchedImports")
-
     // TODO: Check if `idNorm` is a dir already?
     val idDir = idNorm.parent
 
-    val result = matchedImports.prependedAll(idDir)
-
-    println(s"Result: $result")
-
-    result
+    matchedImports.prependedAll(idDir)
   }
 }
 
