@@ -1,22 +1,20 @@
 package aqua.semantics.rules.abilities
 
-import aqua.parser.lexer.{Name, NamedTypeToken, Token, ValueToken}
+import aqua.parser.lexer.{Name, NamedTypeToken, Token}
+import aqua.raw.RawContext
 import aqua.raw.value.ValueRaw
-import aqua.raw.{RawContext, ServiceRaw}
 import aqua.semantics.Levenshtein
 import aqua.semantics.rules.locations.LocationsAlgebra
 import aqua.semantics.rules.mangler.ManglerAlgebra
 import aqua.semantics.rules.report.ReportAlgebra
 import aqua.semantics.rules.{StackInterpreter, abilities}
-import aqua.types.{ArrowType, ServiceType}
+import aqua.types.ArrowType
 
 import cats.data.{NonEmptyMap, State}
 import cats.syntax.applicative.*
 import cats.syntax.apply.*
-import cats.syntax.foldable.*
 import cats.syntax.functor.*
 import cats.syntax.option.*
-import cats.syntax.traverse.*
 import monocle.Lens
 import monocle.macros.GenLens
 

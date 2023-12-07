@@ -1,6 +1,8 @@
 package aqua.semantics.rules.locations
 
+import aqua.helpers.syntax.list.*
 import aqua.parser.lexer.Token
+
 import cats.kernel.Monoid
 import scribe.Logging
 
@@ -18,29 +20,24 @@ case class LocationsState[S[_]](
     vars: List[VariableInfo[S]],
     name: String,
     token: Token[S]
-  ): List[VariableInfo[S]] = vars match {
-    case Nil =>
+  ): List[VariableInfo[S]] = {
+    if (!vars.exists(_.definition.name == name))
       logger.error(s"Unexpected. Cannot add occurrence for $name")
-      Nil
-    case head :: tail =>
-      if (head.definition.name == name)
-        head.copy(occurrences = token +: head.occurrences) :: tail
-      else
-        head :: addOccurrenceToFirst(tail, name, token)
+
+    vars.updateFirst(_.definition.name == name, v => v.copy(occurrences = token +: v.occurrences))
   }
 
   def addLocation(
     name: String,
     token: Token[S]
-  ): LocationsState[S] = {
+  ): LocationsState[S] =
     copy(variables = addOccurrenceToFirst(variables, name, token))
-  }
 
   def addLocations(
     locations: List[(String, Token[S])]
   ): LocationsState[S] =
     locations.foldLeft(this) { case (st, (name, token)) =>
-      st.copy(variables = addOccurrenceToFirst(variables, name, token))
+      st.addLocation(name, token)
     }
 }
 

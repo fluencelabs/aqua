@@ -129,7 +129,7 @@ object ResultHelper extends Logging {
       warnings.toJSArray,
       locationsToJs(lsp.variables.flatMap(v => v.allLocations)),
       importsToTokenImport(lsp.importTokens),
-      tokensToJs(lsp.variables.map(_.definition))
+      tokensToJs(lsp.allVariablesMerged.map(_.definition))
     )
   }
 }

@@ -5,8 +5,9 @@ import aqua.parser.Parser
 import aqua.parser.lift.Span
 import aqua.parser.lift.Span.S
 import aqua.raw.ConstantRaw
-import aqua.semantics.rules.locations.{TokenLocation, VariableInfo}
+import aqua.semantics.rules.locations.{DefinitionInfo, TokenLocation, VariableInfo}
 import aqua.types.*
+
 import cats.Id
 import cats.data.*
 import cats.instances.string.*
@@ -16,38 +17,73 @@ import org.scalatest.matchers.should.Matchers
 
 class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
 
+  private def getByPosition(code: String, str: String, position: Int): Option[(Int, Int)] = {
+    str.r.findAllMatchIn(code).toList.lift(position).map(r => (r.start, r.end))
+  }
+
   extension (c: LspContext[Span.S]) {
 
     def checkLocations(
-      defStart: Int,
-      defEnd: Int,
-      useStart: Int,
-      useEnd: Int
-    ): Boolean =
-      c.allLocations.exists { case TokenLocation(useT, defT) =>
-        val defSpan = defT.unit._1
-        val useSpan = useT.unit._1
-        defSpan.startIndex == defStart && defSpan.endIndex == defEnd && useSpan.startIndex == useStart && useSpan.endIndex == useEnd
+      name: String,
+      defPosition: Int,
+      usePosition: Int,
+      defCode: String,
+      useCode: Option[String] = None,
+      fieldName: Option[String] = None
+    ): Boolean = {
+      (for {
+        defPos <- getByPosition(defCode, name, defPosition)
+        usePos <- getByPosition(useCode.getOrElse(defCode), fieldName.getOrElse(name), usePosition)
+      } yield {
+        val (defStart, defEnd) = defPos
+        val (useStart, useEnd) = usePos
+        c.allLocations.exists { case TokenLocation(useT, defT) =>
+          val defSpan = defT.unit._1
+          val useSpan = useT.unit._1
+          defSpan.startIndex == defStart && defSpan.endIndex == defEnd && useSpan.startIndex == useStart && useSpan.endIndex == useEnd
+        }
+      }).getOrElse(false)
+    }
+
+    def locationsToString(): List[String] =
+      c.allLocations.map { case TokenLocation(l, r) =>
+        val lSpan = l.unit._1
+        val rSpan = r.unit._1
+        s"($l($lSpan):$r($rSpan))"
       }
 
     def checkTokenLoc(
+      code: String,
       checkName: String,
-      start: Int,
-      end: Int,
-      `type`: Type
+      position: Int,
+      `type`: Type,
+      // if name is combined
+      fullName: Option[String] = None,
+      printFiltered: Boolean = false
     ): Boolean = {
-      val res = c.variables.exists { case VariableInfo(definition, _) =>
-        val span = definition.token.unit._1
-        definition.name == checkName && span.startIndex == start && span.endIndex == end && definition.`type` == `type`
+
+      getByPosition(code, checkName, position).exists { case (start, end) =>
+        val res = c.allVariablesMerged.exists { case VariableInfo(definition, _) =>
+          val span = definition.token.unit._1
+          definition.name == fullName.getOrElse(
+            checkName
+          ) && span.startIndex == start && span.endIndex == end && definition.`type` == `type`
+        }
+
+        if (printFiltered)
+          println(
+            c.allVariablesMerged
+              .map(_.definition)
+              .filter(v => v.name == fullName.getOrElse(checkName) && v.`type` == `type`)
+              .map { case DefinitionInfo(name, token, t) =>
+                val span = token.unit._1
+                s"$name(${span.startIndex}:${span.endIndex}) $t"
+              }
+          )
+
+        res
       }
 
-      /*println(tokens.filter(v => v._1 == checkName && v._2.`type` == `type`).map {
-        case (name, expr) =>
-          val span = expr.token.unit._1
-          println(s"$name(${span.startIndex}:${span.endIndex}) ${expr.`type`}")
-      })*/
-
-      res
     }
   }
 
@@ -79,49 +115,75 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         id => txt => Parser.parse(Parser.parserSchema)(txt),
         AquaCompilerConf(ConstantRaw.defaultConstants(None))
       )
+      .leftMap { errors =>
+        println(errors)
+        errors
+      }
   }
 
   it should "return right tokens" in {
+    val main =
+      """module Import
+        |import foo, strFunc, num from "export2.aqua"
+        |
+        |import "../gen/OneMore.aqua"
+        |
+        |func foo_wrapper() -> string:
+        |    fooResult <- foo()
+        |    if 1 == 1:
+        |      someVar = "aaa"
+        |      strFunc(someVar)
+        |    else:
+        |      someVar = 123
+        |      num(someVar)
+        |    OneMore fooResult
+        |    OneMore.more_call()
+        |
+        |ability Ab:
+        |    someField: u32
+        |
+        |data Str:
+        |   someField: string
+        |
+        |func useAbAndStruct{Ab}():
+        |    s = Str(someField = "asd")
+        |    strFunc(s.someField)
+        |    num(Ab.someField)
+        |
+        |""".stripMargin
     val src = Map(
-      "index.aqua" ->
-        """module Import
-          |import foo, str, num from "export2.aqua"
-          |
-          |import "../gen/OneMore.aqua"
-          |
-          |func foo_wrapper() -> string:
-          |    z <- foo()
-          |    if 1 == 1:
-          |      a = "aaa"
-          |      str(a)
-          |    else:
-          |      a = 123
-          |      num(a)
-          |    OneMore z
-          |    OneMore.more_call()
-          |""".stripMargin
+      "index.aqua" -> main
     )
+
+    val firstImport =
+      """module Export declares strFunc, num, foo
+        |
+        |func absb() -> string:
+        |    <- "ff"
+        |
+        |func strFunc(someVar: string) -> string:
+        |    <- someVar
+        |
+        |func num(someVar: u32) -> u32:
+        |    <- someVar
+        |
+        |func foo() -> string:
+        |    <- "I am MyFooBar foo"
+        |
+        |""".stripMargin
+
+    val secondImport =
+      """
+        |service OneMore:
+        |  more_call()
+        |  consume(s: string)
+        |""".stripMargin
 
     val imports = Map(
       "export2.aqua" ->
-        """module Export declares str, num, foo
-          |
-          |func str(a: string) -> string:
-          |    <- a
-          |
-          |func num(a: u32) -> u32:
-          |    <- a
-          |
-          |func foo() -> string:
-          |    <- "I am MyFooBar foo"
-          |
-          |""".stripMargin,
+        firstImport,
       "../gen/OneMore.aqua" ->
-        """
-          |service OneMore:
-          |  more_call()
-          |  consume(s: string)
-          |""".stripMargin
+        secondImport
     )
 
     val res = compile(src, imports).toOption.get.values.head
@@ -134,66 +196,85 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       )
     )
 
-    /*println(res.allLocations.map { case TokenLocation(l, r) =>
-      val lSpan = l.unit._1
-      val rSpan = r.unit._1
-      s"($l($lSpan):$r($rSpan))"
-    })*/
-
     // inside `foo_wrapper` func
-    res.checkTokenLoc("z", 120, 121, ScalarType.string) shouldBe true
-    res.checkLocations(120, 121, 224, 225) shouldBe true
+    res.checkTokenLoc(main, "fooResult", 0, ScalarType.string) shouldBe true
+    res.checkLocations("fooResult", 0, 1, main) shouldBe true
 
-    res.checkTokenLoc("a", 152, 153, LiteralType.string) shouldBe true
-    res.checkLocations(152, 153, 172, 173) shouldBe true
-    res.checkTokenLoc("a", 191, 192, LiteralType.unsigned) shouldBe true
-    res.checkLocations(191, 192, 209, 210) shouldBe true
+    res.checkTokenLoc(main, "someVar", 0, LiteralType.string, None, true) shouldBe true
+    res.checkLocations("someVar", 0, 1, main) shouldBe true
+    res.checkTokenLoc(main, "someVar", 2, LiteralType.unsigned) shouldBe true
+    res.checkLocations("someVar", 2, 3, main) shouldBe true
 
     // num usage
-    res.checkLocations(84, 87, 205, 208) shouldBe true
-    // str usage
-    res.checkLocations(43, 46, 168, 171) shouldBe true
+    res.checkLocations("num", 1, 1, firstImport, Some(main)) shouldBe true
+    // strFunc usage
+    res.checkLocations("strFunc", 1, 1, firstImport, Some(main)) shouldBe true
+    res.checkLocations("strFunc", 1, 2, firstImport, Some(main)) shouldBe true
+
+    // Str.field
+    res.checkTokenLoc(main, "someField", 1, ScalarType.string, Some("Str.someField")) shouldBe true
+    res.checkLocations("someField", 1, 3, main, None) shouldBe true
+
+    // Ab.field
+    res.checkTokenLoc(
+      main,
+      "someField",
+      0,
+      ScalarType.u32,
+      Some("Ab.someField"),
+      true
+    ) shouldBe true
 
     // this is tokens from imports, if we will use `FileSpan.F` file names will be different
     // OneMore service
-    res.checkTokenLoc("OneMore", 9, 16, serviceType) shouldBe true
-    res.checkTokenLoc("OneMore.more_call", 20, 29, ArrowType(NilType, NilType)) shouldBe true
+    res.checkTokenLoc(secondImport, "OneMore", 0, serviceType) shouldBe true
     res.checkTokenLoc(
-      "OneMore.consume",
-      34,
-      41,
-      ArrowType(ProductType.labelled(("s", ScalarType.string) :: Nil), NilType)
+      secondImport,
+      "more_call",
+      0,
+      ArrowType(NilType, NilType),
+      Some("OneMore.more_call"),
+      true
+    ) shouldBe true
+    res.checkTokenLoc(
+      secondImport,
+      "consume",
+      0,
+      ArrowType(ProductType.labelled(("s", ScalarType.string) :: Nil), NilType),
+      Some("OneMore.consume")
     ) shouldBe true
 
-    // str function and argument
+    // strFunc function and argument
     res.checkTokenLoc(
-      "str",
-      43,
-      46,
+      firstImport,
+      "strFunc",
+      1,
       ArrowType(
-        ProductType.labelled(("a", ScalarType.string) :: Nil),
+        ProductType.labelled(("someVar", ScalarType.string) :: Nil),
         ProductType(ScalarType.string :: Nil)
-      )
+      ),
+      None,
+      true
     ) shouldBe true
-    res.checkTokenLoc("a", 47, 48, ScalarType.string) shouldBe true
+    res.checkTokenLoc(firstImport, "someVar", 0, ScalarType.string) shouldBe true
 
     // num function and argument
     res.checkTokenLoc(
+      firstImport,
       "num",
-      84,
-      87,
+      1,
       ArrowType(
-        ProductType.labelled(("a", ScalarType.u32) :: Nil),
+        ProductType.labelled(("someVar", ScalarType.u32) :: Nil),
         ProductType(ScalarType.u32 :: Nil)
       )
     ) shouldBe true
-    res.checkTokenLoc("a", 88, 89, ScalarType.u32) shouldBe true
+    res.checkTokenLoc(firstImport, "someVar", 2, ScalarType.u32, None, true) shouldBe true
 
     // foo function
     res.checkTokenLoc(
+      firstImport,
       "foo",
-      119,
-      122,
+      1,
       ArrowType(NilType, ProductType(ScalarType.string :: Nil))
     ) shouldBe true
   }

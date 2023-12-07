@@ -1,15 +1,13 @@
 package aqua.tree
 
+import aqua.helpers.tree.Tree
+
 import cats.Show
 import cats.data.Chain
 import cats.free.Cofree
-
-import cats.syntax.show.*
 import cats.syntax.apply.*
-
+import cats.syntax.show.*
 import scala.annotation.tailrec
-
-import aqua.helpers.Tree
 
 trait TreeNodeCompanion[T <: TreeNode[T]] {
 
