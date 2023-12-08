@@ -21,7 +21,15 @@ import fs2.io.file.{Files, Path}
 import scala.util.Try
 import scribe.Logging
 
+/**
+ * Trait that implements `read` and `resolveImport` methods for `AquaSources` trait.
+ * Imports are resolved with `imports` map.
+ */
 trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileError, FileModuleId] {
+
+  /**
+   * Map (path prefix -> list of import paths for this prefix)
+   */
   def imports: Map[Path, List[Path]]
 
   override def resolveImport(
@@ -39,6 +47,11 @@ trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileErro
   override def load(file: FileModuleId): F[ValidatedNec[AquaFileError, String]] =
     AquaIO[F].readFile(file.file).toValidatedNec
 
+  /**
+   * Gather imports locations for given file id
+   * by matching its path with prefixes in `imports` map.
+   * Longer prefixes are prioritized.
+   */
   private def gatherImportsFor(id: FileModuleId): List[Path] = {
     val idNorm = id.file.normalize.absolute
     val matchedImports = imports.toList.map { case (prefix, paths) =>
@@ -56,6 +69,9 @@ trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileErro
   }
 }
 
+/**
+ * Aqua sources that are read from file system.
+ */
 class AquaFileSources[F[_]: Monad: AquaIO](
   sourcesPath: Path,
   override val imports: Map[Path, List[Path]]
@@ -79,6 +95,9 @@ class AquaFileSources[F[_]: Monad: AquaIO](
     } yield contents).toValidated
 }
 
+/**
+ * Aqua sources that are read from string map.
+ */
 class AquaStringSources[F[_]: Monad: AquaIO](
   sourcesMap: Map[FileModuleId, String],
   override val imports: Map[Path, List[Path]]
