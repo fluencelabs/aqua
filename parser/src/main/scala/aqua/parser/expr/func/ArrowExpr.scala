@@ -23,6 +23,7 @@ object ArrowExpr extends Expr.AndIndented {
   val funcChildren: List[Expr.Lexem] =
     ServiceIdExpr ::
       PushToStreamExpr ::
+      ForkExpr ::
       ForExpr ::
       Expr.defer(OnExpr) ::
       // It is important for IfExpr to be before CallArrowExpr

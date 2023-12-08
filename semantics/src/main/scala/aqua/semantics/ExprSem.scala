@@ -1,9 +1,9 @@
 package aqua.semantics
 
-import aqua.raw.Raw
 import aqua.parser.Expr
 import aqua.parser.expr.*
 import aqua.parser.expr.func.*
+import aqua.raw.Raw
 import aqua.semantics.expr.*
 import aqua.semantics.expr.func.*
 import aqua.semantics.rules.ValuesAlgebra
@@ -20,7 +20,7 @@ object ExprSem {
 
   def getProg[S[_], G[_]: Monad](
     expr: Expr[S]
-  )(implicit
+  )(using
     A: AbilitiesAlgebra[S, G],
     N: NamesAlgebra[S, G],
     T: TypesAlgebra[S, G],
@@ -45,6 +45,7 @@ object ExprSem {
       case expr: ArrowExpr[S] => new ArrowSem(expr).program[G]
       case expr: OnExpr[S] => new OnSem(expr).program[G]
       case expr: ForExpr[S] => new ForSem(expr).program[G]
+      case expr: ForkExpr[S] => new ForkSem(expr).program[G]
       case expr: IfExpr[S] => new IfSem(expr).program[G]
       case expr: TryExpr[S] => new TrySem(expr).program[G]
       case expr: CatchExpr[S] => new CatchSem(expr).program[G]

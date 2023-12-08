@@ -5,7 +5,6 @@ import aqua.parser.expr.func.ForExpr.Mode
 import aqua.parser.lexer.{Name, ValueToken}
 import aqua.raw.Raw
 import aqua.raw.ops.*
-import aqua.raw.ops.ForTag
 import aqua.raw.value.ValueRaw
 import aqua.semantics.Prog
 import aqua.semantics.expr.func.FuncOpSem

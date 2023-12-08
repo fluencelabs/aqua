@@ -195,6 +195,22 @@ object ForTag {
     ForTag(item, iterable, Mode.NonBlocking)
 }
 
+case class ForkTag(
+  item: String,
+  iterable: ValueRaw
+) extends SeqGroupTag {
+
+  override def restrictsVarNames: Set[String] = Set(item)
+
+  override def usesVarNames: Set[String] = iterable.varNames
+
+  override def mapValues(f: ValueRaw => ValueRaw): RawTag =
+    ForkTag(item, iterable.map(f))
+
+  override def renameExports(map: Map[String, String]): RawTag =
+    copy(item = map.getOrElse(item, item))
+}
+
 case class CallArrowRawTag(
   exportTo: List[Call.Export],
   value: ValueRaw
