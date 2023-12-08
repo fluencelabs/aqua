@@ -258,6 +258,24 @@ object TagInliner extends Logging {
           prefix = p
         )
 
+      case ForkTag(item, iterable) =>
+        for {
+          vp <- valueToModel(iterable)
+          (v, p) = vp
+          n <- Mangler[S].findAndForbidName(item)
+          elementType = iterable.`type` match {
+            case b: CollectionType => b.element
+            case _ =>
+              internalError(
+                s"non-box type variable '$iterable' in 'fork' expression."
+              )
+          }
+          _ <- Exports[S].resolved(item, VarModel(n, elementType))
+        } yield TagInlined.Single(
+          model = ForModel(n, v),
+          prefix = p
+        )
+
       case PushToStreamTag(operand, exportTo) =>
         (
           valueToModel(operand),
