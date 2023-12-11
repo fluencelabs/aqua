@@ -1,7 +1,7 @@
 package aqua.run
 
 import aqua.compiler.{AquaCompilerConf, CompileResult, CompilerAPI}
-import aqua.files.{AquaFileSources, FileModuleId}
+import aqua.files.{AquaFileSources, FileModuleId, Imports}
 import aqua.io.{AquaFileError, AquaPath, PackagePath}
 import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow}
@@ -21,7 +21,7 @@ import scribe.Logging
 
 class FuncCompiler[F[_]: Files: AquaIO: Async](
   input: Option[AquaPath],
-  imports: Map[Path, List[Path]],
+  imports: Imports,
   transformConfig: TransformConfig
 ) extends Logging {
 

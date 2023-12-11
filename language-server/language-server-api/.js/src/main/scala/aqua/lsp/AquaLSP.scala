@@ -2,7 +2,7 @@ package aqua.lsp
 
 import aqua.compiler.*
 import aqua.compiler.AquaError.SourcesError
-import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId}
+import aqua.files.{AquaFileSources, AquaFilesIO, FileModuleId, Imports}
 import aqua.io.*
 import aqua.parser.lift.FileSpan
 import aqua.parser.lift.FileSpan.F
@@ -26,10 +26,14 @@ object AquaLSP extends Logging {
 
   import ResultHelper.*
 
+  type ImportsJS = js.Dictionary[
+    js.Dictionary[js.Array[String]]
+  ]
+
   @JSExport
   def compile(
     pathStr: String,
-    imports: js.Dictionary[js.Array[String]]
+    imports: ImportsJS
   ): js.Promise[CompilationResult] = {
     logger.debug(s"Compiling '$pathStr' with imports: $imports")
 
@@ -39,9 +43,7 @@ object AquaLSP extends Logging {
     val pathId = FileModuleId(path)
     val sources = new AquaFileSources[IO](
       path,
-      imports.toMap.map { case (prefix, paths) =>
-        Path(prefix) -> paths.toList.map(Path.apply)
-      }
+      importsToIO(imports)
     )
     val config = AquaCompilerConf(ConstantRaw.defaultConstants(None))
 
@@ -71,6 +73,17 @@ object AquaLSP extends Logging {
     }
 
     proc.unsafeToFuture().toJSPromise
-
   }
+
+  private def importsToIO(
+    imports: ImportsJS
+  ): Imports = Imports(
+    imports.toMap.map { case (pathPrefix, settings) =>
+      Path(pathPrefix) -> Imports.PathSettings(
+        settings.toMap.map { case (importPrefix, locations) =>
+          importPrefix -> locations.toList.map(Path.apply)
+        }
+      )
+    }
+  )
 }

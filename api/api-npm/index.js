@@ -27,11 +27,23 @@ function getConfig({
 function normalizeImports(imports) {
   if (Array.isArray(imports)) {
     return {
-      "/": imports,
+      "/": {
+        "": imports,
+      },
     };
   }
 
-  return imports;
+  return Object.fromEntries(
+    Object.entries(imports).map(([pathPrefix, info]) => [
+      pathPrefix,
+      Object.fromEntries(
+        Object.entries(info).map(([importPrefix, locations]) => [
+          importPrefix,
+          Array.isArray(locations) ? locations : [locations],
+        ]),
+      ),
+    ]),
+  );
 }
 
 async function compile(...args) {

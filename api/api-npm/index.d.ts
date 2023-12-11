@@ -21,20 +21,7 @@ export declare class CompilationResult {
   generatedSources: GeneratedSource[];
 }
 
-/**
- * Imports can be passed to the compiler in two ways:
- * 1. As a mapping from path prefix to list of import paths.
- *    For every file being compiled, imports are gathered from
- *    the mapping using all matching prefixes (prioritizing longer ones).
- *    Example: {
- *      "/": ["dependency-a/0.1.0", "dependency-b/0.1.0"],
- *      "dependency-a": ["dependency-c/0.1.0"],
- *      "dependency-b": ["dependency-c/0.2.0"]
- *    }
- * 2. As a list of import paths. It is equivalent to passing a mapping
- *    with a single entry: { "/": imports }
- */
-type Imports = Record<string, string[]> | string[];
+type Imports = Record<string, Record<string, string[] | string>> | string[];
 
 /** Common arguments for all compile functions */
 type CommonArgs = {

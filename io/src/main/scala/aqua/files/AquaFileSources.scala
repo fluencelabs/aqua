@@ -21,16 +21,8 @@ import fs2.io.file.{Files, Path}
 import scala.util.Try
 import scribe.Logging
 
-/**
- * Trait that implements `read` and `resolveImport` methods for `AquaSources` trait.
- * Imports are resolved with `imports` map.
- */
 trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileError, FileModuleId] {
-
-  /**
-   * Map (path prefix -> list of import paths for this prefix)
-   */
-  def imports: Map[Path, List[Path]]
+  def imports: Imports
 
   override def resolveImport(
     from: FileModuleId,
@@ -54,18 +46,7 @@ trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileErro
    */
   private def gatherImportsFor(id: FileModuleId): List[Path] = {
     val idNorm = id.file.normalize.absolute
-    val matchedImports = imports.toList.map { case (prefix, paths) =>
-      prefix.normalize.absolute -> paths
-    }.filter { case (prefix, _) =>
-      idNorm.startsWith(prefix)
-    }.sortBy { case (prefix, _) =>
-      prefix.toString.length
-    }.reverse.flatMap { case (_, paths) => paths }
-
-    // TODO: Check if `idNorm` is a dir already?
-    val idDir = idNorm.parent
-
-    matchedImports.prependedAll(idDir)
+    Nil
   }
 }
 
@@ -74,7 +55,7 @@ trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileErro
  */
 class AquaFileSources[F[_]: Monad: AquaIO](
   sourcesPath: Path,
-  override val imports: Map[Path, List[Path]]
+  override val imports: Imports
 ) extends AquaFileImports[F] with Logging {
 
   override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =
@@ -100,7 +81,7 @@ class AquaFileSources[F[_]: Monad: AquaIO](
  */
 class AquaStringSources[F[_]: Monad: AquaIO](
   sourcesMap: Map[FileModuleId, String],
-  override val imports: Map[Path, List[Path]]
+  override val imports: Imports
 ) extends AquaFileImports[F] {
 
   override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =

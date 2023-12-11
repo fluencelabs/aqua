@@ -42,11 +42,6 @@ import scribe.{Level, Logging}
 
 object APICompilation {
 
-  /**
-   * Map from path prefix to list of imports for this prefix
-   */
-  type Imports = Map[String, List[String]]
-
   def compileCall(
     functionStr: String,
     pathStr: String,
@@ -55,10 +50,6 @@ object APICompilation {
     fillWithTypes: List[ValueRaw] => ValidatedNec[String, List[ValueRaw]]
   ): IO[APIResult[(FunctionDef, String)]] = {
     given AquaIO[IO] = new AquaFilesIO[IO]
-
-    val importPaths = imports.map { case (prefix, paths) =>
-      Path.apply(prefix) -> paths.map(Path.apply)
-    }
 
     (
       LogLevels.levelFromString(aquaConfig.logLevel),
@@ -70,7 +61,7 @@ object APICompilation {
 
       new FuncCompiler[IO](
         Some(RelativePath(Path(pathStr))),
-        importPaths,
+        imports.toIO,
         transformConfig
       ).compile().map { contextV =>
         for {
@@ -102,12 +93,11 @@ object APICompilation {
   ): IO[APIResult[Chain[AquaCompiled[FileModuleId]]]] = {
     given AquaIO[IO] = new AquaFilesIO[IO]
 
-    val importPaths = imports.map { case (prefix, paths) =>
-      Path.apply(prefix) -> paths.map(Path.apply)
-    }
-
     val path = Path(pathStr)
-    val sources = new AquaFileSources[IO](path, importPaths)
+    val sources = new AquaFileSources[IO](
+      path,
+      imports.toIO
+    )
 
     compileRaw(
       aquaConfig,
@@ -129,9 +119,7 @@ object APICompilation {
     val strSources: AquaStringSources[IO] =
       new AquaStringSources(
         Map(FileModuleId(path) -> input),
-        imports.map { case (prefix, paths) =>
-          Path(prefix) -> paths.map(Path.apply)
-        }
+        imports.toIO
       )
 
     compileRaw(

@@ -3,7 +3,7 @@ package api
 import aqua.Rendering.given
 import aqua.SpanParser
 import aqua.api.TargetType.*
-import aqua.api.{APICompilation, APIResult, AquaAPIConfig}
+import aqua.api.{APICompilation, APIResult, AquaAPIConfig, Imports}
 import aqua.backend.air.AirBackend
 import aqua.backend.api.APIBackend
 import aqua.backend.js.JavaScriptBackend
@@ -53,6 +53,10 @@ import scribe.Logging
 @JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {
 
+  type ImportsJS = js.Dictionary[
+    js.Dictionary[js.Array[String]]
+  ]
+
   /**
    * All-in-one function that support different inputs and backends
    * @param input can be a path to aqua file, string with a code or a function call
@@ -63,20 +67,28 @@ object AquaAPI extends App with Logging {
   @JSExport
   def compile(
     input: types.Input | types.Path | types.Call,
-    imports: js.Dictionary[js.Array[String]],
+    imports: ImportsJS,
     aquaConfigJS: js.UndefOr[AquaConfig]
   ): Promise[CompilationResult] = {
     aquaConfigJS.toOption
       .map(AquaConfig.fromJS)
       .getOrElse(validNec(AquaAPIConfig()))
       .traverse { config =>
-        val importsMap = imports.mapValues(_.toList).toMap
+        val apiImports = Imports.fromMap(
+          imports.view
+            .mapValues(
+              _.toMap.view
+                .mapValues(_.toList)
+                .toMap
+            )
+            .toMap
+        )
 
         input match {
           case i: (types.Input | types.Path) =>
-            compileAll(i, importsMap, config)
+            compileAll(i, apiImports, config)
           case c: types.Call =>
-            compileCall(c, importsMap, config)
+            compileCall(c, apiImports, config)
 
         }
       }
@@ -88,7 +100,7 @@ object AquaAPI extends App with Logging {
   // Compile all non-call inputs
   private def compileAll(
     input: types.Input | types.Path,
-    imports: Map[String, List[String]],
+    imports: Imports,
     config: AquaAPIConfig
   ): IO[CompilationResult] = {
     val backend: Backend = config.targetType match {
@@ -136,7 +148,7 @@ object AquaAPI extends App with Logging {
   // Compile a function call
   private def compileCall(
     call: types.Call,
-    imports: Map[String, List[String]],
+    imports: Imports,
     config: AquaAPIConfig
   ): IO[CompilationResult] = {
     val path = call.input match {
