@@ -33,6 +33,7 @@ function normalizeImports(imports) {
     };
   }
 
+  // Transform each inner string into an array
   return Object.fromEntries(
     Object.entries(imports).map(([pathPrefix, info]) => [
       pathPrefix,

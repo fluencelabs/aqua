@@ -53,6 +53,7 @@ import scribe.Logging
 @JSExportTopLevel("Aqua")
 object AquaAPI extends App with Logging {
 
+  // See api-npm package for description of imports config
   type ImportsJS = js.Dictionary[
     js.Dictionary[js.Array[String]]
   ]
@@ -60,7 +61,7 @@ object AquaAPI extends App with Logging {
   /**
    * All-in-one function that support different inputs and backends
    * @param input can be a path to aqua file, string with a code or a function call
-   * @param imports dictionary (path prefix -> list of imports for this prefix)
+   * @param imports imports configuration
    * @param aquaConfigJS compiler config
    * @return compiler results depending on input and config
    */

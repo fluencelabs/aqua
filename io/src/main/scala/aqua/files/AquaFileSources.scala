@@ -38,16 +38,6 @@ trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileErro
 
   override def load(file: FileModuleId): F[ValidatedNec[AquaFileError, String]] =
     AquaIO[F].readFile(file.file).toValidatedNec
-
-  /**
-   * Gather imports locations for given file id
-   * by matching its path with prefixes in `imports` map.
-   * Longer prefixes are prioritized.
-   */
-  private def gatherImportsFor(id: FileModuleId): List[Path] = {
-    val idNorm = id.file.normalize.absolute
-    Nil
-  }
 }
 
 /**

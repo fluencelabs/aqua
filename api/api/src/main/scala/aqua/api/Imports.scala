@@ -4,6 +4,10 @@ import aqua.files.Imports as IOImports
 
 import fs2.io.file.Path
 
+/**
+ * Imports configuration passed to the compiler
+ * @param settings map of path prefixes to imports settings
+ */
 final case class Imports(
   settings: Map[Path, Imports.PathSettings]
 ) {
@@ -20,6 +24,10 @@ final case class Imports(
 
 object Imports {
 
+  /**
+   * Imports settings for a single path prefix.
+   * @param imports map of import prefixes to locations
+   */
   final case class PathSettings(
     imports: Map[String, List[Path]]
   ) {
