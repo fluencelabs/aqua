@@ -28,12 +28,10 @@ final case class Imports(
     } yield fromParent.resolve(importedPath)
 
   // Gather all possible resolutions from imports config
-  private def gather(from: Path, imported: String): List[Path] = {
-    val fromNorm = from.normalize.absolute
-
+  private def gather(from: Path, imported: String): List[Path] =
     // First - find the longest matching prefix for path
     settings.filter { case (prefix, _) =>
-      fromNorm.startsWith(prefix.normalize.absolute)
+      from.startsWith(prefix)
     }.maxByOption { case (prefix, _) =>
       prefix.toString.length
     }.flatMap { case (_, s) =>
@@ -48,7 +46,6 @@ final case class Imports(
       val dropped = imported.drop(prefix.length)
       paths.map(_ / dropped)
     }.toList.flatten
-  }
 }
 
 object Imports {

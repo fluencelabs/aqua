@@ -1,4 +1,4 @@
-package aqua
+package aqua.files
 
 import aqua.Rendering.given
 import aqua.compiler.AquaError
@@ -25,7 +25,6 @@ class RenderingSpec extends AnyFlatSpec with Matchers with Inside with Inspector
 
     val error = Parser.Error(8, NonEmptyList.one(InRange(36, ':', ':')))
     val fileSpan = FileSpan("file", Eval.now(LocationMap(script)), Span(8, 9))
-
 
     val result: AquaError[FileModuleId, AquaFileError, FileSpan.F] =
       AquaError.ParserError(LexerError((fileSpan, error)))

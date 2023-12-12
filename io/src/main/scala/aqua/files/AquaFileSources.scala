@@ -31,7 +31,11 @@ trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileErro
   ): F[ValidatedNec[AquaFileError, FileModuleId]] =
     AquaIO[F]
       .resolve(
-        imports.resolutions(from.file, imported)
+        imports.resolutions(
+          // NOTE: It is important to use normalized absolute path here
+          from.file.normalize.absolute,
+          imported
+        )
       )
       .leftMap {
         case e: FilesUnresolved =>
