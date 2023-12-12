@@ -23,21 +23,16 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
   override def readFile(file: Path): EitherT[F, AquaFileError, String] =
     EitherT(
       Files[F]
-        .readAll(file)
-        .fold(Vector.empty[Byte])((acc, b) => acc :+ b)
+        .readUtf8(file)
+        .foldMonoid
         // TODO fix for comment on last line in air
         // TODO should be fixed by parser
-        .map(_.appendedAll("\n\r".getBytes))
-        .flatMap(fs2.Stream.emits)
-        .through(text.utf8.decode)
+        .map(_.appendedAll("\n\r"))
         .attempt
+        .map(_.leftMap(FileSystemError.apply))
         .compile
         .last
-        .map(
-          _.fold((EmptyFileError(file): AquaFileError).asLeft[String])(
-            _.left.map(FileSystemError.apply)
-          )
-        )
+        .map(_.getOrElse(EmptyFileError(file).asLeft))
     )
 
   /**
@@ -66,6 +61,7 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
       }
 
   // Get all files if the path is a directory or this path otherwise
+  // TODO: Test it or remove it. It is not used anywhere
   override def listAqua(folder: Path): EitherT[F, AquaFileError, Chain[Path]] =
     for {
       exists <- EitherT.liftF(Files[F].exists(folder))

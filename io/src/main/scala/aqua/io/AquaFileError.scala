@@ -19,6 +19,8 @@ case class FileNotFound(path: Path) extends AquaFileError {
   override def showForConsole: String = s"File not found: $path"
 }
 
+// TODO: Refactor? This is more high-level error
+// not related to file system
 case class ImportUnresolved(name: String, resolutions: Seq[Path]) extends AquaFileError {
 
   override def showForConsole: String =
