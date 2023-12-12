@@ -10,7 +10,7 @@ trait AquaIO[F[_]] {
 
   def resolve(paths: List[Path]): EitherT[F, AquaFileError, Path]
 
-  def listAqua(folder: Path): F[ValidatedNec[AquaFileError, Chain[Path]]]
+  def listAqua(folder: Path): EitherT[F, AquaFileError, Chain[Path]]
 
   def writeFile(file: Path, content: String): EitherT[F, AquaFileError, Unit]
 }

@@ -2,6 +2,7 @@ package aqua.files
 
 import aqua.AquaIO
 import aqua.compiler.{AquaCompiled, AquaSources}
+import aqua.io.FilesUnresolved
 import aqua.io.{AquaFileError, FileSystemError, ListAquaErrors}
 import aqua.syntax.eithert.*
 
@@ -32,7 +33,11 @@ trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileErro
       .resolve(
         imports.resolutions(from.file, imported)
       )
-      // TODO: Map error
+      .leftMap {
+        case e: FilesUnresolved =>
+          e.toImportUnresolved(imported)
+        case e => e
+      }
       .map(FileModuleId.apply)
       .toValidatedNec
 
@@ -50,9 +55,9 @@ class AquaFileSources[F[_]: Monad: AquaIO](
 
   override def sources: F[ValidatedNec[AquaFileError, Chain[(FileModuleId, String)]]] =
     (for {
-      files <- EitherT.fromValidatedF(
-        AquaIO[F].listAqua(sourcesPath)
-      )
+      files <- AquaIO[F]
+        .listAqua(sourcesPath)
+        .transform(_.toEitherNec)
       contents <- EitherT.fromValidatedF(
         files
           .traverse(file =>

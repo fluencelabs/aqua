@@ -15,16 +15,23 @@ case class ListAquaErrors(errors: NonEmptyChain[AquaFileError]) extends AquaFile
     s"Cannot read '*.aqua' files:\n" + errors.map(_.showForConsole)
 }
 
-case class FileNotFound(name: Path, imports: Seq[Path]) extends AquaFileError {
+case class FileNotFound(path: Path) extends AquaFileError {
+  override def showForConsole: String = s"File not found: $path"
+}
+
+case class ImportUnresolved(name: String, resolutions: Seq[Path]) extends AquaFileError {
 
   override def showForConsole: String =
-    if (imports.nonEmpty)
-      s"File '$name' not found, looking in ${imports.mkString(", ")}"
+    if (resolutions.nonEmpty)
+      s"Import '$name' could not be resolved, tried: ${resolutions.mkString(", ")}"
     else
-      s"File '$name' not found"
+      s"Import '$name' could not be resolved"
 }
 
 case class FilesUnresolved(files: Seq[Path]) extends AquaFileError {
+
+  def toImportUnresolved(name: String): ImportUnresolved =
+    ImportUnresolved(name, files)
 
   override def showForConsole: String =
     s"Cannot resolve any of files: ${files.mkString(", ")}"

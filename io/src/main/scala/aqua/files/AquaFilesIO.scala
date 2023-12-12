@@ -65,70 +65,23 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
           ).toEither.leftMap(FileSystemError.apply).toEitherT
       }
 
-  // Get all files for every path if the path in the list is a directory or this path otherwise
-  private def gatherFiles(
-    files: List[Path],
-    listFunction: (f: Path) => F[ValidatedNec[AquaFileError, Chain[Path]]]
-  ): List[F[ValidatedNec[AquaFileError, Chain[Path]]]] = {
-    files.map(f => gatherFile(f, listFunction))
-  }
-
   // Get all files if the path is a directory or this path otherwise
-  private def gatherFile(
-    f: Path,
-    listFunction: (f: Path) => F[ValidatedNec[AquaFileError, Chain[Path]]]
-  ): F[ValidatedNec[AquaFileError, Chain[Path]]] = {
-    Files[F].isDirectory(f).flatMap { isDir =>
-      if (isDir)
-        listFunction(f)
-      else
-        Files[F].isRegularFile(f).map { isFile =>
-          if (isFile)
-            Validated.validNec(Chain.one(f.absolute.normalize))
-          else
-            Validated.invalidNec(FileNotFound(f, Nil))
-        }
-    }
-  }
-
-  // Get all files if the path is a directory or this path otherwise
-  override def listAqua(folder: Path): F[ValidatedNec[AquaFileError, Chain[Path]]] = {
-    Files[F]
-      .exists(folder)
-      .flatMap { exists =>
-        if (!exists) {
-          Left(FileNotFound(folder, Nil): AquaFileError).pure[F]
-        } else {
-          Files[F].isDirectory(folder).flatMap { isDir =>
-            if (isDir) {
-              Files[F]
-                .list(folder)
-                .evalFilter(p =>
-                  if (p.extName == ".aqua") true.pure[F]
-                  else Files[F].isDirectory(p)
-                )
-                .compile
-                .toList
-                .map(Right(_))
-            } else {
-              Right(folder :: Nil).pure[F]
-            }
-          }
-        }
-      }
-      .map(Validated.fromEither)
-      .map(_.leftMap(NonEmptyChain.one))
-      .flatMap {
-        case Valid(files) =>
-          gatherFiles(files, listAqua).foldLeft(
-            Validated.validNec[AquaFileError, Chain[Path]](Chain.nil).pure[F]
-          ) { case (acc, v) =>
-            (acc, v).mapN(_ combine _)
-          }
-        case Invalid(errs) =>
-          Validated.invalid[NonEmptyChain[AquaFileError], Chain[Path]](errs).pure[F]
-      }
-  }
+  override def listAqua(folder: Path): EitherT[F, AquaFileError, Chain[Path]] =
+    for {
+      exists <- EitherT.liftF(Files[F].exists(folder))
+      _ <- EitherT.cond(exists, (), FileNotFound(folder): AquaFileError)
+      paths <- EitherT.liftF(
+        Files[F]
+          .walk(folder)
+          .evalFilter(p =>
+            Files[F]
+              .isRegularFile(p)
+              .map(_ && p.extName == ".aqua")
+          )
+          .compile
+          .toList
+      )
+    } yield Chain.fromSeq(paths)
 
   private def deleteIfExists(file: Path): EitherT[F, AquaFileError, Boolean] =
     Files[F].deleteIfExists(file).attemptT.leftMap(FileSystemError.apply)
