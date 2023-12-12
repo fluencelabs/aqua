@@ -41,40 +41,29 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
     )
 
   /**
-   * Find the first file that exists in the given list of paths
-   * If there is no such file - error
+   * Return first path that is a regular file
    */
-  private def findFirstF(
-    in: List[Path],
-    notFound: EitherT[F, AquaFileError, Path]
+  override def resolve(
+    paths: List[Path]
   ): EitherT[F, AquaFileError, Path] =
-    in.headOption.fold(notFound)(p =>
-      EitherT(
-        Concurrent[F].attempt(Files[F].isRegularFile(p))
+    paths
+      .collectFirstSomeM(p =>
+        Concurrent[F]
+          .attemptT(Files[F].isRegularFile(p))
+          .recover(_ => false)
+          .leftMap(FileSystemError.apply)
+          .map(Option.when(_)(p))
       )
-        .leftMap[AquaFileError](FileSystemError.apply)
-        .recover({ case _ => false })
-        .flatMap {
-          case true =>
-            EitherT(
-              Concurrent[F].attempt(p.absolute.normalize.pure[F])
-            ).leftMap[AquaFileError](FileSystemError.apply)
-          case false =>
-            findFirstF(in.tail, notFound)
-        }
-    )
-
-  /**
-   * Checks if a file exists in the list of possible paths
-   */
-  def resolve(
-    src: Path,
-    imports: List[Path]
-  ): EitherT[F, AquaFileError, Path] =
-    findFirstF(
-      imports.map(_.resolve(src)),
-      EitherT.leftT(FileNotFound(src, imports))
-    )
+      .flatMap {
+        case None =>
+          EitherT.leftT(
+            FilesUnresolved(paths)
+          )
+        case Some(p) =>
+          Try(
+            p.absolute.normalize
+          ).toEither.leftMap(FileSystemError.apply).toEitherT
+      }
 
   // Get all files for every path if the path in the list is a directory or this path otherwise
   private def gatherFiles(
@@ -164,8 +153,4 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
       )
         .leftMap(FileWriteError(file, _))
 
-}
-
-object AquaFilesIO {
-  implicit def summon[F[_]: Files: Concurrent]: AquaIO[F] = new AquaFilesIO[F]
 }

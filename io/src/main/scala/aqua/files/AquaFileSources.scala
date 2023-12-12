@@ -30,9 +30,9 @@ trait AquaFileImports[F[_]: Functor: AquaIO] extends AquaSources[F, AquaFileErro
   ): F[ValidatedNec[AquaFileError, FileModuleId]] =
     AquaIO[F]
       .resolve(
-        Path(imported),
-        gatherImportsFor(from)
+        imports.resolutions(from.file, imported)
       )
+      // TODO: Map error
       .map(FileModuleId.apply)
       .toValidatedNec
 

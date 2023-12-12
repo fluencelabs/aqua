@@ -1,7 +1,6 @@
 package aqua.io
 
 import cats.data.NonEmptyChain
-
 import fs2.io.file.Path
 
 sealed trait AquaFileError {
@@ -23,6 +22,12 @@ case class FileNotFound(name: Path, imports: Seq[Path]) extends AquaFileError {
       s"File '$name' not found, looking in ${imports.mkString(", ")}"
     else
       s"File '$name' not found"
+}
+
+case class FilesUnresolved(files: Seq[Path]) extends AquaFileError {
+
+  override def showForConsole: String =
+    s"Cannot resolve any of files: ${files.mkString(", ")}"
 }
 
 case class EmptyFileError(path: Path) extends AquaFileError {
