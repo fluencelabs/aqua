@@ -8,7 +8,13 @@ final case class Imports(
 ) {
 
   def resolutions(from: Path, imported: String): List[Path] =
-    Try(Path(imported)).toOption.toList ::: gather(from, imported)
+    relative(from, imported).toList ::: gather(from, imported)
+
+  private def relative(from: Path, imported: String): Option[Path] =
+    for {
+      fromParent <- from.parent
+      importedPath <- Try(Path(imported)).toOption
+    } yield fromParent.resolve(importedPath)
 
   private def gather(from: Path, imported: String): List[Path] = {
     val fromNorm = from.normalize.absolute
