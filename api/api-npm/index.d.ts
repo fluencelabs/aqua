@@ -20,7 +20,38 @@ export declare class CompilationResult {
   warnings: string[];
   generatedSources: GeneratedSource[];
 }
-
+/**
+ * Imports configuration for the compiler.
+ * Structure:
+ * {
+ *  "<compiled-path-prefix>": {
+ *   "<import-path-prefix>": ["<import-path-1>", "<import-path-2>"],
+ *   "<import-path-prefix-2>": "<import-path-3>",
+ *   ...
+ *  }
+ *  ...
+ * }
+ * Import `import` written in file with path `path`
+ * is resolved as follows:
+ * 1. Try to resolve `import` as relative import from `path`
+ * 2. If relative resolution failed:
+ *  a. Find **the longest** <compiled-path-prefix>
+ *     that is a prefix of `path` in the imports configuration
+ *  b. In obtained map, find **the longest** <import-path-prefix>
+ *     that is a prefix of `import`
+ *  c. Replace prefix in `import` with <import-path-prefix>
+ *     (try a few paths if array was provided)
+ *  d. Try to resolve import with obtained path
+ *
+ * NOTE: <import-path-prefix> could be empty string,
+ *       in which case it will match any import
+ * NOTE: passing just an array of strings is a shorthand for
+ * {
+ *   "/": {
+ *     "": <array>
+ *   }
+ * }
+ */
 type Imports = Record<string, Record<string, string[] | string>> | string[];
 
 /** Common arguments for all compile functions */
