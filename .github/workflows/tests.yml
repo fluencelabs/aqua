@@ -52,7 +52,7 @@ jobs:
             kv/slack/node-alerts webhook | INCOMING_WEBHOOK_URL
 
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: docker.fluence.dev
           username: ${{ env.DOCKER_USERNAME }}
@@ -90,7 +90,7 @@ jobs:
           version: 8
 
       - name: Setup node with self-hosted registry
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
           registry-url: "https://npm.fluence.dev"
