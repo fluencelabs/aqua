@@ -13,9 +13,10 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
     // Tests here are lightweight, so we can afford to run more of them
     PropertyCheckConfiguration(minSuccessful = 10000)
 
-  val shortAlphaNumStr = Gen
-    .listOfN(5, Gen.alphaNumChar)
-    .map(_.mkString)
+  val shortAlphaNumStr = for {
+    length <- Gen.choose(1, 10)
+    chars <- Gen.listOfN(5, Gen.alphaNumChar)
+  } yield chars.mkString
 
   val fileNameWithExt = Gen
     .zip(
@@ -46,22 +47,23 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
 
   // Paths without "..", ".", "~" and absolute paths
   val simplePath: Gen[Path] = Gen.sized(size =>
-    Gen
-      .listOfN(
+    for {
+      segments <- Gen.listOfN(
         size / 5,
         shortAlphaNumStr
       )
-      .map(_.mkString("/"))
-      .map(Path.apply)
-  )
-
-  val simpleNonEmptyPath: Gen[Path] = Gen.sized(size =>
-    for {
-      prefix <- shortAlphaNumStr
-      suffix <- Gen.resize(size, simplePath)
-      path = List(prefix, suffix).mkString("/")
+      suffix <- Gen.option(
+        fileNameWithExt
+      )
+      path = segments.appendedAll(suffix).mkString("/")
     } yield Path(path)
   )
+
+  val simpleNonEmptyPath: Gen[Path] =
+    for {
+      prefix <- shortAlphaNumStr.map(Path.apply)
+      suffix <- simplePath
+    } yield prefix / suffix
 
   given Arbitrary[Imports] = Arbitrary(
     Gen.sized { size =>
@@ -85,6 +87,9 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
         )
     }.map(Imports.apply)
   )
+
+  val nonEmptyAsciiPrintableStr: Gen[String] =
+    Gen.nonEmptyListOf(Gen.asciiPrintableChar).map(_.mkString)
 
   "Imports" should "resolve relative import first" in {
     forAll(
@@ -121,6 +126,40 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
       val resolved = importsPrepared.resolutions(path, imported)
       resolved should not contain (shortLocation)
       resolved should contain(longLocation)
+    }
+  }
+
+  it should "rewrite the longest import prefix" in {
+    forAll(
+      Arbitrary.arbitrary[Imports],
+      simpleNonEmptyPath,
+      simplePath,
+      nonEmptyAsciiPrintableStr,
+      nonEmptyAsciiPrintableStr,
+      nonEmptyAsciiPrintableStr
+    ) { (imports, pathPrefix, pathSuffix, prefix, middle, suffix) =>
+      val path = pathPrefix / pathSuffix
+      val shortPrefix = prefix
+      val longPrefix = prefix + middle
+      val imported = prefix + middle + suffix
+      val shortLocation = Path("short/path")
+      val longLocation = Path("long/path")
+      val importsPrepared = imports.copy(
+        settings = imports.settings
+          .filterKeys(p => !p.startsWith(pathPrefix))
+          .toMap
+          .updated(
+            pathPrefix,
+            Imports.PathSettings(
+              Map(
+                shortPrefix -> List(shortLocation),
+                longPrefix -> List(longLocation)
+              )
+            )
+          )
+      )
+      val resolved = importsPrepared.resolutions(path, imported)
+      resolved should contain(longLocation / suffix)
     }
   }
 }
