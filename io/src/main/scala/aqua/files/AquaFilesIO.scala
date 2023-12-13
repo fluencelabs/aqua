@@ -61,14 +61,14 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
       }
 
   // Get all files if the path is a directory or this path otherwise
-  // TODO: Test it or remove it. It is not used anywhere
-  override def listAqua(folder: Path): EitherT[F, AquaFileError, Chain[Path]] =
+  // TODO: Test it or refactor. Right now it is used on single files only
+  override def listAqua(path: Path): EitherT[F, AquaFileError, Chain[Path]] =
     for {
-      exists <- EitherT.liftF(Files[F].exists(folder))
-      _ <- EitherT.cond(exists, (), FileNotFound(folder): AquaFileError)
+      exists <- EitherT.liftF(Files[F].exists(path))
+      _ <- EitherT.cond(exists, (), FileNotFound(path): AquaFileError)
       paths <- EitherT.liftF(
         Files[F]
-          .walk(folder)
+          .walk(path)
           .evalFilter(p =>
             Files[F]
               .isRegularFile(p)
