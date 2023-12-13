@@ -43,8 +43,8 @@ importers:
         specifier: 0.2.5
         version: 0.2.5
       '@fluencelabs/aqua-lib':
-        specifier: 0.8.1
-        version: 0.8.1
+        specifier: 0.8.2
+        version: 0.8.2
       '@types/jest':
         specifier: 29.5.2
         version: 29.5.2
@@ -504,8 +504,8 @@ packages:
     resolution: {integrity: sha512-H2Q4gIvociUxc4J2mwmH0D+mrU2N2Z+enKCHgBCanMVEE2wZDsZ80GTbDKsQjEq+gpqbnJIk8lJBYW6lyvLJTg==}
     dev: true
 
-  /@fluencelabs/aqua-lib@0.8.1:
-    resolution: {integrity: sha512-VLslkhi3hsNLWkgsoCyceCediqkicWphMVHZ+9eEkgMumepvo7TcqiYC14bl2LpZjn7YZ6y/OzK+Ffy8ADfKdA==}
+  /@fluencelabs/aqua-lib@0.8.2:
+    resolution: {integrity: sha512-z3kKy5hlgqA3yYvbofdSgcUcM2x0FLIj8t80UTwRwAyDmNfvKcLKNRD4BkbPqWfvLfz9NfASgqak9QAJ5h9/JQ==}
     dev: true
 
   /@fluencelabs/avm@0.54.0:
