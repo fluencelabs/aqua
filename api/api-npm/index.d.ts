@@ -43,6 +43,9 @@ export declare class CompilationResult {
  *  d. Try to resolve import with obtained path
  *     (try a few paths if array was provided)
  *
+ * WARNING: <compiled-path-prefix> in 2.a is compared with
+ *          absolute normalized path of `path`, so <compiled-path-prefix>
+ *          should be absolute normalized path as well
  * NOTE: <import-path-prefix> could be empty string,
  *       in which case it will match any import
  * NOTE: passing just an array of strings is a shorthand for
