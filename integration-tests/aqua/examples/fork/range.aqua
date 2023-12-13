@@ -1,0 +1,18 @@
+aqua Range
+
+export range
+
+func range(a: i32, b: i32) -> []i32:
+    result: *i32
+    iterator: *i32
+
+    iterator <<- a
+    fork i <- iterator:
+        if i < b:
+            result <<- i
+            iterator <<- i + 1
+
+    if b > a:
+        join result[b - a - 1]
+
+    <- result
