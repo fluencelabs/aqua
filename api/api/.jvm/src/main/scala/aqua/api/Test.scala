@@ -17,7 +17,7 @@ object Test extends IOApp.Simple {
     APICompilation
       .compilePath(
         "./aqua-src/antithesis.aqua",
-        "./aqua" :: Nil,
+        Imports.fromMap(Map("/" -> Map("" -> List("./aqua")))),
         AquaAPIConfig(targetType = TypeScriptType),
         TypeScriptBackend(false, "IFluenceClient$$")
       )

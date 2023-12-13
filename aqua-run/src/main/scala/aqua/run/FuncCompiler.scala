@@ -1,7 +1,7 @@
 package aqua.run
 
 import aqua.compiler.{AquaCompilerConf, CompileResult, CompilerAPI}
-import aqua.files.{AquaFileSources, FileModuleId}
+import aqua.files.{AquaFileSources, FileModuleId, Imports}
 import aqua.io.{AquaFileError, AquaPath, PackagePath}
 import aqua.model.transform.TransformConfig
 import aqua.model.{AquaContext, FuncArrow}
@@ -21,7 +21,7 @@ import scribe.Logging
 
 class FuncCompiler[F[_]: Files: AquaIO: Async](
   input: Option[AquaPath],
-  imports: List[Path],
+  imports: Imports,
   transformConfig: TransformConfig
 ) extends Logging {
 
@@ -29,7 +29,6 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
 
   private def compileToContext(
     path: Path,
-    imports: List[Path],
     config: AquaCompilerConf = AquaCompilerConf(transformConfig.constantsList)
   ): F[Result[Chain[AquaContext]]] = {
     val sources = new AquaFileSources[F](path, imports)
@@ -43,12 +42,11 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
   private def compileBuiltins(): F[Result[Chain[AquaContext]]] =
     for {
       path <- PackagePath.builtin.getPath()
-      context <- compileToContext(path, Nil)
+      context <- compileToContext(path)
     } yield context
 
   // Compile and get only one function
   def compile(
-    preludeImports: List[Path] = Nil,
     withBuiltins: Boolean = false
   ): F[Result[Chain[AquaContext]]] = {
     for {
@@ -59,7 +57,7 @@ class FuncCompiler[F[_]: Files: AquaIO: Async](
       compileResult <- input.traverse { ap =>
         // compile only context to wrap and call function later
         Clock[F].timed(
-          ap.getPath().flatMap(p => compileToContext(p, preludeImports ++ imports))
+          ap.getPath().flatMap(p => compileToContext(p))
         )
       }
       (compileTime, contextV) = compileResult.orEmpty

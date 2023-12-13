@@ -9,7 +9,8 @@ val monocleV = "3.1.0"
 val scalaTestV = "3.2.17"
 val scalaTestScalaCheckV = "3.2.17.0"
 val sourcecodeV = "0.3.0"
-val fs2V = "3.9.3"
+// Snapshot is used to get latest fixes
+val fs2V = "3.9.3-37-8badc91-SNAPSHOT"
 val catsEffectV = "3.6-1f95fd7"
 val declineV = "2.3.0"
 val circeVersion = "0.14.2"
@@ -38,7 +39,9 @@ val commons = Seq(
       "-Ykind-projector"
       //      "-Xfatal-warnings"
     )
-  }
+  },
+  // Needed to resolve snapshot versions
+  resolvers ++= Resolver.sonatypeOssRepos("snapshots")
 )
 
 commons
@@ -60,9 +63,13 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
       "co.fs2"        %%% "fs2-io"      % fs2V
     )
   )
-  .dependsOn(compiler, parser)
+  .dependsOn(compiler, parser, helpers)
 
-lazy val ioJS = io.js.dependsOn(`js-imports`)
+lazy val ioJS = io.js
+  .settings(
+    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.CommonJSModule))
+  )
+  .dependsOn(`js-imports`)
 
 lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
