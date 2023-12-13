@@ -60,8 +60,8 @@ class AquaFilesIO[F[_]: Files: Concurrent] extends AquaIO[F] {
           ).toEither.leftMap(FileSystemError.apply).toEitherT
       }
 
-  // Get all files if the path is a directory or this path otherwise
-  // TODO: Test it or refactor. Right now it is used on single files only
+  // Get all `.aqua` files inside if the path is a directory or
+  // this path if it is an `.aqua` file otherwise
   override def listAqua(path: Path): EitherT[F, AquaFileError, Chain[Path]] =
     for {
       exists <- EitherT.liftF(Files[F].exists(path))
