@@ -25,6 +25,10 @@ function getConfig({
 }
 
 function normalizeImports(imports) {
+  if (imports === undefined || imports === null) {
+    return {}; // No imports
+  }
+
   if (Array.isArray(imports)) {
     return {
       "/": {
