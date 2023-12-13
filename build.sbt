@@ -65,7 +65,11 @@ lazy val io = crossProject(JVMPlatform, JSPlatform)
   )
   .dependsOn(compiler, parser, helpers)
 
-lazy val ioJS = io.js.dependsOn(`js-imports`)
+lazy val ioJS = io.js
+  .settings(
+    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.CommonJSModule))
+  )
+  .dependsOn(`js-imports`)
 
 lazy val `language-server-api` = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)

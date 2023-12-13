@@ -55,6 +55,14 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
       .map(Path.apply)
   )
 
+  val simpleNonEmptyPath: Gen[Path] = Gen.sized(size =>
+    for {
+      prefix <- shortAlphaNumStr
+      suffix <- Gen.resize(size, simplePath)
+      path = List(prefix, suffix).mkString("/")
+    } yield Path(path)
+  )
+
   given Arbitrary[Imports] = Arbitrary(
     Gen.sized { size =>
       val N = sqrt(size).toInt
@@ -94,8 +102,8 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
     forAll(
       Arbitrary.arbitrary[Imports],
       Arbitrary.arbitrary[Path],
-      simplePath,
-      simplePath,
+      simpleNonEmptyPath,
+      simpleNonEmptyPath,
       Gen.asciiPrintableStr
     ) { (imports, prefix, middle, suffix, imported) =>
       val shortPrefix = prefix
