@@ -11,11 +11,11 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
 
   implicit override val generatorDrivenConfig =
     // Tests here are lightweight, so we can afford to run more of them
-    PropertyCheckConfiguration(minSuccessful = 500)
+    PropertyCheckConfiguration(minSuccessful = 500, sizeRange = 64)
 
   val shortAlphaNumStr = for {
     length <- Gen.choose(1, 10)
-    chars <- Gen.listOfN(5, Gen.alphaNumChar)
+    chars <- Gen.listOfN(length, Gen.alphaNumChar)
   } yield chars.mkString
 
   val fileNameWithExt = Gen
@@ -29,7 +29,7 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
     Gen.sized(size =>
       for {
         segments <- Gen.listOfN(
-          size / 5,
+          size,
           Gen.oneOf(
             shortAlphaNumStr,
             Gen.oneOf(".", "..")
@@ -49,7 +49,7 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
   val simplePath: Gen[Path] = Gen.sized(size =>
     for {
       segments <- Gen.listOfN(
-        size / 5,
+        size,
         shortAlphaNumStr
       )
       suffix <- Gen.option(
@@ -88,8 +88,12 @@ class ImportsSpec extends AnyFlatSpec with ScalaCheckPropertyChecks with Matcher
     }.map(Imports.apply)
   )
 
-  val nonEmptyAsciiPrintableStr: Gen[String] =
-    Gen.nonEmptyListOf(Gen.asciiPrintableChar).map(_.mkString)
+  val nonEmptyAsciiPrintableStr: Gen[String] = Gen.sized(size =>
+    for {
+      head <- Gen.asciiPrintableChar
+      tail <- Gen.listOfN(size, Gen.asciiPrintableChar)
+    } yield (head +: tail).mkString
+  )
 
   "Imports" should "resolve relative import first" in {
     forAll(
