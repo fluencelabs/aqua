@@ -200,7 +200,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
     res.checkTokenLoc(main, "fooResult", 0, ScalarType.string) shouldBe true
     res.checkLocations("fooResult", 0, 1, main) shouldBe true
 
-    res.checkTokenLoc(main, "someVar", 0, LiteralType.string, None, true) shouldBe true
+    res.checkTokenLoc(main, "someVar", 0, LiteralType.string, None) shouldBe true
     res.checkLocations("someVar", 0, 1, main) shouldBe true
     res.checkTokenLoc(main, "someVar", 2, LiteralType.unsigned) shouldBe true
     res.checkLocations("someVar", 2, 3, main) shouldBe true
@@ -221,8 +221,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       "someField",
       0,
       ScalarType.u32,
-      Some("Ab.someField"),
-      true
+      Some("Ab.someField")
     ) shouldBe true
 
     // this is tokens from imports, if we will use `FileSpan.F` file names will be different
@@ -233,8 +232,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
       "more_call",
       0,
       ArrowType(NilType, NilType),
-      Some("OneMore.more_call"),
-      true
+      Some("OneMore.more_call")
     ) shouldBe true
     res.checkTokenLoc(
       secondImport,
@@ -253,8 +251,7 @@ class AquaLSPSpec extends AnyFlatSpec with Matchers with Inside {
         ProductType.labelled(("someVar", ScalarType.string) :: Nil),
         ProductType(ScalarType.string :: Nil)
       ),
-      None,
-      true
+      None
     ) shouldBe true
     res.checkTokenLoc(firstImport, "someVar", 0, ScalarType.string) shouldBe true
 
